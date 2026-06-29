@@ -262,6 +262,34 @@ impl Simulation {
         self.emergence_genetics_sentience();
         self.emergence_legends();
         self.emergence_civ_ai();
+
+        // Wire plague and famine emergence helpers into feed events.
+        let tick = self.state.tick;
+        let population_f32 = self.state.population.min(u32::MAX as u64) as f32;
+        let density = population_f32 / 1000.0;
+        let trade_count = self.state.trade_routes.len() as u32;
+        let trade_conn = trade_connectivity_score(trade_count, 50.0);
+
+        let (plague_prob, plague_loss) = plague_outbreak(density, trade_conn);
+        if plague_prob > 0.4 {
+            self.emergence.push_feed(
+                tick,
+                "plague_outbreak",
+                format!("Plague risk {:.1}%; potential {plague_loss} deaths", plague_prob * 100.0),
+                None,
+            );
+        }
+
+        let food_deficit = 50.0_f32;
+        let (famine_sev, famine_loss) = famine_severity(food_deficit, population_f32);
+        if famine_sev > 0.3 {
+            self.emergence.push_feed(
+                tick,
+                "famine_severity",
+                format!("Famine severity {:.1}%; potential {famine_loss} deaths", famine_sev * 100.0),
+                None,
+            );
+        }
     }
 
     fn emergence_ensure_genomes(&mut self) {

@@ -23,6 +23,12 @@ pub use pop_pressure::{
     apply_pressure_loss, pressure_mortality, tick_pressure_loss, PressureLoss,
 };
 
+pub mod niche;
+pub use niche::{
+    niche_growth_rate, niche_match, niche_mortality_rate, tick_niche_adaptation, Niche,
+    NicheTick, NicheWeights,
+};
+
 /// Schema version. Bumped on breaking changes.
 pub const SCHEMA_VERSION: &str = "0.1.0-stub";
 

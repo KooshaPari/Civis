@@ -1,5 +1,3 @@
-    Blocking waiting for file lock on package cache
-    Blocking waiting for file lock on build directory
 crates\species\src\pop_pressure.rs:87:9: warning: unused variable: `pressure`: help: if this is intentional, prefix it with an underscore: `_pressure`
 warning: unnecessary parentheses around assigned value
     --> crates\needs\src\lib.rs:1127:23
@@ -318,23 +316,29 @@ warning: use of deprecated struct `religion::Religion`: Replaced by ReligiousPro
 500 | pub fn spread_religion(_rel: &mut Religion, _nearby_agents: u32, _tick: u64) {}
     |                                   ^^^^^^^^
 
-error[E0308]: mismatched types
-    --> crates\engine\src\engine.rs:3302:40
+error[E0614]: type `u64` cannot be dereferenced
+    --> crates\engine\src\engine.rs:3305:28
      |
-3302 |             let _ = self.world.despawn(entity);
-     |                                ------- ^^^^^^ expected `Entity`, found `&Entity`
-     |                                |
-     |                                arguments to this method are incorrect
+3305 |                 entity_id: *id,
+     |                            ^^^ can't be dereferenced
+
+error[E0614]: type `f32` cannot be dereferenced
+    --> crates\engine\src\engine.rs:3306:20
      |
-note: method defined here
-    --> E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hecs-0.10.5\src\world.rs:307:12
+3306 |                 x: *x,
+     |                    ^^ can't be dereferenced
+
+error[E0614]: type `f32` cannot be dereferenced
+    --> crates\engine\src\engine.rs:3307:20
      |
- 307 |     pub fn despawn(&mut self, entity: Entity) -> Result<(), NoSuchEntity> {
-     |            ^^^^^^^
-help: consider dereferencing the borrow
+3307 |                 y: *y,
+     |                    ^^ can't be dereferenced
+
+error[E0614]: type `hecs::Entity` cannot be dereferenced
+    --> crates\engine\src\engine.rs:4187:40
      |
-3302 |             let _ = self.world.despawn(*entity);
-     |                                        +
+4187 |             let _ = self.world.despawn(*entity);
+     |                                        ^^^^^^^ can't be dereferenced
 
 warning: unused variable: `metal_available`
   --> crates\engine\src\building_layouts.rs:61:9
@@ -397,6 +401,6 @@ warning: unused variable: `idx`
 138 |     for idx in 0..feature_len {
     |         ^^^ help: if this is intentional, prefix it with an underscore: `_idx`
 
-For more information about this error, try `rustc --explain E0308`.
+For more information about this error, try `rustc --explain E0614`.
 warning: `civ-engine` (lib) generated 25 warnings
-error: could not compile `civ-engine` (lib) due to 1 previous error; 25 warnings emitted
+error: could not compile `civ-engine` (lib) due to 4 previous errors; 25 warnings emitted

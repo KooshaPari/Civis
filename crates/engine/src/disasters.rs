@@ -48,7 +48,7 @@ pub struct DisasterTickEvent {
 /// Trigger a disaster immediately and apply its effects to terrain and agents.
 pub fn trigger_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) {
     let impact = apply_disaster(sim, kind, pos);
-    sim.last_tick_disaster_events.push(DisasterTickEvent {
+    sim.push_disaster_event(DisasterTickEvent {
         tick: sim.state.tick,
         kind,
         x: pos.x,
@@ -211,8 +211,8 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) -> 
             casualties = impact.1;
         }
         DisasterKind::Flood => {
-            for cell in affected {
-                sim.push_voxel_write(cell, WATER);
+            for cell in &affected {
+                sim.push_voxel_write(*cell, WATER);
             }
             terrain_cells = affected.len() as u32;
             impact = hit_agents(
@@ -285,8 +285,8 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) -> 
     sim.state.resources = resources;
 
     if impact.0 < 0 {
-        let casualties = (-impact.0) as u64;
-        sim.state.population = sim.state.population.saturating_sub(casualties);
+        let population_delta = (-impact.0) as u64;
+        sim.state.population = sim.state.population.saturating_sub(population_delta);
     } else if impact.0 > 0 {
         sim.state.population = sim.state.population.saturating_add(impact.0 as u64);
     }

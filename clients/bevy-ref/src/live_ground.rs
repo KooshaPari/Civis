@@ -34,6 +34,12 @@ impl ChunkVoxelCache {
         self.chunks.get(&chunk_id.0)
     }
 
+    /// Backward-compatible alias for older call sites.
+    #[must_use]
+    pub fn get(&self, chunk_id: ChunkId) -> Option<&Vec<MaterialId>> {
+        self.get_chunk(chunk_id)
+    }
+
     /// Borrow a cached chunk payload mutably, creating an empty dense chunk if needed.
     pub fn ensure_chunk(&mut self, chunk_id: ChunkId) -> &mut Vec<MaterialId> {
         self.chunks.entry(chunk_id.0).or_insert_with(|| vec![MaterialId(0); CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE])

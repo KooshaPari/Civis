@@ -201,7 +201,6 @@ fn draw_main_menu(
         .order(egui::Order::Foreground)
         .show(ctx, |ui| {
             egui::Frame::NONE
-                liquid_glass_frame(egui::Margin::same(18), RADIUS_PANEL)
                 .fill(GLASS_FILL)
                 .inner_margin(egui::Margin::same(28))
                 .show(ui, |ui| {
@@ -272,7 +271,6 @@ fn draw_worldgen_overlay(mut contexts: EguiContexts, state: Option<Res<State<App
         .order(egui::Order::Foreground)
         .show(ctx, |ui| {
             egui::Frame::NONE
-                .liquid_glass_frame(egui::Margin::same(16), RADIUS_PANEL)
                 .fill(GLASS_FILL)
                 .inner_margin(egui::Margin::same(24))
                 .show(ui, |ui| {

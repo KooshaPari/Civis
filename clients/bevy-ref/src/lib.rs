@@ -1076,6 +1076,10 @@ mod agent_needs {
         pub safety: f32,
         /// Belonging pressure.
         pub belonging: f32,
+        /// Health pressure.
+        pub health: f32,
+        /// Rest pressure.
+        pub rest: f32,
     }
 
     impl From<AgentNeedsData> for AgentNeeds {

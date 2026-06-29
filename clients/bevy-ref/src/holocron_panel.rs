@@ -69,8 +69,8 @@ impl Plugin for HolocronPanelPlugin {
 /// Splits both into lowercase words; every word in `query` must appear as a
 /// substring of some word in `candidate`.
 fn fuzzy_match(query: &str, candidate: &str) -> bool {
-    let q_words: Vec<&str> = query
-        .to_lowercase()
+    let query_lower = query.to_lowercase();
+    let q_words: Vec<&str> = query_lower
         .split_whitespace()
         .filter(|w| !w.is_empty())
         .collect();
@@ -116,17 +116,19 @@ fn risk_label(tier: RiskTier) -> &'static str {
 /// Draw the Command‑K overlay as an egui `Window` centered on screen.
 fn draw_holocron_overlay(
     mut state: ResMut<HolocronState>,
-    egui_ctx: Query<&bevy_egui::EguiContext>,
+    mut contexts: bevy_egui::EguiContexts,
 ) {
     if !state.overlay_visible {
         return;
     }
-    let Ok(ctx) = egui_ctx.single() else {
+    let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-    let ctx = ctx.ctx();
 
-    let filtered = matched_verbs(&state.registry, &state.filter);
+    let filtered: Vec<VerbDescriptor> = matched_verbs(&state.registry, &state.filter)
+        .into_iter()
+        .cloned()
+        .collect();
     // Clamp cursor.
     if !filtered.is_empty() && state.cursor >= filtered.len() {
         state.cursor = 0;
@@ -250,7 +252,7 @@ fn draw_holocron_overlay(
     }
     // Enter fires the selected verb.
     if input.key_pressed(egui::Key::Enter) && !filtered.is_empty() {
-        let verb = filtered[state.cursor.min(filtered.len() - 1)];
+        let verb = &filtered[state.cursor.min(filtered.len() - 1)];
         // TODO: dispatch `sim.god_action` via the existing JSON‑RPC path
         info!("Holocron fire: {} (id={})", verb.name, verb.id);
         state.overlay_visible = false;

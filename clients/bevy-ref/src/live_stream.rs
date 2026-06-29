@@ -148,7 +148,7 @@ pub fn material_tint(material: MaterialId) -> [f32; 3] {
 pub fn chunk_biome_tint(voxels: &[MaterialId]) -> Option<[f32; 3]> {
     use civ_voxel::{AIR, METHANE, PLASMA, SMOKE, STEAM, TOXIC_GAS};
     use std::collections::HashMap;
-    let mut counts: HashMap<u8, u32> = HashMap::new();
+    let mut counts: HashMap<_, u32> = HashMap::new();
     for v in voxels {
         if v.0 == AIR.0
             || v.0 == SMOKE.0
@@ -990,7 +990,7 @@ pub fn remesh_cached_chunks(
     wireframe_line_color: Option<Color>,
 ) {
     for &chunk_id in chunk_ids {
-        let Some(voxels) = scene.chunk_voxels.get(&chunk_id) else {
+        let Some(voxels) = scene.chunk_voxels.get_chunk(chunk_id) else {
             continue;
         };
         if !should_render_chunk(chunk_id, culling.eye, culling.max_distance) {
@@ -1011,7 +1011,7 @@ pub fn remesh_cached_chunks(
         let mesh = mesh_assets.add(mesh_buffer_to_bevy(&mesh_buffer));
         let mut material = StandardMaterial { perceptual_roughness: 0.85, metallic: 0.0, ..default() };
         let base_rgb = chunk_biome_tint(voxels).unwrap_or(LIVE_CHUNK_BASE_COLOR);
-        apply_chunk_material(&mut material, base_rgb, debug.wireframe, wireframe_line_color);
+        apply_chunk_material(&mut material, base_rgb, debug.wireframe, Some(0.0));
         let material_handle = material_assets.add(material);
         let transform = chunk_transform(chunk_id);
         let entity = *scene
@@ -1211,8 +1211,8 @@ pub fn sync_agent_labels_from_civilians(
             .get(&agent.id)
             .map(civilian_display_name)
             .unwrap_or_else(|| format!("#{}", agent.id));
-        for &child in children.iter() {
-            let Ok(mut text) = labels.get_mut(child) else {
+        for child in children.iter() {
+            let Ok(mut text) = labels.get_mut(*child) else {
                 continue;
             };
             *text = Text2d::new(label.clone());

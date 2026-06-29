@@ -3298,7 +3298,7 @@ impl Simulation {
             births.push((child_id, x, y, left.2.alignment, left.1, right.1));
         }
 
-        for (entity, id, x, y) in dead {
+        for (entity, id, x, y) in dead.iter().copied() {
             let _ = self.world.despawn(entity);
             self.last_deaths.push(PopulationEvent {
                 tick: self.state.tick,

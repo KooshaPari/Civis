@@ -1361,7 +1361,7 @@ impl Simulation {
                 // downstream CAs and inspectors already
                 // understand. CA re-settles / propagates the
                 // new surface next tick.
-                let target = MaterialId(req.aux_id);
+                let target = MaterialId(req.aux_id as u16);
                 for dz in -r..=r {
                     for dx in -r..=r {
                         if dx * dx + dz * dz > r2 {
@@ -1473,7 +1473,7 @@ impl Simulation {
         let cz = req.center.z;
         let r = i64::from(req.radius_voxels);
         let r2 = r * r;
-        let target = MaterialId(req.material_id);
+        let target = MaterialId(req.material_id as u16);
         let mut writes: u32 = 0;
         match req.op {
             MaterialOp::Erase => {

@@ -23,7 +23,7 @@ use civ_agents::{
 };
 use civ_genetics::{
     sentience::{evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold},
-    Dna, DnaClass, SeedDefinition, SeedLibrary, SeedSet,
+    Dna, DnaClass, SeedDefinition, SeedLibrary,
 };
 use civ_legends::{
     AggregateKey, ClusterId, EntityKind, EntityRef, Epoch, EpochDigest, EventKind, IngestOutcome,

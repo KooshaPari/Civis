@@ -4417,35 +4417,53 @@ mod tests {
     fn voxel_phase_drains_dirty_events_each_tick() {
         use civ_voxel::WorldCoord;
         let mut sim = Simulation::with_seed(42);
-        // Tick once with nothing pending — should be empty.
-        sim.tick();
-        assert!(sim.last_tick_voxel_events().is_empty());
-        // Write four voxels in two chunks, then tick.
-        sim.voxel_mut()
-            .write(WorldCoord { x: 0, y: 0, z: 0 }, MaterialId(1));
+        // The default earthlike weather grid triggers a one-time burst of emergent
+        // flood disasters that paint terrain with WATER on the second tick. Once the
+        // terrain is flooded, re-writing WATER over WATER is a no-op (no dirty event),
+        // so the simulation settles to zero emergent voxel writes per tick. Tick past
+        // that burst to reach the quiescent baseline before exercising the drain
+        // mechanism in isolation.
+        sim.tick(); // tick 1: no emergent writes yet
+        sim.tick(); // tick 2: emergent flood burst paints terrain
+        sim.tick(); // tick 3: quiescent (floods are now no-ops)
+        assert!(
+            sim.last_tick_voxel_events().is_empty(),
+            "simulation should be voxel-quiescent after the initial flood burst; got {}",
+            sim.last_tick_voxel_events().len()
+        );
+        // Write four voxels across two chunks at coordinates far from the origin
+        // settlement region. Two reasons:
+        //  - STONE (not WATER): the emergent flood burst paints near-origin chunks
+        //    with WATER, so a WATER write there would be a no-op (no dirty event).
+        //  - Far placement: writing into flooded near-origin cells would perturb the
+        //    settled fluid and spawn fresh CA voxel events next tick, breaking the
+        //    "draining clears" invariant. These distant chunks are inert.
+        const STONE: MaterialId = MaterialId(6);
+        const FAR: i64 = 100_000_000;
+        sim.voxel_mut().write(WorldCoord { x: FAR, y: 0, z: 0 }, STONE);
         sim.voxel_mut().write(
             WorldCoord {
-                x: 1_000_000,
+                x: FAR + 1_000_000,
                 y: 0,
                 z: 0,
             },
-            MaterialId(1),
+            STONE,
         );
         sim.voxel_mut().write(
             WorldCoord {
-                x: 100_000_000,
+                x: FAR + 200_000_000,
                 y: 0,
                 z: 0,
             },
-            MaterialId(1),
+            STONE,
         );
         sim.voxel_mut().write(
             WorldCoord {
-                x: 101_000_000,
+                x: FAR + 201_000_000,
                 y: 0,
                 z: 0,
             },
-            MaterialId(1),
+            STONE,
         );
         sim.tick();
         let events = sim.last_tick_voxel_events();

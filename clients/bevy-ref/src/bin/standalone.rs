@@ -78,6 +78,8 @@ fn main() {
         .add_plugins(civ_bevy_ref::spawn_tools::SpawnToolsPlugin)
         .add_plugins(civ_bevy_ref::minimap::MinimapPlugin)
         .init_resource::<civ_bevy_ref::game_ui::GameUiSnapshot>()
+        // Scenario objective HUD: displays current goal and progress (e.g. population target).
+        .add_plugins(civ_bevy_ref::scenario_objective_hud::ScenarioObjectiveHudPlugin)
         .add_systems(Startup, setup_atmosphere)
         .add_systems(
             Startup,

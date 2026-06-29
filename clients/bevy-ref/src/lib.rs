@@ -32,6 +32,7 @@ pub mod diplomacy_ui;
 pub mod outcome_overlay;
 pub mod faction_hud;
 pub mod gameplay_hud;
+pub mod scenario_objective_hud;
 pub mod session;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod script_hud;

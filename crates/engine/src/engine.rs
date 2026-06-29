@@ -681,7 +681,9 @@ impl Simulation {
         // Spawn initial entities
         Self::spawn_initial_entities(&mut world);
         let mut spawn_rng = rng.clone();
-        spawn_faction_civilians(&mut world, &mut spawn_rng);
+        // Denser initial civilization: 50 civilians × 6 factions = 300 agents (vs 128 baseline).
+        // Deterministic seeding per faction ensures reproducible world state.
+        spawn_faction_civilians_custom(&mut world, &mut spawn_rng, 50, 6, 2_500);
         attach_citizen_to_agents(&mut world);
 
         let (planet, moon) = defaults_earthlike();
@@ -749,14 +751,15 @@ impl Simulation {
         let mut world = World::new();
         Self::spawn_initial_entities(&mut world);
         let mut spawn_rng = rng.clone();
-        spawn_faction_civilians(&mut world, &mut spawn_rng);
+        // Denser initial civilization: 50 civilians × 6 factions = 300 agents (vs 128 baseline).
+        spawn_faction_civilians_custom(&mut world, &mut spawn_rng, 50, 6, 2_500);
         attach_citizen_to_agents(&mut world);
 
         let (planet, moon) = defaults_earthlike();
         let climate = compute_climate(0, &planet, &moon);
         let weather_grid = compute_weather(&climate, 0, 16);
 
-        // Count actual civilians spawned (128: 32 per faction × 4 factions)
+        // Count actual civilians spawned (300: 50 per faction × 6 factions)
         let civilian_count = count_civilians(&world) as u64;
 
         let state = WorldState {
@@ -3611,12 +3614,12 @@ mod tests {
         }
     }
 
-    /// FR-CIV-ENGINE-INT-010 — startup spawns 128 civilians across four factions.
+    /// FR-CIV-ENGINE-INT-010 — startup spawns 300 civilians across six factions (denser start).
     #[test]
-    fn startup_spawns_128_civilians() {
+    fn startup_spawns_300_civilians() {
         let sim = Simulation::new();
         assert_eq!(sim.state.tick, 0);
-        assert_eq!(count_civilians(&sim.world), 128);
+        assert_eq!(count_civilians(&sim.world), 300);
     }
 
     #[test]

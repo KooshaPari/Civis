@@ -1051,6 +1051,22 @@ pub use relationship_stance::{
 };
 
 // ---------------------------------------------------------------------------
+// FR-CIV-ALLIANCE-FORM: alliance-formation model
+// ---------------------------------------------------------------------------
+//
+// Additive slice: factions whose mutual opinion clears `ally_threshold`
+// group together into a single alliance bloc. Transitive warm edges
+// collapse into one bloc; singletons appear when a faction has recorded
+// opinions but no warm edges. Lives in its own module and does not modify
+// the substrate above.
+
+pub mod alliance_formation;
+
+pub use alliance_formation::{
+    AllianceBloc, AllianceConfig, AllianceConfigError, AllianceFormation,
+};
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 

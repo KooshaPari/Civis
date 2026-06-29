@@ -2717,3 +2717,54 @@ mod public_health_emergence_tests {
         assert!((0.0..=1.0).contains(&medicine_efficacy(1.0, 1.0)));
     }
 }
+
+pub fn monument_ambition(prestige: f32, surplus: f32) -> f32 {
+    let prestige = if prestige.is_finite() { prestige } else { 0.0 };
+    let surplus = if surplus.is_finite() { surplus } else { 0.0 };
+    let score = prestige.max(0.0) * 0.6 + surplus.max(0.0) * 0.4;
+    score.clamp(0.0, 1.0)
+}
+
+pub fn dynastic_stability(legitimacy: f32, succession_clarity: f32) -> f32 {
+    let legitimacy = if legitimacy.is_finite() { legitimacy } else { 0.0 };
+    let succession_clarity = if succession_clarity.is_finite() {
+        succession_clarity
+    } else {
+        0.0
+    };
+    let score = legitimacy.max(0.0) * 0.55 + succession_clarity.max(0.0) * 0.45;
+    score.clamp(0.0, 1.0)
+}
+
+pub fn propaganda_reach(literacy: f32, authority: f32) -> f32 {
+    let literacy = if literacy.is_finite() { literacy } else { 0.0 };
+    let authority = if authority.is_finite() { authority } else { 0.0 };
+    let score = literacy.max(0.0) * 0.35 + authority.max(0.0) * 0.65;
+    score.clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod added_tests {
+    use super::*;
+
+    #[test]
+    fn monument_ambition_is_clamped_and_nans_are_guarded() {
+        assert_eq!(monument_ambition(f32::NAN, f32::NAN), 0.0);
+        assert!((0.0..=1.0).contains(&monument_ambition(0.5, 0.5)));
+        assert_eq!(monument_ambition(10.0, 10.0), 1.0);
+    }
+
+    #[test]
+    fn dynastic_stability_is_clamped_and_nans_are_guarded() {
+        assert_eq!(dynastic_stability(f32::NAN, f32::NAN), 0.0);
+        assert!((0.0..=1.0).contains(&dynastic_stability(0.5, 0.5)));
+        assert_eq!(dynastic_stability(10.0, 10.0), 1.0);
+    }
+
+    #[test]
+    fn propaganda_reach_is_clamped_and_nans_are_guarded() {
+        assert_eq!(propaganda_reach(f32::NAN, f32::NAN), 0.0);
+        assert!((0.0..=1.0).contains(&propaganda_reach(0.5, 0.5)));
+        assert_eq!(propaganda_reach(10.0, 10.0), 1.0);
+    }
+}

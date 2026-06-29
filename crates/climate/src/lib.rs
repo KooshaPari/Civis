@@ -85,6 +85,13 @@ pub use season_cycle::{SeasonCycleParams, SeasonCycleSample, seasonal_cycle};
 pub mod erosion;
 pub use erosion::{ErosionGrid, ErosionParams, erosion_step};
 
+/// Biome shift from sustained temperature / precipitation change
+/// (FR-CIV-BIOME-SHIFT). Additive: provides pure-logic classification of a
+/// cell into a [`Biome`] from its `(temp_c, precip)` and reclassification
+/// helpers that apply a sustained shift. See [`biome_shift`] for details.
+pub mod biome_shift;
+pub use biome_shift::*;
+
 impl ClimateState {
     /// Create a new `ClimateState` initialised to pre-industrial conditions.
     pub fn new() -> Self {

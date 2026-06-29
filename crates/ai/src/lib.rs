@@ -30,6 +30,7 @@
 pub mod cache;
 pub mod config;
 pub mod goal;
+pub mod language;
 pub mod pool;
 pub mod preflight;
 pub mod provenance;
@@ -40,6 +41,7 @@ pub mod social_graph;
 pub use cache::AiCache;
 pub use config::AiConfig;
 pub use goal::{Goal, GoalChoice, Need};
+pub use language::*;
 pub use pool::{AiPayload, AiResult, AiTask, AiWorkerPool, TaskId};
 pub use provenance::{AiEvent, ReplayAdvanceOutcome, ReplayMode, ReplayRefusal};
 pub use providers::DummyAiProvider;

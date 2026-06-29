@@ -59,6 +59,87 @@ pub struct LegendsQueryResult {
     pub emergence_feed: Vec<EmergenceFeedEvent>,
 }
 
+pub fn social_stratification(wealth_gap: f32, mobility: f32) -> f32 {
+    let wealth_gap = if wealth_gap.is_finite() {
+        wealth_gap.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let mobility = if mobility.is_finite() {
+        mobility.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    (wealth_gap * (1.0 - mobility)).clamp(0.0, 1.0)
+}
+
+pub fn caste_rigidity(tradition: f32, enforcement: f32) -> f32 {
+    let tradition = if tradition.is_finite() {
+        tradition.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let enforcement = if enforcement.is_finite() {
+        enforcement.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    ((tradition + enforcement) * 0.5).clamp(0.0, 1.0)
+}
+
+pub fn emancipation_pressure(unrest: f32, enlightenment: f32) -> f32 {
+    let unrest = if unrest.is_finite() {
+        unrest.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let enlightenment = if enlightenment.is_finite() {
+        enlightenment.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    (1.0 - (1.0 - unrest) * (1.0 - enlightenment)).clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod social_stratification_tests {
+    use super::social_stratification;
+
+    #[test]
+    fn social_stratification_is_bounded_and_nan_guarded() {
+        assert_eq!(social_stratification(f32::NAN, 0.5), 0.0);
+        assert_eq!(social_stratification(1.0, f32::NAN), 1.0);
+        assert_eq!(social_stratification(1.5, -1.0), 1.0);
+        assert!((0.0..=1.0).contains(&social_stratification(0.75, 0.25)));
+    }
+}
+
+#[cfg(test)]
+mod caste_rigidity_tests {
+    use super::caste_rigidity;
+
+    #[test]
+    fn caste_rigidity_is_bounded_and_nan_guarded() {
+        assert_eq!(caste_rigidity(f32::NAN, 1.0), 0.5);
+        assert_eq!(caste_rigidity(1.0, f32::NAN), 0.5);
+        assert_eq!(caste_rigidity(2.0, -1.0), 0.5);
+        assert!((0.0..=1.0).contains(&caste_rigidity(0.6, 0.8)));
+    }
+}
+
+#[cfg(test)]
+mod emancipation_pressure_tests {
+    use super::emancipation_pressure;
+
+    #[test]
+    fn emancipation_pressure_is_bounded_and_nan_guarded() {
+        assert_eq!(emancipation_pressure(f32::NAN, 0.5), 0.5);
+        assert_eq!(emancipation_pressure(0.5, f32::NAN), 0.5);
+        assert_eq!(emancipation_pressure(2.0, -1.0), 1.0);
+        assert!((0.0..=1.0).contains(&emancipation_pressure(0.6, 0.8)));
+    }
+}
+
 pub fn festival_intensity(food_surplus: f32, shared_belief: f32) -> f32 {
     let food = if food_surplus.is_finite() {
         food_surplus.max(0.0)
@@ -2503,4 +2584,3 @@ mod public_health_emergence_tests {
         assert!((0.0..=1.0).contains(&medicine_efficacy(1.0, 1.0)));
     }
 }
-

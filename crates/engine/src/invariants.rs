@@ -48,9 +48,9 @@ pub fn check_tick_invariants(sim: &Simulation) -> Result<(), InvariantError> {
     // Population is `u64`; non-negativity is enforced by the type system.
     let _population = sim.state.population;
 
-    if sim.state.energy_budget_joules.raw < Fixed::ZERO.raw {
+    if sim.state.energy_budget_joules < Fixed::ZERO {
         return Err(InvariantError::NegativeEnergyBudget {
-            raw: sim.state.energy_budget_joules.raw,
+            raw: sim.state.energy_budget_joules.to_bits(),
         });
     }
 

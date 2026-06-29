@@ -105,7 +105,7 @@ use civ_agents::{spawn_civilian_at, spawn_many, ActorVisualKind, Alignment, Civi
 use civ_build::{BuildingId, BuildingSpec, BuildingTier, BuildSite, ProductionChain};
 use civ_needs::{Health as LifeHealth, Needs as LifeNeeds};
 use civ_voxel::{
-    material::{GRAVEL, LAVA, ORE, PACKED_DIRT, PLANT, SAND, SNOW, STEAM, STONE, WATER},
+    material::{GRAVEL, LAVA, MOSS, ORE, PACKED_DIRT, PLANT, SAND, SNOW, STEAM, STONE, WATER, WOOD},
     AIR, MaterialId, WorldCoord, FIXED_SCALE,
 };
 use rand::SeedableRng;
@@ -2007,16 +2007,16 @@ impl Simulation {
                     let top = topmost_voxel(&self.voxel, cell);
                     let igniteable = matches!(
                         top,
-                        Some(MaterialId::PLANT) | Some(MaterialId::MOSS) | Some(MaterialId::WOOD)
+                        Some(PLANT) | Some(MOSS) | Some(WOOD)
                     );
-                    if mat != MaterialId::AIR && mat != MaterialId::WATER {
+                    if mat != AIR && mat != WATER {
                         // Plough through solid ground with a
                         // LAVA splinter for a visible scar.
-                        self.push_voxel_write(cell, MaterialId::LAVA);
+                        self.push_voxel_write(cell, LAVA);
                         writes = writes.saturating_add(1);
                     }
                     if igniteable {
-                        self.push_voxel_write(cell, MaterialId::LAVA);
+                        self.push_voxel_write(cell, LAVA);
                         writes = writes.saturating_add(1);
                     }
                 }
@@ -2065,10 +2065,10 @@ impl Simulation {
                     // Snapshot the read before we take the
                     // mutable borrow for the write.
                     let mat = self.voxel().read(cell);
-                    let next = if mat == MaterialId::WATER {
-                        MaterialId::STEAM
+                    let next = if mat == WATER {
+                        STEAM
                     } else {
-                        MaterialId::AIR
+                        AIR
                     };
                     self.push_voxel_write(cell, next);
                     writes = writes.saturating_add(1);
@@ -2103,7 +2103,7 @@ impl Simulation {
                         y: pos.y.saturating_sub(k),
                         z: pos.z,
                     };
-                    self.push_voxel_write(cell, MaterialId::LAVA);
+                    self.push_voxel_write(cell, LAVA);
                     writes = writes.saturating_add(1);
                 }
                 // Steam ring at the surface.
@@ -2113,7 +2113,7 @@ impl Simulation {
                         y: pos.y,
                         z: pos.z + dz,
                     };
-                    self.push_voxel_write(cell, MaterialId::STEAM);
+                    self.push_voxel_write(cell, STEAM);
                     writes = writes.saturating_add(1);
                 }
                 if writes > 0 {

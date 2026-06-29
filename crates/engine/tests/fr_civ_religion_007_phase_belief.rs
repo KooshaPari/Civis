@@ -31,7 +31,7 @@
 
 use civ_engine::religion::{
     apply_big_gods_response, last_religion_sample, substrate_gradients_for, ReligionEvent,
-    ReligiousProfile, SubstrateGradients,
+    ReligionEventKind, ReligiousProfile, SubstrateGradients,
 };
 use std::collections::BTreeMap;
 
@@ -199,16 +199,15 @@ fn fr_civ_religion_007_religion_event_kind_has_stable_discriminants() {
     // versions without breaking clients.
     let kinds = [
         ReligionEvent::tick(0, 0.0, 0.0, 0.0, 0).kind,
-        // The remaining 4 distinct kinds are exercised structurally by
-        // constructing events with the documented variant discriminants.
-        // We can't construct them directly without the public constructor
-        // for each variant, so we just verify the `Tick` discriminant is
-        // distinct from `Default::default()`. (Spec §11.1 covers the
-        // other 4 tripwires in the proptest block in religion.rs.)
-        <ReligionEvent as Default>::default().kind,
+        ReligionEventKind::BigGodsThresholdCrossed,
+        ReligionEventKind::BigGodsThresholdReleased,
+        ReligionEventKind::MonitoringCapViolation { delta: 0.1 },
+        ReligionEventKind::DissolutionImminent,
     ];
-    let mut seen = std::collections::HashSet::new();
-    for k in kinds {
-        assert!(seen.insert(k), "duplicate discriminant for {:?}", k);
+    let discriminants: Vec<_> = kinds.iter().map(std::mem::discriminant).collect();
+    for (idx, left) in discriminants.iter().enumerate() {
+        for right in discriminants.iter().skip(idx + 1) {
+            assert_ne!(left, right, "duplicate discriminant at index {idx}");
+        }
     }
 }

@@ -642,11 +642,7 @@ impl EnvOverlayRegistry {
 
     /// Per-cell raw pollution for `medium` (ppm or dB).
     #[must_use]
-    pub fn pollution_raw(
-        &self,
-        medium: PollutionMedium,
-        cell: CellId,
-    ) -> Option<RawScalar> {
+    pub fn pollution_raw(&self, medium: PollutionMedium, cell: CellId) -> Option<RawScalar> {
         self.pollution.get(&medium).map(|f| f.get_raw(cell))
     }
 
@@ -722,11 +718,7 @@ impl EnvOverlayRegistry {
             // "aggregate pollution" overlay). Clamped to `0.0..=1.0`
             // so it never overflows the legend ramp.
             (EnvDataSourceId::Pollution, None) => {
-                let total: f32 = self
-                    .pollution
-                    .values()
-                    .map(|f| f.sample(cell))
-                    .sum();
+                let total: f32 = self.pollution.values().map(|f| f.sample(cell)).sum();
                 Some((total / 4.0).clamp(0.0, 1.0))
             }
             (EnvDataSourceId::LandValue, _) => Some(self.land_value_sample(cell)),
@@ -927,8 +919,14 @@ mod tests {
         reg.land_value.insert(cell(1, 0, 0), 9999.0); // above max
         let lo = reg.land_value_sample(cell(0, 0, 0));
         let hi = reg.land_value_sample(cell(1, 0, 0));
-        assert!((lo - 0.0).abs() < 1e-6, "below-min must clamp to 0.0, got {lo}");
-        assert!((hi - 1.0).abs() < 1e-6, "above-max must clamp to 1.0, got {hi}");
+        assert!(
+            (lo - 0.0).abs() < 1e-6,
+            "below-min must clamp to 0.0, got {lo}"
+        );
+        assert!(
+            (hi - 1.0).abs() < 1e-6,
+            "above-max must clamp to 1.0, got {hi}"
+        );
     }
 
     /// Substrate-specific saturation — `set_saturation` overrides
@@ -954,9 +952,9 @@ mod tests {
         let mut reg = EnvOverlayRegistry::new();
         reg.temperature.insert(cell(0, 0, 0), 30.0);
         let typed = reg.temperature_sample(cell(0, 0, 0));
-        let dispatched =
-            reg.query(EnvDataSourceId::Temperature, None, cell(0, 0, 0))
-                .expect("temperature must be present");
+        let dispatched = reg
+            .query(EnvDataSourceId::Temperature, None, cell(0, 0, 0))
+            .expect("temperature must be present");
         assert!(
             (typed - dispatched).abs() < 1e-6,
             "typed ({typed}) and query ({dispatched}) must agree"
@@ -995,7 +993,11 @@ mod tests {
             .unwrap()
             .insert(cell(0, 0, 0), 42.0);
         let raw = reg
-            .query_raw(EnvDataSourceId::Pollution, Some(PollutionMedium::Air), cell(0, 0, 0))
+            .query_raw(
+                EnvDataSourceId::Pollution,
+                Some(PollutionMedium::Air),
+                cell(0, 0, 0),
+            )
             .expect("air pollution raw must be present");
         assert!(
             (raw - 42.0).abs() < 1e-6,
@@ -1015,22 +1017,10 @@ mod tests {
             EnvDataSourceId::Pollution.stable_id(Some(PollutionMedium::Noise)),
             "pollution.noise"
         );
-        assert_eq!(
-            EnvDataSourceId::LandValue.stable_id(None),
-            "land_value"
-        );
-        assert_eq!(
-            EnvDataSourceId::Temperature.stable_id(None),
-            "temperature"
-        );
-        assert_eq!(
-            EnvDataSourceId::WaterFlow.stable_id(None),
-            "water_flow"
-        );
-        assert_eq!(
-            EnvDataSourceId::WindFlow.stable_id(None),
-            "wind_flow"
-        );
+        assert_eq!(EnvDataSourceId::LandValue.stable_id(None), "land_value");
+        assert_eq!(EnvDataSourceId::Temperature.stable_id(None), "temperature");
+        assert_eq!(EnvDataSourceId::WaterFlow.stable_id(None), "water_flow");
+        assert_eq!(EnvDataSourceId::WindFlow.stable_id(None), "wind_flow");
     }
 
     /// The five `EnvDataSourceId` variants × four `PollutionMedium`

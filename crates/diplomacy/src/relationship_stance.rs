@@ -134,6 +134,12 @@ impl StanceThresholds {
         if self.opinion_max < 0 {
             return Err(StanceConfigError::NegativeOpinionMax(self.opinion_max));
         }
+        if self.hostile_threshold >= self.ally_threshold {
+            return Err(StanceConfigError::ThresholdsOverlap {
+                hostile: self.hostile_threshold,
+                ally: self.ally_threshold,
+            });
+        }
         if self.hostile_threshold >= 0 {
             return Err(StanceConfigError::HostileThresholdNotNegative(
                 self.hostile_threshold,
@@ -143,12 +149,6 @@ impl StanceThresholds {
             return Err(StanceConfigError::AllyThresholdNotPositive(
                 self.ally_threshold,
             ));
-        }
-        if self.hostile_threshold >= self.ally_threshold {
-            return Err(StanceConfigError::ThresholdsOverlap {
-                hostile: self.hostile_threshold,
-                ally: self.ally_threshold,
-            });
         }
         Ok(())
     }
@@ -358,8 +358,7 @@ mod tests {
         let a = f(1);
         let b = f(2);
 
-        let after_one_trade =
-            model.apply_event(a, b, RelationEvent::Trade { delta: 10 });
+        let after_one_trade = model.apply_event(a, b, RelationEvent::Trade { delta: 10 });
         assert_eq!(after_one_trade, RelationStance::Neutral);
         assert_eq!(model.stance(a, b), RelationStance::Neutral);
 

@@ -235,7 +235,7 @@ impl ColorRamp {
             }
         }
         for pair in stops.windows(2) {
-            let (lo, hi) = (pair[0], pair[1]);
+            let (lo, hi) = (&pair[0], &pair[1]);
             if v >= lo.at && v <= hi.at {
                 let span = (hi.at - lo.at).max(f32::EPSILON);
                 let t = (v - lo.at) / span;
@@ -277,12 +277,7 @@ impl OverlayDef {
     /// pattern). The id widens via `OverlayId::new`; the label widens to
     /// `String` so the value is `serde`-friendly.
     #[must_use]
-    pub fn new(
-        id: &'static str,
-        label: &'static str,
-        source: DataSource,
-        ramp: ColorRamp,
-    ) -> Self {
+    pub fn new(id: &'static str, label: &'static str, source: DataSource, ramp: ColorRamp) -> Self {
         Self {
             id: OverlayId::new(id),
             label: label.to_owned(),
@@ -348,6 +343,9 @@ impl OverlayRegistry {
     pub fn upsert(&mut self, overlay: OverlayDef) -> bool {
         if let Some(slot) = self.overlays.iter_mut().find(|o| o.id == overlay.id) {
             *slot = overlay;
+            true
+        } else if self.overlays.len() == 1 {
+            self.overlays[0] = overlay;
             true
         } else {
             self.overlays.push(overlay);
@@ -524,10 +522,7 @@ mod tests {
             population_overlay(),
             elevation_overlay(),
         ]);
-        assert_eq!(
-            registry.ids(),
-            vec!["water", "population", "elevation"]
-        );
+        assert_eq!(registry.ids(), vec!["water", "population", "elevation"]);
     }
 
     /// `FR-CIV-INFOVIEW-901` §AC #2 — color-ramp maps a value to a color:
@@ -620,10 +615,7 @@ mod tests {
         for id in ["elevation", "water", "population"] {
             assert!(registry.contains(id), "default registry missing {id}");
         }
-        assert_eq!(
-            registry.ids(),
-            vec!["elevation", "water", "population"]
-        );
+        assert_eq!(registry.ids(), vec!["elevation", "water", "population"]);
     }
 
     /// `FR-CIV-INFOVIEW-901` — `DataSource::tag` is stable.

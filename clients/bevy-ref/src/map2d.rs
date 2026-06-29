@@ -40,13 +40,13 @@ use civ_voxel::fluid_ca::CaGrid;
 use civ_voxel::material::{MaterialDef, MaterialRegistry, AIR, WATER};
 
 use crate::camera::CameraRig;
+use crate::settings_ui::{GameSettings, KeyBinding, ACTION_TOGGLE_MAP};
 use crate::sim_bridge::SimState;
 use crate::spawn_tools::SelectEntityRequest;
 use crate::terrain::{HEIGHT_SCALE, WATER_LEVEL};
 #[cfg(feature = "voxel")]
 use crate::voxel_sim::{voxel_surface_y, VoxelSimState};
 use crate::AttachMode;
-use crate::settings_ui::{GameSettings, KeyBinding, ACTION_TOGGLE_MAP};
 #[cfg(not(feature = "voxel"))]
 #[derive(Resource)]
 struct VoxelSimState;
@@ -802,12 +802,9 @@ fn draw_map_view(
                     frame.show(ui, |ui| {
                         ui.vertical(|ui| {
                             ui.label(
-                                egui::RichText::new(format!(
-                                    "Zoom {:.2}x",
-                                    view.zoom / min_zoom
-                                ))
-                                .color(egui::Color32::from_rgb(220, 230, 240))
-                                .size(12.5),
+                                egui::RichText::new(format!("Zoom {:.2}x", view.zoom / min_zoom))
+                                    .color(egui::Color32::from_rgb(220, 230, 240))
+                                    .size(12.5),
                             );
                             if ui
                                 .button("Reset to fit")
@@ -863,12 +860,7 @@ fn draw_map_view(
         });
 }
 
-fn draw_title(
-    painter: &egui::Painter,
-    screen: egui::Rect,
-    fade: f32,
-    map_exit_key: &str,
-) {
+fn draw_title(painter: &egui::Painter, screen: egui::Rect, fade: f32, map_exit_key: &str) {
     let pos = egui::pos2(screen.center().x, screen.top() + 26.0);
     painter.text(
         pos,

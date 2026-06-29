@@ -28,7 +28,7 @@ impl VerbRegistry {
     /// automatically appears in Holocron.
     pub fn from_mcp_catalog() -> Self {
         let mut reg = Self::default();
-        for desc in crate::verbs::MCP_VERBS {
+        for desc in crate::verbs::MCP_VERBS.iter() {
             reg.inner.insert(desc.id.clone(), desc.clone());
         }
         reg
@@ -174,7 +174,7 @@ fn score_verb(desc: &VerbDescriptor, q_lower: &str) -> Option<f32> {
         }
     }
     // 9. Description substring (lowest)
-    if desc.description.to_lowercase().contains(q_lower) {
+    if desc.summary.to_lowercase().contains(q_lower) {
         return Some(0.30);
     }
     None
@@ -192,20 +192,18 @@ mod tests {
             name: "Banish Disaster".into(),
             group: VerbGroup::Divine,
             aliases: vec!["calm".into(), "stop_disaster".into()],
-            hotkey: Some('B'),
             provenance: Provenance::Mcp,
-            risk_tier: RiskTier::Reversible,
-            description: "Ends the current disaster immediately.".into(),
+            risk: RiskTier::Minor,
+            summary: "Ends the current disaster immediately.".into(),
         });
         r.register(VerbDescriptor {
             id: "civ_lay_tax".into(),
             name: "Lay Tax".into(),
             group: VerbGroup::Civic,
             aliases: vec!["tax".into()],
-            hotkey: Some('T'),
             provenance: Provenance::Mcp,
-            risk_tier: RiskTier::Reversible,
-            description: "Set a new tax rate for the city.".into(),
+            risk: RiskTier::Minor,
+            summary: "Set a new tax rate for the city.".into(),
         });
         r
     }
@@ -225,10 +223,9 @@ mod tests {
             name: "Test".into(),
             group: VerbGroup::Debug,
             aliases: vec![],
-            hotkey: None,
-            provenance: Provenance::Other("manual".into()),
-            risk_tier: RiskTier::Reversible,
-            description: "test verb".into(),
+            provenance: Provenance::Internal,
+            risk: RiskTier::Minor,
+            summary: "test verb".into(),
         });
         assert_eq!(r.len(), 1);
         assert!(r.get("civ_test").is_some());
@@ -243,20 +240,18 @@ mod tests {
             name: "First".into(),
             group: VerbGroup::Debug,
             aliases: vec![],
-            hotkey: None,
-            provenance: Provenance::Other("a".into()),
-            risk_tier: RiskTier::Reversible,
-            description: "v1".into(),
+            provenance: Provenance::Internal,
+            risk: RiskTier::Minor,
+            summary: "v1".into(),
         };
         let v2 = VerbDescriptor {
             id: "civ_dup".into(),
             name: "Second".into(),
             group: VerbGroup::Debug,
             aliases: vec![],
-            hotkey: None,
-            provenance: Provenance::Other("b".into()),
-            risk_tier: RiskTier::Reversible,
-            description: "v2".into(),
+            provenance: Provenance::Internal,
+            risk: RiskTier::Minor,
+            summary: "v2".into(),
         };
         let prev = r.register(v1);
         assert!(prev.is_none());

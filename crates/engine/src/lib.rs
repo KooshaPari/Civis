@@ -10,12 +10,11 @@ pub mod emergence;
 pub mod emergence_metrics;
 pub mod engine;
 pub mod era;
-pub mod history;
-pub mod tech;
-pub mod faction_emergence;
 pub mod faction_decisions;
+pub mod faction_emergence;
 pub mod godtools;
 pub mod hash_chain;
+pub mod history;
 pub mod integrity;
 pub mod invariants;
 pub mod io;
@@ -33,76 +32,78 @@ pub mod save_bundle;
 pub mod scenario;
 pub mod spawn;
 pub mod spectator;
+pub mod tech;
 
 /// Fixed-point scaling factor (1 raw unit = SCALE joules). Engine energy
 /// quantities are stored in fixed-point `i64` for determinism and converted
 /// to `f64`/SI at the economy boundary using this constant.
 pub const SCALE: i64 = 1_000;
 
-pub use religion::{emerge_belief, spread_religion, Belief, BeliefConcept, Religion};
 pub use demographics::{
     carrying_capacity_from_food, tick_demographics, total_population, AgeGroup, Demographics,
 };
+pub use religion::{emerge_belief, spread_religion, Belief, BeliefConcept, Religion};
 // FR-AUDIO-wire: re-export the audio substrate's SFX trigger enum so
 // downstream crates (civ-server JSON-RPC + WS bridge) can name it as
 // `civ_engine::SfxTrigger` without taking a direct `civ-audio` dep.
 pub use civ_audio::triggers::SfxTrigger;
-pub use emergence::{
-    CivAiDecision, EmergenceFeedEvent, EmergenceState,
-};
-pub use emergence_metrics::{
-    BranchingRegime, EmergenceBranchingState, EmergenceSample,
-};
+pub use civ_emergence_metrics::branching::BranchingRegime;
+pub use civ_mod_host::{load_manifest, ModBrowserEntry, ModGuestStateSave, ModType};
+pub use civ_planet::Climate;
+pub use civ_tactics::{DamageEvent, DoctrineLibrary};
+pub use conditions::{check_outcome, GameOutcome};
+pub use emergence::{CivAiDecision, EmergenceFeedEvent, EmergenceState};
+pub use emergence_metrics::{EmergenceBranchingState, EmergenceSample};
 pub use engine::{
-    awakening_belief_gain, awakening_cohesion_gain, grid_to_norm, spawn, Building, BuildingType,
-    CombatDamagePulse, DiplomacyKind, EconomicFocus, EconomicFocusEvent, FactionRelationSnapshot, Fixed, MilitaryUnit, ModGuestStateSave, Position, ReplayLog,
-    Simulation, UnitType, WorldState,
+    job_type_for_civilian_id, Building, BuildingType, Citizen, CombatDamagePulse, DiplomacyKind,
+    EconomicFocus, EconomicFocusEvent, FactionRelationSnapshot, Fixed, InstitutionEvent, JobType,
+    MilitaryUnit, Position, ResourceType, Resources, Sim, SimSeed, Simulation, SimulationSnapshot,
+    StratBand, StratificationEvent, StratificationEventKind, StratificationReport, TileInspection,
+    TradeRoute, UnitType, WorldState,
 };
+pub use hash_chain::hash_hex;
+pub use replay::ReplayLog;
+pub use replay_format::{decode_civreplay, encode_civreplay};
+pub use save_bundle::CivSaveBundle;
 
 // FR-CIV-ARCH: Emergent building layouts re-export so callers can use
 // `civ_engine::EmergentLayout` and `civ_engine::LayoutStrategy` without
 // directly depending on the private `building_layouts` module.
-pub use building_layouts::{
-    EmergentLayout, LayoutStrategy,
-};
+pub use building_layouts::{EmergentLayout, LayoutStrategy};
 pub use era::{CivAge, CivEra, EraProgressionState, FactionEraSnapshot};
 pub use history::{EraHistory, EraTransition};
-pub use tech::{FactionEmergenceInputs, FactionTechState};
 pub use replay::ReplayError;
-pub use spawn::norm_to_grid;
+pub use spawn::{
+    grid_to_norm, norm_to_grid, spawn_airport_at, spawn_hangar_at, spawn_military_at,
+    spawn_port_at, unit_type_label,
+};
+pub use spectator::SpectatorView;
+pub use tech::{FactionEmergenceInputs, FactionTechState};
 
 // FR-CIV-GOV-001/002/003 (civ-007 institutions epic). Re-exported so callers
 // (server, clients, tests) can `use civ_engine::InstitutionKind` etc. without
 // pulling the `civ-institutions` crate directly.
 pub use civ_institutions::{
-    Institution, InstitutionEvent, InstitutionKind, GARRISON_UNLOCK_POPULATION,
-    TEMPLE_UNLOCK_POPULATION, TEMPLE_TO_GARRISON_RATIO,
+    Institution, InstitutionKind, GARRISON_UNLOCK_POPULATION, TEMPLE_UNLOCK_POPULATION,
 };
 
 // FR-CIV-GOV-100 (civ-007 social-mood epic). Re-exported so callers can name
 // the snapshot type as `civ_engine::MoodSnapshot` and the saturation /
 // history-cap constants as `civ_engine::MOOD_*` without taking a dependency
 // on the private `engine` module path.
-pub use engine::{
-    MoodSnapshot, MOOD_CRIME_BASE, MOOD_HISTORY_CAP, MOOD_MAX, MOOD_MIN,
-};
+pub use engine::{MoodSnapshot, MOOD_CRIME_BASE, MOOD_HISTORY_CAP, MOOD_MAX, MOOD_MIN};
 
 // FR-CIV-GOV-030 (civ-007 cohesion epic). Re-exported so callers
 // (server, clients, tests) can name the cohesion types as `civ_engine::KinshipEdge`
 // etc. without pulling the private `engine` module path.
 pub use engine::{
-    add_cohesion, add_trust, faction_count, last_tick_cohesion, last_tick_cohesion_snapshot,
-    CohesionCause, CohesionEdge, CohesionEvent, CohesionEventKind, CohesionKind, CohesionSnapshot,
-    FabricTier, KinshipEdge, KinshipKind,
+    CohesionEvent, CohesionEventKind, CohesionSnapshot, FabricTier, KinshipEdge, KinshipKind,
 };
 
 // FR-CIV-UNREST-001 (civ-007 unrest sub-epic). Re-exported so callers
 // can name the unrest types as `civ_engine::UnrestEvent` etc.
 // without pulling the private `engine` module path.
-pub use engine::{
-    last_tick_unrest, last_tick_unrest_settlement, set_settlement_gini, unrest_level,
-    UnrestEvent, UnrestEventKind, UnrestLevel, UnrestSnapshot,
-};
+pub use engine::{UnrestEvent, UnrestLevel, UnrestSnapshot};
 
 // FR-CIV-RELIGION (religion §7 wiring). Re-exported so callers
 // (server, clients, tests) can name `ReligiousProfile`, `SubstrateGradients`,

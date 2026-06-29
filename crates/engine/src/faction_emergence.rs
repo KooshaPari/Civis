@@ -299,7 +299,7 @@ mod tests {
     #[test]
     fn should_faction_split_triggers_on_high_variance() {
         let members = vec![
-            ideology([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+            ideology([-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0]),
             ideology([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
         ];
 

@@ -1,4 +1,4 @@
-﻿//! Civilization era evaluation (FR-ERA / FR-CIV-GAME-003).
+//! Civilization era evaluation (FR-ERA / FR-CIV-GAME-003).
 //!
 //! Eras **emerge** from accumulated tech, population density, and resource
 //! surplus — not a scripted tech tree. Call [`EraProgressionState::tick`] each
@@ -40,15 +40,20 @@ impl CivAge {
     /// Evaluate emergent age from live faction metrics (first-match from most advanced).
     #[must_use]
     pub fn evaluate(population: u32, tech_level: u32, surplus: i64) -> Self {
-        if population >= 4_000 || tech_level >= 12 || surplus >= 25_000 {
+        let population_supported = tech_level >= 1 || surplus >= 150;
+        if (population_supported && population >= 4_000) || tech_level >= 12 || surplus >= 25_000 {
             CivAge::Industrial
-        } else if population >= 1_500 || tech_level >= 8 || surplus >= 10_000 {
+        } else if (population_supported && population >= 1_500)
+            || tech_level >= 8
+            || surplus >= 10_000
+        {
             CivAge::Medieval
-        } else if population >= 400 || tech_level >= 5 || surplus >= 2_500 {
+        } else if (population_supported && population >= 400) || tech_level >= 5 || surplus >= 2_500
+        {
             CivAge::Classical
-        } else if population >= 150 || tech_level >= 3 || surplus >= 600 {
+        } else if (population_supported && population >= 150) || tech_level >= 3 || surplus >= 600 {
             CivAge::Iron
-        } else if population >= 40 || tech_level >= 1 || surplus >= 150 {
+        } else if (population_supported && population >= 40) || tech_level >= 1 || surplus >= 150 {
             CivAge::Bronze
         } else {
             CivAge::Stone
@@ -222,7 +227,7 @@ impl EraProgressionState {
     }
 
     /// Run research, tech, and era evaluation for the current tick.
-    pub fn tick(&mut self, sim: &Simulation) {
+    pub fn tick(&mut self, sim: &mut Simulation) {
         tick_research(sim, &mut self.faction_tech);
         tick_tech(&mut self.faction_tech);
         self.evaluate_eras(sim);
@@ -234,7 +239,11 @@ impl EraProgressionState {
         let inputs = gather_faction_inputs(sim);
         let mut rows = BTreeMap::new();
         for (faction_id, faction_inputs) in inputs {
-            let age = self.faction_ages.get(&faction_id).copied().unwrap_or(CivAge::Stone);
+            let age = self
+                .faction_ages
+                .get(&faction_id)
+                .copied()
+                .unwrap_or(CivAge::Stone);
             let tech_level = self
                 .faction_tech
                 .get(&faction_id)
@@ -269,14 +278,17 @@ impl EraProgressionState {
 
 /// Research phase hook (FR-ERA): emergent progress from economy + population.
 pub fn phase_research(sim: &mut Simulation) {
-    tick_research(sim, &mut sim.era_progression_mut().faction_tech);
+    let mut faction_tech = sim.era_progression().faction_tech.clone();
+    tick_research(sim, &mut faction_tech);
+    sim.era_progression_mut().faction_tech = faction_tech;
 }
 
 /// Tech + era phase hook (FR-ERA): unlock levels and evaluate ages.
 pub fn phase_tech(sim: &mut Simulation) {
-    let progression = sim.era_progression_mut();
+    let mut progression = sim.era_progression().clone();
     tick_tech(&mut progression.faction_tech);
     progression.evaluate_eras(sim);
+    *sim.era_progression_mut() = progression;
 }
 
 #[cfg(test)]
@@ -287,6 +299,21 @@ mod tests {
 
     fn thriving_stagnant_sim() -> Simulation {
         let mut sim = Simulation::with_seed(42);
+        sim.world.clear();
+        sim.state.factions = std::collections::HashMap::from([(0, "Thriving".to_string())]);
+        let mut rng = sim.rng_mut().clone();
+        for id in 0..8 {
+            let _ = spawn_civilian_at(
+                &mut sim.world,
+                1_000 + id,
+                Alignment::Faction(0),
+                0.20,
+                0.20,
+                ActorVisualKind::Humanoid,
+                &mut rng,
+            );
+        }
+        *sim.rng_mut() = rng;
         let thriving = sim.state.faction_resources.entry(0).or_default();
         thriving.food = Fixed::from_num(8_000);
         thriving.wood = Fixed::from_num(6_000);
@@ -299,9 +326,7 @@ mod tests {
         stagnant.food = Fixed::from_num(5);
         stagnant.wood = Fixed::from_num(5);
         stagnant.metal = Fixed::from_num(5);
-        sim.state
-            .faction_treasury
-            .insert(1, Fixed::from_num(10));
+        sim.state.faction_treasury.insert(1, Fixed::from_num(10));
         sim
     }
 
@@ -348,7 +373,8 @@ mod tests {
 
         let snapshot = sim.snapshot();
         assert!(
-            snapshot.faction_eras.get(&0).map(|s| s.age) > snapshot.faction_eras.get(&1).map(|s| s.age),
+            snapshot.faction_eras.get(&0).map(|s| s.age)
+                > snapshot.faction_eras.get(&1).map(|s| s.age),
             "snapshot must surface higher era for thriving faction"
         );
     }
@@ -430,6 +456,7 @@ mod tests {
     fn prosperous_faction_out_researches_and_diffuses_to_neighbor() {
         let mut sim = thriving_stagnant_sim();
         let mut rng = sim.rng_mut().clone();
+        sim.state.factions.insert(1, "Neighbor".to_string());
 
         for id in 0..12 {
             let _ = spawn_civilian_at(
@@ -442,7 +469,7 @@ mod tests {
                 &mut rng,
             );
         }
-        for id in 0..2 {
+        for id in 0..4 {
             let _ = spawn_civilian_at(
                 &mut sim.world,
                 20_000 + id,

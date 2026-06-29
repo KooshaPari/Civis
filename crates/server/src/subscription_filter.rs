@@ -103,14 +103,8 @@ impl Default for SubscriptionFilter {
 impl SubscriptionFilter {
     /// Build from WS connect query params. Absent params → inactive (full broadcast).
     pub fn from_connect_query(query: &WsConnectQuery) -> Self {
-        let kinds_source = query
-            .sub_filter
-            .as_deref()
-            .or(query.frame_kinds.as_deref());
-        let stride = query
-            .tick_stride
-            .as_deref()
-            .and_then(parse_tick_stride);
+        let kinds_source = query.sub_filter.as_deref().or(query.frame_kinds.as_deref());
+        let stride = query.tick_stride.as_deref().and_then(parse_tick_stride);
         build_filter(kinds_source, stride, None)
     }
 
@@ -455,4 +449,3 @@ mod tests {
         assert!(kinds.contains(&FrameKind::FactionState));
     }
 }
-

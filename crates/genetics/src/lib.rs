@@ -511,6 +511,9 @@ mod tests {
         );
 
         let event = evaluate_speciation(0, 5, &variant, &base, &class);
-        assert!(event.is_none(), "no speciation event should fire below threshold");
+        assert!(
+            event.is_none(),
+            "no speciation event should fire below threshold"
+        );
     }
 }

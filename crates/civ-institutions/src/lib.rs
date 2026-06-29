@@ -63,7 +63,7 @@ use serde::{Deserialize, Serialize};
 /// - `civ_engine::Simulation::phase_institutions` — emits the `Spawned` event
 /// - `civ-server` ws_bridge — surfaces to the Bevy client
 /// - Religion / mood research modules — pulls belief signals from this
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum InstitutionKind {
     /// Religious / civic center.
     Temple,

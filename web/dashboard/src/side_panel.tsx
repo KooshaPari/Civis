@@ -4,6 +4,8 @@ import { ModsPanel } from "./mods_panel";
 import { EventFeed } from "./event_feed";
 import { PerfPanel } from "./perf_panel";
 import { StatsPanel } from "./stats_panel";
+import { DiplomacyPanel } from "./diplomacy_panel";
+import { ReligionPanel } from "./religion_panel";
 import { useDashboardStore } from "./store";
 
 export function SidePanel() {
@@ -35,6 +37,20 @@ export function SidePanel() {
               onClick={() => dispatch({ type: "set_active_side_tab", tab: "events" })}
             >
               Event Feed
+            </button>
+            <button
+              type="button"
+              className={`side-panel-tab ${state.activeSideTab === "religion" ? "active" : ""}`}
+              onClick={() => dispatch({ type: "set_active_side_tab", tab: "religion" })}
+            >
+              Religion
+            </button>
+            <button
+              type="button"
+              className={`side-panel-tab ${state.activeSideTab === "diplomacy" ? "active" : ""}`}
+              onClick={() => dispatch({ type: "set_active_side_tab", tab: "diplomacy" })}
+            >
+              Diplomacy
             </button>
           </div>
           <p className="inspector-hint">
@@ -90,6 +106,10 @@ export function SidePanel() {
                 <p className="inspector-empty">Click terrain to inspect a cell</p>
               )}
             </>
+          ) : state.activeSideTab === "religion" ? (
+            <ReligionPanel />
+          ) : state.activeSideTab === "diplomacy" ? (
+            <DiplomacyPanel />
           ) : (
             <EventFeed />
           )}

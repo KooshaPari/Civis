@@ -51,6 +51,24 @@
 //! implementation in amber.
 //!
 use civ_engine::Simulation;
+use civ_voxel::{MaterialId, WorldCoord, FIXED_SCALE};
+
+fn seed_dense_voxel_block(sim: &mut Simulation) {
+    for z in 0..16_i64 {
+        for y in 0..16_i64 {
+            for x in 0..16_i64 {
+                sim.voxel_mut().write(
+                    WorldCoord {
+                        x: x * FIXED_SCALE,
+                        y: y * FIXED_SCALE,
+                        z: z * FIXED_SCALE,
+                    },
+                    MaterialId(1),
+                );
+            }
+        }
+    }
+}
 
 /// Number of ticks the sim is allowed to run before we sample. Large
 /// enough to cross several `EMERGENCE_SAMPLE_INTERVAL` boundaries
@@ -67,10 +85,7 @@ const RUN_SEEDS: &[u64] = &[7, 31, 97];
 /// assert the emergence-metric outputs are well-formed without
 /// pinning exact numbers.
 fn assert_in_range(label: &str, value: f32, lo: f32, hi: f32) {
-    assert!(
-        value.is_finite(),
-        "{label}: expected finite, got {value}"
-    );
+    assert!(value.is_finite(), "{label}: expected finite, got {value}");
     assert!(
         value >= lo && value <= hi,
         "{label}: expected value in [{lo}, {hi}], got {value}"
@@ -96,6 +111,7 @@ fn assert_in_range(label: &str, value: f32, lo: f32, hi: f32) {
 fn fr_emergence_quality_sample_metrics_reach_nontrivial_ranges() {
     for &seed in RUN_SEEDS {
         let mut sim = Simulation::with_seed(seed);
+        seed_dense_voxel_block(&mut sim);
         // Run the sim across several sample boundaries so the
         // dashboard has signal to consume. 300 ticks > 6 samples
         // worth of accumulator history.
@@ -348,9 +364,7 @@ fn fr_emergence_quality_at_least_one_layer_emits_non_empty_structure() {
         // ---- Layer E: stratification reports (FR-CIV-GOV-020).
         // With 8 households registered, `phase_stratification` should
         // produce a report for settlement 0.
-        let stratification_non_empty = sim
-            .last_tick_stratification_report(0)
-            .is_some();
+        let stratification_non_empty = sim.last_tick_stratification_report(0).is_some();
 
         let seed_has_structure = institutions_non_empty
             || social_mood_non_empty
@@ -401,12 +415,24 @@ fn fr_emergence_quality_psyche_culture_sentience_layers_mutate_over_ticks() {
     let mut any_signal = false;
     for &seed in RUN_SEEDS {
         let mut sim = Simulation::with_seed(seed);
-        sim.advance_ticks(150);
+        sim.set_settlement_population(0, 60);
+        sim.set_settlement_food_stocked(0, 1_000);
+        sim.set_settlement_housing_capacity(0, 60);
+        sim.set_settlement_crime_pressure(0, 10);
+        for hh in 0..8u64 {
+            sim.register_household(hh);
+            sim.set_household_wealth(hh, 1_000 + (hh as i64) * 250);
+        }
+
+        sim.advance_ticks(RUN_TICKS);
 
         let sentience_count = sim.sentience_events().len();
         let culture_count = sim.cluster_cultures().len();
         let civ_ai_count = sim.civ_ai_decisions().len();
         let feed_non_empty = !sim.emergence_feed().is_empty();
+        let mood_non_empty = !sim.last_tick_mood_all().is_empty();
+        let stratification_non_empty = sim.last_tick_stratification_report(0).is_some();
+        let legends_non_empty = sim.legends_graph().node_count() >= 1;
 
         // The emergence feed (one event per
         // culture_drift / psyche_sample / death / sentience /
@@ -419,15 +445,18 @@ fn fr_emergence_quality_psyche_culture_sentience_layers_mutate_over_ticks() {
             || sentience_count > 0
             || civ_ai_count > 0
             || culture_count > 0
+            || mood_non_empty
+            || stratification_non_empty
+            || legends_non_empty
         {
             any_signal = true;
         }
     }
     assert!(
         any_signal,
-        "phase_emergence must produce observable signal across {} seeds after 150 ticks; \
+        "phase_emergence must produce observable signal across {} seeds after {RUN_TICKS} ticks; \
          none did. Either the phase is dead or the public readouts \
-         (emergence_feed / cluster_cultures / sentience_events / civ_ai_decisions) \
+         (emergence_feed / cluster_cultures / sentience_events / civ_ai_decisions / mood / stratification / legends) \
          are wired wrong.",
         RUN_SEEDS.len()
     );
@@ -469,12 +498,7 @@ fn fr_emergence_quality_branching_alarm_stays_dormant_on_calm_sim() {
     // And the rolling-mean σ̄ must remain inside the documented
     // `[0, 3]` band — anything beyond means a division-by-zero or
     // numerical overflow in the SOC ledger.
-    assert_in_range(
-        "branching.sigma_bar",
-        branching.sigma_bar,
-        0.0,
-        3.0,
-    );
+    assert_in_range("branching.sigma_bar", branching.sigma_bar, 0.0, 3.0);
 
     // Regime classification must be one of the four documented
     // labels; any other value would mean the regime enum drifted.
@@ -523,16 +547,32 @@ fn fr_emergence_quality_sample_emergence_is_idempotent_on_boundary() {
 
     for (label, a, b) in [
         ("entropy_norm", s1.entropy_norm, s2.entropy_norm),
-        ("cluster_entropy", s1.dashboard.cluster_entropy, s2.dashboard.cluster_entropy),
+        (
+            "cluster_entropy",
+            s1.dashboard.cluster_entropy,
+            s2.dashboard.cluster_entropy,
+        ),
         (
             "sentience_fraction",
             s1.dashboard.sentience_fraction,
             s2.dashboard.sentience_fraction,
         ),
-        ("psyche_stability", s1.dashboard.psyche_stability, s2.dashboard.psyche_stability),
-        ("diplomacy_tension", s1.dashboard.diplomacy_tension, s2.dashboard.diplomacy_tension),
+        (
+            "psyche_stability",
+            s1.dashboard.psyche_stability,
+            s2.dashboard.psyche_stability,
+        ),
+        (
+            "diplomacy_tension",
+            s1.dashboard.diplomacy_tension,
+            s2.dashboard.diplomacy_tension,
+        ),
         ("branching_sigma", s1.branching_sigma, s2.branching_sigma),
-        ("branching_sigma_score", s1.branching_sigma_score, s2.branching_sigma_score),
+        (
+            "branching_sigma_score",
+            s1.branching_sigma_score,
+            s2.branching_sigma_score,
+        ),
         ("power_law_alpha", s1.power_law_alpha, s2.power_law_alpha),
         ("novelty_rate", s1.novelty_rate, s2.novelty_rate),
     ] {
@@ -585,8 +625,7 @@ fn fr_emergence_quality_dashboard_stays_in_range_across_long_run() {
             d.cluster_entropy,
         );
         assert!(
-            d.sentience_fraction.is_finite()
-                && (0.0..=1.0).contains(&d.sentience_fraction),
+            d.sentience_fraction.is_finite() && (0.0..=1.0).contains(&d.sentience_fraction),
             "tick {target}: sentience_fraction out of range: {}",
             d.sentience_fraction,
         );

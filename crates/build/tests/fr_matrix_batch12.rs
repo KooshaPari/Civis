@@ -405,6 +405,7 @@ fn fr_civ_bio_001_round_trip_parcel_facade() {
         provenance: [(BuildingId(99), BuildingProvenance::Freehand)]
             .into_iter()
             .collect(),
+        completed: Default::default(),
     };
     let encoded = to_string(&graph).expect("serialize graph");
     let decoded: BuildingGraph = from_str(&encoded).expect("deserialize graph");
@@ -437,6 +438,7 @@ fn fr_civ_bio_002_capacity_counts_only_residential() {
         ],
         facades: Default::default(),
         provenance: Default::default(),
+        completed: Default::default(),
     };
     assert_eq!(graph.total_capacity(), 4);
 }
@@ -467,6 +469,7 @@ fn fr_civ_bio_003_occupied_counts_residential() {
         ],
         facades: Default::default(),
         provenance: Default::default(),
+        completed: Default::default(),
     };
     assert_eq!(graph.occupied(), 2);
 }

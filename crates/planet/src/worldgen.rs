@@ -29,7 +29,7 @@ impl WorldgenConfig {
     pub const fn new(seed: u64, size: u32, sea_level: f32, roughness: f32) -> Self {
         Self {
             seed,
-            size: size.max(1),
+            size: if size < 1 { 1 } else { size },
             sea_level: if sea_level < 0.0 {
                 0.0
             } else if sea_level > 1.0 {
@@ -259,7 +259,11 @@ fn quantize_height(height: f32) -> u16 {
     (height.clamp(0.0, 1.0) * 4095.0).round() as u16
 }
 
-fn neighbors(x: usize, z: usize, size: usize) -> impl Iterator<Item = (usize, usize)> {
+fn clamp01(value: f32) -> f32 {
+    value.clamp(0.0, 1.0)
+}
+
+fn neighbors(x: usize, z: usize, size: usize) -> Vec<(usize, usize)> {
     let mut items = [(x, z); 4];
     let mut len = 0usize;
     if x > 0 {
@@ -278,7 +282,7 @@ fn neighbors(x: usize, z: usize, size: usize) -> impl Iterator<Item = (usize, us
         items[len] = (x, z + 1);
         len += 1;
     }
-    items[..len].iter().copied()
+    items[..len].to_vec()
 }
 
 fn simplex_fbm(seed: u64, x: f32, y: f32, octaves: usize) -> f32 {

@@ -28,7 +28,10 @@
 //! green-step implementation lands in crates/engine/src/engine.rs,
 //! all 4 tests compile and pass.
 
-use civ_engine::{CohesionCause, CohesionEvent, CohesionKind, CohesionSnapshot, Sim, SimSeed};
+use civ_engine::{
+    CohesionEvent, CohesionEventKind, CohesionSnapshot, FabricTier, KinshipEdge, KinshipKind, Sim,
+    SimSeed,
+};
 
 const COHESION_SEED: u64 = 0xC0_FFEE_0000_0007;
 
@@ -36,9 +39,16 @@ const COHESION_SEED: u64 = 0xC0_FFEE_0000_0007;
 fn fr_civ_gov_030_base_events_emitted_per_tick_on_edges() {
     let mut sim = Sim::with_seed(SimSeed::from_u64(COHESION_SEED));
     let s0 = 0u32;
-    sim.register_household_in_settlement(s0, 1);
-    sim.register_household_in_settlement(s0, 2);
-    sim.add_cohesion(1, 2, CohesionKind::Blood, 80);
+    sim.set_settlement_actor(1, s0);
+    sim.set_settlement_actor(2, s0);
+    sim.register_kinship(
+        1,
+        KinshipEdge {
+            kind: KinshipKind::Family,
+            target: 2,
+        },
+    );
+    sim.add_trust(1, 2, 80);
     sim.tick();
     let events = sim.last_tick_cohesion();
     assert!(
@@ -46,34 +56,49 @@ fn fr_civ_gov_030_base_events_emitted_per_tick_on_edges() {
         "FR-CIV-GOV-030.base: at least one cohesion event should be emitted on tick"
     );
     let e: &CohesionEvent = &events[0];
-    // blood edges get a per-tick SharedInstitution reinforcement
-    let _ = e.delta; // delta may be 0, positive, or negative
-    let _ = CohesionCause::SharedInstitution;
+    assert_eq!(e.settlement_id, s0);
+    assert!(
+        matches!(e.kind, CohesionEventKind::Strengthened),
+        "positive kinship/trust fabric should strengthen, got {:?}",
+        e.kind
+    );
 }
 
 #[test]
 fn fr_civ_gov_030_kinship_blood_and_marriage_have_higher_base_strength() {
     let mut sim = Sim::with_seed(SimSeed::from_u64(COHESION_SEED));
     let s0 = 0u32;
-    sim.register_household_in_settlement(s0, 10);
-    sim.register_household_in_settlement(s0, 20);
-    sim.register_household_in_settlement(s0, 30);
-    // Blood (kinship): strength=80 should be reinforced
-    sim.add_cohesion(10, 20, CohesionKind::Blood, 80);
-    // Rival (non-kinship): strength=20 should be unchanged or decay
-    sim.add_cohesion(10, 30, CohesionKind::Rival, 20);
-    sim.tick();
-    let events = sim.last_tick_cohesion();
-    let blood_delta: i32 = events
-        .iter()
-        .filter(|e| matches!(e.cause, CohesionCause::SharedInstitution))
-        .map(|e| e.delta)
-        .sum();
-    // kinship edges should have a non-negative net delta across ticks
-    assert!(
-        blood_delta >= 0,
-        "FR-CIV-GOV-030.kinship: blood/institution edges should not decay, got delta={blood_delta}"
+    sim.set_settlement_actor(10, s0);
+    sim.set_settlement_actor(20, s0);
+    sim.set_settlement_actor(30, s0);
+    sim.register_kinship(
+        10,
+        KinshipEdge {
+            kind: KinshipKind::Family,
+            target: 20,
+        },
     );
+    sim.register_kinship(
+        10,
+        KinshipEdge {
+            kind: KinshipKind::Clan,
+            target: 30,
+        },
+    );
+    sim.add_trust(10, 20, 80);
+    sim.add_trust(10, 30, 20);
+    sim.tick();
+    let snapshot = sim
+        .last_tick_cohesion_settlement(s0)
+        .expect("cohesion snapshot");
+    assert!(
+        snapshot.kin_count >= 2 && snapshot.trust_sum >= 100,
+        "FR-CIV-GOV-030.kinship: kinship/trust should contribute to fabric; got {snapshot:?}"
+    );
+    assert!(matches!(
+        snapshot.fabric,
+        FabricTier::Tight | FabricTier::Loosened
+    ));
 }
 
 #[test]
@@ -82,29 +107,21 @@ fn fr_civ_gov_030_fragment_low_trust_increases_faction_count() {
     let s0 = 0u32;
     // 4 households in a single settlement, all rival to each other
     for h in 1u64..=4u64 {
-        sim.register_household_in_settlement(s0, h);
-    }
-    for i in 1u64..=4u64 {
-        for j in 1u64..=4u64 {
-            if i != j {
-                sim.add_cohesion(i, j, CohesionKind::Rival, 5);
-            }
-        }
+        sim.set_settlement_actor(h, s0);
+        sim.set_actor_in_settlement_hardship(h, 80);
     }
     // run for enough ticks for fragmentation to occur
     for _ in 0..100 {
         sim.tick();
     }
-    let snap: Option<CohesionSnapshot> = sim.last_tick_cohesion_snapshot(s0);
+    let snap: Option<CohesionSnapshot> = sim.last_tick_cohesion_settlement(s0);
     let snap = snap.expect("snapshot should be present after ticks");
-    // either avg_trust is low OR faction_count >= 1
-    let fragmentations = snap.fragmentations;
-    let faction_count = snap.faction_count;
+    let fragmentations = snap.fragmentation_events;
     assert!(
-        fragmentations > 0 || faction_count >= 1,
+        fragmentations > 0 || matches!(snap.fabric, FabricTier::Fractured),
         "FR-CIV-GOV-030.fragment: settlement with all-rival edges should fragment; \
-         got fragmentations={fragmentations} faction_count={faction_count} avg_trust={}",
-        snap.avg_trust
+         got fragmentations={fragmentations} fabric={:?}",
+        snap.fabric
     );
 }
 
@@ -114,25 +131,39 @@ fn fr_civ_gov_030_determinism_identical_seeds_yield_identical_snapshots() {
     let mut b = Sim::with_seed(SimSeed::from_u64(COHESION_SEED));
     let s0 = 0u32;
     for h in 1u64..=3u64 {
-        a.register_household_in_settlement(s0, h);
-        b.register_household_in_settlement(s0, h);
+        a.set_settlement_actor(h, s0);
+        b.set_settlement_actor(h, s0);
     }
-    a.add_cohesion(1, 2, CohesionKind::Ally, 60);
-    a.add_cohesion(1, 3, CohesionKind::Rival, 20);
-    b.add_cohesion(1, 2, CohesionKind::Ally, 60);
-    b.add_cohesion(1, 3, CohesionKind::Rival, 20);
+    a.register_kinship(
+        1,
+        KinshipEdge {
+            kind: KinshipKind::Clan,
+            target: 2,
+        },
+    );
+    a.add_trust(1, 2, 60);
+    a.add_trust(1, 3, -20);
+    b.register_kinship(
+        1,
+        KinshipEdge {
+            kind: KinshipKind::Clan,
+            target: 2,
+        },
+    );
+    b.add_trust(1, 2, 60);
+    b.add_trust(1, 3, -20);
     for _ in 0..10 {
         a.tick();
         b.tick();
     }
-    let sa = a.last_tick_cohesion_snapshot(s0).expect("a snapshot");
-    let sb = b.last_tick_cohesion_snapshot(s0).expect("b snapshot");
+    let sa = a.last_tick_cohesion_settlement(s0).expect("a snapshot");
+    let sb = b.last_tick_cohesion_settlement(s0).expect("b snapshot");
     assert_eq!(
-        sa.avg_trust, sb.avg_trust,
-        "FR-CIV-GOV-030.determinism: avg_trust should match for identical seeds"
+        sa.trust_sum, sb.trust_sum,
+        "FR-CIV-GOV-030.determinism: trust_sum should match for identical seeds"
     );
     assert_eq!(
-        sa.faction_count, sb.faction_count,
-        "FR-CIV-GOV-030.determinism: faction_count should match for identical seeds"
+        sa.fabric, sb.fabric,
+        "FR-CIV-GOV-030.determinism: fabric should match for identical seeds"
     );
 }

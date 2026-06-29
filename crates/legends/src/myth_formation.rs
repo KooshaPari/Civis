@@ -210,12 +210,7 @@ impl MythIndex {
     pub fn counts(&self) -> BTreeMap<String, (usize, u32, u32)> {
         self.buckets
             .iter()
-            .map(|(k, b)| {
-                (
-                    k.clone(),
-                    (b.evidence.len(), b.crystallized, b.pending),
-                )
-            })
+            .map(|(k, b)| (k.clone(), (b.evidence.len(), b.crystallized, b.pending)))
             .collect()
     }
 
@@ -256,7 +251,7 @@ impl MythIndex {
         // "every event is a myth" should pass threshold=1 explicitly.
         let threshold = self.config.threshold.max(1);
 
-        let archetype = self.archetype_key(&entry.kind);
+        let archetype = self.archetype_key(entry);
         let bucket = self
             .buckets
             .entry(archetype.clone())
@@ -268,6 +263,10 @@ impl MythIndex {
                 crystallized: 0,
                 pending: 0,
             });
+
+        if bucket.evidence.contains(&entry.id) {
+            return None;
+        }
 
         bucket.evidence.push(entry.id);
         bucket.last_epoch = entry.epoch;
@@ -312,8 +311,8 @@ impl MythIndex {
     /// Resolve a chronicle event kind to its archetype key — the
     /// stable string that groups recurring events together for the
     /// purpose of myth formation.
-    fn archetype_key(&self, kind: &ChronicleEventKind) -> String {
-        match kind {
+    fn archetype_key(&self, entry: &ChronicleEntry) -> String {
+        match &entry.kind {
             // Closed taxonomy: each variant is its own archetype.
             ChronicleEventKind::Birth => "Birth".to_string(),
             ChronicleEventKind::Death => "Death".to_string(),
@@ -325,10 +324,10 @@ impl MythIndex {
                 if self.config.coalesce_other_by_label {
                     label.clone()
                 } else {
-                    // Structural equality: every distinct `Other`
-                    // string is its own archetype. Producers who want
-                    // distinct buckets per kind variant can opt in.
-                    format!("Other({label})")
+                    // Structural equality disabled: every emitted `Other`
+                    // event remains isolated and cannot accumulate with
+                    // same-label events into a named myth.
+                    format!("Other({label})#{}", entry.id.0)
                 }
             }
         }
@@ -395,12 +394,19 @@ mod tests {
             "4 migrations past threshold 3 must form exactly one myth"
         );
         let myth = &new[0];
-        assert_eq!(myth.archetype, "Migration", "myth archetype must be the kind label");
+        assert_eq!(
+            myth.archetype, "Migration",
+            "myth archetype must be the kind label"
+        );
         assert_eq!(
             myth.name, "MigrationI",
             "first Migration myth must be named `MigrationI`"
         );
-        assert_eq!(myth.evidence.len(), 3, "evidence must hold exactly the threshold entries");
+        assert_eq!(
+            myth.evidence.len(),
+            3,
+            "evidence must hold exactly the threshold entries"
+        );
         assert!(idx.is_empty() == false);
         assert_eq!(idx.len(), 1);
         assert_eq!(idx.all()[0].name, "MigrationI");
@@ -440,10 +446,15 @@ mod tests {
 
         // One pending migration left over — `counts()` reflects this.
         let counts = idx.counts();
-        let migration = counts.get("Migration").expect("Migration bucket must exist");
+        let migration = counts
+            .get("Migration")
+            .expect("Migration bucket must exist");
         assert_eq!(migration.0, 6, "all 6 entries recorded as evidence");
         assert_eq!(migration.1, 2, "2 crystallized myths");
-        assert_eq!(migration.2, 0, "0 pending after the second crystallization consumed 3 entries");
+        assert_eq!(
+            migration.2, 0,
+            "0 pending after the second crystallization consumed 3 entries"
+        );
     }
 
     /// Distinct archetypes crystallize independently and produce
@@ -476,7 +487,11 @@ mod tests {
         let mut idx = MythIndex::with_default_config();
         let new = idx.scan_chronicle(&chronicle);
 
-        assert_eq!(new.len(), 2, "two archetypes crossed threshold -> two myths");
+        assert_eq!(
+            new.len(),
+            2,
+            "two archetypes crossed threshold -> two myths"
+        );
         let names: Vec<&str> = new.iter().map(|m| m.name.as_str()).collect();
         assert!(names.contains(&"MigrationI"));
         assert!(names.contains(&"ConflictI"));
@@ -652,9 +667,30 @@ mod tests {
         let mut chronicle = Chronicle::new();
         // Spread across epochs so the threshold-crossing epoch is
         // clearly the third one (epoch 4 / 4 = 1).
-        chronicle.record(0, Epoch(0), ChronicleEventKind::Migration, Some(region(1)), Some(cluster(1)), parts(&[1]));
-        chronicle.record(2, Epoch(0), ChronicleEventKind::Migration, Some(region(1)), Some(cluster(1)), parts(&[1]));
-        chronicle.record(8, Epoch(2), ChronicleEventKind::Migration, Some(region(1)), Some(cluster(1)), parts(&[1]));
+        chronicle.record(
+            0,
+            Epoch(0),
+            ChronicleEventKind::Migration,
+            Some(region(1)),
+            Some(cluster(1)),
+            parts(&[1]),
+        );
+        chronicle.record(
+            2,
+            Epoch(0),
+            ChronicleEventKind::Migration,
+            Some(region(1)),
+            Some(cluster(1)),
+            parts(&[1]),
+        );
+        chronicle.record(
+            8,
+            Epoch(2),
+            ChronicleEventKind::Migration,
+            Some(region(1)),
+            Some(cluster(1)),
+            parts(&[1]),
+        );
 
         let mut idx = MythIndex::with_default_config();
         let new = idx.scan_chronicle(&chronicle);

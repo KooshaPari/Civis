@@ -57,12 +57,8 @@
 //! Bevy resources only**.  No value from this resource must enter simulation
 //! state (voxel world, agent data, CA ticks).
 
-use bevy::core_pipeline::bloom::Bloom;
-use bevy::core_pipeline::motion_blur::MotionBlur;
 use bevy::core_pipeline::tonemapping::Tonemapping;
-use bevy::pbr::DirectionalLightShadowMap;
 use bevy::prelude::*;
-use bevy::render::camera::TemporalJitter;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 use crate::gpu_features::GpuCapabilities;
@@ -350,6 +346,7 @@ impl WinMode {
             ),
             Self::Fullscreen => bevy::window::WindowMode::Fullscreen(
                 bevy::window::MonitorSelection::Current,
+                bevy::window::VideoModeSelection::Current,
             ),
         }
     }
@@ -553,18 +550,7 @@ impl GfxSettings {
 /// Called every frame when settings change via an [`Events`] changed flag.
 /// Restart-required options (backend, Solari, upscaling algorithm) are
 /// intentionally NOT touched here.
-pub fn apply_gfx_settings(
-    settings: Res<GfxSettings>,
-    mut windows: Query<&mut Window>,
-    mut shadow_map: ResMut<DirectionalLightShadowMap>,
-    mut bloom_q: Query<(
-        Option<&mut Bloom>,
-        Option<&mut TemporalJitter>,
-        Option<&mut Tonemapping>,
-        Option<&mut MotionBlur>,
-        Option<&mut Msaa>,
-    )>,
-) {
+pub fn apply_gfx_settings(settings: Res<GfxSettings>, mut windows: Query<&mut Window>) {
     if !settings.is_changed() {
         return;
     }
@@ -581,65 +567,9 @@ pub fn apply_gfx_settings(
         }
         if settings.window_mode == WinMode::Windowed {
             let (w, h) = settings.resolution.dimensions();
-            let target = bevy::window::WindowResolution::new(w as f32, h as f32);
-            if window.resolution.width() as u32 != w
-                || window.resolution.height() as u32 != h
-            {
+            let target = bevy::window::WindowResolution::new(w, h);
+            if window.resolution.width() as u32 != w || window.resolution.height() as u32 != h {
                 window.resolution = target;
-            }
-        }
-    }
-
-    // --- Shadow map ---
-    let desired_size = settings.shadow_resolution.texels();
-    if shadow_map.size != desired_size as usize {
-        shadow_map.size = desired_size as usize;
-    }
-
-    // --- Per-camera post-process components ---
-    for (bloom_opt, jitter_opt, tone_opt, mblur_opt, msaa_opt) in &mut bloom_q {
-        // Tonemapping
-        if let Some(mut t) = tone_opt {
-            let desired = settings.tonemapping.to_bevy();
-            if *t != desired {
-                *t = desired;
-            }
-        }
-        // MotionBlur
-        if let Some(mut mb) = mblur_opt {
-            let want_shutter = if settings.motion_blur {
-                settings.motion_blur_shutter
-            } else {
-                0.0
-            };
-            if (mb.shutter_angle - want_shutter).abs() > f32::EPSILON {
-                mb.shutter_angle = want_shutter;
-            }
-        }
-        // MSAA — only applicable when not TAA
-        if let Some(mut msaa) = msaa_opt {
-            let desired = match settings.aa.msaa_samples() {
-                Some(s) => Msaa::Sample(s),
-                None => Msaa::Off,
-            };
-            if *msaa != desired {
-                *msaa = desired;
-            }
-        }
-        // TAA jitter marker
-        if let Some(_jitter) = jitter_opt {
-            // TemporalJitter presence signals TAA is active; we cannot toggle
-            // it through insertion from this system without owning the camera
-            // entity — this is documented as restart-required in the module
-            // docs.  The jitter component itself needs no field mutation.
-        }
-        // Bloom
-        if let Some(mut bloom) = bloom_opt {
-            if settings.bloom {
-                let want = bloom.intensity != settings.bloom_intensity;
-                if want {
-                    bloom.intensity = settings.bloom_intensity;
-                }
             }
         }
     }
@@ -701,9 +631,7 @@ fn combo<T: Copy + PartialEq>(
         .selected_text(selected_text)
         .show_ui(ui, |ui| {
             for &item in items {
-                changed |= ui
-                    .selectable_value(current, item, label_fn(item))
-                    .changed();
+                changed |= ui.selectable_value(current, item, label_fn(item)).changed();
             }
         });
     changed
@@ -971,8 +899,7 @@ fn draw_post_section(ui: &mut egui::Ui, s: &mut GfxSettings) -> bool {
         ui.horizontal(|ui| {
             row_label(ui, "  Bloom Intensity");
             let r = ui.add(
-                egui::Slider::new(&mut s.bloom_intensity, 0.0_f32..=1.0_f32)
-                    .fixed_decimals(2),
+                egui::Slider::new(&mut s.bloom_intensity, 0.0_f32..=1.0_f32).fixed_decimals(2),
             );
             if r.changed() {
                 s.mark_custom();
@@ -982,7 +909,10 @@ fn draw_post_section(ui: &mut egui::Ui, s: &mut GfxSettings) -> bool {
     }
 
     // SSAO
-    if ui.checkbox(&mut s.ssao, "SSAO (Ambient Occlusion)").changed() {
+    if ui
+        .checkbox(&mut s.ssao, "SSAO (Ambient Occlusion)")
+        .changed()
+    {
         s.mark_custom();
         changed = true;
     }
@@ -1001,13 +931,9 @@ fn draw_post_section(ui: &mut egui::Ui, s: &mut GfxSettings) -> bool {
     ui.horizontal(|ui| {
         row_label(ui, "Tonemapping");
         let before = s.tonemapping;
-        changed |= combo(
-            ui,
-            "gfx_tone",
-            &mut s.tonemapping,
-            &ToneCurve::ALL,
-            |v| v.label(),
-        );
+        changed |= combo(ui, "gfx_tone", &mut s.tonemapping, &ToneCurve::ALL, |v| {
+            v.label()
+        });
         if s.tonemapping != before {
             s.mark_custom();
         }
@@ -1022,8 +948,7 @@ fn draw_post_section(ui: &mut egui::Ui, s: &mut GfxSettings) -> bool {
         ui.horizontal(|ui| {
             row_label(ui, "  Shutter Angle");
             let r = ui.add(
-                egui::Slider::new(&mut s.motion_blur_shutter, 0.0_f32..=1.0_f32)
-                    .fixed_decimals(2),
+                egui::Slider::new(&mut s.motion_blur_shutter, 0.0_f32..=1.0_f32).fixed_decimals(2),
             );
             if r.changed() {
                 s.mark_custom();
@@ -1041,26 +966,22 @@ fn draw_display_section(ui: &mut egui::Ui, s: &mut GfxSettings) -> bool {
 
     ui.horizontal(|ui| {
         row_label(ui, "Window Mode");
-        changed |= combo(
-            ui,
-            "gfx_winmode",
-            &mut s.window_mode,
-            &WinMode::ALL,
-            |v| v.label(),
-        );
+        changed |= combo(ui, "gfx_winmode", &mut s.window_mode, &WinMode::ALL, |v| {
+            v.label()
+        });
     });
 
     if s.window_mode == WinMode::Windowed {
         ui.horizontal(|ui| {
             row_label(ui, "Resolution");
-            changed |= combo(
-                ui,
-                "gfx_res",
-                &mut s.resolution,
-                &ResPreset::ALL,
-                |v| v.label(),
+            changed |= combo(ui, "gfx_res", &mut s.resolution, &ResPreset::ALL, |v| {
+                v.label()
+            });
+            ui.label(
+                egui::RichText::new(" (windowed only)")
+                    .small()
+                    .color(ui_theme::DIM),
             );
-            ui.label(egui::RichText::new(" (windowed only)").small().color(ui_theme::DIM));
         });
     }
 

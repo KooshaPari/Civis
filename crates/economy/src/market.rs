@@ -141,7 +141,6 @@ impl MarketState {
             *price = price.saturating_add(delta);
         }
     }
-
 }
 
 /// Integer-only price delta from tick and good id (replay-stable).
@@ -298,7 +297,7 @@ mod tests {
     fn apply_pressure_raises_price_when_demand_exceeds_supply() {
         let mut market = MarketState::default();
         let before = market.prices["food"];
-        market.apply_pressure("food", 1_000, 100);
+        market.apply_pressure("food", 100, 1_000);
         assert!(market.prices["food"] > before);
     }
 
@@ -307,7 +306,7 @@ mod tests {
     fn apply_pressure_lowers_price_when_supply_exceeds_demand() {
         let mut market = MarketState::default();
         let before = market.prices["food"];
-        market.apply_pressure("food", 100, 1_000);
+        market.apply_pressure("food", 1_000, 100);
         assert!(market.prices["food"] < before);
     }
 
@@ -330,7 +329,8 @@ mod tests {
         let mut market = MarketState {
             prices: BTreeMap::from([("food".to_string(), 1)]),
         };
-        market.apply_pressure("food", 0, 1_000_000);
+        // Huge surplus (supply ≫ demand) — price should floor at MIN_PRICE_CENTS.
+        market.apply_pressure("food", 1_000_000, 0);
         assert_eq!(market.prices["food"], 1);
     }
 
@@ -458,10 +458,7 @@ mod tests {
     #[test]
     fn mean_clearing_price_reflects_apply_pressure_changes() {
         let mut market = MarketState {
-            prices: BTreeMap::from([
-                ("a".to_string(), 1_000),
-                ("b".to_string(), 1_000),
-            ]),
+            prices: BTreeMap::from([("a".to_string(), 1_000), ("b".to_string(), 1_000)]),
         };
         let before = market.mean_clearing_price();
         market.apply_pressure("a", 0, 1_000); // strong demand => price up
@@ -660,16 +657,12 @@ impl MultiGoodMarket {
         price_cents: i64,
         placed_tick: u64,
     ) {
-        self.books
-            .entry(good)
-            .or_default()
-            .bids
-            .push(Order {
-                agent_id,
-                qty,
-                price_cents,
-                placed_tick,
-            });
+        self.books.entry(good).or_default().bids.push(Order {
+            agent_id,
+            qty,
+            price_cents,
+            placed_tick,
+        });
     }
 
     /// Place an ask (sell) order for `good` at `qty` × `price_cents` placed
@@ -682,16 +675,12 @@ impl MultiGoodMarket {
         price_cents: i64,
         placed_tick: u64,
     ) {
-        self.books
-            .entry(good)
-            .or_default()
-            .asks
-            .push(Order {
-                agent_id,
-                qty,
-                price_cents,
-                placed_tick,
-            });
+        self.books.entry(good).or_default().asks.push(Order {
+            agent_id,
+            qty,
+            price_cents,
+            placed_tick,
+        });
     }
 
     /// Push a pre-built [`Order`] onto the appropriate side of the book for `good`.

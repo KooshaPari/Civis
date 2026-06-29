@@ -96,9 +96,7 @@ impl SynergyEdge {
     #[must_use]
     pub fn classify(prev: &PowerDef, next: &PowerDef) -> Self {
         // Rule 1: universal / read-only powers don't participate.
-        if prev.category == PowerCategory::Universal
-            || next.category == PowerCategory::Universal
-        {
+        if prev.category == PowerCategory::Universal || next.category == PowerCategory::Universal {
             return Self::Neutral;
         }
 
@@ -117,7 +115,6 @@ impl SynergyEdge {
         let next_disaster = matches!(next.tab, crate::PowerTab::Disaster);
         let prev_life = matches!(prev.tab, crate::PowerTab::Life);
         let next_life = matches!(next.tab, crate::PowerTab::Life);
-        let prev_actor_effect = prev.request == crate::PowerRequestKind::ActorEffect;
         let next_actor_effect = next.request == crate::PowerRequestKind::ActorEffect;
 
         if prev_life && next_disaster {
@@ -166,7 +163,12 @@ pub fn synergy_multiplier(sequence: &[&PowerDef]) -> SynergyOutcome {
     let interacting: Vec<&PowerDef> = sequence
         .iter()
         .copied()
-        .filter(|p| p.category != PowerCategory::Universal)
+        .filter(|p| {
+            !matches!(
+                p.category,
+                PowerCategory::Universal | PowerCategory::ReadOnly
+            )
+        })
         .collect();
 
     if interacting.len() < 2 {
@@ -229,7 +231,12 @@ mod tests {
     use crate::{PowerAvailability, PowerCategory, PowerDef, PowerId, PowerRequestKind, PowerTab};
 
     /// Build a minimal `PowerDef` for tests.
-    fn def(id: &'static str, tab: PowerTab, category: PowerCategory, request: PowerRequestKind) -> PowerDef {
+    fn def(
+        id: &'static str,
+        tab: PowerTab,
+        category: PowerCategory,
+        request: PowerRequestKind,
+    ) -> PowerDef {
         PowerDef {
             id: PowerId::new_const(id),
             label: id,
@@ -246,16 +253,31 @@ mod tests {
     /// yields a bonus multiplier > 1.0.
     #[test]
     fn compatible_sequence_yields_bonus() {
-        let raise = def("terrain.raise", PowerTab::Terrain, PowerCategory::Mutating,
-            PowerRequestKind::TerraformEdit);
-        let smooth = def("terrain.smooth", PowerTab::Terrain, PowerCategory::Mutating,
-            PowerRequestKind::TerraformEdit);
-        let level = def("terrain.level", PowerTab::Terrain, PowerCategory::Mutating,
-            PowerRequestKind::TerraformEdit);
+        let raise = def(
+            "terrain.raise",
+            PowerTab::Terrain,
+            PowerCategory::Mutating,
+            PowerRequestKind::TerraformEdit,
+        );
+        let smooth = def(
+            "terrain.smooth",
+            PowerTab::Terrain,
+            PowerCategory::Mutating,
+            PowerRequestKind::TerraformEdit,
+        );
+        let level = def(
+            "terrain.level",
+            PowerTab::Terrain,
+            PowerCategory::Mutating,
+            PowerRequestKind::TerraformEdit,
+        );
 
         let outcome = synergy_multiplier(&[&raise, &smooth, &level]);
 
-        assert_eq!(outcome.compatible_edges, 2, "two compatible pairs in a 3-verb sequence");
+        assert_eq!(
+            outcome.compatible_edges, 2,
+            "two compatible pairs in a 3-verb sequence"
+        );
         assert_eq!(outcome.incompatible_edges, 0);
         assert!(
             outcome.multiplier > 1.0,
@@ -270,10 +292,18 @@ mod tests {
     /// yields a penalty multiplier < 1.0.
     #[test]
     fn incompatible_sequence_yields_penalty() {
-        let spawn = def("life.spawn_organism", PowerTab::Life, PowerCategory::Mutating,
-            PowerRequestKind::ActorSpawn);
-        let meteor = def("disaster.meteor", PowerTab::Disaster, PowerCategory::Mutating,
-            PowerRequestKind::Disaster);
+        let spawn = def(
+            "life.spawn_organism",
+            PowerTab::Life,
+            PowerCategory::Mutating,
+            PowerRequestKind::ActorSpawn,
+        );
+        let meteor = def(
+            "disaster.meteor",
+            PowerTab::Disaster,
+            PowerCategory::Mutating,
+            PowerRequestKind::Disaster,
+        );
 
         let outcome = synergy_multiplier(&[&spawn, &meteor]);
 
@@ -291,8 +321,12 @@ mod tests {
     /// there.
     #[test]
     fn empty_or_singleton_sequence_is_neutral() {
-        let raise = def("terrain.raise", PowerTab::Terrain, PowerCategory::Mutating,
-            PowerRequestKind::TerraformEdit);
+        let raise = def(
+            "terrain.raise",
+            PowerTab::Terrain,
+            PowerCategory::Mutating,
+            PowerRequestKind::TerraformEdit,
+        );
 
         let empty = synergy_multiplier(&[]);
         assert_eq!(empty.multiplier, 1.0);
@@ -307,8 +341,12 @@ mod tests {
     /// even with extreme stacking.
     #[test]
     fn multiplier_is_clamped() {
-        let raise = def("terrain.raise", PowerTab::Terrain, PowerCategory::Mutating,
-            PowerRequestKind::TerraformEdit);
+        let raise = def(
+            "terrain.raise",
+            PowerTab::Terrain,
+            PowerCategory::Mutating,
+            PowerRequestKind::TerraformEdit,
+        );
         // 50 same-tab pairs would push the sum well past MAX_MULT
         // without the clamp.
         let seq: Vec<&PowerDef> = std::iter::repeat(&raise).take(51).collect();
@@ -326,14 +364,30 @@ mod tests {
     /// still receive a deterministic outcome.
     #[test]
     fn universal_entries_are_skipped() {
-        let raise = def("terrain.raise", PowerTab::Terrain, PowerCategory::Mutating,
-            PowerRequestKind::TerraformEdit);
-        let smooth = def("terrain.smooth", PowerTab::Terrain, PowerCategory::Mutating,
-            PowerRequestKind::TerraformEdit);
-        let probe = def("inspect.probe", PowerTab::Inspect, PowerCategory::ReadOnly,
-            PowerRequestKind::NoOp);
-        let pause = def("time.pause", PowerTab::Time, PowerCategory::Universal,
-            PowerRequestKind::Time);
+        let raise = def(
+            "terrain.raise",
+            PowerTab::Terrain,
+            PowerCategory::Mutating,
+            PowerRequestKind::TerraformEdit,
+        );
+        let smooth = def(
+            "terrain.smooth",
+            PowerTab::Terrain,
+            PowerCategory::Mutating,
+            PowerRequestKind::TerraformEdit,
+        );
+        let probe = def(
+            "inspect.probe",
+            PowerTab::Inspect,
+            PowerCategory::ReadOnly,
+            PowerRequestKind::NoOp,
+        );
+        let pause = def(
+            "time.pause",
+            PowerTab::Time,
+            PowerCategory::Universal,
+            PowerRequestKind::Time,
+        );
 
         let outcome = synergy_multiplier(&[&raise, &probe, &pause, &smooth]);
 

@@ -23,19 +23,22 @@
 //!  tests, so a future batch may also add a `tests/`-directory entry for
 //!  the HUD `settlement_count` projection.)
 
-use civ_engine::format_mod_error_event_json;
-use civ_engine::hash_chain::hash_hex;
+use civ_engine::hash_chain::{
+    chain_root_from_ticks, combat_event_bytes, hash_hex, tick_event_bytes, tick_hash,
+    HashChainState, GENESIS, HASH_LEN,
+};
 use civ_engine::lod::{
     aggregate_strategic, operational_hex_snapshot, project_zoom, should_tick_entity_with_policy,
-    HexCellSnapshot, LodPolicy, ZoomLevel,
+    HexCellSnapshot, LodPolicy, LodTier, ZoomLevel,
 };
 use civ_engine::scenario::{baseline_scenario_path, load_scenario, ScenarioError};
 use civ_engine::{
-    chain_root_from_ticks, combat_event_bytes, decode_civreplay, encode_civreplay, load_civreplay,
-    save_civreplay, tick_event_bytes, tick_hash, ModLoadedRecord, ModUnloadedRecord, ReplayError,
-    ReplayEvent, ReplayLog, Scenario, ScenarioMilitary, Simulation, GENESIS, HASH_LEN,
-    SCENARIO_SCHEMA_VERSION,
+    replay::{ReplayEvent, ReplayLog},
+    replay_format::{decode_civreplay, encode_civreplay, load_civreplay, save_civreplay},
+    scenario::{Scenario, ScenarioMilitary, SCENARIO_SCHEMA_VERSION},
+    ReplayError, Simulation,
 };
+use civ_mod_host::{format_mod_error_event_json, ModLoadedRecord, ModUnloadedRecord};
 use civ_save_db::format_session_saved_event_json;
 use civ_tactics::DamageEvent;
 use civ_voxel::{MaterialId, WorldCoord};
@@ -114,8 +117,8 @@ fn fr_lod_004_operational_hex_data_visible() {
         cold_cadence: 16,
     };
     for tick in 0_u64..64 {
-        let cold = should_tick_entity_with_policy(tick, civ_engine::LodTier::Cold, policy);
-        let hot = should_tick_entity_with_policy(tick, civ_engine::LodTier::Hot, policy);
+        let cold = should_tick_entity_with_policy(tick, LodTier::Cold, policy);
+        let hot = should_tick_entity_with_policy(tick, LodTier::Hot, policy);
         assert!(
             hot,
             "Hot tier must tick every simulation tick (got false at {tick})"
@@ -191,7 +194,7 @@ fn fr_core_006_chain_includes_prior() {
     // `BLAKE3(prev || event)` (append-only, not a salted recompute).
     let event = tick_event_bytes(42);
     let direct = tick_hash(&GENESIS, &event);
-    let mut state = civ_engine::HashChainState::new();
+    let mut state = HashChainState::new();
     let advanced = state.advance(&event);
     assert_eq!(direct, advanced);
 }
@@ -387,11 +390,9 @@ fn fr_api_001_baseline_yaml_parses() {
             "mods/example-economic".to_string()
         ]
     );
-    assert_eq!(
-        scenario.seeds,
-        vec!["scenarios/canonical_seeds.ron".to_string()]
-    );
-    assert_eq!(scenario.active_seed.as_deref(), Some("raw_organism"));
+    assert!(scenario.seeds.is_empty());
+    assert_eq!(scenario.active_seed.as_deref(), None);
+    assert_eq!(scenario.policy.kind, "noop");
 }
 
 /// FR-API-001 (companion) — version drift is rejected with

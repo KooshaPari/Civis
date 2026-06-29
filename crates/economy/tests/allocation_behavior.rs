@@ -42,7 +42,10 @@ fn scenario_planned_allocator_fills_demand_when_budget_is_sufficient() {
     let allocated = engine.allocate(budget, demand);
 
     // Then the demand is fully met
-    assert_eq!(allocated, 80, "planned allocator should fill demand fully when budget >= demand");
+    assert_eq!(
+        allocated, 80,
+        "planned allocator should fill demand fully when budget >= demand"
+    );
 }
 
 #[test]
@@ -54,7 +57,10 @@ fn scenario_planned_allocator_caps_at_budget_when_demand_exceeds_supply() {
     let allocated = engine.allocate(budget, demand);
 
     // Then allocation is capped at the budget ceiling
-    assert_eq!(allocated, 40, "planned allocator should cap at budget, not ration proportionally");
+    assert_eq!(
+        allocated, 40,
+        "planned allocator should cap at budget, not ration proportionally"
+    );
 }
 
 #[test]
@@ -66,7 +72,10 @@ fn scenario_capitalist_allocator_rations_proportionally_when_budget_is_scarce() 
     let allocated = engine.allocate(budget, demand);
 
     // Then the allocation is proportional to the budget/demand ratio
-    assert_eq!(allocated, 50, "capitalist allocator should ration at 50% fill when budget is half of demand");
+    assert_eq!(
+        allocated, 50,
+        "capitalist allocator should ration at 50% fill when budget is half of demand"
+    );
 }
 
 #[test]
@@ -99,7 +108,8 @@ fn scenario_all_regimes_return_zero_when_budget_is_zero() {
         let allocated = allocate_with(regime, budget, demand);
         assert_eq!(
             allocated, 0,
-            "regime {:?} must grant nothing when budget is zero", regime
+            "regime {:?} must grant nothing when budget is zero",
+            regime
         );
     }
 }
@@ -117,7 +127,8 @@ fn scenario_all_regimes_return_zero_when_demand_is_zero() {
         let allocated = allocate_with(regime, budget, demand);
         assert_eq!(
             allocated, 0,
-            "regime {:?} must grant nothing when demand is zero", regime
+            "regime {:?} must grant nothing when demand is zero",
+            regime
         );
     }
 }
@@ -130,17 +141,20 @@ fn scenario_all_regimes_return_zero_when_demand_is_zero() {
 fn scenario_subsistence_is_filled_before_luxury() {
     // Given a scarce budget that cannot cover both subsistence and luxury
     let budget = 60;
-    let demands = [
-        (PriorityTier::Luxury, 50),
-        (PriorityTier::Subsistence, 50),
-    ];
+    let demands = [(PriorityTier::Luxury, 50), (PriorityTier::Subsistence, 50)];
 
     // When allocating by priority using the planned engine
     let allocations = allocate_by_priority(&PlannedAllocator, budget, &demands);
 
     // Then subsistence is fully met and luxury receives only the remainder
-    assert_eq!(allocations[1], 50, "subsistence demand (index 1) must be filled first");
-    assert_eq!(allocations[0], 10, "luxury demand (index 0) gets only the leftover");
+    assert_eq!(
+        allocations[1], 50,
+        "subsistence demand (index 1) must be filled first"
+    );
+    assert_eq!(
+        allocations[0], 10,
+        "luxury demand (index 0) gets only the leftover"
+    );
 }
 
 #[test]
@@ -198,23 +212,26 @@ fn scenario_zero_budget_grants_nothing_across_all_tiers() {
     let allocations = allocate_by_priority(&PlannedAllocator, budget, &demands);
 
     // Then every consumer receives zero
-    assert!(allocations.iter().all(|&a| a == 0), "zero budget must grant nothing across all tiers");
+    assert!(
+        allocations.iter().all(|&a| a == 0),
+        "zero budget must grant nothing across all tiers"
+    );
 }
 
 #[test]
 fn scenario_negative_budget_grants_nothing_across_all_tiers() {
     // Given a negative budget
     let budget = -10;
-    let demands = [
-        (PriorityTier::Subsistence, 40),
-        (PriorityTier::Luxury, 20),
-    ];
+    let demands = [(PriorityTier::Subsistence, 40), (PriorityTier::Luxury, 20)];
 
     // When allocating by priority
     let allocations = allocate_by_priority(&PlannedAllocator, budget, &demands);
 
     // Then every consumer receives zero
-    assert!(allocations.iter().all(|&a| a == 0), "negative budget must grant nothing across all tiers");
+    assert!(
+        allocations.iter().all(|&a| a == 0),
+        "negative budget must grant nothing across all tiers"
+    );
 }
 
 // ===========================================================================
@@ -284,7 +301,10 @@ fn scenario_partition_sum_with_capitalist_engine_rations_at_boundary() {
         "partition sum {total} must not exceed budget {budget}"
     );
     // And subsistence is fully met before the capitalist boundary tier
-    assert_eq!(allocations[0], 50, "subsistence must be fully met before capitalist rationing begins");
+    assert_eq!(
+        allocations[0], 50,
+        "subsistence must be fully met before capitalist rationing begins"
+    );
 }
 
 #[test]
@@ -328,7 +348,10 @@ fn scenario_mixed_tier_ordering_is_resolved_by_priority_not_by_index() {
     let allocations = allocate_by_priority(&PlannedAllocator, budget, &demands);
 
     // Then subsistence (index 3) is filled first despite being last in the list
-    assert_eq!(allocations[3], 30, "subsistence must be filled first regardless of index order");
+    assert_eq!(
+        allocations[3], 30,
+        "subsistence must be filled first regardless of index order"
+    );
     assert_eq!(allocations[2], 30, "basic filled next");
     assert_eq!(allocations[1], 10, "comfort gets the remainder");
     assert_eq!(allocations[0], 0, "luxury is starved");
@@ -360,8 +383,15 @@ fn scenario_priority_total_with_single_consumer_and_sufficient_budget() {
 
     let allocations = allocate_by_priority(&PlannedAllocator, budget, &demands);
 
-    assert_eq!(allocations[0], 80, "single consumer gets full demand when budget is sufficient");
-    assert_eq!(allocations.iter().sum::<i64>(), 80, "partition sum equals the single allocation");
+    assert_eq!(
+        allocations[0], 80,
+        "single consumer gets full demand when budget is sufficient"
+    );
+    assert_eq!(
+        allocations.iter().sum::<i64>(),
+        80,
+        "partition sum equals the single allocation"
+    );
 }
 
 #[test]
@@ -372,7 +402,11 @@ fn scenario_priority_total_with_single_consumer_and_insufficient_budget() {
     let allocations = allocate_by_priority(&PlannedAllocator, budget, &demands);
 
     assert_eq!(allocations[0], 30, "single consumer gets capped at budget");
-    assert_eq!(allocations.iter().sum::<i64>(), 30, "partition sum equals the budget cap");
+    assert_eq!(
+        allocations.iter().sum::<i64>(),
+        30,
+        "partition sum equals the budget cap"
+    );
 }
 
 #[test]
@@ -403,7 +437,8 @@ fn scenario_allocate_with_never_exceeds_budget_for_any_regime() {
         let allocated = allocate_with(regime, budget, demand);
         assert!(
             allocated <= budget,
-            "regime {:?} allocated {allocated} exceeds budget {budget}", regime
+            "regime {:?} allocated {allocated} exceeds budget {budget}",
+            regime
         );
     }
 }

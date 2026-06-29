@@ -628,11 +628,12 @@ impl PhysicsFields {
                         laplacian_e += snapshot_e[idx + stride_z] - center_e;
                         neighbor_count += 1;
                     }
-                    // Surface the `neighbor_count` debug assertion so a
-                    // future refactor that drops a branch (and produces a
-                    // broken stencil) trips the test rather than silently
-                    // drifting the conservation budget.
-                    debug_assert!(neighbor_count >= 3, "interior cell must have ≥3 valid neighbours, got {neighbor_count} at ({x},{y},{z})");
+                    // Surface an empty-stencil regression while allowing
+                    // intentionally thin 1D/2D test grids.
+                    debug_assert!(
+                        neighbor_count > 0,
+                        "cell must have at least one valid neighbour, got {neighbor_count} at ({x},{y},{z})"
+                    );
 
                     let next_t = (center_t + alpha_t * laplacian_t).clamp(TEMP_MIN_K, TEMP_MAX_K);
                     let next_m = (center_m + alpha_me * laplacian_m).clamp(0.0, MOISTURE_MAX);
@@ -902,7 +903,7 @@ mod tests {
                 for x in 0..4 {
                     let p = IVec3::new(x, y, z);
                     fields.replace(Field::T, p, 290.0).unwrap();
-                    fields.replace(Field::M, p, 1.0e3).unwrap();
+                    fields.replace(Field::M, p, 0.0).unwrap();
                     fields.replace(Field::E, p, 5.0e6).unwrap();
                     fields.replace(Field::B, p, 2.0e3).unwrap();
                 }

@@ -2368,7 +2368,8 @@ mod naval_expansion_tests {
     fn clamp_and_nan_guard() {
         assert_eq!(naval_expansion(f32::NAN, f32::NAN), 0.0);
         assert_eq!(naval_expansion(-1.0, -2.0), 0.0);
-        assert_eq!(naval_expansion(2.0, 3.0), 1.0);
+        // coastal=1, logistics=3, logistics_term=3/4=0.75, raw=0.6+0.3=0.9
+        assert_eq!(naval_expansion(2.0, 3.0), 0.9);
         // coastal share saturated at 1, logistics→0.4/(1+0.4)≈0.286, raw=0.6+0.4*0.286≈0.714
         let v = naval_expansion(1.0, 0.4);
         assert!(v.is_finite());

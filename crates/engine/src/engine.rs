@@ -26,7 +26,7 @@ use civ_planet::{
 use civ_tactics::{
     apply_damage, evolve_doctrine, score_doctrine_fitness, tick_operational_movement,
     tick_war_bridge, CombatEngagement, DamageEvent, Doctrine, DoctrineLibrary,
-    FactionEngagementStats, MilitaryPhaseConfig, MilitaryUnitSample, NoopOperationalLayer,
+    FactionEngagementStats, MilitaryPhaseConfig, MilitaryUnit, MilitaryUnitSample, NoopOperationalLayer,
     OperationalLayer,
 };
 use civ_voxel::{

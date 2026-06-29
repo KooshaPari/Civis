@@ -1085,7 +1085,7 @@ pub fn should_reproduce(
     overcrowding_factor: f32,
     lifecycle_params: &LifecycleParams,
 ) -> f32 {
-    use crate::lifecycle::classify_lifecycle;
+    use crate::lifecycle::{classify_lifecycle_from_age as classify_lifecycle};
 
     // Only working-age adults can reproduce.
     let lifecycle = classify_lifecycle(age, lifecycle_params);

@@ -55,9 +55,12 @@ pub use emergence_metrics::{
 };
 pub use engine::{
     awakening_belief_gain, awakening_cohesion_gain, Building, BuildingType,
-    CombatDamagePulse, DiplomacyKind, EconomicFocus, EconomicFocusEvent, FactionRelationSnapshot, Fixed, MilitaryUnit, Position,
+    CombatDamagePulse, DiplomacyKind, EconomicFocus, EconomicFocusEvent, FactionRelationSnapshot, Fixed, Position,
     Simulation, UnitType, WorldState,
 };
+
+// MilitaryUnit is defined in civ-tactics and re-exported here for backward compatibility.
+pub use civ_tactics::MilitaryUnit;
 
 // Re-export of `grid_to_norm` and `spawn()` so callers can name them without
 // pulling the private `spawn` module path.

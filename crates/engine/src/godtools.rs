@@ -776,7 +776,7 @@ fn actors_in_footprint(
     world: &hecs::World,
     center: WorldCoord,
     radius_voxels: u8,
-) -> Vec<(hecs::Entity, Position3d, Civilian)> {
+) -> Vec<hecs::Entity> {
     let r = i64::from(radius_voxels) * FIXED_SCALE;
     let r2 = r * r;
     world
@@ -787,7 +787,7 @@ fn actors_in_footprint(
             let dy = pos.coord.y - center.y;
             let dz = pos.coord.z - center.z;
             if dx * dx + dy * dy + dz * dz <= r2 {
-                Some((entity, *pos, civ.clone()))
+                Some(entity)
             } else {
                 None
             }
@@ -830,11 +830,11 @@ fn apply_actor_effect(
     }
     // Snapshot the entities first so we can drop the immutable
     // borrow of `world` before taking the mutable borrows below.
-    let affected: Vec<hecs::Entity> = actors_in_footprint(world, center, radius_voxels)
-        .into_iter()
-        .map(|(e, _, _)| e)
-        .collect();
-    let first = affected.first().map(|ent| ent.to_bits().get()).unwrap_or(0);
+    let affected = actors_in_footprint(world, center, radius_voxels);
+    let first = affected
+        .first()
+        .map(|ent| ent.to_bits().get())
+        .unwrap_or(0);
     let mut touched: u32 = 0;
     for entity in &affected {
         let mut did_touch = false;
@@ -1825,15 +1825,10 @@ impl Simulation {
                     ));
                 }
                 let affected = actors_in_footprint(&self.world, e.center, e.radius_voxels);
-                let first = affected
-                    .first()
-                    .map(|(ent, _, _)| ent.to_bits().get())
-                    .unwrap_or(0);
-                let affected_entities: Vec<hecs::Entity> =
-                    affected.iter().map(|(entity, _, _)| *entity).collect();
+                let first = affected.first().map(|ent| ent.to_bits().get()).unwrap_or(0);
                 let mut despawned: u32 = 0;
-                for entity in affected_entities {
-                    if self.world.despawn(entity).is_ok() {
+                for entity in &affected {
+                    if self.world.despawn(*entity).is_ok() {
                         despawned = despawned.saturating_add(1);
                     }
                 }

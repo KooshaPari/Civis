@@ -1,6 +1,7 @@
 pub mod architecture;
 pub mod creature;
 pub mod diplomacy;
+pub mod disaster;
 pub mod economy;
 pub mod epidemic;
 pub mod festival;

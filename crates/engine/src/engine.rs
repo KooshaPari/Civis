@@ -18,7 +18,7 @@ use civ_build::{Allocator, BuildSite, BuildingGraph, DemandSignals, ProductionEv
 use civ_diffusion::DiffusionParams;
 use civ_economy::{
     settlement_trade_flow_from_supply_demand, AllocationEngine, CapitalistAllocator, EconomyState,
-    Good, MarketState, SettlementTradeFlow,
+    Good, LaborCapacityAllocator, MarketState, SettlementTradeFlow,
 };
 use civ_economy::{collect_taxes, Taxation};
 use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold};

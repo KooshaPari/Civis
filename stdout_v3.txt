@@ -1,0 +1,2 @@
+Usage: fsutil file createNew <filename> <length>
+   Eg: fsutil file createNew C:\testfile.txt 1000

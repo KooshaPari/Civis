@@ -30,8 +30,10 @@ use civ_voxel::WorldCoord;
 use serde::{Deserialize, Serialize};
 
 pub mod grid;
+pub mod congestion;
 pub mod lane;
 
+pub use congestion::PathCongestion;
 pub use grid::{
     CellState, GridCell, ServiceGrid, ServiceGridError, ServiceKind, SERVICE_GRID_SCHEMA_VERSION,
 };

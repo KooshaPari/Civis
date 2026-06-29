@@ -40,8 +40,7 @@ pub mod group;
 pub mod inspect;
 pub mod provenance;
 pub mod rank;
-pub mod registry;
-pub mod risk;
+pub mod snapshot;
 pub mod verbs;
 pub mod voxel_inspector;
 

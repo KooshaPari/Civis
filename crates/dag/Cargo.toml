@@ -17,7 +17,7 @@ path = "src/lib.rs"
 
 [[bin]]
 name = "civ-dag"
-path = "src/bin/civ-dag.rs"
+path = "src/bin/dagr.rs"
 required-features = ["cli"]
 
 [dependencies]

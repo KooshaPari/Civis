@@ -68,6 +68,11 @@ const BASELINE_TEMP_C: f64 = 14.0;
 /// Sea-level sensitivity (metres of rise per °C of anomaly per tick).
 const SEA_LEVEL_SENSITIVITY_M_PER_C: f64 = 0.002;
 
+/// Disaster-spread model: a hazard (fire/flood) propagates to adjacent cells
+/// by intensity and decays over time. See [`disaster_spread`] for details.
+pub mod disaster_spread;
+pub use disaster_spread::{DisasterGrid, DisasterParams, HazardCell, HazardKind};
+
 impl ClimateState {
     /// Create a new `ClimateState` initialised to pre-industrial conditions.
     pub fn new() -> Self {

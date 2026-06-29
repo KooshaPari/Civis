@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod seeds;
 pub mod sentience;
+pub mod traits;
 
 pub use seeds::{
     archetype_dna, archetype_seed, effective_mutation_rate, example_seed_set,
@@ -21,6 +22,7 @@ pub use seeds::{
     spawn_genome_with_divergence, BiomeAffinity, NamedSeed, SeedDefinition, SeedError, SeedId,
     SeedLibrary, SeedSet,
 };
+pub use traits::{inherit_trait, TraitInheritanceConfig};
 
 /// Schema version for `civ-genetics`. Bumped on breaking changes.
 pub const SCHEMA_VERSION: &str = "0.1.0-stub";

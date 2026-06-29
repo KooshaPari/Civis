@@ -133,6 +133,68 @@ mod appended_emergence_tests {
     }
 }
 
+pub fn charity_response(surplus: f32, social_cohesion: f32) -> f32 {
+    if !surplus.is_finite() || !social_cohesion.is_finite() {
+        return 0.0;
+    }
+
+    let surplus = surplus.clamp(0.0, 1.0);
+    let social_cohesion = social_cohesion.clamp(0.0, 1.0);
+    (surplus * 0.55 + social_cohesion * 0.45).clamp(0.0, 1.0)
+}
+
+pub fn mutual_aid_density(kinship: f32, scarcity: f32) -> f32 {
+    if !kinship.is_finite() || !scarcity.is_finite() {
+        return 0.0;
+    }
+
+    let kinship = kinship.clamp(0.0, 1.0);
+    let scarcity = scarcity.clamp(0.0, 1.0);
+    (kinship * (0.35 + scarcity * 0.65)).clamp(0.0, 1.0)
+}
+
+pub fn relief_effectiveness(institutions: f32, mobilization: f32) -> f32 {
+    if !institutions.is_finite() || !mobilization.is_finite() {
+        return 0.0;
+    }
+
+    let institutions = institutions.clamp(0.0, 1.0);
+    let mobilization = mobilization.clamp(0.0, 1.0);
+    (institutions * 0.6 + mobilization * 0.4).clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod welfare_response_tests {
+    use super::*;
+
+    #[test]
+    fn charity_response_is_bounded_and_nan_guarded() {
+        assert_eq!(charity_response(f32::NAN, 0.5), 0.0);
+        assert_eq!(charity_response(0.5, f32::NAN), 0.0);
+        assert_eq!(charity_response(-1.0, -1.0), 0.0);
+        assert_eq!(charity_response(10.0, 10.0), 1.0);
+        assert!((0.0..=1.0).contains(&charity_response(0.6, 0.7)));
+    }
+
+    #[test]
+    fn mutual_aid_density_is_bounded_and_nan_guarded() {
+        assert_eq!(mutual_aid_density(f32::NAN, 0.5), 0.0);
+        assert_eq!(mutual_aid_density(0.5, f32::NAN), 0.0);
+        assert_eq!(mutual_aid_density(-1.0, -1.0), 0.0);
+        assert_eq!(mutual_aid_density(10.0, 10.0), 1.0);
+        assert!((0.0..=1.0).contains(&mutual_aid_density(0.6, 0.7)));
+    }
+
+    #[test]
+    fn relief_effectiveness_is_bounded_and_nan_guarded() {
+        assert_eq!(relief_effectiveness(f32::NAN, 0.5), 0.0);
+        assert_eq!(relief_effectiveness(0.5, f32::NAN), 0.0);
+        assert_eq!(relief_effectiveness(-1.0, -1.0), 0.0);
+        assert_eq!(relief_effectiveness(10.0, 10.0), 1.0);
+        assert!((0.0..=1.0).contains(&relief_effectiveness(0.6, 0.7)));
+    }
+}
+
 pub fn heresy_emergence(doctrinal_strain: f32, literacy: f32) -> f32 {
     if !doctrinal_strain.is_finite() || !literacy.is_finite() {
         return 0.0;

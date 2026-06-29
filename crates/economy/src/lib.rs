@@ -313,3 +313,76 @@ mod tests {
         );
     }
 }
+
+/// Allocates labor capacity weighted by population lifecycle distribution.
+///
+/// FR-CIV-LIFE-020: Labor allocation is weighted by lifecycle stage — working-age
+/// citizens provide more capacity than children or elderly. This struct encapsulates
+/// the weighting function and allocation logic.
+#[derive(Debug, Clone)]
+pub struct LaborCapacityAllocator {
+    /// Fraction of population that is working-age (0.0-1.0).
+    working_age_fraction: f32,
+}
+
+impl LaborCapacityAllocator {
+    /// Create a new allocator with the given fraction of working-age population.
+    #[must_use]
+    pub fn new(working_age_fraction: f32) -> Self {
+        Self {
+            working_age_fraction: working_age_fraction.clamp(0.0, 1.0),
+        }
+    }
+
+    /// Allocate labor capacity from a budget across demands, weighted by lifecycle stage.
+    ///
+    /// Working-age citizens provide 1.0x capacity, while children and elderly provide
+    /// reduced capacity (0.2x and 0.3x respectively, by default).
+    #[must_use]
+    pub fn allocate(&self, budget: f32, _demand: f32) -> f32 {
+        // Base allocation from budget × working-age weighting.
+        // Children and elderly contribute proportionally less.
+        let working_age_weight = 1.0;
+        let youth_weight = 0.2;
+        let elderly_weight = 0.3;
+
+        let young_fraction = (1.0 - self.working_age_fraction) * 0.5;
+        let elderly_fraction = (1.0 - self.working_age_fraction) * 0.5;
+
+        let effective_labor = (self.working_age_fraction * working_age_weight)
+            + (young_fraction * youth_weight)
+            + (elderly_fraction * elderly_weight);
+
+        budget * effective_labor.clamp(0.0, 1.0)
+    }
+}
+
+#[cfg(test)]
+mod test_labor_allocator {
+    use super::*;
+
+    #[test]
+    fn test_working_age_gets_more_capacity() {
+        // All working-age: should get full budget allocation.
+        let allocator = LaborCapacityAllocator::new(1.0);
+        let result = allocator.allocate(100.0, 50.0);
+        assert!(result > 90.0, "100% working-age should get most of budget, got {}", result);
+    }
+
+    #[test]
+    fn test_all_youth_gets_less_capacity() {
+        // All children (0% working-age): should get less than full budget.
+        let allocator = LaborCapacityAllocator::new(0.0);
+        let result = allocator.allocate(100.0, 50.0);
+        assert!(result < 50.0, "0% working-age should get less than half, got {}", result);
+    }
+
+    #[test]
+    fn test_mixed_population_weighted() {
+        // 50% working-age, 50% other.
+        let allocator = LaborCapacityAllocator::new(0.5);
+        let result = allocator.allocate(100.0, 50.0);
+        // Should be between the two extremes.
+        assert!(result > 30.0 && result < 90.0, "Mixed population should be intermediate, got {}", result);
+    }
+}

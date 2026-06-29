@@ -126,6 +126,11 @@ pub fn generate_world(config: WorldgenConfig, planet: PlanetConfig, climate: Cli
     }
 }
 
+/// Clamp value to [0.0, 1.0].
+fn clamp01(x: f32) -> f32 {
+    x.clamp(0.0, 1.0)
+}
+
 fn base_heights(config: &WorldgenConfig, size: usize) -> Vec<f32> {
     let mut heights = Vec::with_capacity(size * size);
     let seed = config.seed;
@@ -264,25 +269,20 @@ fn clamp01(value: f32) -> f32 {
 }
 
 fn neighbors(x: usize, z: usize, size: usize) -> Vec<(usize, usize)> {
-    let mut items = [(x, z); 4];
-    let mut len = 0usize;
+    let mut items = Vec::with_capacity(4);
     if x > 0 {
-        items[len] = (x - 1, z);
-        len += 1;
+        items.push((x - 1, z));
     }
     if x + 1 < size {
-        items[len] = (x + 1, z);
-        len += 1;
+        items.push((x + 1, z));
     }
     if z > 0 {
-        items[len] = (x, z - 1);
-        len += 1;
+        items.push((x, z - 1));
     }
     if z + 1 < size {
-        items[len] = (x, z + 1);
-        len += 1;
+        items.push((x, z + 1));
     }
-    items[..len].to_vec()
+    items
 }
 
 fn simplex_fbm(seed: u64, x: f32, y: f32, octaves: usize) -> f32 {

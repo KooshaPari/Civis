@@ -205,7 +205,7 @@ pub fn summary_json(node_gates: &[(String, Gate)]) -> serde_json::Value {
     })
 }
 
-fn reason_text(r: &SkipReason) -> &'static str {
+pub fn reason_text(r: &SkipReason) -> &'static str {
     match r {
         SkipReason::UnknownLane { .. } => "unknown_lane",
         SkipReason::DesignOnly => "design_only",

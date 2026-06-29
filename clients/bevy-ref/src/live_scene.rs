@@ -70,7 +70,7 @@ fn setup_live_scene_assets(mut commands: Commands, mut meshes: ResMut<Assets<Mes
 
 fn apply_live_scene_frames(
     attach: Res<AttachMode>,
-    bridge: Res<LiveAttachBridge>,
+    bridge: Option<Res<LiveAttachBridge>>,
     mut state: ResMut<LiveAttachState>,
     mut hud: ResMut<LiveHudSnapshot>,
     mut scene: ResMut<LiveStreamScene>,
@@ -87,6 +87,7 @@ fn apply_live_scene_frames(
         return;
     }
 
+    let Some(bridge) = bridge else { return; };
     let frames = bridge.client.poll();
     if frames.is_empty() {
         return;

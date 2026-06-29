@@ -75,21 +75,23 @@ struct LastConnectionToastState(Option<WsConnectionState>);
 
 fn sync_live_hud_connection(
     attach: Res<AttachMode>,
-    bridge: Res<LiveAttachBridge>,
+    bridge: Option<Res<LiveAttachBridge>>,
     mut hud: ResMut<LiveHudSnapshot>,
 ) {
     if *attach != AttachMode::Server {
         return;
     }
+    let Some(bridge) = bridge else { return; };
     hud.connection = bridge.client.latest_connection_state();
 }
 
 fn poll_live_meta(
-    bridge: Res<LiveAttachBridge>,
+    bridge: Option<Res<LiveAttachBridge>>,
     mut state: ResMut<LiveAttachState>,
     mut hud: ResMut<LiveHudSnapshot>,
     mut day_night: ResMut<DayNightCycle>,
 ) {
+    let Some(bridge) = bridge else { return; };
     for meta in bridge.client.poll_meta() {
         if let Some(tick) = meta.tick {
             hud.tick = Some(tick);
@@ -104,13 +106,14 @@ fn poll_live_meta(
 
 fn sync_live_hud_stats(
     attach: Res<AttachMode>,
-    bridge: Res<LiveAttachBridge>,
+    bridge: Option<Res<LiveAttachBridge>>,
     scene: Res<crate::live_stream::LiveStreamScene>,
     mut hud: ResMut<LiveHudSnapshot>,
 ) {
     if *attach != AttachMode::Server {
         return;
     }
+    let Some(bridge) = bridge else { return; };
     let civilians = crate::live_stream::civilian_hud_count(&scene);
     let factions = crate::live_stream::faction_hud_count(&scene);
     hud.sync_scene_counts(
@@ -140,7 +143,7 @@ fn sync_live_selection(
 #[cfg(feature = "egui")]
 fn sync_live_connection_toasts(
     attach: Res<AttachMode>,
-    bridge: Res<LiveAttachBridge>,
+    bridge: Option<Res<LiveAttachBridge>>,
     mut feed: ResMut<EventFeed>,
     mut last: ResMut<LastConnectionToastState>,
 ) {
@@ -148,6 +151,7 @@ fn sync_live_connection_toasts(
         return;
     }
 
+    let Some(bridge) = bridge else { return; };
     let state = bridge.client.latest_connection_state();
     if last.0 == Some(state) {
         return;

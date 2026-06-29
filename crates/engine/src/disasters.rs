@@ -185,7 +185,7 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) -> 
     let affected = positions_in_radius(pos, radius);
     let mut terrain_cells = 0u32;
     let mut casualties = 0u32;
-    let mut impact = (0i32, 0u32, 0.0);
+    let mut impact = (0i32, 0u32, 0.0_f32);
 
     match kind {
         DisasterKind::Meteor => {
@@ -285,11 +285,11 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) -> 
     consume(&mut resources.energy, &mut resource_delta.energy);
     sim.state.resources = resources;
 
-    if impact.population_delta < 0 {
-        let casualties = (-impact.population_delta) as u64;
+    if impact.0 < 0 {
+        let casualties = (-impact.0) as u64;
         sim.state.population = sim.state.population.saturating_sub(casualties);
-    } else if impact.population_delta > 0 {
-        sim.state.population = sim.state.population.saturating_add(impact.population_delta as u64);
+    } else if impact.0 > 0 {
+        sim.state.population = sim.state.population.saturating_add(impact.0 as u64);
     }
 
     DisasterImpact {

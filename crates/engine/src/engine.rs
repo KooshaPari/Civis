@@ -854,7 +854,7 @@ pub struct Simulation {
     /// `last_tick_diffusion_events` pattern). Consumers (e.g. the
     /// JSON-RPC `sim.snapshot.religion` method) read this buffer once per
     /// tick.
-    pub last_tick_religion_events: Vec<ReligionEvent>,
+    pub last_tick_religion_events: Vec<crate::religion::ReligionEvent>,
 
     // ── Phase A4: Cohesion (FR-CIV-GOV-030) ──────────────────────────────
     /// Per-actor settlement assignment used by `phase_cohesion` to group
@@ -3690,6 +3690,49 @@ impl Simulation {
         let deaths_count = self.last_deaths.len() as u64;
         self.state.population = self.state.population.saturating_add(births_count);
         self.state.population = self.state.population.saturating_sub(deaths_count);
+
+        // FR-CIV-LIFE P4-A: compute per-tick lifecycle metrics (children /
+        // adults / elders / dead) so phase_economy can derive aggregate
+        // labor fraction. Uses LifecycleLabel from civ_needs. Children are
+        // tagged by age; elders by age >= 65. Dead civilians come from the
+        // `dead` despawn list captured earlier this tick.
+        let mut metrics = LifecycleCounters::default();
+        for (_entity, _id, sample) in records.iter() {
+            // Use the existing fertility_score as a proxy for general
+            // well-being (it is already a [0, 1] value derived from age and
+            // needs). In CIV-003 P5-A this will be replaced with a
+            // dedicated Health derivation; for now it gives deterministic
+            // testable rollups.
+            let integrity = sample.fertility_score.clamp(0.0, 1.0);
+            let health = civ_needs::Health {
+                integrity,
+                ..civ_needs::Health::default()
+            };
+            // Maturity: read from the first civilian's Psyche if available,
+            // otherwise default 0 (Child band).
+            let maturity = self
+                .world
+                .query::<&civ_agents::Psyche>()
+                .iter()
+                .next()
+                .map(|(_, p)| p.maturity)
+                .unwrap_or(0.0);
+            let labor_cap = civ_needs::labor_capacity(
+                sample.age,
+                &health,
+                &civ_genetics::Dna::zero(0),
+                &civ_needs::LifecycleParams::default(),
+            );
+            match civ_needs::classify_lifecycle(sample.age, &health, maturity, labor_cap) {
+                civ_needs::LifecycleLabel::Child => metrics.children += 1,
+                civ_needs::LifecycleLabel::Adult => metrics.adults += 1,
+                civ_needs::LifecycleLabel::Elder => metrics.elders += 1,
+                civ_needs::LifecycleLabel::Dead => metrics.dead += 1,
+            }
+        }
+        // Dead tally from this tick's despawn list:
+        metrics.dead = metrics.dead.saturating_add(dead.len() as u32);
+        self.last_tick_lifecycle_metrics = metrics;
     }
 
     fn resource_pressure(&self) -> f32 {
@@ -4596,13 +4639,30 @@ impl Simulation {
                 dead.push((entity, civilian.id, pos.coord));
                 continue;
             }
-            if birth_window && civilian.age > 18 && self.rng.gen_bool(birth_chance.clamp(0.0, 1.0))
-            {
-                let child_id = self.next_civilian_id;
-                self.next_civilian_id += 1;
-                let x = pos.coord.x as f32 / FIXED_SCALE as f32;
-                let y = pos.coord.z as f32 / FIXED_SCALE as f32;
-                births.push((child_id, x, y));
+            if birth_window && civilian.age > 18 {
+                // Map the agent's need/integrity state to a `civ_needs::Health`
+                // so the gating logic stays in one place. Reuses the same
+                // 4-need mean formula as `civilian_to_health` for consistency.
+                let health = CivNeedsHealth {
+                    integrity: ((needs.food + needs.shelter + needs.safety + needs.belonging) * 0.25)
+                        .clamp(0.0, 1.0),
+                    ..CivNeedsHealth::default()
+                };
+                let should_birth = should_reproduce(
+                    civilian.age,
+                    &health,
+                    needs.food,
+                    needs.safety,
+                    overcrowding_factor as f32,
+                    &lifecycle_params,
+                );
+                if should_birth {
+                    let child_id = self.next_civilian_id;
+                    self.next_civilian_id += 1;
+                    let x = pos.coord.x as f32 / FIXED_SCALE as f32;
+                    let y = pos.coord.z as f32 / FIXED_SCALE as f32;
+                    births.push((child_id, x, y));
+                }
             }
         }
 

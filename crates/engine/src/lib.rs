@@ -111,8 +111,8 @@ pub use engine::{
 // (server, clients, tests) can name the cohesion types as `civ_engine::KinshipEdge`
 // etc. without pulling the private `engine` module path.
 pub use engine::{
-    add_cohesion, add_trust, faction_count, last_tick_cohesion, last_tick_cohesion_snapshot,
-    CohesionCause, CohesionEdge, CohesionEvent, CohesionEventKind, CohesionKind, CohesionSnapshot,
+    add_cohesion, add_trust, last_tick_cohesion, last_tick_cohesion_settlement,
+    CohesionEvent, CohesionEventKind, CohesionSnapshot,
     FabricTier, KinshipEdge, KinshipKind,
 };
 
@@ -121,7 +121,7 @@ pub use engine::{
 // without pulling the private `engine` module path.
 pub use engine::{
     last_tick_unrest, last_tick_unrest_settlement, set_settlement_gini, unrest_level,
-    UnrestEvent, UnrestEventKind, UnrestLevel, UnrestSnapshot,
+    UnrestEvent, UnrestLevel, UnrestSnapshot,
 };
 
 // FR-CIV-RELIGION (religion §7 wiring). Re-exported so callers

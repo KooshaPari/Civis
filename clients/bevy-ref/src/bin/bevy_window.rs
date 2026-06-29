@@ -45,9 +45,11 @@ use civ_bevy_ref::{
     event_feed::{EventFeed, EventFeedPlugin},
     emergence_dashboard::EmergenceDashboardPlugin,
     sandbox_event_feed::SandboxEventFeedPlugin,
+    sim_bridge::SimBridgePlugin,
+    spawn_tools::SpawnToolsPlugin,
     ws_client::{WsClient, WsClientConfig},
     post_fx::PostFxPlugin,
-    CameraTarget, DebugRender, EmergenceHudData, HudState, LiveHudSnapshot, MinimapBounds,
+    AttachMode, CameraTarget, DebugRender, EmergenceHudData, HudState, LiveHudSnapshot, MinimapBounds,
     VOXEL_CHUNK_EDGE, WsConnectionState,
 };
 #[cfg(feature = "gi")]
@@ -270,7 +272,7 @@ fn main() {
             SaveLoadUiPlugin,
             TutorialPlugin,
             PerfHudPlugin,
-            EguiPlugin::default(),
+            civ_bevy_ref::game_ui::GameUiPlugin,
             MenusPlugin,
             EventFeedPlugin,
             EmergenceDashboardPlugin,
@@ -280,6 +282,7 @@ fn main() {
         ),
     ))
         .add_plugins((SandboxEventFeedPlugin, civ_bevy_ref::frame_budget::FrameBudgetPlugin))
+        .add_plugins((SimBridgePlugin, SpawnToolsPlugin))
         .init_state::<AppState>()
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()
@@ -292,6 +295,7 @@ fn main() {
         .init_resource::<GameSpeed>()
         .insert_resource(ScenePresentation::default())
         .insert_resource(DebugRender::default())
+        .insert_resource(AttachMode::Standalone)
         .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
         .add_systems(Startup, setup)
         .add_systems(OnEnter(AppState::Connecting), spawn_connecting_overlay)

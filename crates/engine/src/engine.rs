@@ -799,7 +799,7 @@ pub struct Simulation {
     /// `last_tick_diffusion_events` pattern). Consumers (e.g. the
     /// JSON-RPC `sim.snapshot.religion` method) read this buffer once per
     /// tick.
-    pub last_tick_religion_events: Vec<ReligionEvent>,
+    pub last_tick_religion_events: Vec<crate::religion::ReligionEvent>,
 
     // ── Phase A4: Cohesion (FR-CIV-GOV-030) ──────────────────────────────
 
@@ -1625,8 +1625,8 @@ impl Simulation {
     }
 
     /// Create simulation with custom seed (accepts SimSeed wrapper or u64)
-    pub fn with_seed(seed: SimSeed) -> Self {
-        Self::with_seed_internal(seed.0)
+    pub fn with_seed(seed: impl Into<SimSeed>) -> Self {
+        Self::with_seed_internal(seed.into().0)
     }
 
     /// Internal seed method that takes raw u64
@@ -3397,8 +3397,7 @@ impl Simulation {
             let integrity = sample.fertility_score.clamp(0.0, 1.0);
             let health = civ_needs::Health {
                 integrity,
-                sickness: (1.0 - integrity).max(0.0),
-                morale: 0.5,
+                ..civ_needs::Health::default()
             };
             // Maturity: read from the first civilian's Psyche if available,
             // otherwise default 0 (Child band).
@@ -3408,7 +3407,7 @@ impl Simulation {
                 .iter()
                 .next()
                 .map(|(_, p)| p.maturity)
-                .unwrap_or(0);
+                .unwrap_or(0.0);
             let labor_cap = civ_needs::labor_capacity(
                 sample.age,
                 &health,
@@ -3948,14 +3947,14 @@ impl Simulation {
         for (&faction_id, signature) in &centroids {
             let lang = self
                 .faction_languages
-                .entry(*faction_id)
+                .entry(faction_id)
                 .or_insert_with(|| seeded_language_state(*signature));
             lang.drift_rate = 0.05;
             lang.split_threshold = 0.35;
-            ensure_seeded_word(lang, place_name_meaning(*faction_id, 0), *signature);
-            ensure_seeded_word(lang, person_name_meaning(*faction_id, 0), *signature);
+            ensure_seeded_word(lang, place_name_meaning(faction_id, 0), *signature);
+            ensure_seeded_word(lang, person_name_meaning(faction_id, 0), *signature);
             let isolation = faction_isolation_pressure(
-                *faction_id,
+                faction_id,
                 &dominant,
                 &cluster_member_counts,
                 &contacts,
@@ -4154,7 +4153,7 @@ impl Simulation {
                         .clamp(0.0, 1.0),
                     ..CivNeedsHealth::default()
                 };
-                let birth_chance = should_reproduce(
+                let should_birth = should_reproduce(
                     civilian.age,
                     &health,
                     needs.food,
@@ -4162,7 +4161,7 @@ impl Simulation {
                     overcrowding_factor as f32,
                     &lifecycle_params,
                 );
-                if self.rng.gen_bool(birth_chance.clamp(0.0, 1.0)) {
+                if should_birth {
                     let child_id = self.next_civilian_id;
                     self.next_civilian_id += 1;
                     let x = pos.coord.x as f32 / FIXED_SCALE as f32;
@@ -6036,7 +6035,7 @@ fn rollup_cluster_member_counts(world: &World) -> BTreeMap<u64, u32> {
 fn treasury_disparity_whole(treasury: &HashMap<u32, Fixed>, a: u32, b: u32) -> i64 {
     let ta = treasury.get(&a).copied().unwrap_or(Fixed::ZERO);
     let tb = treasury.get(&b).copied().unwrap_or(Fixed::ZERO);
-    ((ta.to_bits() - tb.to_bits()).unsigned_abs() / crate::SCALE) as i64
+    i64::from((ta.to_bits() - tb.to_bits()).unsigned_abs()) / crate::SCALE
 }
 
 fn mean_pair_aggression(aggression: &BTreeMap<u32, f32>, a: u32, b: u32) -> f32 {
@@ -6411,11 +6410,11 @@ impl Simulation {
             .find_map(|(entity, civilian)| (civilian.id == agent_id).then_some(entity))
     }
     /// Micro-actor action count for emergence metrics (no-op stub).
-    pub fn micro_actor_action_count(&self, _actor: u64) -> u64 {
+    pub fn micro_actor_action_count(&self) -> u32 {
         0
     }
     /// Micro-descendant action count for emergence metrics (no-op stub).
-    pub fn micro_descendant_action_count(&self, _descendant: u64) -> u64 {
+    pub fn micro_descendant_action_count(&self) -> u32 {
         0
     }
 }

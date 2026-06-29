@@ -77,11 +77,13 @@ impl Default for WarBridgeConfig {
 }
 
 /// Map a grid cell to a voxel world coordinate (deterministic, Y-up voxel axis).
+/// Units are placed at y=10*FIXED_SCALE (well above ground) so line-of-sight rays
+/// can travel over terrain without being blocked by ground-level voxels.
 pub fn grid_to_world_coord(grid_x: i32, grid_y: i32) -> WorldCoord {
     let step = FIXED_SCALE / 16;
     WorldCoord {
         x: i64::from(grid_x) * step,
-        y: 0,
+        y: 10 * FIXED_SCALE,
         z: i64::from(grid_y) * step,
     }
 }

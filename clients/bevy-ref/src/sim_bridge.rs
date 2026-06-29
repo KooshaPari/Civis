@@ -62,8 +62,16 @@ impl Default for SimState {
 /// In-process simulation tick interval for the standalone client.
 const SIM_TICK_SECONDS: f32 = 0.1;
 
+/// Cap on maximum seeded actors to render (for performance).
+const MAX_SEEDED_ACTORS: usize = 500;
+
 #[derive(Resource)]
 struct SimTickAccumulator(f32);
+
+/// Tracks whether seeded civilians and buildings have been rendered yet.
+/// This ensures we render the full population once on first tick.
+#[derive(Resource, Default)]
+struct SeededActorsRendered(bool);
 
 #[derive(Resource)]
 struct GameplayMarkerMeshes {
@@ -84,10 +92,12 @@ impl Plugin for SimBridgePlugin {
         app.add_plugins(ProceduralActorPlugin);
         app.init_resource::<SimState>()
             .insert_resource(SimTickAccumulator(0.0))
+            .init_resource::<SeededActorsRendered>()
             .add_systems(Startup, setup_gameplay_marker_meshes)
             .add_systems(
                 Update,
                 (
+                    render_seeded_agents.run_if(in_process_sim_active),
                     advance_simulation.run_if(in_process_sim_active),
                     apply_spawn_civilian_requests.run_if(in_process_sim_active),
                     apply_spawn_building_requests.run_if(in_process_sim_active),
@@ -104,6 +114,97 @@ impl Plugin for SimBridgePlugin {
                 .run_if(in_process_sim_active),
         );
         app.add_systems(Update, sync_visible_gameplay.run_if(in_process_sim_active));
+    }
+}
+
+fn render_seeded_agents(
+    mut sim: ResMut<SimState>,
+    mut seeded_rendered: ResMut<SeededActorsRendered>,
+    mut commands: Commands,
+    existing_civilians: Query<(Entity, &SimCivilianMarker)>,
+    existing_buildings: Query<(Entity, &SimBuildingMarker)>,
+    marker_meshes: Res<GameplayMarkerMeshes>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    #[cfg(feature = "models")]
+    models: Option<Res<civ_bevy_ref::gltf_models::GameModels>>,
+) {
+    // Only run once to render seeded population
+    if seeded_rendered.0 {
+        return;
+    }
+    seeded_rendered.0 = true;
+
+    let mut civilian_entities: HashMap<u64, (Entity, u32, ActorVisualKind)> = existing_civilians
+        .iter()
+        .map(|(entity, marker)| (marker.id, (entity, marker.faction, marker.visual)))
+        .collect();
+    let mut building_entities: HashMap<(i32, i32, BuildingType), Entity> = existing_buildings
+        .iter()
+        .map(|(entity, marker)| ((marker.position.x, marker.position.y, marker.building_type), entity))
+        .collect();
+
+    #[cfg(feature = "models")]
+    let model_resource = models.as_ref();
+    #[cfg(not(feature = "models"))]
+    let model_resource: ModelResourceRef = None;
+
+    // Render seeded civilians, capped for performance
+    let mut civilian_count = 0;
+    for (_, (civilian, position, actor_visual)) in sim
+        .0
+        .world
+        .query::<(&Civilian, &civ_agents::Position3d, Option<&ActorVisual>)>()
+        .iter()
+    {
+        if civilian_count >= MAX_SEEDED_ACTORS {
+            break;
+        }
+        civilian_count += 1;
+
+        let world_pos = sim_position_to_world(position);
+        let faction_id = faction_id(&civilian.alignment);
+        let visual = actor_visual_kind(actor_visual);
+
+        // Spawn if not already rendered
+        if !civilian_entities.contains_key(&civilian.id) {
+            spawn_civilian_visual(
+                &mut commands,
+                model_resource,
+                &marker_meshes.civilian,
+                &mut meshes,
+                &mut materials,
+                civilian.id,
+                faction_id,
+                visual,
+                &world_pos,
+            );
+        }
+    }
+
+    // Render seeded buildings, capped for performance
+    let mut building_count = 0;
+    for (_, building) in sim.0.world.query::<&Building>().iter() {
+        if building_count >= MAX_SEEDED_ACTORS {
+            break;
+        }
+        building_count += 1;
+
+        let world_pos = building_world_position(building);
+        let key = (building.position.x, building.position.y, building.building_type);
+
+        // Spawn if not already rendered
+        if !building_entities.contains_key(&key) {
+            spawn_building_visual(
+                &mut commands,
+                model_resource,
+                &marker_meshes.building,
+                &mut materials,
+                building.building_type,
+                building.position,
+                &world_pos,
+            );
+        }
     }
 }
 

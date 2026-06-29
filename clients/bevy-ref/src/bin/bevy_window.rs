@@ -21,6 +21,7 @@ use civ_bevy_ref::{
     },
     faction_hud::{FactionHudPlugin, PlayerFactionId},
     script_hud::ScriptHudPlugin,
+    world_faction_glyphs::WorldFactionGlyphsPlugin,
     gameplay_hud::GameplayHudPlugin,
     save_load_ui::SaveLoadUiPlugin,
     tutorial::TutorialPlugin,
@@ -268,6 +269,7 @@ fn main() {
             LivePickPlugin,
             FactionHudPlugin,
             ScriptHudPlugin,
+            WorldFactionGlyphsPlugin,
             GameplayHudPlugin,
         ),
         (

@@ -1554,7 +1554,6 @@ impl Simulation {
             moon,
             worldgen,
             climate,
-            current_tick: 0,
             pending_damage: Vec::new(),
             tick_modulo_compact: 64,
             building_graph: BuildingGraph::new(),

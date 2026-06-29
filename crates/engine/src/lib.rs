@@ -69,6 +69,20 @@ pub use save_bundle::{
     delete_slot, list_slots, load_from_slot, save_to_slot, CivSaveBundle, SaveSlotEntry,
 };
 
+// Re-export of `grid_to_norm` and `spawn()` so callers can name them without
+// pulling the private `spawn` module path.
+pub use crate::spawn::{grid_to_norm, military_pin_id, spawn_military_at, unit_type_label};
+
+// `ModGuestStateSave` lives in the `civ-mod-host` crate. Re-exported here
+// so engine consumers (save_bundle, scenario) can `use civ_engine::ModGuestStateSave`
+// without adding a direct `civ-mod-host` dependency.
+pub use civ_mod_host::ModGuestStateSave;
+
+// `ReplayLog` is declared `pub` in `crate::replay`. Re-exported here so
+// callers can `use civ_engine::ReplayLog` without importing the private
+// `crate::replay` module.
+pub use crate::replay::ReplayLog;
+
 // FR-CIV-ARCH: Emergent building layouts re-export so callers can use
 // `civ_engine::EmergentLayout` and `civ_engine::LayoutStrategy` without
 // directly depending on the private `building_layouts` module.
@@ -90,6 +104,12 @@ pub use tutorial::{TutorialMilestone, TutorialProgress};
 pub use civ_institutions::{
     Institution, InstitutionKind, GARRISON_UNLOCK_POPULATION, TEMPLE_UNLOCK_POPULATION,
 };
+
+/// Per-settlement institution event emitted by [`crate::Simulation::phase_institutions`].
+///
+/// Local mirror of the engine's internal type so callers can name it without
+/// pulling the engine module path directly.
+pub use crate::engine::InstitutionEvent;
 
 // FR-CIV-GOV-100 (civ-007 social-mood epic). Re-exported so callers can name
 // the snapshot type as `civ_engine::MoodSnapshot` and the saturation /

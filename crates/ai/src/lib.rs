@@ -35,6 +35,7 @@ pub mod preflight;
 pub mod provenance;
 pub mod providers;
 pub mod registry;
+pub mod social_graph;
 
 pub use cache::AiCache;
 pub use config::AiConfig;
@@ -43,6 +44,7 @@ pub use pool::{AiPayload, AiResult, AiTask, AiWorkerPool, TaskId};
 pub use provenance::{AiEvent, ReplayAdvanceOutcome, ReplayMode, ReplayRefusal};
 pub use providers::DummyAiProvider;
 pub use registry::{ProviderRegistry, ProviderRole};
+pub use social_graph::*;
 
 use serde::{Deserialize, Serialize};
 

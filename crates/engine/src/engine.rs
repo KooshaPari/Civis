@@ -4289,6 +4289,10 @@ impl Simulation {
         );
     }
 
+    pub(crate) fn push_disaster_event(&mut self, event: crate::disasters::DisasterTickEvent) {
+        self.last_tick_disaster_events.push(event);
+    }
+
     /// Language phase (FR-CIV-LANG-001 / FR-LANGUAGE-001) — per-faction language
     /// emerges from current cluster culture vectors (`cluster_cultures`) and drifts
     /// under isolation pressure.

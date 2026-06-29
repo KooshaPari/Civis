@@ -36,6 +36,7 @@ pub mod scenario;
 pub mod perf;
 pub mod spawn;
 pub mod spectator;
+pub mod writing;
 
 pub use conditions::{check_outcome, GameOutcome};
 pub use gameplay::{
@@ -105,6 +106,7 @@ pub use scenario::{
     SCENARIO_SCHEMA_VERSION,
 };
 pub use spectator::{BuildingPin, CivPin, Faction, JobLabel, SpectatorView};
+pub use writing::{glyphs_for_language, Glyph, Stroke};
 
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;

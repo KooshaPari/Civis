@@ -188,7 +188,7 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) -> 
     let affected = positions_in_radius(pos, radius);
     let mut terrain_cells = 0u32;
     let mut casualties = 0u32;
-    let mut impact = (0i32, 0u32, 0.0);
+    let mut impact = (0i32, 0u32, 0.0_f32);
 
     match kind {
         DisasterKind::Meteor => {

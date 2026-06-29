@@ -32,12 +32,17 @@
 
 mod registry;
 mod cooldown;
+mod synergy;
 
 pub use registry::{
     PowerCategory, PowerId, PowerRequestKind, PowerRegistry, PowerTab, PowerTargetMask, PowerDef,
     PowerAvailability, FORBIDDEN_TARGET_FIELDS,
 };
 pub use cooldown::{PowerCooldown, PowerCooldownState};
+pub use synergy::{
+    synergy_multiplier, SynergyEdge, SynergyOutcome, MAX_MULT, MIN_MULT, PENALTY_NUDGE,
+    SYNERGY_BUMP,
+};
 
 /// Return the full 50-verb god-tool catalog.
 ///

@@ -224,6 +224,17 @@ fn sync_visible_gameplay(
     #[cfg(feature = "models")]
     models: Option<Res<civ_bevy_ref::gltf_models::GameModels>>,
 ) {
+    // One-time archetype debug log on first sync (to find 300-vs-5 gap)
+    static DEBUG_LOGGED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    if !DEBUG_LOGGED.swap(true, std::sync::atomic::Ordering::SeqCst) {
+        let count_civilian = sim.0.world.query::<&Civilian>().iter().count();
+        let count_pos3d = sim.0.world.query::<&civ_agents::Position3d>().iter().count();
+        let count_civ_pos = sim.0.world.query::<(&Civilian, &civ_agents::Position3d)>().iter().count();
+        let count_render = sim.0.world.query::<(&Civilian, &civ_agents::Position3d, Option<&ActorVisual>)>().iter().count();
+        let count_total = sim.0.world.iter().count();
+        info!("civis-archetype: total={} civilian={} pos3d={} civ+pos={} render_match={}", count_total, count_civilian, count_pos3d, count_civ_pos, count_render);
+    }
+
     if !sim.is_changed() {
         return;
     }

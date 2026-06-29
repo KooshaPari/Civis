@@ -60,7 +60,7 @@ fn evaluate_faction(sim: &Simulation, faction_id: u32) -> FactionDecision {
 
     // 2. Check cohesion and resource state.
     let avg_cohesion = sim
-        .last_tick_cohesion
+        .last_tick_cohesion_snapshots()
         .values()
         .map(|snapshot| match snapshot.fabric {
             crate::FabricTier::Tight => 1.0,
@@ -69,7 +69,7 @@ fn evaluate_faction(sim: &Simulation, faction_id: u32) -> FactionDecision {
             crate::FabricTier::Fractured => 0.0,
         })
         .sum::<f32>()
-        / (sim.last_tick_cohesion.len() as f32).max(1.0);
+        / (sim.last_tick_cohesion_snapshots().len() as f32).max(1.0);
 
     let resources = sim
         .state

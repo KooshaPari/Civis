@@ -49,7 +49,7 @@ impl OracleRegistry {
         self.oracles.push(oracle);
     }
 
-    /// Create a registry pre-loaded with all 15 domain oracles.
+    /// Create a registry pre-loaded with all 16 domain oracles.
     pub fn with_defaults() -> Self {
         use oracles::{
             architecture::ArchitectureOracle, creature::CreatureOracle,
@@ -57,6 +57,7 @@ impl OracleRegistry {
             epidemic::EpidemicOracle, festival::FestivalOracle, language::LanguageOracle,
             legends::LegendsOracle, migration::MigrationOracle, mood::MoodOracle, psyche::PsycheOracle,
             religion::ReligionOracle, trade::TradeOracle, stratification::StratificationOracle,
+            religious_conflict::ReligiousConflictOracle,
         };
         let mut registry = Self::new();
         registry.register(Box::new(ReligionOracle));
@@ -74,6 +75,7 @@ impl OracleRegistry {
         registry.register(Box::new(DisasterOracle));
         registry.register(Box::new(MoodOracle));
         registry.register(Box::new(StratificationOracle));
+        registry.register(Box::new(ReligiousConflictOracle));
         registry
     }
 
@@ -98,7 +100,7 @@ mod tests {
         let sim = Simulation::new();
         let registry = OracleRegistry::with_defaults();
         let verdicts = registry.run_all(&sim);
-        assert_eq!(verdicts.len(), 15, "Expected 15 oracle verdicts");
+        assert_eq!(verdicts.len(), 16, "Expected 16 oracle verdicts");
     }
 
     #[test]

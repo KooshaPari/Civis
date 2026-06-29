@@ -13,3 +13,4 @@ pub mod trade;
 pub mod psyche;
 pub mod religion;
 pub mod stratification;
+pub mod religious_conflict;

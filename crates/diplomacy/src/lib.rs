@@ -1036,6 +1036,21 @@ fn bump_from_energy(energy: u32) -> i32 {
 }
 
 // ---------------------------------------------------------------------------
+// FR-CIV-DIPLO-STANCE: relationship-stance model
+// ---------------------------------------------------------------------------
+//
+// Additive slice: faction pairs hold an opinion scalar shifted by events
+// (trade=+, raid=-) and mapped to stance buckets `Ally`/`Neutral`/`Hostile`.
+// Lives in its own module and does not modify the substrate above.
+
+pub mod relationship_stance;
+
+pub use relationship_stance::{
+    FactionPair, Opinion, RelationEvent, RelationStance, RelationshipStance,
+    RelationshipStanceModel, StanceConfigError, StanceThresholds,
+};
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 

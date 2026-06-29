@@ -208,7 +208,6 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) -> 
                 radius,
                 DisasterEffect::new(0.28, 0.35, 0.25, 0.55, true),
             );
-            terrain_cells = impact.0 as u32;
             casualties = impact.1;
         }
         DisasterKind::Flood => {
@@ -417,7 +416,7 @@ impl DisasterEffect {
     }
 }
 
-fn hit_agents(sim: &mut Simulation, pos: WorldCoord, radius: i64, effect: DisasterEffect) -> (u32, u32) {
+fn hit_agents(sim: &mut Simulation, pos: WorldCoord, radius: i64, effect: DisasterEffect) -> (i32, u32, f32) {
     let radius_sq = (radius as i128) * (radius as i128);
     let effects: Vec<(Entity, bool)> = {
         let entities: Vec<Entity> = sim
@@ -464,7 +463,12 @@ fn hit_agents(sim: &mut Simulation, pos: WorldCoord, radius: i64, effect: Disast
             casualties += 1;
         }
     }
-    (affected, casualties)
+    let severity = if affected == 0 {
+        0.0
+    } else {
+        casualties as f32 / affected as f32
+    };
+    (-(casualties as i32), casualties, severity)
 }
 
 #[cfg(test)]

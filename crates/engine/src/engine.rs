@@ -1242,7 +1242,7 @@ impl Simulation {
                 hp,
                 max_hp: hp,
                 morale: Fixed::from_num(1),
-                position: Position { x: i + 6, y: 2 },
+                position: Position { x: -5 + i, y: 0 },
                 faction_id: 1,
             };
             let _ = world.spawn((soldier,));
@@ -4713,6 +4713,10 @@ mod tests {
         for _ in 0..16 {
             sim.tick();
         }
+        let combat_events: Vec<_> = sim.replay_log().events.iter().filter(|e| matches!(e, ReplayEvent::Combat{..})).collect();
+        eprintln!("Total replay events: {}", sim.replay_log().events.len());
+        eprintln!("Combat events: {:?}", combat_events);
+        eprintln!("Last engagements: {:?}", sim.last_tick_engagements);
         assert!(sim.replay_log().events.iter().any(|event| {
             matches!(
                 event,

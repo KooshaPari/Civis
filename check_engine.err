@@ -1,5 +1,3 @@
-    Blocking waiting for file lock on build directory
-crates\species\src\pop_pressure.rs:87:9: warning: unused variable: `pressure`: help: if this is intentional, prefix it with an underscore: `_pressure`
 warning: unnecessary parentheses around assigned value
     --> crates\needs\src\lib.rs:1121:23
      |
@@ -21,8 +19,9 @@ warning: unused variable: `age_u16`
    |
    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
 
-warning: `civ-species` (lib) generated 1 warning (run `cargo fix --lib -p civ-species` to apply 1 suggestion)
+crates\species\src\pop_pressure.rs:87:9: warning: unused variable: `pressure`: help: if this is intentional, prefix it with an underscore: `_pressure`
 warning: `civ-needs` (lib) generated 2 warnings (run `cargo fix --lib -p civ-needs` to apply 2 suggestions)
+warning: `civ-species` (lib) generated 1 warning (run `cargo fix --lib -p civ-species` to apply 1 suggestion)
 warning: struct `PlannedAllocator` is never constructed
   --> crates\economy\src\allocation.rs:38:12
    |
@@ -179,17 +178,6 @@ warning: `civ-economy` (lib) generated 24 warnings
 crates\civ-emergence-metrics\src\lib.rs:55:1: warning: missing documentation for a module
 warning: `civ-emergence-metrics` (lib) generated 1 warning
     Checking civ-engine v0.1.0 (C:\Users\koosh\Dev\Civis-cxA\crates\engine)
-error: expected one of `,` or `>`, found `{`
-  --> crates\engine\src\culture.rs:65:45
-   |
-65 | ) -> BTreeMap<u32, ([f32; DIM], [f32; DIM]) {
-   |                                             ^ expected one of `,` or `>`
-   |
-help: you might have meant to end the type parameters here
-   |
-65 | ) -> BTreeMap<u32, ([f32; DIM], [f32; DIM])> {
-   |                                            +
-
 error: variant field name `kind` conflicts with internal tag
    --> crates\engine\src\godtools.rs:598:1
     |
@@ -202,38 +190,11 @@ error: variant field name `kind` conflicts with internal tag
 680 | | }
     | |_^
 
-error[E0425]: cannot find type `MilitaryUnit` in this scope
-  --> crates\engine\src\save.rs:65:27
+error[E0432]: unresolved import `crate::culture::CultureSnapshot`
+  --> crates\engine\src\building_layouts.rs:13:5
    |
-65 |     military_unit: Option<MilitaryUnit>,
-   |                           ^^^^^^^^^^^^ not found in this scope
-   |
-help: consider importing this struct through its public re-export
-   |
- 3 + use crate::MilitaryUnit;
-   |
-
-error[E0425]: cannot find type `MilitaryUnit` in this scope
-   --> crates\engine\src\save.rs:136:42
-    |
-136 |     for (entity, unit) in world.query::<&MilitaryUnit>().iter() {
-    |                                          ^^^^^^^^^^^^ not found in this scope
-    |
-help: consider importing this struct through its public re-export
-    |
-  3 + use crate::MilitaryUnit;
-    |
-
-error[E0425]: cannot find type `MilitaryUnit` in this scope
-   --> crates\engine\src\save.rs:193:30
-    |
-193 |             || builder.has::<MilitaryUnit>()
-    |                              ^^^^^^^^^^^^ not found in this scope
-    |
-help: consider importing this struct through its public re-export
-    |
-  3 + use crate::MilitaryUnit;
-    |
+13 | use crate::culture::CultureSnapshot;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `CultureSnapshot` in `culture`
 
 error[E0603]: enum import `BranchingRegime` is private
   --> crates\engine\src\lib.rs:54:5
@@ -263,6 +224,31 @@ warning: unused import: `crate::demographics::DemographicsSnapshot`
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unnecessary parentheses around assigned value
+   --> crates\engine\src\culture.rs:195:25
+    |
+195 |             let noise = (rng.gen_range(-0.5f32..0.5f32) * 2.0 * drift_strength);
+    |                         ^                                                     ^
+    |
+    = note: `#[warn(unused_parens)]` (part of `#[warn(unused)]`) on by default
+help: remove these parentheses
+    |
+195 -             let noise = (rng.gen_range(-0.5f32..0.5f32) * 2.0 * drift_strength);
+195 +             let noise = rng.gen_range(-0.5f32..0.5f32) * 2.0 * drift_strength;
+    |
+
+warning: unnecessary parentheses around assigned value
+   --> crates\engine\src\culture.rs:208:30
+    |
+208 |             let norm_noise = (rng.gen_range(-0.5f32..0.5f32) * 0.015 * (1.0 - 0.65 * isolation));
+    |                              ^                                                                 ^
+    |
+help: remove these parentheses
+    |
+208 -             let norm_noise = (rng.gen_range(-0.5f32..0.5f32) * 0.015 * (1.0 - 0.65 * isolation));
+208 +             let norm_noise = rng.gen_range(-0.5f32..0.5f32) * 0.015 * (1.0 - 0.65 * isolation);
+    |
 
 warning: unused imports: `SeedSet` and `spawn_genome_with_divergence`
   --> crates\engine\src\emergence.rs:19:20
@@ -1908,21 +1894,21 @@ error[E0609]: no field `raw` on type `FixedI32<UInt<UInt<UInt<UInt<UInt<UTerm, B
      |                                   ^^^ unknown field
 
 error[E0599]: no variant, associated function, or constant named `Bonded` found for enum `CohesionEventKind` in the current scope
-    --> crates\engine\src\engine.rs:9381:34
-     |
-1157 | pub enum CohesionEventKind {
-     | -------------------------- variant, associated function, or constant `Bonded` not found for this enum
-...
-9381 |         kind: CohesionEventKind::Bonded,
-     |                                  ^^^^^^ variant, associated function, or constant not found in `CohesionEventKind`
-
-error[E0599]: no variant, associated function, or constant named `Bonded` found for enum `CohesionEventKind` in the current scope
     --> crates\engine\src\engine.rs:9398:34
      |
 1157 | pub enum CohesionEventKind {
      | -------------------------- variant, associated function, or constant `Bonded` not found for this enum
 ...
 9398 |         kind: CohesionEventKind::Bonded,
+     |                                  ^^^^^^ variant, associated function, or constant not found in `CohesionEventKind`
+
+error[E0599]: no variant, associated function, or constant named `Bonded` found for enum `CohesionEventKind` in the current scope
+    --> crates\engine\src\engine.rs:9415:34
+     |
+1157 | pub enum CohesionEventKind {
+     | -------------------------- variant, associated function, or constant `Bonded` not found for this enum
+...
+9415 |         kind: CohesionEventKind::Bonded,
      |                                  ^^^^^^ variant, associated function, or constant not found in `CohesionEventKind`
 
 error[E0308]: mismatched types
@@ -2263,9 +2249,9 @@ help: there is a method `next_u64` with a similar name
     |
 
 error[E0277]: the trait bound `civ_institutions::InstitutionKind: std::cmp::Ord` is not satisfied
-    --> crates\engine\src\save.rs:52:33
+    --> crates\engine\src\save.rs:51:33
      |
-  52 |     institution_levels_emitted: BTreeSet<(u32, InstitutionKind, u8)>,
+  51 |     institution_levels_emitted: BTreeSet<(u32, InstitutionKind, u8)>,
      |                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `std::cmp::Ord` is not implemented for `civ_institutions::InstitutionKind`
      |
 help: the trait `Deserialize<'_>` is implemented for `BTreeSet<T>`
@@ -2297,9 +2283,9 @@ note: required by a bound in `next_element`
      = note: this error originates in the macro `seq_impl` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error[E0277]: the trait bound `civ_institutions::InstitutionKind: std::cmp::Ord` is not satisfied
-    --> crates\engine\src\save.rs:52:33
+    --> crates\engine\src\save.rs:51:33
      |
-  52 |     institution_levels_emitted: BTreeSet<(u32, InstitutionKind, u8)>,
+  51 |     institution_levels_emitted: BTreeSet<(u32, InstitutionKind, u8)>,
      |                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `std::cmp::Ord` is not implemented for `civ_institutions::InstitutionKind`
      |
 help: the trait `Deserialize<'_>` is implemented for `BTreeSet<T>`
@@ -2331,9 +2317,9 @@ note: required by a bound in `next_value`
      = note: this error originates in the macro `seq_impl` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error[E0277]: the trait bound `civ_institutions::InstitutionKind: std::cmp::Ord` is not satisfied
-    --> crates\engine\src\save.rs:31:46
+    --> crates\engine\src\save.rs:30:46
      |
-  31 | #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+  30 | #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
      |                                              ^^^^^^^^^^^ the trait `std::cmp::Ord` is not implemented for `civ_institutions::InstitutionKind`
      |
 help: the trait `Deserialize<'_>` is implemented for `BTreeSet<T>`
@@ -2365,9 +2351,9 @@ note: required by a bound in `building_layouts::_::_serde::__private228::de::mis
      = note: this error originates in the derive macro `Deserialize` which comes from the expansion of the macro `seq_impl` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error[E0308]: mismatched types
-    --> crates\engine\src\save.rs:251:41
+    --> crates\engine\src\save.rs:250:41
      |
- 251 |     let mut sim = Simulation::with_seed(saved.state.rng_seed);
+ 250 |     let mut sim = Simulation::with_seed(saved.state.rng_seed);
      |                   --------------------- ^^^^^^^^^^^^^^^^^^^^ expected `SimSeed`, found `u64`
      |                   |
      |                   arguments to this function are incorrect
@@ -2379,7 +2365,7 @@ note: associated function defined here
      |            ^^^^^^^^^ -------------
 help: try wrapping the expression in `engine::SimSeed`
      |
- 251 |     let mut sim = Simulation::with_seed(engine::SimSeed(saved.state.rng_seed));
+ 250 |     let mut sim = Simulation::with_seed(engine::SimSeed(saved.state.rng_seed));
      |                                         ++++++++++++++++                    +
 
 error[E0308]: mismatched types
@@ -2472,6 +2458,18 @@ warning: value assigned to `impact` is never read
 210 | |             );
     | |_____________- `impact` is overwritten here before the previous value is read
 
+error[E0502]: cannot borrow `*self` as mutable because it is also borrowed as immutable
+   --> crates\engine\src\emergence.rs:374:13
+    |
+364 |         self.faction_ideologies = advance_faction_ideologies(
+    |                                   -------------------------- immutable borrow later used by call
+365 |             tick,
+366 |             &self.emergence.cluster_cultures,
+    |             -------------------------------- immutable borrow occurs here
+...
+374 |             self.rng_mut(),
+    |             ^^^^^^^^^^^^^^ mutable borrow occurs here
+
 warning: variable `cumulative` is assigned to, but never used
     --> crates\engine\src\engine.rs:1104:9
      |
@@ -2555,7 +2553,7 @@ error[E0502]: cannot borrow `self.world` as mutable because it is also borrowed 
 1866 |                     if self.world.despawn(*entity).is_ok() {
      |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^ mutable borrow occurs here
 
-Some errors have detailed explanations: E0061, E0062, E0063, E0277, E0308, E0369, E0382, E0425, E0499...
+Some errors have detailed explanations: E0061, E0062, E0063, E0277, E0308, E0369, E0382, E0432, E0499...
 For more information about an error, try `rustc --explain E0061`.
-warning: `civ-engine` (lib) generated 19 warnings
-error: could not compile `civ-engine` (lib) due to 207 previous errors; 19 warnings emitted
+warning: `civ-engine` (lib) generated 21 warnings
+error: could not compile `civ-engine` (lib) due to 205 previous errors; 21 warnings emitted

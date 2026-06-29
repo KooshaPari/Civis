@@ -17,6 +17,7 @@
 //! -CAUSAL-06, -QUERY-07, -NARRATOR-13; NFR-CIV-LEGENDS-SCALE-02, -CONFIG-04, -LOUD-03.
 
 pub mod config;
+pub mod decay;
 pub mod graph;
 pub mod ids;
 pub mod model;
@@ -25,6 +26,7 @@ pub mod rumor;
 pub mod worker;
 
 pub use config::LegendsConfig;
+pub use decay::{DecayConfig, Prominence, ProminenceTracker};
 pub use graph::{AggregateKey, EmptySagaReason, GapReport, IngestOutcome, SagaGraph};
 pub use ids::{
     ClusterId, Epoch, LegendEntityId, LegendEventId, NameRef, Provenance, RawEventRef, RegionId,

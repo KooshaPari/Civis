@@ -347,7 +347,7 @@ fn scenario_panel_input(
     keys: Res<ButtonInput<KeyCode>>,
     mouse: Res<ButtonInput<MouseButton>>,
     mut panel: ResMut<ScenarioPanel>,
-    bridge: Res<LiveBridge>,
+    bridge: Option<Res<LiveBridge>>,
     mut seed_labels: Query<&mut Text, (With<ScenarioSeedLabel>, Without<ScenarioSpeedLabel>, Without<ScenarioStartButton>)>,
     mut speed_labels: Query<&mut Text, (With<ScenarioSpeedLabel>, Without<ScenarioSeedLabel>, Without<ScenarioStartButton>)>,
     mut preset_labels: Query<&mut Text, (With<ScenarioPresetLabel>, Without<ScenarioSeedLabel>, Without<ScenarioSpeedLabel>, Without<ScenarioStartButton>)>,
@@ -412,6 +412,7 @@ fn scenario_panel_input(
         .map(|i| *i == Interaction::Pressed)
         .unwrap_or(false);
     if clicked || keys.just_pressed(KeyCode::Enter) {
+        let Some(bridge) = bridge else { return; };
         let (_, seed) = NAMED_SEEDS[panel.seed_index];
         let (_, speed) = SPEED_OPTIONS[panel.speed_index];
         let preset = PRESET_OPTIONS[panel.preset_index];
@@ -428,7 +429,8 @@ fn scenario_panel_input(
 }
 
 
-fn drive_app_state(bridge: Res<LiveBridge>, current: Res<State<AppState>>, mut next: ResMut<NextState<AppState>>) {
+fn drive_app_state(bridge: Option<Res<LiveBridge>>, current: Res<State<AppState>>, mut next: ResMut<NextState<AppState>>) {
+    let Some(bridge) = bridge else { return; };
     let ws = bridge.client.latest_connection_state();
     match (current.get(), ws) {
         (AppState::Connecting, WsConnectionState::Connected) => { next.set(AppState::InGame); }
@@ -532,10 +534,11 @@ fn animate_splash(
     }
 }
 fn apply_spectator_meta(
-    bridge: Res<LiveBridge>,
+    bridge: Option<Res<LiveBridge>>,
     mut presentation: ResMut<ScenePresentation>,
     mut hud: ResMut<HudState>,
 ) {
+    let Some(bridge) = bridge else { return; };
     for meta in bridge.client.poll_meta() {
         presentation.is_day = meta.is_day;
         if let Some(tick) = meta.tick {
@@ -558,7 +561,7 @@ fn sync_live_pick_detail(
 }
 
 fn sync_live_hud_stats(
-    bridge: Res<LiveBridge>,
+    bridge: Option<Res<LiveBridge>>,
     scene: Res<LiveStreamScene>,
     mut hud: ResMut<HudState>,
 ) {
@@ -572,6 +575,7 @@ fn sync_live_hud_stats(
         civilians,
         factions,
     );
+    let Some(bridge) = bridge else { return; };
     if let Some(rtt) = bridge.client.latest_rtt_ms() {
         hud.snapshot.ws_rtt_ms = Some(rtt);
     }
@@ -745,7 +749,7 @@ fn debug_render_input(keys: Res<ButtonInput<KeyCode>>, mut debug: ResMut<DebugRe
 
 fn speed_control_input(
     keys: Res<ButtonInput<KeyCode>>,
-    bridge: Res<LiveBridge>,
+    bridge: Option<Res<LiveBridge>>,
     mut speed: ResMut<SimSpeedState>,
     mut hud: ResMut<HudState>,
 ) {
@@ -768,6 +772,7 @@ fn speed_control_input(
     }
 
     speed.multiplier = if speed.paused { 0 } else { SPEED_OPTIONS[speed.speed_idx].1 };
+    let Some(bridge) = bridge else { return; };
     let json = format!(r#"{{"jsonrpc":"2.0","id":1,"method":"sim.set_speed","params":{{"multiplier":{}}}}}"#, speed.multiplier);
     bridge.client.send_rpc_raw(json);
     hud.snapshot.speed_multiplier = speed.multiplier;
@@ -849,7 +854,7 @@ mod tests {
 
 fn apply_live_frames(
     mut commands: Commands,
-    bridge: Res<LiveBridge>,
+    bridge: Option<Res<LiveBridge>>,
     mut scene: ResMut<LiveStreamScene>,
     mut hud: ResMut<HudState>,
     orbit: Res<OrbitCamera>,
@@ -860,6 +865,7 @@ fn apply_live_frames(
     mut feed: ResMut<EventFeed>,
     gpu_quality: Option<Res<GpuQualityMode>>,
 ) {
+    let Some(bridge) = bridge else { return; };
     let frames = bridge.client.poll();
     if !frames.is_empty() {
         hud.snapshot.connected = true;
@@ -1324,7 +1330,7 @@ fn minimap_click_focus(
     mut orbit: ResMut<OrbitCamera>,
     mut hud: ResMut<HudState>,
     mut popup: ResMut<MinimapPopup>,
-    bridge: Res<LiveBridge>,
+    bridge: Option<Res<LiveBridge>>,
 ) {
     let select_pressed = action_pressed(
         #[cfg(feature = "egui")]
@@ -1489,7 +1495,7 @@ fn update_chunk_fade(
 fn minimap_popup_ui(
     mut contexts: EguiContexts,
     mut popup: ResMut<MinimapPopup>,
-    bridge: Res<LiveBridge>,
+    bridge: Option<Res<LiveBridge>>,
     mut orbit: ResMut<OrbitCamera>,
     mut hud: ResMut<HudState>,
     scene: Res<LiveStreamScene>,
@@ -1497,6 +1503,7 @@ fn minimap_popup_ui(
     let Some((tx, ty)) = popup.pending else {
         return;
     };
+    let Some(bridge) = bridge else { return; };
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
@@ -1530,7 +1537,7 @@ fn minimap_popup_ui(
 
 fn poll_emergence(
     time: Res<Time>,
-    bridge: Res<LiveBridge>,
+    bridge: Option<Res<LiveBridge>>,
     mut timer: ResMut<EmergencePollTimer>,
     mut hud: ResMut<HudState>,
     speed: Res<SimSpeedState>,
@@ -1538,6 +1545,7 @@ fn poll_emergence(
 ) {
     hud.snapshot.speed_multiplier = speed.multiplier;
     // Apply any parsed emergence responses received from the server.
+    let Some(bridge) = bridge else { return; };
     for em in bridge.client.poll_emergence() {
         hud.snapshot.emergence = Some(em.clone());
         *emergence_res = em;

@@ -44,9 +44,10 @@ use civ_bevy_ref::{
     event_feed::{EventFeed, EventFeedPlugin},
     emergence_dashboard::EmergenceDashboardPlugin,
     sandbox_event_feed::SandboxEventFeedPlugin,
+    sim_bridge::SimBridgePlugin,
     ws_client::{WsClient, WsClientConfig},
     post_fx::PostFxPlugin,
-    CameraTarget, DebugRender, EmergenceHudData, HudState, LiveHudSnapshot, MinimapBounds,
+    AttachMode, CameraTarget, DebugRender, EmergenceHudData, HudState, LiveHudSnapshot, MinimapBounds,
     VOXEL_CHUNK_EDGE, WsConnectionState,
 };
 #[cfg(feature = "gi")]
@@ -279,6 +280,7 @@ fn main() {
         ),
     ))
         .add_plugins((SandboxEventFeedPlugin, civ_bevy_ref::frame_budget::FrameBudgetPlugin))
+        .add_plugins(SimBridgePlugin)
         .init_state::<AppState>()
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()
@@ -290,6 +292,7 @@ fn main() {
         .init_resource::<EmergenceHudData>()
         .insert_resource(ScenePresentation::default())
         .insert_resource(DebugRender::default())
+        .insert_resource(AttachMode::Standalone)
         .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
         .add_systems(Startup, setup)
         .add_systems(OnEnter(AppState::Connecting), spawn_connecting_overlay)
@@ -431,7 +434,21 @@ fn scenario_panel_input(
 }
 
 
-fn drive_app_state(bridge: Option<Res<LiveBridge>>, current: Res<State<AppState>>, mut next: ResMut<NextState<AppState>>) {
+fn drive_app_state(
+    attach_mode: Res<AttachMode>,
+    bridge: Option<Res<LiveBridge>>,
+    current: Res<State<AppState>>,
+    mut next: ResMut<NextState<AppState>>,
+) {
+    // Standalone mode: in-process simulation, immediate transition to InGame.
+    if *attach_mode == AttachMode::Standalone {
+        if *current.get() == AppState::Connecting {
+            next.set(AppState::InGame);
+        }
+        return;
+    }
+
+    // Server mode: wait for WebSocket connection.
     let Some(bridge) = bridge else { return; };
     let ws = bridge.client.latest_connection_state();
     match (current.get(), ws) {
@@ -663,12 +680,16 @@ fn update_presentation_lighting(
     clear.0 = Color::srgb(clear_rgb[0], clear_rgb[1], clear_rgb[2]);
 }
 
-fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
+fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, attach_mode: Res<AttachMode>) {
     spawn_default_scene(&mut commands);
     commands.insert_resource(default_stream_meshes(&mut meshes));
-    let ws_client = WsClient::spawn_with_config(resolve_live_ws_url(), WsClientConfig::default());
-    commands.insert_resource(DiplomacyBridge::new(ws_client.rpc_sender()));
-    commands.insert_resource(LiveBridge { client: ws_client });
+
+    // Only spawn WebSocket bridge in server mode
+    if *attach_mode == AttachMode::Server {
+        let ws_client = WsClient::spawn_with_config(resolve_live_ws_url(), WsClientConfig::default());
+        commands.insert_resource(DiplomacyBridge::new(ws_client.rpc_sender()));
+        commands.insert_resource(LiveBridge { client: ws_client });
+    }
 
     let text = commands
         .spawn((

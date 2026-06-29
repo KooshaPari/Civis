@@ -17,6 +17,7 @@
 
 pub mod env_overlay;
 pub mod god_tool_state;
+mod godtool_brush;
 pub mod key_palette;
 pub mod notifications;
 pub mod overlay_legend;
@@ -32,6 +33,7 @@ pub use god_tool_state::{
     GodToolDef, GodToolId, GodToolParamKind, GodToolParamSpec, GodToolParamValue, GodToolRegistry,
     GodToolState,
 };
+pub use godtool_brush::*;
 pub use key_palette::{KeyId, KeycapDef, KeycapPalette, keycap_palette_default};
 pub use notifications::{Notification, NotificationQueue, Severity};
 pub use overlay_legend::*;

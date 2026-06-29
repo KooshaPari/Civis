@@ -1,6 +1,7 @@
 pub mod architecture;
 pub mod coastal_settlement;
 pub mod creature;
+pub mod desert_caravan;
 pub mod diplomacy;
 pub mod disaster;
 pub mod economy;

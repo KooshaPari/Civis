@@ -3,7 +3,7 @@
 
 use std::collections::BTreeMap;
 
-use civ_voxel::{MaterialId, WorldCoord};
+use civ_voxel::WorldCoord;
 
 use crate::{
     default_facade_for_era, ArchitectureMode, BuildingGraph, BuildingId, CultureEraWealthVector,

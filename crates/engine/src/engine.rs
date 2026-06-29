@@ -1220,7 +1220,14 @@ impl Simulation {
             let _ = world.spawn((farm,));
         }
 
-        // Create initial military (player + AI for war-bridge smoke)
+        // Create initial military (player + AI for war-bridge smoke). The two armies
+        // must keep CLEAR LINE OF SIGHT to engage (war_bridge LOS over the voxel
+        // world). phase_disasters writes solid terrain near the origin plane
+        // (x = region_id 0..15, y = z = 0, radius ±N·FIXED_SCALE), which would
+        // occlude armies placed at the origin. Base them far from that disaster zone
+        // (grid_x ≈ WAR_SMOKE_GRID_BASE → world x ≈ 62.5·FIXED_SCALE) while keeping
+        // the two factions within war-bridge engage range of each other.
+        const WAR_SMOKE_GRID_BASE: i32 = 1_000;
         for i in 0..5 {
             let hp = Fixed::from_num(10);
             let soldier = MilitaryUnit {
@@ -1229,7 +1236,10 @@ impl Simulation {
                 hp,
                 max_hp: hp,
                 morale: Fixed::from_num(1),
-                position: Position { x: i, y: 0 },
+                position: Position {
+                    x: WAR_SMOKE_GRID_BASE + i,
+                    y: 0,
+                },
                 faction_id: 0,
             };
             let _ = world.spawn((soldier,));
@@ -1242,7 +1252,10 @@ impl Simulation {
                 hp,
                 max_hp: hp,
                 morale: Fixed::from_num(1),
-                position: Position { x: i + 6, y: 2 },
+                position: Position {
+                    x: WAR_SMOKE_GRID_BASE + i + 6,
+                    y: 2,
+                },
                 faction_id: 1,
             };
             let _ = world.spawn((soldier,));
@@ -4670,14 +4683,14 @@ mod tests {
             "expected war-bridge combat in replay log"
         );
 
+        // Replaying the recorded event log (which captures every voxel write — the
+        // war-bridge combat damage as well as the deterministic emergent terrain)
+        // must drain to exactly the same voxel state as the live run. That is the
+        // replay determinism contract this test guards.
         let mut from_replay = Simulation::with_seed(seed);
-        for (tick, event) in combat {
-            from_replay.apply_replay_combat(tick, &event);
-        }
-        let pending: Vec<DamageEvent> = from_replay.pending_damage.drain(..).collect();
-        for event in pending {
-            let _ = from_replay.apply_damage_now(&event);
-        }
+        live.replay_log()
+            .replay(&mut from_replay)
+            .expect("replay of recorded log must succeed");
         assert_eq!(from_replay.voxel().chunk_count(), chunk_live);
     }
 

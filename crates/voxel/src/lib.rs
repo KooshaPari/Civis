@@ -41,6 +41,7 @@ pub mod material_ca;
 pub mod material_pbr;
 pub mod reactions;
 pub mod scale_budget;
+pub mod scale_stream;
 pub mod stream;
 pub mod window;
 pub mod worldgen;
@@ -64,6 +65,7 @@ pub use scale_budget::{
     CohortTotals, ExtentBudget, ExtentError, Gestalt, LodRingPlan, MvpResidentBudget,
     MvpResidentConfig, PlanError, RingRole, SimLodAggregator, StreamConfigLite,
 };
+pub use scale_stream::*;
 pub use stream::{
     ChunkStorePort, FsChunkStore, StreamConfig, StreamStats, StreamingWorld, WorldGen, CHUNK_EDGE,
     CHUNK_EDGE_I32,

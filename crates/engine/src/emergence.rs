@@ -2830,3 +2830,69 @@ mod added_tests {
         assert_eq!(propaganda_reach(10.0, 10.0), 1.0);
     }
 }
+
+pub fn quarantine_efficacy(governance: f32, compliance: f32) -> f32 {
+    if !governance.is_finite() || !compliance.is_finite() {
+        return 0.0;
+    }
+
+    let governance = governance.clamp(0.0, 1.0);
+    let compliance = compliance.clamp(0.0, 1.0);
+
+    (governance * 0.45 + compliance * 0.55).clamp(0.0, 1.0)
+}
+
+pub fn refugee_flow(crisis_severity: f32, neighbor_capacity: f32) -> f32 {
+    if !crisis_severity.is_finite() || !neighbor_capacity.is_finite() {
+        return 0.0;
+    }
+
+    let crisis_severity = crisis_severity.clamp(0.0, 1.0);
+    let neighbor_capacity = neighbor_capacity.clamp(0.0, 1.0);
+
+    (crisis_severity * neighbor_capacity).clamp(0.0, 1.0)
+}
+
+pub fn resettlement_success(integration_support: f32, cultural_distance: f32) -> f32 {
+    if !integration_support.is_finite() || !cultural_distance.is_finite() {
+        return 0.0;
+    }
+
+    let integration_support = integration_support.clamp(0.0, 1.0);
+    let cultural_distance = cultural_distance.clamp(0.0, 1.0);
+
+    (integration_support * (1.0 - cultural_distance * 0.7)).clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod quarantine_refugee_tests {
+    use super::*;
+
+    #[test]
+    fn quarantine_efficacy_is_guarded_and_bounded() {
+        assert_eq!(quarantine_efficacy(f32::NAN, 1.0), 0.0);
+        assert_eq!(quarantine_efficacy(1.0, f32::INFINITY), 0.0);
+        assert_eq!(quarantine_efficacy(-1.0, -1.0), 0.0);
+        assert_eq!(quarantine_efficacy(2.0, 2.0), 1.0);
+        assert!((0.0..=1.0).contains(&quarantine_efficacy(0.4, 0.8)));
+    }
+
+    #[test]
+    fn refugee_flow_is_guarded_and_bounded() {
+        assert_eq!(refugee_flow(f32::NAN, 1.0), 0.0);
+        assert_eq!(refugee_flow(1.0, f32::NEG_INFINITY), 0.0);
+        assert_eq!(refugee_flow(-1.0, 1.0), 0.0);
+        assert_eq!(refugee_flow(2.0, 2.0), 1.0);
+        assert!((0.0..=1.0).contains(&refugee_flow(0.7, 0.6)));
+    }
+
+    #[test]
+    fn resettlement_success_is_guarded_and_bounded() {
+        assert_eq!(resettlement_success(f32::NAN, 0.0), 0.0);
+        assert_eq!(resettlement_success(1.0, f32::INFINITY), 0.0);
+        assert_eq!(resettlement_success(-1.0, 0.0), 0.0);
+        assert_eq!(resettlement_success(2.0, -1.0), 1.0);
+        assert!((0.0..=1.0).contains(&resettlement_success(0.8, 0.5)));
+    }
+}
+

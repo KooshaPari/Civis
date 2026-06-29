@@ -43,6 +43,7 @@ pub mod rank;
 pub mod registry;
 pub mod risk;
 pub mod verbs;
+pub mod voxel_inspector;
 
 pub use descriptor::VerbDescriptor;
 pub use group::VerbGroup;
@@ -51,6 +52,7 @@ pub use provenance::Provenance;
 pub use rank::{rank_verbs, RankedVerb, SimContext};
 pub use registry::{VerbRegistry, VerbSearchResult};
 pub use risk::RiskTier;
+pub use voxel_inspector::*;
 
 /// Build the default registry by enumerating the static verb catalog.
 ///

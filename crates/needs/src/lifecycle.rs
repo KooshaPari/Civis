@@ -22,7 +22,7 @@ pub fn classify_lifecycle_from_age(age: f32, params: &LifecycleParams) -> Lifecy
         "lifecycle-longevity-classify",
         vec![(20, 1.0), (21, 0.5), (22, 0.25)],
     );
-    let longevity = cognition_score(&Dna::zero(), &longevity_profile);
+    let longevity = cognition_score(&Dna::zero(0), &longevity_profile);
     let dna_span = 50.0 + 70.0 * longevity;
     let elder_threshold = (90.0 * (1.0 - params.longevity_dna_weight)
         + dna_span * params.longevity_dna_weight)

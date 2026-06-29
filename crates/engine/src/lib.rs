@@ -41,7 +41,7 @@ pub const SCALE: i64 = 1_000;
 
 pub use religion::{emerge_belief, spread_religion, Belief, BeliefConcept, Religion};
 pub use demographics::{
-    carrying_capacity_from_food, tick_demographics, total_population, AgeGroup, Demographics,
+    carrying_capacity_from_food, tick_demographics, total_population, AgeGroup, Demographics, DemographicsSnapshot,
 };
 // FR-AUDIO-wire: re-export the audio substrate's SFX trigger enum so
 // downstream crates (civ-server JSON-RPC + WS bridge) can name it as

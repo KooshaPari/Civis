@@ -49,7 +49,6 @@ pub fn compute_faction_decisions(sim: &Simulation) -> Vec<(u32, FactionDecision)
 fn evaluate_faction(sim: &Simulation, faction_id: u32) -> FactionDecision {
     // 1. Check unrest level across settlements controlled by this faction.
     let max_unrest = sim
-        .state
         .last_tick_unrest_snapshots
         .values()
         .map(|snapshot| snapshot.level as f32)
@@ -61,12 +60,11 @@ fn evaluate_faction(sim: &Simulation, faction_id: u32) -> FactionDecision {
 
     // 2. Check cohesion and resource state.
     let avg_cohesion = sim
-        .state
-        .last_tick_cohesion
+        .last_tick_cohesion_snapshots()
         .values()
         .map(|snapshot| snapshot.level)
         .sum::<f32>()
-        / (sim.state.last_tick_cohesion.len() as f32).max(1.0);
+        / (sim.last_tick_cohesion_snapshots().len() as f32).max(1.0);
 
     let resources = sim
         .state

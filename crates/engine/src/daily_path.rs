@@ -105,10 +105,11 @@ pub fn plan_daily_path(start: IVec3, goals: &[IVec3], world: &VoxelWorld<Materia
         cursor = *goal;
     }
 
+    let completed = !failed && waypoints.len() <= 1;
     DailyPath {
         waypoints,
         current_idx: 0,
-        completed: !failed && waypoints.len() <= 1,
+        completed,
     }
 }
 

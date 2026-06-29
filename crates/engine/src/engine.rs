@@ -501,9 +501,9 @@ pub struct WorldState {
     pub energy_budget_joules: Fixed,
     pub rng_seed: u64,
     #[serde(default)]
-    pub last_tick_unrest_snapshots: HashMap<u32, Fixed>,
+    pub last_tick_unrest_snapshots: BTreeMap<u32, UnrestSnapshot>,
     #[serde(default)]
-    pub last_tick_cohesion: HashMap<u32, Fixed>,
+    pub last_tick_cohesion: BTreeMap<u32, CohesionSnapshot>,
     /// Faction ID -> faction name
     pub factions: HashMap<u32, String>,
     /// Faction ID -> treasury balance
@@ -528,8 +528,8 @@ impl Default for WorldState {
             population: 1_000_000,
             energy_budget_joules: Fixed::from_num(1_000_000_000_000i64),
             rng_seed: 42,
-            last_tick_unrest_snapshots: HashMap::new(),
-            last_tick_cohesion: HashMap::new(),
+            last_tick_unrest_snapshots: BTreeMap::new(),
+            last_tick_cohesion: BTreeMap::new(),
             factions: HashMap::from([
                 (0, "Player".to_string()),
                 (1, "AI Faction A".to_string()),
@@ -9634,4 +9634,3 @@ mod compat_state_tests {
         assert!(!last_tick_unrest().is_empty());
     }
 }
-

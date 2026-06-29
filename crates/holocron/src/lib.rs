@@ -15,6 +15,7 @@
 //! - [`registry`] — `VerbRegistry` static catalog with lookup + fuzzy search.
 //! - [`verbs`] — auto-enumerated catalog of all godgame verbs (52 verbs).
 //! - [`bridge`] — bridge between the MCP server's tool list and the registry.
+//! - [`inspect`] — agent inspector data + query layer (FR-CIV-INSPECT-901).
 //!
 //! # Usage
 //!
@@ -32,6 +33,7 @@
 pub mod bridge;
 pub mod descriptor;
 pub mod group;
+pub mod inspect;
 pub mod provenance;
 pub mod rank;
 pub mod registry;
@@ -40,6 +42,10 @@ pub mod verbs;
 
 pub use descriptor::VerbDescriptor;
 pub use group::VerbGroup;
+pub use inspect::{
+    summarize_agent, summarize_fields, AgentSnapshot, AgentSummary, CurrentAction,
+    IdentityBlock, MoodLabel, MoodReading, Need, NeedMap, NeedValue,
+};
 pub use provenance::Provenance;
 pub use rank::{rank_verbs, RankedVerb, SimContext};
 pub use registry::{VerbRegistry, VerbSearchResult};

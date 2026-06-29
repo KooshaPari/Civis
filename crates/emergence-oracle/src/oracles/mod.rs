@@ -7,3 +7,4 @@ pub mod legends;
 pub mod migration;
 pub mod psyche;
 pub mod religion;
+pub mod trade;

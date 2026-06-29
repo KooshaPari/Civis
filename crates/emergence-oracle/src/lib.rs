@@ -49,13 +49,13 @@ impl OracleRegistry {
         self.oracles.push(oracle);
     }
 
-    /// Create a registry pre-loaded with all 9 domain oracles.
+    /// Create a registry pre-loaded with all domain oracles.
     pub fn with_defaults() -> Self {
         use oracles::{
             architecture::ArchitectureOracle, creature::CreatureOracle,
             diplomacy::DiplomacyOracle, economy::EconomyOracle, language::LanguageOracle,
             legends::LegendsOracle, migration::MigrationOracle, psyche::PsycheOracle,
-            religion::ReligionOracle,
+            religion::ReligionOracle, trade::TradeOracle,
         };
         let mut registry = Self::new();
         registry.register(Box::new(ReligionOracle));
@@ -67,6 +67,7 @@ impl OracleRegistry {
         registry.register(Box::new(ArchitectureOracle));
         registry.register(Box::new(CreatureOracle));
         registry.register(Box::new(MigrationOracle));
+        registry.register(Box::new(TradeOracle));
         registry
     }
 

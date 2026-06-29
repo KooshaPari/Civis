@@ -48,7 +48,7 @@ pub struct DisasterTickEvent {
 /// Trigger a disaster immediately and apply its effects to terrain and agents.
 pub fn trigger_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) {
     let impact = apply_disaster(sim, kind, pos);
-    sim.last_tick_disaster_events.push(DisasterTickEvent {
+    sim.push_disaster_event(DisasterTickEvent {
         tick: sim.state.tick,
         kind,
         x: pos.x,

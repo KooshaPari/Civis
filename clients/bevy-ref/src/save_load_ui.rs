@@ -113,7 +113,7 @@ fn render_panel(
 
 fn process_save_load_actions(
     time: Res<Time>,
-    attach: Res<AttachMode>,
+    attach: Option<Res<AttachMode>>,
     mut params: ResMut<WorldSetupParams>,
     mut panel: ResMut<SaveLoadPanel>,
     mut pending: ResMut<PendingSaveLoadAction>,
@@ -129,11 +129,12 @@ fn process_save_load_actions(
         return;
     };
 
+    let Some(attach) = attach else { return; };
     let stamp_secs = time.elapsed_secs().floor() as u64;
 
     match action {
         SaveLoadAction::Save(slot) => {
-            let world_state = collect_session_data(&params, &attach, sim.as_deref(), hud.as_deref(), stamp_secs);
+            let world_state = collect_session_data(&params, attach.as_ref(), sim.as_deref(), hud.as_deref(), stamp_secs);
             match session::save(&world_state, slot) {
                 Ok(()) => {
                     let stamp = session::format_stamp_hms(stamp_secs);

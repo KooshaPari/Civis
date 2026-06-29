@@ -9,6 +9,7 @@ use civ_bevy_ref::{
     chunk_fade_complete, chunk_raycast_terrain, chunk_to_minimap_uv, focused_chunk_at_grid,
     gpu_features::GpuFeaturesPlugin,
     frame_budget::{scaled_cull_distance, GpuQualityMode},
+    game_ui::GameSpeed,
     live_focus::{
         compute_live_scene_focus, minimap_uv_to_world_xz, LiveSceneFocus, LIVE_FOCUS_LERP_SPEED,
     },
@@ -288,6 +289,7 @@ fn main() {
         .init_resource::<SimSpeedState>()
         .init_resource::<EmergencePollTimer>()
         .init_resource::<EmergenceHudData>()
+        .init_resource::<GameSpeed>()
         .insert_resource(ScenePresentation::default())
         .insert_resource(DebugRender::default())
         .insert_resource(OrbitCamera::from_target(CameraTarget::default()))

@@ -71,8 +71,8 @@ struct GameplayMarkerMeshes {
     building: Handle<Mesh>,
 }
 
-fn in_process_sim_active(mode: Res<AttachMode>) -> bool {
-    !is_server_attach_mode(*mode)
+fn in_process_sim_active(mode: Option<Res<AttachMode>>) -> bool {
+    mode.map(|m| !is_server_attach_mode(*m)).unwrap_or(true)
 }
 
 /// Wires spawn-tool messages into the ECS simulation and optional HUD sync.

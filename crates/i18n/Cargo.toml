@@ -3,6 +3,8 @@ name = "civ-i18n"
 version = "0.1.0"
 edition = "2021"
 description = "String-table i18n/l10n infrastructure for Civis"
+license = "MIT OR Apache-2.0"
+publish = false
 
 [lib]
 name = "civ_i18n"

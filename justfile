@@ -33,11 +33,10 @@ audit:
     cargo audit
 
 # Standalone cargo-deny gate (mirrors .github/workflows/cargo-deny.yml).
-# Runs `cargo deny check --workspace` so all workspace members are checked,
-# not only the root package. Used by the PR-time CI workflow and by the
-# pre-push lefthook hook.
+# Runs `cargo deny check`; current cargo-deny discovers workspace members from
+# Cargo metadata and does not accept a `--workspace` flag.
 deny:
-    cargo deny check --workspace
+    cargo deny check
 
 # Find unused dependencies
 unused:
@@ -66,7 +65,7 @@ docs:
 
 # JSON-RPC method catalog must match jsonrpc.rs (docs/api/jsonrpc-surface.md).
 civis-3d-catalog-check:
-    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-jsonrpc-catalog.ps1
+    python3 scripts/check-jsonrpc-catalog.py
 
 # Scenario YAML + mods validation (civ-engine scenario::* tests).
 civis-3d-scenario-check:

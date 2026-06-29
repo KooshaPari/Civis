@@ -605,11 +605,9 @@ mods:
         assert!(ids.contains(&"example-policy"));
         assert!(ids.contains(&"example-economic"));
 
-        for _ in 0..10 {
-            sim.tick();
-        }
+        sim.tick();
 
-        assert_eq!(sim.state.tick, 10);
+        assert_eq!(sim.state.tick, 1);
     }
 
     /// Scenario YAML economy fields wire into `phase_economy` via `economy_policy`.

@@ -1,16 +1,16 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "5979ad0f8789beb4d6fdb7de41200a3f86c1d7f9",
-  "created_at": "2026-05-28T04:21:43Z",
+  "git_sha": "e822215ce9216a82d1abd83ea7d01c2ec8b7a2ee",
+  "created_at": "2026-06-29T22:34:44Z",
   "runner": {
-    "host": "KOOSHAPARI-DESK",
-    "rust": "rustc 1.95.0 (59807616e 2026-04-14)"
+    "host": "unknown",
+    "rust": "rustc 1.95.0 (59807616e 2026-04-14) (Homebrew)"
   },
   "gates": {
     "civis_3d_verify": {
-      "status": "pass",
-      "detail": ""
+      "status": "fail",
+      "detail": "help: return the expression directly     | 198 ~      199 ~     (weighted / total_w).clamp(0.0, 1.0)     |  error: could not compile `civ-species` (lib) due to 2 previous errors warning: build failed, waiting for other jobs to finish... error: manual `!Range::contains` implementation    --> crates/needs/src/lifecycle.rs:244:8     | 244 |     if age < 18 || age >= 65 {     |        ^^^^^^^^^^^^^^^^^^^^^ help: use: `!(18..65).contains(&age)`     |     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.95.0/index.html#manual_range_contains     = note: `-D clippy::manual-range-contains` implied by `-D warnings`     = help: to override `-D warnings` add `#[allow(clippy::manual_range_contains)]`  error: could not compile `civ-needs` (lib) due to 1 previous error error: Recipe `civis-3d-verify` failed on line 110 with exit code 101 "
     },
     "web_test": {
       "status": "pass",
@@ -20,14 +20,38 @@
       "status": "pass",
       "detail": ""
     },
-    "unreal_preflight": {
+    "extra_cargo_audit": {
       "status": "skip",
-      "detail": "optional UE gate"
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     },
-    "unreal_build": {
+    "extra_cargo_deny": {
       "status": "skip",
-      "detail": "optional UE gate"
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_cargo_machete": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_cargo_semver": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_trufflehog": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_fr_coverage": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_docs_check": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_security_guard": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     }
   },
-  "manifest_hash": "d70905457d1707fcf4f0c0d9348f883d16fb386460197a869075e69715efa825"
+  "manifest_hash": "0a71d3347eee43eb854edc0c6cdd6d4d3dca2c70d23a9ae686db6b63ea613204"
 }

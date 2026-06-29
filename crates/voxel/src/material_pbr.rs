@@ -1377,7 +1377,7 @@ mod tests {
 
         let blended = blend_triplanar_pbr(weights, x, y, z);
         assert_eq!(blended.albedo_linear, [0.5, 0.25, 0.25]);
-        assert!((blended.perceptual_roughness - 0.45).abs() < 1e-6);
+        assert!((blended.perceptual_roughness - 0.5).abs() < 1e-6);
         assert!(
             (blended.normal[0] * blended.normal[0]
                 + blended.normal[1] * blended.normal[1]

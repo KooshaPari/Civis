@@ -139,7 +139,11 @@ impl FlowPriorityPolicy {
     /// `prev_wait` each tick (typically by storing it from the previous
     /// assignment's `waits_after`).
     #[must_use]
-    pub fn schedule(&self, lanes: &[LaneVolume], prev_wait: &BTreeMap<LaneId, u64>) -> PhaseAssignment {
+    pub fn schedule(
+        &self,
+        lanes: &[LaneVolume],
+        prev_wait: &BTreeMap<LaneId, u64>,
+    ) -> PhaseAssignment {
         // Normalize negative / bad inputs. Empty input => empty phase.
         if lanes.is_empty() {
             return PhaseAssignment {
@@ -189,8 +193,8 @@ impl FlowPriorityPolicy {
 
         // Per-lane wait update:
         //   - Green lanes: clear their queued wait (they get to move).
-        //   - Other lanes: accrue `phase_ticks` of additional wait, since
-        //     they sat still for the whole phase.
+        //   - Other lanes: accrue `phase_ticks * volume` of additional wait,
+        //     since every queued agent sat still for the whole phase.
         // We start from `prev_wait` and overlay the new state.
         let mut waits_after: BTreeMap<LaneId, u64> = prev_wait.clone();
         for lv in lanes {
@@ -201,7 +205,9 @@ impl FlowPriorityPolicy {
                 // not just go to zero). u32 -> u64 widening is always safe.
                 prev.saturating_sub(u64::from(lv.volume.max(1)))
             } else {
-                prev.saturating_add(u64::from(phase_ticks))
+                prev.saturating_add(
+                    u64::from(phase_ticks).saturating_mul(u64::from(lv.volume.max(1))),
+                )
             };
             waits_after.insert(lv.lane, next);
         }
@@ -242,7 +248,10 @@ mod tests {
     fn fr_civ_flow_priority_higher_volume_lane_gets_priority_lowering_total_wait() {
         let policy = FlowPriorityPolicy::default();
         let lanes = [
-            LaneVolume { lane: 7, volume: 10 },
+            LaneVolume {
+                lane: 7,
+                volume: 10,
+            },
             LaneVolume { lane: 3, volume: 1 },
         ];
 
@@ -256,7 +265,7 @@ mod tests {
                 let next = if lv.lane == green {
                     prev.saturating_sub(u64::from(lv.volume.max(1)))
                 } else {
-                    prev.saturating_add(1)
+                    prev.saturating_add(u64::from(lv.volume.max(1)))
                 };
                 naive_waits.insert(lv.lane, next);
             }
@@ -320,8 +329,11 @@ mod tests {
     fn starvation_guard_promotes_long_waiting_low_volume_lane() {
         let policy = FlowPriorityPolicy::default(); // starvation_threshold = 64
         let lanes = [
-            LaneVolume { lane: 1, volume: 100 }, // high volume, but fresh
-            LaneVolume { lane: 2, volume: 1 },   // low volume, but starving
+            LaneVolume {
+                lane: 1,
+                volume: 100,
+            }, // high volume, but fresh
+            LaneVolume { lane: 2, volume: 1 }, // low volume, but starving
         ];
         let mut prev: BTreeMap<LaneId, u64> = BTreeMap::new();
         prev.insert(2, 100); // lane 2 has already waited past the threshold

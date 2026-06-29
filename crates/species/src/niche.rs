@@ -122,11 +122,7 @@ impl Niche {
     /// optima and a chosen set of [`NicheWeights`]. Convenience for tests
     /// and for callers building a niche from climate/biome data.
     #[must_use]
-    pub fn new(
-        morphology: Morphology,
-        behavior: BehaviorWeights,
-        weights: NicheWeights,
-    ) -> Self {
+    pub fn new(morphology: Morphology, behavior: BehaviorWeights, weights: NicheWeights) -> Self {
         Self {
             opt_height_cm: morphology.height_cm,
             opt_body_color_hue: morphology.body_color_hue,
@@ -166,23 +162,21 @@ pub fn niche_match(phenotype: &Phenotype, niche: &Niche) -> f32 {
     }
 
     // Per-axis closeness: 1.0 at distance 0, 0.0 at distance 1.
-    let morph_height = 1.0 - (f32::from(phenotype.morphology.height_cm.abs_diff(niche.opt_height_cm)) / 255.0);
+    let morph_height =
+        1.0 - (f32::from(phenotype.morphology.height_cm.abs_diff(niche.opt_height_cm)) / 255.0);
     let morph_hue = 1.0
         - (f32::from(
-            phenotype.morphology.body_color_hue.abs_diff(niche.opt_body_color_hue),
+            phenotype
+                .morphology
+                .body_color_hue
+                .abs_diff(niche.opt_body_color_hue),
         ) / 255.0);
-    let morph_legs = 1.0
-        - (f32::from(
-            phenotype.morphology.leg_count.abs_diff(niche.opt_leg_count),
-        ) / 255.0);
-    let morph_arms = 1.0
-        - (f32::from(
-            phenotype.morphology.arm_count.abs_diff(niche.opt_arm_count),
-        ) / 255.0);
-    let morph_eyes = 1.0
-        - (f32::from(
-            phenotype.morphology.eye_count.abs_diff(niche.opt_eye_count),
-        ) / 255.0);
+    let morph_legs =
+        1.0 - (f32::from(phenotype.morphology.leg_count.abs_diff(niche.opt_leg_count)) / 255.0);
+    let morph_arms =
+        1.0 - (f32::from(phenotype.morphology.arm_count.abs_diff(niche.opt_arm_count)) / 255.0);
+    let morph_eyes =
+        1.0 - (f32::from(phenotype.morphology.eye_count.abs_diff(niche.opt_eye_count)) / 255.0);
 
     let behav_aggr = 1.0 - (phenotype.behavior.aggression - niche.opt_aggression).abs();
     let behav_curio = 1.0 - (phenotype.behavior.curiosity - niche.opt_curiosity).abs();
@@ -277,9 +271,7 @@ pub fn tick_niche_adaptation(
     let births = (growth as f64 * pop_f).floor().max(0.0) as u64;
     let deaths = (total_mortality as f64 * pop_f).floor().max(0.0) as u64;
 
-    let population_after = population
-        .saturating_add(births)
-        .saturating_sub(deaths);
+    let population_after = population.saturating_add(births).saturating_sub(deaths);
 
     NicheTick {
         match_score,
@@ -346,11 +338,7 @@ mod tests {
         let niche = niche_exact_for(&pheno);
         let start = 1_000_u64;
         let tick = tick_niche_adaptation(
-            start,
-            &pheno,
-            &niche,
-            0.0,
-            0.1, // max_growth
+            start, &pheno, &niche, 0.0, 0.1, // max_growth
             0.1, // max_mortality
         );
         // Perfect match → 0 mortality from niche, growth = 0.1 × 1000 = 100.
@@ -396,12 +384,9 @@ mod tests {
 
         let start = 1_000_u64;
         let tick = tick_niche_adaptation(
-            start,
-            &pheno,
-            &niche,
-            0.0,            // no baseline; only niche-driven mortality
-            0.05,           // max_growth
-            0.2,            // max_mortality
+            start, &pheno, &niche, 0.0,  // no baseline; only niche-driven mortality
+            0.05, // max_growth
+            0.2,  // max_mortality
         );
         assert!(
             tick.match_score < 1e-6,
@@ -453,22 +438,8 @@ mod tests {
         let mismatched = phenotype_with(0, 255, 255, 255, 255, 1.0, 0.0, 1.0, 0.0);
 
         let pop = 500_u64;
-        let matched_tick = tick_niche_adaptation(
-            pop,
-            &matched,
-            &niche,
-            0.0,
-            0.1,
-            0.1,
-        );
-        let mismatched_tick = tick_niche_adaptation(
-            pop,
-            &mismatched,
-            &niche,
-            0.0,
-            0.1,
-            0.1,
-        );
+        let matched_tick = tick_niche_adaptation(pop, &matched, &niche, 0.0, 0.1, 0.1);
+        let mismatched_tick = tick_niche_adaptation(pop, &mismatched, &niche, 0.0, 0.1, 0.1);
 
         assert!(
             matched_tick.population_after > pop,
@@ -696,12 +667,7 @@ mod tests {
 
         let start = 1_000_u64;
         let tick = tick_niche_adaptation(
-            start,
-            &pheno,
-            &niche,
-            0.0,
-            0.1,
-            0.1, // niche_mortality = 0.1 × 1.0
+            start, &pheno, &niche, 0.0, 0.1, 0.1, // niche_mortality = 0.1 × 1.0
         );
         assert_eq!(tick.niche_mortality, 0.1);
         // baseline=0 + niche_mortality=0.1 → total_mortality = 0.1.

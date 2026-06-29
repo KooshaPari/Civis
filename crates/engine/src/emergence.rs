@@ -2182,3 +2182,132 @@ mod emergence_emergent_functions_tests {
     }
 }
 
+
+
+pub fn art_flourishing(surplus: f32, stability: f32) -> f32 {
+    if !surplus.is_finite() || !stability.is_finite() {
+        return 0.0;
+    }
+    let surplus = surplus.clamp(0.0, 1.0);
+    let stability = stability.clamp(0.0, 1.0);
+    ((surplus * 0.6) + (stability * 0.4)).clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod art_flourishing_tests {
+    use super::art_flourishing;
+
+    #[test]
+    fn in_range() {
+        assert!((0.0..=1.0).contains(&art_flourishing(0.8, 0.6)));
+        assert_eq!(art_flourishing(f32::NAN, 0.0), 0.0);
+        assert_eq!(art_flourishing(f32::INFINITY, 1.0), 0.0);
+    }
+}
+
+pub fn ritual_frequency(belief: f32, hardship: f32) -> f32 {
+    if !belief.is_finite() || !hardship.is_finite() {
+        return 0.0;
+    }
+    let belief = belief.clamp(0.0, 1.0);
+    let hardship = hardship.clamp(0.0, 1.0);
+    ((belief * 0.7) + (hardship * 0.3)).clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod ritual_frequency_tests {
+    use super::ritual_frequency;
+
+    #[test]
+    fn in_range() {
+        assert!((0.0..=1.0).contains(&ritual_frequency(0.7, 0.9)));
+        assert_eq!(ritual_frequency(f32::NAN, 1.0), 0.0);
+        assert_eq!(ritual_frequency(1.0, f32::NEG_INFINITY), 0.0);
+    }
+}
+
+pub fn pilgrimage_draw(sacred_sites: f32, devotion: f32) -> f32 {
+    if !sacred_sites.is_finite() || !devotion.is_finite() {
+        return 0.0;
+    }
+    let sacred_sites = sacred_sites.clamp(0.0, 1.0);
+    let devotion = devotion.clamp(0.0, 1.0);
+    ((sacred_sites * 0.5) + (devotion * 0.5)).clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod pilgrimage_draw_tests {
+    use super::pilgrimage_draw;
+
+    #[test]
+    fn in_range() {
+        assert!((0.0..=1.0).contains(&pilgrimage_draw(0.4, 0.9)));
+        assert_eq!(pilgrimage_draw(f32::NAN, 1.0), 0.0);
+        assert_eq!(pilgrimage_draw(1.0, f32::INFINITY), 0.0);
+    }
+}
+
+
+fn clamp01(value: f32) -> f32 {
+    if value.is_finite() {
+        value.clamp(0.0, 1.0)
+    } else {
+        0.0
+    }
+}
+
+pub fn banditry_rate(poverty: f32, enforcement: f32) -> f32 {
+    if !poverty.is_finite() || !enforcement.is_finite() {
+        return 0.0;
+    }
+
+    let poverty = poverty.clamp(0.0, 1.0);
+    let enforcement = enforcement.clamp(0.0, 1.0);
+    clamp01(poverty * (1.0 - 0.75 * enforcement))
+}
+
+pub fn corruption_level(wealth_gap: f32, oversight: f32) -> f32 {
+    if !wealth_gap.is_finite() || !oversight.is_finite() {
+        return 0.0;
+    }
+
+    let wealth_gap = wealth_gap.clamp(0.0, 1.0);
+    let oversight = oversight.clamp(0.0, 1.0);
+    clamp01(wealth_gap * (1.0 - 0.8 * oversight))
+}
+
+pub fn reform_momentum(unrest: f32, leadership: f32) -> f32 {
+    if !unrest.is_finite() || !leadership.is_finite() {
+        return 0.0;
+    }
+
+    let unrest = unrest.clamp(0.0, 1.0);
+    let leadership = leadership.clamp(0.0, 1.0);
+    clamp01(0.55 * unrest + 0.45 * leadership)
+}
+
+#[cfg(test)]
+mod civic_emergence_tests {
+    use super::{banditry_rate, corruption_level, reform_momentum};
+
+    #[test]
+    fn banditry_rate_is_bounded_and_nan_guarded() {
+        assert!((0.0..=1.0).contains(&banditry_rate(0.9, 0.2)));
+        assert_eq!(banditry_rate(f32::NAN, 0.2), 0.0);
+        assert!(banditry_rate(0.9, 0.0) >= banditry_rate(0.9, 1.0));
+    }
+
+    #[test]
+    fn corruption_level_is_bounded_and_nan_guarded() {
+        assert!((0.0..=1.0).contains(&corruption_level(0.8, 0.3)));
+        assert_eq!(corruption_level(0.8, f32::NAN), 0.0);
+        assert!(corruption_level(0.8, 0.0) >= corruption_level(0.8, 1.0));
+    }
+
+    #[test]
+    fn reform_momentum_is_bounded_and_nan_guarded() {
+        assert!((0.0..=1.0).contains(&reform_momentum(0.6, 0.7)));
+        assert_eq!(reform_momentum(f32::NAN, 0.7), 0.0);
+        assert!(reform_momentum(1.0, 1.0) >= reform_momentum(0.0, 0.0));
+    }
+}

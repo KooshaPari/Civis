@@ -21,7 +21,7 @@ use civ_economy::{
     Good, LaborCapacityAllocator, MarketState, SettlementTradeFlow,
 };
 use civ_economy::{collect_taxes, Taxation};
-use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold, SentienceEvent};
+use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold, SentienceEvent, evaluate_sentience};
 use civ_genetics::Dna;
 use civ_mod_host::ModHost;
 use civ_needs::{Health as CivNeedsHealth, LifecycleParams, should_reproduce};
@@ -763,7 +763,7 @@ pub struct Simulation {
     /// Sentience events produced by the most recent [`Simulation::phase_sentience`]
     /// call (cleared at the start of every [`Simulation::tick`], alongside the
     /// other `last_tick_*` buffers).
-    last_tick_sentience_events: Vec<civ_genetics::sentience::SentienceEvent>,
+    last_tick_sentience_events: Vec<SentienceEvent>,
     /// Per-settlement population snapshot, settable by tests + scenario loaders
     /// so `phase_institutions` can drive Temple/Garrison spawns deterministically
     /// (FR-CIV-GOV-001). Keyed by settlement id (`u32`).
@@ -4390,7 +4390,7 @@ impl Simulation {
     fn phase_sentience(&mut self) {
         let mut events = Vec::new();
         for (_, dna) in self.world.query::<&Dna>().iter() {
-            events.push(civ_genetics::sentience::evaluate_sentience(
+            events.push(evaluate_sentience(
                 None,
                 dna,
                 &self.sentience_profile,
@@ -4405,7 +4405,7 @@ impl Simulation {
     /// (along with the other `last_tick_*` buffers) so callers observe only
     /// the current tick's crossings.
     #[must_use]
-    pub fn last_tick_sentience_events(&self) -> &[civ_genetics::sentience::SentienceEvent] {
+    pub fn last_tick_sentience_events(&self) -> &[SentienceEvent] {
         &self.last_tick_sentience_events
     }
 
@@ -10258,4 +10258,45 @@ mod tests {
 pub mod genetics {
     /// Re-export of SentienceEvent from civ_genetics.
     pub use civ_genetics::sentience::SentienceEvent;
+}
+
+// Free-function wrappers for cohesion and unrest accessors so they can be re-exported from lib.rs.
+
+/// Add cohesion to a faction (currently a no-op stub).
+pub fn add_cohesion(_faction: u32, _delta: f32) {}
+
+/// Add trust between two actors (currently a no-op stub).
+pub fn add_trust(_actor_id: u64, _target: u64, _amount: i64) {}
+
+/// Get faction count (currently returns 0 stub).
+pub fn faction_count() -> u32 {
+    0
+}
+
+/// Get last tick's cohesion events (currently empty stub).
+pub fn last_tick_cohesion() -> &'static [CohesionEvent] {
+    &[]
+}
+
+/// Get last tick's cohesion for a settlement (currently empty stub).
+pub fn last_tick_cohesion_settlement(_settlement_id: u32) -> &'static [CohesionEvent] {
+    &[]
+}
+
+/// Get last tick's unrest events (currently empty stub).
+pub fn last_tick_unrest() -> &'static [UnrestEvent] {
+    &[]
+}
+
+/// Get last tick's unrest for a settlement (currently empty stub).
+pub fn last_tick_unrest_settlement(_settlement_id: u32) -> &'static [UnrestEvent] {
+    &[]
+}
+
+/// Set settlement gini coefficient (currently a no-op stub).
+pub fn set_settlement_gini(_settlement_id: u32, _gini: f64) {}
+
+/// Get unrest level for a settlement (currently None stub).
+pub fn unrest_level(_settlement_id: u32) -> Option<UnrestLevel> {
+    None
 }

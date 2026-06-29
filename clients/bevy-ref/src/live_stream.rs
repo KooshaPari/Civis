@@ -1212,7 +1212,7 @@ pub fn sync_agent_labels_from_civilians(
             .map(civilian_display_name)
             .unwrap_or_else(|| format!("#{}", agent.id));
         for child in children.iter() {
-            let Ok(mut text) = labels.get_mut(*child) else {
+            let Ok(mut text) = labels.get_mut(child) else {
                 continue;
             };
             *text = Text2d::new(label.clone());

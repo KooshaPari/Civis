@@ -351,7 +351,7 @@ fn faction_list_ui(ui: &mut egui::Ui, state: &mut DiplomacyState, bridge: Option
             if ui.small_button("Propose Treaty").clicked() {
                 if let Some(b) = bridge {
                     let json = format!(
-                        r#"{{"jsonrpc":"2.0","id":10,"method":"sim.diplomacy_action","params":{{"action":"propose_treaty","target_faction":{}}}}"#,
+                        r#"{{"jsonrpc":"2.0","id":10,"method":"sim.diplomacy_action","params":{{"action":"propose_treaty","target_faction":{}}}}}"#,
                         faction.id
                     );
                     b.send_rpc(json);
@@ -366,7 +366,7 @@ fn faction_list_ui(ui: &mut egui::Ui, state: &mut DiplomacyState, bridge: Option
                 if state.pending_war_target == Some(faction.id) {
                     if let Some(b) = bridge {
                         let json = format!(
-                            r#"{{"jsonrpc":"2.0","id":11,"method":"sim.diplomacy_action","params":{{"action":"declare_war","target_faction":{}}}}"#,
+                            r#"{{"jsonrpc":"2.0","id":11,"method":"sim.diplomacy_action","params":{{"action":"declare_war","target_faction":{}}}}}"#,
                             faction.id
                         );
                         b.send_rpc(json);
@@ -379,7 +379,7 @@ fn faction_list_ui(ui: &mut egui::Ui, state: &mut DiplomacyState, bridge: Option
             if ui.small_button("Offer Trade").clicked() {
                 if let Some(b) = bridge {
                     let json = format!(
-                        r#"{{"jsonrpc":"2.0","id":12,"method":"sim.diplomacy_action","params":{{"action":"offer_trade","target_faction":{},"amount":100}}}"#,
+                        r#"{{"jsonrpc":"2.0","id":12,"method":"sim.diplomacy_action","params":{{"action":"offer_trade","target_faction":{},"amount":100}}}}"#,
                         faction.id
                     );
                     b.send_rpc(json);

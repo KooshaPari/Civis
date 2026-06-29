@@ -1076,10 +1076,10 @@ mod agent_needs {
         pub safety: f32,
         /// Belonging pressure.
         pub belonging: f32,
-        /// Health pressure.
-        pub health: f32,
         /// Rest pressure.
         pub rest: f32,
+        /// Health pressure.
+        pub health: f32,
     }
 
     impl From<AgentNeedsData> for AgentNeeds {
@@ -1089,6 +1089,8 @@ mod agent_needs {
                 shelter: value.shelter,
                 safety: value.safety,
                 belonging: value.belonging,
+                rest: 0.0,
+                health: 0.0,
             }
         }
     }
@@ -1100,6 +1102,8 @@ mod agent_needs {
                 shelter: value.shelter,
                 safety: value.safety,
                 belonging: value.belonging,
+                rest: value.rest,
+                health: value.health,
             }
         }
     }

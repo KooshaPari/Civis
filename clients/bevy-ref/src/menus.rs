@@ -17,7 +17,7 @@ const DIM: egui::Color32 = egui::Color32::from_rgb(150, 158, 178);
 const OVERLAY_DIM: egui::Color32 = egui::Color32::from_rgba_premultiplied(0, 0, 0, 160);
 
 /// Shell state used by the Bevy window client (main menu + gameplay + pause states).
-#[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(States, Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub enum AppState {
     #[default]
     MainMenu,
@@ -318,10 +318,10 @@ fn draw_pause_menu(
         .show(ctx, |ui| {
             pause_panel(
                 ui,
-                &mut mode,
-                &mut settings_open,
-                &mut command,
-                &mut save_panel,
+                &mut *mode,
+                &mut *command,
+                &mut *settings_open,
+                &mut *save_panel,
                 &mut exit,
             )
         });
@@ -369,9 +369,9 @@ fn dim_overlay(ctx: &egui::Context) {
 fn pause_panel(
     ui: &mut egui::Ui,
     mode: &mut GameUiMode,
-    mut command: &mut ResMut<MenuCommand>,
+    command: &mut MenuCommand,
     settings_open: &mut SettingsOpen,
-    save_panel: &mut ResMut<SaveLoadPanel>,
+    save_panel: &mut SaveLoadPanel,
     exit: &mut MessageWriter<AppExit>,
 ) {
     egui::Frame::NONE
@@ -392,8 +392,8 @@ fn pause_panel(
                 pause_menu_buttons(
                     ui,
                     mode,
-                    settings_open,
                     command,
+                    settings_open,
                     save_panel,
                     exit,
                 );
@@ -404,9 +404,9 @@ fn pause_panel(
 fn pause_menu_buttons(
     ui: &mut egui::Ui,
     mode: &mut GameUiMode,
-    command: &mut ResMut<MenuCommand>,
+    command: &mut MenuCommand,
     settings_open: &mut SettingsOpen,
-    save_panel: &mut ResMut<SaveLoadPanel>,
+    save_panel: &mut SaveLoadPanel,
     exit: &mut MessageWriter<AppExit>,
 ) {
     if menu_button(ui, "\u{25b6}  Resume").clicked() {

@@ -5,6 +5,7 @@
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
+use serde::{Deserialize, Serialize};
 
 use crate::menus::in_game;
 

@@ -23,6 +23,16 @@ pub use desire_paths::{
     DesireEdge, DesireEdgeKey, DesirePathConfig, DesirePathTracker, PathState,
 };
 
+/// Utility-grid distribution kernel (FR-CIV-UTILITY-GRID). Pure-logic, no
+/// Bevy dependency; routes resource supply from sources to sinks through a
+/// directed graph, reporting per-sink shortfalls when capacity bottlenecks
+/// starve downstream consumers.
+pub mod utility_grid;
+pub use utility_grid::{
+    UtilityEdge, UtilityEdgeId, UtilityGrid, UtilityGridResult, UtilityNode, UtilityNodeId,
+    UtilityNodeKind,
+};
+
 /// Unified infrastructure error.
 #[derive(Debug, thiserror::Error)]
 pub enum InfraError {

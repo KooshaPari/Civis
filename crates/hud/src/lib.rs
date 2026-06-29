@@ -19,6 +19,7 @@ pub mod env_overlay;
 pub mod god_tool_state;
 pub mod key_palette;
 pub mod notifications;
+pub mod overlay_legend;
 pub mod overlay_registry;
 pub mod tile_inspector;
 pub mod tokens;
@@ -31,6 +32,7 @@ pub use god_tool_state::{
 };
 pub use key_palette::{KeyId, KeycapDef, KeycapPalette, keycap_palette_default};
 pub use notifications::{Notification, NotificationQueue, Severity};
+pub use overlay_legend::*;
 pub use overlay_registry::{
     ColorRamp, DataSource, LegendStop, OverlayDef, OverlayId, OverlayRegistry,
     default_overlay_registry, elevation_overlay, population_overlay, water_overlay,

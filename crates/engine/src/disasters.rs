@@ -779,18 +779,20 @@ mod tests {
         sim.set_climate_state(Climate {
             tick: 700,
             day_phase: 0.6,
-            year_phase: 0.35,
+            year_phase: 0.1,  // Spring season (0.0-0.25): low wildfire, lower drought thresholds manageable
             moon_phase: 0.0,
             tide_offset: 0.0,
         });
 
+        // Spring modifiers: wildfire @ 80k threshold (very high), drought @ 250 threshold (manageable)
+        // With temp=35k and precip=80, wildfire doesn't trigger (35k < 80k) but drought does
         sim.set_weather_cells(vec![WeatherCell {
             region_id: 8,
             latitude_fp: 10_000,
-            season: civ_planet::SeasonKind::Summer,
+            season: civ_planet::SeasonKind::Spring,
             kind: WeatherKind::Clear,
-            temp_c_fp: 35_000,
-            precip_mm_fp: 80,
+            temp_c_fp: 35_000,  // High enough for drought (>= 30_000), too low for spring wildfire (>= 80_000)
+            precip_mm_fp: 80,   // Low enough for drought (<= 250 threshold)
             storm_intensity_fp: 100,
         }]);
 

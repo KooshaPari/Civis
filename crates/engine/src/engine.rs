@@ -5725,10 +5725,11 @@ mod tests {
         assert_ne!(ardani_base, grundak_base, "Ardani and Grundak must differ");
         assert_ne!(velthari_base, grundak_base, "Velthari and Grundak must differ");
 
-        // With 128 civilians and 12 named seeds, each archetype slot is hit ~10-11 times.
+        // With 300 civilians (50×6 ring spawn pattern, #1102 denser-start) and 12 named seeds,
+        // each archetype slot is hit ~25 times.
         let sim = Simulation::with_seed(1);
         let dna_list: Vec<Dna> = sim.world.query::<&Dna>().iter().map(|(_, d)| d.clone()).collect();
-        assert_eq!(dna_list.len(), 128, "all 128 civilians must carry Dna");
+        assert_eq!(dna_list.len(), 300, "all 300 civilians must carry Dna");
 
         // Verify that at minimum 3 distinct genomes are present, proving multiple
         // archetype branches were exercised (divergence prevents collisions).

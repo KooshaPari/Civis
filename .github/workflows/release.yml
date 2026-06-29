@@ -45,16 +45,16 @@ jobs:
         with:
           cache-all-crates: true
       - name: Build Bevy client (release)
-        run: cargo build --release -p civ-bevy-ref --bin civ-bevy-ref --features bevy,egui
+        run: cargo build --release -p civ-bevy-ref --bin civ-bevy-window --features bevy,egui
       - name: Package executable + assets
         run: |
           New-Item -ItemType Directory -Path artifact | Out-Null
-          Copy-Item -Path target/release/civ-bevy-ref.exe -Destination artifact/civ-bevy-ref.exe
+          Copy-Item -Path target/release/civ-bevy-window.exe -Destination artifact/civ-bevy-window.exe
           Copy-Item -Path clients/bevy-ref/assets -Destination artifact/assets -Recurse
       - name: Create release archive
         run: |
           cd artifact
-          Compress-Archive -Path civ-bevy-ref.exe, assets -DestinationPath ../civis-windows.zip
+          Compress-Archive -Path civ-bevy-window.exe, assets -DestinationPath ../civis-windows.zip
       - name: Upload to release
         env:
           GH_TOKEN: ${{ github.token }}

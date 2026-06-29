@@ -5371,25 +5371,42 @@ mod tests {
     #[test]
     fn religion_diplomacy_coupling_phase_picks_trade_over_conflict() {
         let disparity = DIPLOMACY_BASE_CONFLICT_THRESHOLD + 2_000;
+
+        // phase_diplomacy chooses which faction PAIR to evaluate. For a fresh sim with
+        // no settlement overlap yet it falls back to a tick-indexed pick over the
+        // registered factions: (keys[tick % N], keys[(tick+1) % N]) — see
+        // `diplomacy_pair_from_settlement_overlap`. With the denser 6-faction start
+        // (#1102) this is no longer factions[0]/[1]. Seed the treasuries on EXACTLY the
+        // pair the engine will evaluate (gap == `disparity`), leaving all other
+        // treasuries at zero, so wealth-disparity is fixed and belief/cohesion is the
+        // only variable between the peace and war runs.
+        let seed_evaluated_pair = |sim: &mut Simulation| -> bool {
+            let ids: Vec<u32> = sim.state.factions.keys().copied().collect();
+            let n = ids.len();
+            if n < 2 {
+                return false;
+            }
+            let tick = sim.state.tick as usize;
+            let a = ids[tick % n];
+            let b = ids[(tick + 1) % n];
+            for id in &ids {
+                sim.state.faction_treasury.insert(*id, Fixed::from_num(0));
+            }
+            sim.state.faction_treasury.insert(a, Fixed::from_num(0));
+            sim.state
+                .faction_treasury
+                .insert(b, Fixed::from_num(disparity));
+            true
+        };
+
         let mut sim_peace = Simulation::with_seed(5);
         sim_peace.state.tick = 500;
         sim_peace.state.belief = 500_000;
         sim_peace.state.cohesion = 200_000;
         sim_peace.emergence.has_patron = true;
-        let mut faction_ids: Vec<u32> = sim_peace.state.factions.keys().copied().collect();
-        faction_ids.sort_unstable();
-        if faction_ids.len() < 2 {
+        if !seed_evaluated_pair(&mut sim_peace) {
             return;
         }
-        let (a, b) = (faction_ids[0], faction_ids[1]);
-        sim_peace
-            .state
-            .faction_treasury
-            .insert(a, Fixed::from_num(0));
-        sim_peace
-            .state
-            .faction_treasury
-            .insert(b, Fixed::from_num(disparity));
         sim_peace.phase_diplomacy();
         let peace_kind = sim_peace.diplomacy_events().last().expect("event").kind;
 
@@ -5397,14 +5414,9 @@ mod tests {
         sim_war.state.tick = 500;
         sim_war.state.belief = 0;
         sim_war.state.cohesion = 0;
-        sim_war
-            .state
-            .faction_treasury
-            .insert(a, Fixed::from_num(0));
-        sim_war
-            .state
-            .faction_treasury
-            .insert(b, Fixed::from_num(disparity));
+        if !seed_evaluated_pair(&mut sim_war) {
+            return;
+        }
         sim_war.phase_diplomacy();
         let war_kind = sim_war.diplomacy_events().last().expect("event").kind;
 

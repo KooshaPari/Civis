@@ -29,6 +29,7 @@
 
 pub mod cache;
 pub mod config;
+pub mod goal;
 pub mod pool;
 pub mod preflight;
 pub mod provenance;
@@ -37,6 +38,7 @@ pub mod registry;
 
 pub use cache::AiCache;
 pub use config::AiConfig;
+pub use goal::{Goal, GoalChoice, Need};
 pub use pool::{AiPayload, AiResult, AiTask, AiWorkerPool, TaskId};
 pub use provenance::{AiEvent, ReplayAdvanceOutcome, ReplayMode, ReplayRefusal};
 pub use providers::DummyAiProvider;

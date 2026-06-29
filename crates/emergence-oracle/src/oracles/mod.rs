@@ -1,4 +1,5 @@
 pub mod architecture;
+pub mod coastal_settlement;
 pub mod creature;
 pub mod diplomacy;
 pub mod disaster;

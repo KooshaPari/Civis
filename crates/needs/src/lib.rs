@@ -184,6 +184,10 @@ pub struct Health {
     pub integrity: f32,
     /// `true` once an illness has taken hold (accelerates integrity loss).
     pub sick: bool,
+    /// Legacy alias for callers still using the older field name.
+    pub sickness: bool,
+    /// Legacy morale-style compatibility field used by engine glue.
+    pub morale: f32,
     /// Consecutive ticks spent with at least one critical need.
     pub deprivation_streak: u32,
 }
@@ -193,6 +197,8 @@ impl Default for Health {
         Self {
             integrity: 1.0,
             sick: false,
+            sickness: false,
+            morale: 1.0,
             deprivation_streak: 0,
         }
     }

@@ -637,6 +637,7 @@ pub struct Simulation {
     moon: MoonConfig,
     worldgen: WorldgenConfig,
     pub climate: Climate,
+    pub current_tick: u64,
     pending_damage: Vec<DamageEvent>,
     tick_modulo_compact: u64,
     building_graph: BuildingGraph,
@@ -680,7 +681,7 @@ pub struct Simulation {
     /// 3D voxel substrate (Civis 3D extension). Hosts terrain + destructible
     /// structures + tactical combat impacts. Drained per tick by
     /// [`Simulation::phase_voxel`].
-    voxel: VoxelWorld<MaterialId>,
+    pub voxel: VoxelWorld<MaterialId>,
     /// Voxel dirty events produced during the most recent tick. Consumers
     /// (renderer protocol bridge, replay log) read this each tick; it resets
     /// at the start of every [`Simulation::tick`].
@@ -983,6 +984,13 @@ pub const MOOD_MAX: i64 = 200;
 /// `crime_score` to `0`; lower crime gives a linearly higher score.
 pub const MOOD_CRIME_BASE: i64 = 300;
 
+fn institution_kind_key(kind: civ_institutions::InstitutionKind) -> u8 {
+    match kind {
+        civ_institutions::InstitutionKind::Temple => 1,
+        civ_institutions::InstitutionKind::Garrison => 2,
+    }
+}
+
 /// Per-settlement mood history cap (FR-CIV-GOV-100). The engine keeps at
 /// most this many [`MoodSnapshot`] entries per settlement in
 /// `Simulation::mood_history_by_settlement`, plus [`MOOD_HISTORY_CAP`] * 8
@@ -1199,6 +1207,7 @@ pub struct KinshipEdge {
 /// [`Simulation::phase_cohesion`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum CohesionEventKind {
+    Bonded,
     Strengthened,
     Weakened,
     Fragmented,
@@ -1256,7 +1265,7 @@ pub struct CohesionSnapshot {
 // ---------------------------------------------------------------------------
 
 /// The unrest level of a settlement.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub enum UnrestLevel {
     Stable,
     Restless,
@@ -1538,6 +1547,7 @@ impl Simulation {
             moon,
             worldgen,
             climate,
+            current_tick: 0,
             pending_damage: Vec::new(),
             tick_modulo_compact: 64,
             building_graph: BuildingGraph::new(),
@@ -2007,6 +2017,11 @@ impl Simulation {
         &self.climate
     }
 
+    /// Back-compat alias for code that still expects the old tick accessor.
+    pub fn current_tick(&self) -> u64 {
+        self.state.tick
+    }
+
     /// Borrow the latest weather grid for the current tick.
     pub fn weather_grid(&self) -> &[WeatherCell] {
         &self.weather_grid
@@ -2352,6 +2367,7 @@ impl Simulation {
     /// after all phases finish.
     pub fn tick(&mut self) {
         self.state.tick += 1;
+        self.current_tick = self.state.tick;
         self.last_tick_combat_pulses.clear();
         self.last_tick_engagements.clear();
         self.last_tick_mod_lifecycle.clear();
@@ -2880,7 +2896,7 @@ impl Simulation {
         new_level: u8,
         events: &mut Vec<InstitutionEvent>,
     ) {
-        let key = (sid, kind, new_level);
+        let key = (sid, institution_kind_key(kind), new_level);
         if self.institution_levels_emitted.contains(&key) {
             // Already emitted this level for this settlement+kind - skip.
             return;
@@ -3214,7 +3230,13 @@ impl Simulation {
             };
             new_snapshots.insert(settlement_id, snapshot);
         }
-        self.last_tick_cohesion = new_snapshots;
+        self.last_tick_cohesion = new_snapshots.clone();
+        self.last_tick_cohesion_snapshots = new_snapshots;
+    }
+
+    /// Compatibility alias for older phase ordering that routed into cohesion.
+    fn phase_faction_decisions(&mut self) {
+        self.phase_cohesion();
     }
 
     /// Unrest phase (FR-CIV-UNREST-001). Converts mood + stratification +
@@ -3320,9 +3342,12 @@ impl Simulation {
 
             let snapshot = UnrestSnapshot {
                 settlement_id,
-                level: level.clone(),
+                level,
                 score,
                 events_count: riots_count.saturating_add(migrants_count) as u32,
+                riots_count,
+                migrants_count,
+                mob_size: riots_count.saturating_add(migrants_count),
             };
             new_snapshots.insert(settlement_id, snapshot);
             self.last_unrest_level.insert(settlement_id, level);

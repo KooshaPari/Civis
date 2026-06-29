@@ -316,3 +316,8 @@ rust-verify: lint test
 # Call after packaging dist/Civis.exe (native launchType in phenotype-tooling apps.json).
 register-startmenu:
     pwsh -NoProfile -File C:/Users/koosh/Dev/phenotype-tooling/Tools/Register-StartMenuApps.ps1 -App Civis
+
+# Autograder loop for engine build-green: compile + acceptance tests must pass.
+build-green-engine:
+    cargo check -p civ-engine
+    cargo test -p civ-engine --lib

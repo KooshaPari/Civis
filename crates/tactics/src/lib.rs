@@ -44,6 +44,10 @@ pub use war_bridge::{
 use civ_voxel::{MaterialId, VoxelWorld, WorldCoord};
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
+// `MilitaryUnit` is defined in this crate's root (`pub struct MilitaryUnit`
+// below) so it is reachable as `civ_tactics::MilitaryUnit` without an extra
+// `pub use`. We keep this comment in place of the previous self-import to
+// avoid the E0255 duplicate-name error.
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 

@@ -20,7 +20,9 @@ mod tax_policy;
 mod trade_flow;
 mod trade_routes;
 
-pub use allocation::{AllocationEngine, CapitalistAllocator};
+pub use allocation::{
+    AllocationEngine, CapitalistAllocator, LaborCapacityAllocator,
+};
 pub use currency_trust::{
     acceptance, step_currency_trust, CurrencyTrust, CurrencyTrustOutcome,
 };

@@ -15,6 +15,7 @@ mod extraction;
 mod institution;
 mod market;
 mod stocks;
+mod tax_policy;
 mod trade_routes;
 
 pub use allocation::{AllocationEngine, CapitalistAllocator};
@@ -28,6 +29,7 @@ pub use institution::{
 };
 pub use market::{GoodId, MarketState, MultiGoodMarket, Order, OrderBook, Side, Trade};
 pub use stocks::{Good, Stocks};
+pub use tax_policy::{apply_tax_policy, TaxPolicy, TaxPolicyOutcome};
 pub use trade_routes::{
     compute_trade_routes, route_flow, routes_lexicographic, Settlement, SettlementId, TradeRoute,
 };

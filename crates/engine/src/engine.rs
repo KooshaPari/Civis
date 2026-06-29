@@ -1255,7 +1255,7 @@ impl FabricTier {
 }
 
 /// Per-settlement cohesion summary produced every tick.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct CohesionSnapshot {
     pub settlement_id: u32,
     pub fabric: FabricTier,
@@ -1321,11 +1321,11 @@ pub struct UnrestEvent {
     pub score_delta: i32,
     pub mood: i32,
     pub gini_x100: i32,
-    pub fabric: i32,
+    pub fabric: FabricTier,
 }
 
 /// Per-settlement unrest snapshot for the last tick.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct UnrestSnapshot {
     pub settlement_id: u32,
     pub level: UnrestLevel,
@@ -1544,6 +1544,7 @@ impl Simulation {
         let state = WorldState::default();
 
         Self {
+            current_tick: 0,
             economy_state: economy_state_from_world(&state),
             market_state: MarketState::default(),
             state,
@@ -1723,6 +1724,7 @@ impl Simulation {
             moon,
             worldgen,
             climate,
+            current_tick: 0,
             pending_damage: Vec::new(),
             tick_modulo_compact: 64,
             building_graph: BuildingGraph::new(),
@@ -4216,6 +4218,7 @@ impl Simulation {
             gini.clamp(0.0, 1.0)
         };
         self.unrest_settlement_gini.insert(settlement_id, clamped);
+        self.settlement_gini.insert(settlement_id, (clamped * 100.0).round() as i32);
     }
 
     /// Read-only access to the `phase_unrest` event stream for the most
@@ -4649,7 +4652,7 @@ impl Simulation {
                     ..CivNeedsHealth::default()
                 };
                 let should_birth = should_reproduce(
-                    civilian.age,
+                    civilian.age as f32,
                     &health,
                     needs.food,
                     needs.safety,

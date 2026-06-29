@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 #[cfg(feature = "egui")]
 use crate::settings_ui::{
-    KeyBinding, GameSettings, ACTION_CAMERA_LOWER, ACTION_CAMERA_MOVE_BACKWARD,
+    GameSettings, KeyBinding, ACTION_CAMERA_LOWER, ACTION_CAMERA_MOVE_BACKWARD,
     ACTION_CAMERA_MOVE_FORWARD, ACTION_CAMERA_MOVE_LEFT, ACTION_CAMERA_MOVE_RIGHT,
     ACTION_CAMERA_RAISE, ACTION_CAMERA_ROTATE,
 };
@@ -103,9 +103,7 @@ pub fn camera_input(
     let forward_flat = Vec3::new(rig.yaw.sin(), 0.0, rig.yaw.cos());
     let right_flat = Vec3::new(forward_flat.z, 0.0, -forward_flat.x);
 
-    let movement_binding_pressed = |fallback: KeyCode| -> bool {
-        keys.pressed(fallback)
-    };
+    let movement_binding_pressed = |fallback: KeyCode| -> bool { keys.pressed(fallback) };
 
     if movement_binding_pressed(KeyCode::KeyW) {
         move_dir += forward_flat;

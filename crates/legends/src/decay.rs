@@ -140,11 +140,7 @@ impl ProminenceTracker {
             None => {
                 // Seed: brand-new legend, salience starts low unless we already
                 // matched (a reinforcing event saw it).
-                let seed = if matched {
-                    decay_config.reinforcement_delta
-                } else {
-                    0.0
-                };
+                let seed = if matched { legend.importance } else { 0.0 };
                 Prominence::new(seed, current_epoch)
             }
             Some(prev) => {
@@ -237,15 +233,15 @@ mod tests {
         let cfg = DecayConfig {
             decay_rate: 0.9,
             floor: 0.0,
-            reinforcement_delta: 0.0, // explicit: no reinforcement
+            reinforcement_delta: 0.0, // explicit: no later reinforcement
         };
 
         // Seed legend 0 at epoch 0 with a single reinforcement (matched=true).
         let legend = make_legend(0);
         let p0 = t.observe(&legend, 0, true, &cfg);
         assert!(
-            (p0.value - cfg.reinforcement_delta).abs() < 1e-6,
-            "seed should equal reinforcement_delta, got {}",
+            (p0.value - legend.importance).abs() < 1e-6,
+            "seed should equal legend importance, got {}",
             p0.value
         );
 
@@ -281,7 +277,7 @@ mod tests {
 
         // Seed at epoch 0 with a reinforcement.
         let p0 = t.observe(&legend, 0, true, &cfg);
-        assert!((p0.value - 0.3).abs() < 1e-6);
+        assert!((p0.value - legend.importance).abs() < 1e-6);
 
         // Wait 20 epochs → should decay substantially.
         let p1 = t.observe(&legend, 20, false, &cfg);
@@ -371,8 +367,8 @@ mod tests {
         let v3 = t.get(LegendEventId(3)).unwrap().value;
         assert!((v1 - v2).abs() < 1e-6);
         assert!((v2 - v3).abs() < 1e-6);
-        // 0.4 * 0.8^5 = 0.4 * 0.32768 ≈ 0.1311
-        let expected = (0.4f32 * 0.8f32.powi(5)).max(0.0);
+        // Seeded legend importance decays uniformly across elapsed epochs.
+        let expected = (make_legend(1).importance * 0.8f32.powi(5)).max(0.0);
         assert!(
             (v1 - expected).abs() < 1e-3,
             "expected ~{}, got {}",

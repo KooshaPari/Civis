@@ -14,9 +14,27 @@
 
 use civ_engine::faction_emergence::{cluster_into_factions, AgentIdeology};
 use civ_engine::{
-    apply_big_gods_response, last_religion_sample, InstitutionKind, ReligiousProfile,
-    Simulation, SubstrateGradients,
+    apply_big_gods_response, last_religion_sample, InstitutionKind, ReligiousProfile, Simulation,
+    SubstrateGradients,
 };
+use civ_voxel::{MaterialId, WorldCoord, FIXED_SCALE};
+
+fn seed_dense_voxel_block(sim: &mut Simulation) {
+    for z in 0..16_i64 {
+        for y in 0..16_i64 {
+            for x in 0..16_i64 {
+                sim.voxel_mut().write(
+                    WorldCoord {
+                        x: x * FIXED_SCALE,
+                        y: y * FIXED_SCALE,
+                        z: z * FIXED_SCALE,
+                    },
+                    MaterialId(1),
+                );
+            }
+        }
+    }
+}
 
 /// Tick budget large enough to cross several `EMERGENCE_SAMPLE_INTERVAL` (50)
 /// boundaries and let gov / psyche layers accumulate signal.
@@ -40,6 +58,7 @@ fn assert_finite_in_range(label: &str, value: f32, lo: f32, hi: f32) {
 fn fr_emergence_anti_theater_core_metrics_reach_nontrivial_ranges() {
     for &seed in RUN_SEEDS {
         let mut sim = Simulation::with_seed(seed);
+        seed_dense_voxel_block(&mut sim);
         sim.advance_ticks(RUN_TICKS);
         assert!(
             sim.sample_emergence(),
@@ -69,7 +88,10 @@ fn fr_emergence_anti_theater_core_metrics_reach_nontrivial_ranges() {
         );
 
         // Power-law slope — finite, non-negative sentinel contract.
-        assert!(s.power_law_alpha.is_finite(), "power_law_alpha (seed={seed})");
+        assert!(
+            s.power_law_alpha.is_finite(),
+            "power_law_alpha (seed={seed})"
+        );
         assert!(
             s.power_law_alpha >= 0.0,
             "power_law_alpha must be >= 0 (seed={seed}); got {}",
@@ -87,12 +109,7 @@ fn fr_emergence_anti_theater_core_metrics_reach_nontrivial_ranges() {
         }
 
         // Coupling MI — normalised estimate in [0, 1]; optional raw MI when wired.
-        assert_finite_in_range(
-            "coupling_mi_estimate",
-            s.coupling_mi_estimate,
-            0.0,
-            1.0,
-        );
+        assert_finite_in_range("coupling_mi_estimate", s.coupling_mi_estimate, 0.0, 1.0);
         if let Some(mi) = s.mi_material_faction_norm {
             assert_finite_in_range("mi_material_faction_norm", mi, 0.0, 1.0);
             if mi > 0.0 && s.entropy_norm > 0.0 {
@@ -104,12 +121,7 @@ fn fr_emergence_anti_theater_core_metrics_reach_nontrivial_ranges() {
         }
 
         // Criticality — combines branching σ, power-law α, entropy norm.
-        assert_finite_in_range(
-            "criticality_indicator",
-            s.criticality_indicator,
-            0.0,
-            1.0,
-        );
+        assert_finite_in_range("criticality_indicator", s.criticality_indicator, 0.0, 1.0);
         assert_finite_in_range("branching_sigma", s.branching_sigma, 0.0, 3.0);
 
         // Anti-theater: at least two independent metric families must show
@@ -175,9 +187,10 @@ fn fr_emergence_anti_theater_at_least_one_canonical_structure() {
             .any(|m| m.settlement_id == 0);
 
         // Institution — temple unlock at pop >= TEMPLE_UNLOCK_POPULATION (50).
-        let institution_present = sim.last_tick_institution_events().iter().any(|e| {
-            matches!(e.kind, InstitutionKind::Temple if e.settlement_id == 0)
-        });
+        let institution_present = sim
+            .last_tick_institution_events()
+            .iter()
+            .any(|e| matches!(e.kind, InstitutionKind::Temple if e.settlement_id == 0));
 
         // Faction — doctrine libraries exist and k-means clustering yields seeds
         // from spread ideologies (public `faction_emergence` API).
@@ -190,18 +203,18 @@ fn fr_emergence_anti_theater_at_least_one_canonical_structure() {
             })
             .collect();
         let faction_clusters = cluster_into_factions(&ideologies, 3);
-        let faction_structure_present =
-            faction_doctrines_present && faction_clusters.len() >= 1;
+        let faction_structure_present = faction_doctrines_present && faction_clusters.len() >= 1;
 
         // Religion — profile snapshot accessor returns the wired settlement.
-        let religion_present = last_religion_sample(&sim.religious_profiles)
-            .iter()
-            .any(|(sid, p)| {
-                *sid == 0
-                    && (p.monitoring > 0.0
-                        || p.mythic_coherence > 0.0
-                        || p.uncertainty_reduction > 0.0)
-            });
+        let religion_present =
+            last_religion_sample(&sim.religious_profiles)
+                .iter()
+                .any(|(sid, p)| {
+                    *sid == 0
+                        && (p.monitoring > 0.0
+                            || p.mythic_coherence > 0.0
+                            || p.uncertainty_reduction > 0.0)
+                });
 
         let any = settlement_present
             || institution_present

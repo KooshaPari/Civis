@@ -66,7 +66,7 @@ fn green_fr_civ_life_020_step_stocks_applies_profile_with_deficit_clamp() {
     stocks.add(Good::Food, 5);
     stocks.add(Good::Water, 1);
 
-    let profile = Profile::new([10, 0, 0, 0, 0], [4, 2, 0, 0, 0]);
+    let profile = Profile::new([10, 0, 0, 0, 0, 0], [4, 2, 0, 0, 0, 0]);
     step_stocks(&mut stocks, &profile);
 
     assert_eq!(stocks.get(Good::Food), 11);
@@ -91,8 +91,8 @@ fn green_fr_civ_life_020_propose_trade_selects_mutual_exchange() {
         s
     };
 
-    let a_profile = Profile::new([4, 0, 0, 0, 0], [0, 1, 0, 0, 0]);
-    let b_profile = Profile::new([0, 3, 0, 0, 0], [1, 0, 0, 0, 0]);
+    let a_profile = Profile::new([4, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0]);
+    let b_profile = Profile::new([0, 3, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0]);
 
     let offer = propose_trade(&a_stocks, &a_profile, &b_stocks, &b_profile)
         .expect("trade should be mutually beneficial");
@@ -118,8 +118,8 @@ fn green_fr_civ_life_020_apply_trade_preserves_total_stock() {
         s.add(Good::Water, 6);
         s
     };
-    let a_profile = Profile::new([4, 0, 0, 0, 0], [0, 1, 0, 0, 0]);
-    let b_profile = Profile::new([0, 3, 0, 0, 0], [1, 0, 0, 0, 0]);
+    let a_profile = Profile::new([4, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0]);
+    let b_profile = Profile::new([0, 3, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0]);
 
     let before_total = a_stocks.total() + b_stocks.total();
     let offer = propose_trade(&a_stocks, &a_profile, &b_stocks, &b_profile)

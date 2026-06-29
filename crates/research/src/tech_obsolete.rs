@@ -145,7 +145,11 @@ impl ObsolescenceTracker {
 
     /// Register a freshly researched tech with its baseline upkeep value.
     /// Calling on a duplicate ID returns [`ObsolescenceError::DuplicateTech`].
-    pub fn register_tech(&mut self, tech_id: &str, base_value: u64) -> Result<(), ObsolescenceError> {
+    pub fn register_tech(
+        &mut self,
+        tech_id: &str,
+        base_value: u64,
+    ) -> Result<(), ObsolescenceError> {
         if self.records.contains_key(tech_id) {
             return Err(ObsolescenceError::DuplicateTech(tech_id.to_string()));
         }
@@ -402,11 +406,15 @@ mod tests {
     #[test]
     fn repeat_supersede_is_idempotent() {
         let mut tracker = fixture();
-        tracker.supersede_with("steel_sword", "steel_rifle").unwrap();
+        tracker
+            .supersede_with("steel_sword", "steel_rifle")
+            .unwrap();
         tracker.tick(3);
         let mid = tracker.upkeep_value("steel_sword").expect("tracked");
 
-        tracker.supersede_with("steel_sword", "steel_rifle").unwrap();
+        tracker
+            .supersede_with("steel_sword", "steel_rifle")
+            .unwrap();
         tracker.tick(0);
         let after_dup = tracker.upkeep_value("steel_sword").expect("tracked");
         assert_eq!(
@@ -419,7 +427,9 @@ mod tests {
     #[test]
     fn tick_zero_is_noop() {
         let mut tracker = fixture();
-        tracker.supersede_with("steel_sword", "steel_rifle").unwrap();
+        tracker
+            .supersede_with("steel_sword", "steel_rifle")
+            .unwrap();
         let before = tracker.upkeep_value("steel_sword").expect("tracked");
         tracker.tick(0);
         let after = tracker.upkeep_value("steel_sword").expect("tracked");
@@ -458,6 +468,10 @@ mod tests {
     #[test]
     fn zero_decay_clamps_to_one() {
         let cfg = ObsolescenceConfig::new(0, 1);
-        assert_eq!(cfg.decay_bps(), 1, "zero must clamp to 1 to keep decay alive");
+        assert_eq!(
+            cfg.decay_bps(),
+            1,
+            "zero must clamp to 1 to keep decay alive"
+        );
     }
 }

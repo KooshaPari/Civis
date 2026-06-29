@@ -1,20 +1,20 @@
 //! Real `.civsave` snapshot persistence for `Simulation`.
 
-use std::fs;
 use std::collections::{BTreeMap, BTreeSet};
+use std::fs;
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::engine::Citizen;
+use crate::engine::MilitaryUnit;
+use crate::language::LanguageState;
 use crate::{
     Building, CombatDamagePulse, DoctrineLibrary, Institution, InstitutionKind, Position,
-    ReligiousProfile, ReplayLog,
-    Simulation, WorldState,
+    ReligiousProfile, ReplayLog, Simulation, WorldState,
 };
 use civ_agents::{ClusterMember, LodTier, Needs, Position3d, Tools, Wardrobe};
-use crate::language::LanguageState;
 use civ_needs::Health as LifeHealth;
 use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, WorldCoord};
 
@@ -118,6 +118,20 @@ fn snapshot_world(world: &hecs::World) -> SavedWorld {
         }
         if let Ok(value) = world.get::<&ClusterMember>(entity) {
             record.cluster_member = Some(*value);
+        }
+        entities.push(record);
+    }
+
+    for (entity, citizen) in world.query::<&Citizen>().iter() {
+        if world.get::<&civ_agents::Civilian>(entity).is_ok() {
+            continue;
+        }
+        let mut record = SavedEntity {
+            citizen: Some(*citizen),
+            ..SavedEntity::default()
+        };
+        if let Ok(value) = world.get::<&Position>(entity) {
+            record.position_2d = Some(*value);
         }
         entities.push(record);
     }
@@ -278,21 +292,16 @@ fn restore_sim(saved: SavedSimulation) -> Simulation {
 
 pub fn save_game(sim: &Simulation, path: impl AsRef<Path>) -> Result<(), SaveError> {
     let path = path.as_ref();
-    let bytes = bincode_next::serde::encode_to_vec(
-        &snapshot_sim(sim),
-        bincode_next::config::standard(),
-    )?;
+    let bytes =
+        bincode_next::serde::encode_to_vec(&snapshot_sim(sim), bincode_next::config::standard())?;
     fs::write(path, bytes).map_err(|e| io_err(path, e))
 }
 
 pub fn load_game(path: impl AsRef<Path>) -> Result<Simulation, SaveError> {
     let path = path.as_ref();
     let bytes = fs::read(path).map_err(|e| io_err(path, e))?;
-    let saved: SavedSimulation = bincode_next::serde::decode_from_slice(
-        &bytes,
-        bincode_next::config::standard(),
-    )?
-    .0;
+    let saved: SavedSimulation =
+        bincode_next::serde::decode_from_slice(&bytes, bincode_next::config::standard())?.0;
     Ok(restore_sim(saved))
 }
 

@@ -3,9 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RiskTier {
     /// Pure inspection — no side effects on world state.
@@ -88,6 +86,10 @@ mod tests {
         let mut uniq = roles.clone();
         uniq.sort();
         uniq.dedup();
-        assert_eq!(uniq.len(), roles.len(), "palette_role must be unique per tier");
+        assert_eq!(
+            uniq.len(),
+            roles.len(),
+            "palette_role must be unique per tier"
+        );
     }
 }

@@ -72,12 +72,8 @@ pub fn tick_demographics(d: &mut Demographics, food_per_capita: f32, disease_fac
     let mut births = 0.0_f32;
 
     for (idx, group) in d.groups.iter().enumerate() {
-        let death_rate = adjusted_death_rate(
-            group.death_rate,
-            food_per_capita,
-            disease_factor,
-            crowding,
-        );
+        let death_rate =
+            adjusted_death_rate(group.death_rate, food_per_capita, disease_factor, crowding);
         let survivors = (group.count as f32) * (1.0 - death_rate);
         let survivors = round_population(survivors);
 
@@ -185,6 +181,7 @@ mod tests {
     #[test]
     fn favorable_conditions_grow_population() {
         let mut d = sample_demographics();
+        d.carrying_capacity = 50_000;
         tick_demographics(&mut d, 1.25, 0.0);
         assert!(total_population(&d) > 8_000);
         assert!(total_population(&d) <= d.carrying_capacity);

@@ -160,7 +160,7 @@ pub fn route_flow(
     // multiplication can overflow at extreme inputs. Saturate both
     // legs and the division so the answer is bounded.
     let numerator = supply.saturating_mul(demand);
-    let flow = numerator / dist_sq;
+    let flow = (numerator / dist_sq).min(supply).min(demand);
     if flow < min_flow {
         return None;
     }
@@ -250,14 +250,14 @@ mod tests {
     fn farm(id: SettlementId, pos: IVec3, prod: i64) -> Settlement {
         // Surplus-side: produces `prod` units of food per tick, consumes none.
         let mut s = Settlement::new(id, pos);
-        s.profile = ProductionProfile::new([prod, 0, 0, 0, 0], [0, 0, 0, 0, 0]);
+        s.profile = ProductionProfile::new([prod, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]);
         s
     }
 
     fn consumer(id: SettlementId, pos: IVec3, demand: i64) -> Settlement {
         // Deficit-side: no production, consumes `demand` food per tick.
         let mut s = Settlement::new(id, pos);
-        s.profile = ProductionProfile::new([0, 0, 0, 0, 0], [demand, 0, 0, 0, 0]);
+        s.profile = ProductionProfile::new([0, 0, 0, 0, 0, 0], [demand, 0, 0, 0, 0, 0]);
         s
     }
 
@@ -284,11 +284,17 @@ mod tests {
             .expect("mid route should emerge from gravity kernel");
         let far_flow = route_flow(&origin, &far, Good::Food, 1);
 
-        assert_eq!(near_flow.flow, 50, "kernel: 10*5/1 = 50");
-        assert_eq!(mid_flow.flow, 12, "kernel: 10*5/4 = 12 (floor)");
+        assert_eq!(
+            near_flow.flow, 5,
+            "kernel is capped by destination deficit: min(10*5/1, 10, 5) = 5"
+        );
+        assert_eq!(
+            mid_flow.flow, 5,
+            "kernel is capped by destination deficit: min(10*5/4, 10, 5) = 5"
+        );
         assert!(
-            near_flow.flow > mid_flow.flow,
-            "gravity: near flow must exceed mid flow"
+            near_flow.flow >= mid_flow.flow,
+            "gravity: near flow should be at least mid flow after conservation caps"
         );
         assert!(
             far_flow.is_none(),
@@ -315,11 +321,11 @@ mod tests {
         // surplus; settlement 2 has 5 water deficit; settlement 3
         // is a water surplus / food deficit counterparty.
         let mut a = Settlement::new(1, IVec3::ZERO);
-        a.profile = ProductionProfile::new([12, 0, 0, 0, 0], [0, 0, 0, 0, 0]);
+        a.profile = ProductionProfile::new([12, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]);
         let mut b = Settlement::new(2, IVec3::new(3, 0, 0));
-        b.profile = ProductionProfile::new([0, 0, 0, 0, 0], [0, 5, 0, 0, 0]);
+        b.profile = ProductionProfile::new([0, 0, 0, 0, 0, 0], [0, 5, 0, 0, 0, 0]);
         let mut c = Settlement::new(3, IVec3::new(1, 0, 0));
-        c.profile = ProductionProfile::new([0, 6, 0, 0, 0], [4, 0, 0, 0, 0]);
+        c.profile = ProductionProfile::new([0, 6, 0, 0, 0, 0], [4, 0, 0, 0, 0, 0]);
 
         let settlements = vec![a.clone(), b.clone(), c.clone()];
         let routes = compute_trade_routes(&settlements, &GOODS, 1);
@@ -327,35 +333,25 @@ mod tests {
         assert_eq!(routes, compute_trade_routes(&settlements, &GOODS, 1));
 
         // Expected routes, sorted by (origin, destination, good):
-        //   1 -> 2 : food    (12 * 5 / 9 = 6)
-        //   1 -> 3 : food    (12 * 4 / 1 = 48)
-        //   3 -> 2 : water   (6  * 5 / 4 = 7)
-        assert_eq!(routes.len(), 3);
+        //   1 -> 3 : food    min(12 * 4 / 1, 12, 4) = 4
+        //   3 -> 2 : water   min(6  * 5 / 4, 6, 5) = 5
+        assert_eq!(routes.len(), 2);
         assert_eq!(
             routes[0],
             TradeRoute {
                 origin: 1,
-                destination: 2,
+                destination: 3,
                 good: Good::Food,
-                flow: 6,
+                flow: 4,
             }
         );
         assert_eq!(
             routes[1],
             TradeRoute {
-                origin: 1,
-                destination: 3,
-                good: Good::Food,
-                flow: 48,
-            }
-        );
-        assert_eq!(
-            routes[2],
-            TradeRoute {
                 origin: 3,
                 destination: 2,
                 good: Good::Water,
-                flow: 7,
+                flow: 5,
             }
         );
 

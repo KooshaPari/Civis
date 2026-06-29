@@ -213,6 +213,23 @@ export type DisasterEvent = {
   severity: number;
 };
 
+export type ReligiousProfile = {
+  faction_id: number;
+  belief: number;
+  mythic_coherence: number;
+  uncertainty_reduction: number;
+  age_ticks: number;
+  population: number;
+};
+
+export type DiplomaticTreaty = {
+  faction_a: number;
+  faction_b: number;
+  treaty_kind: string;
+  influence_cost: number;
+  remaining_ticks: number;
+};
+
 export type WeatherSnapshot = {
   season: string;
   temperature: number;
@@ -248,6 +265,8 @@ export type Snapshot = {
   tech_tree: TechNode[];
   events: GameEvent[];
   is_day: boolean;
+  religious_profiles?: ReligiousProfile[];
+  diplomatic_treaties?: DiplomaticTreaty[];
   weather?: WeatherSnapshot;
   speed: TimeSpeed;
 };
@@ -313,8 +332,10 @@ type State = {
   frameSampleSource: FrameSampleSource;
   terrain: Terrain | null;
   inspectorOpen: boolean;
-  activeSideTab: "inspector" | "events";
+  activeSideTab: "inspector" | "events" | "religion" | "diplomacy";
   economyPanelOpen: boolean;
+  religionPanelOpen: boolean;
+  diplomacyPanelOpen: boolean;
   techTreeOpen: boolean;
   theme: ThemeMode;
   toast: Toast | null;
@@ -360,6 +381,8 @@ type Action =
   | { type: "set_inspector_open"; open: boolean }
   | { type: "set_active_side_tab"; tab: State["activeSideTab"] }
   | { type: "set_economy_panel_open"; open: boolean }
+  | { type: "set_religion_panel_open"; open: boolean }
+  | { type: "set_diplomacy_panel_open"; open: boolean }
   | { type: "set_tech_tree_open"; open: boolean }
   | { type: "set_toast"; message: string | null }
   | { type: "push_notification"; notification: NotificationItem }
@@ -404,6 +427,8 @@ const initialState: State = {
   inspectorOpen: true,
   activeSideTab: "inspector",
   economyPanelOpen: true,
+  religionPanelOpen: false,
+  diplomacyPanelOpen: false,
   techTreeOpen: false,
   theme: readStoredTheme(
     typeof window !== "undefined" ? { search: window.location.search } : {},
@@ -507,6 +532,10 @@ function reducer(state: State, action: Action): State {
       return { ...state, activeSideTab: action.tab, inspectorOpen: true };
     case "set_economy_panel_open":
       return { ...state, economyPanelOpen: action.open };
+    case "set_religion_panel_open":
+      return { ...state, religionPanelOpen: action.open };
+    case "set_diplomacy_panel_open":
+      return { ...state, diplomacyPanelOpen: action.open };
     case "set_tech_tree_open":
       return { ...state, techTreeOpen: action.open };
     case "set_toast":

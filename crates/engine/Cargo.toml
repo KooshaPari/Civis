@@ -16,7 +16,7 @@ glam = "0.30.10"
 hecs = "0.10"
 
 # Fixed-point arithmetic (16-bit signed with 16 fractional bits).
-fixed = "1.28"
+fixed = { version = "1.28", features = ["serde"] }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }

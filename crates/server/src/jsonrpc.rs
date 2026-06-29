@@ -112,6 +112,8 @@ pub enum JsonRpcMethod {
     /// Per-entity sentience/psyche snapshot (`psyche.snapshot`, FR-PSYCHE-readapi).
     PsycheSnapshot,
     /// Per-tick sentience events (`psyche.events`, FR-PSYCHE-readapi).
+    /// Per-faction religious profile state (`sim.religion_state`, FR-RELIG-readapi).
+    SimReligionState,
     PsycheEvents,
 }
 
@@ -156,6 +158,7 @@ impl JsonRpcMethod {
             Self::SimGodAction => "sim.god_action",
             Self::PsycheSnapshot => "psyche.snapshot",
             Self::PsycheEvents => "psyche.events",
+            Self::SimReligionState => "sim.religion_state",
         }
     }
 
@@ -199,6 +202,7 @@ impl JsonRpcMethod {
             "sim.god_action" => Some(Self::SimGodAction),
             "psyche.snapshot" => Some(Self::PsycheSnapshot),
             "psyche.events" => Some(Self::PsycheEvents),
+            "sim.religion_state" => Some(Self::SimReligionState),
             _ => None,
         }
     }
@@ -453,7 +457,7 @@ pub struct InstitutionSnapshot {
 }
 
 /// Snapshot fields from `Simulation::snapshot()` for read-only RPC handlers.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SnapshotFields {
     /// Engine tick at snapshot time.
     pub tick: u64,
@@ -797,7 +801,7 @@ pub fn military_pins_from_sim(sim: &civ_engine::Simulation) -> Vec<MilitaryPinSn
                 y,
                 unit_type: unit_type_label(unit.unit_type).to_string(),
                 faction: unit.faction_id,
-                strength: unit.hp.to_f64() as f32,
+                strength: unit.hp.to_num::<f64>() as f32,
             }
         })
         .collect()
@@ -831,13 +835,13 @@ pub fn snapshot_fields_from_sim(
     speed_multiplier: u32,
 ) -> SnapshotFields {
     let snap = sim.snapshot();
-        let spectator = sim.spectator_view();
-        let sim_snapshot = snap.disaster_events;
-        SnapshotFields {
-            tick: snap.tick,
-            population: snap.population,
-            building_count: snap.building_count,
-        energy_budget: Some(snap.energy_budget.to_f64()),
+    let spectator = sim.spectator_view();
+    let sim_snapshot = snap.disaster_events;
+    SnapshotFields {
+        tick: snap.tick,
+        population: snap.population,
+        building_count: snap.building_count,
+        energy_budget: Some(snap.energy_budget.to_num::<f64>()),
         market_prices: snap.market_prices.clone(),
         hash_chain_root: sim
             .hash_chain_root()
@@ -866,12 +870,12 @@ pub fn snapshot_fields_from_sim(
             language_count: sim.cluster_cultures().len() as u32,
         },
         mods: sim.mod_browser_entries(),
-            mod_lifecycle: sim.replay_log().mod_loaded_bus_at_tick(sim.state.tick),
-            session_saved: sim.replay_log().session_saved_bus_at_tick(sim.state.tick),
-            disaster_events: sim_snapshot,
-            mod_permission_violations: sim
-                .replay_log()
-                .mod_permission_violation_bus_at_tick(sim.state.tick),
+        mod_lifecycle: sim.replay_log().mod_loaded_bus_at_tick(sim.state.tick),
+        session_saved: sim.replay_log().session_saved_bus_at_tick(sim.state.tick),
+        disaster_events: sim_snapshot,
+        mod_permission_violations: sim
+            .replay_log()
+            .mod_permission_violation_bus_at_tick(sim.state.tick),
         climate: *sim.climate(),
         emergence: sim.last_emergence_sample().map(EmergenceSampleFields::from),
         researched: sim.research_cache().researched.clone(),
@@ -947,22 +951,22 @@ fn game_resources_from_sim(sim: &civ_engine::Simulation) -> Vec<ResourceSnapshot
     vec![
         ResourceSnapshot {
             kind: "food".to_owned(),
-            amount: sim.state.resources.food.to_f64() as f32,
+            amount: sim.state.resources.food.to_num::<f64>() as f32,
             rate: food_per_tick,
         },
         ResourceSnapshot {
             kind: "wood".to_owned(),
-            amount: sim.state.resources.wood.to_f64() as f32,
+            amount: sim.state.resources.wood.to_num::<f64>() as f32,
             rate: wood_per_tick,
         },
         ResourceSnapshot {
             kind: "metal".to_owned(),
-            amount: sim.state.resources.metal.to_f64() as f32,
+            amount: sim.state.resources.metal.to_num::<f64>() as f32,
             rate: metal_per_tick,
         },
         ResourceSnapshot {
             kind: "energy".to_owned(),
-            amount: sim.state.resources.energy.to_f64() as f32,
+            amount: sim.state.resources.energy.to_num::<f64>() as f32,
             rate: energy_per_tick,
         },
     ]
@@ -976,6 +980,25 @@ pub struct OutcomeFields {
     pub reason: String,
     pub tick: u64,
 }
+
+/// Live material/height readout for `sim.inspect_tile`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct TileInspectionWire {
+    /// Top non-air material id.
+    pub material: u16,
+    /// Top non-air voxel height in fixed-point world units.
+    pub terrain_height: i64,
+}
+
+impl From<civ_engine::TileInspection> for TileInspectionWire {
+    fn from(value: civ_engine::TileInspection) -> Self {
+        Self {
+            material: value.material.0,
+            terrain_height: value.terrain_height,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct DispatchContext {
     /// Current bridge tick (may lag until the next broadcast).
@@ -984,6 +1007,8 @@ pub struct DispatchContext {
     pub population: Option<u64>,
     /// Full snapshot when the handler could read the simulation.
     pub snapshot: Option<SnapshotFields>,
+    /// Live material/height probe for `sim.inspect_tile`.
+    pub tile_probe: Option<TileInspectionWire>,
     /// When true, privileged `sim.command` actions require the operator role.
     pub require_role: bool,
     /// Current tick speed multiplier from the bridge (`AppState::speed_multiplier`).
@@ -1009,6 +1034,9 @@ pub struct DispatchContext {
     /// Per-tick sentience events for `psyche.events` (FR-PSYCHE-readapi).
     /// Pre-computed by the bridge when the method matches.
     pub sentience_events: Option<Vec<SentienceEventWire>>,
+    /// Per-faction religious profile state for `sim.religion_state` (FR-RELIG-readapi).
+    /// Pre-computed by the bridge when the method matches.
+    pub religion_state: Option<Vec<ReligionProfileWire>>,
 }
 
 /// JSON-RPC view of [`civ_engine::emergence_metrics::EmergenceSample`].
@@ -1231,10 +1259,7 @@ pub fn psyche_snapshot_from_sim(
 
     let mut entities: Vec<PsycheEntitySnapshotWire> = Vec::new();
     for (_, (civilian, psyche)) in sim.world.query::<(&Civilian, &civ_agents::Psyche)>().iter() {
-        let score = recorded_sentience
-            .get(&civilian.id)
-            .copied()
-            .unwrap_or(0.0);
+        let score = recorded_sentience.get(&civilian.id).copied().unwrap_or(0.0);
         let is_sentient = crossed.contains(&civilian.id);
         entities.push(PsycheEntitySnapshotWire {
             agent_id: civilian.id,
@@ -1262,6 +1287,44 @@ pub fn sentience_events_from_sim(sim: &civ_engine::Simulation) -> Vec<SentienceE
             lineage_id: ev.lineage_id,
             cognition_score: ev.cognition_score,
             crossed: ev.crossed,
+        })
+        .collect()
+}
+
+// ---------------------------------------------------------------------------
+// RELIGION read-API types (FR-RELIG-readapi)
+// ---------------------------------------------------------------------------
+
+/// Wire-friendly representation of one settlement's religious profile for
+/// `sim.religion_state`.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct ReligionProfileWire {
+    /// Faction / settlement id.
+    pub faction_id: u32,
+    /// Big-Gods monitoring pressure.
+    pub monitoring: f32,
+    /// Shared mythic narrative integration.
+    pub mythic_coherence: f32,
+    /// Anxiety-quotient absorbed by religion.
+    pub uncertainty_reduction: f32,
+    /// Monotonically increasing age in ticks.
+    pub age_ticks: u64,
+    /// Member population.
+    pub population: usize,
+}
+
+/// Build per-faction religious profile snapshot from the simulation's
+/// `religious_profiles` map (FR-RELIG-readapi).
+pub fn religion_profiles_from_sim(sim: &civ_engine::Simulation) -> Vec<ReligionProfileWire> {
+    sim.religious_profiles
+        .iter()
+        .map(|(&faction_id, profile)| ReligionProfileWire {
+            faction_id,
+            monitoring: profile.monitoring,
+            mythic_coherence: profile.mythic_coherence,
+            uncertainty_reduction: profile.uncertainty_reduction,
+            age_ticks: profile.age_ticks,
+            population: profile.population as usize,
         })
         .collect()
 }
@@ -1362,6 +1425,15 @@ pub enum DispatchEffect {
     QueueResearch {
         /// Tech identifier to queue.
         tech: String,
+    },
+    /// Apply a player-issued diplomacy action to the live relation substrate.
+    DiplomacyAction {
+        /// Acting/source faction id. Defaults to player faction `0` when omitted.
+        source_faction: u32,
+        /// Target faction id.
+        target_faction: u32,
+        /// Relation/event outcome to apply.
+        kind: civ_engine::DiplomacyKind,
     },
     /// Apply a god action from the bridge UI.
     ///
@@ -1583,17 +1655,23 @@ pub fn parse_replay_path(params: Option<&Value>) -> Result<String, JsonRpcError>
             data: None,
         })?;
     let path = std::path::Path::new(path_str);
+    let has_windows_drive_prefix = path_str
+        .as_bytes()
+        .get(0..2)
+        .is_some_and(|prefix| prefix[0].is_ascii_alphabetic() && prefix[1] == b':');
     if !path.is_relative()
         || path_str.starts_with('/')
         || path_str.starts_with('\\')
-        || path
-            .components()
-            .any(|c| matches!(
+        || path_str.contains('\\')
+        || has_windows_drive_prefix
+        || path.components().any(|c| {
+            matches!(
                 c,
                 std::path::Component::ParentDir
                     | std::path::Component::Prefix(_)
                     | std::path::Component::RootDir
-            ))
+            )
+        })
     {
         return Err(JsonRpcError {
             code: error_code::INVALID_PARAMS,
@@ -1636,9 +1714,7 @@ pub fn resolve_replay_path(
                 let parent = existing
                     .parent()
                     .filter(|p| !p.as_os_str().is_empty())
-                    .ok_or_else(|| {
-                        format!("replay path {:?} has no existing ancestor", joined)
-                    })?;
+                    .ok_or_else(|| format!("replay path {:?} has no existing ancestor", joined))?;
                 if parent == existing {
                     return Err(format!(
                         "replay path {:?} cannot be resolved relative to base {:?}",
@@ -1723,6 +1799,159 @@ fn emergence_dashboard_snapshot_from_context(ctx: &DispatchContext) -> Emergence
         tick: ctx.tick,
     }
 }
+
+fn norm_tile_coord(value: i64) -> f32 {
+    (value.rem_euclid(128) as f32 / 127.0).clamp(0.0, 1.0)
+}
+
+fn inspect_tile_result(ctx: &DispatchContext, x: i64, y: i64) -> Value {
+    let nx = norm_tile_coord(x);
+    let ny = norm_tile_coord(y);
+    let material = ctx
+        .tile_probe
+        .map(|probe| serde_json::json!(probe.material))
+        .unwrap_or(Value::Null);
+    let terrain_height = ctx
+        .tile_probe
+        .map(|probe| serde_json::json!(probe.terrain_height))
+        .unwrap_or(Value::Null);
+    let spectator = ctx
+        .snapshot
+        .as_ref()
+        .and_then(|snapshot| snapshot.spectator.as_ref());
+
+    let nearest_faction = spectator.and_then(|spectator| {
+        spectator
+            .factions
+            .iter()
+            .min_by(|a, b| {
+                let da = {
+                    let dx = nx - a.capital[0];
+                    let dy = ny - a.capital[1];
+                    dx * dx + dy * dy
+                };
+                let db = {
+                    let dx = nx - b.capital[0];
+                    let dy = ny - b.capital[1];
+                    dx * dx + dy * dy
+                };
+                da.total_cmp(&db)
+            })
+            .map(|faction| {
+                let dx = nx - faction.capital[0];
+                let dy = ny - faction.capital[1];
+                let distance = (dx * dx + dy * dy).sqrt();
+                serde_json::json!({
+                    "id": faction.id,
+                    "color": faction.color,
+                    "capital": faction.capital,
+                    "distance": distance,
+                    "inside_territory": distance <= faction.radius / 128.0,
+                })
+            })
+    });
+
+    let nearest_civ = spectator.and_then(|spectator| {
+        spectator
+            .civ_pins
+            .iter()
+            .min_by(|a, b| {
+                let da = {
+                    let dx = nx - a.x;
+                    let dy = ny - a.y;
+                    dx * dx + dy * dy
+                };
+                let db = {
+                    let dx = nx - b.x;
+                    let dy = ny - b.y;
+                    dx * dx + dy * dy
+                };
+                da.total_cmp(&db)
+            })
+            .map(|pin| {
+                let dx = nx - pin.x;
+                let dy = ny - pin.y;
+                serde_json::json!({
+                    "idx": pin.idx,
+                    "x": pin.x,
+                    "y": pin.y,
+                    "distance": (dx * dx + dy * dy).sqrt(),
+                    "job": pin.job,
+                })
+            })
+    });
+
+    serde_json::json!({
+        "x": x,
+        "y": y,
+        "norm_x": nx,
+        "norm_y": ny,
+        "tick": ctx.tick,
+        "material": material,
+        "terrain_height": terrain_height,
+        "nearest_faction": nearest_faction,
+        "nearest_agent_alignment": nearest_civ,
+    })
+}
+
+fn diplomacy_action_result(
+    ctx: &DispatchContext,
+    action: &str,
+    source: u64,
+    target: u64,
+) -> Result<Value, JsonRpcError> {
+    let action_class = match action {
+        "propose_treaty" => "proposal",
+        "declare_war" => "declaration",
+        "offer_trade" => "trade",
+        other => {
+            return Err(JsonRpcError {
+                code: error_code::INVALID_PARAMS,
+                message: format!(
+                    "Invalid params: unsupported diplomacy action {other:?}; expected propose_treaty, declare_war, or offer_trade"
+                ),
+                data: None,
+            });
+        }
+    };
+
+    let target_known = ctx
+        .snapshot
+        .as_ref()
+        .map(|snapshot| {
+            snapshot
+                .factions
+                .iter()
+                .any(|faction| u64::from(faction.id) == target)
+                || snapshot.spectator.as_ref().is_some_and(|spectator| {
+                    spectator
+                        .factions
+                        .iter()
+                        .any(|faction| u64::from(faction.id) == target)
+                })
+        })
+        .unwrap_or(false);
+
+    Ok(serde_json::json!({
+        "action": action,
+        "action_class": action_class,
+        "source_faction": source,
+        "target_faction": target,
+        "accepted": true,
+        "target_known": target_known,
+        "tick": ctx.tick,
+    }))
+}
+
+fn diplomacy_action_kind(action: &str) -> Option<civ_engine::DiplomacyKind> {
+    match action {
+        "propose_treaty" => Some(civ_engine::DiplomacyKind::Peace),
+        "declare_war" => Some(civ_engine::DiplomacyKind::Conflict),
+        "offer_trade" => Some(civ_engine::DiplomacyKind::TradeAgreement),
+        _ => None,
+    }
+}
+
 /// Dispatch a validated request (CIV-0200 stub handlers).
 pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPlan {
     match req.method {
@@ -1794,21 +2023,19 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 effect: DispatchEffect::None,
             },
         },
-        JsonRpcMethod::SimLoadScenario => {
-            match parse_load_scenario_params(req.params.as_ref()) {
-                Ok((preset, seed)) => DispatchPlan {
-                    response: JsonRpcResponse::success(
-                        req.id,
-                        serde_json::json!({ "preset": preset, "seed": seed, "tick": 0 }),
-                    ),
-                    effect: DispatchEffect::LoadScenario { preset, seed },
-                },
-                Err(error) => DispatchPlan {
-                    response: JsonRpcResponse::failure(req.id, error),
-                    effect: DispatchEffect::None,
-                },
-            }
-        }
+        JsonRpcMethod::SimLoadScenario => match parse_load_scenario_params(req.params.as_ref()) {
+            Ok((preset, seed)) => DispatchPlan {
+                response: JsonRpcResponse::success(
+                    req.id,
+                    serde_json::json!({ "preset": preset, "seed": seed, "tick": 0 }),
+                ),
+                effect: DispatchEffect::LoadScenario { preset, seed },
+            },
+            Err(error) => DispatchPlan {
+                response: JsonRpcResponse::failure(req.id, error),
+                effect: DispatchEffect::None,
+            },
+        },
         JsonRpcMethod::SimSetPolicy => match parse_set_policy_params(req.params.as_ref()) {
             Ok(policy) => DispatchPlan {
                 response: JsonRpcResponse::success(
@@ -1940,39 +2167,37 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             // [`EmergenceSampleFields`] so dashboard tiles can render
             // a stable 5-tile view without nullability branching.
             let result = match ctx.emergence.as_ref() {
-                Some(sample) => {
-                    serde_json::to_value(sample).unwrap_or_else(|_| {
-                        serde_json::json!({ "tick": ctx.tick })
-                    })
-                }
+                Some(sample) => serde_json::to_value(sample)
+                    .unwrap_or_else(|_| serde_json::json!({ "tick": ctx.tick })),
                 None => serde_json::to_value(EmergenceSampleFields {
-                tick: ctx.tick,
-                entropy_bits: 0.0,
-                entropy_norm: 0.0,
-                structure_count: Some(0),
-                structure_largest: Some(0),
-                structure_foreground: Some(0),
-                histogram_total: 0,
-                histogram_populated_bins: 0,
-                sample_dur_us: 0,
-                dashboard: None,
-                branching_sigma: 0.0,
-                branching_sigma_score: 0.0,
-                branching_window: 0,
-                avalanches_closed: 0,
-                branching_regime: String::new(),
-                power_law_alpha: 0.0,
-                novelty_rate: 0.0,
-                mi_material_faction_norm: None,
-                // FR-EMERGENCE-dashboard: zeroed defaults for the
-                // three derived summary metrics. The dashboard
-                // renders the "no data" tile when the live sample
-                // is absent.
-                novelty_score: 0.0,
-                coupling_mi_estimate: 0.0,
-                criticality_indicator: 0.0,
-            })
-            .unwrap_or_else(|_| serde_json::json!({ "tick": ctx.tick })),
+                    tick: ctx.tick,
+                    entropy_bits: 0.0,
+                    entropy_norm: 0.0,
+                    structure_count: Some(0),
+                    structure_largest: Some(0),
+                    structure_foreground: Some(0),
+                    histogram_total: 0,
+                    histogram_populated_bins: 0,
+                    sample_dur_us: 0,
+                    dashboard: None,
+                    branching_sigma: 0.0,
+                    branching_sigma_score: 0.0,
+                    branching_window: 0,
+                    avalanches_closed: 0,
+                    branching_regime: String::new(),
+                    power_law_alpha: 0.0,
+                    novelty_rate: 0.0,
+                    mi_material_faction_norm: None,
+                    // FR-EMERGENCE-dashboard: zeroed defaults for the
+                    // three derived summary metrics. The dashboard
+                    // renders the "no data" tile when the live sample
+                    // is absent.
+                    novelty_score: 0.0,
+                    coupling_mi_estimate: 0.0,
+                    criticality_indicator: 0.0,
+                })
+                .unwrap_or_else(|_| serde_json::json!({ "tick": ctx.tick })),
+            };
             DispatchPlan {
                 response: JsonRpcResponse::success(req.id, result),
                 effect: DispatchEffect::None,
@@ -1989,7 +2214,7 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 .as_ref()
                 .and_then(|p| p.get("y").and_then(|v| v.as_i64()))
                 .unwrap_or(0);
-            let result = serde_json::json!({ "x": x, "y": y, "stub": true });
+            let result = inspect_tile_result(&ctx, x, y);
             DispatchPlan {
                 response: JsonRpcResponse::success(req.id, result),
                 effect: DispatchEffect::None,
@@ -2002,21 +2227,32 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 .and_then(|p| p.get("action"))
                 .and_then(|v| v.as_str())
                 .unwrap_or("unknown");
+            let source = req
+                .params
+                .as_ref()
+                .and_then(|p| p.get("source_faction"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let target = req
                 .params
                 .as_ref()
                 .and_then(|p| p.get("target_faction"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
-            let result = serde_json::json!({
-                "action": action,
-                "target_faction": target,
-                "stub": true,
-                "tick": ctx.tick,
-            });
-            DispatchPlan {
-                response: JsonRpcResponse::success(req.id, result),
-                effect: DispatchEffect::None,
+            match diplomacy_action_result(&ctx, action, source, target) {
+                Ok(result) => DispatchPlan {
+                    response: JsonRpcResponse::success(req.id, result),
+                    effect: DispatchEffect::DiplomacyAction {
+                        source_faction: u32::try_from(source).unwrap_or(u32::MAX),
+                        target_faction: u32::try_from(target).unwrap_or(u32::MAX),
+                        kind: diplomacy_action_kind(action)
+                            .expect("validated by diplomacy_action_result"),
+                    },
+                },
+                Err(error) => DispatchPlan {
+                    response: JsonRpcResponse::failure(req.id, error),
+                    effect: DispatchEffect::None,
+                },
             }
         }
         JsonRpcMethod::SimGodAction => {
@@ -2419,6 +2655,16 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 effect: DispatchEffect::None,
             }
         }
+        JsonRpcMethod::SimReligionState => {
+            let religion_state = ctx
+                .religion_state
+                .map(|state| serde_json::to_value(state).unwrap_or(Value::Array(Vec::new())))
+                .unwrap_or_else(|| Value::Array(Vec::new()));
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, religion_state),
+                effect: DispatchEffect::None,
+            }
+        }
         JsonRpcMethod::SimTechState => DispatchPlan {
             response: JsonRpcResponse::success(
                 req.id,
@@ -2436,9 +2682,7 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             effect: DispatchEffect::None,
         },
         JsonRpcMethod::SimOutcome => {
-            use civ_engine::check_outcome;
             let outcome_result = {
-                let sim = ctx.snapshot.as_ref().map(|_| ()).is_some();
                 // We only have a ctx snapshot; real outcome check needs the live sim.
                 // The ws_bridge populates outcome_fields before dispatch (see below).
                 ctx.outcome_fields
@@ -2469,21 +2713,6 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                     "last_tick_ms": ctx.last_tick_ms,
                     "agent_count": ctx.population.unwrap_or(0) as u32,
                     "ca_steps": 1u32,
-                    "stub": true,
-                }),
-            ),
-            effect: DispatchEffect::None,
-        },
-        JsonRpcMethod::SimTechState => DispatchPlan {
-            response: JsonRpcResponse::success(
-                req.id,
-                serde_json::json!({
-                    "available": ["pottery", "masonry", "writing", "iron_working",
-                                  "currency", "mathematics", "gunpowder", "printing",
-                                  "banking", "steam_power", "electricity", "railroad"],
-                    "researched": [],
-                    "in_progress": null,
-                    "tick": ctx.tick,
                     "stub": true,
                 }),
             ),
@@ -2733,6 +2962,7 @@ mod tests {
                 tick: 7,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -2742,6 +2972,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -2772,6 +3005,7 @@ mod tests {
                 tick: 0,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -2781,6 +3015,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(
@@ -2811,6 +3048,7 @@ mod tests {
                 tick: 42,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -2820,6 +3058,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::ResetSimulation { seed: 99 });
@@ -2839,6 +3080,7 @@ mod tests {
                 tick: 3,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -2848,6 +3090,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2868,6 +3113,7 @@ mod tests {
                 tick: 3,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -2877,6 +3123,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2898,6 +3147,7 @@ mod tests {
                 tick: 1,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: true,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -2907,6 +3157,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2928,6 +3181,7 @@ mod tests {
                 tick: 1,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: true,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -2937,6 +3191,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -2954,6 +3211,7 @@ mod tests {
                 tick: 1,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: true,
                 speed_multiplier: 1,
                 connection_role: Some(OPERATOR_ROLE.to_owned()),
@@ -2963,6 +3221,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -3064,6 +3325,7 @@ mod tests {
                 tick: 42,
                 population: Some(1_000_000),
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -3073,6 +3335,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3092,6 +3357,7 @@ mod tests {
                 tick: 1,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -3101,6 +3367,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.response.result, Some(serde_json::json!({ "tick": 1 })));
@@ -3154,15 +3423,19 @@ mod tests {
                 tick: 50,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: Some(sample),
+                emergence: Some(EmergenceSampleFields::from(sample)),
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3236,15 +3509,19 @@ mod tests {
                 tick: 100,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: Some(sample),
+                emergence: Some(EmergenceSampleFields::from(sample)),
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         let result = plan.response.result.expect("result");
@@ -3282,6 +3559,7 @@ mod tests {
                 tick: 12,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -3291,6 +3569,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3337,6 +3618,9 @@ mod tests {
             power_law_alpha: 1.42,
             novelty_rate: 0.18,
             mi_material_faction_norm: Some(0.31),
+            novelty_score: 0.0,
+            coupling_mi_estimate: 0.0,
+            criticality_indicator: 0.0,
         };
         let plan = dispatch_request(
             req,
@@ -3344,15 +3628,19 @@ mod tests {
                 tick: 75,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: Some(sample),
+                emergence: Some(EmergenceSampleFields::from(sample)),
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3379,9 +3667,7 @@ mod tests {
         // Dashboard block is preserved verbatim.
         let dashboard = &result["dashboard"];
         assert!(dashboard.is_object(), "dashboard must be an object");
-        assert!(
-            (dashboard["cluster_entropy"].as_f64().unwrap_or(f64::NAN) - 0.91).abs() < 1e-5
-        );
+        assert!((dashboard["cluster_entropy"].as_f64().unwrap_or(f64::NAN) - 0.91).abs() < 1e-5);
     }
 
     /// FR-CIV-EMERG-001..005: `emergence.metrics` on a fresh sim
@@ -3391,16 +3677,16 @@ mod tests {
     /// nullability branching.
     #[test]
     fn dispatch_emergence_metrics_returns_zeroed_sample_before_first_boundary() {
-        let req = parse_request(
-            r#"{"jsonrpc":"2.0","id":61,"method":"emergence.metrics","params":{}}"#,
-        )
-        .expect("parse");
+        let req =
+            parse_request(r#"{"jsonrpc":"2.0","id":61,"method":"emergence.metrics","params":{}}"#)
+                .expect("parse");
         let plan = dispatch_request(
             req,
             DispatchContext {
                 tick: 12,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -3410,6 +3696,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3525,6 +3814,7 @@ mod tests {
                 tick: 3,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -3534,6 +3824,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert!(matches!(plan.effect, DispatchEffect::ApplyDamage { .. }));
@@ -3565,6 +3858,7 @@ mod tests {
                 tick: 4,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -3574,6 +3868,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert!(matches!(
@@ -3616,6 +3913,7 @@ mod tests {
                 tick: 10,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -3625,6 +3923,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert!(matches!(
@@ -3700,7 +4001,11 @@ mod tests {
                         tide_offset: 0.0,
                     },
                     emergence: None,
+                    researched: vec![],
+                    in_progress_tech: None,
+                    audio_events: vec![],
                 }),
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -3710,6 +4015,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3783,7 +4091,11 @@ mod tests {
                         tide_offset: 0.0,
                     },
                     emergence: None,
+                    researched: vec![],
+                    in_progress_tech: None,
+                    audio_events: vec![],
                 }),
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -3793,6 +4105,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(
@@ -3871,7 +4186,11 @@ mod tests {
                         tide_offset: 0.0,
                     },
                     emergence: None,
+                    researched: vec![],
+                    in_progress_tech: None,
+                    audio_events: vec![],
                 }),
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -3881,6 +4200,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(
@@ -3917,6 +4239,7 @@ mod tests {
                 tick: 5,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -3926,6 +4249,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(
@@ -3955,6 +4281,7 @@ mod tests {
                 tick: 0,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -3964,6 +4291,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(
@@ -3991,6 +4321,7 @@ mod tests {
                 tick: 0,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -4000,6 +4331,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -4020,6 +4354,7 @@ mod tests {
                 tick: 0,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -4029,6 +4364,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -4091,6 +4429,7 @@ mod tests {
                 tick: 0,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: true,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -4100,6 +4439,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -4160,6 +4502,7 @@ mod tests {
                 tick: 0,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -4169,6 +4512,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::SetSpeed { multiplier: 4 });
@@ -4190,6 +4536,7 @@ mod tests {
                 tick: 0,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -4199,6 +4546,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -4225,6 +4575,7 @@ mod tests {
                 tick: 75,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -4234,6 +4585,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(
@@ -4253,6 +4607,7 @@ mod tests {
             tick: snapshot.tick,
             population: Some(snapshot.population),
             snapshot: Some(snapshot.clone()),
+            tile_probe: None,
             require_role: false,
             speed_multiplier: 1,
             connection_role: None,
@@ -4262,6 +4617,9 @@ mod tests {
             in_progress_tech: None,
             last_tick_ms: 0.0,
             outcome_fields: None,
+            psyche_snapshot: None,
+            sentience_events: None,
+            religion_state: None,
         };
 
         let factions_req =
@@ -4295,6 +4653,132 @@ mod tests {
     }
 
     #[test]
+    fn dispatch_inspect_tile_projects_snapshot_spectator_data() {
+        let sim = civ_engine::Simulation::with_seed(7);
+        let snapshot = snapshot_fields_from_sim(&sim, 1);
+        let ctx = DispatchContext {
+            tick: snapshot.tick,
+            population: Some(snapshot.population),
+            snapshot: Some(snapshot),
+            tile_probe: Some(TileInspectionWire {
+                material: 7,
+                terrain_height: 196_608,
+            }),
+            require_role: false,
+            speed_multiplier: 1,
+            connection_role: None,
+            saves_dir: None,
+            emergence: None,
+            researched: vec![],
+            in_progress_tech: None,
+            last_tick_ms: 0.0,
+            outcome_fields: None,
+            psyche_snapshot: None,
+            sentience_events: None,
+            religion_state: None,
+        };
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":30,"method":"sim.inspect_tile","params":{"x":28,"y":30}}"#,
+        )
+        .expect("parse");
+        let plan = dispatch_request(req, ctx);
+        assert_eq!(plan.effect, DispatchEffect::None);
+        let result = plan.response.result.expect("inspect result");
+        assert!(
+            result.get("stub").is_none(),
+            "inspect_tile must not return a stub marker"
+        );
+        assert_eq!(result["x"], 28);
+        assert_eq!(result["y"], 30);
+        assert_eq!(result["material"], 7);
+        assert_eq!(result["terrain_height"], 196_608);
+        assert_eq!(result["nearest_faction"]["id"], 0);
+        assert!(result["nearest_agent_alignment"]["idx"].as_u64().is_some());
+    }
+
+    #[test]
+    fn dispatch_diplomacy_action_validates_and_returns_non_stub_record() {
+        let sim = civ_engine::Simulation::with_seed(7);
+        let snapshot = snapshot_fields_from_sim(&sim, 1);
+        let ctx = DispatchContext {
+            tick: snapshot.tick,
+            population: Some(snapshot.population),
+            snapshot: Some(snapshot),
+            tile_probe: None,
+            require_role: false,
+            speed_multiplier: 1,
+            connection_role: None,
+            saves_dir: None,
+            emergence: None,
+            researched: vec![],
+            in_progress_tech: None,
+            last_tick_ms: 0.0,
+            outcome_fields: None,
+            psyche_snapshot: None,
+            sentience_events: None,
+            religion_state: None,
+        };
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":31,"method":"sim.diplomacy_action","params":{"action":"declare_war","target_faction":1}}"#,
+        )
+        .expect("parse");
+        let plan = dispatch_request(req, ctx);
+        assert_eq!(
+            plan.effect,
+            DispatchEffect::DiplomacyAction {
+                source_faction: 0,
+                target_faction: 1,
+                kind: civ_engine::DiplomacyKind::Conflict,
+            }
+        );
+        let result = plan.response.result.expect("diplomacy result");
+        assert!(
+            result.get("stub").is_none(),
+            "diplomacy_action must not return a stub marker"
+        );
+        assert_eq!(result["action"], "declare_war");
+        assert_eq!(result["action_class"], "declaration");
+        assert_eq!(result["source_faction"], 0);
+        assert_eq!(result["target_faction"], 1);
+        assert_eq!(result["accepted"], true);
+        assert_eq!(result["target_known"], true);
+    }
+
+    #[test]
+    fn dispatch_diplomacy_action_rejects_unknown_action() {
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":32,"method":"sim.diplomacy_action","params":{"action":"bribe_moon","target_faction":1}}"#,
+        )
+        .expect("parse");
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                tick: 0,
+                population: None,
+                snapshot: None,
+                tile_probe: None,
+                require_role: false,
+                speed_multiplier: 1,
+                connection_role: None,
+                saves_dir: None,
+                emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
+            },
+        );
+        assert_eq!(plan.effect, DispatchEffect::None);
+        assert_eq!(
+            plan.response.error.as_ref().map(|err| err.code),
+            Some(error_code::INVALID_PARAMS)
+        );
+    }
+
+    #[test]
     fn dispatch_sim_get_speed_returns_multiplier_from_context() {
         let req =
             parse_request(r#"{"jsonrpc":"2.0","id":25,"method":"sim.get_speed"}"#).expect("parse");
@@ -4304,6 +4788,7 @@ mod tests {
                 tick: 0,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 4,
                 connection_role: None,
@@ -4313,6 +4798,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -4340,6 +4828,7 @@ mod tests {
                 tick: 1,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -4349,6 +4838,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(
@@ -4374,6 +4866,7 @@ mod tests {
                 tick: 0,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -4383,6 +4876,9 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -4568,10 +5064,10 @@ mod tests {
         // Linux/macOS absolute path.
         assert!(parse_replay_path(Some(&json!({"path":"/etc/passwd"}))).is_err());
         // Windows-style absolute paths with drive prefix.
-        assert!(
-            parse_replay_path(Some(&json!({"path":"C:\\Windows\\System32\\drivers\\etc\\hosts"})))
-                .is_err()
-        );
+        assert!(parse_replay_path(Some(
+            &json!({"path":"C:\\Windows\\System32\\drivers\\etc\\hosts"})
+        ))
+        .is_err());
         // Backslash-leading UNC-style path is rejected.
         assert!(parse_replay_path(Some(&json!({"path":"\\\\server\\share\\file"}))).is_err());
         // Just the root.
@@ -4708,7 +5204,7 @@ mod tests {
     #[test]
     fn emergence_sample_fields_from_carries_criticality_metrics() {
         use civ_emergence_metrics::branching::BranchingRegime;
-        use civ_emergence_metrics::dashboard::EmergenceDashboard;
+        use civ_emergence_metrics::dashboard::TileDashboard;
         use civ_engine::emergence_metrics::EmergenceSample;
 
         let sample = EmergenceSample {
@@ -4721,7 +5217,7 @@ mod tests {
             histogram_total: 0,
             histogram_populated_bins: 0,
             sample_dur_us: 0,
-            dashboard: EmergenceDashboard::default(),
+            dashboard: TileDashboard::default(),
             branching_sigma: 0.0,
             branching_sigma_score: 0.0,
             branching_window: 0,
@@ -4759,7 +5255,7 @@ mod tests {
     #[test]
     fn emerg_emerg_004_sim_emergence_surfaces_fr_emergence_dashboard_metrics() {
         use civ_emergence_metrics::branching::BranchingRegime;
-        use civ_emergence_metrics::dashboard::EmergenceDashboard;
+        use civ_emergence_metrics::dashboard::TileDashboard;
         use civ_engine::emergence_metrics::EmergenceSample;
 
         let sample = EmergenceSample {
@@ -4772,7 +5268,7 @@ mod tests {
             histogram_total: 0,
             histogram_populated_bins: 0,
             sample_dur_us: 0,
-            dashboard: EmergenceDashboard::default(),
+            dashboard: TileDashboard::default(),
             branching_sigma: 0.0,
             branching_sigma_score: 0.0,
             branching_window: 0,
@@ -4785,27 +5281,28 @@ mod tests {
             coupling_mi_estimate: 0.3,
             criticality_indicator: 1.0,
         };
-        let req = parse_request(
-            r#"{"jsonrpc":"2.0","id":99,"method":"sim.emergence","params":{}}"#,
-        )
-        .expect("parse");
+        let req =
+            parse_request(r#"{"jsonrpc":"2.0","id":99,"method":"sim.emergence","params":{}}"#)
+                .expect("parse");
         let plan = dispatch_request(
             req,
             DispatchContext {
                 tick: 100,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: Some(sample),
-                faction_metrics: None,
-                tech_state: civ_engine::tech::TechState::default(),
+                emergence: Some(EmergenceSampleFields::from(sample)),
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -4891,6 +5388,9 @@ mod tests {
                 tide_offset: 0.0,
             },
             emergence: Some(emergence),
+            researched: vec![],
+            in_progress_tech: None,
+            audio_events: vec![],
         };
         let json = snapshot_result_json(&fields);
         let emerg = json.get("emergence").expect("emergence block");
@@ -4921,6 +5421,7 @@ mod tests {
                 tick: 10,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -4930,6 +5431,9 @@ mod tests {
                 in_progress_tech: None,
                 outcome_fields: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(
@@ -4955,6 +5459,7 @@ mod tests {
                 tick: 1,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -4964,6 +5469,9 @@ mod tests {
                 in_progress_tech: None,
                 outcome_fields: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -4984,6 +5492,7 @@ mod tests {
                 tick: 42,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -4993,6 +5502,9 @@ mod tests {
                 in_progress_tech: None,
                 outcome_fields: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert!(plan.response.result.is_some());

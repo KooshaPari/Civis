@@ -1,12 +1,31 @@
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
-use bevy_egui::{egui, EguiContexts};
 use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
 use bevy::ui::{FocusPolicy, RelativeCursorPosition};
+use bevy_egui::{egui, EguiContexts};
+#[cfg(feature = "models")]
+use civ_bevy_ref::animation::ActorAnimationPlugin;
+#[cfg(feature = "egui")]
+use civ_bevy_ref::diplomacy_ui::{DiplomacyBridge, DiplomacyUiPlugin};
+#[cfg(feature = "models")]
+use civ_bevy_ref::gltf_models::GltfModelsPlugin;
+#[cfg(feature = "gi")]
+use civ_bevy_ref::lighting_gi::SolariGiPlugin;
+#[cfg(feature = "egui")]
+use civ_bevy_ref::settings_ui::{GameSettings, KeyBinding, SettingsPlugin};
+#[cfg(not(feature = "egui"))]
+use civ_bevy_ref::spawn_tools::{GameSettings, KeyBinding};
+#[cfg(feature = "egui")]
 use civ_bevy_ref::{
     bevy_render::{apply_chunk_material, spawn_default_scene, CHUNK_WIREFRAME_LINE_COLOR},
-    chunk_fade_complete, chunk_raycast_terrain, chunk_to_minimap_uv, focused_chunk_at_grid,
+    chunk_fade_complete, chunk_raycast_terrain, chunk_to_minimap_uv,
+    emergence_dashboard::EmergenceDashboardPlugin,
+    event_feed::{EventFeed, EventFeedPlugin},
+    faction_hud::FactionHudPlugin,
+    focused_chunk_at_grid,
+    game_ui::GameUiPlugin,
+    god_panel::GodPanelPlugin,
     gpu_features::GpuFeaturesPlugin,
     live_focus::{
         compute_live_scene_focus, minimap_uv_to_world_xz, LiveSceneFocus, LIVE_FOCUS_LERP_SPEED,
@@ -17,45 +36,34 @@ use civ_bevy_ref::{
         LIVE_MINIMAP_AGENT_COLOR, LIVE_MINIMAP_CAMERA_COLOR, LIVE_MINIMAP_CHUNK_FOCUSED_COLOR,
         LIVE_MINIMAP_CHUNK_LOADED_COLOR, LIVE_MINIMAP_DOT, LIVE_MINIMAP_GRAPH_DOT_SCALE,
     },
-    faction_hud::{FactionHudPlugin, PlayerFactionId},
-    god_panel::GodPanelPlugin,
-    game_ui::GameUiPlugin,
-    menus::{AppState, GameUiMode, MainMenuCommand, MainMenuSaves, MenuCommand, WorldSetupParams},
-    save_load_ui::{SaveLoadPanel, SaveLoadUiPlugin},
     live_pick::{LivePickPlugin, LiveSelection},
     live_stream::{
         apply_agent_appearance_frame_with_labels_and_eye, apply_building_diff_frame,
         apply_civilian_state_frame, apply_climate_frame, apply_event_feed_frame,
         apply_faction_state_frame, apply_voxel_delta_frame, apply_water_deltas_for_frame,
-        default_stream_meshes, default_water_meshes,
-        format_event_feed_message, latest_climate, push_event_feed_to_hud_summary,
-        sync_agent_labels_from_civilians, AgentLabelConfig, LiveAgentTag, LiveBuildingTag,
-        LiveChunkFade, LiveChunkTag, LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene,
-        LiveWaterMeshes, StreamCulling,
-        LIVE_CHUNK_BASE_COLOR, LIVE_CHUNK_EDGE,
+        default_stream_meshes, default_water_meshes, format_event_feed_message, latest_climate,
+        push_event_feed_to_hud_summary, sync_agent_labels_from_civilians, AgentLabelConfig,
+        LiveAgentTag, LiveBuildingTag, LiveChunkFade, LiveChunkTag, LiveGraphParcelTag,
+        LiveStreamMeshes, LiveStreamScene, LiveWaterMeshes, StreamCulling, LIVE_CHUNK_BASE_COLOR,
+        LIVE_CHUNK_EDGE,
+    },
+    menus::{
+        AppState, GameUiMode, MainMenuCommand, MainMenuSaves, MenuCommand, MenusPlugin,
+        WorldSetupParams,
     },
     minimap::MinimapRoot,
     minimap_uv_to_chunk_grid,
     native_backend::native_render_plugin,
+    perf_hud::PerfHudPlugin,
+    post_fx::PostFxPlugin,
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
     presentation_day_factor_target, resolve_live_ws_url,
-    event_feed::{EventFeed, EventFeedPlugin},
-    emergence_dashboard::EmergenceDashboardPlugin,
+    save_load_ui::{SaveLoadPanel, SaveLoadUiPlugin},
+    tutorial::TutorialPlugin,
     world_stats_dashboard::WorldStatsDashboardPlugin,
     ws_client::{WsClient, WsClientConfig},
-    CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MinimapBounds,
-    VOXEL_CHUNK_EDGE,
-    post_fx::PostFxPlugin,
+    CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
 };
-#[cfg(feature = "gi")]
-use civ_bevy_ref::lighting_gi::SolariGiPlugin;
-#[cfg(feature = "models")]
-use civ_bevy_ref::animation::ActorAnimationPlugin;
-#[cfg(feature = "models")]
-use civ_bevy_ref::gltf_models::GltfModelsPlugin;
-#[cfg(feature = "egui")]
-use civ_bevy_ref::settings_ui::{GameSettings, KeyBinding, SettingsPlugin};
-use civ_bevy_ref::diplomacy_ui::{DiplomacyBridge, DiplomacyUiPlugin};
 use civ_protocol_3d::Frame3d;
 use civ_voxel::ChunkId;
 use serde_json;
@@ -208,46 +216,62 @@ struct EmergencePollTimer(f32);
 fn main() {
     let mut app = App::new();
     app.add_plugins((
-            DefaultPlugins
-                .set(WindowPlugin {
-                    primary_window: Some(Window {
-                        title: "Civis 3D — Bevy reference (live)".to_string(),
-                        ..default()
-                    }),
+        DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "Civis 3D — Bevy reference (live)".to_string(),
                     ..default()
-                })
-                .set(native_render_plugin()),
-            WireframePlugin::default(),
-            PostFxPlugin,
-            GpuFeaturesPlugin,
-            LivePickPlugin,
-            FactionHudPlugin,
-            SaveLoadUiPlugin,
-            TutorialPlugin,
-            PerfHudPlugin,
-            EventFeedPlugin,
-            EmergenceDashboardPlugin,
-            WorldStatsDashboardPlugin,
-            civ_bevy_ref::AgentNeedsPlugin,
-            DiplomacyUiPlugin,
-            GodPanelPlugin,
-            MenusPlugin,
-            GameUiPlugin,
-        ))
-        .init_state::<AppState>()
-        .init_resource::<LiveStreamScene>()
-        .init_resource::<LiveSceneFocus>()
-        .init_resource::<MinimapPopup>()
-        .init_resource::<SimSpeedState>()
-        .init_resource::<EmergencePollTimer>()
-        .init_resource::<EmergenceHudData>()
-        .init_resource::<SaveListState>()
-        .insert_resource(ScenePresentation::default())
-        .insert_resource(DebugRender::default())
-        .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
-        .add_systems(Startup, setup)
-        .add_systems(Update, (consume_menu_commands, update_mainmenu_saves, sync_app_state_with_game_mode))
-        .add_systems(
+                }),
+                ..default()
+            })
+            .set(native_render_plugin()),
+        WireframePlugin::default(),
+        PostFxPlugin,
+        GpuFeaturesPlugin,
+        LivePickPlugin,
+    ));
+    #[cfg(feature = "egui")]
+    app.add_plugins((
+        FactionHudPlugin,
+        SaveLoadUiPlugin,
+        TutorialPlugin,
+        PerfHudPlugin,
+        EventFeedPlugin,
+    ));
+    #[cfg(feature = "egui")]
+    app.add_plugins((
+        EmergenceDashboardPlugin,
+        WorldStatsDashboardPlugin,
+        civ_bevy_ref::AgentNeedsPlugin,
+        DiplomacyUiPlugin,
+        GodPanelPlugin,
+        MenusPlugin,
+        GameUiPlugin,
+    ));
+    #[cfg(feature = "egui")]
+    app.init_state::<AppState>();
+    app.init_resource::<LiveStreamScene>()
+    .init_resource::<LiveSceneFocus>()
+    .init_resource::<MinimapPopup>()
+    .init_resource::<SimSpeedState>()
+    .init_resource::<EmergencePollTimer>()
+    .init_resource::<EmergenceHudData>()
+    .init_resource::<SaveListState>()
+    .insert_resource(ScenePresentation::default())
+    .insert_resource(DebugRender::default())
+    .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
+    .add_systems(Startup, setup);
+    #[cfg(feature = "egui")]
+    {
+        app.add_systems(
+            Update,
+            (
+                consume_menu_commands,
+                update_mainmenu_saves,
+                sync_app_state_with_game_mode,
+            ),
+        );
+        app.add_systems(
             Update,
             (
                 worldgen_to_playing,
@@ -276,10 +300,40 @@ fn main() {
                     // (which consumes the flag).
                     sync_presentation_from_climate.after(apply_live_frames),
                     update_presentation_lighting,
-                ).run_if(in_state(AppState::Playing)),
+                )
+                    .run_if(in_state(AppState::Playing)),
             ),
-        )
-        .run();
+        );
+    }
+    #[cfg(not(feature = "egui"))]
+    {
+        app.add_systems(
+            Update,
+            (
+                debug_render_input,
+                orbit_camera_input,
+                minimap_click_focus,
+                minimap_popup_ui,
+                poll_emergence,
+                viewport_chunk_raycast,
+                update_orbit_camera_transform,
+                apply_live_frames,
+                sync_agent_labels_from_civilians.after(apply_live_frames),
+                apply_spectator_meta,
+                sync_live_hud_stats,
+                sync_live_pick_detail,
+                update_live_focus,
+                follow_live_orbit_focus,
+                sync_chunk_debug_render,
+                update_chunk_fade,
+                update_hud,
+                update_minimap,
+                sync_presentation_from_climate.after(apply_live_frames),
+                update_presentation_lighting,
+            ),
+        );
+    }
+    app.run();
 
     #[cfg(feature = "egui")]
     {
@@ -299,6 +353,7 @@ fn main() {
     app.run();
 }
 
+#[cfg(feature = "egui")]
 fn consume_menu_commands(
     mut menu_command: ResMut<MenuCommand>,
     state: Option<Res<State<AppState>>>,
@@ -327,12 +382,14 @@ fn consume_menu_commands(
                 .get(params.world_size % WORLDGEN_PRESETS.len())
                 .copied()
                 .unwrap_or(WORLDGEN_PRESETS[0]);
+            let speed_multiplier =
+                WORLDGEN_SPEED_STEPS[speed.speed_idx.min(WORLDGEN_SPEED_STEPS.len() - 1)];
             start_world_boot(
                 &bridge,
                 preset,
                 params.seed,
                 speed.as_mut(),
-                WORLDGEN_SPEED_STEPS[speed.speed_idx.min(WORLDGEN_SPEED_STEPS.len() - 1)],
+                speed_multiplier,
             );
             next_state.set(AppState::WorldGen);
         }
@@ -370,6 +427,10 @@ fn consume_menu_commands(
             next_state.set(AppState::MainMenu);
             *game_mode = GameUiMode::Playing;
         }
+        MainMenuCommand::BackToMenu => {
+            next_state.set(AppState::MainMenu);
+            *game_mode = GameUiMode::Playing;
+        }
         MainMenuCommand::Quit => {
             *game_mode = GameUiMode::Playing;
             exit.write(AppExit::Success);
@@ -377,6 +438,7 @@ fn consume_menu_commands(
     }
 }
 
+#[cfg(feature = "egui")]
 fn worldgen_to_playing(
     state: Option<Res<State<AppState>>>,
     scene: Res<LiveStreamScene>,
@@ -393,6 +455,7 @@ fn worldgen_to_playing(
     }
 }
 
+#[cfg(feature = "egui")]
 fn sync_app_state_with_game_mode(
     state: Option<Res<State<AppState>>>,
     mode: Res<GameUiMode>,
@@ -408,6 +471,7 @@ fn sync_app_state_with_game_mode(
     }
 }
 
+#[cfg(feature = "egui")]
 fn update_mainmenu_saves(
     bridge: Res<LiveBridge>,
     state: Option<Res<State<AppState>>>,
@@ -421,9 +485,9 @@ fn update_mainmenu_saves(
         return;
     }
     if !query.queried {
-        bridge
-            .client
-            .send_rpc_raw(r#"{"jsonrpc":"2.0","id":2099,"method":"save.list","params":{}}"#.to_string());
+        bridge.client.send_rpc_raw(
+            r#"{"jsonrpc":"2.0","id":2099,"method":"save.list","params":{}}"#.to_string(),
+        );
         query.queried = true;
     }
 
@@ -448,15 +512,24 @@ fn start_world_boot(
     speed: &mut SimSpeedState,
     multiplier: u32,
 ) {
-    if speed.speed_idx >= WORLDGEN_SPEED_STEPS.len() || WORLDGEN_SPEED_STEPS[speed.speed_idx] != multiplier {
-        if let Some(speed_idx) = WORLDGEN_SPEED_STEPS.iter().position(|value| *value == multiplier) {
+    if speed.speed_idx >= WORLDGEN_SPEED_STEPS.len()
+        || WORLDGEN_SPEED_STEPS[speed.speed_idx] != multiplier
+    {
+        if let Some(speed_idx) = WORLDGEN_SPEED_STEPS
+            .iter()
+            .position(|value| *value == multiplier)
+        {
             speed.speed_idx = speed_idx;
         } else {
             speed.speed_idx = 0;
         }
     }
     speed.multiplier = multiplier;
-    let init_seed = if seed == 0 { WORLDGEN_DEFAULT_SEED } else { seed };
+    let init_seed = if seed == 0 {
+        WORLDGEN_DEFAULT_SEED
+    } else {
+        seed
+    };
     bridge.client.send_rpc(
         "sim.load_scenario",
         serde_json::json!({ "preset": preset, "seed": init_seed }),
@@ -465,10 +538,9 @@ fn start_world_boot(
         "sim.set_speed",
         serde_json::json!({ "multiplier": multiplier }),
     );
-    bridge.client.send_rpc(
-        "sim.reset",
-        serde_json::json!({ "seed": init_seed }),
-    );
+    bridge
+        .client
+        .send_rpc("sim.reset", serde_json::json!({ "seed": init_seed }));
     bridge.client.send_rpc(
         "sim.set_speed",
         serde_json::json!({ "multiplier": multiplier }),
@@ -614,7 +686,7 @@ fn sync_presentation_from_climate(
     let Some((snap, _)) = latest_climate(&scene) else {
         return;
     };
-    presentation.is_day = snap.day_phase.is_day_band();
+    presentation.is_day = snap.is_day_band();
 }
 
 fn setup(
@@ -740,7 +812,10 @@ fn speed_control_input(
     } else {
         WORLDGEN_SPEED_STEPS[speed.speed_idx]
     };
-    let json = format!(r#"{{"jsonrpc":"2.0","id":1,"method":"sim.set_speed","params":{{"multiplier":{}}}}}"#, speed.multiplier);
+    let json = format!(
+        r#"{{"jsonrpc":"2.0","id":1,"method":"sim.set_speed","params":{{"multiplier":{}}}}}"#,
+        speed.multiplier
+    );
     bridge.client.send_rpc_raw(json);
     hud.snapshot.speed_multiplier = speed.multiplier;
 }
@@ -905,8 +980,7 @@ fn orbit_camera_input(
     keys: Res<ButtonInput<KeyCode>>,
     mut motion_events: MessageReader<MouseMotion>,
     mut scroll_events: MessageReader<MouseWheel>,
-    #[cfg(feature = "egui")]
-    settings: Option<Res<GameSettings>>,
+    #[cfg(feature = "egui")] settings: Option<Res<GameSettings>>,
     mut orbit: ResMut<OrbitCamera>,
     minimap: Query<&Interaction, With<MinimapPanel>>,
 ) {
@@ -973,7 +1047,9 @@ fn orbit_camera_input(
         }
         #[cfg(not(feature = "egui"))]
         {
-            keys.just_pressed(KeyCode::Equal) || keys.just_pressed(KeyCode::NumpadAdd) || keys.just_pressed(KeyCode::BracketLeft)
+            keys.just_pressed(KeyCode::Equal)
+                || keys.just_pressed(KeyCode::NumpadAdd)
+                || keys.just_pressed(KeyCode::BracketLeft)
         }
     };
     let zoom_out = {
@@ -1023,16 +1099,28 @@ fn orbit_camera_input(
         }
     };
 
-    if pan_pressed(civ_bevy_ref::settings_ui::ACTION_CAMERA_MOVE_FORWARD, KeyCode::KeyW) {
+    if pan_pressed(
+        civ_bevy_ref::settings_ui::ACTION_CAMERA_MOVE_FORWARD,
+        KeyCode::KeyW,
+    ) {
         forward += pan;
     }
-    if pan_pressed(civ_bevy_ref::settings_ui::ACTION_CAMERA_MOVE_BACKWARD, KeyCode::KeyS) {
+    if pan_pressed(
+        civ_bevy_ref::settings_ui::ACTION_CAMERA_MOVE_BACKWARD,
+        KeyCode::KeyS,
+    ) {
         forward -= pan;
     }
-    if pan_pressed(civ_bevy_ref::settings_ui::ACTION_CAMERA_MOVE_LEFT, KeyCode::KeyA) {
+    if pan_pressed(
+        civ_bevy_ref::settings_ui::ACTION_CAMERA_MOVE_LEFT,
+        KeyCode::KeyA,
+    ) {
         right -= pan;
     }
-    if pan_pressed(civ_bevy_ref::settings_ui::ACTION_CAMERA_MOVE_RIGHT, KeyCode::KeyD) {
+    if pan_pressed(
+        civ_bevy_ref::settings_ui::ACTION_CAMERA_MOVE_RIGHT,
+        KeyCode::KeyD,
+    ) {
         right += pan;
     }
     if right != 0.0 || forward != 0.0 {
@@ -1287,15 +1375,13 @@ fn update_minimap(
                 false,
             );
         }
-
     });
 }
 
 fn minimap_click_focus(
     mouse: Res<ButtonInput<MouseButton>>,
     keys: Res<ButtonInput<KeyCode>>,
-    #[cfg(feature = "egui")]
-    settings: Option<Res<GameSettings>>,
+    #[cfg(feature = "egui")] settings: Option<Res<GameSettings>>,
     panels: Query<(&Interaction, &RelativeCursorPosition), With<MinimapPanel>>,
     cache: Res<MinimapCache>,
     scene: Res<LiveStreamScene>,
@@ -1327,7 +1413,10 @@ fn minimap_click_focus(
                                 (0, 0)
                             }
                         } else if let Some(bounds) = cache.bounds {
-                            let (cx, cz) = minimap_uv_to_chunk_grid(inset_minimap_uv_from_cursor(normalized), bounds);
+                            let (cx, cz) = minimap_uv_to_chunk_grid(
+                                inset_minimap_uv_from_cursor(normalized),
+                                bounds,
+                            );
                             (cx, cz)
                         } else {
                             (0, 0)
@@ -1390,8 +1479,7 @@ fn minimap_click_focus(
 fn viewport_chunk_raycast(
     mouse: Res<ButtonInput<MouseButton>>,
     keys: Res<ButtonInput<KeyCode>>,
-    #[cfg(feature = "egui")]
-    settings: Option<Res<GameSettings>>,
+    #[cfg(feature = "egui")] settings: Option<Res<GameSettings>>,
     windows: Query<&Window>,
     cameras: Query<(&Camera, &GlobalTransform), With<Camera3d>>,
     minimap: Query<&Interaction, With<MinimapPanel>>,
@@ -1475,10 +1563,13 @@ fn minimap_popup_ui(
     let Some((tx, ty)) = popup.pending else {
         return;
     };
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
     egui::Window::new("Tile Actions")
         .collapsible(false)
         .resizable(false)
-        .show(contexts.ctx_mut(), |ui| {
+        .show(ctx, |ui| {
             ui.label(format!("Tile ({tx}, {ty})"));
             if ui.button("Inspect tile").clicked() {
                 let json = format!(
@@ -1517,8 +1608,8 @@ fn poll_emergence(
     hud.snapshot.speed_multiplier = speed.multiplier;
     // Apply any parsed emergence responses received from the server.
     for em in bridge.client.poll_emergence() {
-        hud.snapshot.emergence = Some(em.clone());
-        *emergence_res = em;
+        let em = em.clone();
+        *emergence_res = em.clone();
         hud.snapshot.emergence = Some(em);
     }
     timer.0 += time.delta_secs();

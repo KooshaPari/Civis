@@ -139,7 +139,10 @@ mod tests {
             std::env::remove_var(BACKEND_ENV);
             let b = native_only_backends();
             assert!(b.contains(Backends::DX12));
-            assert!(!b.contains(Backends::VULKAN), "Vulkan is opt-in via env, not default");
+            assert!(
+                !b.contains(Backends::VULKAN),
+                "Vulkan is opt-in via env, not default"
+            );
             assert!(!b.contains(Backends::BROWSER_WEBGPU));
             assert!(!b.contains(Backends::GL));
         }
@@ -186,7 +189,10 @@ mod tests {
             std::env::remove_var(BACKEND_ENV);
             let b = native_only_backends();
             assert!(b.contains(Backends::DX12));
-            assert!(!b.contains(Backends::VULKAN), "Vulkan is opt-in via env, not default");
+            assert!(
+                !b.contains(Backends::VULKAN),
+                "Vulkan is opt-in via env, not default"
+            );
             assert!(!b.contains(Backends::BROWSER_WEBGPU));
             assert!(!b.contains(Backends::GL));
         }

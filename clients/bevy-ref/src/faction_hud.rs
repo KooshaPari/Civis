@@ -1,4 +1,4 @@
-﻿#![cfg(all(feature = "bevy", feature = "egui"))]
+#![cfg(all(feature = "bevy", feature = "egui"))]
 
 //! Player faction HUD panel — shows the player-owned faction stats (top-left corner).
 //!
@@ -75,7 +75,11 @@ fn draw_faction_hud(
 
     // Counts derived from civilians that are tracked (no per-faction breakdown
     // in the wire protocol yet — civilian_entries lack faction_id).
-    let faction_population = scene.population_by_faction.get(&player.0).copied().unwrap_or(0);
+    let faction_population = scene
+        .population_by_faction
+        .get(&player.0)
+        .copied()
+        .unwrap_or(0);
     let total_civilians = scene.civilian_ids.len();
 
     egui::Window::new("Faction")
@@ -95,8 +99,10 @@ fn draw_faction_hud(
             // Header: faction colour swatch + name
             ui.horizontal(|ui| {
                 let color = faction_egui_color(player.0);
-                let (rect, _) = ui.allocate_exact_size(egui::vec2(12.0, 12.0), egui::Sense::hover());
-                ui.painter().rect_filled(rect, egui::CornerRadius::same(3), color);
+                let (rect, _) =
+                    ui.allocate_exact_size(egui::vec2(12.0, 12.0), egui::Sense::hover());
+                ui.painter()
+                    .rect_filled(rect, egui::CornerRadius::same(3), color);
                 ui.label(
                     egui::RichText::new(faction_display_name(player.0, &faction))
                         .color(ACCENT)
@@ -119,7 +125,11 @@ fn draw_faction_hud(
                 };
                 stat_row(ui, "Treasury", &treasury_label, GREEN);
             } else {
-                ui.label(egui::RichText::new("Awaiting faction data...").color(DIM).italics());
+                ui.label(
+                    egui::RichText::new("Awaiting faction data...")
+                        .color(DIM)
+                        .italics(),
+                );
             }
 
             ui.add_space(2.0);
@@ -149,16 +159,18 @@ fn draw_faction_hud(
             });
 
             ui.add_space(4.0);
-            ui.label(egui::RichText::new("[F] to hide").color(DIM).small().italics());
+            ui.label(
+                egui::RichText::new("[F] to hide")
+                    .color(DIM)
+                    .small()
+                    .italics(),
+            );
         });
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-fn faction_display_name(
-    id: u32,
-    entry: &Option<civ_protocol_3d::FactionStateEntry>,
-) -> String {
+fn faction_display_name(id: u32, entry: &Option<civ_protocol_3d::FactionStateEntry>) -> String {
     let gov = entry
         .as_ref()
         .map(|e| government_label(&e.government))
@@ -189,7 +201,12 @@ fn stat_row(ui: &mut egui::Ui, label: &str, value: &str, value_color: egui::Colo
     ui.horizontal(|ui| {
         ui.label(egui::RichText::new(label).color(DIM).small());
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            ui.label(egui::RichText::new(value).color(value_color).strong().small());
+            ui.label(
+                egui::RichText::new(value)
+                    .color(value_color)
+                    .strong()
+                    .small(),
+            );
         });
     });
 }

@@ -396,7 +396,12 @@ impl AgentInspectorSummary {
             .map(|a| format!("age {}", a))
             .unwrap_or_else(|| "age ?".to_string());
         match &self.current_action {
-            Some(a) => format!("{} — {} ({})", self.identity.display_name, a.one_line(), age),
+            Some(a) => format!(
+                "{} — {} ({})",
+                self.identity.display_name,
+                a.one_line(),
+                age
+            ),
             None => format!("{} ({})", self.identity.display_name, age),
         }
     }
@@ -531,7 +536,10 @@ mod tests {
 
         // Needs — every need is reflected with its measured value.
         assert_eq!(summary.needs.len(), 3);
-        assert!(summary.has_measured_need(), "at least one need must be measured");
+        assert!(
+            summary.has_measured_need(),
+            "at least one need must be measured"
+        );
         assert_eq!(
             summary.needs.iter().filter(|n| n.is_measured()).count(),
             3,
@@ -556,16 +564,17 @@ mod tests {
         assert_eq!(summary.mood.valence, Some(12));
 
         // Helpers: dominant need is the lowest-value measured need.
-        let dominant = summary
-            .dominant_need()
-            .expect("at least one measured need");
+        let dominant = summary.dominant_need().expect("at least one measured need");
         assert_eq!(dominant.label, "hunger");
         assert_eq!(dominant.value, Some(18));
 
         // Helpers: average need is the arithmetic mean of measured values.
         let avg = summary.average_need().expect("measured needs must average");
         // (18 + 72 + 95) / 3 = 61.666...
-        assert!((avg - 61.666_664).abs() < 0.01, "average need must be ~61.67");
+        assert!(
+            (avg - 61.666_664).abs() < 0.01,
+            "average need must be ~61.67"
+        );
 
         // Optional summary fields — also reflected.
         assert_eq!(summary.relationship_count, Some(3));
@@ -574,7 +583,10 @@ mod tests {
         // `one_line` is non-empty and embeds the agent's name.
         let line = summary.one_line();
         assert!(!line.is_empty());
-        assert!(line.contains("Aldric"), "one_line must include display name");
+        assert!(
+            line.contains("Aldric"),
+            "one_line must include display name"
+        );
     }
 
     /// Acceptance: an *unmeasured* summary renders as "unmeasured" — the
@@ -679,8 +691,14 @@ mod tests {
         reg.publish(summary_a.clone());
         reg.publish(summary_b.clone());
         assert_eq!(reg.len(), 2);
-        assert_eq!(reg.summary(id_a).map(|s| s.identity.display_name.as_str()), Some("Aldric"));
-        assert_eq!(reg.summary(id_b).map(|s| s.identity.display_name.as_str()), Some("Bryn"));
+        assert_eq!(
+            reg.summary(id_a).map(|s| s.identity.display_name.as_str()),
+            Some("Aldric")
+        );
+        assert_eq!(
+            reg.summary(id_b).map(|s| s.identity.display_name.as_str()),
+            Some("Bryn")
+        );
         assert!(reg.summary(EntityId::new(999)).is_none());
 
         let removed = reg.remove(id_a);

@@ -32,7 +32,7 @@ pub enum DisasterKind {
 }
 
 /// Per-tick snapshot event for disaster systems.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DisasterTickEvent {
     pub tick: u64,
     pub kind: DisasterKind,
@@ -69,7 +69,8 @@ pub fn trigger_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoor
     // bigger storm sounds louder than a small fire; clamped to [0, 1] in
     // `record_disaster_audio`.
     let label = disaster_kind_label(kind);
-    let severity = (radius_for(kind) as f32 / (6.0 * civ_voxel::FIXED_SCALE as f32)).clamp(0.1, 1.0);
+    let severity =
+        (radius_for(kind) as f32 / (6.0 * civ_voxel::FIXED_SCALE as f32)).clamp(0.1, 1.0);
     sim.record_disaster_audio(label, severity);
 }
 
@@ -132,7 +133,8 @@ impl Simulation {
         // Research mitigates nature: fire-suppression tech raises the ignition
         // threshold (research -> fewer disasters). Computed before the weather
         // borrow so the immutable grow iteration holds no `&self` method call.
-        let wildfire_temp_threshold = wildfire_ignition_temp_fp(WILDFIRE_TEMP_FP, self.research_tier());
+        let wildfire_temp_threshold =
+            wildfire_ignition_temp_fp(WILDFIRE_TEMP_FP, self.research_tier());
         let mut wildfires = Vec::new();
         let mut quakes = Vec::new();
         for cell in &self.weather_grid {
@@ -141,7 +143,8 @@ impl Simulation {
                 y: 0,
                 z: 0,
             };
-            if cell.temp_c_fp >= wildfire_temp_threshold && cell.precip_mm_fp <= WILDFIRE_PRECIP_FP {
+            if cell.temp_c_fp >= wildfire_temp_threshold && cell.precip_mm_fp <= WILDFIRE_PRECIP_FP
+            {
                 wildfires.push(pos);
             }
             if tidal_stress >= QUAKE_TIDE_THRESHOLD && cell.latitude_fp.abs() >= QUAKE_LATITUDE_FP {
@@ -211,8 +214,8 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) -> 
             casualties = impact.1;
         }
         DisasterKind::Flood => {
-            for cell in affected {
-                sim.push_voxel_write(cell, WATER);
+            for cell in &affected {
+                sim.push_voxel_write(*cell, WATER);
             }
             terrain_cells = affected.len() as u32;
             let impact = hit_agents(
@@ -284,11 +287,8 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) -> 
     consume(&mut resources.energy, &mut resource_delta.energy);
     sim.state.resources = resources;
 
-    if impact.population_delta < 0 {
-        let casualties = (-impact.population_delta) as u64;
-        sim.state.population = sim.state.population.saturating_sub(casualties);
-    } else if impact.population_delta > 0 {
-        sim.state.population = sim.state.population.saturating_add(impact.population_delta as u64);
+    if casualties > 0 {
+        sim.state.population = sim.state.population.saturating_sub(casualties as u64);
     }
 
     DisasterImpact {
@@ -352,7 +352,7 @@ fn apply_disaster_resource_loss(kind: DisasterKind, terrain_cells: u32) -> Resou
 }
 
 fn consume(pool: &mut Fixed, requested: &mut Fixed) {
-    let spent = pool.min(*requested);
+    let spent = (*pool).min(*requested);
     *pool -= spent;
     *requested = spent;
 }
@@ -416,7 +416,12 @@ impl DisasterEffect {
     }
 }
 
-fn hit_agents(sim: &mut Simulation, pos: WorldCoord, radius: i64, effect: DisasterEffect) -> (u32, u32) {
+fn hit_agents(
+    sim: &mut Simulation,
+    pos: WorldCoord,
+    radius: i64,
+    effect: DisasterEffect,
+) -> (u32, u32) {
     let radius_sq = (radius as i128) * (radius as i128);
     let effects: Vec<(Entity, bool)> = {
         let entities: Vec<Entity> = sim
@@ -483,7 +488,11 @@ mod tests {
     fn disaster_raises_belief_fear_breeds_faith() {
         let mut sim = seeded_sim();
         let before = sim.belief();
-        trigger_disaster(&mut sim, DisasterKind::Quake, WorldCoord { x: 0, y: 0, z: 0 });
+        trigger_disaster(
+            &mut sim,
+            DisasterKind::Quake,
+            WorldCoord { x: 0, y: 0, z: 0 },
+        );
         assert!(
             sim.belief() > before,
             "a disaster should raise belief (fear breeds faith)"
@@ -769,7 +778,8 @@ mod tests {
             storm_intensity_fp: 500,
         }];
 
-        sim.tick();
+        sim.state.tick = 1;
+        sim.phase_disasters();
 
         let snapshot = sim.snapshot();
         assert!(
@@ -779,7 +789,10 @@ mod tests {
         let event = &snapshot.disaster_events[0];
         assert_eq!(event.tick, 1);
         assert!(event.terrain_cells > 0, "disaster should modify terrain");
-        assert!(event.population_delta < 0, "disaster should reduce population when lethal casualties occur");
+        assert!(
+            event.population_delta < 0,
+            "disaster should reduce population when lethal casualties occur"
+        );
         assert!(
             event.resource_delta.food > Fixed::from_num(0)
                 || event.resource_delta.wood > Fixed::from_num(0)
@@ -794,7 +807,10 @@ mod tests {
                 || sim.state.resources.energy < resources_before.energy,
             "state resources should reflect disaster consumption"
         );
-        assert!(sim.state.population < population_before, "state population should reflect casualties");
+        assert!(
+            sim.state.population < population_before,
+            "state population should reflect casualties"
+        );
 
         let terrain = sim.voxel().read(target);
         assert!(

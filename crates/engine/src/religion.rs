@@ -269,9 +269,8 @@ impl Default for SubstrateGradients {
 /// (relief proportional to felt anxiety, damped by how much monitoring
 /// already supplies structure); returns toward zero when unrest falls.
 pub fn apply_big_gods_response(profile: &mut ReligiousProfile, g: &SubstrateGradients, tick: u64) {
-    let hardship = clamp01(
-        g.grad_T * W_HARDSHIP_T + g.grad_B * W_HARDSHIP_B + g.grad_M * W_HARDSHIP_M,
-    );
+    let hardship =
+        clamp01(g.grad_T * W_HARDSHIP_T + g.grad_B * W_HARDSHIP_B + g.grad_M * W_HARDSHIP_M);
     let group_factor = clamp01(profile.population as f32 / GROUP_NORM);
     let kinship_factor = clamp01(g.kinship_density);
     let uncertainty = clamp01(g.unrest / MAX_MISERY_UNREST);
@@ -286,9 +285,7 @@ pub fn apply_big_gods_response(profile: &mut ReligiousProfile, g: &SubstrateGrad
     // Mythic coherence: integration under stress + low migration.
     // 0.04 ceiling — falls inside MAX_D_COHERENCE_PER_TICK (0.04) by spec §4.2.
     let d_coherence = 0.04
-        * (0.50 * profile.monitoring.max(0.3)
-            + 0.30 * (1.0 - g.migration_rate)
-            + 0.20 * hardship)
+        * (0.50 * profile.monitoring.max(0.3) + 0.30 * (1.0 - g.migration_rate) + 0.20 * hardship)
         - 0.03 * g.language_distance;
 
     // Uncertainty reduction: relief proportional to felt uncertainty,
@@ -298,8 +295,7 @@ pub fn apply_big_gods_response(profile: &mut ReligiousProfile, g: &SubstrateGrad
 
     profile.monitoring = (profile.monitoring + d_monitoring).clamp(0.0, 1.0);
     profile.mythic_coherence = (profile.mythic_coherence + d_coherence).clamp(0.0, 1.0);
-    profile.uncertainty_reduction =
-        (profile.uncertainty_reduction + d_uncertainty).clamp(0.0, 1.0);
+    profile.uncertainty_reduction = (profile.uncertainty_reduction + d_uncertainty).clamp(0.0, 1.0);
 
     // Tick advances on every response invocation.
     profile.age_ticks = tick;
@@ -416,7 +412,10 @@ pub fn substrate_gradients_for(_settlement_id: u32) -> SubstrateGradients {
 pub fn last_religion_sample(
     religious_profiles: &std::collections::BTreeMap<u32, ReligiousProfile>,
 ) -> Vec<(u32, ReligiousProfile)> {
-    religious_profiles.iter().map(|(k, v)| (*k, v.clone())).collect()
+    religious_profiles
+        .iter()
+        .map(|(k, v)| (*k, v.clone()))
+        .collect()
 }
 
 // ─── §12.4 Deprecation shim ────────────────────────────────────────────────
@@ -443,12 +442,8 @@ pub enum BeliefConcept {
     NaturalAgent,
     MoralOverseer,
     Afterlife,
-    Taboo {
-        action: String,
-    },
-    Ritual {
-        cost: f32,
-    },
+    Taboo { action: String },
+    Ritual { cost: f32 },
 }
 
 /// **Deprecated.** Use [`ReligiousProfile`]. Authored belief list is
@@ -486,7 +481,11 @@ pub struct Religion {
     note = "Bool-gated emergence replaced by continuous apply_big_gods_response"
 )]
 #[allow(dead_code)]
-pub fn emerge_belief(_hardship: f32, _group_size: u32, _agent_detection_bias: f32) -> Option<Belief> {
+pub fn emerge_belief(
+    _hardship: f32,
+    _group_size: u32,
+    _agent_detection_bias: f32,
+) -> Option<Belief> {
     None
 }
 
@@ -532,13 +531,21 @@ mod tests {
             };
             apply_big_gods_response(&mut p, &g, 2);
             assert!(!p.monitoring.is_nan(), "monitoring NaN for {:?}", g);
-            assert!(!p.mythic_coherence.is_nan(), "mythic_coherence NaN for {:?}", g);
+            assert!(
+                !p.mythic_coherence.is_nan(),
+                "mythic_coherence NaN for {:?}",
+                g
+            );
             assert!(
                 !p.uncertainty_reduction.is_nan(),
                 "uncertainty_reduction NaN for {:?}",
                 g
             );
-            assert!((0.0..=1.0).contains(&p.monitoring), "monitoring out of [0,1]: {}", p.monitoring);
+            assert!(
+                (0.0..=1.0).contains(&p.monitoring),
+                "monitoring out of [0,1]: {}",
+                p.monitoring
+            );
             assert!(
                 (0.0..=1.0).contains(&p.mythic_coherence),
                 "mythic_coherence out of [0,1]: {}",

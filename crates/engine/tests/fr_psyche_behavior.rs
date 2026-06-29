@@ -42,7 +42,8 @@ fn fr_psyche_behavior_fearful_agent_flees() {
     );
     let behavior = behavior_from_psyche(&psyche);
     assert_eq!(
-        behavior, EmotionDrivenBehavior::Flee,
+        behavior,
+        EmotionDrivenBehavior::Flee,
         "fearful agent (high arousal + low valence) must flee"
     );
 }
@@ -61,7 +62,8 @@ fn fr_psyche_behavior_content_agent_cooperates() {
     );
     let behavior = behavior_from_psyche(&psyche);
     assert_eq!(
-        behavior, EmotionDrivenBehavior::Cooperate,
+        behavior,
+        EmotionDrivenBehavior::Cooperate,
         "content agent (high valence + low arousal) must cooperate"
     );
 }
@@ -80,7 +82,8 @@ fn fr_psyche_behavior_angry_impulsive_agent_aggresses() {
     );
     let behavior = behavior_from_psyche(&psyche);
     assert_eq!(
-        behavior, EmotionDrivenBehavior::Aggress,
+        behavior,
+        EmotionDrivenBehavior::Aggress,
         "angry, impulsive agent (low valence + high arousal + high impulsivity) must aggress"
     );
 }
@@ -99,7 +102,8 @@ fn fr_psyche_behavior_balanced_mood_is_neutral() {
     );
     let behavior = behavior_from_psyche(&psyche);
     assert_eq!(
-        behavior, EmotionDrivenBehavior::Neutral,
+        behavior,
+        EmotionDrivenBehavior::Neutral,
         "balanced, calm agent must exhibit neutral behavior"
     );
 }
@@ -121,13 +125,9 @@ fn fr_psyche_behavior_emergence_integration() {
     }
 
     // Collect all agents with psyche states
-    let agents_with_psyche: Vec<_> = sim
-        .all_agents()
-        .iter()
-        .filter_map(|agent| {
-            sim.agent_psyche(agent.id)
-                .map(|psyche| (agent.id, psyche))
-        })
+    let citizen_count = sim.snapshot().citizen_count as u64;
+    let agents_with_psyche: Vec<_> = (1..=citizen_count)
+        .filter_map(|agent_id| sim.agent_psyche(agent_id).map(|psyche| (agent_id, psyche)))
         .collect();
 
     // At least some agents should have developed psyche states by now
@@ -166,7 +166,10 @@ fn fr_psyche_behavior_low_impulsivity_dampens_anger() {
     let behavior = behavior_from_psyche(&psyche);
     // Low impulsivity reduces anger signal; might be flee or neutral
     assert!(
-        matches!(behavior, EmotionDrivenBehavior::Flee | EmotionDrivenBehavior::Neutral),
+        matches!(
+            behavior,
+            EmotionDrivenBehavior::Flee | EmotionDrivenBehavior::Neutral
+        ),
         "low-impulsivity agent should not easily aggress even with negative valence"
     );
 }

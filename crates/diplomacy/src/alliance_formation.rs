@@ -149,11 +149,10 @@ impl AllianceFormation {
     /// returned blocs (the model's neutral-by-default semantics treat
     /// unseen pairs as neutral, and a neutral pair is not an alliance
     /// edge).
-    pub fn compute(
-        model: &RelationshipStanceModel,
-        config: &AllianceConfig,
-    ) -> Vec<AllianceBloc> {
-        config.validate().expect("AllianceConfig invariants checked by caller");
+    pub fn compute(model: &RelationshipStanceModel, config: &AllianceConfig) -> Vec<AllianceBloc> {
+        config
+            .validate()
+            .expect("AllianceConfig invariants checked by caller");
 
         // 1. Walk every tracked pair and collect a "warm graph":
         //    undirected edges keyed by faction id, where the edge exists
@@ -210,10 +209,7 @@ impl AllianceFormation {
 
     /// Convenience: number of **real** alliances (blocs meeting
     /// `config.min_bloc_size`).
-    pub fn real_alliance_count(
-        model: &RelationshipStanceModel,
-        config: &AllianceConfig,
-    ) -> usize {
+    pub fn real_alliance_count(model: &RelationshipStanceModel, config: &AllianceConfig) -> usize {
         Self::compute(model, config)
             .iter()
             .filter(|b| b.is_real(config))
@@ -279,10 +275,7 @@ mod tests {
             blocs[0].is_real(&config()),
             "two-member bloc meets min_bloc_size"
         );
-        assert_eq!(
-            AllianceFormation::real_alliance_count(&model, &config()),
-            1
-        );
+        assert_eq!(AllianceFormation::real_alliance_count(&model, &config()), 1);
     }
 
     /// FR-CIV-ALLIANCE-FORM: transitive closure — if A is allied with B

@@ -239,11 +239,11 @@ impl ResearchFocus {
                         .saturating_mul(b.1)
                         .checked_rem(total_weight)
                         .unwrap_or(0);
-                    rb.cmp(&ra)
+                    ra.cmp(&rb)
                         // tie-break: larger weight
-                        .then_with(|| b.1.cmp(&a.1))
+                        .then_with(|| a.1.cmp(&b.1))
                         // tie-break: lexicographic id ascending
-                        .then_with(|| a.0.cmp(&b.0))
+                        .then_with(|| b.0.cmp(&a.0))
                 })
                 .map(|(id, _)| id.clone())
             else {
@@ -388,10 +388,7 @@ mod tests {
     /// (3 points) and the call must report A as completed.
     #[test]
     fn weighted_allocation_completes_higher_weight_first() {
-        let mut focus = focus_with(
-            &[("A", 3), ("B", 1)],
-            &[("A", 3, 0), ("B", 3, 0)],
-        );
+        let mut focus = focus_with(&[("A", 3), ("B", 1)], &[("A", 3, 0), ("B", 3, 0)]);
 
         let completed = focus.allocate_points(4);
 
@@ -460,13 +457,13 @@ mod tests {
     /// underlying project (if any) is preserved.
     #[test]
     fn zero_weight_entry_is_skipped() {
-        let mut focus = focus_with(
-            &[("A", 0), ("B", 1)],
-            &[("A", 5, 2), ("B", 5, 0)],
-        );
+        let mut focus = focus_with(&[("A", 0), ("B", 1)], &[("A", 5, 2), ("B", 5, 0)]);
 
         let completed = focus.allocate_points(2);
-        assert!(completed.is_empty(), "A at threshold is not investable, B should not yet complete");
+        assert!(
+            completed.is_empty(),
+            "A at threshold is not investable, B should not yet complete"
+        );
 
         let proj_a = focus
             .projects()
@@ -501,10 +498,7 @@ mod tests {
     /// from the active set and returns them deterministically.
     #[test]
     fn take_completed_drops_finished_projects() {
-        let mut focus = focus_with(
-            &[("A", 3), ("B", 1)],
-            &[("A", 3, 0), ("B", 3, 0)],
-        );
+        let mut focus = focus_with(&[("A", 3), ("B", 1)], &[("A", 3, 0), ("B", 3, 0)]);
 
         // Drive A to threshold; B has 1 point.
         let _ = focus.allocate_points(4);

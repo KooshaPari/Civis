@@ -1,13 +1,13 @@
-﻿#![cfg(all(feature = "bevy", feature = "egui"))]
+#![cfg(all(feature = "bevy", feature = "egui"))]
 
 //! Emergence dashboard panel — 6-metric criticality readout (FR-CIV-EMERGE-DASH-001).
 //!
 //! Toggle with `E`. Reads `HudState::snapshot.emergence` (polled every 10 s by
 //! `poll_emergence` in `bevy_window`). Displays progress bars + regime badge.
 
+use crate::EmergenceHudData;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
-use crate::EmergenceHudData;
 
 // Palette (mirrors diplomacy_ui.rs / faction_hud.rs)
 const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
@@ -186,18 +186,30 @@ fn draw_emergence_dashboard(
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-fn metric_bar(ui: &mut egui::Ui, label: &str, fraction: f32, value_str: &str, bar_color: egui::Color32) {
+fn metric_bar(
+    ui: &mut egui::Ui,
+    label: &str,
+    fraction: f32,
+    value_str: &str,
+    bar_color: egui::Color32,
+) {
     ui.horizontal(|ui| {
         ui.label(egui::RichText::new(label).color(DIM).small());
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             ui.label(egui::RichText::new(value_str).strong().small());
         });
     });
-    let (bg_rect, _) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 6.0), egui::Sense::hover());
-    ui.painter().rect_filled(bg_rect, egui::CornerRadius::same(3), egui::Color32::from_rgba_premultiplied(40, 45, 60, 200));
+    let (bg_rect, _) =
+        ui.allocate_exact_size(egui::vec2(ui.available_width(), 6.0), egui::Sense::hover());
+    ui.painter().rect_filled(
+        bg_rect,
+        egui::CornerRadius::same(3),
+        egui::Color32::from_rgba_premultiplied(40, 45, 60, 200),
+    );
     let fill_w = (bg_rect.width() * fraction.clamp(0.0, 1.0)).max(0.0);
     let fill_rect = egui::Rect::from_min_size(bg_rect.min, egui::vec2(fill_w, bg_rect.height()));
-    ui.painter().rect_filled(fill_rect, egui::CornerRadius::same(3), bar_color);
+    ui.painter()
+        .rect_filled(fill_rect, egui::CornerRadius::same(3), bar_color);
     ui.add_space(4.0);
 }
 

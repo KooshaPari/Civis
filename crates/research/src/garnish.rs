@@ -44,9 +44,9 @@ impl GarnishCache {
     /// Generate a deterministic entity name from a seed and entity type.
     /// FR-CIV-LLM compliance: no network, deterministic output.
     pub fn name_for_entity(&self, entity_type: &str, seed: u64) -> String {
-        let type_hash = entity_type.bytes().fold(0u64, |acc, b| {
-            acc.wrapping_mul(31).wrapping_add(b as u64)
-        });
+        let type_hash = entity_type
+            .bytes()
+            .fold(0u64, |acc, b| acc.wrapping_mul(31).wrapping_add(b as u64));
 
         let combined_seed = seed.wrapping_add(type_hash);
         let flavor = self.garnish_for_seed(combined_seed);
@@ -71,21 +71,8 @@ impl Default for GarnishCache {
         // Populate with a small, stable set of flavors.
         // Index → Flavor mapping is deterministic and never changes.
         let flavors = vec![
-            "bronze",
-            "copper",
-            "iron",
-            "steel",
-            "silver",
-            "gold",
-            "platinum",
-            "crystal",
-            "emerald",
-            "sapphire",
-            "ruby",
-            "diamond",
-            "obsidian",
-            "marble",
-            "granite",
+            "bronze", "copper", "iron", "steel", "silver", "gold", "platinum", "crystal",
+            "emerald", "sapphire", "ruby", "diamond", "obsidian", "marble", "granite",
         ];
 
         for (idx, flavor) in flavors.into_iter().enumerate() {
@@ -126,7 +113,10 @@ mod tests {
 
         // At least some should differ (extremely high probability with 15 flavors).
         let all_same = garnish_1 == garnish_2 && garnish_2 == garnish_99;
-        assert!(!all_same, "different seeds should produce some different garnish");
+        assert!(
+            !all_same,
+            "different seeds should produce some different garnish"
+        );
     }
 
     /// Covers FR-CIV-LLM: offline safety — no network calls ever made.

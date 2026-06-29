@@ -28,19 +28,19 @@ pub struct VerbDescriptor {
     /// Provenance — where the verb is reachable from.
     pub provenance: Provenance,
     /// Aliases for Command-K fuzzy search. Lower-case, no whitespace.
-    pub aliases: &'static [&'static str],
+    pub aliases: Vec<String>,
 }
 
 impl VerbDescriptor {
     /// Construct a new descriptor. All fields are required.
-    pub const fn new(
-        id: &'static str,
-        name: &'static str,
-        summary: &'static str,
+    pub fn new(
+        id: &str,
+        name: &str,
+        summary: &str,
         group: VerbGroup,
         risk: RiskTier,
         provenance: Provenance,
-        aliases: &'static [&'static str],
+        aliases: &[&str],
     ) -> Self {
         Self {
             id: id.to_string(),
@@ -49,7 +49,7 @@ impl VerbDescriptor {
             group,
             risk,
             provenance,
-            aliases,
+            aliases: aliases.iter().map(|a| (*a).to_string()).collect(),
         }
     }
 
@@ -59,8 +59,8 @@ impl VerbDescriptor {
         let mut tokens = Vec::with_capacity(4 + self.aliases.len());
         tokens.push(self.name.to_lowercase());
         tokens.push(self.id.replace('-', " "));
-        for alias in self.aliases {
-            tokens.push((*alias).to_lowercase());
+        for alias in &self.aliases {
+            tokens.push(alias.to_lowercase());
         }
         tokens
     }

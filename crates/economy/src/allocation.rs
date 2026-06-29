@@ -337,7 +337,11 @@ pub fn subsistence_first_allocate(
         kind_key(a)
             .cmp(&kind_key(b))
             // Higher deficit first.
-            .then_with(|| b.deficit().partial_cmp(&a.deficit()).unwrap_or(std::cmp::Ordering::Equal))
+            .then_with(|| {
+                b.deficit()
+                    .partial_cmp(&a.deficit())
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
             // Stable tie-break: lower agent id first.
             .then_with(|| a.agent_id.cmp(&b.agent_id))
             // Final fallback to original slice order for full determinism
@@ -380,7 +384,6 @@ pub fn subsistence_first_allocate(
 
     outcome
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -445,7 +448,10 @@ mod tests {
 
     #[test]
     fn joule_allocator_matches_planned_at_single_good() {
-        assert_eq!(JouleAllocator.allocate(40, 100), PlannedAllocator.allocate(40, 100));
+        assert_eq!(
+            JouleAllocator.allocate(40, 100),
+            PlannedAllocator.allocate(40, 100)
+        );
     }
 
     // FR-CIV-LIFE P4-A: LaborCapacityAllocator
@@ -523,7 +529,10 @@ mod tests {
     #[test]
     fn priority_zero_budget_grants_nothing() {
         let demands = [(PriorityTier::Subsistence, 40)];
-        assert_eq!(allocate_by_priority(&PlannedAllocator, 0, &demands), vec![0]);
+        assert_eq!(
+            allocate_by_priority(&PlannedAllocator, 0, &demands),
+            vec![0]
+        );
     }
 
     proptest! {

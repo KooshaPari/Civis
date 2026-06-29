@@ -13,9 +13,9 @@
 
 use std::collections::VecDeque;
 
+use crate::ui_theme::{ACCENT, CHIP_FILL, PANEL_FILL};
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
-use crate::ui_theme::{ACCENT, CHIP_FILL, PANEL_FILL};
 
 // ---------------------------------------------------------------------------
 // Palette — canonical Keycap tokens from ui_theme; local CHIP_FILL not in ui_theme

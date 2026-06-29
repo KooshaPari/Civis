@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "pastey"
+name = "paste-complete"
 version = "0.2.3"

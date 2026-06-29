@@ -29,7 +29,7 @@ export function readStoredTheme(opts = {}) {
 
   const storage =
     opts.storage ?? (typeof localStorage !== "undefined" ? localStorage : null);
-  if (storage) {
+  if (storage && typeof storage.getItem === "function") {
     const stored =
       normalizeTheme(storage.getItem(THEME_STORAGE_KEY)) ??
       normalizeTheme(storage.getItem(LEGACY_THEME_STORAGE_KEY));
@@ -53,7 +53,13 @@ export function applyDocumentTheme(theme, doc = typeof document !== "undefined" 
  * @param {Storage | null} [storage]
  */
 export function persistTheme(theme, storage = typeof localStorage !== "undefined" ? localStorage : null) {
-  if (!storage) return;
+  if (
+    !storage ||
+    typeof storage.setItem !== "function" ||
+    typeof storage.removeItem !== "function"
+  ) {
+    return;
+  }
   storage.setItem(THEME_STORAGE_KEY, theme);
   storage.removeItem(LEGACY_THEME_STORAGE_KEY);
 }

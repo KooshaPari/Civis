@@ -3,14 +3,20 @@
 //! Each test references its FR code explicitly so the audit scanner can
 //! associate this batch with IMPL-NO-TEST matrix rows.
 
-use civ_engine::replay_format::MAGIC;
-use civ_engine::{
-    aggregate_strategic, baseline_scenario_path, chain_root_from_ticks, decode_civreplay,
-    encode_civreplay, format_mod_error_event_json, hash_chain::GENESIS, hash_hex, load_civreplay,
-    load_scenario, operational_hex_snapshot, project_zoom, save_civreplay, tick_event_bytes,
-    tick_hash, HashChainState, HexCellSnapshot, ModLoadedRecord, ModUnloadedRecord, ReplayError,
-    ReplayLog, Simulation, ZoomLevel, SCENARIO_SCHEMA_VERSION,
+use civ_engine::hash_chain::{
+    chain_root_from_ticks, hash_hex, tick_event_bytes, tick_hash, HashChainState, GENESIS,
 };
+use civ_engine::lod::{
+    aggregate_strategic, operational_hex_snapshot, project_zoom, HexCellSnapshot, ZoomLevel,
+};
+use civ_engine::replay::ReplayLog;
+use civ_engine::replay_format::MAGIC;
+use civ_engine::replay_format::{
+    decode_civreplay, encode_civreplay, load_civreplay, save_civreplay,
+};
+use civ_engine::scenario::{baseline_scenario_path, load_scenario, SCENARIO_SCHEMA_VERSION};
+use civ_engine::{ReplayError, Simulation};
+use civ_mod_host::{format_mod_error_event_json, ModLoadedRecord, ModUnloadedRecord};
 use civ_save_db::format_session_saved_event_json;
 use civ_tactics::DamageEvent;
 use civ_voxel::{MaterialId, WorldCoord};

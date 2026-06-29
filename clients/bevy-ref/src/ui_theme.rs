@@ -675,7 +675,14 @@ pub fn rim_glow(painter: &egui::Painter, rect: egui::Rect, accent: egui::Color32
 /// (lit) pair; `hovered` the dimmer hover pair; idle has no rim (just the
 /// panel stroke from the Frame). Used by the bottom tool palette so each
 /// category glows in its own color when active (Life=green, Disaster=red, …).
-pub fn rim_glow_for(painter: &egui::Painter, rect: egui::Rect, accent: egui::Color32, radius: u8, focused: bool, hovered: bool) {
+pub fn rim_glow_for(
+    painter: &egui::Painter,
+    rect: egui::Rect,
+    accent: egui::Color32,
+    radius: u8,
+    focused: bool,
+    hovered: bool,
+) {
     let p = if focused {
         rim_palette(accent, true)
     } else if hovered {
@@ -1085,24 +1092,40 @@ mod tests {
 
     #[test]
     fn ease_towards_converges_to_target() {
-        let mut s = UiAnimState { current: 0.0, target: 1.0, half_life_ms: 90.0 };
+        let mut s = UiAnimState {
+            current: 0.0,
+            target: 1.0,
+            half_life_ms: 90.0,
+        };
         // 30fps for ~1 second; should be within 1% of target.
         for _ in 0..30 {
             ease_towards(&mut s, 1.0 / 30.0);
         }
-        assert!((s.current - 1.0).abs() < 0.01, "did not converge: {}", s.current);
+        assert!(
+            (s.current - 1.0).abs() < 0.01,
+            "did not converge: {}",
+            s.current
+        );
     }
 
     #[test]
     fn ease_towards_handles_zero_half_life() {
-        let mut s = UiAnimState { current: 0.0, target: 1.0, half_life_ms: 0.0 };
+        let mut s = UiAnimState {
+            current: 0.0,
+            target: 1.0,
+            half_life_ms: 0.0,
+        };
         ease_towards(&mut s, 0.016);
         assert_eq!(s.current, 1.0);
     }
 
     #[test]
     fn ease_towards_handles_negative_dt() {
-        let mut s = UiAnimState { current: 0.0, target: 1.0, half_life_ms: 90.0 };
+        let mut s = UiAnimState {
+            current: 0.0,
+            target: 1.0,
+            half_life_ms: 90.0,
+        };
         ease_towards(&mut s, -1.0);
         // Negative dt: treated as zero; current should not move.
         assert_eq!(s.current, 0.0);
@@ -1110,7 +1133,11 @@ mod tests {
 
     #[test]
     fn set_open_resets_current_when_transitioning_to_open() {
-        let mut s = UiAnimState { current: 0.8, target: 0.8, half_life_ms: 90.0 };
+        let mut s = UiAnimState {
+            current: 0.8,
+            target: 0.8,
+            half_life_ms: 90.0,
+        };
         s.set_open(true);
         assert_eq!(s.target, 1.0);
         assert_eq!(s.current, 0.0, "closed→open must restart from 0");
@@ -1118,7 +1145,11 @@ mod tests {
 
     #[test]
     fn set_open_does_not_reset_when_closing() {
-        let mut s = UiAnimState { current: 0.8, target: 0.8, half_life_ms: 90.0 };
+        let mut s = UiAnimState {
+            current: 0.8,
+            target: 0.8,
+            half_life_ms: 90.0,
+        };
         s.set_open(false);
         assert_eq!(s.target, 0.0);
         assert_eq!(s.current, 0.8, "closing should ease from current, not jump");
@@ -1130,8 +1161,14 @@ mod tests {
         let f = rim_palette(accent, true);
         let h = rim_palette(accent, false);
         let luma = |c: egui::Color32| c.r() as u32 + c.g() as u32 + c.b() as u32;
-        assert!(luma(f.outer) > luma(h.outer), "focused outer should be brighter");
-        assert!(luma(f.inner) > luma(h.inner) || f.inner == KC_ACCENT, "focused inner lights up");
+        assert!(
+            luma(f.outer) > luma(h.outer),
+            "focused outer should be brighter"
+        );
+        assert!(
+            luma(f.inner) > luma(h.inner) || f.inner == KC_ACCENT,
+            "focused inner lights up"
+        );
     }
 
     #[test]

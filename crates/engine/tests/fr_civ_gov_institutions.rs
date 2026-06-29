@@ -62,7 +62,9 @@ fn fr_civ_gov_001_spawns_when_settlement_crosses_threshold() {
         events
     );
     assert!(
-        events.iter().all(|e| !matches!(e.kind, InstitutionKind::Garrison)),
+        events
+            .iter()
+            .all(|e| !matches!(e.kind, InstitutionKind::Garrison)),
         "Garrison must NOT spawn below {} population",
         GARRISON_UNLOCK
     );
@@ -152,7 +154,14 @@ fn fr_civ_gov_003_upgrade_gated_by_population_threshold() {
 
     let events = sim.last_tick_institution_events();
     let upgrade = events.iter().find(|e| {
-        matches!(e, InstitutionEvent { kind: InstitutionKind::Temple, level: 2, .. })
+        matches!(
+            e,
+            InstitutionEvent {
+                kind: InstitutionKind::Temple,
+                level: 2,
+                ..
+            }
+        )
     });
     assert!(
         upgrade.is_some(),
@@ -177,9 +186,14 @@ fn fr_civ_gov_003_upgrade_gated_by_population_threshold() {
     // Same-spawn must NOT re-fire (the upgrade is one-shot, not a regression).
     sim.advance_ticks(1);
     assert!(
-        sim.last_tick_institution_events()
-            .iter()
-            .all(|e| !matches!(e, InstitutionEvent { kind: InstitutionKind::Temple, level: 2, .. })),
+        sim.last_tick_institution_events().iter().all(|e| !matches!(
+            e,
+            InstitutionEvent {
+                kind: InstitutionKind::Temple,
+                level: 2,
+                ..
+            }
+        )),
         "Temple L2 must not re-emit on subsequent ticks once upgraded"
     );
 }

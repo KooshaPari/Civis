@@ -40,19 +40,20 @@ pub enum EmotionDrivenBehavior {
 #[must_use]
 pub fn behavior_from_psyche(psyche: &Psyche) -> EmotionDrivenBehavior {
     let Psyche {
-        mood,
-        temperament,
-        ..
+        mood, temperament, ..
     } = psyche;
 
-    // Fear: high arousal + misery (low/negative valence)
-    let fear_signal = mood.arousal * (1.0 - mood.valence.max(0.0));
+    // Fear: high arousal + misery, dampened when impulsivity converts threat
+    // into fight instead of flight.
+    let misery = (-mood.valence).max(0.0);
+    let fear_dampener = (1.0 - temperament.impulsivity * 0.5).clamp(0.5, 1.0);
+    let fear_signal = mood.arousal * (1.0 + misery) * fear_dampener;
 
     // Contentment: positive valence + low arousal
     let contentment_signal = mood.valence.max(0.0) * (1.0 - mood.arousal);
 
     // Anger: negative valence + high arousal + impulsivity (quick to escalate)
-    let anger_impulse = (-mood.valence).max(0.0) * mood.arousal * temperament.impulsivity;
+    let anger_impulse = misery * mood.arousal * (1.0 + temperament.impulsivity);
 
     // Determine dominant emotion
     let max_signal = [fear_signal, contentment_signal, anger_impulse]

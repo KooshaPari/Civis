@@ -59,6 +59,65 @@ pub struct LegendsQueryResult {
     pub emergence_feed: Vec<EmergenceFeedEvent>,
 }
 
+pub fn heresy_emergence(doctrinal_strain: f32, literacy: f32) -> f32 {
+    if !doctrinal_strain.is_finite() || !literacy.is_finite() {
+        return 0.0;
+    }
+
+    let strain = doctrinal_strain.clamp(0.0, 1.0);
+    let literacy = literacy.clamp(0.0, 1.0);
+    (strain * (0.35 + 0.65 * literacy)).clamp(0.0, 1.0)
+}
+
+pub fn schism_risk(factional_belief_gap: f32, authority: f32) -> f32 {
+    if !factional_belief_gap.is_finite() || !authority.is_finite() {
+        return 0.0;
+    }
+
+    let gap = factional_belief_gap.clamp(0.0, 1.0);
+    let authority = authority.clamp(0.0, 1.0);
+    (gap * (1.0 - 0.75 * authority)).clamp(0.0, 1.0)
+}
+
+pub fn crusade_fervor(zeal: f32, external_threat: f32) -> f32 {
+    if !zeal.is_finite() || !external_threat.is_finite() {
+        return 0.0;
+    }
+
+    let zeal = zeal.clamp(0.0, 1.0);
+    let threat = external_threat.clamp(0.0, 1.0);
+    (0.6 * zeal + 0.4 * zeal * threat).clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod religion_emergence_tests {
+    use super::*;
+
+    #[test]
+    fn heresy_emergence_is_bounded_and_nan_guarded() {
+        assert_eq!(heresy_emergence(f32::NAN, 0.5), 0.0);
+        assert_eq!(heresy_emergence(0.5, f32::INFINITY), 0.0);
+        assert_eq!(heresy_emergence(-1.0, 1.0), 0.0);
+        assert!((0.0..=1.0).contains(&heresy_emergence(1.0, 1.0)));
+    }
+
+    #[test]
+    fn schism_risk_is_bounded_and_nan_guarded() {
+        assert_eq!(schism_risk(f32::NAN, 0.5), 0.0);
+        assert_eq!(schism_risk(0.5, f32::NEG_INFINITY), 0.0);
+        assert_eq!(schism_risk(1.0, 1.0), 0.25);
+        assert!((0.0..=1.0).contains(&schism_risk(1.0, 0.0)));
+    }
+
+    #[test]
+    fn crusade_fervor_is_bounded_and_nan_guarded() {
+        assert_eq!(crusade_fervor(f32::NAN, 0.5), 0.0);
+        assert_eq!(crusade_fervor(0.5, f32::INFINITY), 0.0);
+        assert_eq!(crusade_fervor(0.0, 1.0), 0.0);
+        assert!((0.0..=1.0).contains(&crusade_fervor(1.0, 1.0)));
+    }
+}
+
 pub fn social_stratification(wealth_gap: f32, mobility: f32) -> f32 {
     let wealth_gap = if wealth_gap.is_finite() {
         wealth_gap.clamp(0.0, 1.0)

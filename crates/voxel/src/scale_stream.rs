@@ -96,6 +96,7 @@ impl std::error::Error for WindowError {}
 /// `resident_cap` is a hard safety net: if the inner ball would exceed it (a
 /// misconfiguration), the farthest chunks from the focus are trimmed off and
 /// reported as unloads.
+#[derive(Debug, Clone)]
 pub struct StreamingWindowConfig {
     /// Inner ring radius (chunks). Chunks within this Chebyshev distance of
     /// the focus are always loaded. The strict invariant: after every
@@ -225,7 +226,7 @@ impl StreamingWindow {
 
     /// Current configuration.
     pub fn config(&self) -> StreamingWindowConfig {
-        self.cfg
+        self.cfg.clone()
     }
 
     /// Current focus (anchor chunk). `None` if `update_focus` has never been called.

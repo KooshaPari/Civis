@@ -4093,6 +4093,11 @@ impl Simulation {
         self.last_tick_cohesion.get(&settlement_id).cloned()
     }
 
+    /// Per-settlement cohesion snapshots from the most recent tick.
+    pub fn last_tick_cohesion_snapshots(&self) -> &BTreeMap<u32, CohesionSnapshot> {
+        &self.last_tick_cohesion_snapshots
+    }
+
     /// Register a household as part of the global household population.
     /// `phase_stratification` uses the registered households to compute
     /// per-settlement quantiles, Gini coefficient, and class-mobility events.

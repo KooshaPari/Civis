@@ -20,6 +20,7 @@ use civ_bevy_ref::{
         LIVE_MINIMAP_CHUNK_LOADED_COLOR, LIVE_MINIMAP_DOT, LIVE_MINIMAP_GRAPH_DOT_SCALE,
     },
     faction_hud::{FactionHudPlugin, PlayerFactionId},
+    script_hud::ScriptHudPlugin,
     gameplay_hud::GameplayHudPlugin,
     save_load_ui::SaveLoadUiPlugin,
     tutorial::TutorialPlugin,
@@ -266,6 +267,7 @@ fn main() {
             GpuFeaturesPlugin,
             LivePickPlugin,
             FactionHudPlugin,
+            ScriptHudPlugin,
             GameplayHudPlugin,
         ),
         (

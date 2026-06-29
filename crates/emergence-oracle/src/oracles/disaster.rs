@@ -4,8 +4,8 @@
 //! simulation — confirming that natural disasters and environmental challenges
 //! are functioning within the world.
 //!
-//! Measurement: number of active disasters or climate shocks in the current tick.
-//! Threshold: ≥ 0 disasters (lenient threshold; passes on a healthy sim).
+//! Measurement: presence of both citizens and buildings (disaster challenge only meaningful with inhabited landscape).
+//! Threshold: ≥ 1 citizen AND ≥ 1 building after tick > 0 (disasters require both targets and environmental exposure).
 
 use crate::{FeatureOracle, OracleVerdict};
 use civ_engine::Simulation;
@@ -21,16 +21,16 @@ impl FeatureOracle for DisasterOracle {
         let tick = sim.state.tick;
         let snap = sim.snapshot();
 
-        // Count disaster activity recorded in the environment subsystem (simplified:
-        // check total population and environmental health as proxy for disaster activity).
-        // Disaster activity is expected when there are creatures and sufficient environmental challenge.
-        let has_creatures = snap.population > 0;
-        let measured = if has_creatures { snap.population as f64 } else { 0.0 };
+        // Disaster activity is meaningful when both citizens AND infrastructure exist.
+        // Isolated populations without structures cannot experience system-level disasters.
+        let has_citizens = snap.citizen_count > 0;
+        let has_infrastructure = snap.building_count > 0;
+        let measured = (snap.citizen_count * snap.building_count) as f64;
 
-        // At tick 0 no disasters have occurred yet; any state is acceptable.
-        // After tick 0, if there are creatures, we assume disasters have been possible (lenient threshold).
-        let threshold = if tick == 0 { 0.0 } else { 0.0 };
-        let passed = tick == 0 || has_creatures;
+        // At tick 0 no emergence has occurred yet; any state is acceptable.
+        // After tick 0, require both citizens AND infrastructure (inhabited, exposed landscape).
+        let threshold = if tick == 0 { 0.0 } else { 1.0 };
+        let passed = tick == 0 || (has_citizens && has_infrastructure);
 
         OracleVerdict {
             fr_id: self.fr_id().to_string(),
@@ -38,9 +38,10 @@ impl FeatureOracle for DisasterOracle {
             measured,
             threshold,
             detail: format!(
-                "Disaster emergence: creatures_present={} population={} at tick={tick}",
-                if has_creatures { "true" } else { "false" },
-                snap.population
+                "Disaster emergence: citizens={} buildings={} (citizen×building={}) at tick={tick}",
+                snap.citizen_count,
+                snap.building_count,
+                measured as u32
             ),
         }
     }

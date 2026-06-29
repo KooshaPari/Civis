@@ -99,6 +99,7 @@ impl Plugin for SimBridgePlugin {
             (
                 sync_game_ui_snapshot,
                 sync_emergence_hud,
+                sync_faction_state_snapshot,
             )
                 .run_if(in_process_sim_active),
         );
@@ -579,4 +580,47 @@ fn sync_game_ui_snapshot(
     let factions = factions.len() as u32;
     let tick = sim.0.state.tick;
     snapshot.set_sim_state(tick, population, factions, tick.to_string(), speed.multiplier);
+}
+
+/// Sync in-process simulation faction state into LiveStreamScene so the HUD displays it.
+#[cfg(feature = "egui")]
+fn sync_faction_state_snapshot(
+    sim: Res<SimState>,
+    mut scene: ResMut<crate::live_stream::LiveStreamScene>,
+) {
+    if !sim.is_changed() {
+        return;
+    }
+
+    // Build faction entries from the simulation (basic stub: just id and era).
+    let mut faction_entries = std::collections::BTreeMap::new();
+    let mut population_by_faction = std::collections::BTreeMap::new();
+
+    // Count civilians per faction.
+    for (_, civilian) in sim.0.world.query::<&Civilian>().iter() {
+        if let Alignment::Faction(faction) = civilian.alignment {
+            *population_by_faction.entry(faction).or_insert(0) += 1;
+        }
+    }
+
+    // Create entries for each observed faction.
+    for &faction_id in population_by_faction.keys() {
+        faction_entries.insert(
+            faction_id,
+            civ_protocol_3d::FactionStateEntry {
+                id: faction_id,
+                era: sim.0.state.tick.saturating_div(1000) as u16,
+                government: civ_protocol_3d::Government3d::Unknown,
+                treasury: civ_protocol_3d::FactionTreasury3d {
+                    amount: 0.0,
+                    currency: String::new(),
+                },
+            },
+        );
+    }
+
+    // Update the scene (only if there are changes).
+    scene.faction_entries = faction_entries.into_values().collect();
+    scene.faction_entries.sort_by_key(|entry| entry.id);
+    scene.population_by_faction = population_by_faction;
 }

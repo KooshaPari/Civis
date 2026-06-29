@@ -23,6 +23,9 @@ pub mod firepass;
 /// Implements FR-CIV-LLM: zero network calls, all results from seeded cache/lookup.
 pub mod garnish;
 
+/// Tech prerequisite graph and unlock gating for research progression.
+pub mod tech_prereq;
+
 /// Schema version for `civ-research`. Bumped on breaking changes.
 pub const SCHEMA_VERSION: u32 = 0;
 

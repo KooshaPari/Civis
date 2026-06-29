@@ -20,6 +20,10 @@
 //!   (voxel/agent/settlement/structure/vehicle) to a `Summary`. No Bevy
 //!   rendering; the renderer hands it `WorldPick` values and gets a
 //!   `Summary` back.
+//! - [`agent_inspector`] — FR-CIV-INSPECT-901 agent inspector summary:
+//!   aggregate identity, age, needs, mood, and current-action into a
+//!   single renderer-friendly struct. Pure-logic data + query layer
+//!   (no Bevy rendering).
 //!
 //! # Usage
 //!
@@ -34,6 +38,7 @@
 #![forbid(unsafe_code)]
 #![deny(rust_2018_idioms)]
 
+pub mod agent_inspector;
 pub mod bridge;
 pub mod descriptor;
 pub mod group;
@@ -45,6 +50,7 @@ pub mod risk;
 pub mod verbs;
 pub mod voxel_inspector;
 
+pub use agent_inspector::*;
 pub use descriptor::VerbDescriptor;
 pub use group::VerbGroup;
 pub use inspect::*;

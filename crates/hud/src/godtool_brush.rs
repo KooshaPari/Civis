@@ -423,12 +423,12 @@ impl BrushKernel {
             BrushShape::Square => {
                 let adx = i64::from(dx.unsigned_abs());
                 let ady = i64::from(dy.unsigned_abs());
-                f64::from(adx.max(ady))
+                adx.max(ady) as f64
             }
             BrushShape::Diamond => {
                 let adx = i64::from(dx.unsigned_abs());
                 let ady = i64::from(dy.unsigned_abs());
-                f64::from(adx + ady)
+                (adx + ady) as f64
             }
         };
         if r == 0.0 {

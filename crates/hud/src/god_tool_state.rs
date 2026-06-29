@@ -690,18 +690,12 @@ impl GodToolState {
     #[must_use]
     pub fn param(
         &self,
-        registry: &GodToolRegistry,
+        _registry: &GodToolRegistry,
         id: &GodToolId,
         name: &str,
     ) -> Option<&GodToolParamValue> {
-        let def = registry.get(id)?;
-        let spec = def.params.iter().find(|s| s.name == name)?;
-        if let Some(map) = self.params.get(id) {
-            if let Some(v) = map.get(name) {
-                return Some(v);
-            }
-        }
-        Some(&spec.default)
+        let map = self.params.get(id)?;
+        map.get(name)
     }
 
     /// Reset a single tool's params to the registry's spec defaults.

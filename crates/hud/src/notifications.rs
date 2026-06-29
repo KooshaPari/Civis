@@ -228,8 +228,17 @@ impl NotificationQueue {
     }
 
     /// Iterate notifications in oldest-first order.
-    pub fn iter(&self) -> impl Iterator<Item = &Notification> {
-        self.snapshot().into_iter()
+    pub fn iter(&self) -> Box<dyn Iterator<Item = &Notification> + '_> {
+        if self.buf.len() < self.capacity {
+            // Not full: order is already oldest-first.
+            Box::new(self.buf.iter())
+        } else {
+            // Full: iterate starting from head index (rotated order).
+            let cap = self.capacity;
+            let head = self.head;
+            let buf_ref = &self.buf;
+            Box::new((0..cap).map(move |i| &buf_ref[(head + i) % cap]))
+        }
     }
 
     /// Iterate notifications at or above `threshold`, oldest-first.

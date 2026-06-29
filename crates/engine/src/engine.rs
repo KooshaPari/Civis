@@ -41,8 +41,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 use std::ops::{Deref, DerefMut};
 
-use super::Fixed;
-
 /// Fixed-point decimal (16-bit signed integer + 16 fractional bits).
 /// Re-exported from the `fixed` crate; aliased here so callers can use
 /// `crate::engine::Fixed` (or `crate::Fixed`) and `Fixed::from_num(...)`.
@@ -54,7 +52,7 @@ use crate::policy::PolicyInput;
 use crate::policy::DEFAULT_ECONOMY_POLICY;
 use crate::religion::{
     apply_big_gods_response, last_religion_sample, substrate_gradients_for,
-    ReligionEvent, ReligionEventKind, ReligiousProfile, SubstrateGradients,
+    ReligiousProfile, SubstrateGradients,
 };
 use crate::replay::{ReplayError, ReplayLog};
 use crate::replay_format::{load_civreplay, save_civreplay};

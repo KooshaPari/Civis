@@ -235,7 +235,7 @@ impl ColorRamp {
             }
         }
         for pair in stops.windows(2) {
-            let (lo, hi) = (pair[0], pair[1]);
+            let (lo, hi) = (&pair[0], &pair[1]);
             if v >= lo.at && v <= hi.at {
                 let span = (hi.at - lo.at).max(f32::EPSILON);
                 let t = (v - lo.at) / span;

@@ -1854,10 +1854,15 @@ impl Simulation {
                     ));
                 }
                 let affected = actors_in_footprint(&self.world, e.center, e.radius_voxels);
-                let first = affected.first().map(|ent| ent.to_bits().get()).unwrap_or(0);
+                let affected_entities: Vec<hecs::Entity> =
+                    affected.iter().copied().collect();
+                let first = affected_entities
+                    .first()
+                    .map(|ent| ent.to_bits().get())
+                    .unwrap_or(0);
                 let mut despawned: u32 = 0;
-                for entity in &affected {
-                    if self.world.despawn(*entity).is_ok() {
+                for entity in affected_entities {
+                    if self.world.despawn(entity).is_ok() {
                         despawned = despawned.saturating_add(1);
                     }
                 }

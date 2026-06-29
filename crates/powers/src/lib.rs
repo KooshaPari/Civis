@@ -31,11 +31,13 @@
 #![allow(missing_docs)]
 
 mod registry;
+mod cooldown;
 
 pub use registry::{
     PowerCategory, PowerId, PowerRequestKind, PowerRegistry, PowerTab, PowerTargetMask, PowerDef,
     PowerAvailability, FORBIDDEN_TARGET_FIELDS,
 };
+pub use cooldown::{PowerCooldown, PowerCooldownState};
 
 /// Return the full 50-verb god-tool catalog.
 ///

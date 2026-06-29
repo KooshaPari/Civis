@@ -321,3 +321,4 @@ register-startmenu:
 build-green-engine:
     cargo check -p civ-engine
     cargo build --release -p civ-bevy-ref --features "bevy egui" --bin civ-bevy-window  # REAL playable gate (release build, not check)
+    cargo test -p civ-engine --lib

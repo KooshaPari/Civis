@@ -1,4 +1,3 @@
-    Blocking waiting for file lock on build directory
 crates\species\src\pop_pressure.rs:87:9: warning: unused variable: `pressure`: help: if this is intentional, prefix it with an underscore: `_pressure`
 warning: unnecessary parentheses around assigned value
     --> crates\needs\src\lib.rs:1127:23
@@ -176,7 +175,19 @@ warning: function `apply_trade` is never used
     |        ^^^^^^^^^^^
 
 warning: `civ-economy` (lib) generated 24 warnings
-crates\civ-emergence-metrics\src\lib.rs:55:1: warning: missing documentation for a module
+    Checking civ-emergence-metrics v0.1.0 (C:\Users\koosh\Dev\Civis-cxA\crates\civ-emergence-metrics)
+warning: missing documentation for a module
+  --> crates\civ-emergence-metrics\src\lib.rs:55:1
+   |
+55 | pub mod sample_snapshot;
+   | ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+note: the lint level is defined here
+  --> crates\civ-emergence-metrics\src\lib.rs:47:9
+   |
+47 | #![warn(missing_docs)]
+   |         ^^^^^^^^^^^^
+
 warning: `civ-emergence-metrics` (lib) generated 1 warning
     Checking civ-engine v0.1.0 (C:\Users\koosh\Dev\Civis-cxA\crates\engine)
 warning: unused import: `crate::culture::CultureSnapshot`
@@ -244,6 +255,12 @@ warning: unused imports: `PACKED_DIRT` and `SAND`
 108 |     material::{GRAVEL, LAVA, MOSS, ORE, PACKED_DIRT, PLANT, SAND, SNOW, STEAM, STONE, WATER, WOOD},
     |                                         ^^^^^^^^^^^         ^^^^
 
+warning: unused import: `InstitutionKind`
+  --> crates\engine\src\save.rs:12:64
+   |
+12 |     Building, CombatDamagePulse, DoctrineLibrary, Institution, InstitutionKind, MilitaryUnit,
+   |                                                                ^^^^^^^^^^^^^^^
+
 warning: use of deprecated function `religion::emerge_belief`: Bool-gated emergence replaced by continuous apply_big_gods_response
   --> crates\engine\src\lib.rs:42:20
    |
@@ -300,356 +317,11 @@ warning: use of deprecated struct `religion::Religion`: Replaced by ReligiousPro
 500 | pub fn spread_religion(_rel: &mut Religion, _nearby_agents: u32, _tick: u64) {}
     |                                   ^^^^^^^^
 
-error[E0061]: this method takes 1 argument but 0 arguments were supplied
-    --> crates\engine\src\emergence_metrics.rs:321:27
-     |
- 321 |         let actors = self.micro_actor_action_count();
-     |                           ^^^^^^^^^^^^^^^^^^^^^^^^-- argument #1 of type `u64` is missing
-     |
-note: method defined here
-    --> crates\engine\src\engine.rs:6414:12
-     |
-6414 |     pub fn micro_actor_action_count(&self, _actor: u64) -> u64 {
-     |            ^^^^^^^^^^^^^^^^^^^^^^^^        -----------
-help: provide the argument
-     |
- 321 |         let actors = self.micro_actor_action_count(/* u64 */);
-     |                                                    +++++++++
-
-error[E0061]: this method takes 1 argument but 0 arguments were supplied
-    --> crates\engine\src\emergence_metrics.rs:322:32
-     |
- 322 |         let descendants = self.micro_descendant_action_count();
-     |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-- argument #1 of type `u64` is missing
-     |
-note: method defined here
-    --> crates\engine\src\engine.rs:6418:12
-     |
-6418 |     pub fn micro_descendant_action_count(&self, _descendant: u64) -> u64 {
-     |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^        ----------------
-help: provide the argument
-     |
- 322 |         let descendants = self.micro_descendant_action_count(/* u64 */);
-     |                                                              +++++++++
-
 error[E0308]: mismatched types
-   --> crates\engine\src\emergence_metrics.rs:338:45
-    |
-338 |                     open.last_descendants = descendants;
-    |                     ---------------------   ^^^^^^^^^^^ expected `u32`, found `u64`
-    |                     |
-    |                     expected due to the type of this binding
-
-error[E0308]: mismatched types
-   --> crates\engine\src\emergence_metrics.rs:356:30
-    |
-356 |                 seed_actors: actors,
-    |                              ^^^^^^ expected `u32`, found `u64`
-
-error[E0369]: binary operation `==` cannot be applied to type `BTreeMap<u32, UnrestSnapshot>`
-    --> crates\engine\src\engine.rs:504:5
+    --> crates\engine\src\engine.rs:4165:20
      |
- 497 | #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-     |                        --------- in this derive macro expansion
-...
- 504 |     pub last_tick_unrest_snapshots: BTreeMap<u32, UnrestSnapshot>,
-     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-     |
-note: an implementation of `PartialEq` might be missing for `UnrestSnapshot`
-    --> crates\engine\src\engine.rs:1295:1
-     |
-1295 | pub struct UnrestSnapshot {
-     | ^^^^^^^^^^^^^^^^^^^^^^^^^ must implement `PartialEq`
-help: consider annotating `UnrestSnapshot` with `#[derive(PartialEq)]`
-     |
-1295 + #[derive(PartialEq)]
-1296 | pub struct UnrestSnapshot {
-     |
-
-error[E0369]: binary operation `==` cannot be applied to type `BTreeMap<u32, CohesionSnapshot>`
-    --> crates\engine\src\engine.rs:506:5
-     |
- 497 | #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-     |                        --------- in this derive macro expansion
-...
- 506 |     pub last_tick_cohesion: BTreeMap<u32, CohesionSnapshot>,
-     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-     |
-note: an implementation of `PartialEq` might be missing for `CohesionSnapshot`
-    --> crates\engine\src\engine.rs:1234:1
-     |
-1234 | pub struct CohesionSnapshot {
-     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^ must implement `PartialEq`
-help: consider annotating `CohesionSnapshot` with `#[derive(PartialEq)]`
-     |
-1234 + #[derive(PartialEq)]
-1235 | pub struct CohesionSnapshot {
-     |
-
-error[E0063]: missing field `current_tick` in initializer of `Simulation`
-    --> crates\engine\src\engine.rs:1650:9
-     |
-1650 |         Self {
-     |         ^^^^ missing `current_tick`
-
-error[E0308]: mismatched types
-    --> crates\engine\src\engine.rs:2391:39
-     |
-2391 |         let mut sim = Self::with_seed(log.seed);
-     |                       --------------- ^^^^^^^^ expected `SimSeed`, found `u64`
-     |                       |
-     |                       arguments to this function are incorrect
-     |
-note: associated function defined here
-    --> crates\engine\src\engine.rs:1628:12
-     |
-1628 |     pub fn with_seed(seed: SimSeed) -> Self {
-     |            ^^^^^^^^^ -------------
-help: try wrapping the expression in `engine::SimSeed`
-     |
-2391 |         let mut sim = Self::with_seed(engine::SimSeed(log.seed));
-     |                                       ++++++++++++++++        +
-
-error[E0308]: mismatched types
-    --> crates\engine\src\engine.rs:3105:35
-     |
-3105 |             settlement_ids.insert(sid);
-     |                            ------ ^^^ expected `u32`, found `u64`
-     |                            |
-     |                            arguments to this method are incorrect
-     |
-note: method defined here
-    --> C:\Users\koosh\.rustup\toolchains\stable-x86_64-pc-windows-msvc\lib/rustlib/src/rust\library\alloc\src\collections\btree\set.rs:900:12
-     |
- 900 |     pub fn insert(&mut self, value: T) -> bool
-     |            ^^^^^^
-help: you can convert a `u64` to a `u32` and panic if the converted value doesn't fit
-     |
-3105 |             settlement_ids.insert(sid.try_into().unwrap());
-     |                                      ++++++++++++++++++++
-
-error[E0308]: mismatched types
-    --> crates\engine\src\engine.rs:3400:27
-     |
-3400 |                 sickness: (1.0 - integrity).max(0.0),
-     |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `bool`, found `f32`
-
-error[E0063]: missing fields `deprivation_streak` and `sick` in initializer of `civ_needs::Health`
-    --> crates\engine\src\engine.rs:3398:26
-     |
-3398 |             let health = civ_needs::Health {
-     |                          ^^^^^^^^^^^^^^^^^ missing `deprivation_streak` and `sick`
-
-error[E0308]: mismatched types
-    --> crates\engine\src\engine.rs:3411:28
-     |
-3411 |                 .unwrap_or(0);
-     |                  --------- ^ expected `f32`, found integer
-     |                  |
-     |                  arguments to this method are incorrect
-     |
-help: the return type of this call is `{integer}` due to the type of the argument passed
-    --> crates\engine\src\engine.rs:3405:28
-     |
-3405 |               let maturity = self
-     |  ____________________________^
-3406 | |                 .world
-3407 | |                 .query::<&civ_agents::Psyche>()
-3408 | |                 .iter()
-3409 | |                 .next()
-3410 | |                 .map(|(_, p)| p.maturity)
-3411 | |                 .unwrap_or(0);
-     | |____________________________-^
-     |                              |
-     |                              this argument influences the return type of `unwrap_or`
-note: method defined here
-    --> C:\Users\koosh\.rustup\toolchains\stable-x86_64-pc-windows-msvc\lib/rustlib/src/rust\library\core\src\option.rs:1038:18
-     |
-1038 |     pub const fn unwrap_or(self, default: T) -> T
-     |                  ^^^^^^^^^
-help: use a float literal
-     |
-3411 |                 .unwrap_or(0.0);
-     |                             ++
-
-error[E0308]: mismatched types
-    --> crates\engine\src\engine.rs:3487:53
-     |
-3487 |                 self.last_tick_religion_events.push(event);
-     |                                                ---- ^^^^^ expected `engine::ReligionEvent`, found `religion::ReligionEvent`
-     |                                                |
-     |                                                arguments to this method are incorrect
-     |
-     = note: `religion::ReligionEvent` and `engine::ReligionEvent` have similar names, but are actually distinct types
-note: `religion::ReligionEvent` is defined in module `crate::religion` of the current crate
-    --> crates\engine\src\religion.rs:359:1
-     |
- 359 | pub struct ReligionEvent {
-     | ^^^^^^^^^^^^^^^^^^^^^^^^
-note: `engine::ReligionEvent` is defined in module `crate::engine` of the current crate
-    --> crates\engine\src\engine.rs:887:1
-     |
- 887 | pub struct ReligionEvent {
-     | ^^^^^^^^^^^^^^^^^^^^^^^^
-note: method defined here
-    --> C:\Users\koosh\.rustup\toolchains\stable-x86_64-pc-windows-msvc\lib/rustlib/src/rust\library\alloc\src\vec\mod.rs:1003:12
-     |
-1003 |     pub fn push(&mut self, value: T) {
-     |            ^^^^
-
-error[E0308]: mismatched types
-    --> crates\engine\src\engine.rs:3760:52
-     |
-3760 |         self.settlement_gini.insert(settlement_id, clamped);
-     |                              ------                ^^^^^^^ expected `i32`, found `f64`
-     |                              |
-     |                              arguments to this method are incorrect
-     |
-help: the return type of this call is `f64` due to the type of the argument passed
-    --> crates\engine\src\engine.rs:3760:9
-     |
-3760 |         self.settlement_gini.insert(settlement_id, clamped);
-     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-------^
-     |                                                    |
-     |                                                    this argument influences the return type of `insert`
-note: method defined here
-    --> C:\Users\koosh\.rustup\toolchains\stable-x86_64-pc-windows-msvc\lib/rustlib/src/rust\library\alloc\src\collections\btree\map.rs:1045:12
-     |
-1045 |     pub fn insert(&mut self, key: K, value: V) -> Option<V>
-     |            ^^^^^^
-
-error[E0614]: type `u32` cannot be dereferenced
-    --> crates\engine\src\engine.rs:3951:24
-     |
-3951 |                 .entry(*faction_id)
-     |                        ^^^^^^^^^^^ can't be dereferenced
-
-error[E0614]: type `u32` cannot be dereferenced
-    --> crates\engine\src\engine.rs:3955:57
-     |
-3955 |             ensure_seeded_word(lang, place_name_meaning(*faction_id, 0), *signature);
-     |                                                         ^^^^^^^^^^^ can't be dereferenced
-
-error[E0614]: type `u32` cannot be dereferenced
-    --> crates\engine\src\engine.rs:3956:58
-     |
-3956 |             ensure_seeded_word(lang, person_name_meaning(*faction_id, 0), *signature);
-     |                                                          ^^^^^^^^^^^ can't be dereferenced
-
-error[E0614]: type `u32` cannot be dereferenced
-    --> crates\engine\src\engine.rs:3958:17
-     |
-3958 |                 *faction_id,
-     |                 ^^^^^^^^^^^ can't be dereferenced
-
-error[E0308]: mismatched types
-    --> crates\engine\src\engine.rs:4158:21
-     |
-4157 |                 let birth_chance = should_reproduce(
-     |                                    ---------------- arguments to this function are incorrect
-4158 |                     civilian.age,
-     |                     ^^^^^^^^^^^^ expected `f32`, found `u16`
-     |
-note: function defined here
-    --> crates\needs\src\lib.rs:1086:8
-     |
-1086 | pub fn should_reproduce(
-     |        ^^^^^^^^^^^^^^^^
-help: you can convert a `u16` to an `f32`, producing the floating point representation of the integer
-     |
-4158 |                     civilian.age.into(),
-     |                                 +++++++
-
-error[E0308]: mismatched types
-    --> crates\engine\src\engine.rs:4165:38
-     |
-4165 |                 if self.rng.gen_bool(birth_chance.clamp(0.0, 1.0)) {
-     |                             -------- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `f64`, found `f32`
-     |                             |
-     |                             arguments to this method are incorrect
-     |
-note: method defined here
-    --> E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\rand-0.8.6\src\rng.rs:270:8
-     |
- 270 |     fn gen_bool(&mut self, p: f64) -> bool {
-     |        ^^^^^^^^
-help: you can convert an `f32` to an `f64`
-     |
-4165 |                 if self.rng.gen_bool(birth_chance.clamp(0.0, 1.0).into()) {
-     |                                                                  +++++++
-
-error[E0308]: mismatched types
-    --> crates\engine\src\engine.rs:6039:53
-     |
-6039 |     ((ta.to_bits() - tb.to_bits()).unsigned_abs() / crate::SCALE) as i64
-     |                                                     ^^^^^^^^^^^^ expected `u32`, found `i64`
-
-error[E0277]: cannot divide `u32` by `i64`
-    --> crates\engine\src\engine.rs:6039:51
-     |
-6039 |     ((ta.to_bits() - tb.to_bits()).unsigned_abs() / crate::SCALE) as i64
-     |                                                   ^ no implementation for `u32 / i64`
-     |
-     = help: the trait `Div<i64>` is not implemented for `u32`
-     = help: the following other types implement trait `Div<Rhs>`:
-               `&u32` implements `Div<&UVec2>`
-               `&u32` implements `Div<&UVec3>`
-               `&u32` implements `Div<&UVec4>`
-               `&u32` implements `Div<&glam::u32::uvec2::UVec2>`
-               `&u32` implements `Div<&glam::u32::uvec3::UVec3>`
-               `&u32` implements `Div<&glam::u32::uvec4::UVec4>`
-               `&u32` implements `Div<UVec2>`
-               `&u32` implements `Div<UVec3>`
-             and 25 others
-
-error[E0277]: a value of type `i64` cannot be made by summing an iterator over elements of type `i32`
-    --> crates\engine\src\engine.rs:6144:10
-     |
-6144 |         .sum();
-     |          ^^^ value of type `i64` cannot be made by summing a `std::iter::Iterator<Item=i32>`
-     |
-     = help: the trait `Sum<i32>` is not implemented for `i64`
-help: `i64` implements trait `Sum<A>`
-    --> C:\Users\koosh\.rustup\toolchains\stable-x86_64-pc-windows-msvc\lib/rustlib/src/rust\library\core\src\iter\traits\accum.rs:50:9
-     |
-  50 |         impl Sum for $a {
-     |         ^^^^^^^^^^^^^^^ `Sum`
-...
-  72 |         impl<'a> Sum<&'a $a> for $a {
-     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ `Sum<&i64>`
-...
- 206 | integer_sum_product! { i8 i16 i32 i64 i128 isize u8 u16 u32 u64 u128 usize }
-     | ---------------------------------------------------------------------------- in this macro invocation
-note: the method call chain might not have had the expected associated types
-    --> crates\engine\src\engine.rs:6143:10
-     |
-6137 |       let volume: i64 = routes
-     |                         ------ this expression has type `&[TradeRoute]`
-6138 |           .iter()
-     |            ------ `Iterator::Item` is `&TradeRoute` here
-6139 |           .filter(|route| {
-     |  __________-
-6140 | |             (route.from_faction == a && route.to_faction == b)
-6141 | |                 || (route.from_faction == b && route.to_faction == a)
-6142 | |         })
-     | |__________- `Iterator::Item` remains `&TradeRoute` here
-6143 |           .map(|route| route.volume.to_bits())
-     |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `Iterator::Item` changed to `i32` here
-note: required by a bound in `std::iter::Iterator::sum`
-    --> C:\Users\koosh\.rustup\toolchains\stable-x86_64-pc-windows-msvc\lib/rustlib/src/rust\library\core\src\iter\traits\iterator.rs:3674:12
-     |
-3671 |     fn sum<S>(self) -> S
-     |        --- required by a bound in this associated function
-...
-3674 |         S: [const] Sum<Self::Item>,
-     |            ^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Iterator::sum`
-     = note: this error originates in the macro `integer_sum_product` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-error[E0308]: mismatched types
-    --> crates\engine\src\engine.rs:9593:17
-     |
-9593 |         fabric: FabricTier::Fractured,
-     |                 ^^^^^^^^^^^^^^^^^^^^^ expected `i32`, found `FabricTier`
+4165 |                 if should_birth {
+     |                    ^^^^^^^^^^^^ expected `bool`, found `f32`
 
 error[E0308]: mismatched types
    --> crates\engine\src\era.rs:226:23
@@ -667,19 +339,11 @@ note: function defined here
 146 | pub fn tick_research(sim: &mut Simulation, tech_by_faction: &mut BTreeMap<u32, FactionTechState>) {
     |        ^^^^^^^^^^^^^ --------------------
 
-error[E0606]: casting `UnrestLevel` as `f32` is invalid
-  --> crates\engine\src\faction_decisions.rs:54:25
-   |
-54 |         .map(|snapshot| snapshot.level as f32)
-   |                         ^^^^^^^^^^^^^^^^^^^^^
-   |
-   = help: cast through an integer first
-
 error[E0308]: mismatched types
     --> crates\engine\src\godtools.rs:1367:41
      |
-1367 |                 let target = MaterialId(req.aux_id as u8);
-     |                              ---------- ^^^^^^^^^^^^^^^^ expected `u16`, found `u8`
+1367 |                 let target = MaterialId(req.aux_id);
+     |                              ---------- ^^^^^^^^^^ expected `u16`, found `u32`
      |                              |
      |                              arguments to this struct are incorrect
      |
@@ -688,16 +352,16 @@ note: tuple struct defined here
      |
   11 | pub struct MaterialId(pub u16);
      |            ^^^^^^^^^^
-help: you can convert a `u8` to a `u16`
+help: you can convert a `u32` to a `u16` and panic if the converted value doesn't fit
      |
-1367 |                 let target = MaterialId((req.aux_id as u8).into());
-     |                                         +                ++++++++
+1367 |                 let target = MaterialId(req.aux_id.try_into().unwrap());
+     |                                                   ++++++++++++++++++++
 
 error[E0308]: mismatched types
     --> crates\engine\src\godtools.rs:1479:33
      |
-1479 |         let target = MaterialId(req.material_id as u8);
-     |                      ---------- ^^^^^^^^^^^^^^^^^^^^^ expected `u16`, found `u8`
+1479 |         let target = MaterialId(req.material_id);
+     |                      ---------- ^^^^^^^^^^^^^^^ expected `u16`, found `u32`
      |                      |
      |                      arguments to this struct are incorrect
      |
@@ -706,231 +370,10 @@ note: tuple struct defined here
      |
   11 | pub struct MaterialId(pub u16);
      |            ^^^^^^^^^^
-help: you can convert a `u8` to a `u16`
+help: you can convert a `u32` to a `u16` and panic if the converted value doesn't fit
      |
-1479 |         let target = MaterialId((req.material_id as u8).into());
-     |                                 +                     ++++++++
-
-error[E0559]: variant `GodToolReceipt::Disaster` has no field named `kind`
-    --> crates\engine\src\godtools.rs:1941:21
-     |
-1941 |                     kind: DisasterKind::Meteor,
-     |                     ^^^^ `GodToolReceipt::Disaster` does not have this field
-     |
-     = note: available fields are: `disaster`
-
-error[E0559]: variant `GodToolReceipt::Disaster` has no field named `kind`
-    --> crates\engine\src\godtools.rs:1949:21
-     |
-1949 |                     kind: DisasterKind::Wildfire,
-     |                     ^^^^ `GodToolReceipt::Disaster` does not have this field
-     |
-     = note: available fields are: `disaster`
-
-error[E0559]: variant `GodToolReceipt::Disaster` has no field named `kind`
-    --> crates\engine\src\godtools.rs:1957:21
-     |
-1957 |                     kind: DisasterKind::Flood,
-     |                     ^^^^ `GodToolReceipt::Disaster` does not have this field
-     |
-     = note: available fields are: `disaster`
-
-error[E0559]: variant `GodToolReceipt::Disaster` has no field named `kind`
-    --> crates\engine\src\godtools.rs:1965:21
-     |
-1965 |                     kind: DisasterKind::Quake,
-     |                     ^^^^ `GodToolReceipt::Disaster` does not have this field
-     |
-     = note: available fields are: `disaster`
-
-error[E0559]: variant `GodToolReceipt::Disaster` has no field named `kind`
-    --> crates\engine\src\godtools.rs:1973:21
-     |
-1973 |                     kind: DisasterKind::Storm,
-     |                     ^^^^ `GodToolReceipt::Disaster` does not have this field
-     |
-     = note: available fields are: `disaster`
-
-error[E0559]: variant `GodToolReceipt::Disaster` has no field named `kind`
-    --> crates\engine\src\godtools.rs:1981:21
-     |
-1981 |                     kind: DisasterKind::Plague,
-     |                     ^^^^ `GodToolReceipt::Disaster` does not have this field
-     |
-     = note: available fields are: `disaster`
-
-error[E0308]: mismatched types
-  --> crates\engine\src\invariants.rs:53:18
-   |
-53 |             raw: sim.state.energy_budget_joules.to_bits(),
-   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `i64`, found `i32`
-
-error[E0277]: the trait bound `civ_institutions::InstitutionKind: std::cmp::Ord` is not satisfied
-    --> crates\engine\src\save.rs:51:33
-     |
-  51 |     institution_levels_emitted: BTreeSet<(u32, InstitutionKind, u8)>,
-     |                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `std::cmp::Ord` is not implemented for `civ_institutions::InstitutionKind`
-     |
-help: the trait `Deserialize<'_>` is implemented for `BTreeSet<T>`
-    --> E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_core-1.0.228\src\de\impls.rs:989:9
-     |
- 989 | /         impl<'de, T $(, $typaram)*> Deserialize<'de> for $ty<T $(, $typaram)*>
- 990 | |         where
- 991 | |             T: Deserialize<'de> $(+ $tbound1 $(+ $tbound2)*)*,
-     | |______________________________________________________________^
-...
-1087 | / seq_impl!(
-1088 | |     #[cfg(any(feature = "std", feature = "alloc"))]
-1089 | |     #[cfg_attr(docsrs, doc(cfg(any(feature = "std", feature = "alloc"))))]
-1090 | |     BTreeSet<T: Eq + Ord>,
-...    |
-1095 | |     BTreeSet::insert
-1096 | | );
-     | |_- in this macro invocation
-     = note: required for `(u32, civ_institutions::InstitutionKind, u8)` to implement `std::cmp::Ord`
-     = note: required for `BTreeSet<(u32, civ_institutions::InstitutionKind, u8)>` to implement `Deserialize<'_>`
-note: required by a bound in `next_element`
-    --> E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_core-1.0.228\src\de\mod.rs:1771:12
-     |
-1769 |     fn next_element<T>(&mut self) -> Result<Option<T>, Self::Error>
-     |        ------------ required by a bound in this associated function
-1770 |     where
-1771 |         T: Deserialize<'de>,
-     |            ^^^^^^^^^^^^^^^^ required by this bound in `SeqAccess::next_element`
-     = note: this error originates in the macro `seq_impl` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-error[E0277]: the trait bound `civ_institutions::InstitutionKind: std::cmp::Ord` is not satisfied
-    --> crates\engine\src\save.rs:51:33
-     |
-  51 |     institution_levels_emitted: BTreeSet<(u32, InstitutionKind, u8)>,
-     |                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `std::cmp::Ord` is not implemented for `civ_institutions::InstitutionKind`
-     |
-help: the trait `Deserialize<'_>` is implemented for `BTreeSet<T>`
-    --> E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_core-1.0.228\src\de\impls.rs:989:9
-     |
- 989 | /         impl<'de, T $(, $typaram)*> Deserialize<'de> for $ty<T $(, $typaram)*>
- 990 | |         where
- 991 | |             T: Deserialize<'de> $(+ $tbound1 $(+ $tbound2)*)*,
-     | |______________________________________________________________^
-...
-1087 | / seq_impl!(
-1088 | |     #[cfg(any(feature = "std", feature = "alloc"))]
-1089 | |     #[cfg_attr(docsrs, doc(cfg(any(feature = "std", feature = "alloc"))))]
-1090 | |     BTreeSet<T: Eq + Ord>,
-...    |
-1095 | |     BTreeSet::insert
-1096 | | );
-     | |_- in this macro invocation
-     = note: required for `(u32, civ_institutions::InstitutionKind, u8)` to implement `std::cmp::Ord`
-     = note: required for `BTreeSet<(u32, civ_institutions::InstitutionKind, u8)>` to implement `Deserialize<'_>`
-note: required by a bound in `next_value`
-    --> E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_core-1.0.228\src\de\mod.rs:1916:12
-     |
-1914 |     fn next_value<V>(&mut self) -> Result<V, Self::Error>
-     |        ---------- required by a bound in this associated function
-1915 |     where
-1916 |         V: Deserialize<'de>,
-     |            ^^^^^^^^^^^^^^^^ required by this bound in `MapAccess::next_value`
-     = note: this error originates in the macro `seq_impl` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-error[E0277]: the trait bound `civ_institutions::InstitutionKind: std::cmp::Ord` is not satisfied
-    --> crates\engine\src\save.rs:30:46
-     |
-  30 | #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-     |                                              ^^^^^^^^^^^ the trait `std::cmp::Ord` is not implemented for `civ_institutions::InstitutionKind`
-     |
-help: the trait `Deserialize<'_>` is implemented for `BTreeSet<T>`
-    --> E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_core-1.0.228\src\de\impls.rs:989:9
-     |
- 989 | /         impl<'de, T $(, $typaram)*> Deserialize<'de> for $ty<T $(, $typaram)*>
- 990 | |         where
- 991 | |             T: Deserialize<'de> $(+ $tbound1 $(+ $tbound2)*)*,
-     | |______________________________________________________________^
-...
-1087 | / seq_impl!(
-1088 | |     #[cfg(any(feature = "std", feature = "alloc"))]
-1089 | |     #[cfg_attr(docsrs, doc(cfg(any(feature = "std", feature = "alloc"))))]
-1090 | |     BTreeSet<T: Eq + Ord>,
-...    |
-1095 | |     BTreeSet::insert
-1096 | | );
-     | |_- in this macro invocation
-     = note: required for `(u32, civ_institutions::InstitutionKind, u8)` to implement `std::cmp::Ord`
-     = note: required for `BTreeSet<(u32, civ_institutions::InstitutionKind, u8)>` to implement `Deserialize<'_>`
-note: required by a bound in `building_layouts::_::_serde::__private228::de::missing_field`
-    --> E:\Dev\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs:26:8
-     |
-  24 | pub fn missing_field<'de, V, E>(field: &'static str) -> Result<V, E>
-     |        ------------- required by a bound in this function
-  25 | where
-  26 |     V: Deserialize<'de>,
-     |        ^^^^^^^^^^^^^^^^ required by this bound in `missing_field`
-     = note: this error originates in the derive macro `Deserialize` which comes from the expansion of the macro `seq_impl` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-error[E0308]: mismatched types
-   --> crates\engine\src\save.rs:242:9
-    |
-242 |         institution_levels_emitted,
-    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `BTreeSet<(u32, InstitutionKind, u8)>`, found `BTreeSet<(u32, u8, u8)>`
-    |
-    = note: expected struct `BTreeSet<(_, civ_institutions::InstitutionKind, _)>`
-               found struct `BTreeSet<(_, u8, _)>`
-
-error[E0308]: mismatched types
-    --> crates\engine\src\save.rs:250:41
-     |
- 250 |     let mut sim = Simulation::with_seed(saved.state.rng_seed);
-     |                   --------------------- ^^^^^^^^^^^^^^^^^^^^ expected `SimSeed`, found `u64`
-     |                   |
-     |                   arguments to this function are incorrect
-     |
-note: associated function defined here
-    --> crates\engine\src\engine.rs:1628:12
-     |
-1628 |     pub fn with_seed(seed: SimSeed) -> Self {
-     |            ^^^^^^^^^ -------------
-help: try wrapping the expression in `engine::SimSeed`
-     |
- 250 |     let mut sim = Simulation::with_seed(engine::SimSeed(saved.state.rng_seed));
-     |                                         ++++++++++++++++                    +
-
-error[E0308]: mismatched types
-    --> crates\engine\src\save.rs:258:9
-     |
- 255 |     sim.restore_institution_state(
-     |         ------------------------- arguments to this method are incorrect
-...
- 258 |         saved.institution_levels_emitted,
-     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `BTreeSet<(u32, u8, u8)>`, found `BTreeSet<(u32, InstitutionKind, u8)>`
-     |
-     = note: expected struct `BTreeSet<(_, u8, _)>`
-                found struct `BTreeSet<(_, civ_institutions::InstitutionKind, _)>`
-note: method defined here
-    --> crates\engine\src\engine.rs:1925:19
-     |
-1925 |     pub(crate) fn restore_institution_state(
-     |                   ^^^^^^^^^^^^^^^^^^^^^^^^^
-...
-1929 |         institution_levels_emitted: BTreeSet<(u32, u8, u8)>,
-     |         ---------------------------------------------------
-
-error[E0308]: mismatched types
-    --> crates\engine\src\scenario.rs:280:45
-     |
- 280 |         let mut sim = Simulation::with_seed(rng_seed);
-     |                       --------------------- ^^^^^^^^ expected `SimSeed`, found `u64`
-     |                       |
-     |                       arguments to this function are incorrect
-     |
-note: associated function defined here
-    --> crates\engine\src\engine.rs:1628:12
-     |
-1628 |     pub fn with_seed(seed: SimSeed) -> Self {
-     |            ^^^^^^^^^ -------------
-help: try wrapping the expression in `engine::SimSeed`
-     |
- 280 |         let mut sim = Simulation::with_seed(engine::SimSeed(rng_seed));
-     |                                             ++++++++++++++++        +
+1479 |         let target = MaterialId(req.material_id.try_into().unwrap());
+     |                                                ++++++++++++++++++++
 
 warning: unused variable: `metal_available`
   --> crates\engine\src\building_layouts.rs:61:9
@@ -966,15 +409,15 @@ warning: value assigned to `impact` is never read
     | |_____________- `impact` is overwritten here before the previous value is read
 
 error[E0502]: cannot borrow `*self` as mutable because it is also borrowed as immutable
-   --> crates\engine\src\emergence.rs:374:13
+   --> crates\engine\src\emergence.rs:377:13
     |
-364 |         self.faction_ideologies = advance_faction_ideologies(
+367 |         self.faction_ideologies = advance_faction_ideologies(
     |                                   -------------------------- immutable borrow later used by call
-365 |             tick,
-366 |             &self.emergence.cluster_cultures,
-    |             -------------------------------- immutable borrow occurs here
 ...
-374 |             self.rng_mut(),
+373 |             &self.climate,
+    |             ------------- immutable borrow occurs here
+...
+377 |             self.rng_mut(),
     |             ^^^^^^^^^^^^^^ mutable borrow occurs here
 
 warning: variable `cumulative` is assigned to, but never used
@@ -993,17 +436,26 @@ warning: value assigned to `cumulative` is never read
      |
      = help: maybe it is overwritten before being read?
 
-error[E0596]: cannot borrow `*site` as mutable, as it is behind a `&` reference
-    --> crates\engine\src\engine.rs:2628:31
+error[E0004]: non-exhaustive patterns: `LifecycleLabel::WorkingAge` not covered
+    --> crates\engine\src\engine.rs:3418:19
      |
-2626 |         for site in self.build_sites.iter() {
-     |                     -----------------------
-     |                     |                |
-     |                     |                help: use mutable method: `iter_mut()`
-     |                     this iterator yields `&` references
-2627 |             if completed_ids.contains(&site.id()) {
-2628 |                 events.extend(site.produce_and_collect(&mut self.economy_state, tick));
-     |                               ^^^^ `site` is a `&` reference, so it cannot be borrowed as mutable
+3418 |             match civ_needs::classify_lifecycle(sample.age, &health, maturity, labor_cap) {
+     |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ pattern `LifecycleLabel::WorkingAge` not covered
+     |
+note: `LifecycleLabel` defined here
+    --> crates\needs\src\lifecycle.rs:43:1
+     |
+  43 | pub enum LifecycleLabel {
+     | ^^^^^^^^^^^^^^^^^^^^^^^
+...
+  49 |     WorkingAge,
+     |     ---------- not covered
+     = note: the matched value is of type `LifecycleLabel`
+help: ensure that all possible cases are being handled by adding a match arm with a wildcard pattern or an explicit pattern as shown
+     |
+3422 ~                 civ_needs::LifecycleLabel::Dead => metrics.dead += 1,
+3423 ~                 LifecycleLabel::WorkingAge => todo!(),
+     |
 
 error[E0499]: cannot borrow `*sim` as mutable more than once at a time
    --> crates\engine\src\era.rs:272:29
@@ -1066,7 +518,7 @@ warning: unused variable: `idx`
 138 |     for idx in 0..feature_len {
     |         ^^^ help: if this is intentional, prefix it with an underscore: `_idx`
 
-Some errors have detailed explanations: E0061, E0063, E0277, E0308, E0369, E0499, E0502, E0515, E0559...
-For more information about an error, try `rustc --explain E0061`.
-warning: `civ-engine` (lib) generated 23 warnings
-error: could not compile `civ-engine` (lib) due to 48 previous errors; 23 warnings emitted
+Some errors have detailed explanations: E0004, E0308, E0499, E0502, E0515.
+For more information about an error, try `rustc --explain E0004`.
+warning: `civ-engine` (lib) generated 24 warnings
+error: could not compile `civ-engine` (lib) due to 10 previous errors; 24 warnings emitted

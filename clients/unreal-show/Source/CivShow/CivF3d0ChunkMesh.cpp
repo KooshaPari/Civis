@@ -64,7 +64,7 @@ FVector ChunkWorldOriginFromId(const uint64 ChunkRaw)
         Cz |= ~0xFFFFLL;
     }
     const float Edge = static_cast<float>(ChunkEdge);
-    return FVector(static_cast<float>(Cx) * Edge, static_cast<float>(Cy) * Edge, static_cast<float>(Cz) * Edge);
+    return FVector(static_cast<float>(Cx) * Edge, static_cast<float>(Cy) * Edge * 0.2f, static_cast<float>(Cz) * Edge);
 }
 
 bool BuildDenseChunkMesh(

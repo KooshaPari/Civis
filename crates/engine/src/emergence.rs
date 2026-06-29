@@ -2018,3 +2018,37 @@ mod revolt_likelihood_tests {
     }
 }
 
+
+pub fn famine_severity(food_deficit: f32, population: f32) -> (f32, u32) {
+    let d = if food_deficit.is_finite() { food_deficit.max(0.0) } else { 0.0 };
+    let p = if population.is_finite() { population.max(0.0) } else { 0.0 };
+    let severity = (d / (d + 50.0)).clamp(0.0, 1.0);
+    (severity, (severity * p * 0.2).round() as u32)
+}
+#[cfg(test)]
+mod famine_severity_tests {
+    use super::famine_severity;
+    #[test] fn in_range() { assert!((0.0..=1.0).contains(&famine_severity(120.0,1000.0).0)); assert_eq!(famine_severity(f32::NAN,-5.0),(0.0,0)); }
+}
+
+pub fn disease_spread_rate(density: f32, trade_connectivity: f32) -> f32 {
+    let d = if density.is_finite() { density.max(0.0) } else { 0.0 };
+    let t = if trade_connectivity.is_finite() { trade_connectivity.max(0.0) } else { 0.0 };
+    ((d/(d+80.0))*0.6 + (t/(t+10.0))*0.4).clamp(0.0,1.0)
+}
+#[cfg(test)]
+mod disease_spread_rate_tests {
+    use super::disease_spread_rate;
+    #[test] fn in_range() { assert!((0.0..=1.0).contains(&disease_spread_rate(200.0,9.0))); assert_eq!(disease_spread_rate(f32::NAN,f32::INFINITY),0.0); }
+}
+
+pub fn migration_pressure(local_scarcity: f32, neighbor_opportunity: f32) -> f32 {
+    let s = if local_scarcity.is_finite() { local_scarcity.max(0.0) } else { 0.0 };
+    let o = if neighbor_opportunity.is_finite() { neighbor_opportunity.max(0.0) } else { 0.0 };
+    ((s*0.5+o*0.5)/((s+o)*0.5+1.0)).clamp(0.0,1.0)
+}
+#[cfg(test)]
+mod migration_pressure_tests {
+    use super::migration_pressure;
+    #[test] fn in_range() { assert!((0.0..=1.0).contains(&migration_pressure(0.8,0.6))); assert_eq!(migration_pressure(f32::NAN,0.0),0.0); }
+}

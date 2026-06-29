@@ -32,8 +32,12 @@ use serde::{Deserialize, Serialize};
 pub mod grid;
 pub mod congestion;
 pub mod lane;
+pub mod flow_priority;
 
 pub use congestion::PathCongestion;
+pub use flow_priority::{
+    FlowPriorityPolicy, LaneId, LaneVolume, PhaseAssignment, FLOW_PRIORITY_SCHEMA_VERSION,
+};
 pub use grid::{
     CellState, GridCell, ServiceGrid, ServiceGridError, ServiceKind, SERVICE_GRID_SCHEMA_VERSION,
 };

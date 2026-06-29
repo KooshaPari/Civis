@@ -9,9 +9,6 @@
 /// - **Organic**: Chaotic, high-culture settlements favor curved/irregular patterns
 /// - **Grid**: Low-culture, low-population settlements favor rigid orthogonal layouts
 /// - **Mixed**: Intermediate states blend both patterns
-
-use crate::culture::CultureSnapshot;
-use crate::demographics::DemographicsSnapshot;
 use serde::{Deserialize, Serialize};
 
 /// Describes the structural layout pattern for a settlement (FR-CIV-ARCH).
@@ -54,12 +51,7 @@ impl EmergentLayout {
     ///
     /// An `EmergentLayout` with strategy, density, and spacing tuned to
     /// the settlement's emergent properties.
-    pub fn compute(
-        culture: f32,
-        population: u32,
-        food_surplus: f32,
-        metal_available: f32,
-    ) -> Self {
+    pub fn compute(culture: f32, population: u32, food_surplus: f32, metal_available: f32) -> Self {
         // Normalize culture to 0..1 range for strategy selection.
         let culture_normalized = (culture / 100.0).clamp(0.0, 1.0);
 
@@ -86,9 +78,9 @@ impl EmergentLayout {
 
         // Angular variation: organic layouts permit rotation; grid layouts are rigid.
         let angular_variation = match strategy {
-            LayoutStrategy::Grid => 0.0,      // No rotation
-            LayoutStrategy::Mixed => 0.15,    // Slight rotation (~8.6 degrees)
-            LayoutStrategy::Organic => 1.0,   // Full rotation freedom
+            LayoutStrategy::Grid => 0.0,    // No rotation
+            LayoutStrategy::Mixed => 0.15,  // Slight rotation (~8.6 degrees)
+            LayoutStrategy::Organic => 1.0, // Full rotation freedom
         };
 
         EmergentLayout {
@@ -126,21 +118,24 @@ mod tests {
     fn test_low_culture_grid_layout() {
         let layout = EmergentLayout::compute(
             20.0,  // Low culture
-            100.0, // Small population
+            100,   // Small population
             500.0, // Moderate food
             100.0, // Low metal
         );
 
         assert_eq!(layout.strategy, LayoutStrategy::Grid);
-        assert_eq!(layout.angular_variation, 0.0, "Grid should have no rotation");
+        assert_eq!(
+            layout.angular_variation, 0.0,
+            "Grid should have no rotation"
+        );
     }
 
     /// FR-CIV-ARCH Test 2: High culture → Organic layout
     #[test]
     fn test_high_culture_organic_layout() {
         let layout = EmergentLayout::compute(
-            85.0,  // High culture
-            800.0, // Large population
+            85.0,   // High culture
+            800,    // Large population
             2000.0, // Abundant food
             1500.0, // High metal
         );
@@ -156,10 +151,10 @@ mod tests {
     #[test]
     fn test_medium_culture_mixed_layout() {
         let layout = EmergentLayout::compute(
-            50.0,  // Medium culture
-            400.0, // Medium population
+            50.0,   // Medium culture
+            400,    // Medium population
             1000.0, // Adequate food
-            800.0, // Moderate metal
+            800.0,  // Moderate metal
         );
 
         assert_eq!(layout.strategy, LayoutStrategy::Mixed);
@@ -169,8 +164,8 @@ mod tests {
     /// FR-CIV-ARCH Test 4: Density differs by input conditions
     #[test]
     fn test_density_varies_with_population() {
-        let low_pop = EmergentLayout::compute(50.0, 100.0, 500.0, 200.0);
-        let high_pop = EmergentLayout::compute(50.0, 1000.0, 2000.0, 1200.0);
+        let low_pop = EmergentLayout::compute(50.0, 100, 500.0, 200.0);
+        let high_pop = EmergentLayout::compute(50.0, 1000, 2000.0, 1200.0);
 
         assert!(
             high_pop.density > low_pop.density,
@@ -181,8 +176,8 @@ mod tests {
     /// FR-CIV-ARCH Test 5: Resource pressure forces clustering
     #[test]
     fn test_resource_pressure_tightens_spacing() {
-        let normal = EmergentLayout::compute(50.0, 300.0, 800.0, 400.0);
-        let pressured = normal.with_resource_pressure(0.8);
+        let normal = EmergentLayout::compute(50.0, 300, 800.0, 400.0);
+        let pressured = normal.clone().with_resource_pressure(0.8);
 
         assert!(
             pressured.spacing < normal.spacing,
@@ -198,12 +193,12 @@ mod tests {
     #[test]
     fn test_extreme_conditions() {
         // Minimum viable settlement
-        let minimal = EmergentLayout::compute(0.0, 10.0, 50.0, 10.0);
+        let minimal = EmergentLayout::compute(0.0, 10, 50.0, 10.0);
         assert_eq!(minimal.strategy, LayoutStrategy::Grid);
         assert!(minimal.density >= 0.1, "Density should have floor");
 
         // Maximum development
-        let maximal = EmergentLayout::compute(100.0, 2000.0, 5000.0, 5000.0);
+        let maximal = EmergentLayout::compute(100.0, 2000, 5000.0, 5000.0);
         assert_eq!(maximal.strategy, LayoutStrategy::Organic);
         assert!(maximal.density <= 0.95, "Density should have ceiling");
     }
@@ -211,7 +206,7 @@ mod tests {
     /// FR-CIV-ARCH Test 7: Identical inputs produce identical layouts
     #[test]
     fn test_deterministic_layout_generation() {
-        let input = (50.0, 400.0, 1000.0, 500.0);
+        let input = (50.0, 400, 1000.0, 500.0);
 
         let layout1 = EmergentLayout::compute(input.0, input.1, input.2, input.3);
         let layout2 = EmergentLayout::compute(input.0, input.1, input.2, input.3);

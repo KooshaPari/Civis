@@ -1509,6 +1509,20 @@ impl CivisMcpServer {
         forward_rpc(&transport, "sim.outcome", json!({}), "civis_outcome").map(Json)
     }
 
+    /// Forward `sim.religion_state` to civ-server. Returns per-faction religious
+    /// profile data: monitoring, mythic_coherence, uncertainty_reduction,
+    /// age_ticks, and population for every settlement (FR-RELIG-readapi).
+    #[tool(
+        name = "civis_religion_state",
+        description = "Forward sim.religion_state to civ-server. Returns per-faction religious profile data: monitoring, mythic_coherence, uncertainty_reduction, age_ticks, and population."
+    )]
+    async fn civis_religion_state(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.religion_state", json!({}), "civis_religion_state").map(Json)
+    }
+
     /// Forward `sim.perf` to civ-server.
     #[tool(
         name = "civis_perf",
@@ -2121,7 +2135,7 @@ impl CivisMcpServer {
                 break;
             }
 
-            if deadline_seconds > 0 && timeout_deadline.elapsed().as_secs() >= timeout_seconds {
+            if deadline_seconds > 0 && timeout_deadline.elapsed().as_secs() >= deadline_seconds {
                 stopped = "timeout".to_owned();
                 break;
             }
@@ -2275,9 +2289,9 @@ impl CivisMcpServer {
             x,
             y,
             z,
-            _op,
+            op: _,
             material,
-            _radius,
+            radius: _,
             transport,
         }): Parameters<SimTerraformExtentArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {

@@ -10,8 +10,6 @@
 //! let msg = tr!("welcome_title", &locale);
 //! ```
 use std::collections::HashMap;
-use std::path::Path;
-use serde::Deserialize;
 
 /// Supported game locales.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

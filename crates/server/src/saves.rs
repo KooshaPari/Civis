@@ -3,7 +3,7 @@
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use civ_engine::CivSaveBundle;
+use civ_engine::save_bundle::CivSaveBundle;
 use serde::Serialize;
 use serde_json::Value;
 

@@ -68,9 +68,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// Coordinates are voxel-space integers (column / row / layer), matching
 /// the dense world storage used everywhere else.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct VoxelKey {
     /// X axis (voxel column).
     pub x: i32,
@@ -118,9 +116,7 @@ impl From<VoxelKey> for crate::inspect::WorldPos {
 /// "liquid" against "Liquid" across crates. Each variant has a stable
 /// lower-case [`name`](Self::name) for display, and an [`index`](Self::index)
 /// for sortability and for tests that want a stable ordering.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Phase {
     /// Solid phase (e.g. rock, ice, wood).
@@ -210,7 +206,7 @@ pub struct VoxelState {
 
 impl VoxelState {
     /// Construct a `VoxelState`. Provided for ergonomic test/seed data.
-    pub const fn new(
+    pub fn new(
         key: VoxelKey,
         material: &'static str,
         temperature_kelvin: i32,
@@ -329,10 +325,13 @@ impl VoxelInspectorIndex {
         Self::default()
     }
 
-    /// Insert (or replace) a voxel cell. Returns the previous state at
-    /// that key, if any.
+    /// Insert (or replace) a voxel cell without reporting the previous state.
+    ///
+    /// This is the bulk-load path used when the substrate rebuilds the index.
+    /// Use [`VoxelInspector::set`] when a caller needs the replaced state.
     pub fn insert(&mut self, cell: VoxelState) -> Option<VoxelState> {
-        self.cells.insert(cell.key, cell)
+        self.cells.insert(cell.key, cell);
+        None
     }
 
     /// Remove a voxel cell. Returns the removed state, if any.
@@ -403,7 +402,7 @@ impl VoxelInspector {
 
     /// Insert (or replace) the state for a single voxel cell.
     pub fn set(&mut self, cell: VoxelState) -> Option<VoxelState> {
-        self.index.insert(cell)
+        self.index.cells.insert(cell.key, cell)
     }
 
     /// Remove a voxel cell from the index.

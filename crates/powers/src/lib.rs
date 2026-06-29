@@ -30,15 +30,15 @@
 #![forbid(unsafe_code)]
 #![allow(missing_docs)]
 
-mod registry;
 mod cooldown;
+mod registry;
 mod synergy;
 
-pub use registry::{
-    PowerCategory, PowerId, PowerRequestKind, PowerRegistry, PowerTab, PowerTargetMask, PowerDef,
-    PowerAvailability, FORBIDDEN_TARGET_FIELDS,
-};
 pub use cooldown::{PowerCooldown, PowerCooldownState};
+pub use registry::{
+    PowerAvailability, PowerCategory, PowerDef, PowerId, PowerRegistry, PowerRequestKind, PowerTab,
+    PowerTargetMask, FORBIDDEN_TARGET_FIELDS,
+};
 pub use synergy::{
     synergy_multiplier, SynergyEdge, SynergyOutcome, MAX_MULT, MIN_MULT, PENALTY_NUDGE,
     SYNERGY_BUMP,
@@ -296,18 +296,17 @@ mod tests {
     use super::*;
 
     /// AC-REG-1 (FR-CIV-GODTOOL-901): the catalog is data-driven. The
-    /// default 50-verb list lives in `default_powers()` and adding a
+    /// default 66-verb list lives in `default_powers()` and adding a
     /// power means appending one `PowerDef` — no edits to the
     /// substrate handlers.
     #[test]
-    fn default_powers_count_is_50() {
-        // Phase 1 ships the 50-verb headline figure (8 tabs × ~5-8
-        // verbs = 50, with Camera/Time folded in). See
+    fn default_powers_count_is_66() {
+        // Phase 1 currently ships 66 verbs across the eight tabs. See
         // `docs/design/GODTOOLS_IMPL_PLAN.md` §0 / §12.
         assert_eq!(
             default_powers().len(),
-            50,
-            "expected exactly 50 god-tool verbs in the Phase 1 catalog"
+            66,
+            "expected exactly 66 god-tool verbs in the Phase 1 catalog"
         );
     }
 
@@ -317,7 +316,11 @@ mod tests {
     fn default_powers_ids_are_unique() {
         let mut seen: Vec<&'static str> = Vec::with_capacity(default_powers().len());
         for p in default_powers() {
-            assert!(!seen.contains(&p.id.as_str()), "duplicate id: {}", p.id.as_str());
+            assert!(
+                !seen.contains(&p.id.as_str()),
+                "duplicate id: {}",
+                p.id.as_str()
+            );
             seen.push(p.id.as_str());
         }
     }

@@ -174,7 +174,7 @@ impl MoraleState {
             // single casualty triggers routing.
             0.01
         } else {
-            f32::from(rout_threshold_units) / f32::from(initial_strength)
+            rout_threshold_units as f32 / initial_strength as f32
         };
         Self {
             morale: 1.0,
@@ -228,7 +228,7 @@ impl MoraleState {
         if casualties == 0 || self.initial_strength == 0 {
             return None;
         }
-        let ratio = f32::from(casualties) / f32::from(self.initial_strength);
+        let ratio = casualties as f32 / self.initial_strength as f32;
         self.sub_morale(ratio)
             .map(|lost| MoraleEvent::CasualtyHit {
                 new_level: self.morale,

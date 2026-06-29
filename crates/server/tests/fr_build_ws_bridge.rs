@@ -12,11 +12,11 @@
 //! * FR-CIV-BUILD-003 — `BuildingSpec` overrides (engine side)
 
 use civ_build::{
-    BuildingGraph, BuildingId, BuildingSpec, BuildingSpecOverride, BuildingTier, BuildSite,
+    BuildSite, BuildingGraph, BuildingId, BuildingSpec, BuildingSpecOverride, BuildingTier,
     ProductionChain,
 };
 use civ_engine::Simulation;
-use civ_protocol_3d::{BuildingKind3d, Frame3d};
+use civ_protocol_3d::BuildingKind3d;
 use civ_voxel::WorldCoord;
 
 /// Construct a minimal spec deterministically.
@@ -37,8 +37,8 @@ fn engine_completes_farm_and_emits_production_event() {
     );
     sim.enqueue_build_site(site);
 
-    // Primitive farm takes 5 ticks to complete (BuildingTier::Primitive.construction_ticks()).
-    for _ in 0..6 {
+    // Tick exactly to completion so the per-tick production event is still visible.
+    for _ in 0..BuildingTier::Primitive.construction_ticks() {
         sim.tick();
     }
 
@@ -61,12 +61,14 @@ fn engine_completes_farm_and_emits_production_event() {
 #[test]
 fn yaml_override_applies_to_minimal_spec() {
     let base = BuildingSpec::minimal(BuildingTier::Artisan, ProductionChain::Workshop);
+    let tier = base.tier();
+    let chain = base.chain();
     let overridden = base
         .apply_override(BuildingSpecOverride { production_rate: 5 })
         .expect("valid override");
     assert_eq!(overridden.production_rate(), 5);
-    assert_eq!(overridden.tier(), base.tier());
-    assert_eq!(overridden.chain(), base.chain());
+    assert_eq!(overridden.tier(), tier);
+    assert_eq!(overridden.chain(), chain);
 }
 
 /// `BuildingGraph` is cloneable and exposes the `completed` field
@@ -106,8 +108,8 @@ fn frame_bundle_carries_completed_building() {
         WorldCoord { x: 5, y: 0, z: 7 },
     ));
 
-    // Tick past the construction budget so the farm is recorded.
-    for _ in 0..6 {
+    // Tick exactly to completion so the per-tick production event is still visible.
+    for _ in 0..BuildingTier::Primitive.construction_ticks() {
         sim.tick();
     }
 
@@ -120,7 +122,10 @@ fn frame_bundle_carries_completed_building() {
     let produced_at_least_one = events
         .iter()
         .any(|event| matches!(event, civ_build::ProductionEvent::Produced { .. }));
-    assert!(produced_at_least_one, "farm must produce food on completion");
+    assert!(
+        produced_at_least_one,
+        "farm must produce food on completion"
+    );
 
     let recorded = graph
         .completed

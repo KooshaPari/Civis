@@ -200,11 +200,13 @@ impl DownsampledChunk {
     /// ```
     #[must_use]
     pub fn new(lod_level: LodLevel, original_edge_size: usize) -> Self {
-        // MSRV 1.75 doesn't have `usize::saturating_shl` (stabilized in 1.86),
-        // so emulate it with `checked_shl` + sentinel `usize::MAX`.
-        let stride = 1_usize
-            .checked_shl(lod_level.0 as u32)
-            .unwrap_or(usize::MAX);
+        let stride = if lod_level.0 >= 64 {
+            usize::MAX
+        } else {
+            1_usize
+                .checked_shl(lod_level.0 as u32)
+                .unwrap_or(usize::MAX)
+        };
         let sampled_edge = (original_edge_size + stride - 1) / stride;
         let expected_sample_count = sampled_edge.pow(3);
         Self {
@@ -356,6 +358,7 @@ mod tests {
         let mesh = MeshBuffer {
             vertices: vec![],
             indices: vec![0, 1, 2, 2, 3, 0],
+            ao: vec![],
         };
         assert_eq!(mesh_triangle_count(&mesh), 2);
     }
@@ -368,7 +371,11 @@ mod tests {
         let policy = LodPolicy::default();
 
         let lod = compute_chunk_lod(camera_pos, chunk_center, scale, policy);
-        assert_eq!(lod, LodLevel(0), "Near chunk should have LOD 0 (full detail)");
+        assert_eq!(
+            lod,
+            LodLevel(0),
+            "Near chunk should have LOD 0 (full detail)"
+        );
     }
 
     #[test]
@@ -467,8 +474,14 @@ mod tests {
         let tri_lod1 = chunk_lod1.estimate_triangle_count();
         let tri_lod2 = chunk_lod2.estimate_triangle_count();
 
-        assert!(tri_lod0 > tri_lod1, "LOD 0 should have more triangles than LOD 1");
-        assert!(tri_lod1 > tri_lod2, "LOD 1 should have more triangles than LOD 2");
+        assert!(
+            tri_lod0 > tri_lod1,
+            "LOD 0 should have more triangles than LOD 1"
+        );
+        assert!(
+            tri_lod1 > tri_lod2,
+            "LOD 1 should have more triangles than LOD 2"
+        );
     }
 
     #[test]
@@ -482,10 +495,7 @@ mod tests {
         for x in 0..16 {
             for y in 0..16 {
                 for z in 0..16 {
-                    assert_eq!(
-                        chunk1.should_sample(x, y, z),
-                        chunk2.should_sample(x, y, z)
-                    );
+                    assert_eq!(chunk1.should_sample(x, y, z), chunk2.should_sample(x, y, z));
                 }
             }
         }
@@ -498,9 +508,18 @@ mod tests {
         let chunk_center_a = glam::Vec3::new(64.0 * 8.0, 0.0, 0.0);
         let chunk_center_b = glam::Vec3::new(64.0 * 16.0, 0.0, 0.0);
 
-        let lod_a = compute_chunk_lod(camera_pos, chunk_center_a, VoxelScaleMultiplier(8.0), policy);
-        let lod_b =
-            compute_chunk_lod(camera_pos, chunk_center_b, VoxelScaleMultiplier(16.0), policy);
+        let lod_a = compute_chunk_lod(
+            camera_pos,
+            chunk_center_a,
+            VoxelScaleMultiplier(8.0),
+            policy,
+        );
+        let lod_b = compute_chunk_lod(
+            camera_pos,
+            chunk_center_b,
+            VoxelScaleMultiplier(16.0),
+            policy,
+        );
 
         assert_eq!(
             lod_a, lod_b,

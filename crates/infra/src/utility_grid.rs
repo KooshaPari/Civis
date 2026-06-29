@@ -261,11 +261,7 @@ impl UtilityGrid {
         }
         let id = UtilityEdgeId(self.next_edge_id);
         self.next_edge_id = self.next_edge_id.saturating_add(1);
-        let edge = UtilityEdge {
-            from,
-            to,
-            capacity,
-        };
+        let edge = UtilityEdge { from, to, capacity };
         self.outgoing.entry(from).or_default().push((id, edge));
         self.edge_index.insert(id, edge);
         id
@@ -347,28 +343,17 @@ impl UtilityGrid {
 
                 // Find the cheapest reachable sink (by hops, ties broken by
                 // sink id ascending so BFS picks a stable target).
-                let Some((sink, path)) = self.shortest_path_from(src, &residual_demand)
-                else {
+                let Some((sink, path)) = self.shortest_path_from(src, &residual_demand) else {
                     continue;
                 };
 
                 // Find the bottleneck along the path.
                 let mut bottleneck = src_supply;
-                bottleneck = bottleneck.min(
-                    residual_demand
-                        .get(&sink)
-                        .copied()
-                        .unwrap_or(0.0)
-                        .max(0.0),
-                );
+                bottleneck =
+                    bottleneck.min(residual_demand.get(&sink).copied().unwrap_or(0.0).max(0.0));
                 for edge_id in path.iter().copied() {
-                    bottleneck = bottleneck.min(
-                        residual_edge
-                            .get(&edge_id)
-                            .copied()
-                            .unwrap_or(0.0)
-                            .max(0.0),
-                    );
+                    bottleneck = bottleneck
+                        .min(residual_edge.get(&edge_id).copied().unwrap_or(0.0).max(0.0));
                 }
                 if bottleneck <= 0.0 {
                     // No edge has capacity -> retire this source for the
@@ -380,10 +365,7 @@ impl UtilityGrid {
 
                 // Push the bottleneck along the path.
                 residual_supply.insert(src, src_supply - bottleneck);
-                let prev_demand = residual_demand
-                    .get(&sink)
-                    .copied()
-                    .unwrap_or(0.0);
+                let prev_demand = residual_demand.get(&sink).copied().unwrap_or(0.0);
                 residual_demand.insert(sink, (prev_demand - bottleneck).max(0.0));
                 for edge_id in path.iter().copied() {
                     let prev_flow = edge_flow.get(&edge_id).copied().unwrap_or(0.0);
@@ -441,8 +423,7 @@ impl UtilityGrid {
         }
 
         // parent[child] = (edge_id_from_parent, parent_id)
-        let mut parent: BTreeMap<UtilityNodeId, (UtilityEdgeId, UtilityNodeId)> =
-            BTreeMap::new();
+        let mut parent: BTreeMap<UtilityNodeId, (UtilityEdgeId, UtilityNodeId)> = BTreeMap::new();
         parent.insert(start, (UtilityEdgeId(u32::MAX), start));
 
         let mut frontier: VecDeque<UtilityNodeId> = VecDeque::new();

@@ -1,10 +1,11 @@
-﻿#![cfg(all(feature = "bevy", feature = "egui"))]
+#![cfg(all(feature = "bevy", feature = "egui"))]
 
 //! 6-step tutorial hint system (FR-CIV-CLIENT-011).
 //! Shown bottom-centre during InGame. Space/click advances; H replays.
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
+use serde::{Deserialize, Serialize};
 
 use crate::menus::in_game;
 
@@ -30,9 +31,9 @@ const HINTS: &[&str] = &[
 
 /// State-dependent filter: which step index to show based on sim progress.
 const STATE_GATES: &[(u8, &str)] = &[
-    (0, ""),                              // step 0: always
-    (1, "faction"),                        // step 1: once a faction exists
-    (5, "technology"),                     // step 5: once tech is unlocked
+    (0, ""),           // step 0: always
+    (1, "faction"),    // step 1: once a faction exists
+    (5, "technology"), // step 5: once tech is unlocked
 ];
 
 /// Persistent tutorial state saved to disk.
@@ -44,7 +45,9 @@ pub struct TutorialSaveData {
 
 impl Default for TutorialSaveData {
     fn default() -> Self {
-        Self { completed_once: false }
+        Self {
+            completed_once: false,
+        }
     }
 }
 
@@ -72,22 +75,25 @@ pub struct TutorialPlugin;
 
 impl Plugin for TutorialPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<TutorialState>()
-            .add_systems(Update, (handle_tutorial_keys, draw_tutorial_hint).chain().run_if(in_game));
+        app.init_resource::<TutorialState>().add_systems(
+            Update,
+            (handle_tutorial_keys, draw_tutorial_hint)
+                .chain()
+                .run_if(in_game),
+        );
     }
 }
 
-fn handle_tutorial_keys(
-    keys: Res<ButtonInput<KeyCode>>,
-    mut state: ResMut<TutorialState>,
-) {
+fn handle_tutorial_keys(keys: Res<ButtonInput<KeyCode>>, mut state: ResMut<TutorialState>) {
     if keys.just_pressed(KeyCode::KeyH) {
         state.visibility = TutorialVisibility::Manual;
         state.step = 0;
         state.acknowledged = false;
         return;
     }
-    if state.visibility == TutorialVisibility::Hidden { return; }
+    if state.visibility == TutorialVisibility::Hidden {
+        return;
+    }
     if keys.just_pressed(KeyCode::Space) {
         advance(&mut state);
     }
@@ -125,18 +131,19 @@ fn should_show(state: &TutorialState) -> bool {
     }
 }
 
-fn draw_tutorial_hint(
-    mut contexts: EguiContexts,
-    mut state: ResMut<TutorialState>,
-) {
-    if !should_show(&state) { return; }
+fn draw_tutorial_hint(mut contexts: EguiContexts, mut state: ResMut<TutorialState>) {
+    if !should_show(&state) {
+        return;
+    }
 
     let idx = (state.step as usize).min(HINTS.len() - 1);
     let hint = HINTS[idx];
     let step = state.step;
     let total = HINTS.len() as u8;
 
-    let ctx = contexts.ctx_mut();
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
     let screen = ctx.screen_rect();
 
     let mut clicked = false;
@@ -145,9 +152,12 @@ fn draw_tutorial_hint(
         .show(ctx, |ui| {
             egui::Frame::none()
                 .fill(egui::Color32::from_rgba_premultiplied(9, 10, 12, 230))
-                .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(126, 186, 181)))
-                .rounding(egui::Rounding::same(8.0))
-                .inner_margin(egui::Margin::symmetric(16.0, 10.0))
+                .stroke(egui::Stroke::new(
+                    1.0,
+                    egui::Color32::from_rgb(126, 186, 181),
+                ))
+                .rounding(egui::Rounding::same(8))
+                .inner_margin(egui::Margin::symmetric(16, 10))
                 .show(ui, |ui| {
                     ui.set_width(560.0);
                     ui.label(

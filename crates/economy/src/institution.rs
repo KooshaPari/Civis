@@ -227,7 +227,10 @@ impl InstitutionLedger {
             return Err(InstitutionLedgerError::NonPositiveAmount { amount });
         }
         if debit == credit {
-            return Err(InstitutionLedgerError::SelfPosting { side: debit, amount });
+            return Err(InstitutionLedgerError::SelfPosting {
+                side: debit,
+                amount,
+            });
         }
 
         self.apply_debit(economy, debit, amount)?;
@@ -324,14 +327,12 @@ impl InstitutionLedger {
             // Per-posting amount integrity: a tampered posting has debit_amount != credit_amount.
             // Legacy postings (serialized before the split-amount fields landed) have both = 0
             // and `amount` as the canonical figure. Treat those as balanced by construction.
-            let (debit_amount, credit_amount) = if posting.debit_amount == 0
-                && posting.credit_amount == 0
-                && posting.amount > 0
-            {
-                (posting.amount, posting.amount)
-            } else {
-                (posting.debit_amount, posting.credit_amount)
-            };
+            let (debit_amount, credit_amount) =
+                if posting.debit_amount == 0 && posting.credit_amount == 0 && posting.amount > 0 {
+                    (posting.amount, posting.amount)
+                } else {
+                    (posting.debit_amount, posting.credit_amount)
+                };
 
             if debit_amount != credit_amount {
                 return Err(InstitutionLedgerError::TamperedAmount {
@@ -675,7 +676,11 @@ mod tests {
     #[test]
     fn verify_conservation_rejects_tampered_posting_amount() {
         let mut ledger = InstitutionLedger::with_defaults();
-        ledger.accounts.get_mut(&INSTITUTION_TREASURY).unwrap().balance_joules = 0;
+        ledger
+            .accounts
+            .get_mut(&INSTITUTION_TREASURY)
+            .unwrap()
+            .balance_joules = 0;
 
         ledger.postings.push(InstitutionPosting {
             tick: 0,
@@ -707,7 +712,11 @@ mod tests {
     #[test]
     fn verify_conservation_rejects_self_posting_in_log() {
         let mut ledger = InstitutionLedger::with_defaults();
-        ledger.accounts.get_mut(&INSTITUTION_TREASURY).unwrap().balance_joules = 0;
+        ledger
+            .accounts
+            .get_mut(&INSTITUTION_TREASURY)
+            .unwrap()
+            .balance_joules = 0;
 
         ledger.postings.push(InstitutionPosting {
             tick: 5,
@@ -765,7 +774,11 @@ mod tests {
     #[test]
     fn verify_conservation_accepts_legacy_posting_without_split_amounts() {
         let mut ledger = InstitutionLedger::with_defaults();
-        ledger.accounts.get_mut(&INSTITUTION_TREASURY).unwrap().balance_joules = 0;
+        ledger
+            .accounts
+            .get_mut(&INSTITUTION_TREASURY)
+            .unwrap()
+            .balance_joules = 0;
 
         ledger.postings.push(InstitutionPosting {
             tick: 0,
@@ -787,19 +800,16 @@ mod tests {
     fn collect_taxes_posts_balanced_transfer_at_basis_points_rate() {
         let mut economy = EconomyState::with_energy_budget(100_000);
         let mut taxation = Taxation::default();
-        taxation
-            .rates_bp
-            .insert(INSTITUTION_TREASURY, 500); // 5.00 %
+        taxation.rates_bp.insert(INSTITUTION_TREASURY, 500); // 5.00 %
 
         let summary = collect_taxes(&mut economy, &taxation).expect("collect");
         assert_eq!(summary.total_collected_joules, 5_000);
-        assert_eq!(
-            summary.per_institution_joules[&INSTITUTION_TREASURY],
-            5_000
-        );
+        assert_eq!(summary.per_institution_joules[&INSTITUTION_TREASURY], 5_000);
         assert_eq!(economy.energy_budget_joules, 95_000);
         assert_eq!(
-            economy.institutions.institution_balance(INSTITUTION_TREASURY),
+            economy
+                .institutions
+                .institution_balance(INSTITUTION_TREASURY),
             5_000
         );
         economy
@@ -859,10 +869,7 @@ mod tests {
         let summary = collect_taxes(&mut economy, &taxation).expect("collect");
         assert_eq!(summary.total_collected_joules, 100);
         assert_eq!(summary.capped_institutions, 1);
-        assert_eq!(
-            summary.per_institution_joules[&INSTITUTION_TREASURY],
-            100
-        );
+        assert_eq!(summary.per_institution_joules[&INSTITUTION_TREASURY], 100);
     }
 
     #[test]

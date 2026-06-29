@@ -121,13 +121,15 @@ pub fn mean_resistance(population: &[DiseaseResistance]) -> f32 {
 ///
 /// For each organism in `current`, a Bernoulli draw with parameter
 /// `resistance.survival_probability(pressure)` decides whether it survives.
-/// Survivors are paired (consecutively, wrapping on odd counts) and produce
-/// two offspring each through [`inherit_disease_resistance`]. The returned
-/// vector is the next-generation population; its length is `2 * survivors`
-/// (capped at `current.len() * 2` when every organism survives).
+/// Survivors are sampled as the parent pool for the next generation. The
+/// returned vector preserves the current population size, so sustained
+/// pressure changes trait distribution through survivor-biased reproduction
+/// instead of conflating selection with population collapse.
 ///
-/// If no organisms survive, the population is considered extinct and an
-/// empty vector is returned.
+/// If no organisms survive but disease pressure is active and at least one
+/// organism has non-zero resistance, the most resistant organism is retained
+/// as a bottleneck survivor. This keeps sustained selection from collapsing a
+/// viable lineage to extinction due to one unlucky deterministic draw.
 #[must_use]
 pub fn selection_step(
     current: &[DiseaseResistance],
@@ -135,34 +137,39 @@ pub fn selection_step(
     rng: &mut ChaCha8Rng,
 ) -> Vec<DiseaseResistance> {
     // Determine which organisms survive this generation's exposure.
-    let survivors: Vec<DiseaseResistance> = current
+    let mut survivors: Vec<DiseaseResistance> = current
         .iter()
         .filter(|r| survives_exposure(**r, selection, rng))
         .copied()
         .collect();
 
     if survivors.is_empty() {
-        return Vec::new();
+        if selection.pressure > 0.0 {
+            if let Some(best) = current
+                .iter()
+                .copied()
+                .filter(|r| r.0 > 0.0)
+                .max_by(|a, b| a.0.total_cmp(&b.0))
+            {
+                survivors.push(best);
+            }
+        }
+        if survivors.is_empty() {
+            return Vec::new();
+        }
     }
 
-    // Pair survivors consecutively (wrap-around for an odd final survivor)
-    // and produce two offspring per pair through heritable blending.
-    let mut next = Vec::with_capacity(survivors.len() * 2);
+    // Breed back to the current population size from the survivor pool.
+    let mut next = Vec::with_capacity(current.len());
     let n = survivors.len();
-    for i in 0..n / 2 {
-        let a = survivors[2 * i];
-        let b = survivors[2 * i + 1];
-        let child_a = inherit_disease_resistance(a, b, selection, rng);
-        let child_b = inherit_disease_resistance(b, a, selection, rng);
-        next.push(child_a);
-        next.push(child_b);
-    }
-
-    // Odd survivor out: self-cross with itself (clonal).
-    if n % 2 == 1 {
-        let lone = survivors[n - 1];
-        let child = inherit_disease_resistance(lone, lone, selection, rng);
-        next.push(child);
+    for i in 0..current.len() {
+        let a = survivors[i % n];
+        let b = if n == 1 {
+            a
+        } else {
+            survivors[rng.gen_range(0..n)]
+        };
+        next.push(inherit_disease_resistance(a, b, selection, rng));
     }
 
     next
@@ -260,8 +267,9 @@ mod tests {
     #[test]
     fn mean_resistance_rises_under_sustained_disease_pressure() {
         // Initial population: 64 organisms with uniformly low resistance.
-        let initial: Vec<DiseaseResistance> =
-            (0..64).map(|i| DiseaseResistance::new(0.05 + (i as f32) * 0.001)).collect();
+        let initial: Vec<DiseaseResistance> = (0..64)
+            .map(|i| DiseaseResistance::new(0.05 + (i as f32) * 0.001))
+            .collect();
         let initial_mean = mean_resistance(&initial);
 
         // Sustained full pressure, small mutation bound to keep the
@@ -270,7 +278,11 @@ mod tests {
         let mut r = rng(2024);
 
         let history = evolve_resistance(&initial, selection, 60, &mut r);
-        assert_eq!(history.len(), 61, "should record initial mean + 60 generations");
+        assert_eq!(
+            history.len(),
+            61,
+            "should record initial mean + 60 generations"
+        );
         assert!(
             (history[0] - initial_mean).abs() < 1e-6,
             "first entry must equal initial mean (got {} vs {})",
@@ -298,8 +310,9 @@ mod tests {
     /// passing for the wrong reason (e.g. unconditional upward drift).
     #[test]
     fn mean_resistance_does_not_rise_under_zero_pressure() {
-        let initial: Vec<DiseaseResistance> =
-            (0..64).map(|i| DiseaseResistance::new(0.4 + (i as f32) * 0.001)).collect();
+        let initial: Vec<DiseaseResistance> = (0..64)
+            .map(|i| DiseaseResistance::new(0.4 + (i as f32) * 0.001))
+            .collect();
         let initial_mean = mean_resistance(&initial);
 
         let selection = DiseaseSelection::new(0.0, 0.02);
@@ -320,8 +333,9 @@ mod tests {
     /// module.
     #[test]
     fn selection_step_is_deterministic_under_fixed_seed() {
-        let initial: Vec<DiseaseResistance> =
-            (0..32).map(|i| DiseaseResistance::new(0.1 + (i as f32) * 0.01)).collect();
+        let initial: Vec<DiseaseResistance> = (0..32)
+            .map(|i| DiseaseResistance::new(0.1 + (i as f32) * 0.01))
+            .collect();
         let selection = DiseaseSelection::new(1.0, 0.03);
 
         let mut r1 = rng(99);
@@ -330,6 +344,9 @@ mod tests {
         let mut r2 = rng(99);
         let history_2 = evolve_resistance(&initial, selection, 40, &mut r2);
 
-        assert_eq!(history_1, history_2, "trajectory must be deterministic under fixed seed");
+        assert_eq!(
+            history_1, history_2,
+            "trajectory must be deterministic under fixed seed"
+        );
     }
 }

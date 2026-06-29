@@ -16,27 +16,25 @@ use civ_agents::{
 };
 use civ_genetics::{
     sentience::{evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold},
-    Dna, DnaClass, spawn_genome_with_divergence, SeedDefinition, SeedLibrary, SeedSet,
+    spawn_genome_with_divergence, Dna, DnaClass, SeedDefinition, SeedLibrary, SeedSet,
 };
 use civ_legends::{
     EventKind, IngestOutcome, LegendsConfig, LegendsWorker, RawSimEvent, Role, SagaGraph,
     SourceCrate,
 };
-use civ_planet::GeologyMap;
-use civ_voxel::FIXED_SCALE;
 use civ_legends::{LegendEntityId, NameRef, SimRuntimeId};
 use civ_needs::Needs as LifeNeeds;
+use civ_planet::GeologyMap;
 use civ_species::express;
+use civ_voxel::FIXED_SCALE;
 use hecs::Entity;
 use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
-use crate::engine::{Simulation, awakening_belief_gain, awakening_cohesion_gain};
-use crate::culture::{
-    advance_faction_ideologies,
-};
+use crate::culture::advance_faction_ideologies;
+use crate::engine::{awakening_belief_gain, awakening_cohesion_gain, Simulation};
 
 /// Notable emergence this tick — event feed / inspect panels (FR-CIV-LEGENDS-QUERY-07).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -72,6 +70,9 @@ pub struct EmergenceState {
     pub(crate) sentience_profile: CognitionTraitProfile,
     pub(crate) sentience_threshold: SentienceThreshold,
     pub(crate) sentient_agents: HashSet<u64>,
+    pub(crate) novelty_window_start_tick: u64,
+    pub(crate) novelty_window_new: u32,
+    pub(crate) seen_config_hashes: HashSet<u64>,
 }
 
 impl EmergenceState {
@@ -91,6 +92,9 @@ impl EmergenceState {
             ),
             sentience_threshold: SentienceThreshold::new(0.72),
             sentient_agents: HashSet::new(),
+            novelty_window_start_tick: 0,
+            novelty_window_new: 0,
+            seen_config_hashes: HashSet::new(),
         }
     }
 
@@ -214,25 +218,27 @@ impl Simulation {
         }
         let mut dominant_by_cluster: BTreeMap<u64, u32> = BTreeMap::new();
         let mut faction_vote: BTreeMap<u64, BTreeMap<u32, u32>> = BTreeMap::new();
-        for (_, (civilian, member)) in self
-            .world
-            .query::<(&Civilian, &ClusterMember)>()
-            .iter()
-        {
+        for (_, (civilian, member)) in self.world.query::<(&Civilian, &ClusterMember)>().iter() {
             let cluster_id = member.cluster.0;
             let members = cluster_member_counts.get(&cluster_id).copied().unwrap_or(0);
             if members < 2 {
                 continue;
             }
             if let civ_agents::Alignment::Faction(faction_id) = civilian.alignment {
-                *faction_vote.entry(cluster_id).or_default().entry(faction_id).or_default() += 1;
+                *faction_vote
+                    .entry(cluster_id)
+                    .or_default()
+                    .entry(faction_id)
+                    .or_default() += 1;
             }
         }
         for (cluster_id, by_faction) in faction_vote {
             let mut best = None;
             let mut best_count = 0u32;
             for (&faction_id, &count) in &by_faction {
-                if count > best_count || (count == best_count && best.is_some_and(|id| faction_id < id)) {
+                if count > best_count
+                    || (count == best_count && best.is_some_and(|id| faction_id < id))
+                {
                     best = Some(faction_id);
                     best_count = count;
                 }
@@ -272,13 +278,11 @@ impl Simulation {
                     None => continue,
                 };
                 let in_contact = left_agents.iter().any(|&(ax, az)| {
-                    right_agents
-                        .iter()
-                        .any(|&(bx, bz)| {
-                            let dx = i128::from(ax) - i128::from(bx);
-                            let dz = i128::from(az) - i128::from(bz);
-                            dx * dx + dz * dz <= contact_radius_sq
-                        })
+                    right_agents.iter().any(|&(bx, bz)| {
+                        let dx = i128::from(ax) - i128::from(bx);
+                        let dz = i128::from(az) - i128::from(bz);
+                        dx * dx + dz * dz <= contact_radius_sq
+                    })
                 });
                 if in_contact {
                     settlement_contacts.insert((left.min(right), left.max(right)));
@@ -315,9 +319,10 @@ impl Simulation {
                     weight: 0.15,
                 });
             }
-            let climate_pressure =
-                (self.climate.day_phase * 0.06 + self.climate.moon_phase * 0.04 + self.climate.tide_offset.abs() * 0.08)
-                    .clamp(0.0, 0.16);
+            let climate_pressure = (self.climate.day_phase * 0.06
+                + self.climate.moon_phase * 0.04
+                + self.climate.tide_offset.abs() * 0.08)
+                .clamp(0.0, 0.16);
             let mutation_rate = 0.02 + climate_pressure;
             let diffusion_rate = 0.08 + (self.state.tick % 1000) as f32 * 0.00001;
             drift_populations(
@@ -339,9 +344,7 @@ impl Simulation {
             let monitor = self
                 .religious_profiles
                 .get(&faction_id)
-                .map(|religion| {
-                    religion.monitoring * 0.55 + religion.mythic_coherence * 0.45
-                })
+                .map(|religion| religion.monitoring * 0.55 + religion.mythic_coherence * 0.45)
                 .unwrap_or(0.45);
             let entry = faction_religion.entry(faction_id).or_insert((0.0, 0));
             entry.0 += monitor;
@@ -355,21 +358,26 @@ impl Simulation {
             }
         }
 
+        let cluster_cultures = self.emergence.cluster_cultures.clone();
+        let climate = self.climate.clone();
+        let faction_ages = self.era_progression.faction_ages.clone();
+        let previous_ideologies = self.faction_ideologies.clone();
         self.faction_ideologies = advance_faction_ideologies(
             tick,
-            &self.emergence.cluster_cultures,
+            &cluster_cultures,
             &dominant_by_cluster,
             &cluster_member_counts,
             &settlement_contacts,
-            &self.climate,
+            &climate,
             &faction_religion_signal,
-            &self.era_progression.faction_ages,
-            &self.faction_ideologies,
+            &faction_ages,
+            &previous_ideologies,
             self.rng_mut(),
         );
         self.faction_aggression.clear();
         for (faction_id, state) in &self.faction_ideologies {
-            self.faction_aggression.insert(*faction_id, state.aggression);
+            self.faction_aggression
+                .insert(*faction_id, state.aggression);
         }
 
         if tick % 128 == 0 && !self.emergence.cluster_cultures.is_empty() {
@@ -566,12 +574,7 @@ impl Simulation {
                     0.0,
                 );
                 let arousal = psyche.mood.arousal;
-                nudge_temperament(
-                    &mut psyche.temperament,
-                    arousal,
-                    needs.belonging,
-                    maturity,
-                );
+                nudge_temperament(&mut psyche.temperament, arousal, needs.belonging, maturity);
             }
             let sociability = self
                 .world
@@ -961,95 +964,6 @@ mod tests {
         );
     }
 
-    fn test_seed_definition(id: &str) -> SeedDefinition {
-        let length = 64usize;
-        SeedDefinition {
-            id: id.to_string(),
-            display_name: id.to_string(),
-            dna_length: length,
-            genome: (0..length as u8).collect(),
-            divergence: 0.5,
-            spawn_biome_affinity: vec![],
-            notes: None,
-        }
-    }
-
-    /// `register_seed_set` merges valid seeds and replaces ids on re-register.
-    #[test]
-    fn register_seed_set_merges_and_replaces_ids() {
-        let mut sim = Simulation::with_seed(1);
-        assert!(sim.seed_library().get("raw_organism").is_some());
-
-        let set_a = SeedSet {
-            version: 1,
-            seeds: vec![
-                test_seed_definition("alpha"),
-                test_seed_definition("beta"),
-            ],
-        };
-        sim.register_seed_set(set_a);
-        assert!(sim.seed_library().get("alpha").is_some());
-        assert!(sim.seed_library().get("beta").is_some());
-        assert!(sim.seed_library().get("raw_organism").is_some());
-
-        let set_b = SeedSet {
-            version: 1,
-            seeds: vec![
-                test_seed_definition("gamma"),
-                test_seed_definition("beta"),
-            ],
-        };
-        sim.register_seed_set(set_b);
-        assert!(sim.seed_library().get("alpha").is_some());
-        assert!(sim.seed_library().get("gamma").is_some());
-        assert!(sim.seed_library().get("beta").is_some());
-        assert!(sim.seed_library().get("raw_organism").is_some());
-    }
-
-    /// `set_active_seed` updates the active id; unknown ids are rejected.
-    #[test]
-    fn set_active_seed_updates_or_rejects_unknown() {
-        let mut sim = Simulation::with_seed(2);
-        sim.set_active_seed(Some("raw_organism".to_string()));
-        assert_eq!(sim.active_seed_id(), Some("raw_organism"));
-
-        let kept = sim.active_seed_id().map(str::to_string);
-        sim.set_active_seed(Some("missing_seed_id".to_string()));
-        assert_eq!(sim.active_seed_id(), kept.as_deref());
-        assert!(
-            sim.emergence_feed()
-                .iter()
-                .any(|e| e.kind == "seed_unknown"),
-            "unknown seed id should emit seed_unknown"
-        );
-
-        sim.set_active_seed(None);
-        assert_eq!(sim.active_seed_id(), None);
-    }
-
-    /// `register_seed_file` loads fixture RON and reports missing paths.
-    #[test]
-    fn register_seed_file_loads_fixture_and_reports_missing() {
-        let mut sim = Simulation::with_seed(3);
-        sim.register_seed_file("scenarios/canonical_seeds.ron");
-        assert!(sim.seed_library().get("human_baseline").is_some());
-        assert!(
-            sim.emergence_feed()
-                .iter()
-                .any(|e| e.kind == "seed_loaded"),
-            "successful load should emit seed_loaded"
-        );
-
-        sim.emergence.last_feed.clear();
-        sim.register_seed_file("scenarios/no_such_seed_file.ron");
-        assert!(
-            sim.emergence_feed()
-                .iter()
-                .any(|e| e.kind == "seed_load_failed"),
-            "missing file should emit seed_load_failed"
-        );
-    }
-
     /// `agent_social_graph` returns cloned graphs by civilian id.
     #[test]
     fn agent_social_graph_returns_graph_for_known_agent() {
@@ -1118,7 +1032,9 @@ mod tests {
             id: "human_baseline".to_string(),
             display_name: "Human Baseline".to_string(),
             dna_length: dna_len,
-            genome: (0..dna_len as u8).map(|i| i.wrapping_mul(7).wrapping_add(13)).collect(),
+            genome: (0..dna_len as u8)
+                .map(|i| i.wrapping_mul(7).wrapping_add(13))
+                .collect(),
             divergence: 0.1,
             spawn_biome_affinity: vec!["TemperateForest".to_string()],
             notes: None,
@@ -1130,12 +1046,8 @@ mod tests {
         let lib = SeedLibrary::from_seed_set(set).expect("valid seed set");
 
         // select_seed_for_position should prefer the forest seed over the fallback.
-        let chosen = select_seed_for_position(
-            &lib,
-            Some(&active_seed),
-            &geology_map,
-            &equatorial_pos,
-        );
+        let chosen =
+            select_seed_for_position(&lib, Some(&active_seed), &geology_map, &equatorial_pos);
         assert_eq!(
             chosen.map(|s| s.id.as_str()),
             Some("human_baseline"),

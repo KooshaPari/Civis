@@ -66,10 +66,9 @@ pub fn check_outcome(sim: &Simulation) -> GameOutcome {
 
     // ── Victory: all factions at peace for 500 ticks ────────────────────────
     // Count conflict events in the last PEACE_TICKS_THRESHOLD ticks.
-    let recent_conflict = sim
-        .diplomacy_events()
-        .iter()
-        .any(|e| e.kind == DiplomacyKind::Conflict && tick.saturating_sub(e.tick) < PEACE_TICKS_THRESHOLD);
+    let recent_conflict = sim.diplomacy_events().iter().any(|e| {
+        e.kind == DiplomacyKind::Conflict && tick.saturating_sub(e.tick) < PEACE_TICKS_THRESHOLD
+    });
     if !recent_conflict && tick >= PEACE_TICKS_THRESHOLD {
         return GameOutcome::Victory("Age of Harmony".to_owned());
     }
@@ -94,20 +93,21 @@ mod tests {
 
     #[test]
     fn ongoing_on_fresh_sim() {
-        let sim = Simulation::new(42);
+        let mut sim = Simulation::with_seed(42);
+        sim.state.population = 1_000;
         assert_eq!(check_outcome(&sim), GameOutcome::Ongoing);
     }
 
     #[test]
     fn victory_population_threshold() {
-        let mut sim = Simulation::new(42);
+        let mut sim = Simulation::with_seed(42);
         sim.state.population = POPULATION_VICTORY;
         assert!(matches!(check_outcome(&sim), GameOutcome::Victory(_)));
     }
 
     #[test]
     fn defeat_extinction() {
-        let mut sim = Simulation::new(42);
+        let mut sim = Simulation::with_seed(42);
         sim.state.population = 0;
         assert!(matches!(check_outcome(&sim), GameOutcome::Defeat(_)));
     }

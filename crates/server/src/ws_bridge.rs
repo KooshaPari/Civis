@@ -21,17 +21,19 @@ use axum::{
 use civ_agents::{Civilian as AgentCivilian, Needs, Tools, Wardrobe};
 use civ_build::ProductionEvent;
 use civ_engine::{
-    decode_civreplay, encode_civreplay, job_type_for_civilian_id,
+    engine::{job_type_for_civilian_id, Citizen, InstitutionEvent, JobType, StratificationEvent},
+    replay_format::{decode_civreplay, encode_civreplay},
+    save_bundle::CivSaveBundle,
     scenario::{load_scenario, preset_scenario_path},
-    Citizen, CivSaveBundle, CohesionEvent, DiplomacyKind, InstitutionEvent,
-    JobType, MoodSnapshot, Simulation, StratificationEvent, UnrestEvent,
+    CohesionEvent, DiplomacyKind, MoodSnapshot, Simulation, UnrestEvent,
 };
 use civ_protocol_3d::{
     encode_frame3d_binary, encode_frame3d_binary_from_json, AgentAppearanceFrame,
-    AgentAppearanceUpdate, BattleEvent3d, BirthEvent3d, BuildingDiffFrame, BuildingProvenance,
-    CivilianNeeds3d, CivilianStateEntry, CivilianStateFrame, ClimateFrame, DeathEvent3d,
-    EventFeedFrame, EventFeedMessage3d, FactionStateEntry, FactionStateFrame, FactionTreasury3d,
-    Frame3d, GenomeSummary3d, Government3d, TechEvent3d, WorldXZ,
+    AgentAppearanceUpdate, BattleEvent3d, BirthEvent3d, BuildingDiffEntry, BuildingDiffFrame,
+    BuildingKind3d, BuildingProvenance, CivilianNeeds3d, CivilianStateEntry, CivilianStateFrame,
+    ClimateFrame, DeathEvent3d, EventFeedFrame, EventFeedMessage3d, FactionStateEntry,
+    FactionStateFrame, FactionTreasury3d, Frame3d, GenomeSummary3d, Government3d, TechEvent3d,
+    WorldXZ,
 };
 use civ_save_db::SaveDb;
 use futures::{SinkExt, StreamExt};
@@ -44,9 +46,9 @@ use tokio::{
 use crate::{
     jsonrpc::{
         dispatch_request, encode_response, error_code, parse_error_response, parse_request,
-        parse_role_param, psyche_snapshot_from_sim, sentience_events_from_sim, set_sim_command_tick,
-        set_spawn_civilian_result, DispatchContext, DispatchEffect, JsonRpcError, JsonRpcMethod,
-        JsonRpcResponse,
+        parse_role_param, psyche_snapshot_from_sim, religion_profiles_from_sim,
+        sentience_events_from_sim, set_sim_command_tick, set_spawn_civilian_result,
+        DispatchContext, DispatchEffect, JsonRpcError, JsonRpcMethod, JsonRpcResponse,
     },
     saves::save_archive_path,
     subscription_filter::{SubscriptionFilter, WsConnectQuery},
@@ -487,7 +489,8 @@ async fn handle_jsonrpc_text(
                 JsonRpcMethod::SimSnapshot
                 | JsonRpcMethod::GetFactions
                 | JsonRpcMethod::GetResources
-                | JsonRpcMethod::GetEmergenceMetrics => {
+                | JsonRpcMethod::GetEmergenceMetrics
+                | JsonRpcMethod::SimInspectTile => {
                     let sim = state.sim.lock().await;
                     let speed_multiplier = state.speed_multiplier.load(Ordering::Relaxed);
                     (
@@ -513,6 +516,14 @@ async fn handle_jsonrpc_text(
                     (None, Some(events))
                 }
                 _ => (None, None),
+            };
+
+            let religion_state = match req.method {
+                JsonRpcMethod::SimReligionState => {
+                    let sim = state.sim.lock().await;
+                    Some(religion_profiles_from_sim(&sim))
+                }
+                _ => None,
             };
 
             let emergence = if req.method == JsonRpcMethod::SimEmergence
@@ -542,12 +553,31 @@ async fn handle_jsonrpc_text(
             } else {
                 None
             };
+            let tile_probe = if req.method == crate::jsonrpc::JsonRpcMethod::SimInspectTile {
+                let x = req
+                    .params
+                    .as_ref()
+                    .and_then(|p| p.get("x").and_then(|v| v.as_i64()))
+                    .unwrap_or(0);
+                let y = req
+                    .params
+                    .as_ref()
+                    .and_then(|p| p.get("y").and_then(|v| v.as_i64()))
+                    .unwrap_or(0);
+                let sim = state.sim.lock().await;
+                Some(crate::jsonrpc::TileInspectionWire::from(
+                    sim.inspect_tile(x, y),
+                ))
+            } else {
+                None
+            };
             let mut plan = dispatch_request(
                 req,
                 DispatchContext {
                     tick,
                     population,
                     snapshot,
+                    tile_probe,
                     require_role: state.require_role,
                     speed_multiplier: state.speed_multiplier.load(Ordering::Relaxed),
                     connection_role: connection_role.clone(),
@@ -559,6 +589,7 @@ async fn handle_jsonrpc_text(
                     last_tick_ms: 0.0,
                     psyche_snapshot,
                     sentience_events,
+                    religion_state,
                 },
             );
             apply_dispatch_effect(&mut plan.response, plan.effect, state).await;
@@ -669,7 +700,7 @@ fn build_civilian_state_frame(sim: &Simulation, tick: u64) -> CivilianStateFrame
                         .unwrap_or_else(|| job_type_for_civilian_id(civilian.id));
                     (
                         job_profession_label(job).to_string(),
-                        citizen.health.to_f64() as f32,
+                        citizen.health.to_num::<f64>() as f32,
                     )
                 })
                 .unwrap_or_else(|| {
@@ -741,7 +772,7 @@ fn build_faction_state_frame(sim: &Simulation, tick: u64) -> FactionStateFrame {
                 .state
                 .faction_treasury
                 .get(&faction.id)
-                .map(|value| value.to_f64())
+                .map(|value| value.to_num::<f64>())
                 .unwrap_or(0.0);
             if faction.id == 0 {
                 amount += market_balance + treasury_balance;
@@ -1102,9 +1133,7 @@ async fn apply_dispatch_effect(
             entity_seq,
         } => {
             use crate::jsonrpc::SpawnEntityKind;
-            use civ_engine::{
-                spawn_airport_at, spawn_hangar_at, spawn_military_at, spawn_port_at, UnitType,
-            };
+            use civ_engine::{spawn, UnitType};
 
             let mut sim = state.sim.lock().await;
             let entity = match kind {
@@ -1123,11 +1152,11 @@ async fn apply_dispatch_effect(
                     entity
                 }
                 SpawnEntityKind::Vehicle => {
-                    spawn_military_at(&mut sim.world, faction, x, y, UnitType::Knight)
+                    spawn::spawn_military_at(&mut sim.world, faction, x, y, UnitType::Knight)
                 }
-                SpawnEntityKind::Airport => spawn_airport_at(&mut sim.world, x, y),
-                SpawnEntityKind::Port => spawn_port_at(&mut sim.world, x, y),
-                SpawnEntityKind::Hangar => spawn_hangar_at(&mut sim.world, x, y),
+                SpawnEntityKind::Airport => spawn::spawn_airport_at(&mut sim.world, x, y),
+                SpawnEntityKind::Port => spawn::spawn_port_at(&mut sim.world, x, y),
+                SpawnEntityKind::Hangar => spawn::spawn_hangar_at(&mut sim.world, x, y),
             };
             set_spawn_civilian_result(response, entity.id());
         }
@@ -1232,7 +1261,49 @@ async fn apply_dispatch_effect(
             }
         }
         DispatchEffect::QueueResearch { tech } => {
-            state.sim.lock().await.research_cache_mut().queued.push_back(tech);
+            state
+                .sim
+                .lock()
+                .await
+                .research_cache_mut()
+                .queued
+                .push_back(tech);
+        }
+        DispatchEffect::DiplomacyAction {
+            source_faction,
+            target_faction,
+            kind,
+        } => {
+            let relation = state.sim.lock().await.apply_player_diplomacy_action(
+                source_faction,
+                target_faction,
+                kind,
+            );
+            match relation {
+                Some(relation) => {
+                    if let Some(result) = response
+                        .result
+                        .as_mut()
+                        .and_then(|value| value.as_object_mut())
+                    {
+                        result.insert(
+                            "relation".to_owned(),
+                            serde_json::to_value(relation)
+                                .unwrap_or_else(|_| serde_json::Value::Null),
+                        );
+                    }
+                }
+                None => {
+                    response.result = None;
+                    response.error = Some(JsonRpcError {
+                        code: crate::jsonrpc::error_code::INVALID_PARAMS,
+                        message: format!(
+                            "Invalid params: unknown or self diplomacy pair {source_faction}->{target_faction}"
+                        ),
+                        data: None,
+                    });
+                }
+            }
         }
         DispatchEffect::GodAction {
             action,
@@ -1250,16 +1321,19 @@ async fn apply_dispatch_effect(
             use civ_engine::disasters::{trigger_disaster, DisasterKind};
             use civ_engine::godtools::{
                 DisasterRequest, GodToolRequest, LifeRequest, MaterialOp, MaterialRequest,
-                SpawnHerdRequest, SpawnOrganismRequest, SpawnVisual, TerraformOp,
-                TerraformRequest,
+                SpawnHerdRequest, SpawnOrganismRequest, SpawnVisual, TerraformOp, TerraformRequest,
             };
             use civ_voxel::WorldCoord;
             let mut sim = state.sim.lock().await;
-            let world_w = sim.voxel().width() as f32;
-            let world_d = sim.voxel().depth() as f32;
+            let world_w = voxel_axis_span(sim.voxel(), |coord| coord.cx);
+            let world_d = voxel_axis_span(sim.voxel(), |coord| coord.cz);
             let wx = x.unwrap_or(0.5) * world_w;
             let wz = y.unwrap_or(0.5) * world_d;
-            let pos = WorldCoord { x: wx as i64, y: 0, z: wz as i64 };
+            let pos = WorldCoord {
+                x: wx as i64,
+                y: 0,
+                z: wz as i64,
+            };
             let mag = magnitude.unwrap_or(0.5_f32).clamp(0.0, 1.0);
             // FR-CLIENT-godbuttons: shared verb resolver. Legacy
             // smite / earthquake / plague / bless / miracle keep their
@@ -1290,7 +1364,9 @@ async fn apply_dispatch_effect(
                 "miracle" => {
                     sim.add_belief(2000);
                     let boost = civ_engine::Fixed::from_num(mag * 200.0_f32);
-                    for t in sim.state.faction_treasury.values_mut() { *t += boost; }
+                    for t in sim.state.faction_treasury.values_mut() {
+                        *t += boost;
+                    }
                 }
                 // ============ TERRAIN verbs (FR-CLIENT-godbuttons) ============
                 // The TERRAIN verbs default to `radius_voxels = 3` and
@@ -1299,7 +1375,8 @@ async fn apply_dispatch_effect(
                 // params override when supplied.
                 "terrain.add_land" => {
                     let r = radius_voxels.unwrap_or(3).max(1);
-                    let s = strength.unwrap_or((mag * civ_voxel::FIXED_SCALE as f32) as i32)
+                    let s = strength
+                        .unwrap_or((mag * civ_voxel::FIXED_SCALE as f32) as i32)
                         .max(civ_voxel::FIXED_SCALE as i32);
                     let req = GodToolRequest::Terraform(TerraformRequest {
                         op: TerraformOp::AddLand,
@@ -1312,7 +1389,8 @@ async fn apply_dispatch_effect(
                 }
                 "terrain.dig_ocean" => {
                     let r = radius_voxels.unwrap_or(3).max(1);
-                    let s = strength.unwrap_or((mag * civ_voxel::FIXED_SCALE as f32 * 3.0) as i32)
+                    let s = strength
+                        .unwrap_or((mag * civ_voxel::FIXED_SCALE as f32 * 3.0) as i32)
                         .max(civ_voxel::FIXED_SCALE as i32);
                     let req = GodToolRequest::Terraform(TerraformRequest {
                         op: TerraformOp::DigOcean,
@@ -1376,7 +1454,8 @@ async fn apply_dispatch_effect(
                 }
                 "material.pour_liquid" => {
                     let r = radius_voxels.unwrap_or(3).max(1);
-                    let layers = strength.unwrap_or((mag * civ_voxel::FIXED_SCALE as f32) as i32)
+                    let layers = strength
+                        .unwrap_or((mag * civ_voxel::FIXED_SCALE as f32) as i32)
                         .max(civ_voxel::FIXED_SCALE as i32);
                     let mat = material_id.unwrap_or(civ_voxel::material::WATER.0 as u32);
                     let dh = drop_height.unwrap_or((civ_voxel::FIXED_SCALE * 3) as i32);
@@ -1418,22 +1497,23 @@ async fn apply_dispatch_effect(
                 }
                 // ============ LIFE verbs (FR-CLIENT-godbuttons) ============
                 "life.spawn_organism" => {
-                    let id = seed_civilian_id.unwrap_or(sim.state.tick.wrapping_add(1).max(1) as u64);
+                    let id =
+                        seed_civilian_id.unwrap_or(sim.state.tick.wrapping_add(1).max(1) as u64);
                     let faction = target_faction.unwrap_or(0);
-                    let req = GodToolRequest::Life(LifeRequest::SpawnOrganism(
-                        SpawnOrganismRequest {
+                    let req =
+                        GodToolRequest::Life(LifeRequest::SpawnOrganism(SpawnOrganismRequest {
                             id,
                             faction,
                             x: x.unwrap_or(0.5).clamp(0.0, 1.0),
                             y: y.unwrap_or(0.5).clamp(0.0, 1.0),
                             visual: SpawnVisual::Humanoid,
-                        },
-                    ));
+                        }));
                     let _ = sim.apply_god_tool(req);
                 }
                 "life.spawn_herd" => {
                     let n = count.unwrap_or(5).clamp(1, 64);
-                    let id = seed_civilian_id.unwrap_or(sim.state.tick.wrapping_add(1).max(1) as u64);
+                    let id =
+                        seed_civilian_id.unwrap_or(sim.state.tick.wrapping_add(1).max(1) as u64);
                     let faction = target_faction.unwrap_or(0);
                     let req = GodToolRequest::Life(LifeRequest::SpawnHerd(SpawnHerdRequest {
                         count: n,
@@ -1526,45 +1606,27 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
         // Snapshot construction events for the just-completed tick. The events
         // are cleared at the top of `Simulation::tick()`, so we read them here
         // after `sim.tick()` has run (FR-CIV-BUILD-002).
-        let construction_events: Arc<[ProductionEvent]> = Arc::from(
-            sim.last_construction_events()
-                .to_vec()
-                .into_boxed_slice(),
-        );
+        let construction_events: Arc<[ProductionEvent]> =
+            Arc::from(sim.last_construction_events().to_vec().into_boxed_slice());
         // FR-AUDIO-wire — forward the engine's per-tick audio triggers.
         // Clients play SFX cues from this list; the replay log mirrors
         // it via the JSON-RPC `sim.snapshot.audio_events` field.
-        let audio_events: Arc<[civ_engine::SfxTrigger]> = Arc::from(
-            sim.last_tick_audio_events()
-                .to_vec()
-                .into_boxed_slice(),
-        );
+        let audio_events: Arc<[civ_engine::SfxTrigger]> =
+            Arc::from(sim.last_tick_audio_events().to_vec().into_boxed_slice());
         // governance event snapshots
         let institution_events: Arc<[InstitutionEvent]> = Arc::from(
             sim.last_tick_institution_events()
                 .to_vec()
                 .into_boxed_slice(),
         );
-        let mood_snapshots: Arc<[MoodSnapshot]> = Arc::from(
-            sim.last_tick_mood_all()
-                .to_vec()
-                .into_boxed_slice(),
-        );
-        let stratification_events: Arc<[StratificationEvent]> = Arc::from(
-            sim.last_tick_stratification()
-                .to_vec()
-                .into_boxed_slice(),
-        );
-        let cohesion_events: Arc<[CohesionEvent]> = Arc::from(
-            sim.last_tick_cohesion()
-                .to_vec()
-                .into_boxed_slice(),
-        );
-        let unrest_events: Arc<[UnrestEvent]> = Arc::from(
-            sim.last_tick_unrest()
-                .to_vec()
-                .into_boxed_slice(),
-        );
+        let mood_snapshots: Arc<[MoodSnapshot]> =
+            Arc::from(sim.last_tick_mood_all().to_vec().into_boxed_slice());
+        let stratification_events: Arc<[StratificationEvent]> =
+            Arc::from(sim.last_tick_stratification().to_vec().into_boxed_slice());
+        let cohesion_events: Arc<[CohesionEvent]> =
+            Arc::from(sim.last_tick_cohesion().to_vec().into_boxed_slice());
+        let unrest_events: Arc<[UnrestEvent]> =
+            Arc::from(sim.last_tick_unrest().to_vec().into_boxed_slice());
         Arc::new(TickBroadcast {
             tick,
             frames: Arc::from(bundle),
@@ -1776,6 +1838,7 @@ mod tests {
             Frame3d::FactionState(FactionStateFrame {
                 tick: 1,
                 factions: Vec::new(),
+                population_by_faction: Default::default(),
             }),
             Frame3d::EventFeed(EventFeedFrame {
                 tick: 1,
@@ -2153,6 +2216,7 @@ mod tests {
             Frame3d::FactionState(FactionStateFrame {
                 tick: 1,
                 factions: Vec::new(),
+                population_by_faction: Default::default(),
             }),
             Frame3d::EventFeed(EventFeedFrame {
                 tick: 1,
@@ -2195,6 +2259,7 @@ mod tests {
             Frame3d::FactionState(FactionStateFrame {
                 tick: 5,
                 factions: Vec::new(),
+                population_by_faction: Default::default(),
             }),
             Frame3d::EventFeed(EventFeedFrame {
                 tick: 5,
@@ -2334,7 +2399,7 @@ mod tests {
                 snap.tick,
                 snap.population,
                 snap.building_count,
-                snap.energy_budget.to_f64(),
+                snap.energy_budget.to_num::<f64>(),
                 snap.market_prices.clone(),
                 guard
                     .hash_chain_root()
@@ -2389,6 +2454,40 @@ mod tests {
                 .and_then(|v| v.as_u64()),
             Some(4)
         );
+    }
+
+    #[tokio::test]
+    async fn jsonrpc_diplomacy_action_mutates_live_relation_substrate() {
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(7)));
+        let (_dir, state) = test_app_state(sim.clone(), 0, 1, false);
+        let mut connection_role = None;
+        let text = handle_jsonrpc_text(
+            r#"{"jsonrpc":"2.0","id":88,"method":"sim.diplomacy_action","params":{"source_faction":0,"target_faction":1,"action":"declare_war"}}"#,
+            &state,
+            &mut connection_role,
+            test_subscription_filter(),
+        )
+        .await;
+        let value: serde_json::Value =
+            serde_json::from_str(&text).expect("sim.diplomacy_action json");
+        assert_eq!(value.get("id"), Some(&serde_json::json!(88)));
+        assert!(value.pointer("/result/relation").is_some());
+
+        let guard = sim.lock().await;
+        let event = guard
+            .diplomacy_events()
+            .last()
+            .expect("diplomacy event persisted");
+        assert_eq!(event.faction_a, 0);
+        assert_eq!(event.faction_b, 1);
+        assert_eq!(event.kind, DiplomacyKind::Conflict);
+        let relation = guard
+            .snapshot()
+            .faction_relations
+            .into_iter()
+            .find(|row| row.faction_a == 0 && row.faction_b == 1)
+            .expect("relation persisted in snapshot");
+        assert!(relation.score < 0.0);
     }
 
     #[tokio::test]

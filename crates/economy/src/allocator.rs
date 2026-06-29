@@ -541,7 +541,11 @@ mod tests {
                 price: -1,
             })
             .is_none());
-        assert_eq!(alloc.next_order_id(), 2, "rejected posts must not bump counter");
+        assert_eq!(
+            alloc.next_order_id(),
+            2,
+            "rejected posts must not bump counter"
+        );
     }
 
     #[test]

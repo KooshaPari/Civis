@@ -117,7 +117,11 @@ fn draw_world_stats_dashboard(
             ui.add_space(10.0);
             ui.label(egui::RichText::new("Market Prices").color(ACCENT));
             if world.market_prices.is_empty() {
-                ui.label(egui::RichText::new("No market pricing data yet").color(DIM).small());
+                ui.label(
+                    egui::RichText::new("No market pricing data yet")
+                        .color(DIM)
+                        .small(),
+                );
             } else {
                 egui::ScrollArea::vertical()
                     .max_height(120.0)
@@ -131,7 +135,11 @@ fn draw_world_stats_dashboard(
             ui.add_space(10.0);
             ui.label(egui::RichText::new("Factions / Cohesion").color(ACCENT));
             if world.factions.is_empty() {
-                ui.label(egui::RichText::new("No faction rows yet").color(DIM).small());
+                ui.label(
+                    egui::RichText::new("No faction rows yet")
+                        .color(DIM)
+                        .small(),
+                );
             } else {
                 let mut faction_text = String::new();
                 for faction in &world.factions {
@@ -140,7 +148,11 @@ fn draw_world_stats_dashboard(
                         faction.id, faction.name, faction.population, faction.territory_size,
                     ));
                 }
-                ui.label(egui::RichText::new(faction_text.trim_end()).small().color(DIM));
+                ui.label(
+                    egui::RichText::new(faction_text.trim_end())
+                        .small()
+                        .color(DIM),
+                );
             }
 
             ui.add_space(10.0);
@@ -199,7 +211,12 @@ fn metric_row(ui: &mut egui::Ui, label: &str, value: &str, value_color: egui::Co
     ui.horizontal(|ui| {
         ui.label(egui::RichText::new(label).color(DIM).small());
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            ui.label(egui::RichText::new(value).color(value_color).small().strong());
+            ui.label(
+                egui::RichText::new(value)
+                    .color(value_color)
+                    .small()
+                    .strong(),
+            );
         });
     });
     ui.add_space(2.0);

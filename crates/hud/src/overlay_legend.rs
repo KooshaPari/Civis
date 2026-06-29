@@ -367,10 +367,7 @@ impl LegendRegistry {
     /// Borrow the list of registered overlay ids in registration order.
     #[must_use]
     pub fn ids(&self) -> Vec<&str> {
-        self.legends
-            .iter()
-            .map(|l| l.overlay_id.as_str())
-            .collect()
+        self.legends.iter().map(|l| l.overlay_id.as_str()).collect()
     }
 
     /// `true` if a legend for the given overlay id is registered.
@@ -525,7 +522,8 @@ mod tests {
     /// the public getter.
     #[test]
     fn legend_update_units_reflects_on_getter() {
-        let mut legend = OverlayLegend::new("population", "Population", "people/km²", 0.0, 1.0, vec![]);
+        let mut legend =
+            OverlayLegend::new("population", "Population", "people/km²", 0.0, 1.0, vec![]);
         assert_eq!(legend.units(), "people/km²");
         legend.update_units("ppl/km^2");
         assert_eq!(legend.units(), "ppl/km^2");

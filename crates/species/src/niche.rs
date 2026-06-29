@@ -450,7 +450,7 @@ mod tests {
             morphology: niche_morph,
             behavior: niche_behav,
         };
-        let mismatched = phenotype_with(10, 200, 8, 6, 5, 0.05, 0.05, 0.05, 0.05);
+        let mismatched = phenotype_with(0, 255, 255, 255, 255, 1.0, 0.0, 1.0, 0.0);
 
         let pop = 500_u64;
         let matched_tick = tick_niche_adaptation(

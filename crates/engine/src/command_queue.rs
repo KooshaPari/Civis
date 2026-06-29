@@ -167,10 +167,22 @@ mod tests {
         let mut q = CommandQueue::new(10);
         assert_eq!(q.len(), 0);
 
-        q.push(Command { client_id: 1, seq: 1, kind: CommandKind::Pause, tick_issued: 0 }).unwrap();
+        q.push(Command {
+            client_id: 1,
+            seq: 1,
+            kind: CommandKind::Pause,
+            tick_issued: 0,
+        })
+        .unwrap();
         assert_eq!(q.len(), 1);
 
-        q.push(Command { client_id: 2, seq: 2, kind: CommandKind::Resume, tick_issued: 0 }).unwrap();
+        q.push(Command {
+            client_id: 2,
+            seq: 2,
+            kind: CommandKind::Resume,
+            tick_issued: 0,
+        })
+        .unwrap();
         assert_eq!(q.len(), 2);
 
         q.pop();

@@ -104,7 +104,7 @@ fn simulation_snapshot_to_dict(snapshot: &SimulationSnapshot) -> VarDictionary {
     dict.set("military_count", snapshot.military_count as i64);
     dict.set(
         "energy_budget",
-        snapshot.energy_budget.to_f64() as f32,
+        snapshot.energy_budget.to_num::<f32>(),
     );
     dict.set("births_this_tick", snapshot.births_this_tick as i64);
     dict.set("deaths_this_tick", snapshot.deaths_this_tick as i64);

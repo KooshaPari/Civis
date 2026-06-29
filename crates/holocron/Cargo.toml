@@ -1,5 +1,5 @@
 [package]
-name = "holocron"
+name = "civ-holocron"
 version = "0.1.0"
 edition = "2021"
 description = "Holocron Keycap UI — verb registry, command palette, context-aware verb ranking for godgame"

@@ -363,13 +363,12 @@ impl GodToolRegistry {
     #[must_use]
     pub fn default_rim() -> Self {
         Self::new([
-            GodToolDef::new(GodToolId::None, "None", "·")
-                .with_param(GodToolParamSpec::new(
-                    "armed",
-                    "Armed",
-                    GodToolParamKind::Bool,
-                    GodToolParamValue::Bool(false),
-                )),
+            GodToolDef::new(GodToolId::None, "None", "·").with_param(GodToolParamSpec::new(
+                "armed",
+                "Armed",
+                GodToolParamKind::Bool,
+                GodToolParamValue::Bool(false),
+            )),
             GodToolDef::new(GodToolId::Select, "Select", "Q").with_param(GodToolParamSpec::new(
                 "inspect_kind",
                 "Inspect kind",
@@ -555,6 +554,9 @@ impl GodToolState {
     /// is not in the registry.
     #[must_use]
     pub fn current_def<'a>(&self, registry: &'a GodToolRegistry) -> Option<&'a GodToolDef> {
+        if self.current == GodToolId::None {
+            return None;
+        }
         registry.get(&self.current)
     }
 
@@ -577,6 +579,9 @@ impl GodToolState {
         &'a self,
         registry: &'a GodToolRegistry,
     ) -> Vec<(&'a GodToolParamSpec, &'a GodToolParamValue)> {
+        if self.current == GodToolId::None {
+            return Vec::new();
+        }
         let Some(def) = registry.get(&self.current) else {
             return Vec::new();
         };
@@ -601,6 +606,9 @@ impl GodToolState {
         &self,
         registry: &GodToolRegistry,
     ) -> Vec<(GodToolParamSpec, GodToolParamValue)> {
+        if self.current == GodToolId::None {
+            return Vec::new();
+        }
         let Some(def) = registry.get(&self.current) else {
             return Vec::new();
         };
@@ -688,12 +696,12 @@ impl GodToolState {
     /// Read a single parameter on `id`. Returns `None` if the tool
     /// or the param is unknown.
     #[must_use]
-    pub fn param(
-        &self,
-        registry: &GodToolRegistry,
+    pub fn param<'a>(
+        &'a self,
+        registry: &'a GodToolRegistry,
         id: &GodToolId,
         name: &str,
-    ) -> Option<&GodToolParamValue> {
+    ) -> Option<&'a GodToolParamValue> {
         let def = registry.get(id)?;
         let spec = def.params.iter().find(|s| s.name == name)?;
         if let Some(map) = self.params.get(id) {
@@ -809,7 +817,10 @@ mod tests {
         // continuous. They are the spec defaults — not Raise's.
         let swapped = state.current_params(&reg);
         let names: Vec<&str> = swapped.iter().map(|(s, _)| s.name.as_str()).collect();
-        assert_eq!(names, vec!["material", "radius", "drop_height", "continuous"]);
+        assert_eq!(
+            names,
+            vec!["material", "radius", "drop_height", "continuous"]
+        );
         // The new current has its own `radius` default (2.0), NOT
         // Raise's edited 9.5.
         assert!(matches!(
@@ -868,12 +879,7 @@ mod tests {
             GodToolParamValue::Float(1.0),
         ));
         // Kind mismatch: `radius` is Float, not Int.
-        assert!(!state.set_param(
-            &reg,
-            &GodToolId::Raise,
-            "radius",
-            GodToolParamValue::Int(7),
-        ));
+        assert!(!state.set_param(&reg, &GodToolId::Raise, "radius", GodToolParamValue::Int(7),));
         // Kind mismatch: `mode` is Enum, not Text.
         assert!(!state.set_param(
             &reg,

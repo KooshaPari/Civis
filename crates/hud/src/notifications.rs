@@ -228,7 +228,7 @@ impl NotificationQueue {
     }
 
     /// Iterate notifications in oldest-first order.
-    pub fn iter(&self) -> impl Iterator<Item = &Notification> {
+    pub fn iter(&self) -> impl Iterator<Item = Notification> {
         self.snapshot().into_iter()
     }
 

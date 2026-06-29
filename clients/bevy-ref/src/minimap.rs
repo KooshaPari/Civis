@@ -4,14 +4,13 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages};
 use bevy::ui::widget::ImageNode;
 use bevy::ui::{FocusPolicy, RelativeCursorPosition};
-use civ_agents::{Civilian as AgentCivilian, Alignment};
+use civ_agents::{Alignment, Civilian as AgentCivilian};
 use civ_engine::Building;
 
 use crate::camera::CameraRig;
-use crate::settings_ui::GameSettings;
 use crate::sim_bridge::SimState;
+use crate::spawn_tools::{select_action_binding, GameSettings};
 use crate::terrain::WORLD_SIZE;
-use crate::spawn_tools::select_action_binding;
 use crate::AttachMode;
 
 /// Minimap side length in UI pixels.

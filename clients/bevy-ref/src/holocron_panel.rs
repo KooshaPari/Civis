@@ -5,17 +5,17 @@
 //! * **CommandKOverlay** — full‑screen Spotlight‑style overlay, fuzzy token‑substring
 //!   search, <200 ms keystroke‑to‑fire, Esc dismisses.
 //!
-//! Both consume `holocron::VerbRegistry` (Phase 1 substrate) through a
+//! Both consume `civ_holocron::VerbRegistry` (Phase 1 substrate) through a
 //! `HolocronState` resource so the registry is available in every frame without
 //! re‑building.
 //!
 //! Refs: FR‑HOLOCRON‑keycap, FR‑UX‑discoverability, ADR‑012, ADR‑009.
 
 use bevy::prelude::*;
-use holocron::descriptor::VerbDescriptor;
-use holocron::group::VerbGroup;
-use holocron::registry::VerbRegistry;
-use holocron::risk::RiskTier;
+use bevy_egui::{egui, EguiContexts};
+use civ_holocron::descriptor::VerbDescriptor;
+use civ_holocron::registry::VerbRegistry;
+use civ_holocron::risk::RiskTier;
 
 // ---------------------------------------------------------------------------
 // Resource — shared Holocron state kept across frames
@@ -68,8 +68,8 @@ impl Plugin for HolocronPanelPlugin {
 /// Splits both into lowercase words; every word in `query` must appear as a
 /// substring of some word in `candidate`.
 fn fuzzy_match(query: &str, candidate: &str) -> bool {
-    let q_words: Vec<&str> = query
-        .to_lowercase()
+    let q_lower = query.to_lowercase();
+    let q_words: Vec<&str> = q_lower
         .split_whitespace()
         .filter(|w| !w.is_empty())
         .collect();
@@ -82,28 +82,28 @@ fn fuzzy_match(query: &str, candidate: &str) -> bool {
 
 /// Collect verbs that fuzzy‑match `filter`. Also checks `aliases` and
 /// `description`.
-fn matched_verbs<'a>(
-    registry: &'a VerbRegistry,
-    filter: &str,
-) -> Vec<&'a VerbDescriptor> {
-    let mut out: Vec<&'a VerbDescriptor> = registry
+fn matched_verbs(registry: &VerbRegistry, filter: &str) -> Vec<VerbDescriptor> {
+    let mut out: Vec<VerbDescriptor> = registry
         .iter()
+        .map(|(_, d)| d)
         .filter(|d| {
             fuzzy_match(filter, &d.name)
-                || fuzzy_match(filter, &d.description)
+                || fuzzy_match(filter, &d.summary)
                 || d.aliases.iter().any(|a| fuzzy_match(filter, a))
         })
+        .cloned()
         .collect();
-    out.sort_by_key(|d| &d.name);
+    out.sort_by(|a, b| a.name.cmp(&b.name));
     out
 }
 
 /// Human‑readable label for a risk tier.
 fn risk_label(tier: RiskTier) -> &'static str {
     match tier {
-        RiskTier::Safe => "Safe",
-        RiskTier::Caution => "⚠ Caution",
-        RiskTier::Destructive => "☠ Destructive",
+        RiskTier::ReadOnly => "Read Only",
+        RiskTier::Minor => "Minor",
+        RiskTier::Major => "Major",
+        RiskTier::Critical => "Critical",
     }
 }
 
@@ -112,17 +112,13 @@ fn risk_label(tier: RiskTier) -> &'static str {
 // ---------------------------------------------------------------------------
 
 /// Draw the Command‑K overlay as an egui `Window` centered on screen.
-fn draw_holocron_overlay(
-    mut state: ResMut<HolocronState>,
-    egui_ctx: Query<&bevy_egui::EguiContext>,
-) {
+fn draw_holocron_overlay(mut state: ResMut<HolocronState>, mut contexts: EguiContexts) {
     if !state.overlay_visible {
         return;
     }
-    let Ok(ctx) = egui_ctx.get_single() else {
+    let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-    let ctx = ctx.ctx();
 
     let filtered = matched_verbs(&state.registry, &state.filter);
     // Clamp cursor.
@@ -137,10 +133,8 @@ fn draw_holocron_overlay(
             let avail = ui.available_size();
             let panel_w = (avail.x * 0.55).min(640.0).max(300.0);
             let panel_h = (avail.y * 0.60).min(480.0).max(200.0);
-            let (rect, _response) = ui.allocate_exact_size(
-                egui::vec2(panel_w, panel_h),
-                egui::Sense::hover(),
-            );
+            let (rect, _response) =
+                ui.allocate_exact_size(egui::vec2(panel_w, panel_h), egui::Sense::hover());
             //  Center the alloc rect
             let base = ui.min_rect().min;
             let dx = (avail.x - panel_w) * 0.5 - base.x;
@@ -148,57 +142,53 @@ fn draw_holocron_overlay(
             egui::Area::new(egui::Id::new("cmdk-overlay"))
                 .fixed_pos(egui::pos2(rect.min.x + dx, rect.min.y + dy))
                 .show(ctx, |ui| {
-                    egui::Frame::window(&egui::style::FrameStyle {
-                        fill: egui::Color32::from_rgb(22, 22, 30),
-                        ..Default::default()
-                    })
-                    .show(ui, |ui| {
-                        ui.set_max_width(panel_w);
-                        ui.set_max_height(panel_h);
+                    egui::Frame::NONE
+                        .fill(egui::Color32::from_rgb(22, 22, 30))
+                        .show(ui, |ui| {
+                            ui.set_max_width(panel_w);
+                            ui.set_max_height(panel_h);
 
-                        // ── Search bar ──
-                        let search_resp = ui.add(
-                            egui::TextEdit::singleline(&mut state.filter)
-                                .hint_text("Search verbs… (fire with Enter, Esc to dismiss)")
-                                .desired_width(f32::INFINITY)
-                                .font(egui::TextStyle::Heading),
-                        );
-                        search_resp.request_focus();
+                            // ── Search bar ──
+                            let search_resp = ui.add(
+                                egui::TextEdit::singleline(&mut state.filter)
+                                    .hint_text("Search verbs… (fire with Enter, Esc to dismiss)")
+                                    .desired_width(f32::INFINITY)
+                                    .font(egui::TextStyle::Heading),
+                            );
+                            search_resp.request_focus();
 
-                        // ── Results ──
-                        ui.separator();
-                        egui::ScrollArea::vertical()
-                            .max_height(panel_h - 60.0)
-                            .show(ui, |ui| {
-                                if filtered.is_empty() {
-                                    ui.label(
-                                        egui::RichText::new("No verbs match the filter.")
-                                            .color(egui::Color32::GRAY),
-                                    );
-                                    return;
-                                }
-                                for (i, verb) in filtered.iter().enumerate() {
-                                    let selected = i == state.cursor;
-                                    let bg = if selected {
-                                        egui::Color32::from_rgb(40, 60, 120)
-                                    } else {
-                                        egui::Color32::TRANSPARENT
-                                    };
+                            // ── Results ──
+                            ui.separator();
+                            egui::ScrollArea::vertical()
+                                .max_height(panel_h - 60.0)
+                                .show(ui, |ui| {
+                                    if filtered.is_empty() {
+                                        ui.label(
+                                            egui::RichText::new("No verbs match the filter.")
+                                                .color(egui::Color32::GRAY),
+                                        );
+                                        return;
+                                    }
+                                    for (i, verb) in filtered.iter().enumerate() {
+                                        let selected = i == state.cursor;
+                                        let bg = if selected {
+                                            egui::Color32::from_rgb(40, 60, 120)
+                                        } else {
+                                            egui::Color32::TRANSPARENT
+                                        };
 
-                                    egui::Frame::none()
-                                        .fill(bg)
-                                        .show(ui, |ui| {
+                                        egui::Frame::none().fill(bg).show(ui, |ui| {
                                             ui.horizontal(|ui| {
                                                 // Risk badge
-                                                let badge = risk_label(verb.risk_tier);
-                                                let badge_col = match verb.risk_tier {
-                                                    RiskTier::Safe => {
+                                                let badge = risk_label(verb.risk);
+                                                let badge_col = match verb.risk {
+                                                    RiskTier::ReadOnly | RiskTier::Minor => {
                                                         egui::Color32::from_rgb(80, 160, 80)
                                                     }
-                                                    RiskTier::Caution => {
+                                                    RiskTier::Major => {
                                                         egui::Color32::from_rgb(200, 160, 40)
                                                     }
-                                                    RiskTier::Destructive => {
+                                                    RiskTier::Critical => {
                                                         egui::Color32::from_rgb(200, 60, 60)
                                                     }
                                                 };
@@ -212,29 +202,16 @@ fn draw_holocron_overlay(
                                                         egui::Align::Center,
                                                     ),
                                                     |ui| {
-                                                        // Hotkey hint
-                                                        if let Some(hk) = &verb.hotkey {
-                                                            ui.label(
-                                                                egui::RichText::new(format!("[{}]", hk))
-                                                                    .color(egui::Color32::GRAY)
-                                                                    .text_style(
-                                                                        egui::TextStyle::Monospace,
-                                                                    ),
-                                                            );
-                                                        }
                                                         // Provenance badge
                                                         let prov = verb.provenance.label();
-                                                        ui.colored_label(
-                                                            egui::Color32::GRAY,
-                                                            prov,
-                                                        );
+                                                        ui.colored_label(egui::Color32::GRAY, prov);
                                                     },
                                                 );
                                             });
                                         });
-                                }
-                            });
-                    });
+                                    }
+                                });
+                        });
                 });
         });
 
@@ -250,7 +227,7 @@ fn draw_holocron_overlay(
     }
     // Enter fires the selected verb.
     if input.key_pressed(egui::Key::Enter) && !filtered.is_empty() {
-        let verb = filtered[state.cursor.min(filtered.len() - 1)];
+        let verb = &filtered[state.cursor.min(filtered.len() - 1)];
         // TODO: dispatch `sim.god_action` via the existing JSON‑RPC path
         info!("Holocron fire: {} (id={})", verb.name, verb.id);
         state.overlay_visible = false;

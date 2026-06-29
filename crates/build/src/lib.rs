@@ -15,7 +15,7 @@ pub mod tiers;
 // Public re-exports from `tiers` so the test crate can `use civ_build::*`
 // without diving into the submodule path.
 pub use tiers::{
-    BuildingSpec, BuildingSpecOverride, BuildingSpecOverrideError, BuildingTier, BuildSite,
+    BuildSite, BuildingSpec, BuildingSpecOverride, BuildingSpecOverrideError, BuildingTier,
     CompletedBuilding, ProductionChain, ProductionEvent,
 };
 

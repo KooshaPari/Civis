@@ -603,11 +603,7 @@ impl KeyBinding {
     }
 
     #[inline]
-    pub fn is_pressed(
-        self,
-        keys: &ButtonInput<KeyCode>,
-        mouse: &ButtonInput<MouseButton>,
-    ) -> bool {
+    pub fn is_pressed(self, keys: &ButtonInput<KeyCode>, mouse: &ButtonInput<MouseButton>) -> bool {
         match self {
             Self::Key(key) => keys.pressed(key),
             Self::Mouse(button) => mouse.pressed(button),
@@ -812,19 +808,10 @@ fn default_keybinds() -> Vec<Keybind> {
         Keybind::new(ACTION_SPEED_2X, KeyBinding::Key(KeyCode::Digit2)),
         Keybind::new(ACTION_SPEED_5X, KeyBinding::Key(KeyCode::Digit3)),
         Keybind::new(ACTION_SPEED_10X, KeyBinding::Key(KeyCode::Digit4)),
-        Keybind::new(
-            ACTION_CAMERA_MOVE_FORWARD,
-            KeyBinding::Key(KeyCode::KeyW),
-        ),
-        Keybind::new(
-            ACTION_CAMERA_MOVE_BACKWARD,
-            KeyBinding::Key(KeyCode::KeyS),
-        ),
+        Keybind::new(ACTION_CAMERA_MOVE_FORWARD, KeyBinding::Key(KeyCode::KeyW)),
+        Keybind::new(ACTION_CAMERA_MOVE_BACKWARD, KeyBinding::Key(KeyCode::KeyS)),
         Keybind::new(ACTION_CAMERA_MOVE_LEFT, KeyBinding::Key(KeyCode::KeyA)),
-        Keybind::new(
-            ACTION_CAMERA_MOVE_RIGHT,
-            KeyBinding::Key(KeyCode::KeyD),
-        ),
+        Keybind::new(ACTION_CAMERA_MOVE_RIGHT, KeyBinding::Key(KeyCode::KeyD)),
         Keybind::new(ACTION_CAMERA_RAISE, KeyBinding::Key(KeyCode::Space)),
         Keybind::new(ACTION_CAMERA_LOWER, KeyBinding::Key(KeyCode::ShiftLeft)),
         Keybind::new(ACTION_CAMERA_ROTATE, KeyBinding::Mouse(MouseButton::Right)),
@@ -1409,7 +1396,11 @@ fn controls_tab(
             }
         });
     ui.add_space(4.0);
-    ui.label(egui::RichText::new("Configured controls update instantly from the game settings.").color(ui_theme::DIM).small());
+    ui.label(
+        egui::RichText::new("Configured controls update instantly from the game settings.")
+            .color(ui_theme::DIM)
+            .small(),
+    );
     changed
 }
 
@@ -1563,7 +1554,9 @@ fn gameplay_tab(ui: &mut egui::Ui, p: &mut GameplaySettings) -> bool {
             let label = format!("{}x", spd);
             let active = (p.default_sim_speed - spd as f32).abs() < 0.01;
             let btn = if active {
-                ui.add(egui::Button::new(egui::RichText::new(&label).color(ui_theme::ACCENT)))
+                ui.add(egui::Button::new(
+                    egui::RichText::new(&label).color(ui_theme::ACCENT),
+                ))
             } else {
                 ui.button(&label)
             };
@@ -1583,7 +1576,9 @@ fn sync_audio_settings(
     ambient: Option<Res<AudioChannel<crate::audio::AmbientChannel>>>,
     sfx_ch: Option<Res<AudioChannel<crate::audio::SfxChannel>>>,
 ) {
-    if !settings.is_changed() { return; }
+    if !settings.is_changed() {
+        return;
+    }
     if let Some(amb) = ambient {
         let vol = (settings.audio.master * settings.audio.music) as f64;
         amb.set_volume(vol);

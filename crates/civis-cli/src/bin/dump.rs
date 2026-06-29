@@ -102,8 +102,8 @@ fn run(cli: Cli) -> Result<(), DumpError> {
                 count_delta,
             };
             let label = baseline.to_string_lossy().into_owned();
-            let report = compare_to_baseline(&actual_dump, &baseline_dump, &tolerance)
-                .with_baseline(label);
+            let report =
+                compare_to_baseline(&actual_dump, &baseline_dump, &tolerance).with_baseline(label);
             emit_report(&report)
         }
         Command::Extract { input } => {

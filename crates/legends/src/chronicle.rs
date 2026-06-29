@@ -288,7 +288,14 @@ mod tests {
         let r_b = region(20);
         let p_x = cluster(100);
 
-        c.record(0, Epoch(0), ChronicleEventKind::Birth, None, None, parts(&[1]));
+        c.record(
+            0,
+            Epoch(0),
+            ChronicleEventKind::Birth,
+            None,
+            None,
+            parts(&[1]),
+        );
         c.record(
             5,
             Epoch(0),
@@ -325,7 +332,11 @@ mod tests {
         // 1) Appending preserves order: ids are monotonic and the
         //    tick/seq in `entries` matches the call order.
         let ids: Vec<u64> = c.all().iter().map(|e| e.id.0).collect();
-        assert_eq!(ids, vec![0, 1, 2, 3, 4], "append-order ids must be monotonic");
+        assert_eq!(
+            ids,
+            vec![0, 1, 2, 3, 4],
+            "append-order ids must be monotonic"
+        );
         for window in c.all().windows(2) {
             assert!(
                 window[0].tick <= window[1].tick,
@@ -390,13 +401,43 @@ mod tests {
         let mut a = Chronicle::new();
         let mut b = Chronicle::new();
 
-        let stream: Vec<(u64, ChronicleEventKind, Option<RegionId>, Option<ClusterId>, Vec<u64>)> = vec![
+        let stream: Vec<(
+            u64,
+            ChronicleEventKind,
+            Option<RegionId>,
+            Option<ClusterId>,
+            Vec<u64>,
+        )> = vec![
             (0, ChronicleEventKind::Birth, None, None, vec![7]),
-            (3, ChronicleEventKind::Migration, Some(region(1)), None, vec![7, 8]),
-            (4, ChronicleEventKind::Founding, Some(region(2)), Some(cluster(5)), vec![9]),
-            (10, ChronicleEventKind::Conflict, Some(region(1)), Some(cluster(5)), vec![7, 9]),
+            (
+                3,
+                ChronicleEventKind::Migration,
+                Some(region(1)),
+                None,
+                vec![7, 8],
+            ),
+            (
+                4,
+                ChronicleEventKind::Founding,
+                Some(region(2)),
+                Some(cluster(5)),
+                vec![9],
+            ),
+            (
+                10,
+                ChronicleEventKind::Conflict,
+                Some(region(1)),
+                Some(cluster(5)),
+                vec![7, 9],
+            ),
             (15, ChronicleEventKind::FirstContact, None, None, vec![8, 9]),
-            (22, ChronicleEventKind::Death, Some(region(2)), Some(cluster(5)), vec![8]),
+            (
+                22,
+                ChronicleEventKind::Death,
+                Some(region(2)),
+                Some(cluster(5)),
+                vec![8],
+            ),
             (30, ChronicleEventKind::Birth, None, None, vec![10]),
         ];
 
@@ -407,7 +448,10 @@ mod tests {
         }
 
         // Structural equality: every field, in order.
-        assert_eq!(a.entries, b.entries, "same input stream must yield equal chronicles");
+        assert_eq!(
+            a.entries, b.entries,
+            "same input stream must yield equal chronicles"
+        );
         assert_eq!(a.next_id, b.next_id);
 
         // And every query result must agree.
@@ -438,7 +482,10 @@ mod tests {
         // same run must reproduce the same chronicle bytes).
         let json_a = serde_json::to_string(&a).expect("serialize a");
         let json_b = serde_json::to_string(&b).expect("serialize b");
-        assert_eq!(json_a, json_b, "serialized form must be identical for same input");
+        assert_eq!(
+            json_a, json_b,
+            "serialized form must be identical for same input"
+        );
     }
 
     /// Sanity: `from_entries` honors the monotonic-id contract and a
@@ -446,7 +493,14 @@ mod tests {
     #[test]
     fn from_entries_round_trips_and_preserves_order() {
         let mut live = Chronicle::new();
-        live.record(0, Epoch(0), ChronicleEventKind::Birth, None, None, parts(&[1]));
+        live.record(
+            0,
+            Epoch(0),
+            ChronicleEventKind::Birth,
+            None,
+            None,
+            parts(&[1]),
+        );
         live.record(
             5,
             Epoch(1),

@@ -161,6 +161,37 @@ pub fn phenotypes_diverged(
 mod tests {
     use super::*;
 
+    fn phenotype_distance(pheno_a: &Phenotype, pheno_b: &Phenotype) -> f32 {
+        let morph_dist = {
+            let dh = (f32::from(pheno_a.morphology.height_cm)
+                - f32::from(pheno_b.morphology.height_cm))
+                / 255.0;
+            let dc = (f32::from(pheno_a.morphology.body_color_hue)
+                - f32::from(pheno_b.morphology.body_color_hue))
+                / 255.0;
+            let dl = (f32::from(pheno_a.morphology.leg_count)
+                - f32::from(pheno_b.morphology.leg_count))
+                / 255.0;
+            let da = (f32::from(pheno_a.morphology.arm_count)
+                - f32::from(pheno_b.morphology.arm_count))
+                / 255.0;
+            let de = (f32::from(pheno_a.morphology.eye_count)
+                - f32::from(pheno_b.morphology.eye_count))
+                / 255.0;
+            dh * dh + dc * dc + dl * dl + da * da + de * de
+        };
+
+        let behav_dist = {
+            let dag = pheno_a.behavior.aggression - pheno_b.behavior.aggression;
+            let dc = pheno_a.behavior.curiosity - pheno_b.behavior.curiosity;
+            let ds = pheno_a.behavior.sociability - pheno_b.behavior.sociability;
+            let di = pheno_a.behavior.intelligence - pheno_b.behavior.intelligence;
+            dag * dag + dc * dc + ds * ds + di * di
+        };
+
+        (morph_dist + behav_dist).sqrt()
+    }
+
     /// Covers FR-CIV-SPECIES-000 — exposes a semver-like schema version stub.
     #[test]
     fn schema_version_stub() {
@@ -625,18 +656,13 @@ mod tests {
             "mixed offspring aggression should be intermediate"
         );
 
-        // The mixed phenotype may or may not trigger subspeciation,
-        // depending on its distance to the parents. The point is that
-        // it sits in the middle, not at the extreme.
-        let threshold = 0.5;
-        let diverged_from_a = phenotypes_diverged(&mixed_pheno, &pheno_a, threshold);
-        let diverged_from_b = phenotypes_diverged(&mixed_pheno, &pheno_b, threshold);
+        let parent_distance = phenotype_distance(&pheno_a, &pheno_b);
+        let mixed_distance_from_a = phenotype_distance(&mixed_pheno, &pheno_a);
+        let mixed_distance_from_b = phenotype_distance(&mixed_pheno, &pheno_b);
 
-        // At least one of these should be false (the mixed phenotype is
-        // closer to at least one parent than a highly diverged phenotype would be).
         assert!(
-            !diverged_from_a || !diverged_from_b,
-            "mixed phenotype should be closer to at least one parent"
+            mixed_distance_from_a < parent_distance && mixed_distance_from_b < parent_distance,
+            "mixed phenotype should be closer to both parents than the parents are to each other"
         );
     }
 }

@@ -14,7 +14,54 @@
 //! panel.render();
 //! ```
 
-use crate::rank::{EraKind, FactionStance, SimSnapshot};
+/// Dominant high-level era signal used by Holocron ranking boosts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum EraKind {
+    /// No dominant era is known.
+    #[default]
+    Unknown,
+    /// Peaceful / growth-oriented period.
+    Peace,
+    /// Active conflict or military pressure.
+    Conflict,
+    /// Trade and exchange pressure dominates.
+    Trade,
+}
+
+/// Coarse relation stance between two factions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum FactionStance {
+    /// No strong relation signal.
+    #[default]
+    Neutral,
+    /// Cooperative stance.
+    Allied,
+    /// Trade-oriented stance.
+    Trading,
+    /// Hostile but not actively at war.
+    Hostile,
+    /// Active war.
+    AtWar,
+}
+
+/// Holocron-facing summary of live sim state.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SimSnapshot {
+    /// Current sim tick.
+    pub tick: u64,
+    /// Number of active disasters.
+    pub active_disasters: u32,
+    /// Dominant era signal.
+    pub dominant_era: EraKind,
+    /// Pairwise faction stances.
+    pub faction_relations: Vec<(u32, u32, FactionStance)>,
+    /// Living population.
+    pub population: u32,
+    /// Market stress in `[0, 1]`.
+    pub market_stress: f32,
+    /// Culture drift in `[0, 1]`.
+    pub culture_drift: f32,
+}
 
 /// Source of sim-state scalars that holocron consumes for ranking.
 ///
@@ -37,9 +84,13 @@ pub trait SimSnapshotSource {
     /// Total living population. 0 if unknown.
     fn population(&self) -> u32;
     /// Market stress [0..1]. 0 if unknown.
-    fn market_stress(&self) -> f32;
+    fn market_stress(&self) -> f32 {
+        0.0
+    }
     /// Culture drift [0..1]. 0 if unknown.
-    fn culture_drift(&self) -> f32;
+    fn culture_drift(&self) -> f32 {
+        0.0
+    }
 }
 
 /// Build a `SimSnapshot` from any source.

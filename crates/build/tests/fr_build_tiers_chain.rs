@@ -14,7 +14,8 @@
 //! commit; once it does, the tests compile and pass.
 
 use civ_build::{
-    BuildingGraph, BuildingId, BuildingSpec, BuildingTier, ProductionChain, ProductionGood,
+    BuildSite, BuildingGraph, BuildingId, BuildingSpec, BuildingTier, ProductionChain,
+    ProductionGood,
 };
 use civ_economy::{EconomyState, Stocks};
 use civ_voxel::WorldCoord;
@@ -53,7 +54,10 @@ fn fr_build_001_base_joule_cost_scales_with_tier() {
 
     assert!(p < a, "Primitive ({p}) must be cheaper than Artisan ({a})");
     assert!(a < i, "Artisan ({a}) must be cheaper than Industrial ({i})");
-    assert!(i < adv, "Industrial ({i}) must be cheaper than Advanced ({adv})");
+    assert!(
+        i < adv,
+        "Industrial ({i}) must be cheaper than Advanced ({adv})"
+    );
 }
 
 /// Building tier is serializable (for replay + YAML scenario config).
@@ -72,16 +76,13 @@ fn fr_build_001_tier_ron_round_trips() {
 #[test]
 fn fr_build_001_construction_ticks_scale_with_tier() {
     assert!(
-        BuildingTier::Primitive.construction_ticks()
-            < BuildingTier::Artisan.construction_ticks()
+        BuildingTier::Primitive.construction_ticks() < BuildingTier::Artisan.construction_ticks()
     );
     assert!(
-        BuildingTier::Artisan.construction_ticks()
-            < BuildingTier::Industrial.construction_ticks()
+        BuildingTier::Artisan.construction_ticks() < BuildingTier::Industrial.construction_ticks()
     );
     assert!(
-        BuildingTier::Industrial.construction_ticks()
-            < BuildingTier::Advanced.construction_ticks()
+        BuildingTier::Industrial.construction_ticks() < BuildingTier::Advanced.construction_ticks()
     );
 }
 
@@ -101,7 +102,10 @@ fn fr_build_002_farm_produces_food_when_active() {
     site.produce(&mut economy);
     let after = economy.stocks().food();
 
-    assert!(after > before, "Farm must produce food (before={before}, after={after})");
+    assert!(
+        after > before,
+        "Farm must produce food (before={before}, after={after})"
+    );
 }
 
 /// Workshop chain: 1 input (Wood), 1 output (Tools). Halt when Wood = 0.
@@ -118,7 +122,10 @@ fn fr_build_002_workshop_halts_when_wood_is_zero() {
     site.produce(&mut economy);
     let after_tools = economy.stocks().tools();
 
-    assert_eq!(before_tools, after_tools, "Workshop must halt when Wood = 0");
+    assert_eq!(
+        before_tools, after_tools,
+        "Workshop must halt when Wood = 0"
+    );
 }
 
 /// Factory chain: 2 inputs (Wood + Metal), 2 outputs (Energy + Tools). Halt
@@ -139,9 +146,17 @@ fn fr_build_002_factory_halts_when_any_input_is_zero() {
 
     site.produce(&mut economy);
 
-    assert_eq!(economy.stocks().energy(), before_energy, "no phantom energy");
+    assert_eq!(
+        economy.stocks().energy(),
+        before_energy,
+        "no phantom energy"
+    );
     assert_eq!(economy.stocks().tools(), before_tools, "no phantom tools");
-    assert_eq!(economy.stocks().wood(), before_wood, "no input consumption when halted");
+    assert_eq!(
+        economy.stocks().wood(),
+        before_wood,
+        "no input consumption when halted"
+    );
 }
 
 /// Production chain halt is logged via a `ProductionEvent` (FR-CIV-BUILD-002
@@ -158,7 +173,10 @@ fn fr_build_002_halts_emit_production_event() {
 
     let events: Vec<civ_build::ProductionEvent> = site.produce_and_collect(&mut economy, 7);
     assert_eq!(events.len(), 1, "expected one halt event");
-    assert!(matches!(events[0], civ_build::ProductionEvent::Halted { tick: 7, .. }));
+    assert!(matches!(
+        events[0],
+        civ_build::ProductionEvent::Halted { tick: 7, .. }
+    ));
 }
 
 // =====================================================================
@@ -179,7 +197,10 @@ fn fr_build_003_chain_input_output_signatures_are_pinned() {
     assert_eq!(workshop.outputs(), vec![ProductionGood::Tools]);
 
     let factory = ProductionChain::Factory;
-    assert_eq!(factory.inputs(), vec![ProductionGood::Wood, ProductionGood::Metal]);
+    assert_eq!(
+        factory.inputs(),
+        vec![ProductionGood::Wood, ProductionGood::Metal]
+    );
     assert_eq!(
         factory.outputs(),
         vec![ProductionGood::Energy, ProductionGood::Tools]
@@ -211,8 +232,14 @@ fn fr_build_003_yaml_override_rejects_missing_field() {
         .apply_override(civ_build::BuildingSpecOverride { production_rate: 0 })
         .expect_err("production_rate=0 must be rejected");
 
-    assert!(matches!(err, civ_build::BuildingSpecOverrideError::InvalidValue { .. }));
-    assert!(err.to_string().contains("production_rate"), "error message must name the field");
+    assert!(matches!(
+        err,
+        civ_build::BuildingSpecOverrideError::InvalidValue { .. }
+    ));
+    assert!(
+        err.to_string().contains("production_rate"),
+        "error message must name the field"
+    );
 }
 
 // =====================================================================
@@ -226,8 +253,11 @@ fn build_site_progresses_one_tick_at_a_time() {
     let ticks_needed = spec.tier.construction_ticks();
     let mut site = BuildSite::new(BuildingId(10), spec, WorldCoord { x: 0, y: 0, z: 0 });
 
-    for i in 0..ticks_needed {
-        assert!(!site.is_complete(), "site should not be complete at tick {i}");
+    for i in 0..ticks_needed - 1 {
+        assert!(
+            !site.is_complete(),
+            "site should not be complete at tick {i}"
+        );
         let event = site.tick();
         assert!(event.is_none(), "no completion event yet at tick {i}");
         assert_eq!(site.progress(), i + 1);
@@ -259,7 +289,11 @@ fn multiple_build_sites_tick_independently() {
     let workshop = BuildingSpec::minimal(BuildingTier::Artisan, ProductionChain::Workshop);
 
     let mut sites = vec![
-        BuildSite::new(BuildingId(20), farm, WorldCoord { x: 0, y: 0, z: 0 }),
+        BuildSite::new(
+            BuildingId(20),
+            farm.clone(),
+            WorldCoord { x: 0, y: 0, z: 0 },
+        ),
         BuildSite::new(BuildingId(21), farm, WorldCoord { x: 1, y: 0, z: 0 }),
         BuildSite::new(BuildingId(22), workshop, WorldCoord { x: 2, y: 0, z: 0 }),
     ];

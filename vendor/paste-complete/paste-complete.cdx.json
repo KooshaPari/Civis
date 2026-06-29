@@ -1,0 +1,68 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.3",
+  "version": 1,
+  "serialNumber": "urn:uuid:e9732679-d4d4-425d-a310-ef5aa4bb0175",
+  "metadata": {
+    "timestamp": "2026-06-28T19:25:45.360302000Z",
+    "tools": [
+      {
+        "vendor": "CycloneDX",
+        "name": "cargo-cyclonedx",
+        "version": "0.5.9"
+      }
+    ],
+    "authors": [
+      {
+        "name": "Aditya Kumar",
+        "email": "git@adityais.dev"
+      },
+      {
+        "name": "David Tolnay",
+        "email": "dtolnay@gmail.com"
+      }
+    ],
+    "component": {
+      "type": "library",
+      "bom-ref": "path+file:///Users/kooshapari/CodeProjects/Phenotype/repos/Civis/vendor/paste-complete#0.2.3",
+      "author": "Aditya Kumar <git@adityais.dev>, David Tolnay <dtolnay@gmail.com>",
+      "name": "paste-complete",
+      "version": "0.2.3",
+      "description": "Macros for all your token pasting needs. Successor of paste.",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/paste-complete@0.2.3?download_url=file://.",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/as1100k/pastey"
+        }
+      ],
+      "components": [
+        {
+          "type": "library",
+          "bom-ref": "path+file:///Users/kooshapari/CodeProjects/Phenotype/repos/Civis/vendor/paste-complete#0.2.3 bin-target-0",
+          "name": "pastey",
+          "version": "0.2.3",
+          "purl": "pkg:cargo/paste-complete@0.2.3?download_url=file://.#src/lib.rs"
+        }
+      ]
+    },
+    "properties": [
+      {
+        "name": "cdx:rustc:sbom:target:triple",
+        "value": "aarch64-apple-darwin"
+      }
+    ]
+  },
+  "components": [],
+  "dependencies": [
+    {
+      "ref": "path+file:///Users/kooshapari/CodeProjects/Phenotype/repos/Civis/vendor/paste-complete#0.2.3"
+    }
+  ]
+}

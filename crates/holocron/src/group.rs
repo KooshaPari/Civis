@@ -10,9 +10,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Coarse categorization of godgame verbs.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum VerbGroup {
     /// Population, culture, faith, law, language — the slow civic substrate.
@@ -65,7 +63,13 @@ impl VerbGroup {
 
     /// Iterate over all groups in canonical display order.
     pub fn all() -> [Self; 5] {
-        [Self::Civic, Self::Economic, Self::Divine, Self::Debug, Self::Misc]
+        [
+            Self::Civic,
+            Self::Economic,
+            Self::Divine,
+            Self::Debug,
+            Self::Misc,
+        ]
     }
 }
 
@@ -87,6 +91,10 @@ mod tests {
         let mut sorted = keys.clone();
         sorted.sort();
         sorted.dedup();
-        assert_eq!(sorted.len(), keys.len(), "sort_key must be unique per group");
+        assert_eq!(
+            sorted.len(),
+            keys.len(),
+            "sort_key must be unique per group"
+        );
     }
 }

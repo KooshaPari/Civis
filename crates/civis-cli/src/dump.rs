@@ -367,14 +367,21 @@ fn check_meshes(dump: &SceneDump, policy: &DumpPolicy, out: &mut Vec<DumpViolati
         return;
     }
     let Some(spread) = mesh_spread_xz(&dump.meshes) else {
-        push_violation(out, "meshes.spread", "mesh bounds missing despite count > 0");
+        push_violation(
+            out,
+            "meshes.spread",
+            "mesh bounds missing despite count > 0",
+        );
         return;
     };
     if spread < policy.min_mesh_spread_xz {
         push_violation(
             out,
             "meshes.spread",
-            format!("mesh XZ spread {spread:.1} < minimum {}", policy.min_mesh_spread_xz),
+            format!(
+                "mesh XZ spread {spread:.1} < minimum {}",
+                policy.min_mesh_spread_xz
+            ),
         );
     }
 }
@@ -465,7 +472,13 @@ fn diff_sim_fields(
     tolerance: &DumpTolerance,
     out: &mut Vec<DumpViolation>,
 ) {
-    diff_u64("sim.tick", actual.tick, baseline.tick, tolerance.count_delta, out);
+    diff_u64(
+        "sim.tick",
+        actual.tick,
+        baseline.tick,
+        tolerance.count_delta,
+        out,
+    );
     diff_u64(
         "sim.population",
         actual.population,
@@ -473,7 +486,13 @@ fn diff_sim_fields(
         tolerance.count_delta,
         out,
     );
-    diff_f64("sim.food", actual.food, baseline.food, tolerance.resource_abs, out);
+    diff_f64(
+        "sim.food",
+        actual.food,
+        baseline.food,
+        tolerance.resource_abs,
+        out,
+    );
     diff_f64(
         "sim.energy",
         actual.energy,
@@ -510,7 +529,11 @@ fn diff_voxel(
             );
         }
         (None, None) => {}
-        _ => push_violation(out, "voxel.presence", "voxel presence differs from baseline"),
+        _ => push_violation(
+            out,
+            "voxel.presence",
+            "voxel presence differs from baseline",
+        ),
     }
 }
 

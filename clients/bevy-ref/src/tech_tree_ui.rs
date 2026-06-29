@@ -1,4 +1,4 @@
-﻿#![cfg(all(feature = "bevy", feature = "egui"))]
+#![cfg(all(feature = "bevy", feature = "egui"))]
 
 //! Tech tree overlay window for the Civis gameplay HUD.
 //!
@@ -13,9 +13,9 @@
 //! as research completes.  EguiPlugin is owned by `GameUiPlugin`; this module
 //! never re-registers it.
 
+use crate::settings_ui::{GameSettings, KeyBinding, ACTION_TOGGLE_TECH_TREE};
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
-use crate::settings_ui::{GameSettings, ACTION_TOGGLE_TECH_TREE, KeyBinding};
 
 // ---------------------------------------------------------------------------
 // Palette — canonical Keycap tokens from ui_theme; local-only consts kept below

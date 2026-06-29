@@ -139,7 +139,7 @@ civis-3d-bevy-smoke:
 
 # Run the Bevy windowed reference client behind the optional bevy feature.
 civis-3d-bevy-window:
-    cargo run -p civ-bevy-ref --features bevy --bin civ-bevy-window
+    cargo run -p civ-bevy-ref --features bevy,egui --bin civ-bevy-window
 
 # Run the standalone Bevy client with in-process simulation.
 civis-3d-standalone:
@@ -166,12 +166,12 @@ civis-3d-live-smoke:
     cargo test -p civ-bevy-ref --lib chunk_to_minimap
     cargo test -p civ-bevy-ref --lib minimap_uv_to_chunk
     cargo check -p civ-bevy-ref --features bevy,egui --bin civ-standalone
-    cargo check -p civ-bevy-ref --features bevy --bin civ-bevy-window
+    cargo check -p civ-bevy-ref --features bevy,egui --bin civ-bevy-window
 
 # Run the live Bevy reference client against civ-server's WebSocket bridge.
 # Requires civ-server to be running first.
 civis-3d-bevy-live:
-    cargo run -p civ-bevy-ref --features bevy --bin civ-bevy-window
+    cargo run -p civ-bevy-ref --features bevy,egui --bin civ-bevy-window
 
 # Run the phenotype-voxel kernel tests (sibling-repo dependency).
 civis-3d-voxel-kernel:
@@ -209,7 +209,7 @@ run:
 
 # One-shot launch of the live voxel/windowed client.
 run-voxel:
-    cargo run -p civ-bevy-ref --features bevy --bin civ-bevy-window
+    cargo run -p civ-bevy-ref --features bevy,egui --bin civ-bevy-window
 
 # Install the dev-loop watch tool (cargo-watch) if missing. Idempotent.
 dev-tools:

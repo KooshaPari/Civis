@@ -23,7 +23,7 @@ use civ_agents::{
 };
 use civ_genetics::{
     sentience::{evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold},
-    spawn_genome_with_divergence, Dna, DnaClass, SeedDefinition, SeedLibrary, SeedSet,
+    Dna, DnaClass, SeedDefinition, SeedLibrary, SeedSet,
 };
 use civ_legends::{
     AggregateKey, ClusterId, EntityKind, EntityRef, Epoch, EpochDigest, EventKind, IngestOutcome,
@@ -1323,7 +1323,7 @@ impl Simulation {
         }
         for disaster in self.last_tick_disaster_pulses().to_vec() {
             let region = civ_legends::RegionId(
-                disaster.pos.x.unsigned_abs() as u64 ^ disaster.pos.z.unsigned_abs() as u64,
+                disaster.pos.x.unsigned_abs() ^ disaster.pos.z.unsigned_abs(),
             );
             let raw = RawSimEvent::new(tick, EventKind::Disaster, SourceCrate::Planet, 0.8)
                 .with_region(region);

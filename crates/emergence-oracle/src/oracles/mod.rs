@@ -8,6 +8,7 @@ pub mod festival;
 pub mod language;
 pub mod legends;
 pub mod migration;
+pub mod mood;
 pub mod trade;
 pub mod psyche;
 pub mod religion;

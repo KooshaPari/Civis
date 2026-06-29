@@ -3575,13 +3575,13 @@ impl Simulation {
             births.push((child_id, x, y, left.2.alignment, left.1, right.1));
         }
 
-        for (entity, id, x, y) in dead.iter().copied() {
+        for (entity, id, x, y) in &dead {
             let _ = self.world.despawn(entity);
             self.last_deaths.push(PopulationEvent {
                 tick: self.state.tick,
-                entity_id: id,
-                x,
-                y,
+                entity_id: *id,
+                x: *x,
+                y: *y,
             });
         }
 

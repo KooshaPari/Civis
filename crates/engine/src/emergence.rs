@@ -358,10 +358,15 @@ impl Simulation {
             }
         }
 
-        let cluster_cultures = self.emergence.cluster_cultures.clone();
-        let climate = self.climate.clone();
-        let faction_ages = self.era_progression.faction_ages.clone();
-        let previous_ideologies = self.faction_ideologies.clone();
+        let (cluster_cultures, era_faction_ages, faction_ideologies, climate) = {
+            (
+                self.emergence.cluster_cultures.clone(),
+                self.era_progression.faction_ages.clone(),
+                self.faction_ideologies.clone(),
+                self.climate.clone(),
+            )
+        };
+        let rng = self.rng_mut();
         self.faction_ideologies = advance_faction_ideologies(
             tick,
             &cluster_cultures,
@@ -370,9 +375,9 @@ impl Simulation {
             &settlement_contacts,
             &climate,
             &faction_religion_signal,
-            &faction_ages,
-            &previous_ideologies,
-            self.rng_mut(),
+            &era_faction_ages,
+            &faction_ideologies,
+            rng,
         );
         self.faction_aggression.clear();
         for (faction_id, state) in &self.faction_ideologies {

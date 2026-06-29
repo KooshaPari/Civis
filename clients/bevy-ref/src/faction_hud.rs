@@ -74,17 +74,10 @@ fn draw_faction_hud(
         .find(|e| e.id == player.0)
         .cloned();
 
-    // Counts derived from civilians that are tracked (no per-faction breakdown
-    // in the wire protocol yet — civilian_entries lack faction_id).
-    let faction_population = scene.population_by_faction.get(&player.0).copied().unwrap_or(0);
-    let total_civilians = scene.civilian_ids.len();
-
-    // If no per-faction breakdown, use live sim population (same source as objective HUD).
-    let display_population = if faction_population > 0 {
-        faction_population
-    } else {
-        sim.map(|s| s.0.state.population as u32).unwrap_or(0)
-    };
+    // Unify with objective HUD: always read from sim state.population (civilization macro headcount).
+    // This is the canonical population source: the civilization's true population scale (~1_000_000).
+    // Note: population_by_faction (spawned civilians) is a different metric used for localized sim.
+    let display_population = sim.map(|s| s.0.state.population as u32).unwrap_or(0);
 
     egui::Window::new("Faction")
         .anchor(egui::Align2::LEFT_TOP, egui::vec2(8.0, 8.0))

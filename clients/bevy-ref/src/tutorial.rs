@@ -77,6 +77,13 @@ fn draw_tutorial_hint(
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
+
+    // Guard against pre-initialization: egui fonts not available until first Context::run().
+    // Skip drawing if this is the very first frame (input_state is minimal).
+    if ctx.input(|i| i.events.is_empty()) && ctx.screen_rect().is_positive() == false {
+        return;
+    }
+
     let screen = ctx.screen_rect();
 
     let mut clicked = false;

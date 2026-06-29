@@ -4155,7 +4155,7 @@ impl Simulation {
                         .clamp(0.0, 1.0),
                     ..CivNeedsHealth::default()
                 };
-                let should_birth = should_reproduce(
+                let should_birth = civ_needs::should_reproduce(
                     civilian.age as f32,
                     &health,
                     needs.food,

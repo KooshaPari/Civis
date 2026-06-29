@@ -55,7 +55,7 @@ pub type SimBuildingMarkerPublic = SimBuildingMarker;
 
 impl Default for SimState {
     fn default() -> Self {
-        Self(Simulation::new())
+        Self(Simulation::default())
     }
 }
 
@@ -79,15 +79,10 @@ fn in_process_sim_active(mode: Option<Res<AttachMode>>) -> bool {
 #[derive(Default)]
 pub struct SimBridgePlugin;
 
-/// Frame counter for throttled debug logging (every ~60 frames).
-#[derive(Resource, Default)]
-struct DebugFrameCounter(u32);
-
 impl Plugin for SimBridgePlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(ProceduralActorPlugin);
         app.init_resource::<SimState>()
-            .init_resource::<DebugFrameCounter>()
             .insert_resource(SimTickAccumulator(0.0))
             .add_systems(Startup, setup_gameplay_marker_meshes)
             .add_systems(
@@ -220,10 +215,20 @@ fn sync_visible_gameplay(
     marker_meshes: Res<GameplayMarkerMeshes>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut debug_counter: ResMut<DebugFrameCounter>,
     #[cfg(feature = "models")]
     models: Option<Res<civ_bevy_ref::gltf_models::GameModels>>,
 ) {
+    // One-time archetype debug log on first sync (to find 300-vs-5 gap)
+    static DEBUG_LOGGED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    if !DEBUG_LOGGED.swap(true, std::sync::atomic::Ordering::SeqCst) {
+        let count_civilian = sim.0.world.query::<&Civilian>().iter().count();
+        let count_pos3d = sim.0.world.query::<&civ_agents::Position3d>().iter().count();
+        let count_civ_pos = sim.0.world.query::<(&Civilian, &civ_agents::Position3d)>().iter().count();
+        let count_render = sim.0.world.query::<(&Civilian, &civ_agents::Position3d, Option<&ActorVisual>)>().iter().count();
+        let count_total = sim.0.world.iter().count();
+        info!("civis-archetype: total={} civilian={} pos3d={} civ+pos={} render_match={}", count_total, count_civilian, count_pos3d, count_civ_pos, count_render);
+    }
+
     if !sim.is_changed() {
         return;
     }
@@ -242,19 +247,13 @@ fn sync_visible_gameplay(
     #[cfg(not(feature = "models"))]
     let model_resource: ModelResourceRef = None;
 
-    let mut query_count = 0;
-    let mut first_world_pos: Option<Vec3> = None;
     for (_, (civilian, position, actor_visual)) in sim
         .0
         .world
         .query::<(&Civilian, &civ_agents::Position3d, Option<&ActorVisual>)>()
         .iter()
     {
-        query_count += 1;
         let world_pos = sim_position_to_world(position);
-        if first_world_pos.is_none() {
-            first_world_pos = Some(world_pos);
-        }
         let faction_id = faction_id(&civilian.alignment);
         let visual = actor_visual_kind(actor_visual);
         let entity = match civilian_entities.remove(&civilian.id) {
@@ -300,15 +299,6 @@ fn sync_visible_gameplay(
             ),
         };
         let _ = entity;
-    }
-
-    // Throttled debug log: only log every ~60 frames to avoid spam
-    debug_counter.0 = debug_counter.0.wrapping_add(1);
-    if debug_counter.0 % 60 == 0 {
-        info!(
-            "civis-debug: sim civilians query found {} entities, first_world_pos: {:?}",
-            query_count, first_world_pos
-        );
     }
 
     for (_, building) in sim.0.world.query::<&Building>().iter() {

@@ -185,6 +185,7 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) -> 
     let affected = positions_in_radius(pos, radius);
     let mut terrain_cells = 0u32;
     let mut casualties = 0u32;
+    let mut impact = (0i32, 0u32, 0.0);
 
     match kind {
         DisasterKind::Meteor => {
@@ -201,7 +202,7 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) -> 
                 };
                 sim.push_voxel_write(*cell, material);
             }
-            let impact = hit_agents(
+            impact = hit_agents(
                 sim,
                 pos,
                 radius,
@@ -215,7 +216,7 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) -> 
                 sim.push_voxel_write(cell, WATER);
             }
             terrain_cells = affected.len() as u32;
-            let impact = hit_agents(
+            impact = hit_agents(
                 sim,
                 pos,
                 radius,
@@ -229,7 +230,7 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) -> 
                 sim.push_voxel_write(*cell, material);
             }
             terrain_cells = affected.len() as u32;
-            let impact = hit_agents(
+            impact = hit_agents(
                 sim,
                 pos,
                 radius,
@@ -243,7 +244,7 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) -> 
                 sim.push_voxel_write(*cell, material);
             }
             terrain_cells = affected.len() as u32;
-            let impact = hit_agents(
+            impact = hit_agents(
                 sim,
                 pos,
                 radius,
@@ -257,7 +258,7 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) -> 
                 sim.push_voxel_write(*cell, material);
             }
             terrain_cells = affected.len() as u32;
-            let impact = hit_agents(
+            impact = hit_agents(
                 sim,
                 pos,
                 radius,
@@ -266,7 +267,7 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) -> 
             casualties = impact.1;
         }
         DisasterKind::Plague => {
-            let impact = hit_agents(
+            impact = hit_agents(
                 sim,
                 pos,
                 radius * 2,

@@ -55,8 +55,8 @@ pub use descriptor::VerbDescriptor;
 pub use group::VerbGroup;
 pub use inspect::*;
 pub use provenance::Provenance;
-pub use rank::{rank_verbs, RankedVerb, SimContext};
-pub use registry::{VerbRegistry, VerbSearchResult};
+pub use rank::{rank_by_use as rank_verbs};
+pub use registry::{VerbRegistry, MatchedVerb as VerbSearchResult};
 pub use risk::RiskTier;
 pub use voxel_inspector::*;
 
@@ -67,5 +67,5 @@ pub use voxel_inspector::*;
 /// - the CommandKOverlay (Phase 3), and
 /// - the context-aware ranker (Phase 4).
 pub fn default_registry() -> VerbRegistry {
-    VerbRegistry::from_catalog(verbs::STATIC_CATALOG)
+    VerbRegistry::from_catalog(&verbs::build_mcp_catalog())
 }

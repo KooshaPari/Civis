@@ -701,8 +701,8 @@ impl InspectRegistry {
 
         // Pick the winner: hint wins on ties, otherwise foreground-first.
         if let Some(hint) = pick.hint {
-            if let Some((_, s)) = candidates.into_iter().find(|(k, _)| *k == hint) {
-                return Some(s);
+            if let Some((_, s)) = candidates.iter().find(|(k, _)| *k == hint) {
+                return Some(s.clone());
             }
             // Hint didn't match any candidate — fall through to foreground
             // priority. (The hint is advisory, not a hard filter: a player

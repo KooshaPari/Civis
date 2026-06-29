@@ -17,6 +17,12 @@ pub enum RiskTier {
     Major,
     /// World-altering or irreversible (smite faction, end era, apocalypse).
     Critical,
+    /// Alias for Minor — easily reversible action.
+    Reversible,
+    /// Alias for ReadOnly — purely cosmetic, no world state change.
+    Cosmetic,
+    /// Alias for Critical — cannot be undone.
+    Irreversible,
 }
 
 impl RiskTier {
@@ -25,31 +31,31 @@ impl RiskTier {
     /// resolves role → color at render time.
     pub fn palette_role(self) -> &'static str {
         match self {
-            Self::ReadOnly => "keycap.inert",
-            Self::Minor => "keycap.calm",
+            Self::ReadOnly | Self::Cosmetic => "keycap.inert",
+            Self::Minor | Self::Reversible => "keycap.calm",
             Self::Major => "keycap.warn",
-            Self::Critical => "keycap.danger",
+            Self::Critical | Self::Irreversible => "keycap.danger",
         }
     }
 
     /// Whether firing this verb should require a confirmation modal.
     pub fn requires_confirmation(self) -> bool {
-        matches!(self, Self::Major | Self::Critical)
+        matches!(self, Self::Major | Self::Critical | Self::Irreversible)
     }
 
     /// Whether firing this verb should append an undo entry (if the engine
     /// supports undo for this verb).
     pub fn supports_undo(self) -> bool {
-        matches!(self, Self::Minor | Self::Major)
+        matches!(self, Self::Minor | Self::Major | Self::Reversible)
     }
 
     /// Sort key — minor first, critical last.
     pub fn sort_key(self) -> u8 {
         match self {
-            Self::ReadOnly => 0,
-            Self::Minor => 1,
+            Self::ReadOnly | Self::Cosmetic => 0,
+            Self::Minor | Self::Reversible => 1,
             Self::Major => 2,
-            Self::Critical => 3,
+            Self::Critical | Self::Irreversible => 3,
         }
     }
 }

@@ -210,7 +210,7 @@ pub struct VoxelState {
 
 impl VoxelState {
     /// Construct a `VoxelState`. Provided for ergonomic test/seed data.
-    pub const fn new(
+    pub fn new(
         key: VoxelKey,
         material: &'static str,
         temperature_kelvin: i32,
@@ -220,7 +220,7 @@ impl VoxelState {
     ) -> Self {
         Self {
             key,
-            material: String::from(material),
+            material: material.to_string(),
             temperature_kelvin,
             pressure_hpa,
             mass_units,

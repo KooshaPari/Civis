@@ -79,6 +79,12 @@ pub use disaster_spread::{DisasterGrid, DisasterParams, HazardCell, HazardKind};
 pub mod season_cycle;
 pub use season_cycle::{SeasonCycleParams, SeasonCycleSample, seasonal_cycle};
 
+/// Terrain erosion by overland water flow (FR-CIV-EROSION). Each tick,
+/// water flowing over a cell removes a fraction of its height and
+/// deposits it on the downslope neighbour. See [`erosion`] for details.
+pub mod erosion;
+pub use erosion::{ErosionGrid, ErosionParams, erosion_step};
+
 impl ClimateState {
     /// Create a new `ClimateState` initialised to pre-industrial conditions.
     pub fn new() -> Self {

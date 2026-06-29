@@ -73,6 +73,12 @@ const SEA_LEVEL_SENSITIVITY_M_PER_C: f64 = 0.002;
 pub mod disaster_spread;
 pub use disaster_spread::{DisasterGrid, DisasterParams, HazardCell, HazardKind};
 
+/// Seasonal climate oscillation (FR-CIV-SEASON-CYCLE). Additive temperature
+/// and precipitation offsets over a year-length period. See
+/// [`season_cycle`] for details.
+pub mod season_cycle;
+pub use season_cycle::{SeasonCycleParams, SeasonCycleSample, seasonal_cycle};
+
 impl ClimateState {
     /// Create a new `ClimateState` initialised to pre-industrial conditions.
     pub fn new() -> Self {

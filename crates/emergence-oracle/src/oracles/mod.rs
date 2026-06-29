@@ -4,6 +4,7 @@ pub mod diplomacy;
 pub mod disaster;
 pub mod economy;
 pub mod epidemic;
+pub mod expansion;
 pub mod festival;
 pub mod language;
 pub mod legends;

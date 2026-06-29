@@ -2052,3 +2052,66 @@ mod migration_pressure_tests {
     use super::migration_pressure;
     #[test] fn in_range() { assert!((0.0..=1.0).contains(&migration_pressure(0.8,0.6))); assert_eq!(migration_pressure(f32::NAN,0.0),0.0); }
 }
+
+pub fn art_flourishing(surplus: f32, stability: f32) -> f32 {
+    if !surplus.is_finite() || !stability.is_finite() {
+        return 0.0;
+    }
+    let surplus = surplus.clamp(0.0, 1.0);
+    let stability = stability.clamp(0.0, 1.0);
+    ((surplus * 0.6) + (stability * 0.4)).clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod art_flourishing_tests {
+    use super::art_flourishing;
+
+    #[test]
+    fn in_range() {
+        assert!((0.0..=1.0).contains(&art_flourishing(0.8, 0.6)));
+        assert_eq!(art_flourishing(f32::NAN, 0.0), 0.0);
+        assert_eq!(art_flourishing(f32::INFINITY, 1.0), 0.0);
+    }
+}
+
+pub fn ritual_frequency(belief: f32, hardship: f32) -> f32 {
+    if !belief.is_finite() || !hardship.is_finite() {
+        return 0.0;
+    }
+    let belief = belief.clamp(0.0, 1.0);
+    let hardship = hardship.clamp(0.0, 1.0);
+    ((belief * 0.7) + (hardship * 0.3)).clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod ritual_frequency_tests {
+    use super::ritual_frequency;
+
+    #[test]
+    fn in_range() {
+        assert!((0.0..=1.0).contains(&ritual_frequency(0.7, 0.9)));
+        assert_eq!(ritual_frequency(f32::NAN, 1.0), 0.0);
+        assert_eq!(ritual_frequency(1.0, f32::NEG_INFINITY), 0.0);
+    }
+}
+
+pub fn pilgrimage_draw(sacred_sites: f32, devotion: f32) -> f32 {
+    if !sacred_sites.is_finite() || !devotion.is_finite() {
+        return 0.0;
+    }
+    let sacred_sites = sacred_sites.clamp(0.0, 1.0);
+    let devotion = devotion.clamp(0.0, 1.0);
+    ((sacred_sites * 0.5) + (devotion * 0.5)).clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod pilgrimage_draw_tests {
+    use super::pilgrimage_draw;
+
+    #[test]
+    fn in_range() {
+        assert!((0.0..=1.0).contains(&pilgrimage_draw(0.4, 0.9)));
+        assert_eq!(pilgrimage_draw(f32::NAN, 1.0), 0.0);
+        assert_eq!(pilgrimage_draw(1.0, f32::INFINITY), 0.0);
+    }
+}

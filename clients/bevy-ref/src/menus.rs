@@ -9,7 +9,7 @@ use crate::settings_ui::{GameSettings, ACTION_PAUSE_SIM, KeyBinding};
 use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
-use crate::ui_theme::{liquid_glass_frame, KC_ACCENT, RADIUS_PANEL, GLASS_FILL};
+use crate::ui_theme::{GLASS_FILL, KC_ACCENT, RADIUS_PANEL, liquid_glass_frame};
 
 const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
 const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
@@ -17,19 +17,23 @@ const DIM: egui::Color32 = egui::Color32::from_rgb(150, 158, 178);
 const OVERLAY_DIM: egui::Color32 = egui::Color32::from_rgba_premultiplied(0, 0, 0, 160);
 
 /// Shell state used by the Bevy window client (main menu + gameplay + pause states).
-#[derive(States, Debug, Default, Clone, PartialEq, Eq, Hash)]
+#[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum AppState {
-    #[default]
     MainMenu,
     WorldGen,
     Playing,
     Paused,
 }
 
+impl Default for AppState {
+    fn default() -> Self {
+        Self::MainMenu
+    }
+}
+
 /// One-shot intent emitted by menu buttons and consumed by `bevy_window`.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MainMenuCommand {
-    #[default]
     None,
     NewWorld,
     Continue,
@@ -38,6 +42,12 @@ pub enum MainMenuCommand {
     OpenSavePanel,
     ExitToMainMenu,
     Quit,
+}
+
+impl Default for MainMenuCommand {
+    fn default() -> Self {
+        Self::None
+    }
 }
 
 /// Resource that carries the latest main-menu shell command.
@@ -352,7 +362,7 @@ fn draw_settings_window(
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-    settings_window(ctx, &mut settings_open, &mut state, gpu_caps.as_deref());
+    settings_window(ctx, &mut *settings_open, &mut *state, gpu_caps.as_deref());
 }
 
 fn dim_overlay(ctx: &egui::Context) {

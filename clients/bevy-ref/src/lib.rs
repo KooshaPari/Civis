@@ -130,6 +130,9 @@ pub use civ_voxel::{
     ChunkId, CubicMesher, MaterialId, MeshBuffer, MeshVertex, VoxelWorld, WorldCoord,
 };
 pub use civ_agents::NeedAction;
+pub use perf_hud::PerfHudPlugin;
+pub use tutorial::TutorialPlugin;
+pub use menus::MenusPlugin;
 
 /// Default orbit azimuth in radians (45° — camera south-east of centre).
 pub const DEFAULT_CAMERA_AZIMUTH_RAD: f32 = std::f32::consts::FRAC_PI_4;

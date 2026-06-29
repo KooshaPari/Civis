@@ -136,8 +136,8 @@ fn draw_tutorial_hint(
     let step = state.step;
     let total = HINTS.len() as u8;
 
-    let ctx = contexts.ctx_mut();
-    let screen = ctx.screen_rect();
+    let Ok(ctx) = contexts.ctx_mut() else { return; };
+    let screen = ctx.content_rect();
 
     let mut clicked = false;
     egui::Area::new(egui::Id::new("tutorial_hint"))

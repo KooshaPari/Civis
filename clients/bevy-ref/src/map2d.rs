@@ -610,7 +610,7 @@ fn draw_map_view(
         .fixed_pos(egui::pos2(0.0, 0.0))
         .order(egui::Order::Background)
         .show(ctx, |ui| {
-            let screen = ctx.screen_rect();
+            let screen = ctx.content_rect();
             let painter = ui.painter();
             let min_zoom = (screen.width().max(screen.height())) / MAP_TEX as f32;
 

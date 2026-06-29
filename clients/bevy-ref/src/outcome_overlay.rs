@@ -50,7 +50,9 @@ fn draw_outcome_overlay(
     let Some(ref outcome) = state.outcome.clone() else { return };
     if state.dismissed { return }
 
-    let ctx = contexts.ctx_mut();
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
 
     let is_victory = outcome.tag == "victory";
     let header_color = if is_victory {
@@ -62,7 +64,7 @@ fn draw_outcome_overlay(
     egui::Area::new(egui::Id::new("outcome_overlay"))
         .fixed_pos(egui::pos2(0.0, 0.0))
         .show(ctx, |ui| {
-            let screen = ctx.screen_rect();
+            let screen = ctx.content_rect();
             ui.allocate_ui_with_layout(
                 screen.size(),
                 egui::Layout::centered_and_justified(egui::Direction::TopDown),
@@ -70,11 +72,11 @@ fn draw_outcome_overlay(
                     // dim backdrop
                     ui.painter().rect_filled(screen, 0.0, egui::Color32::from_rgba_unmultiplied(9, 10, 12, 210));
 
-                    egui::Frame::none()
+                    egui::Frame::NONE
                         .fill(egui::Color32::from_rgba_unmultiplied(9, 10, 12, 240))
                         .stroke(egui::Stroke::new(1.5, header_color))
                         .inner_margin(egui::Margin::same(40))
-                        .rounding(egui::Rounding::same(8.0))
+                        .corner_radius(egui::CornerRadius::same(8))
                         .show(ui, |ui| {
                             ui.set_max_width(500.0);
                             ui.spacing_mut().item_spacing.y = 16.0;

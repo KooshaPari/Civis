@@ -76,7 +76,9 @@ fn render_panel(
     }
     let Some(bridge) = bridge else { return };
 
-    let ctx = contexts.ctx_mut();
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
     let mut open = panel.visible;
     let mut action: Option<SaveLoadAction> = None;
 
@@ -153,7 +155,7 @@ fn render_panel(
                     format!("save.load → {name}"),
                 )
             }
-            SaveLoadAction::List | SaveLoadAction::Refresh => (
+            SaveLoadAction::List => (
                 r#"{"jsonrpc":"2.0","id":2099,"method":"save.list","params":{}}"#.to_string(),
                 "save.list requested".to_string(),
             ),

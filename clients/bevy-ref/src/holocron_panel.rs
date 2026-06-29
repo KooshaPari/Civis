@@ -13,10 +13,10 @@
 
 use bevy::prelude::*;
 use bevy_egui::egui;
-use holocron::descriptor::VerbDescriptor;
-use holocron::group::VerbGroup;
-use holocron::registry::VerbRegistry;
-use holocron::risk::RiskTier;
+use civ_holocron::descriptor::VerbDescriptor;
+use civ_holocron::group::VerbGroup;
+use civ_holocron::registry::VerbRegistry;
+use civ_holocron::risk::RiskTier;
 
 // ---------------------------------------------------------------------------
 // Resource — shared Holocron state kept across frames
@@ -89,6 +89,7 @@ fn matched_verbs<'a>(
 ) -> Vec<&'a VerbDescriptor> {
     let mut out: Vec<&'a VerbDescriptor> = registry
         .iter()
+        .map(|(_, d)| d)
         .filter(|d| {
             fuzzy_match(filter, &d.name)
                 || fuzzy_match(filter, &d.description)
@@ -102,9 +103,9 @@ fn matched_verbs<'a>(
 /// Human‑readable label for a risk tier.
 fn risk_label(tier: RiskTier) -> &'static str {
     match tier {
-        RiskTier::Safe => "Safe",
-        RiskTier::Caution => "⚠ Caution",
-        RiskTier::Destructive => "☠ Destructive",
+        RiskTier::ReadOnly | RiskTier::Cosmetic => "Safe",
+        RiskTier::Minor | RiskTier::Reversible => "⚠ Caution",
+        RiskTier::Major | RiskTier::Critical | RiskTier::Irreversible => "☠ Destructive",
     }
 }
 
@@ -120,7 +121,7 @@ fn draw_holocron_overlay(
     if !state.overlay_visible {
         return;
     }
-    let Ok(ctx) = egui_ctx.get_single() else {
+    let Ok(ctx) = egui_ctx.single() else {
         return;
     };
     let ctx = ctx.ctx();
@@ -149,11 +150,9 @@ fn draw_holocron_overlay(
             egui::Area::new(egui::Id::new("cmdk-overlay"))
                 .fixed_pos(egui::pos2(rect.min.x + dx, rect.min.y + dy))
                 .show(ctx, |ui| {
-                    egui::Frame::window(&egui::style::FrameStyle {
-                        fill: egui::Color32::from_rgb(22, 22, 30),
-                        ..Default::default()
-                    })
-                    .show(ui, |ui| {
+                    egui::Frame::NONE
+                        .fill(egui::Color32::from_rgb(22, 22, 30))
+                        .show(ui, |ui| {
                         ui.set_max_width(panel_w);
                         ui.set_max_height(panel_h);
 
@@ -191,15 +190,15 @@ fn draw_holocron_overlay(
                                         .show(ui, |ui| {
                                             ui.horizontal(|ui| {
                                                 // Risk badge
-                                                let badge = risk_label(verb.risk_tier);
-                                                let badge_col = match verb.risk_tier {
-                                                    RiskTier::Safe => {
+                                                let badge = risk_label(verb.risk);
+                                                let badge_col = match verb.risk {
+                                                    RiskTier::ReadOnly | RiskTier::Cosmetic => {
                                                         egui::Color32::from_rgb(80, 160, 80)
                                                     }
-                                                    RiskTier::Caution => {
+                                                    RiskTier::Minor | RiskTier::Reversible => {
                                                         egui::Color32::from_rgb(200, 160, 40)
                                                     }
-                                                    RiskTier::Destructive => {
+                                                    RiskTier::Major | RiskTier::Critical | RiskTier::Irreversible => {
                                                         egui::Color32::from_rgb(200, 60, 60)
                                                     }
                                                 };
@@ -235,7 +234,7 @@ fn draw_holocron_overlay(
                                         });
                                 }
                             });
-                    });
+                        });
                 });
         });
 

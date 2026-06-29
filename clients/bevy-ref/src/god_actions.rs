@@ -458,7 +458,6 @@ fn remesh_dirty_chunks(
     let culling = StreamCulling {
         eye: [focus.centre.x, 64.0, focus.centre.z],
         max_distance: scaled_cull_distance(base_distance, gpu_quality),
-        gpu_quality,
     };
     let wire = debug.wireframe.then_some(CHUNK_WIREFRAME_LINE_COLOR);
     let ids: Vec<ChunkId> = dirty.iter().copied().collect();

@@ -334,8 +334,8 @@ fn draw_god_panel(
     bridge: Res<LiveBridge>,
 ) {
     if !state.visible { return; }
-    let ctx = contexts.ctx_mut();
-    let screen = ctx.screen_rect();
+    let Ok(ctx) = contexts.ctx_mut() else { return; };
+    let screen = ctx.content_rect();
 
     let mut fire_legacy: Option<String> = None;
     let mut fire_substrate: Option<usize> = None;

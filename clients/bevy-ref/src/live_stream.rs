@@ -32,7 +32,7 @@ use crate::{
 /// to `civ-server` without taking a direct dependency on the transport layer.
 /// The `civ-bevy-window` binary inserts a concrete instance at startup; tests
 /// and headless binaries may substitute a fake.
-#[derive(Resource, Clone)]
+#[derive(Resource)]
 pub struct LiveBridge {
     /// The shared WebSocket client used for live JSON-RPC + frame traffic.
     pub client: WsClient,

@@ -45,9 +45,10 @@ fn toggle_god_panel(keys: Res<ButtonInput<KeyCode>>, mut state: ResMut<GodPanelS
 fn draw_god_panel(
     mut contexts: EguiContexts,
     mut state: ResMut<GodPanelState>,
-    bridge: Res<LiveBridge>,
+    bridge: Option<Res<LiveBridge>>,
     mut requests: MessageWriter<GodActionRequest>,
 ) {
+    let Some(bridge) = bridge else { return; };
     if !state.visible { return; }
     let Ok(ctx) = contexts.ctx_mut() else {
         return;

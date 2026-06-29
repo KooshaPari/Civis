@@ -67,7 +67,12 @@ fn advance(state: &mut TutorialState) {
 fn draw_tutorial_hint(
     mut contexts: EguiContexts,
     mut state: ResMut<TutorialState>,
+    mut frames: Local<u32>,
 ) {
+    // egui fonts are unavailable until the context has run at least one full pass.
+    // Skip the first few frames unconditionally (does NOT touch egui state).
+    *frames += 1;
+    if *frames < 3 { return; }
     if !state.enabled { return; }
 
     let hint = HINTS[state.step as usize];
@@ -77,6 +82,7 @@ fn draw_tutorial_hint(
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
+
     let screen = ctx.screen_rect();
 
     let mut clicked = false;

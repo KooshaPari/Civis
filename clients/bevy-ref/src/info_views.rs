@@ -708,8 +708,8 @@ mod plugin {
     fn draw_nearby_counts_overlay(
         mut contexts: EguiContexts,
         overlay: Res<NearbyCountsOverlay>,
-        attach: Res<AttachMode>,
-        rig: Res<CameraRig>,
+        attach: Option<Res<AttachMode>>,
+        rig: Option<Res<CameraRig>>,
         sim_civilians: Query<(&GlobalTransform, &SimCivilianMarker)>,
         sim_buildings: Query<&GlobalTransform, With<SimBuildingMarker>>,
         live_agents: Query<(&GlobalTransform, &LiveAgentTag)>,
@@ -720,8 +720,9 @@ mod plugin {
             return;
         }
 
+        let Some(rig) = rig else { return; };
         let eye = rig.target;
-        let counts = if is_server_attach_mode(*attach) {
+        let counts = if attach.as_ref().map(|a| is_server_attach_mode(**a)).unwrap_or(false) {
             collect_nearby_counts_live(eye, scene.as_deref(), &live_agents, &live_buildings)
         } else {
             collect_nearby_counts_standalone(eye, &sim_civilians, &sim_buildings)
@@ -825,10 +826,12 @@ mod plugin {
     /// draws a coloured quad (two gizmo triangles → cross) hovering just above
     /// the surface. Cheap, deterministic, and GPU-light for the sandbox.
     fn render_active_overlay(
-        registry: Res<InfoViewRegistry>,
-        sim: Res<SimState>,
+        registry: Option<Res<InfoViewRegistry>>,
+        sim: Option<Res<SimState>>,
         mut gizmos: Gizmos,
     ) {
+        let Some(registry) = registry else { return; };
+        let Some(sim) = sim else { return; };
         let Some(overlay) = registry.active_overlay() else {
             return;
         };

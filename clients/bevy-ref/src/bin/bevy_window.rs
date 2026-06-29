@@ -41,6 +41,7 @@ use civ_bevy_ref::{
     presentation_day_factor_target, resolve_live_ws_url,
     event_feed::{EventFeed, EventFeedPlugin},
     emergence_dashboard::EmergenceDashboardPlugin,
+    MenusPlugin, PerfHudPlugin, TutorialPlugin,
     world_stats_dashboard::WorldStatsDashboardPlugin,
     ws_client::{WsClient, WsClientConfig},
     CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MinimapBounds,
@@ -457,13 +458,14 @@ fn start_world_boot(
     }
     speed.multiplier = multiplier;
     let init_seed = if seed == 0 { WORLDGEN_DEFAULT_SEED } else { seed };
+    let speed_mult = WORLDGEN_SPEED_STEPS[speed.speed_idx.min(WORLDGEN_SPEED_STEPS.len() - 1)];
     bridge.client.send_rpc(
         "sim.load_scenario",
         serde_json::json!({ "preset": preset, "seed": init_seed }),
     );
     bridge.client.send_rpc(
         "sim.set_speed",
-        serde_json::json!({ "multiplier": multiplier }),
+        serde_json::json!({ "multiplier": speed_mult }),
     );
     bridge.client.send_rpc(
         "sim.reset",
@@ -614,7 +616,7 @@ fn sync_presentation_from_climate(
     let Some((snap, _)) = latest_climate(&scene) else {
         return;
     };
-    presentation.is_day = snap.day_phase.is_day_band();
+    presentation.is_day = civ_bevy_ref::presentation_day_factor_from_climate(snap.day_phase) > 0.5;
 }
 
 fn setup(
@@ -1517,8 +1519,9 @@ fn poll_emergence(
     hud.snapshot.speed_multiplier = speed.multiplier;
     // Apply any parsed emergence responses received from the server.
     for em in bridge.client.poll_emergence() {
-        hud.snapshot.emergence = Some(em.clone());
-        *emergence_res = em;
+        let em_clone = em.clone();
+        hud.snapshot.emergence = Some(em_clone.clone());
+        *emergence_res = em_clone;
         hud.snapshot.emergence = Some(em);
     }
     timer.0 += time.delta_secs();

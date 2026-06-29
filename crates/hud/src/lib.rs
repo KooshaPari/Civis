@@ -15,12 +15,14 @@
 
 #![forbid(unsafe_code)]
 
+pub mod env_overlay;
 pub mod key_palette;
 pub mod notifications;
 pub mod tile_inspector;
 pub mod tokens;
 pub mod top_bar;
 
+pub use env_overlay::*;
 pub use key_palette::{KeyId, KeycapDef, KeycapPalette, keycap_palette_default};
 pub use notifications::{Notification, NotificationQueue, Severity};
 pub use tile_inspector::{TileInspector, CELL_NONE};

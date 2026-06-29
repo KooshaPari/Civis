@@ -11,6 +11,7 @@
 #![warn(missing_docs)]
 
 mod allocation;
+mod currency_trust;
 mod extraction;
 mod institution;
 mod market;
@@ -20,6 +21,9 @@ mod trade_flow;
 mod trade_routes;
 
 pub use allocation::{AllocationEngine, CapitalistAllocator};
+pub use currency_trust::{
+    acceptance, step_currency_trust, CurrencyTrust, CurrencyTrustOutcome,
+};
 pub use extraction::{
     find_extraction_site, tick_extraction, ExtractionSite, Extractor, ResourceKind,
 };

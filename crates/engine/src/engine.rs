@@ -18,7 +18,7 @@ use civ_economy::{collect_taxes, Taxation};
 use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold, SentienceEvent, evaluate_sentience};
 use civ_genetics::Dna;
 use civ_mod_host::ModHost;
-use civ_needs::{Health as CivNeedsHealth, LifecycleParams, should_reproduce};
+use civ_needs::{Health as CivNeedsHealth, LifecycleLabel, LifecycleParams, should_reproduce};
 use civ_planet::{
     compute_climate, compute_weather, defaults_earthlike, Climate, GeologyMap, MoonConfig,
     PlanetConfig, WeatherCell, WorldgenConfig,
@@ -3416,11 +3416,11 @@ impl Simulation {
                 &civ_needs::LifecycleParams::default(),
             );
             match civ_needs::classify_lifecycle(sample.age, &health, maturity, labor_cap) {
-                civ_needs::LifecycleLabel::Child => metrics.children += 1,
-                civ_needs::LifecycleLabel::Adult => metrics.adults += 1,
-                civ_needs::LifecycleLabel::WorkingAge => metrics.adults += 1,
-                civ_needs::LifecycleLabel::Elder => metrics.elders += 1,
-                civ_needs::LifecycleLabel::Dead => metrics.dead += 1,
+                LifecycleLabel::Child => metrics.children += 1,
+                LifecycleLabel::Adult => metrics.adults += 1,
+                LifecycleLabel::WorkingAge => metrics.adults += 1,
+                LifecycleLabel::Elder => metrics.elders += 1,
+                LifecycleLabel::Dead => metrics.dead += 1,
             }
         }
         // Dead tally from this tick's despawn list:

@@ -25,7 +25,7 @@ pub mod decay;
 pub mod lifecycle;
 
 pub use decay::{apply_resource, tick_rise, NeedChannel, NeedLevel, RiseRates};
-pub use lifecycle::{classify_lifecycle, age_threshold, labor_capacity, LifecycleLabel, LifecycleParams};
+pub use lifecycle::{age_threshold, classify_lifecycle, labor_capacity, LifecycleLabel, LifecycleParams};
 
 /// Schema version. Bumped on breaking changes.
 pub const SCHEMA_VERSION: &str = "0.1.0";

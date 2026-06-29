@@ -55,12 +55,9 @@ pub use emergence_metrics::{
 };
 pub use engine::{
     awakening_belief_gain, awakening_cohesion_gain, Building, BuildingType,
-    CombatDamagePulse, DiplomacyKind, EconomicFocus, EconomicFocusEvent, FactionRelationSnapshot, Fixed, Position,
+    CombatDamagePulse, DiplomacyKind, EconomicFocus, EconomicFocusEvent, FactionRelationSnapshot, Fixed, MilitaryUnit, Position,
     Simulation, UnitType, WorldState,
 };
-
-// MilitaryUnit is defined in civ-tactics and re-exported here for backward compatibility.
-pub use civ_tactics::MilitaryUnit;
 
 // DoctrineLibrary is defined in civ-tactics and re-exported here.
 pub use civ_tactics::DoctrineLibrary;

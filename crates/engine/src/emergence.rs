@@ -359,6 +359,41 @@ impl Simulation {
                 None,
             );
         }
+
+        // Wire diplomacy_warmth into emergence feed.
+        let trust = legitimacy;
+        let diplomacy = diplomacy_warmth(trust, shared_belief);
+        if diplomacy > 0.65 {
+            self.emergence.push_feed(
+                tick,
+                "diplomacy_warmth",
+                format!("Diplomacy warmth {:.1}%", diplomacy * 100.0),
+                None,
+            );
+        }
+
+        // Wire innovation_rate into emergence feed.
+        let innovation = innovation_rate(food_surplus, population_f32);
+        if innovation > 0.55 {
+            self.emergence.push_feed(
+                tick,
+                "innovation_rate",
+                format!("Innovation rate {:.1}%", innovation * 100.0),
+                None,
+            );
+        }
+
+        // Wire currency_adoption into emergence feed.
+        let trade_volume = trade_count as f32;
+        let currency = currency_adoption(trade_volume, trust);
+        if currency > 0.60 {
+            self.emergence.push_feed(
+                tick,
+                "currency_adoption",
+                format!("Currency adoption {:.1}%", currency * 100.0),
+                None,
+            );
+        }
     }
 
     fn emergence_ensure_genomes(&mut self) {

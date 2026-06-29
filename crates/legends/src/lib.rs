@@ -44,7 +44,7 @@ pub use model::{
 };
 pub use query::{CausalDag, DigestEvent, EntityRef, EpochDigest, Saga, QUERY_API_VERSION};
 pub use rumor::{
-    register_render, render, retell, witness, Chronicle, ChronicleEntry, DefaultNameResolver,
+    register_render, render, retell, witness, DefaultNameResolver,
     HistorianMind, NameResolver, Ocean, Register, Rumor, RumorMill,
 };
 pub use worker::LegendsWorker;

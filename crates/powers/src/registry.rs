@@ -132,6 +132,20 @@ impl PowerTargetMask {
     pub const TIME: Self = Self(1 << 4);
 }
 
+impl std::ops::BitOr for PowerTargetMask {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for PowerTargetMask {
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.0 |= rhs.0;
+    }
+}
+
 /// A single god-tool verb. The data-driven schema per
 /// `docs/design/GOD_TOOLS_SANDBOX.md` §5.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

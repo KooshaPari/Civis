@@ -1046,7 +1046,7 @@ fn bump_from_energy(energy: u32) -> i32 {
 pub mod relationship_stance;
 
 pub use relationship_stance::{
-    FactionPair, Opinion, RelationEvent, RelationStance, RelationshipStance,
+    FactionPair, RelationEvent, RelationStance, RelationshipStance,
     RelationshipStanceModel, StanceConfigError, StanceThresholds,
 };
 

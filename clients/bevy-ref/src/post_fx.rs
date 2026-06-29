@@ -106,10 +106,7 @@ fn apply_post_fx(
         entity_cmd.insert(Tonemapping::AcesFitted);
     }
     if settings.bloom {
-        entity_cmd.insert(Bloom {
-            intensity: 0.15,
-            ..default()
-        });
+        entity_cmd.insert(Bloom::NATURAL);
     }
     if settings.ssao {
         // #[require] on ScreenSpaceAmbientOcclusion auto-inserts DepthPrepass + NormalPrepass.
@@ -136,20 +133,13 @@ fn tune_sun_shadows(mut commands: Commands, new_lights: Query<Entity, Added<Dire
         }
         .build();
 
-        commands.entity(light_entity).insert((
-            cascade_config,
-            // Enable shadows on the DirectionalLight component itself.
-            // atmosphere.rs spawns with shadows_enabled=false by default;
-            // overwrite via a separate patch so we don't edit that file.
-        ));
-
-        // Patch shadows_enabled=true on the existing component.
-        // Done via a targeted component insert — Bevy merges fields for
-        // components already present on the entity.
+        commands.entity(light_entity).insert(cascade_config);
         commands
             .entity(light_entity)
-            .entry::<DirectionalLight>()
-            .and_modify(|mut dl| dl.shadows_enabled = true);
+            .insert(DirectionalLight {
+                shadows_enabled: true,
+                ..default()
+            });
     }
 }
 

@@ -285,6 +285,7 @@ fn main() {
     ))
         .add_plugins((SandboxEventFeedPlugin, civ_bevy_ref::frame_budget::FrameBudgetPlugin))
         .add_plugins((SimBridgePlugin, SpawnToolsPlugin))
+        .add_plugins(civ_bevy_ref::scenario_objective_hud::ScenarioObjectiveHudPlugin)
         .init_state::<AppState>()
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()

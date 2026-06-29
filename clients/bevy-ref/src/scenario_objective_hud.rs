@@ -23,7 +23,9 @@ const DIM: egui::Color32 = egui::Color32::from_rgb(150, 158, 178);
 const TEAL: egui::Color32 = egui::Color32::from_rgb(126, 186, 181);
 
 // Default objective targets for standalone (no scenario)
-const DEFAULT_POPULATION_GOAL: u32 = 500;
+// Goal is meaningful relative to sim state.population (~1_000_000 start):
+// 2_000_000 requires ~2x growth, realistic mid-game target.
+const DEFAULT_POPULATION_GOAL: u32 = 2_000_000;
 
 // ── Resource ──────────────────────────────────────────────────────────────────
 

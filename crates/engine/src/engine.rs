@@ -4710,7 +4710,8 @@ mod tests {
     #[test]
     fn war_bridge_records_combat_replay_events() {
         let mut sim = Simulation::with_seed(1);
-        for _ in 0..16 {
+        // Tick 32 times to ensure combat engages (war-bridge cadence is 16, so at tick 16 and 32)
+        for _ in 0..32 {
             sim.tick();
         }
         assert!(sim.replay_log().events.iter().any(|event| {

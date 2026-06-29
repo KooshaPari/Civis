@@ -62,6 +62,9 @@ pub use engine::{
 // MilitaryUnit is defined in civ-tactics and re-exported here for backward compatibility.
 pub use civ_tactics::MilitaryUnit;
 
+// DoctrineLibrary is defined in civ-tactics and re-exported here.
+pub use civ_tactics::DoctrineLibrary;
+
 // Re-export of `grid_to_norm` and `spawn()` so callers can name them without
 // pulling the private `spawn` module path.
 pub use crate::spawn::{grid_to_norm, military_pin_id, spawn_military_at, unit_type_label};

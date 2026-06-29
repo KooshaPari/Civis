@@ -62,7 +62,7 @@ fn cluster_values_for_faction(
     cluster_cultures: &BTreeMap<u64, CultureProfile>,
     dominant: &BTreeMap<u64, u32>,
     member_counts: &BTreeMap<u64, u32>,
-) -> BTreeMap<u32, ([f32; DIM], [f32; DIM]) {
+) -> BTreeMap<u32, ([f32; DIM], [f32; DIM])> {
     let mut sums: BTreeMap<u32, ([f32; DIM], [f32; DIM], f32)> = BTreeMap::new();
     for (cluster_id, faction_id) in dominant {
         let members = member_counts.get(cluster_id).copied().unwrap_or(0);

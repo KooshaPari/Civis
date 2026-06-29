@@ -9,9 +9,8 @@ use thiserror::Error;
 
 use crate::engine::Citizen;
 use crate::{
-    Building, CombatDamagePulse, DoctrineLibrary, Institution, InstitutionKind, Position,
-    ReligiousProfile, ReplayLog,
-    Simulation, WorldState,
+    Building, CombatDamagePulse, DoctrineLibrary, Institution, InstitutionKind, MilitaryUnit,
+    Position, ReligiousProfile, ReplayLog, Simulation, WorldState,
 };
 use civ_agents::{ClusterMember, LodTier, Needs, Position3d, Tools, Wardrobe};
 use crate::language::LanguageState;
@@ -369,6 +368,24 @@ mod tests {
         assert_eq!(loaded.last_settlement_count, sim.last_settlement_count);
         assert_eq!(loaded.last_life_deaths, sim.last_life_deaths);
         assert_eq!(*loaded.replay_log(), *sim.replay_log());
+    }
+
+    #[test]
+    fn snapshot_world_preserves_military_unit_component() {
+        let mut world = hecs::World::new();
+        world.spawn((MilitaryUnit {
+            unit_type: crate::UnitType::Soldier,
+            strength: crate::Fixed::from_num(4),
+            hp: crate::Fixed::from_num(3),
+            max_hp: crate::Fixed::from_num(4),
+            morale: crate::Fixed::from_num(1),
+            position: crate::Position { x: 1, y: 2 },
+            faction_id: 9,
+        },));
+
+        let saved = snapshot_world(&world);
+        assert_eq!(saved.entities.len(), 1);
+        assert!(saved.entities[0].military_unit.is_some());
     }
 
     /// FR-CIV-014 — a civilian's 3D Y position survives save/load round-trip.

@@ -332,11 +332,11 @@ warning: use of deprecated struct `religion::Religion`: Replaced by ReligiousPro
 500 | pub fn spread_religion(_rel: &mut Religion, _nearby_agents: u32, _tick: u64) {}
     |                                   ^^^^^^^^
 
-error[E0616]: field `last_tick_disaster_events` of struct `Simulation` is private
+error[E0599]: no method named `push_disaster_event` found for mutable reference `&mut Simulation` in the current scope
   --> crates\engine\src\disasters.rs:51:9
    |
-51 |     sim.last_tick_disaster_events.push(DisasterTickEvent {
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^ private field
+51 |     sim.push_disaster_event(DisasterTickEvent {
+   |     ----^^^^^^^^^^^^^^^^^^^ method not found in `&mut Simulation`
 
 error[E0308]: mismatched types
     --> crates\engine\src\disasters.rs:355:26
@@ -2411,28 +2411,6 @@ help: consider cloning the value if the performance cost is acceptable
 109 |         waypoints: waypoints.clone(),
     |                  +++++++++++++++++++
 
-error[E0382]: borrow of moved value: `affected`
-   --> crates\engine\src\disasters.rs:217:29
-    |
-185 |     let affected = positions_in_radius(pos, radius);
-    |         -------- move occurs because `affected` has type `Vec<WorldCoord>`, which does not implement the `Copy` trait
-...
-214 |             for cell in affected {
-    |                         -------- `affected` moved due to this implicit call to `.into_iter()`
-...
-217 |             terrain_cells = affected.len() as u32;
-    |                             ^^^^^^^^ value borrowed here after move
-    |
-note: `into_iter` takes ownership of the receiver `self`, which moves `affected`
-   --> C:\Users\koosh\.rustup\toolchains\stable-x86_64-pc-windows-msvc\lib/rustlib/src/rust\library\core\src\iter\traits\collect.rs:312:18
-    |
-312 |     fn into_iter(self) -> Self::IntoIter;
-    |                  ^^^^
-help: consider iterating over a slice of the `Vec<WorldCoord>`'s content to avoid moving into the `for` loop
-    |
-214 |             for cell in &affected {
-    |                         +
-
 warning: value assigned to `casualties` is never read
    --> crates\engine\src\disasters.rs:187:26
     |
@@ -2556,4 +2534,4 @@ error[E0502]: cannot borrow `self.world` as mutable because it is also borrowed 
 Some errors have detailed explanations: E0061, E0062, E0063, E0277, E0308, E0369, E0382, E0432, E0499...
 For more information about an error, try `rustc --explain E0061`.
 warning: `civ-engine` (lib) generated 21 warnings
-error: could not compile `civ-engine` (lib) due to 205 previous errors; 21 warnings emitted
+error: could not compile `civ-engine` (lib) due to 204 previous errors; 21 warnings emitted

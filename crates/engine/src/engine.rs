@@ -3207,6 +3207,10 @@ impl Simulation {
                 kin_count,
                 trust_sum,
                 fragmentation_events: fragmentations as u32,
+                fragmentations,
+                faction_count: settlement_actors
+                    .get(&settlement_id)
+                    .map_or(0, |ids| ids.len() as u64),
             };
             new_snapshots.insert(settlement_id, snapshot);
         }
@@ -3254,7 +3258,7 @@ impl Simulation {
             let fabric = self
                 .last_tick_cohesion
                 .get(&settlement_id)
-                .map_or(FabricTier::Tight, |s| s.fabric.clone());
+                .map_or(FabricTier::Tight, |s| s.fabric);
 
             let fabric_x100: i32 = match &fabric {
                 FabricTier::Tight => 0,
@@ -10310,6 +10314,45 @@ mod tests {
             assert!(
                 migrated >= 2,
                 "starving adults should found a new settlement"
+            );
+        }
+
+        // FR-CIV-LIFE-003: smoke test that `phase_citizen_lifecycle` runs
+        // through the new `should_reproduce` path without panicking.
+        #[test]
+        fn phase_citizen_lifecycle_uses_should_reproduce() {
+            let mut sim = Simulation::new();
+            for (i, id) in [700u64, 701, 702].iter().enumerate() {
+                let entity = spawn_civilian_at(
+                    &mut sim.world,
+                    *id,
+                    Alignment::None,
+                    0.20 + (i as f32) * 0.01,
+                    0.20 + (i as f32) * 0.01,
+                    ActorVisualKind::Humanoid,
+                    &mut sim.rng,
+                );
+                let mut civ = sim.world.get::<&mut AgentCivilian>(entity).unwrap();
+                civ.age = 30;
+                let mut needs = sim.world.get::<&mut AgentNeeds>(entity).unwrap();
+                needs.food = 0.95;
+                needs.shelter = 0.95;
+                needs.safety = 0.95;
+                needs.belonging = 0.95;
+            }
+            sim.state.resources.food = Fixed::from_num(1000);
+            sim.state.population = sim.state.population.max(count_civilians(&sim.world) as u64);
+
+            for tick in 0..600 {
+                sim.state.tick = tick;
+                sim.phase_citizen_lifecycle();
+            }
+
+            let final_pop = count_civilians(&sim.world) as u64;
+            assert!(
+                final_pop >= 4,
+                "should_reproduce should have produced at least one child (got {})",
+                final_pop
             );
         }
     }

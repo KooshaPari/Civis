@@ -34,6 +34,7 @@ pub mod pool;
 pub mod preflight;
 pub mod provenance;
 pub mod providers;
+pub mod psyche_lod;
 pub mod registry;
 pub mod social_graph;
 
@@ -43,6 +44,7 @@ pub use goal::{Goal, GoalChoice, Need};
 pub use pool::{AiPayload, AiResult, AiTask, AiWorkerPool, TaskId};
 pub use provenance::{AiEvent, ReplayAdvanceOutcome, ReplayMode, ReplayRefusal};
 pub use providers::DummyAiProvider;
+pub use psyche_lod::*;
 pub use registry::{ProviderRegistry, ProviderRole};
 pub use social_graph::*;
 

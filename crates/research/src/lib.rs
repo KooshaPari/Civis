@@ -32,6 +32,15 @@ pub mod focus;
 
 pub use focus::{CompletedProject, ResearchFocus, ResearchProject};
 
+/// Tech obsoletion: superseded techs decay their upkeep value over time.
+/// FR-CIV-TECH-OBSOLETE.
+pub mod tech_obsolete;
+
+pub use tech_obsolete::{
+    ObsolescenceConfig, ObsolescenceError, ObsolescenceRecord, ObsolescenceTracker,
+    OBSOLESCENCE_SCHEMA_VERSION,
+};
+
 /// Schema version for `civ-research`. Bumped on breaking changes.
 pub const SCHEMA_VERSION: u32 = 0;
 

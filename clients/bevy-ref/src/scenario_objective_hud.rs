@@ -88,9 +88,9 @@ fn draw_objective_hud(
 ) {
     let Ok(ctx) = contexts.ctx_mut() else { return };
 
-    // Small panel in the top-left corner (just below the game info overlays).
+    // Small panel centered at the top to avoid overlapping the faction panel (top-left).
     egui::Window::new("Objective")
-        .anchor(egui::Align2::LEFT_TOP, egui::vec2(8.0, 8.0))
+        .anchor(egui::Align2::CENTER_TOP, egui::vec2(0.0, 8.0))
         .default_width(280.0)
         .resizable(false)
         .collapsible(false)

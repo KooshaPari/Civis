@@ -24,7 +24,7 @@ use civ_economy::{collect_taxes, Taxation};
 use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold};
 use civ_genetics::Dna;
 use civ_mod_host::ModHost;
-use civ_needs::{Health as CivNeedsHealth, LifecycleParams};
+use civ_needs::{Health as CivNeedsHealth, LifecycleParams, should_reproduce};
 use civ_planet::{
     compute_climate, compute_weather, defaults_earthlike, Climate, GeologyMap, MoonConfig,
     PlanetConfig, WeatherCell, WorldgenConfig,
@@ -5967,21 +5967,26 @@ pub(crate) const COHESION_PER_AWAKENING: i64 = 2;
 /// Hard per-tick cap on awakening-driven cohesion nudge (signed i64 so the
 /// existing floored-at-zero cohesion mutator absorbs any overshoot cleanly).
 pub(crate) const MAX_AWAKENING_COHESION_PER_TICK: i64 = 10;
-pub(crate) const BELIEF_PER_AWAKENING: u64 = 2;
-pub(crate) const MAX_AWAKENING_BELIEF_PER_TICK: u64 = 10;
-
+/// Belief pulse minted per awakening this tick. Mirrors the cohesion policy
+/// so FR-CIV-GENETICS / FR-CIV-LEGENDS awakening events are expressed across
+/// both axes (faith + cohesion) symmetrically.
+pub const BELIEF_PER_AWAKENING: u64 = 2;
+/// Per-tick cap on awakening-driven belief so a single dramatic explosion
+/// of awakenings cannot flood the belief reserve.
+pub const MAX_AWAKENING_BELIEF_PER_TICK: u64 = 10;
+/// FR-CIV-GENETICS / FR-CIV-LEGENDS: pure gain fn for the awakening -> belief
+/// pulse. Returns `u64` to match `Simulation::add_belief`. The inner product
+/// is clamped to the per-tick cap.
 #[must_use]
-pub(crate) fn awakening_belief_gain(awakenings_this_tick: usize) -> u64 {
-    (awakenings_this_tick as u64)
-        .saturating_mul(BELIEF_PER_AWAKENING)
-        .min(MAX_AWAKENING_BELIEF_PER_TICK)
+pub fn awakening_belief_gain(awakenings_this_tick: usize) -> u64 {
+    let raw = (awakenings_this_tick as u64).saturating_mul(BELIEF_PER_AWAKENING);
+    raw.min(MAX_AWAKENING_BELIEF_PER_TICK)
 }
-
 /// FR-CIV-GENETICS / FR-CIV-LEGENDS: pure gain fn for the awakening -> cohesion
 /// pulse. Returns a signed i64 (matches `cohesion_delta`'s contract). The
 /// inner product is clamped to the per-tick cap.
 #[must_use]
-pub(crate) fn awakening_cohesion_gain(awakenings_this_tick: usize) -> i64 {
+pub fn awakening_cohesion_gain(awakenings_this_tick: usize) -> i64 {
     let raw = (awakenings_this_tick as i64).saturating_mul(COHESION_PER_AWAKENING);
     raw.min(MAX_AWAKENING_COHESION_PER_TICK).max(0)
 }

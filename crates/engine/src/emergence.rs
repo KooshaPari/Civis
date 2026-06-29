@@ -2311,3 +2311,64 @@ mod civic_emergence_tests {
         assert!(reform_momentum(1.0, 1.0) >= reform_momentum(0.0, 0.0));
     }
 }
+
+pub fn epidemic_peak(infection_rate: f32, density: f32) -> f32 {
+    if !infection_rate.is_finite() || !density.is_finite() {
+        return 0.0;
+    }
+
+    let infection_rate = infection_rate.clamp(0.0, 1.0);
+    let density = density.clamp(0.0, 1.0);
+    let spread_pressure = infection_rate * density;
+    (spread_pressure * (2.0 - spread_pressure)).clamp(0.0, 1.0)
+}
+
+pub fn sanitation_level(infrastructure: f32, wealth: f32) -> f32 {
+    if !infrastructure.is_finite() || !wealth.is_finite() {
+        return 0.0;
+    }
+
+    let infrastructure = infrastructure.clamp(0.0, 1.0);
+    let wealth = wealth.clamp(0.0, 1.0);
+    ((infrastructure * 0.65) + (wealth * 0.35)).clamp(0.0, 1.0)
+}
+
+pub fn medicine_efficacy(knowledge: f32, resources: f32) -> f32 {
+    if !knowledge.is_finite() || !resources.is_finite() {
+        return 0.0;
+    }
+
+    let knowledge = knowledge.clamp(0.0, 1.0);
+    let resources = resources.clamp(0.0, 1.0);
+    (knowledge * 0.7 + resources * 0.3 + knowledge * resources * 0.15).clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod public_health_emergence_tests {
+    use super::*;
+
+    #[test]
+    fn epidemic_peak_is_bounded_and_nan_guarded() {
+        assert_eq!(epidemic_peak(f32::NAN, 0.8), 0.0);
+        assert_eq!(epidemic_peak(0.8, f32::INFINITY), 0.0);
+        assert!((0.0..=1.0).contains(&epidemic_peak(0.0, 0.0)));
+        assert!((0.0..=1.0).contains(&epidemic_peak(1.0, 1.0)));
+    }
+
+    #[test]
+    fn sanitation_level_is_bounded_and_nan_guarded() {
+        assert_eq!(sanitation_level(f32::NAN, 0.5), 0.0);
+        assert_eq!(sanitation_level(0.5, f32::NEG_INFINITY), 0.0);
+        assert!((0.0..=1.0).contains(&sanitation_level(0.0, 0.0)));
+        assert!((0.0..=1.0).contains(&sanitation_level(1.0, 1.0)));
+    }
+
+    #[test]
+    fn medicine_efficacy_is_bounded_and_nan_guarded() {
+        assert_eq!(medicine_efficacy(f32::NAN, 0.4), 0.0);
+        assert_eq!(medicine_efficacy(0.4, f32::INFINITY), 0.0);
+        assert!((0.0..=1.0).contains(&medicine_efficacy(0.0, 0.0)));
+        assert!((0.0..=1.0).contains(&medicine_efficacy(1.0, 1.0)));
+    }
+}
+

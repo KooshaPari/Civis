@@ -1,1 +1,232 @@
 [1m[92m    Blocking[0m waiting for file lock on build directory
+[1m[92m    Checking[0m civ-needs v0.1.0 (C:\Users\koosh\Dev\Civis-cxA\crates\needs)
+[1m[93mwarning[0m[1m[97m: unused variable: `pressure`[0m
+  [1m[96m--> [0mcrates\species\src\pop_pressure.rs:87:9
+   [1m[96m|[0m
+[1m[96m87[0m [1m[96m|[0m     let pressure = total_rate - baseline;
+   [1m[96m|[0m         [1m[93m^^^^^^^^[0m [1m[93mhelp: if this is intentional, prefix it with an underscore: `_pressure`[0m
+   [1m[96m|[0m
+   [1m[96m= [0m[1m[97mnote[0m: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+[1m[93mwarning[0m: `civ-species` (lib) generated 1 warning (run `cargo fix --lib -p civ-species` to apply 1 suggestion)
+[1m[92m    Checking[0m civ-economy v0.1.0 (C:\Users\koosh\Dev\Civis-cxA\crates\economy)
+[1m[93mwarning[0m[1m[97m: unnecessary parentheses around assigned value[0m
+    [1m[96m--> [0mcrates\needs\src\lib.rs:1121:23
+     [1m[96m|[0m
+[1m[96m1121[0m [1m[96m|[0m         birth_prob /= (1.0 + overcrowding_factor);
+     [1m[96m|[0m                       [1m[93m^[0m                         [1m[93m^[0m
+     [1m[96m|[0m
+     [1m[96m= [0m[1m[97mnote[0m: `#[warn(unused_parens)]` (part of `#[warn(unused)]`) on by default
+[1m[96mhelp[0m: remove these parentheses
+     [1m[96m|[0m
+[1m[96m1121[0m [91m- [0m        birth_prob /= [91m([0m1.0 + overcrowding_factor[91m)[0m;
+[1m[96m1121[0m [92m+ [0m        birth_prob /= 1.0 + overcrowding_factor;
+     [1m[96m|[0m
+
+[1m[93mwarning[0m[1m[97m: unused variable: `age_u16`[0m
+  [1m[96m--> [0mcrates\needs\src\lifecycle.rs:20:9
+   [1m[96m|[0m
+[1m[96m20[0m [1m[96m|[0m     let age_u16 = age.clamp(0.0, u16::MAX as f32) as u16;
+   [1m[96m|[0m         [1m[93m^^^^^^^[0m [1m[93mhelp: if this is intentional, prefix it with an underscore: `_age_u16`[0m
+   [1m[96m|[0m
+   [1m[96m= [0m[1m[97mnote[0m: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+[1m[93mwarning[0m: `civ-needs` (lib) generated 2 warnings (run `cargo fix --lib -p civ-needs` to apply 2 suggestions)
+[1m[92m    Checking[0m civ-agents v0.1.0 (C:\Users\koosh\Dev\Civis-cxA\crates\agents)
+[1m[92m    Checking[0m civ-tactics v0.1.0 (C:\Users\koosh\Dev\Civis-cxA\crates\tactics)
+[1m[93mwarning[0m[1m[97m: struct `PlannedAllocator` is never constructed[0m
+  [1m[96m--> [0mcrates\economy\src\allocation.rs:38:12
+   [1m[96m|[0m
+[1m[96m38[0m [1m[96m|[0m pub struct PlannedAllocator;
+   [1m[96m|[0m            [1m[93m^^^^^^^^^^^^^^^^[0m
+   [1m[96m|[0m
+   [1m[96m= [0m[1m[97mnote[0m: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+[1m[93mwarning[0m[1m[97m: struct `JouleAllocator` is never constructed[0m
+  [1m[96m--> [0mcrates\economy\src\allocation.rs:53:12
+   [1m[96m|[0m
+[1m[96m53[0m [1m[96m|[0m pub struct JouleAllocator;
+   [1m[96m|[0m            [1m[93m^^^^^^^^^^^^^^[0m
+
+[1m[93mwarning[0m[1m[97m: struct `LaborCapacityAllocator` is never constructed[0m
+  [1m[96m--> [0mcrates\economy\src\allocation.rs:77:12
+   [1m[96m|[0m
+[1m[96m77[0m [1m[96m|[0m pub struct LaborCapacityAllocator {
+   [1m[96m|[0m            [1m[93m^^^^^^^^^^^^^^^^^^^^^^[0m
+
+[1m[93mwarning[0m[1m[97m: associated function `new` is never used[0m
+  [1m[96m--> [0mcrates\economy\src\allocation.rs:86:12
+   [1m[96m|[0m
+[1m[96m84[0m [1m[96m|[0m impl LaborCapacityAllocator {
+   [1m[96m|[0m [1m[96m---------------------------[0m [1m[96massociated function in this implementation[0m
+[1m[96m85[0m [1m[96m|[0m     /// Construct a labor-capacity allocator from raw `fraction` (clamped).
+[1m[96m86[0m [1m[96m|[0m     pub fn new(fraction: f64) -> Self {
+   [1m[96m|[0m            [1m[93m^^^[0m
+
+[1m[93mwarning[0m[1m[97m: enum `PriorityTier` is never used[0m
+   [1m[96m--> [0mcrates\economy\src\allocation.rs:124:10
+    [1m[96m|[0m
+[1m[96m124[0m [1m[96m|[0m pub enum PriorityTier {
+    [1m[96m|[0m          [1m[93m^^^^^^^^^^^^[0m
+
+[1m[93mwarning[0m[1m[97m: function `allocate_by_priority` is never used[0m
+   [1m[96m--> [0mcrates\economy\src\allocation.rs:141:8
+    [1m[96m|[0m
+[1m[96m141[0m [1m[96m|[0m pub fn allocate_by_priority(
+    [1m[96m|[0m        [1m[93m^^^^^^^^^^^^^^^^^^^^[0m
+
+[1m[93mwarning[0m[1m[97m: enum `AllocationRegime` is never used[0m
+   [1m[96m--> [0mcrates\economy\src\allocation.rs:172:10
+    [1m[96m|[0m
+[1m[96m172[0m [1m[96m|[0m pub enum AllocationRegime {
+    [1m[96m|[0m          [1m[93m^^^^^^^^^^^^^^^^[0m
+
+[1m[93mwarning[0m[1m[97m: function `allocate_with` is never used[0m
+   [1m[96m--> [0mcrates\economy\src\allocation.rs:188:8
+    [1m[96m|[0m
+[1m[96m188[0m [1m[96m|[0m pub fn allocate_with(regime: AllocationRegime, budget: i64, demand: i64) -> i64 {
+    [1m[96m|[0m        [1m[93m^^^^^^^^^^^^^[0m
+
+[1m[93mwarning[0m[1m[97m: type alias `GoodId` is never used[0m
+   [1m[96m--> [0mcrates\economy\src\allocation.rs:202:10
+    [1m[96m|[0m
+[1m[96m202[0m [1m[96m|[0m pub type GoodId = u32;
+    [1m[96m|[0m          [1m[93m^^^^^^[0m
+
+[1m[93mwarning[0m[1m[97m: constant `SCALE` is never used[0m
+   [1m[96m--> [0mcrates\economy\src\allocation.rs:211:7
+    [1m[96m|[0m
+[1m[96m211[0m [1m[96m|[0m const SCALE: i64 = 10;
+    [1m[96m|[0m       [1m[93m^^^^^[0m
+
+[1m[93mwarning[0m[1m[97m: enum `NeedKind` is never used[0m
+   [1m[96m--> [0mcrates\economy\src\allocation.rs:217:10
+    [1m[96m|[0m
+[1m[96m217[0m [1m[96m|[0m pub enum NeedKind {
+    [1m[96m|[0m          [1m[93m^^^^^^^^[0m
+
+[1m[93mwarning[0m[1m[97m: struct `AgentNeed` is never constructed[0m
+   [1m[96m--> [0mcrates\economy\src\allocation.rs:230:12
+    [1m[96m|[0m
+[1m[96m230[0m [1m[96m|[0m pub struct AgentNeed {
+    [1m[96m|[0m            [1m[93m^^^^^^^^^[0m
+
+[1m[93mwarning[0m[1m[97m: methods `deficit` and `need_units` are never used[0m
+   [1m[96m--> [0mcrates\economy\src\allocation.rs:243:8
+    [1m[96m|[0m
+[1m[96m241[0m [1m[96m|[0m impl AgentNeed {
+    [1m[96m|[0m [1m[96m--------------[0m [1m[96mmethods in this implementation[0m
+[1m[96m242[0m [1m[96m|[0m     /// Deficit in `[0.0, 1.0]` (1.0 minus satisfaction, clamped at 0).
+[1m[96m243[0m [1m[96m|[0m     fn deficit(&self) -> f64 {
+    [1m[96m|[0m        [1m[93m^^^^^^^[0m
+[1m[96m...[0m
+[1m[96m255[0m [1m[96m|[0m     fn need_units(&self) -> i64 {
+    [1m[96m|[0m        [1m[93m^^^^^^^^^^[0m
+
+[1m[93mwarning[0m[1m[97m: struct `AllocationOutcome` is never constructed[0m
+   [1m[96m--> [0mcrates\economy\src\allocation.rs:280:12
+    [1m[96m|[0m
+[1m[96m280[0m [1m[96m|[0m pub struct AllocationOutcome {
+    [1m[96m|[0m            [1m[93m^^^^^^^^^^^^^^^^^[0m
+
+[1m[93mwarning[0m[1m[97m: function `subsistence_first_allocate` is never used[0m
+   [1m[96m--> [0mcrates\economy\src\allocation.rs:317:8
+    [1m[96m|[0m
+[1m[96m317[0m [1m[96m|[0m pub fn subsistence_first_allocate(
+    [1m[96m|[0m        [1m[93m^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+
+[1m[93mwarning[0m[1m[97m: constant `STABLE_INFLATION_BP10` is never used[0m
+  [1m[96m--> [0mcrates\economy\src\currency_trust.rs:61:7
+   [1m[96m|[0m
+[1m[96m61[0m [1m[96m|[0m const STABLE_INFLATION_BP10: i64 = 500; // 5 % per tick
+   [1m[96m|[0m       [1m[93m^^^^^^^^^^^^^^^^^^^^^[0m
+
+[1m[93mwarning[0m[1m[97m: struct `SettlementTradeFlow` is never constructed[0m
+   [1m[96m--> [0mcrates\economy\src\market.rs:168:12
+    [1m[96m|[0m
+[1m[96m168[0m [1m[96m|[0m pub struct SettlementTradeFlow {
+    [1m[96m|[0m            [1m[93m^^^^^^^^^^^^^^^^^^^[0m
+
+[1m[93mwarning[0m[1m[97m: function `settlement_trade_flow` is never used[0m
+   [1m[96m--> [0mcrates\economy\src\market.rs:190:8
+    [1m[96m|[0m
+[1m[96m190[0m [1m[96m|[0m pub fn settlement_trade_flow(
+    [1m[96m|[0m        [1m[93m^^^^^^^^^^^^^^^^^^^^^[0m
+
+[1m[93mwarning[0m[1m[97m: struct `TradeOffer` is never constructed[0m
+   [1m[96m--> [0mcrates\economy\src\stocks.rs:167:12
+    [1m[96m|[0m
+[1m[96m167[0m [1m[96m|[0m pub struct TradeOffer {
+    [1m[96m|[0m            [1m[93m^^^^^^^^^^[0m
+
+[1m[93mwarning[0m[1m[97m: function `deficit_was_clamped` is never used[0m
+   [1m[96m--> [0mcrates\economy\src\stocks.rs:182:4
+    [1m[96m|[0m
+[1m[96m182[0m [1m[96m|[0m fn deficit_was_clamped(flow: i64, applied: i64) -> bool {
+    [1m[96m|[0m    [1m[93m^^^^^^^^^^^^^^^^^^^[0m
+
+[1m[93mwarning[0m[1m[97m: function `step_stocks` is never used[0m
+   [1m[96m--> [0mcrates\economy\src\stocks.rs:190:8
+    [1m[96m|[0m
+[1m[96m190[0m [1m[96m|[0m pub fn step_stocks(stocks: &mut Stocks, profile: &ProductionProfile) {
+    [1m[96m|[0m        [1m[93m^^^^^^^^^^^[0m
+
+[1m[93mwarning[0m[1m[97m: function `comparative_advantage` is never used[0m
+   [1m[96m--> [0mcrates\economy\src\stocks.rs:223:8
+    [1m[96m|[0m
+[1m[96m223[0m [1m[96m|[0m pub fn comparative_advantage(profile: &ProductionProfile) -> Good {
+    [1m[96m|[0m        [1m[93m^^^^^^^^^^^^^^^^^^^^^[0m
+
+[1m[93mwarning[0m[1m[97m: function `trade_gain` is never used[0m
+   [1m[96m--> [0mcrates\economy\src\stocks.rs:238:8
+    [1m[96m|[0m
+[1m[96m238[0m [1m[96m|[0m pub fn trade_gain(a: &ProductionProfile, b: &ProductionProfile) -> i64 {
+    [1m[96m|[0m        [1m[93m^^^^^^^^^^[0m
+
+[1m[93mwarning[0m[1m[97m: function `propose_trade` is never used[0m
+   [1m[96m--> [0mcrates\economy\src\stocks.rs:252:8
+    [1m[96m|[0m
+[1m[96m252[0m [1m[96m|[0m pub fn propose_trade(
+    [1m[96m|[0m        [1m[93m^^^^^^^^^^^^^[0m
+
+[1m[93mwarning[0m[1m[97m: function `offer_better` is never used[0m
+   [1m[96m--> [0mcrates\economy\src\stocks.rs:310:4
+    [1m[96m|[0m
+[1m[96m310[0m [1m[96m|[0m fn offer_better(candidate: &TradeOffer, current: &TradeOffer) -> bool {
+    [1m[96m|[0m    [1m[93m^^^^^^^^^^^^[0m
+
+[1m[93mwarning[0m[1m[97m: function `apply_trade` is never used[0m
+   [1m[96m--> [0mcrates\economy\src\stocks.rs:317:8
+    [1m[96m|[0m
+[1m[96m317[0m [1m[96m|[0m pub fn apply_trade(a: &mut Stocks, b: &mut Stocks, offer: &TradeOffer) {
+    [1m[96m|[0m        [1m[93m^^^^^^^^^^^[0m
+
+[1m[93mwarning[0m: `civ-economy` (lib) generated 26 warnings
+[1m[92m    Checking[0m civ-build v0.1.0 (C:\Users\koosh\Dev\Civis-cxA\crates\build)
+[1m[91merror[E0255][0m[1m[97m: the name `MilitaryUnit` is defined multiple times[0m
+   [1m[96m--> [0mcrates\tactics\src\lib.rs:555:1
+    [1m[96m|[0m
+[1m[96m 45[0m [1m[96m|[0m pub use crate::MilitaryUnit;
+    [1m[96m|[0m         [1m[96m-------------------[0m [1m[96mprevious import of the type `MilitaryUnit` here[0m
+[1m[96m...[0m
+[1m[96m555[0m [1m[96m|[0m pub struct MilitaryUnit {
+    [1m[96m|[0m [1m[91m^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[91m`MilitaryUnit` redefined here[0m
+    [1m[96m|[0m
+    [1m[96m= [0m[1m[97mnote[0m: `MilitaryUnit` must be defined only once in the type namespace of this module
+[1m[96mhelp[0m: you can use `as` to change the binding name of the import
+    [1m[96m|[0m
+[1m[96m 45[0m [1m[96m| [0mpub use crate::MilitaryUnit[92m as OtherMilitaryUnit[0m;
+    [1m[96m|[0m                             [92m++++++++++++++++++++[0m
+
+[1m[93mwarning[0m[1m[97m: unused import: `crate::MilitaryUnit`[0m
+  [1m[96m--> [0mcrates\tactics\src\lib.rs:45:9
+   [1m[96m|[0m
+[1m[96m45[0m [1m[96m|[0m pub use crate::MilitaryUnit;
+   [1m[96m|[0m         [1m[93m^^^^^^^^^^^^^^^^^^^[0m
+   [1m[96m|[0m
+   [1m[96m= [0m[1m[97mnote[0m: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+[1m[97mFor more information about this error, try `rustc --explain E0255`.[0m
+[1m[93mwarning[0m: `civ-tactics` (lib) generated 1 warning
+[1m[91merror[0m: could not compile `civ-tactics` (lib) due to 1 previous error; 1 warning emitted
+[1m[93mwarning[0m: build failed, waiting for other jobs to finish...

@@ -15,7 +15,7 @@ use civ_build::{Allocator, BuildingGraph, BuildSite, DemandSignals, ProductionEv
 use civ_diffusion::DiffusionParams;
 use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, LaborCapacityAllocator, MarketState};
 use civ_economy::{collect_taxes, Taxation};
-use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold};
+use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold, SentienceEvent};
 use civ_genetics::Dna;
 use civ_mod_host::ModHost;
 use civ_needs::{Health as CivNeedsHealth, LifecycleParams, should_reproduce};
@@ -9368,4 +9368,10 @@ mod tests {
         let counters = *sim.last_tick_lifecycle_metrics();
         assert!(counters.adults >= 1, "adult should be classified even without Psyche");
     }
+}
+
+/// Re-export of genetics module so callers can use `crate::engine::genetics::...`.
+pub mod genetics {
+    /// Re-export of SentienceEvent from civ_genetics.
+    pub use civ_genetics::sentience::SentienceEvent;
 }

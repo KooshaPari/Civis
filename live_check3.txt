@@ -1,3 +1,4 @@
+crates\species\src\pop_pressure.rs:87:9: warning: unused variable: `pressure`: help: if this is intentional, prefix it with an underscore: `_pressure`
 warning: unnecessary parentheses around assigned value
     --> crates\needs\src\lib.rs:1127:23
      |
@@ -19,9 +20,8 @@ warning: unused variable: `age_u16`
    |
    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
 
-crates\species\src\pop_pressure.rs:87:9: warning: unused variable: `pressure`: help: if this is intentional, prefix it with an underscore: `_pressure`
-warning: `civ-needs` (lib) generated 2 warnings (run `cargo fix --lib -p civ-needs` to apply 2 suggestions)
 warning: `civ-species` (lib) generated 1 warning (run `cargo fix --lib -p civ-species` to apply 1 suggestion)
+warning: `civ-needs` (lib) generated 2 warnings (run `cargo fix --lib -p civ-needs` to apply 2 suggestions)
 warning: struct `PlannedAllocator` is never constructed
   --> crates\economy\src\allocation.rs:38:12
    |
@@ -317,9 +317,9 @@ warning: use of deprecated struct `religion::Religion`: Replaced by ReligiousPro
     |                                   ^^^^^^^^
 
 error[E0308]: mismatched types
-    --> crates\engine\src\engine.rs:4165:20
+    --> crates\engine\src\engine.rs:4166:20
      |
-4165 |                 if should_birth {
+4166 |                 if should_birth {
      |                    ^^^^^^^^^^^^ expected `bool`, found `f32`
 
 error[E0308]: mismatched types
@@ -339,9 +339,9 @@ note: function defined here
     |        ^^^^^^^^^^^^^ --------------------
 
 error[E0308]: mismatched types
-    --> crates\engine\src\godtools.rs:1367:41
+    --> crates\engine\src\godtools.rs:1364:41
      |
-1367 |                 let target = MaterialId(req.aux_id);
+1364 |                 let target = MaterialId(req.aux_id);
      |                              ---------- ^^^^^^^^^^ expected `u16`, found `u32`
      |                              |
      |                              arguments to this struct are incorrect
@@ -353,13 +353,13 @@ note: tuple struct defined here
      |            ^^^^^^^^^^
 help: you can convert a `u32` to a `u16` and panic if the converted value doesn't fit
      |
-1367 |                 let target = MaterialId(req.aux_id.try_into().unwrap());
+1364 |                 let target = MaterialId(req.aux_id.try_into().unwrap());
      |                                                   ++++++++++++++++++++
 
 error[E0308]: mismatched types
-    --> crates\engine\src\godtools.rs:1479:33
+    --> crates\engine\src\godtools.rs:1476:33
      |
-1479 |         let target = MaterialId(req.material_id);
+1476 |         let target = MaterialId(req.material_id);
      |                      ---------- ^^^^^^^^^^^^^^^ expected `u16`, found `u32`
      |                      |
      |                      arguments to this struct are incorrect
@@ -371,7 +371,7 @@ note: tuple struct defined here
      |            ^^^^^^^^^^
 help: you can convert a `u32` to a `u16` and panic if the converted value doesn't fit
      |
-1479 |         let target = MaterialId(req.material_id.try_into().unwrap());
+1476 |         let target = MaterialId(req.material_id.try_into().unwrap());
      |                                                ++++++++++++++++++++
 
 warning: unused variable: `metal_available`
@@ -435,26 +435,49 @@ warning: value assigned to `cumulative` is never read
      |
      = help: maybe it is overwritten before being read?
 
-error[E0004]: non-exhaustive patterns: `LifecycleLabel::WorkingAge` not covered
-    --> crates\engine\src\engine.rs:3418:19
+error[E0382]: borrow of moved value: `dead`
+    --> crates\engine\src\engine.rs:3427:52
      |
-3418 |             match civ_needs::classify_lifecycle(sample.age, &health, maturity, labor_cap) {
-     |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ pattern `LifecycleLabel::WorkingAge` not covered
-     |
-note: `LifecycleLabel` defined here
-    --> crates\needs\src\lifecycle.rs:43:1
-     |
-  43 | pub enum LifecycleLabel {
-     | ^^^^^^^^^^^^^^^^^^^^^^^
+3227 |         let mut dead = Vec::new();
+     |             -------- move occurs because `dead` has type `Vec<(hecs::Entity, u64, f32, f32)>`, which does not implement the `Copy` trait
 ...
-  49 |     WorkingAge,
-     |     ---------- not covered
-     = note: the matched value is of type `LifecycleLabel`
-help: ensure that all possible cases are being handled by adding a match arm with a wildcard pattern or an explicit pattern as shown
+3301 |         for (entity, id, x, y) in dead {
+     |                                   ---- `dead` moved due to this implicit call to `.into_iter()`
+...
+3427 |         metrics.dead = metrics.dead.saturating_add(dead.len() as u32);
+     |                                                    ^^^^ value borrowed here after move
      |
-3422 ~                 civ_needs::LifecycleLabel::Dead => metrics.dead += 1,
-3423 ~                 LifecycleLabel::WorkingAge => todo!(),
+note: `into_iter` takes ownership of the receiver `self`, which moves `dead`
+    --> C:\Users\koosh\.rustup\toolchains\stable-x86_64-pc-windows-msvc\lib/rustlib/src/rust\library\core\src\iter\traits\collect.rs:312:18
      |
+ 312 |     fn into_iter(self) -> Self::IntoIter;
+     |                  ^^^^
+help: consider iterating over a slice of the `Vec<(hecs::Entity, u64, f32, f32)>`'s content to avoid moving into the `for` loop
+     |
+3301 |         for (entity, id, x, y) in &dead {
+     |                                   +
+
+warning: unused variable: `id`
+    --> crates\engine\src\engine.rs:3344:30
+     |
+3344 |                 for (entity, id, mut sample) in candidates.into_iter().take(migration_count) {
+     |                              ^^ help: if this is intentional, prefix it with an underscore: `_id`
+
+warning: value assigned to `sample` is never read
+    --> crates\engine\src\engine.rs:3352:25
+     |
+3352 |                         sample.x = nx;
+     |                         ^^^^^^^^^^^^^
+     |
+     = help: maybe it is overwritten before being read?
+
+warning: value assigned to `sample` is never read
+    --> crates\engine\src\engine.rs:3353:25
+     |
+3353 |                         sample.y = ny;
+     |                         ^^^^^^^^^^^^^
+     |
+     = help: maybe it is overwritten before being read?
 
 error[E0499]: cannot borrow `*sim` as mutable more than once at a time
    --> crates\engine\src\era.rs:272:29
@@ -487,29 +510,11 @@ error[E0502]: cannot borrow `*sim` as immutable because it is also borrowed as m
     |                 |
     |                 mutable borrow later used by call
 
-error[E0515]: cannot return value referencing temporary value
-   --> crates\engine\src\godtools.rs:780:5
+warning: unused variable: `civ`
+   --> crates\engine\src\godtools.rs:783:37
     |
-780 | //     world
-781 | ||         .query::<(&Position3d, &Civilian)>()
-    | ||____________________________________________- temporary value created here
-782 | |          .iter()
-783 | |          .filter_map(|(entity, (pos, civ))| {
-...   |
-792 | |          })
-793 | |          .collect()
-    | |___________________^ returns a value referencing data owned by the current function
-
-error[E0502]: cannot borrow `self.world` as mutable because it is also borrowed as immutable
-    --> crates\engine\src\godtools.rs:1866:24
-     |
-1859 |                 let affected = actors_in_footprint(&self.world, e.center, e.radius_voxels);
-     |                                                    ----------- immutable borrow occurs here
-...
-1865 |                 for (entity, _, _) in &affected {
-     |                                       --------- immutable borrow later used here
-1866 |                     if self.world.despawn(*entity).is_ok() {
-     |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^ mutable borrow occurs here
+783 |         .filter_map(|(entity, (pos, civ))| {
+    |                                     ^^^ help: if this is intentional, prefix it with an underscore: `_civ`
 
 warning: unused variable: `idx`
    --> crates\engine\src\language.rs:138:9
@@ -517,7 +522,7 @@ warning: unused variable: `idx`
 138 |     for idx in 0..feature_len {
     |         ^^^ help: if this is intentional, prefix it with an underscore: `_idx`
 
-Some errors have detailed explanations: E0004, E0308, E0499, E0502, E0515.
-For more information about an error, try `rustc --explain E0004`.
-warning: `civ-engine` (lib) generated 24 warnings
-error: could not compile `civ-engine` (lib) due to 10 previous errors; 24 warnings emitted
+Some errors have detailed explanations: E0308, E0382, E0499, E0502.
+For more information about an error, try `rustc --explain E0308`.
+warning: `civ-engine` (lib) generated 28 warnings
+error: could not compile `civ-engine` (lib) due to 8 previous errors; 28 warnings emitted

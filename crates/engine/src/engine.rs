@@ -3417,6 +3417,7 @@ impl Simulation {
             );
             match civ_needs::classify_lifecycle(sample.age, &health, maturity, labor_cap) {
                 civ_needs::LifecycleLabel::Child => metrics.children += 1,
+                civ_needs::LifecycleLabel::WorkingAge => metrics.adults += 1,
                 civ_needs::LifecycleLabel::Adult => metrics.adults += 1,
                 civ_needs::LifecycleLabel::Elder => metrics.elders += 1,
                 civ_needs::LifecycleLabel::Dead => metrics.dead += 1,

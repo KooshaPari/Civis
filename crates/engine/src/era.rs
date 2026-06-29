@@ -269,14 +269,40 @@ impl EraProgressionState {
 
 /// Research phase hook (FR-ERA): emergent progress from economy + population.
 pub fn phase_research(sim: &mut Simulation) {
-    tick_research(sim, &mut sim.era_progression_mut().faction_tech);
+    let mut faction_tech = std::mem::take(&mut sim.era_progression_mut().faction_tech);
+    tick_research(sim, &mut faction_tech);
+    sim.era_progression_mut().faction_tech = faction_tech;
 }
 
 /// Tech + era phase hook (FR-ERA): unlock levels and evaluate ages.
 pub fn phase_tech(sim: &mut Simulation) {
+    let inputs = gather_faction_inputs(sim);
+    let tick = sim.state.tick;
     let progression = sim.era_progression_mut();
     tick_tech(&mut progression.faction_tech);
-    progression.evaluate_eras(sim);
+    for (faction_id, faction_inputs) in inputs {
+        let tech_level = progression
+            .faction_tech
+            .get(&faction_id)
+            .map(|t| t.tech_level)
+            .unwrap_or(0);
+        let next = CivAge::evaluate(
+            faction_inputs.population,
+            tech_level,
+            faction_inputs.surplus,
+        );
+        let previous = progression
+            .faction_ages
+            .get(&faction_id)
+            .copied()
+            .unwrap_or(CivAge::Stone);
+        if next > previous {
+            progression
+                .history
+                .record_advance(tick, faction_id, previous, next);
+        }
+        progression.faction_ages.insert(faction_id, next);
+    }
 }
 
 #[cfg(test)]

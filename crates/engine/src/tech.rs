@@ -143,7 +143,7 @@ pub fn gather_faction_inputs(sim: &Simulation) -> BTreeMap<u32, FactionEmergence
 }
 
 /// Advance per-faction research progress from emergent pressures.
-pub fn tick_research(sim: &mut Simulation, tech_by_faction: &mut BTreeMap<u32, FactionTechState>) {
+pub fn tick_research(sim: &Simulation, tech_by_faction: &mut BTreeMap<u32, FactionTechState>) {
     let inputs = gather_faction_inputs(sim);
     let faction_ids: Vec<u32> = inputs.keys().copied().collect();
     let snapshot = tech_by_faction.clone();

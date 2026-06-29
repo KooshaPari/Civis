@@ -770,11 +770,11 @@ fn scan_topmost_y(
 /// spherical footprint `(center, radius_voxels)`. The order
 /// matches `hecs`'s archetype iteration order, which is stable
 /// across runs that mutate through the same API.
-fn actors_in_footprint<'w>(
-    world: &'w hecs::World,
+fn actors_in_footprint(
+    world: &hecs::World,
     center: WorldCoord,
     radius_voxels: u8,
-) -> Vec<(hecs::Entity, &'w Position3d, &'w Civilian)> {
+) -> Vec<hecs::Entity> {
     let r = i64::from(radius_voxels) * FIXED_SCALE;
     let r2 = r * r;
     world
@@ -785,7 +785,7 @@ fn actors_in_footprint<'w>(
             let dy = pos.coord.y - center.y;
             let dz = pos.coord.z - center.z;
             if dx * dx + dy * dy + dz * dz <= r2 {
-                Some((entity, pos, civ))
+                Some(entity)
             } else {
                 None
             }
@@ -828,10 +828,7 @@ fn apply_actor_effect(
     }
     // Snapshot the entities first so we can drop the immutable
     // borrow of `world` before taking the mutable borrows below.
-    let affected: Vec<hecs::Entity> = actors_in_footprint(world, center, radius_voxels)
-        .into_iter()
-        .map(|(e, _, _)| e)
-        .collect();
+    let affected = actors_in_footprint(world, center, radius_voxels);
     let first = affected
         .first()
         .map(|ent| ent.to_bits().get())
@@ -1857,12 +1854,9 @@ impl Simulation {
                     ));
                 }
                 let affected = actors_in_footprint(&self.world, e.center, e.radius_voxels);
-                let first = affected
-                    .first()
-                    .map(|(ent, _, _)| ent.to_bits().get())
-                    .unwrap_or(0);
+                let first = affected.first().map(|ent| ent.to_bits().get()).unwrap_or(0);
                 let mut despawned: u32 = 0;
-                for (entity, _, _) in &affected {
+                for entity in &affected {
                     if self.world.despawn(*entity).is_ok() {
                         despawned = despawned.saturating_add(1);
                     }

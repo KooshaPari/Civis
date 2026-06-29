@@ -2052,3 +2052,67 @@ mod migration_pressure_tests {
     use super::migration_pressure;
     #[test] fn in_range() { assert!((0.0..=1.0).contains(&migration_pressure(0.8,0.6))); assert_eq!(migration_pressure(f32::NAN,0.0),0.0); }
 }
+
+fn clamp01(value: f32) -> f32 {
+    if value.is_finite() {
+        value.clamp(0.0, 1.0)
+    } else {
+        0.0
+    }
+}
+
+pub fn banditry_rate(poverty: f32, enforcement: f32) -> f32 {
+    if !poverty.is_finite() || !enforcement.is_finite() {
+        return 0.0;
+    }
+
+    let poverty = poverty.clamp(0.0, 1.0);
+    let enforcement = enforcement.clamp(0.0, 1.0);
+    clamp01(poverty * (1.0 - 0.75 * enforcement))
+}
+
+pub fn corruption_level(wealth_gap: f32, oversight: f32) -> f32 {
+    if !wealth_gap.is_finite() || !oversight.is_finite() {
+        return 0.0;
+    }
+
+    let wealth_gap = wealth_gap.clamp(0.0, 1.0);
+    let oversight = oversight.clamp(0.0, 1.0);
+    clamp01(wealth_gap * (1.0 - 0.8 * oversight))
+}
+
+pub fn reform_momentum(unrest: f32, leadership: f32) -> f32 {
+    if !unrest.is_finite() || !leadership.is_finite() {
+        return 0.0;
+    }
+
+    let unrest = unrest.clamp(0.0, 1.0);
+    let leadership = leadership.clamp(0.0, 1.0);
+    clamp01(0.55 * unrest + 0.45 * leadership)
+}
+
+#[cfg(test)]
+mod civic_emergence_tests {
+    use super::{banditry_rate, corruption_level, reform_momentum};
+
+    #[test]
+    fn banditry_rate_is_bounded_and_nan_guarded() {
+        assert!((0.0..=1.0).contains(&banditry_rate(0.9, 0.2)));
+        assert_eq!(banditry_rate(f32::NAN, 0.2), 0.0);
+        assert!(banditry_rate(0.9, 0.0) >= banditry_rate(0.9, 1.0));
+    }
+
+    #[test]
+    fn corruption_level_is_bounded_and_nan_guarded() {
+        assert!((0.0..=1.0).contains(&corruption_level(0.8, 0.3)));
+        assert_eq!(corruption_level(0.8, f32::NAN), 0.0);
+        assert!(corruption_level(0.8, 0.0) >= corruption_level(0.8, 1.0));
+    }
+
+    #[test]
+    fn reform_momentum_is_bounded_and_nan_guarded() {
+        assert!((0.0..=1.0).contains(&reform_momentum(0.6, 0.7)));
+        assert_eq!(reform_momentum(f32::NAN, 0.7), 0.0);
+        assert!(reform_momentum(1.0, 1.0) >= reform_momentum(0.0, 0.0));
+    }
+}

@@ -322,6 +322,43 @@ impl Simulation {
                 None,
             );
         }
+
+        // Wire festival_intensity into emergence feed.
+        let food_surplus = 50.0_f32;
+        let shared_belief = (self.state.belief.min(u32::MAX as u64) as f32) / 1000.0;
+        let festival = festival_intensity(food_surplus, shared_belief);
+        if festival > 0.6 {
+            self.emergence.push_feed(
+                tick,
+                "festival_intensity",
+                format!("Festival intensity {:.1}%", festival * 100.0),
+                None,
+            );
+        }
+
+        // Wire urbanization_index into emergence feed.
+        let urbanization = urbanization_index(density, food_surplus, trade_score);
+        if urbanization > 0.7 {
+            self.emergence.push_feed(
+                tick,
+                "urbanization_index",
+                format!("Urbanization index {:.1}%", urbanization * 100.0),
+                None,
+            );
+        }
+
+        // Wire revolt_likelihood into emergence feed.
+        let unrest = (self.state.unrest.min(u32::MAX as u64) as f32) / 1000.0;
+        let legitimacy = (self.state.cohesion.min(u32::MAX as u64) as f32) / 1000.0;
+        let revolt = revolt_likelihood(unrest, legitimacy);
+        if revolt > 0.5 {
+            self.emergence.push_feed(
+                tick,
+                "revolt_likelihood",
+                format!("Revolt likelihood {:.1}%", revolt * 100.0),
+                None,
+            );
+        }
     }
 
     fn emergence_ensure_genomes(&mut self) {

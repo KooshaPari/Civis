@@ -171,7 +171,7 @@ pub fn apply_emergence_facades(
 /// Era-gated demand wrapper used by `phase_buildings`.
 #[must_use]
 pub fn emergence_demand_signals(
-    sim: &Simulation,
+    _sim: &Simulation,
     raw: civ_build::DemandSignals,
     era: u16,
 ) -> civ_build::DemandSignals {

@@ -4659,7 +4659,7 @@ impl Simulation {
                     overcrowding_factor as f32,
                     &lifecycle_params,
                 );
-                if should_birth {
+                if self.rng.gen_bool(should_birth.clamp(0.0, 1.0) as f64) {
                     let child_id = self.next_civilian_id;
                     self.next_civilian_id += 1;
                     let x = pos.coord.x as f32 / FIXED_SCALE as f32;

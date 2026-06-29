@@ -16,6 +16,7 @@
 #![forbid(unsafe_code)]
 
 pub mod env_overlay;
+pub mod god_tool_state;
 pub mod key_palette;
 pub mod notifications;
 pub mod overlay_registry;
@@ -24,6 +25,10 @@ pub mod tokens;
 pub mod top_bar;
 
 pub use env_overlay::*;
+pub use god_tool_state::{
+    GodToolDef, GodToolId, GodToolParamKind, GodToolParamSpec, GodToolParamValue, GodToolRegistry,
+    GodToolState,
+};
 pub use key_palette::{KeyId, KeycapDef, KeycapPalette, keycap_palette_default};
 pub use notifications::{Notification, NotificationQueue, Severity};
 pub use overlay_registry::{

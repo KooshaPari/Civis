@@ -290,6 +290,38 @@ impl Simulation {
                 None,
             );
         }
+
+        let disease_rate = disease_spread_rate(density, trade_conn);
+        if disease_rate > 0.5 {
+            self.emergence.push_feed(
+                tick,
+                "disease_spread_rate",
+                format!("Disease spread {:.1}%", disease_rate * 100.0),
+                None,
+            );
+        }
+
+        let local_scarcity = food_deficit / (population_f32.max(1.0) / 10.0);
+        let neighbor_opp = trade_conn * 100.0;
+        let migration = migration_pressure(local_scarcity, neighbor_opp);
+        if migration > 0.6 {
+            self.emergence.push_feed(
+                tick,
+                "migration_pressure",
+                format!("Migration pressure {:.1}%", migration * 100.0),
+                None,
+            );
+        }
+
+        let trade_score = trade_connectivity_score(trade_count, 50.0);
+        if trade_score > 0.7 {
+            self.emergence.push_feed(
+                tick,
+                "trade_connectivity_score",
+                format!("Trade connectivity {:.1}%", trade_score * 100.0),
+                None,
+            );
+        }
     }
 
     fn emergence_ensure_genomes(&mut self) {

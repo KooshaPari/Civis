@@ -20,7 +20,8 @@ use crate::live_stream::{LiveBuildingTag, LiveStreamScene};
 fn draw_world_faction_glyphs(
     mut contexts: EguiContexts,
     scene: Res<LiveStreamScene>,
-    camera_q: Query<&GlobalTransform, With<Camera>>,
+    windows: Query<&Window>,
+    camera_q: Query<(&Camera, &GlobalTransform), With<Camera3d>>,
     building_q: Query<&GlobalTransform, With<LiveBuildingTag>>,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else { return };
@@ -30,9 +31,12 @@ fn draw_world_faction_glyphs(
         return;
     }
 
-    let camera_global = match camera_q.iter().next() {
-        Some(global) => global,
-        _ => return,
+    let Ok(window) = windows.single() else {
+        return;
+    };
+
+    let Ok((camera, camera_transform)) = camera_q.single() else {
+        return;
     };
 
     // Create a custom layer for faction glyphs (rendered on top of other egui)
@@ -69,39 +73,27 @@ fn draw_world_faction_glyphs(
             continue;
         };
 
-        // Project building world position to screen (viewport) coordinates.
-        // Simplified: use camera position and direction for a basic projection.
-        // For now, use a fixed screen-space fallback based on building offset from camera.
-        // TODO: wire proper camera query with Projection component for real world_to_viewport.
-        let camera_pos = camera_global.translation();
-        let delta = building_world_pos - camera_pos;
-
-        // Simple depth check: if building is behind camera, skip
-        if delta.z >= 0.0 {
-            continue;
-        }
-
-        // Rough screen projection: assume 16:9 aspect, ~60 degree FOV
-        // X and Y screen coords based on horizontal/vertical offsets; scale by depth.
-        let depth = -delta.z; // Positive depth away from camera
-        let screen_x = 960.0 + (delta.x / depth) * 500.0; // 960 = 1920/2
-        let screen_y = 540.0 - (delta.y / depth) * 500.0; // 540 = 1080/2; invert Y
-
-        let screen_pos = egui::pos2(screen_x as f32, screen_y as f32);
+        // Project building world position to screen (viewport) coordinates using Camera::world_to_viewport
+        let screen_pos = match camera.world_to_viewport(camera_transform, building_world_pos) {
+            Ok(viewport_pos) => viewport_pos,
+            Err(_) => continue, // Skip if off-screen or behind camera
+        };
 
         // Cull if off-screen (add margin for glyph size)
         if screen_pos.x < -margin
-            || screen_pos.x > painter.clip_rect().width() + margin
+            || screen_pos.x > window.physical_width() as f32 + margin
             || screen_pos.y < -margin
-            || screen_pos.y > painter.clip_rect().height() + margin
+            || screen_pos.y > window.physical_height() as f32 + margin
         {
             continue;
         }
 
+        let egui_screen_pos = egui::pos2(screen_pos.x, screen_pos.y);
+
         // Draw the glyph sigil at the projected position
         draw_glyph_sigil(
             &painter,
-            screen_pos,
+            egui_screen_pos,
             glyph_size,
             lead_glyph,
             faction_entry.id,

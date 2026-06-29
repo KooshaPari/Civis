@@ -1070,3 +1070,113 @@ mod tests {
         assert_eq!(needs.health, 0.0);
     }
 }
+
+/// Determine birth probability for a civilian based on lifecycle stage, health, and environmental constraints.
+///
+/// FR-CIV-LIFE-003: Reproduction is driven by lifecycle stage (working-age adults only),
+/// health/nutrition availability, safety, and population pressure.
+/// Returns a probability in `[0, 1]` to be used with a seeded RNG.
+#[must_use]
+pub fn should_reproduce(
+    age: f32,
+    health: &Health,
+    food_satisfaction: f32,
+    safety_satisfaction: f32,
+    overcrowding_factor: f32,
+    lifecycle_params: &LifecycleParams,
+) -> f32 {
+    use crate::lifecycle::classify_lifecycle;
+
+    // Only working-age adults can reproduce.
+    let lifecycle = classify_lifecycle(age, lifecycle_params);
+    if lifecycle != crate::lifecycle::LifecycleLabel::WorkingAge {
+        return 0.0;
+    }
+
+    // Dead or critically ill individuals do not reproduce.
+    if health.is_dead() || health.sick {
+        return 0.0;
+    }
+
+    // Base reproduction rate for healthy working-age adults.
+    let mut birth_prob = 0.15;
+
+    // Health/integrity modulates: sicker individuals have lower birth probability.
+    birth_prob *= health.integrity.max(0.1);
+
+    // Food satisfaction must be adequate: starving populations don't reproduce well.
+    if food_satisfaction < 0.3 {
+        return 0.0; // Critical food shortage prevents reproduction.
+    }
+    birth_prob *= food_satisfaction.clamp(0.3, 1.0) / 1.0;
+
+    // Safety must be acceptable: threatened/panicked populations suppress reproduction.
+    if safety_satisfaction < 0.2 {
+        return 0.0; // Critical danger prevents reproduction.
+    }
+    birth_prob *= (safety_satisfaction * 0.5 + 0.5).clamp(0.0, 1.0);
+
+    // Overcrowding suppresses reproduction (carrying capacity effect).
+    if overcrowding_factor > 1.0 {
+        birth_prob /= (1.0 + overcrowding_factor);
+    }
+
+    birth_prob.clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod test_reproduction {
+    use super::*;
+
+    #[test]
+    fn test_satisfied_adult_reproduces() {
+        let lifecycle_params = LifecycleParams::default();
+        let health = Health {
+            integrity: 1.0,
+            sick: false,
+            deprivation_streak: 0,
+        };
+        // Working-age adult (age 25 fits in default ranges)
+        let prob = should_reproduce(25.0, &health, 0.9, 0.9, 0.5, &lifecycle_params);
+        assert!(prob > 0.05, "Satisfied adult should have >5% birth prob, got {}", prob);
+    }
+
+    #[test]
+    fn test_starving_adult_no_reproduce() {
+        let lifecycle_params = LifecycleParams::default();
+        let health = Health {
+            integrity: 0.8,
+            sick: false,
+            deprivation_streak: 0,
+        };
+        // Starving (food < 0.3)
+        let prob = should_reproduce(25.0, &health, 0.1, 0.9, 0.5, &lifecycle_params);
+        assert_eq!(prob, 0.0, "Starving adult should not reproduce");
+    }
+
+    #[test]
+    fn test_juvenile_no_reproduce() {
+        let lifecycle_params = LifecycleParams::default();
+        let health = Health {
+            integrity: 1.0,
+            sick: false,
+            deprivation_streak: 0,
+        };
+        // Juvenile (age 8)
+        let prob = should_reproduce(8.0, &health, 0.9, 0.9, 0.5, &lifecycle_params);
+        assert_eq!(prob, 0.0, "Juvenile should not reproduce");
+    }
+
+    #[test]
+    fn test_sick_adult_no_reproduce() {
+        let lifecycle_params = LifecycleParams::default();
+        let health = Health {
+            integrity: 1.0,
+            sick: true,
+            deprivation_streak: 0,
+        };
+        // Working-age but sick
+        let prob = should_reproduce(25.0, &health, 0.9, 0.9, 0.5, &lifecycle_params);
+        assert_eq!(prob, 0.0, "Sick adult should not reproduce");
+    }
+}

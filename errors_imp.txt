@@ -1,0 +1,6 @@
+[1m[91merror[E0432][0m[1m[97m: unresolved import `crate::DoctrineLibrary`[0m
+[1m[91merror[E0432][0m[1m[97m: unresolved import `crate::demographics::DemographicsSnapshot`[0m
+[1m[91merror[E0432][0m[1m[97m: unresolved imports `engine::add_cohesion`, `engine::add_trust`, `engine::last_tick_cohesion`, `engine::last_tick_cohesion_settlement`[0m
+[1m[91merror[E0432][0m[1m[97m: unresolved imports `engine::last_tick_unrest`, `engine::last_tick_unrest_settlement`, `engine::set_settlement_gini`, `engine::unrest_level`[0m
+[1m[91merror[E0592][0m[1m[97m: duplicate definitions with name `cluster_cultures`[0m
+[1m[91merror[E0592][0m[1m[97m: duplicate definitions with name `last_emergence_sample`[0m

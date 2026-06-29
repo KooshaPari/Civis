@@ -12,6 +12,7 @@
 
 mod allocation;
 mod allocator;
+mod currency_trust;
 mod extraction;
 mod institution;
 mod market;
@@ -22,7 +23,10 @@ mod trade_routes;
 
 pub use allocation::{
     allocate_by_priority, allocate_with, AllocationEngine, AllocationRegime, CapitalistAllocator,
-    JouleAllocator, PlannedAllocator, PriorityTier,
+    JouleAllocator, LaborCapacityAllocator, PlannedAllocator, PriorityTier,
+};
+pub use currency_trust::{
+    acceptance, step_currency_trust, CurrencyTrust, CurrencyTrustOutcome,
 };
 pub use allocator::{Allocator, Bid, CancelledOrder, Offer};
 pub use extraction::{

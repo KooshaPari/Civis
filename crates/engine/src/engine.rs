@@ -508,6 +508,25 @@ pub enum UnitType {
     Scout,
 }
 
+/// ECS military unit component used by spawn helpers and JSON-RPC pin export.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MilitaryUnit {
+    /// Broad unit archetype.
+    pub unit_type: UnitType,
+    /// Current combat strength.
+    pub strength: Fixed,
+    /// Current hit points.
+    pub hp: Fixed,
+    /// Maximum hit points.
+    pub max_hp: Fixed,
+    /// Morale in fixed-point units.
+    pub morale: Fixed,
+    /// World position on the hex grid.
+    pub position: Position,
+    /// Owning faction id.
+    pub faction_id: u32,
+}
+
 // ============================================================================
 // WORLD STATE
 // ============================================================================
@@ -7247,6 +7266,23 @@ mod tests {
                 "audio",
             ]
         );
+    }
+
+    #[test]
+    fn military_unit_component_is_serializable() {
+        let unit = MilitaryUnit {
+            unit_type: UnitType::Knight,
+            strength: Fixed::from_num(10),
+            hp: Fixed::from_num(8),
+            max_hp: Fixed::from_num(10),
+            morale: Fixed::from_num(1),
+            position: Position { x: 4, y: -2 },
+            faction_id: 7,
+        };
+        let json = serde_json::to_string(&unit).expect("serialize");
+        let decoded: MilitaryUnit = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(decoded.faction_id, 7);
+        assert_eq!(decoded.unit_type, UnitType::Knight);
     }
 
     /// L5-115 — `PHASE_ORDER` includes "emergence" and the phase is positioned

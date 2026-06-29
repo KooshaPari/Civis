@@ -26,6 +26,12 @@ pub mod garnish;
 /// Tech prerequisite graph and unlock gating for research progression.
 pub mod tech_prereq;
 
+/// Research focus allocation: weighted split of research points across
+/// active projects, completing at thresholds. FR-CIV-RESEARCH-FOCUS.
+pub mod focus;
+
+pub use focus::{CompletedProject, ResearchFocus, ResearchProject};
+
 /// Schema version for `civ-research`. Bumped on breaking changes.
 pub const SCHEMA_VERSION: u32 = 0;
 

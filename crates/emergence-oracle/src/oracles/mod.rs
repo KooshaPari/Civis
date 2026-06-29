@@ -6,5 +6,6 @@ pub mod epidemic;
 pub mod language;
 pub mod legends;
 pub mod migration;
+pub mod trade;
 pub mod psyche;
 pub mod religion;

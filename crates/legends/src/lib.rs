@@ -25,6 +25,9 @@ pub mod query;
 pub mod rumor;
 pub mod worker;
 
+mod chronicle;
+pub use chronicle::{Chronicle, ChronicleEntry, ChronicleEventKind};
+
 pub use config::LegendsConfig;
 pub use decay::{DecayConfig, Prominence, ProminenceTracker};
 pub use graph::{AggregateKey, EmptySagaReason, GapReport, IngestOutcome, SagaGraph};

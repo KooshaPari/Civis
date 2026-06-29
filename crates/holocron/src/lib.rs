@@ -57,7 +57,7 @@ pub use group::VerbGroup;
 pub use inspect::*;
 pub use provenance::Provenance;
 pub use rank::{rank_by_risk, rank_for_state};
-pub use registry::{MatchedVerb, VerbRegistry};
+pub use registry::{MatchedVerb, MatchedVerb as VerbSearchResult, VerbRegistry};
 pub use risk::RiskTier;
 pub use snapshot::{snapshot_from_source, EraKind, FactionStance, SimSnapshot, SimSnapshotSource};
 pub use voxel_inspector::*;

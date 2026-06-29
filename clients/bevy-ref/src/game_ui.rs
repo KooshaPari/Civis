@@ -52,11 +52,11 @@ pub struct ToolIcons {
 /// Extend this list to add icon assets; the stem becomes the lookup key in
 /// [`ToolIcons::ids`].
 const TOOL_ICON_PATHS: &[(&str, &str)] = &[
-    ("spawn", "icons/tool_spawn.png"),
-    ("destroy", "icons/tool_destroy.png"),
-    ("disaster", "icons/tool_disaster.png"),
-    ("terraform", "icons/tool_terraform.png"),
-    ("laws", "icons/tool_laws.png"),
+    ("spawn", "ui/tool-icons/spawn-life.png"),
+    ("destroy", "ui/tool-icons/erase.png"),
+    ("disaster", "ui/tool-icons/disaster.png"),
+    ("terraform", "ui/tool-icons/terraform.png"),
+    ("laws", "ui/tool-icons/policy.png"),
 ];
 
 /// Handle keyboard category-hotkey shortcuts (number-row / hotbar bindings).

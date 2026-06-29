@@ -2369,7 +2369,8 @@ mod naval_expansion_tests {
         assert_eq!(naval_expansion(f32::NAN, f32::NAN), 0.0);
         assert_eq!(naval_expansion(-1.0, -2.0), 0.0);
         // coastal=1, logistics=3, logistics_term=3/4=0.75, raw=0.6+0.3=0.9
-        assert_eq!(naval_expansion(2.0, 3.0), 0.9);
+        // (f32 arithmetic yields 0.90000004, so compare with an epsilon).
+        assert!((naval_expansion(2.0, 3.0) - 0.9).abs() < 1e-5);
         // coastal share saturated at 1, logistics→0.4/(1+0.4)≈0.286, raw=0.6+0.4*0.286≈0.714
         let v = naval_expansion(1.0, 0.4);
         assert!(v.is_finite());
@@ -2392,7 +2393,8 @@ mod urbanization_index_tests {
     fn clamp_and_nan_guard() {
         assert_eq!(urbanization_index(f32::NAN, f32::NAN, f32::NAN), 0.0);
         assert_eq!(urbanization_index(-1.0, -2.0, -3.0), 0.0);
-        assert_eq!(urbanization_index(2.0, 3.0, 4.0), 0.925);
+        // dens=1, surplus_term=3/4=0.75, trd=1 -> 0.5 + 0.75*0.3 + 0.2 = 0.925.
+        assert!((urbanization_index(2.0, 3.0, 4.0) - 0.925).abs() < 1e-5);
         let v = urbanization_index(0.5, 1.0, 0.5);
         assert!(v.is_finite());
         assert!(v >= 0.5 && v < 1.0, "got {v}");

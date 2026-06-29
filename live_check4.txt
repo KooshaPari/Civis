@@ -1,0 +1,475 @@
+crates\species\src\pop_pressure.rs:87:9: warning: unused variable: `pressure`: help: if this is intentional, prefix it with an underscore: `_pressure`
+warning: unnecessary parentheses around assigned value
+    --> crates\needs\src\lib.rs:1127:23
+     |
+1127 |         birth_prob /= (1.0 + overcrowding_factor);
+     |                       ^                         ^
+     |
+     = note: `#[warn(unused_parens)]` (part of `#[warn(unused)]`) on by default
+help: remove these parentheses
+     |
+1127 -         birth_prob /= (1.0 + overcrowding_factor);
+1127 +         birth_prob /= 1.0 + overcrowding_factor;
+     |
+
+warning: unused variable: `age_u16`
+  --> crates\needs\src\lifecycle.rs:20:9
+   |
+20 |     let age_u16 = age.clamp(0.0, u16::MAX as f32) as u16;
+   |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_age_u16`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: `civ-species` (lib) generated 1 warning (run `cargo fix --lib -p civ-species` to apply 1 suggestion)
+warning: `civ-needs` (lib) generated 2 warnings (run `cargo fix --lib -p civ-needs` to apply 2 suggestions)
+warning: struct `PlannedAllocator` is never constructed
+  --> crates\economy\src\allocation.rs:38:12
+   |
+38 | pub struct PlannedAllocator;
+   |            ^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `JouleAllocator` is never constructed
+  --> crates\economy\src\allocation.rs:53:12
+   |
+53 | pub struct JouleAllocator;
+   |            ^^^^^^^^^^^^^^
+
+warning: enum `PriorityTier` is never used
+   --> crates\economy\src\allocation.rs:124:10
+    |
+124 | pub enum PriorityTier {
+    |          ^^^^^^^^^^^^
+
+warning: function `allocate_by_priority` is never used
+   --> crates\economy\src\allocation.rs:141:8
+    |
+141 | pub fn allocate_by_priority(
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: enum `AllocationRegime` is never used
+   --> crates\economy\src\allocation.rs:172:10
+    |
+172 | pub enum AllocationRegime {
+    |          ^^^^^^^^^^^^^^^^
+
+warning: function `allocate_with` is never used
+   --> crates\economy\src\allocation.rs:188:8
+    |
+188 | pub fn allocate_with(regime: AllocationRegime, budget: i64, demand: i64) -> i64 {
+    |        ^^^^^^^^^^^^^
+
+warning: type alias `GoodId` is never used
+   --> crates\economy\src\allocation.rs:202:10
+    |
+202 | pub type GoodId = u32;
+    |          ^^^^^^
+
+warning: constant `SCALE` is never used
+   --> crates\economy\src\allocation.rs:211:7
+    |
+211 | const SCALE: i64 = 10;
+    |       ^^^^^
+
+warning: enum `NeedKind` is never used
+   --> crates\economy\src\allocation.rs:217:10
+    |
+217 | pub enum NeedKind {
+    |          ^^^^^^^^
+
+warning: struct `AgentNeed` is never constructed
+   --> crates\economy\src\allocation.rs:230:12
+    |
+230 | pub struct AgentNeed {
+    |            ^^^^^^^^^
+
+warning: methods `deficit` and `need_units` are never used
+   --> crates\economy\src\allocation.rs:243:8
+    |
+241 | impl AgentNeed {
+    | -------------- methods in this implementation
+242 |     /// Deficit in `[0.0, 1.0]` (1.0 minus satisfaction, clamped at 0).
+243 |     fn deficit(&self) -> f64 {
+    |        ^^^^^^^
+...
+255 |     fn need_units(&self) -> i64 {
+    |        ^^^^^^^^^^
+
+warning: struct `AllocationOutcome` is never constructed
+   --> crates\economy\src\allocation.rs:280:12
+    |
+280 | pub struct AllocationOutcome {
+    |            ^^^^^^^^^^^^^^^^^
+
+warning: function `subsistence_first_allocate` is never used
+   --> crates\economy\src\allocation.rs:317:8
+    |
+317 | pub fn subsistence_first_allocate(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `STABLE_INFLATION_BP10` is never used
+  --> crates\economy\src\currency_trust.rs:61:7
+   |
+61 | const STABLE_INFLATION_BP10: i64 = 500; // 5 % per tick
+   |       ^^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `SettlementTradeFlow` is never constructed
+   --> crates\economy\src\market.rs:168:12
+    |
+168 | pub struct SettlementTradeFlow {
+    |            ^^^^^^^^^^^^^^^^^^^
+
+warning: function `settlement_trade_flow` is never used
+   --> crates\economy\src\market.rs:190:8
+    |
+190 | pub fn settlement_trade_flow(
+    |        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `TradeOffer` is never constructed
+   --> crates\economy\src\stocks.rs:167:12
+    |
+167 | pub struct TradeOffer {
+    |            ^^^^^^^^^^
+
+warning: function `deficit_was_clamped` is never used
+   --> crates\economy\src\stocks.rs:182:4
+    |
+182 | fn deficit_was_clamped(flow: i64, applied: i64) -> bool {
+    |    ^^^^^^^^^^^^^^^^^^^
+
+warning: function `step_stocks` is never used
+   --> crates\economy\src\stocks.rs:190:8
+    |
+190 | pub fn step_stocks(stocks: &mut Stocks, profile: &ProductionProfile) {
+    |        ^^^^^^^^^^^
+
+warning: function `comparative_advantage` is never used
+   --> crates\economy\src\stocks.rs:223:8
+    |
+223 | pub fn comparative_advantage(profile: &ProductionProfile) -> Good {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `trade_gain` is never used
+   --> crates\economy\src\stocks.rs:238:8
+    |
+238 | pub fn trade_gain(a: &ProductionProfile, b: &ProductionProfile) -> i64 {
+    |        ^^^^^^^^^^
+
+warning: function `propose_trade` is never used
+   --> crates\economy\src\stocks.rs:252:8
+    |
+252 | pub fn propose_trade(
+    |        ^^^^^^^^^^^^^
+
+warning: function `offer_better` is never used
+   --> crates\economy\src\stocks.rs:310:4
+    |
+310 | fn offer_better(candidate: &TradeOffer, current: &TradeOffer) -> bool {
+    |    ^^^^^^^^^^^^
+
+warning: function `apply_trade` is never used
+   --> crates\economy\src\stocks.rs:317:8
+    |
+317 | pub fn apply_trade(a: &mut Stocks, b: &mut Stocks, offer: &TradeOffer) {
+    |        ^^^^^^^^^^^
+
+warning: `civ-economy` (lib) generated 24 warnings
+warning: missing documentation for a module
+  --> crates\civ-emergence-metrics\src\lib.rs:55:1
+   |
+55 | pub mod sample_snapshot;
+   | ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+note: the lint level is defined here
+  --> crates\civ-emergence-metrics\src\lib.rs:47:9
+   |
+47 | #![warn(missing_docs)]
+   |         ^^^^^^^^^^^^
+
+warning: `civ-emergence-metrics` (lib) generated 1 warning
+    Checking civ-engine v0.1.0 (C:\Users\koosh\Dev\Civis-cxA\crates\engine)
+warning: unused import: `crate::culture::CultureSnapshot`
+  --> crates\engine\src\building_layouts.rs:13:5
+   |
+13 | use crate::culture::CultureSnapshot;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `crate::demographics::DemographicsSnapshot`
+  --> crates\engine\src\building_layouts.rs:14:5
+   |
+14 | use crate::demographics::DemographicsSnapshot;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unnecessary parentheses around assigned value
+   --> crates\engine\src\culture.rs:197:25
+    |
+197 |             let noise = (rng.gen_range(-0.5f32..0.5f32) * 2.0 * drift_strength);
+    |                         ^                                                     ^
+    |
+    = note: `#[warn(unused_parens)]` (part of `#[warn(unused)]`) on by default
+help: remove these parentheses
+    |
+197 -             let noise = (rng.gen_range(-0.5f32..0.5f32) * 2.0 * drift_strength);
+197 +             let noise = rng.gen_range(-0.5f32..0.5f32) * 2.0 * drift_strength;
+    |
+
+warning: unnecessary parentheses around assigned value
+   --> crates\engine\src\culture.rs:210:30
+    |
+210 |             let norm_noise = (rng.gen_range(-0.5f32..0.5f32) * 0.015 * (1.0 - 0.65 * isolation));
+    |                              ^                                                                 ^
+    |
+help: remove these parentheses
+    |
+210 -             let norm_noise = (rng.gen_range(-0.5f32..0.5f32) * 0.015 * (1.0 - 0.65 * isolation));
+210 +             let norm_noise = rng.gen_range(-0.5f32..0.5f32) * 0.015 * (1.0 - 0.65 * isolation);
+    |
+
+warning: unused imports: `SeedSet` and `spawn_genome_with_divergence`
+  --> crates\engine\src\emergence.rs:19:20
+   |
+19 |     Dna, DnaClass, spawn_genome_with_divergence, SeedDefinition, SeedLibrary, SeedSet,
+   |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^                               ^^^^^^^
+
+warning: unused import: `CapitalistAllocator`
+  --> crates\engine\src\engine.rs:16:37
+   |
+16 | use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, LaborCapacityAllocator, MarketState};
+   |                                     ^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `SubstrateGradients`, `apply_big_gods_response`, `last_religion_sample`, and `substrate_gradients_for`
+  --> crates\engine\src\engine.rs:54:5
+   |
+54 |     apply_big_gods_response, last_religion_sample, substrate_gradients_for,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^
+55 |     ReligiousProfile, SubstrateGradients,
+   |                       ^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `PACKED_DIRT` and `SAND`
+   --> crates\engine\src\godtools.rs:108:41
+    |
+108 |     material::{GRAVEL, LAVA, MOSS, ORE, PACKED_DIRT, PLANT, SAND, SNOW, STEAM, STONE, WATER, WOOD},
+    |                                         ^^^^^^^^^^^         ^^^^
+
+warning: unused import: `InstitutionKind`
+  --> crates\engine\src\save.rs:12:64
+   |
+12 |     Building, CombatDamagePulse, DoctrineLibrary, Institution, InstitutionKind, MilitaryUnit,
+   |                                                                ^^^^^^^^^^^^^^^
+
+warning: use of deprecated function `religion::emerge_belief`: Bool-gated emergence replaced by continuous apply_big_gods_response
+  --> crates\engine\src\lib.rs:42:20
+   |
+42 | pub use religion::{emerge_belief, spread_religion, Belief, BeliefConcept, Religion};
+   |                    ^^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+
+warning: use of deprecated function `religion::spread_religion`: Self-contained spread replaced by gradient-coupled response + substrate writes
+  --> crates\engine\src\lib.rs:42:35
+   |
+42 | pub use religion::{emerge_belief, spread_religion, Belief, BeliefConcept, Religion};
+   |                                   ^^^^^^^^^^^^^^^
+
+warning: use of deprecated struct `religion::Belief`: Authored belief list is replaced by ReligiousProfile (monitoring, mythic_coherence, uncertainty_reduction)
+  --> crates\engine\src\lib.rs:42:52
+   |
+42 | pub use religion::{emerge_belief, spread_religion, Belief, BeliefConcept, Religion};
+   |                                                    ^^^^^^
+
+warning: use of deprecated enum `religion::BeliefConcept`: Authored theology violates the emergence charter; use ReligiousProfile + display_label
+  --> crates\engine\src\lib.rs:42:60
+   |
+42 | pub use religion::{emerge_belief, spread_religion, Belief, BeliefConcept, Religion};
+   |                                                            ^^^^^^^^^^^^^
+
+warning: use of deprecated struct `religion::Religion`: Replaced by ReligiousProfile — see spec §2 / §9
+  --> crates\engine\src\lib.rs:42:75
+   |
+42 | pub use religion::{emerge_belief, spread_religion, Belief, BeliefConcept, Religion};
+   |                                                                           ^^^^^^^^
+
+warning: use of deprecated enum `religion::BeliefConcept`: Authored theology violates the emergence charter; use ReligiousProfile + display_label
+   --> crates\engine\src\religion.rs:462:18
+    |
+462 |     pub concept: BeliefConcept,
+    |                  ^^^^^^^^^^^^^
+
+warning: use of deprecated struct `religion::Belief`: Authored belief list is replaced by ReligiousProfile (monitoring, mythic_coherence, uncertainty_reduction)
+   --> crates\engine\src\religion.rs:475:22
+    |
+475 |     pub beliefs: Vec<Belief>,
+    |                      ^^^^^^
+
+warning: use of deprecated struct `religion::Belief`: Authored belief list is replaced by ReligiousProfile (monitoring, mythic_coherence, uncertainty_reduction)
+   --> crates\engine\src\religion.rs:489:94
+    |
+489 | pub fn emerge_belief(_hardship: f32, _group_size: u32, _agent_detection_bias: f32) -> Option<Belief> {
+    |                                                                                              ^^^^^^
+
+warning: use of deprecated struct `religion::Religion`: Replaced by ReligiousProfile — see spec §2 / §9
+   --> crates\engine\src\religion.rs:500:35
+    |
+500 | pub fn spread_religion(_rel: &mut Religion, _nearby_agents: u32, _tick: u64) {}
+    |                                   ^^^^^^^^
+
+error[E0308]: mismatched types
+    --> crates\engine\src\godtools.rs:1364:41
+     |
+1364 |                 let target = MaterialId(req.aux_id);
+     |                              ---------- ^^^^^^^^^^ expected `u16`, found `u32`
+     |                              |
+     |                              arguments to this struct are incorrect
+     |
+note: tuple struct defined here
+    --> E:\Dev\.cargo\git\checkouts\phenotype-gfx-8c434bb1d9734182\7ed2721\src\voxel\material.rs:11:12
+     |
+  11 | pub struct MaterialId(pub u16);
+     |            ^^^^^^^^^^
+help: you can convert a `u32` to a `u16` and panic if the converted value doesn't fit
+     |
+1364 |                 let target = MaterialId(req.aux_id.try_into().unwrap());
+     |                                                   ++++++++++++++++++++
+
+error[E0308]: mismatched types
+    --> crates\engine\src\godtools.rs:1476:33
+     |
+1476 |         let target = MaterialId(req.material_id);
+     |                      ---------- ^^^^^^^^^^^^^^^ expected `u16`, found `u32`
+     |                      |
+     |                      arguments to this struct are incorrect
+     |
+note: tuple struct defined here
+    --> E:\Dev\.cargo\git\checkouts\phenotype-gfx-8c434bb1d9734182\7ed2721\src\voxel\material.rs:11:12
+     |
+  11 | pub struct MaterialId(pub u16);
+     |            ^^^^^^^^^^
+help: you can convert a `u32` to a `u16` and panic if the converted value doesn't fit
+     |
+1476 |         let target = MaterialId(req.material_id.try_into().unwrap());
+     |                                                ++++++++++++++++++++
+
+warning: unused variable: `metal_available`
+  --> crates\engine\src\building_layouts.rs:61:9
+   |
+61 |         metal_available: f32,
+   |         ^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_metal_available`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: value assigned to `casualties` is never read
+   --> crates\engine\src\disasters.rs:187:26
+    |
+187 |     let mut casualties = 0u32;
+    |                          ^^^^ this value is reassigned later and never used
+...
+211 |             casualties = impact.1;
+    |             --------------------- `casualties` is overwritten here before the previous value is read
+    |
+    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: value assigned to `impact` is never read
+   --> crates\engine\src\disasters.rs:188:22
+    |
+188 |       let mut impact = (0i32, 0u32, 0.0_f32);
+    |                        ^^^^^^^^^^^^^^^^^^^^^ this value is reassigned later and never used
+...
+205 | /             impact = hit_agents(
+206 | |                 sim,
+207 | |                 pos,
+208 | |                 radius,
+209 | |                 DisasterEffect::new(0.28, 0.35, 0.25, 0.55, true),
+210 | |             );
+    | |_____________- `impact` is overwritten here before the previous value is read
+
+error[E0502]: cannot borrow `*self` as mutable because it is also borrowed as immutable
+   --> crates\engine\src\emergence.rs:377:13
+    |
+367 |         self.faction_ideologies = advance_faction_ideologies(
+    |                                   -------------------------- immutable borrow later used by call
+...
+373 |             &self.climate,
+    |             ------------- immutable borrow occurs here
+...
+377 |             self.rng_mut(),
+    |             ^^^^^^^^^^^^^^ mutable borrow occurs here
+
+warning: variable `cumulative` is assigned to, but never used
+    --> crates\engine\src\engine.rs:1137:9
+     |
+1137 |     let mut cumulative = 0.0_f64;
+     |         ^^^^^^^^^^^^^^
+     |
+     = note: consider using `_cumulative` instead
+
+warning: value assigned to `cumulative` is never read
+    --> crates\engine\src\engine.rs:1140:9
+     |
+1140 |         cumulative += *w as f64;
+     |         ^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = help: maybe it is overwritten before being read?
+
+error[E0382]: borrow of moved value: `dead`
+    --> crates\engine\src\engine.rs:3427:52
+     |
+3227 |         let mut dead = Vec::new();
+     |             -------- move occurs because `dead` has type `Vec<(hecs::Entity, u64, f32, f32)>`, which does not implement the `Copy` trait
+...
+3301 |         for (entity, id, x, y) in dead {
+     |                                   ---- `dead` moved due to this implicit call to `.into_iter()`
+...
+3427 |         metrics.dead = metrics.dead.saturating_add(dead.len() as u32);
+     |                                                    ^^^^ value borrowed here after move
+     |
+note: `into_iter` takes ownership of the receiver `self`, which moves `dead`
+    --> C:\Users\koosh\.rustup\toolchains\stable-x86_64-pc-windows-msvc\lib/rustlib/src/rust\library\core\src\iter\traits\collect.rs:312:18
+     |
+ 312 |     fn into_iter(self) -> Self::IntoIter;
+     |                  ^^^^
+help: consider iterating over a slice of the `Vec<(hecs::Entity, u64, f32, f32)>`'s content to avoid moving into the `for` loop
+     |
+3301 |         for (entity, id, x, y) in &dead {
+     |                                   +
+
+warning: unused variable: `id`
+    --> crates\engine\src\engine.rs:3344:30
+     |
+3344 |                 for (entity, id, mut sample) in candidates.into_iter().take(migration_count) {
+     |                              ^^ help: if this is intentional, prefix it with an underscore: `_id`
+
+warning: value assigned to `sample` is never read
+    --> crates\engine\src\engine.rs:3352:25
+     |
+3352 |                         sample.x = nx;
+     |                         ^^^^^^^^^^^^^
+     |
+     = help: maybe it is overwritten before being read?
+
+warning: value assigned to `sample` is never read
+    --> crates\engine\src\engine.rs:3353:25
+     |
+3353 |                         sample.y = ny;
+     |                         ^^^^^^^^^^^^^
+     |
+     = help: maybe it is overwritten before being read?
+
+warning: unused variable: `civ`
+   --> crates\engine\src\godtools.rs:783:37
+    |
+783 |         .filter_map(|(entity, (pos, civ))| {
+    |                                     ^^^ help: if this is intentional, prefix it with an underscore: `_civ`
+
+warning: unused variable: `idx`
+   --> crates\engine\src\language.rs:138:9
+    |
+138 |     for idx in 0..feature_len {
+    |         ^^^ help: if this is intentional, prefix it with an underscore: `_idx`
+
+Some errors have detailed explanations: E0308, E0382, E0502.
+For more information about an error, try `rustc --explain E0308`.
+warning: `civ-engine` (lib) generated 28 warnings
+error: could not compile `civ-engine` (lib) due to 4 previous errors; 28 warnings emitted

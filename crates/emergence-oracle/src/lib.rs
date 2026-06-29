@@ -1,7 +1,7 @@
 //! Emergence Oracle — programmatic FR verification for Civis emergence systems.
 //!
 //! Each [`FeatureOracle`] implementation maps to a specific FR-EMG-* requirement.
-//! [`OracleRegistry::with_defaults`] wires all 9 domain oracles and [`OracleRegistry::run_all`]
+//! [`OracleRegistry::with_defaults`] wires all 10 domain oracles and [`OracleRegistry::run_all`]
 //! batch-verifies them against a live [`Simulation`].
 
 pub mod oracles;
@@ -49,13 +49,13 @@ impl OracleRegistry {
         self.oracles.push(oracle);
     }
 
-    /// Create a registry pre-loaded with all 9 domain oracles.
+    /// Create a registry pre-loaded with all 10 domain oracles.
     pub fn with_defaults() -> Self {
         use oracles::{
             architecture::ArchitectureOracle, creature::CreatureOracle,
-            diplomacy::DiplomacyOracle, economy::EconomyOracle, language::LanguageOracle,
-            legends::LegendsOracle, migration::MigrationOracle, psyche::PsycheOracle,
-            religion::ReligionOracle,
+            diplomacy::DiplomacyOracle, economy::EconomyOracle, epidemic::EpidemicOracle,
+            language::LanguageOracle, legends::LegendsOracle, migration::MigrationOracle,
+            psyche::PsycheOracle, religion::ReligionOracle,
         };
         let mut registry = Self::new();
         registry.register(Box::new(ReligionOracle));
@@ -67,6 +67,7 @@ impl OracleRegistry {
         registry.register(Box::new(ArchitectureOracle));
         registry.register(Box::new(CreatureOracle));
         registry.register(Box::new(MigrationOracle));
+        registry.register(Box::new(EpidemicOracle));
         registry
     }
 
@@ -87,11 +88,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn oracle_registry_runs_all_nine() {
+    fn oracle_registry_runs_all_ten() {
         let sim = Simulation::new();
         let registry = OracleRegistry::with_defaults();
         let verdicts = registry.run_all(&sim);
-        assert_eq!(verdicts.len(), 9, "Expected 9 oracle verdicts");
+        assert_eq!(verdicts.len(), 10, "Expected 10 oracle verdicts");
     }
 
     #[test]

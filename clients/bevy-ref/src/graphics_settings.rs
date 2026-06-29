@@ -833,7 +833,7 @@ fn draw_lighting_section(
     let mut changed = false;
     section(ui, "\u{2728}", "Lighting / Ray Tracing");
 
-    let rt_capable = gpu.map_or(false, |g| g.ray_tracing);
+    let rt_capable = gpu.is_some_and(|g| g.ray_tracing);
 
     ui.horizontal(|ui| {
         let label = "Solari GI (ReSTIR ray-traced global illumination)";
@@ -889,8 +889,8 @@ fn draw_upscaling_section(
     let mut changed = false;
     section(ui, "\u{1f50d}", "Upscaling");
 
-    let dlss_ok = gpu.map_or(false, |g| g.dlss_available);
-    let metal_fx_ok = gpu.map_or(false, |g| g.metal_fx);
+    let dlss_ok = gpu.is_some_and(|g| g.dlss_available);
+    let metal_fx_ok = gpu.is_some_and(|g| g.metal_fx);
 
     ui.horizontal(|ui| {
         row_label(ui, "Algorithm");

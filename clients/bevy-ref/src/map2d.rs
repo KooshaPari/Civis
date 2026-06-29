@@ -404,7 +404,7 @@ fn building_norm_xz_with_state(
     #[cfg(not(feature = "voxel"))]
     {
         let _ = voxel_state;
-        return building_norm_xz(building);
+        building_norm_xz(building)
     }
     #[cfg(feature = "voxel")]
     if let Some(voxel_state) = voxel_state {
@@ -441,7 +441,7 @@ fn marker_world_from_actor(
     #[cfg(not(feature = "voxel"))]
     {
         let _ = voxel_state;
-        return Vec3::new(u * 256.0 - 128.0, 0.0, v * 256.0 - 128.0);
+        Vec3::new(u * 256.0 - 128.0, 0.0, v * 256.0 - 128.0)
     }
     #[cfg(feature = "voxel")]
     if let Some(voxel_state) = voxel_state {
@@ -460,7 +460,7 @@ fn marker_world_from_building(building: &Building, voxel_state: Option<&VoxelSim
     #[cfg(not(feature = "voxel"))]
     {
         let _ = voxel_state;
-        return Vec3::new(n.x * 256.0 - 128.0, 0.0, n.y * 256.0 - 128.0);
+        Vec3::new(n.x * 256.0 - 128.0, 0.0, n.y * 256.0 - 128.0)
     }
     #[cfg(feature = "voxel")]
     if let Some(voxel_state) = voxel_state {

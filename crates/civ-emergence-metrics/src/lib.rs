@@ -52,6 +52,7 @@ pub mod dashboard;
 pub mod mutual_information;
 pub mod power_law;
 pub mod shannon;
+/// Sample SimSnapshot projections for dashboard/export metrics.
 pub mod sample_snapshot;
 pub mod structure;
 

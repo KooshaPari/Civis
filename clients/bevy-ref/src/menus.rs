@@ -6,15 +6,25 @@
 use crate::gpu_features::GpuCapabilities;
 use crate::save_load_ui::SaveLoadPanel;
 use crate::settings_ui::{GameSettings, ACTION_PAUSE_SIM, KeyBinding};
+use crate::ui_theme::{liquid_glass_frame, GLASS_FILL, KC_ACCENT, RADIUS_PANEL};
 use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 use crate::ui_theme::{GLASS_FILL, KC_ACCENT, RADIUS_PANEL, liquid_glass_frame};
 
 const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
+const ACCENT_HI: egui::Color32 = egui::Color32::from_rgb(140, 224, 255);
+const GOLD: egui::Color32 = egui::Color32::from_rgb(232, 184, 75);
 const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
+const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);
+const CHIP_HOVER: egui::Color32 = egui::Color32::from_rgba_premultiplied(44, 54, 74, 245);
 const DIM: egui::Color32 = egui::Color32::from_rgb(150, 158, 178);
 const OVERLAY_DIM: egui::Color32 = egui::Color32::from_rgba_premultiplied(0, 0, 0, 160);
+
+const LOGO_PNG: &[u8] = include_bytes!("../assets/ui/logo.png");
+const TITLE_BG_PNG: &[u8] = include_bytes!("../assets/ui/title-bg.png");
+const LOADING_BG_PNG: &[u8] = include_bytes!("../assets/ui/loading-bg.png");
+const SPINNER_PNG: &[u8] = include_bytes!("../assets/ui/loading-spinner.png");
 
 /// Shell state used by the Bevy window client (main menu + gameplay + pause states).
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
@@ -103,6 +113,41 @@ pub struct WorldSetupParams {
     pub world_size: usize,
 }
 
+#[derive(Resource, Default, Debug)]
+pub struct LoadingProgress {
+    pub fraction: f32,
+    pub label: String,
+}
+
+impl LoadingProgress {
+    pub fn reset(&mut self) {
+        self.fraction = 0.0;
+        self.label = "Initialising world…".to_string();
+    }
+}
+
+#[derive(Resource, Default)]
+pub struct MenuTextures {
+    pub logo: Option<egui::TextureHandle>,
+    pub title_bg: Option<egui::TextureHandle>,
+    pub loading_bg: Option<egui::TextureHandle>,
+    pub spinner: Option<egui::TextureHandle>,
+    loaded: bool,
+}
+
+impl MenuTextures {
+    fn ensure_loaded(&mut self, ctx: &egui::Context) {
+        if self.loaded {
+            return;
+        }
+        self.loaded = true;
+        self.logo = decode_texture(ctx, "menu_logo", LOGO_PNG);
+        self.title_bg = decode_texture(ctx, "menu_title_bg", TITLE_BG_PNG);
+        self.loading_bg = decode_texture(ctx, "menu_loading_bg", LOADING_BG_PNG);
+        self.spinner = decode_texture(ctx, "menu_spinner", SPINNER_PNG);
+    }
+}
+
 impl Default for WorldSetupParams {
     fn default() -> Self {
         Self {
@@ -139,18 +184,21 @@ pub struct MenusPlugin;
 impl Plugin for MenusPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GameUiMode>()
+            .init_resource::<LoadingProgress>()
             .init_resource::<EraBanner>()
             .init_resource::<SettingsOpen>()
             .init_resource::<WorldSetupParams>()
+            .init_resource::<MenuTextures>()
             .init_resource::<SettingsState>()
             .init_resource::<MenuCommand>()
             .init_resource::<MainMenuSaves>()
-            .add_systems(Update, (toggle_pause, tick_era_banner))
+            .add_systems(Update, (toggle_pause, tick_era_banner, tick_loading))
             .add_systems(
                 EguiPrimaryContextPass,
                 (
                     draw_main_menu,
-                    draw_worldgen_overlay,
+                    draw_world_setup,
+                    draw_loading_screen,
                     draw_pause_menu,
                     draw_era_banner,
                     draw_settings_window,
@@ -183,6 +231,23 @@ fn tick_era_banner(mut banner: ResMut<EraBanner>, time: Res<Time>) {
     }
 }
 
+fn tick_loading(
+    mut progress: ResMut<LoadingProgress>,
+    mut mode: ResMut<GameUiMode>,
+    time: Res<Time>,
+) {
+    if !mode.is_loading() {
+        return;
+    }
+    if progress.label.is_empty() {
+        progress.label = "Loading world…".to_string();
+    }
+    progress.fraction = (progress.fraction + time.delta_secs() * 0.18).min(1.0);
+    if progress.fraction >= 1.0 {
+        *mode = GameUiMode::Playing;
+    }
+}
+
 /// True while the player is in live gameplay rather than the paused overlay.
 #[must_use]
 pub fn in_game(mode: Res<GameUiMode>) -> bool {
@@ -195,6 +260,9 @@ fn draw_main_menu(
     mut command: ResMut<MenuCommand>,
     saves: Res<MainMenuSaves>,
     mut settings_open: ResMut<SettingsOpen>,
+    mut progress: ResMut<LoadingProgress>,
+    mut params: ResMut<WorldSetupParams>,
+    mut textures: ResMut<MenuTextures>,
 ) {
     let Some(state) = state else {
         return;
@@ -205,67 +273,29 @@ fn draw_main_menu(
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-
+    textures.ensure_loaded(ctx);
+    image_backdrop(ctx, textures.title_bg.as_ref(), "title_backdrop");
     egui::Area::new(egui::Id::new("main_menu_area"))
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
         .order(egui::Order::Foreground)
         .show(ctx, |ui| {
-            egui::Frame::NONE
-                .fill(GLASS_FILL)
-                .inner_margin(egui::Margin::same(28))
-                .show(ui, |ui| {
-                    ui.set_min_width(420.0);
-                    ui.vertical_centered(|ui| {
-                        ui.label(
-                            egui::RichText::new("Civis")
-                                .size(52.0)
-                                .color(KC_ACCENT)
-                                .strong(),
-                        );
-                        ui.label(
-                            egui::RichText::new("Main menu")
-                                .size(16.0)
-                                .color(DIM)
-                                .italics(),
-                        );
-                        ui.add_space(16.0);
-
-                        if menu_button(ui, "\u{25b6}  New World").clicked() {
-                            command.action = MainMenuCommand::NewWorld;
-                        }
-                        ui.add_space(8.0);
-
-                        let continue_label = if saves.can_continue {
-                            "\u{1f3c3}  Continue"
-                        } else {
-                            "\u{1f3c3}  Continue (no save)"
-                        };
-                        let continue_btn = ui.add_enabled(
-                            saves.can_continue,
-                            egui::Button::new(egui::RichText::new(continue_label).size(16.0))
-                                .fill(KC_ACCENT.gamma_multiply(0.15))
-                                .min_size(egui::vec2(220.0, 40.0))
-                                .corner_radius(egui::CornerRadius::same(8)),
-                        );
-                        if continue_btn.clicked() {
-                            command.action = MainMenuCommand::Continue;
-                        }
-                        ui.add_space(8.0);
-
-                        if menu_button(ui, "\u{2699}  Settings").clicked() {
-                            command.action = MainMenuCommand::OpenSettings;
-                            settings_open.0 = true;
-                        }
-                        ui.add_space(8.0);
-                        if menu_button(ui, "\u{23fb}  Quit").clicked() {
-                            command.action = MainMenuCommand::Quit;
-                        }
-                    });
-                });
+            main_menu_panel(
+                ui,
+                &mut *command,
+                &saves,
+                &mut *settings_open,
+                &mut *progress,
+                &mut *params,
+                textures.logo.as_ref(),
+            );
         });
 }
 
-fn draw_worldgen_overlay(mut contexts: EguiContexts, state: Option<Res<State<AppState>>>) {
+fn draw_world_setup(
+    mut contexts: EguiContexts,
+    state: Option<Res<State<AppState>>>,
+    mut params: ResMut<WorldSetupParams>,
+) {
     let Some(state) = state else {
         return;
     };
@@ -275,29 +305,35 @@ fn draw_worldgen_overlay(mut contexts: EguiContexts, state: Option<Res<State<App
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-
     egui::Area::new(egui::Id::new("worldgen_panel_area"))
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
         .order(egui::Order::Foreground)
         .show(ctx, |ui| {
-            egui::Frame::NONE
-                .fill(GLASS_FILL)
-                .inner_margin(egui::Margin::same(24))
-                .show(ui, |ui| {
-                    ui.vertical_centered(|ui| {
-                        ui.label(
-                            egui::RichText::new("Booting Civis")
-                                .size(28.0)
-                                .color(KC_ACCENT)
-                                .strong(),
-                        );
-                        ui.label(
-                            egui::RichText::new("Spinning up world generation…")
-                                .color(DIM),
-                        );
-                    });
-                });
+            world_setup_panel(ui, &mut params);
         });
+}
+
+fn draw_loading_screen(
+    mut contexts: EguiContexts,
+    state: Option<Res<State<AppState>>>,
+    progress: Res<LoadingProgress>,
+    mut textures: ResMut<MenuTextures>,
+) {
+    let Some(state) = state else {
+        return;
+    };
+    if *state != AppState::WorldGen {
+        return;
+    }
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
+    textures.ensure_loaded(ctx);
+    image_backdrop(ctx, textures.loading_bg.as_ref(), "loading_backdrop");
+    egui::Area::new(egui::Id::new("loading_panel_area"))
+        .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+        .order(egui::Order::Foreground)
+        .show(ctx, |ui| loading_panel(ui, &progress, textures.spinner.as_ref()));
 }
 
 fn draw_pause_menu(

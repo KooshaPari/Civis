@@ -1302,7 +1302,7 @@ async fn apply_dispatch_effect(
                     {
                         result.insert(
                             "relation".to_owned(),
-                            serde_json::to_value(relation.after)
+                            serde_json::to_value(format!("{:?}", relation.after))
                                 .unwrap_or_else(|_| serde_json::Value::Null),
                         );
                     }

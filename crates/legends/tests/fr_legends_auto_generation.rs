@@ -17,14 +17,7 @@ fn cfg() -> LegendsConfig {
     }
 }
 
-fn ev(
-    tick: u64,
-    kind: EventKind,
-    src: SourceCrate,
-    mag: f32,
-    sim: u64,
-    role: Role,
-) -> RawSimEvent {
+fn ev(tick: u64, kind: EventKind, src: SourceCrate, mag: f32, sim: u64, role: Role) -> RawSimEvent {
     RawSimEvent::new(tick, kind, src, mag).with_participant(src, SimRuntimeId(sim), role)
 }
 
@@ -40,12 +33,26 @@ fn test_legend_from_high_impact_event() {
     let mut g = SagaGraph::new(cfg());
 
     // Emit a high-impact war event (magnitude 0.9, which is significant)
-    let war = ev(0, EventKind::WarDeclared, SourceCrate::Tactics, 0.9, 42, Role::Leader);
+    let war = ev(
+        0,
+        EventKind::WarDeclared,
+        SourceCrate::Tactics,
+        0.9,
+        42,
+        Role::Leader,
+    );
     let outcome = g.ingest(war);
 
     if let Some(event_id) = outcome.event_id {
         // Ingest another event for the same entity to ensure promotion
-        let battle = ev(1, EventKind::Battle, SourceCrate::Tactics, 0.8, 42, Role::Leader);
+        let battle = ev(
+            1,
+            EventKind::Battle,
+            SourceCrate::Tactics,
+            0.8,
+            42,
+            Role::Leader,
+        );
         let outcome2 = g.ingest(battle);
 
         // Use the first promoted entity from the initial war event
@@ -71,7 +78,14 @@ fn test_no_legend_for_low_impact_event() {
     let mut g = SagaGraph::new(cfg());
 
     // Emit a very low-impact event (magnitude 0.1)
-    let minor = ev(0, EventKind::Migration, SourceCrate::Agents, 0.1, 99, Role::Witness);
+    let minor = ev(
+        0,
+        EventKind::Migration,
+        SourceCrate::Agents,
+        0.1,
+        99,
+        Role::Witness,
+    );
     let outcome = g.ingest(minor);
 
     if let Some(event_id) = outcome.event_id {
@@ -92,7 +106,14 @@ fn test_no_legend_for_low_impact_event() {
 fn test_legend_deduplication() {
     let mut g = SagaGraph::new(cfg());
 
-    let war = ev(0, EventKind::WarDeclared, SourceCrate::Tactics, 0.9, 42, Role::Leader);
+    let war = ev(
+        0,
+        EventKind::WarDeclared,
+        SourceCrate::Tactics,
+        0.9,
+        42,
+        Role::Leader,
+    );
     let outcome = g.ingest(war);
 
     if let Some(event_id) = outcome.event_id {
@@ -121,17 +142,38 @@ fn test_top_legends_by_importance() {
     let mut created_events = Vec::new();
 
     // Create three events with different magnitudes
-    let high = ev(0, EventKind::WarDeclared, SourceCrate::Tactics, 0.95, 1, Role::Leader);
+    let high = ev(
+        0,
+        EventKind::WarDeclared,
+        SourceCrate::Tactics,
+        0.95,
+        1,
+        Role::Leader,
+    );
     if let Some(id) = g.ingest(high).event_id {
         created_events.push((id, LegendEntityId(1)));
     }
 
-    let med = ev(1, EventKind::Battle, SourceCrate::Tactics, 0.6, 2, Role::Leader);
+    let med = ev(
+        1,
+        EventKind::Battle,
+        SourceCrate::Tactics,
+        0.6,
+        2,
+        Role::Leader,
+    );
     if let Some(id) = g.ingest(med).event_id {
         created_events.push((id, LegendEntityId(2)));
     }
 
-    let low = ev(2, EventKind::Discovery, SourceCrate::Agents, 0.4, 3, Role::Witness);
+    let low = ev(
+        2,
+        EventKind::Discovery,
+        SourceCrate::Agents,
+        0.4,
+        3,
+        Role::Witness,
+    );
     if let Some(id) = g.ingest(low).event_id {
         created_events.push((id, LegendEntityId(3)));
     }
@@ -165,7 +207,10 @@ fn test_legend_importance_computation() {
 
     // Should be average of magnitude and significance, clamped to 0..1
     let expected = ((mag + sig) / 2.0).clamp(0.0, 1.0);
-    assert!((importance - expected).abs() < 0.001, "importance should be (mag+sig)/2");
+    assert!(
+        (importance - expected).abs() < 0.001,
+        "importance should be (mag+sig)/2"
+    );
 
     // Verify edge cases
     assert_eq!(compute_legend_importance(0.0, 0.0), 0.0);
@@ -182,7 +227,14 @@ fn test_legend_importance_computation() {
 fn test_legend_lookup() {
     let mut g = SagaGraph::new(cfg());
 
-    let war = ev(0, EventKind::WarDeclared, SourceCrate::Tactics, 0.9, 42, Role::Leader);
+    let war = ev(
+        0,
+        EventKind::WarDeclared,
+        SourceCrate::Tactics,
+        0.9,
+        42,
+        Role::Leader,
+    );
     let outcome = g.ingest(war);
 
     if let Some(event_id) = outcome.event_id {
@@ -233,10 +285,19 @@ fn test_legend_provenance() {
     let mut g = SagaGraph::new(cfg());
 
     // Emit an event with region and multiple participants
-    let mut war = ev(0, EventKind::WarDeclared, SourceCrate::Tactics, 0.9, 42, Role::Leader);
-    war = war
-        .with_region(RegionId(5))
-        .with_participant(SourceCrate::Tactics, SimRuntimeId(43), Role::Defender);
+    let mut war = ev(
+        0,
+        EventKind::WarDeclared,
+        SourceCrate::Tactics,
+        0.9,
+        42,
+        Role::Leader,
+    );
+    war = war.with_region(RegionId(5)).with_participant(
+        SourceCrate::Tactics,
+        SimRuntimeId(43),
+        Role::Defender,
+    );
 
     let outcome = g.ingest(war);
 
@@ -247,10 +308,21 @@ fn test_legend_provenance() {
         let legend = g.legend(event_id).expect("legend should exist");
 
         // Verify provenance captured
-        assert_eq!(legend.region, Some(RegionId(5)), "region should be captured");
+        assert_eq!(
+            legend.region,
+            Some(RegionId(5)),
+            "region should be captured"
+        );
         assert_eq!(legend.epoch, Epoch(0), "epoch should be captured");
-        assert_eq!(legend.event_kind, EventKind::WarDeclared, "event kind should be captured");
-        assert!(!legend.participants.is_empty(), "participants should be captured");
+        assert_eq!(
+            legend.event_kind,
+            EventKind::WarDeclared,
+            "event kind should be captured"
+        );
+        assert!(
+            !legend.participants.is_empty(),
+            "participants should be captured"
+        );
     }
 }
 
@@ -265,7 +337,14 @@ fn test_legend_importance_deterministic() {
     let mut g1 = SagaGraph::new(cfg());
     let mut g2 = SagaGraph::new(cfg());
 
-    let war = ev(0, EventKind::WarDeclared, SourceCrate::Tactics, 0.9, 42, Role::Leader);
+    let war = ev(
+        0,
+        EventKind::WarDeclared,
+        SourceCrate::Tactics,
+        0.9,
+        42,
+        Role::Leader,
+    );
     let outcome1 = g1.ingest(war.clone());
     let outcome2 = g2.ingest(war);
 

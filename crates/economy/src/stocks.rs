@@ -349,7 +349,7 @@ mod tests {
         let mut stocks = Stocks::default();
         stocks.add(Good::Food, 10);
         stocks.add(Good::Water, 4);
-        let profile = ProductionProfile::new([3, 0, 0, 0, 0], [15, 7, 0, 0, 0]);
+        let profile = ProductionProfile::new([3, 0, 0, 0, 0, 0], [15, 7, 0, 0, 0, 0]);
 
         step_stocks(&mut stocks, &profile);
 
@@ -365,8 +365,8 @@ mod tests {
 
     #[test]
     fn production_and_consumption_getters_return_profile_rates() {
-        let production = [10i64, 2, 3, 4, 5];
-        let consumption = [1i64, 6, 0, 0, 2];
+        let production = [10i64, 2, 3, 4, 5, 0];
+        let consumption = [1i64, 6, 0, 0, 2, 0];
         let profile = ProductionProfile::new(production, consumption);
 
         for (i, good) in GOODS.iter().enumerate() {
@@ -379,7 +379,7 @@ mod tests {
     #[test]
     fn surplus_and_deficit_signs_are_correct() {
         let stocks = Stocks::default();
-        let profile = ProductionProfile::new([12, 0, 0, 0, 0], [2, 8, 0, 0, 0]);
+        let profile = ProductionProfile::new([12, 0, 0, 0, 0, 0], [2, 8, 0, 0, 0, 0]);
 
         assert_eq!(surplus(&stocks, &profile, Good::Food), 10);
         assert_eq!(deficit(&stocks, &profile, Good::Food), 0);
@@ -390,16 +390,16 @@ mod tests {
     /// FR-CIV-LIFE-022: comparative advantage is the highest net-surplus good.
     #[test]
     fn comparative_advantage_picks_max_surplus_good() {
-        let profile = ProductionProfile::new([1, 7, 2, 0, 3], [0, 2, 1, 0, 1]);
+        let profile = ProductionProfile::new([1, 7, 2, 0, 3, 0], [0, 2, 1, 0, 1, 0]);
         assert_eq!(comparative_advantage(&profile), Good::Water);
     }
 
     /// FR-CIV-LIFE-023: trade gain is positive when advantages differ and zero when identical.
     #[test]
     fn trade_gain_reflects_specialization_difference() {
-        let a = ProductionProfile::new([10, 1, 0, 0, 0], [1, 0, 0, 0, 0]);
-        let b = ProductionProfile::new([0, 9, 0, 0, 0], [0, 1, 0, 0, 0]);
-        let c = ProductionProfile::new([10, 1, 0, 0, 0], [1, 0, 0, 0, 0]);
+        let a = ProductionProfile::new([10, 1, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0]);
+        let b = ProductionProfile::new([0, 9, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0]);
+        let c = ProductionProfile::new([10, 1, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0]);
 
         assert!(trade_gain(&a, &b) > 0);
         assert_eq!(trade_gain(&a, &c), 0);
@@ -436,8 +436,8 @@ mod tests {
     fn propose_trade_returns_none_without_mutual_benefit() {
         let a_stocks = Stocks::default();
         let b_stocks = Stocks::default();
-        let a_profile = ProductionProfile::new([5, 0, 0, 0, 0], [0, 0, 0, 0, 0]);
-        let b_profile = ProductionProfile::new([0, 5, 0, 0, 0], [0, 0, 0, 0, 0]);
+        let a_profile = ProductionProfile::new([5, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]);
+        let b_profile = ProductionProfile::new([0, 5, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]);
 
         assert_eq!(
             propose_trade(&a_stocks, &a_profile, &b_stocks, &b_profile),
@@ -509,8 +509,8 @@ mod tests {
         /// FR-CIV-LIFE-022 — comparative advantage must select a maximum net-flow good.
         #[test]
         fn comparative_advantage_is_global_maximum(
-            production in prop::array::uniform5(-100i64..100),
-            consumption in prop::array::uniform5(0i64..100),
+            production in prop::array::uniform6(-100i64..100),
+            consumption in prop::array::uniform6(0i64..100),
         ) {
             let profile = ProductionProfile::new(production, consumption);
             let chosen = comparative_advantage(&profile);
@@ -524,9 +524,9 @@ mod tests {
         /// FR-CIV-LIFE-020 — arbitrary stock updates never make inventories negative.
         #[test]
         fn add_and_step_never_produce_negative_stock(
-            initial in prop::array::uniform5(0i64..500),
-            production in prop::array::uniform5(-100i64..100),
-            consumption in prop::array::uniform5(0i64..150),
+            initial in prop::array::uniform6(0i64..500),
+            production in prop::array::uniform6(-100i64..100),
+            consumption in prop::array::uniform6(0i64..150),
         ) {
             let mut stocks = Stocks::default();
             for (good, qty) in GOODS.into_iter().zip(initial) {

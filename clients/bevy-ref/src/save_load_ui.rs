@@ -39,7 +39,9 @@ pub struct SlotInfo {
 }
 
 fn fmt_opt(val: &Option<impl std::fmt::Display>, fallback: &str) -> String {
-    val.as_ref().map(|v| v.to_string()).unwrap_or_else(|| fallback.to_string())
+    val.as_ref()
+        .map(|v| v.to_string())
+        .unwrap_or_else(|| fallback.to_string())
 }
 
 /// Registers the save/load panel systems.
@@ -102,20 +104,34 @@ fn render_panel(
                 });
 
                 // Show metadata if cached
-                if let Some(info) = panel.slots.iter().find(|s| s.name == format!("slot-{slot}")) {
+                if let Some(info) = panel
+                    .slots
+                    .iter()
+                    .find(|s| s.name == format!("slot-{slot}"))
+                {
                     ui.vertical(|ui| {
-                        ui.label(format!("  tick: {} | pop: {} | age: {}",
+                        ui.label(format!(
+                            "  tick: {} | pop: {} | age: {}",
                             fmt_opt(&info.tick, "-"),
                             fmt_opt(&info.population, "-"),
-                            fmt_opt(&info.world_age, "-")));
-                        ui.label(format!("  map: {} | size: {} | settlements: {}",
+                            fmt_opt(&info.world_age, "-")
+                        ));
+                        ui.label(format!(
+                            "  map: {} | size: {} | settlements: {}",
                             fmt_opt(&info.map_size, "-"),
-                            info.size_bytes.map(|b| {
-                                if b < 1024 { format!("{b} B") }
-                                else if b < 1024*1024 { format!("{:.1} KB", b as f64 / 1024.0) }
-                                else { format!("{:.1} MB", b as f64 / (1024.0*1024.0)) }
-                            }).unwrap_or_else(|| "-".to_string()),
-                            fmt_opt(&info.settled, "-")));
+                            info.size_bytes
+                                .map(|b| {
+                                    if b < 1024 {
+                                        format!("{b} B")
+                                    } else if b < 1024 * 1024 {
+                                        format!("{:.1} KB", b as f64 / 1024.0)
+                                    } else {
+                                        format!("{:.1} MB", b as f64 / (1024.0 * 1024.0))
+                                    }
+                                })
+                                .unwrap_or_else(|| "-".to_string()),
+                            fmt_opt(&info.settled, "-")
+                        ));
                     });
                 }
             }
@@ -144,14 +160,20 @@ fn render_panel(
             SaveLoadAction::Save(slot) => {
                 let name = format!("slot-{slot}");
                 (
-                    format!(r#"{{"jsonrpc":"2.0","id":{id},"method":"save.slot","params":{{"slot_name":"{name}"}}}}"#, id = 2000 + slot as u32),
+                    format!(
+                        r#"{{"jsonrpc":"2.0","id":{id},"method":"save.slot","params":{{"slot_name":"{name}"}}}}"#,
+                        id = 2000 + slot as u32
+                    ),
                     format!("save.slot → {name}"),
                 )
             }
             SaveLoadAction::Load(slot) => {
                 let name = format!("slot-{slot}");
                 (
-                    format!(r#"{{"jsonrpc":"2.0","id":{id},"method":"save.load","params":{{"slot_name":"{name}"}}}}"#, id = 2010 + slot as u32),
+                    format!(
+                        r#"{{"jsonrpc":"2.0","id":{id},"method":"save.load","params":{{"slot_name":"{name}"}}}}"#,
+                        id = 2010 + slot as u32
+                    ),
                     format!("save.load → {name}"),
                 )
             }
@@ -162,7 +184,10 @@ fn render_panel(
             SaveLoadAction::Delete(slot) => {
                 let name = format!("slot-{slot}");
                 (
-                    format!(r#"{{"jsonrpc":"2.0","id":{id},"method":"save.delete","params":{{"slot_name":"{name}"}}}}"#, id = 2020 + slot as u32),
+                    format!(
+                        r#"{{"jsonrpc":"2.0","id":{id},"method":"save.delete","params":{{"slot_name":"{name}"}}}}"#,
+                        id = 2020 + slot as u32
+                    ),
                     format!("save.delete → {name}"),
                 )
             }

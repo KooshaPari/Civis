@@ -10,7 +10,7 @@
 
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
-use civ_engine::{CivSaveBundle, Simulation};
+use civ_engine::{save_bundle::CivSaveBundle, Simulation};
 use civ_save_db::SaveDb;
 use tokio::{sync::Mutex, time::interval};
 

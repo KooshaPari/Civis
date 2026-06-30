@@ -40,13 +40,15 @@ pub fn research_cost_for_level(tech_level: u32) -> u64 {
 /// Per-tick research income from thriving vs stagnant conditions.
 #[must_use]
 pub fn research_income(inputs: FactionEmergenceInputs) -> u64 {
-    if inputs.population < 4 && inputs.surplus < 50 && inputs.treasury < 500 {
+    if inputs.population < 4 || (inputs.surplus < 50 && inputs.treasury < 500) {
         return 0;
     }
     let pop = u64::from(inputs.population);
     let surplus = (inputs.surplus.max(0) as u64) / 4;
     let treasury = (inputs.treasury.max(0) as u64) / 100;
-    pop.saturating_mul(2).saturating_add(surplus).saturating_add(treasury)
+    pop.saturating_mul(2)
+        .saturating_add(surplus)
+        .saturating_add(treasury)
 }
 
 /// Bass-like diffusion weight for one faction observing a better neighbor.
@@ -78,9 +80,16 @@ pub fn can_unlock(current_level: u32, required_level: u32) -> bool {
 
 /// Neighbor diffusion is anchored to faction-id adjacency in sorted order.
 #[must_use]
-pub fn neighboring_factions(faction_ids: &[u32], faction_id: u32) -> impl Iterator<Item = u32> + '_ {
-    let idx = faction_ids.iter().position(|candidate| *candidate == faction_id);
-    let left = idx.and_then(|i| i.checked_sub(1)).and_then(|i| faction_ids.get(i).copied());
+pub fn neighboring_factions(
+    faction_ids: &[u32],
+    faction_id: u32,
+) -> impl Iterator<Item = u32> + '_ {
+    let idx = faction_ids
+        .iter()
+        .position(|candidate| *candidate == faction_id);
+    let left = idx
+        .and_then(|i| i.checked_sub(1))
+        .and_then(|i| faction_ids.get(i).copied());
     let right = idx
         .and_then(|i| i.checked_add(1))
         .and_then(|i| faction_ids.get(i).copied());
@@ -153,14 +162,16 @@ pub fn tick_research(sim: &Simulation, tech_by_faction: &mut BTreeMap<u32, Facti
         state.research_points = state.research_points.saturating_add(delta);
 
         let mut diffusion = 0_u64;
-        for neighbor_id in neighboring_factions(&faction_ids, faction_id) {
-            if let Some(neighbor) = snapshot.get(&neighbor_id) {
-                diffusion = diffusion.saturating_add(diffusion_delta(
-                    state.tech_level,
-                    neighbor.tech_level,
-                    neighbor.diffusion_points,
-                    state.research_points,
-                ));
+        if faction_inputs.population >= 4 {
+            for neighbor_id in neighboring_factions(&faction_ids, faction_id) {
+                if let Some(neighbor) = snapshot.get(&neighbor_id) {
+                    diffusion = diffusion.saturating_add(diffusion_delta(
+                        state.tech_level,
+                        neighbor.tech_level,
+                        neighbor.diffusion_points,
+                        state.research_points,
+                    ));
+                }
             }
         }
         state.diffusion_points = state.diffusion_points.saturating_add(diffusion);

@@ -35,7 +35,10 @@
 
 use bevy::prelude::*;
 
-use crate::spawn_tools::{select_action_binding, ActiveTool, CursorMarker, PointerOverUi, SpawnTool};
+use crate::spawn_tools::{
+    select_action_binding, ActiveTool, CursorMarker, GameSettings, KeyBinding, PointerOverUi,
+    SpawnTool,
+};
 
 /// Brush footprint shape on the XZ plane.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -524,7 +527,7 @@ fn level_column(
 fn emit_terraform_edits(
     buttons: Res<ButtonInput<MouseButton>>,
     keys: Res<ButtonInput<KeyCode>>,
-    settings: Option<Res<crate::settings_ui::GameSettings>>,
+    settings: Option<Res<GameSettings>>,
     active: Res<ActiveTool>,
     over_ui: Res<PointerOverUi>,
     marker: Res<CursorMarker>,
@@ -707,24 +710,26 @@ fn brush_param_sliders(ui: &mut bevy_egui::egui::Ui, brush: &mut BrushSettings) 
 }
 
 fn select_binding_just_pressed(
-    binding: crate::settings_ui::KeyBinding,
+    binding: KeyBinding,
     keys: &ButtonInput<KeyCode>,
     buttons: &ButtonInput<MouseButton>,
 ) -> bool {
     match binding {
-        crate::settings_ui::KeyBinding::Key(key) => keys.just_pressed(key),
-        crate::settings_ui::KeyBinding::Mouse(button) => buttons.just_pressed(button),
+        #[cfg(feature = "egui")]
+        KeyBinding::Key(key) => keys.just_pressed(key),
+        KeyBinding::Mouse(button) => buttons.just_pressed(button),
     }
 }
 
 fn select_binding_just_released(
-    binding: crate::settings_ui::KeyBinding,
+    binding: KeyBinding,
     keys: &ButtonInput<KeyCode>,
     buttons: &ButtonInput<MouseButton>,
 ) -> bool {
     match binding {
-        crate::settings_ui::KeyBinding::Key(key) => keys.just_released(key),
-        crate::settings_ui::KeyBinding::Mouse(button) => buttons.just_released(button),
+        #[cfg(feature = "egui")]
+        KeyBinding::Key(key) => keys.just_released(key),
+        KeyBinding::Mouse(button) => buttons.just_released(button),
     }
 }
 

@@ -68,39 +68,235 @@ pub struct Token {
 /// Canonical token list. Verbatim from `docs/design/ui-design-language.md`.
 pub const CANONICAL_TOKENS: &[(TokenName, Token)] = &[
     // Graphite ramp
-    (TokenName::Ink0, Token { hex: "#05070A", premult_alpha: Some(244), role: "void / deepest scrim behind floating panels" }),
-    (TokenName::Ink1, Token { hex: "#0A0D12", premult_alpha: Some(240), role: "panel bottom / blade base, viewport letterbox" }),
-    (TokenName::Graphite900, Token { hex: "#0F131A", premult_alpha: Some(236), role: "primary panel fill (the console face)" }),
-    (TokenName::Graphite800, Token { hex: "#161B23", premult_alpha: Some(236), role: "inset wells, list rows, sliders track" }),
-    (TokenName::Graphite700, Token { hex: "#1E242E", premult_alpha: Some(238), role: "chips / inactive buttons (mid surface)" }),
-    (TokenName::Graphite600, Token { hex: "#272E3A", premult_alpha: Some(240), role: "hover surface / raised nested cards" }),
-    (TokenName::Graphite500, Token { hex: "#333C4A", premult_alpha: None,     role: "active-but-neutral surface, pressed blade" }),
-    (TokenName::Steel400,   Token { hex: "#4A5564", premult_alpha: None,     role: "bevel highlight (top/left lit edge)" }),
-    (TokenName::Steel300,   Token { hex: "#5E6A7A", premult_alpha: None,     role: "hairline borders, inactive widget stroke" }),
-    (TokenName::Steel200,   Token { hex: "#7C8898", premult_alpha: None,     role: "tick marks, disabled glyphs" }),
+    (
+        TokenName::Ink0,
+        Token {
+            hex: "#05070A",
+            premult_alpha: Some(244),
+            role: "void / deepest scrim behind floating panels",
+        },
+    ),
+    (
+        TokenName::Ink1,
+        Token {
+            hex: "#0A0D12",
+            premult_alpha: Some(240),
+            role: "panel bottom / blade base, viewport letterbox",
+        },
+    ),
+    (
+        TokenName::Graphite900,
+        Token {
+            hex: "#0F131A",
+            premult_alpha: Some(236),
+            role: "primary panel fill (the console face)",
+        },
+    ),
+    (
+        TokenName::Graphite800,
+        Token {
+            hex: "#161B23",
+            premult_alpha: Some(236),
+            role: "inset wells, list rows, sliders track",
+        },
+    ),
+    (
+        TokenName::Graphite700,
+        Token {
+            hex: "#1E242E",
+            premult_alpha: Some(238),
+            role: "chips / inactive buttons (mid surface)",
+        },
+    ),
+    (
+        TokenName::Graphite600,
+        Token {
+            hex: "#272E3A",
+            premult_alpha: Some(240),
+            role: "hover surface / raised nested cards",
+        },
+    ),
+    (
+        TokenName::Graphite500,
+        Token {
+            hex: "#333C4A",
+            premult_alpha: None,
+            role: "active-but-neutral surface, pressed blade",
+        },
+    ),
+    (
+        TokenName::Steel400,
+        Token {
+            hex: "#4A5564",
+            premult_alpha: None,
+            role: "bevel highlight (top/left lit edge)",
+        },
+    ),
+    (
+        TokenName::Steel300,
+        Token {
+            hex: "#5E6A7A",
+            premult_alpha: None,
+            role: "hairline borders, inactive widget stroke",
+        },
+    ),
+    (
+        TokenName::Steel200,
+        Token {
+            hex: "#7C8898",
+            premult_alpha: None,
+            role: "tick marks, disabled glyphs",
+        },
+    ),
     // Text ramp
-    (TokenName::TextHi,       Token { hex: "#ECEFF4", premult_alpha: None, role: "primary body, headings, live values" }),
-    (TokenName::TextMid,      Token { hex: "#9AA4B2", premult_alpha: None, role: "secondary text, field labels" }),
-    (TokenName::TextLow,      Token { hex: "#646F7E", premult_alpha: None, role: "captions, units, inactive tabs, hints" }),
-    (TokenName::TextDisabled, Token { hex: "#3C4450", premult_alpha: None, role: "disabled" }),
+    (
+        TokenName::TextHi,
+        Token {
+            hex: "#ECEFF4",
+            premult_alpha: None,
+            role: "primary body, headings, live values",
+        },
+    ),
+    (
+        TokenName::TextMid,
+        Token {
+            hex: "#9AA4B2",
+            premult_alpha: None,
+            role: "secondary text, field labels",
+        },
+    ),
+    (
+        TokenName::TextLow,
+        Token {
+            hex: "#646F7E",
+            premult_alpha: None,
+            role: "captions, units, inactive tabs, hints",
+        },
+    ),
+    (
+        TokenName::TextDisabled,
+        Token {
+            hex: "#3C4450",
+            premult_alpha: None,
+            role: "disabled",
+        },
+    ),
     // Neon accent
-    (TokenName::Neon,    Token { hex: "#3DF07A", premult_alpha: None, role: "active tab underline, focused-widget 1px edge, selection ring, \"live\" pulse" }),
-    (TokenName::NeonHi,  Token { hex: "#8BFFB4", premult_alpha: None, role: "hottest core of a neon glow (1px inner line)" }),
-    (TokenName::NeonDim, Token { hex: "#1E7A45", premult_alpha: None, role: "neon at rest / pre-glow trace lines, scanline base in chrome" }),
+    (
+        TokenName::Neon,
+        Token {
+            hex: "#3DF07A",
+            premult_alpha: None,
+            role: "active tab underline, focused-widget 1px edge, selection ring, \"live\" pulse",
+        },
+    ),
+    (
+        TokenName::NeonHi,
+        Token {
+            hex: "#8BFFB4",
+            premult_alpha: None,
+            role: "hottest core of a neon glow (1px inner line)",
+        },
+    ),
+    (
+        TokenName::NeonDim,
+        Token {
+            hex: "#1E7A45",
+            premult_alpha: None,
+            role: "neon at rest / pre-glow trace lines, scanline base in chrome",
+        },
+    ),
     // Warm signal
-    (TokenName::Amber,   Token { hex: "#F2B33D", premult_alpha: None, role: "treasury/era value, \"confirm/positive\", positive delta arrows" }),
-    (TokenName::AmberHi, Token { hex: "#FFE3A0", premult_alpha: None, role: "amber glow core" }),
+    (
+        TokenName::Amber,
+        Token {
+            hex: "#F2B33D",
+            premult_alpha: None,
+            role: "treasury/era value, \"confirm/positive\", positive delta arrows",
+        },
+    ),
+    (
+        TokenName::AmberHi,
+        Token {
+            hex: "#FFE3A0",
+            premult_alpha: None,
+            role: "amber glow core",
+        },
+    ),
     // Holo cyan family
-    (TokenName::HoloCore,   Token { hex: "#7FE9FF", premult_alpha: None, role: "holo line work, wireframe, primary projected text" }),
-    (TokenName::HoloGlow,   Token { hex: "#2FBFE6", premult_alpha: None, role: "holo glow / bloom color, scanline tint" }),
-    (TokenName::HoloDeep,   Token { hex: "#0E3A4A", premult_alpha: None, role: "holo panel translucent fill (very low alpha)" }),
-    (TokenName::HoloAberrR, Token { hex: "#FF3B6B", premult_alpha: None, role: "chromatic-aberration red ghost channel" }),
-    (TokenName::HoloAberrB, Token { hex: "#3B7BFF", premult_alpha: None, role: "chromatic-aberration blue ghost channel" }),
+    (
+        TokenName::HoloCore,
+        Token {
+            hex: "#7FE9FF",
+            premult_alpha: None,
+            role: "holo line work, wireframe, primary projected text",
+        },
+    ),
+    (
+        TokenName::HoloGlow,
+        Token {
+            hex: "#2FBFE6",
+            premult_alpha: None,
+            role: "holo glow / bloom color, scanline tint",
+        },
+    ),
+    (
+        TokenName::HoloDeep,
+        Token {
+            hex: "#0E3A4A",
+            premult_alpha: None,
+            role: "holo panel translucent fill (very low alpha)",
+        },
+    ),
+    (
+        TokenName::HoloAberrR,
+        Token {
+            hex: "#FF3B6B",
+            premult_alpha: None,
+            role: "chromatic-aberration red ghost channel",
+        },
+    ),
+    (
+        TokenName::HoloAberrB,
+        Token {
+            hex: "#3B7BFF",
+            premult_alpha: None,
+            role: "chromatic-aberration blue ghost channel",
+        },
+    ),
     // Semantic status
-    (TokenName::Ok,     Token { hex: "#46D67A", premult_alpha: None, role: "healthy / positive (distinct from NEON: less saturated, fill-safe)" }),
-    (TokenName::Warn,   Token { hex: "#F2B33D", premult_alpha: None, role: "caution (shares AMBER)" }),
-    (TokenName::Danger, Token { hex: "#F0556B", premult_alpha: None, role: "alert / negative / war" }),
-    (TokenName::Mana,   Token { hex: "#9B7BF0", premult_alpha: None, role: "disaster / magic / arcane category" }),
+    (
+        TokenName::Ok,
+        Token {
+            hex: "#46D67A",
+            premult_alpha: None,
+            role: "healthy / positive (distinct from NEON: less saturated, fill-safe)",
+        },
+    ),
+    (
+        TokenName::Warn,
+        Token {
+            hex: "#F2B33D",
+            premult_alpha: None,
+            role: "caution (shares AMBER)",
+        },
+    ),
+    (
+        TokenName::Danger,
+        Token {
+            hex: "#F0556B",
+            premult_alpha: None,
+            role: "alert / negative / war",
+        },
+    ),
+    (
+        TokenName::Mana,
+        Token {
+            hex: "#9B7BF0",
+            premult_alpha: None,
+            role: "disaster / magic / arcane category",
+        },
+    ),
 ];
 
 /// Static lookup table mapping `TokenName` → `Token` for the audit test.

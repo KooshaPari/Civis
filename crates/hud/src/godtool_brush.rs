@@ -148,11 +148,7 @@ pub enum BrushShape {
 
 impl BrushShape {
     /// All shapes, declaration order.
-    pub const ALL: [BrushShape; 3] = [
-        BrushShape::Circle,
-        BrushShape::Square,
-        BrushShape::Diamond,
-    ];
+    pub const ALL: [BrushShape; 3] = [BrushShape::Circle, BrushShape::Square, BrushShape::Diamond];
 
     /// `true` when `(dx, dy)` (axial offset from the brush center) is
     /// inside the footprint of `radius`. The unit is **cells**; the
@@ -381,6 +377,9 @@ impl BrushKernel {
         //   Diamond:  |offset| = |dx| + |dy|
         // The shape's `contains` predicate already rejected any cell
         // whose distance exceeds `radius`, so `t <= 1` here.
+        if matches!(self.falloff, BrushFalloff::Hard) {
+            return self.strength;
+        }
         let t = self.normalized_distance(dx, dy);
         self.strength * self.falloff.shape(t)
     }
@@ -402,6 +401,9 @@ impl BrushKernel {
         let in_radius = self.shape.contains(dx, dy, self.radius);
         if !in_radius {
             return (0.0, false);
+        }
+        if matches!(self.falloff, BrushFalloff::Hard) {
+            return (self.strength, true);
         }
         let t = self.normalized_distance(dx, dy);
         (self.strength * self.falloff.shape(t), true)
@@ -485,12 +487,7 @@ mod tests {
     #[test]
     fn kernel_weight_is_monotonically_non_increasing() {
         for falloff in BrushFalloff::ALL {
-            let k = BrushKernel::new(BrushKernelParams::new(
-                5,
-                1.0,
-                falloff,
-                BrushShape::Circle,
-            ));
+            let k = BrushKernel::new(BrushKernelParams::new(5, 1.0, falloff, BrushShape::Circle));
             let mut prev = k.weight_at((0, 0));
             for dx in 1..=5 {
                 let w = k.weight_at((dx, 0));
@@ -653,12 +650,7 @@ mod tests {
     #[test]
     fn shape_contains_agrees_with_kernel_weight_gate() {
         for shape in BrushShape::ALL {
-            let k = BrushKernel::new(BrushKernelParams::new(
-                3,
-                1.0,
-                BrushFalloff::Linear,
-                shape,
-            ));
+            let k = BrushKernel::new(BrushKernelParams::new(3, 1.0, BrushFalloff::Linear, shape));
             for dx in -4..=4 {
                 for dy in -4..=4 {
                     let contained = shape.contains(dx, dy, 3);
@@ -670,7 +662,10 @@ mod tests {
                         // Linear (no plateau at the edge because `t =
                         // 1` clamps to zero). So strictly less than
                         // strength.
-                        assert!(w >= 0.0, "{shape:?}: ({dx},{dy}) weight must be non-negative");
+                        assert!(
+                            w >= 0.0,
+                            "{shape:?}: ({dx},{dy}) weight must be non-negative"
+                        );
                         assert!(
                             w <= k.strength() + 1e-12,
                             "{shape:?}: ({dx},{dy}) weight must not exceed strength"

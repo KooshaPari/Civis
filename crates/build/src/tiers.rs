@@ -440,4 +440,3 @@ impl BuildingGraph {
         self.completed.len()
     }
 }
-

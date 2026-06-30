@@ -189,7 +189,12 @@ fn build_surface_nets(
         .into_iter()
         .filter_map(|i| u32::try_from(i).ok())
         .collect();
-    MeshBuffer { vertices, indices }
+    let ao = vec![255; vertices.len()];
+    MeshBuffer {
+        vertices,
+        indices,
+        ao,
+    }
 }
 
 fn build_shared_solid_density(
@@ -372,7 +377,10 @@ fn weight_for_offset(dx: isize, dy: isize, dz: isize) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use civ_voxel::{material::{MaterialRegistry, WATER}, MaterialId};
+    use civ_voxel::{
+        material::{MaterialRegistry, WATER},
+        MaterialId,
+    };
 
     /// Reference Gaussian the `weight_for_offset` match table mirrors.
     fn gaussian_reference(dx: isize, dy: isize, dz: isize) -> f32 {

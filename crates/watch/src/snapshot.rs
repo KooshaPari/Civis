@@ -451,7 +451,7 @@ pub(crate) fn economy_snapshot(
     factions: &[Faction],
     trade_balances_this_tick: &std::collections::HashMap<u32, f64>,
 ) -> EconomySnapshot {
-    let energy_budget = sim.state.energy_budget_joules.to_f64();
+    let energy_budget = sim.state.energy_budget_joules.to_num::<f64>();
     let resources = &sim.state.resources;
     let faction_treasury = factions
         .iter()
@@ -466,7 +466,7 @@ pub(crate) fn economy_snapshot(
                 .state
                 .faction_treasury
                 .get(&faction.id)
-                .map(|value| value.to_f64())
+                .map(|value| value.to_num::<f64>())
                 .unwrap_or(0.0);
             FactionTreasury {
                 id: faction.id,
@@ -508,10 +508,10 @@ pub(crate) fn economy_snapshot(
         },
         institutions,
         resources: ResourceSnapshot {
-            food: resources.food.to_f64(),
-            wood: resources.wood.to_f64(),
-            metal: resources.metal.to_f64(),
-            energy: resources.energy.to_f64(),
+            food: resources.food.to_num::<f64>(),
+            wood: resources.wood.to_num::<f64>(),
+            metal: resources.metal.to_num::<f64>(),
+            energy: resources.energy.to_num::<f64>(),
         },
     }
 }
@@ -523,9 +523,9 @@ pub(crate) fn sample_civilians(sim: &Simulation) -> Vec<SampleCivilian> {
         .take(8)
         .map(|(_, citizen)| SampleCivilian {
             age: citizen.age,
-            health: citizen.health.to_f64(),
-            ideology: citizen.ideology.to_f64(),
-            welfare: citizen.welfare.to_f64(),
+            health: citizen.health.to_num::<f64>(),
+            ideology: citizen.ideology.to_num::<f64>(),
+            welfare: citizen.welfare.to_num::<f64>(),
             job: None,
         })
         .collect()
@@ -862,10 +862,10 @@ pub(crate) fn resource_amount(
     resource: civ_engine::ResourceType,
 ) -> f64 {
     match resource {
-        civ_engine::ResourceType::Food => resources.food.to_f64(),
-        civ_engine::ResourceType::Wood => resources.wood.to_f64(),
-        civ_engine::ResourceType::Metal => resources.metal.to_f64(),
-        civ_engine::ResourceType::Energy => resources.energy.to_f64(),
+        civ_engine::ResourceType::Food => resources.food.to_num::<f64>(),
+        civ_engine::ResourceType::Wood => resources.wood.to_num::<f64>(),
+        civ_engine::ResourceType::Metal => resources.metal.to_num::<f64>(),
+        civ_engine::ResourceType::Energy => resources.energy.to_num::<f64>(),
     }
 }
 
@@ -877,7 +877,7 @@ pub(crate) fn resource_demand(
 }
 
 pub(crate) fn fixed_from_f64(value: f64) -> civ_engine::Fixed {
-    civ_engine::Fixed::from_raw((value * civ_engine::SCALE as f64).round() as i64)
+    civ_engine::Fixed::from_num(value)
 }
 
 pub(crate) fn adjust_resource(
@@ -1349,7 +1349,7 @@ mod tests {
         treasury.insert(1, fixed_from_f64(100.0));
 
         adjust_treasury(&mut treasury, 1, 25.0);
-        assert!((treasury[&1].to_f64() - 125.0).abs() < 1e-6);
+        assert!((treasury[&1].to_num::<f64>() - 125.0).abs() < 1e-6);
 
         // An absent faction is a silent no-op (no insert).
         adjust_treasury(&mut treasury, 99, 50.0);

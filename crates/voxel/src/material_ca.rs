@@ -81,18 +81,14 @@ fn water_step(grid: &mut CaGrid, scratch: &ScratchView, x: usize, y: usize, z: u
         let below_neighbor_mat = scratch.get(nx, y - 1, z);
 
         if neighbor_mat == AIR && below_neighbor_mat == AIR {
-            if let Some(neighbor_idx) = grid.index(nx, y, z) {
-                if let Some(below_idx) = grid.index(nx, y - 1, z) {
-                    grid.cells[neighbor_idx] = WATER;
-                    grid.cells[below_idx] = WATER;
-                    if let Some(idx) = grid.index(x, y, z) {
-                        grid.cells[idx] = AIR;
-                        grid.mark_dirty_cell(x, y, z);
-                        grid.mark_dirty_cell(nx, y, z);
-                        grid.mark_dirty_cell(nx, y - 1, z);
-                    }
-                    return;
+            if let Some(below_idx) = grid.index(nx, y - 1, z) {
+                grid.cells[below_idx] = WATER;
+                if let Some(idx) = grid.index(x, y, z) {
+                    grid.cells[idx] = AIR;
+                    grid.mark_dirty_cell(x, y, z);
+                    grid.mark_dirty_cell(nx, y - 1, z);
                 }
+                return;
             }
         }
     }
@@ -114,7 +110,14 @@ fn fire_step(
     };
 
     // Deterministic random spread direction based on cell position and tick.
-    let spread_order = if (x.wrapping_mul(73).wrapping_add(y.wrapping_mul(41)).wrapping_add(z).wrapping_add(tick)) % 2 == 0 {
+    let spread_order = if (x
+        .wrapping_mul(73)
+        .wrapping_add(y.wrapping_mul(41))
+        .wrapping_add(z)
+        .wrapping_add(tick))
+        % 2
+        == 0
+    {
         [(1usize, true), (0usize, false), (2usize, true)]
     } else {
         [(0usize, false), (2usize, true), (1usize, true)]
@@ -123,9 +126,33 @@ fn fire_step(
     // Try to spread to a neighboring flammable cell.
     for (axis, neg) in spread_order {
         let (nx, ny, nz) = match axis {
-            0 => (if neg { x.saturating_sub(1) } else { x.saturating_add(1) }, y, z),
-            1 => (x, if neg { y.saturating_sub(1) } else { y.saturating_add(1) }, z),
-            2 => (x, y, if neg { z.saturating_sub(1) } else { z.saturating_add(1) }),
+            0 => (
+                if neg {
+                    x.saturating_sub(1)
+                } else {
+                    x.saturating_add(1)
+                },
+                y,
+                z,
+            ),
+            1 => (
+                x,
+                if neg {
+                    y.saturating_sub(1)
+                } else {
+                    y.saturating_add(1)
+                },
+                z,
+            ),
+            2 => (
+                x,
+                y,
+                if neg {
+                    z.saturating_sub(1)
+                } else {
+                    z.saturating_add(1)
+                },
+            ),
             _ => (x, y, z),
         };
 
@@ -185,7 +212,7 @@ fn sand_step(grid: &mut CaGrid, scratch: &ScratchView, x: usize, y: usize, z: us
 mod tests {
     use super::*;
     use crate::fluid_ca::CaGrid;
-    use crate::material::{MaterialRegistry, WOOD, COAL};
+    use crate::material::{MaterialRegistry, COAL, WOOD};
 
     fn reg() -> MaterialRegistry {
         MaterialRegistry::standard()
@@ -223,7 +250,10 @@ mod tests {
 
         // Fire should either spread to WOOD or become ASH.
         let fire_cell = grid.get(1, 1, 0);
-        assert!(fire_cell == ASH || fire_cell == FIRE, "fire cell should be ash or still fire");
+        assert!(
+            fire_cell == ASH || fire_cell == FIRE,
+            "fire cell should be ash or still fire"
+        );
     }
 
     /// Sand falls into empty space below.
@@ -250,6 +280,7 @@ mod tests {
         grid.set(0, 2, 0, WATER);
         grid.set(0, 1, 0, COAL); // Non-air solid.
         grid.mark_dirty_cell(0, 2, 0);
+        grid.refresh_scratch();
 
         let mut scratch = grid.scratch_view();
         water_step(&mut grid, &scratch, 0, 2, 0);

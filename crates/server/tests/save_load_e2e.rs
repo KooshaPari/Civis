@@ -3,8 +3,10 @@ use std::path::PathBuf;
 
 fn test_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent().unwrap()
-        .join("target").join("test-saves")
+        .parent()
+        .unwrap()
+        .join("target")
+        .join("test-saves")
 }
 
 fn write_slot(slot: &str, data: &[u8]) -> bool {

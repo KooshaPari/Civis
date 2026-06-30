@@ -19,7 +19,7 @@ use crate::registry::VerbRegistry;
 /// the substrate-faithful phase will assert that every registered
 /// MCP tool has a matching Holocron descriptor.
 pub fn mcp_tool_name(verb: &VerbDescriptor) -> Option<&str> {
-    verb.mcp_tool.as_deref()
+    (verb.provenance == crate::provenance::Provenance::Mcp).then_some(verb.id.as_str())
 }
 
 /// Sanity check: verify that every verb with a `mcp_tool` link has
@@ -29,7 +29,7 @@ pub fn mcp_tool_name(verb: &VerbDescriptor) -> Option<&str> {
 pub fn validate_mcp_links(registry: &VerbRegistry) -> Vec<(String, String)> {
     let mut issues = Vec::new();
     for (id, desc) in registry.iter() {
-        if let Some(tool) = desc.mcp_tool.as_deref() {
+        if let Some(tool) = mcp_tool_name(desc) {
             if tool.is_empty() {
                 issues.push((id.to_string(), "empty mcp_tool".into()));
                 continue;
@@ -50,44 +50,53 @@ mod tests {
     use super::*;
     use crate::descriptor::VerbDescriptor;
     use crate::group::VerbGroup;
-    use crate::provenance::Provenance;
     use crate::registry::VerbRegistry;
 
-    fn make(id: &str, tool: Option<&str>) -> VerbDescriptor {
-        let mut b = VerbDescriptor::builder(id, id, VerbGroup::Civic)
-            .description("test")
-            .provenance(Provenance::Mcp);
-        if let Some(t) = tool {
-            b = b.mcp_tool(t);
-        }
-        b.build()
+    fn make(id: &'static str) -> VerbDescriptor {
+        VerbDescriptor::new(
+            id,
+            id,
+            "test",
+            VerbGroup::Civic,
+            crate::risk::RiskTier::Minor,
+            crate::provenance::Provenance::Mcp,
+            &[],
+        )
     }
 
     #[test]
-    fn mcp_tool_name_returns_link() {
-        let v = make("a", Some("civ_a"));
+    fn mcp_tool_name_returns_id_for_mcp_verbs() {
+        let v = make("civ_a");
         assert_eq!(mcp_tool_name(&v), Some("civ_a"));
     }
 
     #[test]
     fn mcp_tool_name_none_when_unlinked() {
-        let v = make("a", None);
+        let v = VerbDescriptor::new(
+            "hud_a",
+            "hud_a",
+            "test",
+            VerbGroup::Civic,
+            crate::risk::RiskTier::ReadOnly,
+            crate::provenance::Provenance::Hud,
+            &[],
+        );
         assert_eq!(mcp_tool_name(&v), None);
     }
 
     #[test]
     fn validate_accepts_snake_case() {
-        let mut reg = VerbRegistry::new();
-        reg.register(make("a", Some("civ_world_inspect"))).unwrap();
-        reg.register(make("b", Some("civ_law_propose_v2"))).unwrap();
+        let mut reg = VerbRegistry::empty();
+        reg.register(make("civ_world_inspect"));
+        reg.register(make("civ_law_propose_v2"));
         assert!(validate_mcp_links(&reg).is_empty());
     }
 
     #[test]
     fn validate_rejects_bad_names() {
-        let mut reg = VerbRegistry::new();
-        reg.register(make("a", Some("BadName"))).unwrap();
-        reg.register(make("b", Some("has space"))).unwrap();
+        let mut reg = VerbRegistry::empty();
+        reg.register(make("BadName"));
+        reg.register(make("has space"));
         let issues = validate_mcp_links(&reg);
         assert_eq!(issues.len(), 2);
     }

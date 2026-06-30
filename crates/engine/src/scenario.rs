@@ -277,7 +277,8 @@ impl Scenario {
 
     /// Headless simulation seeded from scenario starting conditions.
     pub fn into_simulation(self, rng_seed: u64) -> Simulation {
-        let mut sim = Simulation::with_seed(rng_seed);
+        let mut sim =
+            Simulation::with_seed_and_starting_conditions(rng_seed, &self.starting_conditions);
         self.apply_world_state(&mut sim.state);
         sim.economy_policy = self.policy_input();
         sim.configure_military_fog(self.fog_vision_radius, self.fog_grid_size);
@@ -321,9 +322,7 @@ impl Scenario {
                 return Err(ScenarioError::Validation {
                     path,
                     field: "divergence_override",
-                    message: format!(
-                        "must be in [0, 1] and finite (got {v})"
-                    ),
+                    message: format!("must be in [0, 1] and finite (got {v})"),
                 });
             }
         }
@@ -525,6 +524,7 @@ mod tests {
             active_seed: None,
             divergence_override: None,
             starting_conditions: ScenarioStartingConditions::default(),
+            taxation: ScenarioTaxation::default(),
             policy: ScenarioPolicy::default(),
         };
         let sim = scenario.into_simulation(1);
@@ -555,7 +555,7 @@ mods:
             sim.replay_log()
                 .events
                 .iter()
-                .any(|e| matches!(e, crate::ReplayEvent::ModLoaded { mod_id, .. } if mod_id == "example-policy"))
+                .any(|e| matches!(e, crate::replay::ReplayEvent::ModLoaded { mod_id, .. } if mod_id == "example-policy"))
         );
         let bus = sim.replay_log().mod_loaded_bus_events();
         assert_eq!(bus.len(), 1);
@@ -762,7 +762,8 @@ population: 100
 base_consumption_joules: 1
 scarcity_multiplier: 1.0
 "#;
-        let scenario_absent = parse_yaml(yaml_absent).expect("absent divergence_override must parse");
+        let scenario_absent =
+            parse_yaml(yaml_absent).expect("absent divergence_override must parse");
         assert_eq!(
             scenario_absent.divergence_override, None,
             "absent divergence_override must default to None"
@@ -1003,9 +1004,18 @@ starting_conditions:
         let mix = &scenario.starting_conditions.seed_mix;
         assert_eq!(mix.len(), 3, "expected 3 seeds, got {}", mix.len());
         let seeds: Vec<civ_genetics::NamedSeed> = mix.iter().map(|sw| sw.seed).collect();
-        assert!(seeds.contains(&civ_genetics::NamedSeed::Ardani), "missing Ardani");
-        assert!(seeds.contains(&civ_genetics::NamedSeed::Velthari), "missing Velthari");
-        assert!(seeds.contains(&civ_genetics::NamedSeed::Grundak), "missing Grundak");
+        assert!(
+            seeds.contains(&civ_genetics::NamedSeed::Ardani),
+            "missing Ardani"
+        );
+        assert!(
+            seeds.contains(&civ_genetics::NamedSeed::Velthari),
+            "missing Velthari"
+        );
+        assert!(
+            seeds.contains(&civ_genetics::NamedSeed::Grundak),
+            "missing Grundak"
+        );
     }
 
     /// `single-race-ardani` must have exactly 1 seed (Ardani) at weight 1.0.
@@ -1122,7 +1132,9 @@ policy:
         let mut sim = scenario.into_simulation(1);
         sim.tick();
         // Default CapitalistPolicy is a no-op, so signals are empty.
-        assert_eq!(sim.last_control_signals(), &crate::ControlSignals::default());
-
+        assert_eq!(
+            sim.last_control_signals(),
+            &crate::policy::ControlSignals::default()
+        );
     }
 }

@@ -6,10 +6,10 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use rand::Rng;
+use crate::era::CivAge;
 use civ_agents::culture::{cultural_distance, CultureProfile};
 use civ_planet::Climate;
-use crate::era::CivAge;
+use rand::Rng;
 
 const DIM: usize = 4;
 const MAX_DRIFT_RATE: f32 = 0.09;
@@ -74,7 +74,9 @@ fn cluster_values_for_faction(
         let Some(profile) = cluster_cultures.get(cluster_id) else {
             continue;
         };
-        let e = sums.entry(*faction_id).or_insert(([0.0; DIM], [0.0; DIM], 0.0));
+        let e = sums
+            .entry(*faction_id)
+            .or_insert(([0.0; DIM], [0.0; DIM], 0.0));
         let weight = members as f32;
         for i in 0..DIM {
             e.0[i] += profile.traits[i] * weight;
@@ -113,7 +115,10 @@ fn faction_isolation_pressure(
         if faction_id == target_faction_id {
             target_settlements.insert(settlement_id);
             target_members = target_members.saturating_add(
-                cluster_member_counts.get(&settlement_id).copied().unwrap_or(0),
+                cluster_member_counts
+                    .get(&settlement_id)
+                    .copied()
+                    .unwrap_or(0),
             );
         }
     }
@@ -166,7 +171,8 @@ pub(crate) fn advance_faction_ideologies(
     prior: &BTreeMap<u32, FactionIdeologyState>,
     rng: &mut impl Rng,
 ) -> BTreeMap<u32, FactionIdeologyState> {
-    let base_profiles = cluster_values_for_faction(cluster_cultures, dominant, cluster_member_counts);
+    let base_profiles =
+        cluster_values_for_faction(cluster_cultures, dominant, cluster_member_counts);
 
     let mut next = BTreeMap::new();
     for (faction_id, (base_values, base_norms)) in base_profiles {
@@ -183,17 +189,16 @@ pub(crate) fn advance_faction_ideologies(
         );
 
         let history_age = ((tick as f32) / 600.0).fract();
-        let climate_push = climate.day_phase * 0.10 + climate.moon_phase * 0.02 + climate.tide_offset.abs() * 0.04;
+        let climate_push =
+            climate.day_phase * 0.10 + climate.moon_phase * 0.02 + climate.tide_offset.abs() * 0.04;
         let religion = clamp01(*religion_by_faction.get(&faction_id).unwrap_or(&0.5));
-        let era = faction_ages
-            .get(&faction_id)
-            .map(era_weight)
-            .unwrap_or(0.0);
+        let era = faction_ages.get(&faction_id).map(era_weight).unwrap_or(0.0);
 
         let mut values = [0.0f32; DIM];
         let mut norms = [0.0f32; DIM];
         for i in 0..DIM {
-            let drift_strength = (0.02 + isolation * 0.035 + history_age * 0.01).min(MAX_DRIFT_RATE);
+            let drift_strength =
+                (0.02 + isolation * 0.035 + history_age * 0.01).min(MAX_DRIFT_RATE);
             let noise = (rng.gen_range(-0.5f32..0.5f32) * 2.0 * drift_strength);
             let toward_base = (base_values[i] - prior_state.values[i]) * (0.30 + climate_push);
             let tradition_pull = prior_state.tradition * 0.35;
@@ -209,20 +214,27 @@ pub(crate) fn advance_faction_ideologies(
 
             let norm_noise = (rng.gen_range(-0.5f32..0.5f32) * 0.015 * (1.0 - 0.65 * isolation));
             let toward_norm = (base_norms[i] - prior_state.norms[i]) * 0.22;
-            norms[i] = clamp01(prior_state.norms[i] + toward_norm * (0.5 + climate_push) + norm_noise);
+            norms[i] =
+                clamp01(prior_state.norms[i] + toward_norm * (0.5 + climate_push) + norm_noise);
         }
 
         let values_coherence = 1.0 - cultural_distance(values, norms);
         let openness = clamp01(
-            0.15 + (1.0 - isolation) * 0.70 + values_coherence * 0.08 + era * 0.15 + religion * 0.12,
+            0.15 + (1.0 - isolation) * 0.70
+                + values_coherence * 0.08
+                + era * 0.15
+                + religion * 0.12,
         );
-        let cooperation = clamp01(
-            0.10 + openness * 0.55 + values_coherence * 0.35 + (1.0 - isolation) * 0.20,
-        );
+        let cooperation =
+            clamp01(0.10 + openness * 0.55 + values_coherence * 0.35 + (1.0 - isolation) * 0.20);
         let aggression = clamp01(
-            0.10 + isolation * 0.70 + (1.0 - religion) * 0.20 + (1.0 - openness) * 0.15 + (1.0 - era) * 0.10,
+            0.10 + isolation * 0.70
+                + (1.0 - religion) * 0.20
+                + (1.0 - openness) * 0.15
+                + (1.0 - era) * 0.10,
         );
-        let tradition = clamp01(prior_state.tradition * 0.80 + era * 0.1 + (1.0 - isolation) * 0.05 + 0.05);
+        let tradition =
+            clamp01(prior_state.tradition * 0.80 + era * 0.1 + (1.0 - isolation) * 0.05 + 0.05);
 
         next.insert(
             faction_id,
@@ -283,7 +295,7 @@ pub(crate) fn culture_openness_signal(
 mod tests {
     use super::*;
     use civ_agents::culture::CultureProfile;
-    use civ_planet::{Climate, compute_climate};
+    use civ_planet::{compute_climate, Climate};
     use rand::SeedableRng;
     use rand_chacha::ChaCha8Rng;
 

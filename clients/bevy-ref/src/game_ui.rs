@@ -7,22 +7,24 @@
 //! untouched. The HUD draws an AAA-styled glassmorphism shell: a stat-chip top
 //! bar, a tool-palette + speed-control bottom bar, and a selection inspector.
 
+use crate::menus::AppState;
+use crate::ui_theme::CHIP_FILL;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
-use crate::ui_theme::CHIP_FILL;
-use crate::menus::AppState;
 
 use civ_protocol_3d::{CivilianNeeds3d, CivilianStateEntry};
 
 use crate::game_laws::GameLawsOpen;
 use crate::live_pick::LiveSelection;
-use crate::spawn_tools::{ActiveTool, BuildingSpawnKind, SpawnTool};
-use crate::tool_categories::{ActiveSubTool, LeftClusterTab, ToolIcons, TOOL_ICON_PATHS, handle_category_hotkeys};
-use crate::{AttachMode, LiveEntityKind, SelectedLiveEntity};
 use crate::settings_ui::{
-    ACTION_CYCLE_SIM_SPEED, ACTION_PAUSE_SIM, ACTION_SPEED_1X, ACTION_SPEED_10X, ACTION_SPEED_2X,
-    ACTION_SPEED_5X, GameSettings, KeyBinding,
+    GameSettings, KeyBinding, ACTION_CYCLE_SIM_SPEED, ACTION_PAUSE_SIM, ACTION_SPEED_10X,
+    ACTION_SPEED_1X, ACTION_SPEED_2X, ACTION_SPEED_5X,
 };
+use crate::spawn_tools::{ActiveTool, BuildingSpawnKind, SpawnTool};
+use crate::tool_categories::{
+    handle_category_hotkeys, ActiveSubTool, LeftClusterTab, ToolIcons, TOOL_ICON_PATHS,
+};
+use crate::{AttachMode, LiveEntityKind, SelectedLiveEntity};
 
 /// Lightweight sim snapshot consumed by the HUD.
 #[derive(Resource, Debug, Clone)]
@@ -724,8 +726,14 @@ fn tool_palette_ui(
             ui.separator();
             ui.label(egui::RichText::new("Building").color(DIM).small());
             if ui
-                .button(egui::RichText::new(building_kind.label()).color(ACCENT).strong())
-                .on_hover_text("Right-click or scroll while the build tool is active to cycle building type.")
+                .button(
+                    egui::RichText::new(building_kind.label())
+                        .color(ACCENT)
+                        .strong(),
+                )
+                .on_hover_text(
+                    "Right-click or scroll while the build tool is active to cycle building type.",
+                )
                 .clicked()
             {
                 *building_kind = building_kind.next();

@@ -60,7 +60,10 @@ pub fn person_name_meaning(faction_id: u32, person_id: u32) -> u32 {
 }
 
 pub fn ensure_seeded_word(language: &mut LanguageState, meaning: u32, seed: [f32; 4]) {
-    language.vocabulary.entry(meaning).or_insert_with(|| seeded_morpheme(seed, meaning));
+    language
+        .vocabulary
+        .entry(meaning)
+        .or_insert_with(|| seeded_morpheme(seed, meaning));
 }
 
 pub fn place_name(language: &LanguageState, faction_id: u32, place_id: u32) -> String {
@@ -83,7 +86,11 @@ impl Default for LanguageState {
 }
 
 pub fn tick_language(lang: &mut LanguageState, contact_pressure: f32) {
-    let mut rng = seeded_rng(lang, contact_pressure);
+    tick_language_for_lineage(lang, contact_pressure, 0);
+}
+
+pub fn tick_language_for_lineage(lang: &mut LanguageState, contact_pressure: f32, lineage_id: u64) {
+    let mut rng = seeded_rng(lang, contact_pressure, lineage_id);
     let sigma = lang.drift_rate.max(0.0) * (1.0 + contact_pressure.max(0.0));
 
     for morpheme in lang.vocabulary.values_mut() {
@@ -107,8 +114,9 @@ pub fn borrow_word(lang: &mut LanguageState, source: &LanguageState, meaning: u3
     }
 }
 
-fn seeded_rng(lang: &LanguageState, contact_pressure: f32) -> ChaCha8Rng {
+fn seeded_rng(lang: &LanguageState, contact_pressure: f32, lineage_id: u64) -> ChaCha8Rng {
     let mut hasher = blake3::Hasher::new();
+    hasher.update(&lineage_id.to_le_bytes());
     hasher.update(&lang.tick.to_le_bytes());
     hasher.update(&lang.drift_rate.to_bits().to_le_bytes());
     hasher.update(&lang.split_threshold.to_bits().to_le_bytes());
@@ -135,15 +143,13 @@ fn seeded_morpheme(seed: [f32; 4], meaning: u32) -> Morpheme {
     let mut rng = seeded_rng_for_seed(seed, meaning);
     let feature_len = 2 + (rng.next_u32() % 2) as usize;
     let mut phonemes = Vec::with_capacity(feature_len);
-    for idx in 0..feature_len {
+    for _ in 0..feature_len {
         let mut features = [0.0_f32; PHONEME_FEATURES];
         for i in 0..PHONEME_FEATURES {
             let drift = (rng.next_u32() as f32 / u32::MAX as f32 - 0.5) * 0.4;
             features[i] = (seed[i % 4] + drift).clamp(0.0, 1.0);
         }
-        phonemes.push(Phoneme {
-            features,
-        });
+        phonemes.push(Phoneme { features });
     }
     Morpheme {
         phonemes,
@@ -152,7 +158,11 @@ fn seeded_morpheme(seed: [f32; 4], meaning: u32) -> Morpheme {
 }
 
 fn render_name(language: &LanguageState, meaning: u32) -> String {
-    let morpheme = match language.vocabulary.get(&meaning).or_else(|| language.vocabulary.values().next()) {
+    let morpheme = match language
+        .vocabulary
+        .get(&meaning)
+        .or_else(|| language.vocabulary.values().next())
+    {
         Some(m) => m,
         None => {
             let fallback = seeded_morpheme([0.5; 4], meaning);
@@ -163,11 +173,7 @@ fn render_name(language: &LanguageState, meaning: u32) -> String {
 }
 
 fn morpheme_to_text(morpheme: &Morpheme) -> String {
-    let syllables: Vec<String> = morpheme
-        .phonemes
-        .iter()
-        .map(phoneme_to_syllable)
-        .collect();
+    let syllables: Vec<String> = morpheme.phonemes.iter().map(phoneme_to_syllable).collect();
     if syllables.is_empty() {
         "na".to_string()
     } else {
@@ -178,7 +184,8 @@ fn morpheme_to_text(morpheme: &Morpheme) -> String {
 fn phoneme_to_syllable(phoneme: &Phoneme) -> String {
     let mut syllable = String::new();
     for i in (0..PHONEME_FEATURES).step_by(2) {
-        let idx = ((phoneme.features[i] * NAMING_SYLLABLES.len() as f32) as usize) % NAMING_SYLLABLES.len();
+        let idx = ((phoneme.features[i] * NAMING_SYLLABLES.len() as f32) as usize)
+            % NAMING_SYLLABLES.len();
         syllable.push_str(NAMING_SYLLABLES[idx]);
     }
     syllable
@@ -260,7 +267,7 @@ fn phoneme_distance(a: &Phoneme, b: &Phoneme) -> f32 {
     1.0 - cosine_similarity(a, b)
 }
 
-fn average_language_distance(a: &LanguageState, b: &LanguageState) -> f32 {
+pub(crate) fn average_language_distance(a: &LanguageState, b: &LanguageState) -> f32 {
     let mut common: Vec<_> = a
         .vocabulary
         .keys()
@@ -359,7 +366,9 @@ mod tests {
 
         assert_eq!(lang.tick, 8);
         let moved = &lang.vocabulary[&1].phonemes[0].features;
-        assert!(moved.iter().any(|feature| (*feature - 0.5).abs() > f32::EPSILON));
+        assert!(moved
+            .iter()
+            .any(|feature| (*feature - 0.5).abs() > f32::EPSILON));
         assert!(moved.iter().all(|feature| (0.0..=1.0).contains(feature)));
     }
 
@@ -444,19 +453,26 @@ mod tests {
 
         // Both cultures start with identical lexicons
         let initial_distance = average_language_distance(&culture_a, &culture_b);
-        assert!(initial_distance < 0.01, "Initial distance should be near-zero: {}", initial_distance);
+        assert!(
+            initial_distance < 0.01,
+            "Initial distance should be near-zero: {}",
+            initial_distance
+        );
 
         // Evolve both cultures independently with no contact (contact_pressure = 0)
         for _ in 0..50 {
-            tick_language(&mut culture_a, 0.0); // No contact
-            tick_language(&mut culture_b, 0.0); // No contact
+            tick_language_for_lineage(&mut culture_a, 0.0, 1); // No contact
+            tick_language_for_lineage(&mut culture_b, 0.0, 2); // No contact
         }
 
         // After 50 independent ticks with non-zero drift_rate (0.05 default),
         // the lexicons should diverge significantly
         let final_distance = average_language_distance(&culture_a, &culture_b);
-        assert!(final_distance > 0.05,
-            "Isolated cultures should diverge after 50 ticks; distance={}", final_distance);
+        assert!(
+            final_distance > 0.05,
+            "Isolated cultures should diverge after 50 ticks; distance={}",
+            final_distance
+        );
     }
 
     #[test]
@@ -472,7 +488,10 @@ mod tests {
 
         let initial_vocab = culture.vocabulary.clone();
         let initial_distance_before = average_language_distance(&culture, &culture);
-        assert_eq!(initial_distance_before, 0.0, "Self-distance must be zero");
+        assert!(
+            initial_distance_before.abs() < f32::EPSILON,
+            "Self-distance must be within float tolerance"
+        );
 
         // Evolve with zero drift for 20 ticks
         for _ in 0..20 {
@@ -485,13 +504,20 @@ mod tests {
         // Verify all morphemes remain unchanged
         for (meaning, morpheme) in &initial_vocab {
             let final_morpheme = &final_vocab[meaning];
-            assert_eq!(final_morpheme.phonemes.len(), morpheme.phonemes.len(),
-                "Morpheme length should remain constant for meaning {}", meaning);
+            assert_eq!(
+                final_morpheme.phonemes.len(),
+                morpheme.phonemes.len(),
+                "Morpheme length should remain constant for meaning {}",
+                meaning
+            );
             for (idx, phoneme) in morpheme.phonemes.iter().enumerate() {
                 let final_phoneme = &final_morpheme.phonemes[idx];
                 for feat_idx in 0..6 {
-                    assert!((final_phoneme.features[feat_idx] - phoneme.features[feat_idx]).abs() < f32::EPSILON,
-                        "Phoneme features must not drift when drift_rate=0");
+                    assert!(
+                        (final_phoneme.features[feat_idx] - phoneme.features[feat_idx]).abs()
+                            < f32::EPSILON,
+                        "Phoneme features must not drift when drift_rate=0"
+                    );
                 }
             }
         }

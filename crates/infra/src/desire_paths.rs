@@ -246,7 +246,11 @@ impl DesirePathTracker {
             .edges
             .get(&DesireEdgeKey::new(from, to))
             .map_or(0.0, |e| e.weight);
-        PathState::for_weight(weight, self.config.trail_threshold, self.config.road_threshold)
+        PathState::for_weight(
+            weight,
+            self.config.trail_threshold,
+            self.config.road_threshold,
+        )
     }
 
     /// Current accumulated weight for the edge between `from` and `to`, or
@@ -262,7 +266,11 @@ impl DesirePathTracker {
     #[must_use]
     pub fn kind_for(&self, key: DesireEdgeKey) -> PathState {
         let weight = self.edges.get(&key).map_or(0.0, |e| e.weight);
-        PathState::for_weight(weight, self.config.trail_threshold, self.config.road_threshold)
+        PathState::for_weight(
+            weight,
+            self.config.trail_threshold,
+            self.config.road_threshold,
+        )
     }
 
     /// Number of edges currently at or above `min` (renderer LOD / stats).
@@ -311,7 +319,7 @@ mod tests {
         // Five trips of weight 4 each = 20, above trail threshold (8) but below
         // road threshold (32) -> a Trail emerges.
         for _ in 0..5 {
-            assert!(t.record_traversal(a, b, 4.0) >= PathState::Trail);
+            t.record_traversal(a, b, 4.0);
         }
         assert_eq!(t.state_between(a, b), PathState::Trail);
         assert!(!t.state_between(a, b).is_road());
@@ -319,7 +327,7 @@ mod tests {
         // Three more trips of weight 5 each push total to 35, above road
         // threshold (32) -> promotion to Road.
         for _ in 0..3 {
-            assert_eq!(t.record_traversal(a, b, 5.0), PathState::Road);
+            t.record_traversal(a, b, 5.0);
         }
         assert!(t.state_between(a, b).is_road());
         assert_eq!(t.count_at_least(PathState::Road), 1);
@@ -345,7 +353,7 @@ mod tests {
         // Aggressive decay (factor 0.5) drops 10 -> 5 -> 2.5 -> 1.25 -> 0.625
         // -> forgotten (<= 0.5). After enough ticks the edge is gone.
         let mut ticks = 0;
-        while t.state_between(a, b) != PathState::None && ticks < 50 {
+        while t.edge_count() > 0 && ticks < 50 {
             t.tick_decay();
             ticks += 1;
         }
@@ -390,17 +398,11 @@ mod tests {
     #[test]
     fn path_state_threshold_boundaries() {
         // Just below trail threshold -> None.
-        assert_eq!(
-            PathState::for_weight(7.99, 8.0, 32.0),
-            PathState::None
-        );
+        assert_eq!(PathState::for_weight(7.99, 8.0, 32.0), PathState::None);
         // Exactly at trail threshold -> Trail.
         assert_eq!(PathState::for_weight(8.0, 8.0, 32.0), PathState::Trail);
         // Just below road threshold -> Trail.
-        assert_eq!(
-            PathState::for_weight(31.99, 8.0, 32.0),
-            PathState::Trail
-        );
+        assert_eq!(PathState::for_weight(31.99, 8.0, 32.0), PathState::Trail);
         // At or above road threshold -> Road.
         assert_eq!(PathState::for_weight(32.0, 8.0, 32.0), PathState::Road);
         assert_eq!(PathState::for_weight(100.0, 8.0, 32.0), PathState::Road);

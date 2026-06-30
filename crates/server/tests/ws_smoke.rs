@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use civ_engine::{decode_civreplay, encode_civreplay, Simulation, MAGIC};
+use civ_engine::{decode_civreplay, encode_civreplay, replay_format::MAGIC, Simulation};
 use civ_protocol_3d::{decode_frame3d_binary, Frame3d, FRAME3D_BINARY_MAGIC};
 use civ_server::{
     error_code, spawn_ws_bridge, spawn_ws_bridge_with_config, TickBroadcastFormat, WsBridgeConfig,
@@ -9,7 +9,6 @@ use civ_server::{
 use futures::{SinkExt, StreamExt};
 use http::HeaderValue;
 use std::net::SocketAddr;
-use tempfile::NamedTempFile;
 use tokio::time::timeout;
 use tokio_tungstenite::{
     connect_async,
@@ -301,14 +300,24 @@ async fn ws_jsonrpc_sim_status_returns_tick_and_population() {
 #[tokio::test]
 async fn ws_jsonrpc_sim_snapshot_returns_snapshot_fields() {
     let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(21)));
-    let addr = spawn_ws_bridge(sim.clone(), 4).await;
+    let addr = spawn_ws_bridge_with_config(
+        sim.clone(),
+        WsBridgeConfig {
+            addr: SocketAddr::from(([127, 0, 0, 1], 0)),
+            max_clients: 4,
+            require_role: false,
+            tick_broadcast_format: TickBroadcastFormat::Binary,
+            ..Default::default()
+        },
+    )
+    .await;
     let url = format!("ws://{addr}/ws");
 
     let (mut socket, _) = connect_async(&url).await.expect("ws connect");
 
     socket
         .send(Message::Text(
-            r#"{"jsonrpc":"2.0","id":9,"method":"sim.set_speed","params":{"multiplier":4}}"#.into(),
+            r#"{"jsonrpc":"2.0","id":9,"method":"sim.set_speed","params":{"multiplier":0}}"#.into(),
         ))
         .await
         .expect("send sim.set_speed");
@@ -332,7 +341,7 @@ async fn ws_jsonrpc_sim_snapshot_returns_snapshot_fields() {
         set_speed_response
             .pointer("/result/multiplier")
             .and_then(|v| v.as_u64()),
-        Some(4)
+        Some(0)
     );
 
     socket
@@ -390,8 +399,8 @@ async fn ws_jsonrpc_sim_snapshot_returns_snapshot_fields() {
         response
             .pointer("/result/speed_multiplier")
             .and_then(|v| v.as_u64()),
-        Some(4),
-        "expected speed_multiplier in snapshot result after sim.set_speed"
+        Some(0),
+        "expected speed_multiplier in snapshot result after pausing sim.set_speed"
     );
     let snap = sim.lock().await.snapshot();
     // The food price EMERGES from live supply/demand pressure (faction wealth +
@@ -549,8 +558,11 @@ async fn ws_jsonrpc_sim_command_tick_rejects_missing_role_when_required() {
     );
 }
 
+/// Regression guard for audit #56 (CWE-287/306/352): the `x-civis-role` header
+/// must be ignored for privilege decisions. Sending `x-civis-role: operator`
+/// without an authenticated session must not grant operator access.
 #[tokio::test]
-async fn ws_jsonrpc_sim_command_tick_accepts_x_civis_role_header() {
+async fn ws_jsonrpc_sim_command_tick_rejects_x_civis_role_header_spoof() {
     let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(18)));
     let addr = spawn_ws_bridge_with_config(
         sim,
@@ -565,20 +577,22 @@ async fn ws_jsonrpc_sim_command_tick_accepts_x_civis_role_header() {
     .await;
     let url = format!("ws://{addr}/ws");
 
+    // Attacker forges x-civis-role: operator in the HTTP upgrade request.
     let mut request = url.as_str().into_client_request().expect("ws request");
     request
         .headers_mut()
         .insert("x-civis-role", HeaderValue::from_static("operator"));
     let (mut socket, _) = connect_async(request)
         .await
-        .expect("ws connect with role header");
+        .expect("ws connect with forged role header");
 
+    // Params carry no role — only the forged header, which must be ignored.
     socket
         .send(Message::Text(
             r#"{"jsonrpc":"2.0","id":4,"method":"sim.command","params":{"action":"tick"}}"#.into(),
         ))
         .await
-        .expect("send sim.command tick with header role");
+        .expect("send sim.command tick with forged header role");
 
     let response = timeout(Duration::from_secs(2), async {
         while let Some(frame) = socket.next().await {
@@ -593,16 +607,25 @@ async fn ws_jsonrpc_sim_command_tick_accepts_x_civis_role_header() {
         panic!("ws closed before sim.command response");
     })
     .await
-    .expect("sim.command header role timeout");
+    .expect("sim.command forged-header role timeout");
 
+    // The header must be ignored: the response must be FORBIDDEN, not accepted.
     assert_eq!(
-        response.pointer("/result/accepted"),
-        Some(&serde_json::json!(true))
+        response.pointer("/error/code").and_then(|v| v.as_i64()),
+        Some(i64::from(error_code::FORBIDDEN)),
+        "forged x-civis-role header must not grant operator access (audit #56)"
     );
-    assert!(response
-        .pointer("/result/tick")
-        .and_then(|v| v.as_u64())
-        .is_some());
+    assert_eq!(
+        response
+            .pointer("/error/data/required_role")
+            .and_then(|v| v.as_str()),
+        Some("operator")
+    );
+    // No result.accepted — the command must not have executed.
+    assert!(
+        response.pointer("/result").is_none(),
+        "spoofed header must not produce a successful result"
+    );
 }
 
 #[tokio::test]
@@ -733,6 +756,15 @@ async fn ws_jsonrpc_sim_reset_replaces_simulation_and_zeroes_tick() {
     .await
     .expect("tick broadcast timeout");
 
+    socket
+        .send(Message::Text(
+            r#"{"jsonrpc":"2.0","id":28,"method":"sim.set_speed","params":{"multiplier":0}}"#
+                .into(),
+        ))
+        .await
+        .expect("pause ticks");
+    wait_for_jsonrpc_id(&mut socket, 28).await;
+
     let tick_before_reset = timeout(Duration::from_secs(2), async {
         socket
             .send(Message::Text(
@@ -837,18 +869,36 @@ async fn ws_jsonrpc_sim_reset_replaces_simulation_and_zeroes_tick() {
 #[tokio::test]
 async fn ws_jsonrpc_sim_save_and_load_replay_roundtrip() {
     let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(10)));
-    let replay_file = NamedTempFile::new().expect("temp replay file");
-    let replay_path = replay_file.path().to_string_lossy().into_owned();
+    let replays_dir = tempfile::tempdir().expect("temp replay dir");
+    let replay_path = "roundtrip.civreplay";
+    let replay_file = replays_dir.path().join(replay_path);
 
-    let addr = spawn_ws_bridge(sim, 4).await;
+    let addr = spawn_ws_bridge_with_config(
+        sim,
+        WsBridgeConfig {
+            replays_dir: replays_dir.path().to_path_buf(),
+            max_clients: 4,
+            ..Default::default()
+        },
+    )
+    .await;
     let url = format!("ws://{addr}/ws");
     let (mut socket, _) = connect_async(&url).await.expect("ws connect");
+
+    socket
+        .send(Message::Text(
+            r#"{"jsonrpc":"2.0","id":19,"method":"sim.set_speed","params":{"multiplier":0}}"#
+                .into(),
+        ))
+        .await
+        .expect("send sim.set_speed");
+    wait_for_jsonrpc_id(&mut socket, 19).await;
 
     let save_req = serde_json::json!({
         "jsonrpc": "2.0",
         "id": 20,
         "method": "sim.save_replay",
-        "params": { "path": replay_path }
+            "params": { "path": replay_path }
     });
     socket
         .send(Message::Text(save_req.to_string()))
@@ -861,7 +911,9 @@ async fn ws_jsonrpc_sim_save_and_load_replay_roundtrip() {
                 continue;
             };
             let value: serde_json::Value = serde_json::from_str(&text).expect("json text frame");
-            if value.get("id") == Some(&serde_json::json!(20)) {
+            if value.get("jsonrpc").and_then(|v| v.as_str()) == Some("2.0")
+                && value.get("id") == Some(&serde_json::json!(20))
+            {
                 return value;
             }
         }
@@ -872,11 +924,12 @@ async fn ws_jsonrpc_sim_save_and_load_replay_roundtrip() {
 
     assert_eq!(
         save_response.pointer("/result/saved"),
-        Some(&serde_json::json!(true))
+        Some(&serde_json::json!(true)),
+        "unexpected sim.save_replay response: {save_response}"
     );
-    assert!(replay_file.path().is_file());
+    assert!(replay_file.is_file());
 
-    let expected_tick = Simulation::load_replay_from_file(replay_file.path())
+    let expected_tick = Simulation::load_replay_from_file(&replay_file)
         .expect("reload saved replay")
         .state
         .tick;
@@ -885,7 +938,7 @@ async fn ws_jsonrpc_sim_save_and_load_replay_roundtrip() {
         "jsonrpc": "2.0",
         "id": 21,
         "method": "sim.load_replay",
-        "params": { "path": replay_path }
+            "params": { "path": replay_path }
     });
     socket
         .send(Message::Text(load_req.to_string()))
@@ -898,7 +951,9 @@ async fn ws_jsonrpc_sim_save_and_load_replay_roundtrip() {
                 continue;
             };
             let value: serde_json::Value = serde_json::from_str(&text).expect("json text frame");
-            if value.get("id") == Some(&serde_json::json!(21)) {
+            if value.get("jsonrpc").and_then(|v| v.as_str()) == Some("2.0")
+                && value.get("id") == Some(&serde_json::json!(21))
+            {
                 return value;
             }
         }
@@ -931,7 +986,9 @@ async fn ws_jsonrpc_sim_save_and_load_replay_roundtrip() {
                 continue;
             };
             let value: serde_json::Value = serde_json::from_str(&text).expect("json text frame");
-            if value.get("id") == Some(&serde_json::json!(22)) {
+            if value.get("jsonrpc").and_then(|v| v.as_str()) == Some("2.0")
+                && value.get("id") == Some(&serde_json::json!(22))
+            {
                 return value;
             }
         }
@@ -961,6 +1018,15 @@ async fn ws_jsonrpc_sim_set_policy_zero_scarcity_tick_preserves_energy_budget() 
     let url = format!("ws://{addr}/ws");
 
     let (mut socket, _) = connect_async(&url).await.expect("ws connect");
+
+    socket
+        .send(Message::Text(
+            r#"{"jsonrpc":"2.0","id":39,"method":"sim.set_speed","params":{"multiplier":0}}"#
+                .into(),
+        ))
+        .await
+        .expect("pause ticks");
+    wait_for_jsonrpc_id(&mut socket, 39).await;
 
     let set_policy_req = serde_json::json!({
         "jsonrpc": "2.0",
@@ -1747,9 +1813,27 @@ async fn ws_jsonrpc_spawn_palette_all_kinds_accepted() {
         let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(
             40 + idx as u64,
         )));
-        let addr = spawn_ws_bridge(sim, 4).await;
+        let addr = spawn_ws_bridge_with_config(
+            sim,
+            WsBridgeConfig {
+                addr: SocketAddr::from(([127, 0, 0, 1], 0)),
+                max_clients: 4,
+                require_role: false,
+                tick_broadcast_format: TickBroadcastFormat::Binary,
+                ..Default::default()
+            },
+        )
+        .await;
         let url = format!("ws://{addr}/ws");
         let (mut socket, _) = connect_async(&url).await.expect("ws connect");
+        let pause_id = 190 + idx as u64;
+        socket
+            .send(Message::Text(format!(
+                r#"{{"jsonrpc":"2.0","id":{pause_id},"method":"sim.set_speed","params":{{"multiplier":0}}}}"#
+            )))
+            .await
+            .expect("pause ticks");
+        wait_for_jsonrpc_id(&mut socket, pause_id).await;
         let id = 200 + idx as u64;
         let req = format!(
             r#"{{"jsonrpc":"2.0","id":{id},"method":"sim.spawn_entity","params":{{"kind":"{kind}","x":0.2,"y":0.3,"faction":0}}}}"#
@@ -1792,6 +1876,7 @@ async fn ws_jsonrpc_spawn_palette_all_kinds_accepted() {
 #[tokio::test]
 async fn ws_jsonrpc_save_slot_roundtrip() {
     let saves_dir = tempfile::tempdir().expect("temp saves dir");
+    let replays_dir = tempfile::tempdir().expect("temp replays dir");
     let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(42)));
     {
         let mut guard = sim.lock().await;
@@ -1808,6 +1893,7 @@ async fn ws_jsonrpc_save_slot_roundtrip() {
             require_role: false,
             tick_broadcast_format: TickBroadcastFormat::Both,
             saves_dir: saves_dir.path().to_path_buf(),
+            replays_dir: replays_dir.path().to_path_buf(),
         },
     )
     .await;
@@ -1989,8 +2075,7 @@ async fn ws_sub_filter_query_limits_tick_broadcast_frames() {
 
     socket
         .send(Message::Text(
-            r#"{"jsonrpc":"2.0","id":1,"method":"sim.set_speed","params":{"multiplier":0}}"#
-                .into(),
+            r#"{"jsonrpc":"2.0","id":1,"method":"sim.set_speed","params":{"multiplier":0}}"#.into(),
         ))
         .await
         .expect("pause ticks");
@@ -2039,7 +2124,10 @@ async fn ws_sub_filter_query_limits_tick_broadcast_frames() {
 
     assert!(command_done, "sim.command should complete");
     assert_eq!(climate_frames, 1, "expected one climate frame");
-    assert_eq!(other_frames, 0, "filtered client should not receive other kinds");
+    assert_eq!(
+        other_frames, 0,
+        "filtered client should not receive other kinds"
+    );
 }
 
 /// `sim.subscribe` over JSON-RPC applies the same per-connection frame filter.

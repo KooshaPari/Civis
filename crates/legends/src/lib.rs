@@ -26,7 +26,9 @@ pub mod rumor;
 pub mod worker;
 
 mod chronicle;
-pub use chronicle::{Chronicle, ChronicleEntry, ChronicleEventKind};
+pub use chronicle::{
+    Chronicle as EventChronicle, ChronicleEntry as EventChronicleEntry, ChronicleEventKind,
+};
 
 mod myth_formation;
 pub use myth_formation::{Myth, MythFormationConfig, MythId, MythIndex};

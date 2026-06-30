@@ -7,8 +7,53 @@ use bevy::input::mouse::MouseWheel;
 use bevy::math::primitives::Circle;
 use bevy::prelude::*;
 
-use crate::settings_ui::{GameSettings, KeyBinding, ACTION_SELECT_OR_PICK};
+#[cfg(feature = "egui")]
+pub(crate) use crate::settings_ui::GameSettings;
+#[cfg(feature = "egui")]
+pub(crate) use crate::settings_ui::KeyBinding;
+#[cfg(feature = "egui")]
+use crate::settings_ui::ACTION_SELECT_OR_PICK;
 use crate::terrain::{terrain_height, WORLD_SIZE};
+
+#[cfg(not(feature = "egui"))]
+#[derive(Resource)]
+pub struct GameSettings;
+
+#[cfg(not(feature = "egui"))]
+#[derive(Clone, Copy)]
+pub enum KeyBinding {
+    Mouse(MouseButton),
+}
+
+#[cfg(not(feature = "egui"))]
+impl KeyBinding {
+    pub(crate) fn is_pressed(
+        self,
+        _keys: &ButtonInput<KeyCode>,
+        buttons: &ButtonInput<MouseButton>,
+    ) -> bool {
+        match self {
+            Self::Mouse(button) => buttons.pressed(button),
+        }
+    }
+
+    pub(crate) fn is_just_pressed(
+        self,
+        _keys: &ButtonInput<KeyCode>,
+        buttons: &ButtonInput<MouseButton>,
+    ) -> bool {
+        match self {
+            Self::Mouse(button) => buttons.just_pressed(button),
+        }
+    }
+}
+
+/// Shared UI pointer gate for Bevy tool systems.
+///
+/// Egui builds update this resource from UI code; Bevy-only builds keep the
+/// default `false` value so tools remain usable without the UI crate feature.
+#[derive(Resource, Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct PointerOverUi(pub bool);
 
 /// Tool palette used by the authoring UI.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -86,10 +131,17 @@ impl BuildingSpawnKind {
     }
 }
 
+#[cfg(feature = "egui")]
 pub(crate) fn select_action_binding(settings: Option<&GameSettings>) -> KeyBinding {
     settings
         .and_then(|s| s.key_for(ACTION_SELECT_OR_PICK))
         .unwrap_or(KeyBinding::Mouse(MouseButton::Left))
+}
+
+#[cfg(not(feature = "egui"))]
+pub(crate) fn select_action_binding(settings: Option<&GameSettings>) -> KeyBinding {
+    let _ = settings;
+    KeyBinding::Mouse(MouseButton::Left)
 }
 
 /// Cursor state for the terrain hit marker.
@@ -140,6 +192,7 @@ impl Plugin for SpawnToolsPlugin {
             .init_resource::<BuildingSpawnKind>()
             .init_resource::<SelectedEntity>()
             .init_resource::<CursorMarker>()
+            .init_resource::<PointerOverUi>()
             .add_message::<SpawnCivilianRequest>()
             .add_message::<SpawnBuildingRequest>()
             .add_message::<SelectEntityRequest>()
@@ -403,12 +456,30 @@ mod tests {
         assert_eq!(BuildingSpawnKind::CityCenter.label(), "City Center");
         assert_eq!(BuildingSpawnKind::Market.label(), "Market");
         assert_eq!(BuildingSpawnKind::Barracks.label(), "Barracks");
-        assert_eq!(BuildingSpawnKind::CityCenter.next(), BuildingSpawnKind::Market);
-        assert_eq!(BuildingSpawnKind::Market.next(), BuildingSpawnKind::Barracks);
-        assert_eq!(BuildingSpawnKind::Barracks.next(), BuildingSpawnKind::CityCenter);
-        assert_eq!(BuildingSpawnKind::CityCenter.prev(), BuildingSpawnKind::Barracks);
-        assert_eq!(BuildingSpawnKind::Market.prev(), BuildingSpawnKind::CityCenter);
-        assert_eq!(BuildingSpawnKind::Barracks.prev(), BuildingSpawnKind::Market);
+        assert_eq!(
+            BuildingSpawnKind::CityCenter.next(),
+            BuildingSpawnKind::Market
+        );
+        assert_eq!(
+            BuildingSpawnKind::Market.next(),
+            BuildingSpawnKind::Barracks
+        );
+        assert_eq!(
+            BuildingSpawnKind::Barracks.next(),
+            BuildingSpawnKind::CityCenter
+        );
+        assert_eq!(
+            BuildingSpawnKind::CityCenter.prev(),
+            BuildingSpawnKind::Barracks
+        );
+        assert_eq!(
+            BuildingSpawnKind::Market.prev(),
+            BuildingSpawnKind::CityCenter
+        );
+        assert_eq!(
+            BuildingSpawnKind::Barracks.prev(),
+            BuildingSpawnKind::Market
+        );
     }
 
     #[test]

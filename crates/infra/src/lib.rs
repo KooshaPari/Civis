@@ -19,9 +19,7 @@ pub mod pg;
 /// dependency; tracks accumulated traversal weight between world cells and
 /// decays unused paths back to bare ground.
 pub mod desire_paths;
-pub use desire_paths::{
-    DesireEdge, DesireEdgeKey, DesirePathConfig, DesirePathTracker, PathState,
-};
+pub use desire_paths::{DesireEdge, DesireEdgeKey, DesirePathConfig, DesirePathTracker, PathState};
 
 /// Utility-grid distribution kernel (FR-CIV-UTILITY-GRID). Pure-logic, no
 /// Bevy dependency; routes resource supply from sources to sinks through a

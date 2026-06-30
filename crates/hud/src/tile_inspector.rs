@@ -91,12 +91,7 @@ impl TileInspector {
 
     /// Apply agent-derived values (called when an agent presence snapshot
     /// is available).
-    pub fn fill_agents(
-        &mut self,
-        agent_count: u32,
-        faction: Option<String>,
-        mood: Option<f32>,
-    ) {
+    pub fn fill_agents(&mut self, agent_count: u32, faction: Option<String>, mood: Option<f32>) {
         self.agent_count = Some(agent_count);
         self.faction = faction;
         self.mood = mood;

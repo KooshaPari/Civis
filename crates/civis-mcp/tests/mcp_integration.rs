@@ -115,11 +115,11 @@ fn every_tool_has_non_empty_description() {
 fn every_tool_has_input_schema() {
     let tools = tool_router().list_all();
     for tool in &tools {
-        // The rmcp `Tool` type serialises the input schema as a JSON Value.
-        // We just verify it is not null/empty by checking the schema is an object.
+        // The rmcp `Tool` type exposes the input schema as a shared JSON object map.
+        // Verify the schema is populated rather than asserting on its old Value shape.
         let schema = &tool.input_schema;
         assert!(
-            schema.is_object() || !schema.is_null(),
+            !schema.is_empty(),
             "tool `{}` has a null/empty input_schema",
             tool.name
         );
@@ -296,6 +296,7 @@ fn census_unreachable_host_returns_error() {
     let config = CensusConfig {
         host: "127.0.0.1".to_string(),
         port: 1,
+        path: "/ws".to_string(),
         timeout_ms: 500,
     };
     let result = census_sim_status(&config);

@@ -631,20 +631,20 @@ mod tests {
         let dashboard = EmergenceDashboard::from(EmergenceSampleSnapshot {
             agent_count: 12,
             faction_count: 3,
-            resource_entropy: 0.5,
+            resource_entropy: 0.75,
             structure_count: 9,
             novelty_rate: 0.05,        // → novelty_score = 0.5
-            coupling_strength: 0.6,    // → coupling_mi = 0.6 * 0.5 = 0.3
+            coupling_strength: 0.6,    // → coupling_mi = 0.6 * 0.75 = 0.45
             power_law_alpha: 1.7,      // inside alpha band [1.4, 2.0] ✓
             branching_sigma: 0.95,     // inside sigma band [0.85, 1.05] ✓
             tick: 42,
         });
 
         assert_eq!(dashboard.power_law_alpha, 1.7);
-        assert_eq!(dashboard.shannon_entropy, 0.5);
+        assert_eq!(dashboard.shannon_entropy, 0.75);
         assert_eq!(dashboard.structure_count, 9);
         approx(dashboard.novelty_score, 0.5);
-        approx(dashboard.coupling_mi, 0.3);
+        approx(dashboard.coupling_mi, 0.45);
         // All three signals inside their operational band → score = 1.0.
         assert!((dashboard.criticality_indicator - 1.0).abs() < 1e-5,
             "all on-target => criticality = 1.0, got {}",

@@ -51,9 +51,7 @@ use serde::{Deserialize, Serialize};
 /// The integer type matches the rest of the world (voxel, physics-substrate)
 /// and gives the registry a deterministic, hashable key. Rendering layers
 /// can project from this into world-space floats when they need to.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct WorldPos {
     /// X axis (voxel column).
     pub x: i32,
@@ -77,9 +75,7 @@ impl WorldPos {
 /// the same `u64` value without collision because they are tagged by the
 /// owning index). The registry does not assume global uniqueness across
 /// kinds — only within a kind.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct EntityId(pub u64);
 
 impl EntityId {
@@ -99,9 +95,7 @@ impl EntityId {
 /// Resolution priority (highest → lowest): `Agent`, `Vehicle`, `Structure`,
 /// `Settlement`, `Voxel`. `Empty` is never returned by the registry — see
 /// [`InspectRegistry::resolve`] for the `Option` contract.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum EntityKind {
     /// A living unit (citizen, animal, deity avatar, ...).
@@ -140,7 +134,10 @@ impl WorldPick {
 
     /// Construct a pick at `pos` with a kind hint.
     pub const fn at_with_hint(pos: WorldPos, hint: EntityKind) -> Self {
-        Self { pos, hint: Some(hint) }
+        Self {
+            pos,
+            hint: Some(hint),
+        }
     }
 }
 
@@ -162,8 +159,17 @@ impl AgentSummary {
     /// One-line description for tooltips and the panel header.
     pub fn one_line(&self) -> String {
         match &self.current_activity {
-            Some(act) => format!("{} — {} (age {})", self.display_name, act, self.age_years.unwrap_or(0)),
-            None => format!("{} (age {})", self.display_name, self.age_years.unwrap_or(0)),
+            Some(act) => format!(
+                "{} — {} (age {})",
+                self.display_name,
+                act,
+                self.age_years.unwrap_or(0)
+            ),
+            None => format!(
+                "{} (age {})",
+                self.display_name,
+                self.age_years.unwrap_or(0)
+            ),
         }
     }
 }
@@ -229,7 +235,10 @@ pub struct VoxelSummary {
 impl VoxelSummary {
     /// One-line description for tooltips and the panel header.
     pub fn one_line(&self) -> String {
-        format!("{} @ {}K, {}hPa ({})", self.material, self.temperature, self.pressure, self.phase)
+        format!(
+            "{} @ {}K, {}hPa ({})",
+            self.material, self.temperature, self.pressure, self.phase
+        )
     }
 }
 
@@ -712,7 +721,10 @@ impl InspectRegistry {
 
         // Foreground priority: Agent > Vehicle > Structure > Settlement > Voxel.
         // We rely on the `EntityKind` `Ord` derived from declaration order.
-        candidates.into_iter().min_by_key(|(k, _)| *k).map(|(_, s)| s)
+        candidates
+            .iter()
+            .min_by_key(|(k, _)| *k)
+            .map(|(_, s)| s.clone())
     }
 }
 
@@ -795,7 +807,9 @@ mod tests {
     fn agent_index_insert_and_lookup() {
         let mut idx = AgentIndex::new();
         assert!(idx.is_empty());
-        assert!(idx.insert(EntityId::new(1), WorldPos::new(1, 2, 3)).is_none());
+        assert!(idx
+            .insert(EntityId::new(1), WorldPos::new(1, 2, 3))
+            .is_none());
         assert_eq!(idx.len(), 1);
         assert_eq!(idx.get(EntityId::new(1)), Some(WorldPos::new(1, 2, 3)));
         assert_eq!(idx.at(WorldPos::new(1, 2, 3)), Some(EntityId::new(1)));
@@ -869,8 +883,14 @@ mod tests {
     fn acceptance_pick_at_agent_resolves_to_agent() {
         let r = populated_registry();
         let pick = WorldPick::at(WorldPos::new(3, 4, 5));
-        let s = r.resolve(pick).expect("must resolve at an agent's position");
-        assert_eq!(s.kind(), EntityKind::Agent, "agent must beat structure + settlement at the same pos");
+        let s = r
+            .resolve(pick)
+            .expect("must resolve at an agent's position");
+        assert_eq!(
+            s.kind(),
+            EntityKind::Agent,
+            "agent must beat structure + settlement at the same pos"
+        );
         match s {
             Summary::Agent(a) => {
                 assert_eq!(a.id, EntityId::new(101));
@@ -900,7 +920,9 @@ mod tests {
     #[test]
     fn voxel_only_pick_resolves_to_voxel() {
         let r = populated_registry();
-        let s = r.resolve(WorldPick::at(WorldPos::new(0, 0, 0))).expect("voxel present");
+        let s = r
+            .resolve(WorldPick::at(WorldPos::new(0, 0, 0)))
+            .expect("voxel present");
         assert_eq!(s.kind(), EntityKind::Voxel);
     }
 
@@ -974,13 +996,17 @@ mod tests {
     fn one_line_is_nonempty_for_every_variant() {
         let r = populated_registry();
         let variants = [
-            WorldPos::new(3, 4, 5),    // agent
-            WorldPos::new(50, 50, 0),  // vehicle
-            WorldPos::new(0, 0, 0),    // voxel
+            WorldPos::new(3, 4, 5),   // agent
+            WorldPos::new(50, 50, 0), // vehicle
+            WorldPos::new(0, 0, 0),   // voxel
         ];
         for pos in variants {
             let s = r.resolve(WorldPick::at(pos)).expect("must resolve");
-            assert!(!s.one_line().is_empty(), "{:?} produced empty one_line", s.kind());
+            assert!(
+                !s.one_line().is_empty(),
+                "{:?} produced empty one_line",
+                s.kind()
+            );
         }
     }
 

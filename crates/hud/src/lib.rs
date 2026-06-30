@@ -28,19 +28,19 @@ pub mod tokens;
 pub mod top_bar;
 
 pub use env_overlay::*;
-pub use society_overlay::*;
 pub use god_tool_state::{
     GodToolDef, GodToolId, GodToolParamKind, GodToolParamSpec, GodToolParamValue, GodToolRegistry,
     GodToolState,
 };
 pub use godtool_brush::*;
-pub use key_palette::{KeyId, KeycapDef, KeycapPalette, keycap_palette_default};
+pub use key_palette::{keycap_palette_default, KeyId, KeycapDef, KeycapPalette};
 pub use notifications::{Notification, NotificationQueue, Severity};
 pub use overlay_legend::*;
 pub use overlay_registry::{
-    ColorRamp, DataSource, LegendStop, OverlayDef, OverlayId, OverlayRegistry,
-    default_overlay_registry, elevation_overlay, population_overlay, water_overlay,
+    default_overlay_registry, elevation_overlay, population_overlay, water_overlay, ColorRamp,
+    DataSource, LegendStop, OverlayDef, OverlayId, OverlayRegistry,
 };
+pub use society_overlay::*;
 pub use tile_inspector::{TileInspector, CELL_NONE};
 pub use tokens::{Token, TokenName, CANONICAL_TOKENS, TOKEN_AUDIT};
 pub use top_bar::{

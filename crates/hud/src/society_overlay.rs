@@ -356,11 +356,7 @@ impl SocietyOverlayRegistry {
     /// (which today cannot happen — all four ids map to owned fields;
     /// the `Option` is forward-compatible with future sources).
     #[must_use]
-    pub fn query(
-        &self,
-        source: SocietyDataSourceId,
-        cell: CellId,
-    ) -> Option<NormalizedScalar> {
+    pub fn query(&self, source: SocietyDataSourceId, cell: CellId) -> Option<NormalizedScalar> {
         match source {
             SocietyDataSourceId::Ideology => Some(self.ideology_sample(cell)),
             SocietyDataSourceId::Language => Some(self.language_sample(cell)),
@@ -376,11 +372,7 @@ impl SocietyOverlayRegistry {
     /// directly use the typed accessors
     /// ([`Self::ideology_cluster_id`] / [`Self::language_cluster_id`]).
     #[must_use]
-    pub fn query_raw(
-        &self,
-        source: SocietyDataSourceId,
-        cell: CellId,
-    ) -> Option<RawScalar> {
+    pub fn query_raw(&self, source: SocietyDataSourceId, cell: CellId) -> Option<RawScalar> {
         match source {
             SocietyDataSourceId::Ideology => Some(self.ideology_cluster_id(cell) as RawScalar),
             SocietyDataSourceId::Language => Some(self.language_cluster_id(cell) as RawScalar),
@@ -696,8 +688,14 @@ mod tests {
     /// groups.
     #[test]
     fn society_overlay_stable_ids_match_design() {
-        assert_eq!(SocietyDataSourceId::Ideology.stable_id(), "society.ideology");
-        assert_eq!(SocietyDataSourceId::Language.stable_id(), "society.language");
+        assert_eq!(
+            SocietyDataSourceId::Ideology.stable_id(),
+            "society.ideology"
+        );
+        assert_eq!(
+            SocietyDataSourceId::Language.stable_id(),
+            "society.language"
+        );
         assert_eq!(SocietyDataSourceId::Kinship.stable_id(), "society.kinship");
         assert_eq!(
             SocietyDataSourceId::PolityOverlap.stable_id(),

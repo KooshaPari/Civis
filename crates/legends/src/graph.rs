@@ -688,7 +688,8 @@ impl SagaGraph {
             .unwrap_or(0.0);
 
         // Compute importance; only create legend if importance is above a threshold.
-        let importance = crate::model::compute_legend_importance(event.magnitude, principal_significance);
+        let importance =
+            crate::model::compute_legend_importance(event.magnitude, principal_significance);
         let significance_threshold = 0.3; // Legend creation threshold (tunable config)
         if importance < significance_threshold {
             return false;
@@ -710,7 +711,11 @@ impl SagaGraph {
     /// Returns top N legends by importance score.
     pub fn top_legends(&self, limit: usize) -> Vec<&LegendEntry> {
         let mut entries: Vec<_> = self.legends.values().collect();
-        entries.sort_by(|a, b| b.importance.partial_cmp(&a.importance).unwrap_or(std::cmp::Ordering::Equal));
+        entries.sort_by(|a, b| {
+            b.importance
+                .partial_cmp(&a.importance)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         entries.into_iter().take(limit).collect()
     }
 

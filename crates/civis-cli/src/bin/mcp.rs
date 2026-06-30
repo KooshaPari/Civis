@@ -25,8 +25,8 @@ use civis_cli::census::{
     build_sim_status_request, decode_response, validate_sim_status, CensusConfig,
 };
 use civis_cli::config::{census_config_from_env, load_dotenv};
-use civis_cli::pixels::{compute_pixel_stats, sample_rgb_grid};
 use civis_cli::dump::{parse_dump_json, validate_dump, DumpPolicy};
+use civis_cli::pixels::{compute_pixel_stats, sample_rgb_grid};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct RpcRequest {

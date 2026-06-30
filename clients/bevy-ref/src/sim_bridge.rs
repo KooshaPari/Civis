@@ -17,9 +17,9 @@ use crate::spawn_tools::{SpawnBuildingRequest, SpawnCivilianRequest};
 use crate::terrain::WORLD_SIZE;
 use crate::{live_attach::is_server_attach_mode, AttachMode};
 #[cfg(feature = "models")]
-use civ_bevy_ref::gltf_models::{actor_scene, building_scene_for, ModelOrPrimitive};
+use crate::gltf_models::{actor_scene, building_scene_for, ModelOrPrimitive};
 #[cfg(feature = "models")]
-type ModelResourceRef<'a> = Option<&'a Res<civ_bevy_ref::gltf_models::GameModels>>;
+type ModelResourceRef<'a> = Option<&'a Res<crate::gltf_models::GameModels>>;
 #[cfg(not(feature = "models"))]
 type ModelResourceRef<'a> = Option<()>;
 

@@ -2142,6 +2142,36 @@ impl Simulation {
         self.diplomacy_events.push(event);
     }
 
+    /// Apply a player-issued diplomacy action to the live relation substrate.
+    pub fn apply_player_diplomacy_action(
+        &mut self,
+        source_faction: u32,
+        target_faction: u32,
+        kind: DiplomacyKind,
+    ) -> Option<civ_agents::diplomacy::DiplomacyOutcome> {
+        if source_faction == target_faction {
+            return None;
+        }
+
+        let cluster_a = ClusterId(u64::from(source_faction));
+        let cluster_b = ClusterId(u64::from(target_faction));
+        let signal = match kind {
+            DiplomacyKind::TradeAgreement => civ_agents::diplomacy::DiplomacySignal {
+                trade_volume: FACTION_TRADE_RELATION_SIGNAL,
+                ..Default::default()
+            },
+            DiplomacyKind::Conflict => civ_agents::diplomacy::DiplomacySignal {
+                resource_competition: FACTION_CONFLICT_RELATION_SIGNAL,
+                ..Default::default()
+            },
+            DiplomacyKind::Peace => civ_agents::diplomacy::DiplomacySignal {
+                need_complementarity: 0.25,
+                ..Default::default()
+            },
+        };
+        Some(self.faction_relations.apply_signal(cluster_a, cluster_b, signal))
+    }
+
     /// Spawn initial world entities
     fn spawn_initial_entities(world: &mut World) {
         // Create initial citizens

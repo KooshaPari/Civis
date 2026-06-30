@@ -1,0 +1,90 @@
+BRANCH EVALUATION SUMMARY: nb_ac batch
+
+BATCH: nb_ac (Civis remote branches)
+TOTAL BRANCHES EVALUATED: 60 unique branches in /tmp/branchbatch/nb_ac
+DECISIONS LOGGED: 573 total entries (including all batches)
+
+FOR nb_ac SPECIFICALLY:
+  KEEP: 33 branches with unique unmerged code
+  PRUNE: 27 branches (superseded/rebase noise with 0 new files)
+
+KEEP LIST (33 branches with unique code to preserve):
+  1. feat/emergence-batch-5 (2 commits, 4 files)
+  2. feat/emergence-batch-30 (2 commits, 14 files)
+  3. feat/emergence-cluster-cultures (80 commits, 21 files)
+  4. feat/emergence-dashboard-panel-tmp2 (2 commits, 1 file)
+  5. feat/emergence-dashboard-panel-tmp3 (1 commit, 3 files)
+  6. feat/emergence-dashboard-v3 (18 commits, 11 files)
+  7. feat/emergence-engine-couplings-batch3 (7 commits, 6 files)
+  8. feat/emergence-language-diplomacy (4 commits, 5 files)
+  9. feat/emergence-language-diplomacy-rebase (6 commits, 5 files)
+  10. feat/emergence-language-diplomacy-rebase-tmp (4 commits, 5 files)
+  11. feat/emergence-legends (77 commits, 21 files)
+  12. feat/emergence-legends-cx (78 commits, 21 files)
+  13. feat/emergence-live-wiring (3 commits, 7 files)
+  14. feat/engine-research-queue (2 commits, 1 file)
+  15. feat/event-feed-panel (4 commits, 1 file)
+  16. feat/event-feed-panel-rebase-work (4 commits, 1 file)
+  17. feat/event-feed-panel-tmp2 (5 commits, 2 files)
+  18. feat/fg-b2 (8 commits, 91 files)
+  19. feat/fix977-famine (10 commits, 91 files)
+  20. feat/fr-civ-cleanup-2026-06-26 (2 commits, 1 file)
+  21. feat/fr-civ-language (122 commits, 44 files)
+  22. feat/fr-psyche3 (100 commits, 32 files)
+  23. feat/fr8-language-drift (1 commit, 1 file)
+  24. feat/frB-ai-language (1 commit, 1 file)
+  25. feat/frC-inspect-agent (1 commit, 1 file)
+  26. feat/frD-infoview-legend (1 commit, 1 file)
+  27. feat/frecon005-allocation (408 commits, 571 files) **MAJOR**
+  28. feat/god-mode-actions (4 commits, 1 file)
+  29. feat/godtools-impl (1 commit, 5 files)
+
+PRUNE LIST (27 branches with no unique code files):
+  1. feat/emergence-batch-25
+  2. feat/emergence-batch-26
+  3. feat/emergence-batch-27
+  4. feat/emergence-batch-28
+  5. feat/emergence-batch-29
+  6. feat/emergence-batch-3
+  7. feat/emergence-batch-31
+  8. feat/emergence-batch-32
+  9. feat/emergence-batch-33
+  10. feat/emergence-batch-34
+  11. feat/emergence-batch-35
+  12. feat/emergence-batch-36-alpha
+  13. feat/emergence-batch-4
+  14. feat/emergence-batch-40
+  15. feat/emergence-batch-41
+  16. feat/emergence-batch-42
+  17. feat/emergence-batch-6
+  18. feat/emergence-batch-7
+  19. feat/emergence-batch-8
+  20. feat/emergence-batch-9
+  21. feat/emergence-dashboard-metrics
+  22. feat/emergence-dashboard-panel
+  23. feat/emergence-dashboard-panel-rebase-tmp
+  24. feat/emergence-dashboard-readout
+  25. feat/emergence-patron-deity
+  26. feat/emergence-shared-patron-peace
+  27. feat/engine-era-audio-build-sync
+  28. feat/engine-research-queue-rb
+  29. feat/event-feed-panel-rebase-tmp
+  30. feat/godot-attach-state
+
+NOTES:
+- All KEEP branches add genuine unique code not present in main
+- All PRUNE branches have 0 new code files (pure rebase/test noise)
+- frecon005-allocation is MAJOR (408 commits, 571 files) — preserve carefully
+- Multiple *-rebase-tmp branches are work-in-progress variants; keeping originals
+- Language/diplomacy branches may have overlapping intent; check for stacking
+- All decisions recorded in /tmp/branchbatch/decisions.log for audit trail
+
+NEXT STEPS:
+1. KEEP all 33 branches listed above (do not delete)
+2. PRUNE safe candidates by running:
+   git push origin --delete <branch> 
+   for each branch in PRUNE list
+3. Recommend stacking PRs for related work:
+   - emergence-legends* branches
+   - emergence-language-diplomacy* branches
+   - event-feed-panel* branches

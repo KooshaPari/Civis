@@ -231,6 +231,8 @@ impl Plugin for GameUiPlugin {
             .init_resource::<SelectedEntity>()
             .init_resource::<SelectedEntityDetails>()
             .init_resource::<GameSpeed>()
+            .init_resource::<ActiveTool>()
+            .init_resource::<BuildingSpawnKind>()
             .init_resource::<ActiveSubTool>()
             .init_resource::<LeftClusterTab>()
             // Holocron motion state is intentionally NOT registered here yet —

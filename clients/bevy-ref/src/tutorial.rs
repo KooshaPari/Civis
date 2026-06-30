@@ -129,7 +129,13 @@ fn should_show(state: &TutorialState) -> bool {
 fn draw_tutorial_hint(
     mut contexts: EguiContexts,
     mut state: ResMut<TutorialState>,
+    mut ran_once: Local<bool>,
 ) {
+    // egui panics if ctx rect/fonts are accessed before its first run; skip frame 1.
+    if !*ran_once {
+        *ran_once = true;
+        return;
+    }
     if !should_show(&state) { return; }
 
     let idx = (state.step as usize).min(HINTS.len() - 1);

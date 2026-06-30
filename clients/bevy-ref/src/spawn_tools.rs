@@ -4,16 +4,43 @@
 //! marker, and local selection/destruction behavior.
 
 use bevy::input::mouse::MouseWheel;
-use bevy::math::primitives::Circle;
+use bevy::math::primitives::{Capsule3d, Circle, Cuboid};
 use bevy::prelude::*;
+use civ_agents::ActorVisualKind;
 
+#[cfg(feature = "models")]
+use crate::gltf_models::{actor_scene, building_scene, ModelOrPrimitive};
+use crate::minimap::MinimapCamera;
 #[cfg(feature = "egui")]
 pub(crate) use crate::settings_ui::GameSettings;
 #[cfg(feature = "egui")]
 pub(crate) use crate::settings_ui::KeyBinding;
 #[cfg(feature = "egui")]
 use crate::settings_ui::ACTION_SELECT_OR_PICK;
-use crate::terrain::{terrain_height, WORLD_SIZE};
+use crate::terrain::{terrain_height, terrain_surface_y, WORLD_SIZE};
+#[cfg(feature = "voxel")]
+use crate::voxel_sim::VoxelSimState;
+#[cfg(feature = "voxel")]
+use civ_voxel::material::AIR;
+
+const CIVILIAN_RADIUS: f32 = 1.4;
+const CIVILIAN_BODY: f32 = 3.2;
+const CIVILIAN_HALF_HEIGHT: f32 = CIVILIAN_BODY * 0.5 + CIVILIAN_RADIUS;
+#[cfg(all(feature = "models", feature = "voxel"))]
+const CIVILIAN_MODEL_SCALE: f32 = 8.0;
+#[cfg(all(feature = "models", not(feature = "voxel")))]
+const CIVILIAN_MODEL_SCALE: f32 = 1.7;
+#[cfg(all(feature = "models", feature = "voxel"))]
+const HERD_MODEL_SCALE: f32 = 10.0;
+#[cfg(all(feature = "models", not(feature = "voxel")))]
+const HERD_MODEL_SCALE: f32 = 2.4;
+#[cfg(all(feature = "models", feature = "voxel"))]
+const BUILDING_MODEL_SCALE: f32 = 4.0;
+#[cfg(all(feature = "models", not(feature = "voxel")))]
+const BUILDING_MODEL_SCALE: f32 = 6.0;
+const BUILDING_EXTENTS: Vec3 = Vec3::new(7.0, 12.0, 7.0);
+const BUILDING_HALF_HEIGHT: f32 = BUILDING_EXTENTS.y * 0.5;
+const ROAD_SEGMENT_THICKNESS: f32 = 0.6;
 
 #[cfg(not(feature = "egui"))]
 #[derive(Resource)]
@@ -69,6 +96,50 @@ pub enum SpawnTool {
     Terraform,
     /// Remove the entity nearest the clicked point.
     Destroy,
+    /// Drag-to-draw a surfaced road along a desire path.
+    Road,
+    /// Drag-to-draw a foot trail.
+    Trail,
+    /// Drag-to-draw a high-throughput highway.
+    Highway,
+    /// Drag-to-draw a water-spanning bridge.
+    Bridge,
+    /// Click-to-place a dwelling.
+    House,
+    /// Click-to-place an agricultural plot.
+    Farm,
+    /// Click-to-place a production workshop.
+    Workshop,
+    /// Click-to-place a trade market.
+    Market,
+    /// Click-to-place a defensive wall segment.
+    Wall,
+    /// Click-to-place a movement/trade vehicle.
+    Vehicle,
+    /// Paint the selected material into the voxel grid.
+    PaintMaterial,
+}
+
+impl SpawnTool {
+    #[must_use]
+    pub fn is_road_draw(self) -> bool {
+        matches!(
+            self,
+            SpawnTool::Road | SpawnTool::Trail | SpawnTool::Highway | SpawnTool::Bridge
+        )
+    }
+
+    #[must_use]
+    pub fn is_structure(self) -> bool {
+        matches!(
+            self,
+            SpawnTool::House
+                | SpawnTool::Farm
+                | SpawnTool::Workshop
+                | SpawnTool::Market
+                | SpawnTool::Wall
+        )
+    }
 }
 
 /// Currently active tool.
@@ -153,6 +224,10 @@ pub struct CursorMarker {
     pub visible: bool,
 }
 
+/// Marker for entities created/owned by the sandbox spawn tools.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct SandboxEntity;
+
 /// Request to spawn a civilian at the clicked point.
 #[derive(Message, Debug, Clone, Copy, PartialEq)]
 pub struct SpawnCivilianRequest {
@@ -183,6 +258,33 @@ pub struct DestroyEntityRequest {
     pub position: Vec3,
 }
 
+/// Accumulator for the active drag-to-draw road stroke.
+#[derive(Resource, Debug, Default, Clone)]
+pub struct RoadDraft {
+    /// Terrain-surface points collected so far this stroke.
+    pub points: Vec<Vec3>,
+    /// The road tool that started the stroke.
+    pub tool: Option<SpawnTool>,
+}
+
+/// Request to lay a connected road polyline.
+#[derive(Message, Debug, Clone, PartialEq)]
+pub struct PlaceRoadRequest {
+    /// Ordered terrain points; consecutive pairs become segments.
+    pub points: Vec<Vec3>,
+    /// Which road-family tool authored the stroke.
+    pub kind: SpawnTool,
+}
+
+/// Request to seat a structure or vehicle actor on terrain.
+#[derive(Message, Debug, Clone, Copy, PartialEq)]
+pub struct PlaceStructureRequest {
+    /// World-space click position.
+    pub position: Vec3,
+    /// Which structure/vehicle tool authored the placement.
+    pub kind: SpawnTool,
+}
+
 /// Plugin that wires the tool state, ray hit test, and cursor marker together.
 pub struct SpawnToolsPlugin;
 
@@ -193,21 +295,45 @@ impl Plugin for SpawnToolsPlugin {
             .init_resource::<SelectedEntity>()
             .init_resource::<CursorMarker>()
             .init_resource::<PointerOverUi>()
+            .init_resource::<RoadDraft>()
             .add_message::<SpawnCivilianRequest>()
             .add_message::<SpawnBuildingRequest>()
             .add_message::<SelectEntityRequest>()
             .add_message::<DestroyEntityRequest>()
-            .add_systems(Startup, spawn_cursor_marker)
-            .add_systems(
-                Update,
-                (
-                    update_cursor_marker,
-                    handle_spawn_tool_clicks,
-                    resolve_selection_and_destruction,
-                    apply_cursor_marker_visuals,
-                ),
-            );
+            .add_message::<PlaceRoadRequest>()
+            .add_message::<PlaceStructureRequest>()
+            .add_systems(Startup, spawn_cursor_marker);
+
+        #[cfg(feature = "egui")]
+        app.add_systems(Update, update_pointer_over_ui);
+
+        app.add_systems(
+            Update,
+            (
+                update_cursor_marker,
+                handle_spawn_tool_clicks,
+                accumulate_road_draft,
+                apply_spawn_requests,
+                apply_place_road_requests,
+                apply_place_structure_requests,
+                resolve_selection_and_destruction,
+                apply_cursor_marker_visuals,
+            )
+                .chain(),
+        );
     }
+}
+
+#[cfg(feature = "egui")]
+fn update_pointer_over_ui(
+    mut contexts: bevy_egui::EguiContexts,
+    mut over_ui: ResMut<PointerOverUi>,
+) {
+    let Ok(ctx) = contexts.ctx_mut() else {
+        over_ui.0 = false;
+        return;
+    };
+    over_ui.0 = ctx.wants_pointer_input() || ctx.is_pointer_over_area();
 }
 
 #[derive(Component)]
@@ -241,37 +367,75 @@ fn spawn_cursor_marker(
 
 fn update_cursor_marker(
     windows: Query<&Window>,
-    cameras: Query<(&Camera, &GlobalTransform), With<Camera3d>>,
+    cameras: Query<(&Camera, &GlobalTransform), (With<Camera3d>, Without<MinimapCamera>)>,
+    over_ui: Res<PointerOverUi>,
     mut marker: ResMut<CursorMarker>,
+    #[cfg(feature = "voxel")] voxel: Option<Res<VoxelSimState>>,
 ) {
-    let Ok(window) = windows.single() else {
+    if over_ui.0 {
         marker.visible = false;
         marker.position = None;
         return;
-    };
-    let Some(cursor) = window.cursor_position() else {
-        marker.visible = false;
-        marker.position = None;
-        return;
-    };
-    let Ok((camera, camera_transform)) = cameras.single() else {
-        marker.visible = false;
-        marker.position = None;
-        return;
-    };
-    let Ok(ray) = camera.viewport_to_world(camera_transform, cursor) else {
-        marker.visible = false;
-        marker.position = None;
-        return;
-    };
-
-    if let Some(hit) = raycast_to_terrain(ray.origin, ray.direction.as_vec3()) {
-        marker.visible = true;
-        marker.position = Some(hit);
-    } else {
-        marker.visible = false;
-        marker.position = None;
     }
+
+    let hit = cursor_terrain_hit(
+        &windows,
+        &cameras,
+        #[cfg(feature = "voxel")]
+        voxel.as_deref(),
+    );
+    marker.position = hit;
+    marker.visible = hit.is_some();
+}
+
+fn cursor_terrain_hit(
+    windows: &Query<&Window>,
+    cameras: &Query<(&Camera, &GlobalTransform), (With<Camera3d>, Without<MinimapCamera>)>,
+    #[cfg(feature = "voxel")] voxel: Option<&VoxelSimState>,
+) -> Option<Vec3> {
+    let window = windows.single().ok()?;
+    let cursor = window.cursor_position()?;
+    let (camera, camera_transform) = cameras.single().ok()?;
+    let ray = camera.viewport_to_world(camera_transform, cursor).ok()?;
+    #[cfg(feature = "voxel")]
+    if let Some(state) = voxel {
+        if !state.grid.cells.is_empty() {
+            return raycast_to_voxel(&state.grid, ray.origin, ray.direction.as_vec3());
+        }
+    }
+    raycast_to_terrain(ray.origin, ray.direction.as_vec3())
+}
+
+#[cfg(feature = "voxel")]
+fn raycast_to_voxel(
+    grid: &civ_voxel::fluid_ca::CaGrid,
+    origin: Vec3,
+    direction: Vec3,
+) -> Option<Vec3> {
+    let dir = direction.normalize_or_zero();
+    if dir == Vec3::ZERO {
+        return None;
+    }
+    let dims = grid.dims;
+    let max_axis = dims[0].max(dims[1]).max(dims[2]) as f32;
+    let max_distance = max_axis * 4.0 + 64.0;
+    let mut t = 0.0_f32;
+    while t <= max_distance {
+        let p = origin + dir * t;
+        let (x, y, z) = (p.x.floor(), p.y.floor(), p.z.floor());
+        if x >= 0.0
+            && y >= 0.0
+            && z >= 0.0
+            && (x as usize) < dims[0]
+            && (y as usize) < dims[1]
+            && (z as usize) < dims[2]
+            && grid.get(x as usize, y as usize, z as usize) != AIR
+        {
+            return Some(p);
+        }
+        t += 0.25;
+    }
+    None
 }
 
 fn handle_spawn_tool_clicks(

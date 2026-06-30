@@ -73,6 +73,7 @@ async fn fr_e2e_click_to_fire() {
         "id": 1,
         "method": "sim.god_action",
         "params": {
+            "role": "operator",
             "verb": "heal",
             "target_faction": 0
         }
@@ -96,6 +97,7 @@ async fn fr_e2e_click_to_fire() {
         "id": 2,
         "method": "sim.command",
         "params": {
+            "role": "operator",
             "action": "tick"
         }
     });

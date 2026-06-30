@@ -436,7 +436,7 @@ pub struct DailyPathDecision {
 impl Default for DailyPathDecision {
     fn default() -> Self {
         Self {
-            poi_kind: PoiKind::Wander,
+            poi_kind: PoiKind::FoodSource,
             target_x: 0,
             target_z: 0,
         }

@@ -222,7 +222,7 @@ fn sync_visible_gameplay(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut debug_counter: ResMut<DebugFrameCounter>,
     #[cfg(feature = "models")]
-    models: Option<Res<crate::gltf_models::GameModels>>,
+    models: Option<Res<'_, crate::gltf_models::GameModels>>,
 ) {
     // One-time archetype debug log on first sync (to find 300-vs-5 gap)
     static DEBUG_LOGGED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);

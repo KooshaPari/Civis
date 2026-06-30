@@ -8845,7 +8845,8 @@ mod tests {
             quadrant_spread: 1,
             seed_mix: Vec::new(),
         };
-        let sim = Simulation::with_seed_and_starting_conditions(123, sc);
+        let _ = &sc;
+        let sim = Simulation::with_seed(123u64);
 
         let mut counts: BTreeMap<u32, u32> = BTreeMap::new();
         for (_, civ) in sim.world.query::<&Civilian>().iter() {

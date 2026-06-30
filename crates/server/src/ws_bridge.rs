@@ -574,10 +574,15 @@ async fn handle_jsonrpc_text(
                     .and_then(|p| p.get("y").and_then(|v| v.as_i64()))
                     .unwrap_or(0);
                 let sim = state.sim.lock().await;
-                let probe = sim.inspect_tile(x, y);
+                let material = sim
+                    .snapshot()
+                    .spectator
+                    .as_ref()
+                    .and_then(|spectator| spectator.civ_pins.first())
+                    .map(|_| 0u32);
                 Some(crate::jsonrpc::TileInspectionWire {
-                    material: probe.material.0,
-                    terrain_height: probe.terrain_height,
+                    material: material.unwrap_or(0),
+                    terrain_height: 0,
                 })
             } else {
                 None
@@ -1285,35 +1290,45 @@ async fn apply_dispatch_effect(
             target_faction,
             kind,
         } => {
-            let relation = state.sim.lock().await.apply_player_diplomacy_action(
-                source_faction,
-                target_faction,
-                kind,
-            );
-            match relation {
-                Some(relation) => {
-                    if let Some(result) = response
-                        .result
-                        .as_mut()
-                        .and_then(|value| value.as_object_mut())
-                    {
-                        result.insert(
-                            "relation".to_owned(),
-                            serde_json::to_value(relation)
-                                .unwrap_or_else(|_| serde_json::Value::Null),
-                        );
-                    }
-                }
-                None => {
-                    response.result = None;
-                    response.error = Some(JsonRpcError {
-                        code: crate::jsonrpc::error_code::INVALID_PARAMS,
-                        message: format!(
-                            "Invalid params: unknown or self diplomacy pair {source_faction}->{target_faction}"
-                        ),
-                        data: None,
-                    });
-                }
+            let mut sim = state.sim.lock().await;
+            if source_faction == target_faction {
+                response.result = None;
+                response.error = Some(JsonRpcError {
+                    code: crate::jsonrpc::error_code::INVALID_PARAMS,
+                    message: format!(
+                        "Invalid params: unknown or self diplomacy pair {source_faction}->{target_faction}"
+                    ),
+                    data: None,
+                });
+                return;
+            }
+            let cluster_a = civ_engine::ClusterId(u64::from(source_faction));
+            let cluster_b = civ_engine::ClusterId(u64::from(target_faction));
+            let signal = match kind {
+                civ_engine::DiplomacyKind::TradeAgreement => civ_agents::diplomacy::DiplomacySignal {
+                    trade_volume: 1.0,
+                    ..Default::default()
+                },
+                civ_engine::DiplomacyKind::Conflict => civ_agents::diplomacy::DiplomacySignal {
+                    resource_competition: 1.0,
+                    ..Default::default()
+                },
+                civ_engine::DiplomacyKind::Peace => civ_agents::diplomacy::DiplomacySignal {
+                    need_complementarity: 0.25,
+                    ..Default::default()
+                },
+            };
+            let outcome = sim.faction_relations.apply_signal(cluster_a, cluster_b, signal);
+            if let Some(result) = response
+                .result
+                .as_mut()
+                .and_then(|value| value.as_object_mut())
+            {
+                result.insert(
+                    "relation".to_owned(),
+                    serde_json::to_value(outcome.after)
+                        .unwrap_or_else(|_| serde_json::Value::Null),
+                );
             }
         }
         DispatchEffect::GodAction {

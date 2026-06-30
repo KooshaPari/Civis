@@ -32,7 +32,6 @@ void UCivMinimapWidget::NativeConstruct()
     if (MinimapImage)
     {
         MinimapImage->SetVisibility(ESlateVisibility::Visible);
-        MinimapImage->OnMouseButtonDown.BindUObject(this, &UCivMinimapWidget::HandleMinimapPointerEvent);
     }
 }
 
@@ -48,8 +47,8 @@ void UCivMinimapWidget::SetMinimapTexture(UTextureRenderTarget2D* Texture)
     MinimapImage->SetBrush(Brush);
 }
 
-FReply UCivMinimapWidget::HandleMinimapPointerEvent(
-    const FGeometry MyGeometry,
+FReply UCivMinimapWidget::NativeOnMouseButtonDown(
+    const FGeometry& MyGeometry,
     const FPointerEvent& MouseEvent)
 {
     if (MouseEvent.GetEffectingButton() != EKeys::LeftMouseButton)

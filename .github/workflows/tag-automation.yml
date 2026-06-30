@@ -1,7 +1,7 @@
 name: Tag Automation
 
-# Delegates to phenoShared reusable workflow.
-# See: https://github.com/KooshaPari/phenoShared/blob/main/.github/workflows/reusable/tag-automation.yml
+# phenoShared reusable is 404; replaced with no-op.
+# TODO: Implement custom tag automation logic.
 
 on:
   push:
@@ -10,6 +10,8 @@ on:
 
 jobs:
   tag:
-    uses: KooshaPari/phenoShared/.github/workflows/tag-automation.yml@main
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
+    steps:
+      - run: echo "TODO: replace with custom tag-automation logic"

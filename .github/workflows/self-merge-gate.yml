@@ -1,7 +1,7 @@
 name: self-merge-gate
 
-# Delegates to phenoShared reusable workflow.
-# See: https://github.com/KooshaPari/phenoShared/blob/main/.github/workflows/reusable/self-merge-gate.yml
+# phenoShared reusable is 404; replaced with no-op.
+# TODO: Implement custom self-merge gate logic.
 
 on: [pull_request_review]
 
@@ -10,4 +10,6 @@ permissions:
 
 jobs:
   gate:
-    uses: KooshaPari/phenoShared/.github/workflows/self-merge-gate.yml@c3aee3361ff4888a8ced71c8861a8d54ae65fca0
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo "TODO: replace with custom self-merge-gate logic"

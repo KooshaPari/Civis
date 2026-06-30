@@ -238,6 +238,7 @@ fn main() {
             GameUiPlugin,
         ))
         .init_state::<AppState>()
+        .init_resource::<civ_bevy_ref::AttachMode>()
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()
         .init_resource::<MinimapPopup>()

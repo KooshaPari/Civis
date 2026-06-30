@@ -114,7 +114,10 @@ pub(crate) fn make_snapshot(
         is_day,
         weather,
         speed,
+        #[cfg(feature = "mods")]
         mods: sim.mod_browser_entries(),
+        #[cfg(not(feature = "mods"))]
+        mods: Vec::new(),
     }
 }
 

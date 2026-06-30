@@ -298,6 +298,7 @@ impl ReplayLog {
     }
 
     /// Record a `mod.loaded.v1` lifecycle event with replay-bus JSON (FR-MOD-004 partial).
+    #[cfg(feature = "mods")]
     pub fn record_mod_loaded(&mut self, record: &civ_mod_host::ModLoadedRecord) {
         let bus_json = civ_mod_host::format_mod_loaded_event_json(record);
         self.events.push(ReplayEvent::ModLoaded {
@@ -310,6 +311,7 @@ impl ReplayLog {
     }
 
     /// Record a `mod.unloaded.v1` lifecycle event with replay-bus JSON (FR-MOD-004 partial).
+    #[cfg(feature = "mods")]
     pub fn record_mod_unloaded(&mut self, record: &civ_mod_host::ModUnloadedRecord) {
         let bus_json = civ_mod_host::format_mod_unloaded_event_json(record);
         self.events.push(ReplayEvent::ModUnloaded {
@@ -344,6 +346,7 @@ impl ReplayLog {
     }
 
     /// Record a `mod.permission_violation.v1` event with replay-bus JSON (CIV-0700).
+    #[cfg(feature = "mods")]
     pub fn record_mod_permission_violation(
         &mut self,
         mod_id: &str,
@@ -380,13 +383,29 @@ impl ReplayLog {
                     domain,
                     ..
                 } if *event_tick == tick => {
+                    #[cfg(feature = "mods")]
+                    {
                     let parsed_domain = domain.as_deref().and_then(parse_world_domain_label);
-                    Some(civ_mod_host::format_mod_permission_violation_json(
-                        mod_id,
-                        *event_tick,
-                        call,
-                        parsed_domain,
-                    ))
+                        Some(civ_mod_host::format_mod_permission_violation_json(
+                            mod_id,
+                            *event_tick,
+                            call,
+                            parsed_domain,
+                        ))
+                    }
+                    #[cfg(not(feature = "mods"))]
+                    {
+                        Some(
+                            serde_json::json!({
+                                "type": "mod.permission_violation.v1",
+                                "mod_id": mod_id,
+                                "tick": *event_tick,
+                                "call": call,
+                                "domain": domain,
+                            })
+                            .to_string(),
+                        )
+                    }
                 }
                 _ => None,
             })
@@ -410,14 +429,32 @@ impl ReplayLog {
                     mod_name,
                     version,
                     ..
-                } if *event_tick == tick => Some(civ_mod_host::format_mod_loaded_event_json(
-                    &civ_mod_host::ModLoadedRecord {
-                        mod_id: mod_id.clone(),
-                        mod_name: mod_name.clone(),
-                        version: version.clone(),
-                        tick: *event_tick,
-                    },
-                )),
+                } if *event_tick == tick => {
+                    #[cfg(feature = "mods")]
+                    {
+                        Some(civ_mod_host::format_mod_loaded_event_json(
+                            &civ_mod_host::ModLoadedRecord {
+                                mod_id: mod_id.clone(),
+                                mod_name: mod_name.clone(),
+                                version: version.clone(),
+                                tick: *event_tick,
+                            },
+                        ))
+                    }
+                    #[cfg(not(feature = "mods"))]
+                    {
+                        Some(
+                            serde_json::json!({
+                                "type": "mod.loaded.v1",
+                                "mod_id": mod_id,
+                                "mod_name": mod_name,
+                                "version": version,
+                                "tick": *event_tick,
+                            })
+                            .to_string(),
+                        )
+                    }
+                }
                 _ => None,
             })
             .collect()
@@ -494,14 +531,32 @@ impl ReplayLog {
                     mod_name,
                     version,
                     ..
-                } => Some(civ_mod_host::format_mod_loaded_event_json(
-                    &civ_mod_host::ModLoadedRecord {
-                        mod_id: mod_id.clone(),
-                        mod_name: mod_name.clone(),
-                        version: version.clone(),
-                        tick: *tick,
-                    },
-                )),
+                } => {
+                    #[cfg(feature = "mods")]
+                    {
+                        Some(civ_mod_host::format_mod_loaded_event_json(
+                            &civ_mod_host::ModLoadedRecord {
+                                mod_id: mod_id.clone(),
+                                mod_name: mod_name.clone(),
+                                version: version.clone(),
+                                tick: *tick,
+                            },
+                        ))
+                    }
+                    #[cfg(not(feature = "mods"))]
+                    {
+                        Some(
+                            serde_json::json!({
+                                "type": "mod.loaded.v1",
+                                "mod_id": mod_id,
+                                "mod_name": mod_name,
+                                "version": version,
+                                "tick": *tick,
+                            })
+                            .to_string(),
+                        )
+                    }
+                }
                 _ => None,
             })
             .collect()
@@ -645,6 +700,7 @@ impl ReplayLog {
     }
 }
 
+#[cfg(feature = "mods")]
 fn parse_world_domain_label(label: &str) -> Option<civ_mod_host::WorldDomain> {
     match label {
         "Economy" => Some(civ_mod_host::WorldDomain::Economy),

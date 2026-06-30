@@ -55,7 +55,7 @@ civ-tactics = { path = "../tactics" }
 civ-economy = { path = "../economy" }
 
 # Mod manifest host stub (CIV-0700 Sprint D).
-civ-mod-host = { path = "../mod-host" }
+civ-mod-host = { path = "../mod-host", optional = true }
 civ-save-db = { path = "../save-db" }
 
 # MOAT emergence (legends, psyche, culture, genetics, civ-ai) — FR-CIV-LEGENDS-*,
@@ -80,6 +80,10 @@ civ-audio = { path = "../audio" }
 
 # FR-CIV-GOV-001/002/003 (civ-007 institutions epic).
 civ-institutions = { path = "../civ-institutions" }
+
+[features]
+default = []
+mods = ["dep:civ-mod-host"]
 
 [dev-dependencies]
 civ-economy = { path = "../economy" }

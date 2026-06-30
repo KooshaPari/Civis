@@ -9,7 +9,9 @@ use tar::{Archive, Builder};
 use thiserror::Error;
 use zstd::stream::{decode_all, encode_all};
 
-use crate::{ModGuestStateSave, ReplayError, Simulation};
+use crate::{ReplayError, Simulation};
+#[cfg(feature = "mods")]
+use crate::ModGuestStateSave;
 
 /// Sidecar metadata written beside replay + mod state.
 pub const CIVSAVE_SPEC_ID: &str = "CIV-1000";
@@ -49,6 +51,7 @@ pub enum SaveBundleError {
     #[error("json: {0}")]
     Json(#[from] serde_json::Error),
     /// Guest mod state import failure.
+    #[cfg(feature = "mods")]
     #[error("mod state: {0}")]
     ModState(#[from] civ_mod_host::GuestStateError),
     /// Replay encode/decode failure.
@@ -108,8 +111,11 @@ impl CivSaveBundle {
             .map_err(|e| io_err(&metadata_path, e))?;
 
         let mod_state_path = dir.join("mod_state.json");
+        #[cfg(feature = "mods")]
         fs::write(&mod_state_path, sim.export_mod_guest_state().to_json()?)
             .map_err(|e| io_err(&mod_state_path, e))?;
+        #[cfg(not(feature = "mods"))]
+        fs::write(&mod_state_path, "{}").map_err(|e| io_err(&mod_state_path, e))?;
 
         let simulation_path = dir.join("simulation.bin");
         crate::save::save_game(sim, &simulation_path).map_err(SaveBundleError::State)?;
@@ -137,6 +143,7 @@ impl CivSaveBundle {
         };
 
         let mod_state_path = dir.join("mod_state.json");
+        #[cfg(feature = "mods")]
         if mod_state_path.is_file() {
             let json =
                 fs::read_to_string(&mod_state_path).map_err(|e| io_err(&mod_state_path, e))?;

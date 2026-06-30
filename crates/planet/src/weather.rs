@@ -58,8 +58,6 @@ pub struct WeatherCell {
     pub storm_intensity_fp: i32,
 }
 
-/// Compute deterministic weather cells for all regions using climate and tick phase.
-
 fn sin_fp(angle_fp: i64) -> i32 {
     let radians =
         (angle_fp.rem_euclid(FULL_TURN_FP) as f64 / FULL_TURN_FP as f64) * std::f64::consts::TAU;

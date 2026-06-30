@@ -14,19 +14,15 @@ use serde::{Deserialize, Serialize};
 pub use civ_genetics::Dna;
 
 pub mod speciation;
-pub use speciation::{
-    split_diverged_populations, PopulationSplit, SpeciesRecord, SpeciationError,
-};
+pub use speciation::{split_diverged_populations, PopulationSplit, SpeciationError, SpeciesRecord};
 
 pub mod pop_pressure;
-pub use pop_pressure::{
-    apply_pressure_loss, pressure_mortality, tick_pressure_loss, PressureLoss,
-};
+pub use pop_pressure::{apply_pressure_loss, pressure_mortality, tick_pressure_loss, PressureLoss};
 
 pub mod niche;
 pub use niche::{
-    niche_growth_rate, niche_match, niche_mortality_rate, tick_niche_adaptation, Niche,
-    NicheTick, NicheWeights,
+    niche_growth_rate, niche_match, niche_mortality_rate, tick_niche_adaptation, Niche, NicheTick,
+    NicheWeights,
 };
 
 /// Schema version. Bumped on breaking changes.
@@ -431,7 +427,7 @@ mod tests {
         let pheno_a = Phenotype {
             morphology: Morphology {
                 height_cm: 50,
-                body_color_hue: 100,  // Blue-ish
+                body_color_hue: 100, // Blue-ish
                 leg_count: 4,
                 arm_count: 2,
                 eye_count: 2,
@@ -446,14 +442,14 @@ mod tests {
 
         let pheno_b = Phenotype {
             morphology: Morphology {
-                height_cm: 200,       // Much taller
-                body_color_hue: 10,   // Red-ish
+                height_cm: 200,     // Much taller
+                body_color_hue: 10, // Red-ish
                 leg_count: 4,
                 arm_count: 2,
                 eye_count: 2,
             },
             behavior: BehaviorWeights {
-                aggression: 0.9,      // Much more aggressive
+                aggression: 0.9, // Much more aggressive
                 curiosity: 0.2,
                 sociability: 0.1,
                 intelligence: 0.3,
@@ -491,14 +487,14 @@ mod tests {
 
         let pheno_b = Phenotype {
             morphology: Morphology {
-                height_cm: 101,       // 1 cm different
-                body_color_hue: 129,  // 1 hue degree different
+                height_cm: 101,      // 1 cm different
+                body_color_hue: 129, // 1 hue degree different
                 leg_count: 4,
                 arm_count: 2,
                 eye_count: 2,
             },
             behavior: BehaviorWeights {
-                aggression: 0.501,    // 0.001 different
+                aggression: 0.501, // 0.001 different
                 curiosity: 0.502,
                 sociability: 0.501,
                 intelligence: 0.50,
@@ -553,10 +549,7 @@ mod tests {
         let a_to_b = phenotypes_diverged(&pheno_a, &pheno_b, threshold);
         let b_to_a = phenotypes_diverged(&pheno_b, &pheno_a, threshold);
 
-        assert_eq!(
-            a_to_b, b_to_a,
-            "subspeciation check must be symmetric"
-        );
+        assert_eq!(a_to_b, b_to_a, "subspeciation check must be symmetric");
     }
 
     /// Covers FR-CIV-SPECIES (subspeciation + DNA): when two DNAs express
@@ -569,8 +562,8 @@ mod tests {
         let ancestral_dna = Dna(vec![
             100, 100, 4, 2, 2, 100, 100, 100, 100, // morphology + baseline behavior
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // padding
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
         ]);
 
         // Simulate two isolated populations diverging.
@@ -579,13 +572,13 @@ mod tests {
 
         // Flip significant bytes in each population.
         // Population A: smaller, bluer, more peaceful.
-        pop_a_dna.0[0] = 80;  // height down
+        pop_a_dna.0[0] = 80; // height down
         pop_a_dna.0[1] = 120; // hue shift toward blue
-        pop_a_dna.0[5] = 50;  // lower aggression
+        pop_a_dna.0[5] = 50; // lower aggression
 
         // Population B: taller, redder, more aggressive.
         pop_b_dna.0[0] = 180; // height up
-        pop_b_dna.0[1] = 50;  // hue shift toward red
+        pop_b_dna.0[1] = 50; // hue shift toward red
         pop_b_dna.0[5] = 200; // higher aggression
 
         let pheno_a = express(&pop_a_dna);
@@ -613,16 +606,14 @@ mod tests {
     fn subspeciation_mixing_produces_intermediate_phenotypes() {
         // Parent phenotypes (as if from diverged populations).
         let parent_a_dna = Dna(vec![
-            50, 50, 4, 2, 2, 50, 50, 50, 50,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            50, 50, 4, 2, 2, 50, 50, 50, 50, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0,
         ]);
         let parent_b_dna = Dna(vec![
-            200, 200, 6, 3, 3, 200, 200, 200, 200,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            200, 200, 6, 3, 3, 200, 200, 200, 200, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
         ]);
 
         let pheno_a = express(&parent_a_dna);

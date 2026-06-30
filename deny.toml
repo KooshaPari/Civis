@@ -65,33 +65,10 @@ skip = [
 ]
 # Disallow specific crates outright.
 deny = []
-# Allow these even if they would otherwise be denied.
-#
-# Duplicate-version entries below exist because `phenotype-voxel` (pinned via
-# crates/voxel/Cargo.toml to a shared kernel git revision) pins older
-# versions of common crates that are not aligned with the workspace's primary
-# versions. Until the shared kernel moves to Cargo workspaces with a single
-# lockfile, we accept the duplicates at WARN severity above and allow the
-# older version explicitly. Each entry names the crate + accepted version
-# range + reason so triage is straightforward.
-allow = [
-  # `glam` — civ-voxel uses 0.30 (workspace-wide), the shared kernel uses
-  # 0.27.0 internally for its math primitives. Allow the older kernel pin
-  # to keep the shared kernel ABI stable; revisit when the kernel migrates
-  # to the workspace lockfile.
-  { name = "glam", version = "=0.27.0" },
-  { name = "glam", version = "=0.25.0" },
-  { name = "glam", version = "=0.24.2" },
-  # `toml` family — the shared kernel still uses `toml` 0.5 for manifest
-  # parsing; workspace uses `toml` 0.8. Tolerate the older pin.
-  { name = "toml", version = "=0.5.11" },
-  { name = "toml_edit", version = "=0.19.15" },
-  # `rand_core` — shared kernel pins 0.6; workspace uses 0.9. Allow the
-  # older pin to keep the kernel's deterministic-seeding story intact.
-  { name = "rand_core", version = "=0.6.4" },
-  # `getrandom` — shared kernel pins 0.2; workspace uses 0.3. Same reason.
-  { name = "getrandom", version = "=0.2.15" },
-]
+# Keep this empty unless intentionally converting the bans check into a full
+# dependency allowlist. Duplicate versions are surfaced by `multiple-versions =
+# "warn"` above instead of requiring every transitive crate to be enumerated.
+allow = []
 # Skip-tree: tree entries whose path matches are skipped. Useful for
 # excluding generated/proto code or test-only crates from duplicate checks.
 skip-tree = []

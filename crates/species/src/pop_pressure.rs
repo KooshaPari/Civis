@@ -84,7 +84,6 @@ pub struct PressureLoss {
 pub fn tick_pressure_loss(population: u64, capacity: u64, baseline_mortality: f32) -> PressureLoss {
     let total_rate = apply_pressure_loss(population, capacity, baseline_mortality);
     let baseline = baseline_mortality.clamp(0.0, 1.0);
-    let pressure = total_rate - baseline;
 
     let total_deaths = ((population as f64) * (total_rate as f64)).round() as u64;
     let baseline_deaths = ((population as f64) * (baseline as f64)).round() as u64;
@@ -175,13 +174,13 @@ mod tests {
     #[test]
     fn tick_pressure_loss_reports_breakdown() {
         // 50% overshoot + 0% baseline → all deaths are pressure deaths.
-        let pop = 1000_u64;
+        let pop = 750_u64;
         let cap = 500_u64;
         let result = tick_pressure_loss(pop, cap, 0.0);
         assert_eq!(result.baseline_deaths, 0);
-        // 0.5 mortality × 1000 = 500 deaths, all from pressure.
-        assert_eq!(result.pressure_deaths, 500);
-        assert_eq!(result.survivors, 500);
+        // 0.5 mortality × 750 = 375 deaths, all from pressure.
+        assert_eq!(result.pressure_deaths, 375);
+        assert_eq!(result.survivors, 375);
 
         // With baseline: combined rate, baseline deaths first.
         let result2 = tick_pressure_loss(150, 100, 0.1);

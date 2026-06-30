@@ -21,7 +21,7 @@
 //! ## Example
 //!
 //! ```
-//! use civ_tactics::morale::{MoraleState, UnitStance};
+//! use civ_tactics::{MoraleState, UnitStance};
 //!
 //! let mut m = MoraleState::new(100, 50);
 //! // Lose 30 % of starting strength as casualties.
@@ -32,8 +32,10 @@
 //! m.apply_casualties(70);
 //! assert_eq!(m.stance(), UnitStance::Routing);
 //!
-//! // Pull the unit out of contact: it recovers.
-//! m.recover_safety();
+//! // Pull the unit out of contact: it recovers over multiple safe ticks.
+//! while m.stance() == UnitStance::Routing {
+//!     m.recover_safety();
+//! }
 //! assert_eq!(m.stance(), UnitStance::Standing);
 //! ```
 

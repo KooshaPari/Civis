@@ -64,6 +64,7 @@ use civ_bevy_ref::{
     ws_client::{WsClient, WsClientConfig},
     CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
 };
+use civ_bevy_ref::atmosphere::{animate_water, setup_atmosphere, update_lighting, DayNightCycle};
 use civ_protocol_3d::Frame3d;
 use civ_voxel::ChunkId;
 use serde_json;
@@ -260,7 +261,7 @@ fn main() {
     .insert_resource(ScenePresentation::default())
     .insert_resource(DebugRender::default())
     .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
-    .add_systems(Startup, setup);
+    .add_systems(Startup, (setup, setup_atmosphere));
     #[cfg(feature = "egui")]
     {
         app.add_systems(
@@ -300,6 +301,8 @@ fn main() {
                     // (which consumes the flag).
                     sync_presentation_from_climate.after(apply_live_frames),
                     update_presentation_lighting,
+                    animate_water,
+                    update_lighting,
                 )
                     .run_if(in_state(AppState::Playing)),
             ),
@@ -330,11 +333,11 @@ fn main() {
                 update_minimap,
                 sync_presentation_from_climate.after(apply_live_frames),
                 update_presentation_lighting,
+                animate_water,
+                update_lighting,
             ),
         );
     }
-    app.run();
-
     #[cfg(feature = "egui")]
     {
         app.add_plugins(SettingsPlugin);

@@ -4,8 +4,7 @@ use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use civ_agents::{spawn_civilian_at, tick_movement};
-use civ_engine::{DiplomacyKind, Simulation};
-use civ_tactics::DamageEvent;
+use civ_engine::{DamageEvent, DiplomacyKind, Simulation};
 use civ_voxel::{MaterialId, WorldCoord};
 
 use crate::app::{AppState, DamagePulse, MilitaryPin, TradeTickSummary};
@@ -228,7 +227,9 @@ mod tests {
         let faction_count = factions(sim.state.tick).len();
         assert_eq!(units.len(), faction_count * 5);
         assert!(units.iter().all(|u| u.unit_type == "Soldier"));
-        assert!(units.iter().all(|u| (u.strength - 1.0).abs() < f32::EPSILON));
+        assert!(units
+            .iter()
+            .all(|u| (u.strength - 1.0).abs() < f32::EPSILON));
         assert!(
             units
                 .iter()
@@ -249,7 +250,9 @@ mod tests {
         let pulses = tick_military(&mut sim, &terrain, &mut units);
         assert!(pulses.is_empty(), "no conflict => no damage pulses");
         assert!(
-            units.iter().all(|u| (u.strength - 1.0).abs() < f32::EPSILON),
+            units
+                .iter()
+                .all(|u| (u.strength - 1.0).abs() < f32::EPSILON),
             "strengths unchanged when there is no conflict"
         );
     }

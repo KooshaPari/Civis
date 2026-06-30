@@ -12,7 +12,10 @@ use std::{
 use axum::body::Bytes;
 use axum::http::HeaderValue;
 use civ_economy::Stocks;
-use civ_engine::{DiplomacyKind, JobType, ModBrowserEntry, Simulation};
+use civ_engine::{
+    engine::{JobType, Resources},
+    DiplomacyKind, ModBrowserEntry, Simulation,
+};
 use civ_laws::LawDb;
 use civ_save_db::SaveDb;
 use serde::{Deserialize, Serialize};

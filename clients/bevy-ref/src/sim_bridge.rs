@@ -17,9 +17,9 @@ use crate::spawn_tools::{SpawnBuildingRequest, SpawnCivilianRequest};
 use crate::terrain::WORLD_SIZE;
 use crate::{live_attach::is_server_attach_mode, AttachMode};
 #[cfg(feature = "models")]
-use civ_bevy_ref::gltf_models::{actor_scene, building_scene_for, ModelOrPrimitive};
+use crate::gltf_models::{actor_scene, building_scene_for, ModelOrPrimitive};
 #[cfg(feature = "models")]
-type ModelResourceRef<'a> = Option<&'a Res<civ_bevy_ref::gltf_models::GameModels>>;
+type ModelResourceRef<'a> = Option<&'a Res<'a, crate::gltf_models::GameModels>>;
 #[cfg(not(feature = "models"))]
 type ModelResourceRef<'a> = Option<()>;
 
@@ -222,7 +222,7 @@ fn sync_visible_gameplay(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut debug_counter: ResMut<DebugFrameCounter>,
     #[cfg(feature = "models")]
-    models: Option<Res<civ_bevy_ref::gltf_models::GameModels>>,
+    models: Option<Res<'_, crate::gltf_models::GameModels>>,
 ) {
     // One-time archetype debug log on first sync (to find 300-vs-5 gap)
     static DEBUG_LOGGED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
@@ -390,7 +390,7 @@ fn actor_visual_kind(actor_visual: Option<&ActorVisual>) -> ActorVisualKind {
 
 #[cfg(feature = "models")]
 fn spawn_civilian_visual(
-    commands: &mut Commands<'_>,
+    commands: &mut Commands<'_, '_>,
     models: ModelResourceRef,
     _civilian_mesh: &Handle<Mesh>,
     meshes: &mut Assets<Mesh>,
@@ -441,7 +441,7 @@ fn spawn_civilian_visual(
 
 #[cfg(feature = "models")]
 fn spawn_building_visual(
-    commands: &mut Commands<'_>,
+    commands: &mut Commands<'_, '_>,
     models: ModelResourceRef,
     building_mesh: &Handle<Mesh>,
     materials: &mut Assets<StandardMaterial>,

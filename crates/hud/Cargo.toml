@@ -1,0 +1,13 @@
+[package]
+name = "civ-hud"
+description = "Shared Keycap Palette HUD types + token audit (SAVELOAD_HUD_PLAN §1.5, §4.2)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]

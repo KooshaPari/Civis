@@ -1,3 +1,7 @@
+# Standalone crate — NOT part of the parent Civis workspace (it is an Unreal
+# FFI static lib built by the UE toolchain, not cargo's workspace build).
+[workspace]
+
 [package]
 name = "civis_unreal_ffi"
 version = "0.1.0"

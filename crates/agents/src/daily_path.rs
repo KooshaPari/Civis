@@ -424,3 +424,21 @@ mod tests {
         assert!(dz <= WANDER_RADIUS);
     }
 }
+
+/// Per-tick daily-path decision record used by `Simulation::phase_daily_path`.
+#[derive(Debug, Clone)]
+pub struct DailyPathDecision {
+    pub poi_kind: PoiKind,
+    pub target_x: i32,
+    pub target_z: i32,
+}
+
+impl Default for DailyPathDecision {
+    fn default() -> Self {
+        Self {
+            poi_kind: PoiKind::Wander,
+            target_x: 0,
+            target_z: 0,
+        }
+    }
+}

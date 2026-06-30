@@ -34,7 +34,7 @@ pub use cluster::{
 };
 pub use daily_path::{
     choose_activity, need_for_poi_kind, path_step, pick_target, poi_kind_for_need, score_poi,
-    wander_anchor, Activity, DailyGoal, Poi, PoiKind, PoiRegistry,
+    wander_anchor, Activity, DailyGoal, DailyPathDecision, Poi, PoiKind, PoiRegistry,
 };
 pub use diplomacy::{
     DiplomacyMatrix, DiplomacyOutcome, DiplomacySignal, RelationKind, RelationRecord,

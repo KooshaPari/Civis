@@ -26,12 +26,17 @@ async fn main() {
         .ok()
         .is_some_and(|value| matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"));
     let sim = Arc::new(Mutex::new(initial_simulation(&saves_dir, autoload).await));
+    // require_role defaults to true (deny-by-default); operators may disable
+    // via the CIVIS_REQUIRE_ROLE=false env var in permissive local-only setups.
+    let require_role = std::env::var("CIVIS_REQUIRE_ROLE")
+        .map(|v| v.to_ascii_lowercase() != "false")
+        .unwrap_or(true);
 
     run_ws_bridge(
         WsBridgeConfig {
             addr,
             max_clients,
-            require_role: false,
+            require_role,
             tick_broadcast_format: TickBroadcastFormat::from_env(),
             saves_dir,
             ..Default::default()

@@ -1,6 +1,5 @@
-# Alert sync to issues. Calls the phenoShared reusable (caller body is tiny;
-# the heavy work is in phenoShared). Cron downshifted from hourly to weekly
-# to stop the pr-billing drift the reused reusable's transitive work caused.
+# Alert sync to issues. phenoShared reusable is 404; replaced with no-op.
+# TODO: Replace with custom alert-sync logic when needed.
 name: Alert sync issues
 on:
   schedule:
@@ -15,6 +14,6 @@ permissions:
 
 jobs:
   sync:
-    uses: KooshaPari/phenoShared/.github/workflows/alert-sync-issues.yml@main
-    with:
-      auto-label: auto-alert-sync
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo "TODO: replace with custom alert-sync logic"

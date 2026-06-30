@@ -51,20 +51,15 @@ impl CivisVoxelBridge {
 }
 
 /// Mesher selection mirrored by Civis-side renderers.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum MesherKind {
     /// Greedy block meshing.
+    #[default]
     Greedy,
     /// Surface nets meshing.
     SurfaceNet,
     /// Marching cubes meshing.
     Marching,
-}
-
-impl Default for MesherKind {
-    fn default() -> Self {
-        Self::Greedy
-    }
 }
 
 /// Drain dirty chunks from the kernel world and schedule ECS remesh work.
@@ -95,7 +90,6 @@ pub fn drain_and_schedule_remesh(
 }
 
 /// Ensure the bridge and kernel agree on the public schema contract.
-#[must_use]
 pub fn check_version_compat(bridge: &CivisVoxelBridge) -> Result<(), String> {
     let _ = bridge;
     let kernel_schema = phenotype_voxel::SCHEMA_VERSION;
@@ -162,7 +156,6 @@ mod tests {
         let mut commands = Commands::new(&mut queue, &world);
 
         drain_and_schedule_remesh(&mut bridge, &mut commands, &mut chunk_entities);
-        drop(commands);
         queue.apply(&mut world);
 
         assert!(!world.entities().contains(stale));

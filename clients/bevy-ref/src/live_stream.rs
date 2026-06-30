@@ -859,6 +859,7 @@ pub fn apply_water_for_chunk(
     commands: &mut Commands,
     scene: &mut LiveStreamScene,
     meshes: &LiveWaterMeshes,
+    material_assets: &mut Assets<StandardMaterial>,
     chunk_id: ChunkId,
     voxels: &[MaterialId],
 ) {
@@ -883,6 +884,31 @@ pub fn apply_water_for_chunk(
         chunk_origin.translation.z,
     );
 
+    // FR-CLIENT-render: pick a water tint that complements the chunk's
+    // dominant voxel material, matching the per-chunk biome tinting that
+    // terrain chunks already get (lines 942–947 above). Cache the material
+    // hand by chunk ID so repeated deltas reuse the same asset.
+    let tint = chunk_biome_tint(voxels).unwrap_or(LIVE_CHUNK_BASE_COLOR);
+    // Derive a complementary water colour: the tint's hue shifted cool /
+    // desaturated, preserving the biome character.
+    let water_color = Color::srgb(
+        tint[0] * 0.60 + 0.20,
+        tint[1] * 0.50 + 0.25,
+        tint[2] * 0.80 + 0.15,
+    );
+    let water_material = scene
+        .water_materials
+        .entry(chunk_id.0)
+        .or_insert_with(|| {
+            material_assets.add(StandardMaterial {
+                base_color: water_color,
+                perceptual_roughness: 0.30,
+                metallic: 0.05,
+                ..default()
+            })
+        })
+        .clone();
+
     let entity = *scene.water_entities.entry(chunk_id.0).or_insert_with(|| {
         commands
             .spawn((LiveWaterTag { chunk: chunk_id }, Transform::default()))
@@ -890,7 +916,7 @@ pub fn apply_water_for_chunk(
     });
     commands.entity(entity).insert((
         Mesh3d(meshes.surface_mesh.clone()),
-        MeshMaterial3d(meshes.surface_material.clone()),
+        MeshMaterial3d(water_material),
         transform,
     ));
 }
@@ -1005,6 +1031,7 @@ pub fn apply_water_deltas_for_frame(
     commands: &mut Commands,
     scene: &mut LiveStreamScene,
     water_meshes: &LiveWaterMeshes,
+    material_assets: &mut Assets<StandardMaterial>,
     culling_eye: [f32; 3],
     culling_max_distance: f32,
     delta: &VoxelDeltaFrame,
@@ -1023,7 +1050,9 @@ pub fn apply_water_deltas_for_frame(
         if chunk.voxels.len() != LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE {
             continue;
         }
-        apply_water_for_chunk(commands, scene, water_meshes, chunk_id, &chunk.voxels);
+        apply_water_for_chunk(
+            commands, scene, water_meshes, material_assets, chunk_id, &chunk.voxels,
+        );
     }
 }
 

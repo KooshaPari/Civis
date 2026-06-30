@@ -137,6 +137,7 @@ fn apply_live_scene_frames(
                     &mut commands,
                     &mut scene,
                     water_meshes.as_ref(),
+                    &mut materials,
                     culling.eye,
                     culling.max_distance,
                     &delta,

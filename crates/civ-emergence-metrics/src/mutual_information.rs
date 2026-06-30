@@ -68,9 +68,9 @@ impl JointHistogram {
     #[must_use]
     pub fn marginal_a(&self) -> Histogram {
         let mut counts = vec![0u64; self.rows];
-        for a in 0..self.rows {
+        for (a, count) in counts.iter_mut().enumerate().take(self.rows) {
             for b in 0..self.cols {
-                counts[a] = counts[a].saturating_add(self.bins[a * self.cols + b]);
+                *count = count.saturating_add(self.bins[a * self.cols + b]);
             }
         }
         Histogram::from_counts(counts)
@@ -81,8 +81,8 @@ impl JointHistogram {
     pub fn marginal_b(&self) -> Histogram {
         let mut counts = vec![0u64; self.cols];
         for a in 0..self.rows {
-            for b in 0..self.cols {
-                counts[b] = counts[b].saturating_add(self.bins[a * self.cols + b]);
+            for (b, count) in counts.iter_mut().enumerate().take(self.cols) {
+                *count = count.saturating_add(self.bins[a * self.cols + b]);
             }
         }
         Histogram::from_counts(counts)

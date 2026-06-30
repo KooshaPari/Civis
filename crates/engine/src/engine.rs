@@ -6665,6 +6665,24 @@ mod tests {
         );
     }
 
+    #[test]
+    fn tick_records_institution_founding_in_legends_chronicle() {
+        let mut sim = Simulation::with_seed(2026_06_30);
+
+        sim.set_settlement_population(7, civ_institutions::TEMPLE_UNLOCK_POPULATION);
+        sim.tick();
+
+        // FR-CIV-LEGENDS: notable world events produced by the sim tick are
+        // appended to the queryable chronicle.
+        let entries = sim.legends_chronicle().all();
+        assert!(
+            entries
+                .iter()
+                .any(|entry| matches!(entry.kind, civ_legends::ChronicleEventKind::Founding)),
+            "expected the institution founding to create a legends chronicle entry, got {entries:?}"
+        );
+    }
+
     fn count_replay_ticks(sim: &Simulation) -> usize {
         sim.replay_log()
             .events

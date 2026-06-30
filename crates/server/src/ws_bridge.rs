@@ -137,7 +137,10 @@ pub struct WsBridgeConfig {
     pub addr: SocketAddr,
     /// Maximum number of concurrent WebSocket clients.
     pub max_clients: usize,
-    /// When true, `sim.command` tick requires role `operator` in params or connect header.
+    /// When true (default), `sim.command` tick requires role `operator` in params.
+    /// Role is never derived from the `x-civis-role` request header — that header
+    /// is ignored for privilege decisions to prevent unauthenticated role spoofing
+    /// (CWE-287/306/352). Callers must supply `"role":"operator"` in JSON-RPC params.
     pub require_role: bool,
     /// Tick broadcast wire encoding(s) for connected clients.
     ///
@@ -158,7 +161,7 @@ impl Default for WsBridgeConfig {
         Self {
             addr: SocketAddr::from(([127, 0, 0, 1], 3000)),
             max_clients: 16,
-            require_role: false,
+            require_role: true,
             tick_broadcast_format: TickBroadcastFormat::default(),
             saves_dir: PathBuf::from("saves"),
             replays_dir: PathBuf::from("replays"),
@@ -362,12 +365,18 @@ async fn ws_handler(
     headers: HeaderMap,
     Query(query): Query<WsConnectQuery>,
 ) -> impl IntoResponse {
-    let header_role = headers
-        .get("x-civis-role")
-        .and_then(|value| value.to_str().ok())
-        .filter(|role| !role.is_empty())
-        .map(str::to_owned);
-    ws.on_upgrade(move |socket| handle_socket(socket, state, header_role, query))
+    // The `x-civis-role` header is explicitly ignored for privilege decisions.
+    // Accepting a client-supplied header as an authoritative role claim allows
+    // unauthenticated role spoofing (CWE-287/306/352, audit #56). Role must be
+    // supplied by the caller in JSON-RPC params and validated by the server; it
+    // must never be derived from an untrusted request header.
+    if headers.contains_key("x-civis-role") {
+        tracing::warn!(
+            "x-civis-role header present but ignored — \
+             role must be supplied in JSON-RPC params, not request headers"
+        );
+    }
+    ws.on_upgrade(move |socket| handle_socket(socket, state, None, query))
 }
 
 async fn handle_socket(

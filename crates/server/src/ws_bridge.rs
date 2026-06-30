@@ -577,7 +577,7 @@ async fn handle_jsonrpc_text(
                 let material = sim
                     .voxel()
                     .read(civ_voxel::WorldCoord { x, y: 0, z: y })
-                    .0 as u32;
+                    .0 as u16;
                 Some(crate::jsonrpc::TileInspectionWire {
                     material,
                     terrain_height: 0,

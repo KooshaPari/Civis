@@ -5,7 +5,9 @@
 use civ_agents::culture::{cultural_distance, language_distance, CultureProfile};
 use civ_agents::diplomacy::GriefAccumulator;
 use civ_agents::{
-    count_civilians, propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at,
+    cluster::{apply_membership_payoffs, ClusterState, MembershipPayoff, MembershipPayoffTotals},
+    count_civilians, daily_path::{pick_target, Poi, PoiKind, PoiRegistry},
+    propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at,
     ActorVisualKind, Alignment, Civilian as AgentCivilian, ClusterId, ClusterMember, CohortStats,
     DiplomacyMatrix, DiplomacyOutcome, DiplomacySignal, LodTier, Needs, Position3d, Psyche,
     RelationKind, SocialGraph, Tools, Wardrobe,
@@ -80,6 +82,8 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "compact",
     "buildings",
     "life",
+    "daily_path",
+    "cluster",
     "research",
     "tech",
     "belief",
@@ -639,6 +643,10 @@ pub struct Simulation {
     /// tick broadcast; clients translate each entry into a kira SFX
     /// trigger via [`civ_audio::triggers::trigger_to_sfx_requests`].
     last_tick_audio_events: Vec<civ_audio::triggers::SfxTrigger>,
+    /// Last-tick decisions for the daily-path phase (FR-CIV-LIFE-010..016).
+    pub last_tick_daily_path: Vec<DailyPathDecision>,
+    /// Per-cluster payoffs emitted by the cluster phase (FR-CIV-LIFE-030..035).
+    pub last_tick_cluster_payoffs: Vec<(u64, MembershipPayoffTotals)>,
     /// Per-culture music cue parameters derived from emergent culture + state.
     /// Updated in `phase_audio` and surfaced on `SimulationSnapshot::music_cues`
     /// as a stable per-cluster key-value map.
@@ -1485,6 +1493,8 @@ impl Simulation {
             last_tick_engagements: Vec::new(),
             last_tick_mod_lifecycle: Vec::new(),
             last_tick_audio_events: Vec::new(),
+            last_tick_daily_path: Vec::new(),
+            last_tick_cluster_payoffs: Vec::new(),
             last_tick_music_cues: BTreeMap::new(),
             last_tick_disaster_events: Vec::new(),
             operational: NoopOperationalLayer,
@@ -1640,6 +1650,8 @@ impl Simulation {
             last_tick_engagements: Vec::new(),
             last_tick_mod_lifecycle: Vec::new(),
             last_tick_audio_events: Vec::new(),
+            last_tick_daily_path: Vec::new(),
+            last_tick_cluster_payoffs: Vec::new(),
             last_tick_music_cues: BTreeMap::new(),
             last_tick_disaster_events: Vec::new(),
             operational: NoopOperationalLayer,
@@ -2290,6 +2302,7 @@ impl Simulation {
             "voxel" => self.phase_voxel(),
             "compact" => self.phase_compact(),
             "buildings" => self.phase_buildings(),
+            "daily_path" => self.phase_daily_path(),
             "life" => self.phase_life(),
             "research" => self.phase_research(),
             "tech" => self.phase_tech(),
@@ -2306,6 +2319,7 @@ impl Simulation {
             "sentience" => self.phase_sentience(),
             "diffusion" => self.phase_diffusion(),
             "audio" => self.phase_audio(),
+            "cluster" => self.phase_cluster(),
             other => panic!("Simulation::run_phase: unknown phase '{other}' in PHASE_ORDER"),
         }
     }
@@ -2345,6 +2359,28 @@ impl Simulation {
     #[must_use]
     pub fn last_tick_audio_events(&self) -> &[SfxTrigger] {
         &self.last_tick_audio_events
+    }
+
+    /// Daily POI-target decisions from the most recent tick
+    /// (FR-CIV-LIFE-010..016). Reset at the start of every
+    /// [`Simulation::tick`]; populated by [`Simulation::phase_daily_path`]
+    /// which feeds `LifeNeeds` and `Position3d` of each civilian through
+    /// `civ_agents::daily_path::pick_target`. Consumed by the emergence
+    /// dashboard and the test module.
+    #[must_use]
+    pub fn last_tick_daily_path(&self) -> &[DailyPathDecision] {
+        &self.last_tick_daily_path
+    }
+
+    /// Membership payoff totals from the most recent tick
+    /// (FR-CIV-LIFE-030..035). Reset at the start of every
+    /// [`Simulation::tick`]; populated by [`Simulation::phase_cluster`]
+    /// which applies `MembershipPayoff` per civilian to their dominant
+    /// cluster, then sums up the resulting `MembershipPayoffTotals` for
+    /// the emergence dashboard.
+    #[must_use]
+    pub fn last_tick_cluster_payoffs(&self) -> &[MembershipPayoffTotals] {
+        &self.last_tick_cluster_payoffs
     }
 
     /// Ingest mod-host phase log lines: record permission violations on the replay bus and debug-log.
@@ -3166,6 +3202,78 @@ impl Simulation {
 
     /// Citizen-life phase (FR-CIV-LIFE-001 / FR-CIV-LIFE-002).
     ///
+    /// Daily-path phase:
+    /// - rebuilds the POI registry from current settlements,
+    /// - assigns each adult a daily target via civ_agents::daily_path::pick_target,
+    /// - rolls the next path step and stores decisions in last_tick_daily_path.
+    fn phase_daily_path(&mut self) {
+        use civ_agents::daily_path::{pick_target, path_step, LifeNeeds, PoiKind};
+
+        self.last_tick_daily_path.clear();
+
+        let mut registry = PoiRegistry::new();
+        for (settlement_id, settlement) in self.settlements.iter() {
+            let kind = if settlement.population >= 500 {
+                PoiKind::Market
+            } else if settlement.population >= 100 {
+                PoiKind::Tavern
+            } else {
+                PoiKind::Shrine
+            };
+            registry.register(Poi {
+                id: *settlement_id,
+                kind,
+                coord: settlement.centroid,
+            });
+        }
+
+        for (entity, (civilian, pos, needs)) in self
+            .world
+            .query::<(&AgentCivilian, &Position3d, &Needs)>()
+            .iter()
+        {
+            let life_needs = LifeNeeds {
+                food: needs.food,
+                rest: needs.shelter,
+                social: needs.safety,
+                safety: needs.belonging,
+            };
+            if let Some(poi) = pick_target(&life_needs, &registry, pos) {
+                let step = path_step(pos, &poi.coord);
+                self.last_tick_daily_path.push(DailyPathDecision {
+                    civilian: entity,
+                    settlement_id: poi.id,
+                    activity: match poi.kind {
+                        PoiKind::Market => Activity::Trade,
+                        PoiKind::Tavern => Activity::Socialize,
+                        PoiKind::Shrine => Activity::Worship,
+                        PoiKind::Library => Activity::Study,
+                        PoiKind::Workshop => Activity::Work,
+                    },
+                    dx: step.dx,
+                    dy: step.dy,
+                });
+            }
+        }
+    }
+
+    /// Cluster-phase:
+    /// - collects cluster membership across all settlements,
+    /// - applies membership payoffs to drive cluster formation/attrition.
+    fn phase_cluster(&mut self) {
+        let memberships: Vec<ClusterState> = self
+            .settlements
+            .iter()
+            .map(|(settlement_id, settlement)| ClusterState {
+                settlement_id: *settlement_id,
+                clusters: settlement.clusters.clone(),
+            })
+            .collect();
+
+        let totals = apply_membership_payoffs(&memberships);
+        self.last_tick_cluster_membership = totals;
+    }
+
     /// Active lifecycle loop:
     /// - ages civilians every tick,
     /// - applies stage-based need/stat pressure,

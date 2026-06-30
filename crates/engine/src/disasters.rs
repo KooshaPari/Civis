@@ -587,15 +587,19 @@ mod tests {
             tide_offset: 0.0,
         });
 
-        // Create weather with extreme heat and storm conditions
+        // Create weather with extreme heat and low moisture.
+        // NOTE: storm_intensity must stay BELOW the (seasonally-scaled) storm onset
+        // threshold (~2692 in Summer). A competing storm at the same region would
+        // fire after the wildfire and overwrite its LAVA/STEAM voxels with WATER,
+        // masking the wildfire effect this test asserts on.
         sim.set_weather_cells(vec![WeatherCell {
             region_id: 0,
             latitude_fp: 0, // equator
             season: civ_planet::SeasonKind::Summer,
-            kind: WeatherKind::Storm,
-            temp_c_fp: 45_000,        // 45°C - extreme heat
-            precip_mm_fp: 50,         // low precipitation
-            storm_intensity_fp: 3000, // high storm intensity
+            kind: WeatherKind::Clear,
+            temp_c_fp: 45_000,       // 45°C - extreme heat
+            precip_mm_fp: 50,        // low precipitation -> dry fuel
+            storm_intensity_fp: 500, // calm: below storm onset so only wildfire fires
         }]);
 
         // Advance tick so disaster can be triggered

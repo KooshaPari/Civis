@@ -1220,7 +1220,14 @@ impl Simulation {
             let _ = world.spawn((farm,));
         }
 
-        // Create initial military (player + AI for war-bridge smoke)
+        // Create initial military (player + AI for war-bridge smoke). The two armies
+        // must keep CLEAR LINE OF SIGHT to engage (war_bridge LOS over the voxel
+        // world). phase_disasters writes solid terrain near the origin plane
+        // (x = region_id 0..15, y = z = 0, radius ±N·FIXED_SCALE), which would
+        // occlude armies placed at the origin. Base them far from that disaster zone
+        // (grid_x ≈ WAR_SMOKE_GRID_BASE → world x ≈ 62.5·FIXED_SCALE) while keeping
+        // the two factions within war-bridge engage range of each other.
+        const WAR_SMOKE_GRID_BASE: i32 = 1_000;
         for i in 0..5 {
             let hp = Fixed::from_num(10);
             let soldier = MilitaryUnit {
@@ -1229,7 +1236,10 @@ impl Simulation {
                 hp,
                 max_hp: hp,
                 morale: Fixed::from_num(1),
-                position: Position { x: i, y: 0 },
+                position: Position {
+                    x: WAR_SMOKE_GRID_BASE + i,
+                    y: 0,
+                },
                 faction_id: 0,
             };
             let _ = world.spawn((soldier,));
@@ -1242,7 +1252,10 @@ impl Simulation {
                 hp,
                 max_hp: hp,
                 morale: Fixed::from_num(1),
-                position: Position { x: i + 6, y: 2 },
+                position: Position {
+                    x: WAR_SMOKE_GRID_BASE + i + 6,
+                    y: 2,
+                },
                 faction_id: 1,
             };
             let _ = world.spawn((soldier,));
@@ -4417,35 +4430,53 @@ mod tests {
     fn voxel_phase_drains_dirty_events_each_tick() {
         use civ_voxel::WorldCoord;
         let mut sim = Simulation::with_seed(42);
-        // Tick once with nothing pending — should be empty.
-        sim.tick();
-        assert!(sim.last_tick_voxel_events().is_empty());
-        // Write four voxels in two chunks, then tick.
-        sim.voxel_mut()
-            .write(WorldCoord { x: 0, y: 0, z: 0 }, MaterialId(1));
+        // The default earthlike weather grid triggers a one-time burst of emergent
+        // flood disasters that paint terrain with WATER on the second tick. Once the
+        // terrain is flooded, re-writing WATER over WATER is a no-op (no dirty event),
+        // so the simulation settles to zero emergent voxel writes per tick. Tick past
+        // that burst to reach the quiescent baseline before exercising the drain
+        // mechanism in isolation.
+        sim.tick(); // tick 1: no emergent writes yet
+        sim.tick(); // tick 2: emergent flood burst paints terrain
+        sim.tick(); // tick 3: quiescent (floods are now no-ops)
+        assert!(
+            sim.last_tick_voxel_events().is_empty(),
+            "simulation should be voxel-quiescent after the initial flood burst; got {}",
+            sim.last_tick_voxel_events().len()
+        );
+        // Write four voxels across two chunks at coordinates far from the origin
+        // settlement region. Two reasons:
+        //  - STONE (not WATER): the emergent flood burst paints near-origin chunks
+        //    with WATER, so a WATER write there would be a no-op (no dirty event).
+        //  - Far placement: writing into flooded near-origin cells would perturb the
+        //    settled fluid and spawn fresh CA voxel events next tick, breaking the
+        //    "draining clears" invariant. These distant chunks are inert.
+        const STONE: MaterialId = MaterialId(6);
+        const FAR: i64 = 100_000_000;
+        sim.voxel_mut().write(WorldCoord { x: FAR, y: 0, z: 0 }, STONE);
         sim.voxel_mut().write(
             WorldCoord {
-                x: 1_000_000,
+                x: FAR + 1_000_000,
                 y: 0,
                 z: 0,
             },
-            MaterialId(1),
+            STONE,
         );
         sim.voxel_mut().write(
             WorldCoord {
-                x: 100_000_000,
+                x: FAR + 200_000_000,
                 y: 0,
                 z: 0,
             },
-            MaterialId(1),
+            STONE,
         );
         sim.voxel_mut().write(
             WorldCoord {
-                x: 101_000_000,
+                x: FAR + 201_000_000,
                 y: 0,
                 z: 0,
             },
-            MaterialId(1),
+            STONE,
         );
         sim.tick();
         let events = sim.last_tick_voxel_events();
@@ -4652,14 +4683,14 @@ mod tests {
             "expected war-bridge combat in replay log"
         );
 
+        // Replaying the recorded event log (which captures every voxel write — the
+        // war-bridge combat damage as well as the deterministic emergent terrain)
+        // must drain to exactly the same voxel state as the live run. That is the
+        // replay determinism contract this test guards.
         let mut from_replay = Simulation::with_seed(seed);
-        for (tick, event) in combat {
-            from_replay.apply_replay_combat(tick, &event);
-        }
-        let pending: Vec<DamageEvent> = from_replay.pending_damage.drain(..).collect();
-        for event in pending {
-            let _ = from_replay.apply_damage_now(&event);
-        }
+        live.replay_log()
+            .replay(&mut from_replay)
+            .expect("replay of recorded log must succeed");
         assert_eq!(from_replay.voxel().chunk_count(), chunk_live);
     }
 
@@ -5353,25 +5384,42 @@ mod tests {
     #[test]
     fn religion_diplomacy_coupling_phase_picks_trade_over_conflict() {
         let disparity = DIPLOMACY_BASE_CONFLICT_THRESHOLD + 2_000;
+
+        // phase_diplomacy chooses which faction PAIR to evaluate. For a fresh sim with
+        // no settlement overlap yet it falls back to a tick-indexed pick over the
+        // registered factions: (keys[tick % N], keys[(tick+1) % N]) — see
+        // `diplomacy_pair_from_settlement_overlap`. With the denser 6-faction start
+        // (#1102) this is no longer factions[0]/[1]. Seed the treasuries on EXACTLY the
+        // pair the engine will evaluate (gap == `disparity`), leaving all other
+        // treasuries at zero, so wealth-disparity is fixed and belief/cohesion is the
+        // only variable between the peace and war runs.
+        let seed_evaluated_pair = |sim: &mut Simulation| -> bool {
+            let ids: Vec<u32> = sim.state.factions.keys().copied().collect();
+            let n = ids.len();
+            if n < 2 {
+                return false;
+            }
+            let tick = sim.state.tick as usize;
+            let a = ids[tick % n];
+            let b = ids[(tick + 1) % n];
+            for id in &ids {
+                sim.state.faction_treasury.insert(*id, Fixed::from_num(0));
+            }
+            sim.state.faction_treasury.insert(a, Fixed::from_num(0));
+            sim.state
+                .faction_treasury
+                .insert(b, Fixed::from_num(disparity));
+            true
+        };
+
         let mut sim_peace = Simulation::with_seed(5);
         sim_peace.state.tick = 500;
         sim_peace.state.belief = 500_000;
         sim_peace.state.cohesion = 200_000;
         sim_peace.emergence.has_patron = true;
-        let mut faction_ids: Vec<u32> = sim_peace.state.factions.keys().copied().collect();
-        faction_ids.sort_unstable();
-        if faction_ids.len() < 2 {
+        if !seed_evaluated_pair(&mut sim_peace) {
             return;
         }
-        let (a, b) = (faction_ids[0], faction_ids[1]);
-        sim_peace
-            .state
-            .faction_treasury
-            .insert(a, Fixed::from_num(0));
-        sim_peace
-            .state
-            .faction_treasury
-            .insert(b, Fixed::from_num(disparity));
         sim_peace.phase_diplomacy();
         let peace_kind = sim_peace.diplomacy_events().last().expect("event").kind;
 
@@ -5379,14 +5427,9 @@ mod tests {
         sim_war.state.tick = 500;
         sim_war.state.belief = 0;
         sim_war.state.cohesion = 0;
-        sim_war
-            .state
-            .faction_treasury
-            .insert(a, Fixed::from_num(0));
-        sim_war
-            .state
-            .faction_treasury
-            .insert(b, Fixed::from_num(disparity));
+        if !seed_evaluated_pair(&mut sim_war) {
+            return;
+        }
         sim_war.phase_diplomacy();
         let war_kind = sim_war.diplomacy_events().last().expect("event").kind;
 

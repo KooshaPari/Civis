@@ -574,9 +574,11 @@ async fn handle_jsonrpc_text(
                     .and_then(|p| p.get("y").and_then(|v| v.as_i64()))
                     .unwrap_or(0);
                 let sim = state.sim.lock().await;
-                Some(crate::jsonrpc::TileInspectionWire::from(
-                    sim.inspect_tile(x, y),
-                ))
+                let probe = sim.inspect_tile(x, y);
+                Some(crate::jsonrpc::TileInspectionWire {
+                    material: probe.material.0,
+                    terrain_height: probe.terrain_height,
+                })
             } else {
                 None
             };

@@ -40,6 +40,7 @@ pub mod spectator;
 pub const SCALE: i64 = 1_000;
 
 pub use religion::{emerge_belief, spread_religion, Belief, BeliefConcept, Religion};
+pub use hash_chain::hash_hex;
 pub use demographics::{
     carrying_capacity_from_food, tick_demographics, total_population, AgeGroup, Demographics, DemographicsSnapshot,
 };
@@ -57,6 +58,10 @@ pub use engine::{
     CombatDamagePulse, DiplomacyKind, EconomicFocus, EconomicFocusEvent, FactionRelationSnapshot, Fixed, MilitaryUnit, Position,
     Simulation, UnitType, WorldState,
 };
+pub use engine::StratificationEvent;
+pub use civ_planet::Climate;
+pub use civ_tactics::DamageEvent;
+pub use spectator::SpectatorView;
 
 // DoctrineLibrary is defined in civ-tactics and re-exported here.
 pub use civ_tactics::DoctrineLibrary;

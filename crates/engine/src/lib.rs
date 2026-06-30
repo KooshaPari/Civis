@@ -30,6 +30,7 @@ pub mod replay;
 pub mod replay_format;
 pub mod save;
 pub mod save_bundle;
+pub use save_bundle::CivSaveBundle;
 pub mod scenario;
 pub mod spawn;
 pub mod spectator;

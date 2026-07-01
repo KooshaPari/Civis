@@ -1145,7 +1145,7 @@ fn settings_rows(
             )
             .changed()
         {
-            speed.multiplier = state.sim_speed;
+            speed.multiplier = state.sim_speed as f32;
         }
     } else {
         ui.add(

@@ -45,7 +45,10 @@ use std::ops::{Deref, DerefMut};
 /// Re-exported from the `fixed` crate; aliased here so callers can use
 /// `crate::engine::Fixed` (or `crate::Fixed`) and `Fixed::from_num(...)`.
 pub type Fixed = fixed::types::I48F16;
-use crate::culture::{culture_cooperation_signal, culture_openness_signal, FactionIdeologyState};
+use crate::culture::{
+    advance_faction_ideologies, culture_cooperation_signal, culture_openness_signal,
+    FactionIdeologyState,
+};
 use crate::language::{
     borrow_word, ensure_seeded_word, person_name, person_name_meaning, place_name,
     place_name_meaning, seeded_language_state, tick_language_for_lineage, LanguageState,
@@ -95,6 +98,7 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "institutions",
     "economic_focus",
     "emergence",
+    "culture",
     "language",
     "sentience",
     "diffusion",
@@ -2322,6 +2326,7 @@ impl Simulation {
             "institutions" => self.phase_institutions(),
             "economic_focus" => self.phase_economic_focus(),
             "emergence" => self.phase_emergence(),
+            "culture" => self.phase_culture(),
             "language" => self.phase_language(),
             "sentience" => self.phase_sentience(),
             "diffusion" => self.phase_diffusion(),
@@ -4064,6 +4069,40 @@ impl Simulation {
             kind: label,
             severity: severity.clamp(0.0, 1.0),
         });
+    }
+
+    /// Culture phase (FR-CIV-CULTURE) — advance per-faction ideology/trait
+    /// drift from fresh settlement culture, contact, religion, era, and climate
+    /// signals.
+    fn phase_culture(&mut self) {
+        let cluster_member_counts = settlement_member_counts(&self.world);
+        let dominant = settlement_dominant_factions(&self.world, &cluster_member_counts);
+        if dominant.is_empty() || self.cluster_cultures.is_empty() {
+            return;
+        }
+
+        let contacts = settlement_contact_pairs(
+            &self.world,
+            &cluster_member_counts,
+            SETTLEMENT_CONTACT_RADIUS_FP,
+        );
+        let religion_by_faction =
+            faction_religion_signals(&self.religious_profiles, &dominant, &cluster_member_counts);
+        let faction_ages = self.era_progression.faction_ages.clone();
+        let prior = self.faction_ideologies.clone();
+
+        self.faction_ideologies = advance_faction_ideologies(
+            self.state.tick,
+            &self.cluster_cultures,
+            &dominant,
+            &cluster_member_counts,
+            &contacts,
+            &self.climate,
+            &religion_by_faction,
+            &faction_ages,
+            &prior,
+            &mut self.rng,
+        );
     }
 
     /// Language phase (FR-CIV-LANG-001 / FR-LANGUAGE-001) — per-faction language
@@ -5972,6 +6011,36 @@ fn faction_language_centroids(
         .collect()
 }
 
+/// Member-weighted per-faction religion signal for culture drift (FR-CIV-CULTURE).
+fn faction_religion_signals(
+    religious_profiles: &BTreeMap<u32, ReligiousProfile>,
+    dominant: &BTreeMap<u64, u32>,
+    member_counts: &BTreeMap<u64, u32>,
+) -> BTreeMap<u32, f32> {
+    let mut sums: BTreeMap<u32, (f32, f32)> = BTreeMap::new();
+    for (&settlement_id, &faction_id) in dominant {
+        let Some(profile) = religious_profiles.get(&(settlement_id as u32)) else {
+            continue;
+        };
+        let weight = member_counts.get(&settlement_id).copied().unwrap_or(1).max(1) as f32;
+        let signal = (
+            profile.monitoring * 0.40
+                + profile.mythic_coherence * 0.40
+                + profile.uncertainty_reduction * 0.20
+        )
+            .clamp(0.0, 1.0);
+        let entry = sums.entry(faction_id).or_insert((0.0, 0.0));
+        entry.0 += signal * weight;
+        entry.1 += weight;
+    }
+
+    sums.into_iter()
+        .filter_map(|(faction_id, (sum, weight))| {
+            (weight > 0.0).then_some((faction_id, (sum / weight).clamp(0.0, 1.0)))
+        })
+        .collect()
+}
+
 /// Canonical settlement contact edges when any cross-cluster agents are within radius (N3).
 fn settlement_contact_pairs(
     world: &World,
@@ -6624,6 +6693,7 @@ mod tests {
                 "institutions",
                 "economic_focus",
                 "emergence",
+                "culture",
                 "language",
                 "sentience",
                 "diffusion",
@@ -6669,13 +6739,21 @@ mod tests {
             .iter()
             .position(|p| *p == "language")
             .expect("PHASE_ORDER must include 'language' (FR-ENGINE-phaseorder)");
+        let culture_idx = PHASE_ORDER
+            .iter()
+            .position(|p| *p == "culture")
+            .expect("PHASE_ORDER must include 'culture' (FR-CIV-CULTURE)");
         let sentience_idx = PHASE_ORDER
             .iter()
             .position(|p| *p == "sentience")
             .expect("PHASE_ORDER must include 'sentience' (FR-ENGINE-phaseorder)");
         assert!(
-            language_idx > emergence_idx,
-            "language (idx {language_idx}) must run after emergence (idx {emergence_idx})"
+            culture_idx > emergence_idx,
+            "culture (idx {culture_idx}) must run after emergence (idx {emergence_idx})"
+        );
+        assert!(
+            language_idx > culture_idx,
+            "language (idx {language_idx}) must run after culture (idx {culture_idx})"
         );
         assert!(
             sentience_idx > language_idx,
@@ -9082,6 +9160,84 @@ mod tests {
         assert!(
             final_distance > baseline,
             "isolated factions should diverge through Simulation::tick(), {baseline} -> {final_distance}"
+        );
+    }
+
+    #[test]
+    fn culture_traits_drift_through_sim_tick_for_isolated_factions() {
+        use civ_agents::{ClusterId, ClusterMember};
+        use civ_voxel::WorldCoord;
+
+        let mut sim = Simulation::new();
+        sim.world = World::new();
+        sim.cluster_cultures.clear();
+        sim.faction_ideologies.clear();
+
+        sim.cluster_cultures.insert(1, CultureProfile::new([0.15, 0.15, 0.15, 0.15]));
+        sim.cluster_cultures.insert(2, CultureProfile::new([0.85, 0.85, 0.85, 0.85]));
+        sim.religious_profiles.insert(1, ReligiousProfile {
+            monitoring: 0.70,
+            mythic_coherence: 0.60,
+            uncertainty_reduction: 0.20,
+            population: 4,
+            ..ReligiousProfile::default()
+        });
+        sim.religious_profiles.insert(2, ReligiousProfile {
+            monitoring: 0.20,
+            mythic_coherence: 0.30,
+            uncertainty_reduction: 0.65,
+            population: 4,
+            ..ReligiousProfile::default()
+        });
+
+        for (entity_id, cluster_id, faction_id, base_x) in [
+            (1_u64, 1_u64, 1_u32, 0_i64),
+            (2, 1, 1, 20),
+            (3, 1, 1, 40),
+            (4, 1, 1, 60),
+            (5, 2, 2, 200_000),
+            (6, 2, 2, 200_020),
+            (7, 2, 2, 200_040),
+            (8, 2, 2, 200_060),
+        ] {
+            let _ = sim.world.spawn((
+                AgentCivilian {
+                    id: entity_id,
+                    alignment: Alignment::Faction(faction_id),
+                    age: 20,
+                },
+                ClusterMember {
+                    cluster: ClusterId(cluster_id),
+                },
+                Position3d {
+                    coord: WorldCoord {
+                        x: base_x,
+                        y: 0,
+                        z: base_x / 2,
+                    },
+                },
+            ));
+        }
+
+        sim.phase_culture();
+        let before = sim
+            .faction_ideologies()
+            .get(&1)
+            .expect("faction 1 culture should initialize")
+            .values;
+
+        for _ in 0..20 {
+            sim.tick();
+        }
+
+        let after = sim
+            .faction_ideologies()
+            .get(&1)
+            .expect("faction 1 culture should advance through tick")
+            .values;
+        assert_ne!(
+            before, after,
+            "FR-CIV-CULTURE: faction culture traits should drift through Simulation::tick()"
         );
     }
 

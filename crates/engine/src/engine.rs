@@ -3605,81 +3605,14 @@ impl Simulation {
         let thermal_stress = phase_rad.sin().abs().mul_add(0.6, 0.2);
 
         for sid in settlement_ids {
-            let pop = *self.settlements.get(&sid).unwrap_or(&0);
-            let pop_f = pop as f32;
-
-            // Map settlement to a weather cell via sid % N (deterministic).
-            let wc = &self.weather_grid[(sid as usize) % num_weather];
-
-            // Temperature gradient [0, 1]: extreme temps (hot OR cold) = high
-            // stress. |temp/40| maps [-40,40]°C → [0,1]; clamp below -40 to
-            // 1 so arctic settlements also register high grad_T.
-            let temp_abs = (wc.temp_c_fp as f32 / 40.0).abs().clamp(0.0, 1.0);
-            let grad_T = temp_abs.mul_add(0.7, thermal_stress * 0.3);
-
-            // Moisture gradient [0, 1]: low precipitation = high stress
-            // (drought proxy). Invert precip_norm so drier → higher grad_M.
-            let precip_norm = 1.0 - (wc.precip_mm_fp as f32 / 200.0).min(1.0);
-            let grad_M = precip_norm.mul_add(0.8, thermal_stress * 0.2);
-
-            // Biomass gradient [0, 1]: combined T + M stress means less
-            // primary productivity → higher grad_B.
-            let grad_B = (grad_T * 0.5 + grad_M * 0.5).clamp(0.0, 1.0);
-
-            // Kinship density [0, 1]: smaller settlements have denser kin
-            // networks.  √(pop/300) gives ~0.58 at pop=100, ~0.82 at pop=10.
-            let kinship_density = if pop_f > 0.0 {
-                (1.0 - (pop_f / 300.0).sqrt()).clamp(0.0, 1.0)
-            } else {
-                0.0
-            };
-
-            // Unrest [0, MAX_MISERY_UNREST=30]: read from per-settlement
-            // UnrestSnapshot.score (section 812 in phase_cohesion output).
-            // Falls back to 0 if snapshots haven't been collected yet.
-            let unrest = self
-                .last_tick_unrest_snapshots
-                .get(&sid)
-                .map(|s| s.score.max(0) as f32)
-                .unwrap_or(0.0)
-                .min(crate::religion::MAX_MISERY_UNREST);
-
-            // Migration rate [0, 1]: proportion of population that arrived or
-            // departed this tick. Uses |migrant_accumulator| / population,
-            // capped at 1.0.  Pop=0 → 0.
-            let migration_rate = if pop_f > 0.0 {
-                let abs_flow = self
-                    .migrant_accumulator
-                    .get(&sid)
-                    .copied()
-                    .unwrap_or(0)
-                    .unsigned_abs() as f32;
-                (abs_flow / pop_f).min(1.0)
-            } else {
-                0.0
-            };
-
-            // Language distance [0, 1]: deferred — needs phoneme mapping
-            // from culture_map / cluster_cultures (currently not wired).
-            let language_distance = 0.0;
-
-            let gradients = crate::religion::SubstrateGradients {
-                grad_T,
-                grad_M,
-                grad_B,
-                kinship_density,
-                unrest,
-                migration_rate,
-                language_distance,
-            };
-
+            let gradients = self.religion_gradients_for_settlement(sid);
+            let population = self.settlements.get(&sid).copied().unwrap_or(0);
             let profile = self
                 .religious_profiles
                 .entry(sid)
-                .or_insert_with(crate::religion::ReligiousProfile::default);
-            profile.population = pop;
-            crate::religion::apply_big_gods_response(profile, &gradients, tick);
-            let event = crate::religion::ReligionEvent::tick(
+                .or_insert_with(|| ReligiousProfile::new(population, tick));
+            profile.population = population;
+            apply_big_gods_response(profile, &gradients, tick);            let event = crate::religion::ReligionEvent::tick(
                 sid,
                 profile.monitoring,
                 profile.mythic_coherence,
@@ -3690,6 +3623,121 @@ impl Simulation {
                 self.last_tick_religion_events.push(event);
             }
         }
+        self.spread_religion_between_settlements();
+    }
+
+    fn religion_gradients_for_settlement(&self, settlement_id: u32) -> SubstrateGradients {
+        let base = crate::religion::substrate_gradients_for(settlement_id);
+        let population = self.settlements.get(&settlement_id).copied().unwrap_or(0);
+        let food = self
+            .settlement_food_stocked
+            .get(&settlement_id)
+            .copied()
+            .unwrap_or(0)
+            .max(0);
+        let food_pressure = if population == 0 {
+            0.0
+        } else {
+            (1.0 - (food as f32 / population.max(1) as f32)).clamp(0.0, 1.0)
+        };
+        let hardship = settlement_actor_hardship_signal(
+            settlement_id,
+            &self.settlement_actors,
+            &self.actor_hardship,
+        );
+        let kinship = settlement_kinship_density_signal(
+            settlement_id,
+            &self.settlement_actors,
+            &self.kinship,
+        );
+        let unrest = self
+            .last_tick_unrest_snapshots
+            .get(&settlement_id)
+            .map(|snapshot| {
+                (snapshot.score.max(0) as f32 / 500.0) * crate::religion::MAX_MISERY_UNREST
+            })
+            .unwrap_or_else(|| {
+                let gini = (self
+                    .settlement_gini
+                    .get(&settlement_id)
+                    .copied()
+                    .unwrap_or(0)
+                    .clamp(0, 100) as f32)
+                    / 100.0;
+                gini * crate::religion::MAX_MISERY_UNREST
+            });
+        let cohesion = self
+            .last_tick_cohesion_snapshots
+            .get(&settlement_id)
+            .map(|snapshot| fabric_tier_signal(snapshot.fabric))
+            .unwrap_or(0.5);
+        let trade_contact =
+            settlement_trade_contact_signal(settlement_id, &self.last_tick_settlement_trade_flows);
+
+        SubstrateGradients {
+            grad_T: base.grad_T.max(hardship),
+            grad_M: base.grad_M.max(food_pressure),
+            grad_B: base.grad_B.max(food_pressure.max(hardship * 0.5)),
+            kinship_density: base.kinship_density.min(kinship),
+            unrest: base
+                .unrest
+                .max(unrest.clamp(0.0, crate::religion::MAX_MISERY_UNREST)),
+            migration_rate: base.migration_rate.max((1.0 - cohesion).clamp(0.0, 1.0)),
+            language_distance: base.language_distance.max((1.0 - trade_contact) * 0.25),
+        }
+    }
+
+    fn spread_religion_between_settlements(&mut self) {
+        if self.religious_profiles.len() < 2 {
+            return;
+        }
+
+        let mut edges = settlement_religion_spread_edges(&self.last_tick_settlement_trade_flows);
+        let member_counts: BTreeMap<u64, u32> = self
+            .settlements
+            .iter()
+            .map(|(&settlement_id, &population)| (u64::from(settlement_id), population))
+            .collect();
+        for (left, right) in
+            settlement_contact_pairs(&self.world, &member_counts, SETTLEMENT_CONTACT_RADIUS_FP)
+        {
+            if left <= u64::from(u32::MAX) && right <= u64::from(u32::MAX) {
+                edges.insert((left as u32, right as u32), 0.35);
+            }
+        }
+
+        let before = self.religious_profiles.clone();
+        let mut deltas: BTreeMap<u32, (f32, f32, f32)> = BTreeMap::new();
+        for ((a, b), strength) in edges {
+            let (Some(pa), Some(pb)) = (before.get(&a), before.get(&b)) else {
+                continue;
+            };
+            let cohesion_a = self
+                .last_tick_cohesion_snapshots
+                .get(&a)
+                .map(|s| fabric_tier_signal(s.fabric))
+                .unwrap_or(0.5);
+            let cohesion_b = self
+                .last_tick_cohesion_snapshots
+                .get(&b)
+                .map(|s| fabric_tier_signal(s.fabric))
+                .unwrap_or(0.5);
+            let spread =
+                (0.015 * strength * ((cohesion_a + cohesion_b) * 0.5)).clamp(0.0, 0.02);
+            accumulate_profile_diffusion(pa, pb, spread, &mut deltas, a, b);
+        }
+
+        let mut after = before;
+        for (settlement_id, (dm, dc, du)) in deltas {
+            let Some(profile) = after.get_mut(&settlement_id) else {
+                continue;
+            };
+            profile.monitoring = (profile.monitoring + dm).clamp(0.0, 1.0);
+            profile.mythic_coherence = (profile.mythic_coherence + dc).clamp(0.0, 1.0);
+            profile.uncertainty_reduction =
+                (profile.uncertainty_reduction + du).clamp(0.0, 1.0);
+        }
+        self.religious_profiles = after;
     }
 
     /// Economic-focus pre-pass (FR-CIV-ECON-001 / ADR-020).
@@ -6189,6 +6237,108 @@ fn faction_religion_signals(
         .collect()
 }
 
+fn fabric_tier_signal(fabric: FabricTier) -> f32 {
+    match fabric {
+        FabricTier::Tight => 1.0,
+        FabricTier::Loosened => 0.7,
+        FabricTier::Strained => 0.35,
+        FabricTier::Fractured => 0.1,
+    }
+}
+
+fn settlement_actor_hardship_signal(
+    settlement_id: u32,
+    settlement_actors: &BTreeMap<u32, BTreeSet<u64>>,
+    actor_hardship: &BTreeMap<u64, i64>,
+) -> f32 {
+    let Some(actors) = settlement_actors.get(&settlement_id) else {
+        return 0.0;
+    };
+    if actors.is_empty() {
+        return 0.0;
+    }
+    let sum: i64 = actors
+        .iter()
+        .map(|actor_id| actor_hardship.get(actor_id).copied().unwrap_or(0).max(0))
+        .sum();
+    ((sum as f32 / actors.len() as f32) / 1000.0).clamp(0.0, 1.0)
+}
+
+fn settlement_kinship_density_signal(
+    settlement_id: u32,
+    settlement_actors: &BTreeMap<u32, BTreeSet<u64>>,
+    kinship: &BTreeMap<u64, Vec<KinshipEdge>>,
+) -> f32 {
+    let Some(actors) = settlement_actors.get(&settlement_id) else {
+        return 1.0;
+    };
+    if actors.len() <= 1 {
+        return 1.0;
+    }
+    let possible = (actors.len() * (actors.len() - 1)) as f32;
+    let internal_edges = actors
+        .iter()
+        .filter_map(|actor_id| kinship.get(actor_id))
+        .flat_map(|edges| edges.iter())
+        .filter(|edge| actors.contains(&edge.target))
+        .count() as f32;
+    (internal_edges / possible).clamp(0.0, 1.0)
+}
+
+fn settlement_trade_contact_signal(
+    settlement_id: u32,
+    flows: &[SettlementTradeFlow],
+) -> f32 {
+    let volume: i64 = flows
+        .iter()
+        .filter(|flow| {
+            flow.from_settlement == settlement_id || flow.to_settlement == settlement_id
+        })
+        .map(|flow| flow.qty.max(0))
+        .sum();
+    (volume as f32 / 100.0).clamp(0.0, 1.0)
+}
+
+fn settlement_religion_spread_edges(
+    flows: &[SettlementTradeFlow],
+) -> BTreeMap<(u32, u32), f32> {
+    let mut edges = BTreeMap::new();
+    for flow in flows {
+        if flow.from_settlement == flow.to_settlement || flow.qty <= 0 {
+            continue;
+        }
+        let a = flow.from_settlement.min(flow.to_settlement);
+        let b = flow.from_settlement.max(flow.to_settlement);
+        let strength = (flow.qty as f32 / 100.0).clamp(0.05, 1.0);
+        edges
+            .entry((a, b))
+            .and_modify(|existing: &mut f32| *existing = existing.max(strength))
+            .or_insert(strength);
+    }
+    edges
+}
+
+fn accumulate_profile_diffusion(
+    left: &ReligiousProfile,
+    right: &ReligiousProfile,
+    rate: f32,
+    deltas: &mut BTreeMap<u32, (f32, f32, f32)>,
+    left_id: u32,
+    right_id: u32,
+) {
+    let dm = (right.monitoring - left.monitoring) * rate;
+    let dc = (right.mythic_coherence - left.mythic_coherence) * rate;
+    let du = (right.uncertainty_reduction - left.uncertainty_reduction) * rate;
+    let left_delta = deltas.entry(left_id).or_insert((0.0, 0.0, 0.0));
+    left_delta.0 += dm;
+    left_delta.1 += dc;
+    left_delta.2 += du;
+    let right_delta = deltas.entry(right_id).or_insert((0.0, 0.0, 0.0));
+    right_delta.0 -= dm;
+    right_delta.1 -= dc;
+    right_delta.2 -= du;
+}
+
 /// Canonical settlement contact edges when any cross-cluster agents are within radius (N3).
 fn settlement_contact_pairs(
     world: &World,
@@ -7196,6 +7346,51 @@ mod tests {
         assert_ne!(
             after_price, before_price,
             "expected food price to respond to the imbalance over multiple ticks"
+        );
+    }
+
+    /// FR-CIV-RELIGION: the normal tick advances belief emergence and lets
+    /// connected settlements exchange religious profile pressure via trade.
+    #[test]
+    fn tick_wires_religion_emergence_and_trade_spread() {
+        let mut sim = Simulation::with_seed(73_001);
+        sim.set_settlement_population(1, 250);
+        sim.set_settlement_population(2, 250);
+        sim.set_settlement_food_stocked(1, 2_000);
+        sim.set_settlement_food_stocked(2, 0);
+        for actor_id in 1..=8 {
+            sim.set_settlement_actor(actor_id, 1);
+            sim.set_actor_in_settlement_hardship(actor_id, 1_000);
+        }
+        for actor_id in 9..=16 {
+            sim.set_settlement_actor(actor_id, 2);
+        }
+
+        for _ in 0..12 {
+            sim.tick();
+        }
+
+        let source = sim
+            .religious_profiles
+            .get(&1)
+            .expect("source settlement should have an emergent religion profile");
+        let connected = sim
+            .religious_profiles
+            .get(&2)
+            .expect("connected settlement should have an emergent religion profile");
+        assert!(
+            source.monitoring > 0.0 || source.mythic_coherence > 0.0,
+            "hardship and population should produce an emergent religion signal"
+        );
+        assert!(
+            connected.monitoring > 0.0 || connected.mythic_coherence > 0.0,
+            "trade-connected settlement should receive/spread religion pressure"
+        );
+        assert!(
+            sim.last_tick_settlement_trade_flows()
+                .iter()
+                .any(|flow| flow.from_settlement == 1 && flow.to_settlement == 2 && flow.qty > 0),
+            "religion spread test expects the settlements to be connected by trade"
         );
     }
 

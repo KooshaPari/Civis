@@ -34,7 +34,7 @@ pub use institution::{
     InstitutionLedger, InstitutionLedgerError, InstitutionPosting, LedgerSide, Taxation,
     INSTITUTION_MARKET, INSTITUTION_TREASURY,
 };
-pub use market::{GoodId, MarketState, MultiGoodMarket, Order, OrderBook, Side, Trade};
+pub use market::{DEFAULT_SMOOTHING_FACTOR, GoodId, MarketState, MultiGoodMarket, Order, OrderBook, SettlementTradeFlow, Side, Trade};
 pub use stocks::{Good, Stocks};
 pub use tax_policy::{apply_tax_policy, TaxPolicy, TaxPolicyOutcome};
 pub use trade_flow::{complementary_routes, complementary_round_trips, ComplementaryTradeFlow, SettlementFlow};

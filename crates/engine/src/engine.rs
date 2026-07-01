@@ -2126,10 +2126,17 @@ impl Simulation {
         }
     }
 
-    /// Research tier derived from the number of completed techs.
+    /// Research tier derived from unlocked faction tech, with legacy cache fallback.
     #[must_use]
     pub fn research_tier(&self) -> u64 {
-        self.research_cache.researched.len() as u64
+        let faction_tech_tier = self
+            .era_progression
+            .faction_tech
+            .values()
+            .map(|state| u64::from(state.tech_level))
+            .max()
+            .unwrap_or(0);
+        faction_tech_tier.max(self.research_cache.researched.len() as u64)
     }
 
     /// Per-faction ideology and behavior-coupling vectors.

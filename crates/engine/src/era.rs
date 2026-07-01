@@ -440,6 +440,51 @@ mod tests {
         );
     }
 
+    /// FR-CIV-TECH: sim ticks accumulate research and unlock tech levels.
+    #[test]
+    fn fr_civ_tech_ticks_unlock_faction_tech() {
+        let mut sim = thriving_stagnant_sim();
+        let start_level = sim
+            .era_progression()
+            .faction_tech
+            .get(&0)
+            .cloned()
+            .unwrap_or_default()
+            .tech_level;
+
+        sim.advance_ticks(1);
+        let after_one = sim
+            .era_progression()
+            .faction_tech
+            .get(&0)
+            .cloned()
+            .unwrap_or_default();
+        assert!(
+            after_one.research_points > 0,
+            "FR-CIV-TECH: research should accumulate during the sim tick"
+        );
+
+        sim.advance_ticks(8);
+        let after_n = sim
+            .era_progression()
+            .faction_tech
+            .get(&0)
+            .cloned()
+            .unwrap_or_default();
+
+        assert!(
+            after_n.tech_level > start_level,
+            "FR-CIV-TECH: N ticks should unlock a tech level (start={}, end={})",
+            start_level,
+            after_n.tech_level
+        );
+        assert_eq!(
+            sim.research_tier(),
+            u64::from(after_n.tech_level),
+            "FR-CIV-TECH: public research tier should reflect unlocked faction tech"
+        );
+    }
+
     /// FR-TECH-gating: can_unlock predicate gates tech level advancement.
     #[test]
     fn can_unlock_gates_tech_advancement() {

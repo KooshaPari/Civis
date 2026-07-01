@@ -58,8 +58,8 @@ pub use engine::{
     job_type_for_civilian_id, Building, BuildingType, Citizen, CombatDamagePulse, DiplomacyKind,
     EconomicFocus, EconomicFocusEvent, FactionRelationSnapshot, Fixed, InstitutionEvent, JobType,
     MilitaryUnit, Position, ResourceType, Resources, Sim, SimSeed, Simulation, SimulationSnapshot,
-    StratBand, StratificationEvent, StratificationEventKind, StratificationReport, TileInspection,
-    TradeRoute, UnitType, WorldState,
+    PsycheDrivenBehavior, StratBand, StratificationEvent, StratificationEventKind,
+    StratificationReport, TileInspection, TradeRoute, UnitType, WorldState,
 };
 pub use hash_chain::hash_hex;
 pub use replay::ReplayLog;

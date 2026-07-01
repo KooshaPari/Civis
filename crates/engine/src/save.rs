@@ -1,6 +1,6 @@
 //! Real `.civsave` snapshot persistence for `Simulation`.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, HashSet};
 use std::fs;
 use std::path::Path;
 
@@ -49,7 +49,7 @@ struct SavedSimulation {
     faction_languages: BTreeMap<u32, LanguageState>,
     settlements: BTreeMap<u32, u32>,
     institutions: BTreeMap<u32, Institution>,
-    institution_levels_emitted: BTreeSet<(u32, InstitutionKind, u8)>,
+    institution_levels_emitted: HashSet<(u32, InstitutionKind, u8)>,
     faction_doctrines: Vec<DoctrineLibrary>,
 }
 

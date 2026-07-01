@@ -56,7 +56,7 @@ pub use emergence_metrics::{EmergenceBranchingState, EmergenceSample};
 pub use engine::{
     awakening_belief_gain, awakening_cohesion_gain, Building, BuildingType,
     CombatDamagePulse, DiplomacyKind, EconomicFocus, EconomicFocusEvent, FactionRelationSnapshot, Fixed, MilitaryUnit, Position,
-    Simulation, UnitType, WorldState,
+    PsycheDrivenBehavior, Simulation, UnitType, WorldState,
 };
 
 // DoctrineLibrary is defined in civ-tactics and re-exported here.

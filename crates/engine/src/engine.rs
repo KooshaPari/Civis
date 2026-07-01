@@ -4,7 +4,7 @@
 
 use civ_agents::{
     count_civilians, propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at,
-    ActorVisualKind, Alignment, ClusterId, ClusterMember, Civilian as AgentCivilian, CohortStats,
+    ActorVisualKind, AgentAction, Alignment, ClusterId, ClusterMember, Civilian as AgentCivilian, CohortStats,
     DiplomacyMatrix, DiplomacyOutcome, DiplomacySignal, LodTier, Needs, Psyche, RelationKind,
     SocialGraph, Position3d, Tools, Wardrobe,
 };
@@ -54,6 +54,7 @@ use crate::policy::ControlSignals;
 use crate::policy::Policy;
 use crate::policy::PolicyInput;
 use crate::policy::DEFAULT_ECONOMY_POLICY;
+use crate::psyche_behavior::{behavior_from_psyche, EmotionDrivenBehavior};
 use crate::religion::{
     apply_big_gods_response, last_religion_sample, substrate_gradients_for,
     ReligiousProfile, SubstrateGradients,
@@ -100,6 +101,7 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "institutions",
     "economic_focus",
     "emergence",
+    "psyche_behavior",
     "culture",
     "language",
     "sentience",
@@ -177,6 +179,24 @@ pub enum JobType {
     Priest,
     Admin,
     Unemployed,
+}
+
+/// Per-agent behavior selected from current psyche state (FR-CIV-PSYCHE).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PsycheDrivenBehavior {
+    pub emotion: EmotionDrivenBehavior,
+    pub action: AgentAction,
+    pub tick: u64,
+}
+
+#[must_use]
+pub fn action_from_emotion_behavior(behavior: EmotionDrivenBehavior) -> AgentAction {
+    match behavior {
+        EmotionDrivenBehavior::Flee => AgentAction::Flee,
+        EmotionDrivenBehavior::Cooperate => AgentAction::Socialize,
+        EmotionDrivenBehavior::Aggress => AgentAction::Work,
+        EmotionDrivenBehavior::Neutral => AgentAction::Work,
+    }
 }
 
 /// Deterministic job assignment for agent civilians (stable across seeds).
@@ -2322,6 +2342,7 @@ impl Simulation {
             "institutions" => self.phase_institutions(),
             "economic_focus" => self.phase_economic_focus(),
             "emergence" => self.phase_emergence(),
+            "psyche_behavior" => self.phase_psyche_behavior(),
             "culture" => self.phase_culture(),
             "language" => self.phase_language(),
             "sentience" => self.phase_sentience(),
@@ -3568,6 +3589,37 @@ impl Simulation {
     fn phase_economic_focus(&mut self) {
         for event in &self.econ_focus_stability {
             self.econ_focus.insert(event.settlement_id, event.to);
+        }
+    }
+
+    /// FR-CIV-PSYCHE — after psyche/emergence updates mood and beliefs, derive
+    /// each agent's current behavior so downstream systems can consume a
+    /// tick-local action instead of reinterpreting raw affect.
+    fn phase_psyche_behavior(&mut self) {
+        let tick = self.state.tick;
+        let behaviors: Vec<(Entity, PsycheDrivenBehavior)> = self
+            .world
+            .query::<&Psyche>()
+            .iter()
+            .map(|(entity, psyche)| {
+                let emotion = behavior_from_psyche(psyche);
+                (
+                    entity,
+                    PsycheDrivenBehavior {
+                        emotion,
+                        action: action_from_emotion_behavior(emotion),
+                        tick,
+                    },
+                )
+            })
+            .collect();
+
+        for (entity, behavior) in behaviors {
+            if let Ok(mut current) = self.world.get::<&mut PsycheDrivenBehavior>(entity) {
+                *current = behavior;
+            } else {
+                let _ = self.world.insert(entity, (behavior,));
+            }
         }
     }
 
@@ -6576,6 +6628,15 @@ impl Simulation {
             .query::<&AgentCivilian>()
             .iter()
             .find_map(|(entity, civilian)| (civilian.id == agent_id).then_some(entity))
+    }
+    /// Snapshot all civilian agent identity components.
+    #[must_use]
+    pub fn all_agents(&self) -> Vec<AgentCivilian> {
+        self.world
+            .query::<&AgentCivilian>()
+            .iter()
+            .map(|(_, civilian)| civilian.clone())
+            .collect()
     }
     /// Micro-actor action count for emergence metrics (no-op stub).
     pub fn micro_actor_action_count(&self) -> u32 {

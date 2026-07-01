@@ -41,6 +41,7 @@ pub use trade_flow::{complementary_routes, complementary_round_trips, Complement
 pub use trade_routes::{
     compute_trade_routes, route_flow, routes_lexicographic, Settlement, SettlementId, TradeRoute,
 };
+pub use market::settlement_trade_flow_from_supply_demand;
 
 use serde::{Deserialize, Serialize};
 

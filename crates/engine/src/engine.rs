@@ -5,8 +5,9 @@
 use civ_agents::culture::{cultural_distance, language_distance, CultureProfile};
 use civ_agents::diplomacy::GriefAccumulator;
 use civ_agents::{
-    cluster::{apply_membership_payoffs, ClusterState, MembershipPayoff, MembershipPayoffTotals},
-    count_civilians, daily_path::{pick_target, Poi, PoiKind, PoiRegistry},
+    cluster::{cluster_by_colocation, MembershipPayoff},
+    count_civilians,
+    daily_path::{pick_target, DailyPathDecision, Poi, PoiKind, PoiRegistry},
     propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at,
     ActorVisualKind, AgentAction, Alignment, Civilian as AgentCivilian, ClusterId, ClusterMember, CohortStats,
     DiplomacyMatrix, DiplomacyOutcome, DiplomacySignal, LodTier, Needs, Position3d, Psyche,
@@ -41,7 +42,7 @@ use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use std::ops::{Deref, DerefMut};
 
 /// Fixed-point decimal (48-bit signed integer + 16 fractional bits).
@@ -123,6 +124,21 @@ pub struct ResearchCache {
 
 /// Per-cluster stockpiles keyed by emergent settlement id.
 pub type ClusterStocks = civ_economy::Stocks;
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
+pub struct MembershipPayoffTotals {
+    pub cluster_id: u64,
+    pub members: u32,
+    pub total_payoff: f32,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LifecycleCounters {
+    pub children: u32,
+    pub adults: u32,
+    pub elders: u32,
+    pub dead: u32,
+}
 
 /// Broad economic orientation inferred from a civilization's strongest signal.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -676,8 +692,10 @@ pub struct Simulation {
     last_tick_audio_events: Vec<civ_audio::triggers::SfxTrigger>,
     /// Last-tick decisions for the daily-path phase (FR-CIV-LIFE-010..016).
     pub last_tick_daily_path: Vec<DailyPathDecision>,
+    /// Per-tick lifecycle label counts populated by `phase_life`.
+    last_tick_lifecycle_metrics: LifecycleCounters,
     /// Per-cluster payoffs emitted by the cluster phase (FR-CIV-LIFE-030..035).
-    pub last_tick_cluster_payoffs: Vec<(u64, MembershipPayoffTotals)>,
+    pub last_tick_cluster_payoffs: Vec<MembershipPayoffTotals>,
     /// Per-culture music cue parameters derived from emergent culture + state.
     /// Updated in `phase_audio` and surfaced on `SimulationSnapshot::music_cues`
     /// as a stable per-cluster key-value map.
@@ -757,7 +775,7 @@ pub struct Simulation {
     /// Monotonic set of `(settlement_id, kind, level)` we have already emitted
     /// as an `Upgraded` event. Guarantees one-shot upgrade emission even
     /// across population dips/rebounds (FR-CIV-GOV-003).
-    institution_levels_emitted: BTreeSet<(u32, civ_institutions::InstitutionKind, u8)>,
+    institution_levels_emitted: HashSet<(u32, civ_institutions::InstitutionKind, u8)>,
     /// Per-settlement food stock, settable by tests + scenario loaders so
     /// [`Simulation::phase_social_mood`] can derive `food_score` deterministically
     /// (FR-CIV-GOV-100). Keyed by settlement id (`u32`); missing keys default
@@ -1528,6 +1546,7 @@ impl Simulation {
             last_tick_mod_lifecycle: Vec::new(),
             last_tick_audio_events: Vec::new(),
             last_tick_daily_path: Vec::new(),
+            last_tick_lifecycle_metrics: LifecycleCounters::default(),
             last_tick_cluster_payoffs: Vec::new(),
             last_tick_music_cues: BTreeMap::new(),
             last_tick_disaster_events: Vec::new(),
@@ -1556,7 +1575,7 @@ impl Simulation {
             settlements: BTreeMap::new(),
             institutions: BTreeMap::new(),
             last_tick_institution_events: Vec::new(),
-            institution_levels_emitted: BTreeSet::new(),
+            institution_levels_emitted: HashSet::new(),
             settlement_food_stocked: BTreeMap::new(),
             settlement_housing_capacity: BTreeMap::new(),
             settlement_crime_pressure: BTreeMap::new(),
@@ -1687,6 +1706,7 @@ impl Simulation {
             last_tick_mod_lifecycle: Vec::new(),
             last_tick_audio_events: Vec::new(),
             last_tick_daily_path: Vec::new(),
+            last_tick_lifecycle_metrics: LifecycleCounters::default(),
             last_tick_cluster_payoffs: Vec::new(),
             last_tick_music_cues: BTreeMap::new(),
             last_tick_disaster_events: Vec::new(),
@@ -1715,7 +1735,7 @@ impl Simulation {
             settlements: BTreeMap::new(),
             institutions: BTreeMap::new(),
             last_tick_institution_events: Vec::new(),
-            institution_levels_emitted: BTreeSet::new(),
+            institution_levels_emitted: HashSet::new(),
             settlement_food_stocked: BTreeMap::new(),
             settlement_housing_capacity: BTreeMap::new(),
             settlement_crime_pressure: BTreeMap::new(),
@@ -1900,7 +1920,7 @@ impl Simulation {
     ) -> (
         BTreeMap<u32, u32>,
         BTreeMap<u32, civ_institutions::Institution>,
-        BTreeSet<(u32, civ_institutions::InstitutionKind, u8)>,
+        HashSet<(u32, civ_institutions::InstitutionKind, u8)>,
     ) {
         (
             self.settlements.clone(),
@@ -1914,7 +1934,7 @@ impl Simulation {
         &mut self,
         settlements: BTreeMap<u32, u32>,
         institutions: BTreeMap<u32, civ_institutions::Institution>,
-        institution_levels_emitted: BTreeSet<(u32, civ_institutions::InstitutionKind, u8)>,
+        institution_levels_emitted: HashSet<(u32, civ_institutions::InstitutionKind, u8)>,
     ) {
         self.settlements = settlements;
         self.institutions = institutions;
@@ -3259,51 +3279,47 @@ impl Simulation {
     /// - assigns each adult a daily target via civ_agents::daily_path::pick_target,
     /// - rolls the next path step and stores decisions in last_tick_daily_path.
     fn phase_daily_path(&mut self) {
-        use civ_agents::daily_path::{pick_target, path_step, LifeNeeds, PoiKind};
+        use civ_agents::daily_path::path_step;
 
         self.last_tick_daily_path.clear();
 
-        let mut registry = PoiRegistry::new();
-        for (settlement_id, settlement) in self.settlements.iter() {
-            let kind = if settlement.population >= 500 {
-                PoiKind::Market
-            } else if settlement.population >= 100 {
-                PoiKind::Tavern
-            } else {
-                PoiKind::Shrine
+        let mut registry = PoiRegistry::default();
+        for (&settlement_id, &population) in self.settlements.iter() {
+            let Some(pos) = settlement_centroid_position(&self.world, u64::from(settlement_id)) else {
+                continue;
             };
-            registry.register(Poi {
-                id: *settlement_id,
-                kind,
-                coord: settlement.centroid,
-            });
+            for (offset, kind) in [
+                (0_u64, PoiKind::FoodSource),
+                (1, PoiKind::WaterSource),
+                (2, PoiKind::Shelter),
+                (3, PoiKind::SafeZone),
+                (4, PoiKind::SocialHub),
+                (5, PoiKind::Clinic),
+            ] {
+                registry.add(Poi {
+                    id: u64::from(settlement_id) * 10 + offset,
+                    kind,
+                    pos,
+                    capacity: population.max(1),
+                });
+            }
         }
 
-        for (entity, (civilian, pos, needs)) in self
-            .world
-            .query::<(&AgentCivilian, &Position3d, &Needs)>()
-            .iter()
-        {
-            let life_needs = LifeNeeds {
+        for (_, (pos, needs)) in self.world.query::<(&Position3d, &Needs)>().iter() {
+            let life_needs = civ_needs::Needs {
                 food: needs.food,
+                water: needs.food,
                 rest: needs.shelter,
-                social: needs.safety,
-                safety: needs.belonging,
+                safety: needs.safety,
+                social: needs.belonging,
+                health: needs.safety,
             };
             if let Some(poi) = pick_target(&life_needs, &registry, pos) {
-                let step = path_step(pos, &poi.coord);
+                let step = path_step(pos, &poi.pos, FIXED_SCALE / 4);
                 self.last_tick_daily_path.push(DailyPathDecision {
-                    civilian: entity,
-                    settlement_id: poi.id,
-                    activity: match poi.kind {
-                        PoiKind::Market => Activity::Trade,
-                        PoiKind::Tavern => Activity::Socialize,
-                        PoiKind::Shrine => Activity::Worship,
-                        PoiKind::Library => Activity::Study,
-                        PoiKind::Workshop => Activity::Work,
-                    },
-                    dx: step.dx,
-                    dy: step.dy,
+                    poi_kind: poi.kind,
+                    target_x: (step.coord.x / FIXED_SCALE) as i32,
+                    target_z: (step.coord.z / FIXED_SCALE) as i32,
                 });
             }
         }
@@ -3313,17 +3329,49 @@ impl Simulation {
     /// - collects cluster membership across all settlements,
     /// - applies membership payoffs to drive cluster formation/attrition.
     fn phase_cluster(&mut self) {
-        let memberships: Vec<ClusterState> = self
-            .settlements
+        let positions: Vec<(u64, Position3d)> = self
+            .world
+            .query::<(&AgentCivilian, &Position3d)>()
             .iter()
-            .map(|(settlement_id, settlement)| ClusterState {
-                settlement_id: *settlement_id,
-                clusters: settlement.clusters.clone(),
-            })
+            .map(|(_, (civilian, pos))| (civilian.id, *pos))
             .collect();
+        let clusters = cluster_by_colocation(&positions, SETTLEMENT_CLUSTER_RADIUS_FP);
+        let cluster_by_agent: BTreeMap<u64, ClusterId> = clusters.into_iter().collect();
+        let payoff = SettlementMembershipPayoff {
+            stock_by_cluster: &self.cluster_stocks,
+        };
+        let mut totals: BTreeMap<u64, MembershipPayoffTotals> = BTreeMap::new();
 
-        let totals = apply_membership_payoffs(&memberships);
-        self.last_tick_cluster_membership = totals;
+        let mut updates = Vec::new();
+        for (entity, civilian) in self.world.query::<&AgentCivilian>().iter() {
+            let cluster = cluster_by_agent
+                .get(&civilian.id)
+                .copied()
+                .unwrap_or(ClusterId(civilian.id));
+            let value = payoff.payoff(civilian.id, cluster);
+            let entry = totals.entry(cluster.0).or_insert(MembershipPayoffTotals {
+                cluster_id: cluster.0,
+                members: 0,
+                total_payoff: 0.0,
+            });
+            entry.members = entry.members.saturating_add(1);
+            entry.total_payoff += value;
+            updates.push((entity, cluster));
+        }
+
+        for (entity, cluster) in updates {
+            if self.world.get::<&ClusterMember>(entity).is_ok() {
+                let mut member = self
+                    .world
+                    .get::<&mut ClusterMember>(entity)
+                    .expect("cluster member checked above");
+                member.cluster = cluster;
+            } else {
+                let _ = self.world.insert_one(entity, ClusterMember { cluster });
+            }
+        }
+
+        self.last_tick_cluster_payoffs = totals.into_values().collect();
     }
 
     /// Active lifecycle loop:
@@ -3654,12 +3702,12 @@ impl Simulation {
         };
         let hardship = settlement_actor_hardship_signal(
             settlement_id,
-            &self.settlement_actors,
+            &settlement_actors_by_settlement(&self.actor_settlement),
             &self.actor_hardship,
         );
         let kinship = settlement_kinship_density_signal(
             settlement_id,
-            &self.settlement_actors,
+            &settlement_actors_by_settlement(&self.actor_settlement),
             &self.kinship,
         );
         let unrest = self
@@ -3670,16 +3718,15 @@ impl Simulation {
             })
             .unwrap_or_else(|| {
                 let gini = (self
-                    .settlement_gini
+                    .unrest_settlement_gini
                     .get(&settlement_id)
                     .copied()
-                    .unwrap_or(0)
-                    .clamp(0, 100) as f32)
-                    / 100.0;
+                    .unwrap_or(0.0)
+                    .clamp(0.0, 1.0) as f32);
                 gini * crate::religion::MAX_MISERY_UNREST
             });
         let cohesion = self
-            .last_tick_cohesion_snapshots
+            .last_tick_cohesion
             .get(&settlement_id)
             .map(|snapshot| fabric_tier_signal(snapshot.fabric))
             .unwrap_or(0.5);
@@ -3694,7 +3741,7 @@ impl Simulation {
             unrest: base
                 .unrest
                 .max(unrest.clamp(0.0, crate::religion::MAX_MISERY_UNREST)),
-            migration_rate: base.migration_rate.max((1.0 - cohesion).clamp(0.0, 1.0)),
+            migration_rate: base.migration_rate.max((1.0_f32 - cohesion).clamp(0.0, 1.0)),
             language_distance: base.language_distance.max((1.0 - trade_contact) * 0.25),
         }
     }
@@ -3725,12 +3772,12 @@ impl Simulation {
                 continue;
             };
             let cohesion_a = self
-                .last_tick_cohesion_snapshots
+                .last_tick_cohesion
                 .get(&a)
                 .map(|s| fabric_tier_signal(s.fabric))
                 .unwrap_or(0.5);
             let cohesion_b = self
-                .last_tick_cohesion_snapshots
+                .last_tick_cohesion
                 .get(&b)
                 .map(|s| fabric_tier_signal(s.fabric))
                 .unwrap_or(0.5);
@@ -6005,6 +6052,57 @@ const SETTLEMENT_MIN_MEMBERS: u32 = 2;
 const SETTLEMENT_CLUSTER_RADIUS_FP: i64 = (6 * FIXED_SCALE) / 100;
 /// Contact radius between settlement pairs (2× cluster radius).
 const SETTLEMENT_CONTACT_RADIUS_FP: i64 = SETTLEMENT_CLUSTER_RADIUS_FP * 2;
+
+struct SettlementMembershipPayoff<'a> {
+    stock_by_cluster: &'a BTreeMap<u64, ClusterStocks>,
+}
+
+impl MembershipPayoff for SettlementMembershipPayoff<'_> {
+    fn payoff(&self, _agent_id: u64, cluster: ClusterId) -> f32 {
+        let food = self
+            .stock_by_cluster
+            .get(&cluster.0)
+            .map(|stocks| stocks.get(civ_economy::Good::Food))
+            .unwrap_or(0);
+        (food as f32 / 10.0).clamp(-1.0, 1.0)
+    }
+}
+
+fn settlement_actors_by_settlement(
+    actor_settlement: &BTreeMap<u64, u32>,
+) -> BTreeMap<u32, BTreeSet<u64>> {
+    let mut by_settlement: BTreeMap<u32, BTreeSet<u64>> = BTreeMap::new();
+    for (&actor_id, &settlement_id) in actor_settlement {
+        by_settlement
+            .entry(settlement_id)
+            .or_default()
+            .insert(actor_id);
+    }
+    by_settlement
+}
+
+fn settlement_centroid_position(world: &World, settlement_id: u64) -> Option<Position3d> {
+    let mut count = 0_i64;
+    let mut sx = 0_i128;
+    let mut sy = 0_i128;
+    let mut sz = 0_i128;
+    for (_, (member, pos)) in world.query::<(&ClusterMember, &Position3d)>().iter() {
+        if member.cluster.0 == settlement_id {
+            count += 1;
+            sx += i128::from(pos.coord.x);
+            sy += i128::from(pos.coord.y);
+            sz += i128::from(pos.coord.z);
+        }
+    }
+    (count > 0).then(|| Position3d {
+        coord: WorldCoord {
+            x: (sx / i128::from(count)) as i64,
+            y: (sy / i128::from(count)) as i64,
+            z: (sz / i128::from(count)) as i64,
+        },
+    })
+}
+
 /// Belief units required to raise the conflict threshold by one currency unit.
 const BELIEF_PEACE_DIVISOR: u64 = 50;
 /// Cap on the belief-driven peace bonus: shared faith can at most double a

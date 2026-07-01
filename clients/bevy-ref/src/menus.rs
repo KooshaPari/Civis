@@ -12,86 +12,9 @@ use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 use crate::ui_theme::{GLASS_FILL, KC_ACCENT, RADIUS_PANEL, liquid_glass_frame};
 
 const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
-const ACCENT_HI: egui::Color32 = egui::Color32::from_rgb(140, 224, 255);
-const GOLD: egui::Color32 = egui::Color32::from_rgb(232, 184, 75);
 const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
-const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);
-const CHIP_HOVER: egui::Color32 = egui::Color32::from_rgba_premultiplied(44, 54, 74, 245);
 const DIM: egui::Color32 = egui::Color32::from_rgb(150, 158, 178);
 const OVERLAY_DIM: egui::Color32 = egui::Color32::from_rgba_premultiplied(0, 0, 0, 160);
-
-const LOGO_PNG: &[u8] = include_bytes!("../assets/ui/logo.png");
-const TITLE_BG_PNG: &[u8] = include_bytes!("../assets/ui/title-bg.png");
-const LOADING_BG_PNG: &[u8] = include_bytes!("../assets/ui/loading-bg.png");
-const SPINNER_PNG: &[u8] = include_bytes!("../assets/ui/loading-spinner.png");
-
-const TIPS: &[&str] = &[
-    "Tip: Press Esc in-game to pause and adjust settings.",
-    "Tip: Different eras unlock new buildings and technologies.",
-    "Tip: Your choices shape the world - choose wisely.",
-    "Tip: Zoom in to inspect individual citizens.",
-    "Tip: Trade routes between factions boost prosperity.",
-];
-
-#[derive(Resource, Default)]
-struct MenuTextures {
-    logo: Option<egui::TextureHandle>,
-    title_bg: Option<egui::TextureHandle>,
-    loading_bg: Option<egui::TextureHandle>,
-    spinner: Option<egui::TextureHandle>,
-    loaded: bool,
-}
-
-impl MenuTextures {
-    fn ensure_loaded(&mut self, ctx: &egui::Context) {
-        if self.loaded {
-            return;
-        }
-        self.loaded = true;
-        self.logo = decode_texture(ctx, "menu_logo", LOGO_PNG);
-        self.title_bg = decode_texture(ctx, "menu_title_bg", TITLE_BG_PNG);
-        self.loading_bg = decode_texture(ctx, "menu_loading_bg", LOADING_BG_PNG);
-        self.spinner = decode_texture(ctx, "menu_spinner", SPINNER_PNG);
-    }
-}
-
-fn decode_texture(ctx: &egui::Context, name: &str, bytes: &[u8]) -> Option<egui::TextureHandle> {
-    use bevy::asset::RenderAssetUsages;
-    use bevy::image::{Image, ImageType};
-    use bevy::render::render_resource::TextureFormat;
-
-    let decoded = Image::from_buffer(
-        bytes,
-        ImageType::Extension("png"),
-        Default::default(),
-        true,
-        bevy::image::ImageSampler::Default,
-        RenderAssetUsages::RENDER_WORLD,
-    );
-    let img = match decoded {
-        Ok(i) => i,
-        Err(e) => {
-            error!("menu texture '{name}' failed to decode: {e}");
-            return None;
-        }
-    };
-    let rgba = img.convert(TextureFormat::Rgba8UnormSrgb).unwrap_or(img);
-    let size = rgba.texture_descriptor.size;
-    let (w, h) = (size.width as usize, size.height as usize);
-    let Some(data) = rgba.data else {
-        error!("menu texture '{name}' decoded with no pixel data");
-        return None;
-    };
-    if data.len() < w * h * 4 {
-        error!(
-            "menu texture '{name}' pixel buffer too small ({} bytes for {w}x{h})",
-            data.len()
-        );
-        return None;
-    }
-    let color = egui::ColorImage::from_rgba_unmultiplied([w, h], &data[..w * h * 4]);
-    Some(ctx.load_texture(name, color, egui::TextureOptions::LINEAR))
-}
 
 /// Shell state used by the Bevy window client (main menu + gameplay + pause states).
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
@@ -222,13 +145,11 @@ impl Plugin for MenusPlugin {
             .init_resource::<SettingsState>()
             .init_resource::<MenuCommand>()
             .init_resource::<MainMenuSaves>()
-            .init_resource::<MenuTextures>()
             .add_systems(Update, (toggle_pause, tick_era_banner))
             .add_systems(
                 EguiPrimaryContextPass,
                 (
                     draw_main_menu,
-                    draw_loading_screen,
                     draw_worldgen_overlay,
                     draw_pause_menu,
                     draw_era_banner,
@@ -274,7 +195,6 @@ fn draw_main_menu(
     mut command: ResMut<MenuCommand>,
     saves: Res<MainMenuSaves>,
     mut settings_open: ResMut<SettingsOpen>,
-    mut textures: ResMut<MenuTextures>,
 ) {
     let Some(state) = state else {
         return;
@@ -285,66 +205,63 @@ fn draw_main_menu(
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-    textures.ensure_loaded(ctx);
-    image_backdrop(ctx, textures.title_bg.as_ref(), "main_menu_bg");
 
     egui::Area::new(egui::Id::new("main_menu_area"))
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
         .order(egui::Order::Foreground)
         .show(ctx, |ui| {
-            main_menu_panel(
-                ui,
-                &mut *command,
-                &saves,
-                &mut *settings_open,
-                textures.logo.as_ref(),
-            );
-        });
-    egui::Area::new(egui::Id::new("main_menu_footer"))
-        .anchor(egui::Align2::CENTER_BOTTOM, egui::vec2(0.0, -16.0))
-        .order(egui::Order::Foreground)
-        .interactable(false)
-        .show(ctx, |ui| {
-            ui.label(
-                egui::RichText::new("Civis - pre-alpha sandbox")
-                    .color(DIM.gamma_multiply(0.8))
-                    .size(11.0),
-            );
-        });
-}
+            egui::Frame::NONE
+                .fill(GLASS_FILL)
+                .inner_margin(egui::Margin::same(28))
+                .show(ui, |ui| {
+                    ui.set_min_width(420.0);
+                    ui.vertical_centered(|ui| {
+                        ui.label(
+                            egui::RichText::new("Civis")
+                                .size(52.0)
+                                .color(KC_ACCENT)
+                                .strong(),
+                        );
+                        ui.label(
+                            egui::RichText::new("Main menu")
+                                .size(16.0)
+                                .color(DIM)
+                                .italics(),
+                        );
+                        ui.add_space(16.0);
 
-fn draw_loading_screen(
-    mut contexts: EguiContexts,
-    state: Option<Res<State<AppState>>>,
-    mut textures: ResMut<MenuTextures>,
-    time: Res<Time>,
-) {
-    let Some(state) = state else {
-        return;
-    };
-    if *state != AppState::WorldGen {
-        return;
-    }
-    let Ok(ctx) = contexts.ctx_mut() else {
-        return;
-    };
-    textures.ensure_loaded(ctx);
-    image_backdrop(ctx, textures.loading_bg.as_ref(), "loading_bg");
-    let elapsed = time.elapsed_secs();
-    ctx.request_repaint();
+                        if menu_button(ui, "\u{25b6}  New World").clicked() {
+                            command.action = MainMenuCommand::NewWorld;
+                        }
+                        ui.add_space(8.0);
 
-    egui::Area::new(egui::Id::new("loading_area"))
-        .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
-        .order(egui::Order::Foreground)
-        .show(ctx, |ui| {
-            loading_panel(
-                ui,
-                worldgen_progress_fraction(elapsed),
-                "Spinning up world generation...",
-                elapsed,
-                textures.logo.as_ref(),
-                textures.spinner.as_ref(),
-            );
+                        let continue_label = if saves.can_continue {
+                            "\u{1f3c3}  Continue"
+                        } else {
+                            "\u{1f3c3}  Continue (no save)"
+                        };
+                        let continue_btn = ui.add_enabled(
+                            saves.can_continue,
+                            egui::Button::new(egui::RichText::new(continue_label).size(16.0))
+                                .fill(KC_ACCENT.gamma_multiply(0.15))
+                                .min_size(egui::vec2(220.0, 40.0))
+                                .corner_radius(egui::CornerRadius::same(8)),
+                        );
+                        if continue_btn.clicked() {
+                            command.action = MainMenuCommand::Continue;
+                        }
+                        ui.add_space(8.0);
+
+                        if menu_button(ui, "\u{2699}  Settings").clicked() {
+                            command.action = MainMenuCommand::OpenSettings;
+                            settings_open.0 = true;
+                        }
+                        ui.add_space(8.0);
+                        if menu_button(ui, "\u{23fb}  Quit").clicked() {
+                            command.action = MainMenuCommand::Quit;
+                        }
+                    });
+                });
         });
 }
 
@@ -358,7 +275,29 @@ fn draw_worldgen_overlay(mut contexts: EguiContexts, state: Option<Res<State<App
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-    ctx.request_repaint();
+
+    egui::Area::new(egui::Id::new("worldgen_panel_area"))
+        .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+        .order(egui::Order::Foreground)
+        .show(ctx, |ui| {
+            egui::Frame::NONE
+                .fill(GLASS_FILL)
+                .inner_margin(egui::Margin::same(24))
+                .show(ui, |ui| {
+                    ui.vertical_centered(|ui| {
+                        ui.label(
+                            egui::RichText::new("Booting Civis")
+                                .size(28.0)
+                                .color(KC_ACCENT)
+                                .strong(),
+                        );
+                        ui.label(
+                            egui::RichText::new("Spinning up world generation…")
+                                .color(DIM),
+                        );
+                    });
+                });
+        });
 }
 
 fn draw_pause_menu(

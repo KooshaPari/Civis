@@ -15,8 +15,11 @@ use civ_agents::{
 use civ_audio::{derive_music_cue, mood::MusicCue, triggers::SfxTrigger};
 use civ_build::{Allocator, BuildSite, BuildingGraph, DemandSignals, ProductionEvent};
 use civ_diffusion::DiffusionParams;
+use civ_economy::{
+    settlement_trade_flow_from_supply_demand, AllocationEngine, CapitalistAllocator, EconomyState,
+    Good, MarketState, SettlementTradeFlow,
+};
 use civ_economy::{collect_taxes, Taxation};
-use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
 use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold};
 use civ_genetics::Dna;
 use civ_mod_host::ModHost;
@@ -615,6 +618,8 @@ pub struct Simulation {
     /// Per-faction cultural identity, norms, and behavior signals.
     pub faction_ideologies: BTreeMap<u32, FactionIdeologyState>,
     cluster_stocks: BTreeMap<u64, ClusterStocks>,
+    /// Last-tick settlement trade flows derived during `phase_economy`.
+    last_tick_settlement_trade_flows: Vec<SettlementTradeFlow>,
     pub last_settlement_count: u32,
     /// Per-faction aggression (u32 faction id → average aggression).
     pub faction_aggression: std::collections::BTreeMap<u32, f32>,
@@ -1485,6 +1490,7 @@ impl Simulation {
             cluster_cultures: BTreeMap::new(),
             faction_ideologies: BTreeMap::new(),
             cluster_stocks: BTreeMap::new(),
+            last_tick_settlement_trade_flows: Vec::new(),
             last_settlement_count: 0,
             faction_aggression: BTreeMap::new(),
             emergence: crate::emergence::EmergenceState::new(42),
@@ -1642,6 +1648,7 @@ impl Simulation {
             cluster_cultures: BTreeMap::new(),
             faction_ideologies: BTreeMap::new(),
             cluster_stocks: BTreeMap::new(),
+            last_tick_settlement_trade_flows: Vec::new(),
             last_settlement_count: 0,
             faction_aggression: BTreeMap::new(),
             emergence: crate::emergence::EmergenceState::new(seed),
@@ -2257,6 +2264,7 @@ impl Simulation {
         self.last_tick_engagements.clear();
         self.last_tick_mod_lifecycle.clear();
         self.last_tick_construction_events.clear();
+        self.last_tick_settlement_trade_flows.clear();
         self.last_tick_stratification.clear();
         self.last_tick_stratification_reports.clear();
         // Audio buffer is reset at the top of the tick so caller-side
@@ -4755,8 +4763,68 @@ impl Simulation {
         civ_economy::step(&mut self.economy_state);
 
         self.state.energy_budget_joules = Fixed::from_num(self.economy_state.energy_budget_joules);
+        self.tick_settlement_trade_flows();
         self.tick_trade_routes();
         self.market_state.step(self.state.tick);
+    }
+
+    fn tick_settlement_trade_flows(&mut self) {
+        self.last_tick_settlement_trade_flows.clear();
+
+        let mut settlements: Vec<SettlementMarketSetup> = self
+            .settlements
+            .iter()
+            .map(|(&settlement_id, &population)| {
+                let supply = self
+                    .settlement_food_stocked
+                    .get(&settlement_id)
+                    .copied()
+                    .unwrap_or(0)
+                    .max(0);
+                let demand = i64::from(population);
+                let price = market_price_from_balance(supply, demand);
+                SettlementMarketSetup {
+                    id: settlement_id,
+                    supply,
+                    demand,
+                    price,
+                }
+            })
+            .collect();
+        settlements.sort_by_key(|entry| entry.id);
+
+        for settlement in &settlements {
+            self.market_state
+                .apply_pressure("food", settlement.supply, settlement.demand);
+        }
+
+        for low_idx in 0..settlements.len() {
+            for high_idx in (low_idx + 1)..settlements.len() {
+                let low = &settlements[low_idx];
+                let high = &settlements[high_idx];
+                let Some(flow) = settlement_trade_flow_from_supply_demand(
+                    low.id,
+                    high.id,
+                    Good::Food,
+                    low.supply,
+                    high.demand,
+                    low.price,
+                    high.price,
+                    civ_economy::DEFAULT_SMOOTHING_FACTOR,
+                ) else {
+                    continue;
+                };
+                self.apply_settlement_flow(low.id, high.id, flow.qty);
+                self.last_tick_settlement_trade_flows.push(flow);
+            }
+        }
+    }
+
+    fn apply_settlement_flow(&mut self, from_settlement: u32, to_settlement: u32, qty: i64) {
+        let from_stock = self.settlement_food_stocked.entry(from_settlement).or_insert(0);
+        *from_stock = (*from_stock - qty).max(0);
+        let to_stock = self.settlement_food_stocked.entry(to_settlement).or_insert(0);
+        *to_stock = to_stock.saturating_add(qty);
     }
 
     fn tick_trade_routes(&mut self) {
@@ -4924,6 +4992,22 @@ impl Simulation {
         &self.cluster_stocks
     }
 
+    /// Last-tick settlement trade flows computed in `phase_economy`.
+    #[must_use]
+    pub fn last_tick_settlement_trade_flows(&self) -> &[SettlementTradeFlow] {
+        &self.last_tick_settlement_trade_flows
+    }
+
+    /// Per-tick lifecycle label counts populated by [`Simulation::phase_life`]
+    /// (FR-CIV-LIFE-001/002/003). Counts each surviving civilian once,
+    /// classified via [`civ_needs::classify_lifecycle`]. Read by the HUD
+    /// `LifecyclePanel` and the emergence-dashboard consumer; cleared implicitly
+    /// each tick by being re-populated.
+    #[must_use]
+    pub fn last_tick_lifecycle_metrics(&self) -> &LifecycleCounters {
+        &self.last_tick_lifecycle_metrics
+    }
+
     #[cfg(test)]
     pub(crate) fn test_clear_cluster_stocks(&mut self) {
         self.cluster_stocks.clear();
@@ -4935,6 +5019,20 @@ impl Simulation {
         stock.add(civ_economy::Good::Food, food);
         self.cluster_stocks.insert(cluster_id, stock);
     }
+}
+
+struct SettlementMarketSetup {
+    id: u32,
+    supply: i64,
+    demand: i64,
+    price: i64,
+}
+
+fn market_price_from_balance(supply: i64, demand: i64) -> i64 {
+    let supply = supply.max(0);
+    let demand = demand.max(0);
+    let balance = demand.saturating_sub(supply);
+    1_000i64.saturating_add(balance.clamp(-250, 250))
 }
 
 /// Maximum chronicle history lines retained in [`WorldState::chronicle`].
@@ -7007,6 +7105,38 @@ mod tests {
         assert_ne!(
             sim.market_state.prices, initial,
             "expected at least one market price to change after {N} ticks"
+        );
+    }
+
+    /// FR-CIV-ECON / FR-CIV-TRADE: settlement supply imbalances should emit
+    /// emergent trade flows and move the food price over successive ticks.
+    #[test]
+    fn phase_economy_emits_settlement_trade_flows_and_moves_prices() {
+        let mut sim = Simulation::with_seed(2024);
+        sim.set_settlement_population(1, 25);
+        sim.set_settlement_population(2, 25);
+        sim.set_settlement_food_stocked(1, 1_000);
+        sim.set_settlement_food_stocked(2, 0);
+
+        let before_price = sim.market_state.prices().get("food").copied().unwrap_or(0);
+        for _ in 0..4 {
+            sim.tick();
+        }
+
+        let flows = sim.last_tick_settlement_trade_flows();
+        assert!(
+            !flows.is_empty(),
+            "expected settlement trade flows to emerge under a supply imbalance"
+        );
+        assert!(
+            flows.iter().any(|flow| flow.good == Good::Food && flow.qty > 0),
+            "expected at least one positive food trade flow"
+        );
+
+        let after_price = sim.market_state.prices().get("food").copied().unwrap_or(0);
+        assert_ne!(
+            after_price, before_price,
+            "expected food price to respond to the imbalance over multiple ticks"
         );
     }
 

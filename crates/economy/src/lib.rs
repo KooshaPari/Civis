@@ -39,6 +39,9 @@ pub use stocks::{
 pub use trade_routes::{
     compute_trade_routes, route_flow, routes_lexicographic, Settlement, SettlementId, TradeRoute,
 };
+pub use market::{
+    settlement_trade_flow_from_supply_demand, SettlementTradeFlow, DEFAULT_SMOOTHING_FACTOR,
+};
 
 use serde::{Deserialize, Serialize};
 

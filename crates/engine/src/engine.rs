@@ -68,6 +68,7 @@ use crate::religion::{
 };
 use crate::replay::{ReplayError, ReplayLog};
 use crate::replay_format::{load_civreplay, save_civreplay};
+use crate::conditions::GameOutcome;
 
 /// Ordered phase identifiers executed once per [`Simulation::tick`].
 ///
@@ -108,6 +109,7 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "sentience",
     "diffusion",
     "audio",
+    "victory_check",
 ];
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -682,6 +684,8 @@ pub struct Simulation {
     last_tick_music_cues: BTreeMap<u64, MusicCue>,
     /// Per-tick disaster events surfaced in snapshots.
     pub(crate) last_tick_disaster_events: Vec<crate::disasters::DisasterTickEvent>,
+    /// Most recent deterministic victory/defeat assessment.
+    pub last_game_outcome: GameOutcome,
     operational: NoopOperationalLayer,
     replay_log: ReplayLog,
     /// Scenario economy policy (`base_consumption_joules`, `scarcity_multiplier`).
@@ -1527,6 +1531,7 @@ impl Simulation {
             last_tick_cluster_payoffs: Vec::new(),
             last_tick_music_cues: BTreeMap::new(),
             last_tick_disaster_events: Vec::new(),
+            last_game_outcome: GameOutcome::Ongoing,
             operational: NoopOperationalLayer,
             replay_log: ReplayLog {
                 seed: 42,
@@ -1685,6 +1690,7 @@ impl Simulation {
             last_tick_cluster_payoffs: Vec::new(),
             last_tick_music_cues: BTreeMap::new(),
             last_tick_disaster_events: Vec::new(),
+            last_game_outcome: GameOutcome::Ongoing,
             operational: NoopOperationalLayer,
             replay_log: ReplayLog {
                 seed,
@@ -2361,12 +2367,17 @@ impl Simulation {
             "diffusion" => self.phase_diffusion(),
             "audio" => self.phase_audio(),
             "cluster" => self.phase_cluster(),
+            "victory_check" => self.phase_victory_check(),
             other => panic!("Simulation::run_phase: unknown phase '{other}' in PHASE_ORDER"),
         }
     }
 
     fn phase_faction_decisions(&mut self) {
         let _decisions = crate::faction_decisions::compute_faction_decisions(self);
+    }
+
+    fn phase_victory_check(&mut self) {
+        self.last_game_outcome = crate::conditions::check_outcome(self);
     }
 
     /// Borrow the replay log.

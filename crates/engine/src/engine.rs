@@ -68,6 +68,7 @@ use crate::culture::{
     advance_faction_ideologies, culture_cooperation_signal, culture_openness_signal,
     FactionIdeologyState,
 };
+use crate::conditions::GameOutcome;
 
 /// Ordered phase identifiers executed once per [`Simulation::tick`].
 ///
@@ -106,6 +107,7 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "sentience",
     "diffusion",
     "audio",
+    "victory_check",
 ];
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -701,6 +703,8 @@ pub struct Simulation {
     last_tick_music_cues: BTreeMap<u64, MusicCue>,
     /// Per-tick disaster events surfaced in snapshots.
     last_tick_disaster_events: Vec<crate::disasters::DisasterTickEvent>,
+    /// Most recent deterministic victory/defeat assessment.
+    pub last_game_outcome: GameOutcome,
     operational: NoopOperationalLayer,
     replay_log: ReplayLog,
     /// Scenario economy policy (`base_consumption_joules`, `scarcity_multiplier`).
@@ -1586,6 +1590,7 @@ impl Simulation {
             last_tick_audio_events: Vec::new(),
             last_tick_music_cues: BTreeMap::new(),
             last_tick_disaster_events: Vec::new(),
+            last_game_outcome: GameOutcome::Ongoing,
             operational: NoopOperationalLayer,
             replay_log: ReplayLog {
                 seed: 42,
@@ -1725,6 +1730,7 @@ impl Simulation {
             last_tick_audio_events: Vec::new(),
             last_tick_music_cues: BTreeMap::new(),
             last_tick_disaster_events: Vec::new(),
+            last_game_outcome: GameOutcome::Ongoing,
             operational: NoopOperationalLayer,
             replay_log: ReplayLog {
                 seed,
@@ -2354,8 +2360,13 @@ impl Simulation {
             "sentience" => self.phase_sentience(),
             "diffusion" => self.phase_diffusion(),
             "audio" => self.phase_audio(),
+            "victory_check" => self.phase_victory_check(),
             other => panic!("Simulation::run_phase: unknown phase '{other}' in PHASE_ORDER"),
         }
+    }
+
+    fn phase_victory_check(&mut self) {
+        self.last_game_outcome = crate::conditions::check_outcome(self);
     }
 
     /// Borrow the replay log.

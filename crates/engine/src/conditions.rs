@@ -116,20 +116,30 @@ mod tests {
     #[test]
     fn ongoing_on_fresh_sim() {
         let sim = Simulation::new(42);
+        let mut sim = sim;
+        sim.state.population = 1;
         assert_eq!(check_outcome(&sim), GameOutcome::Ongoing);
     }
 
     #[test]
     fn victory_population_threshold() {
         let mut sim = Simulation::new(42);
+        sim.state.population = POPULATION_VICTORY - 1;
+        assert_eq!(check_outcome(&sim), GameOutcome::Ongoing);
         sim.state.population = POPULATION_VICTORY;
-        assert!(matches!(check_outcome(&sim), GameOutcome::Victory(_)));
+        assert!(matches!(
+            check_outcome(&sim),
+            GameOutcome::Victory { kind, .. } if kind == "Thriving Civilization"
+        ));
     }
 
     #[test]
     fn defeat_extinction() {
         let mut sim = Simulation::new(42);
         sim.state.population = 0;
-        assert!(matches!(check_outcome(&sim), GameOutcome::Defeat(_)));
+        assert!(matches!(
+            check_outcome(&sim),
+            GameOutcome::Defeat { reason } if reason == "Civilization Collapsed"
+        ));
     }
 }

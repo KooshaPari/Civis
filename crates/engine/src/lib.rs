@@ -58,6 +58,7 @@ pub use engine::{
     CombatDamagePulse, DiplomacyKind, EconomicFocus, EconomicFocusEvent, FactionRelationSnapshot, Fixed, MilitaryUnit, Position,
     PsycheDrivenBehavior, Simulation, UnitType, WorldState,
 };
+pub use conditions::{check_outcome, GameOutcome};
 
 // DoctrineLibrary is defined in civ-tactics and re-exported here.
 pub use civ_tactics::DoctrineLibrary;

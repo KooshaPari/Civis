@@ -2436,9 +2436,7 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             effect: DispatchEffect::None,
         },
         JsonRpcMethod::SimOutcome => {
-            use civ_engine::check_outcome;
             let outcome_result = {
-                let sim = ctx.snapshot.as_ref().map(|_| ()).is_some();
                 // We only have a ctx snapshot; real outcome check needs the live sim.
                 // The ws_bridge populates outcome_fields before dispatch (see below).
                 ctx.outcome_fields

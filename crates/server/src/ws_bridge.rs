@@ -533,7 +533,7 @@ async fn handle_jsonrpc_text(
             };
             let outcome_fields = if req.method == crate::jsonrpc::JsonRpcMethod::SimOutcome {
                 let sim = state.sim.lock().await;
-                let outcome = civ_engine::conditions::check_outcome(&sim);
+                let outcome = sim.last_game_outcome.clone();
                 Some(crate::jsonrpc::OutcomeFields {
                     tag: outcome.tag().to_owned(),
                     reason: outcome.reason().to_owned(),

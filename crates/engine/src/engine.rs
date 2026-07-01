@@ -3778,11 +3778,9 @@ impl Simulation {
             .collect();
 
         for (entity, behavior) in behaviors {
-            if let Ok(mut current) = self.world.get::<&mut PsycheDrivenBehavior>(entity) {
-                *current = behavior;
-            } else {
-                let _ = self.world.insert(entity, (behavior,));
-            }
+            // insert overwrites an existing component, covering both update and
+            // first-insert without a conflicting mutable get borrow (E0502).
+            let _ = self.world.insert(entity, (behavior,));
         }
     }
 

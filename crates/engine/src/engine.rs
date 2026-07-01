@@ -8813,6 +8813,42 @@ mod tests {
         assert!(sim.diplomacy_events().is_empty());
     }
 
+    /// FR-CIV-DIPLOMACY — `Simulation::tick()` must keep updating faction
+    /// relations so emergent proximity/trade/war signals can accumulate over time.
+    #[test]
+    fn diplomacy_relations_evolve_through_sim_tick() {
+        let mut sim = Simulation::with_seed(91);
+        let a = 1u32;
+        let b = 2u32;
+        sim.state.factions = HashMap::from([(a, "Alpha".into()), (b, "Beta".into())]);
+
+        let initial = sim
+            .faction_relations
+            .record(faction_cluster_id(a), faction_cluster_id(b))
+            .map(|r| r.score)
+            .unwrap_or(0.0);
+
+        const TICKS: u64 = 12;
+        for _ in 0..TICKS {
+            sim.tick();
+        }
+
+        let final_score = sim
+            .faction_relations
+            .record(faction_cluster_id(a), faction_cluster_id(b))
+            .expect("relation record")
+            .score;
+
+        assert!(
+            final_score < initial,
+            "diplomacy relations should drift through Simulation::tick(): initial={initial}, final={final_score}"
+        );
+        assert_ne!(
+            final_score, initial,
+            "expected a relation delta after {TICKS} ticks for FR-CIV-DIPLOMACY"
+        );
+    }
+
     /// N9: faction pairs with high aggression clash at lower disparity than
     /// faction pairs with zero aggression.
     #[test]

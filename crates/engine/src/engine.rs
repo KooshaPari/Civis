@@ -7125,6 +7125,22 @@ mod tests {
         );
     }
 
+    #[test]
+    fn tick_detects_tech_victory() {
+        let mut sim = Simulation::new(42);
+        sim.state.population = 1;
+        sim.research_cache_mut().researched = (0..12)
+            .map(|idx| format!("tech_{idx}"))
+            .collect();
+
+        sim.tick();
+
+        assert!(matches!(
+            sim.last_game_outcome,
+            GameOutcome::Victory { ref kind, .. } if kind == "Age of Enlightenment"
+        ));
+    }
+
     fn count_replay_ticks(sim: &Simulation) -> usize {
         sim.replay_log()
             .events

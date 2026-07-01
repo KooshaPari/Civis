@@ -10,8 +10,9 @@
 //! 3. An angry agent (low valence + high arousal + high impulsivity) returns Aggress.
 //! 4. Integration: behavior choices propagate through emergence ticks.
 
-use civ_agents::{Mood, Psyche, Temperament};
+use civ_agents::{Mood, Needs as AgentNeeds, Psyche, Temperament};
 use civ_engine::{behavior_from_psyche, EmotionDrivenBehavior, Simulation};
+use civ_needs::Needs as LifeNeeds;
 
 /// Helper: construct a test psyche with given mood and impulsivity.
 fn make_test_psyche(valence: f32, arousal: f32, impulsivity: f32) -> Psyche {
@@ -171,5 +172,97 @@ fn fr_psyche_behavior_low_impulsivity_dampens_anger() {
             EmotionDrivenBehavior::Flee | EmotionDrivenBehavior::Neutral
         ),
         "low-impulsivity agent should not easily aggress even with negative valence"
+    );
+}
+
+/// FR-CIV-PSYCHE §7 — stressed ticks update psyche and drive behavior.
+///
+/// The engine tick must do more than expose `behavior_from_psyche`: repeated
+/// stress should move an agent's mood and update its tick-local behavior
+/// snapshot through the simulation phase order.
+#[test]
+fn fr_psyche_behavior_tick_stress_changes_psyche_and_behavior() {
+    let mut sim = Simulation::with_seed(2026);
+    let agent_id = sim
+        .all_agents()
+        .first()
+        .expect("seeded sim has civilian agents")
+        .id;
+    let entity = sim.agent_entity(agent_id).expect("agent entity");
+
+    if let Ok(mut needs) = sim.world.get::<&mut AgentNeeds>(entity) {
+        *needs = AgentNeeds {
+            food: 0.5,
+            shelter: 1.0,
+            safety: 1.0,
+            belonging: 1.0,
+            rest: 1.0,
+            health: 1.0,
+        };
+    }
+    if let Ok(mut needs) = sim.world.get::<&mut LifeNeeds>(entity) {
+        *needs = LifeNeeds::sated();
+        needs.food = 0.5;
+    }
+
+    for _ in 0..4 {
+        sim.tick();
+    }
+
+    let before_psyche = sim.agent_psyche(agent_id).expect("psyche attached");
+    let before_behavior = sim
+        .agent_psyche_behavior(agent_id)
+        .expect("psyche behavior selected");
+
+    if let Ok(mut needs) = sim.world.get::<&mut AgentNeeds>(entity) {
+        *needs = AgentNeeds {
+            food: 0.0,
+            shelter: 0.0,
+            safety: 0.0,
+            belonging: 0.0,
+            rest: 0.0,
+            health: 0.0,
+        };
+    }
+    if let Ok(mut needs) = sim.world.get::<&mut LifeNeeds>(entity) {
+        needs.food = 0.0;
+        needs.safety = 0.0;
+        needs.social = 0.0;
+        needs.health = 0.25;
+    }
+
+    for _ in 0..8 {
+        sim.tick();
+    }
+
+    let after_psyche = sim.agent_psyche(agent_id).expect("psyche remains attached");
+    let after_behavior = sim
+        .agent_psyche_behavior(agent_id)
+        .expect("psyche behavior remains selected");
+
+    assert!(
+        after_psyche.mood.valence < before_psyche.mood.valence,
+        "stress ticks should lower mood valence: before={:.3}, after={:.3}",
+        before_psyche.mood.valence,
+        after_psyche.mood.valence
+    );
+    assert!(
+        after_psyche.mood.arousal > before_psyche.mood.arousal,
+        "stress ticks should raise arousal: before={:.3}, after={:.3}",
+        before_psyche.mood.arousal,
+        after_psyche.mood.arousal
+    );
+    assert_ne!(
+        before_behavior.emotion, after_behavior.emotion,
+        "stress ticks should change psyche-driven emotion"
+    );
+    assert_ne!(
+        before_behavior.action, after_behavior.action,
+        "stress ticks should change selected action"
+    );
+    assert_eq!(
+        after_behavior.emotion,
+        EmotionDrivenBehavior::Flee,
+        "low safety after stress should drive flee behavior"
     );
 }

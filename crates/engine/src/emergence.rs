@@ -559,10 +559,20 @@ impl Simulation {
                     .unwrap_or_else(LifeNeeds::sated);
                 (agent_needs, life)
             };
+            let religion_event_term = cluster
+                .and_then(|cluster_id| u32::try_from(cluster_id).ok())
+                .and_then(|settlement_id| self.religious_profiles.get(&settlement_id))
+                .map(|profile| {
+                    (profile.mythic_coherence + profile.uncertainty_reduction
+                        - profile.monitoring)
+                        .clamp(-1.0, 1.0)
+                })
+                .unwrap_or(0.0);
 
             if let Ok(mut psyche) = self.world.get::<&mut Psyche>(entity) {
                 let threat = (1.0 - life_needs.safety).max(0.0);
-                let delta_needs = (needs.food - 0.5).abs();
+                let delta_needs =
+                    ((needs.food - 0.5).abs() + (life_needs.food - 0.5).abs()).clamp(0.0, 1.0);
                 let temperament = psyche.temperament;
                 let maturity = psyche.maturity;
                 update_mood(
@@ -571,7 +581,7 @@ impl Simulation {
                     &temperament,
                     threat,
                     delta_needs,
-                    0.0,
+                    religion_event_term,
                 );
                 let arousal = psyche.mood.arousal;
                 nudge_temperament(&mut psyche.temperament, arousal, needs.belonging, maturity);
@@ -843,6 +853,19 @@ impl Simulation {
     pub fn agent_psyche(&self, agent_id: u64) -> Option<Psyche> {
         let entity = self.agent_entity(agent_id)?;
         self.world.get::<&Psyche>(entity).ok().map(|p| (*p).clone())
+    }
+
+    /// Psyche-driven behavior selected for a civilian agent on the latest tick.
+    #[must_use]
+    pub fn agent_psyche_behavior(
+        &self,
+        agent_id: u64,
+    ) -> Option<crate::engine::PsycheDrivenBehavior> {
+        let entity = self.agent_entity(agent_id)?;
+        self.world
+            .get::<&crate::engine::PsycheDrivenBehavior>(entity)
+            .ok()
+            .map(|behavior| *behavior)
     }
 
     /// Social graph for a civilian agent id, if present.

@@ -3946,21 +3946,31 @@ impl Simulation {
         );
         let faction_pairs = diplomacy_faction_pairs_from_settlement_contact(&dominant, &contacts);
 
-        for (&faction_id, signature) in &centroids {
+        let mut active_factions: BTreeSet<u32> = self.faction_languages.keys().copied().collect();
+        active_factions.extend(centroids.keys().copied());
+
+        for faction_id in active_factions {
+            let centroid_seed = centroids.get(&faction_id).copied();
             let lang = self
                 .faction_languages
                 .entry(faction_id)
-                .or_insert_with(|| seeded_language_state(*signature));
+                .or_insert_with(|| seeded_language_state(centroid_seed.unwrap_or([0.5; 4])));
             lang.drift_rate = 0.05;
             lang.split_threshold = 0.35;
-            ensure_seeded_word(lang, place_name_meaning(faction_id, 0), *signature);
-            ensure_seeded_word(lang, person_name_meaning(faction_id, 0), *signature);
-            let isolation = faction_isolation_pressure(
-                faction_id,
-                &dominant,
-                &cluster_member_counts,
-                &contacts,
-            );
+            if let Some(signature) = centroid_seed {
+                ensure_seeded_word(lang, place_name_meaning(faction_id, 0), signature);
+                ensure_seeded_word(lang, person_name_meaning(faction_id, 0), signature);
+            }
+            let isolation = centroid_seed
+                .map(|_| {
+                    faction_isolation_pressure(
+                        faction_id,
+                        &dominant,
+                        &cluster_member_counts,
+                        &contacts,
+                    )
+                })
+                .unwrap_or(1.0);
             tick_language(lang, isolation);
         }
 
@@ -8957,6 +8967,69 @@ mod tests {
             sim.faction_place_name(1, 1),
             sim.faction_place_name(2, 1),
             "place names should diverge with isolated lexicons"
+        );
+    }
+
+    #[test]
+    fn language_drift_wires_through_sim_tick_for_isolated_factions() {
+        use civ_agents::{ClusterId, ClusterMember};
+        use civ_voxel::WorldCoord;
+
+        let mut sim = Simulation::new();
+        sim.world = World::new();
+        sim.cluster_cultures.clear();
+        sim.faction_languages.clear();
+        sim.language_state = LanguageState::default();
+
+        sim.cluster_cultures.insert(1, CultureProfile::new([0.15, 0.15, 0.15, 0.15]));
+        sim.cluster_cultures.insert(2, CultureProfile::new([0.85, 0.85, 0.85, 0.85]));
+
+        for (entity_id, cluster_id, faction_id, base_x) in [
+            (1_u64, 1_u64, 1_u32, 0_i64),
+            (2, 1, 1, 20),
+            (3, 1, 1, 40),
+            (4, 1, 1, 60),
+            (5, 2, 2, 200_000),
+            (6, 2, 2, 200_020),
+            (7, 2, 2, 200_040),
+            (8, 2, 2, 200_060),
+        ] {
+            let _ = sim.world.spawn((
+                AgentCivilian {
+                    id: entity_id,
+                    alignment: Alignment::Faction(faction_id),
+                    age: 20,
+                },
+                ClusterMember {
+                    cluster: ClusterId(cluster_id),
+                },
+                Position3d {
+                    coord: WorldCoord {
+                        x: base_x,
+                        y: 0,
+                        z: base_x / 2,
+                    },
+                },
+            ));
+        }
+
+        sim.phase_language();
+        let baseline = average_language_distance(
+            sim.faction_languages().get(&1).expect("faction 1 language state must exist"),
+            sim.faction_languages().get(&2).expect("faction 2 language state must exist"),
+        );
+
+        for _ in 0..20 {
+            sim.tick();
+        }
+
+        let final_distance = average_language_distance(
+            sim.faction_languages().get(&1).expect("faction 1 language state must exist"),
+            sim.faction_languages().get(&2).expect("faction 2 language state must exist"),
+        );
+        assert!(
+            final_distance > baseline,
+            "isolated factions should diverge through Simulation::tick(), {baseline} -> {final_distance}"
         );
     }
 

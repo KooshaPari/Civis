@@ -47,6 +47,7 @@ pub use demographics::{
 // downstream crates (civ-server JSON-RPC + WS bridge) can name it as
 // `civ_engine::SfxTrigger` without taking a direct `civ-audio` dep.
 pub use civ_audio::triggers::SfxTrigger;
+pub use civ_legends::{Chronicle, ChronicleEntry, ChronicleEventKind};
 pub use emergence::{
     CivAiDecision, EmergenceFeedEvent, EmergenceState,
 };

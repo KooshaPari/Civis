@@ -3623,7 +3623,8 @@ impl Simulation {
                 .entry(sid)
                 .or_insert_with(|| ReligiousProfile::new(population, tick));
             profile.population = population;
-            apply_big_gods_response(profile, &gradients, tick);            let event = crate::religion::ReligionEvent::tick(
+            apply_big_gods_response(profile, &gradients, tick);
+            let event = crate::religion::ReligionEvent::tick(
                 sid,
                 profile.monitoring,
                 profile.mythic_coherence,
@@ -4271,7 +4272,7 @@ impl Simulation {
                 })
                 .unwrap_or(1.0);
             tick_language_for_lineage(lang, isolation, u64::from(faction_id));
-        }        }
+        }
 
         for (left, right) in faction_pairs {
             if left == right {

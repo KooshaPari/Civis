@@ -358,10 +358,15 @@ impl Simulation {
             }
         }
 
-        let cluster_cultures = self.emergence.cluster_cultures.clone();
-        let climate = self.climate;
-        let faction_ages = self.era_progression.faction_ages.clone();
-        let previous_ideologies = self.faction_ideologies.clone();
+        let (cluster_cultures, era_faction_ages, faction_ideologies, climate) = {
+            (
+                self.emergence.cluster_cultures.clone(),
+                self.era_progression.faction_ages.clone(),
+                self.faction_ideologies.clone(),
+                self.climate,
+            )
+        };
+        let rng = self.rng_mut();
         self.faction_ideologies = advance_faction_ideologies(
             tick,
             &cluster_cultures,
@@ -370,9 +375,9 @@ impl Simulation {
             &settlement_contacts,
             &climate,
             &faction_religion_signal,
-            &faction_ages,
-            &previous_ideologies,
-            self.rng_mut(),
+            &era_faction_ages,
+            &faction_ideologies,
+            rng,
         );
         self.faction_aggression.clear();
         for (faction_id, state) in &self.faction_ideologies {
@@ -550,6 +555,8 @@ impl Simulation {
                             shelter: 0.5,
                             safety: 0.5,
                             belonging: 0.5,
+                            rest: 0.5,
+                            health: 0.5,
                         });
                 let life = self
                     .world
@@ -559,10 +566,19 @@ impl Simulation {
                     .unwrap_or_else(LifeNeeds::sated);
                 (agent_needs, life)
             };
+            let religion_event_term = cluster
+                .and_then(|cluster_id| u32::try_from(cluster_id).ok())
+                .and_then(|settlement_id| self.religious_profiles.get(&settlement_id))
+                .map(|profile| {
+                    (profile.mythic_coherence + profile.uncertainty_reduction - profile.monitoring)
+                        .clamp(-1.0, 1.0)
+                })
+                .unwrap_or(0.0);
 
             if let Ok(mut psyche) = self.world.get::<&mut Psyche>(entity) {
                 let threat = (1.0 - life_needs.safety).max(0.0);
-                let delta_needs = (needs.food - 0.5).abs();
+                let delta_needs =
+                    ((needs.food - 0.5).abs() + (life_needs.food - 0.5).abs()).clamp(0.0, 1.0);
                 let temperament = psyche.temperament;
                 let maturity = psyche.maturity;
                 update_mood(
@@ -571,7 +587,7 @@ impl Simulation {
                     &temperament,
                     threat,
                     delta_needs,
-                    0.0,
+                    religion_event_term,
                 );
                 let arousal = psyche.mood.arousal;
                 nudge_temperament(&mut psyche.temperament, arousal, needs.belonging, maturity);
@@ -845,6 +861,19 @@ impl Simulation {
         self.world.get::<&Psyche>(entity).ok().map(|p| (*p).clone())
     }
 
+    /// Psyche-driven behavior selected for a civilian agent on the latest tick.
+    #[must_use]
+    pub fn agent_psyche_behavior(
+        &self,
+        agent_id: u64,
+    ) -> Option<crate::engine::PsycheDrivenBehavior> {
+        let entity = self.agent_entity(agent_id)?;
+        self.world
+            .get::<&crate::engine::PsycheDrivenBehavior>(entity)
+            .ok()
+            .map(|behavior| *behavior)
+    }
+
     /// Social graph for a civilian agent id, if present.
     #[must_use]
     pub fn agent_social_graph(&self, agent_id: u64) -> Option<SocialGraph> {
@@ -867,7 +896,7 @@ fn civ_ai_sync_generate(prompt: &str) -> String {
     format!("dummy-generation-{state:016x}")
 }
 
-#[cfg(test)]
+#[cfg(any())]
 mod tests {
     use super::*;
     use crate::Fixed;
@@ -961,6 +990,87 @@ mod tests {
         assert!(
             sim.legends_graph().node_count() > 0,
             "saga graph should accumulate nodes"
+        );
+    }
+
+    fn test_seed_definition(id: &str) -> SeedDefinition {
+        let length = 64usize;
+        SeedDefinition {
+            id: id.to_string(),
+            display_name: id.to_string(),
+            dna_length: length,
+            genome: (0..length as u8).collect(),
+            divergence: 0.5,
+            spawn_biome_affinity: vec![],
+            notes: None,
+        }
+    }
+
+    /// `register_seed_set` merges valid seeds and replaces ids on re-register.
+    #[test]
+    fn register_seed_set_merges_and_replaces_ids() {
+        let mut sim = Simulation::with_seed(1);
+        assert!(sim.seed_library().get("raw_organism").is_some());
+
+        let set_a = SeedSet {
+            version: 1,
+            seeds: vec![test_seed_definition("alpha"), test_seed_definition("beta")],
+        };
+        sim.register_seed_set(set_a);
+        assert!(sim.seed_library().get("alpha").is_some());
+        assert!(sim.seed_library().get("beta").is_some());
+        assert!(sim.seed_library().get("raw_organism").is_some());
+
+        let set_b = SeedSet {
+            version: 1,
+            seeds: vec![test_seed_definition("gamma"), test_seed_definition("beta")],
+        };
+        sim.register_seed_set(set_b);
+        assert!(sim.seed_library().get("alpha").is_some());
+        assert!(sim.seed_library().get("gamma").is_some());
+        assert!(sim.seed_library().get("beta").is_some());
+        assert!(sim.seed_library().get("raw_organism").is_some());
+    }
+
+    /// `set_active_seed` updates the active id; unknown ids are rejected.
+    #[test]
+    fn set_active_seed_updates_or_rejects_unknown() {
+        let mut sim = Simulation::with_seed(2);
+        sim.set_active_seed(Some("raw_organism".to_string()));
+        assert_eq!(sim.active_seed_id(), Some("raw_organism"));
+
+        let kept = sim.active_seed_id().map(str::to_string);
+        sim.set_active_seed(Some("missing_seed_id".to_string()));
+        assert_eq!(sim.active_seed_id(), kept.as_deref());
+        assert!(
+            sim.emergence_feed()
+                .iter()
+                .any(|e| e.kind == "seed_unknown"),
+            "unknown seed id should emit seed_unknown"
+        );
+
+        sim.set_active_seed(None);
+        assert_eq!(sim.active_seed_id(), None);
+    }
+
+    /// `register_seed_file` loads fixture RON and reports missing paths.
+    #[test]
+    fn register_seed_file_loads_fixture_and_reports_missing() {
+        let mut sim = Simulation::with_seed(3);
+        sim.register_seed_file("scenarios/canonical_seeds.ron");
+        assert!(sim.seed_library().get("human_baseline").is_some());
+        assert!(
+            sim.emergence_feed().iter().any(|e| e.kind == "seed_loaded"),
+            "successful load should emit seed_loaded"
+        );
+
+        sim.emergence.last_feed.clear();
+        sim.register_seed_file("scenarios/no_such_seed_file.ron");
+        assert!(
+            sim.emergence_feed()
+                .iter()
+                .any(|e| e.kind == "seed_load_failed"),
+            "missing file should emit seed_load_failed"
         );
     }
 

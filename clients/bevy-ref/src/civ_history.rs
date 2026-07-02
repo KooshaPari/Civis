@@ -156,7 +156,7 @@ fn draw_history_panel(
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-    let screen = ctx.screen_rect();
+    let screen = ctx.content_rect();
     egui::Window::new("Civilization History")
         .fixed_pos(egui::pos2(screen.center().x - 260.0, 60.0))
         .fixed_size([520.0, 200.0])

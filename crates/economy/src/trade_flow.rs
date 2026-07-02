@@ -15,9 +15,9 @@
 //! 2. **Price-differential-scaled flow.** Flow volume is
 //!    `flow = min(origin_surplus, destination_deficit) * price_differential`,
 //!    where `price_differential = max(0, destination_price - origin_price)`.
- //!    Integer-only. Saturating on the multiplication leg so extreme price
+//!    Integer-only. Saturating on the multiplication leg so extreme price
 //!    differentials cannot overflow `i64`.
- //! 3. **Round-trip stability.** The set of routes for a snapshot is fully
+//! 3. **Round-trip stability.** The set of routes for a snapshot is fully
 //!    determined by the inputs (no randomness, no hidden state).
 //!
 //! Both [`complementary_routes`] (the directed one-leg form required by the
@@ -149,10 +149,9 @@ pub fn complementary_round_trips(
         if a >= b {
             continue;
         }
-        if let (Some(forward), Some(reverse)) = (
-            by_pair.get(&(a, b)),
-            by_pair.get(&(b, a)).cloned(),
-        ) {
+        if let (Some(forward), Some(reverse)) =
+            (by_pair.get(&(a, b)), by_pair.get(&(b, a)).cloned())
+        {
             out.push((forward.clone(), reverse));
         }
     }
@@ -194,14 +193,13 @@ mod tests {
         let destination = deficit(2, 5, 130);
 
         let routes = complementary_routes(&[origin, destination]);
-        assert_eq!(
-            routes.len(),
-            1,
-            "exactly one complementary route must form"
-        );
+        assert_eq!(routes.len(), 1, "exactly one complementary route must form");
         let route = &routes[0];
         assert_eq!(route.origin, 1, "origin must be the surplus settlement");
-        assert_eq!(route.destination, 2, "destination must be the deficit settlement");
+        assert_eq!(
+            route.destination, 2,
+            "destination must be the deficit settlement"
+        );
         assert_eq!(
             route.flow, 150,
             "flow must track price differential: min(10, 5) * (130 - 100) = 150"
@@ -210,7 +208,11 @@ mod tests {
         // Widen the price differential; flow scales linearly with it.
         let destination_priced_up = deficit(2, 5, 250);
         let routes_up = complementary_routes(&[surplus(1, 10, 100), destination_priced_up]);
-        assert_eq!(routes_up[0].flow, 5 * 150, "double the differential doubles the flow");
+        assert_eq!(
+            routes_up[0].flow,
+            5 * 150,
+            "double the differential doubles the flow"
+        );
 
         // Drop the differential to zero (equal prices); no route.
         let destination_same_price = deficit(2, 5, 100);
@@ -235,19 +237,13 @@ mod tests {
     /// deficit) never produce routes.
     #[test]
     fn fr_civ_trade_route_rejects_same_side_pairs() {
-        let two_surplus = [
-            surplus(1, 10, 100),
-            surplus(2, 20, 130),
-        ];
+        let two_surplus = [surplus(1, 10, 100), surplus(2, 20, 130)];
         assert!(
             complementary_routes(&two_surplus).is_empty(),
             "surplus/surplus is not complementary"
         );
 
-        let two_deficit = [
-            deficit(1, 5, 100),
-            deficit(2, 7, 130),
-        ];
+        let two_deficit = [deficit(1, 5, 100), deficit(2, 7, 130)];
         assert!(
             complementary_routes(&two_deficit).is_empty(),
             "deficit/deficit is not complementary"

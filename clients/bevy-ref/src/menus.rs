@@ -17,29 +17,38 @@ const DIM: egui::Color32 = egui::Color32::from_rgb(150, 158, 178);
 const OVERLAY_DIM: egui::Color32 = egui::Color32::from_rgba_premultiplied(0, 0, 0, 160);
 
 /// Shell state used by the Bevy window client (main menu + gameplay + pause states).
-#[derive(States, Debug, Clone, Default, PartialEq, Eq, Hash)]
+#[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum AppState {
-    #[default]
     MainMenu,
     WorldGen,
     Playing,
     Paused,
-    GameOver,
+}
+
+impl Default for AppState {
+    fn default() -> Self {
+        Self::MainMenu
+    }
 }
 
 /// One-shot intent emitted by menu buttons and consumed by `bevy_window`.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MainMenuCommand {
-    #[default]
     None,
     NewWorld,
     Continue,
+    LoadGame,
     Resume,
     OpenSettings,
     OpenSavePanel,
     ExitToMainMenu,
-    BackToMenu, // from GameOver
     Quit,
+}
+
+impl Default for MainMenuCommand {
+    fn default() -> Self {
+        Self::None
+    }
 }
 
 /// Resource that carries the latest main-menu shell command.
@@ -146,7 +155,6 @@ impl Plugin for MenusPlugin {
                     draw_pause_menu,
                     draw_era_banner,
                     draw_settings_window,
-                    draw_game_over_screen,
                 ),
             );
     }
@@ -203,7 +211,7 @@ fn draw_main_menu(
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
         .order(egui::Order::Foreground)
         .show(ctx, |ui| {
-            liquid_glass_frame(egui::Margin::same(18), RADIUS_PANEL)
+            egui::Frame::NONE
                 .fill(GLASS_FILL)
                 .inner_margin(egui::Margin::same(28))
                 .show(ui, |ui| {
@@ -245,6 +253,11 @@ fn draw_main_menu(
                         }
                         ui.add_space(8.0);
 
+                        if menu_button(ui, "\u{1f4be}  Load Game").clicked() {
+                            command.action = MainMenuCommand::LoadGame;
+                        }
+                        ui.add_space(8.0);
+
                         if menu_button(ui, "\u{2699}  Settings").clicked() {
                             command.action = MainMenuCommand::OpenSettings;
                             settings_open.0 = true;
@@ -273,7 +286,7 @@ fn draw_worldgen_overlay(mut contexts: EguiContexts, state: Option<Res<State<App
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
         .order(egui::Order::Foreground)
         .show(ctx, |ui| {
-            liquid_glass_frame(egui::Margin::same(16), RADIUS_PANEL)
+            egui::Frame::NONE
                 .fill(GLASS_FILL)
                 .inner_margin(egui::Margin::same(24))
                 .show(ui, |ui| {
@@ -318,10 +331,10 @@ fn draw_pause_menu(
         .show(ctx, |ui| {
             pause_panel(
                 ui,
-                &mut mode,
-                &mut command,
-                &mut settings_open,
-                &mut save_panel,
+                &mut *mode,
+                &mut *command,
+                &mut *settings_open,
+                &mut *save_panel,
                 &mut exit,
             )
         });
@@ -352,7 +365,7 @@ fn draw_settings_window(
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-    settings_window(ctx, &mut settings_open, &mut state, gpu_caps.as_deref());
+    settings_window(ctx, &mut *settings_open, &mut *state, gpu_caps.as_deref());
 }
 
 fn dim_overlay(ctx: &egui::Context) {
@@ -369,9 +382,9 @@ fn dim_overlay(ctx: &egui::Context) {
 fn pause_panel(
     ui: &mut egui::Ui,
     mode: &mut GameUiMode,
-    mut command: &mut ResMut<MenuCommand>,
+    command: &mut MenuCommand,
     settings_open: &mut SettingsOpen,
-    save_panel: &mut ResMut<SaveLoadPanel>,
+    save_panel: &mut SaveLoadPanel,
     exit: &mut MessageWriter<AppExit>,
 ) {
     egui::Frame::NONE
@@ -397,9 +410,9 @@ fn pause_panel(
 fn pause_menu_buttons(
     ui: &mut egui::Ui,
     mode: &mut GameUiMode,
-    command: &mut ResMut<MenuCommand>,
+    command: &mut MenuCommand,
     settings_open: &mut SettingsOpen,
-    save_panel: &mut ResMut<SaveLoadPanel>,
+    save_panel: &mut SaveLoadPanel,
     exit: &mut MessageWriter<AppExit>,
 ) {
     if menu_button(ui, "\u{25b6}  Resume").clicked() {
@@ -411,7 +424,8 @@ fn pause_menu_buttons(
         settings_open.0 = !settings_open.0;
     }
     ui.add_space(6.0);
-    if menu_button(ui, "\u{1f4be}  Save").clicked() {
+    if menu_button(ui, "\u{1f4be}  Save/Load").clicked() {
+        // Save/Load tab: opens the shared slot browser while the pause shell stays visible.
         command.action = MainMenuCommand::OpenSavePanel;
         save_panel.visible = true;
     }
@@ -459,58 +473,6 @@ fn era_banner(ui: &mut egui::Ui, banner: &EraBanner) {
                     .color(text_color)
                     .strong(),
             );
-        });
-}
-
-fn draw_game_over_screen(
-    mut contexts: EguiContexts,
-    state: Option<Res<State<AppState>>>,
-    mut command: ResMut<MenuCommand>,
-) {
-    let Some(state) = state else { return };
-    if *state != AppState::GameOver {
-        return;
-    }
-    let Ok(ctx) = contexts.ctx_mut() else { return };
-
-    egui::Area::new(egui::Id::new("game_over_area"))
-        .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
-        .order(egui::Order::Foreground)
-        .show(ctx, |ui| {
-            dim_overlay(ui.ctx());
-            egui::Frame::NONE
-                .fill(PANEL_FILL)
-                .corner_radius(egui::CornerRadius::same(12))
-                .stroke(egui::Stroke::new(
-                    1.5,
-                    egui::Color32::from_rgb(0xe0, 0x5c, 0x5c),
-                ))
-                .inner_margin(egui::Margin::same(32))
-                .show(ui, |ui| {
-                    ui.set_min_width(360.0);
-                    ui.vertical_centered(|ui| {
-                        ui.label(
-                            egui::RichText::new("GAME OVER")
-                                .size(32.0)
-                                .color(egui::Color32::from_rgb(0xe0, 0x5c, 0x5c))
-                                .strong(),
-                        );
-                        ui.add_space(8.0);
-                        ui.label(
-                            egui::RichText::new("Your civilization has fallen.")
-                                .size(16.0)
-                                .color(DIM),
-                        );
-                        ui.add_space(24.0);
-                        if menu_button(ui, "\u{25b6}  Main Menu").clicked() {
-                            command.action = MainMenuCommand::BackToMenu;
-                        }
-                        ui.add_space(8.0);
-                        if menu_button(ui, "\u{23fb}  Quit").clicked() {
-                            command.action = MainMenuCommand::Quit;
-                        }
-                    });
-                });
         });
 }
 

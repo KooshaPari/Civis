@@ -268,6 +268,8 @@ mod tests {
             shelter: 0.0,
             safety: 0.0,
             belonging: 0.0,
+            rest: 0.0,
+            health: 0.0,
         };
         let mut low = Mood::neutral();
         let mut high = Mood::neutral();

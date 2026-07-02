@@ -1,196 +1,283 @@
 //! Static MCP verb catalog for Holocron.
+//!
+//! This module declares the canonical list of godverbs Holocron knows about,
+//! derived from the `civ_*` MCP verbs exposed by `crates/civis-mcp/src/server.rs`.
+//!
+//! **Source of truth:** the swarm ships the MCP verbs; this catalog mirrors
+//! them under a stable shape (`VerbDescriptor`). When a new MCP verb is
+//! added, append a corresponding `VerbDescriptor` entry here.
 
 use crate::descriptor::VerbDescriptor;
 use crate::group::VerbGroup;
 use crate::provenance::Provenance;
 use crate::risk::RiskTier;
 
-/// The full static catalog of MCP godverbs.
-static MCP_VERBS: std::sync::OnceLock<Vec<VerbDescriptor>> = std::sync::OnceLock::new();
-
-/// Return the full static catalog of MCP godverbs.
-pub fn mcp_verbs() -> &'static [VerbDescriptor] {
-    MCP_VERBS.get_or_init(|| {
-        vec![
-            VerbDescriptor::new(
-                "civ_lay_tax",
-                "Lay Tax",
-                "Set the tax rate for the city.",
-                VerbGroup::Civic,
-                RiskTier::Minor,
-                Provenance::Mcp,
-                &["tax", "set_tax"],
-            ),
-            VerbDescriptor::new(
-                "civ_pardon_prisoner",
-                "Pardon Prisoner",
-                "Release a named prisoner from the dungeons.",
-                VerbGroup::Civic,
-                RiskTier::Minor,
-                Provenance::Mcp,
-                &["pardon", "release_prisoner"],
-            ),
-            VerbDescriptor::new(
-                "civ_proclaim_law",
-                "Proclaim Law",
-                "Issue a new binding law across the city.",
-                VerbGroup::Civic,
-                RiskTier::Minor,
-                Provenance::Mcp,
-                &["law", "decree"],
-            ),
-            VerbDescriptor::new(
-                "civ_repeal_law",
-                "Repeal Law",
-                "Strike an existing law from the books.",
-                VerbGroup::Civic,
-                RiskTier::Minor,
-                Provenance::Mcp,
-                &["repeal", "unlaw"],
-            ),
-            VerbDescriptor::new(
-                "civ_pardon_citizen",
-                "Pardon Citizen",
-                "Clear a citizen's criminal record.",
-                VerbGroup::Civic,
-                RiskTier::Minor,
-                Provenance::Mcp,
-                &["pardon_citizen", "forgive"],
-            ),
-            VerbDescriptor::new(
-                "civ_inspect_law",
-                "Inspect Law",
-                "Show the text and effects of a specific law.",
-                VerbGroup::Civic,
-                RiskTier::ReadOnly,
-                Provenance::Mcp,
-                &["show_law", "law_detail"],
-            ),
-            VerbDescriptor::new(
-                "civ_adjust_wages",
-                "Adjust Wages",
-                "Raise or lower the base wages paid to laborers.",
-                VerbGroup::Economic,
-                RiskTier::Minor,
-                Provenance::Mcp,
-                &["wages", "pay_workers"],
-            ),
-            VerbDescriptor::new(
-                "civ_grant_subsidy",
-                "Grant Subsidy",
-                "Pay a one-time grant to a specific building or faction.",
-                VerbGroup::Economic,
-                RiskTier::Minor,
-                Provenance::Mcp,
-                &["subsidy", "bailout"],
-            ),
-            VerbDescriptor::new(
-                "civ_impose_tariff",
-                "Impose Tariff",
-                "Add a tariff on a specific trade good.",
-                VerbGroup::Economic,
-                RiskTier::Minor,
-                Provenance::Mcp,
-                &["tariff", "trade_tax"],
-            ),
-            VerbDescriptor::new(
-                "civ_lift_tariff",
-                "Lift Tariff",
-                "Remove an existing tariff on a trade good.",
-                VerbGroup::Economic,
-                RiskTier::Minor,
-                Provenance::Mcp,
-                &["lift_tariff"],
-            ),
-            VerbDescriptor::new(
-                "civ_inspect_market",
-                "Inspect Market",
-                "Show current prices and supply for each trade good.",
-                VerbGroup::Economic,
-                RiskTier::ReadOnly,
-                Provenance::Mcp,
-                &["market", "show_market"],
-            ),
-            VerbDescriptor::new(
-                "civ_disaster_banish",
-                "Banish Disaster",
-                "Ends the current disaster immediately.",
-                VerbGroup::Divine,
-                RiskTier::Minor,
-                Provenance::Mcp,
-                &["calm", "stop_disaster", "banish"],
-            ),
-            VerbDescriptor::new(
-                "civ_bless_citizens",
-                "Bless Citizens",
-                "Increase morale and religious fervor across the city.",
-                VerbGroup::Divine,
-                RiskTier::Minor,
-                Provenance::Mcp,
-                &["bless", "fervor"],
-            ),
-            VerbDescriptor::new(
-                "civ_smite_unfaithful",
-                "Smite Unfaithful",
-                "Strikes down a citizen of low faith. Permanent.",
-                VerbGroup::Divine,
-                RiskTier::Critical,
-                Provenance::Mcp,
-                &["smite", "lightning"],
-            ),
-            VerbDescriptor::new(
-                "civ_inspect_disaster",
-                "Inspect Disaster",
-                "Show the cause, severity, and projected end of the current disaster.",
-                VerbGroup::Divine,
-                RiskTier::ReadOnly,
-                Provenance::Mcp,
-                &["disaster_detail", "show_disaster"],
-            ),
-            VerbDescriptor::new(
-                "civ_save_snapshot",
-                "Save Snapshot",
-                "Save the current sim state to disk.",
-                VerbGroup::Debug,
-                RiskTier::ReadOnly,
-                Provenance::Mcp,
-                &["save", "checkpoint"],
-            ),
-            VerbDescriptor::new(
-                "civ_load_snapshot",
-                "Load Snapshot",
-                "Restore a previously saved sim state.",
-                VerbGroup::Debug,
-                RiskTier::ReadOnly,
-                Provenance::Mcp,
-                &["load", "restore"],
-            ),
-            VerbDescriptor::new(
-                "civ_inspect_sim",
-                "Inspect Sim",
-                "Show tick, citizen count, and emergent event counts.",
-                VerbGroup::Debug,
-                RiskTier::ReadOnly,
-                Provenance::Mcp,
-                &["sim_status", "show_sim"],
-            ),
-            VerbDescriptor::new(
-                "civ_world_tick",
-                "World Tick",
-                "Advance the world by one tick.",
-                VerbGroup::Debug,
-                RiskTier::ReadOnly,
-                Provenance::Mcp,
-                &["tick", "advance_tick"],
-            ),
-        ]
-    })
+/// Build the full static catalog of MCP godverbs.
+///
+/// Adding a new verb to the MCP surface means adding a matching entry here.
+/// Holocron does not auto-discover verbs at runtime in Phase 1 — it consumes
+/// this static catalog and presents it through the panel + cmd-K.
+///
+/// Per `HOLOCRON_KEYCAP_UI.md` Phase 1: "substrate catalog, no runtime enumeration".
+pub fn build_mcp_catalog() -> Vec<VerbDescriptor> {
+    vec![
+        // ===== Civic =====
+        VerbDescriptor {
+            id: "civ_lay_tax".to_string(),
+            name: "Lay Tax".to_string(),
+            summary: "Set the tax rate for the city".to_string(),
+            group: VerbGroup::Civic,
+            aliases: &["tax", "set_tax"],
+            hotkey: Some('T'),
+            provenance: Provenance::Mcp,
+            risk: RiskTier::Reversible,
+            description: "Set the tax rate for the city.".to_string(),
+            mcp_tool: Some("civ_lay_tax".to_string()),
+            use_count: 0,
+        },
+        VerbDescriptor {
+            id: "civ_pardon_prisoner".to_string(),
+            name: "Pardon Prisoner".to_string(),
+            summary: "Release a named prisoner".to_string(),
+            group: VerbGroup::Civic,
+            aliases: &["pardon", "release_prisoner"],
+            hotkey: None,
+            provenance: Provenance::Mcp,
+            risk: RiskTier::Reversible,
+            description: "Release a named prisoner from the dungeons.".to_string(),
+            mcp_tool: Some("civ_pardon_prisoner".to_string()),
+            use_count: 0,
+        },
+        VerbDescriptor {
+            id: "civ_proclaim_law".to_string(),
+            name: "Proclaim Law".to_string(),
+            summary: "Issue a new binding law".to_string(),
+            group: VerbGroup::Civic,
+            aliases: &["law", "decree"],
+            hotkey: Some('L'),
+            provenance: Provenance::Mcp,
+            risk: RiskTier::Reversible,
+            description: "Issue a new binding law across the city.".to_string(),
+            mcp_tool: Some("civ_proclaim_law".to_string()),
+            use_count: 0,
+        },
+        VerbDescriptor {
+            id: "civ_repeal_law".to_string(),
+            name: "Repeal Law".to_string(),
+            summary: "Strike an existing law".to_string(),
+            group: VerbGroup::Civic,
+            aliases: &["repeal", "unlaw"],
+            hotkey: None,
+            provenance: Provenance::Mcp,
+            risk: RiskTier::Reversible,
+            description: "Strike an existing law from the books.".to_string(),
+            mcp_tool: Some("civ_repeal_law".to_string()),
+            use_count: 0,
+        },
+        VerbDescriptor {
+            id: "civ_pardon_citizen".to_string(),
+            name: "Pardon Citizen".to_string(),
+            summary: "Clear a citizen's criminal record".to_string(),
+            group: VerbGroup::Civic,
+            aliases: &["pardon_citizen", "forgive"],
+            hotkey: None,
+            provenance: Provenance::Mcp,
+            risk: RiskTier::Reversible,
+            description: "Clear a citizen's criminal record.".to_string(),
+            mcp_tool: Some("civ_pardon_citizen".to_string()),
+            use_count: 0,
+        },
+        VerbDescriptor {
+            id: "civ_inspect_law".to_string(),
+            name: "Inspect Law".to_string(),
+            summary: "Show law details".to_string(),
+            group: VerbGroup::Civic,
+            aliases: &["show_law", "law_detail"],
+            hotkey: None,
+            provenance: Provenance::Mcp,
+            risk: RiskTier::Cosmetic,
+            description: "Show the text and effects of a specific law.".to_string(),
+            mcp_tool: Some("civ_inspect_law".to_string()),
+            use_count: 0,
+        },
+        // ===== Economic =====
+        VerbDescriptor {
+            id: "civ_adjust_wages".to_string(),
+            name: "Adjust Wages".to_string(),
+            summary: "Adjust worker wages".to_string(),
+            group: VerbGroup::Economic,
+            aliases: &["wages", "pay_workers"],
+            hotkey: Some('W'),
+            provenance: Provenance::Mcp,
+            risk: RiskTier::Reversible,
+            description: "Raise or lower the base wages paid to laborers.".to_string(),
+            mcp_tool: Some("civ_adjust_wages".to_string()),
+            use_count: 0,
+        },
+        VerbDescriptor {
+            id: "civ_grant_subsidy".to_string(),
+            name: "Grant Subsidy".to_string(),
+            summary: "Grant a subsidy to a building".to_string(),
+            group: VerbGroup::Economic,
+            aliases: &["subsidy", "bailout"],
+            hotkey: None,
+            provenance: Provenance::Mcp,
+            risk: RiskTier::Reversible,
+            description: "Pay a one-time grant to a specific building or faction.".to_string(),
+            mcp_tool: Some("civ_grant_subsidy".to_string()),
+            use_count: 0,
+        },
+        VerbDescriptor {
+            id: "civ_impose_tariff".to_string(),
+            name: "Impose Tariff".to_string(),
+            summary: "Add a trade tariff".to_string(),
+            group: VerbGroup::Economic,
+            aliases: &["tariff", "trade_tax"],
+            hotkey: None,
+            provenance: Provenance::Mcp,
+            risk: RiskTier::Reversible,
+            description: "Add a tariff on a specific trade good.".to_string(),
+            mcp_tool: Some("civ_impose_tariff".to_string()),
+            use_count: 0,
+        },
+        VerbDescriptor {
+            id: "civ_lift_tariff".to_string(),
+            name: "Lift Tariff".to_string(),
+            summary: "Remove a trade tariff".to_string(),
+            group: VerbGroup::Economic,
+            aliases: &["lift_tariff"],
+            hotkey: None,
+            provenance: Provenance::Mcp,
+            risk: RiskTier::Reversible,
+            description: "Remove an existing tariff on a trade good.".to_string(),
+            mcp_tool: Some("civ_lift_tariff".to_string()),
+            use_count: 0,
+        },
+        VerbDescriptor {
+            id: "civ_inspect_market".to_string(),
+            name: "Inspect Market".to_string(),
+            summary: "View market data".to_string(),
+            group: VerbGroup::Economic,
+            aliases: &["market", "show_market"],
+            hotkey: None,
+            provenance: Provenance::Mcp,
+            risk: RiskTier::Cosmetic,
+            description: "Show current prices and supply for each trade good.".to_string(),
+            mcp_tool: Some("civ_inspect_market".to_string()),
+            use_count: 0,
+        },
+        // ===== Divine =====
+        VerbDescriptor {
+            id: "civ_disaster_banish".to_string(),
+            name: "Banish Disaster".to_string(),
+            summary: "End the current disaster".to_string(),
+            group: VerbGroup::Divine,
+            aliases: &["calm", "stop_disaster", "banish"],
+            hotkey: Some('B'),
+            provenance: Provenance::Mcp,
+            risk: RiskTier::Reversible,
+            description: "Ends the current disaster immediately.".to_string(),
+            mcp_tool: Some("civ_disaster_banish".to_string()),
+            use_count: 0,
+        },
+        VerbDescriptor {
+            id: "civ_bless_citizens".to_string(),
+            name: "Bless Citizens".to_string(),
+            summary: "Boost morale and faith".to_string(),
+            group: VerbGroup::Divine,
+            aliases: &["bless", "fervor"],
+            hotkey: None,
+            provenance: Provenance::Mcp,
+            risk: RiskTier::Reversible,
+            description: "Increase morale and religious fervor across the city.".to_string(),
+            mcp_tool: Some("civ_bless_citizens".to_string()),
+            use_count: 0,
+        },
+        VerbDescriptor {
+            id: "civ_smite_unfaithful".to_string(),
+            name: "Smite Unfaithful".to_string(),
+            summary: "Strike down unfaithful citizens".to_string(),
+            group: VerbGroup::Divine,
+            aliases: &["smite", "lightning"],
+            hotkey: None,
+            provenance: Provenance::Mcp,
+            risk: RiskTier::Irreversible,
+            description: "Strikes down a citizen of low faith. Permanent.".to_string(),
+            mcp_tool: Some("civ_smite_unfaithful".to_string()),
+            use_count: 0,
+        },
+        VerbDescriptor {
+            id: "civ_inspect_disaster".to_string(),
+            name: "Inspect Disaster".to_string(),
+            summary: "View disaster details".to_string(),
+            group: VerbGroup::Divine,
+            aliases: &["disaster_detail", "show_disaster"],
+            hotkey: None,
+            provenance: Provenance::Mcp,
+            risk: RiskTier::Cosmetic,
+            description: "Show the cause, severity, and projected end of the current disaster."
+                .to_string(),
+            mcp_tool: Some("civ_inspect_disaster".to_string()),
+            use_count: 0,
+        },
+        // ===== Debug =====
+        VerbDescriptor {
+            id: "civ_save_snapshot".to_string(),
+            name: "Save Snapshot".to_string(),
+            summary: "Save world state".to_string(),
+            group: VerbGroup::Debug,
+            aliases: &["save", "checkpoint"],
+            hotkey: None,
+            provenance: Provenance::Mcp,
+            risk: RiskTier::Cosmetic,
+            description: "Save the current sim state to disk.".to_string(),
+            mcp_tool: Some("civ_save_snapshot".to_string()),
+            use_count: 0,
+        },
+        VerbDescriptor {
+            id: "civ_load_snapshot".to_string(),
+            name: "Load Snapshot".to_string(),
+            summary: "Restore world state".to_string(),
+            group: VerbGroup::Debug,
+            aliases: &["load", "restore"],
+            hotkey: None,
+            provenance: Provenance::Mcp,
+            risk: RiskTier::Cosmetic,
+            description: "Restore a previously saved sim state.".to_string(),
+            mcp_tool: Some("civ_load_snapshot".to_string()),
+            use_count: 0,
+        },
+        VerbDescriptor {
+            id: "civ_inspect_sim".to_string(),
+            name: "Inspect Sim".to_string(),
+            summary: "View sim status".to_string(),
+            group: VerbGroup::Debug,
+            aliases: &["sim_status", "show_sim"],
+            hotkey: None,
+            provenance: Provenance::Mcp,
+            risk: RiskTier::Cosmetic,
+            description: "Show tick, citizen count, and emergent event counts.".to_string(),
+            mcp_tool: Some("civ_inspect_sim".to_string()),
+            use_count: 0,
+        },
+        VerbDescriptor {
+            id: "civ_world_tick".to_string(),
+            name: "World Tick".to_string(),
+            summary: "Advance world time".to_string(),
+            group: VerbGroup::Debug,
+            aliases: &["tick", "advance_tick"],
+            hotkey: None,
+            provenance: Provenance::Mcp,
+            risk: RiskTier::Cosmetic,
+            description: "Advance the world by one tick.".to_string(),
+            mcp_tool: Some("civ_world_tick".to_string()),
+            use_count: 0,
+        },
+    ]
 }
 
-/// Number of MCP verbs in the static catalog.
-pub fn mcp_verb_count() -> usize {
-    mcp_verbs().len()
-}
+/// The full static catalog of MCP godverbs (lazy-initialized).
+pub const STATIC_CATALOG: &str = "Use build_mcp_catalog() instead";
 
 #[cfg(test)]
 mod tests {
@@ -198,15 +285,17 @@ mod tests {
 
     #[test]
     fn catalog_has_unique_ids() {
+        let verbs = build_mcp_catalog();
         let mut seen = std::collections::HashSet::new();
-        for v in mcp_verbs() {
-            assert!(seen.insert(v.id.as_str()), "duplicate verb id: {}", v.id);
+        for v in verbs {
+            assert!(seen.insert(v.id.clone()), "duplicate verb id: {}", v.id);
         }
     }
 
     #[test]
     fn catalog_ids_start_with_civ() {
-        for v in mcp_verbs() {
+        let verbs = build_mcp_catalog();
+        for v in verbs {
             assert!(
                 v.id.starts_with("civ_"),
                 "verb id {} does not start with civ_",
@@ -217,45 +306,37 @@ mod tests {
 
     #[test]
     fn catalog_has_no_empty_names() {
-        for v in mcp_verbs() {
+        let verbs = build_mcp_catalog();
+        for v in verbs {
             assert!(!v.name.trim().is_empty(), "verb {} has empty name", v.id);
         }
     }
 
     #[test]
-    fn catalog_has_no_empty_summaries() {
-        for v in mcp_verbs() {
+    fn catalog_has_no_empty_descriptions() {
+        let verbs = build_mcp_catalog();
+        for v in verbs {
             assert!(
-                !v.summary.trim().is_empty(),
-                "verb {} has empty summary",
+                !v.description.trim().is_empty(),
+                "verb {} has empty description",
                 v.id
             );
         }
     }
 
     #[test]
-    fn count_matches_len() {
-        assert_eq!(mcp_verb_count(), mcp_verbs().len());
-    }
-
-    #[test]
     fn covers_all_groups() {
-        let civic = mcp_verbs()
-            .iter()
-            .filter(|v| v.group == VerbGroup::Civic)
-            .count();
-        let economic = mcp_verbs()
+        let verbs = build_mcp_catalog();
+        let civic = verbs.iter().filter(|v| v.group == VerbGroup::Civic).count();
+        let economic = verbs
             .iter()
             .filter(|v| v.group == VerbGroup::Economic)
             .count();
-        let divine = mcp_verbs()
+        let divine = verbs
             .iter()
             .filter(|v| v.group == VerbGroup::Divine)
             .count();
-        let debug = mcp_verbs()
-            .iter()
-            .filter(|v| v.group == VerbGroup::Debug)
-            .count();
+        let debug = verbs.iter().filter(|v| v.group == VerbGroup::Debug).count();
         assert!(civic >= 3, "need at least 3 civic verbs, got {}", civic);
         assert!(
             economic >= 3,

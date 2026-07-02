@@ -10,6 +10,17 @@
 use crate::descriptor::VerbDescriptor;
 use crate::registry::VerbRegistry;
 
+/// Simulation context for ranking — currently a placeholder.
+/// In later phases, this will capture world state (disasters, resources, etc.)
+/// to inform ranking decisions.
+pub struct SimContext;
+
+/// Ranked verb result — wraps a descriptor with its ranking score.
+pub struct RankedVerb {
+    pub descriptor: VerbDescriptor,
+    pub rank_score: f32,
+}
+
 /// Ranks verbs for a given sim-state snapshot.
 ///
 /// `sim_state_score` is a closure that, for a given verb id, returns
@@ -63,15 +74,11 @@ mod tests {
     use crate::registry::VerbRegistry;
 
     fn make(id: &'static str, risk: crate::risk::RiskTier) -> VerbDescriptor {
-        VerbDescriptor::new(
-            id,
-            id,
-            "test",
-            VerbGroup::Civic,
-            risk,
-            crate::provenance::Provenance::Mcp,
-            &[],
-        )
+        VerbDescriptor::builder(id, id, VerbGroup::Civic)
+            .summary("test")
+            .risk(risk)
+            .provenance(crate::provenance::Provenance::Mcp)
+            .build()
     }
 
     #[test]

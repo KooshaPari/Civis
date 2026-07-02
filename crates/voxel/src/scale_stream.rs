@@ -75,7 +75,10 @@ impl std::fmt::Display for WindowError {
                 write!(f, "load_radius must be <= unload_radius")
             }
             WindowError::UnloadRadiusZero => {
-                write!(f, "unload_radius must be >= 1 (focus chunk must stay resident)")
+                write!(
+                    f,
+                    "unload_radius must be >= 1 (focus chunk must stay resident)"
+                )
             }
         }
     }
@@ -266,9 +269,8 @@ impl StreamingWindow {
         let fx = focus.cx as i64;
         let fy = focus.cy as i64;
         let fz = focus.cz as i64;
-        let mut out = Vec::with_capacity(StreamingWindowConfig::inner_ball_size(
-            self.cfg.load_radius,
-        ));
+        let mut out =
+            Vec::with_capacity(StreamingWindowConfig::inner_ball_size(self.cfg.load_radius));
         // Iterate (z, y, x) so the output is `(cz, cy, cx)` ascending — matches
         // the kernel's canonical chunk-id bit order (`cz` in the low bits).
         for cz_off in -r..=r {
@@ -280,21 +282,12 @@ impl StreamingWindow {
                     // Saturate into i32; Chebyshev-ball coords near i32::MAX
                     // overflow on add. Clamp rather than wrap so callers don't
                     // get surprise aliasing across the lattice boundary.
-                    let cx_i32 = i32::try_from(cx).unwrap_or(if cx >= 0 {
-                        i32::MAX
-                    } else {
-                        i32::MIN
-                    });
-                    let cy_i32 = i32::try_from(cy).unwrap_or(if cy >= 0 {
-                        i32::MAX
-                    } else {
-                        i32::MIN
-                    });
-                    let cz_i32 = i32::try_from(cz).unwrap_or(if cz >= 0 {
-                        i32::MAX
-                    } else {
-                        i32::MIN
-                    });
+                    let cx_i32 =
+                        i32::try_from(cx).unwrap_or(if cx >= 0 { i32::MAX } else { i32::MIN });
+                    let cy_i32 =
+                        i32::try_from(cy).unwrap_or(if cy >= 0 { i32::MAX } else { i32::MIN });
+                    let cz_i32 =
+                        i32::try_from(cz).unwrap_or(if cz >= 0 { i32::MAX } else { i32::MIN });
                     // Cheap tie-breaker: a coord that overflowed still has
                     // |Δ| > r in at least one axis, so it would be outside the
                     // ball anyway. We filter explicitly using r_i32 so the
@@ -397,8 +390,10 @@ impl StreamingWindow {
 
         // --- update stats ---
         self.stats.total_loads = self.stats.total_loads.saturating_add(loads.len() as u64);
-        self.stats.total_unloads =
-            self.stats.total_unloads.saturating_add(unloads.len() as u64);
+        self.stats.total_unloads = self
+            .stats
+            .total_unloads
+            .saturating_add(unloads.len() as u64);
         if loads.is_empty() && unloads.is_empty() {
             self.stats.noop_updates = self.stats.noop_updates.saturating_add(1);
         }
@@ -410,12 +405,13 @@ impl StreamingWindow {
 
     /// Drop every chunk from the resident set. Returns the unloads emitted.
     pub fn clear(&mut self) -> Vec<UnloadOp> {
-        let mut unloads: Vec<UnloadOp> =
-            self.resident.iter().map(|c| UnloadOp(*c)).collect();
+        let mut unloads: Vec<UnloadOp> = self.resident.iter().map(|c| UnloadOp(*c)).collect();
         unloads.sort_by_key(|op| (op.0.cz, op.0.cy, op.0.cx));
         self.resident.clear();
-        self.stats.total_unloads =
-            self.stats.total_unloads.saturating_add(unloads.len() as u64);
+        self.stats.total_unloads = self
+            .stats
+            .total_unloads
+            .saturating_add(unloads.len() as u64);
         unloads
     }
 }
@@ -437,7 +433,7 @@ mod tests {
             unload_radius: 2,
             resident_cap: StreamingWindowConfig::inner_ball_size(2),
         };
-        let mut w = StreamingWindow::new(cfg).expect("window");
+        let mut w = StreamingWindow::new(cfg.clone()).expect("window");
 
         // 1) Initial focus at the origin: should load the full Chebyshev ball
         //    of radius 2 around (0,0,0), i.e. a 5³ cube = 125 chunks.
@@ -529,10 +525,10 @@ mod tests {
             unload_radius: 2,
             resident_cap: StreamingWindowConfig::inner_ball_size(2),
         };
-        let mut a = StreamingWindow::new(cfg).expect("a");
+        let mut a = StreamingWindow::new(cfg.clone()).expect("a");
         let mut b = StreamingWindow::new(cfg).expect("b");
         for step in 0..16 {
-            let focus = c(step, step.wrapping_mul(2) as i32, step.wrapping_neg() as i32);
+            let focus = c(step, step.wrapping_mul(2), step.wrapping_neg());
             let ua = a.update_focus(focus);
             let ub = b.update_focus(focus);
             assert_eq!(ua, ub, "differed at step {step}");

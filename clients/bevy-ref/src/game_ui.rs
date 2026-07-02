@@ -135,6 +135,87 @@ fn speed_value_matches(actual: f32, expected: f32) -> bool {
     (actual - expected).abs() < 0.01
 }
 
+/// Seconds a god-action result toast stays visible in the HUD.
+pub const GOD_ACTION_TOAST_DURATION_SECS: f32 = 3.0;
+
+/// Transient HUD toast for god-mode action results.
+#[derive(Resource, Debug, Clone, Default)]
+pub struct GodActionToast {
+    /// Result text shown in the toast card.
+    pub message: String,
+    /// Remaining visible time; `0` means hidden.
+    pub ttl_secs: f32,
+}
+
+impl GodActionToast {
+    /// Show `message` for [`GOD_ACTION_TOAST_DURATION_SECS`].
+    pub fn show(&mut self, message: impl Into<String>) {
+        self.message = message.into();
+        self.ttl_secs = GOD_ACTION_TOAST_DURATION_SECS;
+    }
+
+    #[must_use]
+    pub fn visible(&self) -> bool {
+        !self.message.is_empty() && self.ttl_secs > 0.0
+    }
+}
+
+/// Tick down the god-action toast lifetime each frame.
+pub fn tick_god_action_toast(time: Res<Time>, mut toast: ResMut<GodActionToast>) {
+    if toast.ttl_secs <= 0.0 {
+        return;
+    }
+    toast.ttl_secs = (toast.ttl_secs - time.delta_secs()).max(0.0);
+    if toast.ttl_secs <= 0.0 {
+        toast.message.clear();
+    }
+}
+
+/// Bevy system wrapper for [`draw_god_action_toast`].
+pub fn draw_god_action_toast_system(mut contexts: EguiContexts, toast: Res<GodActionToast>) {
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
+    draw_god_action_toast(ctx, &toast);
+}
+
+/// Bottom-right glass card for the latest god-action result.
+pub fn draw_god_action_toast(ctx: &egui::Context, toast: &GodActionToast) {
+    if !toast.visible() {
+        return;
+    }
+    let alpha_frac = (toast.ttl_secs / GOD_ACTION_TOAST_DURATION_SECS).clamp(0.0, 1.0);
+    let alpha = (alpha_frac * 235.0) as u8;
+    let accent = egui::Color32::from_rgb(126, 186, 181);
+    let fill = egui::Color32::from_rgba_premultiplied(17, 20, 31, alpha.saturating_add(30));
+    let text_color = egui::Color32::from_rgba_unmultiplied(220, 225, 235, alpha);
+    let accent_color =
+        egui::Color32::from_rgba_unmultiplied(accent.r(), accent.g(), accent.b(), alpha);
+
+    egui::Area::new(egui::Id::new("civis_god_action_toast"))
+        .anchor(egui::Align2::RIGHT_BOTTOM, egui::vec2(-16.0, -120.0))
+        .order(egui::Order::Foreground)
+        .interactable(false)
+        .show(ctx, |ui| {
+            ui.set_max_width(340.0);
+            egui::Frame::NONE
+                .fill(fill)
+                .stroke(egui::Stroke::new(1.0, accent_color.gamma_multiply(0.6)))
+                .corner_radius(egui::CornerRadius::same(8))
+                .inner_margin(egui::Margin::symmetric(10, 6))
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(egui::RichText::new("⚡").color(accent_color).size(16.0));
+                        ui.label(
+                            egui::RichText::new(&toast.message)
+                                .color(text_color)
+                                .size(13.0),
+                        );
+                    });
+                });
+        });
+}
+
 // ---------------------------------------------------------------------------
 // Palette
 // ---------------------------------------------------------------------------
@@ -157,6 +238,8 @@ impl Plugin for GameUiPlugin {
             .init_resource::<SelectedEntity>()
             .init_resource::<SelectedEntityDetails>()
             .init_resource::<GameSpeed>()
+            .init_resource::<ActiveTool>()
+            .init_resource::<BuildingSpawnKind>()
             .init_resource::<ActiveSubTool>()
             .init_resource::<LeftClusterTab>()
             // Holocron motion state is intentionally NOT registered here yet —
@@ -337,34 +420,22 @@ fn draw_game_ui(
 
     apply_theme(ctx);
 
-    egui::TopBottomPanel::top("civis_game_top_bar")
-        .frame(panel_frame(egui::Margin::symmetric(12, 8)))
-        .show(ctx, |ui| {
-            top_bar_ui(
-                ui,
-                &snapshot,
-                &attach_mode,
-                live_attach.as_deref(),
-                &mut laws_open,
-            );
-        });
+    top_center_cluster(
+        ctx,
+        &snapshot,
+        &attach_mode,
+        live_attach.as_deref(),
+        &mut laws_open,
+    );
 
-    egui::TopBottomPanel::bottom("civis_game_bottom_bar")
-        .frame(panel_frame(egui::Margin::symmetric(12, 8)))
-        .show(ctx, |ui| {
-            tool_palette_ui(ui, &mut active_tool, &mut building_kind, &mut speed);
-        });
+    left_sidebar_cluster(
+        ctx,
+        selected.entity.is_some() || live_selection.0.is_some(),
+        &details,
+        snapshot.factions,
+    );
 
-    let show_live_inspector = *attach_mode == AttachMode::Server && live_selection.0.is_some();
-    if selected.entity.is_some() || show_live_inspector {
-        egui::SidePanel::right("civis_game_selected_panel")
-            .resizable(true)
-            .default_width(268.0)
-            .frame(panel_frame(egui::Margin::same(14)))
-            .show(ctx, |ui| {
-                inspector_ui(ui, &details);
-            });
-    }
+    bottom_cluster(ctx, &mut active_tool, &mut building_kind, &mut speed);
 }
 
 /// Compact needs line for the selection inspector (`F 82% · S 70% · …`).
@@ -384,6 +455,85 @@ pub fn format_civilian_needs_summary(needs: &CivilianNeeds3d) -> String {
 #[must_use]
 pub fn format_civilian_health_display(health: f32) -> String {
     format!("{:.0}%", health.clamp(0.0, 1.0) * 100.0)
+}
+
+/// Polished top-center HUD cluster with the stat strip and websocket status.
+fn top_center_cluster(
+    ctx: &egui::Context,
+    snapshot: &GameUiSnapshot,
+    attach_mode: &crate::AttachMode,
+    live_attach: Option<&crate::live_attach::LiveAttachState>,
+    laws_open: &mut GameLawsOpen,
+) {
+    egui::Area::new(egui::Id::new("civis_top_center_cluster"))
+        .anchor(egui::Align2::CENTER_TOP, [0.0, 10.0])
+        .show(ctx, |ui| {
+            egui::Frame::NONE
+                .fill(PANEL_FILL)
+                .stroke(egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.18)))
+                .corner_radius(egui::CornerRadius::same(10))
+                .inner_margin(egui::Margin::symmetric(12, 8))
+                .show(ui, |ui| {
+                    top_bar_ui(ui, snapshot, attach_mode, live_attach, laws_open);
+                });
+        });
+}
+
+/// Left-side inspector cluster with a faction summary rail.
+fn left_sidebar_cluster(
+    ctx: &egui::Context,
+    has_selection: bool,
+    details: &SelectedEntityDetails,
+    faction_count: u32,
+) {
+    egui::SidePanel::left("civis_left_sidebar_cluster")
+        .resizable(false)
+        .exact_width(288.0)
+        .frame(egui::Frame::NONE)
+        .show(ctx, |ui| {
+            egui::Frame::NONE
+                .fill(PANEL_FILL)
+                .stroke(egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.16)))
+                .corner_radius(egui::CornerRadius::same(10))
+                .inner_margin(egui::Margin::symmetric(12, 10))
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(egui::RichText::new("◧ Inspect").color(ACCENT).strong());
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            ui.label(
+                                egui::RichText::new(format!("{faction_count} factions"))
+                                    .color(DIM)
+                                    .small(),
+                            );
+                        });
+                    });
+                    ui.add_space(6.0);
+                    ui.separator();
+                    ui.add_space(6.0);
+                    inspector_ui(ui, has_selection, details);
+                });
+        });
+}
+
+/// Bottom cluster with tool palette and speed control.
+fn bottom_cluster(
+    ctx: &egui::Context,
+    active_tool: &mut ActiveTool,
+    building_kind: &mut BuildingSpawnKind,
+    speed: &mut GameSpeed,
+) {
+    egui::Area::new(egui::Id::new("civis_bottom_cluster"))
+        .anchor(egui::Align2::CENTER_BOTTOM, [0.0, -12.0])
+        .show(ctx, |ui| {
+            egui::Frame::NONE
+                .fill(PANEL_FILL)
+                .stroke(egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.16)))
+                .corner_radius(egui::CornerRadius::same(10))
+                .inner_margin(egui::Margin::symmetric(12, 8))
+                .show(ui, |ui| {
+                    tool_palette_ui(ui, active_tool, building_kind, speed);
+                });
+        });
 }
 
 /// Display name for a civilian wire entry (genome summary or stable id).
@@ -737,11 +887,11 @@ fn speed_control_ui(ui: &mut egui::Ui, speed: &mut GameSpeed) {
 }
 
 /// Right-side selection inspector card.
-fn inspector_ui(ui: &mut egui::Ui, details: &SelectedEntityDetails) {
-    ui.heading(egui::RichText::new("\u{25a4} Selection").color(ACCENT));
-    ui.add_space(4.0);
-    ui.separator();
-    ui.add_space(6.0);
+fn inspector_ui(ui: &mut egui::Ui, has_selection: bool, details: &SelectedEntityDetails) {
+    if !has_selection {
+        inspector_empty_state(ui);
+        return;
+    }
 
     inspector_row(ui, "Name", &details.name);
     inspector_row(ui, "Faction", &details.faction);
@@ -749,7 +899,34 @@ fn inspector_ui(ui: &mut egui::Ui, details: &SelectedEntityDetails) {
     // Health rendered as a progress bar when it parses to a fraction.
     ui.add_space(2.0);
     ui.label(egui::RichText::new("Health").color(DIM).small());
-    if let Some(frac) = parse_health_fraction(&details.health) {
+    health_bar_ui(ui, &details.health);
+    ui.add_space(2.0);
+
+    inspector_row(ui, "Profession", &details.profession);
+    inspector_row(ui, "Species", &details.species);
+    inspector_row(ui, "Needs", &details.needs);
+    inspector_row(ui, "Position", &details.position);
+}
+
+/// Empty state shown when there is no selection.
+fn inspector_empty_state(ui: &mut egui::Ui) {
+    ui.add_space(16.0);
+    ui.vertical_centered(|ui| {
+        ui.label(egui::RichText::new("🗺").size(28.0).color(DIM));
+        ui.add_space(6.0);
+        ui.label(egui::RichText::new("Nothing selected").strong());
+        ui.add_space(2.0);
+        ui.label(
+            egui::RichText::new("Pick the Select tool and click an actor to inspect it.")
+                .color(DIM)
+                .small(),
+        );
+    });
+}
+
+/// Health rendered as a color-coded progress bar when parsable.
+fn health_bar_ui(ui: &mut egui::Ui, health: &str) {
+    if let Some(frac) = parse_health_fraction(health) {
         let color = if frac > 0.66 {
             egui::Color32::from_rgb(120, 220, 130)
         } else if frac > 0.33 {
@@ -760,17 +937,12 @@ fn inspector_ui(ui: &mut egui::Ui, details: &SelectedEntityDetails) {
         ui.add(
             egui::ProgressBar::new(frac)
                 .fill(color)
-                .text(details.health.clone()),
+                .text(health.to_string()),
         );
     } else {
-        ui.label(egui::RichText::new(&details.health).strong());
+        let shown = if health.is_empty() { "—" } else { health };
+        ui.label(egui::RichText::new(shown).strong());
     }
-    ui.add_space(2.0);
-
-    inspector_row(ui, "Profession", &details.profession);
-    inspector_row(ui, "Species", &details.species);
-    inspector_row(ui, "Needs", &details.needs);
-    inspector_row(ui, "Position", &details.position);
 }
 
 /// A dimmed-label / bright-value inspector row.

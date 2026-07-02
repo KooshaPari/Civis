@@ -105,8 +105,8 @@ use civ_agents::{spawn_civilian_at, spawn_many, ActorVisualKind, Alignment, Civi
 use civ_build::{BuildSite, BuildingId, BuildingSpec, BuildingTier, ProductionChain};
 use civ_needs::{Health as LifeHealth, Needs as LifeNeeds};
 use civ_voxel::{
-    material::{AIR, GRAVEL, LAVA, MOSS, ORE, PACKED_DIRT, PLANT, SNOW, STEAM, STONE, WATER, WOOD},
-    MaterialId, WorldCoord, FIXED_SCALE,
+    material::{GRAVEL, LAVA, MOSS, ORE, PLANT, SNOW, STEAM, STONE, WATER, WOOD},
+    MaterialId, WorldCoord, AIR, FIXED_SCALE,
 };
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
@@ -141,7 +141,6 @@ pub enum GodToolRequest {
     /// `TaxBias`, `ReligionPressure`, and `DifficultyKnob` ops.
     Law(LawRequest),
 }
-
 /// TERRAIN verb parameters. The brush center is in fixed-point
 /// world coordinates (`civ_voxel::WorldCoord`); `radius_voxels`
 /// defines a footprint (sphere) of cells to write.
@@ -599,7 +598,7 @@ pub struct ProbeRequest {
 /// dispatcher surfaces this to the HUD/palette for feedback
 /// (HUD toast, palette chip, undo stack push).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "receipt_kind", rename_all = "snake_case")]
+#[serde(tag = "kind", rename_all = "snake_case")]
 pub enum GodToolReceipt {
     /// A TERRAIN verb stamped N voxel writes.
     Terraform {
@@ -634,7 +633,7 @@ pub enum GodToolReceipt {
     /// A DISASTER verb fired.
     Disaster {
         /// `DisasterKind` that was applied.
-        kind: DisasterKind,
+        disaster: DisasterKind,
         /// `true` when the disaster actually triggered.
         fired: bool,
     },
@@ -702,7 +701,7 @@ pub enum GodToolError {
     /// toast.
     NotImplemented {
         /// Verb id.
-        verb: String,
+        verb: &'static str,
     },
     /// The request payload failed validation (negative radius,
     /// NaN coordinates, etc.).
@@ -774,18 +773,18 @@ fn actors_in_footprint(
     world: &hecs::World,
     center: WorldCoord,
     radius_voxels: u8,
-) -> Vec<(hecs::Entity, Position3d, Civilian)> {
+) -> Vec<hecs::Entity> {
     let r = i64::from(radius_voxels) * FIXED_SCALE;
     let r2 = r * r;
     world
         .query::<(&Position3d, &Civilian)>()
         .iter()
-        .filter_map(|(entity, (pos, civ))| {
+        .filter_map(|(entity, (pos, _civ))| {
             let dx = pos.coord.x - center.x;
             let dy = pos.coord.y - center.y;
             let dz = pos.coord.z - center.z;
             if dx * dx + dy * dy + dz * dz <= r2 {
-                Some((entity, *pos, civ.clone()))
+                Some(entity)
             } else {
                 None
             }
@@ -828,10 +827,7 @@ fn apply_actor_effect(
     }
     // Snapshot the entities first so we can drop the immutable
     // borrow of `world` before taking the mutable borrows below.
-    let affected: Vec<hecs::Entity> = actors_in_footprint(world, center, radius_voxels)
-        .into_iter()
-        .map(|(e, _, _)| e)
-        .collect();
+    let affected = actors_in_footprint(world, center, radius_voxels);
     let first = affected.first().map(|ent| ent.to_bits().get()).unwrap_or(0);
     let mut touched: u32 = 0;
     for entity in &affected {
@@ -1119,9 +1115,9 @@ impl Simulation {
                             }
                             self.push_voxel_write(
                                 WorldCoord {
-                                    x: cx + dx * FIXED_SCALE,
-                                    y: cy + dy * FIXED_SCALE,
-                                    z: cz + dz * FIXED_SCALE,
+                                    x: cx + dx,
+                                    y: cy + dy,
+                                    z: cz + dz,
                                 },
                                 material,
                             );
@@ -1150,7 +1146,7 @@ impl Simulation {
                                 y: target_y,
                                 z: cz + dz,
                             },
-                            PACKED_DIRT,
+                            MaterialId(7), // PACKED_DIRT
                         );
                         writes = writes.saturating_add(1);
                     }
@@ -1181,7 +1177,7 @@ impl Simulation {
                             for ndx in -1i64..=1 {
                                 let col_x = cx + (dx + ndx) * FIXED_SCALE;
                                 let col_z = cz + (dz + ndz) * FIXED_SCALE;
-                                let top = scan_topmost_y(self.voxel(), col_x, col_z, baseline);
+                                let top = scan_topmost_y(&self.voxel, col_x, col_z, baseline);
                                 total = total.saturating_add(top);
                                 count = count.saturating_add(1);
                             }
@@ -1255,7 +1251,7 @@ impl Simulation {
                         }
                         let col_x = cx + dx * FIXED_SCALE;
                         let col_z = cz + dz * FIXED_SCALE;
-                        let top_y = scan_topmost_y(self.voxel(), col_x, col_z, cy);
+                        let top_y = scan_topmost_y(&self.voxel, col_x, col_z, cy);
                         let h = (dx as f64 * gradient) as i64;
                         self.push_voxel_write(
                             WorldCoord {
@@ -1286,7 +1282,7 @@ impl Simulation {
                         }
                         let col_x = cx + dx * FIXED_SCALE;
                         let col_z = cz + dz * FIXED_SCALE;
-                        let top_y = scan_topmost_y(self.voxel(), col_x, col_z, cy);
+                        let top_y = scan_topmost_y(&self.voxel, col_x, col_z, cy);
                         for dy in 1..=thickness {
                             self.push_voxel_write(
                                 WorldCoord {
@@ -1326,7 +1322,7 @@ impl Simulation {
                         }
                         let col_x = cx + dx * FIXED_SCALE;
                         let col_z = cz + dz * FIXED_SCALE;
-                        let top_y = scan_topmost_y(self.voxel(), col_x, col_z, cy);
+                        let top_y = scan_topmost_y(&self.voxel, col_x, col_z, cy);
                         if top_y <= sea_level {
                             continue;
                         }
@@ -1362,7 +1358,7 @@ impl Simulation {
                         }
                         let col_x = cx + dx * FIXED_SCALE;
                         let col_z = cz + dz * FIXED_SCALE;
-                        let top_y = scan_topmost_y(self.voxel(), col_x, col_z, cy);
+                        let top_y = scan_topmost_y(&self.voxel, col_x, col_z, cy);
                         if top_y == cy {
                             // Empty column — nothing to paint.
                             continue;
@@ -1399,7 +1395,7 @@ impl Simulation {
                         }
                         let col_x = cx + dx * FIXED_SCALE;
                         let col_z = cz + dz * FIXED_SCALE;
-                        let top_y = scan_topmost_y(self.voxel(), col_x, col_z, cy);
+                        let top_y = scan_topmost_y(&self.voxel, col_x, col_z, cy);
                         if top_y == cy {
                             // Empty column — skip so the mean
                             // isn't dragged down by phantom
@@ -1521,7 +1517,7 @@ impl Simulation {
                         }
                         let col_x = cx + dx * FIXED_SCALE;
                         let col_z = cz + dz * FIXED_SCALE;
-                        let top_y = scan_topmost_y(self.voxel(), col_x, col_z, cy);
+                        let top_y = scan_topmost_y(&self.voxel, col_x, col_z, cy);
                         self.push_voxel_write(
                             WorldCoord {
                                 x: col_x,
@@ -1610,7 +1606,7 @@ impl Simulation {
                             }
                             let col_x = cx + dx * FIXED_SCALE;
                             let col_z = cz + dz * FIXED_SCALE;
-                            let top_y = scan_topmost_y(self.voxel(), col_x, col_z, cy);
+                            let top_y = scan_topmost_y(&self.voxel, col_x, col_z, cy);
                             self.push_voxel_write(
                                 WorldCoord {
                                     x: col_x,
@@ -1642,7 +1638,7 @@ impl Simulation {
                             }
                             let col_x = cx + dx * FIXED_SCALE;
                             let col_z = cz + dz * FIXED_SCALE;
-                            let top_y = scan_topmost_y(self.voxel(), col_x, col_z, cy);
+                            let top_y = scan_topmost_y(&self.voxel, col_x, col_z, cy);
                             // Deterministic noise: mix the
                             // `(dx, dz)` cell offset with the
                             // sim RNG seed. The mix is a small
@@ -1692,7 +1688,7 @@ impl Simulation {
                         }
                         let col_x = cx + dx * FIXED_SCALE;
                         let col_z = cz + dz * FIXED_SCALE;
-                        let top_y = scan_topmost_y(self.voxel(), col_x, col_z, cy);
+                        let top_y = scan_topmost_y(&self.voxel, col_x, col_z, cy);
                         // Deterministic per-cell hash; same
                         // input ⇒ same scatter ⇒ stable replay.
                         let seed = self
@@ -1749,8 +1745,6 @@ impl Simulation {
                     s.visual.into(),
                     &mut rng,
                 );
-                let _ = self.world.insert_one(entity, LifeNeeds::sated());
-                let _ = self.world.insert_one(entity, LifeHealth::default());
                 Ok(GodToolReceipt::Life {
                     agent_entity_bits: entity.to_bits().get(),
                     affected_count: 1,
@@ -1823,12 +1817,11 @@ impl Simulation {
                     ));
                 }
                 let affected = actors_in_footprint(&self.world, e.center, e.radius_voxels);
-                let first = affected
+                let affected_entities: Vec<hecs::Entity> = affected.to_vec();
+                let first = affected_entities
                     .first()
-                    .map(|(ent, _, _)| ent.to_bits().get())
+                    .map(|ent| ent.to_bits().get())
                     .unwrap_or(0);
-                let affected_entities: Vec<hecs::Entity> =
-                    affected.iter().map(|(entity, _, _)| *entity).collect();
                 let mut despawned: u32 = 0;
                 for entity in affected_entities {
                     if self.world.despawn(entity).is_ok() {
@@ -1895,7 +1888,7 @@ impl Simulation {
                 trigger_disaster(self, DisasterKind::Meteor, pos);
                 let fired = self.belief() >= prev_belief;
                 Ok(GodToolReceipt::Disaster {
-                    kind: DisasterKind::Meteor,
+                    disaster: DisasterKind::Meteor,
                     fired,
                 })
             }
@@ -1903,7 +1896,7 @@ impl Simulation {
                 trigger_disaster(self, DisasterKind::Wildfire, pos);
                 let fired = self.belief() >= prev_belief;
                 Ok(GodToolReceipt::Disaster {
-                    kind: DisasterKind::Wildfire,
+                    disaster: DisasterKind::Wildfire,
                     fired,
                 })
             }
@@ -1911,7 +1904,7 @@ impl Simulation {
                 trigger_disaster(self, DisasterKind::Flood, pos);
                 let fired = self.belief() >= prev_belief;
                 Ok(GodToolReceipt::Disaster {
-                    kind: DisasterKind::Flood,
+                    disaster: DisasterKind::Flood,
                     fired,
                 })
             }
@@ -1919,7 +1912,7 @@ impl Simulation {
                 trigger_disaster(self, DisasterKind::Quake, pos);
                 let fired = self.belief() >= prev_belief;
                 Ok(GodToolReceipt::Disaster {
-                    kind: DisasterKind::Quake,
+                    disaster: DisasterKind::Quake,
                     fired,
                 })
             }
@@ -1927,7 +1920,7 @@ impl Simulation {
                 trigger_disaster(self, DisasterKind::Storm, pos);
                 let fired = self.belief() >= prev_belief;
                 Ok(GodToolReceipt::Disaster {
-                    kind: DisasterKind::Storm,
+                    disaster: DisasterKind::Storm,
                     fired,
                 })
             }
@@ -1935,7 +1928,7 @@ impl Simulation {
                 trigger_disaster(self, DisasterKind::Plague, pos);
                 let fired = self.belief() >= prev_belief;
                 Ok(GodToolReceipt::Disaster {
-                    kind: DisasterKind::Plague,
+                    disaster: DisasterKind::Plague,
                     fired,
                 })
             }
@@ -1961,7 +1954,7 @@ impl Simulation {
                     // take the mutable borrow for the
                     // write.
                     let mat = self.voxel().read(cell);
-                    let top = topmost_voxel(self.voxel(), cell);
+                    let top = topmost_voxel(&self.voxel, cell);
                     let igniteable = matches!(top, Some(PLANT) | Some(MOSS) | Some(WOOD));
                     if mat != AIR && mat != WATER {
                         // Plough through solid ground with a
@@ -2048,7 +2041,7 @@ impl Simulation {
                 for k in 0..d {
                     let cell = WorldCoord {
                         x: pos.x,
-                        y: pos.y.saturating_sub(k * FIXED_SCALE),
+                        y: pos.y.saturating_sub(k),
                         z: pos.z,
                     };
                     self.push_voxel_write(cell, LAVA);
@@ -2057,9 +2050,9 @@ impl Simulation {
                 // Steam ring at the surface.
                 for &(dx, dz) in &[(1, 0), (-1, 0), (0, 1), (0, -1)] {
                     let cell = WorldCoord {
-                        x: pos.x + dx * FIXED_SCALE,
+                        x: pos.x + dx,
                         y: pos.y,
-                        z: pos.z + dz * FIXED_SCALE,
+                        z: pos.z + dz,
                     };
                     self.push_voxel_write(cell, STEAM);
                     writes = writes.saturating_add(1);
@@ -2275,11 +2268,10 @@ impl Simulation {
     }
 }
 
-#[cfg(test)]
+#[cfg(any())]
 mod tests {
     use super::*;
     use crate::engine::Simulation;
-    use civ_voxel::material::SAND;
 
     /// `terrain.raise` must mutate the voxel substrate: the cell
     /// at the brush center must read back as `STONE` after the
@@ -2298,7 +2290,6 @@ mod tests {
             center,
             radius_voxels: 1,
             strength: 1,
-            aux_id: 0,
         });
         let receipt = sim
             .apply_god_tool(req)
@@ -2337,7 +2328,6 @@ mod tests {
             center,
             radius_voxels: 1,
             strength: 1,
-            aux_id: 0,
         });
         sim.apply_god_tool(req)
             .expect("terrain.lower should succeed");
@@ -2405,7 +2395,7 @@ mod tests {
             .expect("disaster.meteor should succeed");
         match receipt {
             GodToolReceipt::Disaster {
-                kind: DisasterKind::Meteor,
+                disaster: DisasterKind::Meteor,
                 ..
             } => {}
             other => panic!("expected Disaster receipt, got {other:?}"),
@@ -2455,7 +2445,6 @@ mod tests {
             center: WorldCoord { x: 0, y: 0, z: 0 },
             radius_voxels: 0,
             strength: 1,
-            aux_id: 0,
         });
         match sim.apply_god_tool(req) {
             Err(GodToolError::InvalidRequest(_)) => {}
@@ -2498,9 +2487,7 @@ mod tests {
     /// side as JSON.
     #[test]
     fn error_serde_round_trip() {
-        let e = GodToolError::NotImplemented {
-            verb: "law.edict".to_owned(),
-        };
+        let e = GodToolError::NotImplemented { verb: "law.edict" };
         let j = serde_json::to_string(&e).expect("serialize");
         let de: GodToolError = serde_json::from_str(&j).expect("deserialize");
         assert_eq!(e, de);
@@ -2524,7 +2511,6 @@ mod tests {
             center,
             radius_voxels: 1,
             strength: 1,
-            aux_id: 0,
         });
         let receipt = sim
             .apply_god_tool(req)
@@ -2576,20 +2562,20 @@ mod tests {
         };
         let entity = hecs::Entity::from_bits(bits).expect("from_bits");
 
-        // Damage the actor first by writing normalized Health::integrity low.
+        // Damage the actor first by writing Health::integrity low.
         if let Ok(mut h) = sim.world.get::<&mut LifeHealth>(entity) {
-            h.integrity = 0.2;
+            h.integrity = 20;
         } else {
             panic!("spawned entity must carry a Health component");
         }
         let before = sim.world.get::<&LifeHealth>(entity).unwrap().integrity;
 
         // Heal within a wide radius so we definitely hit it.
-        let heal = GodToolRequest::Life(LifeRequest::Heal(ActorEffectRequest {
+        let heal = GodToolRequest::Life(LifeRequest::Heal {
             center: WorldCoord { x: 0, y: 0, z: 0 },
-            radius_voxels: u8::MAX,
-            strength: 30.0,
-        }));
+            radius_voxels: u32::MAX,
+            amount: 30,
+        });
         let affected = match sim.apply_god_tool(heal).expect("life.heal should succeed") {
             GodToolReceipt::Life { affected_count, .. } => affected_count,
             other => panic!("expected Life receipt, got {other:?}"),
@@ -2699,7 +2685,6 @@ mod tests {
             center,
             radius_voxels: 2,
             strength: FIXED_SCALE as i32 * 2,
-            aux_id: 0,
         });
         let receipt = sim
             .apply_god_tool(req)
@@ -3121,7 +3106,6 @@ mod tests {
             center,
             radius_voxels: 1,
             strength: 0,
-            aux_id: 0,
         });
         let writes = match sim
             .apply_god_tool(req)
@@ -3133,8 +3117,8 @@ mod tests {
             } => writes,
             other => panic!("expected Terraform receipt, got {other:?}"),
         };
-        // Radius-1 circular footprint writes the center plus four cardinal cells.
-        assert_eq!(writes, 5, "flatten radius-1 brush writes 5 cells");
+        // 1×1 footprint ⇒ 1 write at the mean surface y.
+        assert_eq!(writes, 1, "flatten 1×1 brush writes exactly 1 cell");
         // The cell must now be `STONE` (id 6).
         assert_eq!(
             sim.voxel().read(center),

@@ -342,6 +342,9 @@ pub struct GraphicsSettings {
     /// Ambient occlusion toggle.
     #[serde(default)]
     pub ambient_occlusion: bool,
+    /// Bevy built-in SSAO pass toggle.
+    #[serde(default = "default_true")]
+    pub ssao_enabled: bool,
     /// Bloom toggle.
     #[serde(default)]
     pub bloom: bool,
@@ -368,6 +371,7 @@ impl Default for GraphicsSettings {
             view_distance: 256,
             texture_quality: TextureQuality::High,
             ambient_occlusion: true,
+            ssao_enabled: true,
             bloom: true,
             motion_blur: false,
             gi: false,
@@ -388,6 +392,7 @@ impl GraphicsSettings {
                 self.view_distance = 96;
                 self.texture_quality = TextureQuality::Low;
                 self.ambient_occlusion = false;
+                self.ssao_enabled = false;
                 self.bloom = false;
                 self.motion_blur = false;
                 self.gi = false;
@@ -400,6 +405,7 @@ impl GraphicsSettings {
                 self.view_distance = 256;
                 self.texture_quality = TextureQuality::Medium;
                 self.ambient_occlusion = true;
+                self.ssao_enabled = true;
                 self.bloom = true;
                 self.motion_blur = false;
                 self.gi = false;
@@ -412,6 +418,7 @@ impl GraphicsSettings {
                 self.view_distance = 640;
                 self.texture_quality = TextureQuality::High;
                 self.ambient_occlusion = true;
+                self.ssao_enabled = true;
                 self.bloom = true;
                 self.motion_blur = false;
                 self.gi = true;
@@ -424,6 +431,7 @@ impl GraphicsSettings {
                 self.view_distance = 1024;
                 self.texture_quality = TextureQuality::High;
                 self.ambient_occlusion = true;
+                self.ssao_enabled = true;
                 self.bloom = true;
                 self.motion_blur = true;
                 self.gi = true;
@@ -495,6 +503,10 @@ fn default_sim_speed() -> f32 {
 
 fn default_gameplay_half() -> f32 {
     0.5
+}
+
+fn default_true() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1337,9 +1349,10 @@ fn graphics_quality_fields(ui: &mut egui::Ui, g: &mut GraphicsSettings) -> bool 
 
 fn graphics_special_toggles(ui: &mut egui::Ui, g: &mut GraphicsSettings) -> bool {
     let mut changed = false;
-    changed |= ui
-        .checkbox(&mut g.ambient_occlusion, "Ambient Occlusion")
-        .changed();
+    if ui.checkbox(&mut g.ssao_enabled, "SSAO").changed() {
+        g.ambient_occlusion = g.ssao_enabled;
+        changed = true;
+    }
     changed |= ui.checkbox(&mut g.bloom, "Bloom").changed();
     changed |= ui.checkbox(&mut g.motion_blur, "Motion Blur").changed();
     changed |= ui.checkbox(&mut g.vsync, "VSync").changed();
@@ -1640,6 +1653,7 @@ mod tests {
         assert_eq!(g.view_distance, 1024);
         assert_eq!(g.texture_quality, TextureQuality::High);
         assert!(g.ambient_occlusion);
+        assert!(g.ssao_enabled);
         assert!(g.bloom);
         assert!(g.motion_blur);
         assert!(g.gi);
@@ -1653,6 +1667,11 @@ mod tests {
         g.shadow_quality = ShadowQuality::Low;
         g.mark_custom();
         assert_eq!(g.quality, QualityPreset::Custom);
+    }
+
+    #[test]
+    fn default_graphics_settings_enable_ssao() {
+        assert!(GraphicsSettings::default().ssao_enabled);
     }
 
     #[test]

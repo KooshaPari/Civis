@@ -225,6 +225,10 @@ pub struct Needs {
     pub safety: f32,
     /// Belonging need (social).
     pub belonging: f32,
+    /// Rest/sleep need.
+    pub rest: f32,
+    /// Health need.
+    pub health: f32,
 }
 
 /// Home assignment for a civilian.
@@ -296,6 +300,8 @@ impl CivilianBundle {
                 shelter: 0.25,
                 safety: 0.25,
                 belonging: 0.25,
+                rest: 0.25,
+                health: 0.25,
             },
             lod: LodTier::Hot,
         }
@@ -324,6 +330,8 @@ pub fn child_bundle_from_parent(rng: &mut ChaCha8Rng) -> CivilianBundle {
             shelter: 0.25,
             safety: 0.25,
             belonging: 0.25,
+            rest: 0.25,
+            health: 0.25,
         },
         lod: LodTier::Hot,
     }
@@ -615,6 +623,8 @@ pub fn spawn_many(
             shelter: 0.25,
             safety: 0.25,
             belonging: 0.25,
+            rest: 0.25,
+            health: 0.25,
         };
         let lod = match offset % 3 {
             0 => LodTier::Hot,
@@ -1028,6 +1038,8 @@ mod tests {
             shelter: 0.2,
             safety: 0.3,
             belonging: 0.4,
+            rest: 0.25,
+            health: 0.25,
         };
         let lod = LodTier::Warm;
         let entity = spawn_civilian(
@@ -1112,6 +1124,8 @@ mod tests {
                     shelter: 0.25,
                     safety: 0.25,
                     belonging: 0.25,
+                    rest: 0.25,
+                    health: 0.25,
                 },
                 lod: LodTier::Hot,
             },
@@ -1156,6 +1170,8 @@ mod tests {
                     shelter: 0.25,
                     safety: 0.25,
                     belonging: 0.25,
+                    rest: 0.25,
+                    health: 0.25,
                 },
                 lod: LodTier::Hot,
             },
@@ -1202,6 +1218,8 @@ mod tests {
                     shelter: 0.25,
                     safety: 0.25,
                     belonging: 0.25,
+                    rest: 0.25,
+                    health: 0.25,
                 },
                 lod: LodTier::Hot,
             },
@@ -1315,6 +1333,8 @@ mod tests {
             shelter: 0.25,
             safety: 0.75,
             belonging: 0.125,
+            rest: 0.25,
+            health: 0.25,
         };
         let weights = UtilityWeights {
             food: 2.0,
@@ -1336,6 +1356,8 @@ mod tests {
             shelter: 0.9,
             safety: 0.2,
             belonging: 0.3,
+            rest: 0.25,
+            health: 0.25,
         };
         let weights = UtilityWeights {
             food: 1.0,

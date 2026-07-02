@@ -53,15 +53,11 @@ mod tests {
     use crate::registry::VerbRegistry;
 
     fn make(id: &'static str) -> VerbDescriptor {
-        VerbDescriptor::new(
-            id,
-            id,
-            "test",
-            VerbGroup::Civic,
-            crate::risk::RiskTier::Minor,
-            crate::provenance::Provenance::Mcp,
-            &[],
-        )
+        VerbDescriptor::builder(id, id, VerbGroup::Civic)
+            .summary("test")
+            .risk(crate::risk::RiskTier::Minor)
+            .provenance(crate::provenance::Provenance::Mcp)
+            .build()
     }
 
     #[test]
@@ -72,15 +68,11 @@ mod tests {
 
     #[test]
     fn mcp_tool_name_none_when_unlinked() {
-        let v = VerbDescriptor::new(
-            "hud_a",
-            "hud_a",
-            "test",
-            VerbGroup::Civic,
-            crate::risk::RiskTier::ReadOnly,
-            crate::provenance::Provenance::Hud,
-            &[],
-        );
+        let v = VerbDescriptor::builder("hud_a", "hud_a", VerbGroup::Civic)
+            .summary("test")
+            .risk(crate::risk::RiskTier::ReadOnly)
+            .provenance(crate::provenance::Provenance::Hud)
+            .build();
         assert_eq!(mcp_tool_name(&v), None);
     }
 

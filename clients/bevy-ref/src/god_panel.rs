@@ -343,15 +343,20 @@ fn toggle_god_panel(keys: Res<ButtonInput<KeyCode>>, mut state: ResMut<GodPanelS
 fn draw_god_panel(
     mut contexts: EguiContexts,
     mut state: ResMut<GodPanelState>,
-    bridge: Res<LiveBridge>,
+    bridge: Option<Res<LiveBridge>>,
+    mut ran_once: Local<bool>,
 ) {
+    if !*ran_once {
+        *ran_once = true;
+        return;
+    }
     if !state.visible {
         return;
     }
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-    let screen = ctx.screen_rect();
+    let screen = ctx.content_rect();
 
     let mut fire_legacy: Option<String> = None;
     let mut fire_substrate: Option<usize> = None;
@@ -619,7 +624,9 @@ fn draw_god_panel(
             "target_faction": if needs_faction { Some(state.target_faction) } else { None::<u32> },
             "magnitude": state.magnitude,
         });
-        bridge.client.send_rpc("sim.god_action", payload);
+        if let Some(ref bridge) = bridge {
+            bridge.client.send_rpc("sim.god_action", payload);
+        }
         state.status = Some(format!("Invoked: {}", ACTIONS[state.selected_action]));
     }
 
@@ -630,7 +637,9 @@ fn draw_god_panel(
     if let Some(idx) = fire_substrate {
         let v = &SUBSTRATE_VERBS[idx];
         let payload = (v.param_builder)(&state);
-        bridge.client.send_rpc("sim.god_action", payload);
+        if let Some(ref bridge) = bridge {
+            bridge.client.send_rpc("sim.god_action", payload);
+        }
         state.status = Some(format!("Fired: {} ({})", v.label, v.verb));
     }
 }

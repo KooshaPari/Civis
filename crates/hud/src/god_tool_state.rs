@@ -554,9 +554,6 @@ impl GodToolState {
     /// is not in the registry.
     #[must_use]
     pub fn current_def<'a>(&self, registry: &'a GodToolRegistry) -> Option<&'a GodToolDef> {
-        if self.current == GodToolId::None {
-            return None;
-        }
         registry.get(&self.current)
     }
 
@@ -579,9 +576,6 @@ impl GodToolState {
         &'a self,
         registry: &'a GodToolRegistry,
     ) -> Vec<(&'a GodToolParamSpec, &'a GodToolParamValue)> {
-        if self.current == GodToolId::None {
-            return Vec::new();
-        }
         let Some(def) = registry.get(&self.current) else {
             return Vec::new();
         };
@@ -606,9 +600,6 @@ impl GodToolState {
         &self,
         registry: &GodToolRegistry,
     ) -> Vec<(GodToolParamSpec, GodToolParamValue)> {
-        if self.current == GodToolId::None {
-            return Vec::new();
-        }
         let Some(def) = registry.get(&self.current) else {
             return Vec::new();
         };
@@ -696,20 +687,14 @@ impl GodToolState {
     /// Read a single parameter on `id`. Returns `None` if the tool
     /// or the param is unknown.
     #[must_use]
-    pub fn param<'a>(
-        &'a self,
-        registry: &'a GodToolRegistry,
+    pub fn param(
+        &self,
+        _registry: &GodToolRegistry,
         id: &GodToolId,
         name: &str,
-    ) -> Option<&'a GodToolParamValue> {
-        let def = registry.get(id)?;
-        let spec = def.params.iter().find(|s| s.name == name)?;
-        if let Some(map) = self.params.get(id) {
-            if let Some(v) = map.get(name) {
-                return Some(v);
-            }
-        }
-        Some(&spec.default)
+    ) -> Option<&GodToolParamValue> {
+        let map = self.params.get(id)?;
+        map.get(name)
     }
 
     /// Reset a single tool's params to the registry's spec defaults.

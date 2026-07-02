@@ -4,15 +4,25 @@ use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
 use bevy::ui::{FocusPolicy, RelativeCursorPosition};
 use bevy_egui::{egui, EguiContexts};
+use bevy_egui::{egui, EguiContexts};
+#[cfg(feature = "models")]
+use civ_bevy_ref::animation::ActorAnimationPlugin;
 #[cfg(feature = "models")]
 use civ_bevy_ref::animation::ActorAnimationPlugin;
 use civ_bevy_ref::atmosphere::{animate_water, setup_atmosphere, update_lighting, DayNightCycle};
 #[cfg(feature = "egui")]
 use civ_bevy_ref::diplomacy_ui::{DiplomacyBridge, DiplomacyUiPlugin};
+use civ_bevy_ref::diplomacy_ui::{DiplomacyBridge, DiplomacyUiPlugin};
+#[cfg(feature = "models")]
+use civ_bevy_ref::gltf_models::GltfModelsPlugin;
 #[cfg(feature = "models")]
 use civ_bevy_ref::gltf_models::GltfModelsPlugin;
 #[cfg(feature = "gi")]
 use civ_bevy_ref::lighting_gi::SolariGiPlugin;
+#[cfg(feature = "gi")]
+use civ_bevy_ref::lighting_gi::SolariGiPlugin;
+#[cfg(feature = "egui")]
+use civ_bevy_ref::settings_ui::{GameSettings, KeyBinding, SettingsPlugin};
 #[cfg(feature = "egui")]
 use civ_bevy_ref::settings_ui::{GameSettings, KeyBinding, SettingsPlugin};
 #[cfg(not(feature = "egui"))]
@@ -23,7 +33,7 @@ use civ_bevy_ref::{
     chunk_fade_complete, chunk_raycast_terrain, chunk_to_minimap_uv,
     emergence_dashboard::EmergenceDashboardPlugin,
     event_feed::{EventFeed, EventFeedPlugin},
-    faction_hud::FactionHudPlugin,
+    faction_hud::{FactionHudPlugin, PlayerFactionId},
     focused_chunk_at_grid,
     game_ui::GameUiPlugin,
     god_panel::GodPanelPlugin,
@@ -48,22 +58,18 @@ use civ_bevy_ref::{
         LiveStreamMeshes, LiveStreamScene, LiveWaterMeshes, StreamCulling, LIVE_CHUNK_BASE_COLOR,
         LIVE_CHUNK_EDGE,
     },
-    menus::{
-        AppState, GameUiMode, MainMenuCommand, MainMenuSaves, MenuCommand, MenusPlugin,
-        WorldSetupParams,
-    },
+    menus::{AppState, GameUiMode, MainMenuCommand, MainMenuSaves, MenuCommand, WorldSetupParams},
     minimap::MinimapRoot,
     minimap_uv_to_chunk_grid,
     native_backend::native_render_plugin,
-    perf_hud::PerfHudPlugin,
     post_fx::PostFxPlugin,
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
     presentation_day_factor_target, resolve_live_ws_url,
     save_load_ui::{SaveLoadPanel, SaveLoadUiPlugin},
-    tutorial::TutorialPlugin,
     world_stats_dashboard::WorldStatsDashboardPlugin,
     ws_client::{WsClient, WsClientConfig},
-    CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
+    CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MenusPlugin, MinimapBounds,
+    PerfHudPlugin, TutorialPlugin, VOXEL_CHUNK_EDGE,
 };
 use civ_protocol_3d::Frame3d;
 use civ_voxel::ChunkId;
@@ -356,7 +362,6 @@ fn main() {
     app.run();
 }
 
-#[cfg(feature = "egui")]
 fn consume_menu_commands(
     mut menu_command: ResMut<MenuCommand>,
     state: Option<Res<State<AppState>>>,
@@ -385,15 +390,9 @@ fn consume_menu_commands(
                 .get(params.world_size % WORLDGEN_PRESETS.len())
                 .copied()
                 .unwrap_or(WORLDGEN_PRESETS[0]);
-            let speed_multiplier =
+            let speed_step =
                 WORLDGEN_SPEED_STEPS[speed.speed_idx.min(WORLDGEN_SPEED_STEPS.len() - 1)];
-            start_world_boot(
-                &bridge,
-                preset,
-                params.seed,
-                speed.as_mut(),
-                speed_multiplier,
-            );
+            start_world_boot(&bridge, preset, params.seed, speed.as_mut(), speed_step);
             next_state.set(AppState::WorldGen);
         }
         MainMenuCommand::Continue => {
@@ -417,6 +416,9 @@ fn consume_menu_commands(
             bridge.client.send_rpc_raw(json);
             next_state.set(AppState::WorldGen);
         }
+        MainMenuCommand::LoadGame => {
+            save_panel.visible = true;
+        }
         MainMenuCommand::Resume => {
             if *state == AppState::Paused {
                 next_state.set(AppState::Playing);
@@ -430,10 +432,6 @@ fn consume_menu_commands(
             next_state.set(AppState::MainMenu);
             *game_mode = GameUiMode::Playing;
         }
-        MainMenuCommand::BackToMenu => {
-            next_state.set(AppState::MainMenu);
-            *game_mode = GameUiMode::Playing;
-        }
         MainMenuCommand::Quit => {
             *game_mode = GameUiMode::Playing;
             exit.write(AppExit::Success);
@@ -441,7 +439,6 @@ fn consume_menu_commands(
     }
 }
 
-#[cfg(feature = "egui")]
 fn worldgen_to_playing(
     state: Option<Res<State<AppState>>>,
     scene: Res<LiveStreamScene>,
@@ -458,7 +455,6 @@ fn worldgen_to_playing(
     }
 }
 
-#[cfg(feature = "egui")]
 fn sync_app_state_with_game_mode(
     state: Option<Res<State<AppState>>>,
     mode: Res<GameUiMode>,
@@ -474,7 +470,6 @@ fn sync_app_state_with_game_mode(
     }
 }
 
-#[cfg(feature = "egui")]
 fn update_mainmenu_saves(
     bridge: Res<LiveBridge>,
     state: Option<Res<State<AppState>>>,
@@ -533,13 +528,14 @@ fn start_world_boot(
     } else {
         seed
     };
+    let speed_mult = WORLDGEN_SPEED_STEPS[speed.speed_idx.min(WORLDGEN_SPEED_STEPS.len() - 1)];
     bridge.client.send_rpc(
         "sim.load_scenario",
         serde_json::json!({ "preset": preset, "seed": init_seed }),
     );
     bridge.client.send_rpc(
         "sim.set_speed",
-        serde_json::json!({ "multiplier": multiplier }),
+        serde_json::json!({ "multiplier": speed_mult }),
     );
     bridge
         .client
@@ -689,7 +685,7 @@ fn sync_presentation_from_climate(
     let Some((snap, _)) = latest_climate(&scene) else {
         return;
     };
-    presentation.is_day = snap.is_day_band();
+    presentation.is_day = civ_bevy_ref::presentation_day_factor_from_climate(snap.day_phase) > 0.5;
 }
 
 fn setup(
@@ -1611,8 +1607,9 @@ fn poll_emergence(
     hud.snapshot.speed_multiplier = speed.multiplier;
     // Apply any parsed emergence responses received from the server.
     for em in bridge.client.poll_emergence() {
-        let em = em.clone();
-        *emergence_res = em.clone();
+        let em_clone = em.clone();
+        hud.snapshot.emergence = Some(em_clone.clone());
+        *emergence_res = em_clone;
         hud.snapshot.emergence = Some(em);
     }
     timer.0 += time.delta_secs();

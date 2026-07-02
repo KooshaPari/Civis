@@ -64,7 +64,7 @@ fn draw_perf_hud(mut contexts: EguiContexts, state: Res<PerfHudState>, metrics: 
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-    let screen = ctx.screen_rect();
+    let screen = ctx.content_rect();
 
     egui::Area::new(egui::Id::new("perf_hud"))
         .fixed_pos(egui::pos2(screen.max.x - 230.0, 8.0))
@@ -72,7 +72,7 @@ fn draw_perf_hud(mut contexts: EguiContexts, state: Res<PerfHudState>, metrics: 
             egui::Frame::none()
                 .fill(egui::Color32::from_rgba_premultiplied(9, 10, 12, 210))
                 .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(40, 45, 55)))
-                .rounding(egui::Rounding::same(6))
+                .corner_radius(egui::CornerRadius::same(6))
                 .inner_margin(egui::Margin::symmetric(10, 6))
                 .show(ui, |ui| {
                     ui.set_width(210.0);

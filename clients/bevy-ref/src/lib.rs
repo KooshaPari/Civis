@@ -29,12 +29,12 @@ pub mod civ_history;
 pub mod decorations;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod diplomacy_ui;
-#[cfg(feature = "bevy")]
-pub mod disaster_tools;
 pub mod emergence_dashboard;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod event_feed;
 pub mod faction_hud;
+#[cfg(feature = "bevy")]
+pub mod frame_budget;
 pub mod game_laws;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod game_ui;
@@ -42,6 +42,8 @@ pub mod game_ui;
 pub mod gltf_models;
 #[cfg(all(feature = "bevy", feature = "models"))]
 pub mod gltf_models;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod god_actions;
 pub mod god_panel;
 #[cfg(feature = "bevy")]
 pub mod gpu_features;
@@ -51,8 +53,6 @@ pub mod graphics_settings;
 pub mod holocron_panel;
 #[cfg(feature = "bevy")]
 pub mod info_views;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod inspect;
 #[cfg(all(feature = "bevy", feature = "gi"))]
 pub mod lighting_gi;
 #[cfg(feature = "bevy")]
@@ -70,8 +70,6 @@ pub mod live_scene;
 #[cfg(feature = "bevy")]
 pub mod live_stream;
 pub mod map2d;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod material_brush_ui;
 #[cfg(feature = "pbr-textures")]
 pub mod materials;
 #[cfg(all(feature = "bevy", feature = "egui"))]
@@ -82,14 +80,14 @@ pub mod minimap;
 pub mod native_backend;
 #[cfg(feature = "bevy")]
 pub mod native_renderer;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod notifications;
 #[cfg(all(feature = "bevy", feature = "voxel"))]
 pub mod ocean;
 pub mod outcome_overlay;
 pub mod perf_hud;
 #[cfg(feature = "bevy")]
 pub mod post_fx;
+#[cfg(feature = "bevy")]
+pub mod procedural_actor;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod save_load_ui;
 #[cfg(all(feature = "bevy", feature = "egui"))]
@@ -100,8 +98,6 @@ pub mod sim_bridge;
 pub mod spawn_tools;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tech_tree_ui;
-#[cfg(feature = "bevy")]
-pub mod terraform_brush;
 #[cfg(feature = "bevy")]
 pub mod terrain;
 #[cfg(all(feature = "bevy", feature = "egui"))]
@@ -134,6 +130,12 @@ pub use civ_agents::NeedAction;
 pub use civ_voxel::{
     ChunkId, CubicMesher, MaterialId, MeshBuffer, MeshVertex, VoxelWorld, WorldCoord,
 };
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub use menus::MenusPlugin;
+#[cfg(feature = "bevy")]
+pub use perf_hud::PerfHudPlugin;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub use tutorial::TutorialPlugin;
 
 /// Default orbit azimuth in radians (45° — camera south-east of centre).
 pub const DEFAULT_CAMERA_AZIMUTH_RAD: f32 = std::f32::consts::FRAC_PI_4;
@@ -1102,6 +1104,10 @@ mod agent_needs {
         pub safety: f32,
         /// Belonging pressure.
         pub belonging: f32,
+        /// Rest pressure.
+        pub rest: f32,
+        /// Health pressure.
+        pub health: f32,
     }
 
     impl From<AgentNeedsData> for AgentNeeds {
@@ -1111,6 +1117,8 @@ mod agent_needs {
                 shelter: value.shelter,
                 safety: value.safety,
                 belonging: value.belonging,
+                rest: 0.0,
+                health: 0.0,
             }
         }
     }
@@ -1122,6 +1130,8 @@ mod agent_needs {
                 shelter: value.shelter,
                 safety: value.safety,
                 belonging: value.belonging,
+                rest: value.rest,
+                health: value.health,
             }
         }
     }

@@ -58,7 +58,10 @@
 //! state (voxel world, agent data, CA ticks).
 
 use bevy::core_pipeline::tonemapping::Tonemapping;
+use bevy::light::DirectionalLightShadowMap;
+use bevy::post_process::{bloom::Bloom, motion_blur::MotionBlur};
 use bevy::prelude::*;
+use bevy::render::camera::TemporalJitter;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 use crate::gpu_features::GpuCapabilities;
@@ -550,7 +553,18 @@ impl GfxSettings {
 /// Called every frame when settings change via an [`Events`] changed flag.
 /// Restart-required options (backend, Solari, upscaling algorithm) are
 /// intentionally NOT touched here.
-pub fn apply_gfx_settings(settings: Res<GfxSettings>, mut windows: Query<&mut Window>) {
+pub fn apply_gfx_settings(
+    settings: Res<GfxSettings>,
+    mut windows: Query<&mut Window>,
+    mut shadow_map: ResMut<DirectionalLightShadowMap>,
+    mut bloom_q: Query<(
+        Option<&mut Bloom>,
+        Option<&mut TemporalJitter>,
+        Option<&mut Tonemapping>,
+        Option<&mut MotionBlur>,
+        Option<&mut Msaa>,
+    )>,
+) {
     if !settings.is_changed() {
         return;
     }
@@ -570,6 +584,63 @@ pub fn apply_gfx_settings(settings: Res<GfxSettings>, mut windows: Query<&mut Wi
             let target = bevy::window::WindowResolution::new(w, h);
             if window.resolution.width() as u32 != w || window.resolution.height() as u32 != h {
                 window.resolution = target;
+            }
+        }
+    }
+
+    // --- Shadow map ---
+    let desired_size = settings.shadow_resolution.texels();
+    if shadow_map.size != desired_size as usize {
+        shadow_map.size = desired_size as usize;
+    }
+
+    // --- Per-camera post-process components ---
+    for (bloom_opt, jitter_opt, tone_opt, mblur_opt, msaa_opt) in &mut bloom_q {
+        // Tonemapping
+        if let Some(mut t) = tone_opt {
+            let desired = settings.tonemapping.to_bevy();
+            if *t != desired {
+                *t = desired;
+            }
+        }
+        // MotionBlur
+        if let Some(mut mb) = mblur_opt {
+            let want_shutter = if settings.motion_blur {
+                settings.motion_blur_shutter
+            } else {
+                0.0
+            };
+            if (mb.shutter_angle - want_shutter).abs() > f32::EPSILON {
+                mb.shutter_angle = want_shutter;
+            }
+        }
+        // MSAA — only applicable when not TAA
+        if let Some(mut msaa) = msaa_opt {
+            let desired = match settings.aa.msaa_samples() {
+                Some(2) => Msaa::Sample2,
+                Some(4) => Msaa::Sample4,
+                Some(8) => Msaa::Sample8,
+                None => Msaa::Off,
+                Some(_) => Msaa::Off,
+            };
+            if *msaa != desired {
+                *msaa = desired;
+            }
+        }
+        // TAA jitter marker
+        if let Some(_jitter) = jitter_opt {
+            // TemporalJitter presence signals TAA is active; we cannot toggle
+            // it through insertion from this system without owning the camera
+            // entity — this is documented as restart-required in the module
+            // docs.  The jitter component itself needs no field mutation.
+        }
+        // Bloom
+        if let Some(mut bloom) = bloom_opt {
+            if settings.bloom {
+                let want = bloom.intensity != settings.bloom_intensity;
+                if want {
+                    bloom.intensity = settings.bloom_intensity;
+                }
             }
         }
     }

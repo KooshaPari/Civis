@@ -362,13 +362,9 @@ fn faction_list_ui(
                         "jsonrpc": "2.0",
                         "id": 10,
                         "method": "sim.diplomacy_action",
-                        "params": {
-                            "action": "propose_treaty",
-                            "target_faction": faction.id,
-                        },
-                    })
-                    .to_string();
-                    b.send_rpc(json);
+                        "params": { "action": "propose_treaty", "target_faction": faction.id }
+                    });
+                    b.send_rpc(json.to_string());
                 }
             }
             let war_label = if state.pending_war_target == Some(faction.id) {
@@ -383,13 +379,9 @@ fn faction_list_ui(
                             "jsonrpc": "2.0",
                             "id": 11,
                             "method": "sim.diplomacy_action",
-                            "params": {
-                                "action": "declare_war",
-                                "target_faction": faction.id,
-                            },
-                        })
-                        .to_string();
-                        b.send_rpc(json);
+                            "params": { "action": "declare_war", "target_faction": faction.id }
+                        });
+                        b.send_rpc(json.to_string());
                     }
                     state.pending_war_target = None;
                 } else {
@@ -402,14 +394,9 @@ fn faction_list_ui(
                         "jsonrpc": "2.0",
                         "id": 12,
                         "method": "sim.diplomacy_action",
-                        "params": {
-                            "action": "offer_trade",
-                            "target_faction": faction.id,
-                            "amount": 100,
-                        },
-                    })
-                    .to_string();
-                    b.send_rpc(json);
+                        "params": { "action": "offer_trade", "target_faction": faction.id, "amount": 100 }
+                    });
+                    b.send_rpc(json.to_string());
                 }
             }
         });

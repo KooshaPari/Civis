@@ -553,7 +553,7 @@ async fn handle_jsonrpc_text(
             };
             let outcome_fields = if req.method == crate::jsonrpc::JsonRpcMethod::SimOutcome {
                 let sim = state.sim.lock().await;
-                let outcome = civ_engine::conditions::check_outcome(&sim);
+                let outcome = sim.last_game_outcome.clone();
                 Some(crate::jsonrpc::OutcomeFields {
                     tag: outcome.tag().to_owned(),
                     reason: outcome.reason().to_owned(),
@@ -574,9 +574,11 @@ async fn handle_jsonrpc_text(
                     .and_then(|p| p.get("y").and_then(|v| v.as_i64()))
                     .unwrap_or(0);
                 let sim = state.sim.lock().await;
-                Some(crate::jsonrpc::TileInspectionWire::from(
-                    sim.inspect_tile(x, y),
-                ))
+                let material = sim.voxel().read(civ_voxel::WorldCoord { x, y: 0, z: y }).0 as u16;
+                Some(crate::jsonrpc::TileInspectionWire {
+                    material,
+                    terrain_height: 0,
+                })
             } else {
                 None
             };
@@ -1295,7 +1297,8 @@ async fn apply_dispatch_effect(
                     {
                         result.insert(
                             "relation".to_owned(),
-                            serde_json::to_value(relation).unwrap_or(serde_json::Value::Null),
+                            serde_json::to_value(format!("{:?}", relation.after))
+                                .unwrap_or(serde_json::Value::Null),
                         );
                     }
                 }
@@ -2067,7 +2070,7 @@ mod tests {
         let sim = Simulation::with_seed(100);
         let frame = build_event_feed_frame(&sim, 0);
         assert_eq!(frame.tick, 0);
-        assert!(frame.events.len() <= 128);
+        assert!(frame.events.is_empty());
     }
 
     #[test]

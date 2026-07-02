@@ -61,6 +61,7 @@ pub use mutual_information::{
 };
 
 pub use criticality::{criticality_indicator, CriticalityBands, CriticalityInputs};
+pub use dashboard::{coupling_mi_estimate, novelty_score, TileDashboard};
 
 /// Marker version of this crate's public schema. Bumped on breaking changes.
 pub const SCHEMA_VERSION: &str = "0.5.0-power-law-alpha";

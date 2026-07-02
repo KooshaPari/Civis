@@ -43,6 +43,7 @@ pub mod scenario;
 pub mod spawn;
 pub mod spectator;
 pub mod tech;
+pub mod tutorial;
 
 /// Fixed-point scaling factor (1 raw unit = SCALE joules). Engine energy
 /// quantities are stored in fixed-point `i64` for determinism and converted
@@ -67,14 +68,16 @@ pub use emergence_metrics::{EmergenceBranchingState, EmergenceSample};
 pub use engine::{
     job_type_for_civilian_id, Building, BuildingType, Citizen, CombatDamagePulse, DiplomacyKind,
     EconomicFocus, EconomicFocusEvent, FactionRelationSnapshot, Fixed, InstitutionEvent, JobType,
-    MilitaryUnit, Position, ResourceType, Resources, Sim, SimSeed, Simulation, SimulationSnapshot,
-    StratBand, StratificationEvent, StratificationEventKind, StratificationReport, TileInspection,
-    TradeRoute, UnitType, WorldState,
+    MilitaryUnit, Position, PsycheDrivenBehavior, ResourceType, Resources, Sim, SimSeed,
+    Simulation, SimulationSnapshot, StratBand, StratificationEvent, StratificationEventKind,
+    StratificationReport, TradeRoute, UnitType, WorldState,
 };
 pub use hash_chain::hash_hex;
 pub use replay::ReplayLog;
 pub use replay_format::{decode_civreplay, encode_civreplay};
-pub use save_bundle::CivSaveBundle;
+pub use save_bundle::{
+    delete_slot, list_slots, load_from_slot, save_to_slot, CivSaveBundle, SaveSlotEntry,
+};
 
 // FR-CIV-ARCH: Emergent building layouts re-export so callers can use
 // `civ_engine::EmergentLayout` and `civ_engine::LayoutStrategy` without
@@ -89,6 +92,7 @@ pub use spawn::{
 };
 pub use spectator::SpectatorView;
 pub use tech::{FactionEmergenceInputs, FactionTechState};
+pub use tutorial::{TutorialMilestone, TutorialProgress};
 
 // FR-CIV-GOV-001/002/003 (civ-007 institutions epic). Re-exported so callers
 // (server, clients, tests) can `use civ_engine::InstitutionKind` etc. without

@@ -100,7 +100,7 @@ pub enum JsonRpcMethod {
     SimTechState,
     /// Opt-in tick broadcast filter (`sim.subscribe`, CIV-0200).
     SimPerf,
-    /// Subscribe this WebSocket connection to a filtered tick broadcast stream.
+    /// Opt in to receiving simulation tick broadcasts (`sim.subscribe`).
     SimSubscribe,
     /// Clear per-connection tick broadcast filter (`sim.unsubscribe`).
     SimUnsubscribe,
@@ -977,11 +977,11 @@ fn game_resources_from_sim(sim: &civ_engine::Simulation) -> Vec<ResourceSnapshot
 /// Precomputed outcome for `sim.outcome` (FR-CIV-GAME-001).
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct OutcomeFields {
-    /// Machine-readable outcome tag.
+    /// Stable outcome tag.
     pub tag: String,
-    /// Human-readable reason associated with the outcome.
+    /// Human-readable outcome reason.
     pub reason: String,
-    /// Simulation tick at which the outcome was observed.
+    /// Simulation tick at which the outcome was sampled.
     pub tick: u64,
 }
 
@@ -994,16 +994,7 @@ pub struct TileInspectionWire {
     pub terrain_height: i64,
 }
 
-impl From<civ_engine::TileInspection> for TileInspectionWire {
-    fn from(value: civ_engine::TileInspection) -> Self {
-        Self {
-            material: value.material.0,
-            terrain_height: value.terrain_height,
-        }
-    }
-}
-
-/// Dispatch-time snapshot fields shared by JSON-RPC handlers.
+/// Request-scoped precomputed fields used by JSON-RPC dispatch handlers.
 #[derive(Debug, Clone)]
 pub struct DispatchContext {
     /// Current bridge tick (may lag until the next broadcast).
@@ -1208,13 +1199,12 @@ pub struct PsycheEntitySnapshotWire {
     /// Current mood arousal `[0, 1]`.
     pub mood_arousal: f32,
     /// Temperament axes.
-    /// Reactivity temperament axis.
     pub reactivity: f32,
-    /// Sociability temperament axis.
+    /// Social temperament axis `[0, 1]`.
     pub sociability: f32,
-    /// Risk tolerance temperament axis.
+    /// Risk tolerance temperament axis `[0, 1]`.
     pub risk_tol: f32,
-    /// Impulsivity temperament axis.
+    /// Impulsivity temperament axis `[0, 1]`.
     pub impulsivity: f32,
     /// Four drive axes `[0, 1]`.
     pub drives: [f32; 4],

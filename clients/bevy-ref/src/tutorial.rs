@@ -131,7 +131,16 @@ fn should_show(state: &TutorialState) -> bool {
     }
 }
 
-fn draw_tutorial_hint(mut contexts: EguiContexts, mut state: ResMut<TutorialState>) {
+fn draw_tutorial_hint(
+    mut contexts: EguiContexts,
+    mut state: ResMut<TutorialState>,
+    mut ran_once: Local<bool>,
+) {
+    // egui panics if ctx rect/fonts are accessed before its first run; skip frame 1.
+    if !*ran_once {
+        *ran_once = true;
+        return;
+    }
     if !should_show(&state) {
         return;
     }
@@ -144,7 +153,7 @@ fn draw_tutorial_hint(mut contexts: EguiContexts, mut state: ResMut<TutorialStat
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-    let screen = ctx.screen_rect();
+    let screen = ctx.content_rect();
 
     let mut clicked = false;
     egui::Area::new(egui::Id::new("tutorial_hint"))
@@ -156,7 +165,7 @@ fn draw_tutorial_hint(mut contexts: EguiContexts, mut state: ResMut<TutorialStat
                     1.0,
                     egui::Color32::from_rgb(126, 186, 181),
                 ))
-                .rounding(egui::Rounding::same(8))
+                .corner_radius(egui::CornerRadius::same(8))
                 .inner_margin(egui::Margin::symmetric(16, 10))
                 .show(ui, |ui| {
                     ui.set_width(560.0);

@@ -253,7 +253,7 @@ mod plugin {
                 name: format!("Civilian #{}", civ.id),
                 faction: civilian_faction_id(civ)
                     .map_or_else(|| "—".to_string(), |faction| format!("Faction {faction}")),
-                health: format!("{:.0}%", pressure.clamp(0.0, 1.0) * 100.0),
+                health: format!("Needs pressure {:.0}%", pressure * 100.0),
                 profession: needs
                     .map(|n| {
                         format!(
@@ -266,10 +266,20 @@ mod plugin {
                     })
                     .unwrap_or_else(|| "—".to_string()),
                 species: "—".to_string(),
-                needs: format!("{:.0}%", pressure.clamp(0.0, 1.0) * 100.0),
-                position: format!(
-                    "{:.1}, {:.1}, {:.1}",
-                    agent_pos.x, agent_pos.y, agent_pos.z
+                needs: needs
+                    .map(|n| {
+                        format!(
+                            "F {:.0}% · Sh {:.0}% · Sa {:.0}% · So {:.0}%",
+                            n.food * 100.0,
+                            n.shelter * 100.0,
+                            n.safety * 100.0,
+                            n.belonging * 100.0
+                        )
+                    })
+                    .unwrap_or_else(|| "—".to_string()),
+                position: civilian_faction_id(civ).map_or_else(
+                    || format!("age {} · cluster —", civ.age),
+                    |faction| format!("age {} · cluster {}", civ.age, faction),
                 ),
             };
             if best.as_ref().map_or(true, |(bd, _)| d2 < *bd) {
@@ -298,12 +308,7 @@ mod plugin {
                 profession: "Structure".to_string(),
                 species: "—".to_string(),
                 needs: "—".to_string(),
-                position: format!(
-                    "{:.1}, {:.1}, {:.1}",
-                    tf.translation().x,
-                    tf.translation().y,
-                    tf.translation().z
-                ),
+                position: format!("({:.0}, {:.0})", tf.translation().x, tf.translation().z),
             };
             if best.as_ref().map_or(true, |(bd, _)| d2 < *bd) {
                 best = Some((d2, det));
@@ -323,10 +328,10 @@ mod plugin {
             species: "—".to_string(),
             needs: "—".to_string(),
             position: format!(
-                "{:.1}, {:.1}, {:.1}",
-                cell.world_x,
+                "h={:.0} · {} ({})",
                 cell.height,
-                cell.world_z
+                temperature_band(cell.temperature),
+                cell.material
             ),
         }
     }

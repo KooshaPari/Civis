@@ -1,6 +1,6 @@
 //! Real `.civsave` snapshot persistence for `Simulation`.
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
 
@@ -8,13 +8,12 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::engine::Citizen;
-use crate::engine::MilitaryUnit;
-use crate::language::LanguageState;
 use crate::{
-    Building, CombatDamagePulse, DoctrineLibrary, Institution, Position, ReligiousProfile,
-    ReplayLog, Simulation, WorldState,
+    Building, CombatDamagePulse, DoctrineLibrary, Institution, InstitutionKind, MilitaryUnit,
+    Position, ReligiousProfile, ReplayLog, Simulation, WorldState,
 };
 use civ_agents::{ClusterMember, LodTier, Needs, Position3d, Tools, Wardrobe};
+use crate::language::LanguageState;
 use civ_needs::Health as LifeHealth;
 use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, WorldCoord};
 
@@ -49,7 +48,7 @@ struct SavedSimulation {
     faction_languages: BTreeMap<u32, LanguageState>,
     settlements: BTreeMap<u32, u32>,
     institutions: BTreeMap<u32, Institution>,
-    institution_levels_emitted: HashSet<(u32, u8, u8)>,
+    institution_levels_emitted: BTreeSet<(u32, u8, u8)>,
     faction_doctrines: Vec<DoctrineLibrary>,
 }
 
@@ -118,20 +117,6 @@ fn snapshot_world(world: &hecs::World) -> SavedWorld {
         }
         if let Ok(value) = world.get::<&ClusterMember>(entity) {
             record.cluster_member = Some(*value);
-        }
-        entities.push(record);
-    }
-
-    for (entity, citizen) in world.query::<&Citizen>().iter() {
-        if world.get::<&civ_agents::Civilian>(entity).is_ok() {
-            continue;
-        }
-        let mut record = SavedEntity {
-            citizen: Some(*citizen),
-            ..SavedEntity::default()
-        };
-        if let Ok(value) = world.get::<&Position>(entity) {
-            record.position_2d = Some(*value);
         }
         entities.push(record);
     }
@@ -317,16 +302,21 @@ fn institution_kind_from_key(key: u8) -> Option<crate::InstitutionKind> {
 
 pub fn save_game(sim: &Simulation, path: impl AsRef<Path>) -> Result<(), SaveError> {
     let path = path.as_ref();
-    let bytes =
-        bincode_next::serde::encode_to_vec(&snapshot_sim(sim), bincode_next::config::standard())?;
+    let bytes = bincode_next::serde::encode_to_vec(
+        &snapshot_sim(sim),
+        bincode_next::config::standard(),
+    )?;
     fs::write(path, bytes).map_err(|e| io_err(path, e))
 }
 
 pub fn load_game(path: impl AsRef<Path>) -> Result<Simulation, SaveError> {
     let path = path.as_ref();
     let bytes = fs::read(path).map_err(|e| io_err(path, e))?;
-    let saved: SavedSimulation =
-        bincode_next::serde::decode_from_slice(&bytes, bincode_next::config::standard())?.0;
+    let saved: SavedSimulation = bincode_next::serde::decode_from_slice(
+        &bytes,
+        bincode_next::config::standard(),
+    )?
+    .0;
     Ok(restore_sim(saved))
 }
 
@@ -403,6 +393,24 @@ mod tests {
         assert_eq!(loaded.last_settlement_count, sim.last_settlement_count);
         assert_eq!(loaded.last_life_deaths, sim.last_life_deaths);
         assert_eq!(*loaded.replay_log(), *sim.replay_log());
+    }
+
+    #[test]
+    fn snapshot_world_preserves_military_unit_component() {
+        let mut world = hecs::World::new();
+        world.spawn((MilitaryUnit {
+            unit_type: crate::UnitType::Soldier,
+            strength: crate::Fixed::from_num(4),
+            hp: crate::Fixed::from_num(3),
+            max_hp: crate::Fixed::from_num(4),
+            morale: crate::Fixed::from_num(1),
+            position: crate::Position { x: 1, y: 2 },
+            faction_id: 9,
+        },));
+
+        let saved = snapshot_world(&world);
+        assert_eq!(saved.entities.len(), 1);
+        assert!(saved.entities[0].military_unit.is_some());
     }
 
     /// FR-CIV-014 — a civilian's 3D Y position survives save/load round-trip.

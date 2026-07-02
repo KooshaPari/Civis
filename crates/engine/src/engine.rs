@@ -3,6 +3,7 @@
 //! This module provides the deterministic simulation loop with entity component system.
 
 use civ_agents::{
+
     cluster::{cluster_by_colocation, MembershipPayoff},
     count_civilians,
     daily_path::{pick_target, DailyPathDecision, Poi, PoiKind, PoiRegistry},
@@ -10,18 +11,21 @@ use civ_agents::{
     ActorVisualKind, AgentAction, Alignment, Civilian as AgentCivilian, ClusterId, ClusterMember, CohortStats,
     DiplomacyMatrix, DiplomacyOutcome, DiplomacySignal, LodTier, Needs, Position3d, Psyche,
     RelationKind, SocialGraph, Tools, Wardrobe,
+
 };
 use civ_agents::diplomacy::GriefAccumulator;
 use civ_audio::{derive_music_cue, mood::MusicCue, triggers::SfxTrigger};
 use civ_agents::culture::{cultural_distance, language_distance, CultureProfile};
 use civ_build::{Allocator, BuildingGraph, BuildSite, DemandSignals, ProductionEvent};
 use civ_diffusion::DiffusionParams;
+
 use civ_economy::{
     settlement_trade_flow_from_supply_demand, AllocationEngine, CapitalistAllocator, EconomyState,
     Good, MarketState, SettlementTradeFlow,
 };
 use civ_economy::{collect_taxes, Taxation};
 use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold};
+
 use civ_genetics::Dna;
 use civ_mod_host::ModHost;
 use civ_needs::{Health as CivNeedsHealth, LifecycleLabel, LifecycleParams, should_reproduce};
@@ -50,6 +54,7 @@ use std::ops::{Deref, DerefMut};
 /// Fixed-point decimal (16-bit signed integer + 16 fractional bits).
 /// Re-exported from the `fixed` crate; aliased here so callers can use
 /// `crate::engine::Fixed` (or `crate::Fixed`) and `Fixed::from_num(...)`.
+
 pub type Fixed = fixed::types::I48F16;
 use crate::culture::{
     advance_faction_ideologies, culture_cooperation_signal, culture_openness_signal,
@@ -59,6 +64,7 @@ use crate::language::{
     borrow_word, ensure_seeded_word, person_name, person_name_meaning, place_name,
     place_name_meaning, seeded_language_state, tick_language_for_lineage, LanguageState,
 };
+
 use crate::lod::{should_tick_entity_with_policy, LodPolicy};
 use crate::policy::ControlSignals;
 use crate::policy::Policy;
@@ -72,7 +78,9 @@ use crate::religion::{
 use crate::tutorial::TutorialProgress;
 use crate::replay::{ReplayError, ReplayLog};
 use crate::replay_format::{load_civreplay, save_civreplay};
+
 use crate::conditions::GameOutcome;
+
 
 /// Ordered phase identifiers executed once per [`Simulation::tick`].
 ///
@@ -732,9 +740,11 @@ pub struct Simulation {
     /// as a stable per-cluster key-value map.
     last_tick_music_cues: BTreeMap<u64, MusicCue>,
     /// Per-tick disaster events surfaced in snapshots.
+
     pub(crate) last_tick_disaster_events: Vec<crate::disasters::DisasterTickEvent>,
     /// Most recent deterministic victory/defeat assessment.
     pub last_game_outcome: GameOutcome,
+
     operational: NoopOperationalLayer,
     replay_log: ReplayLog,
     /// Scenario economy policy (`base_consumption_joules`, `scarcity_multiplier`).
@@ -806,7 +816,9 @@ pub struct Simulation {
     /// Monotonic set of `(settlement_id, kind, level)` we have already emitted
     /// as an `Upgraded` event. Guarantees one-shot upgrade emission even
     /// across population dips/rebounds (FR-CIV-GOV-003).
-    institution_levels_emitted: HashSet<(u32, civ_institutions::InstitutionKind, u8)>,
+
+    institution_levels_emitted: BTreeSet<(u32, u8, u8)>,
+
     /// Per-settlement food stock, settable by tests + scenario loaders so
     /// [`Simulation::phase_social_mood`] can derive `food_score` deterministically
     /// (FR-CIV-GOV-100). Keyed by settlement id (`u32`); missing keys default
@@ -1649,7 +1661,7 @@ impl Simulation {
             settlements: BTreeMap::new(),
             institutions: BTreeMap::new(),
             last_tick_institution_events: Vec::new(),
-            institution_levels_emitted: HashSet::new(),
+            institution_levels_emitted: BTreeSet::new(),
             settlement_food_stocked: BTreeMap::new(),
             settlement_housing_capacity: BTreeMap::new(),
             settlement_crime_pressure: BTreeMap::new(),
@@ -1793,7 +1805,7 @@ impl Simulation {
             settlements: BTreeMap::new(),
             institutions: BTreeMap::new(),
             last_tick_institution_events: Vec::new(),
-            institution_levels_emitted: HashSet::new(),
+            institution_levels_emitted: BTreeSet::new(),
             settlement_food_stocked: BTreeMap::new(),
             settlement_housing_capacity: BTreeMap::new(),
             settlement_crime_pressure: BTreeMap::new(),
@@ -1986,7 +1998,9 @@ impl Simulation {
     ) -> (
         BTreeMap<u32, u32>,
         BTreeMap<u32, civ_institutions::Institution>,
-        HashSet<(u32, civ_institutions::InstitutionKind, u8)>,
+
+        BTreeSet<(u32, u8, u8)>,
+
     ) {
         (
             self.settlements.clone(),
@@ -2000,7 +2014,9 @@ impl Simulation {
         &mut self,
         settlements: BTreeMap<u32, u32>,
         institutions: BTreeMap<u32, civ_institutions::Institution>,
-        institution_levels_emitted: HashSet<(u32, civ_institutions::InstitutionKind, u8)>,
+
+        institution_levels_emitted: BTreeSet<(u32, u8, u8)>,
+
     ) {
         self.settlements = settlements;
         self.institutions = institutions;
@@ -2406,6 +2422,7 @@ impl Simulation {
         }
     }
 
+
     fn phase_faction_decisions(&mut self) {
         let _decisions = crate::faction_decisions::compute_faction_decisions(self);
     }
@@ -2419,6 +2436,7 @@ impl Simulation {
         tutorial.advance_from_sim(self);
         self.tutorial_progress = tutorial;
     }
+
 
     /// Borrow the replay log.
     pub fn replay_log(&self) -> &ReplayLog {
@@ -3694,6 +3712,7 @@ impl Simulation {
         self.last_tick_religion_events.clear();
         let settlement_ids: Vec<u32> = self.settlements.keys().copied().collect();
         for sid in settlement_ids {
+
             let gradients = self.religion_gradients_for_settlement(sid);
             let population = self.settlements.get(&sid).copied().unwrap_or(0);
             let profile = self
@@ -3702,6 +3721,7 @@ impl Simulation {
                 .or_insert_with(|| ReligiousProfile::new(population, tick));
             profile.population = population;
             apply_big_gods_response(profile, &gradients, tick);
+
             let event = crate::religion::ReligionEvent::tick(
                 sid,
                 profile.monitoring,
@@ -4348,6 +4368,7 @@ impl Simulation {
         );
         let faction_pairs = diplomacy_faction_pairs_from_settlement_contact(&dominant, &contacts);
 
+
         let mut active_factions: BTreeSet<u32> = self.faction_languages.keys().copied().collect();
         active_factions.extend(centroids.keys().copied());
 
@@ -4374,6 +4395,7 @@ impl Simulation {
                 })
                 .unwrap_or(1.0);
             tick_language_for_lineage(lang, isolation, u64::from(faction_id));
+
         }
 
         for (left, right) in faction_pairs {
@@ -5253,11 +5275,13 @@ impl Simulation {
         &self.cluster_stocks
     }
 
+
     /// Last-tick settlement trade flows computed in `phase_economy`.
     #[must_use]
     pub fn last_tick_settlement_trade_flows(&self) -> &[SettlementTradeFlow] {
         &self.last_tick_settlement_trade_flows
     }
+
 
     /// Per-tick lifecycle label counts populated by [`Simulation::phase_life`]
     /// (FR-CIV-LIFE-001/002/003). Counts each surviving civilian once,
@@ -7117,6 +7141,7 @@ impl Simulation {
             .iter()
             .find_map(|(entity, civilian)| (civilian.id == agent_id).then_some(entity))
     }
+
     /// Snapshot all civilian agent identity components.
     #[must_use]
     pub fn all_agents(&self) -> Vec<AgentCivilian> {
@@ -7127,6 +7152,7 @@ impl Simulation {
             .collect()
     }
     /// Micro-actor action count for emergence metrics.
+
     pub fn micro_actor_action_count(&self) -> u32 {
         0
     }
@@ -9215,6 +9241,7 @@ mod tests {
         );
     }
 
+
     #[test]
     fn player_diplomacy_action_mutates_relation_substrate() {
         let mut sim = Simulation::with_seed(7);
@@ -9309,6 +9336,7 @@ mod tests {
             "expected a relation delta after {TICKS} ticks for FR-CIV-DIPLOMACY"
         );
     }
+
 
     /// N9: faction pairs with high aggression clash at lower disparity than
     /// faction pairs with zero aggression.

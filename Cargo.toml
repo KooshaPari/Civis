@@ -50,6 +50,8 @@ members = [
   "crates/hud",
   "crates/legends",
   "crates/civ-emergence-metrics",
+  "crates/emergence-migration",
+  "crates/emergence-oracle",
   "crates/civ-institutions",
   "crates/infra",
   "crates/physics-substrate",

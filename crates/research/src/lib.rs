@@ -19,6 +19,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "firepass-kimi")]
 pub mod firepass;
 
+pub mod tech_prereq;
+
 /// Schema version for `civ-research`. Bumped on breaking changes.
 pub const SCHEMA_VERSION: u32 = 0;
 

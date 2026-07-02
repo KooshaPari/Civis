@@ -4551,11 +4551,22 @@ impl Simulation {
 
         let phase_cfg = self.military_phase;
 
-        for (_, unit) in self.world.query::<&mut MilitaryUnit>().iter() {
-            if unit.morale < Fixed::from_num(1) {
-                unit.morale = (unit.morale + Fixed::from_num(1) / Fixed::from_num(100))
+        let morale_updates: Vec<(Entity, MilitaryUnit)> = self
+            .world
+            .query::<&MilitaryUnit>()
+            .iter()
+            .filter_map(|(entity, unit)| {
+                if unit.morale >= Fixed::from_num(1) {
+                    return None;
+                }
+                let mut updated = unit.clone();
+                updated.morale = (updated.morale + Fixed::from_num(1) / Fixed::from_num(100))
                     .min(Fixed::from_num(1));
-            }
+                Some((entity, updated))
+            })
+            .collect();
+        for (entity, unit) in morale_updates {
+            let _ = self.world.insert(entity, (unit,));
         }
 
         let mut entities: Vec<Entity> = Vec::new();
@@ -4587,12 +4598,21 @@ impl Simulation {
                 sample.grid_y = grid_move.new_grid_y;
             }
             if let Some(target_entity) = entities.get(grid_move.unit_index).copied() {
-                for (entity, unit) in self.world.query_mut::<&mut MilitaryUnit>() {
-                    if entity == target_entity {
-                        unit.position.x = grid_move.new_grid_x;
-                        unit.position.y = grid_move.new_grid_y;
-                        break;
-                    }
+                let movement_update = self
+                    .world
+                    .query::<&MilitaryUnit>()
+                    .iter()
+                    .find_map(|(entity, unit)| {
+                        if entity != target_entity {
+                            return None;
+                        }
+                        let mut updated = unit.clone();
+                        updated.position.x = grid_move.new_grid_x;
+                        updated.position.y = grid_move.new_grid_y;
+                        Some(updated)
+                    });
+                if let Some(updated) = movement_update {
+                    let _ = self.world.insert(target_entity, (updated,));
                 }
             }
         }
@@ -4619,13 +4639,22 @@ impl Simulation {
                 engagement.target_id,
                 engagement.damage,
             );
-            if let Some(target_entity) = entities.get(engagement.target_index) {
-                for (entity, unit) in self.world.query_mut::<&mut MilitaryUnit>() {
-                    if entity == *target_entity {
-                        unit.hp = (unit.hp - hp_loss).max(Fixed::from_num(0));
-                        unit.strength = unit.hp;
-                        break;
-                    }
+            if let Some(target_entity) = entities.get(engagement.target_index).copied() {
+                let damage_update = self
+                    .world
+                    .query::<&MilitaryUnit>()
+                    .iter()
+                    .find_map(|(entity, unit)| {
+                        if entity != target_entity {
+                            return None;
+                        }
+                        let mut updated = unit.clone();
+                        updated.hp = (updated.hp - hp_loss).max(Fixed::from_num(0));
+                        updated.strength = updated.hp;
+                        Some(updated)
+                    });
+                if let Some(updated) = damage_update {
+                    let _ = self.world.insert(target_entity, (updated,));
                 }
             }
             self.last_tick_combat_pulses.push(CombatDamagePulse {
@@ -7054,6 +7083,64 @@ mod tests {
         let mut sim = Simulation::new();
         sim.tick();
         assert_eq!(sim.state.tick, 1);
+    }
+
+    /// FR-CIV-TACTICS — opposing military units in LOS/range engage during the
+    /// normal simulation tick, emit combat damage, and resolve casualties.
+    #[test]
+    fn fr_civ_tactics_tick_resolves_in_range_combat() {
+        let mut sim = Simulation::with_seed(2026_07_01);
+        sim.world = World::new();
+        sim.military_phase.movement.cadence_ticks = 0;
+        sim.military_phase.war.cadence_ticks = 1;
+        sim.military_phase.war.engage_range_grid = 4;
+
+        let hp = Fixed::from_num(1);
+        let unit_a = MilitaryUnit {
+            unit_type: UnitType::Soldier,
+            strength: hp,
+            hp,
+            max_hp: hp,
+            morale: Fixed::from_num(1),
+            position: Position { x: 0, y: 0 },
+            faction_id: 0,
+        };
+        let unit_b = MilitaryUnit {
+            unit_type: UnitType::Soldier,
+            strength: hp,
+            hp,
+            max_hp: hp,
+            morale: Fixed::from_num(1),
+            position: Position { x: 1, y: 0 },
+            faction_id: 1,
+        };
+        let _ = sim.world.spawn((unit_a,));
+        let _ = sim.world.spawn((unit_b,));
+
+        sim.tick();
+
+        assert!(
+            !sim.last_tick_engagements.is_empty(),
+            "FR-CIV-TACTICS: tick should resolve at least one engagement"
+        );
+        assert!(
+            !sim.last_tick_combat_pulses().is_empty(),
+            "FR-CIV-TACTICS: resolved engagement should surface a damage pulse"
+        );
+        let survivors = sim.world.query::<&MilitaryUnit>().iter().count();
+        let damaged = sim
+            .world
+            .query::<&MilitaryUnit>()
+            .iter()
+            .any(|(_, unit)| unit.hp < unit.max_hp);
+        assert!(
+            survivors < 2 || damaged,
+            "FR-CIV-TACTICS: tick should apply unit damage or casualties"
+        );
+        assert!(
+            sim.replay_log().combat_event_count() > 0,
+            "FR-CIV-TACTICS: tick combat should be replay-recorded"
+        );
     }
 
     /// FR-CORE-001 — each `Simulation::tick()` appends exactly one `ReplayEvent::Tick`.

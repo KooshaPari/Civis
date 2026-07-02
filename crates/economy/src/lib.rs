@@ -29,6 +29,8 @@ pub use institution::{
     INSTITUTION_TREASURY,
 };
 pub use market::{GoodId, MarketState, MultiGoodMarket, Order, OrderBook, Side, Trade};
+pub use market::{settlement_trade_flow_from_supply_demand, SettlementTradeFlow, DEFAULT_SMOOTHING_FACTOR};
+pub use stocks::Good;
 pub use prices::{compute_price, update_cluster_prices, ClusterId, PriceState};
 pub use shocks::{apply_shock, MarketShock};
 pub use specialization::{update_specialization, SpecializationProfile};

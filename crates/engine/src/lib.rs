@@ -33,6 +33,7 @@ pub mod scenario;
 pub mod spawn;
 pub mod spectator;
 pub mod tech;
+pub mod tutorial;
 
 /// Fixed-point scaling factor (1 raw unit = SCALE joules). Engine energy
 /// quantities are stored in fixed-point `i64` for determinism and converted
@@ -79,6 +80,7 @@ pub use spawn::{
 };
 pub use spectator::SpectatorView;
 pub use tech::{FactionEmergenceInputs, FactionTechState};
+pub use tutorial::{TutorialMilestone, TutorialProgress};
 
 // FR-CIV-GOV-001/002/003 (civ-007 institutions epic). Re-exported so callers
 // (server, clients, tests) can `use civ_engine::InstitutionKind` etc. without

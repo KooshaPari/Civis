@@ -26,8 +26,12 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "Civis")
     FOnMinimapUvClicked OnMinimapClicked;
 
+protected:
+    // UE5: UImage exposes no OnMouseButtonDown delegate — handle the click via
+    // the UserWidget mouse override instead of binding to the image.
+    virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+
 private:
-    FReply HandleMinimapPointerEvent(FGeometry MyGeometry, const FPointerEvent& MouseEvent);
 
     UPROPERTY()
     TObjectPtr<UImage> MinimapImage;

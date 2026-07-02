@@ -51,7 +51,7 @@ fn evaluate_faction(sim: &Simulation, faction_id: u32) -> FactionDecision {
     let max_unrest = sim
         .last_tick_unrest_snapshots
         .values()
-        .map(|snapshot| snapshot.level.rank() as f32)
+        .map(|snapshot| snapshot.level.to_rank() as f32 / 3.0)
         .fold(0.0, f32::max);
 
     if max_unrest > 0.7 {
@@ -60,16 +60,16 @@ fn evaluate_faction(sim: &Simulation, faction_id: u32) -> FactionDecision {
 
     // 2. Check cohesion and resource state.
     let avg_cohesion = sim
-        .last_tick_cohesion
+        .last_tick_cohesion_snapshots()
         .values()
         .map(|snapshot| match snapshot.fabric {
-            crate::FabricTier::Tight => 1.0,
-            crate::FabricTier::Loosened => 0.75,
-            crate::FabricTier::Strained => 0.4,
-            crate::FabricTier::Fractured => 0.0,
+            crate::engine::FabricTier::Tight => 1.0,
+            crate::engine::FabricTier::Loosened => 0.7,
+            crate::engine::FabricTier::Strained => 0.4,
+            crate::engine::FabricTier::Fractured => 0.1,
         })
         .sum::<f32>()
-        / (sim.last_tick_cohesion.len() as f32).max(1.0);
+        / (sim.last_tick_cohesion_snapshots().len() as f32).max(1.0);
 
     let resources = sim
         .state
@@ -89,7 +89,7 @@ fn evaluate_faction(sim: &Simulation, faction_id: u32) -> FactionDecision {
     // Decision thresholds:
     if relation_score < -0.6 && has_military_advantage {
         FactionDecision::FlagHostility
-    } else if resources.food.to_bits() > 1000 && relation_score > 0.3 && avg_cohesion > 0.5 {
+    } else if resources.food.to_num::<f32>() > 1000.0 && relation_score > 0.3 && avg_cohesion > 0.5 {
         FactionDecision::FlagTradeOpen
     } else {
         FactionDecision::Maintain

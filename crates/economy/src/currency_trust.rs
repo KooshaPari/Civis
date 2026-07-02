@@ -319,7 +319,7 @@ pub fn step_currency_trust(
         // Quadratic ramp in (excess / threshold). Saturating.
         // penalty = MAX_PASS_LOSS_BP * (excess/threshold)^2, capped at MAX_PASS_LOSS_BP.
         // Use integer arithmetic: penalty_num = MAX_PASS_LOSS_BP * excess^2 / threshold^2.
-        let excess = excess_bp10.min(i64::MAX as i128) as i64;
+        let excess = (excess_bp10 as i64).min(i64::MAX);
         let threshold = if price_hyper {
             HYPER_INFLATION_BP10
         } else {

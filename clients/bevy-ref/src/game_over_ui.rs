@@ -123,7 +123,7 @@ fn draw_game_over_overlay(
     log_expanded: &mut GameOverLogExpanded,
 ) {
     // Full-screen dim overlay background.
-    let screen = ctx.screen_rect();
+    let screen = ctx.content_rect();
     egui::Area::new(egui::Id::new("game_over_dim"))
         .fixed_pos(egui::pos2(0.0, 0.0))
         .order(egui::Order::Middle)
@@ -138,8 +138,9 @@ fn draw_game_over_overlay(
         .order(egui::Order::Foreground)
         .show(ctx, |ui| {
             egui::Frame::NONE
-                .liquid_glass_frame(egui::Margin::same(18), crate::ui_theme::RADIUS_PANEL)
+                .corner_radius(egui::CornerRadius::same(crate::ui_theme::RADIUS_PANEL))
                 .fill(PANEL_FILL)
+                .stroke(egui::Stroke::new(1.0, crate::ui_theme::GLASS_EDGE))
                 .inner_margin(egui::Margin::same(28))
                 .show(ui, |ui| {
                     ui.set_min_width(520.0);

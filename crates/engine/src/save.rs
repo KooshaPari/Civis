@@ -11,8 +11,8 @@ use crate::engine::Citizen;
 use crate::engine::MilitaryUnit;
 use crate::language::LanguageState;
 use crate::{
-    Building, CombatDamagePulse, DoctrineLibrary, Institution, InstitutionKind, Position,
-    ReligiousProfile, ReplayLog, Simulation, WorldState,
+    Building, CombatDamagePulse, DoctrineLibrary, Institution, Position, ReligiousProfile,
+    ReplayLog, Simulation, WorldState,
 };
 use civ_agents::{ClusterMember, LodTier, Needs, Position3d, Tools, Wardrobe};
 use civ_needs::Health as LifeHealth;
@@ -49,7 +49,7 @@ struct SavedSimulation {
     faction_languages: BTreeMap<u32, LanguageState>,
     settlements: BTreeMap<u32, u32>,
     institutions: BTreeMap<u32, Institution>,
-    institution_levels_emitted: HashSet<(u32, InstitutionKind, u8)>,
+    institution_levels_emitted: HashSet<(u32, u8, u8)>,
     faction_doctrines: Vec<DoctrineLibrary>,
 }
 
@@ -238,6 +238,10 @@ fn snapshot_voxel(voxel: &VoxelWorld<MaterialId>) -> SavedVoxelWorld {
 
 fn snapshot_sim(sim: &Simulation) -> SavedSimulation {
     let (settlements, institutions, institution_levels_emitted) = sim.saveable_institution_state();
+    let institution_levels_emitted = institution_levels_emitted
+        .into_iter()
+        .map(|(settlement_id, kind, level)| (settlement_id, institution_kind_key(kind), level))
+        .collect();
     SavedSimulation {
         state: sim.state.clone(),
         world: snapshot_world(&sim.world),
@@ -270,7 +274,13 @@ fn restore_sim(saved: SavedSimulation) -> Simulation {
     sim.restore_institution_state(
         saved.settlements,
         saved.institutions,
-        saved.institution_levels_emitted,
+        saved
+            .institution_levels_emitted
+            .into_iter()
+            .filter_map(|(settlement_id, kind, level)| {
+                institution_kind_from_key(kind).map(|kind| (settlement_id, kind, level))
+            })
+            .collect(),
     );
     sim.restore_faction_doctrines(saved.faction_doctrines);
     sim.set_faction_languages(saved.faction_languages);
@@ -288,6 +298,21 @@ fn restore_sim(saved: SavedSimulation) -> Simulation {
     }
 
     sim
+}
+
+fn institution_kind_key(kind: crate::InstitutionKind) -> u8 {
+    match kind {
+        crate::InstitutionKind::Temple => 1,
+        crate::InstitutionKind::Garrison => 2,
+    }
+}
+
+fn institution_kind_from_key(key: u8) -> Option<crate::InstitutionKind> {
+    match key {
+        1 => Some(crate::InstitutionKind::Temple),
+        2 => Some(crate::InstitutionKind::Garrison),
+        _ => None,
+    }
 }
 
 pub fn save_game(sim: &Simulation, path: impl AsRef<Path>) -> Result<(), SaveError> {

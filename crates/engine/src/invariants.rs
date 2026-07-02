@@ -25,7 +25,7 @@ pub enum InvariantError {
 /// - **Tick monotonicity:** `state.tick` equals the count of `ReplayEvent::Tick`
 ///   entries in the replay log (one marker per completed tick).
 /// - **Population non-negative:** always true for `u64`; kept as an explicit guard.
-/// - **Energy budget non-negative:** `energy_budget_joules.to_bits() >= 0`.
+/// - **Energy budget non-negative:** `energy_budget_joules.raw >= 0`.
 /// - **Economy ledger:** when non-empty, macro budget ≥ 0, leg balance, and
 ///   `ledger.len() <= economy_state.tick * 2` via [`civ_economy::verify_ledger_conservation`].
 pub fn check_tick_invariants(sim: &Simulation) -> Result<(), InvariantError> {
@@ -48,7 +48,7 @@ pub fn check_tick_invariants(sim: &Simulation) -> Result<(), InvariantError> {
     // Population is `u64`; non-negativity is enforced by the type system.
     let _population = sim.state.population;
 
-    if sim.state.energy_budget_joules.to_bits() < Fixed::ZERO.to_bits() {
+    if sim.state.energy_budget_joules < Fixed::ZERO {
         return Err(InvariantError::NegativeEnergyBudget {
             raw: i64::from(sim.state.energy_budget_joules.to_bits()),
         });

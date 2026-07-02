@@ -49,8 +49,7 @@ use civ_emergence_metrics::branching::{
     classify_regime, rolling_mean_sigma, sigma_a, sigma_score, BranchingLedger, BranchingRegime,
     DEFAULT_BRANCHING_WINDOW, SIGMA_SUBCRITICAL, SIGMA_SUPERCRITICAL,
 };
-use civ_emergence_metrics::criticality::{criticality_indicator, CriticalityInputs};
-use civ_emergence_metrics::dashboard::{coupling_mi_estimate, novelty_score, TileDashboard};
+use civ_emergence_metrics::{criticality_indicator, coupling_mi_estimate, novelty_score, CriticalityInputs, TileDashboard};
 use civ_emergence_metrics::power_law::PowerLawFit;
 use civ_emergence_metrics::shannon::ShannonEntropy;
 use civ_emergence_metrics::structure::{ComponentSummary, Grid, StructureCount};

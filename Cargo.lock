@@ -2487,6 +2487,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "civ-i18n"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "civ-laws"
 version = "0.1.0"
 dependencies = [

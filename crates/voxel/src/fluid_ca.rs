@@ -43,7 +43,8 @@ pub struct CaGrid {
     pub cells: Vec<MaterialId>,
     /// Per-cell temperature state.
     pub temperatures: Vec<i16>,
-    /// Per-cell liquid saturation (0-255).
+    /// Per-cell liquid saturation (0-255), paired with `temperatures`
+    /// for FR-CIV-CA-001 dense CaGrid cells.
     pub saturation: Vec<u8>,
     /// Active chunks queued for the next CA pass.
     ///
@@ -323,6 +324,12 @@ impl CaGrid {
         self.index(x, y, z).map_or(20, |i| self.temperatures[i])
     }
 
+    /// Reads a saturation value or returns 0 when out of bounds.
+    #[must_use]
+    pub fn get_saturation(&self, x: usize, y: usize, z: usize) -> u8 {
+        self.index(x, y, z).map_or(0, |i| self.saturation[i])
+    }
+
     /// Writes a cell and temperature when coordinates are in bounds.
     pub fn set_with_temp(&mut self, x: usize, y: usize, z: usize, value: MaterialId, temp: i16) {
         if let Some(i) = self.index(x, y, z) {
@@ -335,6 +342,14 @@ impl CaGrid {
     /// Writes a cell when coordinates are in bounds.
     pub fn set(&mut self, x: usize, y: usize, z: usize, value: MaterialId) {
         self.set_with_temp(x, y, z, value, self.get_temp(x, y, z));
+    }
+
+    /// Writes a saturation value when coordinates are in bounds.
+    pub fn set_saturation(&mut self, x: usize, y: usize, z: usize, value: u8) {
+        if let Some(i) = self.index(x, y, z) {
+            self.saturation[i] = value;
+            self.mark_dirty_cell(x, y, z);
+        }
     }
 
     /// Sorted list of chunk indices that have at least one dirty cell.
@@ -1568,6 +1583,21 @@ mod tests {
 
     fn count(grid: &CaGrid, id: MaterialId) -> usize {
         grid.cells.iter().copied().filter(|&c| c == id).count()
+    }
+
+    /// Covers FR-CIV-CA-001 (fresh dense CaGrid cells expose saturation=0,
+    /// and saturation can be written/read through the grid accessor path).
+    #[test]
+    fn ca_grid_saturation_defaults_zero_and_round_trips() {
+        let mut g = CaGrid::new([2, 1, 1]);
+
+        assert_eq!(g.get_saturation(0, 0, 0), 0);
+        assert_eq!(g.saturation[g.index(0, 0, 0).unwrap()], 0);
+
+        g.set_saturation(0, 0, 0, 127);
+
+        assert_eq!(g.get_saturation(0, 0, 0), 127);
+        assert_eq!(g.saturation[g.index(0, 0, 0).unwrap()], 127);
     }
 
     /// Covers FR-CIV-CA-001 (saturated liquid WATER falls under gravity).

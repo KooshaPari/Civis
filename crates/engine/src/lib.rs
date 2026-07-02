@@ -65,7 +65,9 @@ pub use engine::{
 pub use hash_chain::hash_hex;
 pub use replay::ReplayLog;
 pub use replay_format::{decode_civreplay, encode_civreplay};
-pub use save_bundle::CivSaveBundle;
+pub use save_bundle::{
+    delete_slot, list_slots, load_from_slot, save_to_slot, CivSaveBundle, SaveSlotEntry,
+};
 
 // FR-CIV-ARCH: Emergent building layouts re-export so callers can use
 // `civ_engine::EmergentLayout` and `civ_engine::LayoutStrategy` without

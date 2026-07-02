@@ -71,6 +71,14 @@ pub enum SaveBundleError {
     /// Zstd compression failure.
     #[error("zstd: {0}")]
     Zstd(String),
+    /// Invalid named save slot.
+    #[error("invalid slot name {name:?}: {message}")]
+    InvalidSlotName {
+        /// Provided slot name.
+        name: String,
+        /// Validation failure detail.
+        message: String,
+    },
 }
 
 fn io_err(path: impl AsRef<Path>, err: impl std::fmt::Display) -> SaveBundleError {
@@ -86,6 +94,56 @@ fn archive_err(message: impl std::fmt::Display) -> SaveBundleError {
 
 fn zstd_err(message: impl std::fmt::Display) -> SaveBundleError {
     SaveBundleError::Zstd(message.to_string())
+}
+
+fn validate_slot_name(name: &str) -> Result<String, SaveBundleError> {
+    let trimmed = name.trim();
+    let invalid = |message: &str| SaveBundleError::InvalidSlotName {
+        name: name.to_string(),
+        message: message.to_string(),
+    };
+    if trimmed.is_empty() {
+        return Err(invalid("slot name cannot be empty"));
+    }
+    if trimmed.contains('/') || trimmed.contains('\\') || trimmed.contains("..") {
+        return Err(invalid("slot name must be a simple filename"));
+    }
+    let normalized = trimmed
+        .trim_end_matches(".civreplay")
+        .trim_end_matches(".civsave.zst")
+        .trim_end_matches(".civsave");
+    if normalized.is_empty() {
+        return Err(invalid("slot name cannot be only an extension"));
+    }
+    Ok(normalized.to_string())
+}
+
+fn slot_archive_path(saves_dir: &Path, name: &str) -> Result<PathBuf, SaveBundleError> {
+    let name = validate_slot_name(name)?;
+    Ok(saves_dir.join(format!("{name}.{CIVSAVE_ARCHIVE_EXTENSION}")))
+}
+
+fn slot_name_from_path(path: &Path) -> Option<String> {
+    if CivSaveBundle::is_save_archive(path) {
+        path.file_name()
+            .and_then(|s| s.to_str())
+            .map(|s| s.trim_end_matches(".civsave.zst").to_string())
+    } else if CivSaveBundle::is_save_dir(path) {
+        path.file_stem()
+            .and_then(|s| s.to_str())
+            .map(|s| s.trim_end_matches(".civsave").to_string())
+    } else {
+        None
+    }
+}
+
+/// One named save slot under a saves directory.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SaveSlotEntry {
+    /// Slot name without `.civsave.zst`.
+    pub name: String,
+    /// Engine tick at save time, or 0 when metadata cannot be read.
+    pub tick: u64,
 }
 
 /// CIV-1000 save bundle: folder (debug) and `.civsave.zst` archive (default).
@@ -234,6 +292,61 @@ impl CivSaveBundle {
     }
 }
 
+/// FR-CIV-SAVESLOT: save `sim` to a named archive slot under `saves_dir`.
+pub fn save_to_slot(
+    saves_dir: impl AsRef<Path>,
+    name: &str,
+    sim: &Simulation,
+) -> Result<(), SaveBundleError> {
+    let path = slot_archive_path(saves_dir.as_ref(), name)?;
+    CivSaveBundle::save_archive(path, sim)
+}
+
+/// FR-CIV-SAVESLOT: load a simulation from a named slot under `saves_dir`.
+pub fn load_from_slot(
+    saves_dir: impl AsRef<Path>,
+    name: &str,
+) -> Result<Simulation, SaveBundleError> {
+    let path = slot_archive_path(saves_dir.as_ref(), name)?;
+    CivSaveBundle::load_archive(path)
+}
+
+/// FR-CIV-SAVESLOT: list named save slots under `saves_dir`.
+pub fn list_slots(saves_dir: impl AsRef<Path>) -> Result<Vec<SaveSlotEntry>, SaveBundleError> {
+    let saves_dir = saves_dir.as_ref();
+    let read_dir = match fs::read_dir(saves_dir) {
+        Ok(read_dir) => read_dir,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(err) => return Err(io_err(saves_dir, err)),
+    };
+
+    let mut entries = Vec::new();
+    for entry in read_dir {
+        let entry = entry.map_err(|err| io_err(saves_dir, err))?;
+        let path = entry.path();
+        let Some(name) = slot_name_from_path(&path) else {
+            continue;
+        };
+        let tick = CivSaveBundle::read_metadata(&path)
+            .map(|metadata| metadata.tick)
+            .unwrap_or(0);
+        entries.push(SaveSlotEntry { name, tick });
+    }
+    entries.sort_by(|a, b| b.tick.cmp(&a.tick).then_with(|| a.name.cmp(&b.name)));
+    Ok(entries)
+}
+
+/// FR-CIV-SAVESLOT: delete a named save slot under `saves_dir`.
+pub fn delete_slot(saves_dir: impl AsRef<Path>, name: &str) -> Result<bool, SaveBundleError> {
+    let path = slot_archive_path(saves_dir.as_ref(), name)?;
+    if path.is_file() {
+        fs::remove_file(&path).map_err(|err| io_err(&path, err))?;
+        Ok(true)
+    } else {
+        Ok(false)
+    }
+}
+
 fn tar_dir(dir: &Path) -> Result<Vec<u8>, SaveBundleError> {
     let mut tar_buf = Vec::new();
     {
@@ -361,5 +474,35 @@ mod tests {
             loaded.mod_host().guest_memory_snapshot("archive-mod"),
             vec![1, 2]
         );
+    }
+
+    /// FR-CIV-SAVESLOT.
+    #[test]
+    fn fr_civ_saveslot_named_slots_save_list_load_delete() {
+        let dir = tempdir().expect("tempdir");
+
+        let mut sim_a = Simulation::with_seed(31);
+        sim_a.tick();
+        let mut sim_b = Simulation::with_seed(37);
+        sim_b.tick();
+        sim_b.tick();
+
+        save_to_slot(dir.path(), "a", &sim_a).expect("save a");
+        save_to_slot(dir.path(), "b", &sim_b).expect("save b");
+
+        let slots = list_slots(dir.path()).expect("list slots");
+        let names = slots.iter().map(|slot| slot.name.as_str()).collect::<Vec<_>>();
+        assert!(names.contains(&"a"));
+        assert!(names.contains(&"b"));
+
+        let loaded_a = load_from_slot(dir.path(), "a").expect("load a");
+        assert_eq!(loaded_a.state, sim_a.state);
+        assert_eq!(loaded_a.hash_chain_root(), sim_a.hash_chain_root());
+
+        assert!(delete_slot(dir.path(), "a").expect("delete a"));
+        let slots = list_slots(dir.path()).expect("list after delete");
+        let names = slots.iter().map(|slot| slot.name.as_str()).collect::<Vec<_>>();
+        assert!(!names.contains(&"a"));
+        assert!(names.contains(&"b"));
     }
 }

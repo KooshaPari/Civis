@@ -7,6 +7,7 @@ pub mod disaster;
 pub mod economy;
 pub mod epidemic;
 pub mod expansion;
+pub mod i18n;
 pub mod festival;
 pub mod genetics;
 pub mod language;

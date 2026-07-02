@@ -19,6 +19,7 @@ use civ_protocol_3d::{
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId};
 
 use crate::bevy_render::{apply_chunk_material, mesh_buffer_to_bevy};
+use crate::game_ui::civilian_display_name;
 use crate::live_ground::{live_ground_y, ChunkVoxelCache};
 use crate::ws_client::WsClient;
 use crate::{
@@ -98,7 +99,7 @@ impl ClimateSnapshot {
 /// resolves to [`LIVE_CHUNK_BASE_COLOR`].
 #[must_use]
 pub fn material_tint(material: MaterialId) -> [f32; 3] {
-    use civ_voxel::material::{
+    use civ_voxel::{
         ASH, BEDROCK, BRICK, CLAY, COAL, CRYSTAL, DIRT, FIRE, GLASS, GRANITE, GRAVEL, ICE, MOSS,
         MUD, ORE, PACKED_DIRT, PLANT, SALT, SAND, SMOKE, SNOW, STONE, WATER, WOOD,
     };
@@ -145,9 +146,9 @@ pub fn material_tint(material: MaterialId) -> [f32; 3] {
 /// should fall back to [`LIVE_CHUNK_BASE_COLOR`].
 #[must_use]
 pub fn chunk_biome_tint(voxels: &[MaterialId]) -> Option<[f32; 3]> {
-    use civ_voxel::material::{AIR, METHANE, PLASMA, SMOKE, STEAM, TOXIC_GAS};
+    use civ_voxel::{AIR, METHANE, PLASMA, SMOKE, STEAM, TOXIC_GAS};
     use std::collections::HashMap;
-    let mut counts: HashMap<u16, u32> = HashMap::new();
+    let mut counts: HashMap<_, u32> = HashMap::new();
     for v in voxels {
         if v.0 == AIR.0
             || v.0 == SMOKE.0
@@ -164,24 +165,6 @@ pub fn chunk_biome_tint(voxels: &[MaterialId]) -> Option<[f32; 3]> {
     Some(material_tint(MaterialId(id)))
 }
 
-#[must_use]
-fn live_civilian_display_name(entry: &CivilianStateEntry) -> String {
-    #[cfg(feature = "egui")]
-    {
-        crate::game_ui::civilian_display_name(entry)
-    }
-    #[cfg(not(feature = "egui"))]
-    {
-        if !entry.genome_summary.summary.is_empty() {
-            entry.genome_summary.summary.clone()
-        } else if !entry.species.is_empty() {
-            format!("{} #{}", entry.species, entry.id)
-        } else {
-            format!("Civilian #{}", entry.id)
-        }
-    }
-}
-
 /// Per-agent distance LOD scale (FR-CLIENT-render). The wire agent scale
 /// is further attenuated by a smooth function of camera distance so that
 /// far-away agents visually compress into the terrain instead of
@@ -189,7 +172,12 @@ fn live_civilian_display_name(entry: &CivilianStateEntry) -> String {
 /// `max_scale` (defaults match the existing `agent_scale_multiplier`
 /// envelope so HUD spacing is unaffected).
 #[must_use]
-pub fn agent_distance_lod(wire_scale: f32, distance: f32, min_scale: f32, max_scale: f32) -> f32 {
+pub fn agent_distance_lod(
+    wire_scale: f32,
+    distance: f32,
+    min_scale: f32,
+    max_scale: f32,
+) -> f32 {
     if !wire_scale.is_finite() || !distance.is_finite() {
         return min_scale;
     }
@@ -787,9 +775,10 @@ pub fn default_water_meshes(
     materials: &mut Assets<StandardMaterial>,
 ) -> LiveWaterMeshes {
     let surface_mesh = meshes.add(Mesh::from(
-        bevy::math::primitives::Plane3d::default()
-            .mesh()
-            .size(LIVE_CHUNK_EDGE as f32, LIVE_CHUNK_EDGE as f32),
+        bevy::math::primitives::Plane3d::default().mesh().size(
+            LIVE_CHUNK_EDGE as f32,
+            LIVE_CHUNK_EDGE as f32,
+        ),
     ));
     let surface_material = materials.add(StandardMaterial {
         base_color: Color::srgba(
@@ -834,7 +823,7 @@ pub fn chunk_water_top_y(voxels: &[MaterialId], chunk_origin_y: i32) -> Option<f
             for iz in 0..LIVE_CHUNK_EDGE {
                 // Canonical voxel layout (matches `voxel_index` in
                 // `live_ground.rs` / `live_stream.rs`): idx = ix + iy * E + iz * E * E.
-                let idx = ix + iy * edge + iz * edge * edge;
+                let idx = ix + iy * edge * edge + iz * edge;
                 let v = voxels[idx];
                 if v.0 == WATER.0 || v.0 == SALT_WATER.0 {
                     return Some(
@@ -878,11 +867,7 @@ pub fn apply_water_for_chunk(
     };
 
     let chunk_origin = chunk_transform(chunk_id);
-    let transform = Transform::from_xyz(
-        chunk_origin.translation.x,
-        surface_y,
-        chunk_origin.translation.z,
-    );
+    let transform = Transform::from_xyz(chunk_origin.translation.x, surface_y, chunk_origin.translation.z);
 
     // FR-CLIENT-render: pick a water tint that complements the chunk's
     // dominant voxel material, matching the per-chunk biome tinting that
@@ -969,8 +954,14 @@ pub fn apply_voxel_delta_frame(
         // voxel composition so the streamed mesh visibly tracks the
         // underlying material (sand reads tan, snow reads cool, etc.).
         // Falls back to `LIVE_CHUNK_BASE_COLOR` for empty / unmapped chunks.
-        let base_rgb = chunk_biome_tint(&chunk.voxels).unwrap_or(LIVE_CHUNK_BASE_COLOR);
-        apply_chunk_material(&mut material, base_rgb, debug.wireframe, Some(0.0));
+        let base_rgb =
+            chunk_biome_tint(&chunk.voxels).unwrap_or(LIVE_CHUNK_BASE_COLOR);
+        apply_chunk_material(
+            &mut material,
+            base_rgb,
+            debug.wireframe,
+            Some(0.0),
+        );
         let material_handle = material_assets.add(material);
         let transform = chunk_transform(chunk.event.chunk_id);
 
@@ -1004,6 +995,50 @@ pub fn apply_voxel_delta_frame(
                 .remove::<Wireframe>()
                 .remove::<WireframeColor>();
         }
+    }
+}
+
+/// Rebuilds cached chunk meshes for a set of dirty chunks already present in the scene cache.
+pub fn remesh_cached_chunks(
+    commands: &mut Commands,
+    scene: &mut LiveStreamScene,
+    mesh_assets: &mut Assets<Mesh>,
+    material_assets: &mut Assets<StandardMaterial>,
+    culling: StreamCulling,
+    debug: &DebugRender,
+    chunk_ids: &[ChunkId],
+    wireframe_line_color: Option<Color>,
+) {
+    for &chunk_id in chunk_ids {
+        let Some(voxels) = scene.chunk_voxels.get_chunk(chunk_id) else {
+            continue;
+        };
+        if !should_render_chunk(chunk_id, culling.eye, culling.max_distance) {
+            if let Some(entity) = scene.chunks.remove(&chunk_id.0) {
+                commands.entity(entity).despawn();
+            }
+            continue;
+        }
+        if voxels.len() != LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE {
+            continue;
+        }
+        let chunk_view = ChunkView { id: chunk_id, voxels };
+        let distance = chunk_distance_from_camera(chunk_id, culling.eye, LIVE_CHUNK_EDGE as f32);
+        let lod = LodLevel(mesh_lod_level(distance));
+        let Ok(mesh_buffer) = CubicMesher::mesh_cubic(chunk_view, lod) else {
+            continue;
+        };
+        let mesh = mesh_assets.add(mesh_buffer_to_bevy(&mesh_buffer));
+        let mut material = StandardMaterial { perceptual_roughness: 0.85, metallic: 0.0, ..default() };
+        let base_rgb = chunk_biome_tint(voxels).unwrap_or(LIVE_CHUNK_BASE_COLOR);
+        apply_chunk_material(&mut material, base_rgb, debug.wireframe, Some(0.0));
+        let material_handle = material_assets.add(material);
+        let transform = chunk_transform(chunk_id);
+        let entity = *scene
+            .chunks
+            .entry(chunk_id.0)
+            .or_insert_with(|| commands.spawn((LiveChunkTag { id: chunk_id }, Transform::default())).id());
+        commands.entity(entity).insert((Mesh3d(mesh), MeshMaterial3d(material_handle), transform));
     }
 }
 
@@ -1084,7 +1119,13 @@ pub fn apply_agent_appearance_frame_with_labels(
     labels: AgentLabelConfig,
 ) {
     apply_agent_appearance_frame_with_labels_and_eye(
-        commands, scene, materials, meshes, agents, labels, None,
+        commands,
+        scene,
+        materials,
+        meshes,
+        agents,
+        labels,
+        None,
     );
 }
 
@@ -1157,7 +1198,7 @@ pub fn apply_agent_appearance_frame_with_labels_and_eye(
                 let label = scene
                     .civilian_entries
                     .get(&update.agent_id)
-                    .map(live_civilian_display_name)
+                    .map(civilian_display_name)
                     .unwrap_or_else(|| format!("#{}", update.agent_id));
                 commands.entity(entity).with_children(|parent| {
                     parent.spawn((
@@ -1191,7 +1232,7 @@ pub fn sync_agent_labels_from_civilians(
         let label = scene
             .civilian_entries
             .get(&agent.id)
-            .map(live_civilian_display_name)
+            .map(civilian_display_name)
             .unwrap_or_else(|| format!("#{}", agent.id));
         for child in children.iter() {
             let Ok(mut text) = labels.get_mut(child) else {
@@ -1704,7 +1745,7 @@ mod tests {
         let mut material_assets = Assets::<StandardMaterial>::default();
         let water_meshes = default_water_meshes(&mut mesh_assets, &mut material_assets);
 
-        let chunk_id = encode_chunk_id(0, 0, 0);
+        let chunk_id = encode_chunk_id(2048, 0, 0); // far from eye
         let mut voxels = vec![MaterialId(0); CHUNK_VOXELS];
         voxels[voxel_index(0, 5, 0)] = WATER;
 
@@ -1732,7 +1773,7 @@ mod tests {
         );
         assert!(scene.water_entities.contains_key(&chunk_id.0));
 
-        // Then tighten the culling radius so the same chunk is out of range.
+        // Then move eye away so chunk is out of range.
         apply_water_deltas_for_frame(
             &mut commands,
             &mut scene,
@@ -1892,7 +1933,6 @@ mod tests {
             100,
             CivilianStateEntry {
                 id: 100,
-                faction_id: 0,
                 needs: CivilianNeeds3d::default(),
                 profession: "smith".to_string(),
                 genome_summary: GenomeSummary3d::default(),
@@ -1916,7 +1956,6 @@ mod tests {
             42,
             CivilianStateEntry {
                 id: 42,
-                faction_id: 0,
                 needs: CivilianNeeds3d::default(),
                 profession: "farmer".to_string(),
                 genome_summary: GenomeSummary3d {
@@ -1944,7 +1983,6 @@ mod tests {
             10,
             CivilianStateEntry {
                 id: 10,
-                faction_id: 0,
                 needs: CivilianNeeds3d::default(),
                 profession: String::new(),
                 genome_summary: GenomeSummary3d::default(),
@@ -1956,7 +1994,6 @@ mod tests {
             20,
             CivilianStateEntry {
                 id: 20,
-                faction_id: 0,
                 needs: CivilianNeeds3d::default(),
                 profession: String::new(),
                 genome_summary: GenomeSummary3d::default(),
@@ -1977,7 +2014,6 @@ mod tests {
             7,
             CivilianStateEntry {
                 id: 7,
-                faction_id: 0,
                 needs: CivilianNeeds3d::default(),
                 profession: "Farmer".to_string(),
                 genome_summary: GenomeSummary3d {
@@ -2024,7 +2060,6 @@ mod tests {
             42,
             CivilianStateEntry {
                 id: 42,
-                faction_id: 0,
                 needs: CivilianNeeds3d::default(),
                 profession: "Farmer".to_string(),
                 genome_summary: GenomeSummary3d {
@@ -2105,7 +2140,6 @@ mod tests {
 
         let entry = |id: u64| CivilianStateEntry {
             id,
-            faction_id: 0,
             needs: CivilianNeeds3d::default(),
             profession: String::new(),
             genome_summary: GenomeSummary3d::default(),
@@ -2151,7 +2185,6 @@ mod tests {
             FactionStateFrame {
                 tick: 3,
                 factions: vec![entry(0, 2), entry(4, 5)],
-                population_by_faction: Default::default(),
             },
         );
 
@@ -2180,7 +2213,6 @@ mod tests {
                 government: Government3d::Junta,
                 treasury: FactionTreasury3d::default(),
             }],
-            population_by_faction: Default::default(),
         };
         let mut diplomacy = crate::diplomacy_ui::DiplomacyState {
             open: true,
@@ -2243,7 +2275,7 @@ mod tests {
 
     #[test]
     fn chunk_biome_tint_picks_dominant_solid_material() {
-        use civ_voxel::material::{GRANITE, SAND, SNOW};
+        use civ_voxel::{GRANITE, SAND, SNOW};
         let mut voxels = vec![MaterialId(0); CHUNK_VOXELS];
         // Sand fills ~80% of the chunk.
         for v in voxels.iter_mut().take(CHUNK_VOXELS * 4 / 5) {

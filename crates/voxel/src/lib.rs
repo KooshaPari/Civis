@@ -41,6 +41,7 @@ pub use material::{
 pub mod material_ca;
 pub mod material_pbr;
 pub mod reactions;
+pub mod residency;
 pub mod scale_budget;
 pub mod scale_stream;
 pub mod stream;
@@ -65,6 +66,10 @@ pub use material_pbr::{
 pub use scale_budget::{
     CohortTotals, ExtentBudget, ExtentError, Gestalt, LodRingPlan, MvpResidentBudget,
     MvpResidentConfig, PlanError, RingRole, SimLodAggregator, StreamConfigLite,
+};
+pub use residency::{
+    validate_residency, ResidencyError, ResidencyLimits, DEFAULT_MAX_RESIDENT_AREA_SQ_MI,
+    DEFAULT_MIN_ACTIVE_CA_CHUNK_SIZE,
 };
 pub use scale_stream::*;
 pub use stream::{

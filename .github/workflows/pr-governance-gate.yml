@@ -30,7 +30,7 @@ jobs:
         run: bash scripts/quality/verify-quality-manifest.sh
 
       - name: Evaluate PR checks (billing bypass)
-        uses: actions/github-script@60a0d4aab8c21a6b6c375a657fbe2e65754290a2
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
         with:
           script: |
             const prNumber =

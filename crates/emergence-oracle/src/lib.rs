@@ -1,7 +1,7 @@
 //! Emergence Oracle — programmatic FR verification for Civis emergence systems.
 //!
 //! Each [`FeatureOracle`] implementation maps to a specific FR-EMG-* requirement.
-//! [`OracleRegistry::with_defaults`] wires all 23 domain oracles and [`OracleRegistry::run_all`]
+//! [`OracleRegistry::with_defaults`] wires all 24 domain oracles and [`OracleRegistry::run_all`]
 //! batch-verifies them against a live [`Simulation`].
 
 pub mod oracles;
@@ -49,13 +49,13 @@ impl OracleRegistry {
         self.oracles.push(oracle);
     }
 
-    /// Create a registry pre-loaded with all 22 domain oracles.
+    /// Create a registry pre-loaded with all 24 domain oracles.
     pub fn with_defaults() -> Self {
         use oracles::{
             architecture::ArchitectureOracle, coastal_settlement::CoastalSettlementOracle, creature::CreatureOracle,
             desert_caravan::DesertCaravanOracle, diplomacy::DiplomacyOracle, disaster::DisasterOracle, economy::EconomyOracle,
             epidemic::EpidemicOracle, expansion::ExpansionOracle, festival::FestivalOracle, genetics::GeneticsOracle, language::LanguageOracle,
-            legends::LegendsOracle, migration::MigrationOracle, migration_flow::MigrationFlowOracle, mood::MoodOracle, mountain_pass::MountainPassOracle, psyche::PsycheOracle,
+            legends::LegendsOracle, migration::MigrationOracle, migration_flow::MigrationFlowOracle, mood::MoodOracle, mountain_pass::MountainPassOracle, powers::PowersOracle, psyche::PsycheOracle,
             religion::ReligionOracle, trade::TradeOracle, stratification::StratificationOracle,
             religious_conflict::ReligiousConflictOracle, river_trade::RiverTradeOracle,
         };
@@ -63,6 +63,7 @@ impl OracleRegistry {
         registry.register(Box::new(ReligionOracle));
         registry.register(Box::new(LanguageOracle));
         registry.register(Box::new(EconomyOracle));
+        registry.register(Box::new(GeneticsOracle));
         registry.register(Box::new(LegendsOracle));
         registry.register(Box::new(DiplomacyOracle));
         registry.register(Box::new(PsycheOracle));
@@ -81,8 +82,8 @@ impl OracleRegistry {
         registry.register(Box::new(CoastalSettlementOracle));
         registry.register(Box::new(RiverTradeOracle));
         registry.register(Box::new(MountainPassOracle));
+        registry.register(Box::new(PowersOracle));
         registry.register(Box::new(DesertCaravanOracle));
-        registry.register(Box::new(GeneticsOracle));
         registry
     }
 
@@ -103,11 +104,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn oracle_registry_runs_all_twenty_three() {
+    fn oracle_registry_runs_all_twenty_four() {
         let sim = Simulation::new();
         let registry = OracleRegistry::with_defaults();
         let verdicts = registry.run_all(&sim);
-        assert_eq!(verdicts.len(), 23, "Expected 23 oracle verdicts");
+        assert_eq!(verdicts.len(), 24, "Expected 24 oracle verdicts");
     }
 
     #[test]

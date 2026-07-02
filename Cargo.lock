@@ -3731,6 +3731,7 @@ dependencies = [
  "civ-agents",
  "civ-engine",
  "civ-genetics",
+ "civ-powers",
  "rand 0.8.6",
  "rand_chacha 0.3.1",
 ]

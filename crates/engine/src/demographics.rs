@@ -221,3 +221,82 @@ mod tests {
         assert!(after > 0);
     }
 }
+
+/// A snapshot of demographic state for serialization or snapshot comparison.
+///
+/// FR-CIV-LIFE: Captures age distribution and total population at a point in time.
+/// Used for save/load and validation.
+#[derive(Clone, Debug, PartialEq)]
+pub struct DemographicsSnapshot {
+    /// Total population across all age groups.
+    pub total_population: u32,
+    /// Age group counts (parallel to [`Demographics::groups`]).
+    pub age_group_counts: Vec<u32>,
+    /// Carrying capacity at this snapshot.
+    pub carrying_capacity: u32,
+}
+
+impl DemographicsSnapshot {
+    /// Create a snapshot from a Demographics state.
+    pub fn from_demographics(d: &Demographics) -> Self {
+        Self {
+            total_population: total_population(d),
+            age_group_counts: d.groups.iter().map(|g| g.count).collect(),
+            carrying_capacity: d.carrying_capacity,
+        }
+    }
+
+    /// Verify that age group counts sum to total.
+    pub fn is_consistent(&self) -> bool {
+        self.age_group_counts.iter().copied().sum::<u32>() == self.total_population
+    }
+}
+
+#[cfg(test)]
+mod test_demographics_snapshot {
+    use super::*;
+
+    #[test]
+    fn test_demographics_snapshot_from_state() {
+        let d = Demographics {
+            carrying_capacity: 1000,
+            groups: vec![
+                AgeGroup {
+                    label: "youth",
+                    count: 300,
+                    birth_rate: 0.1,
+                    death_rate: 0.02,
+                },
+                AgeGroup {
+                    label: "adult",
+                    count: 600,
+                    birth_rate: 0.08,
+                    death_rate: 0.01,
+                },
+            ],
+        };
+
+        let snap = DemographicsSnapshot::from_demographics(&d);
+        assert_eq!(snap.total_population, 900);
+        assert_eq!(snap.age_group_counts, vec![300, 600]);
+        assert_eq!(snap.carrying_capacity, 1000);
+        assert!(snap.is_consistent());
+    }
+
+    #[test]
+    fn test_demographics_snapshot_consistency() {
+        let snap = DemographicsSnapshot {
+            total_population: 100,
+            age_group_counts: vec![40, 60],
+            carrying_capacity: 200,
+        };
+        assert!(snap.is_consistent());
+
+        let inconsistent = DemographicsSnapshot {
+            total_population: 100,
+            age_group_counts: vec![40, 50],
+            carrying_capacity: 200,
+        };
+        assert!(!inconsistent.is_consistent());
+    }
+}

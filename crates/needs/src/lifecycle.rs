@@ -11,6 +11,33 @@ use serde::{Deserialize, Serialize};
 
 use crate::Health;
 
+/// Convenience overload that derives maturity + labor capacity from a f32 age,
+/// then delegates to the canonical [`classify_lifecycle`] classifier. Used by
+/// the FR-CIV-LIFE-003 reproduction gating path, which only has age available
+/// and is willing to fall back to the stratified thresholds.
+#[must_use]
+pub fn classify_lifecycle_from_age(age: f32, params: &LifecycleParams) -> LifecycleLabel {
+    let age_u16 = age.clamp(0.0, u16::MAX as f32) as u16;
+    let longevity_profile = CognitionTraitProfile::new(
+        "lifecycle-longevity-classify",
+        vec![(20, 1.0), (21, 0.5), (22, 0.25)],
+    );
+    let longevity = cognition_score(&Dna::zero(0), &longevity_profile);
+    let dna_span = 50.0 + 70.0 * longevity;
+    let elder_threshold = (90.0 * (1.0 - params.longevity_dna_weight)
+        + dna_span * params.longevity_dna_weight)
+        .round()
+        .clamp(50.0, 120.0) as u16;
+    // Children with very low age cannot be adult-classified for reproduction.
+    if age < 18.0 {
+        return LifecycleLabel::Child;
+    }
+    if age >= elder_threshold as f32 {
+        return LifecycleLabel::Elder;
+    }
+    LifecycleLabel::WorkingAge
+}
+
 /// Read-only lifecycle label derived from continuous state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum LifecycleLabel {
@@ -18,6 +45,8 @@ pub enum LifecycleLabel {
     Child,
     /// Fully participating adult.
     Adult,
+    /// Synonym for `Adult` used by FR-CIV-LIFE-003 reproduction gating.
+    WorkingAge,
     /// Aging or physically degraded.
     Elder,
     /// No longer alive.

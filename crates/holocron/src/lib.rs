@@ -28,11 +28,11 @@
 //! # Usage
 //!
 //! ```
-//! use civ_holocron::default_registry;
+//! use holocron::{VerbRegistry, default_registry};
 //!
 //! let registry = default_registry();
-//! assert!(registry.len() >= 10);
-//! assert!(registry.get("civ_bless_citizens").is_some());
+//! assert!(registry.len() >= 50);
+//! assert!(registry.lookup("civ_bless_faction").is_some());
 //! ```
 
 #![forbid(unsafe_code)]
@@ -47,7 +47,6 @@ pub mod provenance;
 pub mod rank;
 pub mod registry;
 pub mod risk;
-pub mod snapshot;
 pub mod verbs;
 pub mod voxel_inspector;
 
@@ -56,10 +55,9 @@ pub use descriptor::VerbDescriptor;
 pub use group::VerbGroup;
 pub use inspect::*;
 pub use provenance::Provenance;
-pub use rank::{rank_by_risk, rank_for_state};
-pub use registry::{MatchedVerb, VerbRegistry};
+pub use rank::{rank_by_use as rank_verbs};
+pub use registry::{VerbRegistry, MatchedVerb as VerbSearchResult};
 pub use risk::RiskTier;
-pub use snapshot::{snapshot_from_source, EraKind, FactionStance, SimSnapshot, SimSnapshotSource};
 pub use voxel_inspector::*;
 
 /// Build the default registry by enumerating the static verb catalog.
@@ -69,5 +67,5 @@ pub use voxel_inspector::*;
 /// - the CommandKOverlay (Phase 3), and
 /// - the context-aware ranker (Phase 4).
 pub fn default_registry() -> VerbRegistry {
-    VerbRegistry::from_mcp_catalog()
+    VerbRegistry::from_catalog(&verbs::build_mcp_catalog())
 }

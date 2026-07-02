@@ -407,15 +407,9 @@ pub struct SaveListEntry {
 
 fn parse_save_list_response(text: &str) -> Option<Vec<SaveListEntry>> {
     let v: serde_json::Value = serde_json::from_str(text).ok()?;
-    let id_is_2099 = match v.get("id")?.as_u64() {
-        Some(2099) => true,
-        Some(_) => false,
-        None => match v.get("id").and_then(|i| i.as_i64()) {
-            Some(2099) => true,
-            None | Some(_) => false,
-        },
-    };
-    if !id_is_2099 {
+    let id = v.get("id")?;
+    let id_ok = id.as_u64() == Some(2099) || id.as_i64() == Some(2099);
+    if !id_ok {
         return None;
     }
     let entries = v.get("result")?.as_array()?;

@@ -1,4 +1,4 @@
-//! Faction Diplomacy panel for the Civis reference client.
+﻿//! Faction Diplomacy panel for the Civis reference client.
 //!
 //! Provides a dark-glassmorphism overlay (matching `game_ui.rs` palette) that
 //! shows all known factions and a symmetric relation matrix. Open / close with
@@ -12,13 +12,13 @@
 //! app.insert_resource(DiplomacyState::demo());
 //! ```
 
-use crossbeam_channel::Sender;
 use std::collections::HashMap;
+use crossbeam_channel::Sender;
 
-use crate::settings_ui::{GameSettings, KeyBinding, ACTION_TOGGLE_DIPLOMACY};
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 use civ_protocol_3d::{FactionStateEntry, FactionStateFrame, Government3d};
+use crate::settings_ui::{GameSettings, ACTION_TOGGLE_DIPLOMACY, KeyBinding};
 
 // ---------------------------------------------------------------------------
 // Outbound RPC bridge
@@ -268,11 +268,7 @@ fn toggle_diplomacy_panel(
     }
 }
 
-fn draw_diplomacy_panel(
-    mut contexts: EguiContexts,
-    mut state: ResMut<DiplomacyState>,
-    bridge: Option<Res<DiplomacyBridge>>,
-) {
+fn draw_diplomacy_panel(mut contexts: EguiContexts, mut state: ResMut<DiplomacyState>, bridge: Option<Res<DiplomacyBridge>>) {
     let Ok(ctx) = contexts.ctx_mut() else { return };
 
     if !state.open {
@@ -338,11 +334,7 @@ fn draw_diplomacy_panel(
 // ---------------------------------------------------------------------------
 
 /// Renders the faction list: colour swatch + name + population + action buttons.
-fn faction_list_ui(
-    ui: &mut egui::Ui,
-    state: &mut DiplomacyState,
-    bridge: Option<&DiplomacyBridge>,
-) {
+fn faction_list_ui(ui: &mut egui::Ui, state: &mut DiplomacyState, bridge: Option<&DiplomacyBridge>) {
     for faction in state.factions.clone() {
         ui.horizontal(|ui| {
             color_swatch(ui, faction.egui_color());
@@ -362,13 +354,9 @@ fn faction_list_ui(
                         "jsonrpc": "2.0",
                         "id": 10,
                         "method": "sim.diplomacy_action",
-                        "params": {
-                            "action": "propose_treaty",
-                            "target_faction": faction.id,
-                        },
-                    })
-                    .to_string();
-                    b.send_rpc(json);
+                        "params": { "action": "propose_treaty", "target_faction": faction.id }
+                    });
+                    b.send_rpc(json.to_string());
                 }
             }
             let war_label = if state.pending_war_target == Some(faction.id) {
@@ -383,13 +371,9 @@ fn faction_list_ui(
                             "jsonrpc": "2.0",
                             "id": 11,
                             "method": "sim.diplomacy_action",
-                            "params": {
-                                "action": "declare_war",
-                                "target_faction": faction.id,
-                            },
-                        })
-                        .to_string();
-                        b.send_rpc(json);
+                            "params": { "action": "declare_war", "target_faction": faction.id }
+                        });
+                        b.send_rpc(json.to_string());
                     }
                     state.pending_war_target = None;
                 } else {
@@ -402,14 +386,9 @@ fn faction_list_ui(
                         "jsonrpc": "2.0",
                         "id": 12,
                         "method": "sim.diplomacy_action",
-                        "params": {
-                            "action": "offer_trade",
-                            "target_faction": faction.id,
-                            "amount": 100,
-                        },
-                    })
-                    .to_string();
-                    b.send_rpc(json);
+                        "params": { "action": "offer_trade", "target_faction": faction.id, "amount": 100 }
+                    });
+                    b.send_rpc(json.to_string());
                 }
             }
         });

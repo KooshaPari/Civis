@@ -1,92 +1,78 @@
-//! Tech prerequisite graph and unlock gating.
+//! Tech prerequisite graph for research unlock gating.
 //!
-//! This module is pure data logic: callers provide researched tech ids and
-//! prerequisite edges, and the graph answers whether a tech can unlock without
-//! touching engine state or persistence.
+//! FR-CIV-TECH-PREREQ: a tech unlocks only when all prerequisite techs are
+//! researched and the accumulated research points meet the tech's threshold.
 
 use std::collections::{BTreeMap, BTreeSet};
 
-/// Stable tech identifier.
-pub type TechId = String;
-
-/// Errors returned when building or mutating a prerequisite graph.
+/// A single tech entry in the prerequisite graph.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TechPrereqError {
-    /// A prerequisite references a tech id that is not registered.
-    UnknownTech(TechId),
-    /// Adding the dependency would create a cycle.
-    Cycle { tech: TechId, prereq: TechId },
+pub struct TechPrereqNode {
+    /// Tech id.
+    pub id: String,
+    /// Tech ids that must already be researched.
+    pub prerequisites: BTreeSet<String>,
+    /// Research points required to unlock this tech.
+    pub required_points: u32,
 }
 
-/// Directed prerequisite graph: `tech -> prerequisites`.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+impl TechPrereqNode {
+    /// Create a node from an id, prerequisite list, and point threshold.
+    #[must_use]
+    pub fn new<I, S>(id: impl Into<String>, prerequisites: I, required_points: u32) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        Self {
+            id: id.into(),
+            prerequisites: prerequisites.into_iter().map(Into::into).collect(),
+            required_points,
+        }
+    }
+}
+
+/// Directed prerequisite graph for tech research.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct TechPrereqGraph {
-    prereqs: BTreeMap<TechId, BTreeSet<TechId>>,
+    nodes: BTreeMap<String, TechPrereqNode>,
 }
 
 impl TechPrereqGraph {
-    /// Build an empty graph.
+    /// Insert or replace a tech node.
+    pub fn insert(&mut self, node: TechPrereqNode) {
+        self.nodes.insert(node.id.clone(), node);
+    }
+
+    /// Returns `true` when the tech exists, all prerequisites are researched,
+    /// and the accrued research points are sufficient.
     #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Register a tech id if absent.
-    pub fn register(&mut self, tech: impl Into<TechId>) {
-        self.prereqs.entry(tech.into()).or_default();
-    }
-
-    /// Add `prereq` as a prerequisite for `tech`.
-    pub fn require(
-        &mut self,
-        tech: impl Into<TechId>,
-        prereq: impl Into<TechId>,
-    ) -> Result<(), TechPrereqError> {
-        let tech = tech.into();
-        let prereq = prereq.into();
-        if !self.prereqs.contains_key(&tech) {
-            return Err(TechPrereqError::UnknownTech(tech));
-        }
-        if !self.prereqs.contains_key(&prereq) {
-            return Err(TechPrereqError::UnknownTech(prereq));
-        }
-        if tech == prereq || self.depends_on(&prereq, &tech) {
-            return Err(TechPrereqError::Cycle { tech, prereq });
-        }
-        self.prereqs
-            .get_mut(&tech)
-            .expect("tech existence checked")
-            .insert(prereq);
-        Ok(())
-    }
-
-    /// Return prerequisites for `tech`, if it is registered.
-    #[must_use]
-    pub fn prerequisites(&self, tech: &str) -> Option<&BTreeSet<TechId>> {
-        self.prereqs.get(tech)
-    }
-
-    /// True when every prerequisite for `tech` is in `researched`.
-    #[must_use]
-    pub fn can_unlock<'a>(
+    pub fn is_unlocked(
         &self,
-        tech: &str,
-        researched: impl IntoIterator<Item = &'a str>,
+        tech_id: &str,
+        researched: &BTreeSet<String>,
+        points: u32,
     ) -> bool {
-        let Some(prereqs) = self.prereqs.get(tech) else {
+        let Some(node) = self.nodes.get(tech_id) else {
             return false;
         };
-        let researched: BTreeSet<&str> = researched.into_iter().collect();
-        prereqs.iter().all(|p| researched.contains(p.as_str()))
+
+        points >= node.required_points
+            && node
+                .prerequisites
+                .iter()
+                .all(|prereq| researched.contains(prereq))
     }
 
-    fn depends_on(&self, tech: &str, needle: &str) -> bool {
-        let Some(prereqs) = self.prereqs.get(tech) else {
-            return false;
-        };
-        prereqs
-            .iter()
-            .any(|p| p == needle || self.depends_on(p, needle))
+    /// Returns `true` when a tech is still locked under the current state.
+    #[must_use]
+    pub fn is_locked(
+        &self,
+        tech_id: &str,
+        researched: &BTreeSet<String>,
+        points: u32,
+    ) -> bool {
+        !self.is_unlocked(tech_id, researched, points)
     }
 }
 
@@ -94,30 +80,22 @@ impl TechPrereqGraph {
 mod tests {
     use super::*;
 
+    /// FR-CIV-TECH-PREREQ — tech stays locked until prereqs are met, then unlocks.
     #[test]
-    fn can_unlock_when_all_prereqs_are_researched() {
-        let mut graph = TechPrereqGraph::new();
-        graph.register("fire");
-        graph.register("kiln");
-        graph.require("kiln", "fire").unwrap();
+    fn tech_stays_locked_until_prereqs_met_then_unlocks() {
+        let mut graph = TechPrereqGraph::default();
+        graph.insert(TechPrereqNode::new("advanced_rail", ["basic_rail", "steel"], 100));
 
-        assert!(graph.can_unlock("kiln", ["fire"]));
-        assert!(!graph.can_unlock("kiln", []));
-    }
+        let mut researched = BTreeSet::new();
+        researched.insert("basic_rail".to_string());
 
-    #[test]
-    fn rejects_cycles() {
-        let mut graph = TechPrereqGraph::new();
-        graph.register("a");
-        graph.register("b");
-        graph.require("b", "a").unwrap();
+        assert!(graph.is_locked("advanced_rail", &researched, 100));
+        assert!(graph.is_locked("advanced_rail", &researched, 99));
 
-        assert_eq!(
-            graph.require("a", "b"),
-            Err(TechPrereqError::Cycle {
-                tech: "a".into(),
-                prereq: "b".into()
-            })
-        );
+        researched.insert("steel".to_string());
+        assert!(graph.is_locked("advanced_rail", &researched, 99));
+
+        assert!(graph.is_unlocked("advanced_rail", &researched, 100));
+        assert!(!graph.is_locked("advanced_rail", &researched, 100));
     }
 }

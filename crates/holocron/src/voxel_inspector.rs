@@ -216,7 +216,7 @@ impl VoxelState {
     ) -> Self {
         Self {
             key,
-            material: String::from(material),
+            material: material.to_string(),
             temperature_kelvin,
             pressure_hpa,
             mass_units,

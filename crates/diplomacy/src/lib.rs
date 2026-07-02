@@ -754,8 +754,6 @@ pub struct DiplomacyConfig {
     pub hostile_threshold: i32,
     /// Standing ≥ this is [`Stance::Allied`]. Must be ≥ 0.
     pub allied_threshold: i32,
-    /// Optional per-tick influence income for all factions (passive accrual).
-    pub default_income: Option<i32>,
 }
 
 impl Default for DiplomacyConfig {
@@ -765,7 +763,6 @@ impl Default for DiplomacyConfig {
             decay_per_tick: 1,
             hostile_threshold: -100,
             allied_threshold: 100,
-            default_income: None,
         }
     }
 }
@@ -835,10 +832,6 @@ pub struct DiplomacyState {
     /// Events emitted by the most recent mutation pass. Cleared by
     /// [`Self::drain_events`].
     pending_events: Vec<DiplomacyTickEvent>,
-    /// Per-polity influence capital pools.
-    influence_pools: BTreeMap<PolityId, InfluenceCapital>,
-    /// Active scheduled payments (treaty obligations).
-    pending_payments: Vec<AnnualPayment>,
 }
 
 impl DiplomacyState {
@@ -849,8 +842,6 @@ impl DiplomacyState {
             config,
             relations: BTreeMap::new(),
             pending_events: Vec::new(),
-            influence_pools: BTreeMap::new(),
-            pending_payments: Vec::new(),
         })
     }
 
@@ -1016,80 +1007,6 @@ impl DiplomacyState {
         // ceil(mag / decay) — integer math.
         ((mag + decay - 1) / decay) as u64
     }
-
-    // -- Influence capital helpers ------------------------------------------
-
-    /// Ensure an [`InfluenceCapital`] pool exists for `polity`, creating one
-    /// with reserve 0 if absent.
-    pub fn ensure_capital(&mut self, polity: PolityId) -> &mut InfluenceCapital {
-        // We store influence pools in a side-channel: the config's
-        // `default_income` drives passive accrual. For now, influence
-        // tracking is caller-managed (the engine tick function
-        // accumulates per-faction).
-        self.influence_pools
-            .entry(polity)
-            .or_insert_with(|| InfluenceCapital::new(polity, 0))
-    }
-
-    /// Tick all influence pools: accrue `income` from config or caller.
-    pub fn tick_influence(&mut self, tick_income: i64) {
-        let polity_ids: Vec<PolityId> = self.influence_pools.keys().copied().collect();
-        for p in polity_ids {
-            if let Some(pool) = self.influence_pools.get_mut(&p) {
-                pool.accrue(tick_income);
-            }
-        }
-    }
-
-    /// Spend `amount` from `polity`'s influence pool. Returns `true` if
-    /// sufficient reserves exist.
-    pub fn spend_influence(&mut self, polity: PolityId, amount: i64) -> bool {
-        self.influence_pools
-            .get_mut(&polity)
-            .map(|pool| pool.spend(amount))
-            .unwrap_or(false)
-    }
-
-    /// Award `amount` to `polity`'s influence pool (one-time grant).
-    pub fn earn_influence(&mut self, polity: PolityId, amount: i64) {
-        if let Some(pool) = self.influence_pools.get_mut(&polity) {
-            pool.award(amount);
-        }
-    }
-
-    /// Current influence reserve for `polity`, or 0 if no pool exists.
-    pub fn influence_of(&self, polity: PolityId) -> i64 {
-        self.influence_pools
-            .get(&polity)
-            .map(|p| p.reserve)
-            .unwrap_or(0)
-    }
-
-    // -- Payment schedule helpers -------------------------------------------
-
-    /// Add a scheduled payment. The payment will be collected via
-    /// [`Self::tick_payments`].
-    pub fn add_payment(&mut self, from: PolityId, to: PolityId, amount: i64, duration_ticks: u32) {
-        self.pending_payments
-            .push(AnnualPayment::new(from, to, amount, duration_ticks));
-    }
-
-    /// Advance all pending payments by one tick. Returns a list of
-    /// `(from, to, amount)` tuples for payments that were due this tick.
-    pub fn tick_payments(&mut self) -> Vec<(PolityId, PolityId, i64)> {
-        let mut due = Vec::new();
-        self.pending_payments.retain(|pmt| {
-            let mut clone = pmt.clone();
-            match clone.tick() {
-                Some(triple) => {
-                    due.push(triple);
-                    !clone.expired()
-                }
-                None => false,
-            }
-        });
-        due
-    }
 }
 
 /// Project a standing value to a [`Stance`] using `config`'s thresholds.
@@ -1118,293 +1035,6 @@ fn bump_from_energy(energy: u32) -> i32 {
     digits.clamp(1, 50)
 }
 
-// -- Influence capital -----------------------------------------------------
-
-/// Maximum influence a single polity can accumulate.
-pub const MAX_INFLUENCE: i64 = 10_000;
-
-/// Per-polity influence capital pool used to fund diplomatic actions.
-///
-/// Influence accrues through passive income, trade, and patronage. It is
-/// consumed by diplomatic actions (treaty concessions, tribute, espionage).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct InfluenceCapital {
-    /// Current reserve, clipped to `[0, MAX_INFLUENCE]`.
-    pub reserve: i64,
-    /// Polity this pool belongs to.
-    pub polity: PolityId,
-}
-
-impl InfluenceCapital {
-    /// Create a fresh pool for `polity` starting at `initial` (clamped).
-    pub fn new(polity: PolityId, initial: i64) -> Self {
-        Self {
-            reserve: initial.clamp(0, MAX_INFLUENCE),
-            polity,
-        }
-    }
-
-    /// Passive accrual: add `income` per tick, clamped to `MAX_INFLUENCE`.
-    pub fn accrue(&mut self, income: i64) {
-        self.reserve = (self.reserve + income).min(MAX_INFLUENCE);
-    }
-
-    /// Spend `amount` if sufficient reserves exist. Returns `true` if spent.
-    pub fn spend(&mut self, amount: i64) -> bool {
-        if self.reserve >= amount {
-            self.reserve -= amount;
-            true
-        } else {
-            false
-        }
-    }
-
-    /// Award a one-time influence grant (e.g. from a successful treaty).
-    pub fn award(&mut self, amount: i64) {
-        self.reserve = (self.reserve + amount).min(MAX_INFLUENCE);
-    }
-
-    /// Current influence level as a fraction of max (`0.0` – `1.0`).
-    pub fn fullness(&self) -> f32 {
-        self.reserve as f32 / MAX_INFLUENCE as f32
-    }
-}
-
-// -- Annual payments -------------------------------------------------------
-
-/// A scheduled payment from one polity to another, part of a treaty lifecycle.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct AnnualPayment {
-    /// Paying polity.
-    pub from: PolityId,
-    /// Receiving polity.
-    pub to: PolityId,
-    /// Amount per tick.
-    pub amount: i64,
-    /// Remaining ticks before this payment expires.
-    pub remaining_ticks: u32,
-    /// Total ticks when the payment was created.
-    pub total_ticks: u32,
-}
-
-impl AnnualPayment {
-    /// Create a new scheduled payment.
-    pub fn new(from: PolityId, to: PolityId, amount: i64, duration_ticks: u32) -> Self {
-        Self {
-            from,
-            to,
-            amount,
-            remaining_ticks: duration_ticks,
-            total_ticks: duration_ticks,
-        }
-    }
-
-    /// Advance one tick. Returns `(from, to, amount)` if payment is due,
-    /// or `None` if expired. Decrements `remaining_ticks`.
-    pub fn tick(&mut self) -> Option<(PolityId, PolityId, i64)> {
-        if self.remaining_ticks == 0 {
-            return None;
-        }
-        self.remaining_ticks -= 1;
-        Some((self.from, self.to, self.amount))
-    }
-
-    /// `true` if this payment has been fully delivered.
-    pub fn expired(&self) -> bool {
-        self.remaining_ticks == 0
-    }
-}
-
-// -- AI Diplomacy Engine ----------------------------------------------------
-
-/// Types of diplomatic proposals an AI can autonomously generate.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum AiDiplomacyProposal {
-    /// Mutual defense and trade alliance (high trust required).
-    Alliance,
-    /// Resource-exchange trade pact (medium trust required).
-    TradePact,
-    /// Promise not to attack each other (low-medium trust).
-    NonAggressionPact,
-    /// Shared technology research agreement (high trust + influence).
-    ResearchAgreement,
-}
-
-/// Context snapshot passed to the AI engine for one evaluation cycle.
-#[derive(Debug, Clone)]
-pub struct ProposalContext {
-    /// Current relationship standing between the two factions.
-    pub standing: i32,
-    /// Faction A's influence capital reserve.
-    pub influence_a: i64,
-    /// Faction B's influence capital reserve.
-    pub influence_b: i64,
-    /// Faction A's relative military power (0.0 – 1.0, vs B).
-    pub power_ratio: f32,
-    /// Faction A's war exhaustion (0 = none).
-    pub exhaustion_a: u32,
-    /// Faction B's war exhaustion (0 = none).
-    pub exhaustion_b: u32,
-    /// Whether the factions share a border.
-    pub contiguous: bool,
-    /// Faction A's available treasury (Fixed-point scale).
-    pub treasury_a: i64,
-    /// Faction B's available treasury.
-    pub treasury_b: i64,
-}
-
-impl Default for ProposalContext {
-    fn default() -> Self {
-        Self {
-            standing: 0,
-            influence_a: 0,
-            influence_b: 0,
-            power_ratio: 0.5,
-            exhaustion_a: 0,
-            exhaustion_b: 0,
-            contiguous: false,
-            treasury_a: 0,
-            treasury_b: 0,
-        }
-    }
-}
-
-/// Outcome of AI proposal evaluation.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ProposalEvaluation {
-    /// The proposal the AI chose to make.
-    pub proposal: AiDiplomacyProposal,
-    /// Confidence score (0.0 – 1.0) that the target will accept.
-    pub confidence: f32,
-    /// Human-readable rationale for the decision.
-    pub rationale: String,
-}
-
-/// Thresholds for AI proposal selection.
-const STANDING_ALLIANCE_MIN: i32 = 75;
-const STANDING_TRADE_PACT_MIN: i32 = 30;
-const STANDING_NON_AGGRESSION_MIN: i32 = 0;
-const STANDING_RESEARCH_MIN: i32 = 50;
-const INFLUENCE_RESEARCH_COST: i64 = 200;
-const CONFIDENCE_HIGH: f32 = 0.85;
-const CONFIDENCE_MEDIUM: f32 = 0.60;
-const CONFIDENCE_LOW: f32 = 0.35;
-
-/// Generate the best diplomatic proposal the AI should make toward `_target`
-/// given the current strategic context.
-///
-/// Returns `None` when no proposal is worthwhile (standing too low or both
-/// sides too exhausted to engage diplomatically).
-pub fn evaluate_ai_proposal(
-    _target: PolityId,
-    ctx: &ProposalContext,
-) -> Option<ProposalEvaluation> {
-    // Standing is the primary gate: below hostile threshold, no proposal.
-    if ctx.standing < STANDING_NON_AGGRESSION_MIN {
-        return Some(ProposalEvaluation {
-            proposal: AiDiplomacyProposal::NonAggressionPact,
-            confidence: CONFIDENCE_LOW,
-            rationale: format!(
-                "standing {} below minimum for any positive proposal; \
-                 offer non-aggression to stabilise relations",
-                ctx.standing
-            ),
-        });
-    }
-
-    // Compute weighted scores for each proposal type.
-    let alliance_score = score_alliance(ctx);
-    let trade_score = score_trade_pact(ctx);
-    let non_agg_score = score_non_aggression(ctx);
-    let research_score = score_research(ctx);
-
-    // Pick the highest-scoring proposal with positive score.
-    let candidates = [
-        (
-            alliance_score,
-            AiDiplomacyProposal::Alliance,
-            CONFIDENCE_HIGH,
-        ),
-        (
-            trade_score,
-            AiDiplomacyProposal::TradePact,
-            CONFIDENCE_MEDIUM,
-        ),
-        (
-            non_agg_score,
-            AiDiplomacyProposal::NonAggressionPact,
-            CONFIDENCE_LOW,
-        ),
-        (
-            research_score,
-            AiDiplomacyProposal::ResearchAgreement,
-            CONFIDENCE_HIGH,
-        ),
-    ];
-
-    let best = candidates
-        .iter()
-        .max_by(|(sa, _, _), (sb, _, _)| sa.partial_cmp(sb).unwrap_or(std::cmp::Ordering::Equal))
-        .filter(|(score, _, _)| *score > 0.0)?;
-
-    let rationale = format!(
-        "standing={} power_ratio={:.2} influence_a={} influence_b={} \
-         exhaustion_a={} exhaustion_b={} contiguous={}",
-        ctx.standing,
-        ctx.power_ratio,
-        ctx.influence_a,
-        ctx.influence_b,
-        ctx.exhaustion_a,
-        ctx.exhaustion_b,
-        ctx.contiguous,
-    );
-
-    Some(ProposalEvaluation {
-        proposal: best.1,
-        confidence: best.2,
-        rationale,
-    })
-}
-
-fn score_alliance(ctx: &ProposalContext) -> f32 {
-    if ctx.standing < STANDING_ALLIANCE_MIN {
-        return -1.0;
-    }
-    // Alliances are more attractive when sharing a border and relatively equal.
-    let border_bonus = if ctx.contiguous { 20.0 } else { 0.0 };
-    let power_parity = 1.0 - (ctx.power_ratio - 0.5).abs() * 2.0; // 0.0 – 1.0
-    let exhaustion_penalty = (ctx.exhaustion_a as f32 + ctx.exhaustion_b as f32) * 0.001;
-    (ctx.standing as f32 * 0.5 + border_bonus) * power_parity - exhaustion_penalty
-}
-
-fn score_trade_pact(ctx: &ProposalContext) -> f32 {
-    if ctx.standing < STANDING_TRADE_PACT_MIN {
-        return -1.0;
-    }
-    // Trade is attractive when one side has surplus and the other has deficit.
-    let treasury_gap = (ctx.treasury_a as f32 - ctx.treasury_b as f32).abs() * 0.001;
-    let influence_bonus = (ctx.influence_a as f32 + ctx.influence_b as f32) * 0.01;
-    treasury_gap + influence_bonus
-}
-
-fn score_non_aggression(ctx: &ProposalContext) -> f32 {
-    // Non-aggression is always available, but more attractive when standing is low.
-    let standing_penalty = (STANDING_TRADE_PACT_MIN as f32 - ctx.standing as f32).max(0.0) * 0.5;
-    let exhaustion_bonus = (ctx.exhaustion_a as f32 + ctx.exhaustion_b as f32) * 0.02;
-    let border_bonus = if ctx.contiguous { 10.0 } else { 0.0 };
-    standing_penalty + exhaustion_bonus + border_bonus
-}
-
-fn score_research(ctx: &ProposalContext) -> f32 {
-    if ctx.standing < STANDING_RESEARCH_MIN || ctx.influence_a < INFLUENCE_RESEARCH_COST {
-        return -1.0;
-    }
-    // Research agreements need mutual influence reserves and high standing.
-    let mutual_influence = (ctx.influence_a.min(ctx.influence_b) as f32) * 0.005;
-    let standing_bonus = (ctx.standing as f32 - STANDING_RESEARCH_MIN as f32) * 0.3;
-    standing_bonus + mutual_influence
-}
-
 // ---------------------------------------------------------------------------
 // FR-CIV-DIPLO-STANCE: relationship-stance model
 // ---------------------------------------------------------------------------
@@ -1416,8 +1046,8 @@ fn score_research(ctx: &ProposalContext) -> f32 {
 pub mod relationship_stance;
 
 pub use relationship_stance::{
-    FactionPair, RelationEvent, RelationStance, RelationshipStance, RelationshipStanceModel,
-    StanceConfigError, StanceThresholds,
+    FactionPair, RelationEvent, RelationStance, RelationshipStance,
+    RelationshipStanceModel, StanceConfigError, StanceThresholds,
 };
 
 // ---------------------------------------------------------------------------
@@ -1451,7 +1081,6 @@ mod tests {
             decay_per_tick: 1,
             hostile_threshold: -100,
             allied_threshold: 100,
-            default_income: None,
         }
     }
 
@@ -1688,7 +1317,6 @@ mod tests {
             decay_per_tick: 1,
             hostile_threshold: -3,
             allied_threshold: 100,
-            default_income: None,
         };
         let mut s = DiplomacyState::new(tight).expect("cfg");
         // 5-digit energy -> bump magnitude 5; one symmetric bump -> -5
@@ -1795,7 +1423,6 @@ mod tests {
             decay_per_tick: 1,
             hostile_threshold: -5,
             allied_threshold: 5,
-            default_income: None,
         };
         let mut s = DiplomacyState::new(big_cfg).expect("cfg");
         s.ingest(&[InteractionEvent::Gesture {
@@ -1862,7 +1489,6 @@ mod tests {
                 decay_per_tick: decay,
                 hostile_threshold: -100,
                 allied_threshold: 100,
-                default_income: None,
             };
             config.validate().expect("config");
             let mut s = DiplomacyState::new(config).expect("state");

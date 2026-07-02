@@ -41,8 +41,9 @@ use tokio::{
 use crate::{
     jsonrpc::{
         dispatch_request, encode_response, error_code, parse_error_response, parse_request,
-        parse_role_param, set_sim_command_tick, set_spawn_civilian_result, DispatchContext,
-        DispatchEffect, JsonRpcError, JsonRpcMethod, JsonRpcResponse,
+        parse_role_param, psyche_snapshot_from_sim, sentience_events_from_sim, set_sim_command_tick,
+        set_spawn_civilian_result, DispatchContext, DispatchEffect, JsonRpcError, JsonRpcMethod,
+        JsonRpcResponse,
     },
     saves::save_archive_path,
     subscription_filter::{SubscriptionFilter, WsConnectQuery},
@@ -490,6 +491,20 @@ async fn handle_jsonrpc_text(
                 }
                 _ => (None, None),
             };
+            let (psyche_snapshot, sentience_events) = match req.method {
+                JsonRpcMethod::PsycheSnapshot => {
+                    let sim = state.sim.lock().await;
+                    let events = sentience_events_from_sim(&sim);
+                    let psyche_snapshot = psyche_snapshot_from_sim(&sim, &events);
+                    (Some(psyche_snapshot), Some(events))
+                }
+                JsonRpcMethod::PsycheEvents => {
+                    let sim = state.sim.lock().await;
+                    let events = sentience_events_from_sim(&sim);
+                    (None, Some(events))
+                }
+                _ => (None, None),
+            };
 
             let (research_researched, research_in_progress): (Vec<String>, Option<String>) =
                 (vec![], None);
@@ -548,6 +563,8 @@ async fn handle_jsonrpc_text(
                     in_progress_tech: research_in_progress,
                     outcome_fields,
                     last_tick_ms: 0.0,
+                    psyche_snapshot,
+                    sentience_events,
                 },
             );
             apply_dispatch_effect(&mut plan.response, plan.effect, state).await;

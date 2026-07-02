@@ -1,4 +1,4 @@
-﻿//! JSON-RPC 2.0 request/response types for the CIV-0200 WebSocket protocol.
+//! JSON-RPC 2.0 request/response types for the CIV-0200 WebSocket protocol.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -93,6 +93,10 @@ pub enum JsonRpcMethod {
     SimUpdateSubscription,
     /// Query current game outcome state (`sim.outcome`, FR-CIV-GAME-001).
     SimOutcome,
+    /// Per-entity sentience/psyche snapshot (`psyche.snapshot`, FR-PSYCHE-readapi).
+    PsycheSnapshot,
+    /// Per-tick sentience events (`psyche.events`, FR-PSYCHE-readapi).
+    PsycheEvents,
 }
 
 impl JsonRpcMethod {
@@ -129,6 +133,8 @@ impl JsonRpcMethod {
             Self::SimUnsubscribe => "sim.unsubscribe",
             Self::SimUpdateSubscription => "sim.update_subscription",
             Self::SimOutcome => "sim.outcome",
+            Self::PsycheSnapshot => "psyche.snapshot",
+            Self::PsycheEvents => "psyche.events",
         }
     }
 
@@ -165,6 +171,8 @@ impl JsonRpcMethod {
             "sim.unsubscribe" => Some(Self::SimUnsubscribe),
             "sim.update_subscription" => Some(Self::SimUpdateSubscription),
             "sim.outcome" => Some(Self::SimOutcome),
+            "psyche.snapshot" => Some(Self::PsycheSnapshot),
+            "psyche.events" => Some(Self::PsycheEvents),
             _ => None,
         }
     }
@@ -770,6 +778,57 @@ pub fn snapshot_fields_from_sim(
     }
 }
 
+/// Convert engine sentience events to wire format.
+pub fn sentience_events_from_sim(sim: &civ_engine::Simulation) -> Vec<SentienceEventWire> {
+    sim.sentience_events()
+        .iter()
+        .map(|ev| SentienceEventWire {
+            lineage_id: ev.lineage_id,
+            cognition_score: ev.cognition_score,
+            crossed: ev.crossed,
+        })
+        .collect()
+}
+
+/// Build per-agent psyche snapshot from the live simulation.
+pub fn psyche_snapshot_from_sim(
+    sim: &civ_engine::Simulation,
+    sentience_events: &[SentienceEventWire],
+) -> Vec<PsycheEntitySnapshotWire> {
+    use civ_agents::{Civilian, Psyche};
+    use std::collections::HashSet;
+
+    let sentient_ids: HashSet<u64> = sentience_events
+        .iter()
+        .filter(|event| event.crossed)
+        .filter_map(|event| event.lineage_id)
+        .collect();
+
+    let mut entities = Vec::new();
+    for (_, (civilian, psyche)) in sim.world.query::<(&Civilian, &Psyche)>().iter() {
+        let is_sentient = sentient_ids.contains(&civilian.id);
+        entities.push(PsycheEntitySnapshotWire {
+            agent_id: civilian.id,
+            cognition_score: sentience_events
+                .iter()
+                .find(|event| event.lineage_id == Some(civilian.id))
+                .map(|event| event.cognition_score)
+                .unwrap_or(0.0),
+            is_sentient,
+            mood_valence: psyche.mood.valence,
+            mood_arousal: psyche.mood.arousal,
+            reactivity: psyche.temperament.reactivity,
+            sociability: psyche.temperament.sociability,
+            risk_tol: psyche.temperament.risk_tol,
+            impulsivity: psyche.temperament.impulsivity,
+            drives: psyche.drives,
+            beliefs: psyche.beliefs,
+            maturity: psyche.maturity,
+        });
+    }
+    entities
+}
+
 /// Precomputed outcome for `sim.outcome` (FR-CIV-GAME-001).
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct OutcomeFields {
@@ -808,6 +867,51 @@ pub struct DispatchContext {
     pub outcome_fields: Option<OutcomeFields>,
     /// Server-reported last tick wall-clock duration (ms) for sim.perf (FR-CIV-PERF-001).
     pub last_tick_ms: f64,
+    /// Per-entity psyche snapshot for `psyche.snapshot` (FR-PSYCHE-readapi).
+    pub psyche_snapshot: Option<Vec<PsycheEntitySnapshotWire>>,
+    /// Per-tick sentience events for `psyche.events` (FR-PSYCHE-readapi).
+    pub sentience_events: Option<Vec<SentienceEventWire>>,
+}
+
+/// Wire-friendly representation of one sentience event for `psyche.events`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SentienceEventWire {
+    /// Optional lineage identifier.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lineage_id: Option<u64>,
+    /// Measured cognition score.
+    pub cognition_score: f32,
+    /// Whether the threshold was crossed.
+    pub crossed: bool,
+}
+
+/// Wire-friendly representation of one psyche-bearing agent.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PsycheEntitySnapshotWire {
+    /// Agent identifier.
+    pub agent_id: u64,
+    /// Sentience score associated with the agent.
+    pub cognition_score: f32,
+    /// Whether the agent crossed the sentience threshold.
+    pub is_sentient: bool,
+    /// Mood valence.
+    pub mood_valence: f32,
+    /// Mood arousal.
+    pub mood_arousal: f32,
+    /// Temperament reactivity.
+    pub reactivity: f32,
+    /// Temperament sociability.
+    pub sociability: f32,
+    /// Temperament risk tolerance.
+    pub risk_tol: f32,
+    /// Temperament impulsivity.
+    pub impulsivity: f32,
+    /// Drive axes.
+    pub drives: [f32; 4],
+    /// Belief axes.
+    pub beliefs: [f32; 4],
+    /// Psyche maturity.
+    pub maturity: f32,
 }
 
 /// JSON-RPC view of [`civ_engine::emergence_metrics::EmergenceSample`].
@@ -1729,6 +1833,26 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 }
             }
         }
+        JsonRpcMethod::PsycheSnapshot => {
+            let psyche_snapshot = ctx
+                .psyche_snapshot
+                .map(|snapshot| serde_json::to_value(snapshot).unwrap_or(Value::Array(Vec::new())))
+                .unwrap_or_else(|| Value::Array(Vec::new()));
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, psyche_snapshot),
+                effect: DispatchEffect::None,
+            }
+        }
+        JsonRpcMethod::PsycheEvents => {
+            let sentience_events = ctx
+                .sentience_events
+                .map(|events| serde_json::to_value(events).unwrap_or(Value::Array(Vec::new())))
+                .unwrap_or_else(|| Value::Array(Vec::new()));
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, sentience_events),
+                effect: DispatchEffect::None,
+            }
+        }
         JsonRpcMethod::SimTechState => DispatchPlan {
             response: JsonRpcResponse::success(req.id, serde_json::json!({
                 "available": [
@@ -2070,6 +2194,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -2110,6 +2236,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -2150,6 +2278,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -2182,6 +2312,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -2212,6 +2344,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -2243,6 +2377,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -2274,6 +2410,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -2301,6 +2439,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -2412,6 +2552,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -2441,6 +2583,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -2498,6 +2642,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -2575,6 +2721,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -2622,6 +2770,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -2659,6 +2809,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -2777,6 +2929,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -2818,6 +2972,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -2870,6 +3026,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -2950,6 +3108,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -3028,6 +3188,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -3111,6 +3273,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -3157,6 +3321,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -3196,6 +3362,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -3233,6 +3401,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -3263,6 +3433,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -3335,6 +3507,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -3405,6 +3579,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -3436,6 +3612,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -3472,6 +3650,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -3509,6 +3689,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -3544,6 +3726,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -3644,6 +3828,14 @@ mod tests {
         assert_eq!(
             JsonRpcMethod::parse_name("save.list"),
             Some(JsonRpcMethod::SaveList)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("psyche.snapshot"),
+            Some(JsonRpcMethod::PsycheSnapshot)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("psyche.events"),
+            Some(JsonRpcMethod::PsycheEvents)
         );
         assert_eq!(
             JsonRpcMethod::parse_name("sim.emergence"),
@@ -3964,6 +4156,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -3994,6 +4188,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -4023,6 +4219,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -4033,3 +4231,4 @@ mod tests {
         assert!(available.as_array().unwrap().len() > 0, "available should be non-empty");
     }
 }
+

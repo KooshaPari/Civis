@@ -573,9 +573,14 @@ async fn handle_jsonrpc_text(
                     .and_then(|p| p.get("y").and_then(|v| v.as_i64()))
                     .unwrap_or(0);
                 let sim = state.sim.lock().await;
-                Some(crate::jsonrpc::TileInspectionWire::from(
-                    sim.inspect_tile(x, y),
-                ))
+                let material = sim
+                    .voxel()
+                    .read(civ_voxel::WorldCoord { x, y: 0, z: y })
+                    .0 as u16;
+                Some(crate::jsonrpc::TileInspectionWire {
+                    material,
+                    terrain_height: 0,
+                })
             } else {
                 None
             };
@@ -1296,7 +1301,7 @@ async fn apply_dispatch_effect(
                     {
                         result.insert(
                             "relation".to_owned(),
-                            serde_json::to_value(relation)
+                            serde_json::to_value(format!("{:?}", relation.after))
                                 .unwrap_or_else(|_| serde_json::Value::Null),
                         );
                     }

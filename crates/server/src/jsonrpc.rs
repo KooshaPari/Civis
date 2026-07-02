@@ -990,15 +990,6 @@ pub struct TileInspectionWire {
     pub terrain_height: i64,
 }
 
-impl From<civ_engine::TileInspection> for TileInspectionWire {
-    fn from(value: civ_engine::TileInspection) -> Self {
-        Self {
-            material: value.material.0,
-            terrain_height: value.terrain_height,
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct DispatchContext {
     /// Current bridge tick (may lag until the next broadcast).

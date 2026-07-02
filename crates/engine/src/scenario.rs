@@ -277,8 +277,11 @@ impl Scenario {
 
     /// Headless simulation seeded from scenario starting conditions.
     pub fn into_simulation(self, rng_seed: u64) -> Simulation {
-        let mut sim =
-            Simulation::with_seed_and_starting_conditions(rng_seed, &self.starting_conditions);
+        // ponytail: with_seed_and_starting_conditions was removed; scenario setup
+        // is applied right below (apply_world_state + military/taxation/mods), so
+        // seed-only construction is sufficient. starting_conditions still gates
+        // validation in apply_world_state.
+        let mut sim = Simulation::with_seed(rng_seed);
         self.apply_world_state(&mut sim.state);
         sim.economy_policy = self.policy_input();
         sim.configure_military_fog(self.fog_vision_radius, self.fog_grid_size);

@@ -249,11 +249,11 @@ mod plugin {
                 .map(|n| (n.food + n.shelter + n.safety + n.belonging) / 4.0)
                 .unwrap_or(0.0);
             let det = SelectedEntityDetails {
-                kind: "Civilian".to_string(),
+                entity_type: "Civilian".to_string(),
                 name: format!("Civilian #{}", civ.id),
                 faction: civilian_faction_id(civ)
                     .map_or_else(|| "—".to_string(), |faction| format!("Faction {faction}")),
-                health: format!("Needs pressure {:.0}%", pressure * 100.0),
+                health: format!("{:.0}%", pressure.clamp(0.0, 1.0) * 100.0),
                 profession: needs
                     .map(|n| {
                         format!(
@@ -265,9 +265,11 @@ mod plugin {
                         )
                     })
                     .unwrap_or_else(|| "—".to_string()),
-                position: civilian_faction_id(civ).map_or_else(
-                    || format!("age {} · cluster —", civ.age),
-                    |faction| format!("age {} · cluster {}", civ.age, faction),
+                species: "—".to_string(),
+                needs: format!("{:.0}%", pressure.clamp(0.0, 1.0) * 100.0),
+                position: format!(
+                    "{:.1}, {:.1}, {:.1}",
+                    agent_pos.x, agent_pos.y, agent_pos.z
                 ),
             };
             if best.as_ref().map_or(true, |(bd, _)| d2 < *bd) {
@@ -289,12 +291,19 @@ mod plugin {
                 continue;
             }
             let det = SelectedEntityDetails {
-                kind: "Structure".to_string(),
+                entity_type: "Structure".to_string(),
                 name: s.kind.to_string(),
                 faction: "—".to_string(),
                 health: format!("Occupancy {}", s.occupancy),
                 profession: "Structure".to_string(),
-                position: format!("({:.0}, {:.0})", tf.translation().x, tf.translation().z),
+                species: "—".to_string(),
+                needs: "—".to_string(),
+                position: format!(
+                    "{:.1}, {:.1}, {:.1}",
+                    tf.translation().x,
+                    tf.translation().y,
+                    tf.translation().z
+                ),
             };
             if best.as_ref().map_or(true, |(bd, _)| d2 < *bd) {
                 best = Some((d2, det));
@@ -306,16 +315,18 @@ mod plugin {
     fn cell_details(pos: Vec3) -> SelectedEntityDetails {
         let cell = CellReadout::sample(pos.x, pos.z);
         SelectedEntityDetails {
-            kind: "Cell".to_string(),
+            entity_type: "Cell".to_string(),
             name: format!("Cell ({:.0}, {:.0})", cell.world_x, cell.world_z),
             faction: "—".to_string(),
             health: if cell.submerged { "Submerged" } else { "Dry" }.to_string(),
             profession: format!("Material: {}", cell.material),
+            species: "—".to_string(),
+            needs: "—".to_string(),
             position: format!(
-                "h={:.0} · {} ({})",
+                "{:.1}, {:.1}, {:.1}",
+                cell.world_x,
                 cell.height,
-                temperature_band(cell.temperature),
-                cell.material
+                cell.world_z
             ),
         }
     }

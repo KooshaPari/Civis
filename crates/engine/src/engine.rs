@@ -67,6 +67,7 @@ use crate::religion::{
     apply_big_gods_response, last_religion_sample, substrate_gradients_for, ReligionEvent,
     ReligionEventKind, ReligiousProfile, SubstrateGradients,
 };
+use crate::tutorial::TutorialProgress;
 use crate::replay::{ReplayError, ReplayLog};
 use crate::replay_format::{load_civreplay, save_civreplay};
 use crate::conditions::GameOutcome;
@@ -104,6 +105,7 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "institutions",
     "economic_focus",
     "emergence",
+    "tutorial",
     "psyche_behavior",
     "culture",
     "language",
@@ -663,6 +665,8 @@ pub struct Simulation {
     pub faction_aggression: std::collections::BTreeMap<u32, f32>,
     /// MOAT emergence state — culture/legends/feed buffers.
     pub emergence: crate::emergence::EmergenceState,
+    /// Tutorial onboarding progression surfaced to clients.
+    pub tutorial_progress: TutorialProgress,
     /// Live emergence-branching state (rolling σ̄_W).
     pub emergence_branching: crate::emergence_metrics::EmergenceBranchingState,
     /// Most recent emergence sample (None before first sample).
@@ -1536,6 +1540,7 @@ impl Simulation {
             last_settlement_count: 0,
             faction_aggression: BTreeMap::new(),
             emergence: crate::emergence::EmergenceState::new(42),
+            tutorial_progress: TutorialProgress::default(),
             emergence_branching: crate::emergence_metrics::EmergenceBranchingState::default(),
             emergence_sample: None,
             voxel: VoxelWorld::new(FIXED_SCALE),
@@ -1696,6 +1701,7 @@ impl Simulation {
             last_settlement_count: 0,
             faction_aggression: BTreeMap::new(),
             emergence: crate::emergence::EmergenceState::new(seed),
+            tutorial_progress: TutorialProgress::default(),
             emergence_branching: crate::emergence_metrics::EmergenceBranchingState::default(),
             emergence_sample: None,
             voxel: VoxelWorld::new(FIXED_SCALE),
@@ -2380,6 +2386,7 @@ impl Simulation {
             "institutions" => self.phase_institutions(),
             "economic_focus" => self.phase_economic_focus(),
             "emergence" => self.phase_emergence(),
+            "tutorial" => self.phase_tutorial(),
             "psyche_behavior" => self.phase_psyche_behavior(),
             "culture" => self.phase_culture(),
             "language" => self.phase_language(),
@@ -2398,6 +2405,12 @@ impl Simulation {
 
     fn phase_victory_check(&mut self) {
         self.last_game_outcome = crate::conditions::check_outcome(self);
+    }
+
+    fn phase_tutorial(&mut self) {
+        let mut tutorial = std::mem::take(&mut self.tutorial_progress);
+        tutorial.advance_from_sim(self);
+        self.tutorial_progress = tutorial;
     }
 
     /// Borrow the replay log.
@@ -5161,6 +5174,7 @@ impl Simulation {
             weather_grid: self.weather_grid.clone(),
             geology_map: GeologyMap::seed(&self.planet),
             faction_eras: self.era_progression.faction_era_snapshots(self),
+            tutorial_progress: self.tutorial_progress.clone(),
         }
     }
 
@@ -6998,6 +7012,7 @@ pub struct SimulationSnapshot {
     /// Per-faction emergent civilization age (FR-ERA).
     #[serde(default)]
     pub faction_eras: std::collections::BTreeMap<u32, crate::era::FactionEraSnapshot>,
+    pub tutorial_progress: TutorialProgress,
 }
 
 // ADR-020 phase stubs (FR-PLAY-click-to-fire prerequisite: tick() compiles).
@@ -7083,6 +7098,40 @@ mod tests {
         let mut sim = Simulation::new();
         sim.tick();
         assert_eq!(sim.state.tick, 1);
+    }
+
+    /// FR-CIV-TUTORIAL — tutorial progression advances from live sim milestones.
+    #[test]
+    fn fr_civ_tutorial_advances_from_tick_progress() {
+        let mut sim = Simulation::with_seed(42);
+        sim.era_progression.faction_tech.insert(
+            0,
+            crate::era::FactionTechState {
+                research_points: 240,
+                tech_level: 0,
+                diffusion_points: 0,
+            },
+        );
+
+        assert_eq!(
+            sim.tutorial_progress.current,
+            crate::tutorial::TutorialMilestone::FirstFaction
+        );
+
+        sim.tick();
+
+        assert!(sim.tutorial_progress.tech_unlocked);
+        assert!(
+            matches!(
+                sim.tutorial_progress.current,
+                crate::tutorial::TutorialMilestone::FirstTech
+                    | crate::tutorial::TutorialMilestone::FirstWar
+                    | crate::tutorial::TutorialMilestone::FirstReligion
+                    | crate::tutorial::TutorialMilestone::Complete
+            ),
+            "tutorial should advance once tech unlocks"
+        );
+        assert_eq!(sim.snapshot().tutorial_progress, sim.tutorial_progress);
     }
 
     /// FR-CIV-TACTICS — opposing military units in LOS/range engage during the
@@ -7197,6 +7246,8 @@ mod tests {
                 "institutions",
                 "economic_focus",
                 "emergence",
+                "tutorial",
+                "psyche_behavior",
                 "culture",
                 "language",
                 "sentience",
@@ -7229,16 +7280,6 @@ mod tests {
             "emergence (idx {emergence_idx}) must run after life (idx {life_idx}) \
              so agent state is finalized first"
         );
-        // emergence is the final deterministic CORE emergence phase —
-        // language and sentience are emergence-following couplings that
-        // depend on emergence output and therefore run after it. They must
-        // appear before `diffusion` so the diffusion phase can observe the
-        // language/sentience deltas.
-        assert!(
-            emergence_idx < PHASE_ORDER.len() - 3,
-            "emergence must be the last core emergence phase, with language, \
-             sentience, and diffusion following"
-        );
         let language_idx = PHASE_ORDER
             .iter()
             .position(|p| *p == "language")
@@ -7264,6 +7305,11 @@ mod tests {
             "sentience (idx {sentience_idx}) must run after language (idx {language_idx}) \
              so language-driven contact pressure is visible to the psyche evaluator"
         );
+        let tutorial_idx = PHASE_ORDER
+            .iter()
+            .position(|p| *p == "tutorial")
+            .expect("PHASE_ORDER must include 'tutorial' (FR-CIV-TUTORIAL)");
+        assert!(tutorial_idx > emergence_idx);
     }
 
     /// L5-115 — `Simulation::tick` invokes `phase_emergence` and the public

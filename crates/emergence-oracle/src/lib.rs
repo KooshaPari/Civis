@@ -1,7 +1,7 @@
 //! Emergence Oracle — programmatic FR verification for Civis emergence systems.
 //!
 //! Each [`FeatureOracle`] implementation maps to a specific FR-EMG-* requirement.
-//! [`OracleRegistry::with_defaults`] wires all 22 domain oracles and [`OracleRegistry::run_all`]
+//! [`OracleRegistry::with_defaults`] wires all 23 domain oracles and [`OracleRegistry::run_all`]
 //! batch-verifies them against a live [`Simulation`].
 
 pub mod oracles;
@@ -54,7 +54,7 @@ impl OracleRegistry {
         use oracles::{
             architecture::ArchitectureOracle, coastal_settlement::CoastalSettlementOracle, creature::CreatureOracle,
             desert_caravan::DesertCaravanOracle, diplomacy::DiplomacyOracle, disaster::DisasterOracle, economy::EconomyOracle,
-            epidemic::EpidemicOracle, expansion::ExpansionOracle, festival::FestivalOracle, language::LanguageOracle,
+            epidemic::EpidemicOracle, expansion::ExpansionOracle, festival::FestivalOracle, genetics::GeneticsOracle, language::LanguageOracle,
             legends::LegendsOracle, migration::MigrationOracle, migration_flow::MigrationFlowOracle, mood::MoodOracle, mountain_pass::MountainPassOracle, psyche::PsycheOracle,
             religion::ReligionOracle, trade::TradeOracle, stratification::StratificationOracle,
             religious_conflict::ReligiousConflictOracle, river_trade::RiverTradeOracle,
@@ -82,6 +82,7 @@ impl OracleRegistry {
         registry.register(Box::new(RiverTradeOracle));
         registry.register(Box::new(MountainPassOracle));
         registry.register(Box::new(DesertCaravanOracle));
+        registry.register(Box::new(GeneticsOracle));
         registry
     }
 
@@ -102,11 +103,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn oracle_registry_runs_all_ten() {
+    fn oracle_registry_runs_all_twenty_three() {
         let sim = Simulation::new();
         let registry = OracleRegistry::with_defaults();
         let verdicts = registry.run_all(&sim);
-        assert_eq!(verdicts.len(), 22, "Expected 22 oracle verdicts");
+        assert_eq!(verdicts.len(), 23, "Expected 23 oracle verdicts");
     }
 
     #[test]

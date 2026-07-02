@@ -8,6 +8,7 @@ pub mod economy;
 pub mod epidemic;
 pub mod expansion;
 pub mod festival;
+pub mod genetics;
 pub mod language;
 pub mod legends;
 pub mod migration;

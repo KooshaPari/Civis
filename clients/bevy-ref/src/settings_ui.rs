@@ -348,6 +348,9 @@ pub struct GraphicsSettings {
     /// Bevy built-in SSR pass toggle.
     #[serde(default = "default_true")]
     pub ssr_enabled: bool,
+    /// Bevy built-in volumetric fog pass toggle.
+    #[serde(default = "default_true")]
+    pub volumetric_fog_enabled: bool,
     /// Bloom toggle.
     #[serde(default)]
     pub bloom: bool,
@@ -376,6 +379,7 @@ impl Default for GraphicsSettings {
             ambient_occlusion: true,
             ssao_enabled: true,
             ssr_enabled: true,
+            volumetric_fog_enabled: true,
             bloom: true,
             motion_blur: false,
             gi: false,
@@ -398,6 +402,7 @@ impl GraphicsSettings {
                 self.ambient_occlusion = false;
                 self.ssao_enabled = false;
                 self.ssr_enabled = false;
+                self.volumetric_fog_enabled = false;
                 self.bloom = false;
                 self.motion_blur = false;
                 self.gi = false;
@@ -412,6 +417,7 @@ impl GraphicsSettings {
                 self.ambient_occlusion = true;
                 self.ssao_enabled = true;
                 self.ssr_enabled = true;
+                self.volumetric_fog_enabled = true;
                 self.bloom = true;
                 self.motion_blur = false;
                 self.gi = false;
@@ -426,6 +432,7 @@ impl GraphicsSettings {
                 self.ambient_occlusion = true;
                 self.ssao_enabled = true;
                 self.ssr_enabled = true;
+                self.volumetric_fog_enabled = true;
                 self.bloom = true;
                 self.motion_blur = false;
                 self.gi = true;
@@ -440,6 +447,7 @@ impl GraphicsSettings {
                 self.ambient_occlusion = true;
                 self.ssao_enabled = true;
                 self.ssr_enabled = true;
+                self.volumetric_fog_enabled = true;
                 self.bloom = true;
                 self.motion_blur = true;
                 self.gi = true;
@@ -1362,6 +1370,9 @@ fn graphics_special_toggles(ui: &mut egui::Ui, g: &mut GraphicsSettings) -> bool
         changed = true;
     }
     changed |= ui.checkbox(&mut g.ssr_enabled, "SSR").changed();
+    changed |= ui
+        .checkbox(&mut g.volumetric_fog_enabled, "Volumetric Fog")
+        .changed();
     changed |= ui.checkbox(&mut g.bloom, "Bloom").changed();
     changed |= ui.checkbox(&mut g.motion_blur, "Motion Blur").changed();
     changed |= ui.checkbox(&mut g.vsync, "VSync").changed();
@@ -1664,6 +1675,7 @@ mod tests {
         assert!(g.ambient_occlusion);
         assert!(g.ssao_enabled);
         assert!(g.ssr_enabled);
+        assert!(g.volumetric_fog_enabled);
         assert!(g.bloom);
         assert!(g.motion_blur);
         assert!(g.gi);
@@ -1687,6 +1699,11 @@ mod tests {
     #[test]
     fn default_graphics_settings_enable_ssr() {
         assert!(GraphicsSettings::default().ssr_enabled);
+    }
+
+    #[test]
+    fn default_graphics_settings_enable_volumetric_fog() {
+        assert!(GraphicsSettings::default().volumetric_fog_enabled);
     }
 
     #[test]

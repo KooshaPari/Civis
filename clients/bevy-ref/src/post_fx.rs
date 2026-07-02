@@ -10,6 +10,7 @@
 //! - [`bevy::post_process::bloom::Bloom`] (requires HDR)
 //! - [`bevy::pbr::ScreenSpaceAmbientOcclusion`] (auto-requires `DepthPrepass` + `NormalPrepass`)
 //! - [`bevy::pbr::ScreenSpaceReflections`] (baseline screen-space reflections)
+//! - [`bevy::light::VolumetricFog`] (baseline camera-level volumetric fog)
 //! - [`bevy::anti_alias::taa::TemporalAntiAliasing`] (auto-requires `MotionVectorPrepass` etc.)
 //! - [`bevy::render::view::Msaa::Off`] (required by TAA)
 //!
@@ -22,7 +23,7 @@
 use bevy::{
     anti_alias::taa::TemporalAntiAliasing,
     core_pipeline::tonemapping::Tonemapping,
-    light::{CascadeShadowConfigBuilder, DirectionalLight},
+    light::{CascadeShadowConfigBuilder, DirectionalLight, VolumetricFog},
     pbr::{ScreenSpaceAmbientOcclusion, ScreenSpaceReflections},
     post_process::bloom::Bloom,
     prelude::*,
@@ -43,6 +44,8 @@ pub struct PostFxSettings {
     pub ssao: bool,
     /// Enable `ScreenSpaceReflections`.
     pub ssr: bool,
+    /// Enable `VolumetricFog`.
+    pub volumetric_fog: bool,
     /// Enable `TemporalAntiAliasing` (requires `Msaa::Off`).
     pub taa: bool,
 }
@@ -54,6 +57,7 @@ impl Default for PostFxSettings {
             bloom: true,
             ssao: true,
             ssr: true,
+            volumetric_fog: true,
             taa: true,
         }
     }
@@ -98,6 +102,10 @@ impl Plugin for PostFxPlugin {
 ///
 /// FR-CIV-PBR-002 — when enabled, this adds Bevy's built-in SSR component as
 /// the baseline screen-space reflection pass for the main 3D camera.
+///
+/// FR-CIV-PBR-003 — when enabled, this adds Bevy's built-in VolumetricFog
+/// component as the baseline volumetric fog/lighting pass for the main 3D
+/// camera.
 fn apply_post_fx(
     mut commands: Commands,
     settings: Res<PostFxSettings>,
@@ -124,6 +132,9 @@ fn apply_post_fx(
     }
     if settings.ssr {
         entity_cmd.insert(ScreenSpaceReflections::default());
+    }
+    if settings.volumetric_fog {
+        entity_cmd.insert(VolumetricFog::default());
     }
     if settings.taa {
         // #[require] on TemporalAntiAliasing auto-inserts DepthPrepass, MotionVectorPrepass,
@@ -167,6 +178,7 @@ mod tests {
         assert!(s.bloom, "bloom should default to true");
         assert!(s.ssao, "ssao should default to true");
         assert!(s.ssr, "ssr should default to true");
+        assert!(s.volumetric_fog, "volumetric_fog should default to true");
         assert!(s.taa, "taa should default to true");
     }
 
@@ -180,6 +192,7 @@ mod tests {
         assert!(s.aces);
         assert!(s.ssao);
         assert!(s.ssr);
+        assert!(s.volumetric_fog);
         assert!(s.taa);
     }
 }

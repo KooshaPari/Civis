@@ -283,6 +283,7 @@ pub struct LiveStreamScene {
     pub buildings: HashMap<u64, Entity>,
     pub graph_parcels: HashMap<u64, Entity>,
     pub agent_materials: HashMap<u64, Handle<StandardMaterial>>,
+    pub water_materials: HashMap<u64, Handle<StandardMaterial>>,
     pub building_materials: HashMap<u64, Handle<StandardMaterial>>,
     pub graph_parcel_materials: HashMap<u64, Handle<StandardMaterial>>,
     pub building_provenance: BuildingProvenance,
@@ -325,6 +326,7 @@ impl Default for LiveStreamScene {
             buildings: HashMap::default(),
             graph_parcels: HashMap::default(),
             agent_materials: HashMap::default(),
+            water_materials: HashMap::default(),
             building_materials: HashMap::default(),
             graph_parcel_materials: HashMap::default(),
             // BuildingProvenance does not derive Default in the wire crate

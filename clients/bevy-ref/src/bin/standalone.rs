@@ -196,6 +196,7 @@ fn sync_post_fx_from_settings(settings: Res<GameSettings>, mut post_fx: ResMut<P
     post_fx.bloom = graphics.bloom;
     post_fx.ssao = graphics.ssao_enabled;
     post_fx.ssr = graphics.ssr_enabled;
+    post_fx.volumetric_fog = graphics.volumetric_fog_enabled;
     post_fx.taa = graphics.anti_aliasing == AntiAliasing::TAA;
 }
 

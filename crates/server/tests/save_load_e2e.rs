@@ -11,7 +11,7 @@ fn test_dir() -> PathBuf {
 
 fn write_slot(slot: &str, data: &[u8]) -> bool {
     let path = test_dir().join(format!("{slot}.sav"));
-    let _ = std::fs::create_dir_all(&test_dir());
+    let _ = std::fs::create_dir_all(test_dir());
     std::fs::write(&path, data).is_ok()
 }
 

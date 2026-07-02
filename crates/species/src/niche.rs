@@ -195,8 +195,7 @@ pub fn niche_match(phenotype: &Phenotype, niche: &Niche) -> f32 {
 
     // Closeness scores are already in [0, 1]; clamp defensively in case
     // a caller passes out-of-range behaviour weights.
-    let per_axis = (weighted / total_w).clamp(0.0, 1.0);
-    per_axis
+    (weighted / total_w).clamp(0.0, 1.0)
 }
 
 /// Per-tick growth rate in `[0.0, 1.0]` driven by a niche match.
@@ -295,6 +294,7 @@ mod tests {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn phenotype_with(
         height: u8,
         hue: u8,

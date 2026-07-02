@@ -163,9 +163,9 @@ fn fr_emergence_anti_theater_at_least_one_canonical_structure() {
         // Religion fixture — continuous profile via the public Big-Gods response.
         let mut profile = ReligiousProfile::new(60, 0);
         let gradients = SubstrateGradients {
-            grad_T: 0.6,
-            grad_M: 0.5,
-            grad_B: 0.4,
+            grad_t: 0.6,
+            grad_m: 0.5,
+            grad_b: 0.4,
             kinship_density: 0.2,
             unrest: 15.0,
             migration_rate: 0.1,
@@ -203,7 +203,7 @@ fn fr_emergence_anti_theater_at_least_one_canonical_structure() {
             })
             .collect();
         let faction_clusters = cluster_into_factions(&ideologies, 3);
-        let faction_structure_present = faction_doctrines_present && faction_clusters.len() >= 1;
+        let faction_structure_present = faction_doctrines_present && !faction_clusters.is_empty();
 
         // Religion — profile snapshot accessor returns the wired settlement.
         let religion_present =

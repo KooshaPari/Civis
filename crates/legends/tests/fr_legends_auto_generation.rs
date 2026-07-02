@@ -53,7 +53,7 @@ fn test_legend_from_high_impact_event() {
             42,
             Role::Leader,
         );
-        let outcome2 = g.ingest(battle);
+        let _outcome2 = g.ingest(battle);
 
         // Use the first promoted entity from the initial war event
         if let Some(promoted_entity) = outcome.promoted.first() {
@@ -265,7 +265,7 @@ fn test_all_legends_query() {
         );
         let outcome = g.ingest(ev_sig);
         if let Some(event_id) = outcome.event_id {
-            let entity = LegendEntityId(i as u64);
+            let entity = LegendEntityId(i);
             g.create_legend_from_event(event_id, entity);
         }
     }

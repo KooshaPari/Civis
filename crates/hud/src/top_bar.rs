@@ -15,11 +15,12 @@ use crate::tokens::TokenName;
 use crate::HudEra;
 
 /// Sim speed multiplier — the source of truth is `sim.snapshot.game_speed`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SimSpeed {
     Paused,
     Slow,
+    #[default]
     Normal,
     Fast,
     Fastest,
@@ -65,12 +66,6 @@ impl SimSpeed {
             SimSpeed::Step => TokenName::TextLow,
             _ => TokenName::Neon,
         }
-    }
-}
-
-impl Default for SimSpeed {
-    fn default() -> Self {
-        SimSpeed::Normal
     }
 }
 
@@ -287,6 +282,23 @@ impl TopBarChips {
     }
 }
 
+/// Internal: format a population count compactly.
+fn format_count(count: u64) -> String {
+    if count < 1_000 {
+        count.to_string()
+    } else if count < 1_000_000 {
+        let k = count as f64 / 1_000.0;
+        if k >= 100.0 {
+            format!("{:.0}K", k)
+        } else {
+            format!("{:.1}K", k)
+        }
+    } else {
+        let m = count as f64 / 1_000_000.0;
+        format!("{:.1}M", m)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -350,22 +362,5 @@ mod tests {
         chips.set_era(HudEra::Bronze);
         assert_eq!(chips.era.value, "BRONZE");
         assert_eq!(chips.era.value_token, TokenName::Amber);
-    }
-}
-
-/// Internal: format a population count compactly.
-fn format_count(count: u64) -> String {
-    if count < 1_000 {
-        count.to_string()
-    } else if count < 1_000_000 {
-        let k = count as f64 / 1_000.0;
-        if k >= 100.0 {
-            format!("{:.0}K", k)
-        } else {
-            format!("{:.1}K", k)
-        }
-    } else {
-        let m = count as f64 / 1_000_000.0;
-        format!("{:.1}M", m)
     }
 }

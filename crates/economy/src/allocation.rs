@@ -74,6 +74,7 @@ impl AllocationEngine for JouleAllocator {
 ///
 /// If `labor_capacity_fraction <= 0.0`, the allocator returns 0 (no workers).
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[allow(dead_code)]
 pub struct LaborCapacityAllocator {
     /// Aggregate labor capacity fraction in `[0, 1]`. `1.0` means full adult
     /// productive workforce; `0.0` means no production (all children/elders
@@ -81,6 +82,7 @@ pub struct LaborCapacityAllocator {
     pub labor_fraction: f64,
 }
 
+#[allow(dead_code)]
 impl LaborCapacityAllocator {
     /// Construct a labor-capacity allocator from raw `fraction` (clamped).
     pub fn new(fraction: f64) -> Self {
@@ -199,6 +201,7 @@ pub fn allocate_with(regime: AllocationRegime, budget: i64, demand: i64) -> i64 
 
 /// Numeric good identifier (FR-ECON-005). Integer-friendly: stable across
 /// serialization, replays, and external registry mappings.
+#[allow(dead_code)]
 pub type GoodId = u32;
 
 /// One unit of need satisfaction equals this fraction of the agent's total
@@ -208,12 +211,14 @@ pub type GoodId = u32;
 /// 10 was chosen so that `f64` deficit values in the common `[0.0, 1.0]`
 /// range map cleanly to a small positive `i64` unit count (0..=10) without
 /// rounding loss for one-decimal satisfactions.
+#[allow(dead_code)]
 const SCALE: i64 = 10;
 
 /// Classifies an agent's need: subsistence needs are filled before any
 /// luxury allocation, and unmet subsistence increments the agent's
 /// deprivation counter (FR-ECON-005).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub enum NeedKind {
     /// Need required to sustain the agent (food, water, shelter, ...).
     Subsistence,
@@ -227,6 +232,7 @@ pub enum NeedKind {
 /// clamped: `satisfaction >= 1.0` means the need is already met (deficit 0),
 /// `satisfaction <= 0.0` means the agent needs the full `SCALE` units.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct AgentNeed {
     /// Stable agent identifier.
     pub agent_id: u32,
@@ -238,6 +244,7 @@ pub struct AgentNeed {
     pub satisfaction: f64,
 }
 
+#[allow(dead_code)]
 impl AgentNeed {
     /// Deficit in `[0.0, 1.0]` (1.0 minus satisfaction, clamped at 0).
     fn deficit(&self) -> f64 {
@@ -277,6 +284,7 @@ impl AgentNeed {
 ///   pass (always present for goods that appeared in the input stock, even
 ///   when the remaining count is 0).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct AllocationOutcome {
     /// Per-agent units received.
     pub received: BTreeMap<u32, i64>,
@@ -314,6 +322,7 @@ pub struct AllocationOutcome {
 ///   any Luxury need consumes stock.
 /// * **Integer-friendly** — every unit is `i64`; `f64` is used only for
 ///   the user's satisfaction input.
+#[allow(dead_code)]
 pub fn subsistence_first_allocate(
     needs: &[AgentNeed],
     stock: BTreeMap<GoodId, i64>,
@@ -459,8 +468,14 @@ mod tests {
     fn labor_allocator_full_labor_meets_capitalist_curve() {
         let alloc = LaborCapacityAllocator::new(1.0);
         // Full labor == same as base capitalist allocator
-        assert_eq!(alloc.allocate(100, 50), CapitalistAllocator.allocate(100, 50));
-        assert_eq!(alloc.allocate(50, 100), CapitalistAllocator.allocate(50, 100));
+        assert_eq!(
+            alloc.allocate(100, 50),
+            CapitalistAllocator.allocate(100, 50)
+        );
+        assert_eq!(
+            alloc.allocate(50, 100),
+            CapitalistAllocator.allocate(50, 100)
+        );
     }
 
     #[test]

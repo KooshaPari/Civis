@@ -1051,7 +1051,12 @@ pub fn apply_water_deltas_for_frame(
             continue;
         }
         apply_water_for_chunk(
-            commands, scene, water_meshes, material_assets, chunk_id, &chunk.voxels,
+            commands,
+            scene,
+            water_meshes,
+            material_assets,
+            chunk_id,
+            &chunk.voxels,
         );
     }
 }

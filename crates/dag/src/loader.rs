@@ -142,7 +142,13 @@ fn split_into_sections(src: &str) -> Sections {
 fn slugify_title(title: &str) -> String {
     title
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_lowercase() } else { '-' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() {
+                c.to_ascii_lowercase()
+            } else {
+                '-'
+            }
+        })
         .collect::<String>()
         .trim_matches('-')
         .split('-')
@@ -242,8 +248,10 @@ fn parse_layers(body: &str) -> Result<Vec<Layer>> {
                 let mut parts = rest.split_whitespace();
                 if let Some(num) = parts.next() {
                     if num.chars().all(|c| c.is_ascii_digit()) {
-                        let name: String =
-                            parts.take_while(|s| !s.contains('(')).collect::<Vec<_>>().join(" ");
+                        let name: String = parts
+                            .take_while(|s| !s.contains('('))
+                            .collect::<Vec<_>>()
+                            .join(" ");
                         if !name.is_empty() {
                             let id = format!("P{}", num);
                             layers.push(Layer {
@@ -271,8 +279,13 @@ fn parse_layers(body: &str) -> Result<Vec<Layer>> {
 }
 
 fn layer_num(id: &str) -> Option<u32> {
-    id.strip_prefix('P')
-        .and_then(|s| s.chars().take_while(|c| c.is_ascii_digit()).collect::<String>().parse().ok())
+    id.strip_prefix('P').and_then(|s| {
+        s.chars()
+            .take_while(|c| c.is_ascii_digit())
+            .collect::<String>()
+            .parse()
+            .ok()
+    })
 }
 fn next_layer_num(layers: &[Layer]) -> u32 {
     layers
@@ -301,7 +314,10 @@ fn parse_phases(body: &str) -> Result<Vec<Phase>> {
             continue;
         }
         // skip header row "| # | phase | dep | lane |"
-        if cells.iter().any(|c| c == "phase" || c == "dep" || c == "lane" || c == "#") {
+        if cells
+            .iter()
+            .any(|c| c == "phase" || c == "dep" || c == "lane" || c == "#")
+        {
             continue;
         }
         let ordinal_str = &cells[0];
@@ -312,9 +328,18 @@ fn parse_phases(body: &str) -> Result<Vec<Phase>> {
         let ordinal: u8 = ordinal_str.parse().unwrap();
         let name = cells[1].trim_matches('`').trim().to_string();
         let dep_str = cells[2].trim();
-        let dep = if dep_str == "—" || dep_str == "-" { None } else { Some(dep_str.to_string()) };
+        let dep = if dep_str == "—" || dep_str == "-" {
+            None
+        } else {
+            Some(dep_str.to_string())
+        };
         let lane = cells[3].trim().to_string();
-        phases.push(Phase { ordinal, name, dep, lane });
+        phases.push(Phase {
+            ordinal,
+            name,
+            dep,
+            lane,
+        });
     }
     Ok(phases)
 }
@@ -343,8 +368,17 @@ fn parse_pillars_done(body: &str) -> Result<Vec<PillarEpic>> {
         let name = cells[1].to_string();
         let lane = cells[2].to_string();
         let prs = parse_pr_list(&cells[3]);
-        let adr = cells.get(4).map(|s| s.trim().to_string()).filter(|s| !s.is_empty() && s != "—");
-        out.push(PillarEpic { fr_id, name, lane, prs, adr });
+        let adr = cells
+            .get(4)
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty() && s != "—");
+        out.push(PillarEpic {
+            fr_id,
+            name,
+            lane,
+            prs,
+            adr,
+        });
     }
     Ok(out)
 }
@@ -376,7 +410,14 @@ fn parse_pillars_queued(body: &str) -> Result<Vec<QueuedPillar>> {
         let eta_label = cells[3].to_string();
         let lane = cells.get(4).cloned().unwrap_or_else(|| "pillar".into());
         let pr = extract_pr_marker(state_str);
-        out.push(QueuedPillar { fr_id, name, state, eta_label, pr, lane });
+        out.push(QueuedPillar {
+            fr_id,
+            name,
+            state,
+            eta_label,
+            pr,
+            lane,
+        });
     }
     Ok(out)
 }
@@ -396,7 +437,10 @@ fn parse_lanes(body: &str) -> Result<Vec<Lane>> {
             if cells.len() < 4 {
                 continue;
             }
-            if cells.iter().any(|c| c == "purpose" || c == "scope" || c == "mutex") {
+            if cells
+                .iter()
+                .any(|c| c == "purpose" || c == "scope" || c == "mutex")
+            {
                 continue;
             }
             let id = cells[0].trim_matches('`').to_string();
@@ -436,7 +480,10 @@ fn parse_ticks(body: &str) -> Result<Vec<Tick>> {
         if cells.len() < 6 {
             continue;
         }
-        if cells.iter().any(|c| c == "merged" || c == "opened" || c == "notes") {
+        if cells
+            .iter()
+            .any(|c| c == "merged" || c == "opened" || c == "notes")
+        {
             continue;
         }
         let id = cells[0].trim().to_string();
@@ -446,7 +493,15 @@ fn parse_ticks(body: &str) -> Result<Vec<Tick>> {
         let open_net = cells[4].parse().unwrap_or(0);
         let notes = cells[5].to_string();
         let recorded_at = parse_date_hint(&notes).unwrap_or_else(Utc::now);
-        out.push(Tick { id, merged, opened, closed_superseded, open_net, notes, recorded_at });
+        out.push(Tick {
+            id,
+            merged,
+            opened,
+            closed_superseded,
+            open_net,
+            notes,
+            recorded_at,
+        });
     }
     Ok(out)
 }
@@ -493,10 +548,12 @@ fn parse_node_state(s: &str) -> NodeState {
         NodeState::Verified
     } else if lower.contains("blocked") {
         NodeState::Blocked
-    } else if lower.contains("working") || lower.contains("active") || lower.starts_with("🔁") || lower.starts_with("⏳") {
+    } else if lower.contains("working")
+        || lower.contains("active")
+        || lower.starts_with("🔁")
+        || lower.starts_with("⏳")
+    {
         NodeState::InFlight
-    } else if lower.contains("queued") || lower.contains("pending") {
-        NodeState::Queued
     } else {
         NodeState::Queued
     }
@@ -505,7 +562,10 @@ fn parse_node_state(s: &str) -> NodeState {
 fn parse_date_hint(s: &str) -> Option<DateTime<Utc>> {
     // Look for `2026-06-XX` or `2026-06-XX-T..` inside the string.
     for token in s.split(|c: char| c.is_whitespace() || c == ',') {
-        if token.len() >= 10 && token.chars().nth(4) == Some('-') && token.chars().nth(7) == Some('-') {
+        if token.len() >= 10
+            && token.chars().nth(4) == Some('-')
+            && token.chars().nth(7) == Some('-')
+        {
             if let Ok(d) = NaiveDate::parse_from_str(&token[..10], "%Y-%m-%d") {
                 return d.and_hms_opt(0, 0, 0).map(|dt| dt.and_utc());
             }
@@ -525,10 +585,7 @@ fn pillar_state_from_prs(prs: &[u32]) -> NodeState {
 /// Slice text starting from the `## <n>` section inclusive, until the next `## <m>` heading.
 fn slice_section<'a>(body: &'a str, needle: &str) -> &'a str {
     // needle is e.g. "3" or "3 · Pillar epics" — match by leading number.
-    let needle_num: String = needle
-        .chars()
-        .take_while(|c| c.is_ascii_digit())
-        .collect();
+    let needle_num: String = needle.chars().take_while(|c| c.is_ascii_digit()).collect();
     let mut start: Option<usize> = None;
     let mut end: Option<usize> = None;
     let lines: Vec<&str> = body.lines().collect();
@@ -676,7 +733,11 @@ content
                 "expected ≥6 layers, got {}",
                 p.layers.len()
             );
-            assert!(p.pillars.len() >= 20, "pillars >=20; got {}", p.pillars.len());
+            assert!(
+                p.pillars.len() >= 20,
+                "pillars >=20; got {}",
+                p.pillars.len()
+            );
             assert!(!p.lanes.is_empty(), "lanes parsed");
         }
     }

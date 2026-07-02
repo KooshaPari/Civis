@@ -29,7 +29,7 @@ async fn main() {
     // require_role defaults to true (deny-by-default); operators may disable
     // via the CIVIS_REQUIRE_ROLE=false env var in permissive local-only setups.
     let require_role = std::env::var("CIVIS_REQUIRE_ROLE")
-        .map(|v| v.to_ascii_lowercase() != "false")
+        .map(|v| !v.eq_ignore_ascii_case("false"))
         .unwrap_or(true);
 
     run_ws_bridge(

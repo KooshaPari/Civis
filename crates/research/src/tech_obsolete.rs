@@ -242,7 +242,6 @@ impl ObsolescenceTracker {
 
     /// All tracked tech IDs in deterministic (sorted) order. Useful for
     /// snapshot serialization and replay diffing.
-    #[must_use]
     pub fn tech_ids(&self) -> impl Iterator<Item = &str> {
         self.records.keys().map(String::as_str)
     }

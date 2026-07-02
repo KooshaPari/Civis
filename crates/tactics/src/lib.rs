@@ -246,12 +246,22 @@ mod tests {
     fn estimated_casualties_zero_when_no_energy_or_radius() {
         let center = WorldCoord { x: 0, y: 0, z: 0 };
         assert_eq!(
-            DamageEvent { center, radius_voxels: 0, energy: 500 }.estimated_casualties(),
+            DamageEvent {
+                center,
+                radius_voxels: 0,
+                energy: 500
+            }
+            .estimated_casualties(),
             0,
             "zero radius => no footprint => no casualties"
         );
         assert_eq!(
-            DamageEvent { center, radius_voxels: 5, energy: 0 }.estimated_casualties(),
+            DamageEvent {
+                center,
+                radius_voxels: 5,
+                energy: 0
+            }
+            .estimated_casualties(),
             0,
             "zero energy => no lethality => no casualties"
         );
@@ -260,9 +270,19 @@ mod tests {
     #[test]
     fn estimated_casualties_monotonic_in_radius_and_energy() {
         let center = WorldCoord { x: 0, y: 0, z: 0 };
-        let base = DamageEvent { center, radius_voxels: 3, energy: 200 };
-        let bigger_r = DamageEvent { radius_voxels: 5, ..base };
-        let bigger_e = DamageEvent { energy: 400, ..base };
+        let base = DamageEvent {
+            center,
+            radius_voxels: 3,
+            energy: 200,
+        };
+        let bigger_r = DamageEvent {
+            radius_voxels: 5,
+            ..base
+        };
+        let bigger_e = DamageEvent {
+            energy: 400,
+            ..base
+        };
         assert!(bigger_r.estimated_casualties() > base.estimated_casualties());
         assert!(bigger_e.estimated_casualties() > base.estimated_casualties());
         // 3·3²·200 / 256 = 5400/256 = 21
@@ -272,7 +292,11 @@ mod tests {
     #[test]
     fn estimated_casualties_saturates_without_overflow() {
         let center = WorldCoord { x: 0, y: 0, z: 0 };
-        let huge = DamageEvent { center, radius_voxels: u8::MAX, energy: u32::MAX };
+        let huge = DamageEvent {
+            center,
+            radius_voxels: u8::MAX,
+            energy: u32::MAX,
+        };
         // Must not panic; large but finite.
         let c = huge.estimated_casualties();
         assert!(c > 0);

@@ -91,11 +91,7 @@ pub enum NeedChannel {
 
 impl NeedChannel {
     /// Canonical iteration order (matches [`NeedLevel`] field order).
-    pub const ALL: [NeedChannel; 3] = [
-        NeedChannel::Hunger,
-        NeedChannel::Rest,
-        NeedChannel::Social,
-    ];
+    pub const ALL: [NeedChannel; 3] = [NeedChannel::Hunger, NeedChannel::Rest, NeedChannel::Social];
 
     /// Read the pressure for this channel from a [`NeedLevel`].
     #[must_use]
@@ -229,7 +225,7 @@ mod tests {
             "resource amount must be subtracted from the current level (got {post}, expected {expected})"
         );
         assert!(
-            post >= 0.0 && post <= 1.0,
+            (0.0..=1.0).contains(&post),
             "post-satisfaction pressure must remain in [0, 1]"
         );
     }

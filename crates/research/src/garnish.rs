@@ -197,7 +197,7 @@ mod tests {
 
         // Ensure fallback is never needed in normal operation.
         assert!(
-            cache.entries.len() > 0,
+            !cache.entries.is_empty(),
             "FR-CIV-LLM: flavor table must have precomputed entries"
         );
 

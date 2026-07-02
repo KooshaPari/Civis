@@ -329,10 +329,7 @@ impl Plan {
             let mut next_pending: Vec<usize> = Vec::with_capacity(pending.len());
             for &i in &pending {
                 let n = &self.nodes[i];
-                let ready = n
-                    .deps
-                    .iter()
-                    .all(|d| placed.contains_key(d.as_str()));
+                let ready = n.deps.iter().all(|d| placed.contains_key(d.as_str()));
                 if ready {
                     emit_ids.push(NodeId(n.id.clone()));
                 } else {

@@ -100,6 +100,7 @@ pub enum JsonRpcMethod {
     SimTechState,
     /// Opt-in tick broadcast filter (`sim.subscribe`, CIV-0200).
     SimPerf,
+    /// Subscribe this WebSocket connection to a filtered tick broadcast stream.
     SimSubscribe,
     /// Clear per-connection tick broadcast filter (`sim.unsubscribe`).
     SimUnsubscribe,
@@ -112,9 +113,9 @@ pub enum JsonRpcMethod {
     /// Per-entity sentience/psyche snapshot (`psyche.snapshot`, FR-PSYCHE-readapi).
     PsycheSnapshot,
     /// Per-tick sentience events (`psyche.events`, FR-PSYCHE-readapi).
+    PsycheEvents,
     /// Per-faction religious profile state (`sim.religion_state`, FR-RELIG-readapi).
     SimReligionState,
-    PsycheEvents,
 }
 
 impl JsonRpcMethod {
@@ -935,7 +936,7 @@ fn game_factions_from_sim(
 
 fn game_resources_from_sim(sim: &civ_engine::Simulation) -> Vec<ResourceSnapshot> {
     let mut food_per_tick = 0.0_f32;
-    let mut wood_per_tick = 0.0_f32;
+    let wood_per_tick = 0.0_f32;
     let mut metal_per_tick = 0.0_f32;
     let mut energy_per_tick = 0.0_f32;
 
@@ -976,8 +977,11 @@ fn game_resources_from_sim(sim: &civ_engine::Simulation) -> Vec<ResourceSnapshot
 /// Precomputed outcome for `sim.outcome` (FR-CIV-GAME-001).
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct OutcomeFields {
+    /// Machine-readable outcome tag.
     pub tag: String,
+    /// Human-readable reason associated with the outcome.
     pub reason: String,
+    /// Simulation tick at which the outcome was observed.
     pub tick: u64,
 }
 
@@ -999,6 +1003,7 @@ impl From<civ_engine::TileInspection> for TileInspectionWire {
     }
 }
 
+/// Dispatch-time snapshot fields shared by JSON-RPC handlers.
 #[derive(Debug, Clone)]
 pub struct DispatchContext {
     /// Current bridge tick (may lag until the next broadcast).
@@ -1203,9 +1208,13 @@ pub struct PsycheEntitySnapshotWire {
     /// Current mood arousal `[0, 1]`.
     pub mood_arousal: f32,
     /// Temperament axes.
+    /// Reactivity temperament axis.
     pub reactivity: f32,
+    /// Sociability temperament axis.
     pub sociability: f32,
+    /// Risk tolerance temperament axis.
     pub risk_tol: f32,
+    /// Impulsivity temperament axis.
     pub impulsivity: f32,
     /// Four drive axes `[0, 1]`.
     pub drives: [f32; 4],
@@ -1237,7 +1246,7 @@ pub fn psyche_snapshot_from_sim(
 ) -> Vec<PsycheEntitySnapshotWire> {
     use civ_agents::Civilian;
     // Build a lookup: agent_id → sentience data
-    let mut sentience_by_lineage: std::collections::HashMap<u64, &SentienceEventWire> =
+    let _sentience_by_lineage: std::collections::HashMap<u64, &SentienceEventWire> =
         std::collections::HashMap::new();
     // Sentience events don't carry agent_id directly; we match using the
     // entity lineage id hash. For the initial read-API we use the ECS
@@ -3428,7 +3437,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: Some(EmergenceSampleFields::from(sample)),
+                emergence: Some(sample),
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -3514,7 +3523,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: Some(EmergenceSampleFields::from(sample)),
+                emergence: Some(sample),
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -3633,7 +3642,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: Some(EmergenceSampleFields::from(sample)),
+                emergence: Some(sample),
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -5509,6 +5518,6 @@ mod tests {
         );
         assert!(plan.response.result.is_some());
         let res = plan.response.result.expect("result");
-        assert!(res["available"].as_array().map_or(false, |a| !a.is_empty()));
+        assert!(res["available"].as_array().is_some_and(|a| !a.is_empty()));
     }
 }

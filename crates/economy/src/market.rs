@@ -101,8 +101,7 @@ impl MarketState {
         // Integer-only smoothing: move toward the scarcity signal in small
         // deterministic steps. Positive imbalance raises price, negative
         // imbalance lowers it.
-        let delta = imbalance
-            .saturating_mul(MAX_PRESSURE_DELTA_CENTS)
+        let delta = imbalance.saturating_mul(MAX_PRESSURE_DELTA_CENTS)
             / baseline.saturating_mul(smoothing_factor);
         let delta = delta.clamp(-MAX_PRESSURE_DELTA_CENTS, MAX_PRESSURE_DELTA_CENTS);
         let current = self.ensure_good(good);
@@ -164,6 +163,7 @@ fn deterministic_price_delta(tick: u64, good: &str) -> i64 {
 ///
 /// The result is deterministic and uses only integer math.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct SettlementTradeFlow {
     /// Source settlement id.
     pub from_settlement: SettlementId,
@@ -186,6 +186,7 @@ pub struct SettlementTradeFlow {
 /// The caller provides the current price estimates for both settlements. The
 /// returned quantity is the emergent trade volume that should move from the
 /// cheaper settlement to the more expensive one.
+#[allow(dead_code)]
 pub fn settlement_trade_flow(
     low: &Settlement,
     high: &Settlement,
@@ -493,18 +494,8 @@ mod tests {
         assert!(scarce_before > DEFAULT_PRICE_CENTS);
         assert!(surplus_before < DEFAULT_PRICE_CENTS);
 
-        let supplier = settlement_with_profile(
-            1,
-            12,
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-        );
-        let buyer = settlement_with_profile(
-            2,
-            0,
-            [0, 0, 0, 0, 0, 0],
-            [8, 0, 0, 0, 0, 0],
-        );
+        let supplier = settlement_with_profile(1, 12, [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]);
+        let buyer = settlement_with_profile(2, 0, [0, 0, 0, 0, 0, 0], [8, 0, 0, 0, 0, 0]);
 
         let low_price = 90;
         let high_price = 150;
@@ -788,11 +779,11 @@ mod multigood_tests {
     use super::*;
 
     /// 1. FR-ECON-003 — three bids (prices 10, 9, 8) and three asks (prices
-    /// 1, 2, 3) on the same good, all unit qty, all at `placed_tick = 0`.
-    /// After sort: bids desc = [10, 9, 8]; asks asc = [1, 2, 3]. Each bid
-    /// crosses the next-cheapest ask, producing exactly 3 trades at
-    /// midpoint 5 each. Different `agent_id`s per order verify the per-pair
-    /// `(buyer, seller)` routing.
+    ///    1, 2, 3) on the same good, all unit qty, all at `placed_tick = 0`.
+    ///    After sort: bids desc = [10, 9, 8]; asks asc = [1, 2, 3]. Each bid
+    ///    crosses the next-cheapest ask, producing exactly 3 trades at
+    ///    midpoint 5 each. Different `agent_id`s per order verify the per-pair
+    ///    `(buyer, seller)` routing.
     #[test]
     fn simple_book_three_bids_three_asks_clear_at_midpoints() {
         let mut m = MultiGoodMarket::new();
@@ -848,8 +839,8 @@ mod multigood_tests {
     }
 
     /// 2. FR-ECON-003 — an empty book (or a good that was never seen) is a
-    /// no-op: no panic, no mutation, no trades emitted, no book entry
-    /// created (lazy initialization).
+    ///    no-op: no panic, no mutation, no trades emitted, no book entry
+    ///    created (lazy initialization).
     #[test]
     fn empty_book_for_new_good_is_no_op() {
         let mut m = MultiGoodMarket::new();
@@ -860,9 +851,9 @@ mod multigood_tests {
     }
 
     /// 3. FR-ECON-003 — orders older than `uncleared_ttl_ticks` are dropped.
-    /// With TTL = 1: an order placed at tick 0 is still in-window at tick 1
-    /// (0 + 1 >= 1) but expired by tick 2 (0 + 1 < 2), so it must be gone
-    /// from the book after a second clear.
+    ///    With TTL = 1: an order placed at tick 0 is still in-window at tick 1
+    ///    (0 + 1 >= 1) but expired by tick 2 (0 + 1 < 2), so it must be gone
+    ///    from the book after a second clear.
     #[test]
     fn orders_past_uncleared_ttl_dropped_on_second_tick() {
         let mut m = MultiGoodMarket::with_ttl(1);
@@ -890,7 +881,7 @@ mod multigood_tests {
     }
 
     /// 4. FR-ECON-003 — when the best bid is strictly below the best ask,
-    /// no trades are emitted and both sides remain intact on the book.
+    ///    no trades are emitted and both sides remain intact on the book.
     #[test]
     fn bid_price_below_ask_price_emits_no_trades() {
         let mut m = MultiGoodMarket::new();
@@ -907,11 +898,11 @@ mod multigood_tests {
     }
 
     /// 5. FR-ECON-003 — determinism. Two markets built from the same final
-    /// set of orders, populated in different insertion orders, must produce
-    /// identical trade vectors. Sorting inside `clear_all` is the source of
-    /// truth; insertion order is irrelevant. (The spec phrase "same book,
-    /// same insertion order" is satisfied trivially; this is the stronger
-    /// statement.)
+    ///    set of orders, populated in different insertion orders, must produce
+    ///    identical trade vectors. Sorting inside `clear_all` is the source of
+    ///    truth; insertion order is irrelevant. (The spec phrase "same book,
+    ///    same insertion order" is satisfied trivially; this is the stronger
+    ///    statement.)
     #[test]
     fn clear_all_is_deterministic_independent_of_insertion_order() {
         let grain = GoodId(1);
@@ -940,9 +931,9 @@ mod multigood_tests {
     }
 
     /// 6. FR-ECON-003 — partial fill. A bid of qty 10 crosses an ask of
-    /// qty 3 at compatible prices. The resulting trade is exactly qty 3
-    /// (the smaller side); the bid is left with qty 7 on the book, the
-    /// ask is fully consumed.
+    ///    qty 3 at compatible prices. The resulting trade is exactly qty 3
+    ///    (the smaller side); the bid is left with qty 7 on the book, the
+    ///    ask is fully consumed.
     #[test]
     fn partial_fill_emits_one_trade_of_smaller_qty() {
         let mut m = MultiGoodMarket::new();
@@ -973,8 +964,8 @@ mod multigood_tests {
     }
 
     /// 7. FR-ECON-003 — leftover order. A bid of qty 3 crosses an ask of
-    /// qty 10. Exactly one trade at qty 3 (the smaller side); the bid
-    /// fully fills, the ask has qty 7 left on the book as a residual.
+    ///    qty 10. Exactly one trade at qty 3 (the smaller side); the bid
+    ///    fully fills, the ask has qty 7 left on the book as a residual.
     #[test]
     fn leftover_ask_remains_after_larger_ask_partial_fill() {
         let mut m = MultiGoodMarket::new();

@@ -37,7 +37,7 @@ pub fn compute_faction_decisions(sim: &Simulation) -> Vec<(u32, FactionDecision)
     let mut decisions = Vec::new();
 
     // Iterate all known faction resource entries.
-    for (&faction_id, _resources) in &sim.state.faction_resources {
+    for &faction_id in sim.state.faction_resources.keys() {
         let decision = evaluate_faction(sim, faction_id);
         decisions.push((faction_id, decision));
     }
@@ -98,7 +98,6 @@ fn evaluate_faction(sim: &Simulation, faction_id: u32) -> FactionDecision {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_high_unrest_faction_picks_unrest_action() {

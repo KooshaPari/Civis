@@ -338,13 +338,7 @@ impl ResearchFocus {
     fn is_investable(&self, id: &str) -> bool {
         match self.projects.get(id) {
             None => false,
-            Some(p) => {
-                if p.points_required == 0 || p.points_invested < p.points_required {
-                    true
-                } else {
-                    false
-                }
-            }
+            Some(p) => p.points_required == 0 || p.points_invested < p.points_required,
         }
     }
 

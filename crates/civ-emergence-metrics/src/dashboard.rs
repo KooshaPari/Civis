@@ -120,10 +120,7 @@ impl From<EmergenceSampleSnapshot> for EmergenceDashboard {
         // [`novelty_score`], [`coupling_mi_estimate`], and
         // [`criticality_indicator`] for the per-metric contracts.
         let novelty_score = novelty_score(sample.novelty_rate);
-        let coupling_mi = coupling_mi_estimate(
-            sample.coupling_strength,
-            sample.resource_entropy,
-        );
+        let coupling_mi = coupling_mi_estimate(sample.coupling_strength, sample.resource_entropy);
         let criticality = compute_criticality(
             CriticalityInputs {
                 branching_sigma: sample.branching_sigma,
@@ -633,10 +630,10 @@ mod tests {
             faction_count: 3,
             resource_entropy: 0.75,
             structure_count: 9,
-            novelty_rate: 0.05,        // → novelty_score = 0.5
-            coupling_strength: 0.6,    // → coupling_mi = 0.6 * 0.75 = 0.45
-            power_law_alpha: 1.7,      // inside alpha band [1.4, 2.0] ✓
-            branching_sigma: 0.95,     // inside sigma band [0.85, 1.05] ✓
+            novelty_rate: 0.05,     // → novelty_score = 0.5
+            coupling_strength: 0.6, // → coupling_mi = 0.6 * 0.75 = 0.45
+            power_law_alpha: 1.7,   // inside alpha band [1.4, 2.0] ✓
+            branching_sigma: 0.95,  // inside sigma band [0.85, 1.05] ✓
             tick: 42,
         });
 
@@ -646,9 +643,11 @@ mod tests {
         approx(dashboard.novelty_score, 0.5);
         approx(dashboard.coupling_mi, 0.45);
         // All three signals inside their operational band → score = 1.0.
-        assert!((dashboard.criticality_indicator - 1.0).abs() < 1e-5,
+        assert!(
+            (dashboard.criticality_indicator - 1.0).abs() < 1e-5,
             "all on-target => criticality = 1.0, got {}",
-            dashboard.criticality_indicator);
+            dashboard.criticality_indicator
+        );
         assert_eq!(dashboard.tick, 42);
     }
 
@@ -768,12 +767,12 @@ mod tests {
         let dashboard = EmergenceDashboard::from(EmergenceSampleSnapshot {
             agent_count: 0,
             faction_count: 0,
-            resource_entropy: 0.75,    // centre of [0.6, 0.9]
+            resource_entropy: 0.75, // centre of [0.6, 0.9]
             structure_count: 0,
             novelty_rate: 0.0,
             coupling_strength: 0.0,
-            power_law_alpha: 1.7,      // centre of [1.4, 2.0]
-            branching_sigma: 0.95,     // centre of [0.85, 1.05]
+            power_law_alpha: 1.7,  // centre of [1.4, 2.0]
+            branching_sigma: 0.95, // centre of [0.85, 1.05]
             tick: 0,
         });
         assert!(
@@ -792,12 +791,12 @@ mod tests {
         let dashboard = EmergenceDashboard::from(EmergenceSampleSnapshot {
             agent_count: 0,
             faction_count: 0,
-            resource_entropy: 0.0,    // far below entropy band [0.6, 0.9]
+            resource_entropy: 0.0, // far below entropy band [0.6, 0.9]
             structure_count: 0,
             novelty_rate: 0.0,
             coupling_strength: 0.0,
-            power_law_alpha: 1.7,     // on target
-            branching_sigma: 0.95,    // on target
+            power_law_alpha: 1.7,  // on target
+            branching_sigma: 0.95, // on target
             tick: 0,
         });
         assert!(

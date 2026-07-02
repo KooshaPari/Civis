@@ -210,11 +210,11 @@ pub enum ReligionRegime {
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct SubstrateGradients {
     /// Projected |∇T| at centroid ∈ [0, 1] — climate-stress.
-    pub grad_T: f32,
+    pub grad_t: f32,
     /// Projected |∇M| at centroid ∈ [0, 1] — famine pressure.
-    pub grad_M: f32,
+    pub grad_m: f32,
     /// Projected |∇B| at centroid ∈ [0, 1] — local scarcity.
-    pub grad_B: f32,
+    pub grad_b: f32,
 
     /// Mean kinship density of the cluster's social-graph ties ∈ [0, 1].
     pub kinship_density: f32,
@@ -236,9 +236,9 @@ pub struct SubstrateGradients {
 impl Default for SubstrateGradients {
     fn default() -> Self {
         Self {
-            grad_T: 0.0,
-            grad_M: 0.0,
-            grad_B: 0.0,
+            grad_t: 0.0,
+            grad_m: 0.0,
+            grad_b: 0.0,
             kinship_density: 1.0,
             unrest: 0.0,
             migration_rate: 0.0,
@@ -270,7 +270,7 @@ impl Default for SubstrateGradients {
 /// already supplies structure); returns toward zero when unrest falls.
 pub fn apply_big_gods_response(profile: &mut ReligiousProfile, g: &SubstrateGradients, tick: u64) {
     let hardship =
-        clamp01(g.grad_T * W_HARDSHIP_T + g.grad_B * W_HARDSHIP_B + g.grad_M * W_HARDSHIP_M);
+        clamp01(g.grad_t * W_HARDSHIP_T + g.grad_b * W_HARDSHIP_B + g.grad_m * W_HARDSHIP_M);
     let group_factor = clamp01(profile.population as f32 / GROUP_NORM);
     let kinship_factor = clamp01(g.kinship_density);
     let uncertainty = clamp01(g.unrest / MAX_MISERY_UNREST);
@@ -512,7 +512,7 @@ mod tests {
     #[test]
     fn fr_civ_religion_001_big_gods_response_clamp_unit_interval() {
         let cases: &[(f32, f32, f32, f32, f32, f32, f32)] = &[
-            // (grad_T, grad_M, grad_B, kinship, unrest, migration, lang_dist)
+            // (grad_t, grad_m, grad_b, kinship, unrest, migration, lang_dist)
             (0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0),
             (1.0, 1.0, 1.0, 0.0, 30.0, 1.0, 1.0),
             (0.5, 0.5, 0.5, 0.5, 15.0, 0.5, 0.5),
@@ -521,9 +521,9 @@ mod tests {
         for (t, m, b, k, u, mig, ld) in cases {
             let mut p = ReligiousProfile::new(100, 1);
             let g = SubstrateGradients {
-                grad_T: *t,
-                grad_M: *m,
-                grad_B: *b,
+                grad_t: *t,
+                grad_m: *m,
+                grad_b: *b,
                 kinship_density: *k,
                 unrest: *u,
                 migration_rate: *mig,
@@ -566,9 +566,9 @@ mod tests {
     fn fr_civ_religion_002_rel_invariant_2_cap_monitor() {
         let mut p = ReligiousProfile::new(500, 1); // large group
         let g = SubstrateGradients {
-            grad_T: 1.0,
-            grad_M: 1.0,
-            grad_B: 1.0,
+            grad_t: 1.0,
+            grad_m: 1.0,
+            grad_b: 1.0,
             kinship_density: 0.0, // no kin bonding → max monitoring pressure
             unrest: MAX_MISERY_UNREST,
             migration_rate: 0.0,
@@ -599,9 +599,9 @@ mod tests {
             last_drift_seed: 0,
         };
         let g = SubstrateGradients {
-            grad_T: 1.0,
-            grad_M: 1.0,
-            grad_B: 1.0,
+            grad_t: 1.0,
+            grad_m: 1.0,
+            grad_b: 1.0,
             kinship_density: 0.5,
             unrest: MAX_MISERY_UNREST,
             migration_rate: 0.0,
@@ -624,9 +624,9 @@ mod tests {
     fn fr_civ_religion_004_rel_invariant_4_cap_uncertainty_reduction() {
         let mut p = ReligiousProfile::new(150, 1);
         let g = SubstrateGradients {
-            grad_T: 0.0,
-            grad_M: 0.0,
-            grad_B: 0.0,
+            grad_t: 0.0,
+            grad_m: 0.0,
+            grad_b: 0.0,
             kinship_density: 1.0,
             unrest: MAX_MISERY_UNREST, // max uncertainty
             migration_rate: 0.0,
@@ -651,9 +651,9 @@ mod tests {
         // Norenzayan regime: large + hard + weakly kin.
         let mut big_gods = ReligiousProfile::new(400, 1);
         let g_big_gods = SubstrateGradients {
-            grad_T: 0.9,
-            grad_M: 0.9,
-            grad_B: 0.9,
+            grad_t: 0.9,
+            grad_m: 0.9,
+            grad_b: 0.9,
             kinship_density: 0.1,
             unrest: 20.0,
             migration_rate: 0.1,
@@ -679,9 +679,9 @@ mod tests {
         // Shamanic regime: small + low stress + kin-dense.
         let mut shamanic = ReligiousProfile::new(8, 1);
         let g_shamanic = SubstrateGradients {
-            grad_T: 0.0,
-            grad_M: 0.0,
-            grad_B: 0.0,
+            grad_t: 0.0,
+            grad_m: 0.0,
+            grad_b: 0.0,
             kinship_density: 1.0,
             unrest: 0.0,
             migration_rate: 0.0,
@@ -713,9 +713,9 @@ mod tests {
             last_drift_seed: 0,
         };
         let g = SubstrateGradients {
-            grad_T: 0.0,
-            grad_M: 0.0,
-            grad_B: 0.0,
+            grad_t: 0.0,
+            grad_m: 0.0,
+            grad_b: 0.0,
             kinship_density: 1.0, // dense kin → maximum decay pressure
             unrest: 0.0,
             migration_rate: 0.0,
@@ -741,9 +741,9 @@ mod tests {
     fn fr_civ_religion_007_min_agents_guard() {
         let mut p = ReligiousProfile::new(1, 1);
         let g = SubstrateGradients {
-            grad_T: 1.0,
-            grad_M: 1.0,
-            grad_B: 1.0,
+            grad_t: 1.0,
+            grad_m: 1.0,
+            grad_b: 1.0,
             kinship_density: 0.0,
             unrest: MAX_MISERY_UNREST,
             migration_rate: 0.0,
@@ -784,9 +784,9 @@ mod tests {
             last_drift_seed: 0,
         };
         let g = SubstrateGradients {
-            grad_T: 0.5,
-            grad_M: 0.5,
-            grad_B: 0.5,
+            grad_t: 0.5,
+            grad_m: 0.5,
+            grad_b: 0.5,
             kinship_density: 0.3,
             unrest: 15.0,
             migration_rate: 0.2,
@@ -808,9 +808,9 @@ mod tests {
         /// ∈ [0, 1] for any sequence of substrate inputs.
         #[test]
         fn prop_religion_profile_stays_in_unit_interval(
-            grad_T in 0.0f32..=1.0,
-            grad_M in 0.0f32..=1.0,
-            grad_B in 0.0f32..=1.0,
+            grad_t in 0.0f32..=1.0,
+            grad_m in 0.0f32..=1.0,
+            grad_b in 0.0f32..=1.0,
             kinship in 0.0f32..=1.0,
             unrest in 0.0f32..=MAX_MISERY_UNREST,
             migration in 0.0f32..=1.0,
@@ -819,9 +819,9 @@ mod tests {
         ) {
             let mut p = ReligiousProfile::new(population, 1);
             let g = SubstrateGradients {
-                grad_T,
-                grad_M,
-                grad_B,
+                grad_t,
+                grad_m,
+                grad_b,
                 kinship_density: kinship,
                 unrest,
                 migration_rate: migration,
@@ -842,9 +842,9 @@ mod tests {
         /// inputs, the per-tick delta on each axis is bounded by its cap.
         #[test]
         fn prop_religion_cap_violation_rate_is_bounded(
-            grad_T in 0.0f32..=1.0,
-            grad_M in 0.0f32..=1.0,
-            grad_B in 0.0f32..=1.0,
+            grad_t in 0.0f32..=1.0,
+            grad_m in 0.0f32..=1.0,
+            grad_b in 0.0f32..=1.0,
             kinship in 0.0f32..=1.0,
             unrest in 0.0f32..=MAX_MISERY_UNREST,
             migration in 0.0f32..=1.0,
@@ -863,9 +863,9 @@ mod tests {
                 last_drift_seed: 0,
             };
             let g = SubstrateGradients {
-                grad_T,
-                grad_M,
-                grad_B,
+                grad_t,
+                grad_m,
+                grad_b,
                 kinship_density: kinship,
                 unrest,
                 migration_rate: migration,
@@ -899,9 +899,9 @@ mod tests {
             let mut p = ReligiousProfile::new(population, 1);
             let g = SubstrateGradients {
                 // Spread hardship across the three weights.
-                grad_T: hardship * W_HARDSHIP_T / (W_HARDSHIP_T + W_HARDSHIP_B + W_HARDSHIP_M),
-                grad_M: hardship * W_HARDSHIP_M / (W_HARDSHIP_T + W_HARDSHIP_B + W_HARDSHIP_M),
-                grad_B: hardship * W_HARDSHIP_B / (W_HARDSHIP_T + W_HARDSHIP_B + W_HARDSHIP_M),
+                grad_t: hardship * W_HARDSHIP_T / (W_HARDSHIP_T + W_HARDSHIP_B + W_HARDSHIP_M),
+                grad_m: hardship * W_HARDSHIP_M / (W_HARDSHIP_T + W_HARDSHIP_B + W_HARDSHIP_M),
+                grad_b: hardship * W_HARDSHIP_B / (W_HARDSHIP_T + W_HARDSHIP_B + W_HARDSHIP_M),
                 kinship_density: kinship,
                 unrest,
                 migration_rate: 0.0,

@@ -293,7 +293,7 @@ fn restore_sim(saved: SavedSimulation) -> Simulation {
 pub fn save_game(sim: &Simulation, path: impl AsRef<Path>) -> Result<(), SaveError> {
     let path = path.as_ref();
     let bytes =
-        bincode_next::serde::encode_to_vec(&snapshot_sim(sim), bincode_next::config::standard())?;
+        bincode_next::serde::encode_to_vec(snapshot_sim(sim), bincode_next::config::standard())?;
     fs::write(path, bytes).map_err(|e| io_err(path, e))
 }
 

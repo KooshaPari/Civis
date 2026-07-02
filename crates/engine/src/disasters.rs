@@ -210,7 +210,7 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) -> 
                 radius,
                 DisasterEffect::new(0.28, 0.35, 0.25, 0.55, true),
             );
-            terrain_cells = impact.0 as u32;
+            terrain_cells = impact.0;
             casualties = impact.1;
         }
         DisasterKind::Flood => {

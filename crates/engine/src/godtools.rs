@@ -105,9 +105,7 @@ use civ_agents::{spawn_civilian_at, spawn_many, ActorVisualKind, Alignment, Civi
 use civ_build::{BuildSite, BuildingId, BuildingSpec, BuildingTier, ProductionChain};
 use civ_needs::{Health as LifeHealth, Needs as LifeNeeds};
 use civ_voxel::{
-    material::{
-        AIR, GRAVEL, LAVA, MOSS, ORE, PACKED_DIRT, PLANT, SAND, SNOW, STEAM, STONE, WATER, WOOD,
-    },
+    material::{AIR, GRAVEL, LAVA, MOSS, ORE, PACKED_DIRT, PLANT, SNOW, STEAM, STONE, WATER, WOOD},
     MaterialId, WorldCoord, FIXED_SCALE,
 };
 use rand::SeedableRng;
@@ -2009,8 +2007,8 @@ impl Simulation {
                     let angle_fp = ((i as i64).wrapping_mul(arms).wrapping_mul(31_416)
                         / (10_000 * r.max(1) as i64))
                         & 0xFFFF;
-                    let dx = ((cos_lut(angle_fp) * i as i64) / 1_000_000) as i64;
-                    let dz = ((sin_lut(angle_fp) * i as i64) / 1_000_000) as i64;
+                    let dx = (cos_lut(angle_fp) * i as i64) / 1_000_000;
+                    let dz = (sin_lut(angle_fp) * i as i64) / 1_000_000;
                     let cell = WorldCoord {
                         x: pos.x + dx,
                         y: pos.y,
@@ -2194,7 +2192,7 @@ impl Simulation {
                 // arbitrary units; we clamp to
                 // `i32::MAX` so a single request can't
                 // overflow the belief channel.
-                let p = pressure.min(i32::MAX as u64) as u64;
+                let p = pressure.min(i32::MAX as u64);
                 let prev = self.belief();
                 self.add_belief(p);
                 let delta = (self.belief() - prev) as i64;
@@ -2281,6 +2279,7 @@ impl Simulation {
 mod tests {
     use super::*;
     use crate::engine::Simulation;
+    use civ_voxel::material::SAND;
 
     /// `terrain.raise` must mutate the voxel substrate: the cell
     /// at the brush center must read back as `STONE` after the

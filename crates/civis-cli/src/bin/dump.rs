@@ -83,7 +83,7 @@ fn run(cli: Cli) -> Result<(), DumpError> {
         } => {
             let dump = read_dump(&input, from_markers)?;
             let policy = resolve_policy(&policy)?;
-            let report = validate_dump(&dump, &policy).with_policy(&policy_name(&policy));
+            let report = validate_dump(&dump, &policy).with_policy(policy_name(&policy));
             emit_report(&report)
         }
         Command::Diff {

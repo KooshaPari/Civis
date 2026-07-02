@@ -385,8 +385,11 @@ pub struct EmergenceHudData {
 #[derive(Debug, Clone, Default)]
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
 pub struct OutcomeHudData {
+    /// Machine-readable outcome tag reported by the simulation.
     pub tag: String,
+    /// Human-readable reason for the outcome transition.
     pub reason: String,
+    /// Simulation tick at which the outcome was observed.
     pub tick: u64,
 }
 /// Wrapper resource so plugins in this crate (`civ_history`, `era_hud`, etc.) can read
@@ -394,6 +397,7 @@ pub struct OutcomeHudData {
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
 #[derive(Debug, Clone, Default)]
 pub struct HudState {
+    /// Latest live HUD snapshot shared across Bevy plugins.
     pub snapshot: LiveHudSnapshot,
 }
 /// Headless-friendly snapshot for the live attach HUD (FPS / tick / socket / scene stats).

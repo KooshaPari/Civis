@@ -17,7 +17,7 @@ use civ_build::{
     BuildSite, BuildingGraph, BuildingId, BuildingSpec, BuildingTier, ProductionChain,
     ProductionGood,
 };
-use civ_economy::{EconomyState, Stocks};
+use civ_economy::EconomyState;
 use civ_voxel::WorldCoord;
 
 // =====================================================================

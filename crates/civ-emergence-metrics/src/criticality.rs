@@ -151,11 +151,12 @@ fn distance_to_band(x: f32, lo: f32, hi: f32) -> f32 {
 /// let score = criticality_indicator(inputs, &Default::default());
 /// assert!((score - 1.0).abs() < 1e-6, "all on-target => 1.0, got {}", score);
 /// ```
-pub fn criticality_indicator(
-    inputs: CriticalityInputs,
-    bands: &CriticalityBands,
-) -> f32 {
-    let d_b = distance_to_band(inputs.branching_sigma, bands.branching_lo, bands.branching_hi);
+pub fn criticality_indicator(inputs: CriticalityInputs, bands: &CriticalityBands) -> f32 {
+    let d_b = distance_to_band(
+        inputs.branching_sigma,
+        bands.branching_lo,
+        bands.branching_hi,
+    );
     let d_a = distance_to_band(inputs.power_law_alpha, bands.alpha_lo, bands.alpha_hi);
     let d_e = distance_to_band(inputs.entropy_norm, bands.entropy_lo, bands.entropy_hi);
 
@@ -199,11 +200,7 @@ mod tests {
             entropy_norm: 0.0,
         };
         let score = criticality_indicator(inputs, &CriticalityBands::default());
-        assert!(
-            score < 0.1,
-            "far-from-band => score near 0, got {}",
-            score
-        );
+        assert!(score < 0.1, "far-from-band => score near 0, got {}", score);
     }
 
     #[test]
@@ -228,14 +225,20 @@ mod tests {
             power_law_alpha: 1.5,
             entropy_norm: 0.75,
         };
-        assert_eq!(criticality_indicator(inputs, &CriticalityBands::default()), 0.0);
+        assert_eq!(
+            criticality_indicator(inputs, &CriticalityBands::default()),
+            0.0
+        );
 
         let inputs = CriticalityInputs {
             branching_sigma: 1.0,
             power_law_alpha: f32::INFINITY,
             entropy_norm: 0.75,
         };
-        assert_eq!(criticality_indicator(inputs, &CriticalityBands::default()), 0.0);
+        assert_eq!(
+            criticality_indicator(inputs, &CriticalityBands::default()),
+            0.0
+        );
     }
 
     #[test]

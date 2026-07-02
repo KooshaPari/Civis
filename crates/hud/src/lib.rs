@@ -27,7 +27,10 @@ pub mod tile_inspector;
 pub mod tokens;
 pub mod top_bar;
 
-pub use env_overlay::*;
+pub use env_overlay::{
+    EnvDataSourceId, EnvOverlayRegistry, FlowField, LandValueField, PollutionField,
+    PollutionMedium, TemperatureField,
+};
 pub use god_tool_state::{
     GodToolDef, GodToolId, GodToolParamKind, GodToolParamSpec, GodToolParamValue, GodToolRegistry,
     GodToolState,
@@ -50,10 +53,13 @@ pub use top_bar::{
 /// Re-export of the canonical era ids used by the HUD. The full colour/glyph
 /// mapping is in `docs/design/ui-design-language.md`; this is the
 /// substrate-neutral vocabulary shared across crates.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, Default, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum HudEra {
     /// No era data yet (fresh sim).
+    #[default]
     Unknown,
     /// Stone / hunter-gatherer.
     Stone,
@@ -84,12 +90,6 @@ impl HudEra {
             HudEra::Information => TokenName::HoloDeep,
             HudEra::Atomic => TokenName::HoloGlow,
         }
-    }
-}
-
-impl Default for HudEra {
-    fn default() -> Self {
-        HudEra::Unknown
     }
 }
 

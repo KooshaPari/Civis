@@ -140,12 +140,12 @@ mod tests {
     #[test]
     fn zh_cn_not_empty() {
         let bundle = Locale::ZhCN.load_bundle();
-        assert!(bundle.get("welcome_title").len() > 0);
+        assert!(!bundle.get("welcome_title").is_empty());
     }
 
     #[test]
     fn zh_tw_not_empty() {
         let bundle = Locale::ZhTW.load_bundle();
-        assert!(bundle.get("welcome_title").len() > 0);
+        assert!(!bundle.get("welcome_title").is_empty());
     }
 }

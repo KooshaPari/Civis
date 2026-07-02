@@ -79,7 +79,6 @@ pub fn can_unlock(current_level: u32, required_level: u32) -> bool {
 }
 
 /// Neighbor diffusion is anchored to faction-id adjacency in sorted order.
-#[must_use]
 pub fn neighboring_factions(
     faction_ids: &[u32],
     faction_id: u32,

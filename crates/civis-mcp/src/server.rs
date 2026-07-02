@@ -458,6 +458,7 @@ pub struct SimSetPolicyArgs {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[allow(dead_code)]
 pub struct SimCommandlessArgs {
     /// Transport override (host/port/timeout).
     #[serde(flatten)]
@@ -979,7 +980,13 @@ impl CivisMcpServer {
         &self,
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(&transport, "sim.snapshot", json!({}), "civis_world_snapshot").map(Json)
+        forward_rpc(
+            &transport,
+            "sim.snapshot",
+            json!({}),
+            "civis_world_snapshot",
+        )
+        .map(Json)
     }
 
     /// Forward `psyche.snapshot` to civ-server.
@@ -991,7 +998,13 @@ impl CivisMcpServer {
         &self,
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(&transport, "psyche.snapshot", json!({}), "civis_psyche_snapshot").map(Json)
+        forward_rpc(
+            &transport,
+            "psyche.snapshot",
+            json!({}),
+            "civis_psyche_snapshot",
+        )
+        .map(Json)
     }
 
     /// Forward `psyche.events` to civ-server.
@@ -1003,7 +1016,13 @@ impl CivisMcpServer {
         &self,
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(&transport, "psyche.events", json!({}), "civis_psyche_events").map(Json)
+        forward_rpc(
+            &transport,
+            "psyche.events",
+            json!({}),
+            "civis_psyche_events",
+        )
+        .map(Json)
     }
 
     /// Forward `psyche.snapshot` and project the belief axes.
@@ -1015,9 +1034,13 @@ impl CivisMcpServer {
         &self,
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        let snapshot = forward_rpc(&transport, "psyche.snapshot", json!({}), "civis_psyche_beliefs").map_err(|err| {
-            format!("civis_psyche_beliefs: {err}")
-        })?;
+        let snapshot = forward_rpc(
+            &transport,
+            "psyche.snapshot",
+            json!({}),
+            "civis_psyche_beliefs",
+        )
+        .map_err(|err| format!("civis_psyche_beliefs: {err}"))?;
 
         let beliefs = match snapshot.result {
             Value::Array(entities) => Value::Array(
@@ -1079,7 +1102,12 @@ impl CivisMcpServer {
         &self,
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        let mut factions = forward_rpc(&transport, "sim.get_factions", json!({}), "civis_faction_cohesion")?;
+        let mut factions = forward_rpc(
+            &transport,
+            "sim.get_factions",
+            json!({}),
+            "civis_faction_cohesion",
+        )?;
         factions.method = "civis_faction_cohesion".to_string();
         Ok(Json(factions))
     }
@@ -1166,7 +1194,13 @@ impl CivisMcpServer {
         &self,
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(&transport, "sim.get_resources", json!({}), "civis_resources").map(Json)
+        forward_rpc(
+            &transport,
+            "sim.get_resources",
+            json!({}),
+            "civis_resources",
+        )
+        .map(Json)
     }
 
     /// Forward `sim.get_emergence_metrics` to civ-server.
@@ -1178,7 +1212,13 @@ impl CivisMcpServer {
         &self,
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(&transport, "sim.get_emergence_metrics", json!({}), "civis_emergence_metrics").map(Json)
+        forward_rpc(
+            &transport,
+            "sim.get_emergence_metrics",
+            json!({}),
+            "civis_emergence_metrics",
+        )
+        .map(Json)
     }
 
     /// Forward `emergence.metrics` to civ-server. Returns full emergence
@@ -1191,7 +1231,13 @@ impl CivisMcpServer {
         &self,
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(&transport, "emergence.metrics", json!({}), "civis_emergence_metrics_full").map(Json)
+        forward_rpc(
+            &transport,
+            "emergence.metrics",
+            json!({}),
+            "civis_emergence_metrics_full",
+        )
+        .map(Json)
     }
 
     /// Forward `emergence.dashboard` to civ-server.
@@ -1231,7 +1277,13 @@ impl CivisMcpServer {
         if let Some(role) = role {
             params.insert("role".to_owned(), json!(role));
         }
-        forward_rpc(&transport, "sim.command", Value::Object(params), "civis_sim_command").map(Json)
+        forward_rpc(
+            &transport,
+            "sim.command",
+            Value::Object(params),
+            "civis_sim_command",
+        )
+        .map(Json)
     }
 
     /// Forward `sim.reset` to civ-server.
@@ -1243,7 +1295,13 @@ impl CivisMcpServer {
         &self,
         Parameters(SimResetArgs { seed, transport }): Parameters<SimResetArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(&transport, "sim.reset", json!({ "seed": seed }), "civis_reset").map(Json)
+        forward_rpc(
+            &transport,
+            "sim.reset",
+            json!({ "seed": seed }),
+            "civis_reset",
+        )
+        .map(Json)
     }
 
     /// Forward `sim.load_scenario` to civ-server.
@@ -1289,9 +1347,18 @@ impl CivisMcpServer {
         let mut params = serde_json::Map::new();
         params.insert("scarcity_multiplier".to_owned(), json!(scarcity_multiplier));
         if let Some(base_consumption_joules) = base_consumption_joules {
-            params.insert("base_consumption_joules".to_owned(), json!(base_consumption_joules));
+            params.insert(
+                "base_consumption_joules".to_owned(),
+                json!(base_consumption_joules),
+            );
         }
-        forward_rpc(&transport, "sim.set_policy", Value::Object(params), "civis_set_policy").map(Json)
+        forward_rpc(
+            &transport,
+            "sim.set_policy",
+            Value::Object(params),
+            "civis_set_policy",
+        )
+        .map(Json)
     }
 
     /// Forward `sim.save_replay` to civ-server.
@@ -1303,7 +1370,13 @@ impl CivisMcpServer {
         &self,
         Parameters(SaveReplayArgs { path, transport }): Parameters<SaveReplayArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(&transport, "sim.save_replay", json!({ "path": path }), "civis_save_replay").map(Json)
+        forward_rpc(
+            &transport,
+            "sim.save_replay",
+            json!({ "path": path }),
+            "civis_save_replay",
+        )
+        .map(Json)
     }
 
     /// Forward `sim.load_replay` to civ-server.
@@ -1315,7 +1388,13 @@ impl CivisMcpServer {
         &self,
         Parameters(SaveReplayArgs { path, transport }): Parameters<SaveReplayArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(&transport, "sim.load_replay", json!({ "path": path }), "civis_load_replay").map(Json)
+        forward_rpc(
+            &transport,
+            "sim.load_replay",
+            json!({ "path": path }),
+            "civis_load_replay",
+        )
+        .map(Json)
     }
 
     /// Forward `sim.spawn_civilian` to civ-server.
@@ -1402,7 +1481,13 @@ impl CivisMcpServer {
         if let Some(energy) = energy {
             params.insert("energy".to_owned(), json!(energy));
         }
-        forward_rpc(&transport, "sim.damage", Value::Object(params), "civis_damage").map(Json)
+        forward_rpc(
+            &transport,
+            "sim.damage",
+            Value::Object(params),
+            "civis_damage",
+        )
+        .map(Json)
     }
 
     /// Forward `sim.inspect_tile` to civ-server.
@@ -1435,7 +1520,13 @@ impl CivisMcpServer {
             transport,
         }): Parameters<SaveSlotArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(&transport, "save.slot", json!({ "slot_name": slot_name }), "civis_save_slot").map(Json)
+        forward_rpc(
+            &transport,
+            "save.slot",
+            json!({ "slot_name": slot_name }),
+            "civis_save_slot",
+        )
+        .map(Json)
     }
 
     /// Forward `save.load` to civ-server. Restores from a named production slot.
@@ -1450,7 +1541,13 @@ impl CivisMcpServer {
             transport,
         }): Parameters<SaveSlotArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(&transport, "save.load", json!({ "slot_name": slot_name }), "civis_load_slot").map(Json)
+        forward_rpc(
+            &transport,
+            "save.load",
+            json!({ "slot_name": slot_name }),
+            "civis_load_slot",
+        )
+        .map(Json)
     }
 
     /// Forward `sim.subscribe` to civ-server. Opens or updates a per-connection
@@ -1475,7 +1572,13 @@ impl CivisMcpServer {
         &self,
         Parameters(SimSubscriptionArgs { transport }): Parameters<SimSubscriptionArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(&transport, "sim.unsubscribe", json!({}), "civis_unsubscribe").map(Json)
+        forward_rpc(
+            &transport,
+            "sim.unsubscribe",
+            json!({}),
+            "civis_unsubscribe",
+        )
+        .map(Json)
     }
 
     /// Forward `sim.update_subscription` to civ-server. Replaces a per-connection
@@ -1520,7 +1623,13 @@ impl CivisMcpServer {
         &self,
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(&transport, "sim.religion_state", json!({}), "civis_religion_state").map(Json)
+        forward_rpc(
+            &transport,
+            "sim.religion_state",
+            json!({}),
+            "civis_religion_state",
+        )
+        .map(Json)
     }
 
     /// Forward `sim.perf` to civ-server.
@@ -1564,7 +1673,13 @@ impl CivisMcpServer {
         &self,
         Parameters(args): Parameters<GodActionVerbArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(&args.transport, "sim.god_action", args.to_params_with_action("smite"), "civis_god_action_smite").map(Json)
+        forward_rpc(
+            &args.transport,
+            "sim.god_action",
+            args.to_params_with_action("smite"),
+            "civis_god_action_smite",
+        )
+        .map(Json)
     }
 
     /// Forward `sim.god_action` with verb `heal`.
@@ -1576,7 +1691,13 @@ impl CivisMcpServer {
         &self,
         Parameters(args): Parameters<GodActionVerbArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(&args.transport, "sim.god_action", args.to_params_with_action("heal"), "civis_god_action_heal").map(Json)
+        forward_rpc(
+            &args.transport,
+            "sim.god_action",
+            args.to_params_with_action("heal"),
+            "civis_god_action_heal",
+        )
+        .map(Json)
     }
 
     /// Forward `sim.god_action` with verb `place_terrain`.
@@ -1606,7 +1727,13 @@ impl CivisMcpServer {
         &self,
         Parameters(args): Parameters<GodActionVerbArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(&args.transport, "sim.god_action", args.to_params_with_action("ignite"), "civis_god_action_ignite").map(Json)
+        forward_rpc(
+            &args.transport,
+            "sim.god_action",
+            args.to_params_with_action("ignite"),
+            "civis_god_action_ignite",
+        )
+        .map(Json)
     }
 
     /// Forward `sim.god_action` with verb `spawn_creature`.
@@ -1869,7 +1996,13 @@ impl CivisMcpServer {
         &self,
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(&transport, "sim.get_factions", json!({}), "sim_get_factions").map(Json)
+        forward_rpc(
+            &transport,
+            "sim.get_factions",
+            json!({}),
+            "sim_get_factions",
+        )
+        .map(Json)
     }
 
     /// Alias to `sim.get_resources` for world resource telemetry.
@@ -1881,7 +2014,13 @@ impl CivisMcpServer {
         &self,
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(&transport, "sim.get_resources", json!({}), "sim_get_resources").map(Json)
+        forward_rpc(
+            &transport,
+            "sim.get_resources",
+            json!({}),
+            "sim_get_resources",
+        )
+        .map(Json)
     }
 
     /// Forward `sim.emergence` (+ optional legacy/detail side calls) to civ-server.
@@ -1897,7 +2036,12 @@ impl CivisMcpServer {
             transport,
         }): Parameters<SimGetEmergenceArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        let primary = forward_rpc(&transport, "sim.emergence", json!({}), "sim_get_emergence.primary")?;
+        let primary = forward_rpc(
+            &transport,
+            "sim.emergence",
+            json!({}),
+            "sim_get_emergence.primary",
+        )?;
         let mut merged = if primary.result.is_object() {
             primary.result
         } else {
@@ -1940,7 +2084,13 @@ impl CivisMcpServer {
         &self,
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(&transport, "sim.get_factions", json!({}), "sim_get_diplomacy").map(Json)
+        forward_rpc(
+            &transport,
+            "sim.get_factions",
+            json!({}),
+            "sim_get_diplomacy",
+        )
+        .map(Json)
     }
 
     /// Alias to `sim.tech_state` for research telemetry.
@@ -1985,25 +2135,41 @@ impl CivisMcpServer {
         if auto_pause.unwrap_or(false) {
             let mut speed_params = serde_json::Map::new();
             speed_params.insert("multiplier".to_owned(), json!(0_u32));
-            forward_rpc(&transport, "sim.set_speed", Value::Object(speed_params), "sim_step.pause").map_err(|e| {
-                format!("sim_step: {e}")
-            })?;
+            forward_rpc(
+                &transport,
+                "sim.set_speed",
+                Value::Object(speed_params),
+                "sim_step.pause",
+            )
+            .map_err(|e| format!("sim_step: {e}"))?;
         }
         for _ in 0..ticks {
             let mut params = serde_json::Map::new();
-            params.insert("action".to_owned(), json!(SimCommandAction::Tick.wire_name()));
+            params.insert(
+                "action".to_owned(),
+                json!(SimCommandAction::Tick.wire_name()),
+            );
             if let Some(role) = role.clone() {
                 params.insert("role".to_owned(), json!(role));
             }
-            forward_rpc(&transport, "sim.command", Value::Object(params), "sim_step.tick")
-                .map_err(|e| format!("sim_step: {e}"))?;
+            forward_rpc(
+                &transport,
+                "sim.command",
+                Value::Object(params),
+                "sim_step.tick",
+            )
+            .map_err(|e| format!("sim_step: {e}"))?;
         }
         if auto_pause.unwrap_or(false) {
             let mut speed_params = serde_json::Map::new();
             speed_params.insert("multiplier".to_owned(), json!(1_u32));
-            forward_rpc(&transport, "sim.set_speed", Value::Object(speed_params), "sim_step.resume").map_err(|e| {
-                format!("sim_step: {e}")
-            })?;
+            forward_rpc(
+                &transport,
+                "sim.set_speed",
+                Value::Object(speed_params),
+                "sim_step.resume",
+            )
+            .map_err(|e| format!("sim_step: {e}"))?;
         }
         let tick = forward_rpc(&transport, "sim.get_tick", json!({}), "sim_step.tick")?;
         let final_tick = tick
@@ -2091,15 +2257,24 @@ impl CivisMcpServer {
             }
 
             let mut params = serde_json::Map::new();
-            params.insert("action".to_owned(), json!(SimCommandAction::Tick.wire_name()));
+            params.insert(
+                "action".to_owned(),
+                json!(SimCommandAction::Tick.wire_name()),
+            );
             if let Some(role) = role.clone() {
                 params.insert("role".to_owned(), json!(role.clone()));
             }
-            forward_rpc(&transport, "sim.command", Value::Object(params), "sim_run_until.tick")
-                .map_err(|e| format!("sim_run_until: {e}"))?;
+            forward_rpc(
+                &transport,
+                "sim.command",
+                Value::Object(params),
+                "sim_run_until.tick",
+            )
+            .map_err(|e| format!("sim_run_until: {e}"))?;
             ticks += 1;
 
-            let should_poll = (ticks % poll_every == 0) || (ticks >= max_ticks) || (final_outcome != "ongoing");
+            let should_poll =
+                (ticks % poll_every == 0) || (ticks >= max_ticks) || (final_outcome != "ongoing");
             if should_poll {
                 let outcome = forward_rpc(
                     &transport,
@@ -2122,7 +2297,11 @@ impl CivisMcpServer {
                     "sim_run_until.tick_check",
                 )
                 .map_err(|e| format!("sim_run_until: {e}"))?;
-                final_tick = tick.result.get("tick").and_then(Value::as_u64).unwrap_or(ticks);
+                final_tick = tick
+                    .result
+                    .get("tick")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(ticks);
 
                 if !target_outcome.is_empty() && final_outcome == target_outcome {
                     stopped = "target_outcome".to_owned();
@@ -2157,13 +2336,7 @@ impl CivisMcpServer {
 
         Ok(Json(RpcForwardResult {
             method: "sim_run_until".to_owned(),
-            url: forward_rpc(
-                &transport,
-                "health",
-                json!({}),
-                "sim_run_until.url",
-            )?
-            .url,
+            url: forward_rpc(&transport, "health", json!({}), "sim_run_until.url")?.url,
             result: json!({
                 "ticks_advanced": ticks,
                 "final_tick": final_tick,
@@ -2175,15 +2348,18 @@ impl CivisMcpServer {
     }
 
     /// Alias to `sim.reset` for control-surface naming.
-    #[tool(
-        name = "sim_reset",
-        description = "Alias for sim.reset."
-    )]
+    #[tool(name = "sim_reset", description = "Alias for sim.reset.")]
     async fn sim_reset(
         &self,
         Parameters(SimResetArgs { seed, transport }): Parameters<SimResetArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(&transport, "sim.reset", json!({ "seed": seed }), "sim_reset").map(Json)
+        forward_rpc(
+            &transport,
+            "sim.reset",
+            json!({ "seed": seed }),
+            "sim_reset",
+        )
+        .map(Json)
     }
 
     /// Alias to `sim.load_scenario` for control-surface naming.
@@ -2255,10 +2431,7 @@ impl CivisMcpServer {
     }
 
     /// Alias to `sim.place_voxel` for mutating terrain.
-    #[tool(
-        name = "sim_sculpt",
-        description = "Alias for sim.place_voxel."
-    )]
+    #[tool(name = "sim_sculpt", description = "Alias for sim.place_voxel.")]
     async fn sim_sculpt(
         &self,
         Parameters(SimSculptArgs {
@@ -2289,12 +2462,13 @@ impl CivisMcpServer {
             x,
             y,
             z,
-            op: _,
+            op,
             material,
-            radius: _,
+            radius,
             transport,
         }): Parameters<SimTerraformExtentArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
+        let _brush = (op, radius);
         let material = material.unwrap_or(1);
         forward_rpc(
             &transport,
@@ -2360,9 +2534,14 @@ impl CivisMcpServer {
                 json!(base_consumption_joules),
             );
         }
-        forward_rpc(&transport, "sim.set_policy", Value::Object(params), "sim_law")
-            .map_err(|err| format!("sim_law via {}: {err}", law))
-            .map(Json)
+        forward_rpc(
+            &transport,
+            "sim.set_policy",
+            Value::Object(params),
+            "sim_law",
+        )
+        .map_err(|err| format!("sim_law via {}: {err}", law))
+        .map(Json)
     }
 
     /// Blind implementation: `sim.undo` has no dedicated JSON-RPC method yet.
@@ -2402,18 +2581,16 @@ impl CivisMcpServer {
     ) -> Result<Json<RpcForwardResult>, String> {
         let mut last = None;
         for _ in 0..count.max(1) {
-            last = Some(
-                forward_rpc(
-                    &transport,
-                    "sim.spawn_civilian",
-                    json!({
-                        "x": x,
-                        "y": y,
-                        "faction": faction.unwrap_or(0),
-                    }),
-                    "sim_spawn_organism",
-                )?,
-            );
+            last = Some(forward_rpc(
+                &transport,
+                "sim.spawn_civilian",
+                json!({
+                    "x": x,
+                    "y": y,
+                    "faction": faction.unwrap_or(0),
+                }),
+                "sim_spawn_organism",
+            )?);
         }
         match last {
             Some(value) => Ok(Json(value)),
@@ -2427,13 +2604,13 @@ impl CivisMcpServer {
     }
 
     /// Alias to `sim.save.slot`.
-    #[tool(
-        name = "sim_save_slot",
-        description = "Alias for save.slot."
-    )]
+    #[tool(name = "sim_save_slot", description = "Alias for save.slot.")]
     async fn sim_save_slot(
         &self,
-        Parameters(SaveSlotArgs { slot_name, transport }): Parameters<SaveSlotArgs>,
+        Parameters(SaveSlotArgs {
+            slot_name,
+            transport,
+        }): Parameters<SaveSlotArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
         forward_rpc(
             &transport,
@@ -2445,13 +2622,13 @@ impl CivisMcpServer {
     }
 
     /// Alias to `save.load`.
-    #[tool(
-        name = "sim_load_slot",
-        description = "Alias for save.load."
-    )]
+    #[tool(name = "sim_load_slot", description = "Alias for save.load.")]
     async fn sim_load_slot(
         &self,
-        Parameters(SaveSlotArgs { slot_name, transport }): Parameters<SaveSlotArgs>,
+        Parameters(SaveSlotArgs {
+            slot_name,
+            transport,
+        }): Parameters<SaveSlotArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
         forward_rpc(
             &transport,
@@ -2463,10 +2640,7 @@ impl CivisMcpServer {
     }
 
     /// Alias to `save.list`.
-    #[tool(
-        name = "sim_list_saves",
-        description = "Alias for save.list."
-    )]
+    #[tool(name = "sim_list_saves", description = "Alias for save.list.")]
     async fn sim_list_saves(
         &self,
         Parameters(transport): Parameters<RpcArgs>,
@@ -2475,10 +2649,7 @@ impl CivisMcpServer {
     }
 
     /// Alias to `sim.save_replay`.
-    #[tool(
-        name = "sim_save_replay",
-        description = "Alias for sim.save_replay."
-    )]
+    #[tool(name = "sim_save_replay", description = "Alias for sim.save_replay.")]
     async fn sim_save_replay(
         &self,
         Parameters(SaveReplayArgs { path, transport }): Parameters<SaveReplayArgs>,
@@ -2493,10 +2664,7 @@ impl CivisMcpServer {
     }
 
     /// Alias to `sim.load_replay`.
-    #[tool(
-        name = "sim_load_replay",
-        description = "Alias for sim.load_replay."
-    )]
+    #[tool(name = "sim_load_replay", description = "Alias for sim.load_replay.")]
     async fn sim_load_replay(
         &self,
         Parameters(SaveReplayArgs { path, transport }): Parameters<SaveReplayArgs>,
@@ -2511,10 +2679,7 @@ impl CivisMcpServer {
     }
 
     /// Alias to `sim.subscribe`.
-    #[tool(
-        name = "sim_subscribe",
-        description = "Alias for sim.subscribe."
-    )]
+    #[tool(name = "sim_subscribe", description = "Alias for sim.subscribe.")]
     async fn sim_subscribe(
         &self,
         Parameters(transport): Parameters<RpcArgs>,
@@ -2523,10 +2688,7 @@ impl CivisMcpServer {
     }
 
     /// Alias to `sim.unsubscribe`.
-    #[tool(
-        name = "sim_unsubscribe",
-        description = "Alias for sim.unsubscribe."
-    )]
+    #[tool(name = "sim_unsubscribe", description = "Alias for sim.unsubscribe.")]
     async fn sim_unsubscribe(
         &self,
         Parameters(transport): Parameters<RpcArgs>,
@@ -2553,10 +2715,7 @@ impl CivisMcpServer {
     }
 
     /// Alias to `sim.damage`.
-    #[tool(
-        name = "sim_damage",
-        description = "Alias for sim.damage."
-    )]
+    #[tool(name = "sim_damage", description = "Alias for sim.damage.")]
     async fn sim_damage(
         &self,
         Parameters(SimDamageArgs {

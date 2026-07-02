@@ -159,8 +159,8 @@ pub fn tick_maturity(
     if health.is_dead() {
         return;
     }
-    let stress = (critical_fraction.clamp(0.0, 1.0) * params.maturity_stress_penalty)
-        .clamp(0.0, 1.0);
+    let stress =
+        (critical_fraction.clamp(0.0, 1.0) * params.maturity_stress_penalty).clamp(0.0, 1.0);
     let delta = params.base_maturity_rate * (1.0 - stress);
     psyche.maturity = (psyche.maturity + delta).clamp(0.0, 1.0);
 }

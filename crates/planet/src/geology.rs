@@ -183,13 +183,22 @@ impl BiomeKind {
             }
             BiomeKind::Desert => matches!(label, "Desert" | "Arid" | "Badlands" | "Dunes"),
             BiomeKind::Tundra => {
-                matches!(label, "Tundra" | "Arctic" | "Boreal" | "Taiga" | "Permafrost")
+                matches!(
+                    label,
+                    "Tundra" | "Arctic" | "Boreal" | "Taiga" | "Permafrost"
+                )
             }
             BiomeKind::Plains => {
-                matches!(label, "Plains" | "Grassland" | "Savanna" | "Steppe" | "Prairie")
+                matches!(
+                    label,
+                    "Plains" | "Grassland" | "Savanna" | "Steppe" | "Prairie"
+                )
             }
             BiomeKind::Grassland => {
-                matches!(label, "Grassland" | "Plains" | "Steppe" | "Prairie" | "Meadow")
+                matches!(
+                    label,
+                    "Grassland" | "Plains" | "Steppe" | "Prairie" | "Meadow"
+                )
             }
             BiomeKind::Savanna => {
                 matches!(label, "Savanna" | "Grassland" | "Scrubland" | "Drylands")

@@ -17,8 +17,7 @@
 //! Branch: feat/phase-unrest
 
 use civ_engine::{
-    CohesionSnapshot, FabricTier, MoodSnapshot, Sim, SimSeed, StratificationReport, UnrestEvent,
-    UnrestLevel, UnrestSnapshot,
+    CohesionSnapshot, MoodSnapshot, Sim, SimSeed, StratificationReport, UnrestEvent, UnrestLevel,
 };
 
 const UNREST_SEED: u64 = 0xA5_A5_00_03;

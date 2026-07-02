@@ -5,12 +5,12 @@
 use civ_agents::culture::{cultural_distance, language_distance, CultureProfile};
 use civ_agents::diplomacy::GriefAccumulator;
 use civ_agents::{
-    cluster::{apply_membership_payoffs, ClusterState, MembershipPayoff, MembershipPayoffTotals},
-    count_civilians, daily_path::{pick_target, Poi, PoiKind, PoiRegistry},
-    propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at,
+    cluster_by_colocation, count_civilians,
+    daily_path::{pick_target, DailyPathDecision, Poi, PoiKind, PoiRegistry},
+    propagate_tools, propagate_wardrobe, reconcile_membership, spawn_child_near, spawn_civilian_at,
     ActorVisualKind, Alignment, Civilian as AgentCivilian, ClusterId, ClusterMember, CohortStats,
-    DiplomacyMatrix, DiplomacyOutcome, DiplomacySignal, LodTier, Needs, Position3d, Psyche,
-    RelationKind, SocialGraph, Tools, Wardrobe,
+    DiplomacyMatrix, DiplomacyOutcome, DiplomacySignal, LodTier, MembershipPayoff, Needs,
+    Position3d, Psyche, RelationKind, SocialGraph, Tools, Wardrobe,
 };
 use civ_audio::{derive_music_cue, mood::MusicCue, triggers::SfxTrigger};
 use civ_build::{Allocator, BuildSite, BuildingGraph, DemandSignals, ProductionEvent};
@@ -55,10 +55,7 @@ use crate::policy::ControlSignals;
 use crate::policy::Policy;
 use crate::policy::PolicyInput;
 use crate::policy::DEFAULT_ECONOMY_POLICY;
-use crate::religion::{
-    apply_big_gods_response, last_religion_sample, substrate_gradients_for, ReligionEvent,
-    ReligionEventKind, ReligiousProfile, SubstrateGradients,
-};
+use crate::religion::{ReligionEvent, ReligiousProfile};
 use crate::replay::{ReplayError, ReplayLog};
 use crate::replay_format::{load_civreplay, save_civreplay};
 
@@ -645,8 +642,8 @@ pub struct Simulation {
     last_tick_audio_events: Vec<civ_audio::triggers::SfxTrigger>,
     /// Last-tick decisions for the daily-path phase (FR-CIV-LIFE-010..016).
     pub last_tick_daily_path: Vec<DailyPathDecision>,
-    /// Per-cluster payoffs emitted by the cluster phase (FR-CIV-LIFE-030..035).
-    pub last_tick_cluster_payoffs: Vec<(u64, MembershipPayoffTotals)>,
+    /// Per-agent cluster payoffs emitted by the cluster phase (FR-CIV-LIFE-030..035).
+    pub last_tick_cluster_payoffs: Vec<(u64, f32)>,
     /// Per-culture music cue parameters derived from emergent culture + state.
     /// Updated in `phase_audio` and surfaced on `SimulationSnapshot::music_cues`
     /// as a stable per-cluster key-value map.
@@ -1079,10 +1076,8 @@ fn compute_gini(wealths: &[i64]) -> f64 {
     if sum <= 0.0 {
         return 0.0;
     }
-    let mut cumulative = 0.0_f64;
     let mut weighted_sum = 0.0_f64;
     for (i, w) in sorted.iter().enumerate() {
-        cumulative += *w as f64;
         // Lorenz curve: cumulative wealth / total wealth; index i+1 out of n.
         weighted_sum += (i as f64 + 1.0) * (*w as f64);
     }
@@ -2372,14 +2367,13 @@ impl Simulation {
         &self.last_tick_daily_path
     }
 
-    /// Membership payoff totals from the most recent tick
+    /// Per-agent membership payoff records from the most recent tick
     /// (FR-CIV-LIFE-030..035). Reset at the start of every
     /// [`Simulation::tick`]; populated by [`Simulation::phase_cluster`]
-    /// which applies `MembershipPayoff` per civilian to their dominant
-    /// cluster, then sums up the resulting `MembershipPayoffTotals` for
-    /// the emergence dashboard.
+    /// which reconciles civilian co-location clusters and records the
+    /// deterministic membership payoff used by the emergence dashboard.
     #[must_use]
-    pub fn last_tick_cluster_payoffs(&self) -> &[MembershipPayoffTotals] {
+    pub fn last_tick_cluster_payoffs(&self) -> &[(u64, f32)] {
         &self.last_tick_cluster_payoffs
     }
 
@@ -2883,7 +2877,7 @@ impl Simulation {
             let history = self
                 .mood_history_by_settlement
                 .entry(snap.settlement_id)
-                .or_insert_with(Vec::new);
+                .or_default();
             history.push(*snap);
             if history.len() > MOOD_HISTORY_CAP {
                 let drop = history.len() - MOOD_HISTORY_CAP;
@@ -3097,7 +3091,7 @@ impl Simulation {
 
         // Collect all settlement IDs from mood, stratification, and cohesion
         let mut settlement_ids: BTreeSet<u32> = BTreeSet::new();
-        for (&sid, _) in &self.unrest_settlement_gini {
+        for &sid in self.unrest_settlement_gini.keys() {
             settlement_ids.insert(sid);
         }
         for (&_actor_id, &sid) in &self.actor_settlement {
@@ -3128,7 +3122,7 @@ impl Simulation {
             let fabric = self
                 .last_tick_cohesion
                 .get(&settlement_id)
-                .map_or(FabricTier::Tight, |s| s.fabric.clone());
+                .map_or(FabricTier::Tight, |s| s.fabric);
 
             let fabric_x100: i32 = match &fabric {
                 FabricTier::Tight => 0,
@@ -3161,7 +3155,7 @@ impl Simulation {
                 riots_count = (score as u64).saturating_div(30).max(1);
                 self.last_tick_unrest.push(UnrestEvent {
                     settlement_id,
-                    level: level.clone(),
+                    level,
                     score,
                     score_delta: level_delta,
                     mood,
@@ -3179,7 +3173,7 @@ impl Simulation {
             {
                 self.last_tick_unrest.push(UnrestEvent {
                     settlement_id,
-                    level: level.clone(),
+                    level,
                     score,
                     score_delta: level_delta,
                     mood,
@@ -3190,7 +3184,7 @@ impl Simulation {
 
             let snapshot = UnrestSnapshot {
                 settlement_id,
-                level: level.clone(),
+                level,
                 score,
                 events_count: riots_count.saturating_add(migrants_count) as u32,
             };
@@ -3207,51 +3201,67 @@ impl Simulation {
     /// - assigns each adult a daily target via civ_agents::daily_path::pick_target,
     /// - rolls the next path step and stores decisions in last_tick_daily_path.
     fn phase_daily_path(&mut self) {
-        use civ_agents::daily_path::{pick_target, path_step, LifeNeeds, PoiKind};
+        use civ_agents::daily_path::path_step;
+        use civ_needs::Needs as LifeNeeds;
 
         self.last_tick_daily_path.clear();
 
-        let mut registry = PoiRegistry::new();
-        for (settlement_id, settlement) in self.settlements.iter() {
-            let kind = if settlement.population >= 500 {
-                PoiKind::Market
-            } else if settlement.population >= 100 {
-                PoiKind::Tavern
-            } else {
-                PoiKind::Shrine
-            };
-            registry.register(Poi {
-                id: *settlement_id,
-                kind,
-                coord: settlement.centroid,
-            });
+        let mut registry = PoiRegistry::default();
+        for (settlement_id, population) in &self.settlements {
+            let (anchor_x, anchor_z) = settlement_anchor_for(*settlement_id, 0.5, 0.5);
+            for (idx, (kind, dx, dz)) in [
+                (PoiKind::FoodSource, -0.018_f32, 0.000_f32),
+                (PoiKind::WaterSource, 0.018_f32, 0.000_f32),
+                (PoiKind::Shelter, 0.000_f32, -0.018_f32),
+                (PoiKind::SafeZone, 0.000_f32, 0.018_f32),
+                (PoiKind::SocialHub, -0.014_f32, 0.014_f32),
+                (PoiKind::Clinic, 0.014_f32, -0.014_f32),
+            ]
+            .into_iter()
+            .enumerate()
+            {
+                let x = ((anchor_x + dx).clamp(0.0, 1.0) * 100.0 * FIXED_SCALE as f32) as i64;
+                let z = ((anchor_z + dz).clamp(0.0, 1.0) * 100.0 * FIXED_SCALE as f32) as i64;
+                registry.add(Poi {
+                    id: (u64::from(*settlement_id) << 8) | idx as u64,
+                    kind,
+                    pos: Position3d {
+                        coord: WorldCoord { x, y: 0, z },
+                    },
+                    capacity: *population,
+                });
+            }
         }
 
-        for (entity, (civilian, pos, needs)) in self
+        for (_, (civilian, pos, needs)) in self
             .world
             .query::<(&AgentCivilian, &Position3d, &Needs)>()
             .iter()
         {
+            if civilian.age < 18 {
+                continue;
+            }
+            let pressure_to_satisfaction = |pressure: f32| 1.0 - pressure.clamp(0.0, 1.0);
             let life_needs = LifeNeeds {
-                food: needs.food,
-                rest: needs.shelter,
-                social: needs.safety,
-                safety: needs.belonging,
+                food: pressure_to_satisfaction(needs.food),
+                // civ_agents::Needs has no separate hydration channel yet; use
+                // hunger pressure as the shared survival-resource proxy.
+                water: pressure_to_satisfaction(needs.food),
+                rest: pressure_to_satisfaction(needs.shelter),
+                safety: pressure_to_satisfaction(needs.safety),
+                social: pressure_to_satisfaction(needs.belonging),
+                health: 1.0,
             };
             if let Some(poi) = pick_target(&life_needs, &registry, pos) {
-                let step = path_step(pos, &poi.coord);
+                let step = path_step(pos, &poi.pos, FIXED_SCALE);
                 self.last_tick_daily_path.push(DailyPathDecision {
-                    civilian: entity,
-                    settlement_id: poi.id,
-                    activity: match poi.kind {
-                        PoiKind::Market => Activity::Trade,
-                        PoiKind::Tavern => Activity::Socialize,
-                        PoiKind::Shrine => Activity::Worship,
-                        PoiKind::Library => Activity::Study,
-                        PoiKind::Workshop => Activity::Work,
-                    },
-                    dx: step.dx,
-                    dy: step.dy,
+                    poi_kind: poi.kind,
+                    target_x: ((step.coord.x / FIXED_SCALE)
+                        .clamp(i64::from(i32::MIN), i64::from(i32::MAX)))
+                        as i32,
+                    target_z: ((step.coord.z / FIXED_SCALE)
+                        .clamp(i64::from(i32::MIN), i64::from(i32::MAX)))
+                        as i32,
                 });
             }
         }
@@ -3261,17 +3271,65 @@ impl Simulation {
     /// - collects cluster membership across all settlements,
     /// - applies membership payoffs to drive cluster formation/attrition.
     fn phase_cluster(&mut self) {
-        let memberships: Vec<ClusterState> = self
-            .settlements
+        self.last_tick_cluster_payoffs.clear();
+
+        struct ClusterSizePayoff {
+            sizes: HashMap<ClusterId, usize>,
+        }
+
+        impl MembershipPayoff for ClusterSizePayoff {
+            fn payoff(&self, _agent_id: u64, cluster: ClusterId) -> f32 {
+                match self.sizes.get(&cluster).copied().unwrap_or_default() {
+                    0 | 1 => -1.0,
+                    size => (size - 1) as f32,
+                }
+            }
+        }
+
+        let mut agents: Vec<(Entity, u64, Position3d)> = self
+            .world
+            .query::<(&AgentCivilian, &Position3d)>()
             .iter()
-            .map(|(settlement_id, settlement)| ClusterState {
-                settlement_id: *settlement_id,
-                clusters: settlement.clusters.clone(),
+            .map(|(entity, (civilian, pos))| (entity, civilian.id, *pos))
+            .collect();
+        agents.sort_by_key(|(_, agent_id, _)| *agent_id);
+
+        let positions: Vec<(u64, Position3d)> = agents
+            .iter()
+            .map(|(_, agent_id, pos)| (*agent_id, *pos))
+            .collect();
+        let clusters = cluster_by_colocation(&positions, SETTLEMENT_CLUSTER_RADIUS_FP);
+        let mut cluster_sizes: HashMap<ClusterId, usize> = HashMap::new();
+        for (_, cluster) in &clusters {
+            *cluster_sizes.entry(*cluster).or_default() += 1;
+        }
+        let payoff = ClusterSizePayoff {
+            sizes: cluster_sizes,
+        };
+
+        let mut members: Vec<(u64, Option<ClusterId>)> = agents
+            .iter()
+            .map(|(entity, agent_id, _)| {
+                let membership = self
+                    .world
+                    .get::<&ClusterMember>(*entity)
+                    .ok()
+                    .map(|member| member.cluster);
+                (*agent_id, membership)
             })
             .collect();
+        reconcile_membership(&mut members, &clusters, &payoff, 0.0);
+        let membership_by_agent: BTreeMap<u64, Option<ClusterId>> = members.into_iter().collect();
 
-        let totals = apply_membership_payoffs(&memberships);
-        self.last_tick_cluster_membership = totals;
+        for (entity, agent_id, _) in agents {
+            let _ = self.world.remove_one::<ClusterMember>(entity);
+            if let Some(Some(cluster)) = membership_by_agent.get(&agent_id).copied() {
+                let payoff_value = payoff.payoff(agent_id, cluster);
+                let _ = self.world.insert_one(entity, ClusterMember { cluster });
+                self.last_tick_cluster_payoffs
+                    .push((agent_id, payoff_value));
+            }
+        }
     }
 
     /// Active lifecycle loop:
@@ -3436,7 +3494,7 @@ impl Simulation {
                     migration_count as u32,
                 ));
 
-                for (entity, id, mut sample) in candidates.into_iter().take(migration_count) {
+                for (entity, _id, mut sample) in candidates.into_iter().take(migration_count) {
                     if let Ok(mut civilian) = self.world.get::<&mut AgentCivilian>(entity) {
                         civilian.alignment = Alignment::Faction(new_settlement_id);
                     }
@@ -3505,12 +3563,12 @@ impl Simulation {
 
     fn resource_pressure(&self) -> f32 {
         let food = self.state.resources.food.to_bits().max(0) as f32;
-        let pressure = if food <= 0.0 {
+
+        if food <= 0.0 {
             1.0
         } else {
             (1.0 / (1.0 + food / 250.0)).clamp(0.0, 1.0)
-        };
-        pressure
+        }
     }
 
     fn unrest_pressure(&self) -> f32 {
@@ -3572,18 +3630,18 @@ impl Simulation {
 
             // Temperature gradient [0, 1]: extreme temps (hot OR cold) = high
             // stress. |temp/40| maps [-40,40]°C → [0,1]; clamp below -40 to
-            // 1 so arctic settlements also register high grad_T.
+            // 1 so arctic settlements also register high grad_t.
             let temp_abs = (wc.temp_c_fp as f32 / 40.0).abs().clamp(0.0, 1.0);
-            let grad_T = temp_abs.mul_add(0.7, thermal_stress * 0.3);
+            let grad_t = temp_abs.mul_add(0.7, thermal_stress * 0.3);
 
             // Moisture gradient [0, 1]: low precipitation = high stress
-            // (drought proxy). Invert precip_norm so drier → higher grad_M.
+            // (drought proxy). Invert precip_norm so drier → higher grad_m.
             let precip_norm = 1.0 - (wc.precip_mm_fp as f32 / 200.0).min(1.0);
-            let grad_M = precip_norm.mul_add(0.8, thermal_stress * 0.2);
+            let grad_m = precip_norm.mul_add(0.8, thermal_stress * 0.2);
 
             // Biomass gradient [0, 1]: combined T + M stress means less
-            // primary productivity → higher grad_B.
-            let grad_B = (grad_T * 0.5 + grad_M * 0.5).clamp(0.0, 1.0);
+            // primary productivity → higher grad_b.
+            let grad_b = (grad_t * 0.5 + grad_m * 0.5).clamp(0.0, 1.0);
 
             // Kinship density [0, 1]: smaller settlements have denser kin
             // networks.  √(pop/300) gives ~0.58 at pop=100, ~0.82 at pop=10.
@@ -3623,19 +3681,16 @@ impl Simulation {
             let language_distance = 0.0;
 
             let gradients = crate::religion::SubstrateGradients {
-                grad_T,
-                grad_M,
-                grad_B,
+                grad_t,
+                grad_m,
+                grad_b,
                 kinship_density,
                 unrest,
                 migration_rate,
                 language_distance,
             };
 
-            let profile = self
-                .religious_profiles
-                .entry(sid)
-                .or_insert_with(crate::religion::ReligiousProfile::default);
+            let profile = self.religious_profiles.entry(sid).or_default();
             profile.population = pop;
             crate::religion::apply_big_gods_response(profile, &gradients, tick);
             let event = crate::religion::ReligionEvent::tick(
@@ -3681,7 +3736,7 @@ impl Simulation {
             // energy_budget_joules) and any per-settlement food stocking.
             let pop = self.settlements[&sid];
             let stocked = self.settlement_food_stocked.get(&sid).copied().unwrap_or(0);
-            let food_surplus = economy_i.saturating_mul(pop as i64) + stocked as i64;
+            let food_surplus = economy_i.saturating_mul(pop as i64) + stocked;
             let food = food_surplus.max(0);
 
             let ideal = candidate_economic_focus(food, research_tier, belief, treasury_total);
@@ -6245,7 +6300,7 @@ fn trade_volume_signal(routes: &[TradeRoute], a: u32, b: u32) -> f32 {
             (route.from_faction == a && route.to_faction == b)
                 || (route.from_faction == b && route.to_faction == a)
         })
-        .map(|route| i64::from(route.volume.to_bits()))
+        .map(|route| route.volume.to_bits())
         .sum();
     ((volume as f64) / 1_000_000.0).clamp(0.0, 1.0) as f32
 }

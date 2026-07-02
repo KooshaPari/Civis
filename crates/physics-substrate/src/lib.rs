@@ -194,7 +194,10 @@ impl GridSpec {
     /// zero-sized lattice is meaningless for a conservation invariant).
     #[must_use]
     pub const fn new(dims: [usize; 3]) -> Self {
-        assert!(dims[0] > 0 && dims[1] > 0 && dims[2] > 0, "GridSpec dims must be non-zero");
+        assert!(
+            dims[0] > 0 && dims[1] > 0 && dims[2] > 0,
+            "GridSpec dims must be non-zero"
+        );
         Self { dims }
     }
 
@@ -463,12 +466,7 @@ impl PhysicsFields {
     }
     /// Replace `field[p]` with `value`. Used by `evolve()`'s operators and
     /// `WorldState` projection paths. Same guarantees as `set`.
-    pub fn replace(
-        &mut self,
-        field: Field,
-        p: IVec3,
-        value: f32,
-    ) -> Result<(), SubstrateError> {
+    pub fn replace(&mut self, field: Field, p: IVec3, value: f32) -> Result<(), SubstrateError> {
         if !value.is_finite() {
             return Err(SubstrateError::NonFinite {
                 field,
@@ -801,7 +799,7 @@ mod tests {
         for z in 0..2 {
             for y in 0..2 {
                 for x in 0..2 {
-                    let p = IVec3::new(x as i32, y as i32, z as i32);
+                    let p = IVec3::new(x, y, z);
                     let value = (x * 100 + y * 10 + z) as f32;
                     grid.update(p, Field::T, |_| value).unwrap();
                     assert_eq!(grid.get(p), value, "round-trip failed at {p:?}");
@@ -812,10 +810,14 @@ mod tests {
         assert_eq!(grid.get(IVec3::new(-1, 0, 0)), 0.0);
         assert_eq!(grid.get(IVec3::new(2, 0, 0)), 0.0);
         // Out-of-bounds writes return Err.
-        let err = grid.update(IVec3::new(2, 0, 0), Field::T, |v| v + 1.0).unwrap_err();
+        let err = grid
+            .update(IVec3::new(2, 0, 0), Field::T, |v| v + 1.0)
+            .unwrap_err();
         assert!(matches!(err, SubstrateError::OutOfBounds { .. }));
         // NaN-producing update returns Err(SubstrateError::NonFinite).
-        let nan_err = grid.update(IVec3::ZERO, Field::T, |_| f32::NAN).unwrap_err();
+        let nan_err = grid
+            .update(IVec3::ZERO, Field::T, |_| f32::NAN)
+            .unwrap_err();
         assert!(matches!(nan_err, SubstrateError::NonFinite { .. }));
     }
 
@@ -844,7 +846,9 @@ mod tests {
         assert!((fields.get(Field::T, p) - TEMP_MAX_K).abs() < 1e-3);
 
         // Negative delta would push below 0 K; clamped to 0.
-        fields.set(Field::T, p, -1e9, WriteSource::Substrate).unwrap();
+        fields
+            .set(Field::T, p, -1e9, WriteSource::Substrate)
+            .unwrap();
         assert_eq!(fields.get(Field::T, p), 0.0);
 
         // NaN delta is rejected outright.
@@ -855,7 +859,12 @@ mod tests {
 
         // Out-of-bounds write is rejected.
         let err = fields
-            .set(Field::T, IVec3::new(99, 99, 99), 1.0, WriteSource::Substrate)
+            .set(
+                Field::T,
+                IVec3::new(99, 99, 99),
+                1.0,
+                WriteSource::Substrate,
+            )
             .unwrap_err();
         assert!(matches!(err, SubstrateError::OutOfBounds { .. }));
     }
@@ -870,9 +879,7 @@ mod tests {
         let spec = GridSpec::new([3, 1, 1]);
         let mut fields = PhysicsFields::new(spec);
         for (x, t) in [(0_i32, 100.0_f32), (1, 200.0), (2, 300.0)] {
-            fields
-                .replace(Field::T, IVec3::new(x, 0, 0), t)
-                .unwrap();
+            fields.replace(Field::T, IVec3::new(x, 0, 0), t).unwrap();
         }
         // Interior cell (1,0,0): symmetric difference → 100.0 on X axis.
         let mid = fields.grad(Field::T, IVec3::new(1, 0, 0));
@@ -881,10 +888,16 @@ mod tests {
         assert_eq!(mid.z, 0.0);
         // Left edge cell (0,0,0): one-sided forward difference → 100.0.
         let left = fields.grad(Field::T, IVec3::new(0, 0, 0));
-        assert!((left.x - 100.0).abs() < 1e-4, "left-edge X gradient: {left:?}");
+        assert!(
+            (left.x - 100.0).abs() < 1e-4,
+            "left-edge X gradient: {left:?}"
+        );
         // Right edge cell (2,0,0): one-sided backward difference → 100.0.
         let right = fields.grad(Field::T, IVec3::new(2, 0, 0));
-        assert!((right.x - 100.0).abs() < 1e-4, "right-edge X gradient: {right:?}");
+        assert!(
+            (right.x - 100.0).abs() < 1e-4,
+            "right-edge X gradient: {right:?}"
+        );
     }
 
     /// FR-PHYS-substrate-004 — `evolve()` is mass-conserving: with all
@@ -949,15 +962,9 @@ mod tests {
         let cold = 100.0_f32;
         let hot = 400.0_f32;
         // Seed: cold | hot | cold.
-        fields
-            .replace(Field::T, IVec3::new(0, 0, 0), cold)
-            .unwrap();
-        fields
-            .replace(Field::T, IVec3::new(1, 0, 0), hot)
-            .unwrap();
-        fields
-            .replace(Field::T, IVec3::new(2, 0, 0), cold)
-            .unwrap();
+        fields.replace(Field::T, IVec3::new(0, 0, 0), cold).unwrap();
+        fields.replace(Field::T, IVec3::new(1, 0, 0), hot).unwrap();
+        fields.replace(Field::T, IVec3::new(2, 0, 0), cold).unwrap();
 
         let before_total = fields.sum(Field::T);
         let report = fields.evolve(1.0);
@@ -999,13 +1006,19 @@ mod tests {
             .replace(Field::T, IVec3::new(0, 0, 0), 600.0)
             .unwrap();
         fields.replace(Field::M, IVec3::new(0, 0, 0), 0.0).unwrap();
-        fields.replace(Field::B, IVec3::new(0, 0, 0), 100.0).unwrap();
+        fields
+            .replace(Field::B, IVec3::new(0, 0, 0), 100.0)
+            .unwrap();
         // Cell 1: optimal T, moist — full regrowth.
         fields
             .replace(Field::T, IVec3::new(1, 0, 0), BIOMASS_OPTIMAL_TEMP)
             .unwrap();
-        fields.replace(Field::M, IVec3::new(1, 0, 0), 1.0e3).unwrap();
-        fields.replace(Field::B, IVec3::new(1, 0, 0), 100.0).unwrap();
+        fields
+            .replace(Field::M, IVec3::new(1, 0, 0), 1.0e3)
+            .unwrap();
+        fields
+            .replace(Field::B, IVec3::new(1, 0, 0), 100.0)
+            .unwrap();
 
         let report = fields.evolve(1.0);
         let cell0 = fields.get(Field::B, IVec3::new(0, 0, 0));

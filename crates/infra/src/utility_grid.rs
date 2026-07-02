@@ -352,8 +352,8 @@ impl UtilityGrid {
                 bottleneck =
                     bottleneck.min(residual_demand.get(&sink).copied().unwrap_or(0.0).max(0.0));
                 for edge_id in &path {
-                    bottleneck = bottleneck
-                        .min(residual_edge.get(edge_id).copied().unwrap_or(0.0).max(0.0));
+                    bottleneck =
+                        bottleneck.min(residual_edge.get(edge_id).copied().unwrap_or(0.0).max(0.0));
                 }
                 if bottleneck <= 0.0 {
                     // No edge has capacity -> retire this source for the
@@ -450,9 +450,7 @@ impl UtilityGrid {
                 .unwrap_or_default();
             outgoing.sort_by_key(|(eid, nid)| (*eid, *nid));
             for (edge_id, neighbour) in outgoing {
-                if let std::collections::btree_map::Entry::Vacant(entry) =
-                    parent.entry(neighbour)
-                {
+                if let std::collections::btree_map::Entry::Vacant(entry) = parent.entry(neighbour) {
                     entry.insert((edge_id, node));
                     frontier.push_back(neighbour);
                 }

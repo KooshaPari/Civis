@@ -51,7 +51,12 @@ impl EmergentLayout {
     ///
     /// An `EmergentLayout` with strategy, density, and spacing tuned to
     /// the settlement's emergent properties.
-    pub fn compute(culture: f32, population: u32, food_surplus: f32, metal_available: f32) -> Self {
+    pub fn compute(
+        culture: f32,
+        population: u32,
+        food_surplus: f32,
+        _metal_available: f32,
+    ) -> Self {
         // Normalize culture to 0..1 range for strategy selection.
         let culture_normalized = (culture / 100.0).clamp(0.0, 1.0);
 
@@ -103,7 +108,7 @@ impl EmergentLayout {
         self.density = (self.density * (1.0 - scarcity * 0.5)).clamp(0.1, 0.95);
 
         // Tighter spacing under pressure.
-        self.spacing = self.spacing / (1.0 + scarcity);
+        self.spacing /= 1.0 + scarcity;
 
         self
     }

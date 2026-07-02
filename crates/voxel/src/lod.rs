@@ -207,7 +207,7 @@ impl DownsampledChunk {
                 .checked_shl(lod_level.0 as u32)
                 .unwrap_or(usize::MAX)
         };
-        let sampled_edge = (original_edge_size + stride - 1) / stride;
+        let sampled_edge = original_edge_size.div_ceil(stride);
         let expected_sample_count = sampled_edge.pow(3);
         Self {
             lod_level,

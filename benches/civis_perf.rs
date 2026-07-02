@@ -1,10 +1,12 @@
-use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion};
 use civ_agents::{spawn_many, tick_movement};
 use civ_economy::{step as economy_step, EconomyState, InstitutionLedger};
 use civ_voxel::fluid_ca::{step_with_config, CaGrid};
-use civ_voxel::{material::AIR, material::WATER, BoundaryConfig, MaterialRegistry};
+use civ_voxel::material::{MaterialRegistry, AIR, WATER};
+use civ_voxel::BoundaryConfig;
+use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
+use std::hint::black_box;
 
 fn ca_fixture() -> (CaGrid, MaterialRegistry) {
     let mut grid = CaGrid::new([8 * 16, 16, 8 * 16]);
@@ -24,13 +26,9 @@ fn bench_ca_step(c: &mut Criterion) {
         b.iter_batched(
             ca_fixture,
             |(mut grid, registry)| {
-                let outcome = step_with_config(
-                    black_box(&mut grid),
-                    registry,
-                    BoundaryConfig::closed(),
-                    0,
-                );
-                black_box((outcome.changed, outcome.changed_chunks.len()))
+                let changed =
+                    step_with_config(black_box(&mut grid), registry, BoundaryConfig::closed(), 0);
+                black_box((changed, grid.last_changed_chunks.len()))
             },
             BatchSize::SmallInput,
         );
@@ -72,5 +70,10 @@ fn bench_economy_tick(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, bench_ca_step, bench_agent_update, bench_economy_tick);
+criterion_group!(
+    benches,
+    bench_ca_step,
+    bench_agent_update,
+    bench_economy_tick
+);
 criterion_main!(benches);

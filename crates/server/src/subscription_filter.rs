@@ -150,7 +150,7 @@ impl SubscriptionFilter {
         if !self.active || self.tick_stride <= 1 {
             return true;
         }
-        tick.is_multiple_of(u64::from(self.tick_stride))
+        tick % u64::from(self.tick_stride) == 0
     }
 
     /// Return the subset of frames allowed by this filter (cloned).
@@ -200,9 +200,10 @@ fn build_filter(
                 subscription_id,
             };
         }
-        let mut filter = SubscriptionFilter::default();
-        filter.subscription_id = subscription_id;
-        return filter;
+        return SubscriptionFilter {
+            subscription_id,
+            ..SubscriptionFilter::default()
+        };
     };
 
     let kinds = parse_kind_csv(source).unwrap_or_default();
@@ -344,7 +345,7 @@ mod tests {
     use civ_engine::Simulation;
     use civ_protocol_3d::{
         AgentAppearanceFrame, BuildingDiffFrame, BuildingProvenance, CivilianStateFrame,
-        ClimateFrame, EventFeedFrame, FactionStateFrame, VoxelDeltaFrame,
+        ClimateFrame, EventFeedFrame, VoxelDeltaFrame,
     };
 
     fn sample_frames() -> [Frame3d; 3] {

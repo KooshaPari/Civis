@@ -1,3 +1,13 @@
+#![allow(dead_code, deprecated, unused_assignments)]
+#![allow(
+    clippy::if_same_then_else,
+    clippy::inconsistent_digit_grouping,
+    clippy::manual_clamp,
+    clippy::needless_range_loop,
+    clippy::too_many_arguments,
+    clippy::type_complexity
+)]
+
 pub mod audio;
 pub mod building_layouts;
 pub mod command_queue;

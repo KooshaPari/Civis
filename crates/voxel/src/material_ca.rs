@@ -227,7 +227,7 @@ mod tests {
         grid.set(1, 0, 0, AIR);
         grid.mark_dirty_cell(1, 2, 0);
 
-        let mut scratch = grid.scratch_view();
+        let scratch = grid.scratch_view();
         water_step(&mut grid, &scratch, 1, 2, 0);
         grid.restore_scratch(scratch);
 
@@ -244,7 +244,7 @@ mod tests {
         grid.mark_dirty_cell(1, 1, 0);
         grid.mark_dirty_cell(0, 1, 0);
 
-        let mut scratch = grid.scratch_view();
+        let scratch = grid.scratch_view();
         fire_step(&mut grid, &scratch, reg(), 1, 1, 0, 0);
         grid.restore_scratch(scratch);
 
@@ -265,7 +265,7 @@ mod tests {
         grid.set(0, 0, 0, AIR);
         grid.mark_dirty_cell(0, 2, 0);
 
-        let mut scratch = grid.scratch_view();
+        let scratch = grid.scratch_view();
         sand_step(&mut grid, &scratch, 0, 2, 0);
         grid.restore_scratch(scratch);
 
@@ -282,7 +282,7 @@ mod tests {
         grid.mark_dirty_cell(0, 2, 0);
         grid.refresh_scratch();
 
-        let mut scratch = grid.scratch_view();
+        let scratch = grid.scratch_view();
         water_step(&mut grid, &scratch, 0, 2, 0);
         grid.restore_scratch(scratch);
 
@@ -298,7 +298,7 @@ mod tests {
         grid.mark_dirty_cell(1, 1, 0);
         grid.mark_dirty_cell(0, 1, 0);
 
-        let mut scratch = grid.scratch_view();
+        let scratch = grid.scratch_view();
         fire_step(&mut grid, &scratch, reg(), 1, 1, 0, 0);
         grid.restore_scratch(scratch);
 
@@ -314,7 +314,7 @@ mod tests {
         grid.set(0, 0, 0, SAND);
         grid.mark_dirty_cell(0, 0, 0);
 
-        let mut scratch = grid.scratch_view();
+        let scratch = grid.scratch_view();
         sand_step(&mut grid, &scratch, 0, 0, 0);
         grid.restore_scratch(scratch);
 

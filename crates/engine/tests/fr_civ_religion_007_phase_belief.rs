@@ -41,36 +41,36 @@ fn fr_civ_religion_007_apply_big_gods_response_keeps_scalars_in_unit_interval() 
     // scalars to [0, 1] across a wide variety of substrate gradients.
     let cases: &[fn() -> SubstrateGradients] = &[
         || SubstrateGradients {
-            grad_T: 0.0,
-            grad_M: 0.0,
-            grad_B: 0.0,
+            grad_t: 0.0,
+            grad_m: 0.0,
+            grad_b: 0.0,
             kinship_density: 0.0,
             unrest: 0.0,
             migration_rate: 0.0,
             language_distance: 0.0,
         },
         || SubstrateGradients {
-            grad_T: 1.0,
-            grad_M: 1.0,
-            grad_B: 1.0,
+            grad_t: 1.0,
+            grad_m: 1.0,
+            grad_b: 1.0,
             kinship_density: 1.0,
             unrest: 1.0,
             migration_rate: 1.0,
             language_distance: 1.0,
         },
         || SubstrateGradients {
-            grad_T: -0.5,
-            grad_M: 0.5,
-            grad_B: 0.0,
+            grad_t: -0.5,
+            grad_m: 0.5,
+            grad_b: 0.0,
             kinship_density: 0.3,
             unrest: -0.3,
             migration_rate: 0.2,
             language_distance: 0.4,
         },
         || SubstrateGradients {
-            grad_T: 0.9,
-            grad_M: 0.1,
-            grad_B: 0.8,
+            grad_t: 0.9,
+            grad_m: 0.1,
+            grad_b: 0.8,
             kinship_density: 0.7,
             unrest: 0.9,
             migration_rate: 0.0,
@@ -107,9 +107,9 @@ fn fr_civ_religion_007_apply_big_gods_response_is_deterministic() {
     // This is the contract the engine wiring depends on for replay determinism
     // (every SettlementId processed in the same order produces the same profile).
     let mk = || SubstrateGradients {
-        grad_T: 0.5,
-        grad_M: 0.3,
-        grad_B: 0.7,
+        grad_t: 0.5,
+        grad_m: 0.3,
+        grad_b: 0.7,
         kinship_density: 0.6,
         unrest: 0.2,
         migration_rate: 0.1,
@@ -145,9 +145,9 @@ fn fr_civ_religion_007_substrate_gradients_for_returns_default_shape() {
     // unconditionally without range-checking.
     for sid in [0u32, 1, 42, u32::MAX] {
         let g = substrate_gradients_for(sid);
-        assert!(g.grad_T.is_finite(), "sid={} grad_T not finite", sid);
-        assert!(g.grad_M.is_finite(), "sid={} grad_M not finite", sid);
-        assert!(g.grad_B.is_finite(), "sid={} grad_B not finite", sid);
+        assert!(g.grad_t.is_finite(), "sid={} grad_t not finite", sid);
+        assert!(g.grad_m.is_finite(), "sid={} grad_m not finite", sid);
+        assert!(g.grad_b.is_finite(), "sid={} grad_b not finite", sid);
         assert!(
             g.kinship_density.is_finite(),
             "sid={} kinship_density not finite",

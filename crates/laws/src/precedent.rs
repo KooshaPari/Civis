@@ -240,12 +240,7 @@ impl PrecedentBook {
     }
 
     /// Same as [`Self::bias`] but with an explicit `decay_per_tick`.
-    pub fn bias_with_decay(
-        &self,
-        case: &Case,
-        now_tick: u64,
-        decay_per_tick: f32,
-    ) -> BiasVerdict {
+    pub fn bias_with_decay(&self, case: &Case, now_tick: u64, decay_per_tick: f32) -> BiasVerdict {
         let mut influences = Vec::with_capacity(self.entries.len());
         let mut net: f32 = 0.0;
         for prec in &self.entries {
@@ -255,10 +250,8 @@ impl PrecedentBook {
             }
             let age = now_tick.saturating_sub(prec.ruling.tick) as f32;
             let recency = 1.0 / (1.0 + age * decay_per_tick.max(0.0));
-            let contribution = prec.ruling.outcome.sign() as f32
-                * sim
-                * prec.weight_factor()
-                * recency;
+            let contribution =
+                prec.ruling.outcome.sign() as f32 * sim * prec.weight_factor() * recency;
             net += contribution;
             influences.push(CaseBias {
                 precedent_id: prec.id,

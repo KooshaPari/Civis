@@ -8,9 +8,7 @@
 use civ_emergence_metrics::criticality::{
     criticality_indicator, CriticalityBands, CriticalityInputs,
 };
-use civ_emergence_metrics::dashboard::{
-    coupling_mi_estimate, novelty_score, NOVELTY_RATE_CEILING,
-};
+use civ_emergence_metrics::dashboard::{coupling_mi_estimate, novelty_score, NOVELTY_RATE_CEILING};
 
 const EPS: f32 = 1e-5;
 
@@ -59,5 +57,5 @@ fn fr_emergence_dashboard_criticality_indicator_peaks_in_operational_band() {
         low < peak,
         "off-band criticality ({low}) must score below in-band ({peak})"
     );
-    assert!(low >= 0.0 && low <= 1.0);
+    assert!((0.0..=1.0).contains(&low));
 }

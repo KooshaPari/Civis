@@ -64,8 +64,8 @@ pub fn derive_music_cue(
         + 1.0)
         * 0.5;
     MusicCue {
-        scale: (((seed + 0.17 * pulse + cluster_id as f32 * 0.13).fract()).max(0.0) * 12.0)
-            .floor() as u8,
+        scale: (((seed + 0.17 * pulse + cluster_id as f32 * 0.13).fract()).max(0.0) * 12.0).floor()
+            as u8,
         tempo_bpm: (60.0 + seed * 65.0 + aggression * 25.0 + pulse * 20.0).clamp(60.0, 180.0),
         rhythm: (0.15 + culture[1] * 0.5 + aggression * 0.2 + pulse * 0.15).clamp(0.0, 1.0),
     }

@@ -385,13 +385,7 @@ mod tests {
             health: 0.5,
         };
         assert!(should_reproduce(
-            &a,
-            &b,
-            &graph_a,
-            &graph_b,
-            &needs,
-            &needs,
-            &params
+            &a, &b, &graph_a, &graph_b, &needs, &needs, &params
         ));
     }
 }

@@ -104,7 +104,11 @@ fn emergence_quality_phase_life_cluster_size_distribution_is_zipfian() {
     let dirac = Histogram::from_counts(vec![50]);
     let degenerate = PowerLawFit.compute_rank_frequency(&dirac);
     assert_eq!(
-        degenerate, PowerLawResult { alpha: 0.0, r_squared: 0.0 },
+        degenerate,
+        PowerLawResult {
+            alpha: 0.0,
+            r_squared: 0.0
+        },
         "single-cluster Dirac should give degenerate fit (alpha=0, R²=0)"
     );
 
@@ -136,10 +140,7 @@ fn emergence_quality_phase_life_cluster_entropy_is_diversified() {
         h > 0.1,
         "cluster_entropy({sizes:?}) = {h}, expected > 0.1 (diversified)"
     );
-    assert!(
-        h <= 1.0 + H_TOL,
-        "cluster_entropy must be ≤ 1.0, got {h}"
-    );
+    assert!(h <= 1.0 + H_TOL, "cluster_entropy must be ≤ 1.0, got {h}");
 
     // A single-mega-cluster world collapses entropy to 0 — the
     // pass-through-stub detector.
@@ -366,7 +367,7 @@ fn emergence_quality_phase_stratification_wealth_zipf_fits_alpha_one_to_two() {
 
 /// §3.10 — categorical label histogram over 5 economic-focus bins
 /// classifies as "diversified" when the labels are spread (entropy
-/// > 0.5 bits) and as "collapsed" when they all sit in one bin
+/// \> 0.5 bits) and as "collapsed" when they all sit in one bin
 /// (entropy = 0).
 #[test]
 fn emergence_quality_phase_economic_focus_label_distribution_is_diversified() {
@@ -430,10 +431,7 @@ fn emergence_quality_phase_emergence_saga_graph_grows_sublinearly() {
         "saga growth: |alpha|={} not in [0.5, 1.5]",
         alpha.abs()
     );
-    assert!(
-        r_squared > 0.85,
-        "saga growth: R²={r_squared} not > 0.85"
-    );
+    assert!(r_squared > 0.85, "saga growth: R²={r_squared} not > 0.85");
 }
 
 /// §3.11 — social-tie degree histogram over 200 agents fits
@@ -481,7 +479,7 @@ fn emergence_quality_phase_emergence_social_graph_degree_is_heavy_tailed() {
 // EMERGENCE_TESTS_PLAN §3.11 test 5 requires: cluster culture entropy
 // rises between t=0 and t=200, then stabilises by t=1000. We test the
 // metric side: two categorical histograms of cluster IDs weighted by a
-/// trait, taken at different ticks, show *rising* Shannon entropy.
+// trait, taken at different ticks, show *rising* Shannon entropy.
 
 /// §3.11 — cluster-culture entropy *rises* between tick 0 and tick 200
 /// (cultures diverge), then is *bounded* by tick 1000 (cultures
@@ -531,7 +529,10 @@ fn emergence_quality_coupling_mi_detects_layer_correlation() {
     }
     let mi_coupled = mutual_information_bits(&coupled);
     let nmi_coupled = mutual_information_normalised(&coupled);
-    assert!(mi_coupled > 1.5, "coupled MI should be high, got {mi_coupled}");
+    assert!(
+        mi_coupled > 1.5,
+        "coupled MI should be high, got {mi_coupled}"
+    );
     assert!(
         (nmi_coupled - 1.0).abs() < H_TOL,
         "coupled NMI should be 1.0, got {nmi_coupled}"
@@ -560,7 +561,7 @@ fn emergence_quality_coupling_mi_detects_layer_correlation() {
 // EMERGENCE_TESTS_PLAN §0 / §3 row "structure_count" requires: 6-
 // connectivity component count on a binary mask is `> 1` and bounded
 // above. We assert the metric on a synthetic voxel grid that the
-/// `phase_emergence` saga-cascade would produce.
+// `phase_emergence` saga-cascade would produce.
 
 /// §0 — `StructureCount::evaluate` on a synthetic voxel grid yields
 /// `count > 1` (multiple structures formed) and `count ≤ foreground`
@@ -600,7 +601,10 @@ fn emergence_quality_structure_count_is_bounded_on_synthetic_grid() {
 
     assert_eq!(count, 2, "two blocks should be two components, got {count}");
     assert_eq!(largest, 8, "each block is 8 cells, got {largest}");
-    assert_eq!(foreground, 16, "foreground should be 16 cells, got {foreground}");
+    assert_eq!(
+        foreground, 16,
+        "foreground should be 16 cells, got {foreground}"
+    );
     assert!(
         count <= foreground,
         "structure count must not exceed foreground (runaway detector): {count} > {foreground}"
@@ -623,7 +627,7 @@ fn emergence_quality_structure_count_is_bounded_on_synthetic_grid() {
 // Shannon-entropy signal (test 4 in §3.5) and a branching-regime
 // signal (same plan section) that agree on "bounded walk". This
 // prevents a hardcoded-constant stub from passing one but failing the
-/// other.
+// other.
 
 /// §3.5 cross-check — the bounded-walk entropy (test above) and the
 /// bounded-walk sigma classifier (test above) agree on the *same*
@@ -665,7 +669,7 @@ fn emergence_quality_phase_unrest_entropy_and_branching_agree() {
     }
     let sigma_bar = rolling_mean_sigma(&ledger, ledger.len());
     assert!(
-        sigma_bar >= SIGMA_SUBCRITICAL && sigma_bar <= SIGMA_SUPERCRITICAL + 0.1,
+        (SIGMA_SUBCRITICAL..=SIGMA_SUPERCRITICAL + 0.1).contains(&sigma_bar),
         "branching branch: σ̄={sigma_bar} not in target band [{SIGMA_SUBCRITICAL}, {SIGMA_SUPERCRITICAL}]"
     );
 

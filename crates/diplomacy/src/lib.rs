@@ -1105,10 +1105,10 @@ fn stance_for(standing: i32, config: &DiplomacyConfig) -> Stance {
 
 /// Convert a `damage.energy` value to a hostility-amplifying bump magnitude.
 ///
-/// 0 energy -> 0 (no substrate change). Otherwise we take `floor(log10(energy))`
-/// + 1 so that even small skirmishes move standing a little, and large
-/// engagements move it a lot — without ever using floats. Clamped to a
-/// sensible range to keep the substrate bounded.
+/// Zero energy maps to 0 (no substrate change). Otherwise we take
+/// `floor(log10(energy)) + 1` so that even small skirmishes move standing a
+/// little, and large engagements move it a lot — without ever using floats.
+/// Clamped to a sensible range to keep the substrate bounded.
 fn bump_from_energy(energy: u32) -> i32 {
     if energy == 0 {
         return 0;
@@ -1527,7 +1527,7 @@ mod tests {
         assert!(approx_eq(opinion.value, expected));
         assert_eq!(opinion.memory.len(), 1);
         assert_eq!(opinion.memory[0], (42, expected));
-        assert!(network.opinions.get(&(actor, target)).is_none());
+        assert!(!network.opinions.contains_key(&(actor, target)));
     }
 
     /// Opinion history is capped at the most recent 20 events.
@@ -2255,6 +2255,6 @@ mod tests {
 
     #[test]
     fn schema_version_is_positive() {
-        assert!(SCHEMA_VERSION >= 1);
+        assert!(std::hint::black_box(SCHEMA_VERSION) >= 1);
     }
 }

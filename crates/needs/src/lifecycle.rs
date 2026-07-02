@@ -76,8 +76,8 @@ pub fn age_threshold(dna: &Dna, params: &LifecycleParams) -> u16 {
     );
     let longevity_score = cognition_score(dna, &longevity_profile);
     let dna_span = 50.0 + 70.0 * longevity_score;
-    let blended = 90.0 * (1.0 - params.longevity_dna_weight)
-        + dna_span * params.longevity_dna_weight;
+    let blended =
+        90.0 * (1.0 - params.longevity_dna_weight) + dna_span * params.longevity_dna_weight;
     blended.round().clamp(50.0, 120.0) as u16
 }
 
@@ -175,10 +175,7 @@ impl Default for ActiveLifecycleParams {
 /// social support are above configured levels. This is deterministic on needs
 /// state only; the caller supplies a seeded RNG for the stochastic roll.
 #[must_use]
-pub fn can_birth(
-    needs: &crate::Needs,
-    params: &ActiveLifecycleParams,
-) -> bool {
+pub fn can_birth(needs: &crate::Needs, params: &ActiveLifecycleParams) -> bool {
     needs.food >= params.birth_food_threshold
         && needs.safety >= params.birth_safety_threshold
         && needs.social >= params.birth_social_threshold
@@ -206,10 +203,7 @@ pub fn compute_unrest(needs: &crate::Needs) -> f32 {
 /// This is threshold-driven and deterministic; the caller supplies a seeded RNG
 /// for the stochastic migration roll.
 #[must_use]
-pub fn migration_pressure(
-    needs: &crate::Needs,
-    params: &ActiveLifecycleParams,
-) -> bool {
+pub fn migration_pressure(needs: &crate::Needs, params: &ActiveLifecycleParams) -> bool {
     let unrest = compute_unrest(needs);
     needs.food < params.migration_food_threshold
         || needs.safety < params.migration_safety_threshold
@@ -241,7 +235,7 @@ pub fn should_reproduce(
     if health.is_dead() {
         return 0.0;
     }
-    if age < 18 || age >= 65 {
+    if !(18..65).contains(&age) {
         return 0.0;
     }
     if health.integrity < 0.3 {
@@ -300,11 +294,27 @@ mod tests {
             LifecycleLabel::Adult
         );
         assert_eq!(
-            classify_lifecycle(70, &Health { integrity: 0.4, ..health }, 0.8, 0.8),
+            classify_lifecycle(
+                70,
+                &Health {
+                    integrity: 0.4,
+                    ..health
+                },
+                0.8,
+                0.8
+            ),
             LifecycleLabel::Elder
         );
         assert_eq!(
-            classify_lifecycle(24, &Health { integrity: 0.0, ..health }, 0.8, 0.8),
+            classify_lifecycle(
+                24,
+                &Health {
+                    integrity: 0.0,
+                    ..health
+                },
+                0.8,
+                0.8
+            ),
             LifecycleLabel::Dead
         );
     }
@@ -480,8 +490,12 @@ mod tests {
         assert!(params.birth_social_threshold > 0.0 && params.birth_social_threshold <= 1.0);
         assert!(params.birth_probability > 0.0 && params.birth_probability <= 0.5);
         assert!(params.migration_food_threshold > 0.0 && params.migration_food_threshold <= 1.0);
-        assert!(params.migration_safety_threshold > 0.0 && params.migration_safety_threshold <= 1.0);
-        assert!(params.migration_unrest_threshold > 0.0 && params.migration_unrest_threshold <= 1.0);
+        assert!(
+            params.migration_safety_threshold > 0.0 && params.migration_safety_threshold <= 1.0
+        );
+        assert!(
+            params.migration_unrest_threshold > 0.0 && params.migration_unrest_threshold <= 1.0
+        );
         assert!(params.migration_probability > 0.0 && params.migration_probability <= 0.5);
     }
 
@@ -515,6 +529,7 @@ mod tests {
         };
         assert!(!can_birth(&starving, &params));
         assert!(migration_pressure(&starving, &params));
+    }
 
     fn healthy() -> Health {
         Health {
@@ -551,13 +566,25 @@ mod tests {
         let h = healthy();
         // Food below threshold
         assert!(
-            should_reproduce(30, &h, params.fertility_food_threshold - 0.1, 1.0, 0.0, &params)
-                == 0.0
+            should_reproduce(
+                30,
+                &h,
+                params.fertility_food_threshold - 0.1,
+                1.0,
+                0.0,
+                &params
+            ) == 0.0
         );
         // Safety below threshold
         assert!(
-            should_reproduce(30, &h, 1.0, params.fertility_safety_threshold - 0.1, 0.0, &params)
-                == 0.0
+            should_reproduce(
+                30,
+                &h,
+                1.0,
+                params.fertility_safety_threshold - 0.1,
+                0.0,
+                &params
+            ) == 0.0
         );
     }
 
@@ -585,7 +612,9 @@ mod tests {
         let packed = should_reproduce(30, &h, 1.0, 1.0, 1.0, &params);
         assert!(open > crowded);
         assert!(crowded > packed);
-        assert_eq!(packed, 0.0, "full overcrowding must drive probability to zero");
+        assert_eq!(
+            packed, 0.0,
+            "full overcrowding must drive probability to zero"
+        );
     }
-}
 }

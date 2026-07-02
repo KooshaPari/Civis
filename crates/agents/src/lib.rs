@@ -482,10 +482,7 @@ pub fn choose_action(
     scorer: &dyn UtilityScorer,
     world: &WorldSnapshot,
 ) -> AgentAction {
-    assert!(
-        !available.is_empty(),
-        "available actions must not be empty"
-    );
+    assert!(!available.is_empty(), "available actions must not be empty");
 
     let mut best_action = available[0];
     let mut best_score = scorer.score_action(&best_action, needs, world);
@@ -1393,10 +1390,7 @@ mod tests {
             0.5
         );
         assert_eq!(scorer.score_action(&AgentAction::Work, &needs, &world), 0.4);
-        assert_eq!(
-            scorer.score_action(&AgentAction::Pray, &needs, &world),
-            0.3
-        );
+        assert_eq!(scorer.score_action(&AgentAction::Pray, &needs, &world), 0.3);
 
         let empty_world = WorldSnapshot::default();
         assert_eq!(
@@ -1773,10 +1767,7 @@ mod tests {
                 z: scale as i64,
             },
         };
-        let current = Velocity {
-            dx: 0.3,
-            dy: 0.7,
-        };
+        let current = Velocity { dx: 0.3, dy: 0.7 };
         let steered = drift_toward_home(&here, &home, current, 0.75);
         let len_sq = steered.dx * steered.dx + steered.dy * steered.dy;
         assert!((len_sq - 1.0).abs() < 1e-5);

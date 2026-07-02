@@ -16,7 +16,7 @@ use civ_agents::{
 };
 use civ_genetics::{
     sentience::{evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold},
-    spawn_genome_with_divergence, Dna, DnaClass, SeedDefinition, SeedLibrary, SeedSet,
+    Dna, DnaClass, SeedDefinition, SeedLibrary,
 };
 use civ_legends::{
     EventKind, IngestOutcome, LegendsConfig, LegendsWorker, RawSimEvent, Role, SagaGraph,
@@ -140,7 +140,7 @@ fn select_seed_for_position<'a>(
     // Stable iteration order: sort by id so the same world always picks the
     // same seed on the same biome (HashMap iteration is unordered).
     let mut candidates: Vec<(&String, &SeedDefinition)> = seed_library.iter().collect();
-    candidates.sort_by(|(a, _), (b, _)| a.cmp(b));
+    candidates.sort_by_key(|(a, _)| *a);
     for (_, seed) in candidates {
         if seed
             .spawn_biome_affinity
@@ -340,7 +340,7 @@ impl Simulation {
         }
 
         let mut faction_religion: BTreeMap<u32, (f32, u32)> = BTreeMap::new();
-        for (_, &faction_id) in &dominant_by_cluster {
+        for &faction_id in dominant_by_cluster.values() {
             let monitor = self
                 .religious_profiles
                 .get(&faction_id)
@@ -359,7 +359,7 @@ impl Simulation {
         }
 
         let cluster_cultures = self.emergence.cluster_cultures.clone();
-        let climate = self.climate.clone();
+        let climate = self.climate;
         let faction_ages = self.era_progression.faction_ages.clone();
         let previous_ideologies = self.faction_ideologies.clone();
         self.faction_ideologies = advance_faction_ideologies(

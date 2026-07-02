@@ -416,11 +416,10 @@ impl std::error::Error for ExtentError {}
 ///
 /// - `Inner`   → fully meshed at LOD 0 (the inner ring's "hot" zone).
 /// - `Seam`    → the cross-fade band; the renderer blends this
-///               chunk's alpha across the LOD-0 → LOD-1 transition.
+///   chunk's alpha across the LOD-0 → LOD-1 transition.
 /// - `Outer`   → past the seam; meshed at a coarser LOD.
 /// - `Frozen`  → past the render budget; only the sim's coarse or
-///               frozen cohort is computed (the renderer does not
-///               see this chunk).
+///   frozen cohort is computed (the renderer does not see this chunk).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum RingRole {
     /// Inside the inner mesh ring. Mesh at LOD 0, full alpha.

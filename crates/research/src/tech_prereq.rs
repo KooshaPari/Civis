@@ -15,7 +15,12 @@ pub enum TechPrereqError {
     /// A prerequisite references a tech id that is not registered.
     UnknownTech(TechId),
     /// Adding the dependency would create a cycle.
-    Cycle { tech: TechId, prereq: TechId },
+    Cycle {
+        /// Tech whose prerequisite edge was being added.
+        tech: TechId,
+        /// Prerequisite that would close the cycle.
+        prereq: TechId,
+    },
 }
 
 /// Directed prerequisite graph: `tech -> prerequisites`.

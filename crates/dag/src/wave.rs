@@ -29,7 +29,9 @@ pub struct NodeReport {
 /// Pluggable agent runner: shell out, call a model, run cargo, ...
 #[async_trait]
 pub trait AgentRunner: Send + Sync + std::fmt::Debug {
-    fn runner_label(&self) -> &str { "agent" }
+    fn runner_label(&self) -> &str {
+        "agent"
+    }
     async fn run(&self, node: &crate::model::Node, _lane: &Lane) -> Result<NodeReport>;
 }
 
@@ -48,13 +50,18 @@ pub struct WaveContext {
     pub wallet: Wallet,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RetryPolicy {
     pub max_attempts: u32,
     pub backoff_ms: u64,
 }
 impl Default for RetryPolicy {
-    fn default() -> Self { Self { max_attempts: 3, backoff_ms: 250 } }
+    fn default() -> Self {
+        Self {
+            max_attempts: 3,
+            backoff_ms: 250,
+        }
+    }
 }
 
 pub struct WaveExecutor {
@@ -142,21 +149,31 @@ impl WaveExecutor {
     /// completed in earlier waves, as "satisfied".
     pub async fn ready_in_wave(&self, wave: &[NodeId]) -> Vec<crate::model::Node> {
         let wave_ids: HashSet<&str> = wave.iter().map(|n| n.0.as_str()).collect();
-        let plan_done: HashSet<&str> = self.plan.nodes.iter()
-            .filter(|n| matches!(n.state, NodeState::Done | NodeState::Merged | NodeState::Verified))
+        let plan_done: HashSet<&str> = self
+            .plan
+            .nodes
+            .iter()
+            .filter(|n| {
+                matches!(
+                    n.state,
+                    NodeState::Done | NodeState::Merged | NodeState::Verified
+                )
+            })
             .map(|n| n.id.as_str())
             .collect();
         let runtime_done: HashSet<String> = {
             let g = self.completed.lock().await;
             g.iter().cloned().collect()
         };
-        self.plan.nodes.iter()
+        self.plan
+            .nodes
+            .iter()
             .filter(|n| wave_ids.contains(n.id.as_str()))
             .filter(|n| n.state == NodeState::Queued)
             .filter(|n| {
-                n.deps.iter().all(|d| {
-                    plan_done.contains(d.as_str()) || runtime_done.contains(d.as_str())
-                })
+                n.deps
+                    .iter()
+                    .all(|d| plan_done.contains(d.as_str()) || runtime_done.contains(d.as_str()))
             })
             .cloned()
             .collect()
@@ -165,22 +182,38 @@ impl WaveExecutor {
     /// Run one wave by index.
     pub async fn run_wave(&self, wave_idx: usize, ctx: WaveContext) -> Result<Vec<NodeReport>> {
         let total = self.plan.waves().len();
-        let wave = self.plan.waves().into_iter().nth(wave_idx)
+        let wave = self
+            .plan
+            .waves()
+            .into_iter()
+            .nth(wave_idx)
             .ok_or_else(|| anyhow!("wave {} out of range", wave_idx))?;
-        ctx.reporter.event(DagEvent::WaveStart { wave_id: wave_idx, total });
+        ctx.reporter.event(DagEvent::WaveStart {
+            wave_id: wave_idx,
+            total,
+        });
 
         let ready = self.ready_in_wave(&wave).await;
         if ready.is_empty() {
-            ctx.reporter.event(DagEvent::WaveEnd { wave_id: wave_idx, succeeded: 0, failed: 0 });
+            ctx.reporter.event(DagEvent::WaveEnd {
+                wave_id: wave_idx,
+                succeeded: 0,
+                failed: 0,
+            });
             return Ok(Vec::new());
         }
 
         let mut by_lane: HashMap<String, Vec<crate::model::Node>> = HashMap::new();
-        for n in ready { by_lane.entry(n.lane.clone()).or_default().push(n); }
+        for n in ready {
+            by_lane.entry(n.lane.clone()).or_default().push(n);
+        }
 
         let mut handles: Vec<JoinHandle<Result<NodeReport>>> = Vec::new();
         for (lane_id, nodes) in by_lane {
-            let lane_obj = self.plan.lanes.iter()
+            let lane_obj = self
+                .plan
+                .lanes
+                .iter()
                 .find(|l| l.id == lane_id)
                 .cloned()
                 .unwrap_or(Lane {
@@ -194,7 +227,9 @@ impl WaveExecutor {
 
             // (mutex acquisition moved into each per-node spawn to give
             //  per-task concurrency the same retry visibility)
-            let runner = self.runners.get(&lane_id)
+            let runner = self
+                .runners
+                .get(&lane_id)
                 .cloned()
                 .or_else(|| self.default_runner.clone())
                 .unwrap_or_else(|| Arc::new(NoopRunner));
@@ -204,8 +239,11 @@ impl WaveExecutor {
             let active_mutexes_h = Arc::clone(&self.active_mutexes);
             let mutex_lane_h = lane_obj.mutex.clone();
             let completed_h = Arc::clone(&self.completed);
+            let retry_policy = self.retry_policy;
             for n in nodes {
-                let permit = Arc::clone(&sem).acquire_owned().await
+                let permit = Arc::clone(&sem)
+                    .acquire_owned()
+                    .await
                     .map_err(|_| anyhow!("sem closed"))?;
                 let runner = Arc::clone(&runner);
                 let reporter = Arc::clone(&ctx_h.reporter);
@@ -213,13 +251,17 @@ impl WaveExecutor {
                 let active_h = Arc::clone(&active_mutexes_h);
                 let mutex_lane = mutex_lane_h.clone();
                 let completed_t = Arc::clone(&completed_h);
+                let max_attempts = retry_policy.max_attempts.max(1);
+                let backoff_ms = retry_policy.backoff_ms;
                 handles.push(tokio::spawn(async move {
                     let _p = permit;
                     if let Some(ref m) = mutex_lane.clone() {
                         let mut spins = 0u32;
                         loop {
                             let g = active_h.lock().await;
-                            if !g.contains(m) { break; }
+                            if !g.contains(m) {
+                                break;
+                            }
                             drop(g);
                             if spins > 240 {
                                 return Err(anyhow!("mutex {} busy too long", m));
@@ -249,8 +291,10 @@ impl WaveExecutor {
                                 break Ok(r);
                             }
                             Err(e) => {
-                                if attempt >= 3 { break Err(e); }
-                                tokio::time::sleep(Duration::from_millis(250)).await;
+                                if attempt >= max_attempts {
+                                    break Err(e);
+                                }
+                                tokio::time::sleep(Duration::from_millis(backoff_ms)).await;
                             }
                         }
                     };
@@ -273,11 +317,17 @@ impl WaveExecutor {
         let mut failed = 0usize;
         for h in handles {
             let r = h.await.map_err(|e| anyhow!("join: {e}"))??;
-            if r.summary.starts_with("FAILED") { failed += 1; }
+            if r.summary.starts_with("FAILED") {
+                failed += 1;
+            }
             reports.push(r);
         }
         let succeeded = reports.len() - failed;
-        ctx.reporter.event(DagEvent::WaveEnd { wave_id: wave_idx, succeeded, failed });
+        ctx.reporter.event(DagEvent::WaveEnd {
+            wave_id: wave_idx,
+            succeeded,
+            failed,
+        });
         Ok(reports)
     }
 
@@ -293,7 +343,8 @@ impl WaveExecutor {
                 reporter: Arc::clone(&reporter),
                 wallet: Wallet::default(),
             };
-            self.run_wave(i, ctx).await
+            self.run_wave(i, ctx)
+                .await
                 .map_err(|e| anyhow!("wave {} failed: {e}", i))?
                 .into_iter()
                 .for_each(|r| total.push(r));
@@ -307,7 +358,9 @@ impl WaveExecutor {
 pub struct NoopRunner;
 #[async_trait]
 impl AgentRunner for NoopRunner {
-    fn runner_label(&self) -> &str { "noop" }
+    fn runner_label(&self) -> &str {
+        "noop"
+    }
     async fn run(&self, node: &crate::model::Node, _lane: &Lane) -> Result<NodeReport> {
         Ok(NodeReport {
             node_id: node.id.clone(),
@@ -326,21 +379,35 @@ mod tests {
 
     fn n(id: &str, state: NodeState, deps: Vec<&str>, lane: &str) -> Node {
         Node {
-            id: id.into(), layer: "P0".into(), pr: None,
-            title: format!("t-{id}"), scope: "scope".into(),
-            state, lane: lane.into(),
+            id: id.into(),
+            layer: "P0".into(),
+            pr: None,
+            title: format!("t-{id}"),
+            scope: "scope".into(),
+            state,
+            lane: lane.into(),
             deps: deps.into_iter().map(String::from).collect(),
-            fr_ref: None, adr_ref: None, eta: None,
-            started_at: None, finished_at: None,
-            summary: None, agent: None, task: None,
+            fr_ref: None,
+            adr_ref: None,
+            eta: None,
+            started_at: None,
+            finished_at: None,
+            summary: None,
+            agent: None,
+            task: None,
         }
     }
 
     fn plan() -> Arc<Plan> {
         Arc::new(Plan {
-            id: "t".into(), version: "v0".into(),
-            layers: vec![], lanes: vec![], ticks: vec![],
-            pillars: vec![], queued_pillars: vec![], phases: vec![],
+            id: "t".into(),
+            version: "v0".into(),
+            layers: vec![],
+            lanes: vec![],
+            ticks: vec![],
+            pillars: vec![],
+            queued_pillars: vec![],
+            phases: vec![],
             nodes: vec![
                 n("root", NodeState::Queued, vec![], "core"),
                 n("left", NodeState::Queued, vec!["root"], "core"),
@@ -348,7 +415,8 @@ mod tests {
                 n("done", NodeState::Done, vec![], "core"),
             ],
             metadata: PlanMeta {
-                total_nodes: 4, total_ticks: 0,
+                total_nodes: 4,
+                total_ticks: 0,
                 last_updated: chrono::Utc::now(),
                 source_path: PathBuf::from("t.md"),
             },
@@ -363,7 +431,9 @@ mod tests {
         let mut found_ready = false;
         for w in &waves {
             let r = ex.ready_in_wave(w).await;
-            if !r.is_empty() { found_ready = true; }
+            if !r.is_empty() {
+                found_ready = true;
+            }
         }
         assert!(found_ready);
     }

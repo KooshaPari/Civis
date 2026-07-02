@@ -44,10 +44,7 @@ pub enum SaveDbError {
     #[error("lock poisoned")]
     LockPoisoned,
     #[error("io error at {path}: {message}")]
-    Io {
-        path: PathBuf,
-        message: String,
-    },
+    Io { path: PathBuf, message: String },
     #[error("save slot not found: {0}")]
     NotFound(String),
     #[error("save archive is empty or unreadable: {path}")]
@@ -366,11 +363,10 @@ fn read_archive_bytes(path: &Path) -> Result<Vec<u8>, SaveDbError> {
         message: err.to_string(),
     })?;
     let mut buf = Vec::new();
-    file.read_to_end(&mut buf)
-        .map_err(|err| SaveDbError::Io {
-            path: path.to_path_buf(),
-            message: err.to_string(),
-        })?;
+    file.read_to_end(&mut buf).map_err(|err| SaveDbError::Io {
+        path: path.to_path_buf(),
+        message: err.to_string(),
+    })?;
     if buf.is_empty() {
         return Err(SaveDbError::EmptyArchive {
             path: path.to_path_buf(),

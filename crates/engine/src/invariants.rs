@@ -50,7 +50,7 @@ pub fn check_tick_invariants(sim: &Simulation) -> Result<(), InvariantError> {
 
     if sim.state.energy_budget_joules.to_bits() < Fixed::ZERO.to_bits() {
         return Err(InvariantError::NegativeEnergyBudget {
-            raw: i64::from(sim.state.energy_budget_joules.to_bits()),
+            raw: sim.state.energy_budget_joules.to_bits(),
         });
     }
 

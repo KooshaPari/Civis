@@ -20,10 +20,24 @@ use crate::model::{Node, NodeState, Plan};
 /// Stream of DAG events produced by [`crate::wave::WaveExecutor`].
 #[derive(Debug, Clone)]
 pub enum DagEvent {
-    WaveStart { wave_id: usize, total: usize },
-    NodeStarted { node: String, agent: String },
-    NodeFinished { node: String, duration_ms: u64, summary: String },
-    WaveEnd { wave_id: usize, succeeded: usize, failed: usize },
+    WaveStart {
+        wave_id: usize,
+        total: usize,
+    },
+    NodeStarted {
+        node: String,
+        agent: String,
+    },
+    NodeFinished {
+        node: String,
+        duration_ms: u64,
+        summary: String,
+    },
+    WaveEnd {
+        wave_id: usize,
+        succeeded: usize,
+        failed: usize,
+    },
 }
 
 pub trait Reporter: Send + Sync {
@@ -85,13 +99,30 @@ impl Reporter for RecorderReporter {
 
 impl ReportSnapshot {
     pub fn from_plan(plan: &Plan) -> Self {
-        let done = plan.nodes.iter().filter(|n| matches!(n.state, NodeState::Done | NodeState::Merged | NodeState::Verified)).count();
+        let done = plan
+            .nodes
+            .iter()
+            .filter(|n| {
+                matches!(
+                    n.state,
+                    NodeState::Done | NodeState::Merged | NodeState::Verified
+                )
+            })
+            .count();
         let total = plan.nodes.len();
-        let ratio = if total == 0 { 1.0 } else { done as f64 / total as f64 };
+        let ratio = if total == 0 {
+            1.0
+        } else {
+            done as f64 / total as f64
+        };
         let bar = Self::bar(10, ratio);
         let progress_line = format!(
             "Progress █{}░░░ ~{:.0}% {}/{} FRs",
-            bar.chars().take((ratio * 10.0).round() as usize).collect::<String>().len().min(10),
+            bar.chars()
+                .take((ratio * 10.0).round() as usize)
+                .collect::<String>()
+                .len()
+                .min(10),
             ratio * 100.0,
             done,
             total
@@ -110,13 +141,19 @@ impl ReportSnapshot {
                     done,
                     total,
                     elapsed_secs: 0,
-                    eta_secs: if ratio > 0.0 { Some(((total - done) as f64 * 60.0) as u64) } else { None },
+                    eta_secs: if ratio > 0.0 {
+                        Some(((total - done) as f64 * 60.0) as u64)
+                    } else {
+                        None
+                    },
                 }
             })
             .collect();
 
         let dag_tree = Self::render_dag(plan, 80);
-        let agents: Vec<AgentRow> = plan.nodes.iter()
+        let agents: Vec<AgentRow> = plan
+            .nodes
+            .iter()
             .filter(|n| n.agent.is_some())
             .map(|n| AgentRow {
                 agent: n.agent.clone().unwrap_or_default(),
@@ -125,17 +162,32 @@ impl ReportSnapshot {
                 summary: n.summary.clone().unwrap_or_default(),
             })
             .collect();
-        let next_steps = plan.queued_pillars.iter().take(5).map(|p| format!("▶ {}", p.fr_id)).collect();
+        let next_steps = plan
+            .queued_pillars
+            .iter()
+            .take(5)
+            .map(|p| format!("▶ {}", p.fr_id))
+            .collect();
 
-        Self { progress_line, epics, dag_tree, agents, next_steps }
+        Self {
+            progress_line,
+            epics,
+            dag_tree,
+            agents,
+            next_steps,
+        }
     }
 
     /// Render a progress bar of `width` blocks filled by `ratio` (0..=1).
     pub fn bar(width: usize, ratio: f64) -> String {
         let full = (ratio * width as f64).round().clamp(0.0, width as f64) as usize;
         let mut s = String::with_capacity(width * 3);
-        for _ in 0..full { s.push('█'); }
-        for _ in full..width { s.push('░'); }
+        for _ in 0..full {
+            s.push('█');
+        }
+        for _ in full..width {
+            s.push('░');
+        }
         s
     }
 
@@ -145,11 +197,16 @@ impl ReportSnapshot {
         let _ = writeln!(out, "DAG (waves={})", plan.waves().len());
         for (i, wave) in plan.waves().iter().enumerate() {
             let _ = writeln!(out, "  wave {i}");
-            let mut q: VecDeque<&Node> = wave.iter()
+            let mut q: VecDeque<&Node> = wave
+                .iter()
                 .filter_map(|id| plan.nodes.iter().find(|n| n.id == id.0))
                 .collect();
             while let Some(n) = q.front() {
-                let prefix = if q.len() > 1 { "├── " } else { "└── " };
+                let prefix = if q.len() > 1 {
+                    "├── "
+                } else {
+                    "└── "
+                };
                 let _ = writeln!(out, "    {prefix}{} [{:?}]", n.id, n.state);
                 let _ = q.pop_front();
             }
@@ -162,7 +219,8 @@ impl ReportSnapshot {
         let mut out = String::new();
         let _ = writeln!(out, "{}", self.progress_line);
         for e in &self.epics {
-            let _ = writeln!(out,
+            let _ = writeln!(
+                out,
                 "  {name:20} {bar} {ratio:.0}% {done}/{total} elapsed={elapsed}s eta={eta:?}",
                 name = e.name,
                 bar = Self::bar(10, e.ratio),
@@ -179,7 +237,11 @@ impl ReportSnapshot {
         if !self.agents.is_empty() {
             let _ = writeln!(out, "agents:");
             for a in &self.agents {
-                let _ = writeln!(out, "  · {} | {} | {} | {}", a.agent, a.task, a.state, a.summary);
+                let _ = writeln!(
+                    out,
+                    "  · {} | {} | {} | {}",
+                    a.agent, a.task, a.state, a.summary
+                );
             }
         }
         if !self.next_steps.is_empty() {
@@ -196,8 +258,8 @@ impl ReportSnapshot {
 mod tests {
     use super::*;
     use crate::model::*;
-    use std::path::PathBuf;
     use chrono::Utc;
+    use std::path::PathBuf;
 
     fn empty_plan() -> Plan {
         Plan {
@@ -235,8 +297,15 @@ mod tests {
     #[test]
     fn recorder_captures_events() {
         let rec = RecorderReporter::default();
-        rec.event(DagEvent::WaveStart { wave_id: 0, total: 1 });
-        rec.event(DagEvent::WaveEnd { wave_id: 0, succeeded: 1, failed: 0 });
+        rec.event(DagEvent::WaveStart {
+            wave_id: 0,
+            total: 1,
+        });
+        rec.event(DagEvent::WaveEnd {
+            wave_id: 0,
+            succeeded: 1,
+            failed: 0,
+        });
         let evs = rec.events.lock().unwrap();
         assert_eq!(evs.len(), 2);
     }

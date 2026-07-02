@@ -46,8 +46,8 @@ pub mod faction_split;
 pub mod legitimacy;
 
 pub use faction_split::{
-    maybe_split_faction, splinter_id, splinter_name, Faction, FactionSplitEvent, InstitutionCohesion,
-    DEFAULT_COHESION_THRESHOLD, MAX_COHESION, MIN_COHESION,
+    maybe_split_faction, splinter_id, splinter_name, Faction, FactionSplitEvent,
+    InstitutionCohesion, DEFAULT_COHESION_THRESHOLD, MAX_COHESION, MIN_COHESION,
 };
 pub use legitimacy::{
     GovernanceOutcome, InstitutionLegitimacy, DEFAULT_LEGITIMACY, LEGITIMACY_COLLAPSE_THRESHOLD,
@@ -120,6 +120,16 @@ pub const GARRISON_UNLOCK_POPULATION: u32 = 120;
 /// Population threshold at which a Garrison upgrades from L1 to L2.
 pub const GARRISON_L2_POPULATION: u32 = 400;
 
+const _: () = {
+    // Unlock must be smaller than L2 upgrade so the L1 phase can
+    // exist for some population range.
+    assert!(TEMPLE_UNLOCK_POPULATION < TEMPLE_L2_POPULATION);
+    assert!(GARRISON_UNLOCK_POPULATION < GARRISON_L2_POPULATION);
+    // Temple is a smaller civil investment than Garrison, so a settlement
+    // should reach Temple first.
+    assert!(TEMPLE_UNLOCK_POPULATION < GARRISON_UNLOCK_POPULATION);
+};
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -137,16 +147,9 @@ mod tests {
 
     #[test]
     fn thresholds_are_strictly_ordered() {
-        // Unlock must be smaller than L2 upgrade so the L1 phase can
-        // exist for some population range.
-        assert!(TEMPLE_UNLOCK_POPULATION < TEMPLE_L2_POPULATION);
-        assert!(GARRISON_UNLOCK_POPULATION < GARRISON_L2_POPULATION);
-    }
-
-    #[test]
-    fn temple_unlock_lower_than_garrison() {
-        // Temple is a smaller civil investment than Garrison, so a
-        // settlement should reach Temple first.
-        assert!(TEMPLE_UNLOCK_POPULATION < GARRISON_UNLOCK_POPULATION);
+        assert_eq!(TEMPLE_UNLOCK_POPULATION, 50);
+        assert_eq!(TEMPLE_L2_POPULATION, 200);
+        assert_eq!(GARRISON_UNLOCK_POPULATION, 100);
+        assert_eq!(GARRISON_L2_POPULATION, 400);
     }
 }

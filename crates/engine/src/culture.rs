@@ -197,7 +197,7 @@ pub(crate) fn advance_faction_ideologies(
         for i in 0..DIM {
             let drift_strength =
                 (0.02 + isolation * 0.035 + history_age * 0.01).min(MAX_DRIFT_RATE);
-            let noise = (rng.gen_range(-0.5f32..0.5f32) * 2.0 * drift_strength);
+            let noise = rng.gen_range(-0.5f32..0.5f32) * 2.0 * drift_strength;
             let toward_base = (base_values[i] - prior_state.values[i]) * (0.30 + climate_push);
             let tradition_pull = prior_state.tradition * 0.35;
             let religion_pull = (religion - 0.5) * 0.04;
@@ -210,7 +210,7 @@ pub(crate) fn advance_faction_ideologies(
                     + history_age * 0.01,
             );
 
-            let norm_noise = (rng.gen_range(-0.5f32..0.5f32) * 0.015 * (1.0 - 0.65 * isolation));
+            let norm_noise = rng.gen_range(-0.5f32..0.5f32) * 0.015 * (1.0 - 0.65 * isolation);
             let toward_norm = (base_norms[i] - prior_state.norms[i]) * 0.22;
             norms[i] =
                 clamp01(prior_state.norms[i] + toward_norm * (0.5 + climate_push) + norm_noise);
@@ -304,7 +304,7 @@ mod tests {
 
     #[test]
     fn two_isolated_factions_diverge_values_over_time() {
-        let mut profiles = BTreeMap::from([
+        let profiles = BTreeMap::from([
             (1_u64, CultureProfile::new([0.15, 0.14, 0.13, 0.12])),
             (2_u64, CultureProfile::new([0.85, 0.84, 0.83, 0.82])),
         ]);

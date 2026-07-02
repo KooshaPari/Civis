@@ -23,6 +23,6 @@ pub mod model;
 pub mod reporter;
 pub mod wave;
 
-pub use model::{Layer, Lane, Node, NodeState, Plan, PlanMeta, PlanStatus};
+pub use model::{Lane, Layer, Node, NodeState, Plan, PlanMeta, PlanStatus};
 pub use reporter::{DagEvent, NoopReporter, ReportSnapshot, Reporter};
 pub use wave::{AgentRunner, NodeReport, RetryPolicy, WaveContext, WaveExecutor};

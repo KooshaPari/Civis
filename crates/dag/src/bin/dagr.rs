@@ -26,7 +26,9 @@ fn enable_utf8_console() {
         fn SetConsoleOutputCP(wCodePageID: u32) -> i32;
     }
     // CP_UTF8 = 65001
-    unsafe { SetConsoleOutputCP(65001); }
+    unsafe {
+        SetConsoleOutputCP(65001);
+    }
 }
 
 #[cfg(not(windows))]
@@ -70,7 +72,7 @@ async fn main() -> anyhow::Result<()> {
                 eprintln!("warning: could not parse {}: {e}", path.display());
                 Arc::new(fallback_plan(path.clone()))
             }
-        }
+        },
         Err(e) => {
             eprintln!("warning: cannot read {}: {e}", path.display());
             Arc::new(fallback_plan(path.clone()))

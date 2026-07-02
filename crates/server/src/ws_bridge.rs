@@ -71,7 +71,7 @@ where
     };
     let max = max.unwrap_or(min);
     let chunk_span = i64::from(max - min + 1) * i64::from(civ_voxel::CHUNK_EDGE as i32);
-    (chunk_span * i64::from(civ_voxel::FIXED_SCALE)) as f32
+    (chunk_span * civ_voxel::FIXED_SCALE) as f32
 }
 
 /// Number of distinct `Frame3d` variants emitted per simulation tick (FR-CIV-BEVY-028 / item 53).
@@ -179,6 +179,7 @@ enum ClientOutbound {
 }
 
 /// One simulation tick's `Frame3d` bundle shared across connected clients.
+#[allow(dead_code)]
 struct TickBroadcast {
     tick: u64,
     frames: Arc<[Frame3d]>,
@@ -958,9 +959,7 @@ fn build_building_diff_frame(sim: &Simulation, tick: u64) -> BuildingDiffFrame {
     let has_completion = events
         .iter()
         .any(|event| matches!(event, ProductionEvent::Produced { .. }));
-    let provenance = if has_completion {
-        BuildingProvenance::Procedural
-    } else if sim.snapshot().building_count % 2 == 0 {
+    let provenance = if has_completion || sim.snapshot().building_count % 2 == 0 {
         BuildingProvenance::Procedural
     } else {
         BuildingProvenance::Freehand
@@ -1296,8 +1295,7 @@ async fn apply_dispatch_effect(
                     {
                         result.insert(
                             "relation".to_owned(),
-                            serde_json::to_value(relation)
-                                .unwrap_or_else(|_| serde_json::Value::Null),
+                            serde_json::to_value(relation).unwrap_or(serde_json::Value::Null),
                         );
                     }
                 }
@@ -2069,9 +2067,7 @@ mod tests {
         let sim = Simulation::with_seed(100);
         let frame = build_event_feed_frame(&sim, 0);
         assert_eq!(frame.tick, 0);
-        // Empty simulation should produce minimal events
-        let event_count = frame.events.len();
-        assert!(event_count >= 0); // Always valid, even if empty
+        assert!(frame.events.len() <= 128);
     }
 
     #[test]
@@ -2123,12 +2119,16 @@ mod tests {
             encode_tick_broadcast_messages(&frames, TickBroadcastFormat::Both).expect("encode");
         assert!(messages.len() >= FRAME_BUNDLE_LEN * 2);
         // First FRAME_BUNDLE_LEN are text
-        for i in 0..FRAME_BUNDLE_LEN {
-            assert!(matches!(messages[i], Message::Text(_)));
+        for message in messages.iter().take(FRAME_BUNDLE_LEN) {
+            assert!(matches!(message, Message::Text(_)));
         }
         // Second FRAME_BUNDLE_LEN are binary
-        for i in FRAME_BUNDLE_LEN..FRAME_BUNDLE_LEN * 2 {
-            assert!(matches!(messages[i], Message::Binary(_)));
+        for message in messages
+            .iter()
+            .take(FRAME_BUNDLE_LEN * 2)
+            .skip(FRAME_BUNDLE_LEN)
+        {
+            assert!(matches!(message, Message::Binary(_)));
         }
     }
 

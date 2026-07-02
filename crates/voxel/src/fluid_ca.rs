@@ -366,17 +366,14 @@ impl CaGrid {
         let chunk_x: Vec<usize> = (0..self.dims[0]).map(|x| x / 16).collect();
         let chunk_y: Vec<usize> = (0..self.dims[1]).map(|y| y / 16).collect();
         let chunk_z: Vec<usize> = (0..self.dims[2]).map(|z| z / 16).collect();
-        for z in 0..self.dims[2] {
-            for y in 0..self.dims[1] {
-                for x in 0..self.dims[0] {
+        for (z, &cz) in chunk_z.iter().enumerate().take(self.dims[2]) {
+            for (y, &cy) in chunk_y.iter().enumerate().take(self.dims[1]) {
+                for (x, &cx) in chunk_x.iter().enumerate().take(self.dims[0]) {
                     let id = self.get(x, y, z);
                     let phase = phase_of(reg, id);
                     if matches!(phase, Phase::Liquid | Phase::Powder | Phase::Gas) {
-                        self.dirty_chunks.insert(
-                            chunk_x[x]
-                                + chunk_y[y] * counts[0]
-                                + chunk_z[z] * counts[0] * counts[1],
-                        );
+                        self.dirty_chunks
+                            .insert(cx + cy * counts[0] + cz * counts[0] * counts[1]);
                     }
                 }
             }
@@ -2642,7 +2639,6 @@ mod tests {
     /// Covers AbiogenesisSuitability boundary: exactly 10 viability threshold.
     #[test]
     fn abiogenesis_viability_threshold() {
-        let mut t = 0;
         let mut found_viable_low = false;
         for temp in 1..80 {
             let s = AbiogenesisSuitability::from_cell(WATER, temp, 255);
@@ -2656,7 +2652,7 @@ mod tests {
             }
         }
         // We should find at least some cells near the boundary.
-        assert!(found_viable_low || true, "sanity: viability range coverage");
+        assert!(found_viable_low, "sanity: viability range coverage");
     }
 
     /// Covers scratch_view get_out_of_bounds fallback.
@@ -2876,8 +2872,6 @@ mod tests {
         );
         let _ = world.drain_dirty();
         settle_world(&mut world, FIXED_SCALE, bounds, reg(), 5);
-        // Water should settle; grid should be stable.
-        assert!(true, "settle_world completed without panic");
     }
 
     /// Covers heat_conduction with air (zero conduct).
@@ -2889,8 +2883,6 @@ mod tests {
         g.mark_dirty_cell(0, 0, 0);
         g.mark_dirty_cell(1, 0, 0);
         step_n_with_config(&mut g, reg(), 2, BoundaryConfig::closed(), 0);
-        // Air conducts poorly; temps may not converge quickly.
-        assert!(true, "heat conduction on air completes");
     }
 
     /// Covers phase_transition with unknown material (skipped).

@@ -9,6 +9,7 @@
 //! - [`bevy::core_pipeline::tonemapping::Tonemapping::AcesFitted`]
 //! - [`bevy::post_process::bloom::Bloom`] (requires HDR)
 //! - [`bevy::pbr::ScreenSpaceAmbientOcclusion`] (auto-requires `DepthPrepass` + `NormalPrepass`)
+//! - [`bevy::pbr::ScreenSpaceReflections`] (baseline screen-space reflections)
 //! - [`bevy::anti_alias::taa::TemporalAntiAliasing`] (auto-requires `MotionVectorPrepass` etc.)
 //! - [`bevy::render::view::Msaa::Off`] (required by TAA)
 //!
@@ -22,7 +23,7 @@ use bevy::{
     anti_alias::taa::TemporalAntiAliasing,
     core_pipeline::tonemapping::Tonemapping,
     light::{CascadeShadowConfigBuilder, DirectionalLight},
-    pbr::ScreenSpaceAmbientOcclusion,
+    pbr::{ScreenSpaceAmbientOcclusion, ScreenSpaceReflections},
     post_process::bloom::Bloom,
     prelude::*,
     render::view::{Hdr, Msaa},
@@ -40,6 +41,8 @@ pub struct PostFxSettings {
     pub bloom: bool,
     /// Enable `ScreenSpaceAmbientOcclusion`.
     pub ssao: bool,
+    /// Enable `ScreenSpaceReflections`.
+    pub ssr: bool,
     /// Enable `TemporalAntiAliasing` (requires `Msaa::Off`).
     pub taa: bool,
 }
@@ -50,6 +53,7 @@ impl Default for PostFxSettings {
             aces: true,
             bloom: true,
             ssao: true,
+            ssr: true,
             taa: true,
         }
     }
@@ -87,10 +91,13 @@ impl Plugin for PostFxPlugin {
 // ── Systems ───────────────────────────────────────────────────────────────────
 
 /// Runs every frame until a `Camera3d` without `PostFxApplied` is found.
-/// Inserts HDR, tonemapping, bloom, SSAO, and TAA onto that camera once.
+/// Inserts HDR, tonemapping, bloom, SSAO, SSR, and TAA onto that camera once.
 ///
 /// FR-CIV-PBR-001 — when enabled, this adds Bevy's built-in SSAO component as
 /// the baseline GI-lite ambient occlusion pass for the main 3D camera.
+///
+/// FR-CIV-PBR-002 — when enabled, this adds Bevy's built-in SSR component as
+/// the baseline screen-space reflection pass for the main 3D camera.
 fn apply_post_fx(
     mut commands: Commands,
     settings: Res<PostFxSettings>,
@@ -115,6 +122,9 @@ fn apply_post_fx(
         // #[require] on ScreenSpaceAmbientOcclusion auto-inserts DepthPrepass + NormalPrepass.
         entity_cmd.insert(ScreenSpaceAmbientOcclusion::default());
     }
+    if settings.ssr {
+        entity_cmd.insert(ScreenSpaceReflections::default());
+    }
     if settings.taa {
         // #[require] on TemporalAntiAliasing auto-inserts DepthPrepass, MotionVectorPrepass,
         // TemporalJitter, and MipBias. Msaa::Off (inserted above) is also required.
@@ -137,12 +147,10 @@ fn tune_sun_shadows(mut commands: Commands, new_lights: Query<Entity, Added<Dire
         .build();
 
         commands.entity(light_entity).insert(cascade_config);
-        commands
-            .entity(light_entity)
-            .insert(DirectionalLight {
-                shadows_enabled: true,
-                ..default()
-            });
+        commands.entity(light_entity).insert(DirectionalLight {
+            shadows_enabled: true,
+            ..default()
+        });
     }
 }
 
@@ -158,6 +166,7 @@ mod tests {
         assert!(s.aces, "aces should default to true");
         assert!(s.bloom, "bloom should default to true");
         assert!(s.ssao, "ssao should default to true");
+        assert!(s.ssr, "ssr should default to true");
         assert!(s.taa, "taa should default to true");
     }
 
@@ -170,6 +179,7 @@ mod tests {
         assert!(!s.bloom);
         assert!(s.aces);
         assert!(s.ssao);
+        assert!(s.ssr);
         assert!(s.taa);
     }
 }

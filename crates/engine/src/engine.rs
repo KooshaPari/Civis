@@ -11,10 +11,7 @@ use civ_agents::{
 use civ_agents::culture::{cultural_distance, CultureProfile};
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
-use civ_economy::{
-    settlement_trade_flow_from_supply_demand, AllocationEngine, CapitalistAllocator, EconomyState,
-    Good, MarketState, SettlementTradeFlow,
-};
+use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
 use civ_mod_host::ModHost;
 use civ_genetics::{
     sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold},
@@ -506,8 +503,6 @@ pub struct Simulation {
     pub(crate) last_settlement_ids: Vec<u64>,
     pub(crate) last_life_deaths: u32,
     cluster_stocks: BTreeMap<u64, ClusterStocks>,
-    /// Last-tick settlement trade flows derived during `phase_economy`.
-    last_tick_settlement_trade_flows: Vec<SettlementTradeFlow>,
     /// Scenario economy policy (`base_consumption_joules`, `scarcity_multiplier`).
     pub economy_policy: PolicyInput,
     /// Active control policy (FR-CORE-005). Read in [`Self::phase_policy`]
@@ -738,7 +733,6 @@ impl Simulation {
             last_settlement_ids: Vec::new(),
             last_life_deaths: 0,
             cluster_stocks: BTreeMap::new(),
-            last_tick_settlement_trade_flows: Vec::new(),
             economy_policy: DEFAULT_ECONOMY_POLICY,
             policy: Box::new(crate::policy::NoopPolicy),
             last_control_signals: ControlSignals::default(),
@@ -816,7 +810,6 @@ impl Simulation {
             last_settlement_ids: Vec::new(),
             last_life_deaths: 0,
             cluster_stocks: BTreeMap::new(),
-            last_tick_settlement_trade_flows: Vec::new(),
             economy_policy: DEFAULT_ECONOMY_POLICY,
             policy: Box::new(crate::policy::NoopPolicy),
             last_control_signals: ControlSignals::default(),
@@ -1320,12 +1313,6 @@ impl Simulation {
         &self.last_control_signals
     }
 
-    /// Last-tick settlement trade flows computed in `phase_economy`.
-    #[must_use]
-    pub fn last_tick_settlement_trade_flows(&self) -> &[SettlementTradeFlow] {
-        &self.last_tick_settlement_trade_flows
-    }
-
     /// Advance simulation by one tick.
     ///
     /// Phases run in [`PHASE_ORDER`] (CIV-0001 partial — engine-side deterministic
@@ -1337,7 +1324,6 @@ impl Simulation {
         self.last_tick_disaster_pulses.clear();
         self.last_tick_engagements.clear();
         self.last_tick_mod_lifecycle.clear();
-        self.last_tick_settlement_trade_flows.clear();
 
         // Phases in PHASE_ORDER (CIV-0001 partial)
         self.phase_production();
@@ -2002,52 +1988,8 @@ impl Simulation {
         civ_economy::step(&mut self.economy_state);
 
         self.state.energy_budget_joules = Fixed::from_num(self.economy_state.energy_budget_joules);
-        self.tick_settlement_trade_flows();
         self.tick_trade_routes();
         self.market_state.step(self.state.tick);
-    }
-
-    fn tick_settlement_trade_flows(&mut self) {
-        self.last_tick_settlement_trade_flows.clear();
-
-        for route in &self.state.trade_routes {
-            if route.volume <= Fixed::ZERO || route.from_faction == route.to_faction {
-                continue;
-            }
-
-            let good = route_resource(&route.goods);
-            let Some(from_resources) = self.state.faction_resources.get(&route.from_faction) else {
-                continue;
-            };
-            let Some(to_resources) = self.state.faction_resources.get(&route.to_faction) else {
-                continue;
-            };
-
-            let supply = resource_amount(from_resources, good);
-            let demand = resource_amount(to_resources, good);
-            let low_price = self.market_state.prices().get(&route.goods).copied().unwrap_or(1_000);
-            let high_price = low_price.saturating_add(1);
-
-            if let Some(flow) = settlement_trade_flow_from_supply_demand(
-                route.from_faction,
-                route.to_faction,
-                match good {
-                    ResourceType::Food => Good::Food,
-                    ResourceType::Water => Good::Water,
-                    ResourceType::Wood => Good::Wood,
-                    ResourceType::Metal => Good::Metal,
-                    ResourceType::Tools => Good::Tools,
-                    ResourceType::Energy => Good::Food,
-                },
-                supply.to_num::<i64>(),
-                demand.to_num::<i64>(),
-                low_price,
-                high_price,
-                8,
-            ) {
-                self.last_tick_settlement_trade_flows.push(flow);
-            }
-        }
     }
 
     fn tick_trade_routes(&mut self) {

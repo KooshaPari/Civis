@@ -13,7 +13,7 @@ use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
 use civ_economy::{
     settlement_trade_flow_from_supply_demand, AllocationEngine, CapitalistAllocator, EconomyState,
-    Good, MarketState, SettlementTradeFlow,
+    Good as EconomyGood, MarketState, SettlementTradeFlow,
 };
 use civ_mod_host::ModHost;
 use civ_genetics::{
@@ -2032,15 +2032,13 @@ impl Simulation {
                 route.from_faction,
                 route.to_faction,
                 match good {
-                    ResourceType::Food => Good::Food,
-                    ResourceType::Water => Good::Water,
-                    ResourceType::Wood => Good::Wood,
-                    ResourceType::Metal => Good::Metal,
-                    ResourceType::Tools => Good::Tools,
-                    ResourceType::Energy => Good::Food,
+                    ResourceType::Food => EconomyGood::Food,
+                    ResourceType::Wood => EconomyGood::Wood,
+                    ResourceType::Metal => EconomyGood::Metal,
+                    ResourceType::Energy => EconomyGood::Food,
                 },
-                supply.to_num::<i64>(),
-                demand.to_num::<i64>(),
+                supply.raw / crate::SCALE,
+                demand.raw / crate::SCALE,
                 low_price,
                 high_price,
                 8,

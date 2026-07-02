@@ -72,6 +72,8 @@ pub mod live_minimap;
 #[cfg(feature = "bevy")]
 pub mod live_pick;
 #[cfg(feature = "bevy")]
+pub mod godtools;
+#[cfg(feature = "bevy")]
 pub mod live_scene;
 #[cfg(feature = "bevy")]
 pub mod live_stream;

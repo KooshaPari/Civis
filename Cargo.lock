@@ -2348,6 +2348,7 @@ dependencies = [
  "civ-diplomacy",
  "civ-engine",
  "civ-laws",
+ "civ-powers",
  "civ-protocol-3d",
  "civ-voxel",
  "crossbeam-channel",
@@ -2362,6 +2363,7 @@ dependencies = [
  "surface-nets",
  "tokio",
  "tokio-tungstenite",
+ "tracing",
  "wgpu",
  "winit",
  "winresource",
@@ -2447,6 +2449,7 @@ dependencies = [
  "civ-mod-host",
  "civ-needs",
  "civ-planet",
+ "civ-powers",
  "civ-save-db",
  "civ-species",
  "civ-tactics",
@@ -2544,6 +2547,13 @@ dependencies = [
  "proptest",
  "serde",
  "tracing",
+]
+
+[[package]]
+name = "civ-powers"
+version = "0.1.0"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

@@ -415,34 +415,22 @@ fn draw_game_ui(
 
     apply_theme(ctx);
 
-    egui::TopBottomPanel::top("civis_game_top_bar")
-        .frame(panel_frame(egui::Margin::symmetric(12, 8)))
-        .show(ctx, |ui| {
-            top_bar_ui(
-                ui,
-                &snapshot,
-                &attach_mode,
-                live_attach.as_deref(),
-                &mut laws_open,
-            );
-        });
+    top_center_cluster(
+        ctx,
+        &snapshot,
+        &attach_mode,
+        live_attach.as_deref(),
+        &mut laws_open,
+    );
 
-    egui::TopBottomPanel::bottom("civis_game_bottom_bar")
-        .frame(panel_frame(egui::Margin::symmetric(12, 8)))
-        .show(ctx, |ui| {
-            tool_palette_ui(ui, &mut active_tool, &mut building_kind, &mut speed);
-        });
+    left_sidebar_cluster(
+        ctx,
+        selected.entity.is_some() || live_selection.0.is_some(),
+        &details,
+        snapshot.factions,
+    );
 
-    let show_live_inspector = *attach_mode == AttachMode::Server && live_selection.0.is_some();
-    if selected.entity.is_some() || show_live_inspector {
-        egui::SidePanel::right("civis_game_selected_panel")
-            .resizable(true)
-            .default_width(268.0)
-            .frame(panel_frame(egui::Margin::same(14)))
-            .show(ctx, |ui| {
-                inspector_ui(ui, &details);
-            });
-    }
+    bottom_cluster(ctx, &mut active_tool, &mut building_kind, &mut speed);
 }
 
 /// Compact needs line for the selection inspector (`F 82% · S 70% · …`).
@@ -462,6 +450,85 @@ pub fn format_civilian_needs_summary(needs: &CivilianNeeds3d) -> String {
 #[must_use]
 pub fn format_civilian_health_display(health: f32) -> String {
     format!("{:.0}%", health.clamp(0.0, 1.0) * 100.0)
+}
+
+/// Polished top-center HUD cluster with the stat strip and websocket status.
+fn top_center_cluster(
+    ctx: &egui::Context,
+    snapshot: &GameUiSnapshot,
+    attach_mode: &crate::AttachMode,
+    live_attach: Option<&crate::live_attach::LiveAttachState>,
+    laws_open: &mut GameLawsOpen,
+) {
+    egui::Area::new(egui::Id::new("civis_top_center_cluster"))
+        .anchor(egui::Align2::CENTER_TOP, [0.0, 10.0])
+        .show(ctx, |ui| {
+            egui::Frame::NONE
+                .fill(PANEL_FILL)
+                .stroke(egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.18)))
+                .corner_radius(egui::CornerRadius::same(10))
+                .inner_margin(egui::Margin::symmetric(12, 8))
+                .show(ui, |ui| {
+                    top_bar_ui(ui, snapshot, attach_mode, live_attach, laws_open);
+                });
+        });
+}
+
+/// Left-side inspector cluster with a faction summary rail.
+fn left_sidebar_cluster(
+    ctx: &egui::Context,
+    has_selection: bool,
+    details: &SelectedEntityDetails,
+    faction_count: u32,
+) {
+    egui::SidePanel::left("civis_left_sidebar_cluster")
+        .resizable(false)
+        .exact_width(288.0)
+        .frame(egui::Frame::NONE)
+        .show(ctx, |ui| {
+            egui::Frame::NONE
+                .fill(PANEL_FILL)
+                .stroke(egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.16)))
+                .corner_radius(egui::CornerRadius::same(10))
+                .inner_margin(egui::Margin::symmetric(12, 10))
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(egui::RichText::new("◧ Inspect").color(ACCENT).strong());
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            ui.label(
+                                egui::RichText::new(format!("{faction_count} factions"))
+                                    .color(DIM)
+                                    .small(),
+                            );
+                        });
+                    });
+                    ui.add_space(6.0);
+                    ui.separator();
+                    ui.add_space(6.0);
+                    inspector_ui(ui, has_selection, details);
+                });
+        });
+}
+
+/// Bottom cluster with tool palette and speed control.
+fn bottom_cluster(
+    ctx: &egui::Context,
+    active_tool: &mut ActiveTool,
+    building_kind: &mut BuildingSpawnKind,
+    speed: &mut GameSpeed,
+) {
+    egui::Area::new(egui::Id::new("civis_bottom_cluster"))
+        .anchor(egui::Align2::CENTER_BOTTOM, [0.0, -12.0])
+        .show(ctx, |ui| {
+            egui::Frame::NONE
+                .fill(PANEL_FILL)
+                .stroke(egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.16)))
+                .corner_radius(egui::CornerRadius::same(10))
+                .inner_margin(egui::Margin::symmetric(12, 8))
+                .show(ui, |ui| {
+                    tool_palette_ui(ui, active_tool, building_kind, speed);
+                });
+        });
 }
 
 /// Display name for a civilian wire entry (genome summary or stable id).
@@ -815,11 +882,11 @@ fn speed_control_ui(ui: &mut egui::Ui, speed: &mut GameSpeed) {
 }
 
 /// Right-side selection inspector card.
-fn inspector_ui(ui: &mut egui::Ui, details: &SelectedEntityDetails) {
-    ui.heading(egui::RichText::new("\u{25a4} Selection").color(ACCENT));
-    ui.add_space(4.0);
-    ui.separator();
-    ui.add_space(6.0);
+fn inspector_ui(ui: &mut egui::Ui, has_selection: bool, details: &SelectedEntityDetails) {
+    if !has_selection {
+        inspector_empty_state(ui);
+        return;
+    }
 
     inspector_row(ui, "Name", &details.name);
     inspector_row(ui, "Faction", &details.faction);
@@ -827,7 +894,34 @@ fn inspector_ui(ui: &mut egui::Ui, details: &SelectedEntityDetails) {
     // Health rendered as a progress bar when it parses to a fraction.
     ui.add_space(2.0);
     ui.label(egui::RichText::new("Health").color(DIM).small());
-    if let Some(frac) = parse_health_fraction(&details.health) {
+    health_bar_ui(ui, &details.health);
+    ui.add_space(2.0);
+
+    inspector_row(ui, "Profession", &details.profession);
+    inspector_row(ui, "Species", &details.species);
+    inspector_row(ui, "Needs", &details.needs);
+    inspector_row(ui, "Position", &details.position);
+}
+
+/// Empty state shown when there is no selection.
+fn inspector_empty_state(ui: &mut egui::Ui) {
+    ui.add_space(16.0);
+    ui.vertical_centered(|ui| {
+        ui.label(egui::RichText::new("🗺").size(28.0).color(DIM));
+        ui.add_space(6.0);
+        ui.label(egui::RichText::new("Nothing selected").strong());
+        ui.add_space(2.0);
+        ui.label(
+            egui::RichText::new("Pick the Select tool and click an actor to inspect it.")
+                .color(DIM)
+                .small(),
+        );
+    });
+}
+
+/// Health rendered as a color-coded progress bar when parsable.
+fn health_bar_ui(ui: &mut egui::Ui, health: &str) {
+    if let Some(frac) = parse_health_fraction(health) {
         let color = if frac > 0.66 {
             egui::Color32::from_rgb(120, 220, 130)
         } else if frac > 0.33 {
@@ -835,20 +929,11 @@ fn inspector_ui(ui: &mut egui::Ui, details: &SelectedEntityDetails) {
         } else {
             egui::Color32::from_rgb(230, 90, 90)
         };
-        ui.add(
-            egui::ProgressBar::new(frac)
-                .fill(color)
-                .text(details.health.clone()),
-        );
+        ui.add(egui::ProgressBar::new(frac).fill(color).text(health.to_string()));
     } else {
-        ui.label(egui::RichText::new(&details.health).strong());
+        let shown = if health.is_empty() { "—" } else { health };
+        ui.label(egui::RichText::new(shown).strong());
     }
-    ui.add_space(2.0);
-
-    inspector_row(ui, "Profession", &details.profession);
-    inspector_row(ui, "Species", &details.species);
-    inspector_row(ui, "Needs", &details.needs);
-    inspector_row(ui, "Position", &details.position);
 }
 
 /// A dimmed-label / bright-value inspector row.

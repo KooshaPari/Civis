@@ -27,6 +27,7 @@ civ-powers = { path = "../../crates/powers", optional = true }
 civ-voxel = { path = "../../crates/voxel" }
 crossbeam-channel = "0.5"
 serde = { version = "1", features = ["derive"] }
+tracing = "0.1"
 # RON persistence for the settings/options panel (src/settings_ui.rs). Pulled in
 # transitively by bevy already; pinned 0.8 to match the workspace lock.
 ron = "0.8"

@@ -194,7 +194,7 @@ fn sync_post_fx_from_settings(settings: Res<GameSettings>, mut post_fx: ResMut<P
     let graphics = &settings.graphics;
     post_fx.aces = graphics.anti_aliasing != AntiAliasing::Off;
     post_fx.bloom = graphics.bloom;
-    post_fx.ssao = graphics.ambient_occlusion;
+    post_fx.ssao = graphics.ssao_enabled;
     post_fx.taa = graphics.anti_aliasing == AntiAliasing::TAA;
 }
 

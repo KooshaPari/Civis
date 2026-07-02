@@ -88,6 +88,9 @@ impl Plugin for PostFxPlugin {
 
 /// Runs every frame until a `Camera3d` without `PostFxApplied` is found.
 /// Inserts HDR, tonemapping, bloom, SSAO, and TAA onto that camera once.
+///
+/// FR-CIV-PBR-001 — when enabled, this adds Bevy's built-in SSAO component as
+/// the baseline GI-lite ambient occlusion pass for the main 3D camera.
 fn apply_post_fx(
     mut commands: Commands,
     settings: Res<PostFxSettings>,

@@ -17,6 +17,7 @@ pub mod command_queue;
 pub mod conditions;
 pub mod gameplay;
 pub mod era;
+pub mod godtools;
 pub mod engine;
 pub mod emergence;
 pub mod disasters;

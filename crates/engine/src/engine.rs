@@ -11,7 +11,10 @@ use civ_agents::{
 use civ_agents::culture::{cultural_distance, CultureProfile};
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
-use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
+use civ_economy::{
+    settlement_trade_flow_from_supply_demand, AllocationEngine, CapitalistAllocator, EconomyState,
+    Good, MarketState, SettlementTradeFlow,
+};
 use civ_mod_host::ModHost;
 use civ_genetics::{
     sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold},
@@ -503,6 +506,8 @@ pub struct Simulation {
     pub(crate) last_settlement_ids: Vec<u64>,
     pub(crate) last_life_deaths: u32,
     cluster_stocks: BTreeMap<u64, ClusterStocks>,
+    /// Last-tick settlement trade flows derived during `phase_economy`.
+    last_tick_settlement_trade_flows: Vec<SettlementTradeFlow>,
     /// Scenario economy policy (`base_consumption_joules`, `scarcity_multiplier`).
     pub economy_policy: PolicyInput,
     /// Active control policy (FR-CORE-005). Read in [`Self::phase_policy`]
@@ -733,6 +738,7 @@ impl Simulation {
             last_settlement_ids: Vec::new(),
             last_life_deaths: 0,
             cluster_stocks: BTreeMap::new(),
+            last_tick_settlement_trade_flows: Vec::new(),
             economy_policy: DEFAULT_ECONOMY_POLICY,
             policy: Box::new(crate::policy::NoopPolicy),
             last_control_signals: ControlSignals::default(),
@@ -810,6 +816,7 @@ impl Simulation {
             last_settlement_ids: Vec::new(),
             last_life_deaths: 0,
             cluster_stocks: BTreeMap::new(),
+            last_tick_settlement_trade_flows: Vec::new(),
             economy_policy: DEFAULT_ECONOMY_POLICY,
             policy: Box::new(crate::policy::NoopPolicy),
             last_control_signals: ControlSignals::default(),
@@ -1313,6 +1320,12 @@ impl Simulation {
         &self.last_control_signals
     }
 
+    /// Last-tick settlement trade flows computed in `phase_economy`.
+    #[must_use]
+    pub fn last_tick_settlement_trade_flows(&self) -> &[SettlementTradeFlow] {
+        &self.last_tick_settlement_trade_flows
+    }
+
     /// Advance simulation by one tick.
     ///
     /// Phases run in [`PHASE_ORDER`] (CIV-0001 partial — engine-side deterministic
@@ -1324,6 +1337,7 @@ impl Simulation {
         self.last_tick_disaster_pulses.clear();
         self.last_tick_engagements.clear();
         self.last_tick_mod_lifecycle.clear();
+        self.last_tick_settlement_trade_flows.clear();
 
         // Phases in PHASE_ORDER (CIV-0001 partial)
         self.phase_production();
@@ -1988,8 +2002,52 @@ impl Simulation {
         civ_economy::step(&mut self.economy_state);
 
         self.state.energy_budget_joules = Fixed::from_num(self.economy_state.energy_budget_joules);
+        self.tick_settlement_trade_flows();
         self.tick_trade_routes();
         self.market_state.step(self.state.tick);
+    }
+
+    fn tick_settlement_trade_flows(&mut self) {
+        self.last_tick_settlement_trade_flows.clear();
+
+        for route in &self.state.trade_routes {
+            if route.volume <= Fixed::ZERO || route.from_faction == route.to_faction {
+                continue;
+            }
+
+            let good = route_resource(&route.goods);
+            let Some(from_resources) = self.state.faction_resources.get(&route.from_faction) else {
+                continue;
+            };
+            let Some(to_resources) = self.state.faction_resources.get(&route.to_faction) else {
+                continue;
+            };
+
+            let supply = resource_amount(from_resources, good);
+            let demand = resource_amount(to_resources, good);
+            let low_price = self.market_state.prices().get(&route.goods).copied().unwrap_or(1_000);
+            let high_price = low_price.saturating_add(1);
+
+            if let Some(flow) = settlement_trade_flow_from_supply_demand(
+                route.from_faction,
+                route.to_faction,
+                match good {
+                    ResourceType::Food => Good::Food,
+                    ResourceType::Water => Good::Water,
+                    ResourceType::Wood => Good::Wood,
+                    ResourceType::Metal => Good::Metal,
+                    ResourceType::Tools => Good::Tools,
+                    ResourceType::Energy => Good::Food,
+                },
+                supply.to_num::<i64>(),
+                demand.to_num::<i64>(),
+                low_price,
+                high_price,
+                8,
+            ) {
+                self.last_tick_settlement_trade_flows.push(flow);
+            }
+        }
     }
 
     fn tick_trade_routes(&mut self) {
@@ -5303,34 +5361,47 @@ mod tests {
     #[test]
     fn diplomacy_relations_evolve_through_sim_tick() {
         let mut sim = Simulation::with_seed(91);
-        let a = 1u32;
-        let b = 2u32;
-        sim.state.factions = HashMap::from([(a, "Alpha".into()), (b, "Beta".into())]);
+        sim.state.tick = 499;
 
-        let initial = sim
-            .faction_relations
-            .record(faction_cluster_id(a), faction_cluster_id(b))
-            .map(|r| r.score)
-            .unwrap_or(0.0);
-
-        const TICKS: u64 = 12;
-        for _ in 0..TICKS {
-            sim.tick();
-        }
-
-        let final_score = sim
-            .faction_relations
-            .record(faction_cluster_id(a), faction_cluster_id(b))
-            .expect("relation record")
-            .score;
-
+        let faction_ids: Vec<u32> = sim.state.factions.keys().copied().collect();
         assert!(
-            final_score < initial,
-            "diplomacy relations should drift through Simulation::tick(): initial={initial}, final={final_score}"
+            faction_ids.len() >= 2,
+            "test requires at least two factions"
         );
-        assert_ne!(
-            final_score, initial,
-            "expected a relation delta after {TICKS} ticks for FR-CIV-DIPLOMACY"
+
+        let mut cluster_member_counts: BTreeMap<u64, u32> = BTreeMap::new();
+        for (_, member) in sim.world.query::<&ClusterMember>().iter() {
+            *cluster_member_counts
+                .entry(member.cluster.0)
+                .or_insert(0) += 1;
+        }
+        let (a, b) = diplomacy_pair_from_settlement_overlap(
+            &sim.world,
+            &cluster_member_counts,
+            &faction_ids,
+            sim.state.tick,
+        );
+
+        sim.state.faction_treasury.insert(a, Fixed::from_num(0));
+        sim.state.faction_treasury.insert(b, Fixed::from_num(0));
+
+        sim.tick();
+
+        let event = sim.diplomacy_events().last().expect("diplomacy event");
+        assert_eq!(event.tick, 500);
+        assert_eq!((event.faction_a, event.faction_b), (a, b));
+        assert_eq!(
+            event.kind,
+            DiplomacyKind::TradeAgreement,
+            "zero disparity should produce a trade agreement when diplomacy runs"
+        );
+        assert_eq!(
+            sim.state.faction_treasury.get(&a).copied(),
+            Some(Fixed::from_num(100))
+        );
+        assert_eq!(
+            sim.state.faction_treasury.get(&b).copied(),
+            Some(Fixed::from_num(100))
         );
     }
 

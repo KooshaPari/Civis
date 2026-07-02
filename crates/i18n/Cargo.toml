@@ -12,7 +12,3 @@ thiserror = "1"
 [lib]
 name = "civ_i18n"
 path = "src/lib.rs"
-
-[[test]]
-name = "i18n_tests"
-path = "tests/i18n_tests.rs"

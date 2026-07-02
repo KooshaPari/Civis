@@ -2363,6 +2363,7 @@ dependencies = [
  "surface-nets",
  "tokio",
  "tokio-tungstenite",
+ "tracing",
  "wgpu",
  "winit",
  "winresource",

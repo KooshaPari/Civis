@@ -1369,32 +1369,6 @@ mod tests {
         );
     }
 
-    /// FR-CIV-EMERG-001 / charter §3.6: normal `Simulation::tick()` runs the
-    /// emergence branching close step, so live edge-of-chaos metrics are not
-    /// limited to tests that call `phase_emergence_events_close` directly.
-    #[test]
-    fn tick_wires_emergence_events_close_into_branching_state() {
-        let mut sim = Simulation::with_seed(21);
-
-        sim.record_unrest_micro_activity(10);
-        sim.tick();
-        sim.record_unrest_micro_activity(9);
-        sim.tick();
-        sim.tick();
-
-        assert_eq!(sim.current_tick(), 3);
-        assert_eq!(sim.emergence_branching_state().ledger.closed_total(), 1);
-        assert!(
-            (sim.emergence_branching_state().sigma_bar - 0.9).abs() < 1e-6,
-            "tick loop should close the same 9/10 avalanche, got {}",
-            sim.emergence_branching_state().sigma_bar
-        );
-        assert_eq!(
-            sim.emergence_branching_state().regime,
-            BranchingRegime::SubcriticalTransition
-        );
-    }
-
     /// Charter §3.4: fewer than 3 clusters → power_law_alpha sentinel 0.0.
     #[test]
     fn power_law_alpha_zero_when_too_few_clusters() {

@@ -492,11 +492,7 @@ pub struct SnapshotFields {
     /// Game-state emergence metrics for `sim.get_emergence_metrics`.
     pub emergence_metrics: EmergenceMetricsSnapshot,
     /// Loaded mods for mod-browser UI (FR-CIV-TACTICS-054).
-    #[cfg(feature = "mods")]
     pub mods: Vec<civ_mod_host::ModBrowserEntry>,
-    /// Loaded mods for mod-browser UI (FR-CIV-TACTICS-054).
-    #[cfg(not(feature = "mods"))]
-    pub mods: Vec<serde_json::Value>,
     /// `mod.loaded.v1` replay-bus JSON from the most recent tick (scenario load).
     pub mod_lifecycle: Vec<String>,
     /// `session.saved.v1` replay-bus JSON from the most recent tick (slot/autosave).
@@ -873,10 +869,7 @@ pub fn snapshot_fields_from_sim(
             structure_count: snap.building_count as u32,
             language_count: sim.cluster_cultures().len() as u32,
         },
-        #[cfg(feature = "mods")]
         mods: sim.mod_browser_entries(),
-        #[cfg(not(feature = "mods"))]
-        mods: Vec::new(),
         mod_lifecycle: sim.replay_log().mod_loaded_bus_at_tick(sim.state.tick),
         session_saved: sim.replay_log().session_saved_bus_at_tick(sim.state.tick),
         disaster_events: sim_snapshot,

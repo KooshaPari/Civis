@@ -1,7 +1,7 @@
 //! Snapshot synthesis from simulation state.
 
 use civ_agents::{drift_toward_home, Civilian as AgentCivilian, Needs, Position3d, Velocity};
-use civ_engine::{engine::Citizen, DiplomacyKind, Simulation};
+use civ_engine::{Citizen, DiplomacyKind, Simulation};
 use civ_laws::{LawDb, LawKind};
 use civ_server::build_voxel_delta_frame;
 use civ_voxel::WorldCoord;
@@ -114,10 +114,7 @@ pub(crate) fn make_snapshot(
         is_day,
         weather,
         speed,
-        #[cfg(feature = "mods")]
         mods: sim.mod_browser_entries(),
-        #[cfg(not(feature = "mods"))]
-        mods: Vec::new(),
     }
 }
 
@@ -483,10 +480,10 @@ pub(crate) fn economy_snapshot(
     let mut food_per_tick = 0.0;
     let wood_per_tick = 0.0;
     let mut metal_per_tick = 0.0;
-    for (_, building) in sim.world.query::<&civ_engine::engine::Building>().iter() {
+    for (_, building) in sim.world.query::<&civ_engine::Building>().iter() {
         match building.building_type {
-            civ_engine::engine::BuildingType::Farm => food_per_tick += 10.0,
-            civ_engine::engine::BuildingType::Mine => metal_per_tick += 5.0,
+            civ_engine::BuildingType::Farm => food_per_tick += 10.0,
+            civ_engine::BuildingType::Mine => metal_per_tick += 5.0,
             _ => {}
         }
     }
@@ -665,11 +662,11 @@ pub(crate) fn buildings(factions: &[Faction], tick: u64) -> Vec<Building> {
 
 /// Placed airports / ports / hangars from ECS authoring (FR-CIV-UX-006).
 pub(crate) fn merge_authoring_buildings(buildings: &mut Vec<Building>, sim: &Simulation) {
-    use civ_engine::{engine::BuildingType, grid_to_norm};
+    use civ_engine::{grid_to_norm, BuildingType};
 
     for (idx, (_, building)) in sim
         .world
-        .query::<&civ_engine::engine::Building>()
+        .query::<&civ_engine::Building>()
         .iter()
         .enumerate()
     {
@@ -850,31 +847,31 @@ pub(crate) fn apply_trade_routes(
     (trade_volume_this_tick, trade_balances)
 }
 
-pub(crate) fn route_resource(goods: &str) -> civ_engine::engine::ResourceType {
+pub(crate) fn route_resource(goods: &str) -> civ_engine::ResourceType {
     match goods {
-        "grain" => civ_engine::engine::ResourceType::Food,
-        "timber" => civ_engine::engine::ResourceType::Wood,
-        "ore" | "tools" => civ_engine::engine::ResourceType::Metal,
-        "cloth" | "salt" => civ_engine::engine::ResourceType::Energy,
-        _ => civ_engine::engine::ResourceType::Food,
+        "grain" => civ_engine::ResourceType::Food,
+        "timber" => civ_engine::ResourceType::Wood,
+        "ore" | "tools" => civ_engine::ResourceType::Metal,
+        "cloth" | "salt" => civ_engine::ResourceType::Energy,
+        _ => civ_engine::ResourceType::Food,
     }
 }
 
 pub(crate) fn resource_amount(
-    resources: &civ_engine::engine::Resources,
-    resource: civ_engine::engine::ResourceType,
+    resources: &civ_engine::Resources,
+    resource: civ_engine::ResourceType,
 ) -> f64 {
     match resource {
-        civ_engine::engine::ResourceType::Food => resources.food.to_num::<f64>(),
-        civ_engine::engine::ResourceType::Wood => resources.wood.to_num::<f64>(),
-        civ_engine::engine::ResourceType::Metal => resources.metal.to_num::<f64>(),
-        civ_engine::engine::ResourceType::Energy => resources.energy.to_num::<f64>(),
+        civ_engine::ResourceType::Food => resources.food.to_num::<f64>(),
+        civ_engine::ResourceType::Wood => resources.wood.to_num::<f64>(),
+        civ_engine::ResourceType::Metal => resources.metal.to_num::<f64>(),
+        civ_engine::ResourceType::Energy => resources.energy.to_num::<f64>(),
     }
 }
 
 pub(crate) fn resource_demand(
-    resources: &civ_engine::engine::Resources,
-    resource: civ_engine::engine::ResourceType,
+    resources: &civ_engine::Resources,
+    resource: civ_engine::ResourceType,
 ) -> f64 {
     (1000.0 - resource_amount(resources, resource)).max(0.0)
 }
@@ -884,16 +881,16 @@ pub(crate) fn fixed_from_f64(value: f64) -> civ_engine::Fixed {
 }
 
 pub(crate) fn adjust_resource(
-    resources: &mut civ_engine::engine::Resources,
-    resource: civ_engine::engine::ResourceType,
+    resources: &mut civ_engine::Resources,
+    resource: civ_engine::ResourceType,
     delta: f64,
 ) {
     let delta = fixed_from_f64(delta);
     match resource {
-        civ_engine::engine::ResourceType::Food => resources.food += delta,
-        civ_engine::engine::ResourceType::Wood => resources.wood += delta,
-        civ_engine::engine::ResourceType::Metal => resources.metal += delta,
-        civ_engine::engine::ResourceType::Energy => resources.energy += delta,
+        civ_engine::ResourceType::Food => resources.food += delta,
+        civ_engine::ResourceType::Wood => resources.wood += delta,
+        civ_engine::ResourceType::Metal => resources.metal += delta,
+        civ_engine::ResourceType::Energy => resources.energy += delta,
     }
 }
 
@@ -976,10 +973,7 @@ mod tests {
         assert_ne!(noise_offset(42, 0), noise_offset(43, 0));
         for (s, l) in [(0_u64, 0_u64), (1, 1), (999, 7), (u64::MAX, 3)] {
             let n = noise_offset(s, l);
-            assert!(
-                n.abs() <= 0.05 + f32::EPSILON,
-                "noise_offset({s},{l}) = {n}"
-            );
+            assert!(n.abs() <= 0.05 + f32::EPSILON, "noise_offset({s},{l}) = {n}");
         }
     }
 
@@ -1027,7 +1021,7 @@ mod tests {
         assert_eq!(normalize_world_coord(i64::MAX), 1.0);
         assert_eq!(normalize_world_coord(-100), 0.0);
 
-        use civ_engine::engine::ResourceType;
+        use civ_engine::ResourceType;
         assert_eq!(route_resource("grain"), ResourceType::Food);
         assert_eq!(route_resource("timber"), ResourceType::Wood);
         assert_eq!(route_resource("ore"), ResourceType::Metal);
@@ -1060,9 +1054,7 @@ mod tests {
         let f = factions(0);
         let b = buildings(&f, 0);
         assert_eq!(b.len(), f.len() * 3);
-        assert!(b
-            .iter()
-            .all(|x| (0.0..1.0).contains(&x.x) && (0.0..1.0).contains(&x.y)));
+        assert!(b.iter().all(|x| (0.0..1.0).contains(&x.x) && (0.0..1.0).contains(&x.y)));
         assert!(b.iter().all(|x| x.faction_id < 4));
         assert!(b.iter().all(|x| x.occupants == 0));
         assert!(b
@@ -1084,8 +1076,8 @@ mod tests {
         for road in &r {
             let from_faction = faction_at(road.from[0], road.from[1])
                 .expect("road.from references a known building");
-            let to_faction =
-                faction_at(road.to[0], road.to[1]).expect("road.to references a known building");
+            let to_faction = faction_at(road.to[0], road.to[1])
+                .expect("road.to references a known building");
             assert_eq!(
                 from_faction, to_faction,
                 "road endpoints must belong to the same faction"
@@ -1118,12 +1110,12 @@ mod tests {
 
     #[test]
     fn resource_demand_never_negative() {
-        let r = civ_engine::engine::Resources::default();
+        let r = civ_engine::Resources::default();
         for res in [
-            civ_engine::engine::ResourceType::Food,
-            civ_engine::engine::ResourceType::Wood,
-            civ_engine::engine::ResourceType::Metal,
-            civ_engine::engine::ResourceType::Energy,
+            civ_engine::ResourceType::Food,
+            civ_engine::ResourceType::Wood,
+            civ_engine::ResourceType::Metal,
+            civ_engine::ResourceType::Energy,
         ] {
             assert!(resource_demand(&r, res) >= 0.0);
         }
@@ -1159,18 +1151,10 @@ mod tests {
         for k in 1..=8u64 {
             let tick = k * 1000;
             let events = disaster_events(tick, &f, &b);
-            assert_eq!(
-                events.len(),
-                1,
-                "tick {tick} must fire exactly one disaster"
-            );
+            assert_eq!(events.len(), 1, "tick {tick} must fire exactly one disaster");
             let e = &events[0];
             assert_eq!(e.tick, tick);
-            assert!(
-                kinds.contains(&e.kind.as_str()),
-                "unexpected kind {}",
-                e.kind
-            );
+            assert!(kinds.contains(&e.kind.as_str()), "unexpected kind {}", e.kind);
             assert!(
                 e.x > 0.0 && e.x < 1.0 && e.y > 0.0 && e.y < 1.0,
                 "coords out of map: {},{}",
@@ -1186,9 +1170,11 @@ mod tests {
     fn game_events_empty_inputs_yield_no_lifecycle_events() {
         let sim = Simulation::with_seed(7);
         let events = game_events(&sim, &[], &[], &[], &[], &[], &[]);
-        assert!(events
-            .iter()
-            .all(|e| !["birth", "death", "disaster"].contains(&e.kind.as_str())));
+        assert!(
+            events
+                .iter()
+                .all(|e| !["birth", "death", "disaster"].contains(&e.kind.as_str()))
+        );
     }
 
     #[test]
@@ -1261,9 +1247,7 @@ mod tests {
         let sim = Simulation::with_seed(7);
         let pins = civ_pins(&sim);
         assert!(pins.windows(2).all(|w| w[0].idx <= w[1].idx));
-        assert!(pins
-            .iter()
-            .all(|p| (0.0..=1.0).contains(&p.x) && (0.0..=1.0).contains(&p.y)));
+        assert!(pins.iter().all(|p| (0.0..=1.0).contains(&p.x) && (0.0..=1.0).contains(&p.y)));
     }
 
     #[test]
@@ -1280,7 +1264,10 @@ mod tests {
             .iter()
             .zip(factions.iter())
             .all(|(t, f)| t.id == f.id));
-        assert!(econ.faction_treasury.iter().all(|t| t.trade_balance == 0.0));
+        assert!(econ
+            .faction_treasury
+            .iter()
+            .all(|t| t.trade_balance == 0.0));
         assert_eq!(econ.production_rates.wood_per_tick, 0.0);
         assert!((econ.production_rates.energy_per_tick * 1000.0 - econ.energy_budget).abs() < 1e-6);
         assert!(econ.production_rates.food_per_tick >= 0.0);
@@ -1325,7 +1312,7 @@ mod tests {
 
     #[test]
     fn resource_amount_demand_and_adjust_cover_every_resource_arm() {
-        use civ_engine::engine::{ResourceType, Resources};
+        use civ_engine::{Resources, ResourceType};
         let mut res = Resources {
             food: fixed_from_f64(100.0),
             wood: fixed_from_f64(200.0),
@@ -1339,24 +1326,15 @@ mod tests {
             (ResourceType::Energy, 400.0),
         ];
         for (r, want) in arms {
-            assert!(
-                (resource_amount(&res, r) - want).abs() < 1e-6,
-                "amount {r:?}"
-            );
+            assert!((resource_amount(&res, r) - want).abs() < 1e-6, "amount {r:?}");
             // demand = max(0, 1000 - amount); all of these are < 1000 so it's positive.
-            assert!(
-                (resource_demand(&res, r) - (1000.0 - want)).abs() < 1e-6,
-                "demand {r:?}"
-            );
+            assert!((resource_demand(&res, r) - (1000.0 - want)).abs() < 1e-6, "demand {r:?}");
         }
 
         // adjust_resource hits each arm; +50 then re-read.
         for (r, want) in arms {
             adjust_resource(&mut res, r, 50.0);
-            assert!(
-                (resource_amount(&res, r) - (want + 50.0)).abs() < 1e-6,
-                "adjusted {r:?}"
-            );
+            assert!((resource_amount(&res, r) - (want + 50.0)).abs() < 1e-6, "adjusted {r:?}");
         }
 
         // demand clamps to 0 once amount exceeds the 1000 cap.

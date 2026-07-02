@@ -227,13 +227,10 @@ fn snapshot_sim(sim: &Simulation) -> SavedSimulation {
         state: sim.state.clone(),
         world: snapshot_world(&sim.world),
         replay_log: sim.replay_log().clone(),
-        #[cfg(feature = "mods")]
         mod_guest_state_json: sim
             .export_mod_guest_state()
             .to_json()
             .unwrap_or_else(|_| "{}".to_string()),
-        #[cfg(not(feature = "mods"))]
-        mod_guest_state_json: "{}".to_string(),
         voxel: snapshot_voxel(sim.voxel()),
         last_tick_voxel_events: sim.last_tick_voxel_events().to_vec(),
         last_tick_voxel_damage_count: sim.last_tick_voxel_damage_count(),
@@ -262,7 +259,6 @@ fn restore_sim(saved: SavedSimulation) -> Simulation {
     );
     sim.restore_faction_doctrines(saved.faction_doctrines);
     sim.set_faction_languages(saved.faction_languages);
-    #[cfg(feature = "mods")]
     let _ = sim.restore_mod_guest_state(
         &civ_mod_host::ModGuestStateSave::from_json(&saved.mod_guest_state_json)
             .unwrap_or_default(),

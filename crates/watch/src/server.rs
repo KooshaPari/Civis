@@ -2,6 +2,7 @@
 
 use std::{
     net::SocketAddr,
+    path::PathBuf,
     sync::{
         atomic::{AtomicU16, AtomicU8},
         Arc,
@@ -20,15 +21,12 @@ use tracing::info;
 
 use crate::app::{
     default_law_db, env_u16, env_u64, resolve_data_dir, resolve_session_id, AppState, Snapshot,
-    TerrainCache,
+    TerrainCache, REMOTE_FETCH_TIMEOUT,
 };
-#[cfg(feature = "mods")]
-use crate::app::REMOTE_FETCH_TIMEOUT;
 use crate::control_routes::{
     damage_handler, place_voxel_handler, spawn_civilian_handler, spawn_entity_handler,
     speed_handler,
 };
-#[cfg(feature = "mods")]
 use crate::mods_api::{
     fetch_mod_handler, install_mod_handler, list_mod_catalog_handler, list_published_mods_handler,
     list_remote_mods_handler, publish_mod_handler, reload_mod_handler, unload_mod_handler,
@@ -42,7 +40,7 @@ use crate::sse::{snapshot_handler, sse_handler, terrain_handler};
 use crate::terrain::Terrain;
 
 pub(crate) fn build_api_router() -> Router<AppState> {
-    let router = Router::new()
+    Router::new()
         .route("/events", get(sse_handler))
         .route("/snapshot", get(snapshot_handler))
         .route("/terrain", get(terrain_handler))
@@ -55,10 +53,7 @@ pub(crate) fn build_api_router() -> Router<AppState> {
         .route("/control/save/slot", post(save_slot_handler))
         .route("/control/load", post(load_handler))
         .route("/control/load/slot", post(load_slot_handler))
-        .route("/control/saves", get(list_saves_handler));
-
-    #[cfg(feature = "mods")]
-    let router = router
+        .route("/control/saves", get(list_saves_handler))
         .route("/control/mods/catalog", get(list_mod_catalog_handler))
         .route("/control/mods/upload", post(upload_mod_handler))
         .route("/control/mods/publish", post(publish_mod_handler))
@@ -67,9 +62,7 @@ pub(crate) fn build_api_router() -> Router<AppState> {
         .route("/control/mods/unload", post(unload_mod_handler))
         .route("/control/mods/reload", post(reload_mod_handler))
         .route("/control/mods/fetch", post(fetch_mod_handler))
-        .route("/control/mods/remote", get(list_remote_mods_handler));
-
-    router
+        .route("/control/mods/remote", get(list_remote_mods_handler))
 }
 
 fn build_app(state: AppState) -> Router {
@@ -97,22 +90,16 @@ pub async fn run() {
     );
     let session_id = resolve_session_id();
     info!(%session_id, ?save_db_path, "session-scoped save metadata db ready");
-    #[cfg(feature = "mods")]
     let mods_dir = Arc::new(
-        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../mods")
             .canonicalize()
-            .unwrap_or_else(|_| std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../mods")),
+            .unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../mods")),
     );
-    #[cfg(feature = "mods")]
     std::fs::create_dir_all(&*mods_dir).ok();
-    #[cfg(feature = "mods")]
     std::fs::create_dir_all(mods_dir.join("uploads")).ok();
-    #[cfg(feature = "mods")]
     std::fs::create_dir_all(mods_dir.join("publish")).ok();
-    #[cfg(feature = "mods")]
     std::fs::create_dir_all(mods_dir.join("remote")).ok();
-    #[cfg(feature = "mods")]
     let http = reqwest::Client::builder()
         .timeout(REMOTE_FETCH_TIMEOUT)
         .redirect(reqwest::redirect::Policy::limited(5))
@@ -128,7 +115,6 @@ pub async fn run() {
     let military = Arc::new(Mutex::new(Vec::new()));
     {
         let mut s = sim.lock().await;
-        #[cfg(feature = "mods")]
         s.register_mod_stubs(&[
             "mods/example-policy".to_owned(),
             "mods/example-economic".to_owned(),
@@ -153,11 +139,9 @@ pub async fn run() {
         target_era: Arc::new(AtomicU16::new(0)),
         speed: Arc::new(AtomicU8::new(1)),
         saves_dir,
-        #[cfg(feature = "mods")]
         mods_dir,
         session_id,
         save_db,
-        #[cfg(feature = "mods")]
         http,
     };
 

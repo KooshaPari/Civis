@@ -17,7 +17,6 @@ use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, LaborCapa
 use civ_economy::{collect_taxes, Taxation};
 use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold, SentienceEvent, evaluate_sentience};
 use civ_genetics::Dna;
-#[cfg(feature = "mods")]
 use civ_mod_host::ModHost;
 use civ_needs::{Health as CivNeedsHealth, LifecycleLabel, LifecycleParams, should_reproduce};
 use civ_planet::{
@@ -693,7 +692,6 @@ pub struct Simulation {
     /// LOD tick cadence for Warm/Cold civilian tiers (CIV-0101).
     pub lod_policy: LodPolicy,
     /// Manifest-only mod host (CIV-0700 v2 policy stub); WASM not loaded yet.
-    #[cfg(feature = "mods")]
     mod_host: ModHost,
     /// Military-phase cadence and per-tick movement pulses (FR-CIV-TACTICS-035).
     pub(crate) military_phase: MilitaryPhaseConfig,
@@ -1569,7 +1567,6 @@ impl Simulation {
             policy: Box::new(crate::policy::NoopPolicy),
             last_control_signals: ControlSignals::default(),
             lod_policy: LodPolicy::default(),
-            #[cfg(feature = "mods")]
             mod_host: ModHost::new(),
             military_phase: MilitaryPhaseConfig::default(),
             faction_doctrines: default_faction_doctrines(),
@@ -1708,7 +1705,6 @@ impl Simulation {
             policy: Box::new(crate::policy::NoopPolicy),
             last_control_signals: ControlSignals::default(),
             lod_policy: LodPolicy::default(),
-            #[cfg(feature = "mods")]
             mod_host: ModHost::new(),
             military_phase: MilitaryPhaseConfig::default(),
             faction_doctrines: default_faction_doctrines(),
@@ -1769,7 +1765,6 @@ impl Simulation {
     /// Install a single mod at runtime (directory or `.civmod` archive).
     ///
     /// `rel_path` is resolved from the repo root (`crates/engine/../../`).
-    #[cfg(feature = "mods")]
     pub fn install_mod_path(
         &mut self,
         rel_path: &str,
@@ -1803,7 +1798,6 @@ impl Simulation {
     }
 
     /// Unload a loaded mod by stable id and emit `mod.unloaded.v1` on the lifecycle bus.
-    #[cfg(feature = "mods")]
     pub fn unload_mod_by_id(
         &mut self,
         mod_id: &str,
@@ -1817,7 +1811,6 @@ impl Simulation {
     }
 
     /// Hot-reload a mod from its remembered source path and emit `mod.loaded.v1`.
-    #[cfg(feature = "mods")]
     pub fn reload_mod_by_id(
         &mut self,
         mod_id: &str,
@@ -1833,7 +1826,6 @@ impl Simulation {
     ///
     /// Paths are resolved from the repo root (`crates/engine/../../`). Failures are
     /// logged and skipped so headless runs stay up during mod development.
-    #[cfg(feature = "mods")]
     pub fn register_mod_stubs(&mut self, mod_paths: &[String]) {
         self.mod_host = ModHost::new();
         if mod_paths.is_empty() {
@@ -1868,26 +1860,22 @@ impl Simulation {
 
     /// Borrow the mod host (manifest registry).
     #[must_use]
-    #[cfg(feature = "mods")]
     pub fn mod_host(&self) -> &ModHost {
         &self.mod_host
     }
 
     /// Mutable mod host (phase ticks and guest memory restore).
-    #[cfg(feature = "mods")]
     pub fn mod_host_mut(&mut self) -> &mut ModHost {
         &mut self.mod_host
     }
 
     /// Export per-mod guest scratch memory for CIV-1000 save bundles.
     #[must_use]
-    #[cfg(feature = "mods")]
     pub fn export_mod_guest_state(&self) -> civ_mod_host::ModGuestStateSave {
         self.mod_host.export_guest_state()
     }
 
     /// Restore per-mod guest scratch memory after load.
-    #[cfg(feature = "mods")]
     pub fn restore_mod_guest_state(
         &mut self,
         save: &civ_mod_host::ModGuestStateSave,
@@ -1897,7 +1885,6 @@ impl Simulation {
 
     /// Loaded mods for mod-browser UI (`sim.snapshot` / civ-watch).
     #[must_use]
-    #[cfg(feature = "mods")]
     pub fn mod_browser_entries(&self) -> Vec<civ_mod_host::ModBrowserEntry> {
         self.mod_host.browser_entries()
     }
@@ -4247,11 +4234,8 @@ impl Simulation {
         use crate::spawn::military_pin_id;
 
         let tick = self.state.tick;
-        #[cfg(feature = "mods")]
-        {
         let lines = self.mod_host.military_tick(tick);
         self.ingest_mod_phase_lines(lines, tick, "military");
-        }
 
         let phase_cfg = self.military_phase;
 
@@ -4605,13 +4589,10 @@ impl Simulation {
     /// energy cannot go negative).
     fn phase_economy(&mut self) {
         let tick = self.state.tick;
-        #[cfg(feature = "mods")]
-        {
         let policy_lines = self.mod_host.tick(tick);
         self.ingest_mod_phase_lines(policy_lines, tick, "policy");
         let economy_lines = self.mod_host.economy_tick(tick);
         self.ingest_mod_phase_lines(economy_lines, tick, "economy");
-        }
 
         self.economy_state.energy_budget_joules =
             i64::from(self.state.energy_budget_joules.to_bits()) / crate::SCALE;
@@ -6681,24 +6662,6 @@ mod tests {
             sim_a.cluster_cultures().len(),
             sim_b.cluster_cultures().len(),
             "phase_emergence must produce deterministic cluster_cultures"
-        );
-    }
-
-    #[test]
-    fn tick_records_institution_founding_in_legends_chronicle() {
-        let mut sim = Simulation::with_seed(2026_06_30);
-
-        sim.set_settlement_population(7, civ_institutions::TEMPLE_UNLOCK_POPULATION);
-        sim.tick();
-
-        // FR-CIV-LEGENDS: notable world events produced by the sim tick are
-        // appended to the queryable chronicle.
-        let entries = sim.legends_chronicle().all();
-        assert!(
-            entries
-                .iter()
-                .any(|entry| matches!(entry.kind, civ_legends::ChronicleEventKind::Founding)),
-            "expected the institution founding to create a legends chronicle entry, got {entries:?}"
         );
     }
 

@@ -6,19 +6,13 @@ use std::{
         atomic::{AtomicU16, AtomicU8},
         Arc,
     },
+    time::Duration,
 };
-#[cfg(feature = "mods")]
-use std::time::Duration;
 
 use axum::body::Bytes;
 use axum::http::HeaderValue;
 use civ_economy::Stocks;
-use civ_engine::{
-    engine::{JobType, Resources},
-    DiplomacyKind, Simulation,
-};
-#[cfg(feature = "mods")]
-use civ_engine::ModBrowserEntry;
+use civ_engine::{DiplomacyKind, JobType, ModBrowserEntry, Simulation};
 use civ_laws::LawDb;
 use civ_save_db::SaveDb;
 use serde::{Deserialize, Serialize};
@@ -311,11 +305,7 @@ pub(crate) struct Snapshot {
     pub(crate) weather: WeatherSnapshot,
     pub(crate) speed: u8,
     /// Loaded CivLab mods for dashboard mod browser (FR-CIV-TACTICS-054).
-    #[cfg(feature = "mods")]
     pub(crate) mods: Vec<ModBrowserEntry>,
-    /// Loaded CivLab mods for dashboard mod browser (FR-CIV-TACTICS-054).
-    #[cfg(not(feature = "mods"))]
-    pub(crate) mods: Vec<serde_json::Value>,
 }
 
 /// Pre-serialized terrain JSON and a stable ETag for cheap repeat fetches.
@@ -348,11 +338,9 @@ pub(crate) struct AppState {
     pub(crate) target_era: Arc<AtomicU16>,
     pub(crate) speed: Arc<AtomicU8>,
     pub(crate) saves_dir: Arc<PathBuf>,
-    #[cfg(feature = "mods")]
     pub(crate) mods_dir: Arc<PathBuf>,
     pub(crate) session_id: String,
     pub(crate) save_db: Arc<SaveDb>,
-    #[cfg(feature = "mods")]
     pub(crate) http: reqwest::Client,
 }
 
@@ -503,7 +491,6 @@ pub(crate) struct UploadModResponse {
 }
 
 pub(crate) const REMOTE_MOD_MAX_BYTES: usize = 50 * 1024 * 1024;
-#[cfg(feature = "mods")]
 pub(crate) const REMOTE_FETCH_TIMEOUT: Duration = Duration::from_secs(30);
 pub(crate) const REMOTE_MOD_META_NAME: &str = "meta.json";
 pub(crate) const REMOTE_MOD_ARCHIVE_NAME: &str = "mod.civmod";

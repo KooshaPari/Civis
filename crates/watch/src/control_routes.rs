@@ -4,7 +4,7 @@ use std::sync::atomic::Ordering;
 
 use axum::{extract::State, response::Json};
 use civ_agents::spawn_civilian_at;
-use civ_engine::DamageEvent;
+use civ_tactics::DamageEvent;
 use civ_voxel::{MaterialId, WorldCoord};
 
 use crate::app::{
@@ -95,15 +95,15 @@ pub(crate) async fn spawn_entity_handler(
             });
         }
         "airport" => {
-            use civ_engine::spawn::spawn_airport_at;
+            use civ_engine::spawn_airport_at;
             let _ = spawn_airport_at(&mut sim.world, req.x, req.y);
         }
         "port" => {
-            use civ_engine::spawn::spawn_port_at;
+            use civ_engine::spawn_port_at;
             let _ = spawn_port_at(&mut sim.world, req.x, req.y);
         }
         "hangar" => {
-            use civ_engine::spawn::spawn_hangar_at;
+            use civ_engine::spawn_hangar_at;
             let _ = spawn_hangar_at(&mut sim.world, req.x, req.y);
         }
         _ => {

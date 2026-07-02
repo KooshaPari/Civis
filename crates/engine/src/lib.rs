@@ -74,8 +74,7 @@ pub use crate::spawn::{grid_to_norm, military_pin_id, spawn_military_at, unit_ty
 // `ModGuestStateSave` lives in the `civ-mod-host` crate. Re-exported here
 // so engine consumers (save_bundle, scenario) can `use civ_engine::ModGuestStateSave`
 // without adding a direct `civ-mod-host` dependency.
-#[cfg(feature = "mods")]
-pub use civ_mod_host::{load_manifest, ModBrowserEntry, ModGuestStateSave, ModType};
+pub use civ_mod_host::ModGuestStateSave;
 
 // `ReplayLog` is declared `pub` in `crate::replay`. Re-exported here so
 // callers can `use civ_engine::ReplayLog` without importing the private

@@ -287,7 +287,6 @@ impl Scenario {
         sim.configure_military_fog(self.fog_vision_radius, self.fog_grid_size);
         sim.apply_scenario_military(&self.military);
         sim.apply_scenario_taxation(&self.taxation);
-        #[cfg(feature = "mods")]
         sim.register_mod_stubs(&self.mods);
         sim.set_policy(policy_from_kind(&self.policy.kind));
         sim

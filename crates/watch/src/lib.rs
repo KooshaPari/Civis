@@ -8,7 +8,6 @@
 
 mod app;
 mod control_routes;
-#[cfg(feature = "mods")]
 mod mods_api;
 mod saves_api;
 mod server;

@@ -27,7 +27,7 @@ use bevy::{
     pbr::{ScreenSpaceAmbientOcclusion, ScreenSpaceReflections},
     post_process::bloom::Bloom,
     prelude::*,
-    render::view::{Hdr, Msaa},
+    render::view::{ColorGrading, Hdr, Msaa},
 };
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -38,6 +38,10 @@ use bevy::{
 pub struct PostFxSettings {
     /// Enable `Tonemapping::AcesFitted`.
     pub aces: bool,
+    /// Enable the baseline Bevy tonemapping pass.
+    pub tonemapping: bool,
+    /// Enable the baseline Bevy color grading component.
+    pub color_grading: bool,
     /// Enable `Bloom` (requires HDR; automatically sets `Camera.hdr = true`).
     pub bloom: bool,
     /// Enable `ScreenSpaceAmbientOcclusion`.
@@ -54,6 +58,8 @@ impl Default for PostFxSettings {
     fn default() -> Self {
         Self {
             aces: true,
+            tonemapping: true,
+            color_grading: true,
             bloom: true,
             ssao: true,
             ssr: true,
@@ -106,6 +112,10 @@ impl Plugin for PostFxPlugin {
 /// FR-CIV-PBR-003 — when enabled, this adds Bevy's built-in VolumetricFog
 /// component as the baseline volumetric fog/lighting pass for the main 3D
 /// camera.
+///
+/// FR-CIV-PBR-004 — when enabled, this adds Bevy's built-in Tonemapping and
+/// ColorGrading components as the baseline post-FX visual-parity closure for
+/// the main 3D camera.
 fn apply_post_fx(
     mut commands: Commands,
     settings: Res<PostFxSettings>,
@@ -120,8 +130,11 @@ fn apply_post_fx(
     // In Bevy 0.18 HDR is the `Hdr` marker component, not a `Camera` field.
     entity_cmd.insert((Hdr, Msaa::Off, PostFxApplied));
 
-    if settings.aces {
+    if settings.tonemapping && settings.aces {
         entity_cmd.insert(Tonemapping::AcesFitted);
+    }
+    if settings.color_grading {
+        entity_cmd.insert(ColorGrading::default());
     }
     if settings.bloom {
         entity_cmd.insert(Bloom::NATURAL);
@@ -175,6 +188,8 @@ mod tests {
     fn post_fx_settings_default_all_true() {
         let s = PostFxSettings::default();
         assert!(s.aces, "aces should default to true");
+        assert!(s.tonemapping, "tonemapping should default to true");
+        assert!(s.color_grading, "color_grading should default to true");
         assert!(s.bloom, "bloom should default to true");
         assert!(s.ssao, "ssao should default to true");
         assert!(s.ssr, "ssr should default to true");
@@ -190,6 +205,8 @@ mod tests {
         };
         assert!(!s.bloom);
         assert!(s.aces);
+        assert!(s.tonemapping);
+        assert!(s.color_grading);
         assert!(s.ssao);
         assert!(s.ssr);
         assert!(s.volumetric_fog);

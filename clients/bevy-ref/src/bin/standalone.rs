@@ -192,7 +192,9 @@ fn main() {
 #[cfg(feature = "egui")]
 fn sync_post_fx_from_settings(settings: Res<GameSettings>, mut post_fx: ResMut<PostFxSettings>) {
     let graphics = &settings.graphics;
-    post_fx.aces = graphics.anti_aliasing != AntiAliasing::Off;
+    post_fx.aces = graphics.tonemapping_enabled;
+    post_fx.tonemapping = graphics.tonemapping_enabled;
+    post_fx.color_grading = graphics.color_grading_enabled;
     post_fx.bloom = graphics.bloom;
     post_fx.ssao = graphics.ssao_enabled;
     post_fx.ssr = graphics.ssr_enabled;

@@ -351,6 +351,12 @@ pub struct GraphicsSettings {
     /// Bevy built-in volumetric fog pass toggle.
     #[serde(default = "default_true")]
     pub volumetric_fog_enabled: bool,
+    /// Bevy built-in tonemapping pass toggle.
+    #[serde(default = "default_true")]
+    pub tonemapping_enabled: bool,
+    /// Bevy built-in color grading pass toggle.
+    #[serde(default = "default_true")]
+    pub color_grading_enabled: bool,
     /// Bloom toggle.
     #[serde(default)]
     pub bloom: bool,
@@ -380,6 +386,8 @@ impl Default for GraphicsSettings {
             ssao_enabled: true,
             ssr_enabled: true,
             volumetric_fog_enabled: true,
+            tonemapping_enabled: true,
+            color_grading_enabled: true,
             bloom: true,
             motion_blur: false,
             gi: false,
@@ -403,6 +411,8 @@ impl GraphicsSettings {
                 self.ssao_enabled = false;
                 self.ssr_enabled = false;
                 self.volumetric_fog_enabled = false;
+                self.tonemapping_enabled = false;
+                self.color_grading_enabled = false;
                 self.bloom = false;
                 self.motion_blur = false;
                 self.gi = false;
@@ -418,6 +428,8 @@ impl GraphicsSettings {
                 self.ssao_enabled = true;
                 self.ssr_enabled = true;
                 self.volumetric_fog_enabled = true;
+                self.tonemapping_enabled = true;
+                self.color_grading_enabled = true;
                 self.bloom = true;
                 self.motion_blur = false;
                 self.gi = false;
@@ -433,6 +445,8 @@ impl GraphicsSettings {
                 self.ssao_enabled = true;
                 self.ssr_enabled = true;
                 self.volumetric_fog_enabled = true;
+                self.tonemapping_enabled = true;
+                self.color_grading_enabled = true;
                 self.bloom = true;
                 self.motion_blur = false;
                 self.gi = true;
@@ -448,6 +462,8 @@ impl GraphicsSettings {
                 self.ssao_enabled = true;
                 self.ssr_enabled = true;
                 self.volumetric_fog_enabled = true;
+                self.tonemapping_enabled = true;
+                self.color_grading_enabled = true;
                 self.bloom = true;
                 self.motion_blur = true;
                 self.gi = true;
@@ -1373,6 +1389,12 @@ fn graphics_special_toggles(ui: &mut egui::Ui, g: &mut GraphicsSettings) -> bool
     changed |= ui
         .checkbox(&mut g.volumetric_fog_enabled, "Volumetric Fog")
         .changed();
+    changed |= ui
+        .checkbox(&mut g.tonemapping_enabled, "Tonemapping")
+        .changed();
+    changed |= ui
+        .checkbox(&mut g.color_grading_enabled, "Color Grading")
+        .changed();
     changed |= ui.checkbox(&mut g.bloom, "Bloom").changed();
     changed |= ui.checkbox(&mut g.motion_blur, "Motion Blur").changed();
     changed |= ui.checkbox(&mut g.vsync, "VSync").changed();
@@ -1676,6 +1698,8 @@ mod tests {
         assert!(g.ssao_enabled);
         assert!(g.ssr_enabled);
         assert!(g.volumetric_fog_enabled);
+        assert!(g.tonemapping_enabled);
+        assert!(g.color_grading_enabled);
         assert!(g.bloom);
         assert!(g.motion_blur);
         assert!(g.gi);
@@ -1704,6 +1728,16 @@ mod tests {
     #[test]
     fn default_graphics_settings_enable_volumetric_fog() {
         assert!(GraphicsSettings::default().volumetric_fog_enabled);
+    }
+
+    #[test]
+    fn default_graphics_settings_enable_tonemapping() {
+        assert!(GraphicsSettings::default().tonemapping_enabled);
+    }
+
+    #[test]
+    fn default_graphics_settings_enable_color_grading() {
+        assert!(GraphicsSettings::default().color_grading_enabled);
     }
 
     #[test]

@@ -65,6 +65,7 @@ fn main() {
         .add_plugins(civ_bevy_ref::diplomacy_ui::DiplomacyUiPlugin)
         .add_plugins(civ_bevy_ref::event_feed::EventFeedPlugin)
         .add_plugins(civ_bevy_ref::menus::MenusPlugin)
+        .add_plugins(civ_bevy_ref::save_load_ui::SaveLoadUiPlugin)
         .add_plugins(civ_bevy_ref::spawn_tools::SpawnToolsPlugin)
         .add_plugins(civ_bevy_ref::minimap::MinimapPlugin)
         .init_resource::<civ_bevy_ref::game_ui::GameUiSnapshot>()

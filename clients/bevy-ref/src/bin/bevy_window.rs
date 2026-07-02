@@ -6,6 +6,7 @@ use bevy::ui::{FocusPolicy, RelativeCursorPosition};
 use bevy_egui::{egui, EguiContexts};
 #[cfg(feature = "models")]
 use civ_bevy_ref::animation::ActorAnimationPlugin;
+use civ_bevy_ref::atmosphere::{animate_water, setup_atmosphere, update_lighting, DayNightCycle};
 #[cfg(feature = "egui")]
 use civ_bevy_ref::diplomacy_ui::{DiplomacyBridge, DiplomacyUiPlugin};
 #[cfg(feature = "models")]
@@ -64,7 +65,6 @@ use civ_bevy_ref::{
     ws_client::{WsClient, WsClientConfig},
     CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
 };
-use civ_bevy_ref::atmosphere::{animate_water, setup_atmosphere, update_lighting, DayNightCycle};
 use civ_protocol_3d::Frame3d;
 use civ_voxel::ChunkId;
 use serde_json;
@@ -252,16 +252,16 @@ fn main() {
     #[cfg(feature = "egui")]
     app.init_state::<AppState>();
     app.init_resource::<LiveStreamScene>()
-    .init_resource::<LiveSceneFocus>()
-    .init_resource::<MinimapPopup>()
-    .init_resource::<SimSpeedState>()
-    .init_resource::<EmergencePollTimer>()
-    .init_resource::<EmergenceHudData>()
-    .init_resource::<SaveListState>()
-    .insert_resource(ScenePresentation::default())
-    .insert_resource(DebugRender::default())
-    .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
-    .add_systems(Startup, (setup, setup_atmosphere));
+        .init_resource::<LiveSceneFocus>()
+        .init_resource::<MinimapPopup>()
+        .init_resource::<SimSpeedState>()
+        .init_resource::<EmergencePollTimer>()
+        .init_resource::<EmergenceHudData>()
+        .init_resource::<SaveListState>()
+        .insert_resource(ScenePresentation::default())
+        .insert_resource(DebugRender::default())
+        .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
+        .add_systems(Startup, (setup, setup_atmosphere));
     #[cfg(feature = "egui")]
     {
         app.add_systems(
@@ -416,6 +416,9 @@ fn consume_menu_commands(
             .to_string();
             bridge.client.send_rpc_raw(json);
             next_state.set(AppState::WorldGen);
+        }
+        MainMenuCommand::LoadGame => {
+            save_panel.visible = true;
         }
         MainMenuCommand::Resume => {
             if *state == AppState::Paused {

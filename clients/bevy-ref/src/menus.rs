@@ -34,6 +34,7 @@ pub enum MainMenuCommand {
     None,
     NewWorld,
     Continue,
+    LoadGame,
     Resume,
     OpenSettings,
     OpenSavePanel,
@@ -245,6 +246,11 @@ fn draw_main_menu(
                         }
                         ui.add_space(8.0);
 
+                        if menu_button(ui, "\u{1f4be}  Load Game").clicked() {
+                            command.action = MainMenuCommand::LoadGame;
+                        }
+                        ui.add_space(8.0);
+
                         if menu_button(ui, "\u{2699}  Settings").clicked() {
                             command.action = MainMenuCommand::OpenSettings;
                             settings_open.0 = true;
@@ -411,7 +417,8 @@ fn pause_menu_buttons(
         settings_open.0 = !settings_open.0;
     }
     ui.add_space(6.0);
-    if menu_button(ui, "\u{1f4be}  Save").clicked() {
+    if menu_button(ui, "\u{1f4be}  Save/Load").clicked() {
+        // Save/Load tab: opens the shared slot browser while the pause shell stays visible.
         command.action = MainMenuCommand::OpenSavePanel;
         save_panel.visible = true;
     }

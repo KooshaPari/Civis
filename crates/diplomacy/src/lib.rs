@@ -1084,6 +1084,21 @@ pub use concession_rounds::{
 };
 
 // ---------------------------------------------------------------------------
+// FR-CIV-DIPLO-005: structured negotiation transcripts
+// ---------------------------------------------------------------------------
+//
+// Additive slice: a [`Transcript`] holds an ordered Vec of
+// [`TranscriptClause`] variants (Offer, Counter, Accept, Reject, Concession)
+// as the source of truth, plus an optional [`Transcript::flavor_text`]
+// garnish layer where LLM wording (FR-CIV-DIPLO-006 may decorate, never
+// construct) attaches in a later slice. Lives in its own module and does
+// not modify the substrate above.
+
+pub mod transcripts;
+
+pub use transcripts::{Transcript, TranscriptClause};
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 

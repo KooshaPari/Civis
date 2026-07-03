@@ -44,7 +44,7 @@ jobs:
         with:
           toolchain: stable
       - name: Cache cargo-deny
-        uses: Swatinem/rust-cache@82e0640c10b16e16b3049b531e1771638dca14eb
+        uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
             ~/.cargo/advisory-db

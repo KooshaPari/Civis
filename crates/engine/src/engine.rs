@@ -957,6 +957,14 @@ pub struct Simulation {
     /// [`Simulation::phase_economic_focus_pre`]. Cleared at the start of
     /// every [`Simulation::tick`]; surfaced to the JSON-RPC bridge.
     econ_focus_stability: Vec<EconomicFocusEvent>,
+
+    /// Pairwise faction relation matrix tracking diplomatic standing
+    /// between factions through trade, combat, and cultural interactions.
+    pub faction_relations: DiplomacyMatrix,
+
+    /// Per-faction combat grief accumulator for tracking accumulated
+    /// hostility from combat engagements (decays each tick).
+    pub grief_accumulator: civ_agents::diplomacy::GriefAccumulator,
 }
 
 /// Per-settlement religious event emitted by [`Simulation::phase_belief`]
@@ -1659,6 +1667,8 @@ impl Simulation {
             settlement_gini: BTreeMap::new(),
             last_tick_unrest_events: Vec::new(),
             last_tick_unrest_levels: BTreeMap::new(),
+            faction_relations: DiplomacyMatrix::new(),
+            grief_accumulator: civ_agents::diplomacy::GriefAccumulator::new(),
         }
     }
 
@@ -1808,6 +1818,8 @@ impl Simulation {
             settlement_gini: BTreeMap::new(),
             last_tick_unrest_events: Vec::new(),
             last_tick_unrest_levels: BTreeMap::new(),
+            faction_relations: DiplomacyMatrix::new(),
+            grief_accumulator: civ_agents::diplomacy::GriefAccumulator::new(),
         }
     }
 
@@ -4873,7 +4885,7 @@ impl Simulation {
     }
 
     /// Per-tick relation drift from proximity, competition, trade, religion, and combat.
-    fn tick_faction_relation_drift(&mut self) {
+    pub(crate) fn tick_faction_relation_drift(&mut self) {
         self.grief_accumulator.tick_decay();
         for eng in &self.last_tick_engagements {
             self.grief_accumulator

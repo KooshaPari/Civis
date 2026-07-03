@@ -261,6 +261,14 @@ pub enum DumpError {
     /// Unknown policy name.
     #[error("unknown dump policy `{0}` (expected headless or headful)")]
     UnknownPolicy(String),
+    /// A CLI tolerance was negative and would invert the diff semantics.
+    #[error("invalid {name} `{value}` (expected a non-negative tolerance)")]
+    InvalidTolerance {
+        /// CLI field name.
+        name: String,
+        /// Raw value supplied by the operator.
+        value: f64,
+    },
     /// IO error reading a dump file (bin layer).
     #[error("read dump file {path}: {source}")]
     Io {
@@ -717,5 +725,17 @@ mod tests {
             .violations
             .iter()
             .any(|v| v.gate == "animation.players"));
+    }
+
+    #[test]
+    fn invalid_tolerance_is_constructible_for_cli_guard() {
+        let err = DumpError::InvalidTolerance {
+            name: "resource_tol".to_string(),
+            value: -1.0,
+        };
+        assert_eq!(
+            err.to_string(),
+            "invalid resource_tol `-1` (expected a non-negative tolerance)"
+        );
     }
 }

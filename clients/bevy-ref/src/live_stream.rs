@@ -12,29 +12,26 @@ use bevy::text::{TextColor, TextFont};
 use civ_protocol_3d::{
     agent_world_translation, map_build_provenance, AgentAppearanceFrame, BattleEvent3d,
     BirthEvent3d, BuildingDiffFrame, BuildingGraph, BuildingKind3d, BuildingProvenance,
-    CivilianStateEntry, CivilianStateFrame, ClimateFrame, DeathEvent3d, DisasterEvent3d,
-    EventFeedMessage3d, FacadeStyle, FactionStateFrame, ParcelKind, TechEvent3d, VoxelDeltaFrame,
-    WorldXZ,
+    CivilianStateEntry, CivilianStateFrame, DeathEvent3d, DisasterEvent3d, EventFeedMessage3d,
+    FacadeStyle, FactionStateFrame, ParcelKind, TechEvent3d, VoxelDeltaFrame, WorldXZ,
 };
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId};
 
 use crate::bevy_render::{apply_chunk_material, mesh_buffer_to_bevy};
 use crate::game_ui::civilian_display_name;
 use crate::live_ground::{live_ground_y, ChunkVoxelCache};
-use crate::ws_client::WsClient;
 use crate::{
     agent_color_from_id, agent_scale_multiplier, chunk_distance_from_camera, decode_chunk_id,
     mesh_lod_level, should_render_chunk, DebugRender, LiveEntityKind, SelectedLiveEntity,
     AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
 };
+use crate::ws_client::WsClient;
 
 /// Bevy resource wrapping a [`WsClient`] so egui plugins can send JSON-RPC calls
-/// to `civ-server` without taking a direct dependency on the transport layer.
-/// The `civ-bevy-window` binary inserts a concrete instance at startup; tests
-/// and headless binaries may substitute a fake.
-#[derive(Resource)]
+/// to `civ-server` without depending on the window binary crate.
+#[derive(Resource, Clone)]
 pub struct LiveBridge {
-    /// The shared WebSocket client used for live JSON-RPC + frame traffic.
+    /// Shared WebSocket client for live JSON-RPC + frame traffic.
     pub client: WsClient,
 }
 
@@ -201,8 +198,10 @@ pub const AGENT_LABEL_Y_OFFSET: f32 = 1.05;
 pub struct StreamCulling {
     /// Camera position in world space.
     pub eye: [f32; 3],
-    /// Maximum render distance in world units.
+    /// Maximum render distance in world units (already scaled for [`gpu_quality`]).
     pub max_distance: f32,
+    /// Active GPU quality recovery mode for chunk LOD selection.
+    pub gpu_quality: GpuQualityMode,
 }
 
 /// Marker for a streamed voxel chunk entity.
@@ -261,11 +260,6 @@ pub struct LiveGraphParcelTag {
 #[derive(Resource)]
 pub struct LiveStreamScene {
     pub chunks: HashMap<u64, Entity>,
-    /// Water surface companion entities keyed by raw chunk id (FR-CLIENT-render).
-    /// The water entity is a transparent quad that follows the parent chunk
-    /// transform and is repositioned every snapshot delta so the water surface
-    /// visibly tracks the underlying voxel stream.
-    pub water_entities: HashMap<u64, Entity>,
     pub chunk_voxels: ChunkVoxelCache,
     pub agents: HashMap<u64, Entity>,
     pub buildings: HashMap<u64, Entity>,
@@ -286,28 +280,12 @@ pub struct LiveStreamScene {
     pub faction_era: u16,
     /// Civilian count per faction id from the latest FactionState frame (FR-CIV-PROTO-001).
     pub population_by_faction: std::collections::BTreeMap<u32, u32>,
-    /// Latest climate snapshot from `Frame3d::Climate` (FR-CLIENT-render).
-    /// Driven by the planetary sim and read by client-side lighting/sky systems.
-    /// Storing a flat copy (instead of [`civ_protocol_3d::ClimateFrame`])
-    /// keeps `civ-bevy-ref` free of a `civ-planet` dep — the renderer only
-    /// needs the four phase floats + tide offset for sky/sun blending.
-    pub latest_climate: Option<ClimateSnapshot>,
-    /// Last tick at which a climate frame was observed (matches
-    /// `latest_climate.as_ref().map(|f| f.tick)`; tracked explicitly so the
-    /// day/night HUD + skybox blend systems don't need to clone the frame).
-    pub latest_climate_tick: Option<u64>,
-    /// Last observed per-region weather grid (FR-CLIENT-render). Kept as the
-    /// raw `WeatherCell` list so the renderer can drive per-region particle
-    /// FX / sky tinting without re-asking the server.
-    #[cfg_attr(not(feature = "bevy"), allow(dead_code))]
-    pub latest_weather_kinds: Vec<WeatherKindSnapshot>,
 }
 
 impl Default for LiveStreamScene {
     fn default() -> Self {
         Self {
             chunks: HashMap::default(),
-            water_entities: HashMap::default(),
             chunk_voxels: ChunkVoxelCache::default(),
             agents: HashMap::default(),
             buildings: HashMap::default(),
@@ -325,9 +303,6 @@ impl Default for LiveStreamScene {
             faction_entries: Vec::new(),
             faction_era: 0,
             population_by_faction: std::collections::BTreeMap::new(),
-            latest_climate: None,
-            latest_climate_tick: None,
-            latest_weather_kinds: Vec::new(),
         }
     }
 }
@@ -357,51 +332,6 @@ pub fn apply_faction_state_frame(scene: &mut LiveStreamScene, frame: FactionStat
         .factions
         .extend(scene.faction_entries.iter().map(|entry| entry.id));
     scene.population_by_faction = frame.population_by_faction;
-}
-
-/// Records a `Frame3d::Climate` snapshot into [`LiveStreamScene`]
-/// (FR-CLIENT-render). Flattens the wire `ClimateFrame` into a
-/// [`ClimateSnapshot`] + per-region `WeatherKind` list so the renderer can
-/// drive sky/sun/ambient tinting without touching `civ-planet` directly.
-///
-/// Stale frames (older than the last-seen tick) are dropped — climate frames
-/// arrive at a much lower cadence than voxel deltas, so this is the only
-/// ordering check we need to prevent the day/night HUD from flickering
-/// backwards on retransmits.
-pub fn apply_climate_frame(scene: &mut LiveStreamScene, frame: ClimateFrame) {
-    let new_tick = frame.climate.tick;
-    if let Some(prev) = scene.latest_climate_tick {
-        if new_tick < prev {
-            return;
-        }
-    }
-    let snapshot = ClimateSnapshot {
-        tick: frame.climate.tick,
-        day_phase: frame.climate.day_phase,
-        year_phase: frame.climate.year_phase,
-        moon_phase: frame.climate.moon_phase,
-        tide_offset: frame.climate.tide_offset,
-    };
-    let weather = frame
-        .weather
-        .iter()
-        .map(|cell| WeatherKindSnapshot(cell.kind as u8))
-        .collect();
-    scene.latest_climate = Some(snapshot);
-    scene.latest_climate_tick = Some(snapshot.tick);
-    scene.latest_weather_kinds = weather;
-}
-
-/// Convenience getter used by client render systems (FR-CLIENT-render).
-/// Returns the most recent [`ClimateSnapshot`] together with the per-region
-/// weather tags, if any frame has been observed.
-#[must_use]
-pub fn latest_climate(
-    scene: &LiveStreamScene,
-) -> Option<(ClimateSnapshot, &[WeatherKindSnapshot])> {
-    scene
-        .latest_climate
-        .map(|snap| (snap, scene.latest_weather_kinds.as_slice()))
 }
 
 /// Maps a `FactionState` wire frame into [`DiplomacyState`] for the egui panel.
@@ -478,6 +408,10 @@ pub fn format_live_pick_hud_line(
             .or_else(|| Some(format!("Agent #{}", selected.id))),
         LiveEntityKind::Building => Some(format!("Building #{}", selected.id)),
         LiveEntityKind::GraphParcel => Some(format!("Parcel #{}", selected.id)),
+        LiveEntityKind::VoxelChunk => {
+            let (cx, cy, cz) = crate::decode_chunk_id(civ_voxel::ChunkId(selected.id));
+            Some(format!("Chunk ({cx}, {cy}, {cz})"))
+        }
     }
 }
 
@@ -847,18 +781,31 @@ pub fn chunk_water_top_y(voxels: &[MaterialId], chunk_origin_y: i32) -> Option<f
 pub fn apply_water_for_chunk(
     commands: &mut Commands,
     scene: &mut LiveStreamScene,
-    meshes: &LiveWaterMeshes,
+    mesh_assets: &mut Assets<Mesh>,
     material_assets: &mut Assets<StandardMaterial>,
-    chunk_id: ChunkId,
-    voxels: &[MaterialId],
+    culling: StreamCulling,
+    debug: &DebugRender,
+    chunk_ids: &[ChunkId],
+    wireframe_line_color: Option<Color>,
 ) {
-    let (cx, cy, cz) = decode_chunk_id(chunk_id);
-    let _ = (cx, cz);
+    use civ_protocol_3d::{DirtyChunkEvent, VoxelChunkDelta, WriteSeq};
 
-    if !chunk_has_water(voxels) {
-        if let Some(entity) = scene.water_entities.remove(&chunk_id.0) {
-            commands.entity(entity).despawn();
-        }
+    let deltas: Vec<VoxelChunkDelta> = chunk_ids
+        .iter()
+        .filter_map(|chunk_id| {
+            scene
+                .chunk_voxels
+                .get_chunk(*chunk_id)
+                .map(|voxels| VoxelChunkDelta {
+                    event: DirtyChunkEvent {
+                        chunk_id: *chunk_id,
+                        write_seq: WriteSeq(1),
+                    },
+                    voxels: voxels.to_vec(),
+                })
+        })
+        .collect();
+    if deltas.is_empty() {
         return;
     }
 
@@ -940,7 +887,8 @@ pub fn apply_voxel_delta_frame(
         };
         let distance =
             chunk_distance_from_camera(chunk.event.chunk_id, culling.eye, LIVE_CHUNK_EDGE as f32);
-        let lod = LodLevel(mesh_lod_level(distance));
+        let lod_distance = scaled_mesh_lod_distance(distance, culling.gpu_quality);
+        let lod = LodLevel(mesh_lod_level(lod_distance));
         let Ok(mesh_buffer) = CubicMesher::mesh_cubic(chunk_view, lod) else {
             continue;
         };
@@ -1148,28 +1096,15 @@ pub fn apply_agent_appearance_frame_with_labels_and_eye(
 ) {
     for update in agents.updates {
         let rgb = agent_color_from_id(update.agent_id);
-        let wire_scale = agent_scale_multiplier(update.scale);
+        let scale = agent_scale_multiplier(update.scale);
         let (x, _, z) = agent_world_translation(&update, 0.0);
-        if !x.is_finite() || !z.is_finite() || !wire_scale.is_finite() {
+        if !x.is_finite() || !z.is_finite() || !scale.is_finite() {
             continue;
         }
         let y = live_ground_y(&scene.chunk_voxels, x, z, AGENT_GROUND_Y);
         if !y.is_finite() {
             continue;
         }
-        // FR-CLIENT-render: distance-LOD the agent marker scale when we know
-        // the camera position. Clamp envelope matches the existing
-        // `agent_scale_multiplier` (i.e. no upper bound, lower bound 0.05 so
-        // agents never disappear entirely).
-        let scale = match camera_eye {
-            Some(eye) => {
-                let dx = x - eye[0];
-                let dz = z - eye[2];
-                let d = (dx * dx + dz * dz).sqrt();
-                agent_distance_lod(wire_scale, d, 0.05, f32::MAX)
-            }
-            None => wire_scale,
-        };
         let transform = Transform::from_xyz(x, y, z).with_scale(Vec3::splat(scale));
 
         let material_handle = scene
@@ -1483,7 +1418,6 @@ mod tests {
     use crate::encode_chunk_id;
     use crate::live_ground::{live_ground_y, live_voxel_surface_y, ChunkVoxelCache};
     use civ_protocol_3d::{DirtyChunkEvent, VoxelChunkDelta, VoxelDeltaFrame, WriteSeq};
-    use civ_voxel::material::WATER;
     use civ_voxel::MaterialId;
 
     const CHUNK_VOXELS: usize = LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE;
@@ -1494,7 +1428,7 @@ mod tests {
 
     fn solid_chunk_voxels() -> Vec<MaterialId> {
         let mut voxels = vec![MaterialId(0); CHUNK_VOXELS];
-        voxels[voxel_index(4, 3, 5)] = WATER;
+        voxels[voxel_index(4, 3, 5)] = MaterialId(1);
         voxels
     }
 
@@ -1626,6 +1560,7 @@ mod tests {
         let culling = StreamCulling {
             eye: [8.0, 8.0, 8.0],
             max_distance: 512.0,
+            gpu_quality: GpuQualityMode::Full,
         };
 
         let mut scene = LiveStreamScene::default();

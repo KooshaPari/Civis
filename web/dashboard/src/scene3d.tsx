@@ -13,8 +13,9 @@ import {
   executeTerrainAuthoring,
 } from "./lib/authoring";
 import { convoyCells, spawnKindUsesConvoy } from "./lib/spawnConvoy";
+import { zoomDistanceFromWheel } from "./lib/zoomMath.mjs";
 import { postControl } from "./control";
-import { useDashboardShortcuts } from "./hooks/useDashboardShortcuts";
+import { isDashboardShortcutTarget, useDashboardShortcuts } from "./hooks/useDashboardShortcuts";
 import { getActiveServerSocket } from "./lib/civisSocket";
 import { jsonRpcCall, normalizeServerSnapshot } from "./lib/civisServer";
 import {
@@ -1273,11 +1274,7 @@ export function Scene3d() {
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.repeat) return;
-      if (
-        event.target instanceof HTMLElement &&
-        /input|textarea|select/i.test(event.target.tagName)
-      )
-        return;
+      if (isDashboardShortcutTarget(event.target)) return;
       if (event.key >= "1" && event.key <= "5") {
         const faction =
           stateRef.current.snapshot?.factions?.[Number(event.key) - 1];
@@ -1312,14 +1309,12 @@ export function Scene3d() {
 
       const minDistance = Math.max(terrain.size * 0.12, controls.minDistance || 0);
       const maxDistance = Math.max(terrain.size * 8, controls.maxDistance || Infinity);
-      // zoomDistanceFromWheel (harvested in fb4c135d) inlined here.
-      // Math: distance * exp(deltaY * 0.0012), clamped to [minDistance, maxDistance].
-      const zoomFactor = Math.exp(event.deltaY * 0.0012);
-      const rawNextDistance = offset.length() * zoomFactor;
-      const nextDistance = Math.min(
-        Math.max(rawNextDistance, minDistance),
+      const nextDistance = zoomDistanceFromWheel({
+        distance: offset.length(),
+        deltaY: event.deltaY,
+        minDistance,
         maxDistance,
-      );
+      });
       offset.setLength(nextDistance);
 
       camera.position.copy(controls.target).add(offset);
@@ -1407,6 +1402,10 @@ export function Scene3d() {
 
     let raf = 0;
     const animate = () => {
+      if (document.hidden) {
+        raf = 0;
+        return;
+      }
       raf = window.requestAnimationFrame(animate);
       const snapshot = refs.current.currentSnapshot;
       const terrain = refs.current.activeTerrain;
@@ -1458,6 +1457,18 @@ export function Scene3d() {
       renderer.render(scene, camera);
       labelRenderer.render(scene, camera);
     };
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        if (raf !== 0) {
+          window.cancelAnimationFrame(raf);
+          raf = 0;
+        }
+        return;
+      }
+      if (raf === 0) {
+        animate();
+      }
+    };
 
     const initialize = async () => {
       const terrain = stateRef.current.terrain ?? (await terrainLoader());
@@ -1476,6 +1487,7 @@ export function Scene3d() {
     };
 
     void initialize();
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       observer.disconnect();
@@ -1488,6 +1500,7 @@ export function Scene3d() {
       renderer.domElement.removeEventListener("wheel", onWheel);
       clearDragPreview();
       window.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       window.cancelAnimationFrame(raf);
       controls.dispose();
       terrainGroup.clear();

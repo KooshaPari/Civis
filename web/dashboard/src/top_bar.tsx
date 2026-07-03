@@ -1,6 +1,12 @@
 import { flipTheme, themeToggleLabel } from "./lib/theme";
 import { useDashboardStore } from "./store";
 import { playClick, primeAudio } from "./lib/sounds";
+import { authoringModeLabel } from "../../../src/authoringMode.mjs";
+import {
+  attachEndpointLabel,
+  attachModeLabel,
+  resolveBrowserWsUrl,
+} from "./lib/attachConfig";
 
 export function TopBar() {
   const { state, dispatch } = useDashboardStore();
@@ -11,18 +17,23 @@ export function TopBar() {
   }[state.connection];
   const metrics = state.serverMetrics;
   const tick = state.snapshot?.tick ?? metrics?.tick ?? 0;
-  const modeLabel = state.attachMode === "server" ? "civ-server" : "civ-watch";
+  const modeLabel = attachModeLabel(state.attachMode);
+  const endpointLabel = attachEndpointLabel(state.attachMode);
+  const endpointUrl = resolveBrowserWsUrl(window.location.search);
   const weatherLabel = formatWeather(state.snapshot?.weather);
 
   return (
     <header className="top-bar">
       <div className="brand-block">
-        <p className="eyebrow">
-          Civis · {state.readOnly ? "spectator" : "L2 authoring"}
-        </p>
+        <p className="eyebrow">Civis</p>
         <h1>{state.readOnly ? "Live simulation observer" : "Simulation sandbox"}</h1>
         <p className="brand-sub">
-          Attach: <strong>{modeLabel}</strong>
+          <span className={`mode-pill ${state.readOnly ? "spectator" : "authoring"}`}>
+            {authoringModeLabel(state.readOnly)}
+          </span>
+          Attach target: <strong>{modeLabel}</strong>
+          {` · ${endpointLabel}: `}
+          <strong>{endpointUrl}</strong>
           {state.frame3dTick != null ? ` · F3D0 tick ${state.frame3dTick}` : null}
           {weatherLabel ? ` · ${weatherLabel}` : null}
         </p>

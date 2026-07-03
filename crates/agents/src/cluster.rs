@@ -93,13 +93,12 @@ pub fn cluster_by_colocation(
     // canonical root *index*; because indices follow the agent-id sort, the same
     // component always yields the same min id regardless of input order.
     let mut cluster_min_id: HashMap<usize, u64> = HashMap::new();
-    for idx in 0..count {
+    for (idx, (agent_id, _)) in agents.iter().enumerate().take(count) {
         let root = find(&mut parent, idx);
-        let agent_id = agents[idx].0;
         cluster_min_id
             .entry(root)
-            .and_modify(|min_id| *min_id = (*min_id).min(agent_id))
-            .or_insert(agent_id);
+            .and_modify(|min_id| *min_id = (*min_id).min(*agent_id))
+            .or_insert(*agent_id);
     }
 
     let mut result: Vec<(u64, ClusterId)> = (0..count)
@@ -139,7 +138,7 @@ pub fn should_leave(
 /// colocated cluster when payoff is net-positive at the threshold and leave
 /// when it is not.
 pub fn reconcile_membership(
-    members: &mut Vec<(u64, Option<ClusterId>)>,
+    members: &mut [(u64, Option<ClusterId>)],
     colocated: &[(u64, ClusterId)],
     payoff: &impl MembershipPayoff,
     threshold: f32,

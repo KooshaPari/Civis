@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 use crate::menus::in_game;
 use crate::live_stream::LiveBridge;
+use crate::god_actions::GodActionRequest;
 
 #[derive(Resource, Default)]
 pub struct GodPanelState {
@@ -38,12 +39,6 @@ fn toggle_god_panel(keys: Res<ButtonInput<KeyCode>>, mut state: ResMut<GodPanelS
     if keys.just_pressed(KeyCode::KeyG) {
         state.visible = !state.visible;
         if state.magnitude == 0.0 { state.magnitude = 0.5; }
-        // FR-CLIENT-godbuttons: lazy-init the substrate-verb defaults so
-        // a freshly-opened panel doesn't ship 0s for every rich param.
-        if state.radius_voxels == 0 { state.radius_voxels = 3; }
-        if state.material_id == 0 { state.material_id = 6; } // STONE
-        if state.drop_height == 0 { state.drop_height = 768; } // 3 × FIXED_SCALE
-        if state.herd_count == 0 { state.herd_count = 5; }
     }
 }
 
@@ -112,79 +107,14 @@ fn draw_god_panel(
             }
 
             ui.separator();
-            let fire_btn = ui.add_sized([290.0, 28.0], egui::Button::new(
+            let fire_btn = ui.add_sized([280.0, 28.0], egui::Button::new(
                 egui::RichText::new(format!("Invoke: {}", action_name)).color(egui::Color32::from_rgb(9,10,12)).size(13.0)
             ).fill(egui::Color32::from_rgb(126,186,181)));
             if fire_btn.clicked() {
                 fire = Some(action_name.to_string());
             }
 
-            // ============ FR-CLIENT-godbuttons: Substrate Tools ============
-            // 13 buttons firing substrate-live verbs via the SAME JSON-RPC
-            // path as the Invoke button above (`sim.god_action`). The
-            // `param_builder` for each verb fills the matching rich param
-            // shape from `GodPanelState`; the `ws_bridge` resolver then
-            // routes the call through `Simulation::apply_god_tool`.
-            ui.separator();
-            ui.label(egui::RichText::new("Substrate Tools (FR-CLIENT-godbuttons)")
-                .color(egui::Color32::from_rgb(126,186,181)).size(11.0));
-            ui.separator();
-
-            // Shared brush params — apply to every substrate verb below.
-            ui.horizontal(|ui| {
-                ui.label(egui::RichText::new("Target (x,y):").color(egui::Color32::from_rgb(160,170,180)).size(11.0));
-                ui.add(egui::DragValue::new(&mut state.target_x).speed(0.01).clamp_range(0.0..=1.0f32));
-                ui.add(egui::DragValue::new(&mut state.target_y).speed(0.01).clamp_range(0.0..=1.0f32));
-            });
-            ui.horizontal(|ui| {
-                ui.label(egui::RichText::new("Radius:").color(egui::Color32::from_rgb(160,170,180)).size(11.0));
-                ui.add(egui::DragValue::new(&mut state.radius_voxels).speed(1.0).clamp_range(1..=32u8));
-                ui.label(egui::RichText::new("MatId:").color(egui::Color32::from_rgb(160,170,180)).size(11.0));
-                ui.add(egui::DragValue::new(&mut state.material_id).speed(1.0).clamp_range(1..=255u32));
-            });
-            ui.horizontal(|ui| {
-                ui.label(egui::RichText::new("Drop:").color(egui::Color32::from_rgb(160,170,180)).size(11.0));
-                ui.add(egui::DragValue::new(&mut state.drop_height).speed(16.0).clamp_range(0..=16384i32));
-                ui.label(egui::RichText::new("Herd:").color(egui::Color32::from_rgb(160,170,180)).size(11.0));
-                ui.add(egui::DragValue::new(&mut state.herd_count).speed(1.0).clamp_range(1..=64u32));
-            });
-
-            // Per-category button grid. We walk the SUBSTRATE_VERBS table
-            // once and emit a category header the first time we see each
-            // label; remaining verbs in that category follow under it.
-            let mut last_category: Option<&'static str> = None;
-            for (idx, v) in SUBSTRATE_VERBS.iter().enumerate() {
-                if last_category != Some(v.category) {
-                    ui.separator();
-                    ui.label(egui::RichText::new(v.category)
-                        .color(egui::Color32::from_rgb(126,186,181))
-                        .monospace().size(10.5));
-                    last_category = Some(v.category);
-                }
-                let btn = ui.add_sized([290.0, 22.0], egui::Button::new(
-                    egui::RichText::new(format!("{}  [{}]", v.label, v.verb))
-                        .color(egui::Color32::from_rgb(9, 10, 12))
-                        .size(11.0),
-                ).fill(egui::Color32::from_rgb(126, 186, 181)));
-                if btn.clicked() {
-                    fire_substrate = Some(idx);
-                }
-                ui.label(egui::RichText::new(v.desc)
-                    .color(egui::Color32::from_rgb(120, 130, 140))
-                    .size(9.0).italics());
-            }
-            // Sanity check: every verb's category must appear in
-            // SUBSTRATE_CATEGORY_ORDER so the egui header logic below
-            // groups them correctly. Only checked in debug builds.
-            debug_assert!(
-                SUBSTRATE_VERBS
-                    .iter()
-                    .all(|v| SUBSTRATE_CATEGORY_ORDER.contains(&v.category)),
-                "every SUBSTRATE_VERBS entry's category must appear in SUBSTRATE_CATEGORY_ORDER",
-            );
-
             if let Some(ref msg) = state.status {
-                ui.separator();
                 ui.label(egui::RichText::new(msg).color(egui::Color32::from_rgb(200,200,100)).size(10.0));
             }
         });

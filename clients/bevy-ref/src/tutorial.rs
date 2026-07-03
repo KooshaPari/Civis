@@ -18,26 +18,6 @@ const HINTS: &[&str] = &[
     "Press [?] anytime for all controls. Good luck!",
 ];
 
-/// State-dependent filter: which step index to show based on sim progress.
-const STATE_GATES: &[(u8, &str)] = &[
-    (0, ""),                              // step 0: always
-    (1, "faction"),                        // step 1: once a faction exists
-    (5, "technology"),                     // step 5: once tech is unlocked
-];
-
-/// Persistent tutorial state saved to disk.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TutorialSaveData {
-    /// Has the user ever completed the tutorial?
-    pub completed_once: bool,
-}
-
-impl Default for TutorialSaveData {
-    fn default() -> Self {
-        Self { completed_once: false }
-    }
-}
-
 #[derive(Resource)]
 pub struct TutorialState {
     pub enabled: bool,
@@ -70,7 +50,7 @@ fn handle_tutorial_keys(
         state.acknowledged = false;
         return;
     }
-    if state.visibility == TutorialVisibility::Hidden { return; }
+    if !state.enabled { return; }
     if keys.just_pressed(KeyCode::Space) {
         advance(&mut state);
     }
@@ -112,8 +92,7 @@ fn draw_tutorial_hint(
     }
     if !should_show(&state) { return; }
 
-    let idx = (state.step as usize).min(HINTS.len() - 1);
-    let hint = HINTS[idx];
+    let hint = HINTS[state.step as usize];
     let step = state.step;
     let total = HINTS.len() as u8;
 

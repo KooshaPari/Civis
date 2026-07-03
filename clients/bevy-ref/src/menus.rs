@@ -4,7 +4,6 @@
 //! Settings GPU readout: FR-CIV-BEVY-036 / item 61.
 
 use crate::gpu_features::GpuCapabilities;
-use crate::save_load_ui::SaveLoadPanel;
 use crate::settings_ui::{GameSettings, ACTION_PAUSE_SIM, KeyBinding};
 use bevy::app::AppExit;
 use bevy::prelude::*;
@@ -147,13 +146,7 @@ impl Plugin for MenusPlugin {
             .add_systems(Update, (toggle_pause, tick_era_banner))
             .add_systems(
                 EguiPrimaryContextPass,
-                (
-                    draw_main_menu,
-                    draw_worldgen_overlay,
-                    draw_pause_menu,
-                    draw_era_banner,
-                    draw_settings_window,
-                ),
+                (draw_pause_menu, draw_era_banner, draw_settings_window),
             );
     }
 }

@@ -825,10 +825,12 @@ mod plugin {
     /// draws a coloured quad (two gizmo triangles → cross) hovering just above
     /// the surface. Cheap, deterministic, and GPU-light for the sandbox.
     fn render_active_overlay(
-        registry: Res<InfoViewRegistry>,
-        sim: Res<SimState>,
+        registry: Option<Res<InfoViewRegistry>>,
+        sim: Option<Res<SimState>>,
         mut gizmos: Gizmos,
     ) {
+        let Some(registry) = registry else { return; };
+        let Some(sim) = sim else { return; };
         let Some(overlay) = registry.active_overlay() else {
             return;
         };

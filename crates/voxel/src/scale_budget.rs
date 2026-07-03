@@ -416,11 +416,10 @@ impl std::error::Error for ExtentError {}
 ///
 /// - `Inner`   → fully meshed at LOD 0 (the inner ring's "hot" zone).
 /// - `Seam`    → the cross-fade band; the renderer blends this
-///               chunk's alpha across the LOD-0 → LOD-1 transition.
+///   chunk's alpha across the LOD-0 → LOD-1 transition.
 /// - `Outer`   → past the seam; meshed at a coarser LOD.
 /// - `Frozen`  → past the render budget; only the sim's coarse or
-///               frozen cohort is computed (the renderer does not
-///               see this chunk).
+///   frozen cohort is computed (the renderer does not see this chunk).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum RingRole {
     /// Inside the inner mesh ring. Mesh at LOD 0, full alpha.
@@ -1359,5 +1358,67 @@ mod tests {
         }
         .to_string();
         assert!(msg.contains('0') && msg.contains('1'), "{msg}");
+    }
+
+    // ---- ExtentBudget::validate() targeted unit tests ----
+
+    #[test]
+    fn extent_budget_validate_valid_extent_passes() {
+        let budget = ExtentBudget::Bounded { side_chunks: 100 };
+        assert_eq!(budget.validate(coord(0, 0, 0)), Ok(()));
+        assert_eq!(budget.validate(coord(49, -49, 0)), Ok(()));
+        assert_eq!(
+            ExtentBudget::Unbounded.validate(coord(i32::MAX, i32::MIN, 0)),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn extent_budget_validate_invalid_min_ge_max_fails() {
+        let budget = ExtentBudget::Bounded { side_chunks: 100 };
+        assert!(matches!(
+            budget.validate(coord(50, 0, 0)),
+            Err(ExtentError::OutOfExtent { .. })
+        ));
+        assert_eq!(
+            ExtentBudget::Bounded { side_chunks: 0 }.validate(coord(0, 0, 0)),
+            Err(ExtentError::ZeroSide)
+        );
+    }
+
+    // ---- LodRingPlan::role() targeted unit tests ----
+
+    #[test]
+    fn lod_ring_plan_role_ring_0_is_inner() {
+        let plan = LodRingPlan::default();
+        let anchor = coord(0, 0, 0);
+        assert_eq!(plan.role(anchor, anchor), RingRole::Inner);
+    }
+
+    #[test]
+    fn lod_ring_plan_role_outermost_rendered_ring_is_outer() {
+        let policy = WindowPolicy {
+            mesh_ring: 1,
+            seam_chunks: 1,
+            ..WindowPolicy::default()
+        };
+        let plan = LodRingPlan::checked(policy, 3).unwrap();
+        let anchor = coord(0, 0, 0);
+        assert_eq!(plan.role(coord(3, 0, 0), anchor), RingRole::Outer);
+        assert_eq!(plan.role(coord(4, 0, 0), anchor), RingRole::Frozen);
+    }
+
+    // ---- LodRingPlan::seam_blend() targeted unit test ----
+
+    #[test]
+    fn lod_ring_plan_seam_blend_seam_ring_weight_in_range() {
+        let policy = WindowPolicy {
+            seam_chunks: 4,
+            ..WindowPolicy::default()
+        };
+        let plan = LodRingPlan::default_for(policy);
+        let w = plan.seam_blend(2);
+        assert!(w > 0);
+        assert!(w < 255);
     }
 }

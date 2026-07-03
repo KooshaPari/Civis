@@ -16,6 +16,9 @@ mod currency_trust;
 mod extraction;
 mod institution;
 mod market;
+mod prices;
+mod shocks;
+mod specialization;
 mod stocks;
 mod tax_policy;
 mod trade_flow;
@@ -33,9 +36,9 @@ pub use extraction::{
     find_extraction_site, tick_extraction, ExtractionSite, Extractor, ResourceKind,
 };
 pub use institution::{
-    collect_taxes, step_institutions, InstitutionAccount, InstitutionId, InstitutionKind,
-    InstitutionLedger, InstitutionLedgerError, InstitutionPosting, LedgerSide, Taxation,
-    INSTITUTION_MARKET, INSTITUTION_TREASURY,
+    step_institutions, InstitutionAccount, InstitutionId, InstitutionKind, InstitutionLedger,
+    InstitutionLedgerError, InstitutionPosting, LedgerSide, INSTITUTION_MARKET,
+    INSTITUTION_TREASURY,
 };
 pub use market::{
     DEFAULT_SMOOTHING_FACTOR, GoodId, MarketState, MultiGoodMarket, Order, OrderBook,
@@ -93,9 +96,6 @@ pub struct EconomyState {
     /// Institution accounts and posting log (CIV-0100 §3d stub).
     #[serde(default)]
     pub institutions: InstitutionLedger,
-    /// Per-good material stocks consumed and produced by completed buildings.
-    #[serde(default)]
-    pub stocks: Stocks,
     /// Budget at the previous [`step`] boundary (tick-close reconciliation).
     #[serde(default)]
     last_step_budget_joules: i64,
@@ -109,16 +109,6 @@ impl EconomyState {
             last_step_budget_joules: energy_budget_joules,
             ..Default::default()
         }
-    }
-
-    /// Returns a shared reference to the per-good material stocks.
-    pub fn stocks(&self) -> &Stocks {
-        &self.stocks
-    }
-
-    /// Returns a mutable reference to the per-good material stocks.
-    pub fn stocks_mut(&mut self) -> &mut Stocks {
-        &mut self.stocks
     }
 }
 

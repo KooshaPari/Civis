@@ -3461,6 +3461,8 @@ Every event emitted by `crates/economy` is annotated with a routing tag that det
 | `economy.firm_insolvency.v1` | `production/sector.rs` | `crates/institutions`, `crates/metrics` | Firm debt ceiling breached |
 | `policy.constitutional_clamp.v1` | `conservation.rs` | `crates/institutions`, diagnostic | Knob clamped to constitutional limit |
 
+Export invariant: when any `economy.*` event is forwarded to Venture, it MUST be wrapped in `EventEnvelopeV1`; the envelope `event_type` MUST preserve the original economy topic, `trace_id` MUST be copied from the originating tick/control-plane context, and `payload` MUST contain only the domain event body.
+
 ### Integration Test Stubs
 
 ```rust

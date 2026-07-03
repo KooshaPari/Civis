@@ -13,6 +13,8 @@ serde = { version = "1.0", features = ["derive"] }
 tracing = "0.1"
 civ-voxel = { path = "../voxel" }
 civ-agents = { path = "../agents" }
+diplomacy = { package = "civ-diplomacy", path = "../diplomacy" }
+legends = { package = "civ-legends", path = "../legends" }
 
 [dev-dependencies]
 proptest = "1.11"

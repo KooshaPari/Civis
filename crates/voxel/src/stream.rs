@@ -108,8 +108,11 @@ pub struct StreamStats {
 /// Port trait for chunk storage adapters.
 /// The domain (`StreamingWorld`) depends on this trait, not on concrete I/O.
 pub trait ChunkStorePort: Send + Sync {
+    /// Persist an edited chunk at the given coordinate.
     fn put(&self, coord: ChunkCoord, chunk: &Chunk<MaterialId>) -> std::io::Result<()>;
+    /// Load an edited chunk if the store contains one.
     fn get(&self, coord: ChunkCoord) -> std::io::Result<Option<Chunk<MaterialId>>>;
+    /// Return whether an edited chunk exists for the coordinate.
     fn contains(&self, coord: ChunkCoord) -> bool;
 }
 
@@ -136,8 +139,8 @@ impl FsChunkStore {
 
 impl ChunkStorePort for FsChunkStore {
     fn put(&self, coord: ChunkCoord, chunk: &Chunk<MaterialId>) -> std::io::Result<()> {
-        let bytes = bincode_next::serde::encode_to_vec(chunk, bincode_next::config::standard())
-            .map_err(|err| Error::new(ErrorKind::InvalidData, err))?;
+        let bytes =
+            bincode::serialize(chunk).map_err(|err| Error::new(ErrorKind::InvalidData, err))?;
         fs::write(self.path_for(coord), bytes)
     }
     fn get(&self, coord: ChunkCoord) -> std::io::Result<Option<Chunk<MaterialId>>> {
@@ -148,9 +151,7 @@ impl ChunkStorePort for FsChunkStore {
             Err(err) => return Err(err),
         };
         let chunk =
-            bincode_next::serde::decode_from_slice(&bytes, bincode_next::config::standard())
-                .map_err(|err| Error::new(ErrorKind::InvalidData, err))?
-                .0;
+            bincode::deserialize(&bytes).map_err(|err| Error::new(ErrorKind::InvalidData, err))?;
         Ok(Some(chunk))
     }
     fn contains(&self, coord: ChunkCoord) -> bool {
@@ -222,14 +223,15 @@ impl<G: WorldGen> StreamingWorld<G> {
     /// camera), then evict anything outside the budget. Returns the set actually
     /// resident after the call. Order-independent given the same `coords`.
     pub fn load_set(&mut self, coords: &[ChunkCoord]) -> std::io::Result<()> {
-        if self.cfg.active_budget < coords.len() {
+        let mut ordered = coords.to_vec();
+        ordered.sort_unstable_by_key(|coord| (coord.cx, coord.cy, coord.cz));
+        ordered.dedup();
+        if self.cfg.active_budget < ordered.len() {
             return Err(Error::new(
                 ErrorKind::InvalidInput,
                 "active_budget below requested set",
             ));
         }
-        let mut ordered = coords.to_vec();
-        ordered.sort_unstable_by_key(|coord| (coord.cx, coord.cy, coord.cz));
         for coord in &ordered {
             self.load_no_evict(*coord)?;
         }
@@ -375,6 +377,31 @@ mod tests {
         .expect("world")
     }
 
+
+    /// FR-CIV-VOXEL-022 - edit returns false when the chunk is not resident.
+    #[test]
+    fn edit_returns_false_when_chunk_not_resident() {
+        let mut w = world(StreamConfig::default());
+        let coord = ChunkCoord { cx: 0, cy: 0, cz: 0 };
+        // No load() called: chunk is not resident, edit must return false.
+        let result = w.edit(coord, 0, MaterialId(1));
+        assert!(!result, "edit on unloaded chunk should return false");
+        assert!(w.get(coord).is_none(), "chunk should remain unloaded");
+    }
+
+    /// FR-CIV-VOXEL-022 - edit returns false when idx is out of bounds.
+    #[test]
+    fn edit_returns_false_for_out_of_bounds_idx() {
+        let mut w = world(StreamConfig {
+            active_budget: 4,
+            ..StreamConfig::default()
+        });
+        let coord = ChunkCoord { cx: 0, cy: 0, cz: 0 };
+        w.load(coord).expect("load");
+        // CHUNK_VOXELS = 16^3 = 4096; idx >= 4096 is out of bounds.
+        let result = w.edit(coord, CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE, MaterialId(99));
+        assert!(!result, "edit with idx >= CHUNK_VOXELS should return false");
+    }
     #[test]
     fn region_regen_is_bit_identical_to_reload() {
         let dir = temp_dir("regen");
@@ -493,6 +520,27 @@ mod tests {
         let w = world(StreamConfig::default());
         assert!(w.resident_coords().is_empty());
         assert_eq!(w.stats().loaded, 0);
+    }
+
+    #[test]
+    fn load_set_accounts_for_duplicate_coords_once() {
+        let a = ChunkCoord {
+            cx: 1,
+            cy: 2,
+            cz: 3,
+        };
+        let b = ChunkCoord {
+            cx: 4,
+            cy: 5,
+            cz: 6,
+        };
+        let mut w = world(StreamConfig {
+            active_budget: 2,
+            ..StreamConfig::default()
+        });
+        w.load_set(&[a, b, a]).expect("deduped working set fits");
+        assert_eq!(w.resident_coords().len(), 2);
+        assert_eq!(w.stats().loaded, 2);
     }
 
     /// Perf smoke: streaming a large radius (a full active-set page-in) must stay

@@ -57,6 +57,8 @@
 //! Bevy resources only**.  No value from this resource must enter simulation
 //! state (voxel world, agent data, CA ticks).
 
+use bevy::post_process::bloom::Bloom;
+use bevy::post_process::motion_blur::MotionBlur;
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::light::DirectionalLightShadowMap;
 use bevy::post_process::{bloom::Bloom, motion_blur::MotionBlur};

@@ -40,7 +40,16 @@ export function statusLabel(status) {
 
 /** @param {ConnectionStatus} status */
 export function statusClass(status) {
-  return `status-${status}`;
+  switch (status) {
+    case Status.IDLE:
+    case Status.CONNECTING:
+    case Status.OPEN:
+    case Status.CLOSED:
+    case Status.ERROR:
+      return `status-${status}`;
+    default:
+      return "status-unknown";
+  }
 }
 
 /**
@@ -60,17 +69,19 @@ export function attachConnectionToStatus(connection) {
  * @param {"watch" | "server"} attachMode
  */
 export function attachConnectionDetail(status, attachMode) {
+  if (status === Status.IDLE || status === Status.CLOSED) {
+    return "Not connected";
+  }
   if (status === Status.OPEN) {
     return attachMode === "watch" ? "SSE stream active" : "WebSocket open";
   }
   if (status === Status.CONNECTING) {
     return attachMode === "watch" ? "Opening SSE stream…" : "Opening connection…";
   }
-  if (status === Status.CLOSED) {
-    return "Not connected";
-  }
   return statusLabel(status);
 }
+
+export const connectionDetail = attachConnectionDetail;
 
 /** JSON-RPC `health` probe (matches civ-server JSON-RPC surface). */
 export function buildHealthProbe(id = 1) {
@@ -87,7 +98,7 @@ export function buildHealthProbe(id = 1) {
  * @param {string} wsUrl
  */
 export function httpBaseFromWsUrl(wsUrl) {
-  const normalized = wsUrl.replace(/^ws:/i, "http:");
+  const normalized = wsUrl.replace(/^wss:/i, "https:").replace(/^ws:/i, "http:");
   const url = new URL(normalized);
   return `${url.protocol}//${url.host}`;
 }
@@ -104,6 +115,7 @@ export function createConnectionMonitor(url, options = {}) {
   const { WebSocketImpl = globalThis.WebSocket, onChange } = options;
   /** @type {WebSocket | null} */
   let ws = null;
+  let connectionToken = 0;
   /** @type {ConnectionStatus} */
   let status = Status.IDLE;
   /** @type {{ code?: number; reason?: string }} */
@@ -135,12 +147,19 @@ export function createConnectionMonitor(url, options = {}) {
       return;
     }
 
-    ws.addEventListener("open", () => setStatus(Status.OPEN));
+    const socket = ws;
+    const token = ++connectionToken;
+
+    ws.addEventListener("open", () => {
+      if (ws === socket && token === connectionToken) setStatus(Status.OPEN);
+    });
     ws.addEventListener("close", (event) => {
-      setStatus(Status.CLOSED, { code: event.code, reason: event.reason });
+      if (ws === socket && token === connectionToken) {
+        setStatus(Status.CLOSED, { code: event.code, reason: event.reason });
+      }
     });
     ws.addEventListener("error", () => {
-      if (status !== Status.CLOSED) {
+      if (ws === socket && token === connectionToken && status !== Status.CLOSED) {
         setStatus(Status.ERROR);
       }
     });
@@ -148,10 +167,14 @@ export function createConnectionMonitor(url, options = {}) {
 
   function disconnect() {
     if (ws) {
-      ws.close();
+      const socket = ws;
       ws = null;
+      connectionToken += 1;
+      socket.close();
     }
-    setStatus(Status.IDLE);
+    if (status !== Status.IDLE) {
+      setStatus(Status.IDLE);
+    }
   }
 
   /** @param {string} message */

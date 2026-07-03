@@ -8,6 +8,8 @@
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
+use crate::language::{drift_phonemes, phoneme_inventory_distance, PhonemeInventory};
+
 /// Fixed-size cultural meme vector.
 ///
 /// Values are normalized to `[0, 1]` and are intentionally generic: the
@@ -22,6 +24,8 @@ pub struct CultureProfile {
     /// Language drift vector. Different enough vectors represent distinct
     /// dialects or languages.
     pub language: TraitVector,
+    /// Drifted phoneme inventory for this cluster dialect.
+    pub phonemes: PhonemeInventory,
     /// How much contact this population has with others in the current step.
     pub contact: f32,
     /// How much kinship insulation this population has. Higher values reduce
@@ -36,6 +40,7 @@ impl CultureProfile {
         Self {
             traits: seed,
             language: seed,
+            phonemes: PhonemeInventory::from_trait_seed(seed),
             contact: 0.0,
             kinship: 0.0,
         }
@@ -87,9 +92,36 @@ pub fn cultural_distance(a: TraitVector, b: TraitVector) -> f32 {
     (sum / 4.0).sqrt().min(1.0)
 }
 
-/// Returns a normalized language distance in `[0, 1]`.
+/// Returns a normalized language distance in `[0, 1]` from trait vectors alone.
 pub fn language_distance(a: TraitVector, b: TraitVector) -> f32 {
     cultural_distance(a, b)
+}
+
+/// Cluster divergence: cultural distance drives language distance (FR-CIV-LANG).
+#[must_use]
+pub fn cluster_language_distance(a: &CultureProfile, b: &CultureProfile) -> f32 {
+    let cult = cultural_distance(a.traits, b.traits);
+    let phon = phoneme_inventory_distance(&a.phonemes, &b.phonemes);
+    let raw = language_distance(a.language, b.language);
+    clamp01((cult * 0.5 + phon * 0.3 + raw * 0.2).max(cult * 0.7))
+}
+
+/// Language divergence accelerated by isolation (FR-CIV-LANG-003 / FR-CIV-LANG-005).
+///
+/// Models how isolated clusters accumulate linguistic divergence beyond what cultural
+/// drift alone produces: `isolation_ticks` acts as a multiplier on baseline distance so
+/// populations that were once in contact and then separated grow further apart over time.
+/// Returns a value in `[0, 1]`.
+#[must_use]
+pub fn language_divergence_from_isolation(
+    a: &CultureProfile,
+    b: &CultureProfile,
+    isolation_ticks: u32,
+) -> f32 {
+    let base = cluster_language_distance(a, b);
+    // Isolation accumulator: saturates at 1.0; half-saturation at 200 ticks.
+    let isolation_factor = isolation_ticks as f32 / (isolation_ticks as f32 + 200.0);
+    clamp01(base + (1.0 - base) * isolation_factor * 0.5)
 }
 
 /// Diffuses culture and language across a contact graph for one step.
@@ -105,7 +137,19 @@ pub fn drift_populations(
     diffusion_rate: f32,
     creole_threshold: f32,
 ) {
+    if profiles.is_empty() {
+        return;
+    }
     let base = profiles.to_vec();
+    if edges.is_empty() {
+        for (idx, profile) in profiles.iter_mut().enumerate() {
+            profile.traits = mutate_traits(rng, base[idx].traits, mutation_rate);
+            profile.language = mutate_traits(rng, base[idx].language, mutation_rate * 0.5);
+            let _ = drift_phonemes(rng, &mut profile.phonemes, mutation_rate * 0.4, 50);
+            profile.contact = 0.0;
+        }
+        return;
+    }
     let mut incoming: Vec<Vec<(usize, f32)>> = vec![Vec::new(); profiles.len()];
     for edge in edges {
         if edge.from < profiles.len() && edge.to < profiles.len() {
@@ -138,6 +182,7 @@ pub fn drift_populations(
 
         profile.traits = traits;
         profile.language = language;
+        let _ = drift_phonemes(rng, &mut profile.phonemes, mutation_rate * 0.4, 50);
     }
 
     // Creolization is a second pass so contact zones blend the already-drifted
@@ -228,12 +273,14 @@ mod tests {
                 language: [0.0, 0.0, 0.0, 0.0],
                 contact: 0.0,
                 kinship: 0.95,
+                ..CultureProfile::new([0.0, 0.0, 0.0, 0.0])
             },
             CultureProfile {
                 traits: [1.0, 1.0, 1.0, 1.0],
                 language: [1.0, 1.0, 1.0, 1.0],
                 contact: 0.0,
                 kinship: 0.0,
+                ..CultureProfile::new([1.0, 1.0, 1.0, 1.0])
             },
         ];
         let edges = [ContactEdge {
@@ -246,5 +293,78 @@ mod tests {
 
         assert!(cultural_distance(profiles[0].traits, [0.0, 0.0, 0.0, 0.0]) < 0.2);
         assert!(profiles[0].contact < 0.2);
+    }
+
+    #[test]
+    fn cluster_language_distance_tracks_cultural_divergence() {
+        let near_a = CultureProfile::new([0.5, 0.5, 0.5, 0.5]);
+        let near_b = CultureProfile::new([0.52, 0.48, 0.51, 0.49]);
+        let far_a = CultureProfile::new([0.0, 0.0, 0.0, 0.0]);
+        let far_b = CultureProfile::new([1.0, 1.0, 1.0, 1.0]);
+        let near = cluster_language_distance(&near_a, &near_b);
+        let far = cluster_language_distance(&far_a, &far_b);
+        assert!(far > near, "cultural divergence must raise language distance");
+    }
+
+    #[test]
+    fn phoneme_vectors_diverge_with_isolated_drift() {
+        let mut rng = rng(31);
+        let mut profiles = vec![
+            CultureProfile::new([0.2, 0.2, 0.2, 0.2]),
+            CultureProfile::new([0.8, 0.8, 0.8, 0.8]),
+        ];
+        for _ in 0..24 {
+            drift_populations(&mut profiles, &[], &mut rng, 0.06, 0.0, 0.85);
+        }
+        assert_ne!(profiles[0].phonemes, profiles[1].phonemes);
+    }
+
+    // --- Sub-feature 3: cluster language divergence mirrors culture/religion pattern ---
+
+    #[test]
+    fn language_divergence_rises_with_isolation_ticks() {
+        let a = CultureProfile::new([0.3, 0.4, 0.3, 0.4]);
+        let b = CultureProfile::new([0.7, 0.6, 0.7, 0.6]);
+        let dist_0 = language_divergence_from_isolation(&a, &b, 0);
+        let dist_100 = language_divergence_from_isolation(&a, &b, 100);
+        let dist_500 = language_divergence_from_isolation(&a, &b, 500);
+        assert!(
+            dist_500 >= dist_100 && dist_100 >= dist_0,
+            "language divergence must be monotone in isolation_ticks"
+        );
+        assert!(dist_500 > dist_0, "long isolation must produce strictly more divergence");
+    }
+
+    #[test]
+    fn language_divergence_bounded_in_unit_interval() {
+        let a = CultureProfile::new([0.0, 0.0, 0.0, 0.0]);
+        let b = CultureProfile::new([1.0, 1.0, 1.0, 1.0]);
+        for ticks in [0u32, 1, 50, 200, 1000, u32::MAX / 2] {
+            let d = language_divergence_from_isolation(&a, &b, ticks);
+            assert!((0.0..=1.0).contains(&d), "divergence must be in [0,1] at ticks={ticks}");
+        }
+    }
+
+    #[test]
+    fn language_divergence_correlates_with_cultural_distance() {
+        // Near pair vs far pair at same isolation
+        let near_a = CultureProfile::new([0.5, 0.5, 0.5, 0.5]);
+        let near_b = CultureProfile::new([0.52, 0.48, 0.51, 0.49]);
+        let far_a = CultureProfile::new([0.0, 0.0, 0.0, 0.0]);
+        let far_b = CultureProfile::new([1.0, 1.0, 1.0, 1.0]);
+        let near_div = language_divergence_from_isolation(&near_a, &near_b, 100);
+        let far_div = language_divergence_from_isolation(&far_a, &far_b, 100);
+        assert!(
+            far_div > near_div,
+            "culturally distant clusters must have larger language divergence"
+        );
+    }
+
+    #[test]
+    fn identical_clusters_no_divergence_without_drift() {
+        let a = CultureProfile::new([0.5, 0.5, 0.5, 0.5]);
+        let b = CultureProfile::new([0.5, 0.5, 0.5, 0.5]);
+        let d0 = language_divergence_from_isolation(&a, &b, 0);
+        assert_eq!(d0, 0.0, "identical clusters must have zero divergence at t=0");
     }
 }

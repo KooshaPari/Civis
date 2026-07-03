@@ -20,12 +20,11 @@ impl AllocationEngine for CapitalistAllocator {
         if demand <= 0 || budget <= 0 {
             return 0;
         }
+        if budget >= demand {
+            return demand;
+        }
         // fill_bps = min(10_000, budget * 10_000 / demand)
-        let fill_bps = budget
-            .saturating_mul(10_000)
-            .checked_div(demand)
-            .unwrap_or(i64::MAX)
-            .min(10_000);
+        let fill_bps = (budget.saturating_mul(10_000) / demand).min(10_000);
         demand.saturating_mul(fill_bps) / 10_000
     }
 }

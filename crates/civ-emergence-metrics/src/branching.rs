@@ -208,10 +208,7 @@ mod tests {
             ledger.push_closed(sigma, 1, 0);
         }
         let mean = rolling_mean_sigma(&ledger, 4);
-        assert!(
-            (mean - 0.9375).abs() < 1e-6,
-            "expected 0.9375, got {mean}"
-        );
+        assert!((mean - 0.9375).abs() < 1e-6, "expected 0.9375, got {mean}");
     }
 
     #[test]
@@ -229,10 +226,7 @@ mod tests {
             a.push_closed(sigma, size, tick);
             b.push_closed(sigma, size, tick);
         }
-        assert_eq!(
-            rolling_mean_sigma(&a, 3),
-            rolling_mean_sigma(&b, 3)
-        );
+        assert_eq!(rolling_mean_sigma(&a, 3), rolling_mean_sigma(&b, 3));
     }
 
     /// Known closed-avalanche stream → expected `σ̄` and regime classification.
@@ -271,6 +265,9 @@ mod tests {
             },
             2,
         );
-        assert_eq!(classify_regime(explosion_bar), BranchingRegime::Supercritical);
+        assert_eq!(
+            classify_regime(explosion_bar),
+            BranchingRegime::Supercritical
+        );
     }
 }

@@ -7,8 +7,6 @@ license.workspace = true
 publish = false
 
 [dependencies]
-civ-voxel = { path = "../voxel" }
-glam = { version = "0.27", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 tracing = "0.1"
 

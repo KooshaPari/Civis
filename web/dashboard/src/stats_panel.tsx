@@ -1,4 +1,4 @@
-import { formatPerfSummary } from "./sparkline";
+import { summarizeFrameSamples } from "./lib/framePerf";
 import { useDashboardStore } from "./store";
 
 export function StatsPanel() {
@@ -12,7 +12,7 @@ export function StatsPanel() {
     terrain,
     snapshot,
   } = state;
-  const summary = formatPerfSummary(frameSamples);
+  const summary = summarizeFrameSamples(frameSamples);
   const hasMinimap = terrain != null;
 
   return (

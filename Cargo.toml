@@ -30,7 +30,7 @@ members = [
   "crates/emergence-oracle",
   "crates/civ-institutions",
   "crates/infra",
-  "crates/physics-substrate",
+  # "crates/physics-substrate", — excluded until its crate manifest is restored
   "crates/audio",
   "crates/climate",
   "clients/bevy-ref",

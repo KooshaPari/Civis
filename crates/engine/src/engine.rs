@@ -5997,17 +5997,17 @@ pub(crate) const MAX_AWAKENING_COHESION_PER_TICK: i64 = 10;
 /// Belief pulse minted per awakening this tick. Mirrors the cohesion policy
 /// so FR-CIV-GENETICS / FR-CIV-LEGENDS awakening events are expressed across
 /// both axes (faith + cohesion) symmetrically.
-pub const BELIEF_PER_AWAKENING: u64 = 1;
+pub const BELIEF_PER_AWAKENING: i64 = 1;
 /// Per-tick cap on awakening-driven belief so a single dramatic explosion
 /// of awakenings cannot flood the belief reserve.
-pub const MAX_AWAKENING_BELIEF_PER_TICK: u64 = 16;
+pub const MAX_AWAKENING_BELIEF_PER_TICK: i64 = 16;
 /// FR-CIV-GENETICS / FR-CIV-LEGENDS: pure gain fn for the awakening -> belief
 /// pulse. Returns `u64` to match `Simulation::add_belief`. The inner product
 /// is clamped to the per-tick cap.
 #[must_use]
-pub fn awakening_belief_gain(awakenings_this_tick: usize) -> u64 {
-    let raw = (awakenings_this_tick as u64).saturating_mul(BELIEF_PER_AWAKENING);
-    raw.min(MAX_AWAKENING_BELIEF_PER_TICK)
+pub fn awakening_belief_gain(awakenings_this_tick: usize) -> i64 {
+    let raw = (awakenings_this_tick as i64).saturating_mul(BELIEF_PER_AWAKENING);
+    raw.min(MAX_AWAKENING_BELIEF_PER_TICK).max(0)
 }
 /// FR-CIV-GENETICS / FR-CIV-LEGENDS: pure gain fn for the awakening -> cohesion
 /// pulse. Returns a signed i64 (matches `cohesion_delta`'s contract). The

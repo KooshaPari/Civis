@@ -7,7 +7,7 @@
 
 use std::collections::{BTreeMap, HashSet};
 
-use civ_agents::culture::{drift_populations, ContactEdge, CultureProfile};
+use civ_agents::culture::{advance_faction_ideologies, drift_populations, ContactEdge, CultureProfile};
 use civ_agents::language::{
     name_from_lexicon, EvolvedLexicon, LexemeKind, PhonemeInventory,
 };
@@ -1198,7 +1198,7 @@ impl Simulation {
         if awakenings == 0 {
             return;
         }
-        self.add_belief(awakening_belief_gain(awakenings));
+        self.add_belief(awakening_belief_gain(awakenings).try_into().unwrap_or(i64::MAX));
         self.add_cohesion(awakening_cohesion_gain(awakenings));
     }
 

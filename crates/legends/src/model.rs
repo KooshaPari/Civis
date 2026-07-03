@@ -162,6 +162,65 @@ pub struct EventNode {
     pub raw_ref: Option<RawEventRef>,
 }
 
+/// A named legend entry recording a significant emergent event with provenance.
+///
+/// This remains the stable memory-shaped record used by the decay tracker and
+/// the narratorial surfaces that still reason about legend prominence directly.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LegendEntry {
+    /// Unique identifier for this legend.
+    pub id: LegendEventId,
+    /// Human-readable name/title of the legend.
+    pub name: Option<NameRef>,
+    /// The event that triggered this legend.
+    pub event_id: LegendEventId,
+    /// Entity most central to the legend.
+    pub principal_entity: LegendEntityId,
+    /// When the legend occurred.
+    pub epoch: Epoch,
+    /// Importance score in `0..=1`.
+    pub importance: f32,
+    /// Kind of event that triggered the legend.
+    pub event_kind: EventKind,
+    /// Where the event occurred, if known.
+    pub region: Option<RegionId>,
+    /// All entities involved in the legend.
+    pub participants: SmallVec<[LegendEntityId; 4]>,
+    /// Provenance for the record.
+    pub provenance: Provenance,
+}
+
+impl LegendEntry {
+    /// Create a legend from a significant event.
+    pub fn from_event(
+        event_id: LegendEventId,
+        event: &EventNode,
+        principal: LegendEntityId,
+        principal_significance: f32,
+        participants: SmallVec<[LegendEntityId; 4]>,
+    ) -> Self {
+        let importance = compute_legend_importance(event.magnitude, principal_significance);
+        LegendEntry {
+            id: event_id,
+            name: None,
+            event_id,
+            principal_entity: principal,
+            epoch: event.epoch,
+            importance,
+            event_kind: event.kind.clone(),
+            region: event.region,
+            participants,
+            provenance: event.provenance,
+        }
+    }
+}
+
+/// Compute importance score for a legend from event magnitude and entity significance.
+#[must_use]
+pub fn compute_legend_importance(event_magnitude: f32, principal_significance: f32) -> f32 {
+    ((event_magnitude + principal_significance) / 2.0).clamp(0.0, 1.0)
+}
+
 /// Edge types (spec §3.3).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum LegendEdge {

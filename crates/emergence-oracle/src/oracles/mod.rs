@@ -17,6 +17,7 @@ pub mod migration_flow;
 pub mod mood;
 pub mod mountain_pass;
 pub mod trade;
+pub mod trade_flow;
 pub mod psyche;
 pub mod powers;
 pub mod religion;

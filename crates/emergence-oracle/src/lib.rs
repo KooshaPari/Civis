@@ -1,7 +1,7 @@
 //! Emergence Oracle — programmatic FR verification for Civis emergence systems.
 //!
 //! Each [`FeatureOracle`] implementation maps to a specific FR-EMG-* requirement.
-//! [`OracleRegistry::with_defaults`] wires all 25 domain oracles and [`OracleRegistry::run_all`]
+//! [`OracleRegistry::with_defaults`] wires all 26 domain oracles and [`OracleRegistry::run_all`]
 //! batch-verifies them against a live [`Simulation`].
 
 pub mod oracles;
@@ -49,14 +49,14 @@ impl OracleRegistry {
         self.oracles.push(oracle);
     }
 
-    /// Create a registry pre-loaded with all 25 domain oracles.
+    /// Create a registry pre-loaded with all 26 domain oracles.
     pub fn with_defaults() -> Self {
         use oracles::{
             architecture::ArchitectureOracle, coastal_settlement::CoastalSettlementOracle, creature::CreatureOracle,
             desert_caravan::DesertCaravanOracle, diplomacy::DiplomacyOracle, disaster::DisasterOracle, economy::EconomyOracle,
             epidemic::EpidemicOracle, expansion::ExpansionOracle, festival::FestivalOracle, genetics::GeneticsOracle, i18n::I18nOracle, language::LanguageOracle,
             legends::LegendsOracle, migration::MigrationOracle, migration_flow::MigrationFlowOracle, mood::MoodOracle, mountain_pass::MountainPassOracle, psyche::PsycheOracle,
-            powers::PowersOracle, religion::ReligionOracle, trade::TradeOracle, stratification::StratificationOracle,
+            powers::PowersOracle, religion::ReligionOracle, trade::TradeOracle, trade_flow::TradeFlowOracle, stratification::StratificationOracle,
             religious_conflict::ReligiousConflictOracle, river_trade::RiverTradeOracle,
         };
         let mut registry = Self::new();
@@ -85,6 +85,7 @@ impl OracleRegistry {
         registry.register(Box::new(MountainPassOracle));
         registry.register(Box::new(DesertCaravanOracle));
         registry.register(Box::new(GeneticsOracle));
+        registry.register(Box::new(TradeFlowOracle));
         registry
     }
 
@@ -105,11 +106,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn oracle_registry_runs_all_twenty_five() {
+    fn oracle_registry_runs_all_twenty_six() {
         let sim = Simulation::new();
         let registry = OracleRegistry::with_defaults();
         let verdicts = registry.run_all(&sim);
-        assert_eq!(verdicts.len(), 25, "Expected 25 oracle verdicts");
+        assert_eq!(verdicts.len(), 26, "Expected 26 oracle verdicts");
     }
 
     #[test]

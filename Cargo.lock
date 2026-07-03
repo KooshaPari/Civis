@@ -3729,6 +3729,7 @@ name = "emergence-oracle"
 version = "0.1.0"
 dependencies = [
  "civ-agents",
+ "civ-economy",
  "civ-engine",
  "civ-genetics",
  "civ-i18n",

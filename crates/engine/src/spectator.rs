@@ -189,7 +189,7 @@ fn buildings_for_factions(factions: &[Faction], tick: u64, sim: &Simulation) -> 
         }
     }
     for (idx, (_, building)) in sim.world.query::<&crate::Building>().iter().enumerate() {
-        let (x, y) = crate::spawn::grid_to_norm(building.position);
+        let (x, y) = crate::grid_to_norm(building.position);
         match building.building_type {
             crate::BuildingType::CityCenter => pins.push(BuildingPin {
                 id: 9_000 + idx as u32,

@@ -1,6 +1,7 @@
 //! Real `.civsave` snapshot persistence for `Simulation`.
 
 use std::fs;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
@@ -8,21 +9,22 @@ use thiserror::Error;
 
 use crate::engine::Citizen;
 use crate::{
-    Building, CombatDamagePulse, DoctrineLibrary, Institution, MilitaryUnit, Position,
-    ReligiousProfile, ReplayLog, Simulation, WorldState,
+    Building, CombatDamagePulse, DoctrineLibrary, Institution, InstitutionKind, MilitaryUnit,
+    Position, ReligiousProfile, ReplayLog, Simulation, WorldState,
 };
 use civ_agents::{ClusterMember, LodTier, Needs, Position3d, Tools, Wardrobe};
 use crate::language::LanguageState;
 use civ_needs::Health as LifeHealth;
-use civ_planet::{Climate, MoonConfig, PlanetConfig, WeatherCell};
 use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, WorldCoord};
 
 #[derive(Debug, Error)]
 pub enum SaveError {
     #[error("io at {path}: {message}")]
     Io { path: String, message: String },
-    #[error("bincode: {0}")]
-    Bincode(#[from] bincode::Error),
+    #[error("bincode encode: {0}")]
+    BincodeEncode(#[from] bincode_next::error::EncodeError),
+    #[error("bincode decode: {0}")]
+    BincodeDecode(#[from] bincode_next::error::DecodeError),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -220,6 +222,7 @@ fn snapshot_voxel(voxel: &VoxelWorld<MaterialId>) -> SavedVoxelWorld {
 }
 
 fn snapshot_sim(sim: &Simulation) -> SavedSimulation {
+    let (settlements, institutions, institution_levels_emitted) = sim.saveable_institution_state();
     SavedSimulation {
         state: sim.state.clone(),
         world: snapshot_world(&sim.world),
@@ -232,10 +235,12 @@ fn snapshot_sim(sim: &Simulation) -> SavedSimulation {
         last_tick_voxel_events: sim.last_tick_voxel_events().to_vec(),
         last_tick_voxel_damage_count: sim.last_tick_voxel_damage_count(),
         last_tick_combat_pulses: sim.last_tick_combat_pulses().to_vec(),
-        planet: *sim.planet(),
-        moon: *sim.moon(),
-        climate: *sim.climate(),
-        weather_grid: sim.snapshot().weather_grid,
+        religious_profiles: sim.religious_profiles.clone(),
+        faction_languages: sim.faction_languages().clone(),
+        settlements,
+        institutions,
+        institution_levels_emitted,
+        faction_doctrines: sim.saveable_faction_doctrines(),
         last_settlement_count: sim.last_settlement_count,
         last_life_deaths: sim.last_life_deaths,
     }
@@ -250,8 +255,7 @@ fn restore_sim(saved: SavedSimulation) -> Simulation {
     sim.restore_institution_state(
         saved.settlements,
         saved.institutions,
-        saved
-            .institution_levels_emitted,
+        saved.institution_levels_emitted,
     );
     sim.restore_faction_doctrines(saved.faction_doctrines);
     sim.set_faction_languages(saved.faction_languages);
@@ -297,26 +301,70 @@ mod tests {
     use tempfile::NamedTempFile;
 
     #[test]
-    fn save_and_load_round_trip_snapshot_state() {
+    fn save_and_load_round_trip_full_world_state() {
         let mut sim = Simulation::with_seed(17);
+        sim.set_settlement_population(101, 2_000_000);
+        sim.set_settlement_population(102, 1_500_000);
+        sim.religious_profiles.insert(
+            101,
+            ReligiousProfile {
+                monitoring: 0.42,
+                mythic_coherence: 0.33,
+                uncertainty_reduction: 0.27,
+                age_ticks: sim.state.tick,
+                population: 2_000_000,
+                last_drift_seed: 1_234,
+            },
+        );
+        sim.religious_profiles.insert(
+            102,
+            ReligiousProfile {
+                monitoring: 0.21,
+                mythic_coherence: 0.17,
+                uncertainty_reduction: 0.55,
+                age_ticks: sim.state.tick,
+                population: 1_500_000,
+                last_drift_seed: 2_468,
+            },
+        );
+
         for _ in 0..4 {
             sim.tick();
         }
+
+        let (settlements, institutions, institution_levels_emitted) =
+            sim.saveable_institution_state();
+        let faction_doctrines = sim.saveable_faction_doctrines();
 
         let file = NamedTempFile::new().unwrap();
         save_game(&sim, file.path()).unwrap();
         let loaded = load_game(file.path()).unwrap();
 
-        // `Simulation::snapshot()` derives fields from the live world (emergence,
-        // planet-derived geology, cached cluster counts) that the save format
-        // doesn't persist verbatim. The round-trip contract is the
-        // **persisted** state surface: `state` + cached HUD/tally fields
-        // (last_settlement_count, last_life_deaths) + replay log + voxel writes.
-        // FR-CORE-010 / FR-SAVE-003: Fixed now serializes as i64 (raw) so
-        // treasury and resource fields round-trip losslessly.
-        assert_eq!(loaded.state.tick, sim.state.tick);
-        assert_eq!(loaded.state.faction_treasury, sim.state.faction_treasury);
-        assert_eq!(loaded.state.faction_resources, sim.state.faction_resources);
+        // Persisted round-trip contract is the full world-state surface:
+        // `state` (including emergence/faction), terrain, entities,
+        // doctrine libraries, and religion/institution maps.
+        assert_eq!(loaded.state, sim.state);
+        assert_eq!(snapshot_world(&sim.world), snapshot_world(&loaded.world));
+        for x in -64..=64 {
+            for y in -16..=64 {
+                for z in -64..=64 {
+                    let pos = civ_voxel::WorldCoord {
+                        x: i64::from(x) * crate::SCALE,
+                        y: i64::from(y) * crate::SCALE,
+                        z: i64::from(z) * crate::SCALE,
+                    };
+                    assert_eq!(loaded.voxel().read(pos), sim.voxel().read(pos));
+                }
+            }
+        }
+
+        assert_eq!(loaded.saveable_faction_doctrines(), faction_doctrines);
+        let restored_state = loaded.saveable_institution_state();
+        assert_eq!(restored_state.0, settlements);
+        assert_eq!(restored_state.1, institutions);
+        assert_eq!(restored_state.2, institution_levels_emitted);
+        assert_eq!(loaded.faction_languages(), sim.faction_languages());
+        assert_eq!(loaded.religious_profiles, sim.religious_profiles);
         assert_eq!(loaded.last_settlement_count, sim.last_settlement_count);
         assert_eq!(loaded.last_life_deaths, sim.last_life_deaths);
         assert_eq!(*loaded.replay_log(), *sim.replay_log());

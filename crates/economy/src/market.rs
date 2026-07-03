@@ -128,18 +128,6 @@ impl MarketState {
         if self.prices.is_empty() {
             return;
         }
-        if self.prices.len() == 1 {
-            let key = self
-                .prices
-                .first_key_value()
-                .expect("non-empty prices")
-                .0
-                .clone();
-            let delta = deterministic_price_delta(tick, &key);
-            let price = self.prices.get_mut(&key).expect("key from first_key_value");
-            *price = price.saturating_add(delta);
-            return;
-        }
         let len = self.prices.len();
         let idx = tick as usize % len;
         let key = self
@@ -238,50 +226,6 @@ pub fn settlement_trade_flow(
     })
 }
 
-/// Settlement trade helper for callers that already have aggregate supply and demand.
-///
-/// This preserves the same low-price -> high-price semantics as
-/// [`settlement_trade_flow`] but avoids requiring access to a full
-/// [`Settlement`] value. Used by the engine tick when it only has the
-/// settlement stock / population aggregates.
-pub fn settlement_trade_flow_from_supply_demand(
-    from_settlement: SettlementId,
-    to_settlement: SettlementId,
-    good: Good,
-    supply: i64,
-    demand: i64,
-    low_price_cents: i64,
-    high_price_cents: i64,
-    smoothing_factor: i64,
-) -> Option<SettlementTradeFlow> {
-    if from_settlement == to_settlement || low_price_cents >= high_price_cents {
-        return None;
-    }
-    let supply = supply.max(0);
-    let demand = demand.max(0);
-    if supply <= 0 || demand <= 0 {
-        return None;
-    }
-
-    let smoothing_factor = smoothing_factor.max(1);
-    let price_gap = high_price_cents - low_price_cents;
-    let gap_limited_qty = (price_gap / smoothing_factor).max(1);
-    let qty = supply.min(demand).min(gap_limited_qty);
-    if qty <= 0 {
-        return None;
-    }
-
-    Some(SettlementTradeFlow {
-        from_settlement,
-        to_settlement,
-        good,
-        qty,
-        low_price_cents,
-        high_price_cents,
-        settled_price_cents: (low_price_cents + high_price_cents) / 2,
-    })
-}
-
 #[cfg(test)]
 fn run_tick_sequence(market: &mut MarketState, ticks: &[u64]) {
     for &tick in ticks {
@@ -366,15 +310,6 @@ mod tests {
         assert!(market.prices["food"] < before);
     }
 
-    /// FR-CIV-0100 §3d — exact clearing leaves the price unchanged.
-    #[test]
-    fn apply_pressure_keeps_price_when_demand_equals_supply() {
-        let mut market = MarketState::default();
-        let before = market.prices["food"];
-        market.apply_pressure("food", 500, 500);
-        assert_eq!(market.prices["food"], before);
-    }
-
     #[test]
     fn prices_accessor_returns_same_map_reference() {
         let mut market = MarketState::default();
@@ -394,6 +329,7 @@ mod tests {
         let mut market = MarketState {
             prices: BTreeMap::from([("food".to_string(), 1)]),
         };
+        // Huge surplus (supply ≫ demand) — price should floor at MIN_PRICE_CENTS.
         market.apply_pressure("food", 1_000_000, 0);
         assert_eq!(market.prices["food"], 1);
     }

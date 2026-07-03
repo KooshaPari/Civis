@@ -162,6 +162,21 @@ pub struct EventNode {
     pub raw_ref: Option<RawEventRef>,
 }
 
+/// Compact, narrator-facing record for a promoted event legend.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LegendEntry {
+    pub id: LegendEventId,
+    pub name: Option<NameRef>,
+    pub event_id: LegendEventId,
+    pub principal_entity: LegendEntityId,
+    pub epoch: Epoch,
+    pub importance: f32,
+    pub event_kind: EventKind,
+    pub region: Option<RegionId>,
+    pub participants: SmallVec<[LegendEntityId; 4]>,
+    pub provenance: Provenance,
+}
+
 /// Edge types (spec §3.3).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum LegendEdge {

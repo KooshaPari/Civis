@@ -7,7 +7,6 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::engine::{Simulation, WorldState};
-use crate::gameplay::ScenarioObjective;
 use crate::policy::policy_from_kind;
 use crate::policy::PolicyInput;
 
@@ -137,13 +136,6 @@ pub struct Scenario {
     /// defaults to the no-op policy as well.
     #[serde(default)]
     pub policy: ScenarioPolicy,
-    /// Victory/defeat objectives for this scenario (FR-CIV-GAME-002).
-    ///
-    /// Each objective specifies a [`VictoryCondition`] and an optional tick
-    /// deadline.  An empty list (the default) means the session runs indefinitely
-    /// with only the global `check_outcome` conditions applying.
-    #[serde(default)]
-    pub objectives: Vec<ScenarioObjective>,
 }
 
 /// Per-institution tax rates from scenario YAML (FR-ECON-004 partial).
@@ -285,11 +277,8 @@ impl Scenario {
 
     /// Headless simulation seeded from scenario starting conditions.
     pub fn into_simulation(self, rng_seed: u64) -> Simulation {
-        // ponytail: with_seed_and_starting_conditions was removed; scenario setup
-        // is applied right below (apply_world_state + military/taxation/mods), so
-        // seed-only construction is sufficient. starting_conditions still gates
-        // validation in apply_world_state.
-        let mut sim = Simulation::with_seed(rng_seed);
+        let mut sim =
+            Simulation::with_seed_and_starting_conditions(rng_seed, &self.starting_conditions);
         self.apply_world_state(&mut sim.state);
         sim.economy_policy = self.policy_input();
         sim.configure_military_fog(self.fog_vision_radius, self.fog_grid_size);
@@ -507,7 +496,6 @@ mod tests {
             starting_conditions: ScenarioStartingConditions::default(),
             taxation: ScenarioTaxation::default(),
             policy: ScenarioPolicy::default(),
-            objectives: Vec::new(),
         };
         let sim = scenario.into_simulation(1);
         assert_eq!(sim.military_phase_config().war.fog_vision_radius, Some(6));
@@ -538,7 +526,6 @@ mod tests {
             starting_conditions: ScenarioStartingConditions::default(),
             taxation: ScenarioTaxation::default(),
             policy: ScenarioPolicy::default(),
-            objectives: Vec::new(),
         };
         let sim = scenario.into_simulation(1);
         let cfg = sim.military_phase_config();
@@ -618,9 +605,11 @@ mods:
         assert!(ids.contains(&"example-policy"));
         assert!(ids.contains(&"example-economic"));
 
-        sim.tick();
+        for _ in 0..10 {
+            sim.tick();
+        }
 
-        assert_eq!(sim.state.tick, 1);
+        assert_eq!(sim.state.tick, 10);
     }
 
     /// Scenario YAML economy fields wire into `phase_economy` via `economy_policy`.
@@ -645,7 +634,6 @@ mods:
             starting_conditions: ScenarioStartingConditions::default(),
             taxation: ScenarioTaxation::default(),
             policy: ScenarioPolicy::default(),
-            objectives: Vec::new(),
         };
 
         let mut zero_scarcity = base.clone();

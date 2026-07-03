@@ -141,6 +141,7 @@ pub enum GodToolRequest {
     /// `TaxBias`, `ReligionPressure`, and `DifficultyKnob` ops.
     Law(LawRequest),
 }
+
 /// TERRAIN verb parameters. The brush center is in fixed-point
 /// world coordinates (`civ_voxel::WorldCoord`); `radius_voxels`
 /// defines a footprint (sphere) of cells to write.
@@ -163,6 +164,7 @@ pub struct TerraformRequest {
     #[serde(default)]
     pub aux_id: u32,
 }
+
 /// TERRAIN op kinds. Mirrors the 11 TERRAIN verbs from
 /// `docs/design/GOD_TOOLS_SANDBOX.md` §3.1. Phase 1 ships
 /// `Raise`, `Lower`, `Level`; Phase 2 adds `Smooth` and

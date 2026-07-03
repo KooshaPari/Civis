@@ -54,6 +54,9 @@ pub enum SaveBundleError {
     /// Replay encode/decode failure.
     #[error("replay: {0}")]
     Replay(#[from] ReplayError),
+    /// Full simulation payload save/load failure (`simulation.bin`).
+    #[error("state: {0}")]
+    State(#[from] crate::save::SaveError),
     /// Missing required component in the folder.
     #[error("missing {component} in {dir}")]
     MissingComponent {
@@ -68,14 +71,6 @@ pub enum SaveBundleError {
     /// Zstd compression failure.
     #[error("zstd: {0}")]
     Zstd(String),
-    /// Invalid named save slot.
-    #[error("invalid slot name {name:?}: {message}")]
-    InvalidSlotName {
-        /// Provided slot name.
-        name: String,
-        /// Validation failure detail.
-        message: String,
-    },
 }
 
 fn io_err(path: impl AsRef<Path>, err: impl std::fmt::Display) -> SaveBundleError {
@@ -91,56 +86,6 @@ fn archive_err(message: impl std::fmt::Display) -> SaveBundleError {
 
 fn zstd_err(message: impl std::fmt::Display) -> SaveBundleError {
     SaveBundleError::Zstd(message.to_string())
-}
-
-fn validate_slot_name(name: &str) -> Result<String, SaveBundleError> {
-    let trimmed = name.trim();
-    let invalid = |message: &str| SaveBundleError::InvalidSlotName {
-        name: name.to_string(),
-        message: message.to_string(),
-    };
-    if trimmed.is_empty() {
-        return Err(invalid("slot name cannot be empty"));
-    }
-    if trimmed.contains('/') || trimmed.contains('\\') || trimmed.contains("..") {
-        return Err(invalid("slot name must be a simple filename"));
-    }
-    let normalized = trimmed
-        .trim_end_matches(".civreplay")
-        .trim_end_matches(".civsave.zst")
-        .trim_end_matches(".civsave");
-    if normalized.is_empty() {
-        return Err(invalid("slot name cannot be only an extension"));
-    }
-    Ok(normalized.to_string())
-}
-
-fn slot_archive_path(saves_dir: &Path, name: &str) -> Result<PathBuf, SaveBundleError> {
-    let name = validate_slot_name(name)?;
-    Ok(saves_dir.join(format!("{name}.{CIVSAVE_ARCHIVE_EXTENSION}")))
-}
-
-fn slot_name_from_path(path: &Path) -> Option<String> {
-    if CivSaveBundle::is_save_archive(path) {
-        path.file_name()
-            .and_then(|s| s.to_str())
-            .map(|s| s.trim_end_matches(".civsave.zst").to_string())
-    } else if CivSaveBundle::is_save_dir(path) {
-        path.file_stem()
-            .and_then(|s| s.to_str())
-            .map(|s| s.trim_end_matches(".civsave").to_string())
-    } else {
-        None
-    }
-}
-
-/// One named save slot under a saves directory.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct SaveSlotEntry {
-    /// Slot name without `.civsave.zst`.
-    pub name: String,
-    /// Engine tick at save time, or 0 when metadata cannot be read.
-    pub tick: u64,
 }
 
 /// CIV-1000 save bundle: folder (debug) and `.civsave.zst` archive (default).
@@ -166,6 +111,9 @@ impl CivSaveBundle {
         fs::write(&mod_state_path, sim.export_mod_guest_state().to_json()?)
             .map_err(|e| io_err(&mod_state_path, e))?;
 
+        let simulation_path = dir.join("simulation.bin");
+        crate::save::save_game(sim, &simulation_path).map_err(SaveBundleError::State)?;
+
         let replay_path = dir.join("replay.civreplay");
         sim.save_replay(&replay_path)?;
         Ok(())
@@ -174,14 +122,19 @@ impl CivSaveBundle {
     /// Load simulation from a `.civsave/` folder.
     pub fn load_dir(dir: impl AsRef<Path>) -> Result<Simulation, SaveBundleError> {
         let dir = dir.as_ref();
-        let replay_path = dir.join("replay.civreplay");
-        if !replay_path.is_file() {
-            return Err(SaveBundleError::MissingComponent {
-                dir: dir.to_path_buf(),
-                component: "replay.civreplay",
-            });
-        }
-        let mut sim = Simulation::load_replay_from_file(&replay_path)?;
+        let simulation_path = dir.join("simulation.bin");
+        let mut sim = if simulation_path.is_file() {
+            crate::save::load_game(&simulation_path)?
+        } else {
+            let replay_path = dir.join("replay.civreplay");
+            if !replay_path.is_file() {
+                return Err(SaveBundleError::MissingComponent {
+                    dir: dir.to_path_buf(),
+                    component: "replay.civreplay",
+                });
+            }
+            Simulation::load_replay_from_file(&replay_path)?
+        };
 
         let mod_state_path = dir.join("mod_state.json");
         if mod_state_path.is_file() {
@@ -281,61 +234,6 @@ impl CivSaveBundle {
     }
 }
 
-/// FR-CIV-SAVESLOT: save `sim` to a named archive slot under `saves_dir`.
-pub fn save_to_slot(
-    saves_dir: impl AsRef<Path>,
-    name: &str,
-    sim: &Simulation,
-) -> Result<(), SaveBundleError> {
-    let path = slot_archive_path(saves_dir.as_ref(), name)?;
-    CivSaveBundle::save_archive(path, sim)
-}
-
-/// FR-CIV-SAVESLOT: load a simulation from a named slot under `saves_dir`.
-pub fn load_from_slot(
-    saves_dir: impl AsRef<Path>,
-    name: &str,
-) -> Result<Simulation, SaveBundleError> {
-    let path = slot_archive_path(saves_dir.as_ref(), name)?;
-    CivSaveBundle::load_archive(path)
-}
-
-/// FR-CIV-SAVESLOT: list named save slots under `saves_dir`.
-pub fn list_slots(saves_dir: impl AsRef<Path>) -> Result<Vec<SaveSlotEntry>, SaveBundleError> {
-    let saves_dir = saves_dir.as_ref();
-    let read_dir = match fs::read_dir(saves_dir) {
-        Ok(read_dir) => read_dir,
-        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
-        Err(err) => return Err(io_err(saves_dir, err)),
-    };
-
-    let mut entries = Vec::new();
-    for entry in read_dir {
-        let entry = entry.map_err(|err| io_err(saves_dir, err))?;
-        let path = entry.path();
-        let Some(name) = slot_name_from_path(&path) else {
-            continue;
-        };
-        let tick = CivSaveBundle::read_metadata(&path)
-            .map(|metadata| metadata.tick)
-            .unwrap_or(0);
-        entries.push(SaveSlotEntry { name, tick });
-    }
-    entries.sort_by(|a, b| b.tick.cmp(&a.tick).then_with(|| a.name.cmp(&b.name)));
-    Ok(entries)
-}
-
-/// FR-CIV-SAVESLOT: delete a named save slot under `saves_dir`.
-pub fn delete_slot(saves_dir: impl AsRef<Path>, name: &str) -> Result<bool, SaveBundleError> {
-    let path = slot_archive_path(saves_dir.as_ref(), name)?;
-    if path.is_file() {
-        fs::remove_file(&path).map_err(|err| io_err(&path, err))?;
-        Ok(true)
-    } else {
-        Ok(false)
-    }
-}
-
 fn tar_dir(dir: &Path) -> Result<Vec<u8>, SaveBundleError> {
     let mut tar_buf = Vec::new();
     {
@@ -388,11 +286,41 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
-    fn civsave_folder_round_trips_mod_guest_state() {
+    fn civsave_folder_round_trips_full_simulation_state() {
         let mut sim = Simulation::with_seed(9);
+        sim.set_settlement_population(101, 2_000_000);
+        sim.set_settlement_population(102, 1_500_000);
+        sim.religious_profiles.insert(
+            101,
+            crate::ReligiousProfile {
+                monitoring: 0.42,
+                mythic_coherence: 0.33,
+                uncertainty_reduction: 0.27,
+                age_ticks: sim.state.tick,
+                population: 2_000_000,
+                last_drift_seed: 1_234,
+            },
+        );
+        sim.religious_profiles.insert(
+            102,
+            crate::ReligiousProfile {
+                monitoring: 0.21,
+                mythic_coherence: 0.17,
+                uncertainty_reduction: 0.55,
+                age_ticks: sim.state.tick,
+                population: 1_500_000,
+                last_drift_seed: 2_468,
+            },
+        );
         for _ in 0..5 {
             sim.tick();
         }
+        let state = sim.state.clone();
+        let institutions = sim.saveable_institution_state();
+        let doctrines = sim.saveable_faction_doctrines();
+        let religious_profiles = sim.religious_profiles.clone();
+        let last_settlement_count = sim.last_settlement_count;
+        let last_life_deaths = sim.last_life_deaths;
         sim.mod_host_mut()
             .restore_guest_memory("test-mod", vec![4, 5, 6]);
 
@@ -401,7 +329,12 @@ mod tests {
         CivSaveBundle::save_dir(&save_path, &sim).expect("save");
 
         let loaded = CivSaveBundle::load_dir(&save_path).expect("load");
-        assert_eq!(loaded.state.tick, sim.state.tick);
+        assert_eq!(loaded.state, state);
+        assert_eq!(loaded.saveable_institution_state(), institutions);
+        assert_eq!(loaded.saveable_faction_doctrines(), doctrines);
+        assert_eq!(loaded.religious_profiles, religious_profiles);
+        assert_eq!(loaded.last_settlement_count, last_settlement_count);
+        assert_eq!(loaded.last_life_deaths, last_life_deaths);
         assert_eq!(
             loaded.mod_host().guest_memory_snapshot("test-mod"),
             vec![4, 5, 6]
@@ -428,35 +361,5 @@ mod tests {
             loaded.mod_host().guest_memory_snapshot("archive-mod"),
             vec![1, 2]
         );
-    }
-
-    /// FR-CIV-SAVESLOT.
-    #[test]
-    fn fr_civ_saveslot_named_slots_save_list_load_delete() {
-        let dir = tempdir().expect("tempdir");
-
-        let mut sim_a = Simulation::with_seed(31);
-        sim_a.tick();
-        let mut sim_b = Simulation::with_seed(37);
-        sim_b.tick();
-        sim_b.tick();
-
-        save_to_slot(dir.path(), "a", &sim_a).expect("save a");
-        save_to_slot(dir.path(), "b", &sim_b).expect("save b");
-
-        let slots = list_slots(dir.path()).expect("list slots");
-        let names = slots.iter().map(|slot| slot.name.as_str()).collect::<Vec<_>>();
-        assert!(names.contains(&"a"));
-        assert!(names.contains(&"b"));
-
-        let loaded_a = load_from_slot(dir.path(), "a").expect("load a");
-        assert_eq!(loaded_a.state, sim_a.state);
-        assert_eq!(loaded_a.hash_chain_root(), sim_a.hash_chain_root());
-
-        assert!(delete_slot(dir.path(), "a").expect("delete a"));
-        let slots = list_slots(dir.path()).expect("list after delete");
-        let names = slots.iter().map(|slot| slot.name.as_str()).collect::<Vec<_>>();
-        assert!(!names.contains(&"a"));
-        assert!(names.contains(&"b"));
     }
 }

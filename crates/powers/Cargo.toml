@@ -1,0 +1,12 @@
+[package]
+name = "civ-powers"
+description = "Data-driven god-tool registry for the Holocron Deck (FR-CIV-GODTOOL-900/901)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]

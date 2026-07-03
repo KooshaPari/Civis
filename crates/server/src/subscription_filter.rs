@@ -44,7 +44,7 @@ impl FrameKind {
     ];
 
     /// Stable wire name for subscribe responses.
-    pub fn wire_name(&self) -> &'static str {
+    pub const fn wire_name(self) -> &'static str {
         match self {
             Self::VoxelDelta => "voxel_delta",
             Self::BuildingDiff => "building_diff",
@@ -124,21 +124,12 @@ impl SubscriptionFilter {
                     .and_then(|v| v.as_u64())
                     .and_then(tick_stride_from_max_framerate)
             });
-        let explicit_id = params.and_then(|p| p.get("subscription_id")).is_some();
         let subscription_id = params
             .and_then(|p| p.get("subscription_id"))
             .and_then(|v| v.as_str())
-            .map(str::trim)
-            .filter(|s| !s.is_empty())
             .map(str::to_owned)
-            .or_else(|| {
-                if explicit_id {
-                    None
-                } else {
-                    Some(uuid::Uuid::new_v4().to_string())
-                }
-            });
-        *self = build_filter(kinds.as_deref(), stride, subscription_id);
+            .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+        *self = build_filter(kinds.as_deref(), stride, Some(subscription_id));
         Ok(self.subscribe_result(current_tick))
     }
 
@@ -159,7 +150,7 @@ impl SubscriptionFilter {
         if !self.active || self.tick_stride <= 1 {
             return true;
         }
-        tick % u64::from(self.tick_stride) == 0
+        tick.is_multiple_of(u64::from(self.tick_stride))
     }
 
     /// Return the subset of frames allowed by this filter (cloned).
@@ -209,10 +200,9 @@ fn build_filter(
                 subscription_id,
             };
         }
-        return SubscriptionFilter {
-            subscription_id,
-            ..Default::default()
-        };
+        let mut filter = SubscriptionFilter::default();
+        filter.subscription_id = subscription_id;
+        return filter;
     };
 
     let kinds = parse_kind_csv(source).unwrap_or_default();
@@ -354,7 +344,7 @@ mod tests {
     use civ_engine::Simulation;
     use civ_protocol_3d::{
         AgentAppearanceFrame, BuildingDiffFrame, BuildingProvenance, CivilianStateFrame,
-        ClimateFrame, EventFeedFrame, VoxelDeltaFrame,
+        ClimateFrame, EventFeedFrame, FactionStateFrame, VoxelDeltaFrame,
     };
 
     fn sample_frames() -> [Frame3d; 3] {
@@ -439,20 +429,6 @@ mod tests {
         ];
         let filtered = filter.filter_frames(&frames);
         assert_eq!(filtered.len(), 3);
-    }
-
-    #[test]
-    fn subscribe_params_trim_blank_subscription_id() {
-        let mut filter = SubscriptionFilter::default();
-        let params = json!({
-            "frame_kinds": ["climate"],
-            "subscription_id": "   "
-        });
-        let result = filter
-            .apply_subscribe_params(Some(&params), 12)
-            .expect("subscribe");
-        assert_eq!(result.get("subscription_id"), Some(&json!(null)));
-        assert!(filter.is_active());
     }
 
     #[test]

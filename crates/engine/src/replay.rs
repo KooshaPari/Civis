@@ -682,8 +682,8 @@ mod tests {
     #[test]
     fn rng_draw_records_event_and_counts() {
         let mut log = ReplayLog::default();
-        log.record_rng_draw(7, 0.5, true);
-        log.record_rng_draw(8, 0.75, false);
+        log.record_rng_draw(7, 0.42, true);
+        log.record_rng_draw(8, 0.99, false);
         assert_eq!(log.rng_draw_event_count(), 2);
         let draws: Vec<&ReplayEvent> = log
             .events
@@ -696,7 +696,7 @@ mod tests {
     #[test]
     fn rng_draw_round_trips_through_save_load() {
         let mut log = ReplayLog::default();
-        log.record_rng_draw(11, 0.5, true);
+        log.record_rng_draw(11, 0.42, true);
         let file = tempfile::NamedTempFile::new().expect("temp file");
         log.save(file.path()).expect("save replay log");
         let loaded = ReplayLog::load(file.path()).expect("load replay log");

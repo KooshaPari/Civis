@@ -19,29 +19,19 @@ async fn main() {
         .ok()
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("saves"));
-    let replays_dir: PathBuf = std::env::var("CIVIS_REPLAYS_DIR")
-        .ok()
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("replays"));
     // `CIV_AUTOLOAD=1` seeds the bridge from the freshest on-disk save
     // (slot > autosave > manual, mtime desc within tier). Off by default so
     // CI runs stay reproducible against a fresh `Simulation::default()`.
     let autoload = std::env::var("CIV_AUTOLOAD")
         .ok()
         .is_some_and(|value| matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"));
-    let map_seed = std::env::var("CIVIS_MAP_SEED")
-        .ok()
-        .and_then(|value| value.parse().ok())
-        .unwrap_or(42);
-    let sim = Arc::new(Mutex::new(
-        initial_simulation(&saves_dir, autoload, map_seed).await,
-    ));
+    let sim = Arc::new(Mutex::new(initial_simulation(&saves_dir, autoload).await));
+
     // require_role defaults to true (deny-by-default); operators may disable
     // via the CIVIS_REQUIRE_ROLE=false env var in permissive local-only setups.
     let require_role = std::env::var("CIVIS_REQUIRE_ROLE")
         .map(|v| v.to_ascii_lowercase() != "false")
         .unwrap_or(true);
-
     run_ws_bridge(
         WsBridgeConfig {
             addr,
@@ -49,7 +39,7 @@ async fn main() {
             require_role,
             tick_broadcast_format: TickBroadcastFormat::from_env(),
             saves_dir,
-            replays_dir,
+            ..Default::default()
         },
         sim,
     )
@@ -60,14 +50,10 @@ async fn main() {
 ///
 /// When `autoload` is true and `saves_dir` contains a recognizable save, the
 /// freshest entry is loaded via [`CivSaveBundle::load`]. Otherwise the engine
-/// starts from [`Simulation::with_seed`], using `CIVIS_MAP_SEED` (default 42).
-async fn initial_simulation(
-    saves_dir: &std::path::Path,
-    autoload: bool,
-    map_seed: u64,
-) -> Simulation {
+/// starts from [`Simulation::default`].
+async fn initial_simulation(saves_dir: &std::path::Path, autoload: bool) -> Simulation {
     if !autoload {
-        return Simulation::with_seed(map_seed);
+        return Simulation::default();
     }
     let Some(path) = (match most_recent_save_path(saves_dir) {
         Ok(path) => path,

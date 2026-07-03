@@ -9,6 +9,8 @@ publish = false
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 tracing = "0.1"
+civ-voxel = { path = "../voxel" }
+glam = { version = "0.30.10", features = ["serde"] }
 
 [dev-dependencies]
 proptest = "1.11"

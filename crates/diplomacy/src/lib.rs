@@ -1067,6 +1067,23 @@ pub use alliance_formation::{
 };
 
 // ---------------------------------------------------------------------------
+// FR-CIV-DIPLO-004: Zeuthen/Rubinstein monotonic-concession state machine
+// ---------------------------------------------------------------------------
+//
+// Additive slice: a scripted-fixture-testable bargaining model that pairs
+// the existing `ConcessionStateMachine` monotonic-non-decreasing guards
+// (the concretization of FR-CIV-DIPLO-003's `offer ≥ reservation` rule)
+// with an explicit round loop that closes the reservation-to-offer gap by
+// halves weighted by each party's risk of conflict. Lives in its own
+// module and does not modify the substrate above.
+
+pub mod concession_rounds;
+
+pub use concession_rounds::{
+    run_concession_rounds, ConcessionOutcome, ConcessionRound, NegotiationState, OutcomeKind,
+};
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 

@@ -19,6 +19,8 @@ pub mod diplomacy;
 pub mod culture;
 pub mod gameplay;
 pub mod era;
+pub mod history;
+pub mod tech;
 pub mod godtools;
 pub mod engine;
 pub mod emergence;

@@ -101,7 +101,7 @@ fn cluster_values_for_faction(
     out
 }
 
-fn faction_isolation_pressure(
+pub(crate) fn faction_isolation_pressure(
     target_faction_id: u32,
     dominant: &BTreeMap<u64, u32>,
     cluster_member_counts: &BTreeMap<u64, u32>,

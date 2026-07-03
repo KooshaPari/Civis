@@ -15,6 +15,8 @@ pub mod weather;
 pub use weather::{compute_weather, SeasonKind, WeatherCell, WeatherKind};
 pub mod seasonal;
 pub use seasonal::{apply_modifier, seasonal_modifiers, SeasonalModifiers};
+pub mod worldgen;
+pub use worldgen::WorldgenConfig;
 
 use serde::{Deserialize, Serialize};
 use std::f32::consts::TAU;

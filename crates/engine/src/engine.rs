@@ -5,6 +5,7 @@
 use civ_agents::{
 
     cluster::{cluster_by_colocation, MembershipPayoff},
+    diplomacy::GriefAccumulator,
     count_civilians,
     daily_path::{pick_target, DailyPathDecision, Poi, PoiKind, PoiRegistry},
     propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at,
@@ -53,6 +54,7 @@ use std::ops::{Deref, DerefMut};
 
 use crate::culture::{
     advance_faction_ideologies, culture_cooperation_signal, culture_openness_signal,
+    faction_isolation_pressure,
     FactionIdeologyState,
 };
 use crate::language::{
@@ -75,6 +77,8 @@ use crate::replay::{ReplayError, ReplayLog};
 use crate::replay_format::{load_civreplay, save_civreplay};
 
 use crate::conditions::GameOutcome;
+use crate::{CivAge, EraHistory, FactionRelationSnapshot, FactionTechState, Fixed};
+use civ_planet::worldgen::WorldgenConfig;
 
 
 /// Ordered phase identifiers executed once per [`Simulation::tick`].
@@ -111,6 +115,20 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "audio",
     "victory_check",
 ];
+
+/// Minimum cognition score required for a lineage to cross the sentience
+/// threshold this tick (FR-CIV-GENETICS / FR-CIV-LEGENDS). Mirrors the
+/// threshold used by [`sentience_research_bonus`] so the engine phase and the
+/// emergence coupling stay aligned.
+const SENTIENCE_MIN_COGNITION: f32 = 0.72;
+
+/// Default sentience profile used by [`Simulation::phase_sentience`].
+fn default_sentience_profile() -> CognitionTraitProfile {
+    CognitionTraitProfile::new(
+        "sapient-lineage",
+        vec![(0, 0.5), (1, 0.5), (2, 0.5), (8, 0.25)],
+    )
+}
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ResearchCache {

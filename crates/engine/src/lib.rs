@@ -15,6 +15,7 @@ pub mod building_emergence;
 pub mod technology;
 pub mod command_queue;
 pub mod conditions;
+pub mod culture;
 pub mod gameplay;
 pub mod era;
 pub mod godtools;

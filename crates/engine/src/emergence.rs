@@ -7,7 +7,7 @@
 
 use std::collections::{BTreeMap, HashSet};
 
-use civ_agents::culture::{advance_faction_ideologies, drift_populations, ContactEdge, CultureProfile};
+use civ_agents::culture::{drift_populations, ContactEdge, CultureProfile};
 use civ_agents::language::{
     name_from_lexicon, EvolvedLexicon, LexemeKind, PhonemeInventory,
 };
@@ -794,39 +794,6 @@ impl Simulation {
         drift_populations(&mut profiles, &edges, self.rng_mut(), 0.02, 0.08, 0.85);
         for (key, profile) in keys.into_iter().zip(profiles) {
             self.emergence.cluster_cultures.insert(key, profile);
-        }
-        let mut faction_religion_signal = BTreeMap::new();
-        for (faction_id, (monitor_sum, count)) in faction_religion {
-            if count > 0 {
-                faction_religion_signal
-                    .insert(faction_id, (monitor_sum / (count as f32)).clamp(0.0, 1.0));
-            }
-        }
-
-        let (cluster_cultures, era_faction_ages, faction_ideologies, climate) = {
-            (
-                self.emergence.cluster_cultures.clone(),
-                self.era_progression.faction_ages.clone(),
-                self.faction_ideologies.clone(),
-                self.climate.clone(),
-            )
-        };
-        let rng = self.rng_mut();
-        self.faction_ideologies = advance_faction_ideologies(
-            tick,
-            &cluster_cultures,
-            &dominant_by_cluster,
-            &cluster_member_counts,
-            &settlement_contacts,
-            &climate,
-            &faction_religion_signal,
-            &era_faction_ages,
-            &faction_ideologies,
-            rng,
-        );
-        self.faction_aggression.clear();
-        for (faction_id, state) in &self.faction_ideologies {
-            self.faction_aggression.insert(*faction_id, state.aggression);
         }
 
         if tick % 128 == 0 && !self.emergence.cluster_cultures.is_empty() {

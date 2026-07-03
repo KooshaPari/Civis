@@ -116,11 +116,14 @@ impl VictoryCondition {
                 .get(&self.faction_id)
                 .cloned()
                 .unwrap_or_else(|| format!("Faction {}", self.faction_id));
-            Some(GameOutcome::Victory(format!(
-                "{} Victory ({})",
-                self.victory_type.label(),
-                faction_name
-            )))
+            Some(GameOutcome::Victory {
+                faction: Some(self.faction_id),
+                kind: format!(
+                    "{} Victory ({})",
+                    self.victory_type.label(),
+                    faction_name
+                ),
+            })
         } else {
             None
         }
@@ -247,12 +250,14 @@ impl ScenarioObjective {
                     .get(&self.condition.faction_id)
                     .cloned()
                     .unwrap_or_else(|| format!("Faction {}", self.condition.faction_id));
-                return Some(GameOutcome::Defeat(format!(
-                    "{} objective expired for {} at tick {}",
-                    self.condition.victory_type.label(),
-                    faction_name,
-                    limit,
-                )));
+                return Some(GameOutcome::Defeat {
+                    reason: format!(
+                        "{} objective expired for {} at tick {}",
+                        self.condition.victory_type.label(),
+                        faction_name,
+                        limit,
+                    ),
+                });
             }
         }
         None
@@ -330,9 +335,9 @@ pub fn compute_gameplay_state(sim: &Simulation) -> GameplayState {
         return GameplayState {
             faction_progress: Default::default(),
             tick,
-            resolved_outcome: Some(GameOutcome::Defeat(
-                DefeatCondition::Extinction.label().to_owned(),
-            )),
+            resolved_outcome: Some(GameOutcome::Defeat {
+                reason: DefeatCondition::Extinction.label().to_owned(),
+            }),
         };
     }
 
@@ -403,31 +408,37 @@ pub fn compute_gameplay_state(sim: &Simulation) -> GameplayState {
         // Victory checks (first match wins)
         if resolved_outcome.is_none() {
             if territory_share >= DOMINATION_TERRITORY_THRESHOLD {
-                resolved_outcome = Some(GameOutcome::Victory(format!(
-                    "Domination Victory ({})", fname
-                )));
+                resolved_outcome = Some(GameOutcome::Victory {
+                    faction: Some(fid),
+                    kind: format!("Domination Victory ({})", fname),
+                });
             } else if belief_share >= CULTURAL_BELIEF_THRESHOLD {
-                resolved_outcome = Some(GameOutcome::Victory(format!(
-                    "Cultural Victory ({})", fname
-                )));
+                resolved_outcome = Some(GameOutcome::Victory {
+                    faction: Some(fid),
+                    kind: format!("Cultural Victory ({})", fname),
+                });
             } else if resource_share >= ECONOMIC_RESOURCE_THRESHOLD {
-                resolved_outcome = Some(GameOutcome::Victory(format!(
-                    "Economic Victory ({})", fname
-                )));
+                resolved_outcome = Some(GameOutcome::Victory {
+                    faction: Some(fid),
+                    kind: format!("Economic Victory ({})", fname),
+                });
             } else if sci_reached {
-                resolved_outcome = Some(GameOutcome::Victory(format!(
-                    "Scientific Victory ({})", fname
-                )));
+                resolved_outcome = Some(GameOutcome::Victory {
+                    faction: Some(fid),
+                    kind: format!("Scientific Victory ({})", fname),
+                });
             }
         }
 
         // Collapse defeat
         if resolved_outcome.is_none() && check_collapse(state, fid) {
-            resolved_outcome = Some(GameOutcome::Defeat(format!(
-                "{} ({})",
-                DefeatCondition::Collapse.label(),
-                fname
-            )));
+            resolved_outcome = Some(GameOutcome::Defeat {
+                reason: format!(
+                    "{} ({})",
+                    DefeatCondition::Collapse.label(),
+                    fname
+                ),
+            });
         }
     }
 

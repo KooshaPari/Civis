@@ -602,6 +602,8 @@ mod tests {
         let mut health = Health {
             integrity: 0.90,
             sick: true,
+            sickness: true,
+            morale: 1.0,
             deprivation_streak: 0,
         };
         let rates = DecayRates::default();
@@ -753,6 +755,8 @@ mod tests {
         let mut health = Health {
             integrity: 0.0,
             sick: true,
+            sickness: true,
+            morale: 1.0,
             deprivation_streak: 50,
         };
         let mut r = rng(3);
@@ -938,6 +942,8 @@ mod tests {
         let mut health = Health {
             integrity: 0.5,
             sick: false,
+            sickness: false,
+            morale: 1.0,
             deprivation_streak: 0,
         };
         let mut rng = rng(2);
@@ -1011,6 +1017,8 @@ mod tests {
         let mut health = Health {
             integrity: 0.42,
             sick: false,
+            sickness: false,
+            morale: 1.0,
             deprivation_streak: 0,
         };
         let mut rates = DecayRates::default();
@@ -1049,6 +1057,8 @@ mod tests {
         let mut health = Health {
             integrity: 0.02,
             sick: false,
+            sickness: false,
+            morale: 1.0,
             deprivation_streak: 0,
         };
         let mut rng = rng(9);
@@ -1140,6 +1150,8 @@ mod test_reproduction {
         let health = Health {
             integrity: 1.0,
             sick: false,
+            sickness: false,
+            morale: 1.0,
             deprivation_streak: 0,
         };
         // Working-age adult (age 25 fits in default ranges)
@@ -1153,6 +1165,8 @@ mod test_reproduction {
         let health = Health {
             integrity: 0.8,
             sick: false,
+            sickness: false,
+            morale: 1.0,
             deprivation_streak: 0,
         };
         // Starving (food < 0.3)
@@ -1166,6 +1180,8 @@ mod test_reproduction {
         let health = Health {
             integrity: 1.0,
             sick: false,
+            sickness: false,
+            morale: 1.0,
             deprivation_streak: 0,
         };
         // Juvenile (age 8)
@@ -1179,6 +1195,8 @@ mod test_reproduction {
         let health = Health {
             integrity: 1.0,
             sick: true,
+            sickness: true,
+            morale: 1.0,
             deprivation_streak: 0,
         };
         // Working-age but sick

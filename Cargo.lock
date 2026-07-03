@@ -3083,6 +3083,8 @@ dependencies = [
 name = "civ-economy"
 version = "0.1.0"
 dependencies = [
+ "civ-voxel",
+ "glam 0.30.10",
  "proptest",
  "serde",
  "tracing",

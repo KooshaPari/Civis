@@ -18,6 +18,7 @@ pub mod mood;
 pub mod mountain_pass;
 pub mod trade;
 pub mod psyche;
+pub mod powers;
 pub mod religion;
 pub mod stratification;
 pub mod religious_conflict;

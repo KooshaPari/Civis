@@ -12,5 +12,6 @@ civ-engine = { path = "../engine" }
 civ-agents = { path = "../agents" }
 civ-i18n = { path = "../i18n" }
 civ-genetics = { path = "../genetics" }
+civ-powers = { path = "../powers" }
 rand = "0.8.6"
 rand_chacha = "0.3"

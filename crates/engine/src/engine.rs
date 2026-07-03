@@ -25,7 +25,6 @@ use civ_economy::{collect_taxes, Taxation};
 use civ_genetics::sentience::{
     cognition_score, evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold,
 };
-
 use civ_genetics::Dna;
 use civ_mod_host::ModHost;
 use civ_needs::{Health as CivNeedsHealth, LifecycleLabel, LifecycleParams, should_reproduce};

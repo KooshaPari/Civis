@@ -1031,6 +1031,15 @@ const PERCOLATION_UNITS_PER_TICK: u8 = 4;
 /// cannot drain a saturated column overnight.
 const CAPILLARY_RISE_UNITS: u8 = 1;
 
+/// Evaporation threshold as a fraction of the material's boil point
+/// (FR-CIV-CA-004). WATER (boil = 100) starts drying at 60 C, below the
+/// 100 C phase transition used by the existing WATER -> STEAM pass.
+const EVAP_THRESHOLD_FRACTION_NUM: i32 = 60;
+const EVAP_THRESHOLD_FRACTION_DEN: i32 = 100;
+
+/// Saturation units lost per CA step while above the evaporation threshold.
+const EVAP_PER_STEP: u8 = 1;
+
 /// Porosity / capillary-lock + gravity-percolation + upward capillary pass
 /// for the `CaGrid` saturation field (FR-CIV-CA-003).
 ///
@@ -1085,7 +1094,7 @@ const CAPILLARY_RISE_UNITS: u8 = 1;
 ///
 /// Rule per cell:
 ///
-/// 1. Read `id`, `t`, `prev_sat` from the scratch snapshot.
+/// 1. Read `id`, `t`, `prev_sat` from the current grid.
 /// 2. Skip when `prev_sat == 0` (nothing to evaporate).
 /// 3. Resolve the material's boil point (`tpt_thermal.boil_point` first,
 ///    then `boiling_point`); skip when neither is finite.
@@ -1108,31 +1117,16 @@ const CAPILLARY_RISE_UNITS: u8 = 1;
 /// timeline) rather than instantly vanishing.
 fn saturation_evaporation_pass(
     grid: &mut CaGrid,
-    scratch: &ScratchView,
     reg: MaterialRegistry,
     cells: &[usize],
 ) {
-    // Evaporation threshold as a fraction of the material's boil point.
-    // We pick 0.6 of `boil_point` so WATER (boil = 100) starts evaporating
-    // at 60 °C — below the 100 °C phase transition and clearly inside the
-    // "warm but not yet boiling" band that drives weather depth.
-    const EVAP_THRESHOLD_FRACTION_NUM: i32 = 60;
-    const EVAP_THRESHOLD_FRACTION_DEN: i32 = 100;
-    // Saturation units lost per CA step while above the threshold. `u8`
-    // saturation has 256 levels and 1 unit/tick is the smallest
-    // deterministic step on which weather-driven drying is observable
-    // over a few hundred ticks. The 1-3 unit band asked for in the spec
-    // is fully within this range; we pick 1 to keep the per-tick writes
-    // coarse enough that the determinism snapshot stays quiet.
-    const EVAP_PER_STEP: u8 = 1;
-
     let area = grid.dims[0] * grid.dims[1];
     for &idx in cells {
-        let prev_sat = scratch.saturation[idx];
+        let prev_sat = grid.saturation[idx];
         if prev_sat == 0 {
             continue;
         }
-        let id = scratch.cells[idx];
+        let id = grid.cells[idx];
         let def = match reg.get(id) {
             Some(d) => d,
             None => continue,
@@ -1151,11 +1145,11 @@ fn saturation_evaporation_pass(
             // neither is a meaningful evaporation threshold.
             continue;
         }
-        // `boil * 60 / 100` rounded down; keeps the threshold strictly below
-        // `boil` (the (i32,i32) multiply-then-divide avoids overflow for
-        // realistic boil values where `boil * 60 < i32::MAX`).
+        // Multiply before dividing so the fractional threshold rounds down;
+        // keeps the threshold strictly below `boil` for the configured
+        // fraction.
         let threshold = (boil * EVAP_THRESHOLD_FRACTION_NUM) / EVAP_THRESHOLD_FRACTION_DEN;
-        let t = i32::from(scratch.temperatures[idx]);
+        let t = i32::from(grid.temperatures[idx]);
         if t <= threshold {
             continue;
         }
@@ -1472,10 +1466,7 @@ fn run_rule_passes(
     // per-cell `saturation` on hot, water-bearing cells (does NOT phase-
     // change the cell — see `saturation_evaporation_pass` doc for the
     // weather/ecology depth rationale).
-    grid.refresh_scratch();
-    scratch = grid.scratch_view();
-    saturation_evaporation_pass(grid, &scratch, reg, &cells);
-    grid.restore_scratch(scratch);
+    saturation_evaporation_pass(grid, reg, &cells);
     grid.refresh_scratch();
     scratch = grid.scratch_view();
     percolation_pass(grid, &scratch, reg, tick, &cells);
@@ -3418,34 +3409,35 @@ mod tests {
     // FR-CIV-CA-004 — saturation evaporation depth (weather / ecology).
     // The pass complements the existing WATER → STEAM evaporation by
     // gradually drying the per-cell `saturation` of water-bearing cells
-    // whose temperature exceeds 60 % of the material's boil point.
+    // whose temperature exceeds EVAP_THRESHOLD_FRACTION_NUM /
+    // EVAP_THRESHOLD_FRACTION_DEN of the material's boil point.
     // -------------------------------------------------------------------------
 
     /// FR-CIV-CA-004 — direct call: a saturated WATER cell above the
-    /// 60-°C threshold loses exactly one saturation unit per pass call;
+    /// evaporation threshold loses exactly EVAP_PER_STEP saturation units;
     /// the cell material is preserved (no phase change).
     #[test]
     fn saturation_evaporation_pass_hot_water_dries() {
-        // WATER evaporates above 60 °C (60 % of boil_point = 100). 80 °C
-        // is comfortably above the threshold and well below the 100 °C
-        // phase-change, so the existing evaporation_pass won't flip the
-        // cell to STEAM — only the new saturation_evaporation_pass acts
-        // on it.
+        let water_boil = i32::from(reg().get(WATER).unwrap().boiling_point);
+        let water_threshold =
+            (water_boil * EVAP_THRESHOLD_FRACTION_NUM) / EVAP_THRESHOLD_FRACTION_DEN;
+        let hot_temp = i16::try_from(water_threshold + 20).unwrap();
+        // The chosen temperature is comfortably above the configured
+        // evaporation threshold and below the phase-change point, so the
+        // existing evaporation_pass won't flip the cell to STEAM — only the
+        // saturation pass acts.
         let mut g = CaGrid::new([1, 1, 1]);
-        g.set_with_temp(0, 0, 0, WATER, 80);
+        g.set_with_temp(0, 0, 0, WATER, hot_temp);
         g.saturation[g.index(0, 0, 0).unwrap()] = 100;
         g.mark_dirty_cell(0, 0, 0);
 
         let cells = g.dirty_cell_indices();
-        g.refresh_scratch();
-        let scratch = g.scratch_view();
-        saturation_evaporation_pass(&mut g, &scratch, reg(), &cells);
-        g.restore_scratch(scratch);
+        saturation_evaporation_pass(&mut g, reg(), &cells);
 
         assert_eq!(
             g.saturation[g.index(0, 0, 0).unwrap()],
-            99,
-            "hot water cell must lose exactly 1 saturation unit per pass"
+            100u8.saturating_sub(EVAP_PER_STEP),
+            "hot water cell must lose exactly EVAP_PER_STEP saturation units per pass"
         );
         assert_eq!(
             g.get(0, 0, 0),
@@ -3455,22 +3447,23 @@ mod tests {
     }
 
     /// FR-CIV-CA-004 — direct call: a saturated WATER cell below the
-    /// 60-°C threshold does NOT lose saturation; the saturation field is
+    /// evaporation threshold does NOT lose saturation; the saturation field is
     /// untouched.
     #[test]
     fn saturation_evaporation_pass_cold_water_unchanged() {
-        // 20 °C is well below 60 °C (the 60 % boil-point threshold), so
-        // the pass must skip the cell entirely.
+        let water_boil = i32::from(reg().get(WATER).unwrap().boiling_point);
+        let water_threshold =
+            (water_boil * EVAP_THRESHOLD_FRACTION_NUM) / EVAP_THRESHOLD_FRACTION_DEN;
+        let cold_temp = i16::try_from(water_threshold.saturating_sub(40)).unwrap();
+        // The chosen temperature is below the configured evaporation
+        // threshold for WATER, so the pass must skip the cell entirely.
         let mut g = CaGrid::new([1, 1, 1]);
-        g.set_with_temp(0, 0, 0, WATER, 20);
+        g.set_with_temp(0, 0, 0, WATER, cold_temp);
         g.saturation[g.index(0, 0, 0).unwrap()] = 100;
         g.mark_dirty_cell(0, 0, 0);
 
         let cells = g.dirty_cell_indices();
-        g.refresh_scratch();
-        let scratch = g.scratch_view();
-        saturation_evaporation_pass(&mut g, &scratch, reg(), &cells);
-        g.restore_scratch(scratch);
+        saturation_evaporation_pass(&mut g, reg(), &cells);
 
         assert_eq!(
             g.saturation[g.index(0, 0, 0).unwrap()],
@@ -3490,10 +3483,7 @@ mod tests {
         let dirty_before: HashSet<usize> = g.dirty_chunks.clone();
 
         let cells = g.dirty_cell_indices();
-        g.refresh_scratch();
-        let scratch = g.scratch_view();
-        saturation_evaporation_pass(&mut g, &scratch, reg(), &cells);
-        g.restore_scratch(scratch);
+        saturation_evaporation_pass(&mut g, reg(), &cells);
 
         assert_eq!(
             g.saturation[g.index(0, 0, 0).unwrap()],
@@ -3517,14 +3507,14 @@ mod tests {
         hot.set_with_temp(0, 0, 0, WATER, 80);
         hot.saturation[hot.index(0, 0, 0).unwrap()] = 100;
         hot.mark_dirty_cell(0, 0, 0);
-        // 10 ticks → 10 × 1 unit = 10 units of saturation lost. The cell
+        // 10 ticks lose EVAP_PER_STEP per tick while above threshold. The cell
         // is held at y=0 so `water_step` cannot drain it; thermo has no
         // neighbours, so temperature stays at 80 °C; evaporation_pass's
         // WATER→STEAM trigger needs T > 100, well above 80. Net effect
         // is exactly the saturation_evaporation_pass contribution.
         step_n_with_config(&mut hot, reg(), 10, BoundaryConfig::closed(), 0);
         assert!(
-            hot.saturation[hot.index(0, 0, 0).unwrap()] <= 99,
+            hot.saturation[hot.index(0, 0, 0).unwrap()] <= 100u8.saturating_sub(EVAP_PER_STEP),
             "hot water must lose saturation across N ticks, got {}",
             hot.saturation[hot.index(0, 0, 0).unwrap()]
         );

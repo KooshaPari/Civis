@@ -51,11 +51,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use std::ops::{Deref, DerefMut};
 
-/// Fixed-point decimal (16-bit signed integer + 16 fractional bits).
-/// Re-exported from the `fixed` crate; aliased here so callers can use
-/// `crate::engine::Fixed` (or `crate::Fixed`) and `Fixed::from_num(...)`.
-
-pub type Fixed = fixed::types::I48F16;
 use crate::culture::{
     advance_faction_ideologies, culture_cooperation_signal, culture_openness_signal,
     FactionIdeologyState,
@@ -7092,15 +7087,6 @@ impl Simulation {
             .iter()
             .map(|(_, civilian)| civilian.clone())
             .collect()
-    }
-    /// Micro-actor action count for emergence metrics.
-
-    pub fn micro_actor_action_count(&self) -> u32 {
-        0
-    }
-    /// Micro-descendant action count for emergence metrics (no-op stub).
-    pub fn micro_descendant_action_count(&self) -> u32 {
-        0
     }
 }
 

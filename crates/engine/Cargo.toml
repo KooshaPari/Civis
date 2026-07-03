@@ -10,9 +10,13 @@ publish = false
 # Random number generation with seeding
 rand = "0.8.6"
 rand_chacha = "0.3"
+glam = "0.30.10"
 
 # Entity Component System (ECS)
 hecs = "0.10"
+
+# Fixed-point arithmetic (16-bit signed with 16 fractional bits).
+fixed = "1.28"
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -39,6 +43,8 @@ chrono = { version = "0.4", features = ["serde"] }
 civ-agents = { path = "../agents" }
 civ-needs = { path = "../needs" }
 civ-build = { path = "../build" }
+civ-audio = { path = "../audio" }
+civ-institutions = { path = "../civ-institutions" }
 civ-diffusion = { path = "../diffusion" }
 civ-traffic = { path = "../civ-traffic" }
 civ-voxel = { path = "../voxel" }

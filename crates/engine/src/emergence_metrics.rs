@@ -186,7 +186,7 @@ pub struct EmergenceSample {
     /// events yet — see the unit tests in
     /// `civ-emergence-metrics::dashboard::tests` for the documented
     /// degenerate-state values.
-    pub dashboard: EmergenceDashboard,
+    pub dashboard: TileDashboard,
     /// Rolling-mean branching ratio `σ̄_W` (charter §3.6).
     pub branching_sigma: f32,
     /// Normalised edge-of-chaos score derived from `branching_sigma`.
@@ -232,7 +232,7 @@ impl Default for EmergenceSample {
             histogram_total: 0,
             histogram_populated_bins: 0,
             sample_dur_us: 0,
-            dashboard: EmergenceDashboard::default(),
+            dashboard: TileDashboard::default(),
             branching_sigma: 0.0,
             branching_sigma_score: 0.0,
             branching_window: DEFAULT_BRANCHING_WINDOW as u32,
@@ -768,7 +768,7 @@ fn diplomacy_kind_score(kind: DiplomacyKind) -> f32 {
 /// that those crates' S-curve diffusion operates on. We clamp to
 /// `[-1, 1]` to keep the dashboard's bin mapping stable across the
 /// full `beliefs` range.
-fn compute_dashboard(sim: &Simulation) -> (EmergenceDashboard, f32) {
+fn compute_dashboard(sim: &Simulation) -> (TileDashboard, f32) {
     // 1. cluster_sizes — fold &ClusterMember into a sorted map of
     //    cluster id → member count. `BTreeMap` keeps iteration
     //    order stable across runs; the engine itself assigns cluster
@@ -848,7 +848,7 @@ fn compute_dashboard(sim: &Simulation) -> (EmergenceDashboard, f32) {
         .map(|event| diplomacy_kind_score(event.kind))
         .collect();
 
-    let dashboard = EmergenceDashboard::compute(
+    let dashboard = TileDashboard::compute(
         &cluster_sizes,
         &ideologies,
         sentient_count,

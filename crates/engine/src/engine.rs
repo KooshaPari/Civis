@@ -13,8 +13,9 @@ use civ_agents::{
     RelationKind, SocialGraph, Tools, Wardrobe,
 
 };
+use civ_audio::{derive_music_cue, mood::MusicCue, triggers::SfxTrigger};
 use civ_agents::culture::{cultural_distance, CultureProfile};
-use civ_build::{Allocator, BuildingGraph, DemandSignals};
+use civ_build::{Allocator, BuildingGraph, BuildSite, DemandSignals, ProductionEvent};
 use civ_diffusion::DiffusionParams;
 
 use civ_economy::{
@@ -2892,20 +2893,72 @@ impl Simulation {
         new_level: u8,
         events: &mut Vec<InstitutionEvent>,
     ) {
-        let key = (sid, institution_kind_key(kind), new_level);
+        let key = (sid, kind, new_level);
         if self.institution_levels_emitted.contains(&key) {
             // Already emitted this level for this settlement+kind - skip.
             return;
         }
-        self.run_building_emergence_tick();
+        // Update the institution record (insert if missing, replace if
+        // present but at a lower level).
+        self.institutions
+            .entry(sid)
+            .and_modify(|inst| {
+                if matches!(inst.kind, _k if std::mem::discriminant(&inst.kind) == std::mem::discriminant(&kind)) {
+                    inst.level = inst.level.max(new_level);
+                }
+            })
+            .or_insert(civ_institutions::Institution { kind, level: new_level });
+        // Only emit the event if this is the first time we've ever seen this
+        // level for this settlement+kind. We mark the triple as emitted even
+        // if the new_level is higher than what we've seen (e.g. L1 -> L2
+        // upgrade) so the upgrade event is one-shot.
+        self.institution_levels_emitted.insert(key);
+        events.push(InstitutionEvent {
+            kind,
+            level: new_level,
+            settlement_id: sid,
+        });
     }
 
-    fn run_building_emergence_tick(&mut self) {
-        use crate::building_emergence::{
-            apply_emergence_facades, emergent_style_key_for_sim, emergence_demand_signals,
-            settlement_build_anchor,
-        };
-        use civ_planet::GeologyMap;
+    /// Social-mood phase (FR-CIV-GOV-100 family). Computes a per-settlement
+    /// `MoodSnapshot` from food surplus, housing capacity vs population,
+    /// crime pressure, and institution bonuses (Temple + Garrison L1/L2).
+    ///
+    /// Algorithm (deterministic given identical inputs):
+    /// 1. `food_score` = `clamp(stocked/200, -200, 200)` in the range
+    ///    [-200, +200] (200 stocked = perfect; negative if negative stock).
+    /// 2. `housing_score` = `clamp(2*(capacity - population), -200, 200)`.
+    ///    Positive when capacity > population (surplus housing lifts mood);
+    ///    negative when overcrowded.
+    /// 3. `crime_score` = `max(0, 300 - 4*crime_pressure)` in [0, 300].
+    ///    Crime at 75 saturates the score to 0; below that mood degrades
+    ///    linearly.
+    /// 4. `temple_bonus` = 25 + 25*level (Temple L1=+25, L2=+50).
+    /// 5. `garrison_bonus` = 15 + 15*level (Garrison L1=+15, L2=+30).
+    /// 6. `mood` = `food_score + housing_score + crime_score + bonuses`,
+    ///    saturated at [`MOOD_MIN`, `MOOD_MAX`].
+    /// 7. `mood_delta` = `mood - previous_mood` (0 if no prior snapshot).
+    /// 8. Snapshots are written to `self.last_tick_mood` in ascending
+    ///    `settlement_id` order for determinism (test pinning).
+    fn phase_social_mood(&mut self) {
+        // 1) For every settlement, compute the sub-scores + total mood.
+        let mut snapshots: Vec<MoodSnapshot> = Vec::with_capacity(self.settlements.len());
+        for (&settlement_id, &population) in &self.settlements {
+            let stocked = self
+                .settlement_food_stocked
+                .get(&settlement_id)
+                .copied()
+                .unwrap_or(0);
+            let capacity = self
+                .settlement_housing_capacity
+                .get(&settlement_id)
+                .copied()
+                .unwrap_or(0);
+            let crime_pressure = self
+                .settlement_crime_pressure
+                .get(&settlement_id)
+                .copied()
+                .unwrap_or(0);
 
             // 1. food_score
             let food_score = (stocked / 200).clamp(MOOD_MIN, MOOD_MAX);
@@ -3874,6 +3927,7 @@ impl Simulation {
                 });
             }
         }
+    }
 
     /// Economic-focus phase (FR-CIV-ECON-001 / ADR-020).
     ///

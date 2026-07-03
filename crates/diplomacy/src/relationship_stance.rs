@@ -36,11 +36,9 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-/// Canonical ordered pair of [`crate::FactionId`]s.
+/// Canonical ordered pair of [`crate::PolityId`]s.
 ///
-/// Reuses [`crate::FactionId`] (alias for [`crate::PolityId`]) so consumers
-/// can cross-reference the existing faction identifiers without an extra
-/// mapping layer. Ordering matches [`crate::Pair::new`]: `lo <= hi`.
+/// Ordering matches [`crate::Pair::new`]: `lo <= hi`.
 pub type FactionPair = crate::Pair;
 
 /// Event that shifts the opinion scalar of a faction pair.
@@ -265,7 +263,7 @@ impl RelationshipStanceModel {
 
     /// Look up the relationship state for `(a, b)`, if any. Symmetric:
     /// `(a, b)` and `(b, a)` resolve to the same entry.
-    pub fn get(&self, a: crate::FactionId, b: crate::FactionId) -> Option<&RelationshipStance> {
+    pub fn get(&self, a: crate::PolityId, b: crate::PolityId) -> Option<&RelationshipStance> {
         if a == b {
             return None;
         }
@@ -280,7 +278,7 @@ impl RelationshipStanceModel {
     /// Project the relationship between `a` and `b` to a [`RelationStance`].
     /// Unknown pairs default to [`RelationStance::Neutral`] (no recorded
     /// opinion ⇒ no relationship).
-    pub fn stance(&self, a: crate::FactionId, b: crate::FactionId) -> RelationStance {
+    pub fn stance(&self, a: crate::PolityId, b: crate::PolityId) -> RelationStance {
         match self.get(a, b) {
             Some(rs) => rs.stance(&self.thresholds),
             None => RelationStance::Neutral,
@@ -295,8 +293,8 @@ impl RelationshipStanceModel {
     /// Self-targeted events (`a == b`) are no-ops and return `Neutral`.
     pub fn apply_event(
         &mut self,
-        a: crate::FactionId,
-        b: crate::FactionId,
+        a: crate::PolityId,
+        b: crate::PolityId,
         event: RelationEvent,
     ) -> RelationStance {
         if a == b {
@@ -334,8 +332,8 @@ fn stance_for(value: i32, thresholds: &StanceThresholds) -> RelationStance {
 mod tests {
     use super::*;
 
-    fn f(id: u32) -> crate::FactionId {
-        crate::FactionId::new(id)
+    fn f(id: u32) -> crate::PolityId {
+        crate::PolityId::new(id)
     }
 
     fn thresholds() -> StanceThresholds {

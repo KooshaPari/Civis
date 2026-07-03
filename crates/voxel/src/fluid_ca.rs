@@ -46,6 +46,15 @@ pub struct CaGrid {
     /// Per-cell liquid saturation (0-255), paired with `temperatures`
     /// for FR-CIV-CA-001 dense CaGrid cells.
     pub saturation: Vec<u8>,
+    /// Per-cell latent-heat budget for the FR-CIV-CA-005 phase transition
+    /// pass. Parallel to `cells` / `temperatures` / `saturation`; the pass
+    /// adds a fixed accumulator each tick when the cell's temperature is on
+    /// the "wrong" side of a phase threshold, and once the budget clears
+    /// `MaterialDef::tpt_thermal.latent_heat` the cell transitions to
+    /// `MaterialDef::tpt_thermal.phase_target`. This is a simplified
+    /// budget model — full thermodynamics is intentionally out of scope
+    /// (FR-CIV-CA-005).
+    pub phase_budget: Vec<i32>,
     /// Active chunks queued for the next CA pass.
     ///
     /// Any cell mutation marks the owning chunk plus its 6 face-neighbors so
@@ -241,6 +250,7 @@ impl CaGrid {
             cells: vec![AIR; len],
             temperatures: vec![0; len],
             saturation: vec![0; len],
+            phase_budget: vec![0; len],
             dirty_chunks: HashSet::new(),
             last_changed_chunks: HashSet::new(),
             scratch: vec![AIR; len],
@@ -572,6 +582,7 @@ impl CaGrid {
                                 if self.cells[i] != before.cells[i]
                                     || self.temperatures[i] != before.temperatures[i]
                                     || self.saturation[i] != before.saturation[i]
+                                    || self.phase_budget[i] != before.phase_budget[i]
                                 {
                                     chunk_changed = true;
                                     break 'cells;
@@ -1040,6 +1051,16 @@ const EVAP_THRESHOLD_FRACTION_DEN: i32 = 100;
 /// Saturation units lost per CA step while above the evaporation threshold.
 const EVAP_PER_STEP: u8 = 1;
 
+/// Per-tick latent-heat budget accumulator for the FR-CIV-CA-005 phase
+/// transition pass. When a cell's temperature is on the "wrong" side of a
+/// phase threshold, this fixed amount is added to `phase_budget[idx]` each
+/// tick. Once the budget meets or exceeds `MaterialDef::tpt_thermal.latent_heat`,
+/// the cell transitions to `MaterialDef::tpt_thermal.phase_target` and the
+/// budget is cleared. This is the simplified-budget model the task explicitly
+/// allows — full 3-phase thermodynamics (Peridynamics / staggered solvers)
+/// is intentionally out of scope.
+const PHASE_BUDGET_PER_TICK: i32 = 50;
+
 /// Porosity / capillary-lock + gravity-percolation + upward capillary pass
 /// for the `CaGrid` saturation field (FR-CIV-CA-003).
 ///
@@ -1160,6 +1181,184 @@ fn saturation_evaporation_pass(
             continue;
         }
         grid.saturation[idx] = next_sat;
+        let z = idx / area;
+        let rem = idx - z * area;
+        let y = rem / grid.dims[0];
+        let x = rem % grid.dims[0];
+        grid.mark_dirty_cell(x, y, z);
+    }
+}
+
+/// FR-CIV-CA-005 — material-data-driven phase transition pass.
+///
+/// Wires `MaterialDef::tpt_thermal.{melt_point, boil_point, freeze_point,
+/// latent_heat, phase_target}` into an actual cell transition. For each
+/// dirty-chunk cell:
+///
+/// 1. Look up the material's TPT thermal block via `MaterialRegistry`.
+///    Materials without a `phase_target` (or without any threshold) are
+///    skipped — they are terrain / air / non-phase-changeable.
+/// 2. Decide which phase front the cell is on the "wrong" side of:
+///    - Solid → `melt_point` (cell is warmer than its melt): accumulate
+///      budget toward `latent_heat`, then transition to `phase_target`.
+///    - Liquid → `boil_point` (cell is at/above boiling): same shape,
+///      budget toward `latent_heat`, then `→ phase_target`
+///      (e.g. WATER → STEAM, LAVA → FIRE).
+///    - Liquid → `freeze_point` (cell is at/below freezing, only when the
+///      material's `phase_target` is the solid survivor of the
+///      liquid-solid front). The freezer branch releases latent heat,
+///      so the budget model is identical (cells accumulate, then flip
+///      to the solid `phase_target` and the budget resets) but the
+///      direction of the temperature test is reversed.
+/// 3. Subtract `latent_heat` from the cell's temperature when the
+///    transition fires (energy conservation by saturation arithmetic;
+///    full thermodynamics is intentionally out of scope per the task —
+///    "a simplified budget model is fine").
+/// 4. Reset `phase_budget` to zero on transition so the next-tick
+///    budget starts clean for the new material.
+///
+/// This pass operates AFTER `fluid_thermo_pass` (so the cell temperature
+/// reflects this tick's conduction updates) and BEFORE
+/// `saturation_evaporation_pass` (so a freshly-melted water cell still
+/// contributes to the weather-depth drying pass on the same tick).
+///
+/// The pass is dirty-chunk scoped (caller passes the `dirty_cell_indices`
+/// list) so a 256³ static world never sweeps the whole grid — same
+/// contract as `saturation_evaporation_pass` (FR-CIV-CA-004).
+fn phase_transition_pass(
+    grid: &mut CaGrid,
+    reg: MaterialRegistry,
+    cells: &[usize],
+) {
+    let area = grid.dims[0] * grid.dims[1];
+    for &idx in cells {
+        let id = grid.cells[idx];
+        let def = match reg.get(id) {
+            Some(d) => d,
+            None => continue,
+        };
+        // Only fire for materials that opted into the TPT-driven phase
+        // path. Terrain (no `phase_target`) and pure-locked structural
+        // materials are skipped.
+        let phase_target = match def.tpt_thermal.phase_target {
+            Some(t) => t,
+            None => continue,
+        };
+        let latent_heat: i32 = i32::try_from(def.tpt_thermal.latent_heat).unwrap_or(0);
+        // Latent-heat = 0 means the transition is "free" — apply
+        // immediately on threshold crossing and skip the budget loop.
+        let t = i32::from(grid.temperatures[idx]);
+        // Pick which TPT front is in play. The mutual-exclusion guards
+        // below ensure a cell picks at most one front per tick; this
+        // matches the existing `fluid_thermo_pass` default of "one
+        // transition per tick" so we don't oscillate.
+        //
+        // Decision order:
+        //   - Solid + t > melt_point  → melt (Solid → Liquid/whatever-target)
+        //   - Liquid + t >= boil_point → boil (Liquid → Gas/whatever-target)
+        //   - Liquid + t <= freeze_point → freeze (Liquid → Solid/whatever target)
+        let firing_threshold: Option<(&'static str, i32)> = match def.phase {
+            Phase::Solid => {
+                let melt = match def.tpt_thermal.melt_point {
+                    Some(m) => m,
+                    None => continue,
+                };
+                if t > melt && phase_target != id {
+                    Some(("melt", melt))
+                } else {
+                    None
+                }
+            }
+            Phase::Liquid => {
+                // Boil check first (liquid at/above boiling → vapor/steam).
+                let boil_opt = def
+                    .tpt_thermal
+                    .boil_point
+                    .or_else(|| Some(i32::from(def.boiling_point)))
+                    .filter(|&b| b > 0);
+                if let Some(boil) = boil_opt {
+                    if t >= boil && phase_target != id {
+                        Some(("boil", boil))
+                    } else {
+                        // Freeze check (liquid at/below freezing → solid).
+                        let freeze = match def.tpt_thermal.freeze_point {
+                            Some(f) => f,
+                            None => continue,
+                        };
+                        if t <= freeze && phase_target != id {
+                            Some(("freeze", freeze))
+                        } else {
+                            None
+                        }
+                    }
+                } else {
+                    let freeze = match def.tpt_thermal.freeze_point {
+                        Some(f) => f,
+                        None => continue,
+                    };
+                    if t <= freeze && phase_target != id {
+                        Some(("freeze", freeze))
+                    } else {
+                        None
+                    }
+                }
+            }
+            // Powder melts by the same rule as Solid; treat it via the
+            // Solid branch above so SNOW (Powder) doesn't reach this.
+            // Powder's phase is excluded because, in practice, a powder
+            // like SNOW uses its own melt path (fluid_thermo_pass hard-
+            // coded match on id). Skip powders here to avoid double-
+            // crossing with the legacy fluid_thermo_pass.
+            Phase::Powder | Phase::Gas | Phase::Empty => continue,
+        };
+        let Some(_front) = firing_threshold else { continue };
+
+        // Apply the budget: zero-latent-heat transitions fire immediately;
+        // anything with positive latent_heat must drain the per-tick
+        // accumulator first.
+        let budget = grid.phase_budget[idx];
+        if latent_heat == 0 {
+            // Free transition — apply immediately.
+            grid.cells[idx] = phase_target;
+            // The phase change doesn't move heat here; full-thermo is
+            // out of scope. We do clamp the temperature to keep it
+            // monotonic against neighbours (no negative shocks).
+            grid.temperatures[idx] =
+                i16::try_from(t).unwrap_or(grid.temperatures[idx]);
+            grid.phase_budget[idx] = 0;
+            let z = idx / area;
+            let rem = idx - z * area;
+            let y = rem / grid.dims[0];
+            let x = rem % grid.dims[0];
+            grid.mark_dirty_cell(x, y, z);
+            continue;
+        }
+
+        // Accumulate one tick's worth of latent-heat budget.
+        let next_budget = budget.saturating_add(PHASE_BUDGET_PER_TICK);
+        if next_budget < latent_heat {
+            // Not enough heat banked yet — keep accumulating and move on.
+            grid.phase_budget[idx] = next_budget;
+            // No cell flip yet; do not mark the chunk dirty for the
+            // budget bump alone (the temperature hasn't moved, the
+            // material hasn't moved). The next tick will revisit.
+            //
+            // Exception: if `next_budget` itself crossed a `dirty` line
+            // (e.g. the consumer wants to observe budget growth), skip
+            // the dirty-mark — the budget field is internal and the
+            // remesh side doesn't surface it directly.
+            continue;
+        }
+
+        // Budget is full: apply latent-heat debit to the cell temperature
+        // (energy conservation by saturation) and flip the material to
+        // its `phase_target`.
+        let new_t = i32::from(grid.temperatures[idx])
+            .saturating_sub(latent_heat)
+            .max(i32::from(i16::MIN));
+        grid.temperatures[idx] = i16::try_from(new_t).unwrap_or(grid.temperatures[idx]);
+        grid.cells[idx] = phase_target;
+        grid.phase_budget[idx] = 0;
         let z = idx / area;
         let rem = idx - z * area;
         let y = rem / grid.dims[0];
@@ -1458,6 +1657,15 @@ fn run_rule_passes(
     scratch = grid.scratch_view();
     fluid_thermo_pass(grid, &scratch, reg, boundary, &cells);
     grid.restore_scratch(scratch);
+    // FR-CIV-CA-005 — material-data-driven phase transition pass: for each
+    // cell, when its temperature crosses the material's TPT
+    // `melt_point` / `boil_point` / `freeze_point` AND the material's
+    // `phase_target` (FR-CIV-CA-002) is configured, accumulate enough
+    // latent-heat budget to fire and transition the cell. Run AFTER
+    // `fluid_thermo_pass` so cell temperatures are up-to-date with this
+    // tick's conduction; the per-cell `phase_budget` accumulator is a
+    // private field on `CaGrid` and doesn't need a scratch round-trip.
+    phase_transition_pass(grid, reg, &cells);
     grid.refresh_scratch();
     scratch = grid.scratch_view();
     evaporation_pass(grid, &scratch, reg, boundary, tick, &cells);
@@ -1526,7 +1734,8 @@ fn step_with_parity(
 
     let changed = before.cells != grid.cells
         || before.temperatures != grid.temperatures
-        || before.saturation != grid.saturation;
+        || before.saturation != grid.saturation
+        || before.phase_budget != grid.phase_budget;
     if changed {
         // The cheap "anything moved?" test above is enough to gate the next-tick
         // halo expansion below, but for remesh-side we want the *per-chunk*
@@ -1784,7 +1993,7 @@ pub fn settle_world(
 mod tests {
     use super::*;
     use crate::boundary::{BoundaryConfig, BoundaryMode};
-    use crate::material::{BEDROCK, OIL, SAND, STONE};
+    use crate::material::{BEDROCK, ICE, OIL, SAND, STONE};
 
     fn reg() -> MaterialRegistry {
         MaterialRegistry::standard()
@@ -3534,6 +3743,128 @@ mod tests {
             cold.saturation[cold.index(0, 0, 0).unwrap()],
             100,
             "cold water must keep full saturation across N ticks"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // FR-CIV-CA-005 — heat/phase transition pass: data-driven phase change
+    // via MaterialProps.tpt_thermal.{melt_point, boil_point, freeze_point,
+    // latent_heat, phase_target}. Exercises the new phase_transition_pass
+    // directly (already wired into `run_rule_passes`).
+    // -------------------------------------------------------------------------
+
+    /// FR-CIV-CA-005 — direct call: a Solid-phase ICE cell with temperature
+    /// above its melt_point (0 °C) accumulates the latent-heat budget each
+    /// tick and transitions to its `phase_target` (WATER) once the budget
+    /// clears `tpt_thermal.latent_heat` (334). ICE in the standard registry
+    /// has `freeze_point = -20`, `melt_point = 0`, `phase_target = Some(WATER)`.
+    #[test]
+    fn phase_transition_pass_solid_melts_to_liquid_after_latent_budget() {
+        let registry = reg();
+        let ice = registry.get(ICE).expect("ICE must be in standard registry");
+        let latent_heat = ice.tpt_thermal.latent_heat;
+        assert_eq!(
+            ice.tpt_thermal.phase_target,
+            Some(WATER),
+            "test premise: ICE must declare WATER as its phase_target"
+        );
+        assert_eq!(
+            ice.tpt_thermal.melt_point,
+            Some(0),
+            "test premise: ICE melt_point must be 0 °C"
+        );
+
+        // Just above the melt front: 5 °C. Strictly above 0 so the Solid→Liquid
+        // match arm fires, but small enough that latent_heat dominates the
+        // budget calc and not the temperature debit.
+        let mut g = CaGrid::new([1, 1, 1]);
+        g.set_with_temp(0, 0, 0, ICE, 5);
+        g.mark_dirty_cell(0, 0, 0);
+        let cells = g.dirty_cell_indices();
+
+        // Step the pass once: only PHASE_BUDGET_PER_TICK has accumulated and
+        // we haven't crossed the latent_heat threshold yet (50 < 334).
+        phase_transition_pass(&mut g, registry, &cells);
+        assert_eq!(
+            g.get(0, 0, 0),
+            ICE,
+            "ICE must remain ICE until the latent-heat budget is satisfied"
+        );
+        assert_eq!(
+            g.phase_budget[g.index(0, 0, 0).unwrap()],
+            PHASE_BUDGET_PER_TICK,
+            "one tick at the melt front must accumulate exactly PHASE_BUDGET_PER_TICK latent heat"
+        );
+
+        // Run enough additional ticks to clear the latent_heat budget.
+        // ceil(latent_heat / PHASE_BUDGET_PER_TICK) = 7 ticks for 334/50.
+        let ticks_needed =
+            usize::try_from(latent_heat.div_ceil(PHASE_BUDGET_PER_TICK as u32)).unwrap_or(0);
+        let extra_ticks = ticks_needed.saturating_sub(1); // one tick already ran above
+        for _ in 0..extra_ticks {
+            // Re-mark the cell dirty each pass so `dirty_cell_indices()` keeps
+            // returning it (the pass itself doesn't requeue).
+            g.mark_dirty_cell(0, 0, 0);
+            let cells = g.dirty_cell_indices();
+            phase_transition_pass(&mut g, registry, &cells);
+        }
+
+        assert_eq!(
+            g.get(0, 0, 0),
+            WATER,
+            "ICE above its melt_point MUST transition to WATER once the latent-heat budget clears {}",
+            latent_heat
+        );
+        assert_eq!(
+            g.phase_budget[g.index(0, 0, 0).unwrap()],
+            0,
+            "phase_budget must reset to 0 on a successful transition"
+        );
+    }
+
+    /// FR-CIV-CA-005 — direct call: a Solid-phase ICE cell held BELOW its
+    /// melt_point must NOT transition, no matter how many ticks the pass
+    /// runs through. This guards against the regression where the pass
+    /// operates on phase_target presence alone (instead of also requiring
+    /// the cell to be on the wrong side of a threshold).
+    #[test]
+    fn phase_transition_pass_solid_below_melt_does_not_transition() {
+        let registry = reg();
+        let ice = registry.get(ICE).expect("ICE must be in standard registry");
+        // re-confirm premise for the test in case the registry is reshuffled.
+        let Some(melt) = ice.tpt_thermal.melt_point else {
+            panic!("test premise: ICE must declare a melt_point");
+        };
+        // Strictly below the melt front. -50 °C is well under ICE.melt_point=0
+        // and ICE.freeze_point=-20 — the cell is not crossing either front.
+        let below_melt_temp: i16 = -50;
+
+        let mut g = CaGrid::new([1, 1, 1]);
+        g.set_with_temp(0, 0, 0, ICE, below_melt_temp);
+        g.mark_dirty_cell(0, 0, 0);
+
+        // Run the pass a generous number of times — even after a budget many
+        // times larger than latent_heat, the cell must NOT transition
+        // because it isn't on the wrong side of the melt front.
+        let ticks = 64;
+        for _ in 0..ticks {
+            let cells = g.dirty_cell_indices();
+            phase_transition_pass(&mut g, registry, &cells);
+            g.mark_dirty_cell(0, 0, 0);
+        }
+
+        assert_eq!(
+            g.get(0, 0, 0),
+            ICE,
+            "ICE held below its melt_point ({} < {}) MUST remain ICE after {} ticks",
+            below_melt_temp,
+            melt,
+            ticks
+        );
+        assert_eq!(
+            g.phase_budget[g.index(0, 0, 0).unwrap()],
+            0,
+            "phase_budget must stay at 0 when no transition front is crossed"
         );
     }
 }

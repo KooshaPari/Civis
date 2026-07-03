@@ -78,6 +78,48 @@ impl EmergenceDashboard {
     }
 }
 
+/// Transport-safe emergence dashboard view used by the JSON-RPC surface.
+///
+/// FR-EMERGENCE-dashboard: surfaces the three summary metrics
+/// `novelty_score`, `coupling_mi`, and `criticality_indicator` on
+/// top of the existing `power_law_alpha`, `shannon_entropy`, and
+/// `structure_count`. All fields are pure-function derivations of
+/// existing per-tick engine state; the struct is wire-flat (no
+/// nested blocks) so the L1 web dashboard and the L2 Bevy minimap
+/// can read each tile as a single JSON number.
+///
+/// Construct via [`TileDashboard::default`] (the documented
+/// "no data" state) or via the per-field setters on the engine
+/// `EmergenceSample.dashboard` slot. The struct intentionally
+/// mirrors the same five top-level fields that
+/// [`EmergenceDashboard`] exposes — even though the semantic
+/// mapping is not 1:1 — because the engine hands it to consumers
+/// that already serialize/deserialize the same JSON shape.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
+pub struct TileDashboard {
+    /// Normalised Shannon entropy over per-cluster population
+    /// sizes. Mirrors [`EmergenceDashboard::cluster_entropy`].
+    pub cluster_entropy: f32,
+    /// Homophily index for the ideology distribution.
+    pub ideology_homophily: f32,
+    /// Fraction of agents that have crossed the sentience
+    /// threshold.
+    pub sentience_fraction: f32,
+    /// Population stability of mood valence.
+    pub psyche_stability: f32,
+    /// Mean absolute tension across recent diplomacy events.
+    pub diplomacy_tension: f32,
+    /// Normalised novelty score in `[0, 1]` derived from
+    /// [`novelty_score`].
+    pub novelty_score: f32,
+    /// Estimated coupling mutual information in `[0, 1]` derived
+    /// from [`coupling_mi_estimate`].
+    pub coupling_mi: f32,
+    /// Edge-of-chaos / criticality indicator in `[0, 1]` derived
+    /// from [`criticality_indicator`].
+    pub criticality_indicator: f32,
+}
+
 /// Normalised Shannon entropy over per-cluster population sizes.
 ///
 /// `0.0` for an empty or single-cluster world, `1.0` for a perfectly
@@ -223,6 +265,75 @@ pub fn diplomacy_tension(pair_scores: &[f32]) -> f32 {
     }
     let mean_abs: f32 = pair_scores.iter().map(|v| v.abs()).sum::<f32>() / pair_scores.len() as f32;
     mean_abs.clamp(0.0, 1.0)
+}
+
+// ---------------------------------------------------------------------------
+// FR-EMERGENCE-dashboard: summary metrics surfaced on `emergence.dashboard`.
+// ---------------------------------------------------------------------------
+//
+// Each function is a *derivation* — not a pass-through — of an existing
+// per-tick engine signal. Two functions live here
+// ([`novelty_score`], [`coupling_mi_estimate`]) and the third
+// ([`criticality_indicator`]) lives in [`crate::criticality`]. They
+// are pure-function, side-effect-free, and deterministic so the
+// replay-bus recomputes bit-equal values on every replay turn.
+
+/// Operational ceiling for `novelty_rate` in normalised units of
+/// "novel configs per W_nov tick per civilian".
+///
+/// Charter §3.4 footnote calls the operational novelty band
+/// `[0.01, 0.10]/tick`; we round the ceiling up to `0.10` and use it
+/// as the saturating upper bound for [`novelty_score`]. Anything at
+/// or above the ceiling maps to `1.0`.
+pub const NOVELTY_RATE_CEILING: f32 = 0.10;
+
+/// FR-EMERGENCE-dashboard: novelty score, a normalised `[0, 1]`
+/// summary of the per-tick `novelty_rate`.
+///
+/// ```text
+/// novelty_score = clamp(novelty_rate / NOVELTY_RATE_CEILING, 0, 1)
+/// ```
+///
+/// Properties:
+/// * Monotonic in `novelty_rate` on `[0, NOVELTY_RATE_CEILING]`.
+/// * `0.0` for a "settled" world (no new configurations seen).
+/// * `1.0` at or above the operational ceiling.
+/// * `0.0` for `NaN` / negative / non-finite input.
+#[must_use]
+pub fn novelty_score(novelty_rate: f32) -> f32 {
+    if !novelty_rate.is_finite() || novelty_rate <= 0.0 {
+        return 0.0;
+    }
+    (novelty_rate / NOVELTY_RATE_CEILING).clamp(0.0, 1.0)
+}
+
+/// FR-EMERGENCE-dashboard: estimated coupling mutual information.
+///
+/// Combines the existing per-tick `mi_material_faction_norm`
+/// (normalised mutual information between the voxel-material
+/// layer and the faction layer) with the existing normalised
+/// Shannon entropy `entropy_norm`:
+///
+/// ```text
+/// coupling_mi_estimate = clamp(mi_material_faction * entropy_norm, 0, 1)
+/// ```
+///
+/// Degenerate-state handling:
+/// * `mi_material_faction` non-finite or negative → `0.0`.
+/// * `entropy_norm` non-finite, negative, or `> 1.0` → clamped
+///   to `[0, 1]` first, then `0.0` is returned when the material
+///   layer is fully collapsed (no diversity = nothing to couple).
+#[must_use]
+pub fn coupling_mi_estimate(mi_material_faction: f32, entropy_norm: f32) -> f32 {
+    if !mi_material_faction.is_finite() || mi_material_faction <= 0.0 {
+        return 0.0;
+    }
+    let h = if entropy_norm.is_finite() {
+        entropy_norm.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    (mi_material_faction * h).clamp(0.0, 1.0)
 }
 
 #[cfg(test)]

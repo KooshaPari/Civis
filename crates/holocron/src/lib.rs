@@ -43,10 +43,12 @@ pub mod bridge;
 pub mod descriptor;
 pub mod group;
 pub mod inspect;
+pub mod lore;
 pub mod provenance;
 pub mod rank;
 pub mod registry;
 pub mod risk;
+pub mod unlockable;
 pub mod verbs;
 pub mod voxel_inspector;
 

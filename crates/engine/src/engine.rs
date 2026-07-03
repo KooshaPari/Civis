@@ -5086,9 +5086,21 @@ impl Simulation {
         civ_economy::step(&mut self.economy_state);
 
         self.state.energy_budget_joules = Fixed::from_num(self.economy_state.energy_budget_joules);
+        let food_price_before = self
+            .market_state
+            .prices()
+            .get("food")
+            .copied()
+            .unwrap_or(FOOD_SCARCITY_BASELINE);
         self.tick_settlement_trade_flows();
         self.tick_trade_routes();
         self.market_state.step(self.state.tick);
+        if tech_unlocks_for_tier(self.research_tier()) & TECH_STORAGE != 0 {
+            if let Some(price) = self.market_state.prices.get_mut("food") {
+                let delta = *price - food_price_before;
+                *price = food_price_before + delta / 2;
+            }
+        }
     }
 
     fn tick_settlement_trade_flows(&mut self) {
@@ -7751,6 +7763,39 @@ mod tests {
         assert_ne!(
             after_price, before_price,
             "expected food price to respond to the imbalance over multiple ticks"
+        );
+    }
+
+    /// TECH_STORAGE smooths food-price shocks (advanced logistics damp volatility).
+    #[test]
+    fn tech_storage_smooths_food_price_shocks() {
+        let mut with = Simulation::with_seed(7);
+        let mut without = Simulation::with_seed(7);
+        with.era_progression.faction_tech.insert(
+            0,
+            crate::era::FactionTechState {
+                research_points: 0,
+                tech_level: 2,
+                diffusion_points: 0,
+            },
+        );
+        for sim in [&mut with, &mut without] {
+            sim.set_settlement_population(1, 25);
+            sim.set_settlement_population(2, 25);
+            sim.set_settlement_food_stocked(1, 1_000);
+            sim.set_settlement_food_stocked(2, 0);
+        }
+
+        let before_with = with.market_state.prices()["food"];
+        let before_without = without.market_state.prices()["food"];
+        with.phase_economy();
+        without.phase_economy();
+        let delta_with = (with.market_state.prices()["food"] - before_with).abs();
+        let delta_without = (without.market_state.prices()["food"] - before_without).abs();
+
+        assert!(
+            delta_with < delta_without,
+            "storage should reduce food price volatility"
         );
     }
 

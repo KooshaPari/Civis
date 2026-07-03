@@ -15,8 +15,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::stocks::{deficit, surplus, Good};
-use crate::trade_routes::{Settlement, SettlementId};
+use crate::stocks::Good;
 
 /// Default clearing price (cents) for goods inserted on first sighting.
 pub const DEFAULT_PRICE_CENTS: i64 = 1_000;
@@ -29,36 +28,12 @@ pub const DEFAULT_SMOOTHING_FACTOR: i64 = 8;
 pub const MAX_PRESSURE_DELTA_CENTS: i64 = 100;
 /// Minimum a price can ever be after `apply_pressure` (cents).
 pub const MIN_PRICE_CENTS: i64 = 1;
-/// Default smoothing factor for FR-CIV-MARKET price updates.
-///
-/// Higher values make price changes smaller per tick while keeping the
-/// signal deterministic and integer-only.
-pub const DEFAULT_SMOOTHING_FACTOR: i64 = 8;
 
 /// Per-good clearing prices in fixed-point cents (stub; full clearing in CIV-0100 §3c).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MarketState {
     /// Good id → price in cents.
     pub prices: BTreeMap<String, i64>,
-}
-
-/// FR-CIV-MARKET: deterministic low-price -> high-price settlement flow.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct SettlementTradeFlow {
-    /// Source settlement id.
-    pub from_settlement: u32,
-    /// Destination settlement id.
-    pub to_settlement: u32,
-    /// Good being moved.
-    pub good: crate::stocks::Good,
-    /// Quantity transferred.
-    pub qty: i64,
-    /// Source settlement price in cents.
-    pub low_price_cents: i64,
-    /// Destination settlement price in cents.
-    pub high_price_cents: i64,
-    /// Settled midpoint price in cents.
-    pub settled_price_cents: i64,
 }
 
 impl Default for MarketState {
@@ -179,45 +154,6 @@ impl MarketState {
     }
 }
 
-/// Settlement trade helper for callers that already have aggregate supply and demand.
-pub fn settlement_trade_flow_from_supply_demand(
-    from_settlement: u32,
-    to_settlement: u32,
-    good: crate::stocks::Good,
-    supply: i64,
-    demand: i64,
-    low_price_cents: i64,
-    high_price_cents: i64,
-    smoothing_factor: i64,
-) -> Option<SettlementTradeFlow> {
-    if from_settlement == to_settlement || low_price_cents >= high_price_cents {
-        return None;
-    }
-    let supply = supply.max(0);
-    let demand = demand.max(0);
-    if supply <= 0 || demand <= 0 {
-        return None;
-    }
-
-    let smoothing_factor = smoothing_factor.max(1);
-    let price_gap = high_price_cents - low_price_cents;
-    let gap_limited_qty = (price_gap / smoothing_factor).max(1);
-    let qty = supply.min(demand).min(gap_limited_qty);
-    if qty <= 0 {
-        return None;
-    }
-
-    Some(SettlementTradeFlow {
-        from_settlement,
-        to_settlement,
-        good,
-        qty,
-        low_price_cents,
-        high_price_cents,
-        settled_price_cents: (low_price_cents + high_price_cents) / 2,
-    })
-}
-
 /// Integer-only price delta from tick and good id (replay-stable).
 fn deterministic_price_delta(tick: u64, good: &str) -> i64 {
     let mut mix = tick;
@@ -241,9 +177,9 @@ fn deterministic_price_delta(tick: u64, good: &str) -> i64 {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SettlementTradeFlow {
     /// Source settlement id.
-    pub from_settlement: SettlementId,
+    pub from_settlement: u32,
     /// Destination settlement id.
-    pub to_settlement: SettlementId,
+    pub to_settlement: u32,
     /// Good being moved.
     pub good: Good,
     /// Quantity transferred.
@@ -256,60 +192,13 @@ pub struct SettlementTradeFlow {
     pub settled_price_cents: i64,
 }
 
-/// Compute a deterministic low-to-high price trade flow for a single good.
-///
-/// The caller provides the current price estimates for both settlements. The
-/// returned quantity is the emergent trade volume that should move from the
-/// cheaper settlement to the more expensive one.
-pub fn settlement_trade_flow(
-    low: &Settlement,
-    high: &Settlement,
-    good: Good,
-    low_price_cents: i64,
-    high_price_cents: i64,
-    smoothing_factor: i64,
-) -> Option<SettlementTradeFlow> {
-    if low.id == high.id {
-        return None;
-    }
-    if low_price_cents >= high_price_cents {
-        return None;
-    }
-
-    let supply = surplus(&low.stocks, &low.profile, good).max(0);
-    let demand = deficit(&high.stocks, &high.profile, good).max(0);
-    if supply <= 0 || demand <= 0 {
-        return None;
-    }
-
-    let smoothing_factor = smoothing_factor.max(1);
-    let price_gap = high_price_cents - low_price_cents;
-    let gap_limited_qty = (price_gap / smoothing_factor).max(1);
-    let qty = supply.min(demand).min(gap_limited_qty);
-    if qty <= 0 {
-        return None;
-    }
-
-    Some(SettlementTradeFlow {
-        from_settlement: low.id,
-        to_settlement: high.id,
-        good,
-        qty,
-        low_price_cents,
-        high_price_cents,
-        settled_price_cents: (low_price_cents + high_price_cents) / 2,
-    })
-}
-
 /// Settlement trade helper for callers that already have aggregate supply and demand.
 ///
-/// This preserves the same low-price -> high-price semantics as
-/// [`settlement_trade_flow`] but avoids requiring access to a full
-/// [`Settlement`] value. Used by the engine tick when it only has the
-/// settlement stock / population aggregates.
+/// The flow is low-price -> high-price and uses only aggregate supply,
+/// aggregate demand, and integer math.
 pub fn settlement_trade_flow_from_supply_demand(
-    from_settlement: SettlementId,
-    to_settlement: SettlementId,
+    from_settlement: u32,
+    to_settlement: u32,
     good: Good,
     supply: i64,
     demand: i64,
@@ -355,7 +244,6 @@ fn run_tick_sequence(market: &mut MarketState, ticks: &[u64]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::stocks::{ProductionProfile, Stocks};
     use proptest::prelude::*;
 
     #[test]
@@ -593,20 +481,6 @@ mod tests {
         assert!(after.unwrap() > before.unwrap());
     }
 
-    fn settlement_with_profile(
-        id: u32,
-        food_stock: i64,
-        production: [i64; 6],
-        consumption: [i64; 6],
-    ) -> Settlement {
-        let mut settlement = Settlement::new(id, glam::IVec3::ZERO);
-        let mut stocks = Stocks::default();
-        stocks.set(Good::Food, food_stock);
-        settlement.stocks = stocks;
-        settlement.profile = ProductionProfile::new(production, consumption);
-        settlement
-    }
-
     /// FR-CIV-MARKET — scarcity lifts price, surplus lowers it, and the
     /// resulting low-price -> high-price flow narrows the spread
     /// deterministically.
@@ -620,33 +494,22 @@ mod tests {
         assert!(scarce_before > DEFAULT_PRICE_CENTS);
         assert!(surplus_before < DEFAULT_PRICE_CENTS);
 
-        let supplier = settlement_with_profile(
-            1,
-            12,
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-        );
-        let buyer = settlement_with_profile(
-            2,
-            0,
-            [0, 0, 0, 0, 0, 0],
-            [8, 0, 0, 0, 0, 0],
-        );
-
         let low_price = 90;
         let high_price = 150;
-        let flow = settlement_trade_flow(
-            &supplier,
-            &buyer,
+        let flow = settlement_trade_flow_from_supply_demand(
+            1,
+            2,
             Good::Food,
+            12,
+            8,
             low_price,
             high_price,
             DEFAULT_SMOOTHING_FACTOR,
         )
         .expect("expected deterministic low->high flow");
 
-        assert_eq!(flow.from_settlement, supplier.id);
-        assert_eq!(flow.to_settlement, buyer.id);
+        assert_eq!(flow.from_settlement, 1);
+        assert_eq!(flow.to_settlement, 2);
         assert!(flow.qty > 0);
         assert!(flow.settled_price_cents > low_price);
         assert!(flow.settled_price_cents < high_price);

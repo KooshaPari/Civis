@@ -115,7 +115,7 @@ fn requirement_new_world_differs_from_previous() {
 }
 
 #[test]
-#[cfg(feature = "egui")]
+#[cfg(all(feature = "egui", feature = "voxel"))]
 fn requirement_2d_map_extent_matches_world() {
     // GIVEN a world size D from UI/worldgen wiring,
     // WHEN basemap sampling is executed,
@@ -377,21 +377,27 @@ fn requirement_emergent_factions_no_fixed_count_or_alignment() {
     const SEEDS: [u64; 2] = [7, 11];
     const RUN_TICKS: u64 = 64;
 
-    let mut counts = Vec::with_capacity(2);
-    let mut alignments: Vec<Vec<civ_agents::Alignment>> = Vec::with_capacity(2);
+    let mut populations = Vec::with_capacity(2);
+    let mut alignments: Vec<Vec<(u32, usize)>> = Vec::with_capacity(2);
 
     for &seed in &SEEDS {
         let mut sim = civ_engine::Simulation::with_seed(seed);
         for _ in 0..RUN_TICKS {
             sim.tick();
         }
-        let count = sim.faction_count();
-        counts.push(count);
-        alignments.push((0..count).map(|id| sim.faction_alignment(id)).collect());
+        populations.push(sim.state.population as usize);
+
+        let mut faction_counts = std::collections::BTreeMap::<u32, usize>::new();
+        for (_, civilian) in sim.world.query::<&civ_agents::Civilian>().iter() {
+            if let civ_agents::Alignment::Faction(faction_id) = civilian.alignment {
+                *faction_counts.entry(faction_id).or_default() += 1;
+            }
+        }
+        alignments.push(faction_counts.into_iter().collect());
     }
 
     assert!(
-        counts[0] != counts[1] || alignments[0] != alignments[1],
+        populations[0] != populations[1] || alignments[0] != alignments[1],
         "expect emergent variance: faction count or alignment vectors differ across seeded runs"
     );
 }

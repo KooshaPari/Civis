@@ -228,7 +228,7 @@ pub enum Government3d {
 }
 
 /// A single faction state payload for the 3D wire protocol.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct FactionStateEntry {
     /// Stable faction id from the simulation ECS.
     pub id: u32,

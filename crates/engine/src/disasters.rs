@@ -32,7 +32,7 @@ pub enum DisasterKind {
 }
 
 /// Per-tick snapshot event for disaster systems.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DisasterTickEvent {
     pub tick: u64,
     pub kind: DisasterKind,

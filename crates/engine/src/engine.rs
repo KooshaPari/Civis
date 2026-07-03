@@ -21,10 +21,12 @@ use civ_diffusion::DiffusionParams;
 
 use civ_economy::{
     settlement_trade_flow_from_supply_demand, AllocationEngine, CapitalistAllocator, EconomyState,
-    Good, MarketState, SettlementTradeFlow,
+    Good, LaborCapacityAllocator, MarketState, SettlementTradeFlow,
 };
 use civ_economy::{collect_taxes, Taxation};
-use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold};
+use civ_genetics::sentience::{
+    cognition_score, evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold,
+};
 
 use civ_genetics::Dna;
 use civ_mod_host::ModHost;
@@ -150,6 +152,31 @@ pub struct LifecycleCounters {
     pub adults: u32,
     pub elders: u32,
     pub dead: u32,
+}
+
+impl LifecycleCounters {
+    /// Total civilians observed across all labels.
+    #[must_use]
+    pub fn total(&self) -> u32 {
+        self.children + self.adults + self.elders + self.dead
+    }
+
+    /// Total living civilians (children + adults + elders).
+    #[must_use]
+    pub fn total_living(&self) -> u32 {
+        self.children + self.adults + self.elders
+    }
+
+    /// Working-age fraction (adults / total). Returns `0.0` when empty.
+    #[must_use]
+    pub fn adult_fraction(&self) -> f32 {
+        let total = self.total();
+        if total == 0 {
+            0.0
+        } else {
+            self.adults as f32 / total as f32
+        }
+    }
 }
 
 /// Broad economic orientation inferred from a civilization's strongest signal.
@@ -381,45 +408,6 @@ struct CivilianLifecycleSample {
     y: f32,
     fertility_score: f32,
     migration_pressure: f32,
-}
-
-/// Per-tick lifecycle rollup (FR-CIV-LIFE P4-A). Populated by phase_life,
-/// read by phase_economy to weight allocation by labor capacity.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct LifecycleCounters {
-    /// Civilians classified as [`civ_needs::LifecycleLabel::Child`].
-    pub children: u32,
-    /// Civilians classified as [`civ_needs::LifecycleLabel::Adult`].
-    pub adults: u32,
-    /// Civilians classified as [`civ_needs::LifecycleLabel::Elder`].
-    pub elders: u32,
-    /// Civilians classified as [`civ_needs::LifecycleLabel::Dead`].
-    pub dead: u32,
-}
-
-impl LifecycleCounters {
-    /// Total civilians observed across all labels.
-    #[must_use]
-    pub fn total(&self) -> u32 {
-        self.children + self.adults + self.elders + self.dead
-    }
-
-    /// Total living civilians (children + adults + elders).
-    #[must_use]
-    pub fn total_living(&self) -> u32 {
-        self.children + self.adults + self.elders
-    }
-
-    /// Working-age fraction (adults / total). Returns `0.0` when empty.
-    #[must_use]
-    pub fn adult_fraction(&self) -> f32 {
-        let t = self.total();
-        if t == 0 {
-            0.0
-        } else {
-            self.adults as f32 / t as f32
-        }
-    }
 }
 
 /// Map an `AgentCivilian` age + `civ_agents::Needs` to a `civ_needs::Health`
@@ -731,8 +719,6 @@ pub struct Simulation {
     last_tick_audio_events: Vec<civ_audio::triggers::SfxTrigger>,
     /// Last-tick decisions for the daily-path phase (FR-CIV-LIFE-010..016).
     pub last_tick_daily_path: Vec<DailyPathDecision>,
-    /// Per-tick lifecycle label counts populated by `phase_life`.
-    last_tick_lifecycle_metrics: LifecycleCounters,
     /// Per-cluster payoffs emitted by the cluster phase (FR-CIV-LIFE-030..035).
     pub last_tick_cluster_payoffs: Vec<MembershipPayoffTotals>,
     /// Per-culture music cue parameters derived from emergent culture + state.
@@ -1632,7 +1618,6 @@ impl Simulation {
             last_tick_mod_lifecycle: Vec::new(),
             last_tick_audio_events: Vec::new(),
             last_tick_daily_path: Vec::new(),
-            last_tick_lifecycle_metrics: LifecycleCounters::default(),
             last_tick_cluster_payoffs: Vec::new(),
             last_tick_music_cues: BTreeMap::new(),
             last_tick_disaster_events: Vec::new(),
@@ -1776,7 +1761,6 @@ impl Simulation {
             last_tick_mod_lifecycle: Vec::new(),
             last_tick_audio_events: Vec::new(),
             last_tick_daily_path: Vec::new(),
-            last_tick_lifecycle_metrics: LifecycleCounters::default(),
             last_tick_cluster_payoffs: Vec::new(),
             last_tick_music_cues: BTreeMap::new(),
             last_tick_disaster_events: Vec::new(),
@@ -3223,11 +3207,6 @@ impl Simulation {
         }
         self.last_tick_cohesion = new_snapshots.clone();
         self.last_tick_cohesion_snapshots = new_snapshots;
-    }
-
-    /// Compatibility alias for older phase ordering that routed into cohesion.
-    fn phase_faction_decisions(&mut self) {
-        self.phase_cohesion();
     }
 
     /// Unrest phase (FR-CIV-UNREST-001). Converts mood + stratification +
@@ -4776,6 +4755,61 @@ impl Simulation {
             return;
         }
         self.run_macro_diplomacy_event();
+    }
+
+    /// Apply an explicit player diplomacy command to the emergent relation substrate.
+    #[must_use]
+    pub fn apply_player_diplomacy_action(
+        &mut self,
+        source_faction: u32,
+        target_faction: u32,
+        kind: DiplomacyKind,
+    ) -> Option<FactionRelationSnapshot> {
+        if source_faction == target_faction
+            || !self.state.factions.contains_key(&source_faction)
+            || !self.state.factions.contains_key(&target_faction)
+        {
+            return None;
+        }
+
+        let signal = match kind {
+            DiplomacyKind::TradeAgreement => DiplomacySignal {
+                trade_volume: 1.0,
+                need_complementarity: 0.5,
+                ..DiplomacySignal::default()
+            },
+            DiplomacyKind::Conflict => DiplomacySignal {
+                resource_competition: 0.5,
+                combat_grievance: 1.0,
+                ..DiplomacySignal::default()
+            },
+            DiplomacyKind::Peace => DiplomacySignal {
+                trade_volume: 0.35,
+                ..DiplomacySignal::default()
+            },
+        };
+
+        let a = faction_cluster_id(source_faction);
+        let b = faction_cluster_id(target_faction);
+        let outcome = self.faction_relations.apply_signal(a, b, signal);
+        self.emit_relation_threshold_event(source_faction, target_faction, outcome);
+        self.diplomacy_events.push(DiplomacyEvent {
+            tick: self.state.tick,
+            faction_a: source_faction,
+            faction_b: target_faction,
+            kind,
+        });
+        let record = self
+            .faction_relations
+            .record(a, b)
+            .expect("relation must exist after apply_signal");
+        Some(FactionRelationSnapshot {
+            faction_a: source_faction,
+            faction_b: target_faction,
+            score: record.score,
+            kind: self.faction_relations.relation(a, b),
+            samples: record.samples,
+        })
     }
 
     /// Per-tick relation drift from proximity, competition, trade, religion, and combat.
@@ -6766,7 +6800,7 @@ fn rollup_cluster_member_counts(world: &World) -> BTreeMap<u64, u32> {
 fn treasury_disparity_whole(treasury: &HashMap<u32, Fixed>, a: u32, b: u32) -> i64 {
     let ta = treasury.get(&a).copied().unwrap_or(Fixed::ZERO);
     let tb = treasury.get(&b).copied().unwrap_or(Fixed::ZERO);
-    i64::from((ta.to_bits() - tb.to_bits()).unsigned_abs()) / crate::SCALE
+    (ta.to_bits() - tb.to_bits()).abs() / crate::SCALE
 }
 
 fn mean_pair_aggression(aggression: &BTreeMap<u32, f32>, a: u32, b: u32) -> f32 {

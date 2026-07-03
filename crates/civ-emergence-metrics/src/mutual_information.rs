@@ -12,7 +12,7 @@
 //! loop order is deterministic (row-major over (a, b)) so two runs of the
 //! same seed produce the same value.
 
-use crate::{Histogram, shannon::ShannonEntropy};
+use crate::{shannon::ShannonEntropy, Histogram};
 
 /// Joint histogram over two categorical layers A (rows) and B (cols).
 ///
@@ -42,8 +42,7 @@ impl JointHistogram {
     /// not bounds-check before calling.
     pub fn observe(&mut self, a: usize, b: usize) {
         if a < self.rows && b < self.cols {
-            self.bins[a * self.cols + b] =
-                self.bins[a * self.cols + b].saturating_add(1);
+            self.bins[a * self.cols + b] = self.bins[a * self.cols + b].saturating_add(1);
         }
     }
 

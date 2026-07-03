@@ -133,6 +133,7 @@ impl AiWorkerPool {
     ///
     /// # Errors
     /// Returns the task back when the bounded queue is full or closed.
+    #[allow(clippy::result_large_err)]
     pub fn try_enqueue(&self, task: AiTask) -> Result<(), AiTask> {
         self.task_tx.try_send(task).map_err(|e| e.into_inner())
     }

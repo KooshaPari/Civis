@@ -11,3 +11,12 @@ export function resolveAuthoringEnabled(search) {
   if (authoring === "0" || authoring === "false" || authoring === "no") return false;
   return true;
 }
+
+/**
+ * Human-readable label for the current dashboard interaction mode.
+ * @param {boolean} readOnly
+ * @returns {string}
+ */
+export function authoringModeLabel(readOnly) {
+  return readOnly ? "Spectator mode" : "Authoring enabled";
+}

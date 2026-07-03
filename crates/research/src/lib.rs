@@ -19,28 +19,6 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "firepass-kimi")]
 pub mod firepass;
 
-/// Cached, offline-safe LLM-garnish hook for deterministic flavor-text/name generation.
-/// Implements FR-CIV-LLM: zero network calls, all results from seeded cache/lookup.
-pub mod garnish;
-
-/// Tech prerequisite graph and unlock gating for research progression.
-pub mod tech_prereq;
-
-/// Research focus allocation: weighted split of research points across
-/// active projects, completing at thresholds. FR-CIV-RESEARCH-FOCUS.
-pub mod focus;
-
-pub use focus::{CompletedProject, ResearchFocus, ResearchProject};
-
-/// Tech obsoletion: superseded techs decay their upkeep value over time.
-/// FR-CIV-TECH-OBSOLETE.
-pub mod tech_obsolete;
-
-pub use tech_obsolete::{
-    ObsolescenceConfig, ObsolescenceError, ObsolescenceRecord, ObsolescenceTracker,
-    OBSOLESCENCE_SCHEMA_VERSION,
-};
-
 /// Schema version for `civ-research`. Bumped on breaking changes.
 pub const SCHEMA_VERSION: u32 = 0;
 

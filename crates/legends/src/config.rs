@@ -63,6 +63,7 @@ pub fn kind_weight(kind: &EventKind) -> f32 {
         | EventKind::WarEnded
         | EventKind::SpeciationEvent
         | EventKind::Extinction
+        | EventKind::Betrayal
         | EventKind::Disaster => 1.0,
         EventKind::Battle | EventKind::Siege | EventKind::SettlementFounded => 0.8,
         EventKind::Famine
@@ -71,11 +72,14 @@ pub fn kind_weight(kind: &EventKind) -> f32 {
         | EventKind::CulturalSpeciation
         | EventKind::IdeologyShift
         | EventKind::Discovery
+        | EventKind::Treaty
         | EventKind::LawObserved => 0.6,
         EventKind::Birth | EventKind::Migration | EventKind::Raid | EventKind::GodAct => 0.4,
         EventKind::PriceShock | EventKind::Abandoned => 0.3,
         EventKind::Sickness => 0.2,
         EventKind::Promotion => 0.0, // bookkeeping; never re-feeds significance
+        EventKind::GreatWork => 0.7,
+        EventKind::Plague => 0.9,
         EventKind::Other(_) => 0.5,
     }
 }
@@ -95,6 +99,12 @@ pub fn kind_affinity(cause: &EventKind, effect: &EventKind) -> f32 {
         (Bust, Migration) => 0.6,
         (WarDeclared, Battle) => 0.9,
         (SpeciationEvent, CulturalSpeciation) => 0.5,
+        (Treaty, Betrayal) => 0.8,
+        (Plague, Famine) => 0.7,
+        (Plague, Migration) => 0.6,
+        (GreatWork, IdeologyShift) => 0.5,
+        (Betrayal, WarDeclared) => 0.9,
+        (Treaty, WarEnded) => 0.7,
         _ => 0.0,
     }
 }

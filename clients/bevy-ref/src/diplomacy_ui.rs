@@ -39,9 +39,21 @@ impl DiplomacyBridge {
         Self { sender }
     }
 
-    /// Enqueue a JSON-RPC text frame (fire-and-forget; drops if disconnected).
+    /// Enqueue a pre-formatted JSON-RPC text frame (fire-and-forget; drops if disconnected).
     pub fn send_rpc(&self, json: String) {
         let _ = self.sender.send(json);
+    }
+
+    /// Build and enqueue a JSON-RPC 2.0 request with method + params object.
+    pub fn send_rpc_call(&self, method: &str, params: serde_json::Value) {
+        let msg = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": method,
+            "params": params,
+        })
+        .to_string();
+        let _ = self.sender.send(msg);
     }
 }
 
@@ -626,6 +638,7 @@ mod tests {
                     treasury: FactionTreasury3d::default(),
                 },
             ],
+            population_by_faction: Default::default(),
         };
         let mut counts = HashMap::new();
         counts.insert(0, 42);

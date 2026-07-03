@@ -1,33 +1,5 @@
 ﻿#![cfg(all(feature = "bevy", feature = "egui"))]
 //! God-mode intervention panel (FR-CIV-GAME-002). G key toggles.
-//!
-//! # FR-CLIENT-godbuttons — substrate-live verb expansion
-//!
-//! PR #762 landed the first click-to-fire egui button (the `Invoke: …`
-//! button below) which posts `sim.god_action` over JSON-RPC. The dispatch
-//! effect (`DispatchEffect::GodAction` in `crates/server/src/jsonrpc.rs`
-//! + the `apply_dispatch_effect` handler in `crates/server/src/ws_bridge.rs`)
-//! was then widened so 13 more substrate-live verbs route through the
-//! **same** JSON-RPC method:
-//!
-//! * TERRAIN: `terrain.add_land`, `terrain.dig_ocean`, `terrain.drop_biome`
-//! * MATERIAL: `material.erase`, `material.replace`, `material.surface_paint`,
-//!   `material.pour_liquid`, `material.seed_snow`, `material.seed_ore`
-//! * LIFE: `life.spawn_organism`, `life.spawn_herd`
-//! * DISASTER: `disaster.wildfire`, `disaster.flood`
-//!
-//! Every button in the **Substrate Tools** section below fires one of those
-//! verbs by calling `bridge.client.send_rpc("sim.god_action", payload)` with
-//! the matching `GodToolRequest`-shaped params — exactly mirroring the
-//! `Invoke` button's wire path. The `ws_bridge` handler then routes them
-//! through `Simulation::apply_god_tool` (the substrate-owned write path)
-//! so the CA, replay log, and dirty-event invariant stay intact.
-//!
-//! See:
-//! * `crates/engine/src/godtools.rs` — verb request / receipt shapes.
-//! * `crates/server/src/jsonrpc.rs` — `SimGodAction` param parser.
-//! * `crates/server/src/ws_bridge.rs` — verb → `GodToolRequest` resolver.
-//! * `docs/specs/CIV-0700-modding-api-spec.md` — substrate verb catalog.
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
@@ -43,19 +15,6 @@ pub struct GodPanelState {
     pub target_y: f32,
     pub target_faction: u32,
     pub status: Option<String>,
-
-    // FR-CLIENT-godbuttons: rich-verb params shared by the new buttons.
-    /// Brush radius in voxels (TERRAIN / MATERIAL verbs; defaults to 3).
-    pub radius_voxels: u8,
-    /// Target material id (MATERIAL verbs; defaults to STONE).
-    pub material_id: u32,
-    /// Drop height in fixed-point units (MATERIAL.pour_liquid).
-    pub drop_height: i32,
-    /// Agent count for `life.spawn_herd` (clamped to `[1, 64]`).
-    pub herd_count: u32,
-    /// Sticky id seed for `life.spawn_organism` / `life.spawn_herd`
-    /// (defaults to a tick-derived id when 0).
-    pub seed_civilian_id: u64,
 }
 
 const ACTIONS: &[&str] = &["smite", "bless", "earthquake", "plague", "miracle"];
@@ -66,246 +25,6 @@ const ACTION_DESCS: &[&str] = &[
     "Reduce target faction treasury (disease proxy)",
     "Raise all faction belief + small treasury boost",
 ];
-
-// FR-CLIENT-godbuttons: per-verb metadata table for the Substrate Tools
-// section. `verb` is the exact action id the `ws_bridge` resolver matches on;
-// `param_builder` fills the JSON-RPC `params` object from `GodPanelState`
-// (mirroring the `GodToolRequest` shape the engine expects); `label` /
-// `desc` drive the egui button.
-struct GodToolVerb {
-    verb: &'static str,
-    category: &'static str,
-    label: &'static str,
-    desc: &'static str,
-    param_builder: fn(&GodPanelState) -> serde_json::Value,
-}
-
-fn build_terrain_add_land(s: &GodPanelState) -> serde_json::Value {
-    serde_json::json!({
-        "action": "terrain.add_land",
-        "x": s.target_x,
-        "y": s.target_y,
-        "magnitude": s.magnitude,
-        "radius_voxels": s.radius_voxels.max(1),
-        "strength": s.magnitude.max(0.0) as i32 * 256,
-    })
-}
-fn build_terrain_dig_ocean(s: &GodPanelState) -> serde_json::Value {
-    serde_json::json!({
-        "action": "terrain.dig_ocean",
-        "x": s.target_x,
-        "y": s.target_y,
-        "magnitude": s.magnitude,
-        "radius_voxels": s.radius_voxels.max(1),
-        "strength": s.magnitude.max(0.0) as i32 * 512,
-    })
-}
-fn build_terrain_drop_biome(s: &GodPanelState) -> serde_json::Value {
-    // aux_id = material id; the ws_bridge routes this into
-    // `TerraformRequest::aux_id` for `TerraformOp::DropBiome`.
-    serde_json::json!({
-        "action": "terrain.drop_biome",
-        "x": s.target_x,
-        "y": s.target_y,
-        "radius_voxels": s.radius_voxels.max(1),
-        "material_id": s.material_id,
-    })
-}
-fn build_material_erase(s: &GodPanelState) -> serde_json::Value {
-    serde_json::json!({
-        "action": "material.erase",
-        "x": s.target_x,
-        "y": s.target_y,
-        "radius_voxels": s.radius_voxels.max(1),
-    })
-}
-fn build_material_replace(s: &GodPanelState) -> serde_json::Value {
-    serde_json::json!({
-        "action": "material.replace",
-        "x": s.target_x,
-        "y": s.target_y,
-        "radius_voxels": s.radius_voxels.max(1),
-        "material_id": s.material_id,
-    })
-}
-fn build_material_surface_paint(s: &GodPanelState) -> serde_json::Value {
-    serde_json::json!({
-        "action": "material.surface_paint",
-        "x": s.target_x,
-        "y": s.target_y,
-        "radius_voxels": s.radius_voxels.max(1),
-        "material_id": s.material_id,
-    })
-}
-fn build_material_pour_liquid(s: &GodPanelState) -> serde_json::Value {
-    serde_json::json!({
-        "action": "material.pour_liquid",
-        "x": s.target_x,
-        "y": s.target_y,
-        "magnitude": s.magnitude,
-        "radius_voxels": s.radius_voxels.max(1),
-        "material_id": s.material_id,
-        "drop_height": s.drop_height,
-        "strength": s.magnitude.max(0.0) as i32 * 256,
-    })
-}
-fn build_material_seed_snow(s: &GodPanelState) -> serde_json::Value {
-    serde_json::json!({
-        "action": "material.seed_snow",
-        "x": s.target_x,
-        "y": s.target_y,
-        "radius_voxels": s.radius_voxels.max(1),
-        "strength": 256, // FIXED_SCALE; ws_bridge maps to i32
-    })
-}
-fn build_material_seed_ore(s: &GodPanelState) -> serde_json::Value {
-    serde_json::json!({
-        "action": "material.seed_ore",
-        "x": s.target_x,
-        "y": s.target_y,
-        "radius_voxels": s.radius_voxels.max(1),
-        "strength": 256,
-    })
-}
-fn build_life_spawn_organism(s: &GodPanelState) -> serde_json::Value {
-    serde_json::json!({
-        "action": "life.spawn_organism",
-        "x": s.target_x,
-        "y": s.target_y,
-        "target_faction": s.target_faction,
-        "seed_civilian_id": s.seed_civilian_id,
-    })
-}
-fn build_life_spawn_herd(s: &GodPanelState) -> serde_json::Value {
-    serde_json::json!({
-        "action": "life.spawn_herd",
-        "target_faction": s.target_faction,
-        "count": s.herd_count.clamp(1, 64),
-        "seed_civilian_id": s.seed_civilian_id,
-    })
-}
-fn build_disaster_wildfire(s: &GodPanelState) -> serde_json::Value {
-    serde_json::json!({
-        "action": "disaster.wildfire",
-        "x": s.target_x,
-        "y": s.target_y,
-        "radius_voxels": s.radius_voxels.max(1),
-    })
-}
-fn build_disaster_flood(s: &GodPanelState) -> serde_json::Value {
-    serde_json::json!({
-        "action": "disaster.flood",
-        "x": s.target_x,
-        "y": s.target_y,
-        "radius_voxels": s.radius_voxels.max(1),
-    })
-}
-
-/// Substrate-live verbs added under FR-CLIENT-godbuttons. Order is the
-/// rendering order inside the panel — TERRAIN first (terrain is what the
-/// player sees change most), then MATERIAL (paint/pour), then LIFE, then
-/// DISASTER. Each entry corresponds to a verb the ws_bridge resolver
-/// already routes through `Simulation::apply_god_tool`.
-const SUBSTRATE_VERBS: &[GodToolVerb] = &[
-    GodToolVerb {
-        verb: "terrain.add_land",
-        category: "TERRAIN",
-        label: "Add Land",
-        desc: "Stamp a chunky STONE band on the surface at (x,y)",
-        param_builder: build_terrain_add_land,
-    },
-    GodToolVerb {
-        verb: "terrain.dig_ocean",
-        category: "TERRAIN",
-        label: "Dig Ocean",
-        desc: "Dig a basin at (x,y) and fill with WATER",
-        param_builder: build_terrain_dig_ocean,
-    },
-    GodToolVerb {
-        verb: "terrain.drop_biome",
-        category: "TERRAIN",
-        label: "Drop Biome",
-        desc: "Repaint topmost surface to material_id at (x,y)",
-        param_builder: build_terrain_drop_biome,
-    },
-    GodToolVerb {
-        verb: "material.erase",
-        category: "MATERIAL",
-        label: "Erase",
-        desc: "Write AIR in the brush footprint at (x,y)",
-        param_builder: build_material_erase,
-    },
-    GodToolVerb {
-        verb: "material.replace",
-        category: "MATERIAL",
-        label: "Replace",
-        desc: "Overwrite brush with material_id at (x,y)",
-        param_builder: build_material_replace,
-    },
-    GodToolVerb {
-        verb: "material.surface_paint",
-        category: "MATERIAL",
-        label: "Surface Paint",
-        desc: "Paint only the topmost solid voxel per column",
-        param_builder: build_material_surface_paint,
-    },
-    GodToolVerb {
-        verb: "material.pour_liquid",
-        category: "MATERIAL",
-        label: "Pour Liquid",
-        desc: "Drop material_id from drop_height above (x,y)",
-        param_builder: build_material_pour_liquid,
-    },
-    GodToolVerb {
-        verb: "material.seed_snow",
-        category: "MATERIAL",
-        label: "Seed Snow",
-        desc: "Write SNOW voxels in the brush footprint",
-        param_builder: build_material_seed_snow,
-    },
-    GodToolVerb {
-        verb: "material.seed_ore",
-        category: "MATERIAL",
-        label: "Seed Ore",
-        desc: "Write ORE voxels in a stochastic vein pattern",
-        param_builder: build_material_seed_ore,
-    },
-    GodToolVerb {
-        verb: "life.spawn_organism",
-        category: "LIFE",
-        label: "Spawn Civ",
-        desc: "Inject one humanoid civilian at (x,y)",
-        param_builder: build_life_spawn_organism,
-    },
-    GodToolVerb {
-        verb: "life.spawn_herd",
-        category: "LIFE",
-        label: "Spawn Herd",
-        desc: "Inject herd_count fauna on faction target_faction",
-        param_builder: build_life_spawn_herd,
-    },
-    GodToolVerb {
-        verb: "disaster.wildfire",
-        category: "DISASTER",
-        label: "Wildfire",
-        desc: "Ignite flammables in the brush footprint",
-        param_builder: build_disaster_wildfire,
-    },
-    GodToolVerb {
-        verb: "disaster.flood",
-        category: "DISASTER",
-        label: "Flood",
-        desc: "Flood the brush footprint with WATER",
-        param_builder: build_disaster_flood,
-    },
-];
-
-/// Category order — drives the egui rendering order so TERRAIN appears
-/// first (most visually obvious), then MATERIAL, LIFE, DISASTER. We walk
-/// `SUBSTRATE_VERBS` and emit a header each time `v.category` changes,
-/// so the iteration order of the table below must match this list. New
-/// categories can be appended; existing ones should not be re-ordered.
-const SUBSTRATE_CATEGORY_ORDER: &[&str] = &["TERRAIN", "MATERIAL", "LIFE", "DISASTER"];
 
 pub struct GodPanelPlugin;
 impl Plugin for GodPanelPlugin {
@@ -339,13 +58,10 @@ fn draw_god_panel(
     let Ok(ctx) = contexts.ctx_mut() else { return; };
     let screen = ctx.content_rect();
 
-    let mut fire_legacy: Option<String> = None;
-    let mut fire_substrate: Option<usize> = None;
+    let mut fire: Option<String> = None;
     egui::Window::new("God Mode")
         .fixed_pos(egui::pos2(screen.max.x - 310.0, screen.center().y - 180.0))
-        // FR-CLIENT-godbuttons: taller panel for the Substrate Tools
-        // section (13 buttons across 4 categories + brush params).
-        .fixed_size([310.0, 720.0])
+        .fixed_size([290.0, 360.0])
         .collapsible(false)
         .title_bar(true)
         .frame(egui::Frame::window(ctx.style().as_ref())
@@ -400,7 +116,7 @@ fn draw_god_panel(
                 egui::RichText::new(format!("Invoke: {}", action_name)).color(egui::Color32::from_rgb(9,10,12)).size(13.0)
             ).fill(egui::Color32::from_rgb(126,186,181)));
             if fire_btn.clicked() {
-                fire_legacy = Some(action_name.to_string());
+                fire = Some(action_name.to_string());
             }
 
             // ============ FR-CLIENT-godbuttons: Substrate Tools ============
@@ -473,10 +189,7 @@ fn draw_god_panel(
             }
         });
 
-    // Dispatch legacy `Invoke` button (smite / bless / earthquake / plague /
-    // miracle). Same payload shape as before — the `ws_bridge` resolver
-    // continues to handle the legacy 5 verbs unchanged.
-    if let Some(action) = fire_legacy {
+    if let Some(action) = fire {
         let needs_pos = matches!(action.as_str(), "smite" | "earthquake");
         let needs_faction = matches!(action.as_str(), "bless" | "plague");
         let payload = serde_json::json!({

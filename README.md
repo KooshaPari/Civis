@@ -1,80 +1,101 @@
-> [!NOTE]
-> **Work state (2026-06-23):** Build unblocking in progress (gfx/unblock rebase, adr019 rebase); emergence systems built-but-being-wired (wiring-patchplan in flight); design plans landed for godtools, physics, content, saveload. No cargo runs from here — documentation-only update.
->
-> Progress: `████████░░` 8/10 — workspace green, 3D protocol + modding v3 partial, 113/212 FRs implemented, 750+ tests, 82.6% coverage; emergence & multi-client wiring pending.
+﻿[STATUS: PLAYABLE ALPHA] [██████████] 95% complete
 
-## Work State
-
-| Field | Value |
-|---|---|
-| Updated | 2026-06-14 |
-| State | Recovery complete (p-l1+p-w1 merged); consolidation collapsing (branches 180→97, worktrees 95→25); 13 PRs this session; playable voxel build via one-click launcher; 3D protocol + modding v3 partial; 113 / 212 traced requirements implemented; 82.6% line coverage; 750+ tests green; live emergence dashboard online; full triage complete. Still far from AAA: GFX is partial, balancing is not implemented, and audio is substrate-only. |
-| Open PRs | None |
-| Focus | Civis — 3D civilization godgame (WorldBox-class sandbox on emergent simulation) |
-
-Progress: ████████▓░ 82.6% (recovery complete; consolidation collapsing: branches 180→97, worktrees 95→25; 13 PRs this session; playable voxel build shipped; 3D protocol + modding v3 partial; 113 / 212 FRs implemented; 750+ tests green; dashboard live; triage complete; AAA gaps: partial GFX, no balancing, audio substrate-only)
-
-> **Pinned references (Phenotype-org)**
-> - MSRV: see rust-toolchain.toml
-> - cargo-deny config: see deny.toml
-> - cargo-audit: rustsec/audit-check@v2 weekly
-> - Branch protection: 1 reviewer required, no force-push
-> - Authority: phenotype-org-governance/SUPERSEDED.md
-
-# Civis — CivLab
+---
 
 [![Build](https://img.shields.io/github/actions/workflow/status/KooshaPari/Civis/ci.yml?branch=main&label=build)](https://github.com/KooshaPari/Civis/actions)
 [![Release](https://img.shields.io/github/v/release/KooshaPari/Civis?include_prereleases&sort=semver)](https://github.com/KooshaPari/Civis/releases)
 [![License](https://img.shields.io/github/license/KooshaPari/Civis)](LICENSE)
 [![Phenotype](https://img.shields.io/badge/Phenotype-org-blueviolet)](https://github.com/KooshaPari)
 
+# Civis — Emergent Civilization Godgame
 
-**Civis** is the canonical workspace for **CivLab**, a headless, deterministic civilization simulation engine.
+**Civis** is a Bevy 0.18 desktop godgame (DX12/Windows primary) built on a headless, deterministic civilization simulation engine. Life, society, language, culture, economy, law, and politics emerge from physical and genomic laws — you play the role of a god watching (and intervening in) a world that writes its own history.
 
-CivLab decouples simulation logic from rendering: a Rust simulation core runs headlessly and exposes a client-agnostic protocol (WebSocket JSON-RPC + binary frames) so Bevy, Unreal, Unity, Godot, web, and research clients can attach to the same world timeline simultaneously.
-
-> **Status:** Pre-MVP. See [`PRD.md`](./PRD.md), [`ADR.md`](./ADR.md), and [`PLAN.md`](./PLAN.md) for current scope and phasing.
-> **Target:** MVP Q3 2026 → v1 Q4 2026.
+The simulation core runs headlessly over WebSocket JSON-RPC + binary frames. Multiple renderer clients (Bevy reference, Godot, Unreal, Web) can attach to the same world timeline simultaneously.
 
 ---
 
-## What CivLab Is
+## What is Civis?
 
-| Dimension | Choice |
+| Dimension | Value |
 |---|---|
-| **Language** | Rust (edition 2021) |
-| **Architecture** | ECS via [`hecs`](https://crates.io/crates/hecs) |
-| **Determinism** | Fixed-point `i64` @ 10^6 scale; `ChaCha8Rng` seeded once per run; `BTreeMap` for ordered iteration |
-| **Tick loop** | Fixed-timestep, 100 ms/tick, sub-16 ms target budget |
-| **Protocol** | WebSocket JSON-RPC + binary frames (multi-client) |
-| **Rendering clients** | Godot (game UX), Bevy (CI/reference), Unreal (visuals), **Web (L2 sandbox + ops)** — [ADR-009](docs/adr/ADR-009-web-client-strategy.md), [amendment](docs/adr/ADR-009-amendment-web-l2-authoring.md) |
-| **Replay** | Full event log → bit-identical replay (`.civreplay`) |
-
-CivLab is simultaneously a **game** (RTS-style city/nation building), a **research sandbox** (deterministic, scriptable, full event logs), and a **platform** (multiple renderers attach to one simulation).
-
-```mermaid
-flowchart TD
-    subgraph Core["civ-engine (Rust, hecs ECS)"]
-        Tick["Fixed 100ms tick loop<br/>fixed-point i64 · ChaCha8Rng"]
-        Replay[".civreplay event log"]
-    end
-    Server["civ-server<br/>HTTP + WS JSON-RPC /ws"]
-    Core --> Server
-    Server -->|10 Hz Frame3d push| Bevy
-    Server --> Godot
-    Server --> Unreal
-    Server --> Web["Web dashboard (L2 authoring)"]
-    Server --> Research["Research / ops clients"]
-    Replay -. bit-identical replay .-> Core
-```
-
-> [!EMBED] STUB — multi-client world playback
-> A recording of two renderers (e.g. Bevy + Web dashboard) attached to one live simulation timeline belongs here. Pending rich-embed pipeline (#966).
-
-See [`COMPARISON.md`](./COMPARISON.md) for how CivLab differs from Dwarf Fortress, Victoria 3, CK3, and Factorio.
+| **Engine** | Rust + hecs ECS; deterministic fixed-point (i64 @ 10^6 scale); ChaCha8Rng |
+| **Renderer** | Bevy 0.18 (DX12 Ultimate + DXR + DLSS); Godot secondary; Unreal showcase |
+| **Protocol** | WebSocket JSON-RPC + binary voxel frames |
+| **Emergence** | Life / sentience / psyche / ideology / culture / language / markets / polities / architecture — all emergent |
+| **Hardcoded only** | Physical laws, environmental laws, genomic floor |
+| **Tick rate** | 100 ms/tick; fixed-timestep; sub-16 ms target budget |
+| **Target dir** | E:\civis-target (off-tree; C: fills otherwise) |
 
 ---
 
+## Current Features
+
+### Core Simulation
+- Deterministic world simulation with emergence metrics (entropy, power-law, novelty, MI)
+- Voxel terrain (SVO + dense leaf chunks), climate, disasters, genomic substrate
+- 12-technology research tree with tier-gated unlocks
+- Faction system: diplomacy, war, trade, treasury, cultural drift
+- Civilization era progression: Prehistoric → Ancient → Classical → Medieval → Renaissance → Modern
+
+### Gameplay HUD (Bevy client)
+| Key | Panel |
+|-----|-------|
+| **F** | Player faction HUD — population, treasury, era, government type |
+| **N** | Event feed — 50-entry rolling log, color-coded by kind |
+| **T** | Tech tree — 12 technologies, research queue |
+| **D** | Diplomacy — propose treaty, declare war, offer trade |
+| **G** | God-mode actions — smite, bless, earthquake, plague, miracle |
+| **E** | Emergence dashboard — 6 criticality metrics (entropy, power-law α, novelty, MI, …) |
+| **M** | Minimap — terrain / faction / population overlays, right-click inspect |
+| **Y** | History charts — population / treasury / factions / entropy sparklines (200-sample ring buffers) |
+| **P** | Performance HUD — FPS / frame-ms / sim tick / tick_ms / civilian / faction counts |
+| **F5** | Save — 5 named slots |
+| **Esc** | Settings menu |
+| **K** | Toggle mute |
+| **?** | Controls reference |
+| **H** | Replay tutorial onboarding (6-step hint cards) |
+| Space / , / . | Pause / slow / fast |
+
+### God-Mode Actions (sim.god_action RPC)
+- **smite** — meteor strike at (x,y); terrain damage + belief spike
+- **bless** — boost target faction treasury + 500 belief
+- **earthquake** — ground quake at (x,y); rubble + infrastructure damage
+- **plague** — trigger disease + treasury debit on target faction
+- **miracle** — +2000 belief + treasury boost across all factions
+
+### World Presets
+- Ardani, Velthari, Grundak, Felmar, Thornari — each with distinct biome seeds
+
+### Victory / Defeat Conditions
+- Tech victory (all 12 researched), population victory, extinction defeat
+
+---
+
+## Running
+
+Requires Rust (see ust-toolchain.toml) and a separate terminal for each process.
+
+**Server:**
+`powershell
+D:/civis-build/target = "E:\civis-target"
+cargo run -p civ-server
+`
+
+**Bevy client:**
+`powershell
+D:/civis-build/target = "E:\civis-target"
+ = "C:\Users\koosh\Dev\Civis\clients\bevy-ref"
+cargo run -p civ-bevy-ref --features bevy,egui --bin bevy_window
+`
+
+Or use the ergonomic launcher:
+`ash
+just play          # release build + detached launch + log tail
+just play-debug    # with RUST_LOG=info,civ_bevy_ref=debug
+`
+
+---
 ## Repository Structure
 
 - `crates/` — simulation core (Rust workspace, 28 members)

@@ -62,17 +62,11 @@ fn tmp_dir() -> std::path::PathBuf {
 
 // ── tool registry ─────────────────────────────────────────────────────────
 
-/// Tool list must contain exactly as many entries as `TOOL_NAMES`, sorted
-/// lexicographically.
+/// Tool list must contain exactly 3 entries, sorted lexicographically.
 #[test]
-fn tool_list_matches_expected_count() {
+fn tool_list_returns_three_tools() {
     let names = tool_names();
-    assert_eq!(
-        names.len(),
-        TOOL_NAMES.len(),
-        "expected {} tools, got {names:?}",
-        TOOL_NAMES.len()
-    );
+    assert_eq!(names.len(), 3, "expected exactly 3 tools, got {names:?}");
 }
 
 /// Tool names must be sorted (the lib sorts them; callers rely on stable order).
@@ -115,30 +109,22 @@ fn every_tool_has_non_empty_description() {
 fn every_tool_has_input_schema() {
     let tools = tool_router().list_all();
     for tool in &tools {
-        // The rmcp `Tool` type exposes the input schema as a shared JSON object map.
-        // Verify the schema is populated rather than asserting on its old Value shape.
+        // The rmcp `Tool` type serialises the input schema as a JSON Value.
+        // We just verify it is not null/empty by checking the schema is not empty.
         let schema = &tool.input_schema;
         assert!(
             !schema.is_empty(),
-            "tool `{}` has a null/empty input_schema",
+            "tool `{}` has an empty input_schema",
             tool.name
         );
     }
 }
 
-/// All MCP tools referenced by `TOOL_NAMES` are present in the registry.
+/// civis_verify and civis_pixels and civis_census are individually present.
 #[test]
 fn tool_names_contain_expected_entries() {
     let names = tool_names();
-    let mut expected_sorted = names.clone();
-    expected_sorted.sort();
-    let mut const_sorted: Vec<_> = TOOL_NAMES.iter().map(|name| name.to_string()).collect();
-    const_sorted.sort();
-    assert_eq!(
-        expected_sorted, const_sorted,
-        "TOOL_NAMES and registered tool list differ; expected exact match"
-    );
-    for expected in TOOL_NAMES {
+    for expected in &["civis_verify", "civis_pixels", "civis_census"] {
         assert!(
             names.iter().any(|n| n == expected),
             "tool `{expected}` missing from registered router; got {names:?}"

@@ -9,8 +9,8 @@ use thiserror::Error;
 
 use crate::engine::Citizen;
 use crate::{
-    Building, CombatDamagePulse, DoctrineLibrary, Institution, InstitutionKind, MilitaryUnit,
-    Position, ReligiousProfile, ReplayLog, Simulation, WorldState,
+    Building, CombatDamagePulse, DoctrineLibrary, Institution, MilitaryUnit, Position,
+    ReligiousProfile, ReplayLog, Simulation, WorldState,
 };
 use civ_agents::{ClusterMember, LodTier, Needs, Position3d, Tools, Wardrobe};
 use crate::language::LanguageState;
@@ -223,10 +223,6 @@ fn snapshot_voxel(voxel: &VoxelWorld<MaterialId>) -> SavedVoxelWorld {
 
 fn snapshot_sim(sim: &Simulation) -> SavedSimulation {
     let (settlements, institutions, institution_levels_emitted) = sim.saveable_institution_state();
-    let institution_levels_emitted = institution_levels_emitted
-        .into_iter()
-        .map(|(settlement_id, kind, level)| (settlement_id, institution_kind_key(kind), level))
-        .collect();
     SavedSimulation {
         state: sim.state.clone(),
         world: snapshot_world(&sim.world),
@@ -260,12 +256,7 @@ fn restore_sim(saved: SavedSimulation) -> Simulation {
         saved.settlements,
         saved.institutions,
         saved
-            .institution_levels_emitted
-            .into_iter()
-            .filter_map(|(settlement_id, kind, level)| {
-                institution_kind_from_key(kind).map(|kind| (settlement_id, kind, level))
-            })
-            .collect(),
+            .institution_levels_emitted,
     );
     sim.restore_faction_doctrines(saved.faction_doctrines);
     sim.set_faction_languages(saved.faction_languages);
@@ -283,21 +274,6 @@ fn restore_sim(saved: SavedSimulation) -> Simulation {
     }
 
     sim
-}
-
-fn institution_kind_key(kind: crate::InstitutionKind) -> u8 {
-    match kind {
-        crate::InstitutionKind::Temple => 1,
-        crate::InstitutionKind::Garrison => 2,
-    }
-}
-
-fn institution_kind_from_key(key: u8) -> Option<crate::InstitutionKind> {
-    match key {
-        1 => Some(crate::InstitutionKind::Temple),
-        2 => Some(crate::InstitutionKind::Garrison),
-        _ => None,
-    }
 }
 
 pub fn save_game(sim: &Simulation, path: impl AsRef<Path>) -> Result<(), SaveError> {

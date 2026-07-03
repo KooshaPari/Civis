@@ -34,7 +34,6 @@ pub mod scenario;
 pub mod spawn;
 pub mod spectator;
 
-pub mod tech;
 pub mod tutorial;
 
 
@@ -51,6 +50,9 @@ pub use demographics::{
 // downstream crates (civ-server JSON-RPC + WS bridge) can name it as
 // `civ_engine::SfxTrigger` without taking a direct `civ-audio` dep.
 pub use civ_audio::triggers::SfxTrigger;
+pub use civ_mod_host::{load_manifest, ModBrowserEntry, ModGuestStateSave, ModType};
+pub use civ_planet::Climate;
+pub use civ_tactics::{DamageEvent, DoctrineLibrary};
 pub use emergence::{
     CivAiDecision, EmergenceFeedEvent, EmergenceState,
 };
@@ -62,14 +64,20 @@ pub use engine::{
     EconomicFocus, EconomicFocusEvent, FactionRelationSnapshot, Fixed, InstitutionEvent, JobType,
     MilitaryUnit, Position, ResourceType, Resources, Sim, SimSeed, Simulation, SimulationSnapshot,
     PsycheDrivenBehavior, StratBand, StratificationEvent, StratificationEventKind,
-    StratificationReport, TileInspection, TradeRoute, UnitType, WorldState,
+    StratificationReport, TradeRoute, UnitType, WorldState,
 };
 pub use hash_chain::hash_hex;
 pub use replay::ReplayLog;
+pub use replay::ReplayError;
 pub use replay_format::{decode_civreplay, encode_civreplay};
 pub use save_bundle::{
     delete_slot, list_slots, load_from_slot, save_to_slot, CivSaveBundle, SaveSlotEntry,
 };
+pub use spawn::{
+    grid_to_norm, spawn_airport_at, spawn_hangar_at, spawn_military_at, spawn_port_at,
+    unit_type_label,
+};
+pub use spectator::SpectatorView;
 
 
 // FR-CIV-ARCH: Emergent building layouts re-export so callers can use
@@ -92,12 +100,6 @@ pub use civ_institutions::{
     Institution, InstitutionKind, GARRISON_UNLOCK_POPULATION,
     TEMPLE_UNLOCK_POPULATION,
 };
-
-/// Per-settlement institution event emitted by [`crate::Simulation::phase_institutions`].
-///
-/// Local mirror of the engine's internal type so callers can name it without
-/// pulling the engine module path directly.
-pub use crate::engine::InstitutionEvent;
 
 // FR-CIV-GOV-100 (civ-007 social-mood epic). Re-exported so callers can name
 // the snapshot type as `civ_engine::MoodSnapshot` and the saturation /

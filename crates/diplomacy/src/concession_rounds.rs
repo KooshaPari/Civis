@@ -92,6 +92,8 @@ pub enum OutcomeKind {
 /// One party's negotiation state — reservation, current offer, and the
 /// cost of impasse the actor would bear if the negotiation collapses.
 ///
+/// `FR-CIV-DIPLO-006: deterministic, LLM MUST NOT influence this decision.`
+///
 /// This mirrors the FR-CIV-DIPLO-003 inputs ("reservation from power +
 /// relationship + war exhaustion"): the reservation value is the
 /// **floor** below which the party would rather walk away, the offer is
@@ -202,6 +204,15 @@ impl ConcessionOutcome {
 
 /// Run the Zeuthen/Rubinstein monotonic-concession state machine for
 /// `party_a` vs `party_b`, bounded by `max_rounds` rounds.
+///
+/// `FR-CIV-DIPLO-006: deterministic, LLM MUST NOT influence this decision.`
+///
+/// The driver takes only structured inputs ([`NegotiationState`]
+/// reservations, offers, conflict costs, plus a `max_rounds` budget).
+/// String/free-text paths are absent from the public signature, so
+/// neither party participation nor the choice of conceder can be
+/// steered by LLM-authored wording. The choice of *who concedes* in a
+/// given round, and by how much, is fully determined by the inputs.
 ///
 /// ## Algorithm
 ///

@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080" role="img" aria-label="Civis main menu backdrop">
+  <defs>
+    <radialGradient id="vig" cx="50%" cy="44%" r="75%">
+      <stop offset="0%" stop-color="#0e161a"/>
+      <stop offset="60%" stop-color="#0b1013"/>
+      <stop offset="100%" stop-color="#070809"/>
+    </radialGradient>
+    <radialGradient id="corefade" cx="50%" cy="44%" r="55%">
+      <stop offset="0%" stop-color="#7ebab5" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#7ebab5" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="bglow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+  </defs>
+
+  <rect width="1920" height="1080" fill="url(#vig)"/>
+  <ellipse cx="960" cy="475" rx="820" ry="560" fill="url(#corefade)"/>
+
+  <!-- constellation / emergence network: faint hex-grid nodes with connective lines -->
+  <g stroke="#7ebab5" stroke-opacity="0.12" stroke-width="1.2">
+    <path d="M260,180 L520,300 L470,560 L200,600 L120,360 Z"/>
+    <path d="M520,300 L820,220 L980,420 L740,560 L470,560"/>
+    <path d="M980,420 L1240,300 L1500,380 L1560,640 L1300,720 L1040,660 L740,560"/>
+    <path d="M1500,380 L1720,240 L1840,500"/>
+    <path d="M200,600 L340,840 L640,880 L740,700"/>
+    <path d="M640,880 L980,940 L1300,880 L1300,720"/>
+    <path d="M980,940 L1040,660"/>
+    <path d="M1560,640 L1780,760 L1640,980"/>
+  </g>
+
+  <!-- glowing nodes -->
+  <g fill="#7ebab5" filter="url(#bglow)">
+    <circle cx="260" cy="180" r="3.5" opacity="0.5"/><circle cx="520" cy="300" r="4.5" opacity="0.75"/>
+    <circle cx="820" cy="220" r="3" opacity="0.5"/><circle cx="980" cy="420" r="5" opacity="0.9"/>
+    <circle cx="1240" cy="300" r="3.5" opacity="0.6"/><circle cx="1500" cy="380" r="4.5" opacity="0.8"/>
+    <circle cx="1720" cy="240" r="3" opacity="0.5"/><circle cx="470" cy="560" r="4" opacity="0.7"/>
+    <circle cx="740" cy="560" r="5" opacity="0.85"/><circle cx="1300" cy="720" r="4.5" opacity="0.8"/>
+    <circle cx="1560" cy="640" r="3.5" opacity="0.6"/><circle cx="200" cy="600" r="3" opacity="0.5"/>
+    <circle cx="640" cy="880" r="4" opacity="0.7"/><circle cx="980" cy="940" r="4.5" opacity="0.8"/>
+    <circle cx="1300" cy="880" r="3.5" opacity="0.6"/><circle cx="340" cy="840" r="3" opacity="0.5"/>
+    <circle cx="1040" cy="660" r="3.5" opacity="0.6"/><circle cx="1780" cy="760" r="3" opacity="0.5"/>
+  </g>
+
+  <!-- subtle bottom horizon line -->
+  <line x1="0" y1="1010" x2="1920" y2="1010" stroke="#7ebab5" stroke-opacity="0.10" stroke-width="1.5"/>
+</svg>

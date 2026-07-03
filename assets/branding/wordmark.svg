@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200" width="800" height="200" role="img" aria-label="CIVIS">
+  <defs>
+    <linearGradient id="wm" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#a9e0da"/>
+      <stop offset="100%" stop-color="#6fa8a3"/>
+    </linearGradient>
+    <filter id="wglow" x="-20%" y="-40%" width="140%" height="180%">
+      <feGaussianBlur stdDeviation="2.2" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- leading emblem glyph: hex node cluster -->
+  <g transform="translate(70,100)" filter="url(#wglow)">
+    <polygon points="0,-34 30,-17 30,17 0,34 -30,17 -30,-17" fill="none" stroke="url(#wm)" stroke-width="4"/>
+    <polyline points="0,-34 0,0 26,15" fill="none" stroke="url(#wm)" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="0" cy="0" r="5" fill="#d7f2ee"/>
+    <circle cx="0" cy="-34" r="4" fill="#7ebab5"/>
+    <circle cx="26" cy="15" r="4" fill="#7ebab5"/>
+  </g>
+
+  <!-- CIVIS letterforms as stroked paths (no font dependency) -->
+  <g fill="none" stroke="url(#wm)" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" filter="url(#wglow)">
+    <!-- C -->
+    <path d="M205,66 A44,44 0 1 0 205,134"/>
+    <!-- I -->
+    <line x1="300" y1="60" x2="300" y2="140"/>
+    <!-- V -->
+    <polyline points="350,60 383,140 416,60"/>
+    <!-- I -->
+    <line x1="470" y1="60" x2="470" y2="140"/>
+    <!-- S -->
+    <path d="M585,70 A28,26 0 0 0 545,80 A24,20 0 0 0 585,100 A24,20 0 0 1 545,120 A28,26 0 0 0 585,130"/>
+  </g>
+
+  <!-- underline accent -->
+  <line x1="205" y1="164" x2="585" y2="164" stroke="#7ebab5" stroke-opacity="0.35" stroke-width="2"/>
+</svg>

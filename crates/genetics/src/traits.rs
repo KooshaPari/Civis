@@ -1,100 +1,121 @@
-//! Trait inheritance for emergent offspring phenotypes.
+//! Trait inheritance helpers for emergent lineages.
 //!
-//! Covers FR-CIV-TRAIT-INHERIT: an offspring trait is the blend of parent
-//! traits plus bounded mutation.
+//! Offspring traits are produced by blending parent traits and then applying a
+//! bounded mutation so the result stays close to the parental range.
 
 use rand::Rng;
+use rand_chacha::ChaCha8Rng;
+use serde::{Deserialize, Serialize};
 
-/// Configuration for scalar trait inheritance.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct TraitInheritanceConfig {
-    /// Inclusive lower bound for the inherited trait value.
-    pub min_value: f32,
-    /// Inclusive upper bound for the inherited trait value.
-    pub max_value: f32,
-    /// Maximum absolute mutation delta applied after parental blending.
+/// A bounded trait vector in normalized `[0.0, 1.0]` space.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TraitVector(pub Vec<f32>);
+
+impl TraitVector {
+    /// Construct a trait vector from raw values.
+    #[must_use]
+    pub fn new(values: Vec<f32>) -> Self {
+        Self(values)
+    }
+
+    /// Length of the vector.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// True when there are no traits.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
+/// Parameters controlling offspring trait inheritance.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct TraitInheritance {
+    /// Maximum absolute mutation applied after blending.
     pub mutation_bound: f32,
 }
 
-impl TraitInheritanceConfig {
-    /// Construct a trait inheritance configuration.
+impl TraitInheritance {
+    /// Construct inheritance parameters.
     #[must_use]
-    pub fn new(min_value: f32, max_value: f32, mutation_bound: f32) -> Self {
+    pub fn new(mutation_bound: f32) -> Self {
         Self {
-            min_value,
-            max_value,
-            mutation_bound,
-        }
-    }
-
-    /// Return the finite, non-negative mutation bound used at inheritance time.
-    #[must_use]
-    pub fn bounded_mutation(self) -> f32 {
-        if self.mutation_bound.is_finite() {
-            self.mutation_bound.max(0.0)
-        } else {
-            0.0
+            mutation_bound: mutation_bound.max(0.0),
         }
     }
 }
 
-impl Default for TraitInheritanceConfig {
-    fn default() -> Self {
-        Self {
-            min_value: 0.0,
-            max_value: 1.0,
-            mutation_bound: 0.05,
-        }
-    }
-}
-
-/// Blend two parent trait values and apply bounded mutation.
+/// Blend parent trait vectors and apply bounded mutation.
 ///
-/// The parental blend is the arithmetic mean. Mutation is sampled uniformly
-/// from `[-mutation_bound, mutation_bound]`, then the result is clamped to the
-/// configured trait range.
+/// Each child component starts as the arithmetic mean of the two parents and
+/// then receives a random delta in `[-mutation_bound, mutation_bound]`.
+/// The final value is clamped to `[0.0, 1.0]`.
 #[must_use]
-pub fn inherit_trait<R: Rng + ?Sized>(
-    parent_a: f32,
-    parent_b: f32,
-    rng: &mut R,
-    config: TraitInheritanceConfig,
-) -> f32 {
-    let min_value = config.min_value.min(config.max_value);
-    let max_value = config.min_value.max(config.max_value);
-    let blend = (parent_a + parent_b) * 0.5;
-    let bound = config.bounded_mutation();
-    let mutation = if bound > 0.0 {
-        rng.gen_range(-bound..=bound)
-    } else {
-        0.0
-    };
+pub fn inherit_trait_vector(
+    parent_a: &TraitVector,
+    parent_b: &TraitVector,
+    rng: &mut ChaCha8Rng,
+    inheritance: TraitInheritance,
+) -> TraitVector {
+    assert_eq!(
+        parent_a.0.len(),
+        parent_b.0.len(),
+        "inherit_trait_vector: parent length mismatch"
+    );
 
-    (blend + mutation).clamp(min_value, max_value)
+    let mut child = Vec::with_capacity(parent_a.0.len());
+    let bound = inheritance.mutation_bound;
+    for (a, b) in parent_a.0.iter().zip(parent_b.0.iter()) {
+        let blended = (a + b) * 0.5;
+        let delta = if bound == 0.0 {
+            0.0
+        } else {
+            rng.gen_range(-bound..=bound)
+        };
+        child.push((blended + delta).clamp(0.0, 1.0));
+    }
+
+    TraitVector(child)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use rand::SeedableRng;
-    use rand_chacha::ChaCha8Rng;
 
-    /// Covers FR-CIV-TRAIT-INHERIT: child trait stays between parent extrema
-    /// extended by the configured mutation bound.
+    fn rng(seed: u64) -> ChaCha8Rng {
+        ChaCha8Rng::seed_from_u64(seed)
+    }
+
     #[test]
-    fn child_trait_lies_between_parents_within_mutation_bound() {
-        let parent_a = 0.25_f32;
-        let parent_b = 0.75_f32;
-        let config = TraitInheritanceConfig::new(0.0, 1.0, 0.1);
-        let mut rng = ChaCha8Rng::seed_from_u64(0xC1A0_71A1_u64);
+    fn child_trait_stays_within_parent_blend_and_mutation_bound() {
+        let parent_a = TraitVector::new(vec![0.1, 0.2, 0.3, 0.4]);
+        let parent_b = TraitVector::new(vec![0.9, 0.8, 0.7, 0.6]);
+        let inheritance = TraitInheritance::new(0.05);
+        let mut rng = rng(1234);
 
-        let child = inherit_trait(parent_a, parent_b, &mut rng, config);
-        let lower = parent_a.min(parent_b) - config.mutation_bound;
-        let upper = parent_a.max(parent_b) + config.mutation_bound;
+        let child = inherit_trait_vector(&parent_a, &parent_b, &mut rng, inheritance);
 
-        assert!(
-            child >= lower && child <= upper,
-            "child trait {child} must lie within parent range plus mutation bound [{lower}, {upper}]"
-        );
+        assert_eq!(child.len(), parent_a.len());
+        for ((a, b), c) in parent_a.0.iter().zip(parent_b.0.iter()).zip(child.0.iter()) {
+            let a = *a;
+            let b = *b;
+            let c = *c;
+            let blended = (a + b) * 0.5;
+            assert!(
+                (c - blended).abs() <= inheritance.mutation_bound + f32::EPSILON,
+                "child trait {c} must stay within mutation bound of blended parent value {blended}"
+            );
+            let min_parent = a.min(b);
+            let max_parent = a.max(b);
+            assert!(
+                c >= (min_parent - inheritance.mutation_bound).max(0.0)
+                    && c <= (max_parent + inheritance.mutation_bound).min(1.0),
+                "child trait {c} must stay between parents within mutation bounds"
+            );
+        }
     }
 }

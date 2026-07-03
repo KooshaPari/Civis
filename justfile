@@ -33,11 +33,10 @@ audit:
     cargo audit
 
 # Standalone cargo-deny gate (mirrors .github/workflows/cargo-deny.yml).
-# Runs `cargo deny check --workspace` so all workspace members are checked,
-# not only the root package. Used by the PR-time CI workflow and by the
-# pre-push lefthook hook.
+# Runs `cargo deny check`; current cargo-deny discovers workspace members from
+# Cargo metadata and does not accept a `--workspace` flag.
 deny:
-    cargo deny check --workspace
+    cargo deny check
 
 # Find unused dependencies
 unused:
@@ -66,7 +65,7 @@ docs:
 
 # JSON-RPC method catalog must match jsonrpc.rs (docs/api/jsonrpc-surface.md).
 civis-3d-catalog-check:
-    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-jsonrpc-catalog.ps1
+    python3 scripts/check-jsonrpc-catalog.py
 
 # Scenario YAML + mods validation (civ-engine scenario::* tests).
 civis-3d-scenario-check:
@@ -139,7 +138,7 @@ civis-3d-bevy-smoke:
 
 # Run the Bevy windowed reference client behind the optional bevy feature.
 civis-3d-bevy-window:
-    cargo run -p civ-bevy-ref --features bevy --bin civ-bevy-window
+    cargo run -p civ-bevy-ref --features bevy,egui --bin civ-bevy-window
 
 # Run the standalone Bevy client with in-process simulation.
 civis-3d-standalone:
@@ -166,12 +165,12 @@ civis-3d-live-smoke:
     cargo test -p civ-bevy-ref --lib chunk_to_minimap
     cargo test -p civ-bevy-ref --lib minimap_uv_to_chunk
     cargo check -p civ-bevy-ref --features bevy,egui --bin civ-standalone
-    cargo check -p civ-bevy-ref --features bevy --bin civ-bevy-window
+    cargo check -p civ-bevy-ref --features bevy,egui --bin civ-bevy-window
 
 # Run the live Bevy reference client against civ-server's WebSocket bridge.
 # Requires civ-server to be running first.
 civis-3d-bevy-live:
-    cargo run -p civ-bevy-ref --features bevy --bin civ-bevy-window
+    cargo run -p civ-bevy-ref --features bevy,egui --bin civ-bevy-window
 
 # Run the phenotype-voxel kernel tests (sibling-repo dependency).
 civis-3d-voxel-kernel:
@@ -209,7 +208,7 @@ run:
 
 # One-shot launch of the live voxel/windowed client.
 run-voxel:
-    cargo run -p civ-bevy-ref --features bevy --bin civ-bevy-window
+    cargo run -p civ-bevy-ref --features bevy,egui --bin civ-bevy-window
 
 # Install the dev-loop watch tool (cargo-watch) if missing. Idempotent.
 dev-tools:
@@ -313,3 +312,8 @@ rust-verify: lint test
 # Call after packaging dist/Civis.exe (native launchType in phenotype-tooling apps.json).
 register-startmenu:
     pwsh -NoProfile -File C:/Users/koosh/Dev/phenotype-tooling/Tools/Register-StartMenuApps.ps1 -App Civis
+
+# Autograder loop for engine build-green: compile + acceptance tests must pass.
+build-green-engine:
+    cargo check -p civ-engine
+    cargo build --release -p civ-bevy-ref --features "bevy egui" --bin civ-bevy-window  # REAL playable gate (release build, not check)

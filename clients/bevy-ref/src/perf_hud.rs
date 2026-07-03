@@ -60,10 +60,8 @@ fn draw_perf_hud(
     let fps = metrics.fps;
     let frame_ms = if fps > 0.0 { 1000.0 / fps } else { 0.0 };
 
-    let Ok(ctx) = contexts.ctx_mut() else {
-        return;
-    };
-    let screen = ctx.screen_rect();
+    let Ok(ctx) = contexts.ctx_mut() else { return; };
+    let screen = ctx.content_rect();
 
     egui::Area::new(egui::Id::new("perf_hud"))
         .fixed_pos(egui::pos2(screen.max.x - 230.0, 8.0))
@@ -72,7 +70,7 @@ fn draw_perf_hud(
                 .fill(egui::Color32::from_rgba_premultiplied(9, 10, 12, 210))
                 .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(40, 45, 55)))
                 .corner_radius(egui::CornerRadius::same(6))
-                .inner_margin(egui::Margin::symmetric(10_i8, 6_i8))
+                .inner_margin(egui::Margin::symmetric(10, 6))
                 .show(ui, |ui| {
                     ui.set_width(210.0);
                     ui.horizontal(|ui| {

@@ -20,12 +20,17 @@
 #include "VoxelTerrain.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/Pawn.h"
+#include "GameFramework/DefaultPawn.h"
 
 ACivShowGameMode::ACivShowGameMode()
 {
     PrimaryActorTick.bCanEverTick = true;
     TerrainClass = AVoxelTerrain::StaticClass();
     CivilianClass = ACivilianActor::StaticClass();
+    // Without a default pawn the world has no camera → black viewport even when
+    // terrain + civilians spawn. ADefaultPawn is UE5's built-in flycam-style
+    // spectator pawn, auto-possessed by the player controller on BeginPlay.
+    DefaultPawnClass = ADefaultPawn::StaticClass();
 }
 
 void ACivShowGameMode::BeginPlay()

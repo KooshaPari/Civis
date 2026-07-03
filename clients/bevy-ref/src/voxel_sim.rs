@@ -422,6 +422,7 @@ impl Default for VoxelSimState {
                 cells: Vec::new(),
                 temperatures: Vec::new(),
                 saturation: Vec::new(),
+                phase_budget: Vec::new(),
                 dirty_chunks: HashSet::new(),
                 last_changed_chunks: HashSet::new(),
             },
@@ -474,6 +475,7 @@ pub fn build_voxel_world(
         cells: generated.cells,
         temperatures: vec![20; cell_count],
         saturation: vec![0; cell_count],
+        phase_budget: vec![0; cell_count],
         dirty_chunks: HashSet::new(),
         last_changed_chunks: HashSet::new(),
     };

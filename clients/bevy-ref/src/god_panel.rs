@@ -46,14 +46,12 @@ fn draw_god_panel(
     mut contexts: EguiContexts,
     mut state: ResMut<GodPanelState>,
     bridge: Option<Res<LiveBridge>>,
-    mut requests: MessageWriter<GodActionRequest>,
+    mut ran_once: Local<bool>,
 ) {
-    let Some(bridge) = bridge else { return; };
+    if !*ran_once { *ran_once = true; return; }
     if !state.visible { return; }
-    let Ok(ctx) = contexts.ctx_mut() else {
-        return;
-    };
-    let screen = ctx.screen_rect();
+    let Ok(ctx) = contexts.ctx_mut() else { return; };
+    let screen = ctx.content_rect();
 
     let mut fire: Option<String> = None;
     egui::Window::new("God Mode")
@@ -131,14 +129,22 @@ fn draw_god_panel(
             "target_faction": if needs_faction { Some(state.target_faction) } else { None::<u32> },
             "magnitude": state.magnitude,
         });
-        bridge.client.send_rpc("sim.god_action", payload);
-        requests.write(GodActionRequest {
-            action,
-            norm_x: state.target_x,
-            norm_y: state.target_y,
-            target_faction: state.target_faction,
-            magnitude: state.magnitude,
-        });
-        state.status = Some(format!("Invoked: {} (applying…)", ACTIONS[state.selected_action]));
+        if let Some(ref bridge) = bridge {
+            bridge.client.send_rpc("sim.god_action", payload);
+        }
+        state.status = Some(format!("Invoked: {}", ACTIONS[state.selected_action]));
+    }
+
+    // Dispatch a substrate verb button. The `param_builder` produces the
+    // matching `GodToolRequest` JSON shape; `sim.god_action` is the same
+    // JSON-RPC method the legacy Invoke button uses, so this stays on
+    // the exact wire path PR #762 wired up.
+    if let Some(idx) = fire_substrate {
+        let v = &SUBSTRATE_VERBS[idx];
+        let payload = (v.param_builder)(&state);
+        if let Some(ref bridge) = bridge {
+            bridge.client.send_rpc("sim.god_action", payload);
+        }
+        state.status = Some(format!("Fired: {} ({})", v.label, v.verb));
     }
 }

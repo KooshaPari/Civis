@@ -80,7 +80,7 @@ impl TechPrereqGraph {
 mod tests {
     use super::*;
 
-    /// FR-CIV-TECH-PREREQ - tech stays locked until prereqs are met, then unlocks.
+    /// FR-CIV-TECH-PREREQ — tech stays locked until prereqs are met, then unlocks.
     #[test]
     fn tech_stays_locked_until_prereqs_met_then_unlocks() {
         let mut graph = TechPrereqGraph::default();

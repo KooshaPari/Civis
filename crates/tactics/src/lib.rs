@@ -14,6 +14,7 @@ mod formation;
 mod grid_obstacles;
 mod los;
 mod military_phase;
+mod morale;
 mod movement;
 mod operational;
 mod pathfinding;
@@ -38,6 +39,7 @@ pub use formation::{
 pub use grid_obstacles::{grid_cell_blocked, grid_cell_impassable, grid_cell_occupied};
 pub use los::line_of_sight;
 pub use military_phase::MilitaryPhaseConfig;
+pub use morale::*;
 pub use movement::{
     operational_movement_pulse, tick_operational_movement, GridMove, OperationalMovementConfig,
 };
@@ -53,6 +55,10 @@ pub use war_bridge::{
 use civ_voxel::{MaterialId, VoxelWorld, WorldCoord};
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
+// `MilitaryUnit` is defined in this crate's root (`pub struct MilitaryUnit`
+// below) so it is reachable as `civ_tactics::MilitaryUnit` without an extra
+// `pub use`. We keep this comment in place of the previous self-import to
+// avoid the E0255 duplicate-name error.
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 

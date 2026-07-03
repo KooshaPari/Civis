@@ -1,13 +1,13 @@
-﻿#![cfg(all(feature = "bevy", feature = "egui"))]
+#![cfg(all(feature = "bevy", feature = "egui"))]
 
 //! Emergence dashboard panel — criticality readout (P2.3 / FR-CIV-EMERGE-DASH-001).
 //!
 //! Toggle with `E`. Reads `EmergenceHudData` (polled every 10 s via `sim.emergence`
 //! in `bevy_window`, or synced from in-process `SimState` in standalone).
 
+use crate::EmergenceHudData;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
-use crate::EmergenceHudData;
 
 // Palette (mirrors diplomacy_ui.rs / faction_hud.rs)
 const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
@@ -239,7 +239,8 @@ fn metric_bar(
     );
     let fill_w = (bg_rect.width() * fraction.clamp(0.0, 1.0)).max(0.0);
     let fill_rect = egui::Rect::from_min_size(bg_rect.min, egui::vec2(fill_w, bg_rect.height()));
-    ui.painter().rect_filled(fill_rect, egui::CornerRadius::same(3), bar_color);
+    ui.painter()
+        .rect_filled(fill_rect, egui::CornerRadius::same(3), bar_color);
     ui.add_space(4.0);
 }
 

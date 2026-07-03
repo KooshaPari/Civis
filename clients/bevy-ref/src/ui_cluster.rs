@@ -25,8 +25,8 @@ use bevy_egui::egui;
 
 use crate::tool_categories::{Category, SubTool};
 use crate::ui_theme::{
-    liquid_glass_pill, motion_rect, paint_cluster_icon_label, rim_glow_for, DECK_ACCENT,
-    DECK_TEXT, DECK_TEXT_MID, RADIUS_BTN, RADIUS_SM,
+    liquid_glass_pill, motion_rect, paint_cluster_icon_label, rim_glow_for, DECK_ACCENT, DECK_TEXT,
+    DECK_TEXT_MID, RADIUS_BTN, RADIUS_SM,
 };
 
 /// Width of one category block-pill in the bottom toolbar cluster.

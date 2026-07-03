@@ -1,4 +1,4 @@
-//! FR-EMG-025: Trade emergence oracle.
+//! FR-EMG-010: Trade emergence oracle.
 //!
 //! Validates that trade and economy-flow emergence are active in the
 //! simulation — confirming that trading relationships and economic activity
@@ -15,7 +15,7 @@ pub struct TradeOracle;
 
 impl FeatureOracle for TradeOracle {
     fn fr_id(&self) -> &str {
-        "FR-EMG-025"
+        "FR-EMG-010"
     }
 
     fn check(&self, sim: &Simulation) -> OracleVerdict {

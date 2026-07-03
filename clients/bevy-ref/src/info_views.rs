@@ -708,8 +708,8 @@ mod plugin {
     fn draw_nearby_counts_overlay(
         mut contexts: EguiContexts,
         overlay: Res<NearbyCountsOverlay>,
-        attach: Option<Res<AttachMode>>,
-        rig: Option<Res<CameraRig>>,
+        attach: Res<AttachMode>,
+        rig: Res<CameraRig>,
         sim_civilians: Query<(&GlobalTransform, &SimCivilianMarker)>,
         sim_buildings: Query<&GlobalTransform, With<SimBuildingMarker>>,
         live_agents: Query<(&GlobalTransform, &LiveAgentTag)>,
@@ -720,9 +720,8 @@ mod plugin {
             return;
         }
 
-        let Some(rig) = rig else { return; };
         let eye = rig.target;
-        let counts = if attach.as_ref().map(|a| is_server_attach_mode(**a)).unwrap_or(false) {
+        let counts = if is_server_attach_mode(*attach) {
             collect_nearby_counts_live(eye, scene.as_deref(), &live_agents, &live_buildings)
         } else {
             collect_nearby_counts_standalone(eye, &sim_civilians, &sim_buildings)

@@ -9,6 +9,8 @@
 //! - [`bevy::core_pipeline::tonemapping::Tonemapping::AcesFitted`]
 //! - [`bevy::post_process::bloom::Bloom`] (requires HDR)
 //! - [`bevy::pbr::ScreenSpaceAmbientOcclusion`] (auto-requires `DepthPrepass` + `NormalPrepass`)
+//! - [`bevy::pbr::ScreenSpaceReflections`] (baseline screen-space reflections)
+//! - [`bevy::light::VolumetricFog`] (baseline camera-level volumetric fog)
 //! - [`bevy::anti_alias::taa::TemporalAntiAliasing`] (auto-requires `MotionVectorPrepass` etc.)
 //! - [`bevy::render::view::Msaa::Off`] (required by TAA)
 //!
@@ -21,11 +23,11 @@
 use bevy::{
     anti_alias::taa::TemporalAntiAliasing,
     core_pipeline::tonemapping::Tonemapping,
-    light::{CascadeShadowConfigBuilder, DirectionalLight},
-    pbr::ScreenSpaceAmbientOcclusion,
+    light::{CascadeShadowConfigBuilder, DirectionalLight, VolumetricFog},
+    pbr::{ScreenSpaceAmbientOcclusion, ScreenSpaceReflections},
     post_process::bloom::Bloom,
     prelude::*,
-    render::view::{Hdr, Msaa},
+    render::view::{ColorGrading, Hdr, Msaa},
 };
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -36,10 +38,18 @@ use bevy::{
 pub struct PostFxSettings {
     /// Enable `Tonemapping::AcesFitted`.
     pub aces: bool,
+    /// Enable the baseline Bevy tonemapping pass.
+    pub tonemapping: bool,
+    /// Enable the baseline Bevy color grading component.
+    pub color_grading: bool,
     /// Enable `Bloom` (requires HDR; automatically sets `Camera.hdr = true`).
     pub bloom: bool,
     /// Enable `ScreenSpaceAmbientOcclusion`.
     pub ssao: bool,
+    /// Enable `ScreenSpaceReflections`.
+    pub ssr: bool,
+    /// Enable `VolumetricFog`.
+    pub volumetric_fog: bool,
     /// Enable `TemporalAntiAliasing` (requires `Msaa::Off`).
     pub taa: bool,
 }
@@ -48,8 +58,12 @@ impl Default for PostFxSettings {
     fn default() -> Self {
         Self {
             aces: true,
+            tonemapping: true,
+            color_grading: true,
             bloom: true,
             ssao: true,
+            ssr: true,
+            volumetric_fog: true,
             taa: true,
         }
     }
@@ -87,7 +101,21 @@ impl Plugin for PostFxPlugin {
 // ── Systems ───────────────────────────────────────────────────────────────────
 
 /// Runs every frame until a `Camera3d` without `PostFxApplied` is found.
-/// Inserts HDR, tonemapping, bloom, SSAO, and TAA onto that camera once.
+/// Inserts HDR, tonemapping, bloom, SSAO, SSR, and TAA onto that camera once.
+///
+/// FR-CIV-PBR-001 — when enabled, this adds Bevy's built-in SSAO component as
+/// the baseline GI-lite ambient occlusion pass for the main 3D camera.
+///
+/// FR-CIV-PBR-002 — when enabled, this adds Bevy's built-in SSR component as
+/// the baseline screen-space reflection pass for the main 3D camera.
+///
+/// FR-CIV-PBR-003 — when enabled, this adds Bevy's built-in VolumetricFog
+/// component as the baseline volumetric fog/lighting pass for the main 3D
+/// camera.
+///
+/// FR-CIV-PBR-004 — when enabled, this adds Bevy's built-in Tonemapping and
+/// ColorGrading components as the baseline post-FX visual-parity closure for
+/// the main 3D camera.
 fn apply_post_fx(
     mut commands: Commands,
     settings: Res<PostFxSettings>,
@@ -102,18 +130,24 @@ fn apply_post_fx(
     // In Bevy 0.18 HDR is the `Hdr` marker component, not a `Camera` field.
     entity_cmd.insert((Hdr, Msaa::Off, PostFxApplied));
 
-    if settings.aces {
+    if settings.tonemapping && settings.aces {
         entity_cmd.insert(Tonemapping::AcesFitted);
     }
+    if settings.color_grading {
+        entity_cmd.insert(ColorGrading::default());
+    }
     if settings.bloom {
-        entity_cmd.insert(Bloom {
-            intensity: 0.15,
-            ..default()
-        });
+        entity_cmd.insert(Bloom::NATURAL);
     }
     if settings.ssao {
         // #[require] on ScreenSpaceAmbientOcclusion auto-inserts DepthPrepass + NormalPrepass.
         entity_cmd.insert(ScreenSpaceAmbientOcclusion::default());
+    }
+    if settings.ssr {
+        entity_cmd.insert(ScreenSpaceReflections::default());
+    }
+    if settings.volumetric_fog {
+        entity_cmd.insert(VolumetricFog::default());
     }
     if settings.taa {
         // #[require] on TemporalAntiAliasing auto-inserts DepthPrepass, MotionVectorPrepass,
@@ -136,20 +170,11 @@ fn tune_sun_shadows(mut commands: Commands, new_lights: Query<Entity, Added<Dire
         }
         .build();
 
-        commands.entity(light_entity).insert((
-            cascade_config,
-            // Enable shadows on the DirectionalLight component itself.
-            // atmosphere.rs spawns with shadows_enabled=false by default;
-            // overwrite via a separate patch so we don't edit that file.
-        ));
-
-        // Patch shadows_enabled=true on the existing component.
-        // Done via a targeted component insert — Bevy merges fields for
-        // components already present on the entity.
-        commands
-            .entity(light_entity)
-            .entry::<DirectionalLight>()
-            .and_modify(|mut dl| dl.shadows_enabled = true);
+        commands.entity(light_entity).insert(cascade_config);
+        commands.entity(light_entity).insert(DirectionalLight {
+            shadows_enabled: true,
+            ..default()
+        });
     }
 }
 
@@ -163,8 +188,12 @@ mod tests {
     fn post_fx_settings_default_all_true() {
         let s = PostFxSettings::default();
         assert!(s.aces, "aces should default to true");
+        assert!(s.tonemapping, "tonemapping should default to true");
+        assert!(s.color_grading, "color_grading should default to true");
         assert!(s.bloom, "bloom should default to true");
         assert!(s.ssao, "ssao should default to true");
+        assert!(s.ssr, "ssr should default to true");
+        assert!(s.volumetric_fog, "volumetric_fog should default to true");
         assert!(s.taa, "taa should default to true");
     }
 
@@ -176,7 +205,11 @@ mod tests {
         };
         assert!(!s.bloom);
         assert!(s.aces);
+        assert!(s.tonemapping);
+        assert!(s.color_grading);
         assert!(s.ssao);
+        assert!(s.ssr);
+        assert!(s.volumetric_fog);
         assert!(s.taa);
     }
 }

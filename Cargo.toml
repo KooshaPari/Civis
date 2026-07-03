@@ -16,7 +16,6 @@ members = [
   "crates/research",
   "crates/ai",
   "crates/tactics",
-  "crates/powers",
     "crates/planet",
     "crates/protocol-3d",
     "crates/mod-host",
@@ -27,13 +26,15 @@ members = [
   "crates/save-db",
   "crates/legends",
   "crates/civ-emergence-metrics",
-  "crates/emergence-oracle",
   "crates/emergence-migration",
+  "crates/emergence-oracle",
+  "crates/civ-institutions",
+  "crates/infra",
+  "crates/physics-substrate",
   "crates/audio",
   "crates/climate",
-  "crates/i18n",
   "clients/bevy-ref",
-  # "clients/fyrox-ref" - excluded until fyrox 1.x API is wired (see docs/research/fyrox-evaluation.md)
+  # "clients/fyrox-ref", — excluded until fyrox 1.x API is wired (see docs/research/fyrox-evaluation.md)
 ]
 exclude = [
   "clients/godot-ref/rust",
@@ -54,7 +55,7 @@ rust-version = "1.75"
 [profile.dev]
 # Our own crates: opt-level 0 = fastest possible compile (the code we edit).
 opt-level = 0
-# Lightweight line-table debuginfo only - full DWARF is the slowest part of a
+# Lightweight line-table debuginfo only — full DWARF is the slowest part of a
 # dev link. `debug = 1` keeps backtraces/line numbers while shrinking link time.
 debug = 1
 # Split debuginfo out of the object files so the linker copies less. On Windows
@@ -69,7 +70,7 @@ split-debuginfo = "packed"
 # not bloat and incremental re-links stay cheap.
 #
 # `debug = 1` keeps line tables so breakpoints / backtraces inside bevy_ecs,
-# wgpu, and kira work when stepping through a sim issue - without paying for
+# wgpu, and kira work when stepping through a sim issue — without paying for
 # full inline DWARF on the first build.
 [profile.dev.package.bevy]
 opt-level = 3

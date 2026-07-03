@@ -8,7 +8,8 @@ use thiserror::Error;
 
 use crate::engine::Citizen;
 use crate::{
-    Building, CombatDamagePulse, MilitaryUnit, Position, ReplayLog, Simulation, WorldState,
+    Building, CombatDamagePulse, DoctrineLibrary, Institution, MilitaryUnit, Position,
+    ReligiousProfile, ReplayLog, Simulation, WorldState,
 };
 use civ_agents::{ClusterMember, LodTier, Needs, Position3d, Tools, Wardrobe};
 use civ_needs::Health as LifeHealth;
@@ -39,10 +40,13 @@ struct SavedSimulation {
     last_settlement_count: u32,
     last_life_deaths: u32,
     last_tick_combat_pulses: Vec<CombatDamagePulse>,
-    planet: PlanetConfig,
-    moon: MoonConfig,
-    climate: Climate,
-    weather_grid: Vec<WeatherCell>,
+    religious_profiles: BTreeMap<u32, ReligiousProfile>,
+    #[serde(default)]
+    faction_languages: BTreeMap<u32, LanguageState>,
+    settlements: BTreeMap<u32, u32>,
+    institutions: BTreeMap<u32, Institution>,
+    institution_levels_emitted: BTreeSet<(u32, u8, u8)>,
+    faction_doctrines: Vec<DoctrineLibrary>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -241,6 +245,15 @@ fn restore_sim(saved: SavedSimulation) -> Simulation {
     sim.state = saved.state;
     sim.world = restore_world(&saved.world);
     *sim.replay_log_mut() = saved.replay_log;
+    sim.religious_profiles = saved.religious_profiles;
+    sim.restore_institution_state(
+        saved.settlements,
+        saved.institutions,
+        saved
+            .institution_levels_emitted,
+    );
+    sim.restore_faction_doctrines(saved.faction_doctrines);
+    sim.set_faction_languages(saved.faction_languages);
     let _ = sim.restore_mod_guest_state(
         &civ_mod_host::ModGuestStateSave::from_json(&saved.mod_guest_state_json)
             .unwrap_or_default(),
@@ -299,6 +312,24 @@ mod tests {
         assert_eq!(loaded.last_settlement_count, sim.last_settlement_count);
         assert_eq!(loaded.last_life_deaths, sim.last_life_deaths);
         assert_eq!(*loaded.replay_log(), *sim.replay_log());
+    }
+
+    #[test]
+    fn snapshot_world_preserves_military_unit_component() {
+        let mut world = hecs::World::new();
+        world.spawn((MilitaryUnit {
+            unit_type: crate::UnitType::Soldier,
+            strength: crate::Fixed::from_num(4),
+            hp: crate::Fixed::from_num(3),
+            max_hp: crate::Fixed::from_num(4),
+            morale: crate::Fixed::from_num(1),
+            position: crate::Position { x: 1, y: 2 },
+            faction_id: 9,
+        },));
+
+        let saved = snapshot_world(&world);
+        assert_eq!(saved.entities.len(), 1);
+        assert!(saved.entities[0].military_unit.is_some());
     }
 
     /// FR-CIV-014 — a civilian's 3D Y position survives save/load round-trip.

@@ -17,6 +17,7 @@
 //! -CAUSAL-06, -QUERY-07, -NARRATOR-13; NFR-CIV-LEGENDS-SCALE-02, -CONFIG-04, -LOUD-03.
 
 pub mod config;
+pub mod decay;
 pub mod graph;
 pub mod ids;
 pub mod model;
@@ -24,7 +25,16 @@ pub mod query;
 pub mod rumor;
 pub mod worker;
 
+mod chronicle;
+pub use chronicle::{
+    Chronicle as EventChronicle, ChronicleEntry as EventChronicleEntry, ChronicleEventKind,
+};
+
+mod myth_formation;
+pub use myth_formation::{Myth, MythFormationConfig, MythId, MythIndex};
+
 pub use config::LegendsConfig;
+pub use decay::{DecayConfig, Prominence, ProminenceTracker};
 pub use graph::{AggregateKey, EmptySagaReason, GapReport, IngestOutcome, SagaGraph};
 pub use ids::{
     ClusterId, Epoch, LegendEntityId, LegendEventId, NameRef, Provenance, RawEventRef, RegionId,
@@ -36,7 +46,7 @@ pub use model::{
 };
 pub use query::{CausalDag, DigestEvent, EntityRef, EpochDigest, NamedEntitySummary, NamedLegendsResult, Saga, QUERY_API_VERSION};
 pub use rumor::{
-    register_render, render, retell, witness, Chronicle, ChronicleEntry, DefaultNameResolver,
+    register_render, render, retell, witness, DefaultNameResolver,
     HistorianMind, NameResolver, Ocean, Register, Rumor, RumorMill,
 };
 pub use worker::LegendsWorker;

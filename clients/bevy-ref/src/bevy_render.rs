@@ -222,6 +222,7 @@ mod tests {
                 },
             ],
             indices: vec![0, 1, 2, 0, 2, 3],
+            ao: vec![255; 4],
         };
         let mesh = mesh_buffer_to_bevy(&buf);
         // Bevy Mesh exposes attribute count through positions length.

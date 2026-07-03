@@ -8,6 +8,8 @@ use bevy::ui::RelativeCursorPosition;
 use crate::settings_ui::{GameSettings, KeyBinding, ACTION_SELECT_OR_PICK};
 use crate::live_stream::{LiveAgentTag, LiveBuildingTag, LiveGraphParcelTag, LiveChunkTag};
 use crate::minimap::{MinimapCamera, MinimapRoot};
+#[cfg(feature = "egui")]
+use crate::settings_ui::{GameSettings, KeyBinding, ACTION_SELECT_OR_PICK};
 use crate::{
     LiveEntityKind, SelectedLiveEntity, AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
     VOXEL_CHUNK_EDGE,
@@ -274,10 +276,9 @@ fn reset_live_pick_drag_on_press(
 #[cfg(not(feature = "egui"))]
 fn reset_live_pick_drag_on_press(
     mouse: Res<ButtonInput<MouseButton>>,
-    keys: Res<ButtonInput<KeyCode>>,
     mut pointer: ResMut<LivePickPointer>,
 ) {
-    if MouseButton::Left.is_pressed(&keys, &mouse) {
+    if mouse.pressed(MouseButton::Left) {
         pointer.left_dragged = false;
     }
 }

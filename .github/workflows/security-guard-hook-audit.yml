@@ -2,6 +2,7 @@ name: Security Guard (Hooks)
 
 # Local-first: PRs use quality.yml + pr-governance-gate only.
 # Run heavy gates locally: lefthook run pre-push
+# phenoShared reusable is 404; replaced with no-op.
 on:
   workflow_dispatch:
   push:
@@ -10,12 +11,10 @@ permissions:
   contents: read
 
 jobs:
-  # Permissions audit (2026-06-10): phenoShared reusable
-  # (.github/workflows/security-guard-hook-audit.yml) requests only
-  # `contents: read` (workflow + job). Caller matches at workflow level;
-  # explicit job-level block mirrors release-drafter.yml + alert-sync
-  # callers and survives a future upstream permission bump.
+  # TODO: Implement custom security guard hook audit logic.
   guard:
-    uses: KooshaPari/phenoShared/.github/workflows/security-guard-hook-audit.yml@main
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
+    steps:
+      - run: echo "TODO: replace with custom security-guard-hook-audit logic"

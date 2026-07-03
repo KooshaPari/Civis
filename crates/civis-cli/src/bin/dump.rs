@@ -83,7 +83,7 @@ fn run(cli: Cli) -> Result<(), DumpError> {
         } => {
             let dump = read_dump(&input, from_markers)?;
             let policy = resolve_policy(&policy)?;
-            let report = validate_dump(&dump, &policy).with_policy(&policy_name(&policy));
+            let report = validate_dump(&dump, &policy).with_policy(policy_name(&policy));
             emit_report(&report)
         }
         Command::Diff {
@@ -94,6 +94,18 @@ fn run(cli: Cli) -> Result<(), DumpError> {
             count_delta,
             from_markers,
         } => {
+            if resource_tol < 0.0 {
+                return Err(DumpError::InvalidTolerance {
+                    name: "resource_tol".to_string(),
+                    value: resource_tol,
+                });
+            }
+            if placement_tol < 0.0 {
+                return Err(DumpError::InvalidTolerance {
+                    name: "placement_tol".to_string(),
+                    value: placement_tol,
+                });
+            }
             let baseline_dump = read_dump_file(&baseline)?;
             let actual_dump = read_dump(&actual, from_markers)?;
             let tolerance = DumpTolerance {
@@ -102,8 +114,8 @@ fn run(cli: Cli) -> Result<(), DumpError> {
                 count_delta,
             };
             let label = baseline.to_string_lossy().into_owned();
-            let report = compare_to_baseline(&actual_dump, &baseline_dump, &tolerance)
-                .with_baseline(label);
+            let report =
+                compare_to_baseline(&actual_dump, &baseline_dump, &tolerance).with_baseline(label);
             emit_report(&report)
         }
         Command::Extract { input } => {

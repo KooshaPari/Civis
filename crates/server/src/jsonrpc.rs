@@ -1,4 +1,4 @@
-//! JSON-RPC 2.0 request/response types for the CIV-0200 WebSocket protocol.
+﻿//! JSON-RPC 2.0 request/response types for the CIV-0200 WebSocket protocol.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -93,10 +93,6 @@ pub enum JsonRpcMethod {
     SimUpdateSubscription,
     /// Query current game outcome state (`sim.outcome`, FR-CIV-GAME-001).
     SimOutcome,
-    /// Per-entity sentience/psyche snapshot (`psyche.snapshot`, FR-PSYCHE-readapi).
-    PsycheSnapshot,
-    /// Per-tick sentience events (`psyche.events`, FR-PSYCHE-readapi).
-    PsycheEvents,
 }
 
 impl JsonRpcMethod {
@@ -133,8 +129,6 @@ impl JsonRpcMethod {
             Self::SimUnsubscribe => "sim.unsubscribe",
             Self::SimUpdateSubscription => "sim.update_subscription",
             Self::SimOutcome => "sim.outcome",
-            Self::PsycheSnapshot => "psyche.snapshot",
-            Self::PsycheEvents => "psyche.events",
         }
     }
 
@@ -171,8 +165,6 @@ impl JsonRpcMethod {
             "sim.unsubscribe" => Some(Self::SimUnsubscribe),
             "sim.update_subscription" => Some(Self::SimUpdateSubscription),
             "sim.outcome" => Some(Self::SimOutcome),
-            "psyche.snapshot" => Some(Self::PsycheSnapshot),
-            "psyche.events" => Some(Self::PsycheEvents),
             _ => None,
         }
     }
@@ -706,7 +698,7 @@ pub fn military_pins_from_sim(sim: &civ_engine::Simulation) -> Vec<MilitaryPinSn
                 y,
                 unit_type: unit_type_label(unit.unit_type).to_string(),
                 faction: unit.faction_id,
-                strength: unit.hp.to_f64() as f32,
+                strength: unit.hp.to_num::<f64>() as f32,
             }
         })
         .collect()
@@ -778,57 +770,6 @@ pub fn snapshot_fields_from_sim(
     }
 }
 
-/// Convert engine sentience events to wire format.
-pub fn sentience_events_from_sim(sim: &civ_engine::Simulation) -> Vec<SentienceEventWire> {
-    sim.sentience_events()
-        .iter()
-        .map(|ev| SentienceEventWire {
-            lineage_id: ev.lineage_id,
-            cognition_score: ev.cognition_score,
-            crossed: ev.crossed,
-        })
-        .collect()
-}
-
-/// Build per-agent psyche snapshot from the live simulation.
-pub fn psyche_snapshot_from_sim(
-    sim: &civ_engine::Simulation,
-    sentience_events: &[SentienceEventWire],
-) -> Vec<PsycheEntitySnapshotWire> {
-    use civ_agents::{Civilian, Psyche};
-    use std::collections::HashSet;
-
-    let sentient_ids: HashSet<u64> = sentience_events
-        .iter()
-        .filter(|event| event.crossed)
-        .filter_map(|event| event.lineage_id)
-        .collect();
-
-    let mut entities = Vec::new();
-    for (_, (civilian, psyche)) in sim.world.query::<(&Civilian, &Psyche)>().iter() {
-        let is_sentient = sentient_ids.contains(&civilian.id);
-        entities.push(PsycheEntitySnapshotWire {
-            agent_id: civilian.id,
-            cognition_score: sentience_events
-                .iter()
-                .find(|event| event.lineage_id == Some(civilian.id))
-                .map(|event| event.cognition_score)
-                .unwrap_or(0.0),
-            is_sentient,
-            mood_valence: psyche.mood.valence,
-            mood_arousal: psyche.mood.arousal,
-            reactivity: psyche.temperament.reactivity,
-            sociability: psyche.temperament.sociability,
-            risk_tol: psyche.temperament.risk_tol,
-            impulsivity: psyche.temperament.impulsivity,
-            drives: psyche.drives,
-            beliefs: psyche.beliefs,
-            maturity: psyche.maturity,
-        });
-    }
-    entities
-}
-
 /// Precomputed outcome for `sim.outcome` (FR-CIV-GAME-001).
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct OutcomeFields {
@@ -837,8 +778,16 @@ pub struct OutcomeFields {
     pub tick: u64,
 }
 
-/// Tick and optional snapshot fields passed into dispatch.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+/// Live material/height readout for `sim.inspect_tile`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct TileInspectionWire {
+    /// Top non-air material id.
+    pub material: u16,
+    /// Top non-air voxel height in fixed-point world units.
+    pub terrain_height: i64,
+}
+
+#[derive(Debug, Clone)]
 pub struct DispatchContext {
     /// Current bridge tick (may lag until the next broadcast).
     pub tick: u64,
@@ -846,6 +795,8 @@ pub struct DispatchContext {
     pub population: Option<u64>,
     /// Full snapshot when the handler could read the simulation.
     pub snapshot: Option<SnapshotFields>,
+    /// Live material/height probe for `sim.inspect_tile`.
+    pub tile_probe: Option<TileInspectionWire>,
     /// When true, privileged `sim.command` actions require the operator role.
     pub require_role: bool,
     /// Current tick speed multiplier from the bridge (`AppState::speed_multiplier`).
@@ -867,10 +818,6 @@ pub struct DispatchContext {
     pub outcome_fields: Option<OutcomeFields>,
     /// Server-reported last tick wall-clock duration (ms) for sim.perf (FR-CIV-PERF-001).
     pub last_tick_ms: f64,
-    /// Per-entity psyche snapshot for `psyche.snapshot` (FR-PSYCHE-readapi).
-    pub psyche_snapshot: Option<Vec<PsycheEntitySnapshotWire>>,
-    /// Per-tick sentience events for `psyche.events` (FR-PSYCHE-readapi).
-    pub sentience_events: Option<Vec<SentienceEventWire>>,
 }
 
 /// Wire-friendly representation of one sentience event for `psyche.events`.
@@ -1325,7 +1272,8 @@ pub fn parse_replay_path(params: Option<&Value>) -> Result<String, JsonRpcError>
                 std::path::Component::ParentDir
                     | std::path::Component::Prefix(_)
                     | std::path::Component::RootDir
-            ))
+            )
+        })
     {
         return Err(JsonRpcError {
             code: error_code::INVALID_PARAMS,
@@ -1368,9 +1316,7 @@ pub fn resolve_replay_path(
                 let parent = existing
                     .parent()
                     .filter(|p| !p.as_os_str().is_empty())
-                    .ok_or_else(|| {
-                        format!("replay path {:?} has no existing ancestor", joined)
-                    })?;
+                    .ok_or_else(|| format!("replay path {:?} has no existing ancestor", joined))?;
                 if parent == existing {
                     return Err(format!(
                         "replay path {:?} cannot be resolved relative to base {:?}",
@@ -1580,15 +1526,20 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 .and_then(|p| p.get("target_faction"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
-            let result = serde_json::json!({
-                "action": action,
-                "target_faction": target,
-                "stub": true,
-                "tick": ctx.tick,
-            });
-            DispatchPlan {
-                response: JsonRpcResponse::success(req.id, result),
-                effect: DispatchEffect::None,
+            match diplomacy_action_result(&ctx, action, source, target) {
+                Ok(result) => DispatchPlan {
+                    response: JsonRpcResponse::success(req.id, result),
+                    effect: DispatchEffect::DiplomacyAction {
+                        source_faction: u32::try_from(source).unwrap_or(u32::MAX),
+                        target_faction: u32::try_from(target).unwrap_or(u32::MAX),
+                        kind: diplomacy_action_kind(action)
+                            .expect("validated by diplomacy_action_result"),
+                    },
+                },
+                Err(error) => DispatchPlan {
+                    response: JsonRpcResponse::failure(req.id, error),
+                    effect: DispatchEffect::None,
+                },
             }
         }
         JsonRpcMethod::SimSpawnCivilian => {
@@ -1833,26 +1784,6 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 }
             }
         }
-        JsonRpcMethod::PsycheSnapshot => {
-            let psyche_snapshot = ctx
-                .psyche_snapshot
-                .map(|snapshot| serde_json::to_value(snapshot).unwrap_or(Value::Array(Vec::new())))
-                .unwrap_or_else(|| Value::Array(Vec::new()));
-            DispatchPlan {
-                response: JsonRpcResponse::success(req.id, psyche_snapshot),
-                effect: DispatchEffect::None,
-            }
-        }
-        JsonRpcMethod::PsycheEvents => {
-            let sentience_events = ctx
-                .sentience_events
-                .map(|events| serde_json::to_value(events).unwrap_or(Value::Array(Vec::new())))
-                .unwrap_or_else(|| Value::Array(Vec::new()));
-            DispatchPlan {
-                response: JsonRpcResponse::success(req.id, sentience_events),
-                effect: DispatchEffect::None,
-            }
-        }
         JsonRpcMethod::SimTechState => DispatchPlan {
             response: JsonRpcResponse::success(req.id, serde_json::json!({
                 "available": [
@@ -1867,9 +1798,7 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             effect: DispatchEffect::None,
         },
         JsonRpcMethod::SimOutcome => {
-            use civ_engine::check_outcome;
             let outcome_result = {
-                let sim = ctx.snapshot.as_ref().map(|_| ()).is_some();
                 // We only have a ctx snapshot; real outcome check needs the live sim.
                 // The ws_bridge populates outcome_fields before dispatch (see below).
                 ctx.outcome_fields.clone().unwrap_or_else(|| crate::jsonrpc::OutcomeFields {
@@ -2185,6 +2114,7 @@ mod tests {
                 tick: 7,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -2197,6 +2127,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -2227,6 +2160,7 @@ mod tests {
                 tick: 0,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -2239,6 +2173,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(
@@ -2269,6 +2206,7 @@ mod tests {
                 tick: 42,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -2281,6 +2219,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::ResetSimulation { seed: 99 });
@@ -2303,6 +2244,7 @@ mod tests {
                 tick: 3,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -2315,6 +2257,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::ResetSimulation { seed: 0 });
@@ -2335,6 +2280,7 @@ mod tests {
                 tick: 3,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -2347,6 +2293,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2368,6 +2317,7 @@ mod tests {
                 tick: 1,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: true,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -2380,6 +2330,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2401,6 +2354,7 @@ mod tests {
                 tick: 1,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: true,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -2413,6 +2367,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -2430,6 +2387,7 @@ mod tests {
                 tick: 1,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: true,
                 speed_multiplier: 1,
                 connection_role: Some(OPERATOR_ROLE.to_owned()),
@@ -2442,6 +2400,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -2543,6 +2504,7 @@ mod tests {
                 tick: 42,
                 population: Some(1_000_000),
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -2555,6 +2517,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2574,6 +2539,7 @@ mod tests {
                 tick: 1,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -2586,6 +2552,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.response.result, Some(serde_json::json!({ "tick": 1 })));
@@ -2633,6 +2602,7 @@ mod tests {
                 tick: 50,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -2645,6 +2615,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2712,6 +2685,7 @@ mod tests {
                 tick: 100,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -2724,6 +2698,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         let result = plan.response.result.expect("result");
@@ -2761,6 +2738,7 @@ mod tests {
                 tick: 12,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -2773,6 +2751,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2800,6 +2781,7 @@ mod tests {
                 tick: sim.state.tick,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -2812,6 +2794,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2920,6 +2905,7 @@ mod tests {
                 tick: 3,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -2932,6 +2918,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert!(matches!(plan.effect, DispatchEffect::ApplyDamage { .. }));
@@ -2963,6 +2952,7 @@ mod tests {
                 tick: 4,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -2975,6 +2965,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert!(matches!(
@@ -3017,6 +3010,7 @@ mod tests {
                 tick: 10,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -3029,6 +3023,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert!(matches!(
@@ -3099,6 +3096,7 @@ mod tests {
                     researched: vec![],
                     in_progress_tech: None,
                 }),
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -3111,6 +3109,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3179,6 +3180,7 @@ mod tests {
                     researched: vec![],
                     in_progress_tech: None,
                 }),
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -3191,6 +3193,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(
@@ -3264,6 +3269,7 @@ mod tests {
                     researched: vec![],
                     in_progress_tech: None,
                 }),
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -3276,6 +3282,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(
@@ -3312,6 +3321,7 @@ mod tests {
                 tick: 5,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -3324,6 +3334,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(
@@ -3353,6 +3366,7 @@ mod tests {
                 tick: 0,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -3365,6 +3379,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(
@@ -3392,6 +3409,7 @@ mod tests {
                 tick: 0,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -3404,6 +3422,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3424,6 +3445,7 @@ mod tests {
                 tick: 0,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -3436,6 +3458,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3498,6 +3523,7 @@ mod tests {
                 tick: 0,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: true,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -3510,6 +3536,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3570,6 +3599,7 @@ mod tests {
                 tick: 0,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -3582,6 +3612,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::SetSpeed { multiplier: 4 });
@@ -3603,6 +3636,7 @@ mod tests {
                 tick: 0,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -3615,6 +3649,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3641,6 +3678,7 @@ mod tests {
                 tick: 0,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 4,
                 connection_role: None,
@@ -3653,6 +3691,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3680,6 +3721,7 @@ mod tests {
                 tick: 1,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -3692,6 +3734,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(
@@ -3717,6 +3762,7 @@ mod tests {
                 tick: 0,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -3729,6 +3775,9 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
+                psyche_snapshot: None,
+                sentience_events: None,
+                religion_state: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3830,14 +3879,6 @@ mod tests {
             Some(JsonRpcMethod::SaveList)
         );
         assert_eq!(
-            JsonRpcMethod::parse_name("psyche.snapshot"),
-            Some(JsonRpcMethod::PsycheSnapshot)
-        );
-        assert_eq!(
-            JsonRpcMethod::parse_name("psyche.events"),
-            Some(JsonRpcMethod::PsycheEvents)
-        );
-        assert_eq!(
             JsonRpcMethod::parse_name("sim.emergence"),
             Some(JsonRpcMethod::SimEmergence)
         );
@@ -3889,10 +3930,10 @@ mod tests {
         // Linux/macOS absolute path.
         assert!(parse_replay_path(Some(&json!({"path":"/etc/passwd"}))).is_err());
         // Windows-style absolute paths with drive prefix.
-        assert!(
-            parse_replay_path(Some(&json!({"path":"C:\\Windows\\System32\\drivers\\etc\\hosts"})))
-                .is_err()
-        );
+        assert!(parse_replay_path(Some(
+            &json!({"path":"C:\\Windows\\System32\\drivers\\etc\\hosts"})
+        ))
+        .is_err());
         // Backslash-leading UNC-style path is rejected.
         assert!(parse_replay_path(Some(&json!({"path":"\\\\server\\share\\file"}))).is_err());
         // Just the root.
@@ -4029,7 +4070,7 @@ mod tests {
     #[test]
     fn emergence_sample_fields_from_carries_criticality_metrics() {
         use civ_emergence_metrics::branching::BranchingRegime;
-        use civ_emergence_metrics::dashboard::EmergenceDashboard;
+        use civ_emergence_metrics::dashboard::TileDashboard;
         use civ_engine::emergence_metrics::EmergenceSample;
 
         let sample = EmergenceSample {
@@ -4042,7 +4083,7 @@ mod tests {
             histogram_total: 0,
             histogram_populated_bins: 0,
             sample_dur_us: 0,
-            dashboard: EmergenceDashboard::default(),
+            dashboard: TileDashboard::default(),
             branching_sigma: 0.0,
             branching_sigma_score: 0.0,
             branching_window: 0,
@@ -4147,6 +4188,7 @@ mod tests {
                 tick: 10,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -4156,8 +4198,6 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
-                psyche_snapshot: None,
-                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -4179,6 +4219,7 @@ mod tests {
                 tick: 0,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -4188,8 +4229,6 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
-                psyche_snapshot: None,
-                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -4210,6 +4249,7 @@ mod tests {
                 tick: 42,
                 population: None,
                 snapshot: None,
+                tile_probe: None,
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
@@ -4219,8 +4259,6 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
-                psyche_snapshot: None,
-                sentience_events: None,
                 outcome_fields: None,
             },
         );
@@ -4231,4 +4269,3 @@ mod tests {
         assert!(available.as_array().unwrap().len() > 0, "available should be non-empty");
     }
 }
-

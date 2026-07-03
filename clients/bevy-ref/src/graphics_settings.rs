@@ -61,6 +61,7 @@ use bevy::post_process::bloom::Bloom;
 use bevy::post_process::motion_blur::MotionBlur;
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::light::DirectionalLightShadowMap;
+use bevy::post_process::{bloom::Bloom, motion_blur::MotionBlur};
 use bevy::prelude::*;
 use bevy::render::camera::TemporalJitter;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
@@ -620,8 +621,11 @@ pub fn apply_gfx_settings(
         // MSAA — only applicable when not TAA
         if let Some(mut msaa) = msaa_opt {
             let desired = match settings.aa.msaa_samples() {
-                Some(s) => Msaa::from_samples(s),
+                Some(2) => Msaa::Sample2,
+                Some(4) => Msaa::Sample4,
+                Some(8) => Msaa::Sample8,
                 None => Msaa::Off,
+                Some(_) => Msaa::Off,
             };
             if *msaa != desired {
                 *msaa = desired;

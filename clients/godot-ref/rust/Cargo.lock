@@ -3,6 +3,16 @@
 version = 4
 
 [[package]]
+name = "Inflector"
+version = "0.11.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe438c63458706e03479442743baae6c88256498e6431708f6dfc520a26515d3"
+dependencies = [
+ "lazy_static",
+ "regex",
+]
+
+[[package]]
 name = "addr2line"
 version = "0.26.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -109,6 +119,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
+name = "az"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be5eb007b7cacc6c660343e96f650fedf4b5a77512399eb952ca6642cf8d13f7"
+
+[[package]]
 name = "base64"
 version = "0.21.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -127,23 +143,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06"
 
 [[package]]
-name = "bincode"
-version = "2.0.1"
+name = "bincode-next"
+version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "36eaf5d7b090263e8150820482d5d93cd964a81e4019913c972f4edcc6edb740"
+checksum = "1d6626829353ae29293be5c86f42de5f0468bc758af074b0c7d08f07e538ccbc"
 dependencies = [
- "bincode_derive",
+ "bincode_derive-next",
+ "pastey",
+ "rapidhash",
  "serde",
- "unty",
+ "unty-next",
 ]
 
 [[package]]
-name = "bincode_derive"
-version = "2.0.1"
+name = "bincode_derive-next"
+version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf95709a440f45e986983918d0e8a1f30a9b1df04918fc828670606804ac3c09"
+checksum = "409532b1da3be643427e49c2f79e0c47d445f695e1b028270d9e80e9044d7d1c"
 dependencies = [
- "virtue",
+ "virtue-next",
 ]
 
 [[package]]
@@ -266,6 +284,7 @@ version = "0.1.0"
 dependencies = [
  "civ-diffusion",
  "civ-genetics",
+ "civ-needs",
  "civ-species",
  "civ-voxel",
  "hecs",
@@ -277,9 +296,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "civ-audio"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "tracing",
+]
+
+[[package]]
 name = "civ-build"
 version = "0.1.0"
 dependencies = [
+ "civ-economy",
  "civ-voxel",
  "rand",
  "rand_chacha",
@@ -300,25 +328,45 @@ dependencies = [
 name = "civ-economy"
 version = "0.1.0"
 dependencies = [
+ "civ-voxel",
+ "glam 0.27.0",
  "serde",
  "tracing",
+]
+
+[[package]]
+name = "civ-emergence-metrics"
+version = "0.1.0"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
 name = "civ-engine"
 version = "0.1.0"
 dependencies = [
+ "bincode-next",
  "blake3",
  "chrono",
  "civ-agents",
+ "civ-audio",
  "civ-build",
  "civ-diffusion",
  "civ-economy",
+ "civ-emergence-metrics",
+ "civ-genetics",
+ "civ-institutions",
+ "civ-legends",
  "civ-mod-host",
+ "civ-needs",
  "civ-planet",
  "civ-save-db",
+ "civ-species",
  "civ-tactics",
+ "civ-traffic",
  "civ-voxel",
+ "fixed",
+ "glam 0.30.10",
  "hecs",
  "rand",
  "rand_chacha",
@@ -342,7 +390,30 @@ version = "0.1.0"
 dependencies = [
  "rand",
  "rand_chacha",
+ "ron",
  "serde",
+ "thiserror 1.0.69",
+ "tracing",
+]
+
+[[package]]
+name = "civ-institutions"
+version = "0.1.0"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "civ-legends"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "petgraph",
+ "rand",
+ "serde",
+ "serde_json",
+ "smallvec",
+ "tracery",
  "tracing",
 ]
 
@@ -362,6 +433,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "civ-needs"
+version = "0.1.0"
+dependencies = [
+ "civ-genetics",
+ "rand",
+ "rand_chacha",
+ "serde",
+]
+
+[[package]]
 name = "civ-planet"
 version = "0.1.0"
 dependencies = [
@@ -373,7 +454,6 @@ dependencies = [
 name = "civ-protocol-3d"
 version = "0.1.0"
 dependencies = [
- "bincode",
  "civ-agents",
  "civ-build",
  "civ-planet",
@@ -381,6 +461,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tracing",
+ "zstd",
 ]
 
 [[package]]
@@ -417,10 +498,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "civ-traffic"
+version = "0.1.0"
+dependencies = [
+ "civ-voxel",
+ "rand",
+ "rand_chacha",
+ "serde",
+]
+
+[[package]]
 name = "civ-voxel"
 version = "0.1.0"
 dependencies = [
- "phenotype-gfx",
+ "bincode-next",
+ "glam 0.30.10",
+ "phenotype-voxel",
  "serde",
  "tracing",
 ]
@@ -689,6 +782,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0a5c400df2834b80a4c3327b3aad3a4c4cd4de0629063962b03235697506a28"
 
 [[package]]
+name = "crunchy"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "460fbee9c2c2f33933d720630a6a0bac33ba7053db5344fac858d4b8952d77d5"
+
+[[package]]
 name = "crypto-common"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -919,6 +1018,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5baebc0774151f905a1a2cc41989300b1e6fbb29aff0ceffa1064fdd3088d582"
 
 [[package]]
+name = "fixed"
+version = "1.31.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9af2cbf772fa6d1c11358f92ef554cb6b386201210bcf0e91fb7fba8a907fb40"
+dependencies = [
+ "az",
+ "bytemuck",
+ "half",
+ "serde",
+ "typenum",
+]
+
+[[package]]
 name = "fixedbitset"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1090,6 +1202,15 @@ dependencies = [
 
 [[package]]
 name = "glam"
+version = "0.27.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9e05e7e6723e3455f4818c7b26e855439f7546cf617ef669d1adedb8669e5cb9"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "glam"
 version = "0.29.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8babf46d4c1c9d92deac9f7be466f76dfc4482b6452fc5024b5e8daf6ffeb3ee"
@@ -1177,6 +1298,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "venial",
+]
+
+[[package]]
+name = "half"
+version = "2.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ea2d84b969582b4b1864a92dc5d27cd2b77b622a8d79306834f1be5ba20d84b"
+dependencies = [
+ "cfg-if",
+ "crunchy",
+ "zerocopy",
 ]
 
 [[package]]
@@ -1515,6 +1647,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 
 [[package]]
+name = "pastey"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ee67f1008b1ba2321834326597b8e186293b049a023cdef258527550b9935b4"
+
+[[package]]
 name = "pbkdf2"
 version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1525,6 +1663,49 @@ dependencies = [
 ]
 
 [[package]]
+name = "pest"
+version = "2.8.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e0848c601009d37dfa3430c4666e147e49cdcf1b92ecd3e63657d8a5f19da662"
+dependencies = [
+ "memchr",
+ "ucd-trie",
+]
+
+[[package]]
+name = "pest_derive"
+version = "2.8.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11f486f1ea21e6c10ed15d5a7c77165d0ee443402f0780849d1768e7d9d6fe77"
+dependencies = [
+ "pest",
+ "pest_generator",
+]
+
+[[package]]
+name = "pest_generator"
+version = "2.8.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8040c4647b13b210a963c1ed407c1ff4fdfa01c31d6d2a098218702e6664f94f"
+dependencies = [
+ "pest",
+ "pest_meta",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "pest_meta"
+version = "2.8.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "89815c69d36021a140146f26659a81d6c2afa33d216d736dd4be5381a7362220"
+dependencies = [
+ "pest",
+ "sha2",
+]
+
+[[package]]
 name = "petgraph"
 version = "0.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1532,12 +1713,14 @@ checksum = "b4c5cc86750666a3ed20bdaf5ca2a0344f9c67674cae0515bec2da16fbaa47db"
 dependencies = [
  "fixedbitset",
  "indexmap",
+ "serde",
+ "serde_derive",
 ]
 
 [[package]]
 name = "phenotype-gfx"
 version = "0.2.0"
-source = "git+https://github.com/KooshaPari/phenotype-gfx.git#3f7587b18d0fee7da03b2c261cf7a3440c649502"
+source = "git+https://github.com/KooshaPari/phenotype-gfx.git?rev=7ed27211554f5ba25d3a79c54c73262db6e160b1#7ed27211554f5ba25d3a79c54c73262db6e160b1"
 dependencies = [
  "bytemuck",
  "glam 0.29.3",
@@ -1545,6 +1728,14 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.18",
  "uuid",
+]
+
+[[package]]
+name = "phenotype-voxel"
+version = "0.2.0"
+source = "git+https://github.com/KooshaPari/phenotype-gfx.git?rev=7ed27211554f5ba25d3a79c54c73262db6e160b1#7ed27211554f5ba25d3a79c54c73262db6e160b1"
+dependencies = [
+ "phenotype-gfx",
 ]
 
 [[package]]
@@ -1677,6 +1868,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
 dependencies = [
  "getrandom 0.2.17",
+]
+
+[[package]]
+name = "rapidhash"
+version = "4.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32b266a82f4aa99bb5c25e28d11cc44ace63d91adbcbcee4d323e2ae3d49ef37"
+dependencies = [
+ "rustversion",
 ]
 
 [[package]]
@@ -2004,6 +2204,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "split_preserve"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c52e4b793c51b8362e64eb396144772ddc6dbe8e41a1e4dc68b79377c17d6729"
+
+[[package]]
 name = "stable_deref_trait"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2214,6 +2420,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "756daf9b1013ebe47a8776667b466417e2d4c5679d441c26230efd9ef78692db"
 
 [[package]]
+name = "tracery"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2bb5a38f1f0384276c08b16facdcb05d64e525f32d5f906ba73e6716901894c8"
+dependencies = [
+ "Inflector",
+ "lazy_static",
+ "pest",
+ "pest_derive",
+ "rand",
+ "serde",
+ "serde_json",
+ "split_preserve",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "tracing"
 version = "0.1.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2277,6 +2500,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
 
 [[package]]
+name = "ucd-trie"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2896d95c02a80c6d6a5d6e953d479f5ddf2dfdb6a244441010e373ac0fb88971"
+
+[[package]]
 name = "unicode-ident"
 version = "1.0.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2301,10 +2530,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "673aac59facbab8a9007c7f6108d11f63b603f7cabff99fabf650fea5c32b861"
 
 [[package]]
-name = "unty"
-version = "0.0.4"
+name = "unty-next"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d49784317cd0d1ee7ec5c716dd598ec5b4483ea832a2dced265471cc0f690ae"
+checksum = "16062d030850f35054e37746427b9febb74a2f24c9c6dd6fa2d0c13c5f53221e"
 
 [[package]]
 name = "uuid"
@@ -2347,10 +2576,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
-name = "virtue"
-version = "0.0.18"
+name = "virtue-next"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "051eb1abcf10076295e815102942cc58f9d5e3b4560e46e53c21e8ff6f3af7b1"
+checksum = "8d5208a9710a6ca1c2da0d64289a5dcca13deb05afdedf651f4e11bcd9fc53eb"
 
 [[package]]
 name = "wasi"

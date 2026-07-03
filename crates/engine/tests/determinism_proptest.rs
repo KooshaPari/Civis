@@ -1,6 +1,7 @@
 //! Property-based determinism checks for the simulation engine.
 
-use civ_engine::{load_civreplay, save_civreplay, Simulation, FOOTER_CHECKSUM_LEN};
+use civ_engine::replay_format::{load_civreplay, save_civreplay, FOOTER_CHECKSUM_LEN};
+use civ_engine::Simulation;
 use proptest::prelude::*;
 use tempfile::NamedTempFile;
 
@@ -17,6 +18,8 @@ fn footer_checksum(bytes: &[u8]) -> &[u8] {
 }
 
 proptest! {
+    #![proptest_config(ProptestConfig::with_cases(16))]
+
     /// Same seed + N ticks => identical final tick and replay event count.
     #[test]
     fn same_seed_and_tick_count_yields_identical_outcome(

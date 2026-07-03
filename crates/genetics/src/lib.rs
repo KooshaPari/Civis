@@ -12,10 +12,15 @@ use rand::Rng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
+pub mod disease_resistance;
 pub mod seeds;
 pub mod sentience;
 pub mod traits;
 
+pub use disease_resistance::{
+    evolve_resistance, inherit_disease_resistance, mean_resistance, selection_step,
+    survives_exposure, DiseaseResistance, DiseaseSelection,
+};
 pub use seeds::{
     all_named_seeds, archetype_dna, archetype_seed, choose_named_seed, divergence_preset,
     effective_mutation_rate, effective_spawn_divergence, example_seed_set, mutate_with_divergence,
@@ -24,7 +29,7 @@ pub use seeds::{
     SeedDefinition, SeedError, SeedId, SeedLibrary, SeedSet, WeightedNamedSeed, ALL_NAMED_SEEDS,
     DIVERGENCE_PRESETS,
 };
-pub use traits::{inherit_trait, TraitInheritanceConfig};
+pub use traits::{inherit_trait_vector, TraitInheritance, TraitVector};
 
 /// Schema version for `civ-genetics`. Bumped on breaking changes.
 pub const SCHEMA_VERSION: &str = "0.1.0-stub";

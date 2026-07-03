@@ -29,13 +29,24 @@ async fn main() {
     let autoload = std::env::var("CIV_AUTOLOAD")
         .ok()
         .is_some_and(|value| matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"));
-    let sim = Arc::new(Mutex::new(initial_simulation(&saves_dir, autoload).await));
+    let map_seed = std::env::var("CIVIS_MAP_SEED")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(42);
+    let sim = Arc::new(Mutex::new(
+        initial_simulation(&saves_dir, autoload, map_seed).await,
+    ));
+    // require_role defaults to true (deny-by-default); operators may disable
+    // via the CIVIS_REQUIRE_ROLE=false env var in permissive local-only setups.
+    let require_role = std::env::var("CIVIS_REQUIRE_ROLE")
+        .map(|v| v.to_ascii_lowercase() != "false")
+        .unwrap_or(true);
 
     run_ws_bridge(
         WsBridgeConfig {
             addr,
             max_clients,
-            require_role: false,
+            require_role,
             tick_broadcast_format: TickBroadcastFormat::from_env(),
             saves_dir,
             replays_dir,
@@ -49,10 +60,14 @@ async fn main() {
 ///
 /// When `autoload` is true and `saves_dir` contains a recognizable save, the
 /// freshest entry is loaded via [`CivSaveBundle::load`]. Otherwise the engine
-/// starts from [`Simulation::default`].
-async fn initial_simulation(saves_dir: &std::path::Path, autoload: bool) -> Simulation {
+/// starts from [`Simulation::with_seed`], using `CIVIS_MAP_SEED` (default 42).
+async fn initial_simulation(
+    saves_dir: &std::path::Path,
+    autoload: bool,
+    map_seed: u64,
+) -> Simulation {
     if !autoload {
-        return Simulation::default();
+        return Simulation::with_seed(map_seed);
     }
     let Some(path) = (match most_recent_save_path(saves_dir) {
         Ok(path) => path,

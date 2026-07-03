@@ -4,7 +4,7 @@
 
 **Transport:** connect to `ws://<bind>/ws`, send JSON-RPC 2.0 requests as WebSocket **text** frames. Tick pushes (`Frame3d`) are separate broadcasts, not JSON-RPC responses.
 
-**Role gate:** when `WsBridgeConfig::require_role` is true (env `CIVIS_REQUIRE_ROLE=1`), privileged methods require effective role `"operator"` from, in order: `params.role` on the request, then connection role from the `x-civis-role` WebSocket header or first-message `params.role`. Error: `-32003` (`FORBIDDEN`) with `data.required_role: "operator"`.
+**Role gate:** when `WsBridgeConfig::require_role` is true (env `CIVIS_REQUIRE_ROLE=1`), privileged methods require effective role `"operator"` from `params.role` on the request (the `x-civis-role` WebSocket header is ignored for privilege decisions). Error: `-32003` (`FORBIDDEN`) with `data.required_role: "operator"`.
 
 ---
 
@@ -41,6 +41,22 @@
 | `save.slot` | — | `{ "slot_name": "slot-1" … "slot-5" }` | `{ "saved": true, "slot_name", "tick", "path" }` (writes `{saves_dir}/{slot_name}.civsave.zst`) | [`ws_jsonrpc_save_slot_roundtrip`](../../crates/server/tests/ws_smoke.rs) |
 | `save.load` | — | `{ "slot_name": "slot-1" … "slot-5" }` | `{ "loaded": true, "slot_name", "tick" }` | [`ws_jsonrpc_save_slot_roundtrip`](../../crates/server/tests/ws_smoke.rs) |
 | `save.list` | — | `{}` or omit | `[ { "name", "tick", "save_type": "slot" \| "auto" \| "manual" }, … ]` | [`ws_jsonrpc_save_slot_roundtrip`](../../crates/server/tests/ws_smoke.rs) |
+| `sim.emergence` | — | `{}` or omit | Emergence state payload for the active simulation | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
+| `emergence.dashboard` | — | `{}` or omit | Dashboard-ready emergence metrics | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
+| `emergence.metrics` | — | `{}` or omit | Raw emergence metrics payload | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
+| `sim.inspect_tile` | — | Tile coordinate params accepted by bridge parser | Tile inspection payload | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
+| `sim.perf` | — | `{}` or omit | Simulation performance counters | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
+| `sim.diplomacy_action` | **operator** | Diplomacy action params accepted by bridge parser | Diplomacy action result | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
+| `sim.queue_research` | **operator** | Research queue params accepted by bridge parser | Research queue result | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
+| `sim.tech_state` | — | `{}` or omit | Technology/research state payload | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
+| `sim.subscribe` | — | Subscription params accepted by bridge parser | Subscription acceptance/update payload | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
+| `sim.unsubscribe` | — | Subscription id/filter params accepted by bridge parser | Unsubscribe result | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
+| `sim.update_subscription` | — | Subscription update params accepted by bridge parser | Subscription update result | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
+| `sim.outcome` | — | `{}` or omit | Scenario/outcome state payload | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
+| `sim.god_action` | **operator** | God-tool action params accepted by bridge parser | God-tool action receipt/result | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
+| `psyche.snapshot` | — | `{}` or omit | Psyche snapshot payload | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
+| `psyche.events` | — | Event query params accepted by bridge parser | Psyche event stream/query payload | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
+| `sim.religion_state` | — | `{}` or omit | Religion state payload | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
 
 **Invalid `sim.command` action:** `-32601` `Method not found` (not `-32602`).
 

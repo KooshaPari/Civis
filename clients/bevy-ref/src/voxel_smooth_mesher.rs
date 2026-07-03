@@ -189,7 +189,12 @@ fn build_surface_nets(
         .into_iter()
         .filter_map(|i| u32::try_from(i).ok())
         .collect();
-    MeshBuffer { vertices, indices }
+    let ao = vec![255; vertices.len()];
+    MeshBuffer {
+        vertices,
+        indices,
+        ao,
+    }
 }
 
 fn build_shared_solid_density(

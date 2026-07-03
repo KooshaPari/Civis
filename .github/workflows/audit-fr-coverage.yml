@@ -1,0 +1,31 @@
+name: audit-fr-coverage
+
+on:
+  push:
+    branches: [fix/workspace-bevy-ref-holocron-dep, main]
+  pull_request:
+    branches: [fix/workspace-bevy-ref-holocron-dep, main]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run FR/NFR coverage audit
+        run: |
+          chmod +x Tools/audit-fr-coverage/audit.sh
+          bash Tools/audit-fr-coverage/audit.sh docs/traceability
+      - name: Coverage regression gate
+        run: |
+          bash Tools/audit-fr-coverage/audit.sh docs/traceability > coverage.txt
+          # Fail if any FR row has Status: dormant AND Family: emergence batch
+          # (these should be promoted as code lands)
+          DORMANT_BATCH=$(grep -c "| dormant |" coverage.txt || true)
+          echo "dormant_batch_rows=$DORMANT_BATCH"
+          if [ "$DORMANT_BATCH" -gt 200 ]; then
+            echo "::error::FR batch dormant count $DORMANT_BATCH exceeds threshold (200)"
+            exit 1
+          fi

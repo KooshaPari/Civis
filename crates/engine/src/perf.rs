@@ -35,7 +35,10 @@ impl TickProfile {
     /// The single slowest phase this tick, if any were recorded.
     #[must_use]
     pub fn slowest(&self) -> Option<PhaseTiming> {
-        self.phases.iter().copied().max_by_key(|&(_, micros)| micros)
+        self.phases
+            .iter()
+            .copied()
+            .max_by_key(|&(_, micros)| micros)
     }
 }
 

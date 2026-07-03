@@ -25,6 +25,8 @@
 
 use crate::{Dna, DnaClass};
 use rand::Rng;
+#[cfg(test)]
+use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 

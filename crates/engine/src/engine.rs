@@ -7069,16 +7069,6 @@ pub struct SimulationSnapshot {
 // *not* phase methods and remain in this trailing impl block because
 // they have no primary-block duplicates.
 impl Simulation {
-    /// Adjust cohesion for a faction (no-op stub used by tests).
-    pub fn add_cohesion(&mut self, _delta: i64) {}
-    /// Lookup the ECS entity id for a faction agent (no-op stub).
-    pub fn agent_entity(&self, agent_id: u64) -> Option<Entity> {
-        self.world
-            .query::<&AgentCivilian>()
-            .iter()
-            .find_map(|(entity, civilian)| (civilian.id == agent_id).then_some(entity))
-    }
-
     /// Snapshot all civilian agent identity components.
     #[must_use]
     pub fn all_agents(&self) -> Vec<AgentCivilian> {

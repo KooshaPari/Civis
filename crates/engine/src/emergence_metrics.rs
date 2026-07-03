@@ -49,7 +49,10 @@ use civ_emergence_metrics::branching::{
     classify_regime, rolling_mean_sigma, sigma_a, sigma_score, BranchingLedger, BranchingRegime,
     DEFAULT_BRANCHING_WINDOW, SIGMA_SUBCRITICAL, SIGMA_SUPERCRITICAL,
 };
-use civ_emergence_metrics::{criticality_indicator, coupling_mi_estimate, novelty_score, CriticalityInputs, TileDashboard};
+use civ_emergence_metrics::{
+    criticality_indicator, coupling_mi_estimate, novelty_score, CriticalityInputs,
+    EmergenceDashboard, TileDashboard,
+};
 use civ_emergence_metrics::power_law::PowerLawFit;
 use civ_emergence_metrics::shannon::ShannonEntropy;
 use civ_emergence_metrics::structure::{ComponentSummary, Grid, StructureCount};
@@ -848,7 +851,7 @@ fn compute_dashboard(sim: &Simulation) -> (TileDashboard, f32) {
         .map(|event| diplomacy_kind_score(event.kind))
         .collect();
 
-    let dashboard = TileDashboard::compute(
+    let summary = EmergenceDashboard::compute(
         &cluster_sizes,
         &ideologies,
         sentient_count,
@@ -856,6 +859,16 @@ fn compute_dashboard(sim: &Simulation) -> (TileDashboard, f32) {
         &mood_valences,
         &diplomacy_pair_scores,
     );
+    let dashboard = TileDashboard {
+        cluster_entropy: summary.cluster_entropy,
+        ideology_homophily: summary.ideology_homophily,
+        sentience_fraction: summary.sentience_fraction,
+        psyche_stability: summary.psyche_stability,
+        diplomacy_tension: summary.diplomacy_tension,
+        novelty_score: 0.0,
+        coupling_mi: 0.0,
+        criticality_indicator: 0.0,
+    };
     (dashboard, power_law_alpha)
 }
 

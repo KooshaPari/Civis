@@ -256,7 +256,7 @@ fn is_low_elevation(
     biome_low || voxel_low
 }
 
-fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) {
+fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) -> DisasterImpact {
     sim.last_tick_disaster_pulses.push(DisasterPulse { kind, pos });
     let radius = radius_for(kind);
     let affected = positions_in_radius(pos, radius);

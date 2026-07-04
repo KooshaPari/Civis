@@ -4381,7 +4381,7 @@ impl Simulation {
                 .copied()
                 .unwrap_or(0.0);
             // TODO: wire audio system to derive proper music cues
-            cues.insert(cluster_id, MusicCue { id: cluster_id });
+            cues.insert(cluster_id, MusicCue { id: cluster_id as u32 });
         }
         self.last_tick_music_cues = cues;
 
@@ -5192,7 +5192,7 @@ impl Simulation {
             let supply_units = supply.max(Fixed::ZERO).raw / crate::SCALE;
             let demand_units = demand.max(Fixed::ZERO).raw / crate::SCALE;
             self.market_state
-                .apply_pressure(resource_market_key(resource), supply_units, demand_units);
+                .apply_pressure(resource_market_key(resource_type_to_good(resource)), supply_units, demand_units);
             let margin = (demand - supply).max(Fixed::ZERO);
             let profit = quantity * (Fixed::from_num(1) + margin / Fixed::from_num(100));
 
@@ -6392,6 +6392,15 @@ fn settlement_member_counts(world: &World) -> BTreeMap<u64, u32> {
         *counts.entry(member.cluster.0).or_insert(0) += 1;
     }
     counts
+}
+
+fn resource_type_to_good(resource: ResourceType) -> civ_economy::Good {
+    match resource {
+        ResourceType::Food => Good::Food,
+        ResourceType::Wood => Good::Wood,
+        ResourceType::Metal => Good::Metal,
+        ResourceType::Energy => Good::Tools,
+    }
 }
 
 fn resource_market_key(resource: civ_economy::Good) -> &'static str {

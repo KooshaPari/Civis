@@ -24,6 +24,8 @@
     clippy::nonminimal_bool
 )]
 
+#[cfg(all(feature = "bevy", feature = "models"))]
+pub mod animation;
 #[cfg(feature = "bevy")]
 pub mod animation;
 #[cfg(feature = "bevy")]
@@ -135,8 +137,6 @@ pub mod atmosphere;
 pub mod camera;
 #[cfg(feature = "bevy")]
 pub mod decorations;
-#[cfg(all(feature = "bevy", feature = "models"))]
-pub mod animation;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod diplomacy_ui;
 pub mod outcome_overlay;
@@ -152,8 +152,8 @@ pub mod event_feed;
 pub mod lighting_gi;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod game_ui;
-#[cfg(all(feature = "bevy", feature = "models"))]
-pub mod gltf_models;
+#[cfg(feature = "bevy")]
+pub mod procedural_actor;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod graphics_settings;
 pub mod game_laws;
@@ -210,8 +210,6 @@ pub mod tool_categories;
 pub mod ui_cluster;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod ui_holo;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod ui_theme;
 #[cfg(all(feature = "bevy", feature = "vfx"))]
 pub mod vfx;
 #[cfg(all(feature = "bevy", feature = "voxel"))]
@@ -316,6 +314,7 @@ pub struct WsSpectatorMeta {
 
 /// WebSocket session state exposed to live attach HUD and event feed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub enum WsConnectionState {
     /// Active stream to `civ-server`.
     Connected,
@@ -327,7 +326,7 @@ pub enum WsConnectionState {
 }
 
 /// Streamed entity kind for viewport pick and HUD labels.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum LiveEntityKind {
     /// Streamed agent marker.
     Agent,
@@ -338,7 +337,7 @@ pub enum LiveEntityKind {
 }
 
 /// A single streamed entity selected in the live viewport.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SelectedLiveEntity {
     /// Entity category.
     pub kind: LiveEntityKind,
@@ -357,6 +356,27 @@ pub fn format_live_selection(entity: SelectedLiveEntity) -> String {
     format!("sel: {label} #{}", entity.id)
 }
 
+fn format_live_pick_context(
+    focused_chunk: Option<ChunkId>,
+    selected_live: Option<SelectedLiveEntity>,
+) -> Option<String> {
+    let mut parts = Vec::with_capacity(2);
+    if let Some(chunk) = focused_chunk {
+        parts.push(format!("chunk {}", chunk.0));
+    }
+    if let Some(selection) = selected_live {
+        let rendered = format_live_selection(selection);
+        let selection = rendered.strip_prefix("sel: ").unwrap_or(&rendered);
+        parts.push(selection.to_string());
+    }
+
+    if parts.is_empty() {
+        None
+    } else {
+        Some(format!("pick: {}", parts.join(" / ")))
+    }
+}
+
 /// Parse `sim.snapshot` JSON-RPC text (not F3D0 tick frames).
 #[cfg(any(test, feature = "bevy"))]
 #[must_use]
@@ -369,7 +389,7 @@ pub fn parse_jsonrpc_snapshot_meta(text: &str) -> Option<WsSpectatorMeta> {
 }
 
 /// Subset of sim.emergence fields shown in the HUD.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
 pub struct EmergenceHudData {
     /// Normalised Shannon entropy (`0..=1`).
@@ -388,7 +408,7 @@ pub struct EmergenceHudData {
 
 
 /// Outcome data from `sim.outcome` polling (FR-CIV-GAME-001).
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
 pub struct OutcomeHudData {
     pub tag: String,
@@ -397,7 +417,7 @@ pub struct OutcomeHudData {
 }
 /// Headless-friendly snapshot for the live attach HUD (FPS / tick / socket / scene stats).
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
 pub struct LiveHudSnapshot {
     /// WebSocket session state from the reconnecting client.
     pub connection: WsConnectionState,
@@ -485,11 +505,8 @@ impl LiveHudSnapshot {
         if let Some(rtt) = self.ws_rtt_ms {
             line.push_str(&format!(" | RTT: {rtt:.0}ms"));
         }
-        if let Some(chunk) = self.focused_chunk {
-            line.push_str(&format!(" | chunk: {}", chunk.0));
-        }
-        if let Some(selection) = self.selected_live {
-            line.push_str(&format!(" | {}", format_live_selection(selection)));
+        if let Some(pick) = format_live_pick_context(self.focused_chunk, self.selected_live) {
+            line.push_str(&format!(" | {pick}"));
         }
         if let Some(event) = &self.last_event {
             line.push_str(&format!(" | evt: {event}"));
@@ -1135,7 +1152,7 @@ mod tests {
             ..Default::default()
         }
         .format_overlay();
-        assert!(line.contains("chunk: 42"));
+        assert!(line.contains("pick: chunk 42"));
     }
 
     #[test]
@@ -1169,7 +1186,24 @@ mod tests {
             ..Default::default()
         }
         .format_overlay();
-        assert!(line.contains("sel: graph #11"));
+        assert!(line.contains("pick: graph #11"));
+    }
+
+    #[test]
+    fn live_hud_overlay_combines_focused_chunk_and_selection() {
+        let line = LiveHudSnapshot {
+            connected: true,
+            tick: Some(1),
+            fps: 60.0,
+            focused_chunk: Some(ChunkId(42)),
+            selected_live: Some(SelectedLiveEntity {
+                kind: LiveEntityKind::Building,
+                id: 3,
+            }),
+            ..Default::default()
+        }
+        .format_overlay();
+        assert!(line.contains("pick: chunk 42 / building #3"));
     }
 
     #[test]
@@ -1594,6 +1628,7 @@ mod tests {
                 tick: 4,
                 civilians: vec![CivilianStateEntry {
                     id: 1,
+                    faction_id: 0,
                     needs: CivilianNeeds3d::default(),
                     profession: String::new(),
                     genome_summary: Default::default(),
@@ -1609,6 +1644,7 @@ mod tests {
                     government: Government3d::Unknown,
                     treasury: FactionTreasury3d::default(),
                 }],
+                population_by_faction: Default::default(),
             }),
             Frame3d::EventFeed(EventFeedFrame {
                 tick: 6,

@@ -1,5 +1,5 @@
 //! Integration tests for configure_military_fog and apply_scenario_military.
-use civis_engine::{scenario::ScenarioMilitary, Simulation};
+use civ_engine::{scenario::ScenarioMilitary, Simulation};
 
 /// configure_military_fog does not panic on any combination of valid inputs.
 #[test]

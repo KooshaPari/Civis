@@ -1,0 +1,15 @@
+[package]
+name = "civ-physics-substrate"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+description = "Shared physics substrate (T, M, E, F, P, B) — the only coupling channel between emergent layers (FR-CIV-PHYS-SUBSTRATE-001; PHYSICS_COUPLING_SUBSTRATE.md §7.1)."
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
+# No dev-deps for the skeleton — identity-evolve is a pure fn over a Vec<f32>.

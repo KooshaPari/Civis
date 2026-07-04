@@ -15,6 +15,8 @@ pub mod command_queue;
 pub mod conditions;
 pub mod era;
 pub mod engine;
+pub mod emergence;
+pub mod emergence_metrics;
 pub mod hash_chain;
 pub mod integrity;
 pub mod invariants;
@@ -33,7 +35,7 @@ pub mod spectator;
 pub use conditions::{check_outcome, GameOutcome};
 pub use era::CivEra;
 pub use engine::{
-    job_type_for_civilian_id, Building, BuildingType, Citizen, CombatDamagePulse, DiplomacyEvent,
+    job_type_for_civilian_id, Building, BuildingType, Citizen, ClusterStocks, CombatDamagePulse, DiplomacyEvent,
     DiplomacyKind, JobType, MilitaryUnit, PopulationEvent, Position, Production, ResourceType,
     Resources, Simulation, SimulationSnapshot, TradeRoute, UnitType, WorldState,
 };

@@ -1,4 +1,4 @@
-﻿use std::{
+use std::{
     net::SocketAddr,
     path::PathBuf,
     sync::{
@@ -20,8 +20,9 @@ use axum::{
 };
 use civ_agents::{Civilian as AgentCivilian, Needs, Tools, Wardrobe};
 use civ_engine::{
-    decode_civreplay, encode_civreplay, job_type_for_civilian_id, Citizen, CivSaveBundle,
-    scenario::{load_scenario, preset_scenario_path}, DiplomacyKind, JobType, Simulation,
+    decode_civreplay, encode_civreplay, job_type_for_civilian_id,
+    scenario::{load_scenario, preset_scenario_path},
+    Citizen, CivSaveBundle, DiplomacyKind, JobType, Simulation,
 };
 use civ_protocol_3d::{
     encode_frame3d_binary, encode_frame3d_binary_from_json, AgentAppearanceFrame,
@@ -48,6 +49,25 @@ use crate::{
     subscription_filter::{SubscriptionFilter, WsConnectQuery},
     voxel_frame_builder::build_voxel_delta_frame,
 };
+
+fn voxel_axis_span<F>(world: &civ_voxel::VoxelWorld<civ_voxel::MaterialId>, axis: F) -> f32
+where
+    F: Fn(civ_voxel::ChunkCoord) -> i32,
+{
+    let mut min = None::<i32>;
+    let mut max = None::<i32>;
+    for (coord, _) in world.chunks_dense() {
+        let value = axis(coord);
+        min = Some(min.map_or(value, |current| current.min(value)));
+        max = Some(max.map_or(value, |current| current.max(value)));
+    }
+    let Some(min) = min else {
+        return civ_voxel::FIXED_SCALE as f32;
+    };
+    let max = max.unwrap_or(min);
+    let chunk_span = i64::from(max - min + 1) * i64::from(civ_voxel::CHUNK_EDGE as i32);
+    (chunk_span * i64::from(civ_voxel::FIXED_SCALE)) as f32
+}
 
 /// Number of distinct `Frame3d` variants emitted per simulation tick (FR-CIV-BEVY-028 / item 53).
 pub const FRAME_BUNDLE_LEN: usize = 7;
@@ -121,6 +141,11 @@ pub struct WsBridgeConfig {
     pub tick_broadcast_format: TickBroadcastFormat,
     /// Directory for `.civsave.zst` slot files (created on bridge start).
     pub saves_dir: PathBuf,
+    /// Directory for `.civreplay` files (created on bridge start).
+    /// `sim.save_replay` / `sim.load_replay` paths are validated as
+    /// relative and resolved under this directory with containment
+    /// enforced via canonicalize (see `resolve_replay_path`).
+    pub replays_dir: PathBuf,
 }
 
 impl Default for WsBridgeConfig {
@@ -131,6 +156,7 @@ impl Default for WsBridgeConfig {
             require_role: false,
             tick_broadcast_format: TickBroadcastFormat::default(),
             saves_dir: PathBuf::from("saves"),
+            replays_dir: PathBuf::from("replays"),
         }
     }
 }
@@ -195,6 +221,7 @@ struct AppState {
     require_role: bool,
     tick_broadcast_format: TickBroadcastFormat,
     saves_dir: PathBuf,
+    replays_dir: PathBuf,
     save_db: Arc<SaveDb>,
     session_id: String,
 }
@@ -241,6 +268,7 @@ async fn serve_ws_bridge(
     sim: Arc<Mutex<Simulation>>,
 ) {
     std::fs::create_dir_all(&config.saves_dir).expect("create saves directory");
+    std::fs::create_dir_all(&config.replays_dir).expect("create replays directory");
     let save_db_path = save_db_path_for_saves_dir(&config.saves_dir);
     let save_db = Arc::new(
         SaveDb::open(&save_db_path)
@@ -260,6 +288,7 @@ async fn serve_ws_bridge(
         require_role: config.require_role,
         tick_broadcast_format: config.tick_broadcast_format,
         saves_dir: config.saves_dir,
+        replays_dir: config.replays_dir,
         save_db,
         session_id,
     };
@@ -483,7 +512,10 @@ async fn handle_jsonrpc_text(
                     let snap = sim.snapshot();
                     (Some(snap.population), None)
                 }
-                JsonRpcMethod::SimSnapshot => {
+                JsonRpcMethod::SimSnapshot
+                | JsonRpcMethod::GetFactions
+                | JsonRpcMethod::GetResources
+                | JsonRpcMethod::GetEmergenceMetrics => {
                     let sim = state.sim.lock().await;
                     let speed_multiplier = state.speed_multiplier.load(Ordering::Relaxed);
                     (
@@ -497,47 +529,19 @@ async fn handle_jsonrpc_text(
                 _ => (None, None),
             };
 
-            let (research_researched, research_in_progress) = {
+            let emergence = if req.method == JsonRpcMethod::SimEmergence {
                 let sim = state.sim.lock().await;
-                let cache = sim.research_cache();
-                (cache.researched.clone(), cache.in_progress.as_ref().map(|(t, _)| t.clone()))
-            };
-            let outcome_fields = if req.method == crate::jsonrpc::JsonRpcMethod::SimOutcome {
-                let sim = state.sim.lock().await;
-                let outcome = civ_engine::conditions::check_outcome(&sim);
-                Some(crate::jsonrpc::OutcomeFields {
-                    tag: outcome.tag().to_owned(),
-                    reason: outcome.reason().to_owned(),
-                    tick: sim.state.tick,
-                })
+                sim.last_emergence_sample().map(Into::into)
             } else {
                 None
-            let diplomacy_snapshot = if req.method == JsonRpcMethod::SimDiplomacyState {
-                let sim = state.sim.lock().await;
-                sim.diplomacy_events()
-                    .iter()
-                    .map(|e| {
-                        let status = match e.kind {
-                            civ_engine::DiplomacyKind::Peace => "Peace",
-                            civ_engine::DiplomacyKind::Conflict => "War",
-                            civ_engine::DiplomacyKind::TradeAgreement => "Trade",
-                        };
-                        serde_json::json!({
-                            "tick": e.tick,
-                            "faction_a": e.faction_a,
-                            "faction_b": e.faction_b,
-                            "status": status,
-                            "treaty_active": e.kind == civ_engine::DiplomacyKind::Peace,
-                        })
-                    })
-                    .collect::<Vec<_>>()
-            } else {
-                vec![]
             };
             let (research_researched, research_in_progress) = {
                 let sim = state.sim.lock().await;
                 let cache = sim.research_cache();
-                (cache.researched.clone(), cache.in_progress.as_ref().map(|(t, _)| t.clone()))
+                (
+                    cache.researched.clone(),
+                    cache.in_progress.as_ref().map(|(t, _)| t.clone()),
+                )
             };
             let outcome_fields = if req.method == crate::jsonrpc::JsonRpcMethod::SimOutcome {
                 let sim = state.sim.lock().await;
@@ -560,15 +564,11 @@ async fn handle_jsonrpc_text(
                     speed_multiplier: state.speed_multiplier.load(Ordering::Relaxed),
                     connection_role: connection_role.clone(),
                     saves_dir: Some(state.saves_dir.clone()),
-                    emergence: None,
+                    emergence,
                     researched: research_researched,
                     in_progress_tech: research_in_progress,
                     outcome_fields,
                     last_tick_ms: 0.0,
-                    diplomacy_snapshot,
-                    researched: research_researched,
-                    in_progress_tech: research_in_progress,
-                    outcome_fields,
                 },
             );
             apply_dispatch_effect(&mut plan.response, plan.effect, state).await;
@@ -768,15 +768,28 @@ fn build_faction_state_frame(sim: &Simulation, tick: u64) -> FactionStateFrame {
         })
         .collect();
     factions.sort_by_key(|entry| entry.id);
-    let mut population_by_faction: std::collections::BTreeMap<u32, u32> = std::collections::BTreeMap::new();
-    for (_, (civilian, _needs, _wardrobe)) in sim.world.query::<(&civ_agents::Civilian, &civ_agents::Needs, &civ_agents::Wardrobe)>().iter() {
+    let mut population_by_faction: std::collections::BTreeMap<u32, u32> =
+        std::collections::BTreeMap::new();
+    for (_, (civilian, _needs, _wardrobe)) in sim
+        .world
+        .query::<(
+            &civ_agents::Civilian,
+            &civ_agents::Needs,
+            &civ_agents::Wardrobe,
+        )>()
+        .iter()
+    {
         let fid = match civilian.alignment {
             civ_agents::Alignment::Faction(id) => id,
             _ => 0,
         };
         *population_by_faction.entry(fid).or_insert(0) += 1;
     }
-    FactionStateFrame { tick, factions, population_by_faction }
+    FactionStateFrame {
+        tick,
+        factions,
+        population_by_faction,
+    }
 }
 
 /// Build event-feed messages for one tick.
@@ -910,31 +923,56 @@ async fn apply_dispatch_effect(
             }
         }
         DispatchEffect::SaveReplay { path } => {
+            // `parse_replay_path` already rejected absolute paths, `..`
+            // segments, prefixes, and root. Resolve the path under the
+            // bridge's `replays_dir` with canonicalize+containment to
+            // defeat symlink escape. Any failure becomes a clear error
+            // response — no silent fallback to `path` as-is.
+            let resolved = match crate::jsonrpc::resolve_replay_path(&state.replays_dir, &path) {
+                Ok(resolved) => resolved,
+                Err(err) => {
+                    tracing::error!("sim.save_replay rejected path {path:?}: {err}");
+                    set_replay_io_error(response, format!("rejected path {path:?}: {err}"));
+                    return;
+                }
+            };
             let save_result = {
                 let sim = state.sim.lock().await;
-                sim.save_replay(&path)
+                sim.save_replay(&resolved)
             };
             if let Err(err) = save_result {
                 tracing::error!("sim.save_replay failed: {err}");
                 set_replay_io_error(response, err.to_string());
             }
         }
-        DispatchEffect::LoadReplay { path } => match Simulation::load_replay_from_file(&path) {
-            Ok(loaded) => {
-                let tick = loaded.state.tick;
-                *state.sim.lock().await = loaded;
-                state.tick.store(tick, Ordering::SeqCst);
-                if let Some(result) = response.result.as_mut() {
-                    if let Some(obj) = result.as_object_mut() {
-                        obj.insert("tick".to_owned(), serde_json::json!(tick));
+        DispatchEffect::LoadReplay { path } => {
+            // Same containment check as SaveReplay: the path must resolve
+            // inside `replays_dir` after canonicalize.
+            let resolved = match crate::jsonrpc::resolve_replay_path(&state.replays_dir, &path) {
+                Ok(resolved) => resolved,
+                Err(err) => {
+                    tracing::error!("sim.load_replay rejected path {path:?}: {err}");
+                    set_replay_io_error(response, format!("rejected path {path:?}: {err}"));
+                    return;
+                }
+            };
+            match Simulation::load_replay_from_file(&resolved) {
+                Ok(loaded) => {
+                    let tick = loaded.state.tick;
+                    *state.sim.lock().await = loaded;
+                    state.tick.store(tick, Ordering::SeqCst);
+                    if let Some(result) = response.result.as_mut() {
+                        if let Some(obj) = result.as_object_mut() {
+                            obj.insert("tick".to_owned(), serde_json::json!(tick));
+                        }
                     }
                 }
+                Err(err) => {
+                    tracing::error!("sim.load_replay failed: {err}");
+                    set_replay_io_error(response, err.to_string());
+                }
             }
-            Err(err) => {
-                tracing::error!("sim.load_replay failed: {err}");
-                set_replay_io_error(response, err.to_string());
-            }
-        },
+        }
         DispatchEffect::ResetSimulation { seed } => {
             *state.sim.lock().await = Simulation::with_seed(seed);
             state.tick.store(0, Ordering::SeqCst);
@@ -948,10 +986,10 @@ async fn apply_dispatch_effect(
                 }
                 Err(err) => {
                     tracing::error!(%preset, ?err, "sim.load_scenario failed");
-                    *response = civ_server::jsonrpc::JsonRpcResponse::error(
+                    *response = crate::jsonrpc::JsonRpcResponse::failure(
                         response.id.clone(),
-                        civ_server::jsonrpc::JsonRpcError {
-                            code: civ_server::jsonrpc::error_code::INTERNAL_ERROR,
+                        crate::jsonrpc::JsonRpcError {
+                            code: crate::jsonrpc::error_code::INTERNAL_ERROR,
                             message: format!("failed to load preset {preset:?}: {err}"),
                             data: None,
                         },
@@ -1184,6 +1222,94 @@ async fn apply_dispatch_effect(
                 }
             }
         }
+        DispatchEffect::GodAction { action, x, y, target_faction, magnitude } => {
+            use civ_engine::disasters::{trigger_disaster, DisasterKind};
+            use civ_voxel::WorldCoord;
+            let mut sim = state.sim.lock().await;
+            let world_w = sim.voxel().width() as f32;
+            let world_d = sim.voxel().depth() as f32;
+            let wx = x.unwrap_or(0.5) * world_w;
+            let wz = y.unwrap_or(0.5) * world_d;
+            let pos = WorldCoord { x: wx as i64, y: 0, z: wz as i64 };
+            let mag = magnitude.unwrap_or(0.5_f32).clamp(0.0, 1.0);
+            match action.as_str() {
+                "smite" => trigger_disaster(&mut sim, DisasterKind::Meteor, pos),
+                "earthquake" => trigger_disaster(&mut sim, DisasterKind::Quake, pos),
+                "plague" => {
+                    trigger_disaster(&mut sim, DisasterKind::Plague, pos);
+                    if let Some(fid) = target_faction {
+                        if let Some(t) = sim.state.faction_treasury.get_mut(&fid) {
+                            let debit = civ_engine::Fixed::from_num(mag * 500.0_f32);
+                            *t = (*t - debit).max(civ_engine::Fixed::ZERO);
+                        }
+                    }
+                }
+                "bless" => {
+                    if let Some(fid) = target_faction {
+                        if let Some(t) = sim.state.faction_treasury.get_mut(&fid) {
+                            let credit = civ_engine::Fixed::from_num(mag * 1000.0_f32);
+                            *t += credit;
+                        }
+                    }
+                    sim.add_belief(500);
+                }
+                "miracle" => {
+                    sim.add_belief(2000);
+                    let boost = civ_engine::Fixed::from_num(mag * 200.0_f32);
+                    for t in sim.state.faction_treasury.values_mut() { *t += boost; }
+                }
+                _ => {}
+            }
+            if let Some(result) = response.result.as_mut() {
+                if let Some(obj) = result.as_object_mut() {
+                    obj.insert("applied".to_owned(), serde_json::json!(true));
+                }
+            }
+        }
+        DispatchEffect::GodAction { action, x, y, target_faction, magnitude } => {
+            use civ_engine::disasters::{trigger_disaster, DisasterKind};
+            use civ_voxel::WorldCoord;
+            let mut sim = state.sim.lock().await;
+            let world_w = sim.voxel().width() as f32;
+            let world_d = sim.voxel().depth() as f32;
+            let wx = x.unwrap_or(0.5) * world_w;
+            let wz = y.unwrap_or(0.5) * world_d;
+            let pos = WorldCoord { x: wx as i64, y: 0, z: wz as i64 };
+            let mag = magnitude.unwrap_or(0.5_f32).clamp(0.0, 1.0);
+            match action.as_str() {
+                "smite" => trigger_disaster(&mut sim, DisasterKind::Meteor, pos),
+                "earthquake" => trigger_disaster(&mut sim, DisasterKind::Quake, pos),
+                "plague" => {
+                    trigger_disaster(&mut sim, DisasterKind::Plague, pos);
+                    if let Some(fid) = target_faction {
+                        if let Some(t) = sim.state.faction_treasury.get_mut(&fid) {
+                            let debit = civ_engine::Fixed::from_num(mag * 500.0_f32);
+                            *t = (*t - debit).max(civ_engine::Fixed::ZERO);
+                        }
+                    }
+                }
+                "bless" => {
+                    if let Some(fid) = target_faction {
+                        if let Some(t) = sim.state.faction_treasury.get_mut(&fid) {
+                            let credit = civ_engine::Fixed::from_num(mag * 1000.0_f32);
+                            *t += credit;
+                        }
+                    }
+                    sim.add_belief(500);
+                }
+                "miracle" => {
+                    sim.add_belief(2000);
+                    let boost = civ_engine::Fixed::from_num(mag * 200.0_f32);
+                    for t in sim.state.faction_treasury.values_mut() { *t += boost; }
+                }
+                _ => {}
+            }
+            if let Some(result) = response.result.as_mut() {
+                if let Some(obj) = result.as_object_mut() {
+                    obj.insert("applied".to_owned(), serde_json::json!(true));
+                }
+            }
+        }
     }
 }
 
@@ -1257,13 +1383,7 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
 
     state.tick_batches_sent.fetch_add(1, Ordering::Relaxed);
     let mut clients = state.clients.lock().await;
-    clients.retain(|tx| {
-        let delivered = tx.send(ClientOutbound::Tick(Arc::clone(&batch))).is_ok();
-        if !delivered {
-            state.ws_client_disconnects.fetch_add(1, Ordering::Relaxed);
-        }
-        delivered
-    });
+    clients.retain(|tx| tx.send(ClientOutbound::Tick(Arc::clone(&batch))).is_ok());
     Ok(())
 }
 
@@ -1314,10 +1434,15 @@ mod tests {
         tick: u64,
         speed_multiplier: u32,
         require_role: bool,
-    ) -> AppState {
-        let saves_dir = PathBuf::from("test-saves");
-        let save_db = Arc::new(SaveDb::open_in_memory().expect("open save db"));
-        AppState {
+    ) -> (tempfile::TempDir, AppState) {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let saves_dir = dir.path().join("saves");
+        std::fs::create_dir_all(&saves_dir).expect("saves dir");
+        let replays_dir = dir.path().join("replays");
+        std::fs::create_dir_all(&replays_dir).expect("replays dir");
+        let save_db_path = save_db_path_for_saves_dir(&saves_dir);
+        let save_db = Arc::new(SaveDb::open(&save_db_path).expect("open save db"));
+        let state = AppState {
             sim,
             tick: Arc::new(AtomicU64::new(tick)),
             speed_multiplier: Arc::new(AtomicU32::new(speed_multiplier)),
@@ -1329,6 +1454,7 @@ mod tests {
             require_role,
             tick_broadcast_format: TickBroadcastFormat::Both,
             saves_dir,
+            replays_dir,
             save_db,
             session_id: "test-session".to_string(),
         }

@@ -346,6 +346,7 @@ mod tests {
             Frame3d::FactionState(FactionStateFrame {
                 tick,
                 factions: vec![],
+                population_by_faction: Default::default(),
             }),
             Frame3d::EventFeed(EventFeedFrame {
                 tick,

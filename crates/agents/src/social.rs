@@ -375,7 +375,7 @@ mod tests {
             SocialEvent {
                 a: 1,
                 b: 2,
-                kind: Interaction::Cooperated { benefit: 4.0 },
+                kind: Interaction::Cooperated { benefit: 4.3 },
                 tick: 1,
             },
         );
@@ -384,7 +384,7 @@ mod tests {
             SocialEvent {
                 a: 2,
                 b: 1,
-                kind: Interaction::Cooperated { benefit: 4.0 },
+                kind: Interaction::Cooperated { benefit: 4.3 },
                 tick: 1,
             },
         );

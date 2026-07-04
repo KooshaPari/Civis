@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { resolveBrowserWsUrl } from "./lib/attachConfig";
+import {
+  attachEndpointLabel,
+  attachEndpointUrl,
+  attachModeLabel,
+  resolveBrowserWsUrl,
+} from "./lib/attachConfig";
 import {
   buildHealthProbe,
   connectionDetail,
@@ -18,9 +23,9 @@ export function ConnectionStatusCard() {
   const probeTimerRef = useRef<number | null>(null);
 
   const wsUrl = useMemo(() => resolveBrowserWsUrl(window.location.search), []);
-  const endpointLabel = state.attachMode === "server" ? "WebSocket URL" : "Attach endpoint";
-  const endpointValue =
-    state.attachMode === "server" ? wsUrl : `${window.location.origin}/events (SSE)`;
+  const endpointLabel = attachEndpointLabel(state.attachMode);
+  const endpointValue = attachEndpointUrl(state.attachMode, wsUrl, window.location.origin);
+  const targetLabel = attachModeLabel(state.attachMode);
 
   const status = dashboardConnectionToStatus(state.connection);
   const healthHref =
@@ -67,6 +72,10 @@ export function ConnectionStatusCard() {
           </dd>
         </div>
         <div>
+          <dt>Attach target</dt>
+          <dd>{targetLabel}</dd>
+        </div>
+        <div>
           <dt>{endpointLabel}</dt>
           <dd>{endpointValue}</dd>
         </div>
@@ -94,8 +103,8 @@ export function ConnectionStatusCard() {
         </div>
       ) : (
         <p className="connection-hint">
-          Watch mode uses civ-watch SSE.{" "}
-          <a href="./status.html">Open status page</a> to probe civ-server WebSocket.
+          Watch mode attaches to civ-watch over SSE.{" "}
+          <a href="./status.html">Open status page</a> to inspect the civ-server WebSocket endpoint.
         </p>
       )}
     </section>

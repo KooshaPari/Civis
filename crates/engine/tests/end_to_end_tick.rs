@@ -30,6 +30,7 @@ fn tick_loop_changes_population_and_forms_clusters() {
     }
 
     let final_snapshot = sim.snapshot();
+    let settlement_count = sim.settlement_count();
 
     assert_eq!(final_snapshot.tick, initial.tick + 360);
     assert!(
@@ -37,11 +38,11 @@ fn tick_loop_changes_population_and_forms_clusters() {
         "population should evolve at least once over repeated ticks"
     );
     assert!(
-        final_snapshot.settlement_count > 0,
+        settlement_count > 0,
         "expected emergent settlement clusters to form after repeated ticks"
     );
     assert!(
-        sim.cluster_stocks().len() as u32 >= final_snapshot.settlement_count,
+        sim.cluster_stocks().len() as u32 >= settlement_count,
         "cluster stock tracking should cover detected settlements"
     );
 }

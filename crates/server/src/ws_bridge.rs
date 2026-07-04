@@ -20,9 +20,8 @@ use axum::{
 };
 use civ_agents::{Civilian as AgentCivilian, Needs, Tools, Wardrobe};
 use civ_engine::{
-    decode_civreplay, encode_civreplay, job_type_for_civilian_id,
-    scenario::{load_scenario, preset_scenario_path},
-    Citizen, CivSaveBundle, DiplomacyKind, JobType, Simulation,
+    decode_civreplay, encode_civreplay, job_type_for_civilian_id, Citizen, CivSaveBundle,
+    scenario::{load_scenario, preset_scenario_path}, DiplomacyKind, EcsWorld, JobType, Simulation,
 };
 use civ_protocol_3d::{
     encode_frame3d_binary, encode_frame3d_binary_from_json, AgentAppearanceFrame,
@@ -32,6 +31,7 @@ use civ_protocol_3d::{
     Frame3d, GenomeSummary3d, Government3d, TechEvent3d, WorldXZ,
 };
 use civ_save_db::SaveDb;
+use civ_voxel::{MaterialId, WorldCoord, FIXED_SCALE};
 use futures::{SinkExt, StreamExt};
 use tokio::{
     net::TcpListener,
@@ -43,7 +43,7 @@ use crate::{
     jsonrpc::{
         dispatch_request, encode_response, error_code, parse_error_response, parse_request,
         parse_role_param, set_sim_command_tick, set_spawn_civilian_result, DispatchContext,
-        DispatchEffect, JsonRpcError, JsonRpcMethod, JsonRpcResponse,
+        DispatchEffect, GodActionRequest, JsonRpcError, JsonRpcMethod, JsonRpcResponse,
     },
     saves::save_archive_path,
     subscription_filter::{SubscriptionFilter, WsConnectQuery},
@@ -1175,142 +1175,252 @@ async fn apply_dispatch_effect(
                 }
             }
         }
-        DispatchEffect::QueueResearch { tech } => {
-            state.sim.lock().await.research_cache_mut().queued.push_back(tech);
-        }
-        DispatchEffect::GodAction { action, x, y, target_faction, magnitude } => {
-            use civ_engine::disasters::{trigger_disaster, DisasterKind};
-            use civ_voxel::WorldCoord;
+        DispatchEffect::GodAction(request) => {
             let mut sim = state.sim.lock().await;
-            let world_w = sim.voxel().width() as f32;
-            let world_d = sim.voxel().depth() as f32;
-            let wx = x.unwrap_or(0.5) * world_w;
-            let wz = y.unwrap_or(0.5) * world_d;
-            let pos = WorldCoord { x: wx as i64, y: 0, z: wz as i64 };
-            let mag = magnitude.unwrap_or(0.5_f32).clamp(0.0, 1.0);
-            match action.as_str() {
-                "smite" => trigger_disaster(&mut sim, DisasterKind::Meteor, pos),
-                "earthquake" => trigger_disaster(&mut sim, DisasterKind::Quake, pos),
-                "plague" => {
-                    trigger_disaster(&mut sim, DisasterKind::Plague, pos);
-                    if let Some(fid) = target_faction {
-                        if let Some(t) = sim.state.faction_treasury.get_mut(&fid) {
-                            let debit = civ_engine::Fixed::from_num(mag * 500.0_f32);
-                            *t = (*t - debit).max(civ_engine::Fixed::ZERO);
-                        }
-                    }
-                }
-                "bless" => {
-                    if let Some(fid) = target_faction {
-                        if let Some(t) = sim.state.faction_treasury.get_mut(&fid) {
-                            let credit = civ_engine::Fixed::from_num(mag * 1000.0_f32);
-                            *t += credit;
-                        }
-                    }
-                    sim.add_belief(500);
-                }
-                "miracle" => {
-                    sim.add_belief(2000);
-                    let boost = civ_engine::Fixed::from_num(mag * 200.0_f32);
-                    for t in sim.state.faction_treasury.values_mut() { *t += boost; }
-                }
-                _ => {}
-            }
-            if let Some(result) = response.result.as_mut() {
-                if let Some(obj) = result.as_object_mut() {
-                    obj.insert("applied".to_owned(), serde_json::json!(true));
-                }
-            }
-        }
-        DispatchEffect::GodAction { action, x, y, target_faction, magnitude } => {
-            use civ_engine::disasters::{trigger_disaster, DisasterKind};
-            use civ_voxel::WorldCoord;
-            let mut sim = state.sim.lock().await;
-            let world_w = sim.voxel().width() as f32;
-            let world_d = sim.voxel().depth() as f32;
-            let wx = x.unwrap_or(0.5) * world_w;
-            let wz = y.unwrap_or(0.5) * world_d;
-            let pos = WorldCoord { x: wx as i64, y: 0, z: wz as i64 };
-            let mag = magnitude.unwrap_or(0.5_f32).clamp(0.0, 1.0);
-            match action.as_str() {
-                "smite" => trigger_disaster(&mut sim, DisasterKind::Meteor, pos),
-                "earthquake" => trigger_disaster(&mut sim, DisasterKind::Quake, pos),
-                "plague" => {
-                    trigger_disaster(&mut sim, DisasterKind::Plague, pos);
-                    if let Some(fid) = target_faction {
-                        if let Some(t) = sim.state.faction_treasury.get_mut(&fid) {
-                            let debit = civ_engine::Fixed::from_num(mag * 500.0_f32);
-                            *t = (*t - debit).max(civ_engine::Fixed::ZERO);
-                        }
-                    }
-                }
-                "bless" => {
-                    if let Some(fid) = target_faction {
-                        if let Some(t) = sim.state.faction_treasury.get_mut(&fid) {
-                            let credit = civ_engine::Fixed::from_num(mag * 1000.0_f32);
-                            *t += credit;
-                        }
-                    }
-                    sim.add_belief(500);
-                }
-                "miracle" => {
-                    sim.add_belief(2000);
-                    let boost = civ_engine::Fixed::from_num(mag * 200.0_f32);
-                    for t in sim.state.faction_treasury.values_mut() { *t += boost; }
-                }
-                _ => {}
-            }
-            if let Some(result) = response.result.as_mut() {
-                if let Some(obj) = result.as_object_mut() {
-                    obj.insert("applied".to_owned(), serde_json::json!(true));
-                }
-            }
-        }
-        DispatchEffect::GodAction { action, x, y, target_faction, magnitude } => {
-            use civ_engine::disasters::{trigger_disaster, DisasterKind};
-            use civ_voxel::WorldCoord;
-            let mut sim = state.sim.lock().await;
-            let world_w = sim.voxel().width() as f32;
-            let world_d = sim.voxel().depth() as f32;
-            let wx = x.unwrap_or(0.5) * world_w;
-            let wz = y.unwrap_or(0.5) * world_d;
-            let pos = WorldCoord { x: wx as i64, y: 0, z: wz as i64 };
-            let mag = magnitude.unwrap_or(0.5_f32).clamp(0.0, 1.0);
-            match action.as_str() {
-                "smite" => trigger_disaster(&mut sim, DisasterKind::Meteor, pos),
-                "earthquake" => trigger_disaster(&mut sim, DisasterKind::Quake, pos),
-                "plague" => {
-                    trigger_disaster(&mut sim, DisasterKind::Plague, pos);
-                    if let Some(fid) = target_faction {
-                        if let Some(t) = sim.state.faction_treasury.get_mut(&fid) {
-                            let debit = civ_engine::Fixed::from_num(mag * 500.0_f32);
-                            *t = (*t - debit).max(civ_engine::Fixed::ZERO);
-                        }
-                    }
-                }
-                "bless" => {
-                    if let Some(fid) = target_faction {
-                        if let Some(t) = sim.state.faction_treasury.get_mut(&fid) {
-                            let credit = civ_engine::Fixed::from_num(mag * 1000.0_f32);
-                            *t += credit;
-                        }
-                    }
-                    sim.add_belief(500);
-                }
-                "miracle" => {
-                    sim.add_belief(2000);
-                    let boost = civ_engine::Fixed::from_num(mag * 200.0_f32);
-                    for t in sim.state.faction_treasury.values_mut() { *t += boost; }
-                }
-                _ => {}
-            }
-            if let Some(result) = response.result.as_mut() {
-                if let Some(obj) = result.as_object_mut() {
-                    obj.insert("applied".to_owned(), serde_json::json!(true));
-                }
-            }
+            apply_god_action(&mut sim, request, response);
         }
     }
+}
+
+/// Apply a [`GodActionRequest`] to the simulation and stamp the response with
+/// the verb's outcome.
+///
+/// Each verb maps to one of:
+///
+/// - a single engine write (smite → `push_damage`, place_terrain/ignite →
+///   `voxel_mut().write()` in a disk, spawn_creature/multiply_creatures →
+///   `civ_agents::spawn_civilian_at`)
+/// - a hecs world mutation (heal/bless → iterate `world` and patch `Citizen`
+///   fields in place; this is the only place we deliberately mutate
+///   agent-side state outside the scheduled sim phases).
+///
+/// Coordinates from the wire are normalized `[0, 1]`. We convert to the
+/// fixed-point voxel world with [`civ_voxel::FIXED_SCALE`]. Radius clamps are
+/// already enforced by [`parse_god_action`] so we don't re-validate here.
+fn apply_god_action(
+    sim: &mut Simulation,
+    request: GodActionRequest,
+    response: &mut JsonRpcResponse,
+) {
+    let applied = true;
+    let mut affected: u64 = 0;
+    match request {
+        GodActionRequest::Smite { x, y, radius, energy } => {
+            let center = normalized_to_world(x, y, 0);
+            sim.push_damage(civ_engine::DamageEvent {
+                center,
+                radius_voxels: radius,
+                energy,
+            });
+            tracing::debug!(x, y, radius, energy, "god_action:smite");
+        }
+        GodActionRequest::Heal { x, y, radius_norm } => {
+            affected = heal_citizens_near(&mut sim.world, x, y, radius_norm);
+            tracing::debug!(x, y, radius_norm, affected, "god_action:heal");
+        }
+        GodActionRequest::PlaceTerrain {
+            x,
+            y,
+            radius,
+            material,
+        } => {
+            let written = paint_voxel_disk(
+                &mut sim.voxel_mut(),
+                x,
+                y,
+                radius,
+                MaterialId(material),
+            );
+            affected = written as u64;
+            tracing::debug!(x, y, radius, material, written, "god_action:place_terrain");
+        }
+        GodActionRequest::Ignite { x, y, radius } => {
+            // Material id 4 = LAVA in the phenotype-voxel material table. Keeping
+            // it a literal here (not a re-exported constant) because the material
+            // table is currently owned by the voxel kernel, not by civis.
+            const LAVA: u16 = 4;
+            let written = paint_voxel_disk(&mut sim.voxel_mut(), x, y, radius, MaterialId(LAVA));
+            affected = written as u64;
+            tracing::debug!(x, y, radius, written, "god_action:ignite");
+        }
+        GodActionRequest::SpawnCreature {
+            x,
+            y,
+            faction,
+            entity_seq,
+        } => {
+            let mut rng = sim.rng_mut().clone();
+            let entity = civ_agents::spawn_civilian_at(
+                &mut sim.world,
+                entity_seq,
+                civ_agents::Alignment::Faction(faction),
+                x,
+                y,
+                civ_agents::ActorVisualKind::Humanoid,
+                &mut rng,
+            );
+            *sim.rng_mut() = rng;
+            set_spawn_civilian_result(response, entity.id());
+            tracing::debug!(x, y, faction, entity_seq, "god_action:spawn_creature");
+            return;
+        }
+        GodActionRequest::Bless {
+            x,
+            y,
+            radius_norm,
+            magnitude,
+        } => {
+            affected = bless_citizens_near(&mut sim.world, x, y, radius_norm, magnitude);
+            tracing::debug!(x, y, radius_norm, magnitude, affected, "god_action:bless");
+        }
+        GodActionRequest::MultiplyCreatures {
+            x,
+            y,
+            radius_norm,
+            count,
+            faction,
+            entity_seq,
+        } => {
+            let mut rng = sim.rng_mut().clone();
+            let mut spawned: u64 = 0;
+            for i in 0..count {
+                // Deterministic offset within the disk so consecutive god-tool
+                // calls don't collapse into a single point.
+                let angle = (i as f32) * 0.785_398; // π/4 step
+                let r = radius_norm * ((i as f32 + 1.0) / (count as f32 + 1.0));
+                let px = (x + r * angle.cos()).clamp(0.0, 1.0);
+                let py = (y + r * angle.sin()).clamp(0.0, 1.0);
+                let _ = civ_agents::spawn_civilian_at(
+                    &mut sim.world,
+                    entity_seq.wrapping_add(u64::from(i)),
+                    civ_agents::Alignment::Faction(faction),
+                    px,
+                    py,
+                    civ_agents::ActorVisualKind::Humanoid,
+                    &mut rng,
+                );
+                spawned += 1;
+            }
+            *sim.rng_mut() = rng;
+            affected = spawned;
+            tracing::debug!(x, y, radius_norm, count, faction, spawned, "god_action:multiply_creatures");
+        }
+    }
+
+    // Stamp outcome metadata onto the wire response so the client can confirm
+    // what landed. Mutating the response object keeps the wire shape identical
+    // to the prior stub (`{"ok": true, ...}`) and just enriches it.
+    if let Some(result) = response.result.as_mut() {
+        if let Some(obj) = result.as_object_mut() {
+            obj.insert("applied".to_owned(), serde_json::json!(applied));
+            obj.insert("affected".to_owned(), serde_json::json!(affected));
+        }
+    }
+}
+
+/// Convert a normalized `(x, y)` map point to a fixed-point [`WorldCoord`].
+///
+/// `x` and `y` are clamped to `[0, 1]`. The `z` plane is a fixed altitude for
+/// god-tool brushes (we paint at the surface and don't reach underground).
+fn normalized_to_world(x: f32, y: f32, z: i64) -> WorldCoord {
+    let fx = (x.clamp(0.0, 1.0) * FIXED_SCALE as f32) as i64;
+    let fy = (y.clamp(0.0, 1.0) * FIXED_SCALE as f32) as i64;
+    WorldCoord {
+        x: fx,
+        y: fy,
+        z,
+    }
+}
+
+/// Paint a disk of voxels at `(x, y)` with the given `material`. Returns the
+/// number of voxels written (clamped to `radius² * π` worst-case). Out-of-bounds
+/// writes are silently dropped by [`VoxelWriteProxy::write`].
+fn paint_voxel_disk(
+    proxy: &mut civ_engine::engine::VoxelWriteProxy<'_>,
+    x: f32,
+    y: f32,
+    radius: u8,
+    material: MaterialId,
+) -> usize {
+    let center = normalized_to_world(x, y, 0);
+    let r_fixed = (radius as i64).saturating_mul(FIXED_SCALE / 8);
+    let r2 = r_fixed.saturating_mul(r_fixed);
+    let mut written = 0usize;
+    let r_i = radius as i32;
+    for dx in -r_i..=r_i {
+        for dy in -r_i..=r_i {
+            let dxf = (dx as i64).saturating_mul(FIXED_SCALE / 8);
+            let dyf = (dy as i64).saturating_mul(FIXED_SCALE / 8);
+            if dxf.saturating_mul(dxf) + dyf.saturating_mul(dyf) > r2 {
+                continue;
+            }
+            proxy.write(
+                WorldCoord {
+                    x: center.x.saturating_add(dxf),
+                    y: center.y.saturating_add(dyf),
+                    z: center.z,
+                },
+                material,
+            );
+            written += 1;
+        }
+    }
+    written
+}
+
+/// Restore full health to every citizen within `radius_norm` of `(x, y)`.
+///
+/// Returns the count of citizens healed. The function intentionally does not
+/// touch `welfare` or `ideology` — that's what `bless` is for. Splitting the
+/// two verbs means a UI button can offer "heal body" vs "lift spirit" without
+/// one action accidentally doing both.
+fn heal_citizens_near(world: &mut civ_engine::EcsWorld, x: f32, y: f32, radius_norm: f32) -> u64 {
+    let radius_sq = radius_norm * radius_norm;
+    let mut healed = 0u64;
+    for (_e, (_c, citizen, pos)) in world
+        .query_mut::<(&mut AgentCivilian, &mut civ_engine::Citizen, &civ_agents::Position3d)>()
+    {
+        let px = pos.coord.x as f32 / civ_voxel::FIXED_SCALE as f32;
+        let py = pos.coord.z as f32 / civ_voxel::FIXED_SCALE as f32;
+        let dx = px - x;
+        let dy = py - y;
+        if dx * dx + dy * dy <= radius_sq {
+            citizen.health = civ_engine::Fixed::from_num(1);
+            healed += 1;
+        }
+    }
+    healed
+}
+
+/// Bump `welfare` and `ideology` of every citizen within `radius_norm` of `(x, y)`
+/// by `magnitude` (clamped to `[0, 1]`). Used for "bless"-style effects.
+fn bless_citizens_near(
+    world: &mut civ_engine::EcsWorld,
+    x: f32,
+    y: f32,
+    radius_norm: f32,
+    magnitude: f32,
+) -> u64 {
+    let radius_sq = radius_norm * radius_norm;
+    let mag = (magnitude.clamp(0.0, 1.0) as f64) * civ_engine::SCALE as f64;
+    let mut blessed = 0u64;
+    for (_e, (_c, citizen, pos)) in world
+        .query_mut::<(&mut AgentCivilian, &mut civ_engine::Citizen, &civ_agents::Position3d)>()
+    {
+        let px = pos.coord.x as f32 / civ_voxel::FIXED_SCALE as f32;
+        let py = pos.coord.z as f32 / civ_voxel::FIXED_SCALE as f32;
+        let dx = px - x;
+        let dy = py - y;
+        if dx * dx + dy * dy > radius_sq {
+            continue;
+        }
+        let new_welfare = (citizen.welfare.raw as f64 + mag) as i64;
+        let new_ideology = (citizen.ideology.raw as f64 + mag * 0.5) as i64;
+        citizen.welfare = civ_engine::Fixed::from_raw(new_welfare.min(civ_engine::SCALE));
+        citizen.ideology = civ_engine::Fixed::from_raw(new_ideology.clamp(-civ_engine::SCALE, civ_engine::SCALE));
+        blessed += 1;
+    }
+    blessed
 }
 
 fn set_replay_io_error(response: &mut JsonRpcResponse, message: String) {
@@ -1457,7 +1567,8 @@ mod tests {
             replays_dir,
             save_db,
             session_id: "test-session".to_string(),
-        }
+        };
+        (dir, state)
     }
 
     fn test_subscription_filter() -> Arc<tokio::sync::Mutex<SubscriptionFilter>> {
@@ -2071,7 +2182,7 @@ mod tests {
     async fn frame_bundle_is_deterministic_for_fixed_seed() {
         let make = || async {
             let sim = Arc::new(Mutex::new(Simulation::with_seed(11)));
-            let state = test_app_state(sim, 0, 1, false);
+            let (_dir, state) = test_app_state(sim, 0, 1, false);
             tick_once(&state).await.expect("tick");
             state.tick.load(Ordering::SeqCst)
         };
@@ -2083,7 +2194,7 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_invalid_json_returns_parse_error() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(9)));
-        let state = test_app_state(sim, 0, 1, false);
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             "{not json",
@@ -2108,7 +2219,7 @@ mod tests {
             let guard = sim.lock().await;
             guard.snapshot().population
         };
-        let state = test_app_state(sim, 5, 1, false);
+        let (_dir, state) = test_app_state(sim, 5, 1, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":7,"method":"sim.status","params":{}}"#,
@@ -2151,7 +2262,7 @@ mod tests {
                     .expect("hash chain root after tick"),
             )
         };
-        let state = test_app_state(sim, 5, 4, false);
+        let (_dir, state) = test_app_state(sim, 5, 4, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":8,"method":"sim.snapshot","params":{}}"#,
@@ -2203,7 +2314,7 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_sim_subscribe_applies_frame_kind_filter() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(23)));
-        let state = test_app_state(sim, 0, 1, false);
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
         let mut connection_role = None;
         let filter = test_subscription_filter();
         let text = handle_jsonrpc_text(
@@ -2230,7 +2341,7 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_sim_unsubscribe_restores_full_broadcast() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(24)));
-        let state = test_app_state(sim, 0, 1, false);
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
         let mut connection_role = None;
         let filter = test_subscription_filter();
         let subscribe = handle_jsonrpc_text(
@@ -2260,7 +2371,7 @@ mod tests {
     #[tokio::test]
     async fn healthz_exposes_latest_tick() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(3)));
-        let state = test_app_state(sim, 123, 1, false);
+        let (_dir, state) = test_app_state(sim, 123, 1, false);
         let response = healthz(State(state)).await.into_response();
         assert_eq!(response.status(), StatusCode::OK);
 
@@ -2282,7 +2393,7 @@ mod tests {
         let expected_tick = source.state.tick;
 
         let sim = Arc::new(Mutex::new(Simulation::with_seed(99)));
-        let state = test_app_state(sim, 0, 1, false);
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
         let response = replay_import(State(state.clone()), bytes.into())
             .await
             .expect("replay import")
@@ -2305,7 +2416,7 @@ mod tests {
     #[tokio::test]
     async fn replay_export_sets_octet_stream_and_attachment_headers() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(31)));
-        let state = test_app_state(sim, 0, 1, false);
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
         let response = replay_export(State(state))
             .await
             .expect("replay export")
@@ -2330,7 +2441,7 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_sim_set_policy_updates_simulation_policy() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(5)));
-        let state = test_app_state(sim.clone(), 0, 1, false);
+        let (_dir, state) = test_app_state(sim.clone(), 0, 1, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":1,"method":"sim.set_policy","params":{"scarcity_multiplier":3.0,"base_consumption_joules":500}}"#,
@@ -2364,7 +2475,7 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_sim_set_speed_stores_multiplier() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(5)));
-        let state = test_app_state(sim, 0, 1, false);
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":3,"method":"sim.set_speed","params":{"multiplier":4}}"#,
@@ -2388,7 +2499,7 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_sim_get_speed_returns_stored_multiplier() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(5)));
-        let state = test_app_state(sim, 0, 1, false);
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
         let mut connection_role = None;
         let set_text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":4,"method":"sim.set_speed","params":{"multiplier":8}}"#,
@@ -2421,7 +2532,7 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_sim_command_tick_rejects_wrong_role_when_enforced() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(9)));
-        let state = test_app_state(sim, 0, 1, true);
+        let (_dir, state) = test_app_state(sim, 0, 1, true);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":2,"method":"sim.command","params":{"action":"tick","role":"viewer"}}"#,
@@ -2451,7 +2562,7 @@ mod tests {
             guard.tick();
         }
         let saved_tick = sim.lock().await.state.tick;
-        let state = test_app_state(sim.clone(), saved_tick, 1, false);
+        let (_dir, state) = test_app_state(sim.clone(), saved_tick, 1, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":70,"method":"save.slot","params":{"slot_name":"slot-1"}}"#,

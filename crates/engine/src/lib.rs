@@ -36,7 +36,6 @@ pub mod spectator;
 pub mod tutorial;
 
 
-pub mod tutorial;
 
 
 /// Fixed-point scaling factor (1 raw unit = SCALE joules). Engine energy

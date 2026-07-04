@@ -709,8 +709,6 @@ pub struct Simulation {
     pub(crate) last_tick_disaster_pulses: Vec<crate::disasters::DisasterPulse>,
     /// Engagements resolved this tick (war bridge); feeds doctrine fitness.
     pub(crate) last_tick_engagements: Vec<CombatEngagement>,
-    /// Per-faction mean aggression snapshot rebuilt during emergence.
-    pub(crate) faction_aggression: BTreeMap<u32, f32>,
     /// `mod.loaded.v1` replay-bus JSON emitted when mods load (cleared each tick).
     last_tick_mod_lifecycle: Vec<String>,
     /// Audio events derived from substrate signals on the most recent tick
@@ -737,11 +735,8 @@ pub struct Simulation {
 
     operational: NoopOperationalLayer,
     replay_log: ReplayLog,
-    pub(crate) last_settlement_count: u32,
     /// Cluster ids qualifying as settlements after the most recent life rollup.
     pub(crate) last_settlement_ids: Vec<u64>,
-    pub(crate) last_life_deaths: u32,
-    cluster_stocks: BTreeMap<u64, ClusterStocks>,
     /// Scenario economy policy (`base_consumption_joules`, `scarcity_multiplier`).
     pub economy_policy: PolicyInput,
     /// Active control policy (FR-CORE-005). Read in [`Self::phase_policy`]
@@ -1581,7 +1576,6 @@ impl Simulation {
             last_tick_combat_pulses: Vec::new(),
             last_tick_disaster_pulses: Vec::new(),
             last_tick_engagements: Vec::new(),
-            faction_aggression: BTreeMap::new(),
             last_tick_mod_lifecycle: Vec::new(),
             last_tick_audio_events: Vec::new(),
             last_tick_daily_path: Vec::new(),
@@ -1594,10 +1588,7 @@ impl Simulation {
                 seed: 42,
                 ..ReplayLog::default()
             },
-            last_settlement_count: 0,
             last_settlement_ids: Vec::new(),
-            last_life_deaths: 0,
-            cluster_stocks: BTreeMap::new(),
             economy_policy: DEFAULT_ECONOMY_POLICY,
             policy: Box::new(crate::policy::NoopPolicy),
             last_control_signals: ControlSignals::default(),
@@ -1732,7 +1723,6 @@ impl Simulation {
             last_tick_combat_pulses: Vec::new(),
             last_tick_disaster_pulses: Vec::new(),
             last_tick_engagements: Vec::new(),
-            faction_aggression: BTreeMap::new(),
             last_tick_mod_lifecycle: Vec::new(),
             last_tick_audio_events: Vec::new(),
             last_tick_daily_path: Vec::new(),
@@ -1745,10 +1735,7 @@ impl Simulation {
                 seed,
                 ..ReplayLog::default()
             },
-            last_settlement_count: 0,
             last_settlement_ids: Vec::new(),
-            last_life_deaths: 0,
-            cluster_stocks: BTreeMap::new(),
             economy_policy: DEFAULT_ECONOMY_POLICY,
             policy: Box::new(crate::policy::NoopPolicy),
             last_control_signals: ControlSignals::default(),

@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Current session file format version.
 pub const SESSION_FORMAT_VERSION: u32 = 1;
@@ -41,7 +42,7 @@ pub struct SessionData {
     pub tick: u64,
     /// World setup parameters used to generate the session.
     pub world_setup: WorldSetupParams,
-    /// Save stamp in seconds (engine elapsed or tick-derived; not wall clock).
+    /// Save timestamp as Unix milliseconds.
     pub save_timestamp_unix_ms: u64,
 }
 
@@ -58,12 +59,12 @@ impl Default for SessionData {
 }
 
 /// Persist a session to the given slot.
-pub fn save(world_state: &SessionData, slot: u8) -> io::Result<()> {
+pub fn save(slot: u8, data: &SessionData) -> io::Result<()> {
     let path = session_path(slot);
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
-    let text = ron::ser::to_string_pretty(world_state, ron::ser::PrettyConfig::default())
+    let text = ron::ser::to_string_pretty(data, ron::ser::PrettyConfig::default())
         .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
     fs::write(path, text)
 }
@@ -72,23 +73,6 @@ pub fn save(world_state: &SessionData, slot: u8) -> io::Result<()> {
 pub fn load(slot: u8) -> io::Result<SessionData> {
     let text = fs::read_to_string(session_path(slot))?;
     ron::from_str(&text).map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))
-}
-
-/// Return slot indices that have an on-disk session file.
-#[must_use]
-pub fn list_saved_slots() -> Vec<u8> {
-    (1..=5)
-        .filter(|slot| session_path(*slot).exists())
-        .collect()
-}
-
-/// Format a monotonic stamp (seconds) as `HH:MM:SS` for HUD status lines.
-#[must_use]
-pub fn format_stamp_hms(stamp_secs: u64) -> String {
-    let hours = stamp_secs / 3600;
-    let minutes = (stamp_secs % 3600) / 60;
-    let seconds = stamp_secs % 60;
-    format!("{hours:02}:{minutes:02}:{seconds:02}")
 }
 
 /// Build the on-disk file path for a slot.
@@ -120,9 +104,19 @@ fn user_data_dir() -> PathBuf {
     Path::new(&home).join(".local").join("share")
 }
 
+/// Return the current Unix timestamp in milliseconds.
+#[must_use]
+pub fn now_unix_ms() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_millis() as u64)
+        .unwrap_or(0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::UNIX_EPOCH;
 
     #[test]
     fn path_uses_slot_name() {
@@ -140,16 +134,14 @@ mod tests {
                 seed: 7,
                 world_size: 4,
             },
-            save_timestamp_unix_ms: 12_345,
+            save_timestamp_unix_ms: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("time")
+                .as_millis() as u64,
         };
         let text = ron::ser::to_string_pretty(&data, ron::ser::PrettyConfig::default())
             .expect("serialize");
         let back: SessionData = ron::from_str(&text).expect("deserialize");
         assert_eq!(back, data);
-    }
-
-    #[test]
-    fn format_stamp_hms_zero_pads() {
-        assert_eq!(format_stamp_hms(3661), "01:01:01");
     }
 }

@@ -65,12 +65,6 @@ fn advance(state: &mut TutorialState) {
     }
 }
 
-fn draw_tutorial_hint(
-    mut contexts: EguiContexts,
-    mut state: ResMut<TutorialState>,
-) {
-    if !state.enabled { return; }
-
 /// Returns true if the tutorial should show this frame.
 fn should_show(state: &TutorialState) -> bool {
     match state.visibility {

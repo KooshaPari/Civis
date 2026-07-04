@@ -6000,17 +6000,6 @@ pub fn awakening_cohesion_gain(awakenings_this_tick: usize) -> i64 {
     raw.min(MAX_AWAKENING_COHESION_PER_TICK).max(0)
 }
 
-/// FR-CIV-GENETICS / FR-CIV-LEGENDS: pure gain fn for the awakening -> belief
-/// pulse. Returns a signed i64 and clamps to a small per-tick cap so the
-/// compatibility shim stays bounded and deterministic.
-pub(crate) const BELIEF_PER_AWAKENING: i64 = 2;
-pub(crate) const MAX_AWAKENING_BELIEF_PER_TICK: i64 = 10;
-
-#[must_use]
-pub(crate) fn awakening_belief_gain(awakenings_this_tick: usize) -> i64 {
-    let raw = (awakenings_this_tick as i64).saturating_mul(BELIEF_PER_AWAKENING);
-    raw.min(MAX_AWAKENING_BELIEF_PER_TICK).max(0)
-}
 
 /// Cohesion absorbs hardship: a strong social fabric damps the per-tick unrest
 /// rise (cohesion -> calmer society), bounded and floored at 1. Decay passes through.

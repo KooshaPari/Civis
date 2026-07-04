@@ -2687,7 +2687,6 @@ version = "0.1.0"
 dependencies = [
  "bincode-next",
  "criterion 0.5.1",
- "glam 0.30.10",
  "phenotype-voxel 0.1.0 (git+https://github.com/KooshaPari/phenotype-voxel?rev=a4d115898c0db4afe77074fe51a302b1c09d4478)",
  "proptest",
  "ron 0.8.1",
@@ -6543,6 +6542,12 @@ dependencies = [
 [[package]]
 name = "phenotype-voxel"
 version = "0.1.0"
+source = "git+https://github.com/KooshaPari/phenotype-voxel?rev=a4d115898c0db4afe77074fe51a302b1c09d4478#a4d115898c0db4afe77074fe51a302b1c09d4478"
+dependencies = [
+ "bytemuck",
+ "serde",
+ "thiserror 1.0.69",
+]
 
 [[package]]
 name = "phenotype-voxel"

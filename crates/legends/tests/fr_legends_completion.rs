@@ -358,8 +358,7 @@ fn fr_legends_005_spec_query_api_surface_present() {
     // neighbors
     let _: Vec<EntityRef> = g.neighbors(id);
     // QUERY_API_VERSION constant is present + nonzero
-    let version = std::hint::black_box(QUERY_API_VERSION);
-    assert!(version >= 1);
+    assert!(QUERY_API_VERSION >= 1);
 }
 
 /// `Covers FR-CIV-LEGENDS-005` — the query API version constant is the
@@ -367,8 +366,7 @@ fn fr_legends_005_spec_query_api_surface_present() {
 #[test]
 fn fr_legends_005_query_api_version_constant_present() {
     let _: u32 = QUERY_API_VERSION;
-    let version = std::hint::black_box(QUERY_API_VERSION);
-    assert!(version >= 1);
+    assert!(QUERY_API_VERSION >= 1);
 }
 
 // ===========================================================================

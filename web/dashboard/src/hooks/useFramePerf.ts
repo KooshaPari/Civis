@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { mockDevFrameMs } from "../lib/framePerf";
 import type { FrameSampleSource } from "../store";
 
@@ -13,26 +13,15 @@ type FramePerfDispatch = React.Dispatch<
  */
 export function useFramePerfMock(
   connection: "live" | "reconnecting" | "disconnected",
-  enabled: boolean,
   dispatch: FramePerfDispatch,
 ) {
-  const [isVisible, setIsVisible] = useState(
-    () => typeof document !== "undefined" && document.visibilityState === "visible",
-  );
-
-  useEffect(() => {
-    const onVisibilityChange = () => setIsVisible(document.visibilityState === "visible");
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
-  }, []);
-
   useEffect(() => {
     if (!import.meta.env.DEV) return;
     if (connection === "live") {
       dispatch({ type: "set_frame_sample_source", source: "attach" });
       return;
     }
-    if (connection !== "disconnected" || !enabled || !isVisible) return;
+    if (connection !== "disconnected") return;
 
     dispatch({ type: "set_frame_sample_source", source: "mock" });
     let raf = 0;
@@ -50,5 +39,5 @@ export function useFramePerfMock(
 
     raf = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(raf);
-  }, [connection, dispatch, enabled, isVisible]);
+  }, [connection, dispatch]);
 }

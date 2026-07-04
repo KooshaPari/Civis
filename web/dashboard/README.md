@@ -28,7 +28,6 @@ http://localhost:5173
 
 The dashboard reads the live simulation from `civ-watch`:
 
-- `http://localhost:9090/events`
 - `http://localhost:9090/snapshot`
 - `http://localhost:9090/terrain`
 

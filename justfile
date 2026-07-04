@@ -317,3 +317,9 @@ rust-verify: lint test
 # Call after packaging dist/Civis.exe (native launchType in phenotype-tooling apps.json).
 register-startmenu:
     pwsh -NoProfile -File C:/Users/koosh/Dev/phenotype-tooling/Tools/Register-StartMenuApps.ps1 -App Civis
+
+# Generate CC0 procedural actor .glb files via headless Blender.
+# Outputs: clients/bevy-ref/assets/models/humanoid_gen.glb + herd_gen.glb
+# Requires: Blender 4.x (https://www.blender.org/download/lts/)
+gen-actors:
+    pwsh -File tools/asset-gen/run_asset_gen.ps1

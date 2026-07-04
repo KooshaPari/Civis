@@ -10,7 +10,9 @@ pub fn spawn_decorations(
 ) {
     let tree_trunk = meshes.add(Mesh::from(bevy::math::primitives::Cylinder::new(0.35, 3.2)));
     let tree_foliage = meshes.add(Mesh::from(bevy::math::primitives::Sphere { radius: 1.6 }));
-    let rock = meshes.add(Mesh::from(bevy::math::primitives::Cuboid::new(2.0, 1.3, 1.8)));
+    let rock = meshes.add(Mesh::from(bevy::math::primitives::Cuboid::new(
+        2.0, 1.3, 1.8,
+    )));
 
     let tree_trunk_mat = materials.add(StandardMaterial {
         base_color: Color::srgb(0.35, 0.22, 0.12),
@@ -43,7 +45,8 @@ pub fn spawn_decorations(
                 commands.spawn((
                     Mesh3d(tree_foliage.clone()),
                     MeshMaterial3d(tree_foliage_mat.clone()),
-                    Transform::from_xyz(world_x, height + 4.0, world_z).with_scale(Vec3::new(1.0, 1.1, 1.0)),
+                    Transform::from_xyz(world_x, height + 4.0, world_z)
+                        .with_scale(Vec3::new(1.0, 1.1, 1.0)),
                 ));
             } else if height > 8.0 && noise < 0.26 {
                 commands.spawn((

@@ -2,7 +2,9 @@ use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::prelude::*;
 
 /// Minimum / maximum orbit stand-off distance for mouse-wheel zoom.
-const MIN_DISTANCE: f32 = 20.0;
+/// Min is low enough to dolly down onto a single actor/building (actors stand
+/// ~14 units tall in the 96-unit world); max still frames the whole map.
+const MIN_DISTANCE: f32 = 12.0;
 const MAX_DISTANCE: f32 = 600.0;
 
 #[derive(Resource, Clone, Copy)]
@@ -54,6 +56,7 @@ pub fn camera_input(
 ) {
     let dt = time.delta_secs();
     let mut move_dir = Vec3::ZERO;
+    let mut yaw_delta = 0.0;
 
     // Yaw-projected ground-plane axes — W/S/A/D move relative to camera facing.
     // forward_flat: direction the camera looks projected onto XZ.
@@ -64,34 +67,59 @@ pub fn camera_input(
     if keys.pressed(KeyCode::KeyW) {
         move_dir += forward_flat;
     }
+    if keys.pressed(KeyCode::ArrowUp) {
+        move_dir += forward_flat;
+    }
     if keys.pressed(KeyCode::KeyS) {
+        move_dir -= forward_flat;
+    }
+    if keys.pressed(KeyCode::ArrowDown) {
         move_dir -= forward_flat;
     }
     if keys.pressed(KeyCode::KeyD) {
         move_dir += right_flat;
     }
+    if keys.pressed(KeyCode::ArrowRight) {
+        move_dir += right_flat;
+    }
     if keys.pressed(KeyCode::KeyA) {
         move_dir -= right_flat;
     }
-    if keys.pressed(KeyCode::Space) || keys.pressed(KeyCode::KeyZ) {
+    if keys.pressed(KeyCode::ArrowLeft) {
+        move_dir -= right_flat;
+    }
+    if keys.pressed(KeyCode::KeyR) {
         move_dir += Vec3::Y;
     }
-    if keys.pressed(KeyCode::ShiftLeft) {
+    if keys.pressed(KeyCode::KeyF) {
         move_dir -= Vec3::Y;
     }
     if move_dir.length_squared() > 0.0 {
         rig.target += move_dir.normalize() * 90.0 * dt;
     }
 
+    if keys.pressed(KeyCode::KeyQ) {
+        yaw_delta += 1.0;
+    }
+    if keys.pressed(KeyCode::KeyE) {
+        yaw_delta -= 1.0;
+    }
+
     // Mouse-wheel zoom adjusts the orbit stand-off distance.
     let scroll: f32 = mouse_wheel.read().map(|ev| ev.y).sum();
     if scroll != 0.0 {
-        rig.distance = (rig.distance - scroll * 12.0).clamp(MIN_DISTANCE, MAX_DISTANCE);
+        rig.distance = (rig.distance - scroll * 10.0).clamp(MIN_DISTANCE, MAX_DISTANCE);
+    }
+
+    if yaw_delta != 0.0 {
+        rig.yaw += yaw_delta * 1.5 * dt;
     }
 
     // Right-drag orbits; consume motion events when not orbiting to avoid drift.
     if mouse_buttons.pressed(MouseButton::Right) {
-        let delta = mouse_motion.read().fold(Vec2::ZERO, |acc, ev| acc + ev.delta);
+        let delta = mouse_motion
+            .read()
+            .fold(Vec2::ZERO, |acc, ev| acc + ev.delta);
         rig.yaw -= delta.x * 0.003;
         rig.pitch = (rig.pitch - delta.y * 0.003).clamp(-1.5, 0.6);
     } else {

@@ -21,7 +21,14 @@ fn ev(tick: u64, kind: EventKind, src: SourceCrate, mag: f32, sim: u64, role: Ro
 #[test]
 fn ingest_inserts_event_and_resolves_participant() {
     let mut g = SagaGraph::new(cfg());
-    let out = g.ingest(ev(0, EventKind::Birth, SourceCrate::Agents, 0.5, 1, Role::Victim));
+    let out = g.ingest(ev(
+        0,
+        EventKind::Birth,
+        SourceCrate::Agents,
+        0.5,
+        1,
+        Role::Victim,
+    ));
     assert!(out.event_id.is_some());
     // participant resolved to a stable entity
     let eid = g
@@ -34,10 +41,28 @@ fn ingest_inserts_event_and_resolves_participant() {
 #[test]
 fn resolve_04_recycled_sim_id_same_source_is_same_legend() {
     let mut g = SagaGraph::new(cfg());
-    g.ingest(ev(0, EventKind::Birth, SourceCrate::Agents, 0.2, 7, Role::Victim));
-    let first = g.entity_for_sim(SourceCrate::Agents, SimRuntimeId(7)).unwrap();
-    g.ingest(ev(1, EventKind::Migration, SourceCrate::Agents, 0.2, 7, Role::Leader));
-    let second = g.entity_for_sim(SourceCrate::Agents, SimRuntimeId(7)).unwrap();
+    g.ingest(ev(
+        0,
+        EventKind::Birth,
+        SourceCrate::Agents,
+        0.2,
+        7,
+        Role::Victim,
+    ));
+    let first = g
+        .entity_for_sim(SourceCrate::Agents, SimRuntimeId(7))
+        .unwrap();
+    g.ingest(ev(
+        1,
+        EventKind::Migration,
+        SourceCrate::Agents,
+        0.2,
+        7,
+        Role::Leader,
+    ));
+    let second = g
+        .entity_for_sim(SourceCrate::Agents, SimRuntimeId(7))
+        .unwrap();
     assert_eq!(first, second, "same (source,sim_id) folds into one legend");
 }
 
@@ -52,7 +77,10 @@ fn resolve_04_aggregate_battles_fold_into_one_war() {
     };
     let w1 = g.resolve_aggregate(key.clone(), Epoch(0));
     let w2 = g.resolve_aggregate(key, Epoch(3));
-    assert_eq!(w1, w2, "repeated battles between the same clusters = one War");
+    assert_eq!(
+        w1, w2,
+        "repeated battles between the same clusters = one War"
+    );
 }
 
 #[test]
@@ -61,14 +89,46 @@ fn sig_05_significant_lineage_promoted_over_transient_farmer() {
     let mut g = SagaGraph::new(cfg());
 
     // weighty figure: founds a settlement + wins a war
-    g.ingest(ev(0, EventKind::SettlementFounded, SourceCrate::Protocol3d, 1.0, 100, Role::Founder));
-    g.ingest(ev(1, EventKind::WarEnded, SourceCrate::Tactics, 1.0, 100, Role::Leader));
-    let hero = g.entity_for_sim(SourceCrate::Protocol3d, SimRuntimeId(100)).unwrap();
+    g.ingest(ev(
+        0,
+        EventKind::SettlementFounded,
+        SourceCrate::Protocol3d,
+        1.0,
+        100,
+        Role::Founder,
+    ));
+    g.ingest(ev(
+        1,
+        EventKind::WarEnded,
+        SourceCrate::Tactics,
+        1.0,
+        100,
+        Role::Leader,
+    ));
+    let hero = g
+        .entity_for_sim(SourceCrate::Protocol3d, SimRuntimeId(100))
+        .unwrap();
 
     // transient farmer: just birth + death
-    g.ingest(ev(2, EventKind::Birth, SourceCrate::Agents, 0.1, 200, Role::Victim));
-    g.ingest(ev(3, EventKind::Death, SourceCrate::Agents, 0.1, 200, Role::Victim));
-    let farmer = g.entity_for_sim(SourceCrate::Agents, SimRuntimeId(200)).unwrap();
+    g.ingest(ev(
+        2,
+        EventKind::Birth,
+        SourceCrate::Agents,
+        0.1,
+        200,
+        Role::Victim,
+    ));
+    g.ingest(ev(
+        3,
+        EventKind::Death,
+        SourceCrate::Agents,
+        0.1,
+        200,
+        Role::Victim,
+    ));
+    let farmer = g
+        .entity_for_sim(SourceCrate::Agents, SimRuntimeId(200))
+        .unwrap();
 
     assert!(g.entity(hero).unwrap().promoted, "hero promoted");
     assert!(!g.entity(farmer).unwrap().promoted, "farmer not promoted");
@@ -78,8 +138,17 @@ fn sig_05_significant_lineage_promoted_over_transient_farmer() {
 fn sig_05_decay_terminates_at_prune_floor() {
     // AC-SIG-2: with no new events, a non-promoted entity decays to <= prune_floor.
     let mut g = SagaGraph::new(cfg());
-    g.ingest(ev(0, EventKind::Sickness, SourceCrate::Agents, 0.2, 5, Role::Victim));
-    let id = g.entity_for_sim(SourceCrate::Agents, SimRuntimeId(5)).unwrap();
+    g.ingest(ev(
+        0,
+        EventKind::Sickness,
+        SourceCrate::Agents,
+        0.2,
+        5,
+        Role::Victim,
+    ));
+    let id = g
+        .entity_for_sim(SourceCrate::Agents, SimRuntimeId(5))
+        .unwrap();
     let floor = g.config.prune_floor;
     for _ in 0..500 {
         g.decay_epoch();
@@ -94,11 +163,29 @@ fn sig_05_decay_terminates_at_prune_floor() {
 fn sig_05_prune_removes_provisional_noise_keeps_promoted() {
     let mut g = SagaGraph::new(cfg());
     // promoted hero
-    g.ingest(ev(0, EventKind::WarEnded, SourceCrate::Tactics, 1.0, 1, Role::Leader));
-    let hero = g.entity_for_sim(SourceCrate::Tactics, SimRuntimeId(1)).unwrap();
+    g.ingest(ev(
+        0,
+        EventKind::WarEnded,
+        SourceCrate::Tactics,
+        1.0,
+        1,
+        Role::Leader,
+    ));
+    let hero = g
+        .entity_for_sim(SourceCrate::Tactics, SimRuntimeId(1))
+        .unwrap();
     // transient with an isolated low score
-    g.ingest(ev(0, EventKind::Sickness, SourceCrate::Economy, 0.01, 2, Role::Witness));
-    let transient = g.entity_for_sim(SourceCrate::Economy, SimRuntimeId(2)).unwrap();
+    g.ingest(ev(
+        0,
+        EventKind::Sickness,
+        SourceCrate::Economy,
+        0.01,
+        2,
+        Role::Witness,
+    ));
+    let transient = g
+        .entity_for_sim(SourceCrate::Economy, SimRuntimeId(2))
+        .unwrap();
 
     for _ in 0..50 {
         g.decay_epoch();
@@ -114,15 +201,27 @@ fn causal_06_chain_finds_shared_participant_cause() {
     let mut g = SagaGraph::new(cfg());
     // regicide at epoch 0 involving the king (sim 50)
     let regicide = g
-        .ingest(ev(0, EventKind::Death, SourceCrate::Agents, 0.9, 50, Role::Victim))
+        .ingest(ev(
+            0,
+            EventKind::Death,
+            SourceCrate::Agents,
+            0.9,
+            50,
+            Role::Victim,
+        ))
         .event_id
         .unwrap();
     // succession war at epoch 1 involving the same king + region
     // same king (Agents/sim 50) participates in the succession war
     let war = g
-        .ingest(
-            ev(1, EventKind::WarDeclared, SourceCrate::Agents, 0.9, 50, Role::Leader),
-        )
+        .ingest(ev(
+            1,
+            EventKind::WarDeclared,
+            SourceCrate::Agents,
+            0.9,
+            50,
+            Role::Leader,
+        ))
         .event_id
         .unwrap();
 
@@ -137,11 +236,25 @@ fn causal_06_chain_finds_shared_participant_cause() {
 fn causal_06_acyclicity_no_cause_to_same_or_future_epoch() {
     let mut g = SagaGraph::new(cfg());
     let e0 = g
-        .ingest(ev(0, EventKind::Battle, SourceCrate::Tactics, 0.8, 9, Role::Aggressor))
+        .ingest(ev(
+            0,
+            EventKind::Battle,
+            SourceCrate::Tactics,
+            0.8,
+            9,
+            Role::Aggressor,
+        ))
         .event_id
         .unwrap();
     // same epoch: must NOT become a cause of e0 (acyclicity guard)
-    let _e0b = g.ingest(ev(0, EventKind::Battle, SourceCrate::Tactics, 0.8, 9, Role::Defender));
+    let _e0b = g.ingest(ev(
+        0,
+        EventKind::Battle,
+        SourceCrate::Tactics,
+        0.8,
+        9,
+        Role::Defender,
+    ));
     let chain = g.causal_chain(e0, 4).unwrap();
     let e0_epoch = g.event(e0).unwrap().epoch;
     for (_, cause, _) in &chain.edges {
@@ -154,9 +267,25 @@ fn causal_06_acyclicity_no_cause_to_same_or_future_epoch() {
 #[test]
 fn query_07_saga_of_and_timeline() {
     let mut g = SagaGraph::new(cfg());
-    g.ingest(ev(0, EventKind::SettlementFounded, SourceCrate::Protocol3d, 1.0, 3, Role::Founder));
-    g.ingest(ev(5, EventKind::WarEnded, SourceCrate::Tactics, 1.0, 3, Role::Leader));
-    let id = g.entity_for_sim(SourceCrate::Protocol3d, SimRuntimeId(3)).unwrap();
+    g.ingest(ev(
+        0,
+        EventKind::SettlementFounded,
+        SourceCrate::Protocol3d,
+        1.0,
+        3,
+        Role::Founder,
+    ));
+    g.ingest(ev(
+        5,
+        EventKind::WarEnded,
+        SourceCrate::Tactics,
+        1.0,
+        3,
+        Role::Leader,
+    ));
+    let id = g
+        .entity_for_sim(SourceCrate::Protocol3d, SimRuntimeId(3))
+        .unwrap();
 
     let saga = g.saga_of(id).expect("saga");
     assert!(saga.events.len() >= 2, "saga has the entity's events");
@@ -173,8 +302,22 @@ fn query_07_saga_of_and_timeline() {
 #[test]
 fn query_07_significant_top_n_ordered() {
     let mut g = SagaGraph::new(cfg());
-    g.ingest(ev(0, EventKind::WarEnded, SourceCrate::Tactics, 1.0, 1, Role::Leader));
-    g.ingest(ev(0, EventKind::Birth, SourceCrate::Agents, 0.05, 2, Role::Witness));
+    g.ingest(ev(
+        0,
+        EventKind::WarEnded,
+        SourceCrate::Tactics,
+        1.0,
+        1,
+        Role::Leader,
+    ));
+    g.ingest(ev(
+        0,
+        EventKind::Birth,
+        SourceCrate::Agents,
+        0.05,
+        2,
+        Role::Witness,
+    ));
     let top = g.significant(10, None);
     assert!(!top.is_empty());
     // descending by significance
@@ -187,8 +330,22 @@ fn query_07_significant_top_n_ordered() {
 fn narrator_13_epoch_digest_hash_stable_across_reloads() {
     // AC-Q-2: an unchanged epoch produces an identical digest_hash (cache-safe).
     let mut g = SagaGraph::new(cfg());
-    g.ingest(ev(0, EventKind::SettlementFounded, SourceCrate::Protocol3d, 0.9, 1, Role::Founder));
-    g.ingest(ev(0, EventKind::Disaster, SourceCrate::Planet, 0.7, 2, Role::Victim));
+    g.ingest(ev(
+        0,
+        EventKind::SettlementFounded,
+        SourceCrate::Protocol3d,
+        0.9,
+        1,
+        Role::Founder,
+    ));
+    g.ingest(ev(
+        0,
+        EventKind::Disaster,
+        SourceCrate::Planet,
+        0.7,
+        2,
+        Role::Victim,
+    ));
     let d1 = g.epoch_digest(Epoch(0), None);
     let d2 = g.epoch_digest(Epoch(0), None);
     assert_eq!(d1.digest_hash, d2.digest_hash, "same epoch hashes the same");
@@ -199,7 +356,14 @@ fn narrator_13_epoch_digest_hash_stable_across_reloads() {
 fn loud_gap_detected_when_producer_silent() {
     // §7: a required producer silent past gap_epochs is reported (loud, not silent).
     let mut g = SagaGraph::new(cfg());
-    g.ingest(ev(0, EventKind::Birth, SourceCrate::Agents, 0.2, 1, Role::Victim));
+    g.ingest(ev(
+        0,
+        EventKind::Birth,
+        SourceCrate::Agents,
+        0.2,
+        1,
+        Role::Victim,
+    ));
     // advance well past gap_epochs with no Tactics/Economy/etc events
     let gaps = g.detect_gaps(Epoch(10));
     assert!(
@@ -212,8 +376,22 @@ fn loud_gap_detected_when_producer_silent() {
 fn worker_drains_off_path_and_maintains() {
     let mut w = LegendsWorker::new(SagaGraph::new(cfg()));
     w.drain([
-        ev(0, EventKind::WarEnded, SourceCrate::Tactics, 1.0, 1, Role::Leader),
-        ev(10, EventKind::Birth, SourceCrate::Agents, 0.1, 2, Role::Victim),
+        ev(
+            0,
+            EventKind::WarEnded,
+            SourceCrate::Tactics,
+            1.0,
+            1,
+            Role::Leader,
+        ),
+        ev(
+            10,
+            EventKind::Birth,
+            SourceCrate::Agents,
+            0.1,
+            2,
+            Role::Victim,
+        ),
     ]);
     // hero promoted, graph maintained across the epoch jump
     let hero = w

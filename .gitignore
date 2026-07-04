@@ -52,6 +52,8 @@ scripts/omniroute.env
 .llmignore
 worktrees/
 worktrees/
+.worktrees/
+.worktrees-prompts/
 vendor/phenodocs/node_modules/
 .vitepress/cache/
 target-ci/

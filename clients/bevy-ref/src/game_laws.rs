@@ -7,27 +7,19 @@
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
-use civ_laws::{LawDb, LawKind};
-use std::sync::OnceLock;
 
 use crate::ui_theme;
 
 /// Public state shared with the toolbar button in `game_ui`.
-#[derive(Resource, Debug)]
+#[derive(Resource, Debug, Default)]
 pub struct GameLawsOpen(pub bool);
 
-impl Default for GameLawsOpen {
-    fn default() -> Self {
-        Self(false)
-    }
-}
-
 /// A single law line for the popup list.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 struct LawLine {
-    category: String,
-    title: String,
-    description: String,
+    category: &'static str,
+    title: &'static str,
+    description: &'static str,
 }
 
 /// Read-only laws panel root type.
@@ -37,96 +29,43 @@ pub struct GameLawsPanel;
 pub struct GameLawsPlugin;
 
 impl GameLawsPanel {
-    fn law_line_from_db_law(law: &civ_laws::Law) -> LawLine {
-        let category = match law.kind {
-            LawKind::Conservation => "Physical",
-            LawKind::Material => "Material",
-            LawKind::FictionalExtension => "Futurism",
-        };
-        let inputs = if law.inputs.is_empty() {
-            "none".to_string()
-        } else {
-            law.inputs.join(", ")
-        };
-        let outputs = if law.outputs.is_empty() {
-            "none".to_string()
-        } else {
-            law.outputs.join(", ")
-        };
-        let losses = if law.losses.is_empty() {
-            "none".to_string()
-        } else {
-            law.losses.join(", ")
-        };
-        let deps = if law.dependencies.is_empty() {
-            "none".to_string()
-        } else {
-            law.dependencies.join(", ")
-        };
-
-        let description = format!(
-            "Era {era_min}. Inputs: {inputs}. Outputs: {outputs}. Losses: {losses}. Depends on: {deps}.",
-            era_min = law.era_min,
-            inputs = inputs,
-            outputs = outputs,
-            losses = losses,
-            deps = deps,
-        );
-
-        LawLine {
-            category: category.to_string(),
-            title: law.id.clone(),
-            description,
-        }
-    }
-
     /// Curated fallback laws list when direct `civ-laws` wiring is unavailable.
-    fn fallback_laws() -> Vec<LawLine> {
-        vec![
+    fn fallback_laws() -> &'static [LawLine] {
+        const FALLBACK_LAWS: &[LawLine] = &[
             LawLine {
-                category: "Physical".to_string(),
-                title: "Conservation of Matter".to_string(),
-                description: "Mass is neither created nor destroyed by simulation events; terrain edits redistributes existing mass.".to_string(),
+                category: "Physical",
+                title: "Conservation of Matter",
+                description: "Mass is neither created nor destroyed by simulation events; terrain edits redistributes existing mass.",
             },
             LawLine {
-                category: "Physical".to_string(),
-                title: "Energy Conservation".to_string(),
-                description: "Energy is tracked explicitly and only reduced through consumptive simulation sinks such as movement and production.".to_string(),
+                category: "Physical",
+                title: "Energy Conservation",
+                description: "Energy is tracked explicitly and only reduced through consumptive simulation sinks such as movement and production.",
             },
             LawLine {
-                category: "Genomic".to_string(),
-                title: "Population Growth Bound".to_string(),
-                description: "Population growth has diminishing returns constrained by food throughput and carrying capacity.".to_string(),
+                category: "Genomic",
+                title: "Population Growth Bound",
+                description: "Population growth has diminishing returns constrained by food throughput and carrying capacity.",
             },
             LawLine {
-                category: "Environmental".to_string(),
-                title: "Biome Stability".to_string(),
-                description: "Biome state (soil/water/temperature) feeds back into settlement productivity and migration pressure.".to_string(),
+                category: "Environmental",
+                title: "Biome Stability",
+                description: "Biome state (soil/water/temperature) feeds back into settlement productivity and migration pressure.",
             },
             LawLine {
-                category: "Environmental".to_string(),
-                title: "Disaster Envelope".to_string(),
-                description: "Disasters are pseudo-random but reproducible within seeded law tables and world state.".to_string(),
+                category: "Environmental",
+                title: "Disaster Envelope",
+                description: "Disasters are pseudo-random but reproducible within seeded law tables and world state.",
             },
-        ]
+        ];
+        FALLBACK_LAWS
     }
 
-    fn law_lines() -> &'static [LawLine] {
-        static LAW_LINES: OnceLock<Vec<LawLine>> = OnceLock::new();
-        LAW_LINES
-            .get_or_init(|| {
-                if let Ok(db) = LawDb::default_canon() {
-                    db.laws.iter().map(Self::law_line_from_db_law).collect()
-                } else {
-                    Self::fallback_laws()
-                }
-            })
-            .as_slice()
-    }
-
-    /// Current law source: the canonical `civ-laws` DB when available.
+    /// Current law source: static fallback first, API-backed later.
     fn laws() -> &'static [LawLine] {
-        Self::law_lines()
+        // TODO: wire from crates/laws public API (`LawDb`, `Law`) when dependency is
+        // added for this target.
+        Self::fallback_laws()
     }
 }
 
@@ -170,21 +109,21 @@ fn draw_game_laws_panel(mut contexts: EguiContexts, mut open: ResMut<GameLawsOpe
             );
             ui.add_space(8.0);
             egui::ScrollArea::vertical().show(ui, |ui| {
-                let mut current_category = String::new();
+                let mut current_category = "";
                 for law in GameLawsPanel::laws() {
                     if current_category != law.category {
-                        current_category = law.category.clone();
+                        current_category = law.category;
                         ui.label(
-                            egui::RichText::new(law.category.as_str())
+                            egui::RichText::new(law.category)
                                 .color(ui_theme::ACCENT)
                                 .strong(),
                         );
                         ui.add_space(2.0);
                     }
                     ui.group(|ui| {
-                        ui.label(egui::RichText::new(law.title.as_str()).strong().color(ui_theme::TEXT));
+                        ui.label(egui::RichText::new(law.title).strong().color(ui_theme::TEXT));
                         ui.label(
-                            egui::RichText::new(law.description.as_str())
+                            egui::RichText::new(law.description)
                                 .small()
                                 .color(ui_theme::DIM),
                         );

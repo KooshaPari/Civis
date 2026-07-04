@@ -9,9 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::MaterialId;
 
 /// Broad material phase used by the cellular automata step.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum Phase {
     /// Occupies empty cells and rises through heavier gases.
     Gas,

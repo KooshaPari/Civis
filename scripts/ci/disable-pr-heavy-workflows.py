@@ -7,9 +7,9 @@ import re
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 WF = ROOT / ".github" / "workflows"
-KEEP_PR = {"quality.yml", "pr-governance-gate.yml", "self-merge-gate.yml"}
+KEEP_PR = {"quality.yml", "pr-governance-gate-v2.yml", "self-merge-gate.yml"}
 
-LOCAL_FIRST_ON = """# Local-first: PRs use quality.yml + pr-governance-gate only.
+LOCAL_FIRST_ON = """# Local-first: PRs use quality.yml + pr-governance-gate-v2 only.
 # Run heavy gates locally: lefthook run pre-push
 on:
   workflow_dispatch:

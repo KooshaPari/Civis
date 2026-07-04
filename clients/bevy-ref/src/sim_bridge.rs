@@ -9,10 +9,10 @@ use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
 use crate::spawn_tools::{SpawnBuildingRequest, SpawnCivilianRequest};
-#[cfg(feature = "voxel")]
-use crate::voxel_sim::{voxel_surface_y, VoxelSimState};
 #[cfg(not(feature = "voxel"))]
 use crate::terrain::{terrain_surface_y, WATER_LEVEL, WORLD_SIZE};
+#[cfg(feature = "voxel")]
+use crate::voxel_sim::{voxel_surface_y, VoxelSimState};
 use crate::{live_attach::is_server_attach_mode, AttachMode};
 
 /// Half-height of the civilian capsule (used to seat its base on terrain).
@@ -22,18 +22,25 @@ const BUILDING_HALF_HEIGHT: f32 = 7.0;
 
 /// Uniform scale for the CC0 GLTF civilian (KayKit Knight) so it reads near the
 /// gameplay capsule's height.
+// Voxel world is [0, dims] world-space with 1 voxel = 1 world unit and terrain
+// ~256 units tall. A ~1.8m glb at scale 1.7 reads as ~3 units = sub-pixel /
+// invisible when the camera frames the whole world. Scale actors up so they
+// read clearly against the voxel terrain (sub-pixel mesh-scale bug).
 #[cfg(feature = "models")]
 #[cfg(feature = "voxel")]
-const CIVILIAN_MODEL_SCALE: f32 = 1.7;
+const CIVILIAN_MODEL_SCALE: f32 = 8.0;
 #[cfg(all(feature = "models", not(feature = "voxel")))]
 const CIVILIAN_MODEL_SCALE: f32 = 3.0;
 /// Scale for herd / fauna rigs (skeleton minion).
 #[cfg(feature = "models")]
+#[cfg(feature = "voxel")]
+const HERD_MODEL_SCALE: f32 = 10.0;
+#[cfg(all(feature = "models", not(feature = "voxel")))]
 const HERD_MODEL_SCALE: f32 = 2.4;
 /// Uniform scale for the CC0 GLTF building (KayKit hexagon home).
 #[cfg(feature = "models")]
 #[cfg(feature = "voxel")]
-const BUILDING_MODEL_SCALE: f32 = 0.65;
+const BUILDING_MODEL_SCALE: f32 = 4.0;
 #[cfg(all(feature = "models", not(feature = "voxel")))]
 const BUILDING_MODEL_SCALE: f32 = 6.0;
 
@@ -42,6 +49,13 @@ const BUILDING_MODEL_SCALE: f32 = 6.0;
 #[cfg(feature = "models")]
 #[derive(Component)]
 struct FactionTint(#[allow(dead_code)] u32);
+
+#[cfg(feature = "models")]
+#[derive(Component, Clone, Copy)]
+struct PendingActorScene {
+    kind: ActorVisualKind,
+    faction: u32,
+}
 
 /// Resolve the loaded CC0 actor scene for `kind`, else `None` (capsule fallback).
 #[cfg(feature = "models")]
@@ -58,6 +72,25 @@ fn actor_model_root(
 }
 
 #[cfg(feature = "models")]
+fn actor_scene_if_loaded(
+    models: Option<&crate::gltf_models::GameModels>,
+    asset_server: &AssetServer,
+    kind: ActorVisualKind,
+    faction: u32,
+) -> Option<SceneRoot> {
+    use crate::gltf_models::{actor_scene, ModelOrPrimitive};
+    let Some(model) = models else {
+        return None;
+    };
+    match actor_scene(model, kind, faction) {
+        ModelOrPrimitive::Model(SceneRoot(handle)) => asset_server
+            .is_loaded_with_dependencies(&handle)
+            .then_some(SceneRoot(handle)),
+        ModelOrPrimitive::Primitive => None,
+    }
+}
+
+#[cfg(feature = "models")]
 fn model_scale_for(kind: ActorVisualKind) -> f32 {
     match kind {
         ActorVisualKind::Humanoid => CIVILIAN_MODEL_SCALE,
@@ -68,9 +101,12 @@ fn model_scale_for(kind: ActorVisualKind) -> f32 {
 /// Resolve the loaded CC0 building scene to a spawnable `SceneRoot`, else `None`
 /// to fall back to the procedural cuboid.
 #[cfg(feature = "models")]
-fn building_model_root(models: Option<&crate::gltf_models::GameModels>) -> Option<SceneRoot> {
-    use crate::gltf_models::{building_scene, ModelOrPrimitive};
-    match models.map(building_scene) {
+fn building_model_root(
+    models: Option<&crate::gltf_models::GameModels>,
+    building_type: BuildingType,
+) -> Option<SceneRoot> {
+    use crate::gltf_models::{building_scene_for, ModelOrPrimitive};
+    match models.map(|m| building_scene_for(m, building_type)) {
         Some(ModelOrPrimitive::Model(root)) => Some(root),
         _ => None,
     }
@@ -94,11 +130,23 @@ struct GameplayAssets {
     building_mesh: Handle<Mesh>,
 }
 
+/// In-process simulation marker for civilian entities rendered from `SimState`.
+///
+/// This tag is only used when not in server-attach mode, and should never be
+/// attached by the live-stream `Frame3d` path.
 #[derive(Component)]
-struct SimCivilianMarker;
+pub struct SimCivilianMarker;
 
+/// In-process simulation marker for building entities rendered from `SimState`.
+///
+/// This tag is only used when not in server-attach mode, and should never be
+/// attached by the live-stream `Frame3d` path.
 #[derive(Component)]
-struct SimBuildingMarker;
+pub struct SimBuildingMarker;
+
+// Public aliases for the scene-dump harness (machine-level verification).
+pub use SimBuildingMarker as SimBuildingMarkerPublic;
+pub use SimCivilianMarker as SimCivilianMarkerPublic;
 
 impl Default for SimState {
     fn default() -> Self {
@@ -180,13 +228,26 @@ impl Plugin for SimBridgePlugin {
         #[cfg(feature = "egui")]
         app.add_systems(
             Update,
-            sync_visible_gameplay
-                .run_if(in_process_sim_active)
-                .run_if(is_playing_or_paused),
+            (
+                sync_visible_gameplay
+                    .run_if(in_process_sim_active)
+                    .run_if(is_playing_or_paused),
+                #[cfg(feature = "models")]
+                upgrade_pending_actor_scenes
+                    .run_if(in_process_sim_active)
+                    .run_if(is_playing_or_paused),
+            ),
         );
 
         #[cfg(not(feature = "egui"))]
-        app.add_systems(Update, sync_visible_gameplay.run_if(in_process_sim_active));
+        app.add_systems(
+            Update,
+            (
+                sync_visible_gameplay.run_if(in_process_sim_active),
+                #[cfg(feature = "models")]
+                upgrade_pending_actor_scenes.run_if(in_process_sim_active),
+            ),
+        );
     }
 }
 
@@ -294,8 +355,7 @@ fn world_to_norm(position: Vec3, voxel: Option<&VoxelSimState>) -> (f32, f32) {
 fn apply_spawn_civilian_requests(
     mut sim: ResMut<SimState>,
     mut requests: MessageReader<SpawnCivilianRequest>,
-    #[cfg(feature = "voxel")]
-    voxel_state: Option<Res<VoxelSimState>>,
+    #[cfg(feature = "voxel")] voxel_state: Option<Res<VoxelSimState>>,
 ) {
     for request in requests.read() {
         let (nx, ny) = {
@@ -314,7 +374,7 @@ fn apply_spawn_civilian_requests(
         spawn_civilian_at(
             &mut sim.0.world,
             id,
-            0,
+            civ_agents::Alignment::None,
             nx,
             ny,
             request.model_kind,
@@ -326,8 +386,7 @@ fn apply_spawn_civilian_requests(
 fn apply_spawn_building_requests(
     mut sim: ResMut<SimState>,
     mut requests: MessageReader<SpawnBuildingRequest>,
-    #[cfg(feature = "voxel")]
-    voxel_state: Option<Res<VoxelSimState>>,
+    #[cfg(feature = "voxel")] voxel_state: Option<Res<VoxelSimState>>,
 ) {
     for request in requests.read() {
         let (nx, ny) = {
@@ -347,7 +406,9 @@ fn apply_spawn_building_requests(
 /// Build the shared civilian/building meshes once at startup.
 fn init_gameplay_assets(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     let civilian_mesh = meshes.add(Mesh::from(bevy::math::primitives::Capsule3d::new(1.4, 3.2)));
-    let building_mesh = meshes.add(Mesh::from(bevy::math::primitives::Cuboid::new(7.0, 14.0, 7.0)));
+    let building_mesh = meshes.add(Mesh::from(bevy::math::primitives::Cuboid::new(
+        7.0, 14.0, 7.0,
+    )));
     commands.insert_resource(GameplayAssets {
         civilian_mesh,
         building_mesh,
@@ -367,9 +428,9 @@ fn sync_visible_gameplay(
     mut commands: Commands,
     sim: Res<SimState>,
     assets: Option<Res<GameplayAssets>>,
-    #[cfg(feature = "voxel")]
-    voxel_state: Option<Res<VoxelSimState>>,
+    #[cfg(feature = "voxel")] voxel_state: Option<Res<VoxelSimState>>,
     #[cfg(feature = "models")] models: Option<Res<crate::gltf_models::GameModels>>,
+    #[cfg(feature = "models")] asset_server: Res<AssetServer>,
     mut rendered: ResMut<RenderedEntities>,
     mut transforms: Query<&mut Transform>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -391,17 +452,21 @@ fn sync_visible_gameplay(
         .query::<(&Civilian, &civ_agents::Position3d, Option<&ActorVisual>)>()
         .iter()
     {
+        #[cfg(feature = "models")]
         let visual_kind = visual.map(|v| v.0).unwrap_or(ActorVisualKind::Humanoid);
+        #[cfg(not(feature = "models"))]
+        let _visual_kind = visual.map(|v| v.0).unwrap_or(ActorVisualKind::Humanoid);
         civ_count += 1;
         seen_civilians.push(civilian.id);
         let world_pos = {
             #[cfg(not(feature = "voxel"))]
             {
-                sim_position_to_world(position, None) + Vec3::Y * CIVILIAN_HALF_HEIGHT
+                sim_position_to_world(position) + Vec3::Y * CIVILIAN_HALF_HEIGHT
             }
             #[cfg(feature = "voxel")]
             {
-                sim_position_to_world(position, voxel_state.as_deref()) + Vec3::Y * CIVILIAN_HALF_HEIGHT
+                sim_position_to_world(position, voxel_state.as_deref())
+                    + Vec3::Y * CIVILIAN_HALF_HEIGHT
             }
         };
         if first_world_pos.is_none() {
@@ -414,7 +479,12 @@ fn sync_visible_gameplay(
             }
         } else {
             #[cfg(feature = "models")]
-            let scene_root = actor_model_root(models.as_deref(), visual_kind, civilian.faction);
+            let scene_root = actor_scene_if_loaded(
+                models.as_deref(),
+                &asset_server,
+                visual_kind,
+                civilian_faction_id(civilian),
+            );
             #[cfg(not(feature = "models"))]
             let scene_root: Option<SceneRoot> = None;
 
@@ -424,7 +494,7 @@ fn sync_visible_gameplay(
                     commands
                         .spawn((
                             SimCivilianMarker,
-                            FactionTint(civilian.faction),
+                            FactionTint(civilian_faction_id(civilian)),
                             scene_root,
                             Transform::from_translation(world_pos - Vec3::Y * CIVILIAN_HALF_HEIGHT)
                                 .with_scale(Vec3::splat(model_scale_for(visual_kind))),
@@ -437,7 +507,8 @@ fn sync_visible_gameplay(
                     unreachable!()
                 }
             } else {
-                let color = faction_color(civilian.faction);
+                let faction = civilian_faction_id(civilian);
+                let color = faction_color(faction);
                 let material = materials.add(StandardMaterial {
                     base_color: color,
                     // Solid lit object, not a glowing pill: kill the emissive bloom.
@@ -448,6 +519,14 @@ fn sync_visible_gameplay(
                 });
                 commands
                     .spawn((
+                        #[cfg(feature = "models")]
+                        SimCivilianMarker,
+                        #[cfg(feature = "models")]
+                        PendingActorScene {
+                            kind: visual_kind,
+                            faction,
+                        },
+                        #[cfg(not(feature = "models"))]
                         SimCivilianMarker,
                         Mesh3d(assets.civilian_mesh.clone()),
                         MeshMaterial3d(material),
@@ -478,11 +557,12 @@ fn sync_visible_gameplay(
         let world_pos = {
             #[cfg(not(feature = "voxel"))]
             {
-                building_world_position(building, None) + Vec3::Y * BUILDING_HALF_HEIGHT
+                building_world_position(building) + Vec3::Y * BUILDING_HALF_HEIGHT
             }
             #[cfg(feature = "voxel")]
             {
-                building_world_position(building, voxel_state.as_deref()) + Vec3::Y * BUILDING_HALF_HEIGHT
+                building_world_position(building, voxel_state.as_deref())
+                    + Vec3::Y * BUILDING_HALF_HEIGHT
             }
         };
 
@@ -492,7 +572,7 @@ fn sync_visible_gameplay(
             }
         } else {
             #[cfg(feature = "models")]
-            let scene_root = building_model_root(models.as_deref());
+            let scene_root = building_model_root(models.as_deref(), building.building_type);
             #[cfg(not(feature = "models"))]
             let scene_root: Option<SceneRoot> = None;
 
@@ -552,12 +632,62 @@ fn sync_visible_gameplay(
     );
 }
 
+fn civilian_faction_id(civilian: &Civilian) -> u32 {
+    match civilian.alignment {
+        civ_agents::Alignment::Faction(faction) => faction,
+        _ => 0,
+    }
+}
+
+#[cfg(feature = "models")]
+fn upgrade_pending_actor_scenes(
+    mut commands: Commands,
+    models: Option<Res<crate::gltf_models::GameModels>>,
+    asset_server: Res<AssetServer>,
+    mut rendered: ResMut<RenderedEntities>,
+    query: Query<(Entity, &Transform, &PendingActorScene), (With<SimCivilianMarker>, With<Mesh3d>)>,
+) {
+    let Some(models) = models.as_deref() else {
+        return;
+    };
+
+    let mut upgrades: Vec<(u64, Entity)> = Vec::new();
+    for (&sim_id, &entity) in rendered.civilians.iter() {
+        let Ok((entity, transform, pending)) = query.get(entity) else {
+            continue;
+        };
+
+        let Some(scene_root) =
+            actor_scene_if_loaded(Some(models), &asset_server, pending.kind, pending.faction)
+        else {
+            continue;
+        };
+
+        let mut next_transform = *transform;
+        next_transform.translation -= Vec3::Y * CIVILIAN_HALF_HEIGHT;
+        next_transform.scale = Vec3::splat(model_scale_for(pending.kind));
+
+        let new_entity = commands
+            .spawn((
+                SimCivilianMarker,
+                FactionTint(pending.faction),
+                scene_root,
+                next_transform,
+            ))
+            .id();
+        commands.entity(entity).despawn();
+
+        upgrades.push((sim_id, new_entity));
+    }
+
+    for (sim_id, new_entity) in upgrades {
+        rendered.civilians.insert(sim_id, new_entity);
+    }
+}
+
 /// Map a normalised sim agent coordinate to centred, terrain-seated world XZ.
 #[cfg(not(feature = "voxel"))]
-fn sim_position_to_world(
-    position: &civ_agents::Position3d,
-    _voxel: Option<&VoxelSimState>,
-) -> Vec3 {
+fn sim_position_to_world(position: &civ_agents::Position3d) -> Vec3 {
     let scale = civ_voxel::FIXED_SCALE as f32;
     let nx = position.coord.x as f32 / scale;
     let nz = position.coord.z as f32 / scale;
@@ -597,7 +727,7 @@ fn sim_position_to_world(position: &civ_agents::Position3d, voxel: Option<&Voxel
 /// below sea level the base is clamped to [`WATER_LEVEL`] so the building rests
 /// at the shoreline instead of being submerged or floating on the water plane.
 #[cfg(not(feature = "voxel"))]
-fn building_world_position(building: &Building, _voxel: Option<&VoxelSimState>) -> Vec3 {
+fn building_world_position(building: &Building) -> Vec3 {
     let nx = ((building.position.x + 64) as f32 / 127.0).clamp(0.0, 1.0);
     let nz = ((building.position.y + 64) as f32 / 127.0).clamp(0.0, 1.0);
     let mesh_x = nx * WORLD_SIZE;
@@ -652,6 +782,31 @@ fn next_civilian_id(sim: &Simulation) -> u64 {
         .saturating_add(1)
 }
 
+fn tick_to_era_label(tick: u64) -> String {
+    let era = if tick < 100 {
+        "Prehistoric"
+    } else if tick < 500 {
+        "Stone Age"
+    } else if tick < 1500 {
+        "Bronze Age"
+    } else if tick < 3000 {
+        "Iron Age"
+    } else if tick < 6000 {
+        "Classical"
+    } else if tick < 12000 {
+        "Medieval"
+    } else if tick < 25000 {
+        "Renaissance"
+    } else if tick < 50000 {
+        "Industrial"
+    } else if tick < 100000 {
+        "Modern"
+    } else {
+        "Information"
+    };
+    era.to_string()
+}
+
 #[cfg(feature = "egui")]
 fn sync_game_ui_snapshot(
     sim: Res<SimState>,
@@ -667,7 +822,7 @@ fn sync_game_ui_snapshot(
 
     // Pull the authoritative per-tick snapshot for stocks + vital stats.
     let snap = sim.snapshot();
-    let population = snap.population;
+    let population = snap.citizen_count as u64;
 
     // Emergent clusters (settlements) drive both the faction count chip and the
     // left-panel roster — these are NOT hardcoded factions.
@@ -679,12 +834,13 @@ fn sync_game_ui_snapshot(
         snap.tick,
         population,
         faction_count,
-        snap.tick.to_string(),
+        tick_to_era_label(snap.tick),
         speed.multiplier.max(1),
     );
 
     // World resource strip: global economy stocks + the pooled settlement
     // commons as a stand-in treasury, plus births/deaths this tick.
+    // TODO(FR-CIV-ECON): resources are seeded, not yet produced by agent labor at the resource-read site.
     let food = snap.resources.food.to_f64();
     let materials = snap.resources.wood.to_f64() + snap.resources.metal.to_f64();
     let energy = snap.resources.energy.to_f64();
@@ -727,4 +883,109 @@ fn build_faction_roster(sim: &Simulation) -> Vec<crate::game_ui::FactionInfo> {
         .collect();
     rows.sort_by(|a, b| b.count.cmp(&a.count).then(a.name.cmp(&b.name)));
     rows
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(feature = "models")]
+    #[test]
+    fn model_scale_matches_actor_kind() {
+        // Guards the sub-pixel actor-scale fix: humanoids and herd use their
+        // respective constants (and herd reads larger than a civilian).
+        assert_eq!(
+            model_scale_for(ActorVisualKind::Humanoid),
+            CIVILIAN_MODEL_SCALE
+        );
+        assert_eq!(model_scale_for(ActorVisualKind::Herd), HERD_MODEL_SCALE);
+        assert!(HERD_MODEL_SCALE >= CIVILIAN_MODEL_SCALE);
+    }
+
+    #[test]
+    fn faction_color_is_deterministic_and_hue_varies() {
+        // Same faction -> same colour across calls; different factions differ.
+        assert_eq!(faction_color(0), faction_color(0));
+        assert_ne!(faction_color(0), faction_color(1));
+        assert_ne!(faction_color(1), faction_color(2));
+    }
+
+    #[test]
+    fn building_color_is_distinct_per_type() {
+        use std::collections::HashSet;
+        let types = [
+            BuildingType::Farm,
+            BuildingType::Mine,
+            BuildingType::Barracks,
+            BuildingType::Temple,
+            BuildingType::Market,
+            BuildingType::House,
+            BuildingType::CityCenter,
+        ];
+        // Encode each colour's sRGB bytes so distinct building types read as
+        // visually distinct swatches (no two share a colour).
+        let mut seen: HashSet<[u8; 3]> = HashSet::new();
+        for t in types {
+            let c = building_color(t).to_srgba();
+            let key = [
+                (c.red * 255.0) as u8,
+                (c.green * 255.0) as u8,
+                (c.blue * 255.0) as u8,
+            ];
+            assert!(seen.insert(key), "duplicate building colour for {t:?}");
+        }
+    }
+
+    #[test]
+    fn tick_to_era_label_uses_expected_boundaries() {
+        assert_eq!(tick_to_era_label(0), "Prehistoric");
+        assert_eq!(tick_to_era_label(50000), "Modern");
+    }
+
+    #[cfg(feature = "voxel")]
+    #[test]
+    fn actor_seats_feet_on_voxel_surface() {
+        use civ_agents::Position3d;
+        use civ_voxel::fluid_ca::CaGrid;
+        use civ_voxel::material::DIRT;
+        use civ_voxel::WorldCoord;
+
+        // 8x8x8 world, solid DIRT floor 3 voxels tall under every column.
+        let dims = [8usize, 8, 8];
+        let mut grid = CaGrid::new(dims);
+        for z in 0..dims[2] {
+            for x in 0..dims[0] {
+                for y in 0..3 {
+                    grid.set(x, y, z, DIRT);
+                }
+            }
+        }
+        let mut voxel = VoxelSimState::default();
+        voxel.grid = grid;
+
+        // A civilian at normalised map centre (0.5, 0.5).
+        let scale = civ_voxel::FIXED_SCALE as f32;
+        let pos = Position3d {
+            coord: WorldCoord {
+                x: (0.5 * scale) as i64,
+                y: 0,
+                z: (0.5 * scale) as i64,
+            },
+        };
+        let world = sim_position_to_world(&pos, Some(&voxel));
+
+        // The mapped XZ must land inside the grid extent, and Y must equal the
+        // voxel surface so the model's feet rest on the terrain. A 3-tall floor
+        // (solid at y=0,1,2) has its surface at y=3.0 — voxel_surface_y returns
+        // `highest_solid_y + 1` (top face of voxel index 2).
+        let expected_y = voxel_surface_y(&voxel.grid, world.x, world.z);
+        assert!((world.y - expected_y).abs() < f32::EPSILON);
+        assert!(
+            (world.y - 3.0).abs() < f32::EPSILON,
+            "surface should be 3.0, got {}",
+            world.y
+        );
+        assert!(world.x >= 0.0 && world.x <= dims[0] as f32);
+        assert!(world.z >= 0.0 && world.z <= dims[2] as f32);
+    }
 }

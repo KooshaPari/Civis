@@ -63,10 +63,14 @@ mod tests {
     #[test]
     fn plan_is_culled_before_lod_selection() {
         let policy = LodPolicy::default();
-        assert!(
-            plan_chunk_render(ChunkId(3), 32.0, false, VoxelScaleMultiplier::default(), policy)
-                .is_none()
-        );
+        assert!(plan_chunk_render(
+            ChunkId(3),
+            32.0,
+            false,
+            VoxelScaleMultiplier::default(),
+            policy
+        )
+        .is_none());
         let plan = plan_chunk_render(
             ChunkId(7),
             1.0e6,

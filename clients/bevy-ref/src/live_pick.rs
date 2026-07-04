@@ -113,9 +113,8 @@ pub fn pick_live_entity_along_ray(
     buildings: &[(u64, Vec3, Vec3)],
     graph_parcels: &[(u64, Vec3, Vec3)],
 ) -> Option<SelectedLiveEntity> {
-    let dir_len_sq = direction[0] * direction[0]
-        + direction[1] * direction[1]
-        + direction[2] * direction[2];
+    let dir_len_sq =
+        direction[0] * direction[0] + direction[1] * direction[1] + direction[2] * direction[2];
     if dir_len_sq < f32::EPSILON {
         return None;
     }
@@ -131,12 +130,10 @@ pub fn pick_live_entity_along_ray(
 
     let mut best: Option<(f32, SelectedLiveEntity)> = None;
 
-    let mut consider = |distance: f32, selection: SelectedLiveEntity| {
-        match best {
-            None => best = Some((distance, selection)),
-            Some((best_t, _)) if distance < best_t => best = Some((distance, selection)),
-            _ => {}
-        }
+    let mut consider = |distance: f32, selection: SelectedLiveEntity| match best {
+        None => best = Some((distance, selection)),
+        Some((best_t, _)) if distance < best_t => best = Some((distance, selection)),
+        _ => {}
     };
 
     for &(id, centre, scale) in agents {
@@ -311,8 +308,8 @@ mod tests {
         let direction = [0.0, 0.0, 1.0];
         let agents = [(1_u64, Vec3::new(0.0, 1.0, 0.0), Vec3::ONE)];
         let buildings = [(9_u64, Vec3::new(0.0, 1.0, 5.0), Vec3::ONE)];
-        let picked = pick_live_entity_along_ray(origin, direction, &agents, &buildings, &[])
-            .expect("pick");
+        let picked =
+            pick_live_entity_along_ray(origin, direction, &agents, &buildings, &[]).expect("pick");
         assert_eq!(picked.kind, LiveEntityKind::Agent);
         assert_eq!(picked.id, 1);
     }

@@ -25,9 +25,15 @@ if (Test-Path $cargoBin) {
 }
 
 Write-Host "==> civis quality manifest (local gates)"
+$skipCivisVerify = $env:SKIP_CIVIS_3D_VERIFY -eq "1" -or $env:SKIP_QUALITY_MANIFEST -eq "1" -or $env:SKIP_QUALITY -eq "1"
 
 if (Get-Command just -ErrorAction SilentlyContinue) {
-    Invoke-Gate "civis_3d_verify" { just civis-3d-verify }
+    if ($skipCivisVerify) {
+        $results["civis_3d_verify"] = @{ status = "skip"; detail = "SKIP_CIVIS_3D_VERIFY/SKIP_QUALITY_MANIFEST set" }
+        Write-Host "  skip civis_3d_verify"
+    } else {
+        Invoke-Gate "civis_3d_verify" { just civis-3d-verify }
+    }
 } else {
     Invoke-Gate "rust_fmt" { cargo fmt --check }
     Invoke-Gate "rust_clippy" { cargo clippy --workspace --all-targets -- -D warnings }

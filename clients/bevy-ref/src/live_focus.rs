@@ -82,8 +82,7 @@ pub fn compute_live_scene_focus(
 
     let centre = Vec3::new((min_x + max_x) * 0.5, 0.0, (min_z + max_z) * 0.5);
     let half_extent = ((max_x - min_x).max(max_z - min_z) * 0.55)
-        .max(LIVE_FOCUS_MIN_HALF_EXTENT)
-        .min(WORLD_SIZE * 0.5);
+        .clamp(LIVE_FOCUS_MIN_HALF_EXTENT, WORLD_SIZE * 0.5);
     LiveSceneFocus {
         centre,
         half_extent,

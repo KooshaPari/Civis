@@ -9,6 +9,8 @@ use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
+use crate::game_ui::GameSpeed;
+
 const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
 const ACCENT_HI: egui::Color32 = egui::Color32::from_rgb(140, 224, 255);
 const GOLD: egui::Color32 = egui::Color32::from_rgb(232, 184, 75);
@@ -64,11 +66,7 @@ impl MenuTextures {
 /// back to its pure-code styling rather than panicking — per the project
 /// "fail clearly, never silently" stance, the failure is logged with the asset
 /// name and the cause.
-fn decode_texture(
-    ctx: &egui::Context,
-    name: &str,
-    bytes: &[u8],
-) -> Option<egui::TextureHandle> {
+fn decode_texture(ctx: &egui::Context, name: &str, bytes: &[u8]) -> Option<egui::TextureHandle> {
     use bevy::asset::RenderAssetUsages;
     use bevy::image::{Image, ImageType};
     use bevy::render::render_resource::TextureFormat;
@@ -89,9 +87,7 @@ fn decode_texture(
         }
     };
     // Normalise to RGBA8 sRGB so the pixel layout is known.
-    let rgba = img
-        .convert(TextureFormat::Rgba8UnormSrgb)
-        .unwrap_or(img);
+    let rgba = img.convert(TextureFormat::Rgba8UnormSrgb).unwrap_or(img);
     let size = rgba.texture_descriptor.size;
     let (w, h) = (size.width as usize, size.height as usize);
     let Some(data) = rgba.data else {
@@ -99,7 +95,10 @@ fn decode_texture(
         return None;
     };
     if data.len() < w * h * 4 {
-        error!("menu texture '{name}' pixel buffer too small ({} bytes for {w}x{h})", data.len());
+        error!(
+            "menu texture '{name}' pixel buffer too small ({} bytes for {w}x{h})",
+            data.len()
+        );
         return None;
     }
     let color = egui::ColorImage::from_rgba_unmultiplied([w, h], &data[..w * h * 4]);
@@ -197,6 +196,7 @@ pub struct WorldSetupParams {
     /// Ephemeral string buffer backing the seed text field in the UI.
     pub seed_text: String,
     pub world_size: usize,
+    pub water_level: i32,
     pub starting_era: usize,
 }
 
@@ -207,6 +207,7 @@ impl Default for WorldSetupParams {
             seed,
             seed_text: seed.to_string(),
             world_size: 1,
+            water_level: 40,
             starting_era: 0,
         }
     }
@@ -223,7 +224,10 @@ impl WorldSetupParams {
     /// seed is left unchanged and `false` is returned.
     pub fn commit_text(&mut self) -> bool {
         match self.seed_text.trim().parse::<u64>() {
-            Ok(v) => { self.seed = v; true }
+            Ok(v) => {
+                self.seed = v;
+                true
+            }
             Err(_) => false,
         }
     }
@@ -262,12 +266,26 @@ pub struct SettingsState {
     /// 0 = Low … 3 = Ultra
     pub graphics_quality: usize,
     pub master_volume: f32,
+    pub music_volume: f32,
+    pub sfx_volume: f32,
+    pub camera_sensitivity: f32,
     pub sim_speed: u32,
+    pub vsync: bool,
+    pub fullscreen: bool,
 }
 
 impl Default for SettingsState {
     fn default() -> Self {
-        Self { graphics_quality: 2, master_volume: 0.8, sim_speed: 1 }
+        Self {
+            graphics_quality: 2,
+            master_volume: 0.8,
+            music_volume: 0.7,
+            sfx_volume: 0.8,
+            camera_sensitivity: 1.0,
+            sim_speed: 1,
+            vsync: true,
+            fullscreen: false,
+        }
     }
 }
 
@@ -304,10 +322,7 @@ impl Plugin for MenusPlugin {
             .init_resource::<SettingsOpen>()
             .init_resource::<SettingsState>()
             .init_resource::<MenuTextures>()
-            .add_systems(
-                Update,
-                (toggle_pause, tick_era_banner, tick_loading),
-            )
+            .add_systems(Update, (toggle_pause, tick_era_banner, tick_loading))
             .add_systems(
                 EguiPrimaryContextPass,
                 (
@@ -380,6 +395,7 @@ fn draw_main_menu(
     mut progress: ResMut<LoadingProgress>,
     mut textures: ResMut<MenuTextures>,
     mut settings_open: ResMut<SettingsOpen>,
+    mut params: ResMut<WorldSetupParams>,
     mut exit: MessageWriter<AppExit>,
 ) {
     if *mode != GameUiMode::MainMenu {
@@ -392,7 +408,15 @@ fn draw_main_menu(
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
         .order(egui::Order::Foreground)
         .show(ctx, |ui| {
-            main_menu_panel(ui, &mut mode, &mut progress, &mut settings_open, textures.logo.as_ref(), &mut exit);
+            main_menu_panel(
+                ui,
+                &mut mode,
+                &mut progress,
+                &mut settings_open,
+                &mut params,
+                textures.logo.as_ref(),
+                &mut exit,
+            );
         });
     // Footer build/version line, bottom-centred.
     egui::Area::new(egui::Id::new("main_menu_footer"))
@@ -447,7 +471,13 @@ fn draw_loading_screen(
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
         .order(egui::Order::Foreground)
         .show(ctx, |ui| {
-            loading_panel(ui, &progress, elapsed, textures.logo.as_ref(), textures.spinner.as_ref());
+            loading_panel(
+                ui,
+                &progress,
+                elapsed,
+                textures.logo.as_ref(),
+                textures.spinner.as_ref(),
+            );
         });
 }
 
@@ -465,7 +495,9 @@ fn draw_pause_menu(
     egui::Area::new(egui::Id::new("pause_panel_area"))
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
         .order(egui::Order::Foreground)
-        .show(ctx, |ui| pause_panel(ui, &mut mode, &mut settings_open, &mut exit));
+        .show(ctx, |ui| {
+            pause_panel(ui, &mut mode, &mut settings_open, &mut exit)
+        });
 }
 
 fn draw_era_banner(mut contexts: EguiContexts, banner: Res<EraBanner>) {
@@ -483,12 +515,18 @@ fn draw_settings_window(
     mut contexts: EguiContexts,
     mut settings_open: ResMut<SettingsOpen>,
     mut state: ResMut<SettingsState>,
+    mut game_speed: Option<ResMut<GameSpeed>>,
 ) {
     if !settings_open.0 {
         return;
     }
     let Ok(ctx) = contexts.ctx_mut() else { return };
-    settings_window(ctx, &mut settings_open, &mut state);
+    settings_window(
+        ctx,
+        &mut settings_open,
+        &mut state,
+        game_speed.as_deref_mut(),
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -497,13 +535,14 @@ fn draw_settings_window(
 
 /// Full-screen near-opaque dark backdrop used behind menus and loading screen.
 fn full_screen_backdrop(ctx: &egui::Context) {
-    let screen = ctx.screen_rect();
+    let screen = ctx.content_rect();
     let bg = egui::Color32::from_rgba_premultiplied(8, 10, 18, 245);
     egui::Area::new(egui::Id::new("menu_backdrop"))
         .fixed_pos(egui::pos2(0.0, 0.0))
         .order(egui::Order::Background)
         .show(ctx, |ui| {
-            ui.painter().rect_filled(screen, egui::CornerRadius::ZERO, bg);
+            ui.painter()
+                .rect_filled(screen, egui::CornerRadius::ZERO, bg);
         });
 }
 
@@ -515,7 +554,7 @@ fn image_backdrop(ctx: &egui::Context, tex: Option<&egui::TextureHandle>, id: &s
         full_screen_backdrop(ctx);
         return;
     };
-    let screen = ctx.screen_rect();
+    let screen = ctx.content_rect();
     egui::Area::new(egui::Id::new(id))
         .fixed_pos(egui::pos2(0.0, 0.0))
         .order(egui::Order::Background)
@@ -553,7 +592,8 @@ fn dim_overlay(ctx: &egui::Context) {
         .fixed_pos(egui::pos2(0.0, 0.0))
         .order(egui::Order::Middle)
         .show(ctx, |ui| {
-            ui.painter().rect_filled(screen, egui::CornerRadius::ZERO, OVERLAY_DIM);
+            ui.painter()
+                .rect_filled(screen, egui::CornerRadius::ZERO, OVERLAY_DIM);
         });
 }
 
@@ -566,6 +606,7 @@ fn main_menu_panel(
     mode: &mut GameUiMode,
     progress: &mut LoadingProgress,
     settings_open: &mut SettingsOpen,
+    params: &mut WorldSetupParams,
     logo: Option<&egui::TextureHandle>,
     exit: &mut MessageWriter<AppExit>,
 ) {
@@ -590,7 +631,7 @@ fn main_menu_panel(
                         .color(DIM),
                 );
                 ui.add_space(28.0);
-                main_menu_buttons(ui, mode, progress, settings_open, exit);
+                main_menu_buttons(ui, mode, progress, settings_open, params, exit);
             });
         });
 }
@@ -604,7 +645,12 @@ fn menu_logo(ui: &mut egui::Ui, logo: Option<&egui::TextureHandle>, max_width: f
             ui.add(egui::Image::new((tex.id(), size * scale)));
         }
         None => {
-            ui.label(egui::RichText::new("CIVIS").size(52.0).color(ACCENT).strong());
+            ui.label(
+                egui::RichText::new("CIVIS")
+                    .size(52.0)
+                    .color(ACCENT)
+                    .strong(),
+            );
         }
     }
 }
@@ -614,9 +660,16 @@ fn main_menu_buttons(
     mode: &mut GameUiMode,
     progress: &mut LoadingProgress,
     settings_open: &mut SettingsOpen,
+    params: &mut WorldSetupParams,
     exit: &mut MessageWriter<AppExit>,
 ) {
     if primary_button(ui, "\u{1f30d}  New World").clicked() {
+        // Draw a fresh seed for each New World so worlds differ by default; the
+        // player can still override via the Randomize die or manual seed entry
+        // on the World-Setup screen. (Without this, every play reused the one
+        // seed drawn at WorldSetupParams::default() — same map every time.)
+        params.randomize();
+        progress.reset();
         *mode = GameUiMode::WorldSetup;
     }
     ui.add_space(8.0);
@@ -651,7 +704,7 @@ fn world_setup_panel(
     progress: &mut LoadingProgress,
     params: &mut WorldSetupParams,
 ) {
-    const SIZES: &[&str] = &["Small", "Medium", "Large"];
+    const SIZES: &[&str] = &["Small", "Medium", "Large", "Huge"];
     const ERAS: &[&str] = &["Stone Age", "Bronze Age", "Iron Age", "Industrial"];
     egui::Frame::NONE
         .fill(PANEL_FILL)
@@ -661,7 +714,12 @@ fn world_setup_panel(
         .show(ui, |ui| {
             ui.set_min_width(380.0);
             ui.vertical_centered(|ui| {
-                ui.label(egui::RichText::new("World Setup").size(26.0).color(ACCENT).strong());
+                ui.label(
+                    egui::RichText::new("World Setup")
+                        .size(26.0)
+                        .color(ACCENT)
+                        .strong(),
+                );
                 ui.add_space(18.0);
             });
             world_setup_fields(ui, params, SIZES, ERAS);
@@ -721,7 +779,11 @@ fn world_setup_fields(
     ui.add_space(6.0);
 
     // Editable text field — player can paste/type a specific u64.
-    ui.label(egui::RichText::new("Enter seed manually:").color(DIM).small());
+    ui.label(
+        egui::RichText::new("Enter seed manually:")
+            .color(DIM)
+            .small(),
+    );
     let resp = ui.add(
         egui::TextEdit::singleline(&mut params.seed_text)
             .desired_width(200.0)
@@ -748,6 +810,12 @@ fn world_setup_fields(
             }
         });
     ui.add_space(8.0);
+
+    // ---- Water level ------------------------------------------------------
+    ui.label(egui::RichText::new("Water Level").color(DIM).small());
+    ui.add(egui::Slider::new(&mut params.water_level, 20..=80).suffix("%"));
+    ui.add_space(8.0);
+    // TODO: wire world_size / water_level to voxel worldgen arguments once generation accepts them.
 
     // ---- Starting era -----------------------------------------------------
     ui.label(egui::RichText::new("Starting Era").color(DIM).small());
@@ -829,7 +897,8 @@ fn loading_spinner(ui: &mut egui::Ui, spinner: Option<&egui::TextureHandle>, ela
             let c = rect.center();
             let h = SIZE / 2.0;
             let (sin, cos) = angle.sin_cos();
-            let rot = |dx: f32, dy: f32| egui::pos2(c.x + dx * cos - dy * sin, c.y + dx * sin + dy * cos);
+            let rot =
+                |dx: f32, dy: f32| egui::pos2(c.x + dx * cos - dy * sin, c.y + dx * sin + dy * cos);
             let pts = [rot(-h, -h), rot(h, -h), rot(h, h), rot(-h, h)];
             let uv = [
                 egui::pos2(0.0, 0.0),
@@ -983,7 +1052,10 @@ fn era_banner(ui: &mut egui::Ui, banner: &EraBanner) {
     .clamp(0.0, 1.0);
     let panel_fill = egui::Color32::from_rgba_unmultiplied(17, 20, 31, (220.0 * alpha) as u8);
     let text_color = egui::Color32::from_rgba_unmultiplied(
-        ACCENT.r(), ACCENT.g(), ACCENT.b(), (255.0 * alpha) as u8,
+        ACCENT.r(),
+        ACCENT.g(),
+        ACCENT.b(),
+        (255.0 * alpha) as u8,
     );
     egui::Frame::NONE
         .fill(panel_fill)
@@ -1008,24 +1080,34 @@ fn settings_window(
     ctx: &egui::Context,
     settings_open: &mut SettingsOpen,
     state: &mut SettingsState,
+    game_speed: Option<&mut GameSpeed>,
 ) {
     const QUALITIES: &[&str] = &["Low", "Medium", "High", "Ultra"];
-    egui::Window::new(egui::RichText::new("\u{2699} Settings").color(ACCENT).strong())
-        .collapsible(false)
-        .resizable(false)
-        .min_width(320.0)
-        .frame(
-            egui::Frame::NONE
-                .fill(PANEL_FILL)
-                .corner_radius(egui::CornerRadius::same(10))
-                .stroke(egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.4)))
-                .inner_margin(egui::Margin::same(18)),
-        )
-        .open(&mut settings_open.0)
-        .show(ctx, |ui| settings_rows(ui, state, QUALITIES));
+    egui::Window::new(
+        egui::RichText::new("\u{2699} Settings")
+            .color(ACCENT)
+            .strong(),
+    )
+    .collapsible(false)
+    .resizable(false)
+    .min_width(320.0)
+    .frame(
+        egui::Frame::NONE
+            .fill(PANEL_FILL)
+            .corner_radius(egui::CornerRadius::same(10))
+            .stroke(egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.4)))
+            .inner_margin(egui::Margin::same(18)),
+    )
+    .open(&mut settings_open.0)
+    .show(ctx, |ui| settings_rows(ui, state, game_speed, QUALITIES));
 }
 
-fn settings_rows(ui: &mut egui::Ui, state: &mut SettingsState, qualities: &[&str]) {
+fn settings_rows(
+    ui: &mut egui::Ui,
+    state: &mut SettingsState,
+    game_speed: Option<&mut GameSpeed>,
+    qualities: &[&str],
+) {
     ui.label(egui::RichText::new("Graphics Quality").color(DIM).small());
     egui::ComboBox::from_id_salt("graphics_quality_combo")
         .selected_text(*qualities.get(state.graphics_quality).unwrap_or(&"High"))
@@ -1038,8 +1120,50 @@ fn settings_rows(ui: &mut egui::Ui, state: &mut SettingsState, qualities: &[&str
     ui.label(egui::RichText::new("Master Volume").color(DIM).small());
     ui.add(egui::Slider::new(&mut state.master_volume, 0.0..=1.0).show_value(true));
     ui.add_space(8.0);
+    ui.label(egui::RichText::new("Music Volume").color(DIM).small());
+    ui.add(egui::Slider::new(&mut state.music_volume, 0.0..=1.0).show_value(true));
+    ui.add_space(8.0);
+    ui.label(egui::RichText::new("SFX Volume").color(DIM).small());
+    ui.add(egui::Slider::new(&mut state.sfx_volume, 0.0..=1.0).show_value(true));
+    ui.add_space(8.0);
     ui.label(egui::RichText::new("Sim Speed").color(DIM).small());
-    ui.add(egui::Slider::new(&mut state.sim_speed, 1..=10).text("x").show_value(true));
+    if let Some(speed) = game_speed {
+        if ui
+            .add(
+                egui::Slider::new(&mut state.sim_speed, 1..=10)
+                    .text("x")
+                    .show_value(true),
+            )
+            .changed()
+        {
+            speed.multiplier = state.sim_speed;
+        }
+    } else {
+        ui.add(
+            egui::Slider::new(&mut state.sim_speed, 1..=10)
+                .text("x")
+                .show_value(true),
+        );
+    }
+    ui.add_space(8.0);
+    ui.label(egui::RichText::new("Camera Sensitivity").color(DIM).small());
+    ui.add(egui::Slider::new(&mut state.camera_sensitivity, 0.2..=4.0).show_value(true));
+    ui.add_space(8.0);
+    ui.label(egui::RichText::new("Display").color(DIM).small());
+    // TODO: wire fullscreen setting to window/fullscreen resource when available.
+    ui.checkbox(&mut state.fullscreen, "Fullscreen");
+    ui.label(egui::RichText::new("VSync").color(DIM).small());
+    ui.checkbox(&mut state.vsync, "Vertical sync");
+    // TODO: wire vsync setting to window descriptor once window settings sink is added.
+    ui.add_space(12.0);
+    ui.separator();
+    ui.add_space(8.0);
+    ui.label(egui::RichText::new("Controls").color(DIM).small());
+    ui.indent("settings_controls", |ui| {
+        ui.label("Rotate Camera: Q / E");
+        ui.label("Move Up / Down: R / F");
+        ui.label("Move Horizontal: W / A / S / D");
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -1053,7 +1177,14 @@ fn menu_button(ui: &mut egui::Ui, label: &str) -> egui::Response {
 
 /// Emphasised primary call-to-action (filled accent tint, white text).
 fn primary_button(ui: &mut egui::Ui, label: &str) -> egui::Response {
-    themed_button(ui, label, ACCENT.gamma_multiply(0.22), egui::Color32::WHITE, ACCENT, true)
+    themed_button(
+        ui,
+        label,
+        ACCENT.gamma_multiply(0.22),
+        egui::Color32::WHITE,
+        ACCENT,
+        true,
+    )
 }
 
 fn themed_button(
@@ -1071,16 +1202,33 @@ fn themed_button(
     let radius = egui::CornerRadius::same(9);
 
     let bg = if hovered {
-        if primary { accent.gamma_multiply(0.34) } else { CHIP_HOVER }
+        if primary {
+            accent.gamma_multiply(0.34)
+        } else {
+            CHIP_HOVER
+        }
     } else {
         fill
     };
     painter.rect_filled(rect, radius, bg);
     let stroke_w = if hovered { 1.6 } else { 1.0 };
-    let stroke_c = if hovered { accent } else { accent.gamma_multiply(0.35) };
-    painter.rect_stroke(rect, radius, egui::Stroke::new(stroke_w, stroke_c), egui::StrokeKind::Inside);
+    let stroke_c = if hovered {
+        accent
+    } else {
+        accent.gamma_multiply(0.35)
+    };
+    painter.rect_stroke(
+        rect,
+        radius,
+        egui::Stroke::new(stroke_w, stroke_c),
+        egui::StrokeKind::Inside,
+    );
 
-    let txt = if hovered { egui::Color32::WHITE } else if primary { egui::Color32::WHITE } else { egui::Color32::from_rgb(214, 224, 240) };
+    let txt = if hovered || primary {
+        egui::Color32::WHITE
+    } else {
+        egui::Color32::from_rgb(214, 224, 240)
+    };
     painter.text(
         rect.center(),
         egui::Align2::CENTER_CENTER,
@@ -1121,7 +1269,10 @@ mod tests {
 
     #[test]
     fn loading_progress_reset() {
-        let mut p = LoadingProgress { fraction: 0.9, label: "done".into() };
+        let mut p = LoadingProgress {
+            fraction: 0.9,
+            label: "done".into(),
+        };
         p.reset();
         assert_eq!(p.fraction, 0.0);
         assert!(!p.label.is_empty());
@@ -1129,7 +1280,10 @@ mod tests {
 
     #[test]
     fn loading_progress_fraction_clamp() {
-        let p = LoadingProgress { fraction: 1.5, label: String::new() };
+        let p = LoadingProgress {
+            fraction: 1.5,
+            label: String::new(),
+        };
         assert!(p.fraction.clamp(0.0, 1.0) <= 1.0);
     }
 
@@ -1160,14 +1314,22 @@ mod tests {
     #[test]
     fn pause_only_in_playing_or_paused() {
         // MainMenu and Loading should not be affected by Esc (toggle_pause guard)
-        for initial in [GameUiMode::MainMenu, GameUiMode::Loading, GameUiMode::WorldSetup] {
+        for initial in [
+            GameUiMode::MainMenu,
+            GameUiMode::Loading,
+            GameUiMode::WorldSetup,
+        ] {
             // The toggle_pause function only acts on Playing/Paused; other states are passed through unchanged.
             let result = match initial {
                 GameUiMode::Playing => GameUiMode::Paused,
                 GameUiMode::Paused => GameUiMode::Playing,
                 other => other,
             };
-            assert_eq!(result, initial, "Mode {:?} should not change on Esc", initial);
+            assert_eq!(
+                result, initial,
+                "Mode {:?} should not change on Esc",
+                initial
+            );
         }
     }
 
@@ -1197,6 +1359,24 @@ mod tests {
         assert_ne!(a, b, "Two consecutive seeds were identical — RNG broken?");
     }
 
+    /// The "New World" transition must draw a fresh seed so two consecutive
+    /// New Worlds differ by default (the regression this fixes: every New World
+    /// reused the one seed from WorldSetupParams::default()).
+    #[test]
+    fn new_world_transition_randomizes_seed() {
+        let mut p = WorldSetupParams {
+            seed: 1234,
+            seed_text: "1234".to_string(),
+            world_size: 1,
+            water_level: 40,
+            starting_era: 0,
+        };
+        // Mirror the New World button body: randomize() runs on the transition.
+        p.randomize();
+        assert_ne!(p.seed, 1234, "New World must draw a fresh seed");
+        assert_eq!(p.seed_text, p.seed.to_string(), "seed text stays in sync");
+    }
+
     /// WorldSetupParams::default() must produce a seed that is large and valid.
     #[test]
     fn world_setup_params_default_seed_is_large() {
@@ -1204,6 +1384,7 @@ mod tests {
             seed: fresh_seed(),
             seed_text: String::new(),
             world_size: 1,
+            water_level: 40,
             starting_era: 0,
         };
         assert!(p.seed > 0xFFFF);
@@ -1216,6 +1397,7 @@ mod tests {
             seed: 42,
             seed_text: "42".to_string(),
             world_size: 1,
+            water_level: 40,
             starting_era: 0,
         };
         p.randomize();
@@ -1230,6 +1412,7 @@ mod tests {
             seed: 1,
             seed_text: "12345678901234567".to_string(),
             world_size: 1,
+            water_level: 40,
             starting_era: 0,
         };
         assert!(p.commit_text());
@@ -1243,6 +1426,7 @@ mod tests {
             seed: 9999,
             seed_text: "not-a-number".to_string(),
             world_size: 1,
+            water_level: 40,
             starting_era: 0,
         };
         assert!(!p.commit_text());

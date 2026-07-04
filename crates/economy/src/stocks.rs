@@ -248,7 +248,11 @@ pub fn propose_trade(
                 qty_b_to_a,
             };
 
-            if best.as_ref().map(|current| offer_better(&offer, current)).unwrap_or(true) {
+            if best
+                .as_ref()
+                .map(|current| offer_better(&offer, current))
+                .unwrap_or(true)
+            {
                 best = Some(offer);
             }
         }

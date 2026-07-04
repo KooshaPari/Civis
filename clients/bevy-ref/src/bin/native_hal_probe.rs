@@ -8,13 +8,17 @@ use civ_bevy_ref::{gpu_features::GpuFeaturesPlugin, native_backend::native_rende
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(native_render_plugin()).set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "civ-native-hal-probe".into(),
-                ..default()
-            }),
-            ..default()
-        }))
+        .add_plugins(
+            DefaultPlugins
+                .set(native_render_plugin())
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: "civ-native-hal-probe".into(),
+                        ..default()
+                    }),
+                    ..default()
+                }),
+        )
         .add_plugins(GpuFeaturesPlugin)
         .add_plugins(NativeHalProbePlugin)
         .add_systems(Update, exit_after_probe)

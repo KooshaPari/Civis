@@ -16,13 +16,17 @@
 //!    and use a saturated faction colour with near-zero emissive so they read
 //!    as solid actors, not hovering neon pills.
 
+#[cfg(feature = "models")]
+use crate::gltf_models::{actor_scene, building_scene, ModelOrPrimitive};
 use bevy::math::primitives::{Capsule3d, Circle, Cuboid};
 use bevy::prelude::*;
 use civ_agents::ActorVisualKind;
 
 use crate::minimap::MinimapCamera;
 use crate::terrain::{terrain_height, terrain_surface_y, WORLD_SIZE};
+#[cfg(feature = "voxel")]
 use crate::voxel_sim::VoxelSimState;
+#[cfg(feature = "voxel")]
 use civ_voxel::material::AIR;
 
 /// Civilian capsule radius (world units).
@@ -31,6 +35,20 @@ const CIVILIAN_RADIUS: f32 = 1.4;
 const CIVILIAN_BODY: f32 = 3.2;
 /// Half the total civilian height, used to seat the base on the terrain.
 const CIVILIAN_HALF_HEIGHT: f32 = CIVILIAN_BODY * 0.5 + CIVILIAN_RADIUS;
+// Match sim_bridge: voxel world is ~256 units tall, so a ~1.8m glb must be
+// scaled up to read against the terrain (sub-pixel mesh-scale bug).
+#[cfg(all(feature = "models", feature = "voxel"))]
+const CIVILIAN_MODEL_SCALE: f32 = 8.0;
+#[cfg(all(feature = "models", not(feature = "voxel")))]
+const CIVILIAN_MODEL_SCALE: f32 = 1.7;
+#[cfg(all(feature = "models", feature = "voxel"))]
+const HERD_MODEL_SCALE: f32 = 10.0;
+#[cfg(all(feature = "models", not(feature = "voxel")))]
+const HERD_MODEL_SCALE: f32 = 2.4;
+#[cfg(all(feature = "models", feature = "voxel"))]
+const BUILDING_MODEL_SCALE: f32 = 4.0;
+#[cfg(all(feature = "models", not(feature = "voxel")))]
+const BUILDING_MODEL_SCALE: f32 = 6.0;
 /// Building cuboid full extents (x, y, z).
 const BUILDING_EXTENTS: Vec3 = Vec3::new(7.0, 12.0, 7.0);
 /// Half the building height, used to seat the base on the terrain.
@@ -295,7 +313,7 @@ fn update_cursor_marker(
     // Present only when `VoxelSimPlugin` is active (the `voxel` feature). When
     // it is, clicks must raycast the VISIBLE voxel surface, not the analytic
     // heightmap (which is no longer rendered under `voxel`).
-    voxel: Option<Res<VoxelSimState>>,
+    #[cfg(feature = "voxel")] voxel: Option<Res<VoxelSimState>>,
 ) {
     if over_ui.0 {
         marker.visible = false;
@@ -303,7 +321,12 @@ fn update_cursor_marker(
         return;
     }
     let had_hit = marker.position.is_some();
-    let hit = cursor_terrain_hit(&windows, &cameras, voxel.as_deref());
+    let hit = cursor_terrain_hit(
+        &windows,
+        &cameras,
+        #[cfg(feature = "voxel")]
+        voxel.as_deref(),
+    );
     log_hit_transition(had_hit, hit.is_some());
     marker.position = hit;
     marker.visible = hit.is_some();
@@ -326,7 +349,7 @@ fn log_hit_transition(prev: bool, now: bool) {
 fn cursor_terrain_hit(
     windows: &Query<&Window>,
     cameras: &Query<(&Camera, &GlobalTransform), (With<Camera3d>, Without<MinimapCamera>)>,
-    voxel: Option<&VoxelSimState>,
+    #[cfg(feature = "voxel")] voxel: Option<&VoxelSimState>,
 ) -> Option<Vec3> {
     let window = windows.single().ok()?;
     let cursor = window.cursor_position()?;
@@ -335,6 +358,7 @@ fn cursor_terrain_hit(
     // Under the voxel feature the chunk meshes are the visible world, so the
     // click must hit a real voxel cell. Fall back to the heightmap analytic
     // surface only when no voxel grid is loaded (heightmap sandbox build).
+    #[cfg(feature = "voxel")]
     if let Some(state) = voxel {
         if !state.grid.cells.is_empty() {
             return raycast_to_voxel(&state.grid, ray.origin, ray.direction.as_vec3());
@@ -346,7 +370,12 @@ fn cursor_terrain_hit(
 /// March a ray through the dense voxel grid (world-space == grid coords; chunk
 /// meshes are spawned at raw cell offsets with no centring) and return the
 /// surface point of the first non-air cell hit, or `None` if the ray misses.
-fn raycast_to_voxel(grid: &civ_voxel::fluid_ca::CaGrid, origin: Vec3, direction: Vec3) -> Option<Vec3> {
+#[cfg(feature = "voxel")]
+fn raycast_to_voxel(
+    grid: &civ_voxel::fluid_ca::CaGrid,
+    origin: Vec3,
+    direction: Vec3,
+) -> Option<Vec3> {
     let dir = direction.normalize_or_zero();
     if dir == Vec3::ZERO {
         return None;
@@ -386,6 +415,7 @@ fn handle_spawn_tool_clicks(
     over_ui: Res<PointerOverUi>,
     marker: Res<CursorMarker>,
     #[cfg(feature = "egui")] sub: Res<crate::tool_categories::ActiveSubTool>,
+    #[cfg(feature = "voxel")] mut brush: ResMut<crate::terraform_brush::BrushSettings>,
     mut spawn_civilian: MessageWriter<SpawnCivilianRequest>,
     mut spawn_building: MessageWriter<SpawnBuildingRequest>,
     mut select_entity: MessageWriter<SelectEntityRequest>,
@@ -428,12 +458,35 @@ fn handle_spawn_tool_clicks(
             };
             #[cfg(not(feature = "egui"))]
             let model_kind = ActorVisualKind::Humanoid;
-            spawn_civilian.write(SpawnCivilianRequest { position, model_kind });
+            spawn_civilian.write(SpawnCivilianRequest {
+                position,
+                model_kind,
+            });
         }
         SpawnTool::SpawnBuilding => {
             spawn_building.write(SpawnBuildingRequest { position });
         }
-        SpawnTool::Terraform => {}
+        SpawnTool::Terraform => {
+            #[cfg(all(feature = "voxel", feature = "egui"))]
+            {
+                let op = match sub.current {
+                    crate::tool_categories::SubTool::Raise => {
+                        crate::terraform_brush::BrushOp::Raise
+                    }
+                    crate::tool_categories::SubTool::Lower => {
+                        crate::terraform_brush::BrushOp::Lower
+                    }
+                    crate::tool_categories::SubTool::Flatten => {
+                        crate::terraform_brush::BrushOp::Flatten
+                    }
+                    crate::tool_categories::SubTool::PaintBiome => {
+                        crate::terraform_brush::BrushOp::DropBiome
+                    }
+                    _ => brush.op,
+                };
+                brush.select_op(op);
+            }
+        }
         SpawnTool::PaintMaterial => {
             // Painting is handled by the material brush's own per-frame system
             // (gated on `MaterialPaintArmed`); nothing to dispatch on click here.
@@ -485,7 +538,7 @@ fn accumulate_road_draft(
             let keep = draft
                 .points
                 .last()
-                .is_none_or(|last| last.distance_squared(p) > 2.25);
+                .map_or(true, |last| last.distance_squared(p) > 2.25);
             if keep {
                 draft.points.push(p);
             }
@@ -513,19 +566,88 @@ fn apply_spawn_requests(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    #[cfg(feature = "models")] models: Option<Res<crate::gltf_models::GameModels>>,
     mut civilians: MessageReader<SpawnCivilianRequest>,
     mut buildings: MessageReader<SpawnBuildingRequest>,
 ) {
     for request in civilians.read() {
+        #[cfg(feature = "models")]
+        {
+            let mut spawned = false;
+            if let Some(models) = models
+                .as_ref()
+                .and_then(|models| model_root_for_spawn(models, request.model_kind))
+            {
+                let seated = seat_on_terrain(request.position, CIVILIAN_HALF_HEIGHT);
+                commands.spawn((
+                    SandboxEntity,
+                    models,
+                    Transform::from_translation(seated)
+                        .with_scale(Vec3::splat(model_scale_for_kind(request.model_kind))),
+                ));
+                spawned = true;
+            }
+            if !spawned {
+                spawn_civilian_entity(&mut commands, &mut meshes, &mut materials, request.position);
+            }
+        }
+        #[cfg(not(feature = "models"))]
         spawn_civilian_entity(&mut commands, &mut meshes, &mut materials, request.position);
         info!("[tools] SPAWNED civilian at {:?}", request.position);
     }
     for request in buildings.read() {
+        #[cfg(feature = "models")]
+        {
+            let mut spawned = false;
+            if let Some(models) = models
+                .as_ref()
+                .and_then(|models| building_root_for_spawn(models))
+            {
+                let seated = seat_on_terrain(request.position, BUILDING_HALF_HEIGHT);
+                commands.spawn((
+                    SandboxEntity,
+                    models,
+                    Transform::from_translation(seated)
+                        .with_scale(Vec3::splat(BUILDING_MODEL_SCALE)),
+                ));
+                spawned = true;
+            }
+            if !spawned {
+                spawn_building_entity(&mut commands, &mut meshes, &mut materials, request.position);
+            }
+        }
+        #[cfg(not(feature = "models"))]
         spawn_building_entity(&mut commands, &mut meshes, &mut materials, request.position);
         info!("[tools] SPAWNED building at {:?}", request.position);
     }
 }
 
+#[cfg(feature = "models")]
+fn model_scale_for_kind(kind: ActorVisualKind) -> f32 {
+    match kind {
+        ActorVisualKind::Humanoid => CIVILIAN_MODEL_SCALE,
+        ActorVisualKind::Herd => HERD_MODEL_SCALE,
+    }
+}
+
+#[cfg(feature = "models")]
+fn model_root_for_spawn(
+    models: &crate::gltf_models::GameModels,
+    kind: ActorVisualKind,
+) -> Option<SceneRoot> {
+    match actor_scene(models, kind, 0) {
+        ModelOrPrimitive::Model(root) => Some(root),
+        ModelOrPrimitive::Primitive => None,
+    }
+}
+
+#[cfg(feature = "models")]
+fn building_root_for_spawn(models: &crate::gltf_models::GameModels) -> Option<SceneRoot> {
+    match building_scene(models) {
+        ModelOrPrimitive::Model(root) => Some(root),
+        ModelOrPrimitive::Primitive => None,
+    }
+}
 
 /// Shared data tag carried by every user-placed infra actor (road segment,
 /// structure, or vehicle). Records which [`SpawnTool`] authored it so the
@@ -641,7 +763,10 @@ fn apply_place_structure_requests(
             MeshMaterial3d(material),
             Transform::from_translation(seated),
         ));
-        info!("[tools] PLACED {:?} at {:?}", request.kind, request.position);
+        info!(
+            "[tools] PLACED {:?} at {:?}",
+            request.kind, request.position
+        );
     }
 }
 
@@ -806,8 +931,14 @@ fn raycast_to_terrain(origin: Vec3, direction: Vec3) -> Option<Vec3> {
 }
 
 /// Signed distance of `point` above the terrain (positive = above surface).
+///
+/// Must be `point.y - surface` to match the documented convention and the hit
+/// test in [`raycast_to_terrain`] (`err <= 0 && prev_err > 0` = a downward ray
+/// crossing from above to below the surface). The previous `surface - point.y`
+/// inverted the sign, so a sky-down ray never registered a crossing and the
+/// cast always returned `None`.
 fn terrain_error(point: Vec3) -> f32 {
-    terrain_height(point.x + WORLD_SIZE * 0.5, point.z + WORLD_SIZE * 0.5) - point.y
+    point.y - terrain_height(point.x + WORLD_SIZE * 0.5, point.z + WORLD_SIZE * 0.5)
 }
 
 /// Bisect between an above-surface and below-surface sample to the crossing.

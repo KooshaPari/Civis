@@ -260,7 +260,7 @@ mod tests {
         let _ = spawn_civilian_at(
             &mut sim.world,
             42_007,
-            1,
+            civ_agents::Alignment::None,
             0.4,
             0.6,
             civ_agents::ActorVisualKind::Humanoid,

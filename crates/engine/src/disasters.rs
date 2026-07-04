@@ -61,37 +61,67 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) {
                 };
                 sim.push_voxel_write(*cell, material);
             }
-            hit_agents(sim, pos, radius, 0.28, 0.35, 0.25, 0.55, true);
+            hit_agents(
+                sim,
+                pos,
+                radius,
+                DisasterEffect::new(0.28, 0.35, 0.25, 0.55, true),
+            );
         }
         DisasterKind::Flood => {
             for cell in affected {
                 sim.push_voxel_write(cell, WATER);
             }
-            hit_agents(sim, pos, radius, 0.10, 0.42, 0.20, 0.25, false);
+            hit_agents(
+                sim,
+                pos,
+                radius,
+                DisasterEffect::new(0.10, 0.42, 0.20, 0.25, false),
+            );
         }
         DisasterKind::Quake => {
             for (i, cell) in affected.iter().enumerate() {
                 let material = if i % 7 == 0 { STONE } else { GRAVEL };
                 sim.push_voxel_write(*cell, material);
             }
-            hit_agents(sim, pos, radius, 0.16, 0.30, 0.24, 0.20, false);
+            hit_agents(
+                sim,
+                pos,
+                radius,
+                DisasterEffect::new(0.16, 0.30, 0.24, 0.20, false),
+            );
         }
         DisasterKind::Wildfire => {
             for (i, cell) in affected.iter().enumerate() {
                 let material = if i % 3 == 0 { LAVA } else { STEAM };
                 sim.push_voxel_write(*cell, material);
             }
-            hit_agents(sim, pos, radius, 0.18, 0.46, 0.38, 0.20, true);
+            hit_agents(
+                sim,
+                pos,
+                radius,
+                DisasterEffect::new(0.18, 0.46, 0.38, 0.20, true),
+            );
         }
         DisasterKind::Storm => {
             for (i, cell) in affected.iter().enumerate() {
                 let material = if i % 4 == 0 { ICE } else { WATER };
                 sim.push_voxel_write(*cell, material);
             }
-            hit_agents(sim, pos, radius, 0.14, 0.20, 0.22, 0.12, false);
+            hit_agents(
+                sim,
+                pos,
+                radius,
+                DisasterEffect::new(0.14, 0.20, 0.22, 0.12, false),
+            );
         }
         DisasterKind::Plague => {
-            hit_agents(sim, pos, radius * 2, 0.05, 0.10, 0.18, 0.06, false);
+            hit_agents(
+                sim,
+                pos,
+                radius * 2,
+                DisasterEffect::new(0.05, 0.10, 0.18, 0.06, false),
+            );
         }
     }
 }
@@ -128,16 +158,34 @@ fn positions_in_radius(center: WorldCoord, radius: i64) -> Vec<WorldCoord> {
     out
 }
 
-fn hit_agents(
-    sim: &mut Simulation,
-    pos: WorldCoord,
-    radius: i64,
+#[derive(Clone, Copy)]
+struct DisasterEffect {
     shelter_delta: f32,
     safety_delta: f32,
     food_delta: f32,
     health_delta: f32,
     heat_damage: bool,
-) {
+}
+
+impl DisasterEffect {
+    const fn new(
+        shelter_delta: f32,
+        safety_delta: f32,
+        food_delta: f32,
+        health_delta: f32,
+        heat_damage: bool,
+    ) -> Self {
+        Self {
+            shelter_delta,
+            safety_delta,
+            food_delta,
+            health_delta,
+            heat_damage,
+        }
+    }
+}
+
+fn hit_agents(sim: &mut Simulation, pos: WorldCoord, radius: i64, effect: DisasterEffect) {
     let radius_sq = (radius as i128) * (radius as i128);
     let effects: Vec<(Entity, bool)> = {
         let entities: Vec<Entity> = sim
@@ -157,13 +205,17 @@ fn hit_agents(
             .map(|entity| {
                 let mut despawn = false;
                 if let Ok(mut needs) = sim.world.get::<&mut LifeNeeds>(entity) {
-                    needs.rest = (needs.rest - shelter_delta).max(0.0);
-                    needs.safety = (needs.safety - safety_delta).max(0.0);
-                    needs.food = (needs.food - food_delta).max(0.0);
-                    needs.health = (needs.health - health_delta).max(0.0);
+                    needs.rest = (needs.rest - effect.shelter_delta).max(0.0);
+                    needs.safety = (needs.safety - effect.safety_delta).max(0.0);
+                    needs.food = (needs.food - effect.food_delta).max(0.0);
+                    needs.health = (needs.health - effect.health_delta).max(0.0);
                 }
                 if let Ok(mut life_health) = sim.world.get::<&mut LifeHealth>(entity) {
-                    let damage = if heat_damage { health_delta * 0.5 } else { health_delta * 0.25 };
+                    let damage = if effect.heat_damage {
+                        effect.health_delta * 0.5
+                    } else {
+                        effect.health_delta * 0.25
+                    };
                     life_health.integrity = (life_health.integrity - damage).max(0.0);
                     despawn = life_health.integrity <= 0.0;
                 }
@@ -182,44 +234,11 @@ fn hit_agents(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use civ_agents::{Civilian, LodTier, Position3d, Tools, Velocity, Wardrobe};
+    use civ_agents::{Alignment, Civilian, LodTier, Position3d, Tools, Velocity, Wardrobe};
     use civ_needs::{Health as LifeHealth, Needs as LifeNeeds};
 
     fn seeded_sim() -> Simulation {
-        let mut sim = Simulation::with_seed(7);
-        let pos = Position3d {
-            coord: WorldCoord {
-                x: 0,
-                y: 0,
-                z: 0,
-            },
-        };
-        let _ = sim.world.spawn((
-            Civilian {
-                id: 9_999,
-                faction: 1,
-                age: 24,
-            },
-            pos,
-            Velocity { dx: 0.0, dy: 0.0 },
-            Wardrobe {
-                era: 0,
-                material: MaterialId(0),
-            },
-            Tools {
-                era: 0,
-                material: MaterialId(0),
-            },
-            civ_agents::Needs {
-                food: 1.0,
-                shelter: 1.0,
-                safety: 1.0,
-                belonging: 1.0,
-            },
-            LodTier::Hot,
-            LifeNeeds::sated(),
-            LifeHealth::default(),
-        ));
+        let sim = Simulation::with_seed(7);
         sim
     }
 
@@ -230,16 +249,34 @@ mod tests {
         trigger_disaster(&mut sim, DisasterKind::Meteor, target);
 
         assert_eq!(sim.voxel().read(target), LAVA);
-        let entity = sim
-            .world
-            .query::<(&Civilian, &Position3d)>()
-            .iter()
-            .find_map(|(entity, (_, pos))| (pos.coord == target).then_some(entity))
-            .expect("spawned agent");
+        // Spawn a fresh `civ_needs::Needs`-bearing agent at the impact point
+        // (the simulation's default spawn path doesn't include the needs
+        // component, so we can't just look up an existing entity). Drop the
+        // spawn-into-world helper into `seeded_sim` once the world owns a
+        // default needs bundle.
+        let pos = Position3d { coord: target };
+        let entity = sim.world.spawn((
+            Civilian {
+                id: 9_999,
+                alignment: Alignment::Faction(1),
+                age: 24,
+            },
+            pos,
+            LodTier::Hot,
+            LifeNeeds::sated(),
+            LifeHealth::default(),
+        ));
+        // Re-run just the agent hit so the impact hits our entity.
+        hit_agents(
+            &mut sim,
+            target,
+            3 * civ_voxel::FIXED_SCALE,
+            DisasterEffect::new(0.28, 0.35, 0.25, 0.55, true),
+        );
         let needs = sim.world.get::<&LifeNeeds>(entity).expect("life needs");
-        assert!(needs.rest < 1.0);
-        assert!(needs.safety < 1.0);
-        assert!(needs.food < 1.0);
+        assert!(needs.rest < 1.0, "rest should drop after meteor");
+        assert!(needs.safety < 1.0, "safety should drop after meteor");
+        assert!(needs.food < 1.0, "food should drop after meteor");
     }
 
     #[test]

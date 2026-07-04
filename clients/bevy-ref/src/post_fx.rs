@@ -127,10 +127,7 @@ fn apply_post_fx(
 ///
 /// Using `Added<DirectionalLight>` means this fires exactly once per light
 /// without requiring changes to `atmosphere.rs`.
-fn tune_sun_shadows(
-    mut commands: Commands,
-    new_lights: Query<Entity, Added<DirectionalLight>>,
-) {
+fn tune_sun_shadows(mut commands: Commands, new_lights: Query<Entity, Added<DirectionalLight>>) {
     for light_entity in &new_lights {
         let cascade_config = CascadeShadowConfigBuilder {
             num_cascades: 4,

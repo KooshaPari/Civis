@@ -4585,7 +4585,7 @@ impl Simulation {
                     metal += Fixed::from_num(1);
                 }
                 BuildingType::CityCenter => {
-                    energy += Fixed::from_bits(Fixed::from_num(1).to_bits() / 2);
+                    energy += Fixed::from_raw(Fixed::from_num(1).raw / 2);
                 }
                 _ => {}
             }
@@ -4620,14 +4620,14 @@ impl Simulation {
                 .query_mut::<(&mut AgentCivilian, &Position3d, &mut Needs)>()
         {
             civilian.age = civilian.age.saturating_add(1);
-            if self.state.resources.food.to_bits() > 0 {
+            if self.state.resources.food.raw > 0 {
                 needs.food = (needs.food + 0.008).min(1.0);
                 self.state.resources.food =
                     (self.state.resources.food - Fixed::from_num(1)).max(Fixed::ZERO);
             } else {
                 needs.food = (needs.food - 0.03).max(0.0);
             }
-            if needs.food < 0.05 && self.state.resources.food.to_bits() <= 0 {
+            if needs.food < 0.05 && self.state.resources.food.raw <= 0 {
                 dead.push((entity, civilian.id, pos.coord));
                 continue;
             }
@@ -4892,7 +4892,7 @@ impl Simulation {
                 .add_engagement(eng.shooter_faction, eng.target_faction);
         }
 
-        let member_counts = rollup_cluster_member_counts(&self.world);
+        let _member_counts = rollup_cluster_member_counts(&self.world);
         let mut faction_ids: Vec<u32> = self.state.factions.keys().copied().collect();
         faction_ids.sort_unstable();
         if faction_ids.len() < 2 {
@@ -4980,7 +4980,7 @@ impl Simulation {
         self.ingest_mod_phase_lines(economy_lines, tick, "economy");
 
         self.economy_state.energy_budget_joules =
-            i64::from(self.state.energy_budget_joules.to_bits()) / crate::SCALE;
+            self.state.energy_budget_joules.raw / crate::SCALE;
 
         let demand = crate::policy::effective_consumption(self.economy_policy) as i64;
         let budget = self.economy_state.energy_budget_joules;
@@ -5116,8 +5116,8 @@ impl Simulation {
                 .faction_resources
                 .get(&to_faction)
                 .map_or(Fixed::ZERO, |to_resources| resource_amount(to_resources, resource));
-            let supply_units = i64::from(supply.max(Fixed::ZERO).to_bits()) / crate::SCALE;
-            let demand_units = i64::from(demand.max(Fixed::ZERO).to_bits()) / crate::SCALE;
+            let supply_units = supply.max(Fixed::ZERO).raw / crate::SCALE;
+            let demand_units = demand.max(Fixed::ZERO).raw / crate::SCALE;
             self.market_state
                 .apply_pressure(resource_market_key(resource), supply_units, demand_units);
             let margin = (demand - supply).max(Fixed::ZERO);
@@ -5154,11 +5154,6 @@ impl Simulation {
         if let Some(v) = military.engage_range_grid {
             self.military_phase.war.engage_range_grid = v.max(1);
         }
-    }
-
-    /// Store scenario taxation settings for later economy-phase wiring.
-    pub fn apply_scenario_taxation(&mut self, taxation: &crate::scenario::ScenarioTaxation) {
-        self.scenario_taxation = taxation.clone();
     }
 
     /// Military phase configuration (tests and tooling).
@@ -5207,14 +5202,6 @@ impl Simulation {
     pub fn cluster_stocks(&self) -> &BTreeMap<u64, ClusterStocks> {
         &self.cluster_stocks
     }
-
-
-    /// Last-tick settlement trade flows computed in `phase_economy`.
-    #[must_use]
-    pub fn last_tick_settlement_trade_flows(&self) -> &[SettlementTradeFlow] {
-        &self.last_tick_settlement_trade_flows
-    }
-
 
     /// Per-tick lifecycle label counts populated by [`Simulation::phase_life`]
     /// (FR-CIV-LIFE-001/002/003). Counts each surviving civilian once,
@@ -5402,8 +5389,8 @@ fn faction_wealth_scarcity_shadow(treasury: Fixed, resources: &Resources) -> i64
     const FOOD_COMFORT: i64 = 80;
     const FOOD_WEIGHT: i64 = 50;
 
-    let treasury_i = (i64::from(treasury.to_bits()) / crate::SCALE).max(0);
-    let food_i = (i64::from(resources.food.to_bits()) / crate::SCALE).max(0);
+    let treasury_i = (treasury.raw / crate::SCALE).max(0);
+    let food_i = (resources.food.raw / crate::SCALE).max(0);
     let comfort = TREASURY_COMFORT + FOOD_COMFORT * FOOD_WEIGHT;
     let wealth = treasury_i + food_i * FOOD_WEIGHT;
 
@@ -5763,7 +5750,7 @@ fn faction_treasury_spread(treasury: &HashMap<u32, Fixed>) -> i64 {
     let mut min = i64::MAX;
     let mut max = i64::MIN;
     for t in treasury.values() {
-        let v = i64::from(t.to_bits()) / crate::SCALE;
+        let v = t.raw / crate::SCALE;
         min = min.min(v);
         max = max.max(v);
     }
@@ -5902,11 +5889,11 @@ const FC3_COMMERCIAL_PARCEL_THRESHOLD: f32 = 0.5;
 fn building_material_headroom_permille(stock: Fixed, reserve_units: i64, gate_units: i64) -> u64 {
     let reserve = Fixed::from_num(reserve_units);
     let effective = stock.saturating_sub(reserve);
-    if effective.to_bits() <= 0 {
+    if effective.raw <= 0 {
         return 0;
     }
     let gate = Fixed::from_num(gate_units);
-    let linear = ((effective.to_bits() as i128) * 1000 / gate.to_bits().max(1) as i128).min(1000) as u64;
+    let linear = ((effective.raw as i128) * 1000 / gate.raw.max(1) as i128).min(1000) as u64;
     linear.saturating_mul(linear) / 1000
 }
 
@@ -5914,13 +5901,13 @@ fn building_material_headroom_permille(stock: Fixed, reserve_units: i64, gate_un
 fn building_affordable_parcel_count(wood: Fixed, metal: Fixed) -> usize {
     let wood_per = Fixed::from_num(BUILDING_WOOD_PER_PARCEL);
     let metal_per = Fixed::from_num(BUILDING_METAL_PER_PARCEL);
-    let by_wood = if wood_per.to_bits() > 0 {
-        (wood.to_bits() / wood_per.to_bits()) as usize
+    let by_wood = if wood_per.raw > 0 {
+        (wood.raw / wood_per.raw) as usize
     } else {
         usize::MAX
     };
-    let by_metal = if metal_per.to_bits() > 0 {
-        (metal.to_bits() / metal_per.to_bits()) as usize
+    let by_metal = if metal_per.raw > 0 {
+        (metal.raw / metal_per.raw) as usize
     } else {
         usize::MAX
     };
@@ -6046,18 +6033,6 @@ pub fn awakening_belief_gain(awakenings_this_tick: usize) -> i64 {
 pub fn awakening_cohesion_gain(awakenings_this_tick: usize) -> i64 {
     let raw = (awakenings_this_tick as i64).saturating_mul(COHESION_PER_AWAKENING);
     raw.min(MAX_AWAKENING_COHESION_PER_TICK).max(0)
-}
-
-/// FR-CIV-GENETICS / FR-CIV-LEGENDS: pure gain fn for the awakening -> belief
-/// pulse. Returns a signed i64 and clamps to a small per-tick cap so the
-/// compatibility shim stays bounded and deterministic.
-pub(crate) const BELIEF_PER_AWAKENING: i64 = 2;
-pub(crate) const MAX_AWAKENING_BELIEF_PER_TICK: i64 = 10;
-
-#[must_use]
-pub(crate) fn awakening_belief_gain(awakenings_this_tick: usize) -> i64 {
-    let raw = (awakenings_this_tick as i64).saturating_mul(BELIEF_PER_AWAKENING);
-    raw.min(MAX_AWAKENING_BELIEF_PER_TICK).max(0)
 }
 
 /// Cohesion absorbs hardship: a strong social fabric damps the per-tick unrest
@@ -6749,7 +6724,7 @@ fn rollup_cluster_member_counts(world: &World) -> BTreeMap<u64, u32> {
 fn treasury_disparity_whole(treasury: &HashMap<u32, Fixed>, a: u32, b: u32) -> i64 {
     let ta = treasury.get(&a).copied().unwrap_or(Fixed::ZERO);
     let tb = treasury.get(&b).copied().unwrap_or(Fixed::ZERO);
-    (ta.to_bits() - tb.to_bits()).abs() / crate::SCALE
+    (ta.raw - tb.raw).abs() / crate::SCALE
 }
 
 fn mean_pair_aggression(aggression: &BTreeMap<u32, f32>, a: u32, b: u32) -> f32 {
@@ -6791,9 +6766,9 @@ fn resource_competition_signal(ra: &Resources, rb: &Resources) -> f32 {
     let mut sum = 0.0f32;
     let mut count = 0u32;
     for (a, b) in overlaps {
-        if a.to_bits() > 0 && b.to_bits() > 0 {
-            let af = a.to_bits() as f32;
-            let bf = b.to_bits() as f32;
+        if a.raw > 0 && b.raw > 0 {
+            let af = a.raw as f32;
+            let bf = b.raw as f32;
             sum += af.min(bf) / af.max(bf);
             count += 1;
         }
@@ -6815,11 +6790,11 @@ fn need_complementarity_signal(ra: &Resources, rb: &Resources) -> f32 {
     let mut sum = 0.0f32;
     let mut count = 0u32;
     for (a, b) in pairs {
-        if a.to_bits() == 0 && b.to_bits() == 0 {
+        if a.raw == 0 && b.raw == 0 {
             continue;
         }
-        let af = a.to_bits() as f32;
-        let bf = b.to_bits() as f32;
+        let af = a.raw as f32;
+        let bf = b.raw as f32;
         let gap = (af - bf).abs();
         let scale = af.max(bf).max(1.0);
         sum += (gap / scale).clamp(0.0, 1.0);
@@ -6834,9 +6809,9 @@ fn need_complementarity_signal(ra: &Resources, rb: &Resources) -> f32 {
 
 fn scarcity_pressure_signal(energy_budget: Fixed, ra: &Resources, rb: &Resources) -> f32 {
     const SCARCITY_GATE: i64 = 100;
-    let budget_scarce = i64::from(energy_budget.to_bits()) / crate::SCALE < SCARCITY_GATE;
-    let a_scarce = i64::from(ra.energy.to_bits()) / crate::SCALE < SCARCITY_GATE && i64::from(ra.food.to_bits()) / crate::SCALE < SCARCITY_GATE;
-    let b_scarce = i64::from(rb.energy.to_bits()) / crate::SCALE < SCARCITY_GATE && i64::from(rb.food.to_bits()) / crate::SCALE < SCARCITY_GATE;
+    let budget_scarce = energy_budget.raw / crate::SCALE < SCARCITY_GATE;
+    let a_scarce = ra.energy.raw / crate::SCALE < SCARCITY_GATE && ra.food.raw / crate::SCALE < SCARCITY_GATE;
+    let b_scarce = rb.energy.raw / crate::SCALE < SCARCITY_GATE && rb.food.raw / crate::SCALE < SCARCITY_GATE;
     if budget_scarce && a_scarce && b_scarce {
         1.0
     } else if (a_scarce && !b_scarce) || (b_scarce && !a_scarce) {
@@ -6853,7 +6828,7 @@ fn trade_volume_signal(routes: &[TradeRoute], a: u32, b: u32) -> f32 {
             (route.from_faction == a && route.to_faction == b)
                 || (route.from_faction == b && route.to_faction == a)
         })
-        .map(|route| i64::from(route.volume.to_bits()))
+        .map(|route| route.volume.raw)
         .sum();
     ((volume as f64) / 1_000_000.0).clamp(0.0, 1.0) as f32
 }

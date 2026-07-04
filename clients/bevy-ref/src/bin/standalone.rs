@@ -28,6 +28,12 @@ use civ_bevy_ref::gltf_models::GltfModelsPlugin;
 
 fn main() {
     let attach_mode = resolve_attach_mode_from_env();
+
+    if let Err(message) = civ_bevy_ref::preflight::run_startup_preflight(attach_mode) {
+        eprintln!("{message}");
+        std::process::exit(1);
+    }
+
     let window_title = match attach_mode {
         AttachMode::Standalone => "Civis — Bevy standalone".to_string(),
         AttachMode::Server => "Civis — Bevy standalone (live attach)".to_string(),

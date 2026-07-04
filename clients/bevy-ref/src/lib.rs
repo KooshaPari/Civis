@@ -66,6 +66,8 @@ pub mod live_stream;
 pub mod materials;
 #[cfg(feature = "bevy")]
 pub mod post_fx;
+#[cfg(feature = "bevy")]
+pub mod preflight;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod settings_ui;
 #[cfg(all(feature = "bevy", feature = "egui"))]

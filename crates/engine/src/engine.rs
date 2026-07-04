@@ -9,27 +9,26 @@ use civ_agents::{
     count_civilians,
     daily_path::{pick_target, DailyPathDecision, Poi, PoiKind, PoiRegistry},
     propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at,
-    ActorVisualKind, AgentAction, Alignment, Civilian as AgentCivilian, ClusterId, ClusterMember, CohortStats,
-    DiplomacyMatrix, DiplomacyOutcome, DiplomacySignal, LodTier, Needs, Position3d, Psyche,
-    RelationKind, SocialGraph, Tools, Wardrobe,
+    ActorVisualKind, Alignment, Civilian as AgentCivilian, ClusterId, ClusterMember, CohortStats,
+    DiplomacyMatrix, DiplomacySignal, LodTier, Needs, Position3d, Psyche,
+    SocialGraph, Tools, Wardrobe,
 
 };
-use civ_audio::{derive_music_cue, mood::MusicCue, triggers::SfxTrigger};
+use civ_audio::triggers::SfxTrigger;
 use civ_agents::culture::{cultural_distance, CultureProfile};
-use civ_build::{Allocator, BuildingGraph, BuildSite, DemandSignals, ProductionEvent};
+use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
 
 use civ_economy::{
-    settlement_trade_flow_from_supply_demand, AllocationEngine, CapitalistAllocator, EconomyState,
+    settlement_trade_flow_from_supply_demand, AllocationEngine, EconomyState,
     Good, LaborCapacityAllocator, MarketState, SettlementTradeFlow,
 };
-use civ_economy::{collect_taxes, Taxation};
 use civ_genetics::sentience::{
     cognition_score, evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold,
 };
 use civ_genetics::Dna;
 use civ_mod_host::ModHost;
-use civ_needs::{Health as CivNeedsHealth, LifecycleLabel, LifecycleParams, should_reproduce};
+use civ_needs::{Health as CivNeedsHealth, LifecycleLabel, LifecycleParams};
 use civ_planet::{
     compute_climate, compute_weather, defaults_earthlike, Climate, GeologyMap, MoonConfig,
     PlanetConfig, WeatherCell,
@@ -49,7 +48,7 @@ use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 use std::ops::{Deref, DerefMut};
 
 use crate::culture::{
@@ -57,27 +56,17 @@ use crate::culture::{
     faction_isolation_pressure,
     FactionIdeologyState,
 };
-use crate::language::{
-    borrow_word, ensure_seeded_word, person_name, person_name_meaning, place_name,
-    place_name_meaning, seeded_language_state, tick_language_for_lineage, LanguageState,
-};
-
 use crate::lod::{should_tick_entity_with_policy, LodPolicy};
 use crate::policy::ControlSignals;
 use crate::policy::Policy;
 use crate::policy::PolicyInput;
 use crate::policy::DEFAULT_ECONOMY_POLICY;
-use crate::psyche_behavior::{behavior_from_psyche, EmotionDrivenBehavior};
-use crate::religion::{
-    apply_big_gods_response, last_religion_sample, substrate_gradients_for,
-    ReligiousProfile, SubstrateGradients,
-};
 use crate::tutorial::TutorialProgress;
 use crate::replay::{ReplayError, ReplayLog};
 use crate::replay_format::{load_civreplay, save_civreplay};
 
 use crate::conditions::GameOutcome;
-use crate::{CivAge, EraHistory, FactionRelationSnapshot, FactionTechState, Fixed};
+use crate::{Fixed};
 use civ_planet::worldgen::WorldgenConfig;
 
 

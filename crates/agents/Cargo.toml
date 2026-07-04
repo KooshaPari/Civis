@@ -20,6 +20,7 @@ civ-genetics = { path = "../genetics" }
 civ-voxel = { path = "../voxel" }
 civ-needs = { path = "../needs" }
 civ-diffusion = { path = "../diffusion" }
+civ-build = { path = "../build" }
 hecs = "0.10"
 
 [dev-dependencies]

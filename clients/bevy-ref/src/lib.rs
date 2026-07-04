@@ -34,6 +34,10 @@ pub mod entity_inspector;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod inspect;
 #[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod entity_inspector;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod inspect;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod diplomacy_ui;
 pub mod outcome_overlay;
 pub mod faction_hud;

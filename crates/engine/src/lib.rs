@@ -36,6 +36,9 @@ pub mod spectator;
 pub mod tutorial;
 
 
+pub mod tutorial;
+
+
 /// Fixed-point scaling factor (1 raw unit = SCALE joules). Engine energy
 /// quantities are stored in fixed-point `i64` for determinism and converted
 /// to `f64`/SI at the economy boundary using this constant.

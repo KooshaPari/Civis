@@ -40,7 +40,7 @@ use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
-use crate::engine::{awakening_belief_gain, awakening_cohesion_gain, Simulation};
+use crate::engine::{awakening_belief_gain, awakening_cohesion_gain, PsycheDrivenBehavior, Simulation};
 
 /// JSON-RPC / inspector payload for `sim.legends` (FR-CIV-LEGENDS-QUERY-07).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1601,7 +1601,11 @@ impl Simulation {
         self.world
             .get::<&crate::engine::PsycheDrivenBehavior>(entity)
             .ok()
-            .map(|behavior| *behavior)
+            .map(|behavior| PsycheDrivenBehavior {
+                emotion: behavior.emotion,
+                action: behavior.action,
+                tick: behavior.tick,
+            })
     }
 
     /// Social graph for a civilian agent id, if present.

@@ -89,7 +89,7 @@ fn evaluate_faction(sim: &Simulation, faction_id: u32) -> FactionDecision {
     // Decision thresholds:
     if relation_score < -0.6 && has_military_advantage {
         FactionDecision::FlagHostility
-    } else if resources.food.to_num::<f32>() > 1000.0 && relation_score > 0.3 && avg_cohesion > 0.5 {
+    } else if resources.food.to_f64() as f32 > 1000.0 && relation_score > 0.3 && avg_cohesion > 0.5 {
         FactionDecision::FlagTradeOpen
     } else {
         FactionDecision::Maintain

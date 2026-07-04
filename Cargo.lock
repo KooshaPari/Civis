@@ -2331,7 +2331,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "civ-audio"
+<<<<<<< HEAD
+name = "civ-ai"
 version = "0.1.0"
 dependencies = [
  "proptest",
@@ -2341,6 +2342,8 @@ dependencies = [
 ]
 
 [[package]]
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
 name = "civ-bevy-ref"
 version = "0.1.0"
 dependencies = [

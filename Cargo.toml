@@ -32,7 +32,10 @@ members = [
   "crates/economy",
   "crates/species",
   "crates/agents",
-  "crates/needs",
+<<<<<<< HEAD
+  "crates/ai",
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
   "crates/diffusion",
   "crates/diplomacy",
   "crates/laws",
@@ -46,13 +49,11 @@ members = [
   "crates/civis-mcp",
   "crates/powers",
   "crates/watch",
+<<<<<<< HEAD
   "crates/save-db",
-  "crates/hud",
-  "crates/legends",
-  "crates/civ-emergence-metrics",
-  "crates/civ-institutions",
-  "crates/physics-substrate",
-  "crates/audio",
+  "crates/climate",
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
   "clients/bevy-ref",
   # "clients/fyrox-ref" - excluded until fyrox 1.x API is wired (see docs/research/fyrox-evaluation.md)
 ]

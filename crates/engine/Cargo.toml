@@ -7,6 +7,7 @@ license.workspace = true
 publish = false
 
 [dependencies]
+fixed = { version = "1.28", features = ["serde"] }
 # Random number generation with seeding
 rand = "0.8.6"
 rand_chacha = "0.3"

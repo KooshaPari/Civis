@@ -2975,7 +2975,13 @@ impl Simulation {
         new_level: u8,
         events: &mut Vec<InstitutionEvent>,
     ) {
-        let key = (sid, kind, new_level);
+        // Hash the InstitutionKind discriminant into a byte
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+        let mut hasher = DefaultHasher::new();
+        kind.hash(&mut hasher);
+        let kind_hash = (hasher.finish() as u8);
+        let key = (sid, kind_hash, new_level);
         if self.institution_levels_emitted.contains(&key) {
             // Already emitted this level for this settlement+kind - skip.
             return;

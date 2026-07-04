@@ -2859,91 +2859,7 @@ impl Simulation {
             // Already emitted this level for this settlement+kind - skip.
             return;
         }
-
-        let signals = DemandSignals {
-            residential: 0.75,
-            commercial: 0.25,
-            industrial: 0.25,
-            civic: 0.75,
-        };
-
-            // 1. food_score
-            let food_score = (stocked / 200).clamp(MOOD_MIN, MOOD_MAX);
-
-            // 2. housing_score
-            let housing_signed =
-                (capacity as i64).saturating_sub(population as i64).saturating_mul(2);
-            let housing_score = housing_signed.clamp(MOOD_MIN, MOOD_MAX);
-
-            // 3. crime_score (max(0, 300 - 4*pressure), bounded)
-            let crime_signed = MOOD_CRIME_BASE.saturating_sub(4 * crime_pressure as i64);
-            let crime_score = crime_signed.clamp(0, MOOD_CRIME_BASE);
-
-            // 4-5. institution bonuses (settlement may have 0 or 1 institution)
-            let (temple_bonus, garrison_bonus) = match self.institutions.get(&settlement_id) {
-                Some(inst) if inst.kind == civ_institutions::InstitutionKind::Temple => (
-                    25 + 25 * (inst.level as i32),
-                    0,
-                ),
-                Some(inst) if inst.kind == civ_institutions::InstitutionKind::Garrison => (
-                    0,
-                    15 + 15 * (inst.level as i32),
-                ),
-                _ => (0, 0),
-            };
-
-            // 6. total mood (saturated)
-            let total = food_score
-                .saturating_add(housing_score)
-                .saturating_add(crime_score)
-                .saturating_add(temple_bonus as i64)
-                .saturating_add(garrison_bonus as i64)
-                .clamp(MOOD_MIN, MOOD_MAX);
-
-            // 7. delta vs previous
-            let prev = self
-                .mood_history
-                .iter()
-                .rev()
-                .find(|s| s.settlement_id == settlement_id)
-                .map(|s| s.mood)
-                .unwrap_or(0);
-            let mood_delta = total - prev;
-
-            snapshots.push(MoodSnapshot {
-                settlement_id,
-                mood: total,
-                mood_delta,
-                food_score,
-                housing_score,
-                crime_score,
-                temple_bonus,
-                garrison_bonus,
-            });
-        }
-
-        // 8) Sort by settlement_id for determinism (test pinning).
-        snapshots.sort_by_key(|s| s.settlement_id);
-
-        // 9) Persist current + history (capped to 16 entries per settlement).
-        for snap in &snapshots {
-            let history = self
-                .mood_history_by_settlement
-                .entry(snap.settlement_id)
-                .or_insert_with(Vec::new);
-            history.push(*snap);
-            if history.len() > MOOD_HISTORY_CAP {
-                let drop = history.len() - MOOD_HISTORY_CAP;
-                history.drain(0..drop);
-            }
-        }
-        // Also append into the flat history (test convenience).
-        self.mood_history.extend(snapshots.iter().copied());
-        if self.mood_history.len() > MOOD_HISTORY_CAP * 8 {
-            let drop = self.mood_history.len() - MOOD_HISTORY_CAP * 8;
-            self.mood_history.drain(0..drop);
-        }
-        self.last_tick_mood = snapshots;
+        self.run_building_emergence_tick();
     }
 
     /// Stratification phase (FR-CIV-GOV-200 family). Computes per-settlement
@@ -3834,6 +3750,7 @@ impl Simulation {
                 });
             }
         }
+    }
 
     /// Economic-focus phase (FR-CIV-ECON-001 / ADR-020).
     ///

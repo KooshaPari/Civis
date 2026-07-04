@@ -797,6 +797,7 @@ mod tests {
             "state resources should reflect disaster consumption"
         );
         assert!(sim.state.population < population_before, "state population should reflect casualties");
+    }
 
     /// Storm emerges when storm intensity crosses the physical onset threshold.
     #[test]

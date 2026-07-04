@@ -80,11 +80,10 @@ fn sync_inspector_from_live_selection(
 
 /// Standalone sandbox: mirror [`crate::inspect::InspectedDetails`] into the panel.
 fn sync_inspector_from_inspected(
-    attach: Option<Res<AttachMode>>,
+    attach: Res<AttachMode>,
     inspected: Option<Res<crate::inspect::InspectedDetails>>,
     mut details: ResMut<SelectedEntityDetails>,
 ) {
-    let Some(attach) = attach else { return; };
     if *attach != AttachMode::Standalone {
         return;
     }

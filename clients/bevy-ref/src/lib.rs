@@ -26,6 +26,8 @@ pub mod decorations;
 #[cfg(all(feature = "bevy", feature = "models"))]
 pub mod animation;
 #[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod entity_inspector;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod diplomacy_ui;
 pub mod outcome_overlay;
 pub mod faction_hud;
@@ -232,6 +234,8 @@ pub enum LiveEntityKind {
     Building,
     /// Streamed building-graph parcel marker.
     GraphParcel,
+    /// Streamed voxel chunk marker.
+    VoxelChunk,
 }
 
 /// A single streamed entity selected in the live viewport.
@@ -250,6 +254,7 @@ pub fn format_live_selection(entity: SelectedLiveEntity) -> String {
         LiveEntityKind::Agent => "agent",
         LiveEntityKind::Building => "building",
         LiveEntityKind::GraphParcel => "graph",
+        LiveEntityKind::VoxelChunk => "chunk",
     };
     format!("sel: {label} #{}", entity.id)
 }

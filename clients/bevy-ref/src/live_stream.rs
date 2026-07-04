@@ -262,6 +262,10 @@ pub fn format_live_pick_hud_line(
             .or_else(|| Some(format!("Agent #{}", selected.id))),
         LiveEntityKind::Building => Some(format!("Building #{}", selected.id)),
         LiveEntityKind::GraphParcel => Some(format!("Parcel #{}", selected.id)),
+        LiveEntityKind::VoxelChunk => {
+            let (cx, cy, cz) = crate::decode_chunk_id(civ_voxel::ChunkId(selected.id));
+            Some(format!("Chunk ({cx}, {cy}, {cz})"))
+        }
     }
 }
 

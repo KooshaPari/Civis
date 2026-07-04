@@ -337,6 +337,7 @@ fn main() {
     #[cfg(feature = "egui")]
     {
         app.add_plugins(SettingsPlugin);
+        app.add_plugins(civ_bevy_ref::entity_inspector::EntityInspectorPlugin);
         app.add_plugins(civ_bevy_ref::outcome_overlay::OutcomeOverlayPlugin);
     }
 

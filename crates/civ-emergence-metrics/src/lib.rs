@@ -15,8 +15,6 @@
 //! * [`structure::StructureCount`] — 6-connectivity connected components on
 //!   a sampled 3-D grid, with a union-find core. Used to detect structure
 //!   collapse and single-cluster domination.
-//! * [`branching`] — per-avalanche branching ratio `σ_a` and rolling-mean
-//!   `σ̄_W` for SOC heat-death / edge-of-chaos / explosion discrimination.
 //!
 //! Both implement the [`Metric`] trait so the dashboard can iterate over a
 //! uniform interface.
@@ -38,29 +36,18 @@
 //!
 //! ## Scope
 //!
-//! The remaining dashboard metrics (power-law fit, novelty rate) are scoped
-//! for follow-up PRs once the wiring exists in `civ-server` and
-//! `civ-protocol-3d`. Mutual information between sim layers is implemented
-//! in [`mutual_information`].
+//! The remaining dashboard metrics (power-law fit, novelty rate, mutual
+//! information between sim layers, branching ratio) are scoped for
+//! follow-up PRs once the wiring exists in `civ-server` and `civ-protocol-3d`.
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-pub mod branching;
-pub mod dashboard;
-pub mod mutual_information;
-pub mod power_law;
-pub mod sample_snapshot;
 pub mod shannon;
-pub mod sample_snapshot;
 pub mod structure;
 
-pub use mutual_information::{
-    mutual_information_bits, mutual_information_normalised, JointHistogram,
-};
-
 /// Marker version of this crate's public schema. Bumped on breaking changes.
-pub const SCHEMA_VERSION: &str = "0.5.0-power-law-alpha";
+pub const SCHEMA_VERSION: &str = "0.1.0-stub";
 
 /// Common interface implemented by every metric in this crate.
 ///

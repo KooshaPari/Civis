@@ -39,16 +39,18 @@
 #![warn(missing_docs)]
 
 pub mod census;
-pub mod config;
-pub mod dump;
-pub mod pixels;
-
-#[cfg(feature = "bevy")]
+pub mod populated_boot;
+pub mod proc;
+pub mod screenshot;
 pub mod verify;
 
-/// Library version of the harness (semver-compatible; `0.1.0` until the
-/// Bevy 0.18 / RON schema freezes).
-pub const HARNESS_VERSION: &str = "0.1.0";
+pub use build::run_build;
+pub use census::{
+    census_to_json, find_latest_run_log, parse_census_text, read_census_from_log, CensusData,
+};
+pub use populated_boot::run_populated_boot;
+pub use screenshot::{run_screenshot, ScreenshotResult};
+pub use verify::{run_verify, VerifyResult};
 
 /// Resolve the path of the workspace root that contains this crate.
 ///

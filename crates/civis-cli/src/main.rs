@@ -4,7 +4,7 @@ use clap::{Parser, Subcommand};
 
 use civis_cli::{
     census_to_json, command_bench, command_inspect_save, command_new_world, run_build,
-    run_screenshot, run_verify, CliError, CliResult,
+    run_populated_boot, run_screenshot, run_verify, CliError, CliResult,
 };
 use civis_cli::{find_latest_run_log, parse_census_text};
 
@@ -56,6 +56,18 @@ enum Commands {
         out: PathBuf,
         #[arg(long, value_name = "DIR", default_value = "E:/civis-cli-target")]
         target_dir: PathBuf,
+    },
+    /// Populated-evidence boot: pre-fills the engine's voxel world with a
+    /// deterministic non-empty material pattern, then ticks the sim so the
+    /// live `sample_emergence()` path emits one `emergence sample:`
+    /// line per 50-tick boundary. Designed to prove the PR #363
+    /// emergence wiring against a world with content (the default sim is
+    /// empty, so the prior evidence run yielded `entropy=0 structures=0`).
+    PopulatedBoot {
+        #[arg(long, default_value_t = 1)]
+        seed: u64,
+        #[arg(long, default_value_t = 250)]
+        ticks: u64,
     },
 }
 
@@ -132,6 +144,11 @@ fn dispatch(command: Commands) -> CliResult<i32> {
                     "census": census,
                 })
             );
+            Ok(0)
+        }
+        Commands::PopulatedBoot { seed, ticks } => {
+            let json = run_populated_boot(seed, ticks)?;
+            println!("{}", json);
             Ok(0)
         }
     }

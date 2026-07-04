@@ -477,11 +477,11 @@ async fn handle_jsonrpc_text(
                 }
             }
             let tick = state.tick.load(Ordering::SeqCst);
-            let (population, snapshot) = match req.method {
+            let (population, snapshot, emergence) = match req.method {
                 JsonRpcMethod::SimStatus => {
                     let sim = state.sim.lock().await;
                     let snap = sim.snapshot();
-                    (Some(snap.population), None)
+                    (Some(snap.population), None, None)
                 }
                 JsonRpcMethod::SimSnapshot
                 | JsonRpcMethod::GetFactions
@@ -489,15 +489,28 @@ async fn handle_jsonrpc_text(
                 | JsonRpcMethod::GetEmergenceMetrics => {
                     let sim = state.sim.lock().await;
                     let speed_multiplier = state.speed_multiplier.load(Ordering::Relaxed);
+                    let emergence = sim
+                        .last_emergence_sample()
+                        .map(crate::jsonrpc::EmergenceSampleFields::from);
                     (
                         None,
                         Some(crate::jsonrpc::snapshot_fields_from_sim(
                             &sim,
                             speed_multiplier,
                         )),
+                        emergence,
                     )
                 }
-                _ => (None, None),
+                JsonRpcMethod::SimEmergence => {
+                    // Read the latest sample (sampler is internal to
+                    // the simulation; we just expose it).
+                    let sim = state.sim.lock().await;
+                    let emergence = sim
+                        .last_emergence_sample()
+                        .map(crate::jsonrpc::EmergenceSampleFields::from);
+                    (None, None, emergence)
+                }
+                _ => (None, None, None),
             };
 
             let emergence = if req.method == JsonRpcMethod::SimEmergence {
@@ -536,10 +549,6 @@ async fn handle_jsonrpc_text(
                     connection_role: connection_role.clone(),
                     saves_dir: Some(state.saves_dir.clone()),
                     emergence,
-                    researched: research_researched,
-                    in_progress_tech: research_in_progress,
-                    outcome_fields,
-                    last_tick_ms: 0.0,
                 },
             );
             apply_dispatch_effect(&mut plan.response, plan.effect, state).await;

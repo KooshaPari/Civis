@@ -32,9 +32,10 @@ name = "civis-mcp"
 path = "src/bin/mcp.rs"
 
 [dependencies]
-# Always-on: pixel stats + JSON-RPC census + env loading.
-civ-server = { path = "../server" }
-serde = { version = "1", features = ["derive"] }
+civ-engine = { path = "../engine" }
+civ-voxel = { path = "../voxel" }
+clap = { version = "4", features = ["derive"] }
+regex = "1"
 serde_json = "1"
 clap = { version = "4", features = ["derive"] }
 dotenvy = "0.15"

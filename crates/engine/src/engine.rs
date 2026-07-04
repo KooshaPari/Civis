@@ -529,6 +529,24 @@ pub struct Simulation {
     coastal_columns: BTreeMap<(i64, i64), CoastalColumn>,
     /// Per-region weather grid updated by `phase_planet` each tick (FR-CIV-PLANET-030).
     weather_grid: Vec<WeatherCell>,
+    /// Per-cluster (emergent settlement) resource stocks, maintained by
+    /// [`Simulation::phase_life`] (FR-CIV-LIFE-020). Keyed by emergent
+    /// `ClusterId`; iteration order is deterministic (`BTreeMap`).
+    cluster_stocks: BTreeMap<u64, ClusterStocks>,
+    /// Number of emergent settlements (multi-member clusters) detected on the
+    /// most recent [`Simulation::phase_life`] (FR-CIV-LIFE-030).
+    pub(crate) last_settlement_count: u32,
+    /// Deaths attributed to unmet-need sickness on the most recent life phase
+    /// (FR-CIV-LIFE-003); surfaced for the HUD.
+    pub(crate) last_life_deaths: u32,
+    /// MOAT emergence: legends, psyche, culture, social, genetics, civ-ai.
+    pub(crate) emergence: crate::emergence::EmergenceState,
+    /// Latest emergence-metrics sample (civ-emergence-metrics). Updated by
+    /// [`crate::emergence_metrics::sample_emergence`] on every 50-tick
+    /// boundary (5 s at 100 ms tick). `None` before the first sample
+    /// boundary (ticks 0..49). Surfaced over JSON-RPC `sim.emergence`
+    /// (stacked on PR #350).
+    pub(crate) emergence_sample: Option<crate::emergence_metrics::EmergenceSample>,
 }
 
 /// Voxel material id used to mark coastal water-level voxels written by
@@ -772,6 +790,8 @@ impl Simulation {
             faction_doctrines: default_faction_doctrines(),
             coastal_columns: BTreeMap::new(),
             weather_grid,
+            emergence: Self::default_emergence_state(42),
+            emergence_sample: None,
         }
     }
 
@@ -850,6 +870,8 @@ impl Simulation {
             faction_doctrines: default_faction_doctrines(),
             coastal_columns: BTreeMap::new(),
             weather_grid,
+            emergence: Self::default_emergence_state(seed),
+            emergence_sample: None,
         }
     }
 
@@ -1410,6 +1432,11 @@ impl Simulation {
         self.phase_substrate();
         self.phase_life();
         self.phase_emergence();
+        // PR #350 stack: run the civ-emergence-metrics sampler on the
+        // 50-tick boundary. The sampler internally no-ops on
+        // non-boundary ticks so the cost on every other tick is just
+        // one modulo + one branch.
+        self.sample_emergence();
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]

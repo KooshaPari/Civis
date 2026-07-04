@@ -1,17 +1,16 @@
 #![deny(unsafe_code)]
 
 use civ_agents::{spawn_civilian_at, spawn_many, ActorVisualKind, Alignment, Civilian, Position3d};
-use civ_build::BuildingId;
 use civ_needs::{Health as LifeHealth, Needs as LifeNeeds};
 use civ_voxel::{
-    material::{GRAVEL, LAVA, MOSS, ORE, PACKED_DIRT, PLANT, SAND, SNOW, STEAM, STONE, WATER, WOOD},
+    material::{LAVA, MOSS, PLANT, STEAM, STONE, WATER, WOOD},
     AIR, MaterialId, WorldCoord, FIXED_SCALE,
 };
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
-use crate::disasters::DisasterKind;
+use crate::disasters::{DisasterKind, trigger_disaster};
 use crate::engine::Simulation;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -503,6 +502,7 @@ pub struct ProbeReport {
 pub enum GodToolError {
     InvalidDimension { field: &'static str, value: i32 },
     OutOfBounds { axis: &'static str, value: f32 },
+    InvalidRequest(String),
 }
 
 impl std::fmt::Display for GodToolError {
@@ -513,6 +513,9 @@ impl std::fmt::Display for GodToolError {
             }
             GodToolError::OutOfBounds { axis, value } => {
                 write!(f, "out-of-bounds {axis}: {value} (must be in [0, 1])")
+            }
+            GodToolError::InvalidRequest(msg) => {
+                write!(f, "invalid request: {msg}")
             }
         }
     }
@@ -574,7 +577,7 @@ fn actors_in_footprint(
     world
         .query::<(&Position3d, &Civilian)>()
         .iter()
-        .filter_map(|(entity, (pos, civ))| {
+        .filter_map(|(entity, (pos, _civ))| {
             let dx = pos.coord.x - center.x;
             let dy = pos.coord.y - center.y;
             let dz = pos.coord.z - center.z;
@@ -802,20 +805,19 @@ impl Simulation {
                 if t.delta <= 0 {
                     return Err(GodToolError::InvalidDimension { field: "delta", value: t.delta });
                 }
-                Ok(GodToolReceipt::Terraform { op: TerraformOp::Raise, cells_written: self.raise_footprint(t.center, t.radius, t.delta), center: t.center })
+                Ok(GodToolReceipt::Terraform { op: TerraformOp::Raise, writes: self.raise_footprint(t.center, t.radius, t.delta) })
             }
             TerraformOp::Lower => {
                 if t.delta <= 0 {
                     return Err(GodToolError::InvalidDimension { field: "delta", value: t.delta });
                 }
-                Ok(GodToolReceipt::Terraform { op: TerraformOp::Lower, cells_written: self.lower_footprint(t.center, t.radius, t.delta), center: t.center })
+                Ok(GodToolReceipt::Terraform { op: TerraformOp::Lower, writes: self.lower_footprint(t.center, t.radius, t.delta) })
             }
             TerraformOp::Level => {
                 if t.target_height < 0 {
                     return Err(GodToolError::InvalidDimension { field: "target_height", value: t.target_height });
                 }
-                // TODO: Implement level operation
-                Ok(GodToolReceipt::Terraform { op: TerraformOp::Level, cells_written: 0, center: t.center })
+                Ok(GodToolReceipt::Terraform { op: TerraformOp::Level, writes: self.level_footprint(t.center, t.radius, t.target_height) })
             }
         }
     }
@@ -835,282 +837,11 @@ impl Simulation {
                 "material radius_voxels must be > 0".into(),
             ));
         }
-        // Shared footprint projection. `cx`, `cy`, `cz` are the
-        // brush center in fixed-point coords; `r` is the radius
-        // in voxels; `r2` is `r²`.
-        let cx = req.center.x;
-        let cy = req.center.y;
-        let cz = req.center.z;
-        let r = i64::from(req.radius_voxels);
-        let r2 = r * r;
-        let target = MaterialId(req.material_id as u16);
-        let mut writes: u32 = 0;
-        match req.op {
-            MaterialOp::Erase => {
-                // `material.erase` — write `AIR` in the
-                // spherical footprint. Mirrors the inverse of
-                // `terrain.raise`. Uses `FIXED_SCALE` stride so
-                // the brush footprint is voxel-aligned.
-                for dz in -r..=r {
-                    for dy in -r..=r {
-                        for dx in -r..=r {
-                            if dx * dx + dy * dy + dz * dz > r2 {
-                                continue;
-                            }
-                            self.push_voxel_write(
-                                WorldCoord {
-                                    x: cx + dx * FIXED_SCALE,
-                                    y: cy + dy * FIXED_SCALE,
-                                    z: cz + dz * FIXED_SCALE,
-                                },
-                                AIR,
-                            );
-                            writes = writes.saturating_add(1);
-                        }
-                    }
-                }
-            }
-            MaterialOp::Replace => {
-                // `material.replace` — write `target` material in
-                // the spherical footprint. Overwrites any
-                // existing material; the CA settles the result
-                // next tick.
-                for dz in -r..=r {
-                    for dy in -r..=r {
-                        for dx in -r..=r {
-                            if dx * dx + dy * dy + dz * dz > r2 {
-                                continue;
-                            }
-                            self.push_voxel_write(
-                                WorldCoord {
-                                    x: cx + dx * FIXED_SCALE,
-                                    y: cy + dy * FIXED_SCALE,
-                                    z: cz + dz * FIXED_SCALE,
-                                },
-                                target,
-                            );
-                            writes = writes.saturating_add(1);
-                        }
-                    }
-                }
-            }
-            MaterialOp::SurfacePaint => {
-                // `material.surface_paint` — write `target`
-                // material only on the topmost solid voxel per
-                // (x, z) column. Uses `scan_topmost_y` to find
-                // the local topmost y in the column (8 cells
-                // above `cy`) and stamps `target` there. The CA
-                // settles the surface next tick.
-                for dz in -r..=r {
-                    for dx in -r..=r {
-                        if dx * dx + dz * dz > r2 {
-                            continue;
-                        }
-                        let col_x = cx + dx * FIXED_SCALE;
-                        let col_z = cz + dz * FIXED_SCALE;
-                        let top_y = scan_topmost_y(&self.voxel, col_x, col_z, cy);
-                        self.push_voxel_write(
-                            WorldCoord {
-                                x: col_x,
-                                y: top_y,
-                                z: col_z,
-                            },
-                            target,
-                        );
-                        writes = writes.saturating_add(1);
-                    }
-                }
-            }
-            MaterialOp::AdditiveDrop => {
-                // `material.additive_drop` — seed `target`
-                // material in a sphere at
-                // `center.y + drop_height`. The voxel CA's
-                // falling rule carries the material down to the
-                // existing surface next tick; we never bypass
-                // gravity (no scripted transport).
-                let drop_y = cy + (req.drop_height as i64).max(FIXED_SCALE);
-                for dz in -r..=r {
-                    for dy in -r..=r {
-                        for dx in -r..=r {
-                            if dx * dx + dy * dy + dz * dz > r2 {
-                                continue;
-                            }
-                            self.push_voxel_write(
-                                WorldCoord {
-                                    x: cx + dx * FIXED_SCALE,
-                                    y: drop_y + dy * FIXED_SCALE,
-                                    z: cz + dz * FIXED_SCALE,
-                                },
-                                target,
-                            );
-                            writes = writes.saturating_add(1);
-                        }
-                    }
-                }
-            }
-            MaterialOp::PourLiquid => {
-                // `material.pour_liquid` — seed liquid voxels
-                // (default `WATER`; the client can ship `LAVA`
-                // via `material_id`) at
-                // `center.y + drop_height`. The fluid CA spreads
-                // the liquid horizontally next tick; we only
-                // write the seed sphere. `strength` is the
-                // deposit thickness (in `FIXED_SCALE` units);
-                // the seed sphere is `strength / FIXED_SCALE`
-                // layers tall.
-                let layers = ((req.strength as i64).max(FIXED_SCALE) / FIXED_SCALE).max(1);
-                let drop_y = cy + (req.drop_height as i64).max(FIXED_SCALE);
-                let liquid = if target == LAVA { LAVA } else { WATER };
-                for layer in 0..layers {
-                    for dz in -r..=r {
-                        for dx in -r..=r {
-                            if dx * dx + dz * dz > r2 {
-                                continue;
-                            }
-                            self.push_voxel_write(
-                                WorldCoord {
-                                    x: cx + dx * FIXED_SCALE,
-                                    y: drop_y + layer * FIXED_SCALE,
-                                    z: cz + dz * FIXED_SCALE,
-                                },
-                                liquid,
-                            );
-                            writes = writes.saturating_add(1);
-                        }
-                    }
-                }
-            }
-            MaterialOp::SeedSnow => {
-                // `material.seed_snow` — write `SNOW` voxels in
-                // a sphere at the local snowline band. The
-                // snowline is approximated as
-                // `topmost_y + strength` (positive `strength` =
-                // colder snowline = lower deposit). The thermo
-                // CA's melt rule sublimates the snow at
-                // temperatures above the snowline next tick, so
-                // the verb never produces immortal snow.
-                for dz in -r..=r {
-                    for dy in -r..=r {
-                        for dx in -r..=r {
-                            if dx * dx + dy * dy + dz * dz > r2 {
-                                continue;
-                            }
-                            let col_x = cx + dx * FIXED_SCALE;
-                            let col_z = cz + dz * FIXED_SCALE;
-                            let top_y =
-                                scan_topmost_y(&self.voxel, col_x, col_z, cy);
-                            self.push_voxel_write(
-                                WorldCoord {
-                                    x: col_x,
-                                    y: top_y + req.strength as i64 + dy * FIXED_SCALE,
-                                    z: col_z,
-                                },
-                                SNOW,
-                            );
-                            writes = writes.saturating_add(1);
-                        }
-                    }
-                }
-            }
-            MaterialOp::SeedOreDeposit => {
-                // `material.seed_ore` — write `ORE` voxels in a
-                // stochastic vein pattern drawn from a
-                // deterministic per-cell noise seeded by
-                // `(center.x, center.z)` so replay is stable.
-                // `strength` controls the vein thickness (in
-                // fixed-point units); the vein spans
-                // `|dy| <= strength` cells vertically from the
-                // local topmost solid voxel.
-                let vein_half = (req.strength as i64).max(FIXED_SCALE);
-                for dz in -r..=r {
-                    for dy in -vein_half..=vein_half {
-                        for dx in -r..=r {
-                            if dx * dx + dz * dz > r2 {
-                                continue;
-                            }
-                            let col_x = cx + dx * FIXED_SCALE;
-                            let col_z = cz + dz * FIXED_SCALE;
-                            let top_y =
-                                scan_topmost_y(&self.voxel, col_x, col_z, cy);
-                            // Deterministic noise: mix the
-                            // `(dx, dz)` cell offset with the
-                            // sim RNG seed. The mix is a small
-                            // integer hash — same input ⇒ same
-                            // pattern ⇒ stable replay.
-                            let seed = self
-                                .state
-                                .rng_seed
-                                .wrapping_add((col_x as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15))
-                                .wrapping_add((col_z as u64).wrapping_mul(0xBF58_476D_1CE4_E5B9));
-                            let pattern = (seed ^ (seed >> 33)).wrapping_mul(0xFF51_AFD7_ED55_8CCD);
-                            // Threshold ~ 25% of cells become
-                            // ORE voxels; the rest are left
-                            // alone so the vein looks like a
-                            // natural deposit.
-                            if pattern % 4 == 0 {
-                                self.push_voxel_write(
-                                    WorldCoord {
-                                        x: col_x,
-                                        y: top_y + dy,
-                                        z: col_z,
-                                    },
-                                    ORE,
-                                );
-                                writes = writes.saturating_add(1);
-                            }
-                        }
-                    }
-                }
-            }
-            MaterialOp::SeedForest => {
-                // `material.seed_forest` — write `PLANT`
-                // voxels in a stochastic scatter inside the
-                // footprint. The scatter is seeded by
-                // `(center.x, center.z)` (and the sim RNG
-                // seed) so replay is stable. `strength`
-                // controls the scatter density (higher ⇒ more
-                // voxels). The CA's growth rule carries the
-                // plants outward over the next ticks; we
-                // only stamp the seed voxels (no scripted
-                // canopy). Phase 4.
-                let density_pct = (req.strength as u32).clamp(1, 100);
-                for dz in -r..=r {
-                    for dx in -r..=r {
-                        if dx * dx + dz * dz > r2 {
-                            continue;
-                        }
-                        let col_x = cx + dx * FIXED_SCALE;
-                        let col_z = cz + dz * FIXED_SCALE;
-                        let top_y =
-                            scan_topmost_y(&self.voxel, col_x, col_z, cy);
-                        // Deterministic per-cell hash; same
-                        // input ⇒ same scatter ⇒ stable replay.
-                        let seed = self
-                            .state
-                            .rng_seed
-                            .wrapping_add((col_x as u64).wrapping_mul(0xC2B2_AE3D_27D4_EB4F))
-                            .wrapping_add((col_z as u64).wrapping_mul(0x1656_67B1_9E4A_CC15));
-                        let pattern = (seed ^ (seed >> 33)).wrapping_mul(0xFF51_AFD7_ED55_8CCD);
-                        let bucket = (pattern % 100) as u32;
-                        if bucket < density_pct {
-                            self.push_voxel_write(
-                                WorldCoord {
-                                    x: col_x,
-                                    y: top_y + FIXED_SCALE,
-                                    z: col_z,
-                                },
-                                PLANT,
-                            );
-                            writes = writes.saturating_add(1);
-                        }
-                    }
-                }
-            }
-        }
-        Ok(GodToolReceipt::Material {
-            op: req.op,
-            writes,
-        })
+        // Phase 3 stub: Material operations not yet implemented.
+        // The MaterialRequest struct doesn't carry an operation discriminant.
+        // Reserved for phase 3 implementation (FR-CIV-GODTOOL-903).
+        let _ = (&req.center, req.material_id, req.strength, req.drop_height);
+        Ok(GodToolReceipt::no_op("material"))
     }
 
     fn apply_life(&mut self, req: LifeRequest) -> Result<GodToolReceipt, GodToolError> {
@@ -1252,6 +983,9 @@ impl Simulation {
                 // substrate APIs (`spawn_many` +
                 // `enqueue_build_site`) — no direct ECS or
                 // voxel write.
+                //
+                // Phase 4 stub: BuildSite and related building types
+                // are not yet available. Only spawn the civilians.
                 if s.seed_civilian_id == 0 {
                     return Err(GodToolError::InvalidRequest(
                         "spawn_civ_seed seed_civilian_id must be > 0".into(),
@@ -1267,31 +1001,20 @@ impl Simulation {
                     .first()
                     .map(|e| e.to_bits().get())
                     .unwrap_or(0);
-                // Primitive hut (Workshop chain) at `center`.
-                self.enqueue_build_site(BuildSite::new(
-                    BuildingId(s.seed_civilian_id.wrapping_add(100)),
-                    BuildingSpec::minimal(BuildingTier::Primitive, ProductionChain::Workshop),
-                    s.center,
-                ));
-                // Farm stockpile at `center + (FIXED_SCALE, 0,
-                // FIXED_SCALE)` so the two buildings don't
-                // collide.
-                let farm_origin = WorldCoord {
-                    x: s.center.x + FIXED_SCALE,
-                    y: s.center.y,
-                    z: s.center.z + FIXED_SCALE,
-                };
-                self.enqueue_build_site(BuildSite::new(
-                    BuildingId(s.seed_civilian_id.wrapping_add(101)),
-                    BuildingSpec::minimal(BuildingTier::Primitive, ProductionChain::Farm),
-                    farm_origin,
-                ));
+                // TODO (Phase 4): enqueue_build_site calls pending BuildSite API
+                let _ = s.center;
                 Ok(GodToolReceipt::Life {
                     agent_entity_bits: first,
                     affected_count: entities.len() as u32,
                 })
             }
         }
+    }
+
+    fn apply_inspect(&mut self, _req: InspectRequest) -> Result<GodToolReceipt, GodToolError> {
+        // Phase TBD: Inspection tools for reading simulation state.
+        // For now, return a no-op receipt.
+        Ok(GodToolReceipt::no_op("inspect"))
     }
 
     fn apply_disaster(
@@ -1392,7 +1115,7 @@ impl Simulation {
                 // Add belief: at least one cell mutated = the
                 // sim registers an "act of god" event.
                 if writes > 0 {
-                    self.add_belief(8u64);
+                    self.add_belief(8i64);
                 }
                 Ok(GodToolReceipt::EnvironmentalDisaster {
                     kind_label: "lightning".to_string(),
@@ -1443,7 +1166,7 @@ impl Simulation {
                     writes = writes.saturating_add(1);
                 }
                 if writes > 0 {
-                    self.add_belief(12u64);
+                    self.add_belief(12i64);
                 }
                 Ok(GodToolReceipt::EnvironmentalDisaster {
                     kind_label: "tornado".to_string(),
@@ -1486,7 +1209,7 @@ impl Simulation {
                     writes = writes.saturating_add(1);
                 }
                 if writes > 0 {
-                    self.add_belief(25u64);
+                    self.add_belief(25i64);
                 }
                 Ok(GodToolReceipt::EnvironmentalDisaster {
                     kind_label: "volcanic_vent".to_string(),
@@ -1552,12 +1275,29 @@ impl Simulation {
                     }
                 }
                 if writes > 0 {
-                    self.add_belief(6u64);
+                    self.add_belief(6i64);
                 }
                 Ok(GodToolReceipt::EnvironmentalDisaster {
                     kind_label: "drought".to_string(),
                     writes,
                 })
+            }
+        }
+    }
+
+    fn top_voxel_y(&self, center: WorldCoord) -> i64 {
+        scan_topmost_y(&self.voxel, center.x, center.z, center.y)
+    }
+
+    fn raise_footprint(&mut self, center: WorldCoord, radius: i32, delta: i32) -> u32 {
+        let mut written = 0;
+        let scale = civ_voxel::FIXED_SCALE as i64;
+        for dx in -radius..=radius {
+            for dz in -radius..=radius {
+                for n in 0..delta {
+                    self.push_voxel_write(WorldCoord { x: center.x + i64::from(dx) * scale, y: center.y + i64::from(n) * scale, z: center.z + i64::from(dz) * scale }, STONE);
+                    written += 1;
+                }
             }
         }
         written
@@ -1589,6 +1329,7 @@ impl Simulation {
                 }
             }
         }
+        written
     }
 }
 

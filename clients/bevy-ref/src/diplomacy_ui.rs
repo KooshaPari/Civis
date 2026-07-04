@@ -1,6 +1,4 @@
-#![cfg(all(feature = "bevy", feature = "egui"))]
-
-//! Faction Diplomacy panel for the Civis reference client.
+﻿//! Faction Diplomacy panel for the Civis reference client.
 //!
 //! Provides a dark-glassmorphism overlay (matching `game_ui.rs` palette) that
 //! shows all known factions and a symmetric relation matrix. Open / close with
@@ -26,17 +24,35 @@ use crate::ui_theme;
 // Palette — sourced from the shared `ui_theme` dark-glass language.
 // ---------------------------------------------------------------------------
 
-/// Chip / cell tint.
-const CHIP_FILL: egui::Color32 = ui_theme::SURFACE;
-/// Cyan accent.
-const ACCENT: egui::Color32 = ui_theme::ACCENT;
-/// Dimmed label colour.
-const DIM: egui::Color32 = ui_theme::DIM;
+/// Bevy resource wrapping a cloned RPC sender so the diplomacy panel can fire
+/// JSON-RPC frames without importing the binary-crate `LiveBridge` type.
+///
+/// Insert from `bevy_window.rs` setup: `commands.insert_resource(DiplomacyBridge::new(bridge.client.rpc_sender()));`
+#[derive(Resource)]
+pub struct DiplomacyBridge {
+    sender: Sender<String>,
+}
 
-// Relation colour stops
-const GREEN: egui::Color32 = ui_theme::GREEN;
-const GOLD: egui::Color32 = ui_theme::GOLD;
-const RED: egui::Color32 = ui_theme::RED;
+impl DiplomacyBridge {
+    /// Wrap a cloned outbound sender from `WsClient::rpc_sender()`  .
+    pub fn new(sender: Sender<String>) -> Self {
+        Self { sender }
+    }
+
+    /// Enqueue a JSON-RPC text frame (fire-and-forget; drops if disconnected).
+    pub fn send_rpc(&self, json: String) {
+        let _ = self.sender.send(json);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Palette — canonical Keycap tokens from ui_theme; local CHIP_FILL not in ui_theme
+// ---------------------------------------------------------------------------
+
+use crate::ui_theme::{ACCENT, DIM, GOLD, GREEN, PANEL_FILL, RED};
+
+// CHIP_FILL: local tint not present in ui_theme (different from GRAPHITE_700)
+const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);
 
 // ---------------------------------------------------------------------------
 // Data model

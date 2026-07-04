@@ -8,6 +8,7 @@
 use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
+use crate::ui_theme::CHIP_FILL;
 
 use crate::game_ui::GameSpeed;
 
@@ -15,8 +16,6 @@ const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
 const ACCENT_HI: egui::Color32 = egui::Color32::from_rgb(140, 224, 255);
 const GOLD: egui::Color32 = egui::Color32::from_rgb(232, 184, 75);
 const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
-const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);
-const CHIP_HOVER: egui::Color32 = egui::Color32::from_rgba_premultiplied(44, 54, 74, 245);
 const DIM: egui::Color32 = egui::Color32::from_rgb(150, 158, 178);
 const OVERLAY_DIM: egui::Color32 = egui::Color32::from_rgba_premultiplied(0, 0, 0, 160);
 

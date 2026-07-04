@@ -127,10 +127,18 @@ fn apply_live_scene_frames(
                 assets.as_ref(),
                 building,
             ),
-            Frame3d::CivilianState(_)
-            | Frame3d::FactionState(_)
-            | Frame3d::EventFeed(_)
-            | Frame3d::Climate(_) => {}
+            Frame3d::CivilianState(civilian) => apply_civilian_state_frame(&mut scene, civilian),
+            Frame3d::FactionState(faction) => apply_faction_state_frame(&mut scene, faction),
+            #[cfg(feature = "egui")]
+            Frame3d::EventFeed(event_frame) => {
+                if let Some(feed) = event_feed.as_mut() {
+                    apply_event_feed_frame(feed, event_frame);
+                }
+            }
+            Frame3d::Climate(_) => {}
+            #[cfg(not(feature = "egui"))]
+            Frame3d::EventFeed(_) => {}
+            Frame3d::Climate(_) => {}
         }
     }
 }

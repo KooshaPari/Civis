@@ -538,24 +538,6 @@ impl Simulation {
         let mi_material_faction_norm =
             compute_material_faction_mi(self).and_then(|value| value.is_finite().then_some(value));
 
-        // FR-EMERGENCE-dashboard: derive the three summary metrics
-        // from existing per-tick engine state. None of these
-        // introduce a new tick, an ECS scan, or a new wiring —
-        // they're pure functions of fields already on this sample.
-        let novelty_score = novelty_score(novelty_rate);
-        let coupling_mi_value = coupling_mi_estimate(
-            mi_material_faction_norm.unwrap_or(0.0),
-            entropy_norm,
-        );
-        let criticality = criticality_indicator(
-            CriticalityInputs {
-                branching_sigma: branching.sigma_bar,
-                power_law_alpha,
-                entropy_norm,
-            },
-            &Default::default(),
-        );
-
         let sample = EmergenceSample {
             tick,
             entropy_bits,
@@ -575,9 +557,6 @@ impl Simulation {
             power_law_alpha,
             novelty_rate,
             mi_material_faction_norm,
-            novelty_score,
-            coupling_mi_estimate: coupling_mi_value,
-            criticality_indicator: criticality,
         };
 
         // Single INFO line per sample. The cost budget is ~one log
@@ -644,15 +623,12 @@ impl Simulation {
 
 fn emergence_sample_stdout_summary(sample: &EmergenceSample) -> String {
     format!(
-        "emergence sample: entropy={:.4} structures={} power_law_alpha={:.4} novelty_rate={:.6} mi_material_faction={:.4} novelty_score={:.4} coupling_mi_estimate={:.4} criticality={:.4}",
+        "emergence sample: entropy={:.4} structures={} power_law_alpha={:.4} novelty_rate={:.6} mi_material_faction={:.4}",
         sample.entropy_bits,
         sample.structure_count.unwrap_or(0),
         sample.power_law_alpha,
         sample.novelty_rate,
         sample.mi_material_faction_norm.unwrap_or(f32::NAN),
-        sample.novelty_score,
-        sample.coupling_mi_estimate,
-        sample.criticality_indicator,
     )
 }
 
@@ -1094,7 +1070,7 @@ mod tests {
     }
 
     /// FR-CIV-EMERG-001: the sampler computes the five-tile
-    /// `TileDashboard` from the live ECS and caches it on the
+    /// `EmergenceDashboard` from the live ECS and caches it on the
     /// `EmergenceSample`. The test inserts a population with `Civilian`,
     /// `ClusterMember`, `Psyche`, and `Mood`, takes one sample, and asserts the
     /// dashboard block is `Some(_)` with values that match the helper crate's

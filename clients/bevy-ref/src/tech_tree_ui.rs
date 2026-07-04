@@ -1,4 +1,4 @@
-#![cfg(all(feature = "bevy", feature = "egui"))]
+﻿#![cfg(all(feature = "bevy", feature = "egui"))]
 
 //! Tech tree overlay window for the Civis gameplay HUD.
 //!
@@ -19,15 +19,17 @@ use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 use crate::ui_theme;
 
 // ---------------------------------------------------------------------------
-// Palette — sourced from the shared `ui_theme` so the tech-tree overlay tracks
-// the cohesive dark-glass HUD language used across every panel.
+// Palette — canonical Keycap tokens from ui_theme; local-only consts kept below
 // ---------------------------------------------------------------------------
 
-const CHIP_FILL: egui::Color32 = ui_theme::SURFACE;
-const ACCENT: egui::Color32 = ui_theme::ACCENT;
-const LOCKED_DIM: egui::Color32 = ui_theme::DIM;
-const TEXT_MAIN: egui::Color32 = ui_theme::TEXT;
-const GOLD: egui::Color32 = ui_theme::GOLD;
+use crate::ui_theme::{ACCENT, PANEL_FILL, TEXT_HI};
+
+// TEXT_MAIN: alias for TEXT_HI (same semantic role)
+const TEXT_MAIN: egui::Color32 = TEXT_HI;
+// CHIP_FILL: local tint not present in ui_theme (different from GRAPHITE_700)
+const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);
+// LOCKED_DIM: no ui_theme equivalent; kept local
+const LOCKED_DIM: egui::Color32 = egui::Color32::from_rgb(120, 128, 148);
 
 // ---------------------------------------------------------------------------
 // Domain types

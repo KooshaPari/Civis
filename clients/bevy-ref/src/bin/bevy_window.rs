@@ -1,3 +1,8 @@
+﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
+use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
+use bevy_egui::{egui, EguiContexts, EguiPlugin};
+﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
+﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
@@ -17,6 +22,9 @@ use civ_bevy_ref::{
         LIVE_MINIMAP_AGENT_COLOR, LIVE_MINIMAP_CAMERA_COLOR, LIVE_MINIMAP_CHUNK_FOCUSED_COLOR,
         LIVE_MINIMAP_CHUNK_LOADED_COLOR, LIVE_MINIMAP_DOT, LIVE_MINIMAP_GRAPH_DOT_SCALE,
     },
+    faction_hud::{FactionHudPlugin, PlayerFactionId},
+    god_panel::GodPanelPlugin,
+    save_load_ui::SaveLoadUiPlugin,
     live_pick::{LivePickPlugin, LiveSelection},
     live_stream::{
         apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
@@ -51,6 +59,38 @@ const MINIMAP_HUD_LAYOUT: MinimapDotLayout = MinimapDotLayout::InsetHud {
     inset: MINIMAP_INSET,
     plot_margin_dot: MINIMAP_DOT,
 };
+
+// FR-CIV-CLIENT-001
+#[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
+enum AppState {
+    #[default]
+    Connecting,
+    InGame,
+    ConnectionLost,
+}
+
+#[derive(Resource, Default)]
+struct ConnectionOverlay {
+    root: Option<Entity>,
+    tick: u32,
+}
+
+#[derive(Component)]
+struct SplashSpinner;
+#[derive(Resource, Debug, Clone)]
+struct ScenarioPanel {
+    seed_index: usize,
+    speed_index: usize,
+    preset_index: usize,
+}
+
+impl Default for ScenarioPanel {
+    fn default() -> Self {
+        Self { seed_index: 0, speed_index: 0, preset_index: 0 }
+        Self { seed_index: 0, speed_index: 0 }
+    }
+}
+
 
 #[derive(Resource, Debug, Clone, Copy)]
 struct OrbitCamera {
@@ -152,10 +192,51 @@ struct MinimapCache {
 }
 
 #[derive(Resource, Default)]
+struct MinimapPopup {
+    /// Pending right-click tile coords; None when popup is closed.
+    pending: Option<(i32, i32)>,
+}
+
+#[derive(Resource, Default)]
 struct SimSpeedState {
     multiplier: u32,
 }
 
+#[derive(Resource)]
+struct EmergencePollTimer(f32);
+impl Default for EmergencePollTimer {
+    fn default() -> Self {
+        Self(0.0)
+    }
+}
+
+#[derive(Component)]
+struct ScenarioSeedLabel;
+
+#[derive(Component)]
+struct ScenarioSpeedLabel;
+
+#[derive(Component)]
+struct ScenarioPresetLabel;
+
+#[derive(Component)]
+struct ScenarioStartButton;
+
+#[derive(Component)]
+struct ScenarioStartButton;
+
+#[derive(Resource, Default)]
+struct MinimapPopup {
+    /// Pending right-click tile coords; None when popup is closed.
+    pending: Option<(i32, i32)>,
+}
+
+#[derive(Resource, Default)]
+struct SimSpeedState {
+    multiplier: u32,
+}
+
+#[derive(Resource)]
 #[derive(Resource, Default)]
 struct EmergencePollTimer(f32);
 
@@ -174,6 +255,17 @@ fn main() {
             WireframePlugin::default(),
             GpuFeaturesPlugin,
             LivePickPlugin,
+            FactionHudPlugin,
+            SaveLoadUiPlugin,
+            TutorialPlugin,
+            PerfHudPlugin,
+            EguiPlugin::default(),
+            EventFeedPlugin,
+            EmergenceDashboardPlugin,
+            DiplomacyUiPlugin,
+            GodPanelPlugin,
+            EguiPlugin::default(),
+            EventFeedPlugin,
         ))
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()
@@ -186,8 +278,11 @@ fn main() {
         .add_systems(OnEnter(AppState::ConnectionLost), spawn_lost_overlay)
         .add_systems(OnExit(AppState::ConnectionLost), despawn_connection_overlay)
         .add_systems(Update, drive_app_state)
+<<<<<<< HEAD
+=======
         .add_systems(Update, sync_perf_metrics.run_if(crate::menus::in_game))
         .add_systems(Update, animate_splash.run_if(in_state(AppState::Connecting)))
+>>>>>>> 34495eed48a7965a10f0cb2f2db986adfb380b94
         .add_systems(Update, scenario_panel_input.run_if(in_state(AppState::Connecting)))
         .add_systems(
             Update,
@@ -1337,4 +1432,71 @@ fn update_chunk_fade(
             commands.entity(entity).remove::<LiveChunkFade>();
         }
     }
+}
+
+fn minimap_popup_ui(
+    mut contexts: EguiContexts,
+    mut popup: ResMut<MinimapPopup>,
+    bridge: Res<LiveBridge>,
+    mut orbit: ResMut<OrbitCamera>,
+    mut hud: ResMut<HudState>,
+    scene: Res<LiveStreamScene>,
+) {
+    let Some((tx, ty)) = popup.pending else {
+        return;
+    };
+    egui::Window::new("Tile Actions")
+        .collapsible(false)
+        .resizable(false)
+        .show(contexts.ctx_mut(), |ui| {
+            ui.label(format!("Tile ({tx}, {ty})"));
+            if ui.button("Inspect tile").clicked() {
+                let json = format!(
+                    r#"{{"jsonrpc":"2.0","id":1,"method":"sim.inspect_tile","params":{{"x":{tx},"y":{ty}}}}}"#
+                );
+                bridge.client.send_rpc(json);
+                popup.pending = None;
+            }
+            if ui.button("Center camera").clicked() {
+                orbit.centre[0] = tx as f32;
+                orbit.centre[2] = ty as f32;
+                let preferred_cy = (orbit.centre[1] / LIVE_CHUNK_EDGE as f32).floor() as i32;
+                let loaded: Vec<u64> = scene.chunks.keys().copied().collect();
+                hud.snapshot.focused_chunk = Some(focused_chunk_at_grid(
+                    tx / LIVE_CHUNK_EDGE as i32,
+                    ty / LIVE_CHUNK_EDGE as i32,
+                    preferred_cy,
+                    &loaded,
+                ));
+                popup.pending = None;
+            }
+            if ui.button("Cancel").clicked() {
+                popup.pending = None;
+            }
+        });
+}
+
+fn poll_emergence(
+    time: Res<Time>,
+    bridge: Res<LiveBridge>,
+    mut timer: ResMut<EmergencePollTimer>,
+    mut hud: ResMut<HudState>,
+    speed: Res<SimSpeedState>,
+    mut emergence_res: ResMut<EmergenceHudData>,
+) {
+    hud.snapshot.speed_multiplier = speed.multiplier;
+    // Apply any parsed emergence responses received from the server.
+    for em in bridge.client.poll_emergence() {
+        hud.snapshot.emergence = Some(em.clone());
+        *emergence_res = em;
+        hud.snapshot.emergence = Some(em);
+    }
+    timer.0 += time.delta_secs();
+    if timer.0 < 10.0 {
+        return;
+    }
+    timer.0 = 0.0;
+    let json = r#"{"jsonrpc":"2.0","id":2,"method":"sim.emergence","params":null}"#.to_string();
+    bridge.client.send_rpc(json);
+}
 }

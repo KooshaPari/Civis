@@ -59,6 +59,8 @@ pub mod inspect;
 #[cfg(all(feature = "bevy", feature = "gi"))]
 pub mod lighting_gi;
 #[cfg(feature = "bevy")]
+pub mod info_views;
+#[cfg(feature = "bevy")]
 pub mod live_attach;
 #[cfg(feature = "bevy")]
 pub mod live_focus;
@@ -102,8 +104,13 @@ pub mod skybox;
 pub mod spawn_tools;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tech_tree_ui;
-#[cfg(feature = "bevy")]
-pub mod terraform_brush;
+<<<<<<< HEAD
+=======
+pub mod civ_history;
+>>>>>>> 34495eed48a7965a10f0cb2f2db986adfb380b94
+pub mod god_panel;
+pub mod tutorial;
+pub mod perf_hud;
 #[cfg(feature = "bevy")]
 pub mod terrain;
 #[cfg(all(feature = "bevy", feature = "egui"))]
@@ -291,6 +298,13 @@ pub struct LiveHudSnapshot {
     pub building_count: usize,
     /// Streamed building-graph parcel entities in the live scene.
     pub graph_parcel_count: usize,
+    /// Civilians tracked from `Frame3d::CivilianState` wire frames.
+    pub civilian_count: usize,
+    /// Factions tracked from `Frame3d::FactionState` wire frames.
+    pub faction_count: usize,
+    /// Max treasury balance across tracked factions (proxy for player wealth, from FactionStateEntry).
+    #[serde(default)]
+    pub treasury: f32,
     /// Latest `sim.snapshot` round-trip time in milliseconds, when measured.
     pub ws_rtt_ms: Option<f32>,
     /// Chunk under the cursor from minimap click or viewport raycast stub, if any.

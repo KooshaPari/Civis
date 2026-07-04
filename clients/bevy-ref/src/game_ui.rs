@@ -33,6 +33,7 @@
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
+use crate::ui_theme::CHIP_FILL;
 
 use crate::game_laws::GameLawsOpen;
 use crate::holo_minimap::HoloMinimapPlugin;
@@ -269,6 +270,13 @@ impl GameSpeed {
 // ---------------------------------------------------------------------------
 // Plugin
 // ---------------------------------------------------------------------------
+
+/// Accent cyan used for active widgets and highlights.
+const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
+/// Glassmorphism panel fill (premultiplied for `const` construction; alpha ~235).
+const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
+/// Dimmed label color for inspector field names.
+const DIM: egui::Color32 = egui::Color32::from_rgb(150, 158, 178);
 
 /// Plugin that renders the gameplay HUD and binds keyboard speed shortcuts.
 pub struct GameUiPlugin;
@@ -1078,9 +1086,15 @@ fn parse_health_fraction(raw: &str) -> Option<f32> {
     }
     if let Some(pct) = s.strip_suffix('%') {
         let v: f32 = pct.trim().parse().ok()?;
+        if !v.is_finite() {
+            return None;
+        }
         return Some((v / 100.0).clamp(0.0, 1.0));
     }
     let v: f32 = s.parse().ok()?;
+    if !v.is_finite() {
+        return None;
+    }
     if (0.0..=1.0).contains(&v) {
         Some(v)
     } else if (0.0..=100.0).contains(&v) {

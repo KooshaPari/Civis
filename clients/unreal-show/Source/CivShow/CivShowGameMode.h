@@ -61,6 +61,8 @@ private:
 
     void ApplyDayNight(bool bIsDay);
 
+    void UpdateAttachWarning();
+
     UFUNCTION()
     void OnMinimapUvClicked(float U, float V);
 

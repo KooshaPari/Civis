@@ -10,9 +10,7 @@ path = "src/bin/oracle_report.rs"
 [dependencies]
 civ-engine = { path = "../engine" }
 civ-agents = { path = "../agents" }
-civ-economy = { path = "../economy" }
-civ-i18n = { path = "../i18n" }
-civ-genetics = { path = "../genetics" }
 civ-powers = { path = "../powers" }
+civ-genetics = { path = "../genetics" }
 rand = "0.8.6"
 rand_chacha = "0.3"

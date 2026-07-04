@@ -29,9 +29,15 @@ use std::collections::BTreeMap;
 use civ_voxel::WorldCoord;
 use serde::{Deserialize, Serialize};
 
+pub mod congestion;
+pub mod flow_priority;
 pub mod grid;
 pub mod lane;
 
+pub use congestion::PathCongestion;
+pub use flow_priority::{
+    FlowPriorityPolicy, LaneId, LaneVolume, PhaseAssignment, FLOW_PRIORITY_SCHEMA_VERSION,
+};
 pub use grid::{
     CellState, GridCell, ServiceGrid, ServiceGridError, ServiceKind, SERVICE_GRID_SCHEMA_VERSION,
 };

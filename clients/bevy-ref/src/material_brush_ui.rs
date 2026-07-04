@@ -288,15 +288,15 @@ impl Plugin for MaterialBrushPlugin {
     }
 }
 
-/// Arm the material brush exactly while `SpawnTool::PaintMaterial` is the active
-/// tool, so selecting the Material tool flips on `MaterialPaintArmed` and any
-/// other tool flips it off. Keeps the paint gate in sync with the HUD palette
-/// without the paint system needing to know about the tool enum.
+/// Arm the material brush exactly while `SpawnTool::Terraform` is the active
+/// tool, so selecting the material sub-tools flips on `MaterialPaintArmed` and
+/// any other tool flips it off. Keeps the paint gate in sync with the HUD
+/// palette without the paint system needing to know about the tool enum.
 fn sync_paint_armed_from_tool(
     active: Res<crate::spawn_tools::ActiveTool>,
     mut armed: ResMut<MaterialPaintArmed>,
 ) {
-    let want = active.tool == crate::spawn_tools::SpawnTool::PaintMaterial;
+    let want = active.tool == crate::spawn_tools::SpawnTool::Terraform;
     if armed.0 != want {
         armed.0 = want;
     }

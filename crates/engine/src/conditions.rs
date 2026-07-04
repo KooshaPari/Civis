@@ -12,24 +12,32 @@ const TYRANNY_TICKS_THRESHOLD: u64 = 200;
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum GameOutcome {
-    Victory(String),
-    Defeat(String),
+    Victory { faction: Option<u32>, kind: String },
+    Defeat { reason: String },
     Ongoing,
 }
 
 impl GameOutcome {
     pub fn tag(&self) -> &'static str {
         match self {
-            Self::Victory(_) => "victory",
-            Self::Defeat(_) => "defeat",
+            Self::Victory { .. } => "victory",
+            Self::Defeat { .. } => "defeat",
             Self::Ongoing => "ongoing",
         }
     }
 
     pub fn reason(&self) -> &str {
         match self {
-            Self::Victory(r) | Self::Defeat(r) => r.as_str(),
+            Self::Victory { kind, .. } => kind.as_str(),
+            Self::Defeat { reason } => reason.as_str(),
             Self::Ongoing => "",
+        }
+    }
+
+    pub fn faction(&self) -> Option<u32> {
+        match self {
+            Self::Victory { faction, .. } => *faction,
+            Self::Defeat { .. } | Self::Ongoing => None,
         }
     }
 }
@@ -43,7 +51,9 @@ pub fn check_outcome(sim: &Simulation) -> GameOutcome {
 
     // ── Defeat: extinction ───────────────────────────────────────────────────
     if !state.factions.is_empty() && state.population == 0 {
-        return GameOutcome::Defeat("Civilization Collapsed".to_owned());
+        return GameOutcome::Defeat {
+            reason: "Civilization Collapsed".to_owned(),
+        };
     }
 
     // ── Defeat: tyranny (single faction > 95 % pop for 200 ticks) ───────────
@@ -59,29 +69,39 @@ pub fn check_outcome(sim: &Simulation) -> GameOutcome {
         for (_, wealth) in &state.faction_treasury {
             let share = wealth.to_f64().max(0.0) / total_treasury;
             if share >= TYRANNY_POPULATION_SHARE && tick >= TYRANNY_TICKS_THRESHOLD {
-                return GameOutcome::Defeat("Tyranny".to_owned());
+                return GameOutcome::Defeat {
+                    reason: "Tyranny".to_owned(),
+                };
             }
         }
     }
 
     // ── Victory: all factions at peace for 500 ticks ────────────────────────
     // Count conflict events in the last PEACE_TICKS_THRESHOLD ticks.
-    let recent_conflict = sim
-        .diplomacy_events()
-        .iter()
-        .any(|e| e.kind == DiplomacyKind::Conflict && tick.saturating_sub(e.tick) < PEACE_TICKS_THRESHOLD);
+    let recent_conflict = sim.diplomacy_events().iter().any(|e| {
+        e.kind == DiplomacyKind::Conflict && tick.saturating_sub(e.tick) < PEACE_TICKS_THRESHOLD
+    });
     if !recent_conflict && tick >= PEACE_TICKS_THRESHOLD {
-        return GameOutcome::Victory("Age of Harmony".to_owned());
+        return GameOutcome::Victory {
+            faction: None,
+            kind: "Age of Harmony".to_owned(),
+        };
     }
 
     // ── Victory: population > 10 000 ────────────────────────────────────────
     if state.population >= POPULATION_VICTORY {
-        return GameOutcome::Victory("Thriving Civilization".to_owned());
+        return GameOutcome::Victory {
+            faction: None,
+            kind: "Thriving Civilization".to_owned(),
+        };
     }
 
     // ── Victory: all 12 techs researched ────────────────────────────────────
-    if sim.researched_tech_count() >= TECH_VICTORY_COUNT {
-        return GameOutcome::Victory("Age of Enlightenment".to_owned());
+    if sim.research_cache().researched.len() >= TECH_VICTORY_COUNT {
+        return GameOutcome::Victory {
+            faction: None,
+            kind: "Age of Enlightenment".to_owned(),
+        };
     }
 
     GameOutcome::Ongoing
@@ -94,21 +114,30 @@ mod tests {
 
     #[test]
     fn ongoing_on_fresh_sim() {
-        let sim = Simulation::with_seed(42);
+        let mut sim = Simulation::with_seed(42);
+        sim.state.population = 1;
         assert_eq!(check_outcome(&sim), GameOutcome::Ongoing);
     }
 
     #[test]
     fn victory_population_threshold() {
         let mut sim = Simulation::with_seed(42);
+        sim.state.population = POPULATION_VICTORY - 1;
+        assert_eq!(check_outcome(&sim), GameOutcome::Ongoing);
         sim.state.population = POPULATION_VICTORY;
-        assert!(matches!(check_outcome(&sim), GameOutcome::Victory(_)));
+        assert!(matches!(
+            check_outcome(&sim),
+            GameOutcome::Victory { kind, .. } if kind == "Thriving Civilization"
+        ));
     }
 
     #[test]
     fn defeat_extinction() {
         let mut sim = Simulation::with_seed(42);
         sim.state.population = 0;
-        assert!(matches!(check_outcome(&sim), GameOutcome::Defeat(_)));
+        assert!(matches!(
+            check_outcome(&sim),
+            GameOutcome::Defeat { reason } if reason == "Civilization Collapsed"
+        ));
     }
 }

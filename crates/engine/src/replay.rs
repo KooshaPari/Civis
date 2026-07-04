@@ -585,7 +585,6 @@ impl ReplayLog {
         Ok(log)
     }
 
-
     /// Count [`ReplayEvent::RngDraw`] markers in this log.
     #[must_use]
     pub fn rng_draw_event_count(&self) -> usize {

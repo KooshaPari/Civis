@@ -27,12 +27,17 @@ jobs:
   analyze:
     # Manual + weekly: never on push/PR. Heavy (~30 min cargo build).
     if: github.event_name == 'workflow_dispatch' || github.event.schedule
-    uses: KooshaPari/phenoShared/.github/workflows/reusable/codeql.yml@main
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
     permissions:
       contents: read
       actions: read
       security-events: write
-    with:
-      languages: '["rust"]'
-      build-mode: 'manual'
-      build-command: 'cargo build --release || cargo build'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: rust,javascript-typescript
+          build-mode: manual
+      - run: cargo build --release || cargo build
+      - uses: github/codeql-action/analyze@v3

@@ -73,6 +73,7 @@ fn main() {
         .add_plugins(civ_bevy_ref::diplomacy_ui::DiplomacyUiPlugin)
         .add_plugins(civ_bevy_ref::event_feed::EventFeedPlugin)
         .add_plugins(civ_bevy_ref::menus::MenusPlugin)
+        .add_plugins(civ_bevy_ref::save_load_ui::SaveLoadUiPlugin)
         .add_plugins(civ_bevy_ref::spawn_tools::SpawnToolsPlugin)
         .add_plugins(civ_bevy_ref::minimap::MinimapPlugin)
         .init_resource::<civ_bevy_ref::game_ui::GameUiSnapshot>()
@@ -204,9 +205,13 @@ fn sync_post_fx_from_settings(
     mut post_fx: ResMut<PostFxSettings>,
 ) {
     let graphics = &settings.graphics;
-    post_fx.aces = graphics.anti_aliasing != AntiAliasing::Off;
+    post_fx.aces = graphics.tonemapping_enabled;
+    post_fx.tonemapping = graphics.tonemapping_enabled;
+    post_fx.color_grading = graphics.color_grading_enabled;
     post_fx.bloom = graphics.bloom;
-    post_fx.ssao = graphics.ambient_occlusion;
+    post_fx.ssao = graphics.ssao_enabled;
+    post_fx.ssr = graphics.ssr_enabled;
+    post_fx.volumetric_fog = graphics.volumetric_fog_enabled;
     post_fx.taa = graphics.anti_aliasing == AntiAliasing::TAA;
 }
 

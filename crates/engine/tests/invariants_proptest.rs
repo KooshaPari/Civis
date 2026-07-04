@@ -16,10 +16,10 @@ proptest! {
             sim.tick();
 
             prop_assert!(
-                sim.state.energy_budget_joules.raw >= 0,
-                "world energy budget negative after tick {}: raw={}",
+                sim.state.energy_budget_joules >= Fixed::ZERO,
+                "world energy budget negative after tick {}: {}",
                 sim.state.tick,
-                sim.state.energy_budget_joules.raw,
+                sim.state.energy_budget_joules,
             );
             prop_assert!(
                 sim.economy_state.energy_budget_joules >= 0,

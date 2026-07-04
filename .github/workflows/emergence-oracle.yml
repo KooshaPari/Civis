@@ -7,11 +7,10 @@ name: Emergence Oracle FR-Validation
 on:
   push:
     branches:
-      - feat/civis-platform
-      - feat/oracle-ci-gate
+      - main
   pull_request:
     branches:
-      - feat/civis-platform
+      - main
   workflow_dispatch:
 
 permissions:

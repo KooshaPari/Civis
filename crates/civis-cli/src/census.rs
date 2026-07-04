@@ -238,6 +238,27 @@ pub mod wire {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn test_dispatch_context(tick: u64, population: Option<u64>) -> DispatchContext {
+        DispatchContext {
+            tick,
+            population,
+            snapshot: None,
+            tile_probe: None,
+            require_role: false,
+            speed_multiplier: 1,
+            connection_role: None,
+            saves_dir: None,
+            emergence: None,
+            researched: vec![],
+            in_progress_tech: None,
+            outcome_fields: None,
+            last_tick_ms: 0.0,
+            psyche_snapshot: None,
+            sentience_events: None,
+            religion_state: None,
+        }
+    }
     use civ_server::jsonrpc::DispatchEffect;
     use std::collections::BTreeMap;
 

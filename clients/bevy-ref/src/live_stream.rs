@@ -41,6 +41,150 @@ pub const LIVE_CHUNK_EDGE: usize = 16;
 /// Default chunk albedo for streamed meshes.
 pub const LIVE_CHUNK_BASE_COLOR: [f32; 3] = [0.72, 0.69, 0.62];
 
+/// Per-region weather kind observed in the latest `Frame3d::Climate`.
+/// Tracked as a flat `u8` tag mirroring the well-known set in `civ_planet::WeatherKind`
+/// (Clear=0, Cloudy=1, Rain=2, Storm=3, Snow=4, Sandstorm=5, Fog=6) so we don't
+/// pull in a transitive dep just to label the client sky tint (FR-CLIENT-render).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct WeatherKindSnapshot(pub u8);
+
+/// Flat copy of `civ_planet::Climate` for the renderer's sky/lighting pass.
+/// Only the four phase floats + tick + tide offset are needed downstream;
+/// carrying a `ClimateFrame` here would force the client crate to depend on
+/// `civ-planet` just for the type alias (FR-CLIENT-render).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ClimateSnapshot {
+    /// Server tick this climate frame belongs to.
+    pub tick: u64,
+    /// Sun position on the 0..1 daily cycle (0 = midnight, 0.5 = noon).
+    pub day_phase: f32,
+    /// Position on the 0..1 yearly cycle (used for seasonal tint blending).
+    pub year_phase: f32,
+    /// Moon phase in 0..1 (e.g. for night sky ambient).
+    pub moon_phase: f32,
+    /// Tide offset, useful for shoreline shoreline vertex animation hooks.
+    pub tide_offset: f32,
+}
+
+impl ClimateSnapshot {
+    /// `true` when the snapshot's `day_phase` is in the daylight band
+    /// (FR-CLIENT-render). Used by the Bevy presentation system to flip
+    /// `ScenePresentation.is_day` as the planet rotates.
+    ///
+    /// Day band is `[0.20, 0.80]`; outside that (and for non-finite
+    /// phases) the snapshot reads as night. `rem_euclid(1.0)` wraps
+    /// out-of-range phases so the answer stays meaningful for
+    /// server-side overflow.
+    #[must_use]
+    pub fn is_day_band(&self) -> bool {
+        if !self.day_phase.is_finite() {
+            return false;
+        }
+        let p = self.day_phase.rem_euclid(1.0);
+        (0.20..0.80).contains(&p)
+    }
+}
+
+/// Stable biome-to-RGB tint lookup (FR-CLIENT-render).
+/// Maps a small set of `MaterialId` tags to a per-chunk base albedo so that
+/// terrain streaming visibly tracks the underlying material composition
+/// (e.g. a chunk dominated by `SAND` reads warm tan, a chunk dominated by
+/// `SNOW` reads cool white) without making the renderer aware of the full
+/// material registry.
+///
+/// The mapping is intentionally tiny and only covers the visually
+/// distinctive materials the client cares about; anything not listed
+/// resolves to [`LIVE_CHUNK_BASE_COLOR`].
+#[must_use]
+pub fn material_tint(material: MaterialId) -> [f32; 3] {
+    use civ_voxel::{
+        ASH, BEDROCK, BRICK, CLAY, COAL, CRYSTAL, DIRT, FIRE, GLASS, GRANITE, GRAVEL, ICE, MOSS,
+        MUD, ORE, PACKED_DIRT, PLANT, SALT, SAND, SMOKE, SNOW, STONE, WATER, WOOD,
+    };
+    let id = material.0;
+    match id {
+        x if x == SAND.0 => [0.92, 0.83, 0.58],
+        x if x == SNOW.0 => [0.95, 0.97, 1.00],
+        x if x == ICE.0 => [0.78, 0.88, 0.95],
+        x if x == DIRT.0 => [0.55, 0.42, 0.30],
+        x if x == PACKED_DIRT.0 => [0.50, 0.38, 0.27],
+        x if x == CLAY.0 => [0.72, 0.50, 0.40],
+        x if x == MUD.0 => [0.42, 0.30, 0.20],
+        x if x == GRAVEL.0 => [0.62, 0.58, 0.54],
+        x if x == STONE.0 => [0.55, 0.55, 0.55],
+        x if x == GRANITE.0 => [0.60, 0.58, 0.56],
+        x if x == BEDROCK.0 => [0.32, 0.30, 0.30],
+        x if x == BRICK.0 => [0.68, 0.30, 0.22],
+        x if x == WOOD.0 => [0.55, 0.36, 0.18],
+        x if x == COAL.0 => [0.18, 0.18, 0.20],
+        x if x == ORE.0 => [0.78, 0.62, 0.28],
+        x if x == CRYSTAL.0 => [0.70, 0.85, 0.95],
+        x if x == GLASS.0 => [0.80, 0.88, 0.92],
+        x if x == WATER.0 => [0.30, 0.50, 0.78],
+        x if x == PLANT.0 => [0.30, 0.55, 0.22],
+        x if x == MOSS.0 => [0.34, 0.52, 0.24],
+        x if x == SALT.0 => [0.92, 0.90, 0.82],
+        x if x == ASH.0 => [0.55, 0.52, 0.50],
+        x if x == FIRE.0 => [0.95, 0.45, 0.10],
+        x if x == SMOKE.0 => [0.45, 0.42, 0.42],
+        _ => LIVE_CHUNK_BASE_COLOR,
+    }
+}
+
+/// Computes a stable biome tint for a chunk by counting the most
+/// common non-air material id in the voxel payload (FR-CLIENT-render).
+///
+/// `voxels` is expected to be the flat
+/// `LIVE_CHUNK_EDGE^3` slice produced by [`CubicMesher`]. Air and the
+/// non-renderable fluid/material ids are filtered out so that a chunk
+/// whose bulk is empty space falls back to [`LIVE_CHUNK_BASE_COLOR`]
+/// instead of "air" (which is invisible anyway).
+///
+/// Returns `None` when the chunk has no renderable material — callers
+/// should fall back to [`LIVE_CHUNK_BASE_COLOR`].
+#[must_use]
+pub fn chunk_biome_tint(voxels: &[MaterialId]) -> Option<[f32; 3]> {
+    use civ_voxel::{AIR, METHANE, PLASMA, SMOKE, STEAM, TOXIC_GAS};
+    use std::collections::HashMap;
+    let mut counts: HashMap<_, u32> = HashMap::new();
+    for v in voxels {
+        if v.0 == AIR.0
+            || v.0 == SMOKE.0
+            || v.0 == STEAM.0
+            || v.0 == METHANE.0
+            || v.0 == TOXIC_GAS.0
+            || v.0 == PLASMA.0
+        {
+            continue;
+        }
+        *counts.entry(v.0).or_insert(0) += 1;
+    }
+    let (id, _) = counts.into_iter().max_by_key(|(_, c)| *c)?;
+    Some(material_tint(MaterialId(id)))
+}
+
+/// Per-agent distance LOD scale (FR-CLIENT-render). The wire agent scale
+/// is further attenuated by a smooth function of camera distance so that
+/// far-away agents visually compress into the terrain instead of
+/// punching through it. Returns at least `min_scale` and at most
+/// `max_scale` (defaults match the existing `agent_scale_multiplier`
+/// envelope so HUD spacing is unaffected).
+#[must_use]
+pub fn agent_distance_lod(
+    wire_scale: f32,
+    distance: f32,
+    min_scale: f32,
+    max_scale: f32,
+) -> f32 {
+    if !wire_scale.is_finite() || !distance.is_finite() {
+        return min_scale;
+    }
+    // `1 / (1 + d*k)` falls off gently: ~1.0 at d=0, ~0.5 at d=10, ~0.25 at d=30.
+    let falloff = 1.0 / (1.0 + distance.max(0.0) * 0.05);
+    let s = wire_scale * falloff;
+    s.clamp(min_scale, max_scale)
+}
+
 /// Vertical offset for streamed agent markers above ground.
 pub const AGENT_GROUND_Y: f32 = 0.8;
 /// Vertical offset for streamed building markers above ground.
@@ -529,19 +673,49 @@ pub fn remesh_cached_chunks(
     if deltas.is_empty() {
         return;
     }
-    apply_voxel_delta_frame(
-        commands,
-        scene,
-        mesh_assets,
-        material_assets,
-        culling,
-        debug,
-        VoxelDeltaFrame {
-            tick: 0,
-            deltas,
-        },
-        wireframe_line_color,
+
+    let Some(surface_y) = chunk_water_top_y(voxels, cy) else {
+        return;
+    };
+
+    let chunk_origin = chunk_transform(chunk_id);
+    let transform = Transform::from_xyz(chunk_origin.translation.x, surface_y, chunk_origin.translation.z);
+
+    // FR-CLIENT-render: pick a water tint that complements the chunk's
+    // dominant voxel material, matching the per-chunk biome tinting that
+    // terrain chunks already get (lines 942–947 above). Cache the material
+    // hand by chunk ID so repeated deltas reuse the same asset.
+    let tint = chunk_biome_tint(voxels).unwrap_or(LIVE_CHUNK_BASE_COLOR);
+    // Derive a complementary water colour: the tint's hue shifted cool /
+    // desaturated, preserving the biome character.
+    let water_color = Color::srgb(
+        tint[0] * 0.60 + 0.20,
+        tint[1] * 0.50 + 0.25,
+        tint[2] * 0.80 + 0.15,
     );
+    let water_material = scene
+        .water_materials
+        .entry(chunk_id.0)
+        .or_insert_with(|| {
+            material_assets.add(StandardMaterial {
+                base_color: water_color,
+                perceptual_roughness: 0.30,
+                metallic: 0.05,
+                ..default()
+            })
+        })
+        .clone();
+
+    let entity = *scene.water_entities.entry(chunk_id.0).or_insert_with(|| {
+        commands
+            .spawn((LiveWaterTag { chunk: chunk_id }, Transform::default()))
+            .id()
+    });
+    commands.entity(entity).insert((
+        Mesh3d(meshes.surface_mesh.clone()),
+        MeshMaterial3d(water_material),
+        transform,
+    ));
 }
 
 /// Applies a voxel delta frame (caches voxels, meshes in-range chunks).
@@ -629,6 +803,99 @@ pub fn apply_voxel_delta_frame(
                 .remove::<Wireframe>()
                 .remove::<WireframeColor>();
         }
+    }
+}
+
+/// Rebuilds cached chunk meshes for a set of dirty chunks already present in the scene cache.
+pub fn remesh_cached_chunks(
+    commands: &mut Commands,
+    scene: &mut LiveStreamScene,
+    mesh_assets: &mut Assets<Mesh>,
+    material_assets: &mut Assets<StandardMaterial>,
+    culling: StreamCulling,
+    debug: &DebugRender,
+    chunk_ids: &[ChunkId],
+    wireframe_line_color: Option<Color>,
+) {
+    for &chunk_id in chunk_ids {
+        let Some(voxels) = scene.chunk_voxels.get_chunk(chunk_id) else {
+            continue;
+        };
+        if !should_render_chunk(chunk_id, culling.eye, culling.max_distance) {
+            if let Some(entity) = scene.chunks.remove(&chunk_id.0) {
+                commands.entity(entity).despawn();
+            }
+            continue;
+        }
+        if voxels.len() != LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE {
+            continue;
+        }
+        let chunk_view = ChunkView { id: chunk_id, voxels };
+        let distance = chunk_distance_from_camera(chunk_id, culling.eye, LIVE_CHUNK_EDGE as f32);
+        let lod = LodLevel(mesh_lod_level(distance));
+        let Ok(mesh_buffer) = CubicMesher::mesh_cubic(chunk_view, lod) else {
+            continue;
+        };
+        let mesh = mesh_assets.add(mesh_buffer_to_bevy(&mesh_buffer));
+        let mut material = StandardMaterial { perceptual_roughness: 0.85, metallic: 0.0, ..default() };
+        let base_rgb = chunk_biome_tint(voxels).unwrap_or(LIVE_CHUNK_BASE_COLOR);
+        apply_chunk_material(&mut material, base_rgb, debug.wireframe, Some(0.0));
+        let material_handle = material_assets.add(material);
+        let transform = chunk_transform(chunk_id);
+        let entity = *scene
+            .chunks
+            .entry(chunk_id.0)
+            .or_insert_with(|| commands.spawn((LiveChunkTag { id: chunk_id }, Transform::default())).id());
+        commands.entity(entity).insert((Mesh3d(mesh), MeshMaterial3d(material_handle), transform));
+    }
+}
+
+/// Applies the water-surface companion updates for one voxel delta frame
+/// (FR-CLIENT-render). This is the additive hook that pairs with
+/// [`apply_voxel_delta_frame`] — callers that want the streamed water
+/// surface to track chunk composition invoke this right after the chunk
+/// mesh update loop returns, sharing the same `delta` payload and Bevy
+/// `Commands` buffer. Behaviour:
+///
+/// * If a chunk delta carries water voxels (or salt-water), spawn (or
+///   reposition) a [`LiveWaterTag`] entity whose `Transform.y` matches
+///   the topmost water Y for that chunk.
+/// * If a chunk delta carries no water voxels but the companion exists
+///   from a previous snapshot, despawn it.
+/// * Chunks skipped by distance culling keep their cached voxels but
+///   their water companion is removed (same lifecycle rule as the chunk
+///   mesh, so the surface never lags behind the camera).
+///
+/// This function is the single per-delta entry point used by the Bevy
+/// frame consumer; it is intentionally not gated by culling so the
+/// surface can be evicted even when the chunk itself would otherwise
+/// re-appear on the next frame.
+pub fn apply_water_deltas_for_frame(
+    commands: &mut Commands,
+    scene: &mut LiveStreamScene,
+    water_meshes: &LiveWaterMeshes,
+    material_assets: &mut Assets<StandardMaterial>,
+    culling_eye: [f32; 3],
+    culling_max_distance: f32,
+    delta: &VoxelDeltaFrame,
+) {
+    for chunk in &delta.deltas {
+        let chunk_id = chunk.event.chunk_id;
+        let in_range = should_render_chunk(chunk_id, culling_eye, culling_max_distance);
+        if !in_range {
+            // Mirror the chunk-entity eviction rule: drop the water
+            // companion even if voxels would otherwise make it visible.
+            if let Some(entity) = scene.water_entities.remove(&chunk_id.0) {
+                commands.entity(entity).despawn();
+            }
+            continue;
+        }
+        if chunk.voxels.len() != LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE {
+            continue;
+        }
+        apply_water_for_chunk(
+            commands, scene, water_meshes, material_assets, chunk_id, &chunk.voxels,
+        );
     }
 }
 

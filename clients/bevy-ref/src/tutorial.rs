@@ -5,6 +5,7 @@
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
+use serde::{Deserialize, Serialize};
 
 use crate::menus::in_game;
 
@@ -70,12 +71,33 @@ fn draw_tutorial_hint(
 ) {
     if !state.enabled { return; }
 
+/// Returns true if the tutorial should show this frame.
+fn should_show(state: &TutorialState) -> bool {
+    match state.visibility {
+        TutorialVisibility::Auto => !state.save_data.completed_once,
+        TutorialVisibility::Manual => true,
+        TutorialVisibility::Hidden => false,
+    }
+}
+
+fn draw_tutorial_hint(
+    mut contexts: EguiContexts,
+    mut state: ResMut<TutorialState>,
+    mut ran_once: Local<bool>,
+) {
+    // egui panics if ctx rect/fonts are accessed before its first run; skip frame 1.
+    if !*ran_once {
+        *ran_once = true;
+        return;
+    }
+    if !should_show(&state) { return; }
+
     let hint = HINTS[state.step as usize];
     let step = state.step;
     let total = HINTS.len() as u8;
 
-    let ctx = contexts.ctx_mut();
-    let screen = ctx.screen_rect();
+    let Ok(ctx) = contexts.ctx_mut() else { return; };
+    let screen = ctx.content_rect();
 
     let mut clicked = false;
     egui::Area::new(egui::Id::new("tutorial_hint"))
@@ -84,8 +106,8 @@ fn draw_tutorial_hint(
             egui::Frame::none()
                 .fill(egui::Color32::from_rgba_premultiplied(9, 10, 12, 230))
                 .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(126, 186, 181)))
-                .rounding(egui::Rounding::same(8.0))
-                .inner_margin(egui::Margin::symmetric(16.0, 10.0))
+                .corner_radius(egui::CornerRadius::same(8))
+                .inner_margin(egui::Margin::symmetric(16, 10))
                 .show(ui, |ui| {
                     ui.set_width(560.0);
                     ui.label(

@@ -25,10 +25,11 @@ use civ_engine::{
 };
 use civ_protocol_3d::{
     encode_frame3d_binary, encode_frame3d_binary_from_json, AgentAppearanceFrame,
-    AgentAppearanceUpdate, BattleEvent3d, BirthEvent3d, BuildingDiffFrame, BuildingProvenance,
-    CivilianNeeds3d, CivilianStateEntry, CivilianStateFrame, ClimateFrame, DeathEvent3d,
-    EventFeedFrame, EventFeedMessage3d, FactionStateEntry, FactionStateFrame, FactionTreasury3d,
-    Frame3d, GenomeSummary3d, Government3d, TechEvent3d, WorldXZ,
+    AgentAppearanceUpdate, BattleEvent3d, BirthEvent3d, BuildingDiffEntry, BuildingDiffFrame,
+    BuildingKind3d, BuildingProvenance, CivilianNeeds3d, CivilianStateEntry, CivilianStateFrame,
+    ClimateFrame, DeathEvent3d, EventFeedFrame, EventFeedMessage3d, FactionStateEntry,
+    FactionStateFrame, FactionTreasury3d, Frame3d, GenomeSummary3d, Government3d, TechEvent3d,
+    WorldXZ,
 };
 use civ_save_db::SaveDb;
 use futures::{SinkExt, StreamExt};
@@ -112,7 +113,9 @@ pub struct WsBridgeConfig {
     pub addr: SocketAddr,
     /// Maximum number of concurrent WebSocket clients.
     pub max_clients: usize,
-    /// When true, `sim.command` tick requires role `operator` in params or connect header.
+    /// When true (default), `sim.command` tick requires role `operator` in params.
+    /// Role is never derived from the `x-civis-role` request header — that header
+    /// is ignored for privilege decisions to prevent unauthenticated role spoofing.
     pub require_role: bool,
     /// Tick broadcast wire encoding(s) for connected clients.
     ///
@@ -133,7 +136,7 @@ impl Default for WsBridgeConfig {
         Self {
             addr: SocketAddr::from(([127, 0, 0, 1], 3000)),
             max_clients: 16,
-            require_role: false,
+            require_role: true,
             tick_broadcast_format: TickBroadcastFormat::default(),
             saves_dir: PathBuf::from("saves"),
             replays_dir: PathBuf::from("replays"),
@@ -350,12 +353,18 @@ async fn ws_handler(
     headers: HeaderMap,
     Query(query): Query<WsConnectQuery>,
 ) -> impl IntoResponse {
-    let header_role = headers
-        .get("x-civis-role")
-        .and_then(|value| value.to_str().ok())
-        .filter(|role| !role.is_empty())
-        .map(str::to_owned);
-    ws.on_upgrade(move |socket| handle_socket(socket, state, header_role, query))
+    // The `x-civis-role` header is explicitly ignored for privilege decisions.
+    // Accepting a client-supplied header as an authoritative role claim allows
+    // unauthenticated role spoofing. Role must be supplied by the caller in
+    // JSON-RPC params and validated by the server; it must never be derived
+    // from request headers.
+    if headers.contains_key("x-civis-role") {
+        tracing::warn!(
+            "x-civis-role header present but ignored — \
+             role must be supplied in JSON-RPC params, not request headers"
+        );
+    }
+    ws.on_upgrade(move |socket| handle_socket(socket, state, None, query))
 }
 
 async fn handle_socket(
@@ -495,11 +504,24 @@ async fn handle_jsonrpc_text(
                 (vec![], None);
             let outcome_fields = if req.method == crate::jsonrpc::JsonRpcMethod::SimOutcome {
                 let sim = state.sim.lock().await;
-                let outcome = civ_engine::conditions::check_outcome(&sim);
+                let outcome = sim.last_game_outcome.clone();
                 Some(crate::jsonrpc::OutcomeFields {
                     tag: outcome.tag().to_owned(),
                     reason: outcome.reason().to_owned(),
                     tick: sim.state.tick,
+                })
+            } else {
+                None
+            };
+            let legends = if req.method == crate::jsonrpc::JsonRpcMethod::SimLegends {
+                let sim = state.sim.lock().await;
+                let material = sim
+                    .voxel()
+                    .read(civ_voxel::WorldCoord { x, y: 0, z: y })
+                    .0 as u16;
+                Some(crate::jsonrpc::TileInspectionWire {
+                    material,
+                    terrain_height: 0,
                 })
             } else {
                 None
@@ -510,6 +532,7 @@ async fn handle_jsonrpc_text(
                     tick,
                     population,
                     snapshot,
+                    tile_probe,
                     require_role: state.require_role,
                     speed_multiplier: state.speed_multiplier.load(Ordering::Relaxed),
                     connection_role: connection_role.clone(),
@@ -629,7 +652,7 @@ fn build_civilian_state_frame(sim: &Simulation, tick: u64) -> CivilianStateFrame
                         .unwrap_or_else(|| job_type_for_civilian_id(civilian.id));
                     (
                         job_profession_label(job).to_string(),
-                        citizen.health.to_f64() as f32,
+                        citizen.health.to_num::<f64>() as f32,
                     )
                 })
                 .unwrap_or_else(|| {
@@ -701,7 +724,7 @@ fn build_faction_state_frame(sim: &Simulation, tick: u64) -> FactionStateFrame {
                 .state
                 .faction_treasury
                 .get(&faction.id)
-                .map(|value| value.to_f64())
+                .map(|value| value.to_num::<f64>())
                 .unwrap_or(0.0);
             if faction.id == 0 {
                 amount += market_balance + treasury_balance;
@@ -983,9 +1006,7 @@ async fn apply_dispatch_effect(
             entity_seq,
         } => {
             use crate::jsonrpc::SpawnEntityKind;
-            use civ_engine::{
-                spawn_airport_at, spawn_hangar_at, spawn_military_at, spawn_port_at, UnitType,
-            };
+            use civ_engine::{spawn, UnitType};
 
             let mut sim = state.sim.lock().await;
             let entity = match kind {
@@ -1004,11 +1025,11 @@ async fn apply_dispatch_effect(
                     entity
                 }
                 SpawnEntityKind::Vehicle => {
-                    spawn_military_at(&mut sim.world, faction, x, y, UnitType::Knight)
+                    spawn::spawn_military_at(&mut sim.world, faction, x, y, UnitType::Knight)
                 }
-                SpawnEntityKind::Airport => spawn_airport_at(&mut sim.world, x, y),
-                SpawnEntityKind::Port => spawn_port_at(&mut sim.world, x, y),
-                SpawnEntityKind::Hangar => spawn_hangar_at(&mut sim.world, x, y),
+                SpawnEntityKind::Airport => spawn::spawn_airport_at(&mut sim.world, x, y),
+                SpawnEntityKind::Port => spawn::spawn_port_at(&mut sim.world, x, y),
+                SpawnEntityKind::Hangar => spawn::spawn_hangar_at(&mut sim.world, x, y),
             };
             set_spawn_civilian_result(response, entity.id());
         }
@@ -1112,8 +1133,279 @@ async fn apply_dispatch_effect(
                 }
             }
         }
-        DispatchEffect::GodAction { action, .. } => {
-            tracing::warn!(action, "god_action engine integration pending");
+        DispatchEffect::QueueResearch { tech } => {
+            state
+                .sim
+                .lock()
+                .await
+                .research_cache_mut()
+                .queued
+                .push_back(tech);
+        }
+        DispatchEffect::DiplomacyAction {
+            source_faction,
+            target_faction,
+            kind,
+        } => {
+            let relation = state.sim.lock().await.apply_player_diplomacy_action(
+                source_faction,
+                target_faction,
+                kind,
+            );
+            match relation {
+                Some(relation) => {
+                    if let Some(result) = response
+                        .result
+                        .as_mut()
+                        .and_then(|value| value.as_object_mut())
+                    {
+                        result.insert(
+                            "relation".to_owned(),
+                            serde_json::to_value(format!("{:?}", relation.kind))
+                                .unwrap_or_else(|_| serde_json::Value::Null),
+                        );
+                    }
+                }
+                None => {
+                    response.result = None;
+                    response.error = Some(JsonRpcError {
+                        code: crate::jsonrpc::error_code::INVALID_PARAMS,
+                        message: format!(
+                            "Invalid params: unknown or self diplomacy pair {source_faction}->{target_faction}"
+                        ),
+                        data: None,
+                    });
+                }
+            }
+        }
+        DispatchEffect::GodAction {
+            action,
+            x,
+            y,
+            target_faction,
+            magnitude,
+            radius_voxels,
+            strength,
+            material_id,
+            drop_height,
+            count,
+            seed_civilian_id,
+        } => {
+            use civ_engine::disasters::{trigger_disaster, DisasterKind};
+            use civ_engine::godtools::{
+                DisasterRequest, GodToolRequest, LifeRequest, MaterialOp, MaterialRequest,
+                SpawnHerdRequest, SpawnOrganismRequest, SpawnVisual, TerraformOp, TerraformRequest,
+            };
+            use civ_voxel::WorldCoord;
+            let mut sim = state.sim.lock().await;
+            let world_w = voxel_axis_span(sim.voxel(), |coord| coord.cx);
+            let world_d = voxel_axis_span(sim.voxel(), |coord| coord.cz);
+            let wx = x.unwrap_or(0.5) * world_w;
+            let wz = y.unwrap_or(0.5) * world_d;
+            let pos = WorldCoord {
+                x: wx as i64,
+                y: 0,
+                z: wz as i64,
+            };
+            let mag = magnitude.unwrap_or(0.5_f32).clamp(0.0, 1.0);
+            // FR-CLIENT-godbuttons: shared verb resolver. Legacy
+            // smite / earthquake / plague / bless / miracle keep their
+            // existing semantics; the substrate-live verbs are routed
+            // through `Simulation::apply_god_tool` so the same substrate
+            // write path the engine reads each tick handles them.
+            match action.as_str() {
+                "smite" => trigger_disaster(&mut sim, DisasterKind::Meteor, pos),
+                "earthquake" => trigger_disaster(&mut sim, DisasterKind::Quake, pos),
+                "plague" => {
+                    trigger_disaster(&mut sim, DisasterKind::Plague, pos);
+                    if let Some(fid) = target_faction {
+                        if let Some(t) = sim.state.faction_treasury.get_mut(&fid) {
+                            let debit = civ_engine::Fixed::from_num(mag * 500.0_f32);
+                            *t = (*t - debit).max(civ_engine::Fixed::ZERO);
+                        }
+                    }
+                }
+                "bless" => {
+                    if let Some(fid) = target_faction {
+                        if let Some(t) = sim.state.faction_treasury.get_mut(&fid) {
+                            let credit = civ_engine::Fixed::from_num(mag * 1000.0_f32);
+                            *t += credit;
+                        }
+                    }
+                    sim.add_belief(500);
+                }
+                "miracle" => {
+                    sim.add_belief(2000);
+                    let boost = civ_engine::Fixed::from_num(mag * 200.0_f32);
+                    for t in sim.state.faction_treasury.values_mut() {
+                        *t += boost;
+                    }
+                }
+                // ============ TERRAIN verbs (FR-CLIENT-godbuttons) ============
+                // The TERRAIN verbs default to `radius_voxels = 3` and
+                // `strength = (FIXED_SCALE * mag)` so the existing
+                // magnitude slider keeps driving the brush; rich
+                // params override when supplied.
+                "terrain.add_land" => {
+                    let r = radius_voxels.unwrap_or(3).max(1);
+                    let s = strength
+                        .unwrap_or((mag * civ_voxel::FIXED_SCALE as f32) as i32)
+                        .max(civ_voxel::FIXED_SCALE as i32);
+                    let req = GodToolRequest::Terraform(TerraformRequest {
+                        op: TerraformOp::AddLand,
+                        center: pos,
+                        radius_voxels: r,
+                        strength: s,
+                        aux_id: 0,
+                    });
+                    let _ = sim.apply_god_tool(req);
+                }
+                "terrain.dig_ocean" => {
+                    let r = radius_voxels.unwrap_or(3).max(1);
+                    let s = strength
+                        .unwrap_or((mag * civ_voxel::FIXED_SCALE as f32 * 3.0) as i32)
+                        .max(civ_voxel::FIXED_SCALE as i32);
+                    let req = GodToolRequest::Terraform(TerraformRequest {
+                        op: TerraformOp::DigOcean,
+                        center: pos,
+                        radius_voxels: r,
+                        strength: s,
+                        aux_id: 0,
+                    });
+                    let _ = sim.apply_god_tool(req);
+                }
+                "terrain.drop_biome" => {
+                    let r = radius_voxels.unwrap_or(3).max(1);
+                    let mat = material_id.unwrap_or(civ_voxel::material::SAND.0 as u32);
+                    let req = GodToolRequest::Terraform(TerraformRequest {
+                        op: TerraformOp::DropBiome,
+                        center: pos,
+                        radius_voxels: r,
+                        strength: 0,
+                        aux_id: mat,
+                    });
+                    let _ = sim.apply_god_tool(req);
+                }
+                // ============ MATERIAL verbs (FR-CLIENT-godbuttons) ============
+                "material.erase" => {
+                    let r = radius_voxels.unwrap_or(3).max(1);
+                    let req = GodToolRequest::Material(MaterialRequest {
+                        op: MaterialOp::Erase,
+                        center: pos,
+                        radius_voxels: r,
+                        material_id: 0,
+                        strength: 0,
+                        drop_height: 0,
+                    });
+                    let _ = sim.apply_god_tool(req);
+                }
+                "material.replace" => {
+                    let r = radius_voxels.unwrap_or(3).max(1);
+                    let mat = material_id.unwrap_or(civ_voxel::material::STONE.0 as u32);
+                    let req = GodToolRequest::Material(MaterialRequest {
+                        op: MaterialOp::Replace,
+                        center: pos,
+                        radius_voxels: r,
+                        material_id: mat,
+                        strength: 0,
+                        drop_height: 0,
+                    });
+                    let _ = sim.apply_god_tool(req);
+                }
+                "material.surface_paint" => {
+                    let r = radius_voxels.unwrap_or(3).max(1);
+                    let mat = material_id.unwrap_or(civ_voxel::material::SAND.0 as u32);
+                    let req = GodToolRequest::Material(MaterialRequest {
+                        op: MaterialOp::SurfacePaint,
+                        center: pos,
+                        radius_voxels: r,
+                        material_id: mat,
+                        strength: 0,
+                        drop_height: 0,
+                    });
+                    let _ = sim.apply_god_tool(req);
+                }
+                "material.pour_liquid" => {
+                    let r = radius_voxels.unwrap_or(3).max(1);
+                    let layers = strength
+                        .unwrap_or((mag * civ_voxel::FIXED_SCALE as f32) as i32)
+                        .max(civ_voxel::FIXED_SCALE as i32);
+                    let mat = material_id.unwrap_or(civ_voxel::material::WATER.0 as u32);
+                    let dh = drop_height.unwrap_or((civ_voxel::FIXED_SCALE * 3) as i32);
+                    let req = GodToolRequest::Material(MaterialRequest {
+                        op: MaterialOp::PourLiquid,
+                        center: pos,
+                        radius_voxels: r,
+                        material_id: mat,
+                        strength: layers,
+                        drop_height: dh,
+                    });
+                    let _ = sim.apply_god_tool(req);
+                }
+                "material.seed_snow" => {
+                    let r = radius_voxels.unwrap_or(3).max(1);
+                    let s = strength.unwrap_or(civ_voxel::FIXED_SCALE as i32);
+                    let req = GodToolRequest::Material(MaterialRequest {
+                        op: MaterialOp::SeedSnow,
+                        center: pos,
+                        radius_voxels: r,
+                        material_id: civ_voxel::material::SNOW.0 as u32,
+                        strength: s,
+                        drop_height: 0,
+                    });
+                    let _ = sim.apply_god_tool(req);
+                }
+                "material.seed_ore" => {
+                    let r = radius_voxels.unwrap_or(3).max(1);
+                    let s = strength.unwrap_or(civ_voxel::FIXED_SCALE as i32);
+                    let req = GodToolRequest::Material(MaterialRequest {
+                        op: MaterialOp::SeedOreDeposit,
+                        center: pos,
+                        radius_voxels: r,
+                        material_id: civ_voxel::material::ORE.0 as u32,
+                        strength: s,
+                        drop_height: 0,
+                    });
+                    let _ = sim.apply_god_tool(req);
+                }
+                // ============ LIFE verbs (FR-CLIENT-godbuttons) ============
+                "life.spawn_organism" => {
+                    let id =
+                        seed_civilian_id.unwrap_or(sim.state.tick.wrapping_add(1).max(1) as u64);
+                    let faction = target_faction.unwrap_or(0);
+                    let req =
+                        GodToolRequest::Life(LifeRequest::SpawnOrganism(SpawnOrganismRequest {
+                            id,
+                            faction,
+                            x: x.unwrap_or(0.5).clamp(0.0, 1.0),
+                            y: y.unwrap_or(0.5).clamp(0.0, 1.0),
+                            visual: SpawnVisual::Humanoid,
+                        }));
+                    let _ = sim.apply_god_tool(req);
+                }
+                "life.spawn_herd" => {
+                    let n = count.unwrap_or(5).clamp(1, 64);
+                    let id =
+                        seed_civilian_id.unwrap_or(sim.state.tick.wrapping_add(1).max(1) as u64);
+                    let faction = target_faction.unwrap_or(0);
+                    let req = GodToolRequest::Life(LifeRequest::SpawnHerd(SpawnHerdRequest {
+                        count: n,
+                        seed_civilian_id: id,
+                        faction,
+                    }));
+                    let _ = sim.apply_god_tool(req);
+                }
+                // ============ DISASTER verbs (FR-CLIENT-godbuttons) ============
+                "disaster.wildfire" => {
+                    let req = GodToolRequest::Disaster(DisasterRequest::Wildfire { pos });
+                    let _ = sim.apply_god_tool(req);
+                }
+                "disaster.flood" => {
+                    let req = GodToolRequest::Disaster(DisasterRequest::Flood { pos });
+                    let _ = sim.apply_god_tool(req);
+                }
+                _ => {}
+            }
             if let Some(result) = response.result.as_mut() {
                 if let Some(obj) = result.as_object_mut() {
                     obj.insert("applied".to_owned(), serde_json::json!(false));
@@ -1963,7 +2255,7 @@ mod tests {
                 snap.tick,
                 snap.population,
                 snap.building_count,
-                snap.energy_budget.to_f64(),
+                snap.energy_budget.to_num::<f64>(),
                 snap.market_prices.clone(),
                 guard
                     .hash_chain_root()
@@ -2018,6 +2310,40 @@ mod tests {
                 .and_then(|v| v.as_u64()),
             Some(4)
         );
+    }
+
+    #[tokio::test]
+    async fn jsonrpc_diplomacy_action_mutates_live_relation_substrate() {
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(7)));
+        let (_dir, state) = test_app_state(sim.clone(), 0, 1, false);
+        let mut connection_role = None;
+        let text = handle_jsonrpc_text(
+            r#"{"jsonrpc":"2.0","id":88,"method":"sim.diplomacy_action","params":{"source_faction":0,"target_faction":1,"action":"declare_war"}}"#,
+            &state,
+            &mut connection_role,
+            test_subscription_filter(),
+        )
+        .await;
+        let value: serde_json::Value =
+            serde_json::from_str(&text).expect("sim.diplomacy_action json");
+        assert_eq!(value.get("id"), Some(&serde_json::json!(88)));
+        assert!(value.pointer("/result/relation").is_some());
+
+        let guard = sim.lock().await;
+        let event = guard
+            .diplomacy_events()
+            .last()
+            .expect("diplomacy event persisted");
+        assert_eq!(event.faction_a, 0);
+        assert_eq!(event.faction_b, 1);
+        assert_eq!(event.kind, DiplomacyKind::Conflict);
+        let relation = guard
+            .snapshot()
+            .faction_relations
+            .into_iter()
+            .find(|row| row.faction_a == 0 && row.faction_b == 1)
+            .expect("relation persisted in snapshot");
+        assert!(relation.score < 0.0);
     }
 
     #[tokio::test]

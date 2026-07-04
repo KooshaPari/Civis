@@ -103,7 +103,10 @@ fn exhaustion_lowers_engagement() {
         );
     }
     let war_score = matrix.record(a, b).expect("record").score;
-    assert!(war_score < -0.20, "should be at least Rivalry after war phase, got {war_score}");
+    assert!(
+        war_score < -0.20,
+        "should be at least Rivalry after war phase, got {war_score}"
+    );
 
     // Phase 2: engagements stop — only grievance decay, no new signals.
     // Score should drift upward (toward zero) over 200 ticks.

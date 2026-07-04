@@ -1,7 +1,7 @@
 //! FR-CIV-WARFARE-004 — Major battles and decisive victories promote war legends.
 
 use legends::{
-    ids::{RegionId, SimRuntimeId, SourceCrate},
+    ids::{Provenance, RegionId, SimRuntimeId, SourceCrate},
     model::{EventKind, RawSimEvent, Role},
 };
 

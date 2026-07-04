@@ -342,6 +342,21 @@ pub struct GraphicsSettings {
     /// Ambient occlusion toggle.
     #[serde(default)]
     pub ambient_occlusion: bool,
+    /// Bevy built-in SSAO pass toggle.
+    #[serde(default = "default_true")]
+    pub ssao_enabled: bool,
+    /// Bevy built-in SSR pass toggle.
+    #[serde(default = "default_true")]
+    pub ssr_enabled: bool,
+    /// Bevy built-in volumetric fog pass toggle.
+    #[serde(default = "default_true")]
+    pub volumetric_fog_enabled: bool,
+    /// Bevy built-in tonemapping pass toggle.
+    #[serde(default = "default_true")]
+    pub tonemapping_enabled: bool,
+    /// Bevy built-in color grading pass toggle.
+    #[serde(default = "default_true")]
+    pub color_grading_enabled: bool,
     /// Bloom toggle.
     #[serde(default)]
     pub bloom: bool,
@@ -368,6 +383,11 @@ impl Default for GraphicsSettings {
             view_distance: 256,
             texture_quality: TextureQuality::High,
             ambient_occlusion: true,
+            ssao_enabled: true,
+            ssr_enabled: true,
+            volumetric_fog_enabled: true,
+            tonemapping_enabled: true,
+            color_grading_enabled: true,
             bloom: true,
             motion_blur: false,
             gi: false,
@@ -388,6 +408,11 @@ impl GraphicsSettings {
                 self.view_distance = 96;
                 self.texture_quality = TextureQuality::Low;
                 self.ambient_occlusion = false;
+                self.ssao_enabled = false;
+                self.ssr_enabled = false;
+                self.volumetric_fog_enabled = false;
+                self.tonemapping_enabled = false;
+                self.color_grading_enabled = false;
                 self.bloom = false;
                 self.motion_blur = false;
                 self.gi = false;
@@ -400,6 +425,11 @@ impl GraphicsSettings {
                 self.view_distance = 256;
                 self.texture_quality = TextureQuality::Medium;
                 self.ambient_occlusion = true;
+                self.ssao_enabled = true;
+                self.ssr_enabled = true;
+                self.volumetric_fog_enabled = true;
+                self.tonemapping_enabled = true;
+                self.color_grading_enabled = true;
                 self.bloom = true;
                 self.motion_blur = false;
                 self.gi = false;
@@ -412,6 +442,11 @@ impl GraphicsSettings {
                 self.view_distance = 640;
                 self.texture_quality = TextureQuality::High;
                 self.ambient_occlusion = true;
+                self.ssao_enabled = true;
+                self.ssr_enabled = true;
+                self.volumetric_fog_enabled = true;
+                self.tonemapping_enabled = true;
+                self.color_grading_enabled = true;
                 self.bloom = true;
                 self.motion_blur = false;
                 self.gi = true;
@@ -424,6 +459,11 @@ impl GraphicsSettings {
                 self.view_distance = 1024;
                 self.texture_quality = TextureQuality::High;
                 self.ambient_occlusion = true;
+                self.ssao_enabled = true;
+                self.ssr_enabled = true;
+                self.volumetric_fog_enabled = true;
+                self.tonemapping_enabled = true;
+                self.color_grading_enabled = true;
                 self.bloom = true;
                 self.motion_blur = true;
                 self.gi = true;
@@ -495,6 +535,10 @@ fn default_sim_speed() -> f32 {
 
 fn default_gameplay_half() -> f32 {
     0.5
+}
+
+fn default_true() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -603,11 +647,7 @@ impl KeyBinding {
     }
 
     #[inline]
-    pub fn is_pressed(
-        self,
-        keys: &ButtonInput<KeyCode>,
-        mouse: &ButtonInput<MouseButton>,
-    ) -> bool {
+    pub fn is_pressed(self, keys: &ButtonInput<KeyCode>, mouse: &ButtonInput<MouseButton>) -> bool {
         match self {
             Self::Key(key) => keys.pressed(key),
             Self::Mouse(button) => mouse.pressed(button),
@@ -812,19 +852,10 @@ fn default_keybinds() -> Vec<Keybind> {
         Keybind::new(ACTION_SPEED_2X, KeyBinding::Key(KeyCode::Digit2)),
         Keybind::new(ACTION_SPEED_5X, KeyBinding::Key(KeyCode::Digit3)),
         Keybind::new(ACTION_SPEED_10X, KeyBinding::Key(KeyCode::Digit4)),
-        Keybind::new(
-            ACTION_CAMERA_MOVE_FORWARD,
-            KeyBinding::Key(KeyCode::KeyW),
-        ),
-        Keybind::new(
-            ACTION_CAMERA_MOVE_BACKWARD,
-            KeyBinding::Key(KeyCode::KeyS),
-        ),
+        Keybind::new(ACTION_CAMERA_MOVE_FORWARD, KeyBinding::Key(KeyCode::KeyW)),
+        Keybind::new(ACTION_CAMERA_MOVE_BACKWARD, KeyBinding::Key(KeyCode::KeyS)),
         Keybind::new(ACTION_CAMERA_MOVE_LEFT, KeyBinding::Key(KeyCode::KeyA)),
-        Keybind::new(
-            ACTION_CAMERA_MOVE_RIGHT,
-            KeyBinding::Key(KeyCode::KeyD),
-        ),
+        Keybind::new(ACTION_CAMERA_MOVE_RIGHT, KeyBinding::Key(KeyCode::KeyD)),
         Keybind::new(ACTION_CAMERA_RAISE, KeyBinding::Key(KeyCode::Space)),
         Keybind::new(ACTION_CAMERA_LOWER, KeyBinding::Key(KeyCode::ShiftLeft)),
         Keybind::new(ACTION_CAMERA_ROTATE, KeyBinding::Mouse(MouseButton::Right)),
@@ -1350,8 +1381,19 @@ fn graphics_quality_fields(ui: &mut egui::Ui, g: &mut GraphicsSettings) -> bool 
 
 fn graphics_special_toggles(ui: &mut egui::Ui, g: &mut GraphicsSettings) -> bool {
     let mut changed = false;
+    if ui.checkbox(&mut g.ssao_enabled, "SSAO").changed() {
+        g.ambient_occlusion = g.ssao_enabled;
+        changed = true;
+    }
+    changed |= ui.checkbox(&mut g.ssr_enabled, "SSR").changed();
     changed |= ui
-        .checkbox(&mut g.ambient_occlusion, "Ambient Occlusion")
+        .checkbox(&mut g.volumetric_fog_enabled, "Volumetric Fog")
+        .changed();
+    changed |= ui
+        .checkbox(&mut g.tonemapping_enabled, "Tonemapping")
+        .changed();
+    changed |= ui
+        .checkbox(&mut g.color_grading_enabled, "Color Grading")
         .changed();
     changed |= ui.checkbox(&mut g.bloom, "Bloom").changed();
     changed |= ui.checkbox(&mut g.motion_blur, "Motion Blur").changed();
@@ -1409,7 +1451,11 @@ fn controls_tab(
             }
         });
     ui.add_space(4.0);
-    ui.label(egui::RichText::new("Configured controls update instantly from the game settings.").color(ui_theme::DIM).small());
+    ui.label(
+        egui::RichText::new("Configured controls update instantly from the game settings.")
+            .color(ui_theme::DIM)
+            .small(),
+    );
     changed
 }
 
@@ -1563,7 +1609,9 @@ fn gameplay_tab(ui: &mut egui::Ui, p: &mut GameplaySettings) -> bool {
             let label = format!("{}x", spd);
             let active = (p.default_sim_speed - spd as f32).abs() < 0.01;
             let btn = if active {
-                ui.add(egui::Button::new(egui::RichText::new(&label).color(ui_theme::ACCENT)))
+                ui.add(egui::Button::new(
+                    egui::RichText::new(&label).color(ui_theme::ACCENT),
+                ))
             } else {
                 ui.button(&label)
             };
@@ -1583,7 +1631,9 @@ fn sync_audio_settings(
     ambient: Option<Res<AudioChannel<crate::audio::AmbientChannel>>>,
     sfx_ch: Option<Res<AudioChannel<crate::audio::SfxChannel>>>,
 ) {
-    if !settings.is_changed() { return; }
+    if !settings.is_changed() {
+        return;
+    }
     if let Some(amb) = ambient {
         let vol = (settings.audio.master * settings.audio.music) as f64;
         amb.set_volume(vol);
@@ -1645,6 +1695,11 @@ mod tests {
         assert_eq!(g.view_distance, 1024);
         assert_eq!(g.texture_quality, TextureQuality::High);
         assert!(g.ambient_occlusion);
+        assert!(g.ssao_enabled);
+        assert!(g.ssr_enabled);
+        assert!(g.volumetric_fog_enabled);
+        assert!(g.tonemapping_enabled);
+        assert!(g.color_grading_enabled);
         assert!(g.bloom);
         assert!(g.motion_blur);
         assert!(g.gi);
@@ -1658,6 +1713,31 @@ mod tests {
         g.shadow_quality = ShadowQuality::Low;
         g.mark_custom();
         assert_eq!(g.quality, QualityPreset::Custom);
+    }
+
+    #[test]
+    fn default_graphics_settings_enable_ssao() {
+        assert!(GraphicsSettings::default().ssao_enabled);
+    }
+
+    #[test]
+    fn default_graphics_settings_enable_ssr() {
+        assert!(GraphicsSettings::default().ssr_enabled);
+    }
+
+    #[test]
+    fn default_graphics_settings_enable_volumetric_fog() {
+        assert!(GraphicsSettings::default().volumetric_fog_enabled);
+    }
+
+    #[test]
+    fn default_graphics_settings_enable_tonemapping() {
+        assert!(GraphicsSettings::default().tonemapping_enabled);
+    }
+
+    #[test]
+    fn default_graphics_settings_enable_color_grading() {
+        assert!(GraphicsSettings::default().color_grading_enabled);
     }
 
     #[test]

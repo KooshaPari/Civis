@@ -49,13 +49,13 @@ use civ_emergence_metrics::branching::{
     classify_regime, rolling_mean_sigma, sigma_a, sigma_score, BranchingLedger, BranchingRegime,
     DEFAULT_BRANCHING_WINDOW, SIGMA_SUBCRITICAL, SIGMA_SUPERCRITICAL,
 };
-use civ_emergence_metrics::dashboard::EmergenceDashboard;
+use civ_emergence_metrics::{criticality_indicator, coupling_mi_estimate, novelty_score, CriticalityInputs, TileDashboard};
 use civ_emergence_metrics::power_law::PowerLawFit;
 use civ_emergence_metrics::shannon::ShannonEntropy;
 use civ_emergence_metrics::structure::{ComponentSummary, Grid, StructureCount};
 use civ_emergence_metrics::{Histogram, Metric};
 use civ_voxel::{fluid_ca::CaGrid, material::AIR};
-use civ_voxel::{MaterialId, VoxelWorld, CHUNK_EDGE};
+use civ_voxel::{MaterialId, OctreeNode, VoxelWorld, CHUNK_EDGE};
 use serde::{Deserialize, Serialize};
 
 use crate::engine::{DiplomacyKind, Simulation};
@@ -628,6 +628,8 @@ fn sample_from_voxel_world(
 ) -> (Histogram, Option<ComponentSummary>) {
     let mut bins = vec![0u64; MATERIAL_HISTOGRAM_BINS];
     let mut first_chunk: Option<(usize, Vec<MaterialId>)> = None;
+    let mut first_uniform_solid: Option<ComponentSummary> = None;
+    let chunk_voxels = CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE;
 
     for (_, chunk) in voxel.chunks_dense() {
         if first_chunk.is_none() {
@@ -642,11 +644,28 @@ fn sample_from_voxel_world(
         }
     }
 
+    for node in voxel.octree().nodes.values() {
+        let OctreeNode::Uniform(material) = node else {
+            continue;
+        };
+        let idx = (material.0 as usize).min(OVERFLOW_BIN);
+        bins[idx] = bins[idx].saturating_add(chunk_voxels as u64);
+        if material.0 != 0 && first_uniform_solid.is_none() {
+            first_uniform_solid = Some(ComponentSummary {
+                count: 1,
+                largest: chunk_voxels,
+                foreground: chunk_voxels,
+            });
+        }
+    }
+
     let histogram = Histogram::from_counts(bins);
-    let summary = first_chunk.and_then(|(edge, data)| {
-        let grid = Grid::new(edge, edge, edge, &data)?;
-        Some(StructureCount.evaluate(&grid, |m: &MaterialId| m.0 != 0))
-    });
+    let summary = first_chunk
+        .and_then(|(edge, data)| {
+            let grid = Grid::new(edge, edge, edge, &data)?;
+            Some(StructureCount.evaluate(&grid, |m: &MaterialId| m.0 != 0))
+        })
+        .or(first_uniform_solid);
     (histogram, summary)
 }
 
@@ -982,6 +1001,40 @@ mod tests {
         assert_eq!(summary.foreground, CHUNK_EDGE.pow(3));
     }
 
+    /// Compaction promotes uniform chunks out of `chunks_dense()` and into the
+    /// octree. The sampler must still count that represented voxel mass so
+    /// long-running sims do not report an empty substrate after `phase_compact`.
+    #[test]
+    fn sampler_counts_compacted_uniform_chunks() {
+        let mut world = VoxelWorld::new(FIXED_SCALE);
+        for z in 0..CHUNK_EDGE as i64 {
+            for y in 0..CHUNK_EDGE as i64 {
+                for x in 0..CHUNK_EDGE as i64 {
+                    world.write(
+                        WorldCoord {
+                            x: x * FIXED_SCALE,
+                            y: y * FIXED_SCALE,
+                            z: z * FIXED_SCALE,
+                        },
+                        MaterialId(7),
+                    );
+                }
+            }
+        }
+        assert_eq!(world.compact(), 1);
+        assert_eq!(world.chunk_count(), 0);
+        assert_eq!(world.uniform_chunk_count(), 1);
+
+        let (histogram, summary) = sample_from_voxel_world(&world);
+
+        assert_eq!(histogram.total(), CHUNK_EDGE.pow(3) as u64);
+        assert_eq!(histogram.bins()[7], CHUNK_EDGE.pow(3) as u64);
+        let summary = summary.expect("solid uniform chunk has one component");
+        assert_eq!(summary.count, 1);
+        assert_eq!(summary.largest, CHUNK_EDGE.pow(3));
+        assert_eq!(summary.foreground, CHUNK_EDGE.pow(3));
+    }
+
     /// The sampler no-ops on non-boundary ticks.
     #[test]
     fn sampler_no_op_on_non_sample_ticks() {
@@ -1026,7 +1079,7 @@ mod tests {
 
         assert_eq!(
             emergence_sample_stdout_summary(&sample),
-            "emergence sample: entropy=1.2500 structures=3 power_law_alpha=2.5000 novelty_rate=0.125000 mi_material_faction=0.7500"
+            "emergence sample: entropy=1.2500 structures=3 power_law_alpha=2.5000 novelty_rate=0.125000 mi_material_faction=0.7500 novelty_score=0.0000 coupling_mi_estimate=0.0000 criticality=0.0000"
         );
     }
 
@@ -1363,6 +1416,7 @@ mod tests {
         use civ_agents::{Alignment, Civilian, Position3d};
         use civ_voxel::WorldCoord;
         let mut sim = Simulation::with_seed(99);
+        sim.world.clear();
         sim.state.tick = EMERGENCE_SAMPLE_INTERVAL;
         // `with_seed` pre-spawns faction-aligned civilians from scenario setup;
         // clear them so this test's "0 factions" precondition actually holds

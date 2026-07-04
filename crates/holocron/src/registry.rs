@@ -1,0 +1,383 @@
+//! VerbRegistry — the static catalog of every godverb Holocron knows about.
+//!
+//! Substrate-faithful: the registry is built from the same `civ_*` MCP verbs
+//! the swarm already exposes. Holocron does not invent new verbs — it surfaces
+//! what the substrate already provides.
+
+use std::collections::BTreeMap;
+
+use crate::descriptor::VerbDescriptor;
+use crate::group::VerbGroup;
+use crate::provenance::Provenance;
+
+/// In-memory catalog of every godverb Holocron knows about.
+///
+/// Backed by `BTreeMap<VerbId, VerbDescriptor>` so iteration order is stable
+/// and alphabetical — this is what gets serialized for the panel UI and the
+/// command-K overlay.
+#[derive(Debug, Clone, Default)]
+pub struct VerbRegistry {
+    inner: BTreeMap<String, VerbDescriptor>,
+}
+
+impl VerbRegistry {
+    /// Construct an empty registry (for tests and incremental construction).
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Construct a registry pre-populated from a catalog slice.
+    pub fn from_catalog(catalog: &[VerbDescriptor]) -> Self {
+        let mut reg = Self::default();
+        for desc in catalog {
+            reg.inner.insert(desc.id.clone(), desc.clone());
+        }
+        reg
+    }
+
+    /// Construct a registry pre-populated from the MCP `civ_*` verb catalog.
+    ///
+    /// The catalog is built from `verbs::build_mcp_catalog()` and is generated
+    /// by the swarm; we re-export it here under a stable name. Adding a new MCP
+    /// verb automatically appears in Holocron.
+    pub fn from_mcp_catalog() -> Self {
+        let catalog = crate::verbs::build_mcp_catalog();
+        Self::from_catalog(&catalog)
+    }
+
+    /// Construct an empty registry (for tests and incremental construction).
+    pub fn empty() -> Self {
+        Self::default()
+    }
+
+    /// Register a single verb. Returns the previous descriptor if `id` was
+    /// already taken.
+    pub fn register(&mut self, desc: VerbDescriptor) -> Option<VerbDescriptor> {
+        self.inner.insert(desc.id.clone(), desc)
+    }
+
+    /// Look up a verb by its canonical id (e.g. `"civ_disaster_banish"`).
+    pub fn get(&self, id: &str) -> Option<&VerbDescriptor> {
+        self.inner.get(id)
+    }
+
+    /// Number of registered verbs.
+    pub fn len(&self) -> usize {
+        self.inner.len()
+    }
+
+    /// True if no verbs are registered.
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
+
+    /// Iterate over all verbs in alphabetical id order.
+    pub fn iter(&self) -> impl Iterator<Item = (&str, &VerbDescriptor)> {
+        self.inner.iter().map(|(k, v)| (k.as_str(), v))
+    }
+
+    /// Iterate over descriptors (consuming).
+    pub fn into_descriptors(self) -> impl Iterator<Item = VerbDescriptor> {
+        self.inner.into_values()
+    }
+
+    /// Iterate over all verbs in a given group, in alphabetical id order.
+    pub fn by_group(&self, group: VerbGroup) -> impl Iterator<Item = &VerbDescriptor> {
+        self.inner.values().filter(move |d| d.group == group)
+    }
+
+    /// Iterate over all verbs whose `provenance` matches.
+    pub fn by_provenance(&self, prov: Provenance) -> impl Iterator<Item = &VerbDescriptor> {
+        self.inner.values().filter(move |d| d.provenance == prov)
+    }
+
+    /// Fuzzy match: token-substring search over name + aliases + description.
+    ///
+    /// Returns up to `limit` matches, ranked by:
+    ///   1. exact id match (highest)
+    ///   2. name prefix match
+    ///   3. alias prefix match
+    ///   4. name substring
+    ///   5. description substring (lowest)
+    ///
+    /// Case-insensitive. Whitespace-tolerant.
+    pub fn fuzzy_search(&self, query: &str, limit: usize) -> Vec<MatchedVerb> {
+        let q = query.trim().to_lowercase();
+        if q.is_empty() {
+            return Vec::new();
+        }
+
+        let mut scored: Vec<MatchedVerb> = self
+            .inner
+            .values()
+            .filter_map(|desc| {
+                let score = score_verb(desc, &q);
+                score.map(|s| MatchedVerb {
+                    score: s,
+                    descriptor: desc.clone(),
+                })
+            })
+            .collect();
+
+        // Stable: higher score first, then alphabetical id for ties.
+        scored.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then_with(|| a.descriptor.id.cmp(&b.descriptor.id))
+        });
+        scored.truncate(limit);
+        scored
+    }
+}
+
+/// One result from a fuzzy search.
+#[derive(Debug, Clone)]
+pub struct MatchedVerb {
+    /// Higher = better match. Range 0.0..=1.0.
+    pub score: f32,
+    pub descriptor: VerbDescriptor,
+}
+
+/// Score a single verb against a query. `None` if no match.
+fn score_verb(desc: &VerbDescriptor, q_lower: &str) -> Option<f32> {
+    let id = desc.id.to_lowercase();
+    let name = desc.name.to_lowercase();
+
+    // 1. Exact id match
+    if id == q_lower {
+        return Some(1.0);
+    }
+    // 2. Name exact (case-insensitive)
+    if name == q_lower {
+        return Some(0.95);
+    }
+    // 3. Name prefix
+    if name.starts_with(q_lower) {
+        return Some(0.85);
+    }
+    // 4. Id prefix
+    if id.starts_with(q_lower) {
+        return Some(0.80);
+    }
+    // 5. Alias prefix (any alias)
+    for alias in desc.aliases {
+        let a = alias.to_lowercase();
+        if a == q_lower {
+            return Some(0.90);
+        }
+        if a.starts_with(q_lower) {
+            return Some(0.75);
+        }
+    }
+    // 6. Name substring
+    if name.contains(q_lower) {
+        return Some(0.60);
+    }
+    // 7. Id substring
+    if id.contains(q_lower) {
+        return Some(0.55);
+    }
+    // 8. Alias substring
+    for alias in desc.aliases {
+        if alias.to_lowercase().contains(q_lower) {
+            return Some(0.50);
+        }
+    }
+    // 9. Description substring (lowest)
+    if desc.description.to_lowercase().contains(q_lower) {
+        return Some(0.30);
+    }
+    None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::risk::RiskTier;
+
+    fn sample_registry() -> VerbRegistry {
+        let mut r = VerbRegistry::empty();
+        r.register(VerbDescriptor {
+            id: "civ_disaster_banish".into(),
+            name: "Banish Disaster".into(),
+            summary: "End disaster".into(),
+            group: VerbGroup::Divine,
+            aliases: &["calm", "stop_disaster"],
+            hotkey: Some('B'),
+            provenance: Provenance::Mcp,
+            risk: RiskTier::Reversible,
+            description: "Ends the current disaster immediately.".into(),
+            mcp_tool: None,
+            use_count: 0,
+        });
+        r.register(VerbDescriptor {
+            id: "civ_lay_tax".into(),
+            name: "Lay Tax".into(),
+            summary: "Set tax rate".into(),
+            group: VerbGroup::Civic,
+            aliases: &["tax"],
+            hotkey: Some('T'),
+            provenance: Provenance::Mcp,
+            risk: RiskTier::Reversible,
+            description: "Set a new tax rate for the city.".into(),
+            mcp_tool: None,
+            use_count: 0,
+        });
+        r
+    }
+
+    #[test]
+    fn empty_has_zero() {
+        let r = VerbRegistry::empty();
+        assert_eq!(r.len(), 0);
+        assert!(r.is_empty());
+    }
+
+    #[test]
+    fn register_and_get() {
+        let mut r = VerbRegistry::empty();
+        r.register(VerbDescriptor {
+            id: "civ_test".into(),
+            name: "Test".into(),
+            summary: "Test verb".into(),
+            group: VerbGroup::Debug,
+            aliases: &[],
+            hotkey: None,
+            provenance: Provenance::Other("manual".into()),
+            risk: RiskTier::Reversible,
+            description: "test verb".into(),
+            mcp_tool: None,
+            use_count: 0,
+        });
+        assert_eq!(r.len(), 1);
+        assert!(r.get("civ_test").is_some());
+        assert!(r.get("civ_missing").is_none());
+    }
+
+    #[test]
+    fn register_replaces_existing() {
+        let mut r = VerbRegistry::empty();
+        let v1 = VerbDescriptor {
+            id: "civ_dup".into(),
+            name: "First".into(),
+            summary: "First".into(),
+            group: VerbGroup::Debug,
+            aliases: &[],
+            hotkey: None,
+            provenance: Provenance::Other("a".into()),
+            risk: RiskTier::Reversible,
+            description: "v1".into(),
+            mcp_tool: None,
+            use_count: 0,
+        };
+        let v2 = VerbDescriptor {
+            id: "civ_dup".into(),
+            name: "Second".into(),
+            summary: "Second".into(),
+            group: VerbGroup::Debug,
+            aliases: &[],
+            hotkey: None,
+            provenance: Provenance::Other("b".into()),
+            risk: RiskTier::Reversible,
+            description: "v2".into(),
+            mcp_tool: None,
+            use_count: 0,
+        };
+        let prev = r.register(v1);
+        assert!(prev.is_none());
+        let prev = r.register(v2);
+        assert!(prev.is_some());
+        assert_eq!(r.len(), 1);
+        assert_eq!(r.get("civ_dup").unwrap().name, "Second");
+    }
+
+    #[test]
+    fn by_group_filters() {
+        let r = sample_registry();
+        let divine: Vec<_> = r.by_group(VerbGroup::Divine).collect();
+        assert_eq!(divine.len(), 1);
+        assert_eq!(divine[0].id, "civ_disaster_banish");
+    }
+
+    #[test]
+    fn by_provenance_filters() {
+        let r = sample_registry();
+        let mcp: Vec<_> = r.by_provenance(Provenance::Mcp).collect();
+        assert_eq!(mcp.len(), 2);
+    }
+
+    #[test]
+    fn fuzzy_exact_id_wins() {
+        let r = sample_registry();
+        let results = r.fuzzy_search("civ_disaster_banish", 5);
+        assert!(!results.is_empty());
+        assert_eq!(results[0].descriptor.id, "civ_disaster_banish");
+        assert!(results[0].score >= 0.99);
+    }
+
+    #[test]
+    fn fuzzy_name_match() {
+        let r = sample_registry();
+        let results = r.fuzzy_search("Banish", 5);
+        assert!(!results.is_empty());
+        assert_eq!(results[0].descriptor.id, "civ_disaster_banish");
+    }
+
+    #[test]
+    fn fuzzy_alias_match() {
+        let r = sample_registry();
+        let results = r.fuzzy_search("calm", 5);
+        assert!(!results.is_empty());
+        assert_eq!(results[0].descriptor.id, "civ_disaster_banish");
+    }
+
+    #[test]
+    fn fuzzy_case_insensitive() {
+        let r = sample_registry();
+        let upper = r.fuzzy_search("BANISH", 5);
+        let lower = r.fuzzy_search("banish", 5);
+        assert_eq!(upper.len(), lower.len());
+        assert_eq!(upper[0].descriptor.id, lower[0].descriptor.id);
+    }
+
+    #[test]
+    fn fuzzy_no_match_returns_empty() {
+        let r = sample_registry();
+        let results = r.fuzzy_search("zzz_nonexistent_xyz", 5);
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn fuzzy_empty_query_returns_empty() {
+        let r = sample_registry();
+        let results = r.fuzzy_search("", 5);
+        assert!(results.is_empty());
+        let results = r.fuzzy_search("   ", 5);
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn fuzzy_respects_limit() {
+        let r = sample_registry();
+        let results = r.fuzzy_search("civ", 1);
+        assert_eq!(results.len(), 1);
+    }
+
+    #[test]
+    fn fuzzy_description_match() {
+        let r = sample_registry();
+        let results = r.fuzzy_search("immediately", 5);
+        assert!(!results.is_empty());
+        assert_eq!(results[0].descriptor.id, "civ_disaster_banish");
+    }
+
+    #[test]
+    fn iter_alphabetical() {
+        let r = sample_registry();
+        let ids: Vec<_> = r.iter().map(|(id, _)| id.to_string()).collect();
+        let mut sorted = ids.clone();
+        sorted.sort();
+        assert_eq!(ids, sorted);
+    }
+}

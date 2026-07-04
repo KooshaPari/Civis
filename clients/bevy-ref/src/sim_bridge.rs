@@ -1,7 +1,6 @@
 //! In-process simulation bridge for the standalone Bevy client.
 
 use bevy::prelude::*;
-use std::collections::HashMap;
 use civ_agents::{
     infer_alignment_for_spawn, spawn_civilian_at, ActorVisual, ActorVisualKind, Alignment, Civilian,
 };
@@ -11,6 +10,7 @@ use civ_engine::{
 };
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
+use std::collections::HashMap;
 
 use crate::procedural_actor::{spawn_procedural_actor, ProceduralActorPlugin};
 use crate::spawn_tools::{SpawnBuildingRequest, SpawnCivilianRequest};
@@ -94,7 +94,14 @@ impl Plugin for SimBridgePlugin {
                 ),
             );
         #[cfg(feature = "egui")]
-        app.add_systems(Update, sync_game_ui_snapshot.run_if(in_process_sim_active));
+        app.init_resource::<crate::EmergenceHudData>().add_systems(
+            Update,
+            (
+                sync_game_ui_snapshot,
+                sync_emergence_hud,
+            )
+                .run_if(in_process_sim_active),
+        );
         app.add_systems(Update, sync_visible_gameplay.run_if(in_process_sim_active));
     }
 }
@@ -190,12 +197,13 @@ fn apply_spawn_building_requests(
     }
 }
 
-fn setup_gameplay_marker_meshes(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-) {
-    let civilian = meshes.add(Mesh::from(bevy::math::primitives::Capsule3d::new(0.45, 1.1)));
-    let building = meshes.add(Mesh::from(bevy::math::primitives::Cuboid::new(2.0, 2.5, 2.0)));
+fn setup_gameplay_marker_meshes(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
+    let civilian = meshes.add(Mesh::from(bevy::math::primitives::Capsule3d::new(
+        0.45, 1.1,
+    )));
+    let building = meshes.add(Mesh::from(bevy::math::primitives::Cuboid::new(
+        2.0, 2.5, 2.0,
+    )));
     commands.insert_resource(GameplayMarkerMeshes { civilian, building });
 }
 
@@ -207,8 +215,7 @@ fn sync_visible_gameplay(
     marker_meshes: Res<GameplayMarkerMeshes>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    #[cfg(feature = "models")]
-    models: Option<Res<civ_bevy_ref::gltf_models::GameModels>>,
+    #[cfg(feature = "models")] models: Option<Res<civ_bevy_ref::gltf_models::GameModels>>,
 ) {
     if !sim.is_changed() {
         return;
@@ -220,7 +227,12 @@ fn sync_visible_gameplay(
         .collect();
     let mut building_entities: HashMap<(i32, i32, BuildingType), Entity> = existing_buildings
         .iter()
-        .map(|(entity, marker)| ((marker.position.x, marker.position.y, marker.building_type), entity))
+        .map(|(entity, marker)| {
+            (
+                (marker.position.x, marker.position.y, marker.building_type),
+                entity,
+            )
+        })
         .collect();
 
     #[cfg(feature = "models")]
@@ -241,16 +253,14 @@ fn sync_visible_gameplay(
             Some((entity, old_faction, old_visual))
                 if old_faction == faction_id && old_visual == visual =>
             {
-                commands
-                    .entity(entity)
-                    .insert(Transform::from_translation(
-                        world_pos
-                            + if matches!(visual, ActorVisualKind::Humanoid) {
-                                Vec3::Y * 0.8
-                            } else {
-                                Vec3::Y * 0.25
-                            },
-                    ));
+                commands.entity(entity).insert(Transform::from_translation(
+                    world_pos
+                        + if matches!(visual, ActorVisualKind::Humanoid) {
+                            Vec3::Y * 0.8
+                        } else {
+                            Vec3::Y * 0.25
+                        },
+                ));
                 entity
             }
             Some((entity, _, _)) => {
@@ -283,7 +293,11 @@ fn sync_visible_gameplay(
 
     for (_, building) in sim.0.world.query::<&Building>().iter() {
         let world_pos = building_world_position(building);
-        let key = (building.position.x, building.position.y, building.building_type);
+        let key = (
+            building.position.x,
+            building.position.y,
+            building.building_type,
+        );
         let entity = match building_entities.remove(&key) {
             Some(entity) => {
                 commands
@@ -344,7 +358,9 @@ fn faction_id(alignment: &Alignment) -> u32 {
 }
 
 fn actor_visual_kind(actor_visual: Option<&ActorVisual>) -> ActorVisualKind {
-    actor_visual.map(|actor| actor.0).unwrap_or(ActorVisualKind::Humanoid)
+    actor_visual
+        .map(|actor| actor.0)
+        .unwrap_or(ActorVisualKind::Humanoid)
 }
 
 #[cfg(feature = "models")]
@@ -371,19 +387,17 @@ fn spawn_civilian_visual(
         return root;
     };
     match actor_scene(models, visual, faction) {
-        ModelOrPrimitive::Model(scene_root) => {
-            commands
-                .spawn((
-                    SimCivilianMarker {
-                        id: civilian_id,
-                        faction,
-                        visual,
-                    },
-                    scene_root,
-                    Transform::from_translation(*world_pos + Vec3::Y * 0.25),
-                ))
-                .id()
-        }
+        ModelOrPrimitive::Model(scene_root) => commands
+            .spawn((
+                SimCivilianMarker {
+                    id: civilian_id,
+                    faction,
+                    visual,
+                },
+                scene_root,
+                Transform::from_translation(*world_pos + Vec3::Y * 0.25),
+            ))
+            .id(),
         ModelOrPrimitive::Primitive => {
             // glTF present but scene-asset not loaded yet: procedural rig.
             let color = faction_color(&Alignment::with_faction(faction));
@@ -419,28 +433,24 @@ fn spawn_building_visual(
         );
     };
     match building_scene_for(models, building_type) {
-        ModelOrPrimitive::Model(scene_root) => {
-            commands
-                .spawn((
-                    SimBuildingMarker {
-                        building_type,
-                        position,
-                    },
-                    scene_root,
-                    Transform::from_translation(*world_pos),
-                ))
-                .id()
-        }
-        ModelOrPrimitive::Primitive => {
-            spawn_building_primitive(
-                commands,
-                building_mesh,
-                materials,
-                building_type,
-                world_pos,
-                position,
-            )
-        }
+        ModelOrPrimitive::Model(scene_root) => commands
+            .spawn((
+                SimBuildingMarker {
+                    building_type,
+                    position,
+                },
+                scene_root,
+                Transform::from_translation(*world_pos),
+            ))
+            .id(),
+        ModelOrPrimitive::Primitive => spawn_building_primitive(
+            commands,
+            building_mesh,
+            materials,
+            building_type,
+            world_pos,
+            position,
+        ),
     }
 }
 
@@ -476,7 +486,14 @@ fn spawn_building_visual(
     position: civ_engine::Position,
     world_pos: &Vec3,
 ) -> Entity {
-    spawn_building_primitive(commands, building_mesh, materials, building_type, world_pos, position)
+    spawn_building_primitive(
+        commands,
+        building_mesh,
+        materials,
+        building_type,
+        world_pos,
+        position,
+    )
 }
 
 fn spawn_building_primitive(
@@ -551,5 +568,11 @@ fn sync_game_ui_snapshot(
     }
     let factions = factions.len() as u32;
     let tick = sim.0.state.tick;
-    snapshot.set_sim_state(tick, population, factions, tick.to_string(), speed.multiplier);
+    snapshot.set_sim_state(
+        tick,
+        population,
+        factions,
+        tick.to_string(),
+        speed.multiplier,
+    );
 }

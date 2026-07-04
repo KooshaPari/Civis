@@ -8,12 +8,60 @@ use crate::settings_ui::{GameSettings, ACTION_PAUSE_SIM, KeyBinding};
 use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
-use crate::ui_theme::CHIP_FILL;
+use crate::ui_theme::{GLASS_FILL, KC_ACCENT, RADIUS_PANEL, liquid_glass_frame};
 
 const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
 const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
 const DIM: egui::Color32 = egui::Color32::from_rgb(150, 158, 178);
 const OVERLAY_DIM: egui::Color32 = egui::Color32::from_rgba_premultiplied(0, 0, 0, 160);
+
+/// Shell state used by the Bevy window client (main menu + gameplay + pause states).
+#[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
+pub enum AppState {
+    MainMenu,
+    WorldGen,
+    Playing,
+    Paused,
+}
+
+impl Default for AppState {
+    fn default() -> Self {
+        Self::MainMenu
+    }
+}
+
+/// One-shot intent emitted by menu buttons and consumed by `bevy_window`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MainMenuCommand {
+    None,
+    NewWorld,
+    Continue,
+    LoadGame,
+    Resume,
+    OpenSettings,
+    OpenSavePanel,
+    ExitToMainMenu,
+    Quit,
+}
+
+impl Default for MainMenuCommand {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
+/// Resource that carries the latest main-menu shell command.
+#[derive(Resource, Default, Debug)]
+pub struct MenuCommand {
+    pub action: MainMenuCommand,
+}
+
+/// Continuation availability discovered from server save metadata.
+#[derive(Resource, Default, Debug)]
+pub struct MainMenuSaves {
+    pub can_continue: bool,
+    pub preferred_slot: Option<String>,
+}
 
 /// Whether the game is currently playing or paused (overlay visible).
 #[derive(Resource, Clone, Copy, PartialEq, Eq, Default, Debug)]
@@ -133,6 +181,122 @@ pub fn in_game(mode: Res<GameUiMode>) -> bool {
     *mode == GameUiMode::Playing
 }
 
+fn draw_main_menu(
+    mut contexts: EguiContexts,
+    state: Option<Res<State<AppState>>>,
+    mut command: ResMut<MenuCommand>,
+    saves: Res<MainMenuSaves>,
+    mut settings_open: ResMut<SettingsOpen>,
+) {
+    let Some(state) = state else {
+        return;
+    };
+    if *state != AppState::MainMenu {
+        return;
+    }
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
+
+    egui::Area::new(egui::Id::new("main_menu_area"))
+        .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+        .order(egui::Order::Foreground)
+        .show(ctx, |ui| {
+            egui::Frame::NONE
+                .fill(GLASS_FILL)
+                .inner_margin(egui::Margin::same(28))
+                .show(ui, |ui| {
+                    ui.set_min_width(420.0);
+                    ui.vertical_centered(|ui| {
+                        ui.label(
+                            egui::RichText::new("Civis")
+                                .size(52.0)
+                                .color(KC_ACCENT)
+                                .strong(),
+                        );
+                        ui.label(
+                            egui::RichText::new("Main menu")
+                                .size(16.0)
+                                .color(DIM)
+                                .italics(),
+                        );
+                        ui.add_space(16.0);
+
+                        if menu_button(ui, "\u{25b6}  New World").clicked() {
+                            command.action = MainMenuCommand::NewWorld;
+                        }
+                        ui.add_space(8.0);
+
+                        let continue_label = if saves.can_continue {
+                            "\u{1f3c3}  Continue"
+                        } else {
+                            "\u{1f3c3}  Continue (no save)"
+                        };
+                        let continue_btn = ui.add_enabled(
+                            saves.can_continue,
+                            egui::Button::new(egui::RichText::new(continue_label).size(16.0))
+                                .fill(KC_ACCENT.gamma_multiply(0.15))
+                                .min_size(egui::vec2(220.0, 40.0))
+                                .corner_radius(egui::CornerRadius::same(8)),
+                        );
+                        if continue_btn.clicked() {
+                            command.action = MainMenuCommand::Continue;
+                        }
+                        ui.add_space(8.0);
+
+                        if menu_button(ui, "\u{1f4be}  Load Game").clicked() {
+                            command.action = MainMenuCommand::LoadGame;
+                        }
+                        ui.add_space(8.0);
+
+                        if menu_button(ui, "\u{2699}  Settings").clicked() {
+                            command.action = MainMenuCommand::OpenSettings;
+                            settings_open.0 = true;
+                        }
+                        ui.add_space(8.0);
+                        if menu_button(ui, "\u{23fb}  Quit").clicked() {
+                            command.action = MainMenuCommand::Quit;
+                        }
+                    });
+                });
+        });
+}
+
+fn draw_worldgen_overlay(mut contexts: EguiContexts, state: Option<Res<State<AppState>>>) {
+    let Some(state) = state else {
+        return;
+    };
+    if *state != AppState::WorldGen {
+        return;
+    }
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
+
+    egui::Area::new(egui::Id::new("worldgen_panel_area"))
+        .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+        .order(egui::Order::Foreground)
+        .show(ctx, |ui| {
+            egui::Frame::NONE
+                .fill(GLASS_FILL)
+                .inner_margin(egui::Margin::same(24))
+                .show(ui, |ui| {
+                    ui.vertical_centered(|ui| {
+                        ui.label(
+                            egui::RichText::new("Booting Civis")
+                                .size(28.0)
+                                .color(KC_ACCENT)
+                                .strong(),
+                        );
+                        ui.label(
+                            egui::RichText::new("Spinning up world generation…")
+                                .color(DIM),
+                        );
+                    });
+                });
+        });
+}
+
 fn draw_pause_menu(
     mut contexts: EguiContexts,
     mut mode: ResMut<GameUiMode>,
@@ -150,7 +314,14 @@ fn draw_pause_menu(
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
         .order(egui::Order::Foreground)
         .show(ctx, |ui| {
-            pause_panel(ui, &mut mode, &mut settings_open, &mut exit)
+            pause_panel(
+                ui,
+                &mut *mode,
+                &mut *command,
+                &mut *settings_open,
+                &mut *save_panel,
+                &mut exit,
+            )
         });
 }
 
@@ -179,7 +350,7 @@ fn draw_settings_window(
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-    settings_window(ctx, &mut settings_open, &mut state, gpu_caps.as_deref());
+    settings_window(ctx, &mut *settings_open, &mut *state, gpu_caps.as_deref());
 }
 
 fn dim_overlay(ctx: &egui::Context) {
@@ -196,7 +367,9 @@ fn dim_overlay(ctx: &egui::Context) {
 fn pause_panel(
     ui: &mut egui::Ui,
     mode: &mut GameUiMode,
+    command: &mut MenuCommand,
     settings_open: &mut SettingsOpen,
+    save_panel: &mut SaveLoadPanel,
     exit: &mut MessageWriter<AppExit>,
 ) {
     egui::Frame::NONE
@@ -214,7 +387,14 @@ fn pause_panel(
                         .strong(),
                 );
                 ui.add_space(20.0);
-                pause_menu_buttons(ui, mode, settings_open, exit);
+                pause_menu_buttons(
+                    ui,
+                    mode,
+                    command,
+                    settings_open,
+                    save_panel,
+                    exit,
+                );
             });
         });
 }
@@ -222,7 +402,9 @@ fn pause_panel(
 fn pause_menu_buttons(
     ui: &mut egui::Ui,
     mode: &mut GameUiMode,
+    command: &mut MenuCommand,
     settings_open: &mut SettingsOpen,
+    save_panel: &mut SaveLoadPanel,
     exit: &mut MessageWriter<AppExit>,
 ) {
     if menu_button(ui, "\u{25b6}  Resume").clicked() {
@@ -233,9 +415,14 @@ fn pause_menu_buttons(
         settings_open.0 = !settings_open.0;
     }
     ui.add_space(6.0);
-    menu_button(ui, "\u{1f4be}  Save");
-    ui.add_space(6.0);
-    menu_button(ui, "\u{1f30d}  New World");
+    if menu_button(ui, "\u{1f4be}  Save/Load").clicked() {
+        // Save/Load tab: opens the shared slot browser while the pause shell stays visible.
+        command.action = MainMenuCommand::OpenSavePanel;
+        save_panel.visible = true;
+    }
+    if menu_button(ui, "\u{1f30d}  Main Menu").clicked() {
+        command.action = MainMenuCommand::ExitToMainMenu;
+    }
     ui.add_space(14.0);
     ui.separator();
     ui.add_space(10.0);

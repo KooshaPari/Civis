@@ -19,6 +19,7 @@ mods/example-policy/example-policy.civmod
 /web/node_modules/
 
 # Generated tooling artifacts
+*.cdx.json
 clients/unreal-show/scripts/vswhere-out.json
 clients/unreal-show/scripts/vs-modify.log
 clients/unreal-show/scripts/vs-modify2.log

@@ -21,9 +21,11 @@ use rand::Rng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
+pub mod decay;
 pub mod lifecycle;
 
-pub use lifecycle::{classify_lifecycle, age_threshold, labor_capacity, LifecycleLabel, LifecycleParams};
+pub use decay::{apply_resource, tick_rise, NeedChannel, NeedLevel, RiseRates};
+pub use lifecycle::{age_threshold, classify_lifecycle, labor_capacity, LifecycleLabel, LifecycleParams};
 
 /// Schema version. Bumped on breaking changes.
 pub const SCHEMA_VERSION: &str = "0.1.0";
@@ -182,6 +184,10 @@ pub struct Health {
     pub integrity: f32,
     /// `true` once an illness has taken hold (accelerates integrity loss).
     pub sick: bool,
+    /// Legacy alias for callers still using the older field name.
+    pub sickness: bool,
+    /// Legacy morale-style compatibility field used by engine glue.
+    pub morale: f32,
     /// Consecutive ticks spent with at least one critical need.
     pub deprivation_streak: u32,
 }
@@ -191,6 +197,8 @@ impl Default for Health {
         Self {
             integrity: 1.0,
             sick: false,
+            sickness: false,
+            morale: 1.0,
             deprivation_streak: 0,
         }
     }
@@ -245,6 +253,20 @@ pub struct TickOutcome {
     pub died: bool,
 }
 
+/// Outcome of one FR-CIV-LIFE needs tick.
+///
+/// The decay step is applied first, then the agent selects the most-deprived
+/// need as its satisfaction priority. This keeps the control loop deterministic
+/// and gives higher-pressure needs (especially hunger / safety / social) a
+/// stable ordering for downstream planners.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct NeedsTickOutcome {
+    /// Need chosen for satisfaction next.
+    pub priority: NeedKind,
+    /// Satisfaction level after decay, before any replenishment.
+    pub priority_level: f32,
+}
+
 /// Decay every need by its per-tick rate (no satisfaction added). Health is
 /// mirrored from the supplied integrity so utility-AI sees a unified vector.
 pub fn decay(needs: &mut Needs, rates: &DecayRates) {
@@ -254,6 +276,22 @@ pub fn decay(needs: &mut Needs, rates: &DecayRates) {
     needs.safety = (needs.safety - rates.safety).max(0.0);
     needs.social = (needs.social - rates.social).max(0.0);
     needs.health = (needs.health - rates.health).max(0.0);
+}
+
+/// Advance needs by one deterministic FR-CIV-LIFE tick.
+///
+/// This is intentionally pure apart from the mutation of `needs`: decay is
+/// applied in place, then the agent selects the most-deprived need to satisfy
+/// next. The returned priority is stable under identical inputs, which keeps
+/// replay and AI planning deterministic.
+#[must_use]
+pub fn tick_needs(needs: &mut Needs, rates: &DecayRates) -> NeedsTickOutcome {
+    decay(needs, rates);
+    let (priority, priority_level) = needs.most_pressing();
+    NeedsTickOutcome {
+        priority,
+        priority_level,
+    }
 }
 
 /// Advance one living item by a single tick: decay needs, then drive health
@@ -275,7 +313,7 @@ pub fn tick(
         };
     }
 
-    decay(needs, rates);
+    let _needs_tick = tick_needs(needs, rates);
 
     let critical_count = NEED_KINDS
         .iter()
@@ -418,6 +456,34 @@ mod tests {
             health: 1.0,
         };
         assert_eq!(needs.most_pressing(), (NeedKind::Water, 0.2));
+    }
+
+    /// Covers FR-CIV-LIFE-001 — a tick decays needs before selecting the next priority.
+    #[test]
+    fn fr_civ_life_001_tick_needs_decays_then_prioritizes() {
+        let mut needs = Needs {
+            food: 0.5,
+            water: 0.5,
+            rest: 0.5,
+            safety: 0.12,
+            social: 0.13,
+            health: 1.0,
+        };
+        let rates = DecayRates {
+            food: 0.01,
+            water: 0.01,
+            rest: 0.01,
+            safety: 0.02,
+            social: 0.03,
+            health: 0.0,
+        };
+
+        let out = tick_needs(&mut needs, &rates);
+
+        assert_eq!(out.priority, NeedKind::Safety);
+        assert!((out.priority_level - 0.10).abs() < 1e-6);
+        assert!((needs.safety - 0.10).abs() < 1e-6);
+        assert!((needs.social - 0.10).abs() < 1e-6);
     }
 
     /// Covers FR-CIV-LIFE-001 — satisfying a need raises it and clamps at 1.0.
@@ -1011,5 +1077,115 @@ mod tests {
         assert!(health.is_dead());
         assert_eq!(health.integrity, needs.health);
         assert_eq!(needs.health, 0.0);
+    }
+}
+
+/// Determine birth probability for a civilian based on lifecycle stage, health, and environmental constraints.
+///
+/// FR-CIV-LIFE-003: Reproduction is driven by lifecycle stage (working-age adults only),
+/// health/nutrition availability, safety, and population pressure.
+/// Returns a probability in `[0, 1]` to be used with a seeded RNG.
+#[must_use]
+pub fn should_reproduce(
+    age: f32,
+    health: &Health,
+    food_satisfaction: f32,
+    safety_satisfaction: f32,
+    overcrowding_factor: f32,
+    lifecycle_params: &LifecycleParams,
+) -> f32 {
+    use crate::lifecycle::{classify_lifecycle_from_age as classify_lifecycle};
+
+    // Only working-age adults can reproduce.
+    let lifecycle = classify_lifecycle(age, lifecycle_params);
+    if lifecycle != crate::lifecycle::LifecycleLabel::WorkingAge {
+        return 0.0;
+    }
+
+    // Dead or critically ill individuals do not reproduce.
+    if health.is_dead() || health.sick {
+        return 0.0;
+    }
+
+    // Base reproduction rate for healthy working-age adults.
+    let mut birth_prob = 0.15;
+
+    // Health/integrity modulates: sicker individuals have lower birth probability.
+    birth_prob *= health.integrity.max(0.1);
+
+    // Food satisfaction must be adequate: starving populations don't reproduce well.
+    if food_satisfaction < 0.3 {
+        return 0.0; // Critical food shortage prevents reproduction.
+    }
+    birth_prob *= food_satisfaction.clamp(0.3, 1.0) / 1.0;
+
+    // Safety must be acceptable: threatened/panicked populations suppress reproduction.
+    if safety_satisfaction < 0.2 {
+        return 0.0; // Critical danger prevents reproduction.
+    }
+    birth_prob *= (safety_satisfaction * 0.5 + 0.5).clamp(0.0, 1.0);
+
+    // Overcrowding suppresses reproduction (carrying capacity effect).
+    if overcrowding_factor > 1.0 {
+        birth_prob /= (1.0 + overcrowding_factor);
+    }
+
+    birth_prob.clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod test_reproduction {
+    use super::*;
+
+    #[test]
+    fn test_satisfied_adult_reproduces() {
+        let lifecycle_params = LifecycleParams::default();
+        let health = Health {
+            integrity: 1.0,
+            sick: false,
+            deprivation_streak: 0,
+        };
+        // Working-age adult (age 25 fits in default ranges)
+        let prob = should_reproduce(25.0, &health, 0.9, 0.9, 0.5, &lifecycle_params);
+        assert!(prob > 0.05, "Satisfied adult should have >5% birth prob, got {}", prob);
+    }
+
+    #[test]
+    fn test_starving_adult_no_reproduce() {
+        let lifecycle_params = LifecycleParams::default();
+        let health = Health {
+            integrity: 0.8,
+            sick: false,
+            deprivation_streak: 0,
+        };
+        // Starving (food < 0.3)
+        let prob = should_reproduce(25.0, &health, 0.1, 0.9, 0.5, &lifecycle_params);
+        assert_eq!(prob, 0.0, "Starving adult should not reproduce");
+    }
+
+    #[test]
+    fn test_juvenile_no_reproduce() {
+        let lifecycle_params = LifecycleParams::default();
+        let health = Health {
+            integrity: 1.0,
+            sick: false,
+            deprivation_streak: 0,
+        };
+        // Juvenile (age 8)
+        let prob = should_reproduce(8.0, &health, 0.9, 0.9, 0.5, &lifecycle_params);
+        assert_eq!(prob, 0.0, "Juvenile should not reproduce");
+    }
+
+    #[test]
+    fn test_sick_adult_no_reproduce() {
+        let lifecycle_params = LifecycleParams::default();
+        let health = Health {
+            integrity: 1.0,
+            sick: true,
+            deprivation_streak: 0,
+        };
+        // Working-age but sick
+        let prob = should_reproduce(25.0, &health, 0.9, 0.9, 0.5, &lifecycle_params);
+        assert_eq!(prob, 0.0, "Sick adult should not reproduce");
     }
 }

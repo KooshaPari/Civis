@@ -19,6 +19,12 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+pub mod enforcement;
+pub use enforcement::{LawEnforcement, LawPenalty};
+
+pub mod precedent;
+pub use precedent::*;
+
 /// Schema version for the RON law DB.
 pub const SCHEMA_VERSION: u32 = 0;
 

@@ -115,7 +115,7 @@ impl SubTool {
             Kill => Some(SpawnTool::Destroy),
             // Material-paint sub-tools arm the material brush; the painted
             // material is set from `paint_material_name` by a sync system.
-            Water | Sand | Dirt | Stone | Lava | Gas => Some(SpawnTool::PaintMaterial),
+            Water | Sand | Dirt | Stone | Lava | Gas => Some(SpawnTool::Terraform),
             // No backing variant yet (await Infra Lead enum growth).
             _ => None,
         }

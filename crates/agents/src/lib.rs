@@ -34,7 +34,7 @@ pub use cluster::{
 };
 pub use daily_path::{
     choose_activity, need_for_poi_kind, path_step, pick_target, poi_kind_for_need, score_poi,
-    wander_anchor, Activity, DailyGoal, Poi, PoiKind, PoiRegistry,
+    wander_anchor, Activity, DailyGoal, DailyPathDecision, Poi, PoiKind, PoiRegistry,
 };
 pub use diplomacy::{
     DiplomacyMatrix, DiplomacyOutcome, DiplomacySignal, RelationKind, RelationRecord,
@@ -245,6 +245,10 @@ pub struct Needs {
     pub safety: f32,
     /// Belonging need (social).
     pub belonging: f32,
+    /// Rest/sleep need.
+    pub rest: f32,
+    /// Health need.
+    pub health: f32,
 }
 
 /// Home assignment for a civilian.
@@ -316,6 +320,8 @@ impl CivilianBundle {
                 shelter: 0.25,
                 safety: 0.25,
                 belonging: 0.25,
+                rest: 0.25,
+                health: 0.25,
             },
             lod: LodTier::Hot,
         }
@@ -344,6 +350,8 @@ pub fn child_bundle_from_parent(rng: &mut ChaCha8Rng) -> CivilianBundle {
             shelter: 0.25,
             safety: 0.25,
             belonging: 0.25,
+            rest: 0.25,
+            health: 0.25,
         },
         lod: LodTier::Hot,
     }
@@ -565,6 +573,8 @@ pub fn spawn_many(
             shelter: 0.25,
             safety: 0.25,
             belonging: 0.25,
+            rest: 0.25,
+            health: 0.25,
         };
         let lod = match offset % 3 {
             0 => LodTier::Hot,
@@ -1006,6 +1016,8 @@ mod tests {
             shelter: 0.2,
             safety: 0.3,
             belonging: 0.4,
+            rest: 0.25,
+            health: 0.25,
         };
         let lod = LodTier::Warm;
         let mut rng = ChaCha8Rng::seed_from_u64(11);

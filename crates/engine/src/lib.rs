@@ -33,24 +33,71 @@ pub mod perf;
 pub mod spawn;
 pub mod spectator;
 
-pub use conditions::{check_outcome, GameOutcome};
-pub use era::CivEra;
+pub mod tutorial;
+
+
+/// Fixed-point scaling factor (1 raw unit = SCALE joules). Engine energy
+/// quantities are stored in fixed-point `i64` for determinism and converted
+/// to `f64`/SI at the economy boundary using this constant.
+pub const SCALE: i64 = 1_000;
+
+pub use religion::{emerge_belief, spread_religion, Belief, BeliefConcept, Religion};
+pub use demographics::{
+    carrying_capacity_from_food, tick_demographics, total_population, AgeGroup, Demographics, DemographicsSnapshot,
+};
+// FR-AUDIO-wire: re-export the audio substrate's SFX trigger enum so
+// downstream crates (civ-server JSON-RPC + WS bridge) can name it as
+// `civ_engine::SfxTrigger` without taking a direct `civ-audio` dep.
+pub use civ_audio::triggers::SfxTrigger;
+pub use civ_mod_host::{load_manifest, ModBrowserEntry, ModGuestStateSave, ModType};
+pub use civ_planet::Climate;
+pub use civ_tactics::{DamageEvent, DoctrineLibrary};
+pub use emergence::{
+    CivAiDecision, EmergenceFeedEvent, EmergenceState,
+};
+pub use civ_emergence_metrics::branching::BranchingRegime;
+pub use emergence_metrics::{EmergenceBranchingState, EmergenceSample};
 pub use engine::{
-    job_type_for_civilian_id, Building, BuildingType, Citizen, ClusterStocks, CombatDamagePulse, DiplomacyEvent,
-    DiplomacyKind, JobType, MilitaryUnit, PopulationEvent, Position, Production, ResourceType,
-    Resources, Simulation, SimulationSnapshot, TradeRoute, UnitType, WorldState,
+
+    job_type_for_civilian_id, Building, BuildingType, Citizen, CombatDamagePulse, DiplomacyKind,
+    EconomicFocus, EconomicFocusEvent, FactionRelationSnapshot, Fixed, InstitutionEvent, JobType,
+    MilitaryUnit, Position, ResourceType, Resources, Sim, SimSeed, Simulation, SimulationSnapshot,
+    PsycheDrivenBehavior, StratBand, StratificationEvent, StratificationEventKind,
+    StratificationReport, TradeRoute, UnitType, WorldState,
+};
+pub use hash_chain::hash_hex;
+pub use replay::ReplayLog;
+pub use replay::ReplayError;
+pub use replay_format::{decode_civreplay, encode_civreplay};
+pub use save_bundle::{
+    delete_slot, list_slots, load_from_slot, save_to_slot, CivSaveBundle, SaveSlotEntry,
 };
 pub use spawn::{
-    grid_to_norm, military_pin_id, norm_to_grid, spawn_airport_at, spawn_hangar_at,
-    spawn_military_at, spawn_port_at, unit_type_label,
+    grid_to_norm, spawn_airport_at, spawn_hangar_at, spawn_military_at, spawn_port_at,
+    unit_type_label,
 };
-pub use perf::{phases_over_budget, tick_over_budget, TickProfile};
+pub use spectator::SpectatorView;
 
-pub use civ_mod_host::{
-    format_mod_error_event, format_mod_error_event_json, format_mod_loaded_event,
-    format_mod_loaded_event_json, format_mod_unloaded_event_json, load_manifest, ModBrowserEntry,
-    ModGuestStateSave, ModHost, ModLoadedRecord, ModManifest, ModRegistry, ModType,
-    ModUnloadedRecord,
+
+// FR-CIV-ARCH: Emergent building layouts re-export so callers can use
+// `civ_engine::EmergentLayout` and `civ_engine::LayoutStrategy` without
+// directly depending on the private `building_layouts` module.
+pub use building_layouts::{
+    EmergentLayout, LayoutStrategy,
+};
+pub use era::{CivAge, CivEra, EraProgressionState, FactionEraSnapshot};
+pub use history::{EraHistory, EraTransition};
+pub use tech::{FactionEmergenceInputs, FactionTechState};
+
+pub use tutorial::{TutorialMilestone, TutorialProgress};
+
+
+// FR-CIV-GOV-001/002/003 (civ-007 institutions epic). Re-exported so callers
+// (server, clients, tests) can `use civ_engine::InstitutionKind` etc. without
+// pulling the `civ-institutions` crate directly.
+pub use civ_institutions::{
+    Institution, InstitutionKind, GARRISON_UNLOCK_POPULATION,
+    TEMPLE_UNLOCK_POPULATION,
 };
 pub use civ_planet::{BiomeKind, Climate, GeologyMap, MoonConfig, PlanetConfig, RegionBiome};
 pub use civ_tactics::{
@@ -60,9 +107,27 @@ pub use civ_tactics::{
     FormationKind, GridMove, MilitaryPhaseConfig, MilitaryUnitSample, NoopOperationalLayer,
     OperationalLayer, OperationalMovementConfig, WarBridgeConfig,
 };
-pub use hash_chain::{
-    chain_advance, chain_root_from_payloads, chain_root_from_ticks, combat_event_bytes, hash_hex,
-    tick_event_bytes, tick_hash, HashChainState, GENESIS, HASH_LEN,
+
+// FR-CIV-GOV-030 (civ-007 cohesion epic). Re-exported so callers
+// (server, clients, tests) can name the cohesion types as `civ_engine::KinshipEdge`
+// etc. without pulling the private `engine` module path.
+pub use engine::{
+    add_cohesion, add_trust, last_tick_cohesion, last_tick_cohesion_settlement,
+    CohesionEvent, CohesionEventKind, CohesionSnapshot,
+    FabricTier, KinshipEdge, KinshipKind,
+};
+
+// FR-CIV-UNREST-001 (civ-007 unrest sub-epic). Re-exported so callers
+// can name the unrest types as `civ_engine::UnrestEvent` etc.
+// without pulling the private `engine` module path.
+pub use engine::{
+    last_tick_unrest, last_tick_unrest_settlement, set_settlement_gini, unrest_level,
+    UnrestEvent, UnrestLevel, UnrestSnapshot,
+};
+pub use metrics::{compute, compute_fixed, Metrics, MetricsFixed};
+pub use policy::{
+    effective_consumption, policy_from_kind, CapitalistPolicy, ControlSignals, NoopPolicy, Policy,
+    PolicyInput, SubsistenceFirstPolicy, DEFAULT_ECONOMY_POLICY,
 };
 pub use integrity::{check_integrity, IntegrityError};
 pub use invariants::{check_tick_invariants, InvariantError};

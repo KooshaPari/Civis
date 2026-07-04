@@ -11,21 +11,48 @@
 #![warn(missing_docs)]
 
 mod allocation;
+mod allocator;
+mod currency_trust;
+mod extraction;
 mod institution;
 mod market;
 mod stocks;
+mod tax_policy;
+mod trade_flow;
+mod trade_routes;
 
 pub use allocation::{
-    allocate_by_priority, allocate_with, AllocationEngine, AllocationRegime,
-    CapitalistAllocator, JouleAllocator, PlannedAllocator, PriorityTier,
+    allocate_by_priority, allocate_with, AllocationEngine, AllocationRegime, CapitalistAllocator,
+    JouleAllocator, LaborCapacityAllocator, PlannedAllocator, PriorityTier,
+};
+pub use allocator::{Allocator, Bid, CancelledOrder, Offer};
+pub use currency_trust::{
+    acceptance, step_currency_trust, CurrencyTrust, CurrencyTrustOutcome,
+};
+pub use extraction::{
+    find_extraction_site, tick_extraction, ExtractionSite, Extractor, ResourceKind,
 };
 pub use institution::{
     step_institutions, InstitutionAccount, InstitutionId, InstitutionKind, InstitutionLedger,
     InstitutionLedgerError, InstitutionPosting, LedgerSide, INSTITUTION_MARKET,
     INSTITUTION_TREASURY,
 };
-pub use market::{GoodId, MarketState, MultiGoodMarket, Order, OrderBook, Side, Trade};
-pub use stocks::Stocks;
+pub use market::{
+    DEFAULT_SMOOTHING_FACTOR, GoodId, MarketState, MultiGoodMarket, Order, OrderBook,
+    SettlementTradeFlow, Side, Trade,
+};
+pub use stocks::{
+    apply_trade, comparative_advantage, deficit, propose_trade, step_stocks, surplus, Good,
+    ProductionProfile, Stocks, TradeOffer, GOODS,
+};
+pub use tax_policy::{apply_tax_policy, TaxPolicy, TaxPolicyOutcome};
+pub use trade_flow::{
+    complementary_routes, complementary_round_trips, ComplementaryTradeFlow, SettlementFlow,
+};
+pub use trade_routes::{
+    compute_trade_routes, route_flow, routes_lexicographic, Settlement, SettlementId, TradeRoute,
+};
+pub use market::settlement_trade_flow_from_supply_demand;
 
 use serde::{Deserialize, Serialize};
 

@@ -62,8 +62,8 @@ pub enum RoadKind {
 }
 
 pub use lane::{
-    Lane, LaneClass, LaneConnection, LaneDirection, LaneGraph, Node, NodeKey, lanes_for,
-    route_lanes, speed_for_lane,
+    lanes_for, route_lanes, speed_for_lane, Lane, LaneClass, LaneConnection, LaneDirection,
+    LaneGraph, Node, NodeKey,
 };
 
 impl RoadKind {

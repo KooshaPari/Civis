@@ -44,68 +44,30 @@ impl MarketState {
         &self.prices
     }
 
-    /// Ensure a good has a price entry. Idempotent — returns the current price
-    /// (or seeds `DEFAULT_PRICE_CENTS` when first seen).
-    pub fn ensure_good(&mut self, good: &str) -> i64 {
-        *self
-            .prices
-            .entry(good.to_string())
-            .or_insert(DEFAULT_PRICE_CENTS)
-    }
-
-    /// Mutable access to the underlying price book. Engine-side scarcity
-    /// dampening (e.g. `phase_economy`'s `TECH_STORAGE` branch) calls this to
-    /// nudge a good's price directly.
-    pub fn prices_mut(&mut self) -> &mut BTreeMap<String, i64> {
-        &mut self.prices
-    }
-
-    /// Apply supply/demand pressure to a single good's price.
+    /// Clear one good's market by excess-demand price adjustment (FR-ECON-003).
     ///
-    /// Computes `pressure = (demand - supply) / max(supply, 1)`, clamped to
-    /// `[-1, 1]`, then nudges the price by `pressure * MAX_PRESSURE_DELTA_CENTS`
-    /// (saturating). Goods missing from the price book are seeded at
-    /// [`DEFAULT_PRICE_CENTS`] first (self-healing — engine code can pass new
-    /// good ids without silent failure).
+    /// Moves the price toward equilibrium: excess demand (`demand > supply`)
+    /// pushes the price up, excess supply pushes it down, and a balanced market
+    /// leaves it unchanged. The adjustment is the normalized excess demand
+    /// `(demand - supply) / (demand + supply)` in `[-1, 1]`, scaled by
+    /// `ADJUST_BPS`, applied in integer fixed-point. Price is floored at 1 cent
+    /// so a good never becomes free or negative. Unknown goods are inserted at
+    /// the [`Default`] reference price before clearing.
     ///
-    /// Returns the new price in cents.
-    pub fn apply_pressure(&mut self, good: &str, supply: i64, demand: i64) -> i64 {
-        let supply = supply.max(0);
-        let demand = demand.max(0);
-        let denom = supply.max(1);
-        let raw = demand - supply;
-        // Clamp pressure to [-9, 9] in fixed-point integer math (0.9 max magnitude).
-        let pressure = if raw >= denom {
-            9
-        } else if raw <= -denom {
-            -9
-        } else {
-            // raw in [-denom+1, denom-1]; scale to [-9, 9] keeping sign.
-            let sign = raw.signum();
-            let abs_pressure = (raw.abs() * 10) / denom; // 0..=9 (max = 9 since raw < denom)
-            sign * abs_pressure.clamp(0, 9)
-        };
-        // delta = pressure * (MAX_PRESSURE_DELTA_CENTS / 10). Pressure is in [-9, 9]
-        // so delta is in [-MAX_PRESSURE_DELTA_CENTS, MAX_PRESSURE_DELTA_CENTS].
-        let delta = pressure
-            .saturating_mul(MAX_PRESSURE_DELTA_CENTS / 10)
-            .clamp(-MAX_PRESSURE_DELTA_CENTS, MAX_PRESSURE_DELTA_CENTS);
-        let current = self.ensure_good(good);
-        let new_price = current.saturating_add(delta).max(MIN_PRICE_CENTS);
-        self.prices.insert(good.to_string(), new_price);
-        new_price
-    }
+    /// Deterministic and integer-only, so it is replay-stable.
+    pub fn clear(&mut self, good: &str, supply: i64, demand: i64) {
+        const ADJUST_BPS: i64 = 2_000; // max ±20% move per clearing step
+        let price = self.prices.entry(good.to_string()).or_insert(1_000);
 
-    /// Arithmetic mean of all clearing prices in cents. `None` when the
-    /// price book is empty. Used as a 'consumer price index' for the
-    /// chronicle / HUD.
-    pub fn mean_clearing_price(&self) -> Option<i64> {
-        if self.prices.is_empty() {
-            return None;
+        let total = supply.saturating_add(demand);
+        if total <= 0 {
+            return; // no market: nobody supplying or demanding
         }
-        let sum: i64 = self.prices.values().copied().sum();
-        let count = self.prices.len() as i64;
-        Some(sum / count)
+        let excess = demand.saturating_sub(supply); // >0 shortage, <0 glut
+        // delta_bps = ADJUST_BPS * excess / total, in [-ADJUST_BPS, ADJUST_BPS]
+        let delta_bps = ADJUST_BPS.saturating_mul(excess) / total;
+        let delta = (*price).saturating_mul(delta_bps) / 10_000;
+        *price = (*price).saturating_add(delta).max(1);
     }
 
     /// Advance one market tick: updates exactly one good's price from `tick` (deterministic).
@@ -203,48 +165,62 @@ mod tests {
         );
     }
 
-    /// FR-CIV-0100 §3d — price rises when demand exceeds supply (emergent).
     #[test]
-    fn apply_pressure_raises_price_when_demand_exceeds_supply() {
-        let mut market = MarketState::default();
-        let before = market.prices["food"];
-        market.apply_pressure("food", 1_000, 100);
-        assert!(market.prices["food"] > before);
-    }
-
-    /// FR-CIV-0100 §3d — price falls when supply exceeds demand.
-    #[test]
-    fn apply_pressure_lowers_price_when_supply_exceeds_demand() {
-        let mut market = MarketState::default();
-        let before = market.prices["food"];
-        market.apply_pressure("food", 100, 1_000);
-        assert!(market.prices["food"] < before);
+    fn clear_raises_price_on_excess_demand() {
+        let mut m = MarketState::default();
+        let before = m.prices["food"];
+        m.clear("food", 10, 40); // demand >> supply
+        assert!(m.prices["food"] > before, "shortage must raise price");
     }
 
     #[test]
-    fn prices_accessor_returns_same_map_reference() {
-        let mut market = MarketState::default();
-        let ptr_before = market.prices() as *const BTreeMap<String, i64>;
-        market.step(3);
-        market.apply_pressure("food", 500, 100);
-        let ptr_after = market.prices() as *const BTreeMap<String, i64>;
-        assert_eq!(ptr_before, ptr_after);
-        assert_eq!(market.prices().len(), 2);
-        assert_eq!(market.prices().get("food"), market.prices.get("food"));
-        assert_eq!(market.prices().get("energy"), market.prices.get("energy"));
+    fn clear_lowers_price_on_excess_supply() {
+        let mut m = MarketState::default();
+        let before = m.prices["food"];
+        m.clear("food", 40, 10); // supply >> demand
+        assert!(m.prices["food"] < before, "glut must lower price");
     }
 
-    /// FR-CIV-0100 §3d — price never drops below 1 even under huge surplus.
     #[test]
-    fn apply_pressure_floors_price_at_one() {
-        let mut market = MarketState {
-            prices: BTreeMap::from([("food".to_string(), 1)]),
+    fn clear_holds_price_at_equilibrium() {
+        let mut m = MarketState::default();
+        let before = m.prices["food"];
+        m.clear("food", 25, 25); // balanced
+        assert_eq!(m.prices["food"], before, "balanced market is stable");
+    }
+
+    #[test]
+    fn clear_inserts_unknown_good_at_reference_then_adjusts() {
+        let mut m = MarketState {
+            prices: BTreeMap::new(),
         };
-        market.apply_pressure("food", 0, 1_000_000);
-        assert_eq!(market.prices["food"], 1);
+        m.clear("ore", 5, 15); // unknown good, shortage
+        assert!(m.prices["ore"] > 1_000, "inserted at 1000 ref then raised");
+    }
+
+    #[test]
+    fn clear_is_noop_for_empty_market() {
+        let mut m = MarketState::default();
+        let before = m.prices.clone();
+        m.clear("food", 0, 0); // nobody trading
+        assert_eq!(m.prices, before);
     }
 
     proptest! {
+        /// Clearing never drives a price to zero or negative, for any supply/demand.
+        #[test]
+        fn clear_keeps_price_positive(
+            supply in 0i64..1_000_000,
+            demand in 0i64..1_000_000,
+            rounds in 1usize..50,
+        ) {
+            let mut m = MarketState::default();
+            for _ in 0..rounds {
+                m.clear("food", supply, demand);
+            }
+            prop_assert!(m.prices["food"] >= 1, "price floored at 1, got {}", m.prices["food"]);
+        }
+
         /// Same tick sequence => identical prices after N steps.
         #[test]
         fn same_tick_sequence_yields_identical_prices(

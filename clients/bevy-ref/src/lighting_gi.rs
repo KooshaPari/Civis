@@ -23,7 +23,7 @@
 //!   (raytracing scene/BLAS/TLAS build + lighting passes).
 //! - `bevy::solari::prelude::SolariLighting` — the per-camera component that
 //!   turns on realtime ReSTIR DI + GI for that view.
-//! - `CameraMainTextureUsages::default().with(TextureUsages::STORAGE_BINDING)`
+//! - `bevy::camera::CameraMainTextureUsages::default().with(TextureUsages::STORAGE_BINDING)`
 //!   and `Msaa::Off` — both **required** on any Solari camera (the example file
 //!   states this explicitly: Solari writes to the view target via a storage
 //!   binding and is incompatible with hardware MSAA).
@@ -66,7 +66,7 @@
 //! ```ignore
 //! # use bevy::prelude::*;
 //! # use bevy::core_pipeline::prepass::{DepthPrepass, MotionVectorPrepass};
-//! # use bevy::render::camera::CameraMainTextureUsages;
+//! # use bevy::camera::CameraMainTextureUsages;
 //! # use bevy::render::render_resource::TextureUsages;
 //! # use bevy::solari::prelude::SolariLighting;
 //! // ... alongside Camera3d::default() ...
@@ -77,11 +77,10 @@
 
 #![cfg(all(feature = "bevy", feature = "gi"))]
 
+use bevy::camera::CameraMainTextureUsages;
 use bevy::prelude::*;
-use bevy::render::camera::CameraMainTextureUsages;
 use bevy::render::render_resource::TextureUsages;
 use bevy::render::renderer::RenderAdapter;
-use bevy::render::settings::WgpuFeatures;
 use bevy::solari::prelude::{SolariLighting, SolariPlugins};
 
 /// Marker so we attach Solari components to each camera exactly once.
@@ -102,23 +101,28 @@ pub struct SolariGiPlugin;
 
 impl Plugin for SolariGiPlugin {
     fn build(&self, app: &mut App) {
-        // SolariPlugins itself only schedules raytracing work for cameras that
-        // carry SolariLighting, so adding the group is harmless even when no
-        // camera ends up configured (the RT-unavailable no-op path below).
-        if !app.is_plugin_added::<SolariPlugins>() {
-            // SolariPlugins is a PluginGroup.
-            app.add_plugins(SolariPlugins);
-        }
+        // SolariPlugins is a `PluginGroup` (not a `Plugin`), so it has no
+        // `is_plugin_added::<T>` guard — `add_plugins` is idempotent for
+        // groups (Bevy tracks the group itself once added), so a plain
+        // unconditional add is the canonical pattern. Solari's own
+        // `RaytracingScenePlugin` also self-skips when the adapter lacks the
+        // required features (see `bevy_solari/src/scene/mod.rs:42`), so the
+        // RT-unavailable no-op path below is redundant work; we keep the
+        // warning + camera-skip here as the loud, user-visible failure signal
+        // required by the project charter.
+        app.add_plugins(SolariPlugins);
         app.add_systems(Update, configure_solari_cameras);
     }
 }
 
-/// True when the render adapter advertises ray-tracing acceleration structures
-/// (DXR on DX12, `VK_KHR_ray_tracing` on Vulkan). Solari cannot run without it.
+/// True when the render adapter advertises the wgpu features required by
+/// `bevy_solari` (DXR on DX12 / `VK_KHR_ray_tracing` on Vulkan surface as
+/// `EXPERIMENTAL_RAY_QUERY` + binding-array extensions). Solari cannot run
+/// without the full set — `SolariPlugins::required_wgpu_features()` is the
+/// authoritative list maintained by `bevy_solari` itself.
 fn adapter_supports_raytracing(adapter: &RenderAdapter) -> bool {
-    adapter
-        .features()
-        .contains(WgpuFeatures::EXPERIMENTAL_RAY_TRACING_ACCELERATION_STRUCTURE)
+    let features = adapter.features();
+    features.contains(SolariPlugins::required_wgpu_features())
 }
 
 /// Attach the Solari camera components to any not-yet-configured `Camera3d`.
@@ -138,11 +142,13 @@ fn configure_solari_cameras(
 
     let rt_ok = adapter_supports_raytracing(&adapter);
     if !rt_ok {
+        let missing = SolariPlugins::required_wgpu_features() - adapter.features();
         warn!(
-            "SolariGiPlugin: GI disabled — render adapter lacks \
-             EXPERIMENTAL_RAY_TRACING_ACCELERATION_STRUCTURE (need DXR/DX12 or \
-             VK_KHR_ray_tracing on Vulkan). Falling back to rasterized lighting; \
+            "SolariGiPlugin: GI disabled — render adapter lacks required \
+             Solari wgpu features (need DXR/DX12 or VK_KHR_ray_tracing on \
+             Vulkan). Missing: {:?}. Falling back to rasterized lighting; \
              no Solari components attached. Adapter: {:?}",
+            missing,
             adapter.get_info()
         );
     }

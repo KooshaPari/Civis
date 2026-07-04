@@ -185,11 +185,7 @@ pub fn path_step(from: &Position3d, to: &Position3d, speed_fp: i64) -> Position3
         return *from;
     }
 
-    let max_component = dx
-        .abs()
-        .max(dy.abs())
-        .max(dz.abs())
-        .max(1);
+    let max_component = dx.abs().max(dy.abs()).max(dz.abs()).max(1);
     let step = speed_fp.min(max_component);
 
     let scale = |delta: i64| -> i64 {
@@ -209,19 +205,13 @@ pub fn path_step(from: &Position3d, to: &Position3d, speed_fp: i64) -> Position3
         },
     };
 
-    if (dx > 0 && next.coord.x > to.coord.x)
-        || (dx < 0 && next.coord.x < to.coord.x)
-    {
+    if (dx > 0 && next.coord.x > to.coord.x) || (dx < 0 && next.coord.x < to.coord.x) {
         next.coord.x = to.coord.x;
     }
-    if (dy > 0 && next.coord.y > to.coord.y)
-        || (dy < 0 && next.coord.y < to.coord.y)
-    {
+    if (dy > 0 && next.coord.y > to.coord.y) || (dy < 0 && next.coord.y < to.coord.y) {
         next.coord.y = to.coord.y;
     }
-    if (dz > 0 && next.coord.z > to.coord.z)
-        || (dz < 0 && next.coord.z < to.coord.z)
-    {
+    if (dz > 0 && next.coord.z > to.coord.z) || (dz < 0 && next.coord.z < to.coord.z) {
         next.coord.z = to.coord.z;
     }
 
@@ -285,7 +275,8 @@ pub fn choose_activity(needs: &LifeNeeds, has_poi: bool) -> Activity {
 /// Build a deterministic local wander anchor from a seed and current position.
 #[must_use]
 pub fn wander_anchor(from: &Position3d, seed: u64, tick: u64) -> Position3d {
-    let mix = seed ^ tick.rotate_left(17) ^ (from.coord.x as u64).rotate_left(7) ^ (from.coord.z as u64);
+    let mix =
+        seed ^ tick.rotate_left(17) ^ (from.coord.x as u64).rotate_left(7) ^ (from.coord.z as u64);
     let offset = |shift: u32| -> i64 {
         let bits = ((mix >> shift) & 0x3f) as i64;
         bits - 31
@@ -398,7 +389,10 @@ mod tests {
             capacity: 1,
         };
         let d = dist_sq(&pos(0, 0, 0), &poi.pos);
-        assert_eq!(score_poi(&needs, &poi, d).to_bits(), score_poi(&needs, &poi, d).to_bits());
+        assert_eq!(
+            score_poi(&needs, &poi, d).to_bits(),
+            score_poi(&needs, &poi, d).to_bits()
+        );
     }
 
     /// FR-CIV-LIFE-014 — empty registry yields no target.

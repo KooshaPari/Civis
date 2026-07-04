@@ -91,7 +91,10 @@ pub fn terrain_mesh() -> Mesh {
         }
     }
 
-    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default());
+    let mut mesh = Mesh::new(
+        PrimitiveTopology::TriangleList,
+        RenderAssetUsages::default(),
+    );
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
     mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
     mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
@@ -192,8 +195,10 @@ fn continental_mask(nx: f32, nz: f32) -> f32 {
     let sx = nx + warp * ax;
     let sz = nz + warp * az;
     let c = fbm(sx * 3.0, sz * 3.0, 6, 2.0, 0.5, SEED ^ 0xC3);
-    // Sea-level threshold tuned for ~55-65% land before the edge taper.
-    let mut m = c - 0.46;
+    // Sea-level threshold. The fbm output sits lower than a flat 0.5 mean, so the
+    // old 0.46 cut left only ~27% land (measured); 0.36 restores a balanced
+    // land/ocean split in the [0.4, 0.8] target band.
+    let mut m = c - 0.36;
     // Gentle ocean taper in the outermost ~8% (clean border).
     let edge = edge_falloff(nx, nz);
     m -= (1.0 - edge) * 0.6;
@@ -354,7 +359,8 @@ fn classify_biome(x: usize, z: usize, h: f32, flow: f32, height: &[f32]) -> u8 {
     let nz = z as f32 / (GRID - 1) as f32;
     let alt = (h - WATER_LEVEL) / (HEIGHT_SCALE - WATER_LEVEL); // 0..1 above sea
     let lat = (nz - 0.5).abs() * 2.0; // 0 at equator, 1 at poles
-    let temp = (1.0 - lat) - alt * 0.85 + (fbm(nx * 6.0, nz * 6.0, 3, 2.0, 0.5, SEED ^ 0x77) - 0.5) * 0.15;
+    let temp =
+        (1.0 - lat) - alt * 0.85 + (fbm(nx * 6.0, nz * 6.0, 3, 2.0, 0.5, SEED ^ 0x77) - 0.5) * 0.15;
     let moist = moisture(nx, nz, height);
     biome_from_climate(temp, moist, alt)
 }
@@ -556,11 +562,7 @@ mod tests {
 
     #[test]
     fn land_ocean_ratio_reasonable() {
-        let land = field()
-            .height
-            .iter()
-            .filter(|&&h| h >= WATER_LEVEL)
-            .count();
+        let land = field().height.iter().filter(|&&h| h >= WATER_LEVEL).count();
         let ratio = land as f32 / field().height.len() as f32;
         assert!((0.4..=0.8).contains(&ratio), "land ratio={ratio}");
     }

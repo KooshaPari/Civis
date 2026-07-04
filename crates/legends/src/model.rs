@@ -157,12 +157,16 @@ pub struct EventNode {
 pub enum LegendEdge {
     // event → event (the causal DAG spine)
     /// X happened because Y (heuristic-scored, §4.4).
-    CausedBy { confidence: f32 },
+    CausedBy {
+        confidence: f32,
+    },
     /// Temporal succession in the same thread (no causality claim).
     Succeeded,
     // entity ↔ event
     /// e.g. Agent A fought in Battle B.
-    ParticipatedIn { role: Role },
+    ParticipatedIn {
+        role: Role,
+    },
     // entity → entity (relationship spine, lightly held)
     DescendsFrom,
     MemberOf,

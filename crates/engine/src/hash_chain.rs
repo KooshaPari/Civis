@@ -235,8 +235,8 @@ mod tests {
     /// FR-CIV-PLANET-060 — chain digest changes on any ClimateFrame field delta.
     #[test]
     fn replay_hash_chain_differs_when_climate_changes() {
-        use civ_planet::{Climate, GeologyMap, PlanetConfig, WeatherCell};
         use civ_planet::weather::{SeasonKind, WeatherKind};
+        use civ_planet::{Climate, GeologyMap, PlanetConfig, WeatherCell};
 
         let base_climate = Climate {
             tick: 1,

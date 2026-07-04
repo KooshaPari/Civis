@@ -23,7 +23,6 @@ use crate::ui_theme;
 // the cohesive dark-glass HUD language used across every panel.
 // ---------------------------------------------------------------------------
 
-const PANEL_FILL: egui::Color32 = ui_theme::PANEL_FILL;
 const CHIP_FILL: egui::Color32 = ui_theme::SURFACE;
 const ACCENT: egui::Color32 = ui_theme::ACCENT;
 const LOCKED_DIM: egui::Color32 = ui_theme::DIM;
@@ -316,7 +315,11 @@ fn draw_progress_header(ui: &mut egui::Ui, state: &TechTreeState) {
             .size(14.0),
         );
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            let badge = if state.live { "● live" } else { "○ waiting" };
+            let badge = if state.live {
+                "● live"
+            } else {
+                "○ waiting"
+            };
             let badge_color = if state.live { ACCENT } else { LOCKED_DIM };
             ui.label(egui::RichText::new(badge).color(badge_color).size(12.0));
         });
@@ -464,7 +467,10 @@ mod tests {
 
     #[test]
     fn empty_state_progress_is_zero() {
-        let state = TechTreeState { nodes: Vec::new(), ..TechTreeState::default() };
+        let state = TechTreeState {
+            nodes: Vec::new(),
+            ..TechTreeState::default()
+        };
         assert_eq!(state.progress(), 0.0);
         assert_eq!(state.unlocked_count(), 0);
     }

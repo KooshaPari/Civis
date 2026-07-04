@@ -46,6 +46,10 @@ pub struct StreamCulling {
 }
 
 /// Marker for a streamed voxel chunk entity.
+///
+/// This component is only used in **server-attach mode** when chunk voxels are
+/// driven from `Frame3d` streams and should not be attached to in-process
+/// simulation entities.
 #[derive(Component)]
 pub struct LiveChunkTag {
     /// Chunk id from the live bridge.
@@ -72,7 +76,16 @@ impl LiveChunkFade {
     }
 }
 
+impl Default for LiveChunkFade {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Marker for a streamed agent entity.
+///
+/// In server-attach mode, actors are rendered from remote `AgentAppearance`
+/// frames and must carry this tag (not an in-process `SimCivilianMarker`).
 #[derive(Component)]
 pub struct LiveAgentTag {
     /// Server agent id.
@@ -84,6 +97,9 @@ pub struct LiveAgentTag {
 pub struct LiveAgentLabel;
 
 /// Marker for a streamed building diff entry.
+///
+/// In server-attach mode, buildings are spawned from remote `BuildingDiff`
+/// payloads and must use this tag (not an in-process `SimBuildingMarker`).
 #[derive(Component)]
 pub struct LiveBuildingTag {
     /// Building id from the diff frame.
@@ -91,6 +107,9 @@ pub struct LiveBuildingTag {
 }
 
 /// Marker for a streamed building-graph parcel.
+///
+/// This marker is part of the server stream scene model and should remain scoped
+/// to attach-mode render synchronization.
 #[derive(Component)]
 pub struct LiveGraphParcelTag {
     /// Parcel id (raw bits).
@@ -193,9 +212,7 @@ pub fn apply_voxel_delta_frame(
     for chunk in delta.deltas {
         let chunk_id = chunk.event.chunk_id;
         if chunk.voxels.len() == LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE {
-            scene
-                .chunk_voxels
-                .insert(chunk_id, chunk.voxels.clone());
+            scene.chunk_voxels.insert(chunk_id, chunk.voxels.clone());
         }
 
         if !should_render_chunk(chunk_id, culling.eye, culling.max_distance) {
@@ -255,10 +272,9 @@ pub fn apply_voxel_delta_frame(
         ));
 
         if let Some(color) = wireframe_line_color {
-            commands.entity(entity).insert((
-                Wireframe,
-                WireframeColor { color },
-            ));
+            commands
+                .entity(entity)
+                .insert((Wireframe, WireframeColor { color }));
         } else {
             commands
                 .entity(entity)
@@ -408,11 +424,10 @@ pub fn apply_building_diff_frame(
             BUILDING_GROUND_Y,
         );
         let transform = Transform::from_xyz(entry.position.x, ground, entry.position.z);
-        let entity = *scene.buildings.entry(entry.id).or_insert_with(|| {
-            commands
-                .spawn(LiveBuildingTag { id: entry.id })
-                .id()
-        });
+        let entity = *scene
+            .buildings
+            .entry(entry.id)
+            .or_insert_with(|| commands.spawn(LiveBuildingTag { id: entry.id }).id());
         commands.entity(entity).insert((
             Mesh3d(meshes.building_mesh.clone()),
             MeshMaterial3d(material_handle),
@@ -481,11 +496,10 @@ pub fn apply_building_graph_frame(
         let transform = Transform::from_xyz(anchor.x, ground + height * 0.5, anchor.z)
             .with_scale(Vec3::new(width.max(0.5), height.max(0.5), depth.max(0.5)));
 
-        let entity = *scene.graph_parcels.entry(id).or_insert_with(|| {
-            commands
-                .spawn(LiveGraphParcelTag { id })
-                .id()
-        });
+        let entity = *scene
+            .graph_parcels
+            .entry(id)
+            .or_insert_with(|| commands.spawn(LiveGraphParcelTag { id }).id());
         commands.entity(entity).insert((
             Mesh3d(meshes.building_mesh.clone()),
             MeshMaterial3d(material_handle),
@@ -517,11 +531,7 @@ fn parcel_kind_color(kind: ParcelKind) -> Color {
 }
 
 fn facade_material_color(facade: &FacadeStyle) -> Color {
-    let material = facade
-        .materials
-        .first()
-        .copied()
-        .unwrap_or(MaterialId(0));
+    let material = facade.materials.first().copied().unwrap_or(MaterialId(0));
     material_id_color(material)
 }
 
@@ -645,7 +655,10 @@ mod tests {
             BuildingKind3d::House,
             BuildingKind3d::CityCenter,
         ];
-        let colors: Vec<_> = kinds.iter().map(|k| color_rgb(building_kind_color(*k))).collect();
+        let colors: Vec<_> = kinds
+            .iter()
+            .map(|k| color_rgb(building_kind_color(*k)))
+            .collect();
         for (i, left) in colors.iter().enumerate() {
             for (j, right) in colors.iter().enumerate() {
                 if i != j {

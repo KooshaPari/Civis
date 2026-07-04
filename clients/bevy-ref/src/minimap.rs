@@ -9,13 +9,24 @@ use civ_engine::Building;
 use std::collections::HashMap;
 
 use crate::camera::CameraRig;
+#[cfg(feature = "egui")]
 use crate::info_views::{cluster_color, InfoViewRegistry};
+#[cfg(feature = "egui")]
+use crate::map2d::MapView;
 use crate::sim_bridge::SimState;
 use crate::terrain::{color_for_height, terrain_height, WORLD_SIZE};
 use crate::AttachMode;
 
-/// Minimap side length in UI pixels.
-pub const MINIMAP_SIZE: f32 = 200.0;
+fn civilian_faction_id(civilian: &AgentCivilian) -> u32 {
+    match civilian.alignment {
+        civ_agents::Alignment::Faction(faction) => faction,
+        _ => 0,
+    }
+}
+
+/// Minimap side length in UI pixels. Enlarged 1.8x (was 200) so the right-side
+/// holocron map reads as a prominent command-deck element, per user request.
+pub const MINIMAP_SIZE: f32 = 360.0;
 /// Minimap inset from the viewport edge (px).
 pub const MINIMAP_INSET: f32 = 8.0;
 const MINIMAP_WORLD_MIN: f32 = 0.0;
@@ -80,12 +91,15 @@ impl Plugin for MinimapPlugin {
         )
         .add_systems(
             Update,
+            (sync_minimap_viewport, teleport_camera_from_minimap),
+        );
+        #[cfg(feature = "egui")]
+        app.add_systems(
+            Update,
             (
                 sync_minimap_visibility,
                 sync_minimap_dots,
-                sync_minimap_viewport,
                 sync_overlay_tint,
-                teleport_camera_from_minimap,
             ),
         );
     }
@@ -95,12 +109,15 @@ impl Plugin for MinimapPlugin {
 /// loading) so the title screen renders clean. The minimap is Bevy UI (not
 /// egui), so it is gated by toggling [`Visibility`] on [`MinimapRoot`] rather
 /// than a `run_if` on a draw system.
+#[cfg(feature = "egui")]
 fn sync_minimap_visibility(
     mode: Res<crate::menus::GameUiMode>,
+    map_view: Option<Res<MapView>>,
     mut root: Query<&mut Visibility, With<MinimapRoot>>,
 ) {
     use crate::menus::GameUiMode;
-    let want = if matches!(*mode, GameUiMode::Playing | GameUiMode::Paused) {
+    let map_active = map_view.as_deref().is_some_and(|view| view.active);
+    let want = if matches!(*mode, GameUiMode::Playing | GameUiMode::Paused) && !map_active {
         Visibility::Inherited
     } else {
         Visibility::Hidden
@@ -108,6 +125,7 @@ fn sync_minimap_visibility(
     for mut vis in &mut root {
         if *vis != want {
             *vis = want;
+            info!("[minimap] visibility -> {:?} (mode={:?})", want, *mode);
         }
     }
 }
@@ -197,7 +215,7 @@ fn setup_minimap(
 ) {
     let terrain_tex = build_terrain_texture(&mut images);
 
-    commands
+    let root = commands
         .spawn((
             Node {
                 position_type: PositionType::Absolute,
@@ -272,7 +290,15 @@ fn setup_minimap(
                 MinimapViewport,
                 FocusPolicy::Pass,
             ));
-        });
+        })
+        .id();
+    // Diagnostic: prove the holocron minimap root node spawned at the expected
+    // size + anchor so a headless capture can confirm it exists (vs hidden /
+    // zero-size / behind the 3D).
+    info!(
+        "[minimap] spawned root={:?} size={}px inset={}px anchor=bottom-right",
+        root, MINIMAP_SIZE, MINIMAP_INSET
+    );
 }
 
 fn world_to_minimap_uv(position: Vec3) -> Vec2 {
@@ -290,7 +316,8 @@ fn minimap_uv_to_world(uv: Vec2) -> Vec3 {
 }
 
 fn civilian_color(civilian: &AgentCivilian) -> Color {
-    let hue = (civilian.faction as f32 * 85.0) % 360.0;
+    let faction = civilian_faction_id(civilian);
+    let hue = (faction as f32 * 85.0) % 360.0;
     Color::hsla(hue, 0.75, 0.58, 1.0)
 }
 
@@ -310,6 +337,7 @@ fn world_position_for_building(building: &Building) -> Vec3 {
     Vec3::new(building.position.x as f32, 0.0, building.position.y as f32)
 }
 
+#[cfg(feature = "egui")]
 fn sync_minimap_dots(
     attach: Res<AttachMode>,
     sim: Res<SimState>,
@@ -344,7 +372,9 @@ fn sync_minimap_dots(
             .iter()
         {
             let uv = world_to_minimap_uv(world_position_for_civilian(civilian, position));
-            let entry = cluster_acc.entry(civilian.faction).or_insert((Vec2::ZERO, 0));
+            let entry = cluster_acc
+                .entry(civilian_faction_id(civilian))
+                .or_insert((Vec2::ZERO, 0));
             entry.0 += uv;
             entry.1 += 1;
             parent.spawn((
@@ -441,6 +471,7 @@ fn sync_minimap_viewport(
 /// Reads the active overlay's legend mid-stop colour as a representative tint.
 /// Degrades gracefully: if no overlay is active (or the resource is absent) the
 /// tint is fully transparent.
+#[cfg(feature = "egui")]
 fn sync_overlay_tint(
     registry: Option<Res<InfoViewRegistry>>,
     mut tint: Query<&mut BackgroundColor, With<MinimapOverlayTint>>,

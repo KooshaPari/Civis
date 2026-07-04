@@ -318,8 +318,8 @@ pub fn tick(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::SeedableRng;
     use proptest::prelude::*;
+    use rand::SeedableRng;
 
     fn rng(seed: u64) -> ChaCha8Rng {
         ChaCha8Rng::seed_from_u64(seed)

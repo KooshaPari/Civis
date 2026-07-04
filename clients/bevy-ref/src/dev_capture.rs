@@ -4,6 +4,11 @@
 //! with a single `.add_plugins(DevCapturePlugin)` call from the standalone
 //! binary, but this file keeps the implementation isolated so the rest of the
 //! client stays untouched.
+//!
+//! Gated to `bevy + egui` because the snapshot/UI-mode types it reads come
+//! from the egui-gated `game_ui` and `menus` modules.
+
+#![cfg(all(feature = "bevy", feature = "egui"))]
 
 use bevy::input::keyboard::KeyboardInput;
 use bevy::input::mouse::{MouseButtonInput, MouseMotion, MouseWheel};

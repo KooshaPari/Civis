@@ -24,7 +24,6 @@ use crate::app::{
     default_law_db, AppState, RemoteModRegistry, RemoteModRegistryEntry, Snapshot, TerrainCache,
     AUTOSAVE_RING_MAX, REMOTE_FETCH_TIMEOUT, REMOTE_MOD_ARCHIVE_NAME,
 };
-use crate::snapshot::make_snapshot;
 use crate::mods_api::{
     format_remote_mod_validation_error, persist_remote_mod_cache, read_remote_mod_meta,
     remote_mod_cache_dir, repo_root, resolve_remote_cache_id, scan_mod_catalog,
@@ -33,6 +32,7 @@ use crate::mods_api::{
 };
 use crate::server::build_api_router;
 use crate::sim_worker::simulation_worker;
+use crate::snapshot::make_snapshot;
 use crate::terrain::{self, Terrain};
 
 fn test_state() -> AppState {

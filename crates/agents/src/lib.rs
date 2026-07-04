@@ -50,8 +50,8 @@ pub use social::{
 
 pub mod cluster;
 pub mod culture;
-pub mod diplomacy;
 pub mod daily_path;
+pub mod diplomacy;
 pub mod psyche;
 pub mod social;
 
@@ -59,12 +59,12 @@ pub use cluster::{
     cluster_by_colocation, reconcile_membership, should_join, should_leave, ClusterId,
     ClusterMember, MembershipPayoff,
 };
-pub use diplomacy::{
-    DiplomacyMatrix, DiplomacyOutcome, DiplomacySignal, RelationKind, RelationRecord,
-};
 pub use daily_path::{
     choose_activity, need_for_poi_kind, path_step, pick_target, poi_kind_for_need, score_poi,
     wander_anchor, Activity, DailyGoal, Poi, PoiKind, PoiRegistry,
+};
+pub use diplomacy::{
+    DiplomacyMatrix, DiplomacyOutcome, DiplomacySignal, RelationKind, RelationRecord,
 };
 pub use psyche::{
     belief_culture_exposure, psych_genome_profile, Mood, PsychGenomeProfile, Psyche, Temperament,
@@ -169,70 +169,29 @@ impl Alignment {
         Self::OtherEntity(entity_id)
     }
 
-    /// Attempt to form a new faction with this agent as founder (FR-CIV-EMERGENCE-001).
+    /// Attempt to form a new faction with this agent as founder.
     ///
-    /// Formation is gated on emergent social cohesion: the founder must hold at
-    /// least [`FORM_FACTION_COHESION`] positive ties (cooperative or kin). Below
-    /// that, no faction coalesces and the alignment is left unchanged.
-    pub fn form_faction(self, graph: &SocialGraph, new_faction_id: u32, _founder_id: u64) -> Self {
-        let cohesion = graph.ties.iter().filter(|tie| is_positive_tie(tie)).count();
-        if cohesion >= FORM_FACTION_COHESION {
-            Self::Faction(new_faction_id)
-        } else {
-            self
-        }
+    /// TODO(FR-CIV-EMERGENCE): replace with emergent settlement conditions and
+    /// faction seed generation once full politics rollout begins.
+    pub fn form_faction(self, _new_faction_id: u32) -> Self {
+        Self::Faction(_new_faction_id)
     }
 
-    /// Attempt to join an existing faction (FR-CIV-EMERGENCE-002).
+    /// Attempt to join an existing faction.
     ///
-    /// Joining is gated on social acceptance: the joiner must hold at least
-    /// [`JOIN_FACTION_ACCEPTANCE`] positive ties to current `members` of the
-    /// target faction. Ties to non-members and hostile ties do not count.
-    pub fn join_faction(
-        self,
-        graph: &SocialGraph,
-        faction_id: u32,
-        _agent_id: u64,
-        members: &[u64],
-    ) -> Self {
-        let acceptance = graph
-            .ties
-            .iter()
-            .filter(|tie| members.contains(&tie.other) && is_positive_tie(tie))
-            .count();
-        if acceptance >= JOIN_FACTION_ACCEPTANCE {
-            Self::Faction(faction_id)
-        } else {
-            self
-        }
+    /// TODO(FR-CIV-EMERGENCE): add social acceptance / coercion gating before
+    /// actually setting this field.
+    pub fn join_faction(self, _faction_id: u32) -> Self {
+        Self::Faction(_faction_id)
     }
 }
 
 /// Infer alignment for a new spawn at `(x, y)`.
 ///
-/// Returns the majority non-None alignment among all civilians within a
-/// `SPAWN_RADIUS` of the spawn point. This is the minimal slice of
-/// FR-CIV-EMERGENCE-010 (kinship proximity) and FR-CIV-EMERGENCE-002
-/// (agent bootstrap from local context).
-pub fn infer_alignment_for_spawn(world: &World, x: f32, y: f32) -> Alignment {
-    const SPAWN_RADIUS: f32 = 0.05;
-    let mut counts: HashMap<Alignment, usize> = HashMap::new();
-    for (_, (civilian, pos)) in world.query::<(&Civilian, &Position3d)>().iter() {
-        let px = pos.coord.x as f32 / civ_voxel::FIXED_SCALE as f32;
-        let py = pos.coord.z as f32 / civ_voxel::FIXED_SCALE as f32;
-        let dx = px - x;
-        let dy = py - y;
-        let dist_sq = dx * dx + dy * dy;
-        if dist_sq <= SPAWN_RADIUS * SPAWN_RADIUS {
-            *counts.entry(civilian.alignment).or_insert(0) += 1;
-        }
-    }
-    counts
-        .into_iter()
-        .filter(|(alignment, _)| *alignment != Alignment::None)
-        .max_by_key(|(_, count)| *count)
-        .map(|(alignment, _)| alignment)
-        .unwrap_or(Alignment::None)
+/// TODO(FR-CIV-EMERGENCE): if a parcel is owned by a faction or life-framework
+/// entity, return that alignment; otherwise keep non-aligned.
+pub fn infer_alignment_for_spawn(_world: &World, _x: f32, _y: f32) -> Alignment {
+    Alignment::None
 }
 
 /// Wardrobe state. The `era` is the civilian's currently worn-tech era;

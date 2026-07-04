@@ -16,9 +16,9 @@ mod institution;
 mod market;
 pub mod stocks;
 
-pub use allocation::{AllocationEngine, CapitalistAllocator};
-pub use extraction::{
-    find_extraction_site, tick_extraction, ExtractionSite, Extractor, ResourceKind,
+pub use allocation::{
+    allocate_by_priority, allocate_with, AllocationEngine, AllocationRegime, CapitalistAllocator,
+    JouleAllocator, PlannedAllocator, PriorityTier,
 };
 pub use institution::{
     collect_taxes, step_institutions, InstitutionAccount, InstitutionId, InstitutionKind,

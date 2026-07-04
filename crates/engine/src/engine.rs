@@ -4,13 +4,13 @@
 
 use civ_agents::{
     choose_activity, cluster_by_colocation, count_civilians, path_step, pick_target,
-    propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at,
-    wander_anchor, Activity, Civilian as AgentCivilian, ClusterMember, CohortStats, LodTier,
-    Needs, PoiKind, PoiRegistry, Position3d, Tools, Wardrobe,
+    propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at, wander_anchor,
+    Activity, Alignment, Civilian as AgentCivilian, ClusterMember, CohortStats, LodTier, Needs,
+    PoiKind, PoiRegistry, Position3d, Tools, Wardrobe,
 };
-use civ_economy::Stocks as ClusterStocks;
-use civ_needs::{
-    tick as needs_tick, DecayRates, Health as LifeHealth, HealthParams, Needs as LifeNeeds,
+use civ_agents::{
+    diplomacy::{DiplomacyMatrix, DiplomacySignal, GriefAccumulator, RelationKind},
+    ClusterId,
 };
 <<<<<<< HEAD
     choose_activity, cluster_by_colocation, count_civilians, path_step, pick_target,
@@ -26,11 +26,12 @@ use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_genetics::Dna;
 use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold};
 use civ_diffusion::DiffusionParams;
-use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
-use civ_economy::{collect_taxes, Taxation};
-use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold};
-use civ_genetics::Dna;
+use civ_economy::Stocks as ClusterStocks;
+use civ_economy::{EconomyState, MarketState};
 use civ_mod_host::ModHost;
+use civ_needs::{
+    tick as needs_tick, DecayRates, Health as LifeHealth, HealthParams, Needs as LifeNeeds,
+};
 use civ_planet::{
     compute_climate, compute_weather, defaults_earthlike, Climate, GeologyMap, MoonConfig,
     PlanetConfig, WeatherCell,
@@ -47,7 +48,8 @@ use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
+use std::collections::BTreeMap;
+use std::collections::{HashMap, HashSet};
 use std::ops::{Deref, DerefMut};
 
 use super::Fixed;
@@ -224,7 +226,7 @@ fn spawn_faction_civilians(world: &mut World, rng: &mut SimRng) {
 
     let scale = FIXED_SCALE as f32;
     let mut next_civilian_id = 1u64;
-    for (faction, (center_x, center_y)) in faction_capitals.into_iter().enumerate() {
+    for (center_x, center_y) in faction_capitals.into_iter() {
         for _ in 0..CIVILIANS_PER_FACTION {
             let grid_x = center_x + rng.gen_range(-QUADRANT_SPREAD..=QUADRANT_SPREAD);
             let grid_z = center_y + rng.gen_range(-QUADRANT_SPREAD..=QUADRANT_SPREAD);
@@ -233,7 +235,7 @@ fn spawn_faction_civilians(world: &mut World, rng: &mut SimRng) {
             spawn_civilian_at(
                 world,
                 next_civilian_id,
-                faction as u32,
+                civ_agents::infer_alignment_for_spawn(world, norm_x, norm_y),
                 norm_x,
                 norm_y,
                 civ_agents::ActorVisualKind::Humanoid,
@@ -454,6 +456,13 @@ pub struct Simulation {
     last_deaths: Vec<PopulationEvent>,
     pub last_life_deaths: u32,
     diplomacy_events: Vec<DiplomacyEvent>,
+    /// Continuous pairwise relation matrix (CIV-007). Keyed by canonical
+    /// `(ClusterId, ClusterId)` pairs; scores drift each tick from gradient
+    /// signals.  Macro states (Alliance/Trade/Neutral/Rivalry/War) are
+    /// read-off projections, not stored primary state.
+    pub diplomacy_matrix: DiplomacyMatrix,
+    /// Per-faction-pair grievance accumulator with exponential decay (CIV-007 §2.2).
+    pub grief_accumulator: GriefAccumulator,
     next_civilian_id: u64,
     research_cache: ResearchCache,
     belief: u64,
@@ -519,10 +528,10 @@ pub struct Simulation {
     cluster_stocks: BTreeMap<u64, ClusterStocks>,
     /// Number of emergent settlements (multi-member clusters) detected on the
     /// most recent [`Simulation::phase_life`] (FR-CIV-LIFE-030).
-    last_settlement_count: u32,
+    pub(crate) last_settlement_count: u32,
     /// Deaths attributed to unmet-need sickness on the most recent life phase
     /// (FR-CIV-LIFE-003); surfaced for the HUD.
-    last_life_deaths: u32,
+    pub(crate) last_life_deaths: u32,
     /// MOAT emergence: legends, psyche, culture, social, genetics, civ-ai.
     pub(crate) emergence: crate::emergence::EmergenceState,
 }
@@ -737,6 +746,8 @@ impl Simulation {
             last_deaths: Vec::new(),
             last_life_deaths: 0,
             diplomacy_events: Vec::new(),
+            diplomacy_matrix: DiplomacyMatrix::new(),
+            grief_accumulator: GriefAccumulator::new(),
             next_civilian_id: 1_000_000,
             research_cache: ResearchCache::default(),
             belief: 0,
@@ -828,6 +839,8 @@ impl Simulation {
             last_deaths: Vec::new(),
             last_life_deaths: 0,
             diplomacy_events: Vec::new(),
+            diplomacy_matrix: DiplomacyMatrix::new(),
+            grief_accumulator: GriefAccumulator::new(),
             next_civilian_id: 1_000_000,
             research_cache: ResearchCache::default(),
             belief: 0,
@@ -1041,6 +1054,63 @@ impl Simulation {
     #[must_use]
     pub fn faction_doctrines(&self) -> &[DoctrineLibrary] {
         &self.faction_doctrines
+    }
+
+    /// Count distinct faction IDs currently represented by civilian alignments.
+    ///
+    /// If no explicit civilian `Alignment::Faction` values are present, this
+    /// falls back to a deterministic heuristic over known factions in
+    /// `WorldState::factions` (for parity with the current partial emergence
+    /// implementation). If/when a dedicated `HeuristicFactionSet` becomes
+    /// available, it should replace this fallback.
+    pub fn faction_count(&self) -> u32 {
+        let explicit_faction_ids = self
+            .world
+            .query::<&AgentCivilian>()
+            .iter()
+            .filter_map(|(_, civilian)| match civilian.alignment {
+                civ_agents::Alignment::Faction(faction_id) => Some(faction_id),
+                _ => None,
+            })
+            .collect::<HashSet<_>>();
+
+        if !explicit_faction_ids.is_empty() {
+            return explicit_faction_ids.len() as u32;
+        }
+
+        self.state.factions.len() as u32
+    }
+
+    /// Return a deterministic representative alignment for the requested faction.
+    ///
+    /// The method first searches for explicit `Alignment::Faction` values among
+    /// live civilians. If none is found for `faction_id`, it returns a
+    /// deterministic rotated representative from `WorldState::factions` as a
+    /// heuristic fallback.
+    pub fn faction_alignment(&self, faction_id: u32) -> civ_agents::Alignment {
+        if let Some(alignment) =
+            self.world
+                .query::<&AgentCivilian>()
+                .iter()
+                .find_map(|(_, civilian)| match civilian.alignment {
+                    civ_agents::Alignment::Faction(fid) if fid == faction_id => {
+                        Some(civilian.alignment)
+                    }
+                    _ => None,
+                })
+        {
+            return alignment;
+        }
+
+        let mut registered_factions: Vec<u32> = self.state.factions.keys().copied().collect();
+        if registered_factions.is_empty() {
+            return Alignment::None;
+        }
+
+        registered_factions.sort_unstable();
+        let rotation = (self.state.rng_seed % registered_factions.len() as u64) as usize;
+        let fallback_index = (faction_id as usize + rotation) % registered_factions.len();
+        Alignment::with_faction(registered_factions[fallback_index])
     }
 
     /// Borrow the immutable planet config.
@@ -1347,27 +1417,59 @@ impl Simulation {
     /// phases can never drift apart. Exactly one [`ReplayEvent::Tick`] is appended
     /// after all phases finish.
     pub fn tick(&mut self) {
+        self.run_tick(None);
+    }
+
+    /// Like [`tick`](Self::tick) but records per-phase wall-clock timing into a
+    /// [`TickProfile`](crate::perf::TickProfile) for tick-budget enforcement
+    /// (FR-CORE-007). The timing path is observability only and never touches
+    /// simulation state, so `tick` and `tick_profiled` produce identical worlds
+    /// for identical inputs — the profile is purely a side-channel.
+    pub fn tick_profiled(&mut self) -> crate::perf::TickProfile {
+        let mut profile = crate::perf::TickProfile::default();
+        self.run_tick(Some(&mut profile));
+        profile
+    }
+
+    /// Shared tick body. When `profile` is `Some`, each phase is wall-clock
+    /// timed and recorded; when `None`, phases run with zero overhead (the
+    /// deterministic production path). Single phase list so the two entry points
+    /// can never drift.
+    fn run_tick(&mut self, mut profile: Option<&mut crate::perf::TickProfile>) {
         self.state.tick += 1;
         self.last_tick_combat_pulses.clear();
         self.last_tick_engagements.clear();
         self.last_tick_mod_lifecycle.clear();
 
-        // Phases in PHASE_ORDER (CIV-0001 partial)
-        self.phase_production();
-        self.phase_citizen_lifecycle();
-        self.phase_military();
-        self.phase_economy();
-        self.phase_planet();
+        // Run a phase, timing it only when profiling is active.
+        macro_rules! phase {
+            ($name:expr, $body:expr) => {{
+                if let Some(p) = profile.as_deref_mut() {
+                    let start = std::time::Instant::now();
+                    $body;
+                    p.record($name, start.elapsed().as_micros() as u64);
+                } else {
+                    $body;
+                }
+            }};
+        }
+
+        // Phases in PHASE_ORDER (CIV-0001).
+        phase!("production", self.phase_production());
+        phase!("citizen_lifecycle", self.phase_citizen_lifecycle());
+        phase!("military", self.phase_military());
+        phase!("economy", self.phase_economy());
+        phase!("planet", self.phase_planet());
         self.diplomacy_events.clear();
-        self.phase_diplomacy();
-        self.phase_tactics();
-        self.phase_voxel();
-        self.phase_compact();
-        self.phase_buildings();
-        self.phase_diffusion();
-        self.phase_disasters();
-        self.phase_life();
-        self.phase_emergence();
+        phase!("diplomacy", self.phase_diplomacy());
+        phase!("tactics", self.phase_tactics());
+        phase!("voxel", self.phase_voxel());
+        phase!("compact", self.phase_compact());
+        phase!("buildings", self.phase_buildings());
+        phase!("diffusion", self.phase_diffusion());
+        phase!("disasters", self.phase_disasters());
+        phase!("life", self.phase_life());
+        phase!("emergence", self.phase_emergence());
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]
@@ -1578,6 +1680,11 @@ impl Simulation {
     /// Tactics phase - evolve faction doctrines and apply queued voxel damage.
     fn phase_tactics(&mut self) {
         self.last_tick_voxel_damage_count = 0;
+        // CIV-006 (FR-CIV-WAR-003): combat damage inflicts population casualties.
+        // A mechanical/physical consequence (blast footprint · energy → deaths), so
+        // it is hardcoded rather than emergent. Stacks additively with lifecycle
+        // deaths booked in `phase_life`.
+        let mut combat_casualties: u64 = 0;
         let scale = FIXED_SCALE as f32;
         for event in self.pending_damage.drain(..) {
             let x = (event.center.x as f32 / scale).clamp(0.0, 1.0);
@@ -1594,6 +1701,12 @@ impl Simulation {
                 });
             }
             self.last_tick_voxel_damage_count += apply_damage(&mut self.voxel, &event);
+            combat_casualties =
+                combat_casualties.saturating_add(u64::from(event.estimated_casualties()));
+        }
+        // Deduct combat deaths from the living population (floored at zero).
+        if combat_casualties > 0 {
+            self.state.population = self.state.population.saturating_sub(combat_casualties);
         }
 
         const DOCTRINE_EVOLVE_MODULO: u64 = 64;
@@ -2370,7 +2483,10 @@ impl Simulation {
                 }
                 Activity::Wander => {
                     let mut local_rng = ChaCha8Rng::seed_from_u64(
-                        self.state.tick ^ civ.id ^ (pos.coord.x as u64).rotate_left(13) ^ (pos.coord.z as u64).rotate_left(29),
+                        self.state.tick
+                            ^ civ.id
+                            ^ (pos.coord.x as u64).rotate_left(13)
+                            ^ (pos.coord.z as u64).rotate_left(29),
                     );
                     if local_rng.gen_bool(0.65) {
                         let target_pos = wander_anchor(&pos, civ.id, self.state.tick);
@@ -2417,7 +2533,9 @@ impl Simulation {
         for (agent_id, cluster) in &assignments {
             *cluster_sizes.entry(cluster.0).or_insert(0) += 1;
             if let Some(&entity) = id_to_entity.get(agent_id) {
-                let _ = self.world.insert_one(entity, ClusterMember { cluster: *cluster });
+                let _ = self
+                    .world
+                    .insert_one(entity, ClusterMember { cluster: *cluster });
             }
         }
 
@@ -2505,12 +2623,8 @@ impl Simulation {
         }
 
         for (child_id, x, y) in births {
-            let _ = spawn_child_near(&mut self.world, child_id, 0, x, y, &mut self.rng);
-<<<<<<< HEAD
             let alignment = civ_agents::infer_alignment_for_spawn(&self.world, x, y);
             let _ = spawn_child_near(&mut self.world, child_id, alignment, x, y, &mut self.rng);
-=======
->>>>>>> 2c9bf0da (add save-db coverage tests)
             self.last_births.push(PopulationEvent {
                 tick: self.state.tick,
                 entity_id: child_id,
@@ -2643,47 +2757,307 @@ impl Simulation {
         }
     }
 
+    /// Emergent diplomacy phase — CIV-007.
+    ///
+    /// Replaces the old random coin-flip stub with a continuous relation-score
+    /// model driven by six live gradient signals (combat grievance, resource
+    /// competition, border friction, trade volume, need complementarity, energy
+    /// scarcity).  Macro states (Alliance / Trade / Neutral / Rivalry / War) are
+    /// read-off thresholds on the continuous score, not stored primary state.
+    ///
+    /// Runs **every tick** (≤ 10-tick cadence per spec §6).
     fn phase_diplomacy(&mut self) {
-        if self.state.tick % 500 != 0 {
-            return;
-        }
         self.diplomacy_events.clear();
+
         let faction_ids: Vec<u32> = self.state.factions.keys().copied().collect();
         if faction_ids.len() < 2 {
             return;
         }
-        let a = faction_ids[(self.state.tick as usize) % faction_ids.len()];
-        let b = faction_ids[((self.state.tick as usize) + 1) % faction_ids.len()];
-        let kind = if self.rng.gen_bool(0.6) {
-            DiplomacyKind::TradeAgreement
-        } else {
-            DiplomacyKind::Conflict
-        };
-        match kind {
-            DiplomacyKind::TradeAgreement => {
-                if let Some(v) = self.state.faction_treasury.get_mut(&a) {
-                    *v += Fixed::from_num(100);
-                }
-                if let Some(v) = self.state.faction_treasury.get_mut(&b) {
-                    *v += Fixed::from_num(100);
-                }
+
+        // ── Step 1: apply grievance decay and accumulate new engagements ────
+        self.grief_accumulator.tick_decay();
+        for eng in &self.last_tick_engagements {
+            if eng.shooter_faction != eng.target_faction {
+                self.grief_accumulator
+                    .add_engagement(eng.shooter_faction, eng.target_faction);
             }
-            DiplomacyKind::Conflict => {
-                if let Some(v) = self.state.faction_treasury.get_mut(&a) {
-                    *v -= Fixed::from_num(50);
-                }
-                if let Some(v) = self.state.faction_treasury.get_mut(&b) {
-                    *v -= Fixed::from_num(50);
-                }
-            }
-            DiplomacyKind::Peace => {}
         }
-        self.diplomacy_events.push(DiplomacyEvent {
-            tick: self.state.tick,
-            faction_a: a,
-            faction_b: b,
-            kind,
-        });
+
+        // ── Step 2: compute per-faction scarcity index ──────────────────────
+        // economy_state.energy_budget_joules is already a raw i64 (divided by SCALE
+        // from world Fixed; see phase_economy sync).
+        let total_budget_i64 = self.economy_state.energy_budget_joules;
+        let n_factions = faction_ids.len() as i64;
+        let per_faction_budget_i64 = if n_factions > 0 {
+            total_budget_i64 / n_factions
+        } else {
+            total_budget_i64
+        };
+        // Subsistence demand from tiered_demand (returns i64 tier allocations).
+        let subsistence_demand = {
+            let tiers = self.tiered_demand(total_budget_i64.max(1));
+            tiers[0].1.max(1)
+        };
+        let per_faction_subsistence = (subsistence_demand / n_factions.max(1)).max(1);
+
+        // Scarcity fraction ∈ [0, 1]: 0.0 = fully satisfied, 1.0 = empty.
+        let scarcity_fraction = |faction_id: u32| -> f32 {
+            // faction_resources.energy is a Fixed; convert to the same i64 scale
+            // as economy_state (raw / SCALE).
+            let energy_holding = self
+                .state
+                .faction_resources
+                .get(&faction_id)
+                .map(|r| r.energy.raw / crate::SCALE)
+                .unwrap_or(0);
+            let budget_share = per_faction_budget_i64 + energy_holding;
+            let fill = (budget_share as f32) / (per_faction_subsistence as f32);
+            1.0 - fill.clamp(0.0, 1.0)
+        };
+
+        // ── Step 3: compute faction cluster ids (faction_id → ClusterId) ──
+        // We use faction_id as the ClusterId directly via ClusterId(id as u64).
+        // This is consistent with the scaffold that maps factions to clusters.
+
+        // ── Step 4: compute signals for every faction pair and apply ─────────
+        let pairs: Vec<(u32, u32)> = {
+            let ids = &faction_ids;
+            let mut v = Vec::new();
+            for i in 0..ids.len() {
+                for j in (i + 1)..ids.len() {
+                    v.push((ids[i], ids[j]));
+                }
+            }
+            v
+        };
+
+        for (fa, fb) in pairs {
+            let cid_a = ClusterId(u64::from(fa));
+            let cid_b = ClusterId(u64::from(fb));
+
+            // --- trade_volume: sum TradeRoute.volume for routes between fa↔fb
+            let trade_volume: f32 = self
+                .state
+                .trade_routes
+                .iter()
+                .filter(|r| {
+                    (r.from_faction == fa && r.to_faction == fb)
+                        || (r.from_faction == fb && r.to_faction == fa)
+                })
+                .map(|r| r.volume.to_f64() as f32)
+                .sum::<f32>()
+                .max(0.0)
+                / 20.0; // normalise: route volumes ~10-20 → signal ∈ [0,1]
+
+            // --- resource_competition: cosine-like overlap of resource vectors
+            let competition: f32 = {
+                let ra = self.state.faction_resources.get(&fa);
+                let rb = self.state.faction_resources.get(&fb);
+                match (ra, rb) {
+                    (Some(ra), Some(rb)) => {
+                        let overlap = |a: Fixed, b: Fixed| -> f32 {
+                            let av = a.to_f64() as f32;
+                            let bv = b.to_f64() as f32;
+                            let av = av.max(0.0);
+                            let bv = bv.max(0.0);
+                            av.min(bv) / (av + bv + 1.0)
+                        };
+                        let food_c = overlap(ra.food, rb.food);
+                        let metal_c = overlap(ra.metal, rb.metal);
+                        let wood_c = overlap(ra.wood, rb.wood);
+                        let energy_c = overlap(ra.energy, rb.energy);
+                        (food_c + metal_c + wood_c + energy_c) / 4.0
+                    }
+                    _ => 0.0,
+                }
+            };
+
+            // --- proximity: fraction of cluster members co-located
+            // Pre-collect cluster sets per faction to avoid nested borrows.
+            let proximity: f32 = {
+                let mut clusters_a: HashSet<ClusterId> = HashSet::new();
+                let mut clusters_b: HashSet<ClusterId> = HashSet::new();
+                for (_, (civ, member)) in
+                    self.world.query::<(&AgentCivilian, &ClusterMember)>().iter()
+                {
+                    match civ.alignment {
+                        Alignment::Faction(fid) if fid == fa => {
+                            clusters_a.insert(member.cluster);
+                        }
+                        Alignment::Faction(fid) if fid == fb => {
+                            clusters_b.insert(member.cluster);
+                        }
+                        _ => {}
+                    }
+                }
+                let total_a = clusters_a.len() as f32;
+                let total_b = clusters_b.len() as f32;
+                let shared = clusters_a.intersection(&clusters_b).count() as f32;
+                let total = (total_a + total_b).max(1.0);
+                (shared / total).clamp(0.0, 1.0)
+            };
+
+            // --- combat_grievance from accumulator
+            let grievance = self.grief_accumulator.get(fa, fb).clamp(0.0, 1.0);
+
+            // --- need_complementarity: A-surplus matches B-deficit
+            let complementarity: f32 = {
+                let ra = self.state.faction_resources.get(&fa);
+                let rb = self.state.faction_resources.get(&fb);
+                match (ra, rb) {
+                    (Some(ra), Some(rb)) => {
+                        let complement_pair = |a: Fixed, b: Fixed| -> f32 {
+                            let av = (a.to_f64() as f32).max(0.0);
+                            let bv = (b.to_f64() as f32).max(0.0);
+                            let sum = av + bv + 1.0;
+                            // High when one is high and the other is low
+                            (av - bv).abs() / sum
+                        };
+                        let food_c = complement_pair(ra.food, rb.food);
+                        let metal_c = complement_pair(ra.metal, rb.metal);
+                        let wood_c = complement_pair(ra.wood, rb.wood);
+                        (food_c + metal_c + wood_c) / 3.0
+                    }
+                    _ => 0.0,
+                }
+            };
+
+            // --- scarcity_pressure: both scarce → positive (competition sharpens)
+            //     one surplus → negative (pull toward cooperation)
+            let scarcity: f32 = {
+                let sa = scarcity_fraction(fa);
+                let sb = scarcity_fraction(fb);
+                // Both scarce: positive pressure; one surplus: negative pressure
+                sa * sb - (1.0 - sa) * (1.0 - sb) * 0.5
+            };
+
+            let signal = DiplomacySignal {
+                resource_competition: competition,
+                trade_volume,
+                proximity,
+                combat_grievance: grievance,
+                need_complementarity: complementarity,
+                scarcity_pressure: scarcity,
+            };
+
+            let outcome = self.diplomacy_matrix.apply_signal(cid_a, cid_b, signal);
+
+            // ── Step 5: war → trade route suppression (CIV-007 §2.4) ────────
+            if outcome.after == RelationKind::War {
+                for route in self.state.trade_routes.iter_mut() {
+                    if (route.from_faction == fa && route.to_faction == fb)
+                        || (route.from_faction == fb && route.to_faction == fa)
+                    {
+                        route.volume = Fixed::ZERO;
+                    }
+                }
+            }
+
+            // ── Step 6: emit DiplomacyEvent on RelationKind transitions ────
+            if outcome.before != outcome.after {
+                let kind = match outcome.after {
+                    RelationKind::Alliance | RelationKind::Trade => DiplomacyKind::TradeAgreement,
+                    RelationKind::War | RelationKind::Rivalry => DiplomacyKind::Conflict,
+                    RelationKind::Neutral => DiplomacyKind::Peace,
+                };
+                self.diplomacy_events.push(DiplomacyEvent {
+                    tick: self.state.tick,
+                    faction_a: fa,
+                    faction_b: fb,
+                    kind,
+                });
+            }
+        }
+    }
+
+    /// Split an aggregate energy `total` into the four consumer priority tiers
+    /// (FR-ECON-005, CIV-002), highest-priority first. The *ordering* is a
+    /// survival floor (subsistence before luxury) — defensible to hardcode under
+    /// the Civis Emergence Charter — while the *share* each tier receives is
+    /// derived from the population's live need pressure so culture/preference is
+    /// not baked in.
+    ///
+    /// Tier→need mapping (Maslow / Stone-Geary linear-expenditure grounding):
+    /// - `Subsistence` = food + water + health (physiological survival).
+    /// - `Basic` = rest + safety (security).
+    /// - `Comfort` = social (belonging).
+    /// - `Luxury` = residual headroom above satiated needs (supernumerary income
+    ///   in Stone-Geary terms) — first cut under scarcity.
+    ///
+    /// Weighting: each tier's weight is the population's aggregate *unmet*
+    /// pressure for its needs (`1 - satisfaction`, summed) — more starvation ⇒
+    /// larger subsistence share. Pressure is converted to integer basis points
+    /// deterministically (no `f32` survives into the returned `i64` split), so
+    /// replay equality is preserved. When there are no citizens/needs to sample,
+    /// a fixed survival-floor baseline (50/25/15/10 — physiological-heavy, a
+    /// documented floor, not a culture knob) is used.
+    ///
+    /// The four returned demands sum to `total` (remainder assigned to the
+    /// lowest tier so the budget is never silently lost).
+    fn tiered_demand(&self, total: i64) -> [(civ_economy::PriorityTier, i64); 4] {
+        use civ_economy::PriorityTier;
+        if total <= 0 {
+            return [
+                (PriorityTier::Subsistence, 0),
+                (PriorityTier::Basic, 0),
+                (PriorityTier::Comfort, 0),
+                (PriorityTier::Luxury, 0),
+            ];
+        }
+
+        // Aggregate unmet need pressure across all living citizens. Pressure is
+        // quantised to integer milli-units (`1 - satisfaction`, scaled ×1000)
+        // immediately so the persisted/replayed path carries no f32.
+        let mut subsist_p: i64 = 0; // food + water + health
+        let mut basic_p: i64 = 0; // rest + safety
+        let mut comfort_p: i64 = 0; // social
+        let mut n: i64 = 0;
+        let unmet = |s: f32| -> i64 { ((1.0 - s.clamp(0.0, 1.0)) * 1000.0) as i64 };
+        for (_e, needs) in self.world.query::<&LifeNeeds>().iter() {
+            subsist_p += unmet(needs.food) + unmet(needs.water) + unmet(needs.health);
+            basic_p += unmet(needs.rest) + unmet(needs.safety);
+            comfort_p += unmet(needs.social);
+            n += 1;
+        }
+
+        // Tier weights in basis points (sum 10_000). Subsistence carries a hard
+        // floor (5_000 bps) regardless of measured pressure — the survival floor
+        // the charter permits us to hardcode; the remaining 5_000 bps are split
+        // by live pressure (or the baseline split when no pressure data exists).
+        const SUBSIST_FLOOR_BPS: i64 = 5_000;
+        const LUX_BASELINE_BPS: i64 = 1_000;
+        // Luxury bps is the residual (10_000 − others), so only three are bound.
+        let (sub_bps, basic_bps, comfort_bps) = if n == 0 {
+            // No citizens: documented survival-floor baseline 50/25/15(/10 lux).
+            (5_000, 2_500, 1_500)
+        } else {
+            let pressure_total = subsist_p + basic_p + comfort_p;
+            let headroom = 10_000 - SUBSIST_FLOOR_BPS - LUX_BASELINE_BPS; // 4_000
+            if pressure_total == 0 {
+                // Everyone sated: minimal subsistence pull, surplus flows down to
+                // comfort/luxury (Stone-Geary supernumerary spend).
+                (SUBSIST_FLOOR_BPS, 1_500, 2_000)
+            } else {
+                let sub_extra = subsist_p.saturating_mul(headroom) / pressure_total;
+                let basic_extra = basic_p.saturating_mul(headroom) / pressure_total;
+                let comfort_extra = comfort_p.saturating_mul(headroom) / pressure_total;
+                (SUBSIST_FLOOR_BPS + sub_extra, basic_extra, comfort_extra)
+            }
+        };
+
+        // Convert bps → joule demands; remainder to Luxury (lowest tier) so the
+        // full `total` is distributed and conservation holds.
+        let sub_d = total.saturating_mul(sub_bps) / 10_000;
+        let basic_d = total.saturating_mul(basic_bps) / 10_000;
+        let comfort_d = total.saturating_mul(comfort_bps) / 10_000;
+        // Luxury is the residual (LUX_BASELINE_BPS is the implicit floor within it).
+        let lux_d = total - sub_d - basic_d - comfort_d;
+        [
+            (PriorityTier::Subsistence, sub_d),
+            (PriorityTier::Basic, basic_d),
+            (PriorityTier::Comfort, comfort_d),
+            (PriorityTier::Luxury, lux_d.max(0)),
+        ]
     }
 
     /// Policy phase — read the active [`Policy`] for the current tick and
@@ -2720,7 +3094,16 @@ impl Simulation {
 
         let demand = crate::policy::effective_consumption(self.economy_policy) as i64;
         let budget = self.economy_state.energy_budget_joules;
-        let allocated = CapitalistAllocator.allocate(budget, demand);
+        // Split aggregate demand into subsistence-first priority tiers (FR-ECON-005,
+        // CIV-002) and ration the scarce budget highest-priority-first: subsistence
+        // is filled before luxury, and luxury is starved first under scarcity.
+        let tiers = self.tiered_demand(demand);
+        let granted = civ_economy::allocate_by_priority(
+            &civ_economy::CapitalistAllocator,
+            budget,
+            &tiers,
+        );
+        let allocated: i64 = granted.iter().sum();
         civ_economy::drain_energy_budget(&mut self.economy_state, allocated);
         civ_economy::step(&mut self.economy_state);
 
@@ -2862,6 +3245,19 @@ impl Simulation {
     pub fn cluster_stocks(&self) -> &BTreeMap<u64, ClusterStocks> {
         &self.cluster_stocks
     }
+
+    /// Immutable borrow of the emergent diplomacy relation matrix (CIV-007).
+    #[must_use]
+    pub fn diplomacy_matrix(&self) -> &DiplomacyMatrix {
+        &self.diplomacy_matrix
+    }
+
+    /// Shannon trust-entropy over the five `RelationKind` buckets (CIV-007 §4.3).
+    /// Target operating range: `[1.5, 2.1]`.
+    #[must_use]
+    pub fn diplomacy_trust_entropy(&self) -> f32 {
+        self.diplomacy_matrix.trust_entropy()
+    }
 }
 
 fn route_resource(goods: &str) -> ResourceType {
@@ -2966,6 +3362,7 @@ pub struct SimulationSnapshot {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use civ_economy::{AllocationEngine, CapitalistAllocator};
     use crate::lod::{should_tick_entity_with_policy, LodPolicy};
     use crate::replay::{ReplayEvent, ReplayLog};
     use civ_agents::{count_civilians, LodTier, Wardrobe};
@@ -2996,6 +3393,25 @@ mod tests {
         let mut sim = Simulation::new();
         sim.tick();
         assert_eq!(sim.state.tick, 1);
+    }
+
+    /// FR-CORE-007 — `tick_profiled` records every phase and advances the tick
+    /// exactly like `tick` (the profile is a side-channel, not sim state).
+    #[test]
+    fn tick_profiled_records_all_phases() {
+        let mut sim = Simulation::with_seed(1);
+        let profile = sim.tick_profiled();
+        assert_eq!(sim.state.tick, 1, "tick_profiled advances the tick");
+        // 14 phases run through the `phase!` macro.
+        assert_eq!(profile.phases.len(), 14, "all phases recorded");
+        // Total is the sum of recorded phases.
+        let sum: u64 = profile.phases.iter().map(|&(_, m)| m).sum();
+        assert_eq!(profile.total_micros, sum);
+        // Phase names are present and stable.
+        let names: Vec<&str> = profile.phases.iter().map(|&(n, _)| n).collect();
+        assert_eq!(names[0], "production");
+        assert!(names.contains(&"economy"));
+        assert_eq!(names[names.len() - 1], "emergence");
     }
 
     /// FR-CORE-001 — each `Simulation::tick()` appends exactly one `ReplayEvent::Tick`.
@@ -3367,9 +3783,16 @@ mod tests {
         }
         // Every agent civilian now carries the civ-needs Needs + Health.
         let agents = sim.world.query::<&AgentCivilian>().iter().count();
-        let with_needs = sim.world.query::<(&AgentCivilian, &LifeNeeds)>().iter().count();
+        let with_needs = sim
+            .world
+            .query::<(&AgentCivilian, &LifeNeeds)>()
+            .iter()
+            .count();
         assert!(agents > 0);
-        assert_eq!(agents, with_needs, "all agents must have life needs attached");
+        assert_eq!(
+            agents, with_needs,
+            "all agents must have life needs attached"
+        );
 
         let snap = sim.snapshot();
         // Settlement count is exposed (emergent clusters; may be zero early).
@@ -3605,6 +4028,46 @@ mod tests {
             "removal count exceeded chunk total: {removed}"
         );
         assert!(sim.pending_damage.is_empty());
+    }
+
+    /// CIV-006 / FR-CIV-WAR-003 — combat damage deducts personnel casualties
+    /// from the living population (blast footprint · energy → deaths).
+    #[test]
+    fn phase_tactics_combat_casualties_reduce_population() {
+        let mut sim = Simulation::with_seed(7);
+        sim.state.population = 1000;
+        // r=4, energy=200 → footprint 3·16=48, casualties = 48·200/256 = 37.
+        let event = DamageEvent {
+            center: WorldCoord { x: 8, y: 8, z: 8 },
+            radius_voxels: 4,
+            energy: 200,
+        };
+        let expected = event.estimated_casualties() as u64;
+        assert_eq!(expected, 37, "casualty model drifted");
+        sim.push_damage(event);
+
+        sim.phase_tactics();
+
+        assert_eq!(
+            sim.state.population,
+            1000 - expected,
+            "combat casualties must reduce population"
+        );
+        assert!(sim.pending_damage.is_empty(), "damage events drained");
+    }
+
+    /// CIV-006 — population deduction is floored at zero (never underflows).
+    #[test]
+    fn phase_tactics_casualties_floor_population_at_zero() {
+        let mut sim = Simulation::with_seed(7);
+        sim.state.population = 5;
+        sim.push_damage(DamageEvent {
+            center: WorldCoord { x: 8, y: 8, z: 8 },
+            radius_voxels: 12,
+            energy: 10_000,
+        });
+        sim.phase_tactics();
+        assert_eq!(sim.state.population, 0, "population floors at zero");
     }
 
     /// FR-CIV-ENGINE-INT-003 — compact runs every 64 ticks and the uniform
@@ -4247,8 +4710,7 @@ mod tests {
         let planet_s = *sim_s.planet();
         let moon_s = *sim_s.moon();
         sim_s.climate = compute_climate(summer_tick, &planet_s, &moon_s);
-        sim_s.weather_grid =
-            compute_weather(&sim_s.climate, summer_tick, 16);
+        sim_s.weather_grid = compute_weather(&sim_s.climate, summer_tick, 16);
         let snap_summer = sim_s.snapshot();
 
         let mut sim_w = Simulation::with_seed(0);
@@ -4256,8 +4718,7 @@ mod tests {
         let planet_w = *sim_w.planet();
         let moon_w = *sim_w.moon();
         sim_w.climate = compute_climate(winter_tick, &planet_w, &moon_w);
-        sim_w.weather_grid =
-            compute_weather(&sim_w.climate, winter_tick, 16);
+        sim_w.weather_grid = compute_weather(&sim_w.climate, winter_tick, 16);
         let snap_winter = sim_w.snapshot();
 
         let summer_temp = snap_summer.weather_grid[equatorial_idx].temp_c_fp;
@@ -4269,11 +4730,311 @@ mod tests {
         );
 
         // Determinism: re-running the same ticks must produce identical grids.
-        let summer_grid_2 =
-            compute_weather(&sim_s.climate, summer_tick, 16);
+        let summer_grid_2 = compute_weather(&sim_s.climate, summer_tick, 16);
         assert_eq!(
             snap_summer.weather_grid, summer_grid_2,
             "weather grid must be deterministic across re-runs"
+        );
+    }
+
+    /// FR-ECON-005 / CIV-002 — the tiered split never demands more than the
+    /// aggregate total (conservation: shares partition the budget exactly).
+    #[test]
+    fn tiered_demand_partitions_total() {
+        let sim = Simulation::with_seed(5);
+        for total in [0i64, 1, 1_000, 5_000_000_000] {
+            let tiers = sim.tiered_demand(total);
+            let sum: i64 = tiers.iter().map(|(_, d)| *d).sum();
+            assert_eq!(sum, total, "tier demands must sum to total ({total})");
+            assert!(tiers.iter().all(|(_, d)| *d >= 0), "no negative demand");
+            // Subsistence is the highest-priority tier and (by floor) gets a
+            // non-trivial share when there is anything to allocate.
+            if total > 10_000 {
+                assert!(
+                    tiers[0].1 >= total / 2,
+                    "subsistence honors its survival floor (>=50%)"
+                );
+            }
+        }
+    }
+
+    /// FR-ECON-005 / CIV-002 — under scarcity the priority allocator fills
+    /// subsistence before luxury (luxury starves first).
+    #[test]
+    fn tiered_allocation_fills_subsistence_before_luxury() {
+        let sim = Simulation::with_seed(5);
+        let total = 1_000_000i64;
+        let tiers = sim.tiered_demand(total);
+        // Budget covers only the subsistence tier's demand.
+        let budget = tiers[0].1;
+        let granted =
+            civ_economy::allocate_by_priority(&CapitalistAllocator, budget, &tiers);
+        assert_eq!(granted[0], tiers[0].1, "subsistence fully met");
+        assert_eq!(granted[3], 0, "luxury starved under scarcity");
+        let total_granted: i64 = granted.iter().sum();
+        assert!(total_granted <= budget, "never exceeds budget");
+    }
+
+    /// FR-ECON-005 / CIV-002 — a zero budget grants nothing across all tiers.
+    #[test]
+    fn tiered_allocation_zero_budget_grants_nothing() {
+        let sim = Simulation::with_seed(5);
+        let tiers = sim.tiered_demand(1_000_000);
+        let granted = civ_economy::allocate_by_priority(&CapitalistAllocator, 0, &tiers);
+        assert_eq!(granted.iter().sum::<i64>(), 0);
+        assert!(granted.iter().all(|&g| g == 0));
+    }
+
+    // ── CIV-007 Emergent Diplomacy behavior tests ────────────────────────────
+
+    /// CIV-007 — sustained combat engagements push the relation score negative
+    /// (war→grievance→r falls feedback).
+    #[test]
+    fn diplomacy_war_drives_score_negative() {
+        use civ_agents::diplomacy::{DiplomacyMatrix, DiplomacySignal, RelationKind};
+        use civ_agents::ClusterId;
+
+        let mut matrix = DiplomacyMatrix::new();
+        let a = ClusterId(0);
+        let b = ClusterId(1);
+
+        // Inject pure combat-grievance signal for 30 ticks.
+        let mut last_score = 0.0_f32;
+        for _ in 0..30 {
+            let outcome = matrix.apply_signal(
+                a,
+                b,
+                DiplomacySignal {
+                    combat_grievance: 1.0,
+                    ..Default::default()
+                },
+            );
+            last_score = outcome.score;
+        }
+
+        assert!(
+            last_score < -0.60,
+            "30 ticks of grievance should push score into War territory, got {last_score}"
+        );
+        assert_eq!(
+            matrix.relation(a, b),
+            RelationKind::War,
+            "score {last_score} should map to War"
+        );
+    }
+
+    /// CIV-007 — resource scarcity (high competition) raises rivalry between
+    /// factions without any explicit combat.
+    #[test]
+    fn diplomacy_resource_scarcity_raises_rivalry() {
+        use civ_agents::diplomacy::{DiplomacyMatrix, DiplomacySignal, RelationKind};
+        use civ_agents::ClusterId;
+
+        let mut matrix = DiplomacyMatrix::new();
+        let a = ClusterId(10);
+        let b = ClusterId(20);
+
+        for _ in 0..20 {
+            matrix.apply_signal(
+                a,
+                b,
+                DiplomacySignal {
+                    resource_competition: 1.0,
+                    proximity: 0.8,
+                    ..Default::default()
+                },
+            );
+        }
+
+        let record = matrix.record(a, b).expect("record present");
+        assert!(
+            record.score <= -0.20,
+            "resource + proximity should push into Rivalry or War, got {}",
+            record.score
+        );
+        let kind = matrix.relation(a, b);
+        assert!(
+            matches!(kind, RelationKind::Rivalry | RelationKind::War),
+            "expected Rivalry or War, got {kind:?}"
+        );
+    }
+
+    /// CIV-007 — sustained war followed by halted engagements → score recovers
+    /// toward neutral (attrition + exhaustion: grievance decays, score drifts up).
+    #[test]
+    fn diplomacy_war_attrition_exhaustion_recovers() {
+        use civ_agents::diplomacy::{GriefAccumulator, DiplomacyMatrix, DiplomacySignal};
+        use civ_agents::ClusterId;
+
+        let mut matrix = DiplomacyMatrix::new();
+        let mut grief = GriefAccumulator::new();
+        let a = ClusterId(3);
+        let b = ClusterId(4);
+
+        // Phase 1: sustained war (50 ticks of grievance engagements).
+        for _ in 0..50 {
+            grief.add_engagement(3, 4);
+            grief.tick_decay();
+            let g = grief.get(3, 4);
+            matrix.apply_signal(
+                a,
+                b,
+                DiplomacySignal {
+                    combat_grievance: g,
+                    ..Default::default()
+                },
+            );
+        }
+        let war_score = matrix.record(a, b).expect("record").score;
+        assert!(war_score < -0.20, "should be at least Rivalry after war phase, got {war_score}");
+
+        // Phase 2: engagements stop — only grievance decay, no new signals.
+        // Score should drift upward (toward zero) over 200 ticks.
+        for _ in 0..200 {
+            grief.tick_decay();
+            let g = grief.get(3, 4);
+            matrix.apply_signal(
+                a,
+                b,
+                DiplomacySignal {
+                    combat_grievance: g,
+                    ..Default::default()
+                },
+            );
+        }
+        let recovery_score = matrix.record(a, b).expect("record").score;
+        assert!(
+            recovery_score > war_score,
+            "score should recover after engagements stop: war={war_score}, recovery={recovery_score}"
+        );
+    }
+
+    /// CIV-007 — zero-input (no signals) leaves score stable at initial 0.0.
+    #[test]
+    fn diplomacy_zero_input_leaves_score_stable() {
+        use civ_agents::diplomacy::{DiplomacyMatrix, DiplomacySignal};
+        use civ_agents::ClusterId;
+
+        let mut matrix = DiplomacyMatrix::new();
+        let a = ClusterId(5);
+        let b = ClusterId(6);
+
+        // Neutral start — apply zero-signal 100 times.
+        for _ in 0..100 {
+            matrix.apply_signal(a, b, DiplomacySignal::default());
+        }
+
+        let record = matrix.record(a, b).expect("record");
+        assert!(
+            record.score.abs() < 1e-5,
+            "zero-input should leave score stable at ~0.0, got {}",
+            record.score
+        );
+    }
+
+    /// CIV-007 — score is always clamped to [-1.0, 1.0] under extreme inputs.
+    #[test]
+    fn diplomacy_score_clamped_under_extremes() {
+        use civ_agents::diplomacy::{DiplomacyMatrix, DiplomacySignal};
+        use civ_agents::ClusterId;
+
+        let mut matrix = DiplomacyMatrix::new();
+        let a = ClusterId(7);
+        let b = ClusterId(8);
+
+        // Extreme positive push.
+        for _ in 0..200 {
+            matrix.apply_signal(
+                a,
+                b,
+                DiplomacySignal {
+                    trade_volume: 100.0,
+                    need_complementarity: 100.0,
+                    ..Default::default()
+                },
+            );
+        }
+        let score = matrix.record(a, b).expect("record").score;
+        assert!((-1.0..=1.0).contains(&score), "score must stay in [-1,1], got {score}");
+        assert!((score - 1.0).abs() < 1e-4, "extreme positive should saturate at 1.0, got {score}");
+
+        // Reset and extreme negative push.
+        let mut matrix2 = DiplomacyMatrix::new();
+        for _ in 0..200 {
+            matrix2.apply_signal(
+                a,
+                b,
+                DiplomacySignal {
+                    combat_grievance: 100.0,
+                    resource_competition: 100.0,
+                    scarcity_pressure: 100.0,
+                    ..Default::default()
+                },
+            );
+        }
+        let score2 = matrix2.record(a, b).expect("record").score;
+        assert!((-1.0..=1.0).contains(&score2), "score must stay in [-1,1], got {score2}");
+        assert!((score2 + 1.0).abs() < 1e-4, "extreme negative should saturate at -1.0, got {score2}");
+    }
+
+    /// CIV-007 — phase_diplomacy runs every tick (not gated on tick%500).
+    #[test]
+    fn phase_diplomacy_runs_every_tick() {
+        let mut sim = Simulation::with_seed(42);
+        // After one tick the matrix should have records for all 3 faction pairs.
+        sim.tick();
+        let snapshot = sim.diplomacy_matrix.snapshot();
+        assert_eq!(
+            snapshot.len(),
+            3,
+            "all 3 faction pairs should have a relation record after one tick"
+        );
+    }
+
+    /// CIV-007 — trust entropy is in the valid [0, log2(5)] range.
+    #[test]
+    fn diplomacy_trust_entropy_in_valid_range() {
+        let mut sim = Simulation::with_seed(7);
+        for _ in 0..50 {
+            sim.tick();
+        }
+        let h = sim.diplomacy_trust_entropy();
+        assert!(
+            (0.0..=2.33).contains(&h),
+            "trust entropy must be in [0, log2(5)≈2.32], got {h}"
+        );
+    }
+
+    /// CIV-007 — GriefAccumulator decays correctly and grievance accumulates.
+    #[test]
+    fn grief_accumulator_decays_and_accumulates() {
+        use civ_agents::diplomacy::GriefAccumulator;
+
+        let mut grief = GriefAccumulator::new();
+
+        // Add engagements and verify accumulation.
+        grief.add_engagement(0, 1);
+        grief.add_engagement(0, 1);
+        let after_add = grief.get(0, 1);
+        assert!(
+            after_add > 0.0,
+            "grievance should be positive after engagements, got {after_add}"
+        );
+
+        // Decay should reduce the value.
+        let before = grief.get(0, 1);
+        grief.tick_decay();
+        let after = grief.get(0, 1);
+        assert!(after < before, "decay should reduce grievance: before={before}, after={after}");
+
+        // Many decay ticks should approach zero.
+        for _ in 0..1000 {
+            grief.tick_decay();
+        }
+        let near_zero = grief.get(0, 1);
+        assert!(
+            near_zero < 1e-4,
+            "grievance should decay near zero after 1000 ticks, got {near_zero}"
         );
     }
 }

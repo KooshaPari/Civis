@@ -7,9 +7,9 @@ use bevy::prelude::*;
 use bevy::ui::FocusPolicy;
 use civ_voxel::ChunkId;
 
-use civ_protocol_3d::BuildingProvenance;
 use crate::minimap::MinimapDot;
 use crate::{chunk_to_minimap_uv, decode_chunk_id, world_xz_to_minimap_uv, MinimapBounds};
+use civ_protocol_3d::BuildingProvenance;
 
 /// Re-export building provenance tint from [`live_stream`](crate::live_stream).
 pub use crate::live_stream::building_minimap_dot_color;
@@ -125,10 +125,7 @@ pub fn minimap_bounds_from_keys(chunk_keys: &[u64]) -> Option<MinimapBounds> {
 pub fn chunk_centre_world_xz(chunk_id: ChunkId, chunk_edge: usize) -> (f32, f32) {
     let (cx, _cy, cz) = decode_chunk_id(chunk_id);
     let edge = chunk_edge as f32;
-    (
-        (cx as f32 + 0.5) * edge,
-        (cz as f32 + 0.5) * edge,
-    )
+    ((cx as f32 + 0.5) * edge, (cz as f32 + 0.5) * edge)
 }
 
 /// UV for a chunk centre within chunk-grid `bounds`.

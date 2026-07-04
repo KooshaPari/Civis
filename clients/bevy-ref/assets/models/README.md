@@ -13,7 +13,8 @@ sources (Quaternius / Kenney — public-domain / CC0):
 
 | File            | Replaces            | Loaded as              |
 | --------------- | ------------------- | ---------------------- |
-| `civilian.glb`  | capsule civilian    | `GltfAssetLabel::Scene(0)` |
+| `civilian.glb`  | townsperson / farmer| `GltfAssetLabel::Scene(0)` |
+| `herd.glb`      | herd / quadruped    | `GltfAssetLabel::Scene(0)` |
 | `tree.glb`      | cone tree decoration| `GltfAssetLabel::Scene(0)` |
 | `building.glb`  | cuboid building     | `GltfAssetLabel::Scene(0)` |
 | `road.glb`      | road tile           | `GltfAssetLabel::Scene(0)` |
@@ -45,6 +46,7 @@ are **not yet referenced** by `src/gltf_models.rs` (owned elsewhere); add new
 | `rock_c.glb`                    | nature      | KayKit `rock_single_C`        |
 | `creature_skeleton_minion.glb`  | creature    | KayKit `Skeleton_Minion`      |
 | `creature_skeleton_warrior.glb` | creature    | KayKit `Skeleton_Warrior`     |
+| `herd.glb`                      | fauna       | Quaternius mirror `Horse`      |
 | `cart_wheelbarrow.glb`          | vehicle     | KayKit `wheelbarrow`          |
 | `boat.glb`                      | vehicle     | Quaternius Pirate Kit (manual drop — see LICENSE.txt) |
 

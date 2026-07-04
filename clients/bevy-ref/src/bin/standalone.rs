@@ -3,6 +3,8 @@
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
+#[cfg(feature = "voxel")]
+use civ_bevy_ref::ocean::OceanPlugin;
 use civ_bevy_ref::{
     atmosphere::{animate_water, setup_atmosphere, update_lighting, DayNightCycle},
     camera::{camera_input, update_camera, CameraRig},
@@ -44,27 +46,47 @@ fn main() {
         }));
     }
 
+    // Build-identity banner: print on EVERY launch so it is provable which build
+    // is actually running (not trusting binary mtime). `CIVIS_GIT_HASH` /
+    // `CIVIS_BUILD_TIME` are injected at compile time by the build/deploy script
+    // when available; they fall back to "dev"/"unknown" for a plain `cargo run`.
+    eprintln!(
+        "[civis] build v{} git={} built={} feat=voxel,models,egui",
+        env!("CARGO_PKG_VERSION"),
+        option_env!("CIVIS_GIT_HASH").unwrap_or("dev"),
+        option_env!("CIVIS_BUILD_TIME").unwrap_or("unknown"),
+    );
+
     let attach_mode = resolve_attach_mode_from_env();
     let window_title = match attach_mode {
         AttachMode::Standalone => "Civis — Bevy standalone".to_string(),
         AttachMode::Server => "Civis — Bevy standalone (live attach)".to_string(),
     };
 
+    let default_plugins = DefaultPlugins
+        .set(WindowPlugin {
+            primary_window: Some(Window {
+                title: window_title,
+                ..default()
+            }),
+            ..default()
+        })
+        .set(native_render_plugin())
+        // `DefaultPlugins` includes Bevy's built-in `AudioPlugin`. When Civis
+        // enables the `audio` feature, `CivisAudioPlugin` adds
+        // `bevy_kira_audio::AudioPlugin`, which registers its own loaders for
+        // audio extensions. Keeping both stacks produces Bevy's "Multiple
+        // AssetLoaders found" warning; Kira owns audio here.
+        .build();
+
+    #[cfg(feature = "audio")]
+    let default_plugins = default_plugins.disable::<bevy::audio::AudioPlugin>();
+
     let mut app = App::new();
     app.insert_resource(DayNightCycle::default())
         .insert_resource(CameraRig::default())
         .insert_resource(attach_mode)
-        .add_plugins(
-            DefaultPlugins
-                .set(WindowPlugin {
-                    primary_window: Some(Window {
-                        title: window_title,
-                        ..default()
-                    }),
-                    ..default()
-                })
-                .set(native_render_plugin()),
-        )
+        .add_plugins(default_plugins)
         .add_plugins(GpuFeaturesPlugin)
         // Civis app/window icon (graphite + neon voxel-world glyph). Sets the
         // embedded icon on the primary winit window at startup.
@@ -105,8 +127,16 @@ fn main() {
     app.add_plugins(civ_bevy_ref::diplomacy_ui::DiplomacyUiPlugin);
 
     // 2D procedural/SVG alternate map view (M key + far-zoom auto-engage).
+    // Normally suppressed under autoshot (the far-zoom auto-engage could flip the
+    // headless 3D capture into map mode), but MUST be present when we explicitly
+    // ask to capture the map via CIVIS_MAP_OPEN=1 — otherwise the plugin (and its
+    // draw_map_view system) never exists and the map can't open in the frame.
     #[cfg(feature = "egui")]
-    app.add_plugins(civ_bevy_ref::map2d::Map2dPlugin);
+    if std::env::var("CIVIS_AUTOSHOT").is_err()
+        || std::env::var("CIVIS_MAP_OPEN").as_deref() == Ok("1")
+    {
+        app.add_plugins(civ_bevy_ref::map2d::Map2dPlugin);
+    }
 
     // Perception layer: CS2-style info-view overlays (Tab) + click-to-inspect.
     #[cfg(feature = "egui")]
@@ -122,9 +152,17 @@ fn main() {
     #[cfg(feature = "bevy")]
     app.add_plugins(civ_bevy_ref::terraform_brush::TerraformBrushPlugin);
 
+    // God-game disaster actions (meteor/flood/quake/storm/wildfire) that mutate
+    // the voxel world; bevy-only, gated systems handle egui/voxel internally.
+    #[cfg(feature = "bevy")]
+    app.add_plugins(civ_bevy_ref::disaster_tools::DisasterToolsPlugin);
+
     // Material brush palette + voxel paint (Powder-Toy-style); bevy+egui.
     #[cfg(feature = "egui")]
     app.add_plugins(civ_bevy_ref::material_brush_ui::MaterialBrushPlugin);
+
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::game_laws::GameLawsPlugin);
 
     // Settings / options panel (RON-persisted); bevy+egui.
     #[cfg(feature = "egui")]
@@ -144,6 +182,21 @@ fn main() {
     // sandbox owns the world instead of the bounded dense `VoxelSimPlugin`.
     #[cfg(all(feature = "voxel", not(feature = "voxel_stream")))]
     app.add_plugins(civ_bevy_ref::voxel_sim::VoxelSimPlugin);
+
+    // OceanPlugin — wraps bevy_water::WaterPlugin.  Gated on `voxel` (which
+    // pulls bevy_water).  Two modes:
+    //
+    // • voxel + voxel_stream  → full mode (OceanPlugin::default): WaterPlugin
+    //   + WaterSettings + wave-plane spawn.  VoxelStreamPlugin does NOT spawn
+    //   a water plane, so OceanPlugin owns the surface here.
+    //
+    // • voxel only (VoxelSimPlugin active) → thin mode (water_plugin_only):
+    //   registers WaterPlugin shader infrastructure but skips the spawn because
+    //   VoxelSimPlugin::spawn_bevy_water_plane already owns the wave surface.
+    #[cfg(all(feature = "voxel", feature = "voxel_stream"))]
+    app.add_plugins(OceanPlugin::default());
+    #[cfg(all(feature = "voxel", not(feature = "voxel_stream")))]
+    app.add_plugins(OceanPlugin::water_plugin_only());
 
     // FR-CIV-VOXEL-020: camera-driven chunk streaming over the 20mi voxel world.
     #[cfg(feature = "voxel_stream")]
@@ -170,9 +223,26 @@ fn main() {
     // `WorldSetupParams.seed`); forcing `Playing` triggers that exact path so a
     // headless screenshot captures a freshly generated world, not the title card.
     if std::env::var("CIVIS_AUTOSTART").as_deref() == Ok("1") {
-        app.add_systems(Startup, |mut mode: ResMut<civ_bevy_ref::menus::GameUiMode>| {
-            *mode = civ_bevy_ref::menus::GameUiMode::Playing;
-        });
+        app.add_systems(
+            Startup,
+            |mut mode: ResMut<civ_bevy_ref::menus::GameUiMode>| {
+                *mode = civ_bevy_ref::menus::GameUiMode::Playing;
+            },
+        );
+    }
+
+    // Headless brush-mutation proof: when CIVIS_PAINT_DEMO=1, stamp a bright
+    // lava blob into the live voxel grid after the world has generated. This
+    // exercises the exact paint path the fix repairs — grid.set marks the chunk
+    // dirty, step_and_remesh re-meshes it — so the autoshot screenshot shows a
+    // painted blob on the terrain, proving the mutation→remesh→render chain.
+    #[cfg(feature = "voxel")]
+    if std::env::var("CIVIS_PAINT_DEMO").as_deref() == Ok("1") {
+        app.insert_resource(PaintDemo {
+            timer: Timer::from_seconds(6.0, TimerMode::Once),
+            done: false,
+        })
+        .add_systems(Update, paint_demo_blob);
     }
 
     // Headless verification hook: when CIVIS_AUTOSHOT=<path> is set, capture one
@@ -180,45 +250,152 @@ fn main() {
     // and the camera has framed the world) and then exit. This lets a debug
     // worker confirm voxel terrain visibility by pixels without manual F9.
     if let Ok(path) = std::env::var("CIVIS_AUTOSHOT") {
+        let warmup_seconds = std::env::var("CIVIS_AUTOSHOT_WARMUP")
+            .ok()
+            .and_then(|value| value.parse::<f32>().ok())
+            .filter(|value| value.is_finite() && *value > 0.0)
+            .unwrap_or(4.0);
+        info!("[autoshot] armed: path set, warmup={warmup_seconds:.1}s (wall-clock)");
         app.insert_resource(AutoShot {
             path,
-            timer: Timer::from_seconds(4.0, TimerMode::Once),
-            taken: false,
+            armed_at: std::time::Instant::now(),
+            warmup: std::time::Duration::from_secs_f32(warmup_seconds),
+            taken_at: None,
+            ticking_logged: false,
         })
         .add_systems(Update, auto_screenshot);
     }
 
+    // Machine-level scene + sim dump (CIVIS_DUMP=<path>) — writes authoritative
+    // scene-graph + sim-counter JSON after warmup, then exits. Lets a verifier
+    // find floating actors / dissolved terrain / T-poses / wrong counters from
+    // data, never from pixels.
+    #[cfg(feature = "voxel")]
+    let _ = civ_bevy_ref::scene_dump::arm_from_env(&mut app);
+
     app.run();
+}
+
+/// Headless brush-mutation demo state (see `CIVIS_PAINT_DEMO`).
+#[cfg(feature = "voxel")]
+#[derive(Resource)]
+struct PaintDemo {
+    timer: Timer,
+    done: bool,
+}
+
+/// After warm-up, stamp a bright blob into the live grid centred over the world
+/// so the next screenshot proves the paint→dirty→remesh→render path works.
+#[cfg(feature = "voxel")]
+fn paint_demo_blob(
+    time: Res<Time>,
+    mut demo: ResMut<PaintDemo>,
+    mut sim: ResMut<civ_bevy_ref::voxel_sim::VoxelSimState>,
+) {
+    use civ_voxel::material::MaterialRegistry;
+    if demo.done || !demo.timer.tick(time.delta()).just_finished() {
+        return;
+    }
+    if sim.grid.cells.is_empty() {
+        demo.timer = Timer::from_seconds(0.5, TimerMode::Once);
+        return;
+    }
+    let dims = sim.grid.dims;
+    let mat = MaterialRegistry::standard()
+        .by_name("Lava")
+        .map_or(civ_voxel::MaterialId(6), |m| m.id);
+    // Sit the blob on the surface near the world centre.
+    let (cx, cz) = (dims[0] / 2, dims[2] / 2);
+    let cy = surface_demo(&sim.grid, cx, cz);
+    let r = 10i64;
+    for dz in -r..=r {
+        for dy in -r..=r {
+            for dx in -r..=r {
+                if dx * dx + dy * dy + dz * dz > r * r {
+                    continue;
+                }
+                let (x, y, z) = (cx as i64 + dx, cy as i64 + dy, cz as i64 + dz);
+                if x < 0 || y < 0 || z < 0 {
+                    continue;
+                }
+                sim.grid.set(x as usize, y as usize, z as usize, mat);
+            }
+        }
+    }
+    info!("[paint-demo] stamped lava blob r={r} at ({cx},{cy},{cz})");
+    demo.done = true;
+}
+
+/// Surface scan for the paint demo (lowest air resting on solid).
+#[cfg(feature = "voxel")]
+fn surface_demo(grid: &civ_voxel::fluid_ca::CaGrid, x: usize, z: usize) -> usize {
+    use civ_voxel::material::AIR;
+    for y in (0..grid.dims[1]).rev() {
+        if grid.get(x, y, z) != AIR {
+            return (y + 4).min(grid.dims[1] - 1);
+        }
+    }
+    grid.dims[1] / 2
 }
 
 #[derive(Resource)]
 struct AutoShot {
     path: String,
-    timer: Timer,
-    taken: bool,
+    /// Wall-clock instant the resource was armed (app start). Warmup + exit gating
+    /// use WALL-CLOCK (`Instant`), not `Time::delta()`, because Bevy clamps delta to
+    /// `max_delta` (~0.25s/frame): during the multi-second synchronous world mesh,
+    /// ticking a Timer with the clamped delta accumulates game-time far slower than
+    /// real time, so a 12s warmup never fired within any reasonable wall-clock wait.
+    armed_at: std::time::Instant,
+    /// Warmup duration before the screenshot is requested.
+    warmup: std::time::Duration,
+    /// When the screenshot was requested (post-capture flush is gated off this).
+    taken_at: Option<std::time::Instant>,
+    /// One-shot "system scheduled + running" heartbeat trace.
+    ticking_logged: bool,
 }
 
 fn auto_screenshot(
     mut commands: Commands,
-    time: Res<Time>,
     mut shot: ResMut<AutoShot>,
     mut exit: MessageWriter<AppExit>,
 ) {
-    if shot.taken {
-        // Give the capture a couple frames to flush to disk, then quit.
-        shot.timer.tick(time.delta());
-        if shot.timer.is_finished() {
+    // Post-capture: exit once the png is actually on disk (deterministic, no race
+    // with the GPU readback flush), with a wall-clock safety cap so a failed save
+    // can't hang the process forever.
+    if let Some(taken_at) = shot.taken_at {
+        let png_exists = std::path::Path::new(&shot.path).exists();
+        let waited = taken_at.elapsed();
+        if png_exists {
+            info!("[autoshot] saved {} -> exiting", shot.path);
+            exit.write(AppExit::Success);
+        } else if waited >= std::time::Duration::from_secs(15) {
+            warn!(
+                "[autoshot] exit safety cap: no png after {:.0}s, exiting",
+                waited.as_secs_f32()
+            );
             exit.write(AppExit::Success);
         }
         return;
     }
-    if shot.timer.tick(time.delta()).just_finished() {
+    // Heartbeat once, proving the system is scheduled + Update is running it.
+    if !shot.ticking_logged && shot.armed_at.elapsed().as_secs_f32() >= 1.0 {
+        info!("[autoshot] ticking (system scheduled + running, wall-clock)");
+        shot.ticking_logged = true;
+    }
+    // Warmup is WALL-CLOCK: fire once enough real time has passed regardless of how
+    // many frames the synchronous world build stalled.
+    if shot.armed_at.elapsed() >= shot.warmup {
         let path = shot.path.clone();
+        info!(
+            "[autoshot] warmup done at {:.1}s -> requesting screenshot",
+            shot.armed_at.elapsed().as_secs_f32()
+        );
         commands
             .spawn(Screenshot::primary_window())
-            .observe(save_to_disk(path));
-        shot.taken = true;
-        shot.timer = Timer::from_seconds(1.5, TimerMode::Once);
+            .observe(save_to_disk(path.clone()));
+        info!("[autoshot] requested -> {path}");
+        shot.taken_at = Some(std::time::Instant::now());
     }
 }
 

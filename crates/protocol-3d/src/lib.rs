@@ -310,8 +310,13 @@ pub struct BattleEvent3d {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct DisasterEvent3d {
     /// Disaster kind or label.
+    ///
+    /// Renamed to `disaster_kind` to avoid clashing with the
+    /// `EventFeedMessage3d` tagged-enum tag (`#[serde(tag = "kind")]`); the
+    /// serializer would otherwise emit two `kind` fields per disaster
+    /// message.
     #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub kind: String,
+    pub disaster_kind: String,
     /// Optional disaster severity.
     #[serde(default)]
     pub severity: f32,
@@ -443,6 +448,10 @@ pub enum Frame3d {
     FactionState(FactionStateFrame),
     /// Event-feed batch for one tick.
     EventFeed(EventFeedFrame),
+    /// Climate broadcast for one tick (planetary phase + per-region weather).
+    /// Distinct from the other batch frames because it ticks on its own cadence
+    /// (driven by the planet sim) and carries a different per-tick payload shape.
+    Climate(ClimateFrame),
 }
 
 impl Frame3d {
@@ -456,6 +465,7 @@ impl Frame3d {
             Self::CivilianState(f) => f.tick,
             Self::FactionState(f) => f.tick,
             Self::EventFeed(f) => f.tick,
+            Self::Climate(f) => f.tick,
         }
     }
 }
@@ -504,6 +514,7 @@ enum Frame3dKind {
     CivilianState = 3,
     FactionState = 4,
     EventFeed = 5,
+    Climate = 6,
 }
 
 impl Frame3dKind {
@@ -515,6 +526,7 @@ impl Frame3dKind {
             Frame3d::CivilianState(_) => Self::CivilianState,
             Frame3d::FactionState(_) => Self::FactionState,
             Frame3d::EventFeed(_) => Self::EventFeed,
+            Frame3d::Climate(_) => Self::Climate,
         }
     }
 }
@@ -1018,7 +1030,11 @@ mod tests {
         graph.insert_parcel(Parcel {
             id: BuildingId(7),
             kind: ParcelKind::Residential,
-            origin: civ_voxel::WorldCoord { x: 128, y: 0, z: 256 },
+            origin: civ_voxel::WorldCoord {
+                x: 128,
+                y: 0,
+                z: 256,
+            },
             size: [8, 6, 4],
             era_min: 1,
         });
@@ -1158,7 +1174,7 @@ mod tests {
                     position: Some(WorldXZ { x: 1.0, z: 2.0 }),
                 }),
                 EventFeedMessage3d::Disaster(DisasterEvent3d {
-                    kind: "flood".to_string(),
+                    disaster_kind: "flood".to_string(),
                     severity: 0.75,
                     position: Some(WorldXZ { x: 3.0, z: 4.0 }),
                 }),

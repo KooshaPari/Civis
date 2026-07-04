@@ -34,16 +34,18 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
 
+use crate::game_laws::GameLawsOpen;
 use crate::holo_minimap::HoloMinimapPlugin;
 use crate::menus::GameUiMode;
 use crate::spawn_tools::{ActiveTool, SelectedEntity};
-use crate::tool_categories::{ActiveSubTool, Category, SubTool, CATEGORIES};
+use crate::tool_categories::{ActiveSubTool, SubTool, CATEGORIES};
 use crate::ui_theme::{
-    accent_frame, apply_theme, compact, deck_chip, deck_rim_frame, hairline, motion_rect,
-    panel_finish, ACCENT, DECK_ACCENT, DECK_BORDER, DECK_GLASS, DECK_SUCCESS, DECK_TEXT,
-    DECK_TEXT_MID, GOLD, GREEN, RED, INSET_FILL, RADIUS, RADIUS_BTN, RADIUS_PANEL, RADIUS_SM,
-    SPACE_LG, SPACE_MD, SPACE_SM, SPACE_XS, BORDER, DIM, TEXT,
+    apply_theme, compact, deck_chip, hairline, liquid_glass_finish, liquid_glass_frame,
+    panel_finish, BORDER, DECK_ACCENT, DECK_BORDER, DECK_GLASS, DECK_SUCCESS, DECK_TEXT,
+    DECK_TEXT_MID, DIM, GOLD, GREEN, INSET_FILL, RADIUS_BTN, RADIUS_PANEL, RED, SPACE_LG, SPACE_MD,
+    SPACE_SM, SPACE_XS, TEXT,
 };
+use crate::ui_theme::{panel_edge_stroke, panel_glass_fill};
 
 // ---------------------------------------------------------------------------
 // Resources
@@ -214,6 +216,27 @@ pub struct SelectedEntityDetails {
     pub position: String,
 }
 
+/// Which tab of the unified left HUD cluster is showing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LeftTab {
+    /// Selection inspector card.
+    Inspector,
+    /// Faction / group roster.
+    Factions,
+    /// Info Views overlay picker + legend.
+    InfoViews,
+}
+
+/// Active tab of the left HUD cluster (persisted across frames).
+#[derive(Resource, Debug, Clone, Copy)]
+pub struct LeftClusterTab(pub LeftTab);
+
+impl Default for LeftClusterTab {
+    fn default() -> Self {
+        Self(LeftTab::Inspector)
+    }
+}
+
 /// Tick speed resource used by the HUD controls.
 #[derive(Resource, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GameSpeed {
@@ -268,6 +291,7 @@ const TOOL_ICON_PATHS: &[(&str, &str)] = &[
     ("select", "ui/tool-icons/select.png"),
     ("spawn-life", "ui/tool-icons/spawn-life.png"),
     ("spawn-structure", "ui/tool-icons/spawn-structure.png"),
+    ("infra", "ui/tool-icons/infra.png"),
     ("terraform", "ui/tool-icons/terraform.png"),
     ("spawn-material", "ui/tool-icons/spawn-material.png"),
     ("disaster", "ui/tool-icons/disaster.png"),
@@ -285,6 +309,10 @@ impl Plugin for GameUiPlugin {
             .init_resource::<SelectedEntityDetails>()
             .init_resource::<GameSpeed>()
             .init_resource::<ActiveSubTool>()
+            .init_resource::<LeftClusterTab>()
+            // Info Views tab reads this; init defensively (idempotent) so the
+            // HUD never panics if GameUiPlugin runs without InfoViewsPlugin.
+            .init_resource::<crate::info_views::InfoViewRegistry>()
             .init_resource::<ToolIcons>()
             .add_systems(Startup, queue_tool_icon_handles)
             .add_systems(Update, (handle_speed_shortcuts, handle_category_hotkeys))
@@ -293,8 +321,33 @@ impl Plugin for GameUiPlugin {
             // before `draw_game_ui` consumes them.
             .add_systems(
                 EguiPrimaryContextPass,
-                (load_tool_icons, draw_game_ui).chain(),
+                // apply_keycap_theme MUST run first: it sets the global egui
+                // Style/Visuals (Keycap Palette + holocron chrome) before any
+                // draw call can consume it. load_tool_icons and draw_game_ui
+                // follow in order.
+                (apply_keycap_theme, load_tool_icons, draw_game_ui).chain(),
             );
+    }
+}
+
+/// Global egui theme system — runs first in every [`EguiPrimaryContextPass`] frame.
+///
+/// Applies the Phenotype Keycap Palette + holocron command-deck chrome:
+/// - Background: midnight `#090a0c` / `#1a1e24` (GRAPHITE_900) surfaces
+/// - Primary accent: teal `#7ebab5` on edges, selection, and active strokes only
+///   (never as a large fill — "neon-as-signal" rule)
+/// - Holographic glass panels: frosted DECK_GLASS fill + DECK_BORDER rim
+/// - Colored teal rim-glow on focus (not white)
+/// - Rounded corners (8 px buttons, 12 px panels)
+/// - Drop shadows for depth hierarchy
+/// - Montserrat (body), JetBrains Mono (numeric), Bricolage Grotesque (display)
+///
+/// Delegates to [`crate::ui_theme::apply_theme`] which is the canonical
+/// implementation; this system exists purely to give it an explicit, named place
+/// in the Bevy schedule and to separate theming from HUD draw logic.
+fn apply_keycap_theme(mut contexts: EguiContexts) {
+    if let Ok(ctx) = contexts.ctx_mut() {
+        apply_theme(ctx);
     }
 }
 
@@ -356,7 +409,11 @@ fn handle_category_hotkeys(keys: Res<ButtonInput<KeyCode>>, mut sub: ResMut<Acti
     for (idx, cat) in CATEGORIES.iter().enumerate() {
         if let Some(code) = hotkey_to_code(cat.hotkey) {
             if keys.just_pressed(code) {
-                sub.open_category = if sub.open_category == Some(idx) { None } else { Some(idx) };
+                sub.open_category = if sub.open_category == Some(idx) {
+                    None
+                } else {
+                    Some(idx)
+                };
             }
         }
     }
@@ -384,6 +441,7 @@ struct BottomBarCtx<'a> {
     sub: &'a mut ActiveSubTool,
     speed: &'a mut GameSpeed,
     icons: &'a std::collections::HashMap<&'static str, egui::TextureId>,
+    laws_open: Option<&'a mut GameLawsOpen>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -400,52 +458,260 @@ fn draw_game_ui(
     mut speed: ResMut<GameSpeed>,
     mut active_tool: ResMut<ActiveTool>,
     mut sub_tool: ResMut<ActiveSubTool>,
+    mut left_tab: ResMut<LeftClusterTab>,
+    mut info_views: ResMut<crate::info_views::InfoViewRegistry>,
     ui_mode: Res<GameUiMode>,
     tool_icons: Res<ToolIcons>,
+    mut laws_open: Option<ResMut<GameLawsOpen>>,
 ) {
-    // Hide HUD entirely when not in Playing mode (pause overlay, loading, etc.).
-    if *ui_mode != GameUiMode::Playing {
+    // Show the HUD while Playing OR Paused (frozen-but-visible) — matches the
+    // `menus::in_game` gate the brush/map panels use, so the left cluster, top
+    // and bottom clusters don't vanish when the others stay up (e.g. Paused, or
+    // the autoshot warm-up frame). Only menus/loading hide it entirely.
+    if !matches!(*ui_mode, GameUiMode::Playing | GameUiMode::Paused) {
         return;
     }
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-    apply_theme(ctx);
 
-    egui::TopBottomPanel::top("civis_game_top_bar")
-        .frame(deck_rim_frame(egui::Margin::symmetric(SPACE_LG as i8, SPACE_SM as i8)))
+    // ---- Top cluster: CENTERED readout (floating, not a full-width bar) ----
+    top_center_cluster(
+        ctx,
+        &snapshot,
+        &resources,
+        &attach_mode,
+        live_attach.as_deref(),
+    );
+
+    // ---- Left cluster: ONE tabbed column (Inspector / Factions / Info Views) ----
+    left_sidebar_cluster(
+        ctx,
+        &mut left_tab.0,
+        &roster,
+        selected.0.is_some(),
+        &details,
+        &mut info_views,
+    );
+
+    // ---- Bottom: narrow, short, floating cluster of expanding block-pills ----
+    let mut bottom = BottomBarCtx {
+        active: &mut active_tool,
+        sub: &mut sub_tool,
+        speed: &mut speed,
+        icons: &tool_icons.ids,
+        laws_open: laws_open.as_deref_mut(),
+    };
+    bottom_cluster(ctx, &mut bottom);
+}
+
+/// Top-center HUD readout: a single centered floating glass cluster of stat
+/// chips + the resource strip (no longer a flush full-width top bar).
+fn top_center_cluster(
+    ctx: &egui::Context,
+    snapshot: &GameUiSnapshot,
+    resources: &WorldResources,
+    attach_mode: &crate::AttachMode,
+    live_attach: Option<&crate::live_attach::LiveAttachState>,
+) {
+    egui::Area::new(egui::Id::new("civis_top_center"))
+        .anchor(egui::Align2::CENTER_TOP, [0.0, 10.0])
         .show(ctx, |ui| {
-            top_bar_ui(ui, &snapshot, &resources, &attach_mode, live_attach.as_deref());
-            panel_finish(ui.painter(), ui.min_rect(), RADIUS_PANEL, false, false);
+            liquid_glass_frame(
+                egui::Margin::symmetric(SPACE_LG as i8, SPACE_SM as i8),
+                RADIUS_PANEL,
+            )
+            .show(ui, |ui| {
+                top_bar_ui(ui, snapshot, resources, attach_mode, live_attach);
+                liquid_glass_finish(ui.painter(), ui.min_rect(), RADIUS_PANEL);
+            });
         });
+}
 
-    egui::TopBottomPanel::bottom("civis_game_bottom_bar")
-        .frame(deck_rim_frame(egui::Margin::symmetric(SPACE_LG as i8, SPACE_MD as i8)))
-        .show(ctx, |ui| {
-            let mut bottom = BottomBarCtx {
-                active: &mut active_tool,
-                sub: &mut sub_tool,
-                speed: &mut speed,
-                icons: &tool_icons.ids,
-            };
-            category_bar_ui(ui, &mut bottom);
-            ui.add_space(SPACE_XS);
-            help_hint_ui(ui);
-            panel_finish(ui.painter(), ui.min_rect(), RADIUS_PANEL, false, false);
-        });
-
-    egui::SidePanel::left("civis_game_left_panel")
+/// Left sidebar: a single left-edge vertical column that merges the faction
+/// roster and the selection inspector into one frosted cluster (the minimap
+/// anchor stays reserved at the bottom for `live_minimap.rs`).
+fn left_sidebar_cluster(
+    ctx: &egui::Context,
+    tab: &mut LeftTab,
+    roster: &FactionRoster,
+    has_selection: bool,
+    details: &SelectedEntityDetails,
+    info_views: &mut crate::info_views::InfoViewRegistry,
+) {
+    egui::SidePanel::left("civis_game_left_sidebar")
         .resizable(false)
-        .exact_width(214.0)
-        .frame(deck_rim_frame(egui::Margin::same(SPACE_MD as i8)))
-        .show(ctx, |ui| faction_panel_ui(ui, &roster));
+        .exact_width(252.0)
+        .frame(egui::Frame::NONE)
+        .show(ctx, |ui| {
+            let full_panel = ui.max_rect();
+            ui.painter()
+                .rect_filled(full_panel, RADIUS_PANEL as f32, crate::ui_theme::GLASS_FILL);
+            let glass = liquid_glass_frame(egui::Margin::same(SPACE_MD as i8), RADIUS_PANEL);
+            glass.show(ui, |ui| {
+                // Teal rim + lifted inner highlight on the cluster's own rect BEFORE
+                // content, so the glass edge reads without glossing over text.
+                let full = ui.max_rect();
+                sidebar_glass_edge(ui.painter(), full);
+                left_tab_strip(ui, tab);
+                ui.add_space(SPACE_SM);
+                hairline(ui);
+                match tab {
+                    LeftTab::Inspector => inspector_ui(ui, has_selection, details),
+                    LeftTab::Factions => faction_panel_ui(ui, roster),
+                    LeftTab::InfoViews => crate::info_views::info_view_tab_body(ui, info_views),
+                }
+            });
+        });
+}
 
-    // selected.0 is the Option<Entity> from spawn_tools::SelectedEntity.
-    egui::SidePanel::right("civis_game_selected_panel")
-        .resizable(true)
-        .default_width(276.0)
-        .frame(deck_rim_frame(egui::Margin::same(SPACE_LG as i8)))
-        .show(ctx, |ui| inspector_ui(ui, selected.0.is_some(), &details));
+/// The Inspector / Factions / Info Views tab strip atop the left cluster.
+fn left_tab_strip(ui: &mut egui::Ui, tab: &mut LeftTab) {
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing = egui::vec2(4.0, 4.0);
+        for (variant, label) in [
+            (LeftTab::Inspector, "\u{25a4} Inspect"),
+            (LeftTab::Factions, "\u{1f6a9} Factions"),
+            (LeftTab::InfoViews, "\u{1f5fa} Views"),
+        ] {
+            let selected = *tab == variant;
+            let is_hovering = false;
+            let text = egui::RichText::new(label).color(if selected {
+                DECK_ACCENT
+            } else {
+                DECK_TEXT_MID
+            });
+            let response = ui.add(
+                egui::Button::new(text)
+                    .fill(panel_glass_fill(is_hovering, false))
+                    .stroke(panel_edge_stroke(false, selected))
+                    .corner_radius(egui::CornerRadius::same(RADIUS_BTN))
+                    .min_size(egui::vec2(102.0, 30.0)),
+            );
+            if response.hovered() {
+                ui.painter().rect_stroke(
+                    response.rect.shrink(0.8),
+                    RADIUS_BTN as f32,
+                    egui::Stroke::new(1.0, DECK_ACCENT.gamma_multiply(0.45)),
+                    egui::StrokeKind::Inside,
+                );
+                ui.painter().rect_filled(
+                    response.rect,
+                    RADIUS_BTN as f32,
+                    panel_glass_fill(true, false).gamma_multiply(0.15),
+                );
+            }
+            if response.is_pointer_button_down_on() {
+                ui.painter().rect_filled(
+                    response.rect.shrink(1.0),
+                    RADIUS_BTN as f32,
+                    panel_glass_fill(false, true).gamma_multiply(0.12),
+                );
+            }
+            if response.clicked() {
+                *tab = variant;
+            }
+        }
+    });
+}
+
+/// Lifted glass edge for a text-dense panel: a thin light inner highlight + a
+/// soft teal rim, without the gloss sheen (which would dim text drawn on top).
+fn sidebar_glass_edge(painter: &egui::Painter, rect: egui::Rect) {
+    painter.rect_stroke(
+        rect.shrink(1.0),
+        RADIUS_PANEL as f32,
+        egui::Stroke::new(1.0, egui::Color32::from_white_alpha(26)),
+        egui::StrokeKind::Inside,
+    );
+    painter.rect_stroke(
+        rect,
+        RADIUS_PANEL as f32,
+        egui::Stroke::new(1.0, DECK_ACCENT.gamma_multiply(0.30)),
+        egui::StrokeKind::Outside,
+    );
+}
+
+/// Bottom cluster: a narrow (< full-width), short floating row of expanding
+/// category block-pills + the speed control, wrapped in a frosted glass shell
+/// with padding + margin (not a flush full-width bar).
+fn bottom_cluster(ctx: &egui::Context, bottom: &mut BottomBarCtx) {
+    egui::Area::new(egui::Id::new("civis_bottom_cluster"))
+        .anchor(egui::Align2::CENTER_BOTTOM, [0.0, -12.0])
+        .show(ctx, |ui| {
+            // Expanded items rect (the larger rectangle) stacks ABOVE the pills.
+            if let Some(idx) = bottom.sub.open_category {
+                if let Some(cat) = CATEGORIES.get(idx) {
+                    ui.vertical_centered(|ui| {
+                        if let Some(picked) =
+                            crate::ui_cluster::items_rect(ui, cat, bottom.sub.current)
+                        {
+                            select_subtool(bottom, picked);
+                        }
+                    });
+                    ui.add_space(6.0);
+                }
+            }
+            liquid_glass_frame(
+                egui::Margin::symmetric(SPACE_MD as i8, SPACE_SM as i8),
+                RADIUS_PANEL,
+            )
+            .show(ui, |ui| {
+                category_pill_row(ui, bottom);
+                liquid_glass_finish(ui.painter(), ui.min_rect(), RADIUS_PANEL);
+            });
+        });
+}
+
+/// One horizontal row of small category block-pills + the speed control. Each
+/// pill is the always-visible small rect; clicking toggles its items rect.
+fn category_pill_row(ui: &mut egui::Ui, ctx: &mut BottomBarCtx) {
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing = egui::vec2(6.0, 6.0);
+        let active_cat = ctx.sub.active_category();
+        for (idx, cat) in CATEGORIES.iter().enumerate() {
+            let is_open = ctx.sub.open_category == Some(idx);
+            let is_active = active_cat == Some(idx);
+            let icon_tex = cat.icon_key().and_then(|k| ctx.icons.get(k).copied());
+            let resp = crate::ui_cluster::category_pill(ui, cat, is_open, is_active, icon_tex);
+            if resp.hovered() {
+                ui.painter().rect_stroke(
+                    resp.rect.shrink(0.7),
+                    RADIUS_BTN as f32,
+                    egui::Stroke::new(1.0, DECK_ACCENT.gamma_multiply(0.65)),
+                    egui::StrokeKind::Inside,
+                );
+                ui.painter().rect_stroke(
+                    resp.rect,
+                    RADIUS_BTN as f32,
+                    egui::Stroke::new(1.1, DECK_ACCENT.gamma_multiply(0.24)),
+                    egui::StrokeKind::Outside,
+                );
+            }
+            if resp.is_pointer_button_down_on() {
+                ui.painter().rect_filled(
+                    resp.rect,
+                    RADIUS_BTN as f32,
+                    panel_glass_fill(false, true).gamma_multiply(0.12),
+                );
+            }
+            if resp.clicked() {
+                ctx.sub.open_category = if is_open { None } else { Some(idx) };
+            }
+        }
+        ui.add_space(SPACE_MD);
+        speed_control_ui(ui, ctx.speed);
+        ui.add_space(SPACE_SM);
+        if ui
+            .button(egui::RichText::new("Laws").color(TEXT))
+            .on_hover_text("Open game laws viewer")
+            .clicked()
+        {
+            if let Some(laws_open) = ctx.laws_open.as_deref_mut() {
+                laws_open.0 = !laws_open.0;
+            }
+        }
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -461,20 +727,27 @@ fn resource_chip(ui: &mut egui::Ui, icon: &str, value: &str, delta: f64, color: 
     } else {
         ("\u{2192}", DECK_TEXT_MID)
     };
+    let fill = DECK_GLASS;
     egui::Frame::NONE
-        .fill(DECK_GLASS.gamma_multiply(0.85))
+        .fill(fill)
         .corner_radius(egui::CornerRadius::same(RADIUS_BTN))
         .stroke(egui::Stroke::new(1.0, DECK_BORDER))
         .inner_margin(egui::Margin::symmetric(SPACE_MD as i8, SPACE_XS as i8))
         .show(ui, |ui| {
             ui.label(egui::RichText::new(icon).color(color));
-            ui.label(egui::RichText::new(value).monospace().color(DECK_TEXT).strong());
+            ui.label(
+                egui::RichText::new(value)
+                    .monospace()
+                    .color(DECK_TEXT)
+                    .strong(),
+            );
             ui.label(
                 egui::RichText::new(format!("{arrow}{:+.0}", delta))
                     .color(dcol)
                     .small()
                     .monospace(),
             );
+            panel_finish(ui.painter(), ui.min_rect(), RADIUS_BTN, false, false);
         });
 }
 
@@ -504,7 +777,13 @@ fn top_bar_ui(
     });
     ui.add_space(SPACE_SM);
     ui.horizontal(|ui| {
-        resource_chip(ui, "\u{1f33e}", &compact(resources.food), resources.food_delta, DECK_ACCENT);
+        resource_chip(
+            ui,
+            "\u{1f33e}",
+            &compact(resources.food),
+            resources.food_delta,
+            DECK_ACCENT,
+        );
         resource_chip(
             ui,
             "\u{2699}",
@@ -547,144 +826,18 @@ fn ws_status_ui(
     };
     deck_chip(ui, dot, text, color);
     if let Some(overlay) = &snapshot.live_hud_overlay {
-        ui.label(egui::RichText::new(overlay).color(DECK_TEXT_MID).small().monospace());
+        ui.label(
+            egui::RichText::new(overlay)
+                .color(DECK_TEXT_MID)
+                .small()
+                .monospace(),
+        );
     }
 }
 
 // ---------------------------------------------------------------------------
-// Bottom category toolbar + flyout drawers
+// Bottom cluster helpers (sub-tool selection + speed control)
 // ---------------------------------------------------------------------------
-
-/// Bottom bar: a flyout drawer (when a category is open) above a centred
-/// category toolbar, plus a right-aligned segmented speed control.
-fn category_bar_ui(ui: &mut egui::Ui, ctx: &mut BottomBarCtx) {
-    // Draw the open flyout first so it stacks above the toolbar row.
-    if let Some(idx) = ctx.sub.open_category {
-        if let Some(cat) = CATEGORIES.get(idx) {
-            flyout_drawer_ui(ui, cat, ctx);
-            ui.add_space(6.0);
-        }
-    }
-    category_toolbar_ui(ui, ctx);
-}
-
-/// The centred row of top-level category buttons + speed control on the right.
-fn category_toolbar_ui(ui: &mut egui::Ui, ctx: &mut BottomBarCtx) {
-    const BTN_W: f32 = 64.0;
-    const GAP: f32 = 8.0;
-    ui.horizontal(|ui| {
-        let available = ui.available_width();
-        let bar_w = CATEGORIES.len() as f32 * (BTN_W + GAP);
-        let right_w = 240.0;
-        let left_pad = ((available - bar_w - right_w) * 0.5).max(0.0);
-        ui.add_space(left_pad);
-        let active_cat = ctx.sub.active_category();
-        for (idx, cat) in CATEGORIES.iter().enumerate() {
-            let is_open = ctx.sub.open_category == Some(idx);
-            let is_active = active_cat == Some(idx);
-            let icon_tex = cat.icon_key().and_then(|k| ctx.icons.get(k).copied());
-            if category_button(ui, cat, is_active, is_open, icon_tex).clicked() {
-                ctx.sub.open_category = if is_open { None } else { Some(idx) };
-            }
-        }
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            speed_control_ui(ui, ctx.speed);
-        });
-    });
-}
-
-/// Render one 64x60 category button (PNG icon or glyph + label), lit when active/open.
-fn category_button(
-    ui: &mut egui::Ui,
-    cat: &Category,
-    active: bool,
-    open: bool,
-    icon_tex: Option<egui::TextureId>,
-) -> egui::Response {
-    let size = egui::vec2(64.0, 60.0);
-    let (rect, resp) = ui.allocate_exact_size(size, egui::Sense::click());
-    let lit = active || open;
-    let time = ui.input(|i| i.time);
-    let paint_rect = motion_rect(rect, lit, resp.hovered(), time, ui.id().value());
-    let fill = if lit {
-        DECK_ACCENT.gamma_multiply(0.22)
-    } else if resp.hovered() {
-        DECK_GLASS.gamma_multiply(1.05)
-    } else {
-        DECK_GLASS.gamma_multiply(0.92)
-    };
-    let stroke = if lit {
-        egui::Stroke::new(1.5, DECK_ACCENT)
-    } else if resp.hovered() {
-        egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.55))
-    } else {
-        egui::Stroke::new(1.0, DECK_BORDER)
-    };
-    let p = ui.painter();
-    p.rect_filled(paint_rect, RADIUS_BTN as f32, fill);
-    p.rect_stroke(paint_rect, RADIUS_BTN as f32, stroke, egui::StrokeKind::Inside);
-    panel_finish(p, paint_rect, RADIUS_BTN, resp.is_pointer_button_down_on(), lit);
-    let accent = if lit { DECK_ACCENT } else { cat.accent };
-    paint_icon_label(p, paint_rect, cat.icon, cat.label, lit, accent, icon_tex);
-    // A small caret marks that the slot opens a flyout drawer.
-    let caret = paint_rect.center_top() + egui::vec2(0.0, 4.0);
-    let caret_col = if open { DECK_ACCENT } else { DECK_TEXT_MID.gamma_multiply(0.7) };
-    p.text(caret, egui::Align2::CENTER_TOP, "\u{25be}", egui::FontId::proportional(9.0), caret_col);
-    resp.on_hover_text(format!("{} \u{25b8}  [{}]", cat.label, cat.hotkey))
-}
-
-/// Paint a centred icon + caption inside `rect` (shared by category/sub-tool).
-///
-/// When `icon_tex` is `Some`, the rasterized PNG tool-icon is drawn; otherwise it
-/// falls back to the unicode `icon` glyph so the toolbar is never empty.
-fn paint_icon_label(
-    p: &egui::Painter,
-    rect: egui::Rect,
-    icon: &str,
-    label: &str,
-    lit: bool,
-    accent: egui::Color32,
-    icon_tex: Option<egui::TextureId>,
-) {
-    let icon_color = if lit { accent } else { DECK_TEXT };
-    let icon_at = rect.min + egui::vec2(rect.width() * 0.5, rect.height() * 0.40);
-    if let Some(tex) = icon_tex {
-        // Draw the PNG centred on the icon anchor; tint white when lit for a
-        // subtle highlight, otherwise near-full opacity for an inert look.
-        let side = 26.0_f32;
-        let img_rect = egui::Rect::from_center_size(icon_at, egui::vec2(side, side));
-        let tint = if lit {
-            egui::Color32::WHITE
-        } else {
-            egui::Color32::from_white_alpha(220)
-        };
-        p.image(tex, img_rect, egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)), tint);
-    } else {
-        p.text(icon_at, egui::Align2::CENTER_CENTER, icon, egui::FontId::proportional(22.0), icon_color);
-    }
-    let label_color = if lit { accent } else { DECK_TEXT_MID };
-    let label_at = rect.min + egui::vec2(rect.width() * 0.5, rect.height() * 0.80);
-    p.text(label_at, egui::Align2::CENTER_CENTER, label, egui::FontId::proportional(10.5), label_color);
-}
-
-/// The flyout drawer: a framed panel of sub-tool buttons for the open category.
-fn flyout_drawer_ui(ui: &mut egui::Ui, cat: &Category, ctx: &mut BottomBarCtx) {
-    accent_frame(egui::Margin::symmetric(12, 9), cat.accent).show(ui, |ui| {
-        ui.horizontal(|ui| {
-            ui.label(egui::RichText::new(format!("{}  {}", cat.icon, cat.label)).color(cat.accent).strong());
-            ui.label(egui::RichText::new(format!("\u{2022}  {} tools", cat.subtools.len())).color(DIM).small());
-        });
-        ui.add_space(4.0);
-        ui.horizontal_wrapped(|ui| {
-            for &st in cat.subtools {
-                let is_active = ctx.sub.current == st;
-                if subtool_button(ui, st, is_active, cat.accent).clicked() {
-                    select_subtool(ctx, st);
-                }
-            }
-        });
-    });
-}
 
 /// Pick a sub-tool: set the UI-side current tool + sync the backing SpawnTool.
 fn select_subtool(ctx: &mut BottomBarCtx, st: SubTool) {
@@ -696,45 +849,21 @@ fn select_subtool(ctx: &mut BottomBarCtx, st: SubTool) {
     // Infra Lead grows SpawnTool; the UI still lights them as the picked tool.
 }
 
-/// Render one 70x56 sub-tool button inside a flyout, lit when it is current.
-fn subtool_button(ui: &mut egui::Ui, st: SubTool, active: bool, accent: egui::Color32) -> egui::Response {
-    let size = egui::vec2(70.0, 56.0);
-    let (rect, resp) = ui.allocate_exact_size(size, egui::Sense::click());
-    let inert = !st.is_active_capable();
-    let time = ui.input(|i| i.time);
-    let paint_rect = motion_rect(rect, active, resp.hovered(), time, ui.id().value());
-    let fill = if active {
-        accent.gamma_multiply(0.24)
-    } else if resp.hovered() {
-        DECK_GLASS.gamma_multiply(1.05)
-    } else {
-        DECK_GLASS.gamma_multiply(0.9)
-    };
-    let stroke = if active {
-        egui::Stroke::new(1.5, accent)
-    } else if resp.hovered() {
-        egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.5))
-    } else {
-        egui::Stroke::new(1.0, DECK_BORDER)
-    };
-    let p = ui.painter();
-    p.rect_filled(paint_rect, RADIUS_SM as f32, fill);
-    p.rect_stroke(paint_rect, RADIUS_SM as f32, stroke, egui::StrokeKind::Inside);
-    panel_finish(p, paint_rect, RADIUS_SM, resp.is_pointer_button_down_on(), active);
-    let lit = active && !inert;
-    paint_icon_label(p, paint_rect, st.icon(), st.label(), lit, accent, None);
-    let tip = if inert {
-        format!("{} — coming soon", st.label())
-    } else {
-        st.label().to_string()
-    };
-    resp.on_hover_text(tip)
-}
-
 /// Segmented speed control: pause / 1x / 2x / 5x / 10x wired to GameSpeed.
 fn speed_control_ui(ui: &mut egui::Ui, speed: &mut GameSpeed) {
-    // Reversed because the parent layout is right_to_left.
-    let steps = [(4u32, "10x"), (3, "5x"), (2, "2x"), (1, "1x"), (0, "\u{23f8}")];
+    ui.label(
+        egui::RichText::new("\u{23f5} Speed")
+            .color(DECK_TEXT_MID)
+            .small(),
+    );
+    // Left-to-right order inside the bottom cluster row.
+    let steps = [
+        (0u32, "\u{23f8}"),
+        (1, "1x"),
+        (2, "2x"),
+        (3, "5x"),
+        (4, "10x"),
+    ];
     for (mult, label) in steps {
         let active = speed.multiplier == mult;
         let mut text = egui::RichText::new(label).size(13.0).monospace();
@@ -745,70 +874,67 @@ fn speed_control_ui(ui: &mut egui::Ui, speed: &mut GameSpeed) {
         };
         let btn = egui::Button::new(text)
             .fill(if active {
-                DECK_ACCENT.gamma_multiply(0.22)
+                panel_glass_fill(false, false).gamma_multiply(1.12)
             } else {
-                DECK_GLASS.gamma_multiply(0.9)
+                panel_glass_fill(false, false)
             })
             .stroke(if active {
                 egui::Stroke::new(1.5, DECK_ACCENT)
             } else {
-                egui::Stroke::new(1.0, DECK_BORDER)
+                panel_edge_stroke(false, false)
             })
             .corner_radius(egui::CornerRadius::same(RADIUS_BTN))
             .min_size(egui::vec2(40.0, 34.0));
-        if ui.add(btn).clicked() {
+        let resp = ui.add(btn);
+        if resp.hovered() {
+            ui.painter().rect_stroke(
+                resp.rect.shrink(0.9),
+                RADIUS_BTN as f32,
+                egui::Stroke::new(1.0, DECK_ACCENT.gamma_multiply(0.4)),
+                egui::StrokeKind::Inside,
+            );
+        }
+        if resp.is_pointer_button_down_on() {
+            ui.painter().rect_filled(
+                resp.rect,
+                RADIUS_BTN as f32,
+                panel_glass_fill(false, true).gamma_multiply(0.15),
+            );
+        }
+        if resp.clicked() {
             speed.multiplier = mult;
         }
     }
-    ui.label(egui::RichText::new("\u{23f5} Speed").color(DECK_TEXT_MID).small());
-}
-
-/// Persistent help / hotkey hint line under the toolbar.
-fn help_hint_ui(ui: &mut egui::Ui) {
-    ui.vertical_centered(|ui| {
-        ui.label(
-            egui::RichText::new(
-                "Space pause  \u{2022}  1-4 speed  \u{2022}  Q/E/R/C/T/A/X/D/F categories  \u{2022}  L event log  \u{2022}  Esc menu",
-            )
-            .color(DECK_TEXT_MID.gamma_multiply(0.85))
-            .small(),
-        );
-    });
 }
 
 // ---------------------------------------------------------------------------
 // Left faction / group panel
 // ---------------------------------------------------------------------------
 
-/// Left panel: faction/group roster with colour swatches + counts, then a
-/// reserved minimap area (the minimap itself is drawn by `live_minimap.rs`).
+/// Factions tab body: faction/group roster with colour swatches + counts.
+///
+/// The bottom-left minimap reservation was removed — the holocron map on the
+/// right is the single map, so the roster uses the full column height. No
+/// heading: the left-cluster tab strip already labels it.
 fn faction_panel_ui(ui: &mut egui::Ui, roster: &FactionRoster) {
-    ui.label(egui::RichText::new("\u{1f6a9} Factions").color(DECK_ACCENT).heading());
-    ui.add_space(4.0);
-    hairline(ui);
-
     if roster.factions.is_empty() {
-        ui.label(egui::RichText::new("No factions yet.").color(DECK_TEXT_MID).small());
+        ui.label(
+            egui::RichText::new("No factions yet.")
+                .color(DECK_TEXT_MID)
+                .small(),
+        );
         ui.label(
             egui::RichText::new("Spawn life to seed groups.")
                 .color(DECK_TEXT_MID.gamma_multiply(0.8))
                 .small(),
         );
     } else {
-        egui::ScrollArea::vertical()
-            .max_height(ui.available_height() - 150.0)
-            .show(ui, |ui| {
-                for faction in &roster.factions {
-                    faction_row(ui, faction);
-                }
-            });
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            for faction in &roster.factions {
+                faction_row(ui, faction);
+            }
+        });
     }
-
-    // Reserve space above the minimap so live_minimap.rs has a clear anchor.
-    ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
-        ui.add_space(140.0); // minimap footprint owned by live_minimap.rs
-        ui.label(egui::RichText::new("MINIMAP").color(DECK_TEXT_MID.gamma_multiply(0.7)).small());
-    });
 }
 
 /// One faction row: colour swatch, name, and right-aligned member count.
@@ -823,10 +949,19 @@ fn faction_row(ui: &mut egui::Ui, faction: &FactionInfo) {
             ui.horizontal(|ui| {
                 let (r, _) = ui.allocate_exact_size(egui::vec2(12.0, 12.0), egui::Sense::hover());
                 ui.painter().rect_filled(r, 3.0, swatch);
-                ui.painter().rect_stroke(r, 3.0, egui::Stroke::new(1.0, BORDER), egui::StrokeKind::Inside);
+                ui.painter().rect_stroke(
+                    r,
+                    3.0,
+                    egui::Stroke::new(1.0, BORDER),
+                    egui::StrokeKind::Inside,
+                );
                 ui.label(egui::RichText::new(&faction.name).strong().color(TEXT));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.label(egui::RichText::new(compact(faction.count as f64)).monospace().color(DIM));
+                    ui.label(
+                        egui::RichText::new(compact(faction.count as f64))
+                            .monospace()
+                            .color(DIM),
+                    );
                 });
             });
             panel_finish(ui.painter(), ui.min_rect(), 7, false, false);
@@ -838,20 +973,25 @@ fn faction_row(ui: &mut egui::Ui, faction: &FactionInfo) {
 // Right inspector card
 // ---------------------------------------------------------------------------
 
-/// Right-side selection inspector card with empty-state fallback.
+/// Inspector tab body: selection card with empty-state fallback. (No heading —
+/// the left-cluster tab strip already labels it.)
 fn inspector_ui(ui: &mut egui::Ui, has_selection: bool, details: &SelectedEntityDetails) {
-    ui.label(egui::RichText::new("\u{25a4} Inspector").color(DECK_ACCENT).heading());
-    ui.add_space(4.0);
-    hairline(ui);
-
     if !has_selection {
         inspector_empty_state(ui);
         return;
     }
 
-    let kind = if details.kind.is_empty() { "Entity" } else { &details.kind };
+    let kind = if details.kind.is_empty() {
+        "Entity"
+    } else {
+        &details.kind
+    };
     ui.horizontal(|ui| {
-        let name = if details.name.is_empty() { "Unnamed" } else { &details.name };
+        let name = if details.name.is_empty() {
+            "Unnamed"
+        } else {
+            &details.name
+        };
         ui.label(egui::RichText::new(name).strong().size(16.0));
     });
     ui.label(egui::RichText::new(kind).color(GOLD).small());
@@ -868,7 +1008,11 @@ fn inspector_ui(ui: &mut egui::Ui, has_selection: bool, details: &SelectedEntity
 fn inspector_empty_state(ui: &mut egui::Ui) {
     ui.add_space(20.0);
     ui.vertical_centered(|ui| {
-        ui.label(egui::RichText::new("\u{1f9ed}").size(34.0).color(DIM.gamma_multiply(0.8)));
+        ui.label(
+            egui::RichText::new("\u{1f9ed}")
+                .size(34.0)
+                .color(DIM.gamma_multiply(0.8)),
+        );
         ui.add_space(6.0);
         ui.label(egui::RichText::new("Nothing selected").color(DIM).strong());
         ui.add_space(2.0);
@@ -892,7 +1036,11 @@ fn health_bar_ui(ui: &mut egui::Ui, health: &str) {
             } else {
                 RED
             };
-            ui.add(egui::ProgressBar::new(frac).fill(color).text(health.to_string()));
+            ui.add(
+                egui::ProgressBar::new(frac)
+                    .fill(color)
+                    .text(health.to_string()),
+            );
         }
         None => {
             let shown = if health.is_empty() { "—" } else { health };
@@ -998,7 +1146,11 @@ mod tests {
     #[test]
     fn every_category_hotkey_maps_to_a_keycode() {
         for cat in CATEGORIES {
-            assert!(hotkey_to_code(cat.hotkey).is_some(), "{} hotkey unmapped", cat.label);
+            assert!(
+                hotkey_to_code(cat.hotkey).is_some(),
+                "{} hotkey unmapped",
+                cat.label
+            );
         }
     }
 }

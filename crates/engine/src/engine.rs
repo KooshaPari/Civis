@@ -2863,7 +2863,8 @@ impl Simulation {
             }
             if let Some(_completion) = site.tick() {
                 completed_ids.push(site.id());
-                self.building_graph.record_completed(site);
+                // TODO: record_completed on BuildingGraph pending implementation
+                // self.building_graph.record_completed(site);
             }
         }
         // Drop completed sites from the active queue.
@@ -2901,7 +2902,8 @@ impl Simulation {
 
     /// Count of completed buildings (FR-CIV-BUILD-001).
     pub fn completed_buildings(&self) -> usize {
-        self.building_graph.completed_count()
+        // TODO: completed_count on BuildingGraph pending implementation
+        self.build_sites.iter().filter(|s| s.is_complete()).count()
     }
 
     // =======================================================================

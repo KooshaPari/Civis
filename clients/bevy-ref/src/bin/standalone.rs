@@ -27,6 +27,8 @@ use civ_bevy_ref::animation::ActorAnimationPlugin;
 use civ_bevy_ref::gltf_models::GltfModelsPlugin;
 
 fn main() {
+    civ_bevy_ref::install_crash_handler();
+
     let attach_mode = resolve_attach_mode_from_env();
 
     if let Err(message) = civ_bevy_ref::preflight::run_startup_preflight(attach_mode) {

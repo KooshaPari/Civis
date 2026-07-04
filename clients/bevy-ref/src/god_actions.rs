@@ -25,6 +25,7 @@ use crate::live_stream::{
 use crate::menus::in_game;
 use crate::terrain::{terrain_surface_y, WORLD_SIZE};
 use crate::{decode_chunk_id, encode_chunk_id, DebugRender};
+use crate::game_ui::GodActionToast;
 
 /// Legacy god-panel verb fired from egui.
 #[derive(Message, Debug, Clone)]
@@ -317,6 +318,7 @@ fn apply_god_action_requests(
     mut panel: ResMut<GodPanelState>,
     focus: Res<LiveSceneFocus>,
     debug: Res<DebugRender>,
+    mut toast: Option<ResMut<GodActionToast>>,
     effect_meshes: Res<GodEffectMeshes>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -421,6 +423,9 @@ fn apply_god_action_requests(
             other => format!("Unknown god action: {other}"),
         };
         panel.status = Some(status);
+        if let Some(mut toast) = toast.as_mut() {
+            toast.show(status.clone());
+        }
     }
 }
 

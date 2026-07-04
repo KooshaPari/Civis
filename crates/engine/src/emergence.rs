@@ -32,7 +32,6 @@ use civ_legends::{
 };
 use civ_planet::GeologyMap;
 use civ_voxel::FIXED_SCALE;
-use civ_legends::{LegendEntityId, NameRef, SimRuntimeId};
 use civ_needs::Needs as LifeNeeds;
 use civ_species::express;
 use hecs::Entity;

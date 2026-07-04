@@ -10,18 +10,10 @@ use civ_agents::{
 };
 use civ_agents::{
     diplomacy::{DiplomacyMatrix, DiplomacySignal, GriefAccumulator, RelationKind},
-    ClusterId,
+    ClusterId, Interaction, SocialEvent, SocialGraph,
 };
-<<<<<<< HEAD
-    choose_activity, cluster_by_colocation, count_civilians, path_step, pick_target,
-    propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at, wander_anchor,
-    Activity, Alignment, Civilian as AgentCivilian, ClusterId, ClusterMember, CohortStats,
-    DiplomacyMatrix, DiplomacySignal, LodTier, Needs, PoiKind, PoiRegistry, Position3d, Psyche,
-    SocialGraph, Tools, Wardrobe,
-};
-use civ_agents::culture::{cultural_distance, language_distance, CultureProfile, TraitVector};
-=======
->>>>>>> 2c9bf0da (add save-db coverage tests)
+use civ_agents::psyche::tick_maturity;
+use civ_agents::social::should_reproduce;
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_genetics::Dna;
 use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold};
@@ -29,8 +21,10 @@ use civ_diffusion::DiffusionParams;
 use civ_economy::Stocks as ClusterStocks;
 use civ_economy::{EconomyState, MarketState};
 use civ_mod_host::ModHost;
+use civ_genetics::Dna;
 use civ_needs::{
-    tick as needs_tick, DecayRates, Health as LifeHealth, HealthParams, Needs as LifeNeeds,
+    classify_lifecycle, labor_capacity, tick as needs_tick, DecayRates, Health as LifeHealth,
+    HealthParams, LifecycleLabel, LifecycleParams, Needs as LifeNeeds,
 };
 use civ_planet::{
     compute_climate, compute_weather, defaults_earthlike, Climate, GeologyMap, MoonConfig,
@@ -526,6 +520,8 @@ pub struct Simulation {
     /// [`Simulation::phase_life`] (FR-CIV-LIFE-020). Keyed by emergent
     /// `ClusterId`; iteration order is deterministic (`BTreeMap`).
     cluster_stocks: BTreeMap<u64, ClusterStocks>,
+    /// Lagged abundance signal derived from the previous tick's cluster stocks.
+    last_cluster_stock_gradient: BTreeMap<u64, f32>,
     /// Number of emergent settlements (multi-member clusters) detected on the
     /// most recent [`Simulation::phase_life`] (FR-CIV-LIFE-030).
     pub(crate) last_settlement_count: u32,
@@ -736,6 +732,7 @@ impl Simulation {
             tick_modulo_compact: 64,
             building_graph: BuildingGraph::new(),
             cluster_stocks: BTreeMap::new(),
+            last_cluster_stock_gradient: BTreeMap::new(),
             last_life_deaths: 0,
             last_settlement_count: 0,
             allocator: Allocator::new(42),
@@ -829,6 +826,7 @@ impl Simulation {
             tick_modulo_compact: 64,
             building_graph: BuildingGraph::new(),
             cluster_stocks: BTreeMap::new(),
+            last_cluster_stock_gradient: BTreeMap::new(),
             last_life_deaths: 0,
             last_settlement_count: 0,
             allocator: Allocator::new(seed),

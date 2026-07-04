@@ -5,6 +5,10 @@
 
 use serde::{Deserialize, Serialize};
 
+use civ_needs::{LifecycleParams, Needs};
+
+use crate::Civilian;
+
 /// Maximum number of ties retained per agent.
 pub const MAX_TIES: usize = 150;
 
@@ -209,6 +213,40 @@ pub fn decay_social_graph(graph: &mut SocialGraph, current_tick: u32) {
     graph.ties.sort_by_key(|tie| tie.other);
 }
 
+/// Determine whether two co-located partnered agents should reproduce.
+#[must_use]
+pub fn should_reproduce(
+    a: &Civilian,
+    b: &Civilian,
+    graph_a: &SocialGraph,
+    graph_b: &SocialGraph,
+    needs_a: &Needs,
+    needs_b: &Needs,
+    params: &LifecycleParams,
+) -> bool {
+    if a.id == b.id {
+        return false;
+    }
+
+    let relation_a = graph_a
+        .ties
+        .iter()
+        .find(|tie| tie.other == b.id)
+        .map(relation_label);
+    let relation_b = graph_b
+        .ties
+        .iter()
+        .find(|tie| tie.other == a.id)
+        .map(relation_label);
+
+    matches!(relation_a, Some(RelationLabel::Partner))
+        && matches!(relation_b, Some(RelationLabel::Partner))
+        && needs_a.food > params.fertility_food_threshold
+        && needs_b.food > params.fertility_food_threshold
+        && needs_a.safety > params.fertility_safety_threshold
+        && needs_b.safety > params.fertility_safety_threshold
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -312,5 +350,57 @@ mod tests {
         assert!(graph.ties[0].familiarity < 1.0);
         assert!(graph.ties[1].familiarity < 1.0);
         assert!(graph.ties[0].affinity > graph.ties[1].affinity);
+    }
+
+    #[test]
+    fn partnered_couples_with_enough_food_and_safety_can_reproduce() {
+        let params = LifecycleParams::default();
+        let a = Civilian {
+            id: 1,
+            alignment: Default::default(),
+            age: 24,
+        };
+        let b = Civilian {
+            id: 2,
+            alignment: Default::default(),
+            age: 25,
+        };
+        let mut graph_a = SocialGraph::default();
+        let mut graph_b = SocialGraph::default();
+        apply_social_event(
+            &mut graph_a,
+            SocialEvent {
+                a: 1,
+                b: 2,
+                kind: Interaction::Cooperated { benefit: 4.0 },
+                tick: 1,
+            },
+        );
+        apply_social_event(
+            &mut graph_b,
+            SocialEvent {
+                a: 2,
+                b: 1,
+                kind: Interaction::Cooperated { benefit: 4.0 },
+                tick: 1,
+            },
+        );
+        let needs = Needs {
+            food: 0.6,
+            water: 0.5,
+            rest: 0.5,
+            safety: 0.5,
+            social: 0.4,
+            health: 0.5,
+        };
+        assert!(should_reproduce(
+            &a,
+            &b,
+            &graph_a,
+            &graph_b,
+            &needs,
+            &needs,
+            &params
+        ));
     }
 }

@@ -374,13 +374,18 @@ pub fn spawn_child_near(
     y: f32,
     rng: &mut ChaCha8Rng,
 ) -> hecs::Entity {
-    use civ_genetics::{named_seed_round_robin, spawn_genome_with_divergence};
+    use civ_genetics::{NamedSeed, spawn_genome_with_divergence};
 
     let nx = (x + rng.gen_range(-0.015..0.015)).clamp(0.01, 0.99);
     let ny = (y + rng.gen_range(-0.015..0.015)).clamp(0.01, 0.99);
 
-    // Generate DNA from archetype — round-robin through all 12 named seeds.
-    let named_seed = named_seed_round_robin(id as usize);
+    // Generate DNA from archetype with divergence
+    let seed_index = (id as usize) % 3;
+    let named_seed = match seed_index {
+        0 => NamedSeed::Ardani,
+        1 => NamedSeed::Velthari,
+        _ => NamedSeed::Grundak,
+    };
     let dna_class = civ_genetics::DnaClass::default();
     let seed_def = civ_genetics::archetype_seed(named_seed);
     let dna = spawn_genome_with_divergence(rng, &dna_class, &seed_def, 0.3);
@@ -498,7 +503,7 @@ pub fn spawn_civilian_at(
     visual: ActorVisualKind,
     rng: &mut ChaCha8Rng,
 ) -> hecs::Entity {
-    use civ_genetics::{named_seed_round_robin, spawn_genome_with_divergence};
+    use civ_genetics::{NamedSeed, spawn_genome_with_divergence};
 
     let angle = rng.gen::<f32>() * std::f32::consts::TAU;
     let velocity = Velocity {
@@ -511,8 +516,13 @@ pub fn spawn_civilian_at(
         z: (y.clamp(0.0, 1.0) * civ_voxel::FIXED_SCALE as f32) as i64,
     };
 
-    // Select archetype seed — round-robin through all 12 named seeds for variety.
-    let named_seed = named_seed_round_robin(id as usize);
+    // Select archetype seed based on civilian ID % 3 for variety (Ardani, Velthari, Grundak)
+    let seed_index = (id as usize) % 3;
+    let named_seed = match seed_index {
+        0 => NamedSeed::Ardani,
+        1 => NamedSeed::Velthari,
+        _ => NamedSeed::Grundak,
+    };
 
     // Generate DNA from archetype with divergence
     let dna_class = civ_genetics::DnaClass::default();
@@ -541,7 +551,7 @@ pub fn spawn_many(
     seed_civilian_id: u64,
     faction: u32,
 ) -> Vec<hecs::Entity> {
-    use civ_genetics::{named_seed_round_robin, spawn_genome_with_divergence};
+    use civ_genetics::{NamedSeed, spawn_genome_with_divergence};
     use rand::SeedableRng;
     use rand_chacha::ChaCha8Rng;
 
@@ -581,8 +591,13 @@ pub fn spawn_many(
         };
         let angle = (offset as f32) * 0.5;
 
-        // Generate DNA from archetype — round-robin through all 12 named seeds.
-        let named_seed = named_seed_round_robin((seed_civilian_id + u64::from(offset)) as usize);
+        // Generate DNA from archetype with divergence
+        let seed_index = ((seed_civilian_id + u64::from(offset)) as usize) % 3;
+        let named_seed = match seed_index {
+            0 => NamedSeed::Ardani,
+            1 => NamedSeed::Velthari,
+            _ => NamedSeed::Grundak,
+        };
         let dna_class = civ_genetics::DnaClass::default();
         let seed_def = civ_genetics::archetype_seed(named_seed);
         let dna = spawn_genome_with_divergence(&mut rng, &dna_class, &seed_def, 0.3);

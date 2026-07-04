@@ -47,11 +47,9 @@
 #![warn(missing_docs)]
 
 pub mod branching;
-pub mod criticality;
 pub mod dashboard;
 pub mod mutual_information;
 pub mod power_law;
-pub mod sample_snapshot;
 pub mod shannon;
 pub mod structure;
 

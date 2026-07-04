@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Faction crest "violet" — procedural heraldry (DNA->form). Shared Keycap frame, distinct hue/shield/sigil. -->
+  <defs>
+    <radialGradient id="amb" cx="50%" cy="46%" r="55%">
+      <stop offset="0%" stop-color="#8a6fc9" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#8a6fc9" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="field" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0e1416"/>
+      <stop offset="100%" stop-color="#080b0c"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <circle cx="64" cy="64" r="56" fill="url(#amb)"/>
+  <!-- shared Keycap teal outer ring (faction DNA) -->
+  <circle cx="64" cy="64" r="58" fill="none" stroke="#7ebab5" stroke-width="1.4" opacity="0.35" stroke-dasharray="3 5"/>
+
+  <!-- shield field -->
+  <path d="M40,20 H88 Q104,20 104,40 V62 Q104,96 64,112 Q24,96 24,62 V40 Q24,20 40,20 Z" fill="url(#field)" stroke="#8a6fc9" stroke-width="3" filter="url(#glow)"/>
+  <path d="M40,20 H88 Q104,20 104,40 V62 Q104,96 64,112 Q24,96 24,62 V40 Q24,20 40,20 Z" fill="none" stroke="#c0aeec" stroke-width="1" opacity="0.5"/>
+
+  <!-- central faction glyph -->
+  <g filter="url(#glow)"><path stroke="#c0aeec" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" d="M64,40 L80,58 L72,86 L56,86 L48,58 Z"/>
+              <line x1="64" y1="40" x2="64" y2="86" stroke="#c0aeec" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+              <line x1="48" y1="58" x2="80" y2="58" stroke="#c0aeec" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" /></g>
+
+  <!-- emergent node motif at crest base (shared DNA) -->
+  <g>
+    <line x1="50" y1="98" x2="64" y2="104" stroke="#7ebab5" stroke-width="1" opacity="0.5"/>
+    <line x1="78" y1="98" x2="64" y2="104" stroke="#7ebab5" stroke-width="1" opacity="0.5"/>
+    <circle cx="50" cy="98" r="2.2" fill="#7ebab5" opacity="0.8"/>
+    <circle cx="78" cy="98" r="2.2" fill="#7ebab5" opacity="0.8"/>
+    <circle cx="64" cy="104" r="2.6" fill="#c0aeec"/>
+  </g>
+</svg>

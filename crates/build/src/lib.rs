@@ -8,16 +8,6 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-mod tiers;
-
-pub use tiers::{
-    apply_biome_facade_bias, building_type_min_era, building_type_unlocked, clustered_parcel_offset,
-    culture_id_from_traits, default_architecture_tile_sets, era_gated_demand_signals,
-    era_index_from_pop_tech, facade_for_emergence, facade_histogram_l1, parcel_kind_min_era,
-    parcel_kind_unlocked, settlement_cluster_centroid, wealth_permille_from_stocks, BiomeStyleTag,
-    EmergentStyleKey,
-};
-
 use std::collections::BTreeMap;
 
 use civ_voxel::{MaterialId, WorldCoord};
@@ -261,9 +251,6 @@ pub struct BuildingGraph {
     pub facades: BTreeMap<BuildingId, FacadeStyle>,
     /// Provenance tag per parcel.
     pub provenance: BTreeMap<BuildingId, BuildingProvenance>,
-    /// Settlement-cluster layout: cluster id → parcel ids (`FR-CIV-ARCH`).
-    #[serde(default)]
-    pub settlement_clusters: BTreeMap<u64, Vec<BuildingId>>,
 }
 
 impl BuildingGraph {

@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- Themed spinner: teal orbital + hex core, transparent bg. Bevy rotates it. Keycap teal #7ebab5. -->
+  <defs>
+    <linearGradient id="sweep" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7ebab5" stop-opacity="1"/>
+      <stop offset="45%" stop-color="#7ebab5" stop-opacity="0.55"/>
+      <stop offset="72%" stop-color="#7ebab5" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#7ebab5" stop-opacity="0.04"/>
+    </linearGradient>
+    <radialGradient id="core" cx="42%" cy="38%" r="62%">
+      <stop offset="0%" stop-color="#16332f"/>
+      <stop offset="60%" stop-color="#0c1a18"/>
+      <stop offset="100%" stop-color="#070b0c"/>
+    </radialGradient>
+    <filter id="g" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="1.6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- base ring + sweeping arc -->
+  <circle cx="60" cy="60" r="52" fill="none" stroke="#7ebab5" stroke-width="4.5" opacity="0.10"/>
+  <circle cx="60" cy="60" r="52" fill="none" stroke="url(#sweep)" stroke-width="4.5"
+          stroke-dasharray="245 82" stroke-linecap="round" filter="url(#g)"/>
+
+  <!-- 6 orbital node ticks (hex symmetry) -->
+  <g fill="#7ebab5" filter="url(#g)">
+    <circle cx="60" cy="8" r="3.2"/>
+    <circle cx="105" cy="34" r="3.2" opacity="0.85"/>
+    <circle cx="105" cy="86" r="3.2" opacity="0.7"/>
+    <circle cx="60" cy="112" r="3.2" opacity="0.6"/>
+    <circle cx="15" cy="86" r="3.2" opacity="0.7"/>
+    <circle cx="15" cy="34" r="3.2" opacity="0.85"/>
+  </g>
+
+  <!-- inner counter-ring -->
+  <circle cx="60" cy="60" r="40" fill="none" stroke="#7ebab5" stroke-width="1.6"
+          stroke-dasharray="150 100" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- hex core -->
+  <polygon points="60,33 83,46.5 83,73.5 60,87 37,73.5 37,46.5"
+           fill="url(#core)" stroke="#7ebab5" stroke-width="1.4" filter="url(#g)"/>
+  <polygon points="60,42 75,50.5 75,67.5 60,76 45,67.5 45,50.5"
+           fill="none" stroke="#7ebab5" stroke-width="0.9" opacity="0.45"/>
+  <!-- core node + emergent links -->
+  <g stroke="#a8d4d0" stroke-width="1" opacity="0.7">
+    <line x1="60" y1="60" x2="60" y2="42"/>
+    <line x1="60" y1="60" x2="75" y2="67.5"/>
+    <line x1="60" y1="60" x2="45" y2="67.5"/>
+  </g>
+  <circle cx="60" cy="60" r="3.4" fill="#a8d4d0" filter="url(#g)"/>
+</svg>

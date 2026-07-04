@@ -31,6 +31,7 @@ members = [
   "crates/emergence-migration",
   "crates/audio",
   "crates/climate",
+  "crates/holocron",
   "crates/i18n",
   "clients/bevy-ref",
   # "clients/fyrox-ref" - excluded until fyrox 1.x API is wired (see docs/research/fyrox-evaluation.md)

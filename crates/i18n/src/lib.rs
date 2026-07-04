@@ -13,7 +13,6 @@
 //! ```
 #![deny(missing_docs)]
 
-use std::borrow::Cow;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::Path;
@@ -142,11 +141,8 @@ impl Bundle {
     /// Look up a string key, falling back to a raw key display if missing.
     ///
     /// This is useful during development when keys haven't been translated yet.
-    pub fn get_or_key<'a>(&'a self, key: &'a str) -> Cow<'a, str> {
-        self.strings
-            .get(key)
-            .map(|s| Cow::Borrowed(s.as_str()))
-            .unwrap_or_else(|| Cow::Borrowed(key))
+    pub fn get_or_key(&self, key: &str) -> &str {
+        self.strings.get(key).map(|s| s.as_str()).unwrap_or(key)
     }
 
     /// Return the locale this bundle was loaded for.

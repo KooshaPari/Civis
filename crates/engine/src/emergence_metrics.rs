@@ -63,10 +63,16 @@ use serde::{Deserialize, Serialize};
 use crate::engine::{DiplomacyKind, Simulation};
 
 /// Dashboard metrics for tile-level emergence data (stub pending full integration).
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 pub struct TileDashboard {
     pub cluster_entropy: Option<f32>,
     pub ideology_homophily: Option<f32>,
+    pub sentience_fraction: Option<f32>,
+    pub psyche_stability: Option<f32>,
+    pub diplomacy_tension: Option<f32>,
+    pub novelty_score: f32,
+    pub coupling_mi: f32,
+    pub criticality_indicator: f32,
 }
 
 /// Sample every 50 engine ticks = 5 s at the 100 ms tick cadence

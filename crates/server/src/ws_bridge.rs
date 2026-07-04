@@ -19,6 +19,7 @@ use axum::{
     Json, Router,
 };
 use civ_agents::{Civilian as AgentCivilian, Needs, Tools, Wardrobe};
+use civ_build::ProductionEvent;
 use civ_engine::{
     decode_civreplay, encode_civreplay, job_type_for_civilian_id,
     scenario::{load_scenario, preset_scenario_path},
@@ -177,6 +178,10 @@ struct TickBroadcast {
     tick: u64,
     frames: Arc<[Frame3d]>,
     encoded: Arc<[Message]>,
+    /// Construction lifecycle events emitted during the most recent tick
+    /// (FR-CIV-BUILD-002). Bevy clients use these to render scaffolding and
+    /// completion FX; replay log mirrors them for deterministic reloads.
+    construction_events: Arc<[ProductionEvent]>,
 }
 
 fn resolve_session_id() -> String {
@@ -1596,10 +1601,19 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
             encode_tick_broadcast_messages(&bundle, state.tick_broadcast_format)?
                 .into_boxed_slice(),
         );
+        // Snapshot construction events for the just-completed tick. The events
+        // are cleared at the top of `Simulation::tick()`, so we read them here
+        // after `sim.tick()` has run (FR-CIV-BUILD-002).
+        let construction_events: Arc<[ProductionEvent]> = Arc::from(
+            sim.last_construction_events()
+                .to_vec()
+                .into_boxed_slice(),
+        );
         Arc::new(TickBroadcast {
             tick,
             frames: Arc::from(bundle),
             encoded,
+            construction_events,
         })
     };
 
@@ -1607,7 +1621,6 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
     clients.retain(|tx| tx.send(ClientOutbound::Tick(Arc::clone(&batch))).is_ok());
     Ok(())
 }
-
 async fn tick_once(state: &AppState) -> Result<(), String> {
     let multiplier = state.speed_multiplier.load(Ordering::Relaxed);
     if multiplier == 0 {
@@ -1659,6 +1672,8 @@ mod tests {
         let dir = tempfile::tempdir().expect("tempdir");
         let saves_dir = dir.path().join("saves");
         std::fs::create_dir_all(&saves_dir).expect("saves dir");
+        let replays_dir = dir.path().join("replays");
+        std::fs::create_dir_all(&replays_dir).expect("replays dir");
         let save_db_path = save_db_path_for_saves_dir(&saves_dir);
         let save_db = Arc::new(SaveDb::open(&save_db_path).expect("open save db"));
         let state = AppState {

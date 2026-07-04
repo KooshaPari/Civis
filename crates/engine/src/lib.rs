@@ -1,5 +1,6 @@
 pub mod religion;
 pub mod demographics;
+pub mod godtools;
 
 pub mod disasters;
 pub mod emergence;
@@ -29,4 +30,8 @@ pub use engine::{
     job_type_for_civilian_id, Building, BuildingType, Citizen, CombatDamagePulse, DiplomacyEvent,
     DiplomacyKind, JobType, MilitaryUnit, PopulationEvent, Position, Production, ResourceType,
     Resources, Simulation, SimulationSnapshot, UnitType, WorldState,
+};
+pub use godtools::{
+    DisasterOp, DisasterRequest, GodToolError, GodToolReceipt, GodToolRequest, InspectOp,
+    InspectRequest, LifeRequest, MaterialRequest, SpawnOrganism, TerraformOp, TerraformRequest,
 };

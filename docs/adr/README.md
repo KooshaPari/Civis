@@ -33,7 +33,7 @@ Numbered ADRs (in numeric order):
 | 016   | Religion Emergence from Needs Vector                                                                        | Accepted          | [ADR-016-religion-emergence-from-needs-vector.md](ADR-016-religion-emergence-from-needs-vector.md) |
 | 017   | Web L2 Authoring (Amendment to ADR-009)                                                                     | Accepted          | [ADR-017-web-l2-authoring-amendment.md](ADR-017-web-l2-authoring-amendment.md)             |
 | 018   | Emergence Systems Bidirectional Coupling via Shared Gradients + Conserved Resources                       | Proposed          | [ADR-018-emergence-systems-coupling.md](ADR-018-emergence-systems-coupling.md)             |
-| 019   | *reserved / vacant* — see Numeric gaps and renumber history                                                                 | reserved / vacant | —                                                                                          |
+| 019   | Rendering / World-Substrate Selection for Civis Bevy Client                                               | Proposed (amends [ADR-005](ADR-005-adaptive-voxel.md) and [ADR-voxel-streaming-scale](ADR-voxel-streaming-scale.md)) | [ADR-019-rendering-substrate-selection.md](ADR-019-rendering-substrate-selection.md) |
 | 020   | Wire Dormant Emergence Phases into `Simulation::tick`                                                                       | Proposed          | [ADR-020-wire-dormant-emergence-phases.md](ADR-020-wire-dormant-emergence-phases.md)       |
 
 Non-numeric ADRs (named; kept under their original filenames on purpose — see
@@ -48,12 +48,17 @@ notes below the table):
 
 ## Numeric gaps and renumber history
 
-- **ADR-019 is reserved / vacant.** It is intentionally left as a gap so
-  that the `emergence-wiring-adr` branch lands cleanly under ADR-020 (the
-  companion wiring decision) without disturbing the existing ADR-001 …
-  ADR-018 numbering or requiring a cross-ADR renumber. Do not introduce a
-  new ADR-019 without first re-allocating the gap or renumbering
-  ADR-020.
+- **ADR-019 (filled 2026-06-23).** The previously reserved/vacant slot
+  has been allocated to
+  [ADR-019-rendering-substrate-selection.md](ADR-019-rendering-substrate-selection.md)
+  ("Rendering / World-Substrate Selection for Civis Bevy Client",
+  status *Proposed*; amends [ADR-005](ADR-005-adaptive-voxel.md) and
+  [ADR-voxel-streaming-scale](ADR-voxel-streaming-scale.md)). The
+  decision was previously tracked on the
+  `research/render-substrate-alternatives` branch and has been re-applied
+  on `main` via PR "docs(adr): ADR-019 rendering substrate selection
+  (rebased)" so it sits cleanly between ADR-018 and ADR-020 without any
+  renumber of the existing rows.
 - **ADR-004 is reserved / vacant.** It is historically referenced by
   ADR-005 / ADR-006 / ADR-007 / ADR-008 as the "deterministic replay" ADR. The
   decision they reference now lives under ADR-003
@@ -116,6 +121,21 @@ on recovery and the ADR-009 collision.
   faction, religion, trade, architecture, and climate. It enumerates
   the N-series rows from ADR-011 against the actual crate / file /
   symbol that owns each direction.
+- [ADR-019-rendering-substrate-selection](ADR-019-rendering-substrate-selection.md)
+  is the **research-pass** decision on the world substrate for the Bevy
+  client. It evaluates six candidate substrates (voxel, GPU mesh
+  instancing, Nanite-style virtualized geometry, SDF + marching cubes,
+  Gaussian splatting, hybrid heightfield) against Civis's specific needs
+  and **amends** [ADR-005-adaptive-voxel](ADR-005-adaptive-voxel.md) and
+  [ADR-voxel-streaming-scale](ADR-voxel-streaming-scale.md) by
+  recommending that the **SVO + dense 16³ leaf voxel substrate be
+  retained as the canonical world substrate** while adding a **layered
+  rendering pipeline** on top (SVO-derived greedy-meshed cluster-LOD
+  for natural terrain, GPU instancing for static props, meshlet
+  clusters for imported scanned assets). The substrate split — canonical
+  truth in voxels, visual layer free to choose — is what lets the
+  WSM-dev-observed "mesh instancing is better" insight and the
+  god-tool-editability requirement both be satisfied.
 - [ADR-020-wire-dormant-emergence-phases](ADR-020-wire-dormant-emergence-phases.md)
   is the **wiring decision** that closes the `EMERGENCE_AUDIT.md` §5 #1
   gap: it inserts the 11 dormant emergence phases (`life`, `research`,

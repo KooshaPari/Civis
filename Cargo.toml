@@ -24,6 +24,7 @@ harness = false
 members = [
   ".",
   "crates/engine",
+  "crates/civ-traffic",
   "crates/server",
   "crates/voxel",
   "crates/voxel-bridge",
@@ -87,7 +88,7 @@ split-debuginfo = "packed"
 # not bloat and incremental re-links stay cheap.
 #
 # `debug = 1` keeps line tables so breakpoints / backtraces inside bevy_ecs,
-# wgpu, and kira work when stepping through a sim issue - without paying for
+# wgpu, and kira work when stepping through a sim issue — without paying for
 # full inline DWARF on the first build.
 [profile.dev.package.bevy]
 opt-level = 3
@@ -100,8 +101,3 @@ debug = 1
 [profile.dev.package.bevy_kira_audio]
 opt-level = 3
 debug = 1
-
-[patch.crates-io]
-metal = { path = "vendor/metal" }
-kira = { path = "vendor/kira" }
-simba = { path = "vendor/simba" }

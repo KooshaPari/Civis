@@ -3,10 +3,10 @@
 //! This module provides the deterministic simulation loop with entity component system.
 
 use civ_agents::{
-    count_civilians, propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at,
-    ActorVisualKind, Alignment, ClusterMember, Civilian as AgentCivilian, CohortStats,
-    DiplomacyMatrix, DiplomacySignal, LodTier, Needs, Psyche, SocialGraph, Position3d, Tools,
-    Wardrobe,
+    choose_activity, cluster_by_colocation, count_civilians, path_step, pick_target,
+    propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at, wander_anchor,
+    Activity, Alignment, Civilian as AgentCivilian, ClusterMember, CohortStats, LodTier, Needs,
+    PoiKind, PoiRegistry, Position3d, Tools, Wardrobe,
 };
 use civ_agents::culture::{cultural_distance, language_distance, CultureProfile};
 use civ_build::{Allocator, BuildingGraph, BuildSite, DemandSignals, ProductionEvent};

@@ -394,7 +394,11 @@ mod tests {
             &mut sim,
             target,
             3 * civ_voxel::FIXED_SCALE,
-            DisasterEffect::new(0.28, 0.35, 0.25, 0.55, true),
+            0.28,
+            0.35,
+            0.25,
+            0.55,
+            true,
         );
         let needs = sim.world.get::<&LifeNeeds>(entity).expect("life needs");
         assert!(needs.rest < 1.0, "rest should drop after meteor");

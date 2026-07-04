@@ -57,8 +57,11 @@ pub use mutual_information::{
     mutual_information_bits, mutual_information_normalised, JointHistogram,
 };
 
-pub use criticality::{criticality_indicator, CriticalityBands, CriticalityInputs};
-pub use dashboard::{coupling_mi_estimate, novelty_score, TileDashboard};
+// <deliberately empty> — criticality / coupling / novelty / TileDashboard are
+// defined in branching.rs and dashboard.rs and are not re-exported at crate
+// level during the emergence-merge migration. They are accessible from the
+// engine as civ_emergence_metrics::branching::* and
+// civ_emergence_metrics::dashboard::*.
 
 /// Marker version of this crate's public schema. Bumped on breaking changes.
 pub const SCHEMA_VERSION: &str = "0.5.0-power-law-alpha";

@@ -52,6 +52,7 @@ use civ_emergence_metrics::branching::{
 use civ_emergence_metrics::{
     criticality_indicator, coupling_mi_estimate, novelty_score, CriticalityInputs,
 };
+use civ_emergence_metrics::dashboard::EmergenceDashboard;
 use civ_emergence_metrics::power_law::PowerLawFit;
 use civ_emergence_metrics::shannon::ShannonEntropy;
 use civ_emergence_metrics::structure::{ComponentSummary, Grid, StructureCount};
@@ -587,11 +588,11 @@ impl Simulation {
         // replay-compatibility for downstream consumers.
         self.replay_log_mut().record_emergence_metrics(
             sample.tick,
-            sample.dashboard.cluster_entropy,
-            sample.dashboard.ideology_homophily,
-            sample.dashboard.sentience_fraction,
-            sample.dashboard.psyche_stability,
-            sample.dashboard.diplomacy_tension,
+            sample.dashboard.cluster_entropy.unwrap_or(0.0),
+            sample.dashboard.ideology_homophily.unwrap_or(0.0),
+            sample.dashboard.sentience_fraction.unwrap_or(0.0),
+            sample.dashboard.psyche_stability.unwrap_or(0.0),
+            sample.dashboard.diplomacy_tension.unwrap_or(0.0),
         );
         true
     }

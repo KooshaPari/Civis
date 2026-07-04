@@ -21,9 +21,10 @@ use crate::live_stream::apply_event_feed_frame;
 use crate::live_stream::{
     apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
     apply_civilian_state_frame, apply_climate_frame, apply_faction_state_frame,
-    apply_voxel_delta_frame, default_stream_meshes, AgentLabelConfig, LiveAgentTag,
-    LiveBuildingTag, LiveChunkFade, LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene,
-    StreamCulling, LIVE_CHUNK_EDGE,
+    apply_voxel_delta_frame, apply_water_deltas_for_frame, default_stream_meshes,
+    default_water_meshes, AgentLabelConfig, LiveAgentTag, LiveBuildingTag, LiveChunkFade,
+    LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene, LiveWaterMeshes, StreamCulling,
+    LIVE_CHUNK_EDGE,
 };
 use crate::minimap::{MinimapCamera, MinimapDot, MinimapRoot, MINIMAP_SIZE};
 use crate::{chunk_fade_complete, AttachMode, DebugRender, LiveHudSnapshot};
@@ -64,8 +65,17 @@ impl Plugin for LiveScenePlugin {
     }
 }
 
-fn setup_live_scene_assets(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
+fn setup_live_scene_assets(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
     commands.insert_resource(default_stream_meshes(&mut meshes));
+    // FR-CLIENT-render: shared water-surface quad + tinted material handle so
+    // every chunk's water companion shares one mesh upload / material
+    // uniform block (parallel to `LiveStreamMeshes` for agent / building
+    // markers).
+    commands.insert_resource(default_water_meshes(&mut meshes, &mut materials));
 }
 
 fn apply_live_scene_frames(
@@ -76,6 +86,7 @@ fn apply_live_scene_frames(
     mut scene: ResMut<LiveStreamScene>,
     debug: Res<DebugRender>,
     assets: Res<LiveStreamMeshes>,
+    water_meshes: Res<LiveWaterMeshes>,
     cameras: Query<&Transform, (With<Camera3d>, Without<crate::minimap::MinimapCamera>)>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -107,16 +118,30 @@ fn apply_live_scene_frames(
         state.tick = Some(tick);
         hud.tick = Some(tick);
         match frame {
-            Frame3d::VoxelDelta(delta) => apply_voxel_delta_frame(
-                &mut commands,
-                &mut scene,
-                &mut meshes,
-                &mut materials,
-                culling,
-                debug.as_ref(),
-                delta,
-                None,
-            ),
+            Frame3d::VoxelDelta(delta) => {
+                apply_voxel_delta_frame(
+                    &mut commands,
+                    &mut scene,
+                    &mut meshes,
+                    &mut materials,
+                    culling,
+                    debug.as_ref(),
+                    delta.clone(),
+                    None,
+                );
+                // FR-CLIENT-render: pair the chunk-mesh update with a
+                // water-surface companion update so the streamed water
+                // plane tracks the chunk's voxel composition on every
+                // delta (re-uses the same delta payload + culling eye).
+                apply_water_deltas_for_frame(
+                    &mut commands,
+                    &mut scene,
+                    water_meshes.as_ref(),
+                    culling.eye,
+                    culling.max_distance,
+                    &delta,
+                );
+            }
             Frame3d::AgentAppearance(agents) => {
                 apply_agent_appearance_frame_with_labels(
                     &mut commands,

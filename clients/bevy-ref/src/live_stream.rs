@@ -261,6 +261,11 @@ pub struct LiveGraphParcelTag {
 #[derive(Resource)]
 pub struct LiveStreamScene {
     pub chunks: HashMap<u64, Entity>,
+    /// Water surface companion entities keyed by raw chunk id (FR-CLIENT-render).
+    /// The water entity is a transparent quad that follows the parent chunk
+    /// transform and is repositioned every snapshot delta so the water surface
+    /// visibly tracks the underlying voxel stream.
+    pub water_entities: HashMap<u64, Entity>,
     pub chunk_voxels: ChunkVoxelCache,
     pub agents: HashMap<u64, Entity>,
     pub buildings: HashMap<u64, Entity>,
@@ -302,6 +307,7 @@ impl Default for LiveStreamScene {
     fn default() -> Self {
         Self {
             chunks: HashMap::default(),
+            water_entities: HashMap::default(),
             chunk_voxels: ChunkVoxelCache::default(),
             agents: HashMap::default(),
             buildings: HashMap::default(),
@@ -701,6 +707,185 @@ fn chunk_transform(id: ChunkId) -> Transform {
     )
 }
 
+// ----------------------------------------------------------------------
+// FR-CLIENT-render — water surface companion (FR-CLIENT-render extension)
+// ----------------------------------------------------------------------
+//
+// The voxel delta frame already streams water voxels (MaterialId(1)) inside
+// every chunk payload. The chunk mesher only emits faces between air and
+// solid voxels, so the water surface itself is invisible to the cubic
+// mesher when a water cell is fully bounded by more water above (no solid
+// boundary to expose). To make the streamed world *look* like it has a
+// shoreline we spawn a parallel water-surface quad that:
+//   * shares the parent chunk's transform,
+//   * sits at the topmost water Y for the chunk,
+//   * uses a single shared quad mesh + a stable water material,
+//   * is respawned/repositioned on every snapshot delta via the existing
+//     voxel-delta hook (no separate frame flow, no new poll path).
+//
+// This is purely additive: when the chunk has no water, the water
+// companion is despawned. The chunk mesh path is untouched.
+
+/// Marker component for a water-surface companion entity (FR-CLIENT-render).
+///
+/// Lives alongside the parent chunk's [`LiveChunkTag`] entity in the
+/// scene graph so scene systems can iterate over water companions
+/// (e.g. for HUD counts) by querying the tag without joining on the
+/// chunk transform.
+#[derive(Component)]
+pub struct LiveWaterTag {
+    /// Chunk id whose voxel payload produced this water surface.
+    pub chunk: ChunkId,
+}
+
+/// Single shared water surface mesh + material handle (FR-CLIENT-render).
+///
+/// Bevy `Handle<Mesh>` and `Handle<StandardMaterial>` are interned via
+/// `Arc`; cloning the handle per chunk entity means the GPU keeps one
+/// mesh upload + one material uniform block for every chunk in the
+/// scene. The instancing surface is the same pattern the agent /
+/// building marker meshes already use in [`LiveStreamMeshes`].
+#[derive(Resource, Clone)]
+pub struct LiveWaterMeshes {
+    /// Single shared quad mesh used for every chunk's water surface.
+    pub surface_mesh: Handle<Mesh>,
+    /// Single shared water-tinted material handle.
+    pub surface_material: Handle<StandardMaterial>,
+}
+
+/// Tint applied to streamed water surface (sRGB, FR-CLIENT-render).
+/// Mirrors the `WATER` biome tint from [`material_tint`] so the companion
+/// visually agrees with the chunk's biome-derived albedo.
+pub const WATER_SURFACE_TINT: [f32; 3] = [0.30, 0.50, 0.78];
+/// Alpha for the streamed water surface (semi-transparent over the
+/// chunk mesh). Tuned so the underlying terrain shows through clearly
+/// while still reading as a coherent plane.
+pub const WATER_SURFACE_ALPHA: f32 = 0.62;
+/// Per-chunk surface bias in world units (small lift so the water plane
+/// does not Z-fight with the topmost water voxel face).
+pub const WATER_SURFACE_LIFT: f32 = 0.05;
+
+/// Build the default water surface mesh + material (FR-CLIENT-render).
+/// One quad per chunk keeps the math simple and matches the existing
+/// Bevy mesh-and-material path used by the chunk / agent / building
+/// renderers.
+#[must_use]
+pub fn default_water_meshes(
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+) -> LiveWaterMeshes {
+    let surface_mesh = meshes.add(Mesh::from(
+        bevy::math::primitives::Plane3d::default().mesh().size(
+            LIVE_CHUNK_EDGE as f32,
+            LIVE_CHUNK_EDGE as f32,
+        ),
+    ));
+    let surface_material = materials.add(StandardMaterial {
+        base_color: Color::srgba(
+            WATER_SURFACE_TINT[0],
+            WATER_SURFACE_TINT[1],
+            WATER_SURFACE_TINT[2],
+            WATER_SURFACE_ALPHA,
+        ),
+        perceptual_roughness: 0.35,
+        metallic: 0.0,
+        alpha_mode: AlphaMode::Blend,
+        double_sided: true,
+        ..default()
+    });
+    LiveWaterMeshes {
+        surface_mesh,
+        surface_material,
+    }
+}
+
+/// Returns `true` if any voxel in the chunk payload is water (or salt
+/// water) — used to decide whether the water companion should be
+/// (re)created. Cheap: short-circuits on the first hit.
+#[must_use]
+pub fn chunk_has_water(voxels: &[MaterialId]) -> bool {
+    use civ_voxel::material::{SALT_WATER, WATER};
+    voxels.iter().any(|v| v.0 == WATER.0 || v.0 == SALT_WATER.0)
+}
+
+/// Topmost world-Y of the water column inside the chunk (the Y at which
+/// the surface quad should sit). Returns `None` when the chunk has no
+/// water voxels. Iterates top-down to short-circuit.
+#[must_use]
+pub fn chunk_water_top_y(voxels: &[MaterialId], chunk_origin_y: i32) -> Option<f32> {
+    use civ_voxel::material::{SALT_WATER, WATER};
+    if voxels.len() != LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE {
+        return None;
+    }
+    let edge = LIVE_CHUNK_EDGE as usize;
+    for iy in (0..LIVE_CHUNK_EDGE).rev() {
+        for ix in 0..LIVE_CHUNK_EDGE {
+            for iz in 0..LIVE_CHUNK_EDGE {
+                // Canonical voxel layout (matches `voxel_index` in
+                // `live_ground.rs` / `live_stream.rs`): idx = ix + iy * E + iz * E * E.
+                let idx = ix + iy * edge * edge + iz * edge;
+                let v = voxels[idx];
+                if v.0 == WATER.0 || v.0 == SALT_WATER.0 {
+                    return Some(
+                        (chunk_origin_y * LIVE_CHUNK_EDGE as i32 + iy as i32 + 1) as f32
+                            + WATER_SURFACE_LIFT,
+                    );
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Spawn or update the water companion for one chunk (FR-CLIENT-render).
+///
+/// Behaviour matches the chunk entity's lifecycle:
+/// * If the chunk has water voxels, (re)position the surface at the
+///   computed top Y and reuse the existing entity (or spawn a new one).
+/// * If the chunk has no water voxels, despawn the existing water entity
+///   (if any) so the scene reflects the latest snapshot.
+pub fn apply_water_for_chunk(
+    commands: &mut Commands,
+    scene: &mut LiveStreamScene,
+    meshes: &LiveWaterMeshes,
+    chunk_id: ChunkId,
+    voxels: &[MaterialId],
+) {
+    let (cx, cy, cz) = decode_chunk_id(chunk_id);
+    let _ = (cx, cz);
+
+    if !chunk_has_water(voxels) {
+        if let Some(entity) = scene.water_entities.remove(&chunk_id.0) {
+            commands.entity(entity).despawn();
+        }
+        return;
+    }
+
+    let Some(surface_y) = chunk_water_top_y(voxels, cy) else {
+        return;
+    };
+
+    let chunk_origin = chunk_transform(chunk_id);
+    let transform = Transform::from_xyz(chunk_origin.translation.x, surface_y, chunk_origin.translation.z);
+
+    let entity = *scene
+        .water_entities
+        .entry(chunk_id.0)
+        .or_insert_with(|| {
+            commands
+                .spawn((
+                    LiveWaterTag { chunk: chunk_id },
+                    Transform::default(),
+                ))
+                .id()
+        });
+    commands.entity(entity).insert((
+        Mesh3d(meshes.surface_mesh.clone()),
+        MeshMaterial3d(meshes.surface_material.clone()),
+        transform,
+    ));
+}
+
 /// Applies a voxel delta frame (caches voxels, meshes in-range chunks).
 pub fn apply_voxel_delta_frame(
     commands: &mut Commands,
@@ -790,6 +975,52 @@ pub fn apply_voxel_delta_frame(
                 .remove::<Wireframe>()
                 .remove::<WireframeColor>();
         }
+    }
+}
+
+/// Applies the water-surface companion updates for one voxel delta frame
+/// (FR-CLIENT-render). This is the additive hook that pairs with
+/// [`apply_voxel_delta_frame`] — callers that want the streamed water
+/// surface to track chunk composition invoke this right after the chunk
+/// mesh update loop returns, sharing the same `delta` payload and Bevy
+/// `Commands` buffer. Behaviour:
+///
+/// * If a chunk delta carries water voxels (or salt-water), spawn (or
+///   reposition) a [`LiveWaterTag`] entity whose `Transform.y` matches
+///   the topmost water Y for that chunk.
+/// * If a chunk delta carries no water voxels but the companion exists
+///   from a previous snapshot, despawn it.
+/// * Chunks skipped by distance culling keep their cached voxels but
+///   their water companion is removed (same lifecycle rule as the chunk
+///   mesh, so the surface never lags behind the camera).
+///
+/// This function is the single per-delta entry point used by the Bevy
+/// frame consumer; it is intentionally not gated by culling so the
+/// surface can be evicted even when the chunk itself would otherwise
+/// re-appear on the next frame.
+pub fn apply_water_deltas_for_frame(
+    commands: &mut Commands,
+    scene: &mut LiveStreamScene,
+    water_meshes: &LiveWaterMeshes,
+    culling_eye: [f32; 3],
+    culling_max_distance: f32,
+    delta: &VoxelDeltaFrame,
+) {
+    for chunk in &delta.deltas {
+        let chunk_id = chunk.event.chunk_id;
+        let in_range = should_render_chunk(chunk_id, culling_eye, culling_max_distance);
+        if !in_range {
+            // Mirror the chunk-entity eviction rule: drop the water
+            // companion even if voxels would otherwise make it visible.
+            if let Some(entity) = scene.water_entities.remove(&chunk_id.0) {
+                commands.entity(entity).despawn();
+            }
+            continue;
+        }
+        if chunk.voxels.len() != LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE {
+            continue;
+        }
+        apply_water_for_chunk(commands, scene, water_meshes, chunk_id, &chunk.voxels);
     }
 }
 
@@ -1345,6 +1576,146 @@ mod tests {
 
         assert_eq!(scene.chunks.len(), 1);
         assert!(scene.chunk_voxels.chunks().contains_key(&chunk_id.0));
+    }
+
+    /// FR-CLIENT-render: detects water voxels in a chunk payload.
+    #[test]
+    fn chunk_has_water_detects_water_material() {
+        use civ_voxel::material::SALT_WATER;
+        let mut voxels = vec![MaterialId(0); CHUNK_VOXELS];
+        assert!(!chunk_has_water(&voxels));
+
+        voxels[voxel_index(2, 0, 2)] = WATER;
+        assert!(chunk_has_water(&voxels));
+
+        voxels[voxel_index(5, 4, 1)] = SALT_WATER;
+        assert!(chunk_has_water(&voxels));
+    }
+
+    /// FR-CLIENT-render: surface Y is `cy*E + iy_top + 1 + LIFT`.
+    #[test]
+    fn chunk_water_top_y_matches_topmost_water_cell() {
+        let mut voxels = vec![MaterialId(0); CHUNK_VOXELS];
+        // Place water at iy=7 (not the top, so the function has to iterate down).
+        voxels[voxel_index(0, 7, 0)] = WATER;
+        // Topmost water at iy=14.
+        voxels[voxel_index(3, 14, 5)] = WATER;
+        let top = chunk_water_top_y(&voxels, 0).expect("water present");
+        let expected = (0 * LIVE_CHUNK_EDGE as i32 + 14 + 1) as f32 + WATER_SURFACE_LIFT;
+        assert!((top - expected).abs() < 1e-4);
+    }
+
+    /// FR-CLIENT-render: `None` when no water is present.
+    #[test]
+    fn chunk_water_top_y_none_for_dry_chunk() {
+        let voxels = vec![MaterialId(0); CHUNK_VOXELS];
+        assert!(chunk_water_top_y(&voxels, 5).is_none());
+    }
+
+    /// FR-CLIENT-render: spawning and re-applying reuses one entity.
+    #[test]
+    fn apply_water_for_chunk_reuses_entity_on_repeat_delta() {
+        use bevy::prelude::*;
+
+        let mut world = World::new();
+        let mut mesh_assets = Assets::<Mesh>::default();
+        let mut material_assets = Assets::<StandardMaterial>::default();
+        let water_meshes = default_water_meshes(&mut mesh_assets, &mut material_assets);
+
+        let chunk_id = encode_chunk_id(0, 0, 0);
+        let mut voxels = vec![MaterialId(0); CHUNK_VOXELS];
+        voxels[voxel_index(0, 8, 0)] = WATER;
+
+        let mut scene = LiveStreamScene::default();
+        let mut commands = world.commands();
+        apply_water_for_chunk(&mut commands, &mut scene, &water_meshes, chunk_id, &voxels);
+        let first_entity = *scene
+            .water_entities
+            .get(&chunk_id.0)
+            .expect("water companion spawned");
+
+        // Apply again — should reuse the same entity, not spawn a new one.
+        apply_water_for_chunk(&mut commands, &mut scene, &water_meshes, chunk_id, &voxels);
+        let second_entity = *scene
+            .water_entities
+            .get(&chunk_id.0)
+            .expect("water companion retained");
+        assert_eq!(first_entity, second_entity);
+        assert_eq!(scene.water_entities.len(), 1);
+    }
+
+    /// FR-CLIENT-render: drying the chunk despawns the companion.
+    #[test]
+    fn apply_water_for_chunk_despawns_when_voxels_dry() {
+        use bevy::prelude::*;
+
+        let mut world = World::new();
+        let mut mesh_assets = Assets::<Mesh>::default();
+        let mut material_assets = Assets::<StandardMaterial>::default();
+        let water_meshes = default_water_meshes(&mut mesh_assets, &mut material_assets);
+
+        let chunk_id = encode_chunk_id(0, 0, 0);
+        let mut voxels = vec![MaterialId(0); CHUNK_VOXELS];
+        voxels[voxel_index(0, 8, 0)] = WATER;
+
+        let mut scene = LiveStreamScene::default();
+        let mut commands = world.commands();
+        apply_water_for_chunk(&mut commands, &mut scene, &water_meshes, chunk_id, &voxels);
+        assert!(scene.water_entities.contains_key(&chunk_id.0));
+
+        let dry = vec![MaterialId(0); CHUNK_VOXELS];
+        apply_water_for_chunk(&mut commands, &mut scene, &water_meshes, chunk_id, &dry);
+        assert!(!scene.water_entities.contains_key(&chunk_id.0));
+    }
+
+    /// FR-CLIENT-render: out-of-range chunks lose their companion.
+    #[test]
+    fn apply_water_deltas_for_frame_drops_out_of_range_companion() {
+        use bevy::prelude::*;
+
+        let mut world = World::new();
+        let mut mesh_assets = Assets::<Mesh>::default();
+        let mut material_assets = Assets::<StandardMaterial>::default();
+        let water_meshes = default_water_meshes(&mut mesh_assets, &mut material_assets);
+
+        let chunk_id = encode_chunk_id(2048, 0, 0); // far from eye
+        let mut voxels = vec![MaterialId(0); CHUNK_VOXELS];
+        voxels[voxel_index(0, 5, 0)] = WATER;
+
+        let delta = VoxelDeltaFrame {
+            tick: 1,
+            deltas: vec![VoxelChunkDelta {
+                event: DirtyChunkEvent {
+                    chunk_id,
+                    write_seq: WriteSeq(1),
+                },
+                voxels: voxels.clone(),
+            }],
+        };
+
+        let mut scene = LiveStreamScene::default();
+        let mut commands = world.commands();
+        // First spawn one (in range).
+        apply_water_deltas_for_frame(
+            &mut commands,
+            &mut scene,
+            &water_meshes,
+            [0.0, 0.0, 0.0],
+            512.0,
+            &delta,
+        );
+        assert!(scene.water_entities.contains_key(&chunk_id.0));
+
+        // Then move eye away so chunk is out of range.
+        apply_water_deltas_for_frame(
+            &mut commands,
+            &mut scene,
+            &water_meshes,
+            [0.0, 0.0, 0.0],
+            0.5, // tiny max_distance evicts everything far from origin
+            &delta,
+        );
+        assert!(!scene.water_entities.contains_key(&chunk_id.0));
     }
 
     #[test]

@@ -1,0 +1,11 @@
+[package]
+name = "civ-institutions"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+
+[features]
+default = []

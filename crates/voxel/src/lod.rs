@@ -48,6 +48,40 @@ pub fn plan_chunk_render(
     })
 }
 
+/// A dirty-chunk record signalling that a chunk's visuals or storage
+/// need re-processing on the next frame / tick.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ChunkDirty {
+    /// Chunk grid position.
+    pub chunk_pos: (i32, i32, i32),
+    /// `true` when the chunk is active (loaded / ticked),
+    /// `false` when it should be unloaded.
+    pub is_active: bool,
+}
+
+/// Drain all dirty-chunk records from `dirty`, returning them as a new
+/// `Vec` and leaving the input empty.
+#[must_use]
+pub fn drain_dirty_chunks(dirty: &mut Vec<ChunkDirty>) -> Vec<ChunkDirty> {
+    std::mem::take(dirty)
+}
+
+/// Mark a chunk as dirty because its LOD (mesh detail) changed.
+pub fn mark_lod_dirty(chunk_pos: (i32, i32, i32), dirty: &mut Vec<ChunkDirty>) {
+    dirty.push(ChunkDirty {
+        chunk_pos,
+        is_active: true,
+    });
+}
+
+/// Mark a chunk as dirty because its voxel storage changed.
+pub fn mark_storage_dirty(chunk_pos: (i32, i32, i32), dirty: &mut Vec<ChunkDirty>) {
+    dirty.push(ChunkDirty {
+        chunk_pos,
+        is_active: true,
+    });
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

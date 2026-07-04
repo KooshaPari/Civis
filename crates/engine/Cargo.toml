@@ -65,6 +65,7 @@ civ-species = { path = "../species" }
 # (scaffold + design): this PR wires the live sampling into the engine
 # tick and exposes the latest sample over the WS JSON-RPC surface.
 civ-emergence-metrics = { path = "../civ-emergence-metrics" }
+civ-institutions = { path = "../civ-institutions" }
 
 [dev-dependencies]
 civ-economy = { path = "../economy" }

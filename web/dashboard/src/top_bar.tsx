@@ -1,7 +1,7 @@
 import { flipTheme, themeToggleLabel } from "./lib/theme";
 import { useDashboardStore } from "./store";
 import { playClick, primeAudio } from "./lib/sounds";
-import { authoringModeLabel } from "../../../src/authoringMode.mjs";
+import { authoringModeLabel } from "../../src/authoringMode.mjs";
 import {
   attachEndpointLabel,
   attachModeLabel,

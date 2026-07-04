@@ -8,7 +8,7 @@
 
 ---
 
-## Method catalog (29)
+## Method catalog (30)
 
 | Method | Role (when `require_role`) | Params | Success result (dispatch; bridge may enrich) | `ws_smoke` integration test |
 |--------|----------------------------|--------|---------------------------------------------|------------------------------|
@@ -40,23 +40,8 @@
 | `sim.damage` | **operator** | `{ "x", "y", "z": <i64>, "radius"? }` default `8` clamped 1–32, `"energy"?` default `1000` | Dispatch: `{ "accepted": true }`; bridge: `{ "accepted", "ok", "queued": true }` (applied next tick) | [`ws_jsonrpc_sim_damage_accepts_event`](../../crates/server/tests/ws_smoke.rs) |
 | `save.slot` | — | `{ "slot_name": "slot-1" … "slot-5" }` | `{ "saved": true, "slot_name", "tick", "path" }` (writes `{saves_dir}/{slot_name}.civsave.zst`) | [`ws_jsonrpc_save_slot_roundtrip`](../../crates/server/tests/ws_smoke.rs) |
 | `save.load` | — | `{ "slot_name": "slot-1" … "slot-5" }` | `{ "loaded": true, "slot_name", "tick" }` | [`ws_jsonrpc_save_slot_roundtrip`](../../crates/server/tests/ws_smoke.rs) |
+| `sim.legends` | — | `{}` or omit | Latest legends sample when available; else `{ "tick", "sample": null }` | Unit: `sim_legends_*` in `jsonrpc.rs` |
 | `save.list` | — | `{}` or omit | `[ { "name", "tick", "save_type": "slot" \| "auto" \| "manual" }, … ]` | [`ws_jsonrpc_save_slot_roundtrip`](../../crates/server/tests/ws_smoke.rs) |
-| `sim.emergence` | — | `{}` or omit | Emergence state payload for the active simulation | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
-| `emergence.dashboard` | — | `{}` or omit | Dashboard-ready emergence metrics | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
-| `emergence.metrics` | — | `{}` or omit | Raw emergence metrics payload | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
-| `sim.inspect_tile` | — | Tile coordinate params accepted by bridge parser | Tile inspection payload | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
-| `sim.perf` | — | `{}` or omit | Simulation performance counters | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
-| `sim.diplomacy_action` | **operator** | Diplomacy action params accepted by bridge parser | Diplomacy action result | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
-| `sim.queue_research` | **operator** | Research queue params accepted by bridge parser | Research queue result | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
-| `sim.tech_state` | — | `{}` or omit | Technology/research state payload | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
-| `sim.subscribe` | — | Subscription params accepted by bridge parser | Subscription acceptance/update payload | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
-| `sim.unsubscribe` | — | Subscription id/filter params accepted by bridge parser | Unsubscribe result | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
-| `sim.update_subscription` | — | Subscription update params accepted by bridge parser | Subscription update result | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
-| `sim.outcome` | — | `{}` or omit | Scenario/outcome state payload | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
-| `sim.god_action` | **operator** | God-tool action params accepted by bridge parser | God-tool action receipt/result | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
-| `psyche.snapshot` | — | `{}` or omit | Psyche snapshot payload | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
-| `psyche.events` | — | Event query params accepted by bridge parser | Psyche event stream/query payload | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
-| `sim.religion_state` | — | `{}` or omit | Religion state payload | [`jsonrpc.rs`](../../crates/server/src/jsonrpc.rs) |
 
 **Invalid `sim.command` action:** `-32601` `Method not found` (not `-32602`).
 

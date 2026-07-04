@@ -220,4 +220,3 @@ mod tests {
         assert!((50..=120).contains(&high));
     }
 }
-}

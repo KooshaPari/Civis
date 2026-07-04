@@ -29,8 +29,9 @@ members = [
   "crates/emergence-migration",
   "crates/emergence-oracle",
   "crates/civ-institutions",
+  "crates/powers",
   "crates/infra",
-  "crates/physics-substrate",
+  # "crates/physics-substrate", — CDX sbom only, no Cargo.toml or source
   "crates/audio",
   "crates/climate",
   "clients/bevy-ref",

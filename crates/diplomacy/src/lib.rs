@@ -42,13 +42,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use thiserror::Error;
 
-pub mod emergent;
-
-pub use emergent::{
-    EmergentConfig, EmergentDiplomacy, EmergentStance, RelationDrivers, Reputation, StanceInputs,
-    Territory, TreatyKind, TreatyLedgerEntry, TreatyOutcome,
-};
-
 /// Schema version of this crate's public types. Bumped on breaking changes.
 pub const SCHEMA_VERSION: u32 = 1;
 

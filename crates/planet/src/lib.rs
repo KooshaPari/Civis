@@ -7,14 +7,9 @@
 #![warn(missing_docs)]
 
 pub mod geology;
-pub use geology::{
-    classify_biome, classify_weather_cell, compute_drift, BiomeKind, ClimateDrift, GeologyMap,
-    RegionBiome,
-};
+pub use geology::{BiomeKind, GeologyMap, RegionBiome};
 pub mod weather;
 pub use weather::{compute_weather, SeasonKind, WeatherCell, WeatherKind};
-pub mod seasonal;
-pub use seasonal::{apply_modifier, seasonal_modifiers, SeasonalModifiers};
 
 use serde::{Deserialize, Serialize};
 use std::f32::consts::TAU;

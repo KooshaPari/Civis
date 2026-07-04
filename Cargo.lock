@@ -2348,7 +2348,6 @@ dependencies = [
  "civ-diplomacy",
  "civ-engine",
  "civ-laws",
- "civ-powers",
  "civ-protocol-3d",
  "civ-voxel",
  "crossbeam-channel",
@@ -2363,7 +2362,6 @@ dependencies = [
  "surface-nets",
  "tokio",
  "tokio-tungstenite",
- "tracing",
  "wgpu",
  "winit",
  "winresource",
@@ -2399,7 +2397,6 @@ dependencies = [
 name = "civ-diplomacy"
 version = "0.1.0"
 dependencies = [
- "civ-legends",
  "proptest",
  "serde",
  "thiserror 1.0.69",
@@ -2423,16 +2420,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "civ-emergence-migration"
-version = "0.1.0"
-dependencies = [
- "proptest",
- "rand 0.8.6",
- "rand_chacha 0.3.1",
- "serde",
-]
-
-[[package]]
 name = "civ-engine"
 version = "0.1.0"
 dependencies = [
@@ -2449,7 +2436,6 @@ dependencies = [
  "civ-mod-host",
  "civ-needs",
  "civ-planet",
- "civ-powers",
  "civ-save-db",
  "civ-species",
  "civ-tactics",
@@ -2484,15 +2470,6 @@ dependencies = [
  "serde",
  "thiserror 1.0.69",
  "tracing",
-]
-
-[[package]]
-name = "civ-i18n"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -2556,13 +2533,6 @@ dependencies = [
  "proptest",
  "serde",
  "tracing",
-]
-
-[[package]]
-name = "civ-powers"
-version = "0.1.0"
-dependencies = [
- "serde",
 ]
 
 [[package]]
@@ -2649,8 +2619,6 @@ name = "civ-tactics"
 version = "0.1.0"
 dependencies = [
  "civ-agents",
- "civ-diplomacy",
- "civ-legends",
  "civ-voxel",
  "proptest",
  "rand 0.8.6",
@@ -3723,20 +3691,6 @@ name = "embedded-io"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "edd0f118536f44f5ccd48bcb8b111bdc3de888b58c74639dfb034a357d0f206d"
-
-[[package]]
-name = "emergence-oracle"
-version = "0.1.0"
-dependencies = [
- "civ-agents",
- "civ-economy",
- "civ-engine",
- "civ-genetics",
- "civ-i18n",
- "civ-powers",
- "rand 0.8.6",
- "rand_chacha 0.3.1",
-]
 
 [[package]]
 name = "ena"

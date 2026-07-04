@@ -6,7 +6,6 @@
 
 use civ_agents::Position3d;
 use civ_needs::{Health as LifeHealth, Needs as LifeNeeds};
-use civ_planet::{seasonal_modifiers, BiomeKind, GeologyMap, SeasonKind};
 use civ_voxel::material::{AIR, GRAVEL, ICE, LAVA, STEAM, STONE, WATER};
 use civ_voxel::WorldCoord;
 
@@ -28,17 +27,8 @@ pub enum DisasterKind {
     Wildfire,
     /// Wind-driven rain and safety loss.
     Storm,
-    /// Sustained aridity: crop stress and parched terrain.
-    Drought,
     /// Disease pressure that mostly hits people rather than terrain.
     Plague,
-}
-
-/// One disaster resolved this tick — legends ingest + spectator feed.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct DisasterPulse {
-    pub kind: DisasterKind,
-    pub pos: WorldCoord,
 }
 
 /// Trigger a disaster immediately and apply its effects to terrain and agents.
@@ -86,83 +76,29 @@ impl Simulation {
         const QUAKE_TIDE_THRESHOLD: f32 = 0.9;
         /// ...co-located with a tectonically-active latitude (fixed-point deg).
         const QUAKE_LATITUDE_FP: i32 = 40_000;
-        /// Flood onset: sustained heavy precipitation (fixed-point mm).
-        const FLOOD_PRECIP_FP: i32 = 2_000;
-        /// Storm disaster: extreme storm intensity (fixed-point units).
-        const STORM_INTENSITY_FP: i32 = 3_500;
-        /// Drought onset: very low precipitation (fixed-point mm).
-        const DROUGHT_PRECIP_FP: i32 = 150;
-        /// Drought onset: sustained high air temperature (fixed-point milli-°C).
-        const DROUGHT_TEMP_FP: i32 = 30_000; // 30 °C
-
-        // FR-CIV-CLIMATE: Compute seasonal modifiers so disasters cluster by season.
-        // Droughts peak in summer dry season; floods peak in spring wet season;
-        // wildfires peak in summer/autumn; storms cluster in summer/autumn.
-        // We use a representative Plains biome (the most common) and the current
-        // season derived from the global climate year_phase.
-        let current_season = {
-            let yp = self.climate_state().year_phase;
-            match yp.rem_euclid(1.0) {
-                p if p < 0.25 => SeasonKind::Spring,
-                p if p < 0.5 => SeasonKind::Summer,
-                p if p < 0.75 => SeasonKind::Autumn,
-                _ => SeasonKind::Winter,
-            }
-        };
-        let season_mods = seasonal_modifiers(current_season, BiomeKind::Plains);
-        // FP_SCALE = 1_000. Lower disaster_likelihood_fp → raise threshold (rare);
-        // higher → lower threshold (more likely). Use inverse scaling:
-        //   effective_threshold = base * 1000 / modifier_fp
-        // Clamp to at least base / 4 to prevent divide-by-zero / ridiculous scaling.
-        let fp = civ_planet::seasonal::FP_SCALE as i64;
-        let season_drought_threshold = scale_threshold(DROUGHT_PRECIP_FP as i64, season_mods.drought_likelihood_fp as i64, fp);
-        let season_flood_threshold = scale_threshold(FLOOD_PRECIP_FP as i64, season_mods.flood_likelihood_fp as i64, fp);
-        let season_wildfire_temp = scale_threshold(WILDFIRE_TEMP_FP as i64, season_mods.wildfire_likelihood_fp as i64, fp);
-        let season_storm_threshold = scale_threshold(STORM_INTENSITY_FP as i64, season_mods.storm_likelihood_fp as i64, fp);
 
         // Collect onset sites first so the immutable weather borrow is released
         // before we mutate the simulation via trigger_disaster. Disasters emerge
         // from physical state: heat+drought -> wildfire; tidal stress at a
-        // tectonic latitude -> quake; heavy rain on low ground -> flood;
-        // extreme storm intensity -> storm; dry heat below wildfire ignition -> drought.
+        // tectonic latitude -> quake.
         let tidal_stress = self.climate_state().tide_offset.abs();
         // Research mitigates nature: fire-suppression tech raises the ignition
         // threshold (research -> fewer disasters). Computed before the weather
         // borrow so the immutable grow iteration holds no `&self` method call.
-        let wildfire_temp_threshold = wildfire_ignition_temp_fp(season_wildfire_temp as i32, self.research_tier());
-        let geology = GeologyMap::seed(self.planet());
+        let wildfire_temp_threshold = wildfire_ignition_temp_fp(WILDFIRE_TEMP_FP, self.research_tier());
         let mut wildfires = Vec::new();
         let mut quakes = Vec::new();
-        let mut floods = Vec::new();
-        let mut storms = Vec::new();
-        let mut droughts = Vec::new();
         for cell in self.weather_cells() {
             let pos = WorldCoord {
                 x: i64::from(cell.region_id),
                 y: 0,
                 z: 0,
             };
-            let would_wildfire = cell.temp_c_fp >= wildfire_temp_threshold
-                && cell.precip_mm_fp <= WILDFIRE_PRECIP_FP;
-            if would_wildfire {
+            if cell.temp_c_fp >= wildfire_temp_threshold && cell.precip_mm_fp <= WILDFIRE_PRECIP_FP {
                 wildfires.push(pos);
             }
             if tidal_stress >= QUAKE_TIDE_THRESHOLD && cell.latitude_fp.abs() >= QUAKE_LATITUDE_FP {
                 quakes.push(pos);
-            }
-            if cell.precip_mm_fp >= season_flood_threshold as i32
-                && is_low_elevation(self, &geology, cell.region_id, pos)
-            {
-                floods.push(pos);
-            }
-            if cell.storm_intensity_fp >= season_storm_threshold as i32 {
-                storms.push(pos);
-            }
-            if !would_wildfire
-                && cell.precip_mm_fp <= season_drought_threshold as i32
-                && cell.temp_c_fp >= DROUGHT_TEMP_FP
-            {
-                droughts.push(pos);
             }
         }
 
@@ -172,30 +108,7 @@ impl Simulation {
         for pos in quakes {
             trigger_disaster(self, DisasterKind::Quake, pos);
         }
-        for pos in floods {
-            trigger_disaster(self, DisasterKind::Flood, pos);
-        }
-        for pos in storms {
-            trigger_disaster(self, DisasterKind::Storm, pos);
-        }
-        for pos in droughts {
-            trigger_disaster(self, DisasterKind::Drought, pos);
-        }
     }
-}
-
-/// FR-CIV-CLIMATE: Scale a disaster onset threshold by a seasonal likelihood modifier.
-///
-/// Higher `modifier_fp` (> `fp_scale`) means the disaster is more likely this season,
-/// so the effective threshold is *lowered* (easier to trigger). Lower modifier raises it.
-/// Formula: `base * fp_scale / modifier_fp`, bounded to prevent extreme values.
-fn scale_threshold(base: i64, modifier_fp: i64, fp_scale: i64) -> i64 {
-    if modifier_fp <= 0 {
-        return base * 4; // effectively never triggers
-    }
-    let scaled = base.saturating_mul(fp_scale) / modifier_fp;
-    // Bound between 25% and 400% of base so seasonal swings stay physical.
-    scaled.clamp(base / 4, base * 4)
 }
 
 /// Fire-suppression technology raises the temperature required to ignite a
@@ -220,33 +133,7 @@ fn wildfire_ignition_temp_fp(base_fp: i32, research_tier: u64) -> i32 {
     (base_fp as i64).saturating_add(bonus) as i32
 }
 
-/// True when a region sits on flood-prone terrain: coastal geology or a
-/// voxel column at/below sea level / already holding water.
-fn is_low_elevation(
-    sim: &Simulation,
-    geology: &GeologyMap,
-    region_id: u32,
-    pos: WorldCoord,
-) -> bool {
-    let biome_low = geology
-        .regions
-        .iter()
-        .find(|r| r.region_id == region_id)
-        .is_some_and(|r| {
-            matches!(
-                r.biome,
-                BiomeKind::Ocean
-                    | BiomeKind::Beach
-                    | BiomeKind::Wetland
-                    | BiomeKind::Mangrove
-            )
-        });
-    let voxel_low = pos.y <= civ_voxel::FIXED_SCALE || sim.voxel().read(pos) == WATER;
-    biome_low || voxel_low
-}
-
 fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) {
-    sim.last_tick_disaster_pulses.push(DisasterPulse { kind, pos });
     let radius = radius_for(kind);
     let affected = positions_in_radius(pos, radius);
     match kind {
@@ -318,18 +205,6 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) {
                 DisasterEffect::new(0.14, 0.20, 0.22, 0.12, false),
             );
         }
-        DisasterKind::Drought => {
-            for (i, cell) in affected.iter().enumerate() {
-                let material = if i % 5 == 0 { GRAVEL } else { AIR };
-                sim.push_voxel_write(*cell, material);
-            }
-            hit_agents(
-                sim,
-                pos,
-                radius,
-                DisasterEffect::new(0.08, 0.15, 0.50, 0.30, true),
-            );
-        }
         DisasterKind::Plague => {
             hit_agents(
                 sim,
@@ -348,7 +223,6 @@ fn radius_for(kind: DisasterKind) -> i64 {
         DisasterKind::Quake => 4 * civ_voxel::FIXED_SCALE,
         DisasterKind::Wildfire => 4 * civ_voxel::FIXED_SCALE,
         DisasterKind::Storm => 6 * civ_voxel::FIXED_SCALE,
-        DisasterKind::Drought => 5 * civ_voxel::FIXED_SCALE,
         DisasterKind::Plague => 2 * civ_voxel::FIXED_SCALE,
     }
 }
@@ -587,19 +461,15 @@ mod tests {
             tide_offset: 0.0,
         });
 
-        // Create weather with extreme heat and low moisture.
-        // NOTE: storm_intensity must stay BELOW the (seasonally-scaled) storm onset
-        // threshold (~2692 in Summer). A competing storm at the same region would
-        // fire after the wildfire and overwrite its LAVA/STEAM voxels with WATER,
-        // masking the wildfire effect this test asserts on.
+        // Create weather with extreme heat and storm conditions
         sim.set_weather_cells(vec![WeatherCell {
             region_id: 0,
             latitude_fp: 0, // equator
             season: civ_planet::SeasonKind::Summer,
-            kind: WeatherKind::Clear,
-            temp_c_fp: 45_000,       // 45°C - extreme heat
-            precip_mm_fp: 50,        // low precipitation -> dry fuel
-            storm_intensity_fp: 500, // calm: below storm onset so only wildfire fires
+            kind: WeatherKind::Storm,
+            temp_c_fp: 45_000,        // 45°C - extreme heat
+            precip_mm_fp: 50,         // low precipitation
+            storm_intensity_fp: 3000, // high storm intensity
         }]);
 
         // Advance tick so disaster can be triggered
@@ -702,113 +572,6 @@ mod tests {
         assert!(
             has_quake_effects,
             "Quake should be triggered under tectonic stress conditions"
-        );
-    }
-
-    /// Flood emerges under sustained heavy precipitation on low-elevation terrain.
-    #[test]
-    fn phase_disasters_triggers_flood_on_heavy_precip_low_elevation() {
-        let mut sim = Simulation::with_seed(77);
-
-        sim.set_climate_state(Climate {
-            tick: 500,
-            day_phase: 0.5,
-            year_phase: 0.4,
-            moon_phase: 0.0,
-            tide_offset: 0.0,
-        });
-
-        // Region 0 is ocean/coastal on the default earth-like geology map.
-        sim.set_weather_cells(vec![WeatherCell {
-            region_id: 0,
-            latitude_fp: -80_000,
-            season: civ_planet::SeasonKind::Spring,
-            kind: WeatherKind::Rain,
-            temp_c_fp: 12_000,
-            precip_mm_fp: 3_500,
-            storm_intensity_fp: 800,
-        }]);
-
-        sim.state.tick = 500;
-        sim.phase_disasters();
-
-        let origin = WorldCoord { x: 0, y: 0, z: 0 };
-        assert_eq!(
-            sim.voxel().read(origin),
-            WATER,
-            "Flood should inundate low-elevation terrain under heavy precipitation"
-        );
-    }
-
-    /// Storm emerges when storm intensity crosses the physical onset threshold.
-    #[test]
-    fn phase_disasters_triggers_storm_on_high_storm_intensity() {
-        let mut sim = Simulation::with_seed(88);
-
-        sim.set_climate_state(Climate {
-            tick: 600,
-            day_phase: 0.8,
-            year_phase: 0.5,
-            moon_phase: 0.0,
-            tide_offset: 0.0,
-        });
-
-        sim.set_weather_cells(vec![WeatherCell {
-            region_id: 5,
-            latitude_fp: 0,
-            season: civ_planet::SeasonKind::Summer,
-            kind: WeatherKind::Storm,
-            temp_c_fp: 22_000,
-            precip_mm_fp: 600,
-            storm_intensity_fp: 4_000,
-        }]);
-
-        sim.state.tick = 600;
-        sim.phase_disasters();
-
-        let origin = WorldCoord { x: 5, y: 0, z: 0 };
-        let has_storm_effects =
-            sim.voxel().read(origin) == WATER || sim.voxel().read(origin) == ICE;
-        assert!(
-            has_storm_effects,
-            "Storm should be triggered when storm_intensity_fp exceeds threshold"
-        );
-    }
-
-    /// Drought emerges under sustained dry heat below wildfire ignition.
-    #[test]
-    fn phase_disasters_triggers_drought_on_sustained_dry_heat() {
-        let mut sim = Simulation::with_seed(99);
-
-        sim.set_climate_state(Climate {
-            tick: 700,
-            day_phase: 0.6,
-            year_phase: 0.1,  // Spring season (0.0-0.25): low wildfire, lower drought thresholds manageable
-            moon_phase: 0.0,
-            tide_offset: 0.0,
-        });
-
-        // Spring modifiers: wildfire @ 80k threshold (very high), drought @ 250 threshold (manageable)
-        // With temp=35k and precip=80, wildfire doesn't trigger (35k < 80k) but drought does
-        sim.set_weather_cells(vec![WeatherCell {
-            region_id: 8,
-            latitude_fp: 10_000,
-            season: civ_planet::SeasonKind::Spring,
-            kind: WeatherKind::Clear,
-            temp_c_fp: 35_000,  // High enough for drought (>= 30_000), too low for spring wildfire (>= 80_000)
-            precip_mm_fp: 80,   // Low enough for drought (<= 250 threshold)
-            storm_intensity_fp: 100,
-        }]);
-
-        sim.state.tick = 700;
-        sim.phase_disasters();
-
-        let origin = WorldCoord { x: 8, y: 0, z: 0 };
-        let has_drought_effects =
-            sim.voxel().read(origin) == GRAVEL || sim.voxel().read(origin) == AIR;
-        assert!(
-            has_drought_effects,
-            "Drought should parch terrain under sustained low precip and high temp"
         );
     }
 }

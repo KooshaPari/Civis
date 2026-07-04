@@ -41,9 +41,8 @@ use tokio::{
 use crate::{
     jsonrpc::{
         dispatch_request, encode_response, error_code, parse_error_response, parse_request,
-        parse_role_param, psyche_snapshot_from_sim, sentience_events_from_sim, set_sim_command_tick,
-        set_spawn_civilian_result, DispatchContext, DispatchEffect, JsonRpcError, JsonRpcMethod,
-        JsonRpcResponse,
+        parse_role_param, set_sim_command_tick, set_spawn_civilian_result, DispatchContext,
+        DispatchEffect, JsonRpcError, JsonRpcMethod, JsonRpcResponse,
     },
     saves::save_archive_path,
     subscription_filter::{SubscriptionFilter, WsConnectQuery},
@@ -491,20 +490,6 @@ async fn handle_jsonrpc_text(
                 }
                 _ => (None, None),
             };
-            let (psyche_snapshot, sentience_events) = match req.method {
-                JsonRpcMethod::PsycheSnapshot => {
-                    let sim = state.sim.lock().await;
-                    let events = sentience_events_from_sim(&sim);
-                    let psyche_snapshot = psyche_snapshot_from_sim(&sim, &events);
-                    (Some(psyche_snapshot), Some(events))
-                }
-                JsonRpcMethod::PsycheEvents => {
-                    let sim = state.sim.lock().await;
-                    let events = sentience_events_from_sim(&sim);
-                    (None, Some(events))
-                }
-                _ => (None, None),
-            };
 
             let (research_researched, research_in_progress): (Vec<String>, Option<String>) =
                 (vec![], None);
@@ -519,34 +504,6 @@ async fn handle_jsonrpc_text(
             } else {
                 None
             };
-            let legends = if req.method == crate::jsonrpc::JsonRpcMethod::SimLegends {
-                let sim = state.sim.lock().await;
-                let query = req
-                    .params
-                    .as_ref()
-                    .and_then(|p| p.get("query"))
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("status");
-                let agent_id = req
-                    .params
-                    .as_ref()
-                    .and_then(|p| p.get("agent_id"))
-                    .and_then(|v| v.as_u64());
-                let top_n = req
-                    .params
-                    .as_ref()
-                    .and_then(|p| p.get("top_n"))
-                    .and_then(|v| v.as_u64())
-                    .map(|n| n as usize);
-                let epoch = req
-                    .params
-                    .as_ref()
-                    .and_then(|p| p.get("epoch"))
-                    .and_then(|v| v.as_u64());
-                Some(sim.legends_query(query, agent_id, top_n, epoch))
-            } else {
-                None
-            };
             let mut plan = dispatch_request(
                 req,
                 DispatchContext {
@@ -558,13 +515,10 @@ async fn handle_jsonrpc_text(
                     connection_role: connection_role.clone(),
                     saves_dir: Some(state.saves_dir.clone()),
                     emergence: None,
-                    legends,
                     researched: research_researched,
                     in_progress_tech: research_in_progress,
                     outcome_fields,
                     last_tick_ms: 0.0,
-                    psyche_snapshot,
-                    sentience_events,
                 },
             );
             apply_dispatch_effect(&mut plan.response, plan.effect, state).await;

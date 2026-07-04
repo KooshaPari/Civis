@@ -17,11 +17,6 @@ use serde::{Deserialize, Serialize};
 
 /// Default clearing price (cents) for goods inserted on first sighting.
 pub const DEFAULT_PRICE_CENTS: i64 = 1_000;
-/// Default smoothing factor for FR-CIV-MARKET price updates.
-///
-/// Higher values make price changes smaller per tick while keeping the signal
-/// deterministic and integer-only.
-pub const DEFAULT_SMOOTHING_FACTOR: i64 = 8;
 /// Maximum absolute price change per `apply_pressure` call, in cents.
 pub const MAX_PRESSURE_DELTA_CENTS: i64 = 100;
 /// Minimum a price can ever be after `apply_pressure` (cents).
@@ -32,25 +27,6 @@ pub const MIN_PRICE_CENTS: i64 = 1;
 pub struct MarketState {
     /// Good id → price in cents.
     pub prices: BTreeMap<String, i64>,
-}
-
-/// FR-CIV-MARKET: deterministic low-price -> high-price settlement flow.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct SettlementTradeFlow {
-    /// Source settlement id.
-    pub from_settlement: u32,
-    /// Destination settlement id.
-    pub to_settlement: u32,
-    /// Good being moved.
-    pub good: crate::stocks::Good,
-    /// Quantity transferred.
-    pub qty: i64,
-    /// Source settlement price in cents.
-    pub low_price_cents: i64,
-    /// Destination settlement price in cents.
-    pub high_price_cents: i64,
-    /// Settled midpoint price in cents.
-    pub settled_price_cents: i64,
 }
 
 impl Default for MarketState {
@@ -163,45 +139,6 @@ impl MarketState {
         }
     }
 
-}
-
-/// Settlement trade helper for callers that already have aggregate supply and demand.
-pub fn settlement_trade_flow_from_supply_demand(
-    from_settlement: u32,
-    to_settlement: u32,
-    good: crate::stocks::Good,
-    supply: i64,
-    demand: i64,
-    low_price_cents: i64,
-    high_price_cents: i64,
-    smoothing_factor: i64,
-) -> Option<SettlementTradeFlow> {
-    if from_settlement == to_settlement || low_price_cents >= high_price_cents {
-        return None;
-    }
-    let supply = supply.max(0);
-    let demand = demand.max(0);
-    if supply <= 0 || demand <= 0 {
-        return None;
-    }
-
-    let smoothing_factor = smoothing_factor.max(1);
-    let price_gap = high_price_cents - low_price_cents;
-    let gap_limited_qty = (price_gap / smoothing_factor).max(1);
-    let qty = supply.min(demand).min(gap_limited_qty);
-    if qty <= 0 {
-        return None;
-    }
-
-    Some(SettlementTradeFlow {
-        from_settlement,
-        to_settlement,
-        good,
-        qty,
-        low_price_cents,
-        high_price_cents,
-        settled_price_cents: (low_price_cents + high_price_cents) / 2,
-    })
 }
 
 /// Integer-only price delta from tick and good id (replay-stable).

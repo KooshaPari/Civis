@@ -13,11 +13,7 @@
 mod allocation;
 mod institution;
 mod market;
-mod prices;
-mod shocks;
-mod specialization;
 mod stocks;
-mod trade;
 
 pub use allocation::{
     allocate_by_priority, allocate_with, AllocationEngine, AllocationRegime,
@@ -29,13 +25,7 @@ pub use institution::{
     INSTITUTION_TREASURY,
 };
 pub use market::{GoodId, MarketState, MultiGoodMarket, Order, OrderBook, Side, Trade};
-pub use market::{settlement_trade_flow_from_supply_demand, SettlementTradeFlow, DEFAULT_SMOOTHING_FACTOR};
-pub use stocks::Good;
-pub use prices::{compute_price, update_cluster_prices, ClusterId, PriceState};
-pub use shocks::{apply_shock, MarketShock};
-pub use specialization::{update_specialization, SpecializationProfile};
 pub use stocks::Stocks;
-pub use trade::{compute_trade_flows, TradeFlow};
 
 use serde::{Deserialize, Serialize};
 

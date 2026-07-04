@@ -57,10 +57,10 @@
 //! Bevy resources only**.  No value from this resource must enter simulation
 //! state (voxel world, agent data, CA ticks).
 
-use bevy::post_process::bloom::Bloom;
-use bevy::post_process::motion_blur::MotionBlur;
+use bevy::core_pipeline::bloom::Bloom;
+use bevy::core_pipeline::motion_blur::MotionBlur;
 use bevy::core_pipeline::tonemapping::Tonemapping;
-use bevy::light::DirectionalLightShadowMap;
+use bevy::pbr::DirectionalLightShadowMap;
 use bevy::prelude::*;
 use bevy::render::camera::TemporalJitter;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
@@ -350,7 +350,6 @@ impl WinMode {
             ),
             Self::Fullscreen => bevy::window::WindowMode::Fullscreen(
                 bevy::window::MonitorSelection::Current,
-                bevy::window::VideoModeSelection::Current,
             ),
         }
     }
@@ -582,7 +581,7 @@ pub fn apply_gfx_settings(
         }
         if settings.window_mode == WinMode::Windowed {
             let (w, h) = settings.resolution.dimensions();
-            let target = bevy::window::WindowResolution::new(w, h);
+            let target = bevy::window::WindowResolution::new(w as f32, h as f32);
             if window.resolution.width() as u32 != w
                 || window.resolution.height() as u32 != h
             {
@@ -620,7 +619,7 @@ pub fn apply_gfx_settings(
         // MSAA — only applicable when not TAA
         if let Some(mut msaa) = msaa_opt {
             let desired = match settings.aa.msaa_samples() {
-                Some(s) => Msaa::from_samples(s),
+                Some(s) => Msaa::Sample(s),
                 None => Msaa::Off,
             };
             if *msaa != desired {
@@ -833,7 +832,7 @@ fn draw_lighting_section(
     let mut changed = false;
     section(ui, "\u{2728}", "Lighting / Ray Tracing");
 
-    let rt_capable = gpu.is_some_and(|g| g.ray_tracing);
+    let rt_capable = gpu.map_or(false, |g| g.ray_tracing);
 
     ui.horizontal(|ui| {
         let label = "Solari GI (ReSTIR ray-traced global illumination)";
@@ -889,8 +888,8 @@ fn draw_upscaling_section(
     let mut changed = false;
     section(ui, "\u{1f50d}", "Upscaling");
 
-    let dlss_ok = gpu.is_some_and(|g| g.dlss_available);
-    let metal_fx_ok = gpu.is_some_and(|g| g.metal_fx);
+    let dlss_ok = gpu.map_or(false, |g| g.dlss_available);
+    let metal_fx_ok = gpu.map_or(false, |g| g.metal_fx);
 
     ui.horizontal(|ui| {
         row_label(ui, "Algorithm");

@@ -32,99 +32,14 @@ pub use ids::{
 };
 pub use model::{
     summary_key, EntityKind, EntityNode, EventKind, EventNode, HistoricalEvent, LegendEdge,
-    LegendNode, PromotionCriteria, RawSimEvent, Role, Tag,
+    LegendNode, RawSimEvent, Role, Tag,
 };
-pub use query::{CausalDag, DigestEvent, EntityRef, EpochDigest, NamedEntitySummary, NamedLegendsResult, Saga, QUERY_API_VERSION};
+pub use query::{CausalDag, DigestEvent, EntityRef, EpochDigest, Saga, QUERY_API_VERSION};
 pub use rumor::{
     register_render, render, retell, witness, Chronicle, ChronicleEntry, DefaultNameResolver,
     HistorianMind, NameResolver, Ocean, Register, Rumor, RumorMill,
 };
 pub use worker::LegendsWorker;
-
-#[cfg(test)]
-mod tests {
-    use crate::ids::{Epoch, SimRuntimeId, SourceCrate};
-    use crate::model::{EventKind, RawSimEvent, Role};
-    use crate::graph::SagaGraph;
-
-    /// FR-CIV-LEGENDS deepening — new event kinds ingest and appear in the graph.
-    #[test]
-    fn new_event_kinds_ingest_correctly() {
-        let mut graph = SagaGraph::default();
-        for kind in [
-            EventKind::Treaty,
-            EventKind::Betrayal,
-            EventKind::GreatWork,
-            EventKind::Plague,
-        ] {
-            let raw = RawSimEvent::new(1, kind, SourceCrate::Engine, 0.8);
-            let outcome = graph.ingest(raw);
-            assert!(outcome.event_id.is_some(), "expected event inserted into graph");
-        }
-        // 4 event nodes created.
-        let event_count = graph
-            .graph()
-            .node_indices()
-            .filter(|i| graph.graph()[*i].as_event().is_some())
-            .count();
-        assert_eq!(event_count, 4, "expected 4 event nodes for 4 new kinds");
-    }
-
-    /// FR-CIV-LEGENDS deepening — promote_to_legend sets title and marks entity.
-    #[test]
-    fn promotion_triggers_on_threshold() {
-        let mut graph = SagaGraph::default();
-        // Ingest enough high-magnitude events to promote.
-        for tick in 0..10u64 {
-            let raw = RawSimEvent::new(tick, EventKind::Battle, SourceCrate::Tactics, 1.0)
-                .with_participant(SourceCrate::Tactics, SimRuntimeId(1), Role::Aggressor);
-            graph.ingest(raw);
-        }
-        let eid = graph
-            .entity_for_sim(SourceCrate::Tactics, SimRuntimeId(1))
-            .expect("entity should exist");
-
-        let result = graph.promote_to_legend(eid, "The Veteran".to_string(), Role::Leader);
-        assert!(result.is_ok(), "promote_to_legend should succeed: {result:?}");
-        let entity = graph.entity(eid).expect("entity should be in graph");
-        assert_eq!(entity.title.as_deref(), Some("The Veteran"));
-        assert!(entity.promoted, "entity should be marked promoted");
-    }
-
-    /// FR-CIV-LEGENDS deepening — query_named_legends returns only titled entities.
-    #[test]
-    fn query_legends_returns_named_only() {
-        let mut graph = SagaGraph::default();
-        // Create two entities via events.
-        for sim_id in [1u64, 2u64] {
-            for tick in 0..5u64 {
-                let raw = RawSimEvent::new(tick, EventKind::Battle, SourceCrate::Tactics, 1.0)
-                    .with_participant(SourceCrate::Tactics, SimRuntimeId(sim_id), Role::Aggressor);
-                graph.ingest(raw);
-            }
-        }
-        let eid1 = graph
-            .entity_for_sim(SourceCrate::Tactics, SimRuntimeId(1))
-            .expect("entity 1 should exist");
-        let eid2 = graph
-            .entity_for_sim(SourceCrate::Tactics, SimRuntimeId(2))
-            .expect("entity 2 should exist");
-
-        // Promote only entity 1.
-        graph
-            .promote_to_legend(eid1, "Founder of the First Age".to_string(), Role::Founder)
-            .expect("promote should succeed");
-
-        let result = graph.query_named_legends();
-        assert_eq!(result.named_entities.len(), 1, "only one named legend");
-        assert_eq!(result.named_entities[0].entity_id, eid1);
-        // Entity 2 must not appear.
-        assert!(
-            result.named_entities.iter().all(|s| s.entity_id != eid2),
-            "unnamed entity must not appear in query_named_legends"
-        );
-    }
-}
 
 impl SagaGraph {
     /// Mark a promoted/extant entity as deceased at `epoch` (feeds `fallen` in digests

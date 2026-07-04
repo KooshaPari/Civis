@@ -75,9 +75,6 @@ pub struct ProceduralRig {
 /// The root carries `ProceduralActorMarker`, `ProceduralRig`, and an
 /// `AnimationPlayer` (so Bevy's animation infrastructure does not error on the
 /// absence of a player).
-/// Uniform up-scale so ~0.4u procedural actors are visible at default zoom.
-const ACTOR_VIEW_SCALE: f32 = 6.0;
-
 pub fn spawn_procedural_actor(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
@@ -108,10 +105,7 @@ pub fn spawn_procedural_actor(
     let root = commands
         .spawn((
             ProceduralActorMarker,
-            // Actors are ~0.4u tall; at the default camera (dist 170 over a 256u
-            // world) that is sub-pixel. Scale the whole rig up so the seeded
-            // population is actually visible at gameplay zoom.
-            Transform::from_translation(world_pos).with_scale(Vec3::splat(ACTOR_VIEW_SCALE)),
+            Transform::from_translation(world_pos),
             Visibility::Visible,
             AnimationPlayer::default(),
         ))

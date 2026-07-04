@@ -11,20 +11,17 @@ use std::collections::HashSet;
 
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
-use bevy_egui::EguiPrimaryContextPass;
 use civ_protocol_3d::FactionTreasury3d;
 use civ_voxel::material::{AIR, FIRE, LAVA, STONE};
 use civ_voxel::{ChunkId, MaterialId};
 
 use crate::bevy_render::CHUNK_WIREFRAME_LINE_COLOR;
-use crate::game_ui::GodActionToast;
 use crate::god_panel::GodPanelState;
 use crate::live_focus::LiveSceneFocus;
 use crate::live_ground::{live_ground_y, ChunkVoxelCache};
 use crate::live_stream::{
     remesh_cached_chunks, LiveStreamScene, StreamCulling, LIVE_CHUNK_EDGE,
 };
-use crate::frame_budget::{scaled_cull_distance, GpuQualityMode};
 use crate::menus::in_game;
 use crate::terrain::{terrain_surface_y, WORLD_SIZE};
 use crate::{decode_chunk_id, encode_chunk_id, DebugRender};
@@ -59,20 +56,14 @@ impl Plugin for GodActionsPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<GodActionRequest>()
             .init_resource::<GodEffectMeshes>()
-            .init_resource::<GodActionToast>()
             .add_systems(
                 Update,
-                (apply_god_action_requests, tick_god_effect_flashes)
+                (
+                    apply_god_action_requests,
+                    tick_god_effect_flashes,
+                )
                     .chain()
                     .run_if(in_game),
-            )
-            .add_systems(
-                Update,
-                crate::game_ui::tick_god_action_toast.run_if(in_game),
-            )
-            .add_systems(
-                EguiPrimaryContextPass,
-                crate::game_ui::draw_god_action_toast_system.run_if(in_game),
             );
     }
 }
@@ -197,7 +188,7 @@ fn apply_terrain_verb(
     );
     let mut changed = 0usize;
     let mut dirty = HashSet::new();
-    let edge = LIVE_CHUNK_EDGE as i64;
+    let edge = LIVE_CHUNK_EDGE as i32;
     for dz in -ri..=ri {
         for dy in -ri..=ri {
             for dx in -ri..=ri {
@@ -209,9 +200,9 @@ fn apply_terrain_verb(
                     continue;
                 }
                 let chunk_id = encode_chunk_id(
-                    wx.div_euclid(edge) as i32,
-                    wy.div_euclid(edge) as i32,
-                    wz.div_euclid(edge) as i32,
+                    wx.div_euclid(edge),
+                    wy.div_euclid(edge),
+                    wz.div_euclid(edge),
                 );
                 ensure_chunk_ready(cache, chunk_id);
                 let lx = wx.rem_euclid(edge) as usize;
@@ -253,7 +244,7 @@ fn apply_bless(scene: &mut LiveStreamScene, faction: u32, magnitude: f32) -> Str
             id: faction,
             era: 0,
             government: civ_protocol_3d::Government3d::Republic,
-            treasury: FactionTreasury3d { amount: boost, currency: String::new() },
+            treasury: FactionTreasury3d { amount: boost },
         });
         scene.factions.insert(faction);
     }
@@ -324,13 +315,11 @@ fn apply_god_action_requests(
     mut requests: MessageReader<GodActionRequest>,
     mut scene: ResMut<LiveStreamScene>,
     mut panel: ResMut<GodPanelState>,
-    mut toast: Option<ResMut<GodActionToast>>,
     focus: Res<LiveSceneFocus>,
     debug: Res<DebugRender>,
     effect_meshes: Res<GodEffectMeshes>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    gpu_quality: Option<Res<GpuQualityMode>>,
 ) {
     for req in requests.read() {
         let center = norm_to_world(&scene.chunk_voxels, req.norm_x, req.norm_y);
@@ -352,7 +341,6 @@ fn apply_god_action_requests(
                     &mut meshes,
                     &mut materials,
                     &dirty,
-                    gpu_quality.as_deref().copied().unwrap_or_default(),
                 );
                 spawn_effect_flash(
                     &mut commands,
@@ -380,7 +368,6 @@ fn apply_god_action_requests(
                     &mut meshes,
                     &mut materials,
                     &dirty,
-                    gpu_quality.as_deref().copied().unwrap_or_default(),
                 );
                 spawn_effect_flash(
                     &mut commands,
@@ -433,10 +420,7 @@ fn apply_god_action_requests(
             }
             other => format!("Unknown god action: {other}"),
         };
-        panel.status = Some(status.clone());
-        if let Some(toast) = toast.as_mut() {
-            toast.show(status);
-        }
+        panel.status = Some(status);
     }
 }
 
@@ -449,16 +433,13 @@ fn remesh_dirty_chunks(
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
     dirty: &HashSet<ChunkId>,
-    gpu_quality: GpuQualityMode,
 ) {
     if dirty.is_empty() {
         return;
     }
-    let base_distance = focus.half_extent * 4.0 + 256.0;
     let culling = StreamCulling {
         eye: [focus.centre.x, 64.0, focus.centre.z],
-        max_distance: scaled_cull_distance(base_distance, gpu_quality),
-        gpu_quality,
+        max_distance: focus.half_extent * 4.0 + 256.0,
     };
     let wire = debug.wireframe.then_some(CHUNK_WIREFRAME_LINE_COLOR);
     let ids: Vec<ChunkId> = dirty.iter().copied().collect();

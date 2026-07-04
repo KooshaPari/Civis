@@ -11,17 +11,12 @@
 //! - `metrics` - Tyranny/legitimacy metrics
 //! - `io` - File I/O utilities
 
-pub mod building_emergence;
-pub mod technology;
 pub mod command_queue;
 pub mod conditions;
-pub mod gameplay;
 pub mod era;
-pub mod godtools;
 pub mod engine;
 pub mod emergence;
 pub mod disasters;
-pub mod dormant_phases;
 pub mod emergence_metrics;
 pub mod hash_chain;
 pub mod integrity;
@@ -37,25 +32,13 @@ pub mod scenario;
 pub mod perf;
 pub mod spawn;
 pub mod spectator;
-pub mod writing;
 
 pub use conditions::{check_outcome, GameOutcome};
-pub use gameplay::{
-    check_collapse, check_cultural, check_domination, check_economic, check_scientific,
-    compute_gameplay_state, compute_scores, scenario_cultural_dominance, scenario_survive_1000,
-    DefeatCondition, FactionProgress, FactionScore, GameplayState, ScenarioObjective,
-    VictoryCondition, VictoryType, CULTURAL_BELIEF_THRESHOLD, DOMINATION_TERRITORY_THRESHOLD,
-    ECONOMIC_RESOURCE_THRESHOLD, SCIENTIFIC_TECH_TIER,
-};
-pub use emergence::LegendsQueryResult;
 pub use era::CivEra;
 pub use engine::{
-    cohesion_delta, diplomacy_conflict_threshold, diplomacy_peace_threshold,
-    institution_belief_signal, institution_divergence_boost, job_type_for_civilian_id, Building,
-    BuildingType, Citizen,
-    ClusterStocks, CombatDamagePulse, DiplomacyEvent, DiplomacyKind, JobType, MilitaryUnit,
-    PopulationEvent, Position, Production, ResourceType, Resources, Simulation,
-    SimulationSnapshot, TradeRoute, UnitType, WorldState,
+    job_type_for_civilian_id, Building, BuildingType, Citizen, ClusterStocks, CombatDamagePulse, DiplomacyEvent,
+    DiplomacyKind, JobType, MilitaryUnit, PopulationEvent, Position, Production, ResourceType,
+    Resources, Simulation, SimulationSnapshot, TradeRoute, UnitType, WorldState,
 };
 pub use spawn::{
     grid_to_norm, military_pin_id, norm_to_grid, spawn_airport_at, spawn_hangar_at,
@@ -70,7 +53,6 @@ pub use civ_mod_host::{
     ModUnloadedRecord,
 };
 pub use civ_planet::{BiomeKind, Climate, GeologyMap, MoonConfig, PlanetConfig, RegionBiome};
-pub use civ_voxel::WorldCoord;
 pub use civ_tactics::{
     apply_damage, bfs_next_step, evolve_doctrine, formation_offsets, grid_to_world_coord,
     line_of_sight, score_doctrine_fitness, tick_operational_movement, tick_war_bridge,
@@ -107,7 +89,6 @@ pub use scenario::{
     SCENARIO_SCHEMA_VERSION,
 };
 pub use spectator::{BuildingPin, CivPin, Faction, JobLabel, SpectatorView};
-pub use writing::{glyphs_for_language, Glyph, Stroke};
 
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;

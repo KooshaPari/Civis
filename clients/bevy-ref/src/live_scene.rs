@@ -24,7 +24,6 @@ use crate::live_stream::{
     default_stream_meshes, AgentLabelConfig, LiveAgentTag, LiveBuildingTag, LiveChunkFade,
     LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene, StreamCulling, LIVE_CHUNK_EDGE,
 };
-use crate::frame_budget::{scaled_cull_distance, GpuQualityMode};
 use crate::minimap::{MinimapCamera, MinimapDot, MinimapRoot, MINIMAP_SIZE};
 use crate::{chunk_fade_complete, AttachMode, DebugRender, LiveHudSnapshot};
 
@@ -69,9 +68,9 @@ fn setup_live_scene_assets(mut commands: Commands, mut meshes: ResMut<Assets<Mes
 }
 
 fn apply_live_scene_frames(
-    attach: Option<Res<AttachMode>>,
-    bridge: Option<Res<LiveAttachBridge>>,
-    mut state: Option<ResMut<LiveAttachState>>,
+    attach: Res<AttachMode>,
+    bridge: Res<LiveAttachBridge>,
+    mut state: ResMut<LiveAttachState>,
     mut hud: ResMut<LiveHudSnapshot>,
     mut scene: ResMut<LiveStreamScene>,
     debug: Res<DebugRender>,
@@ -80,12 +79,8 @@ fn apply_live_scene_frames(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    gpu_quality: Option<Res<GpuQualityMode>>,
     #[cfg(feature = "egui")] mut event_feed: Option<ResMut<EventFeed>>,
 ) {
-    let Some(attach) = attach else { return; };
-    let Some(bridge) = bridge else { return; };
-    let Some(mut state) = state else { return; };
     if *attach != AttachMode::Server {
         return;
     }
@@ -101,11 +96,9 @@ fn apply_live_scene_frames(
         .single()
         .map(|transform| transform.translation.to_array())
         .unwrap_or([8.0, 8.0, 8.0]);
-    let quality = gpu_quality.as_deref().copied().unwrap_or_default();
     let culling = StreamCulling {
         eye,
-        max_distance: scaled_cull_distance(LIVE_RENDER_MAX_DISTANCE, quality),
-        gpu_quality: quality,
+        max_distance: LIVE_RENDER_MAX_DISTANCE,
     };
 
     for frame in frames {
@@ -148,6 +141,7 @@ fn apply_live_scene_frames(
                     apply_event_feed_frame(feed, event_frame);
                 }
             }
+            Frame3d::Climate(_) => {}
             #[cfg(not(feature = "egui"))]
             Frame3d::EventFeed(_) => {}
             Frame3d::Climate(_) => {}
@@ -156,7 +150,7 @@ fn apply_live_scene_frames(
 }
 
 fn update_chunk_fade(
-    attach: Option<Res<AttachMode>>,
+    attach: Res<AttachMode>,
     time: Res<Time>,
     debug: Res<DebugRender>,
     mut commands: Commands,
@@ -167,7 +161,6 @@ fn update_chunk_fade(
     )>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let Some(attach) = attach else { return; };
     if *attach != AttachMode::Server || debug.wireframe {
         return;
     }
@@ -184,8 +177,8 @@ fn update_chunk_fade(
 }
 
 fn sync_live_minimap_dots(
-    attach: Option<Res<AttachMode>>,
-    state: Option<Res<LiveAttachState>>,
+    attach: Res<AttachMode>,
+    state: Res<LiveAttachState>,
     scene: Res<LiveStreamScene>,
     focus: Res<LiveSceneFocus>,
     agents: Query<&Transform, With<LiveAgentTag>>,
@@ -195,8 +188,6 @@ fn sync_live_minimap_dots(
     roots: Query<Entity, With<MinimapRoot>>,
     existing: Query<Entity, With<MinimapDot>>,
 ) {
-    let Some(attach) = attach else { return; };
-    let Some(state) = state else { return; };
     if *attach != AttachMode::Server {
         return;
     }
@@ -273,14 +264,13 @@ fn sync_live_minimap_dots(
 }
 
 fn update_live_scene_focus(
-    attach: Option<Res<AttachMode>>,
+    attach: Res<AttachMode>,
     scene: Res<LiveStreamScene>,
     agents: Query<&Transform, With<LiveAgentTag>>,
     buildings: Query<&Transform, With<LiveBuildingTag>>,
     graph_parcels: Query<&Transform, With<LiveGraphParcelTag>>,
     mut focus: ResMut<LiveSceneFocus>,
 ) {
-    let Some(attach) = attach else { return; };
     if *attach != AttachMode::Server {
         return;
     }
@@ -292,13 +282,11 @@ fn update_live_scene_focus(
 }
 
 fn follow_live_scene_focus(
-    attach: Option<Res<AttachMode>>,
+    attach: Res<AttachMode>,
     focus: Res<LiveSceneFocus>,
     time: Res<Time>,
-    mut rig: Option<ResMut<CameraRig>>,
+    mut rig: ResMut<CameraRig>,
 ) {
-    let Some(attach) = attach else { return; };
-    let Some(mut rig) = rig else { return; };
     if *attach != AttachMode::Server {
         return;
     }
@@ -309,11 +297,10 @@ fn follow_live_scene_focus(
 }
 
 fn update_live_minimap_camera(
-    attach: Option<Res<AttachMode>>,
+    attach: Res<AttachMode>,
     focus: Res<LiveSceneFocus>,
     mut minimap_cameras: Query<(&mut Transform, &mut Projection), With<MinimapCamera>>,
 ) {
-    let Some(attach) = attach else { return; };
     if *attach != AttachMode::Server {
         return;
     }

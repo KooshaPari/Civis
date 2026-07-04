@@ -18,7 +18,6 @@ use civ_protocol_3d::{
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId};
 
 use crate::bevy_render::{apply_chunk_material, mesh_buffer_to_bevy};
-use crate::frame_budget::{scaled_cull_distance, scaled_mesh_lod_distance, GpuQualityMode};
 use crate::game_ui::civilian_display_name;
 use crate::live_ground::{live_ground_y, ChunkVoxelCache};
 use crate::{
@@ -55,10 +54,8 @@ pub const AGENT_LABEL_Y_OFFSET: f32 = 1.05;
 pub struct StreamCulling {
     /// Camera position in world space.
     pub eye: [f32; 3],
-    /// Maximum render distance in world units (already scaled for [`gpu_quality`]).
+    /// Maximum render distance in world units.
     pub max_distance: f32,
-    /// Active GPU quality recovery mode for chunk LOD selection.
-    pub gpu_quality: GpuQualityMode,
 }
 
 /// Marker for a streamed voxel chunk entity.
@@ -265,10 +262,6 @@ pub fn format_live_pick_hud_line(
             .or_else(|| Some(format!("Agent #{}", selected.id))),
         LiveEntityKind::Building => Some(format!("Building #{}", selected.id)),
         LiveEntityKind::GraphParcel => Some(format!("Parcel #{}", selected.id)),
-        LiveEntityKind::VoxelChunk => {
-            let (cx, cy, cz) = crate::decode_chunk_id(civ_voxel::ChunkId(selected.id));
-            Some(format!("Chunk ({cx}, {cy}, {cz})"))
-        }
     }
 }
 
@@ -578,8 +571,7 @@ pub fn apply_voxel_delta_frame(
         };
         let distance =
             chunk_distance_from_camera(chunk.event.chunk_id, culling.eye, LIVE_CHUNK_EDGE as f32);
-        let lod_distance = scaled_mesh_lod_distance(distance, culling.gpu_quality);
-        let lod = LodLevel(mesh_lod_level(lod_distance));
+        let lod = LodLevel(mesh_lod_level(distance));
         let Ok(mesh_buffer) = CubicMesher::mesh_cubic(chunk_view, lod) else {
             continue;
         };
@@ -733,7 +725,7 @@ pub fn sync_agent_labels_from_civilians(
             .get(&agent.id)
             .map(civilian_display_name)
             .unwrap_or_else(|| format!("#{}", agent.id));
-        for child in children.iter() {
+        for &child in children.iter() {
             let Ok(mut text) = labels.get_mut(child) else {
                 continue;
             };
@@ -1124,7 +1116,6 @@ mod tests {
         let culling = StreamCulling {
             eye: [8.0, 8.0, 8.0],
             max_distance: 512.0,
-            gpu_quality: GpuQualityMode::Full,
         };
 
         let mut scene = LiveStreamScene::default();
@@ -1544,7 +1535,6 @@ mod tests {
             FactionStateFrame {
                 tick: 3,
                 factions: vec![entry(0, 2), entry(4, 5)],
-                population_by_faction: Default::default(),
             },
         );
 
@@ -1573,7 +1563,6 @@ mod tests {
                 government: Government3d::Junta,
                 treasury: FactionTreasury3d::default(),
             }],
-            population_by_faction: Default::default(),
         };
         let mut diplomacy = crate::diplomacy_ui::DiplomacyState {
             open: true,

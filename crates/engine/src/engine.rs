@@ -530,54 +530,6 @@ pub struct Simulation {
     /// call (cleared at the start of every [`Simulation::tick`], alongside the
     /// other `last_tick_*` buffers).
     last_tick_sentience_events: Vec<crate::genetics::sentience::SentienceEvent>,
-<<<<<<< HEAD
-    /// Per-settlement population snapshot, settable by tests + scenario loaders
-    /// so `phase_institutions` can drive Temple/Garrison spawns deterministically
-    /// (FR-CIV-GOV-001). Keyed by settlement id (`u32`).
-    settlements: BTreeMap<u32, u32>,
-    /// Currently-active institutions per settlement, keyed by
-    /// `(settlement_id, kind)`. Tracks the latest known level so we can detect
-    /// upgrades (FR-CIV-GOV-003).
-    institutions: BTreeMap<u32, civ_institutions::Institution>,
-    /// Civic events emitted by the most recent [`Simulation::phase_institutions`]
-    /// call (cleared at the start of every [`Simulation::tick`], alongside the
-    /// other `last_tick_*` buffers). Surfaced to the JSON-RPC bridge so the
-    /// Bevy client can render the civil layer.
-    last_tick_institution_events: Vec<InstitutionEvent>,
-    /// Monotonic set of `(settlement_id, kind, level)` we have already emitted
-    /// as an `Upgraded` event. Guarantees one-shot upgrade emission even
-    /// across population dips/rebounds (FR-CIV-GOV-003).
-    institution_levels_emitted: BTreeSet<(u32, civ_institutions::InstitutionKind, u8)>,
-    /// Per-settlement food stock, settable by tests + scenario loaders so
-    /// [`Simulation::phase_social_mood`] can derive `food_score` deterministically
-    /// (FR-CIV-GOV-100). Keyed by settlement id (`u32`); missing keys default
-    /// to `0` in the phase.
-    settlement_food_stocked: BTreeMap<u32, i64>,
-    /// Per-settlement housing capacity, settable by tests + scenario loaders
-    /// so [`Simulation::phase_social_mood`] can compute `housing_score` as
-    /// `2 * (capacity - population)` (FR-CIV-GOV-100). Keyed by settlement id
-    /// (`u32`); missing keys default to `0` in the phase.
-    settlement_housing_capacity: BTreeMap<u32, u32>,
-    /// Per-settlement crime pressure, settable by tests + scenario loaders so
-    /// [`Simulation::phase_social_mood`] can compute `crime_score`
-    /// (FR-CIV-GOV-100). Keyed by settlement id (`u32`); missing keys default
-    /// to `0` in the phase. Treated as `i32` so the `4 * pressure` term
-    /// saturates cleanly in `i64` arithmetic.
-    settlement_crime_pressure: BTreeMap<u32, i32>,
-    /// Flat mood history ring (test convenience). At most
-    /// [`MOOD_HISTORY_CAP`] * 8 entries are kept; older entries are drained
-    /// from the front. Mirrors the per-settlement ring in
-    /// `mood_history_by_settlement` for assertion convenience.
-    mood_history: Vec<MoodSnapshot>,
-    /// Per-settlement mood history ring. Each entry retains at most
-    /// [`MOOD_HISTORY_CAP`] [`MoodSnapshot`]s in append order (oldest first).
-    mood_history_by_settlement: BTreeMap<u32, Vec<MoodSnapshot>>,
-    /// Per-settlement mood snapshot emitted on the most recent tick
-    /// (cleared at the start of every [`Simulation::tick`], alongside the
-    /// other `last_tick_*` buffers). Surfaced to the JSON-RPC bridge so
-    /// clients can render the social-mood layer.
-    last_tick_mood: Vec<MoodSnapshot>,
-=======
     /// Per-settlement religious profile (FR-CIV-REL-001 / RELIGION_EMERGENCE §4.1).
     /// Persists across ticks; updated each call to [`Simulation::phase_belief`]
     /// by [`crate::religion::apply_big_gods_response`].
@@ -607,236 +559,6 @@ pub struct Simulation {
     /// Per-settlement stratification report (quantiles + Gini), refreshed
     /// each tick.
     last_tick_stratification_reports: BTreeMap<u32, StratificationReport>,
->>>>>>> eee640b47 (feat(engine): religion §7 phase_belief wiring — Big-Gods response per tick per settlement)
-}
-
-/// Civic institution event emitted by [`Simulation::phase_institutions`]
-/// (FR-CIV-GOV-001/002/003). Consumed by the JSON-RPC bridge in
-/// `crates/server/src/ws_bridge.rs` to surface the civil layer to clients.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct InstitutionEvent {
-    /// The kind of institution that changed.
-    pub kind: civ_institutions::InstitutionKind,
-    /// The new level (1 = L1 / first spawn, 2 = L2 / first upgrade, ...).
-    pub level: u8,
-    /// The settlement id this event pertains to.
-    pub settlement_id: u32,
-}
-
-/// Per-settlement mood snapshot emitted by [`Simulation::phase_social_mood`]
-/// (FR-CIV-GOV-100 family). Carries the total mood plus the four contributing
-/// sub-scores and the institution bonus, so downstream phases and the
-/// JSON-RPC bridge (`sim.snapshot.mood`) can attribute changes to specific
-/// drivers. `Copy` because the snapshot is pushed to a flat `Vec` for
-/// determinism testing and the `mood_history` ring is updated in place.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct MoodSnapshot {
-    /// Settlement this snapshot pertains to.
-    pub settlement_id: u32,
-    /// Total mood after summing the sub-scores and institution bonuses
-    /// (saturated to [`MOOD_MIN`, `MOOD_MAX`]).
-    pub mood: i64,
-    /// Delta versus the previous tick's mood for this settlement
-    /// (`0` if no prior snapshot was recorded).
-    pub mood_delta: i64,
-    /// `clamp(stocked / 200, MOOD_MIN, MOOD_MAX)` — food surplus contribution.
-    pub food_score: i64,
-    /// `clamp(2 * (capacity - population), MOOD_MIN, MOOD_MAX)` —
-    /// housing surplus / deficit contribution.
-    pub housing_score: i64,
-    /// `max(0, MOOD_CRIME_BASE - 4 * crime_pressure)` — crime inverse
-    /// contribution (clipped to `[0, MOOD_CRIME_BASE]`).
-    pub crime_score: i64,
-    /// `25 + 25 * level` when a Temple is present, else `0`.
-    pub temple_bonus: i32,
-    /// `15 + 15 * level` when a Garrison is present, else `0`.
-    pub garrison_bonus: i32,
-}
-
-/// Lower saturation bound for the per-settlement `mood` total in
-/// [`MoodSnapshot`] (FR-CIV-GOV-100). Chosen symmetric with [`MOOD_MAX`]
-/// so the score stays balanced for tests asserting `|mood| <= 200`.
-pub const MOOD_MIN: i64 = -200;
-
-/// Upper saturation bound for the per-settlement `mood` total in
-/// [`MoodSnapshot`] (FR-CIV-GOV-100). Matches the documentation in
-/// [`Simulation::phase_social_mood`].
-pub const MOOD_MAX: i64 = 200;
-
-/// `crime_score` baseline used by [`Simulation::phase_social_mood`]
-/// (FR-CIV-GOV-100). Crime at `MOOD_CRIME_BASE / 4` (i.e. `75`) saturates
-/// `crime_score` to `0`; lower crime gives a linearly higher score.
-pub const MOOD_CRIME_BASE: i64 = 300;
-
-/// Per-settlement mood history cap (FR-CIV-GOV-100). The engine keeps at
-/// most this many [`MoodSnapshot`] entries per settlement in
-/// `Simulation::mood_history_by_settlement`, plus [`MOOD_HISTORY_CAP`] * 8
-/// entries in the flat `Simulation::mood_history` ring buffer (test
-/// convenience).
-pub const MOOD_HISTORY_CAP: usize = 16;
-
-// ---------------------------------------------------------------------------
-// Phase 3: phase_stratification types (FR-CIV-GOV-020)
-// ---------------------------------------------------------------------------
-
-/// Alias for [`Simulation`] so civic-tests can use the shorter name.
-pub type Sim = Simulation;
-
-/// Seed wrapper used by the stratification tests. Wraps a `u64` so the seed
-/// surface matches `Simulation::with_seed(seed: u64)` while keeping the call
-/// site readable.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct SimSeed(pub u64);
-
-impl SimSeed {
-    /// Convert a `u64` seed into a `SimSeed`.
-    pub const fn from_u64(seed: u64) -> Self {
-        SimSeed(seed)
-    }
-}
-
-impl From<SimSeed> for u64 {
-    fn from(seed: SimSeed) -> Self {
-        seed.0
-    }
-}
-
-impl From<u64> for SimSeed {
-    fn from(seed: u64) -> Self {
-        SimSeed(seed)
-    }
-}
-
-/// Stratification band assigned to a household based on wealth + power score.
-///
-/// Ordered from lowest to highest: Poor < Middle < Rich < Elite. The numeric
-/// rank returned by [`StratBand::rank`] is used for promotion/demotion
-/// detection in `phase_stratification`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum StratBand {
-    Poor,
-    Middle,
-    Rich,
-    Elite,
-}
-
-impl StratBand {
-    /// Numeric rank 0..=3 (Poor=0, Middle=1, Rich=2, Elite=3).
-    pub const fn rank(self) -> u8 {
-        match self {
-            StratBand::Poor => 0,
-            StratBand::Middle => 1,
-            StratBand::Rich => 2,
-            StratBand::Elite => 3,
-        }
-    }
-
-    /// Promote (or demote) by `delta` ranks, clamping to `[Poor, Elite]`.
-    pub fn shift(self, delta: i32) -> Self {
-        let new_rank = (self.rank() as i32 + delta).clamp(0, 3) as u8;
-        match new_rank {
-            0 => StratBand::Poor,
-            1 => StratBand::Middle,
-            2 => StratBand::Rich,
-            _ => StratBand::Elite,
-        }
-    }
-}
-
-/// Per-household stratification event emitted each tick.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct StratificationEvent {
-    pub household_id: u64,
-    pub kind: StratificationEventKind,
-    pub band: StratBand,
-    pub score: i64,
-    pub score_delta: i64,
-}
-
-/// Kind of stratification change detected for a household.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum StratificationEventKind {
-    /// Household moved into a higher band than last tick.
-    Promoted,
-    /// Household moved into a lower band than last tick.
-    Demoted,
-    /// Household remained in the same band as last tick.
-    Unchanged,
-}
-
-/// Per-tick quantiles computed from household wealth within a settlement.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct StratQuantiles {
-    pub poor: i64,
-    pub middle: i64,
-    pub rich: i64,
-    pub elite: i64,
-}
-
-impl StratQuantiles {
-    /// Empty quantiles (all bands have 0 wealth sum). Used when a settlement
-    /// has no households yet.
-    pub fn empty() -> Self {
-        StratQuantiles { poor: 0, middle: 0, rich: 0, elite: 0 }
-    }
-
-    /// Accumulate `wealth` into the appropriate band based on the Gini-style
-    /// thresholds used in `phase_stratification`.
-    pub fn add(&mut self, wealth: i64) {
-        // Thresholds are 25/50/75 percentiles of the historical max(1000).
-        // Negative wealth always goes to Poor.
-        if wealth < 0 {
-            self.poor = self.poor.saturating_add(wealth);
-        } else if wealth < 250 {
-            self.poor = self.poor.saturating_add(wealth);
-        } else if wealth < 500 {
-            self.middle = self.middle.saturating_add(wealth);
-        } else if wealth < 750 {
-            self.rich = self.rich.saturating_add(wealth);
-        } else {
-            self.elite = self.elite.saturating_add(wealth);
-        }
-    }
-}
-
-/// Per-settlement stratification report at end of tick.
-#[derive(Debug, Clone, PartialEq)]
-pub struct StratificationReport {
-    pub settlement_id: u32,
-    pub quantiles: StratQuantiles,
-    pub gini: f64,
-}
-
-/// Computes the Gini coefficient (0.0 = perfect equality, 1.0 = one household
-/// owns everything) for a slice of household wealth values. Non-finite
-/// results are clamped to `0.0` to satisfy the no-NaN/Inf project policy.
-fn compute_gini(wealths: &[i64]) -> f64 {
-    if wealths.is_empty() {
-        return 0.0;
-    }
-    let mut sorted: Vec<i64> = wealths.iter().copied().filter(|w| *w >= 0).collect();
-    if sorted.is_empty() {
-        return 0.0;
-    }
-    sorted.sort_unstable();
-    let n = sorted.len() as f64;
-    let sum: f64 = sorted.iter().map(|w| *w as f64).sum();
-    if sum <= 0.0 {
-        return 0.0;
-    }
-    let mut cumulative = 0.0_f64;
-    let mut weighted_sum = 0.0_f64;
-    for (i, w) in sorted.iter().enumerate() {
-        cumulative += *w as f64;
-        // Lorenz curve: cumulative wealth / total wealth; index i+1 out of n.
-        weighted_sum += (i as f64 + 1.0) * (*w as f64);
-    }
-    let gini = (2.0 * weighted_sum) / (n * sum) - (n + 1.0) / n;
-    if gini.is_finite() {
-        gini.clamp(0.0, 1.0)
-    } else {
-        0.0
-    }
 }
 
 /// Voxel material id used to mark coastal water-level voxels written by
@@ -1190,18 +912,9 @@ impl Simulation {
             sentience_profile: default_sentience_profile(),
             sentience_threshold: SentienceThreshold::new(SENTIENCE_MIN_COGNITION),
             last_tick_sentience_events: Vec::new(),
-<<<<<<< HEAD
-            settlement_food_stocked: BTreeMap::new(),
-            settlement_housing_capacity: BTreeMap::new(),
-            settlement_crime_pressure: BTreeMap::new(),
-            mood_history: Vec::new(),
-            mood_history_by_settlement: BTreeMap::new(),
-            last_tick_mood: Vec::new(),
-=======
             religious_profiles: BTreeMap::new(),
             last_tick_religion_events: Vec::new(),
             current_tick: 0,
->>>>>>> eee640b47 (feat(engine): religion §7 phase_belief wiring — Big-Gods response per tick per settlement)
         }
     }
 
@@ -1649,18 +1362,10 @@ impl Simulation {
         // audio events mid-tick; `phase_audio` re-emits the survivors
         // alongside combat + construction events on the wire.
         self.last_tick_audio_events.clear();
-<<<<<<< HEAD
-        // Social-mood buffer (FR-CIV-GOV-100). `phase_social_mood` overwrites
-        // this with the per-settlement snapshots each tick; downstream
-        // consumers (`last_tick_mood`, `last_tick_mood_all`) read a fresh
-        // value when called after `tick()` returns.
-        self.last_tick_mood.clear();
-=======
         // Religion events are reset at the top of the tick so per-settlement
         // `phase_belief` re-records them; this matches the per-tick buffer
         // semantics used by combat / construction / diplomacy / audio.
         self.last_tick_religion_events.clear();
->>>>>>> eee640b47 (feat(engine): religion §7 phase_belief wiring — Big-Gods response per tick per settlement)
 
         // Phases in PHASE_ORDER (CIV-0001 partial). Single source of truth:
         // adding/removing a phase touches only `PHASE_ORDER` + the `run_phase`

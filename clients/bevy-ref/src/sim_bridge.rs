@@ -17,9 +17,9 @@ use crate::spawn_tools::{SpawnBuildingRequest, SpawnCivilianRequest};
 use crate::terrain::WORLD_SIZE;
 use crate::{live_attach::is_server_attach_mode, AttachMode};
 #[cfg(feature = "models")]
-use civ_bevy_ref::gltf_models::{actor_scene, building_scene_for, ModelOrPrimitive};
+use crate::gltf_models::{actor_scene, building_scene_for, ModelOrPrimitive};
 #[cfg(feature = "models")]
-type ModelResourceRef<'a> = Option<&'a Res<civ_bevy_ref::gltf_models::GameModels>>;
+type ModelResourceRef<'a> = Option<&'a Res<'a, crate::gltf_models::GameModels>>;
 #[cfg(not(feature = "models"))]
 type ModelResourceRef<'a> = Option<()>;
 
@@ -55,7 +55,7 @@ pub type SimBuildingMarkerPublic = SimBuildingMarker;
 
 impl Default for SimState {
     fn default() -> Self {
-        Self(Simulation::default())
+        Self(Simulation::new())
     }
 }
 
@@ -71,18 +71,23 @@ struct GameplayMarkerMeshes {
     building: Handle<Mesh>,
 }
 
-fn in_process_sim_active(mode: Res<AttachMode>) -> bool {
-    !is_server_attach_mode(*mode)
+fn in_process_sim_active(mode: Option<Res<AttachMode>>) -> bool {
+    mode.map(|m| !is_server_attach_mode(*m)).unwrap_or(true)
 }
 
 /// Wires spawn-tool messages into the ECS simulation and optional HUD sync.
 #[derive(Default)]
 pub struct SimBridgePlugin;
 
+/// Frame counter for throttled debug logging (every ~60 frames).
+#[derive(Resource, Default)]
+struct DebugFrameCounter(u32);
+
 impl Plugin for SimBridgePlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(ProceduralActorPlugin);
         app.init_resource::<SimState>()
+            .init_resource::<DebugFrameCounter>()
             .insert_resource(SimTickAccumulator(0.0))
             .add_systems(Startup, setup_gameplay_marker_meshes)
             .add_systems(
@@ -217,6 +222,17 @@ fn sync_visible_gameplay(
     mut materials: ResMut<Assets<StandardMaterial>>,
     #[cfg(feature = "models")] models: Option<Res<civ_bevy_ref::gltf_models::GameModels>>,
 ) {
+    // One-time archetype debug log on first sync (to find 300-vs-5 gap)
+    static DEBUG_LOGGED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    if !DEBUG_LOGGED.swap(true, std::sync::atomic::Ordering::SeqCst) {
+        let count_civilian = sim.0.world.query::<&Civilian>().iter().count();
+        let count_pos3d = sim.0.world.query::<&civ_agents::Position3d>().iter().count();
+        let count_civ_pos = sim.0.world.query::<(&Civilian, &civ_agents::Position3d)>().iter().count();
+        let count_render = sim.0.world.query::<(&Civilian, &civ_agents::Position3d, Option<&ActorVisual>)>().iter().count();
+        let count_total = sim.0.world.iter().count();
+        info!("civis-archetype: total={} civilian={} pos3d={} civ+pos={} render_match={}", count_total, count_civilian, count_pos3d, count_civ_pos, count_render);
+    }
+
     if !sim.is_changed() {
         return;
     }
@@ -240,13 +256,19 @@ fn sync_visible_gameplay(
     #[cfg(not(feature = "models"))]
     let model_resource: ModelResourceRef = None;
 
+    let mut query_count = 0;
+    let mut first_world_pos: Option<Vec3> = None;
     for (_, (civilian, position, actor_visual)) in sim
         .0
         .world
         .query::<(&Civilian, &civ_agents::Position3d, Option<&ActorVisual>)>()
         .iter()
     {
+        query_count += 1;
         let world_pos = sim_position_to_world(position);
+        if first_world_pos.is_none() {
+            first_world_pos = Some(world_pos);
+        }
         let faction_id = faction_id(&civilian.alignment);
         let visual = actor_visual_kind(actor_visual);
         let entity = match civilian_entities.remove(&civilian.id) {
@@ -290,6 +312,15 @@ fn sync_visible_gameplay(
             ),
         };
         let _ = entity;
+    }
+
+    // Throttled debug log: only log every ~60 frames to avoid spam
+    debug_counter.0 = debug_counter.0.wrapping_add(1);
+    if debug_counter.0 % 60 == 0 {
+        info!(
+            "civis-debug: sim civilians query found {} entities, first_world_pos: {:?}",
+            query_count, first_world_pos
+        );
     }
 
     for (_, building) in sim.0.world.query::<&Building>().iter() {
@@ -366,7 +397,7 @@ fn actor_visual_kind(actor_visual: Option<&ActorVisual>) -> ActorVisualKind {
 
 #[cfg(feature = "models")]
 fn spawn_civilian_visual(
-    commands: &mut Commands<'_>,
+    commands: &mut Commands<'_, '_>,
     models: ModelResourceRef,
     _civilian_mesh: &Handle<Mesh>,
     meshes: &mut Assets<Mesh>,
@@ -415,7 +446,7 @@ fn spawn_civilian_visual(
 
 #[cfg(feature = "models")]
 fn spawn_building_visual(
-    commands: &mut Commands<'_>,
+    commands: &mut Commands<'_, '_>,
     models: ModelResourceRef,
     building_mesh: &Handle<Mesh>,
     materials: &mut Assets<StandardMaterial>,
@@ -595,4 +626,47 @@ fn sync_game_ui_snapshot(
         tick.to_string(),
         speed.multiplier,
     );
+}
+
+/// Sync in-process simulation faction state into LiveStreamScene so the HUD displays it.
+#[cfg(feature = "egui")]
+fn sync_faction_state_snapshot(
+    sim: Res<SimState>,
+    mut scene: ResMut<crate::live_stream::LiveStreamScene>,
+) {
+    if !sim.is_changed() {
+        return;
+    }
+
+    // Build faction entries from the simulation (basic stub: just id and era).
+    let mut faction_entries = std::collections::BTreeMap::new();
+    let mut population_by_faction = std::collections::BTreeMap::new();
+
+    // Count civilians per faction.
+    for (_, civilian) in sim.0.world.query::<&Civilian>().iter() {
+        if let Alignment::Faction(faction) = civilian.alignment {
+            *population_by_faction.entry(faction).or_insert(0) += 1;
+        }
+    }
+
+    // Create entries for each observed faction.
+    for &faction_id in population_by_faction.keys() {
+        faction_entries.insert(
+            faction_id,
+            civ_protocol_3d::FactionStateEntry {
+                id: faction_id,
+                era: sim.0.state.tick.saturating_div(1000) as u16,
+                government: civ_protocol_3d::Government3d::Unknown,
+                treasury: civ_protocol_3d::FactionTreasury3d {
+                    amount: 0.0,
+                    currency: String::new(),
+                },
+            },
+        );
+    }
+
+    // Update the scene (only if there are changes).
+    scene.faction_entries = faction_entries.into_values().collect();
+    scene.faction_entries.sort_by_key(|entry| entry.id);
+    scene.population_by_faction = population_by_faction;
 }

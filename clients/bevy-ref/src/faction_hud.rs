@@ -61,6 +61,7 @@ fn draw_faction_hud(
     open: Res<FactionHudOpen>,
     player: Res<PlayerFactionId>,
     scene: Res<LiveStreamScene>,
+    sim: Option<Res<crate::sim_bridge::SimState>>,
 ) {
     if !open.0 {
         return;
@@ -136,15 +137,11 @@ fn draw_faction_hud(
             ui.separator();
             ui.add_space(2.0);
 
-            // Population row: per-faction count from FactionState frame (FR-CIV-PROTO-001).
+            // Population row: live count from in-process sim or per-faction breakdown.
             ui.horizontal(|ui| {
                 ui.label(egui::RichText::new("Population").color(DIM).small());
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    let pop_label = if faction_population > 0 {
-                        format_count(faction_population as usize)
-                    } else {
-                        format!("~{}", format_count(total_civilians))
-                    };
+                    let pop_label = format_count(display_population as usize);
                     ui.label(egui::RichText::new(pop_label).strong());
                 });
             });

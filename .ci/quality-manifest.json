@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "tiers": {
+    "unit": {
+      "description": "In-module #[test] functions testing a single type or function"
+    },
+    "integration": {
+      "description": "Multi-module tests in tests/ directories, covering protocol, save-load round-trips, and E2E flows"
+    },
+    "e2e": {
+      "description": "End-to-end tests using realistic game state — save/load, simulation clamping, and edge cases"
+    }
+  },
+  "coverage": {
+    "overall": 78.0,
+    "tiers": {
+      "unit": 0.0,
+      "integration": 0.0,
+      "e2e": 0.0
+    },
+    "min_per_crate": 65.0,
+    "exclude_patterns": [
+      "tests/**",
+      "**/benches/**",
+      "clients/**",
+      "vendor/**",
+      "target/**"
+    ]
+  },
+  "ci": {
+    "required_checks": [
+      "cargo-check",
+      "cargo-test",
+      "cargo-clippy",
+      "cargo-deny",
+      "pr-governance-gate"
+    ],
+    "allow_failure": [
+      "coverage-check"
+    ],
+    "target_branches": [
+      "main",
+      "feat/*"
+    ]
+  },
+  "accessibility": {
+    "wcag_level": "AA",
+    "languages": [
+      "en",
+      "fa",
+      "fa-Latn",
+      "zh-CN",
+      "zh-TW"
+    ],
+    "audit_frequency": "per-release"
+  },
+  "i18n": {
+    "total_strings": 42,
+    "coverage": {
+      "en": 1.0,
+      "fa": 1.0,
+      "fa-Latn": 1.0,
+      "zh-CN": 1.0,
+      "zh-TW": 1.0
+    }
+  },
+  "git_sha": "359c0b91d2b25d740e541aa2c93c74bc3ec04f80"
+}

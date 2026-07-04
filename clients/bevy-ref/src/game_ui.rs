@@ -827,7 +827,7 @@ fn chip(ui: &mut egui::Ui, icon: &str, text: &str, color: egui::Color32) {
 fn top_bar_ui(
     ui: &mut egui::Ui,
     snapshot: &GameUiSnapshot,
-    attach_mode: &crate::AttachMode,
+    attach_mode: Option<&crate::AttachMode>,
     live_attach: Option<&crate::live_attach::LiveAttachState>,
     laws_open: &mut GameLawsOpen,
 ) {
@@ -854,7 +854,7 @@ fn top_bar_ui(
             if ui.button("⚖ Laws").clicked() {
                 laws_open.0 = !laws_open.0;
             }
-            if *attach_mode == crate::AttachMode::Server {
+            if attach_mode.map(|am| *am == crate::AttachMode::Server).unwrap_or(false) {
                 let connected = live_attach.map(|s| s.connected).unwrap_or(false);
                 let (dot, text, color) = if connected {
                     ("\u{1f7e2}", "WS Live", green)

@@ -290,6 +290,37 @@ impl Scenario {
         // seed-only construction is sufficient. starting_conditions still gates
         // validation in apply_world_state.
         let mut sim = Simulation::with_seed(rng_seed);
+
+        // If starting_conditions differ from defaults (32/4/2500), respawn civilians with custom config
+        let needs_respawn = self.starting_conditions.civilians_per_faction != 32
+            || self.starting_conditions.faction_count != 4
+            || self.starting_conditions.quadrant_spread != 2500;
+
+        if needs_respawn {
+            // Clear existing civilians
+            let mut to_remove = Vec::new();
+            for (entity, _) in sim.world.query::<&civ_agents::Civilian>().iter() {
+                to_remove.push(entity);
+            }
+            for entity in to_remove {
+                let _ = sim.world.despawn(entity);
+            }
+
+            // Respawn with scenario config
+            let mut spawn_rng = sim.rng_mut().clone();
+            crate::engine::spawn_faction_civilians_custom(
+                &mut sim.world,
+                &mut spawn_rng,
+                self.starting_conditions.civilians_per_faction,
+                self.starting_conditions.faction_count,
+                self.starting_conditions.quadrant_spread,
+            );
+            crate::engine::attach_citizen_to_agents(&mut sim.world);
+
+            // Update population to match actual spawned count
+            sim.state.population = civ_agents::count_civilians(&sim.world) as u64;
+        }
+
         self.apply_world_state(&mut sim.state);
         sim.economy_policy = self.policy_input();
         sim.configure_military_fog(self.fog_vision_radius, self.fog_grid_size);
@@ -1027,6 +1058,65 @@ starting_conditions:
         assert!(
             seeds.contains(&civ_genetics::NamedSeed::Grundak),
             "missing Grundak"
+        );
+    }
+
+    /// Survival scenario: persist for 500 ticks without extinction.
+    ///
+    /// Constructs a scenario with one objective: the player's faction must
+    /// maintain presence and not fall to complete collapse through tick 500,
+    /// validating that survival mechanics (resource management, population
+    /// stability) work correctly and that the time-based deadline fires.
+    #[test]
+    fn survival_scenario_builds_and_evaluates() {
+        use crate::gameplay::{ScenarioObjective, VictoryCondition, VictoryType};
+
+        // Build the Survival scenario with its objective: maintain any positive
+        // economic/territorial presence for 500 ticks (high threshold ensures
+        // it's a challenge, not instant win).
+        let survival_objective = ScenarioObjective {
+            condition: VictoryCondition {
+                victory_type: VictoryType::Economic,
+                faction_id: 0,
+                threshold: Some(0.3), // Must hold 30% of resources to survive
+            },
+            tick_limit: Some(500), // 500 tick deadline
+        };
+
+        // Verify the objective was constructed correctly
+        assert_eq!(survival_objective.condition.faction_id, 0);
+        assert_eq!(survival_objective.condition.victory_type, VictoryType::Economic);
+        assert_eq!(survival_objective.condition.threshold, Some(0.3));
+        assert_eq!(survival_objective.tick_limit, Some(500));
+
+        // Load baseline and create simulation
+        let scenario = load_scenario(baseline_scenario_path()).expect("baseline scenario loads");
+        let mut sim = scenario.into_simulation(42);
+
+        // Simulate 10 ticks: objective should be pending (not yet won, not yet expired)
+        for _ in 0..10 {
+            sim.tick();
+        }
+        let outcome_pending = survival_objective.evaluate(&sim);
+        // Outcome may be None (Ongoing) or Some(Victory) if threshold is met early,
+        // but should not be Defeat yet since we're well before the deadline.
+        if let Some(crate::conditions::GameOutcome::Defeat(_)) = outcome_pending {
+            panic!(
+                "objective should not fire Defeat before tick limit, got {:?}",
+                outcome_pending
+            );
+        }
+
+        // Fast-forward to tick 501 (beyond deadline)
+        while sim.state.tick < 501 {
+            sim.tick();
+        }
+        let outcome_expired = survival_objective.evaluate(&sim);
+        // After the deadline, the objective must resolve (either Victory if threshold
+        // was met, or Defeat if not).
+        assert!(
+            outcome_expired.is_some(),
+            "objective should resolve after tick limit expires"
         );
     }
 

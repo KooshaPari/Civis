@@ -59,28 +59,6 @@ pub fn trigger_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoor
     // raising belief (emergent disasters -> faith coupling, FR-CIV-EMERGENCE).
     const DISASTER_FAITH_GAIN: i64 = 50;
     sim.add_belief(DISASTER_FAITH_GAIN);
-    // Audio substrate (FR-AUDIO-wire): forward the disaster to the per-tick
-    // audio buffer so `phase_audio` emits a `SfxTrigger::Disaster` on the
-    // wire. Severity is derived from the disaster's terrain radius so a
-    // bigger storm sounds louder than a small fire; clamped to [0, 1] in
-    // `record_disaster_audio`.
-    let label = disaster_kind_label(kind);
-    let severity = (radius_for(kind) as f32 / (6.0 * civ_voxel::FIXED_SCALE as f32)).clamp(0.1, 1.0);
-    sim.record_disaster_audio(label, severity);
-}
-
-/// Wire-stable label for a [`DisasterKind`] used by the audio substrate
-/// (FR-AUDIO-wire). Mirrors the lowercase forms consumed by
-/// `civ_audio::SfxKind::for_disaster_label`.
-pub fn disaster_kind_label(kind: DisasterKind) -> &'static str {
-    match kind {
-        DisasterKind::Meteor => "meteor",
-        DisasterKind::Flood => "flood",
-        DisasterKind::Quake => "quake",
-        DisasterKind::Wildfire => "wildfire",
-        DisasterKind::Storm => "storm",
-        DisasterKind::Plague => "plague",
-    }
 }
 
 impl Simulation {
@@ -162,7 +140,8 @@ impl Simulation {
         // Research mitigates nature: fire-suppression tech raises the ignition
         // threshold (research -> fewer disasters). Computed before the weather
         // borrow so the immutable grow iteration holds no `&self` method call.
-        let wildfire_temp_threshold = wildfire_ignition_temp_fp(WILDFIRE_TEMP_FP, self.research_tier());
+        let wildfire_temp_threshold = wildfire_ignition_temp_fp(season_wildfire_temp as i32, self.research_tier());
+        let geology = GeologyMap::seed(self.planet());
         let mut wildfires = Vec::new();
         let mut quakes = Vec::new();
         let mut floods = Vec::new();
@@ -174,7 +153,9 @@ impl Simulation {
                 y: 0,
                 z: 0,
             };
-            if cell.temp_c_fp >= wildfire_temp_threshold && cell.precip_mm_fp <= WILDFIRE_PRECIP_FP {
+            let would_wildfire = cell.temp_c_fp >= wildfire_temp_threshold
+                && cell.precip_mm_fp <= WILDFIRE_PRECIP_FP;
+            if would_wildfire {
                 wildfires.push(pos);
             }
             if tidal_stress >= QUAKE_TIDE_THRESHOLD && cell.latitude_fp.abs() >= QUAKE_LATITUDE_FP {
@@ -839,9 +820,12 @@ mod tests {
             tide_offset: 0.0,
         });
 
-        sim.tick();
+        sim.state.tick = 700;
+        sim.phase_disasters();
 
-        let snapshot = sim.snapshot();
+        let origin = WorldCoord { x: 8, y: 0, z: 0 };
+        let has_drought_effects =
+            sim.voxel().read(origin) == GRAVEL || sim.voxel().read(origin) == AIR;
         assert!(
             !snapshot.disaster_events.is_empty(),
             "wildfire should emit per-tick disaster events from climate/weather"

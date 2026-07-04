@@ -12,7 +12,6 @@ use crate::{
     ReligiousProfile, ReplayLog, Simulation, WorldState,
 };
 use civ_agents::{ClusterMember, LodTier, Needs, Position3d, Tools, Wardrobe};
-use crate::language::LanguageState;
 use civ_needs::Health as LifeHealth;
 use civ_planet::{Climate, MoonConfig, PlanetConfig, WeatherCell};
 use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, WorldCoord};
@@ -273,21 +272,14 @@ fn restore_sim(saved: SavedSimulation) -> Simulation {
 
 pub fn save_game(sim: &Simulation, path: impl AsRef<Path>) -> Result<(), SaveError> {
     let path = path.as_ref();
-    let bytes = bincode_next::serde::encode_to_vec(
-        &snapshot_sim(sim),
-        bincode_next::config::standard(),
-    )?;
+    let bytes = bincode::serialize(&snapshot_sim(sim))?;
     fs::write(path, bytes).map_err(|e| io_err(path, e))
 }
 
 pub fn load_game(path: impl AsRef<Path>) -> Result<Simulation, SaveError> {
     let path = path.as_ref();
     let bytes = fs::read(path).map_err(|e| io_err(path, e))?;
-    let saved: SavedSimulation = bincode_next::serde::decode_from_slice(
-        &bytes,
-        bincode_next::config::standard(),
-    )?
-    .0;
+    let saved: SavedSimulation = bincode::deserialize(&bytes)?;
     Ok(restore_sim(saved))
 }
 

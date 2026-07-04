@@ -29,9 +29,10 @@ impl Plugin for OutcomeOverlayPlugin {
 }
 
 fn poll_outcome_system(
-    bridge: Res<LiveAttachBridge>,
+    bridge: Option<Res<LiveAttachBridge>>,
     mut state: ResMut<OutcomeOverlayState>,
 ) {
+    let Some(bridge) = bridge else { return; };
     if let Some(data) = bridge.client.poll_outcome() {
         if data.tag != "ongoing" {
             if state.outcome.as_ref().map(|o| o.tag != data.tag).unwrap_or(true) {
@@ -45,7 +46,7 @@ fn poll_outcome_system(
 fn draw_outcome_overlay(
     mut contexts: EguiContexts,
     mut state: ResMut<OutcomeOverlayState>,
-    bridge: Res<LiveAttachBridge>,
+    bridge: Option<Res<LiveAttachBridge>>,
 ) {
     let Some(ref outcome) = state.outcome.clone() else { return };
     if state.dismissed { return }
@@ -92,7 +93,9 @@ fn draw_outcome_overlay(
                             ui.add_space(8.0);
                             ui.horizontal(|ui| {
                                 if ui.button(egui::RichText::new("New Game").size(16.0)).clicked() {
-                                    bridge.client.send_rpc("sim.reset", serde_json::json!({"seed": 0}));
+                                    if let Some(bridge) = &bridge {
+                                        bridge.client.send_rpc("sim.reset", serde_json::json!({"seed": 0}));
+                                    }
                                     state.dismissed = true;
                                     state.outcome = None;
                                 }

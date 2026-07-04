@@ -15,3 +15,7 @@ Build with `--features audio` to activate.
 | `build.ogg` | Building constructed | kenney.nl "Impact Sounds" (CC0) |
 
 All files are optional -- missing files log a warning and play silence.
+
+## Provenance
+
+The 8 .ogg files in this directory are procedurally synthesized (CC0, authored via ffmpeg), not downloaded. Each clip is generated using deterministic audio synthesis (sine waves, noise, and filters) to create musically appropriate event sounds.

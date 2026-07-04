@@ -2453,6 +2453,7 @@ dependencies = [
  "civ-mod-host",
  "civ-needs",
  "civ-planet",
+ "civ-powers",
  "civ-save-db",
  "civ-species",
  "civ-tactics",

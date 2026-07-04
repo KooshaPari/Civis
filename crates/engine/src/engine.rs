@@ -2866,6 +2866,28 @@ impl Simulation {
             industrial: 0.25,
             civic: 0.75,
         };
+        let _ = signals;
+    }
+
+    fn phase_social_mood(&mut self) {
+        // 1) For every settlement, compute the sub-scores + total mood.
+        let mut snapshots: Vec<MoodSnapshot> = Vec::with_capacity(self.settlements.len());
+        for (&settlement_id, &population) in &self.settlements {
+            let stocked = self
+                .settlement_food_stocked
+                .get(&settlement_id)
+                .copied()
+                .unwrap_or(0);
+            let capacity = self
+                .settlement_housing_capacity
+                .get(&settlement_id)
+                .copied()
+                .unwrap_or(0);
+            let crime_pressure = self
+                .settlement_crime_pressure
+                .get(&settlement_id)
+                .copied()
+                .unwrap_or(0);
 
             // 1. food_score
             let food_score = (stocked / 200).clamp(MOOD_MIN, MOOD_MAX);

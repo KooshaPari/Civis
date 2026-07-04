@@ -49,9 +49,7 @@ use civ_emergence_metrics::branching::{
     classify_regime, rolling_mean_sigma, sigma_a, sigma_score, BranchingLedger, BranchingRegime,
     DEFAULT_BRANCHING_WINDOW, SIGMA_SUBCRITICAL, SIGMA_SUPERCRITICAL,
 };
-use civ_emergence_metrics::{
-    criticality_indicator, coupling_mi_estimate, novelty_score, CriticalityInputs,
-};
+use civ_emergence_metrics::{CriticalityInputs};
 use civ_emergence_metrics::dashboard::EmergenceDashboard;
 use civ_emergence_metrics::power_law::PowerLawFit;
 use civ_emergence_metrics::shannon::ShannonEntropy;
@@ -873,11 +871,11 @@ fn compute_dashboard(sim: &Simulation) -> (TileDashboard, f32) {
         &diplomacy_pair_scores,
     );
     let dashboard = TileDashboard {
-        cluster_entropy: summary.cluster_entropy,
-        ideology_homophily: summary.ideology_homophily,
-        sentience_fraction: summary.sentience_fraction,
-        psyche_stability: summary.psyche_stability,
-        diplomacy_tension: summary.diplomacy_tension,
+        cluster_entropy: Some(summary.cluster_entropy),
+        ideology_homophily: Some(summary.ideology_homophily),
+        sentience_fraction: Some(summary.sentience_fraction),
+        psyche_stability: Some(summary.psyche_stability),
+        diplomacy_tension: Some(summary.diplomacy_tension),
         novelty_score: 0.0,
         coupling_mi: 0.0,
         criticality_indicator: 0.0,

@@ -99,9 +99,9 @@ pub fn neighboring_factions(
 /// Resource surplus above a modest subsistence floor (food + wood + metal).
 #[must_use]
 pub fn resource_surplus(resources: &Resources) -> i64 {
-    let food = resources.food.to_num::<i64>();
-    let wood = resources.wood.to_num::<i64>();
-    let metal = resources.metal.to_num::<i64>();
+    let food = resources.food.to_f64() as i64;
+    let wood = resources.wood.to_f64() as i64;
+    let metal = resources.metal.to_f64() as i64;
     let baseline = 40_i64;
     (food - baseline).max(0) + (wood - baseline).max(0) + (metal - baseline).max(0)
 }
@@ -137,7 +137,7 @@ pub fn gather_faction_inputs(sim: &Simulation) -> BTreeMap<u32, FactionEmergence
             .state
             .faction_treasury
             .get(&faction_id)
-            .map(|v| v.to_num::<i64>())
+            .map(|v| v.to_f64() as i64)
             .unwrap_or(0);
         inputs.insert(
             faction_id,

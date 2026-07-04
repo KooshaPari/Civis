@@ -23,7 +23,7 @@ pub fn install_crash_handler() {
             return;
         }
 
-        if let Err(err) = write(&path, output) {
+        if let Err(err) = write(&path, &output) {
             eprintln!("[crash] failed to write panic log: {err}");
             eprintln!("{}", output);
             return;

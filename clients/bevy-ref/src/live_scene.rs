@@ -26,6 +26,7 @@ use crate::live_stream::{
 };
 use crate::minimap::{MinimapCamera, MinimapDot, MinimapRoot, MINIMAP_SIZE};
 use crate::{chunk_fade_complete, AttachMode, DebugRender, LiveHudSnapshot};
+use crate::frame_budget::FrameBudgetRecovery;
 
 const LIVE_RENDER_MAX_DISTANCE: f32 = 200.0;
 const MINIMAP_CAMERA_HEIGHT: f32 = 180.0;
@@ -79,6 +80,7 @@ fn apply_live_scene_frames(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    frame_budget_recovery: Res<FrameBudgetRecovery>,
     #[cfg(feature = "egui")] mut event_feed: Option<ResMut<EventFeed>>,
 ) {
     if *attach != AttachMode::Server {
@@ -99,6 +101,8 @@ fn apply_live_scene_frames(
     let culling = StreamCulling {
         eye,
         max_distance: LIVE_RENDER_MAX_DISTANCE,
+        draw_distance_scale: frame_budget_recovery.draw_distance_scale(),
+        lod_distance_scale: frame_budget_recovery.lod_distance_scale(),
     };
 
     for frame in frames {

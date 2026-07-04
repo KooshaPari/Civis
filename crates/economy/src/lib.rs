@@ -21,11 +21,7 @@ pub use institution::{
     InstitutionLedgerError, InstitutionPosting, LedgerSide, INSTITUTION_MARKET,
     INSTITUTION_TREASURY,
 };
-pub use market::MarketState;
-pub use stocks::{
-    apply_trade, comparative_advantage, deficit, propose_trade, step_stocks, surplus, trade_gain,
-    Good, ProductionProfile, Stocks, TradeOffer, GOODS,
-};
+pub use market::{GoodId, MarketState, MultiGoodMarket, Order, OrderBook, Side, Trade};
 
 use serde::{Deserialize, Serialize};
 

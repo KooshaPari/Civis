@@ -20,7 +20,7 @@ use tower_http::{cors::CorsLayer, services::ServeDir};
 use tracing::info;
 
 use crate::app::{
-    default_law_db, env_u16, resolve_data_dir, resolve_session_id, AppState, Snapshot,
+    default_law_db, env_u16, env_u64, resolve_data_dir, resolve_session_id, AppState, Snapshot,
     TerrainCache, REMOTE_FETCH_TIMEOUT,
 };
 use crate::control_routes::{
@@ -76,7 +76,8 @@ fn build_app(state: AppState) -> Router {
 
 pub async fn run() {
     let (tx, _) = broadcast::channel::<Snapshot>(64);
-    let terrain = Terrain::generate(42);
+    let terrain_seed = env_u64("CIVIS_MAP_SEED", 42);
+    let terrain = Terrain::generate(terrain_seed);
     let terrain_cache = TerrainCache::from_terrain(&terrain);
     let laws = Arc::new(default_law_db());
     let data_dir = resolve_data_dir();
@@ -110,7 +111,7 @@ pub async fn run() {
         terrain.heights.len()
     );
 
-    let sim = Arc::new(Mutex::new(Simulation::with_seed(42)));
+    let sim = Arc::new(Mutex::new(Simulation::with_seed(terrain_seed)));
     let military = Arc::new(Mutex::new(Vec::new()));
     {
         let mut s = sim.lock().await;

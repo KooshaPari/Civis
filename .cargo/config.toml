@@ -46,3 +46,6 @@ linker = "rust-lld.exe"
 #   rustup toolchain install nightly
 #   rustup component add rustc-codegen-cranelift --toolchain nightly
 #   CARGO_PROFILE_DEV_CODEGEN_BACKEND=cranelift cargo +nightly build -Zcodegen-backend ...
+
+[alias]
+m-check = "modules check --deny cyclic --deny dead-code --deny unreachable"

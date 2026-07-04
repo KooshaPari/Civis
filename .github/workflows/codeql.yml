@@ -1,19 +1,32 @@
+# Local-first: PRs use quality.yml + pr-governance only.
+# Heavy CodeQL build (with rust cargo build) is run locally via lefthook and
+# attested in `.ci/quality-manifest.json`. Cloud CodeQL is a manual escape
+# hatch: dispatch-only for ad-hoc security scans, plus a single weekly cron
+# slot so advisory dashboards still get periodic Rust results.
 name: CodeQL
 
-# Local-first: PRs use quality.yml + pr-governance-gate only.
-# Run heavy gates locally: lefthook run pre-push
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
   schedule:
     - cron: "0 6 * * 1"
+
 permissions:
   contents: read
   security-events: write
 
 jobs:
+  manifest-verify:
+    name: manifest-verify (cloud)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Verify local quality manifest
+        run: bash scripts/quality/verify-quality-manifest.sh
+
   analyze:
+    # Manual + weekly: never on push/PR. Heavy (~30 min cargo build).
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule
     uses: KooshaPari/phenoShared/.github/workflows/reusable/codeql.yml@main
     permissions:
       contents: read

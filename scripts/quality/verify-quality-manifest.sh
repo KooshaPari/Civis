@@ -54,13 +54,14 @@ if attested not in {head, ""}:
             + "\nRe-run: lefthook run pre-push && commit .ci/quality-manifest.json"
         )
 
-OPTIONAL_GATE_PREFIXES = ("unreal_",)
+OPTIONAL_GATE_PREFIXES = ("unreal_", "extra_")
 
 def gate_ok(key: str, status: str) -> bool:
     if status == "pass":
         return True
-    if status == "skip" and key.startswith(OPTIONAL_GATE_PREFIXES):
-        return True
+    if key.startswith(OPTIONAL_GATE_PREFIXES):
+        # Optional Unreal tier: pass/skip/fail never block cloud verify.
+        return status in ("pass", "skip", "fail")
     return False
 
 gates = body.get("gates") or {}

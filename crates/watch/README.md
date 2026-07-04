@@ -20,7 +20,7 @@ Build the dashboard first: `cd web/dashboard && npm run build`. Static files are
 
 ## `GET /terrain`
 
-Generated once at startup from seed `42`. Responses include an `ETag` derived from the heightmap fingerprint; send `If-None-Match` to receive `304 Not Modified` on repeat fetches.
+Generated once at startup from `CIVIS_MAP_SEED` if set, otherwise seed `42`. Responses include an `ETag` derived from the heightmap fingerprint; send `If-None-Match` to receive `304 Not Modified` on repeat fetches.
 
 ```json
 {

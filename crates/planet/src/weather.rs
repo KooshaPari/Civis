@@ -13,21 +13,21 @@ const FULL_TURN_FP: i64 = 360_000;
 const FP_SCALE: i64 = 1_000;
 const MAX_LAT_FP: i64 = 90_000;
 
-/// Coarse weather state for a region.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+/// Discrete weather conditions produced by the weather model.
 pub enum WeatherKind {
     /// Clear skies.
     Clear,
-    /// Rainfall.
+    /// Rain.
     Rain,
-    /// Snowfall.
+    /// Snow.
     Snow,
-    /// Storm conditions.
+    /// Heavy storm.
     Storm,
 }
 
-/// Seasonal bucket used by the weather generator.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+/// The current climatological season.
 pub enum SeasonKind {
     /// Spring.
     Spring,
@@ -39,16 +39,16 @@ pub enum SeasonKind {
     Winter,
 }
 
-/// Deterministic weather result for a single region.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// Deterministic per-region weather state snapshot.
 pub struct WeatherCell {
-    /// Region identifier.
+    /// Owning region id.
     pub region_id: u32,
-    /// Latitude in fixed-point degrees.
+    /// Latitude in fixed-point units.
     pub latitude_fp: i32,
     /// Current season.
     pub season: SeasonKind,
-    /// Weather classification.
+    /// Weather kind.
     pub kind: WeatherKind,
     /// Temperature in fixed-point Celsius.
     pub temp_c_fp: i32,
@@ -119,8 +119,7 @@ fn weather_kind_from(temp_c_fp: i64, precip_mm_fp: i64, storm_intensity_fp: i64)
     }
 }
 
-/// Compute the current weather for each region.
-#[must_use]
+/// Build a deterministic weather vector for all regions from climate and tick.
 pub fn compute_weather(climate: &Climate, tick: u64, num_regions: u32) -> Vec<WeatherCell> {
     let n = num_regions.max(1);
     let season = season_from_year_phase(climate.year_phase);
@@ -233,5 +232,60 @@ mod tests {
         let b = compute_weather(&climate, 42, 12);
 
         assert_eq!(a, b);
+    }
+
+    #[test]
+    fn compute_weather_cell_count_and_region_ids() {
+        let cells = compute_weather(&climate(0.3, 0.5), 1234, 9);
+        assert_eq!(cells.len(), 9);
+        for (i, cell) in cells.iter().enumerate() {
+            assert_eq!(cell.region_id, i as u32);
+        }
+        assert_eq!(compute_weather(&climate(0.3, 0.5), 1234, 0).len(), 1);
+    }
+
+    #[test]
+    fn compute_weather_fields_are_clamped() {
+        let cells = compute_weather(&climate(0.9, 0.5), 99_999, 16);
+        assert!(cells
+            .iter()
+            .all(|c| (-60_000..=55_000).contains(&c.temp_c_fp)));
+        assert!(cells.iter().all(|c| (0..=20_000).contains(&c.precip_mm_fp)));
+        assert!(cells
+            .iter()
+            .all(|c| (0..=10_000).contains(&c.storm_intensity_fp)));
+    }
+
+    #[test]
+    fn compute_weather_shares_one_season_and_is_deterministic() {
+        let c = climate(0.2, 0.7);
+        let a = compute_weather(&c, 42, 12);
+        let b = compute_weather(&c, 42, 12);
+        assert_eq!(a, b);
+        let first_season = a[0].season;
+        assert!(a.iter().all(|cell| cell.season == first_season));
+    }
+
+    /// `weather_kind_from` selects each of the four `WeatherKind` variants by its
+    /// storm / temperature / precipitation thresholds (direct branch coverage).
+    #[test]
+    fn weather_kind_from_covers_all_four_variants() {
+        // Storm intensity dominates regardless of temperature/precipitation.
+        assert_eq!(weather_kind_from(20_000, 0, 1_500), WeatherKind::Storm);
+        // Freezing (<=0) with heavy precip (>250) -> Snow.
+        assert_eq!(weather_kind_from(0, 300, 0), WeatherKind::Snow);
+        assert_eq!(weather_kind_from(-5_000, 300, 0), WeatherKind::Snow);
+        // Warm with precip > 200 -> Rain.
+        assert_eq!(weather_kind_from(20_000, 250, 0), WeatherKind::Rain);
+        // Low precipitation -> Clear.
+        assert_eq!(weather_kind_from(20_000, 100, 0), WeatherKind::Clear);
+    }
+
+    /// Sub-zero temperatures add a fixed freezing precipitation bonus; above
+    /// freezing with no moisture there is no precipitation.
+    #[test]
+    fn precipitation_freezing_bonus_applies_below_zero() {
+        assert_eq!(precipitation_from_temp_and_moisture(0, 0, 0), 1_200);
+        assert_eq!(precipitation_from_temp_and_moisture(1, 0, 0), 0);
     }
 }

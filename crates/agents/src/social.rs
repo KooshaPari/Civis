@@ -5,6 +5,10 @@
 
 use serde::{Deserialize, Serialize};
 
+use civ_needs::{LifecycleParams, Needs};
+
+use crate::Civilian;
+
 /// Maximum number of ties retained per agent.
 pub const MAX_TIES: usize = 150;
 
@@ -13,17 +17,17 @@ pub const MAX_TIES: usize = 150;
 pub enum Interaction {
     /// Cooperative contact with a positive benefit.
     Cooperated {
-        /// Benefit gained from the interaction.
+        /// Positive utility transferred by the interaction.
         benefit: f32,
     },
     /// Contested contact with pressure.
     Competed {
-        /// Pressure exerted by the interaction.
+        /// Competitive pressure applied by the interaction.
         pressure: f32,
     },
     /// Betrayal, theft, or attack.
     Defected {
-        /// Harm caused by the interaction.
+        /// Harm inflicted by the interaction.
         harm: f32,
     },
     /// Mere co-location.
@@ -192,21 +196,58 @@ pub fn apply_social_event(graph: &mut SocialGraph, event: SocialEvent) {
 
 /// Decay ties that have not been seen for `current_tick`.
 pub fn decay_social_graph(graph: &mut SocialGraph, current_tick: u32) {
+    if graph.ties.is_empty() {
+        return;
+    }
     for tie in &mut graph.ties {
         let gap = current_tick.saturating_sub(tie.last_seen);
         if gap == 0 {
             continue;
         }
-        let gapf = gap as f32;
-        tie.familiarity = clamp01(tie.familiarity * 0.98_f32.powf(gapf));
+        let gap = gap.min(i32::MAX as u32) as i32;
+        tie.familiarity = clamp01(tie.familiarity * 0.98_f32.powi(gap));
         if tie.kinship < 0.5 {
-            tie.affinity *= 0.995_f32.powf(gapf);
+            tie.affinity *= 0.995_f32.powi(gap);
         }
-        tie.trust *= 0.992_f32.powf(gapf);
+        tie.trust *= 0.992_f32.powi(gap);
         tie.affinity = clamp11(tie.affinity);
         tie.trust = clamp11(tie.trust);
     }
     graph.ties.sort_by_key(|tie| tie.other);
+}
+
+/// Determine whether two co-located partnered agents should reproduce.
+#[must_use]
+pub fn should_reproduce(
+    a: &Civilian,
+    b: &Civilian,
+    graph_a: &SocialGraph,
+    graph_b: &SocialGraph,
+    needs_a: &Needs,
+    needs_b: &Needs,
+    params: &LifecycleParams,
+) -> bool {
+    if a.id == b.id {
+        return false;
+    }
+
+    let relation_a = graph_a
+        .ties
+        .iter()
+        .find(|tie| tie.other == b.id)
+        .map(relation_label);
+    let relation_b = graph_b
+        .ties
+        .iter()
+        .find(|tie| tie.other == a.id)
+        .map(relation_label);
+
+    matches!(relation_a, Some(RelationLabel::Partner))
+        && matches!(relation_b, Some(RelationLabel::Partner))
+        && needs_a.food > params.fertility_food_threshold
+        && needs_b.food > params.fertility_food_threshold
+        && needs_a.safety > params.fertility_safety_threshold
+        && needs_b.safety > params.fertility_safety_threshold
 }
 
 #[cfg(test)]
@@ -312,5 +353,57 @@ mod tests {
         assert!(graph.ties[0].familiarity < 1.0);
         assert!(graph.ties[1].familiarity < 1.0);
         assert!(graph.ties[0].affinity > graph.ties[1].affinity);
+    }
+
+    #[test]
+    fn partnered_couples_with_enough_food_and_safety_can_reproduce() {
+        let params = LifecycleParams::default();
+        let a = Civilian {
+            id: 1,
+            alignment: Default::default(),
+            age: 24,
+        };
+        let b = Civilian {
+            id: 2,
+            alignment: Default::default(),
+            age: 25,
+        };
+        let mut graph_a = SocialGraph::default();
+        let mut graph_b = SocialGraph::default();
+        apply_social_event(
+            &mut graph_a,
+            SocialEvent {
+                a: 1,
+                b: 2,
+                kind: Interaction::Cooperated { benefit: 4.0 },
+                tick: 1,
+            },
+        );
+        apply_social_event(
+            &mut graph_b,
+            SocialEvent {
+                a: 2,
+                b: 1,
+                kind: Interaction::Cooperated { benefit: 4.0 },
+                tick: 1,
+            },
+        );
+        let needs = Needs {
+            food: 0.6,
+            water: 0.5,
+            rest: 0.5,
+            safety: 0.5,
+            social: 0.4,
+            health: 0.5,
+        };
+        assert!(should_reproduce(
+            &a,
+            &b,
+            &graph_a,
+            &graph_b,
+            &needs,
+            &needs,
+            &params
+        ));
     }
 }

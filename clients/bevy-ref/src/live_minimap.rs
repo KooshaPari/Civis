@@ -178,6 +178,8 @@ pub fn spawn_minimap_dot(
 mod tests {
     use super::*;
 
+    /// FR-CIV-BEVY-016 — minimap focus bounds and UV mapping remain stable under focus changes.
+    /// FR-CIV-BEVY-022 — live minimap layout and UV paths.
     #[test]
     fn focus_rect_maps_centre_to_mid_uv() {
         let focus = MinimapFocusRect {
@@ -202,6 +204,7 @@ mod tests {
         assert!(top[1] < bottom[1]);
     }
 
+    /// FR-CIV-BEVY-022 — insets and vflip preserve HUD coordinate expectations for live minimap.
     #[test]
     fn inset_layout_offsets_by_inset() {
         let layout = MinimapDotLayout::InsetHud {
@@ -214,6 +217,7 @@ mod tests {
         assert!((top - 4.0).abs() < 1e-5);
     }
 
+    /// FR-CIV-BEVY-016 — key minimap bound cases are deterministic for live-scene rendering.
     #[test]
     fn bounds_from_keys_empty_is_none() {
         assert!(minimap_bounds_from_keys(&[]).is_none());

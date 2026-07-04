@@ -35,7 +35,6 @@ pub enum Biome {
 
 impl Biome {
     /// Convert this biome to an RGB triplet for the renderer.
-    #[allow(dead_code)]
     pub fn rgb(self) -> [u8; 3] {
         match self {
             Self::DeepWater => [16, 38, 90],
@@ -245,5 +244,55 @@ mod tests {
         // Snow is rare; assert at least 5/7 biomes are present.
         let count = seen.iter().filter(|&&b| b).count();
         assert!(count >= 5, "only {count} biomes seen across 256x256 grid");
+    }
+
+    #[test]
+    fn biome_from_height_partitions_bands() {
+        assert_eq!(Biome::from_height(0.0), Biome::DeepWater);
+        assert_eq!(Biome::from_height(0.29), Biome::DeepWater);
+        assert_eq!(Biome::from_height(0.30), Biome::Water);
+        assert_eq!(Biome::from_height(0.42), Biome::Sand);
+        assert_eq!(Biome::from_height(0.50), Biome::Grass);
+        assert_eq!(Biome::from_height(0.70), Biome::Forest);
+        assert_eq!(Biome::from_height(0.80), Biome::Stone);
+        assert_eq!(Biome::from_height(0.95), Biome::Snow);
+        assert_eq!(Biome::from_height(1.0), Biome::Snow);
+    }
+
+    #[test]
+    fn biome_rgb_palette_is_stable() {
+        assert_eq!(Biome::Snow.rgb(), [240, 240, 240]);
+        assert_eq!(Biome::DeepWater.rgb(), [16, 38, 90]);
+        assert_eq!(Biome::Grass.rgb(), [104, 154, 60]);
+        assert_ne!(Biome::Water.rgb(), Biome::DeepWater.rgb());
+    }
+
+    #[test]
+    fn cell_index_bounds_and_corners() {
+        let t = Terrain::generate(42);
+        assert_eq!(t.cell_index(-0.1, 0.5), None);
+        assert_eq!(t.cell_index(0.5, 1.5), None);
+        assert_eq!(t.cell_index(0.0, 0.0), Some(0));
+        let last = t.size * t.size - 1;
+        assert_eq!(t.cell_index(1.0, 1.0), Some(last));
+        assert!(t.cell_index(0.5, 0.5).unwrap() < t.size * t.size);
+    }
+
+    #[test]
+    fn is_walkable_matches_biome_at() {
+        let t = Terrain::generate(42);
+        assert!(!t.is_walkable(-1.0, -1.0));
+        let walk = t.is_walkable(0.5, 0.5);
+        let biome = t.biome_at(0.5, 0.5);
+        let expected = matches!(biome, Some(b) if !matches!(b, Biome::DeepWater | Biome::Water));
+        assert_eq!(walk, expected);
+    }
+
+    #[test]
+    fn smoothstep_endpoints_and_midpoint() {
+        assert_eq!(smoothstep(0.0), 0.0);
+        assert_eq!(smoothstep(1.0), 1.0);
+        assert!((smoothstep(0.5) - 0.5).abs() < 1e-6);
+        assert!(smoothstep(0.25) < 0.25);
     }
 }

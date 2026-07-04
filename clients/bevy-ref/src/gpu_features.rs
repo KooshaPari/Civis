@@ -104,8 +104,18 @@ pub struct GpuFeaturesPlugin;
 
 impl Plugin for GpuFeaturesPlugin {
     fn build(&self, app: &mut App) {
+        app.init_resource::<GpuCapabilities>();
         if let Some(render_app) = app.get_sub_app_mut(RenderApp) {
             render_app.add_systems(Startup, detect_and_store_capabilities);
+            let mut default_extract = render_app.take_extract();
+            render_app.set_extract(move |main_world, render_world| {
+                if let Some(extract) = default_extract.as_mut() {
+                    extract(main_world, render_world);
+                }
+                if let Some(caps) = render_world.get_resource::<GpuCapabilities>() {
+                    main_world.insert_resource(caps.clone());
+                }
+            });
         }
     }
 }

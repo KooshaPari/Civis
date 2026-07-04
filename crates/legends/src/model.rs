@@ -235,3 +235,90 @@ pub fn summary_key(
     h.update(&epoch.0.to_le_bytes());
     *h.finalize().as_bytes()
 }
+
+/// Structured historical record the sim emits onto the watch bus
+/// (FR-CIV-LEGENDS-001).
+///
+/// This is the typed record the legends engine consumes — a structured wrapper
+/// around a producer's [`RawSimEvent`]. The engine never authors outcomes: it
+/// records what the sim already produced, with explicit provenance, role, and
+/// magnitude. The single `EventKind::Promotion` bookkeeping event the engine
+/// itself emits is recorded with `authored_outcome = false` (it never feeds
+/// significance: `kind_weight(Promotion) = 0`) and is the only event the engine
+/// may originate — every other `HistoricalEvent` MUST come from a sim producer.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HistoricalEvent {
+    /// Sim tick the producer recorded.
+    pub tick: u64,
+    /// Coarse epoch bucket (`tick / ticks_per_epoch`).
+    pub epoch: Epoch,
+    pub region: Option<RegionId>,
+    pub kind: EventKind,
+    /// Producer crate that emitted the event (for the loud-gap check, §7).
+    pub source: SourceCrate,
+    pub provenance: Provenance,
+    /// Resolved entity ids + the role each played.
+    pub participants: SmallVec<[(LegendEntityId, Role); 4]>,
+    /// Crate-local raw impact, normalized to `0.0..=1.0`.
+    pub raw_magnitude: f32,
+    /// `true` for any event emitted by a sim producer. The engine sets this to
+    /// `false` for its own `EventKind::Promotion` bookkeeping record (which
+    /// never feeds significance) — the explicit flag is the structural
+    /// witness that "legends layer SHALL NOT author outcomes".
+    pub authored_outcome: bool,
+    pub raw_ref: Option<RawEventRef>,
+}
+
+impl HistoricalEvent {
+    /// Lift a [`RawSimEvent`] into a structured `HistoricalEvent` after entity
+    /// resolution has produced the stable `LegendEntityId` list. Producer-only;
+    /// `authored_outcome` is `true` for any event that originated in the sim.
+    pub fn from_raw(raw: &RawSimEvent, resolved: &[(LegendEntityId, Role)], epoch: Epoch) -> Self {
+        let mut participants: SmallVec<[(LegendEntityId, Role); 4]> = SmallVec::new();
+        for (eid, role) in resolved {
+            participants.push((*eid, *role));
+        }
+        HistoricalEvent {
+            tick: raw.tick,
+            epoch,
+            region: raw.region,
+            kind: raw.kind.clone(),
+            source: raw.source,
+            provenance: raw.provenance,
+            participants,
+            raw_magnitude: raw.raw_magnitude.clamp(0.0, 1.0),
+            authored_outcome: true,
+            raw_ref: raw.raw_ref,
+        }
+    }
+
+    /// Build the engine's own bookkeeping record. The ONLY event the engine
+    /// is allowed to author: `EventKind::Promotion` (`authored_outcome=false`,
+    /// `kind_weight=0`, never re-feeds significance). Any other use is a
+    /// charter violation.
+    pub fn engine_promotion(
+        tick: u64,
+        epoch: Epoch,
+        region: Option<RegionId>,
+        entity: LegendEntityId,
+    ) -> Self {
+        HistoricalEvent {
+            tick,
+            epoch,
+            region,
+            kind: EventKind::Promotion,
+            source: SourceCrate::Engine,
+            provenance: Provenance::Lived,
+            participants: SmallVec::from_iter([(entity, Role::Leader)]),
+            raw_magnitude: 0.0,
+            authored_outcome: false,
+            raw_ref: None,
+        }
+    }
+
+    /// True iff the engine itself authored this event (the `Promotion`
+    /// bookkeeping record). Producer-emitted events are never engine-authored.
+    pub fn is_engine_authored(&self) -> bool {
+        !self.authored_outcome
+    }
+}

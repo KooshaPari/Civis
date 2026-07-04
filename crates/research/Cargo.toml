@@ -19,5 +19,5 @@ default = []
 firepass-kimi = ["dep:reqwest"]
 
 [dev-dependencies]
-proptest = "1.4"
+proptest = "1.11"
 tokio = { version = "1", features = ["rt", "macros"] }

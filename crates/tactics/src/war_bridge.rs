@@ -289,6 +289,9 @@ mod tests {
     // FR-CIV-TACTICS-022 — LOS-gated combat resolution
     // -----------------------------------------------------------------------
 
+    /// FR-CIV-WAR-002-COMBAT — tactical combat requires LOS+cadence before engagements resolve.
+    /// FR-CIV-WAR-001 — combat requires opposing sampled units as input.
+    /// FR-CIV-WAR-001-UNITS — unit sample identity and faction fields drive engagement pairing.
     /// Attack is blocked when solid voxels fill the entire path between shooter
     /// and target.
     #[test]
@@ -321,6 +324,8 @@ mod tests {
         );
     }
 
+    /// FR-CIV-WAR-002-COMBAT — clear LOS enables mutual engagement on cadence ticks.
+    /// FR-CIV-WAR-002 — combat handshake depends on resolved pairings between enemy groups.
     /// Attack succeeds when the path between shooter and target is clear.
     #[test]
     fn attack_succeeds_with_clear_los() {
@@ -346,6 +351,8 @@ mod tests {
     // FR-CIV-TACTICS-024 — formation movement produces valid positions
     // -----------------------------------------------------------------------
 
+    /// FR-CIV-WAR-003 — formation positions provide operational placement output for unit groups.
+    /// FR-CIV-WAR-004 — formation movement remains deterministic across unit counts.
     /// A squad in Line formation produces distinct positions equal in count to
     /// the number of units.
     #[test]
@@ -376,6 +383,7 @@ mod tests {
         assert_eq!(sorted.len(), positions.len(), "positions are unique");
     }
 
+    /// FR-CIV-WAR-003 — formation movement preserves count and ordering constraints.
     /// A squad in Column formation produces positions ordered along the
     /// dominant axis.
     #[test]
@@ -404,6 +412,7 @@ mod tests {
         assert!(xs.iter().all(|&x| x == xs[0]), "all on same x axis");
     }
 
+    /// FR-CIV-WAR-003 — zero-units operational moves short-circuit safely.
     /// An empty squad produces an empty position list.
     #[test]
     fn formation_move_empty_squad_returns_empty() {
@@ -413,6 +422,7 @@ mod tests {
         assert!(positions.is_empty());
     }
 
+    /// Covers FR-CIV-TACTICS-042.
     /// FR-CIV-TACTICS-042 — fog hides distant targets even within engage range.
     #[test]
     fn fog_blocks_engagement_beyond_vision() {
@@ -447,6 +457,7 @@ mod tests {
         );
     }
 
+    /// FR-CIV-WAR-010 — engagement cadence control creates periodic conflict windows.
     /// resolve_combat respects the cadence — no engagements on off-cadence ticks.
     #[test]
     fn combat_respects_cadence() {

@@ -16,7 +16,13 @@ path = "src/main.rs"
 
 [dependencies]
 civ-agents = { path = "../../crates/agents" }
+civ-laws = { path = "../../crates/laws", optional = true }
 civ-engine = { path = "../../crates/engine", optional = true }
+# Diplomacy substrate (PR #362 — P4 civ-007 slice): pairwise Relation graph +
+# scalar standing + threshold-crossing events. Pulled in for the Standings
+# section of the Diplomacy panel. Optional, gated behind the `bevy` feature
+# alongside `civ-engine` because the bridge ingests from `civ_engine::DiplomacyEvent`.
+civ-diplomacy = { path = "../../crates/diplomacy", optional = true }
 civ-voxel = { path = "../../crates/voxel" }
 crossbeam-channel = "0.5"
 serde = { version = "1", features = ["derive"] }
@@ -29,7 +35,7 @@ surface-nets = "0.1"
 
 # Bevy is an optional dep behind the `bevy` feature so the default workspace
 # build stays fast. Enable with `cargo run -p civ-bevy-ref --features bevy`.
-bevy = { version = "0.18", optional = true, features = ["jpeg"] }
+bevy = { version = "0.18", optional = true }
 bevy_water = { version = "0.18.1", optional = true }
 bevy_egui = { version = "0.39", optional = true }
 # Decode the embedded window-icon PNG (src/window_icon.rs) into RGBA for winit.
@@ -49,19 +55,14 @@ bevy_rapier3d = { version = "0.34", optional = true }
 # our `bevy = "0.18"` pin. default-features off → only the `ogg` decoder is
 # pulled (CC0 clips ship as .ogg), avoiding extra codec deps. See src/audio.rs.
 bevy_kira_audio = { version = "0.25", optional = true, default-features = false, features = ["ogg"] }
-# PART A — bevy_atmosphere (real physically-based sky). NOTE (checked 2026-05-29
-# via crates.io): the latest published bevy_atmosphere is 0.13.0 (2025-05-06)
-# which depends on `bevy ^0.16` — there is NO release compatible with Bevy 0.18
-# yet. The dep is therefore omitted (and the `atmosphere` Cargo feature was
-# removed) so the manifest stays parseable and the existing procedural skybox
-# dome (src/skybox.rs + src/atmosphere.rs) remains the sky. When an
-# 0.18-compatible bevy_atmosphere (expected ~0.14) ships, add the dep line
-# back, reintroduce `atmosphere = ["bevy", "dep:bevy_atmosphere"]` here, and
-# wire `AtmospherePlugin` per the note in src/gltf_models.rs.
-#
-# The `atmosphere` feature was intentionally removed in PR #333 review follow-up
-# because it was a no-op placeholder; reintroduce it as a real feature with a
-# backing `dep:bevy_atmosphere` gate, do not ship a no-op feature flag.
+# PART A — bevy_atmosphere (real physically-based sky).
+# NOTE (checked 2026-05-29 via crates.io): the latest published bevy_atmosphere
+# is 0.13.0 (2025-05-06) which depends on `bevy ^0.16` — there is NO release
+# compatible with Bevy 0.18 yet. The existing procedural skybox dome
+# (src/skybox.rs + src/atmosphere.rs) remains the sky. When an 0.18-compatible
+# bevy_atmosphere (expected ~0.14) ships, add the dep line and the `atmosphere`
+# feature together — do NOT reintroduce a no-op `atmosphere` feature flag.
+# bevy_atmosphere = { version = "0.14", optional = true }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"], optional = true }
 tokio-tungstenite = { version = "0.24", optional = true, default-features = false, features = ["rustls-tls-webpki-roots", "connect"] }
 futures-util = { version = "0.3", optional = true }
@@ -77,6 +78,9 @@ winresource = "0.1"
 [dev-dependencies]
 civ-protocol-3d = { path = "../../crates/protocol-3d" }
 serde_json = "1"
+# P2 visible-citizen-lifecycle test: the sim-side `hecs::Entity` is the unit
+# we despawn from the in-process sim world. Kept as a dev-dep only.
+hecs = "0.10"
 
 [features]
 default = []
@@ -89,6 +93,8 @@ bevy = [
     "dep:serde_json",
     "dep:civ-protocol-3d",
     "dep:civ-engine",
+    "dep:civ-diplomacy",
+    "dep:civ-laws",
     "dep:rand",
     "dep:rand_chacha",
     "dep:image",
@@ -122,16 +128,24 @@ voxel_stream = ["voxel"]
 # disabled (or when assets/models/*.glb are absent) callers fall back to the
 # procedural primitives (capsule civilians / cuboid buildings / cone trees).
 models = ["bevy"]
-# Visual-effects plugin placeholder and shader/material texture-bank toggles.
-vfx = ["bevy"]
-pbr-textures = ["bevy"]
-# `atmosphere` was removed in PR #333 review follow-up — it was a no-op
-# placeholder (no `bevy_atmosphere` dep yet targets Bevy 0.18). Reintroduce
-# it only when a backing `dep:bevy_atmosphere` gate exists. See the long
-# comment above for the upstream-version tracking.
 # Ambient soundscape + UI/event SFX via bevy_kira_audio. See src/audio.rs
 # (CivisAudioPlugin). OFF by default; CC0 clips drop into assets/audio/.
 audio = ["bevy", "dep:bevy_kira_audio"]
+# Empty placeholder for the `vfx` feature. The actual implementation
+# (bevy_hanabi integration) is DEFERRED: `src/vfx.rs` and the
+# `#[cfg(feature = "vfx")]` blocks in `bin/standalone.rs` + `lib.rs` still
+# exist, but they fail to compile because the `bevy_hanabi` dep is not
+# declared. Defining the (empty) feature silences the `unexpected_cfgs`
+# warning that those guards produce today; enabling the feature on the
+# command line (`--features vfx`) will surface a clean "no dep" error
+# until the implementation lands. The expected follow-up is to wire
+# `bevy_hanabi` + the `vfx` feature together in a single PR (see
+# `docs/development-guide/fr-vfx.md` TBD).
+vfx = []
+# `pbr-textures` — enable PBR texture asset loading (normal/roughness/AO maps) on
+# top of the base material pipeline (src/materials.rs). OFF by default so CI builds
+# stay fast and texture assets are optional. Enable: `--features pbr-textures`.
+pbr-textures = ["bevy"]
 solari = [
     "bevy",
     "bevy/bevy_solari",
@@ -156,7 +170,7 @@ gi = [
 [[bin]]
 name = "civ-bevy-window"
 path = "src/bin/bevy_window.rs"
-required-features = ["bevy"]
+required-features = ["bevy", "egui"]
 
 [[bin]]
 name = "civ-standalone"

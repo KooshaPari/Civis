@@ -42,11 +42,11 @@ use civ_voxel::material::{MaterialDef, MaterialRegistry, AIR, WATER};
 use crate::camera::CameraRig;
 use crate::sim_bridge::SimState;
 use crate::spawn_tools::SelectEntityRequest;
-#[cfg(feature = "voxel")]
 use crate::terrain::{HEIGHT_SCALE, WATER_LEVEL};
 #[cfg(feature = "voxel")]
 use crate::voxel_sim::{voxel_surface_y, VoxelSimState};
 use crate::AttachMode;
+use crate::settings_ui::{GameSettings, KeyBinding, ACTION_TOGGLE_MAP};
 #[cfg(not(feature = "voxel"))]
 #[derive(Resource)]
 struct VoxelSimState;
@@ -147,10 +147,18 @@ impl Plugin for Map2dPlugin {
 // Triggers
 // ---------------------------------------------------------------------------
 
-/// `M` toggles the map and pins the manual override.
-fn toggle_map_hotkey(keys: Res<ButtonInput<KeyCode>>, mut view: ResMut<MapView>) {
-    let shift_down = keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
-    if shift_down && keys.just_pressed(KeyCode::KeyM) {
+/// Toggle the map and pin the manual override.
+fn toggle_map_hotkey(
+    settings: Option<Res<GameSettings>>,
+    keys: Res<ButtonInput<KeyCode>>,
+    mouse_buttons: Res<ButtonInput<MouseButton>>,
+    mut view: ResMut<MapView>,
+) {
+    let toggle_map = settings
+        .as_ref()
+        .and_then(|s| s.key_for(ACTION_TOGGLE_MAP))
+        .unwrap_or(KeyBinding::Key(KeyCode::KeyM));
+    if toggle_map.is_just_pressed(&keys, &mouse_buttons) {
         view.active = !view.active;
         view.manual_override = true;
         if !view.active {
@@ -231,7 +239,6 @@ fn hide_3d_scene_when_map_active(
 
 /// Biome-ish palette by elevation + water, mirroring the 3D `terrain` look but
 /// flattened for a clean cartographic read. Returns linear-ish sRGB 0..1.
-#[cfg(any(feature = "voxel", test))]
 fn map_palette(h: f32) -> [f32; 3] {
     let sea = WATER_LEVEL;
     if h < sea - 0.05 * HEIGHT_SCALE {
@@ -257,7 +264,6 @@ fn map_palette(h: f32) -> [f32; 3] {
 }
 
 /// 4x4 Bayer ordered-dither matrix scaled to ±~1/512 so bands don't posterise.
-#[cfg(feature = "voxel")]
 const BAYER4: [[f32; 4]; 4] = [
     [0.0, 8.0, 2.0, 10.0],
     [12.0, 4.0, 14.0, 6.0],
@@ -397,7 +403,7 @@ fn building_norm_xz_with_state(
     #[cfg(not(feature = "voxel"))]
     {
         let _ = voxel_state;
-        building_norm_xz(building)
+        return building_norm_xz(building);
     }
     #[cfg(feature = "voxel")]
     if let Some(voxel_state) = voxel_state {
@@ -434,7 +440,7 @@ fn marker_world_from_actor(
     #[cfg(not(feature = "voxel"))]
     {
         let _ = voxel_state;
-        Vec3::new(u * 256.0 - 128.0, 0.0, v * 256.0 - 128.0)
+        return Vec3::new(u * 256.0 - 128.0, 0.0, v * 256.0 - 128.0);
     }
     #[cfg(feature = "voxel")]
     if let Some(voxel_state) = voxel_state {
@@ -453,7 +459,7 @@ fn marker_world_from_building(building: &Building, voxel_state: Option<&VoxelSim
     #[cfg(not(feature = "voxel"))]
     {
         let _ = voxel_state;
-        Vec3::new(n.x * 256.0 - 128.0, 0.0, n.y * 256.0 - 128.0)
+        return Vec3::new(n.x * 256.0 - 128.0, 0.0, n.y * 256.0 - 128.0);
     }
     #[cfg(feature = "voxel")]
     if let Some(voxel_state) = voxel_state {
@@ -520,7 +526,12 @@ fn hsv_to_rgb(h: f32, s: f32, v: f32) -> [f32; 3] {
 // ---------------------------------------------------------------------------
 
 /// HUD hint shown in 3D mode (`M`: 2D map). Hidden while the map is up.
-fn draw_map_hint(mut contexts: EguiContexts, view: Res<MapView>) {
+fn draw_map_hint(
+    mut contexts: EguiContexts,
+    view: Res<MapView>,
+    settings: Option<Res<GameSettings>>,
+) {
+    let toggle_label = map_toggle_binding_label(settings.as_deref());
     if view.fade > 0.02 {
         return;
     }
@@ -537,7 +548,7 @@ fn draw_map_hint(mut contexts: EguiContexts, view: Res<MapView>) {
                 .corner_radius(6.0);
             frame.show(ui, |ui| {
                 ui.label(
-                    egui::RichText::new("M  ·  2D map view")
+                    egui::RichText::new(format!("{toggle_label} · 2D map view"))
                         .color(egui::Color32::from_rgb(190, 205, 220))
                         .size(13.0),
                 );
@@ -555,6 +566,7 @@ fn draw_map_view(
     attach: Res<AttachMode>,
     sim: Option<Res<SimState>>,
     params: Res<crate::menus::WorldSetupParams>,
+    settings: Option<Res<GameSettings>>,
 ) {
     if view.fade <= 0.01 {
         return;
@@ -598,7 +610,7 @@ fn draw_map_view(
         .fixed_pos(egui::pos2(0.0, 0.0))
         .order(egui::Order::Background)
         .show(ctx, |ui| {
-            let screen = ctx.content_rect();
+            let screen = ctx.screen_rect();
             let painter = ui.painter();
             let min_zoom = (screen.width().max(screen.height())) / MAP_TEX as f32;
 
@@ -639,12 +651,7 @@ fn draw_map_view(
             );
 
             // norm(0..1) → screen point inside map_rect (v flips to match minimap).
-            let to_screen = |n: egui::Vec2| -> egui::Pos2 {
-                egui::pos2(
-                    map_rect.min.x + n.x * side,
-                    map_rect.min.y + (1.0 - n.y) * side,
-                )
-            };
+            let to_screen = |n: egui::Vec2| -> egui::Pos2 { norm_to_screen(map_rect, n) };
 
             let mut map_markers: Vec<MapMarker> = Vec::new();
             if *attach != AttachMode::Server {
@@ -778,7 +785,41 @@ fn draw_map_view(
             }
 
             // Title + legend ribbon.
-            draw_title(painter, screen, fade);
+            draw_title(
+                painter,
+                screen,
+                fade,
+                &map_toggle_binding_label(settings.as_deref()),
+            );
+
+            egui::Area::new(egui::Id::new("map2d_zoom_panel"))
+                .anchor(egui::Align2::RIGHT_TOP, egui::vec2(-12.0, 12.0))
+                .show(ctx, |ui| {
+                    let frame = egui::Frame::NONE
+                        .fill(egui::Color32::from_rgba_unmultiplied(10, 14, 20, 180))
+                        .inner_margin(egui::Margin::symmetric(8, 6))
+                        .corner_radius(6.0);
+                    frame.show(ui, |ui| {
+                        ui.vertical(|ui| {
+                            ui.label(
+                                egui::RichText::new(format!(
+                                    "Zoom {:.2}x",
+                                    view.zoom / min_zoom
+                                ))
+                                .color(egui::Color32::from_rgb(220, 230, 240))
+                                .size(12.5),
+                            );
+                            if ui
+                                .button("Reset to fit")
+                                .on_hover_text("Reset pan and zoom to the fitted overview")
+                                .clicked()
+                            {
+                                view.pan = egui::Vec2::ZERO;
+                                view.zoom = min_zoom;
+                            }
+                        });
+                    });
+                });
 
             // --- Interaction: pan (drag) + zoom (scroll) within the map ---
             let resp = ui.interact(
@@ -822,7 +863,12 @@ fn draw_map_view(
         });
 }
 
-fn draw_title(painter: &egui::Painter, screen: egui::Rect, fade: f32) {
+fn draw_title(
+    painter: &egui::Painter,
+    screen: egui::Rect,
+    fade: f32,
+    map_exit_key: &str,
+) {
     let pos = egui::pos2(screen.center().x, screen.top() + 26.0);
     painter.text(
         pos,
@@ -834,10 +880,32 @@ fn draw_title(painter: &egui::Painter, screen: egui::Rect, fade: f32) {
     painter.text(
         egui::pos2(pos.x, pos.y + 18.0),
         egui::Align2::CENTER_CENTER,
-        "drag to pan · scroll to zoom · M to exit",
+        &format!("drag to pan · scroll to zoom · {map_exit_key} to exit"),
         egui::FontId::proportional(11.0),
         with_alpha(egui::Color32::from_rgb(150, 165, 185), fade),
     );
+}
+
+fn norm_to_screen(map_rect: egui::Rect, n: egui::Vec2) -> egui::Pos2 {
+    let side = map_rect.width();
+    egui::pos2(
+        map_rect.min.x + n.x * side,
+        map_rect.min.y + (1.0 - n.y) * side,
+    )
+}
+
+fn screen_to_norm(map_rect: egui::Rect, p: egui::Pos2) -> egui::Vec2 {
+    let side = map_rect.width().max(1.0);
+    egui::vec2(
+        ((p.x - map_rect.min.x) / side).clamp(0.0, 1.0),
+        (1.0 - ((p.y - map_rect.min.y) / side)).clamp(0.0, 1.0),
+    )
+}
+
+fn map_toggle_binding_label(settings: Option<&GameSettings>) -> String {
+    settings
+        .and_then(|s| s.key_for(ACTION_TOGGLE_MAP))
+        .map_or_else(|| "M".to_string(), |binding| binding.to_string())
 }
 
 fn with_alpha(c: egui::Color32, fade: f32) -> egui::Color32 {
@@ -904,5 +972,30 @@ mod tests {
             ((x + 64) as f32 / 127.0).clamp(0.0, 1.0),
             ((y + 64) as f32 / 127.0).clamp(0.0, 1.0),
         )
+    }
+
+    #[test]
+    fn map_overlay_norm_screen_round_trip_is_stable() {
+        let rects = [
+            egui::Rect::from_min_size(egui::pos2(12.0, 34.0), egui::vec2(256.0, 256.0)),
+            egui::Rect::from_min_size(egui::pos2(80.0, 24.0), egui::vec2(384.0, 384.0)),
+            egui::Rect::from_min_size(egui::pos2(4.0, 10.0), egui::vec2(768.0, 768.0)),
+        ];
+        let samples = [
+            egui::vec2(0.0, 0.0),
+            egui::vec2(0.25, 0.75),
+            egui::vec2(0.5, 0.5),
+            egui::vec2(0.9, 0.1),
+            egui::vec2(1.0, 1.0),
+        ];
+
+        for rect in rects {
+            for sample in samples {
+                let screen = norm_to_screen(rect, sample);
+                let round_trip = screen_to_norm(rect, screen);
+                assert!((round_trip.x - sample.x).abs() < 1.0e-5);
+                assert!((round_trip.y - sample.y).abs() < 1.0e-5);
+            }
+        }
     }
 }

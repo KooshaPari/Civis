@@ -35,7 +35,7 @@
 
 use bevy::prelude::*;
 
-use crate::spawn_tools::{ActiveTool, CursorMarker, PointerOverUi, SpawnTool};
+use crate::spawn_tools::{select_action_binding, ActiveTool, CursorMarker, PointerOverUi, SpawnTool};
 
 /// Brush footprint shape on the XZ plane.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -383,12 +383,12 @@ fn apply_terraform_edits(
     mut edits: MessageReader<TerraformEditRequest>,
     mut sim: ResMut<crate::voxel_sim::VoxelSimState>,
 ) {
-    use civ_voxel::material::MaterialRegistry;
+    use civ_voxel::material::{MaterialRegistry, STONE};
     let registry = MaterialRegistry::standard();
     let solid = registry
         .by_name("Stone")
         .or_else(|| registry.by_name("Dirt"))
-        .map_or(civ_voxel::MaterialId(2), |m| m.id);
+        .map_or(STONE, |m| m.id);
     for req in edits.read() {
         apply_one_terraform_edit(&mut sim.grid, req, solid);
     }
@@ -463,7 +463,7 @@ fn edit_column(
                 .clamp(0.0, (height - 1) as f32) as usize;
             level_column(grid, x, z, surface, target, solid);
         }
-        // DropBiome edits no height; biome painting is deferred (TODO).
+        // DropBiome edits no height; biome painting is deferred for a later pass.
         BrushOp::DropBiome => {}
     }
 }
@@ -523,6 +523,8 @@ fn level_column(
 /// stamps, honouring the egui pointer gate and the shared cursor hit.
 fn emit_terraform_edits(
     buttons: Res<ButtonInput<MouseButton>>,
+    keys: Res<ButtonInput<KeyCode>>,
+    settings: Option<Res<crate::settings_ui::GameSettings>>,
     active: Res<ActiveTool>,
     over_ui: Res<PointerOverUi>,
     marker: Res<CursorMarker>,
@@ -537,7 +539,8 @@ fn emit_terraform_edits(
         return;
     }
 
-    let released = buttons.just_released(MouseButton::Left);
+    let select_binding = select_action_binding(settings.as_deref());
+    let released = select_binding_just_released(select_binding, &keys, &buttons);
     if released {
         stroke.active = false;
         stroke.anchor_height = None;
@@ -549,8 +552,8 @@ fn emit_terraform_edits(
         return;
     }
 
-    let pressed = buttons.just_pressed(MouseButton::Left);
-    let held = buttons.pressed(MouseButton::Left);
+    let pressed = select_binding_just_pressed(select_binding, &keys, &buttons);
+    let held = select_binding.is_pressed(&keys, &buttons);
     if !pressed && !held {
         return;
     }
@@ -700,6 +703,28 @@ fn brush_param_sliders(ui: &mut bevy_egui::egui::Ui, brush: &mut BrushSettings) 
 
     if !brush.op.is_god() {
         ui.checkbox(&mut brush.continuous, "Continuous paint");
+    }
+}
+
+fn select_binding_just_pressed(
+    binding: crate::settings_ui::KeyBinding,
+    keys: &ButtonInput<KeyCode>,
+    buttons: &ButtonInput<MouseButton>,
+) -> bool {
+    match binding {
+        crate::settings_ui::KeyBinding::Key(key) => keys.just_pressed(key),
+        crate::settings_ui::KeyBinding::Mouse(button) => buttons.just_pressed(button),
+    }
+}
+
+fn select_binding_just_released(
+    binding: crate::settings_ui::KeyBinding,
+    keys: &ButtonInput<KeyCode>,
+    buttons: &ButtonInput<MouseButton>,
+) -> bool {
+    match binding {
+        crate::settings_ui::KeyBinding::Key(key) => keys.just_released(key),
+        crate::settings_ui::KeyBinding::Mouse(button) => buttons.just_released(button),
     }
 }
 

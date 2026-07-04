@@ -14,7 +14,10 @@
 //! The live WebSocket attach path only exists in that feature-gated binary,
 //! so this default headless smoke stays valid without a running server.
 
-use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId, VoxelWorld, WorldCoord};
+use civ_voxel::{
+    material::WATER, ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId, VoxelWorld,
+    WorldCoord,
+};
 
 const VOXEL_SPAN: i64 = 1_000_000;
 const CHUNK_EDGE: usize = 16;
@@ -31,7 +34,7 @@ fn main() {
                         y: iy * VOXEL_SPAN,
                         z: iz * VOXEL_SPAN,
                     },
-                    MaterialId(1),
+                    WATER,
                 );
             }
         }
@@ -44,7 +47,7 @@ fn main() {
     for ix in 0..4 {
         for iy in 0..4 {
             for iz in 0..4 {
-                chunk_voxels[ix + iy * CHUNK_EDGE + iz * CHUNK_EDGE * CHUNK_EDGE] = MaterialId(1);
+                chunk_voxels[ix + iy * CHUNK_EDGE + iz * CHUNK_EDGE * CHUNK_EDGE] = WATER;
             }
         }
     }

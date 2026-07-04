@@ -3,6 +3,12 @@
 #
 # Setup: lefthook install
 # Manual: lefthook run pre-push
+#
+# Opt-in extended gates (cargo-audit, cargo-deny, cargo-machete, cargo-semver,
+# trufflehog, fr-coverage, docs:check, security-guard) are run during pre-push
+# when the developer sets CIVIS_QUALITY_EXTRAS=1. The default path is the
+# 5–7 second manifest emission: rust_fmt + rust_clippy + rust_test + godot_test
+# + web_test + dashboard_typecheck (or `just civis-3d-verify`).
 
 pre-commit:
   parallel: true

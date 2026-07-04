@@ -473,6 +473,18 @@ impl InfoViewRegistry {
         self.active.and_then(|i| self.overlays.get(i))
     }
 
+    /// Index of the active overlay in the registry, if one is selected.
+    #[must_use]
+    pub fn active_index(&self) -> Option<usize> {
+        self.active.filter(|&i| i < self.overlays.len())
+    }
+
+    /// The active overlay id, if one is selected.
+    #[must_use]
+    pub fn active_id(&self) -> Option<&'static str> {
+        self.active_overlay().map(|overlay| overlay.id)
+    }
+
     /// Whether any overlay is currently active.
     #[must_use]
     pub fn is_active(&self) -> bool {
@@ -495,6 +507,33 @@ impl InfoViewRegistry {
     pub fn activate_id(&mut self, id: &str) -> bool {
         if let Some(i) = self.overlays.iter().position(|o| o.id == id) {
             self.active = Some(i);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Toggle the overlay with the given id.
+    ///
+    /// If the requested overlay is already active, the suite turns off. If a
+    /// different overlay is active, this switches to the requested overlay.
+    /// Returns `true` when the id exists in the registry.
+    pub fn toggle_id(&mut self, id: &str) -> bool {
+        let Some(index) = self.overlays.iter().position(|overlay| overlay.id == id) else {
+            return false;
+        };
+
+        self.active = match self.active {
+            Some(active) if active == index => None,
+            _ => Some(index),
+        };
+        true
+    }
+
+    /// Activate the overlay at the given index, returning `true` on success.
+    pub fn activate_index(&mut self, index: usize) -> bool {
+        if index < self.overlays.len() {
+            self.active = Some(index);
             true
         } else {
             false
@@ -777,6 +816,29 @@ mod tests {
         assert!(reg.activate_id("temperature"));
         assert_eq!(reg.active_overlay().map(|o| o.id), Some("temperature"));
         assert!(!reg.activate_id("does-not-exist"));
+    }
+
+    /// FR-CIV-INFOVIEW-900 — toggling by id is data-driven and idempotent.
+    #[test]
+    fn toggle_by_id_switches_and_turns_off() {
+        let mut reg = InfoViewRegistry::default();
+        assert!(reg.toggle_id("water"));
+        assert_eq!(reg.active_id(), Some("water"));
+        assert!(reg.toggle_id("elevation"));
+        assert_eq!(reg.active_id(), Some("elevation"));
+        assert!(reg.toggle_id("elevation"));
+        assert_eq!(reg.active_id(), None);
+        assert!(!reg.toggle_id("missing"));
+    }
+
+    /// FR-CIV-INFOVIEW-900 — activation by index supports registry-driven UI.
+    #[test]
+    fn activate_by_index_tracks_selection() {
+        let mut reg = InfoViewRegistry::default();
+        assert!(reg.activate_index(2));
+        assert_eq!(reg.active_index(), Some(2));
+        assert_eq!(reg.active_overlay().map(|o| o.id), Some("temperature"));
+        assert!(!reg.activate_index(reg.overlays.len()));
     }
 
     /// FR-CIV-INFOVIEW-901 — legend ramp interpolates and clamps.

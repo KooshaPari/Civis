@@ -67,22 +67,14 @@ fn advance(state: &mut TutorialState) {
 fn draw_tutorial_hint(
     mut contexts: EguiContexts,
     mut state: ResMut<TutorialState>,
-    mut frames: Local<u32>,
 ) {
-    // egui fonts are unavailable until the context has run at least one full pass.
-    // Skip the first few frames unconditionally (does NOT touch egui state).
-    *frames += 1;
-    if *frames < 3 { return; }
     if !state.enabled { return; }
 
     let hint = HINTS[state.step as usize];
     let step = state.step;
     let total = HINTS.len() as u8;
 
-    let Ok(ctx) = contexts.ctx_mut() else {
-        return;
-    };
-
+    let ctx = contexts.ctx_mut();
     let screen = ctx.screen_rect();
 
     let mut clicked = false;
@@ -92,8 +84,8 @@ fn draw_tutorial_hint(
             egui::Frame::none()
                 .fill(egui::Color32::from_rgba_premultiplied(9, 10, 12, 230))
                 .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(126, 186, 181)))
-                .corner_radius(egui::CornerRadius::same(8))
-                .inner_margin(egui::Margin::symmetric(16_i8, 10_i8))
+                .rounding(egui::Rounding::same(8.0))
+                .inner_margin(egui::Margin::symmetric(16.0, 10.0))
                 .show(ui, |ui| {
                     ui.set_width(560.0);
                     ui.label(

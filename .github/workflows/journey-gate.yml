@@ -1,20 +1,34 @@
+# Local-first: PRs use quality.yml + pr-governance only.
+# Journey gate ran `cargo clippy --all-targets -- -D warnings` and
+# `cargo test --workspace` on every push to main. Both are now covered by
+# `just civis-3d-verify` and emitted into `.ci/quality-manifest.json` via
+# lefthook pre-push. This workflow is dispatch-only.
 name: Journey Gate
 
-# Local-first: PRs use quality.yml + pr-governance-gate only.
-# Run heavy gates locally: lefthook run pre-push
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
+
 permissions:
   contents: read
 
 jobs:
-  journey-validate:
-    runs-on: ubuntu-latest
+  manifest-verify:
+    name: manifest-verify (cloud)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Verify local quality manifest
+        run: bash scripts/quality/verify-quality-manifest.sh
+
+  journey-validate:
+    # Manual escape hatch: rerun clippy + test --workspace on the cloud.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
       - name: Rust clippy
         run: cargo clippy --all-targets -- -D warnings
       - name: Rust test

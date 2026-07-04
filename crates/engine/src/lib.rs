@@ -11,8 +11,9 @@
 //! - `metrics` - Tyranny/legitimacy metrics
 //! - `io` - File I/O utilities
 
-pub mod disasters;
-pub mod emergence;
+pub mod command_queue;
+pub mod conditions;
+pub mod era;
 pub mod engine;
 pub mod hash_chain;
 pub mod integrity;
@@ -23,26 +24,24 @@ pub mod metrics;
 pub mod policy;
 pub mod replay;
 pub mod replay_format;
-pub mod save;
 pub mod save_bundle;
 pub mod scenario;
+pub mod perf;
 pub mod spawn;
 pub mod spectator;
 
-pub use civ_agents::culture::CultureProfile;
-pub use civ_agents::{Psyche, SocialGraph};
-pub use civ_genetics::sentience::SentienceEvent;
-pub use disasters::{trigger_disaster, DisasterKind};
-pub use emergence::{CivAiDecision, EmergenceFeedEvent};
+pub use conditions::{check_outcome, GameOutcome};
+pub use era::CivEra;
 pub use engine::{
     job_type_for_civilian_id, Building, BuildingType, Citizen, CombatDamagePulse, DiplomacyEvent,
     DiplomacyKind, JobType, MilitaryUnit, PopulationEvent, Position, Production, ResourceType,
-    Resources, Simulation, SimulationSnapshot, UnitType, WorldState,
+    Resources, Simulation, SimulationSnapshot, TradeRoute, UnitType, WorldState,
 };
 pub use spawn::{
     grid_to_norm, military_pin_id, norm_to_grid, spawn_airport_at, spawn_hangar_at,
     spawn_military_at, spawn_port_at, unit_type_label,
 };
+pub use perf::{phases_over_budget, tick_over_budget, TickProfile};
 
 pub use civ_mod_host::{
     format_mod_error_event, format_mod_error_event_json, format_mod_loaded_event,
@@ -70,7 +69,10 @@ pub use lod::{
     should_tick_entity_with_policy, HexCellSnapshot, LodPolicy, ZoomLevel,
 };
 pub use metrics::{compute, compute_fixed, Metrics, MetricsFixed};
-pub use policy::{effective_consumption, PolicyInput, DEFAULT_ECONOMY_POLICY};
+pub use policy::{
+    effective_consumption, policy_from_kind, CapitalistPolicy, ControlSignals, NoopPolicy, Policy,
+    PolicyInput, SubsistenceFirstPolicy, DEFAULT_ECONOMY_POLICY,
+};
 pub use replay::{ReplayError, ReplayEvent, ReplayLog};
 pub use replay_format::{
     decode_civreplay, encode_civreplay, load_civreplay, save_civreplay, FOOTER_CHECKSUM_LEN,

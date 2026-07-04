@@ -12,7 +12,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1"
 thiserror = "1"
 toml = "0.8"
-wasmtime = "45.0.0"
+wasmtime = "45.0.1"
 wasmparser = "0.248.0"
 zip = "2"
 rand = "0.8"
@@ -27,6 +27,7 @@ mod-dev = []
 determinism-strict = []
 
 [dev-dependencies]
+civ-save-db = { path = "../save-db" }
 ed25519-dalek = { version = "2", features = ["rand_core"] }
 rand = "0.8"
 tempfile = "3"

@@ -1,13 +1,28 @@
+# Local-first: PRs use quality.yml + pr-governance only.
+# trufflehog secrets scan is run locally via lefthook (the pre-commit script
+# `.github/hooks/pre-commit` invokes the shared security-guard hooks which
+# include trufflehog). This workflow is dispatch-only.
 name: Trufflehog Secrets Scan
-# Local-first: PRs use quality.yml + pr-governance-gate only.
-# Run heavy gates locally: lefthook run pre-push
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
+
 jobs:
+  manifest-verify:
+    name: manifest-verify (cloud)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - name: Verify local quality manifest
+        run: bash scripts/quality/verify-quality-manifest.sh
+
   trufflehog:
-    runs-on: ubuntu-latest
+    # Manual escape hatch: rerun the secrets scan on the cloud.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -15,4 +30,4 @@ jobs:
       - uses: trufflehog/actions/setup@main
       - run: trufflehog github --only-verified --no-update
         env:
-          #
+          # token-less: trufflehog github clones the repo and scans with --no-update

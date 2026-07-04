@@ -535,6 +535,12 @@
 - **FR-CIV-PBR-007** — Canonical mode SHALL reference exemplar material seed manifests; primitive mode allows per-matid overrides.
 - **FR-CIV-PBR-008** — Missing texture files SHALL fail loud in dev builds and degrade to flat tint in player builds with logged warnings.
 
+### FR-CIV-INFRA — Service grid substrate (power, water, coverage) (`crates/civ-traffic`)
+
+- **FR-CIV-INFRA-070** — The service grid substrate SHALL model power, water, and coverage services as typed cells with an adjacency list; `place_source` SHALL flip a cell to `Active` and `coverage_ring` SHALL return every cell within `range` cells (Chebyshev distance) of a query coord.
+- **FR-CIV-INFRA-071** — A building at coord `c` SHALL be considered "served" by a service kind iff at least one cell within `range` cells (Chebyshev) of `c` hosts a source of that kind; the substrate SHALL expose `coverage_ring` so the economy and renderer can compute served status without scanning the full grid.
+- **FR-CIV-INFRA-072** — `transmit(coord)` SHALL flip every cell reachable from `coord` (BFS over the adjacency list, `BTreeMap` order) to `Outage`; the operation SHALL be idempotent and SHALL NOT cross disconnected components.
+
 ### FR-CIV-LLM — Minimal garnish cache (`crates/research`, `crates/ai`)
 
 - **FR-CIV-LLM-001** — Cache key SHALL be `{seed, prompt_hash, model_id, snapshot_hash, output_hash}` and hits SHALL return byte-identical text.

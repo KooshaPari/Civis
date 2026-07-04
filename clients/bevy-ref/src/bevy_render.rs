@@ -15,6 +15,7 @@ use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
+use civ_voxel::material::WATER;
 
 use crate::{
     chunk_fade_alpha, chunk_fade_color, chunk_fade_complete, presentation_ambient_brightness,
@@ -153,7 +154,6 @@ pub fn spawn_voxel_mesh(
     if !crate::should_render_chunk(chunk_id, camera_eye, max_dist) {
         return;
     }
-    let _lod = crate::mesh_lod_level(max_dist);
     let handle = meshes.add(mesh_buffer_to_bevy(buf));
     let material = materials.add(StandardMaterial {
         base_color: Color::srgb(0.72, 0.69, 0.62),
@@ -200,25 +200,25 @@ mod tests {
                     position: [0.0, 0.0, 0.0],
                     normal: [0.0, 1.0, 0.0],
                     uv: [0.0, 0.0],
-                    material: crate::MaterialId(1),
+                    material: WATER,
                 },
                 crate::MeshVertex {
                     position: [1.0, 0.0, 0.0],
                     normal: [0.0, 1.0, 0.0],
                     uv: [1.0, 0.0],
-                    material: crate::MaterialId(1),
+                    material: WATER,
                 },
                 crate::MeshVertex {
                     position: [1.0, 0.0, 1.0],
                     normal: [0.0, 1.0, 0.0],
                     uv: [1.0, 1.0],
-                    material: crate::MaterialId(1),
+                    material: WATER,
                 },
                 crate::MeshVertex {
                     position: [0.0, 0.0, 1.0],
                     normal: [0.0, 1.0, 0.0],
                     uv: [0.0, 1.0],
-                    material: crate::MaterialId(1),
+                    material: WATER,
                 },
             ],
             indices: vec![0, 1, 2, 0, 2, 3],

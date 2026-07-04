@@ -59,6 +59,30 @@ pub struct DamageEvent {
     pub energy: u32,
 }
 
+/// Casualty conversion: how much blast-footprint·energy maps to one personnel
+/// loss. Larger = fewer casualties per unit of damage. Tuned so a small
+/// skirmish blast (r≈2, energy≈100) yields a handful of casualties.
+const CASUALTY_DIVISOR: u64 = 256;
+
+impl DamageEvent {
+    /// Estimate personnel casualties produced by this voxel damage event
+    /// (FR-CIV-WAR-003, first increment toward population backprop).
+    ///
+    /// Models lethal exposure as the blast footprint (disk area `≈ 3·r²`, an
+    /// integer approximation of `π·r²`) scaled by the delivered `energy`, divided
+    /// by [`CASUALTY_DIVISOR`]. Zero radius or zero energy yields zero casualties;
+    /// casualties rise monotonically with both. Pure and deterministic, so it is
+    /// replay-stable. The actual deduction from a unit's strength is a follow-up
+    /// once units carry a personnel count.
+    #[must_use]
+    pub fn estimated_casualties(&self) -> u32 {
+        let r = u64::from(self.radius_voxels);
+        let footprint = 3 * r * r; // ≈ π r²
+        let raw = footprint.saturating_mul(u64::from(self.energy)) / CASUALTY_DIVISOR;
+        u32::try_from(raw).unwrap_or(u32::MAX)
+    }
+}
+
 /// A doctrine candidate for the GA.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Doctrine {
@@ -216,6 +240,42 @@ mod tests {
     }
 
     /// FR-CIV-TACTICS-001 — apply_damage removes voxels in a sphere.
+    #[test]
+    fn estimated_casualties_zero_when_no_energy_or_radius() {
+        let center = WorldCoord { x: 0, y: 0, z: 0 };
+        assert_eq!(
+            DamageEvent { center, radius_voxels: 0, energy: 500 }.estimated_casualties(),
+            0,
+            "zero radius => no footprint => no casualties"
+        );
+        assert_eq!(
+            DamageEvent { center, radius_voxels: 5, energy: 0 }.estimated_casualties(),
+            0,
+            "zero energy => no lethality => no casualties"
+        );
+    }
+
+    #[test]
+    fn estimated_casualties_monotonic_in_radius_and_energy() {
+        let center = WorldCoord { x: 0, y: 0, z: 0 };
+        let base = DamageEvent { center, radius_voxels: 3, energy: 200 };
+        let bigger_r = DamageEvent { radius_voxels: 5, ..base };
+        let bigger_e = DamageEvent { energy: 400, ..base };
+        assert!(bigger_r.estimated_casualties() > base.estimated_casualties());
+        assert!(bigger_e.estimated_casualties() > base.estimated_casualties());
+        // 3·3²·200 / 256 = 5400/256 = 21
+        assert_eq!(base.estimated_casualties(), 21);
+    }
+
+    #[test]
+    fn estimated_casualties_saturates_without_overflow() {
+        let center = WorldCoord { x: 0, y: 0, z: 0 };
+        let huge = DamageEvent { center, radius_voxels: u8::MAX, energy: u32::MAX };
+        // Must not panic; large but finite.
+        let c = huge.estimated_casualties();
+        assert!(c > 0);
+    }
+
     #[test]
     fn apply_damage_removes_voxels_in_a_sphere() {
         let mut world = world_with_cross();

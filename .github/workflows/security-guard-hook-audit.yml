@@ -10,5 +10,12 @@ permissions:
   contents: read
 
 jobs:
+  # Permissions audit (2026-06-10): phenoShared reusable
+  # (.github/workflows/security-guard-hook-audit.yml) requests only
+  # `contents: read` (workflow + job). Caller matches at workflow level;
+  # explicit job-level block mirrors release-drafter.yml + alert-sync
+  # callers and survives a future upstream permission bump.
   guard:
     uses: KooshaPari/phenoShared/.github/workflows/security-guard-hook-audit.yml@main
+    permissions:
+      contents: read

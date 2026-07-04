@@ -160,8 +160,11 @@ pub use civ_voxel::{
     ChunkId, CubicMesher, MaterialId, MeshBuffer, MeshVertex, VoxelWorld, WorldCoord,
 };
 pub use civ_agents::NeedAction;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub use perf_hud::PerfHudPlugin;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub use tutorial::TutorialPlugin;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub use menus::MenusPlugin;
 
 /// Default orbit azimuth in radians (45° — camera south-east of centre).

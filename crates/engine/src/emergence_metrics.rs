@@ -51,7 +51,6 @@ use civ_emergence_metrics::branching::{
 };
 use civ_emergence_metrics::{
     criticality_indicator, coupling_mi_estimate, novelty_score, CriticalityInputs,
-    EmergenceDashboard, TileDashboard,
 };
 use civ_emergence_metrics::power_law::PowerLawFit;
 use civ_emergence_metrics::shannon::ShannonEntropy;
@@ -62,6 +61,13 @@ use civ_voxel::{MaterialId, OctreeNode, VoxelWorld, CHUNK_EDGE};
 use serde::{Deserialize, Serialize};
 
 use crate::engine::{DiplomacyKind, Simulation};
+
+/// Dashboard metrics for tile-level emergence data (stub pending full integration).
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct TileDashboard {
+    pub cluster_entropy: Option<f32>,
+    pub ideology_homophily: Option<f32>,
+}
 
 /// Sample every 50 engine ticks = 5 s at the 100 ms tick cadence
 /// (CIV-0100 §3.2). The cadence is intentionally a single constant so

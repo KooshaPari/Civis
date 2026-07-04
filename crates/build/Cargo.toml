@@ -15,4 +15,4 @@ rand = "0.8.6"
 rand_chacha = "0.3"
 
 [dev-dependencies]
-proptest = "1.11"
+proptest = "1.4"

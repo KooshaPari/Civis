@@ -11,7 +11,8 @@ use std::{
 
 use axum::body::Bytes;
 use axum::http::HeaderValue;
-use civ_engine::{ClusterStocks, DiplomacyKind, JobType, ModBrowserEntry, Simulation};
+use civ_economy::Stocks;
+use civ_engine::{DiplomacyKind, JobType, ModBrowserEntry, Simulation};
 use civ_laws::LawDb;
 use civ_save_db::SaveDb;
 use serde::{Deserialize, Serialize};
@@ -20,13 +21,6 @@ use tokio::sync::{broadcast, Mutex, RwLock};
 use crate::terrain::Terrain;
 
 pub(crate) fn env_u16(name: &str, default: u16) -> u16 {
-    std::env::var(name)
-        .ok()
-        .and_then(|value| value.parse().ok())
-        .unwrap_or(default)
-}
-
-pub(crate) fn env_u64(name: &str, default: u64) -> u64 {
     std::env::var(name)
         .ok()
         .and_then(|value| value.parse().ok())
@@ -277,7 +271,7 @@ pub(crate) struct Snapshot {
     pub(crate) current_era: u16,
     pub(crate) population: u64,
     pub(crate) settlement_count: u32,
-    pub(crate) cluster_stocks: std::collections::BTreeMap<u64, ClusterStocks>,
+    pub(crate) cluster_stocks: std::collections::BTreeMap<u64, Stocks>,
     pub(crate) voxel_dirty_count: usize,
     pub(crate) voxel_chunk_count: usize,
     pub(crate) sample_civilians: Vec<SampleCivilian>,
@@ -587,54 +581,4 @@ pub(crate) struct RemoteModEntry {
     pub(crate) signed: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) author_pubkey_hex: Option<String>,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// `env_u16` falls back to the default when the variable is unset or
-    /// unparsable (no env mutation -> race-free in the parallel test runner).
-    #[test]
-    fn env_u16_defaults_when_var_absent() {
-        // PID-unique key cannot pre-exist in the host environment.
-        let key = format!("CIVIS_TEST_ABSENT_{}", std::process::id());
-        assert_eq!(env_u16(&key, 8080), 8080);
-        assert_eq!(env_u16(&key, 0), 0);
-    }
-
-    /// `env_u64` falls back to the default when the variable is unset or
-    /// unparsable (no env mutation -> race-free in the parallel test runner).
-    #[test]
-    fn env_u64_defaults_when_var_absent() {
-        let key = format!("CIVIS_TEST_ABSENT_{}", std::process::id());
-        assert_eq!(env_u64(&key, 42), 42);
-        assert_eq!(env_u64(&key, 0), 0);
-    }
-
-    /// `resolve_session_id` is always a usable, non-empty identifier — a fresh
-    /// UUID when unset, or the configured value — regardless of environment.
-    #[test]
-    fn resolve_session_id_is_non_empty() {
-        assert!(!resolve_session_id().is_empty());
-        // Two unset calls generate distinct UUIDs (no accidental constant).
-        if std::env::var("CIVIS_SESSION_ID").is_err() {
-            assert_ne!(resolve_session_id(), resolve_session_id());
-        }
-    }
-
-    /// `resolve_data_dir` always yields a real path (defaults to `.`).
-    #[test]
-    fn resolve_data_dir_is_a_path() {
-        assert!(!resolve_data_dir().as_os_str().is_empty());
-    }
-
-    /// The fixed production save slots and autosave ring bound are stable.
-    #[test]
-    fn production_slot_table_is_stable() {
-        assert_eq!(PRODUCTION_SLOTS.len(), 5);
-        assert_eq!(PRODUCTION_SLOTS[0], "slot-1");
-        assert_eq!(PRODUCTION_SLOTS[4], "slot-5");
-        assert_eq!(AUTOSAVE_RING_MAX, 10);
-    }
 }

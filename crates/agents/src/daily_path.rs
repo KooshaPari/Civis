@@ -53,11 +53,6 @@ impl PoiRegistry {
         self.pois.push(poi);
     }
 
-    /// Check whether the registry currently contains any POIs.
-    pub fn is_empty(&self) -> bool {
-        self.pois.is_empty()
-    }
-
     /// Iterate over registered POIs in insertion order.
     pub fn iter(&self) -> impl Iterator<Item = &Poi> {
         self.pois.iter()
@@ -190,7 +185,11 @@ pub fn path_step(from: &Position3d, to: &Position3d, speed_fp: i64) -> Position3
         return *from;
     }
 
-    let max_component = dx.abs().max(dy.abs()).max(dz.abs()).max(1);
+    let max_component = dx
+        .abs()
+        .max(dy.abs())
+        .max(dz.abs())
+        .max(1);
     let step = speed_fp.min(max_component);
 
     let scale = |delta: i64| -> i64 {
@@ -204,22 +203,25 @@ pub fn path_step(from: &Position3d, to: &Position3d, speed_fp: i64) -> Position3
 
     let mut next = Position3d {
         coord: WorldCoord {
-            x: (from.coord.x as i128 + scale(dx) as i128).clamp(i64::MIN as i128, i64::MAX as i128)
-                as i64,
-            y: (from.coord.y as i128 + scale(dy) as i128).clamp(i64::MIN as i128, i64::MAX as i128)
-                as i64,
-            z: (from.coord.z as i128 + scale(dz) as i128).clamp(i64::MIN as i128, i64::MAX as i128)
-                as i64,
+            x: from.coord.x + scale(dx),
+            y: from.coord.y + scale(dy),
+            z: from.coord.z + scale(dz),
         },
     };
 
-    if (dx > 0 && next.coord.x > to.coord.x) || (dx < 0 && next.coord.x < to.coord.x) {
+    if (dx > 0 && next.coord.x > to.coord.x)
+        || (dx < 0 && next.coord.x < to.coord.x)
+    {
         next.coord.x = to.coord.x;
     }
-    if (dy > 0 && next.coord.y > to.coord.y) || (dy < 0 && next.coord.y < to.coord.y) {
+    if (dy > 0 && next.coord.y > to.coord.y)
+        || (dy < 0 && next.coord.y < to.coord.y)
+    {
         next.coord.y = to.coord.y;
     }
-    if (dz > 0 && next.coord.z > to.coord.z) || (dz < 0 && next.coord.z < to.coord.z) {
+    if (dz > 0 && next.coord.z > to.coord.z)
+        || (dz < 0 && next.coord.z < to.coord.z)
+    {
         next.coord.z = to.coord.z;
     }
 
@@ -283,8 +285,7 @@ pub fn choose_activity(needs: &LifeNeeds, has_poi: bool) -> Activity {
 /// Build a deterministic local wander anchor from a seed and current position.
 #[must_use]
 pub fn wander_anchor(from: &Position3d, seed: u64, tick: u64) -> Position3d {
-    let mix =
-        seed ^ tick.rotate_left(17) ^ (from.coord.x as u64).rotate_left(7) ^ (from.coord.z as u64);
+    let mix = seed ^ tick.rotate_left(17) ^ (from.coord.x as u64).rotate_left(7) ^ (from.coord.z as u64);
     let offset = |shift: u32| -> i64 {
         let bits = ((mix >> shift) & 0x3f) as i64;
         bits - 31
@@ -308,7 +309,7 @@ mod tests {
         }
     }
 
-    /// Covers FR-CIV-LIFE-010 — nearest_of_kind returns the closest matching POI.
+    /// FR-CIV-LIFE-010 — nearest_of_kind returns the closest matching POI.
     #[test]
     fn nearest_of_kind_picks_closest() {
         let mut registry = PoiRegistry::default();
@@ -331,7 +332,7 @@ mod tests {
         assert_eq!(nearest.id, 1);
     }
 
-    /// Covers FR-CIV-LIFE-011 — pick_target chooses the highest-pressure need.
+    /// FR-CIV-LIFE-011 — pick_target chooses the highest-pressure need.
     #[test]
     fn pick_target_chooses_highest_pressure_need() {
         let needs = LifeNeeds {
@@ -346,7 +347,7 @@ mod tests {
         registry.add(Poi {
             id: 10,
             kind: PoiKind::FoodSource,
-            pos: pos(FIXED_SCALE, 0, 0),
+            pos: pos(1 * FIXED_SCALE, 0, 0),
             capacity: 1,
         });
         registry.add(Poi {
@@ -367,7 +368,7 @@ mod tests {
         assert_eq!(target.id, 20);
     }
 
-    /// Covers FR-CIV-LIFE-012 — path_step moves toward the target and never overshoots.
+    /// FR-CIV-LIFE-012 — path_step moves toward the target and never overshoots.
     #[test]
     fn path_step_moves_toward_target_without_overshoot() {
         let from = pos(0, 0, 0);
@@ -379,7 +380,7 @@ mod tests {
         assert_eq!(final_step.coord.x, to.coord.x);
     }
 
-    /// Covers FR-CIV-LIFE-013 — scoring is deterministic for the same inputs.
+    /// FR-CIV-LIFE-013 — scoring is deterministic for the same inputs.
     #[test]
     fn scoring_is_deterministic() {
         let needs = LifeNeeds {
@@ -397,13 +398,10 @@ mod tests {
             capacity: 1,
         };
         let d = dist_sq(&pos(0, 0, 0), &poi.pos);
-        assert_eq!(
-            score_poi(&needs, &poi, d).to_bits(),
-            score_poi(&needs, &poi, d).to_bits()
-        );
+        assert_eq!(score_poi(&needs, &poi, d).to_bits(), score_poi(&needs, &poi, d).to_bits());
     }
 
-    /// Covers FR-CIV-LIFE-014 — empty registry yields no target.
+    /// FR-CIV-LIFE-014 — empty registry yields no target.
     #[test]
     fn empty_registry_returns_none() {
         let needs = LifeNeeds::sated();
@@ -411,23 +409,7 @@ mod tests {
         assert!(pick_target(&needs, &registry, &pos(0, 0, 0)).is_none());
     }
 
-    /// Covers FR-CIV-LIFE-014a — `PoiRegistry::is_empty` tracks inserted POIs.
-    #[test]
-    fn poi_registry_is_empty_tracks_insertions() {
-        let mut registry = PoiRegistry::default();
-        assert!(registry.is_empty());
-
-        registry.add(Poi {
-            id: 1,
-            kind: PoiKind::FoodSource,
-            pos: pos(0, 0, 0),
-            capacity: 1,
-        });
-
-        assert!(!registry.is_empty());
-    }
-
-    /// Covers FR-CIV-LIFE-015 — satisfied needs prefer idle/wander over seek.
+    /// FR-CIV-LIFE-015 — satisfied needs prefer idle/wander over seek.
     #[test]
     fn satisfied_needs_do_not_seek() {
         let needs = LifeNeeds::sated();
@@ -435,7 +417,7 @@ mod tests {
         assert_eq!(choose_activity(&needs, true), Activity::Idle);
     }
 
-    /// Covers FR-CIV-LIFE-016 — wander anchors remain local and deterministic.
+    /// FR-CIV-LIFE-016 — wander anchors remain local and deterministic.
     #[test]
     fn wander_anchor_stays_local() {
         let from = pos(100 * FIXED_SCALE, 0, -50 * FIXED_SCALE);

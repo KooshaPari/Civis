@@ -1,37 +1,36 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <!-- Faction crest "cyan" — procedural heraldry (DNA->form). Shared Keycap frame, distinct hue/shield/sigil. -->
+  <!-- Cyan faction: The Aether Lattice — crystalline radial sigil, precise geometry -->
   <defs>
-    <radialGradient id="amb" cx="50%" cy="46%" r="55%">
-      <stop offset="0%" stop-color="#46b6c4" stop-opacity="0.30"/>
-      <stop offset="100%" stop-color="#46b6c4" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="field" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#0e1416"/>
-      <stop offset="100%" stop-color="#080b0c"/>
-    </linearGradient>
-    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
-      <feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    <filter id="cyanGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
+    <radialGradient id="cyanAmbient" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#50C8F0" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#50C8F0" stop-opacity="0"/>
+    </radialGradient>
   </defs>
-
-  <circle cx="64" cy="64" r="56" fill="url(#amb)"/>
-  <!-- shared Keycap teal outer ring (faction DNA) -->
-  <circle cx="64" cy="64" r="58" fill="none" stroke="#7ebab5" stroke-width="1.4" opacity="0.35" stroke-dasharray="3 5"/>
-
-  <!-- shield field -->
-  <path d="M40,20 H88 Q104,20 104,40 V62 Q104,96 64,112 Q24,96 24,62 V40 Q24,20 40,20 Z" fill="url(#field)" stroke="#46b6c4" stroke-width="3" filter="url(#glow)"/>
-  <path d="M40,20 H88 Q104,20 104,40 V62 Q104,96 64,112 Q24,96 24,62 V40 Q24,20 40,20 Z" fill="none" stroke="#8fe1ea" stroke-width="1" opacity="0.5"/>
-
-  <!-- central faction glyph -->
-  <g filter="url(#glow)"><path stroke="#8fe1ea" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" d="M40,58 Q52,46 64,58 Q76,70 88,58"/>
-              <path stroke="#8fe1ea" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" d="M40,74 Q52,62 64,74 Q76,86 88,74"/></g>
-
-  <!-- emergent node motif at crest base (shared DNA) -->
-  <g>
-    <line x1="50" y1="98" x2="64" y2="104" stroke="#7ebab5" stroke-width="1" opacity="0.5"/>
-    <line x1="78" y1="98" x2="64" y2="104" stroke="#7ebab5" stroke-width="1" opacity="0.5"/>
-    <circle cx="50" cy="98" r="2.2" fill="#7ebab5" opacity="0.8"/>
-    <circle cx="78" cy="98" r="2.2" fill="#7ebab5" opacity="0.8"/>
-    <circle cx="64" cy="104" r="2.6" fill="#8fe1ea"/>
-  </g>
+  <!-- ambient -->
+  <circle cx="64" cy="64" r="52" fill="url(#cyanAmbient)"/>
+  <!-- outer ring -->
+  <circle cx="64" cy="64" r="50" fill="none" stroke="#50C8F0" stroke-width="2" opacity="0.45"/>
+  <circle cx="64" cy="64" r="42" fill="none" stroke="#50C8F0" stroke-width="1.2" opacity="0.3"/>
+  <!-- central crystal: vertical hexagonal prism -->
+  <polygon points="64,18 86,40 86,88 64,110 42,88 42,40"
+    fill="#08161e" stroke="#50C8F0" stroke-width="3" stroke-linejoin="round" filter="url(#cyanGlow)"/>
+  <!-- inner facet lines -->
+  <line x1="64" y1="18" x2="64" y2="110" stroke="#50C8F0" stroke-width="1.5" opacity="0.6"/>
+  <line x1="42" y1="40" x2="86" y2="88" stroke="#50C8F0" stroke-width="1" opacity="0.4"/>
+  <line x1="86" y1="40" x2="42" y2="88" stroke="#50C8F0" stroke-width="1" opacity="0.4"/>
+  <!-- inner lattice diamond -->
+  <polygon points="64,40 78,64 64,88 50,64"
+    fill="#0d2530" stroke="#7fdcf7" stroke-width="2" filter="url(#cyanGlow)"/>
+  <!-- four cardinal nodes -->
+  <circle cx="64" cy="14" r="4" fill="#50C8F0" filter="url(#cyanGlow)"/>
+  <circle cx="64" cy="114" r="3" fill="#50C8F0" opacity="0.7"/>
+  <circle cx="14" cy="64" r="3" fill="#50C8F0" opacity="0.7"/>
+  <circle cx="114" cy="64" r="3" fill="#50C8F0" opacity="0.7"/>
+  <!-- core -->
+  <circle cx="64" cy="64" r="5" fill="#08161e" stroke="#7fdcf7" stroke-width="2"/>
+  <circle cx="64" cy="64" r="2" fill="#7fdcf7" filter="url(#cyanGlow)"/>
 </svg>

@@ -13,14 +13,6 @@
 //! - `FR-CIV-INSPECT-910` — hover tooltip + god-hand cursor readout.
 
 use crate::terrain::{terrain_height, HEIGHT_SCALE, WATER_LEVEL, WORLD_SIZE};
-use civ_agents::Civilian;
-
-fn civilian_faction_id(civilian: &Civilian) -> Option<u32> {
-    match civilian.alignment {
-        civ_agents::Alignment::Faction(faction) => Some(faction),
-        _ => None,
-    }
-}
 
 /// What the inspector is currently looking at. Mirrors WorldBox's pick targets.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -223,12 +215,8 @@ mod plugin {
     /// `agent_norm_xy` mapping so inspect + overlay agree on where agents are).
     fn agent_world_pos(id: u64) -> Vec3 {
         let h = id.wrapping_mul(0x9E37_79B9_7F4A_7C15);
-        let nx = ((h >> 11) as f32 / (1u64 << 53) as f32)
-            .fract()
-            .clamp(0.0, 1.0);
-        let nz = ((h >> 5) as f32 / (1u64 << 53) as f32)
-            .fract()
-            .clamp(0.0, 1.0);
+        let nx = ((h >> 11) as f32 / (1u64 << 53) as f32).fract().clamp(0.0, 1.0);
+        let nz = ((h >> 5) as f32 / (1u64 << 53) as f32).fract().clamp(0.0, 1.0);
         let wx = nx * WORLD_SIZE - WORLD_SIZE * 0.5;
         let wz = nz * WORLD_SIZE - WORLD_SIZE * 0.5;
         Vec3::new(wx, 0.0, wz)
@@ -249,10 +237,9 @@ mod plugin {
                 .map(|n| (n.food + n.shelter + n.safety + n.belonging) / 4.0)
                 .unwrap_or(0.0);
             let det = SelectedEntityDetails {
-                entity_type: "Civilian".to_string(),
+                kind: "Civilian".to_string(),
                 name: format!("Civilian #{}", civ.id),
-                faction: civilian_faction_id(civ)
-                    .map_or_else(|| "—".to_string(), |faction| format!("Faction {faction}")),
+                faction: format!("Faction {}", civ.faction),
                 health: format!("Needs pressure {:.0}%", pressure * 100.0),
                 profession: needs
                     .map(|n| {
@@ -265,24 +252,9 @@ mod plugin {
                         )
                     })
                     .unwrap_or_else(|| "—".to_string()),
-                species: "—".to_string(),
-                needs: needs
-                    .map(|n| {
-                        format!(
-                            "F {:.0}% · Sh {:.0}% · Sa {:.0}% · So {:.0}%",
-                            n.food * 100.0,
-                            n.shelter * 100.0,
-                            n.safety * 100.0,
-                            n.belonging * 100.0
-                        )
-                    })
-                    .unwrap_or_else(|| "—".to_string()),
-                position: civilian_faction_id(civ).map_or_else(
-                    || format!("age {} · cluster —", civ.age),
-                    |faction| format!("age {} · cluster {}", civ.age, faction),
-                ),
+                position: format!("age {} · cluster {}", civ.age, civ.faction),
             };
-            if best.as_ref().map_or(true, |(bd, _)| d2 < *bd) {
+            if best.as_ref().is_none_or(|(bd, _)| d2 < *bd) {
                 best = Some((d2, det));
             }
         }
@@ -301,16 +273,14 @@ mod plugin {
                 continue;
             }
             let det = SelectedEntityDetails {
-                entity_type: "Structure".to_string(),
+                kind: "Structure".to_string(),
                 name: s.kind.to_string(),
                 faction: "—".to_string(),
                 health: format!("Occupancy {}", s.occupancy),
                 profession: "Structure".to_string(),
-                species: "—".to_string(),
-                needs: "—".to_string(),
                 position: format!("({:.0}, {:.0})", tf.translation().x, tf.translation().z),
             };
-            if best.as_ref().map_or(true, |(bd, _)| d2 < *bd) {
+            if best.as_ref().is_none_or(|(bd, _)| d2 < *bd) {
                 best = Some((d2, det));
             }
         }
@@ -320,13 +290,11 @@ mod plugin {
     fn cell_details(pos: Vec3) -> SelectedEntityDetails {
         let cell = CellReadout::sample(pos.x, pos.z);
         SelectedEntityDetails {
-            entity_type: "Cell".to_string(),
+            kind: "Cell".to_string(),
             name: format!("Cell ({:.0}, {:.0})", cell.world_x, cell.world_z),
             faction: "—".to_string(),
             health: if cell.submerged { "Submerged" } else { "Dry" }.to_string(),
             profession: format!("Material: {}", cell.material),
-            species: "—".to_string(),
-            needs: "—".to_string(),
             position: format!(
                 "h={:.0} · {} ({})",
                 cell.height,

@@ -7,7 +7,6 @@
 #include "CivProtocolClient.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSnapshotReceived, const FString&, SnapshotJson);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCivTerrainStatus, const FString&, State, const FString&, Detail);
 
 UCLASS(BlueprintType)
 class CIVSHOW_API UCivProtocolClient : public UObject
@@ -40,9 +39,6 @@ public:
 
     UPROPERTY(BlueprintAssignable, Category = "Civis")
     FOnSnapshotReceived OnSnapshot;
-
-    UPROPERTY(BlueprintAssignable, Category = "Civis")
-    FOnCivTerrainStatus OnTerrainStatus;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Civis")
     TArray<float> Heights;

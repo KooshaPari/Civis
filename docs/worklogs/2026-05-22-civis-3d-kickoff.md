@@ -67,7 +67,8 @@ Landed on the same kickoff day; PR #296 now has 8 commits:
    <https://github.com/KooshaPari/phenotype-voxel> (private). 9 modules
    (chunk, coord, cubic_mesher, delta, lod, material, mesh, octree, world).
    **21 passing tests.** Working `VoxelWorld<T>` with deterministic
-   write+drain and an engine-neutral reference `CubicMesher` with face culling.
+   write+drain (FR-PHENO-VOXEL-WORLD-001..005) plus an engine-neutral
+   reference `CubicMesher` with face culling (FR-PHENO-VOXEL-CUBIC-001..005).
 2. **Civis civ-voxel** — re-exports kernel types + `VoxelWorld` + `CubicMesher`;
    adds FR-CIV-VOXEL-005 replay-determinism smoke and FR-CIV-VOXEL-010
    `VoxelWorld → CubicMesher` end-to-end smoke.

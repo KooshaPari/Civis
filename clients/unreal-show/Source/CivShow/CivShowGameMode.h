@@ -5,7 +5,6 @@
 #include "CivShowGameMode.generated.h"
 
 class ACivilianActor;
-class ACivChunkOverlayActor;
 class ACivMinimapCapture;
 class AVoxelTerrain;
 class UCivMinimapWidget;
@@ -45,12 +44,6 @@ private:
     void OnTerrainFetched();
 
     UFUNCTION()
-    void OnTerrainStatusChanged(const FString& State, const FString& Detail);
-
-    UFUNCTION()
-    void OnWsConnectionChanged(const FString& State);
-
-    UFUNCTION()
     void OnWsSnapshot(const FString& SnapshotJson);
 
     UFUNCTION()
@@ -62,8 +55,6 @@ private:
 
     void ApplyDayNight(bool bIsDay);
 
-    void UpdateAttachWarning();
-
     UFUNCTION()
     void OnMinimapUvClicked(float U, float V);
 
@@ -74,19 +65,13 @@ private:
     UCivWsClient* WsClient = nullptr;
 
     UPROPERTY()
-    bool bTerrainLive = false;
-
-    UPROPERTY()
-    bool bWsLive = false;
-
-    UPROPERTY()
     AVoxelTerrain* TerrainActor = nullptr;
 
     UPROPERTY()
     TMap<int32, ACivilianActor*> CivilianActors;
 
     UPROPERTY()
-    TMap<uint64, ACivChunkOverlayActor*> ChunkOverlayActors;
+    TMap<uint64, AActor*> ChunkOverlayActors;
 
     UPROPERTY()
     ACivMinimapCapture* MinimapCapture = nullptr;
@@ -97,4 +82,5 @@ private:
     void SpawnMinimapHud();
 
     static constexpr int32 MaxChunkOverlays = 64;
+    static constexpr float ChunkEdge = 16.0f;
 };

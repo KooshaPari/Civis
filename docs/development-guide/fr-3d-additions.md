@@ -79,8 +79,6 @@
 - **FR-CIV-RESEARCH-002** — Canonical-mode replay refuses to advance on the first
   `LlmEvent` encountered in the log.
 - **FR-CIV-RESEARCH-003** — Hybrid-mode replay on cache miss refuses to advance.
-- **FR-CIV-RESEARCH-004** — `LlmEvent::cache_key` is deterministic and byte-composed
-  of `(prompt_hash, input_snapshot_hash, model_id, model_version)`.
 
 ## FR-CIV-TACTICS (P-W1, crate `civ-tactics`)
 
@@ -105,9 +103,6 @@
 - **FR-CIV-PROTO3D-001** — Voxel delta frames serialize to binary; round-trip is lossless.
 - **FR-CIV-PROTO3D-002** — Building diff frames carry tagged provenance (procedural vs
   freehand) without loss.
-- **FR-CIV-PROTO3D-014** — All six `Frame3d` variants (`VoxelDelta`, `BuildingDiff`,
-  `AgentAppearance`, `CivilianState`, `FactionState`, `EventFeed`) round-trip through
-  the F3D0 binary envelope losslessly.
 
 ## FR-CIV-UX (P-U1, `clients/godot-ref`)
 

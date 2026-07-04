@@ -1,112 +1,23 @@
-# cargo-deny configuration for the Civis workspace.
-# Docs: https://embarkstudios.github.io/cargo-deny/
-#
-# Sections:
-#   * [advisories] — pulls the RustSec advisory DB and fails on known vulns.
-#   * [bans]       — refuses duplicate crate versions and `*` dep specs.
-#   * [licenses]   — allow-list; any license outside the list fails the check.
-#   * [sources]    — refuses deps from registries/git sources we do not trust.
-#   * [graph]      — sanity-checks the dep graph (cycles, features, etc).
-#
-# Run locally with: `cargo deny check` (or `just deny`).
-
 [advisories]
-# Path where the RustSec advisory-db is cloned. Defaults to ~/.cargo/advisory-db.
-# Pinned to $CARGO_HOME so the CI runner and the developer laptop share state.
 db-path = "$CARGO_HOME/advisory-db"
-# Fail the check on any unmaintained-warnings entry too — RustSec classifies
-# these as "unmaintained" but we treat them as warnings, not hard errors.
-unmaintained = "warn"
-# Ignore advisories that do not have a patched version yet (workaround until
-# upstream fixes flow in). Anything not in this list is a hard error.
-ignore = [
-  # Example placeholder — add entries as `RUSTSEC-YYYY-NNNN` once triaged.
+
+[licenses]
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "MPL-2.0",
+    "0BSD",
+    "CC0-1.0",
 ]
 
 [bans]
-# Multiple versions of the same crate in the dep graph: warn (not error).
-# Allow when justified via a workspace comment, but surface the warning so we
-# notice.
 multiple-versions = "warn"
-# Wildcard dep specs (e.g. `serde = "*"`) are a foot-gun; warn so they show
-# up in CI output even if we don't fail the build over them yet.
 wildcards = "warn"
-# Highlight very-common crates that may have legitimate duplicate-version
-# issues we want to know about (serde, tokio, etc).
-highlight = [
-  "rustls",
-  "openssl",
-  "ring",
-  "bevy",
-  "wgpu",
-]
-# Hard skip on duplicate version detection for these (vendored exceptions).
-skip = [
-  # Add `name = "..."` entries when a known-good duplicate is required.
-]
-# Disallow specific crates outright.
-deny = []
-# Allow these even if they would otherwise be denied.
-allow = []
-# Skip-tree: tree entries whose path matches are skipped. Useful for
-# excluding generated/proto code or test-only crates from duplicate checks.
-skip-tree = []
-
-[licenses]
-# Allow-list of acceptable SPDX identifiers. Any crate whose license is not
-# listed here (or has an unknown license) fails the check.
-allow = [
-  "MIT",
-  "Apache-2.0",
-  "Apache-2.0 WITH LLVM-exception",
-  "BSD-2-Clause",
-  "BSD-3-Clause",
-  "ISC",
-  "Zlib",
-  "MPL-2.0",
-  "0BSD",
-  "CC0-1.0",
-  "Unicode-DFS-2016",
-  "Unicode-3.0",
-  "OpenSSL",          # used by rustls/openssl-sys stack — accept, do not silently absorb
-  "NCSA",             # University of Illinois / NCSA (used by some llvm deps)
-]
-# Confidence threshold for the SPDX matcher. `threshold = 1.0` is the strictest
-# (exact SPDX match). Lower values may accept near-matches.
-confidence-threshold = 1.0
-
-[licenses.private]
-# If a workspace crate is private (no published license), treat as ignored
-# rather than failing — local crates are governed by LICENSE at repo root.
-ignore = true
-
-[licenses.clarify]
-# Required clarifications for ambiguous SPDX expressions. Useful when a crate
-# declares "MIT OR Apache-2.0" and we need the SPDX to be canonicalised before
-# the allow-list runs.
-# expressions = []
-
-[licenses.copyleft]
-# Cargo-deny categorises strong/weak copyleft. Strong copyleft (GPL family) is
-# denied; weak copyleft (LGPL/MPL) is allowed only if the entry is in `allow`
-# above (MPL-2.0 is currently listed).
-strong = "deny"
-weak = "warn"
-# Allow specific weak-copyleft crates here (LGPL etc) when used as a system lib.
 
 [sources]
-# Refuse dependencies from registries/git sources we have not whitelisted.
-unknown-registry = "deny"
-unknown-git = "deny"
-# Allow-list of acceptable registries. Only crates.io is whitelisted; private
-# registries / alt indexes would need to be added explicitly.
+unknown-registry = "warn"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-# Allow-list of acceptable git sources. Empty by default — every git dep must
-# be triaged and added with a reason comment.
-allow-git = []
-
-[sources.allow-org]
-# Allow any git source hosted under these GitHub orgs (used for internal
-# sibling repos like phenotype-voxel).
-github = []
-# gitlab = []

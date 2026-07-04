@@ -8,12 +8,6 @@ use crate::live_scene::LiveScenePlugin;
 use crate::ws_client::{WsClient, WsClientConfig};
 use crate::{resolve_live_ws_url, AttachMode, LiveHudSnapshot, WsSpectatorMeta};
 
-#[cfg(feature = "egui")]
-use crate::WsConnectionState;
-
-#[cfg(feature = "egui")]
-use crate::event_feed::{connection_toast_message, EventFeed, EventKind};
-
 /// Connection state mirrored from the live attach WebSocket client.
 #[derive(Resource, Debug, Clone, Default)]
 pub struct LiveAttachState {
@@ -54,32 +48,18 @@ impl Plugin for LiveAttachPlugin {
                 ),
             );
         #[cfg(feature = "egui")]
-        {
-            app.init_resource::<LastConnectionToastState>().add_systems(
-                Update,
-                (
-                    sync_live_connection_toasts,
-                    sync_live_game_ui,
-                    sync_diplomacy_panel_from_scene,
-                )
-                    .chain(),
-            );
-        }
+        app.add_systems(
+            Update,
+            (sync_live_game_ui, sync_live_connection_toasts),
+        );
     }
 }
 
-/// Last WebSocket state used for connection toasts (egui only).
-#[cfg(feature = "egui")]
-#[derive(Resource, Default)]
-struct LastConnectionToastState(Option<WsConnectionState>);
-
 fn sync_live_hud_connection(
-    attach: Option<Res<AttachMode>>,
-    bridge: Option<Res<LiveAttachBridge>>,
+    attach: Res<AttachMode>,
+    bridge: Res<LiveAttachBridge>,
     mut hud: ResMut<LiveHudSnapshot>,
 ) {
-    let Some(attach) = attach else { return; };
-    let Some(bridge) = bridge else { return; };
     if *attach != AttachMode::Server {
         return;
     }
@@ -105,25 +85,19 @@ fn poll_live_meta(
 }
 
 fn sync_live_hud_stats(
-    attach: Option<Res<AttachMode>>,
-    bridge: Option<Res<LiveAttachBridge>>,
+    attach: Res<AttachMode>,
+    bridge: Res<LiveAttachBridge>,
     scene: Res<crate::live_stream::LiveStreamScene>,
     mut hud: ResMut<LiveHudSnapshot>,
 ) {
-    let Some(attach) = attach else { return; };
-    let Some(bridge) = bridge else { return; };
     if *attach != AttachMode::Server {
         return;
     }
-    let civilians = crate::live_stream::civilian_hud_count(&scene);
-    let factions = crate::live_stream::faction_hud_count(&scene);
     hud.sync_scene_counts(
         scene.chunks.len(),
         scene.agents.len(),
         scene.buildings.len(),
         scene.graph_parcels.len(),
-        civilians,
-        factions,
     );
     if let Some(rtt) = bridge.client.latest_rtt_ms() {
         hud.ws_rtt_ms = Some(rtt);
@@ -131,11 +105,10 @@ fn sync_live_hud_stats(
 }
 
 fn sync_live_selection(
-    attach: Option<Res<AttachMode>>,
+    attach: Res<AttachMode>,
     selection: Res<LiveSelection>,
     mut hud: ResMut<LiveHudSnapshot>,
 ) {
-    let Some(attach) = attach else { return; };
     if *attach != AttachMode::Server {
         return;
     }
@@ -144,82 +117,37 @@ fn sync_live_selection(
 
 #[cfg(feature = "egui")]
 fn sync_live_connection_toasts(
-    attach: Option<Res<AttachMode>>,
-    bridge: Option<Res<LiveAttachBridge>>,
-    mut feed: ResMut<EventFeed>,
-    mut last: ResMut<LastConnectionToastState>,
+    attach: Res<AttachMode>,
+    bridge: Res<LiveAttachBridge>,
+    mut feed: ResMut<crate::event_feed::EventFeed>,
+    mut last: Local<Option<crate::WsConnectionState>>,
 ) {
-    let Some(attach) = attach else { return; };
-    let Some(bridge) = bridge else { return; };
+    use crate::event_feed::{connection_toast_message, EventKind};
+
     if *attach != AttachMode::Server {
         return;
     }
-
     let state = bridge.client.latest_connection_state();
-    if last.0 == Some(state) {
+    if *last == Some(state) {
         return;
     }
-
-    if last.0.is_some() || state == WsConnectionState::Connected {
-        feed.push(
-            EventKind::System,
-            connection_toast_message(state).to_string(),
-        );
-    }
-    last.0 = Some(state);
-}
-
-#[cfg(all(feature = "bevy", feature = "egui"))]
-fn sync_diplomacy_panel_from_scene(
-    attach: Option<Res<AttachMode>>,
-    scene: Res<crate::live_stream::LiveStreamScene>,
-    mut diplomacy: ResMut<crate::diplomacy_ui::DiplomacyState>,
-) {
-    let Some(attach) = attach else { return; };
-    if *attach != AttachMode::Server {
-        return;
-    }
-    if scene.faction_entries.is_empty() {
-        return;
-    }
-    if !scene.is_changed() {
-        return;
-    }
-    let frame = civ_protocol_3d::FactionStateFrame {
-        tick: 0,
-        factions: scene.faction_entries.clone(),
-        population_by_faction: Default::default(),
-    };
-    let population_by_faction: std::collections::HashMap<u32, u32> = scene.population_by_faction.iter().map(|(&k, &v)| (k, v)).collect();
-    crate::live_stream::sync_diplomacy_from_faction_frame(
-        &mut diplomacy,
-        &frame,
-        &population_by_faction,
-    );
+    *last = Some(state);
+    feed.push(EventKind::System, connection_toast_message(state));
 }
 
 #[cfg(feature = "egui")]
 fn sync_live_game_ui(
-    attach: Option<Res<crate::AttachMode>>,
-    state: Option<Res<LiveAttachState>>,
+    attach: Res<crate::AttachMode>,
+    state: Res<LiveAttachState>,
     hud: Res<LiveHudSnapshot>,
-    scene: Res<crate::live_stream::LiveStreamScene>,
     mut snapshot: ResMut<crate::game_ui::GameUiSnapshot>,
 ) {
-    let Some(attach) = attach else { return; };
-    let Some(state) = state else { return; };
     if *attach != crate::AttachMode::Server {
         return;
     }
     let tick = hud.tick.or(state.tick).unwrap_or(0);
-    let population = crate::live_stream::civilian_hud_count(&scene) as u64;
-    let factions = crate::live_stream::faction_hud_count(&scene) as u32;
-    let era = if scene.faction_era > 0 {
-        scene.faction_era.to_string()
-    } else {
-        tick.to_string()
-    };
-    snapshot.set_sim_state(tick, population, factions, era, 1.0);
+    let era = tick.to_string();
+    snapshot.set_sim_state(tick, 0, 0, era, 1);
     snapshot.live_hud_overlay = Some(hud.format_overlay());
 }
 

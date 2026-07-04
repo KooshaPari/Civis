@@ -8,11 +8,6 @@ permissions:
   contents: read
 
 jobs:
-  # Permissions audit (2026-06-10): phenoShared reusable
-  # (.github/workflows/reusable-release-drafter.yml) declares
-  # workflow-level `contents: read` and job-level
-  # `contents: write + pull-requests: write`. Job-level caller matches;
-  # no fix needed. See PR #345 (alert-sync precedent).
   release-drafter:
     uses: KooshaPari/phenoShared/.github/workflows/reusable-release-drafter.yml@main
     permissions:

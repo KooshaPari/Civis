@@ -145,8 +145,8 @@ Spec-ref: {CIV-#### spec section if applicable}
 
 | Type | Purpose | Example |
 |------|---------|---------|
-| `feat` | New feature | `feat(engine): core tick loop` |
-| `test` | Test (including failing tests) | `test(engine): tick loop failing test` |
+| `feat` | New feature | `feat(engine): FR-CIV-0001-TICK core tick loop` |
+| `test` | Test (including failing tests) | `test(engine): FR-CIV-0001-TICK failing test` |
 | `fix` | Bug fix | `fix(economy): FR-CIV-ECON-001 market price calc` |
 | `refactor` | Code cleanup (no logic change) | `refactor(engine): FR-CIV-0001 simplify tick` |
 | `docs` | Documentation | `docs: scenario YAML format spec` |
@@ -165,7 +165,7 @@ git commit -m "feat(economy): FR-CIV-ECON-001 market price tracking"
 git commit -m "refactor(economy): FR-CIV-ECON-001 simplify price calculation"
 
 # Multi-line with spec reference
-git commit -m "feat(engine): core tick loop
+git commit -m "feat(engine): FR-CIV-0001-TICK core tick loop
 
 Implements deterministic turn increment per spec CIV-0001-core-simulation-loop.md.
 Ensures all state changes are reproducible with same seed.
@@ -186,15 +186,15 @@ git checkout feat/civ-phase0-tick-loop
 
 # Dispatch L3 agent to write test
 copilot -p "
-Write failing test for core tick loop.
+Write failing test for FR-CIV-0001-TICK.
 ...
-Commit: 'test(engine): tick loop failing test'
+Commit: 'test(engine): FR-CIV-0001-TICK failing test'
 " --yolo --model gpt-5-mini --add-dir /Users/kooshapari/temp-PRODVERCEL/485/kush/civ/.. &
 
 # Or manually:
 # Write test file crates/engine/tests/fr_core_tick_loop.rs
 # git add tests/fr_core_tick_loop.rs
-# git commit -m "test(engine): tick loop failing test"
+# git commit -m "test(engine): FR-CIV-0001-TICK failing test"
 ```
 
 ### Verify Test Fails
@@ -215,11 +215,11 @@ git log -1  # verify test commit is there
 
 # Dispatch L3 agent to implement
 copilot -p "
-Implement core tick loop.
+Implement FR-CIV-0001-TICK.
 Test already exists in crates/engine/tests/fr_core_tick_loop.rs
 Make it pass.
 ...
-Commit: 'feat(engine): core tick loop'
+Commit: 'feat(engine): FR-CIV-0001-TICK core tick loop'
 " --yolo --model gpt-5-mini --add-dir /Users/kooshapari/temp-PRODVERCEL/485/kush/civ/.. &
 ```
 
@@ -240,8 +240,8 @@ cd ../civ-wt-phase0-foundation
 git log --oneline feat/civ-phase0-tick-loop | head -5
 
 # Output:
-# 1a2b3c4 feat(engine): core tick loop
-# 5d6e7f8 test(engine): tick loop failing test
+# 1a2b3c4 feat(engine): FR-CIV-0001-TICK core tick loop
+# 5d6e7f8 test(engine): FR-CIV-0001-TICK failing test
 # 9g0h1i2 main branch commit
 ```
 
@@ -634,3 +634,4 @@ Main
   │   (Parallel: P3 starts)
   └─ P3 worktree → feat/civ-phase3-client → PR → merge
 ```
+

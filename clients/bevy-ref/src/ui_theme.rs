@@ -10,121 +10,11 @@
 //! large fills. Cheap dimensional pass (egui): inner bevel, top-45% gloss,
 //! colored rim glow, ease-out motion + scale-on-select + micro-jitter.
 //!
-//! **Holocron 3D dimensionality (5 moves) — current status:**
-//!
-//! | # | Move                              | Status                                            |
-//! |---|-----------------------------------|---------------------------------------------------|
-//! | 1 | Tilt panels to 3D quads           | DEFERRED (egui has no perspective). See [§3D deferred plan]. |
-//! | 2 | WGSL specular-sweep + fresnel rim | PARTIAL (2D `specular_sweep` + 2-pass `rim_glow`). |
-//! | 3 | Moving curved-perspective bg      | DEFERRED (WGSL full-screen quad).                 |
-//! | 4 | Bevel + top-gloss                 | IMPLEMENTED (`blade_frame`, `gloss_sheen`, `liquid_glass_finish`). |
-//! | 5 | Non-linear easing + scale-on-select | PARTIAL — this pass animates it (`ease_towards`, `FlyoutAnim`, `RimPalette`). |
-//!
-//! §3D deferred plan: when we move off egui, swap to `bevy_ui` 3D nodes for
-//! moves 1+2 and add a custom WGSL material for the background plasma (move 3).
-//! Tracked outside this module so the egui pass stays shippable on its own.
+//! TODO(holocron-3d-phase): tilt panels into perspective 3D quads; WGSL specular
+//! sweep + fresnel rim; moving curved-perspective background + radial plasma.
 
-use bevy::log::warn;
 use bevy_egui::egui;
 use egui::{FontData, FontFamily, FontId, TextStyle};
-
-/// Per-frame UI animation knob. Used by holocron motion to ease a value
-/// (0..=1) toward a target with `ease_out_cubic` rather than snapping.
-///
-/// `half_life_ms` is the time for the gap to halve; `ease_towards` resolves
-/// the curve analytically so it converges in `O(1)` regardless of dt.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct UiAnimState {
-    /// Current eased value (0..=1).
-    pub current: f32,
-    /// Target the value is easing toward (0..=1).
-    pub target: f32,
-    /// Half-life of the gap, in milliseconds. Smaller = snappier.
-    pub half_life_ms: f32,
-}
-
-impl Default for UiAnimState {
-    fn default() -> Self {
-        Self {
-            current: 0.0,
-            target: 0.0,
-            half_life_ms: 90.0,
-        }
-    }
-}
-
-impl UiAnimState {
-    /// Set the target to `to_open`. Resets `current` to 0 when transitioning
-    /// closed→open so the flyout animates up from scratch.
-    pub fn set_open(&mut self, to_open: bool) {
-        let new_target = if to_open { 1.0 } else { 0.0 };
-        if self.target < 0.5 && new_target > 0.5 {
-            // closed→open: animate from 0
-            self.current = 0.0;
-        }
-        self.target = new_target;
-    }
-
-    /// True while still animating (within a small epsilon of the target).
-    pub fn is_settled(&self) -> bool {
-        (self.current - self.target).abs() < 0.001
-    }
-}
-
-/// Step `state` toward its target by `dt` seconds, applying `ease_out_cubic`
-/// to the residual gap. The half-life model means a stable animation regardless
-/// of frame rate: 90ms half-life ≈ a ~220ms perceived settle, matching the
-/// 140–180ms flyout spec in `docs/design/ui-design-language.md` §8.2.
-pub fn ease_towards(state: &mut UiAnimState, dt: f32) {
-    if state.half_life_ms <= 0.0 {
-        state.current = state.target;
-        return;
-    }
-    // Fraction of the gap closed this frame: 1 - 2^(-dt_ms / half_life_ms).
-    let dt_ms = (dt * 1000.0).max(0.0);
-    let k = 1.0 - 0.5_f32.powf(dt_ms / state.half_life_ms);
-    let gap = state.target - state.current;
-    let eased_gap = gap * ease_out_cubic(k.clamp(0.0, 1.0));
-    state.current += eased_gap;
-    if (state.target - state.current).abs() < 0.0005 {
-        state.current = state.target;
-    }
-}
-
-/// Per-category rim palette: returns the outer-glow + inner-glow color pair for
-/// a given category accent and focus state. Honors the holocron design law
-/// ("colored rim glow, not white") and the "neon-as-signal" rule (the rim
-/// color tracks the category's semantic accent, not the chrome teal).
-#[must_use]
-pub fn rim_palette(accent: egui::Color32, focused: bool) -> RimColors {
-    if focused {
-        RimColors {
-            outer: accent.gamma_multiply(0.65),
-            outer_soft: accent.gamma_multiply(0.30),
-            inner: accent.gamma_multiply(0.45),
-        }
-    } else {
-        // Hover (or any non-focused active state): a smaller, dimmer bloom in
-        // the category accent. `rim_glow_for` gates idle with no-op so we only
-        // see this branch when something is being interacted with.
-        RimColors {
-            outer: accent.gamma_multiply(0.32),
-            outer_soft: accent.gamma_multiply(0.14),
-            inner: accent.gamma_multiply(0.18),
-        }
-    }
-}
-
-/// Triple of rim-glow colors for one focus level.
-#[derive(Debug, Clone, Copy)]
-pub struct RimColors {
-    /// Outer 1.5px stroke (closer pass).
-    pub outer: egui::Color32,
-    /// Outer 1.5px stroke (softer, expanded pass).
-    pub outer_soft: egui::Color32,
-    /// Inner 1.0px stroke (lifts the edge off the panel fill).
-    pub inner: egui::Color32,
-}
 
 // ===========================================================================
 // Keycap Palette — locked sRGB (dark mode primary)
@@ -219,10 +109,10 @@ pub const MANA: egui::Color32 = egui::Color32::from_rgb(155, 123, 240);
 // --- Holocron deck (Keycap midnight glass) ------------------------------------
 
 pub const DECK_BG: egui::Color32 = KC_BG;
-/// Frosted glass (`KC_BG_ELV` @ ~86% alpha).
-pub const DECK_GLASS: egui::Color32 = egui::Color32::from_rgba_premultiplied(26, 30, 36, 220);
-/// Hairline on glass (`KC_DIVIDER` @ stronger contrast).
-pub const DECK_BORDER: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 35, 41, 195);
+/// Frosted glass (`KC_BG_ELV` @ ~68% alpha).
+pub const DECK_GLASS: egui::Color32 = egui::Color32::from_rgba_premultiplied(26, 30, 36, 175);
+/// Hairline on glass (`KC_DIVIDER` @ ~55% alpha).
+pub const DECK_BORDER: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 35, 41, 140);
 /// Primary chrome accent — Keycap teal (was holocron amber).
 pub const DECK_ACCENT: egui::Color32 = KC_ACCENT;
 /// Back-compat alias → [`DECK_ACCENT`].
@@ -254,8 +144,6 @@ pub const RED: egui::Color32 = DANGER;
 pub const VIOLET: egui::Color32 = MANA;
 pub const BG_DEEP: egui::Color32 = INK_0;
 pub const PANEL_FILL: egui::Color32 = GRAPHITE_900;
-/// Elevated chip / badge background — layer 2 tint above PANEL_FILL.
-pub const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);
 pub const SURFACE: egui::Color32 = GRAPHITE_700;
 pub const SURFACE_HI: egui::Color32 = GRAPHITE_600;
 pub const INSET_FILL: egui::Color32 = GRAPHITE_800;
@@ -296,27 +184,20 @@ fn font_installed_id() -> egui::Id {
     egui::Id::new("kc_fonts_installed")
 }
 
-fn bricolage_loaded_id() -> egui::Id {
-    egui::Id::new("kc_bricolage_loaded")
-}
-
 /// Safe display FontId: uses the Bricolage display family ONLY if it is bound
 /// in this context's fonts, otherwise falls back to Proportional. Referencing
 /// an unbound `FontFamily::Name` panics egui ("not bound to any fonts"), so all
 /// display-font use sites MUST go through this helper.
 #[must_use]
 pub fn display_font(ctx: &egui::Context, size: f32) -> FontId {
-    let bricolage_family_bound = ctx.fonts(|f| {
+    let bound = ctx.fonts(|f| {
+        // `families()` lists every registered family; Name("bricolage") is only
+        // present when wire_font_families bound it to a loaded font.
         f.families()
             .iter()
             .any(|fam| *fam == FontFamily::Name("bricolage".into()))
     });
-
-    let bricolage_loaded = ctx
-        .data(|d| d.get_temp::<bool>(bricolage_loaded_id()))
-        .unwrap_or(false);
-
-    if bricolage_family_bound && bricolage_loaded {
+    if bound {
         FontId::new(size, FontFamily::Name("bricolage".into()))
     } else {
         FontId::new(size, FontFamily::Proportional)
@@ -330,15 +211,13 @@ pub fn install_keycap_fonts(ctx: &egui::Context) {
         return;
     }
     let mut fonts = egui::FontDefinitions::default();
-    let any_loaded = try_load_font_files(&mut fonts);
-    if any_loaded {
-        let bricolage_bound = wire_font_families(&mut fonts);
-        ctx.set_fonts(fonts);
-        ctx.data_mut(|d| d.insert_temp(bricolage_loaded_id(), bricolage_bound));
-    } else {
-        ctx.data_mut(|d| d.insert_temp(bricolage_loaded_id(), false));
-        warn!("No Bevy HUD fonts loaded from {:?}", font_assets_dir());
+    if !try_load_font_files(&mut fonts) {
+        // TODO(keycap-fonts): ship variable fonts in-repo if GitHub fetch fails in CI.
+        ctx.data_mut(|d| d.insert_temp(flag, true));
+        return;
     }
+    wire_font_families(&mut fonts);
+    ctx.set_fonts(fonts);
     ctx.data_mut(|d| d.insert_temp(flag, true));
 }
 
@@ -353,17 +232,11 @@ fn try_load_font_files(fonts: &mut egui::FontDefinitions) -> bool {
     let mut ok = false;
     for (name, file) in entries {
         let path = base.join(file);
-        match std::fs::read(&path) {
-            Ok(bytes) => {
-                fonts.font_data.insert(
-                    name.into(),
-                    std::sync::Arc::new(FontData::from_owned(bytes)),
-                );
-                ok = true;
-            }
-            Err(err) => {
-                warn!("Failed to load HUD font {}: {}", file, err);
-            }
+        if let Ok(bytes) = std::fs::read(&path) {
+            fonts
+                .font_data
+                .insert(name.into(), std::sync::Arc::new(FontData::from_owned(bytes)));
+            ok = true;
         }
     }
     ok
@@ -373,11 +246,12 @@ fn font_assets_dir() -> std::path::PathBuf {
     std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/fonts")
 }
 
-fn wire_font_families(fonts: &mut egui::FontDefinitions) -> bool {
+fn wire_font_families(fonts: &mut egui::FontDefinitions) {
     // CRITICAL: only bind a family to a font key that was actually loaded into
     // `font_data`. Binding FontFamily::Name to a missing key panics egui on the
     // first text render ("not bound to any fonts"). A custom Name family with
-    // no valid font ALSO panics if referenced.
+    // no valid font ALSO panics if referenced, so we always fall back to a
+    // loaded key (or skip the family entirely).
     let has = |k: &str| fonts.font_data.contains_key(k);
 
     if has("montserrat") {
@@ -394,27 +268,40 @@ fn wire_font_families(fonts: &mut egui::FontDefinitions) -> bool {
             .or_default()
             .insert(0, "jetbrains".into());
     }
-
-    let mut bricolage_bound = false;
-    if has("bricolage") {
-        fonts.families.insert(
-            FontFamily::Name("bricolage".into()),
-            vec!["bricolage".into()],
-        );
-        bricolage_bound = true;
+    // Bricolage display family — fall back to montserrat (or the default
+    // proportional stack) so the Name family is NEVER bound to nothing.
+    let bricolage_stack: Vec<String> = if has("bricolage") {
+        vec!["bricolage".into()]
+    } else if has("montserrat") {
+        vec!["montserrat".into()]
+    } else {
+        fonts
+            .families
+            .get(&FontFamily::Proportional)
+            .cloned()
+            .unwrap_or_default()
+    };
+    if !bricolage_stack.is_empty() {
+        fonts
+            .families
+            .insert(FontFamily::Name("bricolage".into()), bricolage_stack);
     }
-
-    if has("montserrat-bold") {
-        let mut bold_stack: Vec<String> = vec!["montserrat-bold".into()];
-        if has("montserrat") {
-            bold_stack.push("montserrat".into());
-        }
+    let bold_stack: Vec<String> = if has("montserrat-bold") {
+        vec!["montserrat-bold".into(), "montserrat".into()]
+    } else if has("montserrat") {
+        vec!["montserrat".into()]
+    } else {
+        fonts
+            .families
+            .get(&FontFamily::Proportional)
+            .cloned()
+            .unwrap_or_default()
+    };
+    if !bold_stack.is_empty() {
         fonts
             .families
             .insert(FontFamily::Name("montserrat-bold".into()), bold_stack);
     }
-
-    bricolage_bound
 }
 
 /// Apply Keycap chrome theme + typography to the egui context.
@@ -463,7 +350,7 @@ fn apply_widget_visuals(v: &mut egui::Visuals, r: egui::CornerRadius) {
 }
 
 pub fn apply_type_scale(style: &mut egui::Style) {
-    use FontFamily::{Monospace, Proportional};
+    use FontFamily::{Monospace, Name, Proportional};
     // Headings use Proportional (Montserrat once loaded) — NOT a custom Name
     // family. Referencing `FontFamily::Name("bricolage")` in a TextStyle panics
     // egui if the family is not bound yet at render time (font load is async /
@@ -471,22 +358,13 @@ pub fn apply_type_scale(style: &mut egui::Style) {
     // which checks the binding per-frame. This keeps the HUD crash-proof.
     style.text_styles = [
         (TextStyle::Heading, FontId::new(16.0, Proportional)),
-        (
-            TextStyle::Name("Display".into()),
-            FontId::new(22.0, Proportional),
-        ),
+        (TextStyle::Name("Display".into()), FontId::new(22.0, Proportional)),
         (TextStyle::Body, FontId::new(13.5, Proportional)),
         (TextStyle::Button, FontId::new(11.5, Proportional)),
         (TextStyle::Small, FontId::new(10.5, Proportional)),
         (TextStyle::Monospace, FontId::new(14.0, Monospace)),
-        (
-            TextStyle::Name("NumericSm".into()),
-            FontId::new(11.5, Monospace),
-        ),
-        (
-            TextStyle::Name("Coord".into()),
-            FontId::new(12.0, Monospace),
-        ),
+        (TextStyle::Name("NumericSm".into()), FontId::new(11.5, Monospace)),
+        (TextStyle::Name("Coord".into()), FontId::new(12.0, Monospace)),
     ]
     .into();
     style.spacing.item_spacing = egui::vec2(8.0, 8.0);
@@ -520,17 +398,8 @@ pub fn deck_chip(ui: &mut egui::Ui, label: &str, value: &str, accent: egui::Colo
         .inner_margin(egui::Margin::symmetric(SPACE_MD as i8, SPACE_XS as i8))
         .show(ui, |ui| {
             ui.horizontal(|ui| {
-                ui.label(
-                    egui::RichText::new(label.to_uppercase())
-                        .color(DECK_TEXT_MID)
-                        .small(),
-                );
-                ui.label(
-                    egui::RichText::new(value)
-                        .monospace()
-                        .color(DECK_TEXT)
-                        .strong(),
-                );
+                ui.label(egui::RichText::new(label.to_uppercase()).color(DECK_TEXT_MID).small());
+                ui.label(egui::RichText::new(value).monospace().color(DECK_TEXT).strong());
             });
             let r = ui.min_rect();
             ui.painter().hline(
@@ -645,7 +514,7 @@ pub fn gloss_sheen(painter: &egui::Painter, rect: egui::Rect) {
     }
     let gloss = egui::Rect::from_min_max(rect.min, egui::pos2(rect.right(), rect.top() + h));
     let mut mesh = egui::Mesh::default();
-    let c_top = egui::Color32::from_white_alpha(110);
+    let c_top = egui::Color32::from_white_alpha(90);
     let c_bot = egui::Color32::TRANSPARENT;
     let i = mesh.vertices.len() as u32;
     mesh.colored_vertex(gloss.left_top(), c_top);
@@ -657,9 +526,7 @@ pub fn gloss_sheen(painter: &egui::Painter, rect: egui::Rect) {
     painter.add(egui::Shape::mesh(mesh));
 }
 
-/// Draw a 2-pass outer rim bloom in `accent` (the holocron colored-rim rule).
-/// The 2-pass (close + soft) reads as a thin lit halo on a dark surface, not
-/// a flat white outline. Use [`rim_palette`] for category-aware color choices.
+/// Colored outer rim bloom (teal) — not a white halo.
 pub fn rim_glow(painter: &egui::Painter, rect: egui::Rect, accent: egui::Color32, radius: u8) {
     for (expand, alpha) in [(4.0, 0.45_f32), (9.0, 0.22)] {
         painter.rect_stroke(
@@ -667,38 +534,6 @@ pub fn rim_glow(painter: &egui::Painter, rect: egui::Rect, accent: egui::Color32
             radius as f32 + expand * 0.25,
             egui::Stroke::new(1.5, accent.gamma_multiply(alpha)),
             egui::StrokeKind::Outside,
-        );
-    }
-}
-
-/// 2-pass rim bloom tinted by the category accent. `focused` picks the brighter
-/// (lit) pair; `hovered` the dimmer hover pair; idle has no rim (just the
-/// panel stroke from the Frame). Used by the bottom tool palette so each
-/// category glows in its own color when active (Life=green, Disaster=red, …).
-pub fn rim_glow_for(painter: &egui::Painter, rect: egui::Rect, accent: egui::Color32, radius: u8, focused: bool, hovered: bool) {
-    let p = if focused {
-        rim_palette(accent, true)
-    } else if hovered {
-        rim_palette(accent, false)
-    } else {
-        return;
-    };
-    // Outer 1.5px stroke (close + soft pass — same model as `rim_glow`).
-    for (expand, alpha) in [(4.0_f32, p.outer), (9.0, p.outer_soft)] {
-        painter.rect_stroke(
-            rect.expand(expand),
-            radius as f32 + expand * 0.25,
-            egui::Stroke::new(1.5, alpha),
-            egui::StrokeKind::Outside,
-        );
-    }
-    // Inner 1.0px stroke lifts the lit edge off the fill.
-    if p.inner != egui::Color32::TRANSPARENT {
-        painter.rect_stroke(
-            rect.shrink(1.2),
-            radius as f32,
-            egui::Stroke::new(1.0, p.inner),
-            egui::StrokeKind::Inside,
         );
     }
 }
@@ -716,24 +551,6 @@ pub fn panel_finish(
     if focused {
         rim_glow(painter, rect, KC_ACCENT, radius);
         inner_glow(painter, rect, KC_ACCENT, radius);
-    }
-}
-
-/// Like [`panel_finish`] but tints the rim with the supplied accent (used by
-/// the tool palette so each category's rim glows in its own color).
-pub fn panel_finish_accent(
-    painter: &egui::Painter,
-    rect: egui::Rect,
-    radius: u8,
-    pressed: bool,
-    focused: bool,
-    accent: egui::Color32,
-) {
-    blade_frame(painter, rect, pressed);
-    gloss_sheen(painter, rect);
-    if focused {
-        rim_glow(painter, rect, accent, radius);
-        inner_glow(painter, rect, accent, radius);
     }
 }
 
@@ -755,11 +572,8 @@ pub fn inner_glow(painter: &egui::Painter, rect: egui::Rect, accent: egui::Color
 pub fn hairline(ui: &mut egui::Ui) {
     let rect = ui.available_rect_before_wrap();
     let y = ui.cursor().top();
-    ui.painter().hline(
-        rect.x_range(),
-        y,
-        egui::Stroke::new(1.0, KC_DIVIDER.gamma_multiply(0.85)),
-    );
+    ui.painter()
+        .hline(rect.x_range(), y, egui::Stroke::new(1.0, KC_DIVIDER.gamma_multiply(0.85)));
     ui.add_space(8.0);
 }
 
@@ -794,11 +608,7 @@ pub fn chip_labeled(
             if !glyph.is_empty() {
                 ui.label(egui::RichText::new(glyph).color(color));
             }
-            ui.label(
-                egui::RichText::new(label.to_uppercase())
-                    .color(TEXT_LOW)
-                    .small(),
-            );
+            ui.label(egui::RichText::new(label.to_uppercase()).color(TEXT_LOW).small());
             ui.label(egui::RichText::new(value).monospace().color(value_color));
         });
 }
@@ -835,198 +645,6 @@ pub fn motion_rect(
     out
 }
 
-/// Frosted-glass panel fill: translucent enough that the 3D scene clearly
-/// reads through the panel (true Mica/Liquid-Glass), lighter than the opaque
-/// graphite panels so layered depth shows. Alpha kept low on purpose.
-pub const GLASS_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(22, 26, 32, 222);
-/// Thin, dark rim edge that reads as midnight glass.
-pub const GLASS_EDGE: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 35, 41, 180);
-
-/// Frosted Liquid Glass frame for decks, sidebars, and pill shells.
-///
-/// Use [`liquid_glass_finish`] *after* drawing the panel content (it paints the
-/// gloss sheen, soft inner glow, and colored teal rim that make the panel read
-/// as frosted glass rather than a flat fill).
-pub fn liquid_glass_frame(margin: egui::Margin, radius: u8) -> egui::Frame {
-    egui::Frame::NONE
-        .fill(GLASS_FILL)
-        .inner_margin(margin)
-        .stroke(egui::Stroke::new(1.0, GLASS_EDGE))
-        .corner_radius(egui::CornerRadius::same(radius))
-        .shadow(floating_shadow())
-}
-
-/// Bake the dimensional frosted-glass read onto a panel rect drawn with
-/// [`liquid_glass_frame`]: top gloss sheen, layered soft inner glow, a thin
-/// light inner highlight, and a subtle colored teal rim. Call once with the
-/// panel's `ui.min_rect()` after the content is laid out.
-pub fn liquid_glass_finish(painter: &egui::Painter, rect: egui::Rect, radius: u8) {
-    gloss_sheen(painter, rect);
-    soft_inner_glow(painter, rect, KC_ACCENT, radius);
-    // Thin light inner highlight (the lifted glass edge) + a darker lower bevel.
-    painter.rect_stroke(
-        rect.shrink(1.0),
-        radius as f32,
-        egui::Stroke::new(1.2, egui::Color32::from_white_alpha(38)),
-        egui::StrokeKind::Inside,
-    );
-    // Colored TEAL rim glow (2-pass, not white) so the panel reads as a lit holo
-    // blade — the holocron "colored-glow-not-white" rule.
-    rim_glow(painter, rect, KC_ACCENT, radius);
-}
-
-/// Draw a block-style Liquid Glass pill (fill + rim + sheen + optional accent bloom).
-pub fn liquid_glass_pill(
-    painter: &egui::Painter,
-    rect: egui::Rect,
-    radius: u8,
-    lit: bool,
-    hovered: bool,
-) {
-    let fill = if lit {
-        GLASS_FILL.gamma_multiply(1.22)
-    } else if hovered {
-        GLASS_FILL.gamma_multiply(1.12)
-    } else {
-        GLASS_FILL
-    };
-    painter.rect_filled(rect, radius as f32, fill);
-    painter.rect_stroke(
-        rect,
-        radius as f32,
-        egui::Stroke::new(1.0, if lit { KC_ACCENT } else { GLASS_EDGE }),
-        egui::StrokeKind::Outside,
-    );
-    gloss_sheen(painter, rect);
-    let inner = rect.shrink(1.5);
-    painter.rect_stroke(
-        inner,
-        radius as f32,
-        egui::Stroke::new(1.5, egui::Color32::from_white_alpha(26)),
-        egui::StrokeKind::Inside,
-    );
-    if lit {
-        rim_glow(painter, rect, KC_ACCENT, radius);
-        inner_glow(painter, rect, KC_ACCENT, radius);
-    }
-}
-
-pub fn panel_glass_fill(hovered: bool, pressed: bool) -> egui::Color32 {
-    if pressed {
-        DECK_GLASS.gamma_multiply(1.14)
-    } else if hovered {
-        DECK_GLASS.gamma_multiply(1.07)
-    } else {
-        DECK_GLASS
-    }
-}
-
-pub fn panel_edge_stroke(hovered: bool, focused: bool) -> egui::Stroke {
-    if focused {
-        egui::Stroke::new(1.2, DECK_ACCENT.gamma_multiply(0.72))
-    } else if hovered {
-        egui::Stroke::new(1.0, DECK_ACCENT.gamma_multiply(0.44))
-    } else {
-        egui::Stroke::new(1.0, DECK_BORDER)
-    }
-}
-
-/// Subtle multi-pass inner glow inset for depth in glass panels and pills.
-pub fn soft_inner_glow(
-    painter: &egui::Painter,
-    rect: egui::Rect,
-    color: egui::Color32,
-    radius: u8,
-) {
-    for (i, alpha) in [(1.0_f32, 0.18_f32), (2.7, 0.12), (4.6, 0.08)] {
-        painter.rect_stroke(
-            rect.shrink(i),
-            radius as f32 * 0.9,
-            egui::Stroke::new(1.0, color.gamma_multiply(alpha)),
-            egui::StrokeKind::Inside,
-        );
-    }
-}
-
-/// Draw a low-cost diagonal specular sweep across `rect` driven by `time`.
-pub fn specular_sweep(painter: &egui::Painter, rect: egui::Rect, time: f64, radius: u8) {
-    let mut mesh = egui::Mesh::default();
-    let speed = 0.28_f64;
-    let band = (rect.width() * 0.28).max(20.0);
-    let phase = (time as f32 * speed as f32).fract();
-    let drift = rect.width() + rect.height() + band * 1.2;
-    let x = rect.left() - band * 0.6 + phase * drift;
-    let y = rect.top() + rect.height() * 0.28;
-    let up = egui::vec2(rect.height() * 0.08, -rect.height() * 0.08);
-    let p0 = egui::pos2(x, y) + up;
-    let p1 = egui::pos2(x + band, y) + up;
-    let p2 = egui::pos2(p1.x + rect.height() * 0.12, p1.y + rect.height());
-    let p3 = egui::pos2(p0.x + rect.height() * 0.12, p0.y + rect.height());
-    let i = mesh.vertices.len() as u32;
-    mesh.colored_vertex(p0, egui::Color32::from_white_alpha(0));
-    mesh.colored_vertex(p1, egui::Color32::from_white_alpha(60));
-    mesh.colored_vertex(p2, egui::Color32::from_white_alpha(0));
-    mesh.colored_vertex(p3, egui::Color32::from_white_alpha(0));
-    mesh.add_triangle(i, i + 1, i + 2);
-    mesh.add_triangle(i, i + 2, i + 3);
-    painter.add(egui::Shape::mesh(mesh));
-    painter.rect_stroke(
-        rect,
-        radius as f32,
-        egui::Stroke::new(1.0, DECK_BORDER),
-        egui::StrokeKind::Inside,
-    );
-    panel_finish(painter, rect, radius, false, false);
-}
-
-/// Paint a centred icon (PNG when `icon_tex` is `Some`, else the unicode glyph)
-/// above a small caption inside `rect`. Shared by the cluster pills + tiles so
-/// category and sub-tool blocks render identically.
-pub fn paint_cluster_icon_label(
-    p: &egui::Painter,
-    rect: egui::Rect,
-    icon: &str,
-    label: &str,
-    lit: bool,
-    accent: egui::Color32,
-    icon_tex: Option<egui::TextureId>,
-) {
-    let icon_color = if lit { accent } else { DECK_TEXT };
-    let icon_at = rect.min + egui::vec2(rect.width() * 0.5, rect.height() * 0.38);
-    if let Some(tex) = icon_tex {
-        let side = (rect.height() * 0.42).clamp(18.0, 28.0);
-        let img_rect = egui::Rect::from_center_size(icon_at, egui::vec2(side, side));
-        let tint = if lit {
-            egui::Color32::WHITE
-        } else {
-            egui::Color32::from_white_alpha(220)
-        };
-        p.image(
-            tex,
-            img_rect,
-            egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
-            tint,
-        );
-    } else {
-        p.text(
-            icon_at,
-            egui::Align2::CENTER_CENTER,
-            icon,
-            egui::FontId::proportional(20.0),
-            icon_color,
-        );
-    }
-    let label_color = if lit { accent } else { DECK_TEXT_MID };
-    let label_at = rect.min + egui::vec2(rect.width() * 0.5, rect.height() * 0.80);
-    p.text(
-        label_at,
-        egui::Align2::CENTER_CENTER,
-        label,
-        egui::FontId::proportional(10.5),
-        label_color,
-    );
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1050,13 +668,7 @@ mod tests {
     fn no_accent_used_as_widget_bg_fill() {
         let mut v = egui::Visuals::dark();
         apply_widget_visuals(&mut v, egui::CornerRadius::same(RADIUS));
-        let graphite = [
-            GRAPHITE_500,
-            GRAPHITE_600,
-            GRAPHITE_700,
-            GRAPHITE_800,
-            GRAPHITE_900,
-        ];
+        let graphite = [GRAPHITE_500, GRAPHITE_600, GRAPHITE_700, GRAPHITE_800, GRAPHITE_900];
         for fill in [
             v.widgets.inactive.bg_fill,
             v.widgets.hovered.bg_fill,
@@ -1081,65 +693,5 @@ mod tests {
     fn ease_out_cubic_endpoints() {
         assert!((ease_out_cubic(0.0) - 0.0).abs() < f32::EPSILON);
         assert!((ease_out_cubic(1.0) - 1.0).abs() < f32::EPSILON);
-    }
-
-    #[test]
-    fn ease_towards_converges_to_target() {
-        let mut s = UiAnimState { current: 0.0, target: 1.0, half_life_ms: 90.0 };
-        // 30fps for ~1 second; should be within 1% of target.
-        for _ in 0..30 {
-            ease_towards(&mut s, 1.0 / 30.0);
-        }
-        assert!((s.current - 1.0).abs() < 0.01, "did not converge: {}", s.current);
-    }
-
-    #[test]
-    fn ease_towards_handles_zero_half_life() {
-        let mut s = UiAnimState { current: 0.0, target: 1.0, half_life_ms: 0.0 };
-        ease_towards(&mut s, 0.016);
-        assert_eq!(s.current, 1.0);
-    }
-
-    #[test]
-    fn ease_towards_handles_negative_dt() {
-        let mut s = UiAnimState { current: 0.0, target: 1.0, half_life_ms: 90.0 };
-        ease_towards(&mut s, -1.0);
-        // Negative dt: treated as zero; current should not move.
-        assert_eq!(s.current, 0.0);
-    }
-
-    #[test]
-    fn set_open_resets_current_when_transitioning_to_open() {
-        let mut s = UiAnimState { current: 0.8, target: 0.8, half_life_ms: 90.0 };
-        s.set_open(true);
-        assert_eq!(s.target, 1.0);
-        assert_eq!(s.current, 0.0, "closed→open must restart from 0");
-    }
-
-    #[test]
-    fn set_open_does_not_reset_when_closing() {
-        let mut s = UiAnimState { current: 0.8, target: 0.8, half_life_ms: 90.0 };
-        s.set_open(false);
-        assert_eq!(s.target, 0.0);
-        assert_eq!(s.current, 0.8, "closing should ease from current, not jump");
-    }
-
-    #[test]
-    fn rim_palette_focused_is_brighter_than_hover() {
-        let accent = KC_ACCENT;
-        let f = rim_palette(accent, true);
-        let h = rim_palette(accent, false);
-        let luma = |c: egui::Color32| c.r() as u32 + c.g() as u32 + c.b() as u32;
-        assert!(luma(f.outer) > luma(h.outer), "focused outer should be brighter");
-        assert!(luma(f.inner) > luma(h.inner) || f.inner == KC_ACCENT, "focused inner lights up");
-    }
-
-    #[test]
-    fn rim_palette_idle_is_dimmest() {
-        // Hover/focus-state contrast: focused outer alpha 0.65 > hover 0.32.
-        let accent = KC_ACCENT;
-        let h = rim_palette(accent, false);
-        let luma = |c: egui::Color32| c.r() as u32 + c.g() as u32 + c.b() as u32;
-        assert!(luma(h.outer) < luma(rim_palette(accent, true).outer));
     }
 }

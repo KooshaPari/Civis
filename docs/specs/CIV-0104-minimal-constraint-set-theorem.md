@@ -782,8 +782,6 @@ pub struct ConstraintSetResult {
 }
 ```
 
-**Invariant:** `all_satisfied` is derived from `results` and must be `true` iff all five entries are `OK`. `most_severe` must be one of the five per-constraint results and equal the maximum severity observed in `results`. A `ConstraintSetResult` that violates either relation is invalid.
-
 ---
 
 ## 7. Simulation Integration
@@ -1499,11 +1497,6 @@ Research clients can subscribe to the `stability.*` event stream to receive `sta
 ### FR-CIV-0104-010: Recovery Window Tracking
 **Spec:** `ticks_below_recovery_threshold` increments when L \< λ_rec and resets when L recovers above λ_rec.
 **Test:** Drive L below λ_rec for 10 ticks then above; verify counter increments then resets.
-**Status:** Open
-
-### FR-CIV-0104-011: ConstraintSetResult Self-Consistency
-**Spec:** `ConstraintSetResult` must satisfy the internal relation `all_satisfied == results.iter().all(|r| r.is_ok())`, and `most_severe` must equal the highest-severity member of `results`.
-**Test:** Construct a mixed-severity `check_all` output and assert `all_satisfied` matches the five per-constraint statuses while `most_severe` matches the max severity in `results`.
 **Status:** Open
 
 ---

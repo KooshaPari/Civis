@@ -6,8 +6,8 @@
 //! [`MinimapCamera`]). This module paints the holo-cyan rim, scanlines, and
 //! corner brackets on [`EguiPrimaryContextPass`] aligned to that panel.
 //!
-//! Future holohud-3d work: replace this 2.5D egui overlay with a tilted 3D
-//! mesh quad + custom fresnel/emissive shader sampling the minimap render target.
+//! TODO(holohud-3d): Replace this 2.5D egui overlay with a tilted 3D mesh
+//! quad + custom fresnel/emissive shader sampling the minimap render target.
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
@@ -22,15 +22,12 @@ pub struct HoloMinimapPlugin;
 
 impl Plugin for HoloMinimapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            EguiPrimaryContextPass,
-            draw_holo_minimap_overlay.run_if(in_game),
-        );
+        app.add_systems(EguiPrimaryContextPass, draw_holo_minimap_overlay.run_if(in_game));
     }
 }
 
 /// Screen-space rect matching the Bevy UI [`MinimapRoot`] anchor.
-fn minimap_content_rect(ctx: &egui::Context) -> egui::Rect {
+fn minimap_screen_rect(ctx: &egui::Context) -> egui::Rect {
     let screen = ctx.content_rect();
     egui::Rect::from_min_size(
         egui::pos2(
@@ -45,7 +42,7 @@ fn draw_holo_minimap_overlay(mut contexts: EguiContexts, time: Res<Time>) {
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-    let rect = minimap_content_rect(ctx);
+    let rect = minimap_screen_rect(ctx);
     let phase = HoloPhase::settled(time.elapsed_secs());
     let layer = egui::LayerId::new(egui::Order::Foreground, egui::Id::new("holo_minimap"));
     let painter = ctx.layer_painter(layer);

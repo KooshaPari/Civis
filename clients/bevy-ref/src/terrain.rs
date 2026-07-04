@@ -91,10 +91,7 @@ pub fn terrain_mesh() -> Mesh {
         }
     }
 
-    let mut mesh = Mesh::new(
-        PrimitiveTopology::TriangleList,
-        RenderAssetUsages::default(),
-    );
+    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default());
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
     mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
     mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
@@ -130,16 +127,6 @@ pub fn terrain_height(x: f32, z: f32) -> f32 {
 /// Legacy height-banded palette, kept exported for callers that colour by
 /// elevation alone (e.g. materials gradient documentation). Biome colouring
 /// in the mesh uses [`biome_color`] instead.
-/// Map terrain elevation to a PBR [`crate::materials::Biome`] height band.
-///
-/// Only compiled with `pbr-textures`; uses the same normalised thresholds as
-/// [`crate::materials::Biome::from_height_norm`].
-#[cfg(feature = "pbr-textures")]
-#[must_use]
-pub fn pbr_biome_at_height(height: f32) -> crate::materials::Biome {
-    crate::materials::Biome::from_height_norm(height / HEIGHT_SCALE)
-}
-
 pub fn color_for_height(height: f32) -> [f32; 4] {
     let t = height / HEIGHT_SCALE;
     if t < WATER_LEVEL / HEIGHT_SCALE {
@@ -367,8 +354,7 @@ fn classify_biome(x: usize, z: usize, h: f32, flow: f32, height: &[f32]) -> u8 {
     let nz = z as f32 / (GRID - 1) as f32;
     let alt = (h - WATER_LEVEL) / (HEIGHT_SCALE - WATER_LEVEL); // 0..1 above sea
     let lat = (nz - 0.5).abs() * 2.0; // 0 at equator, 1 at poles
-    let temp =
-        (1.0 - lat) - alt * 0.85 + (fbm(nx * 6.0, nz * 6.0, 3, 2.0, 0.5, SEED ^ 0x77) - 0.5) * 0.15;
+    let temp = (1.0 - lat) - alt * 0.85 + (fbm(nx * 6.0, nz * 6.0, 3, 2.0, 0.5, SEED ^ 0x77) - 0.5) * 0.15;
     let moist = moisture(nx, nz, height);
     biome_from_climate(temp, moist, alt)
 }
@@ -570,7 +556,11 @@ mod tests {
 
     #[test]
     fn land_ocean_ratio_reasonable() {
-        let land = field().height.iter().filter(|&&h| h >= WATER_LEVEL).count();
+        let land = field()
+            .height
+            .iter()
+            .filter(|&&h| h >= WATER_LEVEL)
+            .count();
         let ratio = land as f32 / field().height.len() as f32;
         assert!((0.4..=0.8).contains(&ratio), "land ratio={ratio}");
     }
@@ -593,15 +583,6 @@ mod tests {
         }
         let distinct = seen.iter().filter(|&&s| s).count();
         assert!(distinct >= 5, "only {distinct} distinct biomes");
-    }
-
-    #[cfg(feature = "pbr-textures")]
-    #[test]
-    fn pbr_biome_at_height_uses_height_norm_bands() {
-        let beach = pbr_biome_at_height(0.20 * HEIGHT_SCALE);
-        assert_eq!(beach, crate::materials::Biome::SandBeach);
-        let snow = pbr_biome_at_height(0.95 * HEIGHT_SCALE);
-        assert_eq!(snow, crate::materials::Biome::SnowPure);
     }
 
     #[test]

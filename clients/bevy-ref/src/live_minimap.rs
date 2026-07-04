@@ -7,9 +7,9 @@ use bevy::prelude::*;
 use bevy::ui::FocusPolicy;
 use civ_voxel::ChunkId;
 
+use civ_protocol_3d::BuildingProvenance;
 use crate::minimap::MinimapDot;
 use crate::{chunk_to_minimap_uv, decode_chunk_id, world_xz_to_minimap_uv, MinimapBounds};
-use civ_protocol_3d::BuildingProvenance;
 
 /// Re-export building provenance tint from [`live_stream`](crate::live_stream).
 pub use crate::live_stream::building_minimap_dot_color;
@@ -125,7 +125,10 @@ pub fn minimap_bounds_from_keys(chunk_keys: &[u64]) -> Option<MinimapBounds> {
 pub fn chunk_centre_world_xz(chunk_id: ChunkId, chunk_edge: usize) -> (f32, f32) {
     let (cx, _cy, cz) = decode_chunk_id(chunk_id);
     let edge = chunk_edge as f32;
-    ((cx as f32 + 0.5) * edge, (cz as f32 + 0.5) * edge)
+    (
+        (cx as f32 + 0.5) * edge,
+        (cz as f32 + 0.5) * edge,
+    )
 }
 
 /// UV for a chunk centre within chunk-grid `bounds`.
@@ -178,8 +181,6 @@ pub fn spawn_minimap_dot(
 mod tests {
     use super::*;
 
-    /// FR-CIV-BEVY-016 — minimap focus bounds and UV mapping remain stable under focus changes.
-    /// FR-CIV-BEVY-022 — live minimap layout and UV paths.
     #[test]
     fn focus_rect_maps_centre_to_mid_uv() {
         let focus = MinimapFocusRect {
@@ -204,7 +205,6 @@ mod tests {
         assert!(top[1] < bottom[1]);
     }
 
-    /// FR-CIV-BEVY-022 — insets and vflip preserve HUD coordinate expectations for live minimap.
     #[test]
     fn inset_layout_offsets_by_inset() {
         let layout = MinimapDotLayout::InsetHud {
@@ -217,7 +217,6 @@ mod tests {
         assert!((top - 4.0).abs() < 1e-5);
     }
 
-    /// FR-CIV-BEVY-016 — key minimap bound cases are deterministic for live-scene rendering.
     #[test]
     fn bounds_from_keys_empty_is_none() {
         assert!(minimap_bounds_from_keys(&[]).is_none());

@@ -2,39 +2,25 @@
 
 use std::collections::{HashMap, HashSet};
 
-#[cfg(feature = "egui")]
-use crate::event_feed::{EventFeed, EventKind};
 use bevy::pbr::wireframe::{Wireframe, WireframeColor};
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
 use bevy::sprite::Text2d;
 use bevy::text::{TextColor, TextFont};
 use civ_protocol_3d::{
-    agent_world_translation, map_build_provenance, AgentAppearanceFrame, BattleEvent3d,
-    BirthEvent3d, BuildingDiffFrame, BuildingGraph, BuildingKind3d, BuildingProvenance,
-    CivilianStateEntry, CivilianStateFrame, DeathEvent3d, DisasterEvent3d, EventFeedMessage3d,
-    FacadeStyle, FactionStateFrame, ParcelKind, TechEvent3d, VoxelDeltaFrame, WorldXZ,
+    agent_world_translation, map_build_provenance, AgentAppearanceFrame, BuildingDiffFrame,
+    BuildingGraph, BuildingKind3d, BuildingProvenance, FacadeStyle, ParcelKind, VoxelDeltaFrame,
+    WorldXZ,
 };
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId};
 
 use crate::bevy_render::{apply_chunk_material, mesh_buffer_to_bevy};
-use crate::frame_budget::{scaled_cull_distance, scaled_mesh_lod_distance, GpuQualityMode};
-use crate::game_ui::civilian_display_name;
 use crate::live_ground::{live_ground_y, ChunkVoxelCache};
 use crate::{
-    agent_color_from_id, agent_scale_multiplier, chunk_distance_from_camera, decode_chunk_id,
-    mesh_lod_level, should_render_chunk, DebugRender, LiveEntityKind, SelectedLiveEntity,
-    AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
+    agent_color_from_id, agent_label_stub, agent_scale_multiplier, chunk_distance_from_camera,
+    decode_chunk_id, mesh_lod_level, should_render_chunk, DebugRender, AGENT_MARKER_DEPTH,
+    AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
 };
-use crate::ws_client::WsClient;
-
-/// Bevy resource wrapping a [`WsClient`] so egui plugins can send JSON-RPC calls
-/// to `civ-server` without depending on the window binary crate.
-#[derive(Resource, Clone)]
-pub struct LiveBridge {
-    /// Shared WebSocket client for live JSON-RPC + frame traffic.
-    pub client: WsClient,
-}
 
 /// Chunk edge length in voxels (matches kernel).
 pub const LIVE_CHUNK_EDGE: usize = 16;
@@ -55,10 +41,8 @@ pub const AGENT_LABEL_Y_OFFSET: f32 = 1.05;
 pub struct StreamCulling {
     /// Camera position in world space.
     pub eye: [f32; 3],
-    /// Maximum render distance in world units (already scaled for [`gpu_quality`]).
+    /// Maximum render distance in world units.
     pub max_distance: f32,
-    /// Active GPU quality recovery mode for chunk LOD selection.
-    pub gpu_quality: GpuQualityMode,
 }
 
 /// Marker for a streamed voxel chunk entity.
@@ -125,18 +109,6 @@ pub struct LiveStreamScene {
     pub building_materials: HashMap<u64, Handle<StandardMaterial>>,
     pub graph_parcel_materials: HashMap<u64, Handle<StandardMaterial>>,
     pub building_provenance: BuildingProvenance,
-    /// Civilian entity ids from the latest `Frame3d::CivilianState` (HUD counts).
-    pub civilian_ids: HashSet<u64>,
-    /// Latest civilian payloads keyed by stable civilian id (inspector + HUD).
-    pub civilian_entries: HashMap<u64, CivilianStateEntry>,
-    /// Faction ids from the latest `Frame3d::FactionState` (HUD counts).
-    pub factions: HashSet<u32>,
-    /// Latest faction payloads (diplomacy panel + HUD era).
-    pub faction_entries: Vec<civ_protocol_3d::FactionStateEntry>,
-    /// Max era from the latest faction state frame (HUD era chip).
-    pub faction_era: u16,
-    /// Civilian count per faction id from the latest FactionState frame (FR-CIV-PROTO-001).
-    pub population_by_faction: std::collections::BTreeMap<u32, u32>,
 }
 
 impl Default for LiveStreamScene {
@@ -154,299 +126,8 @@ impl Default for LiveStreamScene {
             // (intentional — every diff carries an explicit tag). The renderer
             // simply tracks the last-observed provenance, starting Procedural.
             building_provenance: BuildingProvenance::Procedural,
-            civilian_ids: HashSet::default(),
-            civilian_entries: HashMap::default(),
-            factions: HashSet::default(),
-            faction_entries: Vec::new(),
-            faction_era: 0,
-            population_by_faction: std::collections::BTreeMap::new(),
         }
     }
-}
-
-/// Replaces civilian HUD tracking from a server `CivilianState` snapshot (may truncate at 256).
-pub fn apply_civilian_state_frame(scene: &mut LiveStreamScene, frame: CivilianStateFrame) {
-    scene.civilian_ids.clear();
-    scene.civilian_entries.clear();
-    for entry in frame.civilians {
-        scene.civilian_ids.insert(entry.id);
-        scene.civilian_entries.insert(entry.id, entry);
-    }
-}
-
-/// Replaces faction HUD tracking from a server `FactionState` snapshot.
-pub fn apply_faction_state_frame(scene: &mut LiveStreamScene, frame: FactionStateFrame) {
-    scene.factions.clear();
-    scene.faction_era = frame
-        .factions
-        .iter()
-        .map(|entry| entry.era)
-        .max()
-        .unwrap_or(0);
-    scene.faction_entries = frame.factions;
-    scene.faction_entries.sort_by_key(|entry| entry.id);
-    scene
-        .factions
-        .extend(scene.faction_entries.iter().map(|entry| entry.id));
-    scene.population_by_faction = frame.population_by_faction;
-}
-
-/// Maps a `FactionState` wire frame into [`DiplomacyState`] for the egui panel.
-///
-/// Relation cells are neutral (`0`) until a diplomacy simulation feeds stance data.
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub fn sync_diplomacy_from_faction_frame(
-    diplomacy: &mut crate::diplomacy_ui::DiplomacyState,
-    frame: &FactionStateFrame,
-    population_by_faction: &HashMap<u32, u32>,
-) {
-    let open = diplomacy.open;
-    *diplomacy =
-        crate::diplomacy_ui::diplomacy_state_from_faction_frame(frame, population_by_faction);
-    diplomacy.open = open;
-}
-
-/// HUD population count from the latest civilian state snapshot.
-#[must_use]
-pub fn civilian_hud_count(scene: &LiveStreamScene) -> usize {
-    scene.civilian_ids.len()
-}
-
-/// HUD faction count from the latest faction state snapshot.
-#[must_use]
-pub fn faction_hud_count(scene: &LiveStreamScene) -> usize {
-    scene.factions.len()
-}
-
-/// Copies civilian/faction HUD counts from the latest state frames into [`LiveHudSnapshot`].
-pub fn sync_live_hud_civilian_faction_counts(
-    hud: &mut crate::LiveHudSnapshot,
-    scene: &LiveStreamScene,
-) {
-    hud.civilian_count = civilian_hud_count(scene);
-    hud.faction_count = faction_hud_count(scene);
-}
-
-/// Resolves a live viewport pick id to the latest [`CivilianStateEntry`].
-///
-/// Primary lookup uses stable civilian ids in [`LiveStreamScene::civilian_entries`].
-/// Fallback: when the picked id is a streamed agent key in [`LiveStreamScene::agents`]
-/// but differs from the stable civilian id (legacy servers used ECS entity ids in
-/// `AgentAppearanceUpdate::agent_id` while `CivilianStateEntry::id` is
-/// `AgentCivilian::id`; item 63 aligns server agent ids), return the sole civilian
-/// wire entry when exactly one agent marker and one civilian payload are tracked.
-#[must_use]
-pub fn resolve_civilian_for_live_pick(
-    picked_id: u64,
-    scene: &LiveStreamScene,
-) -> Option<&CivilianStateEntry> {
-    if let Some(entry) = scene.civilian_entries.get(&picked_id) {
-        return Some(entry);
-    }
-    if scene.agents.contains_key(&picked_id)
-        && scene.agents.len() == 1
-        && scene.civilian_entries.len() == 1
-    {
-        return scene.civilian_entries.values().next();
-    }
-    None
-}
-
-/// One-line pick detail for HUD overlay (name, profession, health% when wire data exists).
-#[must_use]
-pub fn format_live_pick_hud_line(
-    selection: Option<SelectedLiveEntity>,
-    scene: &LiveStreamScene,
-) -> Option<String> {
-    let selected = selection?;
-    match selected.kind {
-        LiveEntityKind::Agent => resolve_civilian_for_live_pick(selected.id, scene)
-            .map(format_civilian_pick_hud_line)
-            .or_else(|| Some(format!("Agent #{}", selected.id))),
-        LiveEntityKind::Building => Some(format!("Building #{}", selected.id)),
-        LiveEntityKind::GraphParcel => Some(format!("Parcel #{}", selected.id)),
-        LiveEntityKind::VoxelChunk => {
-            let (cx, cy, cz) = crate::decode_chunk_id(civ_voxel::ChunkId(selected.id));
-            Some(format!("Chunk ({cx}, {cy}, {cz})"))
-        }
-    }
-}
-
-fn format_civilian_pick_hud_line(entry: &CivilianStateEntry) -> String {
-    let name = if entry.genome_summary.summary.is_empty() {
-        format!("Civilian #{}", entry.id)
-    } else {
-        entry.genome_summary.summary.clone()
-    };
-    let profession = if entry.profession.is_empty() {
-        "—".to_string()
-    } else {
-        entry.profession.clone()
-    };
-    let health = format!("{:.0}%", entry.health.clamp(0.0, 1.0) * 100.0);
-    format!("{name} | {profession} | {health}")
-}
-
-/// Maps one wire event-feed message to an egui toast category and human-readable text.
-#[cfg(feature = "egui")]
-#[must_use]
-pub fn map_event_feed_message(msg: &EventFeedMessage3d) -> (EventKind, String) {
-    match msg {
-        EventFeedMessage3d::Birth(ev) => (EventKind::Birth, format_birth_event(ev)),
-        EventFeedMessage3d::Death(ev) => (EventKind::Death, format_death_event(ev)),
-        EventFeedMessage3d::Tech(ev) => (EventKind::Tech, format_tech_event(ev)),
-        EventFeedMessage3d::Battle(ev) => (EventKind::Battle, format_battle_event(ev)),
-        EventFeedMessage3d::Disaster(ev) => (EventKind::Disaster, format_disaster_event(ev)),
-    }
-}
-
-/// Pushes all messages from an `EventFeed` frame into the HUD toast feed.
-#[cfg(feature = "egui")]
-pub fn apply_event_feed_frame(feed: &mut EventFeed, frame: civ_protocol_3d::EventFeedFrame) {
-    for msg in frame.events {
-        let (kind, text) = map_event_feed_message(&msg);
-        feed.push(kind, text);
-    }
-}
-
-/// Maximum characters for [`crate::LiveHudSnapshot::last_event`] overlay text.
-pub const LIVE_HUD_EVENT_MAX_CHARS: usize = 80;
-
-/// Truncates event-feed HUD text to [`LIVE_HUD_EVENT_MAX_CHARS`] (Unicode-safe).
-#[must_use]
-pub fn truncate_event_feed_hud_line(text: &str) -> String {
-    let char_count = text.chars().count();
-    if char_count <= LIVE_HUD_EVENT_MAX_CHARS {
-        return text.to_string();
-    }
-    let mut truncated: String = text
-        .chars()
-        .take(LIVE_HUD_EVENT_MAX_CHARS.saturating_sub(1))
-        .collect();
-    truncated.push('…');
-    truncated
-}
-
-/// Updates [`crate::LiveHudSnapshot::last_event`] from the latest wire event-feed frame.
-///
-/// Keeps the last one or two formatted messages (joined with ` · `) for the HUD line.
-pub fn push_event_feed_to_hud_summary(
-    hud: &mut crate::LiveHudSnapshot,
-    frame: &civ_protocol_3d::EventFeedFrame,
-) {
-    if frame.events.is_empty() {
-        return;
-    }
-    let formatted: Vec<String> = frame.events.iter().map(format_event_feed_message).collect();
-    let summary = match formatted.len() {
-        1 => formatted[0].clone(),
-        n => formatted[n.saturating_sub(2)..].join(" · "),
-    };
-    hud.last_event = Some(truncate_event_feed_hud_line(&summary));
-}
-
-/// Human-readable text for logging (`civ-bevy-window`, no egui).
-#[must_use]
-pub fn format_event_feed_message(msg: &EventFeedMessage3d) -> String {
-    match msg {
-        EventFeedMessage3d::Birth(ev) => format_birth_event(ev),
-        EventFeedMessage3d::Death(ev) => format_death_event(ev),
-        EventFeedMessage3d::Tech(ev) => format_tech_event(ev),
-        EventFeedMessage3d::Battle(ev) => format_battle_event(ev),
-        EventFeedMessage3d::Disaster(ev) => format_disaster_event(ev),
-    }
-}
-
-fn format_birth_event(ev: &BirthEvent3d) -> String {
-    let who = if ev.species.is_empty() {
-        format!("Entity #{}", ev.entity_id)
-    } else {
-        ev.species.clone()
-    };
-    let mut text = format!("{who} was born");
-    if ev.faction_id != 0 {
-        text.push_str(&format!(" (faction {})", ev.faction_id));
-    }
-    if let Some(pos) = &ev.position {
-        text.push_str(&format!(" at ({:.0}, {:.0})", pos.x, pos.z));
-    }
-    text
-}
-
-fn format_death_event(ev: &DeathEvent3d) -> String {
-    if !ev.cause.is_empty() {
-        let mut text = ev.cause.clone();
-        if ev.entity_id != 0 {
-            text.push_str(&format!(" (entity #{})", ev.entity_id));
-        }
-        return text;
-    }
-    let mut text = format!("Entity #{} died", ev.entity_id);
-    if ev.faction_id != 0 {
-        text.push_str(&format!(" (faction {})", ev.faction_id));
-    }
-    if let Some(pos) = &ev.position {
-        text.push_str(&format!(" at ({:.0}, {:.0})", pos.x, pos.z));
-    }
-    text
-}
-
-fn format_tech_event(ev: &TechEvent3d) -> String {
-    if !ev.tech.is_empty() {
-        let mut text = ev.tech.clone();
-        if ev.faction_id != 0 {
-            text = format!("Faction {} unlocked {text}", ev.faction_id);
-        } else {
-            text = format!("Unlocked {text}");
-        }
-        if ev.era != 0 {
-            text.push_str(&format!(" (era {})", ev.era));
-        }
-        return text;
-    }
-    if ev.faction_id != 0 {
-        format!("Faction {} reached era {}", ev.faction_id, ev.era)
-    } else {
-        format!("Technology unlocked (era {})", ev.era)
-    }
-}
-
-fn format_battle_event(ev: &BattleEvent3d) -> String {
-    let sides = match (ev.attacker_faction, ev.defender_faction) {
-        (0, 0) => String::new(),
-        (a, 0) => format!("faction {a}"),
-        (0, d) => format!("faction {d}"),
-        (a, d) => format!("faction {a} vs faction {d}"),
-    };
-    let mut text = if sides.is_empty() {
-        "Battle".to_string()
-    } else {
-        format!("Battle: {sides}")
-    };
-    if !ev.outcome.is_empty() {
-        text.push_str(&format!(" — {}", ev.outcome.replace('_', " ")));
-    }
-    if let Some(pos) = &ev.position {
-        text.push_str(&format!(" at ({:.0}, {:.0})", pos.x, pos.z));
-    }
-    text
-}
-
-fn format_disaster_event(ev: &DisasterEvent3d) -> String {
-    let label = if ev.disaster_kind.is_empty() {
-        "Disaster".to_string()
-    } else {
-        ev.disaster_kind.replace('_', " ")
-    };
-    let mut text = if ev.severity > 0.0 {
-        format!("{label} (severity {:.0}%)", ev.severity * 100.0)
-    } else {
-        label
-    };
-    if let Some(pos) = &ev.position {
-        text.push_str(&format!(" at ({:.0}, {:.0})", pos.x, pos.z));
-    }
-    text
 }
 
 /// Shared marker meshes for agents and buildings.
@@ -498,52 +179,6 @@ fn chunk_transform(id: ChunkId) -> Transform {
     )
 }
 
-/// Re-mesh cached chunks after a local god-tool mutation (client-side preview).
-pub fn remesh_cached_chunks(
-    commands: &mut Commands,
-    scene: &mut LiveStreamScene,
-    mesh_assets: &mut Assets<Mesh>,
-    material_assets: &mut Assets<StandardMaterial>,
-    culling: StreamCulling,
-    debug: &DebugRender,
-    chunk_ids: &[ChunkId],
-    wireframe_line_color: Option<Color>,
-) {
-    use civ_protocol_3d::{DirtyChunkEvent, VoxelChunkDelta, WriteSeq};
-
-    let deltas: Vec<VoxelChunkDelta> = chunk_ids
-        .iter()
-        .filter_map(|chunk_id| {
-            scene
-                .chunk_voxels
-                .get_chunk(*chunk_id)
-                .map(|voxels| VoxelChunkDelta {
-                    event: DirtyChunkEvent {
-                        chunk_id: *chunk_id,
-                        write_seq: WriteSeq(1),
-                    },
-                    voxels: voxels.to_vec(),
-                })
-        })
-        .collect();
-    if deltas.is_empty() {
-        return;
-    }
-    apply_voxel_delta_frame(
-        commands,
-        scene,
-        mesh_assets,
-        material_assets,
-        culling,
-        debug,
-        VoxelDeltaFrame {
-            tick: 0,
-            deltas,
-        },
-        wireframe_line_color,
-    );
-}
-
 /// Applies a voxel delta frame (caches voxels, meshes in-range chunks).
 pub fn apply_voxel_delta_frame(
     commands: &mut Commands,
@@ -558,7 +193,9 @@ pub fn apply_voxel_delta_frame(
     for chunk in delta.deltas {
         let chunk_id = chunk.event.chunk_id;
         if chunk.voxels.len() == LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE {
-            scene.chunk_voxels.insert(chunk_id, chunk.voxels.clone());
+            scene
+                .chunk_voxels
+                .insert(chunk_id, chunk.voxels.clone());
         }
 
         if !should_render_chunk(chunk_id, culling.eye, culling.max_distance) {
@@ -578,8 +215,7 @@ pub fn apply_voxel_delta_frame(
         };
         let distance =
             chunk_distance_from_camera(chunk.event.chunk_id, culling.eye, LIVE_CHUNK_EDGE as f32);
-        let lod_distance = scaled_mesh_lod_distance(distance, culling.gpu_quality);
-        let lod = LodLevel(mesh_lod_level(lod_distance));
+        let lod = LodLevel(mesh_lod_level(distance));
         let Ok(mesh_buffer) = CubicMesher::mesh_cubic(chunk_view, lod) else {
             continue;
         };
@@ -619,9 +255,10 @@ pub fn apply_voxel_delta_frame(
         ));
 
         if let Some(color) = wireframe_line_color {
-            commands
-                .entity(entity)
-                .insert((Wireframe, WireframeColor { color }));
+            commands.entity(entity).insert((
+                Wireframe,
+                WireframeColor { color },
+            ));
         } else {
             commands
                 .entity(entity)
@@ -662,13 +299,7 @@ pub fn apply_agent_appearance_frame_with_labels(
         let rgb = agent_color_from_id(update.agent_id);
         let scale = agent_scale_multiplier(update.scale);
         let (x, _, z) = agent_world_translation(&update, 0.0);
-        if !x.is_finite() || !z.is_finite() || !scale.is_finite() {
-            continue;
-        }
         let y = live_ground_y(&scene.chunk_voxels, x, z, AGENT_GROUND_Y);
-        if !y.is_finite() {
-            continue;
-        }
         let transform = Transform::from_xyz(x, y, z).with_scale(Vec3::splat(scale));
 
         let material_handle = scene
@@ -694,11 +325,7 @@ pub fn apply_agent_appearance_frame_with_labels(
                 })
                 .id();
             if labels.enabled {
-                let label = scene
-                    .civilian_entries
-                    .get(&update.agent_id)
-                    .map(civilian_display_name)
-                    .unwrap_or_else(|| format!("#{}", update.agent_id));
+                let label = agent_label_stub(update.agent_id, None);
                 commands.entity(entity).with_children(|parent| {
                     parent.spawn((
                         Text2d::new(label),
@@ -717,29 +344,6 @@ pub fn apply_agent_appearance_frame_with_labels(
             MeshMaterial3d(material_handle),
             transform,
         ));
-    }
-}
-
-/// Refreshes floating agent labels from the latest civilian snapshot.
-#[cfg(feature = "bevy")]
-pub fn sync_agent_labels_from_civilians(
-    scene: Res<LiveStreamScene>,
-    agents: Query<(&LiveAgentTag, &Children)>,
-    mut labels: Query<&mut Text2d, With<LiveAgentLabel>>,
-) {
-    for (agent, children) in &agents {
-        let label = scene
-            .civilian_entries
-            .get(&agent.id)
-            .map(civilian_display_name)
-            .unwrap_or_else(|| format!("#{}", agent.id));
-        for child in children.iter() {
-            let Ok(mut text) = labels.get_mut(child) else {
-                continue;
-            };
-            *text = Text2d::new(label.clone());
-            break;
-        }
     }
 }
 
@@ -779,9 +383,6 @@ pub fn apply_building_diff_frame(
 
     for entry in buildings {
         let (base_color, emissive, roughness) = building_material_style(entry.kind, provenance);
-        if !entry.position.x.is_finite() || !entry.position.z.is_finite() {
-            continue;
-        }
         let material_handle = scene
             .building_materials
             .entry(entry.id)
@@ -806,14 +407,12 @@ pub fn apply_building_diff_frame(
             entry.position.z,
             BUILDING_GROUND_Y,
         );
-        if !ground.is_finite() {
-            continue;
-        }
         let transform = Transform::from_xyz(entry.position.x, ground, entry.position.z);
-        let entity = *scene
-            .buildings
-            .entry(entry.id)
-            .or_insert_with(|| commands.spawn(LiveBuildingTag { id: entry.id }).id());
+        let entity = *scene.buildings.entry(entry.id).or_insert_with(|| {
+            commands
+                .spawn(LiveBuildingTag { id: entry.id })
+                .id()
+        });
         commands.entity(entity).insert((
             Mesh3d(meshes.building_mesh.clone()),
             MeshMaterial3d(material_handle),
@@ -882,10 +481,11 @@ pub fn apply_building_graph_frame(
         let transform = Transform::from_xyz(anchor.x, ground + height * 0.5, anchor.z)
             .with_scale(Vec3::new(width.max(0.5), height.max(0.5), depth.max(0.5)));
 
-        let entity = *scene
-            .graph_parcels
-            .entry(id)
-            .or_insert_with(|| commands.spawn(LiveGraphParcelTag { id }).id());
+        let entity = *scene.graph_parcels.entry(id).or_insert_with(|| {
+            commands
+                .spawn(LiveGraphParcelTag { id })
+                .id()
+        });
         commands.entity(entity).insert((
             Mesh3d(meshes.building_mesh.clone()),
             MeshMaterial3d(material_handle),
@@ -917,7 +517,11 @@ fn parcel_kind_color(kind: ParcelKind) -> Color {
 }
 
 fn facade_material_color(facade: &FacadeStyle) -> Color {
-    let material = facade.materials.first().copied().unwrap_or(MaterialId(0));
+    let material = facade
+        .materials
+        .first()
+        .copied()
+        .unwrap_or(MaterialId(0));
     material_id_color(material)
 }
 
@@ -1041,10 +645,7 @@ mod tests {
             BuildingKind3d::House,
             BuildingKind3d::CityCenter,
         ];
-        let colors: Vec<_> = kinds
-            .iter()
-            .map(|k| color_rgb(building_kind_color(*k)))
-            .collect();
+        let colors: Vec<_> = kinds.iter().map(|k| color_rgb(building_kind_color(*k))).collect();
         for (i, left) in colors.iter().enumerate() {
             for (j, right) in colors.iter().enumerate() {
                 if i != j {
@@ -1100,8 +701,6 @@ mod tests {
         assert!((building_y - (surface + BUILDING_GROUND_Y)).abs() < f32::EPSILON);
     }
 
-    /// FR-CIV-BEVY-016 — live_stream applies voxel deltas and updates chunk scene state for attach smoke.
-    /// FR-CIV-BEVY-025 — scene update test coverage is part of attach smoke expectations.
     #[test]
     fn apply_voxel_delta_frame_spawns_chunk_in_scene() {
         use bevy::prelude::*;
@@ -1124,7 +723,6 @@ mod tests {
         let culling = StreamCulling {
             eye: [8.0, 8.0, 8.0],
             max_distance: 512.0,
-            gpu_quality: GpuQualityMode::Full,
         };
 
         let mut scene = LiveStreamScene::default();
@@ -1142,446 +740,5 @@ mod tests {
 
         assert_eq!(scene.chunks.len(), 1);
         assert!(scene.chunk_voxels.chunks().contains_key(&chunk_id.0));
-    }
-
-    #[test]
-    fn format_event_feed_message_birth_with_species() {
-        use civ_protocol_3d::{BirthEvent3d, EventFeedMessage3d, WorldXZ};
-
-        let text = format_event_feed_message(&EventFeedMessage3d::Birth(BirthEvent3d {
-            entity_id: 9,
-            faction_id: 2,
-            species: "human".to_string(),
-            position: Some(WorldXZ { x: 10.0, z: 12.0 }),
-        }));
-        assert!(text.contains("human"));
-        assert!(text.contains("faction 2"));
-        assert!(text.contains("(10"));
-    }
-
-    #[test]
-    fn format_event_feed_message_death_uses_cause() {
-        use civ_protocol_3d::{DeathEvent3d, EventFeedMessage3d};
-
-        let text = format_event_feed_message(&EventFeedMessage3d::Death(DeathEvent3d {
-            entity_id: 3,
-            cause: "battle".to_string(),
-            ..Default::default()
-        }));
-        assert_eq!(text, "battle (entity #3)");
-    }
-
-    #[test]
-    fn format_event_feed_message_tech_unlock() {
-        use civ_protocol_3d::{EventFeedMessage3d, TechEvent3d};
-
-        let text = format_event_feed_message(&EventFeedMessage3d::Tech(TechEvent3d {
-            faction_id: 5,
-            era: 2,
-            tech: "agriculture".to_string(),
-        }));
-        assert!(text.contains("Faction 5"));
-        assert!(text.contains("agriculture"));
-    }
-
-    #[test]
-    fn format_event_feed_message_battle_outcome() {
-        use civ_protocol_3d::{BattleEvent3d, EventFeedMessage3d};
-
-        let text = format_event_feed_message(&EventFeedMessage3d::Battle(BattleEvent3d {
-            attacker_faction: 1,
-            defender_faction: 2,
-            outcome: "attacker_won".to_string(),
-            ..Default::default()
-        }));
-        assert!(text.contains("faction 1 vs faction 2"));
-        assert!(text.contains("attacker won"));
-    }
-
-    #[test]
-    fn format_event_feed_message_disaster_kind() {
-        use civ_protocol_3d::{DisasterEvent3d, EventFeedMessage3d};
-
-        let text = format_event_feed_message(&EventFeedMessage3d::Disaster(DisasterEvent3d {
-            disaster_kind: "flood".to_string(),
-            severity: 0.5,
-            ..Default::default()
-        }));
-        assert!(text.contains("flood"));
-        assert!(text.contains("50%"));
-    }
-
-    #[cfg(feature = "egui")]
-    #[test]
-    fn map_event_feed_message_assigns_kinds() {
-        use crate::event_feed::EventKind;
-        use civ_protocol_3d::{BirthEvent3d, EventFeedMessage3d};
-
-        let (kind, _) = map_event_feed_message(&EventFeedMessage3d::Birth(BirthEvent3d::default()));
-        assert_eq!(kind, EventKind::Birth);
-    }
-
-    #[cfg(feature = "egui")]
-    #[test]
-    fn apply_event_feed_frame_pushes_all_events() {
-        use crate::event_feed::EventFeed;
-        use civ_protocol_3d::{DeathEvent3d, EventFeedFrame, EventFeedMessage3d, TechEvent3d};
-
-        let mut feed = EventFeed::default();
-        apply_event_feed_frame(
-            &mut feed,
-            EventFeedFrame {
-                tick: 1,
-                events: vec![
-                    EventFeedMessage3d::Death(DeathEvent3d {
-                        entity_id: 1,
-                        ..Default::default()
-                    }),
-                    EventFeedMessage3d::Tech(TechEvent3d {
-                        tech: "iron".to_string(),
-                        ..Default::default()
-                    }),
-                ],
-            },
-        );
-        assert_eq!(feed.events.len(), 2);
-    }
-
-    #[test]
-    fn push_event_feed_to_hud_summary_stores_last_messages() {
-        use civ_protocol_3d::{DeathEvent3d, EventFeedFrame, EventFeedMessage3d, TechEvent3d};
-
-        let mut hud = crate::LiveHudSnapshot::default();
-        push_event_feed_to_hud_summary(
-            &mut hud,
-            &EventFeedFrame {
-                tick: 4,
-                events: vec![
-                    EventFeedMessage3d::Death(DeathEvent3d {
-                        entity_id: 1,
-                        ..Default::default()
-                    }),
-                    EventFeedMessage3d::Tech(TechEvent3d {
-                        tech: "agriculture".into(),
-                        faction_id: 2,
-                        ..Default::default()
-                    }),
-                ],
-            },
-        );
-        let line = hud.last_event.expect("last_event");
-        assert!(line.contains("Entity #1 died"));
-        assert!(line.contains("agriculture"));
-        assert!(line.contains('·'));
-    }
-
-    #[test]
-    fn truncate_event_feed_hud_line_caps_length() {
-        let long = "x".repeat(LIVE_HUD_EVENT_MAX_CHARS + 20);
-        let truncated = truncate_event_feed_hud_line(&long);
-        assert!(truncated.chars().count() <= LIVE_HUD_EVENT_MAX_CHARS);
-        assert!(truncated.ends_with('…'));
-    }
-
-    #[test]
-    fn resolve_civilian_for_live_pick_by_stable_id() {
-        use civ_protocol_3d::{CivilianNeeds3d, GenomeSummary3d};
-
-        let mut scene = LiveStreamScene::default();
-        scene.civilian_entries.insert(
-            100,
-            CivilianStateEntry {
-                id: 100,
-                needs: CivilianNeeds3d::default(),
-                profession: "smith".to_string(),
-                genome_summary: GenomeSummary3d::default(),
-                species: String::new(),
-                health: 1.0,
-            },
-        );
-
-        let entry = resolve_civilian_for_live_pick(100, &scene).expect("stable id");
-        assert_eq!(entry.id, 100);
-        assert_eq!(entry.profession, "smith");
-    }
-
-    #[test]
-    fn resolve_civilian_for_live_pick_fallback_when_agent_key_differs() {
-        use civ_protocol_3d::{CivilianNeeds3d, GenomeSummary3d};
-
-        let mut scene = LiveStreamScene::default();
-        scene.agents.insert(999, Entity::PLACEHOLDER);
-        scene.civilian_entries.insert(
-            42,
-            CivilianStateEntry {
-                id: 42,
-                needs: CivilianNeeds3d::default(),
-                profession: "farmer".to_string(),
-                genome_summary: GenomeSummary3d {
-                    summary: "Ada".to_string(),
-                    ..Default::default()
-                },
-                species: String::new(),
-                health: 0.5,
-            },
-        );
-
-        let entry = resolve_civilian_for_live_pick(999, &scene).expect("1:1 fallback");
-        assert_eq!(entry.id, 42);
-        assert_eq!(entry.profession, "farmer");
-    }
-
-    #[test]
-    fn resolve_civilian_for_live_pick_none_when_multiple_agents() {
-        use civ_protocol_3d::{CivilianNeeds3d, GenomeSummary3d};
-
-        let mut scene = LiveStreamScene::default();
-        scene.agents.insert(1, Entity::PLACEHOLDER);
-        scene.agents.insert(2, Entity::PLACEHOLDER);
-        scene.civilian_entries.insert(
-            10,
-            CivilianStateEntry {
-                id: 10,
-                needs: CivilianNeeds3d::default(),
-                profession: String::new(),
-                genome_summary: GenomeSummary3d::default(),
-                species: String::new(),
-                health: 1.0,
-            },
-        );
-        scene.civilian_entries.insert(
-            20,
-            CivilianStateEntry {
-                id: 20,
-                needs: CivilianNeeds3d::default(),
-                profession: String::new(),
-                genome_summary: GenomeSummary3d::default(),
-                species: String::new(),
-                health: 1.0,
-            },
-        );
-
-        assert!(resolve_civilian_for_live_pick(1, &scene).is_none());
-    }
-
-    #[test]
-    fn format_live_pick_hud_line_civilian_entry_shows_name_profession_health() {
-        use civ_protocol_3d::{CivilianNeeds3d, GenomeSummary3d};
-
-        let mut scene = LiveStreamScene::default();
-        scene.civilian_entries.insert(
-            7,
-            CivilianStateEntry {
-                id: 7,
-                needs: CivilianNeeds3d::default(),
-                profession: "Farmer".to_string(),
-                genome_summary: GenomeSummary3d {
-                    summary: "Ada".to_string(),
-                    ..Default::default()
-                },
-                species: String::new(),
-                health: 0.87,
-            },
-        );
-
-        let line = format_live_pick_hud_line(
-            Some(SelectedLiveEntity {
-                kind: LiveEntityKind::Agent,
-                id: 7,
-            }),
-            &scene,
-        )
-        .expect("pick line");
-        assert_eq!(line, "Ada | Farmer | 87%");
-    }
-
-    #[test]
-    fn format_live_pick_hud_line_agent_without_civilian_entry_uses_id_stub() {
-        let scene = LiveStreamScene::default();
-        let line = format_live_pick_hud_line(
-            Some(SelectedLiveEntity {
-                kind: LiveEntityKind::Agent,
-                id: 42,
-            }),
-            &scene,
-        )
-        .expect("pick line");
-        assert_eq!(line, "Agent #42");
-    }
-
-    #[test]
-    fn format_live_pick_hud_line_uses_resolver_fallback_for_legacy_agent_key() {
-        use civ_protocol_3d::{CivilianNeeds3d, GenomeSummary3d};
-
-        let mut scene = LiveStreamScene::default();
-        scene.agents.insert(999, Entity::PLACEHOLDER);
-        scene.civilian_entries.insert(
-            42,
-            CivilianStateEntry {
-                id: 42,
-                needs: CivilianNeeds3d::default(),
-                profession: "Farmer".to_string(),
-                genome_summary: GenomeSummary3d {
-                    summary: "Ada".to_string(),
-                    ..Default::default()
-                },
-                species: String::new(),
-                health: 0.87,
-            },
-        );
-
-        let line = format_live_pick_hud_line(
-            Some(SelectedLiveEntity {
-                kind: LiveEntityKind::Agent,
-                id: 999,
-            }),
-            &scene,
-        )
-        .expect("pick line");
-        assert_eq!(line, "Ada | Farmer | 87%");
-    }
-
-    #[test]
-    fn format_live_pick_hud_line_none_when_unselected() {
-        let scene = LiveStreamScene::default();
-        assert!(format_live_pick_hud_line(None, &scene).is_none());
-    }
-
-    #[test]
-    fn format_live_pick_hud_line_building_and_parcel_stubs() {
-        let scene = LiveStreamScene::default();
-        assert_eq!(
-            format_live_pick_hud_line(
-                Some(SelectedLiveEntity {
-                    kind: LiveEntityKind::Building,
-                    id: 3,
-                }),
-                &scene,
-            )
-            .as_deref(),
-            Some("Building #3")
-        );
-        assert_eq!(
-            format_live_pick_hud_line(
-                Some(SelectedLiveEntity {
-                    kind: LiveEntityKind::GraphParcel,
-                    id: 11,
-                }),
-                &scene,
-            )
-            .as_deref(),
-            Some("Parcel #11")
-        );
-    }
-
-    #[test]
-    fn sync_live_hud_civilian_faction_counts_reads_scene_state() {
-        let mut scene = LiveStreamScene::default();
-        scene.civilian_ids.insert(1);
-        scene.civilian_ids.insert(2);
-        scene.factions.insert(7);
-
-        let mut hud = crate::LiveHudSnapshot::default();
-        sync_live_hud_civilian_faction_counts(&mut hud, &scene);
-
-        assert_eq!(hud.civilian_count, 2);
-        assert_eq!(hud.faction_count, 1);
-    }
-
-    #[test]
-    fn apply_civilian_state_frame_replaces_tracked_ids() {
-        use civ_protocol_3d::{
-            CivilianNeeds3d, CivilianStateEntry, CivilianStateFrame, GenomeSummary3d,
-        };
-
-        let mut scene = LiveStreamScene::default();
-        scene.civilian_ids.insert(99);
-
-        let entry = |id: u64| CivilianStateEntry {
-            id,
-            needs: CivilianNeeds3d::default(),
-            profession: String::new(),
-            genome_summary: GenomeSummary3d::default(),
-            species: String::new(),
-            health: 1.0,
-        };
-
-        apply_civilian_state_frame(
-            &mut scene,
-            CivilianStateFrame {
-                tick: 7,
-                civilians: vec![entry(1), entry(2)],
-            },
-        );
-
-        assert_eq!(civilian_hud_count(&scene), 2);
-        assert!(scene.civilian_ids.contains(&1));
-        assert!(scene.civilian_ids.contains(&2));
-        assert!(!scene.civilian_ids.contains(&99));
-        let entry = scene.civilian_entries.get(&1).expect("civilian 1");
-        assert_eq!(entry.id, 1);
-        assert_eq!(entry.profession, String::new());
-    }
-
-    #[test]
-    fn apply_faction_state_frame_replaces_tracked_ids_and_era() {
-        use civ_protocol_3d::{
-            FactionStateEntry, FactionStateFrame, FactionTreasury3d, Government3d,
-        };
-
-        let mut scene = LiveStreamScene::default();
-        scene.factions.insert(9);
-
-        let entry = |id: u32, era: u16| FactionStateEntry {
-            id,
-            era,
-            government: Government3d::Republic,
-            treasury: FactionTreasury3d::default(),
-        };
-
-        apply_faction_state_frame(
-            &mut scene,
-            FactionStateFrame {
-                tick: 3,
-                factions: vec![entry(0, 2), entry(4, 5)],
-                population_by_faction: Default::default(),
-            },
-        );
-
-        assert_eq!(faction_hud_count(&scene), 2);
-        assert_eq!(scene.faction_era, 5);
-        assert_eq!(scene.faction_entries.len(), 2);
-        assert_eq!(scene.faction_entries[0].id, 0);
-        assert_eq!(scene.faction_entries[1].id, 4);
-        assert!(scene.factions.contains(&0));
-        assert!(scene.factions.contains(&4));
-        assert!(!scene.factions.contains(&9));
-    }
-
-    #[cfg(all(feature = "bevy", feature = "egui"))]
-    #[test]
-    fn sync_diplomacy_from_faction_frame_preserves_open_flag() {
-        use civ_protocol_3d::{
-            FactionStateEntry, FactionStateFrame, FactionTreasury3d, Government3d,
-        };
-
-        let frame = FactionStateFrame {
-            tick: 1,
-            factions: vec![FactionStateEntry {
-                id: 1,
-                era: 0,
-                government: Government3d::Junta,
-                treasury: FactionTreasury3d::default(),
-            }],
-            population_by_faction: Default::default(),
-        };
-        let mut diplomacy = crate::diplomacy_ui::DiplomacyState {
-            open: true,
-            ..Default::default()
-        };
-        sync_diplomacy_from_faction_frame(&mut diplomacy, &frame, &HashMap::new());
-        assert!(diplomacy.open);
-        assert_eq!(diplomacy.factions.len(), 1);
-        assert_eq!(diplomacy.factions[0].name, "Junta #1");
     }
 }

@@ -5,8 +5,6 @@
 
 Status values: `planned` | `in_progress` | `implemented`
 
-Finish-readiness rule: a row is only safe to treat as release-ready when the listed test name pattern exists and any user-visible or performance-sensitive requirement has a corresponding smoke, scenario, or benchmark gate in the same workspace.
-
 > Strategic `FR-CORE-*` / `FR-ECON-*` rows remain in
 > [`TRACEABILITY_MATRIX.md`](TRACEABILITY_MATRIX.md). This file is the traceability
 > home for the 3D workspace extension until rows are merged upstream.
@@ -84,7 +82,6 @@ Finish-readiness rule: a row is only safe to treat as release-ready when the lis
 | FR-CIV-LAWS-000 | Stub. | `crates/laws/` | `laws::schema_version_stub` | implemented |
 | FR-CIV-LAWS-001 | Versioned RON schema loads and round-trips. | `crates/laws/` | `laws::ron_roundtrip` | implemented |
 | FR-CIV-LAWS-002 | Validator rejects extensions missing required fields. | `crates/laws/` | `laws::validator_rejects_incomplete` | implemented |
-| FR-CIV-LAWS-006 | `LawDb::get` returns correct law by id and `None` for missing ids. | `crates/laws/` | `laws::get_*` | implemented |
 
 ---
 

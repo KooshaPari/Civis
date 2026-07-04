@@ -5,12 +5,9 @@
 #include "CivProtocolClient.h"
 #include "CivWsClient.h"
 #include "CivilianActor.h"
-#include "CivChunkOverlayActor.h"
-#include "CivF3d0ChunkMesh.h"
 #include "Blueprint/UserWidget.h"
 #include "Dom/JsonObject.h"
 #include "Components/DirectionalLightComponent.h"
-#include "Engine/Engine.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -18,6 +15,8 @@
 #include "Serialization/JsonSerializer.h"
 #include "CivisJobColors.h"
 #include "VoxelTerrain.h"
+#include "Components/StaticMeshComponent.h"
+#include "Engine/StaticMeshActor.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/Pawn.h"
 
@@ -35,7 +34,6 @@ void ACivShowGameMode::BeginPlay()
     HttpClient = NewObject<UCivProtocolClient>(this);
     WsClient = NewObject<UCivWsClient>(this);
 
-    HttpClient->OnTerrainStatus.AddDynamic(this, &ACivShowGameMode::OnTerrainStatusChanged);
     HttpClient->Connect(WatchHttpUrl);
     HttpClient->FetchTerrain();
 
@@ -49,11 +47,9 @@ void ACivShowGameMode::BeginPlay()
 
     WsClient->OnSnapshotReceived.AddDynamic(this, &ACivShowGameMode::OnWsSnapshot);
     WsClient->OnF3d0FrameReceived.AddDynamic(this, &ACivShowGameMode::OnF3d0Frame);
-    WsClient->OnConnectionChanged.AddDynamic(this, &ACivShowGameMode::OnWsConnectionChanged);
     WsClient->ConnectServer(ServerWsUrl);
 
     SpawnMinimapHud();
-    UpdateAttachWarning();
 }
 
 void ACivShowGameMode::SpawnMinimapHud()
@@ -140,62 +136,10 @@ void ACivShowGameMode::Tick(float DeltaSeconds)
     }
 }
 
-void ACivShowGameMode::UpdateAttachWarning()
-{
-    const bool bShowWarning = !(bTerrainLive && bWsLive);
-    if (!bShowWarning)
-    {
-        if (GEngine)
-        {
-            GEngine->AddOnScreenDebugMessage(1357911, 2.0f, FColor::Green, TEXT("CivShow attached: terrain HTTP + WS live"));
-        }
-        return;
-    }
-
-    FString Warning;
-    if (!bTerrainLive)
-    {
-        Warning += FString::Printf(TEXT("waiting for terrain HTTP at %s"), *WatchHttpUrl);
-    }
-    if (!bWsLive)
-    {
-        if (!Warning.IsEmpty())
-        {
-            Warning += TEXT(" | ");
-        }
-        Warning += FString::Printf(TEXT("waiting for WS at %s"), *ServerWsUrl);
-    }
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(1357911, 2.0f, FColor::Red, Warning);
-    }
-}
-
-void ACivShowGameMode::OnTerrainStatusChanged(const FString& State, const FString& Detail)
-{
-    bTerrainLive = State == TEXT("live");
-    if (!bTerrainLive)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("CivShow terrain attach: %s"), *Detail);
-    }
-    UpdateAttachWarning();
-}
-
-void ACivShowGameMode::OnWsConnectionChanged(const FString& State)
-{
-    bWsLive = State == TEXT("live");
-    if (!bWsLive)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("CivShow WS attach: %s"), *State);
-    }
-    UpdateAttachWarning();
-}
-
 void ACivShowGameMode::OnTerrainFetched()
 {
     if (!HttpClient || HttpClient->Heights.Num() == 0)
     {
-        UpdateAttachWarning();
         return;
     }
 
@@ -215,8 +159,6 @@ void ACivShowGameMode::OnTerrainFetched()
     if (TerrainActor)
     {
         TerrainActor->BuildFromHeightmap(HttpClient->Heights, HttpClient->Biomes, Size);
-        bTerrainLive = true;
-        UpdateAttachWarning();
     }
 }
 
@@ -226,6 +168,30 @@ void ACivShowGameMode::OnF3d0Frame(const FString& Kind, const FString& FrameJson
     {
         ApplyVoxelDeltaOverlay(FrameJson);
     }
+}
+
+static FVector ChunkWorldCentreFromId(const uint64 ChunkRaw)
+{
+    static constexpr float ChunkEdge = 16.0f;
+    int64 Cx = static_cast<int64>((ChunkRaw >> 40) & 0xFFFFFF);
+    int64 Cy = static_cast<int64>((ChunkRaw >> 16) & 0xFFFFFF);
+    int64 Cz = static_cast<int64>(ChunkRaw & 0xFFFF);
+    if (Cx & 0x800000)
+    {
+        Cx |= ~0xFFFFFFLL;
+    }
+    if (Cy & 0x800000)
+    {
+        Cy |= ~0xFFFFFFLL;
+    }
+    if (Cz & 0x8000)
+    {
+        Cz |= ~0xFFFFLL;
+    }
+    return FVector(
+        (static_cast<float>(Cx) + 0.5f) * ChunkEdge,
+        (static_cast<float>(Cy) + 0.5f) * ChunkEdge * 0.2f,
+        (static_cast<float>(Cz) + 0.5f) * ChunkEdge);
 }
 
 void ACivShowGameMode::ApplyVoxelDeltaOverlay(const FString& FrameJson)
@@ -273,39 +239,33 @@ void ACivShowGameMode::ApplyVoxelDeltaOverlay(const FString& FrameJson)
         }
         const uint64 ChunkKey = static_cast<uint64>(ChunkIdRaw);
 
-        ACivChunkOverlayActor* Overlay = ChunkOverlayActors.FindRef(ChunkKey);
-        if (!Overlay)
+        AActor* Marker = ChunkOverlayActors.FindRef(ChunkKey);
+        if (!Marker)
         {
-            Overlay = GetWorld()->SpawnActor<ACivChunkOverlayActor>(
-                ACivChunkOverlayActor::StaticClass(),
-                CivF3d0ChunkMesh::ChunkWorldOriginFromId(ChunkKey),
+            Marker = GetWorld()->SpawnActor<AStaticMeshActor>(
+                AStaticMeshActor::StaticClass(),
+                ChunkWorldCentreFromId(ChunkKey),
                 FRotator::ZeroRotator);
-            if (!Overlay)
+            if (!Marker)
             {
                 continue;
             }
-            Overlay->SetChunkOrigin(CivF3d0ChunkMesh::ChunkWorldOriginFromId(ChunkKey));
-            ChunkOverlayActors.Add(ChunkKey, Overlay);
-        }
-
-        const TArray<TSharedPtr<FJsonValue>>* VoxelsArr = nullptr;
-        if (Delta->TryGetArrayField(TEXT("voxels"), VoxelsArr) && VoxelsArr
-            && VoxelsArr->Num() == CivF3d0ChunkMesh::ChunkVoxels)
-        {
-            TArray<int32> MaterialIds;
-            MaterialIds.Reserve(CivF3d0ChunkMesh::ChunkVoxels);
-            for (const TSharedPtr<FJsonValue>& VoxelVal : *VoxelsArr)
+            if (AStaticMeshActor* MeshActor = Cast<AStaticMeshActor>(Marker))
             {
-                MaterialIds.Add(static_cast<int32>(VoxelVal->AsNumber()));
+                if (UStaticMesh* Cube = LoadObject<UStaticMesh>(
+                        nullptr,
+                        TEXT("/Engine/BasicShapes/Cube.Cube")))
+                {
+                    MeshActor->GetStaticMeshComponent()->SetStaticMesh(Cube);
+                    MeshActor->GetStaticMeshComponent()->SetWorldScale3D(
+                        FVector(ChunkEdge * 0.9f, ChunkEdge * 0.35f, ChunkEdge * 0.9f));
+                }
             }
-            if (!Overlay->SetDenseVoxels(MaterialIds))
-            {
-                Overlay->SetMarkerFallback();
-            }
+            ChunkOverlayActors.Add(ChunkKey, Marker);
         }
         else
         {
-            Overlay->SetMarkerFallback();
+            Marker->SetActorLocation(ChunkWorldCentreFromId(ChunkKey));
         }
         ++Shown;
     }

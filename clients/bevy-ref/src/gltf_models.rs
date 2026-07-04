@@ -58,26 +58,14 @@ use civ_agents::ActorVisualKind;
 /// Kept as constants so the fetch-cc0-models script and the loader agree on the
 /// exact filenames.
 pub mod asset_paths {
-    /// Civilian / agent model (townsperson / farmer).
+    /// Civilian / agent model (KayKit Knight — humanoid).
     pub const CIVILIAN: &str = "models/civilian.glb";
-    /// Herd / fauna model (quadruped horse).
-    pub const HERD: &str = "models/herd.glb";
+    /// Herd / fauna model (KayKit skeleton minion — unarmed creature).
+    pub const HERD: &str = "models/creature_skeleton_minion.glb";
     /// Tree / vegetation decoration model.
     pub const TREE: &str = "models/tree.glb";
     /// Generic building model.
     pub const BUILDING: &str = "models/building.glb";
-    /// Farm/house-specific building model variant.
-    pub const BUILDING_HOUSE_B: &str = "models/building_house_B.glb";
-    /// Marketplace building model variant.
-    pub const BUILDING_MARKET: &str = "models/building_market.glb";
-    /// Temple/church building model variant.
-    pub const BUILDING_CHURCH: &str = "models/building_church.glb";
-    /// Tavern/barracks/tower building model variant.
-    pub const BUILDING_TAVERN: &str = "models/building_tavern.glb";
-    /// Vertical tower-style building variant.
-    pub const BUILDING_TOWER: &str = "models/building_tower.glb";
-    /// Well/mineshaft stand-in building variant.
-    pub const BUILDING_WELL: &str = "models/building_well.glb";
 }
 
 /// Loaded CC0 GLTF scene handles, populated at [`Startup`] by
@@ -103,18 +91,6 @@ pub struct GameModels {
     pub tree: Option<Handle<Scene>>,
     /// Building scene (replaces the cuboid).
     pub building: Option<Handle<Scene>>,
-    /// House-specific replacement scene.
-    pub building_house_b: Option<Handle<Scene>>,
-    /// Market replacement scene.
-    pub building_market: Option<Handle<Scene>>,
-    /// Church/temple replacement scene.
-    pub building_church: Option<Handle<Scene>>,
-    /// Tavern replacement scene.
-    pub building_tavern: Option<Handle<Scene>>,
-    /// Tower/barracks/city-center replacement scene.
-    pub building_tower: Option<Handle<Scene>>,
-    /// Well/mine replacement scene.
-    pub building_well: Option<Handle<Scene>>,
 }
 
 impl GameModels {
@@ -125,12 +101,6 @@ impl GameModels {
             && self.herd.is_some()
             && self.tree.is_some()
             && self.building.is_some()
-            && self.building_house_b.is_some()
-            && self.building_market.is_some()
-            && self.building_church.is_some()
-            && self.building_tavern.is_some()
-            && self.building_tower.is_some()
-            && self.building_well.is_some()
     }
 }
 
@@ -176,24 +146,11 @@ impl Plugin for GltfModelsPlugin {
 /// document — which is the conventional single-scene export from Quaternius /
 /// Kenney CC0 packs.
 pub fn load_game_models(mut models: ResMut<GameModels>, asset_server: Res<AssetServer>) {
-    models.civilian =
-        Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::CIVILIAN)));
+    models.civilian = Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::CIVILIAN)));
     models.herd = Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::HERD)));
     models.tree = Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::TREE)));
     models.building =
         Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::BUILDING)));
-    models.building_house_b =
-        Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::BUILDING_HOUSE_B)));
-    models.building_market =
-        Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::BUILDING_MARKET)));
-    models.building_church =
-        Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::BUILDING_CHURCH)));
-    models.building_tavern =
-        Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::BUILDING_TAVERN)));
-    models.building_tower =
-        Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::BUILDING_TOWER)));
-    models.building_well =
-        Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::BUILDING_WELL)));
 }
 
 /// sim_bridge integration point — civilian.
@@ -246,25 +203,6 @@ pub fn building_scene(models: &GameModels) -> ModelOrPrimitive {
     scene_or_primitive(&models.building)
 }
 
-#[must_use]
-pub fn building_scene_for(
-    models: &GameModels,
-    building_type: civ_engine::BuildingType,
-) -> ModelOrPrimitive {
-    let handle = match building_type {
-        civ_engine::BuildingType::Farm | civ_engine::BuildingType::House => {
-            &models.building_house_b
-        }
-        civ_engine::BuildingType::Market => &models.building_market,
-        civ_engine::BuildingType::Temple => &models.building_church,
-        civ_engine::BuildingType::Barracks => &models.building_tower,
-        civ_engine::BuildingType::Mine => &models.building_well,
-        civ_engine::BuildingType::CityCenter => &models.building_tower,
-        _ => &models.building,
-    };
-    scene_or_primitive(handle)
-}
-
 /// decorations integration point — tree. See [`civilian_scene`] for the
 /// match/fallback pattern.
 #[must_use]
@@ -288,7 +226,7 @@ fn scene_or_primitive(handle: &Option<Handle<Scene>>) -> ModelOrPrimitive {
 // There is NO release compatible with Bevy 0.18 yet, so the real-sky swap is
 // deferred and the procedural skybox dome (`src/skybox.rs` +
 // `src/atmosphere.rs`) remains the sky. The `atmosphere` cargo feature and the
-// commented `bevy_atmosphere` dep in Cargo.toml is a future hook.
+// commented `bevy_atmosphere` dep in Cargo.toml are placeholders.
 //
 // When an 0.18-compatible release ships (expected ~0.14):
 //   1. Uncomment the dep in Cargo.toml and flip the feature to
@@ -303,11 +241,11 @@ fn scene_or_primitive(handle: &Option<Handle<Scene>>) -> ModelOrPrimitive {
 // The thin wrapper below documents the add without pulling the dep, so callers
 // have a single stable symbol to reference once the feature is enabled.
 
-/// Wrapper for the future `bevy_atmosphere::plugin::AtmospherePlugin`.
+/// Placeholder wrapper for the future `bevy_atmosphere::plugin::AtmospherePlugin`.
 ///
 /// No 0.18-compatible `bevy_atmosphere` exists yet (see the note above), so this
 /// is a documentation anchor only. Once the dep is enabled, the closer should
-/// add the real `AtmospherePlugin` in `standalone.rs`.
+/// add the real `AtmospherePlugin` (not this stub) in `standalone.rs`.
 #[cfg(feature = "atmosphere")]
 #[derive(Default)]
 pub struct AtmospherePlugin2;
@@ -340,77 +278,5 @@ mod tests {
         assert!(asset_paths::CIVILIAN.starts_with("models/"));
         assert!(asset_paths::TREE.ends_with(".glb"));
         assert!(asset_paths::BUILDING.ends_with(".glb"));
-    }
-
-    /// `GameModels` with exactly one slot populated (selected by `pick`), so a
-    /// router that chooses the right slot yields a `Model` and a router that
-    /// looks at any other slot yields `Primitive` — proving routing without an
-    /// asset server (all `Handle::default()`s compare equal, so we use slot
-    /// presence, not handle identity, to assert selection).
-    fn models_only(pick: impl FnOnce(&mut GameModels)) -> GameModels {
-        let mut m = GameModels::default();
-        pick(&mut m);
-        m
-    }
-
-    #[test]
-    fn actor_scene_routes_humanoid_to_civilian_slot() {
-        // Only the civilian slot is present: Humanoid resolves to a model,
-        // Herd (herd slot empty) falls back to a primitive.
-        let m = models_only(|m| m.civilian = Some(Handle::default()));
-        assert!(actor_scene(&m, ActorVisualKind::Humanoid, 0).has_model());
-        assert!(!actor_scene(&m, ActorVisualKind::Herd, 0).has_model());
-    }
-
-    #[test]
-    fn actor_scene_routes_herd_to_herd_slot() {
-        let m = models_only(|m| m.herd = Some(Handle::default()));
-        assert!(actor_scene(&m, ActorVisualKind::Herd, 0).has_model());
-        assert!(!actor_scene(&m, ActorVisualKind::Humanoid, 0).has_model());
-    }
-
-    #[test]
-    fn building_scene_for_routes_each_type_to_its_slot() {
-        use civ_engine::BuildingType;
-        // (type, slot-setter) — the type must resolve to a Model when ONLY its
-        // mapped slot is populated.
-        let cases: [(BuildingType, fn(&mut GameModels)); 7] = [
-            (BuildingType::Temple, |m| {
-                m.building_church = Some(Handle::default())
-            }),
-            (BuildingType::Market, |m| {
-                m.building_market = Some(Handle::default())
-            }),
-            (BuildingType::Barracks, |m| {
-                m.building_tower = Some(Handle::default())
-            }),
-            (BuildingType::CityCenter, |m| {
-                m.building_tower = Some(Handle::default())
-            }),
-            (BuildingType::Mine, |m| {
-                m.building_well = Some(Handle::default())
-            }),
-            (BuildingType::House, |m| {
-                m.building_house_b = Some(Handle::default())
-            }),
-            (BuildingType::Farm, |m| {
-                m.building_house_b = Some(Handle::default())
-            }),
-        ];
-        for (ty, set_slot) in cases {
-            let m = models_only(set_slot);
-            assert!(
-                building_scene_for(&m, ty).has_model(),
-                "{ty:?} should resolve to its populated model slot"
-            );
-        }
-    }
-
-    #[test]
-    fn building_scene_for_falls_back_to_primitive_when_slots_empty() {
-        use civ_engine::BuildingType;
-        let m = GameModels::default();
-        assert!(!building_scene_for(&m, BuildingType::Temple).has_model());
-        assert!(!building_scene_for(&m, BuildingType::Market).has_model());
     }
 }

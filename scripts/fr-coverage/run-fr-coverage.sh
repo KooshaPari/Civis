@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="${ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 cd "$ROOT"
 
-echo "==> Traceability check (matrix)"
+echo "==> Traceability check (matrix + FR-CIV-3D)"
 bash scripts/traceability/check-traceability.sh
 
 echo "==> civ-engine determinism tests"

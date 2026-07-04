@@ -12,19 +12,7 @@ use rand::Rng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
-pub mod seeds;
 pub mod sentience;
-pub mod traits;
-
-pub use seeds::{
-    all_named_seeds, archetype_dna, archetype_seed, choose_named_seed, divergence_preset,
-    effective_mutation_rate, effective_spawn_divergence, example_seed_set, mutate_with_divergence,
-    named_archetype_seed_set, named_seed_round_robin, raw_organism_primitive, seed_with_divergence,
-    spawn_genome, spawn_genome_with_divergence, BiomeAffinity, DivergencePreset, NamedSeed,
-    SeedDefinition, SeedError, SeedId, SeedLibrary, SeedSet, WeightedNamedSeed, ALL_NAMED_SEEDS,
-    DIVERGENCE_PRESETS,
-};
-pub use traits::{inherit_trait, TraitInheritanceConfig};
 
 /// Schema version for `civ-genetics`. Bumped on breaking changes.
 pub const SCHEMA_VERSION: &str = "0.1.0-stub";
@@ -181,7 +169,7 @@ mod tests {
         ChaCha8Rng::seed_from_u64(seed)
     }
 
-    /// Covers FR-CIV-GENETICS-000 — exposes a semver-like schema version stub.
+    /// FR-CIV-GENETICS-000 — exposes a semver-like schema version stub.
     #[test]
     fn schema_version_stub() {
         assert!(!SCHEMA_VERSION.is_empty());
@@ -191,7 +179,7 @@ mod tests {
         assert!(segments.iter().all(|part| !part.is_empty()));
     }
 
-    /// Covers FR-CIV-GENETICS-001 — mutation is deterministic under a fixed seed.
+    /// FR-CIV-GENETICS-001 — mutation is deterministic under a fixed seed.
     #[test]
     fn mutation_deterministic() {
         let class = DnaClass::default();
@@ -204,7 +192,7 @@ mod tests {
         assert_eq!(a, b);
     }
 
-    /// Covers FR-CIV-GENETICS-002 — recombination is deterministic under a fixed seed.
+    /// FR-CIV-GENETICS-002 — recombination is deterministic under a fixed seed.
     #[test]
     fn recombination_deterministic() {
         let class = DnaClass::default();
@@ -221,7 +209,7 @@ mod tests {
         }
     }
 
-    /// Covers FR-CIV-GENETICS-010 — speciation triggers above the class threshold and
+    /// FR-CIV-GENETICS-010 — speciation triggers above the class threshold and
     /// not below.
     #[test]
     fn speciation_trigger() {
@@ -243,7 +231,7 @@ mod tests {
         assert!(should_speciate(&a, &b, &class));
     }
 
-    /// Covers FR-CIV-GENETICS-011 — speciation_distance is symmetric.
+    /// FR-CIV-GENETICS-011 — speciation_distance is symmetric.
     #[test]
     fn speciation_distance_is_symmetric() {
         let a = Dna(vec![1, 2, 3, 4, 5, 6, 7, 8]);
@@ -251,7 +239,7 @@ mod tests {
         assert_eq!(speciation_distance(&a, &b), speciation_distance(&b, &a));
     }
 
-    /// Covers FR-CIV-GENETICS-012 — fitness against the same vector as DNA is 1.0.
+    /// FR-CIV-GENETICS-012 — fitness against the same vector as DNA is 1.0.
     #[test]
     fn self_fitness_is_one() {
         let dna = Dna(vec![123; 16]);

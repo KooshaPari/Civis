@@ -35,7 +35,7 @@
 
 use bevy::prelude::*;
 
-use crate::spawn_tools::{select_action_binding, ActiveTool, CursorMarker, PointerOverUi, SpawnTool};
+use crate::spawn_tools::{ActiveTool, CursorMarker, PointerOverUi, SpawnTool};
 
 /// Brush footprint shape on the XZ plane.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -96,11 +96,8 @@ pub enum BrushFalloff {
 
 impl BrushFalloff {
     /// All falloff curves in palette order, for UI iteration.
-    pub const ALL: [BrushFalloff; 3] = [
-        BrushFalloff::Linear,
-        BrushFalloff::Smooth,
-        BrushFalloff::Hard,
-    ];
+    pub const ALL: [BrushFalloff; 3] =
+        [BrushFalloff::Linear, BrushFalloff::Smooth, BrushFalloff::Hard];
 
     /// Player-facing label.
     #[must_use]
@@ -359,12 +356,6 @@ impl Plugin for TerraformBrushPlugin {
             // set (spawn_tools chains its own pipeline independently).
             .add_systems(Update, emit_terraform_edits);
 
-        // The applier that actually mutates the voxel world. Without it every
-        // TerraformEditRequest is emitted then dropped (all god/precise brushes
-        // were silent no-ops). Runs only when the voxel sim is compiled in.
-        #[cfg(feature = "voxel")]
-        app.add_systems(Update, apply_terraform_edits.after(emit_terraform_edits));
-
         #[cfg(feature = "egui")]
         app.add_systems(
             bevy_egui::EguiPrimaryContextPass,
@@ -373,158 +364,10 @@ impl Plugin for TerraformBrushPlugin {
     }
 }
 
-/// Drain [`TerraformEditRequest`] stamps and mutate the live voxel grid so the
-/// terraform + god-brushes actually edit the world. Height-raising ops add
-/// solid columns, lowering ops carve to air, level/flatten drive the surface to
-/// a target. Each write goes through `grid.set`, which marks the chunk dirty so
-/// `step_and_remesh` re-meshes it (the change becomes visible next tick).
-#[cfg(feature = "voxel")]
-fn apply_terraform_edits(
-    mut edits: MessageReader<TerraformEditRequest>,
-    mut sim: ResMut<crate::voxel_sim::VoxelSimState>,
-) {
-    use civ_voxel::material::{MaterialRegistry, STONE};
-    let registry = MaterialRegistry::standard();
-    let solid = registry
-        .by_name("Stone")
-        .or_else(|| registry.by_name("Dirt"))
-        .map_or(STONE, |m| m.id);
-    for req in edits.read() {
-        apply_one_terraform_edit(&mut sim.grid, req, solid);
-    }
-}
-
-/// Apply one terraform stamp across its XZ footprint, one column at a time.
-#[cfg(feature = "voxel")]
-fn apply_one_terraform_edit(
-    grid: &mut civ_voxel::fluid_ca::CaGrid,
-    req: &TerraformEditRequest,
-    solid: civ_voxel::MaterialId,
-) {
-    let ri = req.radius.ceil() as i64;
-    let cx = req.center.x.round() as i64;
-    let cz = req.center.z.round() as i64;
-    for dz in -ri..=ri {
-        for dx in -ri..=ri {
-            let w = req
-                .falloff
-                .apply(req.shape.coverage(dx as f32, dz as f32, req.radius));
-            if w <= 0.0 {
-                continue;
-            }
-            let (x, z) = (cx + dx, cz + dz);
-            if x < 0 || z < 0 {
-                continue;
-            }
-            edit_column(grid, x as usize, z as usize, w, req, solid);
-        }
-    }
-}
-
-/// Mutate a single voxel column according to the stamp's op + per-column weight.
-#[cfg(feature = "voxel")]
-fn edit_column(
-    grid: &mut civ_voxel::fluid_ca::CaGrid,
-    x: usize,
-    z: usize,
-    weight: f32,
-    req: &TerraformEditRequest,
-    solid: civ_voxel::MaterialId,
-) {
-    use civ_voxel::material::AIR;
-    if x >= grid.dims[0] || z >= grid.dims[2] {
-        return;
-    }
-    let height = grid.dims[1];
-    let surface = surface_y(grid, x, z);
-    match req.op {
-        BrushOp::Raise | BrushOp::AddLand | BrushOp::RaiseMountain => {
-            let add = (req.strength.abs() * weight).round() as usize;
-            for y in surface..(surface + add).min(height - 1) {
-                grid.set(x, y, z, solid);
-            }
-        }
-        BrushOp::Lower | BrushOp::DigOcean => {
-            let cut = (req.strength.abs() * weight).round() as usize;
-            for y in surface.saturating_sub(cut)..surface {
-                grid.set(x, y, z, AIR);
-            }
-        }
-        BrushOp::LevelToHeight | BrushOp::Flatten | BrushOp::Slope => {
-            let target = (req.target_height.round() as usize).min(height - 1);
-            level_column(grid, x, z, surface, target, solid);
-        }
-        BrushOp::Smooth => {
-            // Low-pass: nudge this column toward its 4-neighbour surface average
-            // so jagged terrain relaxes. Weight scales how far it moves per stamp.
-            let avg = neighbour_surface_avg(grid, x, z);
-            let target = (surface as f32 + (avg - surface as f32) * weight)
-                .round()
-                .clamp(0.0, (height - 1) as f32) as usize;
-            level_column(grid, x, z, surface, target, solid);
-        }
-        // DropBiome edits no height; biome painting is deferred for a later pass.
-        BrushOp::DropBiome => {}
-    }
-}
-
-/// Mean surface height of the four axial neighbours (clamped to the grid), used
-/// by the Smooth brush as the relaxation target.
-#[cfg(feature = "voxel")]
-fn neighbour_surface_avg(grid: &civ_voxel::fluid_ca::CaGrid, x: usize, z: usize) -> f32 {
-    let xm = x.saturating_sub(1);
-    let zm = z.saturating_sub(1);
-    let xp = (x + 1).min(grid.dims[0] - 1);
-    let zp = (z + 1).min(grid.dims[2] - 1);
-    let sum = surface_y(grid, xm, z)
-        + surface_y(grid, xp, z)
-        + surface_y(grid, x, zm)
-        + surface_y(grid, x, zp);
-    sum as f32 / 4.0
-}
-
-/// First-non-air cell scan from the top: returns the lowest air `y` resting on
-/// solid (i.e. the surface). Returns 0 for an all-air column.
-#[cfg(feature = "voxel")]
-fn surface_y(grid: &civ_voxel::fluid_ca::CaGrid, x: usize, z: usize) -> usize {
-    use civ_voxel::material::AIR;
-    for y in (0..grid.dims[1]).rev() {
-        if grid.get(x, y, z) != AIR {
-            return y + 1;
-        }
-    }
-    0
-}
-
-/// Drive a column's surface toward `target`: fill with `solid` if below, carve
-/// to air if above.
-#[cfg(feature = "voxel")]
-fn level_column(
-    grid: &mut civ_voxel::fluid_ca::CaGrid,
-    x: usize,
-    z: usize,
-    surface: usize,
-    target: usize,
-    solid: civ_voxel::MaterialId,
-) {
-    use civ_voxel::material::AIR;
-    if target > surface {
-        for y in surface..target {
-            grid.set(x, y, z, solid);
-        }
-    } else {
-        for y in target..surface {
-            grid.set(x, y, z, AIR);
-        }
-    }
-}
-
 /// Translate a click/drag under the Terraform tool into [`TerraformEditRequest`]
 /// stamps, honouring the egui pointer gate and the shared cursor hit.
 fn emit_terraform_edits(
     buttons: Res<ButtonInput<MouseButton>>,
-    keys: Res<ButtonInput<KeyCode>>,
-    settings: Option<Res<crate::settings_ui::GameSettings>>,
     active: Res<ActiveTool>,
     over_ui: Res<PointerOverUi>,
     marker: Res<CursorMarker>,
@@ -539,8 +382,7 @@ fn emit_terraform_edits(
         return;
     }
 
-    let select_binding = select_action_binding(settings.as_deref());
-    let released = select_binding_just_released(select_binding, &keys, &buttons);
+    let released = buttons.just_released(MouseButton::Left);
     if released {
         stroke.active = false;
         stroke.anchor_height = None;
@@ -552,8 +394,8 @@ fn emit_terraform_edits(
         return;
     }
 
-    let pressed = select_binding_just_pressed(select_binding, &keys, &buttons);
-    let held = select_binding.is_pressed(&keys, &buttons);
+    let pressed = buttons.just_pressed(MouseButton::Left);
+    let held = buttons.pressed(MouseButton::Left);
     if !pressed && !held {
         return;
     }
@@ -693,7 +535,9 @@ fn brush_param_sliders(ui: &mut bevy_egui::egui::Ui, brush: &mut BrushSettings) 
 
     match brush.op {
         BrushOp::LevelToHeight => {
-            ui.add(egui::Slider::new(&mut brush.target_height, 0.0..=200.0).text("Target height"));
+            ui.add(
+                egui::Slider::new(&mut brush.target_height, 0.0..=200.0).text("Target height"),
+            );
         }
         BrushOp::DropBiome => {
             ui.add(egui::Slider::new(&mut brush.biome_id, 0..=15).text("Biome id"));
@@ -703,28 +547,6 @@ fn brush_param_sliders(ui: &mut bevy_egui::egui::Ui, brush: &mut BrushSettings) 
 
     if !brush.op.is_god() {
         ui.checkbox(&mut brush.continuous, "Continuous paint");
-    }
-}
-
-fn select_binding_just_pressed(
-    binding: crate::settings_ui::KeyBinding,
-    keys: &ButtonInput<KeyCode>,
-    buttons: &ButtonInput<MouseButton>,
-) -> bool {
-    match binding {
-        crate::settings_ui::KeyBinding::Key(key) => keys.just_pressed(key),
-        crate::settings_ui::KeyBinding::Mouse(button) => buttons.just_pressed(button),
-    }
-}
-
-fn select_binding_just_released(
-    binding: crate::settings_ui::KeyBinding,
-    keys: &ButtonInput<KeyCode>,
-    buttons: &ButtonInput<MouseButton>,
-) -> bool {
-    match binding {
-        crate::settings_ui::KeyBinding::Key(key) => keys.just_released(key),
-        crate::settings_ui::KeyBinding::Mouse(button) => buttons.just_released(button),
     }
 }
 
@@ -806,69 +628,6 @@ mod tests {
         let edge = b.sample_delta(b.radius * 0.5, 0.0);
         assert!(center > edge);
         assert!(edge > 0.0);
-    }
-
-    #[cfg(feature = "voxel")]
-    #[test]
-    fn raise_adds_solid_lower_carves_air() {
-        use civ_voxel::fluid_ca::CaGrid;
-        use civ_voxel::material::{MaterialRegistry, AIR};
-        let solid = MaterialRegistry::standard().by_name("Stone").unwrap().id;
-        // Flat ground: bottom 8 cells solid, rest air.
-        let mut grid = CaGrid::new([8, 32, 8]);
-        for z in 0..8 {
-            for x in 0..8 {
-                for y in 0..8 {
-                    grid.set(x, y, z, solid);
-                }
-            }
-        }
-        let base = BrushSettings::default();
-        let raise = TerraformEditRequest {
-            center: Vec3::new(4.0, 8.0, 4.0),
-            radius: 3.0,
-            strength: 4.0,
-            falloff: BrushFalloff::Hard,
-            shape: BrushShape::Circle,
-            op: BrushOp::Raise,
-            target_height: base.target_height,
-            biome_id: 0,
-        };
-        apply_one_terraform_edit(&mut grid, &raise, solid);
-        assert_eq!(
-            grid.get(4, 8, 4),
-            solid,
-            "raise must add solid above surface"
-        );
-
-        let lower = TerraformEditRequest {
-            op: BrushOp::Lower,
-            ..raise
-        };
-        apply_one_terraform_edit(&mut grid, &lower, solid);
-        assert_eq!(
-            grid.get(4, 8, 4),
-            AIR,
-            "lower must carve the raised solid back to air"
-        );
-    }
-
-    #[cfg(feature = "voxel")]
-    #[test]
-    fn surface_y_finds_top_of_solid() {
-        use civ_voxel::fluid_ca::CaGrid;
-        use civ_voxel::material::MaterialRegistry;
-        let solid = MaterialRegistry::standard().by_name("Stone").unwrap().id;
-        let mut grid = CaGrid::new([4, 16, 4]);
-        for y in 0..5 {
-            grid.set(1, y, 1, solid);
-        }
-        assert_eq!(
-            surface_y(&grid, 1, 1),
-            5,
-            "surface is one above the top solid cell"
-        );
-        assert_eq!(surface_y(&grid, 0, 0), 0, "all-air column has surface 0");
     }
 
     #[test]

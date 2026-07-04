@@ -6,7 +6,6 @@ Practical guides for working with civ.
 
 - [Anti-Patterns](/guides/anti-patterns) - Code patterns to avoid in civ
 - [Agent Orchestration](/guides/agent-orchestration) - Running parallel agent workflows
-- [CA Dirty-Chunk Profiling](/guides/ca-dirty-chunk-profiling) - Reproducible benchmark and flamegraph entrypoints for the CA hot path
 - [Quality Gates](/governance/QUALITY_GATES) - 9-gate quality system reference
 
 ## Starting Points

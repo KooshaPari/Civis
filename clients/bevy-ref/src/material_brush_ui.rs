@@ -39,10 +39,9 @@
 use bevy::prelude::*;
 
 use bevy_egui::egui;
-use civ_voxel::material::{MaterialDef, MaterialRegistry, Phase, AIR, WATER};
+use civ_voxel::material::{MaterialDef, MaterialRegistry, Phase};
 use civ_voxel::MaterialId;
 
-use crate::spawn_tools::select_action_binding;
 use crate::ui_theme;
 
 /// Player-facing material families shown as collapsible sections in the palette.
@@ -124,7 +123,9 @@ impl MaterialFamily {
         const ENERGETIC: [&str; 8] = [
             "lava", "magma", "fire", "ember", "plasma", "spark", "electric", "radio",
         ];
-        const BIO: [&str; 7] = ["plant", "moss", "mold", "organic", "sludge", "seed", "bio"];
+        const BIO: [&str; 7] = [
+            "plant", "moss", "mold", "organic", "sludge", "seed", "bio",
+        ];
         if ENERGETIC.iter().any(|k| name.contains(k)) {
             return MaterialFamily::Energetic;
         }
@@ -200,13 +201,13 @@ pub struct SelectedMaterial {
 impl Default for SelectedMaterial {
     fn default() -> Self {
         // Default to the first non-air material in the registry so the brush is
-        // immediately useful; fall back to `WATER` in the standard set.
+        // immediately useful; fall back to id 1 (Water in the standard set).
         let material = MaterialRegistry::standard()
             .materials()
             .iter()
             .find(|m| !matches!(m.phase, Phase::Empty) && m.id.0 != 0)
             .map(|m| m.id)
-            .unwrap_or(WATER);
+            .unwrap_or(MaterialId(1));
         Self {
             material,
             mode: MaterialPaintMode::Replace,
@@ -242,23 +243,6 @@ impl Default for MaterialPaletteOpen {
     }
 }
 
-/// Verification hook: when `CIVIS_BRUSH_CLOSED=1` is set, keep the Material
-/// Brush panel closed so a headless autoshot can frame the bottom-right holocron
-/// minimap (which the right-anchored brush Window would otherwise overlap).
-///
-/// Runs every frame (env read once via a `Local` cache) so the panel stays
-/// closed through the whole warm-up regardless of HUD toggles.
-fn close_brush_for_autoshot(
-    mut open: ResMut<MaterialPaletteOpen>,
-    mut enabled: Local<Option<bool>>,
-) {
-    let on =
-        *enabled.get_or_insert_with(|| std::env::var("CIVIS_BRUSH_CLOSED").as_deref() == Ok("1"));
-    if on {
-        open.0 = false;
-    }
-}
-
 /// Material brush palette + voxel paint plugin.
 pub struct MaterialBrushPlugin;
 
@@ -267,20 +251,13 @@ impl Plugin for MaterialBrushPlugin {
         app.init_resource::<SelectedMaterial>()
             .init_resource::<MaterialPaintArmed>()
             .init_resource::<MaterialPaletteOpen>()
-            .add_systems(
-                Update,
-                (sync_paint_armed_from_tool, close_brush_for_autoshot),
-            )
+            .add_systems(Update, sync_paint_armed_from_tool)
             // egui draw MUST run on EguiPrimaryContextPass — on Update the egui
             // context has no fonts yet and panics ("No fonts available").
             .add_systems(
                 bevy_egui::EguiPrimaryContextPass,
                 material_palette_panel.run_if(crate::menus::in_game),
             );
-
-        // Material sub-tool → painted material sync (HUD-driven; egui only).
-        #[cfg(feature = "egui")]
-        app.add_systems(Update, sync_material_from_subtool);
 
         // The actual world paint only exists when the voxel sim is compiled in.
         #[cfg(feature = "voxel")]
@@ -299,25 +276,6 @@ fn sync_paint_armed_from_tool(
     let want = active.tool == crate::spawn_tools::SpawnTool::PaintMaterial;
     if armed.0 != want {
         armed.0 = want;
-    }
-}
-
-/// Set the active paint material from the selected Material sub-tool, so picking
-/// "Water"/"Sand"/"Lava"/… in the HUD actually paints THAT material (these were
-/// previously inert no-ops). Looks the name up in the live registry once it
-/// changes; leaves the selection alone for non-material sub-tools.
-#[cfg(feature = "egui")]
-fn sync_material_from_subtool(
-    sub: Res<crate::tool_categories::ActiveSubTool>,
-    mut selected: ResMut<SelectedMaterial>,
-) {
-    let Some(name) = sub.current.paint_material_name() else {
-        return;
-    };
-    if let Some(def) = MaterialRegistry::standard().by_name(name) {
-        if selected.material != def.id {
-            selected.material = def.id;
-        }
     }
 }
 
@@ -374,26 +332,19 @@ fn paint_swatch_gloss(painter: &egui::Painter, rect: egui::Rect, base: egui::Col
 fn paint_swatch_bevel(painter: &egui::Painter, rect: egui::Rect) {
     let light = swatch_tint(egui::Color32::WHITE, 0.55);
     let dark = swatch_tint(egui::Color32::BLACK, 0.45);
-    painter.line_segment(
-        [rect.left_top(), rect.right_top()],
-        egui::Stroke::new(1.0, light),
-    );
-    painter.line_segment(
-        [rect.left_top(), rect.left_bottom()],
-        egui::Stroke::new(1.0, light),
-    );
-    painter.line_segment(
-        [rect.left_bottom(), rect.right_bottom()],
-        egui::Stroke::new(1.0, dark),
-    );
-    painter.line_segment(
-        [rect.right_top(), rect.right_bottom()],
-        egui::Stroke::new(1.0, dark),
-    );
+    painter.line_segment([rect.left_top(), rect.right_top()], egui::Stroke::new(1.0, light));
+    painter.line_segment([rect.left_top(), rect.left_bottom()], egui::Stroke::new(1.0, light));
+    painter.line_segment([rect.left_bottom(), rect.right_bottom()], egui::Stroke::new(1.0, dark));
+    painter.line_segment([rect.right_top(), rect.right_bottom()], egui::Stroke::new(1.0, dark));
 }
 
 /// Cheap phase texture: liquid wave, powder stipple, solid relies on gloss alone.
-fn paint_swatch_phase_hint(painter: &egui::Painter, rect: egui::Rect, phase: Phase, seed: u32) {
+fn paint_swatch_phase_hint(
+    painter: &egui::Painter,
+    rect: egui::Rect,
+    phase: Phase,
+    seed: u32,
+) {
     match phase {
         Phase::Liquid => paint_liquid_wave(painter, rect),
         Phase::Powder => paint_powder_stipple(painter, rect, seed),
@@ -453,10 +404,7 @@ fn paint_gas_wisp(painter: &egui::Painter, rect: egui::Rect, seed: u32) {
         h = h.wrapping_mul(0x85EB_CA6B).wrapping_add(i);
         let t = (h & 0xFF) as f32 / 255.0;
         let cx = egui::lerp(rect.min.x + 6.0..=rect.max.x - 6.0, t);
-        let cy = egui::lerp(
-            rect.min.y + 8.0..=rect.max.y - 8.0,
-            ((h >> 8) & 0xFF) as f32 / 255.0,
-        );
+        let cy = egui::lerp(rect.min.y + 8.0..=rect.max.y - 8.0, ((h >> 8) & 0xFF) as f32 / 255.0);
         let blob = egui::Rect::from_center_size(egui::pos2(cx, cy), egui::vec2(6.0, 3.0));
         painter.rect_filled(blob, 2.0, swatch_tint(egui::Color32::WHITE, 0.22));
     }
@@ -485,19 +433,19 @@ fn material_palette_panel(
         .unwrap_or("—");
 
     egui::Window::new("Material Brush")
-        .frame(ui_theme::liquid_glass_frame(
-            egui::Margin::same(12),
-            ui_theme::RADIUS_PANEL,
-        ))
+        .frame(ui_theme::accent_frame(egui::Margin::same(10), ui_theme::ACCENT))
         .resizable(false)
         .default_width(248.0)
-        // Top-right (was RIGHT_CENTER): keeps the brush clear of the bottom-right
-        // holocron map (MINIMAP_SIZE=360) so the enlarged map is never occluded.
-        // The y-offset drops it below the top-center stat cluster.
-        .anchor(egui::Align2::RIGHT_TOP, egui::vec2(-12.0, 86.0))
+        .anchor(egui::Align2::RIGHT_CENTER, egui::vec2(-12.0, 0.0))
         .show(ctx, |ui| {
             palette_panel_body(ui, active_name, armed.0, &shelves, &mut selected);
-            ui_theme::liquid_glass_finish(ui.painter(), ui.min_rect(), ui_theme::RADIUS_PANEL);
+            ui_theme::panel_finish(
+                ui.painter(),
+                ui.min_rect(),
+                ui_theme::RADIUS,
+                false,
+                true,
+            );
         });
 }
 
@@ -565,12 +513,7 @@ fn brush_cluster_combo(ui: &mut egui::Ui, selected: &mut SelectedMaterial) {
 
 /// Replace / additive-drop / erase radio row inside the cluster popover.
 fn brush_action_mode_radios(ui: &mut egui::Ui, selected: &mut SelectedMaterial) {
-    ui.label(
-        egui::RichText::new("Action")
-            .small()
-            .strong()
-            .color(ui_theme::DIM),
-    );
+    ui.label(egui::RichText::new("Action").small().strong().color(ui_theme::DIM));
     for mode in MaterialPaintMode::ALL {
         ui.radio_value(&mut selected.mode, mode, mode.label());
     }
@@ -673,16 +616,13 @@ fn material_swatch(
 #[cfg(feature = "voxel")]
 fn paint_into_voxel_grid(
     buttons: Res<ButtonInput<MouseButton>>,
-    keys: Res<ButtonInput<KeyCode>>,
-    settings: Option<Res<crate::settings_ui::GameSettings>>,
     armed: Res<MaterialPaintArmed>,
     selected: Res<SelectedMaterial>,
     marker: Res<crate::spawn_tools::CursorMarker>,
     over_ui: Res<crate::spawn_tools::PointerOverUi>,
     mut sim: ResMut<crate::voxel_sim::VoxelSimState>,
 ) {
-    let paint_pressed = select_action_binding(settings.as_deref()).is_pressed(&keys, &buttons);
-    if !armed.0 || over_ui.0 || !paint_pressed {
+    if !armed.0 || over_ui.0 || !buttons.pressed(MouseButton::Left) {
         return;
     }
     let Some(centre) = marker.position else {
@@ -694,7 +634,6 @@ fn paint_into_voxel_grid(
         centre,
         selected.clamped_size(),
         selected.strength,
-        selected.mode,
         selected.material,
         salt,
     );
@@ -712,7 +651,6 @@ fn stamp_sphere(
     centre: Vec3,
     radius: f32,
     strength: f32,
-    mode: MaterialPaintMode,
     material: MaterialId,
     salt: u64,
 ) {
@@ -723,41 +661,21 @@ fn stamp_sphere(
     let cz = centre.z.round() as i64;
     let ri = r.ceil() as i64;
     let strength = strength.clamp(0.0, 1.0);
-    let material_temp = MaterialRegistry::standard()
-        .get(material)
-        .map_or(20, |def| def.temperature);
-    let add_mode = matches!(mode, MaterialPaintMode::AdditiveDrop);
     for dz in -ri..=ri {
-        for dx in -ri..=ri {
-            let xz2 = dx * dx + dz * dz;
-            if xz2 > ri * ri {
-                continue;
-            }
-            let x = cx + dx;
-            let z = cz + dz;
-            let max_y = if add_mode { cy + 2 * ri } else { cy + ri };
-            let min_y = if add_mode { cy } else { cy - ri };
-            for y in min_y..=max_y {
-                if strength < 1.0 && voxel_dither(x, y, z, salt) >= strength {
+        for dy in -ri..=ri {
+            for dx in -ri..=ri {
+                let dist2 = (dx * dx + dy * dy + dz * dz) as f32;
+                if dist2 > r2 {
                     continue;
                 }
+                let (x, y, z) = (cx + dx, cy + dy, cz + dz);
                 if x < 0 || y < 0 || z < 0 {
                     continue;
                 }
-                if !add_mode {
-                    let dy = y - cy;
-                    let dist2 = (dx * dx + dy * dy + dz * dz) as f32;
-                    if dist2 > r2 {
-                        continue;
-                    }
+                if strength < 1.0 && voxel_dither(x, y, z, salt) >= strength {
+                    continue;
                 }
-                let write_mat = if mode == MaterialPaintMode::Erase {
-                    AIR
-                } else {
-                    material
-                };
-                let write_temp = if write_mat == AIR { 20 } else { material_temp };
-                grid.set_with_temp(x as usize, y as usize, z as usize, write_mat, write_temp);
+                grid.set(x as usize, y as usize, z as usize, material);
             }
         }
     }
@@ -845,15 +763,7 @@ mod tests {
         use civ_voxel::fluid_ca::CaGrid;
         let mut grid = CaGrid::new([16, 16, 16]);
         let mat = MaterialId(6);
-        stamp_sphere(
-            &mut grid,
-            Vec3::new(8.0, 8.0, 8.0),
-            3.0,
-            1.0,
-            MaterialPaintMode::Replace,
-            mat,
-            0,
-        );
+        stamp_sphere(&mut grid, Vec3::new(8.0, 8.0, 8.0), 3.0, 1.0, mat, 0);
         // Centre painted.
         assert_eq!(grid.get(8, 8, 8), mat);
         // A cell well inside the radius painted.
@@ -864,151 +774,11 @@ mod tests {
 
     #[cfg(feature = "voxel")]
     #[test]
-    fn stamp_sphere_erase_writes_air() {
-        use civ_voxel::fluid_ca::CaGrid;
-        let mut grid = CaGrid::new([16, 16, 16]);
-        let mat = MaterialId(6);
-        // Lay solid material first, then erase the same footprint.
-        stamp_sphere(
-            &mut grid,
-            Vec3::new(8.0, 8.0, 8.0),
-            3.0,
-            1.0,
-            MaterialPaintMode::Replace,
-            mat,
-            0,
-        );
-        assert_eq!(grid.get(8, 8, 8), mat);
-        stamp_sphere(
-            &mut grid,
-            Vec3::new(8.0, 8.0, 8.0),
-            3.0,
-            1.0,
-            MaterialPaintMode::Erase,
-            mat,
-            0,
-        );
-        assert_eq!(grid.get(8, 8, 8), AIR, "erase must clear the centre to air");
-    }
-
-    #[cfg(feature = "voxel")]
-    #[test]
-    fn stamp_sphere_additive_drops_column_above_centre() {
-        use civ_voxel::fluid_ca::CaGrid;
-        let mut grid = CaGrid::new([16, 32, 16]);
-        let mat = MaterialId(1);
-        let cy = 8usize;
-        stamp_sphere(
-            &mut grid,
-            Vec3::new(8.0, cy as f32, 8.0),
-            3.0,
-            1.0,
-            MaterialPaintMode::AdditiveDrop,
-            mat,
-            0,
-        );
-        // Additive drop fills a column ABOVE the centre so the CA carries it down.
-        assert_eq!(
-            grid.get(8, cy + 4, 8),
-            mat,
-            "additive must seed material above centre"
-        );
-    }
-
-    #[cfg(feature = "voxel")]
-    #[test]
-    fn additive_drop_falls_and_settles_via_ca() {
-        // End-to-end drop-from-sky: AdditiveDrop seeds SAND high above a stone
-        // floor, then CA gravity must carry it DOWN to rest on the floor. Measured
-        // by the lowest occupied SAND row dropping over ticks (not a screenshot).
-        use civ_voxel::fluid_ca::{step, CaGrid};
-        use civ_voxel::material::{MaterialRegistry, SAND, STONE};
-        let mut grid = CaGrid::new([8, 32, 8]);
-        for z in 0..8 {
-            for x in 0..8 {
-                grid.set(x, 0, z, STONE); // solid floor at y=0
-            }
-        }
-        // Drop sand from high up over the centre column.
-        stamp_sphere(
-            &mut grid,
-            Vec3::new(4.0, 20.0, 4.0),
-            2.0,
-            1.0,
-            MaterialPaintMode::AdditiveDrop,
-            SAND,
-            0,
-        );
-        let lowest = |g: &CaGrid| -> usize {
-            for y in 0..g.dims[1] {
-                for z in 0..g.dims[2] {
-                    for x in 0..g.dims[0] {
-                        if g.get(x, y, z) == SAND {
-                            return y;
-                        }
-                    }
-                }
-            }
-            usize::MAX
-        };
-        let before = lowest(&grid);
-        let reg = MaterialRegistry::standard();
-        for _ in 0..40 {
-            step(&mut grid, reg);
-        }
-        let after = lowest(&grid);
-        assert!(
-            after < before,
-            "dropped sand did not fall (before y={before}, after y={after})"
-        );
-        assert!(
-            after <= 2,
-            "dropped sand did not settle near the floor (rests at y={after})"
-        );
-    }
-
-    #[cfg(feature = "voxel")]
-    #[test]
-    fn paint_marks_chunk_dirty_so_it_remeshes() {
-        use civ_voxel::fluid_ca::CaGrid;
-        // The core "brush did nothing visible" bug: a paint that mutates cells
-        // but never marks its chunk dirty is never re-meshed. Every brush mode
-        // must leave the touched chunk in dirty_chunks so step_and_remesh
-        // rebuilds it.
-        for mode in MaterialPaintMode::ALL {
-            let mut grid = CaGrid::new([16, 16, 16]);
-            assert!(grid.dirty_chunks().is_empty(), "grid starts clean");
-            stamp_sphere(
-                &mut grid,
-                Vec3::new(8.0, 8.0, 8.0),
-                3.0,
-                1.0,
-                mode,
-                MaterialId(6),
-                0,
-            );
-            assert!(
-                !grid.dirty_chunks().is_empty(),
-                "{mode:?} paint must mark a chunk dirty so it remeshes (was the invisible-paint bug)"
-            );
-        }
-    }
-
-    #[cfg(feature = "voxel")]
-    #[test]
     fn stamp_sphere_strength_feathers() {
         use civ_voxel::fluid_ca::CaGrid;
         let mut grid = CaGrid::new([32, 32, 32]);
         let mat = MaterialId(3);
-        stamp_sphere(
-            &mut grid,
-            Vec3::new(16.0, 16.0, 16.0),
-            8.0,
-            0.3,
-            MaterialPaintMode::Replace,
-            mat,
-            7,
-        );
+        stamp_sphere(&mut grid, Vec3::new(16.0, 16.0, 16.0), 8.0, 0.3, mat, 7);
         let painted = grid.cells.iter().filter(|&&c| c == mat).count();
         // Sparse brush paints some but far from all voxels in the footprint.
         assert!(painted > 0, "feathered brush painted nothing");
@@ -1022,15 +792,7 @@ mod tests {
         use civ_voxel::fluid_ca::CaGrid;
         let mut grid = CaGrid::new([8, 8, 8]);
         // Centre near the origin corner so part of the brush is out of bounds.
-        stamp_sphere(
-            &mut grid,
-            Vec3::new(0.0, 0.0, 0.0),
-            4.0,
-            1.0,
-            MaterialPaintMode::Replace,
-            MaterialId(1),
-            0,
-        );
+        stamp_sphere(&mut grid, Vec3::new(0.0, 0.0, 0.0), 4.0, 1.0, MaterialId(1), 0);
         // Did not panic; origin cell painted.
         assert_eq!(grid.get(0, 0, 0), MaterialId(1));
     }

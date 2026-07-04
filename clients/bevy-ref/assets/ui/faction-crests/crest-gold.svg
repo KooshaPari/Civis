@@ -1,37 +1,45 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <!-- Faction crest "gold" — procedural heraldry (DNA->form). Shared Keycap frame, distinct hue/shield/sigil. -->
+  <!-- Gold faction: The Solar Compass — radial sun-wheel with cardinal marks, ordered symmetry -->
   <defs>
-    <radialGradient id="amb" cx="50%" cy="46%" r="55%">
-      <stop offset="0%" stop-color="#c9a24b" stop-opacity="0.30"/>
-      <stop offset="100%" stop-color="#c9a24b" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="field" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#0e1416"/>
-      <stop offset="100%" stop-color="#080b0c"/>
-    </linearGradient>
-    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
-      <feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    <filter id="goldGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="3.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
+    <radialGradient id="goldAmbient" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#E8B84B" stop-opacity="0.35"/>
+      <stop offset="70%" stop-color="#E8B84B" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#E8B84B" stop-opacity="0"/>
+    </radialGradient>
   </defs>
-
-  <circle cx="64" cy="64" r="56" fill="url(#amb)"/>
-  <!-- shared Keycap teal outer ring (faction DNA) -->
-  <circle cx="64" cy="64" r="58" fill="none" stroke="#7ebab5" stroke-width="1.4" opacity="0.35" stroke-dasharray="3 5"/>
-
-  <!-- shield field -->
-  <path d="M64,16 L100,28 V58 Q100,86 64,114 Q28,86 28,58 V28 Z" fill="url(#field)" stroke="#c9a24b" stroke-width="3" filter="url(#glow)"/>
-  <path d="M64,16 L100,28 V58 Q100,86 64,114 Q28,86 28,58 V28 Z" fill="none" stroke="#ecd089" stroke-width="1" opacity="0.5"/>
-
-  <!-- central faction glyph -->
-  <g filter="url(#glow)"><circle cx="64" cy="64" r="13" stroke="#ecd089" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" />
-              <line x1="84.0" y1="64.0" x2="91.0" y2="64.0" stroke="#ecd089" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" /><line x1="78.1" y1="78.1" x2="83.1" y2="83.1" stroke="#ecd089" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" /><line x1="64.0" y1="84.0" x2="64.0" y2="91.0" stroke="#ecd089" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" /><line x1="49.9" y1="78.1" x2="44.9" y2="83.1" stroke="#ecd089" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" /><line x1="44.0" y1="64.0" x2="37.0" y2="64.0" stroke="#ecd089" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" /><line x1="49.9" y1="49.9" x2="44.9" y2="44.9" stroke="#ecd089" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" /><line x1="64.0" y1="44.0" x2="64.0" y2="37.0" stroke="#ecd089" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" /><line x1="78.1" y1="49.9" x2="83.1" y2="44.9" stroke="#ecd089" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" /></g>
-
-  <!-- emergent node motif at crest base (shared DNA) -->
-  <g>
-    <line x1="50" y1="98" x2="64" y2="104" stroke="#7ebab5" stroke-width="1" opacity="0.5"/>
-    <line x1="78" y1="98" x2="64" y2="104" stroke="#7ebab5" stroke-width="1" opacity="0.5"/>
-    <circle cx="50" cy="98" r="2.2" fill="#7ebab5" opacity="0.8"/>
-    <circle cx="78" cy="98" r="2.2" fill="#7ebab5" opacity="0.8"/>
-    <circle cx="64" cy="104" r="2.6" fill="#ecd089"/>
-  </g>
+  <circle cx="64" cy="64" r="58" fill="url(#goldAmbient)"/>
+  <!-- outer ring -->
+  <circle cx="64" cy="64" r="52" fill="none" stroke="#E8B84B" stroke-width="2.5" opacity="0.5" filter="url(#goldGlow)"/>
+  <!-- inner ring -->
+  <circle cx="64" cy="64" r="36" fill="#0c0e08" stroke="#E8B84B" stroke-width="3" filter="url(#goldGlow)"/>
+  <!-- innermost ring -->
+  <circle cx="64" cy="64" r="18" fill="#0c0e08" stroke="#E8B84B" stroke-width="2" opacity="0.8"/>
+  <!-- 8 primary ray spikes (alternating long/short) -->
+  <line x1="64" y1="12" x2="64" y2="28" stroke="#E8B84B" stroke-width="4" stroke-linecap="round" filter="url(#goldGlow)"/>
+  <line x1="64" y1="100" x2="64" y2="116" stroke="#E8B84B" stroke-width="4" stroke-linecap="round" filter="url(#goldGlow)"/>
+  <line x1="12" y1="64" x2="28" y2="64" stroke="#E8B84B" stroke-width="4" stroke-linecap="round" filter="url(#goldGlow)"/>
+  <line x1="100" y1="64" x2="116" y2="64" stroke="#E8B84B" stroke-width="4" stroke-linecap="round" filter="url(#goldGlow)"/>
+  <!-- diagonal shorter rays -->
+  <line x1="27" y1="27" x2="37" y2="37" stroke="#E8B84B" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+  <line x1="91" y1="27" x2="101" y2="37" stroke="#E8B84B" stroke-width="3" stroke-linecap="round" opacity="0.8" transform="rotate(90 64 64)"/>
+  <line x1="27" y1="101" x2="37" y2="91" stroke="#E8B84B" stroke-width="3" stroke-linecap="round" opacity="0.8" transform="rotate(180 64 64)"/>
+  <line x1="91" y1="101" x2="101" y2="91" stroke="#E8B84B" stroke-width="3" stroke-linecap="round" opacity="0.8" transform="rotate(270 64 64)"/>
+  <!-- compass interior diamond needle -->
+  <polygon points="64,46 70,64 64,82 58,64"
+    fill="#1a1400" stroke="#E8B84B" stroke-width="2" filter="url(#goldGlow)"/>
+  <!-- compass N accent -->
+  <polygon points="64,46 69,58 59,58"
+    fill="#E8B84B" opacity="0.9"/>
+  <!-- center hub -->
+  <circle cx="64" cy="64" r="7" fill="#E8B84B" filter="url(#goldGlow)"/>
+  <circle cx="64" cy="64" r="3.5" fill="#0c0e08"/>
+  <!-- outer cardinal tick dots -->
+  <circle cx="64" cy="14" r="3" fill="#E8B84B" filter="url(#goldGlow)"/>
+  <circle cx="64" cy="114" r="3" fill="#E8B84B" filter="url(#goldGlow)"/>
+  <circle cx="14" cy="64" r="3" fill="#E8B84B" filter="url(#goldGlow)"/>
+  <circle cx="114" cy="64" r="3" fill="#E8B84B" filter="url(#goldGlow)"/>
 </svg>

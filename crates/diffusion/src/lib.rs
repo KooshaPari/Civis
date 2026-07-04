@@ -79,7 +79,6 @@ pub fn trajectory(f0: f32, params: DiffusionParams, ticks: usize) -> Vec<f32> {
 mod tests {
     use super::*;
 
-    /// Covers FR-CIV-DIFFUSION-000.
     /// FR-CIV-DIFFUSION-000 — exposes a semver-like schema version stub.
     #[test]
     fn schema_version_stub() {
@@ -90,7 +89,6 @@ mod tests {
         assert!(segments.iter().all(|part| !part.is_empty()));
     }
 
-    /// Covers FR-CIV-DIFFUSION-001.
     /// FR-CIV-DIFFUSION-001 — adoption matches the Bass closed-form for the
     /// per-tick increment.
     #[test]

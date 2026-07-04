@@ -2,10 +2,8 @@
 //!
 //! Cities-Skylines-2-style overlays: a registry of named overlays, each mapping
 //! a world sample point (and optional sim state) to a colour on a legend scale.
-//! A toggle panel (UI buttons in the left HUD) switches the *active* terrain
-//! overlay; the legend shows the colour ramp. [`NearbyCountsOverlay`] (hotkey
-//! `Tab`) shows live nearby entity counts. New overlays are a [`InfoOverlay`]
-//! registration,
+//! A toggle panel (hotkey `Tab` / UI buttons) switches the *active* overlay; the
+//! legend shows the colour ramp. New overlays are a [`InfoOverlay`] registration,
 //! not a code fork.
 //!
 //! Overlays here are sourced from data Civis already computes in the standalone
@@ -24,14 +22,6 @@
 use bevy::prelude::*;
 
 use crate::terrain::{terrain_height, HEIGHT_SCALE, WATER_LEVEL, WORLD_SIZE};
-use civ_agents::Civilian;
-
-fn civilian_faction_id(civilian: &Civilian) -> u32 {
-    match civilian.alignment {
-        civ_agents::Alignment::Faction(faction) => faction,
-        _ => 0,
-    }
-}
 
 /// A single colour-ramp stop: a value in `0.0..=1.0` mapped to an sRGB triple.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -144,126 +134,42 @@ pub fn ramp_color(legend: &[LegendStop], value: f32) -> [f32; 3] {
 // ---------------------------------------------------------------------------
 
 const RAMP_ELEVATION: &[LegendStop] = &[
-    LegendStop {
-        at: 0.0,
-        label: "Deep",
-        rgb: [0.10, 0.20, 0.55],
-    },
-    LegendStop {
-        at: 0.18,
-        label: "Coast",
-        rgb: [0.86, 0.78, 0.52],
-    },
-    LegendStop {
-        at: 0.48,
-        label: "Lowland",
-        rgb: [0.28, 0.58, 0.24],
-    },
-    LegendStop {
-        at: 0.7,
-        label: "Highland",
-        rgb: [0.50, 0.45, 0.40],
-    },
-    LegendStop {
-        at: 1.0,
-        label: "Peak",
-        rgb: [0.97, 0.97, 0.97],
-    },
+    LegendStop { at: 0.0, label: "Deep", rgb: [0.10, 0.20, 0.55] },
+    LegendStop { at: 0.18, label: "Coast", rgb: [0.86, 0.78, 0.52] },
+    LegendStop { at: 0.48, label: "Lowland", rgb: [0.28, 0.58, 0.24] },
+    LegendStop { at: 0.7, label: "Highland", rgb: [0.50, 0.45, 0.40] },
+    LegendStop { at: 1.0, label: "Peak", rgb: [0.97, 0.97, 0.97] },
 ];
 
 const RAMP_WATER: &[LegendStop] = &[
-    LegendStop {
-        at: 0.0,
-        label: "Dry",
-        rgb: [0.80, 0.72, 0.50],
-    },
-    LegendStop {
-        at: 1.0,
-        label: "Submerged",
-        rgb: [0.10, 0.35, 0.75],
-    },
+    LegendStop { at: 0.0, label: "Dry", rgb: [0.80, 0.72, 0.50] },
+    LegendStop { at: 1.0, label: "Submerged", rgb: [0.10, 0.35, 0.75] },
 ];
 
 const RAMP_TEMPERATURE: &[LegendStop] = &[
-    LegendStop {
-        at: 0.0,
-        label: "Cold",
-        rgb: [0.20, 0.40, 0.95],
-    },
-    LegendStop {
-        at: 0.5,
-        label: "Temperate",
-        rgb: [0.30, 0.85, 0.40],
-    },
-    LegendStop {
-        at: 1.0,
-        label: "Hot",
-        rgb: [0.95, 0.25, 0.15],
-    },
+    LegendStop { at: 0.0, label: "Cold", rgb: [0.20, 0.40, 0.95] },
+    LegendStop { at: 0.5, label: "Temperate", rgb: [0.30, 0.85, 0.40] },
+    LegendStop { at: 1.0, label: "Hot", rgb: [0.95, 0.25, 0.15] },
 ];
 
 const RAMP_MATERIAL: &[LegendStop] = &[
-    LegendStop {
-        at: 0.0,
-        label: "Water",
-        rgb: [0.20, 0.40, 0.86],
-    },
-    LegendStop {
-        at: 0.25,
-        label: "Sand",
-        rgb: [0.86, 0.78, 0.52],
-    },
-    LegendStop {
-        at: 0.5,
-        label: "Grass",
-        rgb: [0.28, 0.58, 0.24],
-    },
-    LegendStop {
-        at: 0.75,
-        label: "Rock",
-        rgb: [0.50, 0.50, 0.52],
-    },
-    LegendStop {
-        at: 1.0,
-        label: "Snow",
-        rgb: [0.97, 0.97, 0.97],
-    },
+    LegendStop { at: 0.0, label: "Water", rgb: [0.20, 0.40, 0.86] },
+    LegendStop { at: 0.25, label: "Sand", rgb: [0.86, 0.78, 0.52] },
+    LegendStop { at: 0.5, label: "Grass", rgb: [0.28, 0.58, 0.24] },
+    LegendStop { at: 0.75, label: "Rock", rgb: [0.50, 0.50, 0.52] },
+    LegendStop { at: 1.0, label: "Snow", rgb: [0.97, 0.97, 0.97] },
 ];
 
 const RAMP_DENSITY: &[LegendStop] = &[
-    LegendStop {
-        at: 0.0,
-        label: "Empty",
-        rgb: [0.15, 0.15, 0.20],
-    },
-    LegendStop {
-        at: 0.5,
-        label: "Settled",
-        rgb: [0.95, 0.80, 0.20],
-    },
-    LegendStop {
-        at: 1.0,
-        label: "Crowded",
-        rgb: [0.90, 0.10, 0.10],
-    },
+    LegendStop { at: 0.0, label: "Empty", rgb: [0.15, 0.15, 0.20] },
+    LegendStop { at: 0.5, label: "Settled", rgb: [0.95, 0.80, 0.20] },
+    LegendStop { at: 1.0, label: "Crowded", rgb: [0.90, 0.10, 0.10] },
 ];
 
 const RAMP_NEEDS: &[LegendStop] = &[
-    LegendStop {
-        at: 0.0,
-        label: "Content",
-        rgb: [0.20, 0.80, 0.30],
-    },
-    LegendStop {
-        at: 0.5,
-        label: "Strained",
-        rgb: [0.95, 0.85, 0.20],
-    },
-    LegendStop {
-        at: 1.0,
-        label: "Critical",
-        rgb: [0.90, 0.10, 0.10],
-    },
+    LegendStop { at: 0.0, label: "Content", rgb: [0.20, 0.80, 0.30] },
+    LegendStop { at: 0.5, label: "Strained", rgb: [0.95, 0.85, 0.20] },
+    LegendStop { at: 1.0, label: "Critical", rgb: [0.90, 0.10, 0.10] },
 ];
 
 // ---------------------------------------------------------------------------
@@ -475,18 +381,6 @@ impl InfoViewRegistry {
         self.active.and_then(|i| self.overlays.get(i))
     }
 
-    /// Index of the active overlay in the registry, if one is selected.
-    #[must_use]
-    pub fn active_index(&self) -> Option<usize> {
-        self.active.filter(|&i| i < self.overlays.len())
-    }
-
-    /// The active overlay id, if one is selected.
-    #[must_use]
-    pub fn active_id(&self) -> Option<&'static str> {
-        self.active_overlay().map(|overlay| overlay.id)
-    }
-
     /// Whether any overlay is currently active.
     #[must_use]
     pub fn is_active(&self) -> bool {
@@ -495,7 +389,7 @@ impl InfoViewRegistry {
 
     /// Cycle to the next overlay, wrapping through `None` (off) at the end.
     ///
-    /// Order: off → 0 → 1 → … → n-1 → off.
+    /// Order: off → 0 → 1 → … → n-1 → off. Bound to the `Tab` hotkey.
     pub fn cycle(&mut self) {
         let n = self.overlays.len();
         self.active = match self.active {
@@ -515,85 +409,10 @@ impl InfoViewRegistry {
         }
     }
 
-    /// Toggle the overlay with the given id.
-    ///
-    /// If the requested overlay is already active, the suite turns off. If a
-    /// different overlay is active, this switches to the requested overlay.
-    /// Returns `true` when the id exists in the registry.
-    pub fn toggle_id(&mut self, id: &str) -> bool {
-        let Some(index) = self.overlays.iter().position(|overlay| overlay.id == id) else {
-            return false;
-        };
-
-        self.active = match self.active {
-            Some(active) if active == index => None,
-            _ => Some(index),
-        };
-        true
-    }
-
-    /// Activate the overlay at the given index, returning `true` on success.
-    pub fn activate_index(&mut self, index: usize) -> bool {
-        if index < self.overlays.len() {
-            self.active = Some(index);
-            true
-        } else {
-            false
-        }
-    }
-
     /// Turn the suite off (terrain shows through).
     pub fn deactivate(&mut self) {
         self.active = None;
     }
-}
-
-/// Live nearby-entity counts for the Tab overlay (P1.3.2).
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub struct NearbyEntityCounts {
-    /// Civilians within the nearby radius.
-    pub civilians: usize,
-    /// Buildings within the nearby radius.
-    pub buildings: usize,
-    /// Civilian count per faction id.
-    pub factions: std::collections::BTreeMap<u32, usize>,
-}
-
-fn faction_letter_label(id: u32) -> String {
-    if id < 26 {
-        format!("Faction {}", (b'A' + id as u8) as char)
-    } else {
-        format!("Faction {id}")
-    }
-}
-
-/// Format the nearby summary line shown in the Tab overlay.
-#[must_use]
-pub fn format_nearby_counts_line(counts: &NearbyEntityCounts) -> String {
-    let civ_word = if counts.civilians == 1 {
-        "civilian"
-    } else {
-        "civilians"
-    };
-    let bld_word = if counts.buildings == 1 {
-        "building"
-    } else {
-        "buildings"
-    };
-    let faction_part = if counts.factions.is_empty() || counts.civilians == 0 {
-        String::new()
-    } else {
-        let breakdown: Vec<String> = counts
-            .factions
-            .iter()
-            .map(|(id, count)| format!("{}: {count}", faction_letter_label(*id)))
-            .collect();
-        format!(" ({})", breakdown.join(", "))
-    };
-    format!(
-        "Nearby: {} {}{}, {} {}.",
-        counts.civilians, civ_word, faction_part, counts.buildings, bld_word
-    )
 }
 
 #[cfg(feature = "egui")]
@@ -602,197 +421,76 @@ pub use plugin::*;
 #[cfg(feature = "egui")]
 mod plugin {
     use super::*;
-    use crate::camera::CameraRig;
-    use crate::live_attach::is_server_attach_mode;
-    use crate::live_stream::{LiveAgentTag, LiveBuildingTag, LiveStreamScene};
-    use crate::sim_bridge::{SimBuildingMarker, SimCivilianMarker, SimState};
-    use crate::ui_theme::{TEXT, TEXT_LOW};
-    use crate::AttachMode;
-    use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
+    use crate::sim_bridge::SimState;
+    use crate::ui_theme::{apply_theme, frame_e1, panel_finish, TEXT, TEXT_LOW, RADIUS};
+    use bevy_egui::{egui, EguiContexts};
     use civ_agents::{Civilian, Needs};
 
-    /// Radius (world units) around the camera target for nearby-entity counts.
-    const NEARBY_RADIUS: f32 = 100.0;
-
-    /// Tab-toggled HUD listing live nearby entity counts (P1.3.2).
-    #[derive(Resource, Default, Debug)]
-    pub struct NearbyCountsOverlay {
-        /// Whether the semi-transparent summary panel is visible.
-        pub visible: bool,
-    }
-
-    /// Plugin: overlay registry, Tab nearby-counts HUD, and terrain recolor pass.
+    /// Plugin: registers the overlay registry, the `Tab` cycle hotkey, the
+    /// toggle/legend panel, and the gizmo recolor pass.
     pub struct InfoViewsPlugin;
 
     impl Plugin for InfoViewsPlugin {
         fn build(&self, app: &mut App) {
-            // The overlay PICKER UI lives in the left HUD cluster's "Info Views"
-            // tab (see `info_view_tab_body`); this plugin keeps the registry,
-            // the Tab nearby-counts overlay, and the terrain recolor pass.
             app.init_resource::<InfoViewRegistry>()
-                .init_resource::<NearbyCountsOverlay>()
-                .add_systems(Update, (toggle_nearby_overlay_hotkey, render_active_overlay))
+                .add_systems(Update, (cycle_overlay_hotkey, render_active_overlay))
+                // egui draw MUST run on EguiPrimaryContextPass (no fonts on Update).
                 .add_systems(
-                    EguiPrimaryContextPass,
-                    draw_nearby_counts_overlay.run_if(crate::menus::in_game),
+                    bevy_egui::EguiPrimaryContextPass,
+                    draw_info_view_panel.run_if(crate::menus::in_game),
                 );
         }
     }
 
-    fn toggle_nearby_overlay_hotkey(
+    fn cycle_overlay_hotkey(
         keys: Res<ButtonInput<KeyCode>>,
-        mut overlay: ResMut<NearbyCountsOverlay>,
+        mut registry: ResMut<InfoViewRegistry>,
     ) {
         if keys.just_pressed(KeyCode::Tab) {
-            overlay.visible = !overlay.visible;
-        }
-        if keys.just_pressed(KeyCode::Escape) && overlay.visible {
-            overlay.visible = false;
+            registry.cycle();
         }
     }
 
-    fn is_nearby(eye: Vec3, pos: Vec3) -> bool {
-        let dx = pos.x - eye.x;
-        let dz = pos.z - eye.z;
-        (dx * dx + dz * dz) <= NEARBY_RADIUS * NEARBY_RADIUS
-    }
-
-    fn collect_nearby_counts_standalone(
-        eye: Vec3,
-        civilians: &Query<(&GlobalTransform, &SimCivilianMarker)>,
-        buildings: &Query<&GlobalTransform, With<SimBuildingMarker>>,
-    ) -> NearbyEntityCounts {
-        let mut counts = NearbyEntityCounts::default();
-        for (transform, marker) in civilians.iter() {
-            if !is_nearby(eye, transform.translation()) {
-                continue;
-            }
-            counts.civilians += 1;
-            *counts.factions.entry(marker.faction).or_insert(0) += 1;
-        }
-        for transform in buildings.iter() {
-            if is_nearby(eye, transform.translation()) {
-                counts.buildings += 1;
-            }
-        }
-        counts
-    }
-
-    fn collect_nearby_counts_live(
-        eye: Vec3,
-        scene: Option<&LiveStreamScene>,
-        agents: &Query<(&GlobalTransform, &LiveAgentTag)>,
-        buildings: &Query<&GlobalTransform, With<LiveBuildingTag>>,
-    ) -> NearbyEntityCounts {
-        let mut counts = NearbyEntityCounts::default();
-        let civilian_entries = scene.map(|s| &s.civilian_entries);
-        for (transform, tag) in agents.iter() {
-            if !is_nearby(eye, transform.translation()) {
-                continue;
-            }
-            counts.civilians += 1;
-            let faction = civilian_entries
-                .and_then(|entries| entries.get(&tag.id))
-                .map(|entry| entry.faction_id)
-                .unwrap_or(0);
-            *counts.factions.entry(faction).or_insert(0) += 1;
-        }
-        for transform in buildings.iter() {
-            if is_nearby(eye, transform.translation()) {
-                counts.buildings += 1;
-            }
-        }
-        counts
-    }
-
-    fn draw_nearby_counts_overlay(
-        mut contexts: EguiContexts,
-        overlay: Res<NearbyCountsOverlay>,
-        attach: Option<Res<AttachMode>>,
-        rig: Option<Res<CameraRig>>,
-        sim_civilians: Query<(&GlobalTransform, &SimCivilianMarker)>,
-        sim_buildings: Query<&GlobalTransform, With<SimBuildingMarker>>,
-        live_agents: Query<(&GlobalTransform, &LiveAgentTag)>,
-        live_buildings: Query<&GlobalTransform, With<LiveBuildingTag>>,
-        scene: Option<Res<LiveStreamScene>>,
-    ) {
-        if !overlay.visible {
-            return;
-        }
-
-        let Some(rig) = rig else { return; };
-        let eye = rig.target;
-        let counts = if attach.as_ref().map(|a| is_server_attach_mode(**a)).unwrap_or(false) {
-            collect_nearby_counts_live(eye, scene.as_deref(), &live_agents, &live_buildings)
-        } else {
-            collect_nearby_counts_standalone(eye, &sim_civilians, &sim_buildings)
-        };
-        let summary = format_nearby_counts_line(&counts);
-
+    fn draw_info_view_panel(mut contexts: EguiContexts, mut registry: ResMut<InfoViewRegistry>) {
         let Ok(ctx) = contexts.ctx_mut() else {
             return;
         };
-        let screen = ctx.screen_rect();
-        egui::Area::new(egui::Id::new("nearby_counts_overlay"))
-            .fixed_pos(egui::pos2(screen.center().x - 220.0, 72.0))
-            .show(ctx, |ui| {
-                egui::Frame::none()
-                    .fill(egui::Color32::from_rgba_premultiplied(9, 10, 12, 200))
-                    .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(126, 186, 181)))
-                    .corner_radius(egui::CornerRadius::same(8))
-                    .inner_margin(egui::Margin::symmetric(16_i8, 10_i8))
-                    .show(ui, |ui| {
-                        ui.set_min_width(440.0);
-                        ui.label(
-                            egui::RichText::new("Info View — Nearby")
-                                .heading()
-                                .color(egui::Color32::from_rgb(126, 186, 181)),
-                        );
-                        ui.label(egui::RichText::new(summary).color(TEXT).size(15.0));
-                        ui.label(
-                            egui::RichText::new(format!(
-                                "Within {NEARBY_RADIUS:.0}m of camera focus · Tab or Esc to close"
-                            ))
-                            .color(TEXT_LOW)
-                            .small(),
-                        );
-                    });
-            });
-    }
+        apply_theme(ctx);
 
-    /// Draw the Info Views overlay picker + legend as a tab body (no window
-    /// chrome). Used by the left HUD cluster's "Info Views" tab so the overlay
-    /// suite lives inside the unified left panel instead of a separate window.
-    pub fn info_view_tab_body(ui: &mut egui::Ui, registry: &mut InfoViewRegistry) {
-        ui.label(egui::RichText::new("Terrain overlay:").color(TEXT));
-        ui.horizontal_wrapped(|ui| {
-            if ui.selectable_label(!registry.is_active(), "Off").clicked() {
-                registry.deactivate();
-            }
-            let count = registry.overlays.len();
-            for i in 0..count {
-                let (name, desc, selected) = {
-                    let o = &registry.overlays[i];
-                    (o.name, o.description, registry.active == Some(i))
-                };
-                if ui
-                    .selectable_label(selected, name)
-                    .on_hover_text(desc)
-                    .clicked()
-                {
-                    registry.active = Some(i);
+        egui::Window::new("Info Views")
+            .anchor(egui::Align2::LEFT_TOP, [12.0, 64.0])
+            .resizable(false)
+            .frame(frame_e1(egui::Margin::same(10)))
+            .show(ctx, |ui| {
+                ui.label(egui::RichText::new("Overlay (Tab to cycle):").color(TEXT));
+                ui.horizontal_wrapped(|ui| {
+                    let off = ui.selectable_label(!registry.is_active(), "Off");
+                    if off.clicked() {
+                        registry.deactivate();
+                    }
+                    let count = registry.overlays.len();
+                    for i in 0..count {
+                        let (name, desc, selected) = {
+                            let o = &registry.overlays[i];
+                            (o.name, o.description, registry.active == Some(i))
+                        };
+                        if ui.selectable_label(selected, name).on_hover_text(desc).clicked() {
+                            registry.active = Some(i);
+                        }
+                    }
+                });
+
+                if let Some(overlay) = registry.active_overlay() {
+                    ui.separator();
+                    ui.label(
+                        egui::RichText::new(format!("Legend — {}", overlay.name))
+                            .heading()
+                            .color(TEXT),
+                    );
+                    draw_legend(ui, overlay);
                 }
-            }
-        });
-        if let Some(overlay) = registry.active_overlay() {
-            ui.separator();
-            ui.label(
-                egui::RichText::new(format!("Legend — {}", overlay.name))
-                    .heading()
-                    .color(TEXT),
-            );
-            draw_legend(ui, overlay);
-        }
+                panel_finish(ui.painter(), ui.min_rect(), RADIUS, false, false);
+            });
     }
 
     fn draw_legend(ui: &mut egui::Ui, overlay: &InfoOverlay) {
@@ -826,12 +524,10 @@ mod plugin {
     /// draws a coloured quad (two gizmo triangles → cross) hovering just above
     /// the surface. Cheap, deterministic, and GPU-light for the sandbox.
     fn render_active_overlay(
-        registry: Option<Res<InfoViewRegistry>>,
-        sim: Option<Res<SimState>>,
+        registry: Res<InfoViewRegistry>,
+        sim: Res<SimState>,
         mut gizmos: Gizmos,
     ) {
-        let Some(registry) = registry else { return; };
-        let Some(sim) = sim else { return; };
         let Some(overlay) = registry.active_overlay() else {
             return;
         };
@@ -863,8 +559,16 @@ mod plugin {
                 let pos = Vec3::new(wx, sample.height + 0.6, wz);
                 let tint = Color::srgba(color[0], color[1], color[2], color[3]);
                 // Draw a small "+" gizmo per cell as the recolor marker.
-                gizmos.line(pos - Vec3::X * cell, pos + Vec3::X * cell, tint);
-                gizmos.line(pos - Vec3::Z * cell, pos + Vec3::Z * cell, tint);
+                gizmos.line(
+                    pos - Vec3::X * cell,
+                    pos + Vec3::X * cell,
+                    tint,
+                );
+                gizmos.line(
+                    pos - Vec3::Z * cell,
+                    pos + Vec3::Z * cell,
+                    tint,
+                );
             }
         }
     }
@@ -915,9 +619,7 @@ mod plugin {
             if let Some(n) = needs {
                 needs_sum[i] += needs_pressure(n);
             }
-            *faction_votes[i]
-                .entry(civilian_faction_id(civ))
-                .or_insert(0) += 1;
+            *faction_votes[i].entry(civ.faction).or_insert(0) += 1;
         }
 
         let max_count = counts.iter().copied().max().unwrap_or(0).max(1) as f32;
@@ -977,22 +679,7 @@ mod tests {
         assert!(!reg.is_active(), "default starts off");
     }
 
-    /// P1.3.2 — nearby summary formats civilians, factions, and buildings.
-    #[test]
-    fn nearby_counts_line_formats_breakdown() {
-        let counts = NearbyEntityCounts {
-            civilians: 12,
-            buildings: 3,
-            factions: [(0, 8), (1, 4)].into_iter().collect(),
-        };
-        let line = format_nearby_counts_line(&counts);
-        assert!(line.contains("12 civilians"));
-        assert!(line.contains("Faction A: 8"));
-        assert!(line.contains("Faction B: 4"));
-        assert!(line.contains("3 buildings"));
-    }
-
-    /// FR-CIV-INFOVIEW-900 — cycle walks off → each → off.
+    /// FR-CIV-INFOVIEW-900 — `Tab` cycle walks off → each → off.
     #[test]
     fn cycle_wraps_through_off() {
         let mut reg = InfoViewRegistry::default();
@@ -1013,29 +700,6 @@ mod tests {
         assert!(reg.activate_id("temperature"));
         assert_eq!(reg.active_overlay().map(|o| o.id), Some("temperature"));
         assert!(!reg.activate_id("does-not-exist"));
-    }
-
-    /// FR-CIV-INFOVIEW-900 — toggling by id is data-driven and idempotent.
-    #[test]
-    fn toggle_by_id_switches_and_turns_off() {
-        let mut reg = InfoViewRegistry::default();
-        assert!(reg.toggle_id("water"));
-        assert_eq!(reg.active_id(), Some("water"));
-        assert!(reg.toggle_id("elevation"));
-        assert_eq!(reg.active_id(), Some("elevation"));
-        assert!(reg.toggle_id("elevation"));
-        assert_eq!(reg.active_id(), None);
-        assert!(!reg.toggle_id("missing"));
-    }
-
-    /// FR-CIV-INFOVIEW-900 — activation by index supports registry-driven UI.
-    #[test]
-    fn activate_by_index_tracks_selection() {
-        let mut reg = InfoViewRegistry::default();
-        assert!(reg.activate_index(2));
-        assert_eq!(reg.active_index(), Some(2));
-        assert_eq!(reg.active_overlay().map(|o| o.id), Some("temperature"));
-        assert!(!reg.activate_index(reg.overlays.len()));
     }
 
     /// FR-CIV-INFOVIEW-901 — legend ramp interpolates and clamps.

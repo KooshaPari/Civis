@@ -129,7 +129,7 @@ load_config() {
 get_target_files() {
   local ext="$1"
   if [[ "${QUALITY_GATE_ALL_FILES:-false}" == "true" ]]; then
-    find "${PROJECT_DIR}" -name "*.${ext}" -not -path "*/node_modules/*" -not -path "*/.venv/*" -not -path "*/vendor/*" -not -path "*/.git/*" 2>/dev/null
+    /usr/bin//usr/bin/find "${PROJECT_DIR}" -name "*.${ext}" -not -path "*/node_modules/*" -not -path "*/.venv/*" -not -path "*/vendor/*" -not -path "*/.git/*" 2>/dev/null
   else
     git diff --name-only --diff-filter=ACMR HEAD 2>/dev/null | /usr/bin/grep -E "\.${ext}$" || true
   fi

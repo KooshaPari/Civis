@@ -108,44 +108,12 @@ impl SubTool {
                 Some(SpawnTool::SpawnBuilding)
             }
             Raise | Lower | Flatten | PaintBiome => Some(SpawnTool::Terraform),
-            // Kill despawns an actor; the env disasters are handled by
-            // `disaster_tools` (they mutate the voxel world, not actors), so they
-            // intentionally have NO actor-side SpawnTool — `is_active_capable`
-            // still reports them selectable via `is_disaster`.
-            Kill => Some(SpawnTool::Destroy),
-            // Material-paint sub-tools arm the material brush; the painted
-            // material is set from `paint_material_name` by a sync system.
-            Water | Sand | Dirt | Stone | Lava | Gas => Some(SpawnTool::PaintMaterial),
+            Kill | Meteor | Flood | Quake | Storm | Wildfire | Plague => {
+                Some(SpawnTool::Destroy)
+            }
             // No backing variant yet (await Infra Lead enum growth).
             _ => None,
         }
-    }
-
-    /// True for the environmental disaster verbs handled by `disaster_tools`
-    /// (Meteor/Flood/Quake/Storm/Wildfire/Plague). These mutate the voxel world
-    /// directly rather than through a `SpawnTool`.
-    #[must_use]
-    pub fn is_disaster(self) -> bool {
-        use SubTool::*;
-        matches!(self, Meteor | Flood | Quake | Storm | Wildfire | Plague)
-    }
-
-    /// For the Material-paint sub-tools, the `civ-voxel` material name the brush
-    /// should paint. `None` for non-material sub-tools. Drives the material brush
-    /// so selecting "Water"/"Lava"/… actually arms paint with that material
-    /// (previously these were inert no-ops).
-    #[must_use]
-    pub fn paint_material_name(self) -> Option<&'static str> {
-        use SubTool::*;
-        Some(match self {
-            Water => "Water",
-            Sand => "Sand",
-            Dirt => "Dirt",
-            Stone => "Stone",
-            Lava => "Lava",
-            Gas => "Steam",
-            _ => return None,
-        })
     }
 
     /// Glyph shown on the sub-tool button (unicode fallback; SVG icons in
@@ -247,11 +215,9 @@ impl SubTool {
         }
     }
 
-    /// Whether the sub-tool does something when clicked — either it has a
-    /// backing `SpawnTool` or it is an environmental disaster handled by
-    /// `disaster_tools` (which has no `SpawnTool` but is still fully active).
+    /// Whether a real backing `SpawnTool` exists (false = lit-but-inert).
     pub fn is_active_capable(self) -> bool {
-        self.spawn_tool().is_some() || self.is_disaster()
+        self.spawn_tool().is_some()
     }
 }
 
@@ -281,11 +247,10 @@ impl Category {
             "Structure" => "spawn-structure",
             "Terraform" => "terraform",
             "Material" => "spawn-material",
-            "Infra" => "infra",
             "Disaster" => "disaster",
             "Diplomacy" => "diplomacy",
             "Policy" => "policy",
-            _ => return None,
+            _ => return None, // e.g. "Infra" — no committed PNG; keep the glyph.
         })
     }
 }
@@ -375,10 +340,7 @@ pub struct ActiveSubTool {
 
 impl Default for ActiveSubTool {
     fn default() -> Self {
-        Self {
-            current: SubTool::Select,
-            open_category: None,
-        }
+        Self { current: SubTool::Select, open_category: None }
     }
 }
 
@@ -399,11 +361,7 @@ mod tests {
     fn taxonomy_is_rich() {
         // The overhaul brief asks for "MORE TOOLS heavily".
         assert!(CATEGORIES.len() >= 9, "expected >=9 categories");
-        assert!(
-            subtool_count() >= 40,
-            "expected >=40 sub-tools, got {}",
-            subtool_count()
-        );
+        assert!(subtool_count() >= 40, "expected >=40 sub-tools, got {}", subtool_count());
     }
 
     #[test]
@@ -420,56 +378,23 @@ mod tests {
     #[test]
     fn core_subtools_map_to_spawn_tools() {
         assert_eq!(SubTool::Select.spawn_tool(), Some(SpawnTool::Select));
-        assert_eq!(
-            SubTool::SpawnOrganism.spawn_tool(),
-            Some(SpawnTool::SpawnCivilian)
-        );
+        assert_eq!(SubTool::SpawnOrganism.spawn_tool(), Some(SpawnTool::SpawnCivilian));
         assert_eq!(SubTool::House.spawn_tool(), Some(SpawnTool::SpawnBuilding));
         assert_eq!(SubTool::Raise.spawn_tool(), Some(SpawnTool::Terraform));
-        assert_eq!(SubTool::Kill.spawn_tool(), Some(SpawnTool::Destroy));
-    }
-
-    #[test]
-    fn disasters_are_active_but_have_no_actor_spawn_tool() {
-        // Env disasters are handled by `disaster_tools` (voxel-world mutation),
-        // so they have NO SpawnTool but ARE selectable/active.
-        for d in [
-            SubTool::Meteor,
-            SubTool::Flood,
-            SubTool::Quake,
-            SubTool::Storm,
-            SubTool::Wildfire,
-            SubTool::Plague,
-        ] {
-            assert!(d.is_disaster(), "{d:?} should be a disaster");
-            assert_eq!(
-                d.spawn_tool(),
-                None,
-                "{d:?} must not map to an actor SpawnTool"
-            );
-            assert!(
-                d.is_active_capable(),
-                "{d:?} must still be active/selectable"
-            );
-        }
-        assert!(!SubTool::House.is_disaster());
+        assert_eq!(SubTool::Meteor.spawn_tool(), Some(SpawnTool::Destroy));
     }
 
     #[test]
     fn inert_subtools_have_no_backing_variant_yet() {
-        // Diplomacy/Policy still await infra enum growth; material brushes
-        // now map to `SpawnTool::PaintMaterial`.
+        // Material/Diplomacy/Policy await Infra Lead enum growth.
+        assert_eq!(SubTool::Water.spawn_tool(), None);
         assert_eq!(SubTool::Alliance.spawn_tool(), None);
-        assert_eq!(SubTool::Tax.spawn_tool(), None);
         assert!(!SubTool::Tax.is_active_capable());
     }
 
     #[test]
     fn active_category_resolves_from_current() {
-        let st = ActiveSubTool {
-            current: SubTool::Farm,
-            open_category: None,
-        };
+        let st = ActiveSubTool { current: SubTool::Farm, open_category: None };
         let idx = st.active_category().unwrap();
         assert_eq!(CATEGORIES[idx].label, "Structure");
     }

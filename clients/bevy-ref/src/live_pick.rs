@@ -4,13 +4,10 @@ use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
 use bevy::ui::RelativeCursorPosition;
 
-#[cfg(feature = "egui")]
-use crate::settings_ui::{GameSettings, KeyBinding, ACTION_SELECT_OR_PICK};
-use crate::live_stream::{LiveAgentTag, LiveBuildingTag, LiveGraphParcelTag, LiveChunkTag};
+use crate::live_stream::{LiveAgentTag, LiveBuildingTag, LiveGraphParcelTag};
 use crate::minimap::{MinimapCamera, MinimapRoot};
 use crate::{
     LiveEntityKind, SelectedLiveEntity, AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
-    VOXEL_CHUNK_EDGE,
 };
 
 /// Optional live selection for HUD overlays and inspectors.
@@ -59,13 +56,6 @@ pub const fn building_marker_half_extents() -> [f32; 3] {
     [1.0, 1.25, 1.0]
 }
 
-/// Half-extents of a streamed voxel chunk mesh (`VOXEL_CHUNK_EDGE` cube).
-#[must_use]
-pub const fn chunk_marker_half_extents() -> [f32; 3] {
-    let half = VOXEL_CHUNK_EDGE * 0.5;
-    [half, half, half]
-}
-
 /// Ray–AABB intersection distance along `direction` (normalized), if any.
 #[must_use]
 pub fn ray_aabb_hit_distance(
@@ -74,17 +64,6 @@ pub fn ray_aabb_hit_distance(
     centre: [f32; 3],
     half_extents: [f32; 3],
 ) -> Option<f32> {
-    if !origin
-        .iter()
-        .chain(direction.iter())
-        .all(|value| value.is_finite())
-        || !centre
-            .iter()
-            .chain(half_extents.iter())
-            .all(|value| value.is_finite())
-    {
-        return None;
-    }
     let mut t_min = f32::NEG_INFINITY;
     let mut t_max = f32::INFINITY;
 
@@ -133,11 +112,11 @@ pub fn pick_live_entity_along_ray(
     agents: &[(u64, Vec3, Vec3)],
     buildings: &[(u64, Vec3, Vec3)],
     graph_parcels: &[(u64, Vec3, Vec3)],
-    chunks: &[(u64, Vec3, Vec3)],
 ) -> Option<SelectedLiveEntity> {
-    let dir_len_sq =
-        direction[0] * direction[0] + direction[1] * direction[1] + direction[2] * direction[2];
-    if !dir_len_sq.is_finite() || dir_len_sq < f32::EPSILON {
+    let dir_len_sq = direction[0] * direction[0]
+        + direction[1] * direction[1]
+        + direction[2] * direction[2];
+    if dir_len_sq < f32::EPSILON {
         return None;
     }
     let inv_len = dir_len_sq.sqrt().recip();
@@ -149,20 +128,18 @@ pub fn pick_live_entity_along_ray(
 
     let agent_half = agent_marker_half_extents();
     let building_half = building_marker_half_extents();
-    let chunk_half = chunk_marker_half_extents();
 
     let mut best: Option<(f32, SelectedLiveEntity)> = None;
 
-    let mut consider = |distance: f32, selection: SelectedLiveEntity| match best {
-        None => best = Some((distance, selection)),
-        Some((best_t, _)) if distance < best_t => best = Some((distance, selection)),
-        _ => {}
+    let mut consider = |distance: f32, selection: SelectedLiveEntity| {
+        match best {
+            None => best = Some((distance, selection)),
+            Some((best_t, _)) if distance < best_t => best = Some((distance, selection)),
+            _ => {}
+        }
     };
 
     for &(id, centre, scale) in agents {
-        if !centre.is_finite() || !scale.is_finite() || scale.min_element() <= 0.0 {
-            continue;
-        }
         let half = [
             agent_half[0] * scale.x,
             agent_half[1] * scale.y,
@@ -180,9 +157,6 @@ pub fn pick_live_entity_along_ray(
     }
 
     for &(id, centre, scale) in buildings {
-        if !centre.is_finite() || !scale.is_finite() || scale.min_element() <= 0.0 {
-            continue;
-        }
         let half = [
             building_half[0] * scale.x,
             building_half[1] * scale.y,
@@ -200,9 +174,6 @@ pub fn pick_live_entity_along_ray(
     }
 
     for &(id, centre, scale) in graph_parcels {
-        if !centre.is_finite() || !scale.is_finite() || scale.min_element() <= 0.0 {
-            continue;
-        }
         let half = [
             building_half[0] * scale.x,
             building_half[1] * scale.y,
@@ -213,26 +184,6 @@ pub fn pick_live_entity_along_ray(
                 t,
                 SelectedLiveEntity {
                     kind: LiveEntityKind::GraphParcel,
-                    id,
-                },
-            );
-        }
-    }
-
-    for &(id, centre, scale) in chunks {
-        if !centre.is_finite() || !scale.is_finite() || scale.min_element() <= 0.0 {
-            continue;
-        }
-        let half = [
-            chunk_half[0] * scale.x,
-            chunk_half[1] * scale.y,
-            chunk_half[2] * scale.z,
-        ];
-        if let Some(t) = ray_aabb_hit_distance(origin, dir, centre.to_array(), half) {
-            consider(
-                t,
-                SelectedLiveEntity {
-                    kind: LiveEntityKind::VoxelChunk,
                     id,
                 },
             );
@@ -255,55 +206,15 @@ pub fn pointer_over_live_minimap(
         .unwrap_or(false)
 }
 
-#[cfg(feature = "egui")]
 fn reset_live_pick_drag_on_press(
     mouse: Res<ButtonInput<MouseButton>>,
-    keys: Res<ButtonInput<KeyCode>>,
-    settings: Option<Res<GameSettings>>,
     mut pointer: ResMut<LivePickPointer>,
 ) {
-    let binding_pressed = settings
-        .as_ref()
-        .and_then(|s| s.key_for(ACTION_SELECT_OR_PICK))
-        .unwrap_or(KeyBinding::Mouse(MouseButton::Left));
-    if binding_pressed.is_pressed(&keys, &mouse) {
+    if mouse.just_pressed(MouseButton::Left) {
         pointer.left_dragged = false;
     }
 }
 
-#[cfg(not(feature = "egui"))]
-fn reset_live_pick_drag_on_press(
-    mouse: Res<ButtonInput<MouseButton>>,
-    keys: Res<ButtonInput<KeyCode>>,
-    mut pointer: ResMut<LivePickPointer>,
-) {
-    if MouseButton::Left.is_pressed(&keys, &mouse) {
-        pointer.left_dragged = false;
-    }
-}
-
-#[cfg(feature = "egui")]
-fn mark_live_pick_drag(
-    mouse: Res<ButtonInput<MouseButton>>,
-    keys: Res<ButtonInput<KeyCode>>,
-    mut motion: MessageReader<MouseMotion>,
-    settings: Option<Res<GameSettings>>,
-    mut pointer: ResMut<LivePickPointer>,
-) {
-    let binding_pressed = settings
-        .as_ref()
-        .and_then(|s| s.key_for(ACTION_SELECT_OR_PICK))
-        .unwrap_or(KeyBinding::Mouse(MouseButton::Left));
-    if !binding_pressed.is_pressed(&keys, &mouse) {
-        motion.clear();
-        return;
-    }
-    if motion.read().next().is_some() {
-        pointer.left_dragged = true;
-    }
-}
-
-#[cfg(not(feature = "egui"))]
 fn mark_live_pick_drag(
     mouse: Res<ButtonInput<MouseButton>>,
     mut motion: MessageReader<MouseMotion>,
@@ -318,77 +229,6 @@ fn mark_live_pick_drag(
     }
 }
 
-#[cfg(feature = "egui")]
-fn pick_live_entity_on_release(
-    mouse: Res<ButtonInput<MouseButton>>,
-    keys: Res<ButtonInput<KeyCode>>,
-    settings: Option<Res<GameSettings>>,
-    pointer: Res<LivePickPointer>,
-    minimap: Query<(&Interaction, &RelativeCursorPosition), With<MinimapRoot>>,
-    windows: Query<&Window>,
-    cameras: Query<(&Camera, &GlobalTransform), (With<Camera3d>, Without<MinimapCamera>)>,
-    mut selection: ResMut<LiveSelection>,
-    agents: Query<(&LiveAgentTag, &GlobalTransform)>,
-    buildings: Query<(&LiveBuildingTag, &GlobalTransform)>,
-    graph_parcels: Query<(&LiveGraphParcelTag, &GlobalTransform)>,
-    chunks: Query<(&LiveChunkTag, &GlobalTransform)>,
-) {
-    let binding_released = settings
-        .as_ref()
-        .and_then(|s| s.key_for(ACTION_SELECT_OR_PICK))
-        .map(|binding| match binding {
-            KeyBinding::Mouse(button) => mouse.just_released(button),
-            KeyBinding::Key(key) => keys.just_released(key),
-        })
-        .unwrap_or_else(|| mouse.just_released(MouseButton::Left));
-    if !binding_released || pointer.left_dragged {
-        return;
-    }
-    if pointer_over_live_minimap(&minimap) {
-        return;
-    }
-
-    let Ok(window) = windows.single() else {
-        return;
-    };
-    let Some(cursor) = window.cursor_position() else {
-        return;
-    };
-    let Ok((camera, transform)) = cameras.single() else {
-        return;
-    };
-    let Ok(ray) = camera.viewport_to_world(transform, cursor) else {
-        return;
-    };
-
-    let agents: Vec<_> = agents
-        .iter()
-        .map(|(tag, transform)| (tag.id, transform.translation(), transform.scale()))
-        .collect();
-    let buildings: Vec<_> = buildings
-        .iter()
-        .map(|(tag, transform)| (tag.id, transform.translation(), transform.scale()))
-        .collect();
-    let graph_parcels: Vec<_> = graph_parcels
-        .iter()
-        .map(|(tag, transform)| (tag.id, transform.translation(), transform.scale()))
-        .collect();
-    let chunks: Vec<_> = chunks
-        .iter()
-        .map(|(tag, transform)| (tag.id.0, transform.translation(), transform.scale()))
-        .collect();
-
-    selection.0 = pick_live_entity_along_ray(
-        ray.origin.to_array(),
-        ray.direction.to_array(),
-        &agents,
-        &buildings,
-        &graph_parcels,
-        &chunks,
-    );
-}
-
-#[cfg(not(feature = "egui"))]
 fn pick_live_entity_on_release(
     mouse: Res<ButtonInput<MouseButton>>,
     pointer: Res<LivePickPointer>,
@@ -399,7 +239,6 @@ fn pick_live_entity_on_release(
     agents: Query<(&LiveAgentTag, &GlobalTransform)>,
     buildings: Query<(&LiveBuildingTag, &GlobalTransform)>,
     graph_parcels: Query<(&LiveGraphParcelTag, &GlobalTransform)>,
-    chunks: Query<(&LiveChunkTag, &GlobalTransform)>,
 ) {
     if !mouse.just_released(MouseButton::Left) || pointer.left_dragged {
         return;
@@ -433,10 +272,6 @@ fn pick_live_entity_on_release(
         .iter()
         .map(|(tag, transform)| (tag.id, transform.translation(), transform.scale()))
         .collect();
-    let chunks: Vec<_> = chunks
-        .iter()
-        .map(|(tag, transform)| (tag.id.0, transform.translation(), transform.scale()))
-        .collect();
 
     selection.0 = pick_live_entity_along_ray(
         ray.origin.to_array(),
@@ -444,7 +279,6 @@ fn pick_live_entity_on_release(
         &agents,
         &buildings,
         &graph_parcels,
-        &chunks,
     );
 }
 
@@ -452,7 +286,6 @@ fn pick_live_entity_on_release(
 mod tests {
     use super::*;
 
-    /// FR-CIV-BEVY-025 — live entity pick helpers support attach smoke and HUD selection paths.
     #[test]
     fn ray_aabb_hit_returns_entry_distance() {
         let origin = [0.0, 0.0, -5.0];
@@ -472,15 +305,14 @@ mod tests {
         assert!(ray_aabb_hit_distance(origin, direction, centre, half).is_none());
     }
 
-    /// FR-CIV-BEVY-025 — picking order remains deterministic under same-ray overlap.
     #[test]
     fn pick_live_entity_prefers_nearest_along_ray() {
         let origin = [0.0, 1.0, -10.0];
         let direction = [0.0, 0.0, 1.0];
         let agents = [(1_u64, Vec3::new(0.0, 1.0, 0.0), Vec3::ONE)];
         let buildings = [(9_u64, Vec3::new(0.0, 1.0, 5.0), Vec3::ONE)];
-        let picked =
-            pick_live_entity_along_ray(origin, direction, &agents, &buildings, &[], &[]).expect("pick");
+        let picked = pick_live_entity_along_ray(origin, direction, &agents, &buildings, &[])
+            .expect("pick");
         assert_eq!(picked.kind, LiveEntityKind::Agent);
         assert_eq!(picked.id, 1);
     }
@@ -494,44 +326,9 @@ mod tests {
     }
 
     #[test]
-    fn building_marker_half_extents_match_cuboid_mesh() {
-        let half = building_marker_half_extents();
-        assert_eq!(half, [1.0, 1.25, 1.0]);
-    }
-
-    #[test]
-    fn ray_aabb_hit_rejects_box_behind_ray_origin() {
-        let origin = [0.0, 0.0, 5.0];
-        let direction = [0.0, 0.0, 1.0];
-        let centre = [0.0, 0.0, 0.0];
-        let half = [1.0, 1.0, 1.0];
-        assert!(ray_aabb_hit_distance(origin, direction, centre, half).is_none());
-    }
-
-    #[test]
     fn pick_live_entity_rejects_zero_direction() {
         assert!(
-            pick_live_entity_along_ray([0.0, 0.0, 0.0], [0.0, 0.0, 0.0], &[], &[], &[], &[]).is_none()
+            pick_live_entity_along_ray([0.0, 0.0, 0.0], [0.0, 0.0, 0.0], &[], &[], &[]).is_none()
         );
-    }
-
-    #[test]
-    fn pick_live_entity_rejects_non_finite_hits() {
-        assert!(ray_aabb_hit_distance(
-            [0.0, 0.0, f32::NAN],
-            [0.0, 0.0, 1.0],
-            [0.0, 0.0, 0.0],
-            [1.0, 1.0, 1.0]
-        )
-        .is_none());
-        assert!(pick_live_entity_along_ray(
-            [0.0, 0.0, 0.0],
-            [f32::INFINITY, 0.0, 1.0],
-            &[],
-            &[],
-            &[],
-            &[]
-        )
-        .is_none());
     }
 }

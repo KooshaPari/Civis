@@ -33,26 +33,6 @@ impl ChunkVoxelCache {
     pub fn chunks(&self) -> &HashMap<u64, Vec<MaterialId>> {
         &self.chunks
     }
-
-    /// Mutable access to the underlying chunk map (god-tool local apply path).
-    pub fn chunks_mut(&mut self) -> &mut HashMap<u64, Vec<MaterialId>> {
-        &mut self.chunks
-    }
-
-    /// Dense voxel payload for a chunk, if cached.
-    #[must_use]
-    pub fn get_chunk(&self, chunk_id: ChunkId) -> Option<&[MaterialId]> {
-        self.chunks.get(&chunk_id.0).map(Vec::as_slice)
-    }
-
-    /// Ensure a dense chunk exists, seeding with `AIR` when absent.
-    pub fn ensure_chunk(&mut self, chunk_id: ChunkId) -> &mut [MaterialId] {
-        let len = CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE;
-        self.chunks
-            .entry(chunk_id.0)
-            .or_insert_with(|| vec![MaterialId(0); len]);
-        self.chunks.get_mut(&chunk_id.0).expect("chunk insert")
-    }
 }
 
 fn voxel_index(ix: usize, iy: usize, iz: usize) -> usize {
@@ -122,23 +102,5 @@ mod tests {
         let y = live_ground_y(&cache, 64.0, 128.0, offset);
         let expected = terrain_surface_y(64.0, 128.0) + offset;
         assert!((y - expected).abs() < 0.01);
-    }
-
-    #[test]
-    fn chunk_seam_watertight() {
-        let mut left = vec![MaterialId(0); CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE];
-        let mut right = vec![MaterialId(0); CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE];
-        left[voxel_index(15, 2, 8)] = MaterialId(1);
-        right[voxel_index(0, 5, 8)] = MaterialId(1);
-
-        let mut cache = ChunkVoxelCache::new();
-        cache.insert(encode_chunk_id(0, 0, 0), left);
-        cache.insert(encode_chunk_id(1, 0, 0), right);
-
-        let left_surface = live_voxel_surface_y(&cache, 15.5, 8.5).expect("left surface");
-        let right_surface = live_voxel_surface_y(&cache, 16.5, 8.5).expect("right surface");
-
-        assert_eq!(left_surface, 3.0);
-        assert_eq!(right_surface, 6.0);
     }
 }

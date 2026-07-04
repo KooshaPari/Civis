@@ -115,7 +115,7 @@ fn main() {
         app.add_plugins(civ_bevy_ref::materials::BiomeMaterialsPlugin);
     }
 
-    // Perception layer: CS2-style info-view overlays (Tab) + click-to-inspect.
+    // Perception layer: CS2-style terrain overlays + Tab nearby-counts HUD + inspect.
     #[cfg(feature = "egui")]
     app.add_plugins(civ_bevy_ref::info_views::InfoViewsPlugin);
     #[cfg(feature = "egui")]

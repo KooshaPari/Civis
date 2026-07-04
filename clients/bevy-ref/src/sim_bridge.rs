@@ -27,18 +27,31 @@ type ModelResourceRef<'a> = Option<()>;
 #[derive(Resource)]
 pub struct SimState(pub Simulation);
 
-#[derive(Component)]
-struct SimCivilianMarker {
-    id: u64,
-    faction: u32,
-    visual: ActorVisualKind,
+/// Marker for in-process civilian entities (scene dump, nearby overlay).
+#[derive(Component, Debug, Clone, Copy)]
+pub struct SimCivilianMarker {
+    /// Stable civilian id in the hecs sim world.
+    pub id: u64,
+    /// Owning faction id.
+    pub faction: u32,
+    /// Procedural / GLTF visual kind.
+    pub visual: ActorVisualKind,
 }
 
-#[derive(Component)]
-struct SimBuildingMarker {
-    building_type: BuildingType,
-    position: civ_engine::Position,
+/// Public alias for attach-mode policy tests and headless scene dump.
+pub type SimCivilianMarkerPublic = SimCivilianMarker;
+
+/// Marker for in-process building entities (scene dump, nearby overlay).
+#[derive(Component, Debug, Clone, Copy)]
+pub struct SimBuildingMarker {
+    /// Building archetype.
+    pub building_type: BuildingType,
+    /// Grid position in the sim.
+    pub position: civ_engine::Position,
 }
+
+/// Public alias for attach-mode policy tests and headless scene dump.
+pub type SimBuildingMarkerPublic = SimBuildingMarker;
 
 impl Default for SimState {
     fn default() -> Self {

@@ -42,7 +42,7 @@ pub use ids::{
 };
 pub use model::{
     summary_key, EntityKind, EntityNode, EventKind, EventNode, HistoricalEvent, LegendEdge,
-    LegendNode, RawSimEvent, Role, Tag,
+    LegendEntry, LegendNode, PromotionCriteria, RawSimEvent, Role, Tag,
 };
 pub use query::{CausalDag, DigestEvent, EntityRef, EpochDigest, NamedEntitySummary, NamedLegendsResult, Saga, QUERY_API_VERSION};
 pub use rumor::{

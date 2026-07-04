@@ -209,6 +209,37 @@ impl Default for PromotionCriteria {
     }
 }
 
+/// A legend entry tracked by the decay engine (FR-CIV-LEGEND-DECAY).
+///
+/// Each entry records a historically-significant entity paired with its
+/// originating event and the parameters needed for prominence decay:
+/// the current importance score, the epoch of observation, and full
+/// provenance / participant metadata so the decay layer can reinforce
+/// prominence when related events land.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LegendEntry {
+    /// Stable legend event id used as the tracker key.
+    pub id: LegendEventId,
+    /// Optional narrative name assigned by the ai-rnd namer.
+    pub name: Option<NameRef>,
+    /// The originating (or most-recent) event id for this legend.
+    pub event_id: LegendEventId,
+    /// The principal entity that this legend entry represents.
+    pub principal_entity: LegendEntityId,
+    /// Epoch at which this entry was recorded / last reinforced.
+    pub epoch: Epoch,
+    /// Normalised importance score in `0.0..=1.0` (feeds prominence decay).
+    pub importance: f32,
+    /// Kind of the originating event.
+    pub event_kind: EventKind,
+    /// Optional spatial region the event occurred in.
+    pub region: Option<RegionId>,
+    /// Resolved participant entity ids with their roles.
+    pub participants: SmallVec<[(LegendEntityId, Role); 4]>,
+    /// Provenance (lived play vs pre-sim backstory).
+    pub provenance: Provenance,
+}
+
 /// Producer contract: the minimal payload emitted onto the `crates/watch` bus
 /// (spec §4.1). Producers depend only on this shape, never on the legends crate.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

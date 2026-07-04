@@ -67,6 +67,10 @@ impl PolityId {
 #[deprecated(note = "PolityId is the preferred term in active diplomacy contracts")]
 pub type ActorId = PolityId;
 
+/// Alias for migration compatibility — modules that were authored against
+/// the `FactionId` name (emergence, economy, engine) resolve through this.
+pub type FactionId = PolityId;
+
 /// Ordered pair `(min, max)` of actor ids. The order is fixed at construction
 /// so that `Pair::new(a, b) == Pair::new(b, a)` for any `a, b`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]

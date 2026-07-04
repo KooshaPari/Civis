@@ -49,7 +49,6 @@ use civ_emergence_metrics::branching::{
     classify_regime, rolling_mean_sigma, sigma_a, sigma_score, BranchingLedger, BranchingRegime,
     DEFAULT_BRANCHING_WINDOW, SIGMA_SUBCRITICAL, SIGMA_SUPERCRITICAL,
 };
-use civ_emergence_metrics::{CriticalityInputs};
 use civ_emergence_metrics::dashboard::EmergenceDashboard;
 use civ_emergence_metrics::power_law::PowerLawFit;
 use civ_emergence_metrics::shannon::ShannonEntropy;

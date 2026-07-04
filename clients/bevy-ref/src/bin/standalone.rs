@@ -60,6 +60,7 @@ fn main() {
         // signal. See `docs/audits/frame-budget-baseline-2026-06-10.md`.
         .add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())
         .add_plugins(bevy::diagnostic::LogDiagnosticsPlugin::default())
+        .add_plugins(civ_bevy_ref::frame_budget::FrameBudgetPlugin)
         // Civis app/window icon (graphite + neon voxel-world glyph). Sets the
         // embedded icon on the primary winit window at startup.
         .add_plugins(civ_bevy_ref::window_icon::WindowIconPlugin)

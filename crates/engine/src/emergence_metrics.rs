@@ -1364,6 +1364,14 @@ mod tests {
         use civ_voxel::WorldCoord;
         let mut sim = Simulation::with_seed(99);
         sim.state.tick = EMERGENCE_SAMPLE_INTERVAL;
+        // `with_seed` pre-spawns faction-aligned civilians from scenario setup;
+        // clear them so this test's "0 factions" precondition actually holds
+        // (it asserts the degenerate MI contract: no factions → None).
+        let preexisting: Vec<hecs::Entity> =
+            sim.world.query::<&Civilian>().iter().map(|(e, _)| e).collect();
+        for e in preexisting {
+            let _ = sim.world.despawn(e);
+        }
         for id in 1u64..=10 {
             sim.world.spawn((
                 Civilian {

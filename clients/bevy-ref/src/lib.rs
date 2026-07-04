@@ -94,6 +94,8 @@ pub mod god_panel;
 pub mod tutorial;
 pub mod perf_hud;
 #[cfg(feature = "bevy")]
+pub mod frame_budget;
+#[cfg(feature = "bevy")]
 pub mod terrain;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tool_categories;

@@ -145,7 +145,6 @@ pub fn drift_populations(
         for (idx, profile) in profiles.iter_mut().enumerate() {
             profile.traits = mutate_traits(rng, base[idx].traits, mutation_rate);
             profile.language = mutate_traits(rng, base[idx].language, mutation_rate * 0.5);
-            let _ = drift_phonemes(rng, &mut profile.phonemes, mutation_rate * 0.4, 50);
             profile.contact = 0.0;
         }
         return;

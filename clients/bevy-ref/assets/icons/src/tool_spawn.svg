@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <style>
+      .glyph { fill: #7ebab5; }
+      .bg { fill: #0f1419; opacity: 0; }
+    </style>
+  </defs>
+  <!-- Background (transparent) -->
+  <rect class="bg" width="64" height="64"/>
+  <!-- Person silhouette for spawn -->
+  <g class="glyph">
+    <!-- Head circle -->
+    <circle cx="32" cy="18" r="6"/>
+    <!-- Body -->
+    <rect x="28" y="25" width="8" height="10"/>
+    <!-- Left arm -->
+    <rect x="18" y="27" width="10" height="4" rx="2"/>
+    <!-- Right arm -->
+    <rect x="36" y="27" width="10" height="4" rx="2"/>
+    <!-- Left leg -->
+    <rect x="28" y="35" width="3" height="12"/>
+    <!-- Right leg -->
+    <rect x="33" y="35" width="3" height="12"/>
+  </g>
+</svg>

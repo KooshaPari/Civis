@@ -11,17 +11,13 @@
 //! - `metrics` - Tyranny/legitimacy metrics
 //! - `io` - File I/O utilities
 
-pub mod building_emergence;
-pub mod technology;
 pub mod command_queue;
 pub mod conditions;
-pub mod gameplay;
 pub mod era;
-pub mod history;
-pub mod tech;
-pub mod faction_emergence;
-pub mod faction_decisions;
-pub mod godtools;
+pub mod engine;
+pub mod emergence;
+pub mod disasters;
+pub mod emergence_metrics;
 pub mod hash_chain;
 pub mod integrity;
 pub mod invariants;
@@ -36,6 +32,9 @@ pub mod scenario;
 pub mod perf;
 pub mod spawn;
 pub mod spectator;
+
+pub mod tutorial;
+
 
 pub mod tutorial;
 
@@ -103,13 +102,13 @@ pub use civ_institutions::{
     Institution, InstitutionKind, GARRISON_UNLOCK_POPULATION,
     TEMPLE_UNLOCK_POPULATION,
 };
-
-// FR-CIV-GOV-100 (civ-007 social-mood epic). Re-exported so callers can name
-// the snapshot type as `civ_engine::MoodSnapshot` and the saturation /
-// history-cap constants as `civ_engine::MOOD_*` without taking a dependency
-// on the private `engine` module path.
-pub use engine::{
-    MoodSnapshot, MOOD_CRIME_BASE, MOOD_HISTORY_CAP, MOOD_MAX, MOOD_MIN,
+pub use civ_planet::{BiomeKind, Climate, GeologyMap, MoonConfig, PlanetConfig, RegionBiome};
+pub use civ_tactics::{
+    apply_damage, bfs_next_step, evolve_doctrine, formation_offsets, grid_to_world_coord,
+    line_of_sight, score_doctrine_fitness, tick_operational_movement, tick_war_bridge,
+    CombatEngagement, DamageEvent, Doctrine, DoctrineLibrary, FactionEngagementStats,
+    FormationKind, GridMove, MilitaryPhaseConfig, MilitaryUnitSample, NoopOperationalLayer,
+    OperationalLayer, OperationalMovementConfig, WarBridgeConfig,
 };
 
 // FR-CIV-GOV-030 (civ-007 cohesion epic). Re-exported so callers
@@ -128,15 +127,10 @@ pub use engine::{
     last_tick_unrest, last_tick_unrest_settlement, set_settlement_gini, unrest_level,
     UnrestEvent, UnrestLevel, UnrestSnapshot,
 };
-
-// FR-CIV-RELIGION (religion §7 wiring). Re-exported so callers
-// (server, clients, tests) can name `ReligiousProfile`, `SubstrateGradients`,
-// `ReligionEvent`, and the `apply_big_gods_response` /
-// `substrate_gradients_for` / `last_religion_sample` accessors without
-// pulling the `religion` module path.
-pub use religion::{
-    apply_big_gods_response, last_religion_sample, substrate_gradients_for, ReligionEvent,
-    ReligiousProfile, SubstrateGradients,
+pub use metrics::{compute, compute_fixed, Metrics, MetricsFixed};
+pub use policy::{
+    effective_consumption, policy_from_kind, CapitalistPolicy, ControlSignals, NoopPolicy, Policy,
+    PolicyInput, SubsistenceFirstPolicy, DEFAULT_ECONOMY_POLICY,
 };
 pub use integrity::{check_integrity, IntegrityError};
 pub use invariants::{check_tick_invariants, InvariantError};

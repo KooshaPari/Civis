@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 300">
+  <!-- CIVIS wordmark + emergent-node world emblem. Keycap teal #7ebab5 / midnight #090a0c. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#090a0c"/>
+      <stop offset="100%" stop-color="#0e1417"/>
+    </linearGradient>
+    <radialGradient id="orb" cx="42%" cy="38%" r="62%">
+      <stop offset="0%" stop-color="#16332f"/>
+      <stop offset="55%" stop-color="#0c1a18"/>
+      <stop offset="100%" stop-color="#070b0c"/>
+    </radialGradient>
+    <linearGradient id="teal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#a8d4d0"/>
+      <stop offset="55%" stop-color="#7ebab5"/>
+      <stop offset="100%" stop-color="#5b9b96"/>
+    </linearGradient>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="tshadow"><feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#7ebab5" flood-opacity="0.35"/></filter>
+    <clipPath id="orbclip"><circle cx="150" cy="150" r="92"/></clipPath>
+  </defs>
+
+  <rect width="800" height="300" fill="url(#bg)"/>
+
+  <!-- emergent-node world emblem (left) -->
+  <circle cx="150" cy="150" r="104" fill="none" stroke="#7ebab5" stroke-width="1" opacity="0.18"/>
+  <circle cx="150" cy="150" r="92" fill="url(#orb)" stroke="#7ebab5" stroke-width="1.4" opacity="0.95"/>
+  <g clip-path="url(#orbclip)" opacity="0.85">
+    <!-- faint hex/lat-long world weave -->
+    <g stroke="#7ebab5" fill="none" stroke-width="0.7" opacity="0.30">
+      <ellipse cx="150" cy="150" rx="92" ry="26"/>
+      <ellipse cx="150" cy="150" rx="92" ry="54"/>
+      <ellipse cx="150" cy="150" rx="30" ry="92"/>
+      <ellipse cx="150" cy="150" rx="62" ry="92"/>
+    </g>
+    <!-- emergent network: nodes + links growing across the globe (civilization emergence) -->
+    <g stroke="#7ebab5" stroke-width="1.1" opacity="0.55">
+      <line x1="108" y1="118" x2="150" y2="150"/>
+      <line x1="150" y1="150" x2="196" y2="128"/>
+      <line x1="150" y1="150" x2="132" y2="196"/>
+      <line x1="132" y1="196" x2="178" y2="182"/>
+      <line x1="108" y1="118" x2="150" y2="96"/>
+      <line x1="196" y1="128" x2="178" y2="182"/>
+    </g>
+    <g fill="#a8d4d0">
+      <circle cx="108" cy="118" r="3.4"/>
+      <circle cx="196" cy="128" r="3.4"/>
+      <circle cx="132" cy="196" r="3.0"/>
+      <circle cx="178" cy="182" r="3.0"/>
+      <circle cx="150" cy="96" r="2.6"/>
+    </g>
+    <circle cx="150" cy="150" r="6" fill="#7ebab5" filter="url(#soft)"/>
+  </g>
+  <ellipse cx="150" cy="150" rx="92" ry="11" fill="none" stroke="#7ebab5" stroke-width="1.1" opacity="0.45" clip-path="url(#orbclip)"/>
+
+  <!-- wordmark -->
+  <text x="300" y="180"
+        font-family="'Segoe UI','Helvetica Neue',Arial,sans-serif"
+        font-size="128" font-weight="800" letter-spacing="10"
+        fill="url(#teal)" filter="url(#tshadow)" text-anchor="start">CIVIS</text>
+  <rect x="302" y="198" width="430" height="3" rx="1.5" fill="#7ebab5" opacity="0.9"/>
+  <rect x="302" y="206" width="280" height="1.4" rx="0.7" fill="#7ebab5" opacity="0.4"/>
+  <text x="305" y="242"
+        font-family="'Segoe UI',Arial,sans-serif" font-size="17" font-weight="400"
+        letter-spacing="7" fill="#7ebab5" opacity="0.7" text-anchor="start">EMERGENT CIVILISATION SANDBOX</text>
+
+  <!-- corner ticks -->
+  <g stroke="#7ebab5" stroke-width="1.2" fill="none" opacity="0.4">
+    <polyline points="28,18 18,18 18,28"/>
+    <polyline points="772,18 782,18 782,28"/>
+    <polyline points="28,282 18,282 18,272"/>
+    <polyline points="772,282 782,282 782,272"/>
+  </g>
+</svg>

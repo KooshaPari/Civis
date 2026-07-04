@@ -28,6 +28,7 @@ use crate::frame_budget::{scaled_cull_distance, GpuQualityMode};
 use crate::menus::in_game;
 use crate::terrain::{terrain_surface_y, WORLD_SIZE};
 use crate::{decode_chunk_id, encode_chunk_id, DebugRender};
+use crate::game_ui::GodActionToast;
 
 /// Legacy god-panel verb fired from egui.
 #[derive(Message, Debug, Clone)]
@@ -197,7 +198,7 @@ fn apply_terrain_verb(
     );
     let mut changed = 0usize;
     let mut dirty = HashSet::new();
-    let edge = LIVE_CHUNK_EDGE as i64;
+    let edge = LIVE_CHUNK_EDGE as i32;
     for dz in -ri..=ri {
         for dy in -ri..=ri {
             for dx in -ri..=ri {
@@ -209,9 +210,9 @@ fn apply_terrain_verb(
                     continue;
                 }
                 let chunk_id = encode_chunk_id(
-                    wx.div_euclid(edge) as i32,
-                    wy.div_euclid(edge) as i32,
-                    wz.div_euclid(edge) as i32,
+                    wx.div_euclid(edge),
+                    wy.div_euclid(edge),
+                    wz.div_euclid(edge),
                 );
                 ensure_chunk_ready(cache, chunk_id);
                 let lx = wx.rem_euclid(edge) as usize;
@@ -327,6 +328,7 @@ fn apply_god_action_requests(
     mut toast: Option<ResMut<GodActionToast>>,
     focus: Res<LiveSceneFocus>,
     debug: Res<DebugRender>,
+    frame_budget_recovery: Res<FrameBudgetRecovery>,
     effect_meshes: Res<GodEffectMeshes>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -348,6 +350,7 @@ fn apply_god_action_requests(
                     &mut scene,
                     &focus,
                     &debug,
+                    &frame_budget_recovery,
                     &effect_meshes,
                     &mut meshes,
                     &mut materials,
@@ -376,6 +379,7 @@ fn apply_god_action_requests(
                     &mut scene,
                     &focus,
                     &debug,
+                    &frame_budget_recovery,
                     &effect_meshes,
                     &mut meshes,
                     &mut materials,
@@ -445,6 +449,7 @@ fn remesh_dirty_chunks(
     scene: &mut LiveStreamScene,
     focus: &LiveSceneFocus,
     debug: &DebugRender,
+    frame_budget_recovery: &FrameBudgetRecovery,
     _effect_meshes: &GodEffectMeshes,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,

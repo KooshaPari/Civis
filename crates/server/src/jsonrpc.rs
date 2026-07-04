@@ -72,8 +72,6 @@ pub enum JsonRpcMethod {
     /// Read the latest civ-emergence-metrics sample
     /// (`sim.emergence`, stacked on PR #350; FR dashboard).
     SimEmergence,
-    /// Saga-graph read-only query (`sim.legends`, FR-CIV-LEGENDS-QUERY-07).
-    SimLegends,
     /// Inspect terrain + faction at a tile coordinate.
     /// (`sim.inspect_tile`, FR tile-inspector).
     SimInspectTile,
@@ -118,7 +116,6 @@ impl JsonRpcMethod {
             Self::LoadSlot => "save.load",
             Self::SaveList => "save.list",
             Self::SimEmergence => "sim.emergence",
-            Self::SimLegends => "sim.legends",
             Self::SimInspectTile => "sim.inspect_tile",
             Self::SimGodAction => "sim.god_action",
             Self::SimPerf => "sim.perf",
@@ -154,7 +151,6 @@ impl JsonRpcMethod {
             "save.load" => Some(Self::LoadSlot),
             "save.list" => Some(Self::SaveList),
             "sim.emergence" => Some(Self::SimEmergence),
-            "sim.legends" => Some(Self::SimLegends),
             "sim.inspect_tile" => Some(Self::SimInspectTile),
             "sim.god_action" => Some(Self::SimGodAction),
             "sim.perf" => Some(Self::SimPerf),
@@ -820,6 +816,47 @@ pub struct DispatchContext {
     pub last_tick_ms: f64,
 }
 
+/// Wire-friendly representation of one sentience event for `psyche.events`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SentienceEventWire {
+    /// Optional lineage identifier.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lineage_id: Option<u64>,
+    /// Measured cognition score.
+    pub cognition_score: f32,
+    /// Whether the threshold was crossed.
+    pub crossed: bool,
+}
+
+/// Wire-friendly representation of one psyche-bearing agent.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PsycheEntitySnapshotWire {
+    /// Agent identifier.
+    pub agent_id: u64,
+    /// Sentience score associated with the agent.
+    pub cognition_score: f32,
+    /// Whether the agent crossed the sentience threshold.
+    pub is_sentient: bool,
+    /// Mood valence.
+    pub mood_valence: f32,
+    /// Mood arousal.
+    pub mood_arousal: f32,
+    /// Temperament reactivity.
+    pub reactivity: f32,
+    /// Temperament sociability.
+    pub sociability: f32,
+    /// Temperament risk tolerance.
+    pub risk_tol: f32,
+    /// Temperament impulsivity.
+    pub impulsivity: f32,
+    /// Drive axes.
+    pub drives: [f32; 4],
+    /// Belief axes.
+    pub beliefs: [f32; 4],
+    /// Psyche maturity.
+    pub maturity: f32,
+}
+
 /// JSON-RPC view of [`civ_engine::emergence_metrics::EmergenceSample`].
 ///
 /// Mirrors the engine type but keeps a fixed, transport-friendly
@@ -1443,24 +1480,6 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                     "tick": ctx.tick,
                 })),
                 None => serde_json::json!({ "tick": ctx.tick, "sample": serde_json::Value::Null }),
-            };
-            DispatchPlan {
-                response: JsonRpcResponse::success(req.id, result),
-                effect: DispatchEffect::None,
-            }
-        }
-        JsonRpcMethod::SimLegends => {
-            let result = match ctx.legends.as_ref() {
-                Some(payload) => serde_json::to_value(payload).unwrap_or(serde_json::json!({
-                    "tick": ctx.tick,
-                    "query_api_version": 1,
-                })),
-                None => serde_json::json!({
-                    "tick": ctx.tick,
-                    "query_api_version": 1,
-                    "node_count": 0,
-                    "emergence_feed": [],
-                }),
             };
             DispatchPlan {
                 response: JsonRpcResponse::success(req.id, result),
@@ -2724,6 +2743,8 @@ mod tests {
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
+                psyche_snapshot: None,
+                sentience_events: None,
                 outcome_fields: None,
                 psyche_snapshot: None,
                 sentience_events: None,

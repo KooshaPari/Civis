@@ -30,16 +30,23 @@ pub mod entity_inspector;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod inspect;
 #[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod entity_inspector;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod inspect;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod entity_inspector;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod inspect;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod diplomacy_ui;
 pub mod outcome_overlay;
 pub mod faction_hud;
+pub mod session;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod save_load_ui;
 #[cfg(all(feature = "bevy", feature = "models"))]
 pub mod gltf_models;
 pub mod emergence_dashboard;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod world_stats_dashboard;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod event_feed;
 #[cfg(all(feature = "bevy", feature = "gi"))]
@@ -76,6 +83,8 @@ pub mod live_stream;
 pub mod materials;
 #[cfg(feature = "bevy")]
 pub mod post_fx;
+#[cfg(feature = "bevy")]
+pub mod preflight;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod settings_ui;
 #[cfg(all(feature = "bevy", feature = "egui"))]
@@ -90,18 +99,14 @@ pub mod native_backend;
 pub mod native_renderer;
 #[cfg(feature = "bevy")]
 pub mod sim_bridge;
+pub mod session;
 #[cfg(feature = "bevy")]
 pub mod spawn_tools;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tech_tree_ui;
-#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod civ_history;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod god_actions;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod holocron_panel;
-#[cfg(feature = "bevy")]
-pub mod procedural_actor;
 pub mod god_panel;
 pub mod tutorial;
 pub mod perf_hud;
@@ -125,6 +130,8 @@ pub mod material_brush_ui;
 pub mod ui_cluster;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod ui_holo;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod ui_theme;
 #[cfg(all(feature = "bevy", feature = "vfx"))]
 pub mod vfx;
 #[cfg(all(feature = "bevy", feature = "voxel"))]
@@ -307,42 +314,7 @@ pub fn parse_jsonrpc_snapshot_meta(text: &str) -> Option<WsSpectatorMeta> {
     let result = value.get("result")?;
     let is_day = result.get("is_day")?.as_bool()?;
     let tick = result.get("tick").and_then(|v| v.as_u64());
-    let market_prices = result.get("market_prices").and_then(|prices| prices.as_object()).map(|prices| {
-        prices
-            .iter()
-            .filter_map(|(key, value)| value.as_i64().map(|value| (key.to_string(), value)))
-            .collect()
-    });
-    let factions = result.get("factions").and_then(|values| values.as_array()).map(|values| {
-        values
-            .iter()
-            .filter_map(|entry| {
-                let id = entry.get("id")?.as_u64()? as u32;
-                let name = entry.get("name")?.as_str()?.to_string();
-                let population = entry.get("population")?.as_u64()? as u32;
-                let territory_size = entry.get("territory_size")?.as_u64()? as u32;
-                Some(FactionSnapshotSummary {
-                    id,
-                    name,
-                    population,
-                    territory_size,
-                })
-            })
-            .collect()
-    });
-    let population = result.get("population").and_then(|v| v.as_u64());
-    let building_count = result.get("building_count").and_then(|v| v.as_u64()).map(|v| v as usize);
-    let speed_multiplier = result.get("speed_multiplier").and_then(|v| v.as_u64()).map(|v| v as u32);
-
-    Some(WsSpectatorMeta {
-        is_day,
-        tick,
-        population,
-        building_count,
-        speed_multiplier,
-        market_prices,
-        factions,
-    })
+    Some(WsSpectatorMeta { is_day, tick })
 }
 
 /// Subset of sim.emergence fields shown in the HUD.
@@ -353,8 +325,6 @@ pub struct EmergenceHudData {
     pub entropy_bits: f32,
     /// Normalised Shannon entropy (`0..=1`).
     pub entropy_norm: f32,
-    /// Rolling-mean branching ratio σ̄_W (charter §3.6).
-    pub branching_sigma: f32,
     /// Power-law exponent alpha for cluster-size distribution.
     pub power_law_alpha: f32,
     /// Novel config fingerprints per window per civilian.
@@ -1755,6 +1725,7 @@ mod tests {
                 tick: 4,
                 civilians: vec![CivilianStateEntry {
                     id: 1,
+                    faction_id: 0,
                     needs: CivilianNeeds3d::default(),
                     profession: String::new(),
                     genome_summary: Default::default(),
@@ -1770,6 +1741,7 @@ mod tests {
                     government: Government3d::Unknown,
                     treasury: FactionTreasury3d::default(),
                 }],
+                population_by_faction: Default::default(),
             }),
             Frame3d::EventFeed(EventFeedFrame {
                 tick: 6,

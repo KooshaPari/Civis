@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080">
+  <!-- Loading background: deep midnight, faint hex world grid, teal glow, terrain silhouette, stars.
+       Keycap teal #7ebab5 / midnight #090a0c. Clean, not busy. -->
+  <defs>
+    <radialGradient id="vign" cx="50%" cy="40%" r="75%">
+      <stop offset="0%" stop-color="#0f1719"/>
+      <stop offset="55%" stop-color="#0a0e10"/>
+      <stop offset="100%" stop-color="#070809"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="46%" r="40%">
+      <stop offset="0%" stop-color="#7ebab5" stop-opacity="0.16"/>
+      <stop offset="60%" stop-color="#7ebab5" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#7ebab5" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="terrain" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#11201e"/>
+      <stop offset="100%" stop-color="#080d0c"/>
+    </linearGradient>
+    <linearGradient id="terrain2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0c1716"/>
+      <stop offset="100%" stop-color="#070b0b"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1920" height="1080" fill="url(#vign)"/>
+  <rect width="1920" height="1080" fill="url(#glow)"/>
+
+  <!-- faint hex world grid (low opacity, upper field) -->
+  <g stroke="#7ebab5" stroke-width="1" fill="none" opacity="0.07">
+    <!-- generated hex lattice approximated with a repeated row of pointy-top hexes -->
+    <g id="hexrow">
+      <polygon points="60,0 90,17 90,52 60,69 30,52 30,17"/>
+    </g>
+    <use href="#hexrow" x="0"   y="0"/><use href="#hexrow" x="60"  y="35"/>
+    <use href="#hexrow" x="120" y="0"/><use href="#hexrow" x="180" y="35"/>
+    <use href="#hexrow" x="240" y="0"/><use href="#hexrow" x="300" y="35"/>
+    <use href="#hexrow" x="360" y="0"/><use href="#hexrow" x="420" y="35"/>
+    <use href="#hexrow" x="480" y="0"/><use href="#hexrow" x="540" y="35"/>
+    <use href="#hexrow" x="600" y="0"/><use href="#hexrow" x="660" y="35"/>
+    <use href="#hexrow" x="720" y="0"/><use href="#hexrow" x="780" y="35"/>
+    <use href="#hexrow" x="840" y="0"/><use href="#hexrow" x="900" y="35"/>
+    <use href="#hexrow" x="960" y="0"/><use href="#hexrow" x="1020" y="35"/>
+    <use href="#hexrow" x="1080" y="0"/><use href="#hexrow" x="1140" y="35"/>
+    <use href="#hexrow" x="1200" y="0"/><use href="#hexrow" x="1260" y="35"/>
+    <use href="#hexrow" x="1320" y="0"/><use href="#hexrow" x="1380" y="35"/>
+    <use href="#hexrow" x="1440" y="0"/><use href="#hexrow" x="1500" y="35"/>
+    <use href="#hexrow" x="1560" y="0"/><use href="#hexrow" x="1620" y="35"/>
+    <use href="#hexrow" x="1680" y="0"/><use href="#hexrow" x="1740" y="35"/>
+    <use href="#hexrow" x="1800" y="0"/><use href="#hexrow" x="1860" y="35"/>
+  </g>
+
+  <!-- stars -->
+  <g fill="#a8d4d0">
+    <circle cx="220" cy="140" r="1.4" opacity="0.6"/>
+    <circle cx="480" cy="90" r="1.0" opacity="0.4"/>
+    <circle cx="760" cy="180" r="1.6" opacity="0.7"/>
+    <circle cx="1120" cy="120" r="1.1" opacity="0.5"/>
+    <circle cx="1480" cy="100" r="1.5" opacity="0.6"/>
+    <circle cx="1700" cy="200" r="1.0" opacity="0.4"/>
+    <circle cx="1300" cy="240" r="1.2" opacity="0.45"/>
+    <circle cx="360" cy="260" r="1.0" opacity="0.4"/>
+    <circle cx="940" cy="80" r="1.3" opacity="0.55"/>
+    <circle cx="1580" cy="300" r="1.1" opacity="0.4"/>
+  </g>
+
+  <!-- subtle emergent-node constellation around centre -->
+  <g opacity="0.5">
+    <g stroke="#7ebab5" stroke-width="1" opacity="0.45">
+      <line x1="860" y1="430" x2="960" y2="470"/>
+      <line x1="960" y1="470" x2="1070" y2="440"/>
+      <line x1="960" y1="470" x2="980" y2="560"/>
+      <line x1="980" y1="560" x2="1080" y2="540"/>
+    </g>
+    <g fill="#7ebab5">
+      <circle cx="860" cy="430" r="3"/>
+      <circle cx="1070" cy="440" r="3"/>
+      <circle cx="980" cy="560" r="2.6"/>
+      <circle cx="1080" cy="540" r="2.6"/>
+      <circle cx="960" cy="470" r="4.2"/>
+    </g>
+  </g>
+
+  <!-- layered terrain silhouette (bottom) -->
+  <path d="M0,860 L160,820 L360,870 L560,800 L780,855 L1020,790 L1260,850 L1500,800 L1740,860 L1920,820 L1920,1080 L0,1080 Z"
+        fill="url(#terrain2)" opacity="0.9"/>
+  <path d="M0,940 L240,900 L520,955 L820,890 L1120,950 L1420,895 L1720,950 L1920,915 L1920,1080 L0,1080 Z"
+        fill="url(#terrain)"/>
+  <!-- teal rim light on near ridge -->
+  <path d="M0,940 L240,900 L520,955 L820,890 L1120,950 L1420,895 L1720,950 L1920,915"
+        fill="none" stroke="#7ebab5" stroke-width="1.4" opacity="0.22"/>
+</svg>

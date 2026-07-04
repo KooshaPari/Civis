@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <style>
+      .glyph { fill: #9b7fbe; }
+      .bg { fill: #0f1419; opacity: 0; }
+    </style>
+  </defs>
+  <!-- Background (transparent) -->
+  <rect class="bg" width="64" height="64"/>
+  <!-- Law book/scroll for laws -->
+  <g class="glyph">
+    <!-- Book cover -->
+    <rect x="18" y="14" width="28" height="36" rx="2" stroke="#9b7fbe" stroke-width="1" fill="none"/>
+    <!-- Book pages -->
+    <line x1="22" y1="20" x2="42" y2="20" stroke="#9b7fbe" stroke-width="2" stroke-linecap="round"/>
+    <line x1="22" y1="26" x2="42" y2="26" stroke="#9b7fbe" stroke-width="2" stroke-linecap="round"/>
+    <line x1="22" y1="32" x2="42" y2="32" stroke="#9b7fbe" stroke-width="2" stroke-linecap="round"/>
+    <line x1="22" y1="38" x2="42" y2="38" stroke="#9b7fbe" stroke-width="2" stroke-linecap="round"/>
+  </g>
+</svg>

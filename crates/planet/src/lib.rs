@@ -7,10 +7,7 @@
 #![warn(missing_docs)]
 
 pub mod geology;
-pub use geology::{
-    classify_biome, classify_weather_cell, compute_drift, BiomeKind, ClimateDrift, GeologyMap,
-    RegionBiome,
-};
+pub use geology::{BiomeKind, GeologyMap, RegionBiome};
 pub mod weather;
 pub use weather::{compute_weather, SeasonKind, WeatherCell, WeatherKind};
 pub mod seasonal;

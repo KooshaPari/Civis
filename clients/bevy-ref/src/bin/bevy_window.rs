@@ -1,5 +1,10 @@
+﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
-use bevy_egui::{egui, EguiContexts};
+use bevy_egui::{egui, EguiContexts, EguiPlugin};
+﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
+﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
+use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
+use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
@@ -34,20 +39,17 @@ use civ_bevy_ref::{
         LIVE_MINIMAP_CHUNK_LOADED_COLOR, LIVE_MINIMAP_DOT, LIVE_MINIMAP_GRAPH_DOT_SCALE,
     },
     faction_hud::{FactionHudPlugin, PlayerFactionId},
-    god_panel::GodPanelPlugin,
-    game_ui::GameUiPlugin,
-    menus::{AppState, GameUiMode, MainMenuCommand, MainMenuSaves, MenuCommand, WorldSetupParams},
-    save_load_ui::{SaveLoadPanel, SaveLoadUiPlugin},
+    save_load_ui::SaveLoadUiPlugin,
+    tutorial::TutorialPlugin,
+    perf_hud::{PerfHudPlugin, PerfMetrics},
     live_pick::{LivePickPlugin, LiveSelection},
     live_stream::{
-        apply_agent_appearance_frame_with_labels_and_eye, apply_building_diff_frame,
-        apply_civilian_state_frame, apply_climate_frame, apply_event_feed_frame,
-        apply_faction_state_frame, apply_voxel_delta_frame, apply_water_deltas_for_frame,
-        default_stream_meshes, default_water_meshes,
-        format_event_feed_message, latest_climate, push_event_feed_to_hud_summary,
-        sync_agent_labels_from_civilians, AgentLabelConfig, LiveAgentTag, LiveBuildingTag,
+        apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
+        apply_civilian_state_frame, apply_event_feed_frame, apply_faction_state_frame, apply_voxel_delta_frame,
+        default_stream_meshes, format_event_feed_message, push_event_feed_to_hud_summary,
+        sync_agent_labels_from_civilians, AgentLabelConfig, LiveAgentTag, LiveBridge, LiveBuildingTag,
         LiveChunkFade, LiveChunkTag, LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene,
-        LiveWaterMeshes, StreamCulling,
+        StreamCulling,
         LIVE_CHUNK_BASE_COLOR, LIVE_CHUNK_EDGE,
     },
     god_panel::GodPanelPlugin,
@@ -62,9 +64,11 @@ use civ_bevy_ref::{
     MenusPlugin, PerfHudPlugin, TutorialPlugin,
     world_stats_dashboard::WorldStatsDashboardPlugin,
     ws_client::{WsClient, WsClientConfig},
-    CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MinimapBounds,
+    CameraTarget, DebugRender, LiveHudSnapshot, MinimapBounds, WsConnectionState,
     VOXEL_CHUNK_EDGE,
     post_fx::PostFxPlugin,
+    CameraTarget, DebugRender, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
+    CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
 };
 #[cfg(feature = "gi")]
 use civ_bevy_ref::lighting_gi::SolariGiPlugin;
@@ -138,6 +142,7 @@ struct ScenarioPanel {
 impl Default for ScenarioPanel {
     fn default() -> Self {
         Self { seed_index: 0, speed_index: 0, preset_index: 0 }
+        Self { seed_index: 0, speed_index: 0 }
     }
 }
 
@@ -183,6 +188,12 @@ impl OrbitCamera {
         self.centre[0] += right * cos + forward * sin;
         self.centre[2] += -right * sin + forward * cos;
     }
+}
+
+#[derive(Resource)]
+struct HudState {
+    snapshot: LiveHudSnapshot,
+    text: Entity,
 }
 
 #[derive(Component)]
@@ -238,8 +249,6 @@ struct MinimapPopup {
 #[derive(Resource, Default)]
 struct SimSpeedState {
     multiplier: u32,
-    paused: bool,
-    speed_idx: usize,
 }
 
 #[derive(Resource)]
@@ -261,6 +270,29 @@ struct ScenarioPresetLabel;
 
 #[derive(Component)]
 struct ScenarioStartButton;
+
+#[derive(Component)]
+struct ScenarioStartButton;
+
+#[derive(Resource, Default)]
+struct MinimapPopup {
+    /// Pending right-click tile coords; None when popup is closed.
+    pending: Option<(i32, i32)>,
+}
+
+#[derive(Resource, Default)]
+struct SimSpeedState {
+    multiplier: u32,
+}
+
+#[derive(Resource)]
+#[derive(Resource, Default)]
+struct EmergencePollTimer(f32);
+impl Default for EmergencePollTimer {
+    fn default() -> Self {
+        Self(0.0)
+    }
+}
 
 fn main() {
     let mut app = App::new();
@@ -304,11 +336,12 @@ fn main() {
     app.init_resource::<LiveStreamScene>()
         .init_resource::<civ_bevy_ref::AttachMode>()
         .init_resource::<LiveSceneFocus>()
+        .init_resource::<ConnectionOverlay>()
+        .init_resource::<ScenarioPanel>()
         .init_resource::<MinimapPopup>()
         .init_resource::<SimSpeedState>()
         .init_resource::<EmergencePollTimer>()
         .init_resource::<EmergenceHudData>()
-        .init_resource::<SaveListState>()
         .insert_resource(ScenePresentation::default())
         .insert_resource(DebugRender::default())
         .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
@@ -499,68 +532,56 @@ fn consume_menu_commands(
     }
 }
 
-fn worldgen_to_playing(
-    state: Option<Res<State<AppState>>>,
-    scene: Res<LiveStreamScene>,
-    mut next_state: ResMut<NextState<AppState>>,
-) {
-    let Some(state) = state else {
-        return;
-    };
-    if *state != AppState::WorldGen {
-        return;
-    }
-    if live_stream_has_content(&scene) {
-        next_state.set(AppState::Playing);
-    }
-}
 
-fn sync_app_state_with_game_mode(
-    state: Option<Res<State<AppState>>>,
-    mode: Res<GameUiMode>,
-    mut next_state: ResMut<NextState<AppState>>,
-) {
-    let Some(state) = state else {
-        return;
-    };
-    match (*mode, state.get()) {
-        (GameUiMode::Paused, AppState::Playing) => next_state.set(AppState::Paused),
-        (GameUiMode::Playing, AppState::Paused) => next_state.set(AppState::Playing),
+fn drive_app_state(bridge: Res<LiveBridge>, current: Res<State<AppState>>, mut next: ResMut<NextState<AppState>>) {
+    let ws = bridge.client.latest_connection_state();
+    match (current.get(), ws) {
+        (AppState::Connecting, WsConnectionState::Connected) => { next.set(AppState::InGame); }
+        (AppState::InGame, WsConnectionState::Reconnecting) | (AppState::InGame, WsConnectionState::Disconnected) => { next.set(AppState::ConnectionLost); }
+        (AppState::ConnectionLost, WsConnectionState::Connected) => { next.set(AppState::InGame); }
         _ => {}
     }
 }
 
-fn update_mainmenu_saves(
-    bridge: Res<LiveBridge>,
-    state: Option<Res<State<AppState>>>,
-    mut saves: ResMut<MainMenuSaves>,
-    mut query: ResMut<SaveListState>,
-) {
-    let Some(state) = state else {
-        return;
-    };
-    if *state != AppState::MainMenu {
-        return;
-    }
-    if !query.queried {
-        bridge
-            .client
-            .send_rpc_raw(r#"{"jsonrpc":"2.0","id":2099,"method":"save.list","params":{}}"#.to_string());
-        query.queried = true;
-    }
-
-    let mut preferred = None;
-    for entry in bridge.client.poll_save_list() {
-        if entry.save_type != "slot" {
-            continue;
-        }
-        match &preferred {
-            Some((_, tick)) if entry.tick <= *tick => {}
-            _ => preferred = Some((entry.name, entry.tick)),
-        }
-    }
-    saves.can_continue = preferred.is_some();
-    saves.preferred_slot = preferred.map(|entry| entry.0);
+fn spawn_connecting_overlay(mut commands: Commands, mut overlay: ResMut<ConnectionOverlay>) {
+    let root = commands.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(0.0), left: Val::Px(0.0),
+            width: Val::Percent(100.0), height: Val::Percent(100.0),
+            flex_direction: FlexDirection::Column,
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            row_gap: Val::Px(12.0),
+            ..default()
+        },
+        BackgroundColor(Color::srgb(0.035, 0.039, 0.047)),
+        ZIndex(100),
+    )).with_children(|p| {
+        p.spawn((
+            Text::new("CIVIS"),
+            TextFont::from_font_size(72.0),
+            TextColor(Color::srgb(0.494, 0.729, 0.710)),
+        ));
+        p.spawn((
+            Text::new("An Emergent Civilization"),
+            TextFont::from_font_size(20.0),
+            TextColor(Color::srgba(1.0, 1.0, 1.0, 0.45)),
+        ));
+        p.spawn((
+            Text::new("⠋"),
+            TextFont::from_font_size(28.0),
+            TextColor(Color::srgb(0.494, 0.729, 0.710)),
+            SplashSpinner,
+        ));
+        p.spawn((
+            Text::new("Connecting to simulation server..."),
+            TextFont::from_font_size(14.0),
+            TextColor(Color::srgba(1.0, 1.0, 1.0, 0.5)),
+        ));
+    }).id();
+    overlay.root = Some(root);
+    overlay.tick = 0;
 }
 
 fn start_world_boot(
@@ -599,7 +620,7 @@ fn start_world_boot(
 }
 
 fn despawn_connection_overlay(mut commands: Commands, mut overlay: ResMut<ConnectionOverlay>) {
-    if let Some(root) = overlay.root.take() { commands.entity(root).despawn(); }
+    if let Some(root) = overlay.root.take() { commands.entity(root).despawn_recursive(); }
 }
 
 const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
@@ -863,16 +884,10 @@ fn speed_control_input(
         speed.paused = false;
     }
 
-    speed.multiplier = if speed.paused {
-        0
-    } else {
-        WORLDGEN_SPEED_STEPS[speed.speed_idx]
-    };
+    speed.multiplier = if speed.paused { 0 } else { SPEED_OPTIONS[speed.speed_idx] };
     let json = format!(r#"{{"jsonrpc":"2.0","id":1,"method":"sim.set_speed","params":{{"multiplier":{}}}}}"#, speed.multiplier);
     bridge.client.send_rpc_raw(json);
     hud.snapshot.speed_multiplier = speed.multiplier;
-}
-
 fn action_pressed(
     #[cfg(feature = "egui")] settings: Option<&GameSettings>,
     action: &str,
@@ -886,11 +901,9 @@ fn action_pressed(
             .and_then(|s| s.key_for(action))
             .unwrap_or(default)
             .is_pressed(keys, mouse_buttons)
-    }
     #[cfg(not(feature = "egui"))]
     {
         default.is_pressed(keys, mouse_buttons)
-    }
 }
 
 fn sync_chunk_debug_render(
@@ -1420,22 +1433,16 @@ fn minimap_click_focus(
         &mouse,
     );
     if !select_pressed {
-        // Right-click: open inspect popup
-        if mouse.just_pressed(MouseButton::Right) {
-            if let Ok((interaction, cursor)) = panels.single() {
-                if *interaction != Interaction::None {
-                    if let Some(normalized) = cursor.normalized {
-                        let uv = inset_minimap_uv_from_cursor(normalized);
-                        let (tx, ty) = if cache.use_focus_bounds {
-                            if let Some(focus) = cache.focus {
-                                let (x, z) = minimap_uv_to_world_xz(Vec2::new(uv[0], uv[1]), focus);
-                                (x as i32, z as i32)
-                            } else {
-                                (0, 0)
-                            }
-                        } else if let Some(bounds) = cache.bounds {
-                            let (cx, cz) = minimap_uv_to_chunk_grid(inset_minimap_uv_from_cursor(normalized), bounds);
-                            (cx, cz)
+    // Right-click: open inspect popup
+    if mouse.just_pressed(MouseButton::Right) {
+        if let Ok((interaction, cursor)) = panels.single() {
+            if *interaction != Interaction::None {
+                if let Some(normalized) = cursor.normalized {
+                    let uv = inset_minimap_uv_from_cursor(normalized);
+                    let (tx, ty) = if cache.use_focus_bounds {
+                        if let Some(focus) = cache.focus {
+                            let (x, z) = minimap_uv_to_world_xz(Vec2::new(uv[0], uv[1]), focus);
+                            (x as i32, z as i32)
                         } else {
                             (0, 0)
                         }
@@ -1450,7 +1457,6 @@ fn minimap_click_focus(
             }
         }
         return;
-    }
     }
     // Suppress unused warning — bridge is available for future left-click RPCs.
     let _ = &bridge;
@@ -1597,7 +1603,10 @@ fn minimap_popup_ui(
         .show(ctx, |ui| {
             ui.label(format!("Tile ({tx}, {ty})"));
             if ui.button("Inspect tile").clicked() {
-                bridge.client.send_rpc("sim.inspect_tile", serde_json::json!({"x": tx, "y": ty}));
+                let json = format!(
+                    r#"{{"jsonrpc":"2.0","id":1,"method":"sim.inspect_tile","params":{{"x":{tx},"y":{ty}}}}}"#
+                );
+                bridge.client.send_rpc(json);
                 popup.pending = None;
             }
             if ui.button("Center camera").clicked() {
@@ -1640,5 +1649,7 @@ fn poll_emergence(
         return;
     }
     timer.0 = 0.0;
-    bridge.client.send_rpc("sim.emergence", serde_json::Value::Null);
+    let json = r#"{"jsonrpc":"2.0","id":2,"method":"sim.emergence","params":null}"#.to_string();
+    bridge.client.send_rpc(json);
+}
 }

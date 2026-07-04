@@ -53,11 +53,6 @@ pub mod demographics;
 pub mod faction_decisions;
 
 
-/// Fixed-point scaling factor (1 raw unit = SCALE joules). Engine energy
-/// quantities are stored in fixed-point `i64` for determinism and converted
-/// to `f64`/SI at the economy boundary using this constant.
-pub const SCALE: i64 = 1_000;
-
 pub use religion::{emerge_belief, spread_religion, Belief, BeliefConcept, Religion};
 pub use demographics::{
     carrying_capacity_from_food, tick_demographics, total_population, AgeGroup, Demographics, DemographicsSnapshot,
@@ -67,33 +62,23 @@ pub use demographics::{
 // `civ_engine::SfxTrigger` without taking a direct `civ-audio` dep.
 pub use civ_audio::triggers::SfxTrigger;
 pub use civ_mod_host::{load_manifest, ModBrowserEntry, ModGuestStateSave, ModType};
-pub use civ_planet::Climate;
-pub use civ_tactics::{DamageEvent, DoctrineLibrary};
 pub use emergence::{
     CivAiDecision, EmergenceFeedEvent, EmergenceState,
 };
 pub use civ_emergence_metrics::branching::BranchingRegime;
 pub use emergence_metrics::{EmergenceBranchingState, EmergenceSample};
 pub use engine::{
-
     job_type_for_civilian_id, Building, BuildingType, Citizen, CombatDamagePulse, DiplomacyKind,
-    EconomicFocus, EconomicFocusEvent, FactionRelationSnapshot, Fixed, InstitutionEvent, JobType,
+    EconomicFocus, EconomicFocusEvent, InstitutionEvent, JobType,
     MilitaryUnit, Position, ResourceType, Resources, Sim, SimSeed, Simulation, SimulationSnapshot,
     PsycheDrivenBehavior, StratBand, StratificationEvent, StratificationEventKind,
     StratificationReport, TradeRoute, UnitType, WorldState,
 };
 pub use hash_chain::hash_hex;
-pub use replay::ReplayLog;
-pub use replay::ReplayError;
-pub use replay_format::{decode_civreplay, encode_civreplay};
-pub use save_bundle::{
-    delete_slot, list_slots, load_from_slot, save_to_slot, CivSaveBundle, SaveSlotEntry,
-};
 pub use spawn::{
     grid_to_norm, spawn_airport_at, spawn_hangar_at, spawn_military_at, spawn_port_at,
     unit_type_label,
 };
-pub use spectator::SpectatorView;
 
 
 // FR-CIV-ARCH: Emergent building layouts re-export so callers can use
@@ -121,7 +106,7 @@ pub use civ_voxel::WorldCoord;
 pub use civ_tactics::{
     apply_damage, bfs_next_step, evolve_doctrine, formation_offsets, grid_to_world_coord,
     line_of_sight, score_doctrine_fitness, tick_operational_movement, tick_war_bridge,
-    CombatEngagement, DamageEvent, Doctrine, DoctrineLibrary, FactionEngagementStats,
+    CombatEngagement, Doctrine, FactionEngagementStats,
     FormationKind, GridMove, MilitaryPhaseConfig, MilitaryUnitSample, NoopOperationalLayer,
     OperationalLayer, OperationalMovementConfig, WarBridgeConfig,
 };
@@ -166,7 +151,7 @@ pub use scenario::{
     baseline_scenario_path, load_scenario, Scenario, ScenarioError, ScenarioMilitary,
     SCENARIO_SCHEMA_VERSION,
 };
-pub use spectator::{BuildingPin, CivPin, Faction, JobLabel, SpectatorView};
+pub use spectator::{BuildingPin, CivPin, Faction, JobLabel};
 
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
@@ -180,6 +165,9 @@ pub struct Fixed {
     pub raw: i64,
 }
 
+/// Fixed-point scaling factor (1 raw unit = SCALE joules). Engine energy
+/// quantities are stored in fixed-point `i64` for determinism and converted
+/// to `f64`/SI at the economy boundary using this constant.
 pub const SCALE: i64 = 1_000_000; // 10^6 (easier to work with)
 
 impl Fixed {
@@ -197,6 +185,10 @@ impl Fixed {
 
     pub fn to_f64(self) -> f64 {
         self.raw as f64 / SCALE as f64
+    }
+
+    pub fn to_num<T: std::convert::From<i64>>(self) -> T {
+        T::from(self.raw / SCALE)
     }
 
     pub fn saturating_add(self, other: Fixed) -> Fixed {

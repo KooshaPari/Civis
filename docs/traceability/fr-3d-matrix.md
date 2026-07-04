@@ -5,6 +5,8 @@
 
 Status values: `planned` | `in_progress` | `implemented`
 
+Finish-readiness rule: a row is only safe to treat as release-ready when the listed test name pattern exists and any user-visible or performance-sensitive requirement has a corresponding smoke, scenario, or benchmark gate in the same workspace.
+
 > Strategic `FR-CORE-*` / `FR-ECON-*` rows remain in
 > [`TRACEABILITY_MATRIX.md`](TRACEABILITY_MATRIX.md). This file is the traceability
 > home for the 3D workspace extension until rows are merged upstream.

@@ -170,21 +170,21 @@ fn draw_game_laws_panel(mut contexts: EguiContexts, mut open: ResMut<GameLawsOpe
             );
             ui.add_space(8.0);
             egui::ScrollArea::vertical().show(ui, |ui| {
-                let mut current_category = "";
+                let mut current_category = String::new();
                 for law in GameLawsPanel::laws() {
                     if current_category != law.category {
-                        current_category = law.category;
+                        current_category = law.category.clone();
                         ui.label(
-                            egui::RichText::new(law.category)
+                            egui::RichText::new(law.category.clone())
                                 .color(ui_theme::ACCENT)
                                 .strong(),
                         );
                         ui.add_space(2.0);
                     }
                     ui.group(|ui| {
-                        ui.label(egui::RichText::new(law.title).strong().color(ui_theme::TEXT));
+                        ui.label(egui::RichText::new(law.title.clone()).strong().color(ui_theme::TEXT));
                         ui.label(
-                            egui::RichText::new(law.description)
+                            egui::RichText::new(law.description.clone())
                                 .small()
                                 .color(ui_theme::DIM),
                         );

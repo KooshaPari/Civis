@@ -1,10 +1,6 @@
 ﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
-﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
-﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
-use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
-use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
@@ -13,6 +9,7 @@ use civ_bevy_ref::{
     bevy_render::{apply_chunk_material, spawn_default_scene, CHUNK_WIREFRAME_LINE_COLOR},
     chunk_fade_complete, chunk_raycast_terrain, chunk_to_minimap_uv, focused_chunk_at_grid,
     gpu_features::GpuFeaturesPlugin,
+    frame_budget::{scaled_cull_distance, GpuQualityMode},
     live_focus::{
         compute_live_scene_focus, minimap_uv_to_world_xz, LiveSceneFocus, LIVE_FOCUS_LERP_SPEED,
     },
@@ -22,15 +19,14 @@ use civ_bevy_ref::{
         LIVE_MINIMAP_AGENT_COLOR, LIVE_MINIMAP_CAMERA_COLOR, LIVE_MINIMAP_CHUNK_FOCUSED_COLOR,
         LIVE_MINIMAP_CHUNK_LOADED_COLOR, LIVE_MINIMAP_DOT, LIVE_MINIMAP_GRAPH_DOT_SCALE,
     },
-    faction_hud::{FactionHudPlugin, PlayerFactionId},
-    god_panel::GodPanelPlugin,
-    save_load_ui::SaveLoadUiPlugin,
-    live_pick::{LivePickPlugin, LiveSelection},
+    faction_hud::PlayerFactionId,
+    perf_hud::PerfMetrics,
+    live_pick::LiveSelection,
     live_stream::{
         apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
         apply_civilian_state_frame, apply_event_feed_frame, apply_faction_state_frame, apply_voxel_delta_frame,
         default_stream_meshes, format_event_feed_message, push_event_feed_to_hud_summary,
-        sync_agent_labels_from_civilians, AgentLabelConfig, LiveAgentTag, LiveBuildingTag,
+        sync_agent_labels_from_civilians, AgentLabelConfig, LiveAgentTag, LiveBridge, LiveBuildingTag,
         LiveChunkFade, LiveChunkTag, LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene,
         StreamCulling,
         LIVE_CHUNK_BASE_COLOR, LIVE_CHUNK_EDGE,
@@ -40,14 +36,12 @@ use civ_bevy_ref::{
     native_backend::native_render_plugin,
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
     presentation_day_factor_target, resolve_live_ws_url,
-    event_feed::{EventFeed, EventFeedPlugin},
-    emergence_dashboard::EmergenceDashboardPlugin,
+    event_feed::EventFeed,
     ws_client::{WsClient, WsClientConfig},
-    CameraTarget, DebugRender, LiveHudSnapshot, MinimapBounds, WsConnectionState,
-    VOXEL_CHUNK_EDGE,
     post_fx::PostFxPlugin,
-    CameraTarget, DebugRender, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
-    CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
+    HudPanelsPlugin,
+    CameraTarget, DebugRender, EmergenceHudData, HudState, LiveHudSnapshot, MinimapBounds,
+    VOXEL_CHUNK_EDGE, WsConnectionState,
 };
 #[cfg(feature = "gi")]
 use civ_bevy_ref::lighting_gi::SolariGiPlugin;
@@ -57,7 +51,7 @@ use civ_bevy_ref::animation::ActorAnimationPlugin;
 use civ_bevy_ref::gltf_models::GltfModelsPlugin;
 #[cfg(feature = "egui")]
 use civ_bevy_ref::settings_ui::{GameSettings, KeyBinding, SettingsPlugin};
-use civ_bevy_ref::diplomacy_ui::{DiplomacyBridge, DiplomacyUiPlugin};
+use civ_bevy_ref::diplomacy_ui::DiplomacyBridge;
 use civ_protocol_3d::Frame3d;
 use civ_voxel::ChunkId;
 use serde_json;
@@ -78,6 +72,26 @@ const MINIMAP_HUD_LAYOUT: MinimapDotLayout = MinimapDotLayout::InsetHud {
     inset: MINIMAP_INSET,
     plot_margin_dot: MINIMAP_DOT,
 };
+
+/// Named scenario seeds shown in the pre-game panel.
+const NAMED_SEEDS: &[(&str, u64)] = &[
+    ("Genesis",   0xC1F1_5EED_D3AD_BEEF),
+    ("Ember",     0x0123_4567_89AB_CDEF),
+    ("Verdant",   0xFEDC_BA98_7654_3210),
+    ("Arid",      0xDEAD_BEEF_CAFE_1234),
+    ("Glacial",   0x1111_2222_3333_4444),
+];
+
+/// Speed options (label, multiplier) for the pre-game panel.
+const SPEED_OPTIONS: &[(&str, u32)] = &[
+    ("1×", 1),
+    ("2×", 2),
+    ("4×", 4),
+    ("8×", 8),
+];
+
+/// World preset names for the pre-game panel.
+const PRESET_OPTIONS: &[&str] = &["Standard", "Tiny", "Large"];
 
 // FR-CIV-CLIENT-001
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
@@ -106,7 +120,6 @@ struct ScenarioPanel {
 impl Default for ScenarioPanel {
     fn default() -> Self {
         Self { seed_index: 0, speed_index: 0, preset_index: 0 }
-        Self { seed_index: 0, speed_index: 0 }
     }
 }
 
@@ -152,17 +165,6 @@ impl OrbitCamera {
         self.centre[0] += right * cos + forward * sin;
         self.centre[2] += -right * sin + forward * cos;
     }
-}
-
-#[derive(Resource)]
-struct LiveBridge {
-    client: WsClient,
-}
-
-#[derive(Resource)]
-struct HudState {
-    snapshot: LiveHudSnapshot,
-    text: Entity,
 }
 
 #[derive(Component)]
@@ -218,6 +220,8 @@ struct MinimapPopup {
 #[derive(Resource, Default)]
 struct SimSpeedState {
     multiplier: u32,
+    paused: bool,
+    speed_idx: usize,
 }
 
 #[derive(Resource)]
@@ -240,29 +244,6 @@ struct ScenarioPresetLabel;
 #[derive(Component)]
 struct ScenarioStartButton;
 
-#[derive(Component)]
-struct ScenarioStartButton;
-
-#[derive(Resource, Default)]
-struct MinimapPopup {
-    /// Pending right-click tile coords; None when popup is closed.
-    pending: Option<(i32, i32)>,
-}
-
-#[derive(Resource, Default)]
-struct SimSpeedState {
-    multiplier: u32,
-}
-
-#[derive(Resource)]
-#[derive(Resource, Default)]
-struct EmergencePollTimer(f32);
-impl Default for EmergencePollTimer {
-    fn default() -> Self {
-        Self(0.0)
-    }
-}
-
 fn main() {
     let mut app = App::new();
     app.add_plugins((
@@ -278,19 +259,10 @@ fn main() {
             WireframePlugin::default(),
             PostFxPlugin,
             GpuFeaturesPlugin,
-            LivePickPlugin,
-            FactionHudPlugin,
-            SaveLoadUiPlugin,
-            TutorialPlugin,
-            PerfHudPlugin,
             EguiPlugin::default(),
-            EventFeedPlugin,
-            EmergenceDashboardPlugin,
-            civ_bevy_ref::AgentNeedsPlugin,
-            DiplomacyUiPlugin,
-            GodPanelPlugin,
-            EguiPlugin::default(),
-            EventFeedPlugin,
+            civ_bevy_ref::frame_budget::FrameBudgetPlugin,
+            // All HUD panels in one stable call — see src/hud_panels.rs to add panels.
+            HudPanelsPlugin,
         ))
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()
@@ -309,11 +281,8 @@ fn main() {
         .add_systems(OnEnter(AppState::ConnectionLost), spawn_lost_overlay)
         .add_systems(OnExit(AppState::ConnectionLost), despawn_connection_overlay)
         .add_systems(Update, drive_app_state)
-<<<<<<< HEAD
-=======
-        .add_systems(Update, sync_perf_metrics.run_if(crate::menus::in_game))
+        .add_systems(Update, sync_perf_metrics.run_if(in_state(AppState::InGame)))
         .add_systems(Update, animate_splash.run_if(in_state(AppState::Connecting)))
->>>>>>> 34495eed48a7965a10f0cb2f2db986adfb380b94
         .add_systems(Update, scenario_panel_input.run_if(in_state(AppState::Connecting)))
         .add_systems(
             Update,
@@ -327,6 +296,11 @@ fn main() {
                 update_orbit_camera_transform,
                 apply_live_frames,
                 sync_agent_labels_from_civilians.after(apply_live_frames),
+            ),
+        )
+        .add_systems(
+            Update,
+            (
                 apply_spectator_meta,
                 sync_live_hud_stats,
                 sync_live_pick_detail,
@@ -338,14 +312,13 @@ fn main() {
                 update_minimap,
                 update_presentation_lighting,
             ),
-        )
-        .run();
-            ),
         );
 
     #[cfg(feature = "egui")]
     {
         app.add_plugins(SettingsPlugin);
+        app.add_plugins(civ_bevy_ref::entity_inspector::EntityInspectorPlugin);
+        app.add_plugins(civ_bevy_ref::outcome_overlay::OutcomeOverlayPlugin);
     }
 
     #[cfg(feature = "models")]
@@ -392,7 +365,7 @@ fn scenario_panel_input(
     }
 
     // Rebuild seed label
-    if let Ok(mut text) = seed_labels.get_single_mut() {
+    if let Ok(mut text) = seed_labels.single_mut() {
         let label = NAMED_SEEDS
             .iter()
             .enumerate()
@@ -403,7 +376,7 @@ fn scenario_panel_input(
     }
 
     // Rebuild speed label
-    if let Ok(mut text) = speed_labels.get_single_mut() {
+    if let Ok(mut text) = speed_labels.single_mut() {
         let label = SPEED_OPTIONS
             .iter()
             .enumerate()
@@ -414,7 +387,7 @@ fn scenario_panel_input(
     }
 
     // Rebuild preset label
-    if let Ok(mut text) = preset_labels.get_single_mut() {
+    if let Ok(mut text) = preset_labels.single_mut() {
         let label = PRESET_OPTIONS
             .iter()
             .enumerate()
@@ -426,7 +399,7 @@ fn scenario_panel_input(
 
     // Launch on button click or Enter key
     let clicked = start_buttons
-        .get_single()
+        .single()
         .map(|i| *i == Interaction::Pressed)
         .unwrap_or(false);
     if clicked || keys.just_pressed(KeyCode::Enter) {
@@ -533,7 +506,7 @@ fn spawn_lost_overlay(mut commands: Commands, mut overlay: ResMut<ConnectionOver
 }
 
 fn despawn_connection_overlay(mut commands: Commands, mut overlay: ResMut<ConnectionOverlay>) {
-    if let Some(root) = overlay.root.take() { commands.entity(root).despawn_recursive(); }
+    if let Some(root) = overlay.root.take() { commands.entity(root).despawn(); }
 }
 
 const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
@@ -595,6 +568,14 @@ fn sync_live_hud_stats(
     }
 }
 
+
+fn sync_perf_metrics(hud: Res<HudState>, mut metrics: ResMut<PerfMetrics>) {
+    metrics.fps = hud.snapshot.fps;
+    metrics.tick = hud.snapshot.tick.unwrap_or(0);
+    metrics.civilian_count = hud.snapshot.civilian_count;
+    metrics.faction_count = hud.snapshot.faction_count;
+    metrics.tick_ms = hud.snapshot.tick_ms;
+}
 fn live_stream_has_content(scene: &LiveStreamScene) -> bool {
     !scene.chunks.is_empty()
         || !scene.agents.is_empty()
@@ -770,7 +751,7 @@ fn speed_control_input(
         speed.paused = false;
     }
 
-    speed.multiplier = if speed.paused { 0 } else { SPEED_OPTIONS[speed.speed_idx] };
+    speed.multiplier = if speed.paused { 0 } else { SPEED_OPTIONS[speed.speed_idx].1 };
     let json = format!(r#"{{"jsonrpc":"2.0","id":1,"method":"sim.set_speed","params":{{"multiplier":{}}}}}"#, speed.multiplier);
     bridge.client.send_rpc_raw(json);
     hud.snapshot.speed_multiplier = speed.multiplier;
@@ -842,6 +823,7 @@ fn apply_live_frames(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut feed: ResMut<EventFeed>,
+    gpu_quality: Option<Res<GpuQualityMode>>,
 ) {
     let frames = bridge.client.poll();
     if !frames.is_empty() {
@@ -850,9 +832,11 @@ fn apply_live_frames(
 
     let target = orbit.as_target();
     let eye = target.orbit_position();
+    let quality = gpu_quality.as_deref().copied().unwrap_or_default();
     let culling = StreamCulling {
         eye,
-        max_distance: orbit.distance,
+        max_distance: scaled_cull_distance(orbit.distance, quality),
+        gpu_quality: quality,
     };
     let wireframe_color = debug.wireframe.then_some(CHUNK_WIREFRAME_LINE_COLOR);
 
@@ -906,8 +890,8 @@ fn orbit_camera_input(
     time: Res<Time>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     keys: Res<ButtonInput<KeyCode>>,
-    mut motion_events: MessageReader<MouseMotion>,
-    mut scroll_events: MessageReader<MouseWheel>,
+    mut motion_events: EventReader<MouseMotion>,
+    mut scroll_events: EventReader<MouseWheel>,
     #[cfg(feature = "egui")]
     settings: Option<Res<GameSettings>>,
     mut orbit: ResMut<OrbitCamera>,
@@ -1339,10 +1323,10 @@ fn minimap_click_focus(
                 }
             }
         }
+        // Suppress unused warning — bridge is available for future left-click RPCs.
+        let _ = &bridge;
         return;
     }
-    // Suppress unused warning — bridge is available for future left-click RPCs.
-    let _ = &bridge;
 
     if !mouse.just_pressed(MouseButton::Left) {
         return;
@@ -1477,16 +1461,19 @@ fn minimap_popup_ui(
     let Some((tx, ty)) = popup.pending else {
         return;
     };
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
     egui::Window::new("Tile Actions")
         .collapsible(false)
         .resizable(false)
-        .show(contexts.ctx_mut(), |ui| {
+        .show(ctx, |ui| {
             ui.label(format!("Tile ({tx}, {ty})"));
             if ui.button("Inspect tile").clicked() {
                 let json = format!(
                     r#"{{"jsonrpc":"2.0","id":1,"method":"sim.inspect_tile","params":{{"x":{tx},"y":{ty}}}}}"#
                 );
-                bridge.client.send_rpc(json);
+                bridge.client.send_rpc_json(json);
                 popup.pending = None;
             }
             if ui.button("Center camera").clicked() {
@@ -1519,8 +1506,7 @@ fn poll_emergence(
     hud.snapshot.speed_multiplier = speed.multiplier;
     // Apply any parsed emergence responses received from the server.
     for em in bridge.client.poll_emergence() {
-        hud.snapshot.emergence = Some(em.clone());
-        *emergence_res = em;
+        *emergence_res = em.clone();
         hud.snapshot.emergence = Some(em);
     }
     timer.0 += time.delta_secs();
@@ -1529,6 +1515,5 @@ fn poll_emergence(
     }
     timer.0 = 0.0;
     let json = r#"{"jsonrpc":"2.0","id":2,"method":"sim.emergence","params":null}"#.to_string();
-    bridge.client.send_rpc(json);
-}
+    bridge.client.send_rpc_json(json);
 }

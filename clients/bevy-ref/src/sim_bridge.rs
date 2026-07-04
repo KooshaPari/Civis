@@ -27,18 +27,31 @@ type ModelResourceRef<'a> = Option<()>;
 #[derive(Resource)]
 pub struct SimState(pub Simulation);
 
-#[derive(Component)]
-struct SimCivilianMarker {
-    id: u64,
-    faction: u32,
-    visual: ActorVisualKind,
+/// Marker for in-process civilian entities (scene dump, nearby overlay).
+#[derive(Component, Debug, Clone, Copy)]
+pub struct SimCivilianMarker {
+    /// Stable civilian id in the hecs sim world.
+    pub id: u64,
+    /// Owning faction id.
+    pub faction: u32,
+    /// Procedural / GLTF visual kind.
+    pub visual: ActorVisualKind,
 }
 
-#[derive(Component)]
-struct SimBuildingMarker {
-    building_type: BuildingType,
-    position: civ_engine::Position,
+/// Public alias for attach-mode policy tests and headless scene dump.
+pub type SimCivilianMarkerPublic = SimCivilianMarker;
+
+/// Marker for in-process building entities (scene dump, nearby overlay).
+#[derive(Component, Debug, Clone, Copy)]
+pub struct SimBuildingMarker {
+    /// Building archetype.
+    pub building_type: BuildingType,
+    /// Grid position in the sim.
+    pub position: civ_engine::Position,
 }
+
+/// Public alias for attach-mode policy tests and headless scene dump.
+pub type SimBuildingMarkerPublic = SimBuildingMarker;
 
 impl Default for SimState {
     fn default() -> Self {
@@ -81,7 +94,14 @@ impl Plugin for SimBridgePlugin {
                 ),
             );
         #[cfg(feature = "egui")]
-        app.add_systems(Update, sync_game_ui_snapshot.run_if(in_process_sim_active));
+        app.init_resource::<crate::EmergenceHudData>().add_systems(
+            Update,
+            (
+                sync_game_ui_snapshot,
+                sync_emergence_hud,
+            )
+                .run_if(in_process_sim_active),
+        );
         app.add_systems(Update, sync_visible_gameplay.run_if(in_process_sim_active));
     }
 }
@@ -258,6 +278,7 @@ fn sync_visible_gameplay(
                 &mut commands,
                 model_resource,
                 &marker_meshes.civilian,
+                &mut meshes,
                 &mut materials,
                 civilian.id,
                 faction_id,
@@ -516,6 +537,25 @@ fn next_civilian_id(sim: &Simulation) -> u64 {
 }
 
 #[cfg(feature = "egui")]
+fn sync_emergence_hud(sim: Res<SimState>, mut hud: ResMut<crate::EmergenceHudData>) {
+    let Some(sample) = sim.0.last_emergence_sample() else {
+        return;
+    };
+    if !sim.is_changed() {
+        return;
+    }
+    *hud = crate::EmergenceHudData {
+        entropy_bits: sample.entropy_bits,
+        entropy_norm: sample.entropy_norm,
+        branching_sigma: sample.branching_sigma,
+        power_law_alpha: sample.power_law_alpha,
+        novelty_rate: sample.novelty_rate,
+        mi_material_faction_norm: sample.mi_material_faction_norm,
+        structure_count: sample.structure_count,
+        branching_regime: sample.branching_regime.label().to_string(),
+    };
+}
+
 fn sync_game_ui_snapshot(
     sim: Res<SimState>,
     speed: Res<crate::game_ui::GameSpeed>,

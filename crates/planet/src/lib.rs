@@ -200,4 +200,31 @@ mod tests {
         assert_eq!(a.moon_phase.to_bits(), b.moon_phase.to_bits());
         assert_eq!(a.tide_offset.to_bits(), b.tide_offset.to_bits());
     }
+
+    /// Covers the climate energy-path invariant that all derived phase fields
+    /// remain normalized and the tide offset stays within the configured amplitude.
+    #[test]
+    fn climate_phases_remain_normalized() {
+        let planet = PlanetConfig {
+            radius_km: 1,
+            axial_tilt_deg: 0,
+            day_length_ticks: 7,
+            year_length_ticks: 11,
+        };
+        let moon = MoonConfig {
+            orbit_period_ticks: 13,
+            tidal_amplitude: 0.75,
+        };
+
+        for tick in [0_u64, 1, 6, 7, 10, 11, 12, 13, 42, 99] {
+            let climate = compute_climate(tick, &planet, &moon);
+
+            assert_eq!(climate.tick, tick);
+            assert!(climate.day_phase >= 0.0 && climate.day_phase < 1.0);
+            assert!(climate.year_phase >= 0.0 && climate.year_phase < 1.0);
+            assert!(climate.moon_phase >= 0.0 && climate.moon_phase < 1.0);
+            assert!(climate.tide_offset <= moon.tidal_amplitude);
+            assert!(climate.tide_offset >= -moon.tidal_amplitude);
+        }
+    }
 }

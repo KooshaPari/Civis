@@ -18,6 +18,7 @@ use civ_protocol_3d::{
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId};
 
 use crate::bevy_render::{apply_chunk_material, mesh_buffer_to_bevy};
+use crate::frame_budget::{scaled_cull_distance, scaled_mesh_lod_distance, GpuQualityMode};
 use crate::game_ui::civilian_display_name;
 use crate::live_ground::{live_ground_y, ChunkVoxelCache};
 use crate::{
@@ -25,6 +26,15 @@ use crate::{
     mesh_lod_level, should_render_chunk, DebugRender, LiveEntityKind, SelectedLiveEntity,
     AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
 };
+use crate::ws_client::WsClient;
+
+/// Bevy resource wrapping a [`WsClient`] so egui plugins can send JSON-RPC calls
+/// to `civ-server` without depending on the window binary crate.
+#[derive(Resource, Clone)]
+pub struct LiveBridge {
+    /// Shared WebSocket client for live JSON-RPC + frame traffic.
+    pub client: WsClient,
+}
 
 /// Chunk edge length in voxels (matches kernel).
 pub const LIVE_CHUNK_EDGE: usize = 16;
@@ -45,8 +55,10 @@ pub const AGENT_LABEL_Y_OFFSET: f32 = 1.05;
 pub struct StreamCulling {
     /// Camera position in world space.
     pub eye: [f32; 3],
-    /// Maximum render distance in world units.
+    /// Maximum render distance in world units (already scaled for [`gpu_quality`]).
     pub max_distance: f32,
+    /// Active GPU quality recovery mode for chunk LOD selection.
+    pub gpu_quality: GpuQualityMode,
 }
 
 /// Marker for a streamed voxel chunk entity.
@@ -253,6 +265,10 @@ pub fn format_live_pick_hud_line(
             .or_else(|| Some(format!("Agent #{}", selected.id))),
         LiveEntityKind::Building => Some(format!("Building #{}", selected.id)),
         LiveEntityKind::GraphParcel => Some(format!("Parcel #{}", selected.id)),
+        LiveEntityKind::VoxelChunk => {
+            let (cx, cy, cz) = crate::decode_chunk_id(civ_voxel::ChunkId(selected.id));
+            Some(format!("Chunk ({cx}, {cy}, {cz})"))
+        }
     }
 }
 
@@ -482,6 +498,52 @@ fn chunk_transform(id: ChunkId) -> Transform {
     )
 }
 
+/// Re-mesh cached chunks after a local god-tool mutation (client-side preview).
+pub fn remesh_cached_chunks(
+    commands: &mut Commands,
+    scene: &mut LiveStreamScene,
+    mesh_assets: &mut Assets<Mesh>,
+    material_assets: &mut Assets<StandardMaterial>,
+    culling: StreamCulling,
+    debug: &DebugRender,
+    chunk_ids: &[ChunkId],
+    wireframe_line_color: Option<Color>,
+) {
+    use civ_protocol_3d::{DirtyChunkEvent, VoxelChunkDelta, WriteSeq};
+
+    let deltas: Vec<VoxelChunkDelta> = chunk_ids
+        .iter()
+        .filter_map(|chunk_id| {
+            scene
+                .chunk_voxels
+                .get_chunk(*chunk_id)
+                .map(|voxels| VoxelChunkDelta {
+                    event: DirtyChunkEvent {
+                        chunk_id: *chunk_id,
+                        write_seq: WriteSeq(1),
+                    },
+                    voxels: voxels.to_vec(),
+                })
+        })
+        .collect();
+    if deltas.is_empty() {
+        return;
+    }
+    apply_voxel_delta_frame(
+        commands,
+        scene,
+        mesh_assets,
+        material_assets,
+        culling,
+        debug,
+        VoxelDeltaFrame {
+            tick: 0,
+            deltas,
+        },
+        wireframe_line_color,
+    );
+}
+
 /// Applies a voxel delta frame (caches voxels, meshes in-range chunks).
 pub fn apply_voxel_delta_frame(
     commands: &mut Commands,
@@ -516,7 +578,8 @@ pub fn apply_voxel_delta_frame(
         };
         let distance =
             chunk_distance_from_camera(chunk.event.chunk_id, culling.eye, LIVE_CHUNK_EDGE as f32);
-        let lod = LodLevel(mesh_lod_level(distance));
+        let lod_distance = scaled_mesh_lod_distance(distance, culling.gpu_quality);
+        let lod = LodLevel(mesh_lod_level(lod_distance));
         let Ok(mesh_buffer) = CubicMesher::mesh_cubic(chunk_view, lod) else {
             continue;
         };
@@ -670,7 +733,7 @@ pub fn sync_agent_labels_from_civilians(
             .get(&agent.id)
             .map(civilian_display_name)
             .unwrap_or_else(|| format!("#{}", agent.id));
-        for &child in children.iter() {
+        for child in children.iter() {
             let Ok(mut text) = labels.get_mut(child) else {
                 continue;
             };
@@ -919,7 +982,6 @@ mod tests {
     use crate::encode_chunk_id;
     use crate::live_ground::{live_ground_y, live_voxel_surface_y, ChunkVoxelCache};
     use civ_protocol_3d::{DirtyChunkEvent, VoxelChunkDelta, VoxelDeltaFrame, WriteSeq};
-    use civ_voxel::material::WATER;
     use civ_voxel::MaterialId;
 
     const CHUNK_VOXELS: usize = LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE;
@@ -930,7 +992,7 @@ mod tests {
 
     fn solid_chunk_voxels() -> Vec<MaterialId> {
         let mut voxels = vec![MaterialId(0); CHUNK_VOXELS];
-        voxels[voxel_index(4, 3, 5)] = WATER;
+        voxels[voxel_index(4, 3, 5)] = MaterialId(1);
         voxels
     }
 
@@ -1062,6 +1124,7 @@ mod tests {
         let culling = StreamCulling {
             eye: [8.0, 8.0, 8.0],
             max_distance: 512.0,
+            gpu_quality: GpuQualityMode::Full,
         };
 
         let mut scene = LiveStreamScene::default();

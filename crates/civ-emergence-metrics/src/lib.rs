@@ -43,8 +43,16 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod branching;
+pub mod dashboard;
+pub mod mutual_information;
+pub mod power_law;
 pub mod shannon;
 pub mod structure;
+
+pub use mutual_information::{
+    mutual_information_bits, mutual_information_normalised, JointHistogram,
+};
 
 /// Marker version of this crate's public schema. Bumped on breaking changes.
 pub const SCHEMA_VERSION: &str = "0.1.0-stub";

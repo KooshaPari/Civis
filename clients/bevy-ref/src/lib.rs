@@ -24,125 +24,29 @@
     clippy::nonminimal_bool
 )]
 
+mod crash_handler;
+
 #[cfg(all(feature = "bevy", feature = "models"))]
 pub mod animation;
 #[cfg(feature = "bevy")]
 pub mod animation;
 #[cfg(feature = "bevy")]
 pub mod atmosphere;
-#[cfg(all(feature = "bevy", feature = "audio"))]
-pub mod audio;
 #[cfg(feature = "bevy")]
 pub mod camera;
 #[cfg(feature = "bevy")]
 pub mod decorations;
 #[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod diplomacy_ui;
-#[cfg(feature = "bevy")]
-pub mod disaster_tools;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod event_feed;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod game_laws;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod game_ui;
-#[cfg(all(feature = "bevy", feature = "models"))]
-pub mod gltf_models;
-#[cfg(feature = "bevy")]
-pub mod gpu_features;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod holo_minimap;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod info_views;
+pub mod entity_inspector;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod inspect;
-#[cfg(all(feature = "bevy", feature = "gi"))]
-pub mod lighting_gi;
-#[cfg(feature = "bevy")]
-pub mod live_attach;
-#[cfg(feature = "bevy")]
-pub mod live_focus;
-#[cfg(feature = "bevy")]
-pub mod live_ground;
-#[cfg(feature = "bevy")]
-pub mod live_minimap;
-#[cfg(feature = "bevy")]
-pub mod live_pick;
-#[cfg(feature = "bevy")]
-pub mod live_scene;
-#[cfg(feature = "bevy")]
-pub mod live_stream;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod map2d;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod material_brush_ui;
-#[cfg(feature = "bevy")]
-pub mod materials;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod menus;
-#[cfg(feature = "bevy")]
-pub mod minimap;
-#[cfg(feature = "bevy")]
-pub mod native_backend;
-#[cfg(feature = "bevy")]
-pub mod native_renderer;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod notifications;
-#[cfg(feature = "bevy")]
-pub mod post_fx;
-#[cfg(all(feature = "bevy", feature = "voxel"))]
-pub mod scene_dump;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod settings_ui;
-#[cfg(feature = "bevy")]
-pub mod sim_bridge;
-#[cfg(feature = "bevy")]
-pub mod skybox;
-#[cfg(feature = "bevy")]
-pub mod spawn_tools;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod tech_tree_ui;
-#[cfg(feature = "bevy")]
-pub mod terraform_brush;
-#[cfg(feature = "bevy")]
-pub mod terrain;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod tool_categories;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod ui_cluster;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod ui_holo;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod ui_theme;
-#[cfg(all(feature = "bevy", feature = "vfx"))]
-pub mod vfx;
-#[cfg(feature = "voxel")]
-pub mod voxel_sim;
-#[cfg(feature = "voxel")]
-pub mod voxel_smooth_mesher;
-/// Camera-driven chunk-streaming sandbox (`StreamingWorld` + `HeightFieldGen`).
-/// Gated behind `voxel_stream` so it coexists with the dense `voxel_sim` path.
-#[cfg(feature = "voxel_stream")]
-pub mod voxel_stream;
-#[cfg(feature = "voxel")]
-pub mod voxel_triplanar;
-#[cfg(feature = "bevy")]
-pub mod window_icon;
-
-#[cfg(feature = "bevy")]
-pub mod animation;
-#[cfg(feature = "bevy")]
-pub mod animation;
-#[cfg(feature = "bevy")]
-pub mod atmosphere;
-#[cfg(feature = "bevy")]
-pub mod camera;
-#[cfg(feature = "bevy")]
-pub mod decorations;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod diplomacy_ui;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod outcome_overlay;
+#[cfg(feature = "bevy")]
 pub mod faction_hud;
+pub mod session;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod save_load_ui;
 #[cfg(all(feature = "bevy", feature = "models"))]
@@ -154,8 +58,6 @@ pub mod event_feed;
 pub mod lighting_gi;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod game_ui;
-#[cfg(feature = "bevy")]
-pub mod procedural_actor;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod graphics_settings;
 pub mod game_laws;
@@ -182,6 +84,8 @@ pub mod live_stream;
 pub mod materials;
 #[cfg(feature = "bevy")]
 pub mod post_fx;
+#[cfg(feature = "bevy")]
+pub mod preflight;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod settings_ui;
 #[cfg(all(feature = "bevy", feature = "egui"))]
@@ -201,13 +105,21 @@ pub mod spawn_tools;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tech_tree_ui;
 pub mod civ_history;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod god_actions;
+#[cfg(feature = "bevy")]
+pub mod procedural_actor;
 pub mod god_panel;
 #[cfg(feature = "bevy")]
 pub mod godtools;
 pub mod tutorial;
 pub mod perf_hud;
 #[cfg(feature = "bevy")]
+pub mod frame_budget;
+#[cfg(feature = "bevy")]
 pub mod terrain;
+#[cfg(feature = "bevy")]
+pub mod hud_state;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tool_categories;
 #[cfg(all(feature = "bevy", feature = "egui"))]
@@ -231,10 +143,24 @@ pub mod voxel_triplanar;
 #[cfg(feature = "bevy")]
 pub mod window_icon;
 
+/// Central HUD panel registry — add new panels here, not in the bin files.
+#[cfg(feature = "bevy")]
+pub mod hud_panels;
+#[cfg(feature = "bevy")]
+pub use hud_panels::HudPanelsPlugin;
+
+// These modules self-gate via inner #![cfg(feature = "bevy")] / #![cfg(all(...))]
+pub mod disaster_tools;
+pub mod material_brush_ui;
+pub mod notifications;
+pub mod terraform_brush;
+
 pub use civ_voxel::{
     ChunkId, CubicMesher, MaterialId, MeshBuffer, MeshVertex, VoxelWorld, WorldCoord,
 };
-pub use civ_agents::NeedAction;
+pub use crash_handler::install_crash_handler;
+#[cfg(feature = "bevy")]
+pub use hud_state::HudState;
 
 /// Default orbit azimuth in radians (45° — camera south-east of centre).
 pub const DEFAULT_CAMERA_AZIMUTH_RAD: f32 = std::f32::consts::FRAC_PI_4;
@@ -339,6 +265,8 @@ pub enum LiveEntityKind {
     Building,
     /// Streamed building-graph parcel marker.
     GraphParcel,
+    /// Streamed voxel chunk marker.
+    VoxelChunk,
 }
 
 /// A single streamed entity selected in the live viewport.
@@ -357,6 +285,7 @@ pub fn format_live_selection(entity: SelectedLiveEntity) -> String {
         LiveEntityKind::Agent => "agent",
         LiveEntityKind::Building => "building",
         LiveEntityKind::GraphParcel => "graph",
+        LiveEntityKind::VoxelChunk => "chunk",
     };
     format!("sel: {label} #{}", entity.id)
 }
@@ -394,11 +323,15 @@ pub fn parse_jsonrpc_snapshot_meta(text: &str) -> Option<WsSpectatorMeta> {
 }
 
 /// Subset of sim.emergence fields shown in the HUD.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
 pub struct EmergenceHudData {
+    /// Shannon entropy (bits) over the live material histogram.
+    pub entropy_bits: f32,
     /// Normalised Shannon entropy (`0..=1`).
     pub entropy_norm: f32,
+    /// Rolling-mean branching ratio σ̄_W (charter §3.6).
+    pub branching_sigma: f32,
     /// Power-law exponent alpha for cluster-size distribution.
     pub power_law_alpha: f32,
     /// Novel config fingerprints per window per civilian.
@@ -510,11 +443,8 @@ impl LiveHudSnapshot {
         if let Some(rtt) = self.ws_rtt_ms {
             line.push_str(&format!(" | RTT: {rtt:.0}ms"));
         }
-        if let Some(chunk) = self.focused_chunk {
-            line.push_str(&format!(" | chunk: {}", chunk.0));
-        }
-        if let Some(selection) = self.selected_live {
-            line.push_str(&format!(" | {}", format_live_selection(selection)));
+        if let Some(pick) = format_live_pick_context(self.focused_chunk, self.selected_live) {
+            line.push_str(&format!(" | {pick}"));
         }
         if let Some(event) = &self.last_event {
             line.push_str(&format!(" | evt: {event}"));
@@ -1059,164 +989,6 @@ pub fn parse_ws_payload(payload: &[u8]) -> Result<civ_protocol_3d::Frame3d, Stri
     let text = std::str::from_utf8(payload).map_err(|err| err.to_string())?;
     parse_frame3d_json(text)
 }
-
-#[cfg(feature = "bevy")]
-mod agent_needs {
-    use bevy::prelude::{App, Component, Plugin, Query, Res, Resource, Update};
-    use civ_agents::{Needs as AgentNeedsData, Position3d as AgentPositionData};
-    use civ_voxel::material::{
-        ACID, CO2, FIRE, LAVA, MOLD, MOSS, MOLTEN_METAL, PLANT, SALT_WATER, SMOKE, STEAM,
-        TOXIC_GAS, WATER, WOOD,
-    };
-    use civ_voxel::{MaterialId, VoxelWorld, WorldCoord, FIXED_SCALE};
-
-    /// Bevy component wrapper for the agent needs vector.
-    #[derive(Component, Debug, Clone, Copy, PartialEq)]
-    pub struct AgentNeeds {
-        /// Food pressure.
-        pub food: f32,
-        /// Shelter pressure.
-        pub shelter: f32,
-        /// Safety pressure.
-        pub safety: f32,
-        /// Belonging pressure.
-        pub belonging: f32,
-    }
-
-    impl From<AgentNeedsData> for AgentNeeds {
-        fn from(value: AgentNeedsData) -> Self {
-            Self {
-                food: value.food,
-                shelter: value.shelter,
-                safety: value.safety,
-                belonging: value.belonging,
-            }
-        }
-    }
-
-    impl From<AgentNeeds> for AgentNeedsData {
-        fn from(value: AgentNeeds) -> Self {
-            Self {
-                food: value.food,
-                shelter: value.shelter,
-                safety: value.safety,
-                belonging: value.belonging,
-            }
-        }
-    }
-
-    /// Bevy component wrapper for the agent world position.
-    #[derive(Component, Debug, Clone, Copy, PartialEq)]
-    pub struct Position {
-        /// Fixed-point world coordinate.
-        pub coord: WorldCoord,
-    }
-
-    impl From<AgentPositionData> for Position {
-        fn from(value: AgentPositionData) -> Self {
-            Self { coord: value.coord }
-        }
-    }
-
-    impl From<Position> for AgentPositionData {
-        fn from(value: Position) -> Self {
-            Self { coord: value.coord }
-        }
-    }
-
-    /// Bevy resource carrying the voxel world used by the needs tick.
-    #[derive(Resource)]
-    pub struct VoxelWorldRes {
-        /// Backing voxel world.
-        pub world: VoxelWorld<MaterialId>,
-    }
-
-    impl Default for VoxelWorldRes {
-        fn default() -> Self {
-            Self {
-                world: VoxelWorld::new(FIXED_SCALE),
-            }
-        }
-    }
-
-    const SAMPLE_RADIUS: i64 = 1;
-    const FOOD_RELIEF_PER_HIT: f32 = 0.02;
-    const FOOD_DECAY_WITHOUT_SIGNAL: f32 = 0.008;
-    const SAFETY_PRESSURE_PER_HIT: f32 = 0.03;
-    const SAFETY_RELIEF_WITHOUT_SIGNAL: f32 = 0.006;
-
-    fn classify_voxel(material: MaterialId) -> (bool, bool) {
-        let food = matches!(material, WATER | SALT_WATER | PLANT | MOSS | MOLD | WOOD);
-        let threat = matches!(
-            material,
-            LAVA | FIRE | ACID | TOXIC_GAS | SMOKE | STEAM | MOLTEN_METAL | CO2
-        );
-        (food, threat)
-    }
-
-    fn nearby_stimuli(world: &VoxelWorld<MaterialId>, center: WorldCoord) -> (u32, u32) {
-        let mut food_hits = 0;
-        let mut threat_hits = 0;
-        'samples: for dx in -SAMPLE_RADIUS..=SAMPLE_RADIUS {
-            for dy in -SAMPLE_RADIUS..=SAMPLE_RADIUS {
-                for dz in -SAMPLE_RADIUS..=SAMPLE_RADIUS {
-                    let sample = WorldCoord {
-                        x: center.x + dx * FIXED_SCALE,
-                        y: center.y + dy * FIXED_SCALE,
-                        z: center.z + dz * FIXED_SCALE,
-                    };
-                    let (food, threat) = classify_voxel(world.read(sample));
-                    if food {
-                        food_hits += 1;
-                    }
-                    if threat {
-                        threat_hits += 1;
-                    }
-                    if food_hits > 0 && threat_hits > 0 {
-                        break 'samples;
-                    }
-                }
-            }
-        }
-        (food_hits, threat_hits)
-    }
-
-    /// Tick hunger and safety pressure from nearby voxel-world signals.
-    pub fn update_agent_needs(
-        mut query: Query<(&mut AgentNeeds, &Position)>,
-        world: Res<VoxelWorldRes>,
-    ) {
-        for (mut needs, position) in &mut query {
-            let (food_hits, threat_hits) = nearby_stimuli(&world.world, position.coord);
-
-            if food_hits > 0 {
-                needs.food = (needs.food - FOOD_RELIEF_PER_HIT * food_hits as f32).max(0.0);
-            } else {
-                needs.food = (needs.food + FOOD_DECAY_WITHOUT_SIGNAL).min(1.0);
-            }
-
-            if threat_hits > 0 {
-                needs.safety =
-                    (needs.safety + SAFETY_PRESSURE_PER_HIT * threat_hits as f32).min(1.0);
-            } else {
-                needs.safety = (needs.safety - SAFETY_RELIEF_WITHOUT_SIGNAL).max(0.0);
-            }
-        }
-    }
-
-    /// Registers the agent-needs tick into the Bevy gameplay loop.
-    pub struct AgentNeedsPlugin;
-
-    impl Plugin for AgentNeedsPlugin {
-        fn build(&self, app: &mut App) {
-            app.init_resource::<VoxelWorldRes>()
-                .add_systems(Update, update_agent_needs);
-        }
-    }
-}
-
-#[cfg(feature = "bevy")]
-pub use agent_needs::{AgentNeeds, AgentNeedsPlugin, Position, VoxelWorldRes, update_agent_needs};
 
 #[cfg(feature = "bevy")]
 pub mod bevy_render;
@@ -1849,5 +1621,10 @@ mod tests {
         let bytes = encode_frame3d_binary(&frame).expect("encode");
         let parsed = parse_frame3d_binary(&bytes).expect("parse");
         assert_eq!(parsed, frame);
+    }
+
+    #[test]
+    fn install_crash_handler_does_not_panic() {
+        std::panic::catch_unwind(|| install_crash_handler()).expect("install_crash_handler should install");
     }
 }

@@ -24,6 +24,7 @@ use crate::live_stream::{
     default_stream_meshes, AgentLabelConfig, LiveAgentTag, LiveBuildingTag, LiveChunkFade,
     LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene, StreamCulling, LIVE_CHUNK_EDGE,
 };
+use crate::frame_budget::{scaled_cull_distance, GpuQualityMode};
 use crate::minimap::{MinimapCamera, MinimapDot, MinimapRoot, MINIMAP_SIZE};
 use crate::{chunk_fade_complete, AttachMode, DebugRender, LiveHudSnapshot};
 
@@ -79,6 +80,7 @@ fn apply_live_scene_frames(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    gpu_quality: Option<Res<GpuQualityMode>>,
     #[cfg(feature = "egui")] mut event_feed: Option<ResMut<EventFeed>>,
 ) {
     if *attach != AttachMode::Server {
@@ -96,9 +98,11 @@ fn apply_live_scene_frames(
         .single()
         .map(|transform| transform.translation.to_array())
         .unwrap_or([8.0, 8.0, 8.0]);
+    let quality = gpu_quality.as_deref().copied().unwrap_or_default();
     let culling = StreamCulling {
         eye,
-        max_distance: LIVE_RENDER_MAX_DISTANCE,
+        max_distance: scaled_cull_distance(LIVE_RENDER_MAX_DISTANCE, quality),
+        gpu_quality: quality,
     };
 
     for frame in frames {

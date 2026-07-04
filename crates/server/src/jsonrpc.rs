@@ -1,4 +1,4 @@
-//! JSON-RPC 2.0 request/response types for the CIV-0200 WebSocket protocol.
+﻿//! JSON-RPC 2.0 request/response types for the CIV-0200 WebSocket protocol.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -55,14 +55,6 @@ pub enum JsonRpcMethod {
     SimSetSpeed,
     /// Read simulation tick speed multiplier (`sim.get_speed`).
     SimGetSpeed,
-    /// Read the current simulation tick and wall-clock game time (`sim.get_tick`).
-    GetGameTick,
-    /// Read faction summaries (`sim.get_factions`).
-    GetFactions,
-    /// Read world resource summaries (`sim.get_resources`).
-    GetResources,
-    /// Read coarse emergence metrics (`sim.get_emergence_metrics`).
-    GetEmergenceMetrics,
     /// Spawn one civilian at normalized map coords (`sim.spawn_civilian`, FR-CIV-UX-002).
     SimSpawnCivilian,
     /// Spawn civilian, vehicle, or airport (`sim.spawn_entity`, FR-CIV-UX-006).
@@ -80,6 +72,27 @@ pub enum JsonRpcMethod {
     /// Read the latest civ-emergence-metrics sample
     /// (`sim.emergence`, stacked on PR #350; FR dashboard).
     SimEmergence,
+    /// Saga-graph read-only query (`sim.legends`, FR-CIV-LEGENDS-QUERY-07).
+    SimLegends,
+    /// Inspect terrain + faction at a tile coordinate.
+    /// (`sim.inspect_tile`, FR tile-inspector).
+    SimInspectTile,
+    /// Client-initiated diplomacy action (propose_treaty / declare_war / offer_trade). (sim.diplomacy_action, FR-CIV-CLIENT-006).
+    SimDiplomacyAction,
+    /// Queue a research tech on the simulation (`sim.queue_research`, FR-CIV-SERVER-003).
+    SimQueueResearch,
+    /// Read the current tech research state (`sim.tech_state`, FR-CIV-SERVER-003).
+    SimTechState,
+    /// Opt-in tick broadcast filter (`sim.subscribe`, CIV-0200).
+    SimGodAction,
+    SimPerf,
+    SimSubscribe,
+    /// Clear per-connection tick broadcast filter (`sim.unsubscribe`).
+    SimUnsubscribe,
+    /// Replace per-connection tick broadcast filter `(`sim.update_subscription`).`
+    SimUpdateSubscription,
+    /// Query current game outcome state (`sim.outcome`, FR-CIV-GAME-001).
+    SimOutcome,
 }
 
 impl JsonRpcMethod {
@@ -97,10 +110,6 @@ impl JsonRpcMethod {
             Self::SimSetPolicy => "sim.set_policy",
             Self::SimSetSpeed => "sim.set_speed",
             Self::SimGetSpeed => "sim.get_speed",
-            Self::GetGameTick => "sim.get_tick",
-            Self::GetFactions => "sim.get_factions",
-            Self::GetResources => "sim.get_resources",
-            Self::GetEmergenceMetrics => "sim.get_emergence_metrics",
             Self::SimSpawnCivilian => "sim.spawn_civilian",
             Self::SimSpawnEntity => "sim.spawn_entity",
             Self::SimPlaceVoxel => "sim.place_voxel",
@@ -109,6 +118,17 @@ impl JsonRpcMethod {
             Self::LoadSlot => "save.load",
             Self::SaveList => "save.list",
             Self::SimEmergence => "sim.emergence",
+            Self::SimLegends => "sim.legends",
+            Self::SimInspectTile => "sim.inspect_tile",
+            Self::SimGodAction => "sim.god_action",
+            Self::SimPerf => "sim.perf",
+            Self::SimDiplomacyAction => "sim.diplomacy_action",
+            Self::SimQueueResearch => "sim.queue_research",
+            Self::SimTechState => "sim.tech_state",
+            Self::SimSubscribe => "sim.subscribe",
+            Self::SimUnsubscribe => "sim.unsubscribe",
+            Self::SimUpdateSubscription => "sim.update_subscription",
+            Self::SimOutcome => "sim.outcome",
         }
     }
 
@@ -126,10 +146,6 @@ impl JsonRpcMethod {
             "sim.set_policy" => Some(Self::SimSetPolicy),
             "sim.set_speed" => Some(Self::SimSetSpeed),
             "sim.get_speed" => Some(Self::SimGetSpeed),
-            "sim.get_tick" => Some(Self::GetGameTick),
-            "sim.get_factions" => Some(Self::GetFactions),
-            "sim.get_resources" => Some(Self::GetResources),
-            "sim.get_emergence_metrics" => Some(Self::GetEmergenceMetrics),
             "sim.spawn_civilian" => Some(Self::SimSpawnCivilian),
             "sim.spawn_entity" => Some(Self::SimSpawnEntity),
             "sim.place_voxel" => Some(Self::SimPlaceVoxel),
@@ -138,6 +154,17 @@ impl JsonRpcMethod {
             "save.load" => Some(Self::LoadSlot),
             "save.list" => Some(Self::SaveList),
             "sim.emergence" => Some(Self::SimEmergence),
+            "sim.legends" => Some(Self::SimLegends),
+            "sim.inspect_tile" => Some(Self::SimInspectTile),
+            "sim.god_action" => Some(Self::SimGodAction),
+            "sim.perf" => Some(Self::SimPerf),
+            "sim.diplomacy_action" => Some(Self::SimDiplomacyAction),
+            "sim.queue_research" => Some(Self::SimQueueResearch),
+            "sim.tech_state" => Some(Self::SimTechState),
+            "sim.subscribe" => Some(Self::SimSubscribe),
+            "sim.unsubscribe" => Some(Self::SimUnsubscribe),
+            "sim.update_subscription" => Some(Self::SimUpdateSubscription),
+            "sim.outcome" => Some(Self::SimOutcome),
             _ => None,
         }
     }
@@ -418,12 +445,6 @@ pub struct SnapshotFields {
     pub damage_events_count: u32,
     /// Voxels removed by tactical damage on the last tick.
     pub voxel_damage_removed_this_tick: u32,
-    /// Game-state faction summaries for `sim.get_factions`.
-    pub factions: Vec<FactionSnapshot>,
-    /// Game-state resource summaries for `sim.get_resources`.
-    pub resources: Vec<ResourceSnapshot>,
-    /// Game-state emergence metrics for `sim.get_emergence_metrics`.
-    pub emergence_metrics: EmergenceMetricsSnapshot,
     /// Loaded mods for mod-browser UI (FR-CIV-TACTICS-054).
     pub mods: Vec<civ_mod_host::ModBrowserEntry>,
     /// `mod.loaded.v1` replay-bus JSON from the most recent tick (scenario load).
@@ -476,43 +497,6 @@ pub struct MilitaryPinSnapshot {
     /// Unit strength (float for JSON clients).
     pub strength: f32,
 }
-
-/// Summary row for `sim.get_factions`.
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct FactionSnapshot {
-    /// Stable faction id.
-    pub id: u32,
-    /// Display name from the simulation registry.
-    pub name: String,
-    /// Number of aligned civilians currently attached to the faction.
-    pub population: u32,
-    /// Deterministic territory-size proxy derived from the live spectator radius.
-    pub territory_size: u32,
-}
-
-/// Summary row for `sim.get_resources`.
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct ResourceSnapshot {
-    /// Resource kind label.
-    pub kind: String,
-    /// Current resource amount.
-    pub amount: f32,
-    /// Current per-tick production rate.
-    pub rate: f32,
-}
-
-/// Aggregate values for `sim.get_emergence_metrics`.
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct EmergenceMetricsSnapshot {
-    /// Number of registered factions.
-    pub faction_count: u32,
-    /// Number of structures currently in the world.
-    pub structure_count: u32,
-    /// Number of emergent language clusters currently tracked.
-    pub language_count: u32,
-}
-
-pub use civ_emergence_metrics::sample_snapshot::EmergenceSampleSnapshot;
 
 /// Build the JSON-RPC result object for `sim.snapshot`.
 pub fn snapshot_result_json(fields: &SnapshotFields) -> Value {
@@ -748,7 +732,6 @@ pub fn snapshot_fields_from_sim(
     speed_multiplier: u32,
 ) -> SnapshotFields {
     let snap = sim.snapshot();
-    let spectator = sim.spectator_view();
     SnapshotFields {
         tick: snap.tick,
         population: snap.population,
@@ -759,7 +742,7 @@ pub fn snapshot_fields_from_sim(
             .hash_chain_root()
             .map(|root| civ_engine::hash_hex(&root)),
         speed_multiplier,
-        spectator: Some(spectator.clone()),
+        spectator: Some(sim.spectator_view()),
         institutions: institutions_from_sim(sim),
         military_units: military_pins_from_sim(sim),
         damage_events: sim
@@ -774,13 +757,6 @@ pub fn snapshot_fields_from_sim(
             .collect(),
         damage_events_count: sim.last_tick_combat_pulses().len() as u32,
         voxel_damage_removed_this_tick: sim.last_tick_voxel_damage_count() as u32,
-        factions: game_factions_from_sim(sim, &spectator),
-        resources: game_resources_from_sim(sim),
-        emergence_metrics: EmergenceMetricsSnapshot {
-            faction_count: sim.state.factions.len() as u32,
-            structure_count: snap.building_count as u32,
-            language_count: sim.cluster_cultures().len() as u32,
-        },
         mods: sim.mod_browser_entries(),
         mod_lifecycle: sim.replay_log().mod_loaded_bus_at_tick(sim.state.tick),
         session_saved: sim.replay_log().session_saved_bus_at_tick(sim.state.tick),
@@ -789,98 +765,21 @@ pub fn snapshot_fields_from_sim(
             .mod_permission_violation_bus_at_tick(sim.state.tick),
         climate: *sim.climate(),
         emergence: sim.last_emergence_sample().map(EmergenceSampleFields::from),
-        researched: sim.research_cache().researched.clone(),
-        in_progress_tech: sim
-            .research_cache()
-            .in_progress
-            .as_ref()
-            .map(|(tech, _)| tech.clone()),
+        researched: vec![],
+        in_progress_tech: None,
     }
 }
 
-fn game_factions_from_sim(
-    sim: &civ_engine::Simulation,
-    spectator: &civ_engine::SpectatorView,
-) -> Vec<FactionSnapshot> {
-    use civ_agents::Alignment;
-    let mut populations: BTreeMap<u32, u32> = BTreeMap::new();
-    for (_, civilian) in sim.world.query::<&civ_agents::Civilian>().iter() {
-        if let Alignment::Faction(faction_id) = civilian.alignment {
-            *populations.entry(faction_id).or_insert(0) += 1;
-        }
-    }
-
-    let mut faction_ids: Vec<u32> = sim.state.factions.keys().copied().collect();
-    faction_ids.sort_unstable();
-    faction_ids
-        .into_iter()
-        .map(|faction_id| {
-            let name = sim
-                .state
-                .factions
-                .get(&faction_id)
-                .cloned()
-                .unwrap_or_else(|| format!("Faction {faction_id}"));
-            let population = populations.get(&faction_id).copied().unwrap_or(0);
-            let territory_size = spectator
-                .factions
-                .iter()
-                .find(|faction| faction.id == faction_id)
-                .map(|faction| {
-                    (std::f32::consts::PI * faction.radius * faction.radius).round() as u32
-                })
-                .unwrap_or(0);
-            FactionSnapshot {
-                id: faction_id,
-                name,
-                population,
-                territory_size,
-            }
-        })
-        .collect()
-}
-
-fn game_resources_from_sim(sim: &civ_engine::Simulation) -> Vec<ResourceSnapshot> {
-    let mut food_per_tick = 0.0_f32;
-    let mut wood_per_tick = 0.0_f32;
-    let mut metal_per_tick = 0.0_f32;
-    let mut energy_per_tick = 0.0_f32;
-
-    for (_, building) in sim.world.query::<&civ_engine::Building>().iter() {
-        match building.building_type {
-            civ_engine::BuildingType::Farm => food_per_tick += 1.0,
-            civ_engine::BuildingType::Mine => metal_per_tick += 1.0,
-            civ_engine::BuildingType::CityCenter => energy_per_tick += 0.5,
-            _ => {}
-        }
-    }
-
-    vec![
-        ResourceSnapshot {
-            kind: "food".to_owned(),
-            amount: sim.state.resources.food.to_f64() as f32,
-            rate: food_per_tick,
-        },
-        ResourceSnapshot {
-            kind: "wood".to_owned(),
-            amount: sim.state.resources.wood.to_f64() as f32,
-            rate: wood_per_tick,
-        },
-        ResourceSnapshot {
-            kind: "metal".to_owned(),
-            amount: sim.state.resources.metal.to_f64() as f32,
-            rate: metal_per_tick,
-        },
-        ResourceSnapshot {
-            kind: "energy".to_owned(),
-            amount: sim.state.resources.energy.to_f64() as f32,
-            rate: energy_per_tick,
-        },
-    ]
+/// Precomputed outcome for `sim.outcome` (FR-CIV-GAME-001).
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct OutcomeFields {
+    pub tag: String,
+    pub reason: String,
+    pub tick: u64,
 }
 
 /// Tick and optional snapshot fields passed into dispatch.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DispatchContext {
     /// Current bridge tick (may lag until the next broadcast).
     pub tick: u64,
@@ -899,6 +798,16 @@ pub struct DispatchContext {
     /// Latest civ-emergence-metrics sample (PR #350 stack). `None` on a
     /// fresh simulation before the first 50-tick sample boundary.
     pub emergence: Option<EmergenceSampleFields>,
+    /// Latest saga-graph query payload for `sim.legends` (FR-CIV-LEGENDS-QUERY-07).
+    pub legends: Option<civ_engine::emergence::LegendsQueryResult>,
+    /// Fully-researched techs from `ResearchCache` (FR-CIV-SERVER-003).
+    pub researched: Vec<String>,
+    /// Currently-researching tech name, if any (FR-CIV-SERVER-003).
+    pub in_progress_tech: Option<String>,
+    /// Precomputed game outcome for `sim.outcome` handler (FR-CIV-GAME-001).
+    pub outcome_fields: Option<OutcomeFields>,
+    /// Server-reported last tick wall-clock duration (ms) for sim.perf (FR-CIV-PERF-001).
+    pub last_tick_ms: f64,
 }
 
 /// JSON-RPC view of [`civ_engine::emergence_metrics::EmergenceSample`].
@@ -917,13 +826,10 @@ pub struct EmergenceSampleFields {
     /// Normalised Shannon entropy (`0..=1`).
     pub entropy_norm: f32,
     /// 6-connectivity component count on the first dense chunk.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub structure_count: Option<u32>,
     /// Size (in voxels) of the largest component in the sampled chunk.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub structure_largest: Option<u32>,
     /// Number of foreground voxels in the sampled chunk.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub structure_foreground: Option<u32>,
     /// Total number of voxels accumulated into the histogram.
     pub histogram_total: u64,
@@ -931,6 +837,62 @@ pub struct EmergenceSampleFields {
     pub histogram_populated_bins: u32,
     /// Wall-clock duration of the sample, in microseconds.
     pub sample_dur_us: u64,
+    /// Five-tile dashboard block (FR-CIV-EMERG-001/003). Field is
+    /// `None` only on the (rare) path where the engine sample is
+    /// absent and we still want to emit a non-`null` JSON object;
+    /// the wire shape is `cluster_entropy`, `ideology_homophily`,
+    /// `sentience_fraction`, `psyche_stability`, `diplomacy_tension`.
+    pub dashboard: Option<DashboardBlock>,
+    /// Rolling-mean branching ratio `σ̄_W` (charter §3.6).
+    pub branching_sigma: f32,
+    /// Normalised edge-of-chaos score for `branching_sigma`.
+    pub branching_sigma_score: f32,
+    /// Rolling window `W` for `branching_sigma`.
+    pub branching_window: u32,
+    /// Monotonic count of closed avalanches.
+    pub avalanches_closed: u64,
+    /// Charter regime label for `branching_sigma`.
+    pub branching_regime: String,
+    /// Power-law exponent α for the cluster-size distribution (charter §3.5).
+    pub power_law_alpha: f32,
+    /// Novelty rate: novel config fingerprints per window per civilian (charter §3.4).
+    pub novelty_rate: f32,
+    /// Normalised mutual information between material and faction distributions.
+    pub mi_material_faction_norm: Option<f32>,
+}
+
+/// Wire-friendly mirror of
+/// [`civ_emergence_metrics::dashboard::EmergenceDashboard`] for the
+/// `sim.emergence` / `sim.snapshot.emergence` JSON-RPC surface
+/// (FR-CIV-EMERG-003). The struct re-exports the five f32 fields as a
+/// nested object so dashboard clients can read either the flat
+/// `result["cluster_entropy"]` shape *or* the nested
+/// `result["dashboard"]["cluster_entropy"]` shape — both are emitted
+/// by the dispatch for backwards compatibility with PR #350 consumers.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DashboardBlock {
+    /// Normalised Shannon entropy over per-cluster population sizes.
+    pub cluster_entropy: f32,
+    /// Homophily index for the ideology distribution.
+    pub ideology_homophily: f32,
+    /// Fraction of agents that have crossed the sentience threshold.
+    pub sentience_fraction: f32,
+    /// Population stability of mood valence.
+    pub psyche_stability: f32,
+    /// Mean absolute tension across the recent diplomacy events.
+    pub diplomacy_tension: f32,
+}
+
+impl From<civ_emergence_metrics::dashboard::EmergenceDashboard> for DashboardBlock {
+    fn from(d: civ_emergence_metrics::dashboard::EmergenceDashboard) -> Self {
+        Self {
+            cluster_entropy: d.cluster_entropy,
+            ideology_homophily: d.ideology_homophily,
+            sentience_fraction: d.sentience_fraction,
+            psyche_stability: d.psyche_stability,
+            diplomacy_tension: d.diplomacy_tension,
+        }
+    }
 }
 
 impl From<civ_engine::emergence_metrics::EmergenceSample> for EmergenceSampleFields {
@@ -945,6 +907,15 @@ impl From<civ_engine::emergence_metrics::EmergenceSample> for EmergenceSampleFie
             histogram_total: s.histogram_total,
             histogram_populated_bins: s.histogram_populated_bins,
             sample_dur_us: s.sample_dur_us,
+            dashboard: Some(DashboardBlock::from(s.dashboard)),
+            branching_sigma: s.branching_sigma,
+            branching_sigma_score: s.branching_sigma_score,
+            branching_window: s.branching_window,
+            avalanches_closed: s.avalanches_closed,
+            branching_regime: s.branching_regime.label().to_string(),
+            power_law_alpha: s.power_law_alpha,
+            novelty_rate: s.novelty_rate,
+            mi_material_faction_norm: s.mi_material_faction_norm,
         }
     }
 }
@@ -1026,6 +997,7 @@ pub enum DispatchEffect {
     /// 50-verb god-tools implementation plan (#712) for the full palette.
     GodAction(GodActionRequest),
     /// Write one voxel (`sim.place_voxel`).
+    GodAction { action: String, x: Option<f32>, y: Option<f32>, target_faction: Option<u32>, magnitude: Option<f32> },
     PlaceVoxel {
         /// World X coordinate.
         x: i64,
@@ -1050,112 +1022,6 @@ pub enum DispatchEffect {
     LoadSlot {
         /// Validated slot stem (`slot-1` … `slot-5`).
         slot_name: String,
-    },
-    /// Queue a research topic.
-    QueueResearch {
-        /// Tech identifier to queue.
-        tech: String,
-    },
-    /// Apply a god action from the bridge UI.
-    GodAction {
-        /// Action identifier.
-        action: String,
-        /// Normalized X coordinate, if provided.
-        x: Option<f32>,
-        /// Normalized Y coordinate, if provided.
-        y: Option<f32>,
-        /// Optional faction target.
-        target_faction: Option<u32>,
-        /// Optional magnitude slider.
-        magnitude: Option<f32>,
-    },
-}
-
-/// Payload variants for [`DispatchEffect::GodAction`].
-///
-/// Each verb is one variant, with the parameters it actually needs. This keeps
-/// the planner/executor pattern matches exhaustive and lets us add new verbs
-/// (per the 50-verb palette in god-tools implementation plan #712) without
-/// growing a flat options struct. New verbs: add a variant here, parse it
-/// in [`parse_god_action`], and dispatch it in `ws_bridge.rs`.
-#[derive(Debug, Clone, PartialEq)]
-pub enum GodActionRequest {
-    /// `smite` — apply a tactical damage blast at a normalized map point.
-    Smite {
-        /// Normalized map X ∈ [0, 1].
-        x: f32,
-        /// Normalized map Y ∈ [0, 1].
-        y: f32,
-        /// Blast radius in voxels (clamped 1..=32 by the planner).
-        radius: u8,
-        /// Energy delivered to the blast (clamped 0..=u32::MAX).
-        energy: u32,
-    },
-    /// `heal` — restore full health to every citizen near a point.
-    Heal {
-        /// Normalized map X ∈ [0, 1].
-        x: f32,
-        /// Normalized map Y ∈ [0, 1].
-        y: f32,
-        /// Affect every citizen within this normalized radius.
-        radius_norm: f32,
-    },
-    /// `place_terrain` — paint voxels in a disk around a point with a chosen material.
-    PlaceTerrain {
-        /// Normalized map X ∈ [0, 1].
-        x: f32,
-        /// Normalized map Y ∈ [0, 1].
-        y: f32,
-        /// Brush radius in voxels (clamped 1..=16).
-        radius: u8,
-        /// Material id (0..=255).
-        material: u16,
-    },
-    /// `ignite` — shorthand for `place_terrain` with the LAVA material id (4).
-    Ignite {
-        /// Normalized map X ∈ [0, 1].
-        x: f32,
-        /// Normalized map Y ∈ [0, 1].
-        y: f32,
-        /// Brush radius in voxels (clamped 1..=8).
-        radius: u8,
-    },
-    /// `spawn_creature` — drop a single civilian into the world at a point.
-    SpawnCreature {
-        /// Normalized map X ∈ [0, 1].
-        x: f32,
-        /// Normalized map Y ∈ [0, 1].
-        y: f32,
-        /// Owning faction id.
-        faction: u32,
-        /// Stable id seed for the new civilian.
-        entity_seq: u64,
-    },
-    /// `bless` — bump `welfare` and `ideology` of nearby citizens.
-    Bless {
-        /// Normalized map X ∈ [0, 1].
-        x: f32,
-        /// Normalized map Y ∈ [0, 1].
-        y: f32,
-        /// Affect every citizen within this normalized radius.
-        radius_norm: f32,
-        /// Magnitude of the welfare/ideology shift (clamped 0..=1).
-        magnitude: f32,
-    },
-    /// `multiply_creatures` — spawn N civilians within a disk (FR-CIV-GODTOOL-001).
-    MultiplyCreatures {
-        /// Normalized map X ∈ [0, 1] (center of the spawn disk).
-        x: f32,
-        /// Normalized map Y ∈ [0, 1].
-        y: f32,
-        /// Disk radius in normalized units (0..=0.5).
-        radius_norm: f32,
-        /// Number of civilians to spawn (clamped 1..=32).
-        count: u32,
-        /// Owning faction id.
-        faction: u32,
-        /// Stable id seed for the new civilians.
-        entity_seq: u64,
     },
 }
 
@@ -1189,7 +1055,9 @@ pub fn encode_response(response: &JsonRpcResponse) -> String {
 }
 
 /// Parse `sim.load_scenario` params: `{ "preset": String, "seed"?: u64 }`.
-pub fn parse_load_scenario_params(params: Option<&Value>) -> Result<(String, u64), JsonRpcError> {
+pub fn parse_load_scenario_params(
+    params: Option<&Value>,
+) -> Result<(String, u64), JsonRpcError> {
     let p = params.ok_or_else(|| JsonRpcError {
         code: error_code::INVALID_PARAMS,
         message: r#"Invalid params: expected object with "preset""#.to_owned(),
@@ -1204,12 +1072,15 @@ pub fn parse_load_scenario_params(params: Option<&Value>) -> Result<(String, u64
             message: r#"Invalid params: expected string "preset""#.to_owned(),
             data: None,
         })?;
-    let seed = p.get("seed").and_then(|v| v.as_u64()).unwrap_or_else(|| {
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs())
-            .unwrap_or(42)
-    });
+    let seed = p
+        .get("seed")
+        .and_then(|v| v.as_u64())
+        .unwrap_or_else(|| {
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(42)
+        });
     Ok((preset, seed))
 }
 
@@ -1312,12 +1183,12 @@ pub fn parse_set_speed_params(params: Option<&Value>) -> Result<u32, JsonRpcErro
 
 /// Parse `sim.save_replay` / `sim.load_replay` `path` param.
 ///
-/// The returned path is **strictly relative**: it must not be absolute,
-/// must not start with a path separator, must not contain any `..`
-/// parent segments, prefix components (e.g. `C:`), or root directory
-/// components. This blocks arbitrary-file-read attacks where a client
-/// sends `/etc/passwd` or `../../something`. Containment under the
-/// bridge's replay base directory is enforced separately at the
+/// The returned path is **strictly relative**: it must not be absolute
+/// (Unix `/foo`, Windows drive `C:\foo` / `C:/foo`, drive-relative
+/// `C:foo`, or UNC `\\server\share\foo`), and must not contain any `..`
+/// parent segment. This blocks arbitrary-file-read attacks where a
+/// client sends `/etc/passwd` or `../../something`. Containment under
+/// the bridge's replay base directory is enforced separately at the
 /// consumer via [`resolve_replay_path`].
 pub fn parse_replay_path(params: Option<&Value>) -> Result<String, JsonRpcError> {
     let path_str = params
@@ -1326,13 +1197,33 @@ pub fn parse_replay_path(params: Option<&Value>) -> Result<String, JsonRpcError>
         .filter(|s| !s.is_empty())
         .ok_or(JsonRpcError {
             code: error_code::INVALID_PARAMS,
-            message: "Invalid params: expected non-empty string \"path\"".to_owned(),
+            message: "Invalid params: expected non-empty relative replay path".to_owned(),
             data: None,
         })?;
+
+    // Validate the raw string platform-independently: `std::path` only
+    // recognizes Windows prefixes/separators when compiled for Windows, so
+    // on Linux (CI) a payload like `C:\\Windows\\...` or `C:replays/x`
+    // would otherwise parse as a single harmless component and slip
+    // through. Detect Windows drive prefixes (`C:` ...) and any backslash
+    // separator explicitly regardless of host OS.
+    let has_drive_prefix = {
+        let mut chars = path_str.chars();
+        matches!(
+            (chars.next(), chars.next()),
+            (Some(c), Some(':')) if c.is_ascii_alphabetic()
+        )
+    };
     let path = std::path::Path::new(path_str);
+    // Reject any path that is absolute, starts with `/` or `\`, contains a
+    // backslash (Windows separator), carries a Windows drive prefix, or
+    // whose components include a parent-directory traversal (`..`), an
+    // absolute prefix, or a root-directory component.
     if !path.is_relative()
         || path_str.starts_with('/')
         || path_str.starts_with('\\')
+        || path_str.contains('\\')
+        || has_drive_prefix
         || path
             .components()
             .any(|c| matches!(
@@ -1419,40 +1310,6 @@ pub fn resolve_replay_path(
     Ok(canonical)
 }
 
-fn emergence_dashboard_snapshot_from_context(ctx: &DispatchContext) -> EmergenceSampleSnapshot {
-    let agent_count = ctx
-        .population
-        .or_else(|| ctx.snapshot.as_ref().map(|snapshot| snapshot.population))
-        .unwrap_or(0) as u32;
-    let faction_count = ctx
-        .snapshot
-        .as_ref()
-        .and_then(|snapshot| snapshot.spectator.as_ref())
-        .map(|spectator| spectator.factions.len() as u32)
-        .unwrap_or(0);
-    let (resource_entropy, structure_count, novelty_rate, coupling_strength) = ctx
-        .emergence
-        .as_ref()
-        .map(|sample| {
-            (
-                sample.entropy_bits,
-                sample.structure_count.unwrap_or(0),
-                sample.novelty_rate,
-                sample.mi_material_faction_norm.unwrap_or(0.0),
-            )
-        })
-        .unwrap_or((0.0, 0, 0.0, 0.0));
-
-    EmergenceSampleSnapshot {
-        agent_count,
-        faction_count,
-        resource_entropy,
-        structure_count,
-        novelty_rate,
-        coupling_strength,
-        tick: ctx.tick,
-    }
-}
 /// Dispatch a validated request (CIV-0200 stub handlers).
 pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPlan {
     match req.method {
@@ -1524,21 +1381,19 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 effect: DispatchEffect::None,
             },
         },
-        JsonRpcMethod::SimLoadScenario => {
-            match parse_load_scenario_params(req.params.as_ref()) {
-                Ok((preset, seed)) => DispatchPlan {
-                    response: JsonRpcResponse::success(
-                        req.id,
-                        serde_json::json!({ "preset": preset, "seed": seed, "tick": 0 }),
-                    ),
-                    effect: DispatchEffect::LoadScenario { preset, seed },
-                },
-                Err(error) => DispatchPlan {
-                    response: JsonRpcResponse::failure(req.id, error),
-                    effect: DispatchEffect::None,
-                },
-            }
-        }
+        JsonRpcMethod::SimLoadScenario => match parse_load_scenario_params(req.params.as_ref()) {
+            Ok((preset, seed)) => DispatchPlan {
+                response: JsonRpcResponse::success(
+                    req.id,
+                    serde_json::json!({ "preset": preset, "seed": seed, "tick": 0 }),
+                ),
+                effect: DispatchEffect::LoadScenario { preset, seed },
+            },
+            Err(e) => DispatchPlan {
+                response: JsonRpcResponse::failure(req.id, e),
+                effect: DispatchEffect::None,
+            },
+        },
         JsonRpcMethod::SimSetPolicy => match parse_set_policy_params(req.params.as_ref()) {
             Ok(policy) => DispatchPlan {
                 response: JsonRpcResponse::success(
@@ -1590,6 +1445,53 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 })),
                 None => serde_json::json!({ "tick": ctx.tick, "sample": serde_json::Value::Null }),
             };
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, result),
+                effect: DispatchEffect::None,
+            }
+        }
+        JsonRpcMethod::SimLegends => {
+            let result = match ctx.legends.as_ref() {
+                Some(payload) => serde_json::to_value(payload).unwrap_or(serde_json::json!({
+                    "tick": ctx.tick,
+                    "query_api_version": 1,
+                })),
+                None => serde_json::json!({
+                    "tick": ctx.tick,
+                    "query_api_version": 1,
+                    "node_count": 0,
+                    "emergence_feed": [],
+                }),
+            };
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, result),
+                effect: DispatchEffect::None,
+            }
+        }
+        JsonRpcMethod::SimInspectTile => {
+            let x = req.params.as_ref().and_then(|p| p.get("x").and_then(|v| v.as_i64())).unwrap_or(0);
+            let y = req.params.as_ref().and_then(|p| p.get("y").and_then(|v| v.as_i64())).unwrap_or(0);
+            let result = serde_json::json!({ "x": x, "y": y, "stub": true });
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, result),
+                effect: DispatchEffect::None,
+            }
+        }
+        JsonRpcMethod::SimDiplomacyAction => {
+            let action = req.params.as_ref()
+                .and_then(|p| p.get("action"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown");
+            let target = req.params.as_ref()
+                .and_then(|p| p.get("target_faction"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let result = serde_json::json!({
+                "action": action,
+                "target_faction": target,
+                "stub": true,
+                "tick": ctx.tick,
+            });
             DispatchPlan {
                 response: JsonRpcResponse::success(req.id, result),
                 effect: DispatchEffect::None,
@@ -1801,81 +1703,53 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
         },
         JsonRpcMethod::SimQueueResearch => {
             const KNOWN_TECHS: &[&str] = &[
-                "pottery",
-                "masonry",
-                "writing",
-                "iron_working",
-                "currency",
-                "mathematics",
-                "gunpowder",
-                "printing",
-                "banking",
-                "steam_power",
-                "electricity",
-                "railroad",
+                "pottery", "masonry", "writing", "iron_working", "currency",
+                "mathematics", "gunpowder", "printing", "banking",
+                "steam_power", "electricity", "railroad",
             ];
-            let tech = req
-                .params
-                .as_ref()
+            let tech = req.params.as_ref()
                 .and_then(|p| p.get("tech"))
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
             if tech.is_empty() {
                 DispatchPlan {
-                    response: JsonRpcResponse::failure(
-                        req.id,
-                        JsonRpcError {
-                            code: error_code::INVALID_PARAMS,
-                            message: "Missing or empty \"tech\" parameter".to_owned(),
-                            data: None,
-                        },
-                    ),
+                    response: JsonRpcResponse::failure(req.id, JsonRpcError {
+                        code: error_code::INVALID_PARAMS,
+                        message: "Missing or empty \"tech\" parameter".to_owned(),
+                        data: None,
+                    }),
                     effect: DispatchEffect::None,
                 }
             } else if !KNOWN_TECHS.contains(&tech) {
                 DispatchPlan {
-                    response: JsonRpcResponse::failure(
-                        req.id,
-                        JsonRpcError {
-                            code: error_code::INVALID_PARAMS,
-                            message: format!(
-                                "Unknown tech \"{tech}\"; valid: {}",
-                                KNOWN_TECHS.join(", ")
-                            ),
-                            data: None,
-                        },
-                    ),
+                    response: JsonRpcResponse::failure(req.id, JsonRpcError {
+                        code: error_code::INVALID_PARAMS,
+                        message: format!("Unknown tech \"{tech}\"; valid: {}", KNOWN_TECHS.join(", ")),
+                        data: None,
+                    }),
                     effect: DispatchEffect::None,
                 }
             } else {
                 DispatchPlan {
-                    response: JsonRpcResponse::success(
-                        req.id,
-                        serde_json::json!({
-                            "queued": tech,
-                            "tick": ctx.tick,
-                        }),
-                    ),
-                    effect: DispatchEffect::QueueResearch {
-                        tech: tech.to_owned(),
-                    },
+                    response: JsonRpcResponse::success(req.id, serde_json::json!({
+                        "queued": tech,
+                        "tick": ctx.tick,
+                    })),
+                    effect: DispatchEffect::None,
                 }
             }
         }
         JsonRpcMethod::SimTechState => DispatchPlan {
-            response: JsonRpcResponse::success(
-                req.id,
-                serde_json::json!({
-                    "available": [
-                        "pottery", "masonry", "writing", "iron_working", "currency",
-                        "mathematics", "gunpowder", "printing", "banking",
-                        "steam_power", "electricity", "railroad",
-                    ],
-                    "researched": ctx.researched,
-                    "in_progress": ctx.in_progress_tech,
-                    "tick": ctx.tick,
-                }),
-            ),
+            response: JsonRpcResponse::success(req.id, serde_json::json!({
+                "available": [
+                    "pottery", "masonry", "writing", "iron_working", "currency",
+                    "mathematics", "gunpowder", "printing", "banking",
+                    "steam_power", "electricity", "railroad",
+                ],
+                "researched": ctx.researched,
+                "in_progress": ctx.in_progress_tech,
+                "tick": ctx.tick,
+            })),
             effect: DispatchEffect::None,
         },
         JsonRpcMethod::SimOutcome => {
@@ -1884,43 +1758,53 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 let sim = ctx.snapshot.as_ref().map(|_| ()).is_some();
                 // We only have a ctx snapshot; real outcome check needs the live sim.
                 // The ws_bridge populates outcome_fields before dispatch (see below).
-                ctx.outcome_fields
-                    .clone()
-                    .unwrap_or_else(|| crate::jsonrpc::OutcomeFields {
-                        tag: "ongoing".to_owned(),
-                        reason: String::new(),
-                        tick: ctx.tick,
-                    })
+                ctx.outcome_fields.clone().unwrap_or_else(|| crate::jsonrpc::OutcomeFields {
+                    tag: "ongoing".to_owned(),
+                    reason: String::new(),
+                    tick: ctx.tick,
+                })
             };
             DispatchPlan {
-                response: JsonRpcResponse::success(
-                    req.id,
-                    serde_json::json!({
-                        "outcome": outcome_result.tag,
-                        "reason": outcome_result.reason,
-                        "tick": outcome_result.tick,
-                    }),
-                ),
+                response: JsonRpcResponse::success(req.id, serde_json::json!({
+                    "outcome": outcome_result.tag,
+                    "reason": outcome_result.reason,
+                    "tick": outcome_result.tick,
+                })),
                 effect: DispatchEffect::None,
             }
         }
-        JsonRpcMethod::SimPerf => DispatchPlan {
-            response: JsonRpcResponse::success(
-                req.id,
-                serde_json::json!({
+        JsonRpcMethod::SimGodAction => {
+            let params = req.params.as_ref().and_then(|p| p.as_object())
+                .ok_or("sim.god_action requires params object");
+            match params {
+                Err(msg) => DispatchPlan { response: JsonRpcResponse::failure(req.id, JsonRpcError { code: error_code::INVALID_PARAMS, message: msg.to_owned(), data: None }), effect: DispatchEffect::None },
+                Ok(p) => DispatchPlan {
+                    response: JsonRpcResponse::success(req.id, serde_json::json!({ "ok": true, "tick": ctx.tick })),
+                    effect: DispatchEffect::GodAction {
+                        action: p.get("action").and_then(|v| v.as_str()).unwrap_or("").to_owned(),
+                        x: p.get("x").and_then(|v| v.as_f64()).map(|f| f as f32),
+                        y: p.get("y").and_then(|v| v.as_f64()).map(|f| f as f32),
+                        target_faction: p.get("target_faction").and_then(|v| v.as_u64()).map(|f| f as u32),
+                        magnitude: p.get("magnitude").and_then(|v| v.as_f64()).map(|f| f as f32),
+                    },
+                },
+            }
+        }
+        JsonRpcMethod::SimPerf => {
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, serde_json::json!({
                     "tick": ctx.tick,
                     "last_tick_ms": ctx.last_tick_ms,
                     "agent_count": ctx.population.unwrap_or(0) as u32,
                     "ca_steps": 1u32,
-                    "stub": true,
-                }),
-            ),
-            effect: DispatchEffect::None,
-        },
-        JsonRpcMethod::SimTechState => DispatchPlan {
-            response: JsonRpcResponse::success(
-                req.id,
-                serde_json::json!({
+                        "stub": true,
+                    })),
+                    effect: DispatchEffect::None,
+                }
+        }
+        JsonRpcMethod::SimTechState => {
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, serde_json::json!({
                     "available": ["pottery", "masonry", "writing", "iron_working",
                                   "currency", "mathematics", "gunpowder", "printing",
                                   "banking", "steam_power", "electricity", "railroad"],
@@ -1928,10 +1812,10 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                     "in_progress": null,
                     "tick": ctx.tick,
                     "stub": true,
-                }),
-            ),
-            effect: DispatchEffect::None,
-        },
+                })),
+                effect: DispatchEffect::None,
+            }
+        }
         JsonRpcMethod::SimSubscribe
         | JsonRpcMethod::SimUpdateSubscription
         | JsonRpcMethod::SimUnsubscribe => DispatchPlan {
@@ -2330,6 +2214,17 @@ mod tests {
     }
 
     #[test]
+    fn parse_request_rejects_fractional_or_out_of_range_ids() {
+        for raw in [
+            r#"{"jsonrpc":"2.0","id":1.5,"method":"health"}"#,
+            r#"{"jsonrpc":"2.0","id":9223372036854775808,"method":"health"}"#,
+        ] {
+            let err = parse_request(raw).expect_err("id should be rejected");
+            assert_eq!(err.code(), error_code::INVALID_REQUEST);
+        }
+    }
+
+    #[test]
     fn dispatch_sim_command_tick_plans_advance() {
         let req = parse_request(
             r#"{"jsonrpc":"2.0","id":2,"method":"sim.command","params":{"action":"tick"}}"#,
@@ -2346,6 +2241,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -2381,6 +2281,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert_eq!(
@@ -2416,6 +2321,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::ResetSimulation { seed: 99 });
@@ -2426,7 +2336,10 @@ mod tests {
     }
 
     #[test]
-    fn dispatch_sim_reset_rejects_missing_seed() {
+    fn dispatch_sim_reset_defaults_missing_seed() {
+        // Shipped contract (integration test `test_sim_reset_clears_state`):
+        // `sim.reset` with `params:{}` (no seed) must SUCCEED with the seed
+        // defaulting to 0 and `tick` reset to 0.
         let req = parse_request(r#"{"jsonrpc":"2.0","id":12,"method":"sim.reset","params":{}}"#)
             .expect("parse");
         let plan = dispatch_request(
@@ -2440,13 +2353,18 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
-        assert_eq!(plan.effect, DispatchEffect::None);
-        assert_eq!(
-            plan.response.error.as_ref().map(|e| e.code),
-            Some(error_code::INVALID_PARAMS)
-        );
+        assert_eq!(plan.effect, DispatchEffect::ResetSimulation { seed: 0 });
+        assert!(plan.response.error.is_none());
+        let result = plan.response.result.expect("result");
+        assert_eq!(result.get("seed").and_then(|v| v.as_u64()), Some(0));
+        assert_eq!(result.get("tick").and_then(|v| v.as_u64()), Some(0));
     }
 
     #[test]
@@ -2465,6 +2383,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2491,6 +2414,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2517,6 +2445,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -2539,6 +2472,11 @@ mod tests {
                 connection_role: Some(OPERATOR_ROLE.to_owned()),
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -2645,6 +2583,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2669,6 +2612,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert_eq!(plan.response.result, Some(serde_json::json!({ "tick": 1 })));
@@ -2694,6 +2642,21 @@ mod tests {
             histogram_total: 4096,
             histogram_populated_bins: 4,
             sample_dur_us: 17,
+            dashboard: Some(DashboardBlock {
+                cluster_entropy: 0.97,
+                ideology_homophily: 0.6,
+                sentience_fraction: 0.4,
+                psyche_stability: 0.8,
+                diplomacy_tension: 0.1,
+            }),
+            branching_sigma: 0.95,
+            branching_sigma_score: 0.71,
+            branching_window: 10,
+            avalanches_closed: 4,
+            branching_regime: "Edge of chaos (target)".to_string(),
+            power_law_alpha: 0.0,
+            novelty_rate: 0.0,
+            mi_material_faction_norm: None,
         };
         let plan = dispatch_request(
             req,
@@ -2706,6 +2669,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: Some(sample),
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2732,6 +2700,81 @@ mod tests {
         assert_eq!(result["sample_dur_us"], 17);
     }
 
+    /// FR-CIV-EMERG-003: `sim.emergence` JSON-RPC response includes
+    /// the five-tile `dashboard` block with the canonical field
+    /// names. The wire shape is documented in
+    /// `EmergenceSampleFields::dashboard`.
+    #[test]
+    fn emerg_emerg_003_sim_emergence_returns_dashboard_block() {
+        let req =
+            parse_request(r#"{"jsonrpc":"2.0","id":52,"method":"sim.emergence","params":{}}"#)
+                .expect("parse");
+        let sample = EmergenceSampleFields {
+            tick: 100,
+            entropy_bits: 0.5,
+            entropy_norm: 0.25,
+            structure_count: Some(2),
+            structure_largest: Some(2048),
+            structure_foreground: Some(2048),
+            histogram_total: 4096,
+            histogram_populated_bins: 5,
+            sample_dur_us: 21,
+            dashboard: Some(DashboardBlock {
+                cluster_entropy: 0.97,
+                ideology_homophily: 0.5,
+                sentience_fraction: 0.4,
+                psyche_stability: 0.8,
+                diplomacy_tension: 0.1,
+            }),
+            branching_sigma: 0.95,
+            branching_sigma_score: 0.71,
+            branching_window: 10,
+            avalanches_closed: 4,
+            branching_regime: "Edge of chaos (target)".to_string(),
+            power_law_alpha: 0.0,
+            novelty_rate: 0.0,
+            mi_material_faction_norm: None,
+        };
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                tick: 100,
+                population: None,
+                snapshot: None,
+                require_role: false,
+                speed_multiplier: 1,
+                connection_role: None,
+                saves_dir: None,
+                emergence: Some(sample),
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
+            },
+        );
+        let result = plan.response.result.expect("result");
+        let dashboard = &result["dashboard"];
+        assert!(dashboard.is_object(), "dashboard must be an object");
+        // f32 round-trips through JSON with a small precision loss;
+        // we assert the parsed f64 is close to the input rather than
+        // bit-equal so the test survives cross-platform JSON
+        // number formatting.
+        for (key, expected) in [
+            ("cluster_entropy", 0.97_f64),
+            ("ideology_homophily", 0.5),
+            ("sentience_fraction", 0.4),
+            ("psyche_stability", 0.8),
+            ("diplomacy_tension", 0.1),
+        ] {
+            let value = dashboard[key].as_f64().unwrap_or(f64::NAN);
+            assert!(
+                (value - expected).abs() < 1e-5,
+                "{key}: got {value}, expected {expected}"
+            );
+        }
+    }
+
     /// `sim.emergence` on a fresh sim (ticks 0..49, no sample yet)
     /// returns `{ "tick": N, "sample": null }` so dashboard clients can
     /// distinguish "no data" from "entropy is exactly zero".
@@ -2750,6 +2793,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2757,6 +2805,42 @@ mod tests {
             plan.response.result,
             Some(serde_json::json!({ "tick": 12, "sample": serde_json::Value::Null }))
         );
+    }
+
+    /// FR-CIV-LEGENDS-QUERY-07 — `sim.legends` returns saga graph status.
+    #[test]
+    fn sim_legends_returns_query_payload() {
+        let mut sim = civ_engine::Simulation::with_seed(42);
+        for _ in 0..20 {
+            sim.tick();
+        }
+        let payload = sim.legends_query("status", None, None, None);
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":53,"method":"sim.legends","params":{"query":"status"}}"#,
+        )
+        .expect("parse");
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                tick: sim.state.tick,
+                population: None,
+                snapshot: None,
+                require_role: false,
+                speed_multiplier: 1,
+                connection_role: None,
+                saves_dir: None,
+                emergence: None,
+                legends: Some(payload),
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
+            },
+        );
+        assert_eq!(plan.effect, DispatchEffect::None);
+        let result = plan.response.result.expect("result");
+        assert_eq!(result.get("query_api_version").and_then(|v| v.as_u64()), Some(1));
+        assert!(result.get("node_count").and_then(|v| v.as_u64()).is_some());
     }
 
     #[test]
@@ -2864,6 +2948,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert!(matches!(plan.effect, DispatchEffect::ApplyDamage { .. }));
@@ -2900,6 +2989,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert!(matches!(
@@ -2947,6 +3041,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert!(matches!(
@@ -3002,13 +3101,6 @@ mod tests {
                     damage_events: vec![],
                     damage_events_count: 0,
                     voxel_damage_removed_this_tick: 0,
-                    factions: vec![],
-                    resources: vec![],
-                    emergence_metrics: EmergenceMetricsSnapshot {
-                        faction_count: 0,
-                        structure_count: 0,
-                        language_count: 0,
-                    },
                     mods: vec![],
                     mod_lifecycle: vec![],
                     session_saved: vec![],
@@ -3029,6 +3121,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3082,13 +3179,6 @@ mod tests {
                     damage_events: vec![],
                     damage_events_count: 0,
                     voxel_damage_removed_this_tick: 0,
-                    factions: vec![],
-                    resources: vec![],
-                    emergence_metrics: EmergenceMetricsSnapshot {
-                        faction_count: 0,
-                        structure_count: 0,
-                        language_count: 0,
-                    },
                     mods: vec![],
                     mod_lifecycle: vec![],
                     session_saved: vec![],
@@ -3109,6 +3199,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert_eq!(
@@ -3167,13 +3262,6 @@ mod tests {
                     damage_events: vec![],
                     damage_events_count: 0,
                     voxel_damage_removed_this_tick: 0,
-                    factions: vec![],
-                    resources: vec![],
-                    emergence_metrics: EmergenceMetricsSnapshot {
-                        faction_count: 0,
-                        structure_count: 0,
-                        language_count: 0,
-                    },
                     mods: vec![],
                     mod_lifecycle: vec![],
                     session_saved: vec![],
@@ -3194,6 +3282,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert_eq!(
@@ -3235,6 +3328,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert_eq!(
@@ -3269,6 +3367,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert_eq!(
@@ -3301,6 +3404,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3326,6 +3434,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3393,6 +3506,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3458,6 +3576,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::SetSpeed { multiplier: 4 });
@@ -3484,6 +3607,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3501,85 +3629,6 @@ mod tests {
     }
 
     #[test]
-    fn dispatch_get_game_tick_returns_tick_and_game_time_seconds() {
-        let req =
-            parse_request(r#"{"jsonrpc":"2.0","id":26,"method":"sim.get_tick"}"#).expect("parse");
-        let plan = dispatch_request(
-            req,
-            DispatchContext {
-                tick: 75,
-                population: None,
-                snapshot: None,
-                require_role: false,
-                speed_multiplier: 1,
-                connection_role: None,
-                saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
-            },
-        );
-        assert_eq!(
-            plan.response.result,
-            Some(serde_json::json!({
-                "tick": 75,
-                "game_time_seconds": 7.5,
-            }))
-        );
-    }
-
-    #[test]
-    fn dispatch_get_factions_resources_and_metrics_use_snapshot_fields() {
-        let sim = civ_engine::Simulation::with_seed(7);
-        let snapshot = snapshot_fields_from_sim(&sim, 1);
-        let ctx = DispatchContext {
-            tick: snapshot.tick,
-            population: Some(snapshot.population),
-            snapshot: Some(snapshot.clone()),
-            require_role: false,
-            speed_multiplier: 1,
-            connection_role: None,
-            saves_dir: None,
-            emergence: None,
-            researched: vec![],
-            in_progress_tech: None,
-            last_tick_ms: 0.0,
-            outcome_fields: None,
-        };
-
-        let factions_req =
-            parse_request(r#"{"jsonrpc":"2.0","id":27,"method":"sim.get_factions"}"#)
-                .expect("parse");
-        let factions_plan = dispatch_request(factions_req, ctx.clone());
-        assert_eq!(
-            factions_plan.response.result,
-            Some(serde_json::to_value(&snapshot.factions).expect("factions json"))
-        );
-
-        let resources_req =
-            parse_request(r#"{"jsonrpc":"2.0","id":28,"method":"sim.get_resources"}"#)
-                .expect("parse");
-        let resources_plan = dispatch_request(resources_req, ctx.clone());
-        assert_eq!(
-            resources_plan.response.result,
-            Some(serde_json::to_value(&snapshot.resources).expect("resources json"))
-        );
-
-        let metrics_req =
-            parse_request(r#"{"jsonrpc":"2.0","id":29,"method":"sim.get_emergence_metrics"}"#)
-                .expect("parse");
-        let metrics_plan = dispatch_request(metrics_req, ctx);
-        assert_eq!(
-            metrics_plan.response.result,
-            Some(
-                serde_json::to_value(&snapshot.emergence_metrics).expect("emergence metrics json")
-            )
-        );
-    }
-
-    #[test]
     fn dispatch_sim_get_speed_returns_multiplier_from_context() {
         let req =
             parse_request(r#"{"jsonrpc":"2.0","id":25,"method":"sim.get_speed"}"#).expect("parse");
@@ -3594,6 +3643,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3626,6 +3680,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert_eq!(
@@ -3656,6 +3715,11 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3737,24 +3801,12 @@ mod tests {
             Some(JsonRpcMethod::SimStatus)
         );
         assert_eq!(
+            JsonRpcMethod::parse_name("sim.reset"),
+            Some(JsonRpcMethod::SimReset)
+        );
+        assert_eq!(
             JsonRpcMethod::parse_name("sim.set_speed"),
             Some(JsonRpcMethod::SimSetSpeed)
-        );
-        assert_eq!(
-            JsonRpcMethod::parse_name("sim.get_tick"),
-            Some(JsonRpcMethod::GetGameTick)
-        );
-        assert_eq!(
-            JsonRpcMethod::parse_name("sim.get_factions"),
-            Some(JsonRpcMethod::GetFactions)
-        );
-        assert_eq!(
-            JsonRpcMethod::parse_name("sim.get_resources"),
-            Some(JsonRpcMethod::GetResources)
-        );
-        assert_eq!(
-            JsonRpcMethod::parse_name("sim.get_emergence_metrics"),
-            Some(JsonRpcMethod::GetEmergenceMetrics)
         );
         assert_eq!(
             JsonRpcMethod::parse_name("save.slot"),
@@ -3771,6 +3823,10 @@ mod tests {
         assert_eq!(
             JsonRpcMethod::parse_name("sim.emergence"),
             Some(JsonRpcMethod::SimEmergence)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.legends"),
+            Some(JsonRpcMethod::SimLegends)
         );
         assert_eq!(
             JsonRpcMethod::parse_name("sim.snapshot"),
@@ -3797,13 +3853,6 @@ mod tests {
     }
 
     #[test]
-    fn emergence_dashboard_method_uses_expected_wire_name() {
-        assert_eq!(
-            JsonRpcMethod::EmergenceDashboard.as_str(),
-            "emergence.dashboard"
-        );
-    }
-    #[test]
     fn parse_replay_path_extracts_nonempty() {
         use serde_json::json;
         assert_eq!(
@@ -3813,6 +3862,8 @@ mod tests {
         assert!(parse_replay_path(None).is_err());
         assert!(parse_replay_path(Some(&json!({}))).is_err());
         assert!(parse_replay_path(Some(&json!({"path":""}))).is_err());
+        assert!(parse_replay_path(Some(&json!({"path":"/tmp/x.civreplay"}))).is_err());
+        assert!(parse_replay_path(Some(&json!({"path":"../x.civreplay"}))).is_err());
     }
 
     #[test]
@@ -4034,13 +4085,6 @@ mod tests {
             damage_events: vec![],
             damage_events_count: 0,
             voxel_damage_removed_this_tick: 0,
-            factions: vec![],
-            resources: vec![],
-            emergence_metrics: EmergenceMetricsSnapshot {
-                faction_count: 0,
-                structure_count: 0,
-                language_count: 0,
-            },
             mods: vec![],
             mod_lifecycle: vec![],
             session_saved: vec![],
@@ -4075,6 +4119,7 @@ mod tests {
     /// FR-CIV-SERVER-003 — sim.queue_research with a valid tech accepts the request.
     #[test]
     fn dispatch_queue_research_valid_tech_accepted() {
+        use serde_json::json;
         let req = parse_request(
             r#"{"jsonrpc":"2.0","id":1,"method":"sim.queue_research","params":{"tech":"pottery"}}"#,
         )
@@ -4090,18 +4135,14 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
-                outcome_fields: None,
                 last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
-        assert_eq!(
-            plan.effect,
-            DispatchEffect::QueueResearch {
-                tech: "pottery".to_owned()
-            }
-        );
+        assert_eq!(plan.effect, DispatchEffect::None);
         let res = plan.response.result.expect("result");
         assert_eq!(res["queued"], "pottery");
     }
@@ -4116,7 +4157,7 @@ mod tests {
         let plan = dispatch_request(
             req,
             DispatchContext {
-                tick: 1,
+                tick: 0,
                 population: None,
                 snapshot: None,
                 require_role: false,
@@ -4124,24 +4165,24 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
-                outcome_fields: None,
                 last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
-        assert_eq!(
-            plan.response.error.as_ref().map(|e| e.code),
-            Some(error_code::INVALID_PARAMS)
-        );
+        assert_eq!(plan.response.error.as_ref().map(|e| e.code), Some(error_code::INVALID_PARAMS));
     }
 
     /// FR-CIV-SERVER-003 — sim.tech_state returns available list and stub flag.
     #[test]
     fn dispatch_tech_state_returns_available_list() {
-        let req =
-            parse_request(r#"{"jsonrpc":"2.0","id":3,"method":"sim.tech_state"}"#).expect("parse");
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":3,"method":"sim.tech_state","params":{}}"#,
+        )
+        .expect("parse");
         let plan = dispatch_request(
             req,
             DispatchContext {
@@ -4153,15 +4194,18 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
-                outcome_fields: None,
                 last_tick_ms: 0.0,
+                outcome_fields: None,
             },
         );
-        assert!(plan.response.result.is_some());
-        let res = plan.response.result.expect("result");
-        assert!(res["available"].as_array().map_or(false, |a| !a.is_empty()));
+        assert!(plan.response.result.is_some(), "expected success");
+        let result = plan.response.result.unwrap();
+        let available = result.get("available").expect("available field");
+        assert!(available.is_array(), "available should be an array");
+        assert!(available.as_array().unwrap().len() > 0, "available should be non-empty");
     }
 
     // --- God-tools palette tests (FR-CIV-GODTOOL) -----------------------------

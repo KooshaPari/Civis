@@ -38,7 +38,7 @@ async fn main() {
             require_role: false,
             tick_broadcast_format: TickBroadcastFormat::from_env(),
             saves_dir,
-            ..Default::default()
+            replays_dir,
         },
         sim,
     )

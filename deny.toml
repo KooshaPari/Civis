@@ -2,11 +2,11 @@
 # Docs: https://embarkstudios.github.io/cargo-deny/
 #
 # Sections:
-#   * [advisories] â€” pulls the RustSec advisory DB and fails on known vulns.
-#   * [bans]       â€” refuses duplicate crate versions and `*` dep specs.
-#   * [licenses]   â€” allow-list; any license outside the list fails the check.
-#   * [sources]    â€” refuses deps from registries/git sources we do not trust.
-#   * [graph]      â€” sanity-checks the dep graph (cycles, features, etc).
+#   * [advisories] — pulls the RustSec advisory DB and fails on known vulns.
+#   * [bans]       — refuses duplicate crate versions and `*` dep specs.
+#   * [licenses]   — allow-list; any license outside the list fails the check.
+#   * [sources]    — refuses deps from registries/git sources we do not trust.
+#   * [graph]      — sanity-checks the dep graph (cycles, features, etc).
 #
 # Run locally with: `cargo deny check` (or `just deny`).
 
@@ -14,37 +14,13 @@
 # Path where the RustSec advisory-db is cloned. Defaults to ~/.cargo/advisory-db.
 # Pinned to $CARGO_HOME so the CI runner and the developer laptop share state.
 db-path = "$CARGO_HOME/advisory-db"
-# Fail the check on any unmaintained-warnings entry too â€” RustSec classifies
+# Fail the check on any unmaintained-warnings entry too — RustSec classifies
 # these as "unmaintained" but we treat them as warnings, not hard errors.
-unmaintained = "workspace"
+unmaintained = "warn"
 # Ignore advisories that do not have a patched version yet (workaround until
 # upstream fixes flow in). Anything not in this list is a hard error.
-#
-# Entries below are TRANSITIVE (pulled in via the shared `phenotype-voxel`
-# git dep at crates/voxel/Cargo.toml) or low-severity / unmaintained. They
-# must NOT mask a real high/critical severity advisory in a directly-used
-# crate — if a new RUSTSEC entry appears for one of our direct dependencies,
-# add it to the `review` queue rather than this list. Each line carries a
-# one-line justification so triage is easy during `cargo deny check`.
 ignore = [
-  # Example placeholder â€” add entries as `RUSTSEC-YYYY-NNNN` once triaged.
-  # RUSTSEC-2024-0384 — `instant` crate is unmaintained (transitive via
-  # `phenotype-voxel`); replacement (web-time) is not yet vendored in our
-  # shared kernel. Low risk (monotonic-clock abstraction only).
-  "RUSTSEC-2024-0384",
-  # RUSTSEC-2024-0336 — `if-addrs` (syn-subsitute of `getifaddrs`) is
-  # unmaintained, transitive only on Windows feature flag of a dev-dep
-  # in the shared kernel. Not in any runtime path of civ-server/civ-watch.
-  "RUSTSEC-2024-0336",
-  # RUSTSEC-2024-0437 — `paste` is unmaintained, transitive via macros in
-  # `phenotype-voxel`. No runtime exposure (compile-time only).
-  "RUSTSEC-2024-0437",
-  # RUSTSEC-2024-0370 — `proc-macro-error` is unmaintained, transitive via
-  # older `proc-macro2` chain. Compile-time only, no runtime exposure.
-  "RUSTSEC-2024-0370",
-  # RUSTSEC-2023-0071 — `adler` RUSTSEC informational (algorithm choice);
-  # crate is still actively used. We pin via Cargo.lock. Low severity.
-  "RUSTSEC-2023-0071",
+  # Example placeholder — add entries as `RUSTSEC-YYYY-NNNN` once triaged.
 ]
 
 [bans]
@@ -57,41 +33,21 @@ multiple-versions = "warn"
 wildcards = "warn"
 # Highlight very-common crates that may have legitimate duplicate-version
 # issues we want to know about (serde, tokio, etc).
-highlight = "all"
+highlight = [
+  "rustls",
+  "openssl",
+  "ring",
+  "bevy",
+  "wgpu",
+]
 # Hard skip on duplicate version detection for these (vendored exceptions).
-# Each entry cites the reason a duplicate is tolerated.
 skip = [
   # Add `name = "..."` entries when a known-good duplicate is required.
 ]
 # Disallow specific crates outright.
 deny = []
 # Allow these even if they would otherwise be denied.
-#
-# Duplicate-version entries below exist because `phenotype-voxel` (pinned via
-# crates/voxel/Cargo.toml to a shared kernel git revision) pins older
-# versions of common crates that are not aligned with the workspace's primary
-# versions. Until the shared kernel moves to Cargo workspaces with a single
-# lockfile, we accept the duplicates at WARN severity above and allow the
-# older version explicitly. Each entry names the crate + accepted version
-# range + reason so triage is straightforward.
-allow = [
-  # `glam` — civ-voxel uses 0.30 (workspace-wide), the shared kernel uses
-  # 0.27.0 internally for its math primitives. Allow the older kernel pin
-  # to keep the shared kernel ABI stable; revisit when the kernel migrates
-  # to the workspace lockfile.
-  { name = "glam", version = "=0.27.0" },
-  { name = "glam", version = "=0.25.0" },
-  { name = "glam", version = "=0.24.2" },
-  # `toml` family — the shared kernel still uses `toml` 0.5 for manifest
-  # parsing; workspace uses `toml` 0.8. Tolerate the older pin.
-  { name = "toml", version = "=0.5.11" },
-  { name = "toml_edit", version = "=0.19.15" },
-  # `rand_core` — shared kernel pins 0.6; workspace uses 0.9. Allow the
-  # older pin to keep the kernel's deterministic-seeding story intact.
-  { name = "rand_core", version = "=0.6.4" },
-  # `getrandom` — shared kernel pins 0.2; workspace uses 0.3. Same reason.
-  { name = "getrandom", version = "=0.2.15" },
-]
+allow = []
 # Skip-tree: tree entries whose path matches are skipped. Useful for
 # excluding generated/proto code or test-only crates from duplicate checks.
 skip-tree = []
@@ -108,13 +64,11 @@ allow = [
   "ISC",
   "Zlib",
   "MPL-2.0",
-  "BSL-1.0",           # Boost Software License 1.0 — permissive
-  "CDLA-Permissive-2.0", # Community Data License Agreement Permissive 2.0 — permissive / public-domain-equivalent
   "0BSD",
   "CC0-1.0",
   "Unicode-DFS-2016",
   "Unicode-3.0",
-  "OpenSSL",          # used by rustls/openssl-sys stack â€” accept, do not silently absorb
+  "OpenSSL",          # used by rustls/openssl-sys stack — accept, do not silently absorb
   "NCSA",             # University of Illinois / NCSA (used by some llvm deps)
 ]
 # Confidence threshold for the SPDX matcher. `threshold = 1.0` is the strictest
@@ -123,8 +77,22 @@ confidence-threshold = 1.0
 
 [licenses.private]
 # If a workspace crate is private (no published license), treat as ignored
-# rather than failing â€” local crates are governed by LICENSE at repo root.
+# rather than failing — local crates are governed by LICENSE at repo root.
 ignore = true
+
+[licenses.clarify]
+# Required clarifications for ambiguous SPDX expressions. Useful when a crate
+# declares "MIT OR Apache-2.0" and we need the SPDX to be canonicalised before
+# the allow-list runs.
+# expressions = []
+
+[licenses.copyleft]
+# Cargo-deny categorises strong/weak copyleft. Strong copyleft (GPL family) is
+# denied; weak copyleft (LGPL/MPL) is allowed only if the entry is in `allow`
+# above (MPL-2.0 is currently listed).
+strong = "deny"
+weak = "warn"
+# Allow specific weak-copyleft crates here (LGPL etc) when used as a system lib.
 
 [sources]
 # Refuse dependencies from registries/git sources we have not whitelisted.
@@ -133,22 +101,12 @@ unknown-git = "deny"
 # Allow-list of acceptable registries. Only crates.io is whitelisted; private
 # registries / alt indexes would need to be added explicitly.
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-# Allow-list of acceptable git sources. Empty by default â€” every git dep must
+# Allow-list of acceptable git sources. Empty by default — every git dep must
 # be triaged and added with a reason comment.
-#
-# `phenotype-gfx` (and its embedded `phenotype-voxel` crate) is the shared
-# voxel kernel consumed by civ-voxel (see crates/voxel/Cargo.toml). It is
-# pinned to a specific rev (`7ed2721…`) and hosted under the `KooshaPari`
-# GitHub org. It is mirrored in the repo's `.worktrees/phenotype-voxel` for
-# local development, but CI resolves it directly from this git URL.
-allow-git = [
-  "https://github.com/KooshaPari/phenotype-gfx.git",
-]
+allow-git = []
 
 [sources.allow-org]
 # Allow any git source hosted under these GitHub orgs (used for internal
 # sibling repos like phenotype-voxel).
-# KooshaPari/phenotype-gfx is the only third-party git org we currently
-# trust — see allow-git above for the specific URL.
-github = ["KooshaPari"]
+github = []
 # gitlab = []

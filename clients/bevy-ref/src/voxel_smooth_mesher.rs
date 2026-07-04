@@ -372,7 +372,7 @@ fn weight_for_offset(dx: isize, dy: isize, dz: isize) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use civ_voxel::{material::{MaterialRegistry, WATER}, MaterialId};
+    use civ_voxel::{material::MaterialRegistry, MaterialId};
 
     /// Reference Gaussian the `weight_for_offset` match table mirrors.
     fn gaussian_reference(dx: isize, dy: isize, dz: isize) -> f32 {
@@ -431,11 +431,11 @@ mod tests {
             for y in 1..4 {
                 for x in 1..4 {
                     padded[x + y * CHUNK_EDGE_PADDED + z * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED] =
-                        WATER;
+                        MaterialId(1);
                 }
             }
         }
-        chunk[0] = WATER;
+        chunk[0] = MaterialId(1);
         let registry = MaterialRegistry::standard();
         let bufs = build_smooth_meshes(&chunk, &padded, None, &registry);
         assert!(
@@ -457,7 +457,7 @@ mod tests {
                     if x <= 8 {
                         padded[x
                             + y * CHUNK_EDGE_PADDED
-                            + z * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED] = WATER;
+                            + z * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED] = MaterialId(1);
                     }
                 }
             }
@@ -483,7 +483,7 @@ mod tests {
                     if x <= 8 {
                         padded[x
                             + y * CHUNK_EDGE_PADDED
-                            + z * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED] = WATER;
+                            + z * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED] = MaterialId(1);
                     } else {
                         padded[x
                             + y * CHUNK_EDGE_PADDED
@@ -501,7 +501,7 @@ mod tests {
             materials.insert(v.material);
         }
         assert!(
-            materials.contains(&WATER),
+            materials.contains(&MaterialId(1)),
             "missing first material on interface surface"
         );
         assert!(
@@ -531,13 +531,13 @@ mod tests {
                     if x + y <= CHUNK_EDGE_PADDED {
                         let idx =
                             x + y * CHUNK_EDGE_PADDED + z * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED;
-                        padded[idx] = WATER;
+                        padded[idx] = MaterialId(1);
                     }
                 }
             }
         }
         for c in chunk.iter_mut() {
-            *c = WATER;
+            *c = MaterialId(1);
         }
         let registry = MaterialRegistry::standard();
         let bufs = build_smooth_meshes(&chunk, &padded, None, &registry);
@@ -562,7 +562,7 @@ mod tests {
     /// context that seam faces get vertices, reducing visible gaps between chunks.
     #[test]
     fn seam_chunk_produces_continuous_boundary_surface() {
-        let chunk = [WATER; CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE];
+        let chunk = [MaterialId(1); CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE];
         let mut padded =
             [AIR; SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE];
         for z in 0..CHUNK_EDGE {
@@ -573,7 +573,7 @@ mod tests {
                     let pz = z + APRON;
                     padded[px
                         + py * SMOOTH_MESH_PADDED_EDGE
-                        + pz * SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE] = WATER;
+                        + pz * SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE] = MaterialId(1);
                 }
             }
         }

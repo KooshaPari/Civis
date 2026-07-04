@@ -210,6 +210,22 @@ impl SagaGraph {
         id
     }
 
+    /// Attach an entity↔entity spine edge (Founded, MemberOf, …) after ingest.
+    pub fn link_entity_edge(
+        &mut self,
+        from: LegendEntityId,
+        to: LegendEntityId,
+        edge: LegendEdge,
+    ) {
+        let Some(from_idx) = self.entity_index.get(&from).copied() else {
+            return;
+        };
+        let Some(to_idx) = self.entity_index.get(&to).copied() else {
+            return;
+        };
+        self.g.add_edge(from_idx, to_idx, edge);
+    }
+
     /// Resolve (or fold into) an aggregate entity (War/Disaster/PolityCluster) by
     /// stable aggregate key (§4.2.4).
     pub fn resolve_aggregate(&mut self, key: AggregateKey, epoch: Epoch) -> LegendEntityId {
@@ -355,7 +371,7 @@ impl SagaGraph {
         let mut participants: SmallVec<[LegendEntityId; 4]> = SmallVec::new();
         let mut roles: SmallVec<[(LegendEntityId, Role); 4]> = SmallVec::new();
         for (src, sim_id, role) in raw.participants.iter().copied() {
-            let kind = entity_kind_for(role);
+            let kind = entity_kind_for(role, src);
             let eid = self.resolve_entity(src, sim_id, kind, raw.region, epoch);
             participants.push(eid);
             roles.push((eid, role));
@@ -662,9 +678,12 @@ fn recency(cand: Epoch, now: Epoch, window: u64) -> f32 {
 
 /// Default entity kind to mint for a participant given its role. Coarse; the
 /// producer-side kind registry refines this later (kept simple + opaque here).
-fn entity_kind_for(role: Role) -> EntityKind {
-    match role {
-        Role::Founder | Role::Builder => EntityKind::Agent,
+/// Default entity kind to mint for a participant given its role and producer.
+fn entity_kind_for(role: Role, source: SourceCrate) -> EntityKind {
+    match (role, source) {
+        (Role::Founder | Role::Builder, SourceCrate::Protocol3d) => EntityKind::Settlement,
+        (Role::Leader, SourceCrate::Engine) => EntityKind::PolityCluster,
+        (Role::Aggressor | Role::Defender, SourceCrate::Tactics) => EntityKind::Agent,
         _ => EntityKind::Agent,
     }
 }

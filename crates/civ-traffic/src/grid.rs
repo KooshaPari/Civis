@@ -12,7 +12,7 @@
 //!   [`coverage_ring`]              → `FR-CIV-INFRA-070` (power + water
 //!   grid substrate with adjacency / range checks).
 //! - [`service_coverage_radius`], [`buildings_in_range`]
-//!                                     → `FR-CIV-INFRA-071` (service coverage
+//!   → `FR-CIV-INFRA-071` (service coverage
 //!   ring: a consumer is "served" if at least one source of the matching
 //!   kind is within `range` cells).
 //! - [`ServiceGrid::transmit`]       → `FR-CIV-INFRA-072` (grid propagates
@@ -38,6 +38,9 @@ use civ_voxel::WorldCoord;
 /// Schema version of the [`ServiceGrid`] data shape. Bump on breaking
 /// changes so a future migration can detect old grids.
 pub const SERVICE_GRID_SCHEMA_VERSION: &str = "0.1.0-infra-grid";
+
+/// Deterministic integer coordinate key used by the service grid.
+pub type CoordKey = (i64, i64, i64);
 
 /// The three service kinds modelled by the substrate. Adding a new kind is
 /// a deliberate code change, not a free-form string.
@@ -107,10 +110,10 @@ impl GridCell {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ServiceGrid {
     /// Map of `coord -> cell`. Iteration is in coord-ascending order.
-    pub cells: BTreeMap<(i64, i64, i64), GridCell>,
+    pub cells: BTreeMap<CoordKey, GridCell>,
     /// Adjacency list. Each cell may have any number of neighbours; the
     /// grid does not assume planar topology (we model 3D adjacency).
-    pub adjacency: BTreeMap<(i64, i64, i64), BTreeSet<(i64, i64, i64)>>,
+    pub adjacency: BTreeMap<CoordKey, BTreeSet<CoordKey>>,
     /// Schema version of this grid shape.
     pub schema_version: String,
 }

@@ -278,6 +278,37 @@ impl Scenario {
     /// Headless simulation seeded from scenario starting conditions.
     pub fn into_simulation(self, rng_seed: u64) -> Simulation {
         let mut sim = Simulation::with_seed(rng_seed);
+
+        // If starting_conditions differ from defaults (32/4/2500), respawn civilians with custom config
+        let needs_respawn = self.starting_conditions.civilians_per_faction != 32
+            || self.starting_conditions.faction_count != 4
+            || self.starting_conditions.quadrant_spread != 2500;
+
+        if needs_respawn {
+            // Clear existing civilians
+            let mut to_remove = Vec::new();
+            for (entity, _) in sim.world.query::<&civ_agents::Civilian>().iter() {
+                to_remove.push(entity);
+            }
+            for entity in to_remove {
+                let _ = sim.world.despawn(entity);
+            }
+
+            // Respawn with scenario config
+            let mut spawn_rng = sim.rng_mut().clone();
+            crate::engine::spawn_faction_civilians_custom(
+                &mut sim.world,
+                &mut spawn_rng,
+                self.starting_conditions.civilians_per_faction,
+                self.starting_conditions.faction_count,
+                self.starting_conditions.quadrant_spread,
+            );
+            crate::engine::attach_citizen_to_agents(&mut sim.world);
+
+            // Update population to match actual spawned count
+            sim.state.population = civ_agents::count_civilians(&sim.world) as u64;
+        }
+
         self.apply_world_state(&mut sim.state);
         sim.economy_policy = self.policy_input();
         sim.configure_military_fog(self.fog_vision_radius, self.fog_grid_size);

@@ -24,12 +24,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::sample_snapshot::EmergenceSampleSnapshot;
-
 /// All five dashboard summary metrics computed from a single tick's
 /// pre-aggregated inputs (FR-CIV-EMERG-001). The struct is the
 /// engine's hand-off shape: the engine builds the input slices, calls
-/// [`TileDashboard::compute`], and stores the result on
+/// [`EmergenceDashboard::compute`], and stores the result on
 /// `EmergenceSample` for the JSON-RPC / replay-bus surfaces.
 ///
 /// The default is "no data" — every field is `0.0`. That matches the
@@ -38,7 +36,7 @@ use crate::sample_snapshot::EmergenceSampleSnapshot;
 /// from leaking `0.0` readings that the dashboard would mis-render as
 /// "all minimum".
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
-pub struct TileDashboard {
+pub struct EmergenceDashboard {
     /// Normalised Shannon entropy over per-cluster population sizes.
     /// See [`cluster_entropy`].
     pub cluster_entropy: f32,
@@ -55,7 +53,7 @@ pub struct TileDashboard {
     pub diplomacy_tension: f32,
 }
 
-impl TileDashboard {
+impl EmergenceDashboard {
     /// Compute the dashboard from pre-aggregated inputs. All five
     /// sub-metrics are computed; the inputs are *not* validated. The
     /// caller is the engine and the engine has the only authority over
@@ -76,36 +74,6 @@ impl TileDashboard {
             sentience_fraction: sentience_fraction(sentient_count, total_civilians),
             psyche_stability: psyche_stability(mood_valences),
             diplomacy_tension: diplomacy_tension(diplomacy_pair_scores),
-        }
-    }
-}
-
-/// Transport-safe emergence dashboard view used by the JSON-RPC surface.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
-pub struct EmergenceDashboard {
-    /// Power-law exponent for the cluster distribution.
-    pub power_law_alpha: f32,
-    /// Shannon entropy over the sampled population.
-    pub shannon_entropy: f32,
-    /// Connected structure count.
-    pub structure_count: u32,
-    /// Normalised novelty score.
-    pub novelty_score: f32,
-    /// Mutual-information style coupling summary.
-    pub coupling_mi: f32,
-    /// Engine tick the snapshot was captured at.
-    pub tick: u64,
-}
-
-impl From<EmergenceSampleSnapshot> for EmergenceDashboard {
-    fn from(sample: EmergenceSampleSnapshot) -> Self {
-        Self {
-            power_law_alpha: sample.agent_count as f32,
-            shannon_entropy: sample.resource_entropy,
-            structure_count: sample.structure_count,
-            novelty_score: sample.novelty_rate,
-            coupling_mi: sample.coupling_strength,
-            tick: sample.tick,
         }
     }
 }
@@ -260,7 +228,6 @@ pub fn diplomacy_tension(pair_scores: &[f32]) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sample_snapshot::EmergenceSampleSnapshot;
 
     fn approx(a: f32, b: f32) {
         assert!(
@@ -425,9 +392,9 @@ mod tests {
         approx(diplomacy_tension(&v), 0.35);
     }
 
-    // ---- TileDashboard::compute ----
+    // ---- EmergenceDashboard::compute ----
 
-    /// FR-CIV-EMERG-001: `TileDashboard::compute` returns the
+    /// FR-CIV-EMERG-001: `EmergenceDashboard::compute` returns the
     /// per-metric value for every one of the five fields. This locks
     /// the engine's first-sample contract: the engine stores a
     /// non-`None` `EmergenceSample` with the documented all-zeros
@@ -443,7 +410,7 @@ mod tests {
         // Ideology binning (bw=0.2, 5 bins/side, total=10):
         //   -0.9 → bin 0; -0.7 → bin 1; 0.1 → bin 5; 0.2 → bin 6
         // → 4 bins × 1 agent each, max share = 1/4 = 0.25.
-        let d = TileDashboard::compute(
+        let d = EmergenceDashboard::compute(
             &[3, 3],                 // cluster_sizes
             &[-0.9, -0.7, 0.1, 0.2], // ideologies
             1,
@@ -473,62 +440,12 @@ mod tests {
     /// contracts are explicit.
     #[test]
     fn emerg_emerg_001_dashboard_compute_empty_inputs_yield_documented_defaults() {
-        let d = TileDashboard::compute(&[], &[], 0, 0, &[], &[]);
+        let d = EmergenceDashboard::compute(&[], &[], 0, 0, &[], &[]);
         assert_eq!(d.cluster_entropy, 0.0);
         assert_eq!(d.ideology_homophily, 0.0);
         assert_eq!(d.sentience_fraction, 0.0);
         // Variance of zero observations is 0; stability = 1 - 0 = 1.
         assert_eq!(d.psyche_stability, 1.0);
         assert_eq!(d.diplomacy_tension, 0.0);
-    }
-
-    #[test]
-    fn emerg_emerg_001_dashboard_from_sample_snapshot_maps_fields() {
-        let dashboard = EmergenceDashboard::from(EmergenceSampleSnapshot {
-            agent_count: 12,
-            faction_count: 3,
-            resource_entropy: 0.25,
-            structure_count: 9,
-            novelty_rate: 0.5,
-            coupling_strength: 0.75,
-            tick: 42,
-        });
-
-        assert_eq!(dashboard.power_law_alpha, 12.0);
-        assert_eq!(dashboard.shannon_entropy, 0.25);
-        assert_eq!(dashboard.structure_count, 9);
-        assert_eq!(dashboard.novelty_score, 0.5);
-        assert_eq!(dashboard.coupling_mi, 0.75);
-        assert_eq!(dashboard.tick, 42);
-    }
-
-    #[test]
-    fn emerg_emerg_001_dashboard_from_sample_snapshot_changes_with_tick_and_structure_count() {
-        let low = EmergenceDashboard::from(EmergenceSampleSnapshot {
-            agent_count: 1,
-            faction_count: 2,
-            resource_entropy: 0.1,
-            structure_count: 7,
-            novelty_rate: 0.2,
-            coupling_strength: 0.3,
-            tick: 5,
-        });
-        let high = EmergenceDashboard::from(EmergenceSampleSnapshot {
-            agent_count: 1,
-            faction_count: 2,
-            resource_entropy: 0.1,
-            structure_count: 99,
-            novelty_rate: 0.2,
-            coupling_strength: 0.3,
-            tick: 500,
-        });
-
-        assert_ne!(low, high);
-        assert_eq!(low.power_law_alpha, high.power_law_alpha);
-        assert_eq!(low.shannon_entropy, high.shannon_entropy);
-        assert_eq!(low.novelty_score, high.novelty_score);
-        assert_eq!(low.coupling_mi, high.coupling_mi);
-        assert_ne!(low.structure_count, high.structure_count);
-        assert_ne!(low.tick, high.tick);
     }
 }

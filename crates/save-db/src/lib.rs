@@ -77,6 +77,14 @@ pub struct SaveDb {
 }
 
 impl SaveDb {
+    pub fn open_in_memory() -> Result<Self, SaveDbError> {
+        let conn = Connection::open_in_memory()?;
+        conn.execute_batch(SCHEMA)?;
+        Ok(Self {
+            conn: Mutex::new(conn),
+        })
+    }
+
     pub fn open(path: &Path) -> Result<Self, SaveDbError> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(|err| {

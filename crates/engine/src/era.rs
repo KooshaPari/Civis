@@ -1,4 +1,4 @@
-﻿//! Civilization era evaluation (FR-CIV-GAME-003).
+//! Civilization era evaluation (FR-CIV-GAME-003).
 //!
 //! Eras are derived from simulation state on demand — no persistent field needed.
 //! Call [CivEra::evaluate] each tick; compare to previous to detect advances.
@@ -22,7 +22,7 @@ impl CivEra {
     /// Conditions are first-match from most-advanced downward.
     pub fn evaluate(sim: &Simulation) -> Self {
         let pop = sim.state.population;
-        let techs = sim.research_cache().researched.len();
+        let techs = sim.researched_tech_count();
 
         if techs >= 12 {
             CivEra::Modern

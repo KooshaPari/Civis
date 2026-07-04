@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use civ_genetics::{sentience::CognitionTraitProfile, Dna};
 use civ_needs::{Health as LifeHealth, LifecycleParams};
 
-use crate::{culture, Needs};
+use crate::{culture, ClusterMember, Needs};
 
 /// Shared psyche vector width.
 pub const PSYCHE_DIM: usize = 4;
@@ -215,6 +215,35 @@ pub fn update_beliefs(
     *beliefs = culture::mutate_traits(rng, mixed, 0.01);
 }
 
+/// Normalized L2 distance between belief vectors in `[0, 1]`.
+#[must_use]
+pub fn belief_distance(a: [f32; PSYCHE_DIM], b: [f32; PSYCHE_DIM]) -> f32 {
+    let mut sum = 0.0;
+    for i in 0..PSYCHE_DIM {
+        let d = a[i] - b[i];
+        sum += d * d;
+    }
+    (sum / PSYCHE_DIM as f32).sqrt().min(1.0)
+}
+
+/// Weighted mean of member belief vectors (cluster centroid).
+#[must_use]
+pub fn weighted_belief_centroid(members: &[(f32, [f32; PSYCHE_DIM])]) -> [f32; PSYCHE_DIM] {
+    belief_culture_exposure(members)
+}
+
+/// Maximum pairwise belief distance across cluster centroids.
+#[must_use]
+pub fn max_cluster_belief_divergence(centroids: &[[f32; PSYCHE_DIM]]) -> f32 {
+    let mut max = 0.0f32;
+    for i in 0..centroids.len() {
+        for j in (i + 1)..centroids.len() {
+            max = max.max(belief_distance(centroids[i], centroids[j]));
+        }
+    }
+    max
+}
+
 /// Expose the culture vector sampled through an agent's social ties.
 #[must_use]
 pub fn belief_culture_exposure(exposures: &[(f32, [f32; PSYCHE_DIM])]) -> [f32; PSYCHE_DIM] {
@@ -235,6 +264,64 @@ pub fn belief_culture_exposure(exposures: &[(f32, [f32; PSYCHE_DIM])]) -> [f32; 
         }
     }
     out
+}
+
+/// Belief divergence factor `[0.0, 1.0]` driven by cluster isolation.
+///
+/// `contact_weights` maps each cluster-pair `(min_id, max_id)` to a contact
+/// intensity `[0.0, 1.0]` where `0.0` = fully isolated and `1.0` = full
+/// contact. Clusters with zero contact drift at maximum divergence rate;
+/// high contact suppresses drift toward the convergence floor.
+///
+/// Used to deepening `phase_institutions` and cluster divergence tests
+/// (FR-CIV-RELIGION acceptance contract — cluster divergence rises with isolation).
+///
+/// # Algorithm
+/// For each cluster pair `(i, j)`:
+/// - isolation = `1.0 - contact_weights.get((i,j)).unwrap_or(0.0)`
+/// - pair divergence = `belief_distance(centroids[i], centroids[j]) * isolation`
+/// Returns the maximum pair divergence (mirrors `max_cluster_belief_divergence`
+/// but weighted by isolation).
+#[must_use]
+pub fn isolation_weighted_belief_divergence(
+    centroids: &std::collections::BTreeMap<u64, [f32; PSYCHE_DIM]>,
+    contact_weights: &std::collections::BTreeMap<(u64, u64), f32>,
+) -> f32 {
+    let ids: Vec<u64> = centroids.keys().copied().collect();
+    let mut max = 0.0f32;
+    for i in 0..ids.len() {
+        for j in (i + 1)..ids.len() {
+            let (a, b) = (ids[i], ids[j]);
+            let key = (a.min(b), a.max(b));
+            let contact = contact_weights.get(&key).copied().unwrap_or(0.0);
+            let isolation = 1.0 - contact.clamp(0.0, 1.0);
+            let dist = belief_distance(centroids[&a], centroids[&b]);
+            max = max.max(dist * isolation);
+        }
+    }
+    max
+}
+
+/// Per-cluster belief centroids from live agent `Psyche` components (≥2 members).
+#[must_use]
+pub fn cluster_belief_centroids(world: &hecs::World) -> std::collections::BTreeMap<u64, [f32; PSYCHE_DIM]> {
+    use std::collections::BTreeMap;
+
+    let mut by_cluster: BTreeMap<u64, Vec<[f32; PSYCHE_DIM]>> = BTreeMap::new();
+    for (_, (member, psyche)) in world.query::<(&ClusterMember, &Psyche)>().iter() {
+        by_cluster
+            .entry(member.cluster.0)
+            .or_default()
+            .push(psyche.beliefs);
+    }
+    by_cluster
+        .into_iter()
+        .filter(|(_, members)| members.len() >= 2)
+        .map(|(cluster_id, beliefs)| {
+            let weighted: Vec<_> = beliefs.into_iter().map(|b| (1.0, b)).collect();
+            (cluster_id, weighted_belief_centroid(&weighted))
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -297,6 +384,82 @@ mod tests {
         update_beliefs(&mut beliefs, exposure, 1.0, &mut rng(7));
         assert!(beliefs.iter().all(|v| (0.0..=1.0).contains(v)));
         assert!(beliefs[0] > 0.0);
+    }
+
+    #[test]
+    fn belief_distance_zero_for_identical_vectors() {
+        let v = [0.2, 0.4, 0.6, 0.8];
+        assert!((belief_distance(v, v)).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn max_cluster_belief_divergence_tracks_separation() {
+        let close = [[0.5; PSYCHE_DIM], [0.55; PSYCHE_DIM]];
+        let far = [[0.0; PSYCHE_DIM], [1.0; PSYCHE_DIM]];
+        assert!(max_cluster_belief_divergence(&far) > max_cluster_belief_divergence(&close));
+    }
+
+    #[test]
+    fn cluster_belief_centroids_average_clusters_with_two_or_more_members() {
+        use hecs::World;
+
+        use crate::{ClusterId, ClusterMember};
+
+        fn sample_psyche(belief_axis: f32) -> Psyche {
+            Psyche {
+                drives: [0.5; PSYCHE_DIM],
+                temperament: Temperament::neutral(),
+                mood: Mood::neutral(),
+                beliefs: [belief_axis, 0.5, 0.5, 0.5],
+                maturity: 0.0,
+            }
+        }
+
+        let mut world = World::new();
+        world.spawn((
+            ClusterMember {
+                cluster: ClusterId(1),
+            },
+            sample_psyche(0.0),
+        ));
+        world.spawn((
+            ClusterMember {
+                cluster: ClusterId(1),
+            },
+            sample_psyche(1.0),
+        ));
+        world.spawn((
+            ClusterMember {
+                cluster: ClusterId(2),
+            },
+            sample_psyche(0.25),
+        ));
+
+        let centroids = cluster_belief_centroids(&world);
+        assert_eq!(centroids.len(), 1, "singleton clusters are excluded");
+        assert!((centroids[&1][0] - 0.5).abs() < 0.05);
+    }
+
+    #[test]
+    fn weighted_belief_centroid_averages_members() {
+        let centroid = weighted_belief_centroid(&[
+            (1.0, [0.0, 0.0, 0.0, 0.0]),
+            (1.0, [1.0, 1.0, 1.0, 1.0]),
+        ]);
+        assert!((centroid[0] - 0.5).abs() < 0.01);
+    }
+
+    #[test]
+    fn belief_culture_exposure_ignores_non_positive_weights() {
+        let mixed = belief_culture_exposure(&[
+            (-2.0, [1.0, 1.0, 1.0, 1.0]),
+            (0.0, [0.25, 0.25, 0.25, 0.25]),
+            (2.0, [0.8, 0.6, 0.4, 0.2]),
+        ]);
+        let positive_only = belief_culture_exposure(&[(2.0, [0.8, 0.6, 0.4, 0.2])]);
+
+        assert_eq!(mixed, positive_only);
+        assert!(mixed.iter().all(|v| (0.0..=1.0).contains(v)));
     }
 
     #[test]

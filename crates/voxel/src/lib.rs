@@ -27,6 +27,7 @@ pub use phenotype_voxel::{
     VoxelWorld, WorldCoord, WriteSeq, FIXED_SCALE,
 };
 
+pub mod atlas;
 pub mod boundary;
 pub use boundary::{BoundaryConfig, BoundaryFace, BoundaryMode, Bounds3};
 pub mod fluid_ca;
@@ -40,6 +41,10 @@ pub use material::{
 };
 pub mod material_ca;
 pub mod material_pbr;
+/// Phase-3 PBR placement substrate — see [`pbr`] for triplanar atlas packing
+/// and the WGSL integration glue layered on top of the FR-001..009 policy
+/// module in `material_pbr`. Additive: does not change existing exports.
+pub mod pbr;
 pub mod reactions;
 pub mod scale_budget;
 pub mod scale_stream;

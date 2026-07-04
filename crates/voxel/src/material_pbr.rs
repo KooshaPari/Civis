@@ -11,6 +11,28 @@
 //! these types. The substrate itself is intentionally lightweight so it can
 //! be unit-tested without pulling in `bevy`, `wgpu`, or any asset loader.
 //!
+//! ## Phase-3 integration (FR-CIV-PBR-010..011)
+//!
+//! Phase 3 closes out PBR coverage by adding:
+//!
+//! - A WGSL triplanar shader at
+//!   [`../../../../../assets/shaders/pbr_triplanar.wgsl`](../../../../../assets/shaders/pbr_triplanar.wgsl)
+//!   that the Bevy adapter loads with `include_str!`. The shader samples
+//!   albedo / normal / metallic-roughness from three orthogonal world-axis
+//!   projections and blends them by the squared-and-normalized world normal.
+//!   An optional detail layer adds a second triplanar set at lower weight for
+//!   close-up terrain texturing without UV stretching.
+//! - A greedy 2D shelf bin packer at
+//!   [`crate::atlas::gpu_atlas::GreedyAtlas`] that builds the resolution-free
+//!   material atlas on first load. The packer is engine-agnostic and uses
+//!   only `std::collections` (no extra deps).
+//!
+//! Both phases are consumed by [`MaterialCatalog`] — the substrate-side
+//! aggregator that exposes [`MaterialCatalog::material_count`] to the Bevy
+//! adapter so the renderer can size its bind-group scratch before the first
+//! draw. The catalog is **additive**: the FR-001..009 types and their
+//! invariants are unchanged.
+//!
 //! FR coverage:
 //!
 //! - [`LicenseAttestation`]            → `FR-CIV-PBR-001` (CC0 sourcing).
@@ -971,6 +993,92 @@ impl ColorSpacePolicy {
 }
 
 // ---------------------------------------------------------------------------
+// Phase-3 aggregation — MaterialCatalog + material_count accessor
+// ---------------------------------------------------------------------------
+
+/// Substrate-side aggregator that joins the triplanar splat plan and the
+/// greedy atlas plan for the Phase-3 PBR pipeline.
+///
+/// `MaterialCatalog` is the single point of contact the Bevy adapter reads
+/// at startup to decide how big its scratch bind groups need to be. It is
+/// intentionally a thin wrapper: the catalog owns no GPU resources, no I/O,
+/// and no RNG. The Bevy adapter feeds the catalog's [`Self::material_count`]
+/// into the renderer's bind-group layout and binds the atlas it built via
+/// [`crate::atlas::gpu_atlas::GreedyAtlas::pack`].
+///
+/// ## Determinism
+///
+/// Material count is computed as the union of `MaterialId`s in
+/// [`TriplanarSplatPlan::layers`] and the matids referenced by the
+/// [`GreedyAtlasPlan`] (`array_depth` slice ids). Iteration over both maps is
+/// sorted by `MaterialId` for replay-stable test output.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MaterialCatalog {
+    /// Triplanar splat plan (Phase-1 substrate).
+    pub triplanar: TriplanarSplatPlan,
+    /// Greedy atlas plan (Phase-1 substrate).
+    pub atlas: GreedyAtlasPlan,
+}
+
+impl Default for MaterialCatalog {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl MaterialCatalog {
+    /// Build an empty catalog bound to the current schema versions.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            triplanar: TriplanarSplatPlan::new(),
+            atlas: GreedyAtlasPlan::new(),
+        }
+    }
+
+    /// Total number of distinct `MaterialId`s the renderer will see across
+    /// both the triplanar splat plan and the greedy atlas plan.
+    ///
+    /// The Bevy adapter uses this to size its scratch buffer for the GPU
+    /// bind-group before the first frame. The count is `O(n)` in the number
+    /// of triplanar layers and atlas slices — these are tiny at startup (a
+    /// few hundred materials) so the cost is negligible.
+    ///
+    /// Overlap between the two plans is intentional: a matid that appears in
+    /// both is counted once (the union of material ids). This matches the
+    /// renderer's view, which binds one material per `MaterialId`.
+    #[must_use]
+    pub fn material_count(&self) -> usize {
+        let mut ids: std::collections::BTreeSet<MaterialId> = std::collections::BTreeSet::new();
+        for matid in self.triplanar.layers.keys() {
+            ids.insert(*matid);
+        }
+        // `GreedyAtlasPlan` exposes the `slices` map keyed by `MaterialId`;
+        // union those keys with the triplanar layers to get the full set of
+        // distinct materials the renderer will bind.
+        for matid in self.atlas.slices.keys() {
+            ids.insert(*matid);
+        }
+        ids.len()
+    }
+
+    /// Total number of triplanar layers in the catalog. Convenience for the
+    /// Bevy adapter when sizing the splat-stack uniform buffer.
+    #[must_use]
+    pub fn triplanar_layer_count(&self) -> usize {
+        self.triplanar.layers.len()
+    }
+
+    /// Total number of atlas slices (one per `MaterialId` registered in the
+    /// greedy atlas plan). Convenience for the Bevy adapter when sizing the
+    /// atlas-array texture.
+    #[must_use]
+    pub fn atlas_slice_count(&self) -> usize {
+        self.atlas.array_depth as usize
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -1447,5 +1555,49 @@ mod tests {
     #[test]
     fn fr_pbr_006_color_space_policy_default_matches_strict() {
         assert_eq!(ColorSpacePolicy::default(), ColorSpacePolicy::strict());
+    }
+
+    // -- FR-CIV-PBR-010..011 (Phase-3) -------------------------------
+
+    /// FR-CIV-PBR-010..011 — `MaterialCatalog::material_count` returns the
+    /// union of distinct `MaterialId`s across the triplanar splat plan and
+    /// the greedy atlas plan. Overlapping matids are counted once.
+    #[test]
+    fn fr_pbr_phase3_material_catalog_counts_union_of_matids() {
+        let mut catalog = MaterialCatalog::new();
+        // Three distinct triplanar layers, two overlapping with the atlas.
+        catalog.triplanar.insert(TriplanarLayer::new(
+            MaterialId(1),
+            TextureChannelMap::minimal("a/albedo_1.png", "a/normal_1.png"),
+            1.0,
+        ));
+        catalog.triplanar.insert(TriplanarLayer::new(
+            MaterialId(2),
+            TextureChannelMap::minimal("a/albedo_2.png", "a/normal_2.png"),
+            1.0,
+        ));
+        catalog.triplanar.insert(TriplanarLayer::new(
+            MaterialId(3),
+            TextureChannelMap::minimal("a/albedo_3.png", "a/normal_3.png"),
+            1.0,
+        ));
+        // Three atlas slices; matids 1 and 2 overlap with triplanar.
+        catalog.atlas.allocate(MaterialId(1));
+        catalog.atlas.allocate(MaterialId(2));
+        catalog.atlas.allocate(MaterialId(4));
+        // Expected union: {1, 2, 3, 4} = 4 distinct materials.
+        assert_eq!(catalog.material_count(), 4);
+        assert_eq!(catalog.triplanar_layer_count(), 3);
+        assert_eq!(catalog.atlas_slice_count(), 3);
+    }
+
+    /// FR-CIV-PBR-010..011 — an empty catalog reports `material_count() == 0`
+    /// so the Bevy adapter can safely size a zero-bind-group on cold start.
+    #[test]
+    fn fr_pbr_phase3_material_catalog_empty_is_zero() {
+        let catalog = MaterialCatalog::new();
+        assert_eq!(catalog.material_count(), 0);
+        assert_eq!(catalog.triplanar_layer_count(), 0);
+        assert_eq!(catalog.atlas_slice_count(), 0);
     }
 }

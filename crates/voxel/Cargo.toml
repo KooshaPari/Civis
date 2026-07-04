@@ -30,3 +30,7 @@ ron = "0.8"
 [[bench]]
 name = "ca_dirty_chunk"
 harness = false
+
+[[bench]]
+name = "pbr_greedy_atlas"
+harness = false

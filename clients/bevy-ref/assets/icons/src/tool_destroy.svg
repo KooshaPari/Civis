@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <style>
+      .glyph { fill: #ff6b6b; }
+      .bg { fill: #0f1419; opacity: 0; }
+    </style>
+  </defs>
+  <!-- Background (transparent) -->
+  <rect class="bg" width="64" height="64"/>
+  <!-- Burst/X for destroy -->
+  <g class="glyph">
+    <!-- Central circle -->
+    <circle cx="32" cy="32" r="4"/>
+    <!-- Diagonal X -->
+    <rect x="28" y="14" width="8" height="4" rx="2" transform="rotate(45 32 16)"/>
+    <rect x="28" y="14" width="8" height="4" rx="2" transform="rotate(-45 32 16)"/>
+    <!-- Horizontal and vertical lines -->
+    <rect x="12" y="30" width="40" height="4" rx="2"/>
+    <rect x="30" y="12" width="4" height="40" rx="2"/>
+  </g>
+</svg>

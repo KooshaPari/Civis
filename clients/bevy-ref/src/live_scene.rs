@@ -27,6 +27,7 @@ use crate::live_stream::{
 use crate::frame_budget::{scaled_cull_distance, GpuQualityMode};
 use crate::minimap::{MinimapCamera, MinimapDot, MinimapRoot, MINIMAP_SIZE};
 use crate::{chunk_fade_complete, AttachMode, DebugRender, LiveHudSnapshot};
+use crate::frame_budget::FrameBudgetRecovery;
 
 const LIVE_RENDER_MAX_DISTANCE: f32 = 200.0;
 const MINIMAP_CAMERA_HEIGHT: f32 = 180.0;
@@ -145,6 +146,7 @@ fn apply_live_scene_frames(
                     apply_event_feed_frame(feed, event_frame);
                 }
             }
+            Frame3d::Climate(_) => {}
             #[cfg(not(feature = "egui"))]
             Frame3d::EventFeed(_) => {}
             Frame3d::Climate(_) => {}

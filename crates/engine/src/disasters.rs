@@ -34,13 +34,6 @@ pub enum DisasterKind {
     Plague,
 }
 
-/// One disaster resolved this tick — legends ingest + spectator feed.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct DisasterPulse {
-    pub kind: DisasterKind,
-    pub pos: WorldCoord,
-}
-
 /// Trigger a disaster immediately and apply its effects to terrain and agents.
 pub fn trigger_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) {
     let impact = apply_disaster(sim, kind, pos);
@@ -59,28 +52,6 @@ pub fn trigger_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoor
     // raising belief (emergent disasters -> faith coupling, FR-CIV-EMERGENCE).
     const DISASTER_FAITH_GAIN: i64 = 50;
     sim.add_belief(DISASTER_FAITH_GAIN);
-    // Audio substrate (FR-AUDIO-wire): forward the disaster to the per-tick
-    // audio buffer so `phase_audio` emits a `SfxTrigger::Disaster` on the
-    // wire. Severity is derived from the disaster's terrain radius so a
-    // bigger storm sounds louder than a small fire; clamped to [0, 1] in
-    // `record_disaster_audio`.
-    let label = disaster_kind_label(kind);
-    let severity = (radius_for(kind) as f32 / (6.0 * civ_voxel::FIXED_SCALE as f32)).clamp(0.1, 1.0);
-    sim.record_disaster_audio(label, severity);
-}
-
-/// Wire-stable label for a [`DisasterKind`] used by the audio substrate
-/// (FR-AUDIO-wire). Mirrors the lowercase forms consumed by
-/// `civ_audio::SfxKind::for_disaster_label`.
-pub fn disaster_kind_label(kind: DisasterKind) -> &'static str {
-    match kind {
-        DisasterKind::Meteor => "meteor",
-        DisasterKind::Flood => "flood",
-        DisasterKind::Quake => "quake",
-        DisasterKind::Wildfire => "wildfire",
-        DisasterKind::Storm => "storm",
-        DisasterKind::Plague => "plague",
-    }
 }
 
 impl Simulation {
@@ -156,8 +127,7 @@ impl Simulation {
         // Collect onset sites first so the immutable weather borrow is released
         // before we mutate the simulation via trigger_disaster. Disasters emerge
         // from physical state: heat+drought -> wildfire; tidal stress at a
-        // tectonic latitude -> quake; heavy rain on low ground -> flood;
-        // extreme storm intensity -> storm; dry heat below wildfire ignition -> drought.
+        // tectonic latitude -> quake.
         let tidal_stress = self.climate_state().tide_offset.abs();
         // Research mitigates nature: fire-suppression tech raises the ignition
         // threshold (research -> fewer disasters). Computed before the weather
@@ -165,9 +135,6 @@ impl Simulation {
         let wildfire_temp_threshold = wildfire_ignition_temp_fp(WILDFIRE_TEMP_FP, self.research_tier());
         let mut wildfires = Vec::new();
         let mut quakes = Vec::new();
-        let mut floods = Vec::new();
-        let mut storms = Vec::new();
-        let mut droughts = Vec::new();
         for cell in self.weather_cells() {
             let pos = WorldCoord {
                 x: i64::from(cell.region_id),
@@ -250,33 +217,7 @@ fn wildfire_ignition_temp_fp(base_fp: i32, research_tier: u64) -> i32 {
     (base_fp as i64).saturating_add(bonus) as i32
 }
 
-/// True when a region sits on flood-prone terrain: coastal geology or a
-/// voxel column at/below sea level / already holding water.
-fn is_low_elevation(
-    sim: &Simulation,
-    geology: &GeologyMap,
-    region_id: u32,
-    pos: WorldCoord,
-) -> bool {
-    let biome_low = geology
-        .regions
-        .iter()
-        .find(|r| r.region_id == region_id)
-        .is_some_and(|r| {
-            matches!(
-                r.biome,
-                BiomeKind::Ocean
-                    | BiomeKind::Beach
-                    | BiomeKind::Wetland
-                    | BiomeKind::Mangrove
-            )
-        });
-    let voxel_low = pos.y <= civ_voxel::FIXED_SCALE || sim.voxel().read(pos) == WATER;
-    biome_low || voxel_low
-}
-
 fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) {
-    sim.last_tick_disaster_pulses.push(DisasterPulse { kind, pos });
     let radius = radius_for(kind);
     let affected = positions_in_radius(pos, radius);
     let mut terrain_cells = 0u32;
@@ -355,18 +296,6 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) {
                 pos,
                 radius,
                 DisasterEffect::new(0.14, 0.20, 0.22, 0.12, false),
-            );
-        }
-        DisasterKind::Drought => {
-            for (i, cell) in affected.iter().enumerate() {
-                let material = if i % 5 == 0 { GRAVEL } else { AIR };
-                sim.push_voxel_write(*cell, material);
-            }
-            hit_agents(
-                sim,
-                pos,
-                radius,
-                DisasterEffect::new(0.08, 0.15, 0.50, 0.30, true),
             );
         }
         DisasterKind::Plague => {
@@ -839,9 +768,12 @@ mod tests {
             tide_offset: 0.0,
         });
 
-        sim.tick();
+        sim.state.tick = 700;
+        sim.phase_disasters();
 
-        let snapshot = sim.snapshot();
+        let origin = WorldCoord { x: 8, y: 0, z: 0 };
+        let has_drought_effects =
+            sim.voxel().read(origin) == GRAVEL || sim.voxel().read(origin) == AIR;
         assert!(
             !snapshot.disaster_events.is_empty(),
             "wildfire should emit per-tick disaster events from climate/weather"

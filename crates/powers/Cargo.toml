@@ -3,8 +3,7 @@ name = "civ-powers"
 description = "Data-driven God-Tools power registry for Civis"
 version.workspace = true
 edition.workspace = true
-license.workspace = true
-publish = false
+authors.workspace = true
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }

@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Faction crest "red" — procedural heraldry (DNA->form). Shared Keycap frame, distinct hue/shield/sigil. -->
+  <defs>
+    <radialGradient id="amb" cx="50%" cy="46%" r="55%">
+      <stop offset="0%" stop-color="#c95b5b" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#c95b5b" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="field" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0e1416"/>
+      <stop offset="100%" stop-color="#080b0c"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <circle cx="64" cy="64" r="56" fill="url(#amb)"/>
+  <!-- shared Keycap teal outer ring (faction DNA) -->
+  <circle cx="64" cy="64" r="58" fill="none" stroke="#7ebab5" stroke-width="1.4" opacity="0.35" stroke-dasharray="3 5"/>
+
+  <!-- shield field -->
+  <path d="M64,18 L102,30 V64 Q102,98 64,112 Q26,98 26,64 V30 Z" fill="url(#field)" stroke="#c95b5b" stroke-width="3" filter="url(#glow)"/>
+  <path d="M64,18 L102,30 V64 Q102,98 64,112 Q26,98 26,64 V30 Z" fill="none" stroke="#ec9c9c" stroke-width="1" opacity="0.5"/>
+
+  <!-- central faction glyph -->
+  <g filter="url(#glow)"><path stroke="#ec9c9c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" d="M64,40 Q78,56 70,72 Q80,66 76,82 Q64,94 52,82 Q48,66 58,72 Q50,56 64,40 Z"/></g>
+
+  <!-- emergent node motif at crest base (shared DNA) -->
+  <g>
+    <line x1="50" y1="98" x2="64" y2="104" stroke="#7ebab5" stroke-width="1" opacity="0.5"/>
+    <line x1="78" y1="98" x2="64" y2="104" stroke="#7ebab5" stroke-width="1" opacity="0.5"/>
+    <circle cx="50" cy="98" r="2.2" fill="#7ebab5" opacity="0.8"/>
+    <circle cx="78" cy="98" r="2.2" fill="#7ebab5" opacity="0.8"/>
+    <circle cx="64" cy="104" r="2.6" fill="#ec9c9c"/>
+  </g>
+</svg>

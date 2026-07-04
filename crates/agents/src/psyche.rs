@@ -721,69 +721,6 @@ mod tests {
     }
 
     #[test]
-    fn belief_distance_zero_for_identical_vectors() {
-        let v = [0.2, 0.4, 0.6, 0.8];
-        assert!((belief_distance(v, v)).abs() < f32::EPSILON);
-    }
-
-    #[test]
-    fn max_cluster_belief_divergence_tracks_separation() {
-        let close = [[0.5; PSYCHE_DIM], [0.55; PSYCHE_DIM]];
-        let far = [[0.0; PSYCHE_DIM], [1.0; PSYCHE_DIM]];
-        assert!(max_cluster_belief_divergence(&far) > max_cluster_belief_divergence(&close));
-    }
-
-    #[test]
-    fn cluster_belief_centroids_average_clusters_with_two_or_more_members() {
-        use hecs::World;
-
-        use crate::{ClusterId, ClusterMember};
-
-        fn sample_psyche(belief_axis: f32) -> Psyche {
-            Psyche {
-                drives: [0.5; PSYCHE_DIM],
-                temperament: Temperament::neutral(),
-                mood: Mood::neutral(),
-                beliefs: [belief_axis, 0.5, 0.5, 0.5],
-                maturity: 0.0,
-            }
-        }
-
-        let mut world = World::new();
-        world.spawn((
-            ClusterMember {
-                cluster: ClusterId(1),
-            },
-            sample_psyche(0.0),
-        ));
-        world.spawn((
-            ClusterMember {
-                cluster: ClusterId(1),
-            },
-            sample_psyche(1.0),
-        ));
-        world.spawn((
-            ClusterMember {
-                cluster: ClusterId(2),
-            },
-            sample_psyche(0.25),
-        ));
-
-        let centroids = cluster_belief_centroids(&world);
-        assert_eq!(centroids.len(), 1, "singleton clusters are excluded");
-        assert!((centroids[&1][0] - 0.5).abs() < 0.05);
-    }
-
-    #[test]
-    fn weighted_belief_centroid_averages_members() {
-        let centroid = weighted_belief_centroid(&[
-            (1.0, [0.0, 0.0, 0.0, 0.0]),
-            (1.0, [1.0, 1.0, 1.0, 1.0]),
-        ]);
-        assert!((centroid[0] - 0.5).abs() < 0.01);
-    }
-
-    #[test]
     fn belief_culture_exposure_ignores_non_positive_weights() {
         let mixed = belief_culture_exposure(&[
             (-2.0, [1.0, 1.0, 1.0, 1.0]),

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <style>
+      .glyph { fill: #6bcf7f; }
+      .bg { fill: #0f1419; opacity: 0; }
+    </style>
+  </defs>
+  <!-- Background (transparent) -->
+  <rect class="bg" width="64" height="64"/>
+  <!-- Mountains/terrain -->
+  <g class="glyph">
+    <!-- Left mountain -->
+    <polygon points="12,42 20,24 28,42"/>
+    <!-- Center mountain -->
+    <polygon points="24,42 36,14 48,42"/>
+    <!-- Right mountain -->
+    <polygon points="44,42 52,30 60,42"/>
+    <!-- Ground line -->
+    <rect x="8" y="42" width="48" height="3" rx="1.5"/>
+  </g>
+</svg>

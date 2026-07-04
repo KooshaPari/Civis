@@ -6,6 +6,8 @@
 use bevy::diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin};
 use bevy::prelude::*;
 
+use std::collections::VecDeque;
+
 /// Target frame budget in milliseconds (30 FPS floor).
 pub const FRAME_BUDGET_MS: f32 = 33.3;
 /// Rolling window length for budget averaging.
@@ -71,6 +73,21 @@ struct FrameBudgetState {
     index: usize,
     filled: usize,
     last_warn_at: Option<f64>,
+    last_recovery_warn_at: Option<f64>,
+    recent_drops: VecDeque<f64>,
+}
+
+impl Default for FrameBudgetState {
+    fn default() -> Self {
+        Self {
+            window: [0.0; FRAME_BUDGET_WINDOW],
+            index: 0,
+            filled: 0,
+            last_warn_at: None,
+            last_recovery_warn_at: None,
+            recent_drops: VecDeque::new(),
+        }
+    }
 }
 
 impl Default for FrameBudgetState {
@@ -108,6 +125,7 @@ fn enforce_frame_budget(
     time: Res<Time>,
     mut metrics: ResMut<FrameBudgetMetrics>,
     mut state: ResMut<FrameBudgetState>,
+    mut recovery: ResMut<FrameBudgetRecovery>,
 ) {
     let Some(frame_ms) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FRAME_TIME).and_then(|diag| diag.value()).filter(|value| value.is_finite()).map(|value| value as f32) else { return; };
     metrics.frame_count = metrics.frame_count.saturating_add(1);

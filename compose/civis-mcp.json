@@ -1,0 +1,12 @@
+{
+  "name": "civis-mcp",
+  "description": "Civis MCP server — stdio-based Model Context Protocol server for game state inspection",
+  "command": "cargo run -p civis-mcp",
+  "cwd": "/Users/kooshapari/CodeProjects/Phenotype/repos/Civis",
+  "env": {
+    "RUST_LOG": "info"
+  },
+  "transport": "stdio",
+  "tags": ["mcp", "game-dev", "rust"],
+  "depends_on": ["civ-server"]
+}

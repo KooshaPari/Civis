@@ -22,14 +22,6 @@
 use bevy::prelude::*;
 
 use crate::terrain::{terrain_height, HEIGHT_SCALE, WATER_LEVEL, WORLD_SIZE};
-use civ_agents::Civilian;
-
-fn civilian_faction_id(civilian: &Civilian) -> u32 {
-    match civilian.alignment {
-        civ_agents::Alignment::Faction(faction) => faction,
-        _ => 0,
-    }
-}
 
 /// A single colour-ramp stop: a value in `0.0..=1.0` mapped to an sRGB triple.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -142,126 +134,42 @@ pub fn ramp_color(legend: &[LegendStop], value: f32) -> [f32; 3] {
 // ---------------------------------------------------------------------------
 
 const RAMP_ELEVATION: &[LegendStop] = &[
-    LegendStop {
-        at: 0.0,
-        label: "Deep",
-        rgb: [0.10, 0.20, 0.55],
-    },
-    LegendStop {
-        at: 0.18,
-        label: "Coast",
-        rgb: [0.86, 0.78, 0.52],
-    },
-    LegendStop {
-        at: 0.48,
-        label: "Lowland",
-        rgb: [0.28, 0.58, 0.24],
-    },
-    LegendStop {
-        at: 0.7,
-        label: "Highland",
-        rgb: [0.50, 0.45, 0.40],
-    },
-    LegendStop {
-        at: 1.0,
-        label: "Peak",
-        rgb: [0.97, 0.97, 0.97],
-    },
+    LegendStop { at: 0.0, label: "Deep", rgb: [0.10, 0.20, 0.55] },
+    LegendStop { at: 0.18, label: "Coast", rgb: [0.86, 0.78, 0.52] },
+    LegendStop { at: 0.48, label: "Lowland", rgb: [0.28, 0.58, 0.24] },
+    LegendStop { at: 0.7, label: "Highland", rgb: [0.50, 0.45, 0.40] },
+    LegendStop { at: 1.0, label: "Peak", rgb: [0.97, 0.97, 0.97] },
 ];
 
 const RAMP_WATER: &[LegendStop] = &[
-    LegendStop {
-        at: 0.0,
-        label: "Dry",
-        rgb: [0.80, 0.72, 0.50],
-    },
-    LegendStop {
-        at: 1.0,
-        label: "Submerged",
-        rgb: [0.10, 0.35, 0.75],
-    },
+    LegendStop { at: 0.0, label: "Dry", rgb: [0.80, 0.72, 0.50] },
+    LegendStop { at: 1.0, label: "Submerged", rgb: [0.10, 0.35, 0.75] },
 ];
 
 const RAMP_TEMPERATURE: &[LegendStop] = &[
-    LegendStop {
-        at: 0.0,
-        label: "Cold",
-        rgb: [0.20, 0.40, 0.95],
-    },
-    LegendStop {
-        at: 0.5,
-        label: "Temperate",
-        rgb: [0.30, 0.85, 0.40],
-    },
-    LegendStop {
-        at: 1.0,
-        label: "Hot",
-        rgb: [0.95, 0.25, 0.15],
-    },
+    LegendStop { at: 0.0, label: "Cold", rgb: [0.20, 0.40, 0.95] },
+    LegendStop { at: 0.5, label: "Temperate", rgb: [0.30, 0.85, 0.40] },
+    LegendStop { at: 1.0, label: "Hot", rgb: [0.95, 0.25, 0.15] },
 ];
 
 const RAMP_MATERIAL: &[LegendStop] = &[
-    LegendStop {
-        at: 0.0,
-        label: "Water",
-        rgb: [0.20, 0.40, 0.86],
-    },
-    LegendStop {
-        at: 0.25,
-        label: "Sand",
-        rgb: [0.86, 0.78, 0.52],
-    },
-    LegendStop {
-        at: 0.5,
-        label: "Grass",
-        rgb: [0.28, 0.58, 0.24],
-    },
-    LegendStop {
-        at: 0.75,
-        label: "Rock",
-        rgb: [0.50, 0.50, 0.52],
-    },
-    LegendStop {
-        at: 1.0,
-        label: "Snow",
-        rgb: [0.97, 0.97, 0.97],
-    },
+    LegendStop { at: 0.0, label: "Water", rgb: [0.20, 0.40, 0.86] },
+    LegendStop { at: 0.25, label: "Sand", rgb: [0.86, 0.78, 0.52] },
+    LegendStop { at: 0.5, label: "Grass", rgb: [0.28, 0.58, 0.24] },
+    LegendStop { at: 0.75, label: "Rock", rgb: [0.50, 0.50, 0.52] },
+    LegendStop { at: 1.0, label: "Snow", rgb: [0.97, 0.97, 0.97] },
 ];
 
 const RAMP_DENSITY: &[LegendStop] = &[
-    LegendStop {
-        at: 0.0,
-        label: "Empty",
-        rgb: [0.15, 0.15, 0.20],
-    },
-    LegendStop {
-        at: 0.5,
-        label: "Settled",
-        rgb: [0.95, 0.80, 0.20],
-    },
-    LegendStop {
-        at: 1.0,
-        label: "Crowded",
-        rgb: [0.90, 0.10, 0.10],
-    },
+    LegendStop { at: 0.0, label: "Empty", rgb: [0.15, 0.15, 0.20] },
+    LegendStop { at: 0.5, label: "Settled", rgb: [0.95, 0.80, 0.20] },
+    LegendStop { at: 1.0, label: "Crowded", rgb: [0.90, 0.10, 0.10] },
 ];
 
 const RAMP_NEEDS: &[LegendStop] = &[
-    LegendStop {
-        at: 0.0,
-        label: "Content",
-        rgb: [0.20, 0.80, 0.30],
-    },
-    LegendStop {
-        at: 0.5,
-        label: "Strained",
-        rgb: [0.95, 0.85, 0.20],
-    },
-    LegendStop {
-        at: 1.0,
-        label: "Critical",
-        rgb: [0.90, 0.10, 0.10],
-    },
+    LegendStop { at: 0.0, label: "Content", rgb: [0.20, 0.80, 0.30] },
+    LegendStop { at: 0.5, label: "Strained", rgb: [0.95, 0.85, 0.20] },
+    LegendStop { at: 1.0, label: "Critical", rgb: [0.90, 0.10, 0.10] },
 ];
 
 // ---------------------------------------------------------------------------
@@ -473,18 +381,6 @@ impl InfoViewRegistry {
         self.active.and_then(|i| self.overlays.get(i))
     }
 
-    /// Index of the active overlay in the registry, if one is selected.
-    #[must_use]
-    pub fn active_index(&self) -> Option<usize> {
-        self.active.filter(|&i| i < self.overlays.len())
-    }
-
-    /// The active overlay id, if one is selected.
-    #[must_use]
-    pub fn active_id(&self) -> Option<&'static str> {
-        self.active_overlay().map(|overlay| overlay.id)
-    }
-
     /// Whether any overlay is currently active.
     #[must_use]
     pub fn is_active(&self) -> bool {
@@ -513,33 +409,6 @@ impl InfoViewRegistry {
         }
     }
 
-    /// Toggle the overlay with the given id.
-    ///
-    /// If the requested overlay is already active, the suite turns off. If a
-    /// different overlay is active, this switches to the requested overlay.
-    /// Returns `true` when the id exists in the registry.
-    pub fn toggle_id(&mut self, id: &str) -> bool {
-        let Some(index) = self.overlays.iter().position(|overlay| overlay.id == id) else {
-            return false;
-        };
-
-        self.active = match self.active {
-            Some(active) if active == index => None,
-            _ => Some(index),
-        };
-        true
-    }
-
-    /// Activate the overlay at the given index, returning `true` on success.
-    pub fn activate_index(&mut self, index: usize) -> bool {
-        if index < self.overlays.len() {
-            self.active = Some(index);
-            true
-        } else {
-            false
-        }
-    }
-
     /// Turn the suite off (terrain shows through).
     pub fn deactivate(&mut self) {
         self.active = None;
@@ -553,8 +422,8 @@ pub use plugin::*;
 mod plugin {
     use super::*;
     use crate::sim_bridge::SimState;
-    use crate::ui_theme::{TEXT, TEXT_LOW};
-    use bevy_egui::egui;
+    use crate::ui_theme::{apply_theme, frame_e1, panel_finish, TEXT, TEXT_LOW, RADIUS};
+    use bevy_egui::{egui, EguiContexts};
     use civ_agents::{Civilian, Needs};
 
     /// Plugin: registers the overlay registry, the `Tab` cycle hotkey, the
@@ -563,11 +432,13 @@ mod plugin {
 
     impl Plugin for InfoViewsPlugin {
         fn build(&self, app: &mut App) {
-            // The overlay PICKER UI now lives in the left HUD cluster's
-            // "Info Views" tab (see `info_view_tab_body`); this plugin keeps the
-            // registry, the `Tab` cycle hotkey, and the terrain recolor pass.
             app.init_resource::<InfoViewRegistry>()
-                .add_systems(Update, (cycle_overlay_hotkey, render_active_overlay));
+                .add_systems(Update, (cycle_overlay_hotkey, render_active_overlay))
+                // egui draw MUST run on EguiPrimaryContextPass (no fonts on Update).
+                .add_systems(
+                    bevy_egui::EguiPrimaryContextPass,
+                    draw_info_view_panel.run_if(crate::menus::in_game),
+                );
         }
     }
 
@@ -580,39 +451,46 @@ mod plugin {
         }
     }
 
-    /// Draw the Info Views overlay picker + legend as a tab body (no window
-    /// chrome). Used by the left HUD cluster's "Info Views" tab so the overlay
-    /// suite lives inside the unified left panel instead of a separate window.
-    pub fn info_view_tab_body(ui: &mut egui::Ui, registry: &mut InfoViewRegistry) {
-        ui.label(egui::RichText::new("Overlay (Tab to cycle):").color(TEXT));
-        ui.horizontal_wrapped(|ui| {
-            if ui.selectable_label(!registry.is_active(), "Off").clicked() {
-                registry.deactivate();
-            }
-            let count = registry.overlays.len();
-            for i in 0..count {
-                let (name, desc, selected) = {
-                    let o = &registry.overlays[i];
-                    (o.name, o.description, registry.active == Some(i))
-                };
-                if ui
-                    .selectable_label(selected, name)
-                    .on_hover_text(desc)
-                    .clicked()
-                {
-                    registry.active = Some(i);
+    fn draw_info_view_panel(mut contexts: EguiContexts, mut registry: ResMut<InfoViewRegistry>) {
+        let Ok(ctx) = contexts.ctx_mut() else {
+            return;
+        };
+        apply_theme(ctx);
+
+        egui::Window::new("Info Views")
+            .anchor(egui::Align2::LEFT_TOP, [12.0, 64.0])
+            .resizable(false)
+            .frame(frame_e1(egui::Margin::same(10)))
+            .show(ctx, |ui| {
+                ui.label(egui::RichText::new("Overlay (Tab to cycle):").color(TEXT));
+                ui.horizontal_wrapped(|ui| {
+                    let off = ui.selectable_label(!registry.is_active(), "Off");
+                    if off.clicked() {
+                        registry.deactivate();
+                    }
+                    let count = registry.overlays.len();
+                    for i in 0..count {
+                        let (name, desc, selected) = {
+                            let o = &registry.overlays[i];
+                            (o.name, o.description, registry.active == Some(i))
+                        };
+                        if ui.selectable_label(selected, name).on_hover_text(desc).clicked() {
+                            registry.active = Some(i);
+                        }
+                    }
+                });
+
+                if let Some(overlay) = registry.active_overlay() {
+                    ui.separator();
+                    ui.label(
+                        egui::RichText::new(format!("Legend — {}", overlay.name))
+                            .heading()
+                            .color(TEXT),
+                    );
+                    draw_legend(ui, overlay);
                 }
-            }
-        });
-        if let Some(overlay) = registry.active_overlay() {
-            ui.separator();
-            ui.label(
-                egui::RichText::new(format!("Legend — {}", overlay.name))
-                    .heading()
-                    .color(TEXT),
-            );
-            draw_legend(ui, overlay);
-        }
+                panel_finish(ui.painter(), ui.min_rect(), RADIUS, false, false);
+            });
     }
 
     fn draw_legend(ui: &mut egui::Ui, overlay: &InfoOverlay) {
@@ -681,8 +559,16 @@ mod plugin {
                 let pos = Vec3::new(wx, sample.height + 0.6, wz);
                 let tint = Color::srgba(color[0], color[1], color[2], color[3]);
                 // Draw a small "+" gizmo per cell as the recolor marker.
-                gizmos.line(pos - Vec3::X * cell, pos + Vec3::X * cell, tint);
-                gizmos.line(pos - Vec3::Z * cell, pos + Vec3::Z * cell, tint);
+                gizmos.line(
+                    pos - Vec3::X * cell,
+                    pos + Vec3::X * cell,
+                    tint,
+                );
+                gizmos.line(
+                    pos - Vec3::Z * cell,
+                    pos + Vec3::Z * cell,
+                    tint,
+                );
             }
         }
     }
@@ -733,9 +619,7 @@ mod plugin {
             if let Some(n) = needs {
                 needs_sum[i] += needs_pressure(n);
             }
-            *faction_votes[i]
-                .entry(civilian_faction_id(civ))
-                .or_insert(0) += 1;
+            *faction_votes[i].entry(civ.faction).or_insert(0) += 1;
         }
 
         let max_count = counts.iter().copied().max().unwrap_or(0).max(1) as f32;
@@ -816,29 +700,6 @@ mod tests {
         assert!(reg.activate_id("temperature"));
         assert_eq!(reg.active_overlay().map(|o| o.id), Some("temperature"));
         assert!(!reg.activate_id("does-not-exist"));
-    }
-
-    /// FR-CIV-INFOVIEW-900 — toggling by id is data-driven and idempotent.
-    #[test]
-    fn toggle_by_id_switches_and_turns_off() {
-        let mut reg = InfoViewRegistry::default();
-        assert!(reg.toggle_id("water"));
-        assert_eq!(reg.active_id(), Some("water"));
-        assert!(reg.toggle_id("elevation"));
-        assert_eq!(reg.active_id(), Some("elevation"));
-        assert!(reg.toggle_id("elevation"));
-        assert_eq!(reg.active_id(), None);
-        assert!(!reg.toggle_id("missing"));
-    }
-
-    /// FR-CIV-INFOVIEW-900 — activation by index supports registry-driven UI.
-    #[test]
-    fn activate_by_index_tracks_selection() {
-        let mut reg = InfoViewRegistry::default();
-        assert!(reg.activate_index(2));
-        assert_eq!(reg.active_index(), Some(2));
-        assert_eq!(reg.active_overlay().map(|o| o.id), Some("temperature"));
-        assert!(!reg.activate_index(reg.overlays.len()));
     }
 
     /// FR-CIV-INFOVIEW-901 — legend ramp interpolates and clamps.

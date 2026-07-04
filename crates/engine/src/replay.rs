@@ -637,9 +637,6 @@ impl ReplayLog {
                 ReplayEvent::ModUnloaded { .. } => {}
                 ReplayEvent::SessionSaved { .. } => {}
                 ReplayEvent::ModPermissionViolation { .. } => {}
-                // Informational markers — no world-state mutation on replay.
-                ReplayEvent::EmergenceMetrics { .. } => {}
-                ReplayEvent::RngDraw { .. } => {}
             }
         }
         Ok(())
@@ -678,31 +675,6 @@ mod tests {
         let mut log = ReplayLog::default();
         log.record_session_saved("sess-1", "save-abc", "slot-1", 42, 2048);
         assert_eq!(log.session_saved_bus_at_tick(42).len(), 1);
-    }
-
-    #[test]
-    fn rng_draw_records_event_and_counts() {
-        let mut log = ReplayLog::default();
-        log.record_rng_draw(7, "diplomacy.kind", 42);
-        log.record_rng_draw(8, "citizen.birth", 99);
-        assert_eq!(log.rng_draw_event_count(), 2);
-        let draws: Vec<&ReplayEvent> = log
-            .events
-            .iter()
-            .filter(|e| matches!(e, ReplayEvent::RngDraw { .. }))
-            .collect();
-        assert_eq!(draws.len(), 2);
-    }
-
-    #[test]
-    fn rng_draw_round_trips_through_save_load() {
-        let mut log = ReplayLog::default();
-        log.record_rng_draw(11, "diplomacy.kind", 12345);
-        let file = tempfile::NamedTempFile::new().expect("temp file");
-        log.save(file.path()).expect("save replay log");
-        let loaded = ReplayLog::load(file.path()).expect("load replay log");
-        assert_eq!(loaded.events, log.events);
-        assert_eq!(loaded.rng_draw_event_count(), 1);
     }
 
     #[test]

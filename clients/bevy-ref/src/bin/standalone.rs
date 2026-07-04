@@ -3,30 +3,47 @@
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
-#[cfg(feature = "models")]
-use civ_bevy_ref::animation::ActorAnimationPlugin;
-#[cfg(feature = "models")]
-use civ_bevy_ref::gltf_models::GltfModelsPlugin;
-#[cfg(feature = "gi")]
-use civ_bevy_ref::lighting_gi::SolariGiPlugin;
-#[cfg(feature = "voxel")]
-use civ_bevy_ref::ocean::OceanPlugin;
-#[cfg(feature = "egui")]
-use civ_bevy_ref::settings_ui::{AntiAliasing, GameSettings, SettingsPlugin};
 use civ_bevy_ref::{
-    atmosphere::{animate_water, setup_atmosphere, update_lighting, DayNightCycle, WaterSurface},
+    atmosphere::{animate_water, setup_atmosphere, update_lighting, DayNightCycle},
     camera::{camera_input, update_camera, CameraRig},
     decorations::spawn_decorations,
     gpu_features::GpuFeaturesPlugin,
     live_attach::LiveAttachPlugin,
     native_backend::native_render_plugin,
-    post_fx::PostFxSettings,
     resolve_attach_mode_from_env,
-    terrain::{terrain_mesh, WORLD_SIZE},
+    terrain::terrain_mesh,
     AttachMode,
 };
 
 fn main() {
+    // Persist any panic to `civ-panic.log` in the working dir so a crash is
+    // captured even when launched from a shortcut with no console (per the
+    // "fail loudly, never silently" stance). Chains to the default hook.
+    {
+        let default_hook = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            let loc = info
+                .location()
+                .map(|l| format!("{}:{}:{}", l.file(), l.line(), l.column()))
+                .unwrap_or_else(|| "<unknown>".to_string());
+            let msg = info
+                .payload()
+                .downcast_ref::<&str>()
+                .map(|s| s.to_string())
+                .or_else(|| info.payload().downcast_ref::<String>().cloned())
+                .unwrap_or_else(|| "<non-string panic>".to_string());
+            use std::io::Write as _;
+            if let Ok(mut f) = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open("civ-panic.log")
+            {
+                let _ = f.write_all(format!("PANIC at {loc}: {msg}\n").as_bytes());
+            }
+            default_hook(info);
+        }));
+    }
+
     let attach_mode = resolve_attach_mode_from_env();
     let window_title = match attach_mode {
         AttachMode::Standalone => "Civis — Bevy standalone".to_string(),
@@ -49,20 +66,14 @@ fn main() {
                 .set(native_render_plugin()),
         )
         .add_plugins(GpuFeaturesPlugin)
-        .add_plugins(civ_bevy_ref::AgentNeedsPlugin)
-        // Frame diagnostics: emit `FrameTime` + `SystemInformation` once per
-        // second at INFO so the 90s frame-budget profile has a measurable
-        // signal. See `docs/audits/frame-budget-baseline-2026-06-10.md`.
-        .add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())
-        .add_plugins(bevy::diagnostic::LogDiagnosticsPlugin::default())
         // Civis app/window icon (graphite + neon voxel-world glyph). Sets the
         // embedded icon on the primary winit window at startup.
         .add_plugins(civ_bevy_ref::window_icon::WindowIconPlugin)
         .add_plugins(civ_bevy_ref::sim_bridge::SimBridgePlugin)
+        .add_plugins(civ_bevy_ref::skybox::SkyboxPlugin)
         .add_plugins(civ_bevy_ref::post_fx::PostFxPlugin)
         .add_plugins(civ_bevy_ref::game_ui::GameUiPlugin)
         .add_plugins(civ_bevy_ref::tech_tree_ui::TechTreeUiPlugin)
-        .add_plugins(civ_bevy_ref::diplomacy_ui::DiplomacyUiPlugin)
         .add_plugins(civ_bevy_ref::event_feed::EventFeedPlugin)
         .add_plugins(civ_bevy_ref::menus::MenusPlugin)
         .add_plugins(civ_bevy_ref::spawn_tools::SpawnToolsPlugin)
@@ -73,8 +84,15 @@ fn main() {
             Startup,
             (
                 setup_camera,
-                setup_sandbox_terrain.run_if(in_sandbox_attach_mode),
-                spawn_decorations.run_if(in_sandbox_attach_mode),
+                // Heightmap terrain + decorations are the default-playable
+                // fallback. Under the `voxel` feature VoxelSimPlugin owns the
+                // world instead (see `heightmap_enabled`).
+                setup_sandbox_terrain
+                    .run_if(in_sandbox_attach_mode)
+                    .run_if(heightmap_enabled),
+                spawn_decorations
+                    .run_if(in_sandbox_attach_mode)
+                    .run_if(heightmap_enabled),
             )
                 .chain(),
         )
@@ -82,30 +100,13 @@ fn main() {
             Update,
             (camera_input, update_camera, animate_water, update_lighting),
         );
+
     #[cfg(feature = "egui")]
-    {
-        app.add_plugins(SettingsPlugin)
-            .add_systems(Startup, sync_post_fx_from_settings)
-            .add_systems(
-                Update,
-                sync_post_fx_from_settings.run_if(resource_changed::<GameSettings>),
-            );
-    }
+    app.add_plugins(civ_bevy_ref::diplomacy_ui::DiplomacyUiPlugin);
 
-    #[cfg(feature = "models")]
-    {
-        app.add_plugins((GltfModelsPlugin, ActorAnimationPlugin));
-    }
-
-    #[cfg(feature = "gi")]
-    {
-        app.add_plugins(SolariGiPlugin);
-    }
-
-    if attach_mode == AttachMode::Standalone {
-        #[cfg(feature = "pbr-textures")]
-        app.add_plugins(civ_bevy_ref::materials::BiomeMaterialsPlugin);
-    }
+    // 2D procedural/SVG alternate map view (M key + far-zoom auto-engage).
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::map2d::Map2dPlugin);
 
     // Perception layer: CS2-style info-view overlays (Tab) + click-to-inspect.
     #[cfg(feature = "egui")]
@@ -121,17 +122,9 @@ fn main() {
     #[cfg(feature = "bevy")]
     app.add_plugins(civ_bevy_ref::terraform_brush::TerraformBrushPlugin);
 
-    // God-game disaster actions (meteor/flood/quake/storm/wildfire) that mutate
-    // the voxel world; bevy-only, gated systems handle egui/voxel internally.
-    #[cfg(feature = "bevy")]
-    app.add_plugins(civ_bevy_ref::disaster_tools::DisasterToolsPlugin);
-
     // Material brush palette + voxel paint (Powder-Toy-style); bevy+egui.
     #[cfg(feature = "egui")]
     app.add_plugins(civ_bevy_ref::material_brush_ui::MaterialBrushPlugin);
-
-    #[cfg(feature = "egui")]
-    app.add_plugins(civ_bevy_ref::game_laws::GameLawsPlugin);
 
     // Settings / options panel (RON-persisted); bevy+egui.
     #[cfg(feature = "egui")]
@@ -152,21 +145,6 @@ fn main() {
     #[cfg(all(feature = "voxel", not(feature = "voxel_stream")))]
     app.add_plugins(civ_bevy_ref::voxel_sim::VoxelSimPlugin);
 
-    // OceanPlugin — wraps bevy_water::WaterPlugin.  Gated on `voxel` (which
-    // pulls bevy_water).  Two modes:
-    //
-    // • voxel + voxel_stream  → full mode (OceanPlugin::default): WaterPlugin
-    //   + WaterSettings + wave-plane spawn.  VoxelStreamPlugin does NOT spawn
-    //   a water plane, so OceanPlugin owns the surface here.
-    //
-    // • voxel only (VoxelSimPlugin active) → thin mode (water_plugin_only):
-    //   registers WaterPlugin shader infrastructure but skips the spawn because
-    //   VoxelSimPlugin::spawn_bevy_water_plane already owns the wave surface.
-    #[cfg(all(feature = "voxel", feature = "voxel_stream"))]
-    app.add_plugins(OceanPlugin::default());
-    #[cfg(all(feature = "voxel", not(feature = "voxel_stream")))]
-    app.add_plugins(OceanPlugin::water_plugin_only());
-
     // FR-CIV-VOXEL-020: camera-driven chunk streaming over the 20mi voxel world.
     #[cfg(feature = "voxel_stream")]
     app.add_plugins(civ_bevy_ref::voxel_stream::VoxelStreamPlugin);
@@ -185,49 +163,88 @@ fn main() {
         app.add_plugins(LiveAttachPlugin);
     }
 
+    // Headless "boot into gameplay" hook: when CIVIS_AUTOSTART=1 is set, drive
+    // the app straight into the live world instead of the main menu. Worldgen is
+    // deferred until the game enters Loading/Playing
+    // (`voxel_sim::build_world_on_play`, keyed off the per-world randomized
+    // `WorldSetupParams.seed`); forcing `Playing` triggers that exact path so a
+    // headless screenshot captures a freshly generated world, not the title card.
+    if std::env::var("CIVIS_AUTOSTART").as_deref() == Ok("1") {
+        app.add_systems(Startup, |mut mode: ResMut<civ_bevy_ref::menus::GameUiMode>| {
+            *mode = civ_bevy_ref::menus::GameUiMode::Playing;
+        });
+    }
+
+    // Headless verification hook: when CIVIS_AUTOSHOT=<path> is set, capture one
+    // screenshot after a short warm-up (so chunk meshes / GLTF scenes are loaded
+    // and the camera has framed the world) and then exit. This lets a debug
+    // worker confirm voxel terrain visibility by pixels without manual F9.
+    if let Ok(path) = std::env::var("CIVIS_AUTOSHOT") {
+        app.insert_resource(AutoShot {
+            path,
+            timer: Timer::from_seconds(4.0, TimerMode::Once),
+            taken: false,
+        })
+        .add_systems(Update, auto_screenshot);
+    }
+
     app.run();
 }
 
-#[cfg(feature = "egui")]
-fn sync_post_fx_from_settings(settings: Res<GameSettings>, mut post_fx: ResMut<PostFxSettings>) {
-    let graphics = &settings.graphics;
-    post_fx.aces = graphics.anti_aliasing != AntiAliasing::Off;
-    post_fx.bloom = graphics.bloom;
-    post_fx.ssao = graphics.ambient_occlusion;
-    post_fx.taa = graphics.anti_aliasing == AntiAliasing::TAA;
+#[derive(Resource)]
+struct AutoShot {
+    path: String,
+    timer: Timer,
+    taken: bool,
+}
+
+fn auto_screenshot(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut shot: ResMut<AutoShot>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    if shot.taken {
+        // Give the capture a couple frames to flush to disk, then quit.
+        shot.timer.tick(time.delta());
+        if shot.timer.is_finished() {
+            exit.write(AppExit::Success);
+        }
+        return;
+    }
+    if shot.timer.tick(time.delta()).just_finished() {
+        let path = shot.path.clone();
+        commands
+            .spawn(Screenshot::primary_window())
+            .observe(save_to_disk(path));
+        shot.taken = true;
+        shot.timer = Timer::from_seconds(1.5, TimerMode::Once);
+    }
 }
 
 fn in_sandbox_attach_mode(mode: Res<AttachMode>) -> bool {
     *mode == AttachMode::Standalone
 }
 
+/// True when the heightmap terrain should spawn — i.e. the `voxel` feature is
+/// OFF. Under `voxel`, `VoxelSimPlugin` owns the world instead.
+fn heightmap_enabled() -> bool {
+    cfg!(not(feature = "voxel"))
+}
+
 fn setup_camera(mut commands: Commands) {
     commands.spawn((
         Camera3d::default(),
+        // Far plane raised well past the sky dome (radius 4000) and star shell
+        // (1500) so the skybox/stars are not frustum-culled at any zoom.
+        Projection::Perspective(PerspectiveProjection {
+            far: 10_000.0,
+            ..default()
+        }),
         Transform::from_xyz(0.0, 90.0, 150.0).looking_at(Vec3::new(0.0, 12.0, 0.0), Vec3::Y),
     ));
 }
 
-#[cfg(feature = "pbr-textures")]
-fn setup_sandbox_terrain(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    biome_materials: Res<civ_bevy_ref::materials::BiomeMaterials>,
-) {
-    let terrain = terrain_mesh();
-    let centre_h = terrain_height(WORLD_SIZE * 0.5, WORLD_SIZE * 0.5);
-    let biome = civ_bevy_ref::terrain::pbr_biome_at_height(centre_h);
-    commands.spawn((
-        Mesh3d(meshes.add(terrain)),
-        MeshMaterial3d(biome_materials.handle(biome).clone()),
-        Transform::from_xyz(0.0, 0.0, 0.0),
-    ));
-
-    spawn_sandbox_water(&mut commands, &mut meshes, &mut materials);
-}
-
-#[cfg(not(feature = "pbr-textures"))]
 fn setup_sandbox_terrain(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -243,25 +260,7 @@ fn setup_sandbox_terrain(
         })),
         Transform::from_xyz(0.0, 0.0, 0.0),
     ));
-
-    spawn_sandbox_water(&mut commands, &mut meshes, &mut materials);
-}
-
-fn spawn_sandbox_water(
-    commands: &mut Commands,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<StandardMaterial>>,
-) {
-    let water_size = WORLD_SIZE * 1.05;
-    commands.spawn((
-        Mesh3d(meshes.add(Cuboid::new(water_size, 0.2, water_size))),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::srgba(0.12, 0.35, 0.62, 0.55),
-            alpha_mode: AlphaMode::Blend,
-            perceptual_roughness: 0.2,
-            ..default()
-        })),
-        Transform::from_xyz(0.0, -0.1, 0.0),
-        WaterSurface,
-    ));
+    // NOTE: the single water body is owned by `atmosphere::setup_atmosphere`
+    // (a `WaterSurface` plane at `WATER_LEVEL`). Spawning another here would
+    // double up the water; intentionally not spawned in this setup.
 }

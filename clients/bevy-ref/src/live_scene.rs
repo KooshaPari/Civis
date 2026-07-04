@@ -6,34 +6,28 @@ use civ_protocol_3d::Frame3d;
 use civ_voxel::ChunkId;
 
 use crate::bevy_render::apply_chunk_material;
-use crate::camera::CameraRig;
-#[cfg(feature = "egui")]
-use crate::event_feed::EventFeed;
 use crate::live_attach::{LiveAttachBridge, LiveAttachState};
-use crate::live_focus::{compute_live_scene_focus, LiveSceneFocus, LIVE_FOCUS_LERP_SPEED};
+use crate::live_focus::{
+    compute_live_scene_focus, LiveSceneFocus, LIVE_FOCUS_LERP_SPEED,
+};
 use crate::live_minimap::{
     chunk_centre_world_xz, live_building_dot_color, spawn_minimap_dot, MinimapDotLayout,
     MinimapFocusRect, LIVE_MINIMAP_AGENT_COLOR, LIVE_MINIMAP_CHUNK_COLOR, LIVE_MINIMAP_DOT,
     LIVE_MINIMAP_GRAPH_DOT_SCALE,
 };
-#[cfg(feature = "egui")]
-use crate::live_stream::apply_event_feed_frame;
 use crate::live_stream::{
-    apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
-    apply_civilian_state_frame, apply_climate_frame, apply_faction_state_frame,
-    apply_voxel_delta_frame, apply_water_deltas_for_frame, default_stream_meshes,
-    default_water_meshes, AgentLabelConfig, LiveAgentTag, LiveBuildingTag, LiveChunkFade,
-    LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene, LiveWaterMeshes, StreamCulling,
-    LIVE_CHUNK_EDGE,
+    apply_agent_appearance_frame_with_labels, apply_building_diff_frame, apply_voxel_delta_frame,
+    default_stream_meshes, AgentLabelConfig, LiveAgentTag, LiveBuildingTag, LiveChunkFade,
+    LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene, StreamCulling, LIVE_CHUNK_EDGE,
 };
 use crate::minimap::{MinimapCamera, MinimapDot, MinimapRoot, MINIMAP_SIZE};
+use crate::camera::CameraRig;
 use crate::{chunk_fade_complete, AttachMode, DebugRender, LiveHudSnapshot};
 
 const LIVE_RENDER_MAX_DISTANCE: f32 = 200.0;
 const MINIMAP_CAMERA_HEIGHT: f32 = 180.0;
-const LIVE_MINIMAP_PANEL_LAYOUT: MinimapDotLayout = MinimapDotLayout::FullPanel {
-    panel_size: MINIMAP_SIZE,
-};
+const LIVE_MINIMAP_PANEL_LAYOUT: MinimapDotLayout =
+    MinimapDotLayout::FullPanel { panel_size: MINIMAP_SIZE };
 
 /// Entity maps and voxel cache for the live attach renderer (alias of [`LiveStreamScene`]).
 pub type LiveScene = LiveStreamScene;
@@ -65,17 +59,8 @@ impl Plugin for LiveScenePlugin {
     }
 }
 
-fn setup_live_scene_assets(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
+fn setup_live_scene_assets(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     commands.insert_resource(default_stream_meshes(&mut meshes));
-    // FR-CLIENT-render: shared water-surface quad + tinted material handle so
-    // every chunk's water companion shares one mesh upload / material
-    // uniform block (parallel to `LiveStreamMeshes` for agent / building
-    // markers).
-    commands.insert_resource(default_water_meshes(&mut meshes, &mut materials));
 }
 
 fn apply_live_scene_frames(
@@ -86,12 +71,10 @@ fn apply_live_scene_frames(
     mut scene: ResMut<LiveStreamScene>,
     debug: Res<DebugRender>,
     assets: Res<LiveStreamMeshes>,
-    water_meshes: Res<LiveWaterMeshes>,
     cameras: Query<&Transform, (With<Camera3d>, Without<crate::minimap::MinimapCamera>)>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    #[cfg(feature = "egui")] mut event_feed: Option<ResMut<EventFeed>>,
 ) {
     if *attach != AttachMode::Server {
         return;
@@ -118,30 +101,16 @@ fn apply_live_scene_frames(
         state.tick = Some(tick);
         hud.tick = Some(tick);
         match frame {
-            Frame3d::VoxelDelta(delta) => {
-                apply_voxel_delta_frame(
-                    &mut commands,
-                    &mut scene,
-                    &mut meshes,
-                    &mut materials,
-                    culling,
-                    debug.as_ref(),
-                    delta.clone(),
-                    None,
-                );
-                // FR-CLIENT-render: pair the chunk-mesh update with a
-                // water-surface companion update so the streamed water
-                // plane tracks the chunk's voxel composition on every
-                // delta (re-uses the same delta payload + culling eye).
-                apply_water_deltas_for_frame(
-                    &mut commands,
-                    &mut scene,
-                    water_meshes.as_ref(),
-                    culling.eye,
-                    culling.max_distance,
-                    &delta,
-                );
-            }
+            Frame3d::VoxelDelta(delta) => apply_voxel_delta_frame(
+                &mut commands,
+                &mut scene,
+                &mut meshes,
+                &mut materials,
+                culling,
+                debug.as_ref(),
+                delta,
+                None,
+            ),
             Frame3d::AgentAppearance(agents) => {
                 apply_agent_appearance_frame_with_labels(
                     &mut commands,
@@ -159,20 +128,7 @@ fn apply_live_scene_frames(
                 assets.as_ref(),
                 building,
             ),
-            Frame3d::CivilianState(civilian) => apply_civilian_state_frame(&mut scene, civilian),
-            Frame3d::FactionState(faction) => apply_faction_state_frame(&mut scene, faction),
-            // FR-CLIENT-render: capture the streamed climate snapshot (was
-            // previously dropped). Sky/lighting consumers in this binary
-            // read it via `latest_climate(&scene)`.
-            Frame3d::Climate(climate) => apply_climate_frame(&mut scene, climate),
-            #[cfg(feature = "egui")]
-            Frame3d::EventFeed(event_frame) => {
-                if let Some(feed) = event_feed.as_mut() {
-                    apply_event_feed_frame(feed, event_frame);
-                }
-            }
-            #[cfg(not(feature = "egui"))]
-            Frame3d::EventFeed(_) => {}
+            Frame3d::CivilianState(_) | Frame3d::FactionState(_) | Frame3d::EventFeed(_) => {}
         }
     }
 }
@@ -182,11 +138,7 @@ fn update_chunk_fade(
     time: Res<Time>,
     debug: Res<DebugRender>,
     mut commands: Commands,
-    mut fades: Query<(
-        Entity,
-        &mut LiveChunkFade,
-        &MeshMaterial3d<StandardMaterial>,
-    )>,
+    mut fades: Query<(Entity, &mut LiveChunkFade, &MeshMaterial3d<StandardMaterial>)>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     if *attach != AttachMode::Server || debug.wireframe {

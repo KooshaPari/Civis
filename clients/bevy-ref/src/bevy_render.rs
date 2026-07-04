@@ -15,7 +15,6 @@ use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
-use civ_voxel::material::WATER;
 
 use crate::{
     chunk_fade_alpha, chunk_fade_color, chunk_fade_complete, presentation_ambient_brightness,

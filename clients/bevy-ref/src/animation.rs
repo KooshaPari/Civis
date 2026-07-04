@@ -59,7 +59,6 @@ use std::time::Duration;
 use bevy::animation::RepeatAnimation;
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
-use civ_agents::ActorVisualKind;
 
 /// Speed (world-units / second of root translation) below which an actor is
 /// considered idle.
@@ -70,26 +69,6 @@ const RUN_SPEED: f32 = 14.0;
 const TRANSITION: Duration = Duration::from_millis(250);
 /// How aggressively the model yaw chases the movement direction (per second).
 const FACING_SLERP: f32 = 8.0;
-/// Synthetic rest pose used by animation requirements BDD tests.
-pub fn idle_angles_for_test() -> [Vec3; 6] {
-    [
-        Vec3::new(0.00, 0.00, 0.00), // root
-        Vec3::new(0.45, 1.20, 0.00), // shoulder
-        Vec3::new(0.85, 1.20, 0.00), // elbow
-        Vec3::new(1.30, 1.20, 0.00), // wrist
-        Vec3::new(0.10, 0.95, 0.00), // hip
-        Vec3::new(0.10, 0.10, 0.00), // knee
-    ]
-}
-
-/// Deterministic test frame time for actor animation fixtures.
-pub fn clip_frame_for_test(actor_kind: ActorVisualKind, frame: u32) -> f32 {
-    let fps = match actor_kind {
-        ActorVisualKind::Humanoid => 30.0,
-        ActorVisualKind::Herd => 24.0,
-    };
-    frame as f32 / fps
-}
 
 /// Coarse locomotion state derived from an actor's motion. Maps 1:1 to the clip
 /// categories shared by the Quaternius / KayKit rigs.
@@ -218,14 +197,7 @@ fn scene_root_ancestor(
 #[allow(clippy::too_many_arguments)]
 fn attach_actor_animation(
     mut commands: Commands,
-    players: Query<
-        Entity,
-        (
-            With<AnimationPlayer>,
-            Without<ActorAnim>,
-            Without<AnimationGraphHandle>,
-        ),
-    >,
+    players: Query<Entity, (With<AnimationPlayer>, Without<ActorAnim>)>,
     parents: Query<&ChildOf>,
     scene_roots: Query<&SceneRoot>,
     gltfs: Res<Assets<Gltf>>,
@@ -260,27 +232,8 @@ fn attach_actor_animation(
 
         let nodes = GaitNodes {
             idle: pick(&named, &["Idle", "Unarmed_Idle", "2H_Melee_Idle", "Idle_B"]),
-            walk: pick(
-                &named,
-                &[
-                    "Walking_A",
-                    "Walking_B",
-                    "Walking_C",
-                    "Walking_D_Skeletons",
-                    // Quaternius animal packs use the shorter alias.
-                    "Walk",
-                ],
-            ),
-            run: pick(
-                &named,
-                &[
-                    "Running_A",
-                    "Running_B",
-                    "Running_C",
-                    // Quaternius animal packs use the shorter alias.
-                    "Run",
-                ],
-            ),
+            walk: pick(&named, &["Walking_A", "Walking_B", "Walking_C", "Walking_D_Skeletons"]),
+            run: pick(&named, &["Running_A", "Running_B", "Running_C"]),
         };
 
         let graph_handle = graphs.add(graph);
@@ -303,8 +256,8 @@ fn attach_actor_animation(
             continue;
         }
 
-        let mut entity = commands.entity(player_entity);
-        entity
+        commands
+            .entity(player_entity)
             .insert(AnimationGraphHandle(graph_handle))
             .insert(AnimationTransitions::new())
             .insert(ActorAnim {
@@ -325,10 +278,7 @@ fn pick(named: &HashMap<&str, AnimationNodeIndex>, names: &[&str]) -> Option<Ani
 
 /// Start the idle clip the same frame we attach graph + [`ActorAnim`].
 fn kick_start_actor_idle(
-    mut actors: Query<
-        (&ActorAnim, &mut AnimationPlayer, &mut AnimationTransitions),
-        Added<ActorAnim>,
-    >,
+    mut actors: Query<(&ActorAnim, &mut AnimationPlayer, &mut AnimationTransitions), Added<ActorAnim>>,
 ) {
     for (anim, mut player, mut transitions) in &mut actors {
         if anim.is_static {
@@ -347,11 +297,7 @@ fn kick_start_actor_idle(
 /// and rotate the actor root to face its movement direction.
 fn drive_actor_animation(
     time: Res<Time>,
-    mut actors: Query<(
-        &mut ActorAnim,
-        &mut AnimationPlayer,
-        &mut AnimationTransitions,
-    )>,
+    mut actors: Query<(&mut ActorAnim, &mut AnimationPlayer, &mut AnimationTransitions)>,
     global: Query<&GlobalTransform>,
     mut roots: Query<&mut Transform>,
 ) {
@@ -431,10 +377,7 @@ mod tests {
     #[test]
     fn gait_degrades_to_available_clip() {
         // Rig with only idle: walk/run resolve to idle.
-        let only_idle = GaitNodes {
-            idle: Some(AnimationNodeIndex::new(1)),
-            ..Default::default()
-        };
+        let only_idle = GaitNodes { idle: Some(AnimationNodeIndex::new(1)), ..Default::default() };
         assert_eq!(only_idle.node_for(Gait::Walk), only_idle.idle);
         assert_eq!(only_idle.node_for(Gait::Run), only_idle.idle);
         assert!(only_idle.any());
@@ -447,9 +390,7 @@ mod tests {
 
     #[test]
     fn jitter_is_in_range_and_deterministic() {
-        // bevy 0.18 removed the infallible `Entity::from_raw`; use the checked
-        // u32 constructor (any valid index works — the test only needs stable bits).
-        let e = Entity::from_raw_u32(42).expect("valid raw entity index");
+        let e = Entity::from_raw(42);
         let j = jitter_for(e);
         assert!((0.85..=1.15).contains(&j));
         assert_eq!(j, jitter_for(e)); // deterministic

@@ -10,7 +10,7 @@
 //! crate, while hosts provide adapters that call into engine internals.
 
 #![forbid(unsafe_code)]
-#![allow(missing_docs)]
+#![warn(missing_docs)]
 
 pub mod building;
 pub mod events;
@@ -19,16 +19,16 @@ pub mod material;
 pub mod registry;
 
 pub use building::{
-    BuildingBlueprint, BuildingCatalog, BuildingKind, BuildingRegistrar, BuildingRegistration,
-    RecipeCatalog, RecipeDefinition, RecipeRegistrar, RecipeRegistration,
+    BuildingBlueprint, BuildingCatalog, BuildingKind, BuildingRegistration, BuildingRegistrar,
+    RecipeCatalog, RecipeDefinition, RecipeRegistration, RecipeRegistrar,
 };
 pub use events::{BirthEvent, DeathEvent, SimulationEvent, SimulationEventHook, TechEvent};
 pub use manifest::{
-    load_manifest_file, load_manifests_from_dir, ManifestError, ModManifest, ModManifestFormat,
-    ModMetadata,
+    load_manifest_file, load_manifests_from_dir, ManifestError, ModManifest, ModMetadata,
+    ModManifestFormat,
 };
 pub use material::{
-    CustomMaterial, MaterialCatalog, MaterialRegistrar, MaterialRegistration, MaterialSpec,
+    CustomMaterial, MaterialCatalog, MaterialRegistration, MaterialRegistrar, MaterialSpec,
 };
 pub use registry::ModRegistry;
 
@@ -125,17 +125,11 @@ mod tests {
 
         let mut buildings = BuildingCatalog::default();
         mod_.register_buildings(&mut buildings);
-        assert_eq!(
-            buildings.by_id("marble-cottage").unwrap().blueprint.era_min,
-            2
-        );
+        assert_eq!(buildings.by_id("marble-cottage").unwrap().blueprint.era_min, 2);
 
         let mut recipes = RecipeCatalog::default();
         mod_.register_recipes(&mut recipes);
-        assert_eq!(
-            recipes.by_id("marble-block").unwrap().recipe.inputs.len(),
-            1
-        );
+        assert_eq!(recipes.by_id("marble-block").unwrap().recipe.inputs.len(), 1);
     }
 
     #[test]
@@ -153,7 +147,7 @@ mod tests {
         .expect("json");
         std::fs::write(
             mods.join("manifest.ron"),
-            r#"(mod:(id:"stone",name:"Stone Mod",version:"0.1.0",author:"CivLab",description:"adds stone",entrypoint:Some("stone.wasm")),buildings:[],recipes:[],events:[])"#,
+            r#"(mod:(id:"stone",name:"Stone Mod",version:"0.1.0",author:"CivLab",description:"adds stone",entrypoint:"stone.wasm"),buildings:[],recipes:[],events:[])"#,
         )
         .expect("ron");
 

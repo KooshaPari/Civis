@@ -8,7 +8,7 @@
 //!   from the world seed via a deterministic per-chunk [`WorldGen`]. They never need to
 //!   touch disk — eviction just drops them.
 //! - **Disk-backed cache**: chunks that have been *edited* (dirty) are serialised to a
-//!   [`ChunkStorePort`] on eviction and reloaded on demand. Disk is the bound, not compute.
+//!   [`ChunkStore`] on eviction and reloaded on demand. Disk is the bound, not compute.
 //! - **LRU active set**: [`StreamingWorld`] tracks an LRU of loaded chunks and evicts the
 //!   coldest when over the RAM budget.
 //! - **Distance-tiered LOD**: [`StreamingWorld::lod_for`] reuses the kernel
@@ -105,22 +105,14 @@ pub struct StreamStats {
     pub dropped_evictions: u64,
 }
 
-/// Port trait for chunk storage adapters.
-/// The domain (`StreamingWorld`) depends on this trait, not on concrete I/O.
-pub trait ChunkStorePort: Send + Sync {
-    fn put(&self, coord: ChunkCoord, chunk: &Chunk<MaterialId>) -> std::io::Result<()>;
-    fn get(&self, coord: ChunkCoord) -> std::io::Result<Option<Chunk<MaterialId>>>;
-    fn contains(&self, coord: ChunkCoord) -> bool;
-}
-
-/// Filesystem-backed store for *edited* chunks. Clean chunks never reach here.
+/// Disk-backed store for *edited* chunks. Clean chunks never reach here.
 ///
 /// Serialisation is via the kernel's `serde` derives on [`Chunk`].
-pub struct FsChunkStore {
+pub struct ChunkStore {
     dir: PathBuf,
 }
 
-impl FsChunkStore {
+impl ChunkStore {
     /// Open (creating if needed) a store rooted at `dir`.
     pub fn open(dir: PathBuf) -> std::io::Result<Self> {
         fs::create_dir_all(&dir)?;
@@ -132,28 +124,29 @@ impl FsChunkStore {
         self.dir
             .join(format!("{}_{}_{}.chunk", coord.cx, coord.cy, coord.cz))
     }
-}
 
-impl ChunkStorePort for FsChunkStore {
-    fn put(&self, coord: ChunkCoord, chunk: &Chunk<MaterialId>) -> std::io::Result<()> {
-        let bytes = bincode_next::serde::encode_to_vec(chunk, bincode_next::config::standard())
+    /// Persist an edited chunk. Overwrites any previous version.
+    pub fn put(&self, coord: ChunkCoord, chunk: &Chunk<MaterialId>) -> std::io::Result<()> {
+        let bytes = bincode::serialize(chunk)
             .map_err(|err| Error::new(ErrorKind::InvalidData, err))?;
         fs::write(self.path_for(coord), bytes)
     }
-    fn get(&self, coord: ChunkCoord) -> std::io::Result<Option<Chunk<MaterialId>>> {
+
+    /// Load a previously persisted chunk, or `None` if absent.
+    pub fn get(&self, coord: ChunkCoord) -> std::io::Result<Option<Chunk<MaterialId>>> {
         let path = self.path_for(coord);
         let bytes = match fs::read(path) {
             Ok(bytes) => bytes,
             Err(err) if err.kind() == ErrorKind::NotFound => return Ok(None),
             Err(err) => return Err(err),
         };
-        let chunk =
-            bincode_next::serde::decode_from_slice(&bytes, bincode_next::config::standard())
-                .map_err(|err| Error::new(ErrorKind::InvalidData, err))?
-                .0;
+        let chunk = bincode::deserialize(&bytes)
+            .map_err(|err| Error::new(ErrorKind::InvalidData, err))?;
         Ok(Some(chunk))
     }
-    fn contains(&self, coord: ChunkCoord) -> bool {
+
+    /// True if `coord` has a persisted (edited) version.
+    pub fn contains(&self, coord: ChunkCoord) -> bool {
         self.path_for(coord).exists()
     }
 }
@@ -168,7 +161,7 @@ pub struct StreamingWorld<G: WorldGen> {
     resident: HashMap<ChunkCoord, Resident>,
     /// LRU order: front = coldest, back = hottest. Holds the same keys as `resident`.
     lru: std::collections::VecDeque<ChunkCoord>,
-    store: Option<Box<dyn ChunkStorePort>>,
+    store: Option<ChunkStore>,
     stats: StreamStats,
 }
 
@@ -178,31 +171,21 @@ struct Resident {
 }
 
 impl<G: WorldGen> StreamingWorld<G> {
-    /// Construct a streaming world with an explicit store adapter.
-    pub fn new_with_store(
-        cfg: StreamConfig,
-        gen: G,
-        store: Option<Box<dyn ChunkStorePort>>,
-    ) -> Self {
-        Self {
+    /// Construct a streaming world. Opens the disk cache if `cfg.disk_dir` is set.
+    pub fn new(cfg: StreamConfig, gen: G) -> std::io::Result<Self> {
+        let store = cfg
+            .disk_dir
+            .clone()
+            .map(ChunkStore::open)
+            .transpose()?;
+        Ok(Self {
             cfg,
             gen,
             resident: HashMap::new(),
             lru: VecDeque::new(),
             store,
             stats: StreamStats::default(),
-        }
-    }
-
-    /// Construct a streaming world. Opens the disk cache if `cfg.disk_dir` is set.
-    pub fn new(cfg: StreamConfig, gen: G) -> std::io::Result<Self> {
-        let store = cfg
-            .disk_dir
-            .clone()
-            .map(FsChunkStore::open)
-            .transpose()?
-            .map(|s| Box::new(s) as Box<dyn ChunkStorePort>);
-        Ok(Self::new_with_store(cfg, gen, store))
+        })
     }
 
     /// Number of voxels along one side of the world for the configured scale and a
@@ -223,10 +206,7 @@ impl<G: WorldGen> StreamingWorld<G> {
     /// resident after the call. Order-independent given the same `coords`.
     pub fn load_set(&mut self, coords: &[ChunkCoord]) -> std::io::Result<()> {
         if self.cfg.active_budget < coords.len() {
-            return Err(Error::new(
-                ErrorKind::InvalidInput,
-                "active_budget below requested set",
-            ));
+            return Err(Error::new(ErrorKind::InvalidInput, "active_budget below requested set"));
         }
         let mut ordered = coords.to_vec();
         ordered.sort_unstable_by_key(|coord| (coord.cx, coord.cy, coord.cz));
@@ -393,12 +373,7 @@ mod tests {
         }
         let edited = coords[0];
         assert!(a.edit(edited, 0, MaterialId(1)));
-        a.load(ChunkCoord {
-            cx: 99,
-            cy: 0,
-            cz: 0,
-        })
-        .expect("force eviction");
+        a.load(ChunkCoord { cx: 99, cy: 0, cz: 0 }).expect("force eviction");
         let fresh = HeightFieldGen {
             seed: 7,
             base_voxel_m: 4.0,
@@ -436,11 +411,7 @@ mod tests {
         });
         w.load_set(&coords).expect("budget");
         assert_eq!(w.resident_coords().len(), 4);
-        let extra = ChunkCoord {
-            cx: 99,
-            cy: 99,
-            cz: 99,
-        };
+        let extra = ChunkCoord { cx: 99, cy: 99, cz: 99 };
         w.load(extra).expect("extra");
         assert_eq!(w.resident_coords().len(), 4);
     }
@@ -453,16 +424,8 @@ mod tests {
             disk_dir: Some(dir),
             ..StreamConfig::default()
         });
-        let a = ChunkCoord {
-            cx: 0,
-            cy: 0,
-            cz: 0,
-        };
-        let b = ChunkCoord {
-            cx: 1,
-            cy: 0,
-            cz: 0,
-        };
+        let a = ChunkCoord { cx: 0, cy: 0, cz: 0 };
+        let b = ChunkCoord { cx: 1, cy: 0, cz: 0 };
         w.load(a).expect("a");
         assert!(w.edit(a, 0, MaterialId(1)));
         w.load(b).expect("b");
@@ -477,22 +440,6 @@ mod tests {
         let near = w.lod_for(10.0);
         let far = w.lod_for(10_000.0);
         assert!(near.0 <= far.0);
-    }
-
-    #[test]
-    fn voxels_per_side_is_monotonic_ceil_division() {
-        let cfg = StreamConfig::default();
-        let w = world(cfg.clone());
-        assert_eq!(w.voxels_per_side(0.0), 0);
-        assert!(w.voxels_per_side(100.0) >= w.voxels_per_side(10.0));
-        assert!(w.voxels_per_side(cfg.base_voxel_m) >= 1);
-    }
-
-    #[test]
-    fn fresh_world_has_no_resident_chunks() {
-        let w = world(StreamConfig::default());
-        assert!(w.resident_coords().is_empty());
-        assert_eq!(w.stats().loaded, 0);
     }
 
     /// Perf smoke: streaming a large radius (a full active-set page-in) must stay

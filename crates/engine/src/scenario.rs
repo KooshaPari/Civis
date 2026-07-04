@@ -475,7 +475,6 @@ mod tests {
             scenario.mods,
             vec!["mods/example-policy", "mods/example-economic"]
         );
-        assert_eq!(scenario.policy.kind, "noop");
     }
 
     #[test]

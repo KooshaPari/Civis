@@ -89,10 +89,7 @@ func _ready() -> void:
 		_ws_client = CivisWsClient.new()
 		_ws_client.name = "CivisWsClient"
 		add_child(_ws_client)
-		_ws_client.connection_changed.connect(_on_connection_changed)
 		_ws_client.snapshot_received.connect(_apply_snapshot)
-		_ws_client.f3d0_frame_received.connect(_on_f3d0_frame_received)
-		_ws_client.snapshot_throttled.connect(_on_snapshot_throttled)
 		_ws_client.connect_server()
 	_bind_ui()
 	ui.get_node("Minimap").setup(terrain_heights, terrain_biomes, $Camera3D, terrain_height_exaggeration)

@@ -86,9 +86,8 @@ def main() -> int:
         json.dump(body, f, indent=2)
         f.write("\n")
 
-    # Unreal + opt-in extras gates are optional infrastructure gates; they
-    # never block the push.
-    optional_gate_prefixes = ("unreal_", "extra_")
+    # Unreal gates are optional infrastructure gates; they never block the push.
+    optional_gate_prefixes = ("unreal_",)
     failed = [
         k
         for k, v in gates.items()

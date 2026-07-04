@@ -6,8 +6,8 @@ use bevy::prelude::*;
 use bevy::ui::{FocusPolicy, RelativeCursorPosition};
 use civ_bevy_ref::{
     bevy_render::{apply_chunk_material, spawn_default_scene, CHUNK_WIREFRAME_LINE_COLOR},
-    chunk_fade_complete, chunk_raycast_terrain, chunk_to_minimap_uv, focused_chunk_at_grid,
-    gpu_features::GpuFeaturesPlugin,
+    chunk_fade_complete, chunk_raycast_stub, chunk_to_minimap_uv,
+    focused_chunk_at_grid, gpu_features::GpuFeaturesPlugin,
     live_focus::{
         compute_live_scene_focus, minimap_uv_to_world_xz, LiveSceneFocus, LIVE_FOCUS_LERP_SPEED,
     },
@@ -17,45 +17,22 @@ use civ_bevy_ref::{
         LIVE_MINIMAP_AGENT_COLOR, LIVE_MINIMAP_CAMERA_COLOR, LIVE_MINIMAP_CHUNK_FOCUSED_COLOR,
         LIVE_MINIMAP_CHUNK_LOADED_COLOR, LIVE_MINIMAP_DOT, LIVE_MINIMAP_GRAPH_DOT_SCALE,
     },
-    faction_hud::{FactionHudPlugin, PlayerFactionId},
-    god_panel::GodPanelPlugin,
-    save_load_ui::SaveLoadUiPlugin,
     live_pick::{LivePickPlugin, LiveSelection},
     live_stream::{
-        apply_agent_appearance_frame_with_labels_and_eye, apply_building_diff_frame,
-        apply_civilian_state_frame, apply_climate_frame, apply_event_feed_frame,
-        apply_faction_state_frame, apply_voxel_delta_frame, apply_water_deltas_for_frame,
-        default_stream_meshes, default_water_meshes,
-        format_event_feed_message, latest_climate, push_event_feed_to_hud_summary,
-        sync_agent_labels_from_civilians, AgentLabelConfig, LiveAgentTag, LiveBuildingTag,
-        LiveChunkFade, LiveChunkTag, LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene,
-        LiveWaterMeshes, StreamCulling,
+        apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
+        apply_voxel_delta_frame, default_stream_meshes,
+        AgentLabelConfig, LiveAgentTag, LiveBuildingTag, LiveChunkFade, LiveChunkTag,
+        LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene, StreamCulling,
         LIVE_CHUNK_BASE_COLOR, LIVE_CHUNK_EDGE,
     },
-    minimap::MinimapRoot,
-    minimap_uv_to_chunk_grid,
-    native_backend::native_render_plugin,
+    minimap_uv_to_chunk_grid, minimap::MinimapRoot, native_backend::native_render_plugin,
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
     presentation_day_factor_target, resolve_live_ws_url,
-    event_feed::{EventFeed, EventFeedPlugin},
-    emergence_dashboard::EmergenceDashboardPlugin,
     ws_client::{WsClient, WsClientConfig},
-    CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MinimapBounds,
-    VOXEL_CHUNK_EDGE, WsConnectionState,
-    post_fx::PostFxPlugin,
+    CameraTarget, DebugRender, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
 };
-#[cfg(feature = "gi")]
-use civ_bevy_ref::lighting_gi::SolariGiPlugin;
-#[cfg(feature = "models")]
-use civ_bevy_ref::animation::ActorAnimationPlugin;
-#[cfg(feature = "models")]
-use civ_bevy_ref::gltf_models::GltfModelsPlugin;
-#[cfg(feature = "egui")]
-use civ_bevy_ref::settings_ui::{GameSettings, KeyBinding, SettingsPlugin};
-use civ_bevy_ref::diplomacy_ui::{DiplomacyBridge, DiplomacyUiPlugin};
 use civ_protocol_3d::Frame3d;
 use civ_voxel::ChunkId;
-use serde_json;
 
 const CHUNK_BASE_COLOR: [f32; 3] = LIVE_CHUNK_BASE_COLOR;
 const ORBIT_DRAG_SENSITIVITY: f32 = 0.005;
@@ -73,37 +50,6 @@ const MINIMAP_HUD_LAYOUT: MinimapDotLayout = MinimapDotLayout::InsetHud {
     inset: MINIMAP_INSET,
     plot_margin_dot: MINIMAP_DOT,
 };
-
-// FR-CIV-CLIENT-001
-#[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
-enum AppState {
-    #[default]
-    Connecting,
-    InGame,
-    ConnectionLost,
-}
-
-#[derive(Resource, Default)]
-struct ConnectionOverlay {
-    root: Option<Entity>,
-    tick: u32,
-}
-
-#[derive(Component)]
-struct SplashSpinner;
-#[derive(Resource, Debug, Clone)]
-struct ScenarioPanel {
-    seed_index: usize,
-    speed_index: usize,
-    preset_index: usize,
-}
-
-impl Default for ScenarioPanel {
-    fn default() -> Self {
-        Self { seed_index: 0, speed_index: 0, preset_index: 0 }
-    }
-}
-
 
 #[derive(Resource, Debug, Clone, Copy)]
 struct OrbitCamera {
@@ -198,49 +144,10 @@ struct MinimapCache {
     agent_count: usize,
     building_count: usize,
     graph_count: usize,
+    camera_chunk: Option<(i32, i32)>,
     bounds: Option<MinimapBounds>,
     focus: Option<LiveSceneFocus>,
     use_focus_bounds: bool,
-}
-
-#[derive(Resource, Default)]
-struct MinimapPopup {
-    /// Pending right-click tile coords; None when popup is closed.
-    pending: Option<(i32, i32)>,
-}
-
-#[derive(Resource, Default)]
-struct SimSpeedState {
-    multiplier: u32,
-}
-
-#[derive(Resource)]
-struct EmergencePollTimer(f32);
-impl Default for EmergencePollTimer {
-    fn default() -> Self {
-        Self(0.0)
-    }
-}
-
-#[derive(Component)]
-struct ScenarioSeedLabel;
-
-#[derive(Component)]
-struct ScenarioSpeedLabel;
-
-#[derive(Component)]
-struct ScenarioPresetLabel;
-
-#[derive(Component)]
-struct ScenarioStartButton;
-
-#[derive(Component)]
-struct ScenarioStartButton;
-
-#[derive(Resource, Default)]
-struct MinimapPopup {
-    /// Pending right-click tile coords; None when popup is closed.
-    pending: Option<(i32, i32)>,
 }
 
 #[derive(Resource, Default)]
@@ -264,28 +171,11 @@ fn main() {
                 })
                 .set(native_render_plugin()),
             WireframePlugin::default(),
-            PostFxPlugin,
             GpuFeaturesPlugin,
             LivePickPlugin,
-            FactionHudPlugin,
-            SaveLoadUiPlugin,
-            TutorialPlugin,
-            PerfHudPlugin,
-            EguiPlugin::default(),
-            EventFeedPlugin,
-            EmergenceDashboardPlugin,
-            civ_bevy_ref::AgentNeedsPlugin,
-            DiplomacyUiPlugin,
-            GodPanelPlugin,
         ))
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()
-        .init_resource::<ConnectionOverlay>()
-        .init_resource::<ScenarioPanel>()
-        .init_resource::<MinimapPopup>()
-        .init_resource::<SimSpeedState>()
-        .init_resource::<EmergencePollTimer>()
-        .init_resource::<EmergenceHudData>()
         .insert_resource(ScenePresentation::default())
         .insert_resource(DebugRender::default())
         .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
@@ -312,7 +202,6 @@ fn main() {
                 sync_agent_labels_from_civilians.after(apply_live_frames),
                 apply_spectator_meta,
                 sync_live_hud_stats,
-                sync_live_pick_detail,
                 update_live_focus,
                 follow_live_orbit_focus,
                 sync_chunk_debug_render,
@@ -552,29 +441,16 @@ fn apply_spectator_meta(
     }
 }
 
-fn sync_live_pick_detail(
-    selection: Res<LiveSelection>,
-    scene: Res<LiveStreamScene>,
-    mut hud: ResMut<HudState>,
-) {
-    hud.snapshot.pick_detail =
-        civ_bevy_ref::live_stream::format_live_pick_hud_line(selection.0, &scene);
-}
-
 fn sync_live_hud_stats(
     bridge: Res<LiveBridge>,
     scene: Res<LiveStreamScene>,
     mut hud: ResMut<HudState>,
 ) {
-    let civilians = civ_bevy_ref::live_stream::civilian_hud_count(&scene);
-    let factions = civ_bevy_ref::live_stream::faction_hud_count(&scene);
     hud.snapshot.sync_scene_counts(
         scene.chunks.len(),
         scene.agents.len(),
         scene.buildings.len(),
         scene.graph_parcels.len(),
-        civilians,
-        factions,
     );
     if let Some(rtt) = bridge.client.latest_rtt_ms() {
         hud.snapshot.ws_rtt_ms = Some(rtt);
@@ -668,13 +544,9 @@ fn setup(
 ) {
     spawn_default_scene(&mut commands);
     commands.insert_resource(default_stream_meshes(&mut meshes));
-    // FR-CLIENT-render: parallel to `LiveStreamMeshes`, insert the shared
-    // water-surface quad + tinted material handles so the streamed world
-    // snapshot can drive water companions on every voxel delta.
-    commands.insert_resource(default_water_meshes(&mut meshes, &mut materials));
-    let ws_client = WsClient::spawn_with_config(resolve_live_ws_url(), WsClientConfig::default());
-    commands.insert_resource(DiplomacyBridge::new(ws_client.rpc_sender()));
-    commands.insert_resource(LiveBridge { client: ws_client });
+    commands.insert_resource(LiveBridge {
+        client: WsClient::spawn_with_config(resolve_live_ws_url(), WsClientConfig::default()),
+    });
 
     let text = commands
         .spawn((
@@ -852,7 +724,6 @@ fn apply_live_frames(
     orbit: Res<OrbitCamera>,
     debug: Res<DebugRender>,
     assets: Res<LiveStreamMeshes>,
-    water_meshes: Res<LiveWaterMeshes>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut feed: ResMut<EventFeed>,
@@ -873,44 +744,23 @@ fn apply_live_frames(
     for frame in frames {
         hud.snapshot.tick = Some(frame.tick());
         match frame {
-            Frame3d::VoxelDelta(delta) => {
-                apply_voxel_delta_frame(
-                    &mut commands,
-                    &mut scene,
-                    &mut meshes,
-                    &mut materials,
-                    culling,
-                    debug.as_ref(),
-                    delta.clone(),
-                    wireframe_color,
-                );
-                // FR-CLIENT-render: pair the chunk-mesh update with a
-                // water-surface companion update so the streamed water
-                // plane tracks the chunk's voxel composition on every
-                // delta (re-uses the same delta payload + culling eye).
-                apply_water_deltas_for_frame(
-                    &mut commands,
-                    &mut scene,
-                    water_meshes.as_ref(),
-                    culling.eye,
-                    culling.max_distance,
-                    &delta,
-                );
-            }
-            Frame3d::AgentAppearance(agents) => {
-                // FR-CLIENT-render: pass the camera eye so far-away agents
-                // get a distance-LOD scale attenuation (otherwise they punch
-                // through the terrain near the horizon).
-                apply_agent_appearance_frame_with_labels_and_eye(
-                    &mut commands,
-                    &mut scene,
-                    &mut materials,
-                    assets.as_ref(),
-                    agents,
-                    AgentLabelConfig { enabled: true },
-                    Some(eye),
-                );
-            }
+            Frame3d::VoxelDelta(delta) => apply_voxel_delta_frame(
+                &mut commands,
+                &mut scene,
+                &mut materials,
+                culling,
+                debug.as_ref(),
+                delta,
+                wireframe_color,
+            ),
+            Frame3d::AgentAppearance(agents) => apply_agent_appearance_frame_with_labels(
+                &mut commands,
+                &mut scene,
+                &mut materials,
+                assets.as_ref(),
+                agents,
+                AgentLabelConfig { enabled: true },
+            ),
             Frame3d::BuildingDiff(building) => apply_building_diff_frame(
                 &mut commands,
                 &mut scene,
@@ -918,23 +768,7 @@ fn apply_live_frames(
                 assets.as_ref(),
                 building,
             ),
-            Frame3d::CivilianState(civilian) => apply_civilian_state_frame(&mut scene, civilian),
-            Frame3d::FactionState(faction) => apply_faction_state_frame(&mut scene, faction),
-            Frame3d::EventFeed(ref event_frame) => {
-                for msg in &event_frame.events {
-                    info!(
-                        "event feed (tick {}): {}",
-                        event_frame.tick,
-                        format_event_feed_message(msg),
-                    );
-                }
-                push_event_feed_to_hud_summary(&mut hud.snapshot, event_frame);
-                apply_event_feed_frame(&mut feed, event_frame.clone());
-            }
-            // FR-CLIENT-render: route the streamed climate frame into the
-            // live scene (was previously dropped). Downstream sky/sun/
-            // ambient systems consume it via `latest_climate(&scene)`.
-            Frame3d::Climate(climate) => apply_climate_frame(&mut scene, climate),
+            Frame3d::CivilianState(_) | Frame3d::FactionState(_) | Frame3d::EventFeed(_) => {}
         }
     }
 }
@@ -945,8 +779,6 @@ fn orbit_camera_input(
     keys: Res<ButtonInput<KeyCode>>,
     mut motion_events: MessageReader<MouseMotion>,
     mut scroll_events: MessageReader<MouseWheel>,
-    #[cfg(feature = "egui")]
-    settings: Option<Res<GameSettings>>,
     mut orbit: ResMut<OrbitCamera>,
     minimap: Query<&Interaction, With<MinimapPanel>>,
 ) {
@@ -1134,55 +966,28 @@ fn update_minimap(
     hud: Res<HudState>,
     mut cache: ResMut<MinimapCache>,
     children: Query<&Children>,
-    mut camera_dot: Query<&mut Node, With<MinimapCameraDot>>,
     agents: Query<&Transform, With<LiveAgentTag>>,
-    agents_changed: Query<&Transform, (With<LiveAgentTag>, Changed<Transform>)>,
     buildings: Query<&Transform, With<LiveBuildingTag>>,
-    buildings_changed: Query<&Transform, (With<LiveBuildingTag>, Changed<Transform>)>,
     graph_parcels: Query<&Transform, With<LiveGraphParcelTag>>,
-    graph_parcels_changed: Query<&Transform, (With<LiveGraphParcelTag>, Changed<Transform>)>,
 ) {
     let mut keys: Vec<u64> = scene.chunks.keys().copied().collect();
     keys.sort_unstable();
     let agent_count = scene.agents.len();
     let building_count = scene.buildings.len();
     let graph_count = scene.graph_parcels.len();
-    let transforms_changed = !agents_changed.is_empty()
-        || !buildings_changed.is_empty()
-        || !graph_parcels_changed.is_empty();
+    let cam_cx = (orbit.centre[0] / LIVE_CHUNK_EDGE as f32).floor() as i32;
+    let cam_cz = (orbit.centre[2] / LIVE_CHUNK_EDGE as f32).floor() as i32;
+    let camera_chunk = Some((cam_cx, cam_cz));
     let use_focus_bounds = hud.snapshot.connected && live_stream_has_content(&scene);
     let focus_snapshot = use_focus_bounds.then_some(*focus);
-    let new_bounds = minimap_bounds_from_keys(&keys);
-
-    let camera_uv = if let Some(focus) = focus_snapshot {
-        Some(MinimapFocusRect {
-            centre_x: focus.centre.x,
-            centre_z: focus.centre.z,
-            half_extent: focus.half_extent,
-        })
-        .map(|focus_rect| focus_rect.world_to_uv(orbit.centre[0], orbit.centre[2]))
-    } else {
-        new_bounds.map(|bounds| world_minimap_uv(orbit.centre[0], orbit.centre[2], bounds))
-    };
-
-    if let Ok(mut node) = camera_dot.get_mut(minimap.camera_dot) {
-        if let Some(uv) = camera_uv {
-            let (left, top) = MINIMAP_HUD_LAYOUT.dot_origin(uv, MINIMAP_DOT + 2.0);
-            node.left = Val::Px(left);
-            node.top = Val::Px(top);
-            node.display = Display::Flex;
-        } else {
-            node.display = Display::None;
-        }
-    }
 
     if keys == cache.chunk_keys
         && agent_count == cache.agent_count
         && building_count == cache.building_count
         && graph_count == cache.graph_count
+        && camera_chunk == cache.camera_chunk
         && use_focus_bounds == cache.use_focus_bounds
         && focus_snapshot == cache.focus
-        && !transforms_changed
     {
         return;
     }
@@ -1191,9 +996,10 @@ fn update_minimap(
     cache.agent_count = agent_count;
     cache.building_count = building_count;
     cache.graph_count = graph_count;
+    cache.camera_chunk = camera_chunk;
     cache.use_focus_bounds = use_focus_bounds;
     cache.focus = focus_snapshot;
-    cache.bounds = new_bounds;
+    cache.bounds = minimap_bounds_from_keys(&keys);
 
     for child in children
         .get(minimap.dots)
@@ -1222,14 +1028,7 @@ fn update_minimap(
                 } else {
                     LIVE_MINIMAP_CHUNK_LOADED_COLOR
                 };
-                spawn_minimap_dot(
-                    parent,
-                    MINIMAP_HUD_LAYOUT,
-                    uv,
-                    MINIMAP_DOT,
-                    dot_color,
-                    false,
-                );
+                spawn_minimap_dot(parent, MINIMAP_HUD_LAYOUT, uv, MINIMAP_DOT, dot_color, false);
             }
 
             for transform in &agents {
@@ -1268,6 +1067,15 @@ fn update_minimap(
                 );
             }
 
+            let cam_uv = focus_rect.world_to_uv(orbit.centre[0], orbit.centre[2]);
+            spawn_minimap_dot(
+                parent,
+                MINIMAP_HUD_LAYOUT,
+                cam_uv,
+                MINIMAP_DOT + 2.0,
+                LIVE_MINIMAP_CAMERA_COLOR,
+                false,
+            );
             return;
         }
 
@@ -1282,18 +1090,15 @@ fn update_minimap(
             } else {
                 LIVE_MINIMAP_CHUNK_LOADED_COLOR
             };
-            spawn_minimap_dot(
-                parent,
-                MINIMAP_HUD_LAYOUT,
-                uv,
-                MINIMAP_DOT,
-                dot_color,
-                false,
-            );
+            spawn_minimap_dot(parent, MINIMAP_HUD_LAYOUT, uv, MINIMAP_DOT, dot_color, false);
         }
 
         for transform in &agents {
-            let uv = world_minimap_uv(transform.translation.x, transform.translation.z, bounds);
+            let uv = world_minimap_uv(
+                transform.translation.x,
+                transform.translation.z,
+                bounds,
+            );
             spawn_minimap_dot(
                 parent,
                 MINIMAP_HUD_LAYOUT,
@@ -1305,7 +1110,11 @@ fn update_minimap(
         }
 
         for transform in &buildings {
-            let uv = world_minimap_uv(transform.translation.x, transform.translation.z, bounds);
+            let uv = world_minimap_uv(
+                transform.translation.x,
+                transform.translation.z,
+                bounds,
+            );
             spawn_minimap_dot(
                 parent,
                 MINIMAP_HUD_LAYOUT,
@@ -1317,7 +1126,11 @@ fn update_minimap(
         }
 
         for transform in &graph_parcels {
-            let uv = world_minimap_uv(transform.translation.x, transform.translation.z, bounds);
+            let uv = world_minimap_uv(
+                transform.translation.x,
+                transform.translation.z,
+                bounds,
+            );
             spawn_minimap_dot(
                 parent,
                 MINIMAP_HUD_LAYOUT,
@@ -1328,6 +1141,15 @@ fn update_minimap(
             );
         }
 
+        let cam_uv = world_minimap_uv(orbit.centre[0], orbit.centre[2], bounds);
+        spawn_minimap_dot(
+            parent,
+            MINIMAP_HUD_LAYOUT,
+            cam_uv,
+            MINIMAP_DOT + 2.0,
+            LIVE_MINIMAP_CAMERA_COLOR,
+            false,
+        );
     });
 }
 
@@ -1384,6 +1206,13 @@ fn minimap_click_focus(
         if !mouse.just_pressed(MouseButton::Left) {
             return;
         }
+    }
+
+    let Ok((interaction, cursor)) = panels.single() else {
+        return;
+    };
+    if *interaction == Interaction::None || cursor.normalized.is_none() {
+        return;
     }
 
     let Ok((interaction, cursor)) = panels.single() else {
@@ -1482,11 +1311,7 @@ fn update_chunk_fade(
     time: Res<Time>,
     debug: Res<DebugRender>,
     mut commands: Commands,
-    mut fades: Query<(
-        Entity,
-        &mut LiveChunkFade,
-        &MeshMaterial3d<StandardMaterial>,
-    )>,
+    mut fades: Query<(Entity, &mut LiveChunkFade, &MeshMaterial3d<StandardMaterial>)>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     if debug.wireframe {
@@ -1502,70 +1327,4 @@ fn update_chunk_fade(
             commands.entity(entity).remove::<LiveChunkFade>();
         }
     }
-}
-
-fn minimap_popup_ui(
-    mut contexts: EguiContexts,
-    mut popup: ResMut<MinimapPopup>,
-    bridge: Res<LiveBridge>,
-    mut orbit: ResMut<OrbitCamera>,
-    mut hud: ResMut<HudState>,
-    scene: Res<LiveStreamScene>,
-) {
-    let Some((tx, ty)) = popup.pending else {
-        return;
-    };
-    egui::Window::new("Tile Actions")
-        .collapsible(false)
-        .resizable(false)
-        .show(contexts.ctx_mut(), |ui| {
-            ui.label(format!("Tile ({tx}, {ty})"));
-            if ui.button("Inspect tile").clicked() {
-                let json = format!(
-                    r#"{{"jsonrpc":"2.0","id":1,"method":"sim.inspect_tile","params":{{"x":{tx},"y":{ty}}}}}"#
-                );
-                bridge.client.send_rpc_raw(json);
-                popup.pending = None;
-            }
-            if ui.button("Center camera").clicked() {
-                orbit.centre[0] = tx as f32;
-                orbit.centre[2] = ty as f32;
-                let preferred_cy = (orbit.centre[1] / LIVE_CHUNK_EDGE as f32).floor() as i32;
-                let loaded: Vec<u64> = scene.chunks.keys().copied().collect();
-                hud.snapshot.focused_chunk = Some(focused_chunk_at_grid(
-                    tx / LIVE_CHUNK_EDGE as i32,
-                    ty / LIVE_CHUNK_EDGE as i32,
-                    preferred_cy,
-                    &loaded,
-                ));
-                popup.pending = None;
-            }
-            if ui.button("Cancel").clicked() {
-                popup.pending = None;
-            }
-        });
-}
-
-fn poll_emergence(
-    time: Res<Time>,
-    bridge: Res<LiveBridge>,
-    mut timer: ResMut<EmergencePollTimer>,
-    mut hud: ResMut<HudState>,
-    speed: Res<SimSpeedState>,
-    mut emergence_res: ResMut<EmergenceHudData>,
-) {
-    hud.snapshot.speed_multiplier = speed.multiplier;
-    // Apply any parsed emergence responses received from the server.
-    for em in bridge.client.poll_emergence() {
-        hud.snapshot.emergence = Some(em.clone());
-        *emergence_res = em;
-        hud.snapshot.emergence = Some(em);
-    }
-    timer.0 += time.delta_secs();
-    if timer.0 < 10.0 {
-        return;
-    }
-    timer.0 = 0.0;
-    let json = r#"{"jsonrpc":"2.0","id":2,"method":"sim.emergence","params":null}"#.to_string();
-    bridge.client.send_rpc_raw(json);
 }

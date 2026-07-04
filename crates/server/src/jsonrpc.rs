@@ -77,42 +77,6 @@ pub enum JsonRpcMethod {
     LoadSlot,
     /// List saves in the bridge `saves/` directory (`save.list`, CIV-1000 §13).
     SaveList,
-    /// Read the latest civ-emergence-metrics sample
-    /// (`sim.emergence`, stacked on PR #350; FR dashboard).
-    SimEmergence,
-    /// Read the transport-safe emergence dashboard snapshot.
-    EmergenceDashboard,
-    /// Read the full emergence-metrics sample
-    /// (`emergence.metrics`, FR-CIV-EMERG-001..005 dashboard surface
-    /// — see `docs/design/emergence-dashboard.md`). Surfaces the
-    /// Shannon entropy, structure count, and power-law slope the
-    /// criticality tuning dashboard polls; computed from existing
-    /// per-tick engine state, never introduces a new tick.
-    EmergenceMetrics,
-    /// Inspect terrain + faction at a tile coordinate.
-    /// (`sim.inspect_tile`, FR tile-inspector).
-    SimInspectTile,
-    /// Client-initiated diplomacy action (propose_treaty / declare_war / offer_trade). (sim.diplomacy_action, FR-CIV-CLIENT-006).
-    SimDiplomacyAction,
-    /// Queue a research tech on the simulation (`sim.queue_research`, FR-CIV-SERVER-003).
-    SimQueueResearch,
-    /// Read the current tech research state (`sim.tech_state`, FR-CIV-SERVER-003).
-    SimTechState,
-    /// Opt-in tick broadcast filter (`sim.subscribe`, CIV-0200).
-    SimPerf,
-    SimSubscribe,
-    /// Clear per-connection tick broadcast filter (`sim.unsubscribe`).
-    SimUnsubscribe,
-    /// Replace per-connection tick broadcast filter `(`sim.update_subscription`).`
-    SimUpdateSubscription,
-    /// Query current game outcome state (`sim.outcome`, FR-CIV-GAME-001).
-    SimOutcome,
-    /// Apply a god action from the bridge UI (`sim.god_action`, FR-CIV-GAME-002).
-    SimGodAction,
-    /// Per-entity sentience/psyche snapshot (`psyche.snapshot`, FR-PSYCHE-readapi).
-    PsycheSnapshot,
-    /// Per-tick sentience events (`psyche.events`, FR-PSYCHE-readapi).
-    PsycheEvents,
 }
 
 impl JsonRpcMethod {
@@ -141,21 +105,6 @@ impl JsonRpcMethod {
             Self::SaveSlot => "save.slot",
             Self::LoadSlot => "save.load",
             Self::SaveList => "save.list",
-            Self::SimEmergence => "sim.emergence",
-            Self::EmergenceDashboard => "emergence.dashboard",
-            Self::EmergenceMetrics => "emergence.metrics",
-            Self::SimInspectTile => "sim.inspect_tile",
-            Self::SimPerf => "sim.perf",
-            Self::SimDiplomacyAction => "sim.diplomacy_action",
-            Self::SimQueueResearch => "sim.queue_research",
-            Self::SimTechState => "sim.tech_state",
-            Self::SimSubscribe => "sim.subscribe",
-            Self::SimUnsubscribe => "sim.unsubscribe",
-            Self::SimUpdateSubscription => "sim.update_subscription",
-            Self::SimOutcome => "sim.outcome",
-            Self::SimGodAction => "sim.god_action",
-            Self::PsycheSnapshot => "psyche.snapshot",
-            Self::PsycheEvents => "psyche.events",
         }
     }
 
@@ -184,21 +133,6 @@ impl JsonRpcMethod {
             "save.slot" => Some(Self::SaveSlot),
             "save.load" => Some(Self::LoadSlot),
             "save.list" => Some(Self::SaveList),
-            "sim.emergence" => Some(Self::SimEmergence),
-            "emergence.dashboard" => Some(Self::EmergenceDashboard),
-            "emergence.metrics" => Some(Self::EmergenceMetrics),
-            "sim.inspect_tile" => Some(Self::SimInspectTile),
-            "sim.perf" => Some(Self::SimPerf),
-            "sim.diplomacy_action" => Some(Self::SimDiplomacyAction),
-            "sim.queue_research" => Some(Self::SimQueueResearch),
-            "sim.tech_state" => Some(Self::SimTechState),
-            "sim.subscribe" => Some(Self::SimSubscribe),
-            "sim.unsubscribe" => Some(Self::SimUnsubscribe),
-            "sim.update_subscription" => Some(Self::SimUpdateSubscription),
-            "sim.outcome" => Some(Self::SimOutcome),
-            "sim.god_action" => Some(Self::SimGodAction),
-            "psyche.snapshot" => Some(Self::PsycheSnapshot),
-            "psyche.events" => Some(Self::PsycheEvents),
             _ => None,
         }
     }
@@ -481,12 +415,6 @@ pub struct SnapshotFields {
     pub damage_events_count: u32,
     /// Voxels removed by tactical damage on the last tick.
     pub voxel_damage_removed_this_tick: u32,
-    /// Game-state faction summaries for `sim.get_factions`.
-    pub factions: Vec<FactionSnapshot>,
-    /// Game-state resource summaries for `sim.get_resources`.
-    pub resources: Vec<ResourceSnapshot>,
-    /// Game-state emergence metrics for `sim.get_emergence_metrics`.
-    pub emergence_metrics: EmergenceMetricsSnapshot,
     /// Loaded mods for mod-browser UI (FR-CIV-TACTICS-054).
     pub mods: Vec<civ_mod_host::ModBrowserEntry>,
     /// `mod.loaded.v1` replay-bus JSON from the most recent tick (scenario load).
@@ -497,25 +425,6 @@ pub struct SnapshotFields {
     pub mod_permission_violations: Vec<String>,
     /// Deterministic planet climate from `phase_planet` (FR-CIV-PLANET-010).
     pub climate: civ_engine::Climate,
-    /// Most recent civ-emergence-metrics sample (FR-CIV-EMERG-003
-    /// surface). `None` on a fresh sim before the first 50-tick
-    /// sample boundary; the bridge copies the same value here as
-    /// `DispatchContext::emergence` so dashboard consumers can poll
-    /// either `sim.emergence` or `sim.snapshot.emergence` without
-    /// missing the dashboard block.
-    pub emergence: Option<EmergenceSampleFields>,
-    /// Fully-researched techs (FR-CIV-SERVER-003).
-    pub researched: Vec<String>,
-    /// Currently-researching tech, if any (FR-CIV-SERVER-003).
-    pub in_progress_tech: Option<String>,
-    /// Per-tick audio triggers emitted by `Simulation::phase_audio`
-    /// (FR-AUDIO-wire). Client audio surfaces (`clients/bevy-ref`,
-    /// `civ-watch` web) consume this list to play SFX cues without
-    /// needing a separate audio connection. The field is
-    /// `skip_serializing_if = "Vec::is_empty"` so a quiet tick stays
-    /// zero-bytes on the wire.
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub audio_events: Vec<civ_engine::SfxTrigger>,
 }
 
 /// Tactical damage pulse for `sim.snapshot` (normalized map coords).
@@ -685,90 +594,6 @@ pub fn snapshot_result_json(fields: &SnapshotFields) -> Value {
         "climate".to_owned(),
         serde_json::to_value(fields.climate).unwrap_or(Value::Null),
     );
-    if let Some(emergence) = &fields.emergence {
-        // `sim.snapshot.emergence` block (FR-CIV-EMERG-003). The five
-        // dashboard fields are hoisted to a nested `dashboard` object
-        // so dashboard clients can read either the flat wire shape
-        // (`result["cluster_entropy"]`) or the nested one
-        // (`result["dashboard"]["cluster_entropy"]`). The flat hoist
-        // keeps PR #350 dashboard clients working; the nested
-        // location is the canonical "all five tiles" handle.
-        let mut emergence_obj = serde_json::Map::new();
-        emergence_obj.insert("tick".to_owned(), serde_json::json!(emergence.tick));
-        emergence_obj.insert(
-            "entropy_bits".to_owned(),
-            serde_json::json!(emergence.entropy_bits),
-        );
-        emergence_obj.insert(
-            "entropy_norm".to_owned(),
-            serde_json::json!(emergence.entropy_norm),
-        );
-        if let Some(count) = emergence.structure_count {
-            emergence_obj.insert("structure_count".to_owned(), serde_json::json!(count));
-        }
-        if let Some(largest) = emergence.structure_largest {
-            emergence_obj.insert("structure_largest".to_owned(), serde_json::json!(largest));
-        }
-        if let Some(foreground) = emergence.structure_foreground {
-            emergence_obj.insert(
-                "structure_foreground".to_owned(),
-                serde_json::json!(foreground),
-            );
-        }
-        emergence_obj.insert(
-            "histogram_total".to_owned(),
-            serde_json::json!(emergence.histogram_total),
-        );
-        emergence_obj.insert(
-            "histogram_populated_bins".to_owned(),
-            serde_json::json!(emergence.histogram_populated_bins),
-        );
-        emergence_obj.insert(
-            "sample_dur_us".to_owned(),
-            serde_json::json!(emergence.sample_dur_us),
-        );
-        if let Some(dashboard) = &emergence.dashboard {
-            emergence_obj.insert(
-                "cluster_entropy".to_owned(),
-                serde_json::json!(dashboard.cluster_entropy),
-            );
-            emergence_obj.insert(
-                "ideology_homophily".to_owned(),
-                serde_json::json!(dashboard.ideology_homophily),
-            );
-            emergence_obj.insert(
-                "sentience_fraction".to_owned(),
-                serde_json::json!(dashboard.sentience_fraction),
-            );
-            emergence_obj.insert(
-                "psyche_stability".to_owned(),
-                serde_json::json!(dashboard.psyche_stability),
-            );
-            emergence_obj.insert(
-                "diplomacy_tension".to_owned(),
-                serde_json::json!(dashboard.diplomacy_tension),
-            );
-            emergence_obj.insert(
-                "dashboard".to_owned(),
-                serde_json::to_value(dashboard).unwrap_or(Value::Null),
-            );
-        }
-        emergence_obj.insert(
-            "power_law_alpha".to_owned(),
-            serde_json::json!(emergence.power_law_alpha),
-        );
-        emergence_obj.insert(
-            "novelty_rate".to_owned(),
-            serde_json::json!(emergence.novelty_rate),
-        );
-        emergence_obj.insert(
-            "mi_material_faction_norm".to_owned(),
-            emergence
-                .mi_material_faction_norm
-                .map_or(Value::Null, |v| serde_json::json!(v)),
-        );
-        obj.insert("emergence".to_owned(), Value::Object(emergence_obj));
-    }
     Value::Object(obj)
 }
 
@@ -847,13 +672,6 @@ pub fn snapshot_fields_from_sim(
             .collect(),
         damage_events_count: sim.last_tick_combat_pulses().len() as u32,
         voxel_damage_removed_this_tick: sim.last_tick_voxel_damage_count() as u32,
-        factions: game_factions_from_sim(sim, &spectator),
-        resources: game_resources_from_sim(sim),
-        emergence_metrics: EmergenceMetricsSnapshot {
-            faction_count: sim.state.factions.len() as u32,
-            structure_count: snap.building_count as u32,
-            language_count: sim.cluster_cultures().len() as u32,
-        },
         mods: sim.mod_browser_entries(),
         mod_lifecycle: sim.replay_log().mod_loaded_bus_at_tick(sim.state.tick),
         session_saved: sim.replay_log().session_saved_bus_at_tick(sim.state.tick),
@@ -861,17 +679,6 @@ pub fn snapshot_fields_from_sim(
             .replay_log()
             .mod_permission_violation_bus_at_tick(sim.state.tick),
         climate: *sim.climate(),
-        emergence: sim.last_emergence_sample().map(EmergenceSampleFields::from),
-        researched: sim.research_cache().researched.clone(),
-        in_progress_tech: sim
-            .research_cache()
-            .in_progress
-            .as_ref()
-            .map(|(tech, _)| tech.clone()),
-        // FR-AUDIO-wire — forward the engine's per-tick audio trigger
-        // list unchanged. Clients (Bevy, web) iterate this list and
-        // route each `SfxTrigger` to its `civ_audio::SfxKind`.
-        audio_events: sim.last_tick_audio_events().to_vec(),
     }
 }
 
@@ -980,278 +787,6 @@ pub struct DispatchContext {
     pub connection_role: Option<String>,
     /// Bridge save directory for `save.*` handlers.
     pub saves_dir: Option<PathBuf>,
-    /// Latest civ-emergence-metrics sample (PR #350 stack). `None` on a
-    /// fresh simulation before the first 50-tick sample boundary.
-    pub emergence: Option<EmergenceSampleFields>,
-    /// Fully-researched techs from `ResearchCache` (FR-CIV-SERVER-003).
-    pub researched: Vec<String>,
-    /// Currently-researching tech name, if any (FR-CIV-SERVER-003).
-    pub in_progress_tech: Option<String>,
-    /// Precomputed game outcome for `sim.outcome` handler (FR-CIV-GAME-001).
-    pub outcome_fields: Option<OutcomeFields>,
-    /// Server-reported last tick wall-clock duration (ms) for sim.perf (FR-CIV-PERF-001).
-    pub last_tick_ms: f64,
-    /// Per-entity psyche snapshot for `psyche.snapshot` (FR-PSYCHE-readapi).
-    /// Pre-computed by the bridge when the method matches.
-    pub psyche_snapshot: Option<Vec<PsycheEntitySnapshotWire>>,
-    /// Per-tick sentience events for `psyche.events` (FR-PSYCHE-readapi).
-    /// Pre-computed by the bridge when the method matches.
-    pub sentience_events: Option<Vec<SentienceEventWire>>,
-}
-
-/// JSON-RPC view of [`civ_engine::emergence_metrics::EmergenceSample`].
-///
-/// Mirrors the engine type but keeps a fixed, transport-friendly
-/// representation (no `f32` precision surprises, all `Option`s for the
-/// "no dense chunks yet" boot state). Emitted by the `sim.emergence`
-/// JSON-RPC method and embedded in `sim.snapshot` for dashboard
-/// consumers that poll the snapshot stream instead.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct EmergenceSampleFields {
-    /// Engine tick the sample was taken at.
-    pub tick: u64,
-    /// Shannon entropy (bits) over the live material histogram.
-    pub entropy_bits: f32,
-    /// Normalised Shannon entropy (`0..=1`).
-    pub entropy_norm: f32,
-    /// 6-connectivity component count on the first dense chunk.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub structure_count: Option<u32>,
-    /// Size (in voxels) of the largest component in the sampled chunk.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub structure_largest: Option<u32>,
-    /// Number of foreground voxels in the sampled chunk.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub structure_foreground: Option<u32>,
-    /// Total number of voxels accumulated into the histogram.
-    pub histogram_total: u64,
-    /// Number of populated bins in the material histogram.
-    pub histogram_populated_bins: u32,
-    /// Wall-clock duration of the sample, in microseconds.
-    pub sample_dur_us: u64,
-    /// Five-tile dashboard block (FR-CIV-EMERG-001/003). Field is
-    /// `None` only on the (rare) path where the engine sample is
-    /// absent and we still want to emit a non-`null` JSON object;
-    /// the wire shape is `cluster_entropy`, `ideology_homophily`,
-    /// `sentience_fraction`, `psyche_stability`, `diplomacy_tension`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub dashboard: Option<DashboardBlock>,
-    /// Rolling-mean branching ratio `σ̄_W` (charter §3.6).
-    pub branching_sigma: f32,
-    /// Normalised edge-of-chaos score for `branching_sigma`.
-    pub branching_sigma_score: f32,
-    /// Rolling window `W` for `branching_sigma`.
-    pub branching_window: u32,
-    /// Monotonic count of closed avalanches.
-    pub avalanches_closed: u64,
-    /// Charter regime label for `branching_sigma`.
-    pub branching_regime: String,
-    /// Power-law exponent α for the cluster-size distribution (charter §3.5).
-    #[serde(default)]
-    pub power_law_alpha: f32,
-    /// Novelty rate: novel config fingerprints per window per civilian (charter §3.4).
-    #[serde(default)]
-    pub novelty_rate: f32,
-    /// Normalised mutual information between material and faction distributions.
-    #[serde(default)]
-    pub mi_material_faction_norm: Option<f32>,
-    /// FR-EMERGENCE-dashboard: normalised novelty score in `[0, 1]`,
-    /// derived from `novelty_rate` (see
-    /// [`civ_emergence_metrics::dashboard::novelty_score`]).
-    /// Surfaces on the `emergence.metrics` read method alongside
-    /// the raw `novelty_rate`.
-    #[serde(default)]
-    pub novelty_score: f32,
-    /// FR-EMERGENCE-dashboard: estimated coupling mutual
-    /// information in `[0, 1]`, derived from
-    /// `mi_material_faction_norm * entropy_norm` (see
-    /// [`civ_emergence_metrics::dashboard::coupling_mi_estimate`]).
-    /// `0.0` when the raw MI is degenerate.
-    #[serde(default)]
-    pub coupling_mi_estimate: f32,
-    /// FR-EMERGENCE-dashboard: edge-of-chaos / criticality
-    /// indicator in `[0, 1]`, combining `branching_sigma`,
-    /// `power_law_alpha`, and `entropy_norm` against the
-    /// operational bands documented in
-    /// [`civ_emergence_metrics::criticality`]. `1.0` when all
-    /// three signals sit inside their operational band.
-    #[serde(default)]
-    pub criticality_indicator: f32,
-}
-
-/// Wire-friendly mirror of
-/// [`civ_emergence_metrics::dashboard::TileDashboard`] for the
-/// `sim.emergence` / `sim.snapshot.emergence` JSON-RPC surface
-/// (FR-CIV-EMERG-003). The struct re-exports the five f32 fields as a
-/// nested object so dashboard clients can read either the flat
-/// `result["cluster_entropy"]` shape *or* the nested
-/// `result["dashboard"]["cluster_entropy"]` shape — both are emitted
-/// by the dispatch for backwards compatibility with PR #350 consumers.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct DashboardBlock {
-    /// Normalised Shannon entropy over per-cluster population sizes.
-    pub cluster_entropy: f32,
-    /// Homophily index for the ideology distribution.
-    pub ideology_homophily: f32,
-    /// Fraction of agents that have crossed the sentience threshold.
-    pub sentience_fraction: f32,
-    /// Population stability of mood valence.
-    pub psyche_stability: f32,
-    /// Mean absolute tension across the recent diplomacy events.
-    pub diplomacy_tension: f32,
-}
-
-impl From<civ_emergence_metrics::dashboard::TileDashboard> for DashboardBlock {
-    fn from(d: civ_emergence_metrics::dashboard::TileDashboard) -> Self {
-        Self {
-            cluster_entropy: d.cluster_entropy,
-            ideology_homophily: d.ideology_homophily,
-            sentience_fraction: d.sentience_fraction,
-            psyche_stability: d.psyche_stability,
-            diplomacy_tension: d.diplomacy_tension,
-        }
-    }
-}
-
-impl From<civ_engine::emergence_metrics::EmergenceSample> for EmergenceSampleFields {
-    fn from(s: civ_engine::emergence_metrics::EmergenceSample) -> Self {
-        Self {
-            tick: s.tick,
-            entropy_bits: s.entropy_bits,
-            entropy_norm: s.entropy_norm,
-            structure_count: s.structure_count,
-            structure_largest: s.structure_largest,
-            structure_foreground: s.structure_foreground,
-            histogram_total: s.histogram_total,
-            histogram_populated_bins: s.histogram_populated_bins,
-            sample_dur_us: s.sample_dur_us,
-            dashboard: Some(DashboardBlock::from(s.dashboard)),
-            branching_sigma: s.branching_sigma,
-            branching_sigma_score: s.branching_sigma_score,
-            branching_window: s.branching_window,
-            avalanches_closed: s.avalanches_closed,
-            branching_regime: s.branching_regime.label().to_string(),
-            power_law_alpha: s.power_law_alpha,
-            novelty_rate: s.novelty_rate,
-            mi_material_faction_norm: s.mi_material_faction_norm,
-            // FR-EMERGENCE-dashboard: pass through the three derived
-            // summary metrics unchanged. They were already computed
-            // on the engine side and live on the same `EmergenceSample`
-            // struct.
-            novelty_score: s.novelty_score,
-            coupling_mi_estimate: s.coupling_mi_estimate,
-            criticality_indicator: s.criticality_indicator,
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// PSYCHE / SENTIENCE read-API types (FR-PSYCHE-readapi)
-// ---------------------------------------------------------------------------
-
-/// Wire-friendly representation of one agent's psyche for `psyche.snapshot`.
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct PsycheEntitySnapshotWire {
-    /// Stable agent entity id.
-    pub agent_id: u64,
-    /// Cognition score from the sentience evaluation `[0, 1]`.
-    pub cognition_score: f32,
-    /// Whether the cognition score crossed the sentience threshold this tick.
-    pub is_sentient: bool,
-    /// Current mood valence `[-1, 1]`.
-    pub mood_valence: f32,
-    /// Current mood arousal `[0, 1]`.
-    pub mood_arousal: f32,
-    /// Temperament axes.
-    pub reactivity: f32,
-    pub sociability: f32,
-    pub risk_tol: f32,
-    pub impulsivity: f32,
-    /// Four drive axes `[0, 1]`.
-    pub drives: [f32; 4],
-    /// Four belief axes `[0, 1]`.
-    pub beliefs: [f32; 4],
-    /// Maturity `[0, 1]`.
-    pub maturity: f32,
-}
-
-/// Wire-friendly representation of one sentience event for `psyche.events`.
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct SentienceEventWire {
-    /// Optional lineage identifier.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub lineage_id: Option<u64>,
-    /// Measured cognition score.
-    pub cognition_score: f32,
-    /// Whether the threshold was crossed.
-    pub crossed: bool,
-}
-
-/// Build per-entity psyche snapshot from the simulation's ECS world and
-/// sentience events (FR-PSYCHE-readapi). Returns one entry per agent that
-/// carries a [`Psyche`] component, paired with the matching sentience event
-/// if one exists.
-pub fn psyche_snapshot_from_sim(
-    sim: &civ_engine::Simulation,
-    sentience_events: &[SentienceEventWire],
-) -> Vec<PsycheEntitySnapshotWire> {
-    use civ_agents::Civilian;
-    // Build a lookup: agent_id → sentience data
-    let mut sentience_by_lineage: std::collections::HashMap<u64, &SentienceEventWire> =
-        std::collections::HashMap::new();
-    // Sentience events don't carry agent_id directly; we match using the
-    // entity lineage id hash. For the initial read-API we use the ECS
-    // civilian id as the key.
-    let mut recorded_sentience: std::collections::HashMap<u64, f32> =
-        std::collections::HashMap::new();
-    let mut crossed: std::collections::HashSet<u64> = std::collections::HashSet::new();
-    // Sentience events don't have a direct entity id; we use lineage_id
-    // as a proxy. This is best-effort for display; the full mapping will
-    // improve when lineage→entity tracking is added.
-    for ev in sentience_events {
-        if let Some(lid) = ev.lineage_id {
-            recorded_sentience.insert(lid, ev.cognition_score);
-            if ev.crossed {
-                crossed.insert(lid);
-            }
-        }
-    }
-
-    let mut entities: Vec<PsycheEntitySnapshotWire> = Vec::new();
-    for (_, (civilian, psyche)) in sim.world.query::<(&Civilian, &civ_agents::Psyche)>().iter() {
-        let score = recorded_sentience
-            .get(&civilian.id)
-            .copied()
-            .unwrap_or(0.0);
-        let is_sentient = crossed.contains(&civilian.id);
-        entities.push(PsycheEntitySnapshotWire {
-            agent_id: civilian.id,
-            cognition_score: score,
-            is_sentient,
-            mood_valence: psyche.mood.valence,
-            mood_arousal: psyche.mood.arousal,
-            reactivity: psyche.temperament.reactivity,
-            sociability: psyche.temperament.sociability,
-            risk_tol: psyche.temperament.risk_tol,
-            impulsivity: psyche.temperament.impulsivity,
-            drives: psyche.drives,
-            beliefs: psyche.beliefs,
-            maturity: psyche.maturity,
-        });
-    }
-    entities
-}
-
-/// Convert engine sentience events to wire format.
-pub fn sentience_events_from_sim(sim: &civ_engine::Simulation) -> Vec<SentienceEventWire> {
-    sim.last_tick_sentience_events()
-        .iter()
-        .map(|ev| SentienceEventWire {
-            lineage_id: ev.lineage_id,
-            cognition_score: ev.cognition_score,
-            crossed: ev.crossed,
-        })
-        .collect()
 }
 
 /// Side effect the WebSocket bridge must apply after building the wire response.
@@ -1345,24 +880,6 @@ pub enum DispatchEffect {
     LoadSlot {
         /// Validated slot stem (`slot-1` … `slot-5`).
         slot_name: String,
-    },
-    /// Queue a research topic.
-    QueueResearch {
-        /// Tech identifier to queue.
-        tech: String,
-    },
-    /// Apply a god action from the bridge UI.
-    GodAction {
-        /// Action identifier.
-        action: String,
-        /// Normalized X coordinate, if provided.
-        x: Option<f32>,
-        /// Normalized Y coordinate, if provided.
-        y: Option<f32>,
-        /// Optional faction target.
-        target_faction: Option<u32>,
-        /// Optional magnitude slider.
-        magnitude: Option<f32>,
     },
 }
 
@@ -2233,173 +1750,6 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 effect: DispatchEffect::None,
             },
         },
-        JsonRpcMethod::SimQueueResearch => {
-            const KNOWN_TECHS: &[&str] = &[
-                "pottery",
-                "masonry",
-                "writing",
-                "iron_working",
-                "currency",
-                "mathematics",
-                "gunpowder",
-                "printing",
-                "banking",
-                "steam_power",
-                "electricity",
-                "railroad",
-            ];
-            let tech = req
-                .params
-                .as_ref()
-                .and_then(|p| p.get("tech"))
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            if tech.is_empty() {
-                DispatchPlan {
-                    response: JsonRpcResponse::failure(
-                        req.id,
-                        JsonRpcError {
-                            code: error_code::INVALID_PARAMS,
-                            message: "Missing or empty \"tech\" parameter".to_owned(),
-                            data: None,
-                        },
-                    ),
-                    effect: DispatchEffect::None,
-                }
-            } else if !KNOWN_TECHS.contains(&tech) {
-                DispatchPlan {
-                    response: JsonRpcResponse::failure(
-                        req.id,
-                        JsonRpcError {
-                            code: error_code::INVALID_PARAMS,
-                            message: format!(
-                                "Unknown tech \"{tech}\"; valid: {}",
-                                KNOWN_TECHS.join(", ")
-                            ),
-                            data: None,
-                        },
-                    ),
-                    effect: DispatchEffect::None,
-                }
-            } else {
-                DispatchPlan {
-                    response: JsonRpcResponse::success(
-                        req.id,
-                        serde_json::json!({
-                            "queued": tech,
-                            "tick": ctx.tick,
-                        }),
-                    ),
-                    effect: DispatchEffect::QueueResearch {
-                        tech: tech.to_owned(),
-                    },
-                }
-            }
-        }
-        JsonRpcMethod::SimTechState => DispatchPlan {
-            response: JsonRpcResponse::success(
-                req.id,
-                serde_json::json!({
-                    "available": [
-                        "pottery", "masonry", "writing", "iron_working", "currency",
-                        "mathematics", "gunpowder", "printing", "banking",
-                        "steam_power", "electricity", "railroad",
-                    ],
-                    "researched": ctx.researched,
-                    "in_progress": ctx.in_progress_tech,
-                    "tick": ctx.tick,
-                }),
-            ),
-            effect: DispatchEffect::None,
-        },
-        JsonRpcMethod::SimOutcome => {
-            use civ_engine::check_outcome;
-            let outcome_result = {
-                let sim = ctx.snapshot.as_ref().map(|_| ()).is_some();
-                // We only have a ctx snapshot; real outcome check needs the live sim.
-                // The ws_bridge populates outcome_fields before dispatch (see below).
-                ctx.outcome_fields
-                    .clone()
-                    .unwrap_or_else(|| crate::jsonrpc::OutcomeFields {
-                        tag: "ongoing".to_owned(),
-                        reason: String::new(),
-                        tick: ctx.tick,
-                    })
-            };
-            DispatchPlan {
-                response: JsonRpcResponse::success(
-                    req.id,
-                    serde_json::json!({
-                        "outcome": outcome_result.tag,
-                        "reason": outcome_result.reason,
-                        "tick": outcome_result.tick,
-                    }),
-                ),
-                effect: DispatchEffect::None,
-            }
-        }
-        JsonRpcMethod::SimPerf => DispatchPlan {
-            response: JsonRpcResponse::success(
-                req.id,
-                serde_json::json!({
-                    "tick": ctx.tick,
-                    "last_tick_ms": ctx.last_tick_ms,
-                    "agent_count": ctx.population.unwrap_or(0) as u32,
-                    "ca_steps": 1u32,
-                    "stub": true,
-                }),
-            ),
-            effect: DispatchEffect::None,
-        },
-        JsonRpcMethod::SimTechState => DispatchPlan {
-            response: JsonRpcResponse::success(
-                req.id,
-                serde_json::json!({
-                    "available": ["pottery", "masonry", "writing", "iron_working",
-                                  "currency", "mathematics", "gunpowder", "printing",
-                                  "banking", "steam_power", "electricity", "railroad"],
-                    "researched": [],
-                    "in_progress": null,
-                    "tick": ctx.tick,
-                    "stub": true,
-                }),
-            ),
-            effect: DispatchEffect::None,
-        },
-        JsonRpcMethod::SimSubscribe
-        | JsonRpcMethod::SimUpdateSubscription
-        | JsonRpcMethod::SimUnsubscribe => DispatchPlan {
-            response: JsonRpcResponse::failure(
-                req.id,
-                JsonRpcError {
-                    code: error_code::INTERNAL_ERROR,
-                    message: "sim.subscribe/unsubscribe require an active WebSocket connection"
-                        .to_owned(),
-                    data: None,
-                },
-            ),
-            effect: DispatchEffect::None,
-        },
-        JsonRpcMethod::PsycheSnapshot => DispatchPlan {
-            response: JsonRpcResponse::success(
-                req.id,
-                serde_json::json!({
-                    "entities": ctx.psyche_snapshot.unwrap_or_default(),
-                    "tick": ctx.tick,
-                }),
-            ),
-            effect: DispatchEffect::None,
-        },
-        JsonRpcMethod::PsycheEvents => DispatchPlan {
-            response: JsonRpcResponse::success(
-                req.id,
-                serde_json::json!({
-                    "events": ctx.sentience_events.unwrap_or_default(),
-                    "tick": ctx.tick,
-                }),
-            ),
-            effect: DispatchEffect::None,
-        },
     }
 }
 
@@ -2634,11 +1984,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -2673,11 +2018,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert_eq!(
@@ -2712,11 +2052,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::ResetSimulation { seed: 99 });
@@ -2740,11 +2075,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2769,11 +2099,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2799,11 +2124,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2829,11 +2149,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -2855,11 +2170,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: Some(OPERATOR_ROLE.to_owned()),
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -2965,11 +2275,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2993,11 +2298,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert_eq!(plan.response.result, Some(serde_json::json!({ "tick": 1 })));
@@ -3426,11 +2726,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert!(matches!(plan.effect, DispatchEffect::ApplyDamage { .. }));
@@ -3466,11 +2761,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert!(matches!(
@@ -3517,11 +2807,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert!(matches!(
@@ -3577,13 +2862,6 @@ mod tests {
                     damage_events: vec![],
                     damage_events_count: 0,
                     voxel_damage_removed_this_tick: 0,
-                    factions: vec![],
-                    resources: vec![],
-                    emergence_metrics: EmergenceMetricsSnapshot {
-                        faction_count: 0,
-                        structure_count: 0,
-                        language_count: 0,
-                    },
                     mods: vec![],
                     mod_lifecycle: vec![],
                     session_saved: vec![],
@@ -3595,17 +2873,11 @@ mod tests {
                         moon_phase: 0.0,
                         tide_offset: 0.0,
                     },
-                    emergence: None,
                 }),
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3659,13 +2931,6 @@ mod tests {
                     damage_events: vec![],
                     damage_events_count: 0,
                     voxel_damage_removed_this_tick: 0,
-                    factions: vec![],
-                    resources: vec![],
-                    emergence_metrics: EmergenceMetricsSnapshot {
-                        faction_count: 0,
-                        structure_count: 0,
-                        language_count: 0,
-                    },
                     mods: vec![],
                     mod_lifecycle: vec![],
                     session_saved: vec![],
@@ -3677,17 +2942,11 @@ mod tests {
                         moon_phase: 0.0,
                         tide_offset: 0.0,
                     },
-                    emergence: None,
                 }),
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert_eq!(
@@ -3746,13 +3005,6 @@ mod tests {
                     damage_events: vec![],
                     damage_events_count: 0,
                     voxel_damage_removed_this_tick: 0,
-                    factions: vec![],
-                    resources: vec![],
-                    emergence_metrics: EmergenceMetricsSnapshot {
-                        faction_count: 0,
-                        structure_count: 0,
-                        language_count: 0,
-                    },
                     mods: vec![],
                     mod_lifecycle: vec![],
                     session_saved: vec![],
@@ -3764,17 +3016,11 @@ mod tests {
                         moon_phase: 0.0,
                         tide_offset: 0.0,
                     },
-                    emergence: None,
                 }),
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert_eq!(
@@ -3815,11 +3061,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert_eq!(
@@ -3853,11 +3094,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert_eq!(
@@ -3889,11 +3125,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3918,11 +3149,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3989,11 +3215,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -4058,11 +3279,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::SetSpeed { multiplier: 4 });
@@ -4088,11 +3304,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -4202,11 +3413,6 @@ mod tests {
                 speed_multiplier: 4,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -4216,14 +3422,8 @@ mod tests {
         );
     }
 
-    /// Covers FR-CIV-SAVE-001.
-    /// Covers FR-CIV-SAVE-002.
-    /// Covers FR-CIV-TACTICS-066.
-    /// FR-CIV-TACTICS-066 — `save.slot` is a JSON-RPC method dispatched on
-    /// the server bridge; the planner emits a `DispatchEffect::SaveSlot`
-    /// with the slot name from the request params.
     #[test]
-    fn dispatch_save_slot_plans_save_effect_fr_save_002() {
+    fn dispatch_save_slot_plans_save_effect() {
         let req = parse_request(
             r#"{"jsonrpc":"2.0","id":30,"method":"save.slot","params":{"slot_name":"slot-2"}}"#,
         )
@@ -4238,11 +3438,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert_eq!(
@@ -4253,11 +3448,8 @@ mod tests {
         );
     }
 
-    /// Covers FR-CIV-SAVE-001.
-    /// Covers FR-CIV-SAVE-002.
-    /// Covers FR-CIV-TACTICS-066.
     #[test]
-    fn dispatch_save_slot_rejects_invalid_slot_fr_save_002() {
+    fn dispatch_save_slot_rejects_invalid_slot() {
         let req = parse_request(
             r#"{"jsonrpc":"2.0","id":31,"method":"save.slot","params":{"slot_name":"slot-9"}}"#,
         )
@@ -4272,11 +3464,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -4284,604 +3471,5 @@ mod tests {
             plan.response.error.as_ref().map(|e| e.code),
             Some(error_code::INVALID_PARAMS)
         );
-    }
-
-    #[test]
-    fn parse_reset_seed_extracts_u64() {
-        use serde_json::json;
-        assert_eq!(parse_reset_seed(Some(&json!({"seed": 42}))).unwrap(), 42);
-        assert!(parse_reset_seed(None).is_err());
-        assert!(parse_reset_seed(Some(&json!({}))).is_err());
-        assert!(parse_reset_seed(Some(&json!({"seed": "x"}))).is_err());
-    }
-
-    #[test]
-    fn parse_set_speed_params_validates_multiplier() {
-        use serde_json::json;
-        assert_eq!(
-            parse_set_speed_params(Some(&json!({"multiplier": 2}))).unwrap(),
-            2
-        );
-        assert_eq!(
-            parse_set_speed_params(Some(&json!({"multiplier": 0}))).unwrap(),
-            0
-        );
-        assert!(parse_set_speed_params(Some(&json!({"multiplier": 3}))).is_err());
-        assert!(parse_set_speed_params(None).is_err());
-        assert!(parse_set_speed_params(Some(&json!({"multiplier": "x"}))).is_err());
-    }
-
-    #[test]
-    fn parse_role_param_reads_nonempty_role() {
-        use serde_json::json;
-        assert_eq!(
-            parse_role_param(Some(&json!({"role":"operator"}))),
-            Some("operator".to_string())
-        );
-        assert_eq!(parse_role_param(Some(&json!({"role":""}))), None);
-        assert_eq!(parse_role_param(None), None);
-        assert_eq!(parse_role_param(Some(&json!({}))), None);
-    }
-
-    #[test]
-    fn role_allows_operator_enforces_when_required() {
-        use serde_json::json;
-        assert!(role_allows_operator(false, None, None));
-        assert!(role_allows_operator(
-            true,
-            Some(&json!({"role":"operator"})),
-            None
-        ));
-        assert!(role_allows_operator(true, None, Some("operator")));
-        assert!(!role_allows_operator(true, None, None));
-        assert!(!role_allows_operator(
-            true,
-            Some(&json!({"role":"viewer"})),
-            None
-        ));
-    }
-
-    #[test]
-    fn parse_name_maps_all_known_methods() {
-        assert_eq!(
-            JsonRpcMethod::parse_name("health"),
-            Some(JsonRpcMethod::Health)
-        );
-        assert_eq!(
-            JsonRpcMethod::parse_name("sim.command"),
-            Some(JsonRpcMethod::SimCommand)
-        );
-        assert_eq!(
-            JsonRpcMethod::parse_name("sim.status"),
-            Some(JsonRpcMethod::SimStatus)
-        );
-        assert_eq!(
-            JsonRpcMethod::parse_name("sim.set_speed"),
-            Some(JsonRpcMethod::SimSetSpeed)
-        );
-        assert_eq!(
-            JsonRpcMethod::parse_name("sim.get_tick"),
-            Some(JsonRpcMethod::GetGameTick)
-        );
-        assert_eq!(
-            JsonRpcMethod::parse_name("sim.get_factions"),
-            Some(JsonRpcMethod::GetFactions)
-        );
-        assert_eq!(
-            JsonRpcMethod::parse_name("sim.get_resources"),
-            Some(JsonRpcMethod::GetResources)
-        );
-        assert_eq!(
-            JsonRpcMethod::parse_name("sim.get_emergence_metrics"),
-            Some(JsonRpcMethod::GetEmergenceMetrics)
-        );
-        assert_eq!(
-            JsonRpcMethod::parse_name("save.slot"),
-            Some(JsonRpcMethod::SaveSlot)
-        );
-        assert_eq!(
-            JsonRpcMethod::parse_name("save.load"),
-            Some(JsonRpcMethod::LoadSlot)
-        );
-        assert_eq!(
-            JsonRpcMethod::parse_name("save.list"),
-            Some(JsonRpcMethod::SaveList)
-        );
-        assert_eq!(
-            JsonRpcMethod::parse_name("sim.emergence"),
-            Some(JsonRpcMethod::SimEmergence)
-        );
-        assert_eq!(
-            JsonRpcMethod::parse_name("sim.snapshot"),
-            Some(JsonRpcMethod::SimSnapshot)
-        );
-        assert_eq!(
-            JsonRpcMethod::parse_name("sim.spawn_entity"),
-            Some(JsonRpcMethod::SimSpawnEntity)
-        );
-        assert_eq!(
-            JsonRpcMethod::parse_name("sim.subscribe"),
-            Some(JsonRpcMethod::SimSubscribe)
-        );
-        assert_eq!(
-            JsonRpcMethod::parse_name("sim.unsubscribe"),
-            Some(JsonRpcMethod::SimUnsubscribe)
-        );
-        assert_eq!(
-            JsonRpcMethod::parse_name("sim.update_subscription"),
-            Some(JsonRpcMethod::SimUpdateSubscription)
-        );
-        assert_eq!(JsonRpcMethod::parse_name("unknown.method"), None);
-        assert_eq!(JsonRpcMethod::parse_name(""), None);
-    }
-
-    #[test]
-    fn emergence_dashboard_method_uses_expected_wire_name() {
-        assert_eq!(
-            JsonRpcMethod::EmergenceDashboard.as_str(),
-            "emergence.dashboard"
-        );
-    }
-    /// FR-CIV-EMERG-001..005: the `emergence.metrics` wire name is the
-    /// canonical dashboard surface; round-trip via `as_str` /
-    /// `parse_name` to lock the contract.
-    #[test]
-    fn emergence_metrics_method_uses_expected_wire_name() {
-        assert_eq!(
-            JsonRpcMethod::EmergenceMetrics.as_str(),
-            "emergence.metrics"
-        );
-        assert_eq!(
-            JsonRpcMethod::parse_name("emergence.metrics"),
-            Some(JsonRpcMethod::EmergenceMetrics)
-        );
-    }
-    #[test]
-    fn parse_replay_path_extracts_nonempty() {
-        use serde_json::json;
-        assert_eq!(
-            parse_replay_path(Some(&json!({"path":"saves/x.civreplay"}))).unwrap(),
-            "saves/x.civreplay"
-        );
-        assert!(parse_replay_path(None).is_err());
-        assert!(parse_replay_path(Some(&json!({}))).is_err());
-        assert!(parse_replay_path(Some(&json!({"path":""}))).is_err());
-    }
-
-    #[test]
-    fn parse_replay_path_rejects_absolute_paths() {
-        use serde_json::json;
-        // Linux/macOS absolute path.
-        assert!(parse_replay_path(Some(&json!({"path":"/etc/passwd"}))).is_err());
-        // Windows-style absolute paths with drive prefix.
-        assert!(
-            parse_replay_path(Some(&json!({"path":"C:\\Windows\\System32\\drivers\\etc\\hosts"})))
-                .is_err()
-        );
-        // Backslash-leading UNC-style path is rejected.
-        assert!(parse_replay_path(Some(&json!({"path":"\\\\server\\share\\file"}))).is_err());
-        // Just the root.
-        assert!(parse_replay_path(Some(&json!({"path":"/"}))).is_err());
-    }
-
-    #[test]
-    fn parse_replay_path_rejects_parent_segments() {
-        use serde_json::json;
-        // Single `..` segment.
-        assert!(parse_replay_path(Some(&json!({"path":"../etc/passwd"}))).is_err());
-        // Embedded `..` segment.
-        assert!(parse_replay_path(Some(&json!({"path":"replays/../../etc/passwd"}))).is_err());
-        // Trailing `..`.
-        assert!(parse_replay_path(Some(&json!({"path":"replays/.."}))).is_err());
-        // `..` as the entire (non-empty) path.
-        assert!(parse_replay_path(Some(&json!({"path":".."}))).is_err());
-    }
-
-    #[test]
-    fn parse_replay_path_rejects_windows_drive_prefix() {
-        use serde_json::json;
-        // `C:` alone or with relative path is rejected because of the
-        // Prefix component.
-        assert!(parse_replay_path(Some(&json!({"path":"C:replays/x.civreplay"}))).is_err());
-        assert!(parse_replay_path(Some(&json!({"path":"D:\\foo"}))).is_err());
-    }
-
-    #[test]
-    fn parse_replay_path_accepts_safe_relative_paths() {
-        use serde_json::json;
-        assert_eq!(
-            parse_replay_path(Some(&json!({"path":"replays/x.civreplay"}))).unwrap(),
-            "replays/x.civreplay"
-        );
-        assert_eq!(
-            parse_replay_path(Some(&json!({"path":"a/b/c/x.civreplay"}))).unwrap(),
-            "a/b/c/x.civreplay"
-        );
-        // A single filename (no separator) is fine.
-        assert_eq!(
-            parse_replay_path(Some(&json!({"path":"x.civreplay"}))).unwrap(),
-            "x.civreplay"
-        );
-    }
-
-    #[test]
-    fn resolve_replay_path_contains_existing_file() {
-        let dir = tempfile::tempdir().expect("tempdir");
-        let base = dir.path().join("replays");
-        std::fs::create_dir_all(&base).expect("create base");
-        let file = base.join("x.civreplay");
-        std::fs::write(&file, b"replay-bytes").expect("write file");
-        let resolved = resolve_replay_path(&base, "x.civreplay").expect("resolve");
-        // Canonicalize both before comparing (symlink-resolved on macOS).
-        assert_eq!(
-            std::fs::canonicalize(&resolved).unwrap(),
-            std::fs::canonicalize(&file).unwrap()
-        );
-    }
-
-    #[test]
-    fn resolve_replay_path_resolves_new_file_under_base() {
-        let dir = tempfile::tempdir().expect("tempdir");
-        let base = dir.path().join("replays");
-        std::fs::create_dir_all(&base).expect("create base");
-        // File does not exist yet — `save_replay` will create it.
-        let resolved = resolve_replay_path(&base, "new.civreplay").expect("resolve");
-        let base_canonical = std::fs::canonicalize(&base).unwrap();
-        assert!(resolved.starts_with(&base_canonical));
-        assert!(resolved.ends_with("new.civreplay"));
-    }
-
-    #[test]
-    fn resolve_replay_path_rejects_escape_via_symlink() {
-        let dir = tempfile::tempdir().expect("tempdir");
-        let base = dir.path().join("replays");
-        std::fs::create_dir_all(&base).expect("create base");
-        // Create an out-of-base target file.
-        let outside = dir.path().join("outside.civreplay");
-        std::fs::write(&outside, b"out-of-base").expect("write outside");
-        // Inside the base, plant a symlink that points outside.
-        let link = base.join("escape.civreplay");
-        #[cfg(unix)]
-        std::os::unix::fs::symlink(&outside, &link).expect("symlink");
-        #[cfg(windows)]
-        std::os::windows::fs::symlink_file(&outside, &link).expect("symlink");
-        // The relative path resolves via the symlink to a file outside
-        // the canonicalized base — containment check must reject it.
-        let result = resolve_replay_path(&base, "escape.civreplay");
-        assert!(result.is_err(), "expected escape rejection, got {result:?}");
-    }
-
-    #[test]
-    fn parse_sim_command_action_maps_noop_tick() {
-        use serde_json::json;
-        assert!(matches!(
-            parse_sim_command_action(Some(&json!({"action":"noop"}))),
-            Some(SimCommandAction::Noop)
-        ));
-        assert!(matches!(
-            parse_sim_command_action(Some(&json!({"action":"tick"}))),
-            Some(SimCommandAction::Tick)
-        ));
-        assert!(parse_sim_command_action(Some(&json!({"action":"bogus"}))).is_none());
-        assert!(parse_sim_command_action(Some(&json!({}))).is_none());
-        assert!(parse_sim_command_action(None).is_none());
-    }
-
-    #[test]
-    fn spawn_entity_kind_wire_labels() {
-        assert_eq!(SpawnEntityKind::Civilian.wire_label(), "civilian");
-        assert_eq!(SpawnEntityKind::Vehicle.wire_label(), "vehicle");
-        assert_eq!(SpawnEntityKind::Airport.wire_label(), "airport");
-        assert_eq!(SpawnEntityKind::Port.wire_label(), "port");
-        assert_eq!(SpawnEntityKind::Hangar.wire_label(), "hangar");
-    }
-
-    #[test]
-    fn set_sim_command_tick_inserts_tick_into_object_result() {
-        use serde_json::json;
-        let mut resp = JsonRpcResponse::success(RequestId::Null, json!({"status":"ok"}));
-        set_sim_command_tick(&mut resp, 99);
-        assert_eq!(
-            resp.result.as_ref().unwrap().get("tick").unwrap(),
-            &json!(99)
-        );
-        let mut resp2 = JsonRpcResponse::success(RequestId::Null, json!("plain-string"));
-        set_sim_command_tick(&mut resp2, 5);
-        assert_eq!(resp2.result.as_ref().unwrap(), &json!("plain-string"));
-    }
-
-    /// Criticality metrics are carried through From<EmergenceSample> for EmergenceSampleFields.
-    #[test]
-    fn emergence_sample_fields_from_carries_criticality_metrics() {
-        use civ_emergence_metrics::branching::BranchingRegime;
-        use civ_emergence_metrics::dashboard::EmergenceDashboard;
-        use civ_engine::emergence_metrics::EmergenceSample;
-
-        let sample = EmergenceSample {
-            tick: 1,
-            entropy_bits: 0.0,
-            entropy_norm: 0.0,
-            structure_count: None,
-            structure_largest: None,
-            structure_foreground: None,
-            histogram_total: 0,
-            histogram_populated_bins: 0,
-            sample_dur_us: 0,
-            dashboard: EmergenceDashboard::default(),
-            branching_sigma: 0.0,
-            branching_sigma_score: 0.0,
-            branching_window: 0,
-            avalanches_closed: 0,
-            branching_regime: BranchingRegime::HeatDeath,
-            power_law_alpha: 1.95,
-            novelty_rate: 0.008,
-            mi_material_faction_norm: Some(0.33),
-            // FR-EMERGENCE-dashboard: the three derived summary
-            // metrics carry through the From<EmergenceSample>
-            // conversion — populate them here so the conversion
-            // is exercised end-to-end.
-            novelty_score: 0.08,
-            coupling_mi_estimate: 0.0,
-            criticality_indicator: 0.5,
-        };
-        let fields = EmergenceSampleFields::from(sample);
-        assert!(
-            (fields.power_law_alpha - 1.95).abs() < 1e-6,
-            "power_law_alpha mismatch"
-        );
-        assert!(
-            (fields.novelty_rate - 0.008).abs() < 1e-6,
-            "novelty_rate mismatch"
-        );
-        assert_eq!(fields.mi_material_faction_norm, Some(0.33));
-    }
-
-    /// FR-EMERGENCE-dashboard: the `sim.emergence` JSON-RPC read
-    /// method (the surface the L2 dashboard polls) carries the three
-    /// derived summary metrics — `novelty_score`, `coupling_mi_estimate`,
-    /// `criticality_indicator` — when a live sample is present. This
-    /// pins the wire contract so a future refactor of the engine
-    /// sample can't drop a field silently.
-    #[test]
-    fn emerg_emerg_004_sim_emergence_surfaces_fr_emergence_dashboard_metrics() {
-        use civ_emergence_metrics::branching::BranchingRegime;
-        use civ_emergence_metrics::dashboard::EmergenceDashboard;
-        use civ_engine::emergence_metrics::EmergenceSample;
-
-        let sample = EmergenceSample {
-            tick: 100,
-            entropy_bits: 0.0,
-            entropy_norm: 0.0,
-            structure_count: None,
-            structure_largest: None,
-            structure_foreground: None,
-            histogram_total: 0,
-            histogram_populated_bins: 0,
-            sample_dur_us: 0,
-            dashboard: EmergenceDashboard::default(),
-            branching_sigma: 0.0,
-            branching_sigma_score: 0.0,
-            branching_window: 0,
-            avalanches_closed: 0,
-            branching_regime: BranchingRegime::EdgeOfChaos,
-            power_law_alpha: 1.7,
-            novelty_rate: 0.05,
-            mi_material_faction_norm: Some(0.6),
-            novelty_score: 0.5,
-            coupling_mi_estimate: 0.3,
-            criticality_indicator: 1.0,
-        };
-        let req = parse_request(
-            r#"{"jsonrpc":"2.0","id":99,"method":"sim.emergence","params":{}}"#,
-        )
-        .expect("parse");
-        let plan = dispatch_request(
-            req,
-            DispatchContext {
-                tick: 100,
-                population: None,
-                snapshot: None,
-                require_role: false,
-                speed_multiplier: 1,
-                connection_role: None,
-                saves_dir: None,
-                emergence: Some(sample),
-                faction_metrics: None,
-                tech_state: civ_engine::tech::TechState::default(),
-                researched: vec![],
-                in_progress_tech: None,
-                last_tick_ms: 0.0,
-                outcome_fields: None,
-            },
-        );
-        assert_eq!(plan.effect, DispatchEffect::None);
-        let result = plan.response.result.expect("result");
-        // FR-EMERGENCE-dashboard: the three derived summary metrics
-        // surface on the `emergence.metrics` JSON-RPC read method
-        // alongside the raw `novelty_rate` / `mi_material_faction_norm`.
-        assert!(
-            (result["novelty_score"].as_f64().expect("f64") - 0.5).abs() < 1e-6,
-            "novelty_score mismatch: {}",
-            result["novelty_score"]
-        );
-        assert!(
-            (result["coupling_mi_estimate"].as_f64().expect("f64") - 0.3).abs() < 1e-6,
-            "coupling_mi_estimate mismatch: {}",
-            result["coupling_mi_estimate"]
-        );
-        assert!(
-            (result["criticality_indicator"].as_f64().expect("f64") - 1.0).abs() < 1e-6,
-            "criticality_indicator mismatch: {}",
-            result["criticality_indicator"]
-        );
-    }
-
-    /// snapshot_result_json includes power_law_alpha, novelty_rate, mi_material_faction_norm
-    /// in the emergence block.
-    #[test]
-    fn snapshot_result_json_emergence_contains_criticality_keys() {
-        let emergence = EmergenceSampleFields {
-            tick: 5,
-            entropy_bits: 0.1,
-            entropy_norm: 0.05,
-            structure_count: None,
-            structure_largest: None,
-            structure_foreground: None,
-            histogram_total: 100,
-            histogram_populated_bins: 3,
-            sample_dur_us: 10,
-            dashboard: None,
-            branching_sigma: 1.0,
-            branching_sigma_score: 0.5,
-            branching_window: 5,
-            avalanches_closed: 2,
-            branching_regime: "Edge of chaos (target)".to_string(),
-            power_law_alpha: 2.1,
-            novelty_rate: 0.005,
-            mi_material_faction_norm: Some(0.42),
-            novelty_score: 0.05,
-            coupling_mi_estimate: 0.021,
-            criticality_indicator: 0.0,
-        };
-        let fields = SnapshotFields {
-            tick: 5,
-            population: 0,
-            building_count: 0,
-            energy_budget: None,
-            market_prices: Default::default(),
-            hash_chain_root: None,
-            speed_multiplier: 1,
-            spectator: None,
-            institutions: vec![],
-            military_units: vec![],
-            damage_events: vec![],
-            damage_events_count: 0,
-            voxel_damage_removed_this_tick: 0,
-            factions: vec![],
-            resources: vec![],
-            emergence_metrics: EmergenceMetricsSnapshot {
-                faction_count: 0,
-                structure_count: 0,
-                language_count: 0,
-            },
-            mods: vec![],
-            mod_lifecycle: vec![],
-            session_saved: vec![],
-            mod_permission_violations: vec![],
-            climate: civ_engine::Climate {
-                tick: 5,
-                day_phase: 0.0,
-                year_phase: 0.0,
-                moon_phase: 0.0,
-                tide_offset: 0.0,
-            },
-            emergence: Some(emergence),
-        };
-        let json = snapshot_result_json(&fields);
-        let emerg = json.get("emergence").expect("emergence block");
-        assert!(
-            emerg.get("power_law_alpha").is_some(),
-            "missing power_law_alpha"
-        );
-        assert!(emerg.get("novelty_rate").is_some(), "missing novelty_rate");
-        assert!(
-            emerg.get("mi_material_faction_norm").is_some(),
-            "missing mi_material_faction_norm"
-        );
-        let mi = emerg["mi_material_faction_norm"]
-            .as_f64()
-            .expect("mi_material_faction_norm f64");
-        assert!((mi - 0.42).abs() < 1e-5);
-    }
-    /// FR-CIV-SERVER-003 — sim.queue_research with a valid tech accepts the request.
-    #[test]
-    fn dispatch_queue_research_valid_tech_accepted() {
-        let req = parse_request(
-            r#"{"jsonrpc":"2.0","id":1,"method":"sim.queue_research","params":{"tech":"pottery"}}"#,
-        )
-        .expect("parse");
-        let plan = dispatch_request(
-            req,
-            DispatchContext {
-                tick: 10,
-                population: None,
-                snapshot: None,
-                require_role: false,
-                speed_multiplier: 1,
-                connection_role: None,
-                saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                outcome_fields: None,
-                last_tick_ms: 0.0,
-            },
-        );
-        assert_eq!(
-            plan.effect,
-            DispatchEffect::QueueResearch {
-                tech: "pottery".to_owned()
-            }
-        );
-        let res = plan.response.result.expect("result");
-        assert_eq!(res["queued"], "pottery");
-    }
-
-    /// FR-CIV-SERVER-003 — sim.queue_research with an unknown tech returns INVALID_PARAMS.
-    #[test]
-    fn dispatch_queue_research_unknown_tech_rejected() {
-        let req = parse_request(
-            r#"{"jsonrpc":"2.0","id":2,"method":"sim.queue_research","params":{"tech":"unobtainium"}}"#,
-        )
-        .expect("parse");
-        let plan = dispatch_request(
-            req,
-            DispatchContext {
-                tick: 1,
-                population: None,
-                snapshot: None,
-                require_role: false,
-                speed_multiplier: 1,
-                connection_role: None,
-                saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                outcome_fields: None,
-                last_tick_ms: 0.0,
-            },
-        );
-        assert_eq!(plan.effect, DispatchEffect::None);
-        assert_eq!(
-            plan.response.error.as_ref().map(|e| e.code),
-            Some(error_code::INVALID_PARAMS)
-        );
-    }
-
-    /// FR-CIV-SERVER-003 — sim.tech_state returns available list and stub flag.
-    #[test]
-    fn dispatch_tech_state_returns_available_list() {
-        let req =
-            parse_request(r#"{"jsonrpc":"2.0","id":3,"method":"sim.tech_state"}"#).expect("parse");
-        let plan = dispatch_request(
-            req,
-            DispatchContext {
-                tick: 42,
-                population: None,
-                snapshot: None,
-                require_role: false,
-                speed_multiplier: 1,
-                connection_role: None,
-                saves_dir: None,
-                emergence: None,
-                researched: vec![],
-                in_progress_tech: None,
-                outcome_fields: None,
-                last_tick_ms: 0.0,
-            },
-        );
-        assert!(plan.response.result.is_some());
-        let res = plan.response.result.expect("result");
-        assert!(res["available"].as_array().map_or(false, |a| !a.is_empty()));
     }
 }

@@ -14,64 +14,63 @@
 #![warn(missing_docs)]
 
 #[cfg(feature = "bevy")]
-pub mod animation;
-#[cfg(feature = "bevy")]
 pub mod atmosphere;
 #[cfg(feature = "bevy")]
 pub mod camera;
 #[cfg(feature = "bevy")]
 pub mod decorations;
-#[cfg(all(feature = "bevy", feature = "models"))]
-pub mod animation;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod diplomacy_ui;
-pub mod outcome_overlay;
-pub mod faction_hud;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod save_load_ui;
-#[cfg(all(feature = "bevy", feature = "models"))]
-pub mod gltf_models;
-pub mod emergence_dashboard;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod event_feed;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod game_ui;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod tool_categories;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod material_brush_ui;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod ui_theme;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod holo_minimap;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod ui_holo;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod info_views;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod inspect;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod notifications;
+#[cfg(all(feature = "bevy", feature = "audio"))]
+pub mod audio;
+#[cfg(all(feature = "bevy", feature = "vfx"))]
+pub mod vfx;
 #[cfg(all(feature = "bevy", feature = "gi"))]
 pub mod lighting_gi;
 #[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod game_ui;
-#[cfg(all(feature = "bevy", feature = "models"))]
-pub mod gltf_models;
+pub mod menus;
 #[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod graphics_settings;
-pub mod game_laws;
-pub mod map2d;
+pub mod tech_tree_ui;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod settings_ui;
 #[cfg(feature = "bevy")]
 pub mod gpu_features;
-#[cfg(feature = "bevy")]
-pub mod info_views;
 #[cfg(feature = "bevy")]
 pub mod live_attach;
 #[cfg(feature = "bevy")]
 pub mod live_focus;
 #[cfg(feature = "bevy")]
-pub mod live_ground;
-#[cfg(feature = "bevy")]
 pub mod live_minimap;
 #[cfg(feature = "bevy")]
 pub mod live_pick;
 #[cfg(feature = "bevy")]
+pub mod live_ground;
+#[cfg(feature = "bevy")]
 pub mod live_scene;
 #[cfg(feature = "bevy")]
 pub mod live_stream;
-#[cfg(feature = "pbr-textures")]
-pub mod materials;
-#[cfg(feature = "bevy")]
-pub mod post_fx;
 #[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod settings_ui;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod ui_theme;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod menus;
+pub mod map2d;
 #[cfg(feature = "bevy")]
 pub mod minimap;
 #[cfg(feature = "bevy")]
@@ -79,28 +78,23 @@ pub mod native_backend;
 #[cfg(feature = "bevy")]
 pub mod native_renderer;
 #[cfg(feature = "bevy")]
+pub mod post_fx;
+#[cfg(feature = "bevy")]
 pub mod sim_bridge;
+#[cfg(all(feature = "bevy", feature = "models"))]
+pub mod gltf_models;
+#[cfg(all(feature = "bevy", feature = "models"))]
+pub mod animation;
+#[cfg(feature = "bevy")]
+pub mod skybox;
 #[cfg(feature = "bevy")]
 pub mod spawn_tools;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod tech_tree_ui;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod civ_history;
-pub mod god_panel;
-pub mod tutorial;
-pub mod perf_hud;
+#[cfg(feature = "bevy")]
+pub mod terraform_brush;
 #[cfg(feature = "bevy")]
 pub mod terrain;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod tool_categories;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod ui_cluster;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod ui_holo;
-#[cfg(all(feature = "bevy", feature = "vfx"))]
-pub mod vfx;
-#[cfg(all(feature = "bevy", feature = "voxel"))]
-pub mod ocean;
+#[cfg(feature = "bevy")]
+pub mod window_icon;
 #[cfg(feature = "voxel")]
 pub mod voxel_sim;
 #[cfg(feature = "voxel")]
@@ -109,10 +103,6 @@ pub mod voxel_smooth_mesher;
 /// Gated behind `voxel_stream` so it coexists with the dense `voxel_sim` path.
 #[cfg(feature = "voxel_stream")]
 pub mod voxel_stream;
-#[cfg(feature = "voxel")]
-pub mod voxel_triplanar;
-#[cfg(feature = "bevy")]
-pub mod window_icon;
 
 pub use civ_voxel::{
     ChunkId, CubicMesher, MaterialId, MeshBuffer, MeshVertex, VoxelWorld, WorldCoord,
@@ -254,43 +244,9 @@ pub fn parse_jsonrpc_snapshot_meta(text: &str) -> Option<WsSpectatorMeta> {
     Some(WsSpectatorMeta { is_day, tick })
 }
 
-/// Subset of sim.emergence fields shown in the HUD.
-#[derive(Debug, Clone, Default, PartialEq)]
-#[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
-pub struct EmergenceHudData {
-    /// Normalised Shannon entropy (`0..=1`).
-    pub entropy_norm: f32,
-    /// Power-law exponent alpha for cluster-size distribution.
-    pub power_law_alpha: f32,
-    /// Novel config fingerprints per window per civilian.
-    pub novelty_rate: f32,
-    /// Normalised mutual information between material and faction distributions.
-    pub mi_material_faction_norm: Option<f32>,
-    /// 6-connectivity component count from the sampled chunk (None = not yet sampled).
-    pub structure_count: Option<u32>,
-    /// Charter criticality regime label: "SUBCRITICAL" | "CRITICAL" | "SUPERCRITICAL".
-    pub branching_regime: String,
-}
-
-
-/// Outcome data from `sim.outcome` polling (FR-CIV-GAME-001).
-#[derive(Debug, Clone, Default)]
-#[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
-pub struct OutcomeHudData {
-    pub tag: String,
-    pub reason: String,
-    pub tick: u64,
-}
-/// Wrapper resource so plugins in this crate (`civ_history`, `era_hud`, etc.) can read
-/// the same HUD snapshot that `civ-bevy-window` updates each frame.
-#[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
-#[derive(Debug, Clone, Default)]
-pub struct HudState {
-    pub snapshot: LiveHudSnapshot,
-}
 /// Headless-friendly snapshot for the live attach HUD (FPS / tick / socket / scene stats).
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct LiveHudSnapshot {
     /// WebSocket session state from the reconnecting client.
     pub connection: WsConnectionState,
@@ -308,29 +264,12 @@ pub struct LiveHudSnapshot {
     pub building_count: usize,
     /// Streamed building-graph parcel entities in the live scene.
     pub graph_parcel_count: usize,
-    /// Civilians tracked from `Frame3d::CivilianState` wire frames.
-    pub civilian_count: usize,
-    /// Factions tracked from `Frame3d::FactionState` wire frames.
-    pub faction_count: usize,
-    /// Max treasury balance across tracked factions (proxy for player wealth, from FactionStateEntry).
-    pub treasury: f32,
     /// Latest `sim.snapshot` round-trip time in milliseconds, when measured.
     pub ws_rtt_ms: Option<f32>,
     /// Chunk under the cursor from minimap click or viewport raycast stub, if any.
     pub focused_chunk: Option<ChunkId>,
     /// Streamed agent/building/graph selection from viewport pick, if any.
     pub selected_live: Option<SelectedLiveEntity>,
-    /// Most recent event-feed line for HUD overlay (`civ-bevy-window`, no egui).
-    pub last_event: Option<String>,
-    /// One-line civilian detail for the current viewport pick (inspector-lite HUD).
-    pub pick_detail: Option<String>,
-    /// Current sim speed multiplier (0 = paused, 1/2/4/8 = normal/fast/faster/fastest).
-    /// Cached emergence metrics from sim.emergence poll (entropy_norm, power_law_alpha, novelty_rate, mi).
-    pub emergence: Option<EmergenceHudData>,
-    /// Current simulation speed multiplier (0 = paused).
-    pub speed_multiplier: u32,
-    /// Server-reported last tick wall-clock duration from sim.perf (FR-CIV-PERF-001).
-    pub tick_ms: f64,
 }
 
 impl LiveHudSnapshot {
@@ -341,15 +280,11 @@ impl LiveHudSnapshot {
         agents: usize,
         buildings: usize,
         graph_parcels: usize,
-        civilians: usize,
-        factions: usize,
     ) {
         self.chunk_count = chunks;
         self.agent_count = agents;
         self.building_count = buildings;
         self.graph_parcel_count = graph_parcels;
-        self.civilian_count = civilians;
-        self.faction_count = factions;
     }
 
     /// Format a single-line overlay string suitable for Bevy UI or CI log checks.
@@ -365,14 +300,8 @@ impl LiveHudSnapshot {
             .map(|value| value.to_string())
             .unwrap_or_else(|| "—".to_string());
         let mut line = format!(
-            "FPS: {:.0} | tick: {tick} | {status} | C:{} A:{} B:{} G:{} | P:{} F:{}",
-            self.fps,
-            self.chunk_count,
-            self.agent_count,
-            self.building_count,
-            self.graph_parcel_count,
-            self.civilian_count,
-            self.faction_count,
+            "FPS: {:.0} | tick: {tick} | {status} | C:{} A:{} B:{} G:{}",
+            self.fps, self.chunk_count, self.agent_count, self.building_count, self.graph_parcel_count
         );
         if let Some(rtt) = self.ws_rtt_ms {
             line.push_str(&format!(" | RTT: {rtt:.0}ms"));
@@ -382,25 +311,6 @@ impl LiveHudSnapshot {
         }
         if let Some(selection) = self.selected_live {
             line.push_str(&format!(" | {}", format_live_selection(selection)));
-        }
-        if let Some(event) = &self.last_event {
-            line.push_str(&format!(" | evt: {event}"));
-        }
-        if let Some(detail) = &self.pick_detail {
-            line.push_str(&format!(" | {detail}"));
-        }
-        {
-            let spd = if self.speed_multiplier == 0 { "PAUSED".to_string() } else { format!("{}x", self.speed_multiplier) };
-            line.push_str(&format!(" | spd:{spd}"));
-        }
-        if let Some(em) = &self.emergence {
-            line.push_str(&format!(
-                " | ent:{:.2} \u{03b1}:{:.2} nov:{:.3}",
-                em.entropy_norm, em.power_law_alpha, em.novelty_rate
-            ));
-            if let Some(mi) = em.mi_material_faction_norm {
-                line.push_str(&format!(" MI:{:.2}", mi));
-            }
         }
         line
     }
@@ -518,10 +428,7 @@ pub fn resolve_attach_mode(civis_attach: Option<&str>, civ_ws_url: Option<&str>)
     {
         return AttachMode::Server;
     }
-    if civ_ws_url
-        .map(|value| !value.trim().is_empty())
-        .unwrap_or(false)
-    {
+    if civ_ws_url.map(|value| !value.trim().is_empty()).unwrap_or(false) {
         return AttachMode::Server;
     }
     AttachMode::Standalone
@@ -786,8 +693,8 @@ pub fn chunk_to_minimap_uv(chunk_id: ChunkId, bounds: MinimapBounds) -> [f32; 2]
 /// Map world XZ (metres) into normalised minimap UV within `bounds`.
 #[must_use]
 pub fn world_xz_to_minimap_uv(x: f32, z: f32, bounds: MinimapBounds) -> [f32; 2] {
-    let cx = (x / VOXEL_CHUNK_EDGE).floor() as i32;
-    let cz = (z / VOXEL_CHUNK_EDGE).floor() as i32;
+    let cx = (x / VOXEL_CHUNK_EDGE as f32).floor() as i32;
+    let cz = (z / VOXEL_CHUNK_EDGE as f32).floor() as i32;
     world_chunk_grid_to_minimap_uv(cx, cz, bounds)
 }
 
@@ -1164,8 +1071,6 @@ mod tests {
             agent_count: 5,
             building_count: 2,
             graph_parcel_count: 1,
-            civilian_count: 12,
-            faction_count: 2,
             ..Default::default()
         }
         .format_overlay();
@@ -1176,8 +1081,6 @@ mod tests {
         assert!(line.contains("A:5"));
         assert!(line.contains("B:2"));
         assert!(line.contains("G:1"));
-        assert!(line.contains("P:12"));
-        assert!(line.contains("F:2"));
     }
 
     #[test]
@@ -1256,32 +1159,6 @@ mod tests {
     }
 
     #[test]
-    fn live_hud_overlay_includes_last_event_suffix() {
-        let line = LiveHudSnapshot {
-            connected: true,
-            tick: Some(9),
-            fps: 60.0,
-            last_event: Some("Entity #3 died (faction 1)".to_string()),
-            ..Default::default()
-        }
-        .format_overlay();
-        assert!(line.contains("| evt: Entity #3 died (faction 1)"));
-    }
-
-    #[test]
-    fn live_hud_overlay_includes_pick_detail_suffix() {
-        let line = LiveHudSnapshot {
-            connected: true,
-            tick: Some(1),
-            fps: 60.0,
-            pick_detail: Some("Ada | Farmer | 87%".to_string()),
-            ..Default::default()
-        }
-        .format_overlay();
-        assert!(line.contains("| Ada | Farmer | 87%"));
-    }
-
-    #[test]
     fn parse_jsonrpc_snapshot_meta_reads_is_day_and_tick() {
         let text = r#"{"jsonrpc":"2.0","id":3,"result":{"tick":12,"is_day":false,"population":4}}"#;
         let meta = parse_jsonrpc_snapshot_meta(text).expect("snapshot meta");
@@ -1328,7 +1205,10 @@ mod tests {
 
     #[test]
     fn resolve_attach_mode_defaults_to_standalone() {
-        assert_eq!(resolve_attach_mode(None, None), AttachMode::Standalone);
+        assert_eq!(
+            resolve_attach_mode(None, None),
+            AttachMode::Standalone
+        );
         assert_eq!(
             resolve_attach_mode(Some("watch"), None),
             AttachMode::Standalone

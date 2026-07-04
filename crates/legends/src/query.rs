@@ -81,16 +81,8 @@ pub struct EpochDigest {
 
 const HEADLINE_CAP: usize = 20;
 
-/// The query API surface from `docs/design/legends-engine.md` §6
-/// (FR-CIV-LEGENDS-005). Bump this constant on any breaking signature
-/// change so consumers can pin their compatibility.
-pub const QUERY_API_VERSION: u32 = 1;
-
 impl SagaGraph {
     /// The entity's full sub-saga: its events (chronological) + related entities (§6).
-    ///
-    /// `saga_of` — spec §6 query API. **`Covers FR-CIV-LEGENDS-005`** (saga-graph
-    /// ingest stays compatible with `docs/design/legends-engine.md` query API).
     pub fn saga_of(&self, entity: LegendEntityId) -> Option<Saga> {
         let e = self.entity(entity)?;
         let idx = self.entity_idx(entity)?;
@@ -115,9 +107,6 @@ impl SagaGraph {
     }
 
     /// Events touching `entity` within `epochs`, epoch-ordered (spec §6 `timeline`).
-    ///
-    /// `timeline` — spec §6 query API. **`Covers FR-CIV-LEGENDS-005`** (saga-graph
-    /// ingest stays compatible with `docs/design/legends-engine.md` query API).
     pub fn timeline(&self, entity: LegendEntityId, epochs: Range<Epoch>) -> Vec<EventNode> {
         let Some(idx) = self.entity_idx(entity) else {
             return Vec::new();
@@ -133,18 +122,11 @@ impl SagaGraph {
     }
 
     /// "Why did this happen" — walk `CausedBy` predecessors, breadth-bounded (§6).
-    ///
-    /// `causal_chain` — spec §6 query API. **`Covers FR-CIV-LEGENDS-005`** (saga-graph
-    /// ingest stays compatible with `docs/design/legends-engine.md` query API).
     pub fn causal_chain(&self, event: LegendEventId, max_depth: usize) -> Option<CausalDag> {
         self.walk_causal(event, max_depth, true)
     }
 
     /// "What did this lead to" — walk `CausedBy` successors, breadth-bounded (§6).
-    ///
-    /// `forward_chain` — spec §6 query API. **`Covers FR-CIV-LEGENDS-005`**
-    /// (saga-graph ingest stays compatible with `docs/design/legends-engine.md`
-    /// query API).
     pub fn forward_chain(&self, event: LegendEventId, max_depth: usize) -> Option<CausalDag> {
         self.walk_causal(event, max_depth, false)
     }
@@ -188,11 +170,7 @@ impl SagaGraph {
                     ) {
                         edges.push((eff.id, cau.id, *confidence));
                     }
-                    let next = if backward {
-                        edge.target()
-                    } else {
-                        edge.source()
-                    };
+                    let next = if backward { edge.target() } else { edge.source() };
                     if seen.insert(next) {
                         q.push_back((next, depth + 1));
                     }
@@ -213,10 +191,6 @@ impl SagaGraph {
 
     /// Current top-N entities by significance, optionally filtered by kind (§6).
     /// O(top_n) via the significance side-set.
-    ///
-    /// `significant` — spec §6 query API. **`Covers FR-CIV-LEGENDS-005`**
-    /// (saga-graph ingest stays compatible with `docs/design/legends-engine.md`
-    /// query API).
     pub fn significant(&self, top_n: usize, filter: Option<EntityKind>) -> Vec<EntityRef> {
         let mut out = Vec::with_capacity(top_n);
         for id in self.significant_desc() {
@@ -233,10 +207,6 @@ impl SagaGraph {
     }
 
     /// Generic graph step for the browser (spec §6 `neighbors`).
-    ///
-    /// `neighbors` — spec §6 query API. **`Covers FR-CIV-LEGENDS-005`**
-    /// (saga-graph ingest stays compatible with `docs/design/legends-engine.md`
-    /// query API).
     pub fn neighbors(&self, entity: LegendEntityId) -> Vec<EntityRef> {
         let Some(idx) = self.entity_idx(entity) else {
             return Vec::new();
@@ -250,14 +220,12 @@ impl SagaGraph {
     /// Compact, hashable digest of an epoch — the SLM narrator's input (spec §6).
     /// Deterministic given graph state (sorted + capped) so the same epoch hashes
     /// the same across reloads (AC-Q-2), without requiring sim determinism.
-    ///
-    /// `epoch_digest` — spec §6 query API. **`Covers FR-CIV-LEGENDS-005`**
-    /// (saga-graph ingest stays compatible with `docs/design/legends-engine.md`
-    /// query API).
     pub fn epoch_digest(&self, epoch: Epoch, region: Option<RegionId>) -> EpochDigest {
         // gather this epoch's events (optionally region-scoped)
-        let region_filter: Option<BTreeSet<LegendEventId>> =
-            region.and_then(|r| self.region_events(r).map(|v| v.iter().copied().collect()));
+        let region_filter: Option<BTreeSet<LegendEventId>> = region.and_then(|r| {
+            self.region_events(r)
+                .map(|v| v.iter().copied().collect())
+        });
         let mut events: Vec<&EventNode> = self
             .epoch_buckets
             .get(&epoch)
@@ -328,16 +296,9 @@ impl SagaGraph {
                 }
             }
         }
-        causal_notes.sort_by_key(|a| (a.0 .0, a.1 .0));
+        causal_notes.sort_by(|a, b| (a.0 .0, a.1 .0).cmp(&(b.0 .0, b.1 .0)));
 
-        let digest_hash = hash_digest(
-            epoch,
-            region,
-            &headline_events,
-            &risen,
-            &fallen,
-            &causal_notes,
-        );
+        let digest_hash = hash_digest(epoch, region, &headline_events, &risen, &fallen, &causal_notes);
         EpochDigest {
             epoch,
             region,

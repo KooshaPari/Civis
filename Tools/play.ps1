@@ -103,25 +103,6 @@ if (Test-Path -LiteralPath $PidFile) {
 $targetDir = [System.IO.Path]::Combine($RepoRoot, 'target', $Profile)
 $exePath   = [System.IO.Path]::Combine($targetDir, 'civ-standalone.exe')
 
-# --- 2a. Asset-root + target-dir ergonomics ---
-# Bevy 0.18 `AssetPlugin::file_path` defaults to "assets" relative to CWD.
-# When `cargo run` is launched from the workspace root, that resolves to
-# `<workspace>/assets` (does not exist) instead of the crate's
-# `clients/bevy-ref/assets/`, causing 6 phantom module errors + ~10 asset
-# 404s. We default BEVY_ASSET_ROOT to the bevy-ref crate unless the caller
-# already exported one. CARGO_TARGET_DIR defaults to <repo>/target so the
-# release build artifact lands where $exePath below looks for it (the
-# `just play*` recipes set CARGO_TARGET_DIR=G:/civis-target-gate themselves;
-# this fallback covers direct `pwsh Tools/play.ps1` callers).
-if (-not (Test-Path Env:BEVY_ASSET_ROOT) -or [string]::IsNullOrWhiteSpace($env:BEVY_ASSET_ROOT)) {
-    $env:BEVY_ASSET_ROOT = [System.IO.Path]::Combine($RepoRoot, 'clients', 'bevy-ref')
-    Write-Ok "BEVY_ASSET_ROOT unset -> defaulting to $env:BEVY_ASSET_ROOT"
-}
-if (-not (Test-Path Env:CARGO_TARGET_DIR) -or [string]::IsNullOrWhiteSpace($env:CARGO_TARGET_DIR)) {
-    $env:CARGO_TARGET_DIR = [System.IO.Path]::Combine($RepoRoot, 'target')
-    Write-Ok "CARGO_TARGET_DIR unset -> defaulting to $env:CARGO_TARGET_DIR"
-}
-
 Write-Step "Building civ-standalone ($Profile)..."
 Push-Location $RepoRoot
 try {
@@ -164,11 +145,6 @@ $startInfo.RedirectStandardError = $true
 $startInfo.CreateNoWindow = $false
 $startInfo.EnvironmentVariables['RUST_LOG'] = $LogLevel
 $startInfo.EnvironmentVariables['RUST_BACKTRACE'] = $Backtrace
-# Forward the asset-root + target-dir overrides so the running game binary
-# (cargo-built or already-extracted exe) finds its assets and so any
-# hot-restart via `cargo run` would still see the same target.
-$startInfo.EnvironmentVariables['BEVY_ASSET_ROOT'] = $env:BEVY_ASSET_ROOT
-$startInfo.EnvironmentVariables['CARGO_TARGET_DIR'] = $env:CARGO_TARGET_DIR
 
 $proc = [System.Diagnostics.Process]::new()
 $proc.StartInfo = $startInfo

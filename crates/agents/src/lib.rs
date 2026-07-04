@@ -48,6 +48,33 @@ pub use social::{
     SocialEvent, SocialGraph, Tie, MAX_TIES,
 };
 
+pub mod cluster;
+pub mod culture;
+pub mod diplomacy;
+pub mod daily_path;
+pub mod psyche;
+pub mod social;
+
+pub use cluster::{
+    cluster_by_colocation, reconcile_membership, should_join, should_leave, ClusterId,
+    ClusterMember, MembershipPayoff,
+};
+pub use diplomacy::{
+    DiplomacyMatrix, DiplomacyOutcome, DiplomacySignal, RelationKind, RelationRecord,
+};
+pub use daily_path::{
+    choose_activity, need_for_poi_kind, path_step, pick_target, poi_kind_for_need, score_poi,
+    wander_anchor, Activity, DailyGoal, Poi, PoiKind, PoiRegistry,
+};
+pub use psyche::{
+    belief_culture_exposure, psych_genome_profile, Mood, PsychGenomeProfile, Psyche, Temperament,
+    PSYCHE_DIM,
+};
+pub use social::{
+    apply_social_event, decay_social_graph, relation_label, Interaction, RelationLabel,
+    SocialEvent, SocialGraph, Tie, MAX_TIES,
+};
+
 use civ_diffusion::{advance as diffusion_advance, DiffusionParams};
 use civ_voxel::{MaterialId, WorldCoord};
 use hecs::World;
@@ -81,6 +108,19 @@ pub const KIN_THRESHOLD: f32 = 0.5;
 fn is_positive_tie(tie: &Tie) -> bool {
     tie.affinity > FRIEND_AFFINITY_THRESHOLD || tie.kinship >= KIN_THRESHOLD
 }
+
+/// Which CC0 glTF rig the Bevy client should render for this agent.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ActorVisualKind {
+    /// Humanoid civilian (KayKit Knight / capsule fallback).
+    Humanoid,
+    /// Non-combat herd / fauna (skeleton minion rig).
+    Herd,
+}
+
+/// Marks the visual model variant chosen at spawn (herd tool vs organism).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ActorVisual(pub ActorVisualKind);
 
 /// Which CC0 glTF rig the Bevy client should render for this agent.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

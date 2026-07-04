@@ -26,15 +26,6 @@
 
 use serde::{Deserialize, Serialize};
 
-mod bundle;
-
-pub use bundle::{
-    decode_frame3d_bundle, encode_frame3d_bundle, encode_frame3d_bundle_from_f3d0,
-    is_frame3d_bundle, Frame3dBundle, Frame3dBundleEncodeOptions, Frame3dBundleError,
-    Frame3dBundleFlags, DEFAULT_FRAME3D_BUNDLE_ZSTD_LEVEL, FRAME3D_BUNDLE_MAGIC,
-    FRAME3D_BUNDLE_STANDARD_LEN, FRAME3D_BUNDLE_VERSION,
-};
-
 pub use civ_build::{BuildingGraph, BuildingId, FacadeStyle, Parcel, ParcelKind};
 pub use civ_voxel::{ChunkId, DirtyChunkEvent, MaterialId, WriteSeq};
 
@@ -162,9 +153,6 @@ pub struct GenomeSummary3d {
 pub struct CivilianStateEntry {
     /// Stable civilian entity id from the simulation ECS.
     pub id: u64,
-    /// Owning faction id (0 = neutral/unknown). Added in FR-CIV-PROTO-001.
-    #[serde(default)]
-    pub faction_id: u32,
     /// Latest needs snapshot.
     #[serde(default)]
     pub needs: CivilianNeeds3d,
@@ -251,9 +239,6 @@ pub struct FactionStateFrame {
     /// One entry per faction whose state changed.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub factions: Vec<FactionStateEntry>,
-    /// Civilian count per faction id (derived from CivilianState frame, FR-CIV-PROTO-001).
-    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
-    pub population_by_faction: std::collections::BTreeMap<u32, u32>,
 }
 
 /// A birth event in the wire-level event feed.
@@ -325,13 +310,8 @@ pub struct BattleEvent3d {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct DisasterEvent3d {
     /// Disaster kind or label.
-    ///
-    /// Renamed to `disaster_kind` to avoid clashing with the
-    /// `EventFeedMessage3d` tagged-enum tag (`#[serde(tag = "kind")]`); the
-    /// serializer would otherwise emit two `kind` fields per disaster
-    /// message.
     #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub disaster_kind: String,
+    pub kind: String,
     /// Optional disaster severity.
     #[serde(default)]
     pub severity: f32,
@@ -463,10 +443,6 @@ pub enum Frame3d {
     FactionState(FactionStateFrame),
     /// Event-feed batch for one tick.
     EventFeed(EventFeedFrame),
-    /// Climate broadcast for one tick (planetary phase + per-region weather).
-    /// Distinct from the other batch frames because it ticks on its own cadence
-    /// (driven by the planet sim) and carries a different per-tick payload shape.
-    Climate(ClimateFrame),
 }
 
 impl Frame3d {
@@ -480,7 +456,6 @@ impl Frame3d {
             Self::CivilianState(f) => f.tick,
             Self::FactionState(f) => f.tick,
             Self::EventFeed(f) => f.tick,
-            Self::Climate(f) => f.tick,
         }
     }
 }
@@ -529,7 +504,6 @@ enum Frame3dKind {
     CivilianState = 3,
     FactionState = 4,
     EventFeed = 5,
-    Climate = 6,
 }
 
 impl Frame3dKind {
@@ -541,7 +515,6 @@ impl Frame3dKind {
             Frame3d::CivilianState(_) => Self::CivilianState,
             Frame3d::FactionState(_) => Self::FactionState,
             Frame3d::EventFeed(_) => Self::EventFeed,
-            Frame3d::Climate(_) => Self::Climate,
         }
     }
 }
@@ -1017,7 +990,186 @@ mod tests {
         assert_eq!(back.provenance, BuildingProvenance::Freehand);
     }
 
-    /// Covers FR-CIV-PROTO3D-010 — building tier defaults for legacy payloads and round-trips when present.
+    /// FR-CIV-PROTO3D-010 — building tier defaults for legacy payloads and round-trips when present.
+    #[test]
+    fn building_diff_entry_tier_roundtrip_and_backward_compat() {
+        let entry = BuildingDiffEntry {
+            id: 99,
+            kind: BuildingKind3d::Market,
+            tier: 3,
+            position: WorldXZ { x: 1.5, z: 2.5 },
+        };
+        let json = serde_json::to_string(&entry).expect("serialize");
+        let back: BuildingDiffEntry = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back, entry);
+
+        let legacy_json = r#"{"id":99,"kind":"Market","position":{"x":1.5,"z":2.5}}"#;
+        let legacy: BuildingDiffEntry =
+            serde_json::from_str(legacy_json).expect("legacy deserialize");
+        assert_eq!(legacy.tier, 0);
+    }
+
+    /// FR-CIV-PROTO3D-009 — optional `BuildingGraph` snapshot round-trips on building diff frames.
+    #[test]
+    fn building_graph_snapshot_roundtrips() {
+        use civ_build::{BuildingId, BuildingProvenance as BuildProvenance, ParcelKind};
+
+        let mut graph = BuildingGraph::new();
+        graph.insert_parcel(Parcel {
+            id: BuildingId(7),
+            kind: ParcelKind::Residential,
+            origin: civ_voxel::WorldCoord { x: 128, y: 0, z: 256 },
+            size: [8, 6, 4],
+            era_min: 1,
+        });
+        graph.set_provenance(BuildingId(7), BuildProvenance::Freehand);
+
+        let frame = BuildingDiffFrame {
+            tick: 12,
+            provenance: BuildingProvenance::Freehand,
+            buildings: Vec::new(),
+            graph: Some(graph.clone()),
+        };
+        let json = serde_json::to_string(&frame).expect("serialize");
+        let back: BuildingDiffFrame = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back.graph, Some(graph));
+    }
+
+    /// FR-CIV-PROTO3D-008 — building diff entries and agent positions round-trip.
+    #[test]
+    fn building_and_agent_position_extensions_roundtrip() {
+        let building = BuildingDiffFrame {
+            tick: 9,
+            provenance: BuildingProvenance::Procedural,
+            buildings: vec![BuildingDiffEntry {
+                id: 42,
+                kind: BuildingKind3d::House,
+                tier: 1,
+                position: WorldXZ { x: 12.5, z: 48.0 },
+            }],
+            graph: None,
+        };
+        let building_json = serde_json::to_string(&building).expect("serialize building");
+        let building_back: BuildingDiffFrame =
+            serde_json::from_str(&building_json).expect("deserialize building");
+        assert_eq!(building, building_back);
+
+        let agent = AgentAppearanceUpdate {
+            agent_id: 7,
+            era: 1,
+            wardrobe: MaterialId(0),
+            tools: MaterialId(0),
+            scale: 1.0,
+            position: Some(WorldXZ { x: 3.0, z: 9.0 }),
+        };
+        let agent_json = serde_json::to_string(&agent).expect("serialize agent");
+        let agent_back: AgentAppearanceUpdate =
+            serde_json::from_str(&agent_json).expect("deserialize agent");
+        assert_eq!(agent_back.position, Some(WorldXZ { x: 3.0, z: 9.0 }));
+        assert_eq!(agent_world_translation(&agent_back, 0.8), (3.0, 0.8, 9.0));
+    }
+
+    /// FR-CIV-PROTO3D-011 — civilian state entries round-trip and legacy payloads get defaults.
+    #[test]
+    fn civilian_state_entry_roundtrip_and_backward_compat() {
+        let entry = CivilianStateEntry {
+            id: 17,
+            needs: CivilianNeeds3d {
+                food: 0.8,
+                shelter: 0.6,
+                safety: 0.7,
+                social: 0.5,
+                rest: 0.9,
+            },
+            profession: "farmer".to_string(),
+            genome_summary: GenomeSummary3d {
+                summary: "dominant traits".to_string(),
+                lineage: "line-a".to_string(),
+                traits: vec!["hardy".to_string(), "curious".to_string()],
+            },
+            species: "human".to_string(),
+            health: 0.95,
+        };
+        let json = serde_json::to_string(&entry).expect("serialize");
+        let back: CivilianStateEntry = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back, entry);
+
+        let legacy_json = r#"{"id":17}"#;
+        let legacy: CivilianStateEntry =
+            serde_json::from_str(legacy_json).expect("legacy deserialize");
+        assert_eq!(legacy.needs, CivilianNeeds3d::default());
+        assert_eq!(legacy.profession, "");
+        assert_eq!(legacy.genome_summary, GenomeSummary3d::default());
+        assert_eq!(legacy.species, "");
+        assert_eq!(legacy.health, 1.0);
+    }
+
+    /// FR-CIV-PROTO3D-012 — faction state entries round-trip and legacy payloads get defaults.
+    #[test]
+    fn faction_state_entry_roundtrip_and_backward_compat() {
+        let entry = FactionStateEntry {
+            id: 4,
+            era: 9,
+            government: Government3d::Republic,
+            treasury: FactionTreasury3d {
+                amount: 1234.5,
+                currency: "civ".to_string(),
+            },
+        };
+        let json = serde_json::to_string(&entry).expect("serialize");
+        let back: FactionStateEntry = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back, entry);
+
+        let legacy_json = r#"{"id":4}"#;
+        let legacy: FactionStateEntry =
+            serde_json::from_str(legacy_json).expect("legacy deserialize");
+        assert_eq!(legacy.era, 0);
+        assert_eq!(legacy.government, Government3d::Unknown);
+        assert_eq!(legacy.treasury, FactionTreasury3d::default());
+    }
+
+    /// FR-CIV-PROTO3D-013 — event feed messages round-trip as a tagged enum.
+    #[test]
+    fn event_feed_roundtrip() {
+        let frame = EventFeedFrame {
+            tick: 27,
+            events: vec![
+                EventFeedMessage3d::Birth(BirthEvent3d {
+                    entity_id: 1,
+                    faction_id: 2,
+                    species: "human".to_string(),
+                    position: Some(WorldXZ { x: 10.0, z: 12.0 }),
+                }),
+                EventFeedMessage3d::Death(DeathEvent3d {
+                    entity_id: 3,
+                    faction_id: 4,
+                    position: Some(WorldXZ { x: 8.0, z: 9.0 }),
+                    cause: "battle".to_string(),
+                }),
+                EventFeedMessage3d::Tech(TechEvent3d {
+                    faction_id: 5,
+                    era: 6,
+                    tech: "agriculture".to_string(),
+                }),
+                EventFeedMessage3d::Battle(BattleEvent3d {
+                    attacker_faction: 7,
+                    defender_faction: 8,
+                    outcome: "attacker_won".to_string(),
+                    position: Some(WorldXZ { x: 1.0, z: 2.0 }),
+                }),
+                EventFeedMessage3d::Disaster(DisasterEvent3d {
+                    kind: "flood".to_string(),
+                    severity: 0.75,
+                    position: Some(WorldXZ { x: 3.0, z: 4.0 }),
+                }),
+            ],
+        };
+        let json = serde_json::to_string(&frame).expect("serialize");
+        let back: EventFeedFrame = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back, frame);
+    }
+
+    /// FR-CIV-PROTO3D-003 — Frame3d::tick exposes the inner tick.
     #[test]
     fn fr_civ_proto3d_010_building_diff_entry_tier_roundtrip_and_backward_compat() {
         let entry = BuildingDiffEntry {

@@ -107,7 +107,6 @@ civis-3d-verify: civis-3d-catalog-check civis-3d-scenario-check civis-3d-web-che
     # cargo check avoids exe-lock issues on Windows (service binaries stay open).
     # Targeted tests are already run by sub-recipes above.
     cargo check --workspace
-    cargo bench --bench ca_dirty_chunk || true
     cargo clippy --workspace --all-targets -- -D warnings
     cargo fmt --check
 
@@ -188,7 +187,7 @@ civis-3d-watch-build:
 
 # Godot GDExtension crate (excluded from workspace; test in-tree).
 godot-test:
-    powershell -NoProfile -ExecutionPolicy Bypass -Command 'Set-Item Env:CARGO_TARGET_DIR target-godot-smoke; cargo test --manifest-path clients/godot-ref/rust/Cargo.toml -j 1'
+    cargo test --manifest-path clients/godot-ref/rust/Cargo.toml
 
 # Full local dev stack: infra + civ-watch.
 dev:
@@ -226,42 +225,18 @@ dev-fast: dev-tools
 dev-fast-voxel: dev-tools
     cargo watch -x "run -p civ-bevy-ref --features hot --bin civ-bevy-window"
 
-# Build + run the standalone Bevy sandbox (release). Encodes the verified
-# boot incantation: `bevy,egui` features, CARGO_TARGET_DIR=G:/civis-target-gate
-# (out-of-tree build dir), and BEVY_ASSET_ROOT=clients/bevy-ref so the bin
-# finds its assets when launched from the workspace root (Bevy 0.18
-# `AssetPlugin::file_path` defaults to "./assets" relative to CWD, which is
-# the workspace root, not the crate). Both the script and the recipe set the
-# env, so callers can use either path and still get the correct asset root.
-# Override the target dir by exporting `CARGO_TARGET_DIR` before invoking
-# `just play` (the recipe's default is just a default — caller wins).
+# Build the release civ-standalone binary, kill stale instances, launch with log capture, print PID.
+# Delegates to Tools/play.ps1 (Windows) or Tools/play.sh (Linux/macOS).
 play:
-    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-G:/civis-target-gate}" \
-        BEVY_ASSET_ROOT="${BEVY_ASSET_ROOT:-$(pwd)/clients/bevy-ref}" \
-        powershell -NoProfile -ExecutionPolicy Bypass -File Tools/play.ps1
+    powershell -NoProfile -ExecutionPolicy Bypass -File Tools/play.ps1
 
 # Same as `play` with RUST_LOG=info,civ_bevy_ref=debug,wgpu=warn.
 play-debug:
-    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-G:/civis-target-gate}" \
-        BEVY_ASSET_ROOT="${BEVY_ASSET_ROOT:-$(pwd)/clients/bevy-ref}" \
-        powershell -NoProfile -ExecutionPolicy Bypass -File Tools/play.ps1 -LogLevel 'info,civ_bevy_ref=debug,wgpu=warn'
+    powershell -NoProfile -ExecutionPolicy Bypass -File Tools/play.ps1 -LogLevel 'info,civ_bevy_ref=debug,wgpu=warn'
 
 # Same as `play` with RUST_LOG=info,civ_bevy_ref=debug,wgpu=warn and RUST_BACKTRACE=full.
 play-trace:
-    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-G:/civis-target-gate}" \
-        BEVY_ASSET_ROOT="${BEVY_ASSET_ROOT:-$(pwd)/clients/bevy-ref}" \
-        powershell -NoProfile -ExecutionPolicy Bypass -File Tools/play.ps1 -LogLevel 'info,civ_bevy_ref=debug,wgpu=warn' -Backtrace full
-
-# Build + run the live windowed Bevy client (civ-bevy-window, F3D0 binary frame
-# attach). Mirrors the `play` verified incantation: `bevy,egui` features,
-# CARGO_TARGET_DIR=G:/civis-target-gate, and BEVY_ASSET_ROOT=clients/bevy-ref.
-# The window client reads the same asset dir as the standalone (sandbox
-# terrain fallback + sky HDR + UI panel textures) so the root must be the
-# bevy-ref crate.
-play-window:
-    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-G:/civis-target-gate}" \
-        BEVY_ASSET_ROOT="${BEVY_ASSET_ROOT:-$(pwd)/clients/bevy-ref}" \
-        cargo run -p civ-bevy-ref --features bevy,egui --bin civ-bevy-window
+    powershell -NoProfile -ExecutionPolicy Bypass -File Tools/play.ps1 -LogLevel 'info,civ_bevy_ref=debug,wgpu=warn' -Backtrace full
 
 # Kill a running civ-standalone game process.
 stop:
@@ -293,22 +268,6 @@ deploy:
 # Criterion benchmarks.
 bench:
     cargo bench --workspace
-
-# CA dirty-chunk benchmark.
-ca-bench:
-    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ca-dirty-chunk-bench.ps1
-
-# CA dirty-chunk benchmark report.
-ca-report:
-    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ca-bench-report.ps1
-
-# CA dirty-chunk profiling.
-ca-flamegraph:
-    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ca-flamegraph.ps1
-
-# CA dirty-chunk perf sweep.
-ca-perf:
-    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ca-perf.ps1
 
 # Rust gate without cargo-deny (when deny is not installed locally).
 rust-verify: lint test

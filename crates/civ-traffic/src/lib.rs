@@ -29,12 +29,7 @@ use std::collections::BTreeMap;
 use civ_voxel::WorldCoord;
 use serde::{Deserialize, Serialize};
 
-pub mod grid;
 pub mod lane;
-
-pub use grid::{
-    CellState, GridCell, ServiceGrid, ServiceGridError, ServiceKind, SERVICE_GRID_SCHEMA_VERSION,
-};
 
 /// Marker version of this crate's public schema (replay/save guard).
 pub const SCHEMA_VERSION: &str = "0.1.0";
@@ -67,8 +62,8 @@ pub enum RoadKind {
 }
 
 pub use lane::{
-    lanes_for, route_lanes, speed_for_lane, Lane, LaneClass, LaneConnection, LaneDirection,
-    LaneGraph, Node, NodeKey,
+    Lane, LaneClass, LaneConnection, LaneDirection, LaneGraph, Node, NodeKey, lanes_for,
+    route_lanes, speed_for_lane,
 };
 
 impl RoadKind {

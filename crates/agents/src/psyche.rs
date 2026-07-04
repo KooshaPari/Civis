@@ -8,7 +8,6 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 use civ_genetics::{sentience::CognitionTraitProfile, Dna};
-use civ_needs::{Health as LifeHealth, LifecycleParams};
 
 use crate::{culture, Needs};
 
@@ -133,10 +132,7 @@ pub fn psych_genome_profile() -> PsychGenomeProfile {
 #[must_use]
 pub fn psyche_from_dna(dna: &Dna, profile: &PsychGenomeProfile) -> Psyche {
     Psyche {
-        drives: profile
-            .drive_slots
-            .clone()
-            .map(|slots| score_axis(dna, &slots)),
+        drives: profile.drive_slots.clone().map(|slots| score_axis(dna, &slots)),
         temperament: Temperament {
             reactivity: score_axis(dna, &profile.reactivity_slots),
             sociability: score_axis(dna, &profile.sociability_slots),
@@ -147,22 +143,6 @@ pub fn psyche_from_dna(dna: &Dna, profile: &PsychGenomeProfile) -> Psyche {
         beliefs: [0.5; PSYCHE_DIM],
         maturity: 0.0,
     }
-}
-
-/// Advance maturity from a single tick of lived experience.
-pub fn tick_maturity(
-    psyche: &mut Psyche,
-    health: &LifeHealth,
-    critical_fraction: f32,
-    params: &LifecycleParams,
-) {
-    if health.is_dead() {
-        return;
-    }
-    let stress = (critical_fraction.clamp(0.0, 1.0) * params.maturity_stress_penalty)
-        .clamp(0.0, 1.0);
-    let delta = params.base_maturity_rate * (1.0 - stress);
-    psyche.maturity = (psyche.maturity + delta).clamp(0.0, 1.0);
 }
 
 /// Update temperament with a small lived-experience nudge.
@@ -305,31 +285,5 @@ mod tests {
         nudge_temperament(&mut temperament, 1.0, 0.0, 0.2);
         assert!(temperament.reactivity >= 0.0 && temperament.reactivity <= 1.0);
         assert!(temperament.sociability >= 0.0 && temperament.sociability <= 1.0);
-    }
-
-    #[test]
-    fn maturity_grows_under_low_stress_and_stalls_under_high_stress() {
-        let mut psyche = Psyche {
-            drives: [0.5; PSYCHE_DIM],
-            temperament: Temperament::neutral(),
-            mood: Mood::neutral(),
-            beliefs: [0.5; PSYCHE_DIM],
-            maturity: 0.0,
-        };
-        let params = LifecycleParams {
-            maturity_stress_penalty: 1.0,
-            ..LifecycleParams::default()
-        };
-        let healthy = LifeHealth::default();
-        for _ in 0..50 {
-            tick_maturity(&mut psyche, &healthy, 0.0, &params);
-        }
-        let low_stress = psyche.maturity;
-        for _ in 0..50 {
-            tick_maturity(&mut psyche, &healthy, 1.0, &params);
-        }
-        let high_stress = psyche.maturity;
-        assert!(low_stress > 0.0);
-        assert!((high_stress - low_stress).abs() <= f32::EPSILON);
     }
 }

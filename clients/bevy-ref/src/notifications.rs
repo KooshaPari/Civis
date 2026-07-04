@@ -139,10 +139,10 @@ fn draw_notifications(mut contexts: EguiContexts, mut notifications_mut: ResMut<
 
     apply_theme(ctx);
 
-    let content_rect = ctx.content_rect();
+    let screen_rect = ctx.content_rect();
     let anchor = egui::pos2(
-        content_rect.left() + PANEL_MARGIN,
-        content_rect.bottom() - PANEL_MARGIN,
+        screen_rect.left() + PANEL_MARGIN,
+        screen_rect.bottom() - PANEL_MARGIN,
     );
 
     let mut dismiss_request = None;
@@ -181,9 +181,10 @@ fn toast_card(ui: &mut egui::Ui, index: usize, notification: &Notification) -> e
     let fade = 1.0 - (notification.age_secs / TOAST_LIFETIME_SECS).clamp(0.0, 1.0);
     let alpha = (fade * 235.0).max(40.0) as u8;
     let accent = notification.kind.accent();
-    let fill = egui::Color32::from_rgba_premultiplied(16, 20, 30, alpha);
+    let fill = crate::ui_theme::KC_BG_ELV.gamma_multiply(alpha as f32 / 255.0);
     let text_color = egui::Color32::from_rgba_unmultiplied(TEXT.r(), TEXT.g(), TEXT.b(), alpha);
-    let dim_color = egui::Color32::from_rgba_unmultiplied(152, 161, 182, alpha);
+    let dim = crate::ui_theme::TEXT_MID;
+    let dim_color = egui::Color32::from_rgba_unmultiplied(dim.r(), dim.g(), dim.b(), alpha);
     let accent_color =
         egui::Color32::from_rgba_unmultiplied(accent.r(), accent.g(), accent.b(), alpha);
 

@@ -14,8 +14,7 @@ mod allocation;
 mod extraction;
 mod institution;
 mod market;
-mod stocks;
-mod trade_routes;
+pub mod stocks;
 
 pub use allocation::{AllocationEngine, CapitalistAllocator};
 pub use extraction::{
@@ -30,6 +29,11 @@ pub use market::{GoodId, MarketState, MultiGoodMarket, Order, OrderBook, Side, T
 pub use stocks::{Good, Stocks};
 pub use trade_routes::{
     compute_trade_routes, route_flow, routes_lexicographic, Settlement, SettlementId, TradeRoute,
+};
+pub use market::MarketState;
+pub use stocks::{
+    apply_trade, comparative_advantage, deficit, propose_trade, step_stocks, surplus, trade_gain,
+    Good, ProductionProfile, Stocks, TradeOffer, GOODS,
 };
 
 use serde::{Deserialize, Serialize};

@@ -21,18 +21,15 @@ pub enum Good {
     Metal = 3,
     /// Durable manufactured equipment.
     Tools = 4,
-    /// Refined energetic output of advanced industrial production chains.
-    Energy = 5,
 }
 
 /// All built-in goods in deterministic iteration order.
-pub const GOODS: [Good; 6] = [
+pub const GOODS: [Good; 5] = [
     Good::Food,
     Good::Water,
     Good::Wood,
     Good::Metal,
     Good::Tools,
-    Good::Energy,
 ];
 
 fn good_index(good: Good) -> usize {
@@ -57,41 +54,6 @@ impl Stocks {
     /// Returns the current quantity of `good`.
     pub fn get(&self, good: Good) -> i64 {
         self.quantities[good_index(good)]
-    }
-
-    /// Sets the current quantity of `good` to `qty`, clamping negatives to 0.
-    pub fn set(&mut self, good: Good, qty: i64) {
-        self.quantities[good_index(good)] = qty.max(0);
-    }
-
-    /// Returns the [`Good::Food`] stock quantity.
-    pub fn food(&self) -> i64 {
-        self.get(Good::Food)
-    }
-
-    /// Returns the [`Good::Water`] stock quantity.
-    pub fn water(&self) -> i64 {
-        self.get(Good::Water)
-    }
-
-    /// Returns the [`Good::Wood`] stock quantity.
-    pub fn wood(&self) -> i64 {
-        self.get(Good::Wood)
-    }
-
-    /// Returns the [`Good::Metal`] stock quantity.
-    pub fn metal(&self) -> i64 {
-        self.get(Good::Metal)
-    }
-
-    /// Returns the [`Good::Tools`] stock quantity.
-    pub fn tools(&self) -> i64 {
-        self.get(Good::Tools)
-    }
-
-    /// Returns the [`Good::Energy`] stock quantity.
-    pub fn energy(&self) -> i64 {
-        self.get(Good::Energy)
     }
 
     /// Applies a signed quantity change to `good`.
@@ -175,14 +137,6 @@ pub struct TradeOffer {
     pub qty_b_to_a: i64,
 }
 
-/// True when a consumption deficit was clamped at zero: the request was a draw
-/// (`flow < 0`) but the applied delta is *less* negative than requested because
-/// stock ran out (e.g. wanted -10, only -3 existed). The previous inline check
-/// compared the wrong direction and so never fired.
-fn deficit_was_clamped(flow: i64, applied: i64) -> bool {
-    flow < 0 && applied > flow
-}
-
 /// Applies one production/consumption tick to `stocks`.
 ///
 /// Each good is advanced independently by its net flow. Deficits are clamped
@@ -192,7 +146,7 @@ pub fn step_stocks(stocks: &mut Stocks, profile: &ProductionProfile) {
         let flow = profile.net_flow(good);
         let before = stocks.get(good);
         let applied = stocks.add(good, flow);
-        if deficit_was_clamped(flow, applied) {
+        if flow < 0 && before + applied < before + flow {
             debug!(
                 good = ?good,
                 requested_deficit = flow,
@@ -294,11 +248,7 @@ pub fn propose_trade(
                 qty_b_to_a,
             };
 
-            if best
-                .as_ref()
-                .map(|current| offer_better(&offer, current))
-                .unwrap_or(true)
-            {
+            if best.as_ref().map(|current| offer_better(&offer, current)).unwrap_or(true) {
                 best = Some(offer);
             }
         }
@@ -328,22 +278,7 @@ mod tests {
     use super::*;
     use proptest::prelude::*;
 
-    /// Covers FR-CIV-LIFE-020.
-    /// Stock stepping conserves totals and never drives any good below zero.
-    #[test]
-    fn deficit_was_clamped_detects_only_real_clamps() {
-        // Full deficit applied (stock covered it): not clamped.
-        assert!(!deficit_was_clamped(-10, -10));
-        // Deficit clamped (wanted -10, only -3 of stock): clamped.
-        assert!(deficit_was_clamped(-10, -3));
-        // Fully clamped to nothing (wanted -10, 0 stock): clamped.
-        assert!(deficit_was_clamped(-10, 0));
-        // Production (positive flow): never a deficit clamp.
-        assert!(!deficit_was_clamped(10, 10));
-        // No flow: not a clamp.
-        assert!(!deficit_was_clamped(0, 0));
-    }
-
+    /// FR-CIV-LIFE-020: stock stepping conserves totals and never drives any good below zero.
     #[test]
     fn step_conserves_and_clamps_to_zero() {
         let mut stocks = Stocks::default();
@@ -361,18 +296,6 @@ mod tests {
         assert_eq!(stocks.total(), 0);
         assert_eq!(stocks.get(Good::Food), 0);
         assert_eq!(stocks.get(Good::Water), 0);
-    }
-
-    #[test]
-    fn production_and_consumption_getters_return_profile_rates() {
-        let production = [10i64, 2, 3, 4, 5];
-        let consumption = [1i64, 6, 0, 0, 2];
-        let profile = ProductionProfile::new(production, consumption);
-
-        for (i, good) in GOODS.iter().enumerate() {
-            assert_eq!(profile.production(*good), production[i]);
-            assert_eq!(profile.consumption(*good), consumption[i]);
-        }
     }
 
     /// FR-CIV-LIFE-021: surplus and deficit signs reflect net flow against stock.

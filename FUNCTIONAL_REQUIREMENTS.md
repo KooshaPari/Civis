@@ -490,7 +490,6 @@
 - **FR-CIV-AUDIO-006** — v1 SHALL ship four material archetype instruments (metal/wood/hide/reed) with spatial kira playback.
 - **FR-CIV-AUDIO-007** — Mix tree SHALL expose four duckable buses per `docs/design/audio-direction.md` (ambient/score/sfx/ui).
 - **FR-CIV-AUDIO-008** — Missing audio assets SHALL warn once and play silence without crashing (locked invariant).
-- **FR-CIV-AUDIO-wire** — Per-tick substrate events SHALL be translated into `civ-audio` `SfxTrigger`s inside the engine's `phase_audio`, surfaced on the JSON-RPC `sim.snapshot.audio_events` field and the WebSocket tick broadcast, and parsed by clients (Bevy, web) into one-shot SFX. Disaster / combat / construction → trigger mapping; no synthesis in the engine.
 
 ### FR-CIV-LEGENDS — History, rumor drift, cultural register (`crates/legends`)
 
@@ -535,12 +534,6 @@
 - **FR-CIV-PBR-006** — Albedo SHALL be sRGB; data maps SHALL load linear (`is_srgb=false`).
 - **FR-CIV-PBR-007** — Canonical mode SHALL reference exemplar material seed manifests; primitive mode allows per-matid overrides.
 - **FR-CIV-PBR-008** — Missing texture files SHALL fail loud in dev builds and degrade to flat tint in player builds with logged warnings.
-
-### FR-CIV-INFRA — Service grid substrate (power, water, coverage) (`crates/civ-traffic`)
-
-- **FR-CIV-INFRA-070** — The service grid substrate SHALL model power, water, and coverage services as typed cells with an adjacency list; `place_source` SHALL flip a cell to `Active` and `coverage_ring` SHALL return every cell within `range` cells (Chebyshev distance) of a query coord.
-- **FR-CIV-INFRA-071** — A building at coord `c` SHALL be considered "served" by a service kind iff at least one cell within `range` cells (Chebyshev) of `c` hosts a source of that kind; the substrate SHALL expose `coverage_ring` so the economy and renderer can compute served status without scanning the full grid.
-- **FR-CIV-INFRA-072** — `transmit(coord)` SHALL flip every cell reachable from `coord` (BFS over the adjacency list, `BTreeMap` order) to `Outage`; the operation SHALL be idempotent and SHALL NOT cross disconnected components.
 
 ### FR-CIV-LLM — Minimal garnish cache (`crates/research`, `crates/ai`)
 

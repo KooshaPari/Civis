@@ -28,6 +28,8 @@
 //!     });
 //! ```
 
+#![allow(dead_code)] // Phase 1 scaffold — consumers land in a follow-up PR.
+
 #[cfg(feature = "pbr-textures")]
 use bevy::pbr::StandardMaterial;
 #[cfg(feature = "pbr-textures")]
@@ -109,6 +111,38 @@ impl Biome {
         }
     }
 
+    /// Per-biome surface PBR `(perceptual_roughness, reflectance, metallic)`
+    /// from `docs/design/lighting-biomes-art.md` §4.2. Replaces the old uniform
+    /// `0.95 / 0.18` block (the flat-RGB bug). Keeps a ≥0.40 roughness spread
+    /// across the set so shiny families (Snow `0.45`) read against the matte
+    /// ones (Forest `0.95`). Reflectance is the wet/dry knob; all ground is
+    /// dielectric (metallic `0.0`).
+    #[must_use]
+    pub const fn surface_pbr(self) -> (f32, f32, f32) {
+        match self {
+            Biome::SandBeach => (0.65, 0.42, 0.0), // wet shore
+            Biome::DirtGround => (0.90, 0.18, 0.0),
+            Biome::GrassField => (0.88, 0.25, 0.0),
+            Biome::ForestFloor => (0.95, 0.18, 0.0), // flattest / most matte
+            Biome::RockCliff => (0.78, 0.35, 0.0),
+            Biome::SnowPure => (0.45, 0.55, 0.0), // shiniest / brightest
+        }
+    }
+
+    /// Per-biome `base_color` tint (sRGB) from §4.2, multiplied over the albedo
+    /// texture. Near-white-warm so the texture dominates; tint nudges mood.
+    #[must_use]
+    pub const fn tint_srgb(self) -> [f32; 3] {
+        match self {
+            Biome::SandBeach => [0.788, 0.722, 0.478], // #C9B87A wet shore
+            Biome::DirtGround => [0.478, 0.369, 0.220], // #7A5E38 packed
+            Biome::GrassField => [0.290, 0.604, 0.239], // #4A9A3D
+            Biome::ForestFloor => [0.122, 0.341, 0.122], // #1F571F canopy floor
+            Biome::RockCliff => [0.424, 0.439, 0.455], // #6C7074
+            Biome::SnowPure => [0.941, 0.965, 1.000], // #F0F6FF
+        }
+    }
+
     /// Pick a biome from a normalised terrain height (`0.0..=1.0`) using the
     /// same band thresholds as [`crate::terrain::color_for_height`]. Returns
     /// `SandBeach` for underwater bands so callers can detect water separately
@@ -143,11 +177,8 @@ mod loader {
         pub albedo: String,
         /// `assets/textures/<slug>/normal.ktx2`
         pub normal: String,
-        /// `assets/textures/<slug>/orm.ktx2` (G=roughness, B=metallic, R=occlusion).
-        pub metallic_roughness: String,
-        /// `assets/textures/<slug>/orm.ktx2` (R=occlusion). Shared with
-        /// `metallic_roughness` when the source pack is already ORM.
-        pub occlusion: String,
+        /// `assets/textures/<slug>/orm.ktx2` (Occlusion / Roughness / Metallic)
+        pub orm: String,
     }
 
     impl BiomeAssetPaths {
@@ -160,8 +191,7 @@ mod loader {
             Self {
                 albedo: format!("textures/{slug}/albedo.jpg"),
                 normal: format!("textures/{slug}/normal.jpg"),
-                metallic_roughness: format!("textures/{slug}/orm.ktx2"),
-                occlusion: format!("textures/{slug}/orm.ktx2"),
+                orm: format!("textures/{slug}/orm.ktx2"),
             }
         }
     }
@@ -181,7 +211,10 @@ mod loader {
 
         /// Iterate over `(biome, handle)` pairs in canonical order.
         pub fn iter(&self) -> impl Iterator<Item = (Biome, &Handle<StandardMaterial>)> {
-            Biome::ALL.iter().copied().zip(self.handles.iter())
+            Biome::ALL
+                .iter()
+                .copied()
+                .zip(self.handles.iter())
         }
     }
 
@@ -211,22 +244,17 @@ mod loader {
             let biome = Biome::ALL[i];
             let paths = BiomeAssetPaths::for_biome(biome);
             let albedo: Handle<Image> = asset_server.load(&paths.albedo);
-            let normal: Handle<Image> = texture_load::load_linear_map(&asset_server, &paths.normal);
-            let metallic_roughness: Handle<Image> =
-                texture_load::load_linear_map(&asset_server, &paths.metallic_roughness);
-            let occlusion: Handle<Image> =
-                texture_load::load_linear_map(&asset_server, &paths.occlusion);
+            let normal: Handle<Image> = asset_server.load(&paths.normal);
 
-            let [r, g, b] = biome.fallback_srgb();
+            let [r, g, b] = biome.tint_srgb();
+            let (roughness, reflectance, metallic) = biome.surface_pbr();
             materials.add(StandardMaterial {
                 base_color: Color::srgb(r, g, b),
                 base_color_texture: Some(albedo),
                 normal_map_texture: Some(normal),
-                perceptual_roughness: 0.95,
-                metallic_roughness_texture: Some(metallic_roughness),
-                occlusion_texture: Some(occlusion),
-                metallic: 0.0,
-                reflectance: 0.18,
+                perceptual_roughness: roughness,
+                metallic,
+                reflectance,
                 ..Default::default()
             })
         });
@@ -236,7 +264,7 @@ mod loader {
 }
 
 #[cfg(feature = "pbr-textures")]
-pub use loader::{load_biome_materials, BiomeAssetPaths, BiomeMaterials, BiomeMaterialsPlugin};
+pub use loader::{BiomeAssetPaths, BiomeMaterials, BiomeMaterialsPlugin, load_biome_materials};
 
 #[cfg(test)]
 mod tests {
@@ -277,25 +305,5 @@ mod tests {
                 assert!((0.0..=1.0).contains(&c), "{biome:?} fallback out of gamut");
             }
         }
-    }
-
-    #[test]
-    fn fr_civ_pbr_002_orm_channels_are_split_and_orm_source_fans_in() {
-        let paths = BiomeAssetPaths::for_biome(Biome::RockCliff);
-        assert_eq!(paths.metallic_roughness, "textures/rock_cliff/orm.ktx2");
-        assert_eq!(paths.occlusion, "textures/rock_cliff/orm.ktx2");
-        assert_eq!(paths.metallic_roughness, paths.occlusion);
-    }
-
-    #[test]
-    fn fr_civ_pbr_006_texture_maps_are_color_space_partitioned() {
-        assert_eq!(
-            texture_load::biome_albedo_path(Biome::SandBeach),
-            "textures/sand_beach/albedo.jpg"
-        );
-        assert_eq!(
-            texture_load::biome_normal_path(Biome::SandBeach),
-            "textures/sand_beach/normal.jpg"
-        );
     }
 }

@@ -35,7 +35,6 @@ export function BottomBar() {
   const [loadEntries, setLoadEntries] = useState<SaveEntry[]>([]);
   const [loadOpen, setLoadOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<(typeof PRODUCTION_SLOTS)[number]>("slot-1");
-  const [minimapZoom, setMinimapZoom] = useState(1.0);
 
   const runWatchControl = async (path: string, body: object = {}) => {
     try {

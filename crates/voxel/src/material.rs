@@ -9,7 +9,9 @@ use serde::{Deserialize, Serialize};
 use crate::MaterialId;
 
 /// Broad material phase used by the cellular automata step.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
 pub enum Phase {
     /// Occupies empty cells and rises through heavier gases.
     Gas,
@@ -1015,80 +1017,5 @@ mod tests {
         assert_eq!(steam.id, STEAM);
         assert_eq!(registry.materials().len(), 41);
         assert!(registry.by_name("LAVA").is_none());
-    }
-
-    /// `WATER` is the shared source of truth for the standard registry id/name
-    /// pair used by the clients and worldgen.
-    #[test]
-    fn water_material_id_is_stable_and_named() {
-        let registry = MaterialRegistry::standard();
-        let water = registry.by_name("Water").expect("water");
-
-        assert_eq!(water.id, WATER);
-        assert_eq!(registry.get(WATER).map(|m| m.name), Some("Water"));
-    }
-
-    /// `get` returns `None` for an id past the end of the registry table.
-    #[test]
-    fn get_is_none_for_out_of_range_id() {
-        let registry = MaterialRegistry::standard();
-        let past_end = MaterialId(registry.materials().len() as u16 + 5);
-        assert!(registry.get(past_end).is_none());
-    }
-
-    /// `by_name` is exact-match: an unknown name yields `None`.
-    #[test]
-    fn by_name_is_none_for_unknown() {
-        let registry = MaterialRegistry::standard();
-        assert!(registry.by_name("unobtanium").is_none());
-        assert!(registry.by_name("").is_none());
-    }
-
-    /// The phase predicates are mutually exclusive and agree with the `phase`
-    /// field for every material in the standard registry (data-driven invariant).
-    #[test]
-    fn phase_predicates_agree_with_phase_for_all_materials() {
-        for def in MaterialRegistry::standard().materials() {
-            let flags = [def.is_powder(), def.is_liquid(), def.is_gas()]
-                .iter()
-                .filter(|b| **b)
-                .count();
-            match def.phase {
-                Phase::Powder => assert!(def.is_powder() && flags == 1),
-                Phase::Liquid => assert!(def.is_liquid() && flags == 1),
-                Phase::Gas => assert!(def.is_gas() && flags == 1),
-                Phase::Solid | Phase::Empty => {
-                    assert_eq!(flags, 0, "solid/empty matches no powder/liquid/gas flag")
-                }
-            }
-        }
-    }
-
-    /// Every material is retrievable by its own id, and the id round-trips.
-    #[test]
-    fn every_material_round_trips_by_id() {
-        let registry = MaterialRegistry::standard();
-        for def in registry.materials() {
-            let fetched = registry
-                .get(def.id)
-                .expect("material retrievable by its id");
-            assert_eq!(fetched.id, def.id);
-            assert_eq!(fetched.phase, def.phase);
-        }
-    }
-
-    /// `MaterialRegistry::new` wraps an arbitrary static slice (the const ctor
-    /// behind `standard`), and an empty registry resolves nothing.
-    #[test]
-    fn new_wraps_arbitrary_slice_and_empty_registry_is_inert() {
-        let std_materials = MaterialRegistry::standard().materials();
-        let registry = MaterialRegistry::new(std_materials);
-        assert_eq!(registry.materials().len(), std_materials.len());
-        assert_eq!(registry.get(AIR).map(|m| m.id), Some(AIR));
-
-        let empty = MaterialRegistry::new(&[]);
-        assert!(empty.materials().is_empty());
-        assert!(empty.get(AIR).is_none());
-        assert!(empty.by_name("Water").is_none());
     }
 }

@@ -22,6 +22,7 @@ use civ_diffusion::DiffusionParams;
 use civ_economy::{
     settlement_trade_flow_from_supply_demand, AllocationEngine, EconomyState,
     Good, LaborCapacityAllocator, MarketState, SettlementTradeFlow,
+    institution::{Taxation, collect_taxes},
 };
 use civ_genetics::sentience::{
     cognition_score, evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold,
@@ -62,7 +63,7 @@ use crate::language::{
 };
 use crate::psyche_behavior::{behavior_from_psyche, EmotionDrivenBehavior};
 use crate::religion::{
-    apply_big_gods_response, last_religion_sample, substrate_gradients_for,
+    apply_big_gods_response,
     ReligiousProfile, SubstrateGradients,
 };
 use crate::lod::{should_tick_entity_with_policy, LodPolicy};
@@ -75,7 +76,7 @@ use crate::replay::{ReplayError, ReplayLog};
 use crate::replay_format::{load_civreplay, save_civreplay};
 
 use crate::conditions::GameOutcome;
-use crate::{CivAge, EraHistory, FactionTechState, Fixed};
+use crate::Fixed;
 use civ_planet::worldgen::WorldgenConfig;
 
 
@@ -260,6 +261,52 @@ pub struct BuildSite {
     pub building_type: BuildingType,
     pub position: Position,
     pub progress: Fixed,
+}
+
+impl BuildSite {
+    /// Get a stable id for this build site (derived from position hash).
+    pub fn id(&self) -> u64 {
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        use std::hash::{Hash, Hasher};
+        self.position.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    /// Check if this build site is complete.
+    pub fn is_complete(&self) -> bool {
+        self.progress >= Fixed::from_num(100)
+    }
+
+    /// Advance the build site one tick. Returns Some(()) when newly completed.
+    pub fn tick(&mut self) -> Option<()> {
+        if self.is_complete() {
+            return None;
+        }
+        let was_complete = self.is_complete();
+        self.progress += Fixed::from_num(5); // 5 progress per tick
+        let now_complete = self.is_complete();
+        if !was_complete && now_complete {
+            Some(())
+        } else {
+            None
+        }
+    }
+
+    /// Produce and collect resources for this completed site. Returns events.
+    pub fn produce_and_collect(
+        &mut self,
+        _economy: &mut EconomyState,
+        _tick: u64,
+    ) -> Vec<ProductionEvent> {
+        if self.is_complete() {
+            vec![ProductionEvent::Produced {
+                building_type: self.building_type,
+                count: 1,
+            }]
+        } else {
+            Vec::new()
+        }
+    }
 }
 
 /// Production event emitted during construction (FR-CIV-BUILD-002).
@@ -1450,7 +1497,7 @@ fn default_faction_doctrines() -> Vec<DoctrineLibrary> {
 }
 
 fn economy_state_from_world(world: &WorldState) -> EconomyState {
-    let energy_budget_joules = i64::from(world.energy_budget_joules.to_bits()) / crate::SCALE;
+    let energy_budget_joules = (world.energy_budget_joules.to_f64() as i64) / crate::SCALE;
     let mut state = EconomyState::with_energy_budget(energy_budget_joules);
     state.tick = world.tick;
     state
@@ -1576,6 +1623,7 @@ impl Simulation {
             rng,
             planet,
             moon,
+            worldgen: WorldgenConfig::default(),
             climate,
             pending_damage: Vec::new(),
             tick_modulo_compact: 64,
@@ -1722,6 +1770,7 @@ impl Simulation {
             rng,
             planet,
             moon,
+            worldgen: WorldgenConfig::default(),
             climate,
             current_tick: 0,
             pending_damage: Vec::new(),
@@ -6329,6 +6378,23 @@ fn diplomacy_culture_threshold_bias(
 }
 
 /// Dominant explicit faction alignment per multi-member settlement cluster (N3).
+fn settlement_member_counts(world: &World) -> BTreeMap<u64, u32> {
+    let mut counts = BTreeMap::new();
+    for (_, member) in world.query::<&ClusterMember>().iter() {
+        *counts.entry(member.cluster.0).or_insert(0) += 1;
+    }
+    counts
+}
+
+fn resource_market_key(resource: civ_economy::Good) -> &'static str {
+    match resource {
+        Good::Food => "food",
+        Good::Wood => "wood",
+        Good::Metal => "metal",
+        Good::Energy => "energy",
+    }
+}
+
 fn settlement_dominant_factions(
     world: &World,
     cluster_member_counts: &BTreeMap<u64, u32>,

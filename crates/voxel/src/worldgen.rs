@@ -30,7 +30,10 @@ pub const fn sea_level(dims: [usize; 3]) -> usize {
     dims[1].saturating_mul(40) / 100
 }
 
-/// Return the deterministic surface height for one world column.
+/// Sample the deterministic worldgen surface elevation (Y index) at the given XZ column.
+///
+/// `dims` is the world dimensions `[x, y, z]`, `seed` is the worldgen RNG seed, and
+/// `(x, z)` are the column coordinates. Returned height is in `[0, dims[1]]`.
 #[must_use]
 pub fn surface_height(dims: [usize; 3], seed: u64, x: usize, z: usize) -> usize {
     let dx = dims[0].max(1);
@@ -92,22 +95,24 @@ fn carve_column(
     x: usize,
     z: usize,
 ) {
-    let ctx = ColumnCtx {
+    let surface = surface_height(dims, seed, x, z);
+    let soil = soil_depth(seed, x, z, dims[1]).clamp(1, 2);
+    let ore_seed = mix3(seed ^ 0x9e37_79b9_7f4a_7c15, x as u64, z as u64);
+    let params = WorldgenParams {
         dims,
         seed,
         sea,
-        surface: surface_height(dims, seed, x, z),
-        soil: soil_depth(seed, x, z, dims[1]).clamp(1, 2),
-        ore_seed: mix3(seed ^ 0x9e37_79b9_7f4a_7c15, x as u64, z as u64),
+        surface,
+        soil,
+        ore_seed,
     };
     for y in 0..dims[1] {
         let idx = index(dims, x, y, z);
-        cells[idx] = cell_material(ctx, x, y, z);
+        cells[idx] = cell_material(&params, x, y, z);
     }
 }
 
-#[derive(Clone, Copy)]
-struct ColumnCtx {
+struct WorldgenParams {
     dims: [usize; 3],
     seed: u64,
     sea: usize,
@@ -116,31 +121,23 @@ struct ColumnCtx {
     ore_seed: u64,
 }
 
-fn cell_material(ctx: ColumnCtx, x: usize, y: usize, z: usize) -> MaterialId {
-    let ColumnCtx {
-        dims,
-        seed,
-        sea,
-        surface,
-        soil,
-        ore_seed,
-    } = ctx;
-    if is_bedrock_shell(dims, x, y, z) || y < bedrock_depth(dims[1]) {
+fn cell_material(params: &WorldgenParams, x: usize, y: usize, z: usize) -> MaterialId {
+    if is_bedrock_shell(params.dims, x, y, z) || y < bedrock_depth(params.dims[1]) {
         return BEDROCK;
     }
-    if y < surface.saturating_sub(soil).max(1) {
-        return stone_or_ore(seed, ore_seed, x, y, z);
+    if y < params.surface.saturating_sub(params.soil).max(1) {
+        return stone_or_ore(params.seed, params.ore_seed, x, y, z);
     }
-    if y + 1 == surface {
-        return surface_cover(seed, x, z);
+    if y + 1 == params.surface {
+        return surface_cover(params.seed, x, z);
     }
-    if soil >= 2 && y + 2 == surface {
+    if params.soil >= 2 && y + 2 == params.surface {
         return DIRT;
     }
     // Only fill with water if this cell is above the terrain surface AND below sea
     // level. Columns where surface >= sea get no water — prevents flat blue slabs
     // floating over elevated terrain.
-    if y > surface && y <= sea {
+    if y > params.surface && y <= params.sea {
         return WATER;
     }
     AIR
@@ -259,6 +256,7 @@ fn lerp(a: f64, b: f64, t: f64) -> f64 {
     a + (b - a) * t
 }
 
+#[allow(clippy::items_after_test_module)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -278,7 +276,6 @@ mod tests {
     /// #16 measurement: worldgen must EMIT a meaningful amount of WATER (the sloped
     /// coastlines + sea fill). Locks in that water exists to be rendered, with a
     /// printed count so the absolute number is visible in test output.
-    #[test]
     /// Water must only appear in columns where terrain surface is below sea level.
     /// Regression test for the flat-blue-slab bug where water filled all y<=sea
     /// regardless of terrain height, producing water planes over elevated land.

@@ -503,6 +503,7 @@ pub struct ProbeReport {
 pub enum GodToolError {
     InvalidDimension { field: &'static str, value: i32 },
     OutOfBounds { axis: &'static str, value: f32 },
+    InvalidRequest(String),
 }
 
 impl std::fmt::Display for GodToolError {
@@ -513,6 +514,9 @@ impl std::fmt::Display for GodToolError {
             }
             GodToolError::OutOfBounds { axis, value } => {
                 write!(f, "out-of-bounds {axis}: {value} (must be in [0, 1])")
+            }
+            GodToolError::InvalidRequest(msg) => {
+                write!(f, "invalid request: {msg}")
             }
         }
     }

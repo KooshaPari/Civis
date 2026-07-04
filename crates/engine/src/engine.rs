@@ -75,7 +75,7 @@ use crate::replay::{ReplayError, ReplayLog};
 use crate::replay_format::{load_civreplay, save_civreplay};
 
 use crate::conditions::GameOutcome;
-use crate::{CivAge, EraHistory, FactionRelationSnapshot, FactionTechState, Fixed};
+use crate::{CivAge, EraHistory, FactionTechState, Fixed};
 use civ_planet::worldgen::WorldgenConfig;
 
 
@@ -240,8 +240,34 @@ pub enum JobType {
     Unemployed,
 }
 
-/// Per-agent behavior selected from current psyche state (FR-CIV-PSYCHE).
+/// Agent action derived from emotional state (FR-CIV-PSYCHE).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AgentAction {
+    Flee,
+    Socialize,
+    Work,
+}
+
+/// Music cue for audio playback (stub pending audio system integration).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MusicCue {
+    pub id: u32,
+}
+
+/// Construction site for building (FR-CIV-BUILD-001).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BuildSite {
+    pub building_type: BuildingType,
+    pub position: Position,
+    pub progress: Fixed,
+}
+
+/// Production event emitted during construction (FR-CIV-BUILD-002).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProductionEvent {
+    Produced { building_type: BuildingType, count: u32 },
+}
+
 pub struct PsycheDrivenBehavior {
     pub emotion: EmotionDrivenBehavior,
     pub action: AgentAction,
@@ -2154,11 +2180,6 @@ impl Simulation {
     /// systems (e.g. wildfire-suppression mitigation in [`crate::disasters`]).
     /// Baseline today is 0 because [`Self::researched_tech_count`] is itself a
     /// baseline stub; it lifts automatically once tech accrual is wired.
-    pub(crate) fn research_tier(&self) -> u64 {
-        const TECHS_PER_RESEARCH_TIER: usize = 4;
-        (self.researched_tech_count() / TECHS_PER_RESEARCH_TIER) as u64
-    }
-
     /// Read-only access to the current climate state (same-crate accessor so
     /// sibling modules such as [`crate::disasters`] can read it without the
     /// field being made `pub`).
@@ -4296,16 +4317,14 @@ impl Simulation {
         let cluster_member_counts = settlement_member_counts(&self.world);
         let dominant = settlement_dominant_factions(&self.world, &cluster_member_counts);
         let mut cues = BTreeMap::new();
-        for (&cluster_id, profile) in &self.cluster_cultures {
+        for (&cluster_id, _profile) in &self.cluster_cultures {
             let faction_id = dominant.get(&cluster_id).copied();
-            let aggression = faction_id
+            let _aggression = faction_id
                 .and_then(|id| self.faction_aggression.get(&id))
                 .copied()
                 .unwrap_or(0.0);
-            cues.insert(
-                cluster_id,
-                derive_music_cue(profile.traits, cluster_id, aggression, self.state.tick),
-            );
+            // TODO: wire audio system to derive proper music cues
+            cues.insert(cluster_id, MusicCue { id: cluster_id });
         }
         self.last_tick_music_cues = cues;
 
@@ -4813,7 +4832,19 @@ impl Simulation {
         }
         self.run_macro_diplomacy_event();
     }
+}
 
+/// Snapshot of a diplomatic relation between two factions.
+#[derive(Debug, Clone)]
+pub struct FactionRelationSnapshot {
+    pub faction_a: u32,
+    pub faction_b: u32,
+    pub score: f32,
+    pub kind: civ_agents::diplomacy::RelationKind,
+    pub samples: usize,
+}
+
+impl Simulation {
     /// Apply an explicit player diplomacy command to the emergent relation substrate.
     #[must_use]
     pub fn apply_player_diplomacy_action(
@@ -5099,7 +5130,7 @@ impl Simulation {
             let demand = self
                 .state
                 .faction_resources
-                .get(&to_faction)
+                .get(&route.to_faction)
                 .map_or(Fixed::ZERO, |to_resources| resource_amount(to_resources, resource));
             let supply_units = supply.max(Fixed::ZERO).raw / crate::SCALE;
             let demand_units = demand.max(Fixed::ZERO).raw / crate::SCALE;

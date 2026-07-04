@@ -2,7 +2,7 @@
 use std::backtrace::Backtrace;
 use std::fs::{create_dir_all, write};
 use std::path::PathBuf;
-use std::panic::PanicHookInfo;
+use std::panic::PanicInfo;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 static CRASH_COUNTER: AtomicUsize = AtomicUsize::new(0);
@@ -10,7 +10,7 @@ static CRASH_COUNTER: AtomicUsize = AtomicUsize::new(0);
 /// Install a process-wide panic hook that writes panic details and backtraces
 /// to numbered files under `./crashes`.
 pub fn install_crash_handler() {
-    std::panic::set_hook(Box::new(|info: &PanicHookInfo| {
+    std::panic::set_hook(Box::new(|info: &PanicInfo| {
         let counter = CRASH_COUNTER.fetch_add(1, Ordering::SeqCst) + 1;
         let path = crash_log_path(counter);
         let output = build_crash_log(info);
@@ -33,7 +33,7 @@ pub fn install_crash_handler() {
     }));
 }
 
-fn build_crash_log(info: &PanicHookInfo) -> String {
+fn build_crash_log(info: &PanicInfo) -> String {
     let location = match info.location() {
         Some(location) => format!("{}:{}", location.file(), location.line()),
         None => "<unknown location>".to_string(),

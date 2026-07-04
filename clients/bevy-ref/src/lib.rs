@@ -15,7 +15,7 @@
 
 mod crash_handler;
 
-#[cfg(all(feature = "bevy", feature = "models"))]
+#[cfg(feature = "bevy")]
 pub mod animation;
 #[cfg(feature = "bevy")]
 pub mod atmosphere;
@@ -23,6 +23,8 @@ pub mod atmosphere;
 pub mod camera;
 #[cfg(feature = "bevy")]
 pub mod decorations;
+#[cfg(all(feature = "bevy", feature = "models"))]
+pub mod animation;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod entity_inspector;
 #[cfg(all(feature = "bevy", feature = "egui"))]
@@ -35,28 +37,20 @@ pub mod inspect;
 pub mod diplomacy_ui;
 pub mod outcome_overlay;
 pub mod faction_hud;
-pub mod gameplay_hud;
-pub mod scenario_objective_hud;
 pub mod session;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod script_hud;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod world_faction_glyphs;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod save_load_ui;
 #[cfg(all(feature = "bevy", feature = "models"))]
 pub mod gltf_models;
 pub mod emergence_dashboard;
 #[cfg(all(feature = "bevy", feature = "egui"))]
-pub use emergence_dashboard::EmergenceDashboardPlugin;
-#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod event_feed;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod sandbox_event_feed;
 #[cfg(all(feature = "bevy", feature = "gi"))]
 pub mod lighting_gi;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod game_ui;
+#[cfg(all(feature = "bevy", feature = "models"))]
+pub mod gltf_models;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod graphics_settings;
 #[cfg(feature = "bevy")]
@@ -78,17 +72,11 @@ pub mod live_minimap;
 #[cfg(feature = "bevy")]
 pub mod live_pick;
 #[cfg(feature = "bevy")]
-pub mod godtools;
-#[cfg(feature = "bevy")]
 pub mod live_scene;
 #[cfg(feature = "bevy")]
 pub mod live_stream;
 #[cfg(feature = "pbr-textures")]
 pub mod materials;
-/// Per-material-type PBR `StandardMaterial` look-up table (no textures required).
-/// The [`MaterialType`] enum and its const accessors are always compiled; the
-/// Bevy `material_for` fn is gated behind `#[cfg(feature = "bevy")]`.
-pub mod pbr_materials;
 #[cfg(feature = "bevy")]
 pub mod post_fx;
 #[cfg(feature = "bevy")]
@@ -107,6 +95,7 @@ pub mod native_backend;
 pub mod native_renderer;
 #[cfg(feature = "bevy")]
 pub mod sim_bridge;
+pub mod session;
 #[cfg(feature = "bevy")]
 pub mod spawn_tools;
 #[cfg(all(feature = "bevy", feature = "egui"))]
@@ -114,8 +103,6 @@ pub mod tech_tree_ui;
 pub mod civ_history;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod god_actions;
-#[cfg(feature = "bevy")]
-pub mod procedural_actor;
 pub mod god_panel;
 pub mod tutorial;
 pub mod perf_hud;
@@ -123,22 +110,14 @@ pub mod perf_hud;
 pub mod frame_budget;
 #[cfg(feature = "bevy")]
 pub mod terrain;
-#[cfg(feature = "bevy")]
-pub mod hud_state;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tool_categories;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod notifications;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod terraform_brush;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod disaster_tools;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod material_brush_ui;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod ui_cluster;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod ui_holo;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod ui_theme;
 #[cfg(all(feature = "bevy", feature = "vfx"))]
 pub mod vfx;
 #[cfg(all(feature = "bevy", feature = "voxel"))]
@@ -328,12 +307,8 @@ pub fn parse_jsonrpc_snapshot_meta(text: &str) -> Option<WsSpectatorMeta> {
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
 pub struct EmergenceHudData {
-    /// Shannon entropy (bits) over the live material histogram.
-    pub entropy_bits: f32,
     /// Normalised Shannon entropy (`0..=1`).
     pub entropy_norm: f32,
-    /// Rolling-mean branching ratio σ̄_W (charter §3.6).
-    pub branching_sigma: f32,
     /// Power-law exponent alpha for cluster-size distribution.
     pub power_law_alpha: f32,
     /// Novel config fingerprints per window per civilian.

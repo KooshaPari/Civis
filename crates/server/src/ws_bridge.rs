@@ -538,7 +538,6 @@ async fn handle_jsonrpc_text(
                     connection_role: connection_role.clone(),
                     saves_dir: Some(state.saves_dir.clone()),
                     emergence: None,
-                    legends,
                     researched: research_researched,
                     in_progress_tech: research_in_progress,
                     outcome_fields,

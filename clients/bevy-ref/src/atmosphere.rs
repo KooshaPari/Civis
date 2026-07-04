@@ -43,11 +43,9 @@ pub fn setup_atmosphere(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     commands.insert_resource(ClearColor(Color::srgba(0.54, 0.74, 0.92, 1.0)));
-    // PBR-calibrated ambient: warm-white at 150 lux so shadowed faces retain
-    // colour without washing out the directional-light contrast.
     commands.insert_resource(GlobalAmbientLight {
-        color: Color::srgb(1.0, 0.97, 0.92), // very slightly warm
-        brightness: 150.0,
+        color: Color::WHITE,
+        brightness: 500.0,
         affects_lightmapped_meshes: true,
     });
     commands.insert_resource(DayNightCycle::default());
@@ -55,11 +53,7 @@ pub fn setup_atmosphere(
     commands.spawn((
         SunLight,
         DirectionalLight {
-            // 10 000 lux ≈ bright overcast/sunny day; 15 000 washes out PBR
-            // materials that rely on roughness contrast. `post_fx.rs` re-enables
-            // shadows on this entity via `tune_sun_shadows` when PostFxPlugin is
-            // active; the value here is the safe default for all launch paths.
-            illuminance: 10_000.0,
+            illuminance: 15_000.0,
             shadows_enabled: true,
             ..default()
         },
@@ -97,15 +91,9 @@ pub fn setup_atmosphere(
             )),
         ),
         MeshMaterial3d(materials.add(StandardMaterial {
-            // Deep ocean-blue, semi-transparent.
-            base_color: Color::srgba(0.06, 0.22, 0.55, 0.82),
-            // Near-mirror roughness for specular highlights on bright sun.
-            perceptual_roughness: 0.04,
-            // High Fresnel reflectance → vivid sky/sun reflections at grazing
-            // angles (Bevy remaps reflectance 0.75 → F0 ~0.30 for dielectrics).
-            reflectance: 0.75,
-            // Allow Fresnel rim on metallic path for even stronger glint.
-            metallic: 0.0,
+            base_color: Color::srgba(0.16, 0.34, 0.55, 0.78),
+            perceptual_roughness: 0.12,
+            reflectance: 0.08,
             alpha_mode: AlphaMode::Blend,
             ..default()
         })),

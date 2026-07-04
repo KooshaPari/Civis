@@ -17,7 +17,6 @@ use civ_protocol_3d::{CivilianNeeds3d, CivilianStateEntry};
 
 use crate::game_laws::GameLawsOpen;
 use crate::spawn_tools::{ActiveTool, BuildingSpawnKind, SpawnTool};
-use crate::tool_categories::ActiveSubTool;
 use crate::{AttachMode, LiveEntityKind, SelectedLiveEntity};
 use crate::settings_ui::{
     GameSettings, KeyBinding, ACTION_CYCLE_SIM_SPEED, ACTION_PAUSE_SIM, ACTION_SPEED_10X,
@@ -827,7 +826,7 @@ fn chip(ui: &mut egui::Ui, icon: &str, text: &str, color: egui::Color32) {
 fn top_bar_ui(
     ui: &mut egui::Ui,
     snapshot: &GameUiSnapshot,
-    attach_mode: Option<&crate::AttachMode>,
+    attach_mode: &crate::AttachMode,
     live_attach: Option<&crate::live_attach::LiveAttachState>,
     laws_open: &mut GameLawsOpen,
 ) {
@@ -854,7 +853,7 @@ fn top_bar_ui(
             if ui.button("⚖ Laws").clicked() {
                 laws_open.0 = !laws_open.0;
             }
-            if attach_mode.map(|am| *am == crate::AttachMode::Server).unwrap_or(false) {
+            if *attach_mode == crate::AttachMode::Server {
                 let connected = live_attach.map(|s| s.connected).unwrap_or(false);
                 let (dot, text, color) = if connected {
                     ("\u{1f7e2}", "WS Live", green)

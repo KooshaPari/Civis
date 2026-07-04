@@ -281,13 +281,9 @@ mod tests {
 
         let mut sim = Simulation::with_seed(9);
         let mut rng = sim.rng_mut().clone();
-        // Use agent ID within the pinning window (first 256 after denser-start of 300).
-        // ID 105 is chosen such that 105 % 7 == 0 → Farmer, and it's within the first 300.
-        // After sort_by_key and truncate(256), IDs 1-256 are retained, so 105 is included.
-        let test_agent_id = 105u64;
         let _ = spawn_civilian_at(
             &mut sim.world,
-            test_agent_id,
+            42_007,
             civ_agents::Alignment::None,
             0.4,
             0.6,
@@ -298,9 +294,9 @@ mod tests {
         crate::engine::attach_citizen_to_agents(&mut sim.world);
         let pins = civ_pins(&sim);
         assert_eq!(
-            pins.iter().find(|p| p.idx == test_agent_id as u32).and_then(|p| p.job),
+            pins.iter().find(|p| p.idx == 42_007).and_then(|p| p.job),
             Some(JobLabel::Farmer),
-            "{test_agent_id} % 7 == 0 → Farmer"
+            "42_007 % 7 == 0 → Farmer"
         );
         assert!(
             pins.iter()

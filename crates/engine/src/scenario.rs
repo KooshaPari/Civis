@@ -7,7 +7,6 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::engine::{Simulation, WorldState};
-use crate::gameplay::ScenarioObjective;
 use crate::policy::policy_from_kind;
 use crate::policy::PolicyInput;
 
@@ -137,13 +136,6 @@ pub struct Scenario {
     /// defaults to the no-op policy as well.
     #[serde(default)]
     pub policy: ScenarioPolicy,
-    /// Victory/defeat objectives for this scenario (FR-CIV-GAME-002).
-    ///
-    /// Each objective specifies a [`VictoryCondition`] and an optional tick
-    /// deadline.  An empty list (the default) means the session runs indefinitely
-    /// with only the global `check_outcome` conditions applying.
-    #[serde(default)]
-    pub objectives: Vec<ScenarioObjective>,
 }
 
 /// Per-institution tax rates from scenario YAML (FR-ECON-004 partial).
@@ -538,7 +530,6 @@ mod tests {
             starting_conditions: ScenarioStartingConditions::default(),
             taxation: ScenarioTaxation::default(),
             policy: ScenarioPolicy::default(),
-            objectives: Vec::new(),
         };
         let sim = scenario.into_simulation(1);
         assert_eq!(sim.military_phase_config().war.fog_vision_radius, Some(6));
@@ -569,7 +560,6 @@ mod tests {
             starting_conditions: ScenarioStartingConditions::default(),
             taxation: ScenarioTaxation::default(),
             policy: ScenarioPolicy::default(),
-            objectives: Vec::new(),
         };
         let sim = scenario.into_simulation(1);
         let cfg = sim.military_phase_config();
@@ -676,7 +666,6 @@ mods:
             starting_conditions: ScenarioStartingConditions::default(),
             taxation: ScenarioTaxation::default(),
             policy: ScenarioPolicy::default(),
-            objectives: Vec::new(),
         };
 
         let mut zero_scarcity = base.clone();
@@ -1058,65 +1047,6 @@ starting_conditions:
         assert!(
             seeds.contains(&civ_genetics::NamedSeed::Grundak),
             "missing Grundak"
-        );
-    }
-
-    /// Survival scenario: persist for 500 ticks without extinction.
-    ///
-    /// Constructs a scenario with one objective: the player's faction must
-    /// maintain presence and not fall to complete collapse through tick 500,
-    /// validating that survival mechanics (resource management, population
-    /// stability) work correctly and that the time-based deadline fires.
-    #[test]
-    fn survival_scenario_builds_and_evaluates() {
-        use crate::gameplay::{ScenarioObjective, VictoryCondition, VictoryType};
-
-        // Build the Survival scenario with its objective: maintain any positive
-        // economic/territorial presence for 500 ticks (high threshold ensures
-        // it's a challenge, not instant win).
-        let survival_objective = ScenarioObjective {
-            condition: VictoryCondition {
-                victory_type: VictoryType::Economic,
-                faction_id: 0,
-                threshold: Some(0.3), // Must hold 30% of resources to survive
-            },
-            tick_limit: Some(500), // 500 tick deadline
-        };
-
-        // Verify the objective was constructed correctly
-        assert_eq!(survival_objective.condition.faction_id, 0);
-        assert_eq!(survival_objective.condition.victory_type, VictoryType::Economic);
-        assert_eq!(survival_objective.condition.threshold, Some(0.3));
-        assert_eq!(survival_objective.tick_limit, Some(500));
-
-        // Load baseline and create simulation
-        let scenario = load_scenario(baseline_scenario_path()).expect("baseline scenario loads");
-        let mut sim = scenario.into_simulation(42);
-
-        // Simulate 10 ticks: objective should be pending (not yet won, not yet expired)
-        for _ in 0..10 {
-            sim.tick();
-        }
-        let outcome_pending = survival_objective.evaluate(&sim);
-        // Outcome may be None (Ongoing) or Some(Victory) if threshold is met early,
-        // but should not be Defeat yet since we're well before the deadline.
-        if let Some(crate::conditions::GameOutcome::Defeat(_)) = outcome_pending {
-            panic!(
-                "objective should not fire Defeat before tick limit, got {:?}",
-                outcome_pending
-            );
-        }
-
-        // Fast-forward to tick 501 (beyond deadline)
-        while sim.state.tick < 501 {
-            sim.tick();
-        }
-        let outcome_expired = survival_objective.evaluate(&sim);
-        // After the deadline, the objective must resolve (either Victory if threshold
-        // was met, or Defeat if not).
-        assert!(
-            outcome_expired.is_some(),
-            "objective should resolve after tick limit expires"
         );
     }
 

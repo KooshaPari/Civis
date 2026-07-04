@@ -29,10 +29,9 @@ impl Plugin for OutcomeOverlayPlugin {
 }
 
 fn poll_outcome_system(
-    bridge: Option<Res<LiveAttachBridge>>,
+    bridge: Res<LiveAttachBridge>,
     mut state: ResMut<OutcomeOverlayState>,
 ) {
-    let Some(bridge) = bridge else { return; };
     if let Some(data) = bridge.client.poll_outcome() {
         if data.tag != "ongoing" {
             if state.outcome.as_ref().map(|o| o.tag != data.tag).unwrap_or(true) {
@@ -46,14 +45,12 @@ fn poll_outcome_system(
 fn draw_outcome_overlay(
     mut contexts: EguiContexts,
     mut state: ResMut<OutcomeOverlayState>,
-    bridge: Option<Res<LiveAttachBridge>>,
+    bridge: Res<LiveAttachBridge>,
 ) {
     let Some(ref outcome) = state.outcome.clone() else { return };
     if state.dismissed { return }
 
-    let Ok(ctx) = contexts.ctx_mut() else {
-        return;
-    };
+    let ctx = contexts.ctx_mut();
 
     let is_victory = outcome.tag == "victory";
     let header_color = if is_victory {
@@ -77,7 +74,7 @@ fn draw_outcome_overlay(
                         .fill(egui::Color32::from_rgba_unmultiplied(9, 10, 12, 240))
                         .stroke(egui::Stroke::new(1.5, header_color))
                         .inner_margin(egui::Margin::same(40))
-                        .corner_radius(egui::CornerRadius::same(8))
+                        .rounding(egui::Rounding::same(8.0))
                         .show(ui, |ui| {
                             ui.set_max_width(500.0);
                             ui.spacing_mut().item_spacing.y = 16.0;
@@ -93,9 +90,7 @@ fn draw_outcome_overlay(
                             ui.add_space(8.0);
                             ui.horizontal(|ui| {
                                 if ui.button(egui::RichText::new("New Game").size(16.0)).clicked() {
-                                    if let Some(bridge) = &bridge {
-                                        bridge.client.send_rpc("sim.reset", serde_json::json!({"seed": 0}));
-                                    }
+                                    bridge.client.send_rpc("sim.reset", serde_json::json!({"seed": 0}));
                                     state.dismissed = true;
                                     state.outcome = None;
                                 }

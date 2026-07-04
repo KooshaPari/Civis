@@ -2403,7 +2403,6 @@ dependencies = [
 name = "civ-diplomacy"
 version = "0.1.0"
 dependencies = [
- "civ-legends",
  "proptest",
  "serde",
  "thiserror 1.0.69",
@@ -2427,16 +2426,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "civ-emergence-migration"
-version = "0.1.0"
-dependencies = [
- "proptest",
- "rand 0.8.6",
- "rand_chacha 0.3.1",
- "serde",
-]
-
-[[package]]
 name = "civ-engine"
 version = "0.1.0"
 dependencies = [
@@ -2453,7 +2442,6 @@ dependencies = [
  "civ-mod-host",
  "civ-needs",
  "civ-planet",
- "civ-powers",
  "civ-save-db",
  "civ-species",
  "civ-tactics",
@@ -2637,8 +2625,6 @@ name = "civ-tactics"
 version = "0.1.0"
 dependencies = [
  "civ-agents",
- "civ-diplomacy",
- "civ-legends",
  "civ-voxel",
  "proptest",
  "rand 0.8.6",

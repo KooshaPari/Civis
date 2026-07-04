@@ -1,8 +1,5 @@
 use std::{
-    sync::{
-        atomic::{AtomicU32, Ordering},
-        Arc,
-    },
+    sync::atomic::{AtomicU32, Ordering},
     thread,
     time::Duration,
 };
@@ -36,13 +33,12 @@ impl Default for WsClientConfig {
 }
 
 /// WebSocket client that bridges the tokio network task to Bevy systems.
-#[derive(Clone)]
 pub struct WsClient {
     frame_rx: Receiver<Frame3d>,
     meta_rx: Receiver<WsSpectatorMeta>,
     rtt_rx: Receiver<f32>,
     state_rx: Receiver<WsConnectionState>,
-    latest_state: Arc<AtomicU32>,
+    latest_state: AtomicU32,
     cmd_tx: Sender<String>,
     /// Channel for outbound JSON-RPC text frames (fire-and-forget).
     send_tx: Sender<String>,
@@ -88,12 +84,17 @@ impl WsClient {
             meta_rx,
             rtt_rx,
             state_rx,
-            latest_state: Arc::new(AtomicU32::new(state_to_atomic(WsConnectionState::Disconnected))),
+            latest_state: AtomicU32::new(state_to_atomic(WsConnectionState::Disconnected)),
             cmd_tx,
             send_tx,
             emergence_rx,
             outcome_rx,
         }
+    }
+
+    /// Enqueue an outbound JSON-RPC text frame (fire-and-forget; drops silently if disconnected).
+    pub fn send_rpc(&self, json: String) {
+        let _ = self.send_tx.send(json);
     }
 
     /// Clone the outbound RPC sender so other Bevy resources can enqueue frames
@@ -314,16 +315,8 @@ fn parse_emergence_response(text: &str) -> Option<EmergenceHudData> {
     }
     let result = v.get("result")?;
     Some(EmergenceHudData {
-        entropy_bits: result
-            .get("entropy_bits")
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.0) as f32,
         entropy_norm: result
             .get("entropy_norm")
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.0) as f32,
-        branching_sigma: result
-            .get("branching_sigma")
             .and_then(|v| v.as_f64())
             .unwrap_or(0.0) as f32,
         power_law_alpha: result

@@ -11,17 +11,12 @@
 //! - `metrics` - Tyranny/legitimacy metrics
 //! - `io` - File I/O utilities
 
-pub mod building_emergence;
-pub mod technology;
 pub mod command_queue;
 pub mod conditions;
-pub mod gameplay;
 pub mod era;
-pub mod godtools;
 pub mod engine;
 pub mod emergence;
 pub mod disasters;
-pub mod dormant_phases;
 pub mod emergence_metrics;
 pub mod hash_chain;
 pub mod integrity;
@@ -37,7 +32,6 @@ pub mod scenario;
 pub mod perf;
 pub mod spawn;
 pub mod spectator;
-pub mod writing;
 
 pub mod tutorial;
 
@@ -106,7 +100,6 @@ pub use civ_institutions::{
     TEMPLE_UNLOCK_POPULATION,
 };
 pub use civ_planet::{BiomeKind, Climate, GeologyMap, MoonConfig, PlanetConfig, RegionBiome};
-pub use civ_voxel::WorldCoord;
 pub use civ_tactics::{
     apply_damage, bfs_next_step, evolve_doctrine, formation_offsets, grid_to_world_coord,
     line_of_sight, score_doctrine_fitness, tick_operational_movement, tick_war_bridge,

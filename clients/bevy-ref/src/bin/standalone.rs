@@ -69,18 +69,14 @@ fn main() {
         .add_plugins(civ_bevy_ref::sim_bridge::SimBridgePlugin)
         .add_plugins(civ_bevy_ref::post_fx::PostFxPlugin)
         .add_plugins(civ_bevy_ref::game_ui::GameUiPlugin)
-        .add_plugins(civ_bevy_ref::emergence_dashboard::EmergenceDashboardPlugin)
         .add_plugins(civ_bevy_ref::tech_tree_ui::TechTreeUiPlugin)
         .add_plugins(civ_bevy_ref::diplomacy_ui::DiplomacyUiPlugin)
         .add_plugins(civ_bevy_ref::event_feed::EventFeedPlugin)
-        .add_plugins(civ_bevy_ref::sandbox_event_feed::SandboxEventFeedPlugin)
         .add_plugins(civ_bevy_ref::menus::MenusPlugin)
         .add_plugins(civ_bevy_ref::save_load_ui::SaveLoadUiPlugin)
         .add_plugins(civ_bevy_ref::spawn_tools::SpawnToolsPlugin)
         .add_plugins(civ_bevy_ref::minimap::MinimapPlugin)
         .init_resource::<civ_bevy_ref::game_ui::GameUiSnapshot>()
-        // Scenario objective HUD: displays current goal and progress (e.g. population target).
-        .add_plugins(civ_bevy_ref::scenario_objective_hud::ScenarioObjectiveHudPlugin)
         .add_systems(Startup, setup_atmosphere)
         .add_systems(
             Startup,
@@ -147,10 +143,6 @@ fn main() {
 
     #[cfg(feature = "egui")]
     app.add_plugins(civ_bevy_ref::game_laws::GameLawsPlugin);
-
-    // Gameplay HUD: faction leaderboard + victory progress + outcome banner (F9).
-    #[cfg(feature = "egui")]
-    app.add_plugins(civ_bevy_ref::gameplay_hud::GameplayHudPlugin);
 
     // Settings / options panel (RON-persisted); bevy+egui.
     #[cfg(feature = "egui")]

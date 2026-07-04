@@ -728,9 +728,7 @@ mod plugin {
         };
         let summary = format_nearby_counts_line(&counts);
 
-        let Ok(ctx) = contexts.ctx_mut() else {
-            return;
-        };
+        let ctx = contexts.ctx_mut();
         let screen = ctx.screen_rect();
         egui::Area::new(egui::Id::new("nearby_counts_overlay"))
             .fixed_pos(egui::pos2(screen.center().x - 220.0, 72.0))
@@ -738,8 +736,8 @@ mod plugin {
                 egui::Frame::none()
                     .fill(egui::Color32::from_rgba_premultiplied(9, 10, 12, 200))
                     .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(126, 186, 181)))
-                    .corner_radius(egui::CornerRadius::same(8))
-                    .inner_margin(egui::Margin::symmetric(16_i8, 10_i8))
+                    .rounding(egui::Rounding::same(8.0))
+                    .inner_margin(egui::Margin::symmetric(16.0, 10.0))
                     .show(ui, |ui| {
                         ui.set_min_width(440.0);
                         ui.label(
@@ -825,12 +823,10 @@ mod plugin {
     /// draws a coloured quad (two gizmo triangles → cross) hovering just above
     /// the surface. Cheap, deterministic, and GPU-light for the sandbox.
     fn render_active_overlay(
-        registry: Option<Res<InfoViewRegistry>>,
-        sim: Option<Res<SimState>>,
+        registry: Res<InfoViewRegistry>,
+        sim: Res<SimState>,
         mut gizmos: Gizmos,
     ) {
-        let Some(registry) = registry else { return; };
-        let Some(sim) = sim else { return; };
         let Some(overlay) = registry.active_overlay() else {
             return;
         };

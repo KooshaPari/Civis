@@ -496,7 +496,6 @@ fn handle_spawn_tool_clicks(
             });
         }
         SpawnTool::Terraform => {}
-        SpawnTool::PaintMaterial => {}
         SpawnTool::Destroy => {
             destroy_entity.write(DestroyEntityRequest { position });
         }

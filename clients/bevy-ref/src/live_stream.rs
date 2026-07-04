@@ -735,7 +735,8 @@ pub fn apply_voxel_delta_frame(
             scene.chunk_voxels.insert(chunk_id, chunk.voxels.clone());
         }
 
-        if !should_render_chunk(chunk_id, culling.eye, culling.max_distance) {
+        let max_distance = culling.max_distance * culling.draw_distance_scale;
+        if !should_render_chunk(chunk_id, culling.eye, max_distance) {
             if let Some(entity) = scene.chunks.remove(&chunk_id.0) {
                 commands.entity(entity).despawn();
             }
@@ -1000,7 +1001,7 @@ pub fn sync_agent_labels_from_civilians(
             .get(&agent.id)
             .map(civilian_display_name)
             .unwrap_or_else(|| format!("#{}", agent.id));
-        for child in children.iter() {
+        for &child in children.iter() {
             let Ok(mut text) = labels.get_mut(child) else {
                 continue;
             };
@@ -1811,7 +1812,6 @@ mod tests {
             FactionStateFrame {
                 tick: 3,
                 factions: vec![entry(0, 2), entry(4, 5)],
-                population_by_faction: Default::default(),
             },
         );
 
@@ -1840,7 +1840,6 @@ mod tests {
                 government: Government3d::Junta,
                 treasury: FactionTreasury3d::default(),
             }],
-            population_by_faction: Default::default(),
         };
         let mut diplomacy = crate::diplomacy_ui::DiplomacyState {
             open: true,

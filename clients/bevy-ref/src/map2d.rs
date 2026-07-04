@@ -191,8 +191,7 @@ fn open_map_for_autoshot(mut view: ResMut<MapView>, mut enabled: Local<Option<bo
 }
 
 /// Auto-engage / disengage from the orbit camera distance with hysteresis.
-fn auto_engage_from_zoom(rig: Option<Res<CameraRig>>, mut view: ResMut<MapView>) {
-    let Some(rig) = rig else { return; };
+fn auto_engage_from_zoom(rig: Res<CameraRig>, mut view: ResMut<MapView>) {
     let d = rig.distance;
     if !view.active && d >= AUTO_ENGAGE_DISTANCE {
         view.active = true;
@@ -404,7 +403,7 @@ fn building_norm_xz_with_state(
     #[cfg(not(feature = "voxel"))]
     {
         let _ = voxel_state;
-        building_norm_xz(building)
+        return building_norm_xz(building);
     }
     #[cfg(feature = "voxel")]
     if let Some(voxel_state) = voxel_state {
@@ -441,7 +440,7 @@ fn marker_world_from_actor(
     #[cfg(not(feature = "voxel"))]
     {
         let _ = voxel_state;
-        Vec3::new(u * 256.0 - 128.0, 0.0, v * 256.0 - 128.0)
+        return Vec3::new(u * 256.0 - 128.0, 0.0, v * 256.0 - 128.0);
     }
     #[cfg(feature = "voxel")]
     if let Some(voxel_state) = voxel_state {
@@ -460,7 +459,7 @@ fn marker_world_from_building(building: &Building, voxel_state: Option<&VoxelSim
     #[cfg(not(feature = "voxel"))]
     {
         let _ = voxel_state;
-        Vec3::new(n.x * 256.0 - 128.0, 0.0, n.y * 256.0 - 128.0)
+        return Vec3::new(n.x * 256.0 - 128.0, 0.0, n.y * 256.0 - 128.0);
     }
     #[cfg(feature = "voxel")]
     if let Some(voxel_state) = voxel_state {
@@ -564,9 +563,9 @@ fn draw_map_view(
     mut basemap: ResMut<MapBasemap>,
     voxel_state: Option<Res<VoxelSimState>>,
     mut select_entity: MessageWriter<SelectEntityRequest>,
-    attach: Option<Res<AttachMode>>,
+    attach: Res<AttachMode>,
     sim: Option<Res<SimState>>,
-    params: Option<Res<crate::menus::WorldSetupParams>>,
+    params: Res<crate::menus::WorldSetupParams>,
     settings: Option<Res<GameSettings>>,
 ) {
     if view.fade <= 0.01 {
@@ -575,7 +574,6 @@ fn draw_map_view(
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-    let Some(params) = params else { return; };
     #[cfg(feature = "voxel")]
     let current_dirty = voxel_state.as_ref().map(|s| s.grid.dirty_chunks.len());
     #[cfg(not(feature = "voxel"))]
@@ -656,7 +654,7 @@ fn draw_map_view(
             let to_screen = |n: egui::Vec2| -> egui::Pos2 { norm_to_screen(map_rect, n) };
 
             let mut map_markers: Vec<MapMarker> = Vec::new();
-            if attach.as_ref().map(|a| **a != AttachMode::Server).unwrap_or(true) {
+            if *attach != AttachMode::Server {
                 if let Some(sim) = sim.as_ref() {
                     let voxel = voxel_state.as_ref().map(|s| s.as_ref());
                     for (_, (civ, position)) in sim

@@ -5,8 +5,6 @@
 #include "CivProtocolClient.h"
 #include "CivWsClient.h"
 #include "CivilianActor.h"
-#include "CivChunkOverlayActor.h"
-#include "CivF3d0ChunkMesh.h"
 #include "Blueprint/UserWidget.h"
 #include "Dom/JsonObject.h"
 #include "Components/DirectionalLightComponent.h"
@@ -18,6 +16,8 @@
 #include "Serialization/JsonSerializer.h"
 #include "CivisJobColors.h"
 #include "VoxelTerrain.h"
+#include "Components/StaticMeshComponent.h"
+#include "Engine/StaticMeshActor.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/DefaultPawn.h"
@@ -233,6 +233,30 @@ void ACivShowGameMode::OnF3d0Frame(const FString& Kind, const FString& FrameJson
     }
 }
 
+static FVector ChunkWorldCentreFromId(const uint64 ChunkRaw)
+{
+    static constexpr float ChunkEdge = 16.0f;
+    int64 Cx = static_cast<int64>((ChunkRaw >> 40) & 0xFFFFFF);
+    int64 Cy = static_cast<int64>((ChunkRaw >> 16) & 0xFFFFFF);
+    int64 Cz = static_cast<int64>(ChunkRaw & 0xFFFF);
+    if (Cx & 0x800000)
+    {
+        Cx |= ~0xFFFFFFLL;
+    }
+    if (Cy & 0x800000)
+    {
+        Cy |= ~0xFFFFFFLL;
+    }
+    if (Cz & 0x8000)
+    {
+        Cz |= ~0xFFFFLL;
+    }
+    return FVector(
+        (static_cast<float>(Cx) + 0.5f) * ChunkEdge,
+        (static_cast<float>(Cy) + 0.5f) * ChunkEdge * 0.2f,
+        (static_cast<float>(Cz) + 0.5f) * ChunkEdge);
+}
+
 void ACivShowGameMode::ApplyVoxelDeltaOverlay(const FString& FrameJson)
 {
     TSharedPtr<FJsonObject> Root;
@@ -278,39 +302,33 @@ void ACivShowGameMode::ApplyVoxelDeltaOverlay(const FString& FrameJson)
         }
         const uint64 ChunkKey = static_cast<uint64>(ChunkIdRaw);
 
-        ACivChunkOverlayActor* Overlay = ChunkOverlayActors.FindRef(ChunkKey);
-        if (!Overlay)
+        AActor* Marker = ChunkOverlayActors.FindRef(ChunkKey);
+        if (!Marker)
         {
-            Overlay = GetWorld()->SpawnActor<ACivChunkOverlayActor>(
-                ACivChunkOverlayActor::StaticClass(),
-                CivF3d0ChunkMesh::ChunkWorldOriginFromId(ChunkKey),
+            Marker = GetWorld()->SpawnActor<AStaticMeshActor>(
+                AStaticMeshActor::StaticClass(),
+                ChunkWorldCentreFromId(ChunkKey),
                 FRotator::ZeroRotator);
-            if (!Overlay)
+            if (!Marker)
             {
                 continue;
             }
-            Overlay->SetChunkOrigin(CivF3d0ChunkMesh::ChunkWorldOriginFromId(ChunkKey));
-            ChunkOverlayActors.Add(ChunkKey, Overlay);
-        }
-
-        const TArray<TSharedPtr<FJsonValue>>* VoxelsArr = nullptr;
-        if (Delta->TryGetArrayField(TEXT("voxels"), VoxelsArr) && VoxelsArr
-            && VoxelsArr->Num() == CivF3d0ChunkMesh::ChunkVoxels)
-        {
-            TArray<int32> MaterialIds;
-            MaterialIds.Reserve(CivF3d0ChunkMesh::ChunkVoxels);
-            for (const TSharedPtr<FJsonValue>& VoxelVal : *VoxelsArr)
+            if (AStaticMeshActor* MeshActor = Cast<AStaticMeshActor>(Marker))
             {
-                MaterialIds.Add(static_cast<int32>(VoxelVal->AsNumber()));
+                if (UStaticMesh* Cube = LoadObject<UStaticMesh>(
+                        nullptr,
+                        TEXT("/Engine/BasicShapes/Cube.Cube")))
+                {
+                    MeshActor->GetStaticMeshComponent()->SetStaticMesh(Cube);
+                    MeshActor->GetStaticMeshComponent()->SetWorldScale3D(
+                        FVector(ChunkEdge * 0.9f, ChunkEdge * 0.35f, ChunkEdge * 0.9f));
+                }
             }
-            if (!Overlay->SetDenseVoxels(MaterialIds))
-            {
-                Overlay->SetMarkerFallback();
-            }
+            ChunkOverlayActors.Add(ChunkKey, Marker);
         }
         else
         {
-            Overlay->SetMarkerFallback();
+            Marker->SetActorLocation(ChunkWorldCentreFromId(ChunkKey));
         }
         ++Shown;
     }

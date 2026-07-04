@@ -18,18 +18,6 @@ pub enum CivEra {
 }
 
 impl CivEra {
-    /// Fractional progress through the era ladder, from earliest to latest.
-    pub fn era_progress_fraction(self) -> f32 {
-        match self {
-            CivEra::Prehistoric => 0.0,
-            CivEra::Ancient => 0.2,
-            CivEra::Classical => 0.4,
-            CivEra::Medieval => 0.6,
-            CivEra::Renaissance => 0.8,
-            CivEra::Modern => 1.0,
-        }
-    }
-
     /// Evaluate the current era from live simulation state.
     /// Conditions are first-match from most-advanced downward.
     pub fn evaluate(sim: &Simulation) -> Self {

@@ -91,8 +91,7 @@ fn setup_minimap_render_target(mut commands: Commands, mut images: ResMut<Assets
     ));
 }
 
-fn setup_minimap(mut commands: Commands, minimap_target: Option<Res<MinimapRenderTarget>>) {
-    let Some(minimap_target) = minimap_target else { return; };
+fn setup_minimap(mut commands: Commands, minimap_target: Res<MinimapRenderTarget>) {
     commands
         .spawn((
             Node {
@@ -173,14 +172,12 @@ fn world_position_for_building(building: &Building) -> Vec3 {
 }
 
 fn sync_minimap_dots(
-    attach: Option<Res<AttachMode>>,
-    sim: Option<Res<SimState>>,
+    attach: Res<AttachMode>,
+    sim: Res<SimState>,
     mut commands: Commands,
     roots: Query<Entity, With<MinimapRoot>>,
     existing: Query<Entity, With<MinimapDot>>,
 ) {
-    let Some(attach) = attach else { return; };
-    let Some(sim) = sim else { return; };
     if *attach == AttachMode::Server {
         return;
     }

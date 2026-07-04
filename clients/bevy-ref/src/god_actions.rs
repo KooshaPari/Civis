@@ -24,7 +24,7 @@ use crate::live_ground::{live_ground_y, ChunkVoxelCache};
 use crate::live_stream::{
     remesh_cached_chunks, LiveStreamScene, StreamCulling, LIVE_CHUNK_EDGE,
 };
-use crate::frame_budget::FrameBudgetRecovery;
+use crate::frame_budget::{scaled_cull_distance, GpuQualityMode};
 use crate::menus::in_game;
 use crate::terrain::{terrain_surface_y, WORLD_SIZE};
 use crate::{decode_chunk_id, encode_chunk_id, DebugRender};
@@ -332,6 +332,7 @@ fn apply_god_action_requests(
     effect_meshes: Res<GodEffectMeshes>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    gpu_quality: Option<Res<GpuQualityMode>>,
 ) {
     for req in requests.read() {
         let center = norm_to_world(&scene.chunk_voxels, req.norm_x, req.norm_y);
@@ -354,6 +355,7 @@ fn apply_god_action_requests(
                     &mut meshes,
                     &mut materials,
                     &dirty,
+                    gpu_quality.as_deref().copied().unwrap_or_default(),
                 );
                 spawn_effect_flash(
                     &mut commands,
@@ -382,6 +384,7 @@ fn apply_god_action_requests(
                     &mut meshes,
                     &mut materials,
                     &dirty,
+                    gpu_quality.as_deref().copied().unwrap_or_default(),
                 );
                 spawn_effect_flash(
                     &mut commands,
@@ -451,15 +454,16 @@ fn remesh_dirty_chunks(
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
     dirty: &HashSet<ChunkId>,
+    gpu_quality: GpuQualityMode,
 ) {
     if dirty.is_empty() {
         return;
     }
+    let base_distance = focus.half_extent * 4.0 + 256.0;
     let culling = StreamCulling {
         eye: [focus.centre.x, 64.0, focus.centre.z],
-        max_distance: focus.half_extent * 4.0 + 256.0,
-        draw_distance_scale: frame_budget_recovery.draw_distance_scale(),
-        lod_distance_scale: frame_budget_recovery.lod_distance_scale(),
+        max_distance: scaled_cull_distance(base_distance, gpu_quality),
+        gpu_quality,
     };
     let wire = debug.wireframe.then_some(CHUNK_WIREFRAME_LINE_COLOR);
     let ids: Vec<ChunkId> = dirty.iter().copied().collect();

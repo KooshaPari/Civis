@@ -14,9 +14,6 @@
 pub mod command_queue;
 pub mod conditions;
 pub mod culture;
-pub mod language;
-pub mod psyche_behavior;
-pub mod religion;
 pub mod era;
 pub mod engine;
 pub mod emergence;

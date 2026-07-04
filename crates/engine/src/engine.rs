@@ -3856,6 +3856,7 @@ impl Simulation {
                 });
             }
         }
+    }
 
     /// Economic-focus phase (FR-CIV-ECON-001 / ADR-020).
     ///

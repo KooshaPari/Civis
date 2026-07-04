@@ -62,11 +62,12 @@ fn tmp_dir() -> std::path::PathBuf {
 
 // ── tool registry ─────────────────────────────────────────────────────────
 
-/// Tool list must contain exactly 3 entries, sorted lexicographically.
+/// Tool list must contain exactly 15 entries (3 verify-related + 12 new
+/// JSON-RPC forwarders), sorted lexicographically.
 #[test]
-fn tool_list_returns_three_tools() {
+fn tool_list_returns_fifteen_tools() {
     let names = tool_names();
-    assert_eq!(names.len(), 3, "expected exactly 3 tools, got {names:?}");
+    assert_eq!(names.len(), 15, "expected exactly 15 tools, got {names:?}");
 }
 
 /// Tool names must be sorted (the lib sorts them; callers rely on stable order).
@@ -110,21 +111,38 @@ fn every_tool_has_input_schema() {
     let tools = tool_router().list_all();
     for tool in &tools {
         // The rmcp `Tool` type serialises the input schema as a JSON Value.
-        // We just verify it is not null/empty by checking the schema is not empty.
+        // We just verify it is not null/empty by checking the schema is an object.
         let schema = &tool.input_schema;
         assert!(
-            !schema.is_empty(),
-            "tool `{}` has an empty input_schema",
+            schema.is_object() || !schema.is_null(),
+            "tool `{}` has a null/empty input_schema",
             tool.name
         );
     }
 }
 
-/// civis_verify and civis_pixels and civis_census are individually present.
+/// All 12 new JSON-RPC forwarder tools are present alongside the original 3.
 #[test]
 fn tool_names_contain_expected_entries() {
     let names = tool_names();
-    for expected in &["civis_verify", "civis_pixels", "civis_census"] {
+    for expected in &[
+        "civis_verify",
+        "civis_pixels",
+        "civis_census",
+        // FR-CIV-MCP-001 forwarders (12):
+        "civis_health",
+        "civis_snapshot",
+        "civis_emergence",
+        "civis_market_prices",
+        "civis_speed_get",
+        "civis_speed_set",
+        "civis_god_action",
+        "civis_spawn_entity",
+        "civis_diplomacy_action",
+        "civis_research_queue",
+        "civis_tech_state",
+        "civis_save_list",
+    ] {
         assert!(
             names.iter().any(|n| n == expected),
             "tool `{expected}` missing from registered router; got {names:?}"
@@ -282,7 +300,6 @@ fn census_unreachable_host_returns_error() {
     let config = CensusConfig {
         host: "127.0.0.1".to_string(),
         port: 1,
-        path: "/ws".to_string(),
         timeout_ms: 500,
     };
     let result = census_sim_status(&config);

@@ -896,7 +896,7 @@ mod tests {
     fn stamp_sphere_additive_drops_column_above_centre() {
         use civ_voxel::fluid_ca::CaGrid;
         let mut grid = CaGrid::new([16, 32, 16]);
-        let mat = MaterialId(1);
+        let mat = WATER;
         let cy = 8usize;
         stamp_sphere(
             &mut grid,
@@ -1028,10 +1028,10 @@ mod tests {
             4.0,
             1.0,
             MaterialPaintMode::Replace,
-            MaterialId(1),
+            WATER,
             0,
         );
         // Did not panic; origin cell painted.
-        assert_eq!(grid.get(0, 0, 0), MaterialId(1));
+        assert_eq!(grid.get(0, 0, 0), WATER);
     }
 }

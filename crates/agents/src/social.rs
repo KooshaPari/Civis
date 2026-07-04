@@ -16,20 +16,11 @@ pub const MAX_TIES: usize = 150;
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum Interaction {
     /// Cooperative contact with a positive benefit.
-    Cooperated {
-        /// Positive utility transferred by the interaction.
-        benefit: f32,
-    },
+    Cooperated { benefit: f32 },
     /// Contested contact with pressure.
-    Competed {
-        /// Competitive pressure applied by the interaction.
-        pressure: f32,
-    },
+    Competed { pressure: f32 },
     /// Betrayal, theft, or attack.
-    Defected {
-        /// Harm inflicted by the interaction.
-        harm: f32,
-    },
+    Defected { harm: f32 },
     /// Mere co-location.
     Coexisted,
     /// Kinship link established at birth.
@@ -196,20 +187,17 @@ pub fn apply_social_event(graph: &mut SocialGraph, event: SocialEvent) {
 
 /// Decay ties that have not been seen for `current_tick`.
 pub fn decay_social_graph(graph: &mut SocialGraph, current_tick: u32) {
-    if graph.ties.is_empty() {
-        return;
-    }
     for tie in &mut graph.ties {
         let gap = current_tick.saturating_sub(tie.last_seen);
         if gap == 0 {
             continue;
         }
-        let gap = gap.min(i32::MAX as u32) as i32;
-        tie.familiarity = clamp01(tie.familiarity * 0.98_f32.powi(gap));
+        let gapf = gap as f32;
+        tie.familiarity = clamp01(tie.familiarity * 0.98_f32.powf(gapf));
         if tie.kinship < 0.5 {
-            tie.affinity *= 0.995_f32.powi(gap);
+            tie.affinity *= 0.995_f32.powf(gapf);
         }
-        tie.trust *= 0.992_f32.powi(gap);
+        tie.trust *= 0.992_f32.powf(gapf);
         tie.affinity = clamp11(tie.affinity);
         tie.trust = clamp11(tie.trust);
     }
@@ -375,7 +363,7 @@ mod tests {
             SocialEvent {
                 a: 1,
                 b: 2,
-                kind: Interaction::Cooperated { benefit: 4.3 },
+                kind: Interaction::Cooperated { benefit: 4.0 },
                 tick: 1,
             },
         );
@@ -384,7 +372,7 @@ mod tests {
             SocialEvent {
                 a: 2,
                 b: 1,
-                kind: Interaction::Cooperated { benefit: 4.3 },
+                kind: Interaction::Cooperated { benefit: 4.0 },
                 tick: 1,
             },
         );

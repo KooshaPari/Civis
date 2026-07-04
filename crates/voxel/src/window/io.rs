@@ -187,16 +187,17 @@ impl MaterializedSnapshot {
     /// free to use this directly; the round-trip is byte-exact for
     /// the same input (modulo platform endianness, which bincode
     /// pins to little-endian).
-    pub fn to_bincode(&self) -> Result<Vec<u8>, bincode::Error> {
-        bincode::serialize(self)
+    pub fn to_bincode(&self) -> Result<Vec<u8>, bincode_next::error::EncodeError> {
+        bincode_next::serde::encode_to_vec(self, bincode_next::config::standard())
     }
 
     /// Bincode de-serialise a snapshot previously written with
     /// [`Self::to_bincode`]. Returns `Err` on shape mismatch (the
     /// streaming layer is expected to map this to a user-visible
     /// "save version too old / too new" error).
-    pub fn from_bincode(bytes: &[u8]) -> Result<Self, bincode::Error> {
-        bincode::deserialize(bytes)
+    pub fn from_bincode(bytes: &[u8]) -> Result<Self, bincode_next::error::DecodeError> {
+        bincode_next::serde::decode_from_slice(bytes, bincode_next::config::standard())
+            .map(|(value, _)| value)
     }
 }
 

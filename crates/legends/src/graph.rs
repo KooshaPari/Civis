@@ -202,29 +202,12 @@ impl SagaGraph {
             died_epoch: None,
             significance: 0.0,
             promoted: false,
-            title: None,
             home_region: region,
             cluster: None,
             sim_ref: Some(SimRef { source, sim_id }),
             tags: SmallVec::new(),
         });
         id
-    }
-
-    /// Attach an entity↔entity spine edge (Founded, MemberOf, …) after ingest.
-    pub fn link_entity_edge(
-        &mut self,
-        from: LegendEntityId,
-        to: LegendEntityId,
-        edge: LegendEdge,
-    ) {
-        let Some(from_idx) = self.entity_index.get(&from).copied() else {
-            return;
-        };
-        let Some(to_idx) = self.entity_index.get(&to).copied() else {
-            return;
-        };
-        self.g.add_edge(from_idx, to_idx, edge);
     }
 
     /// Resolve (or fold into) an aggregate entity (War/Disaster/PolityCluster) by
@@ -244,7 +227,6 @@ impl SagaGraph {
             died_epoch: None,
             significance: 0.0,
             promoted: false,
-            title: None,
             home_region: None,
             cluster: None,
             sim_ref: None,
@@ -373,7 +355,7 @@ impl SagaGraph {
         let mut participants: SmallVec<[LegendEntityId; 4]> = SmallVec::new();
         let mut roles: SmallVec<[(LegendEntityId, Role); 4]> = SmallVec::new();
         for (src, sim_id, role) in raw.participants.iter().copied() {
-            let kind = entity_kind_for(role, src);
+            let kind = entity_kind_for(role);
             let eid = self.resolve_entity(src, sim_id, kind, raw.region, epoch);
             participants.push(eid);
             roles.push((eid, role));
@@ -669,37 +651,6 @@ impl SagaGraph {
     pub(crate) fn significant_desc(&self) -> impl Iterator<Item = LegendEntityId> + '_ {
         self.significant_set.iter().rev().map(|(_, id)| *id)
     }
-
-    /// Promote an entity to a named legend with an explicit title and role, adding a
-    /// self-referential `Lineage` edge as the structural witness (FR-CIV-LEGENDS §4.3
-    /// deepening). Returns `Err` if `entity_id` is not in the graph.
-    pub fn promote_to_legend(
-        &mut self,
-        entity_id: LegendEntityId,
-        title: String,
-        role: Role,
-    ) -> Result<(), &'static str> {
-        let idx = self
-            .entity_index
-            .get(&entity_id)
-            .copied()
-            .ok_or("entity not found in saga graph")?;
-        match &mut self.g[idx] {
-            LegendNode::Entity(e) => {
-                e.promoted = true;
-                e.title = Some(title);
-            }
-            _ => return Err("node is not an entity"),
-        }
-        // Self-referential Lineage edge marks the entity as legend-ranked.
-        self.g.add_edge(
-            idx,
-            idx,
-            LegendEdge::ParticipatedIn { role },
-        );
-        self.g.add_edge(idx, idx, LegendEdge::Lineage);
-        Ok(())
-    }
 }
 
 /// Recency factor in (0,1]: nearer-in-epoch candidates score higher.
@@ -711,12 +662,9 @@ fn recency(cand: Epoch, now: Epoch, window: u64) -> f32 {
 
 /// Default entity kind to mint for a participant given its role. Coarse; the
 /// producer-side kind registry refines this later (kept simple + opaque here).
-/// Default entity kind to mint for a participant given its role and producer.
-fn entity_kind_for(role: Role, source: SourceCrate) -> EntityKind {
-    match (role, source) {
-        (Role::Founder | Role::Builder, SourceCrate::Protocol3d) => EntityKind::Settlement,
-        (Role::Leader, SourceCrate::Engine) => EntityKind::PolityCluster,
-        (Role::Aggressor | Role::Defender, SourceCrate::Tactics) => EntityKind::Agent,
+fn entity_kind_for(role: Role) -> EntityKind {
+    match role {
+        Role::Founder | Role::Builder => EntityKind::Agent,
         _ => EntityKind::Agent,
     }
 }

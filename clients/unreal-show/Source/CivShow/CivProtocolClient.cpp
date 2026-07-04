@@ -4,6 +4,17 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 
+namespace
+{
+    static constexpr uint8 BiomeDeepWater = 0;
+    static constexpr uint8 BiomeWater = 1;
+    static constexpr uint8 BiomeSand = 2;
+    static constexpr uint8 BiomeGrass = 3;
+    static constexpr uint8 BiomeForest = 4;
+    static constexpr uint8 BiomeStone = 5;
+    static constexpr uint8 BiomeUnknown = 6;
+}
+
 void UCivProtocolClient::Connect(const FString& InBaseUrl)
 {
     BaseUrl = InBaseUrl;
@@ -39,13 +50,13 @@ void UCivProtocolClient::FetchTerrain()
             for (const TSharedPtr<FJsonValue>& Value : *BiomesJson)
             {
                 const FString Biome = Value->AsString();
-                if (Biome == TEXT("deepwater")) Biomes.Add(0);
-                else if (Biome == TEXT("water")) Biomes.Add(1);
-                else if (Biome == TEXT("sand")) Biomes.Add(2);
-                else if (Biome == TEXT("grass")) Biomes.Add(3);
-                else if (Biome == TEXT("forest")) Biomes.Add(4);
-                else if (Biome == TEXT("stone")) Biomes.Add(5);
-                else Biomes.Add(6);
+                if (Biome == TEXT("deepwater")) Biomes.Add(BiomeDeepWater);
+                else if (Biome == TEXT("water")) Biomes.Add(BiomeWater);
+                else if (Biome == TEXT("sand")) Biomes.Add(BiomeSand);
+                else if (Biome == TEXT("grass")) Biomes.Add(BiomeGrass);
+                else if (Biome == TEXT("forest")) Biomes.Add(BiomeForest);
+                else if (Biome == TEXT("stone")) Biomes.Add(BiomeStone);
+                else Biomes.Add(BiomeUnknown);
             }
         }
 

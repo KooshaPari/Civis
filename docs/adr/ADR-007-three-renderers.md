@@ -1,7 +1,7 @@
 # ADR-007: Three Reference 3D Clients (Bevy + Godot + Unreal) in Parallel
 
 **Date:** 2026-05-22
-**Status:** ACCEPTED (2026-06-26 — renderer audit confirmed: Bevy=iteration/determinism, Godot=UX-iteration surface, Unreal=production visuals; Unity dropped, never implemented and no unique purpose per docs/research/engine-parity/unity.md)
+**Status:** PROPOSED
 **Author:** Civis 3D Extension
 
 ---

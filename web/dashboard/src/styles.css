@@ -942,29 +942,6 @@ h1 { font-size: clamp(1.8rem, 3vw, 3.2rem); line-height: 0.95; }
 }
 .brand-sub { color: var(--muted); font-size: 0.85rem; margin: 4px 0 0; }
 .brand-sub strong { color: var(--text); }
-.mode-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-right: 10px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text);
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-.mode-pill.authoring {
-  color: var(--accent-2);
-  border-color: rgba(158, 247, 182, 0.25);
-}
-.mode-pill.spectator {
-  color: var(--warn);
-  border-color: rgba(255, 210, 122, 0.24);
-}
 .toast {
   position: absolute;
   left: 50%;

@@ -14,17 +14,13 @@ use serde::{Deserialize, Serialize};
 
 pub mod seeds;
 pub mod sentience;
-pub mod traits;
 
 pub use seeds::{
-    all_named_seeds, archetype_dna, archetype_seed, choose_named_seed, divergence_preset,
-    effective_mutation_rate, effective_spawn_divergence, example_seed_set, mutate_with_divergence,
-    named_archetype_seed_set, named_seed_round_robin, raw_organism_primitive, seed_with_divergence,
-    spawn_genome, spawn_genome_with_divergence, BiomeAffinity, DivergencePreset, NamedSeed,
-    SeedDefinition, SeedError, SeedId, SeedLibrary, SeedSet, WeightedNamedSeed, ALL_NAMED_SEEDS,
-    DIVERGENCE_PRESETS,
+    archetype_dna, archetype_seed, effective_mutation_rate, example_seed_set,
+    mutate_with_divergence, raw_organism_primitive, seed_with_divergence, spawn_genome,
+    spawn_genome_with_divergence, BiomeAffinity, NamedSeed, SeedDefinition, SeedError, SeedId,
+    SeedLibrary, SeedSet,
 };
-pub use traits::{inherit_trait, TraitInheritanceConfig};
 
 /// Schema version for `civ-genetics`. Bumped on breaking changes.
 pub const SCHEMA_VERSION: &str = "0.1.0-stub";

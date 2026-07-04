@@ -15,7 +15,6 @@ Use this when you need a flamegraph for the CA dirty-chunk hot path.
 
 - `target/criterion`
 - `target/ca-dirty-chunk.flamegraph.svg`
-- GitHub Actions manual quality sweep uploads both as artifacts.
 
 ## What it profiles
 

@@ -22,14 +22,6 @@ export type PerfBudgetResult = {
   maxMs: number;
 };
 
-export type FrameSampleSummary = {
-  fps: number;
-  frameMs: number;
-  count: number;
-  latestMs: number;
-  latestFps: number;
-};
-
 export function pushFrameSample(
   samples: number[],
   ms: number,
@@ -52,19 +44,6 @@ export function averageFrameMs(samples: number[]): number {
 
 export function averageFps(samples: number[]): number {
   return frameMsToFps(averageFrameMs(samples));
-}
-
-export function summarizeFrameSamples(samples: number[]): FrameSampleSummary {
-  const count = samples.length;
-  const frameMs = averageFrameMs(samples);
-  const latestMs = count ? samples[count - 1] : 0;
-  return {
-    fps: frameMsToFps(frameMs),
-    frameMs,
-    count,
-    latestMs,
-    latestFps: frameMsToFps(latestMs),
-  };
 }
 
 export function maxFrameMs(samples: number[]): number {

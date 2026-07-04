@@ -7,19 +7,18 @@ use civ_agents::{
 };
 use civ_engine::{
     spawn::{spawn_airport_at, spawn_hangar_at, spawn_port_at},
-    Building, BuildingType, Simulation,
+    Building, BuildingType, Position, Simulation,
 };
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
-use crate::procedural_actor::{spawn_procedural_actor, ProceduralActorPlugin};
 use crate::spawn_tools::{SpawnBuildingRequest, SpawnCivilianRequest};
 use crate::terrain::WORLD_SIZE;
 use crate::{live_attach::is_server_attach_mode, AttachMode};
 #[cfg(feature = "models")]
-use crate::gltf_models::{actor_scene, building_scene_for, ModelOrPrimitive};
+use civ_bevy_ref::gltf_models::{actor_scene, building_scene_for, ModelOrPrimitive};
 #[cfg(feature = "models")]
-type ModelResourceRef<'a> = Option<&'a Res<'a, crate::gltf_models::GameModels>>;
+type ModelResourceRef<'a> = Option<&'a Res<civ_bevy_ref::gltf_models::GameModels>>;
 #[cfg(not(feature = "models"))]
 type ModelResourceRef<'a> = Option<()>;
 
@@ -27,35 +26,22 @@ type ModelResourceRef<'a> = Option<()>;
 #[derive(Resource)]
 pub struct SimState(pub Simulation);
 
-/// Marker for in-process civilian entities (scene dump, nearby overlay).
-#[derive(Component, Debug, Clone, Copy)]
-pub struct SimCivilianMarker {
-    /// Stable civilian id in the hecs sim world.
-    pub id: u64,
-    /// Owning faction id.
-    pub faction: u32,
-    /// Procedural / GLTF visual kind.
-    pub visual: ActorVisualKind,
+#[derive(Component)]
+struct SimCivilianMarker {
+    id: u64,
+    faction: u32,
+    visual: ActorVisualKind,
 }
 
-/// Public alias for attach-mode policy tests and headless scene dump.
-pub type SimCivilianMarkerPublic = SimCivilianMarker;
-
-/// Marker for in-process building entities (scene dump, nearby overlay).
-#[derive(Component, Debug, Clone, Copy)]
-pub struct SimBuildingMarker {
-    /// Building archetype.
-    pub building_type: BuildingType,
-    /// Grid position in the sim.
-    pub position: civ_engine::Position,
+#[derive(Component)]
+struct SimBuildingMarker {
+    building_type: BuildingType,
+    position: Position,
 }
-
-/// Public alias for attach-mode policy tests and headless scene dump.
-pub type SimBuildingMarkerPublic = SimBuildingMarker;
 
 impl Default for SimState {
     fn default() -> Self {
-        Self(Simulation::new())
+        Self(Simulation::default())
     }
 }
 
@@ -71,23 +57,17 @@ struct GameplayMarkerMeshes {
     building: Handle<Mesh>,
 }
 
-fn in_process_sim_active(mode: Option<Res<AttachMode>>) -> bool {
-    mode.map(|m| !is_server_attach_mode(*m)).unwrap_or(true)
+fn in_process_sim_active(mode: Res<AttachMode>) -> bool {
+    !is_server_attach_mode(*mode)
 }
 
 /// Wires spawn-tool messages into the ECS simulation and optional HUD sync.
 #[derive(Default)]
 pub struct SimBridgePlugin;
 
-/// Frame counter for throttled debug logging (every ~60 frames).
-#[derive(Resource, Default)]
-struct DebugFrameCounter(u32);
-
 impl Plugin for SimBridgePlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(ProceduralActorPlugin);
         app.init_resource::<SimState>()
-            .init_resource::<DebugFrameCounter>()
             .insert_resource(SimTickAccumulator(0.0))
             .add_systems(Startup, setup_gameplay_marker_meshes)
             .add_systems(
@@ -99,15 +79,7 @@ impl Plugin for SimBridgePlugin {
                 ),
             );
         #[cfg(feature = "egui")]
-        app.init_resource::<crate::EmergenceHudData>().add_systems(
-            Update,
-            (
-                sync_game_ui_snapshot,
-                sync_emergence_hud,
-                sync_faction_state_snapshot,
-            )
-                .run_if(in_process_sim_active),
-        );
+        app.add_systems(Update, sync_game_ui_snapshot.run_if(in_process_sim_active));
         app.add_systems(Update, sync_visible_gameplay.run_if(in_process_sim_active));
     }
 }
@@ -218,23 +190,10 @@ fn sync_visible_gameplay(
     existing_civilians: Query<(Entity, &SimCivilianMarker)>,
     existing_buildings: Query<(Entity, &SimBuildingMarker)>,
     marker_meshes: Res<GameplayMarkerMeshes>,
-    mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut debug_counter: ResMut<DebugFrameCounter>,
     #[cfg(feature = "models")]
-    models: Option<Res<'_, crate::gltf_models::GameModels>>,
+    models: Option<Res<civ_bevy_ref::gltf_models::GameModels>>,
 ) {
-    // One-time archetype debug log on first sync (to find 300-vs-5 gap)
-    static DEBUG_LOGGED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-    if !DEBUG_LOGGED.swap(true, std::sync::atomic::Ordering::SeqCst) {
-        let count_civilian = sim.0.world.query::<&Civilian>().iter().count();
-        let count_pos3d = sim.0.world.query::<&civ_agents::Position3d>().iter().count();
-        let count_civ_pos = sim.0.world.query::<(&Civilian, &civ_agents::Position3d)>().iter().count();
-        let count_render = sim.0.world.query::<(&Civilian, &civ_agents::Position3d, Option<&ActorVisual>)>().iter().count();
-        let count_total = sim.0.world.iter().count();
-        info!("civis-archetype: total={} civilian={} pos3d={} civ+pos={} render_match={}", count_total, count_civilian, count_pos3d, count_civ_pos, count_render);
-    }
-
     if !sim.is_changed() {
         return;
     }
@@ -253,19 +212,13 @@ fn sync_visible_gameplay(
     #[cfg(not(feature = "models"))]
     let model_resource: ModelResourceRef = None;
 
-    let mut query_count = 0;
-    let mut first_world_pos: Option<Vec3> = None;
     for (_, (civilian, position, actor_visual)) in sim
         .0
         .world
         .query::<(&Civilian, &civ_agents::Position3d, Option<&ActorVisual>)>()
         .iter()
     {
-        query_count += 1;
         let world_pos = sim_position_to_world(position);
-        if first_world_pos.is_none() {
-            first_world_pos = Some(world_pos);
-        }
         let faction_id = faction_id(&civilian.alignment);
         let visual = actor_visual_kind(actor_visual);
         let entity = match civilian_entities.remove(&civilian.id) {
@@ -290,7 +243,6 @@ fn sync_visible_gameplay(
                     &mut commands,
                     model_resource,
                     &marker_meshes.civilian,
-                    &mut meshes,
                     &mut materials,
                     civilian.id,
                     faction_id,
@@ -302,7 +254,6 @@ fn sync_visible_gameplay(
                 &mut commands,
                 model_resource,
                 &marker_meshes.civilian,
-                &mut meshes,
                 &mut materials,
                 civilian.id,
                 faction_id,
@@ -311,15 +262,6 @@ fn sync_visible_gameplay(
             ),
         };
         let _ = entity;
-    }
-
-    // Throttled debug log: only log every ~60 frames to avoid spam
-    debug_counter.0 = debug_counter.0.wrapping_add(1);
-    if debug_counter.0 % 60 == 0 {
-        info!(
-            "civis-debug: sim civilians query found {} entities, first_world_pos: {:?}",
-            query_count, first_world_pos
-        );
     }
 
     for (_, building) in sim.0.world.query::<&Building>().iter() {
@@ -390,10 +332,9 @@ fn actor_visual_kind(actor_visual: Option<&ActorVisual>) -> ActorVisualKind {
 
 #[cfg(feature = "models")]
 fn spawn_civilian_visual(
-    commands: &mut Commands<'_, '_>,
+    commands: &mut Commands<'_>,
     models: ModelResourceRef,
-    _civilian_mesh: &Handle<Mesh>,
-    meshes: &mut Assets<Mesh>,
+    civilian_mesh: &Handle<Mesh>,
     materials: &mut Assets<StandardMaterial>,
     civilian_id: u64,
     faction: u32,
@@ -401,15 +342,25 @@ fn spawn_civilian_visual(
     world_pos: &Vec3,
 ) -> Entity {
     let Some(models) = models else {
-        // GameModels resource not loaded yet: spawn procedural rig as fallback.
         let color = faction_color(&Alignment::with_faction(faction));
-        let root = spawn_procedural_actor(commands, meshes, materials, visual, color, *world_pos);
-        commands.entity(root).insert(SimCivilianMarker {
-            id: civilian_id,
-            faction,
-            visual,
+        let material = materials.add(StandardMaterial {
+            base_color: color,
+            emissive: color.into(),
+            perceptual_roughness: 0.55,
+            ..default()
         });
-        return root;
+        return commands
+            .spawn((
+                SimCivilianMarker {
+                    id: civilian_id,
+                    faction,
+                    visual,
+                },
+                Mesh3d(civilian_mesh.clone()),
+                MeshMaterial3d(material),
+                Transform::from_translation(*world_pos + Vec3::Y * 0.8),
+            ))
+            .id();
     };
     match actor_scene(models, visual, faction) {
         ModelOrPrimitive::Model(scene_root) => {
@@ -426,27 +377,37 @@ fn spawn_civilian_visual(
                 .id()
         }
         ModelOrPrimitive::Primitive => {
-            // glTF present but scene-asset not loaded yet: procedural rig.
             let color = faction_color(&Alignment::with_faction(faction));
-            let root = spawn_procedural_actor(commands, meshes, materials, visual, color, *world_pos);
-            commands.entity(root).insert(SimCivilianMarker {
-                id: civilian_id,
-                faction,
-                visual,
+            let material = materials.add(StandardMaterial {
+                base_color: color,
+                emissive: color.into(),
+                perceptual_roughness: 0.55,
+                ..default()
             });
-            root
+            commands
+                .spawn((
+                    SimCivilianMarker {
+                        id: civilian_id,
+                        faction,
+                        visual,
+                    },
+                    Mesh3d(civilian_mesh.clone()),
+                    MeshMaterial3d(material),
+                    Transform::from_translation(*world_pos + Vec3::Y * 0.8),
+                ))
+                .id()
         }
     }
 }
 
 #[cfg(feature = "models")]
 fn spawn_building_visual(
-    commands: &mut Commands<'_, '_>,
+    commands: &mut Commands<'_>,
     models: ModelResourceRef,
     building_mesh: &Handle<Mesh>,
     materials: &mut Assets<StandardMaterial>,
     building_type: BuildingType,
-    position: civ_engine::Position,
+    position: Position,
     world_pos: &Vec3,
 ) -> Entity {
     let Some(models) = models else {
@@ -489,8 +450,7 @@ fn spawn_building_visual(
 fn spawn_civilian_visual(
     commands: &mut Commands<'_, '_>,
     _models: ModelResourceRef,
-    _civilian_mesh: &Handle<Mesh>,
-    meshes: &mut Assets<Mesh>,
+    civilian_mesh: &Handle<Mesh>,
     materials: &mut Assets<StandardMaterial>,
     civilian_id: u64,
     faction: u32,
@@ -498,13 +458,24 @@ fn spawn_civilian_visual(
     world_pos: &Vec3,
 ) -> Entity {
     let color = faction_color(&Alignment::with_faction(faction));
-    let root = spawn_procedural_actor(commands, meshes, materials, visual, color, *world_pos);
-    commands.entity(root).insert(SimCivilianMarker {
-        id: civilian_id,
-        faction,
-        visual,
+    let material = materials.add(StandardMaterial {
+        base_color: color,
+        emissive: color.into(),
+        perceptual_roughness: 0.55,
+        ..default()
     });
-    root
+    commands
+        .spawn((
+            SimCivilianMarker {
+                id: civilian_id,
+                faction,
+                visual,
+            },
+            Mesh3d(civilian_mesh.clone()),
+            MeshMaterial3d(material),
+            Transform::from_translation(*world_pos + Vec3::Y * 0.8),
+        ))
+        .id()
 }
 
 #[cfg(not(feature = "models"))]
@@ -514,7 +485,7 @@ fn spawn_building_visual(
     building_mesh: &Handle<Mesh>,
     materials: &mut Assets<StandardMaterial>,
     building_type: BuildingType,
-    position: civ_engine::Position,
+    position: Position,
     world_pos: &Vec3,
 ) -> Entity {
     spawn_building_primitive(commands, building_mesh, materials, building_type, world_pos, position)
@@ -526,7 +497,7 @@ fn spawn_building_primitive(
     materials: &mut Assets<StandardMaterial>,
     building_type: BuildingType,
     world_pos: &Vec3,
-    position: civ_engine::Position,
+    position: Position,
 ) -> Entity {
     let color = building_color(building_type);
     let material = materials.add(StandardMaterial {
@@ -570,25 +541,6 @@ fn next_civilian_id(sim: &Simulation) -> u64 {
 }
 
 #[cfg(feature = "egui")]
-fn sync_emergence_hud(sim: Res<SimState>, mut hud: ResMut<crate::EmergenceHudData>) {
-    let Some(sample) = sim.0.last_emergence_sample() else {
-        return;
-    };
-    if !sim.is_changed() {
-        return;
-    }
-    *hud = crate::EmergenceHudData {
-        entropy_bits: sample.entropy_bits,
-        entropy_norm: sample.entropy_norm,
-        branching_sigma: sample.branching_sigma,
-        power_law_alpha: sample.power_law_alpha,
-        novelty_rate: sample.novelty_rate,
-        mi_material_faction_norm: sample.mi_material_faction_norm,
-        structure_count: sample.structure_count,
-        branching_regime: sample.branching_regime.label().to_string(),
-    };
-}
-
 fn sync_game_ui_snapshot(
     sim: Res<SimState>,
     speed: Res<crate::game_ui::GameSpeed>,
@@ -612,47 +564,4 @@ fn sync_game_ui_snapshot(
     let factions = factions.len() as u32;
     let tick = sim.0.state.tick;
     snapshot.set_sim_state(tick, population, factions, tick.to_string(), speed.multiplier);
-}
-
-/// Sync in-process simulation faction state into LiveStreamScene so the HUD displays it.
-#[cfg(feature = "egui")]
-fn sync_faction_state_snapshot(
-    sim: Res<SimState>,
-    mut scene: ResMut<crate::live_stream::LiveStreamScene>,
-) {
-    if !sim.is_changed() {
-        return;
-    }
-
-    // Build faction entries from the simulation (basic stub: just id and era).
-    let mut faction_entries = std::collections::BTreeMap::new();
-    let mut population_by_faction = std::collections::BTreeMap::new();
-
-    // Count civilians per faction.
-    for (_, civilian) in sim.0.world.query::<&Civilian>().iter() {
-        if let Alignment::Faction(faction) = civilian.alignment {
-            *population_by_faction.entry(faction).or_insert(0) += 1;
-        }
-    }
-
-    // Create entries for each observed faction.
-    for &faction_id in population_by_faction.keys() {
-        faction_entries.insert(
-            faction_id,
-            civ_protocol_3d::FactionStateEntry {
-                id: faction_id,
-                era: sim.0.state.tick.saturating_div(1000) as u16,
-                government: civ_protocol_3d::Government3d::Unknown,
-                treasury: civ_protocol_3d::FactionTreasury3d {
-                    amount: 0.0,
-                    currency: String::new(),
-                },
-            },
-        );
-    }
-
-    // Update the scene (only if there are changes).
-    scene.faction_entries = faction_entries.into_values().collect();
-    scene.faction_entries.sort_by_key(|entry| entry.id);
-    scene.population_by_faction = population_by_faction;
 }

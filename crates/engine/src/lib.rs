@@ -52,8 +52,6 @@ pub use demographics::{
 // `civ_engine::SfxTrigger` without taking a direct `civ-audio` dep.
 pub use civ_audio::triggers::SfxTrigger;
 pub use civ_mod_host::{load_manifest, ModBrowserEntry, ModGuestStateSave, ModType};
-pub use civ_planet::Climate;
-pub use civ_tactics::{DamageEvent, DoctrineLibrary};
 pub use emergence::{
     CivAiDecision, EmergenceFeedEvent, EmergenceState,
 };
@@ -68,17 +66,13 @@ pub use engine::{
     StratificationReport, TradeRoute, UnitType, WorldState,
 };
 pub use hash_chain::hash_hex;
-pub use replay::ReplayLog;
-pub use replay::ReplayError;
-pub use replay_format::{decode_civreplay, encode_civreplay};
 pub use save_bundle::{
-    delete_slot, list_slots, load_from_slot, save_to_slot, CivSaveBundle, SaveSlotEntry,
+    delete_slot, list_slots, load_from_slot, save_to_slot, SaveSlotEntry,
 };
 pub use spawn::{
     grid_to_norm, spawn_airport_at, spawn_hangar_at, spawn_military_at, spawn_port_at,
     unit_type_label,
 };
-pub use spectator::SpectatorView;
 
 
 // FR-CIV-ARCH: Emergent building layouts re-export so callers can use
@@ -137,11 +131,6 @@ pub use lod::LodTier;
 pub use lod::{
     aggregate_strategic, operational_hex_snapshot, project_zoom, should_tick_entity,
     should_tick_entity_with_policy, HexCellSnapshot, LodPolicy, ZoomLevel,
-};
-pub use metrics::{compute, compute_fixed, Metrics, MetricsFixed};
-pub use policy::{
-    effective_consumption, policy_from_kind, CapitalistPolicy, ControlSignals, NoopPolicy, Policy,
-    PolicyInput, SubsistenceFirstPolicy, DEFAULT_ECONOMY_POLICY,
 };
 pub use replay::{ReplayError, ReplayEvent, ReplayLog};
 pub use replay_format::{

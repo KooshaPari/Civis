@@ -404,14 +404,6 @@ impl Simulation {
             .saturating_add(units);
     }
 
-    fn micro_actor_action_count(&self) -> u32 {
-        self.emergence_branching.last_tick_unrest_events
-    }
-
-    fn micro_descendant_action_count(&self) -> u32 {
-        self.last_tick_engagements.len().try_into().unwrap_or(u32::MAX)
-    }
-
     /// Take one emergence sample if the current tick is on a sample
     /// boundary (every [`EMERGENCE_SAMPLE_INTERVAL`] ticks). The
     /// function is a no-op (returns `false`) on non-sample ticks so

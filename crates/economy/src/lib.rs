@@ -11,13 +11,14 @@
 #![warn(missing_docs)]
 
 mod allocation;
+mod extraction;
 mod institution;
 mod market;
 mod stocks;
 
-pub use allocation::{
-    allocate_by_priority, allocate_with, AllocationEngine, AllocationRegime,
-    CapitalistAllocator, JouleAllocator, PlannedAllocator, PriorityTier,
+pub use allocation::{AllocationEngine, CapitalistAllocator};
+pub use extraction::{
+    find_extraction_site, tick_extraction, ExtractionSite, Extractor, ResourceKind,
 };
 pub use institution::{
     step_institutions, InstitutionAccount, InstitutionId, InstitutionKind, InstitutionLedger,

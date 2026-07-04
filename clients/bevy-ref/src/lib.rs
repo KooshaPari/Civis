@@ -132,6 +132,8 @@ pub mod window_icon;
 #[cfg(feature = "bevy")]
 pub mod animation;
 #[cfg(feature = "bevy")]
+pub mod animation;
+#[cfg(feature = "bevy")]
 pub mod atmosphere;
 #[cfg(feature = "bevy")]
 pub mod camera;
@@ -198,7 +200,10 @@ pub mod sim_bridge;
 pub mod spawn_tools;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tech_tree_ui;
+<<<<<<< HEAD
+=======
 pub mod civ_history;
+>>>>>>> 34495eed48a7965a10f0cb2f2db986adfb380b94
 pub mod god_panel;
 pub mod tutorial;
 pub mod perf_hud;
@@ -505,8 +510,11 @@ impl LiveHudSnapshot {
         if let Some(rtt) = self.ws_rtt_ms {
             line.push_str(&format!(" | RTT: {rtt:.0}ms"));
         }
-        if let Some(pick) = format_live_pick_context(self.focused_chunk, self.selected_live) {
-            line.push_str(&format!(" | {pick}"));
+        if let Some(chunk) = self.focused_chunk {
+            line.push_str(&format!(" | chunk: {}", chunk.0));
+        }
+        if let Some(selection) = self.selected_live {
+            line.push_str(&format!(" | {}", format_live_selection(selection)));
         }
         if let Some(event) = &self.last_event {
             line.push_str(&format!(" | evt: {event}"));

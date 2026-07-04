@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use civ_voxel::{ChunkId, MaterialId};
+use civ_voxel::{material::WATER, ChunkId, MaterialId};
 
 use crate::{decode_chunk_id, terrain::terrain_surface_y};
 
@@ -87,7 +87,7 @@ mod tests {
     #[test]
     fn voxel_column_surface_finds_top_solid() {
         let mut voxels = vec![MaterialId(0); CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE];
-        voxels[voxel_index(4, 3, 5)] = MaterialId(1);
+        voxels[voxel_index(4, 3, 5)] = WATER;
         let id = encode_chunk_id(0, 0, 0);
         let mut cache = ChunkVoxelCache::new();
         cache.insert(id, voxels);
@@ -108,8 +108,8 @@ mod tests {
     fn chunk_seam_watertight() {
         let mut left = vec![MaterialId(0); CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE];
         let mut right = vec![MaterialId(0); CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE];
-        left[voxel_index(15, 2, 8)] = MaterialId(1);
-        right[voxel_index(0, 5, 8)] = MaterialId(1);
+        left[voxel_index(15, 2, 8)] = WATER;
+        right[voxel_index(0, 5, 8)] = WATER;
 
         let mut cache = ChunkVoxelCache::new();
         cache.insert(encode_chunk_id(0, 0, 0), left);

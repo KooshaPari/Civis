@@ -45,6 +45,13 @@ pub mod writing;
 
 pub mod tutorial;
 
+pub mod language;
+pub mod religion;
+pub mod psyche_behavior;
+pub mod building_layouts;
+pub mod demographics;
+pub mod faction_decisions;
+
 
 /// Fixed-point scaling factor (1 raw unit = SCALE joules). Engine energy
 /// quantities are stored in fixed-point `i64` for determinism and converted

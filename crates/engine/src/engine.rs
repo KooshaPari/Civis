@@ -56,6 +56,15 @@ use crate::culture::{
     faction_isolation_pressure,
     FactionIdeologyState,
 };
+use crate::language::{
+    borrow_word, ensure_seeded_word, person_name, person_name_meaning, place_name,
+    place_name_meaning, seeded_language_state, tick_language_for_lineage, LanguageState,
+};
+use crate::psyche_behavior::{behavior_from_psyche, EmotionDrivenBehavior};
+use crate::religion::{
+    apply_big_gods_response, last_religion_sample, substrate_gradients_for,
+    ReligiousProfile, SubstrateGradients,
+};
 use crate::lod::{should_tick_entity_with_policy, LodPolicy};
 use crate::policy::ControlSignals;
 use crate::policy::Policy;
@@ -66,7 +75,7 @@ use crate::replay::{ReplayError, ReplayLog};
 use crate::replay_format::{load_civreplay, save_civreplay};
 
 use crate::conditions::GameOutcome;
-use crate::{Fixed};
+use crate::{CivAge, EraHistory, FactionRelationSnapshot, FactionTechState, Fixed};
 use civ_planet::worldgen::WorldgenConfig;
 
 

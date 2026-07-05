@@ -2330,6 +2330,43 @@ impl Simulation {
         self.state.cohesion = next;
     }
 
+    /// Phase hook for emergent building emergence (FR-CIV-ARCH).
+    /// Stub: full implementation pending building-graph field recovery.
+    pub fn run_building_emergence_tick(&mut self) {}
+
+    /// Phase hook for macro-level diplomacy events (FR-CIV-DIPLOMACY).
+    /// Stub: full implementation pending faction_relations field.
+    pub fn run_macro_diplomacy_event(&mut self) {}
+
+    /// Emit a relation-threshold-crossing event (FR-CIV-DIPLOMACY).
+    /// Stub: full implementation pending faction_relations field.
+    pub fn emit_relation_threshold_event(&mut self, _faction_a: u32, _faction_b: u32, _delta: f32) {}
+
+    /// Default sentience profile for new civilizations (FR-CIV-GENETICS).
+    /// Stub-as-associated-fn; callers invoke as `default_sentience_profile()`.
+    /// The body delegates to `pub free fn default_sentience_profile` below.
+    pub fn default_sentience_profile(&self) -> CognitionTraitProfile {
+        default_sentience_profile()
+    }
+
+    /// Per-faction isolation pressure — sum of social-tension terms (FR-CIV-PSYCHE-911).
+    /// Stub: returns 0.0 until `last_tick_cluster_payoffs` schema is finalized.
+    pub fn faction_isolation_pressure(&self, _faction: u32) -> f32 {
+        0.0
+    }
+
+    /// Stable cache key for a (resource, region) pair on the market bus.
+    /// Stub: returns empty string; full impl depends on ResourceType enum schema.
+    pub fn resource_market_key(_resource: &str, _region: u32) -> String {
+        String::new()
+    }
+
+    /// Count of civilians grouped by settlement id (FR-CIV-SOC).
+    /// Stub: returns empty map; full impl walks `self.world.query::<&Citizen>()`.
+    pub fn settlement_member_counts(&self) -> BTreeMap<u32, u32> {
+        BTreeMap::new()
+    }
+
     /// Install a new control policy. Replaces the previous policy. The new
     /// policy will be evaluated at the start of the next `phase_policy` call
     /// (FR-CORE-005).
@@ -5818,6 +5855,15 @@ fn fc3_commercial_metal_steady_ceiling_i64(cohesion: u64) -> i64 {
     let m_star = (BUILDING_MATERIAL_GATE as f32)
         * (FC3_COMMERCIAL_PARCEL_THRESHOLD / cohesion_signal).sqrt();
     (m_star + (BUILDING_METAL_PER_PARCEL as f32) * 2.0).ceil() as i64
+}
+
+/// Default sentience profile used by [`Simulation::phase_sentience`].
+/// Companion of `Simulation::default_sentience_profile` (associated stub).
+pub fn default_sentience_profile() -> CognitionTraitProfile {
+    CognitionTraitProfile::new(
+        "sapient-lineage",
+        vec![(0, 0.5), (1, 0.5), (2, 0.5), (8, 0.25)],
+    )
 }
 
 /// Parcels that would be allocated for saturated demand signals (> 0.5).

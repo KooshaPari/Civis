@@ -49,7 +49,14 @@ use civ_emergence_metrics::branching::{
     classify_regime, rolling_mean_sigma, sigma_a, sigma_score, BranchingLedger, BranchingRegime,
     DEFAULT_BRANCHING_WINDOW, SIGMA_SUBCRITICAL, SIGMA_SUPERCRITICAL,
 };
-use civ_emergence_metrics::branching::{CriticalityInputs, TileDashboard};
+// Note: a previous `use civ_emergence_metrics::branching::{CriticalityInputs, TileDashboard};`
+// import was removed. `CriticalityInputs` lives in `civ_emergence_metrics::criticality`
+// (not `branching`), and `TileDashboard` is not implemented in `civ_emergence-metrics`
+// (see `civ_emergence_metrics::lib.rs` §"deliberately empty"). Neither was used in
+// this module; the import was dead and blocked compilation.
+// FR-CIV-EMERG-001 follow-up: when `civ_emergence_metrics::dashboard::TileDashboard`
+// lands (per `docs/design/emergence-dashboard.md` §3.6), reintroduce the import from
+// the correct path.
 use civ_emergence_metrics::power_law::PowerLawFit;
 use civ_emergence_metrics::shannon::ShannonEntropy;
 use civ_emergence_metrics::structure::{ComponentSummary, Grid, StructureCount};

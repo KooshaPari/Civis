@@ -8,7 +8,7 @@ use civ_agents::{
     count_civilians,
     daily_path::{pick_target, DailyPathDecision, Poi, PoiKind, PoiRegistry},
     propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at,
-    ActorVisualKind, AgentAction, Alignment, Civilian as AgentCivilian, ClusterId, ClusterMember, CohortStats,
+    ActorVisualKind, Alignment, Civilian as AgentCivilian, ClusterId, ClusterMember, CohortStats,
     DiplomacyMatrix, DiplomacyOutcome, DiplomacySignal, LodTier, Needs, Position3d, Psyche,
     RelationKind, SocialGraph, Tools, Wardrobe,
 
@@ -235,6 +235,30 @@ pub struct PsycheDrivenBehavior {
     pub emotion: EmotionDrivenBehavior,
     pub action: AgentAction,
     pub tick: u64,
+}
+
+/// Engine-local action enum consumed by the psyche-driven behavior
+/// phase. The original `civ_agents::AgentAction` was retired (the
+/// `civ-agents` crate today only exposes the lower-fidelity
+/// `NeedAction` for the needs subsystem); this is the minimal set the
+/// FR-CIV-PSYCHE bridge requires. Variants are the union of values
+/// `phase_psyche_behavior` produces via `action_from_emotion_behavior`.
+///
+/// Engine-locality note: future work could lift this enum into
+/// `civ-agents` once a clean FR-CIV action-surface ships; for now
+/// keeping it engine-side avoids a circular dependency and keeps the
+/// engine crate self-contained for downstream consumers (server, JS
+/// bridges, god-tools UI).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AgentAction {
+    /// Agent is fleeing danger (mapped from [`EmotionDrivenBehavior::Flee`]).
+    Flee,
+    /// Agent is seeking social contact (mapped from
+    /// [`EmotionDrivenBehavior::Cooperate`]).
+    Socialize,
+    /// Agent is performing its default occupation (mapped from
+    /// [`EmotionDrivenBehavior::Aggress`] and [`EmotionDrivenBehavior::Neutral`]).
+    Work,
 }
 
 #[must_use]

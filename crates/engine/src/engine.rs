@@ -14,7 +14,8 @@ use civ_agents::{
 
 };
 use civ_agents::culture::{cultural_distance, CultureProfile};
-use civ_build::{Allocator, BuildingGraph, DemandSignals};
+use civ_audio::{derive_music_cue, mood::MusicCue, triggers::SfxTrigger};
+use civ_build::{Allocator, BuildingGraph, BuildSite, DemandSignals, ProductionEvent};
 use civ_diffusion::DiffusionParams;
 
 use civ_economy::{
@@ -2168,6 +2169,17 @@ impl Simulation {
         } else {
             false
         }
+    }
+
+    /// Borrow emergent era progression state (FR-ERA).
+    #[must_use]
+    pub fn era_progression(&self) -> &crate::era::EraProgressionState {
+        &self.era_progression
+    }
+
+    /// Mutably borrow emergent era progression state (FR-ERA).
+    pub(crate) fn era_progression_mut(&mut self) -> &mut crate::era::EraProgressionState {
+        &mut self.era_progression
     }
 
     /// Research tier derived from unlocked faction tech, with legacy cache fallback.

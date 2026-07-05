@@ -14,6 +14,7 @@ use civ_agents::{
 
 };
 use civ_agents::culture::{cultural_distance, CultureProfile};
+use civ_agents::diplomacy::GriefAccumulator;
 use civ_audio::{derive_music_cue, mood::MusicCue, triggers::SfxTrigger};
 use civ_build::{Allocator, BuildingGraph, BuildSite, DemandSignals, ProductionEvent};
 use civ_diffusion::DiffusionParams;
@@ -666,6 +667,15 @@ pub struct Simulation {
     research_cache: ResearchCache,
     /// Per-faction emergent era/tech progression (FR-ERA).
     pub(crate) era_progression: crate::era::EraProgressionState,
+    /// Per-faction relation matrix (FR-CIV-DIPLOMACY).
+    /// Stub default: empty BTreeMap until DiplomacyMatrix schema is finalized.
+    pub faction_relations: BTreeMap<(u32, u32), f32>,
+    /// Per-tick grief accumulator for casualty → mourning coupling
+    /// (FR-CIV-PSYCHE-911). Stub: zero-valued; full impl tracks faction losses.
+    pub grief_accumulator: civ_agents::diplomacy::GriefAccumulator,
+    /// Scenario-level taxation policy (FR-CIV-ECON-010).
+    /// Stub default: zeroes; full impl wires `civ_economy::Taxation` settings.
+    pub scenario_taxation: civ_economy::Taxation,
     belief: u64,
     /// Per-cluster culture profiles (cluster_cultures key is the cluster id).
     pub cluster_cultures: BTreeMap<u64, CultureProfile>,
@@ -1543,6 +1553,9 @@ impl Simulation {
             next_civilian_id: 1_000_000,
             research_cache: ResearchCache::default(),
             era_progression: crate::era::EraProgressionState::default(),
+            faction_relations: BTreeMap::new(),
+            grief_accumulator: GriefAccumulator::default(),
+            scenario_taxation: civ_economy::Taxation::default(),
             belief: 0,
             cluster_cultures: BTreeMap::new(),
             faction_ideologies: BTreeMap::new(),
@@ -1687,6 +1700,9 @@ impl Simulation {
             next_civilian_id: 1_000_000,
             research_cache: ResearchCache::default(),
             era_progression: crate::era::EraProgressionState::default(),
+            faction_relations: BTreeMap::new(),
+            grief_accumulator: GriefAccumulator::default(),
+            scenario_taxation: civ_economy::Taxation::default(),
             belief: 0,
             cluster_cultures: BTreeMap::new(),
             faction_ideologies: BTreeMap::new(),

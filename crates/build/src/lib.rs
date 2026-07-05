@@ -279,6 +279,23 @@ impl BuildingGraph {
         self.provenance.insert(id, provenance);
     }
 
+    /// Record a building as completed (FR-CIV-BUILD-003).
+    /// Stub: stores the id in the provenance map as a marker;
+    /// full impl adds a dedicated `completed: BTreeSet<BuildingId>` field.
+    pub fn record_completed(&mut self, id: BuildingId) {
+        self.provenance
+            .insert(id, BuildingProvenance::Freehand);
+    }
+
+    /// Count of completed buildings (FR-CIV-BUILD-003).
+    /// Stub: counts Freehand provenance entries; full impl reads the dedicated set.
+    pub fn completed_count(&self) -> usize {
+        self.provenance
+            .values()
+            .filter(|p| matches!(p, BuildingProvenance::Freehand))
+            .count()
+    }
+
     /// Returns parcels whose `era_min` is at or below the supplied era.
     pub fn parcels_at_era(&self, era: u16) -> impl Iterator<Item = &Parcel> {
         self.parcels

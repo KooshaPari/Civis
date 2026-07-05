@@ -57,11 +57,11 @@ pub use mutual_information::{
     mutual_information_bits, mutual_information_normalised, JointHistogram,
 };
 
-// <deliberately empty> — criticality / coupling / novelty / TileDashboard are
-// defined in branching.rs and dashboard.rs and are not re-exported at crate
-// level during the emergence-merge migration. They are accessible from the
-// engine as civ_emergence_metrics::branching::* and
-// civ_emergence_metrics::dashboard::*.
+// Re-export EmergenceDashboard at crate root so engine callers can write
+// `use civ_emergence_metrics::EmergenceDashboard` without depending on the
+// nested `dashboard` module path (FR-EMERGENCE-dashboard hand-off surface;
+// see `crate::dashboard` for the canonical definition and per-field docs).
+pub use dashboard::EmergenceDashboard;
 
 /// Marker version of this crate's public schema. Bumped on breaking changes.
 pub const SCHEMA_VERSION: &str = "0.5.0-power-law-alpha";

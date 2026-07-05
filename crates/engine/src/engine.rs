@@ -1559,7 +1559,6 @@ impl Simulation {
             last_tick_combat_pulses: Vec::new(),
             last_tick_disaster_pulses: Vec::new(),
             last_tick_engagements: Vec::new(),
-            faction_aggression: BTreeMap::new(),
             last_tick_mod_lifecycle: Vec::new(),
             last_tick_audio_events: Vec::new(),
             last_tick_daily_path: Vec::new(),
@@ -1572,9 +1571,6 @@ impl Simulation {
                 seed: 42,
                 ..ReplayLog::default()
             },
-            last_settlement_count: 0,
-            last_life_deaths: 0,
-            cluster_stocks: BTreeMap::new(),
             economy_policy: DEFAULT_ECONOMY_POLICY,
             policy: Box::new(crate::policy::NoopPolicy),
             last_control_signals: ControlSignals::default(),
@@ -1706,7 +1702,6 @@ impl Simulation {
             last_tick_voxel_damage_count: 0,
             last_tick_combat_pulses: Vec::new(),
             last_tick_engagements: Vec::new(),
-            faction_aggression: BTreeMap::new(),
             last_tick_mod_lifecycle: Vec::new(),
             last_tick_audio_events: Vec::new(),
             last_tick_daily_path: Vec::new(),
@@ -1719,9 +1714,6 @@ impl Simulation {
                 seed,
                 ..ReplayLog::default()
             },
-            last_settlement_count: 0,
-            last_life_deaths: 0,
-            cluster_stocks: BTreeMap::new(),
             economy_policy: DEFAULT_ECONOMY_POLICY,
             policy: Box::new(crate::policy::NoopPolicy),
             last_control_signals: ControlSignals::default(),
@@ -5870,21 +5862,6 @@ pub(crate) const COHESION_PER_AWAKENING: i64 = 2;
 /// Hard per-tick cap on awakening-driven cohesion nudge (signed i64 so the
 /// existing floored-at-zero cohesion mutator absorbs any overshoot cleanly).
 pub(crate) const MAX_AWAKENING_COHESION_PER_TICK: i64 = 10;
-/// Belief pulse minted per awakening this tick. Mirrors the cohesion policy
-/// so FR-CIV-GENETICS / FR-CIV-LEGENDS awakening events are expressed across
-/// both axes (faith + cohesion) symmetrically.
-pub const BELIEF_PER_AWAKENING: u64 = 1;
-/// Per-tick cap on awakening-driven belief so a single dramatic explosion
-/// of awakenings cannot flood the belief reserve.
-pub const MAX_AWAKENING_BELIEF_PER_TICK: u64 = 16;
-/// FR-CIV-GENETICS / FR-CIV-LEGENDS: pure gain fn for the awakening -> belief
-/// pulse. Returns `u64` to match `Simulation::add_belief`. The inner product
-/// is clamped to the per-tick cap.
-#[must_use]
-pub fn awakening_belief_gain(awakenings_this_tick: usize) -> u64 {
-    let raw = (awakenings_this_tick as u64).saturating_mul(BELIEF_PER_AWAKENING);
-    raw.min(MAX_AWAKENING_BELIEF_PER_TICK)
-}
 /// FR-CIV-GENETICS / FR-CIV-LEGENDS: pure gain fn for the awakening -> cohesion
 /// pulse. Returns a signed i64 (matches `cohesion_delta`'s contract). The
 /// inner product is clamped to the per-tick cap.
@@ -6945,16 +6922,6 @@ pub struct SimulationSnapshot {
 // *not* phase methods and remain in this trailing impl block because
 // they have no primary-block duplicates.
 impl Simulation {
-    /// Adjust cohesion for a faction (no-op stub used by tests).
-    pub fn add_cohesion(&mut self, _delta: i64) {}
-    /// Lookup the ECS entity id for a faction agent (no-op stub).
-    pub fn agent_entity(&self, agent_id: u64) -> Option<Entity> {
-        self.world
-            .query::<&AgentCivilian>()
-            .iter()
-            .find_map(|(entity, civilian)| (civilian.id == agent_id).then_some(entity))
-    }
-
     /// Snapshot all civilian agent identity components.
     #[must_use]
     pub fn all_agents(&self) -> Vec<AgentCivilian> {
@@ -6963,15 +6930,6 @@ impl Simulation {
             .iter()
             .map(|(_, civilian)| civilian.clone())
             .collect()
-    }
-    /// Micro-actor action count for emergence metrics.
-
-    pub fn micro_actor_action_count(&self) -> u32 {
-        0
-    }
-    /// Micro-descendant action count for emergence metrics (no-op stub).
-    pub fn micro_descendant_action_count(&self) -> u32 {
-        0
     }
 }
 

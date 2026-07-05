@@ -211,7 +211,7 @@ fn seeded_morpheme(seed: [f32; 4], meaning: u32) -> Morpheme {
     let mut rng = seeded_rng_for_seed(seed, meaning);
     let feature_len = 2 + (rng.next_u32() % 2) as usize;
     let mut phonemes = Vec::with_capacity(feature_len);
-    for idx in 0..feature_len {
+    for _idx in 0..feature_len {
         let mut features = [0.0_f32; PHONEME_FEATURES];
         for i in 0..PHONEME_FEATURES {
             let drift = (rng.next_u32() as f32 / u32::MAX as f32 - 0.5) * 0.4;

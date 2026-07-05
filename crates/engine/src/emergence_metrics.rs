@@ -49,6 +49,7 @@ use civ_emergence_metrics::branching::{
     classify_regime, rolling_mean_sigma, sigma_a, sigma_score, BranchingLedger, BranchingRegime,
     DEFAULT_BRANCHING_WINDOW, SIGMA_SUBCRITICAL, SIGMA_SUPERCRITICAL,
 };
+use civ_emergence_metrics::dashboard::EmergenceDashboard;
 // Note: a previous `use civ_emergence_metrics::branching::{CriticalityInputs, TileDashboard};`
 // import was removed. `CriticalityInputs` lives in `civ_emergence_metrics::criticality`
 // (not `branching`), and `TileDashboard` is not implemented in `civ_emergence-metrics`

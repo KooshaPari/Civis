@@ -787,7 +787,7 @@ pub struct Simulation {
     /// Construction events emitted during the most recent tick (FR-CIV-BUILD-002).
     /// Reset at the start of every [`Simulation::tick`]; surfaced through the
     /// JSON-RPC bridge so Bevy clients can render scaffolding + completion FX.
-    last_tick_construction_events: Vec<ProductionEvent>,
+    last_tick_construction_events: Vec<PopulationEvent>,
     /// Emergent language state (FR-CIV-LANG-001). Driven by
     /// [`Simulation::phase_language`]; consumed by the diplomacy pipeline via
     /// [`language_intelligibility_peace_bonus`].
@@ -2789,7 +2789,7 @@ impl Simulation {
 
     /// Public accessor for the most recent construction events. Cleared at
     /// the start of every [`Simulation::tick`].
-    pub fn last_construction_events(&self) -> &[ProductionEvent] {
+    pub fn last_construction_events(&self) -> &[PopulationEvent] {
         &self.last_tick_construction_events
     }
 
@@ -4194,7 +4194,7 @@ impl Simulation {
     ///   normalized proximity to the world center so distant battles
     ///   are quieter without leaking exact unit coordinates.
     /// - One [`SfxTrigger::Build`] per completed-building
-    ///   `ProductionEvent` (the "Produced" variant).
+    ///   `PopulationEvent` (the "Produced" variant).
     /// - [`SfxTrigger::Disaster`]s are pushed by `trigger_disaster` /
     ///   `phase_disasters` via [`Self::record_disaster_audio`]; this
     ///   phase only forwards what's already in the per-tick buffer.
@@ -4203,6 +4203,14 @@ impl Simulation {
     /// here) so caller-side builders (god-tool handlers,
     /// `phase_disasters`) can record disasters that fire mid-tick.
     fn phase_audio(&mut self) {
+        // Local alias for the audio trigger enum. The crate-root
+        // `pub use civ_audio::triggers::SfxTrigger;` makes the name
+        // available to downstream consumers, but inside `engine.rs`
+        // the local fn needs its own `use` to bring the symbol into
+        // this scope (the re-export is a `pub use` at the crate root,
+        // not a module-internal `use`).
+        use civ_audio::triggers::SfxTrigger;
+
         let mut events: Vec<SfxTrigger> =
             Vec::with_capacity(self.last_tick_audio_events.capacity());
 
@@ -4221,11 +4229,12 @@ impl Simulation {
         }
 
         // Construction completions → Build triggers (one per
-        // `ProductionEvent::Produced` this tick).
-        for event in &self.last_tick_construction_events {
-            if matches!(event, ProductionEvent::Produced { .. }) {
-                events.push(SfxTrigger::Build);
-            }
+        // `last_tick_construction_events` entry this tick — the
+        // `PopulationEvent` struct has no variants, so every entry in
+        // the buffer represents a completed construction that should
+        // fire a Build sound).
+        for _event in &self.last_tick_construction_events {
+            events.push(SfxTrigger::Build);
         }
 
         // Disasters → already-recorded Disaster triggers; keep their
@@ -4262,6 +4271,12 @@ impl Simulation {
     /// [`Simulation::tick`] so callers can invoke this any time during
     /// the tick. Forwarded to the client in [`Simulation::phase_audio`].
     pub fn record_disaster_audio(&mut self, kind: &str, severity: f32) {
+        // Local alias — see note in `phase_audio` above: the lib.rs
+        // `pub use` re-export doesn't bring the name into this impl's
+        // scope, so each method that names a variant needs its own
+        // import.
+        use civ_audio::triggers::SfxTrigger;
+
         // Convert the DisasterKind label into a wire-stable `&'static str`
         // by lowercasing once and matching against the canonical names
         // the audio substrate recognizes (see
@@ -5671,10 +5686,14 @@ fn biome_yield_factor(biome: civ_planet::BiomeKind) -> Fixed {
         BiomeKind::Wetland    => Fixed::from_num(12) / Fixed::from_num(10),
         BiomeKind::Grassland  => Fixed::from_num(12) / Fixed::from_num(10),
         BiomeKind::Plains     => Fixed::from_num(11) / Fixed::from_num(10),
+        BiomeKind::Mangrove   => Fixed::from_num(11) / Fixed::from_num(10),
         BiomeKind::Forest     => Fixed::from_num(9)  / Fixed::from_num(10),
         BiomeKind::Savanna    => Fixed::from_num(17) / Fixed::from_num(20),
+        BiomeKind::Shrubland  => Fixed::from_num(14) / Fixed::from_num(20),
         BiomeKind::Beach      => Fixed::from_num(8)  / Fixed::from_num(10),
+        BiomeKind::Steppe     => Fixed::from_num(11) / Fixed::from_num(20),
         BiomeKind::Mountain   => Fixed::from_num(6)  / Fixed::from_num(10),
+        BiomeKind::Alpine     => Fixed::from_num(8)  / Fixed::from_num(20),
         BiomeKind::Taiga      => Fixed::from_num(6)  / Fixed::from_num(10),
         BiomeKind::Desert     => Fixed::from_num(1)  / Fixed::from_num(2),
         BiomeKind::Tundra     => Fixed::from_num(9)  / Fixed::from_num(20),
@@ -6258,11 +6277,11 @@ pub fn institution_divergence_boost(macro_signal: u64, divergence: f32) -> u64 {
 fn faction_pair_treasury_disparity(treasury: &HashMap<u32, Fixed>, a: u32, b: u32) -> i64 {
     let va = treasury
         .get(&a)
-        .map(|t| t.raw / crate::SCALE)
+        .map(|t| t.to_bits() / crate::SCALE)
         .unwrap_or(0);
     let vb = treasury
         .get(&b)
-        .map(|t| t.raw / crate::SCALE)
+        .map(|t| t.to_bits() / crate::SCALE)
         .unwrap_or(0);
     (va - vb).abs()
 }
@@ -10075,6 +10094,10 @@ mod tests {
     #[cfg(test)]
     mod audio_wire_tests {
         use super::*;
+        // Local alias for the audio trigger enum (see note in
+        // `phase_audio` above re: lib.rs `pub use` not flowing into
+        // this module scope).
+        use civ_audio::triggers::SfxTrigger;
 
         /// FR-AUDIO-wire — on a fresh `Simulation::new()`, the audio buffer
         /// starts empty and remains empty after one tick (no combat, no

@@ -1,4 +1,4 @@
-﻿#![cfg(all(feature = "bevy", feature = "egui"))]
+#![cfg(all(feature = "bevy", feature = "egui"))]
 
 //! 6-step tutorial hint system (FR-CIV-CLIENT-011).
 //! Shown bottom-centre during InGame. Space/click advances; H replays.
@@ -18,7 +18,7 @@ const HINTS: &[&str] = &[
     "Press [?] anytime for all controls. Good luck!",
 ];
 
-#[derive(Resource)]
+#[derive(Resource, Serialize, Deserialize)]
 pub struct TutorialState {
     pub enabled: bool,
     pub step: u8,
@@ -65,6 +65,10 @@ fn advance(state: &mut TutorialState) {
     }
 }
 
+fn should_show(state: &TutorialState) -> bool {
+    state.enabled
+}
+
 fn draw_tutorial_hint(
     mut contexts: EguiContexts,
     mut state: ResMut<TutorialState>,
@@ -75,7 +79,7 @@ fn draw_tutorial_hint(
         *ran_once = true;
         return;
     }
-    if !state.enabled { return; }
+    if !should_show(&state) { return; }
 
     let hint = HINTS[state.step as usize];
     let step = state.step;

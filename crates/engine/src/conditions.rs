@@ -12,32 +12,37 @@ const TYRANNY_TICKS_THRESHOLD: u64 = 200;
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum GameOutcome {
-    Victory { faction: Option<u32>, kind: String },
-    Defeat { reason: String },
+    /// Victory event carrying the victory-reason string (e.g. "Thriving
+    /// Civilization (Player)"). Tuple-style so callers can build it with
+    /// `GameOutcome::Victory(reason.into())` without naming fields.
+    Victory(String),
+    /// Defeat event carrying the defeat reason.
+    Defeat(String),
+    /// Game still in progress.
     Ongoing,
 }
 
 impl GameOutcome {
     pub fn tag(&self) -> &'static str {
         match self {
-            Self::Victory { .. } => "victory",
-            Self::Defeat { .. } => "defeat",
+            Self::Victory(_) => "victory",
+            Self::Defeat(_) => "defeat",
             Self::Ongoing => "ongoing",
         }
     }
 
     pub fn reason(&self) -> &str {
         match self {
-            Self::Victory { kind, .. } => kind.as_str(),
-            Self::Defeat { reason } => reason.as_str(),
+            Self::Victory(kind) => kind.as_str(),
+            Self::Defeat(reason) => reason.as_str(),
             Self::Ongoing => "",
         }
     }
 
     pub fn faction(&self) -> Option<u32> {
         match self {
-            Self::Victory { faction, .. } => *faction,
-            Self::Defeat { .. } | Self::Ongoing => None,
+            Self::Victory(_) => None,
+            Self::Defeat(_) | Self::Ongoing => None,
         }
     }
 }
@@ -51,9 +56,7 @@ pub fn check_outcome(sim: &Simulation) -> GameOutcome {
 
     // ── Defeat: extinction ───────────────────────────────────────────────────
     if !state.factions.is_empty() && state.population == 0 {
-        return GameOutcome::Defeat {
-            reason: "Civilization Collapsed".to_owned(),
-        };
+        return GameOutcome::Defeat("Civilization Collapsed".to_owned());
     }
 
     // ── Defeat: tyranny (single faction > 95 % pop for 200 ticks) ───────────
@@ -69,9 +72,7 @@ pub fn check_outcome(sim: &Simulation) -> GameOutcome {
         for (_, wealth) in &state.faction_treasury {
             let share = wealth.to_f64().max(0.0) / total_treasury;
             if share >= TYRANNY_POPULATION_SHARE && tick >= TYRANNY_TICKS_THRESHOLD {
-                return GameOutcome::Defeat {
-                    reason: "Tyranny".to_owned(),
-                };
+                return GameOutcome::Defeat("Tyranny".to_owned());
             }
         }
     }
@@ -82,26 +83,17 @@ pub fn check_outcome(sim: &Simulation) -> GameOutcome {
         e.kind == DiplomacyKind::Conflict && tick.saturating_sub(e.tick) < PEACE_TICKS_THRESHOLD
     });
     if !recent_conflict && tick >= PEACE_TICKS_THRESHOLD {
-        return GameOutcome::Victory {
-            faction: None,
-            kind: "Age of Harmony".to_owned(),
-        };
+        return GameOutcome::Victory("Age of Harmony".to_owned());
     }
 
     // ── Victory: population > 10 000 ────────────────────────────────────────
     if state.population >= POPULATION_VICTORY {
-        return GameOutcome::Victory {
-            faction: None,
-            kind: "Thriving Civilization".to_owned(),
-        };
+        return GameOutcome::Victory("Thriving Civilization".to_owned());
     }
 
     // ── Victory: all 12 techs researched ────────────────────────────────────
     if sim.research_cache().researched.len() >= TECH_VICTORY_COUNT {
-        return GameOutcome::Victory {
-            faction: None,
-            kind: "Age of Enlightenment".to_owned(),
-        };
+        return GameOutcome::Victory("Age of Enlightenment".to_owned());
     }
 
     GameOutcome::Ongoing
@@ -127,7 +119,7 @@ mod tests {
         sim.state.population = POPULATION_VICTORY;
         assert!(matches!(
             check_outcome(&sim),
-            GameOutcome::Victory { kind, .. } if kind == "Thriving Civilization"
+            GameOutcome::Victory(kind) if kind == "Thriving Civilization"
         ));
     }
 

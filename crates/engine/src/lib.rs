@@ -19,6 +19,8 @@ pub mod engine;
 pub mod emergence;
 pub mod disasters;
 pub mod emergence_metrics;
+pub mod faction_decisions;
+pub mod gameplay;
 pub mod hash_chain;
 pub mod integrity;
 pub mod invariants;
@@ -309,7 +311,7 @@ pub fn step(mut state: WorldState, consumption_joules: Fixed) -> WorldState {
     let result = state
         .energy_budget_joules
         .saturating_sub(consumption_joules);
-    state.energy_budget_joules = if result.raw < 0 { Fixed::ZERO } else { result };
+    state.energy_budget_joules = if result.to_bits() < 0 { Fixed::ZERO } else { result };
     state
 }
 

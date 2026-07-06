@@ -5,7 +5,7 @@
 //! legends ingest → civ-ai naming. Surfaced via [`EmergenceFeedEvent`] and getters
 //! on [`Simulation`].
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use civ_agents::culture::{drift_populations, ContactEdge, CultureProfile};
 use civ_agents::language::{
@@ -32,7 +32,6 @@ use civ_legends::{
 };
 use civ_planet::GeologyMap;
 use civ_voxel::FIXED_SCALE;
-use civ_legends::{LegendEntityId, NameRef, SimRuntimeId};
 use civ_needs::Needs as LifeNeeds;
 use civ_species::express;
 use hecs::Entity;
@@ -2199,6 +2198,71 @@ pub fn currency_adoption(trade_volume: f32, trust: f32) -> f32 {
     let trust = trust.clamp(0.0, 1.0);
     let trade_signal = trade_volume / (trade_volume + 1_000.0);
     (0.75 * trade_signal + 0.25 * trust).clamp(0.0, 1.0)
+}
+
+// TODO(cleanup-surgeon): re-add stubs (types + free fns) for D1 compile gate.
+//
+// The following symbols are forward-declared placeholders so the engine
+// compiles while the real implementations are restored in follow-up lanes.
+
+/// Per-faction emergent religion signal (FR-CIV-RELIGION-001).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct ReligionSignal {
+    pub faction_id: u32,
+    pub monitoring: f32,
+    pub mythic_coherence: f32,
+    pub uncertainty_reduction: f32,
+}
+
+/// Per-snapshot of the `legends_query` JSON-RPC result.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct LegendsQueryResult {
+    pub query_api_version: u32,
+    pub tick: u64,
+    pub node_count: usize,
+    pub saga: Option<civ_legends::Saga>,
+    pub significant: Option<Vec<civ_legends::LegendEdge>>,
+    pub epoch_digest: Option<civ_legends::EpochDigest>,
+    pub empty_reason: Option<String>,
+    pub emergence_feed: Vec<EmergenceFeedEvent>,
+}
+
+/// Stub: build a per-faction religion signal from a settlement rollup.
+/// Mirrors the helper the religion phase consumes.
+#[must_use]
+pub fn faction_religion(
+    _dominant: &BTreeMap<u64, u32>,
+    _monitoring: &BTreeMap<u32, (f32, u32)>,
+    _cluster_member_counts: &BTreeMap<u64, u32>,
+    _settlement_contacts: &BTreeSet<(u64, u64)>,
+) -> BTreeMap<u32, (f32, u32)> {
+    BTreeMap::new()
+}
+
+/// Stub: per-cluster dominant faction (alias of `settlement_dominant_factions`
+/// in the engine module — re-exported here to keep `emergence_culture` self
+/// contained).
+#[must_use]
+pub fn dominant_by_cluster(
+    world: &hecs::World,
+    member_counts: &BTreeMap<u64, u32>,
+) -> BTreeMap<u64, u32> {
+    let _ = (world, member_counts);
+    BTreeMap::new()
+}
+
+/// Stub: alias of `rollup_cluster_member_counts`.
+#[must_use]
+pub fn cluster_member_counts(world: &hecs::World) -> BTreeMap<u64, u32> {
+    let _ = world;
+    BTreeMap::new()
+}
+
+/// Stub: settlement contact edges — empty until the contact-pair helper is
+/// re-exported.
+#[must_use]
+pub fn settlement_contacts() -> BTreeSet<(u64, u64)> {
+    BTreeSet::new()
 }
 
 #[cfg(test)]

@@ -66,6 +66,7 @@ civ-species = { path = "../species" }
 # tick and exposes the latest sample over the WS JSON-RPC surface.
 civ-emergence-metrics = { path = "../civ-emergence-metrics" }
 civ-institutions = { path = "../civ-institutions" }
+civ-audio = { path = "../audio" }
 
 [dev-dependencies]
 civ-economy = { path = "../economy" }

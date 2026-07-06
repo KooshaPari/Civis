@@ -36,9 +36,9 @@ pub use extraction::{
     find_extraction_site, tick_extraction, ExtractionSite, Extractor, ResourceKind,
 };
 pub use institution::{
-    step_institutions, InstitutionAccount, InstitutionId, InstitutionKind, InstitutionLedger,
-    InstitutionLedgerError, InstitutionPosting, LedgerSide, INSTITUTION_MARKET,
-    INSTITUTION_TREASURY,
+    collect_taxes, step_institutions, InstitutionAccount, InstitutionId, InstitutionKind,
+    InstitutionLedger, InstitutionLedgerError, InstitutionPosting, LedgerSide, Taxation,
+    INSTITUTION_MARKET, INSTITUTION_TREASURY,
 };
 pub use market::{
     DEFAULT_SMOOTHING_FACTOR, GoodId, MarketState, MultiGoodMarket, Order, OrderBook,

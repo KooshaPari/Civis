@@ -3116,6 +3116,7 @@ dependencies = [
  "blake3",
  "chrono",
  "civ-agents",
+ "civ-audio",
  "civ-build",
  "civ-diffusion",
  "civ-economy",

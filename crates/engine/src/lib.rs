@@ -11,15 +11,20 @@
 //! - `metrics` - Tyranny/legitimacy metrics
 //! - `io` - File I/O utilities
 
+pub mod building_layouts;
 pub mod command_queue;
 pub mod conditions;
 pub mod culture;
+pub mod demographics;
 pub mod era;
 pub mod engine;
 pub mod emergence;
 pub mod disasters;
 pub mod emergence_metrics;
+pub mod faction_decisions;
+pub mod gameplay;
 pub mod hash_chain;
+pub mod history;
 pub mod integrity;
 pub mod invariants;
 pub mod io;
@@ -33,6 +38,7 @@ pub mod replay;
 pub mod replay_format;
 pub mod save_bundle;
 pub mod scenario;
+pub mod tech;
 pub mod perf;
 pub mod spawn;
 pub mod spectator;

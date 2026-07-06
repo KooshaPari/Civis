@@ -385,6 +385,25 @@ pub enum DiplomacyKind {
     Peace,
 }
 
+/// Snapshot of a single pair's diplomatic relation after a player action.
+///
+/// Returned by [`Simulation::apply_player_diplomacy_action`] so the server
+/// (and downstream clients) can serialize the post-action relation state
+/// without re-querying the [`DiplomacyMatrix`] internals.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct FactionRelationSnapshot {
+    /// Source faction ID (the player who acted).
+    pub faction_a: u32,
+    /// Target faction ID (the receiving side).
+    pub faction_b: u32,
+    /// Continuous relation score, roughly `[-1.0, 1.0]`.
+    pub score: f32,
+    /// Discrete relation kind derived from `score`.
+    pub kind: RelationKind,
+    /// Number of samples folded into this record.
+    pub samples: u32,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DiplomacyEvent {
     pub tick: u64,

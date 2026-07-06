@@ -7,6 +7,8 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 use crate::engine::Simulation;
+use crate::history::EraHistory;
+use crate::tech::{gather_faction_inputs, tick_research, tick_tech, FactionTechState};
 
 /// Faction civilization age, derived from population + tech + surplus thresholds (FR-ERA).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]

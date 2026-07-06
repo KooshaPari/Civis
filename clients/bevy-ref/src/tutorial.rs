@@ -68,21 +68,6 @@ fn advance(state: &mut TutorialState) {
 fn draw_tutorial_hint(
     mut contexts: EguiContexts,
     mut state: ResMut<TutorialState>,
-) {
-    if !state.enabled { return; }
-
-/// Returns true if the tutorial should show this frame.
-fn should_show(state: &TutorialState) -> bool {
-    match state.visibility {
-        TutorialVisibility::Auto => !state.save_data.completed_once,
-        TutorialVisibility::Manual => true,
-        TutorialVisibility::Hidden => false,
-    }
-}
-
-fn draw_tutorial_hint(
-    mut contexts: EguiContexts,
-    mut state: ResMut<TutorialState>,
     mut ran_once: Local<bool>,
 ) {
     // egui panics if ctx rect/fonts are accessed before its first run; skip frame 1.
@@ -90,7 +75,7 @@ fn draw_tutorial_hint(
         *ran_once = true;
         return;
     }
-    if !should_show(&state) { return; }
+    if !state.enabled { return; }
 
     let hint = HINTS[state.step as usize];
     let step = state.step;

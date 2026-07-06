@@ -15,6 +15,18 @@ use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
+/// FR-CIV-BUILD-001/002/003 — building tiers, production chains, and
+/// construction sites. See `tiers_build` for the full API; this module
+/// re-exports the canonical types so downstream crates can
+/// `use civ_build::*` without diving into the submodule path.
+pub mod tiers_build;
+
+pub use tiers_build::{
+    BuildingSpec, BuildingSpecOverride, BuildingSpecOverrideError, BuildingTier, BuildSite,
+    CompletedBuilding, ProductionChain, ProductionEvent,
+};
+pub use civ_economy::Good as ProductionGood;
+
 /// Provenance tag carried by every building diff so the renderer can style
 /// procedural-grown vs user-freehand structures differently if desired.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -251,6 +263,9 @@ pub struct BuildingGraph {
     pub facades: BTreeMap<BuildingId, FacadeStyle>,
     /// Provenance tag per parcel.
     pub provenance: BTreeMap<BuildingId, BuildingProvenance>,
+    /// Completed buildings keyed by id (`FR-CIV-BUILD-001/002/003`).
+    /// Populated by [`tiers_build::BuildingGraph::record_completed`].
+    pub completed: BTreeMap<BuildingId, tiers_build::CompletedBuilding>,
 }
 
 impl BuildingGraph {
@@ -279,21 +294,16 @@ impl BuildingGraph {
         self.provenance.insert(id, provenance);
     }
 
-    /// Record a building as completed (FR-CIV-BUILD-003).
-    /// Stub: stores the id in the provenance map as a marker;
-    /// full impl adds a dedicated `completed: BTreeSet<BuildingId>` field.
-    pub fn record_completed(&mut self, id: BuildingId) {
-        self.provenance
-            .insert(id, BuildingProvenance::Freehand);
+    /// Count of completed buildings (`FR-CIV-BUILD-001/002/003`).
+    #[must_use]
+    pub fn completed_count(&self) -> usize {
+        self.completed.len()
     }
 
-    /// Count of completed buildings (FR-CIV-BUILD-003).
-    /// Stub: counts Freehand provenance entries; full impl reads the dedicated set.
-    pub fn completed_count(&self) -> usize {
-        self.provenance
-            .values()
-            .filter(|p| matches!(p, BuildingProvenance::Freehand))
-            .count()
+    /// Looks up a completed building by id.
+    #[must_use]
+    pub fn completed(&self, id: BuildingId) -> Option<&tiers_build::CompletedBuilding> {
+        self.completed.get(&id)
     }
 
     /// Returns parcels whose `era_min` is at or below the supplied era.

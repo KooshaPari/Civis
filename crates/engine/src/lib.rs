@@ -33,9 +33,19 @@ pub mod scenario;
 pub mod perf;
 pub mod spawn;
 pub mod spectator;
+pub mod tech;
 
-pub mod tutorial;
-
+// --- post-merge stubs ---------------------------------------------------------
+// The following in-crate modules were removed by earlier cleanup lanes but
+// downstream files (`lib.rs`, `engine.rs`) still hold `use crate::{X};`
+// references. They are stubbed here so the rest of the crate compiles.
+// The .rs files exist as TODO placeholders; a follow-up lane should either
+// restore the originals or rewrite the callers to drop the imports.
+pub mod religion;
+pub mod history;
+pub mod building_layouts;
+pub mod language;
+pub mod psyche_behavior;
 
 pub mod tutorial;
 
@@ -45,17 +55,21 @@ pub mod tutorial;
 /// to `f64`/SI at the economy boundary using this constant.
 pub const SCALE: i64 = 1_000;
 
-pub use religion::{emerge_belief, spread_religion, Belief, BeliefConcept, Religion};
-pub use demographics::{
-    carrying_capacity_from_food, tick_demographics, total_population, AgeGroup, Demographics, DemographicsSnapshot,
-};
+// TODO(cleanup-surgeon): stub. `religion` is currently an empty `pub mod`
+// placeholder; the real Belief/Religion implementations were removed by
+// earlier lanes. Restore from git history, or rewrite callers.
+// pub use religion::{emerge_belief, spread_religion, Belief, BeliefConcept, Religion};
+// pub use demographics::{
+//     carrying_capacity_from_food, tick_demographics, total_population, AgeGroup, Demographics, DemographicsSnapshot,
+// };
 // FR-AUDIO-wire: re-export the audio substrate's SFX trigger enum so
 // downstream crates (civ-server JSON-RPC + WS bridge) can name it as
 // `civ_engine::SfxTrigger` without taking a direct `civ-audio` dep.
-pub use civ_audio::triggers::SfxTrigger;
+// TODO(cleanup-surgeon): `civ-audio` is not in this crate's Cargo.toml; the
+//  engine self-references it from a small number of WS bridge call-sites.
+//  Restore once `civ-audio` is re-added to the workspace as a sibling crate.
+// pub use civ_audio::triggers::SfxTrigger;
 pub use civ_mod_host::{load_manifest, ModBrowserEntry, ModGuestStateSave, ModType};
-pub use civ_planet::Climate;
-pub use civ_tactics::{DamageEvent, DoctrineLibrary};
 pub use emergence::{
     CivAiDecision, EmergenceFeedEvent, EmergenceState,
 };
@@ -64,7 +78,7 @@ pub use emergence_metrics::{EmergenceBranchingState, EmergenceSample};
 pub use engine::{
 
     job_type_for_civilian_id, Building, BuildingType, Citizen, CombatDamagePulse, DiplomacyKind,
-    EconomicFocus, EconomicFocusEvent, FactionRelationSnapshot, Fixed, InstitutionEvent, JobType,
+    EconomicFocus, EconomicFocusEvent, InstitutionEvent, JobType,
     MilitaryUnit, Position, ResourceType, Resources, Sim, SimSeed, Simulation, SimulationSnapshot,
     PsycheDrivenBehavior, StratBand, StratificationEvent, StratificationEventKind,
     StratificationReport, TradeRoute, UnitType, WorldState,
@@ -86,12 +100,17 @@ pub use spectator::SpectatorView;
 // FR-CIV-ARCH: Emergent building layouts re-export so callers can use
 // `civ_engine::EmergentLayout` and `civ_engine::LayoutStrategy` without
 // directly depending on the private `building_layouts` module.
-pub use building_layouts::{
-    EmergentLayout, LayoutStrategy,
-};
+// TODO(cleanup-surgeon): stub. The original `building_layouts` module is
+// gone; downstream files that re-import these types need to be rewritten.
+// pub use building_layouts::{
+//     EmergentLayout, LayoutStrategy,
+// };
 pub use era::{CivAge, CivEra, EraProgressionState, FactionEraSnapshot};
-pub use history::{EraHistory, EraTransition};
-pub use tech::{FactionEmergenceInputs, FactionTechState};
+// TODO(cleanup-surgeon): `history`/`tech` modules are stubs — the real
+// implementations need restoring. These re-exports were the cargo source of
+// the E0432 cascade for era.rs / engine.rs.
+// pub use history::{EraHistory, EraTransition};
+// pub use tech::{FactionEmergenceInputs, FactionTechState};
 
 pub use tutorial::{TutorialMilestone, TutorialProgress};
 
@@ -99,10 +118,13 @@ pub use tutorial::{TutorialMilestone, TutorialProgress};
 // FR-CIV-GOV-001/002/003 (civ-007 institutions epic). Re-exported so callers
 // (server, clients, tests) can `use civ_engine::InstitutionKind` etc. without
 // pulling the `civ-institutions` crate directly.
-pub use civ_institutions::{
-    Institution, InstitutionKind, GARRISON_UNLOCK_POPULATION,
-    TEMPLE_UNLOCK_POPULATION,
-};
+// TODO(cleanup-surgeon): `civ-institutions` is missing from this crate's
+//  Cargo.toml; the engine self-references it. Restore the dependency or
+//  inline the types when the institutions module is re-introduced.
+// pub use civ_institutions::{
+//     Institution, InstitutionKind, GARRISON_UNLOCK_POPULATION,
+//     TEMPLE_UNLOCK_POPULATION,
+// };
 pub use civ_planet::{BiomeKind, Climate, GeologyMap, MoonConfig, PlanetConfig, RegionBiome};
 pub use civ_tactics::{
     apply_damage, bfs_next_step, evolve_doctrine, formation_offsets, grid_to_world_coord,
@@ -140,45 +162,43 @@ pub use lod::{
     aggregate_strategic, operational_hex_snapshot, project_zoom, should_tick_entity,
     should_tick_entity_with_policy, HexCellSnapshot, LodPolicy, ZoomLevel,
 };
-pub use metrics::{compute, compute_fixed, Metrics, MetricsFixed};
-pub use policy::{
-    effective_consumption, policy_from_kind, CapitalistPolicy, ControlSignals, NoopPolicy, Policy,
-    PolicyInput, SubsistenceFirstPolicy, DEFAULT_ECONOMY_POLICY,
-};
-pub use replay::{ReplayError, ReplayEvent, ReplayLog};
+// `metrics` + `policy` already exported above; previously redeclared here as a
+// post-merge dup — removed. `replay`/`replay_format`/`save_bundle`/`scenario`/
+// `spectator` re-exports live in the upper block (lines 70-80); the older
+// broader exports here were colliding with them.
 pub use replay_format::{
-    decode_civreplay, encode_civreplay, load_civreplay, save_civreplay, FOOTER_CHECKSUM_LEN,
+    load_civreplay, save_civreplay, FOOTER_CHECKSUM_LEN,
     FORMAT_VERSION, MAGIC,
 };
-pub use save_bundle::{
-    CivSaveBundle, CivSaveMetadata, SaveBundleError, CIVSAVE_FORMAT_VERSION, CIVSAVE_SPEC_ID,
-};
+pub use save_bundle::{CivSaveMetadata, SaveBundleError, CIVSAVE_FORMAT_VERSION, CIVSAVE_SPEC_ID};
 pub use scenario::{
     baseline_scenario_path, load_scenario, Scenario, ScenarioError, ScenarioMilitary,
     SCENARIO_SCHEMA_VERSION,
 };
-pub use spectator::{BuildingPin, CivPin, Faction, JobLabel, SpectatorView};
+
 
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
-/// Fixed-point type: i64 with 18 decimal places of precision
-/// Stored as raw i64, divided by 10^18 for actual value
+/// Fixed-point type: i64 with 6 decimal places of precision
+/// Stored as raw i64, divided by `FIXED_SCALE` (10^6) for actual value
 /// This ensures deterministic simulation across platforms
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
 pub struct Fixed {
-    /// Raw value scaled by 10^18
+    /// Raw value scaled by `FIXED_SCALE` (10^6)
     pub raw: i64,
 }
 
-pub const SCALE: i64 = 1_000_000; // 10^6 (easier to work with)
-
 impl Fixed {
+    /// Fixed-point scaling factor (10^6). Engine-wide SCALE (i64 joules/i64
+    /// raw, see top of file) is a different unit; this is Fixed-internal.
+    pub const FIXED_SCALE: i64 = 1_000_000;
+
     pub const ZERO: Fixed = Fixed { raw: 0 };
-    pub const ONE: Fixed = Fixed { raw: SCALE };
+    pub const ONE: Fixed = Fixed { raw: Self::FIXED_SCALE };
 
     pub fn from_num<T: TryInto<i128>>(n: T) -> Self {
-        let scaled = n.try_into().unwrap_or(0) * SCALE as i128;
+        let scaled = n.try_into().unwrap_or(0) * Self::FIXED_SCALE as i128;
         Fixed { raw: scaled as i64 }
     }
 
@@ -187,7 +207,7 @@ impl Fixed {
     }
 
     pub fn to_f64(self) -> f64 {
-        self.raw as f64 / SCALE as f64
+        self.raw as f64 / Self::FIXED_SCALE as f64
     }
 
     pub fn saturating_add(self, other: Fixed) -> Fixed {
@@ -231,7 +251,7 @@ impl std::ops::Mul for Fixed {
     type Output = Fixed;
     fn mul(self, other: Fixed) -> Fixed {
         // Multiply and divide by scale to maintain precision
-        let result = (self.raw as i128) * (other.raw as i128) / SCALE as i128;
+        let result = (self.raw as i128) * (other.raw as i128) / Fixed::FIXED_SCALE as i128;
         Fixed { raw: result as i64 }
     }
 }
@@ -239,7 +259,7 @@ impl std::ops::Mul for Fixed {
 impl std::ops::Div for Fixed {
     type Output = Fixed;
     fn div(self, other: Fixed) -> Fixed {
-        let result = (self.raw as i128 * SCALE as i128) / (other.raw.max(1) as i128);
+        let result = (self.raw as i128 * Fixed::FIXED_SCALE as i128) / (other.raw.max(1) as i128);
         Fixed { raw: result as i64 }
     }
 }
@@ -271,7 +291,7 @@ impl<'de> serde::Deserialize<'de> for Fixed {
         D: serde::Deserializer<'de>,
     {
         let f = f64::deserialize(deserializer)?;
-        Ok(Fixed::from_num((f * SCALE as f64) as i64))
+        Ok(Fixed::from_num((f * Fixed::FIXED_SCALE as f64) as i64))
     }
 }
 

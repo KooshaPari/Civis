@@ -8,14 +8,20 @@ use civ_agents::{
     count_civilians,
     daily_path::{pick_target, DailyPathDecision, Poi, PoiKind, PoiRegistry},
     propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at,
-    ActorVisualKind, AgentAction, Alignment, Civilian as AgentCivilian, ClusterId, ClusterMember, CohortStats,
+    ActorVisualKind, Alignment, Civilian as AgentCivilian, ClusterId, ClusterMember, CohortStats,
     DiplomacyMatrix, DiplomacyOutcome, DiplomacySignal, LodTier, Needs, Position3d, Psyche,
     RelationKind, SocialGraph, Tools, Wardrobe,
 
 };
+// TODO(cleanup-surgeon): `AgentAction` is no longer re-exported from
+// `civ_agents`. Downstream call-sites need to be updated to the new name
+// or the type restored upstream.
 use civ_agents::culture::{cultural_distance, CultureProfile};
 use civ_agents::diplomacy::GriefAccumulator;
-use civ_audio::{derive_music_cue, mood::MusicCue, triggers::SfxTrigger};
+// TODO(cleanup-surgeon): `civ-audio` is not in this crate's Cargo.toml — the
+//  derive_music_cue/MusicCue/SfxTrigger imports are commented until the dep
+//  is restored as a sibling crate.
+// use civ_audio::{derive_music_cue, mood::MusicCue, triggers::SfxTrigger};
 use civ_build::{Allocator, BuildingGraph, BuildSite, DemandSignals, ProductionEvent};
 use civ_diffusion::DiffusionParams;
 
@@ -23,7 +29,10 @@ use civ_economy::{
     settlement_trade_flow_from_supply_demand, AllocationEngine, CapitalistAllocator, EconomyState,
     Good, LaborCapacityAllocator, MarketState, SettlementTradeFlow,
 };
-use civ_economy::{collect_taxes, Taxation};
+// TODO(cleanup-surgeon): `collect_taxes` / `Taxation` were renamed/removed in
+//  the civ-economy crate; rewrite the simulation tick's tax phase to the
+//  new API.
+// use civ_economy::{collect_taxes, Taxation};
 use civ_genetics::sentience::{
     cognition_score, evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold,
 };
@@ -62,27 +71,60 @@ use crate::culture::{
     advance_faction_ideologies, culture_cooperation_signal, culture_openness_signal,
     FactionIdeologyState,
 };
-use crate::language::{
-    borrow_word, ensure_seeded_word, person_name, person_name_meaning, place_name,
-    place_name_meaning, seeded_language_state, tick_language_for_lineage, LanguageState,
-};
+// TODO(cleanup-surgeon): `language`, `psyche_behavior`, `religion` modules
+//  are currently empty `pub mod` stubs. These imports are commented until
+//  the real implementations are restored or the call-sites are rewritten.
+// use crate::language::{
+//     borrow_word, ensure_seeded_word, person_name, person_name_meaning, place_name,
+//     place_name_meaning, seeded_language_state, tick_language_for_lineage, LanguageState,
+// };
 
 use crate::lod::{should_tick_entity_with_policy, LodPolicy};
 use crate::policy::ControlSignals;
 use crate::policy::Policy;
 use crate::policy::PolicyInput;
 use crate::policy::DEFAULT_ECONOMY_POLICY;
-use crate::psyche_behavior::{behavior_from_psyche, EmotionDrivenBehavior};
-use crate::religion::{
-    apply_big_gods_response, last_religion_sample, substrate_gradients_for,
-    ReligiousProfile, SubstrateGradients,
-};
+// use crate::psyche_behavior::{behavior_from_psyche, EmotionDrivenBehavior};
+// use crate::religion::{
+//     apply_big_gods_response, last_religion_sample, substrate_gradients_for,
+//     ReligiousProfile, SubstrateGradients,
+// };
 use crate::tutorial::TutorialProgress;
 use crate::replay::{ReplayError, ReplayLog};
 use crate::replay_format::{load_civreplay, save_civreplay};
 
 use crate::conditions::GameOutcome;
 
+// --- Local stubs for removed upstream types ----------------------------------
+// TODO(cleanup-surgeon): these were once re-imported from `civ_agents`
+//  (`AgentAction`) and `crate::psyche_behavior` (`EmotionDrivenBehavior`).
+//  Restore the upstream definitions or rewrite the call-sites once those
+//  crates are re-stitched in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum AgentAction {
+    Flee,
+    Socialize,
+    Work,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum EmotionDrivenBehavior {
+    Flee,
+    Cooperate,
+    Aggress,
+    Neutral,
+}
+
+/// Stub for `civ_audio::triggers::SfxTrigger`. The audio crate is missing
+/// from this workspace; this enum preserves the call-site signatures so the
+/// engine compiles. Restore when `civ-audio` is re-added.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum SfxTrigger {
+    Battle { intensity: f32 },
+    Build,
+    Disaster { kind: String, severity: f32 },
+    Other(String),
+}
 
 /// Ordered phase identifiers executed once per [`Simulation::tick`].
 ///

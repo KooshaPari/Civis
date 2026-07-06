@@ -742,8 +742,6 @@ pub struct Simulation {
     pub(crate) last_tick_disaster_pulses: Vec<crate::disasters::DisasterPulse>,
     /// Engagements resolved this tick (war bridge); feeds doctrine fitness.
     pub(crate) last_tick_engagements: Vec<CombatEngagement>,
-    /// Per-faction mean aggression snapshot rebuilt during emergence.
-    pub(crate) faction_aggression: BTreeMap<u32, f32>,
     /// `mod.loaded.v1` replay-bus JSON emitted when mods load (cleared each tick).
     last_tick_mod_lifecycle: Vec<String>,
     /// Audio events derived from substrate signals on the most recent tick
@@ -770,9 +768,6 @@ pub struct Simulation {
 
     operational: NoopOperationalLayer,
     replay_log: ReplayLog,
-    pub(crate) last_settlement_count: u32,
-    pub(crate) last_life_deaths: u32,
-    cluster_stocks: BTreeMap<u64, ClusterStocks>,
     /// Scenario economy policy (`base_consumption_joules`, `scarcity_multiplier`).
     pub economy_policy: PolicyInput,
     /// Active control policy (FR-CORE-005). Read in [`Self::phase_policy`]
@@ -1233,11 +1228,13 @@ fn compute_gini(wealths: &[i64]) -> f64 {
     if sum <= 0.0 {
         return 0.0;
     }
-    let mut cumulative = 0.0_f64;
     let mut weighted_sum = 0.0_f64;
     for (i, w) in sorted.iter().enumerate() {
-        cumulative += *w as f64;
         // Lorenz curve: cumulative wealth / total wealth; index i+1 out of n.
+        // `weighted_sum` is the only feed into the Gini formula; we keep the
+        // existing Lorenz derivation semantics (i+1 out of n) without
+        // tracking a separate `cumulative` accumulator that the formula
+        // never reads.
         weighted_sum += (i as f64 + 1.0) * (*w as f64);
     }
     let gini = (2.0 * weighted_sum) / (n * sum) - (n + 1.0) / n;
@@ -2895,7 +2892,7 @@ impl Simulation {
         sid: u32,
         kind: civ_institutions::InstitutionKind,
         new_level: u8,
-        events: &mut Vec<InstitutionEvent>,
+        _events: &mut Vec<InstitutionEvent>,
     ) {
         let key = (sid, institution_kind_key(kind), new_level);
         if self.institution_levels_emitted.contains(&key) {
@@ -3578,7 +3575,7 @@ impl Simulation {
                 next_settlement_id = next_settlement_id.saturating_add(1);
                 found_new_settlements.push((settlement_id, new_settlement_id, migration_count as u32));
 
-                for (entity, id, mut sample) in candidates.into_iter().take(migration_count) {
+                for (entity, _id, mut sample) in candidates.into_iter().take(migration_count) {
                     if let Ok(mut civilian) = self.world.get::<&mut AgentCivilian>(entity) {
                         civilian.alignment = Alignment::Faction(new_settlement_id);
                     }
@@ -3586,8 +3583,10 @@ impl Simulation {
                         let (nx, ny) = settlement_anchor_for(new_settlement_id, sample.x, sample.y);
                         pos.coord.x = (nx * FIXED_SCALE as f32) as i64;
                         pos.coord.z = (ny * FIXED_SCALE as f32) as i64;
-                        sample.x = nx;
-                        sample.y = ny;
+                        // NB: sample.x / sample.y are read by `settlement_anchor_for`
+                        // but the resulting `nx` / `ny` are only fed into the
+                        // `Position3d` mutation above; the writes back to the
+                        // local `sample` were dead and have been removed.
                     }
                 }
             }

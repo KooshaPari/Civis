@@ -38,6 +38,15 @@ chrono = { version = "0.4", features = ["serde"] }
 
 # Civis 3D voxel substrate (sibling Phenotype-org repo via civ-voxel).
 civ-agents = { path = "../agents" }
+# FR-AUDIO-wire: audio substrate for the per-tick SFX trigger buffer
+# (see `crates/audio/src/triggers.rs` for the SfxTrigger enum the
+# engine re-exports at the crate root as `civ_engine::SfxTrigger`).
+# The lib.rs `pub use civ_audio::triggers::SfxTrigger;` made the name
+# visible downstream, but engine internals (`Vec<SfxTrigger>` field,
+# phase_audio / record_disaster_audio / audio_wire_tests) need this
+# path dep so the local `use civ_audio::triggers::SfxTrigger;` imports
+# resolve at cargo build time.
+civ-audio = { path = "../audio" }
 civ-needs = { path = "../needs" }
 civ-build = { path = "../build" }
 civ-diffusion = { path = "../diffusion" }

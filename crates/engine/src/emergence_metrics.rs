@@ -412,13 +412,11 @@ impl Simulation {
             .saturating_add(units);
     }
 
-    fn micro_actor_action_count(&self) -> u32 {
-        self.emergence_branching.last_tick_unrest_events
-    }
-
-    fn micro_descendant_action_count(&self) -> u32 {
-        self.last_tick_engagements.len().try_into().unwrap_or(u32::MAX)
-    }
+    // NB: `micro_actor_action_count` / `micro_descendant_action_count` are
+    // intentionally defined ONLY on the inherent `Simulation` impl in
+    // engine.rs (canonical, pub). Earlier bad-merge corruption placed
+    // trait-style duplicates here; both have been removed to resolve the
+    // E0034 "multiple definitions" errors.
 
     /// Take one emergence sample if the current tick is on a sample
     /// boundary (every [`EMERGENCE_SAMPLE_INTERVAL`] ticks). The

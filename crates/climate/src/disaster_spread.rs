@@ -34,9 +34,10 @@
 #![forbid(unsafe_code)]
 
 /// The kind of hazard tracked on the disaster grid.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum HazardKind {
     /// Wildfire / structural fire — spreads quickly, decays moderately.
+    #[default]
     Fire,
     /// Flooding — spreads slowly, persists longer.
     Flood,

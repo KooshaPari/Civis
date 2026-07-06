@@ -49,11 +49,10 @@ use civ_emergence_metrics::branching::{
     classify_regime, rolling_mean_sigma, sigma_a, sigma_score, BranchingLedger, BranchingRegime,
     DEFAULT_BRANCHING_WINDOW, SIGMA_SUBCRITICAL, SIGMA_SUPERCRITICAL,
 };
-use civ_emergence_metrics::branching::{CriticalityInputs, TileDashboard};
 use civ_emergence_metrics::power_law::PowerLawFit;
 use civ_emergence_metrics::shannon::ShannonEntropy;
 use civ_emergence_metrics::structure::{ComponentSummary, Grid, StructureCount};
-use civ_emergence_metrics::{Histogram, Metric};
+use civ_emergence_metrics::{EmergenceDashboard, Histogram, Metric};
 use civ_voxel::{fluid_ca::CaGrid, material::AIR};
 use civ_voxel::{MaterialId, OctreeNode, VoxelWorld, CHUNK_EDGE};
 use serde::{Deserialize, Serialize};

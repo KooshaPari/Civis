@@ -41,6 +41,7 @@ use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
+use crate::culture::advance_faction_ideologies;
 use crate::engine::{Simulation, awakening_belief_gain, awakening_cohesion_gain};
 
 /// Notable emergence this tick — event feed / inspect panels (FR-CIV-LEGENDS-QUERY-07).

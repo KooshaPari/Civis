@@ -332,6 +332,22 @@ impl Simulation {
         for (key, profile) in keys.into_iter().zip(profiles) {
             self.emergence.cluster_cultures.insert(key, profile);
         }
+
+        // Derive per-cluster dominant faction + member counts + contact edges so
+        // the religion rollup below has the inputs it needs (FR-CIV-RELIGION-001).
+        let mut dominant_by_cluster: BTreeMap<u64, u32> = BTreeMap::new();
+        for (_, member) in self.world.query::<&ClusterMember>().iter() {
+            *dominant_by_cluster.entry(member.cluster.0).or_insert(0) += 1;
+        }
+        let cluster_member_counts = cluster_member_counts(&self.world);
+        let settlement_contacts = settlement_contacts();
+
+        let faction_religion = faction_religion(
+            &dominant_by_cluster,
+            &BTreeMap::new(),
+            &cluster_member_counts,
+            &settlement_contacts,
+        );
         let mut faction_religion_signal = BTreeMap::new();
         for (faction_id, (monitor_sum, count)) in faction_religion {
             if count > 0 {
@@ -2221,7 +2237,7 @@ pub struct LegendsQueryResult {
     pub tick: u64,
     pub node_count: usize,
     pub saga: Option<civ_legends::Saga>,
-    pub significant: Option<Vec<civ_legends::LegendEdge>>,
+    pub significant: Option<Vec<civ_legends::EntityRef>>,
     pub epoch_digest: Option<civ_legends::EpochDigest>,
     pub empty_reason: Option<String>,
     pub emergence_feed: Vec<EmergenceFeedEvent>,

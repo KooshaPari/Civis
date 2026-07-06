@@ -441,6 +441,12 @@ fn apply_disaster_resource_loss(kind: DisasterKind, terrain_cells: u32) -> Resou
             delta.metal = Fixed::ZERO;
             delta.energy = (Fixed::from_num(1.0) * scale).min(Fixed::from_num(4.0));
         }
+        DisasterKind::Drought => {
+            delta.food = (Fixed::from_num(6.0) * scale).min(Fixed::from_num(24.0));
+            delta.wood = (Fixed::from_num(1.0) * scale).min(Fixed::from_num(4.0));
+            delta.metal = Fixed::ZERO;
+            delta.energy = (Fixed::from_num(1.0) * scale).min(Fixed::from_num(4.0));
+        }
     }
     delta
 }

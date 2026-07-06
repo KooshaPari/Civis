@@ -182,120 +182,16 @@ pub use scenario::{
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
-/// Fixed-point type: i64 with 6 decimal places of precision
-/// Stored as raw i64, divided by `FIXED_SCALE` (10^6) for actual value
-/// This ensures deterministic simulation across platforms
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
-pub struct Fixed {
-    /// Raw value scaled by `FIXED_SCALE` (10^6)
-    pub raw: i64,
-}
-
-impl Fixed {
-    /// Fixed-point scaling factor (10^6). Engine-wide SCALE (i64 joules/i64
-    /// raw, see top of file) is a different unit; this is Fixed-internal.
-    pub const FIXED_SCALE: i64 = 1_000_000;
-
-    pub const ZERO: Fixed = Fixed { raw: 0 };
-    pub const ONE: Fixed = Fixed { raw: Self::FIXED_SCALE };
-
-    pub fn from_num<T: TryInto<i128>>(n: T) -> Self {
-        let scaled = n.try_into().unwrap_or(0) * Self::FIXED_SCALE as i128;
-        Fixed { raw: scaled as i64 }
-    }
-
-    pub fn from_raw(raw: i64) -> Self {
-        Fixed { raw }
-    }
-
-    pub fn to_f64(self) -> f64 {
-        self.raw as f64 / Self::FIXED_SCALE as f64
-    }
-
-    pub fn saturating_add(self, other: Fixed) -> Fixed {
-        Fixed {
-            raw: self.raw.saturating_add(other.raw),
-        }
-    }
-
-    pub fn saturating_sub(self, other: Fixed) -> Fixed {
-        Fixed {
-            raw: self.raw.saturating_sub(other.raw),
-        }
-    }
-
-    pub fn clamp(self, min: Fixed, max: Fixed) -> Fixed {
-        Fixed {
-            raw: self.raw.clamp(min.raw, max.raw),
-        }
-    }
-}
-
-impl std::ops::Add for Fixed {
-    type Output = Fixed;
-    fn add(self, other: Fixed) -> Fixed {
-        Fixed {
-            raw: self.raw + other.raw,
-        }
-    }
-}
-
-impl std::ops::Sub for Fixed {
-    type Output = Fixed;
-    fn sub(self, other: Fixed) -> Fixed {
-        Fixed {
-            raw: self.raw - other.raw,
-        }
-    }
-}
-
-impl std::ops::Mul for Fixed {
-    type Output = Fixed;
-    fn mul(self, other: Fixed) -> Fixed {
-        // Multiply and divide by scale to maintain precision
-        let result = (self.raw as i128) * (other.raw as i128) / Fixed::FIXED_SCALE as i128;
-        Fixed { raw: result as i64 }
-    }
-}
-
-impl std::ops::Div for Fixed {
-    type Output = Fixed;
-    fn div(self, other: Fixed) -> Fixed {
-        let result = (self.raw as i128 * Fixed::FIXED_SCALE as i128) / (other.raw.max(1) as i128);
-        Fixed { raw: result as i64 }
-    }
-}
-
-impl std::ops::AddAssign for Fixed {
-    fn add_assign(&mut self, other: Fixed) {
-        self.raw += other.raw;
-    }
-}
-
-impl std::ops::SubAssign for Fixed {
-    fn sub_assign(&mut self, other: Fixed) {
-        self.raw -= other.raw;
-    }
-}
-
-impl serde::Serialize for Fixed {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_f64(self.to_f64())
-    }
-}
-
-impl<'de> serde::Deserialize<'de> for Fixed {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let f = f64::deserialize(deserializer)?;
-        Ok(Fixed::from_num((f * Fixed::FIXED_SCALE as f64) as i64))
-    }
-}
+/// Fixed-point type re-exported from the `engine` submodule.
+///
+/// Historically this crate had its own `Fixed` struct at the crate root;
+/// that duplicate caused E0308 errors (`expected engine::Fixed, found Fixed`)
+/// at every disaster/spawn/lib call site that imported `crate::Fixed` while
+/// the engine expected `crate::engine::Fixed`. Unifying on the submodule
+/// definition (tuple `Fixed(i64)` with `FixedFromNum` trait) also fixes the
+/// `i128: From<{float}>` E0277 errors, since floats now route through the
+/// trait instead of `TryInto<i128>`.
+pub use engine::Fixed;
 
 /// Seeded RNG for deterministic simulation
 pub type SimRng = ChaCha8Rng;

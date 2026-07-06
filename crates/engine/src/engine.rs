@@ -71,43 +71,64 @@ pub struct Fixed(i64);
 
 /// Internal trait used by `Fixed::from_num` so integer and float types can
 /// both be passed without explicit casts.
-pub trait FixedFromNum {
+pub trait FixedFromNum: Sized {
     fn into_fixed(self) -> i64;
+    fn from_fixed(bits: i64) -> Self;
 }
 impl FixedFromNum for i32 {
     fn into_fixed(self) -> i64 {
         i64::from(self) * 1_000
+    }
+    fn from_fixed(bits: i64) -> Self {
+        (bits / 1_000) as i32
     }
 }
 impl FixedFromNum for i64 {
     fn into_fixed(self) -> i64 {
         self * 1_000
     }
+    fn from_fixed(bits: i64) -> Self {
+        bits / 1_000
+    }
 }
 impl FixedFromNum for u32 {
     fn into_fixed(self) -> i64 {
         i64::from(self) * 1_000
+    }
+    fn from_fixed(bits: i64) -> Self {
+        (bits / 1_000) as u32
     }
 }
 impl FixedFromNum for u64 {
     fn into_fixed(self) -> i64 {
         (self as i64) * 1_000
     }
+    fn from_fixed(bits: i64) -> Self {
+        (bits / 1_000) as u64
+    }
 }
 impl FixedFromNum for f32 {
     fn into_fixed(self) -> i64 {
         (f64::from(self) * 1_000.0) as i64
+    }
+    fn from_fixed(bits: i64) -> Self {
+        (bits as f32) / 1_000.0
     }
 }
 impl FixedFromNum for f64 {
     fn into_fixed(self) -> i64 {
         (self * 1_000.0) as i64
     }
+    fn from_fixed(bits: i64) -> Self {
+        (bits as f64) / 1_000.0
+    }
 }
 
 impl Fixed {
     /// All-zero value.
     pub const ZERO: Self = Self(0);
+    /// All-one value (scale = 1_000).
+    pub const ONE: Self = Self(1_000);
 
     /// Construct from an integer or float. `f64`/`f32` callers are
     /// converted via the 1_000 scale (lossy; matches the lossy semantics
@@ -161,10 +182,14 @@ impl Fixed {
     }
 
     /// Cast to a numeric type. Used for the `to_num` method the original
-    /// `fixed`-crate-backed `Fixed` exposed.
+    /// `fixed`-crate-backed `Fixed` exposed. For float types the result
+    /// is divided by the internal scale (1_000).
     #[inline]
-    pub fn to_num<T: From<i64>>(self) -> T {
-        T::from(self.0)
+    pub fn to_num<T>(self) -> T
+    where
+        T: FixedFromNum,
+    {
+        T::from_fixed(self.0)
     }
 
     /// Minimum of two values.
@@ -2026,6 +2051,7 @@ impl Simulation {
             moon,
             worldgen: WorldgenConfig::default(),
             last_settlement_ids: Vec::new(),
+            last_tick_disaster_pulses: Vec::new(),
             climate,
             current_tick: 0,
             pending_damage: Vec::new(),
@@ -4136,30 +4162,30 @@ impl Simulation {
         for (left, right) in
             settlement_contact_pairs(&self.world, &member_counts, SETTLEMENT_CONTACT_RADIUS_FP)
         {
-            if left <= u64::from(u32::MAX) && right <= u64::from(u32::MAX) {
-                edges.insert((left as u32, right as u32), 0.35);
-            }
+            edges.insert((left as u32, right as u32), 0.35);
         }
 
         let before = self.religious_profiles.clone();
         let mut deltas: BTreeMap<u32, (f32, f32, f32)> = BTreeMap::new();
         for ((a, b), strength) in edges {
-            let (Some(pa), Some(pb)) = (before.get(&a), before.get(&b)) else {
+            let a32 = u32::try_from(a).unwrap_or(0);
+            let b32 = u32::try_from(b).unwrap_or(0);
+            let (Some(pa), Some(pb)) = (before.get(&a32), before.get(&b32)) else {
                 continue;
             };
             let cohesion_a = self
                 .last_tick_cohesion
-                .get(&a)
+                .get(&a32)
                 .map(|s| fabric_tier_signal(s.fabric))
                 .unwrap_or(0.5);
             let cohesion_b = self
                 .last_tick_cohesion
-                .get(&b)
+                .get(&b32)
                 .map(|s| fabric_tier_signal(s.fabric))
                 .unwrap_or(0.5);
             let spread =
                 (0.015 * strength * ((cohesion_a + cohesion_b) * 0.5)).clamp(0.0, 0.02);
-            accumulate_profile_diffusion(pa, pb, spread, &mut deltas, a, b);
+            accumulate_profile_diffusion(pa, pb, spread, &mut deltas, a32, b32);
         }
 
         let mut after = before;
@@ -5385,12 +5411,12 @@ impl Simulation {
             let demand = self
                 .state
                 .faction_resources
-                .get(&to_faction)
+                .get(&route.to_faction)
                 .map_or(Fixed::ZERO, |to_resources| resource_amount(to_resources, resource));
             let supply_units = i64::from(supply.max(Fixed::ZERO).to_bits()) / crate::SCALE;
             let demand_units = i64::from(demand.max(Fixed::ZERO).to_bits()) / crate::SCALE;
             self.market_state
-                .apply_pressure(resource_market_key(resource), supply_units, demand_units);
+                .apply_pressure(resource_market_key(resource, 0), supply_units, demand_units);
             let margin = (demand - supply).max(Fixed::ZERO);
             let profit = quantity * (Fixed::from_num(1) + margin / Fixed::from_num(100));
 
@@ -5429,7 +5455,20 @@ impl Simulation {
 
     /// Store scenario taxation settings for later economy-phase wiring.
     pub fn apply_scenario_taxation(&mut self, taxation: &crate::scenario::ScenarioTaxation) {
-        self.scenario_taxation = taxation.clone();
+        // Translate the scenario representation into the engine's
+        // `civ_economy::Taxation` field. The scenario struct is a
+        // wire-friendly shape; the engine keeps a `Taxation` that the
+        // economy phase consumes directly.
+        let mut resolved = civ_economy::Taxation::default();
+        for (institution_id, rate_bp) in &taxation.rates_bp {
+            if let Ok(id) = (*institution_id).try_into() {
+                resolved.rates_bp.insert(id, *rate_bp);
+            }
+        }
+        resolved.per_institution_cap = taxation
+            .per_institution_cap
+            .and_then(|cap| (cap >= 0).then_some(cap));
+        self.scenario_taxation = resolved;
     }
 
     /// Military phase configuration (tests and tooling).
@@ -6771,7 +6810,8 @@ fn settlement_trade_contact_signal(
     let volume: i64 = flows
         .iter()
         .filter(|flow| {
-            flow.from_settlement == settlement_id || flow.to_settlement == settlement_id
+            flow.from_settlement == u64::from(settlement_id)
+                || flow.to_settlement == u64::from(settlement_id)
         })
         .map(|flow| flow.qty.max(0))
         .sum();
@@ -6786,8 +6826,11 @@ fn settlement_religion_spread_edges(
         if flow.from_settlement == flow.to_settlement || flow.qty <= 0 {
             continue;
         }
-        let a = flow.from_settlement.min(flow.to_settlement);
-        let b = flow.from_settlement.max(flow.to_settlement);
+        // Cast SettlementId (u64) → u32; the caller enforces the
+        // `u32::MAX` truncation guard before insertion in
+        // `spread_religion_between_settlements`.
+        let a = flow.from_settlement.min(flow.to_settlement) as u32;
+        let b = flow.from_settlement.max(flow.to_settlement) as u32;
         let strength = (flow.qty as f32 / 100.0).clamp(0.05, 1.0);
         edges
             .entry((a, b))
@@ -7017,10 +7060,16 @@ fn settlement_member_counts(world: &World) -> BTreeMap<u64, u32> {
     rollup_cluster_member_counts(world)
 }
 
-/// Map a `ResourceKind` to its market-state key.
+/// Map a `ResourceType` to its market-state key (coerced to a `&'static str`
+/// for the market bus).
 #[must_use]
-pub fn resource_market_key(resource: ResourceKind, _region: u32) -> String {
-    format!("{resource:?}").to_lowercase()
+pub fn resource_market_key(resource: ResourceType, _region: u32) -> &'static str {
+    match resource {
+        ResourceType::Food => "food",
+        ResourceType::Wood => "wood",
+        ResourceType::Metal => "metal",
+        ResourceType::Energy => "energy",
+    }
 }
 
 fn treasury_disparity_whole(treasury: &HashMap<u32, Fixed>, a: u32, b: u32) -> i64 {

@@ -217,7 +217,7 @@ fn wildfire_ignition_temp_fp(base_fp: i32, research_tier: u64) -> i32 {
     (base_fp as i64).saturating_add(bonus) as i32
 }
 
-fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) {
+fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) -> DisasterImpact {
     let radius = radius_for(kind);
     let affected = positions_in_radius(pos, radius);
     let mut terrain_cells = 0u32;
@@ -337,6 +337,25 @@ struct DisasterImpact {
     casualties: u32,
     population_delta: i64,
     resource_delta: Resources,
+}
+
+/// Predicate: should `pos` be considered "low elevation" for flood onset?
+///
+/// Called from [`phase_disasters`] when a precipitation cell's rain total
+/// crosses the season's flood threshold and we want to gate the actual
+/// `Flood` disaster to cells that are not on high terrain.
+///
+/// ponytail: stub — returns `true` (treat every precipitation cell as
+/// floodable) until the per-cell elevation surface lands. Tracked in
+/// the FR oracle as a flood-onset gating predicate (FR-CIV-DISASTER-012).
+#[must_use]
+fn is_low_elevation(
+    _sim: &Simulation,
+    _geology: &GeologyMap,
+    _region_id: u32,
+    _pos: WorldCoord,
+) -> bool {
+    true
 }
 
 fn apply_disaster_resource_loss(kind: DisasterKind, terrain_cells: u32) -> Resources {

@@ -630,3 +630,145 @@ mod tests {
         );
     }
 }
+
+/// In-flight construction site. Tracks progress against its spec's
+/// construction-tick budget, then transitions to "complete" and can produce
+/// goods each tick.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BuildSite {
+    /// Stable building id.
+    id: BuildingId,
+    /// Spec driving construction and production.
+    spec: BuildingSpec,
+    /// World-space origin of the site.
+    origin: WorldCoord,
+    /// Ticks of construction completed so far.
+    progress: u32,
+    /// Whether the site has finished construction.
+    complete: bool,
+}
+
+impl BuildSite {
+    /// Creates a new construction site in an unfinished state.
+    #[must_use]
+    pub const fn new(id: BuildingId, spec: BuildingSpec, origin: WorldCoord) -> Self {
+        Self {
+            id,
+            spec,
+            origin,
+            progress: 0,
+            complete: false,
+        }
+    }
+
+    /// Returns the site id.
+    #[must_use]
+    pub const fn id(&self) -> BuildingId {
+        self.id
+    }
+
+    /// Returns the spec driving this site.
+    #[must_use]
+    pub const fn spec(&self) -> &BuildingSpec {
+        &self.spec
+    }
+
+    /// Returns the world-space origin.
+    #[must_use]
+    pub const fn origin(&self) -> WorldCoord {
+        self.origin
+    }
+
+    /// Returns the number of ticks of construction completed.
+    #[must_use]
+    pub const fn progress(&self) -> u32 {
+        self.progress
+    }
+
+    /// Returns whether the site has completed construction.
+    #[must_use]
+    pub const fn is_complete(&self) -> bool {
+        self.complete
+    }
+
+    /// Forces the site into a completed state. Used by tests that exercise
+    /// production behavior without paying the full construction cost.
+    pub fn complete(&mut self) {
+        self.complete = true;
+        self.progress = self.spec.tier().construction_ticks();
+    }
+
+    /// Advances construction by one tick. Returns `Some(CompletedBuilding)`
+    /// on the tick that completes the site, otherwise `None`.
+    pub fn tick(&mut self) -> Option<CompletedBuilding> {
+        if self.complete {
+            return None;
+        }
+
+        self.progress = self.progress.saturating_add(1);
+        if self.progress >= self.spec.tier().construction_ticks() {
+            self.complete = true;
+            return Some(CompletedBuilding {
+                id: self.id,
+                spec: self.spec.clone(),
+                origin: self.origin,
+            });
+        }
+
+        None
+    }
+
+    /// Runs the production chain for one tick. No-op when the site has not
+    /// completed construction. When the chain halts (an input is at zero)
+    /// the call still consumes nothing; callers that need the
+    /// [`ProductionEvent`] log should use [`BuildSite::produce_and_collect`].
+    pub fn produce(&mut self, economy: &mut EconomyState) {
+        let _ = self.produce_and_collect(economy, economy.tick);
+    }
+
+    /// Runs the production chain for one tick, returning the
+    /// [`ProductionEvent`]s emitted. Each produced good is one event; a
+    /// halt is one event. Empty when the site is incomplete.
+    pub fn produce_and_collect(
+        &mut self,
+        economy: &mut EconomyState,
+        tick: u64,
+    ) -> Vec<ProductionEvent> {
+        if !self.complete {
+            return Vec::new();
+        }
+
+        let mut events = Vec::new();
+        let stocks = economy.stocks_mut();
+
+        for &input in self.spec.chain.inputs() {
+            if stocks.get(input) == 0 {
+                events.push(ProductionEvent::Halted {
+                    building_id: self.id,
+                    missing: input,
+                    tick,
+                });
+                return events;
+            }
+        }
+
+        let rate = i64::from(self.spec.production_rate);
+        for &output in self.spec.chain.outputs() {
+            stocks.add(output, rate);
+            events.push(ProductionEvent::Produced {
+                building_id: self.id,
+                good: output,
+                quantity: rate,
+                tick,
+            });
+        }
+
+        events
+    }
+}
+
+/// Extend [`BuildingGraph`] with completed-site tracking.
+impl BuildingGraph {
+    /// Records a completed site in the graph. Idempotent: re-recording the
+    /// same building id replaces the prior entry.
+    pub fn record_completed(&mut self, site: &BuildSite) {

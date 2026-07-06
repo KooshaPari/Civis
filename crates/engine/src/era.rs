@@ -3,8 +3,64 @@
 //! Eras are derived from simulation state on demand — no persistent field needed.
 //! Call [CivEra::evaluate] each tick; compare to previous to detect advances.
 
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 use crate::engine::Simulation;
+
+/// Faction civilization age, derived from population + tech + surplus thresholds (FR-ERA).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum CivAge {
+    /// Hunter-gatherer / early settlement baseline.
+    Stone,
+    /// Early metal, agriculture, writing.
+    Bronze,
+    /// Iron tools, militaries, road networks.
+    Iron,
+    /// Civic institutions, philosophy, urban populations.
+    Classical,
+    /// Manorial / feudal / theological governance.
+    Medieval,
+    /// Mechanization, factories, modern nation-state.
+    Industrial,
+}
+
+impl CivAge {
+    /// Evaluate the dominant age from emergent signals.
+    /// Returns the highest age whose thresholds are all satisfied.
+    #[must_use]
+    pub fn evaluate(population: u32, tech_level: u32, surplus: i64) -> Self {
+        // Thresholds calibrated against FR-ERA: tech unlocks era, population
+        // sustains it, surplus feeds it. Each step requires strictly more
+        // capability than the last.
+        if tech_level >= 12 && population >= 20_000 && surplus >= 800 {
+            CivAge::Industrial
+        } else if tech_level >= 8 && population >= 8_000 && surplus >= 300 {
+            CivAge::Medieval
+        } else if tech_level >= 5 && population >= 3_000 && surplus >= 100 {
+            CivAge::Classical
+        } else if tech_level >= 3 && population >= 1_000 && surplus >= 30 {
+            CivAge::Iron
+        } else if tech_level >= 1 && population >= 200 {
+            CivAge::Bronze
+        } else {
+            CivAge::Stone
+        }
+    }
+
+    /// Wire-safe lowercase name for HUD / replay surfaces.
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            CivAge::Stone => "stone",
+            CivAge::Bronze => "bronze",
+            CivAge::Iron => "iron",
+            CivAge::Classical => "classical",
+            CivAge::Medieval => "medieval",
+            CivAge::Industrial => "industrial",
+        }
+    }
+}
 
 /// The six civilization eras, ordered by advancement.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]

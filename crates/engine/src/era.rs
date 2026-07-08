@@ -3,8 +3,53 @@
 //! Eras are derived from simulation state on demand — no persistent field needed.
 //! Call [CivEra::evaluate] each tick; compare to previous to detect advances.
 
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
+
 use crate::engine::Simulation;
+use crate::tech::{gather_faction_inputs, tick_research, tick_tech, FactionTechState};
+
+/// The six civilization ages, ordered by advancement.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum CivAge {
+    Stone,
+    Bronze,
+    Iron,
+    Classical,
+    Medieval,
+    Industrial,
+}
+
+impl CivAge {
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            CivAge::Stone => "Stone",
+            CivAge::Bronze => "Bronze",
+            CivAge::Iron => "Iron",
+            CivAge::Classical => "Classical",
+            CivAge::Medieval => "Medieval",
+            CivAge::Industrial => "Industrial",
+        }
+    }
+
+    #[must_use]
+    pub fn evaluate(population: u32, techs: u32, surplus: i64) -> Self {
+        if techs >= 12 || surplus >= 250_000 {
+            CivAge::Industrial
+        } else if techs >= 8 || population >= 5_000 {
+            CivAge::Medieval
+        } else if techs >= 5 || population >= 2_000 {
+            CivAge::Classical
+        } else if techs >= 2 || population >= 500 {
+            CivAge::Bronze
+        } else {
+            CivAge::Stone
+        }
+    }
+}
+
 
 /// The six civilization eras, ordered by advancement.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -104,6 +149,19 @@ impl TechGate {
     }
 }
 
+
+/// Append-only record of era advances for HUD/replay diagnostics.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EraHistory {
+    pub advances: Vec<(u64, u32, CivAge, CivAge)>,
+}
+
+impl EraHistory {
+    pub fn record_advance(&mut self, tick: u64, faction_id: u32, previous: CivAge, next: CivAge) {
+        self.advances.push((tick, faction_id, previous, next));
+    }
+}
+
 /// Mutable emergent era/tech state carried on [`Simulation`].
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EraProgressionState {
@@ -189,19 +247,19 @@ impl EraProgressionState {
 
 /// Research phase hook (FR-ERA): emergent progress from economy + population.
 pub fn phase_research(sim: &mut Simulation) {
-    let mut faction_tech = std::mem::take(&mut sim.era_progression_mut().faction_tech);
+    let mut faction_tech = std::mem::take(&mut sim.era_progression.faction_tech);
     tick_research(sim, &mut faction_tech);
-    sim.era_progression_mut().faction_tech = faction_tech;
+    sim.era_progression.faction_tech = faction_tech;
 }
 
 /// Tech + era phase hook (FR-ERA): unlock levels and evaluate ages.
 pub fn phase_tech(sim: &mut Simulation) {
     let inputs = gather_faction_inputs(sim);
     let tick = sim.state.tick;
-    let progression = sim.era_progression_mut();
-    tick_tech(&mut progression.faction_tech);
+    tick_tech(&mut sim.era_progression.faction_tech);
     for (faction_id, faction_inputs) in inputs {
-        let tech_level = progression
+        let tech_level = sim
+            .era_progression
             .faction_tech
             .get(&faction_id)
             .map(|t| t.tech_level)
@@ -211,17 +269,18 @@ pub fn phase_tech(sim: &mut Simulation) {
             tech_level,
             faction_inputs.surplus,
         );
-        let previous = progression
+        let previous = sim
+            .era_progression
             .faction_ages
             .get(&faction_id)
             .copied()
             .unwrap_or(CivAge::Stone);
         if next > previous {
-            progression
+            sim.era_progression
                 .history
                 .record_advance(tick, faction_id, previous, next);
         }
-        progression.faction_ages.insert(faction_id, next);
+        sim.era_progression.faction_ages.insert(faction_id, next);
     }
 }
 

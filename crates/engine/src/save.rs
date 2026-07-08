@@ -12,6 +12,7 @@ use crate::{
     ReligiousProfile, ReplayLog, Simulation, WorldState,
 };
 use civ_agents::{ClusterMember, LodTier, Needs, Position3d, Tools, Wardrobe};
+use crate::engine::LanguageState;
 use civ_needs::Health as LifeHealth;
 use civ_planet::{Climate, MoonConfig, PlanetConfig, WeatherCell};
 use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, WorldCoord};

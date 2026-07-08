@@ -8,6 +8,8 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+mod tiers;
+
 use std::collections::BTreeMap;
 
 use civ_voxel::{MaterialId, WorldCoord};
@@ -251,7 +253,16 @@ pub struct BuildingGraph {
     pub facades: BTreeMap<BuildingId, FacadeStyle>,
     /// Provenance tag per parcel.
     pub provenance: BTreeMap<BuildingId, BuildingProvenance>,
+    /// Settlement cluster membership by cluster id.
+    pub settlement_clusters: BTreeMap<u64, Vec<BuildingId>>,
 }
+
+pub use tiers::{
+    BiomeStyleTag, EmergentStyleKey, clustered_parcel_offset, culture_id_from_traits,
+    default_architecture_tile_sets, era_gated_demand_signals, era_index_from_pop_tech,
+    facade_for_emergence, wealth_permille_from_stocks, building_type_min_era,
+    building_type_unlocked,
+};
 
 impl BuildingGraph {
     /// Creates an empty building graph.
@@ -305,6 +316,17 @@ impl BuildingGraph {
             .iter()
             .filter(|parcel| matches!(parcel.kind, ParcelKind::Residential))
             .count() as u32
+    }
+
+    /// Compatibility hook for engine build progress bookkeeping.
+    pub fn record_completed(&mut self, parcel: &Parcel) {
+        self.insert_parcel(parcel.clone());
+    }
+
+    /// Compatibility hook for engine completion counters.
+    #[must_use]
+    pub fn completed_count(&self) -> usize {
+        self.parcels.len()
     }
 
     #[cfg(test)]

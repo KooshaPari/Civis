@@ -37,6 +37,7 @@ chrono = { version = "0.4", features = ["serde"] }
 
 # Civis 3D voxel substrate (sibling Phenotype-org repo via civ-voxel).
 civ-agents = { path = "../agents" }
+civ-audio = { path = "../audio" }
 civ-needs = { path = "../needs" }
 civ-build = { path = "../build" }
 civ-diffusion = { path = "../diffusion" }
@@ -59,6 +60,7 @@ civ-save-db = { path = "../save-db" }
 civ-legends = { path = "../legends" }
 civ-genetics = { path = "../genetics" }
 civ-species = { path = "../species" }
+fixed = { version = "1", features = ["serde"] }
 
 # Weak-emergence / criticality metrics consumed by the Emergence Dashboard
 # (see `docs/design/emergence-dashboard.md`). Stacked on PR #350

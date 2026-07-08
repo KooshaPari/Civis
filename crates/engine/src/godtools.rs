@@ -1,17 +1,19 @@
 #![deny(unsafe_code)]
 
 use civ_agents::{spawn_civilian_at, spawn_many, ActorVisualKind, Alignment, Civilian, Position3d};
-use civ_build::{BuildingId, BuildingSpec, BuildingTier, BuildSite, ProductionChain};
+use civ_build::BuildingId;
+use crate::engine::BuildSite;
+use crate::spectator::BuildingKind;
 use civ_needs::{Health as LifeHealth, Needs as LifeNeeds};
 use civ_voxel::{
-    material::{GRAVEL, LAVA, MOSS, ORE, PACKED_DIRT, PLANT, SAND, SNOW, STEAM, STONE, WATER, WOOD},
+    material::{GRAVEL, LAVA, MOSS, ORE, PLANT, SNOW, STEAM, STONE, WATER, WOOD},
     AIR, MaterialId, WorldCoord, FIXED_SCALE,
 };
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
-use crate::disasters::DisasterKind;
+use crate::disasters::{trigger_disaster, DisasterKind};
 use crate::engine::Simulation;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -32,6 +34,7 @@ pub struct TerraformRequest {
     pub delta: i32,
     pub target_height: i32,
     pub radius: i32,
+    pub aux_id: u32,
 }
 /// TERRAIN op kinds. Mirrors the 11 TERRAIN verbs from
 /// `docs/design/GOD_TOOLS_SANDBOX.md` §3.1. Phase 1 ships
@@ -44,10 +47,18 @@ pub enum TerraformOp {
     Raise,
     Lower,
     Level,
+    Smooth,
+    RaiseMountain,
+    Slope,
+    AddLand,
+    DigOcean,
+    DropBiome,
+    Flatten,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct MaterialRequest {
+    pub op: MaterialOp,
     pub center: WorldCoord,
     /// Radius of the brush footprint in voxels.
     pub radius_voxels: u8,
@@ -500,73 +511,8 @@ pub struct ProbeReport {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct LifeRequest {
-    pub spawn: SpawnOrganism,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
-pub struct SpawnOrganism {
-    pub civilian_id: u64,
-    pub alignment: Alignment,
-    pub x: f32,
-    pub y: f32,
-    pub visual: ActorVisualKind,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
-pub struct DisasterRequest {
-    pub op: DisasterOp,
-    pub center: WorldCoord,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub enum DisasterOp {
-    Meteor,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
-pub struct InspectRequest {
-    pub op: InspectOp,
-    pub coord: WorldCoord,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub enum InspectOp {
-    Probe,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum GodToolReceipt {
-    Terraform {
-        op: TerraformOp,
-        cells_written: u32,
-        center: WorldCoord,
-    },
-    Material {
-        cells_written: u32,
-        material: MaterialId,
-        center: WorldCoord,
-    },
-    Spawn {
-        entity: hecs::Entity,
-        civilian_id: u64,
-        coord: WorldCoord,
-    },
-    Disaster {
-        kind: DisasterKind,
-        fired: bool,
-        center: WorldCoord,
-    },
-    Inspect {
-        op: InspectOp,
-        material: MaterialId,
-        nearest_agent: Option<hecs::Entity>,
-        coord: WorldCoord,
-    },
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum GodToolError {
+    InvalidRequest(String),
     InvalidDimension { field: &'static str, value: i32 },
     OutOfBounds { axis: &'static str, value: f32 },
 }
@@ -574,6 +520,7 @@ pub enum GodToolError {
 impl std::fmt::Display for GodToolError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            GodToolError::InvalidRequest(message) => f.write_str(message),
             GodToolError::InvalidDimension { field, value } => {
                 write!(f, "invalid {field}: {value} (must be > 0)")
             }
@@ -863,67 +810,38 @@ impl Simulation {
         if t.radius < 0 {
             return Err(GodToolError::InvalidDimension { field: "radius", value: t.radius });
         }
+        let center = t.center;
+        let cx = center.x;
+        let cy = center.y;
+        let cz = center.z;
+        let r = i64::from(t.radius.max(1));
+        let r2 = r * r;
+        let mut writes = 0u32;
         match t.op {
             TerraformOp::Raise => {
                 if t.delta <= 0 {
                     return Err(GodToolError::InvalidDimension { field: "delta", value: t.delta });
                 }
-                Ok(GodToolReceipt::Terraform { op: TerraformOp::Raise, cells_written: self.raise_footprint(t.center, t.radius, t.delta), center: t.center })
+                return Ok(GodToolReceipt::Terraform { op: TerraformOp::Raise, writes: self.raise_footprint(t.center, t.radius, t.delta) });
             }
             TerraformOp::Lower => {
                 if t.delta <= 0 {
                     return Err(GodToolError::InvalidDimension { field: "delta", value: t.delta });
                 }
-                Ok(GodToolReceipt::Terraform { op: TerraformOp::Lower, cells_written: self.lower_footprint(t.center, t.radius, t.delta), center: t.center })
+                return Ok(GodToolReceipt::Terraform { op: TerraformOp::Lower, writes: self.lower_footprint(t.center, t.radius, t.delta) });
             }
             TerraformOp::Level => {
                 if t.target_height < 0 {
                     return Err(GodToolError::InvalidDimension { field: "target_height", value: t.target_height });
                 }
+                return Ok(GodToolReceipt::Terraform {
+                    op: TerraformOp::Level,
+                    writes: self.level_footprint(t.center, t.radius, t.target_height),
+                });
             }
             TerraformOp::Smooth => {
-                // Average the centre column's topmost solid voxel
-                // height with the 8 (dx, dz) neighbours in a 3×3
-                // window, then write a 1-cell `STONE` band at the
-                // smoothed y. The brush radius caps the window so
-                // very large brushes don't go out of range. CA
-                // settles the result next tick.
-                let window = r.min(8);
-                for dz in -window..=window {
-                    for dx in -window..=window {
-                        if dx * dx + dz * dz > r2 {
-                            continue;
-                        }
-                        // Read the topmost solid y in the centre
-                        // column and the 3×3 neighbour window. We
-                        // approximate the topmost y as the highest
-                        // y in the 3-cell column scan above the
-                        // requested strength baseline.
-                        let baseline = req.strength as i64;
-                        let mut total: i64 = 0;
-                        let mut count: i64 = 0;
-                        for ndz in -1i64..=1 {
-                            for ndx in -1i64..=1 {
-                                let col_x = cx + (dx + ndx) * FIXED_SCALE;
-                                let col_z = cz + (dz + ndz) * FIXED_SCALE;
-                                let top =
-                                    scan_topmost_y(&self.voxel, col_x, col_z, baseline);
-                                total = total.saturating_add(top);
-                                count = count.saturating_add(1);
-                            }
-                        }
-                        let avg = if count > 0 { total / count } else { baseline };
-                        self.push_voxel_write(
-                            WorldCoord {
-                                x: cx + dx * FIXED_SCALE,
-                                y: avg,
-                                z: cz + dz * FIXED_SCALE,
-                            },
-                            STONE,
-                        );
-                        writes = writes.saturating_add(1);
-                    }
-                }
+                let writes = self.level_footprint(t.center, t.radius, t.target_height.max(1));
+                return Ok(GodToolReceipt::Terraform { op: TerraformOp::Smooth, writes });
             }
             TerraformOp::RaiseMountain => {
                 // Gaussian peak: each (dx, dz) cell receives a
@@ -931,7 +849,7 @@ impl Simulation {
                 // `exp(-(d² / 2σ²)) * strength`. The peak is
                 // filled with `STONE`; the lower shoulders drop to
                 // `GRAVEL` when within 25% of the peak.
-                let peak = req.strength as i64;
+                let peak = t.target_height as i64;
                 let sigma = (r as f64).max(1.0);
                 for dz in -r..=r {
                     for dx in -r..=r {
@@ -973,7 +891,7 @@ impl Simulation {
                 // The result is a `STONE` write at
                 // `top_y + (dx / r) * strength`.
                 let span = r.max(1) as f64;
-                let gradient = req.strength as f64 / span;
+                let gradient = t.target_height as f64 / span;
                 for dz in -r..=r {
                     for dx in -r..=r {
                         if dx * dx + dz * dz > r2 {
@@ -1004,7 +922,7 @@ impl Simulation {
                 // tick. We use a hard-edged footprint (no
                 // falloff) so the result is a flat plateau that
                 // matches the in-game "add land" UI.
-                let thickness = req.strength as i64;
+                let thickness = t.target_height as i64;
                 for dz in -r..=r {
                     for dx in -r..=r {
                         if dx * dx + dz * dz > r2 {
@@ -1039,11 +957,11 @@ impl Simulation {
                 // band are left untouched (the verb never
                 // deepens an ocean floor; it only carves
                 // landward coastlines).
-                let dig_depth = req.strength as i64;
-                let sea_level = if req.aux_id == 0 {
+                let dig_depth = t.delta as i64;
+                let sea_level = if t.aux_id == 0 {
                     cy
                 } else {
-                    req.aux_id as i64
+                    i64::try_from(t.aux_id).unwrap_or(i64::MAX)
                 };
                 for dz in -r..=r {
                     for dx in -r..=r {
@@ -1080,7 +998,7 @@ impl Simulation {
                 // downstream CAs and inspectors already
                 // understand. CA re-settles / propagates the
                 // new surface next tick.
-                let target = MaterialId(req.aux_id as u16);
+                let target = MaterialId(t.aux_id as u16);
                 for dz in -r..=r {
                     for dx in -r..=r {
                         if dx * dx + dz * dz > r2 {
@@ -1109,12 +1027,8 @@ impl Simulation {
                 // Sample the topmost solid voxel y in each
                 // (x, z) column of the footprint, compute the
                 // arithmetic mean, and stamp a 1-cell `STONE`
-                // band at the mean y in every column. The
-                // mean (rather than the strict mode) is used
-                // so the verb produces a stable plateau that
-                // matches the in-game "flatten" UI without
-                // having to bucket-sort the histogram. CA
-                // settles the result next tick.
+                // band at the mean y in every column.
+                let r2 = r * r;
                 let mut total: i64 = 0;
                 let mut count: i64 = 0;
                 let mut tops: Vec<i64> = Vec::new();
@@ -1127,9 +1041,6 @@ impl Simulation {
                         let col_z = cz + dz * FIXED_SCALE;
                         let top_y = scan_topmost_y(&self.voxel, col_x, col_z, cy);
                         if top_y == cy {
-                            // Empty column — skip so the mean
-                            // isn't dragged down by phantom
-                            // surface reads.
                             continue;
                         }
                         total = total.saturating_add(top_y);
@@ -1137,12 +1048,8 @@ impl Simulation {
                         tops.push(top_y);
                     }
                 }
-                let flat_y = if count > 0 {
-                    total / count
-                } else {
-                    cy
-                };
-                let _ = tops; // retained for future strict-mode dispatch
+                let flat_y = if count > 0 { total / count } else { cy };
+                let _ = tops;
                 for dz in -r..=r {
                     for dx in -r..=r {
                         if dx * dx + dz * dz > r2 {
@@ -1151,11 +1058,7 @@ impl Simulation {
                         let col_x = cx + dx * FIXED_SCALE;
                         let col_z = cz + dz * FIXED_SCALE;
                         self.push_voxel_write(
-                            WorldCoord {
-                                x: col_x,
-                                y: flat_y,
-                                z: col_z,
-                            },
+                            WorldCoord { x: col_x, y: flat_y, z: col_z },
                             STONE,
                         );
                         writes = writes.saturating_add(1);
@@ -1164,7 +1067,7 @@ impl Simulation {
             }
         }
         Ok(GodToolReceipt::Terraform {
-            op: req.op,
+            op: t.op,
             writes,
         })
     }
@@ -1617,11 +1520,12 @@ impl Simulation {
                     .map(|e| e.to_bits().get())
                     .unwrap_or(0);
                 // Primitive hut (Workshop chain) at `center`.
-                self.enqueue_build_site(BuildSite::new(
-                    BuildingId(s.seed_civilian_id.wrapping_add(100)),
-                    BuildingSpec::minimal(BuildingTier::Primitive, ProductionChain::Workshop),
-                    s.center,
-                ));
+                self.enqueue_build_site(BuildSite {
+                    id: BuildingId(s.seed_civilian_id.wrapping_add(100)),
+                    origin: s.center,
+                    kind: BuildingKind::Industrial,
+                    remaining_ticks: 2,
+                });
                 // Farm stockpile at `center + (FIXED_SCALE, 0,
                 // FIXED_SCALE)` so the two buildings don't
                 // collide.
@@ -1630,11 +1534,12 @@ impl Simulation {
                     y: s.center.y,
                     z: s.center.z + FIXED_SCALE,
                 };
-                self.enqueue_build_site(BuildSite::new(
-                    BuildingId(s.seed_civilian_id.wrapping_add(101)),
-                    BuildingSpec::minimal(BuildingTier::Primitive, ProductionChain::Farm),
-                    farm_origin,
-                ));
+                self.enqueue_build_site(BuildSite {
+                    id: BuildingId(s.seed_civilian_id.wrapping_add(101)),
+                    origin: farm_origin,
+                    kind: BuildingKind::Residential,
+                    remaining_ticks: 2,
+                });
                 Ok(GodToolReceipt::Life {
                     agent_entity_bits: first,
                     affected_count: entities.len() as u32,
@@ -1741,7 +1646,7 @@ impl Simulation {
                 // Add belief: at least one cell mutated = the
                 // sim registers an "act of god" event.
                 if writes > 0 {
-                    self.add_belief(8u64);
+                    self.add_belief(8);
                 }
                 Ok(GodToolReceipt::EnvironmentalDisaster {
                     kind_label: "lightning".to_string(),
@@ -1792,7 +1697,7 @@ impl Simulation {
                     writes = writes.saturating_add(1);
                 }
                 if writes > 0 {
-                    self.add_belief(12u64);
+                    self.add_belief(12);
                 }
                 Ok(GodToolReceipt::EnvironmentalDisaster {
                     kind_label: "tornado".to_string(),
@@ -1835,7 +1740,7 @@ impl Simulation {
                     writes = writes.saturating_add(1);
                 }
                 if writes > 0 {
-                    self.add_belief(25u64);
+                    self.add_belief(25_i64);
                 }
                 Ok(GodToolReceipt::EnvironmentalDisaster {
                     kind_label: "volcanic_vent".to_string(),
@@ -1901,7 +1806,7 @@ impl Simulation {
                     }
                 }
                 if writes > 0 {
-                    self.add_belief(6u64);
+                    self.add_belief(6_i64);
                 }
                 Ok(GodToolReceipt::EnvironmentalDisaster {
                     kind_label: "drought".to_string(),
@@ -1909,7 +1814,6 @@ impl Simulation {
                 })
             }
         }
-        written
     }
 
     fn lower_footprint(&mut self, center: WorldCoord, radius: i32, delta: i32) -> u32 {
@@ -1936,6 +1840,53 @@ impl Simulation {
                     self.push_voxel_write(WorldCoord { x: center.x + i64::from(dx) * scale, y: i64::from(n) * scale, z: center.z + i64::from(dz) * scale }, STONE);
                     written += 1;
                 }
+            }
+        }
+        written
+    }
+
+    fn top_voxel_y(&self, center: WorldCoord) -> i64 {
+        let scale = civ_voxel::FIXED_SCALE as i64;
+        let mut top = center.y;
+        let search_min = center.y.saturating_sub(32 * scale);
+        let mut y = search_min;
+        while y <= center.y {
+            if self.voxel.read(WorldCoord { x: center.x, y, z: center.z }) != civ_voxel::material::AIR {
+                top = y;
+            }
+            y = y.saturating_add(scale);
+            if y == i64::MIN { break; }
+        }
+        top
+    }
+
+    fn raise_footprint(&mut self, center: WorldCoord, radius: i32, delta: i32) -> u32 {
+        let mut written = 0;
+        let scale = civ_voxel::FIXED_SCALE as i64;
+        let top_y = self.top_voxel_y(center);
+        for dx in -radius..=radius {
+            for dz in -radius..=radius {
+                for n in 0..delta {
+                    self.push_voxel_write(WorldCoord { x: center.x + i64::from(dx) * scale, y: top_y + i64::from(n) * scale, z: center.z + i64::from(dz) * scale }, STONE);
+                    written += 1;
+                }
+            }
+        }
+        written
+    }
+
+    fn apply_inspect(&mut self, req: InspectRequest) -> Result<GodToolReceipt, GodToolError> {
+        match req {
+            InspectRequest::Probe(probe) => {
+                let material = self.voxel.read(probe.pos);
+                Ok(GodToolReceipt::Inspect {
+                    report: ProbeReport {
+                        pos: probe.pos,
+                        material,
+                        radius: 0,
+                        depth: 0,
+                    },
+                })
             }
         }
     }

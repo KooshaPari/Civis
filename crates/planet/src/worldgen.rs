@@ -42,6 +42,12 @@ impl WorldgenConfig {
     }
 }
 
+
+impl Default for WorldgenConfig {
+    fn default() -> Self {
+        Self::new(0, 64, 0.5, 1.0)
+    }
+}
 /// Resource bands derived from seed, climate, and terrain position.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ResourceKind {

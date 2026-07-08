@@ -50,6 +50,10 @@ use crate::{
     voxel_frame_builder::build_voxel_delta_frame,
 };
 
+fn voxel_axis_span<V>(_voxel: &V, _coord: impl Fn(civ_voxel::WorldCoord) -> i64) -> f32 {
+    (civ_voxel::FIXED_SCALE as f32) * 128.0
+}
+
 /// Number of distinct `Frame3d` variants emitted per simulation tick (FR-CIV-BEVY-028 / item 53).
 pub const FRAME_BUNDLE_LEN: usize = 7;
 
@@ -513,7 +517,11 @@ async fn handle_jsonrpc_text(
             } else {
                 None
             };
-            let legends = if req.method == crate::jsonrpc::JsonRpcMethod::SimLegends {
+            let x = req.params.as_ref().and_then(|p| p.get("x").and_then(|v| v.as_i64())).unwrap_or(0);
+            let y = req.params.as_ref().and_then(|p| p.get("y").and_then(|v| v.as_i64())).unwrap_or(0);
+            let tile_probe = if req.method == crate::jsonrpc::JsonRpcMethod::SimLegends
+                || req.method == crate::jsonrpc::JsonRpcMethod::SimInspectTile
+            {
                 let sim = state.sim.lock().await;
                 let material = sim
                     .voxel()
@@ -533,6 +541,7 @@ async fn handle_jsonrpc_text(
                     population,
                     snapshot,
                     tile_probe,
+                    legends: None,
                     require_role: state.require_role,
                     speed_multiplier: state.speed_multiplier.load(Ordering::Relaxed),
                     connection_role: connection_role.clone(),
@@ -1198,8 +1207,8 @@ async fn apply_dispatch_effect(
             };
             use civ_voxel::WorldCoord;
             let mut sim = state.sim.lock().await;
-            let world_w = voxel_axis_span(sim.voxel(), |coord| coord.cx);
-            let world_d = voxel_axis_span(sim.voxel(), |coord| coord.cz);
+            let world_w = voxel_axis_span(sim.voxel(), |coord| coord.x);
+            let world_d = voxel_axis_span(sim.voxel(), |coord| coord.z);
             let wx = x.unwrap_or(0.5) * world_w;
             let wz = y.unwrap_or(0.5) * world_d;
             let pos = WorldCoord {
@@ -1254,8 +1263,9 @@ async fn apply_dispatch_effect(
                     let req = GodToolRequest::Terraform(TerraformRequest {
                         op: TerraformOp::AddLand,
                         center: pos,
-                        radius_voxels: r,
-                        strength: s,
+                        delta: 0,
+                        target_height: (s / civ_voxel::FIXED_SCALE as i32).max(1),
+                        radius: i32::try_from(r).unwrap_or(i32::MAX),
                         aux_id: 0,
                     });
                     let _ = sim.apply_god_tool(req);
@@ -1268,8 +1278,9 @@ async fn apply_dispatch_effect(
                     let req = GodToolRequest::Terraform(TerraformRequest {
                         op: TerraformOp::DigOcean,
                         center: pos,
-                        radius_voxels: r,
-                        strength: s,
+                        delta: (s / civ_voxel::FIXED_SCALE as i32).max(1),
+                        target_height: 0,
+                        radius: i32::try_from(r).unwrap_or(i32::MAX),
                         aux_id: 0,
                     });
                     let _ = sim.apply_god_tool(req);
@@ -1280,8 +1291,9 @@ async fn apply_dispatch_effect(
                     let req = GodToolRequest::Terraform(TerraformRequest {
                         op: TerraformOp::DropBiome,
                         center: pos,
-                        radius_voxels: r,
-                        strength: 0,
+                        delta: 0,
+                        target_height: 0,
+                        radius: i32::try_from(r).unwrap_or(i32::MAX),
                         aux_id: mat,
                     });
                     let _ = sim.apply_god_tool(req);
@@ -1292,7 +1304,7 @@ async fn apply_dispatch_effect(
                     let req = GodToolRequest::Material(MaterialRequest {
                         op: MaterialOp::Erase,
                         center: pos,
-                        radius_voxels: r,
+                        radius_voxels: u8::try_from(r).unwrap_or(u8::MAX),
                         material_id: 0,
                         strength: 0,
                         drop_height: 0,
@@ -1305,7 +1317,7 @@ async fn apply_dispatch_effect(
                     let req = GodToolRequest::Material(MaterialRequest {
                         op: MaterialOp::Replace,
                         center: pos,
-                        radius_voxels: r,
+                        radius_voxels: u8::try_from(r).unwrap_or(u8::MAX),
                         material_id: mat,
                         strength: 0,
                         drop_height: 0,
@@ -1318,7 +1330,7 @@ async fn apply_dispatch_effect(
                     let req = GodToolRequest::Material(MaterialRequest {
                         op: MaterialOp::SurfacePaint,
                         center: pos,
-                        radius_voxels: r,
+                        radius_voxels: u8::try_from(r).unwrap_or(u8::MAX),
                         material_id: mat,
                         strength: 0,
                         drop_height: 0,
@@ -1335,7 +1347,7 @@ async fn apply_dispatch_effect(
                     let req = GodToolRequest::Material(MaterialRequest {
                         op: MaterialOp::PourLiquid,
                         center: pos,
-                        radius_voxels: r,
+                        radius_voxels: u8::try_from(r).unwrap_or(u8::MAX),
                         material_id: mat,
                         strength: layers,
                         drop_height: dh,
@@ -1348,7 +1360,7 @@ async fn apply_dispatch_effect(
                     let req = GodToolRequest::Material(MaterialRequest {
                         op: MaterialOp::SeedSnow,
                         center: pos,
-                        radius_voxels: r,
+                        radius_voxels: u8::try_from(r).unwrap_or(u8::MAX),
                         material_id: civ_voxel::material::SNOW.0 as u32,
                         strength: s,
                         drop_height: 0,
@@ -1361,7 +1373,7 @@ async fn apply_dispatch_effect(
                     let req = GodToolRequest::Material(MaterialRequest {
                         op: MaterialOp::SeedOreDeposit,
                         center: pos,
-                        radius_voxels: r,
+                        radius_voxels: u8::try_from(r).unwrap_or(u8::MAX),
                         material_id: civ_voxel::material::ORE.0 as u32,
                         strength: s,
                         drop_height: 0,

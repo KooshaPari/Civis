@@ -40,6 +40,7 @@ pub use institution::{
     InstitutionLedgerError, InstitutionPosting, LedgerSide, INSTITUTION_MARKET,
     INSTITUTION_TREASURY,
 };
+pub use institution::{collect_taxes, Taxation};
 pub use market::{
     DEFAULT_SMOOTHING_FACTOR, GoodId, MarketState, MultiGoodMarket, Order, OrderBook,
     SettlementTradeFlow, Side, Trade,

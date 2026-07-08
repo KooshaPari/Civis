@@ -1,12 +1,13 @@
 //! Building emergence wiring — culture + biome + era style vectors and settlement anchors.
 
 use std::collections::BTreeMap;
+use std::convert::TryFrom;
 
 use civ_agents::{ClusterMember, Position3d};
 use civ_build::{
     clustered_parcel_offset, culture_id_from_traits, default_architecture_tile_sets,
     era_gated_demand_signals, era_index_from_pop_tech, facade_for_emergence, wealth_permille_from_stocks,
-    BiomeStyleTag, EmergentStyleKey,
+    BiomeStyleTag, BuildingGraph, EmergentStyleKey,
 };
 use civ_planet::{BiomeKind, GeologyMap};
 use civ_voxel::WorldCoord;
@@ -55,9 +56,21 @@ pub fn settlement_build_anchor(world: &World) -> (Option<u64>, WorldCoord) {
     match best {
         Some((cluster_id, positions)) => (
             Some(cluster_id),
-            civ_build::settlement_cluster_centroid(&positions),
+            cluster_centroid_from_positions(&positions),
         ),
         None => (None, WorldCoord { x: 0, y: 0, z: 0 }),
+    }
+}
+
+fn cluster_centroid_from_positions(positions: &[(i64, i64, i64)]) -> WorldCoord {
+    let (sum_x, sum_y, sum_z) = positions.iter().fold((0i64, 0i64, 0i64), |acc, (x, y, z)| {
+        (acc.0 + *x, acc.1 + *y, acc.2 + *z)
+    });
+    let count = i64::try_from(positions.len()).unwrap_or(1).max(1);
+    WorldCoord {
+        x: sum_x / count,
+        y: sum_y / count,
+        z: sum_z / count,
     }
 }
 
@@ -94,8 +107,8 @@ pub fn emergent_style_key_for_sim(
         .unwrap_or([0.25, 0.25, 0.25, 0.25]);
     let culture = culture_id_from_traits(traits);
     let era = era_index_from_pop_tech(sim.state.population, sim.researched_tech_count());
-    let wood = sim.state.resources.wood.raw / civ_voxel::FIXED_SCALE;
-    let metal = sim.state.resources.metal.raw / civ_voxel::FIXED_SCALE;
+    let wood = sim.state.resources.wood.to_bits() / civ_voxel::FIXED_SCALE;
+    let metal = sim.state.resources.metal.to_bits() / civ_voxel::FIXED_SCALE;
     let wealth = wealth_permille_from_stocks(wood, metal);
     let nx = (anchor.x as f32 / civ_voxel::FIXED_SCALE as f32).clamp(0.0, 1.0);
     let nz = (anchor.z as f32 / civ_voxel::FIXED_SCALE as f32).clamp(0.0, 1.0);
@@ -152,8 +165,7 @@ pub fn apply_emergence_facades(
         let facade = facade_for_emergence(style, &signals, tile_sets);
         sim.building_graph_mut().set_facade(*id, facade);
         if let Some(cluster) = cluster_id {
-            sim.building_graph_mut()
-                .assign_to_cluster(cluster, *id);
+            sim.building_graph_mut().assign_to_cluster(cluster, civ_build::BuildingId(id.0));
             let offset = clustered_parcel_offset(cluster, index as u32, 16);
             if let Some(parcel) = sim
                 .building_graph_mut()
@@ -182,8 +194,8 @@ pub fn emergence_demand_signals(
 #[must_use]
 pub fn resource_stock_units(resources: &Resources) -> (i64, i64) {
     (
-        resources.wood.raw / civ_voxel::FIXED_SCALE,
-        resources.metal.raw / civ_voxel::FIXED_SCALE,
+        resources.wood.to_bits() / civ_voxel::FIXED_SCALE,
+        resources.metal.to_bits() / civ_voxel::FIXED_SCALE,
     )
 }
 

@@ -6,14 +6,15 @@
 
 use civ_agents::Position3d;
 use civ_needs::{Health as LifeHealth, Needs as LifeNeeds};
-use civ_planet::{seasonal_modifiers, BiomeKind, GeologyMap, SeasonKind};
+use civ_planet::{seasonal_modifiers, BiomeKind, SeasonKind};
 use civ_voxel::material::{AIR, GRAVEL, ICE, LAVA, STEAM, STONE, WATER};
 use civ_voxel::WorldCoord;
 
 use hecs::Entity;
 use serde::{Deserialize, Serialize};
 
-use crate::engine::Simulation;
+use crate::engine::{Resources, Simulation};
+use crate::Fixed;
 
 /// Supported disaster kinds.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -37,12 +38,12 @@ pub enum DisasterKind {
 /// Trigger a disaster immediately and apply its effects to terrain and agents.
 pub fn trigger_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) {
     let impact = apply_disaster(sim, kind, pos);
-    sim.push_disaster_event(DisasterTickEvent {
+    sim.push_disaster_event(crate::engine::DisasterPulse {
         tick: sim.state.tick,
         kind,
-        x: pos.x,
-        y: pos.y,
-        z: pos.z,
+        x: pos.x as i32,
+        y: pos.y as i32,
+        z: pos.z as i32,
         terrain_cells: impact.terrain_cells,
         casualties: impact.casualties,
         population_delta: impact.population_delta,
@@ -135,6 +136,9 @@ impl Simulation {
         let wildfire_temp_threshold = wildfire_ignition_temp_fp(WILDFIRE_TEMP_FP, self.research_tier());
         let mut wildfires = Vec::new();
         let mut quakes = Vec::new();
+        let mut floods = Vec::new();
+        let mut storms = Vec::new();
+        let mut droughts = Vec::new();
         for cell in self.weather_cells() {
             let pos = WorldCoord {
                 x: i64::from(cell.region_id),
@@ -148,15 +152,13 @@ impl Simulation {
                 quakes.push(pos);
             }
             if cell.precip_mm_fp >= season_flood_threshold as i32
-                && is_low_elevation(self, &geology, cell.region_id, pos)
             {
                 floods.push(pos);
             }
             if cell.storm_intensity_fp >= season_storm_threshold as i32 {
                 storms.push(pos);
             }
-            if !would_wildfire
-                && cell.precip_mm_fp <= season_drought_threshold as i32
+            if cell.precip_mm_fp <= season_drought_threshold as i32
                 && cell.temp_c_fp >= DROUGHT_TEMP_FP
             {
                 droughts.push(pos);
@@ -180,6 +182,8 @@ impl Simulation {
         }
     }
 }
+
+
 
 /// FR-CIV-CLIMATE: Scale a disaster onset threshold by a seasonal likelihood modifier.
 ///
@@ -217,7 +221,7 @@ fn wildfire_ignition_temp_fp(base_fp: i32, research_tier: u64) -> i32 {
     (base_fp as i64).saturating_add(bonus) as i32
 }
 
-fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) {
+fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) -> DisasterImpact {
     let radius = radius_for(kind);
     let affected = positions_in_radius(pos, radius);
     let mut terrain_cells = 0u32;
@@ -306,6 +310,14 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) {
                 DisasterEffect::new(0.05, 0.10, 0.18, 0.06, false),
             );
         }
+        DisasterKind::Drought => {
+            impact = hit_agents(
+                sim,
+                pos,
+                radius,
+                DisasterEffect::new(0.12, 0.20, 0.42, 0.08, false),
+            );
+        }
     }
 
     let mut resource_delta = apply_disaster_resource_loss(kind, terrain_cells);
@@ -378,6 +390,12 @@ fn apply_disaster_resource_loss(kind: DisasterKind, terrain_cells: u32) -> Resou
             delta.wood = Fixed::ZERO;
             delta.metal = Fixed::ZERO;
             delta.energy = (Fixed::from_num(1.0) * scale).min(Fixed::from_num(4.0));
+        }
+        DisasterKind::Drought => {
+            delta.food = (Fixed::from_num(10.0) * scale).min(Fixed::from_num(40.0));
+            delta.wood = (Fixed::from_num(3.0) * scale).min(Fixed::from_num(12.0));
+            delta.metal = Fixed::ZERO;
+            delta.energy = (Fixed::from_num(2.0) * scale).min(Fixed::from_num(8.0));
         }
     }
     delta
@@ -488,9 +506,12 @@ fn hit_agents(sim: &mut Simulation, pos: WorldCoord, radius: i64, effect: Disast
             .collect()
     };
 
-    for (entity, despawn) in effects {
-        if despawn {
-            let _ = sim.world.despawn(entity);
+    let affected = effects.len() as u32;
+    let casualties = effects.iter().filter(|(_, despawn)| *despawn).count() as u32;
+
+    for (entity, despawn) in &effects {
+        if *despawn {
+            let _ = sim.world.despawn(*entity);
         }
     }
     let severity = if affected == 0 {
@@ -797,6 +818,7 @@ mod tests {
             "state resources should reflect disaster consumption"
         );
         assert!(sim.state.population < population_before, "state population should reflect casualties");
+    }
 
     /// Storm emerges when storm intensity crosses the physical onset threshold.
     #[test]

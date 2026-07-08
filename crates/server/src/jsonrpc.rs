@@ -75,6 +75,8 @@ pub enum JsonRpcMethod {
     /// Inspect terrain + faction at a tile coordinate.
     /// (`sim.inspect_tile`, FR tile-inspector).
     SimInspectTile,
+    /// Read the legends / saga graph payload (`sim.legends`).
+    SimLegends,
     /// Client-initiated diplomacy action (propose_treaty / declare_war / offer_trade). (sim.diplomacy_action, FR-CIV-CLIENT-006).
     SimDiplomacyAction,
     /// Queue a research tech on the simulation (`sim.queue_research`, FR-CIV-SERVER-003).
@@ -126,6 +128,7 @@ impl JsonRpcMethod {
             Self::SimUnsubscribe => "sim.unsubscribe",
             Self::SimUpdateSubscription => "sim.update_subscription",
             Self::SimOutcome => "sim.outcome",
+            Self::SimLegends => "sim.legends",
         }
     }
 
@@ -161,9 +164,50 @@ impl JsonRpcMethod {
             "sim.unsubscribe" => Some(Self::SimUnsubscribe),
             "sim.update_subscription" => Some(Self::SimUpdateSubscription),
             "sim.outcome" => Some(Self::SimOutcome),
+            "sim.legends" => Some(Self::SimLegends),
             _ => None,
         }
     }
+}
+
+fn diplomacy_action_kind(action: &str) -> Option<civ_engine::DiplomacyKind> {
+    match action {
+        "propose_treaty" | "trade_agreement" | "offer_trade" | "trade" => {
+            Some(civ_engine::DiplomacyKind::TradeAgreement)
+        }
+        "declare_war" | "war" | "attack" => Some(civ_engine::DiplomacyKind::Conflict),
+        "make_peace" | "peace" => Some(civ_engine::DiplomacyKind::Peace),
+        _ => None,
+    }
+}
+
+fn diplomacy_action_result(
+    ctx: &DispatchContext,
+    action: &str,
+    source: u64,
+    target: u64,
+) -> Result<Value, JsonRpcError> {
+    let kind = diplomacy_action_kind(action).ok_or_else(|| JsonRpcError {
+        code: error_code::INVALID_PARAMS,
+        message: format!("Unknown diplomacy action {action:?}"),
+        data: None,
+    })?;
+    if source == target {
+        return Err(JsonRpcError {
+            code: error_code::INVALID_PARAMS,
+            message: "source and target factions must differ".to_owned(),
+            data: None,
+        });
+    }
+
+    Ok(serde_json::json!({
+        "ok": true,
+        "action": action,
+        "source_faction": source,
+        "target_faction": target,
+        "kind": format!("{kind:?}"),
+        "tick": ctx.tick,
+    }))
 }
 
 /// JSON-RPC request `id` (string, number, or null per spec).
@@ -732,7 +776,7 @@ pub fn snapshot_fields_from_sim(
         tick: snap.tick,
         population: snap.population,
         building_count: snap.building_count,
-        energy_budget: Some(snap.energy_budget.to_f64()),
+        energy_budget: Some(snap.energy_budget.to_num::<f64>()),
         market_prices: snap.market_prices.clone(),
         hash_chain_root: sim
             .hash_chain_root()
@@ -1033,8 +1077,34 @@ pub enum DispatchEffect {
         /// Entity id seed for civilians only.
         entity_seq: u64,
     },
+    /// Queue a research tech on the bridge.
+    QueueResearch {
+        /// Tech identifier from the wire.
+        tech: String,
+    },
+    /// Apply a diplomacy action on the bridge.
+    DiplomacyAction {
+        /// Source faction id.
+        source_faction: u32,
+        /// Target faction id.
+        target_faction: u32,
+        /// Diplomacy kind derived from the action name.
+        kind: civ_engine::DiplomacyKind,
+    },
     /// Write one voxel (`sim.place_voxel`).
-    GodAction { action: String, x: Option<f32>, y: Option<f32>, target_faction: Option<u32>, magnitude: Option<f32> },
+    GodAction {
+        action: String,
+        x: Option<f32>,
+        y: Option<f32>,
+        target_faction: Option<u32>,
+        magnitude: Option<f32>,
+        radius_voxels: Option<u32>,
+        strength: Option<i32>,
+        material_id: Option<u32>,
+        drop_height: Option<i32>,
+        count: Option<u32>,
+        seed_civilian_id: Option<u64>,
+    },
     PlaceVoxel {
         /// World X coordinate.
         x: i64,
@@ -1269,7 +1339,7 @@ pub fn parse_replay_path(params: Option<&Value>) -> Result<String, JsonRpcError>
                     | std::path::Component::Prefix(_)
                     | std::path::Component::RootDir
             )
-        })
+            )
     {
         return Err(JsonRpcError {
             code: error_code::INVALID_PARAMS,
@@ -1495,11 +1565,22 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 effect: DispatchEffect::None,
             }
         }
+        JsonRpcMethod::SimLegends => DispatchPlan {
+            response: JsonRpcResponse::success(req.id, serde_json::json!({
+                "tick": ctx.tick,
+                "stub": true,
+            })),
+            effect: DispatchEffect::None,
+        },
         JsonRpcMethod::SimDiplomacyAction => {
             let action = req.params.as_ref()
                 .and_then(|p| p.get("action"))
                 .and_then(|v| v.as_str())
                 .unwrap_or("unknown");
+            let source = req.params.as_ref()
+                .and_then(|p| p.get("source_faction"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let target = req.params.as_ref()
                 .and_then(|p| p.get("target_faction"))
                 .and_then(|v| v.as_u64())
@@ -1758,7 +1839,9 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                         "queued": tech,
                         "tick": ctx.tick,
                     })),
-                    effect: DispatchEffect::None,
+                    effect: DispatchEffect::QueueResearch {
+                        tech: tech.to_owned(),
+                    },
                 }
             }
         }
@@ -1807,6 +1890,12 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                         y: p.get("y").and_then(|v| v.as_f64()).map(|f| f as f32),
                         target_faction: p.get("target_faction").and_then(|v| v.as_u64()).map(|f| f as u32),
                         magnitude: p.get("magnitude").and_then(|v| v.as_f64()).map(|f| f as f32),
+                        radius_voxels: p.get("radius_voxels").and_then(|v| v.as_u64()).map(|v| v as u32),
+                        strength: p.get("strength").and_then(|v| v.as_i64()).map(|v| v as i32),
+                        material_id: p.get("material_id").and_then(|v| v.as_u64()).map(|v| v as u32),
+                        drop_height: p.get("drop_height").and_then(|v| v.as_i64()).map(|v| v as i32),
+                        count: p.get("count").and_then(|v| v.as_u64()).map(|v| v as u32),
+                        seed_civilian_id: p.get("seed_civilian_id").and_then(|v| v.as_u64()),
                     },
                 },
             }

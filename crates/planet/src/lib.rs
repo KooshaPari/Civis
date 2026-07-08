@@ -8,6 +8,7 @@
 
 pub mod geology;
 pub use geology::{BiomeKind, GeologyMap, RegionBiome};
+pub mod worldgen;
 pub mod weather;
 pub use weather::{compute_weather, SeasonKind, WeatherCell, WeatherKind};
 pub mod seasonal;

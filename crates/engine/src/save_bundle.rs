@@ -9,7 +9,8 @@ use tar::{Archive, Builder};
 use thiserror::Error;
 use zstd::stream::{decode_all, encode_all};
 
-use crate::{ModGuestStateSave, ReplayError, Simulation};
+use crate::replay::ReplayError;
+use crate::{ModGuestStateSave, Simulation};
 
 /// Sidecar metadata written beside replay + mod state.
 pub const CIVSAVE_SPEC_ID: &str = "CIV-1000";

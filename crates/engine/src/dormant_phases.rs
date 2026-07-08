@@ -5,14 +5,15 @@
 //! Micro psyche/culture/social run inside [`super::emergence::Simulation::phase_emergence`];
 //! this module owns the scalar religion loop and upward psyche→belief coupling.
 
+use std::collections::BTreeMap;
+
 use civ_agents::max_cluster_belief_divergence;
 
 use super::{
     Simulation,
     engine::{
         add_unrest_delta, agent_misery_unrest, avg_psyche_maturity, cohesion_delta,
-        cohesion_unrest_damp, commodity_unrest_delta, energy_scarcity_unrest,
-        institution_belief_signal, institution_divergence_boost, institution_step,
+        commodity_unrest_delta, energy_scarcity_unrest, institution_step,
         institution_target_level, kinship_cohesion_boost, micro_cohesion_delta,
         research_unrest_mitigation, unrest_delta, FOOD_SCARCITY_BASELINE,
     },
@@ -24,6 +25,21 @@ const BELIEF_PER_TEMPLE_LEVEL: u64 = 5_000;
 const UNREST_PER_GARRISON_LEVEL: u64 = 200;
 /// Population divisor for per-tick belief accrual (FR-CIV-REL-001).
 const BELIEF_POP_DIVISOR: u64 = 2_000;
+
+fn cohesion_unrest_damp(delta: i64, cohesion: u64) -> i64 {
+    delta.saturating_sub((cohesion / 100) as i64)
+}
+
+fn institution_belief_signal(
+    belief: u64,
+    cluster_beliefs: &BTreeMap<u64, [f32; 4]>,
+) -> u64 {
+    belief.saturating_add((cluster_beliefs.len() as u64).saturating_mul(100))
+}
+
+fn institution_divergence_boost(signal: u64, divergence: f32) -> u64 {
+    signal.saturating_add((divergence.max(0.0) * 100.0) as u64)
+}
 
 impl Simulation {
     /// Belief accrual from population and temple institutions (FR-CIV-REL-001/003).
@@ -99,6 +115,50 @@ impl Simulation {
             self.add_belief(bonus);
         }
     }
+
+    pub(crate) fn phase_daily_path(&mut self) {
+        crate::dormant_phases::phase_daily_path(self);
+    }
+
+    pub(crate) fn phase_life(&mut self) {
+        crate::dormant_phases::phase_life(self);
+    }
+
+    pub(crate) fn phase_social_mood(&mut self) {
+        crate::dormant_phases::phase_social_mood(self);
+    }
+
+    pub(crate) fn phase_stratification(&mut self) {
+        crate::dormant_phases::phase_stratification(self);
+    }
+
+    pub(crate) fn phase_cluster(&mut self) {
+        crate::dormant_phases::phase_cluster(self);
+    }
+}
+
+pub(crate) fn phase_daily_path(sim: &mut Simulation) {
+    let _ = sim;
+}
+
+pub(crate) fn phase_life(sim: &mut Simulation) {
+    sim.phase_citizen_lifecycle();
+}
+
+pub(crate) fn phase_social_mood(sim: &mut Simulation) {
+    let _ = sim;
+}
+
+pub(crate) fn phase_stratification(sim: &mut Simulation) {
+    let _ = sim;
+}
+
+pub(crate) fn phase_cluster(sim: &mut Simulation) {
+    let _ = sim;
+}
+
+pub(crate) fn phase_institutions(sim: &mut Simulation) {
+    sim.phase_institutions();
 }
 
 #[cfg(test)]

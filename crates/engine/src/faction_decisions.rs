@@ -58,18 +58,17 @@ fn evaluate_faction(sim: &Simulation, faction_id: u32) -> FactionDecision {
         return FactionDecision::RaiseUnrestResponse;
     }
 
-    // 2. Check cohesion and resource state.
-    let avg_cohesion = sim
-        .last_tick_cohesion_snapshots()
-        .values()
-        .map(|snapshot| match snapshot.fabric {
-            crate::engine::FabricTier::Tight => 1.0,
-            crate::engine::FabricTier::Loosened => 0.7,
-            crate::engine::FabricTier::Strained => 0.4,
-            crate::engine::FabricTier::Fractured => 0.1,
-        })
-        .sum::<f32>()
-        / (sim.last_tick_cohesion_snapshots().len() as f32).max(1.0);
+    // 2. Check cohesion and resource state from the live cohesion events buffer.
+    let cohesion_events = sim.last_tick_cohesion();
+    let avg_cohesion = if cohesion_events.is_empty() {
+        0.0
+    } else {
+        cohesion_events
+            .iter()
+            .map(|event| event.score as f32)
+            .sum::<f32>()
+            / (cohesion_events.len() as f32)
+    };
 
     let resources = sim
         .state

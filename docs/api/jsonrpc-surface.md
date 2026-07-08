@@ -8,7 +8,7 @@
 
 ---
 
-## Method catalog (30)
+## Method catalog (31)
 
 | Method | Role (when `require_role`) | Params | Success result (dispatch; bridge may enrich) | `ws_smoke` integration test |
 |--------|----------------------------|--------|---------------------------------------------|------------------------------|
@@ -31,6 +31,7 @@
 | `sim.get_speed` | — | omit or `{}` | `{ "multiplier": <u32> }` | [`ws_jsonrpc_sim_set_speed_accepts_valid_multiplier`](../../crates/server/tests/ws_smoke.rs) (paired with set) |
 | `sim.tech_state` | — | `{}` or omit | `{ "available", "researched", "in_progress", "tick" }` | Unit: `sim_tech_state_*` in `jsonrpc.rs` |
 | `sim.queue_research` | — | `{ "tech": <known tech id> }` | `{ "queued": <tech>, "tick" }` | Unit: `dispatch_queue_research_*` in `jsonrpc.rs` |
+| `sim.legends` | — | `{ "query": <string>, "scope"?, "limit"?, "cursor"? }` | Legend / saga graph payload; see `sim.legends_query` in `jsonrpc.rs` | Unit: `sim_legends_*` in `jsonrpc.rs` |
 | `sim.spawn_civilian` | **operator** | `{ "x", "y": <f64 normalized 0–1>, "faction"? }` default faction `0` | Dispatch: `{ "accepted": true }`; bridge: `{ "accepted", "ok", "entity_id" }` | [`ws_jsonrpc_sim_spawn_civilian_returns_entity_id`](../../crates/server/tests/ws_smoke.rs), [`ws_jsonrpc_spawn_civilian_pin_appears_in_snapshot`](../../crates/server/tests/ws_smoke.rs) |
 | `sim.spawn_entity` | **operator** | `{ "kind", "x", "y", "faction"? }` — `kind`: `civilian` \| `vehicle` \| `airport` \| `port` \| `hangar` | Dispatch: `{ "accepted": true, "kind": <wire label> }`; bridge adds `ok`, `entity_id` | [`ws_jsonrpc_sim_spawn_entity_vehicle_returns_entity_id`](../../crates/server/tests/ws_smoke.rs) |
 | `sim.place_voxel` | **operator** | `{ "x", "y", "z": <i64 world>, "material"? }` default `0` | Dispatch: `{ "accepted": true }`; bridge: `{ "accepted", "ok": true }` | — (unit: `parse_place_voxel_params_reads_coords` in `jsonrpc.rs`) |

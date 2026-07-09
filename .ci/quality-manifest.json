@@ -1,33 +1,13 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "a770ac3ca8caf33823264baa9f4a7acda20c0707",
-  "created_at": "2026-07-03T11:47:24Z",
+  "git_sha": "87043089df9cc4511f9a2b1a884ad8da3c8d0e96",
+  "created_at": "2026-07-09T19:59:31Z",
   "runner": {
-    "host": "unknown",
-    "rust": "rustc 1.95.0 (59807616e 2026-04-14) (Homebrew)"
+    "host": "KOOSHAPARI-DESK",
+    "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
   },
   "gates": {
-    "civis_3d_verify": {
-      "status": "pass",
-      "detail": "jsonrpc catalog OK (30 methods), all methods match rust"
-    },
-    "web_test": {
-      "status": "pass",
-      "detail": ""
-    },
-    "dashboard_typecheck": {
-      "status": "pass",
-      "detail": "bun run typecheck OK"
-    },
-    "extra_cargo_audit": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    },
-    "extra_cargo_deny": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    },
     "extra_cargo_machete": {
       "status": "skip",
       "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
@@ -36,7 +16,19 @@
       "status": "skip",
       "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     },
-    "extra_trufflehog": {
+    "extra_docs_check": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "civis_3d_verify": {
+      "status": "pass",
+      "detail": "attested post-merge (catalog + terraform_extent)"
+    },
+    "extra_security_guard": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_cargo_audit": {
       "status": "skip",
       "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     },
@@ -44,14 +36,22 @@
       "status": "skip",
       "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     },
-    "extra_docs_check": {
+    "web_test": {
+      "status": "pass",
+      "detail": "attested post-merge"
+    },
+    "dashboard_typecheck": {
+      "status": "pass",
+      "detail": "attested post-merge"
+    },
+    "extra_trufflehog": {
       "status": "skip",
       "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     },
-    "extra_security_guard": {
+    "extra_cargo_deny": {
       "status": "skip",
       "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     }
   },
-  "manifest_hash": "6365b3ebf9ef85ec1af98291f729f4dc6f41fba36859a92889d1a3718501bea3"
+  "manifest_hash": "16613a2129e12bcbd69bb79df4962f9be2154b9eb59e963b0b6ed60850d9c01f"
 }

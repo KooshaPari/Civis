@@ -23,6 +23,7 @@
 
 pub mod cluster;
 pub mod culture;
+pub mod language;
 pub mod daily_path;
 pub mod diplomacy;
 pub mod psyche;
@@ -39,9 +40,16 @@ pub use daily_path::{
 pub use diplomacy::{
     DiplomacyMatrix, DiplomacyOutcome, DiplomacySignal, RelationKind, RelationRecord,
 };
+pub use language::{
+    coin_evolved, drift_phonemes, name_from_lexicon, phoneme_inventory_distance, render_lexeme,
+    tick_seeded_phoneme_drift, EvolvedLexicon, Lexeme, LexemeKind, Phoneme, PhonemeInventory,
+    DEFAULT_INVENTORY_SIZE, PHONEME_FEATURES,
+};
+pub use culture::{cluster_language_distance, language_divergence_from_isolation};
 pub use psyche::{
-    belief_culture_exposure, psych_genome_profile, Mood, PsychGenomeProfile, Psyche, Temperament,
-    PSYCHE_DIM,
+    belief_culture_exposure, belief_distance, cluster_belief_centroids,
+    isolation_weighted_belief_divergence, max_cluster_belief_divergence, psych_genome_profile,
+    weighted_belief_centroid, Mood, PsychGenomeProfile, Psyche, Temperament, PSYCHE_DIM,
 };
 pub use social::{
     apply_social_event, decay_social_graph, relation_label, Interaction, RelationLabel,
@@ -190,9 +198,29 @@ pub fn infer_alignment_for_spawn(world: &World, x: f32, y: f32) -> Alignment {
     counts
         .into_iter()
         .filter(|(alignment, _)| *alignment != Alignment::None)
-        .max_by_key(|(_, count)| *count)
-        .map(|(alignment, _)| alignment)
-        .unwrap_or(Alignment::None)
+        .fold(
+            (Alignment::None, 0usize),
+            |(best_alignment, best_count), (alignment, count)| {
+                if count > best_count
+                    || (count == best_count && alignment_precedes(alignment, best_alignment))
+                {
+                    (alignment, count)
+                } else {
+                    (best_alignment, best_count)
+                }
+            },
+        )
+        .0
+}
+
+fn alignment_precedes(lhs: Alignment, rhs: Alignment) -> bool {
+    match (lhs, rhs) {
+        (Alignment::Faction(a), Alignment::Faction(b)) => a < b,
+        (Alignment::Faction(_), Alignment::OtherEntity(_) | Alignment::None) => true,
+        (Alignment::OtherEntity(a), Alignment::OtherEntity(b)) => a < b,
+        (Alignment::OtherEntity(_), Alignment::None) => true,
+        _ => false,
+    }
 }
 
 /// Wardrobe state. The `era` is the civilian's currently worn-tech era;
@@ -346,8 +374,22 @@ pub fn spawn_child_near(
     y: f32,
     rng: &mut ChaCha8Rng,
 ) -> hecs::Entity {
+    use civ_genetics::{NamedSeed, spawn_genome_with_divergence};
+
     let nx = (x + rng.gen_range(-0.015..0.015)).clamp(0.01, 0.99);
     let ny = (y + rng.gen_range(-0.015..0.015)).clamp(0.01, 0.99);
+
+    // Generate DNA from archetype with divergence
+    let seed_index = (id as usize) % 3;
+    let named_seed = match seed_index {
+        0 => NamedSeed::Ardani,
+        1 => NamedSeed::Velthari,
+        _ => NamedSeed::Grundak,
+    };
+    let dna_class = civ_genetics::DnaClass::default();
+    let seed_def = civ_genetics::archetype_seed(named_seed);
+    let dna = spawn_genome_with_divergence(rng, &dna_class, &seed_def, 0.3);
+
     spawn_civilian(
         world,
         Civilian {
@@ -363,6 +405,7 @@ pub fn spawn_child_near(
             },
         },
         child_bundle_from_parent(rng),
+        dna,
     )
 }
 
@@ -394,119 +437,6 @@ pub struct UtilityWeights {
     pub belonging: f32,
 }
 
-/// Utility-AI needs vector for scoring higher-level actions.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct NeedsVector {
-    /// Hunger pressure.
-    pub hunger: f32,
-    /// Safety pressure.
-    pub safety: f32,
-    /// Social pressure.
-    pub social: f32,
-    /// Purpose pressure.
-    pub purpose: f32,
-    /// Spirituality pressure.
-    pub spirituality: f32,
-}
-
-impl NeedsVector {
-    /// Highest current need pressure.
-    #[must_use]
-    pub fn urgency(&self) -> f32 {
-        self.hunger
-            .max(self.safety)
-            .max(self.social)
-            .max(self.purpose)
-            .max(self.spirituality)
-    }
-}
-
-/// Coarse world context used by the utility scorer.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
-pub struct WorldSnapshot {
-    /// Food is nearby.
-    pub food_nearby: bool,
-    /// Threat is nearby.
-    pub threat_nearby: bool,
-    /// Other agents are nearby.
-    pub others_nearby: bool,
-    /// Temple is nearby.
-    pub temple_nearby: bool,
-}
-
-/// High-level action considered by the utility scorer.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum AgentAction {
-    /// Consume food.
-    Eat,
-    /// Avoid danger.
-    Flee,
-    /// Seek social contact.
-    Socialize,
-    /// Do productive work.
-    Work,
-    /// Visit a temple.
-    Pray,
-}
-
-/// Score an action for the current needs and world snapshot.
-pub trait UtilityScorer {
-    /// Score one action. Higher is better.
-    fn score_action(
-        &self,
-        action: &AgentAction,
-        needs: &NeedsVector,
-        world_state: &WorldSnapshot,
-    ) -> f32;
-}
-
-/// Simple context-sensitive utility scorer.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct BasicUtilityScorer;
-
-impl UtilityScorer for BasicUtilityScorer {
-    fn score_action(
-        &self,
-        action: &AgentAction,
-        needs: &NeedsVector,
-        world_state: &WorldSnapshot,
-    ) -> f32 {
-        match action {
-            AgentAction::Eat if world_state.food_nearby => needs.hunger * 1.5,
-            AgentAction::Flee if world_state.threat_nearby => needs.safety * 2.0,
-            AgentAction::Socialize if world_state.others_nearby => needs.social * 1.0,
-            AgentAction::Work => needs.purpose * 1.0,
-            AgentAction::Pray if world_state.temple_nearby => needs.spirituality * 1.0,
-            _ => 0.0,
-        }
-    }
-}
-
-/// Pick the highest-scoring available action.
-#[must_use]
-pub fn choose_action(
-    needs: &NeedsVector,
-    available: &[AgentAction],
-    scorer: &dyn UtilityScorer,
-    world: &WorldSnapshot,
-) -> AgentAction {
-    assert!(
-        !available.is_empty(),
-        "available actions must not be empty"
-    );
-
-    let mut best_action = available[0];
-    let mut best_score = scorer.score_action(&best_action, needs, world);
-    for action in &available[1..] {
-        let score = scorer.score_action(action, needs, world);
-        if score > best_score {
-            best_action = *action;
-            best_score = score;
-        }
-    }
-    best_action
-}
-
 /// Cohort-level diffusion statistics for a target era.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CohortStats {
@@ -526,6 +456,7 @@ pub fn spawn_civilian(
     civilian: Civilian,
     position: Position3d,
     bundle: CivilianBundle,
+    dna: civ_genetics::Dna,
 ) -> hecs::Entity {
     let CivilianBundle {
         velocity,
@@ -534,7 +465,7 @@ pub fn spawn_civilian(
         needs,
         lod,
     } = bundle;
-    world.spawn((civilian, position, velocity, wardrobe, tools, needs, lod))
+    world.spawn((civilian, position, velocity, wardrobe, tools, needs, lod, dna))
 }
 
 /// Return a normalized direction from a civilian toward a home coordinate.
@@ -572,6 +503,8 @@ pub fn spawn_civilian_at(
     visual: ActorVisualKind,
     rng: &mut ChaCha8Rng,
 ) -> hecs::Entity {
+    use civ_genetics::{NamedSeed, spawn_genome_with_divergence};
+
     let angle = rng.gen::<f32>() * std::f32::consts::TAU;
     let velocity = Velocity {
         dx: angle.cos(),
@@ -582,6 +515,20 @@ pub fn spawn_civilian_at(
         y: 0,
         z: (y.clamp(0.0, 1.0) * civ_voxel::FIXED_SCALE as f32) as i64,
     };
+
+    // Select archetype seed based on civilian ID % 3 for variety (Ardani, Velthari, Grundak)
+    let seed_index = (id as usize) % 3;
+    let named_seed = match seed_index {
+        0 => NamedSeed::Ardani,
+        1 => NamedSeed::Velthari,
+        _ => NamedSeed::Grundak,
+    };
+
+    // Generate DNA from archetype with divergence
+    let dna_class = civ_genetics::DnaClass::default();
+    let seed_def = civ_genetics::archetype_seed(named_seed);
+    let dna = spawn_genome_with_divergence(rng, &dna_class, &seed_def, 0.3);
+
     let entity = spawn_civilian(
         world,
         Civilian {
@@ -591,6 +538,7 @@ pub fn spawn_civilian_at(
         },
         Position3d { coord },
         CivilianBundle::newborn_default(velocity),
+        dna,
     );
     let _ = world.insert_one(entity, ActorVisual(visual));
     entity
@@ -603,6 +551,13 @@ pub fn spawn_many(
     seed_civilian_id: u64,
     faction: u32,
 ) -> Vec<hecs::Entity> {
+    use civ_genetics::{NamedSeed, spawn_genome_with_divergence};
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha8Rng;
+
+    // Create a seeded RNG for deterministic DNA generation
+    let mut rng = ChaCha8Rng::seed_from_u64(seed_civilian_id);
+
     let mut entities = Vec::with_capacity(count as usize);
     for offset in 0..count {
         let civilian = Civilian {
@@ -635,6 +590,18 @@ pub fn spawn_many(
             _ => LodTier::Cold,
         };
         let angle = (offset as f32) * 0.5;
+
+        // Generate DNA from archetype with divergence
+        let seed_index = ((seed_civilian_id + u64::from(offset)) as usize) % 3;
+        let named_seed = match seed_index {
+            0 => NamedSeed::Ardani,
+            1 => NamedSeed::Velthari,
+            _ => NamedSeed::Grundak,
+        };
+        let dna_class = civ_genetics::DnaClass::default();
+        let seed_def = civ_genetics::archetype_seed(named_seed);
+        let dna = spawn_genome_with_divergence(&mut rng, &dna_class, &seed_def, 0.3);
+
         entities.push(spawn_civilian(
             world,
             civilian,
@@ -649,6 +616,7 @@ pub fn spawn_many(
                 needs,
                 lod,
             },
+            dna,
         ));
     }
     entities
@@ -1000,6 +968,17 @@ mod tests {
         }
     }
 
+    /// Helper function for tests to create default DNA
+    fn test_dna() -> civ_genetics::Dna {
+        use civ_genetics::{NamedSeed, archetype_seed, spawn_genome_with_divergence, DnaClass};
+        use rand::SeedableRng;
+        use rand_chacha::ChaCha8Rng;
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+        let dna_class = DnaClass::default();
+        let seed_def = archetype_seed(NamedSeed::Ardani);
+        spawn_genome_with_divergence(&mut rng, &dna_class, &seed_def, 0.3)
+    }
+
     /// Covers FR-CIV-AGENTS-011 — fixture access: civilians compose with civ-genetics
     /// and civ-species without leaking RNG into the type system.
     #[test]
@@ -1019,6 +998,10 @@ mod tests {
     /// Covers FR-CIV-AGENTS-020 — spawn_civilian inserts all requested components.
     #[test]
     fn spawn_civilian_inserts_components() {
+        use civ_genetics::{NamedSeed, spawn_genome_with_divergence};
+        use rand::SeedableRng;
+        use rand_chacha::ChaCha8Rng;
+
         let mut world = World::new();
         let civ = Civilian {
             id: 11,
@@ -1045,6 +1028,10 @@ mod tests {
             health: 0.25,
         };
         let lod = LodTier::Warm;
+        let mut rng = ChaCha8Rng::seed_from_u64(11);
+        let dna_class = civ_genetics::DnaClass::default();
+        let seed_def = civ_genetics::archetype_seed(civ_genetics::NamedSeed::Ardani);
+        let dna = spawn_genome_with_divergence(&mut rng, &dna_class, &seed_def, 0.3);
         let entity = spawn_civilian(
             &mut world,
             civ.clone(),
@@ -1056,6 +1043,7 @@ mod tests {
                 needs,
                 lod,
             },
+            dna,
         );
 
         assert_eq!(&*world.get::<&Civilian>(entity).unwrap(), &civ);
@@ -1130,6 +1118,7 @@ mod tests {
                 },
                 lod: LodTier::Hot,
             },
+            test_dna(),
         );
         let before = *world.get::<&Position3d>(entity).unwrap();
         tick_movement(&mut world, 128, &mut rng, |_, _| true);
@@ -1174,6 +1163,7 @@ mod tests {
                 },
                 lod: LodTier::Hot,
             },
+            test_dna(),
         );
         tick_movement(&mut world, 128, &mut rng, |_, _| true);
         let pos = world.get::<&Position3d>(entity).unwrap();
@@ -1220,6 +1210,7 @@ mod tests {
                 },
                 lod: LodTier::Hot,
             },
+            test_dna(),
         );
         tick_movement(&mut world, 128, &mut rng, |x, _| x < 0.500_001);
         let pos = world.get::<&Position3d>(entity).unwrap();
@@ -1361,119 +1352,6 @@ mod tests {
         assert_eq!(top_action(&needs, &weights), NeedAction::FindShelter);
     }
 
-    /// Covers utility-AI urgency as the maximum need pressure.
-    #[test]
-    fn needs_vector_urgency_returns_maximum_need() {
-        let needs = NeedsVector {
-            hunger: 0.4,
-            safety: 0.9,
-            social: 0.1,
-            purpose: 0.7,
-            spirituality: 0.6,
-        };
-        assert_eq!(needs.urgency(), 0.9);
-    }
-
-    /// Covers contextual utility scoring for the basic scorer.
-    #[test]
-    fn basic_utility_scorer_scores_contextual_actions() {
-        let scorer = BasicUtilityScorer;
-        let needs = NeedsVector {
-            hunger: 0.8,
-            safety: 0.6,
-            social: 0.5,
-            purpose: 0.4,
-            spirituality: 0.3,
-        };
-        let world = WorldSnapshot {
-            food_nearby: true,
-            threat_nearby: true,
-            others_nearby: true,
-            temple_nearby: true,
-        };
-
-        assert_eq!(
-            scorer.score_action(&AgentAction::Eat, &needs, &world),
-            0.8 * 1.5
-        );
-        assert_eq!(
-            scorer.score_action(&AgentAction::Flee, &needs, &world),
-            0.6 * 2.0
-        );
-        assert_eq!(
-            scorer.score_action(&AgentAction::Socialize, &needs, &world),
-            0.5
-        );
-        assert_eq!(scorer.score_action(&AgentAction::Work, &needs, &world), 0.4);
-        assert_eq!(
-            scorer.score_action(&AgentAction::Pray, &needs, &world),
-            0.3
-        );
-
-        let empty_world = WorldSnapshot::default();
-        assert_eq!(
-            scorer.score_action(&AgentAction::Eat, &needs, &empty_world),
-            0.0
-        );
-        assert_eq!(
-            scorer.score_action(&AgentAction::Flee, &needs, &empty_world),
-            0.0
-        );
-        assert_eq!(
-            scorer.score_action(&AgentAction::Socialize, &needs, &empty_world),
-            0.0
-        );
-        assert_eq!(
-            scorer.score_action(&AgentAction::Pray, &needs, &empty_world),
-            0.0
-        );
-    }
-
-    /// Covers greedy action selection from the highest available utility.
-    #[test]
-    fn choose_action_picks_highest_scoring_available_action() {
-        let scorer = BasicUtilityScorer;
-        let needs = NeedsVector {
-            hunger: 0.9,
-            safety: 0.2,
-            social: 0.1,
-            purpose: 0.7,
-            spirituality: 0.4,
-        };
-        let world = WorldSnapshot {
-            food_nearby: true,
-            threat_nearby: false,
-            others_nearby: false,
-            temple_nearby: false,
-        };
-        let available = [AgentAction::Work, AgentAction::Eat, AgentAction::Pray];
-
-        assert_eq!(
-            choose_action(&needs, &available, &scorer, &world),
-            AgentAction::Eat
-        );
-    }
-
-    /// Covers deterministic tie-breaking in the greedy selector.
-    #[test]
-    fn choose_action_keeps_first_action_on_tie() {
-        let scorer = BasicUtilityScorer;
-        let needs = NeedsVector {
-            hunger: 0.5,
-            safety: 0.5,
-            social: 0.5,
-            purpose: 0.5,
-            spirituality: 0.5,
-        };
-        let world = WorldSnapshot::default();
-        let available = [AgentAction::Work, AgentAction::Eat];
-
-        assert_eq!(
-            choose_action(&needs, &available, &scorer, &world),
-            AgentAction::Work
-        );
-    }
-
     /// Covers FR-CIV-EMERGENCE-010 — spawn alignment is inferred from nearby
     /// civilians (kinship proximity).
     #[test]
@@ -1552,6 +1430,38 @@ mod tests {
             );
         }
         assert_eq!(infer_alignment_for_spawn(&world, 0.5, 0.5), Alignment::None);
+    }
+
+    /// Covers deterministic tie-breaking when multiple aligned clusters are
+    /// equally close to the spawn point.
+    #[test]
+    fn infer_alignment_for_spawn_breaks_ties_deterministically() {
+        let mut world = World::new();
+        let mut rng = rng(7);
+
+        spawn_civilian_at(
+            &mut world,
+            500,
+            Alignment::with_faction(2),
+            0.5,
+            0.5,
+            ActorVisualKind::Humanoid,
+            &mut rng,
+        );
+        spawn_civilian_at(
+            &mut world,
+            501,
+            Alignment::with_faction(1),
+            0.5,
+            0.5,
+            ActorVisualKind::Humanoid,
+            &mut rng,
+        );
+
+        assert_eq!(
+            infer_alignment_for_spawn(&world, 0.5, 0.5),
+            Alignment::with_faction(1)
+        );
     }
 
     /// Covers FR-CIV-EMERGENCE-001 — form_faction succeeds only when the founder
@@ -1785,10 +1695,7 @@ mod tests {
                 z: scale as i64,
             },
         };
-        let current = Velocity {
-            dx: 0.3,
-            dy: 0.7,
-        };
+        let current = Velocity { dx: 0.3, dy: 0.7 };
         let steered = drift_toward_home(&here, &home, current, 0.75);
         let len_sq = steered.dx * steered.dx + steered.dy * steered.dy;
         assert!((len_sq - 1.0).abs() < 1e-5);

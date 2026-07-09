@@ -1,0 +1,22 @@
+{
+  "name": "civ-watch",
+  "description": "Civis watch daemon — filesystem watcher + live-reload bridge",
+  "command": "cargo run -p civ-watch",
+  "cwd": "/Users/kooshapari/CodeProjects/Phenotype/repos/Civis",
+  "env": {
+    "RUST_LOG": "info",
+    "WATCH_PORT": "9090"
+  },
+  "health_check": {
+    "type": "http",
+    "url": "http://localhost:9090/health",
+    "interval_secs": 30,
+    "timeout_secs": 5,
+    "retries": 3
+  },
+  "restart": "on-failure",
+  "restart_secs": 5,
+  "max_restarts": 5,
+  "depends_on": ["civ-server"],
+  "tags": ["dev-tool", "watch", "rust"]
+}

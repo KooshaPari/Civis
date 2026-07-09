@@ -1,8 +1,8 @@
-//! `civ-powers` — Data-driven god-tool registry for the Holocron Deck
+//! `civ-powers` ΓÇö Data-driven god-tool registry for the Holocron Deck
 //! (FR-CIV-GODTOOL-900/901).
 //!
 //! This crate owns the **data-driven catalog** of god-tool verbs the player
-//! can wield. It contains no business logic — every entry in
+//! can wield. It contains no business logic ΓÇö every entry in
 //! [`default_powers`] is a static `PowerDef` describing a single verb's
 //! id, tab, category, request kind, and coupling note. The actual substrate
 //! write is performed by `civ-engine::Simulation::apply_god_tool`
@@ -14,13 +14,13 @@
 //! mutate a field the substrate already owns. The registry records the
 //! *kind* of request each power emits; the substrate handler is the only
 //! path that performs the write. There is no Bevy/ECS/voxel handle stored
-//! on a `PowerDef` — those live in the substrate handlers, not in the
+//! on a `PowerDef` ΓÇö those live in the substrate handlers, not in the
 //! data-driven catalog.
 //!
 //! Phase 1 of the plan lands:
-//! - [`PowerDef`] — the schema for a single god-tool verb
-//! - [`PowerRegistry`] — the catalog with compile-time/runtime guards
-//! - [`default_powers`] — the 50-verb skeleton (status `Live` for the
+//! - [`PowerDef`] ΓÇö the schema for a single god-tool verb
+//! - [`PowerRegistry`] ΓÇö the catalog with compile-time/runtime guards
+//! - [`default_powers`] ΓÇö the 50-verb skeleton (status `Live` for the
 //!   verbs with implemented substrate handlers, `Near` otherwise)
 //!
 //! Substrate handlers for the 3-5 highest-value verbs (terraform /
@@ -61,19 +61,19 @@ pub fn default_powers() -> &'static [PowerDef] {
 /// listed; the canonical 50-verb deck folds Camera and Time in).
 ///
 /// We register the 50-verb headline figure for now (matching
-/// `fr-3d-matrix.md` and `GODTOOLS_IMPL_PLAN.md` §0). The CAMERA and
+/// `fr-3d-matrix.md` and `GODTOOLS_IMPL_PLAN.md` ┬º0). The CAMERA and
 /// TIME rows are tagged `Universal` and `Schedule` respectively and
 /// never produce a substrate mutation.
 pub static DEFAULT_POWERS: &[PowerDef] = &[
     // ===================== TERRAIN (11) =====================
     def_live("terrain.raise", "Raise", PowerTab::Terrain, PowerCategory::Mutating,
-        "Raises terrain height by Δ under brush footprint; CA settles.", PowerRequestKind::TerraformEdit),
+        "Raises terrain height by ╬ö under brush footprint; CA settles.", PowerRequestKind::TerraformEdit),
     def_live("terrain.lower", "Lower", PowerTab::Terrain, PowerCategory::Mutating,
-        "Lowers terrain height by Δ under brush footprint; CA settles.", PowerRequestKind::TerraformEdit),
+        "Lowers terrain height by ╬ö under brush footprint; CA settles.", PowerRequestKind::TerraformEdit),
     def_live("terrain.level", "Level", PowerTab::Terrain, PowerCategory::Mutating,
         "Sets terrain height to a picked target value across footprint.", PowerRequestKind::TerraformEdit),
     def_live("terrain.smooth", "Smooth", PowerTab::Terrain, PowerCategory::Mutating,
-        "Averages neighbour heights under footprint; 3×3×3 window.", PowerRequestKind::TerraformEdit),
+        "Averages neighbour heights under footprint; 3├ù3├ù3 window.", PowerRequestKind::TerraformEdit),
     def_live("terrain.slope", "Slope", PowerTab::Terrain, PowerCategory::Mutating,
         "Tilts height field toward a 2-click anchor gradient.", PowerRequestKind::TerraformEdit),
     def_live("terrain.flatten", "Flatten", PowerTab::Terrain, PowerCategory::Mutating,
@@ -81,9 +81,9 @@ pub static DEFAULT_POWERS: &[PowerDef] = &[
     def_near("terrain.shift", "Shift", PowerTab::Terrain, PowerCategory::Mutating,
         "Translates the height field under footprint by a vector.", PowerRequestKind::TerraformEdit),
     def_live("terrain.add_land", "AddLand", PowerTab::Terrain, PowerCategory::Mutating,
-        "Chunky +Δ in a hard-edged footprint; god-brush ignores falloff.", PowerRequestKind::TerraformEdit),
+        "Chunky +╬ö in a hard-edged footprint; god-brush ignores falloff.", PowerRequestKind::TerraformEdit),
     def_live("terrain.dig_ocean", "DigOcean", PowerTab::Terrain, PowerCategory::Mutating,
-        "Chunky –Δ down to sea level; water CA fills the basin.", PowerRequestKind::TerraformEdit),
+        "Chunky ΓÇô╬ö down to sea level; water CA fills the basin.", PowerRequestKind::TerraformEdit),
     def_live("terrain.raise_mountain", "RaiseMountain", PowerTab::Terrain, PowerCategory::Mutating,
         "AddLand with a Gaussian peak profile + height-noise dither.", PowerRequestKind::TerraformEdit),
     def_live("terrain.drop_biome", "DropBiome", PowerTab::Terrain, PowerCategory::Mutating,
@@ -142,7 +142,7 @@ pub static DEFAULT_POWERS: &[PowerDef] = &[
         "Writes a rotating wind-field vortex for N ticks.",
         PowerRequestKind::Disaster),
     def_live("disaster.volcanic_vent", "VolcanicVent", PowerTab::Disaster, PowerCategory::Mutating,
-        "Drops lava + emits CO₂ gas + raises local temp; sustained.",
+        "Drops lava + emits COΓéé gas + raises local temp; sustained.",
         PowerRequestKind::Disaster),
     def_live("disaster.drought", "Drought", PowerTab::Disaster, PowerCategory::Mutating,
         "Lowers precipitation field across a region for N ticks.",
@@ -188,7 +188,7 @@ pub static DEFAULT_POWERS: &[PowerDef] = &[
         "Reduces trade flow between two faction clusters; agents reroute via A*.",
         PowerRequestKind::Law),
     def_near("law.open_border", "OpenBorder", PowerTab::Law, PowerCategory::Mutating,
-        "Inverse of Sanction — boosts trade flow.",
+        "Inverse of Sanction ΓÇö boosts trade flow.",
         PowerRequestKind::Law),
     def_near("law.alignment_nudge", "AlignmentNudge", PowerTab::Law, PowerCategory::Mutating,
         "Tilts a faction's ethnocentric_tendency_weight (Hammond-Axelrod).",
@@ -200,7 +200,7 @@ pub static DEFAULT_POWERS: &[PowerDef] = &[
         "Replays a stored sequence of (god-tool, params, tick) actions via the standard queue.",
         PowerRequestKind::Law),
 
-    // ===================== CAMERA (8) — universal, no substrate write =====================
+    // ===================== CAMERA (8) ΓÇö universal, no substrate write =====================
     def_near("camera.orbit", "Orbit", PowerTab::Camera, PowerCategory::Universal,
         "Camera transform (yaw around target); UI only.",
         PowerRequestKind::NoOp),
@@ -226,7 +226,7 @@ pub static DEFAULT_POWERS: &[PowerDef] = &[
         "Hides HUD/overlays, free-cam, DoF/exposure; UI only.",
         PowerRequestKind::NoOp),
 
-    // ===================== TIME (8) — clock control, schedule only =====================
+    // ===================== TIME (8) ΓÇö clock control, schedule only =====================
     def_near("time.pause", "Pause", PowerTab::Time, PowerCategory::Universal,
         "GameSpeed multiplier = 0; decoupled sim schedule freezes.",
         PowerRequestKind::Time),
@@ -237,7 +237,7 @@ pub static DEFAULT_POWERS: &[PowerDef] = &[
         "GameSpeed multiplier = 0.25; half-step.",
         PowerRequestKind::Time),
     def_near("time.fast", "Fast", PowerTab::Time, PowerCategory::Universal,
-        "GameSpeed multiplier ∈ {2, 5, 10}; fast-forward.",
+        "GameSpeed multiplier Γêê {2, 5, 10}; fast-forward.",
         PowerRequestKind::Time),
     def_near("time.step", "Step", PowerTab::Time, PowerCategory::Universal,
         "Advance exactly N ticks then auto-pause; discrete step (debug + design).",
@@ -297,12 +297,12 @@ mod tests {
 
     /// AC-REG-1 (FR-CIV-GODTOOL-901): the catalog is data-driven. The
     /// default 66-verb list lives in `default_powers()` and adding a
-    /// power means appending one `PowerDef` — no edits to the
+    /// power means appending one `PowerDef` ΓÇö no edits to the
     /// substrate handlers.
     #[test]
     fn default_powers_count_is_66() {
         // Phase 1 currently ships 66 verbs across the eight tabs. See
-        // `docs/design/GODTOOLS_IMPL_PLAN.md` §0 / §12.
+        // `docs/design/GODTOOLS_IMPL_PLAN.md` ┬º0 / ┬º12.
         assert_eq!(
             default_powers().len(),
             66,

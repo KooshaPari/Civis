@@ -1,40 +1,52 @@
-# ADR-021: Accessibility & L10n Strategy
+# ADR-021: Accessibility & Localization Strategy
 
 ## Status
-Approved
+
+Accepted
 
 ## Context
-Civis targets a global audience with diverse accessibility and language needs. Currently:
-- Four locale directories exist as stubs (`fa/`, `fa-Latn/`, `zh-CN/`, `zh-TW/`) with no translations
-- No string extraction/infrastructure exists
-- No colorblind/tutorial/screen-reader support
-- No ADR governs the approach
+
+The Civis godgame targets a global audience. Two major gaps exist:
+
+1. **Accessibility**: No colorblind support, no high-contrast mode, no screen-reader semantics, no tutorial/onboarding flow.
+2. **Localization (L10n)**: Four locale directories exist (`fa/`, `fa-Latn/`, `zh-CN/`, `zh-TW/`) with stub `index.md` files but zero translation infrastructure in code — no string tables, no locale detection, no RTL layout support.
 
 ## Decision
-Adopt a phased strategy:
 
-### Phase 1 — Foundation (current)
-1. `crates/i18n/` with `Locale` enum + `tr!()` macro + JSON string bundles
-2. `.ci/` quality composites for reusable CI actions
-3. `ADR-021` strategy document
+### Phase 1 — Foundation (done)
 
-### Phase 2 — Translations
-1. Full Persian (fa) RTL layout + Arabic-script rendering
-2. Chinese (zh-CN, zh-TW) CJK font fallback
-3. Complete UI string tables (68+ keys)
+1. Create `crates/i18n` — a dedicated localization crate with:
+   - `Locale` enum + detection (`Accept-Language`, OS locale, override)
+   - `tr!()` macro for compile-time string lookup
+   - JSON string bundles per locale loaded at init
+2. Define target locales: English (en), Persian (fa), Persian-Latin (fa-Latn), Simplified Chinese (zh-CN), Traditional Chinese (zh-TW).
 
-### Phase 3 — Accessibility
-1. Colorblind palette modes (deuteranopia, protanopia, tritanopia)
-2. Tutorial/onboarding flow with first-run detection
-3. High-contrast mode + WCAG AA compliance
+### Phase 2 — Accessibility (next sprint)
 
-### Phase 4 — Screen Reader
-1. ARIA-compatible UI tree
-2. Screen-reader announcement queue
-3. Keyboard-navigation parity
+3. Add colorblind palette modes (deuteranopia, protanopia, tritanopia)
+4. Add high-contrast theme toggle
+5. Add tutorial/onboarding flow for first-time players
+6. Add WCAG AA compliance checklist to PR governance
+
+### Phase 3 — Full L10n rollout (ongoing)
+
+7. Wire iOS system locale detection → `civ-i18n`
+8. Translate full UI string table to Persian + Chinese
+9. Add RTL layout support for Persian
+10. Document i18n workflow in CONTRIBUTING
 
 ## Consequences
-- Translation effort shifts from ad-hoc to structured
-- `crates/i18n/` becomes a dependency for all UI crates
-- New PRs must include `tr!()` for user-facing strings
-- RTL support requires layout-agnostic UI framework testing
+
+- **Positive**: All user-facing text flows through `tr!()` → string bundle → UI, enabling incremental translation without code changes
+- **Positive**: Colorblind modes improve accessibility for ~8% of male players
+- **Negative**: Each new locale adds ~2KB to the binary (JSON bundle)
+- **Risk**: RTL layout may require egui fork or custom widget wrapping
+
+## FR Coverage
+
+- FR-CIV-ACCESS-010: Colorblind palette modes (≥3 palettes)
+- FR-CIV-ACCESS-020: High-contrast theme
+- FR-CIV-L10N-010: String table infrastructure
+- FR-CIV-L10N-020: Locale detection
+- FR-CIV-L10N-030: Persian translation (≥80% string coverage)
+- FR-CIV-L10N-040: Chinese translation (≥80% string coverage)

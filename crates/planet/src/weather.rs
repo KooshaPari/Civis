@@ -247,9 +247,13 @@ mod tests {
     #[test]
     fn compute_weather_fields_are_clamped() {
         let cells = compute_weather(&climate(0.9, 0.5), 99_999, 16);
-        assert!(cells.iter().all(|c| (-60_000..=55_000).contains(&c.temp_c_fp)));
+        assert!(cells
+            .iter()
+            .all(|c| (-60_000..=55_000).contains(&c.temp_c_fp)));
         assert!(cells.iter().all(|c| (0..=20_000).contains(&c.precip_mm_fp)));
-        assert!(cells.iter().all(|c| (0..=10_000).contains(&c.storm_intensity_fp)));
+        assert!(cells
+            .iter()
+            .all(|c| (0..=10_000).contains(&c.storm_intensity_fp)));
     }
 
     #[test]

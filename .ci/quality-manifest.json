@@ -1,16 +1,16 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "e822215ce9216a82d1abd83ea7d01c2ec8b7a2ee",
-  "created_at": "2026-06-29T22:34:44Z",
+  "git_sha": "a770ac3ca8caf33823264baa9f4a7acda20c0707",
+  "created_at": "2026-07-03T11:47:24Z",
   "runner": {
     "host": "unknown",
     "rust": "rustc 1.95.0 (59807616e 2026-04-14) (Homebrew)"
   },
   "gates": {
     "civis_3d_verify": {
-      "status": "fail",
-      "detail": "help: return the expression directly     | 198 ~      199 ~     (weighted / total_w).clamp(0.0, 1.0)     |  error: could not compile `civ-species` (lib) due to 2 previous errors warning: build failed, waiting for other jobs to finish... error: manual `!Range::contains` implementation    --> crates/needs/src/lifecycle.rs:244:8     | 244 |     if age < 18 || age >= 65 {     |        ^^^^^^^^^^^^^^^^^^^^^ help: use: `!(18..65).contains(&age)`     |     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.95.0/index.html#manual_range_contains     = note: `-D clippy::manual-range-contains` implied by `-D warnings`     = help: to override `-D warnings` add `#[allow(clippy::manual_range_contains)]`  error: could not compile `civ-needs` (lib) due to 1 previous error error: Recipe `civis-3d-verify` failed on line 110 with exit code 101 "
+      "status": "pass",
+      "detail": "jsonrpc catalog OK (30 methods), all methods match rust"
     },
     "web_test": {
       "status": "pass",
@@ -18,7 +18,7 @@
     },
     "dashboard_typecheck": {
       "status": "pass",
-      "detail": ""
+      "detail": "bun run typecheck OK"
     },
     "extra_cargo_audit": {
       "status": "skip",
@@ -53,5 +53,5 @@
       "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     }
   },
-  "manifest_hash": "0a71d3347eee43eb854edc0c6cdd6d4d3dca2c70d23a9ae686db6b63ea613204"
+  "manifest_hash": "6365b3ebf9ef85ec1af98291f729f4dc6f41fba36859a92889d1a3718501bea3"
 }

@@ -4,7 +4,6 @@
 //! Settings GPU readout: FR-CIV-BEVY-036 / item 61.
 
 use crate::gpu_features::GpuCapabilities;
-use crate::save_load_ui::SaveLoadPanel;
 use crate::settings_ui::{GameSettings, ACTION_PAUSE_SIM, KeyBinding};
 use bevy::app::AppExit;
 use bevy::prelude::*;
@@ -144,18 +143,10 @@ impl Plugin for MenusPlugin {
             .init_resource::<SettingsOpen>()
             .init_resource::<WorldSetupParams>()
             .init_resource::<SettingsState>()
-            .init_resource::<MenuCommand>()
-            .init_resource::<MainMenuSaves>()
             .add_systems(Update, (toggle_pause, tick_era_banner))
             .add_systems(
                 EguiPrimaryContextPass,
-                (
-                    draw_main_menu,
-                    draw_worldgen_overlay,
-                    draw_pause_menu,
-                    draw_era_banner,
-                    draw_settings_window,
-                ),
+                (draw_pause_menu, draw_era_banner, draw_settings_window),
             );
     }
 }
@@ -308,19 +299,10 @@ fn draw_worldgen_overlay(mut contexts: EguiContexts, state: Option<Res<State<App
 
 fn draw_pause_menu(
     mut contexts: EguiContexts,
-    state: Option<Res<State<AppState>>>,
     mut mode: ResMut<GameUiMode>,
     mut settings_open: ResMut<SettingsOpen>,
-    mut command: ResMut<MenuCommand>,
-    mut save_panel: ResMut<SaveLoadPanel>,
     mut exit: MessageWriter<AppExit>,
 ) {
-    let Some(state) = state else {
-        return;
-    };
-    if *state != AppState::Paused {
-        return;
-    }
     if *mode != GameUiMode::Paused {
         return;
     }
@@ -426,7 +408,6 @@ fn pause_menu_buttons(
     exit: &mut MessageWriter<AppExit>,
 ) {
     if menu_button(ui, "\u{25b6}  Resume").clicked() {
-        command.action = MainMenuCommand::Resume;
         *mode = GameUiMode::Playing;
     }
     ui.add_space(6.0);
@@ -447,7 +428,6 @@ fn pause_menu_buttons(
     ui.add_space(10.0);
     if menu_button(ui, "\u{23fb}  Quit").clicked() {
         exit.write(AppExit::Success);
-        command.action = MainMenuCommand::Quit;
     }
 }
 
@@ -615,7 +595,7 @@ fn gpu_capabilities_settings_section(ui: &mut egui::Ui, gpu_caps: Option<&GpuCap
 
 fn menu_button(ui: &mut egui::Ui, label: &str) -> egui::Response {
     let btn = egui::Button::new(egui::RichText::new(label).size(16.0))
-        .fill(KC_ACCENT.gamma_multiply(0.18))
+        .fill(CHIP_FILL)
         .min_size(egui::vec2(220.0, 40.0))
         .corner_radius(egui::CornerRadius::same(8));
     ui.add(btn)

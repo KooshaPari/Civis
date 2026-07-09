@@ -2,9 +2,7 @@
 
 **Date:** 2026-02-21
 
-**Status:** **Superseded by [ADR-determinism-dropped](ADR-determinism-dropped.md) (2026-05-30)**
-
-> The original "zero-tolerance non-determinism" position below is preserved for the historical decision trail. It no longer reflects the project's current position: the project has dropped the determinism / seeded-only / fixed-point requirement. Real randomness is welcome where it supports richer emergence. See `ADR-determinism-dropped.md` for the active decision.
+**Status:** ACCEPTED
 
 **Author:** CIV Architecture & QA Team
 

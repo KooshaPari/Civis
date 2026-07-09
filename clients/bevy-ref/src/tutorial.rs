@@ -9,17 +9,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::menus::in_game;
 
-/// Tutorial visibility states.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TutorialVisibility {
-    /// Always show at start of new game (first-run detection).
-    Auto,
-    /// Manually toggled with [H].
-    Manual,
-    /// Hidden (completed or dismissed).
-    Hidden,
-}
-
 const HINTS: &[&str] = &[
     "Welcome to Civis! Your civilization is emerging. Watch the minimap for faction spread. [M] cycles map modes.",
     "Press [F] to see your faction's stats - population, treasury, and government type.",
@@ -29,43 +18,16 @@ const HINTS: &[&str] = &[
     "Press [?] anytime for all controls. Good luck!",
 ];
 
-/// State-dependent filter: which step index to show based on sim progress.
-const STATE_GATES: &[(u8, &str)] = &[
-    (0, ""),                              // step 0: always
-    (1, "faction"),                        // step 1: once a faction exists
-    (5, "technology"),                     // step 5: once tech is unlocked
-];
-
-/// Persistent tutorial state saved to disk.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TutorialSaveData {
-    /// Has the user ever completed the tutorial?
-    pub completed_once: bool,
-}
-
-impl Default for TutorialSaveData {
-    fn default() -> Self {
-        Self { completed_once: false }
-    }
-}
-
 #[derive(Resource)]
 pub struct TutorialState {
-    pub visibility: TutorialVisibility,
+    pub enabled: bool,
     pub step: u8,
     pub acknowledged: bool,
-    /// Cached save-data from user_data.
-    pub save_data: TutorialSaveData,
 }
 
 impl Default for TutorialState {
     fn default() -> Self {
-        Self {
-            visibility: TutorialVisibility::Auto,
-            step: 0,
-            acknowledged: false,
-            save_data: TutorialSaveData::default(),
-        }
+        Self { enabled: true, step: 0, acknowledged: false }
     }
 }
 
@@ -83,12 +45,12 @@ fn handle_tutorial_keys(
     mut state: ResMut<TutorialState>,
 ) {
     if keys.just_pressed(KeyCode::KeyH) {
-        state.visibility = TutorialVisibility::Manual;
+        state.enabled = true;
         state.step = 0;
         state.acknowledged = false;
         return;
     }
-    if state.visibility == TutorialVisibility::Hidden { return; }
+    if !state.enabled { return; }
     if keys.just_pressed(KeyCode::Space) {
         advance(&mut state);
     }
@@ -96,26 +58,18 @@ fn handle_tutorial_keys(
 
 fn advance(state: &mut TutorialState) {
     if state.step as usize + 1 >= HINTS.len() {
-        state.visibility = TutorialVisibility::Hidden;
-        state.save_data.completed_once = true;
+        state.enabled = false;
     } else {
-        // Skip ahead to next step whose gate is open.
-        let mut next = state.step + 1;
-        while (next as usize) < HINTS.len() && !is_gate_open(next) {
-            next += 1;
-        }
-        state.step = next.min((HINTS.len() - 1) as u8);
+        state.step += 1;
         state.acknowledged = false;
     }
 }
 
-/// Returns true when the user has progressed far enough to see this step.
-fn is_gate_open(step: u8) -> bool {
-    // For now, all gates are open (no sim-state check in this stub).
-    // Future: check emergence_metrics, faction count, tech tree.
-    let _ = step;
-    true
-}
+fn draw_tutorial_hint(
+    mut contexts: EguiContexts,
+    mut state: ResMut<TutorialState>,
+) {
+    if !state.enabled { return; }
 
 /// Returns true if the tutorial should show this frame.
 fn should_show(state: &TutorialState) -> bool {
@@ -138,8 +92,7 @@ fn draw_tutorial_hint(
     }
     if !should_show(&state) { return; }
 
-    let idx = (state.step as usize).min(HINTS.len() - 1);
-    let hint = HINTS[idx];
+    let hint = HINTS[state.step as usize];
     let step = state.step;
     let total = HINTS.len() as u8;
 

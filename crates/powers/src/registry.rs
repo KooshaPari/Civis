@@ -67,7 +67,7 @@ pub enum PowerCategory {
     Universal,
 }
 
-/// Availability tier mirroring the info-views legibility moat —
+/// Availability tier mirroring the info-views legibility moat ΓÇö
 /// Live powers stamp substrate writes; Near powers are
 /// lit-but-inert in the deck; Blind powers are visibly disabled
 /// with a "coming soon" tag.
@@ -89,24 +89,24 @@ pub enum PowerAvailability {
 /// `crates/engine/src/godtools.rs`.
 ///
 /// **Note:** `ScriptedOutcome` is **intentionally absent**. A power
-/// that wants a scripted outcome fails to register — this is the
+/// that wants a scripted outcome fails to register ΓÇö this is the
 /// AC-CPL-3 compile-time guard from
-/// `docs/design/GODTOOLS_IMPL_PLAN.md` §6.1.
+/// `docs/design/GODTOOLS_IMPL_PLAN.md` ┬º6.1.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum PowerRequestKind {
-    /// `→ crates/voxel::VoxelWorld::write` (Replace, Erase, SurfacePaint, etc.)
+    /// `ΓåÆ crates/voxel::VoxelWorld::write` (Replace, Erase, SurfacePaint, etc.)
     MaterialEdit,
-    /// `→ crates/engine::Simulation::push_voxel_write` (Raise, Lower, Level, …)
+    /// `ΓåÆ crates/engine::Simulation::push_voxel_write` (Raise, Lower, Level, ΓÇª)
     TerraformEdit,
-    /// `→ civ_agents::spawn_child_near` / `spawn_many` / `spawn_civilian_at`
+    /// `ΓåÆ civ_agents::spawn_child_near` / `spawn_many` / `spawn_civilian_at`
     ActorSpawn,
-    /// `→ crates/agents::apply_actor_effect` (Bless, Curse, Heal, Plague)
+    /// `ΓåÆ crates/agents::apply_actor_effect` (Bless, Curse, Heal, Plague)
     ActorEffect,
-    /// `→ Simulation::invoke_divine_disaster` (Meteor, Flood, Quake, …)
+    /// `ΓåÆ Simulation::invoke_divine_disaster` (Meteor, Flood, Quake, ΓÇª)
     Disaster,
-    /// `→ Simulation::apply_scenario_taxation` / `LawDb::apply_overlay` (Law tab)
+    /// `ΓåÆ Simulation::apply_scenario_taxation` / `LawDb::apply_overlay` (Law tab)
     Law,
-    /// Bevy schedule handles — never a substrate write (Time tab)
+    /// Bevy schedule handles ΓÇö never a substrate write (Time tab)
     Time,
     /// Read-only: the substrate handler is a no-op (Inspect tab)
     NoOp,
@@ -147,7 +147,7 @@ impl std::ops::BitOrAssign for PowerTargetMask {
 }
 
 /// A single god-tool verb. The data-driven schema per
-/// `docs/design/GOD_TOOLS_SANDBOX.md` §5.
+/// `docs/design/GOD_TOOLS_SANDBOX.md` ┬º5.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PowerDef {
     /// Stable id, e.g. `"terrain.raise"`.
@@ -158,7 +158,7 @@ pub struct PowerDef {
     pub tab: PowerTab,
     /// Mutating / read-only / universal.
     pub category: PowerCategory,
-    /// Substrate request kind — drives the dispatch in
+    /// Substrate request kind ΓÇö drives the dispatch in
     /// `civ_engine::Simulation::apply_god_tool`.
     pub request: PowerRequestKind,
     /// Live / Near / Blind (mirrors info-views legibility moat).
@@ -209,7 +209,7 @@ impl PowerRegistry {
 
 /// Field names that no `PowerDef` or substrate handler is allowed
 /// to write. Enforced by the AC-CPL-3 compile-time guard
-/// (`docs/design/GODTOOLS_IMPL_PLAN.md` §6.1). The `NoOp` and
+/// (`docs/design/GODTOOLS_IMPL_PLAN.md` ┬º6.1). The `NoOp` and
 /// `Time` request kinds are substrate-exempt; all others must
 /// route through a substrate-owned mutation that doesn't touch
 /// these fields.

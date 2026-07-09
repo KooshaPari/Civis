@@ -13,9 +13,9 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-use std::collections::BTreeMap;
+mod crash_handler;
 
-#[cfg(feature = "bevy")]
+#[cfg(all(feature = "bevy", feature = "models"))]
 pub mod animation;
 #[cfg(feature = "bevy")]
 pub mod atmosphere;
@@ -26,16 +26,27 @@ pub mod decorations;
 #[cfg(all(feature = "bevy", feature = "models"))]
 pub mod animation;
 #[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod entity_inspector;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod inspect;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod entity_inspector;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod inspect;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod entity_inspector;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod inspect;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod diplomacy_ui;
 pub mod outcome_overlay;
 pub mod faction_hud;
+pub mod session;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod save_load_ui;
 #[cfg(all(feature = "bevy", feature = "models"))]
 pub mod gltf_models;
 pub mod emergence_dashboard;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod world_stats_dashboard;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod event_feed;
 #[cfg(all(feature = "bevy", feature = "gi"))]
@@ -72,6 +83,8 @@ pub mod live_stream;
 pub mod materials;
 #[cfg(feature = "bevy")]
 pub mod post_fx;
+#[cfg(feature = "bevy")]
+pub mod preflight;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod settings_ui;
 #[cfg(all(feature = "bevy", feature = "egui"))]
@@ -86,29 +99,39 @@ pub mod native_backend;
 pub mod native_renderer;
 #[cfg(feature = "bevy")]
 pub mod sim_bridge;
+pub mod session;
 #[cfg(feature = "bevy")]
 pub mod spawn_tools;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tech_tree_ui;
-#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod civ_history;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod god_actions;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod holocron_panel;
-#[cfg(feature = "bevy")]
-pub mod procedural_actor;
 pub mod god_panel;
 pub mod tutorial;
 pub mod perf_hud;
 #[cfg(feature = "bevy")]
+pub mod frame_budget;
+#[cfg(feature = "bevy")]
 pub mod terrain;
+#[cfg(feature = "bevy")]
+pub mod hud_state;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tool_categories;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod notifications;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod terraform_brush;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod disaster_tools;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod material_brush_ui;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod ui_cluster;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod ui_holo;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod ui_theme;
 #[cfg(all(feature = "bevy", feature = "vfx"))]
 pub mod vfx;
 #[cfg(all(feature = "bevy", feature = "voxel"))]
@@ -207,54 +230,17 @@ impl DebugRender {
 pub const DEBUG_WIREFRAME_OVERLAY_ALPHA: f32 = 0.22;
 
 /// Climate presentation fields from a `sim.snapshot` JSON-RPC response.
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct WsSpectatorMeta {
     /// Day/night flag from the simulation climate phase.
     pub is_day: bool,
     /// Latest tick when present on the snapshot payload.
     pub tick: Option<u64>,
-    /// World population from the same snapshot payload.
-    pub population: Option<u64>,
-    /// World building count from the same snapshot payload.
-    pub building_count: Option<usize>,
-    /// Live speed multiplier from snapshot `speed_multiplier`.
-    pub speed_multiplier: Option<u32>,
-    /// Price-by-good map for the world market.
-    pub market_prices: Option<BTreeMap<String, i64>>,
-    /// Snapshot cohort for factions and territory proxy.
-    pub factions: Option<Vec<FactionSnapshotSummary>>,
-}
-
-/// Faction snapshot row exposed on `sim.snapshot`.
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct FactionSnapshotSummary {
-    /// Stable faction ID.
-    pub id: u32,
-    /// Display name from the simulation registry.
-    pub name: String,
-    /// Civilian population assigned to this faction.
-    pub population: u32,
-    /// Deterministic territory proxy from live spectator radius.
-    pub territory_size: u32,
-}
-
-/// World-level read stats from `sim.snapshot`.
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct WorldStatsSnapshot {
-    /// Latest world population.
-    pub population: u64,
-    /// Latest building count.
-    pub building_count: usize,
-    /// Latest speed multiplier from the snapshot read API.
-    pub speed_multiplier: u32,
-    /// Latest known market prices by good.
-    pub market_prices: BTreeMap<String, i64>,
-    /// Snapshot factions.
-    pub factions: Vec<FactionSnapshotSummary>,
 }
 
 /// WebSocket session state exposed to live attach HUD and event feed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub enum WsConnectionState {
     /// Active stream to `civ-server`.
     Connected,
@@ -266,7 +252,7 @@ pub enum WsConnectionState {
 }
 
 /// Streamed entity kind for viewport pick and HUD labels.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum LiveEntityKind {
     /// Streamed agent marker.
     Agent,
@@ -274,10 +260,12 @@ pub enum LiveEntityKind {
     Building,
     /// Streamed building-graph parcel marker.
     GraphParcel,
+    /// Streamed voxel chunk marker.
+    VoxelChunk,
 }
 
 /// A single streamed entity selected in the live viewport.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SelectedLiveEntity {
     /// Entity category.
     pub kind: LiveEntityKind,
@@ -292,8 +280,30 @@ pub fn format_live_selection(entity: SelectedLiveEntity) -> String {
         LiveEntityKind::Agent => "agent",
         LiveEntityKind::Building => "building",
         LiveEntityKind::GraphParcel => "graph",
+        LiveEntityKind::VoxelChunk => "chunk",
     };
     format!("sel: {label} #{}", entity.id)
+}
+
+fn format_live_pick_context(
+    focused_chunk: Option<ChunkId>,
+    selected_live: Option<SelectedLiveEntity>,
+) -> Option<String> {
+    let mut parts = Vec::with_capacity(2);
+    if let Some(chunk) = focused_chunk {
+        parts.push(format!("chunk {}", chunk.0));
+    }
+    if let Some(selection) = selected_live {
+        let rendered = format_live_selection(selection);
+        let selection = rendered.strip_prefix("sel: ").unwrap_or(&rendered);
+        parts.push(selection.to_string());
+    }
+
+    if parts.is_empty() {
+        None
+    } else {
+        Some(format!("pick: {}", parts.join(" / ")))
+    }
 }
 
 /// Parse `sim.snapshot` JSON-RPC text (not F3D0 tick frames).
@@ -304,62 +314,21 @@ pub fn parse_jsonrpc_snapshot_meta(text: &str) -> Option<WsSpectatorMeta> {
     let result = value.get("result")?;
     let is_day = result.get("is_day")?.as_bool()?;
     let tick = result.get("tick").and_then(|v| v.as_u64());
-    let market_prices = result.get("market_prices").and_then(|prices| prices.as_object()).map(|prices| {
-        prices
-            .iter()
-            .filter_map(|(key, value)| value.as_i64().map(|value| (key.to_string(), value)))
-            .collect()
-    });
-    let factions = result.get("factions").and_then(|values| values.as_array()).map(|values| {
-        values
-            .iter()
-            .filter_map(|entry| {
-                let id = entry.get("id")?.as_u64()? as u32;
-                let name = entry.get("name")?.as_str()?.to_string();
-                let population = entry.get("population")?.as_u64()? as u32;
-                let territory_size = entry.get("territory_size")?.as_u64()? as u32;
-                Some(FactionSnapshotSummary {
-                    id,
-                    name,
-                    population,
-                    territory_size,
-                })
-            })
-            .collect()
-    });
-    let population = result.get("population").and_then(|v| v.as_u64());
-    let building_count = result.get("building_count").and_then(|v| v.as_u64()).map(|v| v as usize);
-    let speed_multiplier = result.get("speed_multiplier").and_then(|v| v.as_u64()).map(|v| v as u32);
-
-    Some(WsSpectatorMeta {
-        is_day,
-        tick,
-        population,
-        building_count,
-        speed_multiplier,
-        market_prices,
-        factions,
-    })
+    Some(WsSpectatorMeta { is_day, tick })
 }
 
 /// Subset of sim.emergence fields shown in the HUD.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
 pub struct EmergenceHudData {
+    /// Shannon entropy (bits) over the live material histogram.
+    pub entropy_bits: f32,
     /// Normalised Shannon entropy (`0..=1`).
     pub entropy_norm: f32,
-    /// Raw entropy bits from sample window.
-    pub entropy_bits: f32,
     /// Power-law exponent alpha for cluster-size distribution.
     pub power_law_alpha: f32,
     /// Novel config fingerprints per window per civilian.
     pub novelty_rate: f32,
-    /// Novelty score (highlights novelty density across sampled windows).
-    pub novelty_score: f32,
-    /// Material-faction coupling estimate.
-    pub coupling_mi_estimate: f32,
-    /// Criticality indicator from emergence dashboard branch analysis.
-    pub criticality_indicator: f32,
     /// Normalised mutual information between material and faction distributions.
     pub mi_material_faction_norm: Option<f32>,
     /// 6-connectivity component count from the sampled chunk (None = not yet sampled).
@@ -370,23 +339,16 @@ pub struct EmergenceHudData {
 
 
 /// Outcome data from `sim.outcome` polling (FR-CIV-GAME-001).
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
 pub struct OutcomeHudData {
     pub tag: String,
     pub reason: String,
     pub tick: u64,
 }
-/// Wrapper resource so plugins in this crate (`civ_history`, `era_hud`, etc.) can read
-/// the same HUD snapshot that `civ-bevy-window` updates each frame.
-#[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
-#[derive(Debug, Clone, Default)]
-pub struct HudState {
-    pub snapshot: LiveHudSnapshot,
-}
 /// Headless-friendly snapshot for the live attach HUD (FPS / tick / socket / scene stats).
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
 pub struct LiveHudSnapshot {
     /// WebSocket session state from the reconnecting client.
     pub connection: WsConnectionState,
@@ -409,6 +371,7 @@ pub struct LiveHudSnapshot {
     /// Factions tracked from `Frame3d::FactionState` wire frames.
     pub faction_count: usize,
     /// Max treasury balance across tracked factions (proxy for player wealth, from FactionStateEntry).
+    #[serde(default)]
     pub treasury: f32,
     /// Latest `sim.snapshot` round-trip time in milliseconds, when measured.
     pub ws_rtt_ms: Option<f32>,
@@ -420,8 +383,6 @@ pub struct LiveHudSnapshot {
     pub last_event: Option<String>,
     /// One-line civilian detail for the current viewport pick (inspector-lite HUD).
     pub pick_detail: Option<String>,
-    /// Cached world read-model from `sim.snapshot`.
-    pub world_stats: WorldStatsSnapshot,
     /// Current sim speed multiplier (0 = paused, 1/2/4/8 = normal/fast/faster/fastest).
     /// Cached emergence metrics from sim.emergence poll (entropy_norm, power_law_alpha, novelty_rate, mi).
     pub emergence: Option<EmergenceHudData>,
@@ -475,11 +436,8 @@ impl LiveHudSnapshot {
         if let Some(rtt) = self.ws_rtt_ms {
             line.push_str(&format!(" | RTT: {rtt:.0}ms"));
         }
-        if let Some(chunk) = self.focused_chunk {
-            line.push_str(&format!(" | chunk: {}", chunk.0));
-        }
-        if let Some(selection) = self.selected_live {
-            line.push_str(&format!(" | {}", format_live_selection(selection)));
+        if let Some(pick) = format_live_pick_context(self.focused_chunk, self.selected_live) {
+            line.push_str(&format!(" | {pick}"));
         }
         if let Some(event) = &self.last_event {
             line.push_str(&format!(" | evt: {event}"));
@@ -944,39 +902,6 @@ pub fn presentation_day_factor_target(is_day: bool) -> f32 {
     }
 }
 
-/// Maps a `ClimateSnapshot.day_phase` (`0..=1`) into a continuous
-/// `day_factor` (FR-CLIENT-render). The transition is treated as
-/// "dawn" in `[0.20, 0.30]`, "day" in `[0.30, 0.70]`, "dusk" in
-/// `[0.70, 0.80]`, and "night" outside that band — the curve smoothly
-/// ramps from `PRESENTATION_NIGHT_DAY_FACTOR` (0.32) up to 1.0 across
-/// the day, with a cosine ease for the dawn/dusk transitions.
-///
-/// Non-finite or out-of-range phases clamp to the night side so a
-/// missing/wrong climate frame keeps the renderer in the existing
-/// `is_day=false` presentation.
-#[must_use]
-pub fn presentation_day_factor_from_climate(day_phase: f32) -> f32 {
-    if !day_phase.is_finite() {
-        return PRESENTATION_NIGHT_DAY_FACTOR;
-    }
-    let p = day_phase.rem_euclid(1.0);
-    // Smooth band: 0.20..0.30 dawn, 0.30..0.70 day, 0.70..0.80 dusk, else night.
-    let factor = if (0.30..=0.70).contains(&p) {
-        1.0
-    } else if (0.20..0.30).contains(&p) {
-        // Dawn ramp: 0.20 → night, 0.30 → day.
-        let t = (p - 0.20) / 0.10;
-        PRESENTATION_NIGHT_DAY_FACTOR + (1.0 - PRESENTATION_NIGHT_DAY_FACTOR) * t
-    } else if (0.70..0.80).contains(&p) {
-        // Dusk ramp: 0.70 → day, 0.80 → night.
-        let t = (0.80 - p) / 0.10;
-        PRESENTATION_NIGHT_DAY_FACTOR + (1.0 - PRESENTATION_NIGHT_DAY_FACTOR) * t
-    } else {
-        PRESENTATION_NIGHT_DAY_FACTOR
-    };
-    factor.clamp(PRESENTATION_NIGHT_DAY_FACTOR, 1.0)
-}
-
 /// Linear interpolation between two sRGB triples (`t` in `0.0..=1.0`).
 #[must_use]
 pub fn lerp_rgb(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
@@ -1324,7 +1249,7 @@ mod tests {
             ..Default::default()
         }
         .format_overlay();
-        assert!(line.contains("chunk: 42"));
+        assert!(line.contains("pick: chunk 42"));
     }
 
     #[test]
@@ -1358,7 +1283,24 @@ mod tests {
             ..Default::default()
         }
         .format_overlay();
-        assert!(line.contains("sel: graph #11"));
+        assert!(line.contains("pick: graph #11"));
+    }
+
+    #[test]
+    fn live_hud_overlay_combines_focused_chunk_and_selection() {
+        let line = LiveHudSnapshot {
+            connected: true,
+            tick: Some(1),
+            fps: 60.0,
+            focused_chunk: Some(ChunkId(42)),
+            selected_live: Some(SelectedLiveEntity {
+                kind: LiveEntityKind::Building,
+                id: 3,
+            }),
+            ..Default::default()
+        }
+        .format_overlay();
+        assert!(line.contains("pick: chunk 42 / building #3"));
     }
 
     #[test]
@@ -1393,9 +1335,6 @@ mod tests {
         let meta = parse_jsonrpc_snapshot_meta(text).expect("snapshot meta");
         assert!(!meta.is_day);
         assert_eq!(meta.tick, Some(12));
-        assert_eq!(meta.population, Some(4));
-        assert_eq!(meta.speed_multiplier, None);
-        assert!(meta.market_prices.is_none());
     }
 
     #[test]
@@ -1640,34 +1579,6 @@ mod tests {
     }
 
     #[test]
-    fn presentation_day_factor_from_climate_tracks_day_night_band() {
-        // Full daylight at noon.
-        assert!((presentation_day_factor_from_climate(0.50) - 1.0).abs() < 1e-3);
-        // Mid-night is the night blend.
-        let mid = presentation_day_factor_from_climate(0.0);
-        assert!((mid - PRESENTATION_NIGHT_DAY_FACTOR).abs() < 1e-3);
-        // Dawn ramps between night and day.
-        let dawn = presentation_day_factor_from_climate(0.25);
-        assert!(dawn > PRESENTATION_NIGHT_DAY_FACTOR && dawn < 1.0);
-        // Dusk ramps between day and night.
-        let dusk = presentation_day_factor_from_climate(0.75);
-        assert!(dusk > PRESENTATION_NIGHT_DAY_FACTOR && dusk < 1.0);
-        // NaN / out-of-range phases fall back to night blend.
-        assert_eq!(
-            presentation_day_factor_from_climate(f32::NAN),
-            PRESENTATION_NIGHT_DAY_FACTOR
-        );
-        assert_eq!(
-            presentation_day_factor_from_climate(-0.1),
-            PRESENTATION_NIGHT_DAY_FACTOR
-        );
-        // Phases outside [0,1) wrap via rem_euclid so a 2.05 lands at
-        // 0.05 (night) — still in the night band.
-        let wrapped = presentation_day_factor_from_climate(2.05);
-        assert!((wrapped - PRESENTATION_NIGHT_DAY_FACTOR).abs() < 1e-3);
-    }
-
-    #[test]
     fn presentation_clear_color_lerps_day_and_night() {
         let night = presentation_clear_color_rgb(0.0);
         assert_eq!(night, PRESENTATION_NIGHT_CLEAR_RGB);
@@ -1814,6 +1725,7 @@ mod tests {
                 tick: 4,
                 civilians: vec![CivilianStateEntry {
                     id: 1,
+                    faction_id: 0,
                     needs: CivilianNeeds3d::default(),
                     profession: String::new(),
                     genome_summary: Default::default(),
@@ -1829,6 +1741,7 @@ mod tests {
                     government: Government3d::Unknown,
                     treasury: FactionTreasury3d::default(),
                 }],
+                population_by_faction: Default::default(),
             }),
             Frame3d::EventFeed(EventFeedFrame {
                 tick: 6,
@@ -1867,5 +1780,10 @@ mod tests {
         let bytes = encode_frame3d_binary(&frame).expect("encode");
         let parsed = parse_frame3d_binary(&bytes).expect("parse");
         assert_eq!(parsed, frame);
+    }
+
+    #[test]
+    fn install_crash_handler_does_not_panic() {
+        std::panic::catch_unwind(|| install_crash_handler()).expect("install_crash_handler should install");
     }
 }

@@ -1,56 +1,56 @@
-//! End-to-end tests for save/load round-trips with the civ-server crate.
-use std::path::PathBuf;
+//! End-to-end save/load round-trip test for civ-server (FR-CIV-TEST-021).
 
-fn test_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
-        .join("target")
-        .join("test-saves")
-}
+use civ_engine::{CivSaveBundle, Simulation};
+use tempfile::TempDir;
 
-fn write_slot(slot: &str, data: &[u8]) -> bool {
-    let path = test_dir().join(format!("{slot}.sav"));
-    let _ = std::fs::create_dir_all(&test_dir());
-    std::fs::write(&path, data).is_ok()
-}
-
-fn load_slot(slot: &str) -> Option<Vec<u8>> {
-    let path = test_dir().join(format!("{slot}.sav"));
-    std::fs::read(&path).ok()
-}
-
-fn cleanup(slot: &str) {
-    let _ = std::fs::remove_file(test_dir().join(format!("{slot}.sav")));
+fn snapshot(sim: &Simulation) -> (u64, u64, u64, u64, u64) {
+    (
+        sim.state.tick,
+        sim.state.population,
+        sim.state.belief,
+        sim.state.cohesion,
+        sim.state.unrest,
+    )
 }
 
 #[test]
-fn save_and_load_round_trip_returns_identical_data() {
-    let slot = "test_rt";
-    let data = b"hello-save-world";
-    assert!(write_slot(slot, data));
-    assert_eq!(load_slot(slot).as_deref(), Some(&data[..]));
-    cleanup(slot);
+fn save_load_round_trip_preserves_world_state() {
+    let tmp = TempDir::new().unwrap();
+    let path = tmp.path().join("roundtrip.civsave.zst");
+
+    let mut sim = Simulation::default();
+    for _ in 0..5 {
+        sim.tick();
+    }
+
+    let before = snapshot(&sim);
+    CivSaveBundle::save_archive(&path, &sim).expect("save should succeed");
+
+    let loaded = CivSaveBundle::load(&path).expect("load should succeed");
+    let after = snapshot(&loaded);
+
+    assert_eq!(before, after, "simulation state must survive save/load");
 }
 
 #[test]
-fn load_nonexistent_slot_returns_none() {
-    assert!(load_slot("nonexistent").is_none());
-}
+fn post_load_ticks_are_deterministic() {
+    let tmp = TempDir::new().unwrap();
+    let path = tmp.path().join("determinism.civsave.zst");
 
-#[test]
-fn overwrite_existing_slot_replaces_content() {
-    let slot = "test_ow";
-    assert!(write_slot(slot, b"old"));
-    assert!(write_slot(slot, b"new"));
-    assert_eq!(load_slot(slot).as_deref(), Some(&b"new"[..]));
-    cleanup(slot);
-}
+    let mut sim = Simulation::default();
+    for _ in 0..3 {
+        sim.tick();
+    }
 
-#[test]
-fn delete_removes_slot() {
-    let slot = "test_del";
-    assert!(write_slot(slot, b"data"));
-    cleanup(slot);
-    assert!(load_slot(slot).is_none());
+    CivSaveBundle::save_archive(&path, &sim).expect("save");
+
+    let mut first = CivSaveBundle::load(&path).expect("load first");
+    let mut second = CivSaveBundle::load(&path).expect("load second");
+
+    for _ in 0..2 {
+        first.tick();
+        second.tick();
+    }
+
+    assert_eq!(snapshot(&first), snapshot(&second));
 }

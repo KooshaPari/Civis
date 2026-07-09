@@ -25,7 +25,11 @@ function App() {
   const { state, dispatch } = useDashboardStore();
   const previousSnapshotRef = useRef<Snapshot | null>(null);
   useCivisAttach(dispatch);
-  useFramePerfMock(state.connection, dispatch);
+  useFramePerfMock(
+    state.connection,
+    state.inspectorOpen && state.activeSideTab === "inspector",
+    dispatch,
+  );
 
   useEffect(() => {
     if (!state.toast) return;

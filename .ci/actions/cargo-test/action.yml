@@ -1,22 +1,21 @@
-name: "cargo-test"
-description: "Run cargo test with standard Civis flags"
+name: 'Cargo Test'
+description: 'Runs cargo test on a specified package with consistent flags.'
 inputs:
   package:
-    description: "Package to test (optional, empty = all)"
+    description: 'Package to test (optional; runs workspace if omitted).'
     required: false
-    default: ""
-  test-flags:
-    description: "Extra flags to pass to cargo test"
+    default: ''
+  test_flags:
+    description: 'Additional test flags (e.g. --tests --lib).'
     required: false
-    default: "--no-fail-fast"
+    default: '--no-fail-fast'
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
-    - name: Run cargo test
-      shell: bash
+    - shell: bash
       run: |
         if [ -z "${{ inputs.package }}" ]; then
-          cargo test --workspace -j 4 ${{ inputs.test-flags }}
+          cargo test --workspace ${{ inputs.test_flags }} -j 2
         else
-          cargo test -p ${{ inputs.package }} -j 4 ${{ inputs.test-flags }}
+          cargo test -p "${{ inputs.package }}" ${{ inputs.test_flags }} -j 2
         fi

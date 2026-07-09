@@ -737,7 +737,9 @@ impl GodToolReceipt {
 /// `(col_x, *, col_z)`. Used by `terrain.smooth` to compute the
 /// average topmost height in a 3×3 window. Returns `baseline`
 /// when the column is empty above the baseline.
-fn scan_topmost_y(
+/// Public column-height probe used by `sim.inspect_tile` and terraform brushes.
+#[must_use]
+pub fn scan_topmost_y(
     voxel: &civ_voxel::VoxelWorld<MaterialId>,
     col_x: i64,
     col_z: i64,

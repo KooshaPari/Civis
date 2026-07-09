@@ -76,7 +76,7 @@ pub static DEFAULT_POWERS: &[PowerDef] = &[
         "Averages neighbour heights under footprint; 3×3×3 window.", PowerRequestKind::TerraformEdit),
     def_live("terrain.slope", "Slope", PowerTab::Terrain, PowerCategory::Mutating,
         "Tilts height field toward a 2-click anchor gradient.", PowerRequestKind::TerraformEdit),
-    def_near("terrain.flatten", "Flatten", PowerTab::Terrain, PowerCategory::Mutating,
+    def_live("terrain.flatten", "Flatten", PowerTab::Terrain, PowerCategory::Mutating,
         "Sets height equal to the majority surface under footprint.", PowerRequestKind::TerraformEdit),
     def_near("terrain.shift", "Shift", PowerTab::Terrain, PowerCategory::Mutating,
         "Translates the height field under footprint by a vector.", PowerRequestKind::TerraformEdit),
@@ -100,7 +100,7 @@ pub static DEFAULT_POWERS: &[PowerDef] = &[
         "Writes material only on the topmost solid voxel per (x, z).", PowerRequestKind::MaterialEdit),
     def_live("material.pour_liquid", "PourLiquid", PowerTab::Material, PowerCategory::Mutating,
         "Spawns a flowing liquid at cursor + spreads via CA.", PowerRequestKind::MaterialEdit),
-    def_near("material.seed_forest", "SeedForest", PowerTab::Material, PowerCategory::Mutating,
+    def_live("material.seed_forest", "SeedForest", PowerTab::Material, PowerCategory::Mutating,
         "Spawns a herd of plant agents with seed-genome near footprint.", PowerRequestKind::ActorSpawn),
     def_live("material.seed_ore", "SeedOreDeposit", PowerTab::Material, PowerCategory::Mutating,
         "Writes a stochastic ore vein into the ore-density CA field.", PowerRequestKind::MaterialEdit),
@@ -112,7 +112,7 @@ pub static DEFAULT_POWERS: &[PowerDef] = &[
         "Spawns one agent with a chosen genome + cradle_state + age.", PowerRequestKind::ActorSpawn),
     def_live("life.spawn_herd", "SpawnHerd", PowerTab::Life, PowerCategory::Mutating,
         "Spawns N organisms with shared genome at jittered positions.", PowerRequestKind::ActorSpawn),
-    def_near("life.spawn_civ_seed", "SpawnCivilizationSeed", PowerTab::Life, PowerCategory::Mutating,
+    def_live("life.spawn_civ_seed", "SpawnCivilizationSeed", PowerTab::Life, PowerCategory::Mutating,
         "Spawns 6 founder agents + 1 hut BuildingGraph seed + 1 stockpile.", PowerRequestKind::ActorSpawn),
     def_live("life.bless", "Bless", PowerTab::Life, PowerCategory::Mutating,
         "Increments each actor's `mood` driver in a positive direction.", PowerRequestKind::ActorEffect),
@@ -126,7 +126,7 @@ pub static DEFAULT_POWERS: &[PowerDef] = &[
     def_live("disaster.meteor", "Meteor", PowerTab::Disaster, PowerCategory::Mutating,
         "Spawns a hot, fast-moving solid mass at altitude; impact crater + thermal field.",
         PowerRequestKind::Disaster),
-    def_near("disaster.lightning", "Lightning", PowerTab::Disaster, PowerCategory::Mutating,
+    def_live("disaster.lightning", "Lightning", PowerTab::Disaster, PowerCategory::Mutating,
         "Writes a high-voltage arc between two anchor cells; ignites flammables.",
         PowerRequestKind::Disaster),
     def_live("disaster.flood", "Flood", PowerTab::Disaster, PowerCategory::Mutating,
@@ -138,13 +138,13 @@ pub static DEFAULT_POWERS: &[PowerDef] = &[
     def_live("disaster.firestorm", "Firestorm", PowerTab::Disaster, PowerCategory::Mutating,
         "Seeds fire voxels in a radius + raises ambient temp; R0_fire measured not authored.",
         PowerRequestKind::Disaster),
-    def_near("disaster.tornado", "Tornado", PowerTab::Disaster, PowerCategory::Mutating,
+    def_live("disaster.tornado", "Tornado", PowerTab::Disaster, PowerCategory::Mutating,
         "Writes a rotating wind-field vortex for N ticks.",
         PowerRequestKind::Disaster),
-    def_near("disaster.volcanic_vent", "VolcanicVent", PowerTab::Disaster, PowerCategory::Mutating,
+    def_live("disaster.volcanic_vent", "VolcanicVent", PowerTab::Disaster, PowerCategory::Mutating,
         "Drops lava + emits CO₂ gas + raises local temp; sustained.",
         PowerRequestKind::Disaster),
-    def_near("disaster.drought", "Drought", PowerTab::Disaster, PowerCategory::Mutating,
+    def_live("disaster.drought", "Drought", PowerTab::Disaster, PowerCategory::Mutating,
         "Lowers precipitation field across a region for N ticks.",
         PowerRequestKind::Disaster),
 
@@ -175,13 +175,13 @@ pub static DEFAULT_POWERS: &[PowerDef] = &[
         PowerRequestKind::NoOp),
 
     // ===================== LAW (8) =====================
-    def_near("law.tax_bias", "TaxBias", PowerTab::Law, PowerCategory::Mutating,
+    def_live("law.tax_bias", "TaxBias", PowerTab::Law, PowerCategory::Mutating,
         "Adjusts per-resource tax_rate parameter in the market; market re-prices via V3.",
         PowerRequestKind::Law),
     def_near("law.edict", "Edict", PowerTab::Law, PowerCategory::Mutating,
         "Sets a boolean rule in the law registry; each law alters how a subsystem reads its inputs.",
         PowerRequestKind::Law),
-    def_near("law.religion_pressure", "ReligionPressure", PowerTab::Law, PowerCategory::Mutating,
+    def_live("law.religion_pressure", "ReligionPressure", PowerTab::Law, PowerCategory::Mutating,
         "Boosts the religious_doctrine diffusion field; SIR propagation.",
         PowerRequestKind::Law),
     def_near("law.sanction", "Sanction", PowerTab::Law, PowerCategory::Mutating,
@@ -193,7 +193,7 @@ pub static DEFAULT_POWERS: &[PowerDef] = &[
     def_near("law.alignment_nudge", "AlignmentNudge", PowerTab::Law, PowerCategory::Mutating,
         "Tilts a faction's ethnocentric_tendency_weight (Hammond-Axelrod).",
         PowerRequestKind::Law),
-    def_near("law.difficulty_knob", "DifficultyKnob", PowerTab::Law, PowerCategory::Mutating,
+    def_live("law.difficulty_knob", "DifficultyKnob", PowerTab::Law, PowerCategory::Mutating,
         "Adjusts survival-pressure scalars (food scarcity, hazard frequency).",
         PowerRequestKind::Law),
     def_near("law.scenario_script", "ScenarioScript", PowerTab::Law, PowerCategory::Mutating,
@@ -350,9 +350,14 @@ mod tests {
     /// `material.pour_liquid`, `material.seed_snow`,
     /// `material.seed_ore`) and the `terrain.slope` TERRAIN op.
     ///
-    /// Phase 3b (this PR) promotes 3 more TERRAIN ops to `Live`:
+    /// Phase 3b promotes 3 more TERRAIN ops to `Live`:
     /// `terrain.add_land`, `terrain.dig_ocean`, and
     /// `terrain.drop_biome`.
+    ///
+    /// Phase 4 (71+ completion) promotes 10 more substrate-handled
+    /// verbs: flatten, seed_forest, spawn_civ_seed, lightning,
+    /// tornado, volcanic_vent, drought, tax_bias, religion_pressure,
+    /// difficulty_knob.
     #[test]
     fn phase1_live_verbs_are_present() {
         let live: Vec<&'static str> = default_powers()
@@ -392,17 +397,28 @@ mod tests {
             "terrain.add_land",
             "terrain.dig_ocean",
             "terrain.drop_biome",
+            // Phase 4 (10 more with existing substrate handlers).
+            "terrain.flatten",
+            "material.seed_forest",
+            "life.spawn_civ_seed",
+            "disaster.lightning",
+            "disaster.tornado",
+            "disaster.volcanic_vent",
+            "disaster.drought",
+            "law.tax_bias",
+            "law.religion_pressure",
+            "law.difficulty_knob",
         ] {
             assert!(
                 live.contains(&expected),
-                "Phase 1/2/3/3b verb `{expected}` must be marked Live in the catalog (got {live:?})"
+                "Phase 1/2/3/3b/4 verb `{expected}` must be marked Live in the catalog (got {live:?})"
             );
         }
-        // 6 (Phase 1) + 10 (Phase 2) + 8 (Phase 3) + 3 (Phase 3b) = 27 Live verbs.
+        // 27 (through 3b) + 10 (Phase 4) = 37 Live verbs.
         assert_eq!(
             live.len(),
-            27,
-            "expected exactly 27 Live verbs after Phase 3b (6 + 10 + 8 + 3), got {} ({live:?})",
+            37,
+            "expected exactly 37 Live verbs after Phase 4, got {} ({live:?})",
             live.len()
         );
     }

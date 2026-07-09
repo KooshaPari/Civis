@@ -30,6 +30,10 @@ pub use phenotype_voxel::{
 pub mod atlas;
 pub mod boundary;
 pub use boundary::{BoundaryConfig, BoundaryFace, BoundaryMode, Bounds3};
+pub mod brush;
+pub use brush::{
+    default_material_for_op, stamp_footprint, BrushReceipt, BrushShape, BrushStamp,
+};
 pub mod fluid_ca;
 pub mod hud;
 pub mod lod;

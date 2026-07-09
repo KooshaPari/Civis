@@ -668,11 +668,11 @@ pub struct SimTerraformExtentArgs {
     pub y: i64,
     /// Brush center Z in world coordinates.
     pub z: i64,
-    /// Tool shape footprint, mapped to best-effort `sim.place_voxel` stamping.
+    /// Tool shape footprint for `sim.terraform_extent`.
     pub op: SimTerraformKind,
-    /// Optional material id forwarded to `sim.place_voxel`.
+    /// Optional material id; defaults from op when omitted.
     pub material: Option<u16>,
-    /// Optional material stamp radius, ignored by `sim.place_voxel` fallback.
+    /// Optional stamp radius in voxels (default 3).
     pub radius: Option<u32>,
     /// Transport override (host/port/timeout).
     #[serde(flatten)]
@@ -2278,10 +2278,10 @@ impl CivisMcpServer {
         .map(Json)
     }
 
-    /// Best-effort `sim.place_voxel` fallback for missing `sim.terraform_extent`.
+    /// Footprint brush via `sim.terraform_extent` (disk stamp on civ-server).
     #[tool(
         name = "sim_terraform_extent",
-        description = "Best-effort terrain brush operation. Degrades to repeated sim.place_voxel until dedicated tool lands."
+        description = "Stamp a circular terrain/material footprint via sim.terraform_extent (op, radius, material)."
     )]
     async fn sim_terraform_extent(
         &self,
@@ -2289,17 +2289,39 @@ impl CivisMcpServer {
             x,
             y,
             z,
-            op: _,
+            op,
             material,
-            radius: _,
+            radius,
             transport,
         }): Parameters<SimTerraformExtentArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        let material = material.unwrap_or(1);
+        let op_name = match op {
+            SimTerraformKind::Raise => "raise",
+            SimTerraformKind::Lower => "lower",
+            SimTerraformKind::Level => "level",
+            SimTerraformKind::Smooth => "smooth",
+            SimTerraformKind::Slope => "slope",
+            SimTerraformKind::Flatten => "flatten",
+            SimTerraformKind::Shift => "shift",
+            SimTerraformKind::AddLand => "add_land",
+            SimTerraformKind::DigOcean => "dig_ocean",
+            SimTerraformKind::RaiseMountain => "raise_mountain",
+            SimTerraformKind::DropBiome => "drop_biome",
+        };
+        let mut params = json!({
+            "x": x,
+            "y": y,
+            "z": z,
+            "op": op_name,
+            "radius": radius.unwrap_or(3),
+        });
+        if let Some(m) = material {
+            params["material"] = json!(m);
+        }
         forward_rpc(
             &transport,
-            "sim.place_voxel",
-            json!({ "x": x, "y": y, "z": z, "material": material }),
+            "sim.terraform_extent",
+            params,
             "sim_terraform_extent",
         )
         .map(Json)

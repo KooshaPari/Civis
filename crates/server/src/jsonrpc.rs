@@ -69,6 +69,8 @@ pub enum JsonRpcMethod {
     SimSpawnEntity,
     /// Write one voxel (`sim.place_voxel`, FR-CIV-UX-003).
     SimPlaceVoxel,
+    /// Footprint brush stamp (`sim.terraform_extent`, FR-CIV-GODTOOL brush).
+    SimTerraformExtent,
     /// Tactical voxel damage (`sim.damage`, FR-CIV-TACTICS / P-U1).
     SimDamage,
     /// Persist simulation to a production slot (`save.slot`, CIV-1000 §13).
@@ -139,6 +141,7 @@ impl JsonRpcMethod {
             Self::SimSpawnCivilian => "sim.spawn_civilian",
             Self::SimSpawnEntity => "sim.spawn_entity",
             Self::SimPlaceVoxel => "sim.place_voxel",
+            Self::SimTerraformExtent => "sim.terraform_extent",
             Self::SimDamage => "sim.damage",
             Self::SaveSlot => "save.slot",
             Self::LoadSlot => "save.load",
@@ -183,6 +186,7 @@ impl JsonRpcMethod {
             "sim.spawn_civilian" => Some(Self::SimSpawnCivilian),
             "sim.spawn_entity" => Some(Self::SimSpawnEntity),
             "sim.place_voxel" => Some(Self::SimPlaceVoxel),
+            "sim.terraform_extent" => Some(Self::SimTerraformExtent),
             "sim.damage" => Some(Self::SimDamage),
             "save.slot" => Some(Self::SaveSlot),
             "save.load" => Some(Self::LoadSlot),
@@ -1397,6 +1401,21 @@ pub enum DispatchEffect {
         /// Material id (0–255).
         material: u16,
     },
+    /// Stamp a circular footprint (`sim.terraform_extent`).
+    TerraformExtent {
+        /// World X coordinate (fixed-point).
+        x: i64,
+        /// World Y coordinate (fixed-point).
+        y: i64,
+        /// World Z coordinate (fixed-point).
+        z: i64,
+        /// Brush op name (`raise`, `lower`, `dig_ocean`, …).
+        op: String,
+        /// Material id (0–255).
+        material: u16,
+        /// Radius in voxel cells.
+        radius: u8,
+    },
     /// Queue tactical voxel damage (`sim.damage`).
     ApplyDamage {
         /// Damage event applied on next tactics phase (replay-logged).
@@ -2448,6 +2467,39 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 }
             }
         }
+        JsonRpcMethod::SimTerraformExtent => {
+            if !role_allows_operator(
+                ctx.require_role,
+                req.params.as_ref(),
+                ctx.connection_role.as_deref(),
+            ) {
+                DispatchPlan {
+                    response: JsonRpcResponse::failure(req.id, forbidden_operator_role_error()),
+                    effect: DispatchEffect::None,
+                }
+            } else {
+                match parse_terraform_extent_params(req.params.as_ref()) {
+                    Ok((x, y, z, op, material, radius)) => DispatchPlan {
+                        response: JsonRpcResponse::success(
+                            req.id,
+                            serde_json::json!({ "accepted": true, "op": op }),
+                        ),
+                        effect: DispatchEffect::TerraformExtent {
+                            x,
+                            y,
+                            z,
+                            op,
+                            material,
+                            radius,
+                        },
+                    },
+                    Err(error) => DispatchPlan {
+                        response: JsonRpcResponse::failure(req.id, error),
+                        effect: DispatchEffect::None,
+                    },
+                }
+            }
+        }
         JsonRpcMethod::SimDamage => {
             if !role_allows_operator(
                 ctx.require_role,
@@ -2873,6 +2925,45 @@ pub fn parse_place_voxel_params(
         .map(|v| v as u16)
         .unwrap_or(0);
     Ok((x, y, z, material))
+}
+
+/// Parse `sim.terraform_extent` params: `{ "x", "y", "z", "op?", "material?", "radius?" }`.
+pub fn parse_terraform_extent_params(
+    params: Option<&Value>,
+) -> Result<(i64, i64, i64, String, u16, u8), JsonRpcError> {
+    let p = params.ok_or(JsonRpcError {
+        code: error_code::INVALID_PARAMS,
+        message: "Missing params".to_owned(),
+        data: None,
+    })?;
+    let x = p
+        .get("x")
+        .and_then(|v| v.as_i64())
+        .ok_or(invalid_params("x"))?;
+    let y = p
+        .get("y")
+        .and_then(|v| v.as_i64())
+        .ok_or(invalid_params("y"))?;
+    let z = p
+        .get("z")
+        .and_then(|v| v.as_i64())
+        .ok_or(invalid_params("z"))?;
+    let op = p
+        .get("op")
+        .and_then(|v| v.as_str())
+        .unwrap_or("raise")
+        .to_owned();
+    let material = p
+        .get("material")
+        .and_then(|v| v.as_u64())
+        .map(|v| v as u16)
+        .unwrap_or_else(|| civ_voxel::default_material_for_op(&op).0 as u16);
+    let radius = p
+        .get("radius")
+        .and_then(|v| v.as_u64())
+        .map(|v| v.clamp(1, 32) as u8)
+        .unwrap_or(3);
+    Ok((x, y, z, op, material, radius))
 }
 
 fn invalid_params(field: &str) -> JsonRpcError {
@@ -5011,6 +5102,14 @@ mod tests {
         assert_eq!(
             JsonRpcMethod::parse_name("sim.update_subscription"),
             Some(JsonRpcMethod::SimUpdateSubscription)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.terraform_extent"),
+            Some(JsonRpcMethod::SimTerraformExtent)
+        );
+        assert_eq!(
+            JsonRpcMethod::SimTerraformExtent.as_str(),
+            "sim.terraform_extent"
         );
         assert_eq!(JsonRpcMethod::parse_name("unknown.method"), None);
         assert_eq!(JsonRpcMethod::parse_name(""), None);

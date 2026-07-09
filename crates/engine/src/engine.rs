@@ -7319,6 +7319,8 @@ mod tests {
     /// FR-ENGINE-phaseorder.
     #[test]
     fn phase_order_matches_tick_sequence() {
+        // Single source of truth: PHASE_ORDER drives tick via run_phase.
+        // Keep this literal in lockstep with the const at the top of this file.
         assert_eq!(
             PHASE_ORDER,
             &[
@@ -7330,11 +7332,14 @@ mod tests {
                 "planet",
                 "disasters",
                 "diplomacy",
+                "faction_decisions",
                 "tactics",
                 "voxel",
                 "compact",
                 "buildings",
                 "life",
+                "daily_path",
+                "cluster",
                 "research",
                 "tech",
                 "belief",
@@ -7353,6 +7358,7 @@ mod tests {
                 "sentience",
                 "diffusion",
                 "audio",
+                "victory_check",
             ]
         );
     }

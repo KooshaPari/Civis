@@ -573,13 +573,20 @@ async fn handle_jsonrpc_text(
                     .and_then(|p| p.get("y").and_then(|v| v.as_i64()))
                     .unwrap_or(0);
                 let sim = state.sim.lock().await;
+                let baseline = 0i64;
+                let terrain_height =
+                    civ_engine::godtools::scan_topmost_y(sim.voxel(), x, y, baseline);
                 let material = sim
                     .voxel()
-                    .read(civ_voxel::WorldCoord { x, y: 0, z: y })
+                    .read(civ_voxel::WorldCoord {
+                        x,
+                        y: terrain_height,
+                        z: y,
+                    })
                     .0 as u16;
                 Some(crate::jsonrpc::TileInspectionWire {
                     material,
-                    terrain_height: 0,
+                    terrain_height,
                 })
             } else {
                 None
@@ -1185,6 +1192,34 @@ async fn apply_dispatch_effect(
                 }
             }
         }
+        DispatchEffect::TerraformExtent {
+            x,
+            y,
+            z,
+            op,
+            material,
+            radius,
+        } => {
+            let mut sim = state.sim.lock().await;
+            let stamp = civ_voxel::BrushStamp {
+                center: civ_voxel::WorldCoord { x, y, z },
+                radius_voxels: radius,
+                material: civ_voxel::MaterialId(material),
+                shape: civ_voxel::BrushShape::Disk,
+                height_voxels: 1,
+            };
+            let receipt = {
+                let mut proxy = sim.voxel_mut();
+                civ_voxel::stamp_footprint(&mut *proxy, &stamp)
+            };
+            if let Some(result) = response.result.as_mut() {
+                if let Some(obj) = result.as_object_mut() {
+                    obj.insert("ok".to_owned(), serde_json::json!(true));
+                    obj.insert("writes".to_owned(), serde_json::json!(receipt.writes));
+                    obj.insert("op".to_owned(), serde_json::json!(op));
+                }
+            }
+        }
         DispatchEffect::ApplyDamage { event } => {
             let mut sim = state.sim.lock().await;
             sim.push_damage(event);
@@ -1542,6 +1577,104 @@ async fn apply_dispatch_effect(
                 }
                 "disaster.flood" => {
                     let req = GodToolRequest::Disaster(DisasterRequest::Flood { pos });
+                    let _ = sim.apply_god_tool(req);
+                }
+                "disaster.lightning" => {
+                    let to = WorldCoord {
+                        x: pos.x + civ_voxel::FIXED_SCALE * 4,
+                        y: pos.y,
+                        z: pos.z,
+                    };
+                    let req = GodToolRequest::Disaster(DisasterRequest::Lightning {
+                        from: pos,
+                        to,
+                    });
+                    let _ = sim.apply_god_tool(req);
+                }
+                "disaster.tornado" => {
+                    let r = radius_voxels.unwrap_or(4).max(1);
+                    let req = GodToolRequest::Disaster(DisasterRequest::Tornado {
+                        pos,
+                        radius_voxels: r,
+                    });
+                    let _ = sim.apply_god_tool(req);
+                }
+                "disaster.volcanic_vent" => {
+                    let ticks = count.unwrap_or(32).max(1) as u32;
+                    let req = GodToolRequest::Disaster(DisasterRequest::VolcanicVent {
+                        pos,
+                        ticks,
+                    });
+                    let _ = sim.apply_god_tool(req);
+                }
+                "disaster.drought" => {
+                    let ticks = count.unwrap_or(64).max(1) as u32;
+                    let reduction_pct = ((mag * 50.0_f32) as u8).clamp(1, 100);
+                    let req = GodToolRequest::Disaster(DisasterRequest::Drought {
+                        pos,
+                        reduction_pct,
+                        ticks,
+                    });
+                    let _ = sim.apply_god_tool(req);
+                }
+                "terrain.flatten" => {
+                    let r = radius_voxels.unwrap_or(3).max(1);
+                    let req = GodToolRequest::Terraform(TerraformRequest {
+                        op: TerraformOp::Flatten,
+                        center: pos,
+                        radius_voxels: r,
+                        strength: 0,
+                        aux_id: 0,
+                    });
+                    let _ = sim.apply_god_tool(req);
+                }
+                "material.seed_forest" => {
+                    let r = radius_voxels.unwrap_or(4).max(1);
+                    let s = strength.unwrap_or(35).clamp(1, 100);
+                    let req = GodToolRequest::Material(MaterialRequest {
+                        op: MaterialOp::SeedForest,
+                        center: pos,
+                        radius_voxels: r,
+                        material_id: civ_voxel::material::PLANT.0 as u32,
+                        strength: s,
+                        drop_height: 0,
+                    });
+                    let _ = sim.apply_god_tool(req);
+                }
+                "life.spawn_civ_seed" => {
+                    use civ_engine::godtools::SpawnCivSeedRequest;
+                    let id =
+                        seed_civilian_id.unwrap_or(sim.state.tick.wrapping_add(1).max(1) as u64);
+                    let faction = target_faction.unwrap_or(0);
+                    let req = GodToolRequest::Life(LifeRequest::SpawnCivSeed(SpawnCivSeedRequest {
+                        seed_civilian_id: id,
+                        faction,
+                        center: pos,
+                    }));
+                    let _ = sim.apply_god_tool(req);
+                }
+                "law.tax_bias" => {
+                    use civ_engine::godtools::LawRequest;
+                    let fid = target_faction.unwrap_or(0);
+                    let bias = (mag * 1_000.0_f32) as i64;
+                    let req = GodToolRequest::Law(LawRequest::TaxBias {
+                        target_faction: fid,
+                        bias,
+                    });
+                    let _ = sim.apply_god_tool(req);
+                }
+                "law.religion_pressure" => {
+                    use civ_engine::godtools::LawRequest;
+                    let pressure = (mag * 500.0_f32) as u64;
+                    let req = GodToolRequest::Law(LawRequest::ReligionPressure { pressure });
+                    let _ = sim.apply_god_tool(req);
+                }
+                "law.difficulty_knob" => {
+                    use civ_engine::godtools::LawRequest;
+                    let scarcity = (mag * 2.0_f32).clamp(0.0, 10.0) as f64;
+                    let req = GodToolRequest::Law(LawRequest::DifficultyKnob {
+                        scarcity_multiplier: scarcity,
+                    });
                     let _ = sim.apply_god_tool(req);
                 }
                 _ => {}

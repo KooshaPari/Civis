@@ -255,6 +255,7 @@ fn main() {
         civ_bevy_ref::AgentNeedsPlugin,
         DiplomacyUiPlugin,
         GodPanelPlugin,
+        civ_bevy_ref::outcome_overlay::OutcomeOverlayPlugin,
         MenusPlugin,
         GameUiPlugin,
     ));

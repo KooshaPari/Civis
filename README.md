@@ -19,7 +19,9 @@ Progress: ████████▓░ 82.6% (recovery complete; consolidation
 > - cargo-deny config: see deny.toml
 > - cargo-audit: rustsec/audit-check@v2 weekly
 > - Branch protection: 1 reviewer required, no force-push
-> - Authority: phenotype-org-governance/SUPERSEDED.md
+> - Org SSOT (spine): [phenotype-registry](https://github.com/KooshaPari/phenotype-registry) · audits/scorecards: [phenotype-org-audits](https://github.com/KooshaPari/phenotype-org-audits) · community/CI templates: [KooshaPari/.github](https://github.com/KooshaPari/.github)
+> - Stack policy pointer: [STACK_POLICY_POINTER](https://github.com/KooshaPari/.github/blob/main/docs/STACK_POLICY_POINTER.md)
+> - Civis owns `FR-CIV-*` only (godgame) — not org governance
 
 # Civis — CivLab
 

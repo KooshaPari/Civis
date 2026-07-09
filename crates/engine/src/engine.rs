@@ -4886,6 +4886,61 @@ fn avg_social_affinity(world: &hecs::World) -> f32 {
 /// bounded below by `DIPLOMACY_MIN_CONFLICT_THRESHOLD` at the combination site.
 const N12_AFFINITY_BIAS_SCALE: f32 = 5_000.0;
 
+/// Base diplomacy conflict/dispute threshold.
+const DIPLOMACY_BASE_CONFLICT_THRESHOLD: i64 = 10_000;
+
+/// Minimum conflict threshold after unrest erosion.
+const DIPLOMACY_MIN_CONFLICT_THRESHOLD: i64 = 2_000;
+
+/// Maximum unrest-induced war erosion applied to the conflict threshold.
+const DIPLOMACY_MAX_WAR_EROSION: i64 = 8_000;
+
+/// Belief contributes +1 threshold unit every this many units.
+const DIPLOMACY_BELIEF_PER_THRESHOLD: u64 = 50_000;
+
+/// Cohesion contributes +1 peace threshold unit every this many units.
+const DIPLOMACY_COHESION_PER_THRESHOLD: u64 = 50_000;
+
+/// Unrest removes 1 peace/conflict threshold unit every this many units (clamped).
+const DIPLOMACY_UNREST_PER_THRESHOLD: u64 = 50_000;
+
+/// Maximum religion cohesion bonus for peace threshold.
+const DIPLOMACY_RELIGIOUS_UNITY_PEACE_BONUS: i64 = 10_000;
+
+/// Dialectic diplomacy threshold derived from belief and unrest.
+///
+/// Stable, deterministic mapping used by FR-CIV-RELIGION tests and scenario
+/// checks: belief raises tolerance, unrest lowers it, and the result floors at a
+/// minimum conflict threshold.
+pub fn diplomacy_conflict_threshold(belief: u64, unrest: u64) -> i64 {
+    let belief_bonus = (belief / DIPLOMACY_BELIEF_PER_THRESHOLD) as i64;
+    let unrest_penalty = ((unrest / DIPLOMACY_UNREST_PER_THRESHOLD) as i64)
+        .min(DIPLOMACY_MAX_WAR_EROSION);
+    (DIPLOMACY_BASE_CONFLICT_THRESHOLD + belief_bonus - unrest_penalty)
+        .max(DIPLOMACY_MIN_CONFLICT_THRESHOLD)
+}
+
+/// Dialectic diplomacy peace threshold derived from belief, cohesion, unrest,
+/// and shared patron presence.
+///
+/// This is a thin helper around conflict threshold logic used by FR-CIV-RELIGION
+/// tests until callers migrate to the production policy layer.
+pub fn diplomacy_peace_threshold(
+    belief: u64,
+    cohesion: u64,
+    unrest: u64,
+    has_patron: bool,
+) -> i64 {
+    let conflict_threshold = diplomacy_conflict_threshold(belief, unrest);
+    let cohesion_bonus = (cohesion / DIPLOMACY_COHESION_PER_THRESHOLD) as i64;
+    let patron_bonus = if has_patron {
+        DIPLOMACY_RELIGIOUS_UNITY_PEACE_BONUS
+    } else {
+        0
+    };
+    conflict_threshold + cohesion_bonus + patron_bonus
+}
+
 /// N12: collective affinity threshold bias. Positive goodwill raises the conflict
 /// threshold (more tolerance before fighting); hostility lowers it. The input is
 /// clamped to `[-1, 1]` so the bias is bounded to `[-5000, 5000]`. Returns i64.

@@ -93,6 +93,8 @@ fn n6_sated_needs_produce_positive_valence() {
         shelter: 1.0,
         safety: 1.0,
         belonging: 1.0,
+        rest: 1.0,
+        health: 1.0,
     };
     let temp = Temperament::neutral();
     for _ in 0..20 {
@@ -114,6 +116,8 @@ fn n6_high_threat_raises_arousal() {
         shelter: 0.5,
         safety: 0.0,
         belonging: 0.5,
+        rest: 0.5,
+        health: 0.5,
     };
     let temp = Temperament::neutral();
     update_mood(&mut mood, &needs, &temp, 1.0, 0.5, 0.0);
@@ -133,6 +137,8 @@ fn n6_deprived_needs_produce_negative_valence() {
         shelter: 0.0,
         safety: 0.0,
         belonging: 0.0,
+        rest: 0.0,
+        health: 0.0,
     };
     let temp = Temperament::neutral();
     for _ in 0..20 {

@@ -30,14 +30,14 @@ fn cohesion_unrest_damp(delta: i64, cohesion: u64) -> i64 {
     delta.saturating_sub((cohesion / 100) as i64)
 }
 
-fn institution_belief_signal(
+pub fn institution_belief_signal(
     belief: u64,
     cluster_beliefs: &BTreeMap<u64, [f32; 4]>,
 ) -> u64 {
     belief.saturating_add((cluster_beliefs.len() as u64).saturating_mul(100))
 }
 
-fn institution_divergence_boost(signal: u64, divergence: f32) -> u64 {
+pub fn institution_divergence_boost(signal: u64, divergence: f32) -> u64 {
     signal.saturating_add((divergence.max(0.0) * 100.0) as u64)
 }
 

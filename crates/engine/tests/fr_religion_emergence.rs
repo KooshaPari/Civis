@@ -5,10 +5,12 @@ use std::collections::BTreeMap;
 use civ_agents::{
     isolation_weighted_belief_divergence, max_cluster_belief_divergence, PSYCHE_DIM,
 };
-use civ_engine::{
+use civ_engine::engine::{
     cohesion_delta, diplomacy_conflict_threshold, diplomacy_peace_threshold,
-    institution_belief_signal, institution_divergence_boost, Simulation, WorldCoord,
+    institution_belief_signal, institution_divergence_boost,
 };
+use civ_engine::Simulation;
+use civ_voxel::WorldCoord;
 
 fn run_ticks(sim: &mut Simulation, n: u64) {
     for _ in 0..n {

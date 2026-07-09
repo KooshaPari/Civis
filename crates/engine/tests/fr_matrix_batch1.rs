@@ -33,10 +33,10 @@ use civ_engine::lod::{
 };
 use civ_engine::scenario::{baseline_scenario_path, load_scenario, ScenarioError};
 use civ_engine::{
-    replay::{ReplayEvent, ReplayLog},
+    replay::{ReplayError, ReplayEvent, ReplayLog},
     replay_format::{decode_civreplay, encode_civreplay, load_civreplay, save_civreplay},
     scenario::{Scenario, ScenarioMilitary, SCENARIO_SCHEMA_VERSION},
-    ReplayError, Simulation,
+    Simulation,
 };
 use civ_mod_host::{format_mod_error_event_json, ModLoadedRecord, ModUnloadedRecord};
 use civ_save_db::format_session_saved_event_json;

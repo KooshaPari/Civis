@@ -10,8 +10,9 @@
 //! 3. An angry agent (low valence + high arousal + high impulsivity) returns Aggress.
 //! 4. Integration: behavior choices propagate through emergence ticks.
 
-use civ_agents::{Mood, Needs as AgentNeeds, Psyche, Temperament};
-use civ_engine::{behavior_from_psyche, EmotionDrivenBehavior, Simulation};
+use civ_agents::{Civilian as AgentCivilian, Mood, Needs as AgentNeeds, Psyche, Temperament};
+use civ_engine::engine::{behavior_from_psyche, EmotionDrivenBehavior};
+use civ_engine::Simulation;
 use civ_needs::Needs as LifeNeeds;
 
 /// Helper: construct a test psyche with given mood and impulsivity.
@@ -183,12 +184,13 @@ fn fr_psyche_behavior_low_impulsivity_dampens_anger() {
 #[test]
 fn fr_psyche_behavior_tick_stress_changes_psyche_and_behavior() {
     let mut sim = Simulation::with_seed(2026);
-    let agent_id = sim
-        .all_agents()
-        .first()
-        .expect("seeded sim has civilian agents")
-        .id;
-    let entity = sim.agent_entity(agent_id).expect("agent entity");
+    let (entity, agent_id) = sim
+        .world
+        .query::<&AgentCivilian>()
+        .iter()
+        .next()
+        .map(|(entity, civilian)| (entity, civilian.id))
+        .expect("seeded sim has civilian agents");
 
     if let Ok(mut needs) = sim.world.get::<&mut AgentNeeds>(entity) {
         *needs = AgentNeeds {

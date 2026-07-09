@@ -130,6 +130,12 @@ impl PowerTargetMask {
     pub const FIELD: Self = Self(1 << 3);
     /// The power targets the simulation schedule (time).
     pub const TIME: Self = Self(1 << 4);
+
+    /// Returns true when every bit in `other` is also set in `self`.
+    #[must_use]
+    pub const fn contains(self, other: Self) -> bool {
+        self.0 & other.0 == other.0
+    }
 }
 
 impl std::ops::BitOr for PowerTargetMask {

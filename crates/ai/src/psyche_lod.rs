@@ -223,7 +223,7 @@ impl PsycheRecord {
     /// into the `Mood` trait (saturating to `[-1.0, 1.0]`).
     pub fn record_event(&mut self, ev: PsycheEvent) {
         // Fold the event's mood contribution into the Mood trait.
-        let delta = ev.mood_delta() * ev.magnitude;
+        let delta = ev.kind.mood_delta() * ev.magnitude;
         self.traits[Trait::Mood.index()] =
             (self.traits[Trait::Mood.index()] + delta).clamp(-1.0, 1.0);
 
@@ -583,7 +583,7 @@ impl XorShift64 {
     /// `f32`-grade precision.
     fn next_unit_symmetric(&mut self) -> f32 {
         let bits = (self.next_u64() >> 40) as u32; // top 24 bits
-        let unit = f32::from(bits) / (1u32 << 24) as f32; // [0, 1)
+        let unit = (bits as f32) / ((1u32 << 24) as f32); // [0, 1)
         unit.mul_add(2.0, -1.0) // [-1, 1)
     }
 }

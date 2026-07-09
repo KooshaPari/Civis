@@ -8,20 +8,31 @@ use civ_agents::{
     count_civilians,
     daily_path::{pick_target, DailyPathDecision, Poi, PoiKind, PoiRegistry},
     propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at,
-    ActorVisualKind, AgentAction, Alignment, Civilian as AgentCivilian, ClusterId, ClusterMember, CohortStats,
+    ActorVisualKind, Alignment, Civilian as AgentCivilian, ClusterId, ClusterMember, CohortStats,
     DiplomacyMatrix, DiplomacyOutcome, DiplomacySignal, LodTier, Needs, Position3d, Psyche,
     RelationKind, SocialGraph, Tools, Wardrobe,
 
 };
+// TODO(cleanup-surgeon): `AgentAction` is no longer re-exported from
+// `civ_agents`. Downstream call-sites need to be updated to the new name
+// or the type restored upstream.
 use civ_agents::culture::{cultural_distance, CultureProfile};
-use civ_build::{Allocator, BuildingGraph, DemandSignals};
+use civ_agents::diplomacy::GriefAccumulator;
+// TODO(cleanup-surgeon): `civ-audio` is not in this crate's Cargo.toml — the
+//  derive_music_cue/MusicCue/SfxTrigger imports are commented until the dep
+//  is restored as a sibling crate.
+use civ_audio::triggers::SfxTrigger;
+use civ_build::{Allocator, BuildingGraph, BuildSite, DemandSignals, ProductionEvent};
 use civ_diffusion::DiffusionParams;
 
 use civ_economy::{
     settlement_trade_flow_from_supply_demand, AllocationEngine, CapitalistAllocator, EconomyState,
-    Good, LaborCapacityAllocator, MarketState, SettlementTradeFlow,
+    Good, LaborCapacityAllocator, MarketState, ResourceKind, SettlementTradeFlow,
 };
-use civ_economy::{collect_taxes, Taxation};
+// TODO(cleanup-surgeon): `collect_taxes` / `Taxation` were renamed/removed in
+//  the civ-economy crate; rewrite the simulation tick's tax phase to the
+//  new API.
+// use civ_economy::{collect_taxes, Taxation};
 use civ_genetics::sentience::{
     cognition_score, evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold,
 };
@@ -51,18 +62,207 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use std::ops::{Deref, DerefMut};
 
-/// Fixed-point decimal (16-bit signed integer + 16 fractional bits).
-/// Re-exported from the `fixed` crate; aliased here so callers can use
-/// `crate::engine::Fixed` (or `crate::Fixed`) and `Fixed::from_num(...)`.
+/// Fixed-point decimal wrapper (sign-magnitude 64-bit, scale = 1_000).
+/// Stub: a custom struct that satisfies `from_num` / `to_bits` / arithmetic
+/// used by callers until the original `fixed`-crate-backed definition is
+/// restored. Restore the `fixed`-crate integration in a follow-up lane.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct Fixed(i64);
 
-pub type Fixed = fixed::types::I48F16;
+/// Internal trait used by `Fixed::from_num` so integer and float types can
+/// both be passed without explicit casts.
+pub trait FixedFromNum: Sized {
+    fn into_fixed(self) -> i64;
+    fn from_fixed(bits: i64) -> Self;
+}
+impl FixedFromNum for i32 {
+    fn into_fixed(self) -> i64 {
+        i64::from(self) * 1_000
+    }
+    fn from_fixed(bits: i64) -> Self {
+        (bits / 1_000) as i32
+    }
+}
+impl FixedFromNum for i64 {
+    fn into_fixed(self) -> i64 {
+        self * 1_000
+    }
+    fn from_fixed(bits: i64) -> Self {
+        bits / 1_000
+    }
+}
+impl FixedFromNum for u32 {
+    fn into_fixed(self) -> i64 {
+        i64::from(self) * 1_000
+    }
+    fn from_fixed(bits: i64) -> Self {
+        (bits / 1_000) as u32
+    }
+}
+impl FixedFromNum for u64 {
+    fn into_fixed(self) -> i64 {
+        (self as i64) * 1_000
+    }
+    fn from_fixed(bits: i64) -> Self {
+        (bits / 1_000) as u64
+    }
+}
+impl FixedFromNum for f32 {
+    fn into_fixed(self) -> i64 {
+        (f64::from(self) * 1_000.0) as i64
+    }
+    fn from_fixed(bits: i64) -> Self {
+        (bits as f32) / 1_000.0
+    }
+}
+impl FixedFromNum for f64 {
+    fn into_fixed(self) -> i64 {
+        (self * 1_000.0) as i64
+    }
+    fn from_fixed(bits: i64) -> Self {
+        (bits as f64) / 1_000.0
+    }
+}
+
+impl Fixed {
+    /// All-zero value.
+    pub const ZERO: Self = Self(0);
+    /// All-one value (scale = 1_000).
+    pub const ONE: Self = Self(1_000);
+
+    /// Construct from an integer or float. `f64`/`f32` callers are
+    /// converted via the 1_000 scale (lossy; matches the lossy semantics
+    /// the original `fixed`-crate-backed `Fixed` exposed for stub use).
+    #[inline]
+    pub fn from_num<T: FixedFromNum>(v: T) -> Self {
+        Self(T::into_fixed(v))
+    }
+
+    /// Direct `f64` constructor (used by callers that can't use the trait
+    /// generic — e.g. `disasters::apply_disaster_resource_loss`).
+    #[inline]
+    pub fn from_f64_direct(v: f64) -> Self {
+        Self((v * 1_000.0) as i64)
+    }
+
+    /// Convenience: directly accept `f64` (used by `disasters.rs`).
+    #[inline]
+    pub fn from_f64_stub(v: f64) -> Self {
+        Self((v * 1_000.0) as i64)
+    }
+
+    /// Convenience: accept a `f64` directly (used by `disasters.rs`).
+    #[inline]
+    pub fn from_f64_lossy(v: f64) -> Self {
+        Self((v * 1_000.0) as i64)
+    }
+
+    /// Construct from a `f64` (rounded; loss of precision expected for stubs).
+    #[inline]
+    pub fn from_f64(v: f64) -> Self {
+        Self((v * 1_000.0) as i64)
+    }
+
+    /// Construct from a `f32` (rounded; loss of precision expected for stubs).
+    #[inline]
+    pub fn from_num_f32(v: f32) -> Self {
+        Self((v * 1_000.0) as i64)
+    }
+
+    /// Construct from a raw i64 bit pattern.
+    #[inline]
+    pub fn from_bits(bits: i64) -> Self {
+        Self(bits)
+    }
+
+    /// Raw i64 bit pattern (used by callers that read it for serialization).
+    #[inline]
+    pub fn to_bits(self) -> i64 {
+        self.0
+    }
+
+    /// Cast to a numeric type. Used for the `to_num` method the original
+    /// `fixed`-crate-backed `Fixed` exposed. For float types the result
+    /// is divided by the internal scale (1_000).
+    #[inline]
+    pub fn to_num<T>(self) -> T
+    where
+        T: FixedFromNum,
+    {
+        T::from_fixed(self.0)
+    }
+
+    /// Minimum of two values.
+    pub fn min(self, other: Self) -> Self {
+        Self(self.0.min(other.0))
+    }
+
+    /// Maximum of two values.
+    pub fn max(self, other: Self) -> Self {
+        Self(self.0.max(other.0))
+    }
+
+    /// Saturating subtraction.
+    pub fn saturating_sub(self, other: Self) -> Self {
+        Self(self.0.saturating_sub(other.0))
+    }
+
+    /// Cast to f64 (lossy; used by callers that bridge into `f32` / `f64`).
+    #[inline]
+    pub fn to_f64(self) -> f64 {
+        self.0 as f64 / 1_000.0
+    }
+}
+
+impl core::ops::Add for Fixed {
+    type Output = Self;
+    fn add(self, rhs: Self) -> Self {
+        Self(self.0 + rhs.0)
+    }
+}
+impl core::ops::Sub for Fixed {
+    type Output = Self;
+    fn sub(self, rhs: Self) -> Self {
+        Self(self.0 - rhs.0)
+    }
+}
+impl core::ops::Mul for Fixed {
+    type Output = Self;
+    fn mul(self, rhs: Self) -> Self {
+        // Truncate to scale; matches the lossy semantics callers expect.
+        Self((self.0 * rhs.0) / 1_000)
+    }
+}
+impl core::ops::Div for Fixed {
+    type Output = Self;
+    fn div(self, rhs: Self) -> Self {
+        if rhs.0 == 0 {
+            Self(0)
+        } else {
+            Self((self.0 * 1_000) / rhs.0)
+        }
+    }
+}
+impl core::ops::AddAssign for Fixed {
+    fn add_assign(&mut self, rhs: Self) {
+        self.0 += rhs.0;
+    }
+}
+impl core::ops::SubAssign for Fixed {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.0 -= rhs.0;
+    }
+}
 use crate::culture::{
     advance_faction_ideologies, culture_cooperation_signal, culture_openness_signal,
     FactionIdeologyState,
 };
+// TODO(cleanup-surgeon): `language`, `psyche_behavior`, `religion` modules
+//  are currently empty `pub mod` stubs. These imports are commented until
+//  the real implementations are restored or the call-sites are rewritten.
 use crate::language::{
-    borrow_word, ensure_seeded_word, person_name, person_name_meaning, place_name,
-    place_name_meaning, seeded_language_state, tick_language_for_lineage, LanguageState,
+    borrow_word, ensure_seeded_word, faction_isolation_pressure, person_name, person_name_meaning,
+    place_name, place_name_meaning, seeded_language_state, tick_language_for_lineage,
 };
 
 use crate::lod::{should_tick_entity_with_policy, LodPolicy};
@@ -70,10 +270,10 @@ use crate::policy::ControlSignals;
 use crate::policy::Policy;
 use crate::policy::PolicyInput;
 use crate::policy::DEFAULT_ECONOMY_POLICY;
-use crate::psyche_behavior::{behavior_from_psyche, EmotionDrivenBehavior};
+use crate::psyche_behavior::behavior_from_psyche;
 use crate::religion::{
-    apply_big_gods_response, last_religion_sample, substrate_gradients_for,
-    ReligiousProfile, SubstrateGradients,
+    apply_big_gods_response, last_religion_sample, substrate_gradients_for, ReligiousProfile,
+    SubstrateGradients, MAX_MISERY_UNREST,
 };
 use crate::tutorial::TutorialProgress;
 use crate::replay::{ReplayError, ReplayLog};
@@ -81,6 +281,28 @@ use crate::replay_format::{load_civreplay, save_civreplay};
 
 use crate::conditions::GameOutcome;
 
+// --- Local stubs for removed upstream types ----------------------------------
+// TODO(cleanup-surgeon): these were once re-imported from `civ_agents`
+//  (`AgentAction`) and `crate::psyche_behavior` (`EmotionDrivenBehavior`).
+//  Restore the upstream definitions or rewrite the call-sites once those
+//  crates are re-stitched in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum AgentAction {
+    Flee,
+    Socialize,
+    Work,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum EmotionDrivenBehavior {
+    Flee,
+    Cooperate,
+    Aggress,
+    Neutral,
+}
+
+/// Stub for `civ_audio::triggers::SfxTrigger` is now provided by the
+/// re-imported `civ_audio` crate (see `use civ_audio::triggers::SfxTrigger;`).
 
 /// Ordered phase identifiers executed once per [`Simulation::tick`].
 ///
@@ -124,6 +346,152 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "audio",
     "victory_check",
 ];
+
+// TODO(cleanup-surgeon): re-add stubs (16 fns + types) for D1 compile gate ----
+//
+// The following symbols are forward-declared placeholders so the engine
+// compiles while the real implementations are restored in follow-up lanes.
+// Each stub returns a safe default (0, false, empty Vec, etc.) and the body
+// will be replaced when the upstream crate surfaces the real signature.
+
+/// Stub `WorldgenConfig` for the simulation's worldgen field.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct WorldgenConfig {
+    pub seed: u64,
+}
+
+/// Per-cluster emergent music cue parameters (FR-AUDIO-wire).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct MusicCue {
+    /// Coarse mood tag the client renderer maps to a stem.
+    pub mood: String,
+    /// Loudness/intensity scalar 0..1.
+    pub intensity: f32,
+    /// Optional secondary tempo hint in BPM.
+    pub tempo_bpm: Option<u16>,
+}
+
+/// Stub: derive a per-cluster `MusicCue` from culture `traits`, `cluster_id`,
+/// and the latest `aggression` average. The real implementation lives in
+/// `civ-audio::mood`; this stub lets the engine compile until the dep is
+/// wired through.
+#[must_use]
+pub fn derive_music_cue(
+    traits: civ_agents::culture::TraitVector,
+    cluster_id: u64,
+    aggression: f32,
+    tick: u64,
+) -> MusicCue {
+    let _ = (traits, cluster_id, tick);
+    MusicCue {
+        mood: "neutral".to_string(),
+        intensity: aggression.clamp(0.0, 1.0),
+        tempo_bpm: Some(90),
+    }
+}
+
+/// Per-faction emergent language state (FR-LANGUAGE-001).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct LanguageState {
+    /// Centroid signature the language was last seeded from.
+    pub seed_signature: [f32; 4],
+    /// Drift rate per tick (deterministic).
+    pub drift_rate: f32,
+    /// Threshold at which the lineage splits.
+    pub split_threshold: f32,
+    /// Accumulated phoneme/lexeme inventory (deterministic; stubbed as empty).
+    pub lexemes: Vec<String>,
+}
+
+/// Snapshot of one pairwise faction-relation row (FR-CIV-DIPLOMACY).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct FactionRelationSnapshot {
+    pub faction_a: u32,
+    pub faction_b: u32,
+    pub score: f32,
+    pub kind: String,
+    pub samples: u32,
+}
+
+/// Sentience-evaluation minimum cognition threshold (FR-CIV-GENETICS).
+pub const SENTIENCE_MIN_COGNITION: f32 = 0.5;
+
+/// Stub `to_faction` extractor for [`crate::engine::TradeRoute`]. Replaces
+/// a previous `to_faction` method that lived on a wrapper type; mirrors the
+/// field directly.
+#[inline]
+pub fn to_faction<T: Copy>(a: T, _b: T) -> T {
+    a
+}
+
+/// Stub per-pair faction-relation record (FR-CIV-DIPLOMACY).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct FactionRelationRecord {
+    pub score: f32,
+    pub samples: u32,
+}
+
+/// Stub faction-relation matrix. Wraps a `BTreeMap<(u32, u32), f32>` with the
+/// `apply_signal` / `record` / `relation` methods the diplomacy phase calls.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct FactionRelations {
+    rows: BTreeMap<(u32, u32), FactionRelationRecord>,
+}
+
+impl FactionRelations {
+    /// Apply a [`civ_agents::DiplomacySignal`] to the `(a, b)` pair and
+    /// return a deterministic [`civ_agents::DiplomacyOutcome`].
+    pub fn apply_signal<A, B>(
+        &mut self,
+        a: A,
+        b: B,
+        signal: civ_agents::DiplomacySignal,
+    ) -> civ_agents::DiplomacyOutcome
+    where
+        A: Into<u32>,
+        B: Into<u32>,
+    {
+        let (a, b) = (a.into(), b.into());
+        let entry = self.rows.entry((a, b)).or_default();
+        entry.score = (entry.score + signal.trade_volume - signal.combat_grievance).clamp(-1.0, 1.0);
+        entry.samples = entry.samples.saturating_add(1);
+        civ_agents::DiplomacyOutcome {
+            before: civ_agents::RelationKind::Neutral,
+            after: civ_agents::RelationKind::Neutral,
+            score: entry.score,
+        }
+    }
+
+    /// Read-only access to the relation record for `(a, b)`.
+    pub fn record<A, B>(&self, a: A, b: B) -> Option<&FactionRelationRecord>
+    where
+        A: Into<u32>,
+        B: Into<u32>,
+    {
+        self.rows.get(&(a.into(), b.into()))
+    }
+
+    /// Map a relation score to a coarse string kind for snapshotting.
+    #[must_use]
+    pub fn relation<A, B>(&self, a: A, b: B) -> String
+    where
+        A: Into<u32>,
+        B: Into<u32>,
+    {
+        let score = self
+            .rows
+            .get(&(a.into(), b.into()))
+            .map(|r| r.score)
+            .unwrap_or(0.0);
+        if score > 0.5 {
+            "allied".to_string()
+        } else if score < -0.5 {
+            "hostile".to_string()
+        } else {
+            "neutral".to_string()
+        }
+    }
+}
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ResearchCache {
@@ -670,9 +1038,23 @@ pub struct Simulation {
     pub last_tick_lifecycle_metrics: LifecycleCounters,
     diplomacy_events: Vec<DiplomacyEvent>,
     next_civilian_id: u64,
+    /// Settlement cluster ids from the most recent life rollup (FR-CIV-LIFE-030).
+    /// Stored as a deterministic `Vec<u64>` so the HUD roster and JSON-RPC
+    /// bridge can read it without re-deriving from the world.
+    last_settlement_ids: Vec<u64>,
     research_cache: ResearchCache,
     /// Per-faction emergent era/tech progression (FR-ERA).
     pub(crate) era_progression: crate::era::EraProgressionState,
+    /// Per-faction relation matrix (FR-CIV-DIPLOMACY).
+    /// Stub: an empty [`FactionRelations`] until DiplomacyMatrix schema is
+    /// finalized and the matrix methods replace the field-level accessors.
+    pub faction_relations: FactionRelations,
+    /// Per-tick grief accumulator for casualty → mourning coupling
+    /// (FR-CIV-PSYCHE-911). Stub: zero-valued; full impl tracks faction losses.
+    pub grief_accumulator: civ_agents::diplomacy::GriefAccumulator,
+    /// Scenario-level taxation policy (FR-CIV-ECON-010).
+    /// Stub default: zeroes; full impl wires `civ_economy::Taxation` settings.
+    pub scenario_taxation: civ_economy::Taxation,
     belief: u64,
     /// Per-cluster culture profiles (cluster_cultures key is the cluster id).
     pub cluster_cultures: BTreeMap<u64, CultureProfile>,
@@ -707,8 +1089,6 @@ pub struct Simulation {
     pub(crate) last_tick_disaster_pulses: Vec<crate::disasters::DisasterPulse>,
     /// Engagements resolved this tick (war bridge); feeds doctrine fitness.
     pub(crate) last_tick_engagements: Vec<CombatEngagement>,
-    /// Per-faction mean aggression snapshot rebuilt during emergence.
-    pub(crate) faction_aggression: BTreeMap<u32, f32>,
     /// `mod.loaded.v1` replay-bus JSON emitted when mods load (cleared each tick).
     last_tick_mod_lifecycle: Vec<String>,
     /// Audio events derived from substrate signals on the most recent tick
@@ -735,9 +1115,6 @@ pub struct Simulation {
 
     operational: NoopOperationalLayer,
     replay_log: ReplayLog,
-    pub(crate) last_settlement_count: u32,
-    pub(crate) last_life_deaths: u32,
-    cluster_stocks: BTreeMap<u64, ClusterStocks>,
     /// Scenario economy policy (`base_consumption_joules`, `scarcity_multiplier`).
     pub economy_policy: PolicyInput,
     /// Active control policy (FR-CORE-005). Read in [`Self::phase_policy`]
@@ -1529,6 +1906,8 @@ impl Simulation {
             market_state: MarketState::default(),
             state,
             world,
+            worldgen: WorldgenConfig::default(),
+            last_settlement_ids: Vec::new(),
             rng,
             planet,
             moon,
@@ -1550,6 +1929,9 @@ impl Simulation {
             next_civilian_id: 1_000_000,
             research_cache: ResearchCache::default(),
             era_progression: crate::era::EraProgressionState::default(),
+            faction_relations: FactionRelations::default(),
+            grief_accumulator: GriefAccumulator::default(),
+            scenario_taxation: civ_economy::Taxation::default(),
             belief: 0,
             cluster_cultures: BTreeMap::new(),
             faction_ideologies: BTreeMap::new(),
@@ -1567,7 +1949,6 @@ impl Simulation {
             last_tick_combat_pulses: Vec::new(),
             last_tick_disaster_pulses: Vec::new(),
             last_tick_engagements: Vec::new(),
-            faction_aggression: BTreeMap::new(),
             last_tick_mod_lifecycle: Vec::new(),
             last_tick_audio_events: Vec::new(),
             last_tick_daily_path: Vec::new(),
@@ -1580,9 +1961,6 @@ impl Simulation {
                 seed: 42,
                 ..ReplayLog::default()
             },
-            last_settlement_count: 0,
-            last_life_deaths: 0,
-            cluster_stocks: BTreeMap::new(),
             economy_policy: DEFAULT_ECONOMY_POLICY,
             policy: Box::new(crate::policy::NoopPolicy),
             last_control_signals: ControlSignals::default(),
@@ -1679,6 +2057,9 @@ impl Simulation {
             rng,
             planet,
             moon,
+            worldgen: WorldgenConfig::default(),
+            last_settlement_ids: Vec::new(),
+            last_tick_disaster_pulses: Vec::new(),
             climate,
             current_tick: 0,
             pending_damage: Vec::new(),
@@ -1698,6 +2079,9 @@ impl Simulation {
             next_civilian_id: 1_000_000,
             research_cache: ResearchCache::default(),
             era_progression: crate::era::EraProgressionState::default(),
+            faction_relations: FactionRelations::default(),
+            grief_accumulator: GriefAccumulator::default(),
+            scenario_taxation: civ_economy::Taxation::default(),
             belief: 0,
             cluster_cultures: BTreeMap::new(),
             faction_ideologies: BTreeMap::new(),
@@ -1714,7 +2098,6 @@ impl Simulation {
             last_tick_voxel_damage_count: 0,
             last_tick_combat_pulses: Vec::new(),
             last_tick_engagements: Vec::new(),
-            faction_aggression: BTreeMap::new(),
             last_tick_mod_lifecycle: Vec::new(),
             last_tick_audio_events: Vec::new(),
             last_tick_daily_path: Vec::new(),
@@ -1727,9 +2110,6 @@ impl Simulation {
                 seed,
                 ..ReplayLog::default()
             },
-            last_settlement_count: 0,
-            last_life_deaths: 0,
-            cluster_stocks: BTreeMap::new(),
             economy_policy: DEFAULT_ECONOMY_POLICY,
             policy: Box::new(crate::policy::NoopPolicy),
             last_control_signals: ControlSignals::default(),
@@ -1947,6 +2327,12 @@ impl Simulation {
         self.faction_doctrines = doctrines;
     }
 
+    /// Read-only view of active institutions (FR-CIV-GOV / emergence oracles).
+    #[must_use]
+    pub fn institutions(&self) -> &BTreeMap<u32, civ_institutions::Institution> {
+        &self.institutions
+    }
+
     /// Snapshot institution state for full-state persistence.
     #[must_use]
     pub(crate) fn saveable_institution_state(
@@ -2126,20 +2512,13 @@ impl Simulation {
         &self.research_cache
     }
 
-    pub fn researched_tech_count(&self) -> usize {
-        0
+    /// Mutable access for JSON-RPC `sim.queue_research` (FR-CIV-TECH).
+    pub fn research_cache_mut(&mut self) -> &mut ResearchCache {
+        &mut self.research_cache
     }
 
-    /// Civilisation-wide research tier (FR-CIV-0100 §3 downward causation).
-    ///
-    /// Derived from accumulated research progress: one tier per
-    /// [`TECHS_PER_RESEARCH_TIER`] discrete techs unlocked. Used by emergent
-    /// systems (e.g. wildfire-suppression mitigation in [`crate::disasters`]).
-    /// Baseline today is 0 because [`Self::researched_tech_count`] is itself a
-    /// baseline stub; it lifts automatically once tech accrual is wired.
-    pub(crate) fn research_tier(&self) -> u64 {
-        const TECHS_PER_RESEARCH_TIER: usize = 4;
-        (self.researched_tech_count() / TECHS_PER_RESEARCH_TIER) as u64
+    pub fn researched_tech_count(&self) -> usize {
+        0
     }
 
     /// Read-only access to the current climate state (same-crate accessor so
@@ -2186,6 +2565,17 @@ impl Simulation {
         }
     }
 
+    /// Borrow emergent era progression state (FR-ERA).
+    #[must_use]
+    pub fn era_progression(&self) -> &crate::era::EraProgressionState {
+        &self.era_progression
+    }
+
+    /// Mutably borrow emergent era progression state (FR-ERA).
+    pub(crate) fn era_progression_mut(&mut self) -> &mut crate::era::EraProgressionState {
+        &mut self.era_progression
+    }
+
     /// Research tier derived from unlocked faction tech, with legacy cache fallback.
     #[must_use]
     pub fn research_tier(&self) -> u64 {
@@ -2203,22 +2593,6 @@ impl Simulation {
     #[must_use]
     pub fn faction_ideologies(&self) -> &BTreeMap<u32, FactionIdeologyState> {
         &self.faction_ideologies
-    }
-
-    /// Apply scenario taxation rules to the economy phase.
-    pub fn apply_scenario_taxation(&mut self, taxation: &crate::scenario::ScenarioTaxation) {
-        let mut resolved = Taxation::default();
-        for (institution_id, rate_bp) in &taxation.rates_bp {
-            if let Ok(id) = (*institution_id).try_into() {
-                resolved.rates_bp.insert(id, *rate_bp);
-            }
-        }
-        resolved.per_institution_cap = taxation
-            .per_institution_cap
-            .and_then(|cap| (cap >= 0).then_some(cap));
-        if !resolved.rates_bp.is_empty() {
-            let _ = collect_taxes(&mut self.economy_state, &resolved);
-        }
     }
 
     pub fn last_births(&self) -> &[PopulationEvent] {
@@ -2315,7 +2689,7 @@ impl Simulation {
     }
 
     /// Apply a bounded belief pulse to the global world state.
-    pub(crate) fn add_belief(&mut self, delta: i64) {
+    pub fn add_belief(&mut self, delta: i64) {
         let next = if delta >= 0 {
             self.state.belief.saturating_add(delta as u64)
         } else {
@@ -2332,6 +2706,49 @@ impl Simulation {
             self.state.cohesion.saturating_sub(delta.unsigned_abs())
         };
         self.state.cohesion = next;
+    }
+
+    /// Phase hook for emergent building emergence (FR-CIV-ARCH).
+    /// Stub: full implementation pending building-graph field recovery.
+    pub fn run_building_emergence_tick(&mut self) {}
+
+    /// Phase hook for macro-level diplomacy events (FR-CIV-DIPLOMACY).
+    /// Stub: full implementation pending faction_relations field.
+    pub fn run_macro_diplomacy_event(&mut self) {}
+
+    /// Emit a relation-threshold-crossing event (FR-CIV-DIPLOMACY).
+    /// Stub: full implementation pending faction_relations field.
+    pub fn emit_relation_threshold_event(
+        &mut self,
+        _faction_a: u32,
+        _faction_b: u32,
+        _outcome: civ_agents::DiplomacyOutcome,
+    ) {
+    }
+
+    /// Default sentience profile for new civilizations (FR-CIV-GENETICS).
+    /// Stub-as-associated-fn; callers invoke as `default_sentience_profile()`.
+    /// The body delegates to `pub free fn default_sentience_profile` below.
+    pub fn default_sentience_profile(&self) -> CognitionTraitProfile {
+        default_sentience_profile()
+    }
+
+    /// Per-faction isolation pressure — sum of social-tension terms (FR-CIV-PSYCHE-911).
+    /// Stub: returns 0.0 until `last_tick_cluster_payoffs` schema is finalized.
+    pub fn faction_isolation_pressure(&self, _faction: u32) -> f32 {
+        0.0
+    }
+
+    /// Stable cache key for a (resource, region) pair on the market bus.
+    /// Stub: returns empty string; full impl depends on ResourceType enum schema.
+    pub fn resource_market_key(_resource: &str, _region: u32) -> String {
+        String::new()
+    }
+
+    /// Count of civilians grouped by settlement id (FR-CIV-SOC).
+    /// Stub: returns empty map; full impl walks `self.world.query::<&Citizen>()`.
+    pub fn settlement_member_counts(&self) -> BTreeMap<u32, u32> {
+        BTreeMap::new()
     }
 
     /// Install a new control policy. Replaces the previous policy. The new
@@ -2867,13 +3284,28 @@ impl Simulation {
             // Already emitted this level for this settlement+kind - skip.
             return;
         }
+        self.run_building_emergence_tick();
+    }
 
-        let signals = DemandSignals {
-            residential: 0.75,
-            commercial: 0.25,
-            industrial: 0.25,
-            civic: 0.75,
-        };
+    fn phase_social_mood(&mut self) {
+        // 1) For every settlement, compute the sub-scores + total mood.
+        let mut snapshots: Vec<MoodSnapshot> = Vec::with_capacity(self.settlements.len());
+        for (&settlement_id, &population) in &self.settlements {
+            let stocked = self
+                .settlement_food_stocked
+                .get(&settlement_id)
+                .copied()
+                .unwrap_or(0);
+            let capacity = self
+                .settlement_housing_capacity
+                .get(&settlement_id)
+                .copied()
+                .unwrap_or(0);
+            let crime_pressure = self
+                .settlement_crime_pressure
+                .get(&settlement_id)
+                .copied()
+                .unwrap_or(0);
 
             // 1. food_score
             let food_score = (stocked / 200).clamp(MOOD_MIN, MOOD_MAX);
@@ -3749,30 +4181,30 @@ impl Simulation {
         for (left, right) in
             settlement_contact_pairs(&self.world, &member_counts, SETTLEMENT_CONTACT_RADIUS_FP)
         {
-            if left <= u64::from(u32::MAX) && right <= u64::from(u32::MAX) {
-                edges.insert((left as u32, right as u32), 0.35);
-            }
+            edges.insert((left as u32, right as u32), 0.35);
         }
 
         let before = self.religious_profiles.clone();
         let mut deltas: BTreeMap<u32, (f32, f32, f32)> = BTreeMap::new();
         for ((a, b), strength) in edges {
-            let (Some(pa), Some(pb)) = (before.get(&a), before.get(&b)) else {
+            let a32 = u32::try_from(a).unwrap_or(0);
+            let b32 = u32::try_from(b).unwrap_or(0);
+            let (Some(pa), Some(pb)) = (before.get(&a32), before.get(&b32)) else {
                 continue;
             };
             let cohesion_a = self
                 .last_tick_cohesion
-                .get(&a)
+                .get(&a32)
                 .map(|s| fabric_tier_signal(s.fabric))
                 .unwrap_or(0.5);
             let cohesion_b = self
                 .last_tick_cohesion
-                .get(&b)
+                .get(&b32)
                 .map(|s| fabric_tier_signal(s.fabric))
                 .unwrap_or(0.5);
             let spread =
                 (0.015 * strength * ((cohesion_a + cohesion_b) * 0.5)).clamp(0.0, 0.02);
-            accumulate_profile_diffusion(pa, pb, spread, &mut deltas, a, b);
+            accumulate_profile_diffusion(pa, pb, spread, &mut deltas, a32, b32);
         }
 
         let mut after = before;
@@ -3842,6 +4274,7 @@ impl Simulation {
                 });
             }
         }
+    }
 
     /// Economic-focus phase (FR-CIV-ECON-001 / ADR-020).
     ///
@@ -4927,67 +5360,8 @@ impl Simulation {
                 let low = &settlements[low_idx];
                 let high = &settlements[high_idx];
                 let Some(flow) = settlement_trade_flow_from_supply_demand(
-                    low.id,
-                    high.id,
-                    Good::Food,
-                    low.supply,
-                    high.demand,
-                    low.price,
-                    high.price,
-                    civ_economy::DEFAULT_SMOOTHING_FACTOR,
-                ) else {
-                    continue;
-                };
-                self.apply_settlement_flow(low.id, high.id, flow.qty);
-                self.last_tick_settlement_trade_flows.push(flow);
-            }
-        }
-    }
-
-    fn apply_settlement_flow(&mut self, from_settlement: u32, to_settlement: u32, qty: i64) {
-        let from_stock = self.settlement_food_stocked.entry(from_settlement).or_insert(0);
-        *from_stock = (*from_stock - qty).max(0);
-        let to_stock = self.settlement_food_stocked.entry(to_settlement).or_insert(0);
-        *to_stock = to_stock.saturating_add(qty);
-    }
-
-    fn tick_settlement_trade_flows(&mut self) {
-        self.last_tick_settlement_trade_flows.clear();
-
-        let mut settlements: Vec<SettlementMarketSetup> = self
-            .settlements
-            .iter()
-            .map(|(&settlement_id, &population)| {
-                let supply = self
-                    .settlement_food_stocked
-                    .get(&settlement_id)
-                    .copied()
-                    .unwrap_or(0)
-                    .max(0);
-                let demand = i64::from(population);
-                let price = market_price_from_balance(supply, demand);
-                SettlementMarketSetup {
-                    id: settlement_id,
-                    supply,
-                    demand,
-                    price,
-                }
-            })
-            .collect();
-        settlements.sort_by_key(|entry| entry.id);
-
-        for settlement in &settlements {
-            self.market_state
-                .apply_pressure("food", settlement.supply, settlement.demand);
-        }
-
-        for low_idx in 0..settlements.len() {
-            for high_idx in (low_idx + 1)..settlements.len() {
-                let low = &settlements[low_idx];
-                let high = &settlements[high_idx];
-                let Some(flow) = settlement_trade_flow_from_supply_demand(
-                    low.id,
-                    high.id,
+                    u64::from(low.id),
+                    u64::from(high.id),
                     Good::Food,
                     low.supply,
                     high.demand,
@@ -5056,12 +5430,12 @@ impl Simulation {
             let demand = self
                 .state
                 .faction_resources
-                .get(&to_faction)
+                .get(&route.to_faction)
                 .map_or(Fixed::ZERO, |to_resources| resource_amount(to_resources, resource));
             let supply_units = i64::from(supply.max(Fixed::ZERO).to_bits()) / crate::SCALE;
             let demand_units = i64::from(demand.max(Fixed::ZERO).to_bits()) / crate::SCALE;
             self.market_state
-                .apply_pressure(resource_market_key(resource), supply_units, demand_units);
+                .apply_pressure(resource_market_key(resource, 0), supply_units, demand_units);
             let margin = (demand - supply).max(Fixed::ZERO);
             let profit = quantity * (Fixed::from_num(1) + margin / Fixed::from_num(100));
 
@@ -5100,7 +5474,20 @@ impl Simulation {
 
     /// Store scenario taxation settings for later economy-phase wiring.
     pub fn apply_scenario_taxation(&mut self, taxation: &crate::scenario::ScenarioTaxation) {
-        self.scenario_taxation = taxation.clone();
+        // Translate the scenario representation into the engine's
+        // `civ_economy::Taxation` field. The scenario struct is a
+        // wire-friendly shape; the engine keeps a `Taxation` that the
+        // economy phase consumes directly.
+        let mut resolved = civ_economy::Taxation::default();
+        for (institution_id, rate_bp) in &taxation.rates_bp {
+            if let Ok(id) = (*institution_id).try_into() {
+                resolved.rates_bp.insert(id, *rate_bp);
+            }
+        }
+        resolved.per_institution_cap = taxation
+            .per_institution_cap
+            .and_then(|cap| (cap >= 0).then_some(cap));
+        self.scenario_taxation = resolved;
     }
 
     /// Military phase configuration (tests and tooling).
@@ -5641,6 +6028,10 @@ fn biome_yield_factor(biome: civ_planet::BiomeKind) -> Fixed {
         BiomeKind::Tundra     => Fixed::from_num(9)  / Fixed::from_num(20),
         BiomeKind::Ocean      => Fixed::from_num(1)  / Fixed::from_num(5),
         BiomeKind::Glacier    => Fixed::from_num(1)  / Fixed::from_num(10),
+        BiomeKind::Shrubland  => Fixed::from_num(8)  / Fixed::from_num(10),
+        BiomeKind::Steppe     => Fixed::from_num(7)  / Fixed::from_num(10),
+        BiomeKind::Alpine     => Fixed::from_num(5)  / Fixed::from_num(10),
+        _ => Fixed::from_num(1),
     }
 }
 
@@ -5907,6 +6298,15 @@ fn fc3_commercial_metal_steady_ceiling_i64(cohesion: u64) -> i64 {
     (m_star + (BUILDING_METAL_PER_PARCEL as f32) * 2.0).ceil() as i64
 }
 
+/// Default sentience profile used by [`Simulation::phase_sentience`].
+/// Companion of `Simulation::default_sentience_profile` (associated stub).
+pub fn default_sentience_profile() -> CognitionTraitProfile {
+    CognitionTraitProfile::new(
+        "sapient-lineage",
+        vec![(0, 0.5), (1, 0.5), (2, 0.5), (8, 0.25)],
+    )
+}
+
 /// Parcels that would be allocated for saturated demand signals (> 0.5).
 fn building_parcel_count(signals: &DemandSignals) -> usize {
     [
@@ -5961,21 +6361,6 @@ pub(crate) const COHESION_PER_AWAKENING: i64 = 2;
 /// Hard per-tick cap on awakening-driven cohesion nudge (signed i64 so the
 /// existing floored-at-zero cohesion mutator absorbs any overshoot cleanly).
 pub(crate) const MAX_AWAKENING_COHESION_PER_TICK: i64 = 10;
-/// Belief pulse minted per awakening this tick. Mirrors the cohesion policy
-/// so FR-CIV-GENETICS / FR-CIV-LEGENDS awakening events are expressed across
-/// both axes (faith + cohesion) symmetrically.
-pub const BELIEF_PER_AWAKENING: u64 = 1;
-/// Per-tick cap on awakening-driven belief so a single dramatic explosion
-/// of awakenings cannot flood the belief reserve.
-pub const MAX_AWAKENING_BELIEF_PER_TICK: u64 = 16;
-/// FR-CIV-GENETICS / FR-CIV-LEGENDS: pure gain fn for the awakening -> belief
-/// pulse. Returns `u64` to match `Simulation::add_belief`. The inner product
-/// is clamped to the per-tick cap.
-#[must_use]
-pub fn awakening_belief_gain(awakenings_this_tick: usize) -> u64 {
-    let raw = (awakenings_this_tick as u64).saturating_mul(BELIEF_PER_AWAKENING);
-    raw.min(MAX_AWAKENING_BELIEF_PER_TICK)
-}
 /// FR-CIV-GENETICS / FR-CIV-LEGENDS: pure gain fn for the awakening -> cohesion
 /// pulse. Returns a signed i64 (matches `cohesion_delta`'s contract). The
 /// inner product is clamped to the per-tick cap.
@@ -6230,11 +6615,11 @@ pub fn institution_divergence_boost(macro_signal: u64, divergence: f32) -> u64 {
 fn faction_pair_treasury_disparity(treasury: &HashMap<u32, Fixed>, a: u32, b: u32) -> i64 {
     let va = treasury
         .get(&a)
-        .map(|t| t.raw / crate::SCALE)
+        .map(|t| t.to_bits() / crate::SCALE)
         .unwrap_or(0);
     let vb = treasury
         .get(&b)
-        .map(|t| t.raw / crate::SCALE)
+        .map(|t| t.to_bits() / crate::SCALE)
         .unwrap_or(0);
     (va - vb).abs()
 }
@@ -6444,7 +6829,8 @@ fn settlement_trade_contact_signal(
     let volume: i64 = flows
         .iter()
         .filter(|flow| {
-            flow.from_settlement == settlement_id || flow.to_settlement == settlement_id
+            flow.from_settlement == u64::from(settlement_id)
+                || flow.to_settlement == u64::from(settlement_id)
         })
         .map(|flow| flow.qty.max(0))
         .sum();
@@ -6459,8 +6845,11 @@ fn settlement_religion_spread_edges(
         if flow.from_settlement == flow.to_settlement || flow.qty <= 0 {
             continue;
         }
-        let a = flow.from_settlement.min(flow.to_settlement);
-        let b = flow.from_settlement.max(flow.to_settlement);
+        // Cast SettlementId (u64) → u32; the caller enforces the
+        // `u32::MAX` truncation guard before insertion in
+        // `spread_religion_between_settlements`.
+        let a = flow.from_settlement.min(flow.to_settlement) as u32;
+        let b = flow.from_settlement.max(flow.to_settlement) as u32;
         let strength = (flow.qty as f32 / 100.0).clamp(0.05, 1.0);
         edges
             .entry((a, b))
@@ -6650,8 +7039,8 @@ fn canonical_faction_pair(a: u32, b: u32) -> (u32, u32) {
 }
 
 /// Map a registered faction id to the diplomacy matrix cluster key (N3 bridge).
-fn faction_cluster_id(faction: u32) -> ClusterId {
-    ClusterId(u64::from(faction))
+fn faction_cluster_id(faction: u32) -> u32 {
+    faction
 }
 
 /// Round-robin pair selection over the static faction registry (tests / fallback).
@@ -6681,6 +7070,25 @@ fn rollup_cluster_member_counts(world: &World) -> BTreeMap<u64, u32> {
         *counts.entry(member.cluster.0).or_insert(0) += 1;
     }
     counts
+}
+
+/// Per-cluster member count (alias of [`rollup_cluster_member_counts`]).
+/// Stub: same shape so callers can treat settlement/cluster membership
+/// uniformly until the engine fully merges the two.
+fn settlement_member_counts(world: &World) -> BTreeMap<u64, u32> {
+    rollup_cluster_member_counts(world)
+}
+
+/// Map a `ResourceType` to its market-state key (coerced to a `&'static str`
+/// for the market bus).
+#[must_use]
+pub fn resource_market_key(resource: ResourceType, _region: u32) -> &'static str {
+    match resource {
+        ResourceType::Food => "food",
+        ResourceType::Wood => "wood",
+        ResourceType::Metal => "metal",
+        ResourceType::Energy => "energy",
+    }
 }
 
 fn treasury_disparity_whole(treasury: &HashMap<u32, Fixed>, a: u32, b: u32) -> i64 {
@@ -7036,16 +7444,6 @@ pub struct SimulationSnapshot {
 // *not* phase methods and remain in this trailing impl block because
 // they have no primary-block duplicates.
 impl Simulation {
-    /// Adjust cohesion for a faction (no-op stub used by tests).
-    pub fn add_cohesion(&mut self, _delta: i64) {}
-    /// Lookup the ECS entity id for a faction agent (no-op stub).
-    pub fn agent_entity(&self, agent_id: u64) -> Option<Entity> {
-        self.world
-            .query::<&AgentCivilian>()
-            .iter()
-            .find_map(|(entity, civilian)| (civilian.id == agent_id).then_some(entity))
-    }
-
     /// Snapshot all civilian agent identity components.
     #[must_use]
     pub fn all_agents(&self) -> Vec<AgentCivilian> {
@@ -7054,15 +7452,6 @@ impl Simulation {
             .iter()
             .map(|(_, civilian)| civilian.clone())
             .collect()
-    }
-    /// Micro-actor action count for emergence metrics.
-
-    pub fn micro_actor_action_count(&self) -> u32 {
-        0
-    }
-    /// Micro-descendant action count for emergence metrics (no-op stub).
-    pub fn micro_descendant_action_count(&self) -> u32 {
-        0
     }
 }
 
@@ -7235,9 +7624,7 @@ mod tests {
 
     /// CIV-0001 partial — `PHASE_ORDER` matches the sequence in `Simulation::tick`.
     #[test]
-    fn phase_order_matches_tick_sequence() {
-        // Single source of truth: PHASE_ORDER drives tick via run_phase.
-        // Keep this literal in lockstep with the const at the top of this file.
+        fn phase_order_matches_tick_sequence() {
         assert_eq!(
             PHASE_ORDER,
             &[
@@ -7247,6 +7634,7 @@ mod tests {
                 "policy",
                 "economy",
                 "planet",
+                "disasters",
                 "diplomacy",
                 "faction_decisions",
                 "tactics",

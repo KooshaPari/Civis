@@ -1,4 +1,4 @@
-//! MCP server implementation: the three `civis_*` tools plus the rmcp
+//! MCP server implementation: the `civis_*` tools plus the rmcp
 //! `ServerHandler` glue. Lives in its own module so the
 //! `#[tool_router]`-generated code is isolated from the public library
 //! helpers in `lib.rs` (which intentionally avoid `rmcp` re-exports so
@@ -13,10 +13,19 @@ use rmcp::{
     tool, tool_handler, tool_router, Json,
 };
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 
-/// MCP server that exposes the three `civis-cli` verification tools
-/// (`civis_verify`, `civis_pixels`, `civis_census`). The router is
-/// populated by the `#[tool_router]` macro on the impl block below.
+use civis_cli::census::CensusConfig;
+
+/// MCP server that exposes the verification tools (`civis_verify`,
+/// `civis_pixels`, `civis_census`) plus 12 thin JSON-RPC forwarders that
+/// proxy existing `civ-server` methods. The router is populated by the
+/// `#[tool_router]` macro on the impl block below.
+///
+/// Each forwarder wraps an existing `civ-server` JSON-RPC method (see
+/// `crates/server/src/jsonrpc.rs`). The shim does not invent backend
+/// semantics — it just builds the envelope, opens a short-lived WS, and
+/// returns the raw `result` JSON to the MCP caller.
 #[derive(Clone, Default)]
 pub struct CivisMcpServer {
     #[allow(dead_code)]
@@ -33,6 +42,43 @@ impl CivisMcpServer {
         }
     }
 }
+
+// ── shared argument types ────────────────────────────────────────────────
+
+/// Common transport-override block (host/port/timeout) used by every
+/// JSON-RPC forwarding tool. Mirrors `CensusArgs` so the existing
+/// `civis_census` tool stays in lockstep.
+#[derive(Debug, Default, Deserialize, JsonSchema)]
+pub struct RpcArgs {
+    /// Optional WebSocket host override. Default `127.0.0.1`.
+    #[schemars(description = "WebSocket host override (env: CIV_WS_HOST)")]
+    pub host: Option<String>,
+    /// Optional WebSocket port override. Default 3000.
+    #[schemars(description = "WebSocket port override (env: CIV_SERVER_PORT)")]
+    pub port: Option<u16>,
+    /// Optional per-request timeout in milliseconds. Default 5000.
+    #[schemars(description = "Per-request timeout in ms (env: CIV_CENSUS_TIMEOUT_MS)")]
+    pub timeout_ms: Option<u64>,
+}
+
+impl RpcArgs {
+    /// Build a [`CensusConfig`] from env defaults + this arg's overrides.
+    fn resolve_config(&self) -> CensusConfig {
+        let mut config = crate::census_config_with_url();
+        if let Some(host) = &self.host {
+            config.host = host.clone();
+        }
+        if let Some(port) = self.port {
+            config.port = port;
+        }
+        if let Some(timeout_ms) = self.timeout_ms {
+            config.timeout_ms = timeout_ms;
+        }
+        config
+    }
+}
+
+// ── existing argument types ──────────────────────────────────────────────
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct VerifyArgs {
@@ -705,6 +751,41 @@ pub struct VerifyResultTool {
     pub height: u32,
     pub harness_version: &'static str,
     pub bevy_version: &'static str,
+}
+
+// ── new shared result envelope for JSON-RPC forwarders ──────────────────
+
+/// Standard envelope returned by every JSON-RPC forwarding tool. Wraps
+/// the raw `result` value the bridge returned so MCP clients can correlate
+/// the tool call with the bridge wire shape (FR-CIV-MCP-003 contract test).
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct RpcForwardResult {
+    /// The JSON-RPC method that was invoked.
+    pub method: String,
+    /// The bridge URL the request was sent to.
+    pub url: String,
+    /// The raw `result` value the bridge returned (shape is method-specific).
+    pub result: serde_json::Value,
+    /// Harness version stamp so agents can correlate evidence packets.
+    pub harness_version: &'static str,
+}
+
+fn forward_rpc(
+    transport: &RpcArgs,
+    method: &str,
+    params: Value,
+    label: &str,
+) -> Result<RpcForwardResult, String> {
+    let config = transport.resolve_config();
+    let url = config.ws_url();
+    let result = crate::dispatch_rpc_method(&config, method, params)
+        .map_err(|err| format!("{label}: {err}"))?;
+    Ok(RpcForwardResult {
+        method: method.to_owned(),
+        url,
+        result,
+        harness_version: crate::HARNESS_VERSION,
+    })
 }
 
 #[tool_router]

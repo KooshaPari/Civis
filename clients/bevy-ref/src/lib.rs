@@ -23,16 +23,6 @@ pub mod atmosphere;
 pub mod camera;
 #[cfg(feature = "bevy")]
 pub mod decorations;
-#[cfg(all(feature = "bevy", feature = "models"))]
-pub mod animation;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod entity_inspector;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod inspect;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod entity_inspector;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod inspect;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod entity_inspector;
 #[cfg(all(feature = "bevy", feature = "egui"))]
@@ -53,8 +43,6 @@ pub mod event_feed;
 pub mod lighting_gi;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod game_ui;
-#[cfg(all(feature = "bevy", feature = "models"))]
-pub mod gltf_models;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod graphics_settings;
 #[cfg(feature = "bevy")]
@@ -99,7 +87,6 @@ pub mod native_backend;
 pub mod native_renderer;
 #[cfg(feature = "bevy")]
 pub mod sim_bridge;
-pub mod session;
 #[cfg(feature = "bevy")]
 pub mod spawn_tools;
 #[cfg(all(feature = "bevy", feature = "egui"))]
@@ -108,10 +95,10 @@ pub mod civ_history;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod god_actions;
 pub mod god_panel;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tutorial;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod perf_hud;
-#[cfg(feature = "bevy")]
-pub mod frame_budget;
 #[cfg(feature = "bevy")]
 pub mod terrain;
 #[cfg(feature = "bevy")]
@@ -130,8 +117,6 @@ pub mod material_brush_ui;
 pub mod ui_cluster;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod ui_holo;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod ui_theme;
 #[cfg(all(feature = "bevy", feature = "vfx"))]
 pub mod vfx;
 #[cfg(all(feature = "bevy", feature = "voxel"))]
@@ -153,8 +138,11 @@ pub use civ_voxel::{
     ChunkId, CubicMesher, MaterialId, MeshBuffer, MeshVertex, VoxelWorld, WorldCoord,
 };
 pub use civ_agents::NeedAction;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub use perf_hud::PerfHudPlugin;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub use tutorial::TutorialPlugin;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub use menus::MenusPlugin;
 
 /// Default orbit azimuth in radians (45° — camera south-east of centre).

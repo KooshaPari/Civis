@@ -61,8 +61,6 @@ pub enum JsonRpcMethod {
     SimSpawnEntity,
     /// Write one voxel (`sim.place_voxel`, FR-CIV-UX-003).
     SimPlaceVoxel,
-    /// Footprint brush stamp (`sim.terraform_extent`, FR-CIV-GODTOOL brush).
-    SimTerraformExtent,
     /// Tactical voxel damage (`sim.damage`, FR-CIV-TACTICS / P-U1).
     SimDamage,
     /// Persist simulation to a production slot (`save.slot`, CIV-1000 §13).
@@ -77,6 +75,8 @@ pub enum JsonRpcMethod {
     /// Inspect terrain + faction at a tile coordinate.
     /// (`sim.inspect_tile`, FR tile-inspector).
     SimInspectTile,
+    /// Saga-graph / legends query (`sim.legends`, FR-CIV-LEGENDS-QUERY-07).
+    SimLegends,
     /// Client-initiated diplomacy action (propose_treaty / declare_war / offer_trade). (sim.diplomacy_action, FR-CIV-CLIENT-006).
     SimDiplomacyAction,
     /// Queue a research tech on the simulation (`sim.queue_research`, FR-CIV-SERVER-003).
@@ -113,13 +113,13 @@ impl JsonRpcMethod {
             Self::SimSpawnCivilian => "sim.spawn_civilian",
             Self::SimSpawnEntity => "sim.spawn_entity",
             Self::SimPlaceVoxel => "sim.place_voxel",
-            Self::SimTerraformExtent => "sim.terraform_extent",
             Self::SimDamage => "sim.damage",
             Self::SaveSlot => "save.slot",
             Self::LoadSlot => "save.load",
             Self::SaveList => "save.list",
             Self::SimEmergence => "sim.emergence",
             Self::SimInspectTile => "sim.inspect_tile",
+            Self::SimLegends => "sim.legends",
             Self::SimGodAction => "sim.god_action",
             Self::SimPerf => "sim.perf",
             Self::SimDiplomacyAction => "sim.diplomacy_action",
@@ -149,13 +149,13 @@ impl JsonRpcMethod {
             "sim.spawn_civilian" => Some(Self::SimSpawnCivilian),
             "sim.spawn_entity" => Some(Self::SimSpawnEntity),
             "sim.place_voxel" => Some(Self::SimPlaceVoxel),
-            "sim.terraform_extent" => Some(Self::SimTerraformExtent),
             "sim.damage" => Some(Self::SimDamage),
             "save.slot" => Some(Self::SaveSlot),
             "save.load" => Some(Self::LoadSlot),
             "save.list" => Some(Self::SaveList),
             "sim.emergence" => Some(Self::SimEmergence),
             "sim.inspect_tile" => Some(Self::SimInspectTile),
+            "sim.legends" => Some(Self::SimLegends),
             "sim.god_action" => Some(Self::SimGodAction),
             "sim.perf" => Some(Self::SimPerf),
             "sim.diplomacy_action" => Some(Self::SimDiplomacyAction),
@@ -1037,8 +1037,28 @@ pub enum DispatchEffect {
         /// Entity id seed for civilians only.
         entity_seq: u64,
     },
-    /// Write one voxel (`sim.place_voxel`).
-    GodAction { action: String, x: Option<f32>, y: Option<f32>, target_faction: Option<u32>, magnitude: Option<f32> },
+    /// God-tool verb (`sim.god_action`).
+    GodAction {
+        action: String,
+        x: Option<f32>,
+        y: Option<f32>,
+        target_faction: Option<u32>,
+        magnitude: Option<f32>,
+        radius_voxels: Option<u8>,
+        strength: Option<f32>,
+        material_id: Option<u16>,
+        drop_height: Option<i32>,
+        count: Option<u32>,
+        seed_civilian_id: Option<u64>,
+    },
+    /// Queue a research tech (`sim.queue_research`).
+    QueueResearch { tech: String },
+    /// Apply a player diplomacy action (`sim.diplomacy_action`).
+    DiplomacyAction {
+        source_faction: u32,
+        target_faction: u32,
+        kind: civ_engine::DiplomacyKind,
+    },
     PlaceVoxel {
         /// World X coordinate.
         x: i64,
@@ -1048,21 +1068,6 @@ pub enum DispatchEffect {
         z: i64,
         /// Material id (0–255).
         material: u16,
-    },
-    /// Stamp a circular footprint (`sim.terraform_extent`).
-    TerraformExtent {
-        /// World X coordinate (fixed-point).
-        x: i64,
-        /// World Y coordinate (fixed-point).
-        y: i64,
-        /// World Z coordinate (fixed-point).
-        z: i64,
-        /// Brush op name (`raise`, `lower`, `dig_ocean`, …).
-        op: String,
-        /// Material id (0–255).
-        material: u16,
-        /// Radius in voxel cells.
-        radius: u8,
     },
     /// Queue tactical voxel damage (`sim.damage`).
     ApplyDamage {
@@ -1280,9 +1285,8 @@ pub fn parse_replay_path(params: Option<&Value>) -> Result<String, JsonRpcError>
         || path_str.starts_with('\\')
         || path_str.contains('\\')
         || has_drive_prefix
-        || path
-            .components()
-            .any(|c| matches!(
+        || path.components().any(|c| {
+            matches!(
                 c,
                 std::path::Component::ParentDir
                     | std::path::Component::Prefix(_)
@@ -1505,6 +1509,16 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 effect: DispatchEffect::None,
             }
         }
+        JsonRpcMethod::SimLegends => {
+            let result = match ctx.legends.as_ref() {
+                Some(payload) => serde_json::to_value(payload).unwrap_or(serde_json::json!({})),
+                None => serde_json::json!({ "query": "status", "stub": true }),
+            };
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, result),
+                effect: DispatchEffect::None,
+            }
+        }
         JsonRpcMethod::SimInspectTile => {
             let x = req.params.as_ref().and_then(|p| p.get("x").and_then(|v| v.as_i64())).unwrap_or(0);
             let y = req.params.as_ref().and_then(|p| p.get("y").and_then(|v| v.as_i64())).unwrap_or(0);
@@ -1515,26 +1529,57 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             }
         }
         JsonRpcMethod::SimDiplomacyAction => {
-            let action = req.params.as_ref()
+            let action = req
+                .params
+                .as_ref()
                 .and_then(|p| p.get("action"))
                 .and_then(|v| v.as_str())
                 .unwrap_or("unknown");
-            let target = req.params.as_ref()
+            let source = req
+                .params
+                .as_ref()
+                .and_then(|p| p.get("source_faction"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let target = req
+                .params
+                .as_ref()
                 .and_then(|p| p.get("target_faction"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
-            match diplomacy_action_result(&ctx, action, source, target) {
-                Ok(result) => DispatchPlan {
-                    response: JsonRpcResponse::success(req.id, result),
+            let kind = match action {
+                "declare_war" | "conflict" => Some(civ_engine::DiplomacyKind::Conflict),
+                "propose_treaty" | "treaty" | "peace" => Some(civ_engine::DiplomacyKind::Peace),
+                "offer_trade" | "trade" => Some(civ_engine::DiplomacyKind::TradeAgreement),
+                _ => None,
+            };
+            match kind {
+                Some(kind) => DispatchPlan {
+                    response: JsonRpcResponse::success(
+                        req.id,
+                        serde_json::json!({
+                            "action": action,
+                            "source_faction": source,
+                            "target_faction": target,
+                        }),
+                    ),
                     effect: DispatchEffect::DiplomacyAction {
                         source_faction: u32::try_from(source).unwrap_or(u32::MAX),
                         target_faction: u32::try_from(target).unwrap_or(u32::MAX),
-                        kind: diplomacy_action_kind(action)
-                            .expect("validated by diplomacy_action_result"),
+                        kind,
                     },
                 },
-                Err(error) => DispatchPlan {
-                    response: JsonRpcResponse::failure(req.id, error),
+                None => DispatchPlan {
+                    response: JsonRpcResponse::failure(
+                        req.id,
+                        JsonRpcError {
+                            code: error_code::INVALID_PARAMS,
+                            message: format!(
+                                "Invalid params: unknown diplomacy action {action:?}"
+                            ),
+                            data: None,
+                        },
+                    ),
                     effect: DispatchEffect::None,
                 },
             }
@@ -1620,39 +1665,6 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                             serde_json::json!({ "accepted": true }),
                         ),
                         effect: DispatchEffect::PlaceVoxel { x, y, z, material },
-                    },
-                    Err(error) => DispatchPlan {
-                        response: JsonRpcResponse::failure(req.id, error),
-                        effect: DispatchEffect::None,
-                    },
-                }
-            }
-        }
-        JsonRpcMethod::SimTerraformExtent => {
-            if !role_allows_operator(
-                ctx.require_role,
-                req.params.as_ref(),
-                ctx.connection_role.as_deref(),
-            ) {
-                DispatchPlan {
-                    response: JsonRpcResponse::failure(req.id, forbidden_operator_role_error()),
-                    effect: DispatchEffect::None,
-                }
-            } else {
-                match parse_terraform_extent_params(req.params.as_ref()) {
-                    Ok((x, y, z, op, material, radius)) => DispatchPlan {
-                        response: JsonRpcResponse::success(
-                            req.id,
-                            serde_json::json!({ "accepted": true, "op": op }),
-                        ),
-                        effect: DispatchEffect::TerraformExtent {
-                            x,
-                            y,
-                            z,
-                            op,
-                            material,
-                            radius,
-                        },
                     },
                     Err(error) => DispatchPlan {
                         response: JsonRpcResponse::failure(req.id, error),
@@ -1810,7 +1822,9 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                         "queued": tech,
                         "tick": ctx.tick,
                     })),
-                    effect: DispatchEffect::None,
+                    effect: DispatchEffect::QueueResearch {
+                        tech: tech.to_owned(),
+                    },
                 }
             }
         }
@@ -1859,6 +1873,12 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                         y: p.get("y").and_then(|v| v.as_f64()).map(|f| f as f32),
                         target_faction: p.get("target_faction").and_then(|v| v.as_u64()).map(|f| f as u32),
                         magnitude: p.get("magnitude").and_then(|v| v.as_f64()).map(|f| f as f32),
+                        radius_voxels: p.get("radius_voxels").and_then(|v| v.as_u64()).map(|n| n as u8),
+                        strength: p.get("strength").and_then(|v| v.as_f64()).map(|f| f as f32),
+                        material_id: p.get("material_id").and_then(|v| v.as_u64()).map(|n| n as u16),
+                        drop_height: p.get("drop_height").and_then(|v| v.as_i64()).map(|n| n as i32),
+                        count: p.get("count").and_then(|v| v.as_u64()).map(|n| n as u32),
+                        seed_civilian_id: p.get("seed_civilian_id").and_then(|v| v.as_u64()),
                     },
                 },
             }
@@ -2053,45 +2073,6 @@ pub fn parse_place_voxel_params(
         .map(|v| v as u16)
         .unwrap_or(0);
     Ok((x, y, z, material))
-}
-
-/// Parse `sim.terraform_extent` params: `{ "x", "y", "z", "op?", "material?", "radius?" }`.
-pub fn parse_terraform_extent_params(
-    params: Option<&Value>,
-) -> Result<(i64, i64, i64, String, u16, u8), JsonRpcError> {
-    let p = params.ok_or(JsonRpcError {
-        code: error_code::INVALID_PARAMS,
-        message: "Missing params".to_owned(),
-        data: None,
-    })?;
-    let x = p
-        .get("x")
-        .and_then(|v| v.as_i64())
-        .ok_or(invalid_params("x"))?;
-    let y = p
-        .get("y")
-        .and_then(|v| v.as_i64())
-        .ok_or(invalid_params("y"))?;
-    let z = p
-        .get("z")
-        .and_then(|v| v.as_i64())
-        .ok_or(invalid_params("z"))?;
-    let op = p
-        .get("op")
-        .and_then(|v| v.as_str())
-        .unwrap_or("raise")
-        .to_owned();
-    let material = p
-        .get("material")
-        .and_then(|v| v.as_u64())
-        .map(|v| v as u16)
-        .unwrap_or_else(|| civ_voxel::default_material_for_op(&op).0 as u16);
-    let radius = p
-        .get("radius")
-        .and_then(|v| v.as_u64())
-        .map(|v| v.clamp(1, 32) as u8)
-        .unwrap_or(3);
-    Ok((x, y, z, op, material, radius))
 }
 
 fn invalid_params(field: &str) -> JsonRpcError {
@@ -3916,14 +3897,6 @@ mod tests {
         assert_eq!(
             JsonRpcMethod::parse_name("sim.update_subscription"),
             Some(JsonRpcMethod::SimUpdateSubscription)
-        );
-        assert_eq!(
-            JsonRpcMethod::parse_name("sim.terraform_extent"),
-            Some(JsonRpcMethod::SimTerraformExtent)
-        );
-        assert_eq!(
-            JsonRpcMethod::SimTerraformExtent.as_str(),
-            "sim.terraform_extent"
         );
         assert_eq!(JsonRpcMethod::parse_name("unknown.method"), None);
         assert_eq!(JsonRpcMethod::parse_name(""), None);

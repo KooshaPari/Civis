@@ -3046,6 +3046,7 @@ dependencies = [
 name = "civ-build"
 version = "0.1.0"
 dependencies = [
+ "civ-economy",
  "civ-voxel",
  "proptest",
  "rand 0.8.6",
@@ -3115,6 +3116,7 @@ dependencies = [
  "blake3",
  "chrono",
  "civ-agents",
+ "civ-audio",
  "civ-build",
  "civ-diffusion",
  "civ-economy",

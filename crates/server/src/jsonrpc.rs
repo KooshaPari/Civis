@@ -818,6 +818,12 @@ pub struct DispatchContext {
     pub outcome_fields: Option<OutcomeFields>,
     /// Server-reported last tick wall-clock duration (ms) for sim.perf (FR-CIV-PERF-001).
     pub last_tick_ms: f64,
+    /// Legacy psyche snapshot placeholder retained for older test fixtures.
+    pub psyche_snapshot: Option<()>,
+    /// Legacy sentience event placeholder retained for older test fixtures.
+    pub sentience_events: Option<()>,
+    /// Legacy religion state placeholder retained for older test fixtures.
+    pub religion_state: Option<()>,
 }
 
 /// Wire-friendly representation of one sentience event for `psyche.events`.

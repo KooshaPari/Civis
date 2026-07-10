@@ -20,7 +20,10 @@ unmaintained = "workspace"
 # Ignore advisories that do not have a patched version yet (workaround until
 # upstream fixes flow in). Anything not in this list is a hard error.
 ignore = [
-  # Example placeholder — add entries as `RUSTSEC-YYYY-NNNN` once triaged.
+  # bincode 1.x is unmaintained (RUSTSEC-2025-0141); still required by save/replay paths.
+  { id = "RUSTSEC-2025-0141", reason = "bincode 1.x pinned by save format; migrate tracked separately" },
+  # crossbeam-epoch fmt::Pointer advisory; no patched release consumed yet.
+  { id = "RUSTSEC-2026-0204", reason = "awaiting crossbeam-epoch bump through bevy/rayon stack" },
 ]
 
 [bans]
@@ -64,6 +67,7 @@ allow = [
   "Unicode-3.0",
   "OpenSSL",          # used by rustls/openssl-sys stack — accept, do not silently absorb
   "NCSA",             # University of Illinois / NCSA (used by some llvm deps)
+  "CDLA-Permissive-2.0", # webpki-roots (tokio-tungstenite / hyper-rustls)
 ]
 # Confidence threshold for the SPDX matcher. `threshold = 1.0` is the strictest
 # (exact SPDX match). Lower values may accept near-matches.
@@ -83,7 +87,9 @@ unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 # Allow-list of acceptable git sources. Empty by default — every git dep must
 # be triaged and added with a reason comment.
-allow-git = []
+allow-git = [
+  "https://github.com/KooshaPari/phenotype-gfx.git",
+]
 
 [sources.allow-org]
 # Allow any git source hosted under these GitHub orgs (used for internal

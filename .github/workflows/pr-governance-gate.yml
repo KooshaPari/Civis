@@ -116,6 +116,19 @@ jobs:
               /^CodeRabbit$/i,
             ];
 
+            // Third-party / non-blocking checks always ignored (not only with billing label).
+            const alwaysOptional = [
+              /^SonarCloud/i,
+              /^Kilo/i,
+              /^CodeRabbit/i,
+              /^GitGuardian/i,
+              /^semgrep/i,
+              /^Socket Security/i,
+              /^Cursor /i,
+              /^Macroscope/i,
+              /^security\/snyk/i,
+            ];
+
             const contexts =
               pr.commits.nodes?.[0]?.commit?.statusCheckRollup?.contexts?.nodes || [];
             const failures = [];
@@ -124,6 +137,9 @@ jobs:
               const name =
                 node.__typename === "CheckRun" ? node.name : node.context;
               if (!name || requiredOk.some((re) => re.test(name))) {
+                continue;
+              }
+              if (alwaysOptional.some((re) => re.test(name))) {
                 continue;
               }
               if (billingException && billingBypass.some((re) => re.test(name))) {

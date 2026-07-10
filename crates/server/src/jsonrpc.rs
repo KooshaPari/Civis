@@ -2824,8 +2824,6 @@ mod tests {
                 psyche_snapshot: None,
                 sentience_events: None,
                 outcome_fields: None,
-                psyche_snapshot: None,
-                sentience_events: None,
                 religion_state: None,
             },
         );
@@ -4068,7 +4066,7 @@ mod tests {
     #[test]
     fn emergence_sample_fields_from_carries_criticality_metrics() {
         use civ_emergence_metrics::branching::BranchingRegime;
-        use civ_emergence_metrics::dashboard::TileDashboard;
+        use civ_emergence_metrics::dashboard::EmergenceDashboard;
         use civ_engine::emergence_metrics::EmergenceSample;
 
         let sample = EmergenceSample {
@@ -4081,7 +4079,7 @@ mod tests {
             histogram_total: 0,
             histogram_populated_bins: 0,
             sample_dur_us: 0,
-            dashboard: TileDashboard::default(),
+            dashboard: EmergenceDashboard::default(),
             branching_sigma: 0.0,
             branching_sigma_score: 0.0,
             branching_window: 0,
@@ -4197,7 +4195,10 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
-            },
+                    psyche_snapshot: None,
+                    sentience_events: None,
+                    religion_state: None,
+                },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
         let res = plan.response.result.expect("result");
@@ -4228,7 +4229,10 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
-            },
+                    psyche_snapshot: None,
+                    sentience_events: None,
+                    religion_state: None,
+                },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
         assert_eq!(plan.response.error.as_ref().map(|e| e.code), Some(error_code::INVALID_PARAMS));
@@ -4258,7 +4262,10 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
-            },
+                    psyche_snapshot: None,
+                    sentience_events: None,
+                    religion_state: None,
+                },
         );
         assert!(plan.response.result.is_some(), "expected success");
         let result = plan.response.result.unwrap();

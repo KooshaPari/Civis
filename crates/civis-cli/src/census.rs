@@ -250,6 +250,7 @@ mod tests {
             connection_role: None,
             saves_dir: None,
             emergence: None,
+            legends: None,
             researched: vec![],
             in_progress_tech: None,
             outcome_fields: None,
@@ -307,20 +308,7 @@ mod tests {
 
     #[test]
     fn dispatch_sim_status_includes_population_when_ctx_provides_it() {
-        let ctx = DispatchContext {
-            tick: 12,
-            population: Some(1_234),
-            snapshot: None,
-            require_role: false,
-            speed_multiplier: 1,
-            connection_role: None,
-            saves_dir: None,
-            emergence: None,
-            researched: vec![],
-            in_progress_tech: None,
-            outcome_fields: None,
-            last_tick_ms: 0.0,
-        };
+        let ctx = test_dispatch_context(12, Some(1_234));
         let response = dispatch_sim_status_for_test(&ctx);
         let result = validate_sim_status(&response).expect("valid");
         assert_eq!(result.tick, 12);
@@ -330,20 +318,7 @@ mod tests {
 
     #[test]
     fn dispatch_sim_status_marks_live_false_without_population() {
-        let ctx = DispatchContext {
-            tick: 3,
-            population: None,
-            snapshot: None,
-            require_role: false,
-            speed_multiplier: 1,
-            connection_role: None,
-            saves_dir: None,
-            emergence: None,
-            researched: vec![],
-            in_progress_tech: None,
-            outcome_fields: None,
-            last_tick_ms: 0.0,
-        };
+        let ctx = test_dispatch_context(3, None);
         let response = dispatch_sim_status_for_test(&ctx);
         let result = validate_sim_status(&response).expect("valid");
         assert_eq!(result.tick, 3);
@@ -379,20 +354,7 @@ mod tests {
 
     #[test]
     fn dispatch_plan_effects_do_not_leak_into_response_payload() {
-        let ctx = DispatchContext {
-            tick: 1,
-            population: None,
-            snapshot: None,
-            require_role: false,
-            speed_multiplier: 1,
-            connection_role: None,
-            saves_dir: None,
-            emergence: None,
-            researched: vec![],
-            in_progress_tech: None,
-            outcome_fields: None,
-            last_tick_ms: 0.0,
-        };
+        let ctx = test_dispatch_context(1, None);
         let plan = jsonrpc::dispatch_request(
             JsonRpcRequest {
                 jsonrpc: JSONRPC_VERSION.to_owned(),

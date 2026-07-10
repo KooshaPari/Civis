@@ -224,11 +224,9 @@ fn fr_emergence_quality_sample_metrics_reach_nontrivial_ranges() {
             );
         }
 
-        // --- Avalanche ledger monotonically advanced.
-        assert!(
-            sample.avalanches_closed <= u64::MAX,
-            "avalanches_closed overflow (seed={seed})",
-        );
+        // --- Avalanche ledger is a finite counter (always true for u64; keep
+        // branching_window as the meaningful invariant).
+        let _ = sample.avalanches_closed;
         assert!(
             sample.branching_window >= 1,
             "branching_window must be at least 1 (seed={seed}); got {}",

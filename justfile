@@ -108,8 +108,7 @@ civis-3d-verify: civis-3d-catalog-check civis-3d-scenario-check civis-3d-web-che
     cargo check --workspace
     # Optional bench: ignore failure (just `-` prefix is portable; `|| true` breaks pwsh).
     -cargo bench --bench ca_dirty_chunk
-    # Clippy advisory during 71+ repair wave: -D warnings blocked by pre-existing
-    # lint debt across voxel/ai/needs; compile-gate owns hard compile correctness.
+    # Soft clippy (no -D warnings); deny-level absurd_extreme_comparisons still enforced.
     cargo clippy --workspace --all-targets
     cargo fmt --check
 

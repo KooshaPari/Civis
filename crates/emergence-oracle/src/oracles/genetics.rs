@@ -52,7 +52,7 @@ fn inheritance_trial(seed: u64, class: &DnaClass, parent_a: &Dna, parent_b: &Dna
         .filter(|(lhs, rhs)| lhs != rhs)
         .count();
 
-    differing_loci <= class.length && mutated.0.iter().all(|byte| *byte <= u8::MAX)
+    differing_loci <= class.length
 }
 
 impl FeatureOracle for GeneticsOracle {

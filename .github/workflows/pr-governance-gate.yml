@@ -84,10 +84,10 @@ jobs:
             const billingException =
               labels.has("ci-billing-exception") || labels.has("local-first-ci");
 
-            const requiredOk = new Set([
+            const requiredOk = [
               /^pr-governance-gate$/i,
               /^quality-manifest/i,
-            ]);
+            ];
 
             const billingBypass = [
               /billing/i,

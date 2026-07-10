@@ -10,3 +10,5 @@
 
 The remaining policy continues to deny unknown sources, warn on multiple versions
 and wildcard dependency specifications, and enforce the existing license allow-list.
+
+Also: empty `[licenses.clarify]` tables are invalid in 0.19 (expected array) — omit the key until clarifications are needed.

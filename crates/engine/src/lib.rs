@@ -53,7 +53,11 @@ pub const SCALE: i64 = 1_000;
 pub use demographics::{
     carrying_capacity_from_food, tick_demographics, total_population, AgeGroup, Demographics, DemographicsSnapshot,
 };
-pub use civ_mod_host::{load_manifest, ModBrowserEntry, ModGuestStateSave, ModType};
+pub use civ_mod_host::{
+    format_mod_error_event, format_mod_error_event_json, format_mod_loaded_event,
+    format_mod_loaded_event_json, format_mod_unloaded_event_json, load_manifest, ModBrowserEntry,
+    ModGuestStateSave, ModLoadedRecord, ModType, ModUnloadedRecord, ModHost,
+};
 pub use emergence::{
     CivAiDecision, EmergenceFeedEvent, EmergenceState,
 };
@@ -62,7 +66,7 @@ pub use emergence_metrics::{EmergenceBranchingState, EmergenceSample};
 pub use civ_emergence_metrics::dashboard::EmergenceDashboard;
 pub use engine::{
     job_type_for_civilian_id, Building, BuildingType, Citizen, CombatDamagePulse, DiplomacyKind,
-    EconomicFocus, EconomicFocusEvent, InstitutionEvent, JobType, MilitaryUnit, Position,
+    DiplomacyEvent, EconomicFocus, EconomicFocusEvent, InstitutionEvent, JobType, MilitaryUnit, Position,
     ResourceType, Resources, Sim, SimSeed, Simulation, PsycheDrivenBehavior, StratBand,
     StratificationEvent, StratificationEventKind, StratificationReport, TradeRoute, UnitType,
     WorldState, ClusterStocks,
@@ -110,6 +114,7 @@ pub use lod::{
     should_tick_entity_with_policy, HexCellSnapshot, LodPolicy, ZoomLevel,
 };
 pub use metrics::{compute, compute_fixed, Metrics, MetricsFixed};
+pub use perf::{phases_over_budget, tick_over_budget, TickProfile};
 pub use policy::{
     effective_consumption, policy_from_kind, CapitalistPolicy, ControlSignals, NoopPolicy, Policy,
     PolicyInput, SubsistenceFirstPolicy, DEFAULT_ECONOMY_POLICY,

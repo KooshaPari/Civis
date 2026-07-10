@@ -241,6 +241,12 @@ use crate::replay::{ReplayError, ReplayLog};
 use crate::replay_format::{load_civreplay, save_civreplay};
 
 use crate::conditions::GameOutcome;
+
+// Public test/server surface for religion helpers implemented in the dormant
+// phase module. Keep the canonical implementation there while preserving the
+// historical `civ_engine::engine::*` import path.
+pub use crate::dormant_phases::{institution_belief_signal, institution_divergence_boost};
+
 fn settlement_member_counts(world: &World) -> BTreeMap<u64, u32> {
     let mut counts = BTreeMap::new();
     for (_, member) in world.query::<&ClusterMember>().iter() {

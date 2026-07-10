@@ -1083,6 +1083,34 @@ async fn apply_dispatch_effect(
                 }
             }
         }
+        DispatchEffect::TerraformExtent {
+            x,
+            y,
+            z,
+            op,
+            material,
+            radius,
+        } => {
+            let mut sim = state.sim.lock().await;
+            let stamp = civ_voxel::BrushStamp {
+                center: civ_voxel::WorldCoord { x, y, z },
+                radius_voxels: radius,
+                material: civ_voxel::MaterialId(material),
+                shape: civ_voxel::BrushShape::Disk,
+                height_voxels: 1,
+            };
+            let receipt = {
+                let mut proxy = sim.voxel_mut();
+                civ_voxel::stamp_footprint(&mut *proxy, &stamp)
+            };
+            if let Some(result) = response.result.as_mut() {
+                if let Some(obj) = result.as_object_mut() {
+                    obj.insert("ok".to_owned(), serde_json::json!(true));
+                    obj.insert("writes".to_owned(), serde_json::json!(receipt.writes));
+                    obj.insert("op".to_owned(), serde_json::json!(op));
+                }
+            }
+        }
         DispatchEffect::ApplyDamage { event } => {
             let mut sim = state.sim.lock().await;
             sim.push_damage(event);

@@ -8,7 +8,7 @@
 
 ---
 
-## Method catalog (30)
+## Method catalog (31)
 
 | Method | Role (when `require_role`) | Params | Success result (dispatch; bridge may enrich) | `ws_smoke` integration test |
 |--------|----------------------------|--------|---------------------------------------------|------------------------------|
@@ -16,6 +16,7 @@
 | `sim.status` | — | `{}` or omit | `{ "tick": <u64> }`; adds `"population"` when bridge has sim | [`ws_jsonrpc_sim_status_returns_tick_and_population`](../../crates/server/tests/ws_smoke.rs) |
 | `sim.snapshot` | — | `{}` or omit | Full snapshot when sim available (see [Snapshot result](#simsnapshot-result)); else `{ "tick", "speed_multiplier" }` | [`ws_jsonrpc_sim_snapshot_returns_snapshot_fields`](../../crates/server/tests/ws_smoke.rs) |
 | `sim.emergence` | — | `{}` or omit | Latest emergence sample when available; else `{ "tick", "sample": null }` | Unit: `sim_emergence_*` in `jsonrpc.rs` |
+| `sim.legends` | — | `{}` or omit | Latest saga-graph query payload; else `{ "query": "status", "stub": true }` | Unit: `sim_legends_returns_query_payload` in `jsonrpc.rs` |
 | `sim.perf` | — | `{}` or omit | `{ "tick", "last_tick_ms", "agent_count", "ca_steps", "stub" }` | Unit/dispatch coverage in `jsonrpc.rs` |
 | `sim.outcome` | — | `{}` or omit | `{ "outcome", "reason", "tick" }` | Unit/dispatch coverage in `jsonrpc.rs` |
 | `sim.subscribe` | — | `{ "frame_kinds"? \| "filter"? \| "filter_types"?, "tick_stride"?, "max_framerate_hz"?, "subscription_id"? }` | WebSocket only: `{ "subscribed": true, "subscription_id", "filter_active", "frame_kinds", "tick_stride", "current_tick" }`; plain dispatch returns `-32603` | [`ws_sim_subscribe_limits_tick_broadcast_frames`](../../crates/server/tests/ws_smoke.rs) |

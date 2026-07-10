@@ -42,6 +42,12 @@ pub enum HazardKind {
     Flood,
 }
 
+impl Default for HazardKind {
+    fn default() -> Self {
+        Self::Fire
+    }
+}
+
 /// Per-cell hazard state. A cell is "active" when `intensity > 0.0`.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct HazardCell {

@@ -1,7 +1,6 @@
 #![cfg(all(feature = "bevy", feature = "egui"))]
 //! God-mode intervention panel (FR-CIV-GAME-002). G key toggles.
 
-use crate::god_actions::GodActionRequest;
 use crate::live_stream::LiveBridge;
 use crate::menus::in_game;
 use bevy::prelude::*;
@@ -206,18 +205,5 @@ fn draw_god_panel(
             bridge.client.send_rpc("sim.god_action", payload);
         }
         state.status = Some(format!("Invoked: {}", ACTIONS[state.selected_action]));
-    }
-
-    // Dispatch a substrate verb button. The `param_builder` produces the
-    // matching `GodToolRequest` JSON shape; `sim.god_action` is the same
-    // JSON-RPC method the legacy Invoke button uses, so this stays on
-    // the exact wire path PR #762 wired up.
-    if let Some(idx) = fire_substrate {
-        let v = &SUBSTRATE_VERBS[idx];
-        let payload = (v.param_builder)(&state);
-        if let Some(ref bridge) = bridge {
-            bridge.client.send_rpc("sim.god_action", payload);
-        }
-        state.status = Some(format!("Fired: {} ({})", v.label, v.verb));
     }
 }

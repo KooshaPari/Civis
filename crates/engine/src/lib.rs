@@ -14,11 +14,11 @@
 pub mod command_queue;
 pub mod conditions;
 pub mod culture;
-pub mod era;
-pub mod engine;
-pub mod emergence;
 pub mod disasters;
+pub mod emergence;
 pub mod emergence_metrics;
+pub mod engine;
+pub mod era;
 pub mod faction_decisions;
 pub mod gameplay;
 pub mod godtools;
@@ -28,12 +28,12 @@ pub mod invariants;
 pub mod io;
 pub mod lod;
 pub mod metrics;
+pub mod perf;
 pub mod policy;
 pub mod replay;
 pub mod replay_format;
 pub mod save_bundle;
 pub mod scenario;
-pub mod perf;
 pub mod spawn;
 pub mod spectator;
 pub mod tech;
@@ -44,14 +44,13 @@ pub mod tech;
 // references. They are stubbed here so the rest of the crate compiles.
 // The .rs files exist as TODO placeholders; a follow-up lane should either
 // restore the originals or rewrite the callers to drop the imports.
-pub mod religion;
-pub mod history;
 pub mod building_layouts;
+pub mod history;
 pub mod language;
 pub mod psyche_behavior;
+pub mod religion;
 
 pub mod tutorial;
-
 
 /// Fixed-point scaling factor (1 raw unit = SCALE joules). Engine energy
 /// quantities are stored in fixed-point `i64` for determinism and converted
@@ -72,25 +71,22 @@ pub const SCALE: i64 = 1_000;
 //  engine self-references it from a small number of WS bridge call-sites.
 //  Restore once `civ-audio` is re-added to the workspace as a sibling crate.
 // pub use civ_audio::triggers::SfxTrigger;
-pub use civ_mod_host::{load_manifest, ModBrowserEntry, ModGuestStateSave, ModType};
-pub use emergence::{
-    CivAiDecision, EmergenceFeedEvent, EmergenceState,
-};
 pub use civ_emergence_metrics::branching::BranchingRegime;
+pub use civ_mod_host::{load_manifest, ModBrowserEntry, ModGuestStateSave, ModType};
+pub use emergence::{CivAiDecision, EmergenceFeedEvent, EmergenceState};
 pub use emergence_metrics::{EmergenceBranchingState, EmergenceSample};
 pub use engine::{
-
-    job_type_for_civilian_id, Building, BuildingType, Citizen, CombatDamagePulse, DiplomacyEvent, DiplomacyKind,
-    EconomicFocus, EconomicFocusEvent, InstitutionEvent, JobType,
-    MilitaryUnit, Position, ResourceType, Resources, Sim, SimSeed, Simulation, SimulationSnapshot,
-    PsycheDrivenBehavior, StratBand, StratificationEvent, StratificationEventKind,
-    StratificationReport, TradeRoute, UnitType, WorldState, ClusterStocks, MoodSnapshot,
-    EmotionDrivenBehavior, cohesion_delta, diplomacy_conflict_threshold,
-    diplomacy_peace_threshold, institution_belief_signal, institution_divergence_boost,
+    cohesion_delta, diplomacy_conflict_threshold, diplomacy_peace_threshold,
+    institution_belief_signal, institution_divergence_boost, job_type_for_civilian_id, Building,
+    BuildingType, Citizen, ClusterStocks, CombatDamagePulse, DiplomacyEvent, DiplomacyKind,
+    EconomicFocus, EconomicFocusEvent, EmotionDrivenBehavior, InstitutionEvent, JobType,
+    MilitaryUnit, MoodSnapshot, Position, PsycheDrivenBehavior, ResourceType, Resources, Sim,
+    SimSeed, Simulation, SimulationSnapshot, StratBand, StratificationEvent,
+    StratificationEventKind, StratificationReport, TradeRoute, UnitType, WorldState,
 };
 pub use hash_chain::hash_hex;
-pub use replay::ReplayLog;
 pub use replay::ReplayError;
+pub use replay::ReplayLog;
 pub use replay_format::{decode_civreplay, encode_civreplay};
 pub use save_bundle::{
     delete_slot, list_slots, load_from_slot, save_to_slot, CivSaveBundle, SaveSlotEntry,
@@ -101,7 +97,6 @@ pub use spawn::{
 };
 pub use spectator::SpectatorView;
 
-
 // FR-CIV-ARCH: Emergent building layouts re-export so callers can use
 // `civ_engine::EmergentLayout` and `civ_engine::LayoutStrategy` without
 // directly depending on the private `building_layouts` module.
@@ -110,13 +105,13 @@ pub use spectator::SpectatorView;
 // pub use building_layouts::{
 //     EmergentLayout, LayoutStrategy,
 // };
+pub use civ_institutions::InstitutionKind;
+pub use civ_voxel::WorldCoord;
 pub use era::{CivAge, CivEra, EraProgressionState, FactionEraSnapshot};
+pub use psyche_behavior::behavior_from_psyche;
 pub use religion::{
     apply_big_gods_response, last_religion_sample, ReligiousProfile, SubstrateGradients,
 };
-pub use psyche_behavior::behavior_from_psyche;
-pub use civ_institutions::InstitutionKind;
-pub use civ_voxel::WorldCoord;
 // TODO(cleanup-surgeon): `history`/`tech` modules are stubs — the real
 // implementations need restoring. These re-exports were the cargo source of
 // the E0432 cascade for era.rs / engine.rs.
@@ -124,7 +119,6 @@ pub use civ_voxel::WorldCoord;
 // pub use tech::{FactionEmergenceInputs, FactionTechState};
 
 pub use tutorial::{TutorialMilestone, TutorialProgress};
-
 
 // FR-CIV-GOV-001/002/003 (civ-007 institutions epic). Re-exported so callers
 // (server, clients, tests) can `use civ_engine::InstitutionKind` etc. without
@@ -149,22 +143,16 @@ pub use civ_tactics::{
 // (server, clients, tests) can name the cohesion types as `civ_engine::KinshipEdge`
 // etc. without pulling the private `engine` module path.
 pub use engine::{
-    add_cohesion, add_trust, last_tick_cohesion, last_tick_cohesion_settlement,
-    CohesionEvent, CohesionEventKind, CohesionSnapshot,
-    FabricTier, KinshipEdge, KinshipKind,
+    add_cohesion, add_trust, last_tick_cohesion, last_tick_cohesion_settlement, CohesionEvent,
+    CohesionEventKind, CohesionSnapshot, FabricTier, KinshipEdge, KinshipKind,
 };
 
 // FR-CIV-UNREST-001 (civ-007 unrest sub-epic). Re-exported so callers
 // can name the unrest types as `civ_engine::UnrestEvent` etc.
 // without pulling the private `engine` module path.
 pub use engine::{
-    last_tick_unrest, last_tick_unrest_settlement, set_settlement_gini, unrest_level,
-    UnrestEvent, UnrestLevel, UnrestSnapshot,
-};
-pub use metrics::{compute, compute_fixed, Metrics, MetricsFixed};
-pub use policy::{
-    effective_consumption, policy_from_kind, CapitalistPolicy, ControlSignals, NoopPolicy, Policy,
-    PolicyInput, SubsistenceFirstPolicy, DEFAULT_ECONOMY_POLICY,
+    last_tick_unrest, last_tick_unrest_settlement, set_settlement_gini, unrest_level, UnrestEvent,
+    UnrestLevel, UnrestSnapshot,
 };
 pub use integrity::{check_integrity, IntegrityError};
 pub use invariants::{check_tick_invariants, InvariantError};
@@ -173,20 +161,23 @@ pub use lod::{
     aggregate_strategic, operational_hex_snapshot, project_zoom, should_tick_entity,
     should_tick_entity_with_policy, HexCellSnapshot, LodPolicy, ZoomLevel,
 };
+pub use metrics::{compute, compute_fixed, Metrics, MetricsFixed};
+pub use policy::{
+    effective_consumption, policy_from_kind, CapitalistPolicy, ControlSignals, NoopPolicy, Policy,
+    PolicyInput, SubsistenceFirstPolicy, DEFAULT_ECONOMY_POLICY,
+};
 // `metrics` + `policy` already exported above; previously redeclared here as a
 // post-merge dup — removed. `replay`/`replay_format`/`save_bundle`/`scenario`/
 // `spectator` re-exports live in the upper block (lines 70-80); the older
 // broader exports here were colliding with them.
 pub use replay_format::{
-    load_civreplay, save_civreplay, FOOTER_CHECKSUM_LEN,
-    FORMAT_VERSION, MAGIC,
+    load_civreplay, save_civreplay, FOOTER_CHECKSUM_LEN, FORMAT_VERSION, MAGIC,
 };
 pub use save_bundle::{CivSaveMetadata, SaveBundleError, CIVSAVE_FORMAT_VERSION, CIVSAVE_SPEC_ID};
 pub use scenario::{
     baseline_scenario_path, load_scenario, Scenario, ScenarioError, ScenarioMilitary,
     SCENARIO_SCHEMA_VERSION,
 };
-
 
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
@@ -216,7 +207,11 @@ pub fn step(mut state: WorldState, consumption_joules: Fixed) -> WorldState {
     let result = state
         .energy_budget_joules
         .saturating_sub(consumption_joules);
-    state.energy_budget_joules = if result.to_bits() < 0 { Fixed::ZERO } else { result };
+    state.energy_budget_joules = if result.to_bits() < 0 {
+        Fixed::ZERO
+    } else {
+        result
+    };
     state
 }
 

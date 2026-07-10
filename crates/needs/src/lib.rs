@@ -25,7 +25,9 @@ pub mod decay;
 pub mod lifecycle;
 
 pub use decay::{apply_resource, tick_rise, NeedChannel, NeedLevel, RiseRates};
-pub use lifecycle::{age_threshold, classify_lifecycle, labor_capacity, LifecycleLabel, LifecycleParams};
+pub use lifecycle::{
+    age_threshold, classify_lifecycle, labor_capacity, LifecycleLabel, LifecycleParams,
+};
 
 /// Schema version. Bumped on breaking changes.
 pub const SCHEMA_VERSION: &str = "0.1.0";
@@ -1099,7 +1101,7 @@ pub fn should_reproduce(
     overcrowding_factor: f32,
     lifecycle_params: &LifecycleParams,
 ) -> f32 {
-    use crate::lifecycle::{classify_lifecycle_from_age as classify_lifecycle};
+    use crate::lifecycle::classify_lifecycle_from_age as classify_lifecycle;
 
     // Only working-age adults can reproduce.
     let lifecycle = classify_lifecycle(age, lifecycle_params);
@@ -1153,7 +1155,11 @@ mod test_reproduction {
         };
         // Working-age adult (age 25 fits in default ranges)
         let prob = should_reproduce(25.0, &health, 0.9, 0.9, 0.5, &lifecycle_params);
-        assert!(prob > 0.05, "Satisfied adult should have >5% birth prob, got {}", prob);
+        assert!(
+            prob > 0.05,
+            "Satisfied adult should have >5% birth prob, got {}",
+            prob
+        );
     }
 
     #[test]

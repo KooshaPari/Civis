@@ -44,18 +44,21 @@ pub use model::{
     summary_key, EntityKind, EntityNode, EventKind, EventNode, HistoricalEvent, LegendEdge,
     LegendEntry, LegendNode, PromotionCriteria, RawSimEvent, Role, Tag,
 };
-pub use query::{CausalDag, DigestEvent, EntityRef, EpochDigest, NamedEntitySummary, NamedLegendsResult, Saga, QUERY_API_VERSION};
+pub use query::{
+    CausalDag, DigestEvent, EntityRef, EpochDigest, NamedEntitySummary, NamedLegendsResult, Saga,
+    QUERY_API_VERSION,
+};
 pub use rumor::{
-    register_render, render, retell, witness, DefaultNameResolver,
-    Chronicle, ChronicleEntry, HistorianMind, NameResolver, Ocean, Register, Rumor, RumorMill,
+    register_render, render, retell, witness, Chronicle, ChronicleEntry, DefaultNameResolver,
+    HistorianMind, NameResolver, Ocean, Register, Rumor, RumorMill,
 };
 pub use worker::LegendsWorker;
 
 #[cfg(test)]
 mod tests {
+    use crate::graph::SagaGraph;
     use crate::ids::{Epoch, SimRuntimeId, SourceCrate};
     use crate::model::{EventKind, RawSimEvent, Role};
-    use crate::graph::SagaGraph;
 
     /// FR-CIV-LEGENDS deepening — new event kinds ingest and appear in the graph.
     #[test]
@@ -69,7 +72,10 @@ mod tests {
         ] {
             let raw = RawSimEvent::new(1, kind, SourceCrate::Engine, 0.8);
             let outcome = graph.ingest(raw);
-            assert!(outcome.event_id.is_some(), "expected event inserted into graph");
+            assert!(
+                outcome.event_id.is_some(),
+                "expected event inserted into graph"
+            );
         }
         // 4 event nodes created.
         let event_count = graph
@@ -95,7 +101,10 @@ mod tests {
             .expect("entity should exist");
 
         let result = graph.promote_to_legend(eid, "The Veteran".to_string(), Role::Leader);
-        assert!(result.is_ok(), "promote_to_legend should succeed: {result:?}");
+        assert!(
+            result.is_ok(),
+            "promote_to_legend should succeed: {result:?}"
+        );
         let entity = graph.entity(eid).expect("entity should be in graph");
         assert_eq!(entity.title.as_deref(), Some("The Veteran"));
         assert!(entity.promoted, "entity should be marked promoted");

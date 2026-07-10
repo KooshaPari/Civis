@@ -108,9 +108,6 @@ mod tests {
         );
         // radius 1 disk = 5 cells (center + 4 cardinals)
         assert_eq!(receipt.writes, 5);
-        assert_eq!(
-            world.read(WorldCoord { x: 0, y: 0, z: 0 }),
-            crate::STONE
-        );
+        assert_eq!(world.read(WorldCoord { x: 0, y: 0, z: 0 }), crate::STONE);
     }
 }

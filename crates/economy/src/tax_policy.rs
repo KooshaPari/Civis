@@ -185,8 +185,9 @@ pub fn apply_tax_policy(policy: &mut TaxPolicy, production: i64) -> TaxPolicyOut
     // 4. Accumulate.
     policy.treasury = policy.treasury.saturating_add(tax_collected);
     policy.total_tax_collected = policy.total_tax_collected.saturating_add(tax_collected);
-    policy.total_reported_production =
-        policy.total_reported_production.saturating_add(reported_production);
+    policy.total_reported_production = policy
+        .total_reported_production
+        .saturating_add(reported_production);
     policy.passes = policy.passes.saturating_add(1);
 
     TaxPolicyOutcome {
@@ -203,7 +204,9 @@ mod tests {
     use super::*;
 
     fn run_passes(policy: &mut TaxPolicy, production: i64, n: u32) -> Vec<TaxPolicyOutcome> {
-        (0..n).map(|_| apply_tax_policy(policy, production)).collect()
+        (0..n)
+            .map(|_| apply_tax_policy(policy, production))
+            .collect()
     }
 
     /// FR-CIV-TAX-POLICY — sanity: zero-rate, full compliance fills nothing.
@@ -223,7 +226,10 @@ mod tests {
     fn moderate_rate_keeps_full_compliance() {
         let mut p = TaxPolicy::with_rate(0.10); // 10 %
         let out = apply_tax_policy(&mut p, 10_000);
-        assert_eq!(p.compliance_bp, 10_000, "10 % rate ⇒ target compliance = 100 %");
+        assert_eq!(
+            p.compliance_bp, 10_000,
+            "10 % rate ⇒ target compliance = 100 %"
+        );
         // tax = 10_000 * 0.10 * 1.00 = 1_000
         assert_eq!(out.tax_collected, 1_000);
         assert_eq!(out.reported_production, 10_000);

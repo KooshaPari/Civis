@@ -1,4 +1,4 @@
-﻿use std::{
+use std::{
     net::SocketAddr,
     path::PathBuf,
     sync::{
@@ -20,8 +20,9 @@ use axum::{
 };
 use civ_agents::{Civilian as AgentCivilian, Needs, Tools, Wardrobe};
 use civ_engine::{
-    decode_civreplay, encode_civreplay, job_type_for_civilian_id, Citizen, CivSaveBundle,
-    scenario::{load_scenario, preset_scenario_path}, DiplomacyKind, JobType, Simulation,
+    decode_civreplay, encode_civreplay, job_type_for_civilian_id,
+    scenario::{load_scenario, preset_scenario_path},
+    Citizen, CivSaveBundle, DiplomacyKind, JobType, Simulation,
 };
 use civ_protocol_3d::{
     encode_frame3d_binary, encode_frame3d_binary_from_json, AgentAppearanceFrame,
@@ -461,7 +462,6 @@ async fn handle_socket(
     forward.abort();
 }
 
-
 fn voxel_axis_span<F>(voxel: &civ_voxel::VoxelWorld<civ_voxel::MaterialId>, axis: F) -> f32
 where
     F: Fn(civ_voxel::ChunkCoord) -> i32,
@@ -549,10 +549,7 @@ async fn handle_jsonrpc_text(
                     .and_then(|p| p.get("y"))
                     .and_then(|v| v.as_i64())
                     .unwrap_or(0);
-                let material = sim
-                    .voxel()
-                    .read(civ_voxel::WorldCoord { x, y: 0, z: y })
-                    .0 as u16;
+                let material = sim.voxel().read(civ_voxel::WorldCoord { x, y: 0, z: y }).0 as u16;
                 Some(crate::jsonrpc::TileInspectionWire {
                     material,
                     terrain_height: 0,
@@ -779,15 +776,28 @@ fn build_faction_state_frame(sim: &Simulation, tick: u64) -> FactionStateFrame {
         })
         .collect();
     factions.sort_by_key(|entry| entry.id);
-    let mut population_by_faction: std::collections::BTreeMap<u32, u32> = std::collections::BTreeMap::new();
-    for (_, (civilian, _needs, _wardrobe)) in sim.world.query::<(&civ_agents::Civilian, &civ_agents::Needs, &civ_agents::Wardrobe)>().iter() {
+    let mut population_by_faction: std::collections::BTreeMap<u32, u32> =
+        std::collections::BTreeMap::new();
+    for (_, (civilian, _needs, _wardrobe)) in sim
+        .world
+        .query::<(
+            &civ_agents::Civilian,
+            &civ_agents::Needs,
+            &civ_agents::Wardrobe,
+        )>()
+        .iter()
+    {
         let fid = match civilian.alignment {
             civ_agents::Alignment::Faction(id) => id,
             _ => 0,
         };
         *population_by_faction.entry(fid).or_insert(0) += 1;
     }
-    FactionStateFrame { tick, factions, population_by_faction }
+    FactionStateFrame {
+        tick,
+        factions,
+        population_by_faction,
+    }
 }
 
 /// Build event-feed messages for one tick.
@@ -1314,7 +1324,10 @@ async fn apply_dispatch_effect(
                 // params override when supplied.
                 "terrain.add_land" => {
                     let r = radius_voxels.unwrap_or(3).max(1);
-                    let s = strength.map(|v| v as i32).unwrap_or((mag * civ_voxel::FIXED_SCALE as f32) as i32).max(civ_voxel::FIXED_SCALE as i32);
+                    let s = strength
+                        .map(|v| v as i32)
+                        .unwrap_or((mag * civ_voxel::FIXED_SCALE as f32) as i32)
+                        .max(civ_voxel::FIXED_SCALE as i32);
                     let req = GodToolRequest::Terraform(TerraformRequest {
                         op: TerraformOp::AddLand,
                         center: pos,
@@ -1326,7 +1339,10 @@ async fn apply_dispatch_effect(
                 }
                 "terrain.dig_ocean" => {
                     let r = radius_voxels.unwrap_or(3).max(1);
-                    let s = strength.map(|v| v as i32).unwrap_or((mag * civ_voxel::FIXED_SCALE as f32 * 3.0) as i32).max(civ_voxel::FIXED_SCALE as i32);
+                    let s = strength
+                        .map(|v| v as i32)
+                        .unwrap_or((mag * civ_voxel::FIXED_SCALE as f32 * 3.0) as i32)
+                        .max(civ_voxel::FIXED_SCALE as i32);
                     let req = GodToolRequest::Terraform(TerraformRequest {
                         op: TerraformOp::DigOcean,
                         center: pos,
@@ -1363,7 +1379,8 @@ async fn apply_dispatch_effect(
                 }
                 "material.replace" => {
                     let r = radius_voxels.unwrap_or(3).max(1);
-                    let mat = u32::from(material_id.unwrap_or((civ_voxel::material::STONE.0) as u16));
+                    let mat =
+                        u32::from(material_id.unwrap_or((civ_voxel::material::STONE.0) as u16));
                     let req = GodToolRequest::Material(MaterialRequest {
                         op: MaterialOp::Replace,
                         center: pos,
@@ -1389,8 +1406,12 @@ async fn apply_dispatch_effect(
                 }
                 "material.pour_liquid" => {
                     let r = radius_voxels.unwrap_or(3).max(1);
-                    let layers = strength.map(|v| v as i32).unwrap_or((mag * civ_voxel::FIXED_SCALE as f32) as i32).max(civ_voxel::FIXED_SCALE as i32);
-                    let mat = u32::from(material_id.unwrap_or((civ_voxel::material::WATER.0) as u16));
+                    let layers = strength
+                        .map(|v| v as i32)
+                        .unwrap_or((mag * civ_voxel::FIXED_SCALE as f32) as i32)
+                        .max(civ_voxel::FIXED_SCALE as i32);
+                    let mat =
+                        u32::from(material_id.unwrap_or((civ_voxel::material::WATER.0) as u16));
                     let dh = drop_height.unwrap_or((civ_voxel::FIXED_SCALE * 3) as i32);
                     let req = GodToolRequest::Material(MaterialRequest {
                         op: MaterialOp::PourLiquid,
@@ -1404,7 +1425,9 @@ async fn apply_dispatch_effect(
                 }
                 "material.seed_snow" => {
                     let r = radius_voxels.unwrap_or(3).max(1);
-                    let s = strength.map(|v| v as i32).unwrap_or(civ_voxel::FIXED_SCALE as i32);
+                    let s = strength
+                        .map(|v| v as i32)
+                        .unwrap_or(civ_voxel::FIXED_SCALE as i32);
                     let req = GodToolRequest::Material(MaterialRequest {
                         op: MaterialOp::SeedSnow,
                         center: pos,
@@ -1417,7 +1440,9 @@ async fn apply_dispatch_effect(
                 }
                 "material.seed_ore" => {
                     let r = radius_voxels.unwrap_or(3).max(1);
-                    let s = strength.map(|v| v as i32).unwrap_or(civ_voxel::FIXED_SCALE as i32);
+                    let s = strength
+                        .map(|v| v as i32)
+                        .unwrap_or(civ_voxel::FIXED_SCALE as i32);
                     let req = GodToolRequest::Material(MaterialRequest {
                         op: MaterialOp::SeedOreDeposit,
                         center: pos,

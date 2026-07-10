@@ -302,7 +302,10 @@ mod tests {
         let far_b = CultureProfile::new([1.0, 1.0, 1.0, 1.0]);
         let near = cluster_language_distance(&near_a, &near_b);
         let far = cluster_language_distance(&far_a, &far_b);
-        assert!(far > near, "cultural divergence must raise language distance");
+        assert!(
+            far > near,
+            "cultural divergence must raise language distance"
+        );
     }
 
     #[test]
@@ -331,7 +334,10 @@ mod tests {
             dist_500 >= dist_100 && dist_100 >= dist_0,
             "language divergence must be monotone in isolation_ticks"
         );
-        assert!(dist_500 > dist_0, "long isolation must produce strictly more divergence");
+        assert!(
+            dist_500 > dist_0,
+            "long isolation must produce strictly more divergence"
+        );
     }
 
     #[test]
@@ -340,7 +346,10 @@ mod tests {
         let b = CultureProfile::new([1.0, 1.0, 1.0, 1.0]);
         for ticks in [0u32, 1, 50, 200, 1000, u32::MAX / 2] {
             let d = language_divergence_from_isolation(&a, &b, ticks);
-            assert!((0.0..=1.0).contains(&d), "divergence must be in [0,1] at ticks={ticks}");
+            assert!(
+                (0.0..=1.0).contains(&d),
+                "divergence must be in [0,1] at ticks={ticks}"
+            );
         }
     }
 
@@ -364,6 +373,9 @@ mod tests {
         let a = CultureProfile::new([0.5, 0.5, 0.5, 0.5]);
         let b = CultureProfile::new([0.5, 0.5, 0.5, 0.5]);
         let d0 = language_divergence_from_isolation(&a, &b, 0);
-        assert_eq!(d0, 0.0, "identical clusters must have zero divergence at t=0");
+        assert_eq!(
+            d0, 0.0,
+            "identical clusters must have zero divergence at t=0"
+        );
     }
 }

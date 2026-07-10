@@ -424,7 +424,12 @@ mod tests {
             names, sorted_const,
             "router must match the TOOL_NAMES constant"
         );
-        assert_eq!(names.len(), TOOL_NAMES.len(), "expected {} tools, got {names:?}", TOOL_NAMES.len());
+        assert_eq!(
+            names.len(),
+            TOOL_NAMES.len(),
+            "expected {} tools, got {names:?}",
+            TOOL_NAMES.len()
+        );
     }
 
     /// `tool_router().list_all()` must return one `Tool` entry per name and
@@ -434,7 +439,12 @@ mod tests {
     fn router_list_all_is_consistent() {
         let tools = tool_router().list_all();
         let names: Vec<String> = tools.iter().map(|t| t.name.to_string()).collect();
-        assert_eq!(names.len(), TOOL_NAMES.len(), "expected {} tools, got {names:?}", TOOL_NAMES.len());
+        assert_eq!(
+            names.len(),
+            TOOL_NAMES.len(),
+            "expected {} tools, got {names:?}",
+            TOOL_NAMES.len()
+        );
         for expected in TOOL_NAMES {
             assert!(
                 names.iter().any(|n| n == expected),

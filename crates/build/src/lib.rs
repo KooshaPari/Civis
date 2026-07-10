@@ -21,11 +21,11 @@ use serde::{Deserialize, Serialize};
 /// `use civ_build::*` without diving into the submodule path.
 pub mod tiers_build;
 
+pub use civ_economy::Good as ProductionGood;
 pub use tiers_build::{
-    BuildingSpec, BuildingSpecOverride, BuildingSpecOverrideError, BuildingTier, BuildSite,
+    BuildSite, BuildingSpec, BuildingSpecOverride, BuildingSpecOverrideError, BuildingTier,
     CompletedBuilding, ProductionChain, ProductionEvent,
 };
-pub use civ_economy::Good as ProductionGood;
 
 /// Provenance tag carried by every building diff so the renderer can style
 /// procedural-grown vs user-freehand structures differently if desired.
@@ -1105,10 +1105,7 @@ mod tests {
     /// FR-CIV-ARCH-008 — measurable facade histogram tracks culture vector divergence.
     #[test]
     fn fr_arch_008_facade_histogram_tracks_culture_vector_divergence() {
-        fn facade_histogram_l1(
-            left: &BTreeMap<String, u32>,
-            right: &BTreeMap<String, u32>,
-        ) -> u32 {
+        fn facade_histogram_l1(left: &BTreeMap<String, u32>, right: &BTreeMap<String, u32>) -> u32 {
             left.keys()
                 .chain(right.keys())
                 .collect::<std::collections::BTreeSet<_>>()

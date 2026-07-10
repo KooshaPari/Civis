@@ -31,17 +31,15 @@ pub mod atlas;
 pub mod boundary;
 pub use boundary::{BoundaryConfig, BoundaryFace, BoundaryMode, Bounds3};
 pub mod brush;
-pub use brush::{
-    default_material_for_op, stamp_footprint, BrushReceipt, BrushShape, BrushStamp,
-};
+pub use brush::{default_material_for_op, stamp_footprint, BrushReceipt, BrushShape, BrushStamp};
 pub mod fluid_ca;
 pub mod hud;
 pub mod lod;
 pub mod material;
 pub use material::{
-    AIR, ASH, BEDROCK, BRICK, CLAY, COAL, CRYSTAL, DIRT, FIRE, GLASS, GRANITE, GRAVEL, ICE,
-    METHANE, MOSS, MUD, PLANT, PLASMA, SALT, SALT_WATER, SMOKE, SNOW, STONE, TOXIC_GAS, WATER,
-    WOOD, LAVA, MOLTEN_METAL, OIL, ORE, PACKED_DIRT, SAND, STEAM,
+    AIR, ASH, BEDROCK, BRICK, CLAY, COAL, CRYSTAL, DIRT, FIRE, GLASS, GRANITE, GRAVEL, ICE, LAVA,
+    METHANE, MOLTEN_METAL, MOSS, MUD, OIL, ORE, PACKED_DIRT, PLANT, PLASMA, SALT, SALT_WATER, SAND,
+    SMOKE, SNOW, STEAM, STONE, TOXIC_GAS, WATER, WOOD,
 };
 pub mod material_ca;
 pub mod material_pbr;
@@ -63,22 +61,22 @@ pub use hud::{
     TreatySlot, HUB_PALETTE_SCHEMA_VERSION, HUB_TECH_SCHEMA_VERSION,
 };
 pub use material_pbr::{
-    AtlasSlice, AttestationError, BuildFlavour, Cc0Source, ColorSpace, ColorSpacePolicy,
-    GreedyAtlasPlan, LicenseAttestation, LodDistanceConfig, LodRenderPlan, ManifestError,
-    MaterialMode, MaterialOverride, MaterialSeedManifest, MissingTexturePolicy,
-    MissingTextureReport, PbrChannel, PolicyAction, RenderMode, RuntimeAction,
-    TextureChannelMap, TriplanarAxisSample, TriplanarLayer, TriplanarPbrBlend,
-    TriplanarSplatPlan, blend_triplanar_pbr, triplanar_axis_weights,
-    SCHEMA_VERSION as PBR_MANIFEST_SCHEMA_VERSION,
+    blend_triplanar_pbr, triplanar_axis_weights, AtlasSlice, AttestationError, BuildFlavour,
+    Cc0Source, ColorSpace, ColorSpacePolicy, GreedyAtlasPlan, LicenseAttestation,
+    LodDistanceConfig, LodRenderPlan, ManifestError, MaterialMode, MaterialOverride,
+    MaterialSeedManifest, MissingTexturePolicy, MissingTextureReport, PbrChannel, PolicyAction,
+    RenderMode, RuntimeAction, TextureChannelMap, TriplanarAxisSample, TriplanarLayer,
+    TriplanarPbrBlend, TriplanarSplatPlan, SCHEMA_VERSION as PBR_MANIFEST_SCHEMA_VERSION,
 };
 
-pub use scale_budget::{
-    CohortTotals, ExtentBudget, ExtentError, Gestalt, LodRingPlan, MvpResidentBudget,
-    MvpResidentConfig, PlanError, RingRole, SimLodAggregator, StreamConfigLite,
-};
+pub use lod::{drain_dirty_chunks, mark_lod_dirty, mark_storage_dirty, ChunkDirty};
 pub use residency::{
     validate_residency, ResidencyError, ResidencyLimits, DEFAULT_MAX_RESIDENT_AREA_SQ_MI,
     DEFAULT_MIN_ACTIVE_CA_CHUNK_SIZE,
+};
+pub use scale_budget::{
+    CohortTotals, ExtentBudget, ExtentError, Gestalt, LodRingPlan, MvpResidentBudget,
+    MvpResidentConfig, PlanError, RingRole, SimLodAggregator, StreamConfigLite,
 };
 pub use scale_stream::*;
 pub use stream::{
@@ -92,7 +90,6 @@ pub use window::plan::{
 };
 pub use window::ring_iter::RingIter;
 pub use window::{ring_distance, ChunkState, EvictionKey, PolicyError, SimCohort, WindowPolicy};
-pub use lod::{drain_dirty_chunks, mark_lod_dirty, mark_storage_dirty, ChunkDirty};
 pub use worldgen::HeightFieldGen;
 
 /// Civis-side schema version. Independent of the kernel's `SCHEMA_VERSION` so we can

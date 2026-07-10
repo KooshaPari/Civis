@@ -194,7 +194,10 @@ impl fmt::Display for AtlasError {
                 "rect '{name}' ({width}x{height}) exceeds atlas {atlas_width}x{atlas_height}"
             ),
             Self::AtlasExhausted { name, atlas_height } => {
-                write!(f, "atlas exhausted placing '{name}' (height {atlas_height})")
+                write!(
+                    f,
+                    "atlas exhausted placing '{name}' (height {atlas_height})"
+                )
             }
         }
     }
@@ -409,8 +412,13 @@ impl GreedyAtlasPacker {
         let file = File::create(&path)
             .unwrap_or_else(|e| panic!("atlas ppm: cannot create {}: {e}", path.display()));
         let mut writer = BufWriter::new(file);
-        write_rgba_ppm(&mut writer, packed.width, packed.height, &packed.atlas_texture)
-            .unwrap_or_else(|e| panic!("atlas ppm: write failed: {e}"));
+        write_rgba_ppm(
+            &mut writer,
+            packed.width,
+            packed.height,
+            &packed.atlas_texture,
+        )
+        .unwrap_or_else(|e| panic!("atlas ppm: write failed: {e}"));
         writer.flush().expect("atlas ppm: flush failed");
         Ok(packed)
     }

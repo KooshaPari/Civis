@@ -57,9 +57,9 @@ impl SocialEventKind {
     #[must_use]
     pub fn sign(self) -> f32 {
         match self {
-            SocialEventKind::CoLocated | SocialEventKind::Kinship | SocialEventKind::Interaction => {
-                1.0
-            }
+            SocialEventKind::CoLocated
+            | SocialEventKind::Kinship
+            | SocialEventKind::Interaction => 1.0,
             SocialEventKind::Conflict => -1.0,
         }
     }
@@ -486,12 +486,18 @@ mod tests {
         let outcome = g.apply_event(SocialEvent::interaction(1, 2, 1), &cfg());
         assert_eq!(outcome, ApplyOutcome::Created);
         let before = g.edge(1, 2).expect("edge should exist").weight;
-        assert!(before > 0.0, "first interaction must produce a positive weight");
+        assert!(
+            before > 0.0,
+            "first interaction must produce a positive weight"
+        );
 
         // A second interaction updates (does not recreate) the edge.
         let outcome = g.apply_event(SocialEvent::interaction(2, 1, 2), &cfg());
         match outcome {
-            ApplyOutcome::Updated { prev_weight, new_weight } => {
+            ApplyOutcome::Updated {
+                prev_weight,
+                new_weight,
+            } => {
                 assert!(new_weight > prev_weight, "weight must strictly increase");
             }
             other => panic!("expected Updated, got {other:?}"),
@@ -577,7 +583,10 @@ mod tests {
         for _ in 0..5 {
             g.decay(&cfg(), 0.9);
         }
-        let end = g.edge(10, 11).expect("kinship edge must survive light decay").weight;
+        let end = g
+            .edge(10, 11)
+            .expect("kinship edge must survive light decay")
+            .weight;
         assert!(end > 0.0);
         assert!(end < start);
         assert_eq!(

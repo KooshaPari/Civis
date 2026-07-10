@@ -120,10 +120,26 @@ impl Simulation {
         //   effective_threshold = base * 1000 / modifier_fp
         // Clamp to at least base / 4 to prevent divide-by-zero / ridiculous scaling.
         let fp = civ_planet::seasonal::FP_SCALE as i64;
-        let season_drought_threshold = scale_threshold(DROUGHT_PRECIP_FP as i64, season_mods.drought_likelihood_fp as i64, fp);
-        let season_flood_threshold = scale_threshold(FLOOD_PRECIP_FP as i64, season_mods.flood_likelihood_fp as i64, fp);
-        let _season_wildfire_temp = scale_threshold(WILDFIRE_TEMP_FP as i64, season_mods.wildfire_likelihood_fp as i64, fp);
-        let season_storm_threshold = scale_threshold(STORM_INTENSITY_FP as i64, season_mods.storm_likelihood_fp as i64, fp);
+        let season_drought_threshold = scale_threshold(
+            DROUGHT_PRECIP_FP as i64,
+            season_mods.drought_likelihood_fp as i64,
+            fp,
+        );
+        let season_flood_threshold = scale_threshold(
+            FLOOD_PRECIP_FP as i64,
+            season_mods.flood_likelihood_fp as i64,
+            fp,
+        );
+        let _season_wildfire_temp = scale_threshold(
+            WILDFIRE_TEMP_FP as i64,
+            season_mods.wildfire_likelihood_fp as i64,
+            fp,
+        );
+        let season_storm_threshold = scale_threshold(
+            STORM_INTENSITY_FP as i64,
+            season_mods.storm_likelihood_fp as i64,
+            fp,
+        );
 
         // Collect onset sites first so the immutable weather borrow is released
         // before we mutate the simulation via trigger_disaster. Disasters emerge
@@ -133,7 +149,8 @@ impl Simulation {
         // Research mitigates nature: fire-suppression tech raises the ignition
         // threshold (research -> fewer disasters). Computed before the weather
         // borrow so the immutable grow iteration holds no `&self` method call.
-        let wildfire_temp_threshold = wildfire_ignition_temp_fp(WILDFIRE_TEMP_FP, self.research_tier());
+        let wildfire_temp_threshold =
+            wildfire_ignition_temp_fp(WILDFIRE_TEMP_FP, self.research_tier());
         let geology = GeologyMap::seed(self.planet());
         let mut wildfires = Vec::new();
         let mut quakes = Vec::new();
@@ -260,10 +277,7 @@ fn is_low_elevation(
         .is_some_and(|r| {
             matches!(
                 r.biome,
-                BiomeKind::Ocean
-                    | BiomeKind::Beach
-                    | BiomeKind::Wetland
-                    | BiomeKind::Mangrove
+                BiomeKind::Ocean | BiomeKind::Beach | BiomeKind::Wetland | BiomeKind::Mangrove
             )
         });
     let voxel_low = pos.y <= civ_voxel::FIXED_SCALE || sim.voxel().read(pos) == WATER;
@@ -517,7 +531,12 @@ impl DisasterEffect {
     }
 }
 
-fn hit_agents(sim: &mut Simulation, pos: WorldCoord, radius: i64, effect: DisasterEffect) -> (i32, u32, f32) {
+fn hit_agents(
+    sim: &mut Simulation,
+    pos: WorldCoord,
+    radius: i64,
+    effect: DisasterEffect,
+) -> (i32, u32, f32) {
     let radius_sq = (radius as i128) * (radius as i128);
     let entities: Vec<Entity> = sim
         .world
@@ -580,7 +599,11 @@ mod tests {
     fn disaster_raises_belief_fear_breeds_faith() {
         let mut sim = seeded_sim();
         let before = sim.belief();
-        trigger_disaster(&mut sim, DisasterKind::Quake, WorldCoord { x: 0, y: 0, z: 0 });
+        trigger_disaster(
+            &mut sim,
+            DisasterKind::Quake,
+            WorldCoord { x: 0, y: 0, z: 0 },
+        );
         assert!(
             sim.belief() > before,
             "a disaster should raise belief (fear breeds faith)"

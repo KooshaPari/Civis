@@ -102,11 +102,13 @@
 #![allow(missing_docs)]
 
 use civ_agents::{spawn_civilian_at, spawn_many, ActorVisualKind, Alignment, Civilian, Position3d};
-use civ_build::{BuildingId, BuildingSpec, BuildingTier, BuildSite, ProductionChain};
+use civ_build::{BuildSite, BuildingId, BuildingSpec, BuildingTier, ProductionChain};
 use civ_needs::{Health as LifeHealth, Needs as LifeNeeds};
 use civ_voxel::{
-    material::{GRAVEL, LAVA, MOSS, ORE, PACKED_DIRT, PLANT, SAND, SNOW, STEAM, STONE, WATER, WOOD},
-    AIR, MaterialId, WorldCoord, FIXED_SCALE,
+    material::{
+        GRAVEL, LAVA, MOSS, ORE, PACKED_DIRT, PLANT, SAND, SNOW, STEAM, STONE, WATER, WOOD,
+    },
+    MaterialId, WorldCoord, AIR, FIXED_SCALE,
 };
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
@@ -829,10 +831,7 @@ fn apply_actor_effect(
     // Snapshot the entities first so we can drop the immutable
     // borrow of `world` before taking the mutable borrows below.
     let affected = actors_in_footprint(world, center, radius_voxels);
-    let first = affected
-        .first()
-        .map(|ent| ent.to_bits().get())
-        .unwrap_or(0);
+    let first = affected.first().map(|ent| ent.to_bits().get()).unwrap_or(0);
     let mut touched: u32 = 0;
     for entity in &affected {
         let mut did_touch = false;
@@ -885,7 +884,10 @@ fn apply_actor_effect(
 /// immutable borrow while still issuing mutable writes
 /// elsewhere; this matches the rest of the god-tool helpers
 /// (e.g. `scan_topmost_y`).
-fn topmost_voxel(voxel: &civ_voxel::VoxelWorld<MaterialId>, cell: WorldCoord) -> Option<MaterialId> {
+fn topmost_voxel(
+    voxel: &civ_voxel::VoxelWorld<MaterialId>,
+    cell: WorldCoord,
+) -> Option<MaterialId> {
     for dy in 1i64..=16 {
         let y = cell.y + dy * FIXED_SCALE;
         let m = voxel.read(WorldCoord {
@@ -907,10 +909,7 @@ fn topmost_voxel(voxel: &civ_voxel::VoxelWorld<MaterialId>, cell: WorldCoord) ->
 /// 3-D Bresenham (Amanatides & Woo) and is deterministic — the
 /// same `(a, b)` always yields the same sequence, so replay
 /// stays byte-identical.
-fn bresenham_3d(
-    a: WorldCoord,
-    b: WorldCoord,
-) -> Vec<(i64, i64, i64)> {
+fn bresenham_3d(a: WorldCoord, b: WorldCoord) -> Vec<(i64, i64, i64)> {
     let (mut x, mut y, mut z) = (a.x, a.y, a.z);
     let ex = b.x;
     let ey = b.y;
@@ -1031,10 +1030,7 @@ impl Simulation {
     /// Other variants produce a `NoOp` receipt tagged with the
     /// verb id (Bevy layer should surface a "data not yet
     /// surfaced" toast and push the verb as `Near` in the deck).
-    pub fn apply_god_tool(
-        &mut self,
-        req: GodToolRequest,
-    ) -> Result<GodToolReceipt, GodToolError> {
+    pub fn apply_god_tool(&mut self, req: GodToolRequest) -> Result<GodToolReceipt, GodToolError> {
         match req {
             GodToolRequest::Terraform(t) => self.apply_terraform(t),
             GodToolRequest::Material(m) => self.apply_material(m),
@@ -1045,10 +1041,7 @@ impl Simulation {
         }
     }
 
-    fn apply_terraform(
-        &mut self,
-        req: TerraformRequest,
-    ) -> Result<GodToolReceipt, GodToolError> {
+    fn apply_terraform(&mut self, req: TerraformRequest) -> Result<GodToolReceipt, GodToolError> {
         // Validate.
         if req.radius_voxels == 0 {
             return Err(GodToolError::InvalidRequest(
@@ -1187,8 +1180,7 @@ impl Simulation {
                             for ndx in -1i64..=1 {
                                 let col_x = cx + (dx + ndx) * FIXED_SCALE;
                                 let col_z = cz + (dz + ndz) * FIXED_SCALE;
-                                let top =
-                                    scan_topmost_y(&self.voxel, col_x, col_z, baseline);
+                                let top = scan_topmost_y(&self.voxel, col_x, col_z, baseline);
                                 total = total.saturating_add(top);
                                 count = count.saturating_add(1);
                             }
@@ -1418,11 +1410,7 @@ impl Simulation {
                         tops.push(top_y);
                     }
                 }
-                let flat_y = if count > 0 {
-                    total / count
-                } else {
-                    cy
-                };
+                let flat_y = if count > 0 { total / count } else { cy };
                 let _ = tops; // retained for future strict-mode dispatch
                 for dz in -r..=r {
                     for dx in -r..=r {
@@ -1444,10 +1432,7 @@ impl Simulation {
                 }
             }
         }
-        Ok(GodToolReceipt::Terraform {
-            op: req.op,
-            writes,
-        })
+        Ok(GodToolReceipt::Terraform { op: req.op, writes })
     }
 
     /// Material-verb substrate dispatcher (Phase 3 — 7 ops).
@@ -1456,10 +1441,7 @@ impl Simulation {
     /// then settles gravity, fluid flow, reactivity, and weather
     /// each tick. The verb never bypasses the substrate write
     /// path (AC-CPL-2 / AC-CPL-3).
-    fn apply_material(
-        &mut self,
-        req: MaterialRequest,
-    ) -> Result<GodToolReceipt, GodToolError> {
+    fn apply_material(&mut self, req: MaterialRequest) -> Result<GodToolReceipt, GodToolError> {
         if req.radius_voxels == 0 {
             return Err(GodToolError::InvalidRequest(
                 "material radius_voxels must be > 0".into(),
@@ -1627,8 +1609,7 @@ impl Simulation {
                             }
                             let col_x = cx + dx * FIXED_SCALE;
                             let col_z = cz + dz * FIXED_SCALE;
-                            let top_y =
-                                scan_topmost_y(&self.voxel, col_x, col_z, cy);
+                            let top_y = scan_topmost_y(&self.voxel, col_x, col_z, cy);
                             self.push_voxel_write(
                                 WorldCoord {
                                     x: col_x,
@@ -1660,8 +1641,7 @@ impl Simulation {
                             }
                             let col_x = cx + dx * FIXED_SCALE;
                             let col_z = cz + dz * FIXED_SCALE;
-                            let top_y =
-                                scan_topmost_y(&self.voxel, col_x, col_z, cy);
+                            let top_y = scan_topmost_y(&self.voxel, col_x, col_z, cy);
                             // Deterministic noise: mix the
                             // `(dx, dz)` cell offset with the
                             // sim RNG seed. The mix is a small
@@ -1711,8 +1691,7 @@ impl Simulation {
                         }
                         let col_x = cx + dx * FIXED_SCALE;
                         let col_z = cz + dz * FIXED_SCALE;
-                        let top_y =
-                            scan_topmost_y(&self.voxel, col_x, col_z, cy);
+                        let top_y = scan_topmost_y(&self.voxel, col_x, col_z, cy);
                         // Deterministic per-cell hash; same
                         // input ⇒ same scatter ⇒ stable replay.
                         let seed = self
@@ -1737,10 +1716,7 @@ impl Simulation {
                 }
             }
         }
-        Ok(GodToolReceipt::Material {
-            op: req.op,
-            writes,
-        })
+        Ok(GodToolReceipt::Material { op: req.op, writes })
     }
 
     fn apply_life(&mut self, req: LifeRequest) -> Result<GodToolReceipt, GodToolError> {
@@ -1762,9 +1738,7 @@ impl Simulation {
                 // current sim RNG seed + agent id so spawns are
                 // deterministic across replays (charter: soft
                 // determinism).
-                let mut rng = ChaCha8Rng::seed_from_u64(
-                    self.state.rng_seed.wrapping_add(s.id),
-                );
+                let mut rng = ChaCha8Rng::seed_from_u64(self.state.rng_seed.wrapping_add(s.id));
                 let entity = spawn_civilian_at(
                     &mut self.world,
                     s.id,
@@ -1790,16 +1764,8 @@ impl Simulation {
                         "spawn_herd count must be <= 1000".into(),
                     ));
                 }
-                let entities = spawn_many(
-                    &mut self.world,
-                    s.count,
-                    s.seed_civilian_id,
-                    s.faction,
-                );
-                let first = entities
-                    .first()
-                    .map(|e| e.to_bits().get())
-                    .unwrap_or(0);
+                let entities = spawn_many(&mut self.world, s.count, s.seed_civilian_id, s.faction);
+                let first = entities.first().map(|e| e.to_bits().get()).unwrap_or(0);
                 Ok(GodToolReceipt::Life {
                     agent_entity_bits: first,
                     affected_count: entities.len() as u32,
@@ -1854,8 +1820,7 @@ impl Simulation {
                     ));
                 }
                 let affected = actors_in_footprint(&self.world, e.center, e.radius_voxels);
-                let affected_entities: Vec<hecs::Entity> =
-                    affected.iter().copied().collect();
+                let affected_entities: Vec<hecs::Entity> = affected.iter().copied().collect();
                 let first = affected_entities
                     .first()
                     .map(|ent| ent.to_bits().get())
@@ -1887,16 +1852,8 @@ impl Simulation {
                         "spawn_civ_seed seed_civilian_id must be > 0".into(),
                     ));
                 }
-                let entities = spawn_many(
-                    &mut self.world,
-                    6,
-                    s.seed_civilian_id,
-                    s.faction,
-                );
-                let first = entities
-                    .first()
-                    .map(|e| e.to_bits().get())
-                    .unwrap_or(0);
+                let entities = spawn_many(&mut self.world, 6, s.seed_civilian_id, s.faction);
+                let first = entities.first().map(|e| e.to_bits().get()).unwrap_or(0);
                 // Primitive hut (Workshop chain) at `center`.
                 self.enqueue_build_site(BuildSite::new(
                     BuildingId(s.seed_civilian_id.wrapping_add(100)),
@@ -1924,10 +1881,7 @@ impl Simulation {
         }
     }
 
-    fn apply_disaster(
-        &mut self,
-        req: DisasterRequest,
-    ) -> Result<GodToolReceipt, GodToolError> {
+    fn apply_disaster(&mut self, req: DisasterRequest) -> Result<GodToolReceipt, GodToolError> {
         // The substrate writes go through `trigger_disaster`,
         // which already adds belief via the
         // disaster → faith coupling (FR-CIV-EMERGENCE).
@@ -2004,10 +1958,7 @@ impl Simulation {
                     // write.
                     let mat = self.voxel().read(cell);
                     let top = topmost_voxel(&self.voxel, cell);
-                    let igniteable = matches!(
-                        top,
-                        Some(PLANT) | Some(MOSS) | Some(WOOD)
-                    );
+                    let igniteable = matches!(top, Some(PLANT) | Some(MOSS) | Some(WOOD));
                     if mat != AIR && mat != WATER {
                         // Plough through solid ground with a
                         // LAVA splinter for a visible scar.
@@ -2049,9 +2000,7 @@ impl Simulation {
                 for i in 0..=r {
                     // angle sweeps 2π * arms over the
                     // radius.
-                    let angle_fp = ((i as i64)
-                        .wrapping_mul(arms)
-                        .wrapping_mul(31_416)
+                    let angle_fp = ((i as i64).wrapping_mul(arms).wrapping_mul(31_416)
                         / (10_000 * r.max(1) as i64))
                         & 0xFFFF;
                     let dx = ((cos_lut(angle_fp) * i as i64) / 1_000_000) as i64;
@@ -2064,11 +2013,7 @@ impl Simulation {
                     // Snapshot the read before we take the
                     // mutable borrow for the write.
                     let mat = self.voxel().read(cell);
-                    let next = if mat == WATER {
-                        STEAM
-                    } else {
-                        AIR
-                    };
+                    let next = if mat == WATER { STEAM } else { AIR };
                     self.push_voxel_write(cell, next);
                     writes = writes.saturating_add(1);
                 }
@@ -2192,12 +2137,12 @@ impl Simulation {
         }
     }
 
-    fn apply_law(
-        &mut self,
-        req: LawRequest,
-    ) -> Result<GodToolReceipt, GodToolError> {
+    fn apply_law(&mut self, req: LawRequest) -> Result<GodToolReceipt, GodToolError> {
         match req {
-            LawRequest::TaxBias { target_faction, bias } => {
+            LawRequest::TaxBias {
+                target_faction,
+                bias,
+            } => {
                 // Phase 4 (FR-CIV-GODTOOL-901 batch 3) — a
                 // treasury write that transfers `bias`
                 // joules to / from the faction's
@@ -2266,8 +2211,7 @@ impl Simulation {
                 // state. The previous value is
                 // reported as the receipt delta so the
                 // HUD can show "difficulty N → M".
-                if !(0.0..=10.0).contains(&scarcity_multiplier)
-                    || !scarcity_multiplier.is_finite()
+                if !(0.0..=10.0).contains(&scarcity_multiplier) || !scarcity_multiplier.is_finite()
                 {
                     return Err(GodToolError::InvalidRequest(format!(
                         "difficulty_knob scarcity_multiplier must be in [0.0, 10.0], got {scarcity_multiplier}"
@@ -2290,10 +2234,7 @@ impl Simulation {
         }
     }
 
-    fn apply_inspect(
-        &mut self,
-        req: InspectRequest,
-    ) -> Result<GodToolReceipt, GodToolError> {
+    fn apply_inspect(&mut self, req: InspectRequest) -> Result<GodToolReceipt, GodToolError> {
         match req {
             InspectRequest::Probe(p) => {
                 // Read-only: no `&mut self` work. We just query
@@ -2393,7 +2334,8 @@ mod tests {
             strength: 1,
             aux_id: 0,
         });
-        sim.apply_god_tool(req).expect("terrain.lower should succeed");
+        sim.apply_god_tool(req)
+            .expect("terrain.lower should succeed");
         assert_eq!(
             sim.voxel().read(center),
             AIR,
@@ -2451,11 +2393,7 @@ mod tests {
         let mut sim = Simulation::new();
         let prev = sim.belief();
         let req = GodToolRequest::Disaster(DisasterRequest::Meteor {
-            pos: WorldCoord {
-                x: 0,
-                y: 0,
-                z: 0,
-            },
+            pos: WorldCoord { x: 0, y: 0, z: 0 },
         });
         let receipt = sim
             .apply_god_tool(req)
@@ -2481,11 +2419,7 @@ mod tests {
     #[test]
     fn inspect_probe_is_read_only() {
         let mut sim = Simulation::new();
-        let pos = WorldCoord {
-            x: 0,
-            y: 0,
-            z: 0,
-        };
+        let pos = WorldCoord { x: 0, y: 0, z: 0 };
         let req1 = GodToolRequest::Inspect(InspectRequest::Probe(ProbeRequest { pos }));
         let req2 = GodToolRequest::Inspect(InspectRequest::Probe(ProbeRequest { pos }));
         let belief_before = sim.belief();
@@ -2499,7 +2433,10 @@ mod tests {
             GodToolReceipt::Inspect { report } => report.material,
             other => panic!("expected Inspect receipt, got {other:?}"),
         };
-        assert_eq!(m1, m2, "two probes at the same coord must read the same material");
+        assert_eq!(
+            m1, m2,
+            "two probes at the same coord must read the same material"
+        );
         assert_eq!(sim.belief(), belief_before, "probe must not mutate belief");
     }
 
@@ -2510,11 +2447,7 @@ mod tests {
         let mut sim = Simulation::new();
         let req = GodToolRequest::Terraform(TerraformRequest {
             op: TerraformOp::Raise,
-            center: WorldCoord {
-                x: 0,
-                y: 0,
-                z: 0,
-            },
+            center: WorldCoord { x: 0, y: 0, z: 0 },
             radius_voxels: 0,
             strength: 1,
             aux_id: 0,
@@ -2560,9 +2493,7 @@ mod tests {
     /// side as JSON.
     #[test]
     fn error_serde_round_trip() {
-        let e = GodToolError::NotImplemented {
-            verb: "law.edict",
-        };
+        let e = GodToolError::NotImplemented { verb: "law.edict" };
         let j = serde_json::to_string(&e).expect("serialize");
         assert!(j.contains("law.edict"));
     }
@@ -2597,10 +2528,7 @@ mod tests {
             } => {
                 // 1x1x1 footprint → at least 1 cell; the Gaussian
                 // peak may spill extra cells above the ground.
-                assert!(
-                    writes >= 1,
-                    "expected at least 1 voxel write, got {writes}"
-                );
+                assert!(writes >= 1, "expected at least 1 voxel write, got {writes}");
             }
             other => panic!("expected Terraform receipt, got {other:?}"),
         }
@@ -2650,21 +2578,12 @@ mod tests {
 
         // Heal within a wide radius so we definitely hit it.
         let heal = GodToolRequest::Life(LifeRequest::Heal(ActorEffectRequest {
-            center: WorldCoord {
-                x: 0,
-                y: 0,
-                z: 0,
-            },
+            center: WorldCoord { x: 0, y: 0, z: 0 },
             radius_voxels: u8::MAX,
             strength: 0.3,
         }));
-        let affected = match sim
-            .apply_god_tool(heal)
-            .expect("life.heal should succeed")
-        {
-            GodToolReceipt::Life {
-                affected_count, ..
-            } => affected_count,
+        let affected = match sim.apply_god_tool(heal).expect("life.heal should succeed") {
+            GodToolReceipt::Life { affected_count, .. } => affected_count,
             other => panic!("expected Life receipt, got {other:?}"),
         };
         assert!(affected >= 1, "heal must affect at least 1 actor");
@@ -2691,8 +2610,7 @@ mod tests {
         };
         // Pre-seed a STONE voxel so we can verify the verb
         // actually erases it.
-        sim.voxel_mut()
-            .write(center, STONE);
+        sim.voxel_mut().write(center, STONE);
         let req = GodToolRequest::Material(MaterialRequest {
             op: MaterialOp::Erase,
             center,
@@ -2709,10 +2627,7 @@ mod tests {
                 op: MaterialOp::Erase,
                 writes,
             } => {
-                assert!(
-                    writes >= 1,
-                    "expected at least 1 voxel write, got {writes}"
-                );
+                assert!(writes >= 1, "expected at least 1 voxel write, got {writes}");
             }
             other => panic!("expected Material receipt, got {other:?}"),
         }
@@ -2836,7 +2751,11 @@ mod tests {
         // Pre-seed a column of STONE so `scan_topmost_y`
         // returns a non-baseline value.
         sim.voxel_mut().write(
-            WorldCoord { x: col_x, y: FIXED_SCALE, z: col_z },
+            WorldCoord {
+                x: col_x,
+                y: FIXED_SCALE,
+                z: col_z,
+            },
             STONE,
         );
         let req = GodToolRequest::Material(MaterialRequest {
@@ -3246,9 +3165,15 @@ mod tests {
             other => panic!("expected Material receipt, got {other:?}"),
         };
         // 5×5 footprint ⇒ ≤ 25 PLANT voxels.
-        assert!(writes <= 25, "seed_forest writes must not exceed footprint area");
+        assert!(
+            writes <= 25,
+            "seed_forest writes must not exceed footprint area"
+        );
         // A density of 50 ⇒ at least a few seeds.
-        assert!(writes >= 1, "seed_forest with density 50 must write ≥1 seed");
+        assert!(
+            writes >= 1,
+            "seed_forest with density 50 must write ≥1 seed"
+        );
     }
 
     /// Phase 4 — `life.spawn_civ_seed` must inject 6 founder
@@ -3263,25 +3188,25 @@ mod tests {
             y: FIXED_SCALE,
             z: 1_000_000,
         };
-        let req = GodToolRequest::Life(LifeRequest::SpawnCivSeed(
-            SpawnCivSeedRequest {
-                center,
-                seed_civilian_id: 42,
-                faction: 0,
-            },
-        ));
+        let req = GodToolRequest::Life(LifeRequest::SpawnCivSeed(SpawnCivSeedRequest {
+            center,
+            seed_civilian_id: 42,
+            faction: 0,
+        }));
         let affected = match sim
             .apply_god_tool(req)
             .expect("life.spawn_civ_seed should succeed")
         {
-            GodToolReceipt::Life {
-                affected_count, ..
-            } => affected_count,
+            GodToolReceipt::Life { affected_count, .. } => affected_count,
             other => panic!("expected Life receipt, got {other:?}"),
         };
         assert_eq!(affected, 6, "spawn_civ_seed injects 6 founder civilians");
         // The substrate must have recorded two build sites.
-        assert_eq!(sim.build_sites().len(), 2, "expected 2 build sites (hut + farm)");
+        assert_eq!(
+            sim.build_sites().len(),
+            2,
+            "expected 2 build sites (hut + farm)"
+        );
     }
 
     /// Phase 4 — `disaster.lightning` must rasterise a LAVA arc
@@ -3313,18 +3238,12 @@ mod tests {
             );
         }
         let prev_belief = sim.belief();
-        let req = GodToolRequest::Disaster(DisasterRequest::Lightning {
-            from,
-            to,
-        });
+        let req = GodToolRequest::Disaster(DisasterRequest::Lightning { from, to });
         let writes = match sim
             .apply_god_tool(req)
             .expect("disaster.lightning should succeed")
         {
-            GodToolReceipt::EnvironmentalDisaster {
-                kind_label,
-                writes,
-            } => {
+            GodToolReceipt::EnvironmentalDisaster { kind_label, writes } => {
                 assert_eq!(kind_label, "lightning");
                 writes
             }
@@ -3361,10 +3280,7 @@ mod tests {
             .apply_god_tool(req)
             .expect("disaster.tornado should succeed")
         {
-            GodToolReceipt::EnvironmentalDisaster {
-                kind_label,
-                writes,
-            } => {
+            GodToolReceipt::EnvironmentalDisaster { kind_label, writes } => {
                 assert_eq!(kind_label, "tornado");
                 writes
             }
@@ -3406,17 +3322,17 @@ mod tests {
             .apply_god_tool(req)
             .expect("disaster.volcanic_vent should succeed")
         {
-            GodToolReceipt::EnvironmentalDisaster {
-                kind_label,
-                writes,
-            } => {
+            GodToolReceipt::EnvironmentalDisaster { kind_label, writes } => {
                 assert_eq!(kind_label, "volcanic_vent");
                 writes
             }
             other => panic!("expected EnvironmentalDisaster receipt, got {other:?}"),
         };
         // 3 ticks of LAVA + 4-cell STEAM ring = 7 writes.
-        assert_eq!(writes, 7, "volcanic_vent with ticks=3 writes 3 LAVA + 4 STEAM");
+        assert_eq!(
+            writes, 7,
+            "volcanic_vent with ticks=3 writes 3 LAVA + 4 STEAM"
+        );
         assert!(sim.belief() >= prev_belief, "volcanic_vent bumps belief");
         assert_eq!(
             sim.voxel().read(center),
@@ -3447,10 +3363,7 @@ mod tests {
             .apply_god_tool(req)
             .expect("disaster.drought should succeed")
         {
-            GodToolReceipt::EnvironmentalDisaster {
-                kind_label,
-                writes,
-            } => {
+            GodToolReceipt::EnvironmentalDisaster { kind_label, writes } => {
                 assert_eq!(kind_label, "drought");
                 writes
             }
@@ -3514,9 +3427,7 @@ mod tests {
     fn law_religion_pressure_routes_through_belief() {
         let mut sim = Simulation::new();
         let prev = sim.belief();
-        let req = GodToolRequest::Law(LawRequest::ReligionPressure {
-            pressure: 100,
-        });
+        let req = GodToolRequest::Law(LawRequest::ReligionPressure { pressure: 100 });
         let delta = match sim
             .apply_god_tool(req)
             .expect("law.religion_pressure should succeed")
@@ -3527,7 +3438,10 @@ mod tests {
             }
             other => panic!("expected Law receipt, got {other:?}"),
         };
-        assert_eq!(delta, 100, "religion_pressure reports the bump as the delta");
+        assert_eq!(
+            delta, 100,
+            "religion_pressure reports the bump as the delta"
+        );
         assert_eq!(sim.belief() - prev, 100, "belief bumped by 100");
     }
 

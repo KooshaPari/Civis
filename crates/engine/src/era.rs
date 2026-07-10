@@ -5,10 +5,10 @@
 
 use std::collections::BTreeMap;
 
-use serde::{Deserialize, Serialize};
 use crate::engine::Simulation;
 use crate::history::EraHistory;
 use crate::tech::{gather_faction_inputs, tick_research, tick_tech, FactionTechState};
+use serde::{Deserialize, Serialize};
 
 /// Emergent civilization ages, ordered Stone → Industrial (FR-ERA).
 ///
@@ -126,11 +126,11 @@ impl CivEra {
     pub fn next_conditions(self) -> &'static str {
         match self {
             CivEra::Prehistoric => "pop >= 500 or 2 techs researched",
-            CivEra::Ancient     => "pop >= 2,000 or 5 techs researched",
-            CivEra::Classical   => "pop >= 5,000 or 8 techs researched",
-            CivEra::Medieval    => "pop >= 10,000 or 10 techs researched",
+            CivEra::Ancient => "pop >= 2,000 or 5 techs researched",
+            CivEra::Classical => "pop >= 5,000 or 8 techs researched",
+            CivEra::Medieval => "pop >= 10,000 or 10 techs researched",
             CivEra::Renaissance => "all 12 techs researched",
-            CivEra::Modern      => "(peak era reached)",
+            CivEra::Modern => "(peak era reached)",
         }
     }
 }
@@ -225,7 +225,11 @@ impl EraProgressionState {
         let inputs = gather_faction_inputs(sim);
         let mut rows = BTreeMap::new();
         for (faction_id, faction_inputs) in inputs {
-            let age = self.faction_ages.get(&faction_id).copied().unwrap_or(CivAge::Stone);
+            let age = self
+                .faction_ages
+                .get(&faction_id)
+                .copied()
+                .unwrap_or(CivAge::Stone);
             let tech_level = self
                 .faction_tech
                 .get(&faction_id)
@@ -317,9 +321,7 @@ mod tests {
         stagnant.food = Fixed::from_num(5);
         stagnant.wood = Fixed::from_num(5);
         stagnant.metal = Fixed::from_num(5);
-        sim.state
-            .faction_treasury
-            .insert(1, Fixed::from_num(10));
+        sim.state.faction_treasury.insert(1, Fixed::from_num(10));
         sim
     }
 

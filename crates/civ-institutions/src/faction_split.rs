@@ -216,34 +216,18 @@ mod tests {
         let mut cohesion = InstitutionCohesion::default();
 
         // Below-threshold disagreement: no split.
-        let below = maybe_split_faction(
-            1,
-            super::super::InstitutionKind::Temple,
-            2,
-            cohesion,
-            0.10,
-        );
+        let below =
+            maybe_split_faction(1, super::super::InstitutionKind::Temple, 2, cohesion, 0.10);
         assert!(below.is_none(), "low disagreement must not split");
 
         // At-threshold disagreement: still no split (predicate is strict).
-        let at = maybe_split_faction(
-            1,
-            super::super::InstitutionKind::Temple,
-            2,
-            cohesion,
-            0.50,
-        );
+        let at = maybe_split_faction(1, super::super::InstitutionKind::Temple, 2, cohesion, 0.50);
         assert!(at.is_none(), "threshold disagreement must not split");
 
         // Now disagreement rises past the threshold.
         cohesion.value = 0.40; // drops cohesion so 0.65 disagreement clears the bar.
-        let above = maybe_split_faction(
-            1,
-            super::super::InstitutionKind::Temple,
-            2,
-            cohesion,
-            0.65,
-        );
+        let above =
+            maybe_split_faction(1, super::super::InstitutionKind::Temple, 2, cohesion, 0.65);
 
         let event = above.expect("rising disagreement past threshold must spawn a splinter");
         assert_eq!(event.settlement_id, 1);

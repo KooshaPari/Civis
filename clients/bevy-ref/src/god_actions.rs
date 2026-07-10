@@ -17,18 +17,16 @@ use civ_voxel::material::{AIR, FIRE, LAVA, STONE};
 use civ_voxel::{ChunkId, MaterialId};
 
 use crate::bevy_render::CHUNK_WIREFRAME_LINE_COLOR;
+use crate::frame_budget::{scaled_cull_distance, GpuQualityMode};
+use crate::game_ui::GodActionToast;
 use crate::game_ui::GodActionToast;
 use crate::god_panel::GodPanelState;
 use crate::live_focus::LiveSceneFocus;
 use crate::live_ground::{live_ground_y, ChunkVoxelCache};
-use crate::live_stream::{
-    remesh_cached_chunks, LiveStreamScene, StreamCulling, LIVE_CHUNK_EDGE,
-};
-use crate::frame_budget::{scaled_cull_distance, GpuQualityMode};
+use crate::live_stream::{remesh_cached_chunks, LiveStreamScene, StreamCulling, LIVE_CHUNK_EDGE};
 use crate::menus::in_game;
 use crate::terrain::{terrain_surface_y, WORLD_SIZE};
 use crate::{decode_chunk_id, encode_chunk_id, DebugRender};
-use crate::game_ui::GodActionToast;
 
 /// Legacy god-panel verb fired from egui.
 #[derive(Message, Debug, Clone)]
@@ -221,8 +219,8 @@ fn apply_terrain_verb(
                 let idx = voxel_index(lx, ly, lz);
                 let voxels = cache.ensure_chunk(chunk_id);
                 let current = voxels[idx];
-                let above_air = ly + 1 < LIVE_CHUNK_EDGE
-                    && voxels[voxel_index(lx, ly + 1, lz)] == AIR;
+                let above_air =
+                    ly + 1 < LIVE_CHUNK_EDGE && voxels[voxel_index(lx, ly + 1, lz)] == AIR;
                 let Some(mat) = disaster_cell_material(verb, dx, dy, dist2, r2, current, above_air)
                 else {
                     continue;
@@ -250,17 +248,20 @@ fn apply_bless(scene: &mut LiveStreamScene, faction: u32, magnitude: f32) -> Str
     if let Some(faction_entry) = scene.faction_entries.iter_mut().find(|f| f.id == faction) {
         faction_entry.treasury.amount += boost;
     } else {
-        scene.faction_entries.push(civ_protocol_3d::FactionStateEntry {
-            id: faction,
-            era: 0,
-            government: civ_protocol_3d::Government3d::Republic,
-            treasury: FactionTreasury3d { amount: boost, ..Default::default() },
-        });
+        scene
+            .faction_entries
+            .push(civ_protocol_3d::FactionStateEntry {
+                id: faction,
+                era: 0,
+                government: civ_protocol_3d::Government3d::Republic,
+                treasury: FactionTreasury3d {
+                    amount: boost,
+                    ..Default::default()
+                },
+            });
         scene.factions.insert(faction);
     }
-    format!(
-        "Bless: faction {faction} +{boost:.0} treasury, healed {healed} civilians"
-    )
+    format!("Bless: faction {faction} +{boost:.0} treasury, healed {healed} civilians")
 }
 
 fn apply_plague(scene: &mut LiveStreamScene, faction: u32, magnitude: f32) -> String {
@@ -275,9 +276,7 @@ fn apply_plague(scene: &mut LiveStreamScene, faction: u32, magnitude: f32) -> St
     if let Some(faction_entry) = scene.faction_entries.iter_mut().find(|f| f.id == faction) {
         faction_entry.treasury.amount = (faction_entry.treasury.amount - debit).max(0.0);
     }
-    format!(
-        "Plague: faction {faction} -{debit:.0} treasury, sickened {sickened} civilians"
-    )
+    format!("Plague: faction {faction} -{debit:.0} treasury, sickened {sickened} civilians")
 }
 
 fn apply_miracle(scene: &mut LiveStreamScene, magnitude: f32) -> String {
@@ -339,12 +338,8 @@ fn apply_god_action_requests(
         let mag = req.magnitude.clamp(0.0, 1.0);
         let status = match req.action.as_str() {
             "smite" => {
-                let (cells, dirty) = apply_terrain_verb(
-                    &mut scene.chunk_voxels,
-                    center,
-                    TerrainVerb::Meteor,
-                    mag,
-                );
+                let (cells, dirty) =
+                    apply_terrain_verb(&mut scene.chunk_voxels, center, TerrainVerb::Meteor, mag);
                 remesh_dirty_chunks(
                     &mut commands,
                     &mut scene,
@@ -365,15 +360,14 @@ fn apply_god_action_requests(
                     Color::srgb(1.0, 0.35, 0.1),
                     4.0 + mag * 6.0,
                 );
-                format!("Smite: meteor scar at ({:.2},{:.2}) — {cells} voxels", req.norm_x, req.norm_y)
+                format!(
+                    "Smite: meteor scar at ({:.2},{:.2}) — {cells} voxels",
+                    req.norm_x, req.norm_y
+                )
             }
             "earthquake" => {
-                let (cells, dirty) = apply_terrain_verb(
-                    &mut scene.chunk_voxels,
-                    center,
-                    TerrainVerb::Quake,
-                    mag,
-                );
+                let (cells, dirty) =
+                    apply_terrain_verb(&mut scene.chunk_voxels, center, TerrainVerb::Quake, mag);
                 remesh_dirty_chunks(
                     &mut commands,
                     &mut scene,
@@ -467,14 +461,7 @@ fn remesh_dirty_chunks(
     let wire = debug.wireframe.then_some(CHUNK_WIREFRAME_LINE_COLOR);
     let ids: Vec<ChunkId> = dirty.iter().copied().collect();
     remesh_cached_chunks(
-        commands,
-        scene,
-        meshes,
-        materials,
-        culling,
-        debug,
-        &ids,
-        wire,
+        commands, scene, meshes, materials, culling, debug, &ids, wire,
     );
 }
 

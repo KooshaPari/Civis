@@ -8,8 +8,8 @@
 //! one coined lexeme (non-empty `EvolvedLexicon`). Threshold: ≥ 2 such
 //! clusters after tick > 0, demonstrating independent divergence paths.
 
-use civ_agents::language::EvolvedLexicon;
 use crate::{FeatureOracle, OracleVerdict};
+use civ_agents::language::EvolvedLexicon;
 use civ_engine::Simulation;
 
 pub struct LanguageOracle;

@@ -220,8 +220,7 @@ mod tests {
         };
 
         let needs = vec![Need::Hunger(0.9), Need::Rest(0.3), Need::Social(0.1)];
-        let candidates: Vec<Box<dyn Goal>> =
-            vec![Box::new(sleep), Box::new(play), Box::new(eat)];
+        let candidates: Vec<Box<dyn Goal>> = vec![Box::new(sleep), Box::new(play), Box::new(eat)];
 
         assert_eq!(
             select_goal(&candidates, &needs),
@@ -248,8 +247,7 @@ mod tests {
         };
 
         let needs = vec![Need::Rest(0.5)];
-        let candidates: Vec<Box<dyn Goal>> =
-            vec![Box::new(beta), Box::new(alpha), Box::new(gamma)];
+        let candidates: Vec<Box<dyn Goal>> = vec![Box::new(beta), Box::new(alpha), Box::new(gamma)];
 
         // gamma wins on utility (0.7 > 0.5).
         assert_eq!(

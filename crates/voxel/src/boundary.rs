@@ -185,7 +185,6 @@ mod tests {
     use super::*;
     use crate::material::{BEDROCK, WATER};
 
-
     /// FR-CIV-VOXEL-020 - BoundaryFace::index returns a unique value 0..=5 for
     /// each face, covering all six variants in order.
     #[test]

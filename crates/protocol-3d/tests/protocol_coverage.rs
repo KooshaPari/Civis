@@ -18,7 +18,13 @@ fn civilian_state_entry_round_trips() {
     let entry = CivilianStateEntry {
         id: 7,
         faction_id: 2,
-        needs: CivilianNeeds3d { food: 0.9, shelter: 0.8, safety: 0.7, social: 0.6, rest: 0.5 },
+        needs: CivilianNeeds3d {
+            food: 0.9,
+            shelter: 0.8,
+            safety: 0.7,
+            social: 0.6,
+            rest: 0.5,
+        },
         profession: "Farmer".into(),
         genome_summary: GenomeSummary3d::default(),
         species: "human".into(),
@@ -71,16 +77,24 @@ fn quantize_dequantize_round_trip_non_zero_origin() {
         (recovered - world_m).abs() < 0.5,
         "round-trip error too large: got {recovered} for {world_m}"
     );
-    assert_eq!(quantize_axis(1_000_000.0, 0), None, "out-of-range must return None");
+    assert_eq!(
+        quantize_axis(1_000_000.0, 0),
+        None,
+        "out-of-range must return None"
+    );
 }
 
 // ── magic boundary: bundle vs binary ────────────────────────────────────────
 
 #[test]
 fn frame3d_magic_bytes_are_disjoint() {
-    let bundle_hdr = b"F3DB\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+    let bundle_hdr =
+        b"F3DB\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
     assert!(is_frame3d_bundle(bundle_hdr), "must detect F3DB magic");
-    assert!(!is_frame3d_binary(bundle_hdr), "F3DB must not be mistaken for F3D0");
+    assert!(
+        !is_frame3d_binary(bundle_hdr),
+        "F3DB must not be mistaken for F3D0"
+    );
 
     assert!(!is_frame3d_bundle(b"nope"));
     assert!(!is_frame3d_binary(b"nope"));

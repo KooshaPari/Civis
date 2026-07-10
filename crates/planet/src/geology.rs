@@ -472,10 +472,8 @@ pub fn compute_drift(
     let moist_sign: i32 = if (planet_seed / 3) % 2 == 0 { 1 } else { -1 };
 
     let years = elapsed_years.min(i32::MAX as u64) as i32;
-    let temp_delta = (warming_rate_fp.saturating_mul(years) * temp_sign)
-        .clamp(-60_000, 55_000);
-    let moisture_delta = (drying_rate_fp.saturating_mul(years) * moist_sign)
-        .clamp(-5_000, 5_000);
+    let temp_delta = (warming_rate_fp.saturating_mul(years) * temp_sign).clamp(-60_000, 55_000);
+    let moisture_delta = (drying_rate_fp.saturating_mul(years) * moist_sign).clamp(-5_000, 5_000);
 
     ClimateDrift {
         temp_delta_fp: temp_delta,
@@ -542,7 +540,11 @@ mod tests {
         ];
         let unique: std::collections::HashSet<Discriminant<BiomeKind>> =
             variants.iter().map(std::mem::discriminant).collect();
-        assert_eq!(unique.len(), variants.len(), "fixture must cover every variant");
+        assert_eq!(
+            unique.len(),
+            variants.len(),
+            "fixture must cover every variant"
+        );
         for biome in variants {
             let labels = biome.spawn_biome_affinity();
             assert!(!labels.is_empty(), "{biome:?} must expose spawn labels");
@@ -945,5 +947,4 @@ mod tests {
         assert!(even_seed.temp_delta_fp > 0);
         assert!(odd_seed.temp_delta_fp < 0);
     }
-
 }

@@ -87,8 +87,7 @@ pub fn apply_big_gods_response(
     tick: u64,
 ) {
     profile.monitoring = (profile.monitoring + gradients.grad_T * 0.01).clamp(0.0, 1.0);
-    profile.mythic_coherence =
-        (profile.mythic_coherence + gradients.grad_B * 0.01).clamp(0.0, 1.0);
+    profile.mythic_coherence = (profile.mythic_coherence + gradients.grad_B * 0.01).clamp(0.0, 1.0);
     profile.uncertainty_reduction =
         (profile.uncertainty_reduction + gradients.unrest * 0.01).clamp(0.0, 1.0);
     profile.created_tick = tick;

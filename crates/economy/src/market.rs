@@ -101,8 +101,7 @@ impl MarketState {
         // Integer-only smoothing: move toward the scarcity signal in small
         // deterministic steps. Positive imbalance raises price, negative
         // imbalance lowers it.
-        let delta = imbalance
-            .saturating_mul(MAX_PRESSURE_DELTA_CENTS)
+        let delta = imbalance.saturating_mul(MAX_PRESSURE_DELTA_CENTS)
             / baseline.saturating_mul(smoothing_factor);
         let delta = delta.clamp(-MAX_PRESSURE_DELTA_CENTS, MAX_PRESSURE_DELTA_CENTS);
         let current = self.ensure_good(good);
@@ -560,18 +559,8 @@ mod tests {
         assert!(scarce_before > DEFAULT_PRICE_CENTS);
         assert!(surplus_before < DEFAULT_PRICE_CENTS);
 
-        let supplier = settlement_with_profile(
-            1,
-            12,
-            [0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0],
-        );
-        let buyer = settlement_with_profile(
-            2,
-            0,
-            [0, 0, 0, 0, 0],
-            [8, 0, 0, 0, 0],
-        );
+        let supplier = settlement_with_profile(1, 12, [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]);
+        let buyer = settlement_with_profile(2, 0, [0, 0, 0, 0, 0], [8, 0, 0, 0, 0]);
 
         let low_price = 90;
         let high_price = 150;

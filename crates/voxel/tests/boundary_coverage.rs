@@ -1,10 +1,7 @@
 //! External integration tests for crates/voxel coverage gaps.
 //!
 //! Covers: contains_world_coord (zero-span, inside, outside) from boundary.rs.
-use civ_voxel::{
-    boundary::contains_world_coord,
-    Bounds3, WorldCoord,
-};
+use civ_voxel::{boundary::contains_world_coord, Bounds3, WorldCoord};
 
 fn wc(x: i64, y: i64, z: i64) -> WorldCoord {
     WorldCoord { x, y, z }

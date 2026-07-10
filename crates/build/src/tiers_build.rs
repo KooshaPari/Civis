@@ -441,7 +441,10 @@ mod tests {
     #[test]
     fn build_002_workshop_chain_signatures() {
         assert_eq!(ProductionChain::Workshop.inputs(), &[ProductionGood::Wood]);
-        assert_eq!(ProductionChain::Workshop.outputs(), &[ProductionGood::Tools]);
+        assert_eq!(
+            ProductionChain::Workshop.outputs(),
+            &[ProductionGood::Tools]
+        );
     }
 
     /// FR-CIV-BUILD-003 — Reject zero production_rate overrides.
@@ -452,10 +455,13 @@ mod tests {
             .clone()
             .apply_override(BuildingSpecOverride { production_rate: 0 })
             .unwrap_err();
-        assert_eq!(err, BuildingSpecOverrideError::InvalidValue {
-            field: "production_rate".to_owned(),
-            value: 0,
-        });
+        assert_eq!(
+            err,
+            BuildingSpecOverrideError::InvalidValue {
+                field: "production_rate".to_owned(),
+                value: 0,
+            }
+        );
     }
 
     /// BuildSite progresses exactly N ticks before becoming complete; tick()
@@ -492,6 +498,9 @@ mod tests {
         assert_eq!(graph.completed_count(), 1);
         graph.record_completed(&site);
         assert_eq!(graph.completed_count(), 1);
-        assert_eq!(graph.completed(id).expect("present").tier(), BuildingTier::Artisan);
+        assert_eq!(
+            graph.completed(id).expect("present").tier(),
+            BuildingTier::Artisan
+        );
     }
 }

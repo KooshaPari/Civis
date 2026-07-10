@@ -458,8 +458,14 @@ mod tests {
     fn labor_allocator_full_labor_meets_capitalist_curve() {
         let alloc = LaborCapacityAllocator::new(1.0);
         // Full labor == same as base capitalist allocator
-        assert_eq!(alloc.allocate(100, 50), CapitalistAllocator.allocate(100, 50));
-        assert_eq!(alloc.allocate(50, 100), CapitalistAllocator.allocate(50, 100));
+        assert_eq!(
+            alloc.allocate(100, 50),
+            CapitalistAllocator.allocate(100, 50)
+        );
+        assert_eq!(
+            alloc.allocate(50, 100),
+            CapitalistAllocator.allocate(50, 100)
+        );
     }
 
     #[test]

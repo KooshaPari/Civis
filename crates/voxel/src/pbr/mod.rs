@@ -36,9 +36,7 @@ pub mod triplanar_pipeline;
 pub const TRIPLANAR_WGSL_PATH: &str = "shaders/pbr_triplanar.wgsl";
 
 #[doc(inline)]
-pub use greedy_atlas::{
-    AtlasError, AtlasRect, AtlasTexture, GreedyAtlas, Vec2,
-};
+pub use greedy_atlas::{AtlasError, AtlasRect, AtlasTexture, GreedyAtlas, Vec2};
 #[doc(inline)]
 pub use triplanar_pipeline::{
     spawn_triplanar_chunk, TriplanarAtlasHandle, TriplanarChunkBinding, TriplanarChunkError,

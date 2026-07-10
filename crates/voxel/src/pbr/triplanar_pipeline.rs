@@ -244,7 +244,9 @@ pub fn spawn_triplanar_chunk(
         .find(|r| r.id == target_id)
         .ok_or(TriplanarChunkError::UnknownAtlasHandle(spec.dominant_atlas))?;
 
-    let material = spec.material.unwrap_or_else(TriplanarPbrMaterial::triplanar_full);
+    let material = spec
+        .material
+        .unwrap_or_else(TriplanarPbrMaterial::triplanar_full);
     Ok(TriplanarChunkBinding {
         chunk_id: spec.chunk_id,
         dominant_rect,
@@ -301,7 +303,12 @@ mod tests {
     fn spawn_triplanar_chunk_resolves_dominant_rect() {
         let textures = specimen_textures();
         let mut atlas = GreedyAtlas::new(1024, 1024);
-        let spec = TriplanarChunkSpec::simple(42, [0.0, 0.0, 0.0], 8.0, TriplanarAtlasHandle::from_matid(2));
+        let spec = TriplanarChunkSpec::simple(
+            42,
+            [0.0, 0.0, 0.0],
+            8.0,
+            TriplanarAtlasHandle::from_matid(2),
+        );
         let binding = spawn_triplanar_chunk(&spec, &mut atlas, &textures)
             .expect("valid handle + positive extent resolves");
         assert_eq!(binding.chunk_id, 42);
@@ -315,9 +322,14 @@ mod tests {
     fn spawn_triplanar_chunk_rejects_zero_extent() {
         let textures = specimen_textures();
         let mut atlas = GreedyAtlas::new(1024, 1024);
-        let spec = TriplanarChunkSpec::simple(7, [0.0, 0.0, 0.0], 0.0, TriplanarAtlasHandle::from_matid(1));
-        let err = spawn_triplanar_chunk(&spec, &mut atlas, &textures)
-            .expect_err("zero extent rejected");
+        let spec = TriplanarChunkSpec::simple(
+            7,
+            [0.0, 0.0, 0.0],
+            0.0,
+            TriplanarAtlasHandle::from_matid(1),
+        );
+        let err =
+            spawn_triplanar_chunk(&spec, &mut atlas, &textures).expect_err("zero extent rejected");
         assert_eq!(err, TriplanarChunkError::ZeroExtent);
     }
 

@@ -445,7 +445,10 @@ mod tests {
         save_to_slot(dir.path(), "b", &sim_b).expect("save b");
 
         let slots = list_slots(dir.path()).expect("list slots");
-        let names = slots.iter().map(|slot| slot.name.as_str()).collect::<Vec<_>>();
+        let names = slots
+            .iter()
+            .map(|slot| slot.name.as_str())
+            .collect::<Vec<_>>();
         assert!(names.contains(&"a"));
         assert!(names.contains(&"b"));
 
@@ -455,7 +458,10 @@ mod tests {
 
         assert!(delete_slot(dir.path(), "a").expect("delete a"));
         let slots = list_slots(dir.path()).expect("list after delete");
-        let names = slots.iter().map(|slot| slot.name.as_str()).collect::<Vec<_>>();
+        let names = slots
+            .iter()
+            .map(|slot| slot.name.as_str())
+            .collect::<Vec<_>>();
         assert!(!names.contains(&"a"));
         assert!(names.contains(&"b"));
     }

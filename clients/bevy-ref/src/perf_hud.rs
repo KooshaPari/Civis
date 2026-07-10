@@ -1,4 +1,4 @@
-﻿#![cfg(all(feature = "bevy", feature = "egui"))]
+#![cfg(all(feature = "bevy", feature = "egui"))]
 
 //! Performance HUD overlay (FR-CIV-PERF-001).
 //! P key toggles. Shows FPS, frame-ms, sim tick, tick-ms, civilians, factions.
@@ -30,7 +30,10 @@ impl Plugin for PerfHudPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PerfHudState>()
             .init_resource::<PerfMetrics>()
-            .add_systems(Update, (toggle_perf_hud, draw_perf_hud).chain().run_if(in_game));
+            .add_systems(
+                Update,
+                (toggle_perf_hud, draw_perf_hud).chain().run_if(in_game),
+            );
     }
 }
 
@@ -50,17 +53,17 @@ fn fps_color(fps: f32) -> egui::Color32 {
     }
 }
 
-fn draw_perf_hud(
-    mut contexts: EguiContexts,
-    state: Res<PerfHudState>,
-    metrics: Res<PerfMetrics>,
-) {
-    if !state.visible { return; }
+fn draw_perf_hud(mut contexts: EguiContexts, state: Res<PerfHudState>, metrics: Res<PerfMetrics>) {
+    if !state.visible {
+        return;
+    }
 
     let fps = metrics.fps;
     let frame_ms = if fps > 0.0 { 1000.0 / fps } else { 0.0 };
 
-    let Ok(ctx) = contexts.ctx_mut() else { return; };
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
     let screen = ctx.content_rect();
 
     egui::Area::new(egui::Id::new("perf_hud"))
@@ -76,11 +79,15 @@ fn draw_perf_hud(
                     ui.horizontal(|ui| {
                         ui.label(
                             egui::RichText::new(format!("FPS: {:.1}", fps))
-                                .monospace().color(fps_color(fps)).size(12.0),
+                                .monospace()
+                                .color(fps_color(fps))
+                                .size(12.0),
                         );
                         ui.label(
                             egui::RichText::new(format!("  frame: {:.1}ms", frame_ms))
-                                .monospace().color(egui::Color32::from_rgb(160, 170, 180)).size(12.0),
+                                .monospace()
+                                .color(egui::Color32::from_rgb(160, 170, 180))
+                                .size(12.0),
                         );
                     });
                     ui.label(
@@ -88,14 +95,18 @@ fn draw_perf_hud(
                             "sim tick: {}  tick_ms: {:.1}ms",
                             metrics.tick, metrics.tick_ms
                         ))
-                        .monospace().color(egui::Color32::from_rgb(160, 170, 180)).size(12.0),
+                        .monospace()
+                        .color(egui::Color32::from_rgb(160, 170, 180))
+                        .size(12.0),
                     );
                     ui.label(
                         egui::RichText::new(format!(
                             "civilians: {}  factions: {}",
                             metrics.civilian_count, metrics.faction_count
                         ))
-                        .monospace().color(egui::Color32::from_rgb(160, 170, 180)).size(12.0),
+                        .monospace()
+                        .color(egui::Color32::from_rgb(160, 170, 180))
+                        .size(12.0),
                     );
                 });
         });

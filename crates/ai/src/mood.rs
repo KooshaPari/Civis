@@ -295,15 +295,9 @@ impl MoodState {
                 MoodFactorKind::NeedSatisfaction,
                 need_satisfaction_factor(&inputs.needs),
             ),
-            MoodFactor::new(
-                MoodFactorKind::RecentMemory,
-                memory_factor(inputs),
-            ),
+            MoodFactor::new(MoodFactorKind::RecentMemory, memory_factor(inputs)),
             MoodFactor::new(MoodFactorKind::Environment, inputs.environment),
-            MoodFactor::new(
-                MoodFactorKind::SocialEvents,
-                social_factor(inputs),
-            ),
+            MoodFactor::new(MoodFactorKind::SocialEvents, social_factor(inputs)),
         ];
 
         let raw = factors
@@ -353,8 +347,7 @@ fn need_satisfaction_factor(needs: &[Need]) -> f32 {
     if needs.is_empty() {
         return 0.0;
     }
-    let mean_urgency: f32 =
-        needs.iter().map(|n| n.urgency()).sum::<f32>() / needs.len() as f32;
+    let mean_urgency: f32 = needs.iter().map(|n| n.urgency()).sum::<f32>() / needs.len() as f32;
     (1.0 - mean_urgency).clamp(-1.0, 1.0)
 }
 
@@ -476,21 +469,15 @@ mod tests {
         };
 
         let negative = MoodInputs {
-            memory_events: (0..5)
-                .map(|i| MemoryEvent::new(500 - i, -0.9))
-                .collect(),
+            memory_events: (0..5).map(|i| MemoryEvent::new(500 - i, -0.9)).collect(),
             social_events: (0..5)
                 .map(|i| SocialMoodEvent::new(500 - i, -0.9))
                 .collect(),
             ..base.clone()
         };
         let positive = MoodInputs {
-            memory_events: (0..5)
-                .map(|i| MemoryEvent::new(500 - i, 0.9))
-                .collect(),
-            social_events: (0..5)
-                .map(|i| SocialMoodEvent::new(500 - i, 0.9))
-                .collect(),
+            memory_events: (0..5).map(|i| MemoryEvent::new(500 - i, 0.9)).collect(),
+            social_events: (0..5).map(|i| SocialMoodEvent::new(500 - i, 0.9)).collect(),
             ..base
         };
 
@@ -563,7 +550,10 @@ mod tests {
         // The breakdown must be visible without recomputing (inspectability).
         let _ = state.valence; // explicit field access
         let _ = state.factors; // explicit field access
-        assert!(!state.factors.is_empty(), "factor breakdown must be non-empty");
+        assert!(
+            !state.factors.is_empty(),
+            "factor breakdown must be non-empty"
+        );
     }
 
     /// FR-CIV-PSYCHE-901 — recompute is a pure function of inputs: identical
@@ -618,7 +608,9 @@ mod tests {
     fn factor_lookup_is_safe_on_neutral_state() {
         let state = MoodState::neutral();
         for kind in MoodFactorKind::all() {
-            let f = state.factor(kind).expect("neutral state must enumerate every kind");
+            let f = state
+                .factor(kind)
+                .expect("neutral state must enumerate every kind");
             assert_eq!(f.value, 0.0);
         }
         assert_eq!(state.valence, 0.0);

@@ -82,12 +82,7 @@ impl AtlasRect {
         debug_assert!(atlas_size > 0.0);
         let ax = (f32::from(self.x) + lx * f32::from(self.width)) / atlas_size;
         let ay = (f32::from(self.y) + ly * f32::from(self.height)) / atlas_size;
-        let corners = [
-            (0.0, 0.0),
-            (1.0, 0.0),
-            (1.0, 1.0),
-            (0.0, 1.0),
-        ];
+        let corners = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)];
         corners.map(|(u, v)| Vec2 {
             x: ax + u * f32::from(self.width) / atlas_size,
             y: ay + v * f32::from(self.height) / atlas_size,
@@ -153,10 +148,9 @@ impl fmt::Display for AtlasError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::DuplicateId(id) => write!(f, "duplicate atlas id {id}"),
-            Self::RectTooLarge { id, width, height } => write!(
-                f,
-                "rect {id} ({width}x{height}) does not fit in the atlas"
-            ),
+            Self::RectTooLarge { id, width, height } => {
+                write!(f, "rect {id} ({width}x{height}) does not fit in the atlas")
+            }
             Self::ZeroSize { id } => write!(f, "rect {id} has zero width or height"),
         }
     }
@@ -188,7 +182,11 @@ impl GreedyAtlas {
     pub fn new(width: u32, height: u32) -> Self {
         assert!(width > 0, "atlas width must be > 0");
         assert!(height > 0, "atlas height must be > 0");
-        Self { width, height, shelves: Vec::new() }
+        Self {
+            width,
+            height,
+            shelves: Vec::new(),
+        }
     }
 
     /// Pack a slice of textures into the atlas. Returns one [`AtlasRect`] per
@@ -231,11 +229,7 @@ impl GreedyAtlas {
 
         // Step 3: descending-height sort, tie-break by id descending.
         let mut sorted: Vec<AtlasTexture> = textures.to_vec();
-        sorted.sort_by(|a, b| {
-            b.height
-                .cmp(&a.height)
-                .then_with(|| b.id.cmp(&a.id))
-        });
+        sorted.sort_by(|a, b| b.height.cmp(&a.height).then_with(|| b.id.cmp(&a.id)));
 
         // Step 4 + 5: sweep pack.
         let mut placed: std::collections::HashMap<u32, AtlasRect> =
@@ -255,9 +249,7 @@ impl GreedyAtlas {
             // Try to fit on an existing shelf.
             let mut chosen: Option<usize> = None;
             for (i, shelf) in self.shelves.iter().enumerate() {
-                if shelf.height >= h
-                    && u32::from(shelf.cursor_x) + u32::from(w) <= self.width
-                {
+                if shelf.height >= h && u32::from(shelf.cursor_x) + u32::from(w) <= self.width {
                     chosen = Some(i);
                     break;
                 }
@@ -276,8 +268,11 @@ impl GreedyAtlas {
                 rect
             } else {
                 // Allocate a new shelf at the current bottom.
-                let shelf_bottom: u32 =
-                    self.shelves.iter().map(|s| u32::from(s.y) + u32::from(s.height)).sum();
+                let shelf_bottom: u32 = self
+                    .shelves
+                    .iter()
+                    .map(|s| u32::from(s.y) + u32::from(s.height))
+                    .sum();
                 if shelf_bottom + u32::from(h) > self.height {
                     return Err(AtlasError::RectTooLarge {
                         id: t.id,
@@ -325,10 +320,7 @@ impl GreedyAtlas {
     /// the packer actually filled.
     #[must_use]
     pub fn packed_height(&self) -> u32 {
-        self.shelves
-            .iter()
-            .map(|s| u32::from(s.height))
-            .sum()
+        self.shelves.iter().map(|s| u32::from(s.height)).sum()
     }
 }
 
@@ -337,7 +329,11 @@ mod tests {
     use super::*;
 
     fn rect(id: u32, w: u16, h: u16) -> AtlasTexture {
-        AtlasTexture { id, width: w, height: h }
+        AtlasTexture {
+            id,
+            width: w,
+            height: h,
+        }
     }
 
     /// Packing an empty input returns an empty rect list and leaves the shelves
@@ -355,13 +351,17 @@ mod tests {
     #[test]
     fn pack_single_texture_lands_at_origin() {
         let mut atlas = GreedyAtlas::new(512, 512);
-        let out = atlas
-            .pack(&[rect(1, 256, 128)])
-            .expect("single rect packs");
+        let out = atlas.pack(&[rect(1, 256, 128)]).expect("single rect packs");
         assert_eq!(out.len(), 1);
         assert_eq!(
             out[0],
-            AtlasRect { id: 1, x: 0, y: 0, width: 256, height: 128 }
+            AtlasRect {
+                id: 1,
+                x: 0,
+                y: 0,
+                width: 256,
+                height: 128
+            }
         );
         assert_eq!(atlas.shelf_count(), 1);
         assert_eq!(atlas.packed_height(), 128);

@@ -160,7 +160,10 @@ impl Transcript {
     /// Construct a transcript from a clause vector and optional flavor
     /// text.
     pub fn new(clauses: Vec<TranscriptClause>, flavor_text: Option<String>) -> Self {
-        Self { clauses, flavor_text }
+        Self {
+            clauses,
+            flavor_text,
+        }
     }
 
     /// Construct an empty transcript.
@@ -241,7 +244,10 @@ fn format_clause(clause: &TranscriptClause) -> String {
                 party.0, level, prior_level
             )
         }
-        TranscriptClause::Accept { party, agreed_level } => {
+        TranscriptClause::Accept {
+            party,
+            agreed_level,
+        } => {
             format!("accept party={} agreed_level={}", party.0, agreed_level)
         }
         TranscriptClause::Reject { party, last_level } => {
@@ -308,7 +314,10 @@ mod tests {
         //    must contain each variant's tag plus its fields, and the
         //    deserialized value must equal the original.
         let wire = serde_json::to_string(&transcript).expect("serialize transcript");
-        assert!(wire.contains("\"Offer\""), "wire form encodes Offer variant");
+        assert!(
+            wire.contains("\"Offer\""),
+            "wire form encodes Offer variant"
+        );
         assert!(
             wire.contains("\"Counter\""),
             "wire form encodes Counter variant"
@@ -318,8 +327,7 @@ mod tests {
             "wire form encodes Accept variant"
         );
 
-        let decoded: Transcript =
-            serde_json::from_str(&wire).expect("deserialize transcript");
+        let decoded: Transcript = serde_json::from_str(&wire).expect("deserialize transcript");
         assert_eq!(
             decoded.clauses(),
             transcript.clauses(),
@@ -357,7 +365,10 @@ mod tests {
         // updated to match the new format. The assertion itself is the
         // hook for that evolution.
         assert!(first.contains("offer"), "rendered text references Offer");
-        assert!(first.contains("counter"), "rendered text references Counter");
+        assert!(
+            first.contains("counter"),
+            "rendered text references Counter"
+        );
         assert!(first.contains("accept"), "rendered text references Accept");
     }
 

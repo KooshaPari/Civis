@@ -34,9 +34,10 @@ pub fn ensure_seeded_word(state: &mut LanguageState, kind: WordKind, meaning: [f
         WordKind::Place => "place",
         WordKind::Person => "person",
     };
-    state
-        .lexemes
-        .push(format!("{key}:{}", meaning[0] + meaning[1] + meaning[2] + meaning[3]));
+    state.lexemes.push(format!(
+        "{key}:{}",
+        meaning[0] + meaning[1] + meaning[2] + meaning[3]
+    ));
 }
 
 /// Borrow a word from `source` into `target`. Stub: no-op.

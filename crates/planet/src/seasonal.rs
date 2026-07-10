@@ -79,17 +79,17 @@ fn base_season_modifiers(season: SeasonKind) -> SeasonalModifiers {
             wildfire_likelihood_fp: 500, // wet — fires suppressed
         },
         SeasonKind::Summer => SeasonalModifiers {
-            food_productivity_fp: 1_100, // peak growth
-            drought_likelihood_fp: 1_600, // heat / dry season peak
-            flood_likelihood_fp: 700,    // lower baseline
-            storm_likelihood_fp: 1_300,  // convective storms
+            food_productivity_fp: 1_100,   // peak growth
+            drought_likelihood_fp: 1_600,  // heat / dry season peak
+            flood_likelihood_fp: 700,      // lower baseline
+            storm_likelihood_fp: 1_300,    // convective storms
             wildfire_likelihood_fp: 1_700, // peak fire season
         },
         SeasonKind::Autumn => SeasonalModifiers {
-            food_productivity_fp: 1_400, // harvest peak
-            drought_likelihood_fp: 900,  // cooling off
-            flood_likelihood_fp: 1_100,  // autumn rains
-            storm_likelihood_fp: 1_400,  // hurricane season
+            food_productivity_fp: 1_400,   // harvest peak
+            drought_likelihood_fp: 900,    // cooling off
+            flood_likelihood_fp: 1_100,    // autumn rains
+            storm_likelihood_fp: 1_400,    // hurricane season
             wildfire_likelihood_fp: 1_200, // dry after summer
         },
         SeasonKind::Winter => SeasonalModifiers {
@@ -135,7 +135,8 @@ fn apply_biome_amplification(
         BiomeKind::Tundra | BiomeKind::Glacier | BiomeKind::Alpine => {
             m.food_productivity_fp = (m.food_productivity_fp * 300) / FP_SCALE;
             if matches!(season, SeasonKind::Spring) {
-                m.flood_likelihood_fp = (m.flood_likelihood_fp * 1_600) / FP_SCALE; // ice melt
+                m.flood_likelihood_fp = (m.flood_likelihood_fp * 1_600) / FP_SCALE;
+                // ice melt
             }
         }
         // Plains / grassland: solid harvest season; high wildfire in dry summer.

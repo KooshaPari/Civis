@@ -216,10 +216,7 @@ fn validate_residency_impl(
     // `NaN` comparisons are always `false`, so a NaN resident area falls
     // into the "exceeds" branch (it is neither ≤ nor >, so we must
     // explicitly reject it).
-    if current.is_nan()
-        || current.is_infinite()
-        || current > limits.max_resident_area_sq_mi
-    {
+    if current.is_nan() || current.is_infinite() || current > limits.max_resident_area_sq_mi {
         return Err(ResidencyError::ExceedsArea {
             current_area_sq_mi_bits: current.to_bits(),
             max_resident_area_sq_mi_bits: limits.max_resident_area_sq_mi.to_bits(),

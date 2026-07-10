@@ -42,7 +42,9 @@ impl ChunkVoxelCache {
 
     /// Borrow a cached chunk payload mutably, creating an empty dense chunk if needed.
     pub fn ensure_chunk(&mut self, chunk_id: ChunkId) -> &mut Vec<MaterialId> {
-        self.chunks.entry(chunk_id.0).or_insert_with(|| vec![MaterialId(0); CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE])
+        self.chunks
+            .entry(chunk_id.0)
+            .or_insert_with(|| vec![MaterialId(0); CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE])
     }
 
     /// Borrow the underlying map (for iteration in samplers).

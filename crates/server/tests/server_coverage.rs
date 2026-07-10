@@ -17,7 +17,10 @@ use serde_json::json;
 #[test]
 fn validate_production_slot_accepts_all_known_slots() {
     for slot in &PRODUCTION_SLOTS {
-        assert!(validate_production_slot(slot).is_ok(), "expected Ok for {slot}");
+        assert!(
+            validate_production_slot(slot).is_ok(),
+            "expected Ok for {slot}"
+        );
     }
 }
 
@@ -43,8 +46,14 @@ fn save_type_for_name_classifies_correctly() {
 fn save_category_for_name_matches_type_classification() {
     assert_eq!(save_category_for_name("slot-1"), SaveSlotCategory::Slot);
     assert_eq!(save_category_for_name("autosave"), SaveSlotCategory::Auto);
-    assert_eq!(save_category_for_name("autosave-001"), SaveSlotCategory::Auto);
-    assert_eq!(save_category_for_name("manual-save"), SaveSlotCategory::Manual);
+    assert_eq!(
+        save_category_for_name("autosave-001"),
+        SaveSlotCategory::Auto
+    );
+    assert_eq!(
+        save_category_for_name("manual-save"),
+        SaveSlotCategory::Manual
+    );
 }
 
 // ── mtime_unix_seconds / age_label_for_mtime ────────────────────────────────

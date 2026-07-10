@@ -33,9 +33,7 @@ impl FeatureOracle for LegendsOracle {
             passed,
             measured,
             threshold,
-            detail: format!(
-                "Legends emergence: saga_graph_nodes={node_count} at tick={tick}"
-            ),
+            detail: format!("Legends emergence: saga_graph_nodes={node_count} at tick={tick}"),
         }
     }
 }

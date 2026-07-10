@@ -39,9 +39,7 @@ impl FeatureOracle for MoodOracle {
             threshold,
             detail: format!(
                 "Mood emergence: citizens={} buildings={} (citizen×building={}) at tick={tick}",
-                snap.citizen_count,
-                snap.building_count,
-                measured as u32
+                snap.citizen_count, snap.building_count, measured as u32
             ),
         }
     }

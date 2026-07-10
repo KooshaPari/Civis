@@ -188,6 +188,19 @@ impl Simulation {
         EmergenceState::new(seed)
     }
 
+    #[cfg(test)]
+    pub(crate) fn apply_named_legend_influence(&mut self) {
+        let named = self
+            .emergence
+            .legends
+            .graph
+            .query_named_legends()
+            .named_entities
+            .len() as i64;
+        self.add_belief(named.saturating_mul(BELIEF_PER_NAMED_LEGEND));
+        self.add_cohesion(named.saturating_mul(COHESION_PER_NAMED_LEGEND));
+    }
+
     /// MOAT emergence — genetics, culture, social, psyche, legends, civ-ai.
     ///
     /// Runs after [`Self::phase_life`] so needs/clusters are current.

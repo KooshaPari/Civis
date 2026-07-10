@@ -3605,7 +3605,8 @@ mod tests {
         // saturation pass acts.
         let mut g = CaGrid::new([1, 1, 1]);
         g.set_with_temp(0, 0, 0, WATER, hot_temp);
-        g.saturation[g.index(0, 0, 0).unwrap()] = 100;
+        let cell = g.index(0, 0, 0).unwrap();
+        g.saturation[cell] = 100;
         g.mark_dirty_cell(0, 0, 0);
 
         let cells = g.dirty_cell_indices();
@@ -3636,7 +3637,8 @@ mod tests {
         // threshold for WATER, so the pass must skip the cell entirely.
         let mut g = CaGrid::new([1, 1, 1]);
         g.set_with_temp(0, 0, 0, WATER, cold_temp);
-        g.saturation[g.index(0, 0, 0).unwrap()] = 100;
+        let cell = g.index(0, 0, 0).unwrap();
+        g.saturation[cell] = 100;
         g.mark_dirty_cell(0, 0, 0);
 
         let cells = g.dirty_cell_indices();
@@ -3682,7 +3684,8 @@ mod tests {
         // ---- hot cell: 80 °C initial, expect to dry by exactly N units
         let mut hot = CaGrid::new([1, 1, 1]);
         hot.set_with_temp(0, 0, 0, WATER, 80);
-        hot.saturation[hot.index(0, 0, 0).unwrap()] = 100;
+        let hot_cell = hot.index(0, 0, 0).unwrap();
+        hot.saturation[hot_cell] = 100;
         hot.mark_dirty_cell(0, 0, 0);
         // 10 ticks lose EVAP_PER_STEP per tick while above threshold. The cell
         // is held at y=0 so `water_step` cannot drain it; thermo has no
@@ -3704,7 +3707,8 @@ mod tests {
         // ---- cold cell: 20 °C initial, expect zero loss
         let mut cold = CaGrid::new([1, 1, 1]);
         cold.set_with_temp(0, 0, 0, WATER, 20);
-        cold.saturation[cold.index(0, 0, 0).unwrap()] = 100;
+        let cold_cell = cold.index(0, 0, 0).unwrap();
+        cold.saturation[cold_cell] = 100;
         cold.mark_dirty_cell(0, 0, 0);
         step_n_with_config(&mut cold, reg(), 10, BoundaryConfig::closed(), 0);
         assert_eq!(

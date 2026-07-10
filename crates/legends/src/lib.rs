@@ -47,7 +47,7 @@ pub use model::{
 pub use query::{CausalDag, DigestEvent, EntityRef, EpochDigest, NamedEntitySummary, NamedLegendsResult, Saga, QUERY_API_VERSION};
 pub use rumor::{
     register_render, render, retell, witness, DefaultNameResolver,
-    HistorianMind, NameResolver, Ocean, Register, Rumor, RumorMill,
+    Chronicle, ChronicleEntry, HistorianMind, NameResolver, Ocean, Register, Rumor, RumorMill,
 };
 pub use worker::LegendsWorker;
 
@@ -137,6 +137,26 @@ mod tests {
 }
 
 impl SagaGraph {
+    /// Mark an existing entity as a legend and assign its display title.
+    pub fn promote_to_legend(
+        &mut self,
+        entity: LegendEntityId,
+        title: String,
+        _role: Role,
+    ) -> Result<(), LegendEntityId> {
+        let Some(idx) = self.entity_idx(entity) else {
+            return Err(entity);
+        };
+        if self.g[idx].as_entity().is_none() {
+            return Err(entity);
+        }
+        if let crate::model::LegendNode::Entity(node) = &mut self.g[idx] {
+            node.promoted = true;
+            node.title = Some(title);
+        }
+        Ok(())
+    }
+
     /// Mark a promoted/extant entity as deceased at `epoch` (feeds `fallen` in digests
     /// and the inspector's death epoch). Idempotent; no-op for unknown ids.
     pub fn mark_died(&mut self, entity: LegendEntityId, epoch: Epoch) {

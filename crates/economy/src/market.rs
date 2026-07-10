@@ -533,15 +533,18 @@ mod tests {
     fn settlement_with_profile(
         id: u32,
         food_stock: i64,
-        production: [i64; 6],
-        consumption: [i64; 6],
+        production: [i64; 5],
+        consumption: [i64; 5],
     ) -> Settlement {
-        let mut settlement = Settlement::new(id, glam::IVec3::ZERO);
         let mut stocks = Stocks::default();
-        stocks.set(Good::Food, food_stock);
-        settlement.stocks = stocks;
-        settlement.profile = ProductionProfile::new(production, consumption);
-        settlement
+        stocks.add(Good::Food, food_stock);
+        Settlement {
+            id: u64::from(id),
+            name: String::new(),
+            position: (0, 0, 0),
+            stocks,
+            profile: ProductionProfile::new(production, consumption),
+        }
     }
 
     /// FR-CIV-MARKET — scarcity lifts price, surplus lowers it, and the
@@ -560,14 +563,14 @@ mod tests {
         let supplier = settlement_with_profile(
             1,
             12,
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
         );
         let buyer = settlement_with_profile(
             2,
             0,
-            [0, 0, 0, 0, 0, 0],
-            [8, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [8, 0, 0, 0, 0],
         );
 
         let low_price = 90;

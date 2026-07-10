@@ -679,6 +679,15 @@ pub struct SimTerraformExtentArgs {
     pub transport: RpcArgs,
 }
 
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct SimLegendsArgs {
+    /// Legend query mode accepted by `sim.legends` (defaults to `status`).
+    pub query: Option<String>,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SimDisasterKind {
@@ -2495,6 +2504,25 @@ impl CivisMcpServer {
             "sim.terraform_extent",
             params,
             "sim_terraform_extent",
+        )
+        .map(Json)
+    }
+
+    /// Query the saga graph / legends surface from civ-server.
+    #[tool(
+        name = "sim_legends",
+        description = "Forward sim.legends to civ-server. Query saga-graph and legend status (defaults to status)."
+    )]
+    async fn sim_legends(
+        &self,
+        Parameters(SimLegendsArgs { query, transport }): Parameters<SimLegendsArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        let query = query.unwrap_or_else(|| "status".to_owned());
+        forward_rpc(
+            &transport,
+            "sim.legends",
+            json!({ "query": query }),
+            "sim_legends",
         )
         .map(Json)
     }

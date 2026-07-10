@@ -2687,7 +2687,7 @@ impl Simulation {
     }
 
     /// Resolve a civilian agent id to its ECS entity.
-    pub(crate) fn agent_entity(&self, agent_id: u64) -> Option<Entity> {
+    pub fn agent_entity(&self, agent_id: u64) -> Option<Entity> {
         self.world
             .query::<&AgentCivilian>()
             .iter()

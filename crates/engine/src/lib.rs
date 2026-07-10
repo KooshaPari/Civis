@@ -80,11 +80,13 @@ pub use civ_emergence_metrics::branching::BranchingRegime;
 pub use emergence_metrics::{EmergenceBranchingState, EmergenceSample};
 pub use engine::{
 
-    job_type_for_civilian_id, Building, BuildingType, Citizen, CombatDamagePulse, DiplomacyKind,
+    job_type_for_civilian_id, Building, BuildingType, Citizen, CombatDamagePulse, DiplomacyEvent, DiplomacyKind,
     EconomicFocus, EconomicFocusEvent, InstitutionEvent, JobType,
     MilitaryUnit, Position, ResourceType, Resources, Sim, SimSeed, Simulation, SimulationSnapshot,
     PsycheDrivenBehavior, StratBand, StratificationEvent, StratificationEventKind,
-    StratificationReport, TradeRoute, UnitType, WorldState, ClusterStocks,
+    StratificationReport, TradeRoute, UnitType, WorldState, ClusterStocks, MoodSnapshot,
+    EmotionDrivenBehavior, cohesion_delta, diplomacy_conflict_threshold,
+    diplomacy_peace_threshold, institution_belief_signal, institution_divergence_boost,
 };
 pub use hash_chain::hash_hex;
 pub use replay::ReplayLog;
@@ -109,6 +111,12 @@ pub use spectator::SpectatorView;
 //     EmergentLayout, LayoutStrategy,
 // };
 pub use era::{CivAge, CivEra, EraProgressionState, FactionEraSnapshot};
+pub use religion::{
+    apply_big_gods_response, last_religion_sample, ReligiousProfile, SubstrateGradients,
+};
+pub use psyche_behavior::behavior_from_psyche;
+pub use civ_institutions::InstitutionKind;
+pub use civ_voxel::WorldCoord;
 // TODO(cleanup-surgeon): `history`/`tech` modules are stubs — the real
 // implementations need restoring. These re-exports were the cargo source of
 // the E0432 cascade for era.rs / engine.rs.

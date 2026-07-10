@@ -108,7 +108,10 @@ fn estimated_casualties_reduce_population() {
         100 - casualties,
         "population should be reduced by estimated casualties"
     );
-    assert!(population < 100, "population must be strictly lower after casualties");
+    assert!(
+        population < 100,
+        "population must be strictly lower after casualties"
+    );
 }
 
 /// **Scenario:** Large damage can completely wipe out a small unit.
@@ -126,7 +129,10 @@ fn casualties_saturate_at_zero_population() {
     };
 
     let casualties = huge_damage.estimated_casualties();
-    assert!(casualties > 0, "huge damage should yield non-zero casualties");
+    assert!(
+        casualties > 0,
+        "huge damage should yield non-zero casualties"
+    );
 
     let mut population = 10_u32;
     reduce_population(&mut population, casualties);
@@ -163,7 +169,10 @@ fn zero_damage_yields_zero_casualties_and_no_population_loss() {
     let mut population = 50_u32;
     reduce_population(&mut population, no_radius.estimated_casualties());
     reduce_population(&mut population, no_energy.estimated_casualties());
-    assert_eq!(population, 50, "population should remain unchanged after zero casualties");
+    assert_eq!(
+        population, 50,
+        "population should remain unchanged after zero casualties"
+    );
 }
 
 /// **Scenario:** The same damage event always produces the same casualty
@@ -260,7 +269,10 @@ fn engagement_damage_removes_voxels() {
     let bridge = WarBridge::new(&world, config);
 
     let engagements = bridge.resolve_combat(1, &units, None);
-    assert!(!engagements.is_empty(), "expected an engagement to hit the target");
+    assert!(
+        !engagements.is_empty(),
+        "expected an engagement to hit the target"
+    );
 
     let mut total_removed = 0usize;
     for engagement in &engagements {

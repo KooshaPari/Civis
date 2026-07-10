@@ -8,7 +8,7 @@
 
 ---
 
-## Method catalog (30)
+## Method catalog (31)
 
 | Method | Role (when `require_role`) | Params | Success result (dispatch; bridge may enrich) | `ws_smoke` integration test |
 |--------|----------------------------|--------|---------------------------------------------|------------------------------|
@@ -16,6 +16,7 @@
 | `sim.status` | — | `{}` or omit | `{ "tick": <u64> }`; adds `"population"` when bridge has sim | [`ws_jsonrpc_sim_status_returns_tick_and_population`](../../crates/server/tests/ws_smoke.rs) |
 | `sim.snapshot` | — | `{}` or omit | Full snapshot when sim available (see [Snapshot result](#simsnapshot-result)); else `{ "tick", "speed_multiplier" }` | [`ws_jsonrpc_sim_snapshot_returns_snapshot_fields`](../../crates/server/tests/ws_smoke.rs) |
 | `sim.emergence` | — | `{}` or omit | Latest emergence sample when available; else `{ "tick", "sample": null }` | Unit: `sim_emergence_*` in `jsonrpc.rs` |
+| `sim.legends` | — | `{}` or omit | Latest saga-graph query payload; else `{ "query": "status", "stub": true }` | Unit: `sim_legends_returns_query_payload` in `jsonrpc.rs` |
 | `sim.perf` | — | `{}` or omit | `{ "tick", "last_tick_ms", "agent_count", "ca_steps", "stub" }` | Unit/dispatch coverage in `jsonrpc.rs` |
 | `sim.outcome` | — | `{}` or omit | `{ "outcome", "reason", "tick" }` | Unit/dispatch coverage in `jsonrpc.rs` |
 | `sim.subscribe` | — | `{ "frame_kinds"? \| "filter"? \| "filter_types"?, "tick_stride"?, "max_framerate_hz"?, "subscription_id"? }` | WebSocket only: `{ "subscribed": true, "subscription_id", "filter_active", "frame_kinds", "tick_stride", "current_tick" }`; plain dispatch returns `-32603` | [`ws_sim_subscribe_limits_tick_broadcast_frames`](../../crates/server/tests/ws_smoke.rs) |
@@ -34,9 +35,10 @@
 | `sim.spawn_civilian` | **operator** | `{ "x", "y": <f64 normalized 0–1>, "faction"? }` default faction `0` | Dispatch: `{ "accepted": true }`; bridge: `{ "accepted", "ok", "entity_id" }` | [`ws_jsonrpc_sim_spawn_civilian_returns_entity_id`](../../crates/server/tests/ws_smoke.rs), [`ws_jsonrpc_spawn_civilian_pin_appears_in_snapshot`](../../crates/server/tests/ws_smoke.rs) |
 | `sim.spawn_entity` | **operator** | `{ "kind", "x", "y", "faction"? }` — `kind`: `civilian` \| `vehicle` \| `airport` \| `port` \| `hangar` | Dispatch: `{ "accepted": true, "kind": <wire label> }`; bridge adds `ok`, `entity_id` | [`ws_jsonrpc_sim_spawn_entity_vehicle_returns_entity_id`](../../crates/server/tests/ws_smoke.rs) |
 | `sim.place_voxel` | **operator** | `{ "x", "y", "z": <i64 world>, "material"? }` default `0` | Dispatch: `{ "accepted": true }`; bridge: `{ "accepted", "ok": true }` | — (unit: `parse_place_voxel_params_reads_coords` in `jsonrpc.rs`) |
-| `sim.inspect_tile` | — | `{ "x"?: <i64>, "y"?: <i64> }` | `{ "x", "y", "stub": true }` | Unit/dispatch coverage in `jsonrpc.rs` |
+| `sim.terraform_extent` | **operator** | `{ "x", "y", "z": <i64>, "op"?: string default `raise`, "material"?: u16, "radius"?: 1–32 default `3` }` | Dispatch: `{ "accepted": true, "op" }`; bridge: `{ "accepted", "ok", "writes", "op" }` | — (`civ_voxel::stamp_footprint`) |
+| `sim.inspect_tile` | — | `{ "x"?: <i64>, "y"?: <i64> }` | Tile inspection payload (material + terrain_height + nearest faction/agent) | Unit/dispatch coverage in `jsonrpc.rs` |
 | `sim.god_action` | **operator** | `{ "action", "x"?, "y"?, "target_faction"?, "magnitude"? }` | `{ "ok": true, "tick" }` | Unit/dispatch coverage in `jsonrpc.rs` |
-| `sim.diplomacy_action` | — | `{ "action"?, "target_faction"? }` | `{ "action", "target_faction", "stub": true, "tick" }` | Unit/dispatch coverage in `jsonrpc.rs` |
+| `sim.diplomacy_action` | — | `{ "action"?, "target_faction"? }` | Diplomacy action result | Unit/dispatch coverage in `jsonrpc.rs` |
 | `sim.damage` | **operator** | `{ "x", "y", "z": <i64>, "radius"? }` default `8` clamped 1–32, `"energy"?` default `1000` | Dispatch: `{ "accepted": true }`; bridge: `{ "accepted", "ok", "queued": true }` (applied next tick) | [`ws_jsonrpc_sim_damage_accepts_event`](../../crates/server/tests/ws_smoke.rs) |
 | `save.slot` | — | `{ "slot_name": "slot-1" … "slot-5" }` | `{ "saved": true, "slot_name", "tick", "path" }` (writes `{saves_dir}/{slot_name}.civsave.zst`) | [`ws_jsonrpc_save_slot_roundtrip`](../../crates/server/tests/ws_smoke.rs) |
 | `save.load` | — | `{ "slot_name": "slot-1" … "slot-5" }` | `{ "loaded": true, "slot_name", "tick" }` | [`ws_jsonrpc_save_slot_roundtrip`](../../crates/server/tests/ws_smoke.rs) |

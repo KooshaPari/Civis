@@ -331,7 +331,8 @@ fn process_save_load_actions(
 
     match action {
         SaveLoadAction::Save(slot) => {
-            let world_state = collect_session_data(&params, &attach, sim.as_deref(), hud.as_deref(), stamp_secs);
+            let world_state =
+                collect_session_data(&params, &attach, sim.as_deref(), hud.as_deref(), stamp_secs);
             match session::save(&world_state, slot) {
                 Ok(()) => {
                     let stamp = session::format_stamp_hms(stamp_secs);
@@ -460,9 +461,8 @@ fn send_load_rpc(bridge: Option<&LiveAttachBridge>, slot: u8, seed: u64) {
         id = 2010 + u32::from(slot)
     );
     bridge.client.send_rpc_raw(load_json);
-    let reset_json = format!(
-        r#"{{"jsonrpc":"2.0","id":2020,"method":"sim.reset","params":{{"seed":{seed}}}}}"#
-    );
+    let reset_json =
+        format!(r#"{{"jsonrpc":"2.0","id":2020,"method":"sim.reset","params":{{"seed":{seed}}}}}"#);
     bridge.client.send_rpc_raw(reset_json);
 }
 

@@ -10,7 +10,7 @@
 //!   URL is a valid non-empty string even when no env vars are set (the
 //!   function must not panic or return an empty URL).
 
-use civis_mcp::{HARNESS_VERSION, census_config_with_url};
+use civis_mcp::{census_config_with_url, HARNESS_VERSION};
 
 /// `HARNESS_VERSION` must be non-empty and look like a semver string
 /// (at least two dots, e.g. "0.1.0").  A blank or wrongly formatted

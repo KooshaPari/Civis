@@ -375,10 +375,7 @@ impl SagaGraph {
             .filter_map(|i| self.graph()[i].as_entity())
             .filter(|e| e.title.is_some())
             .map(|e| {
-                let saga_length = self
-                    .saga_of(e.id)
-                    .map(|s| s.events.len())
-                    .unwrap_or(0);
+                let saga_length = self.saga_of(e.id).map(|s| s.events.len()).unwrap_or(0);
                 NamedEntitySummary {
                     entity_id: e.id,
                     title: e.title.clone(),
@@ -392,7 +389,10 @@ impl SagaGraph {
             .node_indices()
             .filter(|i| self.graph()[*i].as_event().is_some())
             .count();
-        NamedLegendsResult { named_entities, event_count }
+        NamedLegendsResult {
+            named_entities,
+            event_count,
+        }
     }
 }
 

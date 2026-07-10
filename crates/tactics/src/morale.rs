@@ -231,12 +231,11 @@ impl MoraleState {
             return None;
         }
         let ratio = casualties as f32 / self.initial_strength as f32;
-        self.sub_morale(ratio)
-            .map(|lost| MoraleEvent::CasualtyHit {
-                new_level: self.morale,
-                morale_lost: lost,
-                began_routing: self.stance() == UnitStance::Routing && lost > 0.0,
-            })
+        self.sub_morale(ratio).map(|lost| MoraleEvent::CasualtyHit {
+            new_level: self.morale,
+            morale_lost: lost,
+            began_routing: self.stance() == UnitStance::Routing && lost > 0.0,
+        })
     }
 
     /// Apply one tick of encirclement pressure. Morale falls by a small,
@@ -417,7 +416,10 @@ mod tests {
         // The event that crossed the line should mark began_routing.
         match m.last_event().expect("event recorded") {
             MoraleEvent::CasualtyHit { began_routing, .. } => {
-                assert!(began_routing, "the crossing casualty hit should flag begun_routing");
+                assert!(
+                    began_routing,
+                    "the crossing casualty hit should flag begun_routing"
+                );
             }
             other => panic!("expected CasualtyHit, got {other:?}"),
         }
@@ -457,7 +459,10 @@ mod tests {
             UnitStance::Standing,
             "rallied unit should be standing"
         );
-        assert!(rallied, "the recovery tick that crossed the threshold must report rallied");
+        assert!(
+            rallied,
+            "the recovery tick that crossed the threshold must report rallied"
+        );
     }
 
     /// FR-CIV-MORALE — encirclement degrades morale over time even without

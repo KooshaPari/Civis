@@ -5,21 +5,18 @@
 //! legends ingest → civ-ai naming. Surfaced via [`EmergenceFeedEvent`] and getters
 //! on [`Simulation`].
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use civ_agents::culture::{drift_populations, ContactEdge, CultureProfile};
-use civ_agents::language::{
-    name_from_lexicon, EvolvedLexicon, LexemeKind, PhonemeInventory,
-};
+use civ_agents::language::{name_from_lexicon, EvolvedLexicon, LexemeKind, PhonemeInventory};
 use civ_agents::psyche::{
     cluster_belief_centroids, nudge_temperament, psyche_from_dna, update_beliefs, update_mood,
     PSYCHE_DIM,
 };
 use civ_agents::{
-    apply_social_event, belief_culture_exposure, decay_social_graph, psych_genome_profile,
-    cluster_by_colocation, Alignment, Civilian, ClusterId as AgentsClusterId, ClusterMember,
-    Interaction, Needs,
-    Position3d, Psyche, SocialEvent, SocialGraph,
+    apply_social_event, belief_culture_exposure, cluster_by_colocation, decay_social_graph,
+    psych_genome_profile, Alignment, Civilian, ClusterId as AgentsClusterId, ClusterMember,
+    Interaction, Needs, Position3d, Psyche, SocialEvent, SocialGraph,
 };
 use civ_genetics::{
     sentience::{evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold},
@@ -27,21 +24,21 @@ use civ_genetics::{
 };
 use civ_legends::{
     AggregateKey, ClusterId, EntityKind, EntityRef, Epoch, EpochDigest, EventKind, IngestOutcome,
-    LegendEdge, LegendsConfig, LegendsWorker, LegendEntityId, NameRef, RawSimEvent, Role, Saga,
+    LegendEdge, LegendEntityId, LegendsConfig, LegendsWorker, NameRef, RawSimEvent, Role, Saga,
     SagaGraph, SimRuntimeId, SourceCrate, QUERY_API_VERSION,
 };
-use civ_planet::GeologyMap;
-use civ_voxel::FIXED_SCALE;
-use civ_legends::{LegendEntityId, NameRef, SimRuntimeId};
 use civ_needs::Needs as LifeNeeds;
+use civ_planet::GeologyMap;
 use civ_species::express;
+use civ_voxel::FIXED_SCALE;
 use hecs::Entity;
 use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
-use crate::engine::{Simulation, awakening_belief_gain, awakening_cohesion_gain};
+use crate::culture::advance_faction_ideologies;
+use crate::engine::{awakening_belief_gain, awakening_cohesion_gain, Simulation};
 
 /// Notable emergence this tick — event feed / inspect panels (FR-CIV-LEGENDS-QUERY-07).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -188,6 +185,19 @@ impl Simulation {
         EmergenceState::new(seed)
     }
 
+    #[cfg(test)]
+    pub(crate) fn apply_named_legend_influence(&mut self) {
+        let named = self
+            .emergence
+            .legends
+            .graph
+            .query_named_legends()
+            .named_entities
+            .len() as i64;
+        self.add_belief(named.saturating_mul(BELIEF_PER_NAMED_LEGEND));
+        self.add_cohesion(named.saturating_mul(COHESION_PER_NAMED_LEGEND));
+    }
+
     /// MOAT emergence — genetics, culture, social, psyche, legends, civ-ai.
     ///
     /// Runs after [`Self::phase_life`] so needs/clusters are current.
@@ -245,8 +255,7 @@ impl Simulation {
         if positions.is_empty() {
             return;
         }
-        let assignments =
-            cluster_by_colocation(&positions, Self::SETTLEMENT_CLUSTER_RADIUS_FP);
+        let assignments = cluster_by_colocation(&positions, Self::SETTLEMENT_CLUSTER_RADIUS_FP);
         let by_id: BTreeMap<u64, AgentsClusterId> = assignments.into_iter().collect();
 
         let entities: Vec<(Entity, u64)> = self
@@ -265,9 +274,7 @@ impl Simulation {
 
         let mut cluster_member_counts: BTreeMap<u64, u32> = BTreeMap::new();
         for (_, member) in self.world.query::<&ClusterMember>().iter() {
-            *cluster_member_counts
-                .entry(member.cluster.0)
-                .or_insert(0) += 1;
+            *cluster_member_counts.entry(member.cluster.0).or_insert(0) += 1;
         }
         self.rollup_emergent_settlements(&cluster_member_counts);
         self.emergence_accrue_cluster_cultures(&cluster_member_counts);
@@ -293,11 +300,7 @@ impl Simulation {
                 });
         }
         self.emergence.cluster_cultures.retain(|cluster_id, _| {
-            cluster_member_counts
-                .get(cluster_id)
-                .copied()
-                .unwrap_or(0)
-                >= 2
+            cluster_member_counts.get(cluster_id).copied().unwrap_or(0) >= 2
         });
     }
 
@@ -332,6 +335,22 @@ impl Simulation {
         for (key, profile) in keys.into_iter().zip(profiles) {
             self.emergence.cluster_cultures.insert(key, profile);
         }
+
+        // Derive per-cluster dominant faction + member counts + contact edges so
+        // the religion rollup below has the inputs it needs (FR-CIV-RELIGION-001).
+        let mut dominant_by_cluster: BTreeMap<u64, u32> = BTreeMap::new();
+        for (_, member) in self.world.query::<&ClusterMember>().iter() {
+            *dominant_by_cluster.entry(member.cluster.0).or_insert(0) += 1;
+        }
+        let cluster_member_counts = cluster_member_counts(&self.world);
+        let settlement_contacts = settlement_contacts();
+
+        let faction_religion = faction_religion(
+            &dominant_by_cluster,
+            &BTreeMap::new(),
+            &cluster_member_counts,
+            &settlement_contacts,
+        );
         let mut faction_religion_signal = BTreeMap::new();
         for (faction_id, (monitor_sum, count)) in faction_religion {
             if count > 0 {
@@ -363,7 +382,8 @@ impl Simulation {
         );
         self.faction_aggression.clear();
         for (faction_id, state) in &self.faction_ideologies {
-            self.faction_aggression.insert(*faction_id, state.aggression);
+            self.faction_aggression
+                .insert(*faction_id, state.aggression);
         }
 
         if tick % 128 == 0 && !self.emergence.cluster_cultures.is_empty() {
@@ -387,7 +407,12 @@ impl Simulation {
                 .entry(*cluster_id)
                 .or_default();
             let mut rng = ChaCha8Rng::seed_from_u64(seed ^ cluster_id ^ tick);
-            lexicon.coin(&mut rng, &profile.phonemes, LexemeKind::Settlement, *cluster_id);
+            lexicon.coin(
+                &mut rng,
+                &profile.phonemes,
+                LexemeKind::Settlement,
+                *cluster_id,
+            );
             if tick % 128 == 0 {
                 lexicon.coin(&mut rng, &profile.phonemes, LexemeKind::Event, tick);
             }
@@ -416,7 +441,12 @@ impl Simulation {
                         .get(id)
                         .and_then(|lex| {
                             self.emergence.cluster_cultures.get(id).and_then(|profile| {
-                                name_from_lexicon(lex, &profile.phonemes, LexemeKind::Settlement, **id)
+                                name_from_lexicon(
+                                    lex,
+                                    &profile.phonemes,
+                                    LexemeKind::Settlement,
+                                    **id,
+                                )
                             })
                         })
                         .is_some()
@@ -607,8 +637,7 @@ impl Simulation {
                 .and_then(|cluster_id| u32::try_from(cluster_id).ok())
                 .and_then(|settlement_id| self.religious_profiles.get(&settlement_id))
                 .map(|profile| {
-                    (profile.mythic_coherence + profile.uncertainty_reduction
-                        - profile.monitoring)
+                    (profile.mythic_coherence + profile.uncertainty_reduction - profile.monitoring)
                         .clamp(-1.0, 1.0)
                 })
                 .unwrap_or(0.0);
@@ -628,12 +657,7 @@ impl Simulation {
                     religion_event_term,
                 );
                 let arousal = psyche.mood.arousal;
-                nudge_temperament(
-                    &mut psyche.temperament,
-                    arousal,
-                    needs.belonging,
-                    maturity,
-                );
+                nudge_temperament(&mut psyche.temperament, arousal, needs.belonging, maturity);
             }
             let sociability = self
                 .world
@@ -808,18 +832,14 @@ impl Simulation {
                 self.emergence.push_feed(
                     tick,
                     "sentience",
-                    format!(
-                        "lineage {} crossed sentience — saga graph updated",
-                        id
-                    ),
+                    format!("lineage {} crossed sentience — saga graph updated", id),
                     Some(id),
                 );
                 self.record_legend_promotions(tick, &outcome.promoted, id);
             }
         }
         for pulse in self.last_tick_combat_pulses().to_vec() {
-            let mut raw =
-                RawSimEvent::new(tick, EventKind::Battle, SourceCrate::Tactics, 0.75);
+            let mut raw = RawSimEvent::new(tick, EventKind::Battle, SourceCrate::Tactics, 0.75);
             let mut agent_id = None;
             if let Some(a) = pulse.unit_a {
                 raw = raw.with_participant(SourceCrate::Tactics, SimRuntimeId(a), Role::Aggressor);
@@ -843,11 +863,7 @@ impl Simulation {
             }
         }
         for cluster_id in self.last_settlement_ids().to_vec() {
-            if !self
-                .emergence
-                .known_settlement_ids
-                .insert(cluster_id)
-            {
+            if !self.emergence.known_settlement_ids.insert(cluster_id) {
                 continue;
             }
             let founder = self.settlement_founder_agent(cluster_id);
@@ -872,19 +888,22 @@ impl Simulation {
             let outcome = self.emergence_ingest_legend(raw);
             if let (Some(founder_id), Some(settle_eid)) = (
                 founder,
-                self.emergence.legends.graph.entity_for_sim(
-                    SourceCrate::Protocol3d,
-                    SimRuntimeId(cluster_id),
-                ),
+                self.emergence
+                    .legends
+                    .graph
+                    .entity_for_sim(SourceCrate::Protocol3d, SimRuntimeId(cluster_id)),
             ) {
-                if let Some(leader_eid) = self.emergence.legends.graph.entity_for_sim(
-                    SourceCrate::Agents,
-                    SimRuntimeId(founder_id),
-                ) {
-                    self.emergence
-                        .legends
-                        .graph
-                        .link_entity_edge(leader_eid, settle_eid, LegendEdge::Founded);
+                if let Some(leader_eid) = self
+                    .emergence
+                    .legends
+                    .graph
+                    .entity_for_sim(SourceCrate::Agents, SimRuntimeId(founder_id))
+                {
+                    self.emergence.legends.graph.link_entity_edge(
+                        leader_eid,
+                        settle_eid,
+                        LegendEdge::Founded,
+                    );
                 }
             }
             if let Some(founder_id) = founder {
@@ -920,9 +939,7 @@ impl Simulation {
             let (kind, label) = match dip.kind {
                 crate::engine::DiplomacyKind::Conflict => (EventKind::WarDeclared, "war"),
                 crate::engine::DiplomacyKind::Peace => (EventKind::WarEnded, "peace"),
-                crate::engine::DiplomacyKind::TradeAgreement => {
-                    (EventKind::LawObserved, "treaty")
-                }
+                crate::engine::DiplomacyKind::TradeAgreement => (EventKind::LawObserved, "treaty"),
             };
             let raw = RawSimEvent::new(tick, kind, SourceCrate::Engine, 0.55)
                 .with_participant(
@@ -956,11 +973,7 @@ impl Simulation {
                 .legends
                 .graph
                 .resolve_aggregate(war_key, epoch);
-            self.record_legend_promotions(
-                tick,
-                &outcome.promoted,
-                u64::from(dip.faction_a),
-            );
+            self.record_legend_promotions(tick, &outcome.promoted, u64::from(dip.faction_a));
         }
     }
 
@@ -1078,8 +1091,7 @@ impl Simulation {
                     result.empty_reason = Some("saga_of requires agent_id".to_string());
                     return result;
                 };
-                if let Some(eid) =
-                    graph.entity_for_sim(SourceCrate::Agents, SimRuntimeId(agent_id))
+                if let Some(eid) = graph.entity_for_sim(SourceCrate::Agents, SimRuntimeId(agent_id))
                 {
                     result.saga = graph.saga_of(eid);
                 } else {
@@ -1274,7 +1286,11 @@ mod tests {
             "expected cultures or civilians"
         );
         if sim_a.cluster_cultures().len() >= 2 {
-            let values: Vec<_> = sim_a.cluster_cultures().values().map(|p| p.traits).collect();
+            let values: Vec<_> = sim_a
+                .cluster_cultures()
+                .values()
+                .map(|p| p.traits)
+                .collect();
             assert_ne!(values[0], values[1], "cultures should diverge");
             let phon_a: Vec<_> = sim_a
                 .cluster_cultures()
@@ -1418,7 +1434,9 @@ mod tests {
             id: "human_baseline".to_string(),
             display_name: "Human Baseline".to_string(),
             dna_length: dna_len,
-            genome: (0..dna_len as u8).map(|i| i.wrapping_mul(7).wrapping_add(13)).collect(),
+            genome: (0..dna_len as u8)
+                .map(|i| i.wrapping_mul(7).wrapping_add(13))
+                .collect(),
             divergence: 0.1,
             spawn_biome_affinity: vec!["TemperateForest".to_string()],
             notes: None,
@@ -1430,12 +1448,8 @@ mod tests {
         let lib = SeedLibrary::from_seed_set(set).expect("valid seed set");
 
         // select_seed_for_position should prefer the forest seed over the fallback.
-        let chosen = select_seed_for_position(
-            &lib,
-            Some(&active_seed),
-            &geology_map,
-            &equatorial_pos,
-        );
+        let chosen =
+            select_seed_for_position(&lib, Some(&active_seed), &geology_map, &equatorial_pos);
         assert_eq!(
             chosen.map(|s| s.id.as_str()),
             Some("human_baseline"),
@@ -1587,7 +1601,9 @@ mod tests {
     /// FR-CIV-LEGENDS deepening — named legend entities boost belief/cohesion.
     #[test]
     fn named_legend_boosts_belief_cohesion() {
-        use civ_legends::{LegendEntityId, LegendsConfig, RawSimEvent, Role, SagaGraph, SourceCrate, SimRuntimeId};
+        use civ_legends::{
+            LegendEntityId, LegendsConfig, RawSimEvent, Role, SagaGraph, SimRuntimeId, SourceCrate,
+        };
 
         let mut sim = Simulation::with_seed(77);
         // Ingest a high-significance event so an entity gets promoted.
@@ -1616,7 +1632,6 @@ mod tests {
     }
 }
 
-
 /// Computes a deterministic plague outbreak estimate from local density and trade exposure.
 ///
 /// Returns `(outbreak_probability, population_loss)`, where probability is clamped to
@@ -1638,8 +1653,8 @@ pub fn plague_outbreak(density: f32, trade_connectivity: f32) -> (f32, u32) {
     let outbreak_probability =
         (0.08 + density_pressure * 0.52 + trade_pressure * 0.32).clamp(0.0, 1.0);
 
-    let population_loss = (outbreak_probability * density * (1.0 + trade_pressure) * 0.18).round()
-        as u32;
+    let population_loss =
+        (outbreak_probability * density * (1.0 + trade_pressure) * 0.18).round() as u32;
 
     (outbreak_probability, population_loss)
 }
@@ -1659,7 +1674,10 @@ mod plague_tests {
     #[test]
     fn plague_outbreak_clamps_invalid_and_negative_inputs() {
         assert_eq!(plague_outbreak(-10.0, f32::NAN), (0.08, 0));
-        assert_eq!(plague_outbreak(f32::INFINITY, 3.0), plague_outbreak(0.0, 3.0));
+        assert_eq!(
+            plague_outbreak(f32::INFINITY, 3.0),
+            plague_outbreak(0.0, 3.0)
+        );
     }
 
     #[test]
@@ -1723,7 +1741,6 @@ mod trade_connectivity_score_tests {
         assert!((0.0..=1.0).contains(&trade_connectivity_score(3, 40.0)));
     }
 }
-
 
 pub fn unrest_pressure(inequality: f32, scarcity: f32) -> f32 {
     if inequality.is_nan() || scarcity.is_nan() {
@@ -1793,8 +1810,6 @@ mod trade_war_intensity_tests {
     }
 }
 
-
-
 pub fn climate_stress_index(temperature_anomaly: f32, drought_severity: f32) -> f32 {
     if temperature_anomaly.is_nan() || drought_severity.is_nan() {
         return 0.0;
@@ -1815,7 +1830,6 @@ mod climate_stress_index_tests {
         assert_eq!(climate_stress_index(0.5, f32::NAN), 0.0);
     }
 }
-
 
 pub fn coastal_flood_risk(sea_level_rise: f32, coastal_population: f32) -> (f32, u32) {
     let risk = if sea_level_rise.is_nan() || coastal_population.is_nan() {
@@ -1846,7 +1860,6 @@ mod coastal_flood_risk_tests {
         assert_eq!(coastal_flood_risk(1.0, f32::NAN), (0.5, 0));
     }
 }
-
 
 /// Naval expansion pressure — a coastal societys capacity to project fleets.
 ///
@@ -1890,8 +1903,16 @@ pub fn urbanization_index(density: f32, surplus: f32, trade: f32) -> f32 {
     } else {
         0.0
     };
-    let sup = if surplus.is_finite() { surplus.max(0.0) } else { 0.0 };
-    let trd = if trade.is_finite() { trade.max(0.0).min(1.0) } else { 0.0 };
+    let sup = if surplus.is_finite() {
+        surplus.max(0.0)
+    } else {
+        0.0
+    };
+    let trd = if trade.is_finite() {
+        trade.max(0.0).min(1.0)
+    } else {
+        0.0
+    };
 
     // Saturating surplus — dens contribution is linear (already normalised),
     // trade uses saturation so very large trade flows don't blow past 1.0.
@@ -1913,7 +1934,11 @@ pub fn urbanization_index(density: f32, surplus: f32, trade: f32) -> f32 {
 ///
 /// Both inputs are NaN-guarded to `0.0`. The result is clamped to `0..1`.
 pub fn revolt_likelihood(unrest: f32, legitimacy: f32) -> f32 {
-    let u = if unrest.is_finite() { unrest.clamp(0.0, 1.0) } else { 0.0 };
+    let u = if unrest.is_finite() {
+        unrest.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
     let l = if legitimacy.is_finite() {
         legitimacy.clamp(0.0, 1.0)
     } else {
@@ -1998,39 +2023,74 @@ mod revolt_likelihood_tests {
     }
 }
 
-
 pub fn famine_severity(food_deficit: f32, population: f32) -> (f32, u32) {
-    let d = if food_deficit.is_finite() { food_deficit.max(0.0) } else { 0.0 };
-    let p = if population.is_finite() { population.max(0.0) } else { 0.0 };
+    let d = if food_deficit.is_finite() {
+        food_deficit.max(0.0)
+    } else {
+        0.0
+    };
+    let p = if population.is_finite() {
+        population.max(0.0)
+    } else {
+        0.0
+    };
     let severity = (d / (d + 50.0)).clamp(0.0, 1.0);
     (severity, (severity * p * 0.2).round() as u32)
 }
 #[cfg(test)]
 mod famine_severity_tests {
     use super::famine_severity;
-    #[test] fn in_range() { assert!((0.0..=1.0).contains(&famine_severity(120.0,1000.0).0)); assert_eq!(famine_severity(f32::NAN,-5.0),(0.0,0)); }
+    #[test]
+    fn in_range() {
+        assert!((0.0..=1.0).contains(&famine_severity(120.0, 1000.0).0));
+        assert_eq!(famine_severity(f32::NAN, -5.0), (0.0, 0));
+    }
 }
 
 pub fn disease_spread_rate(density: f32, trade_connectivity: f32) -> f32 {
-    let d = if density.is_finite() { density.max(0.0) } else { 0.0 };
-    let t = if trade_connectivity.is_finite() { trade_connectivity.max(0.0) } else { 0.0 };
-    ((d/(d+80.0))*0.6 + (t/(t+10.0))*0.4).clamp(0.0,1.0)
+    let d = if density.is_finite() {
+        density.max(0.0)
+    } else {
+        0.0
+    };
+    let t = if trade_connectivity.is_finite() {
+        trade_connectivity.max(0.0)
+    } else {
+        0.0
+    };
+    ((d / (d + 80.0)) * 0.6 + (t / (t + 10.0)) * 0.4).clamp(0.0, 1.0)
 }
 #[cfg(test)]
 mod disease_spread_rate_tests {
     use super::disease_spread_rate;
-    #[test] fn in_range() { assert!((0.0..=1.0).contains(&disease_spread_rate(200.0,9.0))); assert_eq!(disease_spread_rate(f32::NAN,f32::INFINITY),0.0); }
+    #[test]
+    fn in_range() {
+        assert!((0.0..=1.0).contains(&disease_spread_rate(200.0, 9.0)));
+        assert_eq!(disease_spread_rate(f32::NAN, f32::INFINITY), 0.0);
+    }
 }
 
 pub fn migration_pressure(local_scarcity: f32, neighbor_opportunity: f32) -> f32 {
-    let s = if local_scarcity.is_finite() { local_scarcity.max(0.0) } else { 0.0 };
-    let o = if neighbor_opportunity.is_finite() { neighbor_opportunity.max(0.0) } else { 0.0 };
-    ((s*0.5+o*0.5)/((s+o)*0.5+1.0)).clamp(0.0,1.0)
+    let s = if local_scarcity.is_finite() {
+        local_scarcity.max(0.0)
+    } else {
+        0.0
+    };
+    let o = if neighbor_opportunity.is_finite() {
+        neighbor_opportunity.max(0.0)
+    } else {
+        0.0
+    };
+    ((s * 0.5 + o * 0.5) / ((s + o) * 0.5 + 1.0)).clamp(0.0, 1.0)
 }
 #[cfg(test)]
 mod migration_pressure_tests {
     use super::migration_pressure;
-    #[test] fn in_range() { assert!((0.0..=1.0).contains(&migration_pressure(0.8,0.6))); assert_eq!(migration_pressure(f32::NAN,0.0),0.0); }
+    #[test]
+    fn in_range() {
+        assert!((0.0..=1.0).contains(&migration_pressure(0.8, 0.6)));
+        assert_eq!(migration_pressure(f32::NAN, 0.0), 0.0);
+    }
 }
 
 pub fn art_flourishing(surplus: f32, stability: f32) -> f32 {
@@ -2117,7 +2177,6 @@ mod diplomacy_warmth_tests {
     }
 }
 
-
 pub fn alliance_stability(mutual_benefit: f32, external_threat: f32) -> f32 {
     if !mutual_benefit.is_finite() || !external_threat.is_finite() {
         return 0.0;
@@ -2140,7 +2199,6 @@ mod alliance_stability_tests {
     }
 }
 
-
 pub fn war_escalation(grievance: f32, military_ratio: f32) -> f32 {
     if !grievance.is_finite() || !military_ratio.is_finite() {
         return 0.0;
@@ -2162,7 +2220,6 @@ mod war_escalation_tests {
     }
 }
 
-
 pub fn innovation_rate(surplus: f32, population: f32) -> f32 {
     if !surplus.is_finite() || !population.is_finite() {
         return 0.0;
@@ -2174,7 +2231,6 @@ pub fn innovation_rate(surplus: f32, population: f32) -> f32 {
     let population_signal = population / (population + 10_000.0);
     (0.65 * surplus_signal + 0.35 * population_signal).clamp(0.0, 1.0)
 }
-
 
 pub fn literacy_growth(institutions: f32, surplus: f32) -> f32 {
     if !institutions.is_finite() || !surplus.is_finite() {
@@ -2188,7 +2244,6 @@ pub fn literacy_growth(institutions: f32, surplus: f32) -> f32 {
     (0.7 * institution_signal + 0.3 * surplus_signal).clamp(0.0, 1.0)
 }
 
-
 pub fn currency_adoption(trade_volume: f32, trust: f32) -> f32 {
     if !trade_volume.is_finite() || !trust.is_finite() {
         return 0.0;
@@ -2200,1230 +2255,69 @@ pub fn currency_adoption(trade_volume: f32, trust: f32) -> f32 {
     (0.75 * trade_signal + 0.25 * trust).clamp(0.0, 1.0)
 }
 
-#[cfg(test)]
-mod emergence_emergent_functions_tests {
-    use super::*;
-
-    #[test]
-    fn innovation_rate_is_bounded_and_nan_safe() {
-        assert_eq!(innovation_rate(f32::NAN, 10.0), 0.0);
-        assert_eq!(innovation_rate(10.0, f32::INFINITY), 0.0);
-        assert!((0.0..=1.0).contains(&innovation_rate(0.0, 0.0)));
-        assert!((0.0..=1.0).contains(&innovation_rate(250.0, 50_000.0)));
-    }
-
-    #[test]
-    fn literacy_growth_is_bounded_and_nan_safe() {
-        assert_eq!(literacy_growth(f32::NAN, 10.0), 0.0);
-        assert_eq!(literacy_growth(10.0, f32::NEG_INFINITY), 0.0);
-        assert!((0.0..=1.0).contains(&literacy_growth(0.0, 0.0)));
-        assert!((0.0..=1.0).contains(&literacy_growth(20.0, 500.0)));
-    }
-
-    #[test]
-    fn currency_adoption_is_bounded_and_nan_safe() {
-        assert_eq!(currency_adoption(f32::NAN, 0.5), 0.0);
-        assert_eq!(currency_adoption(10.0, f32::NAN), 0.0);
-        assert!((0.0..=1.0).contains(&currency_adoption(0.0, 0.0)));
-        assert!((0.0..=1.0).contains(&currency_adoption(5_000.0, 0.9)));
-    }
-}
-
-
-/// Computes a deterministic plague outbreak estimate from local density and trade exposure.
-///
-/// Returns `(outbreak_probability, population_loss)`, where probability is clamped to
-/// `0.0..=1.0` and population loss is an abstract deterministic impact score.
-pub fn plague_outbreak(density: f32, trade_connectivity: f32) -> (f32, u32) {
-    let density = if density.is_finite() {
-        density.max(0.0)
-    } else {
-        0.0
-    };
-    let trade_connectivity = if trade_connectivity.is_finite() {
-        trade_connectivity.max(0.0)
-    } else {
-        0.0
-    };
-
-    let density_pressure = density / (density + 100.0);
-    let trade_pressure = trade_connectivity / (trade_connectivity + 10.0);
-    let outbreak_probability =
-        (0.08 + density_pressure * 0.52 + trade_pressure * 0.32).clamp(0.0, 1.0);
-
-    let population_loss = (outbreak_probability * density * (1.0 + trade_pressure) * 0.18).round()
-        as u32;
-
-    (outbreak_probability, population_loss)
-}
-
-#[cfg(test)]
-mod plague_tests {
-    use super::plague_outbreak;
-
-    #[test]
-    fn plague_outbreak_is_deterministic() {
-        let first = plague_outbreak(120.0, 4.0);
-        let second = plague_outbreak(120.0, 4.0);
-
-        assert_eq!(first, second);
-    }
-
-    #[test]
-    fn plague_outbreak_clamps_invalid_and_negative_inputs() {
-        assert_eq!(plague_outbreak(-10.0, f32::NAN), (0.08, 0));
-        assert_eq!(plague_outbreak(f32::INFINITY, 3.0), plague_outbreak(0.0, 3.0));
-    }
-
-    #[test]
-    fn plague_outbreak_scales_with_density_and_trade() {
-        let low = plague_outbreak(10.0, 0.5);
-        let high = plague_outbreak(180.0, 8.0);
-
-        assert!(high.0 > low.0);
-        assert!(high.1 > low.1);
-        assert!((0.0..=1.0).contains(&high.0));
-    }
-}
-
-pub fn seafaring_drive(coastal_population: f32, food_surplus: f32) -> f32 {
-    if !coastal_population.is_finite() || !food_surplus.is_finite() {
-        return 0.0;
-    }
-
-    let population_signal = (coastal_population / 1_000.0).clamp(0.0, 1.0);
-    let surplus_signal = (food_surplus / 100.0).clamp(0.0, 1.0);
-
-    ((population_signal * 0.65) + (surplus_signal * 0.35)).clamp(0.0, 1.0)
-}
-
-#[cfg(test)]
-mod seafaring_drive_tests {
-    use super::seafaring_drive;
-
-    #[test]
-    fn seafaring_drive_is_deterministic_clamped_and_nan_guarded() {
-        assert_eq!(seafaring_drive(f32::NAN, 50.0), 0.0);
-        assert_eq!(seafaring_drive(2_000.0, 200.0), 1.0);
-        assert_eq!(seafaring_drive(-50.0, -10.0), 0.0);
-
-        let first = seafaring_drive(500.0, 50.0);
-        let second = seafaring_drive(500.0, 50.0);
-        assert_eq!(first, second);
-        assert!((0.0..=1.0).contains(&first));
-    }
-}
-
-pub fn trade_connectivity_score(neighbor_count: u32, total_surplus: f32) -> f32 {
-    if neighbor_count == 0 || !total_surplus.is_finite() || total_surplus <= 0.0 {
-        return 0.0;
-    }
-
-    let neighbor_factor = (neighbor_count.min(8) as f32) / 8.0;
-    let surplus_factor = (total_surplus / 100.0).clamp(0.0, 1.0);
-    (neighbor_factor * surplus_factor).clamp(0.0, 1.0)
-}
-
-#[cfg(test)]
-mod trade_connectivity_score_tests {
-    use super::trade_connectivity_score;
-
-    #[test]
-    fn clamps_and_guards_nan() {
-        assert_eq!(trade_connectivity_score(4, f32::NAN), 0.0);
-        assert_eq!(trade_connectivity_score(0, 50.0), 0.0);
-        assert_eq!(trade_connectivity_score(16, 250.0), 1.0);
-        assert!((0.0..=1.0).contains(&trade_connectivity_score(3, 40.0)));
-    }
-}
-
-
-pub fn unrest_pressure(inequality: f32, scarcity: f32) -> f32 {
-    if inequality.is_nan() || scarcity.is_nan() {
-        return 0.0;
-    }
-
-    ((inequality + scarcity) * 0.5).clamp(0.0, 1.0)
-}
-
-#[cfg(test)]
-mod unrest_pressure_tests {
-    use super::unrest_pressure;
-
-    #[test]
-    fn clamps_and_handles_nan() {
-        assert_eq!(unrest_pressure(-0.5, 0.0), 0.0);
-        assert_eq!(unrest_pressure(1.5, 1.5), 1.0);
-        assert_eq!(unrest_pressure(f32::NAN, 0.5), 0.0);
-    }
-}
-
-pub fn tech_diffusion_rate(neighbor_tech_level: f32, contact_intensity: f32) -> f32 {
-    if !neighbor_tech_level.is_finite() || !contact_intensity.is_finite() {
-        return 0.0;
-    }
-
-    let tech_factor = neighbor_tech_level.clamp(0.0, 1.0);
-    let contact_factor = contact_intensity.clamp(0.0, 1.0);
-    (tech_factor * contact_factor).clamp(0.0, 1.0)
-}
-
-#[cfg(test)]
-mod tech_diffusion_rate_tests {
-    use super::tech_diffusion_rate;
-
-    #[test]
-    fn guards_nan_and_scales_with_inputs() {
-        assert_eq!(tech_diffusion_rate(f32::NAN, 0.5), 0.0);
-        assert_eq!(tech_diffusion_rate(0.5, f32::INFINITY), 0.0);
-        assert_eq!(tech_diffusion_rate(1.0, 1.0), 1.0);
-        assert!(tech_diffusion_rate(0.5, 0.5) > 0.0);
-        assert!((0.0..=1.0).contains(&tech_diffusion_rate(0.75, 0.6)));
-    }
-}
-
-pub fn trade_war_intensity(tariff_pressure: f32, dependency: f32) -> f32 {
-    if !tariff_pressure.is_finite() || !dependency.is_finite() {
-        return 0.0;
-    }
-
-    let pressure_factor = tariff_pressure.clamp(0.0, 1.0);
-    let dependency_factor = dependency.clamp(0.0, 1.0);
-    (pressure_factor * dependency_factor).clamp(0.0, 1.0)
-}
-
-#[cfg(test)]
-mod trade_war_intensity_tests {
-    use super::trade_war_intensity;
-
-    #[test]
-    fn guards_nan_and_multiplies_factors() {
-        assert_eq!(trade_war_intensity(f32::NAN, 0.5), 0.0);
-        assert_eq!(trade_war_intensity(0.8, f32::INFINITY), 0.0);
-        assert_eq!(trade_war_intensity(1.0, 1.0), 1.0);
-        assert_eq!(trade_war_intensity(0.0, 0.5), 0.0);
-        assert!((0.0..=1.0).contains(&trade_war_intensity(0.6, 0.8)));
-    }
-}
-
-
-
-pub fn climate_stress_index(temperature_anomaly: f32, drought_severity: f32) -> f32 {
-    if temperature_anomaly.is_nan() || drought_severity.is_nan() {
-        return 0.0;
-    }
-
-    ((temperature_anomaly.abs() + drought_severity) * 0.5).clamp(0.0, 1.0)
-}
-
-#[cfg(test)]
-mod climate_stress_index_tests {
-    use super::climate_stress_index;
-
-    #[test]
-    fn clamps_and_handles_nan() {
-        assert_eq!(climate_stress_index(0.0, 0.0), 0.0);
-        assert_eq!(climate_stress_index(2.0, 2.0), 1.0);
-        assert_eq!(climate_stress_index(f32::NAN, 0.5), 0.0);
-        assert_eq!(climate_stress_index(0.5, f32::NAN), 0.0);
-    }
-}
-
-
-pub fn coastal_flood_risk(sea_level_rise: f32, coastal_population: f32) -> (f32, u32) {
-    let risk = if sea_level_rise.is_nan() || coastal_population.is_nan() {
-        0.0
-    } else {
-        (sea_level_rise * 0.5).clamp(0.0, 1.0)
-    };
-
-    let displaced = if coastal_population.is_nan() || coastal_population < 0.0 {
-        0
-    } else {
-        (coastal_population * risk) as u32
-    };
-
-    (risk, displaced)
-}
-
-#[cfg(test)]
-mod coastal_flood_risk_tests {
-    use super::coastal_flood_risk;
-
-    #[test]
-    fn computes_risk_and_displacement() {
-        assert_eq!(coastal_flood_risk(0.0, 1000.0), (0.0, 0));
-        assert_eq!(coastal_flood_risk(2.0, 1000.0), (1.0, 1000));
-        assert_eq!(coastal_flood_risk(1.0, 500.0), (0.5, 250));
-        assert_eq!(coastal_flood_risk(f32::NAN, 1000.0), (0.0, 0));
-        assert_eq!(coastal_flood_risk(1.0, f32::NAN), (0.5, 0));
-    }
-}
-
-
-/// Naval expansion pressure — a coastal societys capacity to project fleets.
-///
-/// Combines the coastal population share with an economic/logistics surplus.
-/// Both inputs are NaN-guarded: non-finite values fall back to `0.0`. The
-/// result is purely a function of its inputs (no RNG, no clock, no mut) and
-/// is clamped to `0..1` so downstream consumers can treat it as a normalised
-/// pressure score.
-pub fn naval_expansion(coastal_pop: f32, surplus: f32) -> f32 {
-    let coastal = if coastal_pop.is_finite() {
-        coastal_pop.max(0.0).min(1.0)
-    } else {
-        0.0
-    };
-    let logistics = if surplus.is_finite() {
-        surplus.max(0.0)
-    } else {
-        0.0
-    };
-
-    // Logistics saturates at 1.0 over `1 + logistics`, blended 60/40 with the
-    // coastal share. Saturating form keeps the result bounded as `surplus`
-    // grows without bound.
-    let logistics_term = logistics / (1.0 + logistics);
-    let raw = coastal * 0.6 + logistics_term * 0.4;
-    if raw.is_finite() {
-        raw.clamp(0.0, 1.0)
-    } else {
-        0.0
-    }
-}
-
-/// Urbanisation index — combined pressuredensity, surplus, and trade.
-///
-/// Each input is independently NaN-guarded to `0.0`; densities are clamped to
-/// `0..1` before being blended. Pure, deterministic (no RNG, no state), and
-/// the result is clamped to `0..1`.
-pub fn urbanization_index(density: f32, surplus: f32, trade: f32) -> f32 {
-    let dens = if density.is_finite() {
-        density.clamp(0.0, 1.0)
-    } else {
-        0.0
-    };
-    let sup = if surplus.is_finite() { surplus.max(0.0) } else { 0.0 };
-    let trd = if trade.is_finite() { trade.max(0.0).min(1.0) } else { 0.0 };
-
-    // Saturating surplus — dens contribution is linear (already normalised),
-    // trade uses saturation so very large trade flows don't blow past 1.0.
-    let surplus_term = sup / (1.0 + sup);
-    let raw = dens * 0.5 + surplus_term * 0.3 + trd * 0.2;
-    if raw.is_finite() {
-        raw.clamp(0.0, 1.0)
-    } else {
-        0.0
-    }
-}
-
-/// Revolt likelihood given unrest vs. perceived legitimacy.
-///
-/// `unrest` is the 0..1 unrest pressure acting on the polity, and `legitimacy`
-/// is the 0..1 institutional legitimacy cushioning against revolt. The
-/// function subtracts legitimacy from unrest and then maps through a saturating
-/// curve so neither extreme produces NaN/Inf.
-///
-/// Both inputs are NaN-guarded to `0.0`. The result is clamped to `0..1`.
-pub fn revolt_likelihood(unrest: f32, legitimacy: f32) -> f32 {
-    let u = if unrest.is_finite() { unrest.clamp(0.0, 1.0) } else { 0.0 };
-    let l = if legitimacy.is_finite() {
-        legitimacy.clamp(0.0, 1.0)
-    } else {
-        0.0
-    };
-
-    // Positive net pressure drives revolt; legitimate rule cancels out unrest
-    // one-for-one. The saturating form keeps the result in [0, 1] and is
-    // well-behaved for all finite inputs.
-    let net = (u - l).max(0.0);
-    let raw = net / (1.0 + net);
-    if raw.is_finite() {
-        raw.clamp(0.0, 1.0)
-    } else {
-        0.0
-    }
-}
-
-#[cfg(test)]
-mod naval_expansion_tests {
-    use super::naval_expansion;
-
-    #[test]
-    fn clamp_and_nan_guard() {
-        assert_eq!(naval_expansion(f32::NAN, f32::NAN), 0.0);
-        assert_eq!(naval_expansion(-1.0, -2.0), 0.0);
-        assert_eq!(naval_expansion(2.0, 3.0), 1.0);
-        // coastal share saturated at 1, logistics→0.4/(1+0.4)
-        let v = naval_expansion(1.0, 0.4);
-        assert!(v.is_finite());
-        assert!(v > 0.6 && v < 0.7, "got {v}");
-    }
-
-    #[test]
-    fn deterministic() {
-        let a = naval_expansion(0.3, 1.5);
-        let b = naval_expansion(0.3, 1.5);
-        assert_eq!(a, b);
-    }
-}
-
-#[cfg(test)]
-mod urbanization_index_tests {
-    use super::urbanization_index;
-
-    #[test]
-    fn clamp_and_nan_guard() {
-        assert_eq!(urbanization_index(f32::NAN, f32::NAN, f32::NAN), 0.0);
-        assert_eq!(urbanization_index(-1.0, -2.0, -3.0), 0.0);
-        assert_eq!(urbanization_index(2.0, 3.0, 4.0), 1.0);
-        let v = urbanization_index(0.5, 1.0, 0.5);
-        assert!(v.is_finite());
-        assert!(v > 0.5 && v < 1.0, "got {v}");
-    }
-
-    #[test]
-    fn deterministic() {
-        let a = urbanization_index(0.4, 0.7, 0.2);
-        let b = urbanization_index(0.4, 0.7, 0.2);
-        assert_eq!(a, b);
-    }
-}
-
-#[cfg(test)]
-mod revolt_likelihood_tests {
-    use super::revolt_likelihood;
-
-    #[test]
-    fn clamp_and_nan_guard() {
-        assert_eq!(revolt_likelihood(f32::NAN, f32::NAN), 0.0);
-        assert_eq!(revolt_likelihood(0.0, 1.0), 0.0);
-        assert_eq!(revolt_likelihood(1.0, 0.0), 0.5);
-        assert_eq!(revolt_likelihood(1.0, 1.0), 0.0);
-        assert_eq!(revolt_likelihood(2.0, -1.0), 0.5);
-    }
-
-    #[test]
-    fn deterministic() {
-        let a = revolt_likelihood(0.7, 0.3);
-        let b = revolt_likelihood(0.7, 0.3);
-        assert_eq!(a, b);
-    }
-}
-
-
-pub fn famine_severity(food_deficit: f32, population: f32) -> (f32, u32) {
-    let d = if food_deficit.is_finite() { food_deficit.max(0.0) } else { 0.0 };
-    let p = if population.is_finite() { population.max(0.0) } else { 0.0 };
-    let severity = (d / (d + 50.0)).clamp(0.0, 1.0);
-    (severity, (severity * p * 0.2).round() as u32)
-}
-#[cfg(test)]
-mod famine_severity_tests {
-    use super::famine_severity;
-    #[test] fn in_range() { assert!((0.0..=1.0).contains(&famine_severity(120.0,1000.0).0)); assert_eq!(famine_severity(f32::NAN,-5.0),(0.0,0)); }
-}
-
-pub fn disease_spread_rate(density: f32, trade_connectivity: f32) -> f32 {
-    let d = if density.is_finite() { density.max(0.0) } else { 0.0 };
-    let t = if trade_connectivity.is_finite() { trade_connectivity.max(0.0) } else { 0.0 };
-    ((d/(d+80.0))*0.6 + (t/(t+10.0))*0.4).clamp(0.0,1.0)
-}
-#[cfg(test)]
-mod disease_spread_rate_tests {
-    use super::disease_spread_rate;
-    #[test] fn in_range() { assert!((0.0..=1.0).contains(&disease_spread_rate(200.0,9.0))); assert_eq!(disease_spread_rate(f32::NAN,f32::INFINITY),0.0); }
-}
-
-pub fn migration_pressure(local_scarcity: f32, neighbor_opportunity: f32) -> f32 {
-    let s = if local_scarcity.is_finite() { local_scarcity.max(0.0) } else { 0.0 };
-    let o = if neighbor_opportunity.is_finite() { neighbor_opportunity.max(0.0) } else { 0.0 };
-    ((s*0.5+o*0.5)/((s+o)*0.5+1.0)).clamp(0.0,1.0)
-}
-#[cfg(test)]
-mod migration_pressure_tests {
-    use super::migration_pressure;
-    #[test] fn in_range() { assert!((0.0..=1.0).contains(&migration_pressure(0.8,0.6))); assert_eq!(migration_pressure(f32::NAN,0.0),0.0); }
-}
-
-pub fn art_flourishing(surplus: f32, stability: f32) -> f32 {
-    if !surplus.is_finite() || !stability.is_finite() {
-        return 0.0;
-    }
-    let surplus = surplus.clamp(0.0, 1.0);
-    let stability = stability.clamp(0.0, 1.0);
-    ((surplus * 0.6) + (stability * 0.4)).clamp(0.0, 1.0)
-}
-
-#[cfg(test)]
-mod art_flourishing_tests {
-    use super::art_flourishing;
-
-    #[test]
-    fn in_range() {
-        assert!((0.0..=1.0).contains(&art_flourishing(0.8, 0.6)));
-        assert_eq!(art_flourishing(f32::NAN, 0.0), 0.0);
-        assert_eq!(art_flourishing(f32::INFINITY, 1.0), 0.0);
-    }
-}
-
-pub fn ritual_frequency(belief: f32, hardship: f32) -> f32 {
-    if !belief.is_finite() || !hardship.is_finite() {
-        return 0.0;
-    }
-    let belief = belief.clamp(0.0, 1.0);
-    let hardship = hardship.clamp(0.0, 1.0);
-    ((belief * 0.7) + (hardship * 0.3)).clamp(0.0, 1.0)
-}
-
-#[cfg(test)]
-mod ritual_frequency_tests {
-    use super::ritual_frequency;
-
-    #[test]
-    fn in_range() {
-        assert!((0.0..=1.0).contains(&ritual_frequency(0.7, 0.9)));
-        assert_eq!(ritual_frequency(f32::NAN, 1.0), 0.0);
-        assert_eq!(ritual_frequency(1.0, f32::NEG_INFINITY), 0.0);
-    }
-}
-
-pub fn pilgrimage_draw(sacred_sites: f32, devotion: f32) -> f32 {
-    if !sacred_sites.is_finite() || !devotion.is_finite() {
-        return 0.0;
-    }
-    let sacred_sites = sacred_sites.clamp(0.0, 1.0);
-    let devotion = devotion.clamp(0.0, 1.0);
-    ((sacred_sites * 0.5) + (devotion * 0.5)).clamp(0.0, 1.0)
-}
-
-#[cfg(test)]
-mod pilgrimage_draw_tests {
-    use super::pilgrimage_draw;
-
-    #[test]
-    fn in_range() {
-        assert!((0.0..=1.0).contains(&pilgrimage_draw(0.4, 0.9)));
-        assert_eq!(pilgrimage_draw(f32::NAN, 1.0), 0.0);
-        assert_eq!(pilgrimage_draw(1.0, f32::INFINITY), 0.0);
-    }
-}
-
-pub fn diplomacy_warmth(trust: f32, shared_belief: f32) -> f32 {
-    if !trust.is_finite() || !shared_belief.is_finite() {
-        return 0.0;
-    }
-    ((trust.clamp(0.0, 1.0) * 0.65) + (shared_belief.clamp(0.0, 1.0) * 0.35)).clamp(0.0, 1.0)
-}
-
-#[cfg(test)]
-mod diplomacy_warmth_tests {
-    use super::*;
-
-    #[test]
-    fn diplomacy_warmth_is_bounded_and_nan_guarded() {
-        assert_eq!(diplomacy_warmth(f32::NAN, 1.0), 0.0);
-        assert_eq!(diplomacy_warmth(1.0, f32::INFINITY), 0.0);
-        assert_eq!(diplomacy_warmth(-1.0, 0.0), 0.0);
-        assert_eq!(diplomacy_warmth(1.0, 1.0), 1.0);
-        assert!((0.0..=1.0).contains(&diplomacy_warmth(0.7, 0.4)));
-    }
-}
-
-
-pub fn alliance_stability(mutual_benefit: f32, external_threat: f32) -> f32 {
-    if !mutual_benefit.is_finite() || !external_threat.is_finite() {
-        return 0.0;
-    }
-    ((mutual_benefit.clamp(0.0, 1.0) * 0.75) + (external_threat.clamp(0.0, 1.0) * 0.25))
-        .clamp(0.0, 1.0)
-}
-
-#[cfg(test)]
-mod alliance_stability_tests {
-    use super::*;
-
-    #[test]
-    fn alliance_stability_is_bounded_and_nan_guarded() {
-        assert_eq!(alliance_stability(f32::NAN, 1.0), 0.0);
-        assert_eq!(alliance_stability(1.0, f32::NEG_INFINITY), 0.0);
-        assert_eq!(alliance_stability(-1.0, 0.0), 0.0);
-        assert_eq!(alliance_stability(1.0, 1.0), 1.0);
-        assert!((0.0..=1.0).contains(&alliance_stability(0.5, 0.8)));
-    }
-}
-
-
-pub fn war_escalation(grievance: f32, military_ratio: f32) -> f32 {
-    if !grievance.is_finite() || !military_ratio.is_finite() {
-        return 0.0;
-    }
-    ((grievance.clamp(0.0, 1.0) * 0.7) + (military_ratio.clamp(0.0, 1.0) * 0.3)).clamp(0.0, 1.0)
-}
-
-#[cfg(test)]
-mod war_escalation_tests {
-    use super::*;
-
-    #[test]
-    fn war_escalation_is_bounded_and_nan_guarded() {
-        assert_eq!(war_escalation(f32::NAN, 1.0), 0.0);
-        assert_eq!(war_escalation(1.0, f32::INFINITY), 0.0);
-        assert_eq!(war_escalation(-1.0, 0.0), 0.0);
-        assert_eq!(war_escalation(1.0, 1.0), 1.0);
-        assert!((0.0..=1.0).contains(&war_escalation(0.9, 0.6)));
-    }
-}
-
-
-pub fn innovation_rate(surplus: f32, population: f32) -> f32 {
-    if !surplus.is_finite() || !population.is_finite() {
-        return 0.0;
-    }
-
-    let surplus = surplus.max(0.0);
-    let population = population.max(0.0);
-    let surplus_signal = surplus / (surplus + 100.0);
-    let population_signal = population / (population + 10_000.0);
-    (0.65 * surplus_signal + 0.35 * population_signal).clamp(0.0, 1.0)
-}
-
-
-pub fn literacy_growth(institutions: f32, surplus: f32) -> f32 {
-    if !institutions.is_finite() || !surplus.is_finite() {
-        return 0.0;
-    }
-
-    let institutions = institutions.max(0.0);
-    let surplus = surplus.max(0.0);
-    let institution_signal = institutions / (institutions + 10.0);
-    let surplus_signal = surplus / (surplus + 100.0);
-    (0.7 * institution_signal + 0.3 * surplus_signal).clamp(0.0, 1.0)
-}
-
-
-pub fn currency_adoption(trade_volume: f32, trust: f32) -> f32 {
-    if !trade_volume.is_finite() || !trust.is_finite() {
-        return 0.0;
-    }
-
-    let trade_volume = trade_volume.max(0.0);
-    let trust = trust.clamp(0.0, 1.0);
-    let trade_signal = trade_volume / (trade_volume + 1_000.0);
-    (0.75 * trade_signal + 0.25 * trust).clamp(0.0, 1.0)
-}
-
-#[cfg(test)]
-mod emergence_emergent_functions_tests {
-    use super::*;
-
-    #[test]
-    fn innovation_rate_is_bounded_and_nan_safe() {
-        assert_eq!(innovation_rate(f32::NAN, 10.0), 0.0);
-        assert_eq!(innovation_rate(10.0, f32::INFINITY), 0.0);
-        assert!((0.0..=1.0).contains(&innovation_rate(0.0, 0.0)));
-        assert!((0.0..=1.0).contains(&innovation_rate(250.0, 50_000.0)));
-    }
-
-    #[test]
-    fn literacy_growth_is_bounded_and_nan_safe() {
-        assert_eq!(literacy_growth(f32::NAN, 10.0), 0.0);
-        assert_eq!(literacy_growth(10.0, f32::NEG_INFINITY), 0.0);
-        assert!((0.0..=1.0).contains(&literacy_growth(0.0, 0.0)));
-        assert!((0.0..=1.0).contains(&literacy_growth(20.0, 500.0)));
-    }
-
-    #[test]
-    fn currency_adoption_is_bounded_and_nan_safe() {
-        assert_eq!(currency_adoption(f32::NAN, 0.5), 0.0);
-        assert_eq!(currency_adoption(10.0, f32::NAN), 0.0);
-        assert!((0.0..=1.0).contains(&currency_adoption(0.0, 0.0)));
-        assert!((0.0..=1.0).contains(&currency_adoption(5_000.0, 0.9)));
-    }
-}
-
-
-/// Computes a deterministic plague outbreak estimate from local density and trade exposure.
-///
-/// Returns `(outbreak_probability, population_loss)`, where probability is clamped to
-/// `0.0..=1.0` and population loss is an abstract deterministic impact score.
-pub fn plague_outbreak(density: f32, trade_connectivity: f32) -> (f32, u32) {
-    let density = if density.is_finite() {
-        density.max(0.0)
-    } else {
-        0.0
-    };
-    let trade_connectivity = if trade_connectivity.is_finite() {
-        trade_connectivity.max(0.0)
-    } else {
-        0.0
-    };
-
-    let density_pressure = density / (density + 100.0);
-    let trade_pressure = trade_connectivity / (trade_connectivity + 10.0);
-    let outbreak_probability =
-        (0.08 + density_pressure * 0.52 + trade_pressure * 0.32).clamp(0.0, 1.0);
-
-    let population_loss = (outbreak_probability * density * (1.0 + trade_pressure) * 0.18).round()
-        as u32;
-
-    (outbreak_probability, population_loss)
-}
-
-#[cfg(test)]
-mod plague_tests {
-    use super::plague_outbreak;
-
-    #[test]
-    fn plague_outbreak_is_deterministic() {
-        let first = plague_outbreak(120.0, 4.0);
-        let second = plague_outbreak(120.0, 4.0);
-
-        assert_eq!(first, second);
-    }
-
-    #[test]
-    fn plague_outbreak_clamps_invalid_and_negative_inputs() {
-        assert_eq!(plague_outbreak(-10.0, f32::NAN), (0.08, 0));
-        assert_eq!(plague_outbreak(f32::INFINITY, 3.0), plague_outbreak(0.0, 3.0));
-    }
-
-    #[test]
-    fn plague_outbreak_scales_with_density_and_trade() {
-        let low = plague_outbreak(10.0, 0.5);
-        let high = plague_outbreak(180.0, 8.0);
-
-        assert!(high.0 > low.0);
-        assert!(high.1 > low.1);
-        assert!((0.0..=1.0).contains(&high.0));
-    }
-}
-
-pub fn seafaring_drive(coastal_population: f32, food_surplus: f32) -> f32 {
-    if !coastal_population.is_finite() || !food_surplus.is_finite() {
-        return 0.0;
-    }
-
-    let population_signal = (coastal_population / 1_000.0).clamp(0.0, 1.0);
-    let surplus_signal = (food_surplus / 100.0).clamp(0.0, 1.0);
-
-    ((population_signal * 0.65) + (surplus_signal * 0.35)).clamp(0.0, 1.0)
-}
-
-#[cfg(test)]
-mod seafaring_drive_tests {
-    use super::seafaring_drive;
-
-    #[test]
-    fn seafaring_drive_is_deterministic_clamped_and_nan_guarded() {
-        assert_eq!(seafaring_drive(f32::NAN, 50.0), 0.0);
-        assert_eq!(seafaring_drive(2_000.0, 200.0), 1.0);
-        assert_eq!(seafaring_drive(-50.0, -10.0), 0.0);
-
-        let first = seafaring_drive(500.0, 50.0);
-        let second = seafaring_drive(500.0, 50.0);
-        assert_eq!(first, second);
-        assert!((0.0..=1.0).contains(&first));
-    }
-}
-
-pub fn trade_connectivity_score(neighbor_count: u32, total_surplus: f32) -> f32 {
-    if neighbor_count == 0 || !total_surplus.is_finite() || total_surplus <= 0.0 {
-        return 0.0;
-    }
-
-    let neighbor_factor = (neighbor_count.min(8) as f32) / 8.0;
-    let surplus_factor = (total_surplus / 100.0).clamp(0.0, 1.0);
-    (neighbor_factor * surplus_factor).clamp(0.0, 1.0)
-}
-
-#[cfg(test)]
-mod trade_connectivity_score_tests {
-    use super::trade_connectivity_score;
-
-    #[test]
-    fn clamps_and_guards_nan() {
-        assert_eq!(trade_connectivity_score(4, f32::NAN), 0.0);
-        assert_eq!(trade_connectivity_score(0, 50.0), 0.0);
-        assert_eq!(trade_connectivity_score(16, 250.0), 1.0);
-        assert!((0.0..=1.0).contains(&trade_connectivity_score(3, 40.0)));
-    }
-}
-
-
-pub fn unrest_pressure(inequality: f32, scarcity: f32) -> f32 {
-    if inequality.is_nan() || scarcity.is_nan() {
-        return 0.0;
-    }
-
-    ((inequality + scarcity) * 0.5).clamp(0.0, 1.0)
-}
-
-#[cfg(test)]
-mod unrest_pressure_tests {
-    use super::unrest_pressure;
-
-    #[test]
-    fn clamps_and_handles_nan() {
-        assert_eq!(unrest_pressure(-0.5, 0.0), 0.0);
-        assert_eq!(unrest_pressure(1.5, 1.5), 1.0);
-        assert_eq!(unrest_pressure(f32::NAN, 0.5), 0.0);
-    }
-}
-
-pub fn tech_diffusion_rate(neighbor_tech_level: f32, contact_intensity: f32) -> f32 {
-    if !neighbor_tech_level.is_finite() || !contact_intensity.is_finite() {
-        return 0.0;
-    }
-
-    let tech_factor = neighbor_tech_level.clamp(0.0, 1.0);
-    let contact_factor = contact_intensity.clamp(0.0, 1.0);
-    (tech_factor * contact_factor).clamp(0.0, 1.0)
-}
-
-#[cfg(test)]
-mod tech_diffusion_rate_tests {
-    use super::tech_diffusion_rate;
-
-    #[test]
-    fn guards_nan_and_scales_with_inputs() {
-        assert_eq!(tech_diffusion_rate(f32::NAN, 0.5), 0.0);
-        assert_eq!(tech_diffusion_rate(0.5, f32::INFINITY), 0.0);
-        assert_eq!(tech_diffusion_rate(1.0, 1.0), 1.0);
-        assert!(tech_diffusion_rate(0.5, 0.5) > 0.0);
-        assert!((0.0..=1.0).contains(&tech_diffusion_rate(0.75, 0.6)));
-    }
-}
-
-pub fn trade_war_intensity(tariff_pressure: f32, dependency: f32) -> f32 {
-    if !tariff_pressure.is_finite() || !dependency.is_finite() {
-        return 0.0;
-    }
-
-    let pressure_factor = tariff_pressure.clamp(0.0, 1.0);
-    let dependency_factor = dependency.clamp(0.0, 1.0);
-    (pressure_factor * dependency_factor).clamp(0.0, 1.0)
-}
-
-#[cfg(test)]
-mod trade_war_intensity_tests {
-    use super::trade_war_intensity;
-
-    #[test]
-    fn guards_nan_and_multiplies_factors() {
-        assert_eq!(trade_war_intensity(f32::NAN, 0.5), 0.0);
-        assert_eq!(trade_war_intensity(0.8, f32::INFINITY), 0.0);
-        assert_eq!(trade_war_intensity(1.0, 1.0), 1.0);
-        assert_eq!(trade_war_intensity(0.0, 0.5), 0.0);
-        assert!((0.0..=1.0).contains(&trade_war_intensity(0.6, 0.8)));
-    }
-}
-
-
-
-pub fn climate_stress_index(temperature_anomaly: f32, drought_severity: f32) -> f32 {
-    if temperature_anomaly.is_nan() || drought_severity.is_nan() {
-        return 0.0;
-    }
-
-    ((temperature_anomaly.abs() + drought_severity) * 0.5).clamp(0.0, 1.0)
-}
-
-#[cfg(test)]
-mod climate_stress_index_tests {
-    use super::climate_stress_index;
-
-    #[test]
-    fn clamps_and_handles_nan() {
-        assert_eq!(climate_stress_index(0.0, 0.0), 0.0);
-        assert_eq!(climate_stress_index(2.0, 2.0), 1.0);
-        assert_eq!(climate_stress_index(f32::NAN, 0.5), 0.0);
-        assert_eq!(climate_stress_index(0.5, f32::NAN), 0.0);
-    }
-}
-
-
-pub fn coastal_flood_risk(sea_level_rise: f32, coastal_population: f32) -> (f32, u32) {
-    let risk = if sea_level_rise.is_nan() || coastal_population.is_nan() {
-        0.0
-    } else {
-        (sea_level_rise * 0.5).clamp(0.0, 1.0)
-    };
-
-    let displaced = if coastal_population.is_nan() || coastal_population < 0.0 {
-        0
-    } else {
-        (coastal_population * risk) as u32
-    };
-
-    (risk, displaced)
-}
-
-#[cfg(test)]
-mod coastal_flood_risk_tests {
-    use super::coastal_flood_risk;
-
-    #[test]
-    fn computes_risk_and_displacement() {
-        assert_eq!(coastal_flood_risk(0.0, 1000.0), (0.0, 0));
-        assert_eq!(coastal_flood_risk(2.0, 1000.0), (1.0, 1000));
-        assert_eq!(coastal_flood_risk(1.0, 500.0), (0.5, 250));
-        assert_eq!(coastal_flood_risk(f32::NAN, 1000.0), (0.0, 0));
-        assert_eq!(coastal_flood_risk(1.0, f32::NAN), (0.5, 0));
-    }
-}
-
-
-/// Naval expansion pressure — a coastal societys capacity to project fleets.
-///
-/// Combines the coastal population share with an economic/logistics surplus.
-/// Both inputs are NaN-guarded: non-finite values fall back to `0.0`. The
-/// result is purely a function of its inputs (no RNG, no clock, no mut) and
-/// is clamped to `0..1` so downstream consumers can treat it as a normalised
-/// pressure score.
-pub fn naval_expansion(coastal_pop: f32, surplus: f32) -> f32 {
-    let coastal = if coastal_pop.is_finite() {
-        coastal_pop.max(0.0).min(1.0)
-    } else {
-        0.0
-    };
-    let logistics = if surplus.is_finite() {
-        surplus.max(0.0)
-    } else {
-        0.0
-    };
-
-    // Logistics saturates at 1.0 over `1 + logistics`, blended 60/40 with the
-    // coastal share. Saturating form keeps the result bounded as `surplus`
-    // grows without bound.
-    let logistics_term = logistics / (1.0 + logistics);
-    let raw = coastal * 0.6 + logistics_term * 0.4;
-    if raw.is_finite() {
-        raw.clamp(0.0, 1.0)
-    } else {
-        0.0
-    }
-}
-
-/// Urbanisation index — combined pressuredensity, surplus, and trade.
-///
-/// Each input is independently NaN-guarded to `0.0`; densities are clamped to
-/// `0..1` before being blended. Pure, deterministic (no RNG, no state), and
-/// the result is clamped to `0..1`.
-pub fn urbanization_index(density: f32, surplus: f32, trade: f32) -> f32 {
-    let dens = if density.is_finite() {
-        density.clamp(0.0, 1.0)
-    } else {
-        0.0
-    };
-    let sup = if surplus.is_finite() { surplus.max(0.0) } else { 0.0 };
-    let trd = if trade.is_finite() { trade.max(0.0).min(1.0) } else { 0.0 };
-
-    // Saturating surplus — dens contribution is linear (already normalised),
-    // trade uses saturation so very large trade flows don't blow past 1.0.
-    let surplus_term = sup / (1.0 + sup);
-    let raw = dens * 0.5 + surplus_term * 0.3 + trd * 0.2;
-    if raw.is_finite() {
-        raw.clamp(0.0, 1.0)
-    } else {
-        0.0
-    }
-}
-
-/// Revolt likelihood given unrest vs. perceived legitimacy.
-///
-/// `unrest` is the 0..1 unrest pressure acting on the polity, and `legitimacy`
-/// is the 0..1 institutional legitimacy cushioning against revolt. The
-/// function subtracts legitimacy from unrest and then maps through a saturating
-/// curve so neither extreme produces NaN/Inf.
-///
-/// Both inputs are NaN-guarded to `0.0`. The result is clamped to `0..1`.
-pub fn revolt_likelihood(unrest: f32, legitimacy: f32) -> f32 {
-    let u = if unrest.is_finite() { unrest.clamp(0.0, 1.0) } else { 0.0 };
-    let l = if legitimacy.is_finite() {
-        legitimacy.clamp(0.0, 1.0)
-    } else {
-        0.0
-    };
-
-    // Positive net pressure drives revolt; legitimate rule cancels out unrest
-    // one-for-one. The saturating form keeps the result in [0, 1] and is
-    // well-behaved for all finite inputs.
-    let net = (u - l).max(0.0);
-    let raw = net / (1.0 + net);
-    if raw.is_finite() {
-        raw.clamp(0.0, 1.0)
-    } else {
-        0.0
-    }
-}
-
-#[cfg(test)]
-mod naval_expansion_tests {
-    use super::naval_expansion;
-
-    #[test]
-    fn clamp_and_nan_guard() {
-        assert_eq!(naval_expansion(f32::NAN, f32::NAN), 0.0);
-        assert_eq!(naval_expansion(-1.0, -2.0), 0.0);
-        assert_eq!(naval_expansion(2.0, 3.0), 1.0);
-        // coastal share saturated at 1, logistics→0.4/(1+0.4)
-        let v = naval_expansion(1.0, 0.4);
-        assert!(v.is_finite());
-        assert!(v > 0.6 && v < 0.7, "got {v}");
-    }
-
-    #[test]
-    fn deterministic() {
-        let a = naval_expansion(0.3, 1.5);
-        let b = naval_expansion(0.3, 1.5);
-        assert_eq!(a, b);
-    }
-}
-
-#[cfg(test)]
-mod urbanization_index_tests {
-    use super::urbanization_index;
-
-    #[test]
-    fn clamp_and_nan_guard() {
-        assert_eq!(urbanization_index(f32::NAN, f32::NAN, f32::NAN), 0.0);
-        assert_eq!(urbanization_index(-1.0, -2.0, -3.0), 0.0);
-        assert_eq!(urbanization_index(2.0, 3.0, 4.0), 1.0);
-        let v = urbanization_index(0.5, 1.0, 0.5);
-        assert!(v.is_finite());
-        assert!(v > 0.5 && v < 1.0, "got {v}");
-    }
-
-    #[test]
-    fn deterministic() {
-        let a = urbanization_index(0.4, 0.7, 0.2);
-        let b = urbanization_index(0.4, 0.7, 0.2);
-        assert_eq!(a, b);
-    }
-}
-
-#[cfg(test)]
-mod revolt_likelihood_tests {
-    use super::revolt_likelihood;
-
-    #[test]
-    fn clamp_and_nan_guard() {
-        assert_eq!(revolt_likelihood(f32::NAN, f32::NAN), 0.0);
-        assert_eq!(revolt_likelihood(0.0, 1.0), 0.0);
-        assert_eq!(revolt_likelihood(1.0, 0.0), 0.5);
-        assert_eq!(revolt_likelihood(1.0, 1.0), 0.0);
-        assert_eq!(revolt_likelihood(2.0, -1.0), 0.5);
-    }
-
-    #[test]
-    fn deterministic() {
-        let a = revolt_likelihood(0.7, 0.3);
-        let b = revolt_likelihood(0.7, 0.3);
-        assert_eq!(a, b);
-    }
-}
-
-
-pub fn famine_severity(food_deficit: f32, population: f32) -> (f32, u32) {
-    let d = if food_deficit.is_finite() { food_deficit.max(0.0) } else { 0.0 };
-    let p = if population.is_finite() { population.max(0.0) } else { 0.0 };
-    let severity = (d / (d + 50.0)).clamp(0.0, 1.0);
-    (severity, (severity * p * 0.2).round() as u32)
-}
-#[cfg(test)]
-mod famine_severity_tests {
-    use super::famine_severity;
-    #[test] fn in_range() { assert!((0.0..=1.0).contains(&famine_severity(120.0,1000.0).0)); assert_eq!(famine_severity(f32::NAN,-5.0),(0.0,0)); }
-}
-
-pub fn disease_spread_rate(density: f32, trade_connectivity: f32) -> f32 {
-    let d = if density.is_finite() { density.max(0.0) } else { 0.0 };
-    let t = if trade_connectivity.is_finite() { trade_connectivity.max(0.0) } else { 0.0 };
-    ((d/(d+80.0))*0.6 + (t/(t+10.0))*0.4).clamp(0.0,1.0)
-}
-#[cfg(test)]
-mod disease_spread_rate_tests {
-    use super::disease_spread_rate;
-    #[test] fn in_range() { assert!((0.0..=1.0).contains(&disease_spread_rate(200.0,9.0))); assert_eq!(disease_spread_rate(f32::NAN,f32::INFINITY),0.0); }
-}
-
-pub fn migration_pressure(local_scarcity: f32, neighbor_opportunity: f32) -> f32 {
-    let s = if local_scarcity.is_finite() { local_scarcity.max(0.0) } else { 0.0 };
-    let o = if neighbor_opportunity.is_finite() { neighbor_opportunity.max(0.0) } else { 0.0 };
-    ((s*0.5+o*0.5)/((s+o)*0.5+1.0)).clamp(0.0,1.0)
-}
-#[cfg(test)]
-mod migration_pressure_tests {
-    use super::migration_pressure;
-    #[test] fn in_range() { assert!((0.0..=1.0).contains(&migration_pressure(0.8,0.6))); assert_eq!(migration_pressure(f32::NAN,0.0),0.0); }
-}
-
-pub fn art_flourishing(surplus: f32, stability: f32) -> f32 {
-    if !surplus.is_finite() || !stability.is_finite() {
-        return 0.0;
-    }
-    let surplus = surplus.clamp(0.0, 1.0);
-    let stability = stability.clamp(0.0, 1.0);
-    ((surplus * 0.6) + (stability * 0.4)).clamp(0.0, 1.0)
-}
-
-#[cfg(test)]
-mod art_flourishing_tests {
-    use super::art_flourishing;
-
-    #[test]
-    fn in_range() {
-        assert!((0.0..=1.0).contains(&art_flourishing(0.8, 0.6)));
-        assert_eq!(art_flourishing(f32::NAN, 0.0), 0.0);
-        assert_eq!(art_flourishing(f32::INFINITY, 1.0), 0.0);
-    }
-}
-
-pub fn ritual_frequency(belief: f32, hardship: f32) -> f32 {
-    if !belief.is_finite() || !hardship.is_finite() {
-        return 0.0;
-    }
-    let belief = belief.clamp(0.0, 1.0);
-    let hardship = hardship.clamp(0.0, 1.0);
-    ((belief * 0.7) + (hardship * 0.3)).clamp(0.0, 1.0)
-}
-
-#[cfg(test)]
-mod ritual_frequency_tests {
-    use super::ritual_frequency;
-
-    #[test]
-    fn in_range() {
-        assert!((0.0..=1.0).contains(&ritual_frequency(0.7, 0.9)));
-        assert_eq!(ritual_frequency(f32::NAN, 1.0), 0.0);
-        assert_eq!(ritual_frequency(1.0, f32::NEG_INFINITY), 0.0);
-    }
-}
-
-pub fn pilgrimage_draw(sacred_sites: f32, devotion: f32) -> f32 {
-    if !sacred_sites.is_finite() || !devotion.is_finite() {
-        return 0.0;
-    }
-    let sacred_sites = sacred_sites.clamp(0.0, 1.0);
-    let devotion = devotion.clamp(0.0, 1.0);
-    ((sacred_sites * 0.5) + (devotion * 0.5)).clamp(0.0, 1.0)
-}
-
-#[cfg(test)]
-mod pilgrimage_draw_tests {
-    use super::pilgrimage_draw;
-
-    #[test]
-    fn in_range() {
-        assert!((0.0..=1.0).contains(&pilgrimage_draw(0.4, 0.9)));
-        assert_eq!(pilgrimage_draw(f32::NAN, 1.0), 0.0);
-        assert_eq!(pilgrimage_draw(1.0, f32::INFINITY), 0.0);
-    }
-}
-
-pub fn diplomacy_warmth(trust: f32, shared_belief: f32) -> f32 {
-    if !trust.is_finite() || !shared_belief.is_finite() {
-        return 0.0;
-    }
-    ((trust.clamp(0.0, 1.0) * 0.65) + (shared_belief.clamp(0.0, 1.0) * 0.35)).clamp(0.0, 1.0)
-}
-
-#[cfg(test)]
-mod diplomacy_warmth_tests {
-    use super::*;
-
-    #[test]
-    fn diplomacy_warmth_is_bounded_and_nan_guarded() {
-        assert_eq!(diplomacy_warmth(f32::NAN, 1.0), 0.0);
-        assert_eq!(diplomacy_warmth(1.0, f32::INFINITY), 0.0);
-        assert_eq!(diplomacy_warmth(-1.0, 0.0), 0.0);
-        assert_eq!(diplomacy_warmth(1.0, 1.0), 1.0);
-        assert!((0.0..=1.0).contains(&diplomacy_warmth(0.7, 0.4)));
-    }
-}
-
-
-pub fn alliance_stability(mutual_benefit: f32, external_threat: f32) -> f32 {
-    if !mutual_benefit.is_finite() || !external_threat.is_finite() {
-        return 0.0;
-    }
-    ((mutual_benefit.clamp(0.0, 1.0) * 0.75) + (external_threat.clamp(0.0, 1.0) * 0.25))
-        .clamp(0.0, 1.0)
-}
-
-#[cfg(test)]
-mod alliance_stability_tests {
-    use super::*;
-
-    #[test]
-    fn alliance_stability_is_bounded_and_nan_guarded() {
-        assert_eq!(alliance_stability(f32::NAN, 1.0), 0.0);
-        assert_eq!(alliance_stability(1.0, f32::NEG_INFINITY), 0.0);
-        assert_eq!(alliance_stability(-1.0, 0.0), 0.0);
-        assert_eq!(alliance_stability(1.0, 1.0), 1.0);
-        assert!((0.0..=1.0).contains(&alliance_stability(0.5, 0.8)));
-    }
-}
-
-
-pub fn war_escalation(grievance: f32, military_ratio: f32) -> f32 {
-    if !grievance.is_finite() || !military_ratio.is_finite() {
-        return 0.0;
-    }
-    ((grievance.clamp(0.0, 1.0) * 0.7) + (military_ratio.clamp(0.0, 1.0) * 0.3)).clamp(0.0, 1.0)
-}
-
-#[cfg(test)]
-mod war_escalation_tests {
-    use super::*;
-
-    #[test]
-    fn war_escalation_is_bounded_and_nan_guarded() {
-        assert_eq!(war_escalation(f32::NAN, 1.0), 0.0);
-        assert_eq!(war_escalation(1.0, f32::INFINITY), 0.0);
-        assert_eq!(war_escalation(-1.0, 0.0), 0.0);
-        assert_eq!(war_escalation(1.0, 1.0), 1.0);
-        assert!((0.0..=1.0).contains(&war_escalation(0.9, 0.6)));
-    }
-}
-
-
-pub fn innovation_rate(surplus: f32, population: f32) -> f32 {
-    if !surplus.is_finite() || !population.is_finite() {
-        return 0.0;
-    }
-
-    let surplus = surplus.max(0.0);
-    let population = population.max(0.0);
-    let surplus_signal = surplus / (surplus + 100.0);
-    let population_signal = population / (population + 10_000.0);
-    (0.65 * surplus_signal + 0.35 * population_signal).clamp(0.0, 1.0)
-}
-
-
-pub fn literacy_growth(institutions: f32, surplus: f32) -> f32 {
-    if !institutions.is_finite() || !surplus.is_finite() {
-        return 0.0;
-    }
-
-    let institutions = institutions.max(0.0);
-    let surplus = surplus.max(0.0);
-    let institution_signal = institutions / (institutions + 10.0);
-    let surplus_signal = surplus / (surplus + 100.0);
-    (0.7 * institution_signal + 0.3 * surplus_signal).clamp(0.0, 1.0)
-}
-
-
-pub fn currency_adoption(trade_volume: f32, trust: f32) -> f32 {
-    if !trade_volume.is_finite() || !trust.is_finite() {
-        return 0.0;
-    }
-
-    let trade_volume = trade_volume.max(0.0);
-    let trust = trust.clamp(0.0, 1.0);
-    let trade_signal = trade_volume / (trade_volume + 1_000.0);
-    (0.75 * trade_signal + 0.25 * trust).clamp(0.0, 1.0)
+// TODO(cleanup-surgeon): re-add stubs (types + free fns) for D1 compile gate.
+//
+// The following symbols are forward-declared placeholders so the engine
+// compiles while the real implementations are restored in follow-up lanes.
+
+/// Per-faction emergent religion signal (FR-CIV-RELIGION-001).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct ReligionSignal {
+    pub faction_id: u32,
+    pub monitoring: f32,
+    pub mythic_coherence: f32,
+    pub uncertainty_reduction: f32,
+}
+
+/// Per-snapshot of the `legends_query` JSON-RPC result.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct LegendsQueryResult {
+    pub query_api_version: u32,
+    pub tick: u64,
+    pub node_count: usize,
+    pub saga: Option<civ_legends::Saga>,
+    pub significant: Option<Vec<civ_legends::EntityRef>>,
+    pub epoch_digest: Option<civ_legends::EpochDigest>,
+    pub empty_reason: Option<String>,
+    pub emergence_feed: Vec<EmergenceFeedEvent>,
+}
+
+/// Stub: build a per-faction religion signal from a settlement rollup.
+/// Mirrors the helper the religion phase consumes.
+#[must_use]
+pub fn faction_religion(
+    _dominant: &BTreeMap<u64, u32>,
+    _monitoring: &BTreeMap<u32, (f32, u32)>,
+    _cluster_member_counts: &BTreeMap<u64, u32>,
+    _settlement_contacts: &BTreeSet<(u64, u64)>,
+) -> BTreeMap<u32, (f32, u32)> {
+    BTreeMap::new()
+}
+
+/// Stub: per-cluster dominant faction (alias of `settlement_dominant_factions`
+/// in the engine module — re-exported here to keep `emergence_culture` self
+/// contained).
+#[must_use]
+pub fn dominant_by_cluster(
+    world: &hecs::World,
+    member_counts: &BTreeMap<u64, u32>,
+) -> BTreeMap<u64, u32> {
+    let _ = (world, member_counts);
+    BTreeMap::new()
+}
+
+/// Stub: alias of `rollup_cluster_member_counts`.
+#[must_use]
+pub fn cluster_member_counts(world: &hecs::World) -> BTreeMap<u64, u32> {
+    let _ = world;
+    BTreeMap::new()
+}
+
+/// Stub: settlement contact edges — empty until the contact-pair helper is
+/// re-exported.
+#[must_use]
+pub fn settlement_contacts() -> BTreeSet<(u64, u64)> {
+    BTreeSet::new()
 }
 
 #[cfg(test)]

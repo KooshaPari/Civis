@@ -631,7 +631,10 @@ mod plugin {
             // the Tab nearby-counts overlay, and the terrain recolor pass.
             app.init_resource::<InfoViewRegistry>()
                 .init_resource::<NearbyCountsOverlay>()
-                .add_systems(Update, (toggle_nearby_overlay_hotkey, render_active_overlay))
+                .add_systems(
+                    Update,
+                    (toggle_nearby_overlay_hotkey, render_active_overlay),
+                )
                 .add_systems(
                     EguiPrimaryContextPass,
                     draw_nearby_counts_overlay.run_if(crate::menus::in_game),
@@ -735,7 +738,10 @@ mod plugin {
             .show(ctx, |ui| {
                 egui::Frame::none()
                     .fill(egui::Color32::from_rgba_premultiplied(9, 10, 12, 200))
-                    .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(126, 186, 181)))
+                    .stroke(egui::Stroke::new(
+                        1.0,
+                        egui::Color32::from_rgb(126, 186, 181),
+                    ))
                     .rounding(egui::Rounding::same(8.0))
                     .inner_margin(egui::Margin::symmetric(16.0, 10.0))
                     .show(ui, |ui| {

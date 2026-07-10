@@ -16,9 +16,6 @@ mod currency_trust;
 mod extraction;
 mod institution;
 mod market;
-mod prices;
-mod shocks;
-mod specialization;
 mod stocks;
 mod tax_policy;
 mod trade_flow;
@@ -29,20 +26,19 @@ pub use allocation::{
     JouleAllocator, LaborCapacityAllocator, PlannedAllocator, PriorityTier,
 };
 pub use allocator::{Allocator, Bid, CancelledOrder, Offer};
-pub use currency_trust::{
-    acceptance, step_currency_trust, CurrencyTrust, CurrencyTrustOutcome,
-};
+pub use currency_trust::{acceptance, step_currency_trust, CurrencyTrust, CurrencyTrustOutcome};
 pub use extraction::{
     find_extraction_site, tick_extraction, ExtractionSite, Extractor, ResourceKind,
 };
 pub use institution::{
-    step_institutions, InstitutionAccount, InstitutionId, InstitutionKind, InstitutionLedger,
-    InstitutionLedgerError, InstitutionPosting, LedgerSide, INSTITUTION_MARKET,
-    INSTITUTION_TREASURY,
+    collect_taxes, step_institutions, InstitutionAccount, InstitutionId, InstitutionKind,
+    InstitutionLedger, InstitutionLedgerError, InstitutionPosting, LedgerSide, Taxation,
+    INSTITUTION_MARKET, INSTITUTION_TREASURY,
 };
+pub use market::settlement_trade_flow_from_supply_demand;
 pub use market::{
-    DEFAULT_SMOOTHING_FACTOR, GoodId, MarketState, MultiGoodMarket, Order, OrderBook,
-    SettlementTradeFlow, Side, Trade,
+    GoodId, MarketState, MultiGoodMarket, Order, OrderBook, SettlementTradeFlow, Side, Trade,
+    DEFAULT_SMOOTHING_FACTOR,
 };
 pub use stocks::{
     apply_trade, comparative_advantage, deficit, propose_trade, step_stocks, surplus, Good,
@@ -50,12 +46,11 @@ pub use stocks::{
 };
 pub use tax_policy::{apply_tax_policy, TaxPolicy, TaxPolicyOutcome};
 pub use trade_flow::{
-    complementary_routes, complementary_round_trips, ComplementaryTradeFlow, SettlementFlow,
+    complementary_round_trips, complementary_routes, ComplementaryTradeFlow, SettlementFlow,
 };
 pub use trade_routes::{
     compute_trade_routes, route_flow, routes_lexicographic, Settlement, SettlementId, TradeRoute,
 };
-pub use market::settlement_trade_flow_from_supply_demand;
 
 use serde::{Deserialize, Serialize};
 
@@ -96,6 +91,9 @@ pub struct EconomyState {
     /// Institution accounts and posting log (CIV-0100 §3d stub).
     #[serde(default)]
     pub institutions: InstitutionLedger,
+    /// Per-good material stocks consumed and produced by completed buildings.
+    #[serde(default)]
+    pub stocks: Stocks,
     /// Budget at the previous [`step`] boundary (tick-close reconciliation).
     #[serde(default)]
     last_step_budget_joules: i64,
@@ -109,6 +107,16 @@ impl EconomyState {
             last_step_budget_joules: energy_budget_joules,
             ..Default::default()
         }
+    }
+
+    /// Returns a shared reference to the per-good material stocks.
+    pub fn stocks(&self) -> &Stocks {
+        &self.stocks
+    }
+
+    /// Returns a mutable reference to the per-good material stocks.
+    pub fn stocks_mut(&mut self) -> &mut Stocks {
+        &mut self.stocks
     }
 }
 

@@ -42,8 +42,7 @@ pub fn seasonal_cycle(tick: u64, params: SeasonCycleParams) -> SeasonCycleSample
         };
     }
 
-    let phase =
-        (tick % params.year_length_ticks) as f64 / params.year_length_ticks as f64;
+    let phase = (tick % params.year_length_ticks) as f64 / params.year_length_ticks as f64;
     let wave = -(std::f64::consts::TAU * phase).cos();
 
     SeasonCycleSample {

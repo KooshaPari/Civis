@@ -1,4 +1,4 @@
-﻿//! civ-bevy-ref library surface.
+//! civ-bevy-ref library surface.
 //!
 //! Splits cleanly into two parts:
 //!
@@ -21,50 +21,41 @@ pub mod animation;
 pub mod atmosphere;
 #[cfg(feature = "bevy")]
 pub mod camera;
+pub mod civ_history;
 #[cfg(feature = "bevy")]
 pub mod decorations;
-#[cfg(all(feature = "bevy", feature = "models"))]
-pub mod animation;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod entity_inspector;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod inspect;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod entity_inspector;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod inspect;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod entity_inspector;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod inspect;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod diplomacy_ui;
-pub mod outcome_overlay;
-pub mod faction_hud;
-pub mod session;
 #[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod save_load_ui;
-#[cfg(all(feature = "bevy", feature = "models"))]
-pub mod gltf_models;
+pub mod disaster_tools;
 pub mod emergence_dashboard;
 #[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod entity_inspector;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod event_feed;
-#[cfg(all(feature = "bevy", feature = "gi"))]
-pub mod lighting_gi;
+pub mod faction_hud;
+#[cfg(feature = "bevy")]
+pub mod frame_budget;
+pub mod game_laws;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod game_ui;
 #[cfg(all(feature = "bevy", feature = "models"))]
 pub mod gltf_models;
 #[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod graphics_settings;
-#[cfg(feature = "bevy")]
-pub mod frame_budget;
-pub mod game_laws;
-pub mod map2d;
+pub mod god_actions;
+pub mod god_panel;
 #[cfg(feature = "bevy")]
 pub mod gpu_features;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod graphics_settings;
+#[cfg(feature = "bevy")]
+pub mod hud_state;
 #[cfg(feature = "bevy")]
 pub mod info_views;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod inspect;
+#[cfg(all(feature = "bevy", feature = "gi"))]
+pub mod lighting_gi;
 #[cfg(feature = "bevy")]
 pub mod live_attach;
 #[cfg(feature = "bevy")]
@@ -79,16 +70,11 @@ pub mod live_pick;
 pub mod live_scene;
 #[cfg(feature = "bevy")]
 pub mod live_stream;
+pub mod map2d;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod material_brush_ui;
 #[cfg(feature = "pbr-textures")]
 pub mod materials;
-#[cfg(feature = "bevy")]
-pub mod post_fx;
-#[cfg(feature = "bevy")]
-pub mod preflight;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod settings_ui;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod ui_theme;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod menus;
 #[cfg(feature = "bevy")]
@@ -97,35 +83,36 @@ pub mod minimap;
 pub mod native_backend;
 #[cfg(feature = "bevy")]
 pub mod native_renderer;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod notifications;
+#[cfg(all(feature = "bevy", feature = "voxel"))]
+pub mod ocean;
+pub mod outcome_overlay;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod perf_hud;
+#[cfg(feature = "bevy")]
+pub mod post_fx;
+#[cfg(feature = "bevy")]
+pub mod preflight;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod save_load_ui;
+pub mod session;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod settings_ui;
 #[cfg(feature = "bevy")]
 pub mod sim_bridge;
-pub mod session;
 #[cfg(feature = "bevy")]
 pub mod spawn_tools;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tech_tree_ui;
-pub mod civ_history;
 #[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod god_actions;
-pub mod god_panel;
-pub mod tutorial;
-pub mod perf_hud;
-#[cfg(feature = "bevy")]
-pub mod frame_budget;
+pub mod terraform_brush;
 #[cfg(feature = "bevy")]
 pub mod terrain;
-#[cfg(feature = "bevy")]
-pub mod hud_state;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tool_categories;
 #[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod notifications;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod terraform_brush;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod disaster_tools;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod material_brush_ui;
+pub mod tutorial;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod ui_cluster;
 #[cfg(all(feature = "bevy", feature = "egui"))]
@@ -134,8 +121,6 @@ pub mod ui_holo;
 pub mod ui_theme;
 #[cfg(all(feature = "bevy", feature = "vfx"))]
 pub mod vfx;
-#[cfg(all(feature = "bevy", feature = "voxel"))]
-pub mod ocean;
 #[cfg(feature = "voxel")]
 pub mod voxel_sim;
 #[cfg(feature = "voxel")]
@@ -149,13 +134,16 @@ pub mod voxel_triplanar;
 #[cfg(feature = "bevy")]
 pub mod window_icon;
 
+pub use civ_agents::NeedAction;
 pub use civ_voxel::{
     ChunkId, CubicMesher, MaterialId, MeshBuffer, MeshVertex, VoxelWorld, WorldCoord,
 };
-pub use civ_agents::NeedAction;
-pub use perf_hud::PerfHudPlugin;
-pub use tutorial::TutorialPlugin;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub use menus::MenusPlugin;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub use perf_hud::PerfHudPlugin;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub use tutorial::TutorialPlugin;
 
 /// Default orbit azimuth in radians (45° — camera south-east of centre).
 pub const DEFAULT_CAMERA_AZIMUTH_RAD: f32 = std::f32::consts::FRAC_PI_4;
@@ -239,8 +227,7 @@ pub struct WsSpectatorMeta {
 }
 
 /// WebSocket session state exposed to live attach HUD and event feed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum WsConnectionState {
     /// Active stream to `civ-server`.
     Connected,
@@ -336,7 +323,6 @@ pub struct EmergenceHudData {
     /// Charter criticality regime label: "SUBCRITICAL" | "CRITICAL" | "SUPERCRITICAL".
     pub branching_regime: String,
 }
-
 
 /// Outcome data from `sim.outcome` polling (FR-CIV-GAME-001).
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
@@ -446,7 +432,11 @@ impl LiveHudSnapshot {
             line.push_str(&format!(" | {detail}"));
         }
         {
-            let spd = if self.speed_multiplier == 0 { "PAUSED".to_string() } else { format!("{}x", self.speed_multiplier) };
+            let spd = if self.speed_multiplier == 0 {
+                "PAUSED".to_string()
+            } else {
+                format!("{}x", self.speed_multiplier)
+            };
             line.push_str(&format!(" | spd:{spd}"));
         }
         if let Some(em) = &self.emergence {
@@ -636,14 +626,17 @@ pub fn chunk_id_at_world_pos(pos: [f32; 3], chunk_edge: f32) -> ChunkId {
 /// Raycast against the procedural terrain surface and return the chunk at the hit.
 #[cfg(feature = "bevy")]
 #[must_use]
-pub fn chunk_raycast_terrain(ray_origin: [f32; 3], ray_dir: [f32; 3], chunk_edge: f32) -> Option<ChunkId> {
+pub fn chunk_raycast_terrain(
+    ray_origin: [f32; 3],
+    ray_dir: [f32; 3],
+    chunk_edge: f32,
+) -> Option<ChunkId> {
     let max_distance = terrain::WORLD_SIZE * 2.0;
     let step = (chunk_edge * 0.5).max(1.0);
     let terrain_half = terrain::WORLD_SIZE * 0.5;
 
-    let sample_surface = |pos: [f32; 3]| {
-        terrain::terrain_surface_y(pos[0] + terrain_half, pos[2] + terrain_half)
-    };
+    let sample_surface =
+        |pos: [f32; 3]| terrain::terrain_surface_y(pos[0] + terrain_half, pos[2] + terrain_half);
 
     let mut prev_t = 0.0_f32;
     let mut prev_pos = ray_origin;
@@ -988,7 +981,7 @@ mod agent_needs {
     use bevy::prelude::{App, Component, Plugin, Query, Res, Resource, Update};
     use civ_agents::{Needs as AgentNeedsData, Position3d as AgentPositionData};
     use civ_voxel::material::{
-        ACID, CO2, FIRE, LAVA, MOLD, MOSS, MOLTEN_METAL, PLANT, SALT_WATER, SMOKE, STEAM,
+        ACID, CO2, FIRE, LAVA, MOLD, MOLTEN_METAL, MOSS, PLANT, SALT_WATER, SMOKE, STEAM,
         TOXIC_GAS, WATER, WOOD,
     };
     use civ_voxel::{MaterialId, VoxelWorld, WorldCoord, FIXED_SCALE};
@@ -1147,7 +1140,7 @@ mod agent_needs {
 }
 
 #[cfg(feature = "bevy")]
-pub use agent_needs::{AgentNeeds, AgentNeedsPlugin, Position, VoxelWorldRes, update_agent_needs};
+pub use agent_needs::{update_agent_needs, AgentNeeds, AgentNeedsPlugin, Position, VoxelWorldRes};
 
 #[cfg(feature = "bevy")]
 pub mod bevy_render;
@@ -1784,6 +1777,7 @@ mod tests {
 
     #[test]
     fn install_crash_handler_does_not_panic() {
-        std::panic::catch_unwind(|| install_crash_handler()).expect("install_crash_handler should install");
+        std::panic::catch_unwind(|| crate::crash_handler::install_crash_handler())
+            .expect("install_crash_handler should install");
     }
 }

@@ -407,8 +407,11 @@ impl MigrationEngine {
             // Distribute leavers across destinations proportional to pull, excluding
             // the origin itself. Deterministic largest-remainder allocation.
             let mut remaining = leaving;
-            let dests: Vec<(ClusterId, f32)> =
-                pulls.iter().copied().filter(|(d, _)| d != origin_id).collect();
+            let dests: Vec<(ClusterId, f32)> = pulls
+                .iter()
+                .copied()
+                .filter(|(d, _)| d != origin_id)
+                .collect();
             let dest_pull: f32 = dests.iter().map(|(_, p)| *p).sum();
             if dest_pull <= 0.0 {
                 continue;
@@ -599,11 +602,20 @@ mod tests {
         let after_dest = eng.cluster(ClusterId(2)).unwrap().population;
 
         assert!(report.total_moved > 0, "expected migration to occur");
-        assert!(after_origin < before_origin, "stressed cluster should lose people");
-        assert!(after_dest > before_dest, "opportunity cluster should gain people");
+        assert!(
+            after_origin < before_origin,
+            "stressed cluster should lose people"
+        );
+        assert!(
+            after_dest > before_dest,
+            "opportunity cluster should gain people"
+        );
         // Conservation: nobody is created or destroyed.
         assert_eq!(before_origin + before_dest, after_origin + after_dest);
-        assert_eq!(report.emigrants_from(ClusterId(1)), report.immigrants_to(ClusterId(2)));
+        assert_eq!(
+            report.emigrants_from(ClusterId(1)),
+            report.immigrants_to(ClusterId(2))
+        );
     }
 
     #[test]
@@ -628,14 +640,21 @@ mod tests {
         o.stress.scarcity = 0.2;
         base.upsert(o.clone());
         let mut d = ClusterMigration::new(ClusterId(2), 100, 5000);
-        d.opportunity = MigrationOpportunity { surplus: 0.9, safety: 1.0, capacity: 0.9 };
+        d.opportunity = MigrationOpportunity {
+            surplus: 0.9,
+            safety: 1.0,
+            capacity: 0.9,
+        };
         base.upsert(d.clone());
 
         let baseline = base.clone().tick(&mut rng(3)).total_moved;
 
         // Same setup + a disaster on the origin should spike the flow.
         let mut surged = base;
-        surged.apply_event(SurgeEvent::Disaster { cluster: ClusterId(1), severity: 1.0 });
+        surged.apply_event(SurgeEvent::Disaster {
+            cluster: ClusterId(1),
+            severity: 1.0,
+        });
         let spiked = surged.tick(&mut rng(3)).total_moved;
 
         assert!(
@@ -651,11 +670,18 @@ mod tests {
         o.stress.scarcity = 0.1;
         eng.upsert(o);
         let mut d = ClusterMigration::new(ClusterId(2), 100, 5000);
-        d.opportunity = MigrationOpportunity { surplus: 0.9, safety: 1.0, capacity: 0.9 };
+        d.opportunity = MigrationOpportunity {
+            surplus: 0.9,
+            safety: 1.0,
+            capacity: 0.9,
+        };
         eng.upsert(d);
 
         let baseline = eng.clone().tick(&mut rng(9)).total_moved;
-        eng.apply_event(SurgeEvent::War { cluster: ClusterId(1), intensity: 1.0 });
+        eng.apply_event(SurgeEvent::War {
+            cluster: ClusterId(1),
+            intensity: 1.0,
+        });
         let spiked = eng.tick(&mut rng(9)).total_moved;
         assert!(spiked > baseline, "war surge should increase migration");
     }
@@ -663,7 +689,10 @@ mod tests {
     #[test]
     fn surge_decays_over_time() {
         let mut eng = stress_to_opportunity();
-        eng.apply_event(SurgeEvent::Disaster { cluster: ClusterId(1), severity: 1.0 });
+        eng.apply_event(SurgeEvent::Disaster {
+            cluster: ClusterId(1),
+            severity: 1.0,
+        });
         let initial = eng.cluster(ClusterId(1)).unwrap().surge;
         assert!(initial > 1.0);
 
@@ -681,9 +710,7 @@ mod tests {
     #[test]
     fn migration_mixes_culture_and_reduces_divergence() {
         let mut eng = stress_to_opportunity();
-        let before = eng
-            .language_divergence(ClusterId(1), ClusterId(2))
-            .unwrap();
+        let before = eng.language_divergence(ClusterId(1), ClusterId(2)).unwrap();
         let before_belief = eng.belief_divergence(ClusterId(1), ClusterId(2)).unwrap();
 
         // Run several ticks so migrants blend into the destination repeatedly.
@@ -716,7 +743,10 @@ mod tests {
             report_a.push(a.tick(&mut ra));
             report_b.push(b.tick(&mut rb));
         }
-        assert_eq!(report_a, report_b, "same seed ⇒ identical migration outcome");
+        assert_eq!(
+            report_a, report_b,
+            "same seed ⇒ identical migration outcome"
+        );
         assert_eq!(a, b, "same seed ⇒ identical engine state");
     }
 
@@ -732,7 +762,10 @@ mod tests {
         let total_after: u64 = (1..=2)
             .map(|i| eng.cluster(ClusterId(i)).unwrap().population)
             .sum();
-        assert_eq!(total_before, total_after, "population is conserved across ticks");
+        assert_eq!(
+            total_before, total_after,
+            "population is conserved across ticks"
+        );
     }
 
     #[test]
@@ -745,10 +778,18 @@ mod tests {
         };
         assert!((0.0..=1.0).contains(&s.pressure()));
 
-        let o = MigrationOpportunity { surplus: 1.0, safety: 1.0, capacity: 1.0 };
+        let o = MigrationOpportunity {
+            surplus: 1.0,
+            safety: 1.0,
+            capacity: 1.0,
+        };
         assert!((0.0..=1.0).contains(&o.attractiveness()));
 
-        let capped = MigrationOpportunity { surplus: 1.0, safety: 1.0, capacity: 0.0 };
+        let capped = MigrationOpportunity {
+            surplus: 1.0,
+            safety: 1.0,
+            capacity: 0.0,
+        };
         assert_eq!(capped.attractiveness(), 0.0, "no capacity ⇒ no attraction");
     }
 }

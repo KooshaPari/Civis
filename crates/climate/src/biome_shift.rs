@@ -148,7 +148,11 @@ impl Default for BiomeShiftParams {
 /// `NaN` inputs are coerced to `-∞` for temperature and `0.0` for
 /// precipitation so the function remains total.
 pub fn classify(temp_c: f64, precip: f64, params: &BiomeShiftParams) -> Biome {
-    let temp_c = if temp_c.is_nan() { f64::NEG_INFINITY } else { temp_c };
+    let temp_c = if temp_c.is_nan() {
+        f64::NEG_INFINITY
+    } else {
+        temp_c
+    };
     let precip = if precip.is_nan() { 0.0 } else { precip };
 
     if temp_c < params.polar_desert_temp_c {

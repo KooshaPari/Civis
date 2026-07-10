@@ -1,4 +1,4 @@
-﻿use std::sync::Arc;
+use std::sync::Arc;
 use std::time::Duration;
 
 use civ_engine::Simulation;
@@ -57,7 +57,9 @@ async fn test_load_scenario_ardani() {
     let (mut ws, _) = connect_async(&url).await.expect("connect");
 
     let load = r#"{"jsonrpc":"2.0","id":2,"method":"sim.load_scenario","params":{"preset":"Ardani","seed":42}}"#;
-    ws.send(Message::Text(load.to_owned())).await.expect("send load");
+    ws.send(Message::Text(load.to_owned()))
+        .await
+        .expect("send load");
     let _load_resp = recv_rpc(&mut ws, 2).await;
 
     let status = r#"{"jsonrpc":"2.0","id":3,"method":"sim.status","params":{}}"#;
@@ -79,8 +81,7 @@ async fn test_set_speed_accepted() {
     let url = format!("ws://{addr}/ws");
     let (mut ws, _) = connect_async(&url).await.expect("connect");
 
-    let msg =
-        r#"{"jsonrpc":"2.0","id":4,"method":"sim.set_speed","params":{"multiplier":2}}"#;
+    let msg = r#"{"jsonrpc":"2.0","id":4,"method":"sim.set_speed","params":{"multiplier":2}}"#;
     ws.send(Message::Text(msg.to_owned())).await.expect("send");
 
     let resp = recv_rpc(&mut ws, 4).await;

@@ -9,6 +9,8 @@ use crate::bevy_render::apply_chunk_material;
 use crate::camera::CameraRig;
 #[cfg(feature = "egui")]
 use crate::event_feed::EventFeed;
+use crate::frame_budget::FrameBudgetRecovery;
+use crate::frame_budget::{scaled_cull_distance, GpuQualityMode};
 use crate::live_attach::{LiveAttachBridge, LiveAttachState};
 use crate::live_focus::{compute_live_scene_focus, LiveSceneFocus, LIVE_FOCUS_LERP_SPEED};
 use crate::live_minimap::{
@@ -24,10 +26,8 @@ use crate::live_stream::{
     default_stream_meshes, AgentLabelConfig, LiveAgentTag, LiveBuildingTag, LiveChunkFade,
     LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene, StreamCulling, LIVE_CHUNK_EDGE,
 };
-use crate::frame_budget::{scaled_cull_distance, GpuQualityMode};
 use crate::minimap::{MinimapCamera, MinimapDot, MinimapRoot, MINIMAP_SIZE};
 use crate::{chunk_fade_complete, AttachMode, DebugRender, LiveHudSnapshot};
-use crate::frame_budget::FrameBudgetRecovery;
 
 const LIVE_RENDER_MAX_DISTANCE: f32 = 200.0;
 const MINIMAP_CAMERA_HEIGHT: f32 = 180.0;

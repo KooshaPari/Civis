@@ -1,11 +1,10 @@
-﻿#![cfg(all(feature = "bevy", feature = "egui"))]
+#![cfg(all(feature = "bevy", feature = "egui"))]
 //! God-mode intervention panel (FR-CIV-GAME-002). G key toggles.
 
+use crate::live_stream::LiveBridge;
+use crate::menus::in_game;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
-use crate::menus::in_game;
-use crate::live_stream::LiveBridge;
-use crate::god_actions::GodActionRequest;
 
 #[derive(Resource, Default)]
 pub struct GodPanelState {
@@ -30,15 +29,19 @@ const ACTION_DESCS: &[&str] = &[
 pub struct GodPanelPlugin;
 impl Plugin for GodPanelPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<GodPanelState>()
-           .add_systems(Update, (toggle_god_panel, draw_god_panel).chain().run_if(in_game));
+        app.init_resource::<GodPanelState>().add_systems(
+            Update,
+            (toggle_god_panel, draw_god_panel).chain().run_if(in_game),
+        );
     }
 }
 
 fn toggle_god_panel(keys: Res<ButtonInput<KeyCode>>, mut state: ResMut<GodPanelState>) {
     if keys.just_pressed(KeyCode::KeyG) {
         state.visible = !state.visible;
-        if state.magnitude == 0.0 { state.magnitude = 0.5; }
+        if state.magnitude == 0.0 {
+            state.magnitude = 0.5;
+        }
     }
 }
 
@@ -48,9 +51,16 @@ fn draw_god_panel(
     bridge: Option<Res<LiveBridge>>,
     mut ran_once: Local<bool>,
 ) {
-    if !*ran_once { *ran_once = true; return; }
-    if !state.visible { return; }
-    let Ok(ctx) = contexts.ctx_mut() else { return; };
+    if !*ran_once {
+        *ran_once = true;
+        return;
+    }
+    if !state.visible {
+        return;
+    }
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
     let screen = ctx.content_rect();
 
     let mut fire: Option<String> = None;
@@ -59,29 +69,57 @@ fn draw_god_panel(
         .fixed_size([290.0, 360.0])
         .collapsible(false)
         .title_bar(true)
-        .frame(egui::Frame::window(ctx.style().as_ref())
-            .fill(egui::Color32::from_rgba_premultiplied(9,10,12,230))
-            .stroke(egui::Stroke::new(1.5, egui::Color32::from_rgb(126,186,181))))
+        .frame(
+            egui::Frame::window(ctx.style().as_ref())
+                .fill(egui::Color32::from_rgba_premultiplied(9, 10, 12, 230))
+                .stroke(egui::Stroke::new(
+                    1.5,
+                    egui::Color32::from_rgb(126, 186, 181),
+                )),
+        )
         .show(ctx, |ui| {
-            ui.label(egui::RichText::new("Direct Intervention").color(egui::Color32::from_rgb(126,186,181)).size(11.0));
+            ui.label(
+                egui::RichText::new("Direct Intervention")
+                    .color(egui::Color32::from_rgb(126, 186, 181))
+                    .size(11.0),
+            );
             ui.separator();
 
             // Action selector
             for (idx, (name, desc)) in ACTIONS.iter().zip(ACTION_DESCS.iter()).enumerate() {
                 let selected = state.selected_action == idx;
-                let color = if selected { egui::Color32::from_rgb(126,186,181) } else { egui::Color32::from_rgb(160,170,180) };
-                if ui.add(egui::SelectableLabel::new(selected, egui::RichText::new(*name).color(color).monospace())).clicked() {
+                let color = if selected {
+                    egui::Color32::from_rgb(126, 186, 181)
+                } else {
+                    egui::Color32::from_rgb(160, 170, 180)
+                };
+                if ui
+                    .add(egui::SelectableLabel::new(
+                        selected,
+                        egui::RichText::new(*name).color(color).monospace(),
+                    ))
+                    .clicked()
+                {
                     state.selected_action = idx;
                 }
                 if selected {
-                    ui.label(egui::RichText::new(*desc).color(egui::Color32::from_rgb(120,130,140)).size(10.0).italics());
+                    ui.label(
+                        egui::RichText::new(*desc)
+                            .color(egui::Color32::from_rgb(120, 130, 140))
+                            .size(10.0)
+                            .italics(),
+                    );
                 }
             }
             ui.separator();
 
             // Magnitude
             ui.horizontal(|ui| {
-                ui.label(egui::RichText::new("Magnitude:").color(egui::Color32::from_rgb(160,170,180)).size(11.0));
+                ui.label(
+                    egui::RichText::new("Magnitude:")
+                        .color(egui::Color32::from_rgb(160, 170, 180))
+                        .size(11.0),
+                );
                 ui.add(egui::Slider::new(&mut state.magnitude, 0.0..=1.0).show_value(true));
             });
 
@@ -92,30 +130,64 @@ fn draw_god_panel(
 
             if needs_pos {
                 ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new("X:").color(egui::Color32::from_rgb(160,170,180)).size(11.0));
-                    ui.add(egui::DragValue::new(&mut state.target_x).speed(0.01).clamp_range(0.0..=1.0f32));
-                    ui.label(egui::RichText::new("Y:").color(egui::Color32::from_rgb(160,170,180)).size(11.0));
-                    ui.add(egui::DragValue::new(&mut state.target_y).speed(0.01).clamp_range(0.0..=1.0f32));
+                    ui.label(
+                        egui::RichText::new("X:")
+                            .color(egui::Color32::from_rgb(160, 170, 180))
+                            .size(11.0),
+                    );
+                    ui.add(
+                        egui::DragValue::new(&mut state.target_x)
+                            .speed(0.01)
+                            .clamp_range(0.0..=1.0f32),
+                    );
+                    ui.label(
+                        egui::RichText::new("Y:")
+                            .color(egui::Color32::from_rgb(160, 170, 180))
+                            .size(11.0),
+                    );
+                    ui.add(
+                        egui::DragValue::new(&mut state.target_y)
+                            .speed(0.01)
+                            .clamp_range(0.0..=1.0f32),
+                    );
                 });
             }
 
             if needs_faction {
                 ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new("Faction:").color(egui::Color32::from_rgb(160,170,180)).size(11.0));
-                    ui.add(egui::DragValue::new(&mut state.target_faction).speed(1.0).clamp_range(0..=255u32));
+                    ui.label(
+                        egui::RichText::new("Faction:")
+                            .color(egui::Color32::from_rgb(160, 170, 180))
+                            .size(11.0),
+                    );
+                    ui.add(
+                        egui::DragValue::new(&mut state.target_faction)
+                            .speed(1.0)
+                            .clamp_range(0..=255u32),
+                    );
                 });
             }
 
             ui.separator();
-            let fire_btn = ui.add_sized([280.0, 28.0], egui::Button::new(
-                egui::RichText::new(format!("Invoke: {}", action_name)).color(egui::Color32::from_rgb(9,10,12)).size(13.0)
-            ).fill(egui::Color32::from_rgb(126,186,181)));
+            let fire_btn = ui.add_sized(
+                [280.0, 28.0],
+                egui::Button::new(
+                    egui::RichText::new(format!("Invoke: {}", action_name))
+                        .color(egui::Color32::from_rgb(9, 10, 12))
+                        .size(13.0),
+                )
+                .fill(egui::Color32::from_rgb(126, 186, 181)),
+            );
             if fire_btn.clicked() {
                 fire = Some(action_name.to_string());
             }
 
             if let Some(ref msg) = state.status {
-                ui.label(egui::RichText::new(msg).color(egui::Color32::from_rgb(200,200,100)).size(10.0));
+                ui.label(
+                    egui::RichText::new(msg)
+                        .color(egui::Color32::from_rgb(200, 200, 100))
+                        .size(10.0),
+                );
             }
         });
 
@@ -133,18 +205,5 @@ fn draw_god_panel(
             bridge.client.send_rpc("sim.god_action", payload);
         }
         state.status = Some(format!("Invoked: {}", ACTIONS[state.selected_action]));
-    }
-
-    // Dispatch a substrate verb button. The `param_builder` produces the
-    // matching `GodToolRequest` JSON shape; `sim.god_action` is the same
-    // JSON-RPC method the legacy Invoke button uses, so this stays on
-    // the exact wire path PR #762 wired up.
-    if let Some(idx) = fire_substrate {
-        let v = &SUBSTRATE_VERBS[idx];
-        let payload = (v.param_builder)(&state);
-        if let Some(ref bridge) = bridge {
-            bridge.client.send_rpc("sim.god_action", payload);
-        }
-        state.status = Some(format!("Fired: {} ({})", v.label, v.verb));
     }
 }

@@ -38,7 +38,9 @@ impl BattleSummary {
         if self.total_casualties == 0 {
             return false;
         }
-        let defender_casualties = self.total_casualties.saturating_sub(self.aggressor_casualties);
+        let defender_casualties = self
+            .total_casualties
+            .saturating_sub(self.aggressor_casualties);
         let ratio = defender_casualties as f32 / self.total_casualties as f32;
         ratio >= 0.8 || (1.0 - ratio) >= 0.8
     }

@@ -92,7 +92,12 @@ impl Default for FrameBudgetState {
 
 impl Default for FrameBudgetState {
     fn default() -> Self {
-        Self { window: [0.0; FRAME_BUDGET_WINDOW], index: 0, filled: 0, last_warn_at: None }
+        Self {
+            window: [0.0; FRAME_BUDGET_WINDOW],
+            index: 0,
+            filled: 0,
+            last_warn_at: None,
+        }
     }
 }
 
@@ -116,7 +121,10 @@ impl Plugin for FrameBudgetPlugin {
             .init_resource::<FrameBudgetState>()
             .init_resource::<GpuQualityMode>()
             .init_resource::<QualityRecoveryState>()
-            .add_systems(PostUpdate, enforce_frame_budget.after(FrameTimeDiagnosticsPlugin::diagnostic_system));
+            .add_systems(
+                PostUpdate,
+                enforce_frame_budget.after(FrameTimeDiagnosticsPlugin::diagnostic_system),
+            );
     }
 }
 
@@ -127,19 +135,35 @@ fn enforce_frame_budget(
     mut state: ResMut<FrameBudgetState>,
     mut recovery: ResMut<FrameBudgetRecovery>,
 ) {
-    let Some(frame_ms) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FRAME_TIME).and_then(|diag| diag.value()).filter(|value| value.is_finite()).map(|value| value as f32) else { return; };
+    let Some(frame_ms) = diagnostics
+        .get(&FrameTimeDiagnosticsPlugin::FRAME_TIME)
+        .and_then(|diag| diag.value())
+        .filter(|value| value.is_finite())
+        .map(|value| value as f32)
+    else {
+        return;
+    };
     metrics.frame_count = metrics.frame_count.saturating_add(1);
     metrics.max_frame_ms = metrics.max_frame_ms.max(frame_ms);
     let index = state.index;
     state.window[index] = frame_ms;
     state.index = (index + 1) % FRAME_BUDGET_WINDOW;
-    if state.filled < FRAME_BUDGET_WINDOW { state.filled += 1; }
-    if state.filled < FRAME_BUDGET_WINDOW { return; }
+    if state.filled < FRAME_BUDGET_WINDOW {
+        state.filled += 1;
+    }
+    if state.filled < FRAME_BUDGET_WINDOW {
+        return;
+    }
     let avg_ms = state.window.iter().sum::<f32>() / FRAME_BUDGET_WINDOW as f32;
-    if avg_ms <= FRAME_BUDGET_MS { return; }
+    if avg_ms <= FRAME_BUDGET_MS {
+        return;
+    }
     metrics.drop_count = metrics.drop_count.saturating_add(1);
     let now = time.elapsed_secs_f64();
-    let should_warn = state.last_warn_at.map(|last| now - last >= WARN_THROTTLE_SECS).unwrap_or(true);
+    let should_warn = state
+        .last_warn_at
+        .map(|last| now - last >= WARN_THROTTLE_SECS)
+        .unwrap_or(true);
     if should_warn {
         warn!("Frame budget exceeded: {avg_ms:.1}ms (target {FRAME_BUDGET_MS})");
         state.last_warn_at = Some(now);

@@ -9,19 +9,19 @@
 
 use crate::menus::AppState;
 use crate::ui_theme::CHIP_FILL;
+use crate::ui_theme::CHIP_FILL;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
-use crate::ui_theme::CHIP_FILL;
 
 use civ_protocol_3d::{CivilianNeeds3d, CivilianStateEntry};
 
 use crate::game_laws::GameLawsOpen;
-use crate::spawn_tools::{ActiveTool, BuildingSpawnKind, SpawnTool};
-use crate::{AttachMode, LiveEntityKind, SelectedLiveEntity};
 use crate::settings_ui::{
     GameSettings, KeyBinding, ACTION_CYCLE_SIM_SPEED, ACTION_PAUSE_SIM, ACTION_SPEED_10X,
     ACTION_SPEED_1X, ACTION_SPEED_2X, ACTION_SPEED_5X,
 };
+use crate::spawn_tools::{ActiveTool, BuildingSpawnKind, SpawnTool};
+use crate::{AttachMode, LiveEntityKind, SelectedLiveEntity};
 use std::collections::HashMap;
 
 /// Active left-panel cluster tab.
@@ -65,10 +65,7 @@ const TOOL_ICON_PATHS: &[(&str, &str)] = &[
 /// Currently a no-op stub — the full mapping from key → [`ActiveSubTool`] will
 /// be wired in the next tool-taxonomy pass. The system exists so `GameUiPlugin`
 /// can register it in `Update` without conditional compilation.
-pub fn handle_category_hotkeys(
-    _keys: Res<ButtonInput<KeyCode>>,
-    _active: ResMut<ActiveSubTool>,
-) {
+pub fn handle_category_hotkeys(_keys: Res<ButtonInput<KeyCode>>, _active: ResMut<ActiveSubTool>) {
     // TODO(tool-taxonomy-P2): map F1–F5 / Q-E-R-T-Y to SubTool categories.
 }
 
@@ -237,7 +234,8 @@ pub fn draw_god_action_toast(ctx: &egui::Context, toast: &GodActionToast) {
     let accent = egui::Color32::from_rgb(126, 186, 181);
     let fill = egui::Color32::from_rgba_premultiplied(17, 20, 31, alpha.saturating_add(30));
     let text_color = egui::Color32::from_rgba_unmultiplied(220, 225, 235, alpha);
-    let accent_color = egui::Color32::from_rgba_unmultiplied(accent.r(), accent.g(), accent.b(), alpha);
+    let accent_color =
+        egui::Color32::from_rgba_unmultiplied(accent.r(), accent.g(), accent.b(), alpha);
 
     egui::Area::new(egui::Id::new("civis_god_action_toast"))
         .anchor(egui::Align2::RIGHT_BOTTOM, egui::vec2(-16.0, -120.0))
@@ -253,7 +251,11 @@ pub fn draw_god_action_toast(ctx: &egui::Context, toast: &GodActionToast) {
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
                         ui.label(egui::RichText::new("⚡").color(accent_color).size(16.0));
-                        ui.label(egui::RichText::new(&toast.message).color(text_color).size(13.0));
+                        ui.label(
+                            egui::RichText::new(&toast.message)
+                                .color(text_color)
+                                .size(13.0),
+                        );
                     });
                 });
         });
@@ -423,10 +425,7 @@ pub fn tick_god_action_toast(time: Res<Time>, mut toast: ResMut<GodActionToast>)
 }
 
 /// Bevy system wrapper for [`draw_god_action_toast`] (live attach window).
-pub fn draw_god_action_toast_system(
-    mut contexts: EguiContexts,
-    toast: Res<GodActionToast>,
-) {
+pub fn draw_god_action_toast_system(mut contexts: EguiContexts, toast: Res<GodActionToast>) {
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
@@ -443,7 +442,8 @@ pub fn draw_god_action_toast(ctx: &egui::Context, toast: &GodActionToast) {
     let accent = egui::Color32::from_rgb(126, 186, 181);
     let fill = egui::Color32::from_rgba_premultiplied(17, 20, 31, alpha.saturating_add(30));
     let text_color = egui::Color32::from_rgba_unmultiplied(220, 225, 235, alpha);
-    let accent_color = egui::Color32::from_rgba_unmultiplied(accent.r(), accent.g(), accent.b(), alpha);
+    let accent_color =
+        egui::Color32::from_rgba_unmultiplied(accent.r(), accent.g(), accent.b(), alpha);
 
     egui::Area::new(egui::Id::new("civis_god_action_toast"))
         .anchor(egui::Align2::RIGHT_BOTTOM, egui::vec2(-16.0, -120.0))
@@ -458,11 +458,7 @@ pub fn draw_god_action_toast(ctx: &egui::Context, toast: &GodActionToast) {
                 .inner_margin(egui::Margin::symmetric(10, 6))
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
-                        ui.label(
-                            egui::RichText::new("⚡")
-                                .color(accent_color)
-                                .size(16.0),
-                        );
+                        ui.label(egui::RichText::new("⚡").color(accent_color).size(16.0));
                         ui.label(
                             egui::RichText::new(&toast.message)
                                 .color(text_color)
@@ -1083,7 +1079,11 @@ fn health_bar_ui(ui: &mut egui::Ui, health: &str) {
         } else {
             egui::Color32::from_rgb(230, 90, 90)
         };
-        ui.add(egui::ProgressBar::new(frac).fill(color).text(health.to_string()));
+        ui.add(
+            egui::ProgressBar::new(frac)
+                .fill(color)
+                .text(health.to_string()),
+        );
     } else {
         let shown = if health.is_empty() { "—" } else { health };
         ui.label(egui::RichText::new(shown).strong());

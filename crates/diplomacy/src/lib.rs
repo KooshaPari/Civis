@@ -956,8 +956,8 @@ fn bump_from_energy(energy: u32) -> i32 {
 pub mod relationship_stance;
 
 pub use relationship_stance::{
-    FactionPair, RelationEvent, RelationStance, RelationshipStance,
-    RelationshipStanceModel, StanceConfigError, StanceThresholds,
+    FactionPair, RelationEvent, RelationStance, RelationshipStance, RelationshipStanceModel,
+    StanceConfigError, StanceThresholds,
 };
 
 // ---------------------------------------------------------------------------
@@ -1495,9 +1495,18 @@ mod tests {
         // (any drift in signature forces a different `fn` type, the
         // equality would still hold, but the previous `let` binding
         // would already have failed).
-        assert_eq!(_f_accept as fn(i32) -> bool, decide_treaty_acceptance as fn(i32) -> bool);
-        assert_eq!(_f_trust as fn(i32, i32) -> i32, update_trust_score as fn(i32, i32) -> i32);
-        assert_eq!(_f_war as fn(i32) -> WarGoal, select_war_goal as fn(i32) -> WarGoal);
+        assert_eq!(
+            _f_accept as fn(i32) -> bool,
+            decide_treaty_acceptance as fn(i32) -> bool
+        );
+        assert_eq!(
+            _f_trust as fn(i32, i32) -> i32,
+            update_trust_score as fn(i32, i32) -> i32
+        );
+        assert_eq!(
+            _f_war as fn(i32) -> WarGoal,
+            select_war_goal as fn(i32) -> WarGoal
+        );
         assert_eq!(
             _f_war_v2 as fn(i32, WarExhaustion, i32, u32) -> WarGoal,
             select_war_goal_v2 as fn(i32, WarExhaustion, i32, u32) -> WarGoal
@@ -1533,10 +1542,7 @@ mod tests {
             decide_treaty_acceptance(-25),
             "treaty acceptance is deterministic per standing"
         );
-        assert_eq!(
-            decide_treaty_acceptance(50),
-            decide_treaty_acceptance(50),
-        );
+        assert_eq!(decide_treaty_acceptance(50), decide_treaty_acceptance(50),);
         // Boundary: standing >= 0 accepts, < 0 rejects. Independent of
         // the >5KB of flavor text we have not been fed into it.
         assert!(decide_treaty_acceptance(0));

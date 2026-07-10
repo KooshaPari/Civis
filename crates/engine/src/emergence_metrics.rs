@@ -49,11 +49,10 @@ use civ_emergence_metrics::branching::{
     classify_regime, rolling_mean_sigma, sigma_a, sigma_score, BranchingLedger, BranchingRegime,
     DEFAULT_BRANCHING_WINDOW, SIGMA_SUBCRITICAL, SIGMA_SUPERCRITICAL,
 };
-use civ_emergence_metrics::branching::{CriticalityInputs, TileDashboard};
 use civ_emergence_metrics::power_law::PowerLawFit;
 use civ_emergence_metrics::shannon::ShannonEntropy;
 use civ_emergence_metrics::structure::{ComponentSummary, Grid, StructureCount};
-use civ_emergence_metrics::{Histogram, Metric};
+use civ_emergence_metrics::{EmergenceDashboard, Histogram, Metric};
 use civ_voxel::{fluid_ca::CaGrid, material::AIR};
 use civ_voxel::{MaterialId, OctreeNode, VoxelWorld, CHUNK_EDGE};
 use serde::{Deserialize, Serialize};
@@ -409,7 +408,10 @@ impl Simulation {
     }
 
     fn micro_descendant_action_count(&self) -> u32 {
-        self.last_tick_engagements.len().try_into().unwrap_or(u32::MAX)
+        self.last_tick_engagements
+            .len()
+            .try_into()
+            .unwrap_or(u32::MAX)
     }
 
     /// Take one emergence sample if the current tick is on a sample
@@ -1421,8 +1423,12 @@ mod tests {
         // `with_seed` pre-spawns faction-aligned civilians from scenario setup;
         // clear them so this test's "0 factions" precondition actually holds
         // (it asserts the degenerate MI contract: no factions → None).
-        let preexisting: Vec<hecs::Entity> =
-            sim.world.query::<&Civilian>().iter().map(|(e, _)| e).collect();
+        let preexisting: Vec<hecs::Entity> = sim
+            .world
+            .query::<&Civilian>()
+            .iter()
+            .map(|(e, _)| e)
+            .collect();
         for e in preexisting {
             let _ = sim.world.despawn(e);
         }

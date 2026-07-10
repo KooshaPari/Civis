@@ -14,9 +14,7 @@ use crate::game_ui::{
     SelectedEntityDetails,
 };
 use crate::live_pick::LiveSelection;
-use crate::live_stream::{
-    LiveAgentTag, LiveBuildingTag, LiveGraphParcelTag, LiveStreamScene,
-};
+use crate::live_stream::{LiveAgentTag, LiveBuildingTag, LiveGraphParcelTag, LiveStreamScene};
 use crate::{AttachMode, LiveEntityKind, SelectedLiveEntity};
 
 /// Plugin: syncs pick selection into inspector rows and draws the right-side panel.
@@ -32,10 +30,7 @@ impl Plugin for EntityInspectorPlugin {
                     sync_inspector_from_inspected,
                 ),
             )
-            .add_systems(
-                EguiPrimaryContextPass,
-                draw_entity_inspector_panel,
-            );
+            .add_systems(EguiPrimaryContextPass, draw_entity_inspector_panel);
     }
 }
 
@@ -115,11 +110,10 @@ fn live_entity_world_position(
             .iter()
             .find(|(tag, _)| tag.id == selected.id)
             .map(|(_, transform)| transform.translation()),
-        LiveEntityKind::VoxelChunk => Some(crate::chunk_world_centre(
-            civ_voxel::ChunkId(selected.id),
-            crate::VOXEL_CHUNK_EDGE,
-        )
-        .into()),
+        LiveEntityKind::VoxelChunk => Some(
+            crate::chunk_world_centre(civ_voxel::ChunkId(selected.id), crate::VOXEL_CHUNK_EDGE)
+                .into(),
+        ),
     }
 }
 

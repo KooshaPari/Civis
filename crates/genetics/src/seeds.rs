@@ -412,10 +412,7 @@ pub fn choose_named_seed(
 
 /// Resolve scenario divergence: explicit override wins, else seed default.
 #[must_use]
-pub fn effective_spawn_divergence(
-    seed: &SeedDefinition,
-    divergence_override: Option<f32>,
-) -> f32 {
+pub fn effective_spawn_divergence(seed: &SeedDefinition, divergence_override: Option<f32>) -> f32 {
     divergence_override.unwrap_or(seed.divergence)
 }
 
@@ -639,7 +636,11 @@ pub fn archetype_seed(named: NamedSeed) -> SeedDefinition {
         NamedSeed::Nymari => (
             "nymari",
             "Nymari",
-            vec!["Tundra".to_string(), "Glacier".to_string(), "Alpine".to_string()],
+            vec![
+                "Tundra".to_string(),
+                "Glacier".to_string(),
+                "Alpine".to_string(),
+            ],
             0.20_f32,
             "Glacial highlanders; low-moderate drift, cold adaptation.",
         ),
@@ -1219,9 +1220,7 @@ mod tests {
     fn effective_spawn_divergence_prefers_override() {
         let seed = archetype_seed(NamedSeed::Ardani);
         assert!((effective_spawn_divergence(&seed, Some(0.55)) - 0.55).abs() < f32::EPSILON);
-        assert!(
-            (effective_spawn_divergence(&seed, None) - seed.divergence).abs() < f32::EPSILON
-        );
+        assert!((effective_spawn_divergence(&seed, None) - seed.divergence).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -1418,8 +1417,10 @@ mod tests {
             let seed_def = archetype_seed(named);
             let mut rng_a = ChaCha8Rng::seed_from_u64(0xFEED_DEAD_u64);
             let mut rng_b = ChaCha8Rng::seed_from_u64(0xFEED_DEAD_u64);
-            let dna_a = spawn_genome_with_divergence(&mut rng_a, &class, &seed_def, seed_def.divergence);
-            let dna_b = spawn_genome_with_divergence(&mut rng_b, &class, &seed_def, seed_def.divergence);
+            let dna_a =
+                spawn_genome_with_divergence(&mut rng_a, &class, &seed_def, seed_def.divergence);
+            let dna_b =
+                spawn_genome_with_divergence(&mut rng_b, &class, &seed_def, seed_def.divergence);
             assert_eq!(
                 dna_a, dna_b,
                 "{named:?}: spawn must be deterministic under identical RNG seed"

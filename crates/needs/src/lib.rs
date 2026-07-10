@@ -25,7 +25,9 @@ pub mod decay;
 pub mod lifecycle;
 
 pub use decay::{apply_resource, tick_rise, NeedChannel, NeedLevel, RiseRates};
-pub use lifecycle::{age_threshold, classify_lifecycle, labor_capacity, LifecycleLabel, LifecycleParams};
+pub use lifecycle::{
+    age_threshold, classify_lifecycle, labor_capacity, LifecycleLabel, LifecycleParams,
+};
 
 /// Schema version. Bumped on breaking changes.
 pub const SCHEMA_VERSION: &str = "0.1.0";
@@ -603,6 +605,7 @@ mod tests {
             integrity: 0.90,
             sick: true,
             deprivation_streak: 0,
+            ..Health::default()
         };
         let rates = DecayRates::default();
         let params = HealthParams {
@@ -754,6 +757,7 @@ mod tests {
             integrity: 0.0,
             sick: true,
             deprivation_streak: 50,
+            ..Health::default()
         };
         let mut r = rng(3);
         let out = tick(
@@ -939,6 +943,7 @@ mod tests {
             integrity: 0.5,
             sick: false,
             deprivation_streak: 0,
+            ..Health::default()
         };
         let mut rng = rng(2);
         let rates = DecayRates {
@@ -1014,6 +1019,7 @@ mod tests {
             integrity: 0.42,
             sick: false,
             deprivation_streak: 0,
+            ..Health::default()
         };
         let rates = DecayRates {
             food: 0.0,
@@ -1053,6 +1059,7 @@ mod tests {
             integrity: 0.02,
             sick: false,
             deprivation_streak: 0,
+            ..Health::default()
         };
         let mut rng = rng(9);
         let rates = DecayRates {
@@ -1094,7 +1101,7 @@ pub fn should_reproduce(
     overcrowding_factor: f32,
     lifecycle_params: &LifecycleParams,
 ) -> f32 {
-    use crate::lifecycle::{classify_lifecycle_from_age as classify_lifecycle};
+    use crate::lifecycle::classify_lifecycle_from_age as classify_lifecycle;
 
     // Only working-age adults can reproduce.
     let lifecycle = classify_lifecycle(age, lifecycle_params);
@@ -1144,10 +1151,15 @@ mod test_reproduction {
             integrity: 1.0,
             sick: false,
             deprivation_streak: 0,
+            ..Health::default()
         };
         // Working-age adult (age 25 fits in default ranges)
         let prob = should_reproduce(25.0, &health, 0.9, 0.9, 0.5, &lifecycle_params);
-        assert!(prob > 0.05, "Satisfied adult should have >5% birth prob, got {}", prob);
+        assert!(
+            prob > 0.05,
+            "Satisfied adult should have >5% birth prob, got {}",
+            prob
+        );
     }
 
     #[test]
@@ -1157,6 +1169,7 @@ mod test_reproduction {
             integrity: 0.8,
             sick: false,
             deprivation_streak: 0,
+            ..Health::default()
         };
         // Starving (food < 0.3)
         let prob = should_reproduce(25.0, &health, 0.1, 0.9, 0.5, &lifecycle_params);
@@ -1170,6 +1183,7 @@ mod test_reproduction {
             integrity: 1.0,
             sick: false,
             deprivation_streak: 0,
+            ..Health::default()
         };
         // Juvenile (age 8)
         let prob = should_reproduce(8.0, &health, 0.9, 0.9, 0.5, &lifecycle_params);
@@ -1183,6 +1197,7 @@ mod test_reproduction {
             integrity: 1.0,
             sick: true,
             deprivation_streak: 0,
+            ..Health::default()
         };
         // Working-age but sick
         let prob = should_reproduce(25.0, &health, 0.9, 0.9, 0.5, &lifecycle_params);

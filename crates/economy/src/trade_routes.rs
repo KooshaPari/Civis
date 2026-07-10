@@ -77,10 +77,7 @@ pub fn routes_lexicographic(routes: &[TradeRoute]) -> Vec<TradeRoute> {
 /// destination has deficit for at least one good, with flow equal
 /// to `min(surplus, deficit)`. Returns `None` when no complementary
 /// trade exists.
-pub fn route_flow(
-    origin: &Settlement,
-    destination: &Settlement,
-) -> Option<TradeRoute> {
+pub fn route_flow(origin: &Settlement, destination: &Settlement) -> Option<TradeRoute> {
     let _ = (origin, destination);
     None
 }

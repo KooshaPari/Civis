@@ -5,10 +5,9 @@
 //! See: https://github.com/phenotype-example/civis-platform/issues/XXX
 
 use civ_economy::{
-    drain_energy_budget, step, verify_ledger_conservation,
-    EconomyState, LedgerInvariantError, LedgerSide,
-    ACCOUNT_CONSUMPTION, ACCOUNT_ENERGY_BUDGET,
-    INSTITUTION_MARKET, INSTITUTION_TREASURY,
+    drain_energy_budget, step, verify_ledger_conservation, EconomyState, LedgerInvariantError,
+    LedgerSide, ACCOUNT_CONSUMPTION, ACCOUNT_ENERGY_BUDGET, INSTITUTION_MARKET,
+    INSTITUTION_TREASURY,
 };
 
 use civ_economy::step_institutions;

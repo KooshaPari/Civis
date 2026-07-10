@@ -153,6 +153,7 @@ mod tests {
 
     /// A test goal with a fixed utility score (ignores needs). Useful for
     /// driving the selector without modelling the full needs/goal matrix.
+    #[derive(Clone, Copy)]
     struct FixedGoal {
         id: &'static str,
         score: f32,
@@ -191,11 +192,11 @@ mod tests {
             needs
                 .iter()
                 .map(|n| match (self.target, n) {
-                    (NeedKind::Hunger, Need::Hunger(u)) => u,
-                    (NeedKind::Rest, Need::Rest(u)) => u,
-                    (NeedKind::Safety, Need::Safety(u)) => u,
-                    (NeedKind::Social, Need::Social(u)) => u,
-                    (NeedKind::Purpose, Need::Purpose(u)) => u,
+                    (NeedKind::Hunger, Need::Hunger(u)) => *u,
+                    (NeedKind::Rest, Need::Rest(u)) => *u,
+                    (NeedKind::Safety, Need::Safety(u)) => *u,
+                    (NeedKind::Social, Need::Social(u)) => *u,
+                    (NeedKind::Purpose, Need::Purpose(u)) => *u,
                     _ => 0.0,
                 })
                 .sum()
@@ -219,8 +220,7 @@ mod tests {
         };
 
         let needs = vec![Need::Hunger(0.9), Need::Rest(0.3), Need::Social(0.1)];
-        let candidates: Vec<Box<dyn Goal>> =
-            vec![Box::new(sleep), Box::new(play), Box::new(eat)];
+        let candidates: Vec<Box<dyn Goal>> = vec![Box::new(sleep), Box::new(play), Box::new(eat)];
 
         assert_eq!(
             select_goal(&candidates, &needs),
@@ -247,8 +247,7 @@ mod tests {
         };
 
         let needs = vec![Need::Rest(0.5)];
-        let candidates: Vec<Box<dyn Goal>> =
-            vec![Box::new(beta), Box::new(alpha), Box::new(gamma)];
+        let candidates: Vec<Box<dyn Goal>> = vec![Box::new(beta), Box::new(alpha), Box::new(gamma)];
 
         // gamma wins on utility (0.7 > 0.5).
         assert_eq!(
@@ -316,7 +315,16 @@ mod tests {
 
         let a = select_goal(&candidates, &needs);
         let b = {
-            let candidates_rev: Vec<Box<dyn Goal>> = candidates.iter().rev().cloned().collect();
+            let candidates_rev: Vec<Box<dyn Goal>> = vec![
+                Box::new(RelievesNeed {
+                    id: "eat",
+                    target: NeedKind::Hunger,
+                }),
+                Box::new(RelievesNeed {
+                    id: "sleep",
+                    target: NeedKind::Rest,
+                }),
+            ];
             select_goal(&candidates_rev, &needs)
         };
         assert_eq!(a, b);

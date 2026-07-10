@@ -208,18 +208,12 @@ fn fr_emg_oracle_gate_all_8_of_8() {
             "FR-EMG-001",
             oracle_fr_emg_001_diplomacy_events_accessible(),
         ),
-        (
-            "FR-EMG-002",
-            oracle_fr_emg_002_diplomacy_kind_roundtrip(),
-        ),
+        ("FR-EMG-002", oracle_fr_emg_002_diplomacy_kind_roundtrip()),
         (
             "FR-EMG-003",
             oracle_fr_emg_003_cluster_cultures_accessible(),
         ),
-        (
-            "FR-EMG-004",
-            oracle_fr_emg_004_cultural_distance_finite(),
-        ),
+        ("FR-EMG-004", oracle_fr_emg_004_cultural_distance_finite()),
         (
             "FR-EMG-005",
             oracle_fr_emg_005_diplomacy_stance_evolves_under_combat(),

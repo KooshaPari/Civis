@@ -52,7 +52,7 @@ pub fn evolve_doctrine_from_battle(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Doctrine, DoctrineLibrary, DamageEvent};
+    use crate::{DamageEvent, Doctrine, DoctrineLibrary};
     use civ_voxel::WorldCoord;
     use rand::SeedableRng;
     use rand_chacha::ChaCha8Rng;
@@ -101,8 +101,16 @@ mod tests {
     fn evolve_doctrine_from_battle_bumps_generation() {
         let mut library = DoctrineLibrary {
             current: vec![
-                Doctrine { id: 1, unit_composition: vec![4, 4, 4], score: 0.0 },
-                Doctrine { id: 2, unit_composition: vec![1, 8, 1], score: 0.0 },
+                Doctrine {
+                    id: 1,
+                    unit_composition: vec![4, 4, 4],
+                    score: 0.0,
+                },
+                Doctrine {
+                    id: 2,
+                    unit_composition: vec![1, 8, 1],
+                    score: 0.0,
+                },
             ],
             generation: 0,
         };
@@ -116,8 +124,16 @@ mod tests {
     fn evolve_doctrine_from_battle_deterministic() {
         let make_lib = || DoctrineLibrary {
             current: vec![
-                Doctrine { id: 1, unit_composition: vec![2, 2, 2], score: 0.0 },
-                Doctrine { id: 2, unit_composition: vec![5, 1, 3], score: 0.0 },
+                Doctrine {
+                    id: 1,
+                    unit_composition: vec![2, 2, 2],
+                    score: 0.0,
+                },
+                Doctrine {
+                    id: 2,
+                    unit_composition: vec![5, 1, 3],
+                    score: 0.0,
+                },
             ],
             generation: 0,
         };

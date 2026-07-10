@@ -42,6 +42,12 @@ pub enum HazardKind {
     Flood,
 }
 
+impl Default for HazardKind {
+    fn default() -> Self {
+        Self::Fire
+    }
+}
+
 /// Per-cell hazard state. A cell is "active" when `intensity > 0.0`.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct HazardCell {
@@ -296,7 +302,10 @@ mod tests {
         while !grid.is_quiescent(&params) {
             grid.step(&params);
             ticks += 1;
-            assert!(ticks < 10_000, "grid never decayed to zero after {ticks} ticks");
+            assert!(
+                ticks < 10_000,
+                "grid never decayed to zero after {ticks} ticks"
+            );
         }
 
         // Final state: every cell is below the threshold (i.e. effectively

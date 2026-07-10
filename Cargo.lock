@@ -3046,6 +3046,7 @@ dependencies = [
 name = "civ-build"
 version = "0.1.0"
 dependencies = [
+ "civ-economy",
  "civ-voxel",
  "proptest",
  "rand 0.8.6",
@@ -3075,6 +3076,7 @@ dependencies = [
  "civ-legends",
  "proptest",
  "serde",
+ "serde_json",
  "thiserror 1.0.69",
  "tracing",
 ]
@@ -3115,6 +3117,7 @@ dependencies = [
  "blake3",
  "chrono",
  "civ-agents",
+ "civ-audio",
  "civ-build",
  "civ-diffusion",
  "civ-economy",
@@ -3304,6 +3307,7 @@ version = "0.1.0"
 dependencies = [
  "axum 0.7.9",
  "civ-agents",
+ "civ-build",
  "civ-economy",
  "civ-emergence-metrics",
  "civ-engine",

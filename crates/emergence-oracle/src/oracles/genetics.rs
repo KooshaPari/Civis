@@ -52,7 +52,7 @@ fn inheritance_trial(seed: u64, class: &DnaClass, parent_a: &Dna, parent_b: &Dna
         .filter(|(lhs, rhs)| lhs != rhs)
         .count();
 
-    differing_loci <= class.length && mutated.0.iter().all(|byte| *byte <= u8::MAX)
+    differing_loci <= class.length
 }
 
 impl FeatureOracle for GeneticsOracle {
@@ -64,7 +64,9 @@ impl FeatureOracle for GeneticsOracle {
         let tick = sim.state.tick;
         let class = DnaClass::default();
         let parent_a = Dna((0..class.length).map(|i| i as u8).collect());
-        let parent_b = Dna((0..class.length).map(|i| 255u8.wrapping_sub(i as u8)).collect());
+        let parent_b = Dna((0..class.length)
+            .map(|i| 255u8.wrapping_sub(i as u8))
+            .collect());
 
         let trials = 64usize;
         let successful_trials = (0..trials)
@@ -97,7 +99,9 @@ mod tests {
     fn inheritance_trial_respects_parent_loci_before_mutation() {
         let class = DnaClass::default();
         let parent_a = Dna((0..class.length).map(|i| i as u8).collect());
-        let parent_b = Dna((0..class.length).map(|i| 255u8.wrapping_sub(i as u8)).collect());
+        let parent_b = Dna((0..class.length)
+            .map(|i| 255u8.wrapping_sub(i as u8))
+            .collect());
         assert!(inheritance_trial(123, &class, &parent_a, &parent_b));
     }
 }

@@ -21,12 +21,12 @@ use crate::bevy_render::{apply_chunk_material, mesh_buffer_to_bevy};
 use crate::frame_budget::{scaled_cull_distance, scaled_mesh_lod_distance, GpuQualityMode};
 use crate::game_ui::civilian_display_name;
 use crate::live_ground::{live_ground_y, ChunkVoxelCache};
+use crate::ws_client::WsClient;
 use crate::{
     agent_color_from_id, agent_scale_multiplier, chunk_distance_from_camera, decode_chunk_id,
     mesh_lod_level, should_render_chunk, DebugRender, LiveEntityKind, SelectedLiveEntity,
     AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
 };
-use crate::ws_client::WsClient;
 
 /// Bevy resource wrapping a [`WsClient`] so egui plugins can send JSON-RPC calls
 /// to `civ-server` without depending on the window binary crate.
@@ -170,12 +170,7 @@ pub fn chunk_biome_tint(voxels: &[MaterialId]) -> Option<[f32; 3]> {
 /// `max_scale` (defaults match the existing `agent_scale_multiplier`
 /// envelope so HUD spacing is unaffected).
 #[must_use]
-pub fn agent_distance_lod(
-    wire_scale: f32,
-    distance: f32,
-    min_scale: f32,
-    max_scale: f32,
-) -> f32 {
+pub fn agent_distance_lod(wire_scale: f32, distance: f32, min_scale: f32, max_scale: f32) -> f32 {
     if !wire_scale.is_finite() || !distance.is_finite() {
         return min_scale;
     }
@@ -679,7 +674,11 @@ pub fn remesh_cached_chunks(
     };
 
     let chunk_origin = chunk_transform(chunk_id);
-    let transform = Transform::from_xyz(chunk_origin.translation.x, surface_y, chunk_origin.translation.z);
+    let transform = Transform::from_xyz(
+        chunk_origin.translation.x,
+        surface_y,
+        chunk_origin.translation.z,
+    );
 
     // FR-CLIENT-render: pick a water tint that complements the chunk's
     // dominant voxel material, matching the per-chunk biome tinting that
@@ -830,23 +829,33 @@ pub fn remesh_cached_chunks(
         if voxels.len() != LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE {
             continue;
         }
-        let chunk_view = ChunkView { id: chunk_id, voxels };
+        let chunk_view = ChunkView {
+            id: chunk_id,
+            voxels,
+        };
         let distance = chunk_distance_from_camera(chunk_id, culling.eye, LIVE_CHUNK_EDGE as f32);
         let lod = LodLevel(mesh_lod_level(distance));
         let Ok(mesh_buffer) = CubicMesher::mesh_cubic(chunk_view, lod) else {
             continue;
         };
         let mesh = mesh_assets.add(mesh_buffer_to_bevy(&mesh_buffer));
-        let mut material = StandardMaterial { perceptual_roughness: 0.85, metallic: 0.0, ..default() };
+        let mut material = StandardMaterial {
+            perceptual_roughness: 0.85,
+            metallic: 0.0,
+            ..default()
+        };
         let base_rgb = chunk_biome_tint(voxels).unwrap_or(LIVE_CHUNK_BASE_COLOR);
         apply_chunk_material(&mut material, base_rgb, debug.wireframe, Some(0.0));
         let material_handle = material_assets.add(material);
         let transform = chunk_transform(chunk_id);
-        let entity = *scene
-            .chunks
-            .entry(chunk_id.0)
-            .or_insert_with(|| commands.spawn((LiveChunkTag { id: chunk_id }, Transform::default())).id());
-        commands.entity(entity).insert((Mesh3d(mesh), MeshMaterial3d(material_handle), transform));
+        let entity = *scene.chunks.entry(chunk_id.0).or_insert_with(|| {
+            commands
+                .spawn((LiveChunkTag { id: chunk_id }, Transform::default()))
+                .id()
+        });
+        commands
+            .entity(entity)
+            .insert((Mesh3d(mesh), MeshMaterial3d(material_handle), transform));
     }
 }
 
@@ -894,7 +903,12 @@ pub fn apply_water_deltas_for_frame(
             continue;
         }
         apply_water_for_chunk(
-            commands, scene, water_meshes, material_assets, chunk_id, &chunk.voxels,
+            commands,
+            scene,
+            water_meshes,
+            material_assets,
+            chunk_id,
+            &chunk.voxels,
         );
     }
 }

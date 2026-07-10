@@ -39,9 +39,7 @@ impl FeatureOracle for DisasterOracle {
             threshold,
             detail: format!(
                 "Disaster emergence: citizens={} buildings={} (citizen×building={}) at tick={tick}",
-                snap.citizen_count,
-                snap.building_count,
-                measured as u32
+                snap.citizen_count, snap.building_count, measured as u32
             ),
         }
     }

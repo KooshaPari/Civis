@@ -14,13 +14,16 @@
 # Path where the RustSec advisory-db is cloned. Defaults to ~/.cargo/advisory-db.
 # Pinned to $CARGO_HOME so the CI runner and the developer laptop share state.
 db-path = "$CARGO_HOME/advisory-db"
-# Fail the check on any unmaintained-warnings entry too — RustSec classifies
-# these as "unmaintained" but we treat them as warnings, not hard errors.
-unmaintained = "warn"
+# Report unmaintained direct workspace dependencies. Transitive dependencies
+# remain visible through normal advisory reporting without failing this policy.
+unmaintained = "workspace"
 # Ignore advisories that do not have a patched version yet (workaround until
 # upstream fixes flow in). Anything not in this list is a hard error.
 ignore = [
-  # Example placeholder — add entries as `RUSTSEC-YYYY-NNNN` once triaged.
+  # bincode 1.x is unmaintained (RUSTSEC-2025-0141); still required by save/replay paths.
+  { id = "RUSTSEC-2025-0141", reason = "bincode 1.x pinned by save format; migrate tracked separately" },
+  # crossbeam-epoch fmt::Pointer advisory; no patched release consumed yet.
+  { id = "RUSTSEC-2026-0204", reason = "awaiting crossbeam-epoch bump through bevy/rayon stack" },
 ]
 
 [bans]
@@ -31,15 +34,9 @@ multiple-versions = "warn"
 # Wildcard dep specs (e.g. `serde = "*"`) are a foot-gun; warn so they show
 # up in CI output even if we don't fail the build over them yet.
 wildcards = "warn"
-# Highlight very-common crates that may have legitimate duplicate-version
-# issues we want to know about (serde, tokio, etc).
-highlight = [
-  "rustls",
-  "openssl",
-  "ring",
-  "bevy",
-  "wgpu",
-]
+# Show every path involved in a duplicate-version finding so common crates
+# and their dependency chains are straightforward to investigate.
+highlight = "all"
 # Hard skip on duplicate version detection for these (vendored exceptions).
 skip = [
   # Add `name = "..."` entries when a known-good duplicate is required.
@@ -70,6 +67,7 @@ allow = [
   "Unicode-3.0",
   "OpenSSL",          # used by rustls/openssl-sys stack — accept, do not silently absorb
   "NCSA",             # University of Illinois / NCSA (used by some llvm deps)
+  "CDLA-Permissive-2.0", # webpki-roots (tokio-tungstenite / hyper-rustls)
 ]
 # Confidence threshold for the SPDX matcher. `threshold = 1.0` is the strictest
 # (exact SPDX match). Lower values may accept near-matches.
@@ -80,20 +78,6 @@ confidence-threshold = 1.0
 # rather than failing — local crates are governed by LICENSE at repo root.
 ignore = true
 
-[licenses.clarify]
-# Required clarifications for ambiguous SPDX expressions. Useful when a crate
-# declares "MIT OR Apache-2.0" and we need the SPDX to be canonicalised before
-# the allow-list runs.
-# expressions = []
-
-[licenses.copyleft]
-# Cargo-deny categorises strong/weak copyleft. Strong copyleft (GPL family) is
-# denied; weak copyleft (LGPL/MPL) is allowed only if the entry is in `allow`
-# above (MPL-2.0 is currently listed).
-strong = "deny"
-weak = "warn"
-# Allow specific weak-copyleft crates here (LGPL etc) when used as a system lib.
-
 [sources]
 # Refuse dependencies from registries/git sources we have not whitelisted.
 unknown-registry = "deny"
@@ -103,7 +87,9 @@ unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 # Allow-list of acceptable git sources. Empty by default — every git dep must
 # be triaged and added with a reason comment.
-allow-git = []
+allow-git = [
+  "https://github.com/KooshaPari/phenotype-gfx.git",
+]
 
 [sources.allow-org]
 # Allow any git source hosted under these GitHub orgs (used for internal

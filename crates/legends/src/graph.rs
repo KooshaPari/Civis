@@ -212,12 +212,7 @@ impl SagaGraph {
     }
 
     /// Attach an entity↔entity spine edge (Founded, MemberOf, …) after ingest.
-    pub fn link_entity_edge(
-        &mut self,
-        from: LegendEntityId,
-        to: LegendEntityId,
-        edge: LegendEdge,
-    ) {
+    pub fn link_entity_edge(&mut self, from: LegendEntityId, to: LegendEntityId, edge: LegendEdge) {
         let Some(from_idx) = self.entity_index.get(&from).copied() else {
             return;
         };

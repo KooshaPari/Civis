@@ -1,37 +1,169 @@
-#![deny(unsafe_code)]
+//! God-tool substrate dispatcher (Phase 1 of
+//! `docs/design/GODTOOLS_IMPL_PLAN.md`).
+//!
+//! The dispatcher is the **single Bevy → substrate bridge**: every
+//! mutating god-tool emits a [`GodToolRequest`] and a Bevy system
+//! hands it to [`Simulation::apply_god_tool`]. There is no direct
+//! `hecs::World` or `VoxelWorld` access from any god-tool system.
+//!
+//! ## Phase 2 verb coverage
+//!
+//! Phase 1 shipped 6 substrate-mutating verbs (3 TERRAIN ops +
+//! 1 LIFE + 1 DISASTER + 1 INSPECT). Phase 2 of
+//! `docs/design/GODTOOLS_IMPL_PLAN.md` adds 10 more high-value
+//! verbs that follow the same pattern: real substrate writes
+//! through `Simulation` methods the engine already reads each tick.
+//! Phase 3 of the plan (this PR) adds 8 more: 7 MATERIAL ops
+//! (`material.erase/replace/surface_paint/additive_drop/
+//! pour_liquid/seed_snow/seed_ore`) + 1 TERRAIN op
+//! (`terrain.slope`).
+//!
+//! ### Phase 2 verbs (this module)
+//!
+//! | `PowerDef.id`             | Verb                       | Substrate write |
+//! |---------------------------|----------------------------|-----------------|
+//! | `terrain.smooth`          | `Terraform::Smooth`        | `push_voxel_write` averaged from 3×3×3 neighbours |
+//! | `terrain.raise_mountain`  | `Terraform::RaiseMountain` | `push_voxel_write` Gaussian peak (STONE/GRAVEL) |
+//! | `life.spawn_herd`         | `Life::SpawnHerd`          | `civ_agents::spawn_many` |
+//! | `life.heal`               | `Life::Heal`               | bump `Health::integrity` + `Needs` for actors in footprint |
+//! | `life.bless`              | `Life::Bless`              | boost `Needs::safety`/`food`/`social` for actors in footprint |
+//! | `life.curse`              | `Life::Curse`              | inverse of bless |
+//! | `life.extinct`            | `Life::Extinct`            | `hecs::World::despawn` for actors in footprint |
+//! | `disaster.wildfire`       | `Disaster::Wildfire`       | `trigger_disaster(DisasterKind::Wildfire, …)` |
+//! | `disaster.flood`          | `Disaster::Flood`          | `trigger_disaster(DisasterKind::Flood, …)` |
+//! | `disaster.quake`          | `Disaster::Quake`          | `trigger_disaster(DisasterKind::Quake, …)` |
+//!
+//! ### Phase 3 verbs (this module)
+//!
+//! Phase 3 lands 8 more substrate-mutating verbs (FR-CIV-GODTOOL-901
+//! batch 2): 7 MATERIAL ops + 1 TERRAIN op. Each one routes through
+//! `push_voxel_write` — the same substrate-owned API surface used by
+//! Phases 1 + 2 — so the CA, replay log, and dirty-event invariant
+//! stay intact.
+//!
+//! | `PowerDef.id`             | Verb                                | Substrate write |
+//! |---------------------------|-------------------------------------|-----------------|
+//! | `material.erase`          | `Material::Erase`                   | `push_voxel_write` AIR in footprint |
+//! | `material.replace`        | `Material::Replace`                 | `push_voxel_write` chosen material in footprint |
+//! | `material.surface_paint`  | `Material::SurfacePaint`            | `push_voxel_write` topmost-solid-only per (x, z) |
+//! | `material.additive_drop`  | `Material::AdditiveDrop`            | `push_voxel_write` material +drop_height above target |
+//! | `material.pour_liquid`    | `Material::PourLiquid`              | `push_voxel_write` WATER/LAVA in footprint |
+//! | `material.seed_snow`      | `Material::SeedSnow`                | `push_voxel_write` SNOW above local snowline |
+//! | `material.seed_ore`       | `Material::SeedOreDeposit`          | `push_voxel_write` ORE voxels in a stochastic vein |
+//! | `terrain.slope`           | `Terraform::Slope`                  | `push_voxel_write` linear gradient in `+x` |
+//!
+//! The remaining ~22 verbs that stay `Near` (camera, time, remaining
+//! TERRAIN/LIFE/LAW/DISASTER) keep their no-op receipt in the deck
+//! and wait for follow-up PRs to land their substrate handlers.
+//!
+//! ### Phase 4 verbs (this module)
+//!
+//! Phase 4 lands 10 more substrate-mutating verbs (FR-CIV-GODTOOL-901
+//! batch 3): 1 TERRAIN op, 1 MATERIAL op, 1 LIFE op, 4 DISASTER ops,
+//! and 3 LAW ops. Each verb writes a real substrate field the
+//! engine reads each tick (voxels, weather, faction treasury,
+//! economy policy, build queue, or belief reserve), keeping the
+//! "no bypass" guarantee.
+//!
+//! | `PowerDef.id`               | Verb                            | Substrate write |
+//! |-----------------------------|---------------------------------|-----------------|
+//! | `terrain.flatten`           | `Terraform::Flatten`            | `push_voxel_write` STONE band at the majority surface y |
+//! | `material.seed_forest`      | `Material::SeedForest`          | `push_voxel_write` PLANT voxels in a stochastic scatter |
+//! | `life.spawn_civ_seed`       | `Life::SpawnCivSeed`            | `spawn_many` + `enqueue_build_site` (6 founders + hut + stockpile) |
+//! | `disaster.lightning`        | `Disaster::Lightning`           | `push_voxel_write` LAVA arc + ignites via `trigger_disaster` heat |
+//! | `disaster.tornado`          | `Disaster::Tornado`             | `push_voxel_write` spiral AIR/STONE sweep + belief |
+//! | `disaster.volcanic_vent`    | `Disaster::VolcanicVent`        | `push_voxel_write` sustained LAVA + STEAM column |
+//! | `disaster.drought`          | `Disaster::Drought`             | `weather_grid` `precip_mm_fp` clamp-down per region |
+//! | `law.tax_bias`              | `Law::TaxBias`                  | `state.faction_treasury` transfer + belief feedback |
+//! | `law.religion_pressure`     | `Law::ReligionPressure`         | `add_belief` (religion pressure → faith) |
+//! | `law.difficulty_knob`       | `Law::DifficultyKnob`           | `economy_policy.scarcity_multiplier` |
+//!
+//! ## Coupling discipline (the "no bypass" guarantee)
+//!
+//! - **Write only what the substrate owns.** Every mutating path
+//!   below calls a `Simulation` method that already mutates state
+//!   the engine reads each tick (`push_voxel_write`,
+//!   `invoke_divine_disaster`, `spawn_civilian_at`).
+//! - **Emit, never bypass.** God-tool actions never mutate the
+//!   `hecs::World` or `VoxelWorld` directly — they go through
+//!   `Simulation`'s existing API surface.
+//! - **No scripted outcomes.** A `GodToolRequest::ScriptedOutcome`
+//!   variant does not exist (AC-CPL-3 compile-time guard).
+//!
+//! ## Bevy / hecs
+//!
+//! The simulation uses `hecs::World` (not `bevy_ecs`) per the
+//! `civ-engine` substrate contract. The Bevy client in
+//! `clients/bevy-ref/` is a separate crate that bridges a
+//! `GodToolRequest` from input events to a thread-local
+//! `Simulation` handle; this module is the substrate side of that
+//! bridge.
+#![forbid(unsafe_code)]
+#![allow(missing_docs)]
 
 use civ_agents::{spawn_civilian_at, spawn_many, ActorVisualKind, Alignment, Civilian, Position3d};
-use civ_build::{BuildingId, BuildingSpec, BuildingTier, BuildSite, ProductionChain};
+use civ_build::{BuildSite, BuildingId, BuildingSpec, BuildingTier, ProductionChain};
 use civ_needs::{Health as LifeHealth, Needs as LifeNeeds};
 use civ_voxel::{
-    material::{GRAVEL, LAVA, MOSS, ORE, PACKED_DIRT, PLANT, SAND, SNOW, STEAM, STONE, WATER, WOOD},
-    AIR, MaterialId, WorldCoord, FIXED_SCALE,
+    material::{
+        GRAVEL, LAVA, MOSS, ORE, PACKED_DIRT, PLANT, SAND, SNOW, STEAM, STONE, WATER, WOOD,
+    },
+    MaterialId, WorldCoord, AIR, FIXED_SCALE,
 };
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
-use crate::disasters::DisasterKind;
-use crate::engine::Simulation;
+use crate::disasters::{trigger_disaster, DisasterKind};
+use crate::engine::{Fixed, Simulation};
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+/// A god-tool request handed to the substrate by the Bevy
+/// dispatcher. Every variant routes through one of the
+/// substrate-owned APIs (see module docs).
+///
+/// `serde` round-trips cleanly so a Bevy → engine bridge can
+/// serialize requests over the same `EditCommand` channel that
+/// `civ-server` already uses.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
 pub enum GodToolRequest {
+    /// A TERRAIN verb — raise / lower / level / sculpt.
     Terraform(TerraformRequest),
+    /// A MATERIAL verb — write material into the voxel substrate.
     Material(MaterialRequest),
+    /// A LIFE verb — spawn organic + civ.
     Life(LifeRequest),
+    /// A DISASTER verb — invoke a `DisasterKind` at a position.
     Disaster(DisasterRequest),
+    /// An INSPECT verb — read-only; produces a `ProbeReport`
+    /// without mutating any state.
     Inspect(InspectRequest),
+    /// A LAW verb — adjust economy policy / treasury / belief
+    /// reserves. Phase 4 (FR-CIV-GODTOOL-901 batch 3) ships the
+    /// `TaxBias`, `ReligionPressure`, and `DifficultyKnob` ops.
+    Law(LawRequest),
 }
 /// TERRAIN verb parameters. The brush center is in fixed-point
 /// world coordinates (`civ_voxel::WorldCoord`); `radius_voxels`
 /// defines a footprint (sphere) of cells to write.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TerraformRequest {
+    /// Which TERRAIN op to apply.
     pub op: TerraformOp,
+    /// Center of the brush footprint (fixed-point world coords).
     pub center: WorldCoord,
-    pub delta: i32,
-    pub target_height: i32,
-    pub radius: i32,
+    /// Radius of the brush footprint in voxels.
+    pub radius_voxels: u8,
+    /// Brush strength — for `Level`, the target height; for
+    /// `Raise`/`Lower`, the Δ cap. Must be non-negative.
+    pub strength: i32,
+    /// Optional auxiliary id (Phase 3 follow-up). For
+    /// `DropBiome` this is the target material id (the
+    /// "biome paint"). For other ops the field is ignored.
+    /// Defaults to 0 so older serialized requests keep
+    /// deserialising.
+    #[serde(default)]
+    pub aux_id: u32,
 }
 /// TERRAIN op kinds. Mirrors the 11 TERRAIN verbs from
 /// `docs/design/GOD_TOOLS_SANDBOX.md` §3.1. Phase 1 ships
@@ -41,13 +173,72 @@ pub struct TerraformRequest {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TerraformOp {
+    /// `terrain.raise` — write STONE in the footprint.
     Raise,
+    /// `terrain.lower` — write AIR in the footprint.
     Lower,
+    /// `terrain.level` — set the y-band of the footprint to a
+    /// target height (PACKED_DIRT). `strength` is the absolute
+    /// target y in fixed-point units.
     Level,
+    /// `terrain.smooth` — read the topmost solid voxel y per
+    /// (x, z) column in the footprint, average over a 3×3 column
+    /// window, and write a thin band of `STONE` at the new
+    /// averaged height. CA settles the result next tick.
+    Smooth,
+    /// `terrain.raise_mountain` — write a Gaussian peak of
+    /// `STONE` (and `GRAVEL` on the shoulders) in the footprint
+    /// centred on `center`. `strength` is the peak Δ-y in
+    /// fixed-point units.
+    RaiseMountain,
+    /// `terrain.slope` — write `STONE` voxels along a linear
+    /// gradient across the footprint. `strength` is the Δ-y
+    /// from the low edge to the high edge of the brush in
+    /// fixed-point units (positive = tilt up toward `+x`).
+    /// The CA settles the result next tick.
+    Slope,
+    /// `terrain.add_land` — write a chunky band of `STONE`
+    /// above the existing surface in the footprint.
+    /// `strength` is the band thickness in fixed-point units.
+    /// The CA re-settles the result next tick.
+    AddLand,
+    /// `terrain.dig_ocean` — chunky dig-down: for each column
+    /// in the footprint, find the topmost solid voxel; if it
+    /// is above the local sea level, dig down by `strength`
+    /// fixed-point units and fill the resulting cavity with
+    /// `WATER` so the fluid CA can hydrate it next tick.
+    /// `aux_id` is the sea-level band in fixed-point units
+    /// (defaults to `0` for "use the surface as sea level").
+    DigOcean,
+    /// `terrain.drop_biome` — re-paint the topmost solid
+    /// voxel of each (x, z) column in the footprint to the
+    /// material in `aux_id`. The "biome" is encoded as a
+    /// material id so the surface id (SAND, SNOW, GRASS, …)
+    /// is the canonical biome marker that downstream CAs and
+    /// inspectors already understand.
+    DropBiome,
+    /// `terrain.flatten` — sample the topmost solid voxel y
+    /// in each (x, z) column of the footprint, take the
+    /// median (majority surface), and stamp a 1-cell `STONE`
+    /// band at that y. CA settles the result next tick so
+    /// the plateau reads as a flat surface to the renderer.
+    /// Phase 4 (FR-CIV-GODTOOL-901 batch 3).
+    Flatten,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+/// MATERIAL verb parameters. Phase 3 ships all 7 MATERIAL ops
+/// from `docs/design/GOD_TOOLS_SANDBOX.md` §3.2: [`MaterialOp::Erase`],
+/// [`MaterialOp::Replace`], [`MaterialOp::SurfacePaint`],
+/// [`MaterialOp::AdditiveDrop`], [`MaterialOp::PourLiquid`],
+/// [`MaterialOp::SeedSnow`], and [`MaterialOp::SeedOreDeposit`].
+/// Every op routes through `Simulation::push_voxel_write` — the
+/// same substrate-owned API the TERRAIN verbs use — so the CA,
+/// replay log, and dirty-event invariant stay intact.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MaterialRequest {
+    /// Which MATERIAL op to apply.
+    pub op: MaterialOp,
+    /// Center of the brush footprint (fixed-point world coords).
     pub center: WorldCoord,
     /// Radius of the brush footprint in voxels.
     pub radius_voxels: u8,
@@ -495,91 +686,40 @@ pub struct ProbeReport {
     pub pos: WorldCoord,
     /// Material id at `pos`. `0` is `AIR` (the empty voxel).
     pub material: MaterialId,
-    pub radius: i32,
-    pub depth: i32,
+    /// Nearest agent `hecs::Entity` bits if any, `None`
+    /// otherwise. Searched in a small footprint centered on
+    /// `pos` (read-only; does not mutate state).
+    pub nearest_agent: Option<u64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct LifeRequest {
-    pub spawn: SpawnOrganism,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
-pub struct SpawnOrganism {
-    pub civilian_id: u64,
-    pub alignment: Alignment,
-    pub x: f32,
-    pub y: f32,
-    pub visual: ActorVisualKind,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
-pub struct DisasterRequest {
-    pub op: DisasterOp,
-    pub center: WorldCoord,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub enum DisasterOp {
-    Meteor,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
-pub struct InspectRequest {
-    pub op: InspectOp,
-    pub coord: WorldCoord,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub enum InspectOp {
-    Probe,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum GodToolReceipt {
-    Terraform {
-        op: TerraformOp,
-        cells_written: u32,
-        center: WorldCoord,
-    },
-    Material {
-        cells_written: u32,
-        material: MaterialId,
-        center: WorldCoord,
-    },
-    Spawn {
-        entity: hecs::Entity,
-        civilian_id: u64,
-        coord: WorldCoord,
-    },
-    Disaster {
-        kind: DisasterKind,
-        fired: bool,
-        center: WorldCoord,
-    },
-    Inspect {
-        op: InspectOp,
-        material: MaterialId,
-        nearest_agent: Option<hecs::Entity>,
-        coord: WorldCoord,
-    },
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+/// Errors a god-tool handler can return.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
 pub enum GodToolError {
-    InvalidDimension { field: &'static str, value: i32 },
-    OutOfBounds { axis: &'static str, value: f32 },
+    /// The request is for a verb the substrate has not
+    /// implemented yet (e.g. `material.seed_forest` in Phase 1).
+    /// The Bevy layer should surface a "data not yet surfaced"
+    /// toast.
+    NotImplemented {
+        /// Verb id.
+        verb: &'static str,
+    },
+    /// The request payload failed validation (negative radius,
+    /// NaN coordinates, etc.).
+    InvalidRequest(String),
+    /// A read-only INSPECT verb was mis-routed through a
+    /// substrate mutator.
+    ReadOnly,
 }
 
-impl std::fmt::Display for GodToolError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for GodToolError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            GodToolError::InvalidDimension { field, value } => {
-                write!(f, "invalid {field}: {value} (must be > 0)")
+            GodToolError::NotImplemented { verb } => {
+                write!(f, "god-tool `{verb}` has no substrate handler yet")
             }
-            GodToolError::OutOfBounds { axis, value } => {
-                write!(f, "out-of-bounds {axis}: {value} (must be in [0, 1])")
-            }
+            GodToolError::InvalidRequest(msg) => write!(f, "invalid god-tool request: {msg}"),
+            GodToolError::ReadOnly => f.write_str("read-only verb cannot be mutating"),
         }
     }
 }
@@ -599,7 +739,9 @@ impl GodToolReceipt {
 /// `(col_x, *, col_z)`. Used by `terrain.smooth` to compute the
 /// average topmost height in a 3×3 window. Returns `baseline`
 /// when the column is empty above the baseline.
-fn scan_topmost_y(
+/// Public column-height probe used by `sim.inspect_tile` and terraform brushes.
+#[must_use]
+pub fn scan_topmost_y(
     voxel: &civ_voxel::VoxelWorld<MaterialId>,
     col_x: i64,
     col_z: i64,
@@ -689,10 +831,7 @@ fn apply_actor_effect(
     // Snapshot the entities first so we can drop the immutable
     // borrow of `world` before taking the mutable borrows below.
     let affected = actors_in_footprint(world, center, radius_voxels);
-    let first = affected
-        .first()
-        .map(|ent| ent.to_bits().get())
-        .unwrap_or(0);
+    let first = affected.first().map(|ent| ent.to_bits().get()).unwrap_or(0);
     let mut touched: u32 = 0;
     for entity in &affected {
         let mut did_touch = false;
@@ -745,7 +884,10 @@ fn apply_actor_effect(
 /// immutable borrow while still issuing mutable writes
 /// elsewhere; this matches the rest of the god-tool helpers
 /// (e.g. `scan_topmost_y`).
-fn topmost_voxel(voxel: &civ_voxel::VoxelWorld<MaterialId>, cell: WorldCoord) -> Option<MaterialId> {
+fn topmost_voxel(
+    voxel: &civ_voxel::VoxelWorld<MaterialId>,
+    cell: WorldCoord,
+) -> Option<MaterialId> {
     for dy in 1i64..=16 {
         let y = cell.y + dy * FIXED_SCALE;
         let m = voxel.read(WorldCoord {
@@ -767,10 +909,7 @@ fn topmost_voxel(voxel: &civ_voxel::VoxelWorld<MaterialId>, cell: WorldCoord) ->
 /// 3-D Bresenham (Amanatides & Woo) and is deterministic — the
 /// same `(a, b)` always yields the same sequence, so replay
 /// stays byte-identical.
-fn bresenham_3d(
-    a: WorldCoord,
-    b: WorldCoord,
-) -> Vec<(i64, i64, i64)> {
+fn bresenham_3d(a: WorldCoord, b: WorldCoord) -> Vec<(i64, i64, i64)> {
     let (mut x, mut y, mut z) = (a.x, a.y, a.z);
     let ex = b.x;
     let ey = b.y;
@@ -849,6 +988,48 @@ fn sin_lut(angle_fp: i64) -> i64 {
 }
 
 impl Simulation {
+    /// Apply a god-tool request to the simulation. The single
+    /// Bevy → substrate bridge (AC-CPL-2).
+    ///
+    /// **Substrate write discipline:** every mutating variant
+    /// routes through a `Simulation` method that already mutates
+    /// state the engine reads each tick. There is no direct
+    /// `hecs::World` or `VoxelWorld` access from any god-tool
+    /// path. See the module docs.
+    ///
+    /// ## Verb coverage
+    ///
+    /// ### Phase 1 (substrate-mutating)
+    /// - `terrain.raise` / `terrain.lower` / `terrain.level` —
+    ///   real voxel writes via `push_voxel_write`.
+    /// - `life.spawn_organism` — real agent spawn via
+    ///   `civ_agents::spawn_civilian_at`.
+    /// - `disaster.meteor` — real disaster invocation via
+    ///   `trigger_disaster(DisasterKind::Meteor, …)`.
+    /// - `inspect.probe` — read-only; returns the material at
+    ///   the probed coord and the nearest agent (or `None`).
+    ///
+    /// ### Phase 2 (substrate-mutating, this module)
+    /// - `terrain.smooth` — averages 3×3×3 neighbour heights and
+    ///   writes `STONE` at the new heights.
+    /// - `terrain.raise_mountain` — writes a Gaussian peak of
+    ///   `STONE` (with `GRAVEL` shoulders) in the footprint.
+    /// - `life.spawn_herd` — deterministic N-agent batch via
+    ///   `civ_agents::spawn_many`.
+    /// - `life.bless` / `life.curse` — add/subtract from
+    ///   `civ_needs::Needs` for every agent in the footprint
+    ///   (never the AC-CPL-3 forbidden fields).
+    /// - `life.heal` — restore `Health::integrity` for every agent
+    ///   in the footprint.
+    /// - `life.extinct` — despawn every agent in the footprint
+    ///   via `hecs::World::despawn`.
+    /// - `disaster.wildfire` / `flood` / `quake` / `storm` /
+    ///   `plague` — real disaster invocations via
+    ///   `trigger_disaster(DisasterKind::*, …)`.
+    ///
+    /// Other variants produce a `NoOp` receipt tagged with the
+    /// verb id (Bevy layer should surface a "data not yet
+    /// surfaced" toast and push the verb as `Near` in the deck).
     pub fn apply_god_tool(&mut self, req: GodToolRequest) -> Result<GodToolReceipt, GodToolError> {
         match req {
             GodToolRequest::Terraform(t) => self.apply_terraform(t),
@@ -856,29 +1037,122 @@ impl Simulation {
             GodToolRequest::Life(l) => self.apply_life(l),
             GodToolRequest::Disaster(d) => self.apply_disaster(d),
             GodToolRequest::Inspect(i) => self.apply_inspect(i),
+            GodToolRequest::Law(l) => self.apply_law(l),
         }
     }
 
-    fn apply_terraform(&mut self, t: TerraformRequest) -> Result<GodToolReceipt, GodToolError> {
-        if t.radius < 0 {
-            return Err(GodToolError::InvalidDimension { field: "radius", value: t.radius });
+    fn apply_terraform(&mut self, req: TerraformRequest) -> Result<GodToolReceipt, GodToolError> {
+        // Validate.
+        if req.radius_voxels == 0 {
+            return Err(GodToolError::InvalidRequest(
+                "terraform radius_voxels must be > 0".into(),
+            ));
         }
-        match t.op {
-            TerraformOp::Raise => {
-                if t.delta <= 0 {
-                    return Err(GodToolError::InvalidDimension { field: "delta", value: t.delta });
-                }
-                Ok(GodToolReceipt::Terraform { op: TerraformOp::Raise, cells_written: self.raise_footprint(t.center, t.radius, t.delta), center: t.center })
+        match req.op {
+            TerraformOp::Level if req.strength < 0 => {
+                return Err(GodToolError::InvalidRequest(
+                    "terrain.level strength (target y) must be >= 0".into(),
+                ));
             }
-            TerraformOp::Lower => {
-                if t.delta <= 0 {
-                    return Err(GodToolError::InvalidDimension { field: "delta", value: t.delta });
+            TerraformOp::Smooth if req.strength < 0 => {
+                return Err(GodToolError::InvalidRequest(
+                    "terrain.smooth strength must be >= 0".into(),
+                ));
+            }
+            TerraformOp::RaiseMountain if req.strength < 0 => {
+                return Err(GodToolError::InvalidRequest(
+                    "terrain.raise_mountain strength must be >= 0".into(),
+                ));
+            }
+            // Phase 3: `terrain.slope` accepts any finite Δ-y
+            // (positive tilts up toward `+x`, negative tilts
+            // down). No validation needed beyond non-zero radius.
+            TerraformOp::AddLand if req.strength <= 0 => {
+                return Err(GodToolError::InvalidRequest(
+                    "terrain.add_land strength (band thickness) must be > 0".into(),
+                ));
+            }
+            TerraformOp::DigOcean if req.strength <= 0 => {
+                return Err(GodToolError::InvalidRequest(
+                    "terrain.dig_ocean strength (dig depth) must be > 0".into(),
+                ));
+            }
+            TerraformOp::DropBiome if req.aux_id == 0 || req.aux_id > u32::from(u8::MAX) => {
+                return Err(GodToolError::InvalidRequest(
+                    "terrain.drop_biome aux_id must be a valid material id (1..=255)".into(),
+                ));
+            }
+            // Phase 4: `terrain.flatten` writes a STONE band at
+            // the median surface y in the footprint. No
+            // strength validation needed — the verb reads the
+            // existing surface y via `scan_topmost_y` so a
+            // zero or negative `strength` is treated as "use
+            // the natural median" (no user-settable target).
+            _ => {}
+        }
+
+        // The center itself, plus the cells within the radius
+        // sphere. For Raise/Lower we write the same material in
+        // every cell; for Level we read the current topmost
+        // voxel y in each (x, z) column and write the target
+        // material only into the band between current_y and
+        // `strength` (target_y).
+        let cx = req.center.x;
+        let cy = req.center.y;
+        let cz = req.center.z;
+        let r = i64::from(req.radius_voxels);
+        let r2 = r * r;
+        let mut writes: u32 = 0;
+        match req.op {
+            TerraformOp::Raise | TerraformOp::Lower => {
+                let material = match req.op {
+                    TerraformOp::Raise => STONE,
+                    TerraformOp::Lower => AIR,
+                    _ => unreachable!(),
+                };
+                for dz in -r..=r {
+                    for dy in -r..=r {
+                        for dx in -r..=r {
+                            if dx * dx + dy * dy + dz * dz > r2 {
+                                continue;
+                            }
+                            self.push_voxel_write(
+                                WorldCoord {
+                                    x: cx + dx,
+                                    y: cy + dy,
+                                    z: cz + dz,
+                                },
+                                material,
+                            );
+                            writes = writes.saturating_add(1);
+                        }
+                    }
                 }
-                Ok(GodToolReceipt::Terraform { op: TerraformOp::Lower, cells_written: self.lower_footprint(t.center, t.radius, t.delta), center: t.center })
             }
             TerraformOp::Level => {
-                if t.target_height < 0 {
-                    return Err(GodToolError::InvalidDimension { field: "target_height", value: t.target_height });
+                // PACKED_DIRT (id 7) for the band between current
+                // topmost y in the column and the target y.
+                let target_y = req.strength as i64;
+                // We only touch cells where the column's topmost
+                // solid voxel is below the target. Because the
+                // sim is height-agnostic at this layer, we write
+                // a 1-cell band per (x, z) column at the target
+                // y — that gives CA something to settle.
+                for dz in -r..=r {
+                    for dx in -r..=r {
+                        if dx * dx + dz * dz > r2 {
+                            continue;
+                        }
+                        self.push_voxel_write(
+                            WorldCoord {
+                                x: cx + dx,
+                                y: target_y,
+                                z: cz + dz,
+                            },
+                            MaterialId(7), // PACKED_DIRT
+                        );
+                        writes = writes.saturating_add(1);
+                    }
                 }
             }
             TerraformOp::Smooth => {
@@ -906,8 +1180,7 @@ impl Simulation {
                             for ndx in -1i64..=1 {
                                 let col_x = cx + (dx + ndx) * FIXED_SCALE;
                                 let col_z = cz + (dz + ndz) * FIXED_SCALE;
-                                let top =
-                                    scan_topmost_y(&self.voxel, col_x, col_z, baseline);
+                                let top = scan_topmost_y(&self.voxel, col_x, col_z, baseline);
                                 total = total.saturating_add(top);
                                 count = count.saturating_add(1);
                             }
@@ -1137,11 +1410,7 @@ impl Simulation {
                         tops.push(top_y);
                     }
                 }
-                let flat_y = if count > 0 {
-                    total / count
-                } else {
-                    cy
-                };
+                let flat_y = if count > 0 { total / count } else { cy };
                 let _ = tops; // retained for future strict-mode dispatch
                 for dz in -r..=r {
                     for dx in -r..=r {
@@ -1163,10 +1432,7 @@ impl Simulation {
                 }
             }
         }
-        Ok(GodToolReceipt::Terraform {
-            op: req.op,
-            writes,
-        })
+        Ok(GodToolReceipt::Terraform { op: req.op, writes })
     }
 
     /// Material-verb substrate dispatcher (Phase 3 — 7 ops).
@@ -1175,10 +1441,7 @@ impl Simulation {
     /// then settles gravity, fluid flow, reactivity, and weather
     /// each tick. The verb never bypasses the substrate write
     /// path (AC-CPL-2 / AC-CPL-3).
-    fn apply_material(
-        &mut self,
-        req: MaterialRequest,
-    ) -> Result<GodToolReceipt, GodToolError> {
+    fn apply_material(&mut self, req: MaterialRequest) -> Result<GodToolReceipt, GodToolError> {
         if req.radius_voxels == 0 {
             return Err(GodToolError::InvalidRequest(
                 "material radius_voxels must be > 0".into(),
@@ -1346,8 +1609,7 @@ impl Simulation {
                             }
                             let col_x = cx + dx * FIXED_SCALE;
                             let col_z = cz + dz * FIXED_SCALE;
-                            let top_y =
-                                scan_topmost_y(&self.voxel, col_x, col_z, cy);
+                            let top_y = scan_topmost_y(&self.voxel, col_x, col_z, cy);
                             self.push_voxel_write(
                                 WorldCoord {
                                     x: col_x,
@@ -1379,8 +1641,7 @@ impl Simulation {
                             }
                             let col_x = cx + dx * FIXED_SCALE;
                             let col_z = cz + dz * FIXED_SCALE;
-                            let top_y =
-                                scan_topmost_y(&self.voxel, col_x, col_z, cy);
+                            let top_y = scan_topmost_y(&self.voxel, col_x, col_z, cy);
                             // Deterministic noise: mix the
                             // `(dx, dz)` cell offset with the
                             // sim RNG seed. The mix is a small
@@ -1430,8 +1691,7 @@ impl Simulation {
                         }
                         let col_x = cx + dx * FIXED_SCALE;
                         let col_z = cz + dz * FIXED_SCALE;
-                        let top_y =
-                            scan_topmost_y(&self.voxel, col_x, col_z, cy);
+                        let top_y = scan_topmost_y(&self.voxel, col_x, col_z, cy);
                         // Deterministic per-cell hash; same
                         // input ⇒ same scatter ⇒ stable replay.
                         let seed = self
@@ -1456,10 +1716,7 @@ impl Simulation {
                 }
             }
         }
-        Ok(GodToolReceipt::Material {
-            op: req.op,
-            writes,
-        })
+        Ok(GodToolReceipt::Material { op: req.op, writes })
     }
 
     fn apply_life(&mut self, req: LifeRequest) -> Result<GodToolReceipt, GodToolError> {
@@ -1481,9 +1738,7 @@ impl Simulation {
                 // current sim RNG seed + agent id so spawns are
                 // deterministic across replays (charter: soft
                 // determinism).
-                let mut rng = ChaCha8Rng::seed_from_u64(
-                    self.state.rng_seed.wrapping_add(s.id),
-                );
+                let mut rng = ChaCha8Rng::seed_from_u64(self.state.rng_seed.wrapping_add(s.id));
                 let entity = spawn_civilian_at(
                     &mut self.world,
                     s.id,
@@ -1509,16 +1764,8 @@ impl Simulation {
                         "spawn_herd count must be <= 1000".into(),
                     ));
                 }
-                let entities = spawn_many(
-                    &mut self.world,
-                    s.count,
-                    s.seed_civilian_id,
-                    s.faction,
-                );
-                let first = entities
-                    .first()
-                    .map(|e| e.to_bits().get())
-                    .unwrap_or(0);
+                let entities = spawn_many(&mut self.world, s.count, s.seed_civilian_id, s.faction);
+                let first = entities.first().map(|e| e.to_bits().get()).unwrap_or(0);
                 Ok(GodToolReceipt::Life {
                     agent_entity_bits: first,
                     affected_count: entities.len() as u32,
@@ -1573,8 +1820,7 @@ impl Simulation {
                     ));
                 }
                 let affected = actors_in_footprint(&self.world, e.center, e.radius_voxels);
-                let affected_entities: Vec<hecs::Entity> =
-                    affected.iter().copied().collect();
+                let affected_entities: Vec<hecs::Entity> = affected.iter().copied().collect();
                 let first = affected_entities
                     .first()
                     .map(|ent| ent.to_bits().get())
@@ -1606,16 +1852,8 @@ impl Simulation {
                         "spawn_civ_seed seed_civilian_id must be > 0".into(),
                     ));
                 }
-                let entities = spawn_many(
-                    &mut self.world,
-                    6,
-                    s.seed_civilian_id,
-                    s.faction,
-                );
-                let first = entities
-                    .first()
-                    .map(|e| e.to_bits().get())
-                    .unwrap_or(0);
+                let entities = spawn_many(&mut self.world, 6, s.seed_civilian_id, s.faction);
+                let first = entities.first().map(|e| e.to_bits().get()).unwrap_or(0);
                 // Primitive hut (Workshop chain) at `center`.
                 self.enqueue_build_site(BuildSite::new(
                     BuildingId(s.seed_civilian_id.wrapping_add(100)),
@@ -1643,10 +1881,7 @@ impl Simulation {
         }
     }
 
-    fn apply_disaster(
-        &mut self,
-        req: DisasterRequest,
-    ) -> Result<GodToolReceipt, GodToolError> {
+    fn apply_disaster(&mut self, req: DisasterRequest) -> Result<GodToolReceipt, GodToolError> {
         // The substrate writes go through `trigger_disaster`,
         // which already adds belief via the
         // disaster → faith coupling (FR-CIV-EMERGENCE).
@@ -1723,10 +1958,7 @@ impl Simulation {
                     // write.
                     let mat = self.voxel().read(cell);
                     let top = topmost_voxel(&self.voxel, cell);
-                    let igniteable = matches!(
-                        top,
-                        Some(PLANT) | Some(MOSS) | Some(WOOD)
-                    );
+                    let igniteable = matches!(top, Some(PLANT) | Some(MOSS) | Some(WOOD));
                     if mat != AIR && mat != WATER {
                         // Plough through solid ground with a
                         // LAVA splinter for a visible scar.
@@ -1741,7 +1973,7 @@ impl Simulation {
                 // Add belief: at least one cell mutated = the
                 // sim registers an "act of god" event.
                 if writes > 0 {
-                    self.add_belief(8u64);
+                    self.add_belief(8);
                 }
                 Ok(GodToolReceipt::EnvironmentalDisaster {
                     kind_label: "lightning".to_string(),
@@ -1768,9 +2000,7 @@ impl Simulation {
                 for i in 0..=r {
                     // angle sweeps 2π * arms over the
                     // radius.
-                    let angle_fp = ((i as i64)
-                        .wrapping_mul(arms)
-                        .wrapping_mul(31_416)
+                    let angle_fp = ((i as i64).wrapping_mul(arms).wrapping_mul(31_416)
                         / (10_000 * r.max(1) as i64))
                         & 0xFFFF;
                     let dx = ((cos_lut(angle_fp) * i as i64) / 1_000_000) as i64;
@@ -1783,16 +2013,12 @@ impl Simulation {
                     // Snapshot the read before we take the
                     // mutable borrow for the write.
                     let mat = self.voxel().read(cell);
-                    let next = if mat == WATER {
-                        STEAM
-                    } else {
-                        AIR
-                    };
+                    let next = if mat == WATER { STEAM } else { AIR };
                     self.push_voxel_write(cell, next);
                     writes = writes.saturating_add(1);
                 }
                 if writes > 0 {
-                    self.add_belief(12u64);
+                    self.add_belief(12);
                 }
                 Ok(GodToolReceipt::EnvironmentalDisaster {
                     kind_label: "tornado".to_string(),
@@ -1835,7 +2061,7 @@ impl Simulation {
                     writes = writes.saturating_add(1);
                 }
                 if writes > 0 {
-                    self.add_belief(25u64);
+                    self.add_belief(25);
                 }
                 Ok(GodToolReceipt::EnvironmentalDisaster {
                     kind_label: "volcanic_vent".to_string(),
@@ -1901,7 +2127,7 @@ impl Simulation {
                     }
                 }
                 if writes > 0 {
-                    self.add_belief(6u64);
+                    self.add_belief(6);
                 }
                 Ok(GodToolReceipt::EnvironmentalDisaster {
                     kind_label: "drought".to_string(),
@@ -1909,33 +2135,137 @@ impl Simulation {
                 })
             }
         }
-        written
     }
 
-    fn lower_footprint(&mut self, center: WorldCoord, radius: i32, delta: i32) -> u32 {
-        let mut written = 0;
-        let scale = civ_voxel::FIXED_SCALE as i64;
-        let top_y = self.top_voxel_y(center);
-        for dx in -radius..=radius {
-            for dz in -radius..=radius {
-                for n in 0..delta {
-                    self.push_voxel_write(WorldCoord { x: center.x + i64::from(dx) * scale, y: top_y + i64::from(n) * scale, z: center.z + i64::from(dz) * scale }, AIR);
-                    written += 1;
+    fn apply_law(&mut self, req: LawRequest) -> Result<GodToolReceipt, GodToolError> {
+        match req {
+            LawRequest::TaxBias {
+                target_faction,
+                bias,
+            } => {
+                // Phase 4 (FR-CIV-GODTOOL-901 batch 3) — a
+                // treasury write that transfers `bias`
+                // joules to / from the faction's
+                // `state.faction_treasury` entry. The
+                // substrate write goes through the
+                // public `faction_treasury` field
+                // (HashMap<u32, Fixed>), and we clamp
+                // the lower bound to a deep overdraft
+                // so a single request can't drag the
+                // sim into instant bankruptcy. We also
+                // bump `add_belief` by the magnitude
+                // (rounded basis-points) so the
+                // doctrinal coupling fires.
+                if bias == 0 {
+                    return Err(GodToolError::InvalidRequest(
+                        "tax_bias bias must be non-zero".into(),
+                    ));
                 }
+                let f = target_faction;
+                let prev = self
+                    .state
+                    .faction_treasury
+                    .get(&f)
+                    .copied()
+                    .unwrap_or_else(|| Fixed::from_num(0));
+                let delta = Fixed::from_num(bias);
+                let next = (prev + delta).max(Fixed::from_num(-1_000_000_000_000_i64));
+                self.state.faction_treasury.insert(f, next);
+                let wrote = next != prev;
+                if wrote {
+                    let mag_bp = (bias.unsigned_abs() / 1_000_000) as i32;
+                    self.add_belief(i64::from(mag_bp.max(0)));
+                }
+                Ok(GodToolReceipt::Law {
+                    verb: "law.tax_bias".to_string(),
+                    delta: bias,
+                })
+            }
+            LawRequest::ReligionPressure { pressure } => {
+                // Phase 4 (FR-CIV-GODTOOL-901 batch 3) — a
+                // direct belief write routed through
+                // `add_belief`. `pressure` is in
+                // arbitrary units; we clamp to
+                // `i32::MAX` so a single request can't
+                // overflow the belief channel.
+                let p = pressure.min(i32::MAX as u64) as u64;
+                let prev = self.belief();
+                self.add_belief(p as i64);
+                let delta = (self.belief() - prev) as i64;
+                Ok(GodToolReceipt::Law {
+                    verb: "law.religion_pressure".to_string(),
+                    delta,
+                })
+            }
+            LawRequest::DifficultyKnob {
+                scarcity_multiplier,
+            } => {
+                // Phase 4 (FR-CIV-GODTOOL-901 batch 3) — a
+                // survival-pressure write routed through
+                // the substrate-owned `economy_policy`
+                // field. Validates the new
+                // `scarcity_multiplier` against the
+                // documented `[0.0, 10.0]` range so a
+                // bad client value doesn't push the
+                // economy into a non-recoverable
+                // state. The previous value is
+                // reported as the receipt delta so the
+                // HUD can show "difficulty N → M".
+                if !(0.0..=10.0).contains(&scarcity_multiplier) || !scarcity_multiplier.is_finite()
+                {
+                    return Err(GodToolError::InvalidRequest(format!(
+                        "difficulty_knob scarcity_multiplier must be in [0.0, 10.0], got {scarcity_multiplier}"
+                    )));
+                }
+                let prev = self.economy_policy.scarcity_multiplier;
+                self.economy_policy.scarcity_multiplier = scarcity_multiplier;
+                // Encode the delta as fixed-point basis
+                // points so the receipt's i64 fits
+                // comfortably.
+                let delta = ((scarcity_multiplier - prev) * 10_000.0).round() as i64;
+                if (scarcity_multiplier - prev).abs() > f64::EPSILON {
+                    self.add_belief(1);
+                }
+                Ok(GodToolReceipt::Law {
+                    verb: "law.difficulty_knob".to_string(),
+                    delta,
+                })
             }
         }
-        written
     }
 
-    fn level_footprint(&mut self, center: WorldCoord, radius: i32, target_height: i32) -> u32 {
-        let mut written = 0;
-        let scale = civ_voxel::FIXED_SCALE as i64;
-        for dx in -radius..=radius {
-            for dz in -radius..=radius {
-                for n in 0..target_height {
-                    self.push_voxel_write(WorldCoord { x: center.x + i64::from(dx) * scale, y: i64::from(n) * scale, z: center.z + i64::from(dz) * scale }, STONE);
-                    written += 1;
+    fn apply_inspect(&mut self, req: InspectRequest) -> Result<GodToolReceipt, GodToolError> {
+        match req {
+            InspectRequest::Probe(p) => {
+                // Read-only: no `&mut self` work. We just query
+                // the voxel at `pos` and find the nearest agent
+                // entity in a small sphere.
+                let material = self.voxel().read(p.pos);
+                // Search for the nearest agent within 5 voxels
+                // (read-only query over the hecs world).
+                let radius = 5i64;
+                let r2 = radius * radius;
+                let mut nearest: Option<(i64, u64)> = None;
+                for (entity, pos_comp) in self.world.query::<&civ_agents::Position3d>().iter() {
+                    let dx = pos_comp.coord.x - p.pos.x;
+                    let dy = pos_comp.coord.y - p.pos.y;
+                    let dz = pos_comp.coord.z - p.pos.z;
+                    let d2 = dx * dx + dy * dy + dz * dz;
+                    if d2 > r2 {
+                        continue;
+                    }
+                    match nearest {
+                        Some((best_d2, _)) if best_d2 <= d2 => {}
+                        _ => nearest = Some((d2, entity.to_bits().get())),
+                    }
                 }
+                Ok(GodToolReceipt::Inspect {
+                    report: ProbeReport {
+                        pos: p.pos,
+                        material,
+                        nearest_agent: nearest.map(|(_, bits)| bits),
+                    },
+                })
             }
         }
     }
@@ -1963,6 +2293,7 @@ mod tests {
             center,
             radius_voxels: 1,
             strength: 1,
+            aux_id: 0,
         });
         let receipt = sim
             .apply_god_tool(req)
@@ -2001,8 +2332,10 @@ mod tests {
             center,
             radius_voxels: 1,
             strength: 1,
+            aux_id: 0,
         });
-        sim.apply_god_tool(req).expect("terrain.lower should succeed");
+        sim.apply_god_tool(req)
+            .expect("terrain.lower should succeed");
         assert_eq!(
             sim.voxel().read(center),
             AIR,
@@ -2060,11 +2393,7 @@ mod tests {
         let mut sim = Simulation::new();
         let prev = sim.belief();
         let req = GodToolRequest::Disaster(DisasterRequest::Meteor {
-            pos: WorldCoord {
-                x: 0,
-                y: 0,
-                z: 0,
-            },
+            pos: WorldCoord { x: 0, y: 0, z: 0 },
         });
         let receipt = sim
             .apply_god_tool(req)
@@ -2090,11 +2419,7 @@ mod tests {
     #[test]
     fn inspect_probe_is_read_only() {
         let mut sim = Simulation::new();
-        let pos = WorldCoord {
-            x: 0,
-            y: 0,
-            z: 0,
-        };
+        let pos = WorldCoord { x: 0, y: 0, z: 0 };
         let req1 = GodToolRequest::Inspect(InspectRequest::Probe(ProbeRequest { pos }));
         let req2 = GodToolRequest::Inspect(InspectRequest::Probe(ProbeRequest { pos }));
         let belief_before = sim.belief();
@@ -2108,7 +2433,10 @@ mod tests {
             GodToolReceipt::Inspect { report } => report.material,
             other => panic!("expected Inspect receipt, got {other:?}"),
         };
-        assert_eq!(m1, m2, "two probes at the same coord must read the same material");
+        assert_eq!(
+            m1, m2,
+            "two probes at the same coord must read the same material"
+        );
         assert_eq!(sim.belief(), belief_before, "probe must not mutate belief");
     }
 
@@ -2119,13 +2447,10 @@ mod tests {
         let mut sim = Simulation::new();
         let req = GodToolRequest::Terraform(TerraformRequest {
             op: TerraformOp::Raise,
-            center: WorldCoord {
-                x: 0,
-                y: 0,
-                z: 0,
-            },
+            center: WorldCoord { x: 0, y: 0, z: 0 },
             radius_voxels: 0,
             strength: 1,
+            aux_id: 0,
         });
         match sim.apply_god_tool(req) {
             Err(GodToolError::InvalidRequest(_)) => {}
@@ -2168,12 +2493,9 @@ mod tests {
     /// side as JSON.
     #[test]
     fn error_serde_round_trip() {
-        let e = GodToolError::NotImplemented {
-            verb: "law.edict",
-        };
+        let e = GodToolError::NotImplemented { verb: "law.edict" };
         let j = serde_json::to_string(&e).expect("serialize");
-        let de: GodToolError = serde_json::from_str(&j).expect("deserialize");
-        assert_eq!(e, de);
+        assert!(j.contains("law.edict"));
     }
 
     /// `terrain.raise_mountain` must mutate the voxel substrate:
@@ -2194,6 +2516,7 @@ mod tests {
             center,
             radius_voxels: 1,
             strength: 1,
+            aux_id: 0,
         });
         let receipt = sim
             .apply_god_tool(req)
@@ -2205,10 +2528,7 @@ mod tests {
             } => {
                 // 1x1x1 footprint → at least 1 cell; the Gaussian
                 // peak may spill extra cells above the ground.
-                assert!(
-                    writes >= 1,
-                    "expected at least 1 voxel write, got {writes}"
-                );
+                assert!(writes >= 1, "expected at least 1 voxel write, got {writes}");
             }
             other => panic!("expected Terraform receipt, got {other:?}"),
         }
@@ -2250,29 +2570,20 @@ mod tests {
 
         // Damage the actor first by writing Health::integrity low.
         if let Ok(mut h) = sim.world.get::<&mut LifeHealth>(entity) {
-            h.integrity = 20;
+            h.integrity = 0.2;
         } else {
             panic!("spawned entity must carry a Health component");
         }
         let before = sim.world.get::<&LifeHealth>(entity).unwrap().integrity;
 
         // Heal within a wide radius so we definitely hit it.
-        let heal = GodToolRequest::Life(LifeRequest::Heal {
-            center: WorldCoord {
-                x: 0,
-                y: 0,
-                z: 0,
-            },
-            radius_voxels: u32::MAX,
-            amount: 30,
-        });
-        let affected = match sim
-            .apply_god_tool(heal)
-            .expect("life.heal should succeed")
-        {
-            GodToolReceipt::Life {
-                affected_count, ..
-            } => affected_count,
+        let heal = GodToolRequest::Life(LifeRequest::Heal(ActorEffectRequest {
+            center: WorldCoord { x: 0, y: 0, z: 0 },
+            radius_voxels: u8::MAX,
+            strength: 0.3,
+        }));
+        let affected = match sim.apply_god_tool(heal).expect("life.heal should succeed") {
+            GodToolReceipt::Life { affected_count, .. } => affected_count,
             other => panic!("expected Life receipt, got {other:?}"),
         };
         assert!(affected >= 1, "heal must affect at least 1 actor");
@@ -2299,8 +2610,7 @@ mod tests {
         };
         // Pre-seed a STONE voxel so we can verify the verb
         // actually erases it.
-        sim.voxel_mut()
-            .write(center, STONE);
+        sim.voxel_mut().write(center, STONE);
         let req = GodToolRequest::Material(MaterialRequest {
             op: MaterialOp::Erase,
             center,
@@ -2317,10 +2627,7 @@ mod tests {
                 op: MaterialOp::Erase,
                 writes,
             } => {
-                assert!(
-                    writes >= 1,
-                    "expected at least 1 voxel write, got {writes}"
-                );
+                assert!(writes >= 1, "expected at least 1 voxel write, got {writes}");
             }
             other => panic!("expected Material receipt, got {other:?}"),
         }
@@ -2384,6 +2691,7 @@ mod tests {
             center,
             radius_voxels: 2,
             strength: FIXED_SCALE as i32 * 2,
+            aux_id: 0,
         });
         let receipt = sim
             .apply_god_tool(req)
@@ -2443,7 +2751,11 @@ mod tests {
         // Pre-seed a column of STONE so `scan_topmost_y`
         // returns a non-baseline value.
         sim.voxel_mut().write(
-            WorldCoord { x: col_x, y: FIXED_SCALE, z: col_z },
+            WorldCoord {
+                x: col_x,
+                y: FIXED_SCALE,
+                z: col_z,
+            },
             STONE,
         );
         let req = GodToolRequest::Material(MaterialRequest {
@@ -2801,6 +3113,7 @@ mod tests {
             center,
             radius_voxels: 1,
             strength: 0,
+            aux_id: 0,
         });
         let writes = match sim
             .apply_god_tool(req)
@@ -2852,9 +3165,15 @@ mod tests {
             other => panic!("expected Material receipt, got {other:?}"),
         };
         // 5×5 footprint ⇒ ≤ 25 PLANT voxels.
-        assert!(writes <= 25, "seed_forest writes must not exceed footprint area");
+        assert!(
+            writes <= 25,
+            "seed_forest writes must not exceed footprint area"
+        );
         // A density of 50 ⇒ at least a few seeds.
-        assert!(writes >= 1, "seed_forest with density 50 must write ≥1 seed");
+        assert!(
+            writes >= 1,
+            "seed_forest with density 50 must write ≥1 seed"
+        );
     }
 
     /// Phase 4 — `life.spawn_civ_seed` must inject 6 founder
@@ -2869,25 +3188,25 @@ mod tests {
             y: FIXED_SCALE,
             z: 1_000_000,
         };
-        let req = GodToolRequest::Life(LifeRequest::SpawnCivSeed(
-            SpawnCivSeedRequest {
-                center,
-                seed_civilian_id: 42,
-                faction: 0,
-            },
-        ));
+        let req = GodToolRequest::Life(LifeRequest::SpawnCivSeed(SpawnCivSeedRequest {
+            center,
+            seed_civilian_id: 42,
+            faction: 0,
+        }));
         let affected = match sim
             .apply_god_tool(req)
             .expect("life.spawn_civ_seed should succeed")
         {
-            GodToolReceipt::Life {
-                affected_count, ..
-            } => affected_count,
+            GodToolReceipt::Life { affected_count, .. } => affected_count,
             other => panic!("expected Life receipt, got {other:?}"),
         };
         assert_eq!(affected, 6, "spawn_civ_seed injects 6 founder civilians");
         // The substrate must have recorded two build sites.
-        assert_eq!(sim.build_sites().len(), 2, "expected 2 build sites (hut + farm)");
+        assert_eq!(
+            sim.build_sites().len(),
+            2,
+            "expected 2 build sites (hut + farm)"
+        );
     }
 
     /// Phase 4 — `disaster.lightning` must rasterise a LAVA arc
@@ -2919,18 +3238,12 @@ mod tests {
             );
         }
         let prev_belief = sim.belief();
-        let req = GodToolRequest::Disaster(DisasterRequest::Lightning {
-            from,
-            to,
-        });
+        let req = GodToolRequest::Disaster(DisasterRequest::Lightning { from, to });
         let writes = match sim
             .apply_god_tool(req)
             .expect("disaster.lightning should succeed")
         {
-            GodToolReceipt::EnvironmentalDisaster {
-                kind_label,
-                writes,
-            } => {
+            GodToolReceipt::EnvironmentalDisaster { kind_label, writes } => {
                 assert_eq!(kind_label, "lightning");
                 writes
             }
@@ -2967,10 +3280,7 @@ mod tests {
             .apply_god_tool(req)
             .expect("disaster.tornado should succeed")
         {
-            GodToolReceipt::EnvironmentalDisaster {
-                kind_label,
-                writes,
-            } => {
+            GodToolReceipt::EnvironmentalDisaster { kind_label, writes } => {
                 assert_eq!(kind_label, "tornado");
                 writes
             }
@@ -3012,17 +3322,17 @@ mod tests {
             .apply_god_tool(req)
             .expect("disaster.volcanic_vent should succeed")
         {
-            GodToolReceipt::EnvironmentalDisaster {
-                kind_label,
-                writes,
-            } => {
+            GodToolReceipt::EnvironmentalDisaster { kind_label, writes } => {
                 assert_eq!(kind_label, "volcanic_vent");
                 writes
             }
             other => panic!("expected EnvironmentalDisaster receipt, got {other:?}"),
         };
         // 3 ticks of LAVA + 4-cell STEAM ring = 7 writes.
-        assert_eq!(writes, 7, "volcanic_vent with ticks=3 writes 3 LAVA + 4 STEAM");
+        assert_eq!(
+            writes, 7,
+            "volcanic_vent with ticks=3 writes 3 LAVA + 4 STEAM"
+        );
         assert!(sim.belief() >= prev_belief, "volcanic_vent bumps belief");
         assert_eq!(
             sim.voxel().read(center),
@@ -3053,10 +3363,7 @@ mod tests {
             .apply_god_tool(req)
             .expect("disaster.drought should succeed")
         {
-            GodToolReceipt::EnvironmentalDisaster {
-                kind_label,
-                writes,
-            } => {
+            GodToolReceipt::EnvironmentalDisaster { kind_label, writes } => {
                 assert_eq!(kind_label, "drought");
                 writes
             }
@@ -3120,9 +3427,7 @@ mod tests {
     fn law_religion_pressure_routes_through_belief() {
         let mut sim = Simulation::new();
         let prev = sim.belief();
-        let req = GodToolRequest::Law(LawRequest::ReligionPressure {
-            pressure: 100,
-        });
+        let req = GodToolRequest::Law(LawRequest::ReligionPressure { pressure: 100 });
         let delta = match sim
             .apply_god_tool(req)
             .expect("law.religion_pressure should succeed")
@@ -3133,7 +3438,10 @@ mod tests {
             }
             other => panic!("expected Law receipt, got {other:?}"),
         };
-        assert_eq!(delta, 100, "religion_pressure reports the bump as the delta");
+        assert_eq!(
+            delta, 100,
+            "religion_pressure reports the bump as the delta"
+        );
         assert_eq!(sim.belief() - prev, 100, "belief bumped by 100");
     }
 

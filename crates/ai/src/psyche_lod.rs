@@ -223,7 +223,7 @@ impl PsycheRecord {
     /// into the `Mood` trait (saturating to `[-1.0, 1.0]`).
     pub fn record_event(&mut self, ev: PsycheEvent) {
         // Fold the event's mood contribution into the Mood trait.
-        let delta = ev.mood_delta() * ev.magnitude;
+        let delta = ev.kind.mood_delta() * ev.magnitude;
         self.traits[Trait::Mood.index()] =
             (self.traits[Trait::Mood.index()] + delta).clamp(-1.0, 1.0);
 
@@ -243,7 +243,12 @@ impl PsycheRecord {
         // Insert in descending order so `edge_sample[0]` is the strongest.
         let pos = self
             .edge_sample
-            .binary_search_by(|w| weight.partial_cmp(w).unwrap_or(std::cmp::Ordering::Equal).reverse())
+            .binary_search_by(|w| {
+                weight
+                    .partial_cmp(w)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+                    .reverse()
+            })
             .unwrap_or_else(|e| e);
         self.edge_sample.insert(pos, weight);
         if self.edge_sample.len() > EDGE_SAMPLE_CAP {
@@ -541,10 +546,7 @@ pub fn promote_to_hot(agg: &PsycheAggregate, seed: u64, cfg: &PsycheLodConfig) -
 /// against the original. With [`PsycheLodConfig::default`] every core trait
 /// reconstructs inside the documented tolerance (see the acceptance test).
 #[must_use]
-pub fn round_trip(
-    record: &PsycheRecord,
-    cfg: &PsycheLodConfig,
-) -> (PsycheAggregate, PsycheRecord) {
+pub fn round_trip(record: &PsycheRecord, cfg: &PsycheLodConfig) -> (PsycheAggregate, PsycheRecord) {
     let agg = demote_to_cold(record);
     let seed = cfg.default_seed;
     let promoted = promote_to_hot(&agg, seed, cfg);
@@ -566,7 +568,9 @@ impl XorShift64 {
     fn new(seed: u64) -> Self {
         // Avoid the xorshift all-zero fixed point by mixing in a constant.
         let s = seed.wrapping_add(0x9E37_79B9_7F4A_7C15);
-        Self { state: if s == 0 { 1 } else { s } }
+        Self {
+            state: if s == 0 { 1 } else { s },
+        }
     }
 
     /// Next raw `u64` from the stream.
@@ -583,7 +587,7 @@ impl XorShift64 {
     /// `f32`-grade precision.
     fn next_unit_symmetric(&mut self) -> f32 {
         let bits = (self.next_u64() >> 40) as u32; // top 24 bits
-        let unit = f32::from(bits) / (1u32 << 24) as f32; // [0, 1)
+        let unit = (bits as f32) / ((1u32 << 24) as f32); // [0, 1)
         unit.mul_add(2.0, -1.0) // [-1, 1)
     }
 }

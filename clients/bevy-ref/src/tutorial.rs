@@ -1,4 +1,4 @@
-﻿#![cfg(all(feature = "bevy", feature = "egui"))]
+#![cfg(all(feature = "bevy", feature = "egui"))]
 
 //! 6-step tutorial hint system (FR-CIV-CLIENT-011).
 //! Shown bottom-centre during InGame. Space/click advances; H replays.
@@ -18,7 +18,7 @@ const HINTS: &[&str] = &[
     "Press [?] anytime for all controls. Good luck!",
 ];
 
-#[derive(Resource)]
+#[derive(Resource, Serialize, Deserialize)]
 pub struct TutorialState {
     pub enabled: bool,
     pub step: u8,
@@ -27,7 +27,11 @@ pub struct TutorialState {
 
 impl Default for TutorialState {
     fn default() -> Self {
-        Self { enabled: true, step: 0, acknowledged: false }
+        Self {
+            enabled: true,
+            step: 0,
+            acknowledged: false,
+        }
     }
 }
 
@@ -35,22 +39,25 @@ pub struct TutorialPlugin;
 
 impl Plugin for TutorialPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<TutorialState>()
-            .add_systems(Update, (handle_tutorial_keys, draw_tutorial_hint).chain().run_if(in_game));
+        app.init_resource::<TutorialState>().add_systems(
+            Update,
+            (handle_tutorial_keys, draw_tutorial_hint)
+                .chain()
+                .run_if(in_game),
+        );
     }
 }
 
-fn handle_tutorial_keys(
-    keys: Res<ButtonInput<KeyCode>>,
-    mut state: ResMut<TutorialState>,
-) {
+fn handle_tutorial_keys(keys: Res<ButtonInput<KeyCode>>, mut state: ResMut<TutorialState>) {
     if keys.just_pressed(KeyCode::KeyH) {
         state.enabled = true;
         state.step = 0;
         state.acknowledged = false;
         return;
     }
-    if !state.enabled { return; }
+    if !state.enabled {
+        return;
+    }
     if keys.just_pressed(KeyCode::Space) {
         advance(&mut state);
     }
@@ -65,19 +72,8 @@ fn advance(state: &mut TutorialState) {
     }
 }
 
-fn draw_tutorial_hint(
-    mut contexts: EguiContexts,
-    mut state: ResMut<TutorialState>,
-) {
-    if !state.enabled { return; }
-
-/// Returns true if the tutorial should show this frame.
 fn should_show(state: &TutorialState) -> bool {
-    match state.visibility {
-        TutorialVisibility::Auto => !state.save_data.completed_once,
-        TutorialVisibility::Manual => true,
-        TutorialVisibility::Hidden => false,
-    }
+    state.enabled
 }
 
 fn draw_tutorial_hint(
@@ -90,13 +86,17 @@ fn draw_tutorial_hint(
         *ran_once = true;
         return;
     }
-    if !should_show(&state) { return; }
+    if !should_show(&state) {
+        return;
+    }
 
     let hint = HINTS[state.step as usize];
     let step = state.step;
     let total = HINTS.len() as u8;
 
-    let Ok(ctx) = contexts.ctx_mut() else { return; };
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
     let screen = ctx.content_rect();
 
     let mut clicked = false;
@@ -105,7 +105,10 @@ fn draw_tutorial_hint(
         .show(ctx, |ui| {
             egui::Frame::none()
                 .fill(egui::Color32::from_rgba_premultiplied(9, 10, 12, 230))
-                .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(126, 186, 181)))
+                .stroke(egui::Stroke::new(
+                    1.0,
+                    egui::Color32::from_rgb(126, 186, 181),
+                ))
                 .corner_radius(egui::CornerRadius::same(8))
                 .inner_margin(egui::Margin::symmetric(16, 10))
                 .show(ui, |ui| {

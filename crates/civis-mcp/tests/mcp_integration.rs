@@ -13,14 +13,14 @@
 
 use std::path::Path;
 
-use civis_mcp::{pixels_for_png, pixels_tool_payload, tool_names, tool_router, HARNESS_VERSION, TOOL_NAMES};
+use civis_mcp::{
+    pixels_for_png, pixels_tool_payload, tool_names, tool_router, HARNESS_VERSION, TOOL_NAMES,
+};
 
 // ── helpers ───────────────────────────────────────────────────────────────
 
 fn write_rgb_png(path: &Path, width: u32, height: u32, fill: [u8; 3]) {
-    let data: Vec<u8> = (0..(width * height))
-        .flat_map(|_| fill)
-        .collect();
+    let data: Vec<u8> = (0..(width * height)).flat_map(|_| fill).collect();
     let file = std::fs::File::create(path).expect("create png");
     let mut enc = png::Encoder::new(file, width, height);
     enc.set_color(png::ColorType::Rgb);
@@ -31,9 +31,7 @@ fn write_rgb_png(path: &Path, width: u32, height: u32, fill: [u8; 3]) {
 }
 
 fn write_rgba_png(path: &Path, width: u32, height: u32, fill: [u8; 4]) {
-    let data: Vec<u8> = (0..(width * height))
-        .flat_map(|_| fill)
-        .collect();
+    let data: Vec<u8> = (0..(width * height)).flat_map(|_| fill).collect();
     let file = std::fs::File::create(path).expect("create png");
     let mut enc = png::Encoder::new(file, width, height);
     enc.set_color(png::ColorType::Rgba);
@@ -62,11 +60,17 @@ fn tmp_dir() -> std::path::PathBuf {
 
 // ── tool registry ─────────────────────────────────────────────────────────
 
-/// Tool list must contain exactly 3 entries, sorted lexicographically.
+/// Tool list must contain exactly as many entries as `TOOL_NAMES`, sorted
+/// lexicographically.
 #[test]
-fn tool_list_returns_three_tools() {
+fn tool_list_matches_expected_count() {
     let names = tool_names();
-    assert_eq!(names.len(), 3, "expected exactly 3 tools, got {names:?}");
+    assert_eq!(
+        names.len(),
+        TOOL_NAMES.len(),
+        "expected {} tools, got {names:?}",
+        TOOL_NAMES.len()
+    );
 }
 
 /// Tool names must be sorted (the lib sorts them; callers rely on stable order).
@@ -75,7 +79,10 @@ fn tool_list_is_sorted() {
     let names = tool_names();
     let mut sorted = names.clone();
     sorted.sort();
-    assert_eq!(names, sorted, "tool_names() must be sorted lexicographically");
+    assert_eq!(
+        names, sorted,
+        "tool_names() must be sorted lexicographically"
+    );
 }
 
 /// TOOL_NAMES constant must match the router exactly.
@@ -97,7 +104,10 @@ fn every_tool_has_non_empty_description() {
     let tools = tool_router().list_all();
     for tool in &tools {
         assert!(
-            tool.description.as_deref().map(|d| !d.is_empty()).unwrap_or(false),
+            tool.description
+                .as_deref()
+                .map(|d| !d.is_empty())
+                .unwrap_or(false),
             "tool `{}` has no description",
             tool.name
         );
@@ -109,22 +119,30 @@ fn every_tool_has_non_empty_description() {
 fn every_tool_has_input_schema() {
     let tools = tool_router().list_all();
     for tool in &tools {
-        // The rmcp `Tool` type serialises the input schema as a JSON Value.
-        // We just verify it is not null/empty by checking the schema is not empty.
+        // The rmcp `Tool` type exposes the input schema as a shared JSON object map.
+        // Verify the schema is populated rather than asserting on its old Value shape.
         let schema = &tool.input_schema;
         assert!(
             !schema.is_empty(),
-            "tool `{}` has an empty input_schema",
+            "tool `{}` has a null/empty input_schema",
             tool.name
         );
     }
 }
 
-/// civis_verify and civis_pixels and civis_census are individually present.
+/// All MCP tools referenced by `TOOL_NAMES` are present in the registry.
 #[test]
 fn tool_names_contain_expected_entries() {
     let names = tool_names();
-    for expected in &["civis_verify", "civis_pixels", "civis_census"] {
+    let mut expected_sorted = names.clone();
+    expected_sorted.sort();
+    let mut const_sorted: Vec<_> = TOOL_NAMES.iter().map(|name| name.to_string()).collect();
+    const_sorted.sort();
+    assert_eq!(
+        expected_sorted, const_sorted,
+        "TOOL_NAMES and registered tool list differ; expected exact match"
+    );
+    for expected in TOOL_NAMES {
         assert!(
             names.iter().any(|n| n == expected),
             "tool `{expected}` missing from registered router; got {names:?}"
@@ -145,13 +163,22 @@ fn pixels_all_red_png_stats() {
     let stats = payload["stats"].as_object().expect("stats object");
 
     let mean_r = stats["mean_r"].as_f64().expect("mean_r");
-    assert!((mean_r - 255.0).abs() < 0.1, "all-red must have mean_r≈255, got {mean_r}");
+    assert!(
+        (mean_r - 255.0).abs() < 0.1,
+        "all-red must have mean_r≈255, got {mean_r}"
+    );
 
     let pct_black = stats["percent_near_black"].as_f64().expect("pct_black");
-    assert!(pct_black.abs() < 0.01, "all-red must have 0% near-black, got {pct_black}");
+    assert!(
+        pct_black.abs() < 0.01,
+        "all-red must have 0% near-black, got {pct_black}"
+    );
 
     let pct_gray = stats["percent_gray"].as_f64().expect("pct_gray");
-    assert!(pct_gray.abs() < 0.01, "pure red is not gray, got {pct_gray}");
+    assert!(
+        pct_gray.abs() < 0.01,
+        "pure red is not gray, got {pct_gray}"
+    );
 
     std::fs::remove_file(&path).ok();
 }
@@ -275,8 +302,8 @@ fn pixels_non_png_bytes_returns_error() {
 /// census_sim_status on an unreachable host must return an error with URL info.
 #[test]
 fn census_unreachable_host_returns_error() {
-    use civis_mcp::census_sim_status;
     use civis_cli::census::CensusConfig;
+    use civis_mcp::census_sim_status;
 
     // Port 1 is almost certainly closed and causes immediate refusal.
     let config = CensusConfig {
@@ -289,7 +316,9 @@ fn census_unreachable_host_returns_error() {
     assert!(result.is_err(), "unreachable host must return Err");
     let msg = result.unwrap_err();
     assert!(
-        msg.contains("WS connect") || msg.contains("connect") || msg.contains("refused")
+        msg.contains("WS connect")
+            || msg.contains("connect")
+            || msg.contains("refused")
             || msg.contains("timed out"),
         "error must mention connection failure, got: {msg}"
     );
@@ -300,7 +329,10 @@ fn census_unreachable_host_returns_error() {
 /// HARNESS_VERSION must be non-empty (from Cargo.toml PKG_VERSION).
 #[test]
 fn harness_version_is_non_empty() {
-    assert!(!HARNESS_VERSION.is_empty(), "HARNESS_VERSION must be set from CARGO_PKG_VERSION");
+    assert!(
+        !HARNESS_VERSION.is_empty(),
+        "HARNESS_VERSION must be set from CARGO_PKG_VERSION"
+    );
 }
 
 /// pixels_tool_payload payload shape: path, grid, stats keys present.
@@ -316,7 +348,13 @@ fn pixels_tool_payload_shape() {
     assert!(payload.get("stats").is_some(), "payload missing 'stats'");
 
     let stats = payload["stats"].as_object().expect("stats is object");
-    for key in &["samples", "mean_r", "percent_near_black", "percent_gray", "distinct_hue_count"] {
+    for key in &[
+        "samples",
+        "mean_r",
+        "percent_near_black",
+        "percent_gray",
+        "distinct_hue_count",
+    ] {
         assert!(stats.contains_key(*key), "stats missing '{key}': {stats:?}");
     }
 

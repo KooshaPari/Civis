@@ -44,7 +44,7 @@ jobs:
         with:
           toolchain: stable
       - name: Cache cargo-deny
-        uses: Swatinem/rust-cache@82e0640c10b16e16b3049b531e1771638dca14eb
+        uses: Swatinem/rust-cache@bc2d2e71bd35c5549942babaa51a89c586b981d1
         with:
           workspaces: |
             ~/.cargo/advisory-db
@@ -64,3 +64,4 @@ jobs:
             deny.toml
             target/deny.log
           if-no-files-found: ignore
+

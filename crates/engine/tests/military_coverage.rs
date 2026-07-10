@@ -14,7 +14,11 @@ fn test_configure_military_fog_no_panic() {
     // None radius — no mutation, previous values preserved
     sim.configure_military_fog(None, 32);
     let cfg2 = sim.military_phase_config();
-    assert_eq!(cfg2.war.fog_vision_radius, Some(5), "radius unchanged when None");
+    assert_eq!(
+        cfg2.war.fog_vision_radius,
+        Some(5),
+        "radius unchanged when None"
+    );
     assert_eq!(cfg2.war.fog_grid_size, 16, "grid_size unchanged when None");
 }
 

@@ -15,6 +15,18 @@ use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
+/// FR-CIV-BUILD-001/002/003 — building tiers, production chains, and
+/// construction sites. See `tiers_build` for the full API; this module
+/// re-exports the canonical types so downstream crates can
+/// `use civ_build::*` without diving into the submodule path.
+pub mod tiers_build;
+
+pub use civ_economy::Good as ProductionGood;
+pub use tiers_build::{
+    BuildSite, BuildingSpec, BuildingSpecOverride, BuildingSpecOverrideError, BuildingTier,
+    CompletedBuilding, ProductionChain, ProductionEvent,
+};
+
 /// Provenance tag carried by every building diff so the renderer can style
 /// procedural-grown vs user-freehand structures differently if desired.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -251,6 +263,9 @@ pub struct BuildingGraph {
     pub facades: BTreeMap<BuildingId, FacadeStyle>,
     /// Provenance tag per parcel.
     pub provenance: BTreeMap<BuildingId, BuildingProvenance>,
+    /// Completed buildings keyed by id (`FR-CIV-BUILD-001/002/003`).
+    /// Populated by [`tiers_build::BuildingGraph::record_completed`].
+    pub completed: BTreeMap<BuildingId, tiers_build::CompletedBuilding>,
 }
 
 impl BuildingGraph {
@@ -277,6 +292,18 @@ impl BuildingGraph {
     /// Assigns a provenance tag to a parcel.
     pub fn set_provenance(&mut self, id: BuildingId, provenance: BuildingProvenance) {
         self.provenance.insert(id, provenance);
+    }
+
+    /// Count of completed buildings (`FR-CIV-BUILD-001/002/003`).
+    #[must_use]
+    pub fn completed_count(&self) -> usize {
+        self.completed.len()
+    }
+
+    /// Looks up a completed building by id.
+    #[must_use]
+    pub fn completed(&self, id: BuildingId) -> Option<&tiers_build::CompletedBuilding> {
+        self.completed.get(&id)
     }
 
     /// Returns parcels whose `era_min` is at or below the supplied era.
@@ -1078,7 +1105,19 @@ mod tests {
     /// FR-CIV-ARCH-008 — measurable facade histogram tracks culture vector divergence.
     #[test]
     fn fr_arch_008_facade_histogram_tracks_culture_vector_divergence() {
-        use crate::facade_histogram_l1;
+        fn facade_histogram_l1(left: &BTreeMap<String, u32>, right: &BTreeMap<String, u32>) -> u32 {
+            left.keys()
+                .chain(right.keys())
+                .collect::<std::collections::BTreeSet<_>>()
+                .into_iter()
+                .map(|name| {
+                    left.get(name)
+                        .copied()
+                        .unwrap_or(0)
+                        .abs_diff(right.get(name).copied().unwrap_or(0))
+                })
+                .sum()
+        }
 
         let tile_sets = sample_tile_sets();
         let demands = sample_demand_signals();

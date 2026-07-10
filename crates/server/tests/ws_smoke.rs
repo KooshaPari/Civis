@@ -917,9 +917,7 @@ async fn ws_jsonrpc_sim_save_and_load_replay_roundtrip() {
             max_clients: 4,
             require_role: false,
             tick_broadcast_format: TickBroadcastFormat::Both,
-            saves_dir: tempfile::tempdir()
-                .expect("temp saves dir")
-                .keep(),
+            saves_dir: tempfile::tempdir().expect("temp saves dir").keep(),
             replays_dir: replays_dir.path().to_path_buf(),
         },
     )

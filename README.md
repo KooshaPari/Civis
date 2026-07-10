@@ -2,6 +2,15 @@
 
 ---
 
+> **Pinned references (Phenotype-org)**
+> - MSRV: see rust-toolchain.toml
+> - cargo-deny config: see deny.toml
+> - cargo-audit: rustsec/audit-check@v2 weekly
+> - Branch protection: 1 reviewer required, no force-push
+> - Org SSOT (spine): [phenotype-registry](https://github.com/KooshaPari/phenotype-registry) · audits/scorecards: [phenotype-org-audits](https://github.com/KooshaPari/phenotype-org-audits) · community/CI templates: [KooshaPari/.github](https://github.com/KooshaPari/.github)
+> - Stack policy pointer: [STACK_POLICY_POINTER](https://github.com/KooshaPari/.github/blob/main/docs/STACK_POLICY_POINTER.md)
+> - Civis owns `FR-CIV-*` only (godgame) — not org governance
+
 [![Build](https://img.shields.io/github/actions/workflow/status/KooshaPari/Civis/ci.yml?branch=main&label=build)](https://github.com/KooshaPari/Civis/actions)
 [![Release](https://img.shields.io/github/v/release/KooshaPari/Civis?include_prereleases&sort=semver)](https://github.com/KooshaPari/Civis/releases)
 [![License](https://img.shields.io/github/license/KooshaPari/Civis)](LICENSE)

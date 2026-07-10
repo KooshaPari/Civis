@@ -159,8 +159,8 @@ pub fn tick_maturity(
     if health.is_dead() {
         return;
     }
-    let stress = (critical_fraction.clamp(0.0, 1.0) * params.maturity_stress_penalty)
-        .clamp(0.0, 1.0);
+    let stress =
+        (critical_fraction.clamp(0.0, 1.0) * params.maturity_stress_penalty).clamp(0.0, 1.0);
     let delta = params.base_maturity_rate * (1.0 - stress);
     psyche.maturity = (psyche.maturity + delta).clamp(0.0, 1.0);
 }
@@ -561,7 +561,9 @@ pub fn compute_cluster_profile(
 
 /// Per-cluster belief centroids from live agent `Psyche` components (≥2 members).
 #[must_use]
-pub fn cluster_belief_centroids(world: &hecs::World) -> std::collections::BTreeMap<u64, [f32; PSYCHE_DIM]> {
+pub fn cluster_belief_centroids(
+    world: &hecs::World,
+) -> std::collections::BTreeMap<u64, [f32; PSYCHE_DIM]> {
     use std::collections::BTreeMap;
 
     let mut by_cluster: BTreeMap<u64, Vec<[f32; PSYCHE_DIM]>> = BTreeMap::new();
@@ -649,13 +651,17 @@ mod tests {
             openness: 0.8,
             ..OceanTraits::neutral()
         };
-        let agent_a = AgentPsyche { cluster_id: 1, ocean: shifted };
-        let agent_b = AgentPsyche { cluster_id: 2, ocean: shifted };
+        let agent_a = AgentPsyche {
+            cluster_id: 1,
+            ocean: shifted,
+        };
+        let agent_b = AgentPsyche {
+            cluster_id: 2,
+            ocean: shifted,
+        };
 
-        let profile_low =
-            compute_cluster_profile(&[agent_a], 1, &global, 0.1).unwrap();
-        let profile_high =
-            compute_cluster_profile(&[agent_b], 2, &global, 0.9).unwrap();
+        let profile_low = compute_cluster_profile(&[agent_a], 1, &global, 0.1).unwrap();
+        let profile_high = compute_cluster_profile(&[agent_b], 2, &global, 0.9).unwrap();
 
         assert!(
             profile_high.divergence_from_global > profile_low.divergence_from_global,
@@ -689,6 +695,8 @@ mod tests {
             shelter: 0.0,
             safety: 0.0,
             belonging: 0.0,
+            rest: 0.0,
+            health: 0.0,
         };
         let mut low = Mood::neutral();
         let mut high = Mood::neutral();

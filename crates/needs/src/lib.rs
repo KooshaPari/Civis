@@ -603,6 +603,7 @@ mod tests {
             integrity: 0.90,
             sick: true,
             deprivation_streak: 0,
+            ..Health::default()
         };
         let rates = DecayRates::default();
         let params = HealthParams {
@@ -754,6 +755,7 @@ mod tests {
             integrity: 0.0,
             sick: true,
             deprivation_streak: 50,
+            ..Health::default()
         };
         let mut r = rng(3);
         let out = tick(
@@ -939,6 +941,7 @@ mod tests {
             integrity: 0.5,
             sick: false,
             deprivation_streak: 0,
+            ..Health::default()
         };
         let mut rng = rng(2);
         let rates = DecayRates {
@@ -1014,6 +1017,7 @@ mod tests {
             integrity: 0.42,
             sick: false,
             deprivation_streak: 0,
+            ..Health::default()
         };
         let rates = DecayRates {
             food: 0.0,
@@ -1053,6 +1057,7 @@ mod tests {
             integrity: 0.02,
             sick: false,
             deprivation_streak: 0,
+            ..Health::default()
         };
         let mut rng = rng(9);
         let rates = DecayRates {
@@ -1144,6 +1149,7 @@ mod test_reproduction {
             integrity: 1.0,
             sick: false,
             deprivation_streak: 0,
+            ..Health::default()
         };
         // Working-age adult (age 25 fits in default ranges)
         let prob = should_reproduce(25.0, &health, 0.9, 0.9, 0.5, &lifecycle_params);
@@ -1157,6 +1163,7 @@ mod test_reproduction {
             integrity: 0.8,
             sick: false,
             deprivation_streak: 0,
+            ..Health::default()
         };
         // Starving (food < 0.3)
         let prob = should_reproduce(25.0, &health, 0.1, 0.9, 0.5, &lifecycle_params);
@@ -1170,6 +1177,7 @@ mod test_reproduction {
             integrity: 1.0,
             sick: false,
             deprivation_streak: 0,
+            ..Health::default()
         };
         // Juvenile (age 8)
         let prob = should_reproduce(8.0, &health, 0.9, 0.9, 0.5, &lifecycle_params);
@@ -1183,6 +1191,7 @@ mod test_reproduction {
             integrity: 1.0,
             sick: true,
             deprivation_streak: 0,
+            ..Health::default()
         };
         // Working-age but sick
         let prob = should_reproduce(25.0, &health, 0.9, 0.9, 0.5, &lifecycle_params);

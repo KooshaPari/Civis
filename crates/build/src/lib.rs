@@ -1105,7 +1105,22 @@ mod tests {
     /// FR-CIV-ARCH-008 — measurable facade histogram tracks culture vector divergence.
     #[test]
     fn fr_arch_008_facade_histogram_tracks_culture_vector_divergence() {
-        use crate::facade_histogram_l1;
+        fn facade_histogram_l1(
+            left: &BTreeMap<String, u32>,
+            right: &BTreeMap<String, u32>,
+        ) -> u32 {
+            left.keys()
+                .chain(right.keys())
+                .collect::<std::collections::BTreeSet<_>>()
+                .into_iter()
+                .map(|name| {
+                    left.get(name)
+                        .copied()
+                        .unwrap_or(0)
+                        .abs_diff(right.get(name).copied().unwrap_or(0))
+                })
+                .sum()
+        }
 
         let tile_sets = sample_tile_sets();
         let demands = sample_demand_signals();

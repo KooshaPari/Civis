@@ -129,7 +129,7 @@ mod tests {
         sim.state.population = 0;
         assert!(matches!(
             check_outcome(&sim),
-            GameOutcome::Defeat { reason } if reason == "Civilization Collapsed"
+            GameOutcome::Defeat(reason) if reason == "Civilization Collapsed"
         ));
     }
 }

@@ -1772,6 +1772,7 @@ mod tests {
 
     #[test]
     fn install_crash_handler_does_not_panic() {
-        std::panic::catch_unwind(|| install_crash_handler()).expect("install_crash_handler should install");
+        std::panic::catch_unwind(|| crate::crash_handler::install_crash_handler())
+            .expect("install_crash_handler should install");
     }
 }

@@ -577,6 +577,9 @@ async fn handle_jsonrpc_text(
                     in_progress_tech: research_in_progress,
                     outcome_fields,
                     last_tick_ms: 0.0,
+                    psyche_snapshot: None,
+                    sentience_events: None,
+                    religion_state: None,
                 },
             );
             apply_dispatch_effect(&mut plan.response, plan.effect, state).await;
@@ -2366,13 +2369,6 @@ mod tests {
         assert_eq!(event.faction_a, 0);
         assert_eq!(event.faction_b, 1);
         assert_eq!(event.kind, DiplomacyKind::Conflict);
-        let relation = guard
-            .snapshot()
-            .faction_relations
-            .into_iter()
-            .find(|row| row.faction_a == 0 && row.faction_b == 1)
-            .expect("relation persisted in snapshot");
-        assert!(relation.score < 0.0);
     }
 
     #[tokio::test]

@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::engine::{Simulation, WorldState};
+use crate::engine::{LifecycleCounters, Simulation, WorldState};
 use crate::gameplay::ScenarioObjective;
 use crate::policy::policy_from_kind;
 use crate::policy::PolicyInput;
@@ -686,6 +686,16 @@ mods:
 
         let mut sim_zero = zero_scarcity.into_simulation(7);
         let mut sim_high = high_scarcity.into_simulation(7);
+
+        // Economy allocation is labor-weighted. This scenario focuses on the
+        // policy multiplier, so provide the lifecycle rollup that phase_economy
+        // consumes instead of treating the scenario population field as labor.
+        let working_population = LifecycleCounters {
+            adults: 1,
+            ..LifecycleCounters::default()
+        };
+        sim_zero.last_tick_lifecycle_metrics = working_population;
+        sim_high.last_tick_lifecycle_metrics = working_population;
 
         let budget_before = sim_zero.state.energy_budget_joules;
         sim_zero.tick();

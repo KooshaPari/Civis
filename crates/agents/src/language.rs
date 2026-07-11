@@ -88,27 +88,29 @@ impl EvolvedLexicon {
         entity_id: u64,
     ) -> &Lexeme {
         let key = (kind, entity_id);
-        if !self.entries.contains_key(&key) {
+        self.entries.entry(key).or_insert_with(|| {
             let inv_len = inventory.phonemes.len().max(1);
             let syllable_count = 2 + (rng.gen::<u32>() % 2) as usize;
             let syllables: Vec<u8> = (0..syllable_count)
                 .map(|_| (rng.gen::<u32>() as usize % inv_len) as u8)
                 .collect();
-            self.entries.insert(
-                key,
-                Lexeme {
-                    syllables,
-                    kind,
-                    entity_id,
-                },
-            );
-        }
+            Lexeme {
+                syllables,
+                kind,
+                entity_id,
+            }
+        });
         self.entries.get(&key).expect("coined lexeme")
     }
 
     #[must_use]
     pub fn len(&self) -> usize {
         self.entries.len()
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
     }
 
     #[must_use]
@@ -152,8 +154,8 @@ pub fn drift_phonemes(
 
     let mut l2 = 0.0f32;
     for (orig, phoneme) in before.iter().zip(&inventory.phonemes) {
-        for i in 0..PHONEME_FEATURES {
-            let d = orig[i] - phoneme.features[i];
+        for (orig_feature, feature) in orig.iter().zip(&phoneme.features) {
+            let d = *orig_feature - *feature;
             l2 += d * d;
         }
     }
@@ -162,8 +164,8 @@ pub fn drift_phonemes(
     if l2 > cap && l2 > f32::EPSILON {
         let scale = cap / l2;
         for (phoneme, orig) in inventory.phonemes.iter_mut().zip(before.iter()) {
-            for i in 0..PHONEME_FEATURES {
-                phoneme.features[i] = orig[i] + (phoneme.features[i] - orig[i]) * scale;
+            for (feature, orig_feature) in phoneme.features.iter_mut().zip(orig) {
+                *feature = *orig_feature + (*feature - *orig_feature) * scale;
             }
         }
         l2 = cap;

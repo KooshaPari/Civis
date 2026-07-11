@@ -101,7 +101,7 @@ impl TaxPolicy {
             0.0
         };
         let scaled = (clamped * 10_000.0).round();
-        self.compliance_bp = scaled.max(0.0).min(10_000.0) as i64;
+        self.compliance_bp = scaled.clamp(0.0, 10_000.0) as i64;
     }
 }
 

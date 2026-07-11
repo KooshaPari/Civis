@@ -1,5 +1,8 @@
 //! Market price tracking stub (CIV-0100 §market).
 //!
+#![allow(clippy::doc_lazy_continuation)]
+// Test acceptance documentation intentionally uses multi-line list prose.
+//
 //! Two complementary types live in this module:
 //!
 //! * [`MarketState`] — per-good clearing-price stub retained for backwards
@@ -197,6 +200,7 @@ pub struct SettlementTradeFlow {
 /// The caller provides the current price estimates for both settlements. The
 /// returned quantity is the emergent trade volume that should move from the
 /// cheaper settlement to the more expensive one.
+#[allow(dead_code)] // Public trade-flow helper awaits settlement integration.
 pub fn settlement_trade_flow(
     low: &Settlement,
     high: &Settlement,
@@ -243,6 +247,7 @@ pub fn settlement_trade_flow(
 /// [`settlement_trade_flow`] but avoids requiring access to a full
 /// [`Settlement`] value. Used by the engine tick when it only has the
 /// settlement stock / population aggregates.
+#[allow(clippy::too_many_arguments)] // Settlement flow inputs are independent domain dimensions.
 pub fn settlement_trade_flow_from_supply_demand(
     from_settlement: SettlementId,
     to_settlement: SettlementId,
@@ -289,6 +294,7 @@ fn run_tick_sequence(market: &mut MarketState, ticks: &[u64]) {
 }
 
 #[cfg(test)]
+#[allow(clippy::doc_lazy_continuation)]
 mod tests {
     use super::*;
     use crate::stocks::{ProductionProfile, Stocks};

@@ -225,7 +225,10 @@ pub fn spawn_triplanar_chunk(
     atlas: &mut GreedyAtlas,
     textures: &[AtlasTexture],
 ) -> Result<TriplanarChunkBinding, TriplanarChunkError> {
-    if !(spec.chunk_half_extent > 0.0) {
+    if !matches!(
+        spec.chunk_half_extent.partial_cmp(&0.0),
+        Some(std::cmp::Ordering::Greater)
+    ) {
         return Err(TriplanarChunkError::ZeroExtent);
     }
     let target_id = spec.dominant_atlas.raw();

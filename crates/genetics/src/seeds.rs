@@ -25,8 +25,6 @@
 
 use crate::{Dna, DnaClass};
 use rand::Rng;
-#[cfg(test)]
-use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
@@ -1379,7 +1377,6 @@ mod tests {
     /// divergence > 0, the genome drifts away from its archetype baseline.
     #[test]
     fn p2_divergence_increases_over_generations() {
-        use crate::speciation_distance;
         let class = base_class();
         let seeds_under_test = [
             NamedSeed::Lumari,

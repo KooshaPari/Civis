@@ -4,6 +4,9 @@
 //! All tests have been disabled until the civ-economy API is updated.
 //! See: https://github.com/phenotype-example/civis-platform/issues/XXX
 
+#![allow(dead_code, unused_imports)]
+// Legacy test scaffolding retained pending API migration.
+
 use civ_economy::{
     drain_energy_budget, step, verify_ledger_conservation, EconomyState, LedgerInvariantError,
     LedgerSide, ACCOUNT_CONSUMPTION, ACCOUNT_ENERGY_BUDGET, INSTITUTION_MARKET,

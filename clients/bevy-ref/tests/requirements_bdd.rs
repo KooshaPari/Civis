@@ -9,6 +9,7 @@ fn linear_index(dims: [usize; 3], x: usize, y: usize, z: usize) -> usize {
     x + y * dims[0] + z * dims[0] * dims[1]
 }
 
+#[allow(dead_code)] // Shared BDD terrain helper retained for future scenarios.
 fn surface_y(world: &GenWorld, x: usize, z: usize) -> Option<usize> {
     if x >= world.dims[0] || z >= world.dims[2] {
         return None;

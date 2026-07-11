@@ -78,7 +78,7 @@ async fn fr_e2e_click_to_fire() {
             "target_faction": 0
         }
     });
-    ws.send(Message::Text(god_req.to_string().into()))
+    ws.send(Message::Text(god_req.to_string()))
         .await
         .expect("send god_action");
 
@@ -101,7 +101,7 @@ async fn fr_e2e_click_to_fire() {
             "action": "tick"
         }
     });
-    ws.send(Message::Text(tick_req.to_string().into()))
+    ws.send(Message::Text(tick_req.to_string()))
         .await
         .expect("send sim.command");
 
@@ -121,7 +121,7 @@ async fn fr_e2e_click_to_fire() {
         "method": "sim.snapshot",
         "params": {}
     });
-    ws.send(Message::Text(snap_req.to_string().into()))
+    ws.send(Message::Text(snap_req.to_string()))
         .await
         .expect("send sim.snapshot");
 

@@ -179,8 +179,12 @@ mod tests {
     enum NeedKind {
         Hunger,
         Rest,
+        // Exercised by the match below but not instantiated by these fixtures.
+        #[allow(dead_code)]
         Safety,
         Social,
+        // Exercised by the match below but not instantiated by these fixtures.
+        #[allow(dead_code)]
         Purpose,
     }
 

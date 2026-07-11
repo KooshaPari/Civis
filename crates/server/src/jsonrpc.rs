@@ -2053,21 +2053,6 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             ),
             effect: DispatchEffect::None,
         },
-        JsonRpcMethod::SimTechState => DispatchPlan {
-            response: JsonRpcResponse::success(
-                req.id,
-                serde_json::json!({
-                    "available": ["pottery", "masonry", "writing", "iron_working",
-                                  "currency", "mathematics", "gunpowder", "printing",
-                                  "banking", "steam_power", "electricity", "railroad"],
-                    "researched": [],
-                    "in_progress": null,
-                    "tick": ctx.tick,
-                    "stub": true,
-                }),
-            ),
-            effect: DispatchEffect::None,
-        },
         JsonRpcMethod::SimSubscribe
         | JsonRpcMethod::SimUpdateSubscription
         | JsonRpcMethod::SimUnsubscribe => DispatchPlan {
@@ -4388,7 +4373,6 @@ mod tests {
     /// FR-CIV-SERVER-003 — sim.queue_research with a valid tech accepts the request.
     #[test]
     fn dispatch_queue_research_valid_tech_accepted() {
-        use serde_json::json;
         let req = parse_request(
             r#"{"jsonrpc":"2.0","id":1,"method":"sim.queue_research","params":{"tech":"pottery"}}"#,
         )
@@ -4489,7 +4473,7 @@ mod tests {
         let available = result.get("available").expect("available field");
         assert!(available.is_array(), "available should be an array");
         assert!(
-            available.as_array().unwrap().len() > 0,
+            !available.as_array().unwrap().is_empty(),
             "available should be non-empty"
         );
     }

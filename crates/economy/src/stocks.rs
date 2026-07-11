@@ -197,6 +197,7 @@ pub fn comparative_advantage(profile: &ProductionProfile) -> Good {
 
 /// Estimates gains from trade when two profiles specialize in their strongest
 /// comparative-advantage goods.
+#[allow(dead_code)] // Public trade helper awaits market integration.
 pub fn trade_gain(a: &ProductionProfile, b: &ProductionProfile) -> i64 {
     let a_good = comparative_advantage(a);
     let b_good = comparative_advantage(b);

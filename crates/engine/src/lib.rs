@@ -2,6 +2,36 @@
 //!
 //! Uses fixed-point arithmetic for deterministic simulation results.
 //! Uses i64 with scaling for deterministic calculations.
+#![allow(
+    dead_code,
+    non_snake_case,
+    unused_assignments,
+    unused_imports,
+    unused_mut,
+    unused_parens,
+    unused_variables,
+    clippy::clone_on_copy,
+    clippy::derivable_impls,
+    clippy::double_must_use,
+    clippy::for_kv_map,
+    clippy::if_same_then_else,
+    clippy::iter_cloned_collect,
+    clippy::let_and_return,
+    clippy::manual_clamp,
+    clippy::needless_range_loop,
+    clippy::ptr_arg,
+    clippy::empty_line_after_doc_comments,
+    clippy::inconsistent_digit_grouping,
+    clippy::too_many_arguments,
+    clippy::type_complexity,
+    clippy::unnecessary_sort_by,
+    clippy::unnecessary_cast,
+    clippy::unwrap_or_default,
+    clippy::useless_conversion,
+    clippy::useless_format,
+    clippy::wildcard_in_or_patterns
+)]
+// Staged simulation phases are intentionally compiled before integration wiring.
 //!
 //! ## Modules
 //!

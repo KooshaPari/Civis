@@ -98,7 +98,6 @@ pub enum PsycheEventKind {
 
 impl PsycheEventKind {
     /// All variants in declaration order — useful for bucketed counters.
-    #[must_use]
     pub const ALL: [PsycheEventKind; 5] = [
         PsycheEventKind::Bond,
         PsycheEventKind::Rift,
@@ -153,7 +152,6 @@ pub enum Trait {
 
 impl Trait {
     /// All built-in trait variants in declaration order.
-    #[must_use]
     pub const CORE: [Trait; 6] = [
         Trait::Mood,
         Trait::Sociability,
@@ -385,7 +383,7 @@ pub fn demote_to_cold(record: &PsycheRecord) -> PsycheAggregate {
 
     // Trait-specific noise floors: Mood and Custom can be wider than the
     // unit-interval traits.
-    let mut trait_mean = record.traits;
+    let trait_mean = record.traits;
     let mut trait_var = [0.0_f32; 6];
     for (i, v) in trait_var.iter_mut().enumerate() {
         // Base variance: 0.05 for bounded traits, 0.10 for mood/custom,

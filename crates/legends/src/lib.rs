@@ -55,9 +55,10 @@ pub use rumor::{
 pub use worker::LegendsWorker;
 
 #[cfg(test)]
+#[allow(clippy::items_after_test_module)]
 mod tests {
     use crate::graph::SagaGraph;
-    use crate::ids::{Epoch, SimRuntimeId, SourceCrate};
+    use crate::ids::{SimRuntimeId, SourceCrate};
     use crate::model::{EventKind, RawSimEvent, Role};
 
     /// FR-CIV-LEGENDS deepening — new event kinds ingest and appear in the graph.

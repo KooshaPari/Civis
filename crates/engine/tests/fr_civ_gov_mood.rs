@@ -28,7 +28,7 @@
 
 use civ_engine::{MoodSnapshot, Simulation};
 
-pub const MOOD_SEED: u64 = 0xC1C0DA7A_5EED_F00D;
+pub const MOOD_SEED: u64 = 0xC1C0_DA7A_5EED_F00D;
 
 /// Divisor for the food-score formula. Tuned so that 200 stocked food = +1 score.
 pub const FOOD_DIVISOR: i64 = 200;

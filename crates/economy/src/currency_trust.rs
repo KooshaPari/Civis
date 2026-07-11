@@ -58,6 +58,7 @@ const TRUST_BP_MAX: i64 = 10_000;
 
 /// Below this per-tick price move (in basis points × 10 of the prior price),
 /// exchange is considered price-stable.
+#[allow(dead_code)] // Retained as the stable-inflation reference threshold.
 const STABLE_INFLATION_BP10: i64 = 500; // 5 % per tick
 
 /// At or above this per-tick inflation rate the currency is treated as
@@ -131,8 +132,10 @@ impl CurrencyTrust {
     /// Construct with a custom starting trust in `[0.0, 1.0]`. Out-of-range
     /// values are clamped.
     pub fn with_initial_trust(currency_id: u32, initial_trust: f32) -> Self {
-        let mut t = Self::default();
-        t.currency_id = currency_id;
+        let mut t = Self {
+            currency_id,
+            ..Self::default()
+        };
         t.set_trust(initial_trust);
         t
     }
@@ -140,10 +143,11 @@ impl CurrencyTrust {
     /// Construct with explicit integer starting trust in basis points.
     /// Clamped to `[0, 10_000]`.
     pub fn with_initial_trust_bp(currency_id: u32, trust_bp: i64) -> Self {
-        let mut t = Self::default();
-        t.currency_id = currency_id;
-        t.trust_bp = trust_bp.clamp(0, TRUST_BP_MAX);
-        t
+        Self {
+            currency_id,
+            trust_bp: trust_bp.clamp(0, TRUST_BP_MAX),
+            ..Self::default()
+        }
     }
 
     /// Current trust as a fraction in `[0, 1]`.
@@ -317,7 +321,7 @@ pub fn step_currency_trust(
         // Quadratic ramp in (excess / threshold). Saturating.
         // penalty = MAX_PASS_LOSS_BP * (excess/threshold)^2, capped at MAX_PASS_LOSS_BP.
         // Use integer arithmetic: penalty_num = MAX_PASS_LOSS_BP * excess^2 / threshold^2.
-        let excess = (excess_bp10 as i64).min(i64::MAX);
+        let excess = excess_bp10;
         let threshold = if price_hyper {
             HYPER_INFLATION_BP10
         } else {

@@ -280,8 +280,8 @@ pub fn belief_culture_exposure(exposures: &[(f32, [f32; PSYCHE_DIM])]) -> [f32; 
 /// For each cluster pair `(i, j)`:
 /// - isolation = `1.0 - contact_weights.get((i,j)).unwrap_or(0.0)`
 /// - pair divergence = `belief_distance(centroids[i], centroids[j]) * isolation`
-/// Returns the maximum pair divergence (mirrors `max_cluster_belief_divergence`
-/// but weighted by isolation).
+///   Returns the maximum pair divergence (mirrors `max_cluster_belief_divergence`
+///   but weighted by isolation).
 #[must_use]
 pub fn isolation_weighted_belief_divergence(
     centroids: &std::collections::BTreeMap<u64, [f32; PSYCHE_DIM]>,

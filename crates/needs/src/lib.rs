@@ -1134,7 +1134,7 @@ pub fn should_reproduce(
 
     // Overcrowding suppresses reproduction (carrying capacity effect).
     if overcrowding_factor > 1.0 {
-        birth_prob /= (1.0 + overcrowding_factor);
+        birth_prob /= 1.0 + overcrowding_factor;
     }
 
     birth_prob.clamp(0.0, 1.0)

@@ -407,7 +407,7 @@ mod tests {
             3,
             "evidence must hold exactly the threshold entries"
         );
-        assert!(idx.is_empty() == false);
+        assert!(!idx.is_empty());
         assert_eq!(idx.len(), 1);
         assert_eq!(idx.all()[0].name, "MigrationI");
     }

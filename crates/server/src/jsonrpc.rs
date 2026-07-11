@@ -462,6 +462,9 @@ pub struct SnapshotFields {
     /// Per-cluster music cues from the most recent audio phase.
     #[serde(default)]
     pub music_cues: BTreeMap<u64, MusicCueSnapshot>,
+    /// One-shot SFX triggers from the most recent audio phase (FR-AUDIO-wire).
+    #[serde(default)]
+    pub audio_events: Vec<AudioEventSnapshot>,
     /// Most recent civ-emergence-metrics sample (FR-CIV-EMERG-003
     /// surface). `None` on a fresh sim before the first 50-tick
     /// sample boundary; the bridge copies the same value here as
@@ -484,6 +487,59 @@ pub struct MusicCueSnapshot {
     pub intensity: f32,
     /// Optional secondary tempo hint in BPM.
     pub tempo_bpm: Option<u16>,
+}
+
+/// Owned wire form of [`civ_engine::SfxTrigger`] for `sim.snapshot.audio_events`.
+///
+/// UI-only triggers are filtered out server-side; clients map these onto local
+/// one-shot catalogues (Bevy `SfxKind`, web SFX bus, etc.).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "trigger", rename_all = "snake_case")]
+pub enum AudioEventSnapshot {
+    /// Civilian birth.
+    Birth,
+    /// Civilian death.
+    Death,
+    /// Building completed.
+    Build,
+    /// Technology unlocked.
+    Tech,
+    /// Combat engagement.
+    Battle {
+        /// Intensity in `[0, 1]`.
+        intensity: f32,
+    },
+    /// World disaster.
+    Disaster {
+        /// Disaster label (`meteor`, `flood`, `quake`, …).
+        kind: String,
+        /// Severity in `[0, 1]`.
+        severity: f32,
+    },
+}
+
+impl AudioEventSnapshot {
+    /// Convert an engine trigger into a snapshot event, dropping UI-only kinds.
+    #[must_use]
+    pub fn from_engine(trigger: civ_engine::SfxTrigger) -> Option<Self> {
+        use civ_engine::SfxTrigger;
+        Some(match trigger {
+            SfxTrigger::Birth => Self::Birth,
+            SfxTrigger::Death => Self::Death,
+            SfxTrigger::Build => Self::Build,
+            SfxTrigger::Tech => Self::Tech,
+            SfxTrigger::Battle { intensity } => Self::Battle { intensity },
+            SfxTrigger::Disaster { kind, severity } => Self::Disaster {
+                kind: kind.to_owned(),
+                severity,
+            },
+            SfxTrigger::UiClick
+            | SfxTrigger::UiHover
+            | SfxTrigger::UiConfirm
+            | SfxTrigger::UiCancel
+            | SfxTrigger::UiAlert => return None,
+        })
+    }
 }
 
 /// Tactical damage pulse for `sim.snapshot` (normalized map coords).
@@ -618,6 +674,12 @@ pub fn snapshot_result_json(fields: &SnapshotFields) -> Value {
         "music_cues".to_owned(),
         serde_json::to_value(&fields.music_cues).unwrap_or(Value::Null),
     );
+    if !fields.audio_events.is_empty() {
+        obj.insert(
+            "audio_events".to_owned(),
+            serde_json::to_value(&fields.audio_events).unwrap_or(Value::Null),
+        );
+    }
     if let Some(emergence) = &fields.emergence {
         // `sim.snapshot.emergence` block (FR-CIV-EMERG-003). The five
         // dashboard fields are hoisted to a nested `dashboard` object
@@ -799,6 +861,12 @@ pub fn snapshot_fields_from_sim(
                     },
                 )
             })
+            .collect(),
+        audio_events: sim
+            .last_tick_audio_events()
+            .iter()
+            .copied()
+            .filter_map(AudioEventSnapshot::from_engine)
             .collect(),
         emergence: sim.last_emergence_sample().map(EmergenceSampleFields::from),
         researched: vec![],
@@ -3302,6 +3370,7 @@ mod tests {
                             tempo_bpm: Some(120),
                         },
                     )]),
+                    audio_events: vec![AudioEventSnapshot::Build],
                     emergence: None,
                     researched: vec![],
                     in_progress_tech: None,
@@ -3353,6 +3422,9 @@ mod tests {
                         "tempo_bpm": 120,
                     },
                 },
+                "audio_events": [
+                    { "trigger": "build" }
+                ],
             }))
         );
     }
@@ -3392,6 +3464,7 @@ mod tests {
                         tide_offset: 0.0,
                     },
                     music_cues: BTreeMap::new(),
+                    audio_events: Vec::new(),
                     emergence: None,
                     researched: vec![],
                     in_progress_tech: None,
@@ -3481,6 +3554,7 @@ mod tests {
                         tide_offset: 0.0,
                     },
                     music_cues: BTreeMap::new(),
+                    audio_events: Vec::new(),
                     emergence: None,
                     researched: vec![],
                     in_progress_tech: None,
@@ -4350,6 +4424,7 @@ mod tests {
                 tide_offset: 0.0,
             },
             music_cues: BTreeMap::new(),
+            audio_events: Vec::new(),
             emergence: Some(emergence),
             researched: vec![],
             in_progress_tech: None,

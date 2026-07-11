@@ -98,15 +98,12 @@ pub const SCALE: i64 = 1_000;
 // FR-AUDIO-wire: re-export the audio substrate's SFX trigger enum so
 // downstream crates (civ-server JSON-RPC + WS bridge) can name it as
 // `civ_engine::SfxTrigger` without taking a direct `civ-audio` dep.
-// TODO(cleanup-surgeon): `civ-audio` is not in this crate's Cargo.toml; the
-//  engine self-references it from a small number of WS bridge call-sites.
-//  Restore once `civ-audio` is re-added to the workspace as a sibling crate.
-// pub use civ_audio::triggers::SfxTrigger;
 pub use building_emergence::{
     apply_emergence_facades, architecture_tile_sets, biome_style_tag,
     building_type_unlocked_at_era, culture_traits_for_cluster, emergence_demand_signals,
     emergent_style_key_for_sim, resource_stock_units, settlement_build_anchor,
 };
+pub use civ_audio::triggers::SfxTrigger;
 pub use civ_build::{BiomeStyleTag, EmergentStyleKey};
 pub use civ_emergence_metrics::branching::BranchingRegime;
 pub use civ_mod_host::{load_manifest, ModBrowserEntry, ModGuestStateSave, ModType};

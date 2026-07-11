@@ -124,8 +124,9 @@ pub struct CensusArgs {
 /// Verb discriminator for `civis_god_action` (FR-CIV-GODTOOL). The
 /// underlying `sim.god_action` JSON-RPC accepts these strings:
 /// `smite | heal | place_terrain | ignite | spawn_creature | bless |
-/// multiply_creatures`. The MCP tool re-exports the same enum so agents
-/// get a typed payload instead of a free-form string.
+/// multiply_creatures | earthquake | plague | miracle`. The MCP tool
+/// re-exports the same enum so agents get a typed payload instead of a
+/// free-form string.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum GodActionKind {
@@ -145,6 +146,12 @@ pub enum GodActionKind {
     /// `multiply_creatures` — spawn N civilians within a disk
     /// (FR-CIV-GODTOOL-001).
     MultiplyCreatures,
+    /// `earthquake` — trigger a quake at a normalized map point.
+    Earthquake,
+    /// `plague` — trigger a plague, optionally targeting a faction.
+    Plague,
+    /// `miracle` — boost belief and faction treasuries.
+    Miracle,
 }
 
 impl GodActionKind {
@@ -157,6 +164,9 @@ impl GodActionKind {
             Self::SpawnCreature => "spawn_creature",
             Self::Bless => "bless",
             Self::MultiplyCreatures => "multiply_creatures",
+            Self::Earthquake => "earthquake",
+            Self::Plague => "plague",
+            Self::Miracle => "miracle",
         }
     }
 }
@@ -227,7 +237,7 @@ impl GodActionArgs {
             obj.insert("count".to_owned(), json!(count));
         }
         if let Some(faction) = self.faction {
-            obj.insert("faction".to_owned(), json!(faction));
+            obj.insert("target_faction".to_owned(), json!(faction));
         }
         Value::Object(obj)
     }
@@ -1657,7 +1667,7 @@ impl CivisMcpServer {
     /// clients do, so verb-specific clamps are enforced server-side.
     #[tool(
         name = "civis_god_action",
-        description = "Forward sim.god_action to civ-server. Sends a god-tool verb (smite, heal, place_terrain, ignite, spawn_creature, bless, multiply_creatures) at a normalized map point. Verb-specific clamps are enforced server-side (FR-CIV-GODTOOL)."
+        description = "Forward sim.god_action to civ-server. Sends a god-tool verb (smite, heal, place_terrain, ignite, spawn_creature, bless, multiply_creatures, earthquake, plague, miracle) at a normalized map point. Verb-specific clamps are enforced server-side (FR-CIV-GODTOOL)."
     )]
     async fn civis_god_action(
         &self,
@@ -1794,6 +1804,60 @@ impl CivisMcpServer {
             "sim.god_action",
             args.to_params_with_action("multiply_creatures"),
             "civis_god_action_multiply_creatures",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.god_action` with legacy Bevy-panel verb `earthquake`.
+    #[tool(
+        name = "civis_god_action_earthquake",
+        description = "Forward sim.god_action with verb=earthquake."
+    )]
+    async fn civis_god_action_earthquake(
+        &self,
+        Parameters(args): Parameters<GodActionVerbArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &args.transport,
+            "sim.god_action",
+            args.to_params_with_action("earthquake"),
+            "civis_god_action_earthquake",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.god_action` with legacy Bevy-panel verb `plague`.
+    #[tool(
+        name = "civis_god_action_plague",
+        description = "Forward sim.god_action with verb=plague."
+    )]
+    async fn civis_god_action_plague(
+        &self,
+        Parameters(args): Parameters<GodActionVerbArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &args.transport,
+            "sim.god_action",
+            args.to_params_with_action("plague"),
+            "civis_god_action_plague",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.god_action` with legacy Bevy-panel verb `miracle`.
+    #[tool(
+        name = "civis_god_action_miracle",
+        description = "Forward sim.god_action with verb=miracle."
+    )]
+    async fn civis_god_action_miracle(
+        &self,
+        Parameters(args): Parameters<GodActionVerbArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &args.transport,
+            "sim.god_action",
+            args.to_params_with_action("miracle"),
+            "civis_god_action_miracle",
         )
         .map(Json)
     }

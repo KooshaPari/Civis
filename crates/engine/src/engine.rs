@@ -1794,7 +1794,7 @@ fn default_faction_doctrines() -> Vec<DoctrineLibrary> {
 }
 
 fn economy_state_from_world(world: &WorldState) -> EconomyState {
-    let energy_budget_joules = i64::from(world.energy_budget_joules.to_bits()) / crate::SCALE;
+    let energy_budget_joules = world.energy_budget_joules.to_num::<i64>();
     let mut state = EconomyState::with_energy_budget(energy_budget_joules);
     state.tick = world.tick;
     state
@@ -4316,8 +4316,7 @@ impl Simulation {
         let economy_lines = self.mod_host.economy_tick(tick);
         self.ingest_mod_phase_lines(economy_lines, tick, "economy");
 
-        self.economy_state.energy_budget_joules =
-            i64::from(self.state.energy_budget_joules.to_bits()) / crate::SCALE;
+        self.economy_state.energy_budget_joules = self.state.energy_budget_joules.to_num::<i64>();
 
         let demand = crate::policy::effective_consumption(self.economy_policy) as i64;
         let budget = self.economy_state.energy_budget_joules;

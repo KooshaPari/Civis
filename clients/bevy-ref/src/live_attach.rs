@@ -91,6 +91,7 @@ fn poll_live_meta(
     mut hud: ResMut<LiveHudSnapshot>,
     mut day_night: ResMut<DayNightCycle>,
     mut music_cues: ResMut<MusicCues>,
+    #[cfg(feature = "audio")] mut sfx: bevy::prelude::MessageWriter<crate::audio::SfxEvent>,
 ) {
     for meta in bridge.client.poll_meta() {
         if let Some(tick) = meta.tick {
@@ -98,6 +99,15 @@ fn poll_live_meta(
         }
         hud.connected = true;
         music_cues.0 = meta.music_cues.clone();
+        #[cfg(feature = "audio")]
+        {
+            for event in &meta.audio_events {
+                let (kind, volume) = crate::audio::sfx_from_audio_event(event);
+                if volume > 0.0 {
+                    sfx.write(crate::audio::SfxEvent::with_volume(kind, volume));
+                }
+            }
+        }
         apply_snapshot_meta(&mut state, &mut day_night, meta);
     }
     if let Some(rtt) = bridge.client.latest_rtt_ms() {

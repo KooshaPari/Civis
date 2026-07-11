@@ -150,6 +150,24 @@ impl Default for AudioState {
 
 // -- Plugin ------------------------------------------------------------------
 
+/// Map a snapshot audio event onto the Bevy one-shot catalogue + volume.
+#[must_use]
+pub fn sfx_from_audio_event(event: &crate::AudioEventWire) -> (SfxKind, f32) {
+    match event {
+        crate::AudioEventWire::Birth => (SfxKind::Birth, 1.0),
+        crate::AudioEventWire::Death => (SfxKind::Death, 1.0),
+        crate::AudioEventWire::Build => (SfxKind::Build, 1.0),
+        crate::AudioEventWire::Tech => (SfxKind::Tech, 1.0),
+        // No dedicated battle clip yet — reuse the disaster sting at intensity.
+        crate::AudioEventWire::Battle { intensity } => {
+            (SfxKind::Disaster, intensity.clamp(0.0, 1.0))
+        }
+        crate::AudioEventWire::Disaster { severity, .. } => {
+            (SfxKind::Disaster, severity.clamp(0.0, 1.0))
+        }
+    }
+}
+
 /// Ambient soundscape + SFX plugin for the Civis Bevy client.
 #[derive(Default)]
 pub struct CivisAudioPlugin;

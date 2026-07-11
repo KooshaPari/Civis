@@ -230,6 +230,8 @@ pub struct WsSpectatorMeta {
     pub tick: Option<u64>,
     /// Per-cluster music cues returned with the snapshot.
     pub music_cues: BTreeMap<u64, MusicCueWire>,
+    /// One-shot SFX triggers from the most recent audio phase.
+    pub audio_events: Vec<AudioEventWire>,
 }
 
 /// Wire-format music cue for one simulation culture cluster.
@@ -241,6 +243,32 @@ pub struct MusicCueWire {
     pub intensity: f32,
     /// Optional tempo hint in beats per minute.
     pub tempo_bpm: Option<u16>,
+}
+
+/// Owned wire form of server `audio_events` entries.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "trigger", rename_all = "snake_case")]
+pub enum AudioEventWire {
+    /// Civilian birth.
+    Birth,
+    /// Civilian death.
+    Death,
+    /// Building completed.
+    Build,
+    /// Technology unlocked.
+    Tech,
+    /// Combat engagement.
+    Battle {
+        /// Intensity in `[0, 1]`.
+        intensity: f32,
+    },
+    /// World disaster.
+    Disaster {
+        /// Disaster label.
+        kind: String,
+        /// Severity in `[0, 1]`.
+        severity: f32,
+    },
 }
 
 /// Latest per-cluster music cues received from `sim.snapshot`.
@@ -336,10 +364,12 @@ pub fn parse_jsonrpc_snapshot_meta(text: &str) -> Option<WsSpectatorMeta> {
     let is_day = result.get("is_day")?.as_bool()?;
     let tick = result.get("tick").and_then(|v| v.as_u64());
     let music_cues = parse_music_cues(result).unwrap_or_default();
+    let audio_events = parse_audio_events(result).unwrap_or_default();
     Some(WsSpectatorMeta {
         is_day,
         tick,
         music_cues,
+        audio_events,
     })
 }
 
@@ -389,6 +419,23 @@ pub fn parse_music_cues(snapshot: &serde_json::Value) -> Option<BTreeMap<u64, Mu
         );
     }
 
+    Some(parsed)
+}
+
+/// Parse `audio_events` from a `sim.snapshot` result or complete JSON-RPC response.
+///
+/// Malformed entries are skipped so one bad trigger cannot discard the batch.
+#[cfg(any(test, feature = "bevy"))]
+#[must_use]
+pub fn parse_audio_events(snapshot: &serde_json::Value) -> Option<Vec<AudioEventWire>> {
+    let snapshot = snapshot.get("result").unwrap_or(snapshot);
+    let events = snapshot.get("audio_events")?.as_array()?;
+    let mut parsed = Vec::with_capacity(events.len());
+    for event in events {
+        if let Ok(wire) = serde_json::from_value::<AudioEventWire>(event.clone()) {
+            parsed.push(wire);
+        }
+    }
     Some(parsed)
 }
 
@@ -1435,6 +1482,29 @@ mod tests {
         assert_eq!(cues[&7].mood, "danger");
         assert_eq!(cues[&7].intensity, 1.0);
         assert_eq!(cues[&7].tempo_bpm, Some(140));
+    }
+
+    #[test]
+    fn parse_audio_events_reads_tagged_triggers() {
+        let snapshot = serde_json::json!({
+            "audio_events": [
+                { "trigger": "build" },
+                { "trigger": "battle", "intensity": 0.6 },
+                { "trigger": "disaster", "kind": "quake", "severity": 0.9 },
+                { "trigger": "not_a_real_trigger" }
+            ]
+        });
+        let events = parse_audio_events(&snapshot).expect("audio events");
+        assert_eq!(events.len(), 3);
+        assert_eq!(events[0], AudioEventWire::Build);
+        assert_eq!(events[1], AudioEventWire::Battle { intensity: 0.6 });
+        assert_eq!(
+            events[2],
+            AudioEventWire::Disaster {
+                kind: "quake".to_string(),
+                severity: 0.9
+            }
+        );
     }
 
     #[test]

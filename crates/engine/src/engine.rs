@@ -8816,7 +8816,12 @@ mod tests {
             "labor fraction expected ~0.6667, got {frac}"
         );
         // Ensure spawn targets are still alive (sanity).
-        assert!(sim.world.get::<&AgentCivilian>(hecs::Entity::from_bits(u64::from(civ_a))).is_ok() || true);
+        assert!(sim
+            .world
+            .get::<&AgentCivilian>(
+                hecs::Entity::from_bits(u64::from(civ_a)).expect("valid civilian entity")
+            )
+            .is_ok() || true);
         let _ = civ_b; // unused: kept for documentation
     }
 

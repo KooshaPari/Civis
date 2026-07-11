@@ -29,7 +29,7 @@
 //! - FR-CIV-GOV-020.quantiles per-settlement quantile bands are computed
 //! - FR-CIV-GOV-020.gini      Gini coefficient is in [0, 1]
 //! - FR-CIV-GOV-020.mobility  Promoted event fires when a household crosses
-//!                            a band boundary upward; Demoted downward
+//!   a band boundary upward; Demoted downward
 //! - FR-CIV-GOV-020.determinism identical seeds produce identical reports
 //!
 //! Spec: agileplus-specs/civ-007-diplomacy-laws-government/spec.md

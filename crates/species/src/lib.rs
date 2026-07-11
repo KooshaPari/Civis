@@ -109,6 +109,7 @@ pub fn express(dna: &Dna) -> Phenotype {
 mod tests {
     use super::*;
 
+    #[allow(dead_code)] // Retained for forthcoming phenotype-distance test coverage.
     fn phenotype_distance(pheno_a: &Phenotype, pheno_b: &Phenotype) -> f32 {
         let morph_dist = {
             let dh = (f32::from(pheno_a.morphology.height_cm)

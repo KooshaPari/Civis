@@ -1000,7 +1000,7 @@ mod tests {
     /// Covers FR-CIV-AGENTS-020 — spawn_civilian inserts all requested components.
     #[test]
     fn spawn_civilian_inserts_components() {
-        use civ_genetics::{spawn_genome_with_divergence, NamedSeed};
+        use civ_genetics::spawn_genome_with_divergence;
         use rand::SeedableRng;
         use rand_chacha::ChaCha8Rng;
 

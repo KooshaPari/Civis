@@ -34,18 +34,13 @@
 #![forbid(unsafe_code)]
 
 /// The kind of hazard tracked on the disaster grid.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum HazardKind {
     /// Wildfire / structural fire — spreads quickly, decays moderately.
+    #[default]
     Fire,
     /// Flooding — spreads slowly, persists longer.
     Flood,
-}
-
-impl Default for HazardKind {
-    fn default() -> Self {
-        Self::Fire
-    }
 }
 
 /// Per-cell hazard state. A cell is "active" when `intensity > 0.0`.

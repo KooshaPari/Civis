@@ -528,11 +528,7 @@ mod tests {
         let mut a = StreamingWindow::new(cfg.clone()).expect("a");
         let mut b = StreamingWindow::new(cfg).expect("b");
         for step in 0..16 {
-            let focus = c(
-                step,
-                step.wrapping_mul(2) as i32,
-                step.wrapping_neg() as i32,
-            );
+            let focus = c(step, step.wrapping_mul(2), step.wrapping_neg());
             let ua = a.update_focus(focus);
             let ub = b.update_focus(focus);
             assert_eq!(ua, ub, "differed at step {step}");

@@ -1,6 +1,8 @@
 //! Allocation engines (CIV-002 §allocation, FR-ECON-005). Joule/planned regimes
 //! plus consumer priority-tier allocation (subsistence filled before luxury).
 
+#![allow(dead_code)] // Public allocation API staged for downstream integration.
+
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};

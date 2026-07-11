@@ -1,4 +1,6 @@
 //! Crash handling helpers for the Bevy reference client.
+#![allow(dead_code, deprecated)] // Hook installation is wired by the application shell.
+
 use std::backtrace::Backtrace;
 use std::fs::{create_dir_all, write};
 use std::panic::PanicInfo;

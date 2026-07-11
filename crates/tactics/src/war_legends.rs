@@ -1,7 +1,7 @@
 //! FR-CIV-WARFARE-004 — Major battles and decisive victories promote war legends.
 
 use legends::{
-    ids::{Provenance, RegionId, SimRuntimeId, SourceCrate},
+    ids::{RegionId, SimRuntimeId, SourceCrate},
     model::{EventKind, RawSimEvent, Role},
 };
 
@@ -56,11 +56,7 @@ pub fn battle_to_legend_event(summary: &BattleSummary) -> Option<RawSimEvent> {
     if mag < LEGEND_BATTLE_MAGNITUDE_THRESHOLD {
         return None;
     }
-    let kind = if summary.is_decisive_victory() {
-        EventKind::Battle
-    } else {
-        EventKind::Battle
-    };
+    let kind = EventKind::Battle;
     let mut event = RawSimEvent::new(summary.tick, kind, SourceCrate::Tactics, mag);
     event = event.with_participant(
         SourceCrate::Tactics,

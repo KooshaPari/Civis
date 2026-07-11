@@ -26,11 +26,10 @@ use civ_engine::{
 };
 use civ_protocol_3d::{
     encode_frame3d_binary, encode_frame3d_binary_from_json, AgentAppearanceFrame,
-    AgentAppearanceUpdate, BattleEvent3d, BirthEvent3d, BuildingDiffEntry, BuildingDiffFrame,
-    BuildingKind3d, BuildingProvenance, CivilianNeeds3d, CivilianStateEntry, CivilianStateFrame,
-    ClimateFrame, DeathEvent3d, EventFeedFrame, EventFeedMessage3d, FactionStateEntry,
-    FactionStateFrame, FactionTreasury3d, Frame3d, GenomeSummary3d, Government3d, TechEvent3d,
-    WorldXZ,
+    AgentAppearanceUpdate, BattleEvent3d, BirthEvent3d, BuildingDiffFrame, BuildingProvenance,
+    CivilianNeeds3d, CivilianStateEntry, CivilianStateFrame, ClimateFrame, DeathEvent3d,
+    EventFeedFrame, EventFeedMessage3d, FactionStateEntry, FactionStateFrame, FactionTreasury3d,
+    Frame3d, GenomeSummary3d, Government3d, TechEvent3d, WorldXZ,
 };
 use civ_save_db::SaveDb;
 use futures::{SinkExt, StreamExt};
@@ -462,7 +461,7 @@ async fn handle_socket(
     forward.abort();
 }
 
-fn voxel_axis_span<F>(voxel: &civ_voxel::VoxelWorld<civ_voxel::MaterialId>, axis: F) -> f32
+fn voxel_axis_span<F>(_voxel: &civ_voxel::VoxelWorld<civ_voxel::MaterialId>, axis: F) -> f32
 where
     F: Fn(civ_voxel::ChunkCoord) -> i32,
 {
@@ -1111,7 +1110,7 @@ async fn apply_dispatch_effect(
             };
             let receipt = {
                 let mut proxy = sim.voxel_mut();
-                civ_voxel::stamp_footprint(&mut *proxy, &stamp)
+                civ_voxel::stamp_footprint(&mut proxy, &stamp)
             };
             if let Some(result) = response.result.as_mut() {
                 if let Some(obj) = result.as_object_mut() {
@@ -1238,7 +1237,7 @@ async fn apply_dispatch_effect(
                         result.insert(
                             "relation".to_owned(),
                             serde_json::to_value(format!("{:?}", relation.kind))
-                                .unwrap_or_else(|_| serde_json::Value::Null),
+                                .unwrap_or(serde_json::Value::Null),
                         );
                     }
                 }
@@ -1379,8 +1378,7 @@ async fn apply_dispatch_effect(
                 }
                 "material.replace" => {
                     let r = radius_voxels.unwrap_or(3).max(1);
-                    let mat =
-                        u32::from(material_id.unwrap_or((civ_voxel::material::STONE.0) as u16));
+                    let mat = u32::from(material_id.unwrap_or(civ_voxel::material::STONE.0));
                     let req = GodToolRequest::Material(MaterialRequest {
                         op: MaterialOp::Replace,
                         center: pos,
@@ -1410,8 +1408,7 @@ async fn apply_dispatch_effect(
                         .map(|v| v as i32)
                         .unwrap_or((mag * civ_voxel::FIXED_SCALE as f32) as i32)
                         .max(civ_voxel::FIXED_SCALE as i32);
-                    let mat =
-                        u32::from(material_id.unwrap_or((civ_voxel::material::WATER.0) as u16));
+                    let mat = u32::from(material_id.unwrap_or(civ_voxel::material::WATER.0));
                     let dh = drop_height.unwrap_or((civ_voxel::FIXED_SCALE * 3) as i32);
                     let req = GodToolRequest::Material(MaterialRequest {
                         op: MaterialOp::PourLiquid,

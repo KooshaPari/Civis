@@ -523,9 +523,8 @@ mod tests {
         }
 
         let after = g.edge(1, 2).map(|e| e.weight);
-        match after {
-            Some(w) => assert!(w < start, "decay must shrink the weight"),
-            None => {} // Also acceptable: pruned entirely.
+        if let Some(w) = after {
+            assert!(w < start, "decay must shrink the weight");
         }
 
         // Keep decaying until the edge is gone.

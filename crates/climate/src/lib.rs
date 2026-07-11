@@ -24,7 +24,6 @@
 /// state.step(10.0, &params);
 /// assert!(state.mean_temp_c > 14.0);
 /// ```
-
 /// Tunable parameters that characterise the climate system's response.
 #[derive(Debug, Clone)]
 pub struct ClimateParams {
@@ -137,6 +136,12 @@ impl ClimateState {
     /// (14 °C).  Positive values indicate warming.
     pub fn temp_anomaly_c(&self) -> f64 {
         self.mean_temp_c - BASELINE_TEMP_C
+    }
+}
+
+impl Default for ClimateState {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

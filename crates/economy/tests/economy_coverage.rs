@@ -7,8 +7,8 @@
 //!   4. `MultiGoodMarket::with_ttl` — custom TTL respected by `clear_all`
 
 use civ_economy::{
-    drain_energy_budget, step, verify_ledger_conservation, EconomyState, GoodId, LedgerEntry,
-    LedgerInvariantError, MultiGoodMarket, Order, Side, ACCOUNT_CONSUMPTION, ACCOUNT_ENERGY_BUDGET,
+    step, verify_ledger_conservation, EconomyState, GoodId, LedgerEntry, LedgerInvariantError,
+    MultiGoodMarket, Order, Side, ACCOUNT_CONSUMPTION,
 };
 
 // ---------------------------------------------------------------------------

@@ -467,6 +467,7 @@ pub struct SimSetPolicyArgs {
     pub transport: RpcArgs,
 }
 
+#[allow(dead_code)] // Reserved for command-free RPC endpoints.
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct SimCommandlessArgs {
     /// Transport override (host/port/timeout).

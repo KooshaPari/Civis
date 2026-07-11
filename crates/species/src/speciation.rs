@@ -44,7 +44,6 @@ pub enum SpeciationError {
 /// - when the populations are still within the threshold, it returns `Err(NotDiverged)`;
 /// - when they have diverged, it returns two unique species IDs in the order
 ///   requested by the caller.
-#[must_use]
 pub fn split_diverged_populations(
     left_population: &Dna,
     right_population: &Dna,

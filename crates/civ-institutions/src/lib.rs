@@ -121,6 +121,7 @@ pub const GARRISON_UNLOCK_POPULATION: u32 = 120;
 pub const GARRISON_L2_POPULATION: u32 = 400;
 
 #[cfg(test)]
+#[allow(clippy::assertions_on_constants)]
 mod tests {
     use super::*;
 

@@ -328,8 +328,11 @@ pub struct EmergenceHudData {
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
 pub struct OutcomeHudData {
+    /// Outcome classification tag supplied by the simulation.
     pub tag: String,
+    /// Human-readable explanation for the outcome classification.
     pub reason: String,
+    /// Simulation tick at which the outcome was observed.
     pub tick: u64,
 }
 /// Headless-friendly snapshot for the live attach HUD (FPS / tick / socket / scene stats).
@@ -1777,7 +1780,7 @@ mod tests {
 
     #[test]
     fn install_crash_handler_does_not_panic() {
-        std::panic::catch_unwind(|| crate::crash_handler::install_crash_handler())
+        std::panic::catch_unwind(crate::crash_handler::install_crash_handler)
             .expect("install_crash_handler should install");
     }
 }

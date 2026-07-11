@@ -10,8 +10,7 @@ pub const COMBAT_STANDING_DRAIN: i32 = -8;
 pub const RIVALRY_FRICTION_DRAIN: i32 = -3;
 
 /// Snapshot of an active war between a pair of polities.
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct WarState {
     /// The pair whose standing crossed the war threshold.
     pub pair: Pair,

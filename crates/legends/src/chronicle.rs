@@ -216,7 +216,7 @@ impl Chronicle {
     pub fn by_agent(&self, agent: LegendEntityId) -> Vec<&ChronicleEntry> {
         self.entries
             .iter()
-            .filter(|e| e.participants.iter().any(|p| *p == agent))
+            .filter(|e| e.participants.contains(&agent))
             .collect()
     }
 
@@ -357,7 +357,7 @@ mod tests {
         // The conflict is shared — Bob must also see it.
         for e in &alice_events {
             assert!(
-                e.participants.iter().any(|p| *p == alice),
+                e.participants.contains(&alice),
                 "by_agent must return only entries that include the agent"
             );
         }
@@ -397,6 +397,7 @@ mod tests {
     /// Acceptance: deterministic — two chronicles fed the same input
     /// stream produce identical entries.
     #[test]
+    #[allow(clippy::type_complexity)] // Input tuple mirrors the Chronicle append API.
     fn fr_civ_psyche_920_deterministic_under_same_input_stream() {
         let mut a = Chronicle::new();
         let mut b = Chronicle::new();

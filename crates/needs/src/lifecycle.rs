@@ -17,7 +17,6 @@ use crate::Health;
 /// and is willing to fall back to the stratified thresholds.
 #[must_use]
 pub fn classify_lifecycle_from_age(age: f32, params: &LifecycleParams) -> LifecycleLabel {
-    let age_u16 = age.clamp(0.0, u16::MAX as f32) as u16;
     let longevity_profile = CognitionTraitProfile::new(
         "lifecycle-longevity-classify",
         vec![(20, 1.0), (21, 0.5), (22, 0.25)],

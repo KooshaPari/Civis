@@ -6,9 +6,7 @@ use crate::atmosphere::DayNightCycle;
 use crate::live_pick::{LivePickPlugin, LiveSelection};
 use crate::live_scene::LiveScenePlugin;
 use crate::ws_client::{WsClient, WsClientConfig};
-use crate::{
-    resolve_live_ws_url, AttachMode, LiveHudSnapshot, MusicCues, WsSpectatorMeta,
-};
+use crate::{resolve_live_ws_url, AttachMode, LiveHudSnapshot, MusicCues, WsSpectatorMeta};
 
 #[cfg(feature = "egui")]
 use crate::WsConnectionState;

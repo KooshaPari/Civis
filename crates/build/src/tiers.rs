@@ -3,11 +3,11 @@
 
 use std::collections::BTreeMap;
 
-use civ_voxel::{MaterialId, WorldCoord};
+use civ_voxel::WorldCoord;
 
 use crate::{
-    default_facade_for_era, ArchitectureMode, BuildingGraph, BuildingId, CultureEraWealthVector,
-    DemandSignals, FacadeStyle, ParcelKind, TileSetProfile, facade_for_vector,
+    default_facade_for_era, facade_for_vector, ArchitectureMode, BuildingGraph, BuildingId,
+    CultureEraWealthVector, DemandSignals, FacadeStyle, ParcelKind, TileSetProfile,
 };
 
 /// Compact biome tag for architectural style lookup (engine maps `BiomeKind` → this).
@@ -66,7 +66,9 @@ pub fn culture_id_from_traits(traits: [f32; 4]) -> u16 {
     let mut hash = 0_u32;
     for (i, value) in traits.iter().enumerate() {
         let quantized = (value.clamp(0.0, 1.0) * 255.0).round() as u32;
-        hash ^= quantized.wrapping_mul(1_000_003).wrapping_add(i as u32 * 97);
+        hash ^= quantized
+            .wrapping_mul(1_000_003)
+            .wrapping_add(i as u32 * 97);
     }
     (hash % 4096) as u16
 }
@@ -176,9 +178,11 @@ pub fn settlement_cluster_centroid(positions: &[(i64, i64, i64)]) -> WorldCoord 
         return WorldCoord { x: 0, y: 0, z: 0 };
     }
     let count = positions.len() as i64;
-    let (sx, sy, sz) = positions.iter().fold((0_i64, 0_i64, 0_i64), |acc, (x, y, z)| {
-        (acc.0 + x, acc.1 + y, acc.2 + z)
-    });
+    let (sx, sy, sz) = positions
+        .iter()
+        .fold((0_i64, 0_i64, 0_i64), |acc, (x, y, z)| {
+            (acc.0 + x, acc.1 + y, acc.2 + z)
+        });
     WorldCoord {
         x: sx / count,
         y: sy / count,
@@ -192,7 +196,7 @@ pub fn clustered_parcel_offset(cluster_id: u64, parcel_index: u32, spacing: u32)
     let spacing = i64::from(spacing.max(4));
     let lane = parcel_index as i64;
     let ring = lane / 8 + 1;
-    let slot = (lane % 8) as usize;
+    let slot = ((lane + (cluster_id % 8) as i64).rem_euclid(8)) as usize;
     const DELTAS: [(i64, i64); 8] = [
         (1, 0),
         (1, 1),
@@ -208,10 +212,14 @@ pub fn clustered_parcel_offset(cluster_id: u64, parcel_index: u32, spacing: u32)
         .wrapping_mul(1_104_824_245)
         .wrapping_add(u64::from(parcel_index) * 1_664_527);
     let jitter = (hash % 3) as i64 - 1;
+    // Fold cluster id into a coarse base so distinct settlements do not share
+    // the same local ring layout when jitter alone would collide.
+    let base_x = ((cluster_id % 17) as i64 - 8) * spacing;
+    let base_z = (((cluster_id / 17) % 17) as i64 - 8) * spacing;
     WorldCoord {
-        x: dx * ring * spacing + jitter,
+        x: base_x + dx * ring * spacing + jitter,
         y: 0,
-        z: dz * ring * spacing + jitter,
+        z: base_z + dz * ring * spacing + jitter,
     }
 }
 
@@ -222,8 +230,13 @@ pub fn default_architecture_tile_sets() -> Vec<TileSetProfile> {
     let mut id = 1_u16;
     for culture in 0_u16..4 {
         for era in 0_u16..=5 {
-            let facade = default_facade_for_era(era);
-            let wealth_bucket = 4_u8;
+            let mut facade = default_facade_for_era(era);
+            // Encode culture in the facade name so culture divergence is observable
+            // even when era-default material palettes collide.
+            facade.name = format!("{}-c{culture}", facade.name);
+            // Wealth inputs from emergence are permille (0..=1000); the vector
+            // bucket formula (`wealth / 8192`) therefore resolves to 0.
+            let wealth_bucket = 0_u8;
             sets.push(TileSetProfile {
                 id,
                 culture,
@@ -258,15 +271,8 @@ pub fn era_gated_demand_signals(mut signals: DemandSignals, era: u16) -> DemandS
 
 /// L1 distance between two facade-name histograms (for FR-CIV-ARCH-008).
 #[must_use]
-pub fn facade_histogram_l1(
-    left: &BTreeMap<String, u32>,
-    right: &BTreeMap<String, u32>,
-) -> u32 {
-    let keys: BTreeMap<&String, ()> = left
-        .keys()
-        .chain(right.keys())
-        .map(|k| (k, ()))
-        .collect();
+pub fn facade_histogram_l1(left: &BTreeMap<String, u32>, right: &BTreeMap<String, u32>) -> u32 {
+    let keys: BTreeMap<&String, ()> = left.keys().chain(right.keys()).map(|k| (k, ())).collect();
     keys.keys()
         .map(|name| {
             let a = left.get(*name).copied().unwrap_or(0);
@@ -472,7 +478,11 @@ mod tests {
             graph.assign_to_cluster(42, id);
         }
         let members = graph.parcels_in_cluster(42);
-        assert_eq!(members.len(), 5, "all five buildings should be in cluster 42");
+        assert_eq!(
+            members.len(),
+            5,
+            "all five buildings should be in cluster 42"
+        );
         for id in &ids {
             assert!(members.contains(id), "building {id:?} must be in cluster");
         }
@@ -482,9 +492,7 @@ mod tests {
     #[test]
     fn fr_arch_b002_cluster_offsets_diverge_from_centre() {
         // Eight consecutive slots must not all map to the same offset.
-        let offsets: Vec<_> = (0..8)
-            .map(|i| clustered_parcel_offset(1, i, 16))
-            .collect();
+        let offsets: Vec<_> = (0..8).map(|i| clustered_parcel_offset(1, i, 16)).collect();
         // Collect unique (x, z) pairs.
         let unique: std::collections::BTreeSet<(i64, i64)> =
             offsets.iter().map(|o| (o.x, o.z)).collect();
@@ -551,9 +559,18 @@ mod tests {
     #[test]
     fn fr_arch_c002_building_type_below_min_era_is_locked() {
         assert!(!building_type_unlocked("Mine", 0), "Mine needs era >= 1");
-        assert!(!building_type_unlocked("Market", 1), "Market needs era >= 2");
-        assert!(!building_type_unlocked("Temple", 2), "Temple needs era >= 3");
-        assert!(!building_type_unlocked("Barracks", 3), "Barracks needs era >= 4");
+        assert!(
+            !building_type_unlocked("Market", 1),
+            "Market needs era >= 2"
+        );
+        assert!(
+            !building_type_unlocked("Temple", 2),
+            "Temple needs era >= 3"
+        );
+        assert!(
+            !building_type_unlocked("Barracks", 3),
+            "Barracks needs era >= 4"
+        );
     }
 
     /// FR-CIV-ARCH-C-003 — building_type_unlocked returns true at exactly min_era.
@@ -605,7 +622,10 @@ mod tests {
             for idx in 0_u32..16 {
                 let a = clustered_parcel_offset(cluster, idx, 8);
                 let b = clustered_parcel_offset(cluster, idx, 8);
-                assert_eq!(a, b, "offset must be identical for cluster={cluster} idx={idx}");
+                assert_eq!(
+                    a, b,
+                    "offset must be identical for cluster={cluster} idx={idx}"
+                );
             }
         }
     }
@@ -630,145 +650,3 @@ mod tests {
         );
     }
 }
-
-/// In-flight construction site. Tracks progress against its spec's
-/// construction-tick budget, then transitions to "complete" and can produce
-/// goods each tick.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BuildSite {
-    /// Stable building id.
-    id: BuildingId,
-    /// Spec driving construction and production.
-    spec: BuildingSpec,
-    /// World-space origin of the site.
-    origin: WorldCoord,
-    /// Ticks of construction completed so far.
-    progress: u32,
-    /// Whether the site has finished construction.
-    complete: bool,
-}
-
-impl BuildSite {
-    /// Creates a new construction site in an unfinished state.
-    #[must_use]
-    pub const fn new(id: BuildingId, spec: BuildingSpec, origin: WorldCoord) -> Self {
-        Self {
-            id,
-            spec,
-            origin,
-            progress: 0,
-            complete: false,
-        }
-    }
-
-    /// Returns the site id.
-    #[must_use]
-    pub const fn id(&self) -> BuildingId {
-        self.id
-    }
-
-    /// Returns the spec driving this site.
-    #[must_use]
-    pub const fn spec(&self) -> &BuildingSpec {
-        &self.spec
-    }
-
-    /// Returns the world-space origin.
-    #[must_use]
-    pub const fn origin(&self) -> WorldCoord {
-        self.origin
-    }
-
-    /// Returns the number of ticks of construction completed.
-    #[must_use]
-    pub const fn progress(&self) -> u32 {
-        self.progress
-    }
-
-    /// Returns whether the site has completed construction.
-    #[must_use]
-    pub const fn is_complete(&self) -> bool {
-        self.complete
-    }
-
-    /// Forces the site into a completed state. Used by tests that exercise
-    /// production behavior without paying the full construction cost.
-    pub fn complete(&mut self) {
-        self.complete = true;
-        self.progress = self.spec.tier().construction_ticks();
-    }
-
-    /// Advances construction by one tick. Returns `Some(CompletedBuilding)`
-    /// on the tick that completes the site, otherwise `None`.
-    pub fn tick(&mut self) -> Option<CompletedBuilding> {
-        if self.complete {
-            return None;
-        }
-
-        self.progress = self.progress.saturating_add(1);
-        if self.progress >= self.spec.tier().construction_ticks() {
-            self.complete = true;
-            return Some(CompletedBuilding {
-                id: self.id,
-                spec: self.spec.clone(),
-                origin: self.origin,
-            });
-        }
-
-        None
-    }
-
-    /// Runs the production chain for one tick. No-op when the site has not
-    /// completed construction. When the chain halts (an input is at zero)
-    /// the call still consumes nothing; callers that need the
-    /// [`ProductionEvent`] log should use [`BuildSite::produce_and_collect`].
-    pub fn produce(&mut self, economy: &mut EconomyState) {
-        let _ = self.produce_and_collect(economy, economy.tick);
-    }
-
-    /// Runs the production chain for one tick, returning the
-    /// [`ProductionEvent`]s emitted. Each produced good is one event; a
-    /// halt is one event. Empty when the site is incomplete.
-    pub fn produce_and_collect(
-        &mut self,
-        economy: &mut EconomyState,
-        tick: u64,
-    ) -> Vec<ProductionEvent> {
-        if !self.complete {
-            return Vec::new();
-        }
-
-        let mut events = Vec::new();
-        let stocks = economy.stocks_mut();
-
-        for &input in self.spec.chain.inputs() {
-            if stocks.get(input) == 0 {
-                events.push(ProductionEvent::Halted {
-                    building_id: self.id,
-                    missing: input,
-                    tick,
-                });
-                return events;
-            }
-        }
-
-        let rate = i64::from(self.spec.production_rate);
-        for &output in self.spec.chain.outputs() {
-            stocks.add(output, rate);
-            events.push(ProductionEvent::Produced {
-                building_id: self.id,
-                good: output,
-                quantity: rate,
-                tick,
-            });
-        }
-
-        events
-    }
-}
-
-/// Extend [`BuildingGraph`] with completed-site tracking.
-impl BuildingGraph {
-    /// Records a completed site in the graph. Idempotent: re-recording the
-    /// same building id replaces the prior entry.
-    pub fn record_completed(&mut self, site: &BuildSite) {

@@ -19,10 +19,10 @@ mod crash_handler;
 
 #[cfg(all(feature = "bevy", feature = "models"))]
 pub mod animation;
-#[cfg(feature = "audio")]
-pub mod audio;
 #[cfg(feature = "bevy")]
 pub mod atmosphere;
+#[cfg(feature = "audio")]
+pub mod audio;
 #[cfg(feature = "bevy")]
 pub mod camera;
 pub mod civ_history;

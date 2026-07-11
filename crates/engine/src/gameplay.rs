@@ -683,7 +683,7 @@ mod tests {
         sim.state.population = 0;
         let gs = compute_gameplay_state(&sim);
         assert!(
-            matches!(gs.resolved_outcome, Some(GameOutcome::Defeat(_))),
+            matches!(gs.resolved_outcome, Some(GameOutcome::Defeat { .. })),
             "should detect extinction defeat"
         );
         let reason = gs.resolved_outcome.unwrap();
@@ -735,7 +735,7 @@ mod tests {
         let obj = scenario_cultural_dominance(0);
         let result = obj.evaluate(&sim);
         assert!(
-            matches!(result, Some(GameOutcome::Defeat(_))),
+            matches!(result, Some(GameOutcome::Defeat { .. })),
             "expired objective should return Defeat"
         );
     }
@@ -830,7 +830,7 @@ mod tests {
 
         let gs = compute_gameplay_state(&sim);
         assert!(
-            matches!(gs.resolved_outcome, Some(GameOutcome::Victory(_))),
+            matches!(gs.resolved_outcome, Some(GameOutcome::Victory { .. })),
             "should detect domination victory in gameplay state"
         );
     }

@@ -2583,6 +2583,12 @@ impl Simulation {
         faction_tech_tier.max(self.research_cache.researched.len() as u64)
     }
 
+    /// Read-only access to per-faction era and technology progression.
+    #[must_use]
+    pub fn era_progression(&self) -> &crate::era::EraProgressionState {
+        &self.era_progression
+    }
+
     /// Per-faction ideology and behavior-coupling vectors.
     #[must_use]
     pub fn faction_ideologies(&self) -> &BTreeMap<u32, FactionIdeologyState> {
@@ -7391,6 +7397,10 @@ mod tests {
     }
 
     // ── N9 tests ──────────────────────────────────────────────────────────────
+
+    fn aggression_threshold_reduction(aggression: f32) -> u32 {
+        (aggression.clamp(0.0, 1.0) * 3_000.0).round() as u32
+    }
 
     /// N9: `aggression_threshold_reduction` is bounded: 0.0→0, 0.5→1500,
     /// 1.0→3000, and clamping means 2.0 still yields 3000.

@@ -22,7 +22,8 @@ pub use disease_resistance::{
     survives_exposure, DiseaseResistance, DiseaseSelection,
 };
 pub use seeds::{
-    archetype_dna, archetype_seed, effective_mutation_rate, example_seed_set,
+    archetype_dna, archetype_seed, all_named_seeds, choose_named_seed,
+    effective_mutation_rate, example_seed_set, named_seed_round_robin,
     mutate_with_divergence, raw_organism_primitive, seed_with_divergence, spawn_genome,
     spawn_genome_with_divergence, BiomeAffinity, NamedSeed, SeedDefinition, SeedError, SeedId,
     SeedLibrary, SeedSet,

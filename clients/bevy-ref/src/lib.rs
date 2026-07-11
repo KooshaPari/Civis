@@ -13,10 +13,14 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+use std::collections::BTreeMap;
+
 mod crash_handler;
 
 #[cfg(all(feature = "bevy", feature = "models"))]
 pub mod animation;
+#[cfg(feature = "audio")]
+pub mod audio;
 #[cfg(feature = "bevy")]
 pub mod atmosphere;
 #[cfg(feature = "bevy")]
@@ -218,12 +222,42 @@ impl DebugRender {
 pub const DEBUG_WIREFRAME_OVERLAY_ALPHA: f32 = 0.22;
 
 /// Climate presentation fields from a `sim.snapshot` JSON-RPC response.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct WsSpectatorMeta {
     /// Day/night flag from the simulation climate phase.
     pub is_day: bool,
     /// Latest tick when present on the snapshot payload.
     pub tick: Option<u64>,
+    /// Per-cluster music cues returned with the snapshot.
+    pub music_cues: BTreeMap<u64, MusicCueWire>,
+}
+
+/// Wire-format music cue for one simulation culture cluster.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct MusicCueWire {
+    /// Coarse mood tag for the ambient presentation.
+    pub mood: String,
+    /// Normalized cue intensity.
+    pub intensity: f32,
+    /// Optional tempo hint in beats per minute.
+    pub tempo_bpm: Option<u16>,
+}
+
+/// Latest per-cluster music cues received from `sim.snapshot`.
+#[derive(Debug, Clone, PartialEq, Default)]
+#[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
+pub struct MusicCues(pub BTreeMap<u64, MusicCueWire>);
+
+impl MusicCues {
+    /// Returns the cue with the highest normalized intensity, if one exists.
+    #[must_use]
+    pub fn dominant(&self) -> Option<&MusicCueWire> {
+        self.0.values().max_by(|left, right| {
+            left.intensity
+                .partial_cmp(&right.intensity)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+    }
 }
 
 /// WebSocket session state exposed to live attach HUD and event feed.
@@ -301,7 +335,61 @@ pub fn parse_jsonrpc_snapshot_meta(text: &str) -> Option<WsSpectatorMeta> {
     let result = value.get("result")?;
     let is_day = result.get("is_day")?.as_bool()?;
     let tick = result.get("tick").and_then(|v| v.as_u64());
-    Some(WsSpectatorMeta { is_day, tick })
+    let music_cues = parse_music_cues(result).unwrap_or_default();
+    Some(WsSpectatorMeta {
+        is_day,
+        tick,
+        music_cues,
+    })
+}
+
+/// Parse a `music_cues` map from a `sim.snapshot` result or complete JSON-RPC response.
+///
+/// Invalid cue entries are ignored so a malformed cluster cannot discard valid cues.
+#[cfg(any(test, feature = "bevy"))]
+#[must_use]
+pub fn parse_music_cues(snapshot: &serde_json::Value) -> Option<BTreeMap<u64, MusicCueWire>> {
+    let snapshot = snapshot.get("result").unwrap_or(snapshot);
+    let cues = snapshot.get("music_cues")?.as_object()?;
+    let mut parsed = BTreeMap::new();
+
+    for (cluster_id, cue) in cues {
+        let Ok(cluster_id) = cluster_id.parse::<u64>() else {
+            continue;
+        };
+        let Some(cue) = cue.as_object() else {
+            continue;
+        };
+        let Some(mood) = cue
+            .get("mood")
+            .and_then(serde_json::Value::as_str)
+            .map(str::trim)
+            .filter(|mood| !mood.is_empty())
+        else {
+            continue;
+        };
+        let intensity = cue
+            .get("intensity")
+            .and_then(serde_json::Value::as_f64)
+            .map(|value| value as f32)
+            .filter(|value| value.is_finite())
+            .unwrap_or(0.0)
+            .clamp(0.0, 1.0);
+        let tempo_bpm = cue
+            .get("tempo_bpm")
+            .and_then(serde_json::Value::as_u64)
+            .and_then(|tempo| u16::try_from(tempo).ok());
+        parsed.insert(
+            cluster_id,
+            MusicCueWire {
+                mood: mood.to_owned(),
+                intensity,
+                tempo_bpm,
+            },
+        );
+    }
+
+    Some(parsed)
 }
 
 /// Subset of sim.emergence fields shown in the HUD.
@@ -1331,6 +1419,22 @@ mod tests {
         let meta = parse_jsonrpc_snapshot_meta(text).expect("snapshot meta");
         assert!(!meta.is_day);
         assert_eq!(meta.tick, Some(12));
+    }
+
+    #[test]
+    fn parse_music_cues_reads_cluster_map_and_clamps_intensity() {
+        let snapshot = serde_json::json!({
+            "music_cues": {
+                "7": { "mood": " danger ", "intensity": 1.25, "tempo_bpm": 140 },
+                "bad-id": { "mood": "calm", "intensity": 0.2 },
+                "8": { "mood": "", "intensity": 0.5 }
+            }
+        });
+        let cues = parse_music_cues(&snapshot).expect("music cues");
+        assert_eq!(cues.len(), 1);
+        assert_eq!(cues[&7].mood, "danger");
+        assert_eq!(cues[&7].intensity, 1.0);
+        assert_eq!(cues[&7].tempo_bpm, Some(140));
     }
 
     #[test]

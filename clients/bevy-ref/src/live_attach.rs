@@ -6,7 +6,9 @@ use crate::atmosphere::DayNightCycle;
 use crate::live_pick::{LivePickPlugin, LiveSelection};
 use crate::live_scene::LiveScenePlugin;
 use crate::ws_client::{WsClient, WsClientConfig};
-use crate::{resolve_live_ws_url, AttachMode, LiveHudSnapshot, WsSpectatorMeta};
+use crate::{
+    resolve_live_ws_url, AttachMode, LiveHudSnapshot, MusicCues, WsSpectatorMeta,
+};
 
 #[cfg(feature = "egui")]
 use crate::WsConnectionState;
@@ -38,6 +40,7 @@ impl Plugin for LiveAttachPlugin {
         app.add_plugins((LiveScenePlugin, LivePickPlugin))
             .init_resource::<LiveAttachState>()
             .init_resource::<LiveHudSnapshot>()
+            .init_resource::<MusicCues>()
             .insert_resource(LiveAttachBridge {
                 client: WsClient::spawn_with_config(
                     resolve_live_ws_url(),
@@ -89,12 +92,14 @@ fn poll_live_meta(
     mut state: ResMut<LiveAttachState>,
     mut hud: ResMut<LiveHudSnapshot>,
     mut day_night: ResMut<DayNightCycle>,
+    mut music_cues: ResMut<MusicCues>,
 ) {
     for meta in bridge.client.poll_meta() {
         if let Some(tick) = meta.tick {
             hud.tick = Some(tick);
         }
         hud.connected = true;
+        music_cues.0 = meta.music_cues.clone();
         apply_snapshot_meta(&mut state, &mut day_night, meta);
     }
     if let Some(rtt) = bridge.client.latest_rtt_ms() {

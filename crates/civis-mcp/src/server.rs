@@ -48,7 +48,7 @@ impl CivisMcpServer {
 /// Common transport-override block (host/port/timeout) used by every
 /// JSON-RPC forwarding tool. Mirrors `CensusArgs` so the existing
 /// `civis_census` tool stays in lockstep.
-#[derive(Debug, Default, Deserialize, JsonSchema)]
+#[derive(Debug, Default, Clone, Deserialize, JsonSchema)]
 pub struct RpcArgs {
     /// Optional WebSocket host override. Default `127.0.0.1`.
     #[schemars(description = "WebSocket host override (env: CIV_WS_HOST)")]
@@ -124,9 +124,10 @@ pub struct CensusArgs {
 /// Verb discriminator for `civis_god_action` (FR-CIV-GODTOOL). The
 /// underlying `sim.god_action` JSON-RPC accepts these strings:
 /// `smite | heal | place_terrain | ignite | spawn_creature | bless |
-/// multiply_creatures | earthquake | plague | miracle`. The MCP tool
-/// re-exports the same enum so agents get a typed payload instead of a
-/// free-form string.
+/// multiply_creatures | earthquake | plague | miracle` plus the
+/// substrate-live Bevy panel verbs (`terrain.*`, `material.*`, `life.*`,
+/// `disaster.*`). The MCP tool re-exports the same enum so agents get a
+/// typed payload instead of a free-form string.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum GodActionKind {
@@ -152,6 +153,32 @@ pub enum GodActionKind {
     Plague,
     /// `miracle` — boost belief and faction treasuries.
     Miracle,
+    /// `terrain.add_land` — raise land under a brush.
+    TerrainAddLand,
+    /// `terrain.dig_ocean` — carve ocean under a brush.
+    TerrainDigOcean,
+    /// `terrain.drop_biome` — stamp a biome material under a brush.
+    TerrainDropBiome,
+    /// `material.erase` — clear materials in a brush.
+    MaterialErase,
+    /// `material.replace` — replace materials in a brush.
+    MaterialReplace,
+    /// `material.surface_paint` — paint surface materials in a brush.
+    MaterialSurfacePaint,
+    /// `material.pour_liquid` — pour a liquid column.
+    MaterialPourLiquid,
+    /// `material.seed_snow` — seed snow cover.
+    MaterialSeedSnow,
+    /// `material.seed_ore` — seed ore deposits.
+    MaterialSeedOre,
+    /// `life.spawn_organism` — spawn one organism via god-tool life path.
+    LifeSpawnOrganism,
+    /// `life.spawn_herd` — spawn a herd via god-tool life path.
+    LifeSpawnHerd,
+    /// `disaster.wildfire` — ignite a wildfire disaster.
+    DisasterWildfire,
+    /// `disaster.flood` — trigger a flood disaster.
+    DisasterFlood,
 }
 
 impl GodActionKind {
@@ -167,6 +194,19 @@ impl GodActionKind {
             Self::Earthquake => "earthquake",
             Self::Plague => "plague",
             Self::Miracle => "miracle",
+            Self::TerrainAddLand => "terrain.add_land",
+            Self::TerrainDigOcean => "terrain.dig_ocean",
+            Self::TerrainDropBiome => "terrain.drop_biome",
+            Self::MaterialErase => "material.erase",
+            Self::MaterialReplace => "material.replace",
+            Self::MaterialSurfacePaint => "material.surface_paint",
+            Self::MaterialPourLiquid => "material.pour_liquid",
+            Self::MaterialSeedSnow => "material.seed_snow",
+            Self::MaterialSeedOre => "material.seed_ore",
+            Self::LifeSpawnOrganism => "life.spawn_organism",
+            Self::LifeSpawnHerd => "life.spawn_herd",
+            Self::DisasterWildfire => "disaster.wildfire",
+            Self::DisasterFlood => "disaster.flood",
         }
     }
 }
@@ -214,32 +254,19 @@ impl GodActionArgs {
     /// selected verb understands (matches `parse_god_action` in
     /// `crates/server/src/jsonrpc.rs:2019`).
     fn to_params(&self) -> Value {
-        let mut obj = serde_json::Map::new();
-        obj.insert("action".to_owned(), json!(self.action.wire_name()));
-        obj.insert("x".to_owned(), json!(self.x));
-        obj.insert("y".to_owned(), json!(self.y));
-        if let Some(radius) = self.radius {
-            obj.insert("radius".to_owned(), json!(radius));
+        GodActionVerbArgs {
+            x: self.x,
+            y: self.y,
+            radius: self.radius,
+            radius_norm: self.radius_norm,
+            energy: self.energy,
+            magnitude: self.magnitude,
+            material: self.material,
+            count: self.count,
+            faction: self.faction,
+            transport: self.transport.clone(),
         }
-        if let Some(energy) = self.energy {
-            obj.insert("energy".to_owned(), json!(energy));
-        }
-        if let Some(radius_norm) = self.radius_norm {
-            obj.insert("radius_norm".to_owned(), json!(radius_norm));
-        }
-        if let Some(magnitude) = self.magnitude {
-            obj.insert("magnitude".to_owned(), json!(magnitude));
-        }
-        if let Some(material) = self.material {
-            obj.insert("material".to_owned(), json!(material));
-        }
-        if let Some(count) = self.count {
-            obj.insert("count".to_owned(), json!(count));
-        }
-        if let Some(faction) = self.faction {
-            obj.insert("target_faction".to_owned(), json!(faction));
-        }
-        Value::Object(obj)
+        .to_params_with_action(self.action.wire_name())
     }
 }
 
@@ -275,7 +302,9 @@ impl GodActionVerbArgs {
         obj.insert("x".to_owned(), json!(self.x));
         obj.insert("y".to_owned(), json!(self.y));
         if let Some(radius) = self.radius {
+            // Legacy clients send `radius`; substrate-live verbs read `radius_voxels`.
             obj.insert("radius".to_owned(), json!(radius));
+            obj.insert("radius_voxels".to_owned(), json!(radius));
         }
         if let Some(radius_norm) = self.radius_norm {
             obj.insert("radius_norm".to_owned(), json!(radius_norm));
@@ -285,9 +314,12 @@ impl GodActionVerbArgs {
         }
         if let Some(magnitude) = self.magnitude {
             obj.insert("magnitude".to_owned(), json!(magnitude));
+            // Substrate terraform/material brushes also accept `strength`.
+            obj.insert("strength".to_owned(), json!(magnitude));
         }
         if let Some(material) = self.material {
             obj.insert("material".to_owned(), json!(material));
+            obj.insert("material_id".to_owned(), json!(material));
         }
         if let Some(count) = self.count {
             obj.insert("count".to_owned(), json!(count));
@@ -1668,7 +1700,7 @@ impl CivisMcpServer {
     /// clients do, so verb-specific clamps are enforced server-side.
     #[tool(
         name = "civis_god_action",
-        description = "Forward sim.god_action to civ-server. Sends a god-tool verb (smite, heal, place_terrain, ignite, spawn_creature, bless, multiply_creatures, earthquake, plague, miracle) at a normalized map point. Verb-specific clamps are enforced server-side (FR-CIV-GODTOOL)."
+        description = "Forward sim.god_action to civ-server. Sends a god-tool verb (legacy smite/heal/... plus substrate terrain.*/material.*/life.*/disaster.* verbs) at a normalized map point. Verb-specific clamps are enforced server-side (FR-CIV-GODTOOL)."
     )]
     async fn civis_god_action(
         &self,
@@ -1859,6 +1891,96 @@ impl CivisMcpServer {
             "sim.god_action",
             args.to_params_with_action("miracle"),
             "civis_god_action_miracle",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.god_action` with substrate verb `terrain.add_land`.
+    #[tool(
+        name = "civis_god_action_terrain_add_land",
+        description = "Forward sim.god_action with verb=terrain.add_land."
+    )]
+    async fn civis_god_action_terrain_add_land(
+        &self,
+        Parameters(args): Parameters<GodActionVerbArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &args.transport,
+            "sim.god_action",
+            args.to_params_with_action("terrain.add_land"),
+            "civis_god_action_terrain_add_land",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.god_action` with substrate verb `terrain.dig_ocean`.
+    #[tool(
+        name = "civis_god_action_terrain_dig_ocean",
+        description = "Forward sim.god_action with verb=terrain.dig_ocean."
+    )]
+    async fn civis_god_action_terrain_dig_ocean(
+        &self,
+        Parameters(args): Parameters<GodActionVerbArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &args.transport,
+            "sim.god_action",
+            args.to_params_with_action("terrain.dig_ocean"),
+            "civis_god_action_terrain_dig_ocean",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.god_action` with substrate verb `disaster.wildfire`.
+    #[tool(
+        name = "civis_god_action_disaster_wildfire",
+        description = "Forward sim.god_action with verb=disaster.wildfire."
+    )]
+    async fn civis_god_action_disaster_wildfire(
+        &self,
+        Parameters(args): Parameters<GodActionVerbArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &args.transport,
+            "sim.god_action",
+            args.to_params_with_action("disaster.wildfire"),
+            "civis_god_action_disaster_wildfire",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.god_action` with substrate verb `disaster.flood`.
+    #[tool(
+        name = "civis_god_action_disaster_flood",
+        description = "Forward sim.god_action with verb=disaster.flood."
+    )]
+    async fn civis_god_action_disaster_flood(
+        &self,
+        Parameters(args): Parameters<GodActionVerbArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &args.transport,
+            "sim.god_action",
+            args.to_params_with_action("disaster.flood"),
+            "civis_god_action_disaster_flood",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.god_action` with substrate verb `life.spawn_herd`.
+    #[tool(
+        name = "civis_god_action_life_spawn_herd",
+        description = "Forward sim.god_action with verb=life.spawn_herd."
+    )]
+    async fn civis_god_action_life_spawn_herd(
+        &self,
+        Parameters(args): Parameters<GodActionVerbArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &args.transport,
+            "sim.god_action",
+            args.to_params_with_action("life.spawn_herd"),
+            "civis_god_action_life_spawn_herd",
         )
         .map(Json)
     }

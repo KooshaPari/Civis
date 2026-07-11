@@ -142,6 +142,7 @@ fn emit_disaster_clicks(
 fn apply_disaster_requests(
     mut requests: MessageReader<DisasterRequest>,
     mut sim: ResMut<crate::voxel_sim::VoxelSimState>,
+    #[cfg(feature = "audio")] mut sfx: MessageWriter<crate::audio::SfxEvent>,
 ) {
     for req in requests.read() {
         let impact = apply_disaster(&mut sim.grid, req.center, req.kind);
@@ -149,6 +150,12 @@ fn apply_disaster_requests(
             "[disaster] {:?} applied at {:?}: {} cells changed",
             req.kind, req.center, impact.cells_changed
         );
+        #[cfg(feature = "audio")]
+        if impact.cells_changed > 0 || !req.kind.edits_world() {
+            // Always cue audio for a god-tool strike; plague may not edit voxels
+            // but still needs a playable feedback beat.
+            crate::audio::play_sfx(&mut sfx, crate::audio::SfxKind::Disaster);
+        }
     }
 }
 

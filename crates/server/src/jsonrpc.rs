@@ -1,4 +1,4 @@
-//! JSON-RPC 2.0 request/response types for the CIV-0200 WebSocket protocol.
+﻿//! JSON-RPC 2.0 request/response types for the CIV-0200 WebSocket protocol.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -459,6 +459,9 @@ pub struct SnapshotFields {
     pub mod_permission_violations: Vec<String>,
     /// Deterministic planet climate from `phase_planet` (FR-CIV-PLANET-010).
     pub climate: civ_engine::Climate,
+    /// Per-cluster music cues from the most recent audio phase.
+    #[serde(default)]
+    pub music_cues: BTreeMap<u64, MusicCueSnapshot>,
     /// Most recent civ-emergence-metrics sample (FR-CIV-EMERG-003
     /// surface). `None` on a fresh sim before the first 50-tick
     /// sample boundary; the bridge copies the same value here as
@@ -470,6 +473,17 @@ pub struct SnapshotFields {
     pub researched: Vec<String>,
     /// Currently-researching tech, if any (FR-CIV-SERVER-003).
     pub in_progress_tech: Option<String>,
+}
+
+/// JSON-friendly music cue payload from the engine's audio phase.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MusicCueSnapshot {
+    /// Coarse mood tag the client renderer maps to a stem.
+    pub mood: String,
+    /// Loudness/intensity scalar from 0 to 1.
+    pub intensity: f32,
+    /// Optional secondary tempo hint in BPM.
+    pub tempo_bpm: Option<u16>,
 }
 
 /// Tactical damage pulse for `sim.snapshot` (normalized map coords).
@@ -599,6 +613,10 @@ pub fn snapshot_result_json(fields: &SnapshotFields) -> Value {
     obj.insert(
         "climate".to_owned(),
         serde_json::to_value(fields.climate).unwrap_or(Value::Null),
+    );
+    obj.insert(
+        "music_cues".to_owned(),
+        serde_json::to_value(&fields.music_cues).unwrap_or(Value::Null),
     );
     if let Some(emergence) = &fields.emergence {
         // `sim.snapshot.emergence` block (FR-CIV-EMERG-003). The five
@@ -768,6 +786,20 @@ pub fn snapshot_fields_from_sim(
             .replay_log()
             .mod_permission_violation_bus_at_tick(sim.state.tick),
         climate: *sim.climate(),
+        music_cues: snap
+            .music_cues
+            .iter()
+            .map(|(&cluster_id, cue)| {
+                (
+                    cluster_id,
+                    MusicCueSnapshot {
+                        mood: cue.mood.clone(),
+                        intensity: cue.intensity,
+                        tempo_bpm: cue.tempo_bpm,
+                    },
+                )
+            })
+            .collect(),
         emergence: sim.last_emergence_sample().map(EmergenceSampleFields::from),
         researched: vec![],
         in_progress_tech: None,
@@ -3277,6 +3309,14 @@ mod tests {
                         moon_phase: 0.0,
                         tide_offset: 0.0,
                     },
+                    music_cues: BTreeMap::from([(
+                        12,
+                        MusicCueSnapshot {
+                            mood: "hopeful".to_owned(),
+                            intensity: 0.75,
+                            tempo_bpm: Some(120),
+                        },
+                    )]),
                     emergence: None,
                     researched: vec![],
                     in_progress_tech: None,
@@ -3321,6 +3361,13 @@ mod tests {
                     "moon_phase": 0.0,
                     "tide_offset": 0.0,
                 },
+                "music_cues": {
+                    "12": {
+                        "mood": "hopeful",
+                        "intensity": 0.75,
+                        "tempo_bpm": 120,
+                    },
+                },
             }))
         );
     }
@@ -3359,6 +3406,7 @@ mod tests {
                         moon_phase: 0.0,
                         tide_offset: 0.0,
                     },
+                    music_cues: BTreeMap::new(),
                     emergence: None,
                     researched: vec![],
                     in_progress_tech: None,
@@ -3399,6 +3447,7 @@ mod tests {
                     "moon_phase": 0.0,
                     "tide_offset": 0.0,
                 },
+                "music_cues": {},
             }))
         );
         assert!(plan
@@ -3446,6 +3495,7 @@ mod tests {
                         moon_phase: 0.0,
                         tide_offset: 0.0,
                     },
+                    music_cues: BTreeMap::new(),
                     emergence: None,
                     researched: vec![],
                     in_progress_tech: None,
@@ -3486,6 +3536,7 @@ mod tests {
                     "moon_phase": 0.0,
                     "tide_offset": 0.0,
                 },
+                "music_cues": {},
             }))
         );
     }
@@ -4313,6 +4364,7 @@ mod tests {
                 moon_phase: 0.0,
                 tide_offset: 0.0,
             },
+            music_cues: BTreeMap::new(),
             emergence: Some(emergence),
             researched: vec![],
             in_progress_tech: None,

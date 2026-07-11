@@ -108,7 +108,8 @@ civis-3d-verify: civis-3d-catalog-check civis-3d-scenario-check civis-3d-web-che
     cargo check --workspace
     # Optional bench: ignore failure (just `-` prefix is portable; `|| true` breaks pwsh).
     -cargo bench --bench ca_dirty_chunk
-    # Soft clippy (no -D warnings); deny-level absurd_extreme_comparisons still enforced.
+    # Soft clippy (no -D warnings): deny-level lints are clean; ~20 warn-as-error
+    # findings remain across voxel/ai/economy — restore `-D warnings` in a dedicated lint PR.
     cargo clippy --workspace --all-targets
     cargo fmt --check
 

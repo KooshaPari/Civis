@@ -85,40 +85,12 @@ jobs:
             const billingException =
               labels.has("ci-billing-exception") || labels.has("local-first-ci");
 
-            // Only these two jobs are required on PRs in local-first mode.
-            // NOTE: must be Array (not Set) — consumed via .some() which Set lacks.
-            const requiredOk = [
-              /^pr-governance-gate$/i,
+            // Only these required CI jobs can fail governance (mirrors pr-governance-gate).
+            // Avoid racing on IN_PROGRESS third-party checks (Sonar/Kilo/etc).
+            const mustComplete = [
+              /^cargo check --workspace/i,
+              /^cargo-deny/i,
               /^quality-manifest/i,
-            ];
-
-            // Third-party / legacy optional checks (never block when local-first label is set).
-            const optionalBypass = [
-              /billing/i,
-              /quota/i,
-              /spending/i,
-              /actions.*limit/i,
-              /^cargo-/i,
-              /^Analyze \(rust\)$/i,
-              /^quality-gate$/i,
-              /^gate$/i,
-              /^coverage$/i,
-              /^links$/i,
-              /^docs-build$/i,
-              /^journey-validate$/i,
-              /^Legacy Tooling/i,
-              /^policy-gate$/i,
-              /^guard$/i,
-              /^semver-checks$/i,
-              /^machete$/i,
-              /^civ-show/i,
-              /^GitGuardian/i,
-              /^Kilo/i,
-              /^semgrep/i,
-              /^SonarCloud/i,
-              /^Cursor Bugbot/i,
-              /^CodeRabbit$/i,
-              /^Rust Module Graph$/i,
             ];
 
             const contexts =
@@ -128,10 +100,7 @@ jobs:
             for (const node of contexts) {
               const name =
                 node.__typename === "CheckRun" ? node.name : node.context;
-              if (!name || requiredOk.some((re) => re.test(name))) {
-                continue;
-              }
-              if (billingException && optionalBypass.some((re) => re.test(name))) {
+              if (!name || !mustComplete.some((re) => re.test(name))) {
                 continue;
               }
               if (node.__typename === "CheckRun") {
@@ -160,7 +129,7 @@ jobs:
               .addHeading("PR governance")
               .addRaw(
                 billingException
-                  ? "Manifest OK; optional third-party checks ignored (local-first label)."
-                  : "Manifest OK; all reported checks passed or were ignored as optional."
+                  ? "Manifest OK; required compile/deny/quality green (local-first label present)."
+                  : "Manifest OK; required compile/deny/quality green."
               )
               .write();

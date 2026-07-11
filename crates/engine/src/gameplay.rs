@@ -100,7 +100,7 @@ impl VictoryCondition {
 
     /// Evaluate this condition against the current world state and simulation.
     ///
-    /// Returns `Some(GameOutcome::Victory(_))` when the condition is satisfied,
+    /// Returns `Some(GameOutcome::Victory { .. })` when the condition is satisfied,
     /// `None` otherwise.  Never returns `Defeat` or `Ongoing`.
     pub fn evaluate(&self, sim: &Simulation) -> Option<GameOutcome> {
         let state = &sim.state;

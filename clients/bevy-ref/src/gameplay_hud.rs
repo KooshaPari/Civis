@@ -121,7 +121,13 @@ fn draw_gameplay_hud(
 
             let music_label = music_cues
                 .dominant()
-                .map(|cue| format!("{} ({:.0}%)", cue.mood, cue.intensity * 100.0))
+                .map(|cue| {
+                    let tempo = cue
+                        .tempo_bpm
+                        .map(|bpm| format!(", {bpm} bpm"))
+                        .unwrap_or_default();
+                    format!("{} ({:.0}%{tempo})", cue.mood, cue.intensity * 100.0)
+                })
                 .unwrap_or_else(|| "awaiting cues".to_string());
             ui.label(
                 egui::RichText::new(format!(

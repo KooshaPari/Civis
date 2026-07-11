@@ -225,8 +225,20 @@ fn toggle_mute(
     };
     let sfx_vol = if state.muted { 0.0 } else { state.sfx_volume };
     ambient.set_volume(ambient_vol);
+    ambient.set_playback_rate(if state.muted {
+        1.0
+    } else {
+        ambient_playback_rate_for_music_cues(&cues) as f64
+    });
     sfx.set_volume(sfx_vol);
 }
+
+/// Reference BPM for the ambient bed clip (neutral presentation tempo).
+pub const AMBIENT_REFERENCE_BPM: f32 = 100.0;
+
+/// Clamp for ambient playback-rate mapping from cue tempo.
+pub const AMBIENT_PLAYBACK_RATE_MIN: f32 = 0.85;
+pub const AMBIENT_PLAYBACK_RATE_MAX: f32 = 1.25;
 
 /// Mood-dependent multiplier for the single ambient bed until mood-specific stems exist.
 #[must_use]
@@ -238,6 +250,19 @@ pub fn ambient_mood_gain(mood: &str) -> f32 {
         "danger" | "war" | "crisis" => 1.0,
         _ => 0.75,
     }
+}
+
+/// Playback-rate multiplier from a cue tempo (BPM), relative to [`AMBIENT_REFERENCE_BPM`].
+///
+/// Missing tempo keeps rate `1.0`. Values are clamped so the single ambient bed
+/// stays musical rather than chipmunked.
+#[must_use]
+pub fn ambient_playback_rate_for_tempo_bpm(tempo_bpm: Option<u16>) -> f32 {
+    let Some(bpm) = tempo_bpm.filter(|&b| b > 0) else {
+        return 1.0;
+    };
+    (f32::from(bpm) / AMBIENT_REFERENCE_BPM)
+        .clamp(AMBIENT_PLAYBACK_RATE_MIN, AMBIENT_PLAYBACK_RATE_MAX)
 }
 
 /// Ambient-bed volume implied by all current cluster cues.
@@ -258,7 +283,21 @@ pub fn ambient_volume_for_music_cues(cues: &MusicCues) -> f32 {
     }
 }
 
-/// Apply the strongest snapshot cue to the ambient channel's volume.
+/// Ambient playback rate from the dominant (loudest mood-adjusted) cue's tempo.
+#[must_use]
+pub fn ambient_playback_rate_for_music_cues(cues: &MusicCues) -> f32 {
+    let dominant = cues.0.values().max_by(|a, b| {
+        let ga = a.intensity.clamp(0.0, 1.0) * ambient_mood_gain(&a.mood);
+        let gb = b.intensity.clamp(0.0, 1.0) * ambient_mood_gain(&b.mood);
+        ga.partial_cmp(&gb).unwrap_or(std::cmp::Ordering::Equal)
+    });
+    match dominant {
+        Some(cue) => ambient_playback_rate_for_tempo_bpm(cue.tempo_bpm),
+        None => 1.0,
+    }
+}
+
+/// Apply the strongest snapshot cue to the ambient channel's volume + tempo.
 fn sync_music_cue_volume(
     cues: Res<MusicCues>,
     state: Res<AudioState>,
@@ -273,6 +312,7 @@ fn sync_music_cue_volume(
         ambient_volume_for_music_cues(&cues)
     };
     ambient.set_volume(volume as f64);
+    ambient.set_playback_rate(ambient_playback_rate_for_music_cues(&cues) as f64);
 }
 
 #[cfg(test)]
@@ -347,5 +387,15 @@ mod tests {
             ),
         ]));
         assert!((ambient_volume_for_music_cues(&cues) - AMBIENT_VOLUME * 0.8).abs() < f32::EPSILON);
+        // Dominant cue is danger@0.8 → tempo 140 → 1.25 clamp.
+        assert!((ambient_playback_rate_for_music_cues(&cues) - 1.25).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn tempo_bpm_maps_to_clamped_playback_rate() {
+        assert!((ambient_playback_rate_for_tempo_bpm(None) - 1.0).abs() < f32::EPSILON);
+        assert!((ambient_playback_rate_for_tempo_bpm(Some(100)) - 1.0).abs() < f32::EPSILON);
+        assert!((ambient_playback_rate_for_tempo_bpm(Some(50)) - 0.85).abs() < f32::EPSILON);
+        assert!((ambient_playback_rate_for_tempo_bpm(Some(200)) - 1.25).abs() < f32::EPSILON);
     }
 }

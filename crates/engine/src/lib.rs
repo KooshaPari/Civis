@@ -42,6 +42,7 @@
 //! - `io` - File I/O utilities
 
 pub mod command_queue;
+pub mod building_emergence;
 pub mod conditions;
 pub mod culture;
 pub mod disasters;
@@ -102,6 +103,11 @@ pub const SCALE: i64 = 1_000;
 //  Restore once `civ-audio` is re-added to the workspace as a sibling crate.
 // pub use civ_audio::triggers::SfxTrigger;
 pub use civ_emergence_metrics::branching::BranchingRegime;
+pub use building_emergence::{
+    apply_emergence_facades, architecture_tile_sets, biome_style_tag,
+    building_type_unlocked_at_era, culture_traits_for_cluster, emergent_style_key_for_sim,
+    emergence_demand_signals, resource_stock_units, settlement_build_anchor,
+};
 pub use civ_mod_host::{load_manifest, ModBrowserEntry, ModGuestStateSave, ModType};
 pub use emergence::{CivAiDecision, EmergenceFeedEvent, EmergenceState};
 pub use emergence_metrics::{EmergenceBranchingState, EmergenceSample};

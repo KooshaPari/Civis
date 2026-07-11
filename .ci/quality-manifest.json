@@ -1,65 +1,65 @@
 {
-  "version": "1",
-  "repo": "Civis",
-  "git_sha": "2fee75a9ea66e7a1f5a836065dcb16bf6b351154",
-  "created_at": "2026-07-11T05:55:51Z",
   "runner": {
-    "host": "KOOSHAPARI-DESK",
-    "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
+    "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)",
+    "host": "KOOSHAPARI-DESK"
   },
+  "git_sha": "953e95d004d465184b98ff2077e5145b80541f06",
   "gates": {
-    "unreal_preflight": {
-      "status": "fail",
-      "detail": ""
-    },
-    "web_test": {
-      "detail": "",
-      "status": "pass"
-    },
     "extra_cargo_deny": {
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
-      "status": "skip"
-    },
-    "extra_cargo_audit": {
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
-      "status": "skip"
-    },
-    "extra_security_guard": {
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
-      "status": "skip"
-    },
-    "extra_cargo_semver": {
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
-      "status": "skip"
-    },
-    "dashboard_typecheck": {
-      "detail": "",
-      "status": "pass"
-    },
-    "civis_3d_verify": {
-      "detail": "",
-      "status": "pass"
-    },
-    "extra_fr_coverage": {
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
-      "status": "skip"
-    },
-    "extra_trufflehog": {
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
-      "status": "skip"
-    },
-    "unreal_build": {
-      "status": "fail",
-      "detail": ""
-    },
-    "extra_docs_check": {
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
-      "status": "skip"
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     },
     "extra_cargo_machete": {
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
-      "status": "skip"
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_fr_coverage": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_docs_check": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "dashboard_typecheck": {
+      "status": "pass",
+      "detail": ""
+    },
+    "extra_cargo_semver": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_cargo_audit": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "civis_3d_verify": {
+      "status": "pass",
+      "detail": "just civis-3d-verify (local, pre-emit)"
+    },
+    "unreal_build": {
+      "status": "skip",
+      "detail": "optional"
+    },
+    "extra_trufflehog": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_security_guard": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "unreal_preflight": {
+      "status": "skip",
+      "detail": "optional"
+    },
+    "web_test": {
+      "status": "pass",
+      "detail": ""
     }
   },
-  "manifest_hash": "69aac2092364c6fd74c2e305b5ea1e8bf9e3c7ee0053444552e6b30d9a5ef64c"
+  "version": "1",
+  "repo": "Civis",
+  "created_at": "2026-07-11T06:20:17Z",
+  "manifest_hash": "8874dd6ea7025bf19477d273d51cdc98135462eae5b0ce171a681d4faf4115dc"
 }

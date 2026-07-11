@@ -13,11 +13,6 @@ name: cargo-deny
 on:
   pull_request:
     branches: [main]
-    paths:
-      - "**/Cargo.toml"
-      - "**/Cargo.lock"
-      - "deny.toml"
-      - ".github/workflows/cargo-deny.yml"
   push:
     branches: [main]
   workflow_dispatch:

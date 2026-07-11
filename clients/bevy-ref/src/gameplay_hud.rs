@@ -13,6 +13,7 @@ use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 use crate::live_stream::LiveStreamScene;
 use crate::outcome_overlay::OutcomeOverlayState;
+use crate::MusicCues;
 
 // ── Palette (mirrors emergence_dashboard / faction_hud) ───────────────────────
 
@@ -49,6 +50,7 @@ pub struct GameplayHudPlugin;
 impl Plugin for GameplayHudPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GameplayHudOpen>()
+            .init_resource::<MusicCues>()
             .add_systems(Update, toggle_gameplay_hud)
             .add_systems(EguiPrimaryContextPass, draw_gameplay_hud);
     }
@@ -69,6 +71,7 @@ fn draw_gameplay_hud(
     mut contexts: EguiContexts,
     open: Res<GameplayHudOpen>,
     scene: Res<LiveStreamScene>,
+    music_cues: Res<MusicCues>,
     outcome_state: Option<Res<OutcomeOverlayState>>,
 ) {
     if !open.0 {
@@ -115,6 +118,20 @@ fn draw_gameplay_hud(
             ui.add_space(4.0);
             ui.separator();
             ui.add_space(6.0);
+
+            let music_label = music_cues
+                .dominant()
+                .map(|cue| format!("{} ({:.0}%)", cue.mood, cue.intensity * 100.0))
+                .unwrap_or_else(|| "awaiting cues".to_string());
+            ui.label(
+                egui::RichText::new(format!(
+                    "Music cues: {} — {music_label}",
+                    music_cues.0.len()
+                ))
+                .color(DIM)
+                .small(),
+            );
+            ui.add_space(4.0);
 
             // ── Section 1: Outcome Banner ────────────────────────────────
             if let Some(od) = outcome {

@@ -21,7 +21,17 @@ use serde::{Deserialize, Serialize};
 /// `use civ_build::*` without diving into the submodule path.
 pub mod tiers_build;
 
+/// FR-CIV-ARCH — era grammar, biome style bias, settlement clustering,
+/// and era-gated unlock tables (`BuildingGraph` extensions).
+pub mod tiers;
+
 pub use civ_economy::Good as ProductionGood;
+pub use tiers::{
+    apply_biome_facade_bias, building_type_min_era, building_type_unlocked,
+    clustered_parcel_offset, culture_id_from_traits, default_architecture_tile_sets,
+    era_gated_demand_signals, era_index_from_pop_tech, facade_for_emergence, facade_histogram_l1,
+    settlement_cluster_centroid, wealth_permille_from_stocks, BiomeStyleTag, EmergentStyleKey,
+};
 pub use tiers_build::{
     BuildSite, BuildingSpec, BuildingSpecOverride, BuildingSpecOverrideError, BuildingTier,
     CompletedBuilding, ProductionChain, ProductionEvent,
@@ -266,6 +276,9 @@ pub struct BuildingGraph {
     /// Completed buildings keyed by id (`FR-CIV-BUILD-001/002/003`).
     /// Populated by [`tiers_build::BuildingGraph::record_completed`].
     pub completed: BTreeMap<BuildingId, tiers_build::CompletedBuilding>,
+    /// Settlement-cluster → parcel membership (`FR-CIV-ARCH` layout).
+    #[serde(default)]
+    pub settlement_clusters: BTreeMap<u64, Vec<BuildingId>>,
 }
 
 impl BuildingGraph {

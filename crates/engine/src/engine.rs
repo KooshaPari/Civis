@@ -2722,8 +2722,30 @@ impl Simulation {
     }
 
     /// Phase hook for emergent building emergence (FR-CIV-ARCH).
-    /// Stub: full implementation pending building-graph field recovery.
-    pub fn run_building_emergence_tick(&mut self) {}
+    ///
+    /// Re-applies culture/biome/era facades and settlement-cluster layout to
+    /// every parcel currently in the building graph.
+    pub fn run_building_emergence_tick(&mut self) {
+        use crate::building_emergence::{
+            apply_emergence_facades, emergence_demand_signals, emergent_style_key_for_sim,
+            settlement_build_anchor,
+        };
+
+        let geology = GeologyMap::seed(&self.planet);
+        let (cluster_id, anchor) = settlement_build_anchor(&self.world);
+        let style = emergent_style_key_for_sim(self, cluster_id, &geology, &anchor);
+        let raw = DemandSignals {
+            residential: 0.75,
+            commercial: 0.25,
+            industrial: 0.25,
+            civic: 0.75,
+        };
+        let signals = emergence_demand_signals(self, raw, style.era);
+        let allocated: Vec<_> = self.building_graph.parcels.iter().map(|p| p.id).collect();
+        if !allocated.is_empty() {
+            apply_emergence_facades(self, cluster_id, style, signals, &allocated);
+        }
+    }
 
     /// Phase hook for macro-level diplomacy events (FR-CIV-DIPLOMACY).
     /// Stub: full implementation pending faction_relations field.
@@ -3164,13 +3186,24 @@ impl Simulation {
             .any(|signal| *signal > 0.5)
             {
                 let origin = civ_voxel::WorldCoord { x: 0, y: 0, z: 0 };
-                let _ = self.allocator.allocate(
+                let allocated = self.allocator.allocate(
                     &mut self.building_graph,
                     &signals,
                     self.target_era,
                     origin,
                     16,
                 );
+                if !allocated.is_empty() {
+                    use crate::building_emergence::{
+                        apply_emergence_facades, emergence_demand_signals,
+                        emergent_style_key_for_sim, settlement_build_anchor,
+                    };
+                    let geology = GeologyMap::seed(&self.planet);
+                    let (cluster_id, anchor) = settlement_build_anchor(&self.world);
+                    let style = emergent_style_key_for_sim(self, cluster_id, &geology, &anchor);
+                    let gated = emergence_demand_signals(self, signals, style.era);
+                    apply_emergence_facades(self, cluster_id, style, gated, &allocated);
+                }
             }
         }
 

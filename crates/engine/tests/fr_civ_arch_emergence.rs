@@ -1,14 +1,19 @@
 //! Deferred FR-CIV-ARCH integration coverage.
 //!
-//! The historical assertions require `building_emergence`, which is not
-//! currently exported from `civ_engine`. Keep this anti-wipe test meaningful
-//! by exercising the current public building-emergence hook and simulation
-//! invariants until that API returns.
+//! Covers the public building-emergence API and simulation hook.
 
-use civ_engine::Simulation;
+use civ_engine::{
+    biome_style_tag, building_type_unlocked_at_era, BiomeKind, BuildingType, Simulation,
+};
 
 #[test]
 fn building_emergence_hook_preserves_seeded_building_invariants() {
+    let arid = biome_style_tag(BiomeKind::Desert);
+    assert_eq!(arid, biome_style_tag(BiomeKind::Savanna));
+    assert_ne!(arid, biome_style_tag(BiomeKind::Forest));
+    assert!(!building_type_unlocked_at_era(BuildingType::Barracks, 2));
+    assert!(building_type_unlocked_at_era(BuildingType::Barracks, 4));
+
     let mut sim = Simulation::with_seed(12);
     let before = sim.snapshot();
 

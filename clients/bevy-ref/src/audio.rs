@@ -7,6 +7,8 @@
 use bevy::prelude::*;
 use bevy_kira_audio::prelude::*;
 
+use crate::MusicCues;
+
 // -- Channels ----------------------------------------------------------------
 
 /// Dedicated channel for the looping ambient bed (mute / duck independently).
@@ -162,9 +164,11 @@ impl Plugin for CivisAudioPlugin {
             .init_resource::<AudioFiles>()
             .init_resource::<AudioHandles>()
             .init_resource::<AudioState>()
+            .init_resource::<MusicCues>()
             .add_message::<SfxEvent>()
             .add_systems(Startup, (load_audio, start_ambient).chain())
-            .add_systems(Update, (drain_sfx_events, toggle_mute));
+            .add_systems(Update, (drain_sfx_events, toggle_mute))
+            .add_systems(Update, sync_music_cue_volume.after(toggle_mute));
     }
 }
 
@@ -206,6 +210,7 @@ fn drain_sfx_events(
 fn toggle_mute(
     keys: Res<ButtonInput<KeyCode>>,
     mut state: ResMut<AudioState>,
+    cues: Res<MusicCues>,
     ambient: Res<AudioChannel<AmbientChannel>>,
     sfx: Res<AudioChannel<SfxChannel>>,
 ) {
@@ -213,10 +218,61 @@ fn toggle_mute(
         return;
     }
     state.muted = !state.muted;
-    let ambient_vol = if state.muted { 0.0 } else { state.ambient_volume };
+    let ambient_vol = if state.muted {
+        0.0
+    } else {
+        ambient_volume_for_music_cues(&cues)
+    };
     let sfx_vol = if state.muted { 0.0 } else { state.sfx_volume };
     ambient.set_volume(ambient_vol);
     sfx.set_volume(sfx_vol);
+}
+
+/// Mood-dependent multiplier for the single ambient bed until mood-specific stems exist.
+#[must_use]
+pub fn ambient_mood_gain(mood: &str) -> f32 {
+    match mood.trim().to_ascii_lowercase().as_str() {
+        "calm" | "peaceful" | "serene" => 0.55,
+        "neutral" | "settled" => 0.75,
+        "tense" | "unrest" => 0.9,
+        "danger" | "war" | "crisis" => 1.0,
+        _ => 0.75,
+    }
+}
+
+/// Ambient-bed volume implied by all current cluster cues.
+///
+/// Until the client ships separate stems, the strongest mood-adjusted cue drives
+/// the existing ambient channel. An empty cue map preserves the normal ambient bed.
+#[must_use]
+pub fn ambient_volume_for_music_cues(cues: &MusicCues) -> f32 {
+    let cue_gain = cues
+        .0
+        .values()
+        .map(|cue| cue.intensity.clamp(0.0, 1.0) * ambient_mood_gain(&cue.mood))
+        .fold(0.0_f32, f32::max);
+    if cues.0.is_empty() {
+        AMBIENT_VOLUME
+    } else {
+        AMBIENT_VOLUME * cue_gain
+    }
+}
+
+/// Apply the strongest snapshot cue to the ambient channel's volume.
+fn sync_music_cue_volume(
+    cues: Res<MusicCues>,
+    state: Res<AudioState>,
+    ambient: Res<AudioChannel<AmbientChannel>>,
+) {
+    if !cues.is_changed() {
+        return;
+    }
+    let volume = if state.muted {
+        0.0
+    } else {
+        ambient_volume_for_music_cues(&cues)
+    };
+    ambient.set_volume(volume as f64);
 }
 
 #[cfg(test)]
@@ -268,5 +324,28 @@ mod tests {
         assert!(!state.muted);
         assert!((state.ambient_volume - AMBIENT_VOLUME).abs() < f32::EPSILON);
         assert!(state.sfx_volume > 0.0);
+    }
+
+    #[test]
+    fn music_cues_use_the_loudest_mood_adjusted_cluster() {
+        let cues = MusicCues(std::collections::BTreeMap::from([
+            (
+                1,
+                crate::MusicCueWire {
+                    mood: "calm".to_string(),
+                    intensity: 1.0,
+                    tempo_bpm: Some(80),
+                },
+            ),
+            (
+                2,
+                crate::MusicCueWire {
+                    mood: "danger".to_string(),
+                    intensity: 0.8,
+                    tempo_bpm: Some(140),
+                },
+            ),
+        ]));
+        assert!((ambient_volume_for_music_cues(&cues) - AMBIENT_VOLUME * 0.8).abs() < f32::EPSILON);
     }
 }

@@ -69,7 +69,7 @@ use civ_bevy_ref::{
     world_stats_dashboard::WorldStatsDashboardPlugin,
     ws_client::{WsClient, WsClientConfig},
     CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MenusPlugin, MinimapBounds,
-    PerfHudPlugin, TutorialPlugin, VOXEL_CHUNK_EDGE,
+    MusicCues, PerfHudPlugin, TutorialPlugin, VOXEL_CHUNK_EDGE,
 };
 use civ_protocol_3d::Frame3d;
 use civ_voxel::ChunkId;
@@ -237,6 +237,8 @@ fn main() {
         ReverseFeaturesPlugin,
         LivePickPlugin,
     ));
+    #[cfg(feature = "audio")]
+    app.add_plugins(civ_bevy_ref::audio::CivisAudioPlugin);
     #[cfg(feature = "egui")]
     app.add_plugins((
         FactionHudPlugin,
@@ -265,6 +267,7 @@ fn main() {
         .init_resource::<SimSpeedState>()
         .init_resource::<EmergencePollTimer>()
         .init_resource::<EmergenceHudData>()
+        .init_resource::<MusicCues>()
         .init_resource::<SaveListState>()
         .insert_resource(ScenePresentation::default())
         .insert_resource(DebugRender::default())
@@ -552,9 +555,11 @@ fn apply_spectator_meta(
     bridge: Res<LiveBridge>,
     mut presentation: ResMut<ScenePresentation>,
     mut hud: ResMut<HudState>,
+    mut music_cues: ResMut<MusicCues>,
 ) {
     for meta in bridge.client.poll_meta() {
         presentation.is_day = meta.is_day;
+        music_cues.0 = meta.music_cues;
         if let Some(tick) = meta.tick {
             hud.snapshot.tick = Some(tick);
             hud.snapshot.connected = true;

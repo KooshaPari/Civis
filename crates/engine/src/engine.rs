@@ -903,6 +903,7 @@ pub struct SimulationSnapshot {
     /// Per-cluster music parameters derived from current culture and aggression.
     pub music_cues: BTreeMap<u64, MusicCue>,
     pub damage_events: usize,
+    pub disaster_events: Vec<DisasterPulse>,
     pub climate: Climate,
     pub weather_grid: Vec<WeatherCell>,
     pub geology_map: GeologyMap,
@@ -4535,6 +4536,7 @@ impl Simulation {
             market_prices: self.market_state.prices().clone(),
             music_cues: self.last_tick_music_cues.clone(),
             damage_events: self.last_tick_combat_pulses.len(),
+            disaster_events: self.last_tick_disaster_events.clone(),
             climate: self.climate,
             weather_grid: self.weather_grid.clone(),
             geology_map: GeologyMap::seed(&self.planet),
@@ -5494,7 +5496,7 @@ mod tests {
     use civ_voxel::{MaterialId, WorldCoord};
     use tempfile::NamedTempFile;
 
-    fn fill_voxel_chunk(world: &mut VoxelWorld<MaterialId>, origin: i64, size: i64) {
+    fn fill_voxel_chunk(world: &mut VoxelWriteProxy<'_>, origin: i64, size: i64) {
         for x in origin..origin + size {
             for y in origin..origin + size {
                 for z in origin..origin + size {
@@ -5785,7 +5787,7 @@ mod tests {
 
     #[test]
     fn tick_detects_tech_victory() {
-        let mut sim = Simulation::new(42);
+        let mut sim = Simulation::with_seed(42);
         sim.state.population = 1;
         sim.research_cache_mut().researched = (0..12)
             .map(|idx| format!("tech_{idx}"))
@@ -7447,12 +7449,7 @@ mod tests {
                 .entry(member.cluster.0)
                 .or_insert(0) += 1;
         }
-        let (a, b) = diplomacy_pair_from_settlement_overlap(
-            &sim.world,
-            &cluster_member_counts,
-            &faction_ids,
-            sim.state.tick,
-        );
+        let (a, b) = diplomacy_faction_pair(&faction_ids, sim.state.tick);
 
         sim.state.faction_treasury.insert(a, Fixed::from_num(0));
         sim.state.faction_treasury.insert(b, Fixed::from_num(0));
@@ -8118,6 +8115,7 @@ mod tests {
                 NamedSeed::Ardani => counts[0] += 1,
                 NamedSeed::Velthari => counts[1] += 1,
                 NamedSeed::Grundak => counts[2] += 1,
+                _ => {}
             }
         }
         let ardani_frac = counts[0] as f32 / n as f32;
@@ -8582,12 +8580,12 @@ mod tests {
             let cue_a_100 = snap_a
                 .music_cues
                 .get(&100)
-                .copied()
+                .cloned()
                 .expect("seeded cluster 100 should have a cue");
             let cue_a_200 = snap_a
                 .music_cues
                 .get(&200)
-                .copied()
+                .cloned()
                 .expect("seeded cluster 200 should have a cue");
             assert_ne!(
                 cue_a_100, cue_a_200,
@@ -8599,12 +8597,12 @@ mod tests {
             let cue_b_100 = snap_b
                 .music_cues
                 .get(&100)
-                .copied()
+                .cloned()
                 .expect("seeded cluster 100 should persist");
             let cue_b_200 = snap_b
                 .music_cues
                 .get(&200)
-                .copied()
+                .cloned()
                 .expect("seeded cluster 200 should persist");
             assert_ne!(cue_a_100, cue_b_100);
             assert_ne!(cue_a_200, cue_b_200);
@@ -8818,7 +8816,7 @@ mod tests {
             "labor fraction expected ~0.6667, got {frac}"
         );
         // Ensure spawn targets are still alive (sanity).
-        assert!(sim.world.get::<&AgentCivilian>(civ_a).is_ok() || true);
+        assert!(sim.world.get::<&AgentCivilian>(hecs::Entity::from_bits(u64::from(civ_a))).is_ok() || true);
         let _ = civ_b; // unused: kept for documentation
     }
 

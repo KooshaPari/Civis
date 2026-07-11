@@ -515,9 +515,9 @@ pub struct ProbeReport {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum GodToolError {
     InvalidRequest(String),
-    InvalidDimension { field: &'static str, value: i32 },
-    OutOfBounds { axis: &'static str, value: f32 },
-    NotImplemented { verb: &'static str },
+    InvalidDimension { field: String, value: i32 },
+    OutOfBounds { axis: String, value: f32 },
+    NotImplemented { verb: String },
 }
 
 impl std::fmt::Display for GodToolError {
@@ -856,7 +856,7 @@ impl Simulation {
 
     fn apply_terraform(&mut self, t: TerraformRequest) -> Result<GodToolReceipt, GodToolError> {
         if t.radius < 0 {
-            return Err(GodToolError::InvalidDimension { field: "radius", value: t.radius });
+            return Err(GodToolError::InvalidDimension { field: "radius".into(), value: t.radius });
         }
         let center = t.center;
         let cx = center.x;
@@ -868,19 +868,19 @@ impl Simulation {
         match t.op {
             TerraformOp::Raise => {
                 if t.delta <= 0 {
-                    return Err(GodToolError::InvalidDimension { field: "delta", value: t.delta });
+                    return Err(GodToolError::InvalidDimension { field: "delta".into(), value: t.delta });
                 }
                 return Ok(GodToolReceipt::Terraform { op: TerraformOp::Raise, writes: self.raise_footprint(t.center, t.radius, t.delta) });
             }
             TerraformOp::Lower => {
                 if t.delta <= 0 {
-                    return Err(GodToolError::InvalidDimension { field: "delta", value: t.delta });
+                    return Err(GodToolError::InvalidDimension { field: "delta".into(), value: t.delta });
                 }
                 return Ok(GodToolReceipt::Terraform { op: TerraformOp::Lower, writes: self.lower_footprint(t.center, t.radius, t.delta) });
             }
             TerraformOp::Level => {
                 if t.target_height < 0 {
-                    return Err(GodToolError::InvalidDimension { field: "target_height", value: t.target_height });
+                    return Err(GodToolError::InvalidDimension { field: "target_height".into(), value: t.target_height });
                 }
                 return Ok(GodToolReceipt::Terraform {
                     op: TerraformOp::Level,
@@ -2182,7 +2182,7 @@ mod tests {
     #[test]
     fn error_serde_round_trip() {
         let e = GodToolError::NotImplemented {
-            verb: "law.edict",
+            verb: "law.edict".into(),
         };
         let j = serde_json::to_string(&e).expect("serialize");
         let de: GodToolError = serde_json::from_str(&j).expect("deserialize");

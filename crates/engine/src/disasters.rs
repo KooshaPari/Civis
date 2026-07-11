@@ -798,6 +798,8 @@ mod tests {
             LifeHealth {
                 integrity: 0.1,
                 sick: false,
+                sickness: false,
+                morale: 1.0,
                 deprivation_streak: 0,
             },
         ));

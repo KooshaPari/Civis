@@ -517,6 +517,7 @@ impl Simulation {
         self.emergence_accrue_cluster_beliefs();
         self.emergence_genetics_sentience();
         self.emergence_legends();
+        self.apply_named_legend_influence();
         self.emergence_civ_ai();
     }
 
@@ -1323,6 +1324,23 @@ impl Simulation {
             ),
             Some(agent_id),
         );
+    }
+
+    /// Apply the durable social influence of named legends after their saga
+    /// events have been ingested for this tick.
+    pub fn apply_named_legend_influence(&mut self) {
+        let named_count = self
+            .emergence
+            .legends
+            .graph
+            .query_named_legends()
+            .named_entities
+            .len() as i64;
+        if named_count == 0 {
+            return;
+        }
+        self.add_belief(named_count.saturating_mul(BELIEF_PER_NAMED_LEGEND));
+        self.add_cohesion(named_count.saturating_mul(COHESION_PER_NAMED_LEGEND));
     }
 
     fn emergence_civ_ai(&mut self) {

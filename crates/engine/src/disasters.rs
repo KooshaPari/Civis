@@ -776,25 +776,51 @@ mod tests {
         );
     }
 
-    /// Flood emerges under sustained heavy precipitation on low-elevation terrain.
+    /// A climate-driven wildfire is recorded and applies terrain, resource, and
+    /// population consequences in the same simulation tick.
     #[test]
-    fn phase_disasters_triggers_flood_on_heavy_precip_low_elevation() {
+    fn tick_records_and_applies_emergent_disaster_costs() {
         let mut sim = Simulation::with_seed(77);
+        let target = WorldCoord { x: 0, y: 0, z: 0 };
+        let terrain_before = sim.voxel().read(target);
+        let population_before = sim.state.population;
+        let resources_before = sim.state.resources.clone();
+
+        sim.world.spawn((
+            Civilian {
+                id: 1_002_000,
+                alignment: Alignment::Faction(1),
+                age: 24,
+            },
+            Position3d { coord: target },
+            LodTier::Hot,
+            LifeNeeds::sated(),
+            LifeHealth {
+                integrity: 0.1,
+                sick: false,
+                deprivation_streak: 0,
+            },
+        ));
 
         sim.set_climate_state(Climate {
-            tick: 500,
+            tick: 1,
             day_phase: 0.5,
-            year_phase: 0.4,
+            year_phase: 0.3,
             moon_phase: 0.0,
             tide_offset: 0.0,
         });
+        sim.set_weather_cells(vec![WeatherCell {
+            region_id: 0,
+            latitude_fp: 0,
+            season: SeasonKind::Summer,
+            kind: WeatherKind::Clear,
+            temp_c_fp: 50_000,
+            precip_mm_fp: 100,
+            storm_intensity_fp: 500,
+        }]);
 
-        sim.state.tick = 700;
-        sim.phase_disasters();
-
-        let origin = WorldCoord { x: 8, y: 0, z: 0 };
-        let has_drought_effects =
-            sim.voxel().read(origin) == GRAVEL || sim.voxel().read(origin) == AIR;
+        sim.tick();
+        let snapshot = sim.snapshot();
         assert!(
             !snapshot.disaster_events.is_empty(),
             "wildfire should emit per-tick disaster events from climate/weather"
@@ -818,6 +844,7 @@ mod tests {
             "state resources should reflect disaster consumption"
         );
         assert!(sim.state.population < population_before, "state population should reflect casualties");
+        assert_ne!(sim.voxel().read(target), terrain_before, "disaster should leave terrain changes");
     }
 
     /// Storm emerges when storm intensity crosses the physical onset threshold.

@@ -107,6 +107,19 @@ impl CivEra {
             CivEra::Modern      => "(peak era reached)",
         }
     }
+
+    /// Normalized position in the ordered era sequence for HUD progress bars.
+    #[must_use]
+    pub const fn era_progress_fraction(self) -> f32 {
+        match self {
+            CivEra::Prehistoric => 0.0,
+            CivEra::Ancient => 0.2,
+            CivEra::Classical => 0.4,
+            CivEra::Medieval => 0.6,
+            CivEra::Renaissance => 0.8,
+            CivEra::Modern => 1.0,
+        }
+    }
 }
 
 /// Per-faction era surfaced on [`crate::engine::SimulationSnapshot`].
@@ -286,7 +299,46 @@ pub fn phase_tech(sim: &mut Simulation) {
 
 #[cfg(test)]
 mod tests {
-    use super::CivEra;
+    use super::{CivAge, CivEra};
+    use civ_agents::{spawn_civilian_at, ActorVisualKind, Alignment};
+
+    use crate::engine::{Resources, Simulation};
+
+    fn thriving_stagnant_sim() -> Simulation {
+        let mut sim = Simulation::with_seed(7);
+        sim.state.resources = Resources {
+            food: crate::Fixed::from_num(2_000),
+            wood: crate::Fixed::from_num(1_000),
+            metal: crate::Fixed::from_num(1_000),
+            energy: crate::Fixed::from_num(1_000),
+        };
+
+        let mut rng = sim.rng_mut().clone();
+        for id in 0..8 {
+            spawn_civilian_at(
+                &mut sim.world,
+                1_000 + id,
+                Alignment::Faction(0),
+                0.2,
+                0.2,
+                ActorVisualKind::Humanoid,
+                &mut rng,
+            );
+        }
+        for id in 0..4 {
+            spawn_civilian_at(
+                &mut sim.world,
+                2_000 + id,
+                Alignment::Faction(1),
+                0.8,
+                0.8,
+                ActorVisualKind::Humanoid,
+                &mut rng,
+            );
+        }
+        *sim.rng_mut() = rng;
+        sim
+    }
 
     #[test]
     fn era_progress_fraction_is_earliest_latest_and_monotonic() {
@@ -305,49 +357,6 @@ mod tests {
         for window in eras.windows(2) {
             assert!(window[0].era_progress_fraction() < window[1].era_progress_fraction());
         }
-        *sim.rng_mut() = rng;
-
-        let start_prosperous = sim
-            .era_progression()
-            .faction_tech
-            .get(&0)
-            .cloned()
-            .unwrap_or_default()
-            .research_points;
-        let start_stagnant = sim
-            .era_progression()
-            .faction_tech
-            .get(&1)
-            .cloned()
-            .unwrap_or_default()
-            .research_points;
-
-        sim.advance_ticks(10);
-
-        let end_prosperous = sim
-            .era_progression()
-            .faction_tech
-            .get(&0)
-            .cloned()
-            .unwrap_or_default()
-            .research_points;
-        let end_stagnant = sim
-            .era_progression()
-            .faction_tech
-            .get(&1)
-            .cloned()
-            .unwrap_or_default()
-            .research_points;
-
-        let accrued_prosperous = end_prosperous.saturating_sub(start_prosperous);
-        let accrued_stagnant = end_stagnant.saturating_sub(start_stagnant);
-
-        assert!(
-            accrued_prosperous > accrued_stagnant,
-            "prosperous faction should accrue more research ({}) than stagnant ({})",
-            accrued_prosperous,
-            accrued_stagnant
-        );
     }
 
     /// FR-CIV-TECH: sim ticks accumulate research and unlock tech levels.

@@ -669,6 +669,32 @@ impl SagaGraph {
     pub(crate) fn significant_desc(&self) -> impl Iterator<Item = LegendEntityId> + '_ {
         self.significant_set.iter().rev().map(|(_, id)| *id)
     }
+
+    /// Promote an extant entity to a named legend and record the role that
+    /// made it historically significant.
+    pub fn promote_to_legend(
+        &mut self,
+        entity_id: LegendEntityId,
+        title: String,
+        role: Role,
+    ) -> Result<(), &'static str> {
+        let index = self
+            .entity_index
+            .get(&entity_id)
+            .copied()
+            .ok_or("entity not found in saga graph")?;
+        match &mut self.g[index] {
+            LegendNode::Entity(entity) => {
+                entity.promoted = true;
+                entity.title = Some(title);
+            }
+            _ => return Err("node is not an entity"),
+        }
+        self.g
+            .add_edge(index, index, LegendEdge::ParticipatedIn { role });
+        self.g.add_edge(index, index, LegendEdge::Lineage);
+        Ok(())
+    }
 }
 
 /// Recency factor in (0,1]: nearer-in-epoch candidates score higher.

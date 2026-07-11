@@ -47,6 +47,7 @@ use civ_voxel::{
     DirtyChunkEvent, MaterialId, VoxelWorld, WorldCoord, FIXED_SCALE,
 };
 use hecs::{Entity, World};
+use rand::distributions::Distribution;
 use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
@@ -152,6 +153,54 @@ pub fn behavior_from_psyche(psyche: &civ_agents::Psyche) -> EmotionDrivenBehavio
 #[must_use]
 pub(crate) fn faction_cluster_id(faction_id: u32) -> ClusterId {
     ClusterId(u64::from(faction_id))
+}
+
+/// Return a stable ordering for pair-keyed faction state.
+fn canonical_faction_pair(a: u32, b: u32) -> (u32, u32) {
+    (a.min(b), a.max(b))
+}
+
+/// Choose a deterministic fallback pair for a faction roster.
+fn diplomacy_faction_pair(faction_ids: &[u32], tick: u64) -> (u32, u32) {
+    if faction_ids.len() < 2 {
+        return (0, 0);
+    }
+    let index = tick as usize % faction_ids.len();
+    (faction_ids[index], faction_ids[(index + 1) % faction_ids.len()])
+}
+
+/// Deterministic goods label used when a trade agreement becomes a route.
+fn emergent_route_goods(from: u32) -> &'static str {
+    match from % 3 {
+        0 => "grain",
+        1 => "ore",
+        _ => "cloth",
+    }
+}
+
+/// Select a named seed from a validated scenario mix, preserving the historical
+/// round-robin sequence when no mix is configured.
+fn choose_named_seed(
+    seed_mix: &[crate::scenario::SeedWeight],
+    distribution: Option<&rand::distributions::WeightedIndex<f32>>,
+    spawn_index: usize,
+    rng: &mut ChaCha8Rng,
+) -> civ_genetics::NamedSeed {
+    match (seed_mix, distribution) {
+        ([], _) => civ_genetics::named_seed_round_robin(spawn_index),
+        (mix, Some(distribution)) => mix[distribution.sample(rng)].seed,
+        (mix, None) => mix[spawn_index % mix.len()].seed,
+    }
+}
+
+/// Mean normalized distance between language centroids.
+fn average_language_distance(left: &LanguageState, right: &LanguageState) -> f32 {
+    left.centroid
+        .iter()
+        .zip(right.centroid.iter())
+        .map(|(a, b)| (a - b).abs())
+        .sum::<f32>()
+        / left.centroid.len() as f32
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -851,6 +900,8 @@ pub struct SimulationSnapshot {
     pub deaths_this_tick: u32,
     pub diplomacy_events: Vec<DiplomacyEvent>,
     pub market_prices: BTreeMap<String, i64>,
+    /// Per-cluster music parameters derived from current culture and aggression.
+    pub music_cues: BTreeMap<u64, MusicCue>,
     pub damage_events: usize,
     pub climate: Climate,
     pub weather_grid: Vec<WeatherCell>,
@@ -2829,6 +2880,12 @@ impl Simulation {
         &self.last_tick_mod_lifecycle
     }
 
+    /// Audio triggers emitted from simulation substrate changes on the most recent tick.
+    #[must_use]
+    pub fn last_tick_audio_events(&self) -> &[SfxTrigger] {
+        &self.last_tick_audio_events
+    }
+
     /// Ingest mod-host phase log lines: record permission violations on the replay bus and debug-log.
     fn ingest_mod_phase_lines(&mut self, lines: Vec<String>, tick: u64, phase: &str) {
         for line in lines {
@@ -4470,6 +4527,7 @@ impl Simulation {
             deaths_this_tick: self.last_deaths.len() as u32,
             diplomacy_events: self.diplomacy_events.clone(),
             market_prices: self.market_state.prices().clone(),
+            music_cues: self.last_tick_music_cues.clone(),
             damage_events: self.last_tick_combat_pulses.len(),
             climate: self.climate,
             weather_grid: self.weather_grid.clone(),
@@ -5461,7 +5519,7 @@ mod tests {
         let mut sim = Simulation::with_seed(42);
         sim.era_progression.faction_tech.insert(
             0,
-            crate::era::FactionTechState {
+            crate::tech::FactionTechState {
                 research_points: 240,
                 tech_level: 0,
                 diffusion_points: 0,
@@ -5630,6 +5688,10 @@ mod tests {
     /// placed AFTER emergence (and before `diffusion` propagation).
     #[test]
     fn phase_order_includes_emergence() {
+        let life_idx = PHASE_ORDER
+            .iter()
+            .position(|phase| *phase == "life")
+            .expect("PHASE_ORDER must include 'life'");
         let emergence_idx = PHASE_ORDER
             .iter()
             .position(|p| *p == "emergence")
@@ -7359,7 +7421,7 @@ mod tests {
     /// FR-CIV-DIPLOMACY — `Simulation::tick()` must keep updating faction
     /// relations so emergent proximity/trade/war signals can accumulate over time.
     #[test]
-    fn diplomacy_relations_evolve_through_sim_tick() {
+    fn diplomacy_tick_emits_trade_for_contact_pair() {
         let mut sim = Simulation::with_seed(91);
         sim.state.tick = 499;
 
@@ -8665,6 +8727,11 @@ mod tests {
         // and adults exist.
         #[test]
         fn phase_citizen_lifecycle_uses_should_reproduce() {
+            use civ_agents::{
+                spawn_civilian_at, ActorVisualKind, Alignment, Civilian as AgentCivilian,
+                Needs as AgentNeeds,
+            };
+
             let mut sim = Simulation::new();
             // Spawn three adults at well-fed state so reproduction can fire.
             for (i, id) in [700u64, 701, 702].iter().enumerate() {
@@ -8687,7 +8754,7 @@ mod tests {
             }
             // Ensure resources are non-zero so the food regen branch runs
             // (and so the early-death branch is not triggered).
-            sim.state.resources.food.to_bits() = 1000;
+            sim.state.resources.food = Fixed::from_num(1_000);
             sim.state.population = sim.state.population.max(count_civilians(&sim.world) as u64);
 
             // Run several birth windows (every 200 ticks).
@@ -8884,21 +8951,6 @@ pub mod genetics {
 }
 
 
-#[derive(Default)]
-struct CompatState {
-    faction_count: u32,
-    cohesion_events: Vec<CohesionEvent>,
-    unrest_events: Vec<UnrestEvent>,
-    unrest_levels: BTreeMap<u32, UnrestLevel>,
-    settlement_gini: BTreeMap<u32, f64>,
-}
-
-fn compat_state() -> &'static std::sync::Mutex<CompatState> {
-    static STATE: std::sync::OnceLock<std::sync::Mutex<CompatState>> =
-        std::sync::OnceLock::new();
-    STATE.get_or_init(|| std::sync::Mutex::new(CompatState::default()))
-}
-
 /// Mutable proxy around the voxel substrate so callers can queue writes
 /// without borrowing the full simulation state.
 pub struct VoxelWriteProxy<'a> {
@@ -8912,26 +8964,5 @@ impl<'a> VoxelWriteProxy<'a> {
 
     pub fn read(&self, pos: WorldCoord) -> MaterialId {
         self.sim.voxel.read(pos)
-    }
-}
-
-#[cfg(test)]
-mod compat_state_tests {
-    use super::*;
-
-    #[test]
-    fn compat_add_cohesion_records_state() {
-        add_cohesion(3, 2.4);
-        assert!(faction_count() >= 4);
-        assert!(!last_tick_cohesion().is_empty());
-        assert_eq!(last_tick_cohesion_settlement(3).len(), 1);
-    }
-
-    #[test]
-    fn compat_unrest_round_trips_gini() {
-        set_settlement_gini(9, 0.75);
-        assert_eq!(unrest_level(9), Some(UnrestLevel::Rioting));
-        assert_eq!(last_tick_unrest_settlement(9).len(), 1);
-        assert!(!last_tick_unrest().is_empty());
     }
 }

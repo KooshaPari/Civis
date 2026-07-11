@@ -1,12 +1,13 @@
 #![deny(unsafe_code)]
 
 use civ_agents::{spawn_civilian_at, spawn_many, ActorVisualKind, Alignment, Civilian, Position3d};
+use crate::Fixed;
 use civ_build::BuildingId;
 use crate::engine::BuildSite;
 use crate::spectator::BuildingKind;
 use civ_needs::{Health as LifeHealth, Needs as LifeNeeds};
 use civ_voxel::{
-    material::{GRAVEL, LAVA, MOSS, ORE, PLANT, SNOW, STEAM, STONE, WATER, WOOD},
+    material::{GRAVEL, LAVA, MOSS, ORE, PLANT, SAND, SNOW, STEAM, STONE, WATER, WOOD},
     AIR, MaterialId, WorldCoord, FIXED_SCALE,
 };
 use rand::SeedableRng;
@@ -23,6 +24,7 @@ pub enum GodToolRequest {
     Life(LifeRequest),
     Disaster(DisasterRequest),
     Inspect(InspectRequest),
+    Law(LawRequest),
 }
 /// TERRAIN verb parameters. The brush center is in fixed-point
 /// world coordinates (`civ_voxel::WorldCoord`); `radius_voxels`
@@ -515,6 +517,7 @@ pub enum GodToolError {
     InvalidRequest(String),
     InvalidDimension { field: &'static str, value: i32 },
     OutOfBounds { axis: &'static str, value: f32 },
+    NotImplemented { verb: &'static str },
 }
 
 impl std::fmt::Display for GodToolError {
@@ -527,6 +530,7 @@ impl std::fmt::Display for GodToolError {
             GodToolError::OutOfBounds { axis, value } => {
                 write!(f, "out-of-bounds {axis}: {value} (must be in [0, 1])")
             }
+            GodToolError::NotImplemented { verb } => write!(f, "god tool not implemented: {verb}"),
         }
     }
 }
@@ -803,6 +807,50 @@ impl Simulation {
             GodToolRequest::Life(l) => self.apply_life(l),
             GodToolRequest::Disaster(d) => self.apply_disaster(d),
             GodToolRequest::Inspect(i) => self.apply_inspect(i),
+            GodToolRequest::Law(l) => self.apply_law(l),
+        }
+    }
+
+    fn apply_law(&mut self, req: LawRequest) -> Result<GodToolReceipt, GodToolError> {
+        match req {
+            LawRequest::TaxBias {
+                target_faction,
+                bias,
+            } => {
+                let treasury = self
+                    .state
+                    .faction_treasury
+                    .entry(target_faction)
+                    .or_insert_with(|| Fixed::from_num(0));
+                *treasury += Fixed::from_num(bias);
+                Ok(GodToolReceipt::Law {
+                    verb: "law.tax_bias".to_string(),
+                    delta: bias,
+                })
+            }
+            LawRequest::ReligionPressure { pressure } => {
+                let delta = i64::try_from(pressure).unwrap_or(i64::MAX);
+                self.add_belief(delta);
+                Ok(GodToolReceipt::Law {
+                    verb: "law.religion_pressure".to_string(),
+                    delta,
+                })
+            }
+            LawRequest::DifficultyKnob {
+                scarcity_multiplier,
+            } => {
+                if !scarcity_multiplier.is_finite() || !(0.0..=10.0).contains(&scarcity_multiplier) {
+                    return Err(GodToolError::InvalidRequest(
+                        "difficulty_knob scarcity_multiplier must be finite and in [0, 10]".into(),
+                    ));
+                }
+                let previous = self.economy_policy.scarcity_multiplier;
+                self.economy_policy.scarcity_multiplier = scarcity_multiplier;
+                Ok(GodToolReceipt::Law {
+                    verb: "law.difficulty_knob".to_string(),
+                    delta: ((scarcity_multiplier - previous) * 10_000.0).round() as i64,
+                })
+            }
         }
     }
 
@@ -1897,6 +1945,24 @@ mod tests {
     use super::*;
     use crate::engine::Simulation;
 
+    fn terraform_request(
+        op: TerraformOp,
+        center: WorldCoord,
+        radius: i32,
+        delta: i32,
+        target_height: i32,
+        aux_id: u32,
+    ) -> TerraformRequest {
+        TerraformRequest {
+            op,
+            center,
+            delta,
+            target_height,
+            radius,
+            aux_id,
+        }
+    }
+
     /// `terrain.raise` must mutate the voxel substrate: the cell
     /// at the brush center must read back as `STONE` after the
     /// request is applied. This is the core "verb mutates the
@@ -1909,12 +1975,9 @@ mod tests {
             y: 0,
             z: 1_000_000,
         };
-        let req = GodToolRequest::Terraform(TerraformRequest {
-            op: TerraformOp::Raise,
-            center,
-            radius_voxels: 1,
-            strength: 1,
-        });
+        let req = GodToolRequest::Terraform(terraform_request(
+            TerraformOp::Raise, center, 1, 1, 0, 0,
+        ));
         let receipt = sim
             .apply_god_tool(req)
             .expect("terrain.raise should succeed");
@@ -1947,12 +2010,9 @@ mod tests {
             y: 0,
             z: 2_000_000,
         };
-        let req = GodToolRequest::Terraform(TerraformRequest {
-            op: TerraformOp::Lower,
-            center,
-            radius_voxels: 1,
-            strength: 1,
-        });
+        let req = GodToolRequest::Terraform(terraform_request(
+            TerraformOp::Lower, center, 1, 1, 0, 0,
+        ));
         sim.apply_god_tool(req).expect("terrain.lower should succeed");
         assert_eq!(
             sim.voxel().read(center),
@@ -2068,16 +2128,18 @@ mod tests {
     #[test]
     fn zero_radius_rejected() {
         let mut sim = Simulation::new();
-        let req = GodToolRequest::Terraform(TerraformRequest {
-            op: TerraformOp::Raise,
-            center: WorldCoord {
+        let req = GodToolRequest::Terraform(terraform_request(
+            TerraformOp::Raise,
+            WorldCoord {
                 x: 0,
                 y: 0,
                 z: 0,
             },
-            radius_voxels: 0,
-            strength: 1,
-        });
+            0,
+            1,
+            0,
+            0,
+        ));
         match sim.apply_god_tool(req) {
             Err(GodToolError::InvalidRequest(_)) => {}
             other => panic!("expected InvalidRequest, got {other:?}"),
@@ -2140,12 +2202,9 @@ mod tests {
             y: 0,
             z: 2_500_000,
         };
-        let req = GodToolRequest::Terraform(TerraformRequest {
-            op: TerraformOp::RaiseMountain,
-            center,
-            radius_voxels: 1,
-            strength: 1,
-        });
+        let req = GodToolRequest::Terraform(terraform_request(
+            TerraformOp::RaiseMountain, center, 1, 0, 1, 0,
+        ));
         let receipt = sim
             .apply_god_tool(req)
             .expect("terrain.raise_mountain should succeed");
@@ -2201,22 +2260,22 @@ mod tests {
 
         // Damage the actor first by writing Health::integrity low.
         if let Ok(mut h) = sim.world.get::<&mut LifeHealth>(entity) {
-            h.integrity = 20;
+            h.integrity = 0.2;
         } else {
             panic!("spawned entity must carry a Health component");
         }
         let before = sim.world.get::<&LifeHealth>(entity).unwrap().integrity;
 
         // Heal within a wide radius so we definitely hit it.
-        let heal = GodToolRequest::Life(LifeRequest::Heal {
+        let heal = GodToolRequest::Life(LifeRequest::Heal(ActorEffectRequest {
             center: WorldCoord {
                 x: 0,
                 y: 0,
                 z: 0,
             },
-            radius_voxels: u32::MAX,
-            amount: 30,
-        });
+            radius_voxels: u8::MAX,
+            strength: 0.3,
+        }));
         let affected = match sim
             .apply_god_tool(heal)
             .expect("life.heal should succeed")
@@ -2330,12 +2389,9 @@ mod tests {
             y: 0,
             z: 5_000_000,
         };
-        let req = GodToolRequest::Terraform(TerraformRequest {
-            op: TerraformOp::Slope,
-            center,
-            radius_voxels: 2,
-            strength: FIXED_SCALE as i32 * 2,
-        });
+        let req = GodToolRequest::Terraform(terraform_request(
+            TerraformOp::Slope, center, 2, 0, FIXED_SCALE as i32 * 2, 0,
+        ));
         let receipt = sim
             .apply_god_tool(req)
             .expect("terrain.slope should succeed");
@@ -2595,13 +2651,9 @@ mod tests {
             STONE,
         );
         let thickness = 2 * FIXED_SCALE;
-        let req = GodToolRequest::Terraform(TerraformRequest {
-            op: TerraformOp::AddLand,
-            center,
-            radius_voxels: 1,
-            strength: thickness as i32,
-            aux_id: 0,
-        });
+        let req = GodToolRequest::Terraform(terraform_request(
+            TerraformOp::AddLand, center, 1, 0, thickness as i32, 0,
+        ));
         let writes = match sim
             .apply_god_tool(req)
             .expect("terrain.add_land should succeed")
@@ -2653,13 +2705,14 @@ mod tests {
         // Expected new floor = plateau_top - 3*FIXED_SCALE =
         // 2*FIXED_SCALE. Cells between (new_floor,
         // plateau_top] become WATER.
-        let req = GodToolRequest::Terraform(TerraformRequest {
-            op: TerraformOp::DigOcean,
+        let req = GodToolRequest::Terraform(terraform_request(
+            TerraformOp::DigOcean,
             center,
-            radius_voxels: 1,
-            strength: 3 * FIXED_SCALE as i32,
-            aux_id: FIXED_SCALE as u32,
-        });
+            1,
+            3 * FIXED_SCALE as i32,
+            0,
+            FIXED_SCALE as u32,
+        ));
         let writes = match sim
             .apply_god_tool(req)
             .expect("terrain.dig_ocean should succeed")
@@ -2705,13 +2758,9 @@ mod tests {
             },
             STONE,
         );
-        let req = GodToolRequest::Terraform(TerraformRequest {
-            op: TerraformOp::DropBiome,
-            center,
-            radius_voxels: 1,
-            strength: 0,
-            aux_id: u32::from(SAND.0),
-        });
+        let req = GodToolRequest::Terraform(terraform_request(
+            TerraformOp::DropBiome, center, 1, 0, 0, u32::from(SAND.0),
+        ));
         let writes = match sim
             .apply_god_tool(req)
             .expect("terrain.drop_biome should succeed")
@@ -2747,12 +2796,9 @@ mod tests {
             y: FIXED_SCALE,
             z: 1_000_000,
         };
-        let req = GodToolRequest::Terraform(TerraformRequest {
-            op: TerraformOp::Flatten,
-            center,
-            radius_voxels: 1,
-            strength: 0,
-        });
+        let req = GodToolRequest::Terraform(terraform_request(
+            TerraformOp::Flatten, center, 1, 0, 0, 0,
+        ));
         let writes = match sim
             .apply_god_tool(req)
             .expect("terrain.flatten should succeed")

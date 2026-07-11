@@ -1985,6 +1985,150 @@ impl CivisMcpServer {
         .map(Json)
     }
 
+    /// Forward `sim.god_action` with substrate verb `terrain.drop_biome`.
+    #[tool(
+        name = "civis_god_action_terrain_drop_biome",
+        description = "Forward sim.god_action with verb=terrain.drop_biome."
+    )]
+    async fn civis_god_action_terrain_drop_biome(
+        &self,
+        Parameters(args): Parameters<GodActionVerbArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &args.transport,
+            "sim.god_action",
+            args.to_params_with_action("terrain.drop_biome"),
+            "civis_god_action_terrain_drop_biome",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.god_action` with substrate verb `material.erase`.
+    #[tool(
+        name = "civis_god_action_material_erase",
+        description = "Forward sim.god_action with verb=material.erase."
+    )]
+    async fn civis_god_action_material_erase(
+        &self,
+        Parameters(args): Parameters<GodActionVerbArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &args.transport,
+            "sim.god_action",
+            args.to_params_with_action("material.erase"),
+            "civis_god_action_material_erase",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.god_action` with substrate verb `material.replace`.
+    #[tool(
+        name = "civis_god_action_material_replace",
+        description = "Forward sim.god_action with verb=material.replace."
+    )]
+    async fn civis_god_action_material_replace(
+        &self,
+        Parameters(args): Parameters<GodActionVerbArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &args.transport,
+            "sim.god_action",
+            args.to_params_with_action("material.replace"),
+            "civis_god_action_material_replace",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.god_action` with substrate verb `material.surface_paint`.
+    #[tool(
+        name = "civis_god_action_material_surface_paint",
+        description = "Forward sim.god_action with verb=material.surface_paint."
+    )]
+    async fn civis_god_action_material_surface_paint(
+        &self,
+        Parameters(args): Parameters<GodActionVerbArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &args.transport,
+            "sim.god_action",
+            args.to_params_with_action("material.surface_paint"),
+            "civis_god_action_material_surface_paint",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.god_action` with substrate verb `material.pour_liquid`.
+    #[tool(
+        name = "civis_god_action_material_pour_liquid",
+        description = "Forward sim.god_action with verb=material.pour_liquid."
+    )]
+    async fn civis_god_action_material_pour_liquid(
+        &self,
+        Parameters(args): Parameters<GodActionVerbArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &args.transport,
+            "sim.god_action",
+            args.to_params_with_action("material.pour_liquid"),
+            "civis_god_action_material_pour_liquid",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.god_action` with substrate verb `material.seed_snow`.
+    #[tool(
+        name = "civis_god_action_material_seed_snow",
+        description = "Forward sim.god_action with verb=material.seed_snow."
+    )]
+    async fn civis_god_action_material_seed_snow(
+        &self,
+        Parameters(args): Parameters<GodActionVerbArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &args.transport,
+            "sim.god_action",
+            args.to_params_with_action("material.seed_snow"),
+            "civis_god_action_material_seed_snow",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.god_action` with substrate verb `material.seed_ore`.
+    #[tool(
+        name = "civis_god_action_material_seed_ore",
+        description = "Forward sim.god_action with verb=material.seed_ore."
+    )]
+    async fn civis_god_action_material_seed_ore(
+        &self,
+        Parameters(args): Parameters<GodActionVerbArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &args.transport,
+            "sim.god_action",
+            args.to_params_with_action("material.seed_ore"),
+            "civis_god_action_material_seed_ore",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.god_action` with substrate verb `life.spawn_organism`.
+    #[tool(
+        name = "civis_god_action_life_spawn_organism",
+        description = "Forward sim.god_action with verb=life.spawn_organism."
+    )]
+    async fn civis_god_action_life_spawn_organism(
+        &self,
+        Parameters(args): Parameters<GodActionVerbArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &args.transport,
+            "sim.god_action",
+            args.to_params_with_action("life.spawn_organism"),
+            "civis_god_action_life_spawn_organism",
+        )
+        .map(Json)
+    }
+
     /// Forward `sim.spawn_entity` to civ-server. Spawns a civilian,
     /// vehicle, airport, port, or hangar at a normalized map point.
     #[tool(

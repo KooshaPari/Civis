@@ -2854,6 +2854,9 @@ impl Simulation {
         self.phase_disasters();
         self.phase_emergence();
         self.phase_emergence_events_close();
+        // Run after all event-producing phases so this tick's combat,
+        // construction, and disaster triggers reach the snapshot.
+        self.phase_audio();
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]
@@ -10764,6 +10767,23 @@ mod tests {
                 }
                 other => panic!("expected Battle trigger, got {other:?}"),
             }
+        }
+
+        #[test]
+        fn tick_invokes_phase_audio() {
+            use civ_agents::culture::CultureProfile;
+
+            let mut sim = Simulation::new();
+            sim.cluster_cultures
+                .insert(7, CultureProfile::new([0.4, 0.5, 0.6, 0.7]));
+            assert!(sim.last_tick_music_cues.is_empty());
+
+            sim.tick();
+
+            assert!(
+                sim.last_tick_music_cues.contains_key(&7),
+                "tick should run phase_audio and populate music cues"
+            );
         }
 
         /// FR-MUSIC-001 — two cultures produce distinct, drifting music-cue

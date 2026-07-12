@@ -30,6 +30,8 @@ pub enum SfxKind {
     Birth,
     /// An agent died.
     Death,
+    /// A battle occurred.
+    Battle,
     /// A disaster fired (fire / flood / quake).
     Disaster,
     /// A building was constructed.
@@ -77,6 +79,7 @@ pub struct AudioFiles {
     pub ui_click: String,
     pub birth: String,
     pub death: String,
+    pub battle: String,
     pub disaster: String,
     pub build: String,
     pub diplomatic: String,
@@ -90,6 +93,7 @@ impl Default for AudioFiles {
             ui_click: "audio/ui_click.ogg".to_string(),
             birth: "audio/birth.ogg".to_string(),
             death: "audio/death.ogg".to_string(),
+            battle: "audio/sfx_battle.ogg".to_string(),
             disaster: "audio/sfx_disaster.ogg".to_string(),
             build: "audio/build.ogg".to_string(),
             diplomatic: "audio/sfx_diplomatic.ogg".to_string(),
@@ -105,6 +109,7 @@ pub struct AudioHandles {
     pub ui_click: Handle<bevy_kira_audio::AudioSource>,
     pub birth: Handle<bevy_kira_audio::AudioSource>,
     pub death: Handle<bevy_kira_audio::AudioSource>,
+    pub battle: Handle<bevy_kira_audio::AudioSource>,
     pub disaster: Handle<bevy_kira_audio::AudioSource>,
     pub build: Handle<bevy_kira_audio::AudioSource>,
     pub diplomatic: Handle<bevy_kira_audio::AudioSource>,
@@ -119,6 +124,7 @@ impl AudioHandles {
             SfxKind::UiClick => self.ui_click.clone(),
             SfxKind::Birth => self.birth.clone(),
             SfxKind::Death => self.death.clone(),
+            SfxKind::Battle => self.battle.clone(),
             SfxKind::Disaster => self.disaster.clone(),
             SfxKind::Build => self.build.clone(),
             SfxKind::Diplomatic => self.diplomatic.clone(),
@@ -158,10 +164,7 @@ pub fn sfx_from_audio_event(event: &crate::AudioEventWire) -> (SfxKind, f32) {
         crate::AudioEventWire::Death => (SfxKind::Death, 1.0),
         crate::AudioEventWire::Build => (SfxKind::Build, 1.0),
         crate::AudioEventWire::Tech => (SfxKind::Tech, 1.0),
-        // No dedicated battle clip yet — reuse the disaster sting at intensity.
-        crate::AudioEventWire::Battle { intensity } => {
-            (SfxKind::Disaster, intensity.clamp(0.0, 1.0))
-        }
+        crate::AudioEventWire::Battle { intensity } => (SfxKind::Battle, intensity.clamp(0.0, 1.0)),
         crate::AudioEventWire::Disaster { severity, .. } => {
             (SfxKind::Disaster, severity.clamp(0.0, 1.0))
         }
@@ -199,6 +202,7 @@ fn load_audio(
     handles.ui_click = asset_server.load(files.ui_click.clone());
     handles.birth = asset_server.load(files.birth.clone());
     handles.death = asset_server.load(files.death.clone());
+    handles.battle = asset_server.load(files.battle.clone());
     handles.disaster = asset_server.load(files.disaster.clone());
     handles.build = asset_server.load(files.build.clone());
     handles.diplomatic = asset_server.load(files.diplomatic.clone());
@@ -356,6 +360,7 @@ mod tests {
         let files = AudioFiles::default();
         assert!(files.ambient.starts_with("audio/"));
         assert!(files.ui_click.ends_with(".ogg"));
+        assert_eq!(files.battle, "audio/sfx_battle.ogg");
         assert!(files.diplomatic.starts_with("audio/"));
         assert!(files.tech.starts_with("audio/"));
     }
@@ -367,6 +372,7 @@ mod tests {
             SfxKind::UiClick,
             SfxKind::Birth,
             SfxKind::Death,
+            SfxKind::Battle,
             SfxKind::Disaster,
             SfxKind::Build,
             SfxKind::Diplomatic,
@@ -374,6 +380,14 @@ mod tests {
         ] {
             let _ = handles.for_kind(kind);
         }
+    }
+
+    #[test]
+    fn battle_audio_event_maps_to_dedicated_battle_sfx() {
+        let (kind, volume) =
+            sfx_from_audio_event(&crate::AudioEventWire::Battle { intensity: 1.5 });
+        assert_eq!(kind, SfxKind::Battle);
+        assert!((volume - 1.0).abs() < f32::EPSILON);
     }
 
     #[test]

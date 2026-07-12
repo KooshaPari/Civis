@@ -194,6 +194,8 @@ Finish-readiness rule: a row is only safe to treat as release-ready when the lis
 | FR-CIV-PROTO3D-000 | Stub. | `crates/protocol-3d/` | `protocol3d::schema_version_stub` | implemented |
 | FR-CIV-PROTO3D-001 | Voxel delta frames binary serialize; lossless round-trip. | `crates/protocol-3d/` | `protocol3d::voxel_delta_roundtrip` | implemented |
 | FR-CIV-PROTO3D-002 | Building diff frames carry procedural vs freehand provenance. | `crates/protocol-3d/` | `protocol3d::building_diff_provenance` | implemented |
+| FR-CIV-PROTO3D-009-live | Live `BuildingDiffFrame` fills ECS `buildings` + `BuildingGraph` (not empty stub). | `crates/server/src/ws_bridge.rs` `build_building_diff_frame` | `build_building_diff_frame_emits_ecs_buildings_and_graph` | implemented |
+| FR-CIV-BUILD-010-live | Demand allocation graph reaches Bevy via tick bundle `Frame3d::BuildingDiff.graph`. | `crates/server/src/ws_bridge.rs`, `clients/bevy-ref/src/live_stream.rs` | `build_building_diff_frame_emits_ecs_buildings_and_graph`, `phase_buildings_allocates_over_time_when_signals_are_high` | implemented |
 
 ---
 
@@ -209,4 +211,4 @@ Finish-readiness rule: a row is only safe to treat as release-ready when the lis
 
 ---
 
-*Last updated: 2026-05-25. Source of truth for FR text: `docs/development-guide/fr-3d-additions.md`.*
+*Last updated: 2026-07-12. Source of truth for FR text: `docs/development-guide/fr-3d-additions.md`.*

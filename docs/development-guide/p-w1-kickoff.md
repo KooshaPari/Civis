@@ -113,6 +113,7 @@
 26. **Live WS attach + render-to-texture minimap** — **done** (item 27): `civ-standalone` server attach via `CIVIS_ATTACH=server` / `CIV_WS_URL`, `LiveAttachPlugin`, RTT minimap camera.
 27. **Live attach scene sync** — **done** (item 28): `live_scene` applies `Frame3d::VoxelDelta` / `AgentAppearance`; server mode skips sandbox terrain; minimap dots from live chunks/agents.
 28. **Building-diff + agent positions** — **done** (item 29): protocol `WorldXZ` / `BuildingDiffEntry`; civ-server fills frames; `live_scene` renders buildings and uses `agent_world_translation`.
+   - **Regression note (closed 2026-07-12):** `build_frame_bundle` had drifted to `buildings: []` + `graph: None`. Restored via `build_building_diff_frame` (FR-CIV-PROTO3D-009-live).
 29. **Live scene focus + provenance styling** — **done** (item 30): `LiveSceneFocus` drives camera rig + minimap ortho; procedural vs freehand building materials and minimap dots.
 30. **Terrain anchoring for live entities** — **done** (item 31): `terrain_surface_y` snaps streamed agents/buildings to procedural height in `live_scene`.
 31. **BuildingGraph on live attach** — **done** (item 32): optional `BuildingDiffFrame.graph` from civ-server; `live_scene` renders parcels with facade/provenance styling.

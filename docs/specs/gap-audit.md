@@ -296,3 +296,12 @@ Per the reuse protocol (confirm destination with user before extraction):
 - **`phenotype-ai`** — `AiProvider` trait + cache + pool + preflight from `civ-ai` (domain-agnostic).
 - **NaN/clamp guard utilities** — a shared `phenotype-num` resilience helper for all float-sim repos.
 - **Visual-regression harness** — the F9/F10 capture + a diff gate generalizes across Bevy clients.
+
+---
+
+## Machine changelog (status + evidence — do not wipe historical rows)
+
+| Date | Gap / ID | Delta | Status | Evidence |
+|------|----------|-------|--------|----------|
+| 2026-07-12 | Cities leave engine / live BuildingDiff | `ws_bridge` no longer stubs empty buildings/graph | closed | `build_building_diff_frame`; FR-CIV-PROTO3D-009-live; `Civis-wtrees/_prompts/OUT-fr-gaps.md` |
+| 2026-07-12 | GAP-AUDIO-* / tech_state / faction_decisions / outcome HUD | Still open playability debt | open | WBS P1–P2 in `WBS-playability-2026-07-12.md` |

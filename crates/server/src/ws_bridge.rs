@@ -20,16 +20,17 @@ use axum::{
 };
 use civ_agents::{Civilian as AgentCivilian, Needs, Tools, Wardrobe};
 use civ_engine::{
-    decode_civreplay, encode_civreplay, job_type_for_civilian_id,
+    decode_civreplay, encode_civreplay, grid_to_norm, job_type_for_civilian_id,
     scenario::{load_scenario, preset_scenario_path},
-    Citizen, CivSaveBundle, DiplomacyKind, JobType, Simulation,
+    Building, BuildingType, Citizen, CivSaveBundle, DiplomacyKind, JobType, Simulation,
 };
 use civ_protocol_3d::{
     encode_frame3d_binary, encode_frame3d_binary_from_json, AgentAppearanceFrame,
-    AgentAppearanceUpdate, BattleEvent3d, BirthEvent3d, BuildingDiffFrame, BuildingProvenance,
-    CivilianNeeds3d, CivilianStateEntry, CivilianStateFrame, ClimateFrame, DeathEvent3d,
-    EventFeedFrame, EventFeedMessage3d, FactionStateEntry, FactionStateFrame, FactionTreasury3d,
-    Frame3d, GenomeSummary3d, Government3d, TechEvent3d, WorldXZ,
+    AgentAppearanceUpdate, BattleEvent3d, BirthEvent3d, BuildingDiffEntry, BuildingDiffFrame,
+    BuildingKind3d, BuildingProvenance, CivilianNeeds3d, CivilianStateEntry, CivilianStateFrame,
+    ClimateFrame, DeathEvent3d, EventFeedFrame, EventFeedMessage3d, FactionStateEntry,
+    FactionStateFrame, FactionTreasury3d, Frame3d, GenomeSummary3d, Government3d, TechEvent3d,
+    WorldXZ,
 };
 use civ_save_db::SaveDb;
 use futures::{SinkExt, StreamExt};
@@ -884,20 +885,63 @@ fn build_event_feed_frame(sim: &Simulation, tick: u64) -> EventFeedFrame {
     EventFeedFrame { tick, events }
 }
 
+/// Map engine ECS building types onto the 3D wire kind enum.
+fn building_kind_3d(building_type: BuildingType) -> BuildingKind3d {
+    match building_type {
+        BuildingType::Farm => BuildingKind3d::Farm,
+        BuildingType::Mine => BuildingKind3d::Mine,
+        BuildingType::Barracks => BuildingKind3d::Barracks,
+        BuildingType::Temple => BuildingKind3d::Temple,
+        BuildingType::Market => BuildingKind3d::Market,
+        BuildingType::House => BuildingKind3d::House,
+        BuildingType::CityCenter => BuildingKind3d::CityCenter,
+    }
+}
+
+/// Frame-level provenance: Freehand if any parcel was authored freehand, else Procedural.
+fn frame_building_provenance(graph: &civ_build::BuildingGraph) -> BuildingProvenance {
+    if graph
+        .provenance
+        .values()
+        .any(|p| matches!(p, civ_build::BuildingProvenance::Freehand))
+    {
+        BuildingProvenance::Freehand
+    } else {
+        BuildingProvenance::Procedural
+    }
+}
+
+/// Live BuildingDiff: ECS markers + full [`BuildingGraph`] so Bevy can show cities.
+fn build_building_diff_frame(sim: &Simulation, tick: u64) -> BuildingDiffFrame {
+    let graph = sim.building_graph().clone();
+    let mut buildings: Vec<BuildingDiffEntry> = sim
+        .world
+        .query::<&Building>()
+        .iter()
+        .map(|(entity, building)| {
+            let (x, z) = grid_to_norm(building.position);
+            BuildingDiffEntry {
+                id: entity.to_bits().get(),
+                kind: building_kind_3d(building.building_type),
+                tier: 0,
+                position: WorldXZ { x, z },
+            }
+        })
+        .collect();
+    buildings.sort_by_key(|entry| entry.id);
+    BuildingDiffFrame {
+        tick,
+        provenance: frame_building_provenance(&graph),
+        buildings,
+        graph: Some(graph),
+    }
+}
+
 fn build_frame_bundle(sim: &Simulation) -> Result<[Frame3d; FRAME_BUNDLE_LEN], String> {
     let tick = sim.state.tick;
     let voxel = build_voxel_delta_frame(tick, sim.last_tick_voxel_events(), sim.voxel())
         .map_err(|e| e.to_string())?;
-    let building = BuildingDiffFrame {
-        tick,
-        provenance: if sim.snapshot().building_count % 2 == 0 {
-            BuildingProvenance::Procedural
-        } else {
-            BuildingProvenance::Freehand
-        },
-        buildings: Vec::new(),
-        graph: None,
-    };
+    let building = build_building_diff_frame(sim, tick);
     Ok([
         Frame3d::VoxelDelta(voxel),
         Frame3d::BuildingDiff(building),
@@ -2026,6 +2070,40 @@ mod tests {
                 "seed {seed} must return exactly {FRAME_BUNDLE_LEN} frames"
             );
         }
+    }
+
+    /// Live BuildingDiff carries ECS markers on every seed; graph grows with demand.
+    #[test]
+    fn build_building_diff_frame_emits_ecs_buildings_and_graph() {
+        let mut sim = Simulation::with_seed(77);
+        sim.state.resources.wood = civ_engine::Fixed::from_num(800);
+        sim.state.resources.metal = civ_engine::Fixed::from_num(800);
+
+        let fresh = build_building_diff_frame(&sim, sim.state.tick);
+        assert!(
+            !fresh.buildings.is_empty(),
+            "seed sims spawn city center + farms into ECS"
+        );
+        assert!(
+            fresh
+                .buildings
+                .iter()
+                .any(|b| b.kind == BuildingKind3d::CityCenter),
+            "must include CityCenter"
+        );
+        assert!(fresh.graph.is_some(), "graph snapshot must be present");
+
+        let before_parcels = fresh.graph.as_ref().map(|g| g.parcels.len()).unwrap_or(0);
+        for _ in 0..200 {
+            sim.tick();
+        }
+        let warmed = build_building_diff_frame(&sim, sim.state.tick);
+        let after_parcels = warmed.graph.as_ref().map(|g| g.parcels.len()).unwrap_or(0);
+        assert!(
+            after_parcels > before_parcels,
+            "phase_buildings should allocate parcels (before={before_parcels} after={after_parcels})"
+        );
+        assert_eq!(warmed.provenance, BuildingProvenance::Procedural);
     }
 
     #[test]

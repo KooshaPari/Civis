@@ -1,4 +1,4 @@
-use civ_voxel::material::{MaterialDef, Phase};
+use civ_voxel::material::{MaterialDef, Phase, TptThermalProps};
 use civ_voxel::MaterialId;
 use serde::{Deserialize, Serialize};
 
@@ -43,6 +43,14 @@ impl CustomMaterial {
             flow_rate: spec.flow_rate,
             viscosity: spec.viscosity,
             angle_of_repose: spec.angle_of_repose,
+            tpt_thermal: TptThermalProps {
+                heat_conduct: 128,
+                melt_point: Some(i16::MAX as i32),
+                boil_point: Some(i16::MAX as i32),
+                freeze_point: Some(i16::MAX as i32),
+                latent_heat: 0,
+                phase_target: None,
+            },
             heat_conduct: 128,
             melting_point: i16::MAX,
             boiling_point: i16::MAX,

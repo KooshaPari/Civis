@@ -6,6 +6,7 @@ Build with `--features audio` to activate.
 | File | Description | Suggested source |
 |------|-------------|-----------------|
 | `ambient_wind.ogg` | Looping ambient bed | freesound.org / kenney.nl nature packs (CC0) |
+| `sfx_battle.ogg` | Battle event | freesound.org CC0 (weapons/impact) |
 | `sfx_disaster.ogg` | Disaster event | freesound.org CC0 (rumble/impact) |
 | `sfx_diplomatic.ogg` | Diplomatic event | kenney.nl "UI Audio" (CC0) |
 | `sfx_tech.ogg` | Technology unlock | kenney.nl "Interface Sounds" (CC0) |

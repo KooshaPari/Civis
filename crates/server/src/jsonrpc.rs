@@ -869,8 +869,8 @@ pub fn snapshot_fields_from_sim(
             .filter_map(AudioEventSnapshot::from_engine)
             .collect(),
         emergence: sim.last_emergence_sample().map(EmergenceSampleFields::from),
-        researched: vec![],
-        in_progress_tech: None,
+        researched: snap.researched.clone(),
+        in_progress_tech: snap.in_progress_tech.clone(),
     }
 }
 

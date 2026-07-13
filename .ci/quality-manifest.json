@@ -1,8 +1,8 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "5592eedf0686bf439dfd8ed2933fd2ad1b9399f3",
-  "created_at": "2026-07-13T01:07:21Z",
+  "git_sha": "6e84d5f2f62cf9d0f67165f9ce6327a2f71da0f4",
+  "created_at": "2026-07-13T01:52:53Z",
   "runner": {
     "host": "KOOSHAPARI-DESK",
     "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
@@ -14,11 +14,11 @@
     },
     "web_test": {
       "status": "pass",
-      "detail": "included in just civis-3d-verify"
+      "detail": ""
     },
     "dashboard_typecheck": {
       "status": "pass",
-      "detail": "bun run typecheck"
+      "detail": ""
     },
     "unreal_preflight": {
       "status": "skip",
@@ -61,5 +61,5 @@
       "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     }
   },
-  "manifest_hash": "779a631c31b39d0bc5129e0ef2d3212a12b7c3e7d082e35b7476cb1c4070ba2e"
+  "manifest_hash": "f2e1ed5ce34f9ffafa24609517c1b9df7ec1455fe9d005e20ce651e104ab52e2"
 }

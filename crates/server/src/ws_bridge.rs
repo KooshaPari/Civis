@@ -511,7 +511,13 @@ async fn handle_jsonrpc_text(
             };
 
             let (research_researched, research_in_progress): (Vec<String>, Option<String>) =
-                (vec![], None);
+                if req.method == JsonRpcMethod::SimTechState {
+                    let sim = state.sim.lock().await;
+                    let snap = sim.snapshot();
+                    (snap.researched, snap.in_progress_tech)
+                } else {
+                    (vec![], None)
+                };
             let outcome_fields = if req.method == crate::jsonrpc::JsonRpcMethod::SimOutcome {
                 let sim = state.sim.lock().await;
                 let outcome = sim.last_game_outcome.clone();
@@ -2469,6 +2475,39 @@ mod tests {
                 .pointer("/result/speed_multiplier")
                 .and_then(|v| v.as_u64()),
             Some(4)
+        );
+    }
+
+    #[tokio::test]
+    async fn jsonrpc_tech_state_reads_research_cache() {
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(19)));
+        {
+            let mut guard = sim.lock().await;
+            guard
+                .research_cache_mut()
+                .researched
+                .push("pottery".to_owned());
+            guard.research_cache_mut().in_progress = Some(("writing".to_owned(), 3));
+        }
+        let (_dir, state) = test_app_state(sim, 5, 1, false);
+        let mut connection_role = None;
+
+        let text = handle_jsonrpc_text(
+            r#"{"jsonrpc":"2.0","id":9,"method":"sim.tech_state","params":{}}"#,
+            &state,
+            &mut connection_role,
+            test_subscription_filter(),
+        )
+        .await;
+        let value: serde_json::Value = serde_json::from_str(&text).expect("sim.tech_state json");
+
+        assert_eq!(
+            value.pointer("/result/researched"),
+            Some(&serde_json::json!(["pottery"]))
+        );
+        assert_eq!(
+            value.pointer("/result/in_progress"),
+            Some(&serde_json::json!("writing"))
         );
     }
 

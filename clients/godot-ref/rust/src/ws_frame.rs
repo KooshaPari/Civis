@@ -177,6 +177,8 @@ mod tests {
         let frame = Frame3d::BuildingDiff(BuildingDiffFrame {
             tick: 42,
             provenance: BuildingProvenance::Procedural,
+            buildings: vec![],
+            graph: None,
         });
         let bytes = encode_frame3d_binary(&frame).expect("encode fixture");
         assert!(bytes.starts_with(FRAME3D_BINARY_MAGIC));

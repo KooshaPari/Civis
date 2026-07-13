@@ -2539,7 +2539,7 @@ impl Simulation {
     }
 
     pub fn researched_tech_count(&self) -> usize {
-        0
+        self.research_cache.researched.len()
     }
 
     /// Read-only access to the current climate state (same-crate accessor so
@@ -5645,6 +5645,12 @@ impl Simulation {
             faction_eras: self.era_progression.faction_era_snapshots(self),
             tutorial_progress: self.tutorial_progress.clone(),
             music_cues: self.last_tick_music_cues.clone(),
+            researched: self.research_cache.researched.clone(),
+            in_progress_tech: self
+                .research_cache
+                .in_progress
+                .as_ref()
+                .map(|(tech, _)| tech.clone()),
         }
     }
 
@@ -7527,6 +7533,12 @@ pub struct SimulationSnapshot {
     /// Per-cluster music cues derived during the audio phase.
     #[serde(default)]
     pub music_cues: BTreeMap<u64, MusicCue>,
+    /// Fully-researched tech ids/names from [`ResearchCache`].
+    #[serde(default)]
+    pub researched: Vec<String>,
+    /// Tech id/name currently being researched, if any.
+    #[serde(default)]
+    pub in_progress_tech: Option<String>,
 }
 
 // ADR-020 phase stubs (FR-PLAY-click-to-fire prerequisite: tick() compiles).
@@ -7884,6 +7896,21 @@ mod tests {
             sim_b.cluster_cultures().len(),
             "phase_emergence must produce deterministic cluster_cultures"
         );
+    }
+
+    #[test]
+    fn snapshot_exposes_research_cache_tech_state() {
+        let mut sim = Simulation::with_seed(42);
+        sim.research_cache_mut()
+            .researched
+            .push("pottery".to_owned());
+        sim.research_cache_mut().in_progress = Some(("writing".to_owned(), 3));
+
+        let snapshot = sim.snapshot();
+
+        assert_eq!(snapshot.researched, ["pottery"]);
+        assert_eq!(snapshot.in_progress_tech.as_deref(), Some("writing"));
+        assert_eq!(sim.researched_tech_count(), 1);
     }
 
     #[test]

@@ -13,7 +13,7 @@ use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 use crate::live_stream::LiveStreamScene;
 use crate::outcome_overlay::OutcomeOverlayState;
-use crate::MusicCues;
+use crate::{MusicCues, OutcomeProgressHud};
 
 // ── Palette (mirrors emergence_dashboard / faction_hud) ───────────────────────
 
@@ -28,7 +28,6 @@ const TEAL: egui::Color32 = egui::Color32::from_rgb(126, 186, 181);
 // Victory thresholds (mirrors conditions.rs constants for progress display)
 const POPULATION_VICTORY_TARGET: u32 = 10_000;
 const TECH_VICTORY_TARGET: usize = 12;
-const PEACE_TICKS_TARGET: u64 = 500;
 
 // ── Resource ──────────────────────────────────────────────────────────────────
 
@@ -51,6 +50,7 @@ impl Plugin for GameplayHudPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GameplayHudOpen>()
             .init_resource::<MusicCues>()
+            .init_resource::<OutcomeProgressHud>()
             .add_systems(Update, toggle_gameplay_hud)
             .add_systems(EguiPrimaryContextPass, draw_gameplay_hud);
     }
@@ -72,6 +72,7 @@ fn draw_gameplay_hud(
     open: Res<GameplayHudOpen>,
     scene: Res<LiveStreamScene>,
     music_cues: Res<MusicCues>,
+    outcome_progress: Res<OutcomeProgressHud>,
     outcome_state: Option<Res<OutcomeOverlayState>>,
 ) {
     if !open.0 {
@@ -170,32 +171,69 @@ fn draw_gameplay_hud(
             ui.label(egui::RichText::new("Victory Progress").color(GOLD).strong().small());
             ui.add_space(4.0);
 
-            // Population victory
-            let pop_progress = (total_pop as f32 / POPULATION_VICTORY_TARGET as f32).clamp(0.0, 1.0);
+            let live = outcome_progress.0.as_ref();
+
+            // Population victory — snapshot population is authoritative when attached.
+            let population = live.map(|p| p.population).unwrap_or(u64::from(total_pop));
+            let population_target = live
+                .map(|p| p.population_target)
+                .unwrap_or(u64::from(POPULATION_VICTORY_TARGET));
+            let pop_progress = if population_target > 0 {
+                (population as f32 / population_target as f32).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
             victory_bar(
                 ui,
                 "Population",
                 pop_progress,
-                &format!("{}/{}", total_pop, POPULATION_VICTORY_TARGET),
+                &format!("{population}/{population_target}"),
             );
 
-            // Tech victory (use faction count as proxy when no tech data available)
-            let tech_count = scene.faction_entries.iter().map(|e| e.era as usize).max().unwrap_or(0);
-            let tech_progress = (tech_count as f32 / TECH_VICTORY_TARGET as f32).clamp(0.0, 1.0);
+            // Tech victory — retain an explicitly-labelled era fallback for old servers.
+            let era_proxy = scene
+                .faction_entries
+                .iter()
+                .map(|e| e.era as usize)
+                .max()
+                .unwrap_or(0);
+            let tech_count = live.map(|p| p.researched_techs).unwrap_or(era_proxy);
+            let tech_target = live
+                .map(|p| p.researched_techs_target)
+                .unwrap_or(TECH_VICTORY_TARGET);
+            let tech_progress = if tech_target > 0 {
+                (tech_count as f32 / tech_target as f32).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
             victory_bar(
                 ui,
-                "Technology (era)",
+                if live.is_some() {
+                    "Technology"
+                } else {
+                    "Technology (era proxy)"
+                },
                 tech_progress,
-                &format!("{}/{}", tech_count, TECH_VICTORY_TARGET),
+                &format!("{tech_count}/{tech_target}"),
             );
 
-            // Peace victory (we don't have tick info here, show as unknown)
-            victory_bar(
-                ui,
-                "Peace (500 ticks)",
-                0.0,
-                "—",
-            );
+            // Peace victory — never present a hard-coded zero as live data.
+            if let Some(progress) = live {
+                let peace_fraction = if progress.peace_ticks_target > 0 {
+                    (progress.peace_ticks as f32 / progress.peace_ticks_target as f32)
+                        .clamp(0.0, 1.0)
+                } else {
+                    0.0
+                };
+                victory_bar(
+                    ui,
+                    "Peace",
+                    peace_fraction,
+                    &format!("{}/{}", progress.peace_ticks, progress.peace_ticks_target),
+                );
+            } else {
+                victory_bar(ui, "Peace", 0.0, "awaiting snapshot");
+            }
         });
 }
 

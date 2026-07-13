@@ -2871,6 +2871,8 @@ impl Simulation {
         // Run after all event-producing phases so this tick's combat,
         // construction, and disaster triggers reach the snapshot.
         self.phase_audio();
+        // Victory/defeat after event phases so last_game_outcome matches this tick.
+        self.phase_victory_check();
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]
@@ -5671,6 +5673,7 @@ impl Simulation {
                 .in_progress
                 .as_ref()
                 .map(|(tech, _)| tech.clone()),
+            outcome_progress: crate::conditions::outcome_progress(self),
             last_tick_faction_unrest_response_intents: self
                 .state
                 .last_tick_faction_unrest_response_intents
@@ -7563,6 +7566,9 @@ pub struct SimulationSnapshot {
     /// Tech id/name currently being researched, if any.
     #[serde(default)]
     pub in_progress_tech: Option<String>,
+    /// Live progress toward the victory conditions used by `check_outcome`.
+    #[serde(default)]
+    pub outcome_progress: crate::conditions::OutcomeProgress,
     /// Factions that raised an unrest-response intent during the most recent tick.
     #[serde(default)]
     pub last_tick_faction_unrest_response_intents: BTreeSet<u32>,

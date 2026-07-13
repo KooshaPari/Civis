@@ -1051,6 +1051,12 @@ pub struct Simulation {
     /// bridge can read it without re-deriving from the world.
     last_settlement_ids: Vec<u64>,
     research_cache: ResearchCache,
+    /// Number of researched entries already translated into Tech audio triggers.
+    ///
+    /// `ResearchCache::researched` is append-only in normal operation. Keeping
+    /// the watermark outside the serialized cache prevents existing research
+    /// from replaying as fresh audio after construction or replay load.
+    last_audio_researched_len: usize,
     /// Per-faction emergent era/tech progression (FR-ERA).
     pub(crate) era_progression: crate::era::EraProgressionState,
     /// Per-faction relation matrix (FR-CIV-DIPLOMACY).
@@ -1938,6 +1944,7 @@ impl Simulation {
             diplomacy_events: Vec::new(),
             next_civilian_id: 1_000_000,
             research_cache: ResearchCache::default(),
+            last_audio_researched_len: 0,
             era_progression: crate::era::EraProgressionState::default(),
             faction_relations: FactionRelations::default(),
             grief_accumulator: GriefAccumulator::default(),
@@ -2088,6 +2095,7 @@ impl Simulation {
             diplomacy_events: Vec::new(),
             next_civilian_id: 1_000_000,
             research_cache: ResearchCache::default(),
+            last_audio_researched_len: 0,
             era_progression: crate::era::EraProgressionState::default(),
             faction_relations: FactionRelations::default(),
             grief_accumulator: GriefAccumulator::default(),
@@ -2989,6 +2997,7 @@ impl Simulation {
         let mut sim = Self::with_seed(log.seed);
         log.replay(&mut sim)?;
         sim.replay_log = log;
+        sim.last_audio_researched_len = sim.research_cache.researched.len();
         Ok(sim)
     }
 
@@ -4675,6 +4684,8 @@ impl Simulation {
     ///   are quieter without leaking exact unit coordinates.
     /// - One [`SfxTrigger::Build`] per completed-building
     ///   `ProductionEvent` (the "Produced" variant).
+    /// - One [`SfxTrigger::Birth`] / [`SfxTrigger::Death`] per lifecycle event.
+    /// - One [`SfxTrigger::Tech`] per newly appended researched-tech entry.
     /// - [`SfxTrigger::Disaster`]s are pushed by `trigger_disaster` /
     ///   `phase_disasters` via [`Self::record_disaster_audio`]; this
     ///   phase only forwards what's already in the per-tick buffer.
@@ -4685,6 +4696,16 @@ impl Simulation {
     fn phase_audio(&mut self) {
         let mut events: Vec<SfxTrigger> =
             Vec::with_capacity(self.last_tick_audio_events.capacity());
+
+        events.extend(self.last_births.iter().map(|_| SfxTrigger::Birth));
+        events.extend(self.last_deaths.iter().map(|_| SfxTrigger::Death));
+
+        let researched_len = self.research_cache.researched.len();
+        if researched_len > self.last_audio_researched_len {
+            events
+                .extend((self.last_audio_researched_len..researched_len).map(|_| SfxTrigger::Tech));
+        }
+        self.last_audio_researched_len = researched_len;
 
         // Combat pulses → Battle triggers. Volume scales with normalized
         // proximity to the world center so loudest battles are the ones
@@ -10767,6 +10788,39 @@ mod tests {
                 }
                 other => panic!("expected Battle trigger, got {other:?}"),
             }
+        }
+
+        #[test]
+        fn fr_audio_wire_lifecycle_and_research_emit_birth_death_tech() {
+            let mut sim = Simulation::new();
+            sim.last_births.push(PopulationEvent {
+                tick: sim.state.tick,
+                entity_id: 1,
+                x: 0.25,
+                y: 0.5,
+            });
+            sim.last_deaths.push(PopulationEvent {
+                tick: sim.state.tick,
+                entity_id: 2,
+                x: 0.75,
+                y: 0.5,
+            });
+            sim.research_cache.researched.push("agriculture".to_owned());
+
+            sim.phase_audio();
+
+            assert_eq!(
+                sim.last_tick_audio_events(),
+                &[SfxTrigger::Birth, SfxTrigger::Death, SfxTrigger::Tech]
+            );
+
+            sim.last_births.clear();
+            sim.last_deaths.clear();
+            sim.phase_audio();
+            assert!(
+                sim.last_tick_audio_events().is_empty(),
+                "already-emitted research must not retrigger Tech"
+            );
         }
 
         #[test]

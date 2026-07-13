@@ -142,13 +142,19 @@ async fn replay_import_loads_civreplay_bytes_into_bridge() {
     let response = client
         .post(&url)
         .header(reqwest::header::CONTENT_TYPE, "application/octet-stream")
-        .body(bytes)
+        .body(bytes.clone())
         .send()
         .await
         .expect("replay import request");
-    assert!(response.status().is_success());
+    let status = response.status();
+    let body_text = response.text().await.unwrap_or_default();
+    assert!(
+        status.is_success(),
+        "replay import failed: status={status} bytes={} body={body_text}",
+        bytes.len()
+    );
 
-    let body: serde_json::Value = response.json().await.expect("replay import json");
+    let body: serde_json::Value = serde_json::from_str(&body_text).expect("replay import json");
     assert_eq!(body.get("ok"), Some(&serde_json::json!(true)));
     assert_eq!(
         body.get("tick").and_then(|v| v.as_u64()),

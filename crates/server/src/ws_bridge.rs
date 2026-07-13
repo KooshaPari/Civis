@@ -11,7 +11,7 @@ use axum::{
     body::Bytes,
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
-        Query, State,
+        DefaultBodyLimit, Query, State,
     },
     http::{header, HeaderMap, StatusCode},
     response::IntoResponse,
@@ -53,6 +53,7 @@ use crate::{
 
 /// Number of distinct `Frame3d` variants emitted per simulation tick (FR-CIV-BEVY-028 / item 53).
 pub const FRAME_BUNDLE_LEN: usize = 7;
+const REPLAY_IMPORT_BODY_LIMIT_BYTES: usize = 16 * 1024 * 1024;
 
 /// Which wire encodings the 10 Hz tick loop broadcasts to connected clients.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -265,7 +266,10 @@ async fn serve_ws_bridge(
     let app = Router::new()
         .route("/healthz", get(healthz))
         .route("/replay/export", get(replay_export))
-        .route("/replay/import", post(replay_import))
+        .route(
+            "/replay/import",
+            post(replay_import).layer(DefaultBodyLimit::max(REPLAY_IMPORT_BODY_LIMIT_BYTES)),
+        )
         .route("/ws", get(ws_handler))
         .with_state(state.clone());
 

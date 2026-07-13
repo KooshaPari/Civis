@@ -11,11 +11,17 @@ const TYRANNY_TICKS_THRESHOLD: u64 = 200;
 /// Live progress toward the three victory conditions checked by [`check_outcome`].
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct OutcomeProgress {
+    /// Current civilization population.
     pub population: u64,
+    /// Population required for a population victory.
     pub population_target: u64,
+    /// Count of researched technologies.
     pub researched_techs: usize,
+    /// Researched-tech count required for a tech victory.
     pub researched_techs_target: usize,
+    /// Consecutive peaceful ticks since last conflict (capped at target).
     pub peace_ticks: u64,
+    /// Peaceful ticks required for a peace victory.
     pub peace_ticks_target: u64,
 }
 

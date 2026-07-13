@@ -922,6 +922,10 @@ pub struct WorldState {
     pub last_tick_unrest_snapshots: BTreeMap<u32, UnrestSnapshot>,
     #[serde(default)]
     pub last_tick_cohesion: BTreeMap<u32, CohesionSnapshot>,
+    /// Factions that chose [`crate::faction_decisions::FactionDecision::RaiseUnrestResponse`]
+    /// during the most recent tick.
+    #[serde(default)]
+    pub last_tick_faction_unrest_response_intents: BTreeSet<u32>,
     /// Faction ID -> faction name
     pub factions: HashMap<u32, String>,
     /// Faction ID -> treasury balance
@@ -952,6 +956,7 @@ impl Default for WorldState {
             rng_seed: 42,
             last_tick_unrest_snapshots: BTreeMap::new(),
             last_tick_cohesion: BTreeMap::new(),
+            last_tick_faction_unrest_response_intents: BTreeSet::new(),
             factions: HashMap::from([
                 (0, "Player".to_string()),
                 (1, "AI Faction A".to_string()),
@@ -2853,6 +2858,7 @@ impl Simulation {
         self.phase_planet();
         self.diplomacy_events.clear();
         self.phase_diplomacy();
+        self.phase_faction_decisions();
         self.phase_tactics();
         self.phase_voxel();
         self.phase_compact();
@@ -2922,7 +2928,21 @@ impl Simulation {
     }
 
     fn phase_faction_decisions(&mut self) {
-        let _decisions = crate::faction_decisions::compute_faction_decisions(self);
+        self.state.last_tick_faction_unrest_response_intents.clear();
+        for (faction_id, decision) in crate::faction_decisions::compute_faction_decisions(self) {
+            match decision {
+                crate::faction_decisions::FactionDecision::RaiseUnrestResponse => {
+                    self.state
+                        .last_tick_faction_unrest_response_intents
+                        .insert(faction_id);
+                }
+                // GAP-FACTION-DEC-001 partial: hostility, trade-open, and
+                // maintain decisions remain intentionally unapplied.
+                crate::faction_decisions::FactionDecision::FlagHostility
+                | crate::faction_decisions::FactionDecision::FlagTradeOpen
+                | crate::faction_decisions::FactionDecision::Maintain => {}
+            }
+        }
     }
 
     fn phase_victory_check(&mut self) {
@@ -5651,6 +5671,10 @@ impl Simulation {
                 .in_progress
                 .as_ref()
                 .map(|(tech, _)| tech.clone()),
+            last_tick_faction_unrest_response_intents: self
+                .state
+                .last_tick_faction_unrest_response_intents
+                .clone(),
         }
     }
 
@@ -7539,6 +7563,9 @@ pub struct SimulationSnapshot {
     /// Tech id/name currently being researched, if any.
     #[serde(default)]
     pub in_progress_tech: Option<String>,
+    /// Factions that raised an unrest-response intent during the most recent tick.
+    #[serde(default)]
+    pub last_tick_faction_unrest_response_intents: BTreeSet<u32>,
 }
 
 // ADR-020 phase stubs (FR-PLAY-click-to-fire prerequisite: tick() compiles).
@@ -7780,6 +7807,55 @@ mod tests {
                 "victory_check",
             ]
         );
+    }
+
+    #[test]
+    fn faction_decision_high_unrest_sets_deterministic_response_intents() {
+        fn unrest_snapshot(level: UnrestLevel) -> UnrestSnapshot {
+            UnrestSnapshot {
+                settlement_id: 7,
+                level,
+                score: if level == UnrestLevel::Revolting {
+                    300
+                } else {
+                    0
+                },
+                events_count: 0,
+                riots_count: 0,
+                migrants_count: 0,
+                mob_size: 0,
+            }
+        }
+
+        let mut sim_a = Simulation::with_seed(42);
+        let mut sim_b = Simulation::with_seed(42);
+        sim_a
+            .last_tick_unrest_snapshots
+            .insert(7, unrest_snapshot(UnrestLevel::Revolting));
+        sim_b
+            .last_tick_unrest_snapshots
+            .insert(7, unrest_snapshot(UnrestLevel::Revolting));
+
+        sim_a.tick();
+        sim_b.tick();
+
+        let intents_a = &sim_a.state.last_tick_faction_unrest_response_intents;
+        let intents_b = &sim_b.state.last_tick_faction_unrest_response_intents;
+        assert!(!intents_a.is_empty());
+        assert_eq!(intents_a, intents_b);
+        assert_eq!(
+            sim_a.snapshot().last_tick_faction_unrest_response_intents,
+            *intents_a
+        );
+
+        let mut calm = Simulation::with_seed(42);
+        calm.last_tick_unrest_snapshots
+            .insert(7, unrest_snapshot(UnrestLevel::Stable));
+        calm.tick();
+        assert!(calm
+            .state
+            .last_tick_faction_unrest_response_intents
+            .is_empty());
     }
 
     #[test]

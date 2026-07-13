@@ -1,8 +1,8 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "1fe2b09529ec5209cffbb79c75aa5b19294075d9",
-  "created_at": "2026-07-13T02:25:47Z",
+  "git_sha": "f291accb20d0d632736554f70f67b46992c071db",
+  "created_at": "2026-07-13T20:54:15Z",
   "runner": {
     "host": "KOOSHAPARI-DESK",
     "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
@@ -12,54 +12,10 @@
       "status": "pass",
       "detail": "just civis-3d-verify"
     },
-    "web_test": {
+    "faction_decision_high_unrest": {
       "status": "pass",
-      "detail": ""
-    },
-    "dashboard_typecheck": {
-      "status": "pass",
-      "detail": ""
-    },
-    "unreal_preflight": {
-      "status": "skip",
-      "detail": "optional"
-    },
-    "unreal_build": {
-      "status": "skip",
-      "detail": "optional"
-    },
-    "extra_cargo_audit": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    },
-    "extra_cargo_deny": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    },
-    "extra_cargo_machete": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    },
-    "extra_cargo_semver": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    },
-    "extra_trufflehog": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    },
-    "extra_fr_coverage": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    },
-    "extra_docs_check": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    },
-    "extra_security_guard": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+      "detail": "cargo test -p civ-engine --lib faction_decision_high_unrest"
     }
   },
-  "manifest_hash": "b394619258922e87a8239757fa03edf16e1c9ae948a420493c60a67686c86efc"
+  "manifest_hash": "1c487fc4d3e4b6504f00f9f9efff8bc2c32e1b7787d36978e30f766a25831787"
 }

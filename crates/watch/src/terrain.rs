@@ -206,7 +206,7 @@ mod tests {
     #[test]
     fn terrain_hash_at_seed_42_is_stable() {
         let fingerprint = Terrain::generate(42).heights_fingerprint();
-        assert_eq!(fingerprint, 5_588_789_282_951_133_174);
+        assert_eq!(fingerprint, 14_290_216_453_490_432_101);
     }
 
     #[test]

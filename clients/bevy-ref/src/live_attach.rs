@@ -6,7 +6,10 @@ use crate::atmosphere::DayNightCycle;
 use crate::live_pick::{LivePickPlugin, LiveSelection};
 use crate::live_scene::LiveScenePlugin;
 use crate::ws_client::{WsClient, WsClientConfig};
-use crate::{resolve_live_ws_url, AttachMode, LiveHudSnapshot, MusicCues, WsSpectatorMeta};
+use crate::{
+    resolve_live_ws_url, AttachMode, LiveHudSnapshot, MusicCues, OutcomeProgressHud,
+    WsSpectatorMeta,
+};
 
 #[cfg(feature = "egui")]
 use crate::WsConnectionState;
@@ -39,6 +42,7 @@ impl Plugin for LiveAttachPlugin {
             .init_resource::<LiveAttachState>()
             .init_resource::<LiveHudSnapshot>()
             .init_resource::<MusicCues>()
+            .init_resource::<OutcomeProgressHud>()
             .insert_resource(LiveAttachBridge {
                 client: WsClient::spawn_with_config(
                     resolve_live_ws_url(),
@@ -91,6 +95,7 @@ fn poll_live_meta(
     mut hud: ResMut<LiveHudSnapshot>,
     mut day_night: ResMut<DayNightCycle>,
     mut music_cues: ResMut<MusicCues>,
+    mut outcome_progress: ResMut<OutcomeProgressHud>,
     #[cfg(feature = "audio")] mut sfx: bevy::prelude::MessageWriter<crate::audio::SfxEvent>,
 ) {
     for meta in bridge.client.poll_meta() {
@@ -99,6 +104,7 @@ fn poll_live_meta(
         }
         hud.connected = true;
         music_cues.0 = meta.music_cues.clone();
+        outcome_progress.0 = meta.outcome_progress;
         #[cfg(feature = "audio")]
         {
             for event in &meta.audio_events {

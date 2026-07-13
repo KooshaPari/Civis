@@ -232,6 +232,8 @@ pub struct WsSpectatorMeta {
     pub music_cues: BTreeMap<u64, MusicCueWire>,
     /// One-shot SFX triggers from the most recent audio phase.
     pub audio_events: Vec<AudioEventWire>,
+    /// Live progress toward the engine's population, research, and peace victories.
+    pub outcome_progress: Option<OutcomeProgressHudData>,
 }
 
 /// Wire-format music cue for one simulation culture cluster.
@@ -365,11 +367,15 @@ pub fn parse_jsonrpc_snapshot_meta(text: &str) -> Option<WsSpectatorMeta> {
     let tick = result.get("tick").and_then(|v| v.as_u64());
     let music_cues = parse_music_cues(result).unwrap_or_default();
     let audio_events = parse_audio_events(result).unwrap_or_default();
+    let outcome_progress = result
+        .get("outcome_progress")
+        .and_then(|value| serde_json::from_value(value.clone()).ok());
     Some(WsSpectatorMeta {
         is_day,
         tick,
         music_cues,
         audio_events,
+        outcome_progress,
     })
 }
 
@@ -459,6 +465,28 @@ pub struct EmergenceHudData {
     pub branching_regime: String,
 }
 
+/// Truthful engine progress toward each live victory condition.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct OutcomeProgressHudData {
+    /// Current civilization population.
+    pub population: u64,
+    /// Population required for a population victory.
+    pub population_target: u64,
+    /// Count of researched technologies.
+    pub researched_techs: usize,
+    /// Researched-tech count required for a tech victory.
+    pub researched_techs_target: usize,
+    /// Consecutive peaceful ticks since last conflict (capped at target).
+    pub peace_ticks: u64,
+    /// Peaceful ticks required for a peace victory.
+    pub peace_ticks_target: u64,
+}
+
+/// Latest outcome progress received from `sim.snapshot`.
+#[derive(Debug, Clone, Default)]
+#[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
+pub struct OutcomeProgressHud(pub Option<OutcomeProgressHudData>);
+
 /// Outcome data from `sim.outcome` polling (FR-CIV-GAME-001).
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
@@ -469,6 +497,9 @@ pub struct OutcomeHudData {
     pub reason: String,
     /// Simulation tick at which the outcome was observed.
     pub tick: u64,
+    /// Progress values computed from the same engine conditions as the outcome.
+    #[serde(default)]
+    pub progress: Option<OutcomeProgressHudData>,
 }
 /// Headless-friendly snapshot for the live attach HUD (FPS / tick / socket / scene stats).
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
@@ -1462,10 +1493,14 @@ mod tests {
 
     #[test]
     fn parse_jsonrpc_snapshot_meta_reads_is_day_and_tick() {
-        let text = r#"{"jsonrpc":"2.0","id":3,"result":{"tick":12,"is_day":false,"population":4}}"#;
+        let text = r#"{"jsonrpc":"2.0","id":3,"result":{"tick":12,"is_day":false,"population":4,"outcome_progress":{"population":4321,"population_target":10000,"researched_techs":3,"researched_techs_target":12,"peace_ticks":123,"peace_ticks_target":500}}}"#;
         let meta = parse_jsonrpc_snapshot_meta(text).expect("snapshot meta");
         assert!(!meta.is_day);
         assert_eq!(meta.tick, Some(12));
+        let progress = meta.outcome_progress.expect("outcome progress");
+        assert_eq!(progress.population, 4_321);
+        assert_eq!(progress.researched_techs, 3);
+        assert_eq!(progress.peace_ticks, 123);
     }
 
     #[test]

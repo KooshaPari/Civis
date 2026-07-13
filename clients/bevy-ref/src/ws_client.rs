@@ -369,6 +369,9 @@ fn parse_outcome_response(text: &str) -> Option<OutcomeHudData> {
             .unwrap_or("")
             .to_owned(),
         tick: result.get("tick").and_then(|v| v.as_u64()).unwrap_or(0),
+        progress: result
+            .get("progress")
+            .and_then(|value| serde_json::from_value(value.clone()).ok()),
     })
 }
 

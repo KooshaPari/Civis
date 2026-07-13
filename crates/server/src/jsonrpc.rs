@@ -476,6 +476,8 @@ pub struct SnapshotFields {
     pub researched: Vec<String>,
     /// Currently-researching tech, if any (FR-CIV-SERVER-003).
     pub in_progress_tech: Option<String>,
+    /// Live engine progress toward population, research, and peace victories.
+    pub outcome_progress: civ_engine::conditions::OutcomeProgress,
 }
 
 /// JSON-friendly music cue payload from the engine's audio phase.
@@ -600,6 +602,10 @@ pub fn snapshot_result_json(fields: &SnapshotFields) -> Value {
     obj.insert(
         "speed_multiplier".to_owned(),
         serde_json::json!(fields.speed_multiplier),
+    );
+    obj.insert(
+        "outcome_progress".to_owned(),
+        serde_json::to_value(fields.outcome_progress).unwrap_or(Value::Null),
     );
     if let Some(spec) = &fields.spectator {
         obj.insert(
@@ -871,6 +877,7 @@ pub fn snapshot_fields_from_sim(
         emergence: sim.last_emergence_sample().map(EmergenceSampleFields::from),
         researched: snap.researched.clone(),
         in_progress_tech: snap.in_progress_tech.clone(),
+        outcome_progress: snap.outcome_progress,
     }
 }
 
@@ -880,6 +887,7 @@ pub struct OutcomeFields {
     pub tag: String,
     pub reason: String,
     pub tick: u64,
+    pub progress: civ_engine::conditions::OutcomeProgress,
 }
 
 /// Live material/height readout for `sim.inspect_tile`.
@@ -2036,6 +2044,7 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                         tag: "ongoing".to_owned(),
                         reason: String::new(),
                         tick: ctx.tick,
+                        progress: Default::default(),
                     })
             };
             DispatchPlan {
@@ -2045,6 +2054,7 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                         "outcome": outcome_result.tag,
                         "reason": outcome_result.reason,
                         "tick": outcome_result.tick,
+                        "progress": outcome_result.progress,
                     }),
                 ),
                 effect: DispatchEffect::None,
@@ -3323,6 +3333,28 @@ mod tests {
     }
 
     #[test]
+    fn snapshot_outcome_progress_reads_forced_live_engine_state() {
+        let mut sim = civ_engine::Simulation::with_seed(7);
+        sim.state.population = 4_321;
+        sim.state.tick = 123;
+        sim.research_cache_mut().researched = vec![
+            "pottery".to_owned(),
+            "masonry".to_owned(),
+            "writing".to_owned(),
+        ];
+
+        let fields = snapshot_fields_from_sim(&sim, 1);
+        assert_eq!(fields.outcome_progress.population, 4_321);
+        assert_eq!(fields.outcome_progress.researched_techs, 3);
+        assert_eq!(fields.outcome_progress.peace_ticks, 123);
+
+        let json = snapshot_result_json(&fields);
+        assert_eq!(json["outcome_progress"]["population"], 4_321);
+        assert_eq!(json["outcome_progress"]["researched_techs"], 3);
+        assert_eq!(json["outcome_progress"]["peace_ticks"], 123);
+    }
+
+    #[test]
     fn dispatch_sim_snapshot_includes_snapshot_fields() {
         let req = parse_request(r#"{"jsonrpc":"2.0","id":14,"method":"sim.snapshot","params":{}}"#)
             .expect("parse");
@@ -3374,6 +3406,7 @@ mod tests {
                     emergence: None,
                     researched: vec![],
                     in_progress_tech: None,
+                    outcome_progress: Default::default(),
                 }),
                 tile_probe: None,
                 require_role: false,
@@ -3406,6 +3439,14 @@ mod tests {
                 "hash_chain_root":
                     "a3f7c2b1e9d045f8a3f7c2b1e9d045f8a3f7c2b1e9d045f8a3f7c2b1e9d045f8",
                 "speed_multiplier": 1,
+                "outcome_progress": {
+                    "population": 0,
+                    "population_target": 0,
+                    "researched_techs": 0,
+                    "researched_techs_target": 0,
+                    "peace_ticks": 0,
+                    "peace_ticks_target": 0,
+                },
                 "damage_events_count": 0,
                 "voxel_damage_removed_this_tick": 0,
                 "climate": {
@@ -3468,6 +3509,7 @@ mod tests {
                     emergence: None,
                     researched: vec![],
                     in_progress_tech: None,
+                    outcome_progress: Default::default(),
                 }),
                 tile_probe: None,
                 require_role: false,
@@ -3496,6 +3538,14 @@ mod tests {
                     "food": 1_000,
                 },
                 "speed_multiplier": 1,
+                "outcome_progress": {
+                    "population": 0,
+                    "population_target": 0,
+                    "researched_techs": 0,
+                    "researched_techs_target": 0,
+                    "peace_ticks": 0,
+                    "peace_ticks_target": 0,
+                },
                 "damage_events_count": 0,
                 "voxel_damage_removed_this_tick": 0,
                 "climate": {
@@ -3558,6 +3608,7 @@ mod tests {
                     emergence: None,
                     researched: vec![],
                     in_progress_tech: None,
+                    outcome_progress: Default::default(),
                 }),
                 tile_probe: None,
                 require_role: false,
@@ -3586,6 +3637,14 @@ mod tests {
                     "energy": 1_000,
                 },
                 "speed_multiplier": 1,
+                "outcome_progress": {
+                    "population": 0,
+                    "population_target": 0,
+                    "researched_techs": 0,
+                    "researched_techs_target": 0,
+                    "peace_ticks": 0,
+                    "peace_ticks_target": 0,
+                },
                 "damage_events_count": 0,
                 "voxel_damage_removed_this_tick": 0,
                 "climate": {
@@ -4428,6 +4487,7 @@ mod tests {
             emergence: Some(emergence),
             researched: vec![],
             in_progress_tech: None,
+            outcome_progress: Default::default(),
         };
         let json = snapshot_result_json(&fields);
         let emerg = json.get("emergence").expect("emergence block");

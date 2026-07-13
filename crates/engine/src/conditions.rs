@@ -2,11 +2,50 @@
 
 use crate::{DiplomacyKind, Simulation};
 
-const PEACE_TICKS_THRESHOLD: u64 = 500;
-const POPULATION_VICTORY: u64 = 10_000;
-const TECH_VICTORY_COUNT: usize = 12;
+pub const PEACE_TICKS_THRESHOLD: u64 = 500;
+pub const POPULATION_VICTORY: u64 = 10_000;
+pub const TECH_VICTORY_COUNT: usize = 12;
 const TYRANNY_POPULATION_SHARE: f64 = 0.95;
 const TYRANNY_TICKS_THRESHOLD: u64 = 200;
+
+/// Live progress toward the three victory conditions checked by [`check_outcome`].
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct OutcomeProgress {
+    /// Current civilization population.
+    pub population: u64,
+    /// Population required for a population victory.
+    pub population_target: u64,
+    /// Count of researched technologies.
+    pub researched_techs: usize,
+    /// Researched-tech count required for a tech victory.
+    pub researched_techs_target: usize,
+    /// Consecutive peaceful ticks since last conflict (capped at target).
+    pub peace_ticks: u64,
+    /// Peaceful ticks required for a peace victory.
+    pub peace_ticks_target: u64,
+}
+
+/// Compute truthful progress from the same engine state used by [`check_outcome`].
+#[must_use]
+pub fn outcome_progress(sim: &Simulation) -> OutcomeProgress {
+    let tick = sim.state.tick;
+    let last_conflict_tick = sim
+        .diplomacy_events()
+        .iter()
+        .filter(|event| event.kind == DiplomacyKind::Conflict)
+        .map(|event| event.tick)
+        .max();
+    let peace_ticks = last_conflict_tick.map_or(tick, |last| tick.saturating_sub(last));
+
+    OutcomeProgress {
+        population: sim.state.population,
+        population_target: POPULATION_VICTORY,
+        researched_techs: sim.research_cache().researched.len(),
+        researched_techs_target: TECH_VICTORY_COUNT,
+        peace_ticks: peace_ticks.min(PEACE_TICKS_THRESHOLD),
+        peace_ticks_target: PEACE_TICKS_THRESHOLD,
+    }
+}
 
 /// Outcome of a game-state check.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -131,5 +170,25 @@ mod tests {
             check_outcome(&sim),
             GameOutcome::Defeat(reason) if reason == "Civilization Collapsed"
         ));
+    }
+
+    #[test]
+    fn outcome_progress_reads_live_population_research_and_peace_state() {
+        let mut sim = Simulation::with_seed(42);
+        sim.state.population = 4_321;
+        sim.state.tick = 123;
+        sim.research_cache_mut().researched = vec![
+            "pottery".to_owned(),
+            "masonry".to_owned(),
+            "writing".to_owned(),
+        ];
+
+        let progress = outcome_progress(&sim);
+        assert_eq!(progress.population, 4_321);
+        assert_eq!(progress.population_target, 10_000);
+        assert_eq!(progress.researched_techs, 3);
+        assert_eq!(progress.researched_techs_target, 12);
+        assert_eq!(progress.peace_ticks, 123);
+        assert_eq!(progress.peace_ticks_target, 500);
     }
 }

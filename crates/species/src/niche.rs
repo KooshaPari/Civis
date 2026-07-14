@@ -294,32 +294,29 @@ mod tests {
         )
     }
 
-    fn phenotype_with(
-        height: u8,
-        hue: u8,
-        legs: u8,
-        arms: u8,
-        eyes: u8,
-        aggr: f32,
-        curio: f32,
-        soc: f32,
-        intel: f32,
-    ) -> Phenotype {
+    fn phenotype_with(morphology: Morphology, behavior: BehaviorWeights) -> Phenotype {
         Phenotype {
-            morphology: Morphology {
-                height_cm: height,
-                body_color_hue: hue,
-                leg_count: legs,
-                arm_count: arms,
-                eye_count: eyes,
-            },
-            behavior: BehaviorWeights {
-                aggression: aggr,
-                curiosity: curio,
-                sociability: soc,
-                intelligence: intel,
-            },
+            morphology,
+            behavior,
         }
+    }
+
+    fn zero_phenotype() -> Phenotype {
+        phenotype_with(
+            Morphology {
+                height_cm: 0,
+                body_color_hue: 0,
+                leg_count: 0,
+                arm_count: 0,
+                eye_count: 0,
+            },
+            BehaviorWeights {
+                aggression: 0.0,
+                curiosity: 0.0,
+                sociability: 0.0,
+                intelligence: 0.0,
+            },
+        )
     }
 
     // -----------------------------------------------------------------------
@@ -333,7 +330,21 @@ mod tests {
     /// population grows.
     #[test]
     fn matched_niche_grows_population() {
-        let pheno = phenotype_with(120, 80, 4, 2, 2, 0.5, 0.6, 0.7, 0.4);
+        let pheno = phenotype_with(
+            Morphology {
+                height_cm: 120,
+                body_color_hue: 80,
+                leg_count: 4,
+                arm_count: 2,
+                eye_count: 2,
+            },
+            BehaviorWeights {
+                aggression: 0.5,
+                curiosity: 0.6,
+                sociability: 0.7,
+                intelligence: 0.4,
+            },
+        );
         let niche = niche_exact_for(&pheno);
         let start = 1_000_u64;
         let tick = tick_niche_adaptation(
@@ -364,7 +375,7 @@ mod tests {
     /// population shrinks.
     #[test]
     fn mismatched_niche_shrinks_population() {
-        let pheno = phenotype_with(0, 0, 0, 0, 0, 0.0, 0.0, 0.0, 0.0);
+        let pheno = zero_phenotype();
         // Niche optima are at the opposite extreme of every axis.
         let niche_morph = Morphology {
             height_cm: 255,
@@ -434,7 +445,21 @@ mod tests {
             morphology: niche_morph,
             behavior: niche_behav,
         };
-        let mismatched = phenotype_with(0, 255, 255, 255, 255, 1.0, 0.0, 1.0, 0.0);
+        let mismatched = phenotype_with(
+            Morphology {
+                height_cm: 0,
+                body_color_hue: 255,
+                leg_count: 255,
+                arm_count: 255,
+                eye_count: 255,
+            },
+            BehaviorWeights {
+                aggression: 1.0,
+                curiosity: 0.0,
+                sociability: 1.0,
+                intelligence: 0.0,
+            },
+        );
 
         let pop = 500_u64;
         let matched_tick = tick_niche_adaptation(pop, &matched, &niche, 0.0, 0.1, 0.1);
@@ -463,7 +488,21 @@ mod tests {
     /// one on every axis.
     #[test]
     fn niche_match_extremes_are_zero_and_one() {
-        let exact = phenotype_with(100, 50, 4, 2, 2, 0.3, 0.3, 0.3, 0.3);
+        let exact = phenotype_with(
+            Morphology {
+                height_cm: 100,
+                body_color_hue: 50,
+                leg_count: 4,
+                arm_count: 2,
+                eye_count: 2,
+            },
+            BehaviorWeights {
+                aggression: 0.3,
+                curiosity: 0.3,
+                sociability: 0.3,
+                intelligence: 0.3,
+            },
+        );
         let niche = niche_exact_for(&exact);
         let m_exact = niche_match(&exact, &niche);
         assert!(
@@ -590,7 +629,7 @@ mod tests {
     /// resolves that as a neutral 0.5 match instead of dividing by zero.
     #[test]
     fn zero_weights_yield_neutral_half_match() {
-        let pheno = phenotype_with(0, 0, 0, 0, 0, 0.0, 0.0, 0.0, 0.0);
+        let pheno = zero_phenotype();
         let weights = NicheWeights {
             morphology_height: 0.0,
             morphology_hue: 0.0,
@@ -693,7 +732,21 @@ mod tests {
     /// runs from the same state must produce the same `NicheTick`.
     #[test]
     fn tick_is_deterministic_for_same_inputs() {
-        let pheno = phenotype_with(80, 120, 4, 2, 2, 0.4, 0.5, 0.6, 0.7);
+        let pheno = phenotype_with(
+            Morphology {
+                height_cm: 80,
+                body_color_hue: 120,
+                leg_count: 4,
+                arm_count: 2,
+                eye_count: 2,
+            },
+            BehaviorWeights {
+                aggression: 0.4,
+                curiosity: 0.5,
+                sociability: 0.6,
+                intelligence: 0.7,
+            },
+        );
         let niche = Niche::new(
             Morphology {
                 height_cm: 100,

@@ -109,37 +109,6 @@ pub fn express(dna: &Dna) -> Phenotype {
 mod tests {
     use super::*;
 
-    fn phenotype_distance(pheno_a: &Phenotype, pheno_b: &Phenotype) -> f32 {
-        let morph_dist = {
-            let dh = (f32::from(pheno_a.morphology.height_cm)
-                - f32::from(pheno_b.morphology.height_cm))
-                / 255.0;
-            let dc = (f32::from(pheno_a.morphology.body_color_hue)
-                - f32::from(pheno_b.morphology.body_color_hue))
-                / 255.0;
-            let dl = (f32::from(pheno_a.morphology.leg_count)
-                - f32::from(pheno_b.morphology.leg_count))
-                / 255.0;
-            let da = (f32::from(pheno_a.morphology.arm_count)
-                - f32::from(pheno_b.morphology.arm_count))
-                / 255.0;
-            let de = (f32::from(pheno_a.morphology.eye_count)
-                - f32::from(pheno_b.morphology.eye_count))
-                / 255.0;
-            dh * dh + dc * dc + dl * dl + da * da + de * de
-        };
-
-        let behav_dist = {
-            let dag = pheno_a.behavior.aggression - pheno_b.behavior.aggression;
-            let dc = pheno_a.behavior.curiosity - pheno_b.behavior.curiosity;
-            let ds = pheno_a.behavior.sociability - pheno_b.behavior.sociability;
-            let di = pheno_a.behavior.intelligence - pheno_b.behavior.intelligence;
-            dag * dag + dc * dc + ds * ds + di * di
-        };
-
-        (morph_dist + behav_dist).sqrt()
-    }
-
     /// Covers FR-CIV-SPECIES-000 — exposes a semver-like schema version stub.
     #[test]
     fn schema_version_stub() {

@@ -95,3 +95,38 @@ async fn initial_simulation(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[tokio::test]
+    async fn autoload_fallbacks_preserve_configured_map_seed() {
+        const MAP_SEED: u64 = 987_654_321;
+
+        let unreadable_parent = tempdir().expect("unreadable fixture parent");
+        let unreadable = unreadable_parent.path().join("not-a-directory");
+        std::fs::write(&unreadable, b"file").expect("create non-directory fixture");
+        assert!(std::fs::read_dir(&unreadable).is_err());
+
+        let empty = tempdir().expect("empty saves directory");
+
+        let corrupt = tempdir().expect("corrupt saves directory");
+        let corrupt_save = corrupt.path().join("slot-1.civsave.zst");
+        std::fs::write(&corrupt_save, b"not a save archive").expect("write corrupt save");
+        assert_eq!(
+            most_recent_save_path(corrupt.path()).expect("inspect corrupt fixture"),
+            Some(corrupt_save)
+        );
+
+        for (case, saves_dir) in [
+            ("unreadable directory", unreadable.as_path()),
+            ("no save", empty.path()),
+            ("corrupt save", corrupt.path()),
+        ] {
+            let simulation = initial_simulation(saves_dir, true, MAP_SEED).await;
+            assert_eq!(simulation.state.rng_seed, MAP_SEED, "{case} fallback");
+        }
+    }
+}

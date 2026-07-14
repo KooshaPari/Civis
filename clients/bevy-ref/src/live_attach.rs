@@ -27,11 +27,10 @@ pub struct LiveAttachState {
 }
 
 /// Active live attach bridge (server mode only).
-#[derive(Resource)]
-pub struct LiveAttachBridge {
-    /// Background reconnecting WebSocket client.
-    pub client: WsClient,
-}
+///
+/// Alias of [`crate::live_stream::LiveBridge`] so egui HUD plugins (`outcome_overlay`,
+/// `god_panel`) share one resource type with `civ-bevy-window`.
+pub use crate::live_stream::LiveBridge as LiveAttachBridge;
 
 /// Wires `civ-server` WebSocket attach into the standalone gameplay client.
 pub struct LiveAttachPlugin;
@@ -41,8 +40,6 @@ impl Plugin for LiveAttachPlugin {
         app.add_plugins((LiveScenePlugin, LivePickPlugin))
             .init_resource::<LiveAttachState>()
             .init_resource::<LiveHudSnapshot>()
-            .init_resource::<MusicCues>()
-            .init_resource::<OutcomeProgressHud>()
             .insert_resource(LiveAttachBridge {
                 client: WsClient::spawn_with_config(
                     resolve_live_ws_url(),
@@ -58,6 +55,10 @@ impl Plugin for LiveAttachPlugin {
                     sync_live_selection,
                 ),
             );
+        #[cfg(all(feature = "bevy", feature = "egui"))]
+        {
+            app.add_plugins(crate::outcome_overlay::OutcomeOverlayPlugin);
+        }
         #[cfg(feature = "egui")]
         {
             app.init_resource::<LastConnectionToastState>().add_systems(

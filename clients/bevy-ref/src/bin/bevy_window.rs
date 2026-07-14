@@ -44,7 +44,7 @@ use civ_bevy_ref::{
         apply_faction_state_frame, apply_voxel_delta_frame, apply_water_deltas_for_frame,
         default_stream_meshes, default_water_meshes, format_event_feed_message, latest_climate,
         push_event_feed_to_hud_summary, sync_agent_labels_from_civilians, AgentLabelConfig,
-        LiveAgentTag, LiveBuildingTag, LiveChunkFade, LiveChunkTag, LiveGraphParcelTag,
+        LiveAgentTag, LiveBridge, LiveBuildingTag, LiveChunkFade, LiveChunkTag, LiveGraphParcelTag,
         LiveStreamMeshes, LiveStreamScene, LiveWaterMeshes, StreamCulling, LIVE_CHUNK_BASE_COLOR,
         LIVE_CHUNK_EDGE,
     },
@@ -58,7 +58,7 @@ use civ_bevy_ref::{
     save_load_ui::{SaveLoadPanel, SaveLoadUiPlugin},
     ws_client::{WsClient, WsClientConfig},
     CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MenusPlugin, MinimapBounds,
-    MusicCues, PerfHudPlugin, TutorialPlugin, VOXEL_CHUNK_EDGE,
+    MusicCues, OutcomeProgressHud, PerfHudPlugin, TutorialPlugin, VOXEL_CHUNK_EDGE,
 };
 use civ_protocol_3d::Frame3d;
 use civ_voxel::ChunkId;
@@ -136,11 +136,6 @@ impl OrbitCamera {
         self.centre[0] += right * cos + forward * sin;
         self.centre[2] += -right * sin + forward * cos;
     }
-}
-
-#[derive(Resource)]
-struct LiveBridge {
-    client: WsClient,
 }
 
 #[derive(Resource)]
@@ -256,6 +251,7 @@ fn main() {
         .init_resource::<EmergencePollTimer>()
         .init_resource::<EmergenceHudData>()
         .init_resource::<MusicCues>()
+        .init_resource::<OutcomeProgressHud>()
         .init_resource::<SaveListState>()
         .insert_resource(ScenePresentation::default())
         .insert_resource(DebugRender::default())
@@ -547,6 +543,7 @@ fn apply_spectator_meta(
     mut presentation: ResMut<ScenePresentation>,
     mut hud: ResMut<HudState>,
     mut music_cues: ResMut<MusicCues>,
+    mut outcome_progress: ResMut<OutcomeProgressHud>,
 ) {
     for meta in bridge.client.poll_meta() {
         presentation.is_day = meta.is_day;
@@ -555,9 +552,7 @@ fn apply_spectator_meta(
             hud.snapshot.tick = Some(tick);
             hud.snapshot.connected = true;
         }
-        if let Some(progress) = meta.outcome_progress {
-            hud.snapshot.treasury = progress.population as f32;
-        }
+        outcome_progress.0 = meta.outcome_progress;
     }
     if let Some(rtt) = bridge.client.latest_rtt_ms() {
         hud.snapshot.ws_rtt_ms = Some(rtt);

@@ -287,6 +287,8 @@ impl Plugin for GameUiPlugin {
             .init_resource::<BuildingSpawnKind>()
             .init_resource::<ActiveSubTool>()
             .init_resource::<LeftClusterTab>()
+            // Toast resource is owned here: `tick_god_action_toast` / HUD draw
+            // always need it. `GodActionsPlugin` may also init it (idempotent).
             .init_resource::<GodActionToast>()
             // Holocron motion state is intentionally NOT registered here yet —
             // `step_flyout_motion` exists as `#[allow(dead_code)]` for the

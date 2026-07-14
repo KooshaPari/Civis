@@ -12,7 +12,7 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 use crate::live_stream::LiveStreamScene;
-use crate::outcome_overlay::OutcomeOverlayState;
+use crate::outcome_overlay::{OutcomeOverlayState, OutcomeSessionGate, outcome_modal_visible};
 use crate::{MusicCues, OutcomeProgressHud};
 
 // ── Palette (mirrors emergence_dashboard / faction_hud) ───────────────────────
@@ -74,6 +74,7 @@ fn draw_gameplay_hud(
     music_cues: Res<MusicCues>,
     outcome_progress: Res<OutcomeProgressHud>,
     outcome_state: Option<Res<OutcomeOverlayState>>,
+    session_gate: Option<Res<OutcomeSessionGate>>,
 ) {
     if !open.0 {
         return;
@@ -89,7 +90,17 @@ fn draw_gameplay_hud(
     let total_pop: u32 = scene.population_by_faction.values().sum();
     let max_treasury = factions.first().map(|f| f.treasury.amount).unwrap_or(1.0).max(1.0);
 
-    let outcome = outcome_state.as_deref().and_then(|s| s.outcome.as_ref());
+    let outcome = outcome_state.as_deref().and_then(|state| {
+        let session_active = session_gate
+            .as_deref()
+            .map(|gate| gate.session_active)
+            .unwrap_or(false);
+        if session_active && outcome_modal_visible(state) {
+            state.outcome.as_ref()
+        } else {
+            None
+        }
+    });
 
     egui::Window::new("Gameplay HUD")
         .anchor(egui::Align2::RIGHT_TOP, egui::vec2(-8.0, 260.0))

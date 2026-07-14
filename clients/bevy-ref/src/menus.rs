@@ -4,12 +4,27 @@
 //! Settings GPU readout: FR-CIV-BEVY-036 / item 61.
 
 use crate::gpu_features::GpuCapabilities;
+use crate::live_attach::LiveAttachBridge;
+use crate::live_stream::LiveStreamScene;
+use crate::outcome_overlay::{
+    begin_player_session, end_player_session, outcome_modal_visible, OutcomeEscapeBlock,
+    OutcomeOverlayState, OutcomeSessionGate,
+};
 use crate::save_load_ui::SaveLoadPanel;
 use crate::settings_ui::{GameSettings, KeyBinding, ACTION_PAUSE_SIM};
-use crate::ui_theme::{liquid_glass_frame, GLASS_FILL, KC_ACCENT, RADIUS_PANEL, CHIP_FILL};
+use crate::ui_theme::{GLASS_FILL, KC_ACCENT, CHIP_FILL};
 use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
+
+const WORLDGEN_PRESETS: [&str; 4] = [
+    "single-race-ardani",
+    "three-race-balanced",
+    "ardani-dominant",
+    "lush-frontier",
+];
+const WORLDGEN_DEFAULT_SEED: u64 = 0xC1F1_5EED_D3AD_BEEF;
+const WORLDGEN_BOOT_SECONDS: f32 = 0.5;
 
 const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
 const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
@@ -113,6 +128,24 @@ impl Default for WorldSetupParams {
     }
 }
 
+/// Transient world-gen boot timer (standalone server attach).
+#[derive(Resource, Default, Debug)]
+pub struct WorldGenBoot {
+    /// Elapsed seconds while in [`AppState::WorldGen`].
+    pub elapsed: f32,
+}
+
+/// Optional rasterised main-menu title assets (PNG only; SVG sources are in PIPELINE.md).
+#[derive(Resource, Default)]
+pub struct MainMenuTitleAssets {
+    /// Full-menu background (`ui/title-bg.png`).
+    pub background: Option<Handle<Image>>,
+    /// Logo mark (`ui/logo.png`).
+    pub logo: Option<Handle<Image>>,
+    /// Wordmark (`ui/wordmark.png`).
+    pub wordmark: Option<Handle<Image>>,
+}
+
 /// Transient state for the settings window (no persistence yet).
 #[derive(Resource, Debug)]
 pub struct SettingsState {
@@ -144,30 +177,212 @@ impl Plugin for MenusPlugin {
             .init_resource::<SettingsOpen>()
             .init_resource::<WorldSetupParams>()
             .init_resource::<SettingsState>()
+            .init_resource::<MenuCommand>()
+            .init_resource::<MainMenuSaves>()
+            .init_resource::<WorldGenBoot>()
+            // Idempotent with OutcomeOverlayPlugin (live attach).
+            .init_resource::<OutcomeSessionGate>()
+            .init_resource::<OutcomeOverlayState>()
+            .init_resource::<MainMenuTitleAssets>()
+            .add_systems(Startup, load_main_menu_title_assets)
             .add_systems(Update, (toggle_pause, tick_era_banner))
             .add_systems(
                 EguiPrimaryContextPass,
-                (draw_pause_menu, draw_era_banner, draw_settings_window),
+                (
+                    draw_main_menu,
+                    draw_worldgen_overlay,
+                    draw_pause_menu,
+                    draw_era_banner,
+                    draw_settings_window,
+                ),
             );
     }
 }
 
-fn toggle_pause(
+/// Sync [`GameUiMode`] pause overlay with [`AppState`] when both are present.
+pub fn sync_app_state_with_game_mode(
+    state: Option<Res<State<AppState>>>,
+    mode: Res<GameUiMode>,
+    mut next_state: ResMut<NextState<AppState>>,
+) {
+    let Some(state) = state else {
+        return;
+    };
+    match (*mode, state.get()) {
+        (GameUiMode::Paused, AppState::Playing) => next_state.set(AppState::Paused),
+        (GameUiMode::Playing, AppState::Paused) => next_state.set(AppState::Playing),
+        _ => {}
+    }
+}
+
+/// Advance from world generation to gameplay after boot timer or live scene readiness.
+pub fn advance_worldgen_to_playing(
+    time: Res<Time>,
+    mut boot: ResMut<WorldGenBoot>,
+    state: Option<Res<State<AppState>>>,
+    scene: Option<Res<LiveStreamScene>>,
+    mut next_state: ResMut<NextState<AppState>>,
+) {
+    let Some(state) = state else {
+        return;
+    };
+    if *state.get() != AppState::WorldGen {
+        boot.elapsed = 0.0;
+        return;
+    }
+
+    boot.elapsed += time.delta_secs();
+
+    let ready = match scene.as_deref() {
+        Some(scene) => live_stream_has_content(scene) || boot.elapsed >= WORLDGEN_BOOT_SECONDS,
+        None => true,
+    };
+
+    if ready {
+        next_state.set(AppState::Playing);
+        boot.elapsed = 0.0;
+    }
+}
+
+/// Consume one-shot [`MenuCommand`] actions from shell buttons.
+pub fn consume_menu_commands(
+    mut menu_command: ResMut<MenuCommand>,
+    state: Option<Res<State<AppState>>>,
+    mut next_state: ResMut<NextState<AppState>>,
+    bridge: Option<Res<LiveAttachBridge>>,
+    mut save_panel: Option<ResMut<SaveLoadPanel>>,
+    saves: Res<MainMenuSaves>,
+    params: Res<WorldSetupParams>,
+    mut game_mode: ResMut<GameUiMode>,
+    mut exit: MessageWriter<AppExit>,
+    gate: Option<ResMut<OutcomeSessionGate>>,
+    overlay: Option<ResMut<OutcomeOverlayState>>,
+    mut boot: ResMut<WorldGenBoot>,
+) {
+    let Some(state) = state else {
+        return;
+    };
+    if menu_command.action == MainMenuCommand::None {
+        return;
+    }
+
+    let action = menu_command.action;
+    menu_command.action = MainMenuCommand::None;
+    match action {
+        MainMenuCommand::None => {}
+        MainMenuCommand::NewWorld => {
+            if let Some(bridge) = bridge.as_ref() {
+                let preset = WORLDGEN_PRESETS
+                    .get(params.world_size % WORLDGEN_PRESETS.len())
+                    .copied()
+                    .unwrap_or(WORLDGEN_PRESETS[0]);
+                start_world_boot(&bridge.client, preset, params.seed);
+            }
+            if let (Some(mut gate), Some(mut overlay)) = (gate, overlay) {
+                begin_player_session(&mut gate, &mut overlay);
+            }
+            boot.elapsed = 0.0;
+            next_state.set(AppState::WorldGen);
+        }
+        MainMenuCommand::Continue => {
+            if let Some(bridge) = bridge.as_ref() {
+                let slot_name = saves
+                    .preferred_slot
+                    .as_deref()
+                    .unwrap_or("slot-1")
+                    .to_string();
+                let slot_id = slot_name
+                    .strip_prefix("slot-")
+                    .and_then(|raw| raw.parse::<u32>().ok())
+                    .map(|slot| 2010 + slot)
+                    .unwrap_or(2010);
+                let json = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "id": slot_id,
+                    "method": "save.load",
+                    "params": { "slot_name": slot_name },
+                })
+                .to_string();
+                bridge.client.send_rpc_raw(json);
+            }
+            if let (Some(mut gate), Some(mut overlay)) = (gate, overlay) {
+                begin_player_session(&mut gate, &mut overlay);
+            }
+            boot.elapsed = 0.0;
+            next_state.set(AppState::WorldGen);
+        }
+        MainMenuCommand::LoadGame => {
+            if let Some(save_panel) = save_panel.as_mut() {
+                save_panel.visible = true;
+            }
+            if let (Some(mut gate), Some(mut overlay)) = (gate, overlay) {
+                begin_player_session(&mut gate, &mut overlay);
+            }
+            boot.elapsed = 0.0;
+            next_state.set(AppState::WorldGen);
+        }
+        MainMenuCommand::Resume => {
+            if *state.get() == AppState::Paused {
+                next_state.set(AppState::Playing);
+            }
+        }
+        MainMenuCommand::OpenSettings => {}
+        MainMenuCommand::OpenSavePanel => {
+            if let Some(save_panel) = save_panel.as_mut() {
+                save_panel.visible = true;
+            }
+        }
+        MainMenuCommand::ExitToMainMenu => {
+            if let (Some(mut gate), Some(mut overlay)) = (gate, overlay) {
+                end_player_session(&mut gate, &mut overlay);
+            }
+            next_state.set(AppState::MainMenu);
+            *game_mode = GameUiMode::Playing;
+            boot.elapsed = 0.0;
+        }
+        MainMenuCommand::Quit => {
+            *game_mode = GameUiMode::Playing;
+            exit.write(AppExit::Success);
+        }
+    }
+}
+
+pub fn toggle_pause(
     keys: Res<ButtonInput<KeyCode>>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     settings: Option<Res<GameSettings>>,
+    app_state: Option<Res<State<AppState>>>,
+    outcome_overlay: Option<Res<OutcomeOverlayState>>,
+    escape_block: Option<Res<OutcomeEscapeBlock>>,
     mut mode: ResMut<GameUiMode>,
 ) {
     let pause_binding = settings
         .as_ref()
         .and_then(|s| s.key_for(ACTION_PAUSE_SIM))
         .unwrap_or(KeyBinding::Key(KeyCode::Escape));
-    if pause_binding.is_just_pressed(&keys, &mouse_buttons) {
-        *mode = match *mode {
-            GameUiMode::Playing => GameUiMode::Paused,
-            GameUiMode::Paused => GameUiMode::Playing,
-        };
+    if !pause_binding.is_just_pressed(&keys, &mouse_buttons) {
+        return;
     }
+
+    if escape_block.map(|block| block.0).unwrap_or(false) {
+        return;
+    }
+    if let Some(overlay) = outcome_overlay.as_ref() {
+        if outcome_modal_visible(overlay) {
+            return;
+        }
+    }
+
+    if let Some(app_state) = app_state {
+        if *app_state.get() != AppState::Playing && *app_state.get() != AppState::Paused {
+            return;
+        }
+    }
+
+    *mode = match *mode {
+        GameUiMode::Playing => GameUiMode::Paused,
+        GameUiMode::Paused => GameUiMode::Playing,
+    };
 }
 
 fn tick_era_banner(mut banner: ResMut<EraBanner>, time: Res<Time>) {
@@ -188,16 +403,45 @@ fn draw_main_menu(
     mut command: ResMut<MenuCommand>,
     saves: Res<MainMenuSaves>,
     mut settings_open: ResMut<SettingsOpen>,
+    titles: Res<MainMenuTitleAssets>,
+    images: Res<Assets<Image>>,
 ) {
     let Some(state) = state else {
         return;
     };
-    if *state != AppState::MainMenu {
+    if *state.get() != AppState::MainMenu {
         return;
     }
+
+    let bg_tex = titles.background.as_ref().and_then(|handle| {
+        images
+            .get(handle)
+            .map(|_| contexts.add_image(bevy_egui::EguiTextureHandle::Strong(handle.clone())))
+    });
+    let title_tex = titles
+        .wordmark
+        .as_ref()
+        .or(titles.logo.as_ref())
+        .and_then(|handle| {
+            images
+                .get(handle)
+                .map(|_| contexts.add_image(bevy_egui::EguiTextureHandle::Strong(handle.clone())))
+        });
+    let title_is_wordmark = titles.wordmark.is_some();
+
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
+
+    if let Some(id) = bg_tex {
+        let screen = ctx.content_rect();
+        egui::Area::new(egui::Id::new("main_menu_bg"))
+            .fixed_pos(screen.min)
+            .order(egui::Order::Background)
+            .show(ctx, |ui| {
+                ui.image((id, screen.size()));
+            });
+    }
 
     egui::Area::new(egui::Id::new("main_menu_area"))
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
@@ -209,12 +453,24 @@ fn draw_main_menu(
                 .show(ui, |ui| {
                     ui.set_min_width(420.0);
                     ui.vertical_centered(|ui| {
-                        ui.label(
-                            egui::RichText::new("Civis")
-                                .size(52.0)
-                                .color(KC_ACCENT)
-                                .strong(),
-                        );
+                        let mut drew_title = false;
+                        if let Some(id) = title_tex {
+                            let size = if title_is_wordmark {
+                                egui::vec2(360.0, 90.0)
+                            } else {
+                                egui::vec2(320.0, 120.0)
+                            };
+                            ui.image((id, size));
+                            drew_title = true;
+                        }
+                        if !drew_title {
+                            ui.label(
+                                egui::RichText::new("Civis")
+                                    .size(52.0)
+                                    .color(KC_ACCENT)
+                                    .strong(),
+                            );
+                        }
                         ui.label(
                             egui::RichText::new("Main menu")
                                 .size(16.0)
@@ -267,7 +523,7 @@ fn draw_worldgen_overlay(mut contexts: EguiContexts, state: Option<Res<State<App
     let Some(state) = state else {
         return;
     };
-    if *state != AppState::WorldGen {
+    if *state.get() != AppState::WorldGen {
         return;
     }
     let Ok(ctx) = contexts.ctx_mut() else {
@@ -592,6 +848,45 @@ fn menu_button(ui: &mut egui::Ui, label: &str) -> egui::Response {
         .min_size(egui::vec2(220.0, 40.0))
         .corner_radius(egui::CornerRadius::same(8));
     ui.add(btn)
+}
+
+fn ui_png_exists(stem: &str) -> bool {
+    let path = format!("{}/assets/ui/{stem}.png", env!("CARGO_MANIFEST_DIR"));
+    std::path::Path::new(&path).exists()
+}
+
+fn load_main_menu_title_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let mut assets = MainMenuTitleAssets::default();
+    if ui_png_exists("title-bg") {
+        assets.background = Some(asset_server.load("ui/title-bg.png"));
+    }
+    if ui_png_exists("logo") {
+        assets.logo = Some(asset_server.load("ui/logo.png"));
+    }
+    if ui_png_exists("wordmark") {
+        assets.wordmark = Some(asset_server.load("ui/wordmark.png"));
+    }
+    commands.insert_resource(assets);
+}
+
+fn live_stream_has_content(scene: &LiveStreamScene) -> bool {
+    !scene.chunks.is_empty()
+        || !scene.agents.is_empty()
+        || !scene.buildings.is_empty()
+        || !scene.graph_parcels.is_empty()
+}
+
+fn start_world_boot(client: &crate::ws_client::WsClient, preset: &str, seed: u64) {
+    let init_seed = if seed == 0 {
+        WORLDGEN_DEFAULT_SEED
+    } else {
+        seed
+    };
+    client.send_rpc(
+        "sim.load_scenario",
+        serde_json::json!({ "preset": preset, "seed": init_seed }),
+    );
+    client.send_rpc("sim.reset", serde_json::json!({ "seed": init_seed }));
 }
 
 #[cfg(test)]

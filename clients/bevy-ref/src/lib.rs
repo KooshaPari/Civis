@@ -152,6 +152,11 @@ pub use civ_voxel::{
 };
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub use menus::MenusPlugin;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub use outcome_overlay::{
+    apply_outcome_poll, begin_player_session, end_player_session, OutcomeOverlayState,
+    OutcomeSessionGate,
+};
 pub use crash_handler::install_crash_handler;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub use perf_hud::PerfHudPlugin;

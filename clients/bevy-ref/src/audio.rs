@@ -1,6 +1,19 @@
 //! Ambient soundscape + SFX system for the Civis Bevy client.
 //!
 //! Feature-gated behind the `audio` cargo feature (which implies `bevy`).
+//!
+//! ## Snapshot cue map (`sim.snapshot.audio_events` → Bevy)
+//!
+//! | Wire `trigger` | [`SfxKind`] | Default asset (optional) |
+//! |----------------|-------------|--------------------------|
+//! | `birth`        | `Birth`     | `audio/birth.ogg`        |
+//! | `death`        | `Death`     | `audio/death.ogg`        |
+//! | `tech`         | `Tech`      | `audio/sfx_tech.ogg`     |
+//! | `battle`       | `Battle`    | `audio/sfx_battle.ogg`   |
+//! | `disaster`     | `Disaster`  | `audio/sfx_disaster.ogg` |
+//!
+//! Battle uses a dedicated clip (not the disaster sting). All `.ogg` files under
+//! `assets/audio/` are optional — missing clips play silence without aborting.
 
 #![cfg(feature = "audio")]
 
@@ -388,6 +401,73 @@ mod tests {
             sfx_from_audio_event(&crate::AudioEventWire::Battle { intensity: 1.5 });
         assert_eq!(kind, SfxKind::Battle);
         assert!((volume - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn battle_wire_event_does_not_alias_disaster_sfx() {
+        let (kind, _) =
+            sfx_from_audio_event(&crate::AudioEventWire::Battle { intensity: 0.5 });
+        assert_ne!(kind, SfxKind::Disaster);
+        assert_eq!(kind, SfxKind::Battle);
+    }
+
+    #[test]
+    fn disaster_wire_event_maps_to_disaster_not_battle() {
+        let (kind, volume) = sfx_from_audio_event(&crate::AudioEventWire::Disaster {
+            kind: "quake".to_string(),
+            severity: 0.75,
+        });
+        assert_eq!(kind, SfxKind::Disaster);
+        assert_ne!(kind, SfxKind::Battle);
+        assert!((volume - 0.75).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn lifecycle_and_research_wire_events_map_to_distinct_sfx() {
+        let cases = [
+            (
+                crate::AudioEventWire::Birth,
+                SfxKind::Birth,
+                1.0_f32,
+            ),
+            (
+                crate::AudioEventWire::Death,
+                SfxKind::Death,
+                1.0,
+            ),
+            (
+                crate::AudioEventWire::Tech,
+                SfxKind::Tech,
+                1.0,
+            ),
+        ];
+        for (wire, want_kind, want_vol) in cases {
+            let (kind, volume) = sfx_from_audio_event(&wire);
+            assert_eq!(kind, want_kind);
+            assert!((volume - want_vol).abs() < f32::EPSILON);
+            assert_ne!(kind, SfxKind::Disaster);
+            assert_ne!(kind, SfxKind::Battle);
+        }
+    }
+
+    #[test]
+    fn polish_audio_cue_asset_paths_are_pairwise_distinct() {
+        let files = AudioFiles::default();
+        let paths = [
+            files.birth.as_str(),
+            files.death.as_str(),
+            files.battle.as_str(),
+            files.disaster.as_str(),
+            files.tech.as_str(),
+        ];
+        for (i, left) in paths.iter().enumerate() {
+            for right in paths.iter().skip(i + 1) {
+                assert_ne!(left, right, "lifecycle SFX paths must not alias");
+            }
+        }
+        assert_eq!(files.birth, "audio/birth.ogg");
+        assert_eq!(files.death, "audio/death.ogg");
+        assert_eq!(files.tech, "audio/sfx_tech.ogg");
     }
 
     #[test]

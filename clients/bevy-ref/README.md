@@ -35,6 +35,34 @@ CIVIS_TICK_BROADCAST=binary cargo run -p civ-server
 cargo run -p civ-bevy-ref --features bevy --bin civ-bevy-window
 ```
 
+### Local play fingerprints
+
+Feature flags compound — pick the smallest set that matches your goal. CI and
+local play intentionally diverge: compile gates stay minimal; playable builds
+add audio (and optionally models / voxel / GI).
+
+| Tier | `--features` | Gate / recipe | What you get |
+|------|--------------|---------------|--------------|
+| **Minimal** | `bevy,egui` | `just bevy-egui-check` | Menus, HUD, in-process sim — **no audio**, heightmap terrain fallback. This is what PR compile gates and `civis-3d-live-smoke` `cargo check` use. |
+| **Playable** | `bevy,egui,audio` (+ optional `models`) | `just civis-bevy-play` | Release `civ-standalone` with ambient SFX + UI sounds. Add `models` when `assets/models/*.glb` are present (otherwise procedural primitives). |
+| **Full sandbox** | above + optional `voxel`, `voxel_stream`, `gi` | manual `cargo build/run` | `voxel` — volumetric CA terrain + water; `voxel_stream` — camera-driven chunk streaming (implies `voxel`); `gi` — Bevy Solari RT GI (needs DXR / Vulkan RT; degrades to no-op). Heavier compile; not in CI. |
+
+**Playable run (after `just civis-bevy-play` builds release):**
+
+```powershell
+# From repo root — BEVY_ASSET_ROOT required when CWD is workspace root (see Tools/play.ps1)
+$env:BEVY_ASSET_ROOT = "$PWD/clients/bevy-ref"
+& "$env:CARGO_TARGET_DIR/release/civ-standalone.exe"   # default target: G:/civis-target-gate
+
+# Optional live attach (skip local terrain; remote ticks ignore pause)
+$env:CIVIS_ATTACH = "server"
+$env:CIV_SERVER_PORT = "3010"   # default is 3000; matches civ-server listen port
+# Or full URL (overrides host/port/path):
+$env:CIV_WS_URL = "ws://127.0.0.1:3010/ws?tick_format=binary"
+```
+
+Set `CIVIS_TICK_BROADCAST=binary` on `civ-server` when using `tick_format=binary` on the URL.
+
 ### Live attach smoke (`just civis-3d-live-smoke`)
 
 Headless gate for live attach — no window or running civ-server required:

@@ -271,7 +271,6 @@ impl BiomeKind {
             BiomeKind::Savanna => {
                 matches!(label, "Savanna" | "Grassland" | "Scrubland" | "Drylands")
             }
-            BiomeKind::Savanna => matches!(label, "Savanna" | "Grassland" | "Drylands"),
             BiomeKind::Rainforest => {
                 matches!(label, "Rainforest" | "Jungle" | "TropicalForest" | "Forest")
             }

@@ -992,8 +992,18 @@ mod tests {
     }
 
     #[test]
+    fn app_state_default_is_main_menu() {
+        assert_eq!(AppState::default(), AppState::MainMenu);
+    }
+
+    #[test]
     fn game_ui_mode_default_is_playing() {
         assert_eq!(GameUiMode::default(), GameUiMode::Playing);
+    }
+
+    #[test]
+    fn world_gen_boot_default_is_zero_elapsed() {
+        assert!((WorldGenBoot::default().elapsed).abs() < f32::EPSILON);
     }
 
     #[test]

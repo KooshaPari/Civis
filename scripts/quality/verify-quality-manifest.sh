@@ -2,7 +2,7 @@
 # Cloud CI: verify committed local quality attestation (no cargo/rust on the runner).
 #
 # Gate tiers (see scripts/quality/README.md):
-#   Core (required): civis_3d_verify, web_test, dashboard_typecheck, rust_*, godot_test
+#   Core (required): civis_3d_verify, bevy_egui_check, web_test, dashboard_typecheck, rust_*, godot_test
 #   Optional (Unreal): unreal_preflight, unreal_build — status "skip" is valid; omit if no UE
 set -euo pipefail
 

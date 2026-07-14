@@ -26,6 +26,7 @@ if (Test-Path $cargoBin) {
 
 Write-Host "==> civis quality manifest (local gates)"
 $skipCivisVerify = $env:SKIP_CIVIS_3D_VERIFY -eq "1" -or $env:SKIP_QUALITY_MANIFEST -eq "1" -or $env:SKIP_QUALITY -eq "1"
+$skipBevyEguiCheck = $env:SKIP_BEVY_EGUI_CHECK -eq "1" -or $env:SKIP_QUALITY_MANIFEST -eq "1" -or $env:SKIP_QUALITY -eq "1"
 
 if (Get-Command just -ErrorAction SilentlyContinue) {
     if ($skipCivisVerify) {
@@ -33,6 +34,12 @@ if (Get-Command just -ErrorAction SilentlyContinue) {
         Write-Host "  skip civis_3d_verify"
     } else {
         Invoke-Gate "civis_3d_verify" { just civis-3d-verify }
+    }
+    if ($skipBevyEguiCheck) {
+        $results["bevy_egui_check"] = @{ status = "skip"; detail = "SKIP_BEVY_EGUI_CHECK/SKIP_QUALITY_MANIFEST set" }
+        Write-Host "  skip bevy_egui_check"
+    } else {
+        Invoke-Gate "bevy_egui_check" { just bevy-egui-check }
     }
 } else {
     Invoke-Gate "rust_fmt" { cargo fmt --check }

@@ -17,7 +17,7 @@ The manifest records a `git_sha` (HEAD or HEAD^) and a blake2b `manifest_hash` o
 
 | Tier | Gates | Required for merge? |
 |------|-------|---------------------|
-| **Core** | `civis_3d_verify`, `web_test`, `dashboard_typecheck` (or `rust_*` / `godot_test` fallback) | Yes — `status` must be `pass` |
+| **Core** | `civis_3d_verify`, `bevy_egui_check`, `web_test`, `dashboard_typecheck` (or `rust_*` / `godot_test` fallback) | Yes — `status` must be `pass` |
 | **Optional (Unreal)** | `unreal_preflight`, `unreal_build` | No — `skip` is OK; omit entirely on machines without UE |
 
 Unreal scripts (optional tier):

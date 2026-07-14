@@ -89,6 +89,7 @@ jobs:
             // Avoid racing on IN_PROGRESS third-party checks (Sonar/Kilo/etc).
             const mustComplete = [
               /^cargo check --workspace/i,
+              /^client-compile/i,
               /^cargo-deny/i,
               /^quality-manifest/i,
             ];

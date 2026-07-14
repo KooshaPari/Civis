@@ -54,6 +54,11 @@ if command -v just >/dev/null 2>&1; then
   else
     run_gate civis_3d_verify just civis-3d-verify || true
   fi
+  if [ "${SKIP_BEVY_EGUI_CHECK:-0}" = "1" ] || [ "${SKIP_QUALITY_MANIFEST:-0}" = "1" ] || [ "${SKIP_QUALITY:-0}" = "1" ]; then
+    record "bevy_egui_check" "skip" "SKIP_BEVY_EGUI_CHECK/SKIP_QUALITY_MANIFEST set"
+  else
+    run_gate bevy_egui_check just bevy-egui-check || true
+  fi
 else
   run_gate rust_fmt cargo fmt --check || true
   run_gate rust_clippy cargo clippy --workspace --all-targets -- -D warnings || true

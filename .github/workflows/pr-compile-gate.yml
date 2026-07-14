@@ -9,8 +9,13 @@ name: PR Compile Gate
 on:
   workflow_dispatch:
   pull_request:
-    branches:
-      - feat/civis-platform
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: pr-compile-gate-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

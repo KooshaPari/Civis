@@ -29,6 +29,15 @@ use civ_bevy_ref::{
 fn main() {
     civ_bevy_ref::install_crash_handler();
 
+    // Prefer DX12 Ultimate path on Windows when unset (wgpu → DX12 HAL).
+    if std::env::var_os(civ_bevy_ref::native_backend::BACKEND_ENV).is_none() {
+        #[cfg(target_os = "windows")]
+        {
+            // Process-local; set before Bevy/wgpu adapter enumeration.
+            std::env::set_var(civ_bevy_ref::native_backend::BACKEND_ENV, "dx12");
+        }
+    }
+
     let attach_mode = resolve_attach_mode_from_env();
 
     if let Err(message) = civ_bevy_ref::preflight::run_startup_preflight(attach_mode) {

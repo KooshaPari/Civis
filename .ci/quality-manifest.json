@@ -1,8 +1,8 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "22c28e17ff80614956f72b8d3f39c3137f658f7f",
-  "created_at": "2026-07-14T05:39:46Z",
+  "git_sha": "3aa7bfe3f68d60be35d3eb166881eae389c455ed",
+  "created_at": "2026-07-14T05:56:55Z",
   "runner": {
     "host": "x",
     "rust": "rustc"
@@ -65,5 +65,5 @@
       "detail": "just bevy-egui-check"
     }
   },
-  "manifest_hash": "31b431fc3ae9ff90140d070e0deaa6672c4ba58271a8e7575d5e3c5859422cdf"
+  "manifest_hash": "4c464bb75364deca65f43c28609e41dd51606b400b03e7d0b4739b8272e3d2b0"
 }

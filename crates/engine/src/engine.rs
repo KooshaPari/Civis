@@ -2984,6 +2984,7 @@ impl Simulation {
                 crate::faction_decisions::FactionDecision::Maintain => {}
             }
         }
+        crate::faction_decisions::apply_faction_decision_intents(self);
     }
 
     fn phase_victory_check(&mut self) {
@@ -7965,6 +7966,11 @@ mod tests {
             position: Position { x: 2, y: 0 },
             faction_id: 1,
         },));
+        let hostile_before = hostile
+            .faction_relations
+            .record(0u32, 1u32)
+            .map(|record| record.score)
+            .expect("hostile setup must seed a relation row");
         hostile.tick();
         assert!(hostile
             .state
@@ -7974,6 +7980,16 @@ mod tests {
             hostile.snapshot().last_tick_faction_hostility_intents,
             hostile.state.last_tick_faction_hostility_intents
         );
+        let hostile_after = hostile
+            .faction_relations
+            .record(0u32, 1u32)
+            .map(|record| record.score)
+            .expect("hostility intent must lower relation score");
+        assert!(hostile_after <= hostile_before);
+        assert!(hostile_after < -0.5);
+        assert!(hostile.diplomacy_events().iter().any(|event| {
+            event.kind == DiplomacyKind::Conflict && event.faction_a == 0 && event.faction_b == 1
+        }));
 
         let mut trade = Simulation::with_seed(11);
         trade.state.faction_resources.entry(0).or_default().food = Fixed::from_num(1500);
@@ -8003,6 +8019,17 @@ mod tests {
             trade.snapshot().last_tick_faction_trade_open_intents,
             trade.state.last_tick_faction_trade_open_intents
         );
+        assert!(trade.diplomacy_events().iter().any(|event| {
+            event.kind == DiplomacyKind::TradeAgreement
+                && event.faction_a == 0
+                && event.faction_b == 1
+        }));
+        let trade_score = trade
+            .faction_relations
+            .record(0u32, 1u32)
+            .map(|record| record.score)
+            .expect("trade intent must raise relation score");
+        assert!(trade_score > 0.8);
     }
 
     #[test]

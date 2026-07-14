@@ -7,9 +7,12 @@
 //! This is the "sim→game leap": factions transition from passive emergence to
 //! active decision-makers responding to world state.
 
+use std::cmp::Ordering;
 use std::collections::HashMap;
 
-use crate::engine::{MilitaryUnit, Simulation};
+use civ_agents::DiplomacySignal;
+
+use crate::engine::{DiplomacyEvent, DiplomacyKind, MilitaryUnit, Simulation};
 
 /// Decision action a faction may take based on emergent state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -127,6 +130,103 @@ fn has_military_advantage(faction_id: u32, military_counts: &HashMap<u32, usize>
     mine > max_other
 }
 
+/// Apply hostility/trade-open intents into relation scores and diplomacy events
+/// (FR-FACTION-decisions-apply). Called at the end of `phase_faction_decisions`.
+pub fn apply_faction_decision_intents(sim: &mut Simulation) {
+    let tick = sim.state.tick;
+    let hostility: Vec<u32> = sim
+        .state
+        .last_tick_faction_hostility_intents
+        .iter()
+        .copied()
+        .collect();
+    for faction_id in hostility {
+        let Some(target) = pick_hostility_target(sim, faction_id) else {
+            continue;
+        };
+        let outcome = sim.faction_relations.apply_signal(
+            faction_id,
+            target,
+            DiplomacySignal {
+                combat_grievance: 0.35,
+                ..DiplomacySignal::default()
+            },
+        );
+        sim.emit_relation_threshold_event(faction_id, target, outcome);
+        sim.push_diplomacy_event(DiplomacyEvent {
+            tick,
+            faction_a: faction_id,
+            faction_b: target,
+            kind: DiplomacyKind::Conflict,
+        });
+    }
+
+    let trade_open: Vec<u32> = sim
+        .state
+        .last_tick_faction_trade_open_intents
+        .iter()
+        .copied()
+        .collect();
+    for faction_id in trade_open {
+        let Some(target) = pick_trade_target(sim, faction_id) else {
+            continue;
+        };
+        let outcome = sim.faction_relations.apply_signal(
+            faction_id,
+            target,
+            DiplomacySignal {
+                trade_volume: 0.5,
+                need_complementarity: 0.5,
+                ..DiplomacySignal::default()
+            },
+        );
+        sim.emit_relation_threshold_event(faction_id, target, outcome);
+        sim.push_diplomacy_event(DiplomacyEvent {
+            tick,
+            faction_a: faction_id,
+            faction_b: target,
+            kind: DiplomacyKind::TradeAgreement,
+        });
+    }
+}
+
+fn pair_score(sim: &Simulation, faction_id: u32, other: u32) -> f32 {
+    sim.faction_relations
+        .record(faction_id, other)
+        .map(|record| record.score)
+        .unwrap_or(0.0)
+}
+
+fn other_factions(sim: &Simulation, faction_id: u32) -> Vec<u32> {
+    let mut ids: Vec<u32> = sim
+        .state
+        .factions
+        .keys()
+        .copied()
+        .filter(|id| *id != faction_id)
+        .collect();
+    ids.sort_unstable();
+    ids
+}
+
+fn pick_hostility_target(sim: &Simulation, faction_id: u32) -> Option<u32> {
+    other_factions(sim, faction_id).into_iter().min_by(|left, right| {
+        pair_score(sim, faction_id, *left)
+            .partial_cmp(&pair_score(sim, faction_id, *right))
+            .unwrap_or(Ordering::Equal)
+            .then_with(|| left.cmp(right))
+    })
+}
+
+fn pick_trade_target(sim: &Simulation, faction_id: u32) -> Option<u32> {
+    other_factions(sim, faction_id).into_iter().max_by(|left, right| {
+        pair_score(sim, faction_id, *left)
+            .partial_cmp(&pair_score(sim, faction_id, *right))
+            .unwrap_or(Ordering::Equal)
+            .then_with(|| right.cmp(left))
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -238,5 +338,66 @@ mod tests {
             .find(|(id, _)| *id == 0)
             .map(|(_, d)| *d);
         assert_eq!(d0, Some(FactionDecision::FlagTradeOpen));
+    }
+
+    #[test]
+    fn hostility_intent_applies_relation_score_and_conflict_event() {
+        let mut sim = Simulation::with_seed(42);
+        sim.faction_relations.apply_signal(
+            0u32,
+            1u32,
+            DiplomacySignal {
+                combat_grievance: 0.4,
+                ..DiplomacySignal::default()
+            },
+        );
+        let before = sim
+            .faction_relations
+            .record(0u32, 1u32)
+            .map(|record| record.score)
+            .unwrap_or(0.0);
+        sim.state.last_tick_faction_hostility_intents.insert(0);
+
+        apply_faction_decision_intents(&mut sim);
+
+        let after = sim
+            .faction_relations
+            .record(0u32, 1u32)
+            .map(|record| record.score)
+            .expect("hostility intent must materialize a relation row");
+        assert!(after < before);
+        assert!(sim.diplomacy_events().iter().any(|event| {
+            event.kind == DiplomacyKind::Conflict
+                && event.faction_a == 0
+                && event.faction_b == 1
+        }));
+    }
+
+    #[test]
+    fn trade_open_intent_surfaces_trade_agreement_event() {
+        let mut sim = Simulation::with_seed(42);
+        sim.faction_relations.apply_signal(
+            0u32,
+            1u32,
+            DiplomacySignal {
+                trade_volume: 0.8,
+                ..DiplomacySignal::default()
+            },
+        );
+        sim.state.last_tick_faction_trade_open_intents.insert(0);
+
+        apply_faction_decision_intents(&mut sim);
+
+        let after = sim
+            .faction_relations
+            .record(0u32, 1u32)
+            .map(|record| record.score)
+            .expect("trade intent must materialize a relation row");
+        assert!(after > 0.0);
+        assert!(sim.diplomacy_events().iter().any(|event| {
+            event.kind == DiplomacyKind::TradeAgreement
+                && event.faction_a == 0
+                && event.faction_b == 1
+        }));
     }
 }

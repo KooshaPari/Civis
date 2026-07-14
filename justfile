@@ -138,6 +138,13 @@ civis-verify with_bevy="":
 bevy-egui-check:
     cargo check -p civ-bevy-ref --features bevy,egui
 
+# SHELL-ATTEST-001 — headless AppState / menu smoke (no GPU window).
+# Complements bevy-egui-check compile gate with playability wiring proof.
+bevy-shell-smoke:
+    cargo test -p civ-bevy-ref --features bevy,egui --test shell_attest
+    cargo test -p civ-bevy-ref --features bevy,egui menus::tests::
+    cargo test -p civ-bevy-ref --features bevy,egui outcome_overlay::tests::
+
 # Run the Bevy reference client smoke (headless; meshes one chunk).
 civis-3d-bevy-smoke:
     cargo run -p civ-bevy-ref --bin civ-bevy-ref

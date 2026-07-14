@@ -554,7 +554,6 @@ fn sync_emergence_hud(sim: Res<SimState>, mut hud: ResMut<crate::EmergenceHudDat
     *hud = crate::EmergenceHudData {
         entropy_bits: sample.entropy_bits,
         entropy_norm: sample.entropy_norm,
-        branching_sigma: sample.branching_sigma,
         power_law_alpha: sample.power_law_alpha,
         novelty_rate: sample.novelty_rate,
         mi_material_faction_norm: sample.mi_material_faction_norm,

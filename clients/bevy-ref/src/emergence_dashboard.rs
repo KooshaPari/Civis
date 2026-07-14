@@ -161,12 +161,16 @@ fn draw_emergence_dashboard(
                         bar_color_neutral(novelty_norm),
                     );
 
-                    let sigma_norm = (em.branching_sigma / 1.5).clamp(0.0, 1.0);
+                    let sigma_norm = match em.branching_regime.as_str() {
+                        "SUPERCRITICAL" => 1.0,
+                        "CRITICAL" => 0.66,
+                        _ => 0.33,
+                    };
                     metric_bar(
                         ui,
-                        "Branching σ",
+                        "Branching regime",
                         sigma_norm,
-                        &format!("{:.3}", em.branching_sigma),
+                        &em.branching_regime,
                         regime_color,
                     );
 

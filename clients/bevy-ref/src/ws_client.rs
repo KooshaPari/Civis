@@ -36,7 +36,6 @@ impl Default for WsClientConfig {
 }
 
 /// WebSocket client that bridges the tokio network task to Bevy systems.
-#[derive(Clone)]
 pub struct WsClient {
     frame_rx: Receiver<Frame3d>,
     meta_rx: Receiver<WsSpectatorMeta>,
@@ -49,6 +48,7 @@ pub struct WsClient {
     /// Inbound parsed EmergenceHudData from id=2 sim.emergence responses.
     emergence_rx: crossbeam_channel::Receiver<EmergenceHudData>,
     outcome_rx: crossbeam_channel::Receiver<OutcomeHudData>,
+    save_list_rx: crossbeam_channel::Receiver<Vec<SaveListEntry>>,
 }
 
 impl WsClient {
@@ -67,6 +67,7 @@ impl WsClient {
         let (send_tx, send_rx) = crossbeam_channel::unbounded::<String>();
         let (emergence_tx, emergence_rx) = crossbeam_channel::unbounded::<EmergenceHudData>();
         let (outcome_tx, outcome_rx) = crossbeam_channel::unbounded::<OutcomeHudData>();
+        let (save_list_tx, save_list_rx) = crossbeam_channel::unbounded::<Vec<SaveListEntry>>();
 
         thread::spawn(move || {
             run_client(
@@ -80,6 +81,7 @@ impl WsClient {
                 send_rx,
                 emergence_tx,
                 outcome_tx,
+                save_list_tx,
             );
         });
 
@@ -93,12 +95,8 @@ impl WsClient {
             send_tx,
             emergence_rx,
             outcome_rx,
+            save_list_rx,
         }
-    }
-
-    /// Enqueue an outbound JSON-RPC text frame (fire-and-forget; drops silently if disconnected).
-    pub fn send_rpc(&self, json: String) {
-        let _ = self.send_tx.send(json);
     }
 
     /// Clone the outbound RPC sender so other Bevy resources can enqueue frames
@@ -125,6 +123,16 @@ impl WsClient {
             latest = Some(o);
         }
         latest
+    }
+
+    /// Drain save-list responses from `save.list` (id=2099) RPC replies.
+    #[must_use]
+    pub fn poll_save_list(&self) -> Vec<SaveListEntry> {
+        let mut entries = Vec::new();
+        while let Ok(batch) = self.save_list_rx.try_recv() {
+            entries.extend(batch);
+        }
+        entries
     }
 
     /// Drain all currently available frames without blocking the main thread.
@@ -185,6 +193,23 @@ impl WsClient {
         })
         .to_string();
         let _ = self.cmd_tx.send(msg);
+    }
+}
+
+impl Clone for WsClient {
+    fn clone(&self) -> Self {
+        Self {
+            frame_rx: self.frame_rx.clone(),
+            meta_rx: self.meta_rx.clone(),
+            rtt_rx: self.rtt_rx.clone(),
+            state_rx: self.state_rx.clone(),
+            latest_state: AtomicU32::new(self.latest_state.load(Ordering::Relaxed)),
+            cmd_tx: self.cmd_tx.clone(),
+            send_tx: self.send_tx.clone(),
+            emergence_rx: self.emergence_rx.clone(),
+            outcome_rx: self.outcome_rx.clone(),
+            save_list_rx: self.save_list_rx.clone(),
+        }
     }
 }
 
@@ -252,6 +277,7 @@ fn run_client(
     send_rx: crossbeam_channel::Receiver<String>,
     emergence_tx: Sender<EmergenceHudData>,
     outcome_tx: Sender<OutcomeHudData>,
+    save_list_tx: Sender<Vec<SaveListEntry>>,
 ) {
     let runtime = Builder::new_multi_thread()
         .enable_all()
@@ -273,6 +299,7 @@ fn run_client(
                 &send_rx,
                 &emergence_tx,
                 &outcome_tx,
+                &save_list_tx,
             )
             .await
             {
@@ -419,6 +446,7 @@ async fn connect_and_stream(
     send_rx: &crossbeam_channel::Receiver<String>,
     emergence_tx: &Sender<EmergenceHudData>,
     outcome_tx: &Sender<OutcomeHudData>,
+    save_list_tx: &Sender<Vec<SaveListEntry>>,
 ) -> Result<(), String> {
     let (ws, _) = tokio_tungstenite::connect_async(url)
         .await
@@ -481,6 +509,10 @@ async fn connect_and_stream(
                 }
                 if let Some(oc) = parse_outcome_response(&text) {
                     let _ = outcome_tx.send(oc);
+                    continue;
+                }
+                if let Some(entries) = parse_save_list_response(&text) {
+                    let _ = save_list_tx.send(entries);
                     continue;
                 }
                 if config.prefer_binary {

@@ -4,8 +4,9 @@
 //! Settings GPU readout: FR-CIV-BEVY-036 / item 61.
 
 use crate::gpu_features::GpuCapabilities;
+use crate::save_load_ui::SaveLoadPanel;
 use crate::settings_ui::{GameSettings, KeyBinding, ACTION_PAUSE_SIM};
-use crate::ui_theme::{liquid_glass_frame, GLASS_FILL, KC_ACCENT, RADIUS_PANEL};
+use crate::ui_theme::{liquid_glass_frame, GLASS_FILL, KC_ACCENT, RADIUS_PANEL, CHIP_FILL};
 use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
@@ -297,7 +298,9 @@ fn draw_worldgen_overlay(mut contexts: EguiContexts, state: Option<Res<State<App
 fn draw_pause_menu(
     mut contexts: EguiContexts,
     mut mode: ResMut<GameUiMode>,
+    mut command: ResMut<MenuCommand>,
     mut settings_open: ResMut<SettingsOpen>,
+    mut save_panel: ResMut<SaveLoadPanel>,
     mut exit: MessageWriter<AppExit>,
 ) {
     if *mode != GameUiMode::Paused {

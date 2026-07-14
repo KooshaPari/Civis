@@ -36,6 +36,10 @@ pub enum GpuQualityMode {
     /// Strong recovery after sustained drops.
     Critical,
 }
+
+/// Alias used by god-tool remesh paths that read the active recovery mode.
+pub type FrameBudgetRecovery = GpuQualityMode;
+
 impl GpuQualityMode {
     /// Multiplier applied to cull distance.
     #[must_use]
@@ -58,6 +62,12 @@ impl GpuQualityMode {
 #[must_use]
 pub fn scaled_cull_distance(base: f32, mode: GpuQualityMode) -> f32 {
     base * mode.cull_distance_scale()
+}
+
+/// Scale camera distance before LOD band selection.
+#[must_use]
+pub fn scaled_mesh_lod_distance(distance: f32, mode: GpuQualityMode) -> f32 {
+    distance * mode.lod_distance_scale()
 }
 
 #[derive(Resource, Debug, Default, Clone, Copy, PartialEq)]
@@ -86,17 +96,6 @@ impl Default for FrameBudgetState {
             last_warn_at: None,
             last_recovery_warn_at: None,
             recent_drops: VecDeque::new(),
-        }
-    }
-}
-
-impl Default for FrameBudgetState {
-    fn default() -> Self {
-        Self {
-            window: [0.0; FRAME_BUDGET_WINDOW],
-            index: 0,
-            filled: 0,
-            last_warn_at: None,
         }
     }
 }
@@ -160,6 +159,22 @@ fn enforce_frame_budget(
     }
     metrics.drop_count = metrics.drop_count.saturating_add(1);
     let now = time.elapsed_secs_f64();
+    state.recent_drops.push_back(now);
+    while let Some(front) = state.recent_drops.front().copied() {
+        if now - front > DROP_RECOVERY_WINDOW_SECS {
+            state.recent_drops.pop_front();
+        } else {
+            break;
+        }
+    }
+    let drop_count = state.recent_drops.len() as u64;
+    *recovery = if drop_count >= DROP_THRESHOLD_CRITICAL {
+        GpuQualityMode::Critical
+    } else if drop_count >= DROP_THRESHOLD_REDUCED {
+        GpuQualityMode::Reduced
+    } else {
+        GpuQualityMode::Full
+    };
     let should_warn = state
         .last_warn_at
         .map(|last| now - last >= WARN_THROTTLE_SECS)

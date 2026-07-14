@@ -4,25 +4,15 @@ use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
 use bevy::ui::{FocusPolicy, RelativeCursorPosition};
 use bevy_egui::{egui, EguiContexts};
-use bevy_egui::{egui, EguiContexts};
-#[cfg(feature = "models")]
-use civ_bevy_ref::animation::ActorAnimationPlugin;
 #[cfg(feature = "models")]
 use civ_bevy_ref::animation::ActorAnimationPlugin;
 use civ_bevy_ref::atmosphere::{animate_water, setup_atmosphere, update_lighting, DayNightCycle};
 #[cfg(feature = "egui")]
 use civ_bevy_ref::diplomacy_ui::{DiplomacyBridge, DiplomacyUiPlugin};
-use civ_bevy_ref::diplomacy_ui::{DiplomacyBridge, DiplomacyUiPlugin};
-#[cfg(feature = "models")]
-use civ_bevy_ref::gltf_models::GltfModelsPlugin;
 #[cfg(feature = "models")]
 use civ_bevy_ref::gltf_models::GltfModelsPlugin;
 #[cfg(feature = "gi")]
 use civ_bevy_ref::lighting_gi::SolariGiPlugin;
-#[cfg(feature = "gi")]
-use civ_bevy_ref::lighting_gi::SolariGiPlugin;
-#[cfg(feature = "egui")]
-use civ_bevy_ref::settings_ui::{GameSettings, KeyBinding, SettingsPlugin};
 #[cfg(feature = "egui")]
 use civ_bevy_ref::settings_ui::{GameSettings, KeyBinding, SettingsPlugin};
 #[cfg(not(feature = "egui"))]
@@ -66,7 +56,6 @@ use civ_bevy_ref::{
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
     presentation_day_factor_target, resolve_live_ws_url,
     save_load_ui::{SaveLoadPanel, SaveLoadUiPlugin},
-    world_stats_dashboard::WorldStatsDashboardPlugin,
     ws_client::{WsClient, WsClientConfig},
     CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MenusPlugin, MinimapBounds,
     MusicCues, PerfHudPlugin, TutorialPlugin, VOXEL_CHUNK_EDGE,
@@ -234,7 +223,7 @@ fn main() {
             .set(native_render_plugin()),
         WireframePlugin::default(),
         PostFxPlugin,
-        ReverseFeaturesPlugin,
+        GpuFeaturesPlugin,
         LivePickPlugin,
     ));
     #[cfg(feature = "audio")]
@@ -250,7 +239,6 @@ fn main() {
     #[cfg(feature = "egui")]
     app.add_plugins((
         EmergenceDashboardPlugin,
-        WorldStatsDashboardPlugin,
         civ_bevy_ref::AgentNeedsPlugin,
         DiplomacyUiPlugin,
         GodPanelPlugin,
@@ -285,38 +273,41 @@ fn main() {
         );
         app.add_systems(
             Update,
+            worldgen_to_playing.run_if(in_state(AppState::Playing)),
+        );
+        app.add_systems(
+            Update,
             (
-                worldgen_to_playing,
-                (
-                    debug_render_input,
-                    orbit_camera_input,
-                    minimap_click_focus,
-                    minimap_popup_ui,
-                    poll_emergence,
-                    viewport_chunk_raycast,
-                    update_orbit_camera_transform,
-                    apply_live_frames,
-                    sync_agent_labels_from_civilians.after(apply_live_frames),
-                    apply_spectator_meta,
-                    sync_live_hud_stats,
-                    sync_live_pick_detail,
-                    update_live_focus,
-                    follow_live_orbit_focus,
-                    sync_chunk_debug_render,
-                    update_chunk_fade,
-                    update_hud,
-                    update_minimap,
-                    // FR-CLIENT-render: climate frame → presentation.is_day.
-                    // Must run after `apply_live_frames` (which records the
-                    // climate snapshot) and before `update_presentation_lighting`
-                    // (which consumes the flag).
-                    sync_presentation_from_climate.after(apply_live_frames),
-                    update_presentation_lighting,
-                    animate_water,
-                    update_lighting,
-                )
-                    .run_if(in_state(AppState::Playing)),
-            ),
+                debug_render_input,
+                orbit_camera_input,
+                minimap_click_focus,
+                minimap_popup_ui,
+                poll_emergence,
+                viewport_chunk_raycast,
+                update_orbit_camera_transform,
+                apply_live_frames,
+                sync_agent_labels_from_civilians.after(apply_live_frames),
+                apply_spectator_meta,
+                sync_live_hud_stats,
+            )
+                .run_if(in_state(AppState::Playing)),
+        );
+        app.add_systems(
+            Update,
+            (
+                sync_live_pick_detail,
+                update_live_focus,
+                follow_live_orbit_focus,
+                sync_chunk_debug_render,
+                update_chunk_fade,
+                update_hud,
+                update_minimap,
+                sync_presentation_from_climate.after(apply_live_frames),
+                update_presentation_lighting,
+                animate_water,
+                update_lighting,
+            )
+                .run_if(in_state(AppState::Playing)),
         );
     }
     #[cfg(not(feature = "egui"))]
@@ -564,21 +555,8 @@ fn apply_spectator_meta(
             hud.snapshot.tick = Some(tick);
             hud.snapshot.connected = true;
         }
-        if let Some(population) = meta.population {
-            hud.snapshot.world_stats.population = population;
-        }
-        if let Some(building_count) = meta.building_count {
-            hud.snapshot.world_stats.building_count = building_count;
-        }
-        if let Some(speed_multiplier) = meta.speed_multiplier {
-            hud.snapshot.world_stats.speed_multiplier = speed_multiplier;
-            hud.snapshot.speed_multiplier = speed_multiplier;
-        }
-        if let Some(market_prices) = meta.market_prices {
-            hud.snapshot.world_stats.market_prices = market_prices;
-        }
-        if let Some(factions) = meta.factions {
-            hud.snapshot.world_stats.factions = factions;
+        if let Some(progress) = meta.outcome_progress {
+            hud.snapshot.treasury = progress.population as f32;
         }
     }
     if let Some(rtt) = bridge.client.latest_rtt_ms() {
@@ -908,6 +886,7 @@ fn apply_live_frames(
     let culling = StreamCulling {
         eye,
         max_distance: orbit.distance,
+        gpu_quality: civ_bevy_ref::frame_budget::GpuQualityMode::default(),
     };
     let wireframe_color = debug.wireframe.then_some(CHUNK_WIREFRAME_LINE_COLOR);
 

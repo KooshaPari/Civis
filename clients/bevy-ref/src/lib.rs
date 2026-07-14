@@ -43,6 +43,8 @@ pub mod frame_budget;
 pub mod game_laws;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod game_ui;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod gameplay_hud;
 #[cfg(all(feature = "bevy", feature = "models"))]
 pub mod gltf_models;
 #[cfg(all(feature = "bevy", feature = "egui"))]
@@ -98,6 +100,10 @@ pub mod perf_hud;
 pub mod post_fx;
 #[cfg(feature = "bevy")]
 pub mod preflight;
+#[cfg(feature = "bevy")]
+pub mod procedural_actor;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod sandbox_event_feed;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod save_load_ui;
 pub mod session;
@@ -144,6 +150,7 @@ pub use civ_voxel::{
 };
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub use menus::MenusPlugin;
+pub use crash_handler::install_crash_handler;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub use perf_hud::PerfHudPlugin;
 #[cfg(all(feature = "bevy", feature = "egui"))]
@@ -1058,6 +1065,20 @@ pub const PRESENTATION_NIGHT_AMBIENT_RGB: [f32; 3] = [0.55, 0.68, 0.92];
 #[must_use]
 pub fn presentation_day_factor_target(is_day: bool) -> f32 {
     if is_day {
+        1.0
+    } else {
+        PRESENTATION_NIGHT_DAY_FACTOR
+    }
+}
+
+/// Map a streamed planetary `day_phase` in `[0, 1)` to a presentation blend factor.
+#[must_use]
+pub fn presentation_day_factor_from_climate(day_phase: f32) -> f32 {
+    if !day_phase.is_finite() {
+        return PRESENTATION_NIGHT_DAY_FACTOR;
+    }
+    let phase = day_phase.rem_euclid(1.0);
+    if (0.20..0.80).contains(&phase) {
         1.0
     } else {
         PRESENTATION_NIGHT_DAY_FACTOR

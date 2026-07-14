@@ -142,11 +142,6 @@ impl SpawnTool {
     }
 }
 
-/// Marker resource indicating the cursor is currently over an egui UI panel.
-/// When set, pointer events should not propagate to the 3-D scene.
-#[derive(Resource, Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub struct PointerOverUi(pub bool);
-
 /// Currently active tool.
 #[derive(Resource, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ActiveTool {
@@ -317,10 +312,6 @@ impl Plugin for SpawnToolsPlugin {
             (
                 update_cursor_marker,
                 handle_spawn_tool_clicks,
-                accumulate_road_draft,
-                apply_spawn_requests,
-                apply_place_road_requests,
-                apply_place_structure_requests,
                 resolve_selection_and_destruction,
                 apply_cursor_marker_visuals,
             )
@@ -495,11 +486,21 @@ fn handle_spawn_tool_clicks(
                 kind: *building_kind,
             });
         }
-        SpawnTool::Terraform => {}
-        SpawnTool::PaintMaterial => {}
+        SpawnTool::Terraform | SpawnTool::PaintMaterial => {}
         SpawnTool::Destroy => {
             destroy_entity.write(DestroyEntityRequest { position });
         }
+        // Road/structure/vehicle tools are handled by dedicated draw/place systems.
+        SpawnTool::Road
+        | SpawnTool::Trail
+        | SpawnTool::Highway
+        | SpawnTool::Bridge
+        | SpawnTool::House
+        | SpawnTool::Farm
+        | SpawnTool::Workshop
+        | SpawnTool::Market
+        | SpawnTool::Wall
+        | SpawnTool::Vehicle => {}
     }
 }
 

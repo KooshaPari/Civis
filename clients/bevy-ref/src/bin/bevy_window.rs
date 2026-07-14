@@ -14,6 +14,8 @@ use civ_bevy_ref::gltf_models::GltfModelsPlugin;
 #[cfg(feature = "gi")]
 use civ_bevy_ref::lighting_gi::SolariGiPlugin;
 #[cfg(feature = "egui")]
+use civ_bevy_ref::graphics_settings::GraphicsSettingsPlugin;
+#[cfg(feature = "egui")]
 use civ_bevy_ref::settings_ui::{GameSettings, KeyBinding, SettingsPlugin};
 #[cfg(not(feature = "egui"))]
 use civ_bevy_ref::spawn_tools::{GameSettings, KeyBinding};
@@ -327,7 +329,7 @@ fn main() {
     }
     #[cfg(feature = "egui")]
     {
-        app.add_plugins(SettingsPlugin);
+        app.add_plugins((SettingsPlugin, GraphicsSettingsPlugin));
     }
 
     #[cfg(feature = "models")]

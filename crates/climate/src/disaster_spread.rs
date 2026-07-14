@@ -42,6 +42,15 @@ pub enum HazardKind {
     Flood,
 }
 
+impl Default for HazardKind {
+    fn default() -> Self {
+        // `HazardCell::default()` is inactive, so its kind is never observed
+        // by propagation. Keep Fire as the canonical baseline hazard for
+        // callers that initialize a cell before igniting it.
+        Self::Fire
+    }
+}
+
 /// Per-cell hazard state. A cell is "active" when `intensity > 0.0`.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct HazardCell {
@@ -342,5 +351,13 @@ mod tests {
         // Stronger re-ignition should lift the cell.
         grid.ignite(0, 0, 0.9, HazardKind::Fire);
         approx_eq(grid.intensity_at(0, 0), 0.9);
+    }
+
+    #[test]
+    fn default_cell_is_inactive_with_canonical_fire_kind() {
+        let cell = HazardCell::default();
+
+        assert_eq!(cell.intensity, 0.0);
+        assert_eq!(cell.kind, HazardKind::Fire);
     }
 }

@@ -88,27 +88,28 @@ impl EvolvedLexicon {
         entity_id: u64,
     ) -> &Lexeme {
         let key = (kind, entity_id);
-        if !self.entries.contains_key(&key) {
+        self.entries.entry(key).or_insert_with(|| {
             let inv_len = inventory.phonemes.len().max(1);
             let syllable_count = 2 + (rng.gen::<u32>() % 2) as usize;
             let syllables: Vec<u8> = (0..syllable_count)
                 .map(|_| (rng.gen::<u32>() as usize % inv_len) as u8)
                 .collect();
-            self.entries.insert(
-                key,
-                Lexeme {
-                    syllables,
-                    kind,
-                    entity_id,
-                },
-            );
-        }
-        self.entries.get(&key).expect("coined lexeme")
+            Lexeme {
+                syllables,
+                kind,
+                entity_id,
+            }
+        })
     }
 
     #[must_use]
     pub fn len(&self) -> usize {
         self.entries.len()
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
     }
 
     #[must_use]
@@ -152,8 +153,8 @@ pub fn drift_phonemes(
 
     let mut l2 = 0.0f32;
     for (orig, phoneme) in before.iter().zip(&inventory.phonemes) {
-        for i in 0..PHONEME_FEATURES {
-            let d = orig[i] - phoneme.features[i];
+        for (original_feature, current_feature) in orig.iter().zip(phoneme.features) {
+            let d = *original_feature - current_feature;
             l2 += d * d;
         }
     }
@@ -162,8 +163,9 @@ pub fn drift_phonemes(
     if l2 > cap && l2 > f32::EPSILON {
         let scale = cap / l2;
         for (phoneme, orig) in inventory.phonemes.iter_mut().zip(before.iter()) {
-            for i in 0..PHONEME_FEATURES {
-                phoneme.features[i] = orig[i] + (phoneme.features[i] - orig[i]) * scale;
+            for (current_feature, original_feature) in phoneme.features.iter_mut().zip(orig) {
+                *current_feature =
+                    *original_feature + (*current_feature - *original_feature) * scale;
             }
         }
         l2 = cap;
@@ -241,12 +243,8 @@ pub fn coin_evolved<'a>(
     entity_id: u64,
     entity_seed: u64,
 ) -> &'a Lexeme {
-    let key = (kind, entity_id);
-    if !lexicon.entries.contains_key(&key) {
-        let mut rng = ChaCha8Rng::seed_from_u64(entity_seed ^ entity_id);
-        lexicon.coin(&mut rng, inventory, kind, entity_id);
-    }
-    lexicon.entries.get(&key).expect("coined evolved lexeme")
+    let mut rng = ChaCha8Rng::seed_from_u64(entity_seed ^ entity_id);
+    lexicon.coin(&mut rng, inventory, kind, entity_id)
 }
 
 fn phoneme_distance(a: &Phoneme, b: &Phoneme) -> f32 {

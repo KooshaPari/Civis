@@ -1564,6 +1564,25 @@ mod tests {
     }
 
     #[test]
+    fn parse_audio_events_reads_lifecycle_and_research_triggers() {
+        let snapshot = serde_json::json!({
+            "audio_events": [
+                { "trigger": "birth" },
+                { "trigger": "death" },
+                { "trigger": "tech" },
+                { "trigger": "battle", "intensity": 0.3 },
+                { "trigger": "garbled" }
+            ]
+        });
+        let events = parse_audio_events(&snapshot).expect("audio events");
+        assert_eq!(events.len(), 4);
+        assert_eq!(events[0], AudioEventWire::Birth);
+        assert_eq!(events[1], AudioEventWire::Death);
+        assert_eq!(events[2], AudioEventWire::Tech);
+        assert_eq!(events[3], AudioEventWire::Battle { intensity: 0.3 });
+    }
+
+    #[test]
     fn parse_jsonrpc_snapshot_meta_ignores_tick_broadcast() {
         let text = r#"{"tick":5,"voxel_delta":[]}"#;
         assert!(parse_jsonrpc_snapshot_meta(text).is_none());

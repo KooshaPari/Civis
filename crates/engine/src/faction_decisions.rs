@@ -7,7 +7,9 @@
 //! This is the "sim→game leap": factions transition from passive emergence to
 //! active decision-makers responding to world state.
 
-use crate::engine::Simulation;
+use std::collections::HashMap;
+
+use crate::engine::{MilitaryUnit, Simulation};
 
 /// Decision action a faction may take based on emergent state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -35,10 +37,11 @@ pub enum FactionDecision {
 /// - Otherwise: Maintain status quo
 pub fn compute_faction_decisions(sim: &Simulation) -> Vec<(u32, FactionDecision)> {
     let mut decisions = Vec::new();
+    let military_counts = military_unit_counts(sim);
 
     // Iterate all known faction resource entries.
     for (&faction_id, _resources) in &sim.state.faction_resources {
-        let decision = evaluate_faction(sim, faction_id);
+        let decision = evaluate_faction(sim, faction_id, &military_counts);
         decisions.push((faction_id, decision));
     }
 
@@ -46,7 +49,11 @@ pub fn compute_faction_decisions(sim: &Simulation) -> Vec<(u32, FactionDecision)
 }
 
 /// Evaluate a single faction's decision based on emergent state.
-fn evaluate_faction(sim: &Simulation, faction_id: u32) -> FactionDecision {
+fn evaluate_faction(
+    sim: &Simulation,
+    faction_id: u32,
+    military_counts: &HashMap<u32, usize>,
+) -> FactionDecision {
     // 1. Check unrest level across settlements controlled by this faction.
     let max_unrest = sim
         .last_tick_unrest_snapshots
@@ -78,13 +85,14 @@ fn evaluate_faction(sim: &Simulation, faction_id: u32) -> FactionDecision {
         .cloned()
         .unwrap_or_default();
 
-    // 3. Check diplomatic relations with other factions.
-    // For simplicity, compute an "average sentiment" across known relations.
-    // (Real implementation would iterate DiplomacyMatrix, but we keep it thin.)
-    let relation_score = 0.0; // Placeholder: would query DiplomacyMatrix for this faction.
+    // 3. Mean diplomatic score for pairs involving this faction.
+    let relation_score = sim
+        .faction_relations
+        .mean_score_involving(faction_id)
+        .unwrap_or(0.0);
 
-    // 4. Military advantage check (placeholder: normally from unit counts / population).
-    let has_military_advantage = false;
+    // 4. Military advantage: strictly more units than every other faction.
+    let has_military_advantage = has_military_advantage(faction_id, military_counts);
 
     // Decision thresholds:
     if relation_score < -0.6 && has_military_advantage {
@@ -97,30 +105,138 @@ fn evaluate_faction(sim: &Simulation, faction_id: u32) -> FactionDecision {
     }
 }
 
+fn military_unit_counts(sim: &Simulation) -> HashMap<u32, usize> {
+    let mut counts = HashMap::new();
+    for (_, unit) in sim.world.query::<&MilitaryUnit>().iter() {
+        *counts.entry(unit.faction_id).or_insert(0) += 1;
+    }
+    counts
+}
+
+fn has_military_advantage(faction_id: u32, military_counts: &HashMap<u32, usize>) -> bool {
+    let mine = military_counts.get(&faction_id).copied().unwrap_or(0);
+    if mine == 0 {
+        return false;
+    }
+    let max_other = military_counts
+        .iter()
+        .filter(|(id, _)| **id != faction_id)
+        .map(|(_, count)| *count)
+        .max()
+        .unwrap_or(0);
+    mine > max_other
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::engine::{
+        CohesionSnapshot, FabricTier, Fixed, MilitaryUnit, Position, Simulation, UnitType,
+        UnrestLevel, UnrestSnapshot,
+    };
+    use civ_agents::DiplomacySignal;
 
     #[test]
-    fn test_high_unrest_faction_picks_unrest_action() {
-        // Simulate a faction in high unrest state.
-        // In a real scenario, we'd construct a Simulation with unrest snapshots > 0.7.
-        // For this thin implementation, we verify the logic path:
-        // evaluate_faction should return RaiseUnrestResponse when max unrest > 0.7.
-        //
-        // This test documents the behavior but cannot fully run without
-        // a full Simulation instance. Full integration tests belong in
-        // crates/engine/tests/.
+    fn high_unrest_faction_picks_unrest_action() {
+        let mut sim = Simulation::with_seed(42);
+        sim.last_tick_unrest_snapshots.insert(
+            7,
+            UnrestSnapshot {
+                settlement_id: 7,
+                level: UnrestLevel::Revolting,
+                score: 300,
+                events_count: 0,
+                riots_count: 0,
+                migrants_count: 0,
+                mob_size: 0,
+            },
+        );
+        let decisions = compute_faction_decisions(&sim);
+        assert!(decisions
+            .iter()
+            .all(|(_, d)| *d == FactionDecision::RaiseUnrestResponse));
     }
 
     #[test]
-    fn test_prosperous_friendly_faction_picks_trade() {
-        // Simulate a faction with:
-        // - High food surplus (>1000)
-        // - Positive relation score (>0.3)
-        // - Good cohesion (>0.5)
-        //
-        // evaluate_faction should return FlagTradeOpen.
-        // Again, full integration testing in crates/engine/tests/.
+    fn hostile_militarized_faction_flags_hostility() {
+        let mut sim = Simulation::with_seed(42);
+        // Drive relation score below -0.6 for faction 0 vs 1.
+        for _ in 0..2 {
+            sim.faction_relations.apply_signal(
+                0u32,
+                1u32,
+                DiplomacySignal {
+                    combat_grievance: 0.8,
+                    ..DiplomacySignal::default()
+                },
+            );
+        }
+        sim.world.spawn((MilitaryUnit {
+            unit_type: UnitType::Soldier,
+            strength: Fixed::from_num(10),
+            hp: Fixed::from_num(10),
+            max_hp: Fixed::from_num(10),
+            morale: Fixed::from_num(1),
+            position: Position { x: 0, y: 0 },
+            faction_id: 0,
+        },));
+        sim.world.spawn((MilitaryUnit {
+            unit_type: UnitType::Soldier,
+            strength: Fixed::from_num(10),
+            hp: Fixed::from_num(10),
+            max_hp: Fixed::from_num(10),
+            morale: Fixed::from_num(1),
+            position: Position { x: 1, y: 0 },
+            faction_id: 0,
+        },));
+        sim.world.spawn((MilitaryUnit {
+            unit_type: UnitType::Soldier,
+            strength: Fixed::from_num(5),
+            hp: Fixed::from_num(5),
+            max_hp: Fixed::from_num(5),
+            morale: Fixed::from_num(1),
+            position: Position { x: 2, y: 0 },
+            faction_id: 1,
+        },));
+
+        let decisions = compute_faction_decisions(&sim);
+        let d0 = decisions
+            .iter()
+            .find(|(id, _)| *id == 0)
+            .map(|(_, d)| *d);
+        assert_eq!(d0, Some(FactionDecision::FlagHostility));
+    }
+
+    #[test]
+    fn prosperous_friendly_faction_picks_trade() {
+        let mut sim = Simulation::with_seed(42);
+        sim.state.faction_resources.entry(0).or_default().food = Fixed::from_num(1500);
+        sim.last_tick_cohesion_snapshots_mut().insert(
+            1,
+            CohesionSnapshot {
+                settlement_id: 1,
+                fabric: FabricTier::Tight,
+                kin_count: 10,
+                trust_sum: 100,
+                fragmentation_events: 0,
+                fragmentations: 0,
+                faction_count: 1,
+            },
+        );
+        sim.faction_relations.apply_signal(
+            0u32,
+            1u32,
+            DiplomacySignal {
+                trade_volume: 0.8,
+                ..DiplomacySignal::default()
+            },
+        );
+
+        let decisions = compute_faction_decisions(&sim);
+        let d0 = decisions
+            .iter()
+            .find(|(id, _)| *id == 0)
+            .map(|(_, d)| *d);
+        assert_eq!(d0, Some(FactionDecision::FlagTradeOpen));
     }
 }

@@ -491,6 +491,27 @@ impl FactionRelations {
             "neutral".to_string()
         }
     }
+
+    /// Iterate directed relation rows `(a, b) → record`.
+    pub fn iter_rows(
+        &self,
+    ) -> impl Iterator<Item = (&(u32, u32), &FactionRelationRecord)> {
+        self.rows.iter()
+    }
+
+    /// Mean score across every directed row that mentions `faction`.
+    #[must_use]
+    pub fn mean_score_involving(&self, faction: u32) -> Option<f32> {
+        let mut total = 0.0_f32;
+        let mut count = 0_u32;
+        for ((a, b), record) in &self.rows {
+            if *a == faction || *b == faction {
+                total += record.score;
+                count += 1;
+            }
+        }
+        (count > 0).then_some(total / count as f32)
+    }
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -926,6 +947,14 @@ pub struct WorldState {
     /// during the most recent tick.
     #[serde(default)]
     pub last_tick_faction_unrest_response_intents: BTreeSet<u32>,
+    /// Factions that chose [`crate::faction_decisions::FactionDecision::FlagHostility`]
+    /// during the most recent tick.
+    #[serde(default)]
+    pub last_tick_faction_hostility_intents: BTreeSet<u32>,
+    /// Factions that chose [`crate::faction_decisions::FactionDecision::FlagTradeOpen`]
+    /// during the most recent tick.
+    #[serde(default)]
+    pub last_tick_faction_trade_open_intents: BTreeSet<u32>,
     /// Faction ID -> faction name
     pub factions: HashMap<u32, String>,
     /// Faction ID -> treasury balance
@@ -957,6 +986,8 @@ impl Default for WorldState {
             last_tick_unrest_snapshots: BTreeMap::new(),
             last_tick_cohesion: BTreeMap::new(),
             last_tick_faction_unrest_response_intents: BTreeSet::new(),
+            last_tick_faction_hostility_intents: BTreeSet::new(),
+            last_tick_faction_trade_open_intents: BTreeSet::new(),
             factions: HashMap::from([
                 (0, "Player".to_string()),
                 (1, "AI Faction A".to_string()),
@@ -2931,6 +2962,8 @@ impl Simulation {
 
     fn phase_faction_decisions(&mut self) {
         self.state.last_tick_faction_unrest_response_intents.clear();
+        self.state.last_tick_faction_hostility_intents.clear();
+        self.state.last_tick_faction_trade_open_intents.clear();
         for (faction_id, decision) in crate::faction_decisions::compute_faction_decisions(self) {
             match decision {
                 crate::faction_decisions::FactionDecision::RaiseUnrestResponse => {
@@ -2938,11 +2971,17 @@ impl Simulation {
                         .last_tick_faction_unrest_response_intents
                         .insert(faction_id);
                 }
-                // GAP-FACTION-DEC-001 partial: hostility, trade-open, and
-                // maintain decisions remain intentionally unapplied.
-                crate::faction_decisions::FactionDecision::FlagHostility
-                | crate::faction_decisions::FactionDecision::FlagTradeOpen
-                | crate::faction_decisions::FactionDecision::Maintain => {}
+                crate::faction_decisions::FactionDecision::FlagHostility => {
+                    self.state
+                        .last_tick_faction_hostility_intents
+                        .insert(faction_id);
+                }
+                crate::faction_decisions::FactionDecision::FlagTradeOpen => {
+                    self.state
+                        .last_tick_faction_trade_open_intents
+                        .insert(faction_id);
+                }
+                crate::faction_decisions::FactionDecision::Maintain => {}
             }
         }
     }
@@ -4562,6 +4601,14 @@ impl Simulation {
         &self.last_tick_cohesion_snapshots
     }
 
+    /// Mutable access for drivers/tests that seed cohesion before
+    /// [`crate::faction_decisions::compute_faction_decisions`].
+    pub fn last_tick_cohesion_snapshots_mut(
+        &mut self,
+    ) -> &mut BTreeMap<u32, CohesionSnapshot> {
+        &mut self.last_tick_cohesion_snapshots
+    }
+
     /// Register a household as part of the global household population.
     /// `phase_stratification` uses the registered households to compute
     /// per-settlement quantiles, Gini coefficient, and class-mobility events.
@@ -5677,6 +5724,14 @@ impl Simulation {
             last_tick_faction_unrest_response_intents: self
                 .state
                 .last_tick_faction_unrest_response_intents
+                .clone(),
+            last_tick_faction_hostility_intents: self
+                .state
+                .last_tick_faction_hostility_intents
+                .clone(),
+            last_tick_faction_trade_open_intents: self
+                .state
+                .last_tick_faction_trade_open_intents
                 .clone(),
         }
     }
@@ -7572,6 +7627,12 @@ pub struct SimulationSnapshot {
     /// Factions that raised an unrest-response intent during the most recent tick.
     #[serde(default)]
     pub last_tick_faction_unrest_response_intents: BTreeSet<u32>,
+    /// Factions that flagged hostility intent during the most recent tick.
+    #[serde(default)]
+    pub last_tick_faction_hostility_intents: BTreeSet<u32>,
+    /// Factions that flagged trade-open intent during the most recent tick.
+    #[serde(default)]
+    pub last_tick_faction_trade_open_intents: BTreeSet<u32>,
 }
 
 // ADR-020 phase stubs (FR-PLAY-click-to-fire prerequisite: tick() compiles).
@@ -7862,6 +7923,86 @@ mod tests {
             .state
             .last_tick_faction_unrest_response_intents
             .is_empty());
+    }
+
+    #[test]
+    fn faction_decision_hostility_and_trade_intents_persist_on_snapshot() {
+        let mut hostile = Simulation::with_seed(7);
+        for _ in 0..2 {
+            hostile.faction_relations.apply_signal(
+                0u32,
+                1u32,
+                civ_agents::DiplomacySignal {
+                    combat_grievance: 0.8,
+                    ..civ_agents::DiplomacySignal::default()
+                },
+            );
+        }
+        hostile.world.spawn((MilitaryUnit {
+            unit_type: UnitType::Soldier,
+            strength: Fixed::from_num(10),
+            hp: Fixed::from_num(10),
+            max_hp: Fixed::from_num(10),
+            morale: Fixed::from_num(1),
+            position: Position { x: 0, y: 0 },
+            faction_id: 0,
+        },));
+        hostile.world.spawn((MilitaryUnit {
+            unit_type: UnitType::Soldier,
+            strength: Fixed::from_num(10),
+            hp: Fixed::from_num(10),
+            max_hp: Fixed::from_num(10),
+            morale: Fixed::from_num(1),
+            position: Position { x: 1, y: 0 },
+            faction_id: 0,
+        },));
+        hostile.world.spawn((MilitaryUnit {
+            unit_type: UnitType::Soldier,
+            strength: Fixed::from_num(5),
+            hp: Fixed::from_num(5),
+            max_hp: Fixed::from_num(5),
+            morale: Fixed::from_num(1),
+            position: Position { x: 2, y: 0 },
+            faction_id: 1,
+        },));
+        hostile.tick();
+        assert!(hostile
+            .state
+            .last_tick_faction_hostility_intents
+            .contains(&0));
+        assert_eq!(
+            hostile.snapshot().last_tick_faction_hostility_intents,
+            hostile.state.last_tick_faction_hostility_intents
+        );
+
+        let mut trade = Simulation::with_seed(11);
+        trade.state.faction_resources.entry(0).or_default().food = Fixed::from_num(1500);
+        trade.last_tick_cohesion_snapshots_mut().insert(
+            1,
+            CohesionSnapshot {
+                settlement_id: 1,
+                fabric: FabricTier::Tight,
+                kin_count: 10,
+                trust_sum: 100,
+                fragmentation_events: 0,
+                fragmentations: 0,
+                faction_count: 1,
+            },
+        );
+        trade.faction_relations.apply_signal(
+            0u32,
+            1u32,
+            civ_agents::DiplomacySignal {
+                trade_volume: 0.8,
+                ..civ_agents::DiplomacySignal::default()
+            },
+        );
+        trade.tick();
+        assert!(trade.state.last_tick_faction_trade_open_intents.contains(&0));
+        assert_eq!(
+            trade.snapshot().last_tick_faction_trade_open_intents,
+            trade.state.last_tick_faction_trade_open_intents
+        );
     }
 
     #[test]

@@ -12,6 +12,8 @@ use civ_bevy_ref::lighting_gi::SolariGiPlugin;
 #[cfg(feature = "voxel")]
 use civ_bevy_ref::ocean::OceanPlugin;
 #[cfg(feature = "egui")]
+use civ_bevy_ref::graphics_settings::GraphicsSettingsPlugin;
+#[cfg(feature = "egui")]
 use civ_bevy_ref::settings_ui::{AntiAliasing, GameSettings, SettingsPlugin};
 use civ_bevy_ref::{
     atmosphere::{animate_water, setup_atmosphere, update_lighting, DayNightCycle, WaterSurface},
@@ -108,7 +110,7 @@ fn main() {
         );
     #[cfg(feature = "egui")]
     {
-        app.add_plugins(SettingsPlugin)
+        app.add_plugins((SettingsPlugin, GraphicsSettingsPlugin))
             .add_systems(Startup, sync_post_fx_from_settings)
             .add_systems(
                 Update,

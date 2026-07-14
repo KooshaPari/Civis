@@ -267,10 +267,7 @@ mod plugin {
                     .unwrap_or_else(|| "—".to_string()),
                 species: "—".to_string(),
                 needs: format!("{:.0}%", pressure.clamp(0.0, 1.0) * 100.0),
-                position: format!(
-                    "{:.1}, {:.1}, {:.1}",
-                    agent_pos.x, agent_pos.y, agent_pos.z
-                ),
+                position: format!("{:.1}, {:.1}, {:.1}", agent_pos.x, agent_pos.y, agent_pos.z),
             };
             if best.as_ref().map_or(true, |(bd, _)| d2 < *bd) {
                 best = Some((d2, det));
@@ -324,9 +321,7 @@ mod plugin {
             needs: "—".to_string(),
             position: format!(
                 "{:.1}, {:.1}, {:.1}",
-                cell.world_x,
-                cell.height,
-                cell.world_z
+                cell.world_x, cell.height, cell.world_z
             ),
         }
     }

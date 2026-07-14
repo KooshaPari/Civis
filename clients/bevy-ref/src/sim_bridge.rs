@@ -55,7 +55,7 @@ pub type SimBuildingMarkerPublic = SimBuildingMarker;
 
 impl Default for SimState {
     fn default() -> Self {
-        Self(Simulation::default())
+        Self(Simulation::new())
     }
 }
 
@@ -96,11 +96,7 @@ impl Plugin for SimBridgePlugin {
         #[cfg(feature = "egui")]
         app.init_resource::<crate::EmergenceHudData>().add_systems(
             Update,
-            (
-                sync_game_ui_snapshot,
-                sync_emergence_hud,
-            )
-                .run_if(in_process_sim_active),
+            (sync_game_ui_snapshot, sync_emergence_hud).run_if(in_process_sim_active),
         );
         app.add_systems(Update, sync_visible_gameplay.run_if(in_process_sim_active));
     }
@@ -402,7 +398,8 @@ fn spawn_civilian_visual(
         ModelOrPrimitive::Primitive => {
             // glTF present but scene-asset not loaded yet: procedural rig.
             let color = faction_color(&Alignment::with_faction(faction));
-            let root = spawn_procedural_actor(commands, meshes, materials, visual, color, *world_pos);
+            let root =
+                spawn_procedural_actor(commands, meshes, materials, visual, color, *world_pos);
             commands.entity(root).insert(SimCivilianMarker {
                 id: civilian_id,
                 faction,
@@ -557,7 +554,6 @@ fn sync_emergence_hud(sim: Res<SimState>, mut hud: ResMut<crate::EmergenceHudDat
     *hud = crate::EmergenceHudData {
         entropy_bits: sample.entropy_bits,
         entropy_norm: sample.entropy_norm,
-        branching_sigma: sample.branching_sigma,
         power_law_alpha: sample.power_law_alpha,
         novelty_rate: sample.novelty_rate,
         mi_material_faction_norm: sample.mi_material_faction_norm,

@@ -1,8 +1,10 @@
 //! Crash handling helpers for the Bevy reference client.
+#![allow(dead_code, deprecated)] // Hook installation is wired by the application shell.
+
 use std::backtrace::Backtrace;
 use std::fs::{create_dir_all, write};
-use std::path::PathBuf;
 use std::panic::PanicInfo;
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 static CRASH_COUNTER: AtomicUsize = AtomicUsize::new(0);

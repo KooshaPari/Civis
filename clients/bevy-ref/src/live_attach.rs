@@ -6,7 +6,10 @@ use crate::atmosphere::DayNightCycle;
 use crate::live_pick::{LivePickPlugin, LiveSelection};
 use crate::live_scene::LiveScenePlugin;
 use crate::ws_client::{WsClient, WsClientConfig};
-use crate::{resolve_live_ws_url, AttachMode, LiveHudSnapshot, WsSpectatorMeta};
+use crate::{
+    resolve_live_ws_url, AttachMode, LiveHudSnapshot, MusicCues, OutcomeProgressHud,
+    WsSpectatorMeta,
+};
 
 #[cfg(feature = "egui")]
 use crate::WsConnectionState;
@@ -38,6 +41,8 @@ impl Plugin for LiveAttachPlugin {
         app.add_plugins((LiveScenePlugin, LivePickPlugin))
             .init_resource::<LiveAttachState>()
             .init_resource::<LiveHudSnapshot>()
+            .init_resource::<MusicCues>()
+            .init_resource::<OutcomeProgressHud>()
             .insert_resource(LiveAttachBridge {
                 client: WsClient::spawn_with_config(
                     resolve_live_ws_url(),
@@ -89,12 +94,26 @@ fn poll_live_meta(
     mut state: ResMut<LiveAttachState>,
     mut hud: ResMut<LiveHudSnapshot>,
     mut day_night: ResMut<DayNightCycle>,
+    mut music_cues: ResMut<MusicCues>,
+    mut outcome_progress: ResMut<OutcomeProgressHud>,
+    #[cfg(feature = "audio")] mut sfx: bevy::prelude::MessageWriter<crate::audio::SfxEvent>,
 ) {
     for meta in bridge.client.poll_meta() {
         if let Some(tick) = meta.tick {
             hud.tick = Some(tick);
         }
         hud.connected = true;
+        music_cues.0 = meta.music_cues.clone();
+        outcome_progress.0 = meta.outcome_progress;
+        #[cfg(feature = "audio")]
+        {
+            for event in &meta.audio_events {
+                let (kind, volume) = crate::audio::sfx_from_audio_event(event);
+                if volume > 0.0 {
+                    sfx.write(crate::audio::SfxEvent::with_volume(kind, volume));
+                }
+            }
+        }
         apply_snapshot_meta(&mut state, &mut day_night, meta);
     }
     if let Some(rtt) = bridge.client.latest_rtt_ms() {
@@ -180,8 +199,17 @@ fn sync_diplomacy_panel_from_scene(
     let frame = civ_protocol_3d::FactionStateFrame {
         tick: 0,
         factions: scene.faction_entries.clone(),
+        population_by_faction: scene
+            .population_by_faction
+            .iter()
+            .map(|(&k, &v)| (k, v))
+            .collect(),
     };
-    let population_by_faction: std::collections::HashMap<u32, u32> = scene.population_by_faction.iter().map(|(&k, &v)| (k, v)).collect();
+    let population_by_faction: std::collections::HashMap<u32, u32> = scene
+        .population_by_faction
+        .iter()
+        .map(|(&k, &v)| (k, v))
+        .collect();
     crate::live_stream::sync_diplomacy_from_faction_frame(
         &mut diplomacy,
         &frame,
@@ -208,7 +236,7 @@ fn sync_live_game_ui(
     } else {
         tick.to_string()
     };
-    snapshot.set_sim_state(tick, population, factions, era, 1);
+    snapshot.set_sim_state(tick, population, factions, era, 1.0);
     snapshot.live_hud_overlay = Some(hud.format_overlay());
 }
 

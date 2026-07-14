@@ -57,11 +57,10 @@
 //! Bevy resources only**.  No value from this resource must enter simulation
 //! state (voxel world, agent data, CA ticks).
 
-use bevy::post_process::bloom::Bloom;
-use bevy::post_process::motion_blur::MotionBlur;
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::light::DirectionalLightShadowMap;
-use bevy::post_process::{bloom::Bloom, motion_blur::MotionBlur};
+use bevy::post_process::bloom::Bloom;
+use bevy::post_process::motion_blur::MotionBlur;
 use bevy::prelude::*;
 use bevy::render::camera::TemporalJitter;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
@@ -584,9 +583,7 @@ pub fn apply_gfx_settings(
         if settings.window_mode == WinMode::Windowed {
             let (w, h) = settings.resolution.dimensions();
             let target = bevy::window::WindowResolution::new(w, h);
-            if window.resolution.width() as u32 != w
-                || window.resolution.height() as u32 != h
-            {
+            if window.resolution.width() as u32 != w || window.resolution.height() as u32 != h {
                 window.resolution = target;
             }
         }
@@ -706,9 +703,7 @@ fn combo<T: Copy + PartialEq>(
         .selected_text(selected_text)
         .show_ui(ui, |ui| {
             for &item in items {
-                changed |= ui
-                    .selectable_value(current, item, label_fn(item))
-                    .changed();
+                changed |= ui.selectable_value(current, item, label_fn(item)).changed();
             }
         });
     changed
@@ -976,8 +971,7 @@ fn draw_post_section(ui: &mut egui::Ui, s: &mut GfxSettings) -> bool {
         ui.horizontal(|ui| {
             row_label(ui, "  Bloom Intensity");
             let r = ui.add(
-                egui::Slider::new(&mut s.bloom_intensity, 0.0_f32..=1.0_f32)
-                    .fixed_decimals(2),
+                egui::Slider::new(&mut s.bloom_intensity, 0.0_f32..=1.0_f32).fixed_decimals(2),
             );
             if r.changed() {
                 s.mark_custom();
@@ -987,7 +981,10 @@ fn draw_post_section(ui: &mut egui::Ui, s: &mut GfxSettings) -> bool {
     }
 
     // SSAO
-    if ui.checkbox(&mut s.ssao, "SSAO (Ambient Occlusion)").changed() {
+    if ui
+        .checkbox(&mut s.ssao, "SSAO (Ambient Occlusion)")
+        .changed()
+    {
         s.mark_custom();
         changed = true;
     }
@@ -1006,13 +1003,9 @@ fn draw_post_section(ui: &mut egui::Ui, s: &mut GfxSettings) -> bool {
     ui.horizontal(|ui| {
         row_label(ui, "Tonemapping");
         let before = s.tonemapping;
-        changed |= combo(
-            ui,
-            "gfx_tone",
-            &mut s.tonemapping,
-            &ToneCurve::ALL,
-            |v| v.label(),
-        );
+        changed |= combo(ui, "gfx_tone", &mut s.tonemapping, &ToneCurve::ALL, |v| {
+            v.label()
+        });
         if s.tonemapping != before {
             s.mark_custom();
         }
@@ -1027,8 +1020,7 @@ fn draw_post_section(ui: &mut egui::Ui, s: &mut GfxSettings) -> bool {
         ui.horizontal(|ui| {
             row_label(ui, "  Shutter Angle");
             let r = ui.add(
-                egui::Slider::new(&mut s.motion_blur_shutter, 0.0_f32..=1.0_f32)
-                    .fixed_decimals(2),
+                egui::Slider::new(&mut s.motion_blur_shutter, 0.0_f32..=1.0_f32).fixed_decimals(2),
             );
             if r.changed() {
                 s.mark_custom();
@@ -1046,26 +1038,22 @@ fn draw_display_section(ui: &mut egui::Ui, s: &mut GfxSettings) -> bool {
 
     ui.horizontal(|ui| {
         row_label(ui, "Window Mode");
-        changed |= combo(
-            ui,
-            "gfx_winmode",
-            &mut s.window_mode,
-            &WinMode::ALL,
-            |v| v.label(),
-        );
+        changed |= combo(ui, "gfx_winmode", &mut s.window_mode, &WinMode::ALL, |v| {
+            v.label()
+        });
     });
 
     if s.window_mode == WinMode::Windowed {
         ui.horizontal(|ui| {
             row_label(ui, "Resolution");
-            changed |= combo(
-                ui,
-                "gfx_res",
-                &mut s.resolution,
-                &ResPreset::ALL,
-                |v| v.label(),
+            changed |= combo(ui, "gfx_res", &mut s.resolution, &ResPreset::ALL, |v| {
+                v.label()
+            });
+            ui.label(
+                egui::RichText::new(" (windowed only)")
+                    .small()
+                    .color(ui_theme::DIM),
             );
-            ui.label(egui::RichText::new(" (windowed only)").small().color(ui_theme::DIM));
         });
     }
 

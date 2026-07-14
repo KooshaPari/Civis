@@ -12,8 +12,9 @@ use bevy::text::{TextColor, TextFont};
 use civ_protocol_3d::{
     agent_world_translation, map_build_provenance, AgentAppearanceFrame, BattleEvent3d,
     BirthEvent3d, BuildingDiffFrame, BuildingGraph, BuildingKind3d, BuildingProvenance,
-    CivilianStateEntry, CivilianStateFrame, DeathEvent3d, DisasterEvent3d, EventFeedMessage3d,
-    FacadeStyle, FactionStateFrame, ParcelKind, TechEvent3d, VoxelDeltaFrame, WorldXZ,
+    CivilianStateEntry, CivilianStateFrame, ClimateFrame, DeathEvent3d, DisasterEvent3d,
+    EventFeedMessage3d, FacadeStyle, FactionStateFrame, ParcelKind, TechEvent3d, VoxelDeltaFrame,
+    WorldXZ,
 };
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId};
 
@@ -21,12 +22,12 @@ use crate::bevy_render::{apply_chunk_material, mesh_buffer_to_bevy};
 use crate::frame_budget::{scaled_cull_distance, scaled_mesh_lod_distance, GpuQualityMode};
 use crate::game_ui::civilian_display_name;
 use crate::live_ground::{live_ground_y, ChunkVoxelCache};
+use crate::ws_client::WsClient;
 use crate::{
     agent_color_from_id, agent_scale_multiplier, chunk_distance_from_camera, decode_chunk_id,
     mesh_lod_level, should_render_chunk, DebugRender, LiveEntityKind, SelectedLiveEntity,
     AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
 };
-use crate::ws_client::WsClient;
 
 /// Bevy resource wrapping a [`WsClient`] so egui plugins can send JSON-RPC calls
 /// to `civ-server` without depending on the window binary crate.
@@ -170,12 +171,7 @@ pub fn chunk_biome_tint(voxels: &[MaterialId]) -> Option<[f32; 3]> {
 /// `max_scale` (defaults match the existing `agent_scale_multiplier`
 /// envelope so HUD spacing is unaffected).
 #[must_use]
-pub fn agent_distance_lod(
-    wire_scale: f32,
-    distance: f32,
-    min_scale: f32,
-    max_scale: f32,
-) -> f32 {
+pub fn agent_distance_lod(wire_scale: f32, distance: f32, min_scale: f32, max_scale: f32) -> f32 {
     if !wire_scale.is_finite() || !distance.is_finite() {
         return min_scale;
     }
@@ -203,6 +199,14 @@ pub struct StreamCulling {
     pub max_distance: f32,
     /// Active GPU quality recovery mode for chunk LOD selection.
     pub gpu_quality: GpuQualityMode,
+}
+
+impl StreamCulling {
+    /// Extra draw-distance scale derived from [`gpu_quality`].
+    #[must_use]
+    pub fn draw_distance_scale(self) -> f32 {
+        self.gpu_quality.cull_distance_scale()
+    }
 }
 
 /// Marker for a streamed voxel chunk entity.
@@ -257,10 +261,19 @@ pub struct LiveGraphParcelTag {
     pub id: u64,
 }
 
+/// Marker for a streamed water-surface companion quad (FR-CLIENT-render).
+#[derive(Component)]
+pub struct LiveWaterTag {
+    /// Parent chunk id.
+    pub chunk: ChunkId,
+}
+
 /// Entity maps and voxel cache shared by live attach renderers.
 #[derive(Resource)]
 pub struct LiveStreamScene {
     pub chunks: HashMap<u64, Entity>,
+    /// Water surface companion entities keyed by raw chunk id.
+    pub water_entities: HashMap<u64, Entity>,
     pub chunk_voxels: ChunkVoxelCache,
     pub agents: HashMap<u64, Entity>,
     pub buildings: HashMap<u64, Entity>,
@@ -281,12 +294,17 @@ pub struct LiveStreamScene {
     pub faction_era: u16,
     /// Civilian count per faction id from the latest FactionState frame (FR-CIV-PROTO-001).
     pub population_by_faction: std::collections::BTreeMap<u32, u32>,
+    /// Latest planetary climate snapshot from `Frame3d::Climate`.
+    pub climate: Option<ClimateSnapshot>,
+    /// Latest weather tag from `Frame3d::Climate`.
+    pub weather: Option<WeatherKindSnapshot>,
 }
 
 impl Default for LiveStreamScene {
     fn default() -> Self {
         Self {
             chunks: HashMap::default(),
+            water_entities: HashMap::default(),
             chunk_voxels: ChunkVoxelCache::default(),
             agents: HashMap::default(),
             buildings: HashMap::default(),
@@ -304,8 +322,45 @@ impl Default for LiveStreamScene {
             faction_entries: Vec::new(),
             faction_era: 0,
             population_by_faction: std::collections::BTreeMap::new(),
+            climate: None,
+            weather: None,
         }
     }
+}
+
+/// Record the latest streamed climate frame for sky/lighting consumers.
+pub fn apply_climate_frame(scene: &mut LiveStreamScene, frame: ClimateFrame) {
+    let climate = frame.climate;
+    scene.climate = Some(ClimateSnapshot {
+        tick: climate.tick,
+        day_phase: climate.day_phase,
+        year_phase: climate.year_phase,
+        moon_phase: climate.moon_phase,
+        tide_offset: climate.tide_offset,
+    });
+    let weather_tag = frame
+        .weather
+        .first()
+        .map(|cell| weather_kind_tag(cell.kind))
+        .unwrap_or(0);
+    scene.weather = Some(WeatherKindSnapshot(weather_tag));
+}
+
+fn weather_kind_tag(kind: impl std::fmt::Debug) -> u8 {
+    match format!("{kind:?}").as_str() {
+        "Clear" => 0,
+        "Rain" => 2,
+        "Snow" => 4,
+        "Storm" => 3,
+        _ => 0,
+    }
+}
+
+/// Returns the latest climate + weather snapshots stored on the live scene.
+#[must_use]
+pub fn latest_climate(scene: &LiveStreamScene) -> Option<(ClimateSnapshot, WeatherKindSnapshot)> {
+    let climate = scene.climate?;
+    Some((climate, scene.weather.unwrap_or(WeatherKindSnapshot(0))))
 }
 
 /// Replaces civilian HUD tracking from a server `CivilianState` snapshot (may truncate at 256).
@@ -600,6 +655,22 @@ pub struct LiveStreamMeshes {
     pub building_mesh: Handle<Mesh>,
 }
 
+/// Single shared water surface mesh + material handle (FR-CLIENT-render).
+#[derive(Resource, Clone)]
+pub struct LiveWaterMeshes {
+    /// Single shared quad mesh used for every chunk's water surface.
+    pub surface_mesh: Handle<Mesh>,
+    /// Single shared water-tinted material handle.
+    pub surface_material: Handle<StandardMaterial>,
+}
+
+/// Tint applied to streamed water surface (sRGB, FR-CLIENT-render).
+pub const WATER_SURFACE_TINT: [f32; 3] = [0.30, 0.50, 0.78];
+/// Alpha for the streamed water surface.
+pub const WATER_SURFACE_ALPHA: f32 = 0.62;
+/// Per-chunk surface bias in world units.
+pub const WATER_SURFACE_LIFT: f32 = 0.05;
+
 /// Whether to spawn floating agent id labels.
 #[derive(Clone, Copy, Default)]
 pub struct AgentLabelConfig {
@@ -627,6 +698,36 @@ pub fn default_stream_meshes(meshes: &mut Assets<Mesh>) -> LiveStreamMeshes {
     }
 }
 
+/// Build the default water surface mesh + material (FR-CLIENT-render).
+#[must_use]
+pub fn default_water_meshes(
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+) -> LiveWaterMeshes {
+    let surface_mesh = meshes.add(Mesh::from(
+        bevy::math::primitives::Plane3d::default()
+            .mesh()
+            .size(LIVE_CHUNK_EDGE as f32, LIVE_CHUNK_EDGE as f32),
+    ));
+    let surface_material = materials.add(StandardMaterial {
+        base_color: Color::srgba(
+            WATER_SURFACE_TINT[0],
+            WATER_SURFACE_TINT[1],
+            WATER_SURFACE_TINT[2],
+            WATER_SURFACE_ALPHA,
+        ),
+        perceptual_roughness: 0.35,
+        metallic: 0.0,
+        alpha_mode: AlphaMode::Blend,
+        double_sided: true,
+        ..default()
+    });
+    LiveWaterMeshes {
+        surface_mesh,
+        surface_material,
+    }
+}
+
 /// Default wireframe-off debug state for the live window.
 #[must_use]
 pub fn default_stream_wireframe() -> DebugRender {
@@ -642,35 +743,52 @@ fn chunk_transform(id: ChunkId) -> Transform {
     )
 }
 
-/// Re-mesh cached chunks after a local god-tool mutation (client-side preview).
-pub fn remesh_cached_chunks(
+/// Returns `true` if any voxel in the chunk payload is water or salt water.
+#[must_use]
+pub fn chunk_has_water(voxels: &[MaterialId]) -> bool {
+    use civ_voxel::material::{SALT_WATER, WATER};
+    voxels.iter().any(|v| v.0 == WATER.0 || v.0 == SALT_WATER.0)
+}
+
+/// Topmost world-Y of the water column inside the chunk.
+#[must_use]
+pub fn chunk_water_top_y(voxels: &[MaterialId], chunk_origin_y: i32) -> Option<f32> {
+    use civ_voxel::material::{SALT_WATER, WATER};
+    if voxels.len() != LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE {
+        return None;
+    }
+    let edge = LIVE_CHUNK_EDGE as usize;
+    for iy in (0..LIVE_CHUNK_EDGE).rev() {
+        for ix in 0..LIVE_CHUNK_EDGE {
+            for iz in 0..LIVE_CHUNK_EDGE {
+                let idx = ix + iy * edge * edge + iz * edge;
+                let v = voxels[idx];
+                if v.0 == WATER.0 || v.0 == SALT_WATER.0 {
+                    return Some(
+                        (chunk_origin_y * LIVE_CHUNK_EDGE as i32 + iy as i32 + 1) as f32
+                            + WATER_SURFACE_LIFT,
+                    );
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Spawn or update the water companion for one chunk (FR-CLIENT-render).
+pub fn apply_water_for_chunk(
     commands: &mut Commands,
     scene: &mut LiveStreamScene,
-    mesh_assets: &mut Assets<Mesh>,
-    material_assets: &mut Assets<StandardMaterial>,
-    culling: StreamCulling,
-    debug: &DebugRender,
-    chunk_ids: &[ChunkId],
-    wireframe_line_color: Option<Color>,
+    meshes: &LiveWaterMeshes,
+    chunk_id: ChunkId,
+    voxels: &[MaterialId],
 ) {
-    use civ_protocol_3d::{DirtyChunkEvent, VoxelChunkDelta, WriteSeq};
+    let (_cx, cy, _cz) = decode_chunk_id(chunk_id);
 
-    let deltas: Vec<VoxelChunkDelta> = chunk_ids
-        .iter()
-        .filter_map(|chunk_id| {
-            scene
-                .chunk_voxels
-                .get_chunk(*chunk_id)
-                .map(|voxels| VoxelChunkDelta {
-                    event: DirtyChunkEvent {
-                        chunk_id: *chunk_id,
-                        write_seq: WriteSeq(1),
-                    },
-                    voxels: voxels.to_vec(),
-                })
-        })
-        .collect();
-    if deltas.is_empty() {
+    if !chunk_has_water(voxels) {
+        if let Some(entity) = scene.water_entities.remove(&chunk_id.0) {
+            commands.entity(entity).despawn();
+        }
         return;
     }
 
@@ -679,32 +797,11 @@ pub fn remesh_cached_chunks(
     };
 
     let chunk_origin = chunk_transform(chunk_id);
-    let transform = Transform::from_xyz(chunk_origin.translation.x, surface_y, chunk_origin.translation.z);
-
-    // FR-CLIENT-render: pick a water tint that complements the chunk's
-    // dominant voxel material, matching the per-chunk biome tinting that
-    // terrain chunks already get (lines 942–947 above). Cache the material
-    // hand by chunk ID so repeated deltas reuse the same asset.
-    let tint = chunk_biome_tint(voxels).unwrap_or(LIVE_CHUNK_BASE_COLOR);
-    // Derive a complementary water colour: the tint's hue shifted cool /
-    // desaturated, preserving the biome character.
-    let water_color = Color::srgb(
-        tint[0] * 0.60 + 0.20,
-        tint[1] * 0.50 + 0.25,
-        tint[2] * 0.80 + 0.15,
+    let transform = Transform::from_xyz(
+        chunk_origin.translation.x,
+        surface_y,
+        chunk_origin.translation.z,
     );
-    let water_material = scene
-        .water_materials
-        .entry(chunk_id.0)
-        .or_insert_with(|| {
-            material_assets.add(StandardMaterial {
-                base_color: water_color,
-                perceptual_roughness: 0.30,
-                metallic: 0.05,
-                ..default()
-            })
-        })
-        .clone();
 
     let entity = *scene.water_entities.entry(chunk_id.0).or_insert_with(|| {
         commands
@@ -713,7 +810,7 @@ pub fn remesh_cached_chunks(
     });
     commands.entity(entity).insert((
         Mesh3d(meshes.surface_mesh.clone()),
-        MeshMaterial3d(water_material),
+        MeshMaterial3d(meshes.surface_material.clone()),
         transform,
     ));
 }
@@ -735,7 +832,7 @@ pub fn apply_voxel_delta_frame(
             scene.chunk_voxels.insert(chunk_id, chunk.voxels.clone());
         }
 
-        let max_distance = culling.max_distance * culling.draw_distance_scale;
+        let max_distance = culling.max_distance * culling.draw_distance_scale();
         if !should_render_chunk(chunk_id, culling.eye, max_distance) {
             if let Some(entity) = scene.chunks.remove(&chunk_id.0) {
                 commands.entity(entity).despawn();
@@ -830,23 +927,33 @@ pub fn remesh_cached_chunks(
         if voxels.len() != LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE {
             continue;
         }
-        let chunk_view = ChunkView { id: chunk_id, voxels };
+        let chunk_view = ChunkView {
+            id: chunk_id,
+            voxels,
+        };
         let distance = chunk_distance_from_camera(chunk_id, culling.eye, LIVE_CHUNK_EDGE as f32);
         let lod = LodLevel(mesh_lod_level(distance));
         let Ok(mesh_buffer) = CubicMesher::mesh_cubic(chunk_view, lod) else {
             continue;
         };
         let mesh = mesh_assets.add(mesh_buffer_to_bevy(&mesh_buffer));
-        let mut material = StandardMaterial { perceptual_roughness: 0.85, metallic: 0.0, ..default() };
+        let mut material = StandardMaterial {
+            perceptual_roughness: 0.85,
+            metallic: 0.0,
+            ..default()
+        };
         let base_rgb = chunk_biome_tint(voxels).unwrap_or(LIVE_CHUNK_BASE_COLOR);
         apply_chunk_material(&mut material, base_rgb, debug.wireframe, Some(0.0));
         let material_handle = material_assets.add(material);
         let transform = chunk_transform(chunk_id);
-        let entity = *scene
-            .chunks
-            .entry(chunk_id.0)
-            .or_insert_with(|| commands.spawn((LiveChunkTag { id: chunk_id }, Transform::default())).id());
-        commands.entity(entity).insert((Mesh3d(mesh), MeshMaterial3d(material_handle), transform));
+        let entity = *scene.chunks.entry(chunk_id.0).or_insert_with(|| {
+            commands
+                .spawn((LiveChunkTag { id: chunk_id }, Transform::default()))
+                .id()
+        });
+        commands
+            .entity(entity)
+            .insert((Mesh3d(mesh), MeshMaterial3d(material_handle), transform));
     }
 }
 
@@ -874,7 +981,6 @@ pub fn apply_water_deltas_for_frame(
     commands: &mut Commands,
     scene: &mut LiveStreamScene,
     water_meshes: &LiveWaterMeshes,
-    material_assets: &mut Assets<StandardMaterial>,
     culling_eye: [f32; 3],
     culling_max_distance: f32,
     delta: &VoxelDeltaFrame,
@@ -893,9 +999,7 @@ pub fn apply_water_deltas_for_frame(
         if chunk.voxels.len() != LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE {
             continue;
         }
-        apply_water_for_chunk(
-            commands, scene, water_meshes, material_assets, chunk_id, &chunk.voxels,
-        );
+        apply_water_for_chunk(commands, scene, water_meshes, chunk_id, &chunk.voxels);
     }
 }
 
@@ -914,6 +1018,22 @@ pub fn apply_agent_appearance_frame(
         meshes,
         agents,
         AgentLabelConfig::enabled(),
+        None,
+    );
+}
+
+/// Applies an agent appearance frame with optional camera-eye distance LOD.
+pub fn apply_agent_appearance_frame_with_labels_and_eye(
+    commands: &mut Commands,
+    scene: &mut LiveStreamScene,
+    materials: &mut Assets<StandardMaterial>,
+    meshes: &LiveStreamMeshes,
+    agents: AgentAppearanceFrame,
+    labels: AgentLabelConfig,
+    eye: Option<[f32; 3]>,
+) {
+    apply_agent_appearance_frame_with_labels(
+        commands, scene, materials, meshes, agents, labels, eye,
     );
 }
 
@@ -925,10 +1045,11 @@ pub fn apply_agent_appearance_frame_with_labels(
     meshes: &LiveStreamMeshes,
     agents: AgentAppearanceFrame,
     labels: AgentLabelConfig,
+    eye: Option<[f32; 3]>,
 ) {
     for update in agents.updates {
         let rgb = agent_color_from_id(update.agent_id);
-        let scale = agent_scale_multiplier(update.scale);
+        let mut scale = agent_scale_multiplier(update.scale);
         let (x, _, z) = agent_world_translation(&update, 0.0);
         if !x.is_finite() || !z.is_finite() || !scale.is_finite() {
             continue;
@@ -936,6 +1057,13 @@ pub fn apply_agent_appearance_frame_with_labels(
         let y = live_ground_y(&scene.chunk_voxels, x, z, AGENT_GROUND_Y);
         if !y.is_finite() {
             continue;
+        }
+        if let Some(eye_pos) = eye {
+            let dx = x - eye_pos[0];
+            let dy = y - eye_pos[1];
+            let dz = z - eye_pos[2];
+            let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+            scale = agent_distance_lod(scale, distance, 0.35, scale);
         }
         let transform = Transform::from_xyz(x, y, z).with_scale(Vec3::splat(scale));
 

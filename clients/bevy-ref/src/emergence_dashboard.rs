@@ -97,7 +97,12 @@ fn draw_emergence_dashboard(
                         .size(14.0),
                 );
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.label(egui::RichText::new("[F7] hide").color(DIM).small().italics());
+                    ui.label(
+                        egui::RichText::new("[F7] hide")
+                            .color(DIM)
+                            .small()
+                            .italics(),
+                    );
                 });
             });
             ui.add_space(4.0);
@@ -156,12 +161,16 @@ fn draw_emergence_dashboard(
                         bar_color_neutral(novelty_norm),
                     );
 
-                    let sigma_norm = (em.branching_sigma / 1.5).clamp(0.0, 1.0);
+                    let sigma_norm = match em.branching_regime.as_str() {
+                        "SUPERCRITICAL" => 1.0,
+                        "CRITICAL" => 0.66,
+                        _ => 0.33,
+                    };
                     metric_bar(
                         ui,
-                        "Branching σ",
+                        "Branching regime",
                         sigma_norm,
-                        &format!("{:.3}", em.branching_sigma),
+                        &em.branching_regime,
                         regime_color,
                     );
 
@@ -207,14 +216,16 @@ fn edge_of_chaos_indicator(ui: &mut egui::Ui, label: &str, color: egui::Color32)
             ui.label(egui::RichText::new(label).color(color).strong().small());
         });
     });
-    let (rect, _) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 10.0), egui::Sense::hover());
+    let (rect, _) =
+        ui.allocate_exact_size(egui::vec2(ui.available_width(), 10.0), egui::Sense::hover());
     ui.painter().rect_filled(
         rect,
         egui::CornerRadius::same(5),
         egui::Color32::from_rgba_premultiplied(40, 45, 60, 200),
     );
     let inner = rect.shrink(1.0);
-    ui.painter().rect_filled(inner, egui::CornerRadius::same(4), color);
+    ui.painter()
+        .rect_filled(inner, egui::CornerRadius::same(4), color);
     ui.add_space(6.0);
 }
 
@@ -231,7 +242,8 @@ fn metric_bar(
             ui.label(egui::RichText::new(value_str).strong().small());
         });
     });
-    let (bg_rect, _) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 6.0), egui::Sense::hover());
+    let (bg_rect, _) =
+        ui.allocate_exact_size(egui::vec2(ui.available_width(), 6.0), egui::Sense::hover());
     ui.painter().rect_filled(
         bg_rect,
         egui::CornerRadius::same(3),

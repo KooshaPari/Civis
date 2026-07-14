@@ -20,8 +20,7 @@ pub fn run_startup_preflight(attach_mode: AttachMode) -> Result<(), String> {
         check_simulation().map_err(|reason| format!("[preflight] Sim x: {reason}"))?;
     }
 
-    let gpu_ok = check_gpu_adapter()
-        .map_err(|reason| format!("[preflight] GPU x: {reason}"))?;
+    let gpu_ok = check_gpu_adapter().map_err(|reason| format!("[preflight] GPU x: {reason}"))?;
 
     let mut line = String::from("[preflight] Terrain ✓");
     if attach_mode == AttachMode::Standalone {
@@ -54,7 +53,9 @@ fn check_terrain() -> Result<(), String> {
 
     let centre_h = terrain::terrain_height(WORLD_SIZE * 0.5, WORLD_SIZE * 0.5);
     if !centre_h.is_finite() {
-        return Err(format!("terrain_height at centre is non-finite: {centre_h}"));
+        return Err(format!(
+            "terrain_height at centre is non-finite: {centre_h}"
+        ));
     }
     if !(0.0..=terrain::HEIGHT_SCALE).contains(&centre_h) {
         return Err(format!(

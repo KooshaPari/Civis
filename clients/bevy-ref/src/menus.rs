@@ -4,11 +4,12 @@
 //! Settings GPU readout: FR-CIV-BEVY-036 / item 61.
 
 use crate::gpu_features::GpuCapabilities;
-use crate::settings_ui::{GameSettings, ACTION_PAUSE_SIM, KeyBinding};
+use crate::save_load_ui::SaveLoadPanel;
+use crate::settings_ui::{GameSettings, KeyBinding, ACTION_PAUSE_SIM};
+use crate::ui_theme::{liquid_glass_frame, CHIP_FILL, GLASS_FILL, KC_ACCENT, RADIUS_PANEL};
 use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
-use crate::ui_theme::{GLASS_FILL, KC_ACCENT, RADIUS_PANEL, liquid_glass_frame};
 
 const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
 const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
@@ -288,10 +289,7 @@ fn draw_worldgen_overlay(mut contexts: EguiContexts, state: Option<Res<State<App
                                 .color(KC_ACCENT)
                                 .strong(),
                         );
-                        ui.label(
-                            egui::RichText::new("Spinning up world generation…")
-                                .color(DIM),
-                        );
+                        ui.label(egui::RichText::new("Spinning up world generation…").color(DIM));
                     });
                 });
         });
@@ -300,7 +298,9 @@ fn draw_worldgen_overlay(mut contexts: EguiContexts, state: Option<Res<State<App
 fn draw_pause_menu(
     mut contexts: EguiContexts,
     mut mode: ResMut<GameUiMode>,
+    mut command: ResMut<MenuCommand>,
     mut settings_open: ResMut<SettingsOpen>,
+    mut save_panel: ResMut<SaveLoadPanel>,
     mut exit: MessageWriter<AppExit>,
 ) {
     if *mode != GameUiMode::Paused {
@@ -387,14 +387,7 @@ fn pause_panel(
                         .strong(),
                 );
                 ui.add_space(20.0);
-                pause_menu_buttons(
-                    ui,
-                    mode,
-                    command,
-                    settings_open,
-                    save_panel,
-                    exit,
-                );
+                pause_menu_buttons(ui, mode, command, settings_open, save_panel, exit);
             });
         });
 }

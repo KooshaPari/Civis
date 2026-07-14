@@ -1,4 +1,4 @@
-﻿//! civ-bevy-ref library surface.
+//! civ-bevy-ref library surface.
 //!
 //! Splits cleanly into two parts:
 //!
@@ -13,58 +13,55 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+use std::collections::BTreeMap;
+
 mod crash_handler;
 
 #[cfg(all(feature = "bevy", feature = "models"))]
 pub mod animation;
 #[cfg(feature = "bevy")]
 pub mod atmosphere;
+#[cfg(feature = "audio")]
+pub mod audio;
 #[cfg(feature = "bevy")]
 pub mod camera;
+pub mod civ_history;
 #[cfg(feature = "bevy")]
 pub mod decorations;
-#[cfg(all(feature = "bevy", feature = "models"))]
-pub mod animation;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod entity_inspector;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod inspect;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod entity_inspector;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod inspect;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod entity_inspector;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod inspect;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod diplomacy_ui;
-pub mod outcome_overlay;
-pub mod faction_hud;
-pub mod session;
 #[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod save_load_ui;
-#[cfg(all(feature = "bevy", feature = "models"))]
-pub mod gltf_models;
+pub mod disaster_tools;
 pub mod emergence_dashboard;
 #[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod entity_inspector;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod event_feed;
-#[cfg(all(feature = "bevy", feature = "gi"))]
-pub mod lighting_gi;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod game_ui;
-#[cfg(all(feature = "bevy", feature = "models"))]
-pub mod gltf_models;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod graphics_settings;
+pub mod faction_hud;
 #[cfg(feature = "bevy")]
 pub mod frame_budget;
 pub mod game_laws;
-pub mod map2d;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod game_ui;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod gameplay_hud;
+#[cfg(all(feature = "bevy", feature = "models"))]
+pub mod gltf_models;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod god_actions;
+pub mod god_panel;
 #[cfg(feature = "bevy")]
 pub mod gpu_features;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod graphics_settings;
+#[cfg(feature = "bevy")]
+pub mod hud_state;
 #[cfg(feature = "bevy")]
 pub mod info_views;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod inspect;
+#[cfg(all(feature = "bevy", feature = "gi"))]
+pub mod lighting_gi;
 #[cfg(feature = "bevy")]
 pub mod live_attach;
 #[cfg(feature = "bevy")]
@@ -79,16 +76,11 @@ pub mod live_pick;
 pub mod live_scene;
 #[cfg(feature = "bevy")]
 pub mod live_stream;
+pub mod map2d;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod material_brush_ui;
 #[cfg(feature = "pbr-textures")]
 pub mod materials;
-#[cfg(feature = "bevy")]
-pub mod post_fx;
-#[cfg(feature = "bevy")]
-pub mod preflight;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod settings_ui;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod ui_theme;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod menus;
 #[cfg(feature = "bevy")]
@@ -97,35 +89,40 @@ pub mod minimap;
 pub mod native_backend;
 #[cfg(feature = "bevy")]
 pub mod native_renderer;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod notifications;
+#[cfg(all(feature = "bevy", feature = "voxel"))]
+pub mod ocean;
+pub mod outcome_overlay;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod perf_hud;
+#[cfg(feature = "bevy")]
+pub mod post_fx;
+#[cfg(feature = "bevy")]
+pub mod preflight;
+#[cfg(feature = "bevy")]
+pub mod procedural_actor;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod sandbox_event_feed;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod save_load_ui;
+pub mod session;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod settings_ui;
 #[cfg(feature = "bevy")]
 pub mod sim_bridge;
-pub mod session;
 #[cfg(feature = "bevy")]
 pub mod spawn_tools;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tech_tree_ui;
-pub mod civ_history;
 #[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod god_actions;
-pub mod god_panel;
-pub mod tutorial;
-pub mod perf_hud;
-#[cfg(feature = "bevy")]
-pub mod frame_budget;
+pub mod terraform_brush;
 #[cfg(feature = "bevy")]
 pub mod terrain;
-#[cfg(feature = "bevy")]
-pub mod hud_state;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tool_categories;
 #[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod notifications;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod terraform_brush;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod disaster_tools;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod material_brush_ui;
+pub mod tutorial;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod ui_cluster;
 #[cfg(all(feature = "bevy", feature = "egui"))]
@@ -134,8 +131,6 @@ pub mod ui_holo;
 pub mod ui_theme;
 #[cfg(all(feature = "bevy", feature = "vfx"))]
 pub mod vfx;
-#[cfg(all(feature = "bevy", feature = "voxel"))]
-pub mod ocean;
 #[cfg(feature = "voxel")]
 pub mod voxel_sim;
 #[cfg(feature = "voxel")]
@@ -149,13 +144,17 @@ pub mod voxel_triplanar;
 #[cfg(feature = "bevy")]
 pub mod window_icon;
 
+pub use civ_agents::NeedAction;
 pub use civ_voxel::{
     ChunkId, CubicMesher, MaterialId, MeshBuffer, MeshVertex, VoxelWorld, WorldCoord,
 };
-pub use civ_agents::NeedAction;
-pub use perf_hud::PerfHudPlugin;
-pub use tutorial::TutorialPlugin;
+pub use crash_handler::install_crash_handler;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub use menus::MenusPlugin;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub use perf_hud::PerfHudPlugin;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub use tutorial::TutorialPlugin;
 
 /// Default orbit azimuth in radians (45° — camera south-east of centre).
 pub const DEFAULT_CAMERA_AZIMUTH_RAD: f32 = std::f32::consts::FRAC_PI_4;
@@ -230,17 +229,76 @@ impl DebugRender {
 pub const DEBUG_WIREFRAME_OVERLAY_ALPHA: f32 = 0.22;
 
 /// Climate presentation fields from a `sim.snapshot` JSON-RPC response.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct WsSpectatorMeta {
     /// Day/night flag from the simulation climate phase.
     pub is_day: bool,
     /// Latest tick when present on the snapshot payload.
     pub tick: Option<u64>,
+    /// Per-cluster music cues returned with the snapshot.
+    pub music_cues: BTreeMap<u64, MusicCueWire>,
+    /// One-shot SFX triggers from the most recent audio phase.
+    pub audio_events: Vec<AudioEventWire>,
+    /// Live progress toward the engine's population, research, and peace victories.
+    pub outcome_progress: Option<OutcomeProgressHudData>,
+}
+
+/// Wire-format music cue for one simulation culture cluster.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct MusicCueWire {
+    /// Coarse mood tag for the ambient presentation.
+    pub mood: String,
+    /// Normalized cue intensity.
+    pub intensity: f32,
+    /// Optional tempo hint in beats per minute.
+    pub tempo_bpm: Option<u16>,
+}
+
+/// Owned wire form of server `audio_events` entries.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "trigger", rename_all = "snake_case")]
+pub enum AudioEventWire {
+    /// Civilian birth.
+    Birth,
+    /// Civilian death.
+    Death,
+    /// Building completed.
+    Build,
+    /// Technology unlocked.
+    Tech,
+    /// Combat engagement.
+    Battle {
+        /// Intensity in `[0, 1]`.
+        intensity: f32,
+    },
+    /// World disaster.
+    Disaster {
+        /// Disaster label.
+        kind: String,
+        /// Severity in `[0, 1]`.
+        severity: f32,
+    },
+}
+
+/// Latest per-cluster music cues received from `sim.snapshot`.
+#[derive(Debug, Clone, PartialEq, Default)]
+#[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
+pub struct MusicCues(pub BTreeMap<u64, MusicCueWire>);
+
+impl MusicCues {
+    /// Returns the cue with the highest normalized intensity, if one exists.
+    #[must_use]
+    pub fn dominant(&self) -> Option<&MusicCueWire> {
+        self.0.values().max_by(|left, right| {
+            left.intensity
+                .partial_cmp(&right.intensity)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+    }
 }
 
 /// WebSocket session state exposed to live attach HUD and event feed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum WsConnectionState {
     /// Active stream to `civ-server`.
     Connected,
@@ -314,7 +372,84 @@ pub fn parse_jsonrpc_snapshot_meta(text: &str) -> Option<WsSpectatorMeta> {
     let result = value.get("result")?;
     let is_day = result.get("is_day")?.as_bool()?;
     let tick = result.get("tick").and_then(|v| v.as_u64());
-    Some(WsSpectatorMeta { is_day, tick })
+    let music_cues = parse_music_cues(result).unwrap_or_default();
+    let audio_events = parse_audio_events(result).unwrap_or_default();
+    let outcome_progress = result
+        .get("outcome_progress")
+        .and_then(|value| serde_json::from_value(value.clone()).ok());
+    Some(WsSpectatorMeta {
+        is_day,
+        tick,
+        music_cues,
+        audio_events,
+        outcome_progress,
+    })
+}
+
+/// Parse a `music_cues` map from a `sim.snapshot` result or complete JSON-RPC response.
+///
+/// Invalid cue entries are ignored so a malformed cluster cannot discard valid cues.
+#[cfg(any(test, feature = "bevy"))]
+#[must_use]
+pub fn parse_music_cues(snapshot: &serde_json::Value) -> Option<BTreeMap<u64, MusicCueWire>> {
+    let snapshot = snapshot.get("result").unwrap_or(snapshot);
+    let cues = snapshot.get("music_cues")?.as_object()?;
+    let mut parsed = BTreeMap::new();
+
+    for (cluster_id, cue) in cues {
+        let Ok(cluster_id) = cluster_id.parse::<u64>() else {
+            continue;
+        };
+        let Some(cue) = cue.as_object() else {
+            continue;
+        };
+        let Some(mood) = cue
+            .get("mood")
+            .and_then(serde_json::Value::as_str)
+            .map(str::trim)
+            .filter(|mood| !mood.is_empty())
+        else {
+            continue;
+        };
+        let intensity = cue
+            .get("intensity")
+            .and_then(serde_json::Value::as_f64)
+            .map(|value| value as f32)
+            .filter(|value| value.is_finite())
+            .unwrap_or(0.0)
+            .clamp(0.0, 1.0);
+        let tempo_bpm = cue
+            .get("tempo_bpm")
+            .and_then(serde_json::Value::as_u64)
+            .and_then(|tempo| u16::try_from(tempo).ok());
+        parsed.insert(
+            cluster_id,
+            MusicCueWire {
+                mood: mood.to_owned(),
+                intensity,
+                tempo_bpm,
+            },
+        );
+    }
+
+    Some(parsed)
+}
+
+/// Parse `audio_events` from a `sim.snapshot` result or complete JSON-RPC response.
+///
+/// Malformed entries are skipped so one bad trigger cannot discard the batch.
+#[cfg(any(test, feature = "bevy"))]
+#[must_use]
+pub fn parse_audio_events(snapshot: &serde_json::Value) -> Option<Vec<AudioEventWire>> {
+    let snapshot = snapshot.get("result").unwrap_or(snapshot);
+    let events = snapshot.get("audio_events")?.as_array()?;
+    let mut parsed = Vec::with_capacity(events.len());
+    for event in events {
+        if let Ok(wire) = serde_json::from_value::<AudioEventWire>(event.clone()) {
+            parsed.push(wire);
+        }
+    }
+    Some(parsed)
 }
 
 /// Subset of sim.emergence fields shown in the HUD.
@@ -337,14 +472,41 @@ pub struct EmergenceHudData {
     pub branching_regime: String,
 }
 
+/// Truthful engine progress toward each live victory condition.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct OutcomeProgressHudData {
+    /// Current civilization population.
+    pub population: u64,
+    /// Population required for a population victory.
+    pub population_target: u64,
+    /// Count of researched technologies.
+    pub researched_techs: usize,
+    /// Researched-tech count required for a tech victory.
+    pub researched_techs_target: usize,
+    /// Consecutive peaceful ticks since last conflict (capped at target).
+    pub peace_ticks: u64,
+    /// Peaceful ticks required for a peace victory.
+    pub peace_ticks_target: u64,
+}
+
+/// Latest outcome progress received from `sim.snapshot`.
+#[derive(Debug, Clone, Default)]
+#[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
+pub struct OutcomeProgressHud(pub Option<OutcomeProgressHudData>);
 
 /// Outcome data from `sim.outcome` polling (FR-CIV-GAME-001).
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
 pub struct OutcomeHudData {
+    /// Outcome classification tag supplied by the simulation.
     pub tag: String,
+    /// Human-readable explanation for the outcome classification.
     pub reason: String,
+    /// Simulation tick at which the outcome was observed.
     pub tick: u64,
+    /// Progress values computed from the same engine conditions as the outcome.
+    #[serde(default)]
+    pub progress: Option<OutcomeProgressHudData>,
 }
 /// Headless-friendly snapshot for the live attach HUD (FPS / tick / socket / scene stats).
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
@@ -446,7 +608,11 @@ impl LiveHudSnapshot {
             line.push_str(&format!(" | {detail}"));
         }
         {
-            let spd = if self.speed_multiplier == 0 { "PAUSED".to_string() } else { format!("{}x", self.speed_multiplier) };
+            let spd = if self.speed_multiplier == 0 {
+                "PAUSED".to_string()
+            } else {
+                format!("{}x", self.speed_multiplier)
+            };
             line.push_str(&format!(" | spd:{spd}"));
         }
         if let Some(em) = &self.emergence {
@@ -636,14 +802,17 @@ pub fn chunk_id_at_world_pos(pos: [f32; 3], chunk_edge: f32) -> ChunkId {
 /// Raycast against the procedural terrain surface and return the chunk at the hit.
 #[cfg(feature = "bevy")]
 #[must_use]
-pub fn chunk_raycast_terrain(ray_origin: [f32; 3], ray_dir: [f32; 3], chunk_edge: f32) -> Option<ChunkId> {
+pub fn chunk_raycast_terrain(
+    ray_origin: [f32; 3],
+    ray_dir: [f32; 3],
+    chunk_edge: f32,
+) -> Option<ChunkId> {
     let max_distance = terrain::WORLD_SIZE * 2.0;
     let step = (chunk_edge * 0.5).max(1.0);
     let terrain_half = terrain::WORLD_SIZE * 0.5;
 
-    let sample_surface = |pos: [f32; 3]| {
-        terrain::terrain_surface_y(pos[0] + terrain_half, pos[2] + terrain_half)
-    };
+    let sample_surface =
+        |pos: [f32; 3]| terrain::terrain_surface_y(pos[0] + terrain_half, pos[2] + terrain_half);
 
     let mut prev_t = 0.0_f32;
     let mut prev_pos = ray_origin;
@@ -902,6 +1071,20 @@ pub fn presentation_day_factor_target(is_day: bool) -> f32 {
     }
 }
 
+/// Map a streamed planetary `day_phase` in `[0, 1)` to a presentation blend factor.
+#[must_use]
+pub fn presentation_day_factor_from_climate(day_phase: f32) -> f32 {
+    if !day_phase.is_finite() {
+        return PRESENTATION_NIGHT_DAY_FACTOR;
+    }
+    let phase = day_phase.rem_euclid(1.0);
+    if (0.20..0.80).contains(&phase) {
+        1.0
+    } else {
+        PRESENTATION_NIGHT_DAY_FACTOR
+    }
+}
+
 /// Linear interpolation between two sRGB triples (`t` in `0.0..=1.0`).
 #[must_use]
 pub fn lerp_rgb(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
@@ -988,7 +1171,7 @@ mod agent_needs {
     use bevy::prelude::{App, Component, Plugin, Query, Res, Resource, Update};
     use civ_agents::{Needs as AgentNeedsData, Position3d as AgentPositionData};
     use civ_voxel::material::{
-        ACID, CO2, FIRE, LAVA, MOLD, MOSS, MOLTEN_METAL, PLANT, SALT_WATER, SMOKE, STEAM,
+        ACID, CO2, FIRE, LAVA, MOLD, MOLTEN_METAL, MOSS, PLANT, SALT_WATER, SMOKE, STEAM,
         TOXIC_GAS, WATER, WOOD,
     };
     use civ_voxel::{MaterialId, VoxelWorld, WorldCoord, FIXED_SCALE};
@@ -1147,7 +1330,7 @@ mod agent_needs {
 }
 
 #[cfg(feature = "bevy")]
-pub use agent_needs::{AgentNeeds, AgentNeedsPlugin, Position, VoxelWorldRes, update_agent_needs};
+pub use agent_needs::{update_agent_needs, AgentNeeds, AgentNeedsPlugin, Position, VoxelWorldRes};
 
 #[cfg(feature = "bevy")]
 pub mod bevy_render;
@@ -1331,10 +1514,53 @@ mod tests {
 
     #[test]
     fn parse_jsonrpc_snapshot_meta_reads_is_day_and_tick() {
-        let text = r#"{"jsonrpc":"2.0","id":3,"result":{"tick":12,"is_day":false,"population":4}}"#;
+        let text = r#"{"jsonrpc":"2.0","id":3,"result":{"tick":12,"is_day":false,"population":4,"outcome_progress":{"population":4321,"population_target":10000,"researched_techs":3,"researched_techs_target":12,"peace_ticks":123,"peace_ticks_target":500}}}"#;
         let meta = parse_jsonrpc_snapshot_meta(text).expect("snapshot meta");
         assert!(!meta.is_day);
         assert_eq!(meta.tick, Some(12));
+        let progress = meta.outcome_progress.expect("outcome progress");
+        assert_eq!(progress.population, 4_321);
+        assert_eq!(progress.researched_techs, 3);
+        assert_eq!(progress.peace_ticks, 123);
+    }
+
+    #[test]
+    fn parse_music_cues_reads_cluster_map_and_clamps_intensity() {
+        let snapshot = serde_json::json!({
+            "music_cues": {
+                "7": { "mood": " danger ", "intensity": 1.25, "tempo_bpm": 140 },
+                "bad-id": { "mood": "calm", "intensity": 0.2 },
+                "8": { "mood": "", "intensity": 0.5 }
+            }
+        });
+        let cues = parse_music_cues(&snapshot).expect("music cues");
+        assert_eq!(cues.len(), 1);
+        assert_eq!(cues[&7].mood, "danger");
+        assert_eq!(cues[&7].intensity, 1.0);
+        assert_eq!(cues[&7].tempo_bpm, Some(140));
+    }
+
+    #[test]
+    fn parse_audio_events_reads_tagged_triggers() {
+        let snapshot = serde_json::json!({
+            "audio_events": [
+                { "trigger": "build" },
+                { "trigger": "battle", "intensity": 0.6 },
+                { "trigger": "disaster", "kind": "quake", "severity": 0.9 },
+                { "trigger": "not_a_real_trigger" }
+            ]
+        });
+        let events = parse_audio_events(&snapshot).expect("audio events");
+        assert_eq!(events.len(), 3);
+        assert_eq!(events[0], AudioEventWire::Build);
+        assert_eq!(events[1], AudioEventWire::Battle { intensity: 0.6 });
+        assert_eq!(
+            events[2],
+            AudioEventWire::Disaster {
+                kind: "quake".to_string(),
+                severity: 0.9
+            }
+        );
     }
 
     #[test]
@@ -1784,6 +2010,7 @@ mod tests {
 
     #[test]
     fn install_crash_handler_does_not_panic() {
-        std::panic::catch_unwind(|| install_crash_handler()).expect("install_crash_handler should install");
+        std::panic::catch_unwind(crate::crash_handler::install_crash_handler)
+            .expect("install_crash_handler should install");
     }
 }

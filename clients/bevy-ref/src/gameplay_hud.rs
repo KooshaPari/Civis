@@ -13,6 +13,7 @@ use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 use crate::live_stream::LiveStreamScene;
 use crate::outcome_overlay::OutcomeOverlayState;
+use crate::{MusicCues, OutcomeProgressHud};
 
 // ── Palette (mirrors emergence_dashboard / faction_hud) ───────────────────────
 
@@ -27,7 +28,6 @@ const TEAL: egui::Color32 = egui::Color32::from_rgb(126, 186, 181);
 // Victory thresholds (mirrors conditions.rs constants for progress display)
 const POPULATION_VICTORY_TARGET: u32 = 10_000;
 const TECH_VICTORY_TARGET: usize = 12;
-const PEACE_TICKS_TARGET: u64 = 500;
 
 // ── Resource ──────────────────────────────────────────────────────────────────
 
@@ -49,6 +49,8 @@ pub struct GameplayHudPlugin;
 impl Plugin for GameplayHudPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GameplayHudOpen>()
+            .init_resource::<MusicCues>()
+            .init_resource::<OutcomeProgressHud>()
             .add_systems(Update, toggle_gameplay_hud)
             .add_systems(EguiPrimaryContextPass, draw_gameplay_hud);
     }
@@ -56,10 +58,7 @@ impl Plugin for GameplayHudPlugin {
 
 // ── Systems ───────────────────────────────────────────────────────────────────
 
-fn toggle_gameplay_hud(
-    keys: Res<ButtonInput<KeyCode>>,
-    mut open: ResMut<GameplayHudOpen>,
-) {
+fn toggle_gameplay_hud(keys: Res<ButtonInput<KeyCode>>, mut open: ResMut<GameplayHudOpen>) {
     if keys.just_pressed(KeyCode::F9) {
         open.0 = !open.0;
     }
@@ -69,6 +68,8 @@ fn draw_gameplay_hud(
     mut contexts: EguiContexts,
     open: Res<GameplayHudOpen>,
     scene: Res<LiveStreamScene>,
+    music_cues: Res<MusicCues>,
+    outcome_progress: Res<OutcomeProgressHud>,
     outcome_state: Option<Res<OutcomeOverlayState>>,
 ) {
     if !open.0 {
@@ -79,11 +80,18 @@ fn draw_gameplay_hud(
     // Build ranked faction list sorted by treasury (descending).
     let mut factions: Vec<_> = scene.faction_entries.iter().collect();
     factions.sort_by(|a, b| {
-        b.treasury.amount.partial_cmp(&a.treasury.amount).unwrap_or(std::cmp::Ordering::Equal)
+        b.treasury
+            .amount
+            .partial_cmp(&a.treasury.amount)
+            .unwrap_or(std::cmp::Ordering::Equal)
     });
 
     let total_pop: u32 = scene.population_by_faction.values().sum();
-    let max_treasury = factions.first().map(|f| f.treasury.amount).unwrap_or(1.0).max(1.0);
+    let max_treasury = factions
+        .first()
+        .map(|f| f.treasury.amount)
+        .unwrap_or(1.0)
+        .max(1.0);
 
     let outcome = outcome_state.as_deref().and_then(|s| s.outcome.as_ref());
 
@@ -109,12 +117,37 @@ fn draw_gameplay_hud(
                         .size(14.0),
                 );
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.label(egui::RichText::new("[F9] hide").color(DIM).small().italics());
+                    ui.label(
+                        egui::RichText::new("[F9] hide")
+                            .color(DIM)
+                            .small()
+                            .italics(),
+                    );
                 });
             });
             ui.add_space(4.0);
             ui.separator();
             ui.add_space(6.0);
+
+            let music_label = music_cues
+                .dominant()
+                .map(|cue| {
+                    let tempo = cue
+                        .tempo_bpm
+                        .map(|bpm| format!(", {bpm} bpm"))
+                        .unwrap_or_default();
+                    format!("{} ({:.0}%{tempo})", cue.mood, cue.intensity * 100.0)
+                })
+                .unwrap_or_else(|| "awaiting cues".to_string());
+            ui.label(
+                egui::RichText::new(format!(
+                    "Music cues: {} — {music_label}",
+                    music_cues.0.len()
+                ))
+                .color(DIM)
+                .small(),
+            );
+            ui.add_space(4.0);
 
             // ── Section 1: Outcome Banner ────────────────────────────────
             if let Some(od) = outcome {
@@ -125,16 +158,35 @@ fn draw_gameplay_hud(
             }
 
             // ── Section 2: Faction Leaderboard ──────────────────────────
-            ui.label(egui::RichText::new("Faction Leaderboard").color(GOLD).strong().small());
+            ui.label(
+                egui::RichText::new("Faction Leaderboard")
+                    .color(GOLD)
+                    .strong()
+                    .small(),
+            );
             ui.add_space(4.0);
 
             if factions.is_empty() {
-                ui.label(egui::RichText::new("No faction data yet…").color(DIM).italics().small());
+                ui.label(
+                    egui::RichText::new("No faction data yet…")
+                        .color(DIM)
+                        .italics()
+                        .small(),
+                );
             } else {
                 for (rank, entry) in factions.iter().enumerate() {
-                    let pop = scene.population_by_faction.get(&entry.id).copied().unwrap_or(0);
-                    let treasury_norm = (entry.treasury.amount / max_treasury).clamp(0.0, 1.0) as f32;
-                    let pop_norm = if total_pop > 0 { pop as f32 / total_pop as f32 } else { 0.0 };
+                    let pop = scene
+                        .population_by_faction
+                        .get(&entry.id)
+                        .copied()
+                        .unwrap_or(0);
+                    let treasury_norm =
+                        (entry.treasury.amount / max_treasury).clamp(0.0, 1.0) as f32;
+                    let pop_norm = if total_pop > 0 {
+                        pop as f32 / total_pop as f32
+                    } else {
+                        0.0
+                    };
                     draw_faction_row(ui, rank + 1, entry.id, pop, treasury_norm, pop_norm);
                 }
             }
@@ -144,35 +196,77 @@ fn draw_gameplay_hud(
             ui.add_space(4.0);
 
             // ── Section 3: Victory Progress ──────────────────────────────
-            ui.label(egui::RichText::new("Victory Progress").color(GOLD).strong().small());
+            ui.label(
+                egui::RichText::new("Victory Progress")
+                    .color(GOLD)
+                    .strong()
+                    .small(),
+            );
             ui.add_space(4.0);
 
-            // Population victory
-            let pop_progress = (total_pop as f32 / POPULATION_VICTORY_TARGET as f32).clamp(0.0, 1.0);
+            let live = outcome_progress.0.as_ref();
+
+            // Population victory — snapshot population is authoritative when attached.
+            let population = live.map(|p| p.population).unwrap_or(u64::from(total_pop));
+            let population_target = live
+                .map(|p| p.population_target)
+                .unwrap_or(u64::from(POPULATION_VICTORY_TARGET));
+            let pop_progress = if population_target > 0 {
+                (population as f32 / population_target as f32).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
             victory_bar(
                 ui,
                 "Population",
                 pop_progress,
-                &format!("{}/{}", total_pop, POPULATION_VICTORY_TARGET),
+                &format!("{population}/{population_target}"),
             );
 
-            // Tech victory (use faction count as proxy when no tech data available)
-            let tech_count = scene.faction_entries.iter().map(|e| e.era as usize).max().unwrap_or(0);
-            let tech_progress = (tech_count as f32 / TECH_VICTORY_TARGET as f32).clamp(0.0, 1.0);
+            // Tech victory — retain an explicitly-labelled era fallback for old servers.
+            let era_proxy = scene
+                .faction_entries
+                .iter()
+                .map(|e| e.era as usize)
+                .max()
+                .unwrap_or(0);
+            let tech_count = live.map(|p| p.researched_techs).unwrap_or(era_proxy);
+            let tech_target = live
+                .map(|p| p.researched_techs_target)
+                .unwrap_or(TECH_VICTORY_TARGET);
+            let tech_progress = if tech_target > 0 {
+                (tech_count as f32 / tech_target as f32).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
             victory_bar(
                 ui,
-                "Technology (era)",
+                if live.is_some() {
+                    "Technology"
+                } else {
+                    "Technology (era proxy)"
+                },
                 tech_progress,
-                &format!("{}/{}", tech_count, TECH_VICTORY_TARGET),
+                &format!("{tech_count}/{tech_target}"),
             );
 
-            // Peace victory (we don't have tick info here, show as unknown)
-            victory_bar(
-                ui,
-                "Peace (500 ticks)",
-                0.0,
-                "—",
-            );
+            // Peace victory — never present a hard-coded zero as live data.
+            if let Some(progress) = live {
+                let peace_fraction = if progress.peace_ticks_target > 0 {
+                    (progress.peace_ticks as f32 / progress.peace_ticks_target as f32)
+                        .clamp(0.0, 1.0)
+                } else {
+                    0.0
+                };
+                victory_bar(
+                    ui,
+                    "Peace",
+                    peace_fraction,
+                    &format!("{}/{}", progress.peace_ticks, progress.peace_ticks_target),
+                );
+            } else {
+                victory_bar(ui, "Peace", 0.0, "awaiting snapshot");
+            }
         });
 }
 
@@ -187,9 +281,17 @@ fn draw_outcome_banner(ui: &mut egui::Ui, tag: &str, reason: &str, tick: u64) {
     ui.vertical_centered(|ui| {
         ui.label(egui::RichText::new(label).color(color).size(22.0).strong());
         if !reason.is_empty() {
-            ui.label(egui::RichText::new(reason).color(egui::Color32::WHITE).size(13.0));
+            ui.label(
+                egui::RichText::new(reason)
+                    .color(egui::Color32::WHITE)
+                    .size(13.0),
+            );
         }
-        ui.label(egui::RichText::new(format!("Tick {tick}")).color(DIM).small());
+        ui.label(
+            egui::RichText::new(format!("Tick {tick}"))
+                .color(DIM)
+                .small(),
+        );
     });
 }
 
@@ -208,10 +310,23 @@ fn draw_faction_row(
             3 => egui::Color32::from_rgb(205, 127, 50),
             _ => DIM,
         };
-        ui.label(egui::RichText::new(format!("#{rank}")).color(rank_color).small().strong());
-        ui.label(egui::RichText::new(format!("F{faction_id}")).color(ACCENT).small());
+        ui.label(
+            egui::RichText::new(format!("#{rank}"))
+                .color(rank_color)
+                .small()
+                .strong(),
+        );
+        ui.label(
+            egui::RichText::new(format!("F{faction_id}"))
+                .color(ACCENT)
+                .small(),
+        );
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            ui.label(egui::RichText::new(format!("pop:{population}")).color(DIM).small());
+            ui.label(
+                egui::RichText::new(format!("pop:{population}"))
+                    .color(DIM)
+                    .small(),
+            );
         });
     });
 
@@ -226,7 +341,8 @@ fn sub_bar(ui: &mut egui::Ui, label: &str, fraction: f32, color: egui::Color32) 
     ui.horizontal(|ui| {
         ui.label(egui::RichText::new(label).color(DIM).small());
     });
-    let (bg_rect, _) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 5.0), egui::Sense::hover());
+    let (bg_rect, _) =
+        ui.allocate_exact_size(egui::vec2(ui.available_width(), 5.0), egui::Sense::hover());
     ui.painter().rect_filled(
         bg_rect,
         egui::CornerRadius::same(2),
@@ -234,7 +350,8 @@ fn sub_bar(ui: &mut egui::Ui, label: &str, fraction: f32, color: egui::Color32) 
     );
     let fill_w = (bg_rect.width() * fraction.clamp(0.0, 1.0)).max(0.0);
     let fill_rect = egui::Rect::from_min_size(bg_rect.min, egui::vec2(fill_w, bg_rect.height()));
-    ui.painter().rect_filled(fill_rect, egui::CornerRadius::same(2), color);
+    ui.painter()
+        .rect_filled(fill_rect, egui::CornerRadius::same(2), color);
     ui.add_space(2.0);
 }
 
@@ -246,7 +363,8 @@ fn victory_bar(ui: &mut egui::Ui, label: &str, fraction: f32, value_str: &str) {
         });
     });
     let bar_color = if fraction >= 1.0 { TEAL } else { ACCENT };
-    let (bg_rect, _) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 6.0), egui::Sense::hover());
+    let (bg_rect, _) =
+        ui.allocate_exact_size(egui::vec2(ui.available_width(), 6.0), egui::Sense::hover());
     ui.painter().rect_filled(
         bg_rect,
         egui::CornerRadius::same(3),
@@ -254,7 +372,8 @@ fn victory_bar(ui: &mut egui::Ui, label: &str, fraction: f32, value_str: &str) {
     );
     let fill_w = (bg_rect.width() * fraction.clamp(0.0, 1.0)).max(0.0);
     let fill_rect = egui::Rect::from_min_size(bg_rect.min, egui::vec2(fill_w, bg_rect.height()));
-    ui.painter().rect_filled(fill_rect, egui::CornerRadius::same(3), bar_color);
+    ui.painter()
+        .rect_filled(fill_rect, egui::CornerRadius::same(3), bar_color);
     ui.add_space(4.0);
 }
 

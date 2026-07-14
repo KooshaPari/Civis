@@ -36,6 +36,10 @@ pub enum GpuQualityMode {
     /// Strong recovery after sustained drops.
     Critical,
 }
+
+/// Alias used by god-tool remesh paths that read the active recovery mode.
+pub type FrameBudgetRecovery = GpuQualityMode;
+
 impl GpuQualityMode {
     /// Multiplier applied to cull distance.
     #[must_use]
@@ -58,6 +62,12 @@ impl GpuQualityMode {
 #[must_use]
 pub fn scaled_cull_distance(base: f32, mode: GpuQualityMode) -> f32 {
     base * mode.cull_distance_scale()
+}
+
+/// Scale camera distance before LOD band selection.
+#[must_use]
+pub fn scaled_mesh_lod_distance(distance: f32, mode: GpuQualityMode) -> f32 {
+    distance * mode.lod_distance_scale()
 }
 
 #[derive(Resource, Debug, Default, Clone, Copy, PartialEq)]
@@ -90,12 +100,6 @@ impl Default for FrameBudgetState {
     }
 }
 
-impl Default for FrameBudgetState {
-    fn default() -> Self {
-        Self { window: [0.0; FRAME_BUDGET_WINDOW], index: 0, filled: 0, last_warn_at: None }
-    }
-}
-
 #[derive(Resource, Default)]
 struct QualityRecoveryState {
     window_start_secs: f64,
@@ -116,7 +120,10 @@ impl Plugin for FrameBudgetPlugin {
             .init_resource::<FrameBudgetState>()
             .init_resource::<GpuQualityMode>()
             .init_resource::<QualityRecoveryState>()
-            .add_systems(PostUpdate, enforce_frame_budget.after(FrameTimeDiagnosticsPlugin::diagnostic_system));
+            .add_systems(
+                PostUpdate,
+                enforce_frame_budget.after(FrameTimeDiagnosticsPlugin::diagnostic_system),
+            );
     }
 }
 
@@ -127,19 +134,51 @@ fn enforce_frame_budget(
     mut state: ResMut<FrameBudgetState>,
     mut recovery: ResMut<FrameBudgetRecovery>,
 ) {
-    let Some(frame_ms) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FRAME_TIME).and_then(|diag| diag.value()).filter(|value| value.is_finite()).map(|value| value as f32) else { return; };
+    let Some(frame_ms) = diagnostics
+        .get(&FrameTimeDiagnosticsPlugin::FRAME_TIME)
+        .and_then(|diag| diag.value())
+        .filter(|value| value.is_finite())
+        .map(|value| value as f32)
+    else {
+        return;
+    };
     metrics.frame_count = metrics.frame_count.saturating_add(1);
     metrics.max_frame_ms = metrics.max_frame_ms.max(frame_ms);
     let index = state.index;
     state.window[index] = frame_ms;
     state.index = (index + 1) % FRAME_BUDGET_WINDOW;
-    if state.filled < FRAME_BUDGET_WINDOW { state.filled += 1; }
-    if state.filled < FRAME_BUDGET_WINDOW { return; }
+    if state.filled < FRAME_BUDGET_WINDOW {
+        state.filled += 1;
+    }
+    if state.filled < FRAME_BUDGET_WINDOW {
+        return;
+    }
     let avg_ms = state.window.iter().sum::<f32>() / FRAME_BUDGET_WINDOW as f32;
-    if avg_ms <= FRAME_BUDGET_MS { return; }
+    if avg_ms <= FRAME_BUDGET_MS {
+        return;
+    }
     metrics.drop_count = metrics.drop_count.saturating_add(1);
     let now = time.elapsed_secs_f64();
-    let should_warn = state.last_warn_at.map(|last| now - last >= WARN_THROTTLE_SECS).unwrap_or(true);
+    state.recent_drops.push_back(now);
+    while let Some(front) = state.recent_drops.front().copied() {
+        if now - front > DROP_RECOVERY_WINDOW_SECS {
+            state.recent_drops.pop_front();
+        } else {
+            break;
+        }
+    }
+    let drop_count = state.recent_drops.len() as u64;
+    *recovery = if drop_count >= DROP_THRESHOLD_CRITICAL {
+        GpuQualityMode::Critical
+    } else if drop_count >= DROP_THRESHOLD_REDUCED {
+        GpuQualityMode::Reduced
+    } else {
+        GpuQualityMode::Full
+    };
+    let should_warn = state
+        .last_warn_at
+        .map(|last| now - last >= WARN_THROTTLE_SECS)
+        .unwrap_or(true);
     if should_warn {
         warn!("Frame budget exceeded: {avg_ms:.1}ms (target {FRAME_BUDGET_MS})");
         state.last_warn_at = Some(now);

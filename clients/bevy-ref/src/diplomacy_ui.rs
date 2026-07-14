@@ -1,4 +1,4 @@
-﻿//! Faction Diplomacy panel for the Civis reference client.
+//! Faction Diplomacy panel for the Civis reference client.
 //!
 //! Provides a dark-glassmorphism overlay (matching `game_ui.rs` palette) that
 //! shows all known factions and a symmetric relation matrix. Open / close with
@@ -12,13 +12,13 @@
 //! app.insert_resource(DiplomacyState::demo());
 //! ```
 
-use std::collections::HashMap;
 use crossbeam_channel::Sender;
+use std::collections::HashMap;
 
+use crate::settings_ui::{GameSettings, KeyBinding, ACTION_TOGGLE_DIPLOMACY};
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 use civ_protocol_3d::{FactionStateEntry, FactionStateFrame, Government3d};
-use crate::settings_ui::{GameSettings, ACTION_TOGGLE_DIPLOMACY, KeyBinding};
 
 // ---------------------------------------------------------------------------
 // Outbound RPC bridge
@@ -280,7 +280,11 @@ fn toggle_diplomacy_panel(
     }
 }
 
-fn draw_diplomacy_panel(mut contexts: EguiContexts, mut state: ResMut<DiplomacyState>, bridge: Option<Res<DiplomacyBridge>>) {
+fn draw_diplomacy_panel(
+    mut contexts: EguiContexts,
+    mut state: ResMut<DiplomacyState>,
+    bridge: Option<Res<DiplomacyBridge>>,
+) {
     let Ok(ctx) = contexts.ctx_mut() else { return };
 
     if !state.open {
@@ -346,7 +350,11 @@ fn draw_diplomacy_panel(mut contexts: EguiContexts, mut state: ResMut<DiplomacyS
 // ---------------------------------------------------------------------------
 
 /// Renders the faction list: colour swatch + name + population + action buttons.
-fn faction_list_ui(ui: &mut egui::Ui, state: &mut DiplomacyState, bridge: Option<&DiplomacyBridge>) {
+fn faction_list_ui(
+    ui: &mut egui::Ui,
+    state: &mut DiplomacyState,
+    bridge: Option<&DiplomacyBridge>,
+) {
     for faction in state.factions.clone() {
         ui.horizontal(|ui| {
             color_swatch(ui, faction.egui_color());

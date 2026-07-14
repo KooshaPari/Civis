@@ -7,6 +7,8 @@
 use bevy::prelude::*;
 use bevy_kira_audio::prelude::*;
 
+use crate::MusicCues;
+
 // -- Channels ----------------------------------------------------------------
 
 /// Dedicated channel for the looping ambient bed (mute / duck independently).
@@ -28,6 +30,8 @@ pub enum SfxKind {
     Birth,
     /// An agent died.
     Death,
+    /// A battle occurred.
+    Battle,
     /// A disaster fired (fire / flood / quake).
     Disaster,
     /// A building was constructed.
@@ -75,6 +79,7 @@ pub struct AudioFiles {
     pub ui_click: String,
     pub birth: String,
     pub death: String,
+    pub battle: String,
     pub disaster: String,
     pub build: String,
     pub diplomatic: String,
@@ -88,6 +93,7 @@ impl Default for AudioFiles {
             ui_click: "audio/ui_click.ogg".to_string(),
             birth: "audio/birth.ogg".to_string(),
             death: "audio/death.ogg".to_string(),
+            battle: "audio/sfx_battle.ogg".to_string(),
             disaster: "audio/sfx_disaster.ogg".to_string(),
             build: "audio/build.ogg".to_string(),
             diplomatic: "audio/sfx_diplomatic.ogg".to_string(),
@@ -103,6 +109,7 @@ pub struct AudioHandles {
     pub ui_click: Handle<bevy_kira_audio::AudioSource>,
     pub birth: Handle<bevy_kira_audio::AudioSource>,
     pub death: Handle<bevy_kira_audio::AudioSource>,
+    pub battle: Handle<bevy_kira_audio::AudioSource>,
     pub disaster: Handle<bevy_kira_audio::AudioSource>,
     pub build: Handle<bevy_kira_audio::AudioSource>,
     pub diplomatic: Handle<bevy_kira_audio::AudioSource>,
@@ -117,6 +124,7 @@ impl AudioHandles {
             SfxKind::UiClick => self.ui_click.clone(),
             SfxKind::Birth => self.birth.clone(),
             SfxKind::Death => self.death.clone(),
+            SfxKind::Battle => self.battle.clone(),
             SfxKind::Disaster => self.disaster.clone(),
             SfxKind::Build => self.build.clone(),
             SfxKind::Diplomatic => self.diplomatic.clone(),
@@ -148,6 +156,21 @@ impl Default for AudioState {
 
 // -- Plugin ------------------------------------------------------------------
 
+/// Map a snapshot audio event onto the Bevy one-shot catalogue + volume.
+#[must_use]
+pub fn sfx_from_audio_event(event: &crate::AudioEventWire) -> (SfxKind, f32) {
+    match event {
+        crate::AudioEventWire::Birth => (SfxKind::Birth, 1.0),
+        crate::AudioEventWire::Death => (SfxKind::Death, 1.0),
+        crate::AudioEventWire::Build => (SfxKind::Build, 1.0),
+        crate::AudioEventWire::Tech => (SfxKind::Tech, 1.0),
+        crate::AudioEventWire::Battle { intensity } => (SfxKind::Battle, intensity.clamp(0.0, 1.0)),
+        crate::AudioEventWire::Disaster { severity, .. } => {
+            (SfxKind::Disaster, severity.clamp(0.0, 1.0))
+        }
+    }
+}
+
 /// Ambient soundscape + SFX plugin for the Civis Bevy client.
 #[derive(Default)]
 pub struct CivisAudioPlugin;
@@ -162,9 +185,11 @@ impl Plugin for CivisAudioPlugin {
             .init_resource::<AudioFiles>()
             .init_resource::<AudioHandles>()
             .init_resource::<AudioState>()
+            .init_resource::<MusicCues>()
             .add_message::<SfxEvent>()
             .add_systems(Startup, (load_audio, start_ambient).chain())
-            .add_systems(Update, (drain_sfx_events, toggle_mute));
+            .add_systems(Update, (drain_sfx_events, toggle_mute))
+            .add_systems(Update, sync_music_cue_volume.after(toggle_mute));
     }
 }
 
@@ -177,6 +202,7 @@ fn load_audio(
     handles.ui_click = asset_server.load(files.ui_click.clone());
     handles.birth = asset_server.load(files.birth.clone());
     handles.death = asset_server.load(files.death.clone());
+    handles.battle = asset_server.load(files.battle.clone());
     handles.disaster = asset_server.load(files.disaster.clone());
     handles.build = asset_server.load(files.build.clone());
     handles.diplomatic = asset_server.load(files.diplomatic.clone());
@@ -206,6 +232,7 @@ fn drain_sfx_events(
 fn toggle_mute(
     keys: Res<ButtonInput<KeyCode>>,
     mut state: ResMut<AudioState>,
+    cues: Res<MusicCues>,
     ambient: Res<AudioChannel<AmbientChannel>>,
     sfx: Res<AudioChannel<SfxChannel>>,
 ) {
@@ -213,10 +240,101 @@ fn toggle_mute(
         return;
     }
     state.muted = !state.muted;
-    let ambient_vol = if state.muted { 0.0 } else { state.ambient_volume };
+    let ambient_vol = if state.muted {
+        0.0
+    } else {
+        ambient_volume_for_music_cues(&cues)
+    };
     let sfx_vol = if state.muted { 0.0 } else { state.sfx_volume };
     ambient.set_volume(ambient_vol);
+    ambient.set_playback_rate(if state.muted {
+        1.0
+    } else {
+        ambient_playback_rate_for_music_cues(&cues) as f64
+    });
     sfx.set_volume(sfx_vol);
+}
+
+/// Reference BPM for the ambient bed clip (neutral presentation tempo).
+pub const AMBIENT_REFERENCE_BPM: f32 = 100.0;
+
+/// Clamp for ambient playback-rate mapping from cue tempo.
+pub const AMBIENT_PLAYBACK_RATE_MIN: f32 = 0.85;
+pub const AMBIENT_PLAYBACK_RATE_MAX: f32 = 1.25;
+
+/// Mood-dependent multiplier for the single ambient bed until mood-specific stems exist.
+#[must_use]
+pub fn ambient_mood_gain(mood: &str) -> f32 {
+    match mood.trim().to_ascii_lowercase().as_str() {
+        "calm" | "peaceful" | "serene" => 0.55,
+        "neutral" | "settled" => 0.75,
+        "tense" | "unrest" => 0.9,
+        "danger" | "war" | "crisis" => 1.0,
+        _ => 0.75,
+    }
+}
+
+/// Playback-rate multiplier from a cue tempo (BPM), relative to [`AMBIENT_REFERENCE_BPM`].
+///
+/// Missing tempo keeps rate `1.0`. Values are clamped so the single ambient bed
+/// stays musical rather than chipmunked.
+#[must_use]
+pub fn ambient_playback_rate_for_tempo_bpm(tempo_bpm: Option<u16>) -> f32 {
+    let Some(bpm) = tempo_bpm.filter(|&b| b > 0) else {
+        return 1.0;
+    };
+    (f32::from(bpm) / AMBIENT_REFERENCE_BPM)
+        .clamp(AMBIENT_PLAYBACK_RATE_MIN, AMBIENT_PLAYBACK_RATE_MAX)
+}
+
+/// Ambient-bed volume implied by all current cluster cues.
+///
+/// Until the client ships separate stems, the strongest mood-adjusted cue drives
+/// the existing ambient channel. An empty cue map preserves the normal ambient bed.
+#[must_use]
+pub fn ambient_volume_for_music_cues(cues: &MusicCues) -> f32 {
+    let cue_gain = cues
+        .0
+        .values()
+        .map(|cue| cue.intensity.clamp(0.0, 1.0) * ambient_mood_gain(&cue.mood))
+        .fold(0.0_f32, f32::max);
+    if cues.0.is_empty() {
+        AMBIENT_VOLUME
+    } else {
+        AMBIENT_VOLUME * cue_gain
+    }
+}
+
+/// Ambient playback rate from the dominant (loudest mood-adjusted) cue's tempo.
+#[must_use]
+pub fn ambient_playback_rate_for_music_cues(cues: &MusicCues) -> f32 {
+    let dominant = cues.0.values().max_by(|a, b| {
+        let ga = a.intensity.clamp(0.0, 1.0) * ambient_mood_gain(&a.mood);
+        let gb = b.intensity.clamp(0.0, 1.0) * ambient_mood_gain(&b.mood);
+        ga.partial_cmp(&gb).unwrap_or(std::cmp::Ordering::Equal)
+    });
+    match dominant {
+        Some(cue) => ambient_playback_rate_for_tempo_bpm(cue.tempo_bpm),
+        None => 1.0,
+    }
+}
+
+/// Apply the strongest snapshot cue to the ambient channel's volume + tempo.
+fn sync_music_cue_volume(
+    cues: Res<MusicCues>,
+    state: Res<AudioState>,
+    ambient: Res<AudioChannel<AmbientChannel>>,
+) {
+    if !cues.is_changed() {
+        return;
+    }
+    let volume = if state.muted {
+        0.0
+    } else {
+        ambient_volume_for_music_cues(&cues)
+    };
+    ambient.set_volume(volume as f64);
+    ambient.set_playback_rate(ambient_playback_rate_for_music_cues(&cues) as f64);
 }
 
 #[cfg(test)]
@@ -242,6 +360,7 @@ mod tests {
         let files = AudioFiles::default();
         assert!(files.ambient.starts_with("audio/"));
         assert!(files.ui_click.ends_with(".ogg"));
+        assert_eq!(files.battle, "audio/sfx_battle.ogg");
         assert!(files.diplomatic.starts_with("audio/"));
         assert!(files.tech.starts_with("audio/"));
     }
@@ -253,6 +372,7 @@ mod tests {
             SfxKind::UiClick,
             SfxKind::Birth,
             SfxKind::Death,
+            SfxKind::Battle,
             SfxKind::Disaster,
             SfxKind::Build,
             SfxKind::Diplomatic,
@@ -263,10 +383,51 @@ mod tests {
     }
 
     #[test]
+    fn battle_audio_event_maps_to_dedicated_battle_sfx() {
+        let (kind, volume) =
+            sfx_from_audio_event(&crate::AudioEventWire::Battle { intensity: 1.5 });
+        assert_eq!(kind, SfxKind::Battle);
+        assert!((volume - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
     fn audio_state_default_is_unmuted() {
         let state = AudioState::default();
         assert!(!state.muted);
         assert!((state.ambient_volume - AMBIENT_VOLUME).abs() < f32::EPSILON);
         assert!(state.sfx_volume > 0.0);
+    }
+
+    #[test]
+    fn music_cues_use_the_loudest_mood_adjusted_cluster() {
+        let cues = MusicCues(std::collections::BTreeMap::from([
+            (
+                1,
+                crate::MusicCueWire {
+                    mood: "calm".to_string(),
+                    intensity: 1.0,
+                    tempo_bpm: Some(80),
+                },
+            ),
+            (
+                2,
+                crate::MusicCueWire {
+                    mood: "danger".to_string(),
+                    intensity: 0.8,
+                    tempo_bpm: Some(140),
+                },
+            ),
+        ]));
+        assert!((ambient_volume_for_music_cues(&cues) - AMBIENT_VOLUME * 0.8).abs() < f32::EPSILON);
+        // Dominant cue is danger@0.8 → tempo 140 → 1.25 clamp.
+        assert!((ambient_playback_rate_for_music_cues(&cues) - 1.25).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn tempo_bpm_maps_to_clamped_playback_rate() {
+        assert!((ambient_playback_rate_for_tempo_bpm(None) - 1.0).abs() < f32::EPSILON);
+        assert!((ambient_playback_rate_for_tempo_bpm(Some(100)) - 1.0).abs() < f32::EPSILON);
+        assert!((ambient_playback_rate_for_tempo_bpm(Some(50)) - 0.85).abs() < f32::EPSILON);
+        assert!((ambient_playback_rate_for_tempo_bpm(Some(200)) - 1.25).abs() < f32::EPSILON);
     }
 }

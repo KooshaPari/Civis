@@ -25,7 +25,7 @@ async fn main() {
         .unwrap_or_else(|| PathBuf::from("replays"));
     // `CIV_AUTOLOAD=1` seeds the bridge from the freshest on-disk save
     // (slot > autosave > manual, mtime desc within tier). Off by default so
-    // CI runs stay reproducible against a fresh `Simulation::default()`.
+    // CI runs stay reproducible against a fresh seeded simulation.
     let autoload = std::env::var("CIV_AUTOLOAD")
         .ok()
         .is_some_and(|value| matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"));
@@ -72,15 +72,16 @@ async fn initial_simulation(
     let Some(path) = (match most_recent_save_path(saves_dir) {
         Ok(path) => path,
         Err(err) => {
-            tracing::warn!(?err, ?saves_dir, "CIV_AUTOLOAD enabled but saves_dir is unreadable; starting from Simulation::default()");
-            return Simulation::default();
+            tracing::warn!(?err, ?saves_dir, map_seed, "CIV_AUTOLOAD enabled but saves_dir is unreadable; starting from a seeded simulation");
+            return Simulation::with_seed(map_seed);
         }
     }) else {
         tracing::info!(
             ?saves_dir,
-            "CIV_AUTOLOAD enabled but no saves found; starting from Simulation::default()"
+            map_seed,
+            "CIV_AUTOLOAD enabled but no saves found; starting from a seeded simulation"
         );
-        return Simulation::default();
+        return Simulation::with_seed(map_seed);
     };
 
     match CivSaveBundle::load(&path) {
@@ -89,8 +90,8 @@ async fn initial_simulation(
             loaded
         }
         Err(err) => {
-            tracing::warn!(?err, path = %path.display(), "failed to load most recent save; falling back to Simulation::default()");
-            Simulation::default()
+            tracing::warn!(?err, path = %path.display(), map_seed, "failed to load most recent save; falling back to a seeded simulation");
+            Simulation::with_seed(map_seed)
         }
     }
 }

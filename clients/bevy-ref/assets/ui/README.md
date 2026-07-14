@@ -3,6 +3,9 @@
 Vector source art for the Civis main-menu and loading screens.  
 Bevy cannot load SVG directly; all files must be rasterised to PNG before use (see below).
 
+For the full cross-DCC pipeline (Blender, Substance, FBX, credits), see
+[`PIPELINE.md`](PIPELINE.md) in this directory.
+
 ---
 
 ## Colour Palette

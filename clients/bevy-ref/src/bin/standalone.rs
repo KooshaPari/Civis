@@ -150,18 +150,13 @@ fn main() {
     #[cfg(feature = "egui")]
     app.add_plugins(civ_bevy_ref::gameplay_hud::GameplayHudPlugin);
 
-    // Settings / options panel (RON-persisted); bevy+egui.
-    #[cfg(feature = "egui")]
-    app.add_plugins(civ_bevy_ref::settings_ui::SettingsPlugin);
     // Ambient + SFX audio (feature-gated).
+    // SettingsPlugin / SolariGi / GltfModels / ActorAnimation are registered once above.
     #[cfg(feature = "audio")]
     app.add_plugins(civ_bevy_ref::audio::CivisAudioPlugin);
     // GPU particle VFX for events (feature-gated).
     #[cfg(feature = "vfx")]
     app.add_plugins(civ_bevy_ref::vfx::VfxPlugin);
-    // Real-time RT global illumination via bevy_solari (feature-gated).
-    #[cfg(feature = "gi")]
-    app.add_plugins(civ_bevy_ref::lighting_gi::SolariGiPlugin);
 
     // P-VM-3: real volumetric voxel material world (replaces the heightmap).
     // `voxel_stream` takes precedence: when enabled, the camera-driven streaming
@@ -188,18 +183,21 @@ fn main() {
     #[cfg(feature = "voxel_stream")]
     app.add_plugins(civ_bevy_ref::voxel_stream::VoxelStreamPlugin);
 
-    // CC0 GLTF models: populate GameModels so sim_bridge swaps capsule/cuboid
-    // primitives for real Knight/house scenes (per-asset primitive fallback).
-    #[cfg(feature = "models")]
-    app.add_plugins(civ_bevy_ref::gltf_models::GltfModelsPlugin);
-
-    // Actor rigging: drive glTF skeletal animation from emergent motion so
-    // agents idle / walk / run + face their heading instead of sliding statically.
-    #[cfg(feature = "models")]
-    app.add_plugins(civ_bevy_ref::animation::ActorAnimationPlugin);
-
     if attach_mode == AttachMode::Server {
         app.add_plugins(LiveAttachPlugin);
+    }
+
+    #[cfg(feature = "egui")]
+    {
+        app.init_state::<civ_bevy_ref::menus::AppState>()
+            .add_systems(
+                Update,
+                (
+                    civ_bevy_ref::menus::consume_menu_commands,
+                    civ_bevy_ref::menus::sync_app_state_with_game_mode,
+                    civ_bevy_ref::menus::advance_worldgen_to_playing,
+                ),
+            );
     }
 
     app.run();

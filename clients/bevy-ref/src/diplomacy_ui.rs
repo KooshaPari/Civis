@@ -667,12 +667,13 @@ mod tests {
 
     #[test]
     fn faction_display_name_uses_government_label() {
-        use civ_protocol_3d::FactionStateEntry;
+        use civ_protocol_3d::{FactionStateEntry, FactionTreasury3d, Government3d};
 
         let entry = FactionStateEntry {
             id: 7,
+            era: 0,
             government: Government3d::Corporate,
-            ..Default::default()
+            treasury: FactionTreasury3d::default(),
         };
         assert_eq!(faction_display_name(&entry), "Corporate #7");
     }

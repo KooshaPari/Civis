@@ -1706,6 +1706,7 @@ mod tests {
             100,
             CivilianStateEntry {
                 id: 100,
+                faction_id: 0,
                 needs: CivilianNeeds3d::default(),
                 profession: "smith".to_string(),
                 genome_summary: GenomeSummary3d::default(),
@@ -1729,6 +1730,7 @@ mod tests {
             42,
             CivilianStateEntry {
                 id: 42,
+                faction_id: 0,
                 needs: CivilianNeeds3d::default(),
                 profession: "farmer".to_string(),
                 genome_summary: GenomeSummary3d {
@@ -1756,6 +1758,7 @@ mod tests {
             10,
             CivilianStateEntry {
                 id: 10,
+                faction_id: 0,
                 needs: CivilianNeeds3d::default(),
                 profession: String::new(),
                 genome_summary: GenomeSummary3d::default(),
@@ -1767,6 +1770,7 @@ mod tests {
             20,
             CivilianStateEntry {
                 id: 20,
+                faction_id: 0,
                 needs: CivilianNeeds3d::default(),
                 profession: String::new(),
                 genome_summary: GenomeSummary3d::default(),
@@ -1787,6 +1791,7 @@ mod tests {
             7,
             CivilianStateEntry {
                 id: 7,
+                faction_id: 0,
                 needs: CivilianNeeds3d::default(),
                 profession: "Farmer".to_string(),
                 genome_summary: GenomeSummary3d {
@@ -1833,6 +1838,7 @@ mod tests {
             42,
             CivilianStateEntry {
                 id: 42,
+                faction_id: 0,
                 needs: CivilianNeeds3d::default(),
                 profession: "Farmer".to_string(),
                 genome_summary: GenomeSummary3d {
@@ -1913,6 +1919,7 @@ mod tests {
 
         let entry = |id: u64| CivilianStateEntry {
             id,
+            faction_id: 0,
             needs: CivilianNeeds3d::default(),
             profession: String::new(),
             genome_summary: GenomeSummary3d::default(),
@@ -1958,6 +1965,7 @@ mod tests {
             FactionStateFrame {
                 tick: 3,
                 factions: vec![entry(0, 2), entry(4, 5)],
+                population_by_faction: Default::default(),
             },
         );
 
@@ -1986,6 +1994,7 @@ mod tests {
                 government: Government3d::Junta,
                 treasury: FactionTreasury3d::default(),
             }],
+            population_by_faction: Default::default(),
         };
         let mut diplomacy = crate::diplomacy_ui::DiplomacyState {
             open: true,

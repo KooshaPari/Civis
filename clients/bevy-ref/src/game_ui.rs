@@ -288,6 +288,9 @@ impl Plugin for GameUiPlugin {
             .init_resource::<BuildingSpawnKind>()
             .init_resource::<ActiveSubTool>()
             .init_resource::<LeftClusterTab>()
+            // Toast resource is owned here: `tick_god_action_toast` / HUD draw
+            // always need it. `GodActionsPlugin` may also init it (idempotent).
+            .init_resource::<GodActionToast>()
             // Holocron motion state is intentionally NOT registered here yet —
             // `step_flyout_motion` exists as `#[allow(dead_code)]` for the
             // deferred WGSL/3D anim timeline (see the doc comment on
@@ -1107,6 +1110,7 @@ mod tests {
 
         let entry = CivilianStateEntry {
             id: 42,
+            faction_id: 3,
             needs: CivilianNeeds3d {
                 food: 1.0,
                 shelter: 0.5,
@@ -1138,6 +1142,7 @@ mod tests {
 
         let entry = CivilianStateEntry {
             id: 7,
+            faction_id: 0,
             needs: CivilianNeeds3d::default(),
             profession: String::new(),
             genome_summary: GenomeSummary3d::default(),
@@ -1150,7 +1155,7 @@ mod tests {
     #[test]
     fn snapshot_set_sim_state_clamps_speed() {
         let mut snap = GameUiSnapshot::default();
-        snap.set_sim_state(10, 20, 3, "Bronze", 0);
+        snap.set_sim_state(10, 20, 3, "Bronze", 0.0);
         assert_eq!(snap.tick, 10);
         assert_eq!(snap.population, 20);
         assert_eq!(snap.factions, 3);

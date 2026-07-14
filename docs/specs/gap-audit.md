@@ -305,3 +305,4 @@ Per the reuse protocol (confirm destination with user before extraction):
 |------|----------|-------|--------|----------|
 | 2026-07-12 | Cities leave engine / live BuildingDiff | `ws_bridge` no longer stubs empty buildings/graph | closed | `build_building_diff_frame`; FR-CIV-PROTO3D-009-live; `Civis-wtrees/_prompts/OUT-fr-gaps.md` |
 | 2026-07-12 | GAP-AUDIO-* / tech_state / faction_decisions / outcome HUD | Still open playability debt | open | WBS P1–P2 in `WBS-playability-2026-07-12.md` |
+| 2026-07-13 | GAP-FACTION-DEC-002 / faction intent apply | `apply_faction_decision_intents` wires hostility→relations+Conflict, trade-open→TradeAgreement | closed | FR-FACTION-decisions-apply; `Civis-wtrees/_prompts/OUT-fr-gaps.md` |

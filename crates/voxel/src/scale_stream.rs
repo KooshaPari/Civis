@@ -433,7 +433,7 @@ mod tests {
             unload_radius: 2,
             resident_cap: StreamingWindowConfig::inner_ball_size(2),
         };
-        let mut w = StreamingWindow::new(cfg).expect("window");
+        let mut w = StreamingWindow::new(cfg.clone()).expect("window");
 
         // 1) Initial focus at the origin: should load the full Chebyshev ball
         //    of radius 2 around (0,0,0), i.e. a 5³ cube = 125 chunks.
@@ -525,13 +525,13 @@ mod tests {
             unload_radius: 2,
             resident_cap: StreamingWindowConfig::inner_ball_size(2),
         };
-        let mut a = StreamingWindow::new(cfg).expect("a");
+        let mut a = StreamingWindow::new(cfg.clone()).expect("a");
         let mut b = StreamingWindow::new(cfg).expect("b");
         for step in 0..16 {
             let focus = c(
                 step,
-                step.wrapping_mul(2) as i32,
-                step.wrapping_neg() as i32,
+                step.wrapping_mul(2),
+                step.wrapping_neg(),
             );
             let ua = a.update_focus(focus);
             let ub = b.update_focus(focus);

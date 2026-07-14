@@ -49,7 +49,7 @@ use civ_bevy_ref::{
         LiveStreamMeshes, LiveStreamScene, LiveWaterMeshes, StreamCulling, LIVE_CHUNK_BASE_COLOR,
         LIVE_CHUNK_EDGE,
     },
-    menus::{AppState, GameUiMode, MainMenuCommand, MainMenuSaves, MenuCommand, WorldSetupParams},
+    menus::{AppState, MainMenuSaves},
     minimap::MinimapRoot,
     minimap_uv_to_chunk_grid,
     native_backend::native_render_plugin,
@@ -63,7 +63,6 @@ use civ_bevy_ref::{
 };
 use civ_protocol_3d::Frame3d;
 use civ_voxel::ChunkId;
-use serde_json;
 
 const CHUNK_BASE_COLOR: [f32; 3] = LIVE_CHUNK_BASE_COLOR;
 const ORBIT_DRAG_SENSITIVITY: f32 = 0.005;
@@ -81,14 +80,7 @@ const MINIMAP_HUD_LAYOUT: MinimapDotLayout = MinimapDotLayout::InsetHud {
     inset: MINIMAP_INSET,
     plot_margin_dot: MINIMAP_DOT,
 };
-const WORLDGEN_PRESETS: [&str; 4] = [
-    "single-race-ardani",
-    "three-race-balanced",
-    "ardani-dominant",
-    "lush-frontier",
-];
 const WORLDGEN_SPEED_STEPS: [u32; 3] = [1, 2, 5];
-const WORLDGEN_DEFAULT_SEED: u64 = 0xC1F1_5EED_D3AD_BEEF;
 
 #[derive(Resource, Default)]
 struct SaveListState {
@@ -359,120 +351,6 @@ fn main() {
     app.run();
 }
 
-fn consume_menu_commands(
-    mut menu_command: ResMut<MenuCommand>,
-    state: Option<Res<State<AppState>>>,
-    mut next_state: ResMut<NextState<AppState>>,
-    bridge: Res<LiveBridge>,
-    mut speed: ResMut<SimSpeedState>,
-    mut save_panel: ResMut<SaveLoadPanel>,
-    saves: Res<MainMenuSaves>,
-    params: Res<WorldSetupParams>,
-    mut game_mode: ResMut<GameUiMode>,
-    mut exit: MessageWriter<AppExit>,
-    mut game_settings: Option<ResMut<GameSettings>>,
-) {
-    let Some(state) = state else {
-        return;
-    };
-    if menu_command.action == MainMenuCommand::None {
-        return;
-    }
-
-    let action = menu_command.action;
-    menu_command.action = MainMenuCommand::None;
-    match action {
-        MainMenuCommand::None => {}
-        MainMenuCommand::NewWorld => {
-            let preset = WORLDGEN_PRESETS
-                .get(params.world_size % WORLDGEN_PRESETS.len())
-                .copied()
-                .unwrap_or(WORLDGEN_PRESETS[0]);
-            let speed_step =
-                WORLDGEN_SPEED_STEPS[speed.speed_idx.min(WORLDGEN_SPEED_STEPS.len() - 1)];
-            start_world_boot(&bridge, preset, params.seed, speed.as_mut(), speed_step);
-            next_state.set(AppState::WorldGen);
-        }
-        MainMenuCommand::ConfirmWorldSetup | MainMenuCommand::CancelWorldSetup => {}
-        MainMenuCommand::Continue => {
-            let slot_name = saves
-                .preferred_slot
-                .as_deref()
-                .unwrap_or("slot-1")
-                .to_string();
-            let slot_id = slot_name
-                .strip_prefix("slot-")
-                .and_then(|raw| raw.parse::<u32>().ok())
-                .map(|slot| 2010 + slot)
-                .unwrap_or(2010);
-            let json = serde_json::json!({
-                "jsonrpc": "2.0",
-                "id": slot_id,
-                "method": "save.load",
-                "params": { "slot_name": slot_name },
-            })
-            .to_string();
-            bridge.client.send_rpc_raw(json);
-            next_state.set(AppState::WorldGen);
-        }
-        MainMenuCommand::LoadGame => {
-            save_panel.visible = true;
-        }
-        MainMenuCommand::Resume => {
-            if *state == AppState::Paused {
-                next_state.set(AppState::Playing);
-            }
-        }
-        MainMenuCommand::OpenSettings => {
-            if let Some(mut settings) = game_settings {
-                settings.open = true;
-            }
-        }
-        MainMenuCommand::OpenSavePanel => {
-            save_panel.visible = true;
-        }
-        MainMenuCommand::ExitToMainMenu => {
-            next_state.set(AppState::MainMenu);
-            *game_mode = GameUiMode::Playing;
-        }
-        MainMenuCommand::Quit => {
-            *game_mode = GameUiMode::Playing;
-            exit.write(AppExit::Success);
-        }
-    }
-}
-
-fn worldgen_to_playing(
-    state: Option<Res<State<AppState>>>,
-    scene: Res<LiveStreamScene>,
-    mut next_state: ResMut<NextState<AppState>>,
-) {
-    let Some(state) = state else {
-        return;
-    };
-    if *state != AppState::WorldGen {
-        return;
-    }
-    if live_stream_has_content(&scene) {
-        next_state.set(AppState::Playing);
-    }
-}
-
-fn sync_app_state_with_game_mode(
-    state: Option<Res<State<AppState>>>,
-    mode: Res<GameUiMode>,
-    mut next_state: ResMut<NextState<AppState>>,
-) {
-    let Some(state) = state else {
-        return;
-    };
-    match (*mode, state.get()) {
-        (GameUiMode::Paused, AppState::Playing) => next_state.set(AppState::Paused),
-        (GameUiMode::Playing, AppState::Paused) => next_state.set(AppState::Playing),
-        _ => {}
-    }
-}
-
 fn update_mainmenu_saves(
     bridge: Res<LiveBridge>,
     state: Option<Res<State<AppState>>>,
@@ -504,49 +382,6 @@ fn update_mainmenu_saves(
     }
     saves.can_continue = preferred.is_some();
     saves.preferred_slot = preferred.map(|entry| entry.0);
-}
-
-fn start_world_boot(
-    bridge: &LiveBridge,
-    preset: &str,
-    seed: u64,
-    speed: &mut SimSpeedState,
-    multiplier: u32,
-) {
-    if speed.speed_idx >= WORLDGEN_SPEED_STEPS.len()
-        || WORLDGEN_SPEED_STEPS[speed.speed_idx] != multiplier
-    {
-        if let Some(speed_idx) = WORLDGEN_SPEED_STEPS
-            .iter()
-            .position(|value| *value == multiplier)
-        {
-            speed.speed_idx = speed_idx;
-        } else {
-            speed.speed_idx = 0;
-        }
-    }
-    speed.multiplier = multiplier;
-    let init_seed = if seed == 0 {
-        WORLDGEN_DEFAULT_SEED
-    } else {
-        seed
-    };
-    let speed_mult = WORLDGEN_SPEED_STEPS[speed.speed_idx.min(WORLDGEN_SPEED_STEPS.len() - 1)];
-    bridge.client.send_rpc(
-        "sim.load_scenario",
-        serde_json::json!({ "preset": preset, "seed": init_seed }),
-    );
-    bridge.client.send_rpc(
-        "sim.set_speed",
-        serde_json::json!({ "multiplier": speed_mult }),
-    );
-    bridge
-        .client
-        .send_rpc("sim.reset", serde_json::json!({ "seed": init_seed }));
-    bridge.client.send_rpc(
-        "sim.set_speed",
-        serde_json::json!({ "multiplier": multiplier }),
-    );
 }
 
 fn apply_spectator_meta(

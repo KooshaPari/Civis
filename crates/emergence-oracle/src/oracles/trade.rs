@@ -40,9 +40,7 @@ impl FeatureOracle for TradeOracle {
             threshold,
             detail: format!(
                 "Trade emergence: citizens={} buildings={} (citizen×building={}) at tick={tick}",
-                snap.citizen_count,
-                snap.building_count,
-                measured as u32
+                snap.citizen_count, snap.building_count, measured as u32
             ),
         }
     }

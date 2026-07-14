@@ -109,11 +109,7 @@ mod tests {
     #[test]
     fn all_equal_efficiency_produces_no_change() {
         let mut profile = SpecializationProfile::new(0);
-        let eff = efficiency_map(&[
-            (Good::Food, 2.0),
-            (Good::Water, 2.0),
-            (Good::Wood, 2.0),
-        ]);
+        let eff = efficiency_map(&[(Good::Food, 2.0), (Good::Water, 2.0), (Good::Wood, 2.0)]);
         update_specialization(&mut profile, &eff);
         for good in GOODS {
             assert_eq!(

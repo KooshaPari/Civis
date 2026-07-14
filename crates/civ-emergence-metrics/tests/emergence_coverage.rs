@@ -11,9 +11,8 @@
 //!   the dashboard renderer.
 
 use civ_emergence_metrics::branching::{
-    BranchingLedger, BranchingRegime,
-    SIGMA_SUBCRITICAL, SIGMA_EDGE_LOW, SIGMA_EDGE_HIGH, SIGMA_SUPERCRITICAL,
-    classify_regime,
+    classify_regime, BranchingLedger, BranchingRegime, SIGMA_EDGE_HIGH, SIGMA_EDGE_LOW,
+    SIGMA_SUBCRITICAL, SIGMA_SUPERCRITICAL,
 };
 use civ_emergence_metrics::mutual_information::JointHistogram;
 
@@ -24,11 +23,17 @@ use civ_emergence_metrics::mutual_information::JointHistogram;
 #[test]
 fn branching_regime_label_covers_all_five_arms() {
     let cases = [
-        (BranchingRegime::HeatDeath,            "Subcritical (heat-death risk)"),
-        (BranchingRegime::SubcriticalTransition, "Subcritical → critical transition"),
-        (BranchingRegime::EdgeOfChaos,           "Edge of chaos (target)"),
-        (BranchingRegime::NearSupercritical,     "Near-supercritical"),
-        (BranchingRegime::Supercritical,         "Supercritical (explosion risk)"),
+        (BranchingRegime::HeatDeath, "Subcritical (heat-death risk)"),
+        (
+            BranchingRegime::SubcriticalTransition,
+            "Subcritical → critical transition",
+        ),
+        (BranchingRegime::EdgeOfChaos, "Edge of chaos (target)"),
+        (BranchingRegime::NearSupercritical, "Near-supercritical"),
+        (
+            BranchingRegime::Supercritical,
+            "Supercritical (explosion risk)",
+        ),
     ];
     for (regime, expected) in cases {
         let got = regime.label();
@@ -76,7 +81,8 @@ fn branching_ledger_closed_total_is_monotonic() {
     for i in 1..=5u64 {
         ledger.push_closed(0.9, i, i);
         assert_eq!(
-            ledger.closed_total(), i,
+            ledger.closed_total(),
+            i,
             "closed_total must equal push count after {i} pushes"
         );
     }

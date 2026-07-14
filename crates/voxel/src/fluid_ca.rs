@@ -396,7 +396,9 @@ impl CaGrid {
                     let phase = phase_of(reg, id);
                     if matches!(phase, Phase::Liquid | Phase::Powder | Phase::Gas) {
                         self.dirty_chunks.insert(
-                            chunk_x[x] + chunk_y[y] * counts[0] + chunk_z[z] * counts[0] * counts[1],
+                            chunk_x[x]
+                                + chunk_y[y] * counts[0]
+                                + chunk_z[z] * counts[0] * counts[1],
                         );
                     }
                 }
@@ -945,9 +947,8 @@ fn evaporation_pass(
                             grid.cells[idx] = AIR;
                             grid.cells[si] = STEAM;
                             grid.temperatures[si] = t;
-                            grid.temperatures[idx] = t.saturating_sub(
-                                i16::try_from(def.latent_heat).unwrap_or(0),
-                            );
+                            grid.temperatures[idx] =
+                                t.saturating_sub(i16::try_from(def.latent_heat).unwrap_or(0));
                         }
                     }
                 }
@@ -1100,11 +1101,7 @@ const PHASE_BUDGET_PER_TICK: i32 = 50;
 /// WATER cell over a hot lava surface "dry out" into a dry WATER cell
 /// (which the material layer can then flip to AIR or STONE on its own
 /// timeline) rather than instantly vanishing.
-fn saturation_evaporation_pass(
-    grid: &mut CaGrid,
-    reg: MaterialRegistry,
-    cells: &[usize],
-) {
+fn saturation_evaporation_pass(grid: &mut CaGrid, reg: MaterialRegistry, cells: &[usize]) {
     let area = grid.dims[0] * grid.dims[1];
     for &idx in cells {
         let prev_sat = grid.saturation[idx];
@@ -1189,11 +1186,7 @@ fn saturation_evaporation_pass(
 /// The pass is dirty-chunk scoped (caller passes the `dirty_cell_indices`
 /// list) so a 256³ static world never sweeps the whole grid — same
 /// contract as `saturation_evaporation_pass` (FR-CIV-CA-004).
-fn phase_transition_pass(
-    grid: &mut CaGrid,
-    reg: MaterialRegistry,
-    cells: &[usize],
-) {
+fn phase_transition_pass(grid: &mut CaGrid, reg: MaterialRegistry, cells: &[usize]) {
     let area = grid.dims[0] * grid.dims[1];
     for &idx in cells {
         let id = grid.cells[idx];
@@ -1275,7 +1268,9 @@ fn phase_transition_pass(
             // crossing with the legacy fluid_thermo_pass.
             Phase::Powder | Phase::Gas | Phase::Empty => continue,
         };
-        let Some(_front) = firing_threshold else { continue };
+        let Some(_front) = firing_threshold else {
+            continue;
+        };
 
         // Apply the budget: zero-latent-heat transitions fire immediately;
         // anything with positive latent_heat must drain the per-tick
@@ -1287,8 +1282,7 @@ fn phase_transition_pass(
             // The phase change doesn't move heat here; full-thermo is
             // out of scope. We do clamp the temperature to keep it
             // monotonic against neighbours (no negative shocks).
-            grid.temperatures[idx] =
-                i16::try_from(t).unwrap_or(grid.temperatures[idx]);
+            grid.temperatures[idx] = i16::try_from(t).unwrap_or(grid.temperatures[idx]);
             grid.phase_budget[idx] = 0;
             let z = idx / area;
             let rem = idx - z * area;
@@ -1433,10 +1427,9 @@ fn percolation_pass(
                         if nsat + capillary_step <= u16::from(sat_now) {
                             let moved = capillary_step.min(u16::from(sat_now));
                             if moved > 0 {
-                                pending[idx] = (u16::from(sat_now) - moved)
-                                    .min(u16::from(u8::MAX)) as u8;
-                                pending[ni] =
-                                    (nsat + moved).min(u16::from(u8::MAX)) as u8;
+                                pending[idx] =
+                                    (u16::from(sat_now) - moved).min(u16::from(u8::MAX)) as u8;
+                                pending[ni] = (nsat + moved).min(u16::from(u8::MAX)) as u8;
                                 local_changed = true;
                             }
                         }
@@ -1486,9 +1479,7 @@ fn boundary_flux_pass(
         let idx = x + y * row + z * plane;
         let id = grid.cells[idx];
         let is_fluid = phase_of(reg, id) == Phase::Liquid || phase_of(reg, id) == Phase::Gas;
-        if x == 0
-            && boundary.faces[BoundaryFace::NegX.index()] == BoundaryMode::Vacuum
-            && is_fluid
+        if x == 0 && boundary.faces[BoundaryFace::NegX.index()] == BoundaryMode::Vacuum && is_fluid
         {
             grid.cells[idx] = AIR;
             grid.temperatures[idx] = boundary.ambient_temp;
@@ -1502,9 +1493,7 @@ fn boundary_flux_pass(
             grid.temperatures[idx] = boundary.ambient_temp;
             grid.saturation[idx] = 0;
         }
-        if y == 0
-            && boundary.faces[BoundaryFace::NegY.index()] == BoundaryMode::Vacuum
-            && is_fluid
+        if y == 0 && boundary.faces[BoundaryFace::NegY.index()] == BoundaryMode::Vacuum && is_fluid
         {
             grid.cells[idx] = AIR;
             grid.temperatures[idx] = boundary.ambient_temp;
@@ -1518,9 +1507,7 @@ fn boundary_flux_pass(
             grid.temperatures[idx] = boundary.ambient_temp;
             grid.saturation[idx] = 0;
         }
-        if z == 0
-            && boundary.faces[BoundaryFace::NegZ.index()] == BoundaryMode::Vacuum
-            && is_fluid
+        if z == 0 && boundary.faces[BoundaryFace::NegZ.index()] == BoundaryMode::Vacuum && is_fluid
         {
             grid.cells[idx] = AIR;
             grid.temperatures[idx] = boundary.ambient_temp;

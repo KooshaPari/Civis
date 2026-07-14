@@ -113,8 +113,7 @@ impl RelationDrivers {
     /// shared enemies and trade *warm*, border friction *cools*, culture
     /// pushes either way. The weighted sum is clamped to the unit range.
     pub fn score(&self) -> f32 {
-        let raw = 0.35 * self.shared_enemy + 0.35 * self.trade
-            - 0.40 * self.border_friction
+        let raw = 0.35 * self.shared_enemy + 0.35 * self.trade - 0.40 * self.border_friction
             + 0.30 * self.culture_similarity;
         raw.clamp(-1.0, 1.0)
     }
@@ -421,10 +420,22 @@ fn treaty_event(tick: u64, pair: Pair, kind: EventKind) -> RawSimEvent {
     use civ_legends::ids::SimRuntimeId;
     use civ_legends::model::Role;
     // Higher raw magnitude for betrayals: they reshape the political map.
-    let magnitude = if kind == EventKind::Betrayal { 0.85 } else { 0.7 };
+    let magnitude = if kind == EventKind::Betrayal {
+        0.85
+    } else {
+        0.7
+    };
     RawSimEvent::new(tick, kind, SourceCrate::Engine, magnitude)
-        .with_participant(SourceCrate::Engine, SimRuntimeId(u64::from(pair.lo.0)), Role::Leader)
-        .with_participant(SourceCrate::Engine, SimRuntimeId(u64::from(pair.hi.0)), Role::Leader)
+        .with_participant(
+            SourceCrate::Engine,
+            SimRuntimeId(u64::from(pair.lo.0)),
+            Role::Leader,
+        )
+        .with_participant(
+            SourceCrate::Engine,
+            SimRuntimeId(u64::from(pair.hi.0)),
+            Role::Leader,
+        )
 }
 
 #[cfg(test)]
@@ -440,9 +451,18 @@ mod tests {
     /// FR-CIV-DIPLOMACY: score band partitions into Rival/Neutral/Ally.
     #[test]
     fn stance_from_score_partitions_band() {
-        assert_eq!(EmergentStance::from_score(-0.9, -0.5, 0.7), EmergentStance::Rival);
-        assert_eq!(EmergentStance::from_score(0.0, -0.5, 0.7), EmergentStance::Neutral);
-        assert_eq!(EmergentStance::from_score(0.8, -0.5, 0.7), EmergentStance::Ally);
+        assert_eq!(
+            EmergentStance::from_score(-0.9, -0.5, 0.7),
+            EmergentStance::Rival
+        );
+        assert_eq!(
+            EmergentStance::from_score(0.0, -0.5, 0.7),
+            EmergentStance::Neutral
+        );
+        assert_eq!(
+            EmergentStance::from_score(0.8, -0.5, 0.7),
+            EmergentStance::Ally
+        );
     }
 
     // -- A. Emergent stance --------------------------------------------------
@@ -480,7 +500,10 @@ mod tests {
         let mut rivals: BTreeMap<PolityId, BTreeSet<PolityId>> = BTreeMap::new();
         rivals.entry(p(1)).or_default().insert(p(3));
         rivals.entry(p(2)).or_default().insert(p(4));
-        assert_eq!(EmergentDiplomacy::shared_enemy_strength(p(1), p(2), &rivals), 0.0);
+        assert_eq!(
+            EmergentDiplomacy::shared_enemy_strength(p(1), p(2), &rivals),
+            0.0
+        );
     }
 
     /// FR-CIV-DIPLOMACY: allies emerge from trade interdependence.

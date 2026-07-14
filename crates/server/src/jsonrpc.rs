@@ -1,4 +1,4 @@
-﻿//! JSON-RPC 2.0 request/response types for the CIV-0200 WebSocket protocol.
+//! JSON-RPC 2.0 request/response types for the CIV-0200 WebSocket protocol.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -1162,9 +1162,7 @@ pub fn encode_response(response: &JsonRpcResponse) -> String {
 }
 
 /// Parse `sim.load_scenario` params: `{ "preset": String, "seed"?: u64 }`.
-pub fn parse_load_scenario_params(
-    params: Option<&Value>,
-) -> Result<(String, u64), JsonRpcError> {
+pub fn parse_load_scenario_params(params: Option<&Value>) -> Result<(String, u64), JsonRpcError> {
     let p = params.ok_or_else(|| JsonRpcError {
         code: error_code::INVALID_PARAMS,
         message: r#"Invalid params: expected object with "preset""#.to_owned(),
@@ -1179,15 +1177,12 @@ pub fn parse_load_scenario_params(
             message: r#"Invalid params: expected string "preset""#.to_owned(),
             data: None,
         })?;
-    let seed = p
-        .get("seed")
-        .and_then(|v| v.as_u64())
-        .unwrap_or_else(|| {
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_secs())
-                .unwrap_or(42)
-        });
+    let seed = p.get("seed").and_then(|v| v.as_u64()).unwrap_or_else(|| {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(42)
+    });
     Ok((preset, seed))
 }
 
@@ -1331,15 +1326,14 @@ pub fn parse_replay_path(params: Option<&Value>) -> Result<String, JsonRpcError>
         || path_str.starts_with('\\')
         || path_str.contains('\\')
         || has_drive_prefix
-        || path
-            .components()
-            .any(|c| matches!(
+        || path.components().any(|c| {
+            matches!(
                 c,
                 std::path::Component::ParentDir
                     | std::path::Component::Prefix(_)
                     | std::path::Component::RootDir
             )
-            )
+        })
     {
         return Err(JsonRpcError {
             code: error_code::INVALID_PARAMS,
@@ -1557,8 +1551,16 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             }
         }
         JsonRpcMethod::SimInspectTile => {
-            let x = req.params.as_ref().and_then(|p| p.get("x").and_then(|v| v.as_i64())).unwrap_or(0);
-            let y = req.params.as_ref().and_then(|p| p.get("y").and_then(|v| v.as_i64())).unwrap_or(0);
+            let x = req
+                .params
+                .as_ref()
+                .and_then(|p| p.get("x").and_then(|v| v.as_i64()))
+                .unwrap_or(0);
+            let y = req
+                .params
+                .as_ref()
+                .and_then(|p| p.get("y").and_then(|v| v.as_i64()))
+                .unwrap_or(0);
             let result = serde_json::json!({ "x": x, "y": y, "stub": true });
             DispatchPlan {
                 response: JsonRpcResponse::success(req.id, result),
@@ -1566,22 +1568,31 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             }
         }
         JsonRpcMethod::SimLegends => DispatchPlan {
-            response: JsonRpcResponse::success(req.id, serde_json::json!({
-                "tick": ctx.tick,
-                "stub": true,
-            })),
+            response: JsonRpcResponse::success(
+                req.id,
+                serde_json::json!({
+                    "tick": ctx.tick,
+                    "stub": true,
+                }),
+            ),
             effect: DispatchEffect::None,
         },
         JsonRpcMethod::SimDiplomacyAction => {
-            let action = req.params.as_ref()
+            let action = req
+                .params
+                .as_ref()
                 .and_then(|p| p.get("action"))
                 .and_then(|v| v.as_str())
                 .unwrap_or("unknown");
-            let source = req.params.as_ref()
+            let source = req
+                .params
+                .as_ref()
                 .and_then(|p| p.get("source_faction"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
-            let target = req.params.as_ref()
+            let target = req
+                .params
+                .as_ref()
                 .and_then(|p| p.get("target_faction"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
@@ -1807,38 +1818,61 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
         },
         JsonRpcMethod::SimQueueResearch => {
             const KNOWN_TECHS: &[&str] = &[
-                "pottery", "masonry", "writing", "iron_working", "currency",
-                "mathematics", "gunpowder", "printing", "banking",
-                "steam_power", "electricity", "railroad",
+                "pottery",
+                "masonry",
+                "writing",
+                "iron_working",
+                "currency",
+                "mathematics",
+                "gunpowder",
+                "printing",
+                "banking",
+                "steam_power",
+                "electricity",
+                "railroad",
             ];
-            let tech = req.params.as_ref()
+            let tech = req
+                .params
+                .as_ref()
                 .and_then(|p| p.get("tech"))
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
             if tech.is_empty() {
                 DispatchPlan {
-                    response: JsonRpcResponse::failure(req.id, JsonRpcError {
-                        code: error_code::INVALID_PARAMS,
-                        message: "Missing or empty \"tech\" parameter".to_owned(),
-                        data: None,
-                    }),
+                    response: JsonRpcResponse::failure(
+                        req.id,
+                        JsonRpcError {
+                            code: error_code::INVALID_PARAMS,
+                            message: "Missing or empty \"tech\" parameter".to_owned(),
+                            data: None,
+                        },
+                    ),
                     effect: DispatchEffect::None,
                 }
             } else if !KNOWN_TECHS.contains(&tech) {
                 DispatchPlan {
-                    response: JsonRpcResponse::failure(req.id, JsonRpcError {
-                        code: error_code::INVALID_PARAMS,
-                        message: format!("Unknown tech \"{tech}\"; valid: {}", KNOWN_TECHS.join(", ")),
-                        data: None,
-                    }),
+                    response: JsonRpcResponse::failure(
+                        req.id,
+                        JsonRpcError {
+                            code: error_code::INVALID_PARAMS,
+                            message: format!(
+                                "Unknown tech \"{tech}\"; valid: {}",
+                                KNOWN_TECHS.join(", ")
+                            ),
+                            data: None,
+                        },
+                    ),
                     effect: DispatchEffect::None,
                 }
             } else {
                 DispatchPlan {
-                    response: JsonRpcResponse::success(req.id, serde_json::json!({
-                        "queued": tech,
-                        "tick": ctx.tick,
-                    })),
+                    response: JsonRpcResponse::success(
+                        req.id,
+                        serde_json::json!({
+                            "queued": tech,
+                            "tick": ctx.tick,
+                        }),
+                    ),
                     effect: DispatchEffect::QueueResearch {
                         tech: tech.to_owned(),
                     },
@@ -1846,75 +1880,120 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             }
         }
         JsonRpcMethod::SimTechState => DispatchPlan {
-            response: JsonRpcResponse::success(req.id, serde_json::json!({
-                "available": [
-                    "pottery", "masonry", "writing", "iron_working", "currency",
-                    "mathematics", "gunpowder", "printing", "banking",
-                    "steam_power", "electricity", "railroad",
-                ],
-                "researched": ctx.researched,
-                "in_progress": ctx.in_progress_tech,
-                "tick": ctx.tick,
-            })),
+            response: JsonRpcResponse::success(
+                req.id,
+                serde_json::json!({
+                    "available": [
+                        "pottery", "masonry", "writing", "iron_working", "currency",
+                        "mathematics", "gunpowder", "printing", "banking",
+                        "steam_power", "electricity", "railroad",
+                    ],
+                    "researched": ctx.researched,
+                    "in_progress": ctx.in_progress_tech,
+                    "tick": ctx.tick,
+                }),
+            ),
             effect: DispatchEffect::None,
         },
         JsonRpcMethod::SimOutcome => {
             let outcome_result = {
                 // We only have a ctx snapshot; real outcome check needs the live sim.
                 // The ws_bridge populates outcome_fields before dispatch (see below).
-                ctx.outcome_fields.clone().unwrap_or_else(|| crate::jsonrpc::OutcomeFields {
-                    tag: "ongoing".to_owned(),
-                    reason: String::new(),
-                    tick: ctx.tick,
-                })
+                ctx.outcome_fields
+                    .clone()
+                    .unwrap_or_else(|| crate::jsonrpc::OutcomeFields {
+                        tag: "ongoing".to_owned(),
+                        reason: String::new(),
+                        tick: ctx.tick,
+                    })
             };
             DispatchPlan {
-                response: JsonRpcResponse::success(req.id, serde_json::json!({
-                    "outcome": outcome_result.tag,
-                    "reason": outcome_result.reason,
-                    "tick": outcome_result.tick,
-                })),
+                response: JsonRpcResponse::success(
+                    req.id,
+                    serde_json::json!({
+                        "outcome": outcome_result.tag,
+                        "reason": outcome_result.reason,
+                        "tick": outcome_result.tick,
+                    }),
+                ),
                 effect: DispatchEffect::None,
             }
         }
         JsonRpcMethod::SimGodAction => {
-            let params = req.params.as_ref().and_then(|p| p.as_object())
+            let params = req
+                .params
+                .as_ref()
+                .and_then(|p| p.as_object())
                 .ok_or("sim.god_action requires params object");
             match params {
-                Err(msg) => DispatchPlan { response: JsonRpcResponse::failure(req.id, JsonRpcError { code: error_code::INVALID_PARAMS, message: msg.to_owned(), data: None }), effect: DispatchEffect::None },
+                Err(msg) => DispatchPlan {
+                    response: JsonRpcResponse::failure(
+                        req.id,
+                        JsonRpcError {
+                            code: error_code::INVALID_PARAMS,
+                            message: msg.to_owned(),
+                            data: None,
+                        },
+                    ),
+                    effect: DispatchEffect::None,
+                },
                 Ok(p) => DispatchPlan {
-                    response: JsonRpcResponse::success(req.id, serde_json::json!({ "ok": true, "tick": ctx.tick })),
+                    response: JsonRpcResponse::success(
+                        req.id,
+                        serde_json::json!({ "ok": true, "tick": ctx.tick }),
+                    ),
                     effect: DispatchEffect::GodAction {
-                        action: p.get("action").and_then(|v| v.as_str()).unwrap_or("").to_owned(),
+                        action: p
+                            .get("action")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .to_owned(),
                         x: p.get("x").and_then(|v| v.as_f64()).map(|f| f as f32),
                         y: p.get("y").and_then(|v| v.as_f64()).map(|f| f as f32),
-                        target_faction: p.get("target_faction").and_then(|v| v.as_u64()).map(|f| f as u32),
-                        magnitude: p.get("magnitude").and_then(|v| v.as_f64()).map(|f| f as f32),
-                        radius_voxels: p.get("radius_voxels").and_then(|v| v.as_u64()).map(|v| v as u32),
+                        target_faction: p
+                            .get("target_faction")
+                            .and_then(|v| v.as_u64())
+                            .map(|f| f as u32),
+                        magnitude: p
+                            .get("magnitude")
+                            .and_then(|v| v.as_f64())
+                            .map(|f| f as f32),
+                        radius_voxels: p
+                            .get("radius_voxels")
+                            .and_then(|v| v.as_u64())
+                            .map(|v| v as u32),
                         strength: p.get("strength").and_then(|v| v.as_i64()).map(|v| v as i32),
-                        material_id: p.get("material_id").and_then(|v| v.as_u64()).map(|v| v as u32),
-                        drop_height: p.get("drop_height").and_then(|v| v.as_i64()).map(|v| v as i32),
+                        material_id: p
+                            .get("material_id")
+                            .and_then(|v| v.as_u64())
+                            .map(|v| v as u32),
+                        drop_height: p
+                            .get("drop_height")
+                            .and_then(|v| v.as_i64())
+                            .map(|v| v as i32),
                         count: p.get("count").and_then(|v| v.as_u64()).map(|v| v as u32),
                         seed_civilian_id: p.get("seed_civilian_id").and_then(|v| v.as_u64()),
                     },
                 },
             }
         }
-        JsonRpcMethod::SimPerf => {
-            DispatchPlan {
-                response: JsonRpcResponse::success(req.id, serde_json::json!({
-                    "tick": ctx.tick,
-                    "last_tick_ms": ctx.last_tick_ms,
-                    "agent_count": ctx.population.unwrap_or(0) as u32,
-                    "ca_steps": 1u32,
-                        "stub": true,
-                    })),
-                    effect: DispatchEffect::None,
-                }
-        }
-        JsonRpcMethod::SimTechState => {
-            DispatchPlan {
-                response: JsonRpcResponse::success(req.id, serde_json::json!({
+        JsonRpcMethod::SimPerf => DispatchPlan {
+            response: JsonRpcResponse::success(
+                req.id,
+                serde_json::json!({
+                "tick": ctx.tick,
+                "last_tick_ms": ctx.last_tick_ms,
+                "agent_count": ctx.population.unwrap_or(0) as u32,
+                "ca_steps": 1u32,
+                    "stub": true,
+                }),
+            ),
+            effect: DispatchEffect::None,
+        },
+        JsonRpcMethod::SimTechState => DispatchPlan {
+            response: JsonRpcResponse::success(
+                req.id,
+                serde_json::json!({
                     "available": ["pottery", "masonry", "writing", "iron_working",
                                   "currency", "mathematics", "gunpowder", "printing",
                                   "banking", "steam_power", "electricity", "railroad"],
@@ -1922,10 +2001,10 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                     "in_progress": null,
                     "tick": ctx.tick,
                     "stub": true,
-                })),
-                effect: DispatchEffect::None,
-            }
-        }
+                }),
+            ),
+            effect: DispatchEffect::None,
+        },
         JsonRpcMethod::SimSubscribe
         | JsonRpcMethod::SimUpdateSubscription
         | JsonRpcMethod::SimUnsubscribe => DispatchPlan {
@@ -2842,7 +2921,10 @@ mod tests {
         );
         assert_eq!(plan.effect, DispatchEffect::None);
         let result = plan.response.result.expect("result");
-        assert_eq!(result.get("query_api_version").and_then(|v| v.as_u64()), Some(1));
+        assert_eq!(
+            result.get("query_api_version").and_then(|v| v.as_u64()),
+            Some(1)
+        );
         assert!(result.get("node_count").and_then(|v| v.as_u64()).is_some());
     }
 
@@ -4242,16 +4324,18 @@ mod tests {
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
-        assert_eq!(plan.response.error.as_ref().map(|e| e.code), Some(error_code::INVALID_PARAMS));
+        assert_eq!(
+            plan.response.error.as_ref().map(|e| e.code),
+            Some(error_code::INVALID_PARAMS)
+        );
     }
 
     /// FR-CIV-SERVER-003 — sim.tech_state returns available list and stub flag.
     #[test]
     fn dispatch_tech_state_returns_available_list() {
-        let req = parse_request(
-            r#"{"jsonrpc":"2.0","id":3,"method":"sim.tech_state","params":{}}"#,
-        )
-        .expect("parse");
+        let req =
+            parse_request(r#"{"jsonrpc":"2.0","id":3,"method":"sim.tech_state","params":{}}"#)
+                .expect("parse");
         let plan = dispatch_request(
             req,
             DispatchContext {
@@ -4275,6 +4359,9 @@ mod tests {
         let result = plan.response.result.unwrap();
         let available = result.get("available").expect("available field");
         assert!(available.is_array(), "available should be an array");
-        assert!(available.as_array().unwrap().len() > 0, "available should be non-empty");
+        assert!(
+            available.as_array().unwrap().len() > 0,
+            "available should be non-empty"
+        );
     }
 }

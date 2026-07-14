@@ -154,8 +154,16 @@ mod tests {
             severity: 1.0,
         };
         apply_shock(&mut prices, &shock);
-        assert_eq!(prices[0].price(Good::Metal), 10.0, "cluster 0 should be affected");
-        assert_eq!(prices[1].price(Good::Metal), 1.0, "cluster 1 must be unaffected");
+        assert_eq!(
+            prices[0].price(Good::Metal),
+            10.0,
+            "cluster 0 should be affected"
+        );
+        assert_eq!(
+            prices[1].price(Good::Metal),
+            1.0,
+            "cluster 1 must be unaffected"
+        );
     }
 
     #[test]

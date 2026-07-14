@@ -11,65 +11,64 @@
 //! - `metrics` - Tyranny/legitimacy metrics
 //! - `io` - File I/O utilities
 
+pub mod building_emergence;
 pub mod command_queue;
 pub mod conditions;
-pub mod writing;
-pub mod technology;
-pub mod dormant_phases;
 pub mod culture;
-pub mod godtools;
-pub mod gameplay;
 pub mod demographics;
-pub mod building_emergence;
-pub mod era;
-pub mod engine;
-pub mod emergence;
 pub mod disasters;
+pub mod dormant_phases;
+pub mod emergence;
 pub mod emergence_metrics;
+pub mod engine;
+pub mod era;
+pub mod faction_decisions;
+pub mod gameplay;
+pub mod godtools;
 pub mod hash_chain;
 pub mod integrity;
 pub mod invariants;
 pub mod io;
 pub mod lod;
 pub mod metrics;
+pub mod perf;
 pub mod policy;
 pub mod replay;
 pub mod replay_format;
 pub mod save_bundle;
 pub mod scenario;
-pub mod perf;
 pub mod spawn;
 pub mod spectator;
-pub mod faction_decisions;
+pub mod technology;
+pub mod writing;
 
-pub mod tutorial;
 pub mod tech;
+pub mod tutorial;
 
 /// Fixed-point scaling factor (1 raw unit = SCALE joules). Engine energy
 /// quantities are stored in fixed-point `i64` for determinism and converted
 /// to `f64`/SI at the economy boundary using this constant.
 pub const SCALE: i64 = 1_000;
 
-pub use demographics::{
-    carrying_capacity_from_food, tick_demographics, total_population, AgeGroup, Demographics, DemographicsSnapshot,
-};
+pub use civ_emergence_metrics::branching::BranchingRegime;
+pub use civ_emergence_metrics::dashboard::EmergenceDashboard;
 pub use civ_mod_host::{
     format_mod_error_event, format_mod_error_event_json, format_mod_loaded_event,
     format_mod_loaded_event_json, format_mod_unloaded_event_json, load_manifest, ModBrowserEntry,
-    ModGuestStateSave, ModLoadedRecord, ModType, ModUnloadedRecord, ModHost,
+    ModGuestStateSave, ModHost, ModLoadedRecord, ModType, ModUnloadedRecord,
 };
-pub use emergence::{
-    CivAiDecision, EmergenceFeedEvent, EmergenceState,
+pub use demographics::{
+    carrying_capacity_from_food, tick_demographics, total_population, AgeGroup, Demographics,
+    DemographicsSnapshot,
 };
-pub use civ_emergence_metrics::branching::BranchingRegime;
+pub use emergence::{CivAiDecision, EmergenceFeedEvent, EmergenceState};
 pub use emergence_metrics::{EmergenceBranchingState, EmergenceSample};
-pub use civ_emergence_metrics::dashboard::EmergenceDashboard;
 pub use engine::{
-    job_type_for_civilian_id, Building, BuildingType, Citizen, CombatDamagePulse, DiplomacyKind,
-    DiplomacyEvent, EconomicFocus, EconomicFocusEvent, InstitutionEvent, JobType, MilitaryUnit, Position,
-    ResourceType, Resources, Sim, SimSeed, Simulation, PsycheDrivenBehavior, StratBand,
-    StratificationEvent, StratificationEventKind, StratificationReport, TradeRoute, UnitType,
-    WorldState, ClusterStocks,
+    job_type_for_civilian_id, Building, BuildingType, Citizen, ClusterStocks, CombatDamagePulse,
+    DiplomacyEvent, DiplomacyKind, EconomicFocus, EconomicFocusEvent, InstitutionEvent, JobType,
+    MilitaryUnit, Position, PsycheDrivenBehavior, ResourceType, Resources, Sim, SimSeed,
+    Simulation, StratBand, StratificationEvent, StratificationEventKind, StratificationReport,
+    TradeRoute, UnitType, WorldState,
 };
 pub use hash_chain::hash_hex;
 pub use replay_format::{decode_civreplay, encode_civreplay};
@@ -81,14 +80,12 @@ pub use spawn::{
     unit_type_label,
 };
 
-
 // FR-CIV-ARCH: Emergent building layouts re-export so callers can use
 // `civ_engine::EmergentLayout` and `civ_engine::LayoutStrategy` without
 // directly depending on the private `building_layouts` module.
 pub use era::{CivEra, EraProgressionState, FactionEraSnapshot};
 
 pub use tutorial::{TutorialMilestone, TutorialProgress};
-
 
 // FR-CIV-GOV-001/002/003 (civ-007 institutions epic). Re-exported so callers
 // (server, clients, tests) can `use civ_engine::InstitutionKind` etc. without
@@ -123,9 +120,7 @@ pub use replay::ReplayEvent;
 pub use replay_format::{
     load_civreplay, save_civreplay, FOOTER_CHECKSUM_LEN, FORMAT_VERSION, MAGIC,
 };
-pub use save_bundle::{
-    CivSaveMetadata, SaveBundleError, CIVSAVE_FORMAT_VERSION, CIVSAVE_SPEC_ID,
-};
+pub use save_bundle::{CivSaveMetadata, SaveBundleError, CIVSAVE_FORMAT_VERSION, CIVSAVE_SPEC_ID};
 pub use scenario::{
     baseline_scenario_path, load_scenario, Scenario, ScenarioError, ScenarioMilitary,
     SCENARIO_SCHEMA_VERSION,

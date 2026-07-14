@@ -1,6 +1,8 @@
 //! FR-CIV-ARCH engine integration tests (emergence matrix batch).
 
-use civ_engine::building_emergence::{biome_style_tag, emergent_style_key_for_sim, settlement_build_anchor};
+use civ_engine::building_emergence::{
+    biome_style_tag, emergent_style_key_for_sim, settlement_build_anchor,
+};
 use civ_engine::{BuildingType, Simulation};
 use civ_planet::{defaults_earthlike, BiomeKind, GeologyMap};
 use civ_voxel::WorldCoord;

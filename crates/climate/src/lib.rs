@@ -77,13 +77,13 @@ pub use disaster_spread::{DisasterGrid, DisasterParams, HazardCell, HazardKind};
 /// and precipitation offsets over a year-length period. See
 /// [`season_cycle`] for details.
 pub mod season_cycle;
-pub use season_cycle::{SeasonCycleParams, SeasonCycleSample, seasonal_cycle};
+pub use season_cycle::{seasonal_cycle, SeasonCycleParams, SeasonCycleSample};
 
 /// Terrain erosion by overland water flow (FR-CIV-EROSION). Each tick,
 /// water flowing over a cell removes a fraction of its height and
 /// deposits it on the downslope neighbour. See [`erosion`] for details.
 pub mod erosion;
-pub use erosion::{ErosionGrid, ErosionParams, erosion_step};
+pub use erosion::{erosion_step, ErosionGrid, ErosionParams};
 
 /// Biome shift from sustained temperature / precipitation change
 /// (FR-CIV-BIOME-SHIFT). Additive: provides pure-logic classification of a
@@ -96,9 +96,9 @@ impl ClimateState {
     /// Create a new `ClimateState` initialised to pre-industrial conditions.
     pub fn new() -> Self {
         Self {
-            co2_ppm: 280.0,         // pre-industrial ≈ 280 ppm
+            co2_ppm: 280.0, // pre-industrial ≈ 280 ppm
             mean_temp_c: BASELINE_TEMP_C,
-            sea_level_m: 0.0,       // baseline datum
+            sea_level_m: 0.0, // baseline datum
             tick: 0,
         }
     }
@@ -215,9 +215,6 @@ mod tests {
     /// Assert two `f64` values are equal to within 1e-10.
     fn approx_eq(a: f64, b: f64) {
         let diff = (a - b).abs();
-        assert!(
-            diff < 1e-10,
-            "expected {b}, got {a} (diff = {diff})"
-        );
+        assert!(diff < 1e-10, "expected {b}, got {a} (diff = {diff})");
     }
 }

@@ -329,7 +329,11 @@ pub fn run_concession_rounds(
 
         trace.push(ConcessionRound {
             round: round_idx,
-            conceder: if conceder_is_a { Some(a.party) } else { Some(b.party) },
+            conceder: if conceder_is_a {
+                Some(a.party)
+            } else {
+                Some(b.party)
+            },
             party_a_offer: a.offer,
             party_b_offer: b.offer,
             gap,
@@ -457,22 +461,14 @@ mod tests {
                 // ends with the gap collapsed) and we never exceeded the
                 // round budget.
                 assert!(first.rounds <= MAX_ROUNDS);
-                let last_gap = first
-                    .trace
-                    .last()
-                    .expect("acceptance trace non-empty")
-                    .gap;
+                let last_gap = first.trace.last().expect("acceptance trace non-empty").gap;
                 assert_eq!(last_gap, 0, "Accepted rounds must end with gap == 0");
             }
             OutcomeKind::Impasse { final_gap } => {
                 // Impasse path: the round count is exactly MAX_ROUNDS
                 // and the recorded `final_gap` matches the trace tail.
                 assert_eq!(first.rounds, MAX_ROUNDS);
-                let last_gap = first
-                    .trace
-                    .last()
-                    .expect("impasse trace non-empty")
-                    .gap;
+                let last_gap = first.trace.last().expect("impasse trace non-empty").gap;
                 assert_eq!(
                     last_gap, final_gap,
                     "Impasse::final_gap must equal the last trace entry's gap"
@@ -515,7 +511,9 @@ mod tests {
                 );
                 assert!(terms >= 20, "terms must satisfy party A's reservation");
                 assert!(
-                    out.trace.iter().all(|r| r.party_a_offer <= party_a.reservation),
+                    out.trace
+                        .iter()
+                        .all(|r| r.party_a_offer <= party_a.reservation),
                     "A's offer must not exceed its own reservation"
                 );
                 assert!(

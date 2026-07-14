@@ -114,8 +114,11 @@ pub fn spawn_procedural_actor(
     // Helper: add a bone mesh child to `root`.
     macro_rules! bone {
         ($half_x:expr, $half_y:expr, $half_z:expr, $pos:expr, $mat:expr) => {{
-            let mesh =
-                meshes.add(Mesh::from(Cuboid::new($half_x * 2.0, $half_y * 2.0, $half_z * 2.0)));
+            let mesh = meshes.add(Mesh::from(Cuboid::new(
+                $half_x * 2.0,
+                $half_y * 2.0,
+                $half_z * 2.0,
+            )));
             let b = commands
                 .spawn((
                     Mesh3d(mesh),

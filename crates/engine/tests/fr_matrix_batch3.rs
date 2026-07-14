@@ -9,13 +9,13 @@ use civ_engine::hash_chain::{
 use civ_engine::lod::{
     aggregate_strategic, operational_hex_snapshot, project_zoom, HexCellSnapshot, ZoomLevel,
 };
+use civ_engine::replay::ReplayError;
 use civ_engine::replay::ReplayLog;
 use civ_engine::replay_format::MAGIC;
 use civ_engine::replay_format::{
     decode_civreplay, encode_civreplay, load_civreplay, save_civreplay,
 };
 use civ_engine::scenario::{baseline_scenario_path, load_scenario, SCENARIO_SCHEMA_VERSION};
-use civ_engine::replay::ReplayError;
 use civ_engine::Simulation;
 use civ_mod_host::{format_mod_error_event_json, ModLoadedRecord, ModUnloadedRecord};
 use civ_save_db::format_session_saved_event_json;

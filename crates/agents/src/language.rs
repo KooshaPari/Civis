@@ -277,7 +277,10 @@ mod tests {
             drift_phonemes(&mut rng_a, &mut a, 0.05, 80);
             drift_phonemes(&mut rng_b, &mut b, 0.05, 80);
         }
-        assert_eq!(a, b, "same seed must yield identical phoneme vectors at tick N");
+        assert_eq!(
+            a, b,
+            "same seed must yield identical phoneme vectors at tick N"
+        );
     }
 
     #[test]
@@ -285,7 +288,10 @@ mod tests {
         let mut inv = PhonemeInventory::seed_from(7);
         let mut rng = rng(3);
         let l2 = drift_phonemes(&mut rng, &mut inv, 1.0, 10);
-        assert!(l2 <= 0.011, "per-tick L2 drift must respect max_drift_permille");
+        assert!(
+            l2 <= 0.011,
+            "per-tick L2 drift must respect max_drift_permille"
+        );
     }
 
     #[test]
@@ -338,7 +344,10 @@ mod tests {
         let base = PhonemeInventory::seed_from(42);
         let a = tick_seeded_phoneme_drift(&base, 42, 100, 0.05, 50);
         let b = tick_seeded_phoneme_drift(&base, 42, 100, 0.05, 50);
-        assert_eq!(a, b, "same seed+tick must yield bitwise-equal phoneme vectors");
+        assert_eq!(
+            a, b,
+            "same seed+tick must yield bitwise-equal phoneme vectors"
+        );
     }
 
     #[test]
@@ -346,7 +355,10 @@ mod tests {
         let base = PhonemeInventory::seed_from(7);
         let t10 = tick_seeded_phoneme_drift(&base, 7, 10, 0.1, 100);
         let t20 = tick_seeded_phoneme_drift(&base, 7, 20, 0.1, 100);
-        assert_ne!(t10.phonemes, t20.phonemes, "different ticks must produce different drift");
+        assert_ne!(
+            t10.phonemes, t20.phonemes,
+            "different ticks must produce different drift"
+        );
     }
 
     #[test]
@@ -371,10 +383,17 @@ mod tests {
         coin_evolved(&mut lex, &evolved, LexemeKind::Settlement, 1, 1001);
         coin_evolved(&mut lex, &evolved, LexemeKind::Faction, 2, 2002);
         coin_evolved(&mut lex, &evolved, LexemeKind::Event, 3, 3003);
-        assert_eq!(lex.len(), 3, "lexicon must grow to 3 entries after coining 3 concepts");
+        assert_eq!(
+            lex.len(),
+            3,
+            "lexicon must grow to 3 entries after coining 3 concepts"
+        );
         let name = name_from_lexicon(&lex, &evolved, LexemeKind::Settlement, 1).unwrap();
         assert!(!name.is_empty(), "coined name must be non-empty");
-        assert!(name.chars().next().unwrap().is_uppercase(), "name must start uppercase");
+        assert!(
+            name.chars().next().unwrap().is_uppercase(),
+            "name must start uppercase"
+        );
     }
 
     #[test]
@@ -397,6 +416,9 @@ mod tests {
         coin_evolved(&mut lex_b, &evolved, LexemeKind::Event, 500, 9999);
         let na = name_from_lexicon(&lex_a, &evolved, LexemeKind::Event, 500).unwrap();
         let nb = name_from_lexicon(&lex_b, &evolved, LexemeKind::Event, 500).unwrap();
-        assert_eq!(na, nb, "same evolved inventory + same entity_seed must yield same name");
+        assert_eq!(
+            na, nb,
+            "same evolved inventory + same entity_seed must yield same name"
+        );
     }
 }

@@ -1,4 +1,4 @@
-﻿use std::{
+use std::{
     net::SocketAddr,
     path::PathBuf,
     sync::{
@@ -20,8 +20,9 @@ use axum::{
 };
 use civ_agents::{Civilian as AgentCivilian, Needs, Tools, Wardrobe};
 use civ_engine::{
-    decode_civreplay, encode_civreplay, job_type_for_civilian_id, Citizen, CivSaveBundle,
-    scenario::{load_scenario, preset_scenario_path}, DiplomacyKind, JobType, Simulation,
+    decode_civreplay, encode_civreplay, job_type_for_civilian_id,
+    scenario::{load_scenario, preset_scenario_path},
+    Citizen, CivSaveBundle, DiplomacyKind, JobType, Simulation,
 };
 use civ_protocol_3d::{
     encode_frame3d_binary, encode_frame3d_binary_from_json, AgentAppearanceFrame,
@@ -517,16 +518,21 @@ async fn handle_jsonrpc_text(
             } else {
                 None
             };
-            let x = req.params.as_ref().and_then(|p| p.get("x").and_then(|v| v.as_i64())).unwrap_or(0);
-            let y = req.params.as_ref().and_then(|p| p.get("y").and_then(|v| v.as_i64())).unwrap_or(0);
+            let x = req
+                .params
+                .as_ref()
+                .and_then(|p| p.get("x").and_then(|v| v.as_i64()))
+                .unwrap_or(0);
+            let y = req
+                .params
+                .as_ref()
+                .and_then(|p| p.get("y").and_then(|v| v.as_i64()))
+                .unwrap_or(0);
             let tile_probe = if req.method == crate::jsonrpc::JsonRpcMethod::SimLegends
                 || req.method == crate::jsonrpc::JsonRpcMethod::SimInspectTile
             {
                 let sim = state.sim.lock().await;
-                let material = sim
-                    .voxel()
-                    .read(civ_voxel::WorldCoord { x, y: 0, z: y })
-                    .0 as u16;
+                let material = sim.voxel().read(civ_voxel::WorldCoord { x, y: 0, z: y }).0 as u16;
                 Some(crate::jsonrpc::TileInspectionWire {
                     material,
                     terrain_height: 0,
@@ -750,15 +756,28 @@ fn build_faction_state_frame(sim: &Simulation, tick: u64) -> FactionStateFrame {
         })
         .collect();
     factions.sort_by_key(|entry| entry.id);
-    let mut population_by_faction: std::collections::BTreeMap<u32, u32> = std::collections::BTreeMap::new();
-    for (_, (civilian, _needs, _wardrobe)) in sim.world.query::<(&civ_agents::Civilian, &civ_agents::Needs, &civ_agents::Wardrobe)>().iter() {
+    let mut population_by_faction: std::collections::BTreeMap<u32, u32> =
+        std::collections::BTreeMap::new();
+    for (_, (civilian, _needs, _wardrobe)) in sim
+        .world
+        .query::<(
+            &civ_agents::Civilian,
+            &civ_agents::Needs,
+            &civ_agents::Wardrobe,
+        )>()
+        .iter()
+    {
         let fid = match civilian.alignment {
             civ_agents::Alignment::Faction(id) => id,
             _ => 0,
         };
         *population_by_faction.entry(fid).or_insert(0) += 1;
     }
-    FactionStateFrame { tick, factions, population_by_faction }
+    FactionStateFrame {
+        tick,
+        factions,
+        population_by_faction,
+    }
 }
 
 /// Build event-feed messages for one tick.

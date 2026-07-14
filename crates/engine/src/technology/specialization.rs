@@ -60,9 +60,7 @@ pub fn compute_specialization(environment: &ClusterEnvironment) -> TechSpecializ
     if environment.has_water_access {
         return TechSpecialization::Maritime;
     }
-    if environment.population >= SCHOLAR_POP
-        && environment.institution_count >= SCHOLAR_INST
-    {
+    if environment.population >= SCHOLAR_POP && environment.institution_count >= SCHOLAR_INST {
         return TechSpecialization::Scholarly;
     }
     if environment.resource_richness >= INDUSTRIAL_RESOURCE
@@ -143,7 +141,10 @@ mod tests {
 
     #[test]
     fn bare_environment_yields_none() {
-        assert_eq!(compute_specialization(&base_env()), TechSpecialization::None);
+        assert_eq!(
+            compute_specialization(&base_env()),
+            TechSpecialization::None
+        );
     }
 
     #[test]

@@ -305,7 +305,10 @@ mod tests {
         while !grid.is_quiescent(&params) {
             grid.step(&params);
             ticks += 1;
-            assert!(ticks < 10_000, "grid never decayed to zero after {ticks} ticks");
+            assert!(
+                ticks < 10_000,
+                "grid never decayed to zero after {ticks} ticks"
+            );
         }
 
         // Final state: every cell is below the threshold (i.e. effectively

@@ -69,14 +69,20 @@ mod tests {
     fn price_rises_when_supply_less_than_demand() {
         // supply 0.5 (50 units / 100), demand 1.0 → ratio 2.0
         let price = compute_price(0.5, 1.0, 1.0);
-        assert!(price > 1.0, "price should rise above base when supply < demand");
+        assert!(
+            price > 1.0,
+            "price should rise above base when supply < demand"
+        );
     }
 
     #[test]
     fn price_falls_when_surplus() {
         // supply 2.0 (200 units / 100), demand 1.0 → ratio 0.5
         let price = compute_price(2.0, 1.0, 1.0);
-        assert!(price < 1.0, "price should fall below base when supply > demand");
+        assert!(
+            price < 1.0,
+            "price should fall below base when supply > demand"
+        );
     }
 
     #[test]

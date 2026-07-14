@@ -310,10 +310,8 @@ pub fn step_currency_trust(
     let penalty_bp = if hyperinflation {
         // Use the larger excess (price or supply) so a runaway on EITHER
         // side bites. Excess_bp10 = max(0, observed − threshold).
-        let price_excess_bp10 =
-            (abs_inflation_bp10 - HYPER_INFLATION_BP10).max(0);
-        let supply_excess_bp10 =
-            (supply_growth_bp10 - HYPER_SUPPLY_GROWTH_BP10).max(0);
+        let price_excess_bp10 = (abs_inflation_bp10 - HYPER_INFLATION_BP10).max(0);
+        let supply_excess_bp10 = (supply_growth_bp10 - HYPER_SUPPLY_GROWTH_BP10).max(0);
         let excess_bp10 = price_excess_bp10.max(supply_excess_bp10);
 
         // Quadratic ramp in (excess / threshold). Saturating.
@@ -327,10 +325,10 @@ pub fn step_currency_trust(
         };
         let ratio_num = (excess as i128).saturating_mul(10_000);
         let ratio = ratio_num / threshold.max(1) as i128; // [0, ~very large]
-        // ratio^2, saturating.
+                                                          // ratio^2, saturating.
         let ratio_sq = ratio.saturating_mul(ratio); // i128
-        // penalty_bp = MAX_PASS_LOSS_BP * ratio_sq / (10_000 * 10_000)
-        //            = MAX_PASS_LOSS_BP * ratio_sq / 100_000_000
+                                                    // penalty_bp = MAX_PASS_LOSS_BP * ratio_sq / (10_000 * 10_000)
+                                                    //            = MAX_PASS_LOSS_BP * ratio_sq / 100_000_000
         let pen_num = (MAX_PASS_LOSS_BP as i128).saturating_mul(ratio_sq);
         let pen = pen_num / 100_000_000;
         // Cap at MAX_PASS_LOSS_BP so a single pass can never wipe more
@@ -429,10 +427,7 @@ mod tests {
         assert_eq!(outcomes[0].stable_exchange_delta_bp, MAX_PASS_GAIN_BP);
         // Trust is capped at TRUST_BP_MAX; running enough passes saturates
         // trust to 100 %.
-        assert!(
-            c.trust_bp() <= TRUST_BP_MAX,
-            "trust must not exceed 100 %"
-        );
+        assert!(c.trust_bp() <= TRUST_BP_MAX, "trust must not exceed 100 %");
         assert_eq!(c.hyperinflation_passes, 0);
     }
 
@@ -557,8 +552,7 @@ mod tests {
         let mut none = CurrencyTrust::with_initial_trust_bp(3, 5_000);
 
         // Pass 1 each: full saturation, half saturation, zero volume.
-        let out_full =
-            step_currency_trust(&mut full, SATURATION_VOLUME, 100, 100, 10_000, 10_000);
+        let out_full = step_currency_trust(&mut full, SATURATION_VOLUME, 100, 100, 10_000, 10_000);
         let out_half =
             step_currency_trust(&mut half, SATURATION_VOLUME / 2, 100, 100, 10_000, 10_000);
         let out_none = step_currency_trust(&mut none, 0, 100, 100, 10_000, 10_000);
@@ -583,15 +577,11 @@ mod tests {
         let mut c = CurrencyTrust::with_initial_trust_bp(1, 5_000);
         // Price jumps from 100 → 200 (100 % inflation ⇒ inflation_bp10 =
         // 10_000). Supply flat.
-        let out = step_currency_trust(
-            &mut c,
-            SATURATION_VOLUME,
-            200,
-            100,
-            10_000,
-            10_000,
+        let out = step_currency_trust(&mut c, SATURATION_VOLUME, 200, 100, 10_000, 10_000);
+        assert_eq!(
+            out.stable_exchange_delta_bp, 0,
+            "100 % inflation ⇒ gain = 0"
         );
-        assert_eq!(out.stable_exchange_delta_bp, 0, "100 % inflation ⇒ gain = 0");
         assert!(out.hyperinflation, "100 % price jump is hyperinflationary");
         assert!(
             out.hyperinflation_penalty_bp > 0,
@@ -613,14 +603,7 @@ mod tests {
         let out_stable =
             step_currency_trust(&mut stable, SATURATION_VOLUME, 100, 100, 10_000, 10_000);
         // Price rises from 100 → 105 (+5 % ⇒ inflation_bp10 = 500).
-        let out_mild = step_currency_trust(
-            &mut mild,
-            SATURATION_VOLUME,
-            105,
-            100,
-            10_000,
-            10_000,
-        );
+        let out_mild = step_currency_trust(&mut mild, SATURATION_VOLUME, 105, 100, 10_000, 10_000);
 
         assert_eq!(out_stable.stable_exchange_delta_bp, MAX_PASS_GAIN_BP);
         assert!(
@@ -647,7 +630,10 @@ mod tests {
             let supply = 10_000 + tick * 50;
             let out_a = step_currency_trust(&mut a, volume, price, prev_price, supply, prev_supply);
             let out_b = step_currency_trust(&mut b, volume, price, prev_price, supply, prev_supply);
-            assert_eq!(out_a, out_b, "outcomes must be identical for identical inputs");
+            assert_eq!(
+                out_a, out_b,
+                "outcomes must be identical for identical inputs"
+            );
             prev_price = price;
             prev_supply = supply;
         }

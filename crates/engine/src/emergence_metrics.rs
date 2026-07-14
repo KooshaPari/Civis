@@ -409,7 +409,10 @@ impl Simulation {
     }
 
     fn micro_descendant_action_count(&self) -> u32 {
-        self.last_tick_engagements.len().try_into().unwrap_or(u32::MAX)
+        self.last_tick_engagements
+            .len()
+            .try_into()
+            .unwrap_or(u32::MAX)
     }
 
     /// Take one emergence sample if the current tick is on a sample
@@ -1421,8 +1424,12 @@ mod tests {
         // `with_seed` pre-spawns faction-aligned civilians from scenario setup;
         // clear them so this test's "0 factions" precondition actually holds
         // (it asserts the degenerate MI contract: no factions → None).
-        let preexisting: Vec<hecs::Entity> =
-            sim.world.query::<&Civilian>().iter().map(|(e, _)| e).collect();
+        let preexisting: Vec<hecs::Entity> = sim
+            .world
+            .query::<&Civilian>()
+            .iter()
+            .map(|(e, _)| e)
+            .collect();
         for e in preexisting {
             let _ = sim.world.despawn(e);
         }

@@ -23,9 +23,9 @@
 
 pub mod cluster;
 pub mod culture;
-pub mod language;
 pub mod daily_path;
 pub mod diplomacy;
+pub mod language;
 pub mod psyche;
 pub mod social;
 
@@ -33,6 +33,7 @@ pub use cluster::{
     cluster_by_colocation, reconcile_membership, should_join, should_leave, ClusterId,
     ClusterMember, MembershipPayoff,
 };
+pub use culture::{cluster_language_distance, language_divergence_from_isolation};
 pub use daily_path::{
     choose_activity, need_for_poi_kind, path_step, pick_target, poi_kind_for_need, score_poi,
     wander_anchor, Activity, DailyGoal, DailyPathDecision, Poi, PoiKind, PoiRegistry,
@@ -45,7 +46,6 @@ pub use language::{
     tick_seeded_phoneme_drift, EvolvedLexicon, Lexeme, LexemeKind, Phoneme, PhonemeInventory,
     DEFAULT_INVENTORY_SIZE, PHONEME_FEATURES,
 };
-pub use culture::{cluster_language_distance, language_divergence_from_isolation};
 pub use psyche::{
     belief_culture_exposure, belief_distance, cluster_belief_centroids,
     isolation_weighted_belief_divergence, max_cluster_belief_divergence, psych_genome_profile,
@@ -374,7 +374,7 @@ pub fn spawn_child_near(
     y: f32,
     rng: &mut ChaCha8Rng,
 ) -> hecs::Entity {
-    use civ_genetics::{NamedSeed, spawn_genome_with_divergence};
+    use civ_genetics::{spawn_genome_with_divergence, NamedSeed};
 
     let nx = (x + rng.gen_range(-0.015..0.015)).clamp(0.01, 0.99);
     let ny = (y + rng.gen_range(-0.015..0.015)).clamp(0.01, 0.99);
@@ -465,7 +465,9 @@ pub fn spawn_civilian(
         needs,
         lod,
     } = bundle;
-    world.spawn((civilian, position, velocity, wardrobe, tools, needs, lod, dna))
+    world.spawn((
+        civilian, position, velocity, wardrobe, tools, needs, lod, dna,
+    ))
 }
 
 /// Return a normalized direction from a civilian toward a home coordinate.
@@ -503,7 +505,7 @@ pub fn spawn_civilian_at(
     visual: ActorVisualKind,
     rng: &mut ChaCha8Rng,
 ) -> hecs::Entity {
-    use civ_genetics::{NamedSeed, spawn_genome_with_divergence};
+    use civ_genetics::{spawn_genome_with_divergence, NamedSeed};
 
     let angle = rng.gen::<f32>() * std::f32::consts::TAU;
     let velocity = Velocity {
@@ -551,7 +553,7 @@ pub fn spawn_many(
     seed_civilian_id: u64,
     faction: u32,
 ) -> Vec<hecs::Entity> {
-    use civ_genetics::{NamedSeed, spawn_genome_with_divergence};
+    use civ_genetics::{spawn_genome_with_divergence, NamedSeed};
     use rand::SeedableRng;
     use rand_chacha::ChaCha8Rng;
 
@@ -970,7 +972,7 @@ mod tests {
 
     /// Helper function for tests to create default DNA
     fn test_dna() -> civ_genetics::Dna {
-        use civ_genetics::{NamedSeed, archetype_seed, spawn_genome_with_divergence, DnaClass};
+        use civ_genetics::{archetype_seed, spawn_genome_with_divergence, DnaClass, NamedSeed};
         use rand::SeedableRng;
         use rand_chacha::ChaCha8Rng;
         let mut rng = ChaCha8Rng::seed_from_u64(42);
@@ -998,7 +1000,7 @@ mod tests {
     /// Covers FR-CIV-AGENTS-020 — spawn_civilian inserts all requested components.
     #[test]
     fn spawn_civilian_inserts_components() {
-        use civ_genetics::{NamedSeed, spawn_genome_with_divergence};
+        use civ_genetics::{spawn_genome_with_divergence, NamedSeed};
         use rand::SeedableRng;
         use rand_chacha::ChaCha8Rng;
 

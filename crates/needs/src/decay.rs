@@ -91,11 +91,7 @@ pub enum NeedChannel {
 
 impl NeedChannel {
     /// Canonical iteration order (matches [`NeedLevel`] field order).
-    pub const ALL: [NeedChannel; 3] = [
-        NeedChannel::Hunger,
-        NeedChannel::Rest,
-        NeedChannel::Social,
-    ];
+    pub const ALL: [NeedChannel; 3] = [NeedChannel::Hunger, NeedChannel::Rest, NeedChannel::Social];
 
     /// Read the pressure for this channel from a [`NeedLevel`].
     #[must_use]

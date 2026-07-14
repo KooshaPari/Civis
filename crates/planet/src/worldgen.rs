@@ -42,7 +42,6 @@ impl WorldgenConfig {
     }
 }
 
-
 impl Default for WorldgenConfig {
     fn default() -> Self {
         Self::new(0, 64, 0.5, 1.0)
@@ -97,7 +96,11 @@ pub struct WorldgenMap {
 /// 3. Derive temperature/rainfall from latitude and planet tilt.
 /// 4. Classify biomes and resources from the resulting climate bands.
 #[must_use]
-pub fn generate_world(config: WorldgenConfig, planet: PlanetConfig, climate: Climate) -> WorldgenMap {
+pub fn generate_world(
+    config: WorldgenConfig,
+    planet: PlanetConfig,
+    climate: Climate,
+) -> WorldgenMap {
     let size = config.size.max(1) as usize;
     let mut heights = base_heights(&config, size);
     erode_heights(&mut heights, &config, size);
@@ -110,14 +113,22 @@ pub fn generate_world(config: WorldgenConfig, planet: PlanetConfig, climate: Cli
             let (temperature, rainfall) = climate_band(&planet, &climate, &config, x, z, size);
             let biome =
                 classify_world_biome(normalized_height, temperature, rainfall, config.sea_level);
-            let resources =
-                resource_band(&config, normalized_height, temperature, rainfall, x, z, size);
+            let resources = resource_band(
+                &config,
+                normalized_height,
+                temperature,
+                rainfall,
+                x,
+                z,
+                size,
+            );
             tiles.push(WorldgenTile {
                 height: quantize_height(normalized_height),
                 biome,
                 temperature_milli_c: ((temperature * 1000.0)
                     .round()
-                    .clamp(i16::MIN as f32, i16::MAX as f32)) as i16,
+                    .clamp(i16::MIN as f32, i16::MAX as f32))
+                    as i16,
                 rainfall_mm: rainfall.round().clamp(0.0, u16::MAX as f32) as u16,
                 resources,
             });
@@ -182,7 +193,12 @@ fn erode_heights(heights: &mut [f32], config: &WorldgenConfig, size: usize) {
 }
 
 fn river_cut(seed: u64, x: usize, z: usize, pass: usize) -> f32 {
-    let n = hash01(seed ^ 0x51eb_851e_51eb_851e, x as u64, z as u64, pass as u64);
+    let n = hash01(
+        seed ^ 0x51eb_851e_51eb_851e,
+        x as u64,
+        z as u64,
+        pass as u64,
+    );
     if n > 0.82 {
         (n - 0.82) / 0.18
     } else {
@@ -203,7 +219,12 @@ fn climate_band(
     let seasonal = (climate.year_phase * std::f32::consts::TAU).sin() * 0.08;
     let temperature = 30.0 - lat * (42.0 + tilt * 16.0) + seasonal * 10.0;
     let rain_base = 1200.0 - lat * (700.0 + config.roughness * 140.0);
-    let rain_noise = simplex_value(config.seed ^ 0x7f4a_7c15_9e37_79b9, x as f32 * 0.07, z as f32 * 0.07, 3);
+    let rain_noise = simplex_value(
+        config.seed ^ 0x7f4a_7c15_9e37_79b9,
+        x as f32 * 0.07,
+        z as f32 * 0.07,
+        3,
+    );
     let rainfall = (rain_base + rain_noise * 220.0).max(0.0);
     (temperature, rainfall)
 }
@@ -253,8 +274,14 @@ fn resource_band(
     z: usize,
     size: usize,
 ) -> ResourceKind {
-    let noise = hash01(config.seed ^ 0xa5a5_5a5a_1234_5678, x as u64, z as u64, size as u64);
-    let fertility = rainfall / 1500.0 + (temperature.max(-20.0) + 20.0) / 60.0 - (height - 0.5).abs();
+    let noise = hash01(
+        config.seed ^ 0xa5a5_5a5a_1234_5678,
+        x as u64,
+        z as u64,
+        size as u64,
+    );
+    let fertility =
+        rainfall / 1500.0 + (temperature.max(-20.0) + 20.0) / 60.0 - (height - 0.5).abs();
     if fertility > 1.1 || noise > 0.95 {
         ResourceKind::Abundant
     } else if fertility > 0.65 || noise > 0.72 {
@@ -298,7 +325,11 @@ fn simplex_fbm(seed: u64, x: f32, y: f32, octaves: usize) -> f32 {
         amplitude *= 0.5;
         frequency *= 2.0;
     }
-    if norm == 0.0 { 0.0 } else { total / norm }
+    if norm == 0.0 {
+        0.0
+    } else {
+        total / norm
+    }
 }
 
 fn simplex_value(seed: u64, x: f32, y: f32, octaves: usize) -> f32 {
@@ -404,6 +435,9 @@ mod tests {
         let map = generate_world(WorldgenConfig::new(7, 48, 0.4, 1.1), planet, climate);
         assert_eq!(map.tiles.len(), 48 * 48);
         assert!(map.tiles.iter().any(|t| t.biome == BiomeKind::Ocean));
-        assert!(map.tiles.iter().any(|t| matches!(t.resources, ResourceKind::Rich | ResourceKind::Abundant)));
+        assert!(map
+            .tiles
+            .iter()
+            .any(|t| matches!(t.resources, ResourceKind::Rich | ResourceKind::Abundant)));
     }
 }

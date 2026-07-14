@@ -10,13 +10,13 @@ use std::collections::BTreeMap;
 use civ_agents::max_cluster_belief_divergence;
 
 use super::{
-    Simulation,
     engine::{
         add_unrest_delta, agent_misery_unrest, avg_psyche_maturity, cohesion_delta,
-        commodity_unrest_delta, energy_scarcity_unrest, institution_step,
-        institution_target_level, kinship_cohesion_boost, micro_cohesion_delta,
-        research_unrest_mitigation, unrest_delta, FOOD_SCARCITY_BASELINE,
+        commodity_unrest_delta, energy_scarcity_unrest, institution_step, institution_target_level,
+        kinship_cohesion_boost, micro_cohesion_delta, research_unrest_mitigation, unrest_delta,
+        FOOD_SCARCITY_BASELINE,
     },
+    Simulation,
 };
 
 /// Belief units required per temple level (FR-CIV-REL-003 / emergent-systems-tracelinks).
@@ -30,10 +30,7 @@ fn cohesion_unrest_damp(delta: i64, cohesion: u64) -> i64 {
     delta.saturating_sub((cohesion / 100) as i64)
 }
 
-pub fn institution_belief_signal(
-    belief: u64,
-    cluster_beliefs: &BTreeMap<u64, [f32; 4]>,
-) -> u64 {
+pub fn institution_belief_signal(belief: u64, cluster_beliefs: &BTreeMap<u64, [f32; 4]>) -> u64 {
     belief.saturating_add((cluster_beliefs.len() as u64).saturating_mul(100))
 }
 
@@ -85,10 +82,8 @@ impl Simulation {
     /// Isolated clusters that develop divergent belief accelerate temple growth
     /// further via [`institution_divergence_boost`] (FR-CIV-RELIGION cluster divergence).
     pub(crate) fn phase_institutions(&mut self) {
-        let belief_signal = institution_belief_signal(
-            self.state.belief,
-            &self.emergence.cluster_beliefs,
-        );
+        let belief_signal =
+            institution_belief_signal(self.state.belief, &self.emergence.cluster_beliefs);
         // Cluster divergence amplifies temple growth: isolated belief communities
         // invest more heavily in local religious institutions.
         let centroids: Vec<[f32; 4]> = self.emergence.cluster_beliefs.values().copied().collect();

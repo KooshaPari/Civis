@@ -50,7 +50,6 @@ impl CivAge {
     }
 }
 
-
 /// The six civilization eras, ordered by advancement.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum CivEra {
@@ -100,11 +99,11 @@ impl CivEra {
     pub fn next_conditions(self) -> &'static str {
         match self {
             CivEra::Prehistoric => "pop >= 500 or 2 techs researched",
-            CivEra::Ancient     => "pop >= 2,000 or 5 techs researched",
-            CivEra::Classical   => "pop >= 5,000 or 8 techs researched",
-            CivEra::Medieval    => "pop >= 10,000 or 10 techs researched",
+            CivEra::Ancient => "pop >= 2,000 or 5 techs researched",
+            CivEra::Classical => "pop >= 5,000 or 8 techs researched",
+            CivEra::Medieval => "pop >= 10,000 or 10 techs researched",
             CivEra::Renaissance => "all 12 techs researched",
-            CivEra::Modern      => "(peak era reached)",
+            CivEra::Modern => "(peak era reached)",
         }
     }
 
@@ -161,7 +160,6 @@ impl TechGate {
         }
     }
 }
-
 
 /// Append-only record of era advances for HUD/replay diagnostics.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -225,7 +223,11 @@ impl EraProgressionState {
         let inputs = gather_faction_inputs(sim);
         let mut rows = BTreeMap::new();
         for (faction_id, faction_inputs) in inputs {
-            let age = self.faction_ages.get(&faction_id).copied().unwrap_or(CivAge::Stone);
+            let age = self
+                .faction_ages
+                .get(&faction_id)
+                .copied()
+                .unwrap_or(CivAge::Stone);
             let tech_level = self
                 .faction_tech
                 .get(&faction_id)

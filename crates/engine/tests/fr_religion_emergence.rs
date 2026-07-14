@@ -2,9 +2,7 @@
 
 use std::collections::BTreeMap;
 
-use civ_agents::{
-    isolation_weighted_belief_divergence, max_cluster_belief_divergence, PSYCHE_DIM,
-};
+use civ_agents::{isolation_weighted_belief_divergence, max_cluster_belief_divergence, PSYCHE_DIM};
 use civ_engine::engine::{
     cohesion_delta, diplomacy_conflict_threshold, diplomacy_peace_threshold,
     institution_belief_signal, institution_divergence_boost,
@@ -58,7 +56,10 @@ fn institution_belief_signal_includes_cluster_doctrine() {
     let mut clusters = BTreeMap::new();
     clusters.insert(1_u64, [0.9; PSYCHE_DIM]);
     let boosted = institution_belief_signal(1_000, &clusters);
-    assert!(boosted > 1_000, "cluster centroids must amplify temple signal");
+    assert!(
+        boosted > 1_000,
+        "cluster centroids must amplify temple signal"
+    );
 }
 
 #[test]
@@ -259,8 +260,7 @@ fn belief_and_temple_deterministic_per_seed() {
         "belief must be deterministic for same seed"
     );
     assert_eq!(
-        a.state.temple_level,
-        b.state.temple_level,
+        a.state.temple_level, b.state.temple_level,
         "temple_level must be deterministic for same seed"
     );
     assert_eq!(

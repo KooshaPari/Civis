@@ -56,8 +56,8 @@ fn reduce_population(population: &mut u32, casualties: u32) {
 /// **Scenario:** A successful engagement produces a damage event with
 /// estimated casualties.
 ///
-/// *Given* two enemy units within engagement range with clear line-of-sight  
-/// *When* the war bridge resolves combat on a cadence tick  
+/// *Given* two enemy units within engagement range with clear line-of-sight
+/// *When* the war bridge resolves combat on a cadence tick
 /// *Then* each engagement contains a `DamageEvent` whose `estimated_casualties()`
 ///        is greater than zero.
 #[test]
@@ -86,8 +86,8 @@ fn engagements_produce_estimated_casualties() {
 
 /// **Scenario:** Applying estimated casualties to a unit population reduces it.
 ///
-/// *Given* a unit with a population of 100  
-/// *When* an engagement damage event estimates 5 casualties  
+/// *Given* a unit with a population of 100
+/// *When* an engagement damage event estimates 5 casualties
 /// *Then* the unit population is reduced to 95.
 #[test]
 fn estimated_casualties_reduce_population() {
@@ -108,13 +108,16 @@ fn estimated_casualties_reduce_population() {
         100 - casualties,
         "population should be reduced by estimated casualties"
     );
-    assert!(population < 100, "population must be strictly lower after casualties");
+    assert!(
+        population < 100,
+        "population must be strictly lower after casualties"
+    );
 }
 
 /// **Scenario:** Large damage can completely wipe out a small unit.
 ///
-/// *Given* a unit with a population of 10  
-/// *When* a massive damage event estimates 50 casualties  
+/// *Given* a unit with a population of 10
+/// *When* a massive damage event estimates 50 casualties
 /// *Then* the unit population is reduced to 0 (saturated).
 #[test]
 fn casualties_saturate_at_zero_population() {
@@ -126,7 +129,10 @@ fn casualties_saturate_at_zero_population() {
     };
 
     let casualties = huge_damage.estimated_casualties();
-    assert!(casualties > 0, "huge damage should yield non-zero casualties");
+    assert!(
+        casualties > 0,
+        "huge damage should yield non-zero casualties"
+    );
 
     let mut population = 10_u32;
     reduce_population(&mut population, casualties);
@@ -139,8 +145,8 @@ fn casualties_saturate_at_zero_population() {
 /// **Scenario:** Zero-radius or zero-energy damage yields zero casualties and
 /// leaves population untouched.
 ///
-/// *Given* a unit with a population of 50  
-/// *When* a damage event has zero radius or zero energy  
+/// *Given* a unit with a population of 50
+/// *When* a damage event has zero radius or zero energy
 /// *Then* estimated casualties are zero and population remains 50.
 #[test]
 fn zero_damage_yields_zero_casualties_and_no_population_loss() {
@@ -163,14 +169,17 @@ fn zero_damage_yields_zero_casualties_and_no_population_loss() {
     let mut population = 50_u32;
     reduce_population(&mut population, no_radius.estimated_casualties());
     reduce_population(&mut population, no_energy.estimated_casualties());
-    assert_eq!(population, 50, "population should remain unchanged after zero casualties");
+    assert_eq!(
+        population, 50,
+        "population should remain unchanged after zero casualties"
+    );
 }
 
 /// **Scenario:** The same damage event always produces the same casualty
 /// estimate (determinism).
 ///
-/// *Given* a fixed damage event  
-/// *When* estimated casualties are computed twice  
+/// *Given* a fixed damage event
+/// *When* estimated casualties are computed twice
 /// *Then* both results are identical.
 #[test]
 fn estimated_casualties_are_deterministic() {
@@ -190,8 +199,8 @@ fn estimated_casualties_are_deterministic() {
 /// **Scenario:** Engagements from `WarBridge::resolve_combat` can be replayed
 /// to reduce a tracked population map.
 ///
-/// *Given* a population map with two units at 100 each  
-/// *When* engagements are resolved and casualties applied  
+/// *Given* a population map with two units at 100 each
+/// *When* engagements are resolved and casualties applied
 /// *Then* each targeted unit's population is reduced by its engagement's
 ///        estimated casualties.
 #[test]
@@ -243,8 +252,8 @@ fn resolve_combat_reduces_tracked_populations() {
 
 /// **Scenario:** Damage events from engagements can also carve voxels.
 ///
-/// *Given* a world with solid voxels at the target location  
-/// *When* the engagement's damage event is applied to the world  
+/// *Given* a world with solid voxels at the target location
+/// *When* the engagement's damage event is applied to the world
 /// *Then* at least one voxel is removed.
 #[test]
 fn engagement_damage_removes_voxels() {
@@ -260,7 +269,10 @@ fn engagement_damage_removes_voxels() {
     let bridge = WarBridge::new(&world, config);
 
     let engagements = bridge.resolve_combat(1, &units, None);
-    assert!(!engagements.is_empty(), "expected an engagement to hit the target");
+    assert!(
+        !engagements.is_empty(),
+        "expected an engagement to hit the target"
+    );
 
     let mut total_removed = 0usize;
     for engagement in &engagements {
@@ -275,8 +287,8 @@ fn engagement_damage_removes_voxels() {
 
 /// **Scenario:** Casualty estimate is monotonic with respect to energy.
 ///
-/// *Given* a fixed radius and two energy levels  
-/// *When* casualty estimates are computed  
+/// *Given* a fixed radius and two energy levels
+/// *When* casualty estimates are computed
 /// *Then* the higher energy yields greater or equal casualties.
 #[test]
 fn casualty_estimate_scales_with_energy() {
@@ -304,8 +316,8 @@ fn casualty_estimate_scales_with_energy() {
 
 /// **Scenario:** Casualty estimate is monotonic with respect to blast radius.
 ///
-/// *Given* a fixed energy and two radii  
-/// *When* casualty estimates are computed  
+/// *Given* a fixed energy and two radii
+/// *When* casualty estimates are computed
 /// *Then* the larger radius yields greater or equal casualties.
 #[test]
 fn casualty_estimate_scales_with_radius() {
@@ -330,8 +342,8 @@ fn casualty_estimate_scales_with_radius() {
 /// **Scenario:** Off-cadence ticks produce no engagements, therefore no
 /// casualties and no population loss.
 ///
-/// *Given* a war bridge with cadence 8  
-/// *When* combat is resolved on tick 1  
+/// *Given* a war bridge with cadence 8
+/// *When* combat is resolved on tick 1
 /// *Then* there are no engagements and a tracked population stays at 100.
 #[test]
 fn off_cadence_produces_no_casualties() {

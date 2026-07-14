@@ -49,11 +49,7 @@ impl TechTree {
     /// # Errors
     /// Returns `Err` if the tech does not exist, is already researched, or has
     /// unmet prerequisites.
-    pub fn try_unlock(
-        &self,
-        tech_id: TechId,
-        researched: &mut Vec<TechId>,
-    ) -> Result<(), String> {
+    pub fn try_unlock(&self, tech_id: TechId, researched: &mut Vec<TechId>) -> Result<(), String> {
         if self.nodes.iter().all(|n| n.id != tech_id) {
             return Err(format!("tech {:?} does not exist in the tree", tech_id));
         }
@@ -61,10 +57,7 @@ impl TechTree {
             return Err(format!("tech {:?} is already researched", tech_id));
         }
         if !self.can_unlock(tech_id, researched) {
-            return Err(format!(
-                "tech {:?} has unmet prerequisites",
-                tech_id
-            ));
+            return Err(format!("tech {:?} has unmet prerequisites", tech_id));
         }
         researched.push(tech_id);
         Ok(())
@@ -139,7 +132,7 @@ mod tests {
         let tree = sample_tree();
         let mut researched = vec![TechId(0)];
         tree.try_unlock(TechId(0), &mut researched).unwrap_err(); // already in vec
-        // TechId(0) was already there before unlock attempt; confirm error
+                                                                  // TechId(0) was already there before unlock attempt; confirm error
         let mut r2 = vec![];
         r2.push(TechId(0)); // pre-seed as if researched
         let err = tree.try_unlock(TechId(0), &mut r2);

@@ -9,8 +9,8 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::engine::{Simulation, WorldState};
 use crate::conditions::GameOutcome;
+use crate::engine::{Simulation, WorldState};
 
 // ── Thresholds ───────────────────────────────────────────────────────────────
 
@@ -105,9 +105,15 @@ impl VictoryCondition {
     pub fn evaluate(&self, sim: &Simulation) -> Option<GameOutcome> {
         let state = &sim.state;
         let met = match self.victory_type {
-            VictoryType::Domination => check_domination(state, self.faction_id, self.effective_threshold()),
-            VictoryType::Cultural => check_cultural(state, self.faction_id, self.effective_threshold()),
-            VictoryType::Economic => check_economic(state, self.faction_id, self.effective_threshold()),
+            VictoryType::Domination => {
+                check_domination(state, self.faction_id, self.effective_threshold())
+            }
+            VictoryType::Cultural => {
+                check_cultural(state, self.faction_id, self.effective_threshold())
+            }
+            VictoryType::Economic => {
+                check_economic(state, self.faction_id, self.effective_threshold())
+            }
             VictoryType::Scientific => check_scientific(sim, self.effective_threshold() as u64),
         };
         if met {
@@ -579,7 +585,9 @@ mod tests {
     fn domination_victory_triggers_at_threshold() {
         let mut sim = fresh_sim();
         // Give faction 0 the entire treasury — 100 % share ≥ 75 %
-        sim.state.faction_treasury.insert(0, Fixed::from_num(10_000i64));
+        sim.state
+            .faction_treasury
+            .insert(0, Fixed::from_num(10_000i64));
         sim.state.faction_treasury.insert(1, Fixed::from_num(0i64));
         sim.state.faction_treasury.insert(2, Fixed::from_num(0i64));
 
@@ -588,7 +596,10 @@ mod tests {
             faction_id: 0,
             threshold: None,
         };
-        assert!(cond.evaluate(&sim).is_some(), "should fire domination victory");
+        assert!(
+            cond.evaluate(&sim).is_some(),
+            "should fire domination victory"
+        );
     }
 
     #[test]
@@ -599,15 +610,20 @@ mod tests {
             faction_id: 0,
             threshold: None,
         };
-        assert!(cond.evaluate(&sim).is_none(), "balanced sim should not trigger domination");
+        assert!(
+            cond.evaluate(&sim).is_none(),
+            "balanced sim should not trigger domination"
+        );
     }
 
     #[test]
     fn cultural_victory_triggers_at_threshold() {
         let mut sim = fresh_sim();
         sim.state.belief = 1_000; // non-zero so belief check is active
-        // Give faction 0 dominant treasury share → belief_share proxy fires
-        sim.state.faction_treasury.insert(0, Fixed::from_num(90_000i64));
+                                  // Give faction 0 dominant treasury share → belief_share proxy fires
+        sim.state
+            .faction_treasury
+            .insert(0, Fixed::from_num(90_000i64));
         sim.state.faction_treasury.insert(1, Fixed::from_num(1i64));
         sim.state.faction_treasury.insert(2, Fixed::from_num(1i64));
 
@@ -616,14 +632,19 @@ mod tests {
             faction_id: 0,
             threshold: None,
         };
-        assert!(cond.evaluate(&sim).is_some(), "should fire cultural victory");
+        assert!(
+            cond.evaluate(&sim).is_some(),
+            "should fire cultural victory"
+        );
     }
 
     #[test]
     fn cultural_victory_requires_nonzero_belief() {
         let mut sim = fresh_sim();
         sim.state.belief = 0;
-        sim.state.faction_treasury.insert(0, Fixed::from_num(90_000i64));
+        sim.state
+            .faction_treasury
+            .insert(0, Fixed::from_num(90_000i64));
         sim.state.faction_treasury.insert(1, Fixed::from_num(1i64));
         sim.state.faction_treasury.insert(2, Fixed::from_num(1i64));
 
@@ -632,7 +653,10 @@ mod tests {
             faction_id: 0,
             threshold: None,
         };
-        assert!(cond.evaluate(&sim).is_none(), "zero belief should not trigger cultural victory");
+        assert!(
+            cond.evaluate(&sim).is_none(),
+            "zero belief should not trigger cultural victory"
+        );
     }
 
     #[test]
@@ -672,7 +696,10 @@ mod tests {
             faction_id: 0,
             threshold: None,
         };
-        assert!(cond.evaluate(&sim).is_some(), "should fire economic victory");
+        assert!(
+            cond.evaluate(&sim).is_some(),
+            "should fire economic victory"
+        );
     }
 
     // ── Defeat condition tests ────────────────────────────────────────────────
@@ -698,11 +725,21 @@ mod tests {
     fn collapse_detected_when_faction_loses_all_treasury() {
         let mut sim = fresh_sim();
         sim.state.faction_treasury.insert(0, Fixed::from_num(0i64));
-        sim.state.faction_treasury.insert(1, Fixed::from_num(1_000i64));
-        sim.state.faction_treasury.insert(2, Fixed::from_num(1_000i64));
+        sim.state
+            .faction_treasury
+            .insert(1, Fixed::from_num(1_000i64));
+        sim.state
+            .faction_treasury
+            .insert(2, Fixed::from_num(1_000i64));
 
-        assert!(check_collapse(&sim.state, 0), "faction 0 should be collapsed");
-        assert!(!check_collapse(&sim.state, 1), "faction 1 should not be collapsed");
+        assert!(
+            check_collapse(&sim.state, 0),
+            "faction 0 should be collapsed"
+        );
+        assert!(
+            !check_collapse(&sim.state, 1),
+            "faction 1 should not be collapsed"
+        );
     }
 
     // ── Scenario objective tests ──────────────────────────────────────────────
@@ -722,7 +759,10 @@ mod tests {
         assert_eq!(obj.condition.victory_type, VictoryType::Cultural);
         assert_eq!(obj.condition.faction_id, 1);
         assert_eq!(obj.tick_limit, Some(2_000));
-        assert_eq!(obj.condition.effective_threshold(), CULTURAL_BELIEF_THRESHOLD);
+        assert_eq!(
+            obj.condition.effective_threshold(),
+            CULTURAL_BELIEF_THRESHOLD
+        );
     }
 
     #[test]
@@ -774,13 +814,18 @@ mod tests {
         let sim_b = Simulation::with_seed(7);
         let scores_a = compute_scores(&sim_a);
         let scores_b = compute_scores(&sim_b);
-        assert_eq!(scores_a, scores_b, "scores must be deterministic for identical seeds");
+        assert_eq!(
+            scores_a, scores_b,
+            "scores must be deterministic for identical seeds"
+        );
     }
 
     #[test]
     fn higher_treasury_yields_higher_territory_score() {
         let mut sim = fresh_sim();
-        sim.state.faction_treasury.insert(0, Fixed::from_num(50_000i64));
+        sim.state
+            .faction_treasury
+            .insert(0, Fixed::from_num(50_000i64));
         sim.state.faction_treasury.insert(1, Fixed::from_num(10i64));
         sim.state.faction_treasury.insert(2, Fixed::from_num(10i64));
 
@@ -796,7 +841,9 @@ mod tests {
     #[test]
     fn scores_sorted_descending_by_total() {
         let mut sim = fresh_sim();
-        sim.state.faction_treasury.insert(0, Fixed::from_num(90_000i64));
+        sim.state
+            .faction_treasury
+            .insert(0, Fixed::from_num(90_000i64));
         sim.state.faction_treasury.insert(1, Fixed::from_num(10i64));
         sim.state.faction_treasury.insert(2, Fixed::from_num(10i64));
 
@@ -824,7 +871,9 @@ mod tests {
     #[test]
     fn gameplay_state_detects_domination_victory() {
         let mut sim = fresh_sim();
-        sim.state.faction_treasury.insert(0, Fixed::from_num(100_000i64));
+        sim.state
+            .faction_treasury
+            .insert(0, Fixed::from_num(100_000i64));
         sim.state.faction_treasury.insert(1, Fixed::from_num(1i64));
         sim.state.faction_treasury.insert(2, Fixed::from_num(1i64));
 

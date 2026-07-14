@@ -8,29 +8,26 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use civ_agents::culture::{drift_populations, ContactEdge, CultureProfile};
-use civ_agents::language::{
-    name_from_lexicon, EvolvedLexicon, LexemeKind, PhonemeInventory,
-};
+use civ_agents::language::{name_from_lexicon, EvolvedLexicon, LexemeKind, PhonemeInventory};
 use civ_agents::psyche::{
     cluster_belief_centroids, nudge_temperament, psyche_from_dna, update_beliefs, update_mood,
     PSYCHE_DIM,
 };
 use civ_agents::{
-    apply_social_event, belief_culture_exposure, decay_social_graph, psych_genome_profile,
-    cluster_by_colocation, Alignment, Civilian, ClusterId as AgentsClusterId, ClusterMember,
-    Interaction, Needs,
-    Position3d, Psyche, SocialEvent, SocialGraph,
+    apply_social_event, belief_culture_exposure, cluster_by_colocation, decay_social_graph,
+    psych_genome_profile, Alignment, Civilian, ClusterId as AgentsClusterId, ClusterMember,
+    Interaction, Needs, Position3d, Psyche, SocialEvent, SocialGraph,
 };
+use civ_economy::SettlementTradeFlow;
 use civ_genetics::{
     sentience::{evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold},
     spawn_genome_with_divergence, Dna, DnaClass, SeedDefinition, SeedLibrary, SeedSet,
 };
 use civ_legends::{
     AggregateKey, ClusterId, EntityKind, EntityRef, Epoch, EpochDigest, EventKind, IngestOutcome,
-    LegendEdge, LegendsConfig, LegendsWorker, LegendEntityId, NameRef, RawSimEvent, Role, Saga,
+    LegendEdge, LegendEntityId, LegendsConfig, LegendsWorker, NameRef, RawSimEvent, Role, Saga,
     SagaGraph, SimRuntimeId, SourceCrate, QUERY_API_VERSION,
 };
-use civ_economy::SettlementTradeFlow;
 use civ_planet::GeologyMap;
 use civ_voxel::FIXED_SCALE;
 use hecs::World;
@@ -57,7 +54,6 @@ pub struct LegendsQueryResult {
     pub empty_reason: Option<String>,
     pub emergence_feed: Vec<EmergenceFeedEvent>,
 }
-
 
 use crate::engine::{
     awakening_belief_gain, awakening_cohesion_gain, ReligiousProfile, Simulation,
@@ -238,8 +234,13 @@ pub(crate) fn settlement_dominant_factions(
 
 fn settlement_centroids(world: &World) -> BTreeMap<u64, (f32, f32, f32, u32)> {
     let mut centroids: BTreeMap<u64, (f32, f32, f32, u32)> = BTreeMap::new();
-    for (_, (_civilian, member, pos)) in world.query::<(&Civilian, &ClusterMember, &Position3d)>().iter() {
-        let entry = centroids.entry(member.cluster.0).or_insert((0.0, 0.0, 0.0, 0));
+    for (_, (_civilian, member, pos)) in world
+        .query::<(&Civilian, &ClusterMember, &Position3d)>()
+        .iter()
+    {
+        let entry = centroids
+            .entry(member.cluster.0)
+            .or_insert((0.0, 0.0, 0.0, 0));
         entry.0 += pos.coord.x as f32;
         entry.1 += pos.coord.y as f32;
         entry.2 += pos.coord.z as f32;
@@ -248,7 +249,10 @@ fn settlement_centroids(world: &World) -> BTreeMap<u64, (f32, f32, f32, u32)> {
     centroids
 }
 
-pub(crate) fn settlement_centroid_position(world: &World, settlement_id: u64) -> Option<Position3d> {
+pub(crate) fn settlement_centroid_position(
+    world: &World,
+    settlement_id: u64,
+) -> Option<Position3d> {
     let (x, y, z, count) = settlement_centroids(world).get(&settlement_id).copied()?;
     if count == 0 {
         return None;
@@ -332,7 +336,11 @@ pub(crate) fn faction_language_centroids(
         let Some(&faction_id) = dominant.get(&cluster_id) else {
             continue;
         };
-        let weight = cluster_member_counts.get(&cluster_id).copied().unwrap_or(1).max(1) as f32;
+        let weight = cluster_member_counts
+            .get(&cluster_id)
+            .copied()
+            .unwrap_or(1)
+            .max(1) as f32;
         let entry = sums.entry(faction_id).or_insert(([0.0; 4], 0.0));
         for i in 0..4 {
             entry.0[i] += profile.language[i] * weight;
@@ -368,11 +376,15 @@ pub(crate) fn settlement_actors_by_settlement(world: &World) -> BTreeMap<u64, Ve
 pub(crate) fn settlement_actor_hardship_signal(world: &World, settlement_id: u64) -> f32 {
     let mut sum = 0.0f32;
     let mut count = 0.0f32;
-    for (_, (civilian, member, needs)) in world.query::<(&Civilian, &ClusterMember, &LifeNeeds)>().iter() {
+    for (_, (civilian, member, needs)) in world
+        .query::<(&Civilian, &ClusterMember, &LifeNeeds)>()
+        .iter()
+    {
         if member.cluster.0 != settlement_id {
             continue;
         }
-        let hardship = 1.0 - ((needs.food + needs.safety + needs.rest + needs.health) * 0.25).clamp(0.0, 1.0);
+        let hardship =
+            1.0 - ((needs.food + needs.safety + needs.rest + needs.health) * 0.25).clamp(0.0, 1.0);
         let alignment_bonus = match civilian.alignment {
             Alignment::Faction(_) => 0.0,
             Alignment::None => 0.1,
@@ -391,7 +403,10 @@ pub(crate) fn settlement_actor_hardship_signal(world: &World, settlement_id: u64
 pub(crate) fn settlement_kinship_density_signal(world: &World, settlement_id: u64) -> f32 {
     let mut kin_ties = 0.0f32;
     let mut ties = 0.0f32;
-    for (_, (civilian, member, graph)) in world.query::<(&Civilian, &ClusterMember, &SocialGraph)>().iter() {
+    for (_, (civilian, member, graph)) in world
+        .query::<(&Civilian, &ClusterMember, &SocialGraph)>()
+        .iter()
+    {
         if member.cluster.0 != settlement_id {
             continue;
         }
@@ -467,10 +482,14 @@ pub(crate) fn faction_religion_signals(
         let Some(profile) = profiles.get(&faction_id) else {
             continue;
         };
-        let weight = cluster_member_counts.get(&cluster_id).copied().unwrap_or(1).max(1) as f32;
-        let signal = ((profile.monitoring + profile.mythic_coherence + profile.uncertainty_reduction)
-            / 3.0)
-            .clamp(0.0, 1.0);
+        let weight = cluster_member_counts
+            .get(&cluster_id)
+            .copied()
+            .unwrap_or(1)
+            .max(1) as f32;
+        let signal =
+            ((profile.monitoring + profile.mythic_coherence + profile.uncertainty_reduction) / 3.0)
+                .clamp(0.0, 1.0);
         let entry = sums.entry(faction_id).or_insert((0.0, 0.0));
         entry.0 += signal * weight;
         entry.1 += weight;
@@ -560,8 +579,7 @@ impl Simulation {
         if positions.is_empty() {
             return;
         }
-        let assignments =
-            cluster_by_colocation(&positions, Self::SETTLEMENT_CLUSTER_RADIUS_FP);
+        let assignments = cluster_by_colocation(&positions, Self::SETTLEMENT_CLUSTER_RADIUS_FP);
         let by_id: BTreeMap<u64, AgentsClusterId> = assignments.into_iter().collect();
 
         let entities: Vec<(Entity, u64)> = self
@@ -580,9 +598,7 @@ impl Simulation {
 
         let mut cluster_member_counts: BTreeMap<u64, u32> = BTreeMap::new();
         for (_, member) in self.world.query::<&ClusterMember>().iter() {
-            *cluster_member_counts
-                .entry(member.cluster.0)
-                .or_insert(0) += 1;
+            *cluster_member_counts.entry(member.cluster.0).or_insert(0) += 1;
         }
         self.rollup_emergent_settlements(&cluster_member_counts);
         self.emergence_accrue_cluster_cultures(&cluster_member_counts);
@@ -608,11 +624,7 @@ impl Simulation {
                 });
         }
         self.emergence.cluster_cultures.retain(|cluster_id, _| {
-            cluster_member_counts
-                .get(cluster_id)
-                .copied()
-                .unwrap_or(0)
-                >= 2
+            cluster_member_counts.get(cluster_id).copied().unwrap_or(0) >= 2
         });
     }
 
@@ -654,7 +666,8 @@ impl Simulation {
             self.emergence.cluster_cultures.insert(key, profile);
         }
         let mut faction_religion_signal = BTreeMap::new();
-        let faction_religion_signals = settlement_religion_spread_edges(self.last_tick_settlement_trade_flows());
+        let faction_religion_signals =
+            settlement_religion_spread_edges(self.last_tick_settlement_trade_flows());
         for (faction_id, (monitor_sum, count)) in faction_religion_signals {
             if count > 0 {
                 faction_religion_signal
@@ -685,7 +698,8 @@ impl Simulation {
         );
         self.faction_aggression.clear();
         for (faction_id, state) in &self.faction_ideologies {
-            self.faction_aggression.insert(*faction_id, state.aggression);
+            self.faction_aggression
+                .insert(*faction_id, state.aggression);
         }
 
         if tick % 128 == 0 && !self.emergence.cluster_cultures.is_empty() {
@@ -709,7 +723,12 @@ impl Simulation {
                 .entry(*cluster_id)
                 .or_default();
             let mut rng = ChaCha8Rng::seed_from_u64(seed ^ cluster_id ^ tick);
-            lexicon.coin(&mut rng, &profile.phonemes, LexemeKind::Settlement, *cluster_id);
+            lexicon.coin(
+                &mut rng,
+                &profile.phonemes,
+                LexemeKind::Settlement,
+                *cluster_id,
+            );
             if tick % 128 == 0 {
                 lexicon.coin(&mut rng, &profile.phonemes, LexemeKind::Event, tick);
             }
@@ -738,7 +757,12 @@ impl Simulation {
                         .get(id)
                         .and_then(|lex| {
                             self.emergence.cluster_cultures.get(id).and_then(|profile| {
-                                name_from_lexicon(lex, &profile.phonemes, LexemeKind::Settlement, **id)
+                                name_from_lexicon(
+                                    lex,
+                                    &profile.phonemes,
+                                    LexemeKind::Settlement,
+                                    **id,
+                                )
                             })
                         })
                         .is_some()
@@ -929,8 +953,7 @@ impl Simulation {
                 .and_then(|cluster_id| u32::try_from(cluster_id).ok())
                 .and_then(|settlement_id| self.religious_profiles.get(&settlement_id))
                 .map(|profile| {
-                    (profile.mythic_coherence + profile.uncertainty_reduction
-                        - profile.monitoring)
+                    (profile.mythic_coherence + profile.uncertainty_reduction - profile.monitoring)
                         .clamp(-1.0, 1.0)
                 })
                 .unwrap_or(0.0);
@@ -950,12 +973,7 @@ impl Simulation {
                     religion_event_term,
                 );
                 let arousal = psyche.mood.arousal;
-                nudge_temperament(
-                    &mut psyche.temperament,
-                    arousal,
-                    needs.belonging,
-                    maturity,
-                );
+                nudge_temperament(&mut psyche.temperament, arousal, needs.belonging, maturity);
             }
             let sociability = self
                 .world
@@ -1130,18 +1148,14 @@ impl Simulation {
                 self.emergence.push_feed(
                     tick,
                     "sentience",
-                    format!(
-                        "lineage {} crossed sentience — saga graph updated",
-                        id
-                    ),
+                    format!("lineage {} crossed sentience — saga graph updated", id),
                     Some(id),
                 );
                 self.record_legend_promotions(tick, &outcome.promoted, id);
             }
         }
         for pulse in self.last_tick_combat_pulses().to_vec() {
-            let mut raw =
-                RawSimEvent::new(tick, EventKind::Battle, SourceCrate::Tactics, 0.75);
+            let mut raw = RawSimEvent::new(tick, EventKind::Battle, SourceCrate::Tactics, 0.75);
             let mut agent_id = None;
             if let Some(a) = pulse.unit_a {
                 raw = raw.with_participant(SourceCrate::Tactics, SimRuntimeId(a), Role::Aggressor);
@@ -1169,11 +1183,7 @@ impl Simulation {
         let diplomacy_events = self.diplomacy_events().to_vec();
 
         for cluster_id in settlement_ids {
-            if !self
-                .emergence
-                .known_settlement_ids
-                .insert(cluster_id)
-            {
+            if !self.emergence.known_settlement_ids.insert(cluster_id) {
                 continue;
             }
             let founder = self.settlement_founder_agent(cluster_id);
@@ -1195,10 +1205,11 @@ impl Simulation {
                     Role::Leader,
                 );
             }
-            let settle_eid = self.emergence.legends.graph.entity_for_sim(
-                SourceCrate::Protocol3d,
-                SimRuntimeId(cluster_id),
-            );
+            let settle_eid = self
+                .emergence
+                .legends
+                .graph
+                .entity_for_sim(SourceCrate::Protocol3d, SimRuntimeId(cluster_id));
             let leader_eid = founder.and_then(|founder_id| {
                 self.emergence
                     .legends
@@ -1207,10 +1218,11 @@ impl Simulation {
             });
             let outcome = self.emergence_ingest_legend(raw);
             if let (Some(leader_eid), Some(settle_eid)) = (leader_eid, settle_eid) {
-                self.emergence
-                    .legends
-                    .graph
-                    .link_entity_edge(leader_eid, settle_eid, LegendEdge::Founded);
+                self.emergence.legends.graph.link_entity_edge(
+                    leader_eid,
+                    settle_eid,
+                    LegendEdge::Founded,
+                );
             }
             if let Some(founder_id) = founder {
                 // Settlement founding: communal milestone breeds shared veneration (FR-CIV-RELIGION).
@@ -1245,9 +1257,7 @@ impl Simulation {
             let (kind, label) = match dip.kind {
                 crate::engine::DiplomacyKind::Conflict => (EventKind::WarDeclared, "war"),
                 crate::engine::DiplomacyKind::Peace => (EventKind::WarEnded, "peace"),
-                crate::engine::DiplomacyKind::TradeAgreement => {
-                    (EventKind::LawObserved, "treaty")
-                }
+                crate::engine::DiplomacyKind::TradeAgreement => (EventKind::LawObserved, "treaty"),
             };
             let raw = RawSimEvent::new(tick, kind, SourceCrate::Engine, 0.55)
                 .with_participant(
@@ -1281,11 +1291,7 @@ impl Simulation {
                 .legends
                 .graph
                 .resolve_aggregate(war_key, epoch);
-            self.record_legend_promotions(
-                tick,
-                &outcome.promoted,
-                u64::from(dip.faction_a),
-            );
+            self.record_legend_promotions(tick, &outcome.promoted, u64::from(dip.faction_a));
         }
     }
 
@@ -1421,8 +1427,7 @@ impl Simulation {
                     result.empty_reason = Some("saga_of requires agent_id".to_string());
                     return result;
                 };
-                if let Some(eid) =
-                    graph.entity_for_sim(SourceCrate::Agents, SimRuntimeId(agent_id))
+                if let Some(eid) = graph.entity_for_sim(SourceCrate::Agents, SimRuntimeId(agent_id))
                 {
                     result.saga = graph.saga_of(eid);
                 } else {
@@ -1628,7 +1633,11 @@ mod tests {
             "expected cultures or civilians"
         );
         if sim_a.cluster_cultures().len() >= 2 {
-            let values: Vec<_> = sim_a.cluster_cultures().values().map(|p| p.traits).collect();
+            let values: Vec<_> = sim_a
+                .cluster_cultures()
+                .values()
+                .map(|p| p.traits)
+                .collect();
             assert_ne!(values[0], values[1], "cultures should diverge");
             let phon_a: Vec<_> = sim_a
                 .cluster_cultures()
@@ -1772,7 +1781,9 @@ mod tests {
             id: "human_baseline".to_string(),
             display_name: "Human Baseline".to_string(),
             dna_length: dna_len,
-            genome: (0..dna_len as u8).map(|i| i.wrapping_mul(7).wrapping_add(13)).collect(),
+            genome: (0..dna_len as u8)
+                .map(|i| i.wrapping_mul(7).wrapping_add(13))
+                .collect(),
             divergence: 0.1,
             spawn_biome_affinity: vec!["TemperateForest".to_string()],
             notes: None,
@@ -1784,12 +1795,8 @@ mod tests {
         let lib = SeedLibrary::from_seed_set(set).expect("valid seed set");
 
         // select_seed_for_position should prefer the forest seed over the fallback.
-        let chosen = select_seed_for_position(
-            &lib,
-            Some(&active_seed),
-            &geology_map,
-            &equatorial_pos,
-        );
+        let chosen =
+            select_seed_for_position(&lib, Some(&active_seed), &geology_map, &equatorial_pos);
         assert_eq!(
             chosen.map(|s| s.id.as_str()),
             Some("human_baseline"),
@@ -1926,17 +1933,18 @@ mod tests {
         let mut sim = Simulation::with_seed(88);
         run_ticks(&mut sim, 2);
         let before = sim.legends_graph().node_count();
-        sim.last_tick_disaster_pulses.push(crate::engine::DisasterPulse {
-            tick: sim.state.tick,
-            kind: DisasterKind::Quake,
-            x: 0,
-            y: 0,
-            z: 0,
-            terrain_cells: 0,
-            casualties: 0,
-            population_delta: 0,
-            resource_delta: crate::engine::Resources::default(),
-        });
+        sim.last_tick_disaster_pulses
+            .push(crate::engine::DisasterPulse {
+                tick: sim.state.tick,
+                kind: DisasterKind::Quake,
+                x: 0,
+                y: 0,
+                z: 0,
+                terrain_cells: 0,
+                casualties: 0,
+                population_delta: 0,
+                resource_delta: crate::engine::Resources::default(),
+            });
         sim.phase_emergence();
         assert!(
             sim.legends_graph().node_count() > before
@@ -1948,7 +1956,9 @@ mod tests {
     /// FR-CIV-LEGENDS deepening — named legend entities boost belief/cohesion.
     #[test]
     fn named_legend_boosts_belief_cohesion() {
-        use civ_legends::{LegendEntityId, LegendsConfig, RawSimEvent, Role, SagaGraph, SourceCrate, SimRuntimeId};
+        use civ_legends::{
+            LegendEntityId, LegendsConfig, RawSimEvent, Role, SagaGraph, SimRuntimeId, SourceCrate,
+        };
 
         let mut sim = Simulation::with_seed(77);
         // Ingest a high-significance event so an entity gets promoted.
@@ -1994,8 +2004,8 @@ pub fn plague_outbreak(density: f32, trade_connectivity: f32) -> (f32, u32) {
     let outbreak_probability =
         (0.08 + density_pressure * 0.52 + trade_pressure * 0.32).clamp(0.0, 1.0);
 
-    let population_loss = (outbreak_probability * density * (1.0 + trade_pressure) * 0.18).round()
-        as u32;
+    let population_loss =
+        (outbreak_probability * density * (1.0 + trade_pressure) * 0.18).round() as u32;
 
     (outbreak_probability, population_loss)
 }
@@ -2015,7 +2025,10 @@ mod plague_tests {
     #[test]
     fn plague_outbreak_clamps_invalid_and_negative_inputs() {
         assert_eq!(plague_outbreak(-10.0, f32::NAN), (0.08, 0));
-        assert_eq!(plague_outbreak(f32::INFINITY, 3.0), plague_outbreak(0.0, 3.0));
+        assert_eq!(
+            plague_outbreak(f32::INFINITY, 3.0),
+            plague_outbreak(0.0, 3.0)
+        );
     }
 
     #[test]
@@ -2079,7 +2092,6 @@ mod trade_connectivity_score_tests {
         assert!((0.0..=1.0).contains(&trade_connectivity_score(3, 40.0)));
     }
 }
-
 
 pub fn unrest_pressure(inequality: f32, scarcity: f32) -> f32 {
     if inequality.is_nan() || scarcity.is_nan() {
@@ -2149,8 +2161,6 @@ mod trade_war_intensity_tests {
     }
 }
 
-
-
 pub fn climate_stress_index(temperature_anomaly: f32, drought_severity: f32) -> f32 {
     if temperature_anomaly.is_nan() || drought_severity.is_nan() {
         return 0.0;
@@ -2171,7 +2181,6 @@ mod climate_stress_index_tests {
         assert_eq!(climate_stress_index(0.5, f32::NAN), 0.0);
     }
 }
-
 
 pub fn coastal_flood_risk(sea_level_rise: f32, coastal_population: f32) -> (f32, u32) {
     let risk = if sea_level_rise.is_nan() || coastal_population.is_nan() {
@@ -2202,7 +2211,6 @@ mod coastal_flood_risk_tests {
         assert_eq!(coastal_flood_risk(1.0, f32::NAN), (0.5, 0));
     }
 }
-
 
 /// Naval expansion pressure — a coastal societys capacity to project fleets.
 ///
@@ -2246,8 +2254,16 @@ pub fn urbanization_index(density: f32, surplus: f32, trade: f32) -> f32 {
     } else {
         0.0
     };
-    let sup = if surplus.is_finite() { surplus.max(0.0) } else { 0.0 };
-    let trd = if trade.is_finite() { trade.max(0.0).min(1.0) } else { 0.0 };
+    let sup = if surplus.is_finite() {
+        surplus.max(0.0)
+    } else {
+        0.0
+    };
+    let trd = if trade.is_finite() {
+        trade.max(0.0).min(1.0)
+    } else {
+        0.0
+    };
 
     // Saturating surplus — dens contribution is linear (already normalised),
     // trade uses saturation so very large trade flows don't blow past 1.0.
@@ -2269,7 +2285,11 @@ pub fn urbanization_index(density: f32, surplus: f32, trade: f32) -> f32 {
 ///
 /// Both inputs are NaN-guarded to `0.0`. The result is clamped to `0..1`.
 pub fn revolt_likelihood(unrest: f32, legitimacy: f32) -> f32 {
-    let u = if unrest.is_finite() { unrest.clamp(0.0, 1.0) } else { 0.0 };
+    let u = if unrest.is_finite() {
+        unrest.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
     let l = if legitimacy.is_finite() {
         legitimacy.clamp(0.0, 1.0)
     } else {
@@ -2354,39 +2374,74 @@ mod revolt_likelihood_tests {
     }
 }
 
-
 pub fn famine_severity(food_deficit: f32, population: f32) -> (f32, u32) {
-    let d = if food_deficit.is_finite() { food_deficit.max(0.0) } else { 0.0 };
-    let p = if population.is_finite() { population.max(0.0) } else { 0.0 };
+    let d = if food_deficit.is_finite() {
+        food_deficit.max(0.0)
+    } else {
+        0.0
+    };
+    let p = if population.is_finite() {
+        population.max(0.0)
+    } else {
+        0.0
+    };
     let severity = (d / (d + 50.0)).clamp(0.0, 1.0);
     (severity, (severity * p * 0.2).round() as u32)
 }
 #[cfg(test)]
 mod famine_severity_tests {
     use super::famine_severity;
-    #[test] fn in_range() { assert!((0.0..=1.0).contains(&famine_severity(120.0,1000.0).0)); assert_eq!(famine_severity(f32::NAN,-5.0),(0.0,0)); }
+    #[test]
+    fn in_range() {
+        assert!((0.0..=1.0).contains(&famine_severity(120.0, 1000.0).0));
+        assert_eq!(famine_severity(f32::NAN, -5.0), (0.0, 0));
+    }
 }
 
 pub fn disease_spread_rate(density: f32, trade_connectivity: f32) -> f32 {
-    let d = if density.is_finite() { density.max(0.0) } else { 0.0 };
-    let t = if trade_connectivity.is_finite() { trade_connectivity.max(0.0) } else { 0.0 };
-    ((d/(d+80.0))*0.6 + (t/(t+10.0))*0.4).clamp(0.0,1.0)
+    let d = if density.is_finite() {
+        density.max(0.0)
+    } else {
+        0.0
+    };
+    let t = if trade_connectivity.is_finite() {
+        trade_connectivity.max(0.0)
+    } else {
+        0.0
+    };
+    ((d / (d + 80.0)) * 0.6 + (t / (t + 10.0)) * 0.4).clamp(0.0, 1.0)
 }
 #[cfg(test)]
 mod disease_spread_rate_tests {
     use super::disease_spread_rate;
-    #[test] fn in_range() { assert!((0.0..=1.0).contains(&disease_spread_rate(200.0,9.0))); assert_eq!(disease_spread_rate(f32::NAN,f32::INFINITY),0.0); }
+    #[test]
+    fn in_range() {
+        assert!((0.0..=1.0).contains(&disease_spread_rate(200.0, 9.0)));
+        assert_eq!(disease_spread_rate(f32::NAN, f32::INFINITY), 0.0);
+    }
 }
 
 pub fn migration_pressure(local_scarcity: f32, neighbor_opportunity: f32) -> f32 {
-    let s = if local_scarcity.is_finite() { local_scarcity.max(0.0) } else { 0.0 };
-    let o = if neighbor_opportunity.is_finite() { neighbor_opportunity.max(0.0) } else { 0.0 };
-    ((s*0.5+o*0.5)/((s+o)*0.5+1.0)).clamp(0.0,1.0)
+    let s = if local_scarcity.is_finite() {
+        local_scarcity.max(0.0)
+    } else {
+        0.0
+    };
+    let o = if neighbor_opportunity.is_finite() {
+        neighbor_opportunity.max(0.0)
+    } else {
+        0.0
+    };
+    ((s * 0.5 + o * 0.5) / ((s + o) * 0.5 + 1.0)).clamp(0.0, 1.0)
 }
 #[cfg(test)]
 mod migration_pressure_tests {
     use super::migration_pressure;
-    #[test] fn in_range() { assert!((0.0..=1.0).contains(&migration_pressure(0.8,0.6))); assert_eq!(migration_pressure(f32::NAN,0.0),0.0); }
+    #[test]
+    fn in_range() {
+        assert!((0.0..=1.0).contains(&migration_pressure(0.8, 0.6)));
+        assert_eq!(migration_pressure(f32::NAN, 0.0), 0.0);
+    }
 }
 
 pub fn art_flourishing(surplus: f32, stability: f32) -> f32 {
@@ -2473,7 +2528,6 @@ mod diplomacy_warmth_tests {
     }
 }
 
-
 pub fn alliance_stability(mutual_benefit: f32, external_threat: f32) -> f32 {
     if !mutual_benefit.is_finite() || !external_threat.is_finite() {
         return 0.0;
@@ -2496,7 +2550,6 @@ mod alliance_stability_tests {
     }
 }
 
-
 pub fn war_escalation(grievance: f32, military_ratio: f32) -> f32 {
     if !grievance.is_finite() || !military_ratio.is_finite() {
         return 0.0;
@@ -2518,7 +2571,6 @@ mod war_escalation_tests {
     }
 }
 
-
 pub fn innovation_rate(surplus: f32, population: f32) -> f32 {
     if !surplus.is_finite() || !population.is_finite() {
         return 0.0;
@@ -2531,7 +2583,6 @@ pub fn innovation_rate(surplus: f32, population: f32) -> f32 {
     (0.65 * surplus_signal + 0.35 * population_signal).clamp(0.0, 1.0)
 }
 
-
 pub fn literacy_growth(institutions: f32, surplus: f32) -> f32 {
     if !institutions.is_finite() || !surplus.is_finite() {
         return 0.0;
@@ -2543,7 +2594,6 @@ pub fn literacy_growth(institutions: f32, surplus: f32) -> f32 {
     let surplus_signal = surplus / (surplus + 100.0);
     (0.7 * institution_signal + 0.3 * surplus_signal).clamp(0.0, 1.0)
 }
-
 
 pub fn currency_adoption(trade_volume: f32, trust: f32) -> f32 {
     if !trade_volume.is_finite() || !trust.is_finite() {

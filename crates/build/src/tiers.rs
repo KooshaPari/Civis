@@ -6,8 +6,8 @@ use std::collections::BTreeMap;
 use civ_voxel::{MaterialId, WorldCoord};
 
 use crate::{
-    default_facade_for_era, ArchitectureMode, BuildingGraph, BuildingId, CultureEraWealthVector,
-    DemandSignals, FacadeStyle, ParcelKind, TileSetProfile, facade_for_vector,
+    default_facade_for_era, facade_for_vector, ArchitectureMode, BuildingGraph, BuildingId,
+    CultureEraWealthVector, DemandSignals, FacadeStyle, ParcelKind, TileSetProfile,
 };
 
 /// Compact biome tag for architectural style lookup (engine maps `BiomeKind` → this).
@@ -66,7 +66,9 @@ pub fn culture_id_from_traits(traits: [f32; 4]) -> u16 {
     let mut hash = 0_u32;
     for (i, value) in traits.iter().enumerate() {
         let quantized = (value.clamp(0.0, 1.0) * 255.0).round() as u32;
-        hash ^= quantized.wrapping_mul(1_000_003).wrapping_add(i as u32 * 97);
+        hash ^= quantized
+            .wrapping_mul(1_000_003)
+            .wrapping_add(i as u32 * 97);
     }
     (hash % 4096) as u16
 }
@@ -176,9 +178,11 @@ pub fn settlement_cluster_centroid(positions: &[(i64, i64, i64)]) -> WorldCoord 
         return WorldCoord { x: 0, y: 0, z: 0 };
     }
     let count = positions.len() as i64;
-    let (sx, sy, sz) = positions.iter().fold((0_i64, 0_i64, 0_i64), |acc, (x, y, z)| {
-        (acc.0 + x, acc.1 + y, acc.2 + z)
-    });
+    let (sx, sy, sz) = positions
+        .iter()
+        .fold((0_i64, 0_i64, 0_i64), |acc, (x, y, z)| {
+            (acc.0 + x, acc.1 + y, acc.2 + z)
+        });
     WorldCoord {
         x: sx / count,
         y: sy / count,
@@ -258,15 +262,8 @@ pub fn era_gated_demand_signals(mut signals: DemandSignals, era: u16) -> DemandS
 
 /// L1 distance between two facade-name histograms (for FR-CIV-ARCH-008).
 #[must_use]
-pub fn facade_histogram_l1(
-    left: &BTreeMap<String, u32>,
-    right: &BTreeMap<String, u32>,
-) -> u32 {
-    let keys: BTreeMap<&String, ()> = left
-        .keys()
-        .chain(right.keys())
-        .map(|k| (k, ()))
-        .collect();
+pub fn facade_histogram_l1(left: &BTreeMap<String, u32>, right: &BTreeMap<String, u32>) -> u32 {
+    let keys: BTreeMap<&String, ()> = left.keys().chain(right.keys()).map(|k| (k, ())).collect();
     keys.keys()
         .map(|name| {
             let a = left.get(*name).copied().unwrap_or(0);
@@ -472,7 +469,11 @@ mod tests {
             graph.assign_to_cluster(42, id);
         }
         let members = graph.parcels_in_cluster(42);
-        assert_eq!(members.len(), 5, "all five buildings should be in cluster 42");
+        assert_eq!(
+            members.len(),
+            5,
+            "all five buildings should be in cluster 42"
+        );
         for id in &ids {
             assert!(members.contains(id), "building {id:?} must be in cluster");
         }
@@ -482,9 +483,7 @@ mod tests {
     #[test]
     fn fr_arch_b002_cluster_offsets_diverge_from_centre() {
         // Eight consecutive slots must not all map to the same offset.
-        let offsets: Vec<_> = (0..8)
-            .map(|i| clustered_parcel_offset(1, i, 16))
-            .collect();
+        let offsets: Vec<_> = (0..8).map(|i| clustered_parcel_offset(1, i, 16)).collect();
         // Collect unique (x, z) pairs.
         let unique: std::collections::BTreeSet<(i64, i64)> =
             offsets.iter().map(|o| (o.x, o.z)).collect();
@@ -551,9 +550,18 @@ mod tests {
     #[test]
     fn fr_arch_c002_building_type_below_min_era_is_locked() {
         assert!(!building_type_unlocked("Mine", 0), "Mine needs era >= 1");
-        assert!(!building_type_unlocked("Market", 1), "Market needs era >= 2");
-        assert!(!building_type_unlocked("Temple", 2), "Temple needs era >= 3");
-        assert!(!building_type_unlocked("Barracks", 3), "Barracks needs era >= 4");
+        assert!(
+            !building_type_unlocked("Market", 1),
+            "Market needs era >= 2"
+        );
+        assert!(
+            !building_type_unlocked("Temple", 2),
+            "Temple needs era >= 3"
+        );
+        assert!(
+            !building_type_unlocked("Barracks", 3),
+            "Barracks needs era >= 4"
+        );
     }
 
     /// FR-CIV-ARCH-C-003 — building_type_unlocked returns true at exactly min_era.
@@ -605,7 +613,10 @@ mod tests {
             for idx in 0_u32..16 {
                 let a = clustered_parcel_offset(cluster, idx, 8);
                 let b = clustered_parcel_offset(cluster, idx, 8);
-                assert_eq!(a, b, "offset must be identical for cluster={cluster} idx={idx}");
+                assert_eq!(
+                    a, b,
+                    "offset must be identical for cluster={cluster} idx={idx}"
+                );
             }
         }
     }

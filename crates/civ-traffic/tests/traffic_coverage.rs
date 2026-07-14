@@ -37,7 +37,11 @@ fn transmit_stops_at_disconnected_component() {
     g.connect_bidirectional(a, b);
 
     g.transmit(a);
-    assert_eq!(g.outage_count(), 2, "only a+b should be in outage; isolated survives");
+    assert_eq!(
+        g.outage_count(),
+        2,
+        "only a+b should be in outage; isolated survives"
+    );
 }
 
 #[test]

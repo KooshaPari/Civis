@@ -24,8 +24,13 @@ fn lang_lexicon_grows_after_warmup() {
         .next()
         .expect("cluster culture");
     let lexicon = sim.cluster_lexicons().get(cluster_id).expect("lexicon");
-    let name = name_from_lexicon(lexicon, &profile.phonemes, LexemeKind::Settlement, *cluster_id)
-        .expect("settlement name");
+    let name = name_from_lexicon(
+        lexicon,
+        &profile.phonemes,
+        LexemeKind::Settlement,
+        *cluster_id,
+    )
+    .expect("settlement name");
     assert!(!name.is_empty());
     assert!(name.chars().next().unwrap().is_uppercase());
 }
@@ -51,7 +56,10 @@ fn lang_cluster_divergence_couples_culture_and_language() {
     let a = CultureProfile::new([0.0, 0.0, 0.0, 0.0]);
     let b = CultureProfile::new([1.0, 1.0, 1.0, 1.0]);
     let dist = cluster_language_distance(&a, &b);
-    assert!(dist >= 0.35, "maximally divergent cultures must yield high language distance");
+    assert!(
+        dist >= 0.35,
+        "maximally divergent cultures must yield high language distance"
+    );
 }
 
 #[test]
@@ -69,7 +77,7 @@ fn lang_faction_names_coined_from_lexicon() {
         .next()
         .map(|p| p.phonemes.clone())
         .expect("phoneme inventory");
-    let name = name_from_lexicon(lexicon, &inv, LexemeKind::Faction, faction_id)
-        .expect("faction name");
+    let name =
+        name_from_lexicon(lexicon, &inv, LexemeKind::Faction, faction_id).expect("faction name");
     assert!(!name.is_empty());
 }

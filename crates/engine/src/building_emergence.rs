@@ -6,8 +6,8 @@ use std::convert::TryFrom;
 use civ_agents::{ClusterMember, Position3d};
 use civ_build::{
     clustered_parcel_offset, culture_id_from_traits, default_architecture_tile_sets,
-    era_gated_demand_signals, era_index_from_pop_tech, facade_for_emergence, wealth_permille_from_stocks,
-    BiomeStyleTag, BuildingGraph, EmergentStyleKey,
+    era_gated_demand_signals, era_index_from_pop_tech, facade_for_emergence,
+    wealth_permille_from_stocks, BiomeStyleTag, BuildingGraph, EmergentStyleKey,
 };
 use civ_planet::{BiomeKind, GeologyMap};
 use civ_voxel::WorldCoord;
@@ -22,14 +22,12 @@ pub fn biome_style_tag(kind: BiomeKind) -> BiomeStyleTag {
         BiomeKind::Desert | BiomeKind::Shrubland | BiomeKind::Steppe | BiomeKind::Savanna => {
             BiomeStyleTag::ARID
         }
-        BiomeKind::Forest
-        | BiomeKind::Rainforest
-        | BiomeKind::Taiga
-        | BiomeKind::Grassland => BiomeStyleTag::FOREST,
-        BiomeKind::Ocean
-        | BiomeKind::Beach
-        | BiomeKind::Wetland
-        | BiomeKind::Mangrove => BiomeStyleTag::COASTAL,
+        BiomeKind::Forest | BiomeKind::Rainforest | BiomeKind::Taiga | BiomeKind::Grassland => {
+            BiomeStyleTag::FOREST
+        }
+        BiomeKind::Ocean | BiomeKind::Beach | BiomeKind::Wetland | BiomeKind::Mangrove => {
+            BiomeStyleTag::COASTAL
+        }
         BiomeKind::Tundra | BiomeKind::Glacier | BiomeKind::Alpine | BiomeKind::Mountain => {
             BiomeStyleTag::COLD
         }
@@ -76,10 +74,7 @@ fn cluster_centroid_from_positions(positions: &[(i64, i64, i64)]) -> WorldCoord 
 
 /// Culture profile for a settlement cluster (falls back to cluster-id seed).
 #[must_use]
-pub fn culture_traits_for_cluster(
-    sim: &Simulation,
-    cluster_id: u64,
-) -> [f32; 4] {
+pub fn culture_traits_for_cluster(sim: &Simulation, cluster_id: u64) -> [f32; 4] {
     sim.emergence
         .cluster_cultures
         .get(&cluster_id)
@@ -165,7 +160,8 @@ pub fn apply_emergence_facades(
         let facade = facade_for_emergence(style, &signals, tile_sets);
         sim.building_graph_mut().set_facade(*id, facade);
         if let Some(cluster) = cluster_id {
-            sim.building_graph_mut().assign_to_cluster(cluster, civ_build::BuildingId(id.0));
+            sim.building_graph_mut()
+                .assign_to_cluster(cluster, civ_build::BuildingId(id.0));
             let offset = clustered_parcel_offset(cluster, index as u32, 16);
             if let Some(parcel) = sim
                 .building_graph_mut()

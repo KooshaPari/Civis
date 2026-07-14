@@ -3,11 +3,11 @@
 //! FR-CIV-TEST-005
 
 use civ_engine::{
-    phases_over_budget, tick_over_budget, TickProfile,
     effective_consumption, format_mod_error_event, format_mod_error_event_json,
     format_mod_loaded_event, format_mod_loaded_event_json, format_mod_unloaded_event_json,
-    policy_from_kind, CapitalistPolicy, ControlSignals, ModHost, ModLoadedRecord,
-    ModUnloadedRecord, NoopPolicy, Policy, PolicyInput, SubsistenceFirstPolicy,
+    phases_over_budget, policy_from_kind, tick_over_budget, CapitalistPolicy, ControlSignals,
+    ModHost, ModLoadedRecord, ModUnloadedRecord, NoopPolicy, Policy, PolicyInput,
+    SubsistenceFirstPolicy, TickProfile,
 };
 
 // ── Policy factory ────────────────────────────────────────────────────────────

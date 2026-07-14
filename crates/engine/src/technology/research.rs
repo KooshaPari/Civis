@@ -14,11 +14,7 @@
 /// # Returns
 /// Research points per tick as an `f32`. Returns `0.0` for degenerate inputs.
 #[must_use]
-pub fn calculate_research_rate(
-    population: u32,
-    food_surplus: f32,
-    institution_count: u32,
-) -> f32 {
+pub fn calculate_research_rate(population: u32, food_surplus: f32, institution_count: u32) -> f32 {
     const BASE_RATE: f32 = 1.0;
     const SURPLUS_SCALE: f32 = 0.1;
     const INST_MULTIPLIER: f32 = 0.5;

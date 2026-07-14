@@ -133,6 +133,11 @@ civis-verify with_bevy="":
     @echo "        or 'cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone' with"
     @echo "        BEVY_ASSET_ROOT=clients/bevy-ref for the windowed reference client."
 
+# Feature-gated Bevy client compile oracle (GAP-BEVY-COMPILE-001 / WBS P2.3).
+# Default `cargo check --workspace` does not enable optional `bevy`/`egui` features.
+bevy-egui-check:
+    cargo check -p civ-bevy-ref --features bevy,egui
+
 # Run the Bevy reference client smoke (headless; meshes one chunk).
 civis-3d-bevy-smoke:
     cargo run -p civ-bevy-ref --bin civ-bevy-ref

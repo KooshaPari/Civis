@@ -119,6 +119,7 @@ jobs:
             // Only these required CI jobs can fail governance.
             const mustComplete = [
               /^cargo check --workspace/i,
+              /^client-compile/i,
               /^cargo-deny/i,
               /^quality-manifest/i,
             ];

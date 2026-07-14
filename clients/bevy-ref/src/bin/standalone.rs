@@ -163,6 +163,17 @@ fn main() {
     #[cfg(feature = "egui")]
     app.add_plugins(civ_bevy_ref::gameplay_hud::GameplayHudPlugin);
 
+    // Live-client parity panels (previously only on civ-bevy-window).
+    #[cfg(feature = "egui")]
+    {
+        app.add_plugins((
+            civ_bevy_ref::faction_hud::FactionHudPlugin,
+            civ_bevy_ref::tutorial::TutorialPlugin,
+            civ_bevy_ref::perf_hud::PerfHudPlugin,
+            civ_bevy_ref::AgentNeedsPlugin,
+        ));
+    }
+
     // Ambient + SFX audio (feature-gated).
     // SettingsPlugin / SolariGi / GltfModels / ActorAnimation are registered once above.
     #[cfg(feature = "audio")]
@@ -198,6 +209,14 @@ fn main() {
 
     if attach_mode == AttachMode::Server {
         app.add_plugins(LiveAttachPlugin);
+        // God panel + local preview effects need LiveBridge from LiveAttach.
+        #[cfg(feature = "egui")]
+        {
+            app.add_plugins((
+                civ_bevy_ref::god_panel::GodPanelPlugin,
+                civ_bevy_ref::god_actions::GodActionsPlugin,
+            ));
+        }
     }
 
     #[cfg(feature = "egui")]

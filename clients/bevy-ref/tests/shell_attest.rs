@@ -9,6 +9,7 @@ use std::time::Duration;
 
 use bevy::app::AppExit;
 use bevy::prelude::*;
+use bevy::state::app::StatesPlugin;
 use civ_bevy_ref::live_stream::LiveStreamScene;
 use civ_bevy_ref::menus::{
     advance_worldgen_to_playing, consume_menu_commands, sync_app_state_with_game_mode, AppState,
@@ -21,7 +22,9 @@ use civ_bevy_ref::settings_ui::{GameSettings, SettingsTab};
 
 fn shell_smoke_app() -> App {
     let mut app = App::new();
-    app.init_state::<AppState>()
+    // Headless: StatesPlugin (not DefaultPlugins) so init_state has StateTransition.
+    app.add_plugins(StatesPlugin)
+        .init_state::<AppState>()
         .insert_resource(MenuCommand::default())
         .insert_resource(WorldGenBoot::default())
         .insert_resource(WorldSetupParams::default())

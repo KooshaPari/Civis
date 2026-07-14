@@ -2,6 +2,7 @@
 //! Civilization statistics history panel (FR-CIV-CLIENT-013).
 //! Y key toggles. Samples every 10 ticks. ASCII sparklines (8 levels).
 
+use crate::hud_state::HudState;
 use crate::menus::in_game;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
@@ -63,7 +64,7 @@ fn toggle_history_panel(keys: Res<ButtonInput<KeyCode>>, mut open: ResMut<CivHis
     }
 }
 
-fn sample_history(hud: Res<crate::HudState>, mut hist: ResMut<CivHistory>) {
+fn sample_history(hud: Res<HudState>, mut hist: ResMut<CivHistory>) {
     let tick = hud.snapshot.tick.unwrap_or(0);
     if tick == 0 || tick.saturating_sub(hist.last_sampled_tick) < SAMPLE_EVERY {
         return;

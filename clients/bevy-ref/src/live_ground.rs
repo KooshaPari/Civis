@@ -57,21 +57,6 @@ impl ChunkVoxelCache {
     pub fn chunks_mut(&mut self) -> &mut HashMap<u64, Vec<MaterialId>> {
         &mut self.chunks
     }
-
-    /// Dense voxel payload for a chunk, if cached.
-    #[must_use]
-    pub fn get_chunk(&self, chunk_id: ChunkId) -> Option<&[MaterialId]> {
-        self.chunks.get(&chunk_id.0).map(Vec::as_slice)
-    }
-
-    /// Ensure a dense chunk exists, seeding with `AIR` when absent.
-    pub fn ensure_chunk(&mut self, chunk_id: ChunkId) -> &mut [MaterialId] {
-        let len = CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE;
-        self.chunks
-            .entry(chunk_id.0)
-            .or_insert_with(|| vec![MaterialId(0); len]);
-        self.chunks.get_mut(&chunk_id.0).expect("chunk insert")
-    }
 }
 
 fn voxel_index(ix: usize, iy: usize, iz: usize) -> usize {

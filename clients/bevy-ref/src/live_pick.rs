@@ -8,8 +8,6 @@ use crate::live_stream::{LiveAgentTag, LiveBuildingTag, LiveChunkTag, LiveGraphP
 use crate::minimap::{MinimapCamera, MinimapRoot};
 #[cfg(feature = "egui")]
 use crate::settings_ui::{GameSettings, KeyBinding, ACTION_SELECT_OR_PICK};
-#[cfg(feature = "egui")]
-use crate::settings_ui::{GameSettings, KeyBinding, ACTION_SELECT_OR_PICK};
 use crate::{
     LiveEntityKind, SelectedLiveEntity, AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT,
     AGENT_MARKER_WIDTH, VOXEL_CHUNK_EDGE,

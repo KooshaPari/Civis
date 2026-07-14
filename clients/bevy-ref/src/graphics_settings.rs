@@ -61,7 +61,6 @@ use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::light::DirectionalLightShadowMap;
 use bevy::post_process::bloom::Bloom;
 use bevy::post_process::motion_blur::MotionBlur;
-use bevy::post_process::{bloom::Bloom, motion_blur::MotionBlur};
 use bevy::prelude::*;
 use bevy::render::camera::TemporalJitter;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};

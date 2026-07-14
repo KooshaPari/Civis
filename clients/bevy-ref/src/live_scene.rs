@@ -129,6 +129,7 @@ fn apply_live_scene_frames(
                     assets.as_ref(),
                     agents,
                     AgentLabelConfig { enabled: true },
+                    None,
                 );
             }
             Frame3d::BuildingDiff(building) => apply_building_diff_frame(

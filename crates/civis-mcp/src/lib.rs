@@ -375,6 +375,9 @@ pub fn dispatch_rpc_method(
 #[doc(hidden)]
 pub use server::CivisMcpServer;
 
+/// Live/WS god-verb catalog parity helpers (GAP-MCP-PARITY-001).
+pub mod god_verb_parity;
+
 mod server;
 
 #[cfg(test)]

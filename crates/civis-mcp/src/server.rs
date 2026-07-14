@@ -243,6 +243,9 @@ pub struct GodActionArgs {
     /// Faction id for `spawn_creature` / `multiply_creatures`.
     #[schemars(description = "Owning faction id")]
     pub faction: Option<u32>,
+    /// Seed civilian id for `life.spawn_organism` / `life.spawn_herd`.
+    #[schemars(description = "Seed civilian id for life.spawn_* verbs")]
+    pub seed_civilian_id: Option<u64>,
     /// Transport override (host/port/timeout).
     #[serde(flatten)]
     pub transport: RpcArgs,
@@ -264,6 +267,7 @@ impl GodActionArgs {
             material: self.material,
             count: self.count,
             faction: self.faction,
+            seed_civilian_id: self.seed_civilian_id,
             transport: self.transport.clone(),
         }
         .to_params_with_action(self.action.wire_name())
@@ -290,6 +294,8 @@ pub struct GodActionVerbArgs {
     pub count: Option<u32>,
     /// Optional faction for creature/targeted verbs.
     pub faction: Option<u32>,
+    /// Optional seed civilian id for `life.spawn_organism` / `life.spawn_herd`.
+    pub seed_civilian_id: Option<u64>,
     /// Optional transport override (host/port/timeout).
     #[serde(flatten)]
     pub transport: RpcArgs,
@@ -326,6 +332,9 @@ impl GodActionVerbArgs {
         }
         if let Some(faction) = self.faction {
             obj.insert("target_faction".to_owned(), json!(faction));
+        }
+        if let Some(seed_civilian_id) = self.seed_civilian_id {
+            obj.insert("seed_civilian_id".to_owned(), json!(seed_civilian_id));
         }
         Value::Object(obj)
     }
@@ -682,6 +691,8 @@ pub struct SimSpawnOrganismArgs {
     pub y: f32,
     /// Optional owning faction id.
     pub faction: Option<u32>,
+    /// Optional seed civilian id for deterministic life spawns.
+    pub seed_civilian_id: Option<u64>,
     /// Transport override (host/port/timeout).
     #[serde(flatten)]
     pub transport: RpcArgs,
@@ -744,20 +755,40 @@ pub enum SimDisasterKind {
     Drought,
 }
 
+impl SimDisasterKind {
+    /// Live/WS `sim.god_action` verb when this kind is wired on the panel.
+    fn ws_god_action_verb(self) -> Option<&'static str> {
+        match self {
+            Self::Meteor => Some("smite"),
+            Self::Flood => Some("disaster.flood"),
+            Self::Quake => Some("earthquake"),
+            Self::Firestorm => Some("disaster.wildfire"),
+            Self::Lightning | Self::Tornado | Self::VolcanicVent | Self::Drought => None,
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct SimDisasterArgs {
-    /// Disaster family, currently best-effort mapped to `sim.damage`.
+    /// Disaster family. Mapped kinds forward to `sim.god_action`; others
+    /// fall back to `sim.damage`.
     pub kind: SimDisasterKind,
-    /// World tile X (integer).
+    /// World tile X (integer) for the `sim.damage` fallback path.
     pub x: i64,
-    /// World tile Y (integer).
+    /// World tile Y (integer) for the `sim.damage` fallback path.
     pub y: i64,
-    /// World tile Z (integer).
+    /// World tile Z (integer) for the `sim.damage` fallback path.
     pub z: i64,
-    /// Damage radius in voxels.
+    /// Normalized map X in `[0, 1]` for Live/WS `sim.god_action` routing.
+    pub norm_x: Option<f32>,
+    /// Normalized map Y in `[0, 1]` for Live/WS `sim.god_action` routing.
+    pub norm_y: Option<f32>,
+    /// Damage radius in voxels (`sim.damage` fallback).
     pub radius: Option<u8>,
-    /// Damage energy.
+    /// Damage energy (`sim.damage` fallback).
     pub energy: Option<u32>,
+    /// Optional magnitude for legacy `sim.god_action` verbs (`plague` debit).
+    pub magnitude: Option<f32>,
     /// Transport override (host/port/timeout).
     #[serde(flatten)]
     pub transport: RpcArgs,
@@ -2858,23 +2889,47 @@ impl CivisMcpServer {
         .map(Json)
     }
 
-    /// Best-effort disaster tool mapping to `sim.damage`.
+    /// Forward disaster kinds to Live/WS `sim.god_action` when mapped;
+    /// unmapped kinds fall back to `sim.damage`.
     #[tool(
         name = "sim_disaster",
-        description = "Best-effort disaster mapping to sim.damage."
+        description = "Forward disaster kinds to sim.god_action (Live/WS parity) when mapped; otherwise sim.damage."
     )]
     async fn sim_disaster(
         &self,
         Parameters(SimDisasterArgs {
-            kind: _kind,
+            kind,
             x,
             y,
             z,
+            norm_x,
+            norm_y,
             radius,
             energy,
+            magnitude,
             transport,
         }): Parameters<SimDisasterArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
+        if let (Some(verb), Some(nx), Some(ny)) = (kind.ws_god_action_verb(), norm_x, norm_y) {
+            let mut params = serde_json::Map::new();
+            params.insert("action".to_owned(), json!(verb));
+            params.insert("x".to_owned(), json!(nx));
+            params.insert("y".to_owned(), json!(ny));
+            if let Some(mag) = magnitude {
+                params.insert("magnitude".to_owned(), json!(mag));
+            }
+            if let Some(r) = radius {
+                params.insert("radius_voxels".to_owned(), json!(u32::from(r)));
+            }
+            return forward_rpc(
+                &transport,
+                "sim.god_action",
+                Value::Object(params),
+                "sim_disaster",
+            )
+            .map(Json);
+        }
+
         forward_rpc(
             &transport,
             "sim.damage",
@@ -2943,10 +2998,10 @@ impl CivisMcpServer {
         }))
     }
 
-    /// Alias to `sim.spawn_civilian` for grouped organism spawning.
+    /// Forward grouped spawns to Live/WS `life.spawn_*` via `sim.god_action`.
     #[tool(
         name = "sim_spawn_organism",
-        description = "Best-effort grouped spawn fallback using repeated sim.spawn_civilian."
+        description = "Forward grouped spawns to sim.god_action life.spawn_organism / life.spawn_herd."
     )]
     async fn sim_spawn_organism(
         &self,
@@ -2955,31 +3010,18 @@ impl CivisMcpServer {
             x,
             y,
             faction,
+            seed_civilian_id,
             transport,
         }): Parameters<SimSpawnOrganismArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        let mut last = None;
-        for _ in 0..count.max(1) {
-            last = Some(forward_rpc(
-                &transport,
-                "sim.spawn_civilian",
-                json!({
-                    "x": x,
-                    "y": y,
-                    "faction": faction.unwrap_or(0),
-                }),
-                "sim_spawn_organism",
-            )?);
-        }
-        match last {
-            Some(value) => Ok(Json(value)),
-            None => Ok(Json(RpcForwardResult {
-                method: "sim_spawn_organism".to_owned(),
-                url: transport.resolve_config().ws_url(),
-                result: json!({ "accepted": false, "count": 0 }),
-                harness_version: crate::HARNESS_VERSION,
-            })),
-        }
+        let params = crate::god_verb_parity::build_life_spawn_god_action_params(
+            count,
+            x,
+            y,
+            faction,
+            seed_civilian_id,
+        );
+        forward_rpc(&transport, "sim.god_action", params, "sim_spawn_organism").map(Json)
     }
 
     /// Alias to `sim.save.slot`.

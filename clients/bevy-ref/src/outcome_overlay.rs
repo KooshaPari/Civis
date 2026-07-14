@@ -10,40 +10,13 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 use crate::live_attach::LiveAttachBridge;
-use crate::OutcomeProgressHud;
+use crate::{apply_outcome_poll, OutcomeProgressHud};
 
 /// Bevy resource caching the last non-Ongoing outcome received.
 #[derive(Resource, Debug, Default)]
 pub struct OutcomeOverlayState {
     pub outcome: Option<crate::OutcomeHudData>,
     pub dismissed: bool,
-}
-
-/// Apply a polled `sim.outcome` payload to overlay + progress HUD state.
-pub(crate) fn apply_outcome_poll(
-    state: &mut OutcomeOverlayState,
-    progress: &mut OutcomeProgressHud,
-    data: crate::OutcomeHudData,
-) {
-    if data.tag == "ongoing" {
-        if let Some(snapshot) = data.progress {
-            progress.0 = Some(snapshot);
-        }
-        return;
-    }
-
-    if state
-        .outcome
-        .as_ref()
-        .map(|o| o.tag != data.tag)
-        .unwrap_or(true)
-    {
-        state.dismissed = false;
-    }
-    if let Some(snapshot) = data.progress {
-        progress.0 = Some(snapshot);
-    }
-    state.outcome = Some(data);
 }
 
 pub struct OutcomeOverlayPlugin;
@@ -63,7 +36,12 @@ fn poll_outcome_system(
     mut progress: ResMut<OutcomeProgressHud>,
 ) {
     if let Some(data) = bridge.client.poll_outcome() {
-        apply_outcome_poll(&mut state, &mut progress, data);
+        apply_outcome_poll(
+            &mut state.outcome,
+            &mut state.dismissed,
+            &mut progress,
+            data,
+        );
     }
 }
 
@@ -148,95 +126,4 @@ fn draw_outcome_overlay(
                 },
             );
         });
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::OutcomeProgressHudData;
-
-    fn sample_progress() -> OutcomeProgressHudData {
-        OutcomeProgressHudData {
-            population: 4_321,
-            population_target: 10_000,
-            researched_techs: 3,
-            researched_techs_target: 12,
-            peace_ticks: 50,
-            peace_ticks_target: 500,
-        }
-    }
-
-    #[test]
-    fn apply_outcome_poll_ignores_ongoing_without_overlay() {
-        let mut state = OutcomeOverlayState::default();
-        let mut progress = OutcomeProgressHud::default();
-        apply_outcome_poll(
-            &mut state,
-            &mut progress,
-            crate::OutcomeHudData {
-                tag: "ongoing".to_string(),
-                reason: String::new(),
-                tick: 9,
-                progress: Some(sample_progress()),
-            },
-        );
-        assert!(state.outcome.is_none());
-        assert!(!state.dismissed);
-        assert_eq!(progress.0, Some(sample_progress()));
-    }
-
-    #[test]
-    fn apply_outcome_poll_surfaces_victory_and_resets_dismissed() {
-        let mut state = OutcomeOverlayState {
-            outcome: Some(crate::OutcomeHudData {
-                tag: "defeat".to_string(),
-                reason: "lost".to_string(),
-                tick: 1,
-                progress: None,
-            }),
-            dismissed: true,
-        };
-        let mut progress = OutcomeProgressHud::default();
-        apply_outcome_poll(
-            &mut state,
-            &mut progress,
-            crate::OutcomeHudData {
-                tag: "victory".to_string(),
-                reason: "population".to_string(),
-                tick: 42,
-                progress: Some(sample_progress()),
-            },
-        );
-        assert!(!state.dismissed);
-        let outcome = state.outcome.expect("victory outcome");
-        assert_eq!(outcome.tag, "victory");
-        assert_eq!(outcome.reason, "population");
-        assert_eq!(progress.0, Some(sample_progress()));
-    }
-
-    #[test]
-    fn apply_outcome_poll_keeps_dismissed_for_same_tag() {
-        let mut state = OutcomeOverlayState {
-            outcome: Some(crate::OutcomeHudData {
-                tag: "defeat".to_string(),
-                reason: "first".to_string(),
-                tick: 1,
-                progress: None,
-            }),
-            dismissed: true,
-        };
-        let mut progress = OutcomeProgressHud::default();
-        apply_outcome_poll(
-            &mut state,
-            &mut progress,
-            crate::OutcomeHudData {
-                tag: "defeat".to_string(),
-                reason: "second".to_string(),
-                tick: 2,
-                progress: None,
-            },
-        );
-        assert!(state.dismissed);
-        assert_eq!(state.outcome.as_ref().expect("outcome").reason, "second");
-    }
 }

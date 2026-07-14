@@ -508,6 +508,34 @@ pub struct OutcomeHudData {
     #[serde(default)]
     pub progress: Option<OutcomeProgressHudData>,
 }
+
+/// Apply a polled `sim.outcome` payload to overlay + progress HUD state.
+pub fn apply_outcome_poll(
+    outcome: &mut Option<OutcomeHudData>,
+    dismissed: &mut bool,
+    progress: &mut OutcomeProgressHud,
+    data: OutcomeHudData,
+) {
+    if data.tag == "ongoing" {
+        if let Some(snapshot) = data.progress {
+            progress.0 = Some(snapshot);
+        }
+        return;
+    }
+
+    if outcome
+        .as_ref()
+        .map(|current| current.tag != data.tag)
+        .unwrap_or(true)
+    {
+        *dismissed = false;
+    }
+    if let Some(snapshot) = data.progress {
+        progress.0 = Some(snapshot);
+    }
+    *outcome = Some(data);
+}
+
 /// Headless-friendly snapshot for the live attach HUD (FPS / tick / socket / scene stats).
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
 #[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
@@ -1510,6 +1538,96 @@ mod tests {
         }
         .format_overlay();
         assert!(line.contains("| Ada | Farmer | 87%"));
+    }
+
+    #[test]
+    fn apply_outcome_poll_ignores_ongoing_without_overlay() {
+        let mut outcome = None;
+        let mut dismissed = false;
+        let mut progress = OutcomeProgressHud::default();
+        let sample = OutcomeProgressHudData {
+            population: 4_321,
+            population_target: 10_000,
+            researched_techs: 3,
+            researched_techs_target: 12,
+            peace_ticks: 50,
+            peace_ticks_target: 500,
+        };
+        apply_outcome_poll(
+            &mut outcome,
+            &mut dismissed,
+            &mut progress,
+            OutcomeHudData {
+                tag: "ongoing".to_string(),
+                reason: String::new(),
+                tick: 9,
+                progress: Some(sample),
+            },
+        );
+        assert!(outcome.is_none());
+        assert!(!dismissed);
+        assert_eq!(progress.0, Some(sample));
+    }
+
+    #[test]
+    fn apply_outcome_poll_surfaces_victory_and_resets_dismissed() {
+        let mut outcome = Some(OutcomeHudData {
+            tag: "defeat".to_string(),
+            reason: "lost".to_string(),
+            tick: 1,
+            progress: None,
+        });
+        let mut dismissed = true;
+        let mut progress = OutcomeProgressHud::default();
+        let sample = OutcomeProgressHudData {
+            population: 4_321,
+            population_target: 10_000,
+            researched_techs: 3,
+            researched_techs_target: 12,
+            peace_ticks: 50,
+            peace_ticks_target: 500,
+        };
+        apply_outcome_poll(
+            &mut outcome,
+            &mut dismissed,
+            &mut progress,
+            OutcomeHudData {
+                tag: "victory".to_string(),
+                reason: "population".to_string(),
+                tick: 42,
+                progress: Some(sample),
+            },
+        );
+        assert!(!dismissed);
+        let terminal = outcome.expect("victory outcome");
+        assert_eq!(terminal.tag, "victory");
+        assert_eq!(terminal.reason, "population");
+        assert_eq!(progress.0, Some(sample));
+    }
+
+    #[test]
+    fn apply_outcome_poll_keeps_dismissed_for_same_tag() {
+        let mut outcome = Some(OutcomeHudData {
+            tag: "defeat".to_string(),
+            reason: "first".to_string(),
+            tick: 1,
+            progress: None,
+        });
+        let mut dismissed = true;
+        let mut progress = OutcomeProgressHud::default();
+        apply_outcome_poll(
+            &mut outcome,
+            &mut dismissed,
+            &mut progress,
+            OutcomeHudData {
+                tag: "defeat".to_string(),
+                reason: "second".to_string(),
+                tick: 2,
+                progress: None,
+            },
+        );
+        assert!(dismissed);
+        assert_eq!(outcome.as_ref().expect("outcome").reason, "second");
     }
 
     #[test]

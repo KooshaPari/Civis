@@ -1,4 +1,5 @@
 # POLISH-GOD-001
 
-Closed by prior #1383 Live verb catalog on god_panel (life.* + disaster.* + legacy).
-No code delta required on 2026-07-13 wide DAG — attested for WBS P4.3.
+Bevy `god_panel` ACTIONS expanded to match Live/WS `sim.god_action` catalog
+used by MCP `god_verb_parity`: legacy five verbs plus
+`life.spawn_organism`, `life.spawn_herd`, `disaster.wildfire`, `disaster.flood`.

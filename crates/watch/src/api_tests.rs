@@ -66,7 +66,7 @@ fn test_state_with_seed(seed: u64) -> AppState {
             .timeout(REMOTE_FETCH_TIMEOUT)
             .redirect(reqwest::redirect::Policy::limited(5))
             .build()
-        .expect("reqwest client"),
+            .expect("reqwest client"),
     }
 }
 

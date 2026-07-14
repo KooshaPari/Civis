@@ -24,7 +24,7 @@ const WORLDGEN_PRESETS: [&str; 4] = [
     "lush-frontier",
 ];
 const WORLDGEN_DEFAULT_SEED: u64 = 0xC1F1_5EED_D3AD_BEEF;
-const WORLDGEN_BOOT_SECONDS: f32 = 0.5;
+const WORLDGEN_BOOT_SECONDS: f32 = 2.0;
 
 const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
 const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
@@ -35,6 +35,8 @@ const OVERLAY_DIM: egui::Color32 = egui::Color32::from_rgba_premultiplied(0, 0, 
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum AppState {
     MainMenu,
+    /// Map / scenario setup before worldgen boots.
+    WorldSetup,
     WorldGen,
     Playing,
     Paused,
@@ -50,7 +52,12 @@ impl Default for AppState {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MainMenuCommand {
     None,
+    /// Open the world / map setup panel (does not boot yet).
     NewWorld,
+    /// Confirm world setup and start generation / live attach.
+    ConfirmWorldSetup,
+    /// Abort world setup back to the title screen.
+    CancelWorldSetup,
     Continue,
     LoadGame,
     Resume,
@@ -117,6 +124,12 @@ pub struct WorldSetupParams {
     pub seed: u64,
     /// World-size preset index mirrored by the settings UI.
     pub world_size: usize,
+    /// Climate / scenario preset index into [`WORLDGEN_PRESETS`].
+    pub climate_preset: usize,
+    /// Whether continents favour islands vs contiguous land (UI knob).
+    pub archipelago: bool,
+    /// Starting population density 0..=1.
+    pub population_density: f32,
 }
 
 impl Default for WorldSetupParams {
@@ -124,9 +137,15 @@ impl Default for WorldSetupParams {
         Self {
             seed: 0xC1F1_5EED_D3AD_BEEF,
             world_size: 1,
+            climate_preset: 0,
+            archipelago: false,
+            population_density: 0.45,
         }
     }
 }
+
+/// Human labels for world-size combo (UI).
+const WORLD_SIZE_LABELS: [&str; 4] = ["Tiny", "Standard", "Large", "Huge"];
 
 /// Transient world-gen boot timer (standalone server attach).
 #[derive(Resource, Default, Debug)]
@@ -190,10 +209,10 @@ impl Plugin for MenusPlugin {
                 EguiPrimaryContextPass,
                 (
                     draw_main_menu,
+                    draw_world_setup,
                     draw_worldgen_overlay,
                     draw_pause_menu,
                     draw_era_banner,
-                    draw_settings_window,
                 ),
             );
     }
@@ -258,6 +277,7 @@ pub fn consume_menu_commands(
     gate: Option<ResMut<OutcomeSessionGate>>,
     overlay: Option<ResMut<OutcomeOverlayState>>,
     mut boot: ResMut<WorldGenBoot>,
+    mut game_settings: Option<ResMut<GameSettings>>,
 ) {
     let Some(state) = state else {
         return;
@@ -271,9 +291,12 @@ pub fn consume_menu_commands(
     match action {
         MainMenuCommand::None => {}
         MainMenuCommand::NewWorld => {
+            next_state.set(AppState::WorldSetup);
+        }
+        MainMenuCommand::ConfirmWorldSetup => {
             if let Some(bridge) = bridge.as_ref() {
                 let preset = WORLDGEN_PRESETS
-                    .get(params.world_size % WORLDGEN_PRESETS.len())
+                    .get(params.climate_preset % WORLDGEN_PRESETS.len())
                     .copied()
                     .unwrap_or(WORLDGEN_PRESETS[0]);
                 start_world_boot(&bridge.client, preset, params.seed);
@@ -283,6 +306,10 @@ pub fn consume_menu_commands(
             }
             boot.elapsed = 0.0;
             next_state.set(AppState::WorldGen);
+        }
+        MainMenuCommand::CancelWorldSetup => {
+            next_state.set(AppState::MainMenu);
+            boot.elapsed = 0.0;
         }
         MainMenuCommand::Continue => {
             if let Some(bridge) = bridge.as_ref() {
@@ -326,7 +353,12 @@ pub fn consume_menu_commands(
                 next_state.set(AppState::Playing);
             }
         }
-        MainMenuCommand::OpenSettings => {}
+        MainMenuCommand::OpenSettings => {
+            if let Some(mut settings) = game_settings {
+                settings.open = true;
+                settings.active_tab = crate::settings_ui::SettingsTab::Graphics;
+            }
+        }
         MainMenuCommand::OpenSavePanel => {
             if let Some(save_panel) = save_panel.as_mut() {
                 save_panel.visible = true;
@@ -402,7 +434,6 @@ fn draw_main_menu(
     state: Option<Res<State<AppState>>>,
     mut command: ResMut<MenuCommand>,
     saves: Res<MainMenuSaves>,
-    mut settings_open: ResMut<SettingsOpen>,
     titles: Res<MainMenuTitleAssets>,
     images: Res<Assets<Image>>,
 ) {
@@ -508,7 +539,6 @@ fn draw_main_menu(
 
                         if menu_button(ui, "\u{2699}  Settings").clicked() {
                             command.action = MainMenuCommand::OpenSettings;
-                            settings_open.0 = true;
                         }
                         ui.add_space(8.0);
                         if menu_button(ui, "\u{23fb}  Quit").clicked() {
@@ -519,7 +549,134 @@ fn draw_main_menu(
         });
 }
 
-fn draw_worldgen_overlay(mut contexts: EguiContexts, state: Option<Res<State<AppState>>>) {
+fn draw_world_setup(
+    mut contexts: EguiContexts,
+    state: Option<Res<State<AppState>>>,
+    mut params: ResMut<WorldSetupParams>,
+    mut command: ResMut<MenuCommand>,
+) {
+    let Some(state) = state else {
+        return;
+    };
+    if *state.get() != AppState::WorldSetup {
+        return;
+    }
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
+
+    egui::Area::new(egui::Id::new("world_setup_area"))
+        .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+        .order(egui::Order::Foreground)
+        .show(ctx, |ui| {
+            egui::Frame::NONE
+                .fill(GLASS_FILL)
+                .inner_margin(egui::Margin::same(28))
+                .corner_radius(egui::CornerRadius::same(12))
+                .stroke(egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.45)))
+                .show(ui, |ui| {
+                    ui.set_min_width(480.0);
+                    ui.vertical(|ui| {
+                        ui.label(
+                            egui::RichText::new("New World")
+                                .size(28.0)
+                                .color(KC_ACCENT)
+                                .strong(),
+                        );
+                        ui.label(
+                            egui::RichText::new("Map generation & scenario")
+                                .size(14.0)
+                                .color(DIM)
+                                .italics(),
+                        );
+                        ui.add_space(16.0);
+
+                        ui.label(egui::RichText::new("World seed").color(DIM).small());
+                        let mut seed_text = format!("{:016X}", params.seed);
+                        if ui
+                            .add(
+                                egui::TextEdit::singleline(&mut seed_text)
+                                    .desired_width(220.0)
+                                    .hint_text("hex seed"),
+                            )
+                            .changed()
+                        {
+                            if let Ok(parsed) = u64::from_str_radix(seed_text.trim(), 16) {
+                                params.seed = parsed;
+                            }
+                        }
+                        ui.horizontal(|ui| {
+                            if ui.button("Randomize").clicked() {
+                                params.seed = ((std::time::SystemTime::now()
+                                    .duration_since(std::time::UNIX_EPOCH)
+                                    .map(|d| d.as_nanos())
+                                    .unwrap_or(0)
+                                    ^ 0xC1F1_5EED_u128)
+                                    as u64)
+                                    .wrapping_mul(0x9E37_79B9_7F4A_7C15);
+                            }
+                        });
+                        ui.add_space(10.0);
+
+                        ui.label(egui::RichText::new("Map size").color(DIM).small());
+                        egui::ComboBox::from_id_salt("world_size_combo")
+                            .selected_text(
+                                *WORLD_SIZE_LABELS
+                                    .get(params.world_size % WORLD_SIZE_LABELS.len())
+                                    .unwrap_or(&"Standard"),
+                            )
+                            .show_ui(ui, |ui| {
+                                for (i, label) in WORLD_SIZE_LABELS.iter().enumerate() {
+                                    ui.selectable_value(&mut params.world_size, i, *label);
+                                }
+                            });
+                        ui.add_space(10.0);
+
+                        ui.label(egui::RichText::new("Climate / scenario").color(DIM).small());
+                        let climate_label = WORLDGEN_PRESETS
+                            .get(params.climate_preset % WORLDGEN_PRESETS.len())
+                            .copied()
+                            .unwrap_or(WORLDGEN_PRESETS[0]);
+                        egui::ComboBox::from_id_salt("climate_preset_combo")
+                            .selected_text(climate_label)
+                            .width(280.0)
+                            .show_ui(ui, |ui| {
+                                for (i, label) in WORLDGEN_PRESETS.iter().enumerate() {
+                                    ui.selectable_value(&mut params.climate_preset, i, *label);
+                                }
+                            });
+                        ui.add_space(10.0);
+
+                        ui.checkbox(&mut params.archipelago, "Archipelago landmass bias");
+                        ui.add_space(6.0);
+                        ui.label(egui::RichText::new("Starting population density").color(DIM).small());
+                        ui.add(
+                            egui::Slider::new(&mut params.population_density, 0.05..=1.0)
+                                .show_value(true)
+                                .fixed_decimals(2),
+                        );
+
+                        ui.add_space(20.0);
+                        ui.horizontal(|ui| {
+                            if menu_button(ui, "\u{25b6}  Generate").clicked() {
+                                command.action = MainMenuCommand::ConfirmWorldSetup;
+                            }
+                            ui.add_space(12.0);
+                            if menu_button(ui, "Cancel").clicked() {
+                                command.action = MainMenuCommand::CancelWorldSetup;
+                            }
+                        });
+                    });
+                });
+        });
+}
+
+fn draw_worldgen_overlay(
+    mut contexts: EguiContexts,
+    state: Option<Res<State<AppState>>>,
+    boot: Res<WorldGenBoot>,
+    params: Res<WorldSetupParams>,
+) {
     let Some(state) = state else {
         return;
     };
@@ -530,6 +687,12 @@ fn draw_worldgen_overlay(mut contexts: EguiContexts, state: Option<Res<State<App
         return;
     };
 
+    let progress = (boot.elapsed / WORLDGEN_BOOT_SECONDS).clamp(0.0, 1.0);
+    let preset = WORLDGEN_PRESETS
+        .get(params.climate_preset % WORLDGEN_PRESETS.len())
+        .copied()
+        .unwrap_or(WORLDGEN_PRESETS[0]);
+
     egui::Area::new(egui::Id::new("worldgen_panel_area"))
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
         .order(egui::Order::Foreground)
@@ -537,15 +700,39 @@ fn draw_worldgen_overlay(mut contexts: EguiContexts, state: Option<Res<State<App
             egui::Frame::NONE
                 .fill(GLASS_FILL)
                 .inner_margin(egui::Margin::same(24))
+                .corner_radius(egui::CornerRadius::same(12))
                 .show(ui, |ui| {
+                    ui.set_min_width(420.0);
                     ui.vertical_centered(|ui| {
                         ui.label(
-                            egui::RichText::new("Booting Civis")
+                            egui::RichText::new("Generating world")
                                 .size(28.0)
                                 .color(KC_ACCENT)
                                 .strong(),
                         );
-                        ui.label(egui::RichText::new("Spinning up world generation…").color(DIM));
+                        ui.label(
+                            egui::RichText::new(format!(
+                                "{preset} · seed {:016X}",
+                                params.seed
+                            ))
+                            .color(DIM),
+                        );
+                        ui.add_space(16.0);
+                        let bar = egui::ProgressBar::new(progress)
+                            .desired_width(320.0)
+                            .show_percentage();
+                        ui.add(bar);
+                        ui.add_space(8.0);
+                        let step = if progress < 0.25 {
+                            "Seeding continents…"
+                        } else if progress < 0.5 {
+                            "Raising terrain & biomes…"
+                        } else if progress < 0.75 {
+                            "Spawning factions…"
+                        } else {
+                            "Streaming first chunks…"
+                        };
+                        ui.label(egui::RichText::new(step).color(DIM).italics());
                     });
                 });
         });
@@ -555,8 +742,8 @@ fn draw_pause_menu(
     mut contexts: EguiContexts,
     mut mode: ResMut<GameUiMode>,
     mut command: ResMut<MenuCommand>,
-    mut settings_open: ResMut<SettingsOpen>,
     mut save_panel: ResMut<SaveLoadPanel>,
+    mut game_settings: Option<ResMut<GameSettings>>,
     mut exit: MessageWriter<AppExit>,
 ) {
     if *mode != GameUiMode::Paused {
@@ -570,14 +757,47 @@ fn draw_pause_menu(
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
         .order(egui::Order::Foreground)
         .show(ctx, |ui| {
-            pause_panel(
-                ui,
-                &mut *mode,
-                &mut *command,
-                &mut *settings_open,
-                &mut *save_panel,
-                &mut exit,
-            )
+            egui::Frame::NONE
+                .fill(PANEL_FILL)
+                .corner_radius(egui::CornerRadius::same(12))
+                .stroke(egui::Stroke::new(1.5, ACCENT.gamma_multiply(0.5)))
+                .inner_margin(egui::Margin::same(32))
+                .show(ui, |ui| {
+                    ui.set_min_width(300.0);
+                    ui.vertical_centered(|ui| {
+                        ui.label(
+                            egui::RichText::new("\u{23f8} PAUSED")
+                                .size(28.0)
+                                .color(ACCENT)
+                                .strong(),
+                        );
+                        ui.add_space(20.0);
+                        if menu_button(ui, "\u{25b6}  Resume").clicked() {
+                            *mode = GameUiMode::Playing;
+                        }
+                        ui.add_space(6.0);
+                        if menu_button(ui, "\u{2699}  Settings").clicked() {
+                            if let Some(settings) = game_settings.as_mut() {
+                                settings.open = true;
+                            }
+                            command.action = MainMenuCommand::OpenSettings;
+                        }
+                        ui.add_space(6.0);
+                        if menu_button(ui, "\u{1f4be}  Save/Load").clicked() {
+                            command.action = MainMenuCommand::OpenSavePanel;
+                            save_panel.visible = true;
+                        }
+                        if menu_button(ui, "\u{1f30d}  Main Menu").clicked() {
+                            command.action = MainMenuCommand::ExitToMainMenu;
+                        }
+                        ui.add_space(14.0);
+                        ui.separator();
+                        ui.add_space(10.0);
+                        if menu_button(ui, "\u{23fb}  Quit").clicked() {
+                            exit.write(AppExit::Success);
+                        }
+                    });
+                });
         });
 }
 
@@ -594,21 +814,6 @@ fn draw_era_banner(mut contexts: EguiContexts, banner: Res<EraBanner>) {
         .show(ctx, |ui| era_banner(ui, &banner));
 }
 
-fn draw_settings_window(
-    mut contexts: EguiContexts,
-    mut settings_open: ResMut<SettingsOpen>,
-    mut state: ResMut<SettingsState>,
-    gpu_caps: Option<Res<GpuCapabilities>>,
-) {
-    if !settings_open.0 {
-        return;
-    }
-    let Ok(ctx) = contexts.ctx_mut() else {
-        return;
-    };
-    settings_window(ctx, &mut *settings_open, &mut *state, gpu_caps.as_deref());
-}
-
 fn dim_overlay(ctx: &egui::Context) {
     let screen = ctx.content_rect();
     egui::Area::new(egui::Id::new("pause_dim_overlay"))
@@ -618,66 +823,6 @@ fn dim_overlay(ctx: &egui::Context) {
             ui.painter()
                 .rect_filled(screen, egui::CornerRadius::ZERO, OVERLAY_DIM);
         });
-}
-
-fn pause_panel(
-    ui: &mut egui::Ui,
-    mode: &mut GameUiMode,
-    command: &mut MenuCommand,
-    settings_open: &mut SettingsOpen,
-    save_panel: &mut SaveLoadPanel,
-    exit: &mut MessageWriter<AppExit>,
-) {
-    egui::Frame::NONE
-        .fill(PANEL_FILL)
-        .corner_radius(egui::CornerRadius::same(12))
-        .stroke(egui::Stroke::new(1.5, ACCENT.gamma_multiply(0.5)))
-        .inner_margin(egui::Margin::same(32))
-        .show(ui, |ui| {
-            ui.set_min_width(280.0);
-            ui.vertical_centered(|ui| {
-                ui.label(
-                    egui::RichText::new("\u{23f8} PAUSED")
-                        .size(28.0)
-                        .color(ACCENT)
-                        .strong(),
-                );
-                ui.add_space(20.0);
-                pause_menu_buttons(ui, mode, command, settings_open, save_panel, exit);
-            });
-        });
-}
-
-fn pause_menu_buttons(
-    ui: &mut egui::Ui,
-    mode: &mut GameUiMode,
-    command: &mut MenuCommand,
-    settings_open: &mut SettingsOpen,
-    save_panel: &mut SaveLoadPanel,
-    exit: &mut MessageWriter<AppExit>,
-) {
-    if menu_button(ui, "\u{25b6}  Resume").clicked() {
-        *mode = GameUiMode::Playing;
-    }
-    ui.add_space(6.0);
-    if menu_button(ui, "\u{2699}  Settings").clicked() {
-        settings_open.0 = !settings_open.0;
-    }
-    ui.add_space(6.0);
-    if menu_button(ui, "\u{1f4be}  Save/Load").clicked() {
-        // Save/Load tab: opens the shared slot browser while the pause shell stays visible.
-        command.action = MainMenuCommand::OpenSavePanel;
-        save_panel.visible = true;
-    }
-    if menu_button(ui, "\u{1f30d}  Main Menu").clicked() {
-        command.action = MainMenuCommand::ExitToMainMenu;
-    }
-    ui.add_space(14.0);
-    ui.separator();
-    ui.add_space(10.0);
-    if menu_button(ui, "\u{23fb}  Quit").clicked() {
-        exit.write(AppExit::Success);
-    }
 }
 
 fn era_banner(ui: &mut egui::Ui, banner: &EraBanner) {
@@ -713,62 +858,6 @@ fn era_banner(ui: &mut egui::Ui, banner: &EraBanner) {
                     .strong(),
             );
         });
-}
-
-fn settings_window(
-    ctx: &egui::Context,
-    settings_open: &mut SettingsOpen,
-    state: &mut SettingsState,
-    gpu_caps: Option<&GpuCapabilities>,
-) {
-    const QUALITIES: &[&str] = &["Low", "Medium", "High", "Ultra"];
-    egui::Window::new(
-        egui::RichText::new("\u{2699} Settings")
-            .color(ACCENT)
-            .strong(),
-    )
-    .collapsible(false)
-    .resizable(false)
-    .min_width(320.0)
-    .frame(
-        egui::Frame::NONE
-            .fill(PANEL_FILL)
-            .corner_radius(egui::CornerRadius::same(10))
-            .stroke(egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.4)))
-            .inner_margin(egui::Margin::same(18)),
-    )
-    .open(&mut settings_open.0)
-    .show(ctx, |ui| settings_rows(ui, state, QUALITIES, gpu_caps));
-}
-
-fn settings_rows(
-    ui: &mut egui::Ui,
-    state: &mut SettingsState,
-    qualities: &[&str],
-    gpu_caps: Option<&GpuCapabilities>,
-) {
-    ui.label(egui::RichText::new("Graphics Quality").color(DIM).small());
-    egui::ComboBox::from_id_salt("graphics_quality_combo")
-        .selected_text(*qualities.get(state.graphics_quality).unwrap_or(&"High"))
-        .show_ui(ui, |ui| {
-            for (i, &label) in qualities.iter().enumerate() {
-                ui.selectable_value(&mut state.graphics_quality, i, label);
-            }
-        });
-    ui.add_space(8.0);
-    ui.label(egui::RichText::new("Master Volume").color(DIM).small());
-    ui.add(egui::Slider::new(&mut state.master_volume, 0.0..=1.0).show_value(true));
-    ui.add_space(8.0);
-    ui.label(egui::RichText::new("Sim Speed").color(DIM).small());
-    ui.add(
-        egui::Slider::new(&mut state.sim_speed, 1..=10)
-            .text("x")
-            .show_value(true),
-    );
-    ui.add_space(12.0);
-    ui.separator();
-    ui.add_space(8.0);
-    gpu_capabilities_settings_section(ui, gpu_caps);
 }
 
 /// User-facing yes/no for read-only GPU capability flags.

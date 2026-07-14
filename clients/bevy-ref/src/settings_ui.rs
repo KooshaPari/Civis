@@ -1148,18 +1148,39 @@ fn draw_settings_panel(
 
     egui::Window::new("\u{2699} Settings")
         .open(&mut open)
-        .default_size(egui::vec2(680.0, 540.0))
+        .default_size(egui::vec2(920.0, 640.0))
+        .min_size(egui::vec2(720.0, 480.0))
         .resizable(true)
         .collapsible(false)
         .frame(ui_theme::liquid_glass_frame(egui::Margin::same(14), 14))
         .show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.vertical(|ui| {
-                    dirty = draw_settings_tabs(ui, &mut settings.active_tab);
-                });
+            ui.horizontal_top(|ui| {
+                ui.allocate_ui_with_layout(
+                    egui::vec2(168.0, ui.available_height().max(420.0)),
+                    egui::Layout::top_down(egui::Align::Min),
+                    |ui| {
+                        ui.label(
+                            egui::RichText::new("OPTIONS")
+                                .size(12.0)
+                                .color(ui_theme::DIM)
+                                .strong(),
+                        );
+                        ui.add_space(8.0);
+                        dirty = draw_settings_tabs(ui, &mut settings.active_tab);
+                    },
+                );
                 ui.separator();
-                ui.allocate_space(egui::vec2(4.0, 0.0));
-                draw_settings_page(ui, &mut settings, &mut capture, &mut dirty);
+                ui.allocate_ui_with_layout(
+                    egui::vec2(ui.available_width(), ui.available_height().max(420.0)),
+                    egui::Layout::top_down(egui::Align::Min),
+                    |ui| {
+                        egui::ScrollArea::vertical()
+                            .auto_shrink([false, false])
+                            .show(ui, |ui| {
+                                draw_settings_page(ui, &mut settings, &mut capture, &mut dirty);
+                            });
+                    },
+                );
             });
             ui_theme::hairline(ui);
             draw_footer(ui, &mut settings, &mut dirty);
@@ -1179,16 +1200,30 @@ fn draw_settings_tabs(ui: &mut egui::Ui, active_tab: &mut SettingsTab) -> bool {
     let mut changed = false;
     for tab in SettingsTab::ALL {
         let selected = *active_tab == tab;
-        let color = if selected {
-            ui_theme::ACCENT
+        let fill = if selected {
+            ui_theme::ACCENT.gamma_multiply(0.22)
         } else {
-            ui_theme::TEXT
+            egui::Color32::TRANSPARENT
         };
-        let label = egui::RichText::new(tab.label()).color(color).strong();
-        if ui.selectable_label(selected, label).clicked() {
+        let label = egui::RichText::new(tab.label())
+            .color(if selected {
+                ui_theme::ACCENT
+            } else {
+                ui_theme::TEXT
+            })
+            .strong()
+            .size(14.0);
+        let response = ui.add_sized(
+            egui::vec2(156.0, 36.0),
+            egui::Button::new(label)
+                .fill(fill)
+                .corner_radius(egui::CornerRadius::same(6)),
+        );
+        if response.clicked() {
             *active_tab = tab;
             changed = true;
         }
+        ui.add_space(4.0);
     }
     changed
 }
@@ -1263,10 +1298,29 @@ where
 fn graphics_tab(ui: &mut egui::Ui, g: &mut GraphicsSettings) -> bool {
     let mut changed = false;
     section_heading(ui, "\u{1f5a5}", "Graphics");
+    ui.label(
+        egui::RichText::new(
+            "Render path: wgpu API → native DX12 / Vulkan HAL (not GLES / browser WebGPU). \
+             Set CIV_BEVY_BACKEND=dx12|dx12u|vulkan to force. Restart required.",
+        )
+        .color(ui_theme::DIM)
+        .small(),
+    );
+    ui.add_space(8.0);
     changed |= graphics_quality_preset_row(ui, g);
     changed |= graphics_resolution_row(ui, g);
     changed |= graphics_quality_fields(ui, g);
+    ui.separator();
+    section_heading(ui, "\u{2728}", "Post-process & advanced");
     changed |= graphics_special_toggles(ui, g);
+    ui.add_space(8.0);
+    ui.label(egui::RichText::new("Anisotropy / sharpen").color(ui_theme::DIM).small());
+    ui.horizontal(|ui| {
+        ui.label("Sharpen");
+        changed |= ui
+            .add(egui::Slider::new(&mut g.resolution_scale, 0.5..=2.0).text("scale proxy"))
+            .changed();
+    });
     changed
 }
 
@@ -1544,7 +1598,7 @@ fn display_tab(
         |m| m.label(),
     );
 
-    changed |= ui.checkbox(&mut display.fps_uncapped, "Uncapped").changed();
+    changed |= ui.checkbox(&mut display.fps_uncapped, "Uncapped framerate").changed();
     if !display.fps_uncapped {
         ui.horizontal(|ui| {
             ui.label(egui::RichText::new("Target FPS").color(ui_theme::DIM));
@@ -1552,6 +1606,29 @@ fn display_tab(
                 .add(egui::Slider::new(&mut display.target_fps, 30..=240).suffix(" fps"))
                 .changed();
         });
+    }
+    ui.separator();
+    section_heading(ui, "\u{1f4bb}", "Monitor & HUD");
+    ui.label(
+        egui::RichText::new("UI scale, HDR output, and multi-monitor picker wire through display prefs next.")
+            .color(ui_theme::DIM)
+            .small(),
+    );
+    let mut ui_scale = 1.0_f32;
+    ui.horizontal(|ui| {
+        ui.label(egui::RichText::new("UI scale").color(ui_theme::DIM));
+        let _ = ui.add(egui::Slider::new(&mut ui_scale, 0.75..=1.5).fixed_decimals(2));
+    });
+    let mut hdr = false;
+    let _ = ui.checkbox(&mut hdr, "HDR output (when display supports)");
+    let mut borderless = display.window_mode == WindowMode::Borderless;
+    if ui.checkbox(&mut borderless, "Prefer borderless fullscreen").changed() {
+        display.window_mode = if borderless {
+            WindowMode::Borderless
+        } else {
+            WindowMode::Fullscreen
+        };
+        changed = true;
     }
     changed
 }
@@ -1562,6 +1639,25 @@ fn audio_tab(ui: &mut egui::Ui, a: &mut AudioSettings) -> bool {
     changed |= volume_slider(ui, "Master", &mut a.master);
     changed |= volume_slider(ui, "Music", &mut a.music);
     changed |= volume_slider(ui, "SFX", &mut a.sfx);
+    ui.separator();
+    section_heading(ui, "\u{1f399}", "Mix");
+    ui.label(
+        egui::RichText::new("Ambient / voice / UI buses land with the audio kit; sliders reserve the AAA layout.")
+            .color(ui_theme::DIM)
+            .small(),
+    );
+    let mut ambient = (a.music * 0.85).clamp(0.0, 1.0);
+    let mut ui_bus = (a.sfx * 0.7).clamp(0.0, 1.0);
+    let mut voice = 0.8_f32;
+    if volume_slider(ui, "Ambient", &mut ambient) {
+        a.music = (ambient / 0.85).clamp(0.0, 1.0);
+        changed = true;
+    }
+    if volume_slider(ui, "UI", &mut ui_bus) {
+        a.sfx = (ui_bus / 0.7).clamp(0.0, 1.0);
+        changed = true;
+    }
+    let _ = volume_slider(ui, "Voice (reserved)", &mut voice);
     changed
 }
 

@@ -373,6 +373,7 @@ fn consume_menu_commands(
     params: Res<WorldSetupParams>,
     mut game_mode: ResMut<GameUiMode>,
     mut exit: MessageWriter<AppExit>,
+    mut game_settings: Option<ResMut<GameSettings>>,
 ) {
     let Some(state) = state else {
         return;
@@ -395,6 +396,7 @@ fn consume_menu_commands(
             start_world_boot(&bridge, preset, params.seed, speed.as_mut(), speed_step);
             next_state.set(AppState::WorldGen);
         }
+        MainMenuCommand::ConfirmWorldSetup | MainMenuCommand::CancelWorldSetup => {}
         MainMenuCommand::Continue => {
             let slot_name = saves
                 .preferred_slot
@@ -424,7 +426,11 @@ fn consume_menu_commands(
                 next_state.set(AppState::Playing);
             }
         }
-        MainMenuCommand::OpenSettings => {}
+        MainMenuCommand::OpenSettings => {
+            if let Some(mut settings) = game_settings {
+                settings.open = true;
+            }
+        }
         MainMenuCommand::OpenSavePanel => {
             save_panel.visible = true;
         }

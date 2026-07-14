@@ -85,10 +85,28 @@ fn forced_backend_from_var(raw: Option<String>) -> Option<Backends> {
 /// Parse `CIV_BEVY_BACKEND` value (case-insensitive, trimmed). Returns `None` for unknown tokens.
 fn parse_forced_backend_value(raw: &str) -> Option<Backends> {
     match raw.trim().to_ascii_lowercase().as_str() {
-        "dx12" | "d3d12" | "directx" => Some(Backends::DX12),
+        "dx12" | "d3d12" | "directx" | "dx12u" | "dx12ultimate" | "directx12" => {
+            Some(Backends::DX12)
+        }
         "vulkan" | "vk" => Some(Backends::VULKAN),
         "metal" => Some(Backends::METAL),
         _ => None,
+    }
+}
+
+/// Human-readable description of the active native HAL path (wgpu is the API layer).
+#[must_use]
+pub fn describe_hal_path(backends: Backends) -> &'static str {
+    if backends == Backends::DX12 {
+        "wgpu → DX12 (native HAL; DX12 Ultimate feature set when driver supports it)"
+    } else if backends == Backends::VULKAN {
+        "wgpu → Vulkan (native HAL)"
+    } else if backends == Backends::METAL {
+        "wgpu → Metal (native HAL)"
+    } else if backends.contains(Backends::DX12) && backends.contains(Backends::VULKAN) {
+        "wgpu → DX12|Vulkan (native HAL search)"
+    } else {
+        "wgpu → native HAL backends"
     }
 }
 
@@ -99,7 +117,7 @@ mod tests {
     /// FR-CIV-BEVY-026 — backend env var parsing accepts expected adapter aliases.
     #[test]
     fn parse_forced_backend_value_accepts_dx12_aliases() {
-        for raw in ["dx12", "DX12", " d3d12 ", "DirectX"] {
+        for raw in ["dx12", "DX12", " d3d12 ", "DirectX", "dx12u", "DX12Ultimate"] {
             assert_eq!(
                 parse_forced_backend_value(raw),
                 Some(Backends::DX12),

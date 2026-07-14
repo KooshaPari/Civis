@@ -52,14 +52,22 @@ fn current_app_state(app: &App) -> AppState {
 
 fn dispatch_menu(app: &mut App, action: MainMenuCommand) {
     app.world_mut().resource_mut::<MenuCommand>().action = action;
-    app.update();
+    // StateTransition runs before Update, so NextState set in Update applies next
+    // frame. ConfirmWorldSetup can chain WorldGen→Playing in one more frame.
+    flush_state(app);
 }
 
 fn advance_time(app: &mut App, seconds: f32) {
     app.world_mut()
         .resource_mut::<Time>()
         .advance_by(Duration::from_secs_f32(seconds));
-    app.update();
+    flush_state(app);
+}
+
+fn flush_state(app: &mut App) {
+    for _ in 0..3 {
+        app.update();
+    }
 }
 
 #[test]
@@ -76,13 +84,12 @@ fn new_world_and_confirm_boot_session_and_reach_playing() {
     assert_eq!(current_app_state(&app), AppState::WorldSetup);
 
     dispatch_menu(&mut app, MainMenuCommand::ConfirmWorldSetup);
-    assert_eq!(current_app_state(&app), AppState::WorldGen);
-
-    let gate = app.world().resource::<OutcomeSessionGate>();
-    assert!(gate.session_active, "ConfirmWorldSetup should begin player session");
-
-    // No LiveStreamScene → advance_worldgen_to_playing transitions immediately.
+    // No LiveStreamScene → WorldGen→Playing is drained within flush_state.
     assert_eq!(current_app_state(&app), AppState::Playing);
+    assert!(
+        app.world().resource::<OutcomeSessionGate>().session_active,
+        "ConfirmWorldSetup should begin player session"
+    );
 }
 
 #[test]
@@ -153,11 +160,11 @@ fn sync_app_state_with_game_mode_maps_pause_overlay() {
     assert_eq!(current_app_state(&app), AppState::Playing);
 
     *app.world_mut().resource_mut::<GameUiMode>() = GameUiMode::Paused;
-    app.update();
+    flush_state(&mut app);
     assert_eq!(current_app_state(&app), AppState::Paused);
 
     *app.world_mut().resource_mut::<GameUiMode>() = GameUiMode::Playing;
-    app.update();
+    flush_state(&mut app);
     assert_eq!(current_app_state(&app), AppState::Playing);
 }
 

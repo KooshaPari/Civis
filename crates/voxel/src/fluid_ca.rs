@@ -389,16 +389,14 @@ impl CaGrid {
         let chunk_x: Vec<usize> = (0..self.dims[0]).map(|x| x / 16).collect();
         let chunk_y: Vec<usize> = (0..self.dims[1]).map(|y| y / 16).collect();
         let chunk_z: Vec<usize> = (0..self.dims[2]).map(|z| z / 16).collect();
-        for z in 0..self.dims[2] {
-            for y in 0..self.dims[1] {
-                for x in 0..self.dims[0] {
+        for (z, &chunk_z) in chunk_z.iter().enumerate() {
+            for (y, &chunk_y) in chunk_y.iter().enumerate() {
+                for (x, &chunk_x) in chunk_x.iter().enumerate() {
                     let id = self.get(x, y, z);
                     let phase = phase_of(reg, id);
                     if matches!(phase, Phase::Liquid | Phase::Powder | Phase::Gas) {
                         self.dirty_chunks.insert(
-                            chunk_x[x]
-                                + chunk_y[y] * counts[0]
-                                + chunk_z[z] * counts[0] * counts[1],
+                            chunk_x + chunk_y * counts[0] + chunk_z * counts[0] * counts[1],
                         );
                     }
                 }
@@ -1064,7 +1062,7 @@ const PHASE_BUDGET_PER_TICK: i32 = 50;
 /// the sand does not magically "soak in" here; water flowing onto a porous
 /// surface is the existing liquid-step / rain-inflow pipeline's job, and the
 /// porous cell's saturation is its independent water budget.
-
+///
 /// Per-step evaporation depth on the per-cell `saturation` field
 /// (FR-CIV-CA-004 — weather/ecology depth).
 ///

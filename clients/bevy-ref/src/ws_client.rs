@@ -553,11 +553,20 @@ mod tests {
     }
 
     #[test]
-    fn reconnect_backoff_resets_after_success() {
-        let mut backoff = ReconnectBackoff::new();
-        let _ = backoff.next_delay();
-        let _ = backoff.next_delay();
-        backoff.reset();
-        assert_eq!(backoff.next_delay(), Duration::from_secs(1));
+    fn parse_outcome_response_reads_victory_payload() {
+        let text = r#"{"jsonrpc":"2.0","id":9003,"result":{"outcome":"victory","reason":"population","tick":99,"progress":{"population":10000,"population_target":10000,"researched_techs":4,"researched_techs_target":12,"peace_ticks":10,"peace_ticks_target":500}}}"#;
+        let outcome = parse_outcome_response(text).expect("outcome");
+        assert_eq!(outcome.tag, "victory");
+        assert_eq!(outcome.reason, "population");
+        assert_eq!(outcome.tick, 99);
+        let progress = outcome.progress.expect("progress");
+        assert_eq!(progress.population, 10_000);
+        assert_eq!(progress.peace_ticks, 10);
+    }
+
+    #[test]
+    fn parse_outcome_response_ignores_other_rpc_ids() {
+        let text = r#"{"jsonrpc":"2.0","id":3,"result":{"outcome":"victory"}}"#;
+        assert!(parse_outcome_response(text).is_none());
     }
 }

@@ -167,6 +167,12 @@ civis-bevy-play:
     @echo "      $$env:CIVIS_ATTACH='server'"
     @echo "      $$env:CIV_WS_URL='ws://127.0.0.1:3010/ws?tick_format=binary'"
     @echo "      & \"$$env:CARGO_TARGET_DIR/release/civ-standalone.exe\""
+# SHELL-ATTEST-001 — headless AppState / menu smoke (no GPU window).
+# Complements bevy-egui-check compile gate with playability wiring proof.
+bevy-shell-smoke:
+    cargo test -p civ-bevy-ref --features bevy,egui --test shell_attest
+    cargo test -p civ-bevy-ref --features bevy,egui menus::tests::
+    cargo test -p civ-bevy-ref --features bevy,egui outcome_overlay::tests::
 
 # Run the Bevy reference client smoke (headless; meshes one chunk).
 civis-3d-bevy-smoke:

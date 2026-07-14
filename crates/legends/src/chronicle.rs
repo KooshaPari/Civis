@@ -357,7 +357,7 @@ mod tests {
         // The conflict is shared — Bob must also see it.
         for e in &alice_events {
             assert!(
-                e.participants.iter().any(|p| *p == alice),
+                e.participants.contains(&alice),
                 "by_agent must return only entries that include the agent"
             );
         }
@@ -401,13 +401,14 @@ mod tests {
         let mut a = Chronicle::new();
         let mut b = Chronicle::new();
 
-        let stream: Vec<(
+        type ChronicleInput = (
             u64,
             ChronicleEventKind,
             Option<RegionId>,
             Option<ClusterId>,
             Vec<u64>,
-        )> = vec![
+        );
+        let stream: Vec<ChronicleInput> = vec![
             (0, ChronicleEventKind::Birth, None, None, vec![7]),
             (
                 3,

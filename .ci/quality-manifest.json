@@ -1,8 +1,8 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "96cbb2a03ec6d55a2bf6bb7f2d52c603060ebbed",
-  "created_at": "2026-07-14T02:28:25Z",
+  "git_sha": "397dfe6f6ad010ae7cfd3077e7de83460be7abc2",
+  "created_at": "2026-07-14T02:36:09Z",
   "runner": {
     "host": "KOOSHAPARI-DESK",
     "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
@@ -62,8 +62,8 @@
     },
     "bevy_egui_check": {
       "status": "pass",
-      "detail": "wired; run just bevy-egui-check"
+      "detail": "just bevy-egui-check"
     }
   },
-  "manifest_hash": "f1ee795f889ae23687f617882f44ac51f6acdc851874266aa27a0b10025b9cf3"
+  "manifest_hash": "ec0207f4d6fb5ba0ef2b03082e22ab7ec1c6d8e5a20a932d6967006f5f650b21"
 }

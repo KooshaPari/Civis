@@ -138,6 +138,32 @@ civis-verify with_bevy="":
 bevy-egui-check:
     cargo check -p civ-bevy-ref --features bevy,egui
 
+# SHELL-FEATURES-001 — fuller local play fingerprint: release civ-standalone + audio.
+# Builds only (interactive window is awkward to auto-run from just on Windows).
+# See clients/bevy-ref/README.md "Local play fingerprints" for run commands.
+# Optional live attach env (PowerShell examples echoed after build):
+#   CIVIS_ATTACH=server
+#   CIV_WS_URL=ws://127.0.0.1:3010/ws?tick_format=binary
+#   CIV_SERVER_PORT=3010   (used when CIV_WS_URL unset; default 3000)
+civis-bevy-play:
+    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-G:/civis-target-gate}" \
+        BEVY_ASSET_ROOT="${BEVY_ASSET_ROOT:-$(pwd)/clients/bevy-ref}" \
+        cargo build --release -p civ-bevy-ref --features bevy,egui,audio --bin civ-standalone
+    @echo ""
+    @echo "==> civis-bevy-play: release civ-standalone built (bevy,egui,audio)."
+    @echo "    Set BEVY_ASSET_ROOT and run the binary from repo root (PowerShell):"
+    @echo "      $$env:BEVY_ASSET_ROOT='$(pwd)/clients/bevy-ref'"
+    @echo "      $$env:CARGO_TARGET_DIR='${CARGO_TARGET_DIR:-G:/civis-target-gate}'"
+    @echo "      & \"$$env:CARGO_TARGET_DIR/release/civ-standalone.exe\""
+    @echo "    Local sandbox: omit attach env vars."
+    @echo "    Live attach (civ-server on :3010):"
+    @echo "      $$env:CIVIS_ATTACH='server'; $$env:CIV_SERVER_PORT='3010'"
+    @echo "      & \"$$env:CARGO_TARGET_DIR/release/civ-standalone.exe\""
+    @echo "    Or explicit URL:"
+    @echo "      $$env:CIVIS_ATTACH='server'"
+    @echo "      $$env:CIV_WS_URL='ws://127.0.0.1:3010/ws?tick_format=binary'"
+    @echo "      & \"$$env:CARGO_TARGET_DIR/release/civ-standalone.exe\""
+
 # Run the Bevy reference client smoke (headless; meshes one chunk).
 civis-3d-bevy-smoke:
     cargo run -p civ-bevy-ref --bin civ-bevy-ref

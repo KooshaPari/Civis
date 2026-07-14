@@ -262,14 +262,11 @@ fn main() {
         app.add_systems(
             Update,
             (
-                consume_menu_commands,
+                civ_bevy_ref::menus::consume_menu_commands,
                 update_mainmenu_saves,
-                sync_app_state_with_game_mode,
+                civ_bevy_ref::menus::sync_app_state_with_game_mode,
+                civ_bevy_ref::menus::advance_worldgen_to_playing,
             ),
-        );
-        app.add_systems(
-            Update,
-            worldgen_to_playing.run_if(in_state(AppState::Playing)),
         );
         app.add_systems(
             Update,

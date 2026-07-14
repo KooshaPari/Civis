@@ -312,9 +312,63 @@ impl Default for SettingsTab {
 // Sub-setting groups
 // ---------------------------------------------------------------------------
 
+/// AAA-style GPU API / render-engine preference (restart required).
+///
+/// Bevy still talks through `wgpu`; this selects the **native HAL**
+/// (`DX12` / `Vulkan`) searched at boot via `CIV_BEVY_BACKEND`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum RenderEngine {
+    /// Platform default (DX12 Ultimate on Windows, Vulkan on Linux, Metal on macOS).
+    #[default]
+    Auto,
+    /// DirectX 12 Ultimate feature set when the driver supports it.
+    DirectX12Ultimate,
+    /// Vulkan native HAL.
+    Vulkan,
+}
+
+impl RenderEngine {
+    /// All engines shown in the Graphics combo, AAA menu order.
+    pub const ALL: [RenderEngine; 3] = [Self::Auto, Self::DirectX12Ultimate, Self::Vulkan];
+
+    /// Player-facing combo label.
+    #[must_use]
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Auto => "Auto (recommended)",
+            Self::DirectX12Ultimate => "DirectX 12 Ultimate",
+            Self::Vulkan => "Vulkan",
+        }
+    }
+
+    /// `CIV_BEVY_BACKEND` token, or `None` to leave Auto/platform default.
+    #[must_use]
+    pub fn env_token(self) -> Option<&'static str> {
+        match self {
+            Self::Auto => None,
+            Self::DirectX12Ultimate => Some("dx12"),
+            Self::Vulkan => Some("vulkan"),
+        }
+    }
+
+    /// Apply preference to process env for the next (or current pre-init) boot.
+    pub fn apply_to_env(self) {
+        match self.env_token() {
+            Some(token) => std::env::set_var(crate::native_backend::BACKEND_ENV, token),
+            None => {
+                // Auto: clear forced override so native_backend platform default applies.
+                std::env::remove_var(crate::native_backend::BACKEND_ENV);
+            }
+        }
+    }
+}
+
 /// Graphics / video options.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphicsSettings {
+    /// GPU API / render engine (DX12 Ultimate / Vulkan / Auto). Restart required.
+    #[serde(default)]
+    pub render_engine: RenderEngine,
     /// Selected resolution preset.
     #[serde(default)]
     pub resolution: ResolutionPreset,
@@ -374,6 +428,7 @@ pub struct GraphicsSettings {
 impl Default for GraphicsSettings {
     fn default() -> Self {
         Self {
+            render_engine: RenderEngine::default(),
             resolution: ResolutionPreset::R1080p,
             vsync: true,
             quality: QualityPreset::High,
@@ -963,8 +1018,9 @@ impl GameSettings {
         }
     }
 
-    /// Serialize and write to [`SETTINGS_PATH`].
+    /// Serialize and write to [`SETTINGS_PATH`], and sync render-engine env.
     pub fn save(&self) {
+        self.graphics.render_engine.apply_to_env();
         match ron::ser::to_string_pretty(self, ron::ser::PrettyConfig::default()) {
             Ok(text) => {
                 if let Err(e) = std::fs::write(SETTINGS_PATH, text) {
@@ -973,6 +1029,12 @@ impl GameSettings {
             }
             Err(e) => error!("failed to serialize settings: {e}"),
         }
+    }
+
+    /// Apply persisted render-engine preference before wgpu adapter search.
+    pub fn apply_boot_render_engine() {
+        let settings = Self::load();
+        settings.graphics.render_engine.apply_to_env();
     }
 
     /// Look up the current binding for an action name.
@@ -1297,16 +1359,48 @@ where
 
 fn graphics_tab(ui: &mut egui::Ui, g: &mut GraphicsSettings) -> bool {
     let mut changed = false;
-    section_heading(ui, "\u{1f5a5}", "Graphics");
+    section_heading(ui, "\u{26a1}", "Render Engine");
     ui.label(
         egui::RichText::new(
-            "Render path: wgpu API → native DX12 / Vulkan HAL (not GLES / browser WebGPU). \
-             Set CIV_BEVY_BACKEND=dx12|dx12u|vulkan to force. Restart required.",
+            "Same style as AAA PC titles: pick the GPU API. Civis uses wgpu as the \
+             engine layer over a native HAL — not GLES / browser WebGPU. Changing \
+             the engine requires a restart.",
         )
         .color(ui_theme::DIM)
         .small(),
     );
-    ui.add_space(8.0);
+    ui.add_space(6.0);
+    ui.horizontal(|ui| {
+        changed |= enum_combo(
+            ui,
+            "Graphics API",
+            &mut g.render_engine,
+            &RenderEngine::ALL,
+            RenderEngine::label,
+        );
+        ui.label(
+            egui::RichText::new("Restart required")
+                .color(egui::Color32::from_rgb(0xe0, 0xb0, 0x4a))
+                .small()
+                .strong(),
+        );
+    });
+    ui.label(
+        egui::RichText::new(match g.render_engine {
+            RenderEngine::Auto => {
+                "Auto → DX12 Ultimate on Windows, Vulkan on Linux, Metal on macOS."
+            }
+            RenderEngine::DirectX12Ultimate => {
+                "DirectX 12 Ultimate — DXR / mesh shaders / DLSS path when the driver supports it."
+            }
+            RenderEngine::Vulkan => "Vulkan — cross-vendor native HAL; full RT/DLSS parity on NVIDIA.",
+        })
+        .color(ui_theme::DIM)
+        .small(),
+    );
+    ui.add_space(12.0);
+    ui.separator();
+    section_heading(ui, "\u{1f5a5}", "Quality");
     changed |= graphics_quality_preset_row(ui, g);
     changed |= graphics_resolution_row(ui, g);
     changed |= graphics_quality_fields(ui, g);
@@ -1316,9 +1410,13 @@ fn graphics_tab(ui: &mut egui::Ui, g: &mut GraphicsSettings) -> bool {
     ui.add_space(8.0);
     ui.label(egui::RichText::new("Anisotropy / sharpen").color(ui_theme::DIM).small());
     ui.horizontal(|ui| {
-        ui.label("Sharpen");
+        ui.label("Render scale");
         changed |= ui
-            .add(egui::Slider::new(&mut g.resolution_scale, 0.5..=2.0).text("scale proxy"))
+            .add(
+                egui::Slider::new(&mut g.resolution_scale, 0.5..=2.0)
+                    .show_value(true)
+                    .fixed_decimals(2),
+            )
             .changed();
     });
     changed
@@ -1834,6 +1932,23 @@ mod tests {
     #[test]
     fn default_graphics_settings_enable_color_grading() {
         assert!(GraphicsSettings::default().color_grading_enabled);
+    }
+
+    #[test]
+    fn render_engine_combo_labels_and_env_tokens_match_aaa_api_picker() {
+        assert_eq!(RenderEngine::Auto.label(), "Auto (recommended)");
+        assert_eq!(
+            RenderEngine::DirectX12Ultimate.label(),
+            "DirectX 12 Ultimate"
+        );
+        assert_eq!(RenderEngine::Vulkan.label(), "Vulkan");
+        assert_eq!(RenderEngine::Auto.env_token(), None);
+        assert_eq!(RenderEngine::DirectX12Ultimate.env_token(), Some("dx12"));
+        assert_eq!(RenderEngine::Vulkan.env_token(), Some("vulkan"));
+        assert_eq!(
+            GraphicsSettings::default().render_engine,
+            RenderEngine::Auto
+        );
     }
 
     #[test]

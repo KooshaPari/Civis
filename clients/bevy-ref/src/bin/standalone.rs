@@ -29,11 +29,15 @@ use civ_bevy_ref::{
 fn main() {
     civ_bevy_ref::install_crash_handler();
 
-    // Prefer DX12 Ultimate path on Windows when unset (wgpu → DX12 HAL).
+    // Apply AAA Graphics API combo from settings.ron (or Windows DX12 default).
+    #[cfg(feature = "egui")]
+    {
+        civ_bevy_ref::settings_ui::GameSettings::apply_boot_render_engine();
+    }
+    #[cfg(not(feature = "egui"))]
     if std::env::var_os(civ_bevy_ref::native_backend::BACKEND_ENV).is_none() {
         #[cfg(target_os = "windows")]
         {
-            // Process-local; set before Bevy/wgpu adapter enumeration.
             std::env::set_var(civ_bevy_ref::native_backend::BACKEND_ENV, "dx12");
         }
     }

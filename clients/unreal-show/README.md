@@ -71,8 +71,9 @@ Flags: `-SkipRust`, `-SkipUe`, `-Configuration DebugGame|Shipping`.
 | Terrain heightmap | `GET /terrain` | — | Yes |
 | Snapshot pins | `GET /snapshot` | `sim.snapshot` | Yes (HTTP) |
 | Speed / tick | `POST /control/speed` | `sim.set_speed` | HTTP only |
-| F3D0 voxel stream | — | WS binary | Planned |
-| Spawn / build | `POST /control/spawn_entity`, `place_voxel`, `damage` | `sim.spawn_entity` / `sim.place_voxel` / `sim.damage` | HTTP (`SpawnEntity`, `ApplyDamage` on `UCivProtocolClient`) |
+| F3D0 voxel stream | — | WS binary | Yes — `OnF3d0Frame` → `ACivChunkOverlayActor` procedural mesh (dense `voxels[]`) or marker fallback |
+| God actions | — | `sim.god_action` | Yes — `UCivWsClient::GodAction`, `Smite`, `Earthquake`, `SpawnOrganism`, `SpawnHerd` |
+| Spawn / build | `POST /control/spawn_entity`, `place_voxel`, `damage` | `sim.spawn_entity` / `sim.place_voxel` / `sim.damage` | HTTP (`SpawnEntity`, `ApplyDamage` on `UCivProtocolClient`) + WS spawn helpers |
 
 ## Dual attach (implemented)
 
@@ -82,9 +83,25 @@ Flags: `-SkipRust`, `-SkipUe`, `-Configuration DebugGame|Shipping`.
 
 ## Next integration steps
 
-1. F3D0 voxel mesh stream (keep heightmap terrain until then).
-2. Materials / Nanite polish (L5 art pass).
-3. Share job colors from snapshot pins when jobs are wired on agents.
+1. Materials / Nanite polish on chunk overlays (L5 art pass).
+2. BuildingDiff / AgentAppearance F3D0 frame handlers (overlay today is VoxelDelta-only).
+3. In-editor god panel UI (WS helpers exist; wire input like Bevy G-key panel).
+4. Share job colors from snapshot pins when jobs are wired on agents.
+
+## Verify F3D0 wire (no UE required)
+
+From repo root:
+
+```powershell
+cd clients/unreal-show/Source/Civis/rust-shim
+cargo test
+cd ../../..
+.\scripts\verify-unreal-ready.ps1
+```
+
+With civ-server running, press Play in editor (or packaged build): place a voxel via `UCivWsClient::PlaceVoxel` or fire `Smite` — dirty chunks should spawn `ACivChunkOverlayActor` markers (dense mesh when server sends 4096-length `voxels[]`).
+
+If `UE_ROOT` is unset, `build.ps1 -SkipUe` still builds the rust shim; full UBT compile needs UE 5.4+ installed.
 
 ## Layout
 

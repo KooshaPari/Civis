@@ -44,6 +44,29 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Civis")
     void ApplyDamage(int64 X, int64 Y, int64 Z, int32 Radius, int32 Energy = 1000);
 
+    /** Forward `sim.god_action` (mirrors Bevy god panel / MCP civis_god_action). */
+    UFUNCTION(BlueprintCallable, Category = "Civis")
+    void GodAction(
+        const FString& Action,
+        float X = 0.5f,
+        float Y = 0.5f,
+        int32 TargetFaction = 0,
+        float Magnitude = 0.5f,
+        int32 Count = 0,
+        int64 SeedCivilianId = -1);
+
+    UFUNCTION(BlueprintCallable, Category = "Civis")
+    void Smite(float X, float Y, float Magnitude = 0.5f);
+
+    UFUNCTION(BlueprintCallable, Category = "Civis")
+    void Earthquake(float X, float Y, float Magnitude = 0.5f);
+
+    UFUNCTION(BlueprintCallable, Category = "Civis")
+    void SpawnOrganism(float X, float Y, int32 Faction = 0, int64 SeedCivilianId = -1);
+
+    UFUNCTION(BlueprintCallable, Category = "Civis")
+    void SpawnHerd(float X, float Y, int32 Count = 5, int32 Faction = 0, int64 SeedCivilianId = -1);
+
     UPROPERTY(BlueprintAssignable, Category = "Civis")
     FOnCivWsSnapshot OnSnapshotReceived;
 
@@ -61,6 +84,14 @@ private:
     void HandleBinary(const TArray<uint8>& Data);
     void ScheduleReconnect();
     FString NormalizeSnapshot(const TSharedPtr<FJsonObject>& Result) const;
+    FString BuildGodActionParams(
+        const FString& Action,
+        float X,
+        float Y,
+        int32 TargetFaction,
+        float Magnitude,
+        int32 Count,
+        int64 SeedCivilianId) const;
 
     TSharedPtr<IWebSocket> Socket;
     TMap<int32, FString> PendingMethods;

@@ -141,6 +141,81 @@ void UCivWsClient::ApplyDamage(int64 X, int64 Y, int64 Z, int32 Radius, int32 En
             Energy));
 }
 
+void UCivWsClient::GodAction(
+    const FString& Action,
+    float X,
+    float Y,
+    int32 TargetFaction,
+    float Magnitude,
+    int32 Count,
+    int64 SeedCivilianId)
+{
+    SendRpc(
+        TEXT("sim.god_action"),
+        BuildGodActionParams(Action, X, Y, TargetFaction, Magnitude, Count, SeedCivilianId));
+}
+
+void UCivWsClient::Smite(float X, float Y, float Magnitude)
+{
+    GodAction(TEXT("smite"), X, Y, 0, Magnitude);
+}
+
+void UCivWsClient::Earthquake(float X, float Y, float Magnitude)
+{
+    GodAction(TEXT("earthquake"), X, Y, 0, Magnitude);
+}
+
+void UCivWsClient::SpawnOrganism(float X, float Y, int32 Faction, int64 SeedCivilianId)
+{
+    GodAction(TEXT("life.spawn_organism"), X, Y, Faction, 0.5f, 0, SeedCivilianId);
+}
+
+void UCivWsClient::SpawnHerd(float X, float Y, int32 Count, int32 Faction, int64 SeedCivilianId)
+{
+    GodAction(TEXT("life.spawn_herd"), X, Y, Faction, 0.5f, Count, SeedCivilianId);
+}
+
+FString UCivWsClient::BuildGodActionParams(
+    const FString& Action,
+    float X,
+    float Y,
+    int32 TargetFaction,
+    float Magnitude,
+    int32 Count,
+    int64 SeedCivilianId) const
+{
+    const bool bNeedsPos = Action.Contains(TEXT("smite")) || Action.Contains(TEXT("earthquake"))
+        || Action.Contains(TEXT("life.spawn")) || Action.Contains(TEXT("terrain."))
+        || Action.Contains(TEXT("disaster."));
+    const bool bNeedsFaction = Action.Contains(TEXT("bless")) || Action.Contains(TEXT("plague"))
+        || Action.Contains(TEXT("life.spawn"));
+    const bool bNeedsCount = Action.Contains(TEXT("life.spawn_herd"));
+    const bool bNeedsSeed = Action.Contains(TEXT("life.spawn"));
+
+    FString Params = FString::Printf(
+        TEXT("{\"action\":\"%s\",\"magnitude\":%f"),
+        *Action,
+        Magnitude);
+    if (bNeedsPos)
+    {
+        Params += FString::Printf(TEXT(",\"x\":%f,\"y\":%f"), X, Y);
+    }
+    if (bNeedsFaction)
+    {
+        Params += FString::Printf(TEXT(",\"target_faction\":%d"), TargetFaction);
+    }
+    if (bNeedsCount && Count > 0)
+    {
+        Params += FString::Printf(TEXT(",\"count\":%d"), Count);
+    }
+    if (bNeedsSeed && SeedCivilianId >= 0)
+    {
+        Params += FString::Printf(TEXT(",\"seed_civilian_id\":%lld"), SeedCivilianId);
+    }
+    Params += TEXT("}");
+    return Params;
+}
+
 void UCivWsClient::SendRpc(const FString& Method, const FString& ParamsJsonObject)
 {
     if (!Socket.IsValid() || !bConnected)
@@ -185,7 +260,7 @@ void UCivWsClient::HandleMessage(const FString& Text)
         else if (
             Method
             && (Method->Contains(TEXT("spawn")) || *Method == TEXT("sim.place_voxel")
-                || *Method == TEXT("sim.damage")))
+                || *Method == TEXT("sim.damage") || *Method == TEXT("sim.god_action")))
         {
             RequestSnapshot();
         }

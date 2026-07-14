@@ -25,6 +25,8 @@ $required = @(
     'Source\CivShowEditor.Target.cs',
     'Source\CivShow\CivWsClient.cpp',
     'Source\CivShow\CivShowGameMode.cpp',
+    'Source\CivShow\CivChunkOverlayActor.cpp',
+    'Source\CivShow\CivF3d0ChunkMesh.cpp',
     'Source\Civis\rust-shim\Cargo.toml',
     'Source\Civis\lib\civis_unreal_ffi.lib'
 )
@@ -35,6 +37,11 @@ foreach ($rel in $required) {
 
 & (Join-Path $PSScriptRoot 'build.ps1') -SkipUe | Out-Host
 Check 'rust-shim build.ps1 -SkipUe' ($LASTEXITCODE -eq 0)
+
+Push-Location (Join-Path $Root 'Source\Civis\rust-shim')
+cargo test --quiet 2>&1 | Out-Host
+Check 'rust-shim f3d0 unit tests' ($LASTEXITCODE -eq 0)
+Pop-Location
 
 & (Join-Path $PSScriptRoot 'detect-ue.ps1') | Out-Host
 if ($LASTEXITCODE -eq 0) {

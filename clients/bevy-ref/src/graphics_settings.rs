@@ -91,8 +91,8 @@ impl BackendPref {
 
     fn label(self) -> &'static str {
         match self {
-            Self::Auto => "Auto",
-            Self::DX12 => "DX12",
+            Self::Auto => "Auto (recommended)",
+            Self::DX12 => "DirectX 12 Ultimate",
             Self::Vulkan => "Vulkan",
         }
     }

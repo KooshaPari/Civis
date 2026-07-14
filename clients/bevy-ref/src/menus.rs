@@ -554,11 +554,13 @@ fn draw_world_setup(
     state: Option<Res<State<AppState>>>,
     mut params: ResMut<WorldSetupParams>,
     mut command: ResMut<MenuCommand>,
+    mut seed_edit: Local<Option<String>>,
 ) {
     let Some(state) = state else {
         return;
     };
     if *state.get() != AppState::WorldSetup {
+        *seed_edit = None;
         return;
     }
     let Ok(ctx) = contexts.ctx_mut() else {
@@ -592,10 +594,11 @@ fn draw_world_setup(
                         ui.add_space(16.0);
 
                         ui.label(egui::RichText::new("World seed").color(DIM).small());
-                        let mut seed_text = format!("{:016X}", params.seed);
+                        let seed_text = seed_edit
+                            .get_or_insert_with(|| format!("{:016X}", params.seed));
                         if ui
                             .add(
-                                egui::TextEdit::singleline(&mut seed_text)
+                                egui::TextEdit::singleline(seed_text)
                                     .desired_width(220.0)
                                     .hint_text("hex seed"),
                             )
@@ -614,6 +617,7 @@ fn draw_world_setup(
                                     ^ 0xC1F1_5EED_u128)
                                     as u64)
                                     .wrapping_mul(0x9E37_79B9_7F4A_7C15);
+                                *seed_text = format!("{:016X}", params.seed);
                             }
                         });
                         ui.add_space(10.0);
@@ -939,23 +943,14 @@ fn menu_button(ui: &mut egui::Ui, label: &str) -> egui::Response {
     ui.add(btn)
 }
 
-fn ui_png_exists(stem: &str) -> bool {
-    let path = format!("{}/assets/ui/{stem}.png", env!("CARGO_MANIFEST_DIR"));
-    std::path::Path::new(&path).exists()
-}
-
 fn load_main_menu_title_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let mut assets = MainMenuTitleAssets::default();
-    if ui_png_exists("title-bg") {
-        assets.background = Some(asset_server.load("ui/title-bg.png"));
-    }
-    if ui_png_exists("logo") {
-        assets.logo = Some(asset_server.load("ui/logo.png"));
-    }
-    if ui_png_exists("wordmark") {
-        assets.wordmark = Some(asset_server.load("ui/wordmark.png"));
-    }
-    commands.insert_resource(assets);
+    // Always request via AssetServer; draw_main_menu falls back to text when
+    // handles fail to resolve (shipped builds must not depend on CARGO_MANIFEST_DIR).
+    commands.insert_resource(MainMenuTitleAssets {
+        background: Some(asset_server.load("ui/title-bg.png")),
+        logo: Some(asset_server.load("ui/logo.png")),
+        wordmark: Some(asset_server.load("ui/wordmark.png")),
+    });
 }
 
 fn live_stream_has_content(scene: &LiveStreamScene) -> bool {

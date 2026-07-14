@@ -1018,9 +1018,12 @@ impl GameSettings {
         }
     }
 
-    /// Serialize and write to [`SETTINGS_PATH`], and sync render-engine env.
+    /// Serialize and write to [`SETTINGS_PATH`].
+    ///
+    /// Does not mutate process env here — wgpu/backend selection must be applied
+    /// before adapter search via [`Self::apply_boot_render_engine`] (or a
+    /// restart). Concurrent env mutation from Bevy UI schedules is undefined.
     pub fn save(&self) {
-        self.graphics.render_engine.apply_to_env();
         match ron::ser::to_string_pretty(self, ron::ser::PrettyConfig::default()) {
             Ok(text) => {
                 if let Err(e) = std::fs::write(SETTINGS_PATH, text) {

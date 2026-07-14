@@ -216,7 +216,7 @@ impl Chronicle {
     pub fn by_agent(&self, agent: LegendEntityId) -> Vec<&ChronicleEntry> {
         self.entries
             .iter()
-            .filter(|e| e.participants.iter().any(|p| *p == agent))
+            .filter(|e| e.participants.contains(&agent))
             .collect()
     }
 

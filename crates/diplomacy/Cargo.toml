@@ -14,3 +14,4 @@ civ-legends = { path = "../legends" }
 
 [dev-dependencies]
 proptest = "1.11"
+serde_json = "1"

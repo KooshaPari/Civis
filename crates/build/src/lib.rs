@@ -260,7 +260,8 @@ pub struct BuildingGraph {
 pub use tiers::{
     building_type_min_era, building_type_unlocked, clustered_parcel_offset, culture_id_from_traits,
     default_architecture_tile_sets, era_gated_demand_signals, era_index_from_pop_tech,
-    facade_for_emergence, wealth_permille_from_stocks, BiomeStyleTag, EmergentStyleKey,
+    facade_for_emergence, facade_histogram_l1, settlement_cluster_centroid,
+    wealth_permille_from_stocks, BiomeStyleTag, EmergentStyleKey,
 };
 
 impl BuildingGraph {

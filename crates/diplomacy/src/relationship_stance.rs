@@ -183,21 +183,12 @@ pub enum StanceConfigError {
 /// History is capped at [`HISTORY_LIMIT`] entries to keep memory bounded;
 /// the projection to [`RelationStance`] only depends on `value`, so history
 /// is audit-only.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct Opinion {
     /// Current opinion value, in `[-opinion_max, opinion_max]`.
     pub value: i32,
     /// Bounded history of the most recent events as `(delta)` (signed).
     pub history: Vec<i32>,
-}
-
-impl Default for Opinion {
-    fn default() -> Self {
-        Self {
-            value: 0,
-            history: Vec::new(),
-        }
-    }
 }
 
 impl Opinion {

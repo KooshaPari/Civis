@@ -113,7 +113,7 @@ impl RelationDrivers {
     /// shared enemies and trade *warm*, border friction *cools*, culture
     /// pushes either way. The weighted sum is clamped to the unit range.
     pub fn score(&self) -> f32 {
-        let raw = 0.35 * self.shared_enemy + 0.35 * self.trade - 0.40 * self.border_friction
+        let raw = 0.40 * self.shared_enemy + 0.40 * self.trade - 0.40 * self.border_friction
             + 0.30 * self.culture_similarity;
         raw.clamp(-1.0, 1.0)
     }

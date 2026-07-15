@@ -29,9 +29,9 @@
 //! worse than conceding. Higher risk → more willing to grant a concession
 //! toward the other party's reservation. Concessions are always
 //! **monotonically non-decreasing** with respect to *gap to reservation*
-//! — i.e. each round's `gap` (reservation − offer) is ≤ the previous
-//! round's gap, until the parties reach agreement (`offer ≥ reservation`)
-//! or exhaust the round budget (`max_rounds`).
+//! — i.e. each round's nearest `gap` (reservation − offer) is ≤ the
+//! previous round's gap, until either party reaches agreement (`offer ≥
+//! reservation`) or exhausts the round budget (`max_rounds`).
 //!
 //! This is the classic Zeuthen/Rubinstein alternating-offers pattern,
 //! instantiated in deterministic integer arithmetic so that scripted
@@ -175,7 +175,8 @@ pub struct ConcessionRound {
     pub party_a_offer: u32,
     /// Party B's offer *after* this round.
     pub party_b_offer: u32,
-    /// `max(reservation - offer)` for both parties, after this round.
+    /// The smaller `reservation - offer` distance across both parties,
+    /// after this round. Zero means at least one offer is acceptable.
     /// Monotonic non-increasing across rounds.
     pub gap: u32,
 }
@@ -220,8 +221,8 @@ impl ConcessionOutcome {
 ///    explicit input in [`NegotiationState::risk_of_conflict`]).
 /// 2. The *lower*-risk party — the one whose impasse is cheaper — is
 ///    **willing to concede** first. Concession amount =
-///    `ceil((gap_to_reservation / 2) * risk_of_conceding_party)`, where
-///    `risk_of_conceding_party` is the other party's risk of conflict
+///    `ceil((gap_to_reservation / 2) * risk_of_responder)`, where
+///    `risk_of_responder` is the other party's risk of conflict
 ///    (i.e. the probability *the responder* assigns to walking away).
 ///    The half-gap floors in the "no double-concession" guarantee: at
 ///    most one party's offer moves per round, so `gap` is monotone.
@@ -245,9 +246,9 @@ impl ConcessionOutcome {
 /// ## Acceptance condition
 ///
 /// A round in which `gap == 0` (i.e. one party's offer has reached or
-/// exceeded the other's reservation) is recorded as the closing
-/// acceptance round — `conceder: None`, the agreed level is the lower
-/// of the two offers (which by construction is ≥ the reservation).
+/// exceeded its reservation) is recorded as the closing acceptance
+/// round. The agreed level is the offer that satisfied its reservation;
+/// if both did, the lower accepted offer wins.
 ///
 /// FR-CIV-DIPLO-004: monotonic concession rounds.
 pub fn run_concession_rounds(
@@ -263,9 +264,8 @@ pub fn run_concession_rounds(
 
     let mut trace = Vec::with_capacity(max_rounds as usize + 1);
 
-    // Initial gap is the larger of the two parties' reservation-to-offer
-    // distances; whichever party has the bigger gap is the harder
-    // negotiator and is the one the other side must concede toward.
+    // Initial gap is the nearest reservation-to-offer distance. Either
+    // party can close the negotiation by reaching its reservation.
     let mut round_idx: u32 = 0;
     let mut gap = current_gap(a, b);
 
@@ -295,10 +295,10 @@ pub fn run_concession_rounds(
         // Decide who concedes: the party with the *lower* risk of
         // conflict (cheaper to them if the negotiation collapses). If
         // both risks tie, fall back to choosing party A for determinism.
-        let (conceder_is_a, conceder_risk) = if a.risk_of_conflict() <= b.risk_of_conflict() {
-            (true, a.risk_of_conflict())
+        let (conceder_is_a, responder_risk) = if a.risk_of_conflict() <= b.risk_of_conflict() {
+            (true, b.risk_of_conflict())
         } else {
-            (false, b.risk_of_conflict())
+            (false, a.risk_of_conflict())
         };
 
         // Concession amount: ceil((gap / 2) * other_party_risk). The
@@ -308,7 +308,7 @@ pub fn run_concession_rounds(
         // the more they accommodate. Risk is multiplied as a fraction
         // in `[0, 1]`.
         let half_gap = gap.div_ceil(2).max(1);
-        let scaled = scaled_concession(half_gap, conceder_risk);
+        let scaled = scaled_concession(half_gap, responder_risk);
         let target_offer = if conceder_is_a {
             a.offer.saturating_add(scaled).min(a.reservation)
         } else {
@@ -340,8 +340,7 @@ pub fn run_concession_rounds(
         });
 
         // Acceptance: gap closed. One of the offers has met or
-        // exceeded the other's reservation; record a terminal
-        // acceptance round if the caller wants it and return.
+        // exceeded its reservation; return the terminal state.
         if gap == 0 {
             return ConcessionOutcome {
                 outcome: OutcomeKind::Accepted {
@@ -365,23 +364,24 @@ pub fn run_concession_rounds(
 /* Helpers                                                              */
 /* ------------------------------------------------------------------ */
 
-/// Maximum gap across the two parties: the *max* of each party's
-/// (reservation − offer) distance. Whichever party is farther from its
-/// reservation is the harder negotiator; the gap is named after the
-/// "max of the two distances" so the trace monotonically non-increases
-/// only when at least one party's offer moves.
+/// Distance to the nearest acceptable offer: the *minimum* of each
+/// party's `(reservation - offer)` distance. Either party can close the
+/// negotiation by satisfying its own structured reservation threshold.
 fn current_gap(a: NegotiationState, b: NegotiationState) -> u32 {
     let gap_a = a.reservation.saturating_sub(a.offer);
     let gap_b = b.reservation.saturating_sub(b.offer);
-    gap_a.max(gap_b)
+    gap_a.min(gap_b)
 }
 
-/// The agreed level when both parties' offers have crossed the
-/// other's reservation: the smaller of the two offers (since each offer
-/// must be ≥ the other's reservation, the lower of the two still
-/// satisfies both floors).
+/// The offer that satisfied its structured reservation threshold. If
+/// both offers are acceptable, the lower accepted offer wins.
 fn agreed_level(a: NegotiationState, b: NegotiationState) -> u32 {
-    a.offer.min(b.offer)
+    match (a.offer >= a.reservation, b.offer >= b.reservation) {
+        (true, true) => a.offer.min(b.offer),
+        (true, false) => a.offer,
+        (false, true) => b.offer,
+        (false, false) => unreachable!("agreement requires at least one acceptable offer"),
+    }
 }
 
 /// Compute `ceil(half_gap * risk)` as a `u32` concession amount with a
@@ -529,6 +529,20 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn fr_civ_diplo_004_party_b_offer_can_close_the_negotiation() {
+        let party_a = NegotiationState::new(f(12), 40, 0, 0.90);
+        let party_b = NegotiationState::new(f(13), 10, 9, 0.10);
+
+        let out = run_concession_rounds(&party_a, &party_b, 1);
+
+        assert_eq!(out.outcome, OutcomeKind::Accepted { terms: 10 });
+        assert_eq!(out.rounds, 1);
+        assert_eq!(out.trace[0].party_a_offer, 0);
+        assert_eq!(out.trace[0].party_b_offer, 10);
+        assert_eq!(out.trace[0].gap, 0);
     }
 
     /// FR-CIV-DIPLO-004: when both parties have low conflict-cost (low

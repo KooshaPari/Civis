@@ -1483,16 +1483,21 @@ mod tests {
     fn fr_civ_diplo_006_decision_signatures_have_no_text_input() {
         // Each line below is a *type ascription* to an exact function
         // pointer type. Any signature drift fails to compile.
-        let _f_accept: fn(i32) -> bool = decide_treaty_acceptance;
-        let _f_trust: fn(i32, i32) -> i32 = update_trust_score;
-        let _f_war: fn(i32) -> WarGoal = select_war_goal;
-        let _f_war_v2: fn(i32, WarExhaustion, i32, u32) -> WarGoal = select_war_goal_v2;
+        let f_accept: fn(i32) -> bool = decide_treaty_acceptance;
+        let f_trust: fn(i32, i32) -> i32 = update_trust_score;
+        let f_war: fn(i32) -> WarGoal = select_war_goal;
+        let f_war_v2: fn(i32, WarExhaustion, i32, u32) -> WarGoal = select_war_goal_v2;
 
-        // The underscore-prefixed bindings intentionally only enforce
-        // signatures. Comparing function addresses would be unsound: Rust
-        // does not guarantee that identical functions retain distinct or
-        // stable addresses across codegen units.
-        let _ = (_f_accept, _f_trust, _f_war, _f_war_v2);
+        // Exercise the typed bindings with representative structured
+        // inputs. The exact type ascriptions above are the compile-time
+        // signature guard; comparing code addresses is not portable.
+        assert!(f_accept(0));
+        assert_eq!(f_trust(10, -3), 7);
+        assert_eq!(f_war(-10), WarGoal::Total);
+        assert_eq!(
+            f_war_v2(-100, WarExhaustion(20_000), -50, 10_000),
+            WarGoal::Surrender
+        );
     }
 
     /// FR-CIV-DIPLO-006.

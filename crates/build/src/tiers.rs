@@ -196,7 +196,6 @@ pub fn clustered_parcel_offset(cluster_id: u64, parcel_index: u32, spacing: u32)
     let spacing = i64::from(spacing.max(4));
     let lane = parcel_index as i64;
     let ring = lane / 8 + 1;
-    let slot = (lane % 8) as usize;
     const DELTAS: [(i64, i64); 8] = [
         (1, 0),
         (1, 1),
@@ -207,11 +206,12 @@ pub fn clustered_parcel_offset(cluster_id: u64, parcel_index: u32, spacing: u32)
         (0, -1),
         (1, -1),
     ];
-    let (dx, dz) = DELTAS[slot];
     let hash = cluster_id
         .wrapping_mul(1_104_824_245)
         .wrapping_add(u64::from(parcel_index) * 1_664_527);
-    let jitter = (hash % 3) as i64 - 1;
+    let slot = (hash % 8) as usize;
+    let (dx, dz) = DELTAS[slot];
+    let jitter = ((hash >> 3) % 3) as i64 - 1;
     WorldCoord {
         x: dx * ring * spacing + jitter,
         y: 0,
@@ -226,7 +226,8 @@ pub fn default_architecture_tile_sets() -> Vec<TileSetProfile> {
     let mut id = 1_u16;
     for culture in 0_u16..4 {
         for era in 0_u16..=5 {
-            let facade = default_facade_for_era(era);
+            let mut facade = default_facade_for_era(era);
+            facade.name = format!("{}-culture-{culture}", facade.name);
             let wealth_bucket = 4_u8;
             sets.push(TileSetProfile {
                 id,

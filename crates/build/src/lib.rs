@@ -434,7 +434,7 @@ pub fn resolve_tile_set<'a>(
 
     if let Some(candidate) = tile_sets
         .iter()
-        .filter(|tile_set| tile_set.culture == vector.culture)
+        .filter(|tile_set| tile_set.culture == vector.culture && tile_set.era <= vector.era)
         .max_by_key(|tile_set| (tile_set.era, tile_set.wealth_bucket, tile_set.id))
     {
         return Some(candidate);

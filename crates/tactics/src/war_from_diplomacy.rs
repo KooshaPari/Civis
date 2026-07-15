@@ -10,8 +10,7 @@ pub const COMBAT_STANDING_DRAIN: i32 = -8;
 pub const RIVALRY_FRICTION_DRAIN: i32 = -3;
 
 /// Snapshot of an active war between a pair of polities.
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct WarState {
     /// The pair whose standing crossed the war threshold.
     pub pair: Pair,
@@ -42,7 +41,7 @@ pub fn check_war_onset(relation: &Relation, current_tick: u64) -> Option<WarStat
 /// Called each tick for pairs that remain unresolved rivals; returns the
 /// reduced standing so callers can decide whether to persist it.
 pub fn apply_rivalry_friction(standing: i32) -> i32 {
-    standing - RIVALRY_FRICTION_DRAIN
+    standing + RIVALRY_FRICTION_DRAIN
 }
 
 /// Convert a slice of [`CombatEngagement`]s into [`InteractionEvent::Combat`]
@@ -109,7 +108,7 @@ mod tests {
         let standing = 10;
         let drained = apply_rivalry_friction(standing);
         assert!(drained < standing);
-        assert_eq!(drained, standing - RIVALRY_FRICTION_DRAIN);
+        assert_eq!(drained, standing + RIVALRY_FRICTION_DRAIN);
     }
 
     #[test]

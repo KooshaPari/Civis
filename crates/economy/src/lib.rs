@@ -10,24 +10,25 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-pub mod allocation;
+mod allocation;
 mod allocator;
-pub mod currency_trust;
+mod currency_trust;
 mod extraction;
 mod institution;
-pub mod market;
-pub mod prices;
-pub mod shocks;
-pub mod specialization;
+mod market;
+mod prices;
+mod shocks;
+mod specialization;
 mod stocks;
-pub mod tax_policy;
-pub mod trade;
+mod tax_policy;
+mod trade;
 mod trade_flow;
 mod trade_routes;
 
 pub use allocation::{
-    allocate_by_priority, allocate_with, AllocationEngine, AllocationRegime, CapitalistAllocator,
-    JouleAllocator, LaborCapacityAllocator, PlannedAllocator, PriorityTier,
+    allocate_by_priority, allocate_with, subsistence_first_allocate, AgentNeed, AllocationEngine,
+    AllocationOutcome, AllocationRegime, CapitalistAllocator, GoodId as AllocationGoodId,
+    JouleAllocator, LaborCapacityAllocator, NeedKind, PlannedAllocator, PriorityTier,
 };
 pub use allocator::{Allocator, Bid, CancelledOrder, Offer};
 pub use currency_trust::{acceptance, step_currency_trust, CurrencyTrust, CurrencyTrustOutcome};
@@ -41,15 +42,19 @@ pub use institution::{
     INSTITUTION_TREASURY,
 };
 pub use market::{
-    settlement_trade_flow_from_supply_demand, GoodId, MarketState, MultiGoodMarket, Order,
-    OrderBook, SettlementTradeFlow, SettlementTradeFlowInput, Side, Trade,
+    settlement_trade_flow, settlement_trade_flow_from_supply_demand, GoodId, MarketState,
+    MultiGoodMarket, Order, OrderBook, SettlementTradeFlow, SettlementTradeFlowInput, Side, Trade,
     DEFAULT_SMOOTHING_FACTOR,
 };
+pub use prices::{compute_price, update_cluster_prices, ClusterId, PriceState};
+pub use shocks::{apply_shock, MarketShock};
+pub use specialization::{update_specialization, SpecializationProfile};
 pub use stocks::{
     apply_trade, comparative_advantage, deficit, propose_trade, step_stocks, surplus, trade_gain,
     Good, ProductionProfile, Stocks, TradeOffer, GOODS,
 };
 pub use tax_policy::{apply_tax_policy, TaxPolicy, TaxPolicyOutcome};
+pub use trade::{compute_trade_flows, TradeFlow};
 pub use trade_flow::{
     complementary_round_trips, complementary_routes, ComplementaryTradeFlow, SettlementFlow,
 };

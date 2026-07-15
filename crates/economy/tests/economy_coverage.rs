@@ -7,9 +7,72 @@
 //!   4. `MultiGoodMarket::with_ttl` — custom TTL respected by `clear_all`
 
 use civ_economy::{
-    step, verify_ledger_conservation, EconomyState, GoodId, LedgerEntry, LedgerInvariantError,
-    MultiGoodMarket, Order, Side, ACCOUNT_CONSUMPTION,
+    apply_shock, compute_price, compute_trade_flows, settlement_trade_flow,
+    settlement_trade_flow_from_supply_demand, step, trade_gain, update_cluster_prices,
+    update_specialization, verify_ledger_conservation, EconomyState, Good, GoodId, LedgerEntry,
+    LedgerInvariantError, MarketShock, MultiGoodMarket, Order, PriceState, ProductionProfile,
+    Settlement, SettlementTradeFlowInput, Side, SpecializationProfile, Stocks, ACCOUNT_CONSUMPTION,
 };
+use std::collections::BTreeMap;
+
+#[test]
+fn emergent_economy_surfaces_compose_from_the_public_api() {
+    let mut supplier_stocks = Stocks::default();
+    supplier_stocks.add(Good::Food, 20);
+    let supplier_profile = ProductionProfile::new([10, 0, 0, 0, 0], [0; 5]);
+    let buyer_profile = ProductionProfile::new([0; 5], [10, 0, 0, 0, 0]);
+    assert!(trade_gain(&supplier_profile, &buyer_profile) > 0);
+
+    let mut prices = vec![
+        update_cluster_prices(1, &supplier_stocks),
+        PriceState {
+            cluster_id: 2,
+            prices: BTreeMap::from([(Good::Food, compute_price(1.0, 10.0, 1.0))]),
+        },
+    ];
+    apply_shock(
+        &mut prices,
+        &MarketShock::DemandShock {
+            cluster: 2,
+            good: Good::Food,
+            magnitude: 0.5,
+        },
+    );
+    assert!(!compute_trade_flows(&prices).is_empty());
+
+    let mut specialization = SpecializationProfile::new(1);
+    update_specialization(
+        &mut specialization,
+        &BTreeMap::from([(Good::Food, 2.0), (Good::Water, 1.0)]),
+    );
+    assert!(specialization.affinity(Good::Food) > 0.0);
+
+    let supplier = Settlement {
+        id: 1,
+        stocks: supplier_stocks,
+        profile: supplier_profile,
+        ..Settlement::default()
+    };
+    let buyer = Settlement {
+        id: 2,
+        profile: buyer_profile,
+        ..Settlement::default()
+    };
+    assert!(settlement_trade_flow(&supplier, &buyer, Good::Food, 90, 150, 4).is_some());
+
+    let flow = settlement_trade_flow_from_supply_demand(SettlementTradeFlowInput {
+        from_settlement: 1,
+        to_settlement: 2,
+        good: Good::Food,
+        supply: 10,
+        demand: 8,
+        low_price_cents: 90,
+        high_price_cents: 150,
+        smoothing_factor: 4,
+    })
+    .expect("positive supply, demand, and price gap should create a flow");
+    assert_eq!(flow.qty, 8);
+}
 
 // ---------------------------------------------------------------------------
 // 1. verify_ledger_conservation — UnbalancedEntry error variant

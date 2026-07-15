@@ -5,9 +5,11 @@
 //! partition sums never exceed the available budget.
 
 use civ_economy::{
-    allocate_by_priority, allocate_with, AllocationEngine, AllocationRegime, CapitalistAllocator,
-    JouleAllocator, PlannedAllocator, PriorityTier,
+    allocate_by_priority, allocate_with, subsistence_first_allocate, AgentNeed, AllocationEngine,
+    AllocationGoodId, AllocationRegime, CapitalistAllocator, JouleAllocator, NeedKind,
+    PlannedAllocator, PriorityTier,
 };
+use std::collections::BTreeMap;
 
 // ---------------------------------------------------------------------------
 // Given / When / Then helpers
@@ -27,6 +29,32 @@ fn given_a_joule_allocator() -> JouleAllocator {
 
 fn when_budget_is(budget: i64) -> i64 {
     budget
+}
+
+#[test]
+fn subsistence_allocator_is_available_to_external_consumers() {
+    let food: AllocationGoodId = 7;
+    let needs = [
+        AgentNeed {
+            agent_id: 1,
+            good: food,
+            kind: NeedKind::Luxury,
+            satisfaction: 0.0,
+        },
+        AgentNeed {
+            agent_id: 2,
+            good: food,
+            kind: NeedKind::Subsistence,
+            satisfaction: 0.5,
+        },
+    ];
+
+    let outcome = subsistence_first_allocate(&needs, BTreeMap::from([(food, 5)]));
+
+    assert_eq!(outcome.received.get(&2), Some(&5));
+    assert_eq!(outcome.received.get(&1), Some(&0));
+    assert_eq!(outcome.deprivation_counters.get(&1), None);
+    assert_eq!(outcome.unallocated.get(&food), Some(&0));
 }
 
 // ===========================================================================

@@ -10,17 +10,18 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-mod allocation;
+pub mod allocation;
 mod allocator;
-mod currency_trust;
+pub mod currency_trust;
 mod extraction;
 mod institution;
-mod market;
-mod prices;
-mod shocks;
-mod specialization;
+pub mod market;
+pub mod prices;
+pub mod shocks;
+pub mod specialization;
 mod stocks;
-mod tax_policy;
+pub mod tax_policy;
+pub mod trade;
 mod trade_flow;
 mod trade_routes;
 
@@ -39,14 +40,14 @@ pub use institution::{
     InstitutionLedgerError, InstitutionPosting, LedgerSide, INSTITUTION_MARKET,
     INSTITUTION_TREASURY,
 };
-pub use market::settlement_trade_flow_from_supply_demand;
 pub use market::{
-    GoodId, MarketState, MultiGoodMarket, Order, OrderBook, SettlementTradeFlow, Side, Trade,
+    settlement_trade_flow_from_supply_demand, GoodId, MarketState, MultiGoodMarket, Order,
+    OrderBook, SettlementTradeFlow, SettlementTradeFlowInput, Side, Trade,
     DEFAULT_SMOOTHING_FACTOR,
 };
 pub use stocks::{
-    apply_trade, comparative_advantage, deficit, propose_trade, step_stocks, surplus, Good,
-    ProductionProfile, Stocks, TradeOffer, GOODS,
+    apply_trade, comparative_advantage, deficit, propose_trade, step_stocks, surplus, trade_gain,
+    Good, ProductionProfile, Stocks, TradeOffer, GOODS,
 };
 pub use tax_policy::{apply_tax_policy, TaxPolicy, TaxPolicyOutcome};
 pub use trade_flow::{

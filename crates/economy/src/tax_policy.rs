@@ -101,7 +101,7 @@ impl TaxPolicy {
             0.0
         };
         let scaled = (clamped * 10_000.0).round();
-        self.compliance_bp = scaled.max(0.0).min(10_000.0) as i64;
+        self.compliance_bp = scaled.clamp(0.0, 10_000.0) as i64;
     }
 }
 
@@ -126,33 +126,38 @@ pub struct TaxPolicyOutcome {
 ///
 /// - rate ≤ 10 % ⇒ target = 1.0 (full compliance)
 /// - rate = 50 % ⇒ target = 0.50
-/// - rate = 100 % ⇒ target = 0.00
+/// - rate ≥ 90 % ⇒ target = 0.00
 ///
 /// The mapping is monotonic, continuous, and saturates — never below 0,
 /// never above 1. Stored in basis points (0–10_000).
 fn target_compliance_bp(rate_bp10: u32) -> i64 {
-    // Piecewise linear: full compliance up to 1_000 bp10 (10 %), then a
-    // straight line down to 0 at 10_000 bp10 (100 %).
+    // Piecewise linear: full compliance up to 10 %, then a calibrated
+    // decline. The 50 % anchor keeps half compliance; severe rates at or
+    // above 90 % collapse voluntary compliance entirely.
     const FULL_COMPLIANCE_BELOW: i64 = 1_000;
-    const RATE_MAX: i64 = 10_000;
+    const MID_RATE: i64 = 5_000;
+    const COLLAPSE_RATE: i64 = 9_000;
 
     let rate = rate_bp10 as i64;
     if rate <= FULL_COMPLIANCE_BELOW {
         return 10_000;
     }
-    // slope: -10_000 / (10_000 - 1_000) = -10/9 per bp10 step.
-    // target = 10_000 - (rate - 1_000) * 10_000 / (10_000 - 1_000)
-    let numerator = (rate - FULL_COMPLIANCE_BELOW) * 10_000;
-    let denominator = RATE_MAX - FULL_COMPLIANCE_BELOW;
-    let drop = numerator / denominator;
-    (10_000 - drop).max(0)
+    if rate <= MID_RATE {
+        let drop = (rate - FULL_COMPLIANCE_BELOW) * 5_000 / (MID_RATE - FULL_COMPLIANCE_BELOW);
+        return 10_000 - drop;
+    }
+    if rate < COLLAPSE_RATE {
+        let drop = (rate - MID_RATE) * 5_000 / (COLLAPSE_RATE - MID_RATE);
+        return (5_000 - drop).max(0);
+    }
+    0
 }
 
 /// Apply one tax-policy pass.
 ///
 /// Steps:
-/// 1. Move `compliance` toward `target_compliance(rate)` by 10 % of the gap per
-///    pass (so compliance reacts smoothly to rate changes — never instant).
+/// 1. Move `compliance` halfway toward `target_compliance(rate)` each pass,
+///    smoothing policy response without preserving confiscatory-rate revenue.
 /// 2. `tax = production * rate * compliance` (all integer, saturating).
 /// 3. `reported = production * compliance` (the visible share of production).
 /// 4. Accumulate `treasury`, `total_tax_collected`, `total_reported_production`,
@@ -164,9 +169,10 @@ pub fn apply_tax_policy(policy: &mut TaxPolicy, production: i64) -> TaxPolicyOut
 
     // 1. Update compliance toward the target implied by the current rate.
     let target_bp = target_compliance_bp(policy.rate_bp10);
-    // Move 10 % of the gap each pass → smoother than instant.
-    // delta_bp = (target - current) / 10
-    let delta_bp = (target_bp - policy.compliance_bp) / 10;
+    // Move half the gap each pass. Severe policy changes must affect actual
+    // compliance quickly enough that confiscatory rates cannot out-collect a
+    // moderate, broadly complied-with rate over the steady-state horizon.
+    let delta_bp = (target_bp - policy.compliance_bp) / 2;
     policy.compliance_bp = (policy.compliance_bp + delta_bp).clamp(0, 10_000);
 
     // 2. tax = production * rate * compliance  (all in fixed-point integers)

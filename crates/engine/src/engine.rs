@@ -4424,14 +4424,16 @@ impl Simulation {
                 let low = &settlements[low_idx];
                 let high = &settlements[high_idx];
                 let Some(flow) = settlement_trade_flow_from_supply_demand(
-                    low.id as u64,
-                    high.id as u64,
-                    Good::Food,
-                    low.supply,
-                    high.demand,
-                    low.price,
-                    high.price,
-                    civ_economy::DEFAULT_SMOOTHING_FACTOR,
+                    civ_economy::SettlementTradeFlowInput {
+                        from_settlement: low.id as u64,
+                        to_settlement: high.id as u64,
+                        good: Good::Food,
+                        supply: low.supply,
+                        demand: high.demand,
+                        low_price_cents: low.price,
+                        high_price_cents: high.price,
+                        smoothing_factor: civ_economy::DEFAULT_SMOOTHING_FACTOR,
+                    },
                 ) else {
                     continue;
                 };

@@ -192,6 +192,31 @@ pub struct SettlementTradeFlow {
     pub settled_price_cents: i64,
 }
 
+/// Aggregate settlement data used to derive one deterministic trade flow.
+///
+/// This keeps the public trade kernel stable as the engine acquires more
+/// settlement-level signals, and avoids positional-call ambiguity between the
+/// two price, quantity, and identity pairs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SettlementTradeFlowInput {
+    /// Settlement supplying the good at the lower price.
+    pub from_settlement: SettlementId,
+    /// Settlement demanding the good at the higher price.
+    pub to_settlement: SettlementId,
+    /// Good being transferred.
+    pub good: Good,
+    /// Available supplier surplus in whole units.
+    pub supply: i64,
+    /// Buyer deficit in whole units.
+    pub demand: i64,
+    /// Source settlement price in cents.
+    pub low_price_cents: i64,
+    /// Destination settlement price in cents.
+    pub high_price_cents: i64,
+    /// Positive integer damping factor for the price gap.
+    pub smoothing_factor: i64,
+}
+
 /// Compute a deterministic low-to-high price trade flow for a single good.
 ///
 /// The caller provides the current price estimates for both settlements. The
@@ -244,26 +269,21 @@ pub fn settlement_trade_flow(
 /// [`Settlement`] value. Used by the engine tick when it only has the
 /// settlement stock / population aggregates.
 pub fn settlement_trade_flow_from_supply_demand(
-    from_settlement: SettlementId,
-    to_settlement: SettlementId,
-    good: Good,
-    supply: i64,
-    demand: i64,
-    low_price_cents: i64,
-    high_price_cents: i64,
-    smoothing_factor: i64,
+    input: SettlementTradeFlowInput,
 ) -> Option<SettlementTradeFlow> {
-    if from_settlement == to_settlement || low_price_cents >= high_price_cents {
+    if input.from_settlement == input.to_settlement
+        || input.low_price_cents >= input.high_price_cents
+    {
         return None;
     }
-    let supply = supply.max(0);
-    let demand = demand.max(0);
+    let supply = input.supply.max(0);
+    let demand = input.demand.max(0);
     if supply <= 0 || demand <= 0 {
         return None;
     }
 
-    let smoothing_factor = smoothing_factor.max(1);
-    let price_gap = high_price_cents - low_price_cents;
+    let smoothing_factor = input.smoothing_factor.max(1);
+    let price_gap = input.high_price_cents - input.low_price_cents;
     let gap_limited_qty = (price_gap / smoothing_factor).max(1);
     let qty = supply.min(demand).min(gap_limited_qty);
     if qty <= 0 {
@@ -271,13 +291,13 @@ pub fn settlement_trade_flow_from_supply_demand(
     }
 
     Some(SettlementTradeFlow {
-        from_settlement,
-        to_settlement,
-        good,
+        from_settlement: input.from_settlement,
+        to_settlement: input.to_settlement,
+        good: input.good,
         qty,
-        low_price_cents,
-        high_price_cents,
-        settled_price_cents: (low_price_cents + high_price_cents) / 2,
+        low_price_cents: input.low_price_cents,
+        high_price_cents: input.high_price_cents,
+        settled_price_cents: (input.low_price_cents + input.high_price_cents) / 2,
     })
 }
 
@@ -532,15 +552,18 @@ mod tests {
     fn settlement_with_profile(
         id: u32,
         food_stock: i64,
-        production: [i64; 6],
-        consumption: [i64; 6],
+        production: [i64; 5],
+        consumption: [i64; 5],
     ) -> Settlement {
-        let mut settlement = Settlement::new(id, glam::IVec3::ZERO);
         let mut stocks = Stocks::default();
-        stocks.set(Good::Food, food_stock);
-        settlement.stocks = stocks;
-        settlement.profile = ProductionProfile::new(production, consumption);
-        settlement
+        stocks.add(Good::Food, food_stock);
+        Settlement {
+            id: u64::from(id),
+            name: String::new(),
+            position: (0, 0, 0),
+            stocks,
+            profile: ProductionProfile::new(production, consumption),
+        }
     }
 
     /// FR-CIV-MARKET — scarcity lifts price, surplus lowers it, and the
@@ -556,8 +579,8 @@ mod tests {
         assert!(scarce_before > DEFAULT_PRICE_CENTS);
         assert!(surplus_before < DEFAULT_PRICE_CENTS);
 
-        let supplier = settlement_with_profile(1, 12, [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]);
-        let buyer = settlement_with_profile(2, 0, [0, 0, 0, 0, 0, 0], [8, 0, 0, 0, 0, 0]);
+        let supplier = settlement_with_profile(1, 12, [0; 5], [0; 5]);
+        let buyer = settlement_with_profile(2, 0, [0; 5], [8, 0, 0, 0, 0]);
 
         let low_price = 90;
         let high_price = 150;
@@ -840,7 +863,7 @@ impl MultiGoodMarket {
 mod multigood_tests {
     use super::*;
 
-    /// 1. FR-ECON-003 — three bids (prices 10, 9, 8) and three asks (prices
+    /// FR-ECON-003: three bids (prices 10, 9, 8) and three asks (prices
     /// 1, 2, 3) on the same good, all unit qty, all at `placed_tick = 0`.
     /// After sort: bids desc = [10, 9, 8]; asks asc = [1, 2, 3]. Each bid
     /// crosses the next-cheapest ask, producing exactly 3 trades at
@@ -900,7 +923,7 @@ mod multigood_tests {
         assert!(book.asks.is_empty());
     }
 
-    /// 2. FR-ECON-003 — an empty book (or a good that was never seen) is a
+    /// FR-ECON-003: an empty book (or a good that was never seen) is a
     /// no-op: no panic, no mutation, no trades emitted, no book entry
     /// created (lazy initialization).
     #[test]
@@ -912,7 +935,7 @@ mod multigood_tests {
         assert!(!m.books.contains_key(&water));
     }
 
-    /// 3. FR-ECON-003 — orders older than `uncleared_ttl_ticks` are dropped.
+    /// FR-ECON-003: orders older than `uncleared_ttl_ticks` are dropped.
     /// With TTL = 1: an order placed at tick 0 is still in-window at tick 1
     /// (0 + 1 >= 1) but expired by tick 2 (0 + 1 < 2), so it must be gone
     /// from the book after a second clear.
@@ -942,7 +965,7 @@ mod multigood_tests {
         assert!(book.asks.is_empty());
     }
 
-    /// 4. FR-ECON-003 — when the best bid is strictly below the best ask,
+    /// FR-ECON-003: when the best bid is strictly below the best ask,
     /// no trades are emitted and both sides remain intact on the book.
     #[test]
     fn bid_price_below_ask_price_emits_no_trades() {
@@ -959,7 +982,7 @@ mod multigood_tests {
         assert_eq!(book.asks[0].qty, 5);
     }
 
-    /// 5. FR-ECON-003 — determinism. Two markets built from the same final
+    /// FR-ECON-003: determinism. Two markets built from the same final
     /// set of orders, populated in different insertion orders, must produce
     /// identical trade vectors. Sorting inside `clear_all` is the source of
     /// truth; insertion order is irrelevant. (The spec phrase "same book,
@@ -992,7 +1015,7 @@ mod multigood_tests {
         assert_eq!(ta.len(), 2);
     }
 
-    /// 6. FR-ECON-003 — partial fill. A bid of qty 10 crosses an ask of
+    /// FR-ECON-003: partial fill. A bid of qty 10 crosses an ask of
     /// qty 3 at compatible prices. The resulting trade is exactly qty 3
     /// (the smaller side); the bid is left with qty 7 on the book, the
     /// ask is fully consumed.
@@ -1025,7 +1048,7 @@ mod multigood_tests {
         assert!(book.asks.is_empty());
     }
 
-    /// 7. FR-ECON-003 — leftover order. A bid of qty 3 crosses an ask of
+    /// FR-ECON-003: leftover order. A bid of qty 3 crosses an ask of
     /// qty 10. Exactly one trade at qty 3 (the smaller side); the bid
     /// fully fills, the ask has qty 7 left on the book as a residual.
     #[test]

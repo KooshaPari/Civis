@@ -99,7 +99,6 @@ mod tests {
     use super::*;
     use crate::prices::PriceState;
     use crate::stocks::{Good, GOODS};
-    use std::collections::BTreeMap;
 
     fn baseline_price_state(cluster_id: ClusterId) -> PriceState {
         let prices = GOODS.iter().map(|&g| (g, 1.0_f32)).collect();

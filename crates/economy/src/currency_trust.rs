@@ -56,10 +56,6 @@ use serde::{Deserialize, Serialize};
 /// Fixed-point trust scale. 10_000 bp = 100 % trust.
 const TRUST_BP_MAX: i64 = 10_000;
 
-/// Below this per-tick price move (in basis points × 10 of the prior price),
-/// exchange is considered price-stable.
-const STABLE_INFLATION_BP10: i64 = 500; // 5 % per tick
-
 /// At or above this per-tick inflation rate the currency is treated as
 /// hyperinflating and trust collapses faster than the stable-exchange gain.
 const HYPER_INFLATION_BP10: i64 = 5_000; // 50 % per tick
@@ -131,8 +127,10 @@ impl CurrencyTrust {
     /// Construct with a custom starting trust in `[0.0, 1.0]`. Out-of-range
     /// values are clamped.
     pub fn with_initial_trust(currency_id: u32, initial_trust: f32) -> Self {
-        let mut t = Self::default();
-        t.currency_id = currency_id;
+        let mut t = Self {
+            currency_id,
+            ..Self::default()
+        };
         t.set_trust(initial_trust);
         t
     }
@@ -140,10 +138,11 @@ impl CurrencyTrust {
     /// Construct with explicit integer starting trust in basis points.
     /// Clamped to `[0, 10_000]`.
     pub fn with_initial_trust_bp(currency_id: u32, trust_bp: i64) -> Self {
-        let mut t = Self::default();
-        t.currency_id = currency_id;
-        t.trust_bp = trust_bp.clamp(0, TRUST_BP_MAX);
-        t
+        Self {
+            currency_id,
+            trust_bp: trust_bp.clamp(0, TRUST_BP_MAX),
+            ..Self::default()
+        }
     }
 
     /// Current trust as a fraction in `[0, 1]`.
@@ -278,7 +277,14 @@ pub fn step_currency_trust(
 
     // 1. Period-over-period moves.
     let inflation_bp10 = period_change_bp10(price, prev_price);
-    let supply_growth_bp10 = period_change_bp10(sup, prev_sup);
+    // A currency that begins issuing positive supply from a zero baseline has
+    // unbounded monetary expansion even though no finite percentage exists.
+    // Price initialization, by contrast, is neutral at its zero baseline.
+    let supply_growth_bp10 = if state.passes > 0 && prev_sup == 0 && sup > 0 {
+        i64::MAX
+    } else {
+        period_change_bp10(sup, prev_sup)
+    };
 
     // 2. Stable-exchange contribution (signed delta in bp).
     //
@@ -317,7 +323,7 @@ pub fn step_currency_trust(
         // Quadratic ramp in (excess / threshold). Saturating.
         // penalty = MAX_PASS_LOSS_BP * (excess/threshold)^2, capped at MAX_PASS_LOSS_BP.
         // Use integer arithmetic: penalty_num = MAX_PASS_LOSS_BP * excess^2 / threshold^2.
-        let excess = (excess_bp10 as i64).min(i64::MAX);
+        let excess = excess_bp10;
         let threshold = if price_hyper {
             HYPER_INFLATION_BP10
         } else {
@@ -591,9 +597,8 @@ mod tests {
         assert!(c.trust_bp() < 5_000);
     }
 
-    /// Mild inflation still allows a gain — the stability window is
-    /// STABLE_INFLATION_BP10 (5 %). At 5 % inflation the gain is roughly
-    /// half of the perfect-stability gain.
+    /// Mild inflation still allows a reduced gain. At 5 % inflation the gain
+    /// remains below the perfectly-stable case and above zero.
     #[test]
     fn mild_inflation_reduces_but_does_not_zero_gain() {
         let mut stable = CurrencyTrust::with_initial_trust_bp(1, 5_000);

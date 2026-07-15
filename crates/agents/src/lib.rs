@@ -1000,7 +1000,7 @@ mod tests {
     /// Covers FR-CIV-AGENTS-020 — spawn_civilian inserts all requested components.
     #[test]
     fn spawn_civilian_inserts_components() {
-        use civ_genetics::{spawn_genome_with_divergence, NamedSeed};
+        use civ_genetics::spawn_genome_with_divergence;
         use rand::SeedableRng;
         use rand_chacha::ChaCha8Rng;
 
@@ -1117,6 +1117,8 @@ mod tests {
                     shelter: 0.25,
                     safety: 0.25,
                     belonging: 0.25,
+                    rest: 0.0,
+                    health: 0.0,
                 },
                 lod: LodTier::Hot,
             },
@@ -1162,6 +1164,8 @@ mod tests {
                     shelter: 0.25,
                     safety: 0.25,
                     belonging: 0.25,
+                    rest: 0.0,
+                    health: 0.0,
                 },
                 lod: LodTier::Hot,
             },
@@ -1209,6 +1213,8 @@ mod tests {
                     shelter: 0.25,
                     safety: 0.25,
                     belonging: 0.25,
+                    rest: 0.0,
+                    health: 0.0,
                 },
                 lod: LodTier::Hot,
             },
@@ -1323,6 +1329,8 @@ mod tests {
             shelter: 0.25,
             safety: 0.75,
             belonging: 0.125,
+            rest: 0.0,
+            health: 0.0,
         };
         let weights = UtilityWeights {
             food: 2.0,
@@ -1344,6 +1352,8 @@ mod tests {
             shelter: 0.9,
             safety: 0.2,
             belonging: 0.3,
+            rest: 0.0,
+            health: 0.0,
         };
         let weights = UtilityWeights {
             food: 1.0,

@@ -2,23 +2,22 @@
 //!
 //! This module provides the deterministic simulation loop with entity component system.
 
-use civ_agents::culture::{cultural_distance, CultureProfile};
+use civ_agents::culture::CultureProfile;
 use civ_agents::{
-    cluster::cluster_by_colocation,
-    count_civilians,
-    daily_path::{pick_target, DailyPathDecision, Poi, PoiKind, PoiRegistry},
-    propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at, ActorVisualKind,
-    Alignment, Civilian as AgentCivilian, ClusterId, ClusterMember, CohortStats, DiplomacyMatrix,
-    DiplomacyOutcome, DiplomacySignal, LodTier, Needs, Position3d, Psyche, RelationKind,
-    SocialGraph, Tools, Wardrobe,
+    count_civilians, daily_path::DailyPathDecision, propagate_tools, propagate_wardrobe,
+    spawn_child_near, spawn_civilian_at, ActorVisualKind, Alignment, Civilian as AgentCivilian,
+    ClusterId, ClusterMember, CohortStats, DiplomacyOutcome, DiplomacySignal, LodTier, Needs,
+    Position3d, Psyche, RelationKind, SocialGraph, Tools, Wardrobe,
 };
 use civ_build::{Allocator, BuildingGraph, DemandSignals, Parcel, ParcelKind};
 use civ_diffusion::DiffusionParams;
 
+#[cfg(test)]
+use civ_economy::CapitalistAllocator;
 use civ_economy::{collect_taxes, Taxation};
 use civ_economy::{
-    settlement_trade_flow_from_supply_demand, AllocationEngine, CapitalistAllocator, EconomyState,
-    Good, LaborCapacityAllocator, MarketState, SettlementTradeFlow,
+    settlement_trade_flow_from_supply_demand, AllocationEngine, EconomyState, Good,
+    LaborCapacityAllocator, MarketState, SettlementTradeFlow,
 };
 use civ_genetics::sentience::{
     cognition_score, evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold,
@@ -28,7 +27,7 @@ use civ_agents::diplomacy::GriefAccumulator;
 use civ_audio::triggers::SfxTrigger;
 use civ_genetics::Dna;
 use civ_mod_host::ModHost;
-use civ_needs::{should_reproduce, Health as CivNeedsHealth, LifecycleLabel, LifecycleParams};
+use civ_needs::{Health as CivNeedsHealth, LifecycleParams};
 use civ_planet::worldgen::WorldgenConfig;
 use civ_planet::{
     compute_climate, compute_weather, defaults_earthlike, Climate, GeologyMap, MoonConfig,
@@ -49,8 +48,7 @@ use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
-use std::ops::{Deref, DerefMut};
+use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 
 /// Fixed-point decimal (16-bit signed integer + 16 fractional bits).
 /// Re-exported from the `fixed` crate; aliased here so callers can use
@@ -114,15 +112,9 @@ impl Default for ReligiousProfile {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Institution {
     pub level: u8,
-}
-
-impl Default for Institution {
-    fn default() -> Self {
-        Self { level: 0 }
-    }
 }
 
 #[must_use]
@@ -211,7 +203,7 @@ pub struct BuildSite {
 }
 
 impl BuildSite {
-    fn to_parcel(&self) -> Parcel {
+    fn to_parcel(self) -> Parcel {
         let kind = match self.kind {
             crate::spectator::BuildingKind::Residential => ParcelKind::Residential,
             crate::spectator::BuildingKind::Commercial => ParcelKind::Commercial,
@@ -273,17 +265,8 @@ fn default_sentience_profile() -> CognitionTraitProfile {
         vec![(0, 0.5), (1, 0.5), (2, 0.5), (8, 0.25)],
     )
 }
-use crate::culture::{
-    advance_faction_ideologies, culture_cooperation_signal, culture_openness_signal,
-    FactionIdeologyState,
-};
-use crate::emergence::{
-    accumulate_profile_diffusion, fabric_tier_signal, faction_religion_signals,
-    rollup_cluster_member_counts, settlement_actor_hardship_signal,
-    settlement_actors_by_settlement, settlement_centroid_position,
-    settlement_kinship_density_signal, settlement_religion_spread_edges,
-    settlement_trade_contact_signal,
-};
+use crate::culture::{advance_faction_ideologies, FactionIdeologyState};
+use crate::emergence::faction_religion_signals;
 use crate::lod::{should_tick_entity_with_policy, LodPolicy};
 use crate::policy::ControlSignals;
 use crate::policy::Policy;
@@ -456,12 +439,13 @@ fn resource_market_key(resource: ResourceType) -> &'static str {
 
 /// Ordered phase identifiers executed once per [`Simulation::tick`].
 ///
-/// CIV-0001 partial — engine-side deterministic transition. Server command intake
-/// and client broadcast are outside this crate. Keep in sync with the calls in
-/// [`Simulation::tick`].
+/// Engine-side deterministic phase schedule. Server command intake and client
+/// broadcast are outside this crate.
+///
+/// `Simulation::tick` dispatches every entry through `run_phase`; this list is
+/// therefore the authoritative ordering for engine-owned FR behavior.
 pub(crate) const PHASE_ORDER: &[&str] = &[
     "production",
-    "citizen_lifecycle",
     "military",
     "policy",
     "economy",
@@ -471,14 +455,21 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "voxel",
     "compact",
     "buildings",
-    "diffusion",
-    "emergence",
+    "disasters",
+    "daily_path",
+    "life",
+    "research",
+    "tech",
     "belief",
     "unrest",
     "cohesion",
+    "social_mood",
+    "economic_focus_pre",
+    "stratification",
     "institutions",
     "economic_focus",
     "emergence",
+    "emergence_events_close",
     "tutorial",
     "psyche_behavior",
     "culture",
@@ -486,6 +477,7 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "sentience",
     "diffusion",
     "audio",
+    "cluster",
     "victory_check",
 ];
 
@@ -1609,11 +1601,8 @@ fn compute_gini(wealths: &[i64]) -> f64 {
     if sum <= 0.0 {
         return 0.0;
     }
-    let mut cumulative = 0.0_f64;
     let mut weighted_sum = 0.0_f64;
     for (i, w) in sorted.iter().enumerate() {
-        cumulative += *w as f64;
-        // Lorenz curve: cumulative wealth / total wealth; index i+1 out of n.
         weighted_sum += (i as f64 + 1.0) * (*w as f64);
     }
     let gini = (2.0 * weighted_sum) / (n * sum) - (n + 1.0) / n;
@@ -1918,6 +1907,18 @@ fn propagate_cohort_tools_with_lod(
         current_fraction,
     }
 }
+
+impl Default for Simulation {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+type InstitutionState = (
+    BTreeMap<u32, u32>,
+    BTreeMap<u32, Institution>,
+    BTreeSet<(u32, u8, u8)>,
+);
 
 impl Simulation {
     /// Create new simulation with default state
@@ -2365,13 +2366,7 @@ impl Simulation {
 
     /// Snapshot institution state for full-state persistence.
     #[must_use]
-    pub(crate) fn saveable_institution_state(
-        &self,
-    ) -> (
-        BTreeMap<u32, u32>,
-        BTreeMap<u32, Institution>,
-        BTreeSet<(u32, u8, u8)>,
-    ) {
+    pub(crate) fn saveable_institution_state(&self) -> InstitutionState {
         (
             self.settlements.clone(),
             self.institutions.clone(),
@@ -2799,24 +2794,10 @@ impl Simulation {
         self.last_tick_unrest_events.clear();
         self.econ_focus_stability.clear();
 
-        // Phases in PHASE_ORDER (CIV-0001 partial)
-        self.phase_production();
-        self.phase_citizen_lifecycle();
-        self.phase_military();
-        self.phase_policy();
-        self.phase_economy();
-        self.phase_planet();
         self.diplomacy_events.clear();
-        self.phase_diplomacy();
-        self.phase_tactics();
-        self.phase_voxel();
-        self.phase_compact();
-        self.phase_buildings();
-        // NOTE: emergence phase arms (life/research/tech/belief/unrest/cohesion/social_mood/economic_focus_pre/stratification/institutions/economic_focus) removed 2026-06-25 — re-add each arm COUPLED with its impl (see method doc). Premature wiring caused E0599 workspace compile failure.
-        self.phase_diffusion();
-        self.phase_disasters();
-        self.phase_emergence();
-        self.phase_emergence_events_close();
+        for phase in PHASE_ORDER {
+            self.run_phase(phase);
+        }
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]
@@ -2860,6 +2841,7 @@ impl Simulation {
             "institutions" => crate::dormant_phases::phase_institutions(self),
             "economic_focus" => self.phase_economic_focus(),
             "emergence" => crate::emergence::phase_emergence(self),
+            "emergence_events_close" => self.phase_emergence_events_close(),
             "tutorial" => self.phase_tutorial(),
             "psyche_behavior" => self.phase_psyche_behavior(),
             "culture" => self.phase_culture(),
@@ -3219,7 +3201,7 @@ impl Simulation {
             .state
             .faction_treasury
             .values()
-            .map(|v| i64::from(v.to_bits()) / crate::SCALE)
+            .map(|v| v.to_bits() / crate::SCALE)
             .sum();
 
         let settlement_ids: Vec<u32> = self.settlements.keys().copied().collect();
@@ -3234,7 +3216,7 @@ impl Simulation {
             // energy_budget_joules) and any per-settlement food stocking.
             let pop = self.settlements[&sid];
             let stocked = self.settlement_food_stocked.get(&sid).copied().unwrap_or(0);
-            let food_surplus = economy_i.saturating_mul(pop as i64) + stocked as i64;
+            let food_surplus = economy_i.saturating_mul(pop as i64) + stocked;
             let food = food_surplus.max(0);
 
             let ideal = candidate_economic_focus(food, research_tier, belief, treasury_total);
@@ -3707,9 +3689,10 @@ impl Simulation {
     /// - borrow naming words for contact-connected factions so contact zones
     ///   reduce divergence.
     fn seeded_language_state(seed: [f32; 4]) -> LanguageState {
-        let mut state = LanguageState::default();
-        state.centroid = seed;
-        state
+        LanguageState {
+            centroid: seed,
+            ..Default::default()
+        }
     }
 
     fn place_name_meaning(faction_id: u32, place_id: u32) -> u64 {
@@ -4279,7 +4262,6 @@ impl Simulation {
                 .add_engagement(eng.shooter_faction, eng.target_faction);
         }
 
-        let member_counts = rollup_cluster_member_counts(&self.world);
         let mut faction_ids: Vec<u32> = self.state.factions.keys().copied().collect();
         faction_ids.sort_unstable();
         if faction_ids.len() < 2 {
@@ -4377,7 +4359,7 @@ impl Simulation {
             .prices()
             .get("food")
             .copied()
-            .unwrap_or_else(|| 1_000);
+            .unwrap_or(1_000);
         self.tick_settlement_trade_flows();
         self.tick_trade_routes();
         self.market_state.step(self.state.tick);
@@ -4511,8 +4493,8 @@ impl Simulation {
                 .map_or(Fixed::ZERO, |to_resources| {
                     resource_amount(to_resources, resource)
                 });
-            let supply_units = i64::from(supply.max(Fixed::ZERO).to_bits()) / crate::SCALE;
-            let demand_units = i64::from(demand.max(Fixed::ZERO).to_bits()) / crate::SCALE;
+            let supply_units = supply.max(Fixed::ZERO).to_bits() / crate::SCALE;
+            let demand_units = demand.max(Fixed::ZERO).to_bits() / crate::SCALE;
             self.market_state.apply_pressure(
                 resource_market_key(resource),
                 supply_units,
@@ -4746,8 +4728,6 @@ const FOOD_MARKET_PRESSURE_SCALE: i64 = 500_000;
 /// scarcity. Matches `MarketState::default()`'s food price.
 pub(crate) const FOOD_SCARCITY_BASELINE: i64 = 1_000;
 
-/// Tech unlock bits (irreversible, set-only).
-
 /// Discrete tech unlocks reached by a given research tier (set-only bitmask).
 fn tech_unlocks_for_tier(research_tier: u64) -> u64 {
     let mut bits = 0u64;
@@ -4840,8 +4820,8 @@ fn faction_wealth_scarcity_shadow(treasury: Fixed, resources: &Resources) -> i64
     const FOOD_COMFORT: i64 = 80;
     const FOOD_WEIGHT: i64 = 50;
 
-    let treasury_i = (i64::from(treasury.to_bits()) / crate::SCALE).max(0);
-    let food_i = (i64::from(resources.food.to_bits()) / crate::SCALE).max(0);
+    let treasury_i = (treasury.to_bits() / crate::SCALE).max(0);
+    let food_i = (resources.food.to_bits() / crate::SCALE).max(0);
     let comfort = TREASURY_COMFORT + FOOD_COMFORT * FOOD_WEIGHT;
     let wealth = treasury_i + food_i * FOOD_WEIGHT;
 
@@ -5256,7 +5236,7 @@ fn faction_treasury_spread(treasury: &HashMap<u32, Fixed>) -> i64 {
     let mut min = i64::MAX;
     let mut max = i64::MIN;
     for t in treasury.values() {
-        let v = i64::from(t.to_bits()) / crate::SCALE;
+        let v = t.to_bits() / crate::SCALE;
         min = min.min(v);
         max = max.max(v);
     }
@@ -5537,7 +5517,7 @@ pub fn awakening_belief_gain(awakenings_this_tick: usize) -> u64 {
 #[must_use]
 pub fn awakening_cohesion_gain(awakenings_this_tick: usize) -> i64 {
     let raw = (awakenings_this_tick as i64).saturating_mul(COHESION_PER_AWAKENING);
-    raw.min(MAX_AWAKENING_COHESION_PER_TICK).max(0)
+    raw.clamp(0, MAX_AWAKENING_COHESION_PER_TICK)
 }
 
 /// FR-CIV-GENETICS / FR-CIV-LEGENDS: pure gain fn for the awakening -> belief
@@ -5697,7 +5677,6 @@ mod tests {
             PHASE_ORDER,
             &[
                 "production",
-                "citizen_lifecycle",
                 "military",
                 "policy",
                 "economy",
@@ -5707,14 +5686,21 @@ mod tests {
                 "voxel",
                 "compact",
                 "buildings",
-                "diffusion",
-                "emergence",
+                "disasters",
+                "daily_path",
+                "life",
+                "research",
+                "tech",
                 "belief",
                 "unrest",
                 "cohesion",
+                "social_mood",
+                "economic_focus_pre",
+                "stratification",
                 "institutions",
                 "economic_focus",
                 "emergence",
+                "emergence_events_close",
                 "tutorial",
                 "psyche_behavior",
                 "culture",
@@ -5722,6 +5708,8 @@ mod tests {
                 "sentience",
                 "diffusion",
                 "audio",
+                "cluster",
+                "victory_check",
             ]
         );
     }

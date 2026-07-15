@@ -350,14 +350,13 @@ pub fn faction_language_centroids(
         entry.1 += weight;
     }
     sums.into_iter()
-        .filter_map(|(faction_id, (sum, weight))| {
-            (weight > 0.0).then(|| {
-                let mut centroid = [0.0; 4];
-                for i in 0..4 {
-                    centroid[i] = (sum[i] / weight).clamp(0.0, 1.0);
-                }
-                (faction_id, centroid)
-            })
+        .filter(|(_, (_, weight))| *weight > 0.0)
+        .map(|(faction_id, (sum, weight))| {
+            let mut centroid = [0.0; 4];
+            for i in 0..4 {
+                centroid[i] = (sum[i] / weight).clamp(0.0, 1.0);
+            }
+            (faction_id, centroid)
         })
         .collect()
 }
@@ -497,9 +496,8 @@ pub fn faction_religion_signals(
         entry.1 += weight;
     }
     sums.into_iter()
-        .filter_map(|(faction_id, (sum, weight))| {
-            (weight > 0.0).then(|| (faction_id, (sum / weight).clamp(0.0, 1.0)))
-        })
+        .filter(|(_, (_, weight))| *weight > 0.0)
+        .map(|(faction_id, (sum, weight))| (faction_id, (sum / weight).clamp(0.0, 1.0)))
         .collect()
 }
 
@@ -526,7 +524,6 @@ impl Simulation {
 
         self.emergence_ensure_genomes();
         self.emergence_culture();
-        self.emergence_language_lexicon(self.state.tick);
         self.emergence_social();
         self.emergence_psyche();
         self.emergence_accrue_cluster_beliefs();
@@ -709,8 +706,10 @@ impl Simulation {
         }
     }
 
-    /// Coin settlement/faction/event lexemes from drifted phoneme inventories.
-    fn emergence_language_lexicon(&mut self, tick: u64) {
+    /// Coin settlement, faction, and event lexemes from drifted phoneme inventories.
+    ///
+    /// This is public so explicit simulation drivers can advance language independently.
+    pub fn emergence_language_lexicon(&mut self, tick: u64) {
         let seed = self.state.rng_seed;
         for (cluster_id, profile) in &self.emergence.cluster_cultures {
             let lexicon = self

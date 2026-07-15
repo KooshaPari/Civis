@@ -1097,6 +1097,28 @@ mod tests {
         assert_eq!(primitive, primitive_stable);
     }
 
+    /// FR-CIV-ARCH-007 — same-culture wealth fallback never selects a future-era tile-set.
+    #[test]
+    fn fr_arch_007_canonical_same_culture_wealth_fallback_never_selects_future_era() {
+        let tile_sets = sample_tile_sets();
+        let vector = CultureEraWealthVector::new(0, 1, 20_000);
+        assert!(tile_sets
+            .iter()
+            .filter(|tile_set| tile_set.culture == vector.culture)
+            .all(|tile_set| tile_set.wealth_bucket != vector.wealth_bucket()));
+
+        let selected = resolve_tile_set(&vector, &tile_sets, ArchitectureMode::Canonical, None)
+            .expect("same-culture fallback should select an available-era tile-set");
+
+        assert_eq!(selected.id, 1);
+        assert!(
+            selected.era <= vector.era,
+            "canonical fallback selected future era {} for vector era {}",
+            selected.era,
+            vector.era
+        );
+    }
+
     /// FR-CIV-ARCH-008 — measurable facade histogram tracks culture vector divergence.
     #[test]
     fn fr_arch_008_facade_histogram_tracks_culture_vector_divergence() {

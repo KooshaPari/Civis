@@ -183,7 +183,7 @@ pub enum StanceConfigError {
 /// History is capped at [`HISTORY_LIMIT`] entries to keep memory bounded;
 /// the projection to [`RelationStance`] only depends on `value`, so history
 /// is audit-only.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct Opinion {
     /// Current opinion value, in `[-opinion_max, opinion_max]`.
     pub value: i32,

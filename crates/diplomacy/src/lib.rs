@@ -1488,29 +1488,11 @@ mod tests {
         let _f_war: fn(i32) -> WarGoal = select_war_goal;
         let _f_war_v2: fn(i32, WarExhaustion, i32, u32) -> WarGoal = select_war_goal_v2;
 
-        // The function pointers themselves are pinned to avoid "unused
-        // variable" warnings under `deny(dead_code)` lints. The
-        // twin-trait-equality check below also asserts that each pinned
-        // pointer is exactly equal to the corresponding function symbol
-        // (any drift in signature forces a different `fn` type, the
-        // equality would still hold, but the previous `let` binding
-        // would already have failed).
-        assert_eq!(
-            _f_accept as fn(i32) -> bool,
-            decide_treaty_acceptance as fn(i32) -> bool
-        );
-        assert_eq!(
-            _f_trust as fn(i32, i32) -> i32,
-            update_trust_score as fn(i32, i32) -> i32
-        );
-        assert_eq!(
-            _f_war as fn(i32) -> WarGoal,
-            select_war_goal as fn(i32) -> WarGoal
-        );
-        assert_eq!(
-            _f_war_v2 as fn(i32, WarExhaustion, i32, u32) -> WarGoal,
-            select_war_goal_v2 as fn(i32, WarExhaustion, i32, u32) -> WarGoal
-        );
+        // The underscore-prefixed bindings intentionally only enforce
+        // signatures. Comparing function addresses would be unsound: Rust
+        // does not guarantee that identical functions retain distinct or
+        // stable addresses across codegen units.
+        let _ = (_f_accept, _f_trust, _f_war, _f_war_v2);
     }
 
     /// FR-CIV-DIPLO-006.

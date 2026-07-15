@@ -1,16 +1,28 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "5066ab66365b0097858bda325491705cbf2253bb",
-  "created_at": "2026-07-08T22:59:04Z",
+  "git_sha": "1c3f390081edac0bf192dae18b82e3632a84ed1d",
+  "created_at": "2026-07-15T20:07:18Z",
   "runner": {
     "host": "unknown",
-    "rust": "rustc 1.95.0 (59807616e 2026-04-14) (Homebrew)"
+    "rust": "unknown"
   },
   "gates": {
-    "civis_3d_verify": {
+    "rust_fmt": {
       "status": "fail",
-      "detail": "187 | |         .all_agents()     | |         -^^^^^^^^^^ method not found in `Simulation`     | |_________|     |  error[E0624]: method `agent_entity` is private     --> crates/engine/tests/fr_psyche_behavior.rs:191:22      |  191 |     let entity = sim.agent_entity(agent_id).expect(\"agent entity\");      |                      ^^^^^^^^^^^^ private method      |     ::: crates/engine/src/engine.rs:2637:5      | 2637 |     pub(crate) fn agent_entity(&self, agent_id: u64) -> Option<Entity> {      |     ------------------------------------------------------------------ private method defined here  Some errors have detailed explanations: E0432, E0599, E0624. For more information about an error, try `rustc --explain E0432`. error: could not compile `civ-engine` (test \"fr_psyche_behavior\") due to 3 previous errors error: Recipe `civis-3d-scenario-check` failed on line 73 with exit code 101 "
+      "detail": "scripts/quality/emit-quality-manifest.sh: line 41: cargo: command not found "
+    },
+    "rust_clippy": {
+      "status": "fail",
+      "detail": "scripts/quality/emit-quality-manifest.sh: line 41: cargo: command not found "
+    },
+    "rust_test": {
+      "status": "fail",
+      "detail": "scripts/quality/emit-quality-manifest.sh: line 41: cargo: command not found "
+    },
+    "godot_test": {
+      "status": "fail",
+      "detail": "bash: cargo: command not found "
     },
     "web_test": {
       "status": "pass",
@@ -53,5 +65,5 @@
       "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     }
   },
-  "manifest_hash": "4fe4576ebcc97f89e0b3593e76f852d4833ce55291e0451b21d463cb547e9171"
+  "manifest_hash": "9a54f5e3898e520c50b7a6bbd4a54e7b76781ae5682f21452656f996492549da"
 }

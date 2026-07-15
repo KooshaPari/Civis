@@ -397,6 +397,10 @@ impl Simulation {
 
     /// Record positive unrest micro-activity for the current tick (v1
     /// bootstrap: one unit per positive global/faction unrest delta).
+    #[expect(
+        dead_code,
+        reason = "the phase scheduler owns the call site while this hook remains the metrics API"
+    )]
     pub(crate) fn record_unrest_micro_activity(&mut self, units: u32) {
         self.emergence_branching.last_tick_unrest_events = self
             .emergence_branching
@@ -428,6 +432,10 @@ impl Simulation {
     /// Take one emergence sample if the current tick is on a sample
     /// boundary (every [`EMERGENCE_SAMPLE_INTERVAL`] ticks), using an
     /// explicit CA grid for sampling.
+    #[expect(
+        dead_code,
+        reason = "CA-backed callers use this sampling hook outside the default voxel schedule"
+    )]
     pub(crate) fn sample_emergence_with_ca_grid(&mut self, grid: &CaGrid) -> bool {
         self.sample_emergence_with_source(Some(grid))
     }

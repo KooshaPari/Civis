@@ -265,7 +265,7 @@ fn default_sentience_profile() -> CognitionTraitProfile {
         vec![(0, 0.5), (1, 0.5), (2, 0.5), (8, 0.25)],
     )
 }
-use crate::culture::{advance_faction_ideologies, FactionIdeologyState};
+use crate::culture::{advance_faction_ideologies, FactionIdeologyInputs, FactionIdeologyState};
 use crate::emergence::faction_religion_signals;
 use crate::lod::{should_tick_entity_with_policy, LodPolicy};
 use crate::policy::ControlSignals;
@@ -3663,15 +3663,17 @@ impl Simulation {
         let prior = self.faction_ideologies.clone();
 
         self.faction_ideologies = advance_faction_ideologies(
-            self.state.tick,
-            &self.cluster_cultures,
-            &dominant,
-            &cluster_member_counts,
-            &contacts,
-            &self.climate,
-            &religion_by_faction,
-            &faction_ages,
-            &prior,
+            FactionIdeologyInputs {
+                tick: self.state.tick,
+                cluster_cultures: &self.cluster_cultures,
+                dominant: &dominant,
+                cluster_member_counts: &cluster_member_counts,
+                settlement_contacts: &contacts,
+                climate: &self.climate,
+                religion_by_faction: &religion_by_faction,
+                faction_ages: &faction_ages,
+                prior: &prior,
+            },
             &mut self.rng,
         );
         self.rollup_emergent_settlements(&cluster_member_counts);

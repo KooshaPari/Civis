@@ -32,6 +32,20 @@ pub struct FactionIdeologyState {
 
 pub type CultureSnapshot = FactionIdeologyState;
 
+/// Borrowed state required to advance faction ideologies for one simulation tick.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct FactionIdeologyInputs<'a> {
+    pub tick: u64,
+    pub cluster_cultures: &'a BTreeMap<u64, CultureProfile>,
+    pub dominant: &'a BTreeMap<u64, u32>,
+    pub cluster_member_counts: &'a BTreeMap<u64, u32>,
+    pub settlement_contacts: &'a BTreeSet<(u64, u64)>,
+    pub climate: &'a Climate,
+    pub religion_by_faction: &'a BTreeMap<u32, f32>,
+    pub faction_ages: &'a BTreeMap<u32, CivAge>,
+    pub prior: &'a BTreeMap<u32, FactionIdeologyState>,
+}
+
 impl Default for FactionIdeologyState {
     fn default() -> Self {
         Self {
@@ -160,46 +174,47 @@ pub(crate) fn faction_isolation_pressure(
 /// Advance per-faction ideology from cluster culture, environment, history,
 /// religion and era state.
 pub(crate) fn advance_faction_ideologies(
-    tick: u64,
-    cluster_cultures: &BTreeMap<u64, CultureProfile>,
-    dominant: &BTreeMap<u64, u32>,
-    cluster_member_counts: &BTreeMap<u64, u32>,
-    settlement_contacts: &BTreeSet<(u64, u64)>,
-    climate: &Climate,
-    religion_by_faction: &BTreeMap<u32, f32>,
-    faction_ages: &BTreeMap<u32, CivAge>,
-    prior: &BTreeMap<u32, FactionIdeologyState>,
+    inputs: FactionIdeologyInputs<'_>,
     rng: &mut impl Rng,
 ) -> BTreeMap<u32, FactionIdeologyState> {
-    let base_profiles =
-        cluster_values_for_faction(cluster_cultures, dominant, cluster_member_counts);
+    let base_profiles = cluster_values_for_faction(
+        inputs.cluster_cultures,
+        inputs.dominant,
+        inputs.cluster_member_counts,
+    );
 
     let mut next = BTreeMap::new();
     for (faction_id, (base_values, base_norms)) in base_profiles {
-        let prior_state = prior
+        let prior_state = inputs
+            .prior
             .get(&faction_id)
             .copied()
             .unwrap_or_else(FactionIdeologyState::default);
 
         let isolation = faction_isolation_pressure(
             faction_id,
-            dominant,
-            cluster_member_counts,
-            settlement_contacts,
+            inputs.dominant,
+            inputs.cluster_member_counts,
+            inputs.settlement_contacts,
         );
 
-        let history_age = ((tick as f32) / 600.0).fract();
-        let climate_push =
-            climate.day_phase * 0.10 + climate.moon_phase * 0.02 + climate.tide_offset.abs() * 0.04;
-        let religion = clamp01(*religion_by_faction.get(&faction_id).unwrap_or(&0.5));
-        let era = faction_ages.get(&faction_id).map(era_weight).unwrap_or(0.0);
+        let history_age = ((inputs.tick as f32) / 600.0).fract();
+        let climate_push = inputs.climate.day_phase * 0.10
+            + inputs.climate.moon_phase * 0.02
+            + inputs.climate.tide_offset.abs() * 0.04;
+        let religion = clamp01(*inputs.religion_by_faction.get(&faction_id).unwrap_or(&0.5));
+        let era = inputs
+            .faction_ages
+            .get(&faction_id)
+            .map(era_weight)
+            .unwrap_or(0.0);
 
         let mut values = [0.0f32; DIM];
         let mut norms = [0.0f32; DIM];
         for i in 0..DIM {
             let drift_strength =
                 (0.02 + isolation * 0.035 + history_age * 0.01).min(MAX_DRIFT_RATE);
-            let noise = (rng.gen_range(-0.5f32..0.5f32) * 2.0 * drift_strength);
+            let noise = rng.gen_range(-0.5f32..0.5f32) * 2.0 * drift_strength;
             let toward_base = (base_values[i] - prior_state.values[i]) * (0.30 + climate_push);
             let tradition_pull = prior_state.tradition * 0.35;
             let religion_pull = (religion - 0.5) * 0.04;
@@ -212,7 +227,7 @@ pub(crate) fn advance_faction_ideologies(
                     + history_age * 0.01,
             );
 
-            let norm_noise = (rng.gen_range(-0.5f32..0.5f32) * 0.015 * (1.0 - 0.65 * isolation));
+            let norm_noise = rng.gen_range(-0.5f32..0.5f32) * 0.015 * (1.0 - 0.65 * isolation);
             let toward_norm = (base_norms[i] - prior_state.norms[i]) * 0.22;
             norms[i] =
                 clamp01(prior_state.norms[i] + toward_norm * (0.5 + climate_push) + norm_noise);
@@ -252,6 +267,7 @@ pub(crate) fn advance_faction_ideologies(
     next
 }
 
+#[cfg(test)]
 fn cooperation_signal_from_state(a: &FactionIdeologyState, b: &FactionIdeologyState) -> f32 {
     let norm_distance = cultural_distance(a.norms, b.norms);
     let value_distance = cultural_distance(a.values, b.values);
@@ -259,10 +275,12 @@ fn cooperation_signal_from_state(a: &FactionIdeologyState, b: &FactionIdeologySt
     ((a.cooperation + b.cooperation) * 0.5 * bounded).clamp(0.0, 1.0)
 }
 
+#[cfg(test)]
 fn openness_signal_from_state(a: &FactionIdeologyState, b: &FactionIdeologyState) -> f32 {
     ((a.openness + b.openness) * 0.5).clamp(0.0, 1.0)
 }
 
+#[cfg(test)]
 pub(crate) fn culture_cooperation_signal(
     ideologies: &BTreeMap<u32, FactionIdeologyState>,
     faction_a: u32,
@@ -277,6 +295,7 @@ pub(crate) fn culture_cooperation_signal(
     cooperation_signal_from_state(a, b)
 }
 
+#[cfg(test)]
 pub(crate) fn culture_openness_signal(
     ideologies: &BTreeMap<u32, FactionIdeologyState>,
     faction_a: u32,
@@ -306,7 +325,7 @@ mod tests {
 
     #[test]
     fn two_isolated_factions_diverge_values_over_time() {
-        let mut profiles = BTreeMap::from([
+        let profiles = BTreeMap::from([
             (1_u64, CultureProfile::new([0.15, 0.14, 0.13, 0.12])),
             (2_u64, CultureProfile::new([0.85, 0.84, 0.83, 0.82])),
         ]);
@@ -320,16 +339,19 @@ mod tests {
         let mut rng = ChaCha8Rng::seed_from_u64(7);
         let mut prior = BTreeMap::new();
 
+        let climate = build_environment(0);
         let first = advance_faction_ideologies(
-            0,
-            &profiles,
-            &dominant,
-            &members,
-            &contacts,
-            &build_environment(0),
-            &religion,
-            &era,
-            &prior,
+            FactionIdeologyInputs {
+                tick: 0,
+                cluster_cultures: &profiles,
+                dominant: &dominant,
+                cluster_member_counts: &members,
+                settlement_contacts: &contacts,
+                climate: &climate,
+                religion_by_faction: &religion,
+                faction_ages: &era,
+                prior: &prior,
+            },
             &mut rng,
         );
 
@@ -337,16 +359,19 @@ mod tests {
         let snapshot_b0 = first.get(&1).expect("faction 1 should exist").values;
 
         for tick in 1..48 {
+            let climate = build_environment(tick);
             prior = advance_faction_ideologies(
-                tick,
-                &profiles,
-                &dominant,
-                &members,
-                &contacts,
-                &build_environment(tick),
-                &religion,
-                &era,
-                &prior,
+                FactionIdeologyInputs {
+                    tick,
+                    cluster_cultures: &profiles,
+                    dominant: &dominant,
+                    cluster_member_counts: &members,
+                    settlement_contacts: &contacts,
+                    climate: &climate,
+                    religion_by_faction: &religion,
+                    faction_ages: &era,
+                    prior: &prior,
+                },
                 &mut rng,
             );
         }

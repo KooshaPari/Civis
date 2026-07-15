@@ -66,7 +66,7 @@ pub fn check_outcome(sim: &Simulation) -> GameOutcome {
         .map(|v| v.to_num::<f64>().max(0.0))
         .sum();
     if total_treasury > 0.0 {
-        for (_, wealth) in &state.faction_treasury {
+        for wealth in state.faction_treasury.values() {
             let share = wealth.to_num::<f64>().max(0.0) / total_treasury;
             if share >= TYRANNY_POPULATION_SHARE && tick >= TYRANNY_TICKS_THRESHOLD {
                 return GameOutcome::Defeat {

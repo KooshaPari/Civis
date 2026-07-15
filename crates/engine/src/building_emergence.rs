@@ -7,7 +7,7 @@ use civ_agents::{ClusterMember, Position3d};
 use civ_build::{
     clustered_parcel_offset, culture_id_from_traits, default_architecture_tile_sets,
     era_gated_demand_signals, era_index_from_pop_tech, facade_for_emergence,
-    wealth_permille_from_stocks, BiomeStyleTag, BuildingGraph, EmergentStyleKey,
+    wealth_permille_from_stocks, BiomeStyleTag, EmergentStyleKey,
 };
 use civ_planet::{BiomeKind, GeologyMap};
 use civ_voxel::WorldCoord;
@@ -179,7 +179,7 @@ pub fn apply_emergence_facades(
 /// Era-gated demand wrapper used by `phase_buildings`.
 #[must_use]
 pub fn emergence_demand_signals(
-    sim: &Simulation,
+    _sim: &Simulation,
     raw: civ_build::DemandSignals,
     era: u16,
 ) -> civ_build::DemandSignals {

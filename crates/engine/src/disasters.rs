@@ -150,7 +150,7 @@ impl Simulation {
         // threshold (research -> fewer disasters). Computed before the weather
         // borrow so the immutable grow iteration holds no `&self` method call.
         let wildfire_temp_threshold =
-            wildfire_ignition_temp_fp(WILDFIRE_TEMP_FP, self.research_tier());
+            wildfire_ignition_temp_fp(season_wildfire_temp as i32, self.research_tier());
         let mut wildfires = Vec::new();
         let mut quakes = Vec::new();
         let mut floods = Vec::new();
@@ -240,10 +240,7 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) -> 
     let radius = radius_for(kind);
     let affected = positions_in_radius(pos, radius);
     let mut terrain_cells = 0u32;
-    let mut casualties = 0u32;
-    let mut impact = (0i32, 0u32, 0.0_f32);
-
-    match kind {
+    let impact = match kind {
         DisasterKind::Meteor => {
             sim.push_voxel_write(pos, LAVA);
             for (i, cell) in affected.iter().enumerate() {
@@ -258,25 +255,24 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) -> 
                 };
                 sim.push_voxel_write(*cell, material);
             }
-            impact = hit_agents(
+            hit_agents(
                 sim,
                 pos,
                 radius,
                 DisasterEffect::new(0.28, 0.35, 0.25, 0.55, true),
-            );
-            casualties = impact.1;
+            )
         }
         DisasterKind::Flood => {
             for cell in &affected {
                 sim.push_voxel_write(*cell, WATER);
             }
             terrain_cells = affected.len() as u32;
-            impact = hit_agents(
+            hit_agents(
                 sim,
                 pos,
                 radius,
                 DisasterEffect::new(0.10, 0.42, 0.20, 0.25, false),
-            );
+            )
         }
         DisasterKind::Quake => {
             for (i, cell) in affected.iter().enumerate() {
@@ -284,12 +280,12 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) -> 
                 sim.push_voxel_write(*cell, material);
             }
             terrain_cells = affected.len() as u32;
-            impact = hit_agents(
+            hit_agents(
                 sim,
                 pos,
                 radius,
                 DisasterEffect::new(0.16, 0.30, 0.24, 0.20, false),
-            );
+            )
         }
         DisasterKind::Wildfire => {
             for (i, cell) in affected.iter().enumerate() {
@@ -297,12 +293,12 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) -> 
                 sim.push_voxel_write(*cell, material);
             }
             terrain_cells = affected.len() as u32;
-            impact = hit_agents(
+            hit_agents(
                 sim,
                 pos,
                 radius,
                 DisasterEffect::new(0.18, 0.46, 0.38, 0.20, true),
-            );
+            )
         }
         DisasterKind::Storm => {
             for (i, cell) in affected.iter().enumerate() {
@@ -310,30 +306,27 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) -> 
                 sim.push_voxel_write(*cell, material);
             }
             terrain_cells = affected.len() as u32;
-            impact = hit_agents(
+            hit_agents(
                 sim,
                 pos,
                 radius,
                 DisasterEffect::new(0.14, 0.20, 0.22, 0.12, false),
-            );
+            )
         }
-        DisasterKind::Plague => {
-            impact = hit_agents(
-                sim,
-                pos,
-                radius * 2,
-                DisasterEffect::new(0.05, 0.10, 0.18, 0.06, false),
-            );
-        }
-        DisasterKind::Drought => {
-            impact = hit_agents(
-                sim,
-                pos,
-                radius,
-                DisasterEffect::new(0.12, 0.20, 0.42, 0.08, false),
-            );
-        }
-    }
+        DisasterKind::Plague => hit_agents(
+            sim,
+            pos,
+            radius * 2,
+            DisasterEffect::new(0.05, 0.10, 0.18, 0.06, false),
+        ),
+        DisasterKind::Drought => hit_agents(
+            sim,
+            pos,
+            radius,
+            DisasterEffect::new(0.12, 0.20, 0.42, 0.08, false),
+        ),
+    };
+    let casualties = impact.1;
 
     let mut resource_delta = apply_disaster_resource_loss(kind, terrain_cells);
     let mut resources = sim.state.resources.clone();

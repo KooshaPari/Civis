@@ -86,7 +86,7 @@ pub fn tick_demographics(d: &mut Demographics, food_per_capita: f32, disease_fac
         births += group.count as f32 * group.birth_rate;
     }
 
-    let food_bonus = food_per_capita.max(0.0).min(1.5);
+    let food_bonus = food_per_capita.clamp(0.0, 1.5);
     let newborns = round_population(births * fertility_pressure * food_bonus);
     next_groups[0] = next_groups[0].saturating_add(newborns);
 

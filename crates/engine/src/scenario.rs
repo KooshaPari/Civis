@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::engine::{LifecycleCounters, Simulation, WorldState};
+use crate::engine::{Simulation, WorldState};
 use crate::gameplay::ScenarioObjective;
 use crate::policy::policy_from_kind;
 use crate::policy::PolicyInput;
@@ -497,6 +497,7 @@ pub fn preset_names() -> &'static [&'static str] {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::engine::LifecycleCounters;
 
     #[test]
     fn baseline_yaml_parses() {

@@ -115,7 +115,7 @@ pub fn glyphs_for_language(
     phoneme_count: usize,
     desired_glyphs: usize,
 ) -> Vec<Glyph> {
-    let glyph_count = desired_glyphs.max(4).min(256);
+    let glyph_count = desired_glyphs.clamp(4, 256);
     let mut glyphs = Vec::with_capacity(glyph_count);
 
     for glyph_id in 0..glyph_count {

@@ -32,7 +32,7 @@ use civ_legends::{
 };
 use hecs::World;
 
-use crate::culture::advance_faction_ideologies;
+use crate::culture::{advance_faction_ideologies, FactionIdeologyInputs};
 use civ_needs::Needs as LifeNeeds;
 #[cfg(test)]
 use civ_planet::GeologyMap;
@@ -678,15 +678,17 @@ impl Simulation {
         };
         let rng = self.rng_mut();
         self.faction_ideologies = advance_faction_ideologies(
-            tick,
-            &cluster_cultures,
-            &dominant,
-            &cluster_member_counts,
-            &contacts,
-            &climate,
-            &faction_religion_signal,
-            &era_faction_ages,
-            &faction_ideologies,
+            FactionIdeologyInputs {
+                tick,
+                cluster_cultures: &cluster_cultures,
+                dominant: &dominant,
+                cluster_member_counts: &cluster_member_counts,
+                settlement_contacts: &contacts,
+                climate: &climate,
+                religion_by_faction: &faction_religion_signal,
+                faction_ages: &era_faction_ages,
+                prior: &faction_ideologies,
+            },
             rng,
         );
         self.faction_aggression.clear();

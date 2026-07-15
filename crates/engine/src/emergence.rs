@@ -5,7 +5,7 @@
 //! legends ingest → civ-ai naming. Surfaced via [`EmergenceFeedEvent`] and getters
 //! on [`Simulation`].
 
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use civ_agents::culture::{drift_populations, ContactEdge, CultureProfile};
 use civ_agents::language::{name_from_lexicon, EvolvedLexicon, LexemeKind, PhonemeInventory};
@@ -21,20 +21,24 @@ use civ_agents::{
 use civ_economy::SettlementTradeFlow;
 use civ_genetics::{
     sentience::{evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold},
-    spawn_genome_with_divergence, Dna, DnaClass, SeedDefinition, SeedLibrary, SeedSet,
+    Dna, DnaClass,
 };
+#[cfg(test)]
+use civ_genetics::{SeedDefinition, SeedLibrary};
 use civ_legends::{
-    AggregateKey, ClusterId, EntityKind, EntityRef, Epoch, EpochDigest, EventKind, IngestOutcome,
-    LegendEdge, LegendEntityId, LegendsConfig, LegendsWorker, NameRef, RawSimEvent, Role, Saga,
-    SagaGraph, SimRuntimeId, SourceCrate, QUERY_API_VERSION,
+    AggregateKey, ClusterId, EntityKind, Epoch, EpochDigest, EventKind, IngestOutcome, LegendEdge,
+    LegendEntityId, LegendsConfig, LegendsWorker, NameRef, RawSimEvent, Role, Saga, SagaGraph,
+    SimRuntimeId, SourceCrate, QUERY_API_VERSION,
 };
-use civ_planet::GeologyMap;
-use civ_voxel::FIXED_SCALE;
 use hecs::World;
 
-use crate::culture::{advance_faction_ideologies, faction_isolation_pressure};
+use crate::culture::advance_faction_ideologies;
 use civ_needs::Needs as LifeNeeds;
+#[cfg(test)]
+use civ_planet::GeologyMap;
 use civ_species::express;
+#[cfg(test)]
+use civ_voxel::FIXED_SCALE;
 use hecs::Entity;
 use rand::Rng;
 use rand::SeedableRng;
@@ -163,6 +167,7 @@ impl EmergenceState {
 ///
 /// The fallback keeps the function total: callers never need to special-case
 /// the no-match path.
+#[cfg(test)]
 fn select_seed_for_position<'a>(
     seed_library: &'a SeedLibrary,
     active_seed: Option<&'a SeedDefinition>,
@@ -175,7 +180,7 @@ fn select_seed_for_position<'a>(
     // Stable iteration order: sort by id so the same world always picks the
     // same seed on the same biome (HashMap iteration is unordered).
     let mut candidates: Vec<(&String, &SeedDefinition)> = seed_library.iter().collect();
-    candidates.sort_by(|(a, _), (b, _)| a.cmp(b));
+    candidates.sort_by_key(|(id, _)| *id);
     for (_, seed) in candidates {
         if seed
             .spawn_biome_affinity
@@ -215,7 +220,7 @@ pub(crate) fn settlement_dominant_factions(
     }
 
     let mut dominant = BTreeMap::new();
-    for (&cluster_id, _) in cluster_member_counts {
+    for &cluster_id in cluster_member_counts.keys() {
         let fallback = u32::try_from(cluster_id).unwrap_or(u32::MAX);
         let mut best_faction = fallback;
         let mut best_count = 0u32;
@@ -249,10 +254,8 @@ fn settlement_centroids(world: &World) -> BTreeMap<u64, (f32, f32, f32, u32)> {
     centroids
 }
 
-pub(crate) fn settlement_centroid_position(
-    world: &World,
-    settlement_id: u64,
-) -> Option<Position3d> {
+/// Return the average world position for one settlement cluster.
+pub fn settlement_centroid_position(world: &World, settlement_id: u64) -> Option<Position3d> {
     let (x, y, z, count) = settlement_centroids(world).get(&settlement_id).copied()?;
     if count == 0 {
         return None;
@@ -301,7 +304,8 @@ pub(crate) fn settlement_contact_pairs(
     pairs
 }
 
-pub(crate) fn diplomacy_faction_pairs_from_settlement_contact(
+/// Map inter-settlement contact pairs to ordered pairs of their dominant factions.
+pub fn diplomacy_faction_pairs_from_settlement_contact(
     dominant: &BTreeMap<u64, u32>,
     contacts: &BTreeSet<(u64, u64)>,
 ) -> BTreeSet<(u32, u32)> {
@@ -313,20 +317,18 @@ pub(crate) fn diplomacy_faction_pairs_from_settlement_contact(
         let Some(&right_faction) = dominant.get(&right) else {
             continue;
         };
-        if left_faction == right_faction {
-            continue;
+        if left_faction != right_faction {
+            pairs.insert((
+                left_faction.min(right_faction),
+                left_faction.max(right_faction),
+            ));
         }
-        let pair = if left_faction < right_faction {
-            (left_faction, right_faction)
-        } else {
-            (right_faction, left_faction)
-        };
-        pairs.insert(pair);
     }
     pairs
 }
 
-pub(crate) fn faction_language_centroids(
+/// Aggregate settlement language vectors into population-weighted faction centroids.
+pub fn faction_language_centroids(
     cluster_cultures: &BTreeMap<u64, CultureProfile>,
     dominant: &BTreeMap<u64, u32>,
     cluster_member_counts: &BTreeMap<u64, u32>,
@@ -347,22 +349,21 @@ pub(crate) fn faction_language_centroids(
         }
         entry.1 += weight;
     }
-
-    let mut out = BTreeMap::new();
-    for (faction_id, (sum, weight)) in sums {
-        if weight <= 0.0 {
-            continue;
-        }
-        let mut centroid = [0.0; 4];
-        for i in 0..4 {
-            centroid[i] = (sum[i] / weight).clamp(0.0, 1.0);
-        }
-        out.insert(faction_id, centroid);
-    }
-    out
+    sums.into_iter()
+        .filter_map(|(faction_id, (sum, weight))| {
+            (weight > 0.0).then(|| {
+                let mut centroid = [0.0; 4];
+                for i in 0..4 {
+                    centroid[i] = (sum[i] / weight).clamp(0.0, 1.0);
+                }
+                (faction_id, centroid)
+            })
+        })
+        .collect()
 }
 
-pub(crate) fn settlement_actors_by_settlement(world: &World) -> BTreeMap<u64, Vec<u64>> {
+/// List civilian ids by settlement, with stable ordering for deterministic callers.
+pub fn settlement_actors_by_settlement(world: &World) -> BTreeMap<u64, Vec<u64>> {
     let mut out: BTreeMap<u64, Vec<u64>> = BTreeMap::new();
     for (_, (civilian, member)) in world.query::<(&Civilian, &ClusterMember)>().iter() {
         out.entry(member.cluster.0).or_default().push(civilian.id);
@@ -373,9 +374,10 @@ pub(crate) fn settlement_actors_by_settlement(world: &World) -> BTreeMap<u64, Ve
     out
 }
 
-pub(crate) fn settlement_actor_hardship_signal(world: &World, settlement_id: u64) -> f32 {
-    let mut sum = 0.0f32;
-    let mut count = 0.0f32;
+/// Return the average civilian hardship for a settlement.
+pub fn settlement_actor_hardship_signal(world: &World, settlement_id: u64) -> f32 {
+    let mut sum = 0.0;
+    let mut count = 0.0;
     for (_, (civilian, member, needs)) in world
         .query::<(&Civilian, &ClusterMember, &LifeNeeds)>()
         .iter()
@@ -400,9 +402,10 @@ pub(crate) fn settlement_actor_hardship_signal(world: &World, settlement_id: u64
     }
 }
 
-pub(crate) fn settlement_kinship_density_signal(world: &World, settlement_id: u64) -> f32 {
-    let mut kin_ties = 0.0f32;
-    let mut ties = 0.0f32;
+/// Return the fraction of positive social ties within a settlement.
+pub fn settlement_kinship_density_signal(world: &World, settlement_id: u64) -> f32 {
+    let mut kin_ties = 0.0;
+    let mut ties = 0.0;
     for (_, (civilian, member, graph)) in world
         .query::<(&Civilian, &ClusterMember, &SocialGraph)>()
         .iter()
@@ -424,16 +427,12 @@ pub(crate) fn settlement_kinship_density_signal(world: &World, settlement_id: u6
     }
 }
 
-pub(crate) fn settlement_trade_contact_signal(
-    flows: &[SettlementTradeFlow],
-    settlement_id: u64,
-) -> f32 {
-    let mut total = 0.0f32;
-    let mut count = 0.0f32;
+/// Return the mean incoming or outgoing trade quantity for a settlement.
+pub fn settlement_trade_contact_signal(flows: &[SettlementTradeFlow], settlement_id: u64) -> f32 {
+    let mut total = 0.0;
+    let mut count = 0.0;
     for flow in flows {
-        if u64::from(flow.from_settlement) == settlement_id
-            || u64::from(flow.to_settlement) == settlement_id
-        {
+        if flow.from_settlement == settlement_id || flow.to_settlement == settlement_id {
             total += flow.qty as f32;
             count += 1.0;
         }
@@ -445,11 +444,13 @@ pub(crate) fn settlement_trade_contact_signal(
     }
 }
 
-pub(crate) fn fabric_tier_signal(kinship_density: f32, hardship: f32) -> f32 {
+/// Combine kinship and hardship into a social-fabric strength signal.
+pub fn fabric_tier_signal(kinship_density: f32, hardship: f32) -> f32 {
     (kinship_density * (1.0 - hardship)).clamp(0.0, 1.0)
 }
 
-pub(crate) fn accumulate_profile_diffusion(
+/// Aggregate population-weighted language diffusion by dominant faction.
+pub fn accumulate_profile_diffusion(
     cluster_cultures: &BTreeMap<u64, CultureProfile>,
     dominant: &BTreeMap<u64, u32>,
     cluster_member_counts: &BTreeMap<u64, u32>,
@@ -472,7 +473,8 @@ pub(crate) fn settlement_religion_spread_edges(
     out
 }
 
-pub(crate) fn faction_religion_signals(
+/// Aggregate religion-profile strength into population-weighted faction signals.
+pub fn faction_religion_signals(
     profiles: &BTreeMap<u32, ReligiousProfile>,
     dominant: &BTreeMap<u64, u32>,
     cluster_member_counts: &BTreeMap<u64, u32>,
@@ -494,14 +496,11 @@ pub(crate) fn faction_religion_signals(
         entry.0 += signal * weight;
         entry.1 += weight;
     }
-
-    let mut out = BTreeMap::new();
-    for (faction_id, (sum, weight)) in sums {
-        if weight > 0.0 {
-            out.insert(faction_id, (sum / weight).clamp(0.0, 1.0));
-        }
-    }
-    out
+    sums.into_iter()
+        .filter_map(|(faction_id, (sum, weight))| {
+            (weight > 0.0).then(|| (faction_id, (sum / weight).clamp(0.0, 1.0)))
+        })
+        .collect()
 }
 
 /// Belief gained when a battle is recorded in the saga graph (collective awe/fear → faith).
@@ -517,10 +516,6 @@ const BELIEF_GAIN_FOUNDING: i64 = 20;
 const BELIEF_GAIN_LEGEND_DEATH: i64 = 15;
 
 impl Simulation {
-    pub(crate) fn default_emergence_state(seed: u64) -> EmergenceState {
-        EmergenceState::new(seed)
-    }
-
     /// MOAT emergence — genetics, culture, social, psyche, legends, civ-ai.
     ///
     /// Runs after [`Self::phase_life`] so needs/clusters are current.
@@ -531,6 +526,7 @@ impl Simulation {
 
         self.emergence_ensure_genomes();
         self.emergence_culture();
+        self.emergence_language_lexicon(self.state.tick);
         self.emergence_social();
         self.emergence_psyche();
         self.emergence_accrue_cluster_beliefs();
@@ -680,7 +676,7 @@ impl Simulation {
                 self.emergence.cluster_cultures.clone(),
                 self.era_progression.faction_ages.clone(),
                 self.faction_ideologies.clone(),
-                self.climate.clone(),
+                self.climate,
             )
         };
         let rng = self.rng_mut();
@@ -740,7 +736,7 @@ impl Simulation {
             .next()
             .map(|p| p.phonemes.clone())
             .unwrap_or_else(|| PhonemeInventory::seed_from(seed));
-        for (&faction_id, _) in &self.state.factions {
+        for &faction_id in self.state.factions.keys() {
             let fid = u64::from(faction_id);
             let lexicon = self.emergence.cluster_lexicons.entry(fid).or_default();
             let mut rng = ChaCha8Rng::seed_from_u64(seed ^ fid ^ 0xFAC1_0000);
@@ -1172,7 +1168,7 @@ impl Simulation {
                 self.emergence.push_feed(
                     tick,
                     "battle",
-                    format!("combat pulse recorded in saga graph"),
+                    "combat pulse recorded in saga graph",
                     Some(id),
                 );
                 self.record_legend_promotions(tick, &outcome.promoted, id);
@@ -1454,7 +1450,7 @@ impl Simulation {
                 let epoch = Epoch(epoch.unwrap_or_else(|| graph.config.epoch_of(tick).0));
                 result.epoch_digest = Some(graph.epoch_digest(epoch, None));
             }
-            "status" | _ => {}
+            _ => {}
         }
         result
     }
@@ -1526,7 +1522,8 @@ impl Simulation {
     }
 }
 
-pub(crate) fn phase_emergence(sim: &mut Simulation) {
+/// Execute the simulation's emergence phase through the module-level phase dispatcher.
+pub fn phase_emergence(sim: &mut Simulation) {
     sim.phase_emergence();
 }
 
@@ -2221,7 +2218,7 @@ mod coastal_flood_risk_tests {
 /// pressure score.
 pub fn naval_expansion(coastal_pop: f32, surplus: f32) -> f32 {
     let coastal = if coastal_pop.is_finite() {
-        coastal_pop.max(0.0).min(1.0)
+        coastal_pop.clamp(0.0, 1.0)
     } else {
         0.0
     };
@@ -2260,7 +2257,7 @@ pub fn urbanization_index(density: f32, surplus: f32, trade: f32) -> f32 {
         0.0
     };
     let trd = if trade.is_finite() {
-        trade.max(0.0).min(1.0)
+        trade.clamp(0.0, 1.0)
     } else {
         0.0
     };

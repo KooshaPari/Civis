@@ -12,11 +12,12 @@ use bevy::prelude::*;
 use bevy::state::app::StatesPlugin;
 use civ_bevy_ref::live_stream::LiveStreamScene;
 use civ_bevy_ref::menus::{
-    advance_worldgen_to_playing, consume_menu_commands, sync_app_state_with_game_mode, AppState,
-    GameUiMode, MainMenuCommand, MainMenuSaves, MenuCommand, WorldGenBoot, WorldSetupParams,
+    AppState, GameUiMode, MainMenuCommand, MainMenuSaves, MenuCommand, WorldGenBoot,
+    WorldSetupParams, advance_worldgen_to_playing, consume_menu_commands,
+    sync_app_state_with_game_mode,
 };
 use civ_bevy_ref::outcome_overlay::{
-    begin_player_session, end_player_session, OutcomeOverlayState, OutcomeSessionGate,
+    OutcomeOverlayState, OutcomeSessionGate, begin_player_session, end_player_session,
 };
 use civ_bevy_ref::settings_ui::{GameSettings, SettingsTab};
 
@@ -82,6 +83,22 @@ fn flush_state(app: &mut App) {
 fn app_state_defaults_to_main_menu() {
     let app = shell_smoke_app();
     assert_eq!(current_app_state(&app), AppState::MainMenu);
+}
+
+#[test]
+fn shipped_shell_backgrounds_are_present() {
+    let asset_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/ui");
+    for file in ["title-bg.png", "loading-bg.png"] {
+        let path = asset_root.join(file);
+        let metadata = std::fs::metadata(&path).unwrap_or_else(|error| {
+            panic!("missing shipped shell asset {}: {error}", path.display())
+        });
+        assert!(
+            metadata.len() > 1024,
+            "shipped shell asset is unexpectedly empty: {}",
+            path.display()
+        );
+    }
 }
 
 #[test]

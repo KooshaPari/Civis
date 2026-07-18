@@ -7,15 +7,15 @@ use crate::gpu_features::GpuCapabilities;
 use crate::live_attach::LiveAttachBridge;
 use crate::live_stream::LiveStreamScene;
 use crate::outcome_overlay::{
-    begin_player_session, end_player_session, outcome_modal_visible, OutcomeEscapeBlock,
-    OutcomeOverlayState, OutcomeSessionGate,
+    OutcomeEscapeBlock, OutcomeOverlayState, OutcomeSessionGate, begin_player_session,
+    end_player_session, outcome_modal_visible,
 };
 use crate::save_load_ui::SaveLoadPanel;
-use crate::settings_ui::{GameSettings, KeyBinding, ACTION_PAUSE_SIM};
-use crate::ui_theme::{GLASS_FILL, KC_ACCENT, CHIP_FILL};
+use crate::settings_ui::{ACTION_PAUSE_SIM, GameSettings, KeyBinding};
+use crate::ui_theme::{CHIP_FILL, GLASS_FILL, KC_ACCENT};
 use bevy::app::AppExit;
 use bevy::prelude::*;
-use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
+use bevy_egui::{EguiContexts, EguiPrimaryContextPass, egui};
 
 const WORLDGEN_PRESETS: [&str; 4] = [
     "single-race-ardani",
@@ -154,11 +154,13 @@ pub struct WorldGenBoot {
     pub elapsed: f32,
 }
 
-/// Optional rasterised main-menu title assets (PNG only; SVG sources are in PIPELINE.md).
+/// Rasterised shell artwork (PNG only; vector sources are documented in PIPELINE.md).
 #[derive(Resource, Default)]
 pub struct MainMenuTitleAssets {
     /// Full-menu background (`ui/title-bg.png`).
     pub background: Option<Handle<Image>>,
+    /// World-generation/loading background (`ui/loading-bg.png`).
+    pub loading_background: Option<Handle<Image>>,
     /// Logo mark (`ui/logo.png`).
     pub logo: Option<Handle<Image>>,
     /// Wordmark (`ui/wordmark.png`).
@@ -475,7 +477,7 @@ fn draw_main_menu(
     }
 
     egui::Area::new(egui::Id::new("main_menu_area"))
-        .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+        .anchor(egui::Align2::LEFT_CENTER, egui::vec2(72.0, 0.0))
         .order(egui::Order::Foreground)
         .show(ctx, |ui| {
             egui::Frame::NONE
@@ -592,10 +594,11 @@ fn draw_world_setup(
                         ui.add_space(16.0);
 
                         ui.label(egui::RichText::new("World seed").color(DIM).small());
-                        let mut seed_text = format!("{:016X}", params.seed);
+                        let seed_text =
+                            seed_edit.get_or_insert_with(|| format!("{:016X}", params.seed));
                         if ui
                             .add(
-                                egui::TextEdit::singleline(&mut seed_text)
+                                egui::TextEdit::singleline(seed_text)
                                     .desired_width(220.0)
                                     .hint_text("hex seed"),
                             )
@@ -614,6 +617,7 @@ fn draw_world_setup(
                                     ^ 0xC1F1_5EED_u128)
                                     as u64)
                                     .wrapping_mul(0x9E37_79B9_7F4A_7C15);
+                                *seed_text = format!("{:016X}", params.seed);
                             }
                         });
                         ui.add_space(10.0);
@@ -649,7 +653,11 @@ fn draw_world_setup(
 
                         ui.checkbox(&mut params.archipelago, "Archipelago landmass bias");
                         ui.add_space(6.0);
-                        ui.label(egui::RichText::new("Starting population density").color(DIM).small());
+                        ui.label(
+                            egui::RichText::new("Starting population density")
+                                .color(DIM)
+                                .small(),
+                        );
                         ui.add(
                             egui::Slider::new(&mut params.population_density, 0.05..=1.0)
                                 .show_value(true)
@@ -676,6 +684,8 @@ fn draw_worldgen_overlay(
     state: Option<Res<State<AppState>>>,
     boot: Res<WorldGenBoot>,
     params: Res<WorldSetupParams>,
+    titles: Res<MainMenuTitleAssets>,
+    images: Res<Assets<Image>>,
 ) {
     let Some(state) = state else {
         return;
@@ -683,6 +693,11 @@ fn draw_worldgen_overlay(
     if *state.get() != AppState::WorldGen {
         return;
     }
+    let bg_tex = titles.loading_background.as_ref().and_then(|handle| {
+        images
+            .get(handle)
+            .map(|_| contexts.add_image(bevy_egui::EguiTextureHandle::Strong(handle.clone())))
+    });
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
@@ -692,6 +707,16 @@ fn draw_worldgen_overlay(
         .get(params.climate_preset % WORLDGEN_PRESETS.len())
         .copied()
         .unwrap_or(WORLDGEN_PRESETS[0]);
+
+    if let Some(id) = bg_tex {
+        let screen = ctx.content_rect();
+        egui::Area::new(egui::Id::new("worldgen_bg"))
+            .fixed_pos(screen.min)
+            .order(egui::Order::Background)
+            .show(ctx, |ui| {
+                ui.image((id, screen.size()));
+            });
+    }
 
     egui::Area::new(egui::Id::new("worldgen_panel_area"))
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
@@ -711,11 +736,8 @@ fn draw_worldgen_overlay(
                                 .strong(),
                         );
                         ui.label(
-                            egui::RichText::new(format!(
-                                "{preset} · seed {:016X}",
-                                params.seed
-                            ))
-                            .color(DIM),
+                            egui::RichText::new(format!("{preset} · seed {:016X}", params.seed))
+                                .color(DIM),
                         );
                         ui.add_space(16.0);
                         let bar = egui::ProgressBar::new(progress)
@@ -863,11 +885,7 @@ fn era_banner(ui: &mut egui::Ui, banner: &EraBanner) {
 /// User-facing yes/no for read-only GPU capability flags.
 #[must_use]
 pub fn format_gpu_capability_flag(enabled: bool) -> &'static str {
-    if enabled {
-        "Yes"
-    } else {
-        "No"
-    }
+    if enabled { "Yes" } else { "No" }
 }
 
 /// Read-only settings labels for detected GPU capabilities (FR-CIV-BEVY-036).
@@ -948,6 +966,9 @@ fn load_main_menu_title_assets(mut commands: Commands, asset_server: Res<AssetSe
     let mut assets = MainMenuTitleAssets::default();
     if ui_png_exists("title-bg") {
         assets.background = Some(asset_server.load("ui/title-bg.png"));
+    }
+    if ui_png_exists("loading-bg") {
+        assets.loading_background = Some(asset_server.load("ui/loading-bg.png"));
     }
     if ui_png_exists("logo") {
         assets.logo = Some(asset_server.load("ui/logo.png"));

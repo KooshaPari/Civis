@@ -161,6 +161,8 @@ pub struct MainMenuTitleAssets {
     pub background: Option<Handle<Image>>,
     /// World-generation/loading background (`ui/loading-bg.png`).
     pub loading_background: Option<Handle<Image>>,
+    /// Rotating worldgen emblem (`ui/loading-spinner.png`).
+    pub loading_spinner: Option<Handle<Image>>,
     /// Logo mark (`ui/logo.png`).
     pub logo: Option<Handle<Image>>,
     /// Wordmark (`ui/wordmark.png`).
@@ -698,6 +700,11 @@ fn draw_worldgen_overlay(
             .get(handle)
             .map(|_| contexts.add_image(bevy_egui::EguiTextureHandle::Strong(handle.clone())))
     });
+    let spinner_tex = titles.loading_spinner.as_ref().and_then(|handle| {
+        images
+            .get(handle)
+            .map(|_| contexts.add_image(bevy_egui::EguiTextureHandle::Strong(handle.clone())))
+    });
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
@@ -739,7 +746,15 @@ fn draw_worldgen_overlay(
                             egui::RichText::new(format!("{preset} · seed {:016X}", params.seed))
                                 .color(DIM),
                         );
-                        ui.add_space(16.0);
+                        ui.add_space(12.0);
+                        if let Some(id) = spinner_tex {
+                            let angle = boot.elapsed * 1.75;
+                            ui.add(
+                                egui::Image::new((id, egui::vec2(72.0, 72.0)))
+                                    .rotate(angle, egui::vec2(0.5, 0.5)),
+                            );
+                            ui.add_space(8.0);
+                        }
                         let bar = egui::ProgressBar::new(progress)
                             .desired_width(320.0)
                             .show_percentage();
@@ -969,6 +984,9 @@ fn load_main_menu_title_assets(mut commands: Commands, asset_server: Res<AssetSe
     }
     if ui_png_exists("loading-bg") {
         assets.loading_background = Some(asset_server.load("ui/loading-bg.png"));
+    }
+    if ui_png_exists("loading-spinner") {
+        assets.loading_spinner = Some(asset_server.load("ui/loading-spinner.png"));
     }
     if ui_png_exists("logo") {
         assets.logo = Some(asset_server.load("ui/logo.png"));

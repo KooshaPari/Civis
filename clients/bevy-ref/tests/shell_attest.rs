@@ -88,7 +88,7 @@ fn app_state_defaults_to_main_menu() {
 #[test]
 fn shipped_shell_backgrounds_are_present() {
     let asset_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/ui");
-    for file in ["title-bg.png", "loading-bg.png"] {
+    for file in ["title-bg.png", "loading-bg.png", "loading-spinner.png"] {
         let path = asset_root.join(file);
         let metadata = std::fs::metadata(&path).unwrap_or_else(|error| {
             panic!("missing shipped shell asset {}: {error}", path.display())

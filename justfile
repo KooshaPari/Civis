@@ -150,14 +150,14 @@ bevy-egui-check:
 #   CIV_WS_URL=ws://127.0.0.1:3010/ws?tick_format=binary
 #   CIV_SERVER_PORT=3010   (used when CIV_WS_URL unset; default 3000)
 civis-bevy-play:
-    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-G:/civis-target-gate}" \
+    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}" \
         BEVY_ASSET_ROOT="${BEVY_ASSET_ROOT:-$(pwd)/clients/bevy-ref}" \
         cargo build --release -p civ-bevy-ref --features bevy,egui,audio --bin civ-standalone
     @echo ""
     @echo "==> civis-bevy-play: release civ-standalone built (bevy,egui,audio)."
     @echo "    Set BEVY_ASSET_ROOT and run the binary from repo root (PowerShell):"
     @echo "      $$env:BEVY_ASSET_ROOT='$(pwd)/clients/bevy-ref'"
-    @echo "      $$env:CARGO_TARGET_DIR='${CARGO_TARGET_DIR:-G:/civis-target-gate}'"
+    @echo "      $$env:CARGO_TARGET_DIR='${CARGO_TARGET_DIR:-$(pwd)/target}'"
     @echo "      & \"$$env:CARGO_TARGET_DIR/release/civ-standalone.exe\""
     @echo "    Local sandbox: omit attach env vars."
     @echo "    Live attach (civ-server on :3010):"
@@ -268,8 +268,8 @@ dev-fast-voxel: dev-tools
     cargo watch -x "run -p civ-bevy-ref --features hot --bin civ-bevy-window"
 
 # Build + run the standalone Bevy sandbox (release). Encodes the verified
-# boot incantation: `bevy,egui` features, CARGO_TARGET_DIR=G:/civis-target-gate
-# (out-of-tree build dir), and BEVY_ASSET_ROOT=clients/bevy-ref so the bin
+# boot incantation: playable `bevy,egui,audio` features, a caller-overridable target directory,
+# and BEVY_ASSET_ROOT=clients/bevy-ref so the bin
 # finds its assets when launched from the workspace root (Bevy 0.18
 # `AssetPlugin::file_path` defaults to "./assets" relative to CWD, which is
 # the workspace root, not the crate). Both the script and the recipe set the
@@ -277,30 +277,30 @@ dev-fast-voxel: dev-tools
 # Override the target dir by exporting `CARGO_TARGET_DIR` before invoking
 # `just play` (the recipe's default is just a default — caller wins).
 play:
-    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-G:/civis-target-gate}" \
+    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}" \
         BEVY_ASSET_ROOT="${BEVY_ASSET_ROOT:-$(pwd)/clients/bevy-ref}" \
         powershell -NoProfile -ExecutionPolicy Bypass -File Tools/play.ps1
 
 # Same as `play` with RUST_LOG=info,civ_bevy_ref=debug,wgpu=warn.
 play-debug:
-    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-G:/civis-target-gate}" \
+    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}" \
         BEVY_ASSET_ROOT="${BEVY_ASSET_ROOT:-$(pwd)/clients/bevy-ref}" \
         powershell -NoProfile -ExecutionPolicy Bypass -File Tools/play.ps1 -LogLevel 'info,civ_bevy_ref=debug,wgpu=warn'
 
 # Same as `play` with RUST_LOG=info,civ_bevy_ref=debug,wgpu=warn and RUST_BACKTRACE=full.
 play-trace:
-    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-G:/civis-target-gate}" \
+    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}" \
         BEVY_ASSET_ROOT="${BEVY_ASSET_ROOT:-$(pwd)/clients/bevy-ref}" \
         powershell -NoProfile -ExecutionPolicy Bypass -File Tools/play.ps1 -LogLevel 'info,civ_bevy_ref=debug,wgpu=warn' -Backtrace full
 
 # Build + run the live windowed Bevy client (civ-bevy-window, F3D0 binary frame
 # attach). Mirrors the `play` verified incantation: `bevy,egui` features,
-# CARGO_TARGET_DIR=G:/civis-target-gate, and BEVY_ASSET_ROOT=clients/bevy-ref.
+# caller-overridable CARGO_TARGET_DIR and BEVY_ASSET_ROOT=clients/bevy-ref.
 # The window client reads the same asset dir as the standalone (sandbox
 # terrain fallback + sky HDR + UI panel textures) so the root must be the
 # bevy-ref crate.
 play-window:
-    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-G:/civis-target-gate}" \
+    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}" \
         BEVY_ASSET_ROOT="${BEVY_ASSET_ROOT:-$(pwd)/clients/bevy-ref}" \
         cargo run -p civ-bevy-ref --features bevy,egui --bin civ-bevy-window
 

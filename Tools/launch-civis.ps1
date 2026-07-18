@@ -1,7 +1,32 @@
-# Launch the latest Civis build from the repo dir (assets resolve relative to cwd).
+<#
+.SYNOPSIS
+    One-click Civis launcher for shortcuts and Explorer.
+
+.DESCRIPTION
+    Resolves the repository relative to this script, then delegates build,
+    asset-root setup, logging, and detached launch to Tools/play.ps1.
+#>
+[CmdletBinding()]
+param(
+    [ValidateSet('release', 'debug')]
+    [string]$Profile = 'release',
+
+    [switch]$DebugLog
+)
+
 $ErrorActionPreference = 'Stop'
-$repo = 'C:\Users\koosh\Dev\civis-game'
-$exe  = 'E:\cargo-target\release\civ-standalone.exe'
-if (-not (Test-Path $exe)) { $exe = 'C:\Users\koosh\Dev\civis-game\target\release\civ-standalone.exe' }
-if (-not (Test-Path $exe)) { Write-Host 'No build found — run: cargo build -p civ-bevy-ref --features bevy,egui,voxel --bin civ-standalone --release'; pause; exit 1 }
-Start-Process -FilePath $exe -WorkingDirectory $repo
+$play = Join-Path $PSScriptRoot 'play.ps1'
+if (-not (Test-Path -LiteralPath $play)) {
+    throw "Civis launcher is incomplete: missing $play"
+}
+
+$playArgs = @{
+    Profile = $Profile
+    NoTail  = $true
+}
+if ($DebugLog) {
+    $playArgs.LogLevel = 'info,civ_bevy_ref=debug,wgpu=warn'
+}
+
+& $play @playArgs
+exit $LASTEXITCODE

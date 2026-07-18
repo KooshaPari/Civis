@@ -61,7 +61,15 @@ fn advance_time(app: &mut App, seconds: f32) {
     app.world_mut()
         .resource_mut::<Time>()
         .advance_by(Duration::from_secs_f32(seconds));
-    flush_state(app);
+    // Consume the delta on a single frame, then drain NextState without
+    // re-applying the same elapsed amount across flush updates.
+    app.update();
+    app.world_mut()
+        .resource_mut::<Time>()
+        .advance_by(Duration::ZERO);
+    for _ in 0..2 {
+        app.update();
+    }
 }
 
 fn flush_state(app: &mut App) {

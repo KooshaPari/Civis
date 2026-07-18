@@ -52,7 +52,7 @@ add audio (and optionally models / voxel / GI).
 ```powershell
 # From repo root — BEVY_ASSET_ROOT required when CWD is workspace root (see Tools/play.ps1)
 $env:BEVY_ASSET_ROOT = "$PWD/clients/bevy-ref"
-& "$env:CARGO_TARGET_DIR/release/civ-standalone.exe"   # default target: G:/civis-target-gate
+& "$env:CARGO_TARGET_DIR/release/civ-standalone.exe"   # default target: <repo>/target
 
 # Optional live attach (skip local terrain; remote ticks ignore pause)
 $env:CIVIS_ATTACH = "server"

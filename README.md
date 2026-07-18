@@ -83,26 +83,31 @@ The simulation core runs headlessly over WebSocket JSON-RPC + binary frames. Mul
 
 ## Running
 
-Requires Rust (see ust-toolchain.toml) and a separate terminal for each process.
+ust-toolchain.toml) and a separate terminal for each process.
+Requires Rust (see `rust-toolchain.toml`). The standalone sandbox does not
+require a separate server process.
 
-**Server:**
-`powershell
-D:/civis-build/target = "E:\civis-target"
-cargo run -p civ-server
-`
+**Fastest path (Windows):**
 
-**Bevy client:**
-`powershell
-D:/civis-build/target = "E:\civis-target"
- = "C:\Users\koosh\Dev\Civis\clients\bevy-ref"
-cargo run -p civ-bevy-ref --features bevy,egui --bin bevy_window
-`
+```powershell
+.\Tools\launch-civis.ps1
+```
 
-Or use the ergonomic launcher:
-`ash
+Or use `just`:
+
+```bash
 just play          # release build + detached launch + log tail
 just play-debug    # with RUST_LOG=info,civ_bevy_ref=debug
-`
+```
+
+Install a current-user Start Menu shortcut:
+
+```powershell
+.\Tools\install-launcher.ps1
+```
+
+**Live server attach (optional):** run `cargo run -p civ-server` in one
+terminal, then use the live recipes documented below.
 
 ---
 ## Repository Structure
@@ -137,7 +142,7 @@ a `BEVY_ASSET_ROOT` env var. Bevy 0.18 `AssetPlugin::file_path` defaults
 to `"./assets"` relative to CWD — from the workspace root that resolves
 to the wrong directory and produces 6 phantom module errors + ~10 asset
 404s. Use the ergonomic launcher (it defaults `BEVY_ASSET_ROOT` and
-`CARGO_TARGET_DIR=G:/civis-target-gate` for you):
+uses the repository `target` directory unless `CARGO_TARGET_DIR` is set):
 
 ```bash
 just play          # release build + detached launch + log tail
@@ -150,7 +155,7 @@ Manual incantation if you don't have `just` (Windows PowerShell):
 
 ```powershell
 $env:BEVY_ASSET_ROOT = "$PWD/clients/bevy-ref"
-$env:CARGO_TARGET_DIR = "G:/civis-target-gate"   # any out-of-tree dir
+$env:CARGO_TARGET_DIR = "$PWD/target"   # any writable target directory
 cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone
 ```
 

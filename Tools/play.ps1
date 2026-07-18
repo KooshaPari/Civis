@@ -98,21 +98,16 @@ if (Test-Path -LiteralPath $PidFile) {
     Remove-Item -LiteralPath $PidFile -Force -ErrorAction SilentlyContinue
 }
 
-# --- 2. Build ---
-# Use [System.IO.Path]::Combine so paths with spaces are handled correctly on all drives.
-$targetDir = [System.IO.Path]::Combine($RepoRoot, 'target', $Profile)
-$exePath   = [System.IO.Path]::Combine($targetDir, 'civ-standalone.exe')
-
-# --- 2a. Asset-root + target-dir ergonomics ---
+# --- 2. Asset-root + target-dir ergonomics ---
 # Bevy 0.18 `AssetPlugin::file_path` defaults to "assets" relative to CWD.
 # When `cargo run` is launched from the workspace root, that resolves to
 # `<workspace>/assets` (does not exist) instead of the crate's
 # `clients/bevy-ref/assets/`, causing 6 phantom module errors + ~10 asset
 # 404s. We default BEVY_ASSET_ROOT to the bevy-ref crate unless the caller
 # already exported one. CARGO_TARGET_DIR defaults to <repo>/target so the
-# release build artifact lands where $exePath below looks for it (the
-# `just play*` recipes set CARGO_TARGET_DIR=G:/civis-target-gate themselves;
-# this fallback covers direct `pwsh Tools/play.ps1` callers).
+# release build artifact lands where $exePath below looks for it. The
+# `just play*` recipes use the same portable default; callers can still
+# export an out-of-tree cache.
 if (-not (Test-Path Env:BEVY_ASSET_ROOT) -or [string]::IsNullOrWhiteSpace($env:BEVY_ASSET_ROOT)) {
     $env:BEVY_ASSET_ROOT = [System.IO.Path]::Combine($RepoRoot, 'clients', 'bevy-ref')
     Write-Ok "BEVY_ASSET_ROOT unset -> defaulting to $env:BEVY_ASSET_ROOT"
@@ -122,13 +117,20 @@ if (-not (Test-Path Env:CARGO_TARGET_DIR) -or [string]::IsNullOrWhiteSpace($env:
     Write-Ok "CARGO_TARGET_DIR unset -> defaulting to $env:CARGO_TARGET_DIR"
 }
 
+# Compute the executable from the effective Cargo target directory. This must
+# happen after environment defaults because `just play` deliberately points
+# CARGO_TARGET_DIR at an out-of-tree cache.
+$targetDir = [System.IO.Path]::Combine($env:CARGO_TARGET_DIR, $Profile)
+$exePath = [System.IO.Path]::Combine($targetDir, 'civ-standalone.exe')
+
+# --- 3. Build ---
 Write-Step "Building civ-standalone ($Profile)..."
 Push-Location $RepoRoot
 try {
     $buildArgs = @(
         'build',
         '-p', 'civ-bevy-ref',
-        '--features', 'bevy,egui',
+        '--features', 'bevy,egui,audio',
         '--bin', 'civ-standalone'
     )
     if ($Profile -eq 'release') { $buildArgs += '--release' }
@@ -149,7 +151,7 @@ if (-not (Test-Path -LiteralPath $exePath)) {
 }
 Write-Ok "Built: $exePath"
 
-# --- 3. Launch detached, redirect logs ---
+# --- 4. Launch detached, redirect logs ---
 Write-Step "Launching civ-standalone (RUST_LOG=$LogLevel, RUST_BACKTRACE=$Backtrace)..."
 
 if (Test-Path -LiteralPath $LogFile) { Clear-Content -LiteralPath $LogFile }
@@ -197,7 +199,7 @@ if ($NoTail) {
     exit 0
 }
 
-# --- 4. Tail until process exits or user Ctrl+C ---
+# --- 5. Tail until process exits or user Ctrl+C ---
 Write-Step "Tailing log (Ctrl+C to detach; game keeps running)..."
 Write-Host ""
 

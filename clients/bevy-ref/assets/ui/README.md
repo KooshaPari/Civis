@@ -133,6 +133,13 @@ pwsh Tools/asset-pipeline/Convert-SvgToPng.ps1 -SourceDir clients/bevy-ref/asset
 | `hud/chip-bg.svg` | `80×28` | 9-slice: x=14/66, y=8/20 |
 | `hud/resource-*.svg` | `32×32` or `64×64` | Square, transparent bg |
 
+### Shipped shell backgrounds
+
+`title-bg.png` and `loading-bg.png` are committed 1536×864 raster key art so
+the default binary never opens onto an untextured/blank shell. The SVG files
+remain editable source references; replacing either PNG requires checking
+legibility of the menu or loading panel at 1280×720 and 1920×1080.
+
 ### 9-slice usage in Bevy
 
 ```rust

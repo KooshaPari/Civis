@@ -346,7 +346,7 @@ fn sync_music_cue_volume(
     } else {
         ambient_volume_for_music_cues(&cues)
     };
-    ambient.set_volume(volume as f64);
+    ambient.set_volume(volume);
     ambient.set_playback_rate(ambient_playback_rate_for_music_cues(&cues) as f64);
 }
 

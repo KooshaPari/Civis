@@ -40,6 +40,8 @@ use serde::{
 use crate::ui_theme;
 #[cfg(feature = "audio")]
 use bevy_kira_audio::prelude::AudioChannel;
+#[cfg(feature = "audio")]
+use bevy_kira_audio::AudioControl;
 
 const SETTINGS_PATH: &str = "settings.ron";
 
@@ -1832,11 +1834,11 @@ fn sync_audio_settings(
         return;
     }
     if let Some(amb) = ambient {
-        let vol = (settings.audio.master * settings.audio.music) as f64;
+        let vol = settings.audio.master * settings.audio.music;
         amb.set_volume(vol);
     }
     if let Some(sfx) = sfx_ch {
-        let vol = (settings.audio.master * settings.audio.sfx) as f64;
+        let vol = settings.audio.master * settings.audio.sfx;
         sfx.set_volume(vol);
     }
 }

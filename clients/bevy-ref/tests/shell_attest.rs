@@ -9,6 +9,7 @@ use std::time::Duration;
 
 use bevy::app::AppExit;
 use bevy::prelude::*;
+use bevy::state::app::StatesPlugin;
 use civ_bevy_ref::live_stream::LiveStreamScene;
 use civ_bevy_ref::menus::{
     advance_worldgen_to_playing, consume_menu_commands, sync_app_state_with_game_mode, AppState,
@@ -21,7 +22,9 @@ use civ_bevy_ref::settings_ui::{GameSettings, SettingsTab};
 
 fn shell_smoke_app() -> App {
     let mut app = App::new();
-    app.init_state::<AppState>()
+    // Headless: StatesPlugin (not DefaultPlugins) so init_state has StateTransition.
+    app.add_plugins(StatesPlugin)
+        .init_state::<AppState>()
         .insert_resource(MenuCommand::default())
         .insert_resource(WorldGenBoot::default())
         .insert_resource(WorldSetupParams::default())
@@ -49,14 +52,30 @@ fn current_app_state(app: &App) -> AppState {
 
 fn dispatch_menu(app: &mut App, action: MainMenuCommand) {
     app.world_mut().resource_mut::<MenuCommand>().action = action;
-    app.update();
+    // StateTransition runs before Update, so NextState set in Update applies next
+    // frame. ConfirmWorldSetup can chain WorldGen→Playing in one more frame.
+    flush_state(app);
 }
 
 fn advance_time(app: &mut App, seconds: f32) {
     app.world_mut()
         .resource_mut::<Time>()
         .advance_by(Duration::from_secs_f32(seconds));
+    // Consume the delta on a single frame, then drain NextState without
+    // re-applying the same elapsed amount across flush updates.
     app.update();
+    app.world_mut()
+        .resource_mut::<Time>()
+        .advance_by(Duration::ZERO);
+    for _ in 0..2 {
+        app.update();
+    }
+}
+
+fn flush_state(app: &mut App) {
+    for _ in 0..3 {
+        app.update();
+    }
 }
 
 #[test]
@@ -73,13 +92,12 @@ fn new_world_and_confirm_boot_session_and_reach_playing() {
     assert_eq!(current_app_state(&app), AppState::WorldSetup);
 
     dispatch_menu(&mut app, MainMenuCommand::ConfirmWorldSetup);
-    assert_eq!(current_app_state(&app), AppState::WorldGen);
-
-    let gate = app.world().resource::<OutcomeSessionGate>();
-    assert!(gate.session_active, "ConfirmWorldSetup should begin player session");
-
-    // No LiveStreamScene → advance_worldgen_to_playing transitions immediately.
+    // No LiveStreamScene → WorldGen→Playing is drained within flush_state.
     assert_eq!(current_app_state(&app), AppState::Playing);
+    assert!(
+        app.world().resource::<OutcomeSessionGate>().session_active,
+        "ConfirmWorldSetup should begin player session"
+    );
 }
 
 #[test]
@@ -150,11 +168,11 @@ fn sync_app_state_with_game_mode_maps_pause_overlay() {
     assert_eq!(current_app_state(&app), AppState::Playing);
 
     *app.world_mut().resource_mut::<GameUiMode>() = GameUiMode::Paused;
-    app.update();
+    flush_state(&mut app);
     assert_eq!(current_app_state(&app), AppState::Paused);
 
     *app.world_mut().resource_mut::<GameUiMode>() = GameUiMode::Playing;
-    app.update();
+    flush_state(&mut app);
     assert_eq!(current_app_state(&app), AppState::Playing);
 }
 

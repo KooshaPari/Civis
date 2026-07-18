@@ -15,6 +15,10 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+$env:BEVY_ASSET_ROOT = Join-Path $repoRoot 'clients\bevy-ref'
+$env:CARGO_TARGET_DIR = Join-Path $repoRoot 'target'
+
 $play = Join-Path $PSScriptRoot 'play.ps1'
 if (-not (Test-Path -LiteralPath $play)) {
     throw "Civis launcher is incomplete: missing $play"

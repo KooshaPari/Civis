@@ -102,6 +102,20 @@ fn shipped_shell_backgrounds_are_present() {
 }
 
 #[test]
+fn shipped_hud_panel_frame_is_present() {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("assets/ui/hud/panel-frame.png");
+    let metadata = std::fs::metadata(&path).unwrap_or_else(|error| {
+        panic!("missing shipped HUD panel asset {}: {error}", path.display())
+    });
+    assert!(
+        metadata.len() > 512,
+        "shipped HUD panel asset is unexpectedly empty: {}",
+        path.display()
+    );
+}
+
+#[test]
 fn new_world_and_confirm_boot_session_and_reach_playing() {
     let mut app = shell_smoke_app();
 

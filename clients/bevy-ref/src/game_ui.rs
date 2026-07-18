@@ -36,9 +36,6 @@ pub struct LeftClusterTab {
 }
 
 /// Tool-icon asset handles + registered egui texture IDs (FR-CIV-RELIGION-002 HUD).
-///
-/// Loaded on [`Startup`] by `queue_tool_icon_handles`; promoted to egui texture IDs
-/// during [`EguiPrimaryContextPass`] by `load_tool_icons` once all images are ready.
 #[derive(Resource, Default)]
 pub struct ToolIcons {
     /// Bevy strong handles keeping PNGs alive (one per [`TOOL_ICON_PATHS`] entry).
@@ -48,6 +45,16 @@ pub struct ToolIcons {
     /// `true` once all images have been registered with egui.
     pub registered: bool,
 }
+
+/// Raster HUD chrome (`ui/hud/panel-frame.png`).
+#[derive(Resource, Default)]
+pub struct HudPanelAssets {
+    pub handle: Option<Handle<Image>>,
+    pub texture: Option<egui::TextureId>,
+    pub registered: bool,
+}
+
+const HUD_PANEL_FRAME_PATH: &str = "ui/hud/panel-frame.png";
 
 /// (path-stem, asset path) pairs for each tool-category icon PNG.
 ///
@@ -303,7 +310,8 @@ impl Plugin for GameUiPlugin {
             // HUD never panics if GameUiPlugin runs without InfoViewsPlugin.
             .init_resource::<crate::info_views::InfoViewRegistry>()
             .init_resource::<ToolIcons>()
-            .add_systems(Startup, queue_tool_icon_handles)
+            .init_resource::<HudPanelAssets>()
+            .add_systems(Startup, (queue_tool_icon_handles, queue_hud_panel_handle))
             .add_systems(
                 Update,
                 (
@@ -329,7 +337,7 @@ impl Plugin for GameUiPlugin {
                 // Style/Visuals (Keycap Palette + holocron chrome) before any
                 // draw call can consume it. load_tool_icons and draw_game_ui
                 // follow in order.
-                (apply_keycap_theme, load_tool_icons, draw_game_ui).chain(),
+                (apply_keycap_theme, load_tool_icons, load_hud_panel, draw_game_ui).chain(),
             );
     }
 }
@@ -353,6 +361,57 @@ fn apply_keycap_theme(mut contexts: EguiContexts) {
     if let Ok(ctx) = contexts.ctx_mut() {
         apply_theme(ctx);
     }
+}
+
+fn queue_hud_panel_handle(mut hud: ResMut<HudPanelAssets>, asset_server: Res<AssetServer>) {
+    hud.handle = Some(asset_server.load::<Image>(HUD_PANEL_FRAME_PATH));
+}
+
+/// Register the HUD panel-frame PNG with egui once loaded.
+fn load_hud_panel(
+    mut contexts: EguiContexts,
+    mut hud: ResMut<HudPanelAssets>,
+    asset_server: Res<AssetServer>,
+) {
+    if hud.registered {
+        return;
+    }
+    let Some(handle) = hud.handle.as_ref() else {
+        return;
+    };
+    if !asset_server.is_loaded_with_dependencies(handle) {
+        return;
+    }
+    let id = contexts.add_image(bevy_egui::EguiTextureHandle::Strong(handle.clone()));
+    hud.texture = Some(id);
+    hud.registered = true;
+}
+
+/// Paint optional panel-frame art under HUD contents, then draw children.
+fn show_hud_panel(
+    ui: &mut egui::Ui,
+    panel_tex: Option<egui::TextureId>,
+    margin: egui::Margin,
+    stroke: egui::Stroke,
+    add_contents: impl FnOnce(&mut egui::Ui),
+) {
+    egui::Frame::NONE
+        .fill(PANEL_FILL)
+        .stroke(stroke)
+        .corner_radius(egui::CornerRadius::same(10))
+        .inner_margin(margin)
+        .show(ui, |ui| {
+            if let Some(tex) = panel_tex {
+                let rect = ui.max_rect();
+                ui.painter().image(
+                    tex,
+                    rect,
+                    egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+                    egui::Color32::from_rgba_unmultiplied(255, 255, 255, 220),
+                );
+            }
+            add_contents(ui);
+        });
 }
 
 /// Startup: queue each tool-icon PNG on the [`AssetServer`].
@@ -461,16 +520,19 @@ fn draw_game_ui(
     mut speed: ResMut<GameSpeed>,
     mut active_tool: ResMut<ActiveTool>,
     mut building_kind: ResMut<BuildingSpawnKind>,
-    god_action_toast: Res<GodActionToast>,
+    _god_action_toast: Res<GodActionToast>,
+    hud_panels: Res<HudPanelAssets>,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
 
+    let panel_tex = hud_panels.texture;
     apply_theme(ctx);
 
     top_center_cluster(
         ctx,
+        panel_tex,
         &snapshot,
         &attach_mode,
         live_attach.as_deref(),
@@ -479,12 +541,13 @@ fn draw_game_ui(
 
     left_sidebar_cluster(
         ctx,
+        panel_tex,
         selected.entity.is_some() || live_selection.0.is_some(),
         &details,
         snapshot.factions,
     );
 
-    bottom_cluster(ctx, &mut active_tool, &mut building_kind, &mut speed);
+    bottom_cluster(ctx, panel_tex, &mut active_tool, &mut building_kind, &mut speed);
 }
 
 /// Compact needs line for the selection inspector (`F 82% · S 70% · …`).
@@ -509,6 +572,7 @@ pub fn format_civilian_health_display(health: f32) -> String {
 /// Polished top-center HUD cluster with the stat strip and websocket status.
 fn top_center_cluster(
     ctx: &egui::Context,
+    panel_tex: Option<egui::TextureId>,
     snapshot: &GameUiSnapshot,
     attach_mode: &crate::AttachMode,
     live_attach: Option<&crate::live_attach::LiveAttachState>,
@@ -517,20 +581,20 @@ fn top_center_cluster(
     egui::Area::new(egui::Id::new("civis_top_center_cluster"))
         .anchor(egui::Align2::CENTER_TOP, [0.0, 10.0])
         .show(ctx, |ui| {
-            egui::Frame::NONE
-                .fill(PANEL_FILL)
-                .stroke(egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.18)))
-                .corner_radius(egui::CornerRadius::same(10))
-                .inner_margin(egui::Margin::symmetric(12, 8))
-                .show(ui, |ui| {
-                    top_bar_ui(ui, snapshot, attach_mode, live_attach, laws_open);
-                });
+            show_hud_panel(
+                ui,
+                panel_tex,
+                egui::Margin::symmetric(12, 8),
+                egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.18)),
+                |ui| top_bar_ui(ui, snapshot, attach_mode, live_attach, laws_open),
+            );
         });
 }
 
 /// Left-side inspector cluster with a faction summary rail.
 fn left_sidebar_cluster(
     ctx: &egui::Context,
+    panel_tex: Option<egui::TextureId>,
     has_selection: bool,
     details: &SelectedEntityDetails,
     faction_count: u32,
@@ -540,12 +604,12 @@ fn left_sidebar_cluster(
         .exact_width(288.0)
         .frame(egui::Frame::NONE)
         .show(ctx, |ui| {
-            egui::Frame::NONE
-                .fill(PANEL_FILL)
-                .stroke(egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.16)))
-                .corner_radius(egui::CornerRadius::same(10))
-                .inner_margin(egui::Margin::symmetric(12, 10))
-                .show(ui, |ui| {
+            show_hud_panel(
+                ui,
+                panel_tex,
+                egui::Margin::symmetric(12, 10),
+                egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.16)),
+                |ui| {
                     ui.horizontal(|ui| {
                         ui.label(egui::RichText::new("◧ Inspect").color(ACCENT).strong());
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -560,13 +624,15 @@ fn left_sidebar_cluster(
                     ui.separator();
                     ui.add_space(6.0);
                     inspector_ui(ui, has_selection, details);
-                });
+                },
+            );
         });
 }
 
 /// Bottom cluster with tool palette and speed control.
 fn bottom_cluster(
     ctx: &egui::Context,
+    panel_tex: Option<egui::TextureId>,
     active_tool: &mut ActiveTool,
     building_kind: &mut BuildingSpawnKind,
     speed: &mut GameSpeed,
@@ -574,14 +640,13 @@ fn bottom_cluster(
     egui::Area::new(egui::Id::new("civis_bottom_cluster"))
         .anchor(egui::Align2::CENTER_BOTTOM, [0.0, -12.0])
         .show(ctx, |ui| {
-            egui::Frame::NONE
-                .fill(PANEL_FILL)
-                .stroke(egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.16)))
-                .corner_radius(egui::CornerRadius::same(10))
-                .inner_margin(egui::Margin::symmetric(12, 8))
-                .show(ui, |ui| {
-                    tool_palette_ui(ui, active_tool, building_kind, speed);
-                });
+            show_hud_panel(
+                ui,
+                panel_tex,
+                egui::Margin::symmetric(12, 8),
+                egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.16)),
+                |ui| tool_palette_ui(ui, active_tool, building_kind, speed),
+            );
         });
 }
 

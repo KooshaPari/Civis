@@ -102,6 +102,29 @@ fn shipped_shell_backgrounds_are_present() {
 }
 
 #[test]
+fn shipped_hud_chrome_assets_are_present() {
+    let hud_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/ui/hud");
+    for file in [
+        "panel-frame.png",
+        "button.png",
+        "button-hover.png",
+        "chip-bg.png",
+        "resource-population.png",
+        "resource-clock.png",
+    ] {
+        let path = hud_root.join(file);
+        let metadata = std::fs::metadata(&path).unwrap_or_else(|error| {
+            panic!("missing shipped HUD chrome asset {}: {error}", path.display())
+        });
+        assert!(
+            metadata.len() > 256,
+            "shipped HUD chrome asset is unexpectedly empty: {}",
+            path.display()
+        );
+    }
+}
+
+#[test]
 fn shipped_hud_panel_frame_is_present() {
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("assets/ui/hud/panel-frame.png");

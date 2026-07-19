@@ -903,7 +903,7 @@ fn default_keybinds() -> Vec<Keybind> {
         Keybind::new(ACTION_TOGGLE_DIPLOMACY, KeyBinding::Key(KeyCode::KeyG)),
         Keybind::new(ACTION_TOGGLE_TECH_TREE, KeyBinding::Key(KeyCode::KeyT)),
         Keybind::new(ACTION_TOGGLE_MAP, KeyBinding::Key(KeyCode::KeyM)),
-        Keybind::new(ACTION_PAUSE_SIM, KeyBinding::Key(KeyCode::Space)),
+        Keybind::new(ACTION_PAUSE_SIM, KeyBinding::Key(KeyCode::Escape)),
         Keybind::new(ACTION_CYCLE_SIM_SPEED, KeyBinding::Key(KeyCode::Equal)),
         Keybind::new(ACTION_SPEED_1X, KeyBinding::Key(KeyCode::Digit1)),
         Keybind::new(ACTION_SPEED_2X, KeyBinding::Key(KeyCode::Digit2)),

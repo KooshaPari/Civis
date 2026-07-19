@@ -11,8 +11,9 @@ use crate::outcome_overlay::{
     end_player_session, outcome_modal_visible,
 };
 use crate::faction_hud::PlayerFactionId;
+use crate::game_ui::GameSpeed;
 use crate::save_load_ui::SaveLoadPanel;
-use crate::settings_ui::{ACTION_PAUSE_SIM, GameSettings, KeyBinding};
+use crate::settings_ui::{GameSettings, KeyBinding, ACTION_PAUSE_SIM};
 use crate::ui_theme::{CHIP_FILL, GLASS_FILL, KC_ACCENT};
 use bevy::app::AppExit;
 use bevy::prelude::*;
@@ -28,9 +29,11 @@ const WORLDGEN_DEFAULT_SEED: u64 = 0xC1F1_5EED_D3AD_BEEF;
 const WORLDGEN_BOOT_SECONDS: f32 = 2.0;
 
 const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
-const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
+/// Opaque enough to keep pause chrome readable over bright world / title art.
+const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(12, 14, 22, 248);
 const DIM: egui::Color32 = egui::Color32::from_rgb(150, 158, 178);
-const OVERLAY_DIM: egui::Color32 = egui::Color32::from_rgba_premultiplied(0, 0, 0, 160);
+/// Stronger scrim so shipped backgrounds do not wash out the pause panel.
+const OVERLAY_DIM: egui::Color32 = egui::Color32::from_rgba_premultiplied(0, 0, 0, 210);
 
 /// Shell state used by the Bevy window client (main menu + gameplay + pause states).
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
@@ -287,6 +290,8 @@ pub fn consume_menu_commands(
     overlay: Option<ResMut<OutcomeOverlayState>>,
     mut boot: ResMut<WorldGenBoot>,
     mut game_settings: Option<ResMut<GameSettings>>,
+    mut settings_open: Option<ResMut<SettingsOpen>>,
+    mut game_speed: Option<ResMut<GameSpeed>>,
 ) {
     let Some(state) = state else {
         return;
@@ -359,6 +364,7 @@ pub fn consume_menu_commands(
             next_state.set(AppState::WorldGen);
         }
         MainMenuCommand::Resume => {
+            resume_shell_pause(&mut game_mode, game_speed.as_deref_mut());
             if *state.get() == AppState::Paused {
                 next_state.set(AppState::Playing);
             }
@@ -367,6 +373,9 @@ pub fn consume_menu_commands(
             if let Some(mut settings) = game_settings {
                 settings.open = true;
                 settings.active_tab = crate::settings_ui::SettingsTab::Graphics;
+            }
+            if let Some(mut flag) = settings_open.as_mut() {
+                flag.0 = true;
             }
         }
         MainMenuCommand::OpenSavePanel => {
@@ -397,15 +406,21 @@ pub fn toggle_pause(
     outcome_overlay: Option<Res<OutcomeOverlayState>>,
     escape_block: Option<Res<OutcomeEscapeBlock>>,
     mut mode: ResMut<GameUiMode>,
+    mut game_speed: Option<ResMut<GameSpeed>>,
 ) {
+    // Single owner for ACTION_PAUSE_SIM: shell pause overlay (Esc default).
+    // game_ui no longer toggles GameSpeed on this action.
     let pause_binding = settings
         .as_ref()
         .and_then(|s| s.key_for(ACTION_PAUSE_SIM))
         .unwrap_or(KeyBinding::Key(KeyCode::Escape));
-    if !pause_binding.is_just_pressed(&keys, &mouse_buttons) {
+    let binding_pressed = pause_binding.is_just_pressed(&keys, &mouse_buttons);
+    let esc_pressed = keys.just_pressed(KeyCode::Escape);
+    if !esc_pressed && !binding_pressed {
         return;
     }
 
+    // Same-frame: outcome modal dismissed Esc → do not also toggle pause.
     if escape_block.map(|block| block.0).unwrap_or(false) {
         return;
     }
@@ -415,16 +430,33 @@ pub fn toggle_pause(
         }
     }
 
+    // Settings panel owns Esc while open (Close Panel). MenusPlugin is
+    // registered before SettingsPlugin so `open` is still true this frame.
+    // Only gate the Esc path so a rebound ACTION_PAUSE_SIM can still toggle.
+    if esc_pressed && settings.as_ref().is_some_and(|s| s.open) {
+        return;
+    }
+
     if let Some(app_state) = app_state {
         if *app_state.get() != AppState::Playing && *app_state.get() != AppState::Paused {
             return;
         }
     }
 
-    *mode = match *mode {
-        GameUiMode::Playing => GameUiMode::Paused,
-        GameUiMode::Paused => GameUiMode::Playing,
-    };
+    match *mode {
+        GameUiMode::Playing => *mode = GameUiMode::Paused,
+        GameUiMode::Paused => {
+            resume_shell_pause(&mut mode, game_speed.as_deref_mut());
+        }
+    }
+}
+
+/// Clear shell pause overlay and unstick sim speed if it was left at 0.
+fn resume_shell_pause(mode: &mut GameUiMode, speed: Option<&mut GameSpeed>) {
+    *mode = GameUiMode::Playing;
+    if let Some(speed) = speed {
+        speed.restore_after_resume();
+    }
 }
 
 fn tick_era_banner(mut banner: ResMut<EraBanner>, time: Res<Time>) {
@@ -789,6 +821,8 @@ fn draw_pause_menu(
     mut command: ResMut<MenuCommand>,
     mut save_panel: ResMut<SaveLoadPanel>,
     mut game_settings: Option<ResMut<GameSettings>>,
+    mut settings_open: ResMut<SettingsOpen>,
+    mut game_speed: Option<ResMut<GameSpeed>>,
     mut exit: MessageWriter<AppExit>,
 ) {
     if *mode != GameUiMode::Paused {
@@ -798,6 +832,36 @@ fn draw_pause_menu(
         return;
     };
     dim_overlay(ctx);
+
+    let settings_is_open = game_settings
+        .as_ref()
+        .map(|s| s.open)
+        .unwrap_or(settings_open.0);
+    // Mirror into SettingsOpen so shell consumers stay aligned.
+    settings_open.0 = settings_is_open;
+    // Settings opened from pause: keep dim + cue, hide the button stack so Esc
+    // closing settings returns to this menu instead of a buried / dead-end state.
+    if settings_is_open {
+        egui::Area::new(egui::Id::new("pause_settings_cue"))
+            .anchor(egui::Align2::CENTER_BOTTOM, egui::vec2(0.0, -36.0))
+            .order(egui::Order::Middle)
+            .show(ctx, |ui| {
+                egui::Frame::NONE
+                    .fill(PANEL_FILL)
+                    .corner_radius(egui::CornerRadius::same(8))
+                    .stroke(egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.35)))
+                    .inner_margin(egui::Margin::symmetric(18, 10))
+                    .show(ui, |ui| {
+                        ui.label(
+                            egui::RichText::new("Settings open — Esc returns to pause menu")
+                                .size(14.0)
+                                .color(DIM),
+                        );
+                    });
+            });
+        return;
+    }
+
     egui::Area::new(egui::Id::new("pause_panel_area"))
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
         .order(egui::Order::Foreground)
@@ -816,15 +880,23 @@ fn draw_pause_menu(
                                 .color(ACCENT)
                                 .strong(),
                         );
-                        ui.add_space(20.0);
+                        ui.label(
+                            egui::RichText::new("Esc — resume")
+                                .size(13.0)
+                                .color(DIM)
+                                .italics(),
+                        );
+                        ui.add_space(16.0);
                         if menu_button(ui, "\u{25b6}  Resume").clicked() {
-                            *mode = GameUiMode::Playing;
+                            resume_shell_pause(&mut mode, game_speed.as_deref_mut());
                         }
                         ui.add_space(6.0);
                         if menu_button(ui, "\u{2699}  Settings").clicked() {
                             if let Some(settings) = game_settings.as_mut() {
                                 settings.open = true;
+                                settings.active_tab = crate::settings_ui::SettingsTab::Graphics;
                             }
+                            settings_open.0 = true;
                             command.action = MainMenuCommand::OpenSettings;
                         }
                         ui.add_space(6.0);

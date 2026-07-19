@@ -70,8 +70,6 @@ const HUD_CHROME_PATHS: &[(&str, &str)] = &[
     ("chip-bg", "ui/hud/chip-bg.png"),
     ("resource-population", "ui/hud/resource-population.png"),
     ("resource-clock", "ui/hud/resource-clock.png"),
-    ("resource-food", "ui/hud/resource-food.png"),
-    ("resource-energy", "ui/hud/resource-energy.png"),
 ];
 
 /// (path-stem, asset path) pairs for each tool-category icon PNG.
@@ -440,21 +438,16 @@ fn load_hud_panel(
     hud.registered = true;
 }
 
-fn paint_hud_texture(
-    painter: &egui::Painter,
-    tex: egui::TextureId,
-    rect: egui::Rect,
-    alpha: u8,
-) {
-    painter.image(
+fn hud_texture_shape(tex: egui::TextureId, rect: egui::Rect, alpha: u8) -> egui::Shape {
+    egui::Shape::image(
         tex,
         rect,
         egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
         egui::Color32::from_rgba_unmultiplied(255, 255, 255, alpha),
-    );
+    )
 }
 
-/// Paint optional panel-frame art under HUD contents, then draw children.
+/// Paint optional panel-frame art sized to allocated contents (not max_rect).
 fn show_hud_panel(
     ui: &mut egui::Ui,
     panel_tex: Option<egui::TextureId>,
@@ -468,16 +461,14 @@ fn show_hud_panel(
         .corner_radius(egui::CornerRadius::same(10))
         .inner_margin(margin)
         .show(ui, |ui| {
-            if let Some(tex) = panel_tex {
-                let rect = ui.max_rect();
-                ui.painter().image(
-                    tex,
-                    rect,
-                    egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
-                    egui::Color32::from_rgba_unmultiplied(255, 255, 255, 220),
-                );
-            }
+            // Reserve a paint slot so chrome draws under content but sized to
+            // the final min_rect (avoids SidePanel stretching to window height).
+            let bg_idx = panel_tex.map(|_| ui.painter().add(egui::Shape::Noop));
             add_contents(ui);
+            if let (Some(idx), Some(tex)) = (bg_idx, panel_tex) {
+                ui.painter()
+                    .set(idx, hud_texture_shape(tex, ui.min_rect(), 220));
+            }
         });
 }
 
@@ -550,7 +541,8 @@ fn handle_speed_shortcuts(
                 .is_just_pressed(&keys, &mouse_buttons)
         };
 
-    // ACTION_PAUSE_SIM is owned by menus::toggle_pause (shell overlay).
+    // ACTION_PAUSE_SIM is owned by menus::toggle_pause (shell overlay). HUD
+    // speed steps below remain the only keyboard path that changes multiplier.
     if binding_just_pressed(ACTION_SPEED_1X, KeyCode::Digit1, &settings) {
         speed.multiplier = 1.0;
     }
@@ -890,9 +882,7 @@ fn chip(
         .corner_radius(egui::CornerRadius::same(8))
         .inner_margin(egui::Margin::symmetric(10, 5))
         .show(ui, |ui| {
-            if let Some(tex) = chip_bg {
-                paint_hud_texture(ui.painter(), tex, ui.max_rect(), 210);
-            }
+            let bg_idx = chip_bg.map(|_| ui.painter().add(egui::Shape::Noop));
             ui.horizontal(|ui| {
                 if let Some(key) = icon_key {
                     if let Some(tex) = chrome.texture(key) {
@@ -905,6 +895,10 @@ fn chip(
                 }
                 ui.label(egui::RichText::new(text).color(color).strong());
             });
+            if let (Some(idx), Some(tex)) = (bg_idx, chip_bg) {
+                ui.painter()
+                    .set(idx, hud_texture_shape(tex, ui.min_rect(), 210));
+            }
         });
 }
 
@@ -1104,22 +1098,15 @@ fn tool_button(
         egui::Stroke::new(1.0, egui::Color32::from_rgb(60, 68, 88))
     };
 
+    let mut bg_idx = None;
+    let mut paint_rect = egui::Rect::NOTHING;
     let resp = egui::Frame::NONE
         .fill(fill)
         .stroke(stroke)
         .corner_radius(egui::CornerRadius::same(8))
         .inner_margin(egui::Margin::same(4))
         .show(ui, |ui| {
-            let rect = ui.max_rect();
-            let hovered = ui.rect_contains_pointer(rect);
-            let bg = if active || hovered {
-                chrome.texture("button-hover")
-            } else {
-                chrome.texture("button")
-            };
-            if let Some(tex) = bg {
-                paint_hud_texture(ui.painter(), tex, rect, 230);
-            }
+            bg_idx = Some(ui.painter().add(egui::Shape::Noop));
             ui.set_width(48.0);
             ui.vertical_centered(|ui| {
                 ui.label(egui::RichText::new(def.icon).size(22.0));
@@ -1130,11 +1117,27 @@ fn tool_button(
                     lbl.color(DIM)
                 });
             });
+            paint_rect = ui.min_rect();
         })
         .response;
 
-    resp.interact(egui::Sense::click())
-        .on_hover_text(format!("{} ({})", def.label, def.hotkey))
+    let resp = resp
+        .interact(egui::Sense::click())
+        .on_hover_text(format!("{} ({})", def.label, def.hotkey));
+
+    if let Some(idx) = bg_idx {
+        let bg = if active || resp.hovered() {
+            chrome.texture("button-hover")
+        } else {
+            chrome.texture("button")
+        };
+        if let Some(tex) = bg {
+            ui.painter()
+                .set(idx, hud_texture_shape(tex, paint_rect, 230));
+        }
+    }
+
+    resp
 }
 
 /// Segmented speed control: pause / 1x / 2x / 5x / 10x wired to GameSpeed.

@@ -1832,7 +1832,7 @@ mod climate_stress_index_tests {
 }
 
 pub fn coastal_flood_risk(sea_level_rise: f32, coastal_population: f32) -> (f32, u32) {
-    let risk = if sea_level_rise.is_nan() || coastal_population.is_nan() {
+    let risk = if sea_level_rise.is_nan() {
         0.0
     } else {
         (sea_level_rise * 0.5).clamp(0.0, 1.0)

@@ -1,7 +1,9 @@
-//! SHELL-ATTEST-001 — headless shell smoke for AppState + menu command wiring.
+//! SHELL-ATTEST-001..004 — headless shell smoke for AppState, menu wiring, and
+//! shipped shell assets/launchers.
 //!
 //! Exercises `consume_menu_commands`, `advance_worldgen_to_playing`, and session
-//! gate helpers without opening a GPU window.
+//! gate helpers without opening a GPU window. Also asserts faction crest PNGs,
+//! HUD chrome rasters, and `Tools/launch-civis.ps1` / `Tools/play.ps1` exist.
 
 #![cfg(all(feature = "bevy", feature = "egui"))]
 
@@ -136,6 +138,60 @@ fn shipped_hud_panel_frame_is_present() {
         "shipped HUD panel asset is unexpectedly empty: {}",
         path.display()
     );
+}
+
+#[test]
+fn shipped_faction_crest_pngs_are_present() {
+    let crest_root =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/ui/faction-crests");
+    let entries = std::fs::read_dir(&crest_root).unwrap_or_else(|error| {
+        panic!(
+            "missing faction crest directory {}: {error}",
+            crest_root.display()
+        )
+    });
+    let mut crest_pngs = 0usize;
+    for entry in entries {
+        let entry = entry.expect("read faction crest directory entry");
+        let path = entry.path();
+        let is_crest_png = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.starts_with("crest-") && name.ends_with(".png"));
+        if !is_crest_png {
+            continue;
+        }
+        let metadata = entry.metadata().unwrap_or_else(|error| {
+            panic!("failed to stat crest asset {}: {error}", path.display())
+        });
+        assert!(
+            metadata.len() > 256,
+            "shipped faction crest PNG is unexpectedly empty: {}",
+            path.display()
+        );
+        crest_pngs += 1;
+    }
+    assert!(
+        crest_pngs >= 1,
+        "expected at least one crest-*.png under {}",
+        crest_root.display()
+    );
+}
+
+#[test]
+fn shipped_launcher_scripts_are_present() {
+    let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    for rel in ["Tools/launch-civis.ps1", "Tools/play.ps1"] {
+        let path = repo_root.join(rel);
+        let metadata = std::fs::metadata(&path).unwrap_or_else(|error| {
+            panic!("missing launcher script {}: {error}", path.display())
+        });
+        assert!(
+            metadata.len() > 64,
+            "launcher script is unexpectedly empty: {}",
+            path.display()
+        );
+    }
 }
 
 #[test]

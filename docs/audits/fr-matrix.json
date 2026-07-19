@@ -4061,8 +4061,12 @@
         "docs/guides/COPILOT_L3_AGENTS.md:474",
         "docs/guides/COPILOT_L3_AGENTS.md:476"
       ],
-      "test_refs": [],
-      "status": "IMPL-NO-TEST"
+      "test_refs": [
+        "crates/economy/src/allocator.rs:971",
+        "crates/economy/src/allocator.rs:1026",
+        "crates/economy/tests/allocation_behavior.rs:311"
+      ],
+      "status": "COVERED"
     },
     {
       "id": "FR-CIV-ECON-003",

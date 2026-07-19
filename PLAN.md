@@ -117,8 +117,8 @@ No `crates/climate` or separate `crates/metrics` — climate inputs come from `c
 |---------|-------------|------------|--------|------------------------------|
 | P1.1 | Market struct and price tracking | P0.6 | ✅ | `MarketState` in `market.rs`; unit tests for per-tick price updates |
 | P1.2 | Market implementation | P1.1 | ✅ | `cargo test -p civ-economy` — deterministic price update invariants + edge cases |
-| P1.3 | Joule allocator harness | P1.2 | 🔶 | `drain_energy_budget` + `step` exist; full `JouleAllocator` / actor splits ❌ |
-| P1.4 | Joule allocator implementation | P1.3 | ❌ | Conservation: allocated joules ≤ budget |
+| P1.3 | Joule allocator harness | P1.2 | ✅ | `drain_energy_budget` + `step` exist; allocator and actor/lifecycle routing covered by focused tests |
+| P1.4 | Joule allocator implementation | P1.3 | ✅ | Conservation: allocation and ledger clearing never exceed available joules; focused allocator and engine gates pass |
 | P1.5 | Property-based economy tests | P1.4 | ✅ | `proptest` in `market.rs` (determinism + positive prices) |
 | P1.6 | Engine integration | P1.5 | ✅ | `phase_economy_*` tests — budget sync, `civ_economy::step`, `MarketState::step` |
 
@@ -318,4 +318,3 @@ If a phase fails:
 3. Dispatch new copilot-L3 agent with fix
 4. Retry gate before merging
 5. If repeated failures, escalate to main codebase review (human)
-

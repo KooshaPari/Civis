@@ -6,7 +6,7 @@
 |-------|-------------|--------|---------------|
 | FR-CIV-ECON-001 | Ledger double-entry accounting | In Progress | `crates/engine/src/engine.rs` |
 | FR-CIV-ECON-002 | Market clearing algorithm | In Progress | `crates/engine/src/engine.rs` |
-| FR-CIV-ECON-003 | Joule economy allocator | Planned | `crates/engine/src/engine.rs` |
+| FR-CIV-ECON-003 | Joule economy allocator | In Progress | `crates/economy/src/allocation.rs`, `crates/economy/src/allocator.rs`, `crates/engine/src/engine.rs` |
 | FR-CIV-ECON-004 | Policy-driven fiscal control | In Progress | `crates/engine/src/policy.rs` |
 
 ## RTS Command Interface (FR-CIV-RTS)

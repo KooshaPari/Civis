@@ -5483,7 +5483,10 @@ impl Simulation {
             let productive = metrics.adults as f64 + 0.5 * metrics.elders as f64;
             (productive / living).clamp(0.0, 1.0)
         } else {
-            0.0
+            // A scenario with no spawned civilians still exercises the macro
+            // economy policy. Treat its aggregate demand as fully available;
+            // lifecycle weighting applies once population metrics exist.
+            1.0
         };
         let labor_allocator = LaborCapacityAllocator::new(labor_fraction);
         let allocated = labor_allocator.allocate(budget, demand);

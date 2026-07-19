@@ -140,12 +140,17 @@ fn target_compliance_bp(rate_bp10: u32) -> i64 {
     if rate <= FULL_COMPLIANCE_BELOW {
         return 10_000;
     }
-    // slope: -10_000 / (10_000 - 1_000) = -10/9 per bp10 step.
-    // target = 10_000 - (rate - 1_000) * 10_000 / (10_000 - 1_000)
-    let numerator = (rate - FULL_COMPLIANCE_BELOW) * 10_000;
-    let denominator = RATE_MAX - FULL_COMPLIANCE_BELOW;
-    let drop = numerator / denominator;
-    (10_000 - drop).max(0)
+    if rate <= 5_000 {
+        // Linear descent from 100 % at 10 % to 50 % at 50 %.
+        let numerator = (rate - FULL_COMPLIANCE_BELOW) * 5_000;
+        let denominator = 5_000 - FULL_COMPLIANCE_BELOW;
+        return (10_000 - numerator / denominator).max(0);
+    }
+    // Past 50 %, compliance erodes non-linearly: the remaining trust is the
+    // square of the remaining rate headroom. This keeps confiscatory rates
+    // from being fiscally attractive over long horizons.
+    let remaining = RATE_MAX - rate;
+    (remaining * remaining / 5_000).clamp(0, 10_000)
 }
 
 /// Apply one tax-policy pass.
@@ -164,9 +169,10 @@ pub fn apply_tax_policy(policy: &mut TaxPolicy, production: i64) -> TaxPolicyOut
 
     // 1. Update compliance toward the target implied by the current rate.
     let target_bp = target_compliance_bp(policy.rate_bp10);
-    // Move 10 % of the gap each pass → smoother than instant.
-    // delta_bp = (target - current) / 10
-    let delta_bp = (target_bp - policy.compliance_bp) / 10;
+    // Move 25 % of the gap each pass. This keeps short-horizon high-rate
+    // collection observable while preventing a 90 % rate from collecting more
+    // over a long horizon than a sustainable 10 % rate.
+    let delta_bp = (target_bp - policy.compliance_bp) / 4;
     policy.compliance_bp = (policy.compliance_bp + delta_bp).clamp(0, 10_000);
 
     // 2. tax = production * rate * compliance  (all in fixed-point integers)

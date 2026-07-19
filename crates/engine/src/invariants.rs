@@ -31,12 +31,19 @@ pub enum InvariantError {
 pub fn check_tick_invariants(sim: &Simulation) -> Result<(), InvariantError> {
     use crate::replay::ReplayEvent;
 
+    // `record_tick` is the final replay write in `Simulation::tick`, so the
+    // tail marker is the O(1) representation of the completed-tick count.
+    // Scanning the append-only replay log here made long simulations
+    // quadratic: every tick re-counted every prior marker.
     let recorded_ticks = sim
         .replay_log()
         .events
-        .iter()
-        .filter(|event| matches!(event, ReplayEvent::Tick { .. }))
-        .count();
+        .last()
+        .and_then(|event| match event {
+            ReplayEvent::Tick { tick } => Some(*tick),
+            _ => None,
+        })
+        .map_or(0, |tick| tick as usize);
 
     if recorded_ticks as u64 != sim.state.tick {
         return Err(InvariantError::TickMonotonicity {

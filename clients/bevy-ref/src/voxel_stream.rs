@@ -92,7 +92,9 @@ fn setup_voxel_stream(mut commands: Commands, mut materials: ResMut<Assets<Stand
         base_voxel_m: BASE_VOXEL_M,
         sea_level_m: 24.0,
     };
-    let world = StreamingWorld::new(cfg, gen).expect("streaming world (RAM-only)");
+    // RAM-only: skip `StreamingWorld::new` (disk open Result) so missing/locked
+    // cache dirs can never abort the sandbox startup path.
+    let world = StreamingWorld::new_with_store(cfg, gen, None);
     let material = materials.add(StandardMaterial {
         base_color: Color::srgb(0.45, 0.62, 0.38),
         perceptual_roughness: 0.95,

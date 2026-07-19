@@ -277,7 +277,13 @@ fn erode_cell(h: &[f32], delta: &mut [f32], x: usize, z: usize, talus: f32, fact
 /// steepest descent; summed arrivals approximate drainage for river tinting.
 fn flow_accumulation(height: &[f32]) -> Vec<f32> {
     let mut order: Vec<usize> = (0..height.len()).collect();
-    order.sort_unstable_by(|&a, &b| height[b].partial_cmp(&height[a]).unwrap());
+    // NaN heights must not panic the happy path — treat as equal so drainage
+    // still runs over the finite remainder of the heightfield.
+    order.sort_unstable_by(|&a, &b| {
+        height[b]
+            .partial_cmp(&height[a])
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     let mut flow = vec![1.0_f32; height.len()];
     for &i in &order {
         let (x, z) = (i % GRID, i / GRID);

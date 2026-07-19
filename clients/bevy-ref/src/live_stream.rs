@@ -19,7 +19,7 @@ use civ_protocol_3d::{
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId};
 
 use crate::bevy_render::{apply_chunk_material, mesh_buffer_to_bevy};
-use crate::frame_budget::{scaled_cull_distance, scaled_mesh_lod_distance, GpuQualityMode};
+use crate::frame_budget::{scaled_mesh_lod_distance, GpuQualityMode};
 use crate::game_ui::civilian_display_name;
 use crate::live_ground::{live_ground_y, ChunkVoxelCache};
 use crate::ws_client::WsClient;
@@ -838,8 +838,8 @@ pub fn apply_voxel_delta_frame(
             scene.chunk_voxels.insert(chunk_id, chunk.voxels.clone());
         }
 
-        let max_distance = culling.max_distance * culling.draw_distance_scale();
-        if !should_render_chunk(chunk_id, culling.eye, max_distance) {
+        // `max_distance` is already quality-scaled by the caller (e.g. live_scene).
+        if !should_render_chunk(chunk_id, culling.eye, culling.max_distance) {
             if let Some(entity) = scene.chunks.remove(&chunk_id.0) {
                 commands.entity(entity).despawn();
             }

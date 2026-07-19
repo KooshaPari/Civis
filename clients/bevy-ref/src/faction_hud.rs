@@ -42,7 +42,7 @@ const FACTION_CREST_PATHS: &[(&str, &str)] = &[
 
 /// The faction id the local player controls (0 = Ardani, 1 = Velthari, 2 = Grundak).
 ///
-/// Set from [`crate::game_ui::ScenarioPanel`] on scenario launch.
+/// Set from [`crate::menus::WorldSetupParams::player_faction`] on ConfirmWorldSetup.
 #[derive(Resource, Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct PlayerFactionId(pub u32);
 
@@ -265,12 +265,22 @@ fn draw_faction_hud(
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-fn faction_display_name(id: u32, entry: &Option<civ_protocol_3d::FactionStateEntry>) -> String {
-    let gov = entry
-        .as_ref()
-        .map(|e| government_label(&e.government))
-        .unwrap_or("Faction");
-    format!("{gov} #{id}")
+/// Human-readable identity for a faction id (shared seed names + numeric fallback).
+///
+/// Ids 0..=2 map to Ardani / Velthari / Grundak; higher ids fall back to
+/// `"Faction {id}"`.
+#[must_use]
+pub fn faction_identity_name(id: u32) -> String {
+    match id {
+        0 => "Ardani".to_string(),
+        1 => "Velthari".to_string(),
+        2 => "Grundak".to_string(),
+        _ => format!("Faction {id}"),
+    }
+}
+
+fn faction_display_name(id: u32, _entry: &Option<civ_protocol_3d::FactionStateEntry>) -> String {
+    faction_identity_name(id)
 }
 
 fn government_label(government: &civ_protocol_3d::Government3d) -> &'static str {
@@ -286,10 +296,21 @@ fn government_label(government: &civ_protocol_3d::Government3d) -> &'static str 
     }
 }
 
+/// Crest-aligned swatch when PNG registration has not completed yet.
+///
+/// Order and hexes match [`FACTION_CREST_PATHS`] / `assets/ui/README.md`
+/// (`gold` `#E8B84B`, `blue` `#2980b9`, `violet` `#9b59b6`, `green` `#27ae60`,
+/// `red` `#c0392b`, `cyan` `#50C8F0`).
 fn faction_egui_color(id: u32) -> egui::Color32 {
-    let [r, g, b] = crate::diplomacy_ui::faction_color_from_id(id);
-    let to_u8 = |v: f32| (v.clamp(0.0, 1.0) * 255.0).round() as u8;
-    egui::Color32::from_rgb(to_u8(r), to_u8(g), to_u8(b))
+    const CREST_COLORS: [egui::Color32; 6] = [
+        egui::Color32::from_rgb(0xE8, 0xB8, 0x4B), // gold
+        egui::Color32::from_rgb(0x29, 0x80, 0xB9), // blue
+        egui::Color32::from_rgb(0x9B, 0x59, 0xB6), // violet
+        egui::Color32::from_rgb(0x27, 0xAE, 0x60), // green
+        egui::Color32::from_rgb(0xC0, 0x39, 0x2B), // red
+        egui::Color32::from_rgb(0x50, 0xC8, 0xF0), // cyan
+    ];
+    CREST_COLORS[id as usize % CREST_COLORS.len()]
 }
 
 fn stat_row(ui: &mut egui::Ui, label: &str, value: &str, value_color: egui::Color32) {

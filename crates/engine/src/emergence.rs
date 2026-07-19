@@ -1919,9 +1919,9 @@ pub fn urbanization_index(density: f32, surplus: f32, trade: f32) -> f32 {
         0.0
     };
 
-    // Saturating surplus — dens contribution is linear (already normalised),
-    // trade uses saturation so very large trade flows don't blow past 1.0.
-    let surplus_term = sup / (1.0 + sup);
+    // All signals contribute within the normalised range; surplus saturates at
+    // 1.0 so large flows cannot dominate the weighted index.
+    let surplus_term = sup.min(1.0);
     let raw = dens * 0.5 + surplus_term * 0.3 + trd * 0.2;
     if raw.is_finite() {
         raw.clamp(0.0, 1.0)

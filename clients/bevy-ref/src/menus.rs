@@ -11,8 +11,9 @@ use crate::outcome_overlay::{
     end_player_session, outcome_modal_visible,
 };
 use crate::faction_hud::PlayerFactionId;
+use crate::game_ui::GameSpeed;
 use crate::save_load_ui::SaveLoadPanel;
-use crate::settings_ui::GameSettings;
+use crate::settings_ui::{GameSettings, KeyBinding, ACTION_PAUSE_SIM};
 use crate::ui_theme::{CHIP_FILL, GLASS_FILL, KC_ACCENT};
 use bevy::app::AppExit;
 use bevy::prelude::*;
@@ -290,6 +291,7 @@ pub fn consume_menu_commands(
     mut boot: ResMut<WorldGenBoot>,
     mut game_settings: Option<ResMut<GameSettings>>,
     mut settings_open: Option<ResMut<SettingsOpen>>,
+    mut game_speed: Option<ResMut<GameSpeed>>,
 ) {
     let Some(state) = state else {
         return;
@@ -362,7 +364,7 @@ pub fn consume_menu_commands(
             next_state.set(AppState::WorldGen);
         }
         MainMenuCommand::Resume => {
-            *game_mode = GameUiMode::Playing;
+            resume_shell_pause(&mut game_mode, game_speed.as_deref_mut());
             if *state.get() == AppState::Paused {
                 next_state.set(AppState::Playing);
             }
@@ -398,14 +400,23 @@ pub fn consume_menu_commands(
 
 pub fn toggle_pause(
     keys: Res<ButtonInput<KeyCode>>,
+    mouse_buttons: Res<ButtonInput<MouseButton>>,
     settings: Option<Res<GameSettings>>,
     app_state: Option<Res<State<AppState>>>,
     outcome_overlay: Option<Res<OutcomeOverlayState>>,
     escape_block: Option<Res<OutcomeEscapeBlock>>,
     mut mode: ResMut<GameUiMode>,
+    mut game_speed: Option<ResMut<GameSpeed>>,
 ) {
-    // Paradox-style: Esc owns the pause overlay. Sim clock bindings stay elsewhere.
-    if !keys.just_pressed(KeyCode::Escape) {
+    // Single owner for ACTION_PAUSE_SIM: shell pause overlay (Esc default).
+    // game_ui no longer toggles GameSpeed on this action.
+    let pause_binding = settings
+        .as_ref()
+        .and_then(|s| s.key_for(ACTION_PAUSE_SIM))
+        .unwrap_or(KeyBinding::Key(KeyCode::Escape));
+    let binding_pressed = pause_binding.is_just_pressed(&keys, &mouse_buttons);
+    let esc_pressed = keys.just_pressed(KeyCode::Escape);
+    if !esc_pressed && !binding_pressed {
         return;
     }
 
@@ -421,7 +432,8 @@ pub fn toggle_pause(
 
     // Settings panel owns Esc while open (Close Panel). MenusPlugin is
     // registered before SettingsPlugin so `open` is still true this frame.
-    if settings.as_ref().is_some_and(|s| s.open) {
+    // Only gate the Esc path so a rebound ACTION_PAUSE_SIM can still toggle.
+    if esc_pressed && settings.as_ref().is_some_and(|s| s.open) {
         return;
     }
 
@@ -431,10 +443,20 @@ pub fn toggle_pause(
         }
     }
 
-    *mode = match *mode {
-        GameUiMode::Playing => GameUiMode::Paused,
-        GameUiMode::Paused => GameUiMode::Playing,
-    };
+    match *mode {
+        GameUiMode::Playing => *mode = GameUiMode::Paused,
+        GameUiMode::Paused => {
+            resume_shell_pause(&mut mode, game_speed.as_deref_mut());
+        }
+    }
+}
+
+/// Clear shell pause overlay and unstick sim speed if it was left at 0.
+fn resume_shell_pause(mode: &mut GameUiMode, speed: Option<&mut GameSpeed>) {
+    *mode = GameUiMode::Playing;
+    if let Some(speed) = speed {
+        speed.restore_after_resume();
+    }
 }
 
 fn tick_era_banner(mut banner: ResMut<EraBanner>, time: Res<Time>) {
@@ -800,6 +822,7 @@ fn draw_pause_menu(
     mut save_panel: ResMut<SaveLoadPanel>,
     mut game_settings: Option<ResMut<GameSettings>>,
     mut settings_open: ResMut<SettingsOpen>,
+    mut game_speed: Option<ResMut<GameSpeed>>,
     mut exit: MessageWriter<AppExit>,
 ) {
     if *mode != GameUiMode::Paused {
@@ -865,7 +888,7 @@ fn draw_pause_menu(
                         );
                         ui.add_space(16.0);
                         if menu_button(ui, "\u{25b6}  Resume").clicked() {
-                            *mode = GameUiMode::Playing;
+                            resume_shell_pause(&mut mode, game_speed.as_deref_mut());
                         }
                         ui.add_space(6.0);
                         if menu_button(ui, "\u{2699}  Settings").clicked() {

@@ -18,6 +18,7 @@ import { postControl } from "./control";
 import { isDashboardShortcutTarget, useDashboardShortcuts } from "./hooks/useDashboardShortcuts";
 import { getActiveServerSocket } from "./lib/civisSocket";
 import { jsonRpcCall, normalizeServerSnapshot } from "./lib/civisServer";
+import { createAdaptiveDprController } from "./lib/framePerf";
 import {
   Biome,
   Building,
@@ -203,7 +204,10 @@ export function Scene3d() {
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const adaptiveDpr = createAdaptiveDprController(
+      Math.min(window.devicePixelRatio || 1, 2),
+    );
+    renderer.setPixelRatio(adaptiveDpr.getDpr());
     renderer.setSize(mount.clientWidth, mount.clientHeight, false);
     mount.appendChild(renderer.domElement);
     labelRenderer.setSize(mount.clientWidth, mount.clientHeight);
@@ -1407,6 +1411,7 @@ export function Scene3d() {
         return;
       }
       raf = window.requestAnimationFrame(animate);
+      const frameStartedAt = performance.now();
       const snapshot = refs.current.currentSnapshot;
       const terrain = refs.current.activeTerrain;
       if (terrain) {
@@ -1456,6 +1461,12 @@ export function Scene3d() {
       controls.update();
       renderer.render(scene, camera);
       labelRenderer.render(scene, camera);
+      const previousDpr = adaptiveDpr.getDpr();
+      const nextDpr = adaptiveDpr.record(performance.now() - frameStartedAt);
+      if (nextDpr !== previousDpr) {
+        renderer.setPixelRatio(nextDpr);
+        resizeRenderer();
+      }
     };
     const onVisibilityChange = () => {
       if (document.hidden) {

@@ -4856,6 +4856,16 @@ impl Simulation {
     }
 
     pub(crate) fn push_disaster_event(&mut self, event: crate::disasters::DisasterTickEvent) {
+        let kind = match event.kind {
+            crate::disasters::DisasterKind::Meteor => "meteor",
+            crate::disasters::DisasterKind::Flood => "flood",
+            crate::disasters::DisasterKind::Quake => "quake",
+            crate::disasters::DisasterKind::Wildfire => "wildfire",
+            crate::disasters::DisasterKind::Storm => "storm",
+            crate::disasters::DisasterKind::Drought => "drought",
+            crate::disasters::DisasterKind::Plague => "plague",
+        };
+        self.record_disaster_audio(kind, 1.0);
         self.last_tick_disaster_events.push(event);
     }
 
@@ -11629,8 +11639,13 @@ pub fn last_tick_unrest_settlement(settlement_id: u32) -> &'static [UnrestEvent]
 /// Set settlement gini coefficient (currently a no-op stub).
 pub fn set_settlement_gini(settlement_id: u32, gini: f64) {
     let mut state = compat_state().lock().expect("compat state poisoned");
-    state.settlement_gini.insert(settlement_id, gini);
-    let score = (gini.clamp(0.0, 1.0) * 500.0).round() as i32;
+    let normalized = if gini.is_nan() {
+        0.0
+    } else {
+        gini.clamp(0.0, 1.0)
+    };
+    state.settlement_gini.insert(settlement_id, normalized);
+    let score = (normalized * 200.0).round() as i32;
     let level = UnrestLevel::from_score(score);
     state.unrest_levels.insert(settlement_id, level);
     state.unrest_events.push(UnrestEvent {
@@ -11639,9 +11654,19 @@ pub fn set_settlement_gini(settlement_id: u32, gini: f64) {
         score,
         score_delta: 0,
         mood: 0,
-        gini_x100: (gini.clamp(0.0, 1.0) * 100.0).round() as i32,
+        gini_x100: (normalized * 100.0).round() as i32,
         fabric: FabricTier::Fractured,
     });
+}
+
+/// Get the normalized Gini coefficient stored for a settlement.
+pub fn settlement_gini(settlement_id: u32) -> Option<f64> {
+    compat_state()
+        .lock()
+        .expect("compat state poisoned")
+        .settlement_gini
+        .get(&settlement_id)
+        .copied()
 }
 
 /// Get unrest level for a settlement (currently None stub).
@@ -11683,6 +11708,7 @@ mod compat_state_tests {
     #[test]
     fn compat_unrest_round_trips_gini() {
         set_settlement_gini(9, 0.75);
+        assert_eq!(settlement_gini(9), Some(0.75));
         assert_eq!(unrest_level(9), Some(UnrestLevel::Rioting));
         assert_eq!(last_tick_unrest_settlement(9).len(), 1);
         assert!(!last_tick_unrest().is_empty());

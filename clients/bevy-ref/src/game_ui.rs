@@ -176,11 +176,16 @@ pub struct SelectedEntityDetails {
 pub struct GameSpeed {
     /// Tick speed multiplier. `0` means paused.
     pub multiplier: f32,
+    /// Last non-zero multiplier; restored when shell pause resumes at speed 0.
+    pub last_non_zero: f32,
 }
 
 impl Default for GameSpeed {
     fn default() -> Self {
-        Self { multiplier: 1.0 }
+        Self {
+            multiplier: 1.0,
+            last_non_zero: 1.0,
+        }
     }
 }
 
@@ -199,6 +204,28 @@ impl GameSpeed {
 
     pub const fn factor(self) -> f32 {
         self.multiplier
+    }
+
+    /// Remember the current multiplier when it is a playable (non-zero) rate.
+    pub fn remember_non_zero(&mut self) {
+        if self.multiplier > 0.01 {
+            self.last_non_zero = self.multiplier;
+        }
+    }
+
+    /// After shell Resume: if sim speed is stuck at 0, restore last playable rate.
+    pub fn restore_after_resume(&mut self) {
+        if self.multiplier > 0.01 {
+            self.remember_non_zero();
+            return;
+        }
+        let restored = if self.last_non_zero > 0.01 {
+            self.last_non_zero
+        } else {
+            1.0
+        };
+        self.multiplier = restored;
+        self.last_non_zero = restored;
     }
 }
 
@@ -333,6 +360,7 @@ impl Plugin for GameUiPlugin {
             .add_systems(
                 Update,
                 (
+                    track_last_non_zero_speed,
                     handle_speed_shortcuts,
                     handle_category_hotkeys,
                     tick_god_action_toast,
@@ -499,6 +527,12 @@ fn sync_initial_game_speed_from_settings(
         return;
     };
     speed.multiplier = settings.gameplay.default_sim_speed.max(0.0);
+    speed.remember_non_zero();
+}
+
+/// Keep [`GameSpeed::last_non_zero`] fresh for shell-resume restore.
+fn track_last_non_zero_speed(mut speed: ResMut<GameSpeed>) {
+    speed.remember_non_zero();
 }
 
 fn handle_speed_shortcuts(
@@ -516,13 +550,7 @@ fn handle_speed_shortcuts(
                 .is_just_pressed(&keys, &mouse_buttons)
         };
 
-    if binding_just_pressed(ACTION_PAUSE_SIM, KeyCode::Space, &settings) {
-        speed.multiplier = if speed_value_matches(speed.multiplier, 0.0) {
-            1.0
-        } else {
-            0.0
-        };
-    }
+    // ACTION_PAUSE_SIM is owned by menus::toggle_pause (shell overlay).
     if binding_just_pressed(ACTION_SPEED_1X, KeyCode::Digit1, &settings) {
         speed.multiplier = 1.0;
     }
@@ -893,6 +921,7 @@ fn top_bar_ui(
     let green = egui::Color32::from_rgb(120, 220, 130);
     let speed_label = GameSpeed {
         multiplier: snapshot.speed_multiplier,
+        ..Default::default()
     }
     .display_label();
 
@@ -1252,13 +1281,79 @@ mod tests {
 
     #[test]
     fn speed_label_mapping() {
-        assert_eq!(GameSpeed { multiplier: 0.0 }.display_label(), "Paused");
-        assert_eq!(GameSpeed { multiplier: 1.0 }.display_label(), "1x");
-        assert_eq!(GameSpeed { multiplier: 2.0 }.display_label(), "2x");
-        assert_eq!(GameSpeed { multiplier: 5.0 }.display_label(), "5x");
-        assert_eq!(GameSpeed { multiplier: 10.0 }.display_label(), "10x");
-        assert_eq!(GameSpeed { multiplier: 7.0 }.display_label(), "7x");
-        assert_eq!(GameSpeed { multiplier: 0.25 }.display_label(), "0.25x");
+        assert_eq!(
+            GameSpeed {
+                multiplier: 0.0,
+                ..Default::default()
+            }
+            .display_label(),
+            "Paused"
+        );
+        assert_eq!(
+            GameSpeed {
+                multiplier: 1.0,
+                ..Default::default()
+            }
+            .display_label(),
+            "1x"
+        );
+        assert_eq!(
+            GameSpeed {
+                multiplier: 2.0,
+                ..Default::default()
+            }
+            .display_label(),
+            "2x"
+        );
+        assert_eq!(
+            GameSpeed {
+                multiplier: 5.0,
+                ..Default::default()
+            }
+            .display_label(),
+            "5x"
+        );
+        assert_eq!(
+            GameSpeed {
+                multiplier: 10.0,
+                ..Default::default()
+            }
+            .display_label(),
+            "10x"
+        );
+        assert_eq!(
+            GameSpeed {
+                multiplier: 7.0,
+                ..Default::default()
+            }
+            .display_label(),
+            "7x"
+        );
+        assert_eq!(
+            GameSpeed {
+                multiplier: 0.25,
+                ..Default::default()
+            }
+            .display_label(),
+            "0.25x"
+        );
+    }
+
+    #[test]
+    fn restore_after_resume_uses_last_non_zero() {
+        let mut speed = GameSpeed {
+            multiplier: 0.0,
+            last_non_zero: 5.0,
+        };
+        speed.restore_after_resume();
+        assert_eq!(speed.multiplier, 5.0);
+
+        let mut speed = GameSpeed {
+            multiplier: 0.0,
+            last_non_zero: 0.0,
+        };
+        speed.restore_after_resume();
+        assert_eq!(speed.multiplier, 1.0);
     }
 
     #[test]

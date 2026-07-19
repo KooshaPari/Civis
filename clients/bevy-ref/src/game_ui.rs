@@ -45,15 +45,34 @@ pub struct ToolIcons {
     pub registered: bool,
 }
 
-/// Raster HUD chrome (`ui/hud/panel-frame.png`).
+/// Raster HUD chrome (panel frame, buttons, chips, resource glyphs).
 #[derive(Resource, Default)]
 pub struct HudPanelAssets {
-    pub handle: Option<Handle<Image>>,
-    pub texture: Option<egui::TextureId>,
+    /// Bevy strong handles keeping PNGs alive.
+    pub handles: Vec<Handle<Image>>,
+    /// Registered egui texture IDs keyed by asset stem.
+    pub textures: HashMap<&'static str, egui::TextureId>,
+    /// `true` once all chrome images have been registered with egui.
     pub registered: bool,
 }
 
-const HUD_PANEL_FRAME_PATH: &str = "ui/hud/panel-frame.png";
+impl HudPanelAssets {
+    fn texture(&self, key: &str) -> Option<egui::TextureId> {
+        self.textures.get(key).copied()
+    }
+}
+
+/// (stem, asset path) pairs for HUD chrome PNGs.
+const HUD_CHROME_PATHS: &[(&str, &str)] = &[
+    ("panel-frame", "ui/hud/panel-frame.png"),
+    ("button", "ui/hud/button.png"),
+    ("button-hover", "ui/hud/button-hover.png"),
+    ("chip-bg", "ui/hud/chip-bg.png"),
+    ("resource-population", "ui/hud/resource-population.png"),
+    ("resource-clock", "ui/hud/resource-clock.png"),
+    ("resource-food", "ui/hud/resource-food.png"),
+    ("resource-energy", "ui/hud/resource-energy.png"),
+];
 
 /// (path-stem, asset path) pairs for each tool-category icon PNG.
 ///
@@ -363,10 +382,13 @@ fn apply_keycap_theme(mut contexts: EguiContexts) {
 }
 
 fn queue_hud_panel_handle(mut hud: ResMut<HudPanelAssets>, asset_server: Res<AssetServer>) {
-    hud.handle = Some(asset_server.load::<Image>(HUD_PANEL_FRAME_PATH));
+    hud.handles = HUD_CHROME_PATHS
+        .iter()
+        .map(|(_, path)| asset_server.load::<Image>(*path))
+        .collect();
 }
 
-/// Register the HUD panel-frame PNG with egui once loaded.
+/// Register HUD chrome PNGs with egui once loaded.
 fn load_hud_panel(
     mut contexts: EguiContexts,
     mut hud: ResMut<HudPanelAssets>,
@@ -375,15 +397,33 @@ fn load_hud_panel(
     if hud.registered {
         return;
     }
-    let Some(handle) = hud.handle.as_ref() else {
-        return;
-    };
-    if !asset_server.is_loaded_with_dependencies(handle) {
+    let all_loaded = hud
+        .handles
+        .iter()
+        .all(|h| asset_server.is_loaded_with_dependencies(h));
+    if hud.handles.is_empty() || !all_loaded {
         return;
     }
-    let id = contexts.add_image(bevy_egui::EguiTextureHandle::Strong(handle.clone()));
-    hud.texture = Some(id);
+    let handles = hud.handles.clone();
+    for ((key, _), handle) in HUD_CHROME_PATHS.iter().zip(handles) {
+        let id = contexts.add_image(bevy_egui::EguiTextureHandle::Strong(handle));
+        hud.textures.insert(*key, id);
+    }
     hud.registered = true;
+}
+
+fn paint_hud_texture(
+    painter: &egui::Painter,
+    tex: egui::TextureId,
+    rect: egui::Rect,
+    alpha: u8,
+) {
+    painter.image(
+        tex,
+        rect,
+        egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+        egui::Color32::from_rgba_unmultiplied(255, 255, 255, alpha),
+    );
 }
 
 /// Paint optional panel-frame art under HUD contents, then draw children.
@@ -526,12 +566,14 @@ fn draw_game_ui(
         return;
     };
 
-    let panel_tex = hud_panels.texture;
+    let panel_tex = hud_panels.texture("panel-frame");
+    let chrome = &*hud_panels;
     apply_theme(ctx);
 
     top_center_cluster(
         ctx,
         panel_tex,
+        chrome,
         &snapshot,
         &attach_mode,
         live_attach.as_deref(),
@@ -546,7 +588,14 @@ fn draw_game_ui(
         snapshot.factions,
     );
 
-    bottom_cluster(ctx, panel_tex, &mut active_tool, &mut building_kind, &mut speed);
+    bottom_cluster(
+        ctx,
+        panel_tex,
+        chrome,
+        &mut active_tool,
+        &mut building_kind,
+        &mut speed,
+    );
 }
 
 /// Compact needs line for the selection inspector (`F 82% · S 70% · …`).
@@ -572,6 +621,7 @@ pub fn format_civilian_health_display(health: f32) -> String {
 fn top_center_cluster(
     ctx: &egui::Context,
     panel_tex: Option<egui::TextureId>,
+    chrome: &HudPanelAssets,
     snapshot: &GameUiSnapshot,
     attach_mode: &crate::AttachMode,
     live_attach: Option<&crate::live_attach::LiveAttachState>,
@@ -585,7 +635,7 @@ fn top_center_cluster(
                 panel_tex,
                 egui::Margin::symmetric(12, 8),
                 egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.18)),
-                |ui| top_bar_ui(ui, snapshot, attach_mode, live_attach, laws_open),
+                |ui| top_bar_ui(ui, chrome, snapshot, attach_mode, live_attach, laws_open),
             );
         });
 }
@@ -632,6 +682,7 @@ fn left_sidebar_cluster(
 fn bottom_cluster(
     ctx: &egui::Context,
     panel_tex: Option<egui::TextureId>,
+    chrome: &HudPanelAssets,
     active_tool: &mut ActiveTool,
     building_kind: &mut BuildingSpawnKind,
     speed: &mut GameSpeed,
@@ -644,7 +695,7 @@ fn bottom_cluster(
                 panel_tex,
                 egui::Margin::symmetric(12, 8),
                 egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.16)),
-                |ui| tool_palette_ui(ui, active_tool, building_kind, speed),
+                |ui| tool_palette_ui(ui, chrome, active_tool, building_kind, speed),
             );
         });
 }
@@ -796,21 +847,43 @@ fn panel_frame(margin: egui::Margin) -> egui::Frame {
         .corner_radius(egui::CornerRadius::same(8))
 }
 
-/// A single rounded stat chip: `icon text` on a tinted pill.
-fn chip(ui: &mut egui::Ui, icon: &str, text: &str, color: egui::Color32) {
+/// A single rounded stat chip with optional raster chrome and icon glyph.
+fn chip(
+    ui: &mut egui::Ui,
+    chrome: &HudPanelAssets,
+    icon_key: Option<&str>,
+    icon_fallback: &str,
+    text: &str,
+    color: egui::Color32,
+) {
+    let chip_bg = chrome.texture("chip-bg");
     egui::Frame::NONE
         .fill(CHIP_FILL)
         .corner_radius(egui::CornerRadius::same(8))
         .inner_margin(egui::Margin::symmetric(10, 5))
         .show(ui, |ui| {
-            ui.label(egui::RichText::new(icon).color(color));
-            ui.label(egui::RichText::new(text).color(color).strong());
+            if let Some(tex) = chip_bg {
+                paint_hud_texture(ui.painter(), tex, ui.max_rect(), 210);
+            }
+            ui.horizontal(|ui| {
+                if let Some(key) = icon_key {
+                    if let Some(tex) = chrome.texture(key) {
+                        ui.image((tex, egui::vec2(16.0, 16.0)));
+                    } else {
+                        ui.label(egui::RichText::new(icon_fallback).color(color));
+                    }
+                } else {
+                    ui.label(egui::RichText::new(icon_fallback).color(color));
+                }
+                ui.label(egui::RichText::new(text).color(color).strong());
+            });
         });
 }
 
 /// Top bar: stat chips on the left, websocket status on the right.
 fn top_bar_ui(
     ui: &mut egui::Ui,
+    chrome: &HudPanelAssets,
     snapshot: &GameUiSnapshot,
     attach_mode: &crate::AttachMode,
     live_attach: Option<&crate::live_attach::LiveAttachState>,
@@ -824,16 +897,46 @@ fn top_bar_ui(
     .display_label();
 
     ui.horizontal(|ui| {
-        chip(ui, "\u{23f1}", &format!("{}", snapshot.tick), ACCENT);
-        chip(ui, "\u{1f465}", &format!("{}", snapshot.population), green);
-        chip(ui, "\u{1f6a9}", &format!("{}", snapshot.factions), gold);
         chip(
             ui,
+            chrome,
+            Some("resource-clock"),
+            "\u{23f1}",
+            &format!("{}", snapshot.tick),
+            ACCENT,
+        );
+        chip(
+            ui,
+            chrome,
+            Some("resource-population"),
+            "\u{1f465}",
+            &format!("{}", snapshot.population),
+            green,
+        );
+        chip(
+            ui,
+            chrome,
+            None,
+            "\u{1f6a9}",
+            &format!("{}", snapshot.factions),
+            gold,
+        );
+        chip(
+            ui,
+            chrome,
+            None,
             "\u{1f30d}",
             &format!("Era {}", snapshot.era),
             egui::Color32::WHITE,
         );
-        chip(ui, "\u{25b6}", &speed_label, ACCENT);
+        chip(
+            ui,
+            chrome,
+            Some("resource-clock"),
+            "\u{25b6}",
+            &speed_label,
+            ACCENT,
+        );
 
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             if ui.button("⚖ Laws").clicked() {
@@ -846,7 +949,7 @@ fn top_bar_ui(
                 } else {
                     ("\u{1f7e1}", "WS \u{2026}", gold)
                 };
-                chip(ui, dot, text, color);
+                chip(ui, chrome, None, dot, text, color);
                 if let Some(overlay) = &snapshot.live_hud_overlay {
                     ui.label(egui::RichText::new(overlay).color(DIM).small());
                 }
@@ -866,6 +969,7 @@ struct ToolDef {
 /// Bottom bar: tool palette (left) + segmented speed control (right).
 fn tool_palette_ui(
     ui: &mut egui::Ui,
+    chrome: &HudPanelAssets,
     active: &mut ActiveTool,
     building_kind: &mut BuildingSpawnKind,
     speed: &mut GameSpeed,
@@ -914,7 +1018,7 @@ fn tool_palette_ui(
         for def in &tools {
             let is_active = def.tool == Some(active.tool);
             let is_building = def.tool == Some(SpawnTool::SpawnBuilding);
-            if tool_button(ui, def, is_active).clicked() {
+            if tool_button(ui, chrome, def, is_active).clicked() {
                 if let Some(tool) = def.tool {
                     active.tool = tool;
                 }
@@ -954,7 +1058,12 @@ fn tool_palette_ui(
 }
 
 /// Render one 56x56 tool button with emoji + label, accent-highlighted if active.
-fn tool_button(ui: &mut egui::Ui, def: &ToolDef, active: bool) -> egui::Response {
+fn tool_button(
+    ui: &mut egui::Ui,
+    chrome: &HudPanelAssets,
+    def: &ToolDef,
+    active: bool,
+) -> egui::Response {
     let fill = if active {
         ACCENT.gamma_multiply(0.30)
     } else {
@@ -972,6 +1081,16 @@ fn tool_button(ui: &mut egui::Ui, def: &ToolDef, active: bool) -> egui::Response
         .corner_radius(egui::CornerRadius::same(8))
         .inner_margin(egui::Margin::same(4))
         .show(ui, |ui| {
+            let rect = ui.max_rect();
+            let hovered = ui.rect_contains_pointer(rect);
+            let bg = if active || hovered {
+                chrome.texture("button-hover")
+            } else {
+                chrome.texture("button")
+            };
+            if let Some(tex) = bg {
+                paint_hud_texture(ui.painter(), tex, rect, 230);
+            }
             ui.set_width(48.0);
             ui.vertical_centered(|ui| {
                 ui.label(egui::RichText::new(def.icon).size(22.0));
@@ -1014,7 +1133,8 @@ fn speed_control_ui(ui: &mut egui::Ui, speed: &mut GameSpeed) {
                 CHIP_FILL
             })
             .min_size(egui::vec2(38.0, 30.0));
-        if ui.add(btn).clicked() {
+        let response = ui.add(btn);
+        if response.clicked() {
             speed.multiplier = mult;
         }
     }

@@ -219,6 +219,7 @@ fn main() {
         PostFxPlugin,
         GpuFeaturesPlugin,
         LivePickPlugin,
+        civ_bevy_ref::frame_budget::FrameBudgetPlugin,
     ));
     #[cfg(feature = "audio")]
     app.add_plugins(civ_bevy_ref::audio::CivisAudioPlugin);
@@ -724,6 +725,7 @@ fn apply_live_frames(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut feed: ResMut<EventFeed>,
     mut frame_buffer: Local<Vec<Frame3d>>,
+    gpu_quality: Res<civ_bevy_ref::frame_budget::GpuQualityMode>,
 ) {
     let resets = bridge.client.poll_scene_resets();
     if let Some(reset) = resets.last() {
@@ -737,10 +739,11 @@ fn apply_live_frames(
 
     let target = orbit.as_target();
     let eye = target.orbit_position();
+    let quality = *gpu_quality;
     let culling = StreamCulling {
         eye,
-        max_distance: orbit.distance,
-        gpu_quality: civ_bevy_ref::frame_budget::GpuQualityMode::default(),
+        max_distance: civ_bevy_ref::frame_budget::scaled_cull_distance(orbit.distance, quality),
+        gpu_quality: quality,
     };
     let wireframe_color = debug.wireframe.then_some(CHUNK_WIREFRAME_LINE_COLOR);
 

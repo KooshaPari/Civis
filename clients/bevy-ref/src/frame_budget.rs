@@ -100,14 +100,6 @@ impl Default for FrameBudgetState {
     }
 }
 
-#[derive(Resource, Default)]
-struct QualityRecoveryState {
-    window_start_secs: f64,
-    drops_at_window_start: u64,
-    last_recovery_warn_at: Option<f64>,
-    initialized: bool,
-}
-
 /// Registers frame-budget tracking against Bevy diagnostics.
 pub struct FrameBudgetPlugin;
 
@@ -119,11 +111,30 @@ impl Plugin for FrameBudgetPlugin {
         app.init_resource::<FrameBudgetMetrics>()
             .init_resource::<FrameBudgetState>()
             .init_resource::<GpuQualityMode>()
-            .init_resource::<QualityRecoveryState>()
             .add_systems(
                 PostUpdate,
                 enforce_frame_budget.after(FrameTimeDiagnosticsPlugin::diagnostic_system),
             );
+    }
+}
+
+fn quality_for_drop_count(drop_count: u64) -> GpuQualityMode {
+    if drop_count >= DROP_THRESHOLD_CRITICAL {
+        GpuQualityMode::Critical
+    } else if drop_count >= DROP_THRESHOLD_REDUCED {
+        GpuQualityMode::Reduced
+    } else {
+        GpuQualityMode::Full
+    }
+}
+
+fn prune_recent_drops(state: &mut FrameBudgetState, now: f64) {
+    while let Some(front) = state.recent_drops.front().copied() {
+        if now - front > DROP_RECOVERY_WINDOW_SECS {
+            state.recent_drops.pop_front();
+        } else {
+            break;
+        }
     }
 }
 
@@ -154,33 +165,42 @@ fn enforce_frame_budget(
         return;
     }
     let avg_ms = state.window.iter().sum::<f32>() / FRAME_BUDGET_WINDOW as f32;
-    if avg_ms <= FRAME_BUDGET_MS {
-        return;
-    }
-    metrics.drop_count = metrics.drop_count.saturating_add(1);
     let now = time.elapsed_secs_f64();
-    state.recent_drops.push_back(now);
-    while let Some(front) = state.recent_drops.front().copied() {
-        if now - front > DROP_RECOVERY_WINDOW_SECS {
-            state.recent_drops.pop_front();
-        } else {
-            break;
+    let over_budget = avg_ms > FRAME_BUDGET_MS;
+
+    if over_budget {
+        metrics.drop_count = metrics.drop_count.saturating_add(1);
+        state.recent_drops.push_back(now);
+        let should_warn = state
+            .last_warn_at
+            .map(|last| now - last >= WARN_THROTTLE_SECS)
+            .unwrap_or(true);
+        if should_warn {
+            warn!("Frame budget exceeded: {avg_ms:.1}ms (target {FRAME_BUDGET_MS})");
+            state.last_warn_at = Some(now);
         }
     }
-    let drop_count = state.recent_drops.len() as u64;
-    *recovery = if drop_count >= DROP_THRESHOLD_CRITICAL {
-        GpuQualityMode::Critical
-    } else if drop_count >= DROP_THRESHOLD_REDUCED {
-        GpuQualityMode::Reduced
-    } else {
-        GpuQualityMode::Full
-    };
-    let should_warn = state
-        .last_warn_at
-        .map(|last| now - last >= WARN_THROTTLE_SECS)
-        .unwrap_or(true);
-    if should_warn {
-        warn!("Frame budget exceeded: {avg_ms:.1}ms (target {FRAME_BUDGET_MS})");
-        state.last_warn_at = Some(now);
+
+    // Always prune aged drops and recompute quality so under-budget frames can
+    // upgrade out of Reduced/Critical (hysteresis via DROP_RECOVERY_WINDOW_SECS).
+    prune_recent_drops(&mut state, now);
+    let new_mode = quality_for_drop_count(state.recent_drops.len() as u64);
+    if new_mode != *recovery {
+        if new_mode.cull_distance_scale() > recovery.cull_distance_scale() {
+            let should_warn = state
+                .last_recovery_warn_at
+                .map(|last| now - last >= WARN_THROTTLE_SECS)
+                .unwrap_or(true);
+            if should_warn {
+                info!(
+                    "GpuQualityMode recovering: {:?} → {:?} (avg {avg_ms:.1}ms, drops {})",
+                    *recovery,
+                    new_mode,
+                    state.recent_drops.len()
+                );
+                state.last_recovery_warn_at = Some(now);
+            }
+        }
+        *recovery = new_mode;
     }
 }

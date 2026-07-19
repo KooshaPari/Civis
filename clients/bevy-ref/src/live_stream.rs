@@ -864,8 +864,8 @@ pub fn apply_voxel_delta_frame(
             scene.chunk_voxels.insert(chunk_id, chunk.voxels.clone());
         }
 
-        let max_distance = culling.max_distance * culling.draw_distance_scale();
-        if !should_render_chunk(chunk_id, culling.eye, max_distance) {
+        // `max_distance` is already quality-scaled by the caller (e.g. live_scene).
+        if !should_render_chunk(chunk_id, culling.eye, culling.max_distance) {
             if let Some(entity) = scene.chunks.remove(&chunk_id.0) {
                 commands.entity(entity).despawn();
             }

@@ -10,6 +10,7 @@ use crate::outcome_overlay::{
     OutcomeEscapeBlock, OutcomeOverlayState, OutcomeSessionGate, begin_player_session,
     end_player_session, outcome_modal_visible,
 };
+use crate::faction_hud::PlayerFactionId;
 use crate::save_load_ui::SaveLoadPanel;
 use crate::settings_ui::{ACTION_PAUSE_SIM, GameSettings, KeyBinding};
 use crate::ui_theme::{CHIP_FILL, GLASS_FILL, KC_ACCENT};
@@ -130,6 +131,8 @@ pub struct WorldSetupParams {
     pub archipelago: bool,
     /// Starting population density 0..=1.
     pub population_density: f32,
+    /// Local player faction id (0 = Ardani, 1 = Velthari, 2 = Grundak).
+    pub player_faction: u32,
 }
 
 impl Default for WorldSetupParams {
@@ -140,6 +143,7 @@ impl Default for WorldSetupParams {
             climate_preset: 0,
             archipelago: false,
             population_density: 0.45,
+            player_faction: 0,
         }
     }
 }
@@ -298,6 +302,7 @@ pub fn consume_menu_commands(
             next_state.set(AppState::WorldSetup);
         }
         MainMenuCommand::ConfirmWorldSetup => {
+            commands.insert_resource(PlayerFactionId(params.player_faction));
             if let Some(bridge) = bridge.as_ref() {
                 let preset = WORLDGEN_PRESETS
                     .get(params.climate_preset % WORLDGEN_PRESETS.len())

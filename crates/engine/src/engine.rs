@@ -2908,7 +2908,7 @@ impl Simulation {
 
         #[cfg(debug_assertions)]
         debug_assert!(
-            crate::integrity::check_integrity(self).is_ok(),
+            crate::integrity::check_tick_integrity(self).is_ok(),
             "simulation integrity violated"
         );
     }

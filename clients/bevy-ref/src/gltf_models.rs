@@ -165,7 +165,8 @@ pub struct GltfModelsPlugin;
 impl Plugin for GltfModelsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GameModels>()
-            .add_systems(Startup, load_game_models);
+            .add_systems(Startup, load_game_models)
+            .add_systems(Update, prune_failed_game_models);
     }
 }
 
@@ -277,6 +278,29 @@ fn scene_or_primitive(handle: &Option<Handle<Scene>>) -> ModelOrPrimitive {
         Some(handle) => ModelOrPrimitive::Model(SceneRoot(handle.clone())),
         None => ModelOrPrimitive::Primitive,
     }
+}
+
+/// Drop model slots whose loads settled as [`LoadState::Failed`] so callers
+/// degrade to procedural primitives instead of spawning broken `SceneRoot`s.
+fn prune_failed_game_models(mut models: ResMut<GameModels>, asset_server: Res<AssetServer>) {
+    let prune = |slot: &mut Option<Handle<Scene>>| {
+        let Some(handle) = slot.as_ref() else {
+            return;
+        };
+        if matches!(asset_server.load_state(handle), LoadState::Failed(_)) {
+            *slot = None;
+        }
+    };
+    prune(&mut models.civilian);
+    prune(&mut models.herd);
+    prune(&mut models.tree);
+    prune(&mut models.building);
+    prune(&mut models.building_house_b);
+    prune(&mut models.building_market);
+    prune(&mut models.building_church);
+    prune(&mut models.building_tavern);
+    prune(&mut models.building_tower);
+    prune(&mut models.building_well);
 }
 
 // =============================================================================

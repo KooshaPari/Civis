@@ -345,10 +345,11 @@ fn run_client(
     save_list_tx: Sender<Vec<SaveListEntry>>,
     scene_reset_tx: Sender<SceneReset>,
 ) {
-    let runtime = Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .expect("tokio runtime");
+    let Ok(runtime) = Builder::new_multi_thread().enable_all().build() else {
+        eprintln!("bevy ws client: failed to build tokio runtime — staying disconnected");
+        publish_state(&state_tx, WsConnectionState::Disconnected);
+        return;
+    };
     runtime.block_on(async move {
         let mut backoff = ReconnectBackoff::new();
         publish_state(&state_tx, WsConnectionState::Disconnected);

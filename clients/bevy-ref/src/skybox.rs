@@ -105,13 +105,47 @@ impl Plugin for SkyboxPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<SkyTexture>()
             .add_systems(Startup, (load_sky_texture, spawn_sky_dome).chain())
-            .add_systems(Update, (follow_camera, tint_dome_by_cycle).chain());
+            .add_systems(
+                Update,
+                (
+                    degrade_failed_sky_texture,
+                    follow_camera,
+                    tint_dome_by_cycle,
+                )
+                    .chain(),
+            );
     }
 }
 
 /// Queue the committed equirect HDR panorama on the [`AssetServer`] at startup.
 fn load_sky_texture(mut sky: ResMut<SkyTexture>, asset_server: Res<AssetServer>) {
     sky.0 = Some(asset_server.load(SKY_HDR_PATH));
+}
+
+/// If the HDR panorama fails to resolve, clear the handle and restore the
+/// procedural gradient on the dome so the sky is never blank / pink-missing.
+fn degrade_failed_sky_texture(
+    mut sky: ResMut<SkyTexture>,
+    asset_server: Res<AssetServer>,
+    dome_q: Query<&MeshMaterial3d<StandardMaterial>, With<SkyDome>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    let Some(handle) = sky.0.clone() else {
+        return;
+    };
+    if !matches!(asset_server.load_state(&handle), LoadState::Failed(_)) {
+        return;
+    }
+    sky.0 = None;
+    let Ok(mat_handle) = dome_q.single() else {
+        return;
+    };
+    let Some(mat) = materials.get_mut(mat_handle) else {
+        return;
+    };
+    mat.base_color_texture = None;
+    mat.base_color = horizon_color(DEFAULT_HORIZON);
+    mat.emissive = LinearRgba::from(horizon_color(DEFAULT_HORIZON)) * 0.8;
 }
 
 /// Spawn the inverted-sphere sky dome once at startup.

@@ -55,11 +55,17 @@ fn main() {
         id: ChunkId(0),
         voxels: &chunk_voxels,
     };
-    let mesh = CubicMesher::mesh_cubic(view, LodLevel(0)).expect("mesh");
+    let Ok(mesh) = CubicMesher::mesh_cubic(view, LodLevel(0)) else {
+        eprintln!("mesh: CubicMesher failed on smoke chunk");
+        std::process::exit(1);
+    };
     println!(
         "mesh: {} vertices, {} indices",
         mesh.vertices.len(),
         mesh.indices.len()
     );
-    assert!(!mesh.vertices.is_empty());
+    if mesh.vertices.is_empty() {
+        eprintln!("mesh: smoke chunk produced zero vertices");
+        std::process::exit(1);
+    }
 }

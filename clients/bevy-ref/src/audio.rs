@@ -13,10 +13,12 @@
 //! | `disaster`     | `Disaster`  | `audio/sfx_disaster.ogg` |
 //!
 //! Battle uses a dedicated clip (not the disaster sting). All `.ogg` files under
-//! `assets/audio/` are optional — missing clips play silence without aborting.
+//! `assets/audio/` are optional — missing or failed clips play silence; load/play
+//! never panics and never aliases another catalogue entry.
 
 #![cfg(feature = "audio")]
 
+use bevy::asset::LoadState;
 use bevy::prelude::*;
 use bevy_kira_audio::prelude::*;
 
@@ -198,12 +200,19 @@ impl Plugin for CivisAudioPlugin {
             .init_resource::<AudioFiles>()
             .init_resource::<AudioHandles>()
             .init_resource::<AudioState>()
+            .init_resource::<AmbientBoot>()
             .init_resource::<MusicCues>()
             .add_message::<SfxEvent>()
-            .add_systems(Startup, (load_audio, start_ambient).chain())
-            .add_systems(Update, (drain_sfx_events, toggle_mute))
+            .add_systems(Startup, load_audio)
+            .add_systems(Update, (start_ambient, drain_sfx_events, toggle_mute))
             .add_systems(Update, sync_music_cue_volume.after(toggle_mute));
     }
+}
+
+/// Tracks whether the ambient bed has been started (or abandoned after load failure).
+#[derive(Resource, Default)]
+struct AmbientBoot {
+    settled: bool,
 }
 
 fn load_audio(
@@ -211,6 +220,8 @@ fn load_audio(
     files: Res<AudioFiles>,
     mut handles: ResMut<AudioHandles>,
 ) {
+    // `AssetServer::load` never panics on missing paths — it returns a handle that
+    // settles into `LoadState::Failed`. Playback gates on [`clip_may_play`].
     handles.ambient = asset_server.load(files.ambient.clone());
     handles.ui_click = asset_server.load(files.ui_click.clone());
     handles.birth = asset_server.load(files.birth.clone());
@@ -222,22 +233,61 @@ fn load_audio(
     handles.tech = asset_server.load(files.tech.clone());
 }
 
-fn start_ambient(channel: Res<AudioChannel<AmbientChannel>>, handles: Res<AudioHandles>) {
-    channel
-        .play(handles.ambient.clone())
-        .looped()
-        .with_volume(AMBIENT_VOLUME);
+/// True when `handle` is safe to hand to kira (loaded or still loading).
+///
+/// Missing / corrupt clips (`Failed`) and never-queued handles (`NotLoaded`) stay
+/// silent — never panic and never alias another catalogue entry.
+#[must_use]
+fn clip_may_play(
+    asset_server: &AssetServer,
+    handle: &Handle<bevy_kira_audio::AudioSource>,
+) -> bool {
+    matches!(
+        asset_server.load_state(handle),
+        LoadState::Loaded | LoadState::Loading
+    )
+}
+
+fn start_ambient(
+    channel: Res<AudioChannel<AmbientChannel>>,
+    handles: Res<AudioHandles>,
+    asset_server: Res<AssetServer>,
+    mut boot: ResMut<AmbientBoot>,
+) {
+    if boot.settled {
+        return;
+    }
+    match asset_server.load_state(&handles.ambient) {
+        LoadState::Loaded => {
+            channel
+                .play(handles.ambient.clone())
+                .looped()
+                .with_volume(AMBIENT_VOLUME);
+            boot.settled = true;
+        }
+        LoadState::Failed(_) => {
+            warn!(
+                "ambient clip unavailable — continuing without looping bed (missing/failed asset)"
+            );
+            boot.settled = true;
+        }
+        LoadState::Loading | LoadState::NotLoaded => {}
+    }
 }
 
 fn drain_sfx_events(
     mut events: MessageReader<SfxEvent>,
     channel: Res<AudioChannel<SfxChannel>>,
     handles: Res<AudioHandles>,
+    asset_server: Res<AssetServer>,
 ) {
     for event in events.read() {
-        channel
-            .play(handles.for_kind(event.kind))
-            .with_volume(event.volume);
+        let handle = handles.for_kind(event.kind);
+        if !clip_may_play(&asset_server, &handle) {
+            // Optional assets: silence is the degrade path.
+            continue;
+        }
+        channel.play(handle).with_volume(event.volume);
     }
 }
 
@@ -509,5 +559,13 @@ mod tests {
         assert!((ambient_playback_rate_for_tempo_bpm(Some(100)) - 1.0).abs() < f32::EPSILON);
         assert!((ambient_playback_rate_for_tempo_bpm(Some(50)) - 0.85).abs() < f32::EPSILON);
         assert!((ambient_playback_rate_for_tempo_bpm(Some(200)) - 1.25).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn battle_and_disaster_default_paths_are_distinct_files() {
+        let files = AudioFiles::default();
+        assert_ne!(files.battle, files.disaster);
+        assert!(files.battle.ends_with("sfx_battle.ogg"));
+        assert!(files.disaster.ends_with("sfx_disaster.ogg"));
     }
 }

@@ -885,6 +885,12 @@ h1 { font-size: clamp(1.8rem, 3vw, 3.2rem); line-height: 0.95; }
   font-size: 1rem;
   line-height: 1;
 }
+.event-feed-icon img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(80, 200, 240, 0.18));
+}
 .event-feed-message {
   font-size: 0.86rem;
   line-height: 1.35;

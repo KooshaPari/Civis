@@ -17,14 +17,13 @@ fi
 
 if [[ ! -f "${MANIFEST}" ]]; then
   cat >&2 <<'EOF'
-WARN: .ci/quality-manifest.json not found
-Local-quality attestation has not been run on this branch yet.
-CI check is passing in this case; please run local gates and commit the manifest when available:
+ERROR: .ci/quality-manifest.json not found
+Local-quality attestation is required before merge. Run local gates and commit the manifest:
 
   lefthook run pre-push
   git add .ci/quality-manifest.json && git commit -m "chore(ci): refresh quality manifest"
 EOF
-  exit 0
+  exit 1
 fi
 
 python3 - "${MANIFEST}" <<'PY'
@@ -42,7 +41,9 @@ if body.get("version") != "1":
 
 head = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
 attested = body.get("git_sha")
-if attested not in {head, ""}:
+if not isinstance(attested, str) or not attested:
+    raise SystemExit("manifest git_sha is required and must identify HEAD or HEAD^")
+if attested != head:
     try:
         parent = subprocess.check_output(["git", "rev-parse", "HEAD^"], text=True).strip()
     except subprocess.CalledProcessError:
@@ -65,6 +66,14 @@ def gate_ok(key: str, status: str) -> bool:
     return False
 
 gates = body.get("gates") or {}
+if not isinstance(gates, dict):
+    raise SystemExit("manifest gates must be an object")
+
+required = {"civis_3d_verify", "bevy_egui_check", "web_test", "dashboard_typecheck"}
+missing = sorted(required - set(gates))
+if missing:
+    raise SystemExit(f"manifest is missing required gates: {', '.join(missing)}")
+
 failed = [k for k, v in gates.items() if not gate_ok(k, v.get("status", ""))]
 if failed:
     raise SystemExit(f"manifest records failed gates: {', '.join(failed)}")

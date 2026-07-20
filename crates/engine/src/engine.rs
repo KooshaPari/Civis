@@ -2925,6 +2925,7 @@ impl Simulation {
         self.phase_voxel();
         self.phase_compact();
         self.phase_buildings();
+        self.phase_life();
         // NOTE: emergence phase arms (life/research/tech/belief/unrest/cohesion/social_mood/economic_focus_pre/stratification/institutions/economic_focus) removed 2026-06-25 — re-add each arm COUPLED with its impl (see method doc). Premature wiring caused E0599 workspace compile failure.
         self.phase_diffusion();
         // Let the initial weather snapshot settle before environmental hazards

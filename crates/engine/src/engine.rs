@@ -2932,6 +2932,9 @@ impl Simulation {
         }
         self.phase_emergence();
         self.phase_emergence_events_close();
+        // Culture depends on the finalized emergence/settlement state and is
+        // declared in PHASE_ORDER immediately after emergence.
+        self.phase_culture();
         // Run after all event-producing phases so this tick's combat,
         // construction, and disaster triggers reach the snapshot.
         self.phase_audio();

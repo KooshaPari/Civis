@@ -656,6 +656,12 @@ h1 { font-size: clamp(1.8rem, 3vw, 3.2rem); line-height: 0.95; }
   object-fit: contain;
   filter: drop-shadow(0 3px 6px rgba(80, 200, 240, 0.18));
 }
+.time-button img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(80, 200, 240, 0.18));
+}
 .tool-button.active, .time-button.active, .swatch.active { border-color: var(--line-strong); background: rgba(126, 198, 255, 0.14); }
 .picker-row label {
   display: grid;

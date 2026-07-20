@@ -9,6 +9,9 @@ function mergeServerSnapshot(result, speed) {
     tick: Number(r.tick ?? 0),
     population: Number(r.population ?? 0),
     civ_pins: civPins,
+    damage_events_count: Object.prototype.hasOwnProperty.call(r, "damage_events_count")
+      ? Number(r.damage_events_count ?? 0)
+      : undefined,
     speed,
   };
 }
@@ -28,6 +31,16 @@ test("mergeServerSnapshot reads civ_pins from sim.snapshot", () => {
   assert.equal(snap.tick, 5);
   assert.equal(snap.civ_pins.length, 1);
   assert.equal(snap.civ_pins[0].job, "farmer");
+});
+
+test("mergeServerSnapshot preserves an explicit zero combat event count", () => {
+  const snap = mergeServerSnapshot({ damage_events_count: 0 }, 1);
+  assert.equal(snap.damage_events_count, 0);
+});
+
+test("mergeServerSnapshot exposes missing combat telemetry as unavailable", () => {
+  const snap = mergeServerSnapshot({}, 1);
+  assert.equal(snap.damage_events_count, undefined);
 });
 
 test("parseInstitutions shape for sim.snapshot", () => {

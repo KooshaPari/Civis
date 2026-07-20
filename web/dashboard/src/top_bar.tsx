@@ -21,6 +21,7 @@ export function TopBar() {
   const endpointLabel = attachEndpointLabel(state.attachMode);
   const endpointUrl = resolveBrowserWsUrl(window.location.search);
   const weatherLabel = formatWeather(state.snapshot?.weather);
+  const combatEvents = state.snapshot?.damage_events_count;
 
   return (
     <header className="top-bar">
@@ -42,6 +43,7 @@ export function TopBar() {
         <Metric label="Tick" value={tick} />
         <Metric label="Population" value={state.snapshot?.population ?? metrics?.population ?? 0} />
         <Metric label="⚔️ Soldiers" value={state.snapshot?.military_units?.length ?? 0} />
+        <Metric label="Combat events" value={combatEvents ?? "unavailable"} />
         <Metric
           label="🏠 Housing"
           value={`${state.snapshot?.housing_stats.occupied ?? 0}/${state.snapshot?.housing_stats.total_capacity ?? 0} (${Math.round((1 - (state.snapshot?.housing_stats.vacancy_rate ?? 0)) * 100)}%)`}

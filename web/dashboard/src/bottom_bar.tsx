@@ -395,6 +395,7 @@ export function BottomBar() {
           type="button"
           className={`time-button ${state.speed === speed ? "active" : ""}`}
           title={speed === 0 ? "Pause" : `${speed}x speed`}
+          aria-pressed={state.speed === speed}
           onClick={() => {
             const s = speed as TimeSpeed;
             if (state.attachMode === "server") {
@@ -405,7 +406,12 @@ export function BottomBar() {
             }
           }}
         >
-          {speed === 0 ? "⏸ Pause" : speed === 1 ? "▶ 1×" : `⏩ ${speed}×`}
+          <img
+            src={speed === 0 ? "/civis-icons/time-pause.png" : "/civis-icons/time-play.png"}
+            alt=""
+            aria-hidden="true"
+          />
+          <span>{speed === 0 ? "Pause" : `${speed}×`}</span>
         </button>
       ))}
     </div>

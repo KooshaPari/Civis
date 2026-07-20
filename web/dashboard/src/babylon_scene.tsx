@@ -68,26 +68,41 @@ export function BabylonScene3d() {
 
         const pinMat = new babylon.StandardMaterial("pinMat", scene);
         pinMat.diffuseColor = new babylon.Color3(0.9, 0.35, 0.35);
-        const pinMeshes: import("@babylonjs/core").Mesh[] = [];
+        const pinMeshes = new Map<number, import("@babylonjs/core").Mesh>();
 
         const syncPins = () => {
-          for (const mesh of pinMeshes) mesh.dispose();
-          pinMeshes.length = 0;
           const snapshot = stateRef.current.snapshot;
-          if (!snapshot) return;
+          if (!snapshot) {
+            for (const mesh of pinMeshes.values()) mesh.dispose();
+            pinMeshes.clear();
+            return;
+          }
+
+          const livePins = new Set<number>();
           for (const pin of snapshot.civ_pins) {
-            const box = babylon.MeshBuilder.CreateBox(
-              `pin-${pin.idx}`,
-              { size: 1.2, height: 2.4 },
-              scene,
-            );
-            box.material = pinMat;
+            livePins.add(pin.idx);
+            let box = pinMeshes.get(pin.idx);
+            if (!box) {
+              box = babylon.MeshBuilder.CreateBox(
+                `pin-${pin.idx}`,
+                { size: 1.2, height: 2.4 },
+                scene,
+              );
+              box.material = pinMat;
+              pinMeshes.set(pin.idx, box);
+            }
             box.position = new babylon.Vector3(
               pin.x * TERRAIN_WORLD,
               1.2,
               pin.y * TERRAIN_WORLD,
             );
-            pinMeshes.push(box);
+          }
+
+          for (const [idx, mesh] of pinMeshes) {
+            if (!livePins.has(idx)) {
+              mesh.dispose();
+              pinMeshes.delete(idx);
+            }
           }
         };
 

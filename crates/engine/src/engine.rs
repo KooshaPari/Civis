@@ -501,9 +501,9 @@ impl FactionRelations {
             .map(|r| r.score)
             .unwrap_or(0.0);
         if score > 0.5 {
-            "allied".to_string()
+            "alliance".to_string()
         } else if score < -0.5 {
-            "hostile".to_string()
+            "war".to_string()
         } else {
             "neutral".to_string()
         }
@@ -2489,6 +2489,17 @@ impl Simulation {
     pub(crate) fn apply_replay_damage(&mut self, tick: u64, event: &DamageEvent) {
         self.state.tick = tick;
         let _ = apply_damage(&mut self.voxel, event);
+    }
+
+    pub(crate) fn apply_replay_diplomacy_action(
+        &mut self,
+        tick: u64,
+        source_faction: u32,
+        target_faction: u32,
+        kind: DiplomacyKind,
+    ) {
+        self.state.tick = tick;
+        let _ = self.apply_diplomacy_action(source_faction, target_faction, kind, false);
     }
 
     pub(crate) fn apply_replay_combat(&mut self, tick: u64, event: &DamageEvent) {
@@ -5380,6 +5391,16 @@ impl Simulation {
         target_faction: u32,
         kind: DiplomacyKind,
     ) -> Option<FactionRelationSnapshot> {
+        self.apply_diplomacy_action(source_faction, target_faction, kind, true)
+    }
+
+    fn apply_diplomacy_action(
+        &mut self,
+        source_faction: u32,
+        target_faction: u32,
+        kind: DiplomacyKind,
+        record_replay: bool,
+    ) -> Option<FactionRelationSnapshot> {
         if source_faction == target_faction
             || !self.state.factions.contains_key(&source_faction)
             || !self.state.factions.contains_key(&target_faction)
@@ -5414,6 +5435,14 @@ impl Simulation {
             faction_b: target_faction,
             kind,
         });
+        if record_replay {
+            self.replay_log.record_diplomacy_action(
+                self.state.tick,
+                source_faction,
+                target_faction,
+                kind,
+            );
+        }
         let record = self
             .faction_relations
             .record(a, b)

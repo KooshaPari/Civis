@@ -26,6 +26,13 @@ pub enum ReplayEvent {
     },
     /// A queued damage event.
     Damage { tick: u64, event: DamageEvent },
+    /// An explicit player diplomacy action.
+    Diplomacy {
+        tick: u64,
+        source_faction: u32,
+        target_faction: u32,
+        kind: crate::engine::DiplomacyKind,
+    },
     /// Per-soldier combat (war bridge) with attacker/defender pin ids (FR-CIV-TACTICS-025).
     Combat {
         tick: u64,
@@ -207,6 +214,22 @@ impl ReplayLog {
     /// Record a damage event.
     pub fn record_damage(&mut self, tick: u64, event: DamageEvent) {
         self.events.push(ReplayEvent::Damage { tick, event });
+    }
+
+    /// Record an explicit player diplomacy action.
+    pub fn record_diplomacy_action(
+        &mut self,
+        tick: u64,
+        source_faction: u32,
+        target_faction: u32,
+        kind: crate::engine::DiplomacyKind,
+    ) {
+        self.events.push(ReplayEvent::Diplomacy {
+            tick,
+            source_faction,
+            target_faction,
+            kind,
+        });
     }
 
     /// Record an emergence-dashboard sample (`emergence_metrics.v1`, FR-CIV-EMERG-003).
@@ -612,6 +635,19 @@ impl ReplayLog {
                 }
                 ReplayEvent::Damage { tick, event } => {
                     into.apply_replay_damage(*tick, event);
+                }
+                ReplayEvent::Diplomacy {
+                    tick,
+                    source_faction,
+                    target_faction,
+                    kind,
+                } => {
+                    into.apply_replay_diplomacy_action(
+                        *tick,
+                        *source_faction,
+                        *target_faction,
+                        *kind,
+                    );
                 }
                 ReplayEvent::Combat {
                     tick,

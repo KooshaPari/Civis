@@ -531,21 +531,21 @@ export function BottomBar() {
               active={state.selectedTool === "PlaceVoxel"}
               title="Place voxel on terrain click"
               emoji="🧱"
-              icon="/civis-icons/tool_terraform.png"
+              icon="/civis-icons/terraform.png"
               onClick={() => dispatch({ type: "set_tool", tool: "PlaceVoxel" })}
             />
             <ToolButton
               active={state.selectedTool === "SpawnCivilian"}
               title="Spawn: click civilian, drag-release vehicle/airport"
               emoji="🧍"
-              icon="/civis-icons/tool_spawn.png"
+              icon="/civis-icons/spawn-life.png"
               onClick={() => dispatch({ type: "set_tool", tool: "SpawnCivilian" })}
             />
             <ToolButton
               active={state.selectedTool === "DamageBomb"}
               title="Tactical voxel damage (sim.damage / control/damage)"
               emoji="💥"
-              icon="/civis-icons/tool_disaster.png"
+              icon="/civis-icons/disaster.png"
               onClick={() => dispatch({ type: "set_tool", tool: "DamageBomb" })}
             />
           </div>

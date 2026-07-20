@@ -496,18 +496,21 @@ export function BottomBar() {
               active={state.selectedTool === "PlaceVoxel"}
               title="Place voxel on terrain click"
               emoji="🧱"
+              icon="/civis-icons/tool_terraform.png"
               onClick={() => dispatch({ type: "set_tool", tool: "PlaceVoxel" })}
             />
             <ToolButton
               active={state.selectedTool === "SpawnCivilian"}
               title="Spawn: click civilian, drag-release vehicle/airport"
               emoji="🧍"
+              icon="/civis-icons/tool_spawn.png"
               onClick={() => dispatch({ type: "set_tool", tool: "SpawnCivilian" })}
             />
             <ToolButton
               active={state.selectedTool === "DamageBomb"}
               title="Tactical voxel damage (sim.damage / control/damage)"
               emoji="💥"
+              icon="/civis-icons/tool_disaster.png"
               onClick={() => dispatch({ type: "set_tool", tool: "DamageBomb" })}
             />
           </div>
@@ -814,17 +817,26 @@ function TacticsPanel() {
 function ToolButton({
   title,
   emoji,
+  icon,
   active,
   onClick,
 }: {
   title: string;
   emoji: string;
+  icon?: string;
   active?: boolean;
   onClick: () => void;
 }) {
   return (
-    <button type="button" className={`tool-button ${active ? "active" : ""}`} title={title} onClick={onClick}>
-      <span aria-hidden>{emoji}</span>
+    <button
+      type="button"
+      className={`tool-button ${active ? "active" : ""}`}
+      title={title}
+      aria-label={title}
+      aria-pressed={Boolean(active)}
+      onClick={onClick}
+    >
+      {icon ? <img className="tool-icon" src={icon} alt="" aria-hidden="true" /> : <span aria-hidden>{emoji}</span>}
       <small>{title}</small>
     </button>
   );

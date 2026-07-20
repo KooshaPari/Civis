@@ -55,6 +55,12 @@ Invoke-Gate "dashboard_typecheck" {
     bun run typecheck
     Pop-Location
 }
+Invoke-Gate "dashboard_build" {
+    Push-Location web/dashboard
+    bun install --frozen-lockfile
+    bun run build
+    Pop-Location
+}
 
 $repoRoot = (git rev-parse --show-toplevel).Trim()
 $optionalUnreal = & (Join-Path $PSScriptRoot 'Invoke-OptionalUnrealGates.ps1') -RepoRoot $repoRoot

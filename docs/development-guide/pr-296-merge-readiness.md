@@ -24,6 +24,7 @@ Cloud job **quality-manifest (cloud verify)** only runs `verify-quality-manifest
 | `civis_3d_verify` | `just civis-3d-verify` |
 | `web_test` | `cd web && npm test` |
 | `dashboard_typecheck` | `cd web/dashboard && bun run typecheck` |
+| `dashboard_build` | `cd web/dashboard && bun run build` |
 
 Stop `civ-watch` before `cargo build` if Windows locks `civ-watch.exe`.
 

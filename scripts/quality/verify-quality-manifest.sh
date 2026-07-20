@@ -2,7 +2,7 @@
 # Cloud CI: verify committed local quality attestation (no cargo/rust on the runner).
 #
 # Gate tiers (see scripts/quality/README.md):
-#   Core (required): civis_3d_verify, bevy_egui_check, web_test, dashboard_typecheck, rust_*, godot_test
+#   Core (required): civis_3d_verify, bevy_egui_check, web_test, dashboard_typecheck, dashboard_build, rust_*, godot_test
 #   Optional (Unreal): unreal_preflight, unreal_build — status "skip" is valid; omit if no UE
 set -euo pipefail
 
@@ -69,7 +69,13 @@ gates = body.get("gates") or {}
 if not isinstance(gates, dict):
     raise SystemExit("manifest gates must be an object")
 
-required = {"civis_3d_verify", "bevy_egui_check", "web_test", "dashboard_typecheck"}
+required = {
+    "civis_3d_verify",
+    "bevy_egui_check",
+    "web_test",
+    "dashboard_typecheck",
+    "dashboard_build",
+}
 missing = sorted(required - set(gates))
 if missing:
     raise SystemExit(f"manifest is missing required gates: {', '.join(missing)}")

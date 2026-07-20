@@ -2820,8 +2820,11 @@ impl Simulation {
     }
 
     /// Phase hook for macro-level diplomacy events (FR-CIV-DIPLOMACY).
-    /// Stub: full implementation pending faction_relations field.
-    pub fn run_macro_diplomacy_event(&mut self) {}
+    /// Uses the bounded relation-drift implementation so macro diplomacy emits
+    /// the same authoritative event records consumed by legends and replay.
+    pub fn run_macro_diplomacy_event(&mut self) {
+        self.tick_faction_relation_drift();
+    }
 
     /// Emit a relation-threshold-crossing event (FR-CIV-DIPLOMACY).
     /// Stub: full implementation pending faction_relations field.

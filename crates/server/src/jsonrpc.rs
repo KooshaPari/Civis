@@ -2081,7 +2081,11 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 Ok(p) => DispatchPlan {
                     response: JsonRpcResponse::success(
                         req.id,
-                        serde_json::json!({ "ok": true, "tick": ctx.tick }),
+                        serde_json::json!({
+                            "ok": true,
+                            "accepted": true,
+                            "tick": ctx.tick
+                        }),
                     ),
                     effect: DispatchEffect::GodAction {
                         action: p

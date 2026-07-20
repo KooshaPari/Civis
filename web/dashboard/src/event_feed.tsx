@@ -23,7 +23,7 @@ export function EventFeed() {
     const combatEvents = snapshot.damage_events.map((event) => ({
       tick: snapshot.tick,
       kind: "damage",
-      message: `Combat damage at ${event.x.toFixed(2)}, ${event.y.toFixed(2)}`,
+      message: combatEventMessage(event),
       faction_id: null,
     }));
     return [...snapshot.events, ...combatEvents].sort((a, b) => a.tick - b.tick);
@@ -38,7 +38,14 @@ export function EventFeed() {
   const factionsById = useMemo(() => new Map((state.snapshot?.factions ?? []).map((faction) => [faction.id, faction])), [state.snapshot?.factions]);
 
   return (
-    <div className="event-feed" ref={feedRef}>
+    <div
+      className="event-feed"
+      ref={feedRef}
+      role="log"
+      aria-label="Simulation event feed"
+      aria-live="polite"
+      aria-relevant="additions"
+    >
       {events.length === 0 ? <p className="event-feed-empty">No event feed entries yet.</p> : null}
       <div className="event-feed-list">
         {events.map((event, index) => (
@@ -68,10 +75,11 @@ function EventRow({
       type="button"
       className="event-feed-row"
       onClick={onClick}
+      aria-label={`Tick ${event.tick}: ${event.message}. Select to focus the event location.`}
       style={faction ? { borderLeftColor: `rgb(${faction.color[0]} ${faction.color[1]} ${faction.color[2]})` } : undefined}
     >
       <span className="event-feed-tick">tick {event.tick}</span>
-      <span className="event-feed-icon">
+      <span className="event-feed-icon" aria-hidden="true">
         {EVENT_ICONS[event.kind]?.startsWith("/") ? (
           <img src={EVENT_ICONS[event.kind]} alt="" />
         ) : (
@@ -81,6 +89,12 @@ function EventRow({
       <span className="event-feed-message">{event.message}</span>
     </button>
   );
+}
+
+function combatEventMessage(event: { x: number; y: number; unit_a?: number; unit_b?: number }) {
+  const participants =
+    event.unit_a != null && event.unit_b != null ? ` (units ${event.unit_a} vs ${event.unit_b})` : "";
+  return `Combat damage at ${event.x.toFixed(2)}, ${event.y.toFixed(2)}${participants}`;
 }
 
 function eventLocationLabel(event: GameEvent) {

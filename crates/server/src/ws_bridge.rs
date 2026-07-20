@@ -1326,8 +1326,9 @@ async fn apply_dispatch_effect(
         } => {
             use civ_engine::disasters::{trigger_disaster, DisasterKind};
             use civ_engine::godtools::{
-                DisasterRequest, GodToolRequest, LifeRequest, MaterialOp, MaterialRequest,
-                SpawnHerdRequest, SpawnOrganismRequest, SpawnVisual, TerraformOp, TerraformRequest,
+                ActorEffectRequest, DisasterRequest, GodToolRequest, LifeRequest, MaterialOp,
+                MaterialRequest, SpawnHerdRequest, SpawnOrganismRequest, SpawnVisual, TerraformOp,
+                TerraformRequest,
             };
             use civ_voxel::WorldCoord;
             let mut sim = state.sim.lock().await;
@@ -1347,6 +1348,16 @@ async fn apply_dispatch_effect(
             // through `Simulation::apply_god_tool` so the same substrate
             // write path the engine reads each tick handles them.
             match action.as_str() {
+                "heal" => {
+                    let req = GodToolRequest::Life(LifeRequest::Heal(ActorEffectRequest {
+                        center: pos,
+                        radius_voxels: radius_voxels.unwrap_or(3).max(1),
+                        strength: mag.max(0.01),
+                    }));
+                    if let Err(err) = sim.apply_god_tool(req) {
+                        tracing::warn!(?err, "god action heal was rejected");
+                    }
+                }
                 "smite" => trigger_disaster(&mut sim, DisasterKind::Meteor, pos),
                 "earthquake" => trigger_disaster(&mut sim, DisasterKind::Quake, pos),
                 "plague" => {

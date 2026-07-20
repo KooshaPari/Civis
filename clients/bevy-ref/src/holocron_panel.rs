@@ -17,6 +17,8 @@ use civ_holocron::descriptor::VerbDescriptor;
 use civ_holocron::group::VerbGroup;
 use civ_holocron::registry::VerbRegistry;
 use civ_holocron::risk::RiskTier;
+use crate::live_stream::LiveBridge;
+use serde_json::json;
 
 // ---------------------------------------------------------------------------
 // Resource — shared Holocron state kept across frames
@@ -117,6 +119,7 @@ fn risk_label(tier: RiskTier) -> &'static str {
 fn draw_holocron_overlay(
     mut state: ResMut<HolocronState>,
     mut contexts: bevy_egui::EguiContexts,
+    bridge: Option<Res<LiveBridge>>,
 ) {
     if !state.overlay_visible {
         return;
@@ -240,30 +243,35 @@ fn draw_holocron_overlay(
                 });
         });
 
+    let escape_pressed = ctx.input(|input| input.key_pressed(egui::Key::Escape));
+    let enter_pressed = ctx.input(|input| input.key_pressed(egui::Key::Enter));
+    let arrow_down_pressed = ctx.input(|input| input.key_pressed(egui::Key::ArrowDown));
+    let arrow_up_pressed = ctx.input(|input| input.key_pressed(egui::Key::ArrowUp));
+
     // Handle keyboard — Enter fires the selected verb, Esc dismisses.
-    // (This is a minimal integration; a full Bevy event‑driven approach
-    //  would send a proper `ToolCommand::HolocronFire`. Here we just
-    //  toggle visibility on Esc so the overlay behaves.)
-    let input = egui::InputState::default();
-    if input.key_pressed(egui::Key::Escape) {
+    if escape_pressed {
         state.overlay_visible = false;
         state.filter.clear();
         state.cursor = 0;
     }
     // Enter fires the selected verb.
-    if input.key_pressed(egui::Key::Enter) && !filtered.is_empty() {
+    if enter_pressed && !filtered.is_empty() {
         let verb = &filtered[state.cursor.min(filtered.len() - 1)];
-        // TODO: dispatch `sim.god_action` via the existing JSON‑RPC path
+        if let Some(bridge) = bridge.as_ref() {
+            bridge
+                .client
+                .send_rpc("sim.god_action", json!({ "action": verb.id }));
+        }
         info!("Holocron fire: {} (id={})", verb.name, verb.id);
         state.overlay_visible = false;
         state.filter.clear();
         state.cursor = 0;
     }
     // Keyboard navigation.
-    if input.key_pressed(egui::Key::ArrowDown) && !filtered.is_empty() {
+    if arrow_down_pressed && !filtered.is_empty() {
         state.cursor = (state.cursor + 1) % filtered.len();
     }
-    if input.key_pressed(egui::Key::ArrowUp) && !filtered.is_empty() {
+    if arrow_up_pressed && !filtered.is_empty() {
         state.cursor = (state.cursor + filtered.len() - 1) % filtered.len();
     }
 }

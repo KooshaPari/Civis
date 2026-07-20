@@ -80,7 +80,7 @@ export function mergeServerSnapshot(
     deaths_this_tick: Number(r.deaths_this_tick ?? 0),
     diplomacy_events: parseDiplomacyEvents(r.diplomacy_events),
     damage_events: parseDamageEvents(r.damage_events),
-    damage_events_count: Object.hasOwn(r, "damage_events_count")
+    damage_events_count: Object.prototype.hasOwnProperty.call(r, "damage_events_count")
       ? Number(r.damage_events_count ?? 0)
       : undefined,
     disaster_events: parseDisasterEvents(r.disaster_events),

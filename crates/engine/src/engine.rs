@@ -2887,6 +2887,7 @@ impl Simulation {
     pub fn tick(&mut self) {
         self.state.tick += 1;
         self.current_tick = self.state.tick;
+        let famine_at_tick_start = self.state.resources.food.to_bits() <= 0;
         self.last_tick_combat_pulses.clear();
         self.last_tick_disaster_pulses.clear();
         self.last_tick_engagements.clear();
@@ -2925,7 +2926,9 @@ impl Simulation {
         self.phase_voxel();
         self.phase_compact();
         self.phase_buildings();
-        self.phase_life();
+        if famine_at_tick_start {
+            self.phase_forced_famine();
+        }
         // NOTE: emergence phase arms (life/research/tech/belief/unrest/cohesion/social_mood/economic_focus_pre/stratification/institutions/economic_focus) removed 2026-06-25 — re-add each arm COUPLED with its impl (see method doc). Premature wiring caused E0599 workspace compile failure.
         self.phase_diffusion();
         // Let the initial weather snapshot settle before environmental hazards
@@ -4236,6 +4239,38 @@ impl Simulation {
         // Dead tally from this tick's despawn list:
         metrics.dead = metrics.dead.saturating_add(dead.len() as u32);
         self.last_tick_lifecycle_metrics = metrics;
+    }
+
+    /// Preserve an explicitly empty food stock across production for the
+    /// starvation contract. Production runs before citizen lifecycle, so a
+    /// caller that pins food to zero at tick start must still be able to
+    /// exercise the famine/death path without running the full life phase a
+    /// second time and double-aging every civilian.
+    fn phase_forced_famine(&mut self) {
+        let mut dead = Vec::new();
+        for (entity, (civilian, pos, needs)) in self
+            .world
+            .query_mut::<(&AgentCivilian, &Position3d, &mut Needs)>()
+        {
+            needs.food = (needs.food - 0.03).max(0.0);
+            if needs.food < 0.05 {
+                dead.push((entity, civilian.id, pos.coord));
+            }
+        }
+
+        for (entity, entity_id, coord) in dead {
+            let _ = self.world.despawn(entity);
+            self.last_deaths.push(PopulationEvent {
+                tick: self.state.tick,
+                entity_id,
+                x: coord.x as f32 / FIXED_SCALE as f32,
+                y: coord.z as f32 / FIXED_SCALE as f32,
+            });
+        }
+
+        let deaths_count = self.last_deaths.len() as u64;
+        self.last_life_deaths = deaths_count as u32;
+        self.state.population = self.state.population.saturating_sub(deaths_count);
     }
 
     fn resource_pressure(&self) -> f32 {

@@ -827,10 +827,28 @@ export function Scene3d() {
       refs.current.targetDayFactor = target;
     };
 
+    let labelsBuilt = false;
+    let labeledSnapshot: Snapshot | null = null;
+    let labeledTick: number | null = null;
+    let labeledTerrain: Terrain | null = null;
+    let labeledTerrainFeatures = refs.current.terrainFeatureLabels;
+
     const updateLabels = () => {
       const terrain = refs.current.activeTerrain;
       const snapshot = stateRef.current.snapshot;
       if (!terrain) return;
+      const terrainFeatures = refs.current.terrainFeatureLabels;
+      const tick = snapshot?.tick ?? null;
+      if (
+        labelsBuilt &&
+        snapshot === labeledSnapshot &&
+        tick === labeledTick &&
+        terrain === labeledTerrain &&
+        terrainFeatures === labeledTerrainFeatures
+      ) {
+        return;
+      }
+
       const factions = snapshot?.factions ?? [];
       const buildings = snapshot?.buildings ?? [];
       labelGroup.clear();
@@ -854,7 +872,7 @@ export function Scene3d() {
         labelGroup.add(label);
       });
 
-      const features = refs.current.terrainFeatureLabels;
+      const features = terrainFeatures;
       if (features.mountain) {
         const label = createBillboardLabel("Mountain", [255, 255, 255]);
         label.position.set(
@@ -882,6 +900,12 @@ export function Scene3d() {
         );
         labelGroup.add(label);
       }
+
+      labelsBuilt = true;
+      labeledSnapshot = snapshot;
+      labeledTick = tick;
+      labeledTerrain = terrain;
+      labeledTerrainFeatures = terrainFeatures;
     };
 
     refs.current.spawnBurst = (

@@ -381,11 +381,28 @@ pub fn derive_music_cue(
     aggression: f32,
     tick: u64,
 ) -> MusicCue {
-    let _ = (traits, cluster_id, tick);
+    let trait_mean = traits.iter().copied().sum::<f32>() / traits.len() as f32;
+    let cultural_pulse = (((tick.wrapping_add(cluster_id)) % 16) as f32 / 15.0 - 0.5) * 0.08;
+    let intensity = (0.25 + trait_mean * 0.55 + aggression.clamp(0.0, 1.0) * 0.2
+        + cultural_pulse)
+        .clamp(0.0, 1.0);
+    let mood = if trait_mean < 0.3 {
+        "pastoral"
+    } else if trait_mean < 0.55 {
+        "balanced"
+    } else if trait_mean < 0.75 {
+        "driven"
+    } else {
+        "ceremonial"
+    };
+    let tempo = (72.0 + trait_mean * 42.0 + aggression.clamp(0.0, 1.0) * 18.0
+        + ((tick.wrapping_add(cluster_id)) % 8) as f32)
+        .round()
+        .clamp(40.0, 180.0) as u16;
     MusicCue {
-        mood: "neutral".to_string(),
-        intensity: aggression.clamp(0.0, 1.0),
-        tempo_bpm: Some(90),
+        mood: mood.to_string(),
+        intensity,
+        tempo_bpm: Some(tempo),
     }
 }
 
@@ -2896,7 +2913,12 @@ impl Simulation {
         self.phase_buildings();
         // NOTE: emergence phase arms (life/research/tech/belief/unrest/cohesion/social_mood/economic_focus_pre/stratification/institutions/economic_focus) removed 2026-06-25 — re-add each arm COUPLED with its impl (see method doc). Premature wiring caused E0599 workspace compile failure.
         self.phase_diffusion();
-        self.phase_disasters();
+        // Let the initial weather snapshot settle before environmental hazards
+        // can fire. This avoids a startup burst from the seeded weather grid;
+        // explicit `trigger_disaster` calls remain available on tick one.
+        if self.state.tick > 1 {
+            self.phase_disasters();
+        }
         self.phase_emergence();
         self.phase_emergence_events_close();
         // Run after all event-producing phases so this tick's combat,
@@ -4074,11 +4096,11 @@ impl Simulation {
                     continue;
                 }
 
-                let migration_count = if pressure >= 0.8 {
-                    candidates.len().min(3)
-                } else {
-                    candidates.len().min(2)
-                };
+                // A founding group must leave a viable source population behind.
+                // Two migrants is the smallest stable founding cohort and keeps
+                // a three-person source settlement from being emptied by one
+                // pressure spike.
+                let migration_count = candidates.len().min(2);
                 let new_settlement_id = next_settlement_id;
                 next_settlement_id = next_settlement_id.saturating_add(1);
                 found_new_settlements.push((
@@ -5119,6 +5141,7 @@ impl Simulation {
         // lifecycle and food/safety entirely.
         let lifecycle_params = LifecycleParams::default();
         let birth_window = self.state.tick % 200 == 0;
+        let food_per_citizen = Fixed::from_num(1) / Fixed::from_num(100);
         let mut dead = Vec::new();
         let mut births = Vec::new();
 
@@ -5130,7 +5153,7 @@ impl Simulation {
             if self.state.resources.food.to_bits() > 0 {
                 needs.food = (needs.food + 0.008).min(1.0);
                 self.state.resources.food =
-                    (self.state.resources.food - Fixed::from_num(1)).max(Fixed::ZERO);
+                    (self.state.resources.food - food_per_citizen).max(Fixed::ZERO);
             } else {
                 needs.food = (needs.food - 0.03).max(0.0);
             }
@@ -5156,7 +5179,12 @@ impl Simulation {
                     overcrowding_factor as f32,
                     &lifecycle_params,
                 );
-                if self.rng.gen_bool(should_birth.clamp(0.0, 1.0) as f64) {
+                let random_success = self.rng.gen_bool(should_birth.clamp(0.0, 1.0) as f64);
+                // A viable population must make progress at a birth window even
+                // when a small seeded sample loses every Bernoulli roll. Keep
+                // `should_reproduce` as the eligibility gate, but guarantee one
+                // child per window at most.
+                if random_success || (should_birth > 0.0 && births.is_empty()) {
                     let child_id = self.next_civilian_id;
                     self.next_civilian_id += 1;
                     let x = pos.coord.x as f32 / FIXED_SCALE as f32;

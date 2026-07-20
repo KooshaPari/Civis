@@ -4534,7 +4534,12 @@ mod tests {
                 religion_state: None,
             },
         );
-        assert_eq!(plan.effect, DispatchEffect::None);
+        assert_eq!(
+            plan.effect,
+            DispatchEffect::QueueResearch {
+                tech: "pottery".to_owned(),
+            }
+        );
         let res = plan.response.result.expect("result");
         assert_eq!(res["queued"], "pottery");
     }

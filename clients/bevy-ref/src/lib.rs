@@ -53,13 +53,12 @@ pub mod gltf_models;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod god_actions;
 #[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod holocron_panel;
 pub mod god_panel;
 #[cfg(feature = "bevy")]
 pub mod gpu_features;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod graphics_settings;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod holocron_panel;
 #[cfg(feature = "bevy")]
 pub mod hud_state;
 #[cfg(feature = "bevy")]

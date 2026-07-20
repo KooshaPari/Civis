@@ -29,6 +29,7 @@ use civ_bevy_ref::{
     focused_chunk_at_grid,
     game_ui::GameUiPlugin,
     god_panel::GodPanelPlugin,
+    holocron_panel::HolocronPanelPlugin,
     gpu_features::GpuFeaturesPlugin,
     live_focus::{
         compute_live_scene_focus, minimap_uv_to_world_xz, LiveSceneFocus, LIVE_FOCUS_LERP_SPEED,
@@ -244,7 +245,7 @@ fn main() {
         DiplomacyUiPlugin,
         GodPanelPlugin,
         civ_bevy_ref::god_actions::GodActionsPlugin,
-        civ_bevy_ref::holocron_panel::HolocronPanelPlugin,
+        HolocronPanelPlugin,
         civ_bevy_ref::outcome_overlay::OutcomeOverlayPlugin,
         MenusPlugin,
         GameUiPlugin,

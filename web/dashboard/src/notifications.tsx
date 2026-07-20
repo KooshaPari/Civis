@@ -39,7 +39,11 @@ export function Notifications() {
           }}
         >
           <span className="notification-icon" aria-hidden>
-            {notification.icon}
+            {notification.icon.startsWith("/") ? (
+              <img src={notification.icon} alt="" />
+            ) : (
+              notification.icon
+            )}
           </span>
           <span className="notification-body">
             <strong>{notification.message}</strong>

@@ -113,7 +113,7 @@ function buildNotifications(snapshot: Snapshot, previous: Snapshot, existing: No
         id: Number(`${snapshot.tick}${event.entity_id}1`),
         tick: event.tick,
         kind: "birth",
-        icon: "👶",
+        icon: "/civis-icons/spawn-life.png",
         message: `Birth at ${event.x.toFixed(2)}, ${event.y.toFixed(2)}`,
         focus: [event.x, event.y],
       });
@@ -126,7 +126,7 @@ function buildNotifications(snapshot: Snapshot, previous: Snapshot, existing: No
       id: Number(`${snapshot.tick}${event.entity_id}2`),
       tick: event.tick,
       kind: "death",
-      icon: "💀",
+      icon: "/civis-icons/erase.png",
       message: `Death at ${event.x.toFixed(2)}, ${event.y.toFixed(2)}`,
       focus: [event.x, event.y],
     });
@@ -142,7 +142,7 @@ function buildNotifications(snapshot: Snapshot, previous: Snapshot, existing: No
       id: Number(`${snapshot.tick}${Math.round(event.x * 1000)}${Math.round(event.y * 1000)}3${index}`),
       tick: snapshot.tick,
       kind: "damage",
-      icon: "💥",
+      icon: "/civis-icons/disaster.png",
       message: `Combat damage at ${event.x.toFixed(2)}, ${event.y.toFixed(2)}${units}`,
       focus: [event.x, event.y],
     });
@@ -154,7 +154,7 @@ function buildNotifications(snapshot: Snapshot, previous: Snapshot, existing: No
       id: Number(`${snapshot.tick}${Math.round(event.x * 1000)}${Math.round(event.y * 1000)}7${index}`),
       tick: event.tick,
       kind: "disaster",
-      icon: "⚠️",
+      icon: "/civis-icons/disaster.png",
       message: `${event.kind} at ${event.x.toFixed(2)}, ${event.y.toFixed(2)} (r ${event.radius.toFixed(
         0,
       )}, sev ${event.severity.toFixed(0)})`,
@@ -183,7 +183,7 @@ function buildNotifications(snapshot: Snapshot, previous: Snapshot, existing: No
         id: Number(`${snapshot.tick}${index}5`),
         tick: event.tick,
         kind: "tech",
-        icon: "🔬",
+        icon: "/civis-icons/infra.png",
         message: event.message || "Technology unlocked",
         focus: snapshot.factions[0] ? [snapshot.factions[0].capital[0], snapshot.factions[0].capital[1]] : null,
       });
@@ -193,7 +193,7 @@ function buildNotifications(snapshot: Snapshot, previous: Snapshot, existing: No
         id: Number(`${snapshot.tick}${index}6`),
         tick: event.tick,
         kind: "trade",
-        icon: "📦",
+        icon: "/civis-icons/spawn-material.png",
         message: event.message || "Trade update",
         focus: snapshot.factions[0] ? [snapshot.factions[0].capital[0], snapshot.factions[0].capital[1]] : null,
       });

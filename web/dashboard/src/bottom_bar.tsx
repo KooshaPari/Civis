@@ -451,12 +451,14 @@ export function BottomBar() {
             active={state.selectedTool === "InspectAgent"}
             title="Inspect terrain cell"
             emoji="🔍"
+            icon="/civis-icons/inspect.png"
             onClick={() => dispatch({ type: "set_tool", tool: "InspectAgent" })}
           />
           <ToolButton
             active={state.selectedTool === "Camera"}
             title="Orbit camera"
             emoji="🎥"
+            icon="/civis-icons/camera-orbit.png"
             onClick={() => dispatch({ type: "set_tool", tool: "Camera" })}
           />
         </div>
@@ -466,18 +468,21 @@ export function BottomBar() {
               active={state.cameraPreset === "wide"}
               title="Wide overview (FR-CIV-UX-005)"
               emoji="🌄"
+              icon="/civis-icons/camera-orbit.png"
               onClick={() => dispatch({ type: "set_camera_preset", preset: "wide" })}
             />
             <ToolButton
               active={state.cameraPreset === "close"}
               title="Close orbit"
               emoji="🔎"
+              icon="/civis-icons/camera-orbit.png"
               onClick={() => dispatch({ type: "set_camera_preset", preset: "close" })}
             />
             <ToolButton
               active={state.cameraPreset === "orbit"}
               title="Default orbit"
               emoji="🛰"
+              icon="/civis-icons/camera-orbit.png"
               onClick={() => dispatch({ type: "set_camera_preset", preset: "orbit" })}
             />
           </div>
@@ -496,21 +501,21 @@ export function BottomBar() {
               active={state.selectedTool === "PlaceVoxel"}
               title="Place voxel on terrain click"
               emoji="🧱"
-              icon="/civis-icons/tool_terraform.png"
+              icon="/civis-icons/terraform.png"
               onClick={() => dispatch({ type: "set_tool", tool: "PlaceVoxel" })}
             />
             <ToolButton
               active={state.selectedTool === "SpawnCivilian"}
               title="Spawn: click civilian, drag-release vehicle/airport"
               emoji="🧍"
-              icon="/civis-icons/tool_spawn.png"
+              icon="/civis-icons/spawn-life.png"
               onClick={() => dispatch({ type: "set_tool", tool: "SpawnCivilian" })}
             />
             <ToolButton
               active={state.selectedTool === "DamageBomb"}
               title="Tactical voxel damage (sim.damage / control/damage)"
               emoji="💥"
-              icon="/civis-icons/tool_disaster.png"
+              icon="/civis-icons/disaster.png"
               onClick={() => dispatch({ type: "set_tool", tool: "DamageBomb" })}
             />
           </div>
@@ -585,7 +590,7 @@ export function BottomBar() {
         {speedButtons}
         {state.attachMode === "server" ? (
           <div className="tool-row">
-            <ToolButton title="Advance one tick" emoji="⏭" onClick={() => void runServerTick()} />
+            <ToolButton title="Advance one tick" emoji="⏭" icon="/civis-icons/time-play.png" onClick={() => void runServerTick()} />
             <ToolButton title="Export .civreplay" emoji="💾" onClick={() => void downloadReplay()} />
             <ToolButton
               title="Import .civreplay"

@@ -256,7 +256,7 @@ fn draw_faction_hud(
 
             ui.add_space(4.0);
             ui.label(
-                egui::RichText::new("[F] to hide")
+                egui::RichText::new("[F1] to hide")
                     .color(DIM)
                     .small()
                     .italics(),

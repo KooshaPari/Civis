@@ -39,9 +39,12 @@
 use bevy::prelude::*;
 
 use bevy_egui::egui;
-use civ_voxel::material::{MaterialDef, MaterialRegistry, Phase, AIR, WATER};
+use civ_voxel::material::{MaterialDef, MaterialRegistry, Phase, WATER};
+#[cfg(feature = "voxel")]
+use civ_voxel::material::AIR;
 use civ_voxel::MaterialId;
 
+#[cfg(feature = "voxel")]
 use crate::spawn_tools::select_action_binding;
 use crate::ui_theme;
 

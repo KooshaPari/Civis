@@ -420,6 +420,7 @@ pub fn toggle_pause(
     app_state: Option<Res<State<AppState>>>,
     outcome_overlay: Option<Res<OutcomeOverlayState>>,
     escape_block: Option<Res<OutcomeEscapeBlock>>,
+    mut controls_help: Option<ResMut<crate::controls_help::ControlsHelpOpen>>,
     mut mode: ResMut<GameUiMode>,
     mut game_speed: Option<ResMut<GameSpeed>>,
 ) {
@@ -443,6 +444,16 @@ pub fn toggle_pause(
     if let Some(overlay) = outcome_overlay.as_ref() {
         if outcome_modal_visible(overlay) {
             return;
+        }
+    }
+
+    // Controls cheat sheet owns Esc while open.
+    if esc_pressed {
+        if let Some(help) = controls_help.as_deref_mut() {
+            if help.0 {
+                help.0 = false;
+                return;
+            }
         }
     }
 

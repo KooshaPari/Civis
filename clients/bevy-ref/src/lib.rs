@@ -25,7 +25,10 @@ pub mod atmosphere;
 pub mod audio;
 #[cfg(feature = "bevy")]
 pub mod camera;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod civ_history;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod controls_help;
 #[cfg(feature = "bevy")]
 pub mod decorations;
 #[cfg(all(feature = "bevy", feature = "egui"))]

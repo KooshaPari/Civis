@@ -1,8 +1,5 @@
 use std::{
-    sync::{
-        atomic::{AtomicU32, Ordering},
-        Arc,
-    },
+    sync::atomic::{AtomicU32, Ordering},
     thread,
     time::Duration,
 };

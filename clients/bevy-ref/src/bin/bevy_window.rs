@@ -57,8 +57,8 @@ use civ_bevy_ref::{
     native_backend::native_render_plugin,
     post_fx::PostFxPlugin,
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
-    presentation_day_factor_target, resolve_live_ws_url,
-    save_load_ui::SaveLoadUiPlugin,
+    presentation_day_factor_target, resolve_live_ws_url, AttachMode,
+    save_load_ui::{SaveLoadPanel, SaveLoadUiPlugin},
     ws_client::{WsClient, WsClientConfig},
     CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MenusPlugin, MinimapBounds,
     MusicCues, OutcomeProgressHud, PerfHudPlugin, TutorialPlugin, VOXEL_CHUNK_EDGE,
@@ -520,6 +520,7 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    attach_mode: Res<AttachMode>,
 ) {
     spawn_default_scene(&mut commands);
     commands.insert_resource(default_stream_meshes(&mut meshes));
@@ -527,7 +528,11 @@ fn setup(
     // water-surface quad + tinted material handles so the streamed world
     // snapshot can drive water companions on every voxel delta.
     commands.insert_resource(default_water_meshes(&mut meshes, &mut materials));
-    let ws_client = WsClient::spawn_with_config(resolve_live_ws_url(), WsClientConfig::default());
+    let ws_client = if *attach_mode == AttachMode::Server {
+        WsClient::spawn_with_config(resolve_live_ws_url(), WsClientConfig::default())
+    } else {
+        WsClient::disconnected()
+    };
     commands.insert_resource(DiplomacyBridge::new(ws_client.rpc_sender()));
     commands.insert_resource(LiveBridge { client: ws_client });
 

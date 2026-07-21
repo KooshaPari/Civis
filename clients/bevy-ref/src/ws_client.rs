@@ -35,6 +35,13 @@ impl Default for WsClientConfig {
     }
 }
 
+/// Server-authoritative live-scene replacement notification.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SceneReset {
+    /// Tick represented by the replacement scene.
+    pub tick: u64,
+}
+
 /// WebSocket client that bridges the tokio network task to Bevy systems.
 pub struct WsClient {
     frame_rx: Receiver<Frame3d>,
@@ -49,6 +56,7 @@ pub struct WsClient {
     emergence_rx: crossbeam_channel::Receiver<EmergenceHudData>,
     outcome_rx: crossbeam_channel::Receiver<OutcomeHudData>,
     save_list_rx: crossbeam_channel::Receiver<Vec<SaveListEntry>>,
+    scene_reset_rx: Receiver<SceneReset>,
 }
 
 impl WsClient {
@@ -68,6 +76,7 @@ impl WsClient {
         let (_emergence_tx, emergence_rx) = crossbeam_channel::unbounded();
         let (_outcome_tx, outcome_rx) = crossbeam_channel::unbounded();
         let (_save_list_tx, save_list_rx) = crossbeam_channel::unbounded();
+        let (_scene_reset_tx, scene_reset_rx) = crossbeam_channel::unbounded();
 
         Self {
             frame_rx,
@@ -80,6 +89,7 @@ impl WsClient {
             emergence_rx,
             outcome_rx,
             save_list_rx,
+            scene_reset_rx,
         }
     }
 
@@ -99,6 +109,7 @@ impl WsClient {
         let (emergence_tx, emergence_rx) = crossbeam_channel::unbounded::<EmergenceHudData>();
         let (outcome_tx, outcome_rx) = crossbeam_channel::unbounded::<OutcomeHudData>();
         let (save_list_tx, save_list_rx) = crossbeam_channel::unbounded::<Vec<SaveListEntry>>();
+        let (scene_reset_tx, scene_reset_rx) = crossbeam_channel::unbounded::<SceneReset>();
 
         thread::spawn(move || {
             run_client(
@@ -113,6 +124,7 @@ impl WsClient {
                 emergence_tx,
                 outcome_tx,
                 save_list_tx,
+                scene_reset_tx,
             );
         });
 
@@ -127,6 +139,7 @@ impl WsClient {
             emergence_rx,
             outcome_rx,
             save_list_rx,
+            scene_reset_rx,
         }
     }
 
@@ -164,6 +177,16 @@ impl WsClient {
             entries.extend(batch);
         }
         entries
+    }
+
+    /// Drain server-authoritative scene replacement notifications.
+    #[must_use]
+    pub fn poll_scene_resets(&self) -> Vec<SceneReset> {
+        let mut resets = Vec::new();
+        while let Ok(reset) = self.scene_reset_rx.try_recv() {
+            resets.push(reset);
+        }
+        resets
     }
 
     /// Drain all currently available frames without blocking the main thread.
@@ -240,6 +263,7 @@ impl Clone for WsClient {
             emergence_rx: self.emergence_rx.clone(),
             outcome_rx: self.outcome_rx.clone(),
             save_list_rx: self.save_list_rx.clone(),
+            scene_reset_rx: self.scene_reset_rx.clone(),
         }
     }
 }
@@ -309,6 +333,7 @@ fn run_client(
     emergence_tx: Sender<EmergenceHudData>,
     outcome_tx: Sender<OutcomeHudData>,
     save_list_tx: Sender<Vec<SaveListEntry>>,
+    scene_reset_tx: Sender<SceneReset>,
 ) {
     let runtime = Builder::new_multi_thread()
         .enable_all()
@@ -331,6 +356,7 @@ fn run_client(
                 &emergence_tx,
                 &outcome_tx,
                 &save_list_tx,
+                &scene_reset_tx,
             )
             .await
             {
@@ -466,6 +492,19 @@ fn parse_save_list_response(text: &str) -> Option<Vec<SaveListEntry>> {
     Some(out)
 }
 
+fn parse_scene_reset_notification(text: &str) -> Option<SceneReset> {
+    let value: serde_json::Value = serde_json::from_str(text).ok()?;
+    if value.get("method").and_then(|method| method.as_str()) != Some("scene.reset") {
+        return None;
+    }
+    Some(SceneReset {
+        tick: value
+            .get("params")?
+            .get("tick")
+            .and_then(|tick| tick.as_u64())?,
+    })
+}
+
 async fn connect_and_stream(
     url: &str,
     config: WsClientConfig,
@@ -478,6 +517,7 @@ async fn connect_and_stream(
     emergence_tx: &Sender<EmergenceHudData>,
     outcome_tx: &Sender<OutcomeHudData>,
     save_list_tx: &Sender<Vec<SaveListEntry>>,
+    scene_reset_tx: &Sender<SceneReset>,
 ) -> Result<(), String> {
     let (ws, _) = tokio_tungstenite::connect_async(url)
         .await
@@ -527,6 +567,10 @@ async fn connect_and_stream(
         };
         match msg {
             Message::Text(text) => {
+                if let Some(reset) = parse_scene_reset_notification(&text) {
+                    let _ = scene_reset_tx.send(reset);
+                    continue;
+                }
                 if let Some(meta) = parse_jsonrpc_snapshot_meta(&text) {
                     record_snapshot_rtt(&mut snapshot_ping, rtt_tx);
                     if meta_tx.send(meta).is_err() {
@@ -599,5 +643,17 @@ mod tests {
     fn parse_outcome_response_ignores_other_rpc_ids() {
         let text = r#"{"jsonrpc":"2.0","id":3,"result":{"outcome":"victory"}}"#;
         assert!(parse_outcome_response(text).is_none());
+    }
+
+    #[test]
+    fn parse_scene_reset_notification_reads_tick() {
+        let text = r#"{"jsonrpc":"2.0","method":"scene.reset","params":{"tick":42}}"#;
+        assert_eq!(parse_scene_reset_notification(text), Some(SceneReset { tick: 42 }));
+    }
+
+    #[test]
+    fn parse_scene_reset_notification_ignores_rpc_responses() {
+        let text = r#"{"jsonrpc":"2.0","id":7,"result":{"tick":42}}"#;
+        assert_eq!(parse_scene_reset_notification(text), None);
     }
 }

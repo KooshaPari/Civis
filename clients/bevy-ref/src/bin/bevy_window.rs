@@ -884,6 +884,11 @@ fn apply_live_frames(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut feed: ResMut<EventFeed>,
 ) {
+    let resets = bridge.client.poll_scene_resets();
+    if let Some(reset) = resets.last() {
+        scene.reset(&mut commands);
+        hud.snapshot.tick = Some(reset.tick);
+    }
     let frames = bridge.client.poll();
     if !frames.is_empty() {
         hud.snapshot.connected = true;

@@ -327,6 +327,39 @@ impl Default for LiveStreamScene {
     }
 }
 
+impl LiveStreamScene {
+    /// Remove all entities and cached state from the previous authoritative scene.
+    pub fn reset(&mut self, commands: &mut Commands) {
+        for entity in self
+            .chunks
+            .values()
+            .chain(self.water_entities.values())
+            .chain(self.agents.values())
+            .chain(self.buildings.values())
+            .chain(self.graph_parcels.values())
+        {
+            commands.entity(*entity).despawn();
+        }
+        self.chunks.clear();
+        self.water_entities.clear();
+        self.chunk_voxels = ChunkVoxelCache::default();
+        self.agents.clear();
+        self.buildings.clear();
+        self.graph_parcels.clear();
+        self.agent_materials.clear();
+        self.building_materials.clear();
+        self.graph_parcel_materials.clear();
+        self.civilian_ids.clear();
+        self.civilian_entries.clear();
+        self.factions.clear();
+        self.faction_entries.clear();
+        self.faction_era = 0;
+        self.population_by_faction.clear();
+        self.climate = None;
+        self.weather = None;
+    }
+}
+
 /// Record the latest streamed climate frame for sky/lighting consumers.
 pub fn apply_climate_frame(scene: &mut LiveStreamScene, frame: ClimateFrame) {
     let climate = frame.climate;

@@ -137,7 +137,8 @@ fn load_faction_crests(
 }
 
 fn toggle_faction_hud(keys: Res<ButtonInput<KeyCode>>, mut open: ResMut<FactionHudOpen>) {
-    if keys.just_pressed(KeyCode::KeyF) {
+    // F1 — leave F free for camera lower (RTS-style R/F).
+    if keys.just_pressed(KeyCode::F1) {
         open.0 = !open.0;
     }
 }

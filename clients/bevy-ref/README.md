@@ -32,9 +32,14 @@ cargo run -p civ-server
 # Bevy window prefers binary F3D0 frames — skip redundant JSON text tick pushes:
 CIVIS_TICK_BROADCAST=binary cargo run -p civ-server
 
-cargo run -p civ-bevy-ref --features bevy --bin civ-bevy-window
+cargo run -p civ-bevy-ref --features bevy,client-bins --bin civ-bevy-window
 ```
 
+Live window with egui shell:
+
+```bash
+cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-bevy-window
+```
 ### Local play fingerprints
 
 Feature flags compound — pick the smallest set that matches your goal. CI and
@@ -43,9 +48,11 @@ add audio (and optionally models / voxel / GI).
 
 | Tier | `--features` | Gate / recipe | What you get |
 |------|--------------|---------------|--------------|
-| **Minimal** | `bevy,egui` | `just bevy-egui-check` | Menus, HUD, in-process sim — **no audio**, heightmap terrain fallback. This is what PR compile gates and `civis-3d-live-smoke` `cargo check` use. |
-| **Playable** | `bevy,egui,audio` (+ optional `models`) | `just civis-bevy-play` | Release `civ-standalone` with ambient SFX + UI sounds. Add `models` when `assets/models/*.glb` are present (otherwise procedural primitives). |
+| **Minimal** | `bevy,egui` | `just bevy-egui-check` / `shell_attest` | Menus, HUD, in-process sim — **no audio**, heightmap terrain fallback. This is what PR compile gates and `civis-3d-live-smoke` `cargo check` use. Desktop `[[bin]]` targets are **not** built (need `client-bins`). |
+| **Playable** | `bevy,egui,audio,client-bins` (+ optional `models`) | `just civis-bevy-play` | Release `civ-standalone` with ambient SFX + UI sounds. Add `models` when `assets/models/*.glb` are present (otherwise procedural primitives). |
 | **Full sandbox** | above + optional `voxel`, `voxel_stream`, `gi` | manual `cargo build/run` | `voxel` — volumetric CA terrain + water; `voxel_stream` — camera-driven chunk streaming (implies `voxel`); `gi` — Bevy Solari RT GI (needs DXR / Vulkan RT; degrades to no-op). Heavier compile; not in CI. |
+
+Desktop binaries (`civ-standalone`, `civ-bevy-window`, …) require the empty **`client-bins`** feature so `cargo test --test shell_attest` does not link huge Bevy exes (rust-lld hang on Windows). Recipes under `justfile` / `Tools/play.ps1` already pass it.
 
 **Playable run (after `just civis-bevy-play` builds release):**
 
@@ -108,18 +115,17 @@ and ~35° elevation — see `CameraTarget` in `src/lib.rs`.
 
 ### `civ-standalone` sandbox (HUD + menus)
 
-Requires `--features bevy,egui`:
+Requires `--features bevy,egui,client-bins`:
 
 ```bash
-cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone
+cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone
 ```
 
 | Input | Action |
 |-------|--------|
-| `Escape` | Toggle pause overlay (dims world; halts in-process sim ticks) |
-| Pause overlay **Resume** | Dismiss overlay (same as `Escape` while paused) |
-| `Space` | Toggle HUD speed pause (`GameSpeed` `0` / `1x`) |
-| `1`–`3` | HUD speed `1x` / `2x` / `5x` |
+| `Escape` | Toggle pause overlay (dims world; zeros `GameSpeed` and halts in-process sim) |
+| Pause overlay **Resume** | Dismiss overlay and restore prior sim speed |
+| HUD pause / `1`–`4` | Speed chips set `GameSpeed` directly (sim pause without overlay) |
 | Settings (pause menu) | Graphics quality, volume, sim speed stubs |
 | **L** | Toggle scrollable **Event Log** (egui); stacked toasts bottom-right (~8s) |
 | Live attach (`CIVIS_ATTACH=server`) | Toasts on WebSocket `connected` / `reconnecting` / `disconnected` (`EventKind::System`) |

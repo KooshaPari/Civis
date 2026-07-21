@@ -13,6 +13,10 @@ path = "src/lib.rs"
 [[bin]]
 name = "civ-bevy-ref"
 path = "src/main.rs"
+required-features = ["client-bins"]
+# Skip during `cargo test` — linking these Bevy bins with debuginfo hangs rust-lld.
+test = false
+bench = false
 
 [dependencies]
 civ-agents = { path = "../../crates/agents" }
@@ -101,6 +105,10 @@ bevy = [
     "dep:winit",
 ]
 egui = ["bevy", "dep:bevy_egui"]
+# Opt-in for desktop [[bin]] targets. Integration tests force-build every bin
+# whose required-features are met; gate bins here so `cargo test --features
+# bevy,egui` (shell_attest) does not link huge Bevy binaries (rust-lld hang).
+client-bins = []
 # Embed the multi-size civis.ico onto the Windows .exe (build.rs). Off by default
 # so the standard/CI build needs no Windows resource compiler. Release only.
 exe-icon = []
@@ -170,14 +178,20 @@ gi = [
 [[bin]]
 name = "civ-bevy-window"
 path = "src/bin/bevy_window.rs"
-required-features = ["bevy", "egui"]
+required-features = ["bevy", "egui", "client-bins"]
+test = false
+bench = false
 
 [[bin]]
 name = "civ-standalone"
 path = "src/bin/standalone.rs"
-required-features = ["bevy", "egui"]
+required-features = ["bevy", "egui", "client-bins"]
+test = false
+bench = false
 
 [[bin]]
 name = "civ-native-hal-probe"
 path = "src/bin/native_hal_probe.rs"
-required-features = ["bevy"]
+required-features = ["bevy", "client-bins"]
+test = false
+bench = false

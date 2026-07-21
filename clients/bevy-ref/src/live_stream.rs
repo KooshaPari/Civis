@@ -328,6 +328,50 @@ impl Default for LiveStreamScene {
     }
 }
 
+/// Despawn all streamed entities and reset maps so a new WorldGen boot cannot
+/// treat a previous session's chunks/agents as "ready".
+pub fn clear_live_stream_scene(commands: &mut Commands, scene: &mut LiveStreamScene) {
+    let entities: Vec<Entity> = scene
+        .chunks
+        .values()
+        .copied()
+        .chain(scene.water_entities.values().copied())
+        .chain(scene.agents.values().copied())
+        .chain(scene.buildings.values().copied())
+        .chain(scene.graph_parcels.values().copied())
+        .collect();
+    *scene = LiveStreamScene::default();
+    commands.queue(move |world: &mut World| {
+        for entity in entities {
+            let _ = world.despawn(entity);
+        }
+    });
+}
+
+/// World-exclusive clear used from menu commands (avoids `ResMut` conflicts with
+/// [`crate::menus::advance_worldgen_to_playing`]).
+pub fn clear_live_stream_scene_in_world(world: &mut World) {
+    let entities = {
+        let Some(mut scene) = world.get_resource_mut::<LiveStreamScene>() else {
+            return;
+        };
+        let entities: Vec<Entity> = scene
+            .chunks
+            .values()
+            .copied()
+            .chain(scene.water_entities.values().copied())
+            .chain(scene.agents.values().copied())
+            .chain(scene.buildings.values().copied())
+            .chain(scene.graph_parcels.values().copied())
+            .collect();
+        *scene = LiveStreamScene::default();
+        entities
+    };
+    for entity in entities {
+        let _ = world.despawn(entity);
+    }
+}
+
 /// Record the latest streamed climate frame for sky/lighting consumers.
 pub fn apply_climate_frame(scene: &mut LiveStreamScene, frame: ClimateFrame) {
     let climate = frame.climate;

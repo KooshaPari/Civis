@@ -130,7 +130,7 @@ civis-verify with_bevy="":
     cargo test -p civis-cli
     powershell -NoProfile -Command "if ('{{with_bevy}}' -eq '1') { Write-Host '==> civis-cli: cargo check --features bevy (verify bin)'; & cargo check -p civis-cli --features bevy --bin civis-verify; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } } else { Write-Host '==> Skipping bevy check (pass with_bevy=1 to include it).' }"
     @echo "==> Hint: 'cargo run -p civis-cli --bin civis-census' against a live civ-server,"
-    @echo "        or 'cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone' with"
+    @echo "        or 'cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone' with"
     @echo "        BEVY_ASSET_ROOT=clients/bevy-ref for the windowed reference client."
 
 # Feature-gated Bevy client compile oracle (GAP-BEVY-COMPILE-001 / WBS P2.3).
@@ -148,7 +148,7 @@ bevy-egui-check:
 civis-bevy-play:
     CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}" \
         BEVY_ASSET_ROOT="${BEVY_ASSET_ROOT:-$(pwd)/clients/bevy-ref}" \
-        cargo build --release -p civ-bevy-ref --features bevy,egui,audio --bin civ-standalone
+        cargo build --release -p civ-bevy-ref --features bevy,egui,audio,client-bins --bin civ-standalone
     @echo ""
     @echo "==> civis-bevy-play: release civ-standalone built (bevy,egui,audio)."
     @echo "    Set BEVY_ASSET_ROOT and run the binary from repo root (PowerShell):"
@@ -177,19 +177,19 @@ civis-3d-bevy-smoke:
 
 # Run the Bevy windowed reference client behind the optional bevy feature.
 civis-3d-bevy-window:
-    cargo run -p civ-bevy-ref --features bevy,egui --bin civ-bevy-window
+    cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-bevy-window
 
 # Run the standalone Bevy client with in-process simulation.
 civis-3d-standalone:
-    cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone
+    cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone
 
 # Standalone client attached to civ-server (requires server running on :3000).
 civis-3d-standalone-live:
-    powershell -Command "$env:CIVIS_ATTACH='server'; cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone"
+    powershell -Command "$env:CIVIS_ATTACH='server'; cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone"
 
 # Standalone live attach with explicit WS URL (Tailscale / remote civ-server).
 civis-3d-standalone-live-url URL:
-    powershell -Command "$env:CIVIS_ATTACH='server'; $env:CIV_WS_URL='{{URL}}'; cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone"
+    powershell -Command "$env:CIVIS_ATTACH='server'; $env:CIV_WS_URL='{{URL}}'; cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone"
 
 # Headless live-attach protocol smoke (F3D0 + voxel ground; no GPU window).
 # P-W1 kickoff item 41 / FR-CIV-BEVY-016; item 47 / FR-CIV-BEVY-022; item 50 / FR-CIV-BEVY-025.
@@ -203,13 +203,13 @@ civis-3d-live-smoke:
     cargo test -p civ-bevy-ref --features bevy --lib live_pick::
     cargo test -p civ-bevy-ref --lib chunk_to_minimap
     cargo test -p civ-bevy-ref --lib minimap_uv_to_chunk
-    cargo check -p civ-bevy-ref --features bevy,egui --bin civ-standalone
-    cargo check -p civ-bevy-ref --features bevy,egui --bin civ-bevy-window
+    cargo check -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone
+    cargo check -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-bevy-window
 
 # Run the live Bevy reference client against civ-server's WebSocket bridge.
 # Requires civ-server to be running first.
 civis-3d-bevy-live:
-    cargo run -p civ-bevy-ref --features bevy,egui --bin civ-bevy-window
+    cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-bevy-window
 
 # Run the phenotype-voxel kernel tests (sibling-repo dependency).
 civis-3d-voxel-kernel:
@@ -243,11 +243,11 @@ dev-stop:
 
 # One-shot launch of the standalone sandbox (incremental, no watcher).
 run:
-    cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone
+    cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone
 
 # One-shot launch of the live voxel/windowed client.
 run-voxel:
-    cargo run -p civ-bevy-ref --features bevy,egui --bin civ-bevy-window
+    cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-bevy-window
 
 # Install the dev-loop watch tool (cargo-watch) if missing. Idempotent.
 dev-tools:
@@ -258,11 +258,11 @@ dev-tools:
 # warm rebuilds. Edit a system -> save -> cargo-watch relinks only our crate.
 # Assets (PNG/.glb/WGSL) hot-reload live inside the running process (no rebuild).
 dev-fast: dev-tools
-    cargo watch -x "run -p civ-bevy-ref --features hot,egui --bin civ-standalone"
+    cargo watch -x "run -p civ-bevy-ref --features hot,egui,client-bins --bin civ-standalone"
 
 # Same loop for the live windowed/voxel client.
 dev-fast-voxel: dev-tools
-    cargo watch -x "run -p civ-bevy-ref --features hot --bin civ-bevy-window"
+    cargo watch -x "run -p civ-bevy-ref --features hot,client-bins --bin civ-bevy-window"
 
 # Build + run the standalone Bevy sandbox (release). Encodes the verified
 # boot incantation: playable `bevy,egui,audio` features, a caller-overridable target directory,
@@ -299,7 +299,7 @@ play-trace:
 play-window:
     CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}" \
         BEVY_ASSET_ROOT="${BEVY_ASSET_ROOT:-$(pwd)/clients/bevy-ref}" \
-        cargo run -p civ-bevy-ref --features bevy,egui --bin civ-bevy-window
+        cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-bevy-window
 
 # Kill a running civ-standalone game process.
 stop:
@@ -355,4 +355,4 @@ register-startmenu:
 # Autograder loop for engine build-green: compile + acceptance tests must pass.
 build-green-engine:
     cargo check -p civ-engine
-    cargo build --release -p civ-bevy-ref --features "bevy egui" --bin civ-bevy-window  # REAL playable gate (release build, not check)
+    cargo build --release -p civ-bevy-ref --features "bevy egui client-bins" --bin civ-bevy-window  # REAL playable gate (release build, not check)

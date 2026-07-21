@@ -130,7 +130,7 @@ try {
     $buildArgs = @(
         'build',
         '-p', 'civ-bevy-ref',
-        '--features', 'bevy,egui,audio',
+        '--features', 'bevy,egui,audio,client-bins',
         '--bin', 'civ-standalone'
     )
     if ($Profile -eq 'release') { $buildArgs += '--release' }

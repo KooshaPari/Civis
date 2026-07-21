@@ -6,7 +6,7 @@ use bevy::ui::{FocusPolicy, RelativeCursorPosition};
 use bevy_egui::{egui, EguiContexts};
 #[cfg(feature = "models")]
 use civ_bevy_ref::animation::ActorAnimationPlugin;
-use civ_bevy_ref::atmosphere::{animate_water, setup_atmosphere, update_lighting, DayNightCycle};
+use civ_bevy_ref::atmosphere::{animate_water, setup_atmosphere, update_lighting};
 #[cfg(feature = "egui")]
 use civ_bevy_ref::diplomacy_ui::{DiplomacyBridge, DiplomacyUiPlugin};
 #[cfg(feature = "models")]
@@ -25,7 +25,7 @@ use civ_bevy_ref::{
     chunk_fade_complete, chunk_raycast_terrain, chunk_to_minimap_uv,
     emergence_dashboard::EmergenceDashboardPlugin,
     event_feed::{EventFeed, EventFeedPlugin},
-    faction_hud::{FactionHudPlugin, PlayerFactionId},
+    faction_hud::FactionHudPlugin,
     focused_chunk_at_grid,
     game_ui::GameUiPlugin,
     god_panel::GodPanelPlugin,
@@ -57,7 +57,7 @@ use civ_bevy_ref::{
     post_fx::PostFxPlugin,
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
     presentation_day_factor_target, resolve_live_ws_url,
-    save_load_ui::{SaveLoadPanel, SaveLoadUiPlugin},
+    save_load_ui::SaveLoadUiPlugin,
     ws_client::{WsClient, WsClientConfig},
     CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MenusPlugin, MinimapBounds,
     MusicCues, OutcomeProgressHud, PerfHudPlugin, TutorialPlugin, VOXEL_CHUNK_EDGE,
@@ -81,8 +81,6 @@ const MINIMAP_HUD_LAYOUT: MinimapDotLayout = MinimapDotLayout::InsetHud {
     inset: MINIMAP_INSET,
     plot_margin_dot: MINIMAP_DOT,
 };
-const WORLDGEN_SPEED_STEPS: [u32; 3] = [1, 2, 5];
-
 #[derive(Resource, Default)]
 struct SaveListState {
     /// Requested one-time save list query.
@@ -188,17 +186,18 @@ struct MinimapPopup {
     pending: Option<(i32, i32)>,
 }
 
+/// Live-client sim speed mirror for the HUD (RPC-driven; no local Space toggle).
 #[derive(Resource, Default)]
 struct SimSpeedState {
     multiplier: u32,
-    speed_idx: usize,
-    paused: bool,
 }
 
 #[derive(Resource, Default)]
 struct EmergencePollTimer(f32);
 
 fn main() {
+    civ_bevy_ref::install_crash_handler();
+
     let mut app = App::new();
     app.add_plugins((
         DefaultPlugins
@@ -221,6 +220,7 @@ fn main() {
     #[cfg(feature = "egui")]
     app.add_plugins((
         FactionHudPlugin,
+        civ_bevy_ref::world_faction_glyphs::WorldFactionGlyphsPlugin,
         SaveLoadUiPlugin,
         TutorialPlugin,
         PerfHudPlugin,
@@ -601,43 +601,6 @@ fn debug_render_input(keys: Res<ButtonInput<KeyCode>>, mut debug: ResMut<DebugRe
     if keys.just_pressed(KeyCode::F3) {
         debug.toggle_wireframe();
     }
-}
-
-fn speed_control_input(
-    keys: Res<ButtonInput<KeyCode>>,
-    bridge: Res<LiveBridge>,
-    mut speed: ResMut<SimSpeedState>,
-    mut hud: ResMut<HudState>,
-) {
-    let toggle_pause = keys.just_pressed(KeyCode::Space);
-    let speed_up = keys.just_pressed(KeyCode::Period);
-    let speed_down = keys.just_pressed(KeyCode::Comma);
-
-    if !toggle_pause && !speed_up && !speed_down {
-        return;
-    }
-
-    if toggle_pause {
-        speed.paused = !speed.paused;
-    } else if speed_up {
-        speed.speed_idx = (speed.speed_idx + 1).min(WORLDGEN_SPEED_STEPS.len() - 1);
-        speed.paused = false;
-    } else {
-        speed.speed_idx = speed.speed_idx.saturating_sub(1);
-        speed.paused = false;
-    }
-
-    speed.multiplier = if speed.paused {
-        0
-    } else {
-        WORLDGEN_SPEED_STEPS[speed.speed_idx]
-    };
-    let json = format!(
-        r#"{{"jsonrpc":"2.0","id":1,"method":"sim.set_speed","params":{{"multiplier":{}}}}}"#,
-        speed.multiplier
-    );
-    bridge.client.send_rpc_raw(json);
-    hud.snapshot.speed_multiplier = speed.multiplier;
 }
 
 fn action_pressed(

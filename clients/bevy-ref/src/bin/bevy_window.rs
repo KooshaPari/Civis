@@ -250,7 +250,7 @@ fn main() {
     #[cfg(feature = "egui")]
     app.init_state::<AppState>();
     app.init_resource::<LiveStreamScene>()
-        .init_resource::<civ_bevy_ref::AttachMode>()
+        .insert_resource(civ_bevy_ref::resolve_attach_mode_from_env())
         .init_resource::<LiveSceneFocus>()
         .init_resource::<MinimapPopup>()
         .init_resource::<SimSpeedState>()

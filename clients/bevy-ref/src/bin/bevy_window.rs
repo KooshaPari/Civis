@@ -207,6 +207,10 @@ fn main() {
     let mut app = App::new();
     app.add_plugins((
         DefaultPlugins
+            .set(AssetPlugin {
+                file_path: concat!(env!("CARGO_MANIFEST_DIR"), "/assets").into(),
+                ..default()
+            })
             .set(WindowPlugin {
                 primary_window: Some(Window {
                     title: "Civis 3D - Bevy reference (live)".to_string(),
@@ -256,6 +260,8 @@ fn main() {
         .init_resource::<MusicCues>()
         .init_resource::<OutcomeProgressHud>()
         .init_resource::<SaveListState>()
+        .init_resource::<MainMenuSaves>()
+        .init_resource::<MenuCommand>()
         .insert_resource(ScenePresentation::default())
         .insert_resource(DebugRender::default())
         .insert_resource(OrbitCamera::from_target(CameraTarget::default()))

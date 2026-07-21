@@ -5,7 +5,7 @@
 
 use crate::gpu_features::GpuCapabilities;
 use crate::live_attach::LiveAttachBridge;
-use crate::live_stream::LiveStreamScene;
+use crate::live_stream::{LiveStreamScene, clear_live_stream_scene_in_world};
 use crate::outcome_overlay::{
     OutcomeEscapeBlock, OutcomeOverlayState, OutcomeSessionGate, begin_player_session,
     end_player_session, outcome_modal_visible,
@@ -264,6 +264,9 @@ pub fn advance_worldgen_to_playing(
     boot.elapsed += time.delta_secs();
 
     let ready = match scene.as_deref() {
+        // Skip the ConfirmWorldSetup frame (elapsed still ~0) so a queued live-scene
+        // clear can apply before we treat leftover chunks as boot-ready.
+        Some(scene) if boot.elapsed < f32::EPSILON => false,
         Some(scene) => live_stream_has_content(scene) || boot.elapsed >= WORLDGEN_BOOT_SECONDS,
         None => true,
     };
@@ -308,6 +311,9 @@ pub fn consume_menu_commands(
             next_state.set(AppState::WorldSetup);
         }
         MainMenuCommand::ConfirmWorldSetup => {
+            commands.queue(|world: &mut World| {
+                clear_live_stream_scene_in_world(world);
+            });
             commands.insert_resource(PlayerFactionId(params.player_faction));
             if let Some(bridge) = bridge.as_ref() {
                 let preset = WORLDGEN_PRESETS
@@ -327,6 +333,9 @@ pub fn consume_menu_commands(
             boot.elapsed = 0.0;
         }
         MainMenuCommand::Continue => {
+            commands.queue(|world: &mut World| {
+                clear_live_stream_scene_in_world(world);
+            });
             if let Some(bridge) = bridge.as_ref() {
                 let slot_name = saves
                     .preferred_slot
@@ -354,6 +363,9 @@ pub fn consume_menu_commands(
             next_state.set(AppState::WorldGen);
         }
         MainMenuCommand::LoadGame => {
+            commands.queue(|world: &mut World| {
+                clear_live_stream_scene_in_world(world);
+            });
             if let Some(save_panel) = save_panel.as_mut() {
                 save_panel.visible = true;
             }
@@ -384,6 +396,9 @@ pub fn consume_menu_commands(
             }
         }
         MainMenuCommand::ExitToMainMenu => {
+            commands.queue(|world: &mut World| {
+                clear_live_stream_scene_in_world(world);
+            });
             if let (Some(mut gate), Some(mut overlay)) = (gate, overlay) {
                 end_player_session(&mut gate, &mut overlay);
             }
@@ -444,7 +459,15 @@ pub fn toggle_pause(
     }
 
     match *mode {
-        GameUiMode::Playing => *mode = GameUiMode::Paused,
+        GameUiMode::Playing => {
+            *mode = GameUiMode::Paused;
+            // Keep HUD speed chips in sync with the overlay (sim already stops via
+            // GameUiMode in sim_bridge; zeroing makes Resume restore the prior rate).
+            if let Some(speed) = game_speed.as_deref_mut() {
+                speed.remember_non_zero();
+                speed.multiplier = 0.0;
+            }
+        }
         GameUiMode::Paused => {
             resume_shell_pause(&mut mode, game_speed.as_deref_mut());
         }
@@ -1152,5 +1175,17 @@ mod tests {
     fn format_gpu_capability_flag_yes_no() {
         assert_eq!(format_gpu_capability_flag(true), "Yes");
         assert_eq!(format_gpu_capability_flag(false), "No");
+    }
+
+    #[test]
+    fn resume_shell_pause_restores_stuck_zero_speed() {
+        let mut mode = GameUiMode::Paused;
+        let mut speed = GameSpeed {
+            multiplier: 0.0,
+            last_non_zero: 2.0,
+        };
+        resume_shell_pause(&mut mode, Some(&mut speed));
+        assert_eq!(mode, GameUiMode::Playing);
+        assert!((speed.multiplier - 2.0).abs() < f32::EPSILON);
     }
 }

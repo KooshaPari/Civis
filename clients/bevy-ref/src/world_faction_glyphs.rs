@@ -48,23 +48,25 @@ fn draw_world_faction_glyphs(
     let glyph_size = 20.0;
     let margin = glyph_size + 4.0;
 
-    // For each faction, find a building and render the lead glyph
-    for faction_entry in scene.faction_entries.iter() {
-        // Find a building world position (any building; for MVP, use the first)
-        let building_world_pos = scene
-            .buildings
-            .values()
-            .filter_map(|&building_entity| {
-                building_q
-                    .get(building_entity)
-                    .ok()
-                    .map(|transform| transform.translation())
-            })
-            .next();
+    // Collect building world positions once (wire has no per-building faction_id yet).
+    let building_positions: Vec<Vec3> = scene
+        .buildings
+        .values()
+        .filter_map(|&building_entity| {
+            building_q
+                .get(building_entity)
+                .ok()
+                .map(|transform| transform.translation())
+        })
+        .collect();
+    if building_positions.is_empty() {
+        return;
+    }
 
-        let Some(building_world_pos) = building_world_pos else {
-            continue;
-        };
+    // For each faction, pick a building slot + fan offset so sigils do not stack.
+    for (faction_index, faction_entry) in scene.faction_entries.iter().enumerate() {
+        let building_world_pos =
+            building_positions[faction_index % building_positions.len()];
 
         // Generate the faction's lead glyph from its seed
         let faction_seed = faction_entry.id as u64;
@@ -78,6 +80,13 @@ fn draw_world_faction_glyphs(
             Ok(viewport_pos) => viewport_pos,
             Err(_) => continue, // Skip if off-screen or behind camera
         };
+
+        // Fan offset when multiple factions share the same building anchor.
+        let fan = faction_index as f32;
+        let screen_pos = bevy::math::Vec2::new(
+            screen_pos.x + (fan % 4.0) * (glyph_size + 6.0) - glyph_size,
+            screen_pos.y + (fan / 4.0).floor() * (glyph_size + 6.0),
+        );
 
         // Cull if off-screen (add margin for glyph size)
         if screen_pos.x < -margin
@@ -161,19 +170,17 @@ fn draw_glyph_sigil(
     );
 }
 
-/// Deterministic faction color from faction ID (egui Color32).
+/// Crest-aligned swatch color (matches [`crate::faction_hud`] crest hexes).
 fn faction_color_from_id(faction_id: u32) -> egui::Color32 {
-    let colors = [
-        egui::Color32::from_rgb(255, 200, 100), // Gold
-        egui::Color32::from_rgb(150, 200, 255), // Blue
-        egui::Color32::from_rgb(200, 100, 255), // Purple
-        egui::Color32::from_rgb(100, 255, 150), // Green
-        egui::Color32::from_rgb(255, 100, 150), // Pink
-        egui::Color32::from_rgb(255, 255, 100), // Yellow
-        egui::Color32::from_rgb(100, 200, 200), // Cyan
-        egui::Color32::from_rgb(200, 150, 100), // Brown
+    const CREST_COLORS: [egui::Color32; 6] = [
+        egui::Color32::from_rgb(0xE8, 0xB8, 0x4B), // gold
+        egui::Color32::from_rgb(0x29, 0x80, 0xB9), // blue
+        egui::Color32::from_rgb(0x9B, 0x59, 0xB6), // violet
+        egui::Color32::from_rgb(0x27, 0xAE, 0x60), // green
+        egui::Color32::from_rgb(0xC0, 0x39, 0x2B), // red
+        egui::Color32::from_rgb(0x50, 0xC8, 0xF0), // cyan
     ];
-    colors[(faction_id as usize) % colors.len()]
+    CREST_COLORS[(faction_id as usize) % CREST_COLORS.len()]
 }
 
 // ── Plugin ────────────────────────────────────────────────────────────────────

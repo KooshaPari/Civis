@@ -730,15 +730,25 @@ pub fn civilian_display_name(entry: &CivilianStateEntry) -> String {
     }
 }
 
-/// Faction label from genome lineage (`faction-3` → `Faction 3`).
+/// Faction label for inspector / HUD rows.
+///
+/// Prefers wire `faction_id` / `lineage` (`faction-N`). Empty lineage with no
+/// aligned faction reads as unaligned (`—`) so Ardani (`Faction(0)`) is not
+/// confused with `Alignment::None`.
 #[must_use]
 pub fn civilian_faction_label(entry: &CivilianStateEntry) -> String {
     let lineage = entry.genome_summary.lineage.trim();
     if lineage.is_empty() {
+        // Unaligned civilians leave lineage blank on the wire.
         return "—".to_string();
     }
     if let Some(id) = lineage.strip_prefix("faction-") {
-        return format!("Faction {id}");
+        if let Ok(n) = id.parse::<u32>() {
+            return crate::faction_hud::faction_identity_name(n);
+        }
+    }
+    if entry.faction_id != 0 || lineage.starts_with("faction-") {
+        return crate::faction_hud::faction_identity_name(entry.faction_id);
     }
     lineage.to_string()
 }
@@ -1416,6 +1426,41 @@ mod tests {
         assert_eq!(details.profession, "farmer");
         assert_eq!(details.species, "human");
         assert!(details.needs.contains("F 100%"));
+    }
+
+    #[test]
+    fn civilian_faction_label_uses_named_identities() {
+        use civ_protocol_3d::GenomeSummary3d;
+
+        let unaligned = CivilianStateEntry {
+            id: 1,
+            faction_id: 0,
+            needs: CivilianNeeds3d::default(),
+            profession: String::new(),
+            genome_summary: GenomeSummary3d::default(),
+            species: String::new(),
+            health: 1.0,
+        };
+        assert_eq!(civilian_faction_label(&unaligned), "—");
+
+        let ardani = CivilianStateEntry {
+            genome_summary: GenomeSummary3d {
+                lineage: "faction-0".to_string(),
+                ..GenomeSummary3d::default()
+            },
+            ..unaligned.clone()
+        };
+        assert_eq!(civilian_faction_label(&ardani), "Ardani");
+
+        let velthari = CivilianStateEntry {
+            faction_id: 1,
+            genome_summary: GenomeSummary3d {
+                lineage: "faction-1".to_string(),
+                ..GenomeSummary3d::default()
+            },
+            ..unaligned.clone()
+        };
+        assert_eq!(civilian_faction_label(&velthari), "Velthari");
     }
 
     #[test]

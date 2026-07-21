@@ -270,6 +270,32 @@ fn advance_worldgen_waits_for_boot_timer_with_empty_live_scene() {
 }
 
 #[test]
+fn confirm_world_setup_clears_stale_live_scene_before_boot() {
+    let mut app = shell_smoke_app();
+    let mut stale = LiveStreamScene::default();
+    // Mark as "has content" without real entities — WorldGen must not skip boot.
+    stale.buildings.insert(1, Entity::from_bits(1));
+    app.insert_resource(stale);
+
+    dispatch_menu(&mut app, MainMenuCommand::NewWorld);
+    dispatch_menu(&mut app, MainMenuCommand::ConfirmWorldSetup);
+    assert_eq!(current_app_state(&app), AppState::WorldGen);
+
+    let scene = app.world().resource::<LiveStreamScene>();
+    assert!(
+        scene.buildings.is_empty(),
+        "ConfirmWorldSetup must clear stale streamed buildings"
+    );
+
+    advance_time(&mut app, 0.5);
+    assert_eq!(
+        current_app_state(&app),
+        AppState::WorldGen,
+        "cleared scene should still wait for boot timer"
+    );
+}
+
+#[test]
 fn sync_app_state_with_game_mode_maps_pause_overlay() {
     let mut app = shell_smoke_app();
 

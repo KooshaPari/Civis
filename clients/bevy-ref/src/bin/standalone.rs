@@ -2,7 +2,6 @@
 
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
-use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 #[cfg(feature = "models")]
 use civ_bevy_ref::animation::ActorAnimationPlugin;
 #[cfg(feature = "models")]
@@ -170,6 +169,7 @@ fn main() {
     {
         app.add_plugins((
             civ_bevy_ref::faction_hud::FactionHudPlugin,
+            civ_bevy_ref::world_faction_glyphs::WorldFactionGlyphsPlugin,
             civ_bevy_ref::tutorial::TutorialPlugin,
             civ_bevy_ref::perf_hud::PerfHudPlugin,
             civ_bevy_ref::AgentNeedsPlugin,

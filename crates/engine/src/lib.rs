@@ -78,6 +78,7 @@ pub mod tech;
 pub mod building_layouts;
 pub mod history;
 pub mod language;
+pub mod writing;
 pub mod psyche_behavior;
 pub mod religion;
 

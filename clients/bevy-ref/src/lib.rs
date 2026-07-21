@@ -38,6 +38,8 @@ pub mod entity_inspector;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod event_feed;
 pub mod faction_hud;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod world_faction_glyphs;
 #[cfg(feature = "bevy")]
 pub mod frame_budget;
 pub mod game_laws;

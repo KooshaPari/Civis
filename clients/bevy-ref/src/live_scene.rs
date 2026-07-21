@@ -26,6 +26,7 @@ use crate::live_stream::{
     LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene, StreamCulling, LIVE_CHUNK_EDGE,
 };
 use crate::minimap::{MinimapCamera, MinimapDot, MinimapRoot, MINIMAP_SIZE};
+use crate::ws_client::SceneReset;
 use crate::{chunk_fade_complete, AttachMode, DebugRender, LiveHudSnapshot};
 
 const LIVE_RENDER_MAX_DISTANCE: f32 = 200.0;
@@ -87,8 +88,15 @@ fn apply_live_scene_frames(
         return;
     }
 
+    let reset_tick = latest_scene_reset_tick(&bridge.client.poll_scene_resets());
+    if let Some(tick) = reset_tick {
+        scene.reset(&mut commands);
+        state.tick = Some(tick);
+        hud.tick = Some(tick);
+    }
+
     let frames = bridge.client.poll();
-    if frames.is_empty() {
+    if frames.is_empty() && reset_tick.is_none() {
         return;
     }
 
@@ -152,6 +160,10 @@ fn apply_live_scene_frames(
             Frame3d::Climate(_) => {}
         }
     }
+}
+
+fn latest_scene_reset_tick(resets: &[SceneReset]) -> Option<u64> {
+    resets.last().map(|reset| reset.tick)
 }
 
 fn update_chunk_fade(
@@ -317,5 +329,17 @@ fn update_live_minimap_camera(
         if let Projection::Orthographic(ref mut ortho) = *projection {
             ortho.scaling_mode = bevy::camera::ScalingMode::FixedVertical { viewport_height };
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn latest_scene_reset_tick_uses_authoritative_newest_notification() {
+        let resets = [SceneReset { tick: 12 }, SceneReset { tick: 27 }];
+        assert_eq!(latest_scene_reset_tick(&resets), Some(27));
+        assert_eq!(latest_scene_reset_tick(&[]), None);
     }
 }

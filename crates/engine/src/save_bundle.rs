@@ -9,7 +9,7 @@ use tar::{Archive, Builder};
 use thiserror::Error;
 use zstd::stream::{decode_all, encode_all};
 
-use crate::{ModGuestStateSave, ReplayError, Simulation};
+use crate::{ModGuestStateSave, ReplayError, Simulation, WorldState};
 
 /// Sidecar metadata written beside replay + mod state.
 pub const CIVSAVE_SPEC_ID: &str = "CIV-1000";
@@ -166,6 +166,10 @@ impl CivSaveBundle {
         fs::write(&mod_state_path, sim.export_mod_guest_state().to_json()?)
             .map_err(|e| io_err(&mod_state_path, e))?;
 
+        let world_state_path = dir.join("world_state.json");
+        fs::write(&world_state_path, serde_json::to_string(&sim.state)?)
+            .map_err(|e| io_err(&world_state_path, e))?;
+
         let replay_path = dir.join("replay.civreplay");
         sim.save_replay(&replay_path)?;
         Ok(())
@@ -189,6 +193,13 @@ impl CivSaveBundle {
                 fs::read_to_string(&mod_state_path).map_err(|e| io_err(&mod_state_path, e))?;
             let save = ModGuestStateSave::from_json(&json)?;
             sim.restore_mod_guest_state(&save)?;
+        }
+
+        let world_state_path = dir.join("world_state.json");
+        if world_state_path.is_file() {
+            let json = fs::read_to_string(&world_state_path)
+                .map_err(|e| io_err(&world_state_path, e))?;
+            sim.state = serde_json::from_str::<WorldState>(&json)?;
         }
 
         Ok(sim)

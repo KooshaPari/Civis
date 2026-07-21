@@ -3022,6 +3022,7 @@ dependencies = [
  "civ-agents",
  "civ-diplomacy",
  "civ-engine",
+ "civ-holocron",
  "civ-laws",
  "civ-protocol-3d",
  "civ-voxel",
@@ -3162,6 +3163,13 @@ dependencies = [
  "serde",
  "thiserror 1.0.69",
  "tracing",
+]
+
+[[package]]
+name = "civ-holocron"
+version = "0.1.0"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

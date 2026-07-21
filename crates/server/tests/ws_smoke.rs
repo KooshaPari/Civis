@@ -228,6 +228,48 @@ async fn replay_import_notifies_connected_clients_to_reset_scene() {
 }
 
 #[tokio::test]
+async fn replay_import_notifies_connected_clients_to_reset_scene() {
+    let mut source = Simulation::with_seed(77);
+    for _ in 0..3 {
+        source.tick();
+    }
+    let bytes = encode_civreplay(source.replay_log()).expect("encode replay");
+    let expected_tick = source.state.tick;
+
+    let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(88)));
+    let addr = spawn_ws_bridge(sim, 4).await;
+    let (mut socket, _) = connect_async(format!("ws://{addr}/ws")).await.expect("ws connect");
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    reqwest::Client::new()
+        .post(format!("http://{addr}/replay/import"))
+        .header(reqwest::header::CONTENT_TYPE, "application/octet-stream")
+        .body(bytes)
+        .send()
+        .await
+        .expect("replay import request")
+        .error_for_status()
+        .expect("replay import success");
+
+    let reset = timeout(Duration::from_secs(2), async {
+        while let Some(frame) = socket.next().await {
+            let Message::Text(text) = frame.expect("ws frame") else {
+                continue;
+            };
+            let value: serde_json::Value = serde_json::from_str(&text).expect("json frame");
+            if value.get("method").and_then(|v| v.as_str()) == Some("scene.reset") {
+                return value;
+            }
+        }
+        panic!("ws closed before scene.reset notification");
+    })
+    .await
+    .expect("scene.reset notification timeout");
+
+    assert_eq!(reset.pointer("/params/tick").and_then(|v| v.as_u64()), Some(expected_tick));
+}
+
+#[tokio::test]
 async fn healthz_returns_ok_with_tick() {
     let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(1)));
     let addr = spawn_ws_bridge(sim, 4).await;

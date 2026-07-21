@@ -52,6 +52,37 @@ pub struct WsClient {
 }
 
 impl WsClient {
+    /// Create a client that stays disconnected without starting a network task.
+    ///
+    /// Standalone clients still expose the same polling and command channels as
+    /// live clients, but must not reconnect to the server endpoint unless the
+    /// user explicitly selects server attach mode.
+    #[must_use]
+    pub fn disconnected() -> Self {
+        let (_frame_tx, frame_rx) = crossbeam_channel::unbounded();
+        let (_meta_tx, meta_rx) = crossbeam_channel::unbounded();
+        let (_rtt_tx, rtt_rx) = crossbeam_channel::unbounded();
+        let (_state_tx, state_rx) = crossbeam_channel::unbounded();
+        let (cmd_tx, _cmd_rx) = crossbeam_channel::unbounded::<String>();
+        let (send_tx, _send_rx) = crossbeam_channel::unbounded::<String>();
+        let (_emergence_tx, emergence_rx) = crossbeam_channel::unbounded();
+        let (_outcome_tx, outcome_rx) = crossbeam_channel::unbounded();
+        let (_save_list_tx, save_list_rx) = crossbeam_channel::unbounded();
+
+        Self {
+            frame_rx,
+            meta_rx,
+            rtt_rx,
+            state_rx,
+            latest_state: AtomicU32::new(state_to_atomic(WsConnectionState::Disconnected)),
+            cmd_tx,
+            send_tx,
+            emergence_rx,
+            outcome_rx,
+            save_list_rx,
+        }
+    }
+
     /// Spawn a reconnecting WebSocket client on a dedicated tokio runtime.
     pub fn spawn(url: String) -> Self {
         Self::spawn_with_config(url, WsClientConfig::default())

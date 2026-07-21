@@ -682,6 +682,11 @@ fn apply_live_frames(
     mut feed: ResMut<EventFeed>,
     gpu_quality: Res<civ_bevy_ref::frame_budget::GpuQualityMode>,
 ) {
+    let resets = bridge.client.poll_scene_resets();
+    if let Some(reset) = resets.last() {
+        scene.reset(&mut commands);
+        hud.snapshot.tick = Some(reset.tick);
+    }
     let frames = bridge.client.poll();
     if !frames.is_empty() {
         hud.snapshot.connected = true;

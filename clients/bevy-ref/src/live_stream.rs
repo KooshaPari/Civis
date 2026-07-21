@@ -4,29 +4,28 @@ use std::collections::{HashMap, HashSet};
 
 #[cfg(feature = "egui")]
 use crate::event_feed::{EventFeed, EventKind};
-use bevy::pbr::wireframe::{Wireframe, WireframeColor};
 use bevy::pbr::MeshMaterial3d;
+use bevy::pbr::wireframe::{Wireframe, WireframeColor};
 use bevy::prelude::*;
 use bevy::sprite::Text2d;
 use bevy::text::{TextColor, TextFont};
 use civ_protocol_3d::{
-    agent_world_translation, map_build_provenance, AgentAppearanceFrame, BattleEvent3d,
-    BirthEvent3d, BuildingDiffFrame, BuildingGraph, BuildingKind3d, BuildingProvenance,
-    CivilianStateEntry, CivilianStateFrame, ClimateFrame, DeathEvent3d, DisasterEvent3d,
-    EventFeedMessage3d, FacadeStyle, FactionStateFrame, ParcelKind, TechEvent3d, VoxelDeltaFrame,
-    WorldXZ,
+    AgentAppearanceFrame, BattleEvent3d, BirthEvent3d, BuildingDiffFrame, BuildingGraph,
+    BuildingKind3d, BuildingProvenance, CivilianStateEntry, CivilianStateFrame, ClimateFrame,
+    DeathEvent3d, DisasterEvent3d, EventFeedMessage3d, FacadeStyle, FactionStateFrame, ParcelKind,
+    TechEvent3d, VoxelDeltaFrame, WorldXZ, agent_world_translation, map_build_provenance,
 };
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId};
 
 use crate::bevy_render::{apply_chunk_material, mesh_buffer_to_bevy};
-use crate::frame_budget::{scaled_cull_distance, scaled_mesh_lod_distance, GpuQualityMode};
+use crate::frame_budget::{GpuQualityMode, scaled_cull_distance, scaled_mesh_lod_distance};
 use crate::game_ui::civilian_display_name;
-use crate::live_ground::{live_ground_y, ChunkVoxelCache};
+use crate::live_ground::{ChunkVoxelCache, live_ground_y};
 use crate::ws_client::WsClient;
 use crate::{
-    agent_color_from_id, agent_scale_multiplier, chunk_distance_from_camera, decode_chunk_id,
-    mesh_lod_level, should_render_chunk, DebugRender, LiveEntityKind, SelectedLiveEntity,
-    AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
+    AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH, DebugRender, LiveEntityKind,
+    SelectedLiveEntity, agent_color_from_id, agent_scale_multiplier, chunk_distance_from_camera,
+    decode_chunk_id, mesh_lod_level, should_render_chunk,
 };
 
 /// Bevy resource wrapping a [`WsClient`] so egui plugins can send JSON-RPC calls
@@ -358,9 +357,7 @@ fn weather_kind_tag(kind: impl std::fmt::Debug) -> u8 {
 
 /// Returns the latest climate + weather snapshots stored on the live scene.
 #[must_use]
-pub fn latest_climate(
-    scene: &LiveStreamScene,
-) -> Option<(ClimateSnapshot, WeatherKindSnapshot)> {
+pub fn latest_climate(scene: &LiveStreamScene) -> Option<(ClimateSnapshot, WeatherKindSnapshot)> {
     let climate = scene.climate?;
     Some((climate, scene.weather.unwrap_or(WeatherKindSnapshot(0))))
 }
@@ -707,10 +704,9 @@ pub fn default_water_meshes(
     materials: &mut Assets<StandardMaterial>,
 ) -> LiveWaterMeshes {
     let surface_mesh = meshes.add(Mesh::from(
-        bevy::math::primitives::Plane3d::default().mesh().size(
-            LIVE_CHUNK_EDGE as f32,
-            LIVE_CHUNK_EDGE as f32,
-        ),
+        bevy::math::primitives::Plane3d::default()
+            .mesh()
+            .size(LIVE_CHUNK_EDGE as f32, LIVE_CHUNK_EDGE as f32),
     ));
     let surface_material = materials.add(StandardMaterial {
         base_color: Color::srgba(
@@ -806,14 +802,11 @@ pub fn apply_water_for_chunk(
         chunk_origin.translation.z,
     );
 
-    let entity = *scene
-        .water_entities
-        .entry(chunk_id.0)
-        .or_insert_with(|| {
-            commands
-                .spawn((LiveWaterTag { chunk: chunk_id }, Transform::default()))
-                .id()
-        });
+    let entity = *scene.water_entities.entry(chunk_id.0).or_insert_with(|| {
+        commands
+            .spawn((LiveWaterTag { chunk: chunk_id }, Transform::default()))
+            .id()
+    });
     commands.entity(entity).insert((
         Mesh3d(meshes.surface_mesh.clone()),
         MeshMaterial3d(meshes.surface_material.clone()),
@@ -1005,13 +998,7 @@ pub fn apply_water_deltas_for_frame(
         if chunk.voxels.len() != LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE {
             continue;
         }
-        apply_water_for_chunk(
-            commands,
-            scene,
-            water_meshes,
-            chunk_id,
-            &chunk.voxels,
-        );
+        apply_water_for_chunk(commands, scene, water_meshes, chunk_id, &chunk.voxels);
     }
 }
 
@@ -1045,13 +1032,7 @@ pub fn apply_agent_appearance_frame_with_labels_and_eye(
     eye: Option<[f32; 3]>,
 ) {
     apply_agent_appearance_frame_with_labels(
-        commands,
-        scene,
-        materials,
-        meshes,
-        agents,
-        labels,
-        eye,
+        commands, scene, materials, meshes, agents, labels, eye,
     );
 }
 
@@ -1394,7 +1375,7 @@ fn building_material_style(
 mod tests {
     use super::*;
     use crate::encode_chunk_id;
-    use crate::live_ground::{live_ground_y, live_voxel_surface_y, ChunkVoxelCache};
+    use crate::live_ground::{ChunkVoxelCache, live_ground_y, live_voxel_surface_y};
     use civ_protocol_3d::{DirtyChunkEvent, VoxelChunkDelta, VoxelDeltaFrame, WriteSeq};
     use civ_voxel::MaterialId;
 
@@ -1706,6 +1687,7 @@ mod tests {
             100,
             CivilianStateEntry {
                 id: 100,
+                faction_id: 0,
                 needs: CivilianNeeds3d::default(),
                 profession: "smith".to_string(),
                 genome_summary: GenomeSummary3d::default(),
@@ -1729,6 +1711,7 @@ mod tests {
             42,
             CivilianStateEntry {
                 id: 42,
+                faction_id: 0,
                 needs: CivilianNeeds3d::default(),
                 profession: "farmer".to_string(),
                 genome_summary: GenomeSummary3d {
@@ -1756,6 +1739,7 @@ mod tests {
             10,
             CivilianStateEntry {
                 id: 10,
+                faction_id: 0,
                 needs: CivilianNeeds3d::default(),
                 profession: String::new(),
                 genome_summary: GenomeSummary3d::default(),
@@ -1767,6 +1751,7 @@ mod tests {
             20,
             CivilianStateEntry {
                 id: 20,
+                faction_id: 0,
                 needs: CivilianNeeds3d::default(),
                 profession: String::new(),
                 genome_summary: GenomeSummary3d::default(),
@@ -1787,6 +1772,7 @@ mod tests {
             7,
             CivilianStateEntry {
                 id: 7,
+                faction_id: 0,
                 needs: CivilianNeeds3d::default(),
                 profession: "Farmer".to_string(),
                 genome_summary: GenomeSummary3d {
@@ -1833,6 +1819,7 @@ mod tests {
             42,
             CivilianStateEntry {
                 id: 42,
+                faction_id: 0,
                 needs: CivilianNeeds3d::default(),
                 profession: "Farmer".to_string(),
                 genome_summary: GenomeSummary3d {
@@ -1913,6 +1900,7 @@ mod tests {
 
         let entry = |id: u64| CivilianStateEntry {
             id,
+            faction_id: 0,
             needs: CivilianNeeds3d::default(),
             profession: String::new(),
             genome_summary: GenomeSummary3d::default(),
@@ -1958,6 +1946,7 @@ mod tests {
             FactionStateFrame {
                 tick: 3,
                 factions: vec![entry(0, 2), entry(4, 5)],
+                population_by_faction: Default::default(),
             },
         );
 
@@ -1986,6 +1975,7 @@ mod tests {
                 government: Government3d::Junta,
                 treasury: FactionTreasury3d::default(),
             }],
+            population_by_faction: Default::default(),
         };
         let mut diplomacy = crate::diplomacy_ui::DiplomacyState {
             open: true,

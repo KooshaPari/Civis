@@ -749,7 +749,7 @@ fn apply_live_frames(
             Frame3d::FactionState(faction) => apply_faction_state_frame(&mut scene, faction),
             Frame3d::EventFeed(ref event_frame) => {
                 for msg in &event_frame.events {
-                    info!(
+                    debug!(
                         "event feed (tick {}): {}",
                         event_frame.tick,
                         format_event_feed_message(msg),

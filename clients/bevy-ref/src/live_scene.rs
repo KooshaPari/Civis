@@ -81,7 +81,6 @@ fn apply_live_scene_frames(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut frame_buffer: Local<Vec<Frame3d>>,
     gpu_quality: Option<Res<GpuQualityMode>>,
     #[cfg(feature = "egui")] mut event_feed: Option<ResMut<EventFeed>>,
 ) {
@@ -96,8 +95,8 @@ fn apply_live_scene_frames(
         hud.tick = Some(tick);
     }
 
-    bridge.client.poll_into(&mut frame_buffer);
-    if frame_buffer.is_empty() && reset_tick.is_none() {
+    let frames = bridge.client.poll();
+    if frames.is_empty() && reset_tick.is_none() {
         return;
     }
 
@@ -114,7 +113,7 @@ fn apply_live_scene_frames(
         gpu_quality: quality,
     };
 
-    for frame in frame_buffer.drain(..) {
+    for frame in frames {
         let tick = frame.tick();
         state.tick = Some(tick);
         hud.tick = Some(tick);

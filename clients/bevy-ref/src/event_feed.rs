@@ -257,7 +257,7 @@ fn toast_card(ui: &mut egui::Ui, ev: &GameEvent) {
 
     egui::Frame::NONE
         .fill(fill)
-        .stroke(egui::Stroke::new(1.0, accent_color.gamma_multiply(0.6)))
+        .stroke(egui::Stroke::new(1.0_f32, accent_color.gamma_multiply(0.6)))
         .corner_radius(egui::CornerRadius::same(8))
         .inner_margin(egui::Margin::symmetric(10, 6))
         .show(ui, |ui| {
@@ -282,7 +282,7 @@ fn draw_log_window(ctx: &egui::Context, feed: &EventFeed, log_open: &mut EventLo
         .frame(
             egui::Frame::NONE
                 .fill(PANEL_FILL)
-                .stroke(egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.4)))
+                .stroke(egui::Stroke::new(1.0_f32, ACCENT.gamma_multiply(0.4)))
                 .corner_radius(egui::CornerRadius::same(8))
                 .inner_margin(egui::Margin::same(12)),
         )

@@ -70,6 +70,8 @@ const ORBIT_DRAG_SENSITIVITY: f32 = 0.005;
 const ORBIT_SCROLL_SENSITIVITY: f32 = 2.0;
 const ORBIT_KEYBOARD_DISTANCE_STEP: f32 = 4.0;
 const ORBIT_PAN_SPEED: f32 = 12.0;
+const ORBIT_RAISE_SPEED: f32 = 10.0;
+const ORBIT_YAW_SPEED: f32 = 1.5;
 const MIN_ORBIT_ELEVATION: f32 = 0.05;
 const MIN_ORBIT_DISTANCE: f32 = 8.0;
 const MAX_ORBIT_DISTANCE: f32 = 200.0;
@@ -127,6 +129,10 @@ impl OrbitCamera {
         let cos = self.azimuth.cos();
         self.centre[0] += right * cos + forward * sin;
         self.centre[2] += -right * sin + forward * cos;
+    }
+
+    fn raise_centre(&mut self, delta: f32) {
+        self.centre[1] = (self.centre[1] + delta).clamp(0.0, 256.0);
     }
 }
 
@@ -186,7 +192,7 @@ struct MinimapPopup {
     pending: Option<(i32, i32)>,
 }
 
-/// Live-client sim speed mirror for the HUD (RPC-driven; no local Space toggle).
+/// Live-client sim speed mirror for the HUD (RPC-driven; Space/Esc pause is shell-owned).
 #[derive(Resource, Default)]
 struct SimSpeedState {
     multiplier: u32,
@@ -810,12 +816,12 @@ fn orbit_camera_input(
             settings
                 .as_ref()
                 .and_then(|s| s.key_for(civ_bevy_ref::settings_ui::ACTION_CAMERA_RESET))
-                .unwrap_or(KeyBinding::Key(KeyCode::KeyR))
+                .unwrap_or(KeyBinding::Key(KeyCode::Home))
                 .is_just_pressed(&keys, &mouse_buttons)
         }
         #[cfg(not(feature = "egui"))]
         {
-            keys.just_pressed(KeyCode::KeyR)
+            keys.just_pressed(KeyCode::Home)
         }
     };
     if reset_pressed {
@@ -862,6 +868,8 @@ fn orbit_camera_input(
     }
 
     let pan = ORBIT_PAN_SPEED * time.delta_secs();
+    let raise = ORBIT_RAISE_SPEED * time.delta_secs();
+    let yaw_step = ORBIT_YAW_SPEED * time.delta_secs();
     let mut right = 0.0;
     let mut forward = 0.0;
     let pan_pressed = |action: &str, fallback: KeyCode| -> bool {
@@ -875,13 +883,7 @@ fn orbit_camera_input(
         }
         #[cfg(not(feature = "egui"))]
         {
-            match fallback {
-                KeyCode::KeyW => keys.pressed(KeyCode::KeyW),
-                KeyCode::KeyS => keys.pressed(KeyCode::KeyS),
-                KeyCode::KeyA => keys.pressed(KeyCode::KeyA),
-                KeyCode::KeyD => keys.pressed(KeyCode::KeyD),
-                _ => false,
-            }
+            keys.pressed(fallback)
         }
     };
 
@@ -911,6 +913,31 @@ fn orbit_camera_input(
     }
     if right != 0.0 || forward != 0.0 {
         orbit.pan_centre(right, forward);
+    }
+
+    if pan_pressed(
+        civ_bevy_ref::settings_ui::ACTION_CAMERA_RAISE,
+        KeyCode::KeyR,
+    ) {
+        orbit.raise_centre(raise);
+    }
+    if pan_pressed(
+        civ_bevy_ref::settings_ui::ACTION_CAMERA_LOWER,
+        KeyCode::KeyF,
+    ) {
+        orbit.raise_centre(-raise);
+    }
+    if pan_pressed(
+        civ_bevy_ref::settings_ui::ACTION_CAMERA_ORBIT_LEFT,
+        KeyCode::KeyQ,
+    ) {
+        orbit.azimuth += yaw_step;
+    }
+    if pan_pressed(
+        civ_bevy_ref::settings_ui::ACTION_CAMERA_ORBIT_RIGHT,
+        KeyCode::KeyE,
+    ) {
+        orbit.azimuth -= yaw_step;
     }
 }
 

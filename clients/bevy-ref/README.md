@@ -123,11 +123,13 @@ cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone
 
 | Input | Action |
 |-------|--------|
-| `Escape` | Toggle pause overlay (dims world; zeros `GameSpeed` and halts in-process sim) |
+| `Space` | Toggle pause overlay (dims world; zeros `GameSpeed` and halts in-process sim) |
+| `Escape` | Close panels / also toggles pause when settings are closed |
 | Pause overlay **Resume** | Dismiss overlay and restore prior sim speed |
 | HUD pause / `1`–`4` | Speed chips set `GameSpeed` directly (sim pause without overlay) |
 | Settings (pause menu) | Graphics quality, volume, sim speed stubs |
 | **L** | Toggle scrollable **Event Log** (egui); stacked toasts bottom-right (~8s) |
+| `F1` | Toggle faction HUD |
 | Live attach (`CIVIS_ATTACH=server`) | Toasts on WebSocket `connected` / `reconnecting` / `disconnected` (`EventKind::System`) |
 
 Live attach (`CIVIS_ATTACH=server` or `CIV_WS_URL`) skips local terrain; pause does not gate remote ticks.
@@ -138,10 +140,12 @@ Live attach (`CIVIS_ATTACH=server` or `CIV_WS_URL`) skips local terrain; pause d
 |-------|--------|
 | Left drag | Orbit (azimuth / elevation) |
 | Scroll wheel | Zoom (distance) |
-| `R` | Reset to [`CameraTarget::default()`](src/lib.rs) |
+| `Q` / `E` | Pivot rotate (orbit left / right) |
+| `R` / `F` | Raise / lower orbit centre |
+| `Home` | Reset to [`CameraTarget::default()`](src/lib.rs) |
 | `=`, `+` (numpad), `[` | Zoom in (decrease distance) |
 | `-`, numpad `-`, `]` | Zoom out (increase distance) |
-| `W` / `A` / `S` / `D` | Pan orbit centre on the horizontal plane (stub) |
+| `W` / `A` / `S` / `D` | Pan orbit centre on the horizontal plane |
 | `F3` | Toggle chunk mesh wireframe debug overlay |
 
 ### Native GPU backends (`CIV_BEVY_BACKEND`)

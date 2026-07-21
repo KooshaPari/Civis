@@ -651,6 +651,8 @@ pub const ACTION_CAMERA_MOVE_LEFT: &str = "Move Camera Left";
 pub const ACTION_CAMERA_RAISE: &str = "Raise Camera";
 pub const ACTION_CAMERA_LOWER: &str = "Lower Camera";
 pub const ACTION_CAMERA_ROTATE: &str = "Rotate Camera";
+pub const ACTION_CAMERA_ORBIT_LEFT: &str = "Orbit Camera Left";
+pub const ACTION_CAMERA_ORBIT_RIGHT: &str = "Orbit Camera Right";
 pub const ACTION_CAMERA_ZOOM: &str = "Zoom Camera";
 pub const ACTION_CAMERA_RESET: &str = "Reset Camera";
 pub const ACTION_CAMERA_ZOOM_IN: &str = "Zoom Camera In";
@@ -728,6 +730,10 @@ impl KeyBinding {
             Self::Key(KeyCode::KeyO) => "O".into(),
             Self::Key(KeyCode::KeyG) => "G".into(),
             Self::Key(KeyCode::KeyT) => "T".into(),
+            Self::Key(KeyCode::KeyR) => "R".into(),
+            Self::Key(KeyCode::KeyF) => "F".into(),
+            Self::Key(KeyCode::KeyE) => "E".into(),
+            Self::Key(KeyCode::Home) => "Home".into(),
             Self::Key(KeyCode::Space) => "Space".into(),
             Self::Key(KeyCode::Equal) => "=".into(),
             Self::Key(KeyCode::KeyW) => "W".into(),
@@ -903,7 +909,8 @@ fn default_keybinds() -> Vec<Keybind> {
         Keybind::new(ACTION_TOGGLE_DIPLOMACY, KeyBinding::Key(KeyCode::KeyG)),
         Keybind::new(ACTION_TOGGLE_TECH_TREE, KeyBinding::Key(KeyCode::KeyT)),
         Keybind::new(ACTION_TOGGLE_MAP, KeyBinding::Key(KeyCode::KeyM)),
-        Keybind::new(ACTION_PAUSE_SIM, KeyBinding::Key(KeyCode::Escape)),
+        // Space = pause/resume; Esc still closes panels / toggles overlay via menus.
+        Keybind::new(ACTION_PAUSE_SIM, KeyBinding::Key(KeyCode::Space)),
         Keybind::new(ACTION_CYCLE_SIM_SPEED, KeyBinding::Key(KeyCode::Equal)),
         Keybind::new(ACTION_SPEED_1X, KeyBinding::Key(KeyCode::Digit1)),
         Keybind::new(ACTION_SPEED_2X, KeyBinding::Key(KeyCode::Digit2)),
@@ -913,16 +920,48 @@ fn default_keybinds() -> Vec<Keybind> {
         Keybind::new(ACTION_CAMERA_MOVE_BACKWARD, KeyBinding::Key(KeyCode::KeyS)),
         Keybind::new(ACTION_CAMERA_MOVE_LEFT, KeyBinding::Key(KeyCode::KeyA)),
         Keybind::new(ACTION_CAMERA_MOVE_RIGHT, KeyBinding::Key(KeyCode::KeyD)),
-        Keybind::new(ACTION_CAMERA_RAISE, KeyBinding::Key(KeyCode::Space)),
-        Keybind::new(ACTION_CAMERA_LOWER, KeyBinding::Key(KeyCode::ShiftLeft)),
+        Keybind::new(ACTION_CAMERA_RAISE, KeyBinding::Key(KeyCode::KeyR)),
+        Keybind::new(ACTION_CAMERA_LOWER, KeyBinding::Key(KeyCode::KeyF)),
         Keybind::new(ACTION_CAMERA_ROTATE, KeyBinding::Mouse(MouseButton::Right)),
+        Keybind::new(ACTION_CAMERA_ORBIT_LEFT, KeyBinding::Key(KeyCode::KeyQ)),
+        Keybind::new(ACTION_CAMERA_ORBIT_RIGHT, KeyBinding::Key(KeyCode::KeyE)),
         Keybind::new(ACTION_CAMERA_ZOOM, KeyBinding::Mouse(MouseButton::Middle)),
-        Keybind::new(ACTION_CAMERA_RESET, KeyBinding::Key(KeyCode::KeyR)),
+        Keybind::new(ACTION_CAMERA_RESET, KeyBinding::Key(KeyCode::Home)),
         Keybind::new(ACTION_CAMERA_ZOOM_IN, KeyBinding::Key(KeyCode::Equal)),
         Keybind::new(ACTION_CAMERA_ZOOM_OUT, KeyBinding::Key(KeyCode::Minus)),
         Keybind::new(ACTION_SELECT_OR_PICK, KeyBinding::Mouse(MouseButton::Left)),
         Keybind::new(ACTION_CLOSE_PANEL, KeyBinding::Key(KeyCode::Escape)),
     ]
+}
+
+/// Fill missing actions and migrate the pre-2026-07 stock camera/pause layout.
+fn reconcile_keybinds(keybinds: &mut Vec<Keybind>) {
+    let stock_old = |action: &str, binding: KeyBinding| -> bool {
+        keybinds
+            .iter()
+            .find(|b| b.action == action)
+            .is_some_and(|b| b.binding == binding)
+    };
+    let still_stock_pause_raise = stock_old(ACTION_PAUSE_SIM, KeyBinding::Key(KeyCode::Escape))
+        && stock_old(ACTION_CAMERA_RAISE, KeyBinding::Key(KeyCode::Space))
+        && stock_old(ACTION_CAMERA_LOWER, KeyBinding::Key(KeyCode::ShiftLeft))
+        && stock_old(ACTION_CAMERA_RESET, KeyBinding::Key(KeyCode::KeyR));
+    if still_stock_pause_raise {
+        for bind in keybinds.iter_mut() {
+            match bind.action.as_str() {
+                a if a == ACTION_PAUSE_SIM => bind.binding = KeyBinding::Key(KeyCode::Space),
+                a if a == ACTION_CAMERA_RAISE => bind.binding = KeyBinding::Key(KeyCode::KeyR),
+                a if a == ACTION_CAMERA_LOWER => bind.binding = KeyBinding::Key(KeyCode::KeyF),
+                a if a == ACTION_CAMERA_RESET => bind.binding = KeyBinding::Key(KeyCode::Home),
+                _ => {}
+            }
+        }
+    }
+    for def in default_keybinds() {
+        if !keybinds.iter().any(|b| b.action == def.action) {
+            keybinds.push(def);
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1006,6 +1045,8 @@ impl GameSettings {
                 Ok(mut s) => {
                     if s.keybinds.is_empty() {
                         s.keybinds = default_keybinds();
+                    } else {
+                        reconcile_keybinds(&mut s.keybinds);
                     }
                     s.active_tab = SettingsTab::default();
                     s.open = false;
@@ -1856,9 +1897,71 @@ mod tests {
         assert_eq!(s.display.window_mode, WindowMode::Windowed);
         assert_eq!(s.display.target_fps, 120);
         assert!(!s.keybinds.is_empty());
+        assert_eq!(
+            s.key_for(ACTION_PAUSE_SIM),
+            Some(KeyBinding::Key(KeyCode::Space))
+        );
+        assert_eq!(
+            s.key_for(ACTION_CAMERA_RAISE),
+            Some(KeyBinding::Key(KeyCode::KeyR))
+        );
+        assert_eq!(
+            s.key_for(ACTION_CAMERA_LOWER),
+            Some(KeyBinding::Key(KeyCode::KeyF))
+        );
+        assert_eq!(
+            s.key_for(ACTION_CAMERA_ORBIT_LEFT),
+            Some(KeyBinding::Key(KeyCode::KeyQ))
+        );
+        assert_eq!(
+            s.key_for(ACTION_CAMERA_ORBIT_RIGHT),
+            Some(KeyBinding::Key(KeyCode::KeyE))
+        );
+        assert_eq!(
+            s.key_for(ACTION_CAMERA_RESET),
+            Some(KeyBinding::Key(KeyCode::Home))
+        );
         assert!((s.audio.master - 0.8).abs() < f32::EPSILON);
         assert!((s.gameplay.default_sim_speed - 1.0).abs() < f32::EPSILON);
         assert_eq!(s.world.world_size, 1);
+    }
+
+    #[test]
+    fn reconcile_migrates_stock_space_raise_scheme() {
+        let mut keybinds = vec![
+            Keybind::new(ACTION_PAUSE_SIM, KeyBinding::Key(KeyCode::Escape)),
+            Keybind::new(ACTION_CAMERA_RAISE, KeyBinding::Key(KeyCode::Space)),
+            Keybind::new(ACTION_CAMERA_LOWER, KeyBinding::Key(KeyCode::ShiftLeft)),
+            Keybind::new(ACTION_CAMERA_RESET, KeyBinding::Key(KeyCode::KeyR)),
+        ];
+        reconcile_keybinds(&mut keybinds);
+        let lookup = |action: &str| {
+            keybinds
+                .iter()
+                .find(|b| b.action == action)
+                .map(|b| b.binding)
+        };
+        assert_eq!(lookup(ACTION_PAUSE_SIM), Some(KeyBinding::Key(KeyCode::Space)));
+        assert_eq!(
+            lookup(ACTION_CAMERA_RAISE),
+            Some(KeyBinding::Key(KeyCode::KeyR))
+        );
+        assert_eq!(
+            lookup(ACTION_CAMERA_LOWER),
+            Some(KeyBinding::Key(KeyCode::KeyF))
+        );
+        assert_eq!(
+            lookup(ACTION_CAMERA_RESET),
+            Some(KeyBinding::Key(KeyCode::Home))
+        );
+        assert_eq!(
+            lookup(ACTION_CAMERA_ORBIT_LEFT),
+            Some(KeyBinding::Key(KeyCode::KeyQ))
+        );
+        assert_eq!(
+            lookup(ACTION_CAMERA_ORBIT_RIGHT),
+            Some(KeyBinding::Key(KeyCode::KeyE))
+        );
     }
 
     #[test]

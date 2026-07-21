@@ -423,12 +423,13 @@ pub fn toggle_pause(
     mut mode: ResMut<GameUiMode>,
     mut game_speed: Option<ResMut<GameSpeed>>,
 ) {
-    // Single owner for ACTION_PAUSE_SIM: shell pause overlay (Esc default).
+    // Single owner for ACTION_PAUSE_SIM: shell pause overlay (Space default).
+    // Esc remains a hard fallback so Close Panel / overlay escape still works.
     // game_ui no longer toggles GameSpeed on this action.
     let pause_binding = settings
         .as_ref()
         .and_then(|s| s.key_for(ACTION_PAUSE_SIM))
-        .unwrap_or(KeyBinding::Key(KeyCode::Escape));
+        .unwrap_or(KeyBinding::Key(KeyCode::Space));
     let binding_pressed = pause_binding.is_just_pressed(&keys, &mouse_buttons);
     let esc_pressed = keys.just_pressed(KeyCode::Escape);
     if !esc_pressed && !binding_pressed {
@@ -902,7 +903,7 @@ fn draw_pause_menu(
                                 .strong(),
                         );
                         ui.label(
-                            egui::RichText::new("Esc — resume")
+                            egui::RichText::new("Space / Esc — resume")
                                 .size(13.0)
                                 .color(DIM)
                                 .italics(),
@@ -1187,5 +1188,37 @@ mod tests {
         resume_shell_pause(&mut mode, Some(&mut speed));
         assert_eq!(mode, GameUiMode::Playing);
         assert!((speed.multiplier - 2.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn space_pause_binding_toggles_overlay_and_zeros_speed() {
+        use bevy::prelude::{App, ButtonInput, Time, Update};
+        use std::time::Duration;
+
+        let mut app = App::new();
+        app.insert_resource(ButtonInput::<KeyCode>::default());
+        app.insert_resource(ButtonInput::<MouseButton>::default());
+        app.insert_resource(Time::<()>::default());
+        app.insert_resource(GameUiMode::Playing);
+        app.insert_resource(GameSpeed {
+            multiplier: 1.0,
+            last_non_zero: 1.0,
+        });
+        app.insert_resource(GameSettings::default());
+        app.add_systems(Update, toggle_pause);
+
+        {
+            let mut keys = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keys.clear();
+            keys.press(KeyCode::Space);
+        }
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(Duration::from_millis(16));
+        app.update();
+
+        assert_eq!(*app.world().resource::<GameUiMode>(), GameUiMode::Paused);
+        assert_eq!(app.world().resource::<GameSpeed>().multiplier, 0.0);
+        assert!((app.world().resource::<GameSpeed>().last_non_zero - 1.0).abs() < f32::EPSILON);
     }
 }

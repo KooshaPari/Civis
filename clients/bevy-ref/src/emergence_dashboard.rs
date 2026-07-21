@@ -57,7 +57,8 @@ fn toggle_emergence_dashboard(
     keys: Res<ButtonInput<KeyCode>>,
     mut state: ResMut<EmergenceDashboardState>,
 ) {
-    if keys.just_pressed(KeyCode::F7) || keys.just_pressed(KeyCode::KeyE) {
+    // F7 only — leave E free for orbit-right (RTS-style Q/E).
+    if keys.just_pressed(KeyCode::F7) {
         state.visible = !state.visible;
     }
 }

@@ -288,6 +288,7 @@ impl Plugin for GameUiPlugin {
             .init_resource::<BuildingSpawnKind>()
             .init_resource::<ActiveSubTool>()
             .init_resource::<LeftClusterTab>()
+            .init_resource::<GodActionToast>()
             // Holocron motion state is intentionally NOT registered here yet —
             // `step_flyout_motion` exists as `#[allow(dead_code)]` for the
             // deferred WGSL/3D anim timeline (see the doc comment on

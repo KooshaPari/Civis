@@ -197,8 +197,8 @@ impl CivSaveBundle {
 
         let world_state_path = dir.join("world_state.json");
         if world_state_path.is_file() {
-            let json =
-                fs::read_to_string(&world_state_path).map_err(|e| io_err(&world_state_path, e))?;
+            let json = fs::read_to_string(&world_state_path)
+                .map_err(|e| io_err(&world_state_path, e))?;
             sim.state = serde_json::from_str::<WorldState>(&json)?;
         }
 

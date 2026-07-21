@@ -329,6 +329,22 @@ async fn replay_import(
     let tick = loaded.state.tick;
     *state.sim.lock().await = loaded;
     state.tick.store(tick, Ordering::SeqCst);
+    let reset = Message::Text(
+        serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "scene.reset",
+            "params": { "tick": tick },
+        })
+        .to_string(),
+    );
+    let mut clients = state.clients.lock().await;
+    clients.retain(|tx| {
+        let delivered = tx.send(ClientOutbound::Rpc(reset.clone())).is_ok();
+        if !delivered {
+            state.ws_client_disconnects.fetch_add(1, Ordering::Relaxed);
+        }
+        delivered
+    });
     Ok((
         StatusCode::OK,
         Json(serde_json::json!({ "tick": tick, "ok": true })),

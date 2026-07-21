@@ -229,6 +229,7 @@ fn main() {
         civ_bevy_ref::world_faction_glyphs::WorldFactionGlyphsPlugin,
         SaveLoadUiPlugin,
         TutorialPlugin,
+        civ_bevy_ref::controls_help::ControlsHelpPlugin,
         PerfHudPlugin,
         EventFeedPlugin,
     ));

@@ -125,6 +125,7 @@ cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone
 |-------|--------|
 | `Space` | Toggle pause overlay (dims world; zeros `GameSpeed` and halts in-process sim) |
 | `Escape` | Close panels / also toggles pause when settings are closed |
+| `?` | Controls cheat sheet |
 | Pause overlay **Resume** | Dismiss overlay and restore prior sim speed |
 | HUD pause / `1`–`4` | Speed chips set `GameSpeed` directly (sim pause without overlay) |
 | Settings (pause menu) | Graphics quality, volume, sim speed stubs |

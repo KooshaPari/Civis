@@ -90,7 +90,8 @@ const TOOL_ICON_PATHS: &[(&str, &str)] = &[
 /// be wired in the next tool-taxonomy pass. The system exists so `GameUiPlugin`
 /// can register it in `Update` without conditional compilation.
 pub fn handle_category_hotkeys(_keys: Res<ButtonInput<KeyCode>>, _active: ResMut<ActiveSubTool>) {
-    // TODO(tool-taxonomy-P2): map F1–F5 / Q-E-R-T-Y to SubTool categories.
+    // TODO(tool-taxonomy-P2): map digit-row / hotbar bindings to SubTool categories.
+    // Do not reclaim F1 (faction HUD) or Q/E (camera orbit) — those are shell defaults.
 }
 
 /// Lightweight sim snapshot consumed by the HUD.

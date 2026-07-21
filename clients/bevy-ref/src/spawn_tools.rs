@@ -4,9 +4,8 @@
 //! marker, and local selection/destruction behavior.
 
 use bevy::input::mouse::MouseWheel;
-use bevy::math::primitives::{Capsule3d, Circle, Cuboid};
+use bevy::math::primitives::Circle;
 use bevy::prelude::*;
-use civ_agents::ActorVisualKind;
 
 #[cfg(feature = "models")]
 use crate::gltf_models::{actor_scene, building_scene, ModelOrPrimitive};
@@ -17,7 +16,7 @@ pub(crate) use crate::settings_ui::GameSettings;
 pub(crate) use crate::settings_ui::KeyBinding;
 #[cfg(feature = "egui")]
 use crate::settings_ui::ACTION_SELECT_OR_PICK;
-use crate::terrain::{terrain_height, terrain_surface_y, WORLD_SIZE};
+use crate::terrain::{terrain_height, WORLD_SIZE};
 #[cfg(feature = "voxel")]
 use crate::voxel_sim::VoxelSimState;
 #[cfg(feature = "voxel")]

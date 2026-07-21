@@ -15,8 +15,6 @@ use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
-use civ_voxel::material::WATER;
-
 use crate::{
     chunk_fade_alpha, chunk_fade_color, chunk_fade_complete, presentation_ambient_brightness,
     presentation_ambient_color_rgb, presentation_clear_color_rgb, CameraTarget, MeshBuffer,
@@ -167,6 +165,7 @@ pub fn spawn_voxel_mesh(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use civ_voxel::material::WATER;
 
     /// FR-CIV-BEVY-001 — MeshBuffer with one quad converts to a Bevy Mesh
     /// carrying the expected attribute lengths.

@@ -171,6 +171,7 @@ fn main() {
             civ_bevy_ref::faction_hud::FactionHudPlugin,
             civ_bevy_ref::world_faction_glyphs::WorldFactionGlyphsPlugin,
             civ_bevy_ref::tutorial::TutorialPlugin,
+            civ_bevy_ref::controls_help::ControlsHelpPlugin,
             civ_bevy_ref::perf_hud::PerfHudPlugin,
             civ_bevy_ref::AgentNeedsPlugin,
         ));

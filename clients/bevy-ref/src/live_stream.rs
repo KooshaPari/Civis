@@ -1084,9 +1084,12 @@ pub fn apply_agent_appearance_frame_with_labels(
 
         let entity = *scene.agents.entry(update.agent_id).or_insert_with(|| {
             let entity = commands
-                .spawn(LiveAgentTag {
-                    id: update.agent_id,
-                })
+                .spawn((
+                    LiveAgentTag {
+                        id: update.agent_id,
+                    },
+                    Transform::default(),
+                ))
                 .id();
             if labels.enabled {
                 let label = scene

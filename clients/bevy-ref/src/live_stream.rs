@@ -4,29 +4,28 @@ use std::collections::{HashMap, HashSet};
 
 #[cfg(feature = "egui")]
 use crate::event_feed::{EventFeed, EventKind};
-use bevy::pbr::wireframe::{Wireframe, WireframeColor};
 use bevy::pbr::MeshMaterial3d;
+use bevy::pbr::wireframe::{Wireframe, WireframeColor};
 use bevy::prelude::*;
 use bevy::sprite::Text2d;
 use bevy::text::{TextColor, TextFont};
 use civ_protocol_3d::{
-    agent_world_translation, map_build_provenance, AgentAppearanceFrame, BattleEvent3d,
-    BirthEvent3d, BuildingDiffFrame, BuildingGraph, BuildingKind3d, BuildingProvenance,
-    CivilianStateEntry, CivilianStateFrame, ClimateFrame, DeathEvent3d, DisasterEvent3d,
-    EventFeedMessage3d, FacadeStyle, FactionStateFrame, ParcelKind, TechEvent3d, VoxelDeltaFrame,
-    WorldXZ,
+    AgentAppearanceFrame, BattleEvent3d, BirthEvent3d, BuildingDiffFrame, BuildingGraph,
+    BuildingKind3d, BuildingProvenance, CivilianStateEntry, CivilianStateFrame, ClimateFrame,
+    DeathEvent3d, DisasterEvent3d, EventFeedMessage3d, FacadeStyle, FactionStateFrame, ParcelKind,
+    TechEvent3d, VoxelDeltaFrame, WorldXZ, agent_world_translation, map_build_provenance,
 };
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId};
 
 use crate::bevy_render::{apply_chunk_material, mesh_buffer_to_bevy};
-use crate::frame_budget::{scaled_mesh_lod_distance, GpuQualityMode};
+use crate::frame_budget::{GpuQualityMode, scaled_cull_distance, scaled_mesh_lod_distance};
 use crate::game_ui::civilian_display_name;
-use crate::live_ground::{live_ground_y, ChunkVoxelCache};
+use crate::live_ground::{ChunkVoxelCache, live_ground_y};
 use crate::ws_client::WsClient;
 use crate::{
-    agent_color_from_id, agent_scale_multiplier, chunk_distance_from_camera, decode_chunk_id,
-    mesh_lod_level, should_render_chunk, DebugRender, LiveEntityKind, SelectedLiveEntity,
-    AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
+    AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH, DebugRender, LiveEntityKind,
+    SelectedLiveEntity, agent_color_from_id, agent_scale_multiplier, chunk_distance_from_camera,
+    decode_chunk_id, mesh_lod_level, should_render_chunk,
 };
 
 /// Bevy resource wrapping a [`WsClient`] so egui plugins can send JSON-RPC calls
@@ -1440,7 +1439,7 @@ fn building_material_style(
 mod tests {
     use super::*;
     use crate::encode_chunk_id;
-    use crate::live_ground::{live_ground_y, live_voxel_surface_y, ChunkVoxelCache};
+    use crate::live_ground::{ChunkVoxelCache, live_ground_y, live_voxel_surface_y};
     use civ_protocol_3d::{DirtyChunkEvent, VoxelChunkDelta, VoxelDeltaFrame, WriteSeq};
     use civ_voxel::MaterialId;
 

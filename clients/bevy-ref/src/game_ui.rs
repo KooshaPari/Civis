@@ -7,7 +7,6 @@
 //! untouched. The HUD draws an AAA-styled glassmorphism shell: a stat-chip top
 //! bar, a tool-palette + speed-control bottom bar, and a selection inspector.
 
-use crate::menus::AppState;
 use crate::tool_categories::ActiveSubTool;
 use crate::ui_theme::CHIP_FILL;
 use bevy::prelude::*;

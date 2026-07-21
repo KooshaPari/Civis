@@ -9,7 +9,6 @@ use crate::bevy_render::apply_chunk_material;
 use crate::camera::CameraRig;
 #[cfg(feature = "egui")]
 use crate::event_feed::EventFeed;
-use crate::frame_budget::FrameBudgetRecovery;
 use crate::frame_budget::{scaled_cull_distance, GpuQualityMode};
 use crate::live_attach::{LiveAttachBridge, LiveAttachState};
 use crate::live_focus::{compute_live_scene_focus, LiveSceneFocus, LIVE_FOCUS_LERP_SPEED};

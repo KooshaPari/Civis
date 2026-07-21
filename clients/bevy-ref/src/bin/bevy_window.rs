@@ -6,7 +6,7 @@ use bevy::ui::{FocusPolicy, RelativeCursorPosition};
 use bevy_egui::{egui, EguiContexts};
 #[cfg(feature = "models")]
 use civ_bevy_ref::animation::ActorAnimationPlugin;
-use civ_bevy_ref::atmosphere::{animate_water, setup_atmosphere, update_lighting, DayNightCycle};
+use civ_bevy_ref::atmosphere::{animate_water, setup_atmosphere, update_lighting};
 #[cfg(feature = "egui")]
 use civ_bevy_ref::diplomacy_ui::{DiplomacyBridge, DiplomacyUiPlugin};
 #[cfg(feature = "models")]
@@ -23,7 +23,7 @@ use civ_bevy_ref::{
     chunk_fade_complete, chunk_raycast_terrain, chunk_to_minimap_uv,
     emergence_dashboard::EmergenceDashboardPlugin,
     event_feed::{EventFeed, EventFeedPlugin},
-    faction_hud::{FactionHudPlugin, PlayerFactionId},
+    faction_hud::FactionHudPlugin,
     focused_chunk_at_grid,
     game_ui::GameUiPlugin,
     god_panel::GodPanelPlugin,

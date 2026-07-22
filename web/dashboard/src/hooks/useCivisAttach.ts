@@ -297,6 +297,21 @@ function connectServer(
     if (handled) recordAttachFrame(attachFrameAtRef, dispatch);
   };
 
+  const handleOpen = async (ws: WebSocket, generation: number) => {
+    try {
+      await refreshSnapshot(ws, generation);
+      if (!isCurrentSocket(ws, generation)) return;
+      dispatch({ type: "set_connection", connection: "live" });
+      const terrain = await loadWatchTerrain();
+      if (terrain && isCurrentSocket(ws, generation)) {
+        dispatch({ type: "set_terrain", terrain });
+      }
+    } catch {
+      dispatch({ type: "set_connection", connection: "disconnected" });
+      scheduleReconnect();
+    }
+  };
+
   const connect = () => {
     if (closed) return;
     dispatch({ type: "set_connection", connection: "reconnecting" });
@@ -307,21 +322,7 @@ function connectServer(
 
     ws.onopen = () => {
       setActiveServerSocket(ws);
-      void (async () => {
-        try {
-          await refreshSnapshot(ws, generation);
-          if (!isCurrentSocket(ws, generation)) return;
-          dispatch({ type: "set_connection", connection: "live" });
-          void loadWatchTerrain().then((terrain) => {
-            if (terrain && isCurrentSocket(ws, generation)) {
-              dispatch({ type: "set_terrain", terrain });
-            }
-          });
-        } catch {
-          dispatch({ type: "set_connection", connection: "disconnected" });
-          scheduleReconnect();
-        }
-      })();
+      void handleOpen(ws, generation);
     };
 
     ws.onmessage = (event) => {

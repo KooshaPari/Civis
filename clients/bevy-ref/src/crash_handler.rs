@@ -5,7 +5,8 @@
 
 use std::backtrace::Backtrace;
 use std::fs::{create_dir_all, write};
-use std::panic::PanicHookInfo;
+#[allow(deprecated)]
+use std::panic::PanicInfo;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -14,8 +15,9 @@ static CRASH_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
 /// Install a process-wide panic hook that writes panic details and backtraces
 /// to timestamped files under the Civis crash directory.
+#[allow(deprecated)]
 pub fn install_crash_handler() {
-    std::panic::set_hook(Box::new(|info: &PanicHookInfo<'_>| {
+    std::panic::set_hook(Box::new(|info: &PanicInfo<'_>| {
         let counter = CRASH_COUNTER.fetch_add(1, Ordering::SeqCst) + 1;
         let dir = crash_dir();
         let path = crash_log_path(&dir, counter);
@@ -60,7 +62,8 @@ pub fn crash_dir() -> PathBuf {
 
 /// Format a crash log body from panic hook info (exported for tests).
 #[must_use]
-pub fn build_crash_log(info: &PanicHookInfo<'_>) -> String {
+#[allow(deprecated)]
+pub fn build_crash_log(info: &PanicInfo<'_>) -> String {
     let location = match info.location() {
         Some(location) => format!("{}:{}", location.file(), location.line()),
         None => "<unknown location>".to_string(),

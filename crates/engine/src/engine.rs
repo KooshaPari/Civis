@@ -510,9 +510,7 @@ impl FactionRelations {
     }
 
     /// Iterate directed relation rows `(a, b) → record`.
-    pub fn iter_rows(
-        &self,
-    ) -> impl Iterator<Item = (&(u32, u32), &FactionRelationRecord)> {
+    pub fn iter_rows(&self) -> impl Iterator<Item = (&(u32, u32), &FactionRelationRecord)> {
         self.rows.iter()
     }
 
@@ -4679,9 +4677,7 @@ impl Simulation {
 
     /// Mutable access for drivers/tests that seed cohesion before
     /// [`crate::faction_decisions::compute_faction_decisions`].
-    pub fn last_tick_cohesion_snapshots_mut(
-        &mut self,
-    ) -> &mut BTreeMap<u32, CohesionSnapshot> {
+    pub fn last_tick_cohesion_snapshots_mut(&mut self) -> &mut BTreeMap<u32, CohesionSnapshot> {
         &mut self.last_tick_cohesion_snapshots
     }
 
@@ -8120,7 +8116,10 @@ mod tests {
             },
         );
         trade.tick();
-        assert!(trade.state.last_tick_faction_trade_open_intents.contains(&0));
+        assert!(trade
+            .state
+            .last_tick_faction_trade_open_intents
+            .contains(&0));
         assert_eq!(
             trade.snapshot().last_tick_faction_trade_open_intents,
             trade.state.last_tick_faction_trade_open_intents

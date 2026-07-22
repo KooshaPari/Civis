@@ -210,21 +210,25 @@ fn other_factions(sim: &Simulation, faction_id: u32) -> Vec<u32> {
 }
 
 fn pick_hostility_target(sim: &Simulation, faction_id: u32) -> Option<u32> {
-    other_factions(sim, faction_id).into_iter().min_by(|left, right| {
-        pair_score(sim, faction_id, *left)
-            .partial_cmp(&pair_score(sim, faction_id, *right))
-            .unwrap_or(Ordering::Equal)
-            .then_with(|| left.cmp(right))
-    })
+    other_factions(sim, faction_id)
+        .into_iter()
+        .min_by(|left, right| {
+            pair_score(sim, faction_id, *left)
+                .partial_cmp(&pair_score(sim, faction_id, *right))
+                .unwrap_or(Ordering::Equal)
+                .then_with(|| left.cmp(right))
+        })
 }
 
 fn pick_trade_target(sim: &Simulation, faction_id: u32) -> Option<u32> {
-    other_factions(sim, faction_id).into_iter().max_by(|left, right| {
-        pair_score(sim, faction_id, *left)
-            .partial_cmp(&pair_score(sim, faction_id, *right))
-            .unwrap_or(Ordering::Equal)
-            .then_with(|| right.cmp(left))
-    })
+    other_factions(sim, faction_id)
+        .into_iter()
+        .max_by(|left, right| {
+            pair_score(sim, faction_id, *left)
+                .partial_cmp(&pair_score(sim, faction_id, *right))
+                .unwrap_or(Ordering::Equal)
+                .then_with(|| right.cmp(left))
+        })
 }
 
 #[cfg(test)]
@@ -300,10 +304,7 @@ mod tests {
         },));
 
         let decisions = compute_faction_decisions(&sim);
-        let d0 = decisions
-            .iter()
-            .find(|(id, _)| *id == 0)
-            .map(|(_, d)| *d);
+        let d0 = decisions.iter().find(|(id, _)| *id == 0).map(|(_, d)| *d);
         assert_eq!(d0, Some(FactionDecision::FlagHostility));
     }
 
@@ -333,10 +334,7 @@ mod tests {
         );
 
         let decisions = compute_faction_decisions(&sim);
-        let d0 = decisions
-            .iter()
-            .find(|(id, _)| *id == 0)
-            .map(|(_, d)| *d);
+        let d0 = decisions.iter().find(|(id, _)| *id == 0).map(|(_, d)| *d);
         assert_eq!(d0, Some(FactionDecision::FlagTradeOpen));
     }
 
@@ -367,9 +365,7 @@ mod tests {
             .expect("hostility intent must materialize a relation row");
         assert!(after < before);
         assert!(sim.diplomacy_events().iter().any(|event| {
-            event.kind == DiplomacyKind::Conflict
-                && event.faction_a == 0
-                && event.faction_b == 1
+            event.kind == DiplomacyKind::Conflict && event.faction_a == 0 && event.faction_b == 1
         }));
     }
 

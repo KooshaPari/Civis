@@ -237,7 +237,10 @@ mod tests {
     #[test]
     fn cull_distance_scales_by_quality_mode() {
         assert_eq!(GpuQualityMode::Full.cull_distance_scale(), 1.0);
-        assert_eq!(GpuQualityMode::Reduced.cull_distance_scale(), REDUCED_CULL_SCALE);
+        assert_eq!(
+            GpuQualityMode::Reduced.cull_distance_scale(),
+            REDUCED_CULL_SCALE
+        );
         assert_eq!(
             GpuQualityMode::Critical.cull_distance_scale(),
             REDUCED_CULL_SCALE * CRITICAL_CULL_SCALE

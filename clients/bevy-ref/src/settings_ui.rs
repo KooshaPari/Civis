@@ -37,9 +37,9 @@ use serde::{
     Deserialize, Serialize,
 };
 
-use crate::ui_theme;
 /// Canonical persisted GPU backend preference, re-exported for API compatibility.
 pub use crate::graphics_settings::BackendPref as RenderEngine;
+use crate::ui_theme;
 #[cfg(feature = "audio")]
 use bevy_kira_audio::prelude::AudioChannel;
 #[cfg(feature = "audio")]
@@ -1387,7 +1387,9 @@ fn graphics_tab(ui: &mut egui::Ui, g: &mut GraphicsSettings) -> bool {
             RenderEngine::DX12 => {
                 "DirectX 12 Ultimate — DXR / mesh shaders / DLSS path when the driver supports it."
             }
-            RenderEngine::Vulkan => "Vulkan — cross-vendor native HAL; full RT/DLSS parity on NVIDIA.",
+            RenderEngine::Vulkan => {
+                "Vulkan — cross-vendor native HAL; full RT/DLSS parity on NVIDIA."
+            }
         })
         .color(ui_theme::DIM)
         .small(),
@@ -1402,7 +1404,11 @@ fn graphics_tab(ui: &mut egui::Ui, g: &mut GraphicsSettings) -> bool {
     section_heading(ui, "\u{2728}", "Post-process & advanced");
     changed |= graphics_special_toggles(ui, g);
     ui.add_space(8.0);
-    ui.label(egui::RichText::new("Anisotropy / sharpen").color(ui_theme::DIM).small());
+    ui.label(
+        egui::RichText::new("Anisotropy / sharpen")
+            .color(ui_theme::DIM)
+            .small(),
+    );
     ui.horizontal(|ui| {
         ui.label("Render scale");
         changed |= ui
@@ -1690,7 +1696,9 @@ fn display_tab(
         |m| m.label(),
     );
 
-    changed |= ui.checkbox(&mut display.fps_uncapped, "Uncapped framerate").changed();
+    changed |= ui
+        .checkbox(&mut display.fps_uncapped, "Uncapped framerate")
+        .changed();
     if !display.fps_uncapped {
         ui.horizontal(|ui| {
             ui.label(egui::RichText::new("Target FPS").color(ui_theme::DIM));
@@ -1702,9 +1710,11 @@ fn display_tab(
     ui.separator();
     section_heading(ui, "\u{1f4bb}", "Monitor & HUD");
     ui.label(
-        egui::RichText::new("UI scale, HDR output, and multi-monitor picker wire through display prefs next.")
-            .color(ui_theme::DIM)
-            .small(),
+        egui::RichText::new(
+            "UI scale, HDR output, and multi-monitor picker wire through display prefs next.",
+        )
+        .color(ui_theme::DIM)
+        .small(),
     );
     let mut ui_scale = 1.0_f32;
     ui.horizontal(|ui| {
@@ -1714,7 +1724,10 @@ fn display_tab(
     let mut hdr = false;
     let _ = ui.checkbox(&mut hdr, "HDR output (when display supports)");
     let mut borderless = display.window_mode == WindowMode::Borderless;
-    if ui.checkbox(&mut borderless, "Prefer borderless fullscreen").changed() {
+    if ui
+        .checkbox(&mut borderless, "Prefer borderless fullscreen")
+        .changed()
+    {
         display.window_mode = if borderless {
             WindowMode::Borderless
         } else {
@@ -1734,9 +1747,11 @@ fn audio_tab(ui: &mut egui::Ui, a: &mut AudioSettings) -> bool {
     ui.separator();
     section_heading(ui, "\u{1f399}", "Mix");
     ui.label(
-        egui::RichText::new("Ambient / voice / UI buses land with the audio kit; sliders reserve the AAA layout.")
-            .color(ui_theme::DIM)
-            .small(),
+        egui::RichText::new(
+            "Ambient / voice / UI buses land with the audio kit; sliders reserve the AAA layout.",
+        )
+        .color(ui_theme::DIM)
+        .small(),
     );
     let mut ambient = (a.music * 0.85).clamp(0.0, 1.0);
     let mut ui_bus = (a.sfx * 0.7).clamp(0.0, 1.0);
@@ -1892,7 +1907,10 @@ mod tests {
                 .find(|b| b.action == action)
                 .map(|b| b.binding)
         };
-        assert_eq!(lookup(ACTION_PAUSE_SIM), Some(KeyBinding::Key(KeyCode::Space)));
+        assert_eq!(
+            lookup(ACTION_PAUSE_SIM),
+            Some(KeyBinding::Key(KeyCode::Space))
+        );
         assert_eq!(
             lookup(ACTION_CAMERA_RAISE),
             Some(KeyBinding::Key(KeyCode::KeyR))
@@ -1993,10 +2011,7 @@ mod tests {
     #[test]
     fn render_engine_combo_labels_and_env_tokens_match_aaa_api_picker() {
         assert_eq!(RenderEngine::Auto.label(), "Auto (recommended)");
-        assert_eq!(
-            RenderEngine::DX12.label(),
-            "DirectX 12 Ultimate"
-        );
+        assert_eq!(RenderEngine::DX12.label(), "DirectX 12 Ultimate");
         assert_eq!(RenderEngine::Vulkan.label(), "Vulkan");
         assert_eq!(RenderEngine::Auto.env_token(), None);
         assert_eq!(RenderEngine::DX12.env_token(), Some("dx12"));

@@ -47,7 +47,10 @@ pub fn crash_dir() -> PathBuf {
     if let Some(base) = std::env::var("LOCALAPPDATA").ok().filter(|s| !s.is_empty()) {
         return PathBuf::from(base).join("Civis").join("crashes");
     }
-    if let Some(base) = std::env::var("XDG_DATA_HOME").ok().filter(|s| !s.is_empty()) {
+    if let Some(base) = std::env::var("XDG_DATA_HOME")
+        .ok()
+        .filter(|s| !s.is_empty())
+    {
         return PathBuf::from(base).join("civis").join("crashes");
     }
     if let Some(home) = std::env::var("HOME").ok().filter(|s| !s.is_empty()) {

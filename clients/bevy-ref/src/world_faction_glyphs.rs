@@ -65,8 +65,7 @@ fn draw_world_faction_glyphs(
 
     // For each faction, pick a building slot + fan offset so sigils do not stack.
     for (faction_index, faction_entry) in scene.faction_entries.iter().enumerate() {
-        let building_world_pos =
-            building_positions[faction_index % building_positions.len()];
+        let building_world_pos = building_positions[faction_index % building_positions.len()];
 
         // Generate the faction's lead glyph from its seed
         let faction_seed = faction_entry.id as u64;
@@ -155,10 +154,7 @@ fn draw_glyph_sigil(
         );
 
         // Draw straight lines (curvature ignored for MVP)
-        painter.line_segment(
-            [p0, p1],
-            egui::Stroke::new(stroke_width, stroke_color),
-        );
+        painter.line_segment([p0, p1], egui::Stroke::new(stroke_width, stroke_color));
     }
 
     // Optional: add a small circle marker behind the glyph
@@ -166,7 +162,10 @@ fn draw_glyph_sigil(
     painter.circle_stroke(
         screen_pos,
         marker_radius,
-        egui::Stroke::new(0.8, egui::Color32::from_rgba_unmultiplied(100, 100, 100, 80)),
+        egui::Stroke::new(
+            0.8,
+            egui::Color32::from_rgba_unmultiplied(100, 100, 100, 80),
+        ),
     );
 }
 

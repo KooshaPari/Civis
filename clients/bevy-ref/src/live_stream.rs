@@ -419,9 +419,7 @@ fn weather_kind_tag(kind: impl std::fmt::Debug) -> u8 {
 
 /// Returns the latest climate + weather snapshots stored on the live scene.
 #[must_use]
-pub fn latest_climate(
-    scene: &LiveStreamScene,
-) -> Option<(ClimateSnapshot, WeatherKindSnapshot)> {
+pub fn latest_climate(scene: &LiveStreamScene) -> Option<(ClimateSnapshot, WeatherKindSnapshot)> {
     let climate = scene.climate?;
     Some((climate, scene.weather.unwrap_or(WeatherKindSnapshot(0))))
 }
@@ -768,10 +766,9 @@ pub fn default_water_meshes(
     materials: &mut Assets<StandardMaterial>,
 ) -> LiveWaterMeshes {
     let surface_mesh = meshes.add(Mesh::from(
-        bevy::math::primitives::Plane3d::default().mesh().size(
-            LIVE_CHUNK_EDGE as f32,
-            LIVE_CHUNK_EDGE as f32,
-        ),
+        bevy::math::primitives::Plane3d::default()
+            .mesh()
+            .size(LIVE_CHUNK_EDGE as f32, LIVE_CHUNK_EDGE as f32),
     ));
     let surface_material = materials.add(StandardMaterial {
         base_color: Color::srgba(
@@ -867,14 +864,11 @@ pub fn apply_water_for_chunk(
         chunk_origin.translation.z,
     );
 
-    let entity = *scene
-        .water_entities
-        .entry(chunk_id.0)
-        .or_insert_with(|| {
-            commands
-                .spawn((LiveWaterTag { chunk: chunk_id }, Transform::default()))
-                .id()
-        });
+    let entity = *scene.water_entities.entry(chunk_id.0).or_insert_with(|| {
+        commands
+            .spawn((LiveWaterTag { chunk: chunk_id }, Transform::default()))
+            .id()
+    });
     commands.entity(entity).insert((
         Mesh3d(meshes.surface_mesh.clone()),
         MeshMaterial3d(meshes.surface_material.clone()),
@@ -1066,13 +1060,7 @@ pub fn apply_water_deltas_for_frame(
         if chunk.voxels.len() != LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE {
             continue;
         }
-        apply_water_for_chunk(
-            commands,
-            scene,
-            water_meshes,
-            chunk_id,
-            &chunk.voxels,
-        );
+        apply_water_for_chunk(commands, scene, water_meshes, chunk_id, &chunk.voxels);
     }
 }
 
@@ -1106,13 +1094,7 @@ pub fn apply_agent_appearance_frame_with_labels_and_eye(
     eye: Option<[f32; 3]>,
 ) {
     apply_agent_appearance_frame_with_labels(
-        commands,
-        scene,
-        materials,
-        meshes,
-        agents,
-        labels,
-        eye,
+        commands, scene, materials, meshes, agents, labels, eye,
     );
 }
 

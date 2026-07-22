@@ -229,7 +229,9 @@ mod tests {
             keys.press(KeyCode::KeyQ);
         }
         app.update();
-        assert!((app.world().resource::<CameraRig>().yaw - (base.yaw + YAW_SPEED * dt)).abs() < 1e-4);
+        assert!(
+            (app.world().resource::<CameraRig>().yaw - (base.yaw + YAW_SPEED * dt)).abs() < 1e-4
+        );
 
         let mut app = camera_input_app();
         app.world_mut()

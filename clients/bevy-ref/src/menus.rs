@@ -3,21 +3,21 @@
 //! Menus and overlay plugin for the Civis reference client (FR-CIV-BEVY-024 / item 49).
 //! Settings GPU readout: FR-CIV-BEVY-036 / item 61.
 
-use crate::gpu_features::GpuCapabilities;
-use crate::live_attach::LiveAttachBridge;
-use crate::live_stream::{LiveStreamScene, clear_live_stream_scene_in_world};
-use crate::outcome_overlay::{
-    OutcomeEscapeBlock, OutcomeOverlayState, OutcomeSessionGate, begin_player_session,
-    end_player_session, outcome_modal_visible,
-};
 use crate::faction_hud::PlayerFactionId;
 use crate::game_ui::GameSpeed;
+use crate::gpu_features::GpuCapabilities;
+use crate::live_attach::LiveAttachBridge;
+use crate::live_stream::{clear_live_stream_scene_in_world, LiveStreamScene};
+use crate::outcome_overlay::{
+    begin_player_session, end_player_session, outcome_modal_visible, OutcomeEscapeBlock,
+    OutcomeOverlayState, OutcomeSessionGate,
+};
 use crate::save_load_ui::SaveLoadPanel;
 use crate::settings_ui::{GameSettings, KeyBinding, ACTION_PAUSE_SIM};
 use crate::ui_theme::{CHIP_FILL, GLASS_FILL, KC_ACCENT};
 use bevy::app::AppExit;
 use bevy::prelude::*;
-use bevy_egui::{EguiContexts, EguiPrimaryContextPass, egui};
+use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 const WORLDGEN_PRESETS: [&str; 4] = [
     "single-race-ardani",
@@ -966,7 +966,11 @@ fn era_banner(ui: &mut egui::Ui, banner: &EraBanner) {
 /// User-facing yes/no for read-only GPU capability flags.
 #[must_use]
 pub fn format_gpu_capability_flag(enabled: bool) -> &'static str {
-    if enabled { "Yes" } else { "No" }
+    if enabled {
+        "Yes"
+    } else {
+        "No"
+    }
 }
 
 /// Read-only settings labels for detected GPU capabilities (FR-CIV-BEVY-036).

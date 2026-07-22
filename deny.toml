@@ -28,11 +28,16 @@ ignore = [
 
 [bans]
 # Multiple versions of the same crate in the dep graph: warn (not error).
-# Allow when justified via a workspace comment, but surface the warning so we
-# notice.
+# The remaining duplicates are transitive compatibility boundaries: Bevy/winit,
+# Wasmtime, tokio-tungstenite, and testcontainers currently require different
+# major/minor lines. Do not collapse them blindly; each reduction requires an
+# upstream-compatible graph change and a full client/server build.
 multiple-versions = "warn"
 # Wildcard dep specs (e.g. `serde = "*"`) are a foot-gun; warn so they show
-# up in CI output even if we don't fail the build over them yet.
+# up in CI output even if we don't fail the build over them yet. The current
+# warnings are workspace-local path dependencies without registry versions;
+# they are intentionally local and should be versioned when a crate is prepared
+# for publication, not changed mechanically during this cleanup.
 wildcards = "warn"
 # Show every path involved in a duplicate-version finding so common crates
 # and their dependency chains are straightforward to investigate.
@@ -60,13 +65,9 @@ allow = [
   "BSD-3-Clause",
   "ISC",
   "Zlib",
-  "MPL-2.0",
   "0BSD",
   "CC0-1.0",
-  "Unicode-DFS-2016",
   "Unicode-3.0",
-  "OpenSSL",          # used by rustls/openssl-sys stack — accept, do not silently absorb
-  "NCSA",             # University of Illinois / NCSA (used by some llvm deps)
   "CDLA-Permissive-2.0", # webpki-roots (tokio-tungstenite / hyper-rustls)
 ]
 # Confidence threshold for the SPDX matcher. `threshold = 1.0` is the strictest

@@ -455,8 +455,7 @@ mod tests {
 
     #[test]
     fn battle_wire_event_does_not_alias_disaster_sfx() {
-        let (kind, _) =
-            sfx_from_audio_event(&crate::AudioEventWire::Battle { intensity: 0.5 });
+        let (kind, _) = sfx_from_audio_event(&crate::AudioEventWire::Battle { intensity: 0.5 });
         assert_ne!(kind, SfxKind::Disaster);
         assert_eq!(kind, SfxKind::Battle);
     }
@@ -475,21 +474,9 @@ mod tests {
     #[test]
     fn lifecycle_and_research_wire_events_map_to_distinct_sfx() {
         let cases = [
-            (
-                crate::AudioEventWire::Birth,
-                SfxKind::Birth,
-                1.0_f32,
-            ),
-            (
-                crate::AudioEventWire::Death,
-                SfxKind::Death,
-                1.0,
-            ),
-            (
-                crate::AudioEventWire::Tech,
-                SfxKind::Tech,
-                1.0,
-            ),
+            (crate::AudioEventWire::Birth, SfxKind::Birth, 1.0_f32),
+            (crate::AudioEventWire::Death, SfxKind::Death, 1.0),
+            (crate::AudioEventWire::Tech, SfxKind::Tech, 1.0),
         ];
         for (wire, want_kind, want_vol) in cases {
             let (kind, volume) = sfx_from_audio_event(&wire);

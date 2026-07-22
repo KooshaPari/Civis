@@ -713,13 +713,13 @@ fn apply_live_frames(
                     &mut materials,
                     culling,
                     debug.as_ref(),
-                    delta.clone(),
+                    &delta,
                     wireframe_color,
                 );
                 // FR-CLIENT-render: pair the chunk-mesh update with a
                 // water-surface companion update so the streamed water
                 // plane tracks the chunk's voxel composition on every
-                // delta (re-uses the same delta payload + culling eye).
+                // delta (re-uses the same borrowed payload + culling eye).
                 apply_water_deltas_for_frame(
                     &mut commands,
                     &mut scene,

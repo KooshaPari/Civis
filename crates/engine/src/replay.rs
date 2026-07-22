@@ -604,7 +604,8 @@ impl ReplayLog {
     /// Load the replay log from RON.
     pub fn load(path: impl AsRef<Path>) -> Result<Self, ReplayError> {
         let contents = read_text(path)?;
-        let log = ron::from_str(&contents)?;
+        let log: Self = ron::from_str(&contents)?;
+        log.verify_hash_chain()?;
         Ok(log)
     }
 
@@ -738,6 +739,19 @@ mod tests {
         let loaded = ReplayLog::load(file.path()).expect("load replay log");
         assert_eq!(loaded.events, log.events);
         assert_eq!(loaded.rng_draw_event_count(), 1);
+    }
+
+    #[test]
+    fn plain_ron_load_rejects_tampered_hash_chain() {
+        let mut log = ReplayLog::default();
+        log.record_tick(1);
+        log.running_hash = Some([0u8; HASH_LEN]);
+
+        let file = tempfile::NamedTempFile::new().expect("temp file");
+        log.save(file.path()).expect("save replay log");
+
+        let err = ReplayLog::load(file.path()).expect_err("tampered hash chain must fail");
+        assert!(matches!(err, ReplayError::HashChainMismatch));
     }
 
     #[test]

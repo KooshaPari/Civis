@@ -316,7 +316,7 @@ function connectServer(
     if (closed) return;
     dispatch({ type: "set_connection", connection: "reconnecting" });
     wsRef.current?.close();
-    const ws = new WebSocket(wsUrl);
+    const ws = new WebSocket(wsUrl); // NOSONAR - lifecycle callbacks intentionally share this socket generation closure.
     const generation = ++connectionGeneration;
     wsRef.current = ws;
 

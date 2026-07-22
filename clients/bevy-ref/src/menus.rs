@@ -242,7 +242,12 @@ pub fn advance_worldgen_to_playing(
 
     if boot.scene_clear_pending {
         boot.scene_clear_pending = false;
-        return;
+        // A queued scene clear needs one frame to settle. Headless consumers
+        // without a LiveStreamScene have nothing to drain, so do not delay
+        // their deterministic WorldGen -> Playing transition.
+        if scene.is_some() {
+            return;
+        }
     }
 
     boot.elapsed += time.delta_secs();
@@ -300,7 +305,6 @@ pub fn consume_menu_commands(
             });
             commands.insert_resource(PlayerFactionId(params.player_faction));
             if let Some(bridge) = bridge.as_ref() {
-                bridge.client.clear_outcomes();
                 let preset = WORLDGEN_PRESETS
                     .get(params.climate_preset % WORLDGEN_PRESETS.len())
                     .copied()
@@ -308,7 +312,11 @@ pub fn consume_menu_commands(
                 start_world_boot(&bridge.client, preset, params.seed);
             }
             if let (Some(mut gate), Some(mut overlay)) = (gate, overlay) {
-                begin_player_session(&mut gate, &mut overlay);
+                begin_player_session(
+                    bridge.as_ref().map(|bridge| &bridge.client),
+                    &mut gate,
+                    &mut overlay,
+                );
             }
             boot.elapsed = 0.0;
             boot.scene_clear_pending = true;
@@ -344,7 +352,11 @@ pub fn consume_menu_commands(
                 bridge.client.send_rpc_raw(json);
             }
             if let (Some(mut gate), Some(mut overlay)) = (gate, overlay) {
-                begin_player_session(&mut gate, &mut overlay);
+                begin_player_session(
+                    bridge.as_ref().map(|bridge| &bridge.client),
+                    &mut gate,
+                    &mut overlay,
+                );
             }
             boot.elapsed = 0.0;
             boot.scene_clear_pending = true;

@@ -329,7 +329,7 @@ fn begin_and_end_player_session_reset_gate_and_overlay() {
         dismissed: true,
     };
 
-    begin_player_session(&mut gate, &mut overlay);
+    begin_player_session(None, &mut gate, &mut overlay);
     assert!(gate.session_active);
     assert!(overlay.outcome.is_none());
     assert!(!overlay.dismissed);

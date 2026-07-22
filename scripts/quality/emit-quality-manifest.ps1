@@ -2,6 +2,19 @@
 $ErrorActionPreference = "Continue"
 Set-Location (git rev-parse --show-toplevel)
 
+if ($env:CI -in @("true", "1") -or $env:SKIP_QUALITY_MANIFEST -eq "1" -or $env:SKIP_QUALITY -eq "1") {
+    Write-Host "quality-manifest: skipped (CI or SKIP_QUALITY*)"
+    exit 0
+}
+$manifestPath = Join-Path (Get-Location) ".ci\quality-manifest.json"
+if ($env:FORCE_QUALITY_MANIFEST -ne "1" -and (Test-Path -LiteralPath $manifestPath)) {
+    $age = (Get-Date) - (Get-Item -LiteralPath $manifestPath).LastWriteTime
+    if ($age.TotalSeconds -lt 3600) {
+        Write-Host "quality-manifest: skipped (recent manifest < 1h old)"
+        exit 0
+    }
+}
+
 $results = @{}
 $Failed = $false
 

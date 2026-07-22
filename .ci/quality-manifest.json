@@ -22,8 +22,8 @@
       "detail": ""
     },
     "dashboard_typecheck": {
-      "status": "pass",
-      "detail": ""
+      "status": "fail",
+      "detail": "bun install v1.3.11 (af24e281) Resolving dependencies Resolved, downloaded and extracted [22] error: lockfile had changes, but lockfile is frozen note: try re-running without --frozen-lockfile and commit the updated lockfile "
     },
     "dashboard_build": {
       "status": "pass",

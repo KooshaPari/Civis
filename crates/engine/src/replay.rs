@@ -157,6 +157,8 @@ pub enum ReplayError {
     ChecksumMismatch,
     /// Stored [`ReplayLog::running_hash`] does not match the chain recomputed from tick events.
     HashChainMismatch,
+    /// Replay events are not ordered by nondecreasing simulation tick.
+    NonMonotonicTick { previous: u64, current: u64 },
 }
 
 impl fmt::Display for ReplayError {
@@ -174,6 +176,10 @@ impl fmt::Display for ReplayError {
             Self::InvalidUtf8(err) => write!(f, "{err}"),
             Self::ChecksumMismatch => write!(f, ".civreplay checksum mismatch"),
             Self::HashChainMismatch => write!(f, "replay hash chain mismatch"),
+            Self::NonMonotonicTick { previous, current } => write!(
+                f,
+                "replay tick moved backwards from {previous} to {current}"
+            ),
         }
     }
 }
@@ -629,6 +635,34 @@ impl ReplayLog {
 
     /// Replay all events into a simulation.
     pub fn replay(&self, into: &mut Simulation) -> Result<(), ReplayError> {
+        let mut previous_tick = None;
+        for event in &self.events {
+            let current_tick = match event {
+                ReplayEvent::VoxelWrite { tick, .. }
+                | ReplayEvent::Damage { tick, .. }
+                | ReplayEvent::Diplomacy { tick, .. }
+                | ReplayEvent::Combat { tick, .. }
+                | ReplayEvent::ResearchOutcome { tick, .. }
+                | ReplayEvent::Climate { tick, .. }
+                | ReplayEvent::Tick { tick }
+                | ReplayEvent::EmergenceMetrics { tick, .. }
+                | ReplayEvent::RngDraw { tick, .. }
+                | ReplayEvent::ModLoaded { tick, .. }
+                | ReplayEvent::ModUnloaded { tick, .. }
+                | ReplayEvent::SessionSaved { tick, .. }
+                | ReplayEvent::ModPermissionViolation { tick, .. } => *tick,
+            };
+            if let Some(previous) = previous_tick {
+                if current_tick < previous {
+                    return Err(ReplayError::NonMonotonicTick {
+                        previous,
+                        current: current_tick,
+                    });
+                }
+            }
+            previous_tick = Some(current_tick);
+        }
+
         for event in &self.events {
             match event {
                 ReplayEvent::VoxelWrite { tick, pos, value } => {
@@ -752,6 +786,24 @@ mod tests {
 
         let err = ReplayLog::load(file.path()).expect_err("tampered hash chain must fail");
         assert!(matches!(err, ReplayError::HashChainMismatch));
+    }
+
+    #[test]
+    fn replay_rejects_descending_ticks_before_mutating_simulation() {
+        let mut log = ReplayLog::default();
+        log.record_tick(2);
+        log.record_tick(1);
+
+        let mut sim = Simulation::with_seed(1);
+        let err = log.replay(&mut sim).expect_err("descending ticks must fail");
+        assert!(matches!(
+            err,
+            ReplayError::NonMonotonicTick {
+                previous: 2,
+                current: 1
+            }
+        ));
+        assert_eq!(sim.state.tick, 0);
     }
 
     #[test]

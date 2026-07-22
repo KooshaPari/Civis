@@ -249,6 +249,54 @@ function connectServer(
     }
   };
 
+  const handleMessage = async (ws: WebSocket, generation: number, event: MessageEvent) => {
+    let handled = false;
+    try {
+      if (!isCurrentSocket(ws, generation)) return;
+      let payload: string | Uint8Array;
+      if (typeof event.data === "string") {
+        payload = event.data;
+      } else if (event.data instanceof ArrayBuffer) {
+        payload = new Uint8Array(event.data);
+      } else if (event.data instanceof Blob) {
+        payload = new Uint8Array(await event.data.arrayBuffer());
+      } else {
+        return;
+      }
+      if (!isCurrentSocket(ws, generation)) return;
+      const frame = parseWsPayload(payload);
+      const tick = frame3dTick(frame);
+      const hasChunks = recordVoxelChunks(
+        loadedChunkIdsRef,
+        recentChunkIdsRef,
+        dispatch,
+        frame,
+      );
+      const hasAgents = recordAgentAppearance(
+        seenAgentIdsRef,
+        recentAgentIdsRef,
+        dispatch,
+        frame,
+      );
+      if (tick != null) {
+        dispatch({ type: "set_frame3d_tick", tick });
+        handled = true;
+        const now = performance.now();
+        if (now - lastSnapshotRefreshAt >= SNAPSHOT_REFRESH_MS) {
+          lastSnapshotRefreshAt = now;
+          void refreshSnapshot(ws, generation).catch(() => {
+            /* keep last snapshot on transient RPC errors */
+          });
+        }
+      } else if (hasChunks || hasAgents) {
+        handled = true;
+      }
+    } catch {
+      /* ignore non-frame payloads */
+    }
+    if (handled) recordAttachFrame(attachFrameAtRef, dispatch);
+  };
+
   const connect = () => {
     if (closed) return;
     dispatch({ type: "set_connection", connection: "reconnecting" });
@@ -278,54 +326,7 @@ function connectServer(
 
     ws.onmessage = (event) => {
       if (preferBinary && typeof event.data === "string") return;
-
-      void (async () => {
-        let handled = false;
-        try {
-          if (!isCurrentSocket(ws, generation)) return;
-          let payload: string | Uint8Array;
-          if (typeof event.data === "string") {
-            payload = event.data;
-          } else if (event.data instanceof ArrayBuffer) {
-            payload = new Uint8Array(event.data);
-          } else if (event.data instanceof Blob) {
-            payload = new Uint8Array(await event.data.arrayBuffer());
-          } else {
-            return;
-          }
-          if (!isCurrentSocket(ws, generation)) return;
-          const frame = parseWsPayload(payload);
-          const tick = frame3dTick(frame);
-          const hasChunks = recordVoxelChunks(
-            loadedChunkIdsRef,
-            recentChunkIdsRef,
-            dispatch,
-            frame,
-          );
-          const hasAgents = recordAgentAppearance(
-            seenAgentIdsRef,
-            recentAgentIdsRef,
-            dispatch,
-            frame,
-          );
-          if (tick != null) {
-            dispatch({ type: "set_frame3d_tick", tick });
-            handled = true;
-            const now = performance.now();
-            if (now - lastSnapshotRefreshAt >= SNAPSHOT_REFRESH_MS) {
-              lastSnapshotRefreshAt = now;
-              void refreshSnapshot(ws, generation).catch(() => {
-                /* keep last snapshot on transient RPC errors */
-              });
-            }
-          } else if (hasChunks || hasAgents) {
-            handled = true;
-          }
-        } catch {
-          /* ignore non-frame payloads */
-        }
-        if (handled) recordAttachFrame(attachFrameAtRef, dispatch);
-      })();
+      void handleMessage(ws, generation, event);
     };
 
     ws.onerror = () => dispatch({ type: "set_connection", connection: "disconnected" });

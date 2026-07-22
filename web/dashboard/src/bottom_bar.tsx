@@ -831,13 +831,13 @@ function ToolButton({
   icon,
   active,
   onClick,
-}: {
+}: Readonly<{
   title: string;
   emoji: string;
   icon?: string;
   active?: boolean;
   onClick: () => void;
-}) {
+}>) {
   return (
     <button
       type="button"

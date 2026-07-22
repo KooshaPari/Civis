@@ -334,6 +334,7 @@ pub(crate) struct AppState {
     pub(crate) laws: Arc<LawDb>,
     pub(crate) sim: Arc<Mutex<Simulation>>,
     pub(crate) military: Arc<Mutex<Vec<MilitaryPin>>>,
+    pub(crate) manual_damage_pulses: Arc<Mutex<Vec<DamagePulse>>>,
     pub(crate) target_era: Arc<AtomicU16>,
     pub(crate) speed: Arc<AtomicU8>,
     pub(crate) saves_dir: Arc<PathBuf>,

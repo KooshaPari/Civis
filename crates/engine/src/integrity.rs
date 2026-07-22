@@ -44,6 +44,14 @@ pub fn check_integrity(sim: &Simulation) -> Result<(), IntegrityError> {
     Ok(())
 }
 
+/// Check the invariants that are safe to run synchronously at the end of every
+/// simulation tick. Full replay hash verification remains available through
+/// [`check_integrity`], but recomputing the complete replay history here would
+/// make the tick loop quadratic in the number of recorded ticks.
+pub fn check_tick_integrity(sim: &Simulation) -> Result<(), IntegrityError> {
+    check_tick_invariants(sim).map_err(IntegrityError::Invariant)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -64,6 +72,13 @@ mod tests {
         sim.tick();
         check_integrity(&sim).expect("hash chain and invariants after one tick");
         assert!(sim.hash_chain_root().is_some());
+    }
+
+    #[test]
+    fn check_tick_integrity_accepts_after_tick_without_replay_scan() {
+        let mut sim = Simulation::with_seed(42);
+        sim.tick();
+        check_tick_integrity(&sim).expect("post-tick invariants");
     }
 
     #[test]

@@ -67,6 +67,7 @@ else
 fi
 run_gate web_test bash -lc 'cd web && npm test' || true
 run_gate dashboard_typecheck bash -lc 'cd web/dashboard && bun install --frozen-lockfile && bun run typecheck' || true
+run_gate dashboard_build bash -lc 'cd web/dashboard && bun install --frozen-lockfile && bun run build' || true
 
 # Optional Unreal tier (skip when no UE; never fails machines without UE)
 optional_unreal_gate() {

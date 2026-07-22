@@ -74,15 +74,11 @@ mod tests {
     use crate::registry::VerbRegistry;
 
     fn make(id: &'static str, risk: crate::risk::RiskTier) -> VerbDescriptor {
-        VerbDescriptor::new(
-            id,
-            id,
-            "test",
-            VerbGroup::Civic,
-            risk,
-            crate::provenance::Provenance::Mcp,
-            &[],
-        )
+        VerbDescriptor::builder(id, id, VerbGroup::Civic)
+            .summary("test")
+            .risk(risk)
+            .provenance(crate::provenance::Provenance::Mcp)
+            .build()
     }
 
     #[test]

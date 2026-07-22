@@ -6,11 +6,7 @@ use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() {
-    let port = std::env::var("CIV_SERVER_PORT")
-        .ok()
-        .and_then(|value| value.parse().ok())
-        .unwrap_or(3000);
-    let addr: SocketAddr = SocketAddr::from(([127, 0, 0, 1], port));
+    let addr = server_addr();
     let max_clients = std::env::var("CIVIS_WS_MAX_CLIENTS")
         .ok()
         .and_then(|value| value.parse().ok())
@@ -56,6 +52,25 @@ async fn main() {
     .await;
 }
 
+fn server_addr() -> SocketAddr {
+    let ws_addr = std::env::var("CIVIS_WS_ADDR").ok();
+    let server_port = std::env::var("CIV_SERVER_PORT").ok();
+    parse_server_addr(ws_addr.as_deref(), server_port.as_deref())
+}
+
+fn parse_server_addr(ws_addr: Option<&str>, server_port: Option<&str>) -> SocketAddr {
+    if let Some(value) = ws_addr {
+        if let Ok(addr) = value.parse() {
+            return addr;
+        }
+        eprintln!("WARN: ignoring invalid CIVIS_WS_ADDR={value:?}");
+    }
+    let port = server_port
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(3000);
+    SocketAddr::from(([127, 0, 0, 1], port))
+}
+
 /// Build the bridge's initial [`Simulation`] (P5 / CIV-1000 §13.5).
 ///
 /// When `autoload` is true and `saves_dir` contains a recognizable save, the
@@ -92,5 +107,35 @@ async fn initial_simulation(
             tracing::warn!(?err, path = %path.display(), "failed to load most recent save; falling back to Simulation::default()");
             Simulation::default()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_server_addr;
+    use std::net::SocketAddr;
+
+    #[test]
+    fn full_address_override_wins() {
+        assert_eq!(
+            parse_server_addr(Some("0.0.0.0:3301"), Some("3302")),
+            "0.0.0.0:3301".parse::<SocketAddr>().unwrap()
+        );
+    }
+
+    #[test]
+    fn port_override_is_used_when_full_address_is_absent() {
+        assert_eq!(
+            parse_server_addr(None, Some("3302")),
+            "127.0.0.1:3302".parse::<SocketAddr>().unwrap()
+        );
+    }
+
+    #[test]
+    fn invalid_full_address_falls_back_to_port() {
+        assert_eq!(
+            parse_server_addr(Some("not-an-address"), Some("3302")),
+            "127.0.0.1:3302".parse::<SocketAddr>().unwrap()
+        );
     }
 }

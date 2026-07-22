@@ -221,13 +221,7 @@ fn period_change_bp10(current: i64, previous: i64) -> i64 {
     // numerator = delta * 10_000 ; integer division. Saturating cast to
     // i128 to avoid overflow on huge inputs.
     let numerator = (delta as i128).saturating_mul(10_000);
-    let value = (numerator / prev as i128).min(i64::MAX as i128) as i64;
-    // Direction: negative when current < previous.
-    if current < prev {
-        -value
-    } else {
-        value
-    }
+    (numerator / prev as i128).clamp(i64::MIN as i128, i64::MAX as i128) as i64
 }
 
 /// Volume-scale factor in `[0, 1]` for the stable-exchange contribution.
@@ -278,7 +272,14 @@ pub fn step_currency_trust(
     let price = price_level_cents.max(0);
     let prev_price = previous_price_level_cents.max(0);
     let sup = supply.max(0);
-    let prev_sup = previous_supply.max(0);
+    // A zero previous value means the caller omitted the boundary. Reuse the
+    // last observed supply so repeated runaway passes remain measurable.
+    let prev_sup = if previous_supply > 0 {
+        previous_supply
+    } else {
+        state.last_supply
+    }
+    .max(0);
 
     // 1. Period-over-period moves.
     let inflation_bp10 = period_change_bp10(price, prev_price);
@@ -308,7 +309,8 @@ pub fn step_currency_trust(
     // acute threshold OR the money supply is exploding (pure supply-shock
     // runaway, where prices may not yet have caught up).
     let price_hyper = abs_inflation_bp10 >= HYPER_INFLATION_BP10;
-    let supply_hyper = supply_growth_bp10 >= HYPER_SUPPLY_GROWTH_BP10;
+    let supply_overflowed = sup == i64::MAX && prev_sup > 0;
+    let supply_hyper = supply_growth_bp10 >= HYPER_SUPPLY_GROWTH_BP10 || supply_overflowed;
     let hyperinflation = price_hyper || supply_hyper;
 
     let penalty_bp = if hyperinflation {

@@ -72,7 +72,15 @@ struct GameplayMarkerMeshes {
 }
 
 fn in_process_sim_active(mode: Res<AttachMode>) -> bool {
-    !is_server_attach_mode(*mode)
+    sim_state_enabled(*mode)
+}
+
+fn sim_state_enabled(mode: AttachMode) -> bool {
+    !is_server_attach_mode(mode)
+}
+
+fn init_sim_state(mut commands: Commands) {
+    commands.init_resource::<SimState>();
 }
 
 /// Wires spawn-tool messages into the ECS simulation and optional HUD sync.
@@ -82,8 +90,8 @@ pub struct SimBridgePlugin;
 impl Plugin for SimBridgePlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(ProceduralActorPlugin);
-        app.init_resource::<SimState>()
-            .insert_resource(SimTickAccumulator(0.0))
+        app.insert_resource(SimTickAccumulator(0.0))
+            .add_systems(Startup, init_sim_state.run_if(in_process_sim_active))
             .add_systems(Startup, setup_gameplay_marker_meshes)
             .add_systems(
                 Update,
@@ -99,6 +107,17 @@ impl Plugin for SimBridgePlugin {
             (sync_game_ui_snapshot, sync_emergence_hud).run_if(in_process_sim_active),
         );
         app.add_systems(Update, sync_visible_gameplay.run_if(in_process_sim_active));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn server_attach_does_not_enable_local_simulation_state() {
+        assert!(!sim_state_enabled(AttachMode::Server));
+        assert!(sim_state_enabled(AttachMode::Standalone));
     }
 }
 

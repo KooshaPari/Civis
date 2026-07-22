@@ -17,7 +17,7 @@ The manifest records a `git_sha` (HEAD or HEAD^) and a blake2b `manifest_hash` o
 
 | Tier | Gates | Required for merge? |
 |------|-------|---------------------|
-| **Core** | `civis_3d_verify`, `bevy_egui_check`, `web_test`, `dashboard_typecheck` (or `rust_*` / `godot_test` fallback) | Yes — `status` must be `pass` |
+| **Core** | `civis_3d_verify`, `bevy_egui_check`, `web_test`, `dashboard_typecheck`, `dashboard_build` (or `rust_*` / `godot_test` fallback) | Yes — `status` must be `pass` |
 | **Optional (Unreal)** | `unreal_preflight`, `unreal_build` | No — `skip` is OK; omit entirely on machines without UE |
 
 Unreal scripts (optional tier):
@@ -38,6 +38,9 @@ lefthook run pre-push
 # or
 pwsh -NoProfile -File scripts/quality/emit-quality-manifest.ps1
 ```
+
+The dashboard core gates install its frozen dependencies, run TypeScript checking, and
+produce the production bundle from `web/dashboard` (`bun run typecheck` and `bun run build`).
 
 Optional Unreal gates on a UE machine:
 

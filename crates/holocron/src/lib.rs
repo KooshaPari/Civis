@@ -14,7 +14,6 @@
 //! - [`rank`] — context-aware ranking algorithm.
 //! - [`registry`] — `VerbRegistry` static catalog with lookup + fuzzy search.
 //! - [`verbs`] — auto-enumerated catalog of all godgame verbs (52 verbs).
-//! - [`bridge`] — bridge between the MCP server's tool list and the registry.
 //! - [`inspect`] — FR-CIV-INSPECT-900 inspect-target resolution: pure-logic
 //!   data + query backing layer that resolves a world pick
 //!   (voxel/agent/settlement/structure/vehicle) to a `Summary`. No Bevy
@@ -39,7 +38,6 @@
 #![deny(rust_2018_idioms)]
 
 pub mod agent_inspector;
-pub mod bridge;
 pub mod descriptor;
 pub mod group;
 pub mod inspect;
@@ -55,7 +53,7 @@ pub use descriptor::VerbDescriptor;
 pub use group::VerbGroup;
 pub use inspect::*;
 pub use provenance::Provenance;
-pub use rank::{rank_by_use as rank_verbs};
+pub use rank::{rank_by_risk as rank_verbs};
 pub use registry::{VerbRegistry, MatchedVerb as VerbSearchResult};
 pub use risk::RiskTier;
 pub use voxel_inspector::*;

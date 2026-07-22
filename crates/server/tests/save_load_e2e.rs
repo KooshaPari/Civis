@@ -1,6 +1,6 @@
 //! End-to-end save/load round-trip test for civ-server (FR-CIV-TEST-021).
 
-use civ_engine::{CivSaveBundle, Simulation};
+use civ_engine::{CivSaveBundle, Fixed, Simulation};
 use tempfile::TempDir;
 
 fn snapshot(sim: &Simulation) -> (u64, u64, u64, u64, u64) {
@@ -13,6 +13,14 @@ fn snapshot(sim: &Simulation) -> (u64, u64, u64, u64, u64) {
     )
 }
 
+fn world_state_fixture(sim: &mut Simulation) {
+    sim.state.population = 987_654;
+    sim.state.energy_budget_joules = Fixed::from_num(12_345);
+    sim.state.belief = 321;
+    sim.state.cohesion = 654;
+    sim.state.unrest = 987;
+}
+
 #[test]
 fn save_load_round_trip_preserves_world_state() {
     let tmp = TempDir::new().unwrap();
@@ -22,6 +30,7 @@ fn save_load_round_trip_preserves_world_state() {
     for _ in 0..5 {
         sim.tick();
     }
+    world_state_fixture(&mut sim);
 
     let before = snapshot(&sim);
     CivSaveBundle::save_archive(&path, &sim).expect("save should succeed");

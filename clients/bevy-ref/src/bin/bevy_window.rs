@@ -6,7 +6,7 @@ use bevy::ui::{FocusPolicy, RelativeCursorPosition};
 use bevy_egui::{egui, EguiContexts};
 #[cfg(feature = "models")]
 use civ_bevy_ref::animation::ActorAnimationPlugin;
-use civ_bevy_ref::atmosphere::{animate_water, setup_atmosphere, update_lighting, DayNightCycle};
+use civ_bevy_ref::atmosphere::{animate_water, setup_atmosphere, update_lighting};
 #[cfg(feature = "egui")]
 use civ_bevy_ref::diplomacy_ui::{DiplomacyBridge, DiplomacyUiPlugin};
 #[cfg(feature = "models")]
@@ -23,10 +23,11 @@ use civ_bevy_ref::{
     chunk_fade_complete, chunk_raycast_terrain, chunk_to_minimap_uv,
     emergence_dashboard::EmergenceDashboardPlugin,
     event_feed::{EventFeed, EventFeedPlugin},
-    faction_hud::{FactionHudPlugin, PlayerFactionId},
+    faction_hud::FactionHudPlugin,
     focused_chunk_at_grid,
     game_ui::GameUiPlugin,
     god_panel::GodPanelPlugin,
+    holocron_panel::HolocronPanelPlugin,
     gpu_features::GpuFeaturesPlugin,
     live_focus::{
         compute_live_scene_focus, minimap_uv_to_world_xz, LiveSceneFocus, LIVE_FOCUS_LERP_SPEED,
@@ -54,7 +55,7 @@ use civ_bevy_ref::{
     native_backend::native_render_plugin,
     post_fx::PostFxPlugin,
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
-    presentation_day_factor_target, resolve_live_ws_url,
+    presentation_day_factor_target, resolve_live_ws_url, AttachMode,
     save_load_ui::{SaveLoadPanel, SaveLoadUiPlugin},
     ws_client::{WsClient, WsClientConfig},
     CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MenusPlugin, MinimapBounds,
@@ -208,6 +209,10 @@ fn main() {
     let mut app = App::new();
     app.add_plugins((
         DefaultPlugins
+            .set(AssetPlugin {
+                file_path: concat!(env!("CARGO_MANIFEST_DIR"), "/assets").into(),
+                ..default()
+            })
             .set(WindowPlugin {
                 primary_window: Some(Window {
                     title: "Civis 3D - Bevy reference (live)".to_string(),
@@ -237,6 +242,7 @@ fn main() {
         civ_bevy_ref::AgentNeedsPlugin,
         DiplomacyUiPlugin,
         GodPanelPlugin,
+        HolocronPanelPlugin,
         civ_bevy_ref::outcome_overlay::OutcomeOverlayPlugin,
         MenusPlugin,
         GameUiPlugin,
@@ -244,7 +250,7 @@ fn main() {
     #[cfg(feature = "egui")]
     app.init_state::<AppState>();
     app.init_resource::<LiveStreamScene>()
-        .init_resource::<civ_bevy_ref::AttachMode>()
+        .insert_resource(civ_bevy_ref::resolve_attach_mode_from_env())
         .init_resource::<LiveSceneFocus>()
         .init_resource::<MinimapPopup>()
         .init_resource::<SimSpeedState>()
@@ -253,6 +259,8 @@ fn main() {
         .init_resource::<MusicCues>()
         .init_resource::<OutcomeProgressHud>()
         .init_resource::<SaveListState>()
+        .init_resource::<MainMenuSaves>()
+        .init_resource::<MenuCommand>()
         .insert_resource(ScenePresentation::default())
         .insert_resource(DebugRender::default())
         .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
@@ -672,6 +680,7 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    attach_mode: Res<AttachMode>,
 ) {
     spawn_default_scene(&mut commands);
     commands.insert_resource(default_stream_meshes(&mut meshes));
@@ -679,7 +688,11 @@ fn setup(
     // water-surface quad + tinted material handles so the streamed world
     // snapshot can drive water companions on every voxel delta.
     commands.insert_resource(default_water_meshes(&mut meshes, &mut materials));
-    let ws_client = WsClient::spawn_with_config(resolve_live_ws_url(), WsClientConfig::default());
+    let ws_client = if *attach_mode == AttachMode::Server {
+        WsClient::spawn_with_config(resolve_live_ws_url(), WsClientConfig::default())
+    } else {
+        WsClient::disconnected()
+    };
     commands.insert_resource(DiplomacyBridge::new(ws_client.rpc_sender()));
     commands.insert_resource(LiveBridge { client: ws_client });
 
@@ -870,9 +883,15 @@ fn apply_live_frames(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut feed: ResMut<EventFeed>,
+    mut frame_buffer: Local<Vec<Frame3d>>,
 ) {
-    let frames = bridge.client.poll();
-    if !frames.is_empty() {
+    let resets = bridge.client.poll_scene_resets();
+    if let Some(reset) = resets.last() {
+        scene.reset(&mut commands);
+        hud.snapshot.tick = Some(reset.tick);
+    }
+    bridge.client.poll_into(&mut frame_buffer);
+    if !frame_buffer.is_empty() {
         hud.snapshot.connected = true;
     }
 
@@ -885,7 +904,7 @@ fn apply_live_frames(
     };
     let wireframe_color = debug.wireframe.then_some(CHUNK_WIREFRAME_LINE_COLOR);
 
-    for frame in frames {
+    for frame in frame_buffer.drain(..) {
         hud.snapshot.tick = Some(frame.tick());
         match frame {
             Frame3d::VoxelDelta(delta) => {
@@ -896,13 +915,13 @@ fn apply_live_frames(
                     &mut materials,
                     culling,
                     debug.as_ref(),
-                    delta.clone(),
+                    &delta,
                     wireframe_color,
                 );
                 // FR-CLIENT-render: pair the chunk-mesh update with a
                 // water-surface companion update so the streamed water
                 // plane tracks the chunk's voxel composition on every
-                // delta (re-uses the same delta payload + culling eye).
+                // delta (re-uses the same borrowed payload + culling eye).
                 apply_water_deltas_for_frame(
                     &mut commands,
                     &mut scene,
@@ -937,7 +956,7 @@ fn apply_live_frames(
             Frame3d::FactionState(faction) => apply_faction_state_frame(&mut scene, faction),
             Frame3d::EventFeed(ref event_frame) => {
                 for msg in &event_frame.events {
-                    info!(
+                    debug!(
                         "event feed (tick {}): {}",
                         event_frame.tick,
                         format_event_feed_message(msg),

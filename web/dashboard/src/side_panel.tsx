@@ -23,30 +23,46 @@ export function SidePanel() {
       </button>
       {state.inspectorOpen && (
         <>
-          <div className="side-panel-tabs">
+          <div className="side-panel-tabs" role="tablist" aria-label="Inspector sections">
             <button
+              id="side-panel-tab-inspector"
               type="button"
+              role="tab"
+              aria-selected={state.activeSideTab === "inspector"}
+              aria-controls="side-panel-tabpanel"
               className={`side-panel-tab ${state.activeSideTab === "inspector" ? "active" : ""}`}
               onClick={() => dispatch({ type: "set_active_side_tab", tab: "inspector" })}
             >
               Inspector
             </button>
             <button
+              id="side-panel-tab-events"
               type="button"
+              role="tab"
+              aria-selected={state.activeSideTab === "events"}
+              aria-controls="side-panel-tabpanel"
               className={`side-panel-tab ${state.activeSideTab === "events" ? "active" : ""}`}
               onClick={() => dispatch({ type: "set_active_side_tab", tab: "events" })}
             >
               Event Feed
             </button>
             <button
+              id="side-panel-tab-religion"
               type="button"
+              role="tab"
+              aria-selected={state.activeSideTab === "religion"}
+              aria-controls="side-panel-tabpanel"
               className={`side-panel-tab ${state.activeSideTab === "religion" ? "active" : ""}`}
               onClick={() => dispatch({ type: "set_active_side_tab", tab: "religion" })}
             >
               Religion
             </button>
             <button
+              id="side-panel-tab-diplomacy"
               type="button"
+              role="tab"
+              aria-selected={state.activeSideTab === "diplomacy"}
+              aria-controls="side-panel-tabpanel"
               className={`side-panel-tab ${state.activeSideTab === "diplomacy" ? "active" : ""}`}
               onClick={() => dispatch({ type: "set_active_side_tab", tab: "diplomacy" })}
             >
@@ -59,6 +75,12 @@ export function SidePanel() {
               : "L2 web authoring: spawn, voxel, inspect. Full P-U1 palette in Godot."}
           </p>
 
+          <div
+            id="side-panel-tabpanel"
+            role="tabpanel"
+            aria-labelledby={`side-panel-tab-${state.activeSideTab}`}
+            tabIndex={0}
+          >
           {state.activeSideTab === "inspector" ? (
             <>
               <ConnectionStatusCard />
@@ -113,6 +135,7 @@ export function SidePanel() {
           ) : (
             <EventFeed />
           )}
+          </div>
         </>
       )}
     </aside>

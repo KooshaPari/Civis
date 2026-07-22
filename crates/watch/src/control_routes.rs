@@ -5,7 +5,7 @@ use std::sync::atomic::Ordering;
 use axum::{extract::State, response::Json};
 use civ_agents::spawn_civilian_at;
 use civ_tactics::DamageEvent;
-use civ_voxel::{MaterialId, WorldCoord};
+use civ_voxel::{MaterialId, WorldCoord, FIXED_SCALE};
 
 use crate::app::{
     AppState, ControlOk, DamageReq, MilitaryPin, PlaceVoxelReq, SpawnCivilianReq, SpawnEntityReq,
@@ -136,6 +136,16 @@ pub(crate) async fn damage_handler(
         energy: req.energy,
     };
     sim.push_damage(event);
+    state
+        .manual_damage_pulses
+        .lock()
+        .await
+        .push(crate::app::DamagePulse {
+            x: req.x as f32 / FIXED_SCALE as f32,
+            y: req.z as f32 / FIXED_SCALE as f32,
+            unit_a: None,
+            unit_b: None,
+        });
     Json(ControlOk {
         ok: true,
         message: None,

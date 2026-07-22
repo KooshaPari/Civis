@@ -33,6 +33,7 @@ members = [
   "crates/infra",
   # "crates/physics-substrate", — CDX sbom only, no Cargo.toml or source
   "crates/audio",
+  "crates/holocron",
   "crates/climate",
   "clients/bevy-ref",
   # "clients/fyrox-ref", — excluded until fyrox 1.x API is wired (see docs/research/fyrox-evaluation.md)
@@ -48,7 +49,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["CivLab"]
 license = "MIT OR Apache-2.0"
-rust-version = "1.75"
+rust-version = "1.94.1"
 
 # --- Dev-loop profiles (see docs/development-guide/dev-loop.md) ---
 # These tune ONLY the dev profile; `release` is untouched, so release

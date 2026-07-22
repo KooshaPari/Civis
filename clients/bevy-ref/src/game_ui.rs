@@ -7,19 +7,18 @@
 //! untouched. The HUD draws an AAA-styled glassmorphism shell: a stat-chip top
 //! bar, a tool-palette + speed-control bottom bar, and a selection inspector.
 
-use crate::menus::AppState;
 use crate::tool_categories::ActiveSubTool;
 use crate::ui_theme::CHIP_FILL;
 use bevy::prelude::*;
-use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
+use bevy_egui::{EguiContexts, EguiPlugin, EguiPrimaryContextPass, egui};
 
 use civ_protocol_3d::{CivilianNeeds3d, CivilianStateEntry};
 
 use crate::game_laws::GameLawsOpen;
 use crate::live_pick::LiveSelection;
 use crate::settings_ui::{
-    GameSettings, KeyBinding, ACTION_CYCLE_SIM_SPEED, ACTION_PAUSE_SIM, ACTION_SPEED_10X,
-    ACTION_SPEED_1X, ACTION_SPEED_2X, ACTION_SPEED_5X,
+    ACTION_CYCLE_SIM_SPEED, ACTION_PAUSE_SIM, ACTION_SPEED_1X, ACTION_SPEED_2X, ACTION_SPEED_5X,
+    ACTION_SPEED_10X, GameSettings, KeyBinding,
 };
 use crate::spawn_tools::{ActiveTool, BuildingSpawnKind, SpawnTool};
 use crate::{AttachMode, LiveEntityKind, SelectedLiveEntity};
@@ -288,6 +287,7 @@ impl Plugin for GameUiPlugin {
             .init_resource::<BuildingSpawnKind>()
             .init_resource::<ActiveSubTool>()
             .init_resource::<LeftClusterTab>()
+            .init_resource::<GodActionToast>()
             // Holocron motion state is intentionally NOT registered here yet —
             // `step_flyout_motion` exists as `#[allow(dead_code)]` for the
             // deferred WGSL/3D anim timeline (see the doc comment on
@@ -1107,6 +1107,7 @@ mod tests {
 
         let entry = CivilianStateEntry {
             id: 42,
+            faction_id: 0,
             needs: CivilianNeeds3d {
                 food: 1.0,
                 shelter: 0.5,
@@ -1138,6 +1139,7 @@ mod tests {
 
         let entry = CivilianStateEntry {
             id: 7,
+            faction_id: 0,
             needs: CivilianNeeds3d::default(),
             profession: String::new(),
             genome_summary: GenomeSummary3d::default(),
@@ -1150,7 +1152,7 @@ mod tests {
     #[test]
     fn snapshot_set_sim_state_clamps_speed() {
         let mut snap = GameUiSnapshot::default();
-        snap.set_sim_state(10, 20, 3, "Bronze", 0);
+        snap.set_sim_state(10, 20, 3, "Bronze", 0.0);
         assert_eq!(snap.tick, 10);
         assert_eq!(snap.population, 20);
         assert_eq!(snap.factions, 3);

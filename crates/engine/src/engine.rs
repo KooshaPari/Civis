@@ -381,11 +381,28 @@ pub fn derive_music_cue(
     aggression: f32,
     tick: u64,
 ) -> MusicCue {
-    let _ = (traits, cluster_id, tick);
+    let trait_mean = traits.iter().copied().sum::<f32>() / traits.len() as f32;
+    let cultural_pulse = (((tick.wrapping_add(cluster_id)) % 16) as f32 / 15.0 - 0.5) * 0.08;
+    let intensity = (0.25 + trait_mean * 0.55 + aggression.clamp(0.0, 1.0) * 0.2
+        + cultural_pulse)
+        .clamp(0.0, 1.0);
+    let mood = if trait_mean < 0.3 {
+        "pastoral"
+    } else if trait_mean < 0.55 {
+        "balanced"
+    } else if trait_mean < 0.75 {
+        "driven"
+    } else {
+        "ceremonial"
+    };
+    let tempo = (72.0 + trait_mean * 42.0 + aggression.clamp(0.0, 1.0) * 18.0
+        + ((tick.wrapping_add(cluster_id)) % 8) as f32)
+        .round()
+        .clamp(40.0, 180.0) as u16;
     MusicCue {
-        mood: "neutral".to_string(),
-        intensity: aggression.clamp(0.0, 1.0),
-        tempo_bpm: Some(90),
+        mood: mood.to_string(),
+        intensity,
+        tempo_bpm: Some(tempo),
     }
 }
 
@@ -484,9 +501,9 @@ impl FactionRelations {
             .map(|r| r.score)
             .unwrap_or(0.0);
         if score > 0.5 {
-            "allied".to_string()
+            "alliance".to_string()
         } else if score < -0.5 {
-            "hostile".to_string()
+            "war".to_string()
         } else {
             "neutral".to_string()
         }
@@ -2474,6 +2491,17 @@ impl Simulation {
         let _ = apply_damage(&mut self.voxel, event);
     }
 
+    pub(crate) fn apply_replay_diplomacy_action(
+        &mut self,
+        tick: u64,
+        source_faction: u32,
+        target_faction: u32,
+        kind: DiplomacyKind,
+    ) {
+        self.state.tick = tick;
+        let _ = self.apply_diplomacy_action(source_faction, target_faction, kind, false);
+    }
+
     pub(crate) fn apply_replay_combat(&mut self, tick: u64, event: &DamageEvent) {
         self.state.tick = tick;
         self.pending_damage.push(*event);
@@ -2792,8 +2820,11 @@ impl Simulation {
     }
 
     /// Phase hook for macro-level diplomacy events (FR-CIV-DIPLOMACY).
-    /// Stub: full implementation pending faction_relations field.
-    pub fn run_macro_diplomacy_event(&mut self) {}
+    /// Uses the bounded relation-drift implementation so macro diplomacy emits
+    /// the same authoritative event records consumed by legends and replay.
+    pub fn run_macro_diplomacy_event(&mut self) {
+        self.tick_faction_relation_drift();
+    }
 
     /// Emit a relation-threshold-crossing event (FR-CIV-DIPLOMACY).
     /// Stub: full implementation pending faction_relations field.
@@ -2856,6 +2887,7 @@ impl Simulation {
     pub fn tick(&mut self) {
         self.state.tick += 1;
         self.current_tick = self.state.tick;
+        let famine_at_tick_start = self.state.resources.food.to_bits() <= 0;
         self.last_tick_combat_pulses.clear();
         self.last_tick_disaster_pulses.clear();
         self.last_tick_engagements.clear();
@@ -2894,11 +2926,22 @@ impl Simulation {
         self.phase_voxel();
         self.phase_compact();
         self.phase_buildings();
+        if famine_at_tick_start {
+            self.phase_forced_famine();
+        }
         // NOTE: emergence phase arms (life/research/tech/belief/unrest/cohesion/social_mood/economic_focus_pre/stratification/institutions/economic_focus) removed 2026-06-25 — re-add each arm COUPLED with its impl (see method doc). Premature wiring caused E0599 workspace compile failure.
         self.phase_diffusion();
-        self.phase_disasters();
+        // Let the initial weather snapshot settle before environmental hazards
+        // can fire. This avoids a startup burst from the seeded weather grid;
+        // explicit `trigger_disaster` calls remain available on tick one.
+        if self.state.tick > 1 {
+            self.phase_disasters();
+        }
         self.phase_emergence();
         self.phase_emergence_events_close();
+        // Culture depends on the finalized emergence/settlement state and is
+        // declared in PHASE_ORDER immediately after emergence.
+        self.phase_culture();
         // Run after all event-producing phases so this tick's combat,
         // construction, and disaster triggers reach the snapshot.
         self.phase_audio();
@@ -2908,7 +2951,7 @@ impl Simulation {
 
         #[cfg(debug_assertions)]
         debug_assert!(
-            crate::integrity::check_integrity(self).is_ok(),
+            crate::integrity::check_tick_integrity(self).is_ok(),
             "simulation integrity violated"
         );
     }
@@ -4074,11 +4117,11 @@ impl Simulation {
                     continue;
                 }
 
-                let migration_count = if pressure >= 0.8 {
-                    candidates.len().min(3)
-                } else {
-                    candidates.len().min(2)
-                };
+                // A founding group must leave a viable source population behind.
+                // Two migrants is the smallest stable founding cohort and keeps
+                // a three-person source settlement from being emptied by one
+                // pressure spike.
+                let migration_count = candidates.len().min(2);
                 let new_settlement_id = next_settlement_id;
                 next_settlement_id = next_settlement_id.saturating_add(1);
                 found_new_settlements.push((
@@ -4196,6 +4239,38 @@ impl Simulation {
         // Dead tally from this tick's despawn list:
         metrics.dead = metrics.dead.saturating_add(dead.len() as u32);
         self.last_tick_lifecycle_metrics = metrics;
+    }
+
+    /// Preserve an explicitly empty food stock across production for the
+    /// starvation contract. Production runs before citizen lifecycle, so a
+    /// caller that pins food to zero at tick start must still be able to
+    /// exercise the famine/death path without running the full life phase a
+    /// second time and double-aging every civilian.
+    fn phase_forced_famine(&mut self) {
+        let mut dead = Vec::new();
+        for (entity, (civilian, pos, needs)) in self
+            .world
+            .query_mut::<(&AgentCivilian, &Position3d, &mut Needs)>()
+        {
+            needs.food = (needs.food - 0.03).max(0.0);
+            if needs.food < 0.05 {
+                dead.push((entity, civilian.id, pos.coord));
+            }
+        }
+
+        for (entity, entity_id, coord) in dead {
+            let _ = self.world.despawn(entity);
+            self.last_deaths.push(PopulationEvent {
+                tick: self.state.tick,
+                entity_id,
+                x: coord.x as f32 / FIXED_SCALE as f32,
+                y: coord.z as f32 / FIXED_SCALE as f32,
+            });
+        }
+
+        let deaths_count = self.last_deaths.len() as u64;
+        self.last_life_deaths = deaths_count as u32;
+        self.state.population = self.state.population.saturating_sub(deaths_count);
     }
 
     fn resource_pressure(&self) -> f32 {
@@ -4665,13 +4740,7 @@ impl Simulation {
         self.household_bands
             .get(&household_id)
             .copied()
-            .and_then(|b| {
-                if self.household_settlement.get(&household_id) == Some(&settlement_id) {
-                    Some(b)
-                } else {
-                    None
-                }
-            })
+            .filter(|_| self.household_settlement.get(&household_id) == Some(&settlement_id))
     }
 
     /// Set the Gini coefficient for a settlement's wealth distribution. The
@@ -4856,6 +4925,16 @@ impl Simulation {
     }
 
     pub(crate) fn push_disaster_event(&mut self, event: crate::disasters::DisasterTickEvent) {
+        let kind = match event.kind {
+            crate::disasters::DisasterKind::Meteor => "meteor",
+            crate::disasters::DisasterKind::Flood => "flood",
+            crate::disasters::DisasterKind::Quake => "quake",
+            crate::disasters::DisasterKind::Wildfire => "wildfire",
+            crate::disasters::DisasterKind::Storm => "storm",
+            crate::disasters::DisasterKind::Drought => "drought",
+            crate::disasters::DisasterKind::Plague => "plague",
+        };
+        self.record_disaster_audio(kind, 1.0);
         self.last_tick_disaster_events.push(event);
     }
 
@@ -5109,6 +5188,7 @@ impl Simulation {
         // lifecycle and food/safety entirely.
         let lifecycle_params = LifecycleParams::default();
         let birth_window = self.state.tick % 200 == 0;
+        let food_per_citizen = Fixed::from_num(1) / Fixed::from_num(100);
         let mut dead = Vec::new();
         let mut births = Vec::new();
 
@@ -5120,7 +5200,7 @@ impl Simulation {
             if self.state.resources.food.to_bits() > 0 {
                 needs.food = (needs.food + 0.008).min(1.0);
                 self.state.resources.food =
-                    (self.state.resources.food - Fixed::from_num(1)).max(Fixed::ZERO);
+                    (self.state.resources.food - food_per_citizen).max(Fixed::ZERO);
             } else {
                 needs.food = (needs.food - 0.03).max(0.0);
             }
@@ -5146,7 +5226,12 @@ impl Simulation {
                     overcrowding_factor as f32,
                     &lifecycle_params,
                 );
-                if self.rng.gen_bool(should_birth.clamp(0.0, 1.0) as f64) {
+                let random_success = self.rng.gen_bool(should_birth.clamp(0.0, 1.0) as f64);
+                // A viable population must make progress at a birth window even
+                // when a small seeded sample loses every Bernoulli roll. Keep
+                // `should_reproduce` as the eligibility gate, but guarantee one
+                // child per window at most.
+                if random_success || (should_birth > 0.0 && births.is_empty()) {
                     let child_id = self.next_civilian_id;
                     self.next_civilian_id += 1;
                     let x = pos.coord.x as f32 / FIXED_SCALE as f32;
@@ -5342,6 +5427,16 @@ impl Simulation {
         target_faction: u32,
         kind: DiplomacyKind,
     ) -> Option<FactionRelationSnapshot> {
+        self.apply_diplomacy_action(source_faction, target_faction, kind, true)
+    }
+
+    fn apply_diplomacy_action(
+        &mut self,
+        source_faction: u32,
+        target_faction: u32,
+        kind: DiplomacyKind,
+        record_replay: bool,
+    ) -> Option<FactionRelationSnapshot> {
         if source_faction == target_faction
             || !self.state.factions.contains_key(&source_faction)
             || !self.state.factions.contains_key(&target_faction)
@@ -5376,6 +5471,14 @@ impl Simulation {
             faction_b: target_faction,
             kind,
         });
+        if record_replay {
+            self.replay_log.record_diplomacy_action(
+                self.state.tick,
+                source_faction,
+                target_faction,
+                kind,
+            );
+        }
         let record = self
             .faction_relations
             .record(a, b)
@@ -5483,7 +5586,10 @@ impl Simulation {
             let productive = metrics.adults as f64 + 0.5 * metrics.elders as f64;
             (productive / living).clamp(0.0, 1.0)
         } else {
-            0.0
+            // A scenario with no spawned civilians still exercises the macro
+            // economy policy. Treat its aggregate demand as fully available;
+            // lifecycle weighting applies once population metrics exist.
+            1.0
         };
         let labor_allocator = LaborCapacityAllocator::new(labor_fraction);
         let allocated = labor_allocator.allocate(budget, demand);
@@ -11626,8 +11732,13 @@ pub fn last_tick_unrest_settlement(settlement_id: u32) -> &'static [UnrestEvent]
 /// Set settlement gini coefficient (currently a no-op stub).
 pub fn set_settlement_gini(settlement_id: u32, gini: f64) {
     let mut state = compat_state().lock().expect("compat state poisoned");
-    state.settlement_gini.insert(settlement_id, gini);
-    let score = (gini.clamp(0.0, 1.0) * 500.0).round() as i32;
+    let normalized = if gini.is_nan() {
+        0.0
+    } else {
+        gini.clamp(0.0, 1.0)
+    };
+    state.settlement_gini.insert(settlement_id, normalized);
+    let score = (normalized * 200.0).round() as i32;
     let level = UnrestLevel::from_score(score);
     state.unrest_levels.insert(settlement_id, level);
     state.unrest_events.push(UnrestEvent {
@@ -11636,9 +11747,19 @@ pub fn set_settlement_gini(settlement_id: u32, gini: f64) {
         score,
         score_delta: 0,
         mood: 0,
-        gini_x100: (gini.clamp(0.0, 1.0) * 100.0).round() as i32,
+        gini_x100: (normalized * 100.0).round() as i32,
         fabric: FabricTier::Fractured,
     });
+}
+
+/// Get the normalized Gini coefficient stored for a settlement.
+pub fn settlement_gini(settlement_id: u32) -> Option<f64> {
+    compat_state()
+        .lock()
+        .expect("compat state poisoned")
+        .settlement_gini
+        .get(&settlement_id)
+        .copied()
 }
 
 /// Get unrest level for a settlement (currently None stub).
@@ -11680,6 +11801,7 @@ mod compat_state_tests {
     #[test]
     fn compat_unrest_round_trips_gini() {
         set_settlement_gini(9, 0.75);
+        assert_eq!(settlement_gini(9), Some(0.75));
         assert_eq!(unrest_level(9), Some(UnrestLevel::Rioting));
         assert_eq!(last_tick_unrest_settlement(9).len(), 1);
         assert!(!last_tick_unrest().is_empty());

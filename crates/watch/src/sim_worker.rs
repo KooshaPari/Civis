@@ -22,60 +22,65 @@ pub(crate) async fn simulation_worker(state: AppState) {
         if speed == 0 {
             continue;
         }
-        let snapshot = {
-            let mut sim = state.sim.lock().await;
-            let mut military = state.military.lock().await;
-            let mut damage_events = Vec::new();
-            let mut trade = TradeTickSummary::default();
-            for _ in 0..speed {
-                sim.tick();
-                if sim.state.tick > 0 && sim.state.tick % 600 == 0 {
-                    state
-                        .target_era
-                        .store(((sim.state.tick / 600).min(5)) as u16, Ordering::Relaxed);
-                }
-                let terrain = state.terrain.clone();
-                let factions = factions(sim.state.tick);
-                let buildings = buildings(&factions, sim.state.tick);
-                assign_and_drift_housing(&mut sim, &buildings);
-                let mut rng = sim.rng_mut().clone();
-                tick_movement(&mut sim.world, 128, &mut rng, |x, y| {
-                    terrain.is_walkable(x, y)
-                });
-                *sim.rng_mut() = rng;
-                damage_events = tick_military(&mut sim, &terrain, &mut military);
-                let tick = sim.state.tick;
-                let (trade_volume, trade_balances) = apply_trade_routes(&mut sim, &factions, tick);
-                trade.volume += trade_volume;
-                for (faction_id, balance) in trade_balances {
-                    *trade.balances.entry(faction_id).or_insert(0.0) += balance;
-                }
-                for event in &damage_events {
-                    sim.push_damage(DamageEvent {
-                        center: WorldCoord {
-                            x: (event.x * civ_voxel::FIXED_SCALE as f32) as i64,
-                            y: 0,
-                            z: (event.y * civ_voxel::FIXED_SCALE as f32) as i64,
-                        },
-                        radius_voxels: 1,
-                        energy: 8,
-                    });
-                }
-            }
-            let current_era = state.target_era.load(Ordering::Relaxed);
-            make_snapshot(
-                &sim,
-                &military,
-                &damage_events,
-                &trade,
-                speed,
-                &state.laws,
-                current_era,
-            )
-        };
-        *state.latest.write().await = Some(snapshot.clone());
-        let _ = state.tx.send(snapshot);
+        run_simulation_tick(&state, speed).await;
     }
+}
+
+pub(crate) async fn run_simulation_tick(state: &AppState, speed: u8) {
+    let snapshot = {
+        let mut sim = state.sim.lock().await;
+        let mut military = state.military.lock().await;
+        let mut damage_events = Vec::new();
+        let mut trade = TradeTickSummary::default();
+        for _ in 0..speed {
+            sim.tick();
+            if sim.state.tick > 0 && sim.state.tick % 600 == 0 {
+                state
+                    .target_era
+                    .store(((sim.state.tick / 600).min(5)) as u16, Ordering::Relaxed);
+            }
+            let terrain = state.terrain.clone();
+            let factions = factions(sim.state.tick);
+            let buildings = buildings(&factions, sim.state.tick);
+            assign_and_drift_housing(&mut sim, &buildings);
+            let mut rng = sim.rng_mut().clone();
+            tick_movement(&mut sim.world, 128, &mut rng, |x, y| {
+                terrain.is_walkable(x, y)
+            });
+            *sim.rng_mut() = rng;
+            damage_events = tick_military(&mut sim, &terrain, &mut military);
+            let tick = sim.state.tick;
+            let (trade_volume, trade_balances) = apply_trade_routes(&mut sim, &factions, tick);
+            trade.volume += trade_volume;
+            for (faction_id, balance) in trade_balances {
+                *trade.balances.entry(faction_id).or_insert(0.0) += balance;
+            }
+            for event in &damage_events {
+                sim.push_damage(DamageEvent {
+                    center: WorldCoord {
+                        x: (event.x * civ_voxel::FIXED_SCALE as f32) as i64,
+                        y: 0,
+                        z: (event.y * civ_voxel::FIXED_SCALE as f32) as i64,
+                    },
+                    radius_voxels: 1,
+                    energy: 8,
+                });
+            }
+        }
+        damage_events.extend(state.manual_damage_pulses.lock().await.drain(..));
+        let current_era = state.target_era.load(Ordering::Relaxed);
+        make_snapshot(
+            &sim,
+            &military,
+            &damage_events,
+            &trade,
+            speed,
+            &state.laws,
+            current_era,
+        )
+    };
+    *state.latest.write().await = Some(snapshot.clone());
+    let _ = state.tx.send(snapshot);
 }
 
 pub(crate) fn seed_voxels(sim: &mut Simulation) {

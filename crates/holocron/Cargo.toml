@@ -1,0 +1,10 @@
+[package]
+name = "civ-holocron"
+description = "Civis godgame verb catalog and Holocron UI substrate"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }

@@ -178,7 +178,7 @@ Heavy quality runs **on your machine** via lefthook; GitHub Actions only **verif
 | Step | Command |
 |------|---------|
 | Install hooks | `lefthook install` |
-| Run before push | `lefthook run pre-push` → runs fmt/clippy/test/web/dashboard checks, writes `.ci/quality-manifest.json` |
+| Run before push | `lefthook run pre-push` → runs fmt/clippy/test/web/dashboard typecheck + production build checks, writes `.ci/quality-manifest.json` |
 | Commit manifest | `git add .ci/quality-manifest.json` (staged automatically when hooks pass) |
 | Cloud verify (CI) | `just quality-manifest-verify` or workflow job `quality-manifest` |
 

@@ -31,7 +31,7 @@ use crate::mods_api::{
     validate_remote_mod_bytes,
 };
 use crate::server::build_api_router;
-use crate::sim_worker::simulation_worker;
+use crate::sim_worker::{run_simulation_tick, simulation_worker};
 use crate::snapshot::make_snapshot;
 use crate::terrain::{self, Terrain};
 
@@ -56,6 +56,7 @@ fn test_state_with_seed(seed: u64) -> AppState {
         laws: Arc::new(default_law_db()),
         sim,
         military: Arc::new(Mutex::new(Vec::new())),
+        manual_damage_pulses: Arc::new(Mutex::new(Vec::new())),
         target_era: Arc::new(AtomicU16::new(0)),
         speed: Arc::new(AtomicU8::new(1)),
         saves_dir: Arc::new(saves_dir),
@@ -607,6 +608,47 @@ async fn post_control_damage_returns_ok() {
     assert_eq!(response.status(), StatusCode::OK);
     let json = body_json(response).await;
     assert_eq!(json["ok"], true);
+}
+
+#[tokio::test]
+async fn post_control_damage_is_visible_in_the_next_snapshot_tick() {
+    let state = test_state();
+    let app = test_app_with_state(state.clone());
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/damage")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"x":1000000,"y":0,"z":2000000,"radius":2,"energy":100}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+
+    run_simulation_tick(&state, 1).await;
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/snapshot")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let json = body_json(response).await;
+    assert_eq!(json["tick"], 1);
+    assert_eq!(json["damage_events_count"], 1);
+    assert_eq!(json["damage_events"][0]["x"], 1.0);
+    assert_eq!(json["damage_events"][0]["y"], 2.0);
+    assert!(json["damage_events"][0]["unit_a"].is_null());
+    assert!(json["damage_events"][0]["unit_b"].is_null());
 }
 
 #[tokio::test]

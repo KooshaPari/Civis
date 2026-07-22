@@ -50,15 +50,16 @@ export function resolveWsUrlFromEnv(env = {}) {
 }
 
 /**
- * Resolve a WebSocket URL from a browser query string (`?ws=ws://…`).
- * @param {string} [search]
+ * Resolve a trusted WebSocket URL for browser consumers.
+ *
+ * Query strings are intentionally ignored: allowing user-controlled `?ws=`
+ * values would let a page redirect its streaming connection to an arbitrary
+ * host. Use `CIVIS_WS_URL`/`CIVIS_WS_ADDR` or the same-origin default instead.
+ * @param {string} [_search] retained for call-site compatibility with query parsing helpers
  * @param {string} [fallback]
  */
-export function resolveWsUrlFromQuery(search = "", fallback) {
-  const fb = fallback ?? defaultLiveWsUrl();
-  const query = search.startsWith("?") ? search.slice(1) : search;
-  const ws = new URLSearchParams(query).get("ws")?.trim();
-  return ws || fb;
+export function resolveWsUrlFromQuery(_search, fallback) {
+  return fallback ?? defaultLiveWsUrl();
 }
 
 /**

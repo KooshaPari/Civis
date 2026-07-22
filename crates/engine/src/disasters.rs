@@ -187,9 +187,6 @@ impl Simulation {
             }
         }
 
-        for pos in wildfires {
-            trigger_disaster(self, DisasterKind::Wildfire, pos);
-        }
         for pos in quakes {
             trigger_disaster(self, DisasterKind::Quake, pos);
         }
@@ -201,6 +198,12 @@ impl Simulation {
         }
         for pos in droughts {
             trigger_disaster(self, DisasterKind::Drought, pos);
+        }
+        // Preserve wildfire's visible ignition when multiple hazards co-occur.
+        // Other terrain effects may overlap the same cells, but fire is the
+        // event this phase must leave observable at the ignition site.
+        for pos in wildfires {
+            trigger_disaster(self, DisasterKind::Wildfire, pos);
         }
     }
 }
@@ -717,7 +720,9 @@ mod tests {
         let mut sim = Simulation::with_seed(42);
 
         // Set up extreme environmental conditions that should trigger wildfire
-        // High temperature, low moisture, stormy weather
+        // High temperature, low moisture, stormy weather. Storm and wildfire
+        // intentionally co-occur here; wildfire remains the visible final
+        // terrain effect at the ignition site.
         sim.set_climate_state(Climate {
             tick: 1000,
             day_phase: 0.5,  // midday heat

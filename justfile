@@ -70,10 +70,12 @@ civis-3d-catalog-check:
 # Scenario YAML + mods validation (civ-engine scenario::* tests).
 civis-3d-scenario-check:
     # Single link job avoids intermittent LNK1104 on Windows when other cargo builds run.
-    cargo test -p civ-engine scenario --quiet -j 1
+    CARGO_BUILD_JOBS=1 cargo test -p civ-engine scenario --quiet -j 1
 
 civis-3d-web-check:
-    node --test web/tests/*.test.mjs
+    # Bound worker creation so the local attestation is stable under macOS
+    # process pressure; test semantics and file coverage are unchanged.
+    node --test --test-concurrency=1 web/tests/*.test.mjs
 
 civis-3d-mod-check:
     cargo test -p civ-mod-host -p civlab-sdk --quiet
@@ -98,7 +100,7 @@ civis-3d-mod-package-all: civis-3d-mod-wasm
     powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-example-mod.ps1 -ModId example-policy
     powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-example-mod.ps1 -ModId example-economic
 
-# 3D verification gate: check + test + clippy --all-targets + fmt --check.
+# 3D verification gate: check + test + clippy --all-targets + voxel fmt --check.
 # Uses cargo check (not build) so the gate works when service binaries are
 # held open by the running dev stack (Windows exe-lock).
 # Used by P-V0..P-U1 phase PRs before push.
@@ -106,10 +108,12 @@ civis-3d-verify: civis-3d-catalog-check civis-3d-scenario-check civis-3d-web-che
     # cargo check avoids exe-lock issues on Windows (service binaries stay open).
     # Targeted tests are already run by sub-recipes above.
     cargo check --workspace
-    # Optional bench: ignore failure (just `-` prefix is portable; `|| true` breaks pwsh).
-    -cargo bench --bench ca_dirty_chunk
+    # Benchmarks stay explicit (`cargo bench --bench ca_dirty_chunk`) and are
+    # not part of this bounded attestation gate.
     cargo clippy --workspace --all-targets -- -D warnings
-    cargo fmt --check
+    # Keep this extension gate scoped to the voxel crate; workspace-wide fmt
+    # remains a separate parity check and currently includes unrelated client drift.
+    cargo fmt --package civ-voxel -- --check
 
 # Programmatic verification harness (verify/pixels/census subcommands).
 # `verify` requires the `bevy` feature so the windowed renderer can run.

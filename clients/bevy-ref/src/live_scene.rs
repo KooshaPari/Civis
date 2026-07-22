@@ -9,7 +9,6 @@ use crate::bevy_render::apply_chunk_material;
 use crate::camera::CameraRig;
 #[cfg(feature = "egui")]
 use crate::event_feed::EventFeed;
-use crate::frame_budget::FrameBudgetRecovery;
 use crate::frame_budget::{scaled_cull_distance, GpuQualityMode};
 use crate::live_attach::{LiveAttachBridge, LiveAttachState};
 use crate::live_focus::{compute_live_scene_focus, LiveSceneFocus, LIVE_FOCUS_LERP_SPEED};
@@ -27,6 +26,7 @@ use crate::live_stream::{
     LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene, StreamCulling, LIVE_CHUNK_EDGE,
 };
 use crate::minimap::{MinimapCamera, MinimapDot, MinimapRoot, MINIMAP_SIZE};
+use crate::ws_client::SceneReset;
 use crate::{chunk_fade_complete, AttachMode, DebugRender, LiveHudSnapshot};
 
 const LIVE_RENDER_MAX_DISTANCE: f32 = 200.0;
@@ -81,6 +81,7 @@ fn apply_live_scene_frames(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut frame_buffer: Local<Vec<Frame3d>>,
     gpu_quality: Option<Res<GpuQualityMode>>,
     #[cfg(feature = "egui")] mut event_feed: Option<ResMut<EventFeed>>,
 ) {
@@ -88,8 +89,15 @@ fn apply_live_scene_frames(
         return;
     }
 
-    let frames = bridge.client.poll();
-    if frames.is_empty() {
+    let reset_tick = latest_scene_reset_tick(&bridge.client.poll_scene_resets());
+    if let Some(tick) = reset_tick {
+        scene.reset(&mut commands);
+        state.tick = Some(tick);
+        hud.tick = Some(tick);
+    }
+
+    bridge.client.poll_into(&mut frame_buffer);
+    if frame_buffer.is_empty() && reset_tick.is_none() {
         return;
     }
 
@@ -106,7 +114,7 @@ fn apply_live_scene_frames(
         gpu_quality: quality,
     };
 
-    for frame in frames {
+    for frame in frame_buffer.drain(..) {
         let tick = frame.tick();
         state.tick = Some(tick);
         hud.tick = Some(tick);
@@ -118,7 +126,7 @@ fn apply_live_scene_frames(
                 &mut materials,
                 culling,
                 debug.as_ref(),
-                delta,
+                &delta,
                 None,
             ),
             Frame3d::AgentAppearance(agents) => {
@@ -153,6 +161,10 @@ fn apply_live_scene_frames(
             Frame3d::Climate(_) => {}
         }
     }
+}
+
+fn latest_scene_reset_tick(resets: &[SceneReset]) -> Option<u64> {
+    resets.last().map(|reset| reset.tick)
 }
 
 fn update_chunk_fade(
@@ -318,5 +330,17 @@ fn update_live_minimap_camera(
         if let Projection::Orthographic(ref mut ortho) = *projection {
             ortho.scaling_mode = bevy::camera::ScalingMode::FixedVertical { viewport_height };
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn latest_scene_reset_tick_uses_authoritative_newest_notification() {
+        let resets = [SceneReset { tick: 12 }, SceneReset { tick: 27 }];
+        assert_eq!(latest_scene_reset_tick(&resets), Some(27));
+        assert_eq!(latest_scene_reset_tick(&[]), None);
     }
 }

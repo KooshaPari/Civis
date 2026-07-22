@@ -8,6 +8,7 @@ import {
   averageFps,
   averageFrameMs,
   createAttachFrameClock,
+  createAdaptiveDprController,
   evaluatePerfBudget,
   frameMsToFps,
   maxFrameMs,
@@ -99,6 +100,26 @@ test("evaluatePerfBudget is clear when samples are healthy", () => {
   const budget = evaluatePerfBudget(samples);
   assert.equal(budget.worstLevel, null);
   assert.deepEqual(budget.alerts, []);
+});
+
+test("adaptive DPR changes only after sustained pressure and respects its floor", () => {
+  const controller = createAdaptiveDprController(2, 1);
+  for (let i = 0; i < 29; i += 1) assert.equal(controller.record(40), 2);
+  assert.equal(controller.record(40), 1.5);
+  for (let i = 0; i < 30; i += 1) controller.record(40);
+  assert.equal(controller.getDpr(), 1);
+  assert.equal(controller.record(40), 1);
+});
+
+test("adaptive DPR recovers after sustained healthy frames and resets cleanly", () => {
+  const controller = createAdaptiveDprController(2, 1);
+  for (let i = 0; i < 30; i += 1) controller.record(40);
+  assert.equal(controller.getDpr(), 1.5);
+  for (let i = 0; i < 119; i += 1) assert.equal(controller.record(16), 1.5);
+  assert.equal(controller.record(16), 2);
+  assert.equal(controller.record(Number.NaN), 2);
+  controller.reset();
+  assert.equal(controller.getDpr(), 2);
 });
 
 test("perf budget thresholds are exported", () => {

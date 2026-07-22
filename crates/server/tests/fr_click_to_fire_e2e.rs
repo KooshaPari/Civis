@@ -74,7 +74,7 @@ async fn fr_e2e_click_to_fire() {
         "method": "sim.god_action",
         "params": {
             "role": "operator",
-            "verb": "heal",
+            "action": "heal",
             "target_faction": 0
         }
     });

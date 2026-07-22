@@ -136,6 +136,7 @@ pub async fn run() {
         laws,
         sim,
         military,
+        manual_damage_pulses: Arc::new(Mutex::new(Vec::new())),
         target_era: Arc::new(AtomicU16::new(0)),
         speed: Arc::new(AtomicU8::new(1)),
         saves_dir,

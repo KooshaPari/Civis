@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 // LOS visibility radius (in world units) for each unit when fog-of-war is active
 const LOS_RADIUS = 14;
@@ -18,6 +18,7 @@ import { postControl } from "./control";
 import { isDashboardShortcutTarget, useDashboardShortcuts } from "./hooks/useDashboardShortcuts";
 import { getActiveServerSocket } from "./lib/civisSocket";
 import { jsonRpcCall, normalizeServerSnapshot } from "./lib/civisServer";
+import { createAdaptiveDprController } from "./lib/framePerf";
 import {
   Biome,
   Building,
@@ -55,6 +56,7 @@ const JOB_COLORS: Record<NonNullable<CivPin["job"]>, number> = {
 const CIVILIAN_POOL_SIZE = 256;
 const TERRAIN_HEIGHT_SCALE = 22;
 const TERRAIN_WATER_LEVEL = TERRAIN_HEIGHT_SCALE * 0.38;
+const TERRAIN_COLOR_UPDATE_INTERVAL_MS = 33;
 
 type SceneRefs = {
   terrainMesh: THREE.Mesh<
@@ -88,6 +90,8 @@ type SceneRefs = {
   currentTerrainSize: number;
   terrainWorldSize: number;
   terrainBaseColors: Float32Array | null;
+  terrainColorLastUpdateAt: number;
+  terrainColorStateKey: string;
   terrainSeason: string;
   terrainWeather: Snapshot["weather"] | null;
   terrainFeatureLabels: {
@@ -111,6 +115,7 @@ type SceneRefs = {
 
 export function Scene3d() {
   const mountRef = useRef<HTMLDivElement | null>(null);
+  const [terrainError, setTerrainError] = useState<string | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const { state, dispatch } = useDashboardStore();
@@ -140,6 +145,8 @@ export function Scene3d() {
     currentTerrainSize: 0,
     terrainWorldSize: 0,
     terrainBaseColors: null,
+    terrainColorLastUpdateAt: -Infinity,
+    terrainColorStateKey: "",
     terrainSeason: "",
     terrainWeather: null,
     terrainFeatureLabels: { mountain: null, lake: null, forest: null },
@@ -203,7 +210,10 @@ export function Scene3d() {
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const adaptiveDpr = createAdaptiveDprController(
+      Math.min(window.devicePixelRatio || 1, 2),
+    );
+    renderer.setPixelRatio(adaptiveDpr.getDpr());
     renderer.setSize(mount.clientWidth, mount.clientHeight, false);
     mount.appendChild(renderer.domElement);
     labelRenderer.setSize(mount.clientWidth, mount.clientHeight);
@@ -264,6 +274,8 @@ export function Scene3d() {
     scene.add(tacticGroup);
     const hoverRaycaster = new THREE.Raycaster();
     const hoverPointer = new THREE.Vector2();
+    let hoverFrame = 0;
+    let pendingHoverPoint: { clientX: number; clientY: number } | null = null;
     let hoverTarget: { kind: "civilian" | "building"; index: number; x: number; y: number } | null = null;
 
     const civilianGeometry = createCivilianGeometry();
@@ -365,6 +377,8 @@ export function Scene3d() {
       }
       geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
       refs.current.terrainBaseColors = colors.slice();
+      refs.current.terrainColorLastUpdateAt = -Infinity;
+      refs.current.terrainColorStateKey = "";
       geometry.computeVertexNormals();
       const normalAttr = geometry.getAttribute("normal") as THREE.BufferAttribute;
       for (let i = 0; i < normalAttr.count; i += 1) {
@@ -485,6 +499,7 @@ export function Scene3d() {
       const civs = snapshot?.civ_pins ?? [];
       while (refs.current.civilians.length < CIVILIAN_POOL_SIZE) {
         const mesh = new THREE.Mesh(civilianGeometry, civilianMaterial);
+        mesh.userData.hoverIndex = refs.current.civilians.length;
         mesh.castShadow = true;
         mesh.receiveShadow = false;
         mesh.visible = false;
@@ -626,6 +641,7 @@ export function Scene3d() {
       const buildings = snapshot?.buildings ?? [];
       while (refs.current.buildings.length < buildings.length) {
         const node = createBuildingNode();
+        node.userData.hoverIndex = refs.current.buildings.length;
         buildingGroup.add(node);
         refs.current.buildings.push(node);
       }
@@ -823,10 +839,28 @@ export function Scene3d() {
       refs.current.targetDayFactor = target;
     };
 
+    let labelsBuilt = false;
+    let labeledSnapshot: Snapshot | null = null;
+    let labeledTick: number | null = null;
+    let labeledTerrain: Terrain | null = null;
+    let labeledTerrainFeatures = refs.current.terrainFeatureLabels;
+
     const updateLabels = () => {
       const terrain = refs.current.activeTerrain;
       const snapshot = stateRef.current.snapshot;
       if (!terrain) return;
+      const terrainFeatures = refs.current.terrainFeatureLabels;
+      const tick = snapshot?.tick ?? null;
+      if (
+        labelsBuilt &&
+        snapshot === labeledSnapshot &&
+        tick === labeledTick &&
+        terrain === labeledTerrain &&
+        terrainFeatures === labeledTerrainFeatures
+      ) {
+        return;
+      }
+
       const factions = snapshot?.factions ?? [];
       const buildings = snapshot?.buildings ?? [];
       labelGroup.clear();
@@ -850,7 +884,7 @@ export function Scene3d() {
         labelGroup.add(label);
       });
 
-      const features = refs.current.terrainFeatureLabels;
+      const features = terrainFeatures;
       if (features.mountain) {
         const label = createBillboardLabel("Mountain", [255, 255, 255]);
         label.position.set(
@@ -878,6 +912,12 @@ export function Scene3d() {
         );
         labelGroup.add(label);
       }
+
+      labelsBuilt = true;
+      labeledSnapshot = snapshot;
+      labeledTick = tick;
+      labeledTerrain = terrain;
+      labeledTerrainFeatures = terrainFeatures;
     };
 
     refs.current.spawnBurst = (
@@ -1033,33 +1073,40 @@ export function Scene3d() {
       );
     };
 
-    const onHoverMove = (event: PointerEvent) => {
+    const processHoverMove = (clientX: number, clientY: number) => {
       if (spawnDrag) return;
       const terrain = refs.current.activeTerrain;
       if (!terrain) return;
       const rect = renderer.domElement.getBoundingClientRect();
       hoverPointer.set(
-        ((event.clientX - rect.left) / rect.width) * 2 - 1,
-        -(((event.clientY - rect.top) / rect.height) * 2 - 1),
+        ((clientX - rect.left) / rect.width) * 2 - 1,
+        -(((clientY - rect.top) / rect.height) * 2 - 1),
       );
       hoverRaycaster.setFromCamera(hoverPointer, camera);
       const civilianHit = hoverRaycaster.intersectObjects(refs.current.civilians, false)[0];
       if (civilianHit) {
-        const index = refs.current.civilians.indexOf(
-          civilianHit.object as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>,
-        );
-        hoverTarget = { kind: "civilian", index, x: event.clientX, y: event.clientY };
+        const index = civilianHit.object.userData.hoverIndex as number;
+        hoverTarget = { kind: "civilian", index, x: clientX, y: clientY };
         return;
       }
       const buildingHit = hoverRaycaster.intersectObjects(refs.current.buildings, false)[0];
       if (buildingHit) {
-        const index = refs.current.buildings.indexOf(
-          buildingHit.object as THREE.Group,
-        );
-        hoverTarget = { kind: "building", index, x: event.clientX, y: event.clientY };
+        const index = buildingHit.object.userData.hoverIndex as number;
+        hoverTarget = { kind: "building", index, x: clientX, y: clientY };
         return;
       }
       hoverTarget = null;
+    };
+
+    const onHoverMove = (event: PointerEvent) => {
+      pendingHoverPoint = { clientX: event.clientX, clientY: event.clientY };
+      if (hoverFrame !== 0) return;
+      hoverFrame = window.requestAnimationFrame(() => {
+        hoverFrame = 0;
+        const point = pendingHoverPoint;
+        pendingHoverPoint = null;
+        if (point) processHoverMove(point.clientX, point.clientY);
+      });
     };
 
     const onDoubleClick = (event: MouseEvent) => {
@@ -1407,6 +1454,7 @@ export function Scene3d() {
         return;
       }
       raf = window.requestAnimationFrame(animate);
+      const frameStartedAt = performance.now();
       const snapshot = refs.current.currentSnapshot;
       const terrain = refs.current.activeTerrain;
       if (terrain) {
@@ -1456,6 +1504,12 @@ export function Scene3d() {
       controls.update();
       renderer.render(scene, camera);
       labelRenderer.render(scene, camera);
+      const previousDpr = adaptiveDpr.getDpr();
+      const nextDpr = adaptiveDpr.record(performance.now() - frameStartedAt);
+      if (nextDpr !== previousDpr) {
+        renderer.setPixelRatio(nextDpr);
+        resizeRenderer();
+      }
     };
     const onVisibilityChange = () => {
       if (document.hidden) {
@@ -1471,19 +1525,26 @@ export function Scene3d() {
     };
 
     const initialize = async () => {
-      const terrain = stateRef.current.terrain ?? (await terrainLoader());
-      if (!stateRef.current.terrain) {
-        dispatch({ type: "set_terrain", terrain });
+      try {
+        const terrain = stateRef.current.terrain ?? (await terrainLoader());
+        if (!stateRef.current.terrain) {
+          dispatch({ type: "set_terrain", terrain });
+        }
+        applyTerrain(terrain);
+        updateCivilians();
+        updateMilitary();
+        updateFactions();
+        updateBuildings();
+        updateRoads();
+        updateTradeRoutes();
+        applyWeather();
+        setTerrainError(null);
+        animate();
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Unknown terrain load failure";
+        setTerrainError(`Terrain could not be loaded: ${message}`);
       }
-      applyTerrain(terrain);
-      updateCivilians();
-      updateMilitary();
-      updateFactions();
-      updateBuildings();
-      updateRoads();
-      updateTradeRoutes();
-      applyWeather();
-      animate();
     };
 
     void initialize();
@@ -1502,6 +1563,11 @@ export function Scene3d() {
       window.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.cancelAnimationFrame(raf);
+      if (hoverFrame !== 0) {
+        window.cancelAnimationFrame(hoverFrame);
+        hoverFrame = 0;
+      }
+      pendingHoverPoint = null;
       controls.dispose();
       terrainGroup.clear();
       territoryGroup.clear();
@@ -1616,7 +1682,16 @@ export function Scene3d() {
       ref={mountRef}
       className="scene3d"
       aria-label="Three.js heightmap scene"
-    />
+    >
+      {terrainError ? (
+        <div role="alert" aria-live="assertive" className="scene3d-error">
+          <p>{terrainError}</p>
+          <button type="button" onClick={() => window.location.reload()}>
+            Retry terrain
+          </button>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -2215,28 +2290,47 @@ function interpolateCivPin(refs: SceneRefs, index: number, now: number) {
 }
 
 async function terrainLoader(): Promise<Terrain> {
-  const cachedEtag = localStorage.getItem("civis-terrain-etag");
-  const headers: HeadersInit = {};
-  if (cachedEtag) {
-    headers["If-None-Match"] = cachedEtag;
-  }
-  const response = await fetch("/terrain", { headers });
-  if (response.status === 304 && cachedEtag) {
-    const cachedBody = localStorage.getItem("civis-terrain-body");
-    if (cachedBody) {
-      return JSON.parse(cachedBody) as Terrain;
+  let retryUnconditionally = false;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const cachedEtag = retryUnconditionally
+      ? null
+      : localStorage.getItem("civis-terrain-etag");
+    const headers: HeadersInit = {};
+    if (cachedEtag) headers["If-None-Match"] = cachedEtag;
+    const response = await fetch("/terrain", { headers });
+    if (response.status === 304 && cachedEtag) {
+      const cachedBody = localStorage.getItem("civis-terrain-body");
+      if (cachedBody) {
+        try {
+          return JSON.parse(cachedBody) as Terrain;
+        } catch {
+          localStorage.removeItem("civis-terrain-body");
+        }
+      }
+      localStorage.removeItem("civis-terrain-etag");
+      retryUnconditionally = true;
+      continue;
     }
+    if (!response.ok) throw new Error(`GET /terrain failed with ${response.status}`);
+    const body = await response.text();
+    let terrain: Terrain;
+    try {
+      terrain = JSON.parse(body) as Terrain;
+    } catch (error) {
+      throw new Error(
+        `GET /terrain returned invalid JSON: ${
+          error instanceof Error ? error.message : "parse failure"
+        }`,
+      );
+    }
+    const etag = response.headers.get("ETag");
+    if (etag) {
+      localStorage.setItem("civis-terrain-etag", etag);
+      localStorage.setItem("civis-terrain-body", body);
+    }
+    return terrain;
   }
-  if (!response.ok) {
-    throw new Error(`GET /terrain failed with ${response.status}`);
-  }
-  const etag = response.headers.get("ETag");
-  const body = await response.text();
-  if (etag) {
-    localStorage.setItem("civis-terrain-etag", etag);
-    localStorage.setItem("civis-terrain-body", body);
-  }
-  return JSON.parse(body) as Terrain;
+  throw new Error("GET /terrain returned an unusable cached response");
 }
 
 function terrainHeightAt(terrain: Terrain, x: number, y: number) {
@@ -2711,17 +2805,30 @@ function animateDecorations(refs: SceneRefs, terrain: Terrain, now: number) {
   const terrainMesh = refs.terrainMesh;
   const baseColors = refs.terrainBaseColors;
   if (terrainMesh && baseColors) {
+    const weather = refs.terrainWeather;
+    const season = refs.terrainSeason || "Summer";
+    const colorStateKey = `${season}:${weather?.precipitation ?? "none"}`;
+    // Terrain color sway is visual polish, not simulation state. Cap it at 30Hz
+    // so a 60/120Hz render loop does not rewrite the full terrain buffer every RAF.
+    if (
+      colorStateKey === refs.terrainColorStateKey &&
+      now - refs.terrainColorLastUpdateAt < TERRAIN_COLOR_UPDATE_INTERVAL_MS
+    ) {
+      return;
+    }
+    refs.terrainColorStateKey = colorStateKey;
+    refs.terrainColorLastUpdateAt = now;
     const colorAttr = terrainMesh.geometry.getAttribute(
       "color",
     ) as THREE.BufferAttribute;
-    const season = refs.terrainSeason || "Summer";
     const seasonBlend = terrainSeasonBlend(season);
-    const weather = refs.terrainWeather;
     const positions = terrainMesh.geometry.getAttribute(
       "position",
     ) as THREE.BufferAttribute;
     const base = new THREE.Color();
     const tint = new THREE.Color(seasonBlend.tint);
+    const snowTint = new THREE.Color(0xf2f6fb);
+    const values = colorAttr.array as Float32Array;
     for (let i = 0; i < colorAttr.count; i += 1) {
       const biome = terrain.biomes[i];
       base.setRGB(
@@ -2733,19 +2840,20 @@ function animateDecorations(refs: SceneRefs, terrain: Terrain, now: number) {
       const z = positions.getZ(i);
       const sway = 0.04 * Math.sin(time * 1.2 + x * 0.25 + z * 0.17);
       if (biome === "grass" || biome === "forest") {
-        const seasonal = base.clone().lerp(tint, seasonBlend.amount);
+        const seasonal = base.lerp(tint, seasonBlend.amount);
         if (weather?.precipitation === "snow") {
-          seasonal.lerp(new THREE.Color(0xf2f6fb), 0.32);
+          seasonal.lerp(snowTint, 0.32);
         }
         seasonal.offsetHSL(0, 0, sway * 0.12);
-        colorAttr.setXYZ(i, seasonal.r, seasonal.g, seasonal.b);
+        const offset = i * 3;
+        values[offset] = seasonal.r;
+        values[offset + 1] = seasonal.g;
+        values[offset + 2] = seasonal.b;
       } else {
-        colorAttr.setXYZ(
-          i,
-          clamp01(base.r + sway * 0.05),
-          clamp01(base.g + sway * 0.05),
-          clamp01(base.b + sway * 0.05),
-        );
+        const offset = i * 3;
+        values[offset] = clamp01(base.r + sway * 0.05);
+        values[offset + 1] = clamp01(base.g + sway * 0.05);
+        values[offset + 2] = clamp01(base.b + sway * 0.05);
       }
     }
     colorAttr.needsUpdate = true;

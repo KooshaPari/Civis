@@ -15,9 +15,9 @@
 use crossbeam_channel::Sender;
 use std::collections::HashMap;
 
-use crate::settings_ui::{GameSettings, KeyBinding, ACTION_TOGGLE_DIPLOMACY};
+use crate::settings_ui::{ACTION_TOGGLE_DIPLOMACY, GameSettings, KeyBinding};
 use bevy::prelude::*;
-use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
+use bevy_egui::{EguiContexts, EguiPrimaryContextPass, egui};
 use civ_protocol_3d::{FactionStateEntry, FactionStateFrame, Government3d};
 
 // ---------------------------------------------------------------------------
@@ -672,7 +672,8 @@ mod tests {
         let entry = FactionStateEntry {
             id: 7,
             government: Government3d::Corporate,
-            ..Default::default()
+            era: 0,
+            treasury: Default::default(),
         };
         assert_eq!(faction_display_name(&entry), "Corporate #7");
     }

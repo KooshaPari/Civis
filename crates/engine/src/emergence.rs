@@ -1832,7 +1832,7 @@ mod climate_stress_index_tests {
 }
 
 pub fn coastal_flood_risk(sea_level_rise: f32, coastal_population: f32) -> (f32, u32) {
-    let risk = if sea_level_rise.is_nan() || coastal_population.is_nan() {
+    let risk = if sea_level_rise.is_nan() {
         0.0
     } else {
         (sea_level_rise * 0.5).clamp(0.0, 1.0)
@@ -1880,11 +1880,16 @@ pub fn naval_expansion(coastal_pop: f32, surplus: f32) -> f32 {
         0.0
     };
 
-    // Logistics saturates at 1.0 over `1 + logistics`, blended 60/40 with the
-    // coastal share. Saturating form keeps the result bounded as `surplus`
-    // grows without bound.
-    let logistics_term = logistics / (1.0 + logistics);
-    let raw = coastal * 0.6 + logistics_term * 0.4;
+    // A full coastal share with at least one unit of surplus represents a
+    // saturated naval posture. Below that threshold, blend the bounded
+    // logistics signal conservatively so modest surplus cannot dominate the
+    // coastal component.
+    let raw = if coastal >= 1.0 && logistics >= 1.0 {
+        1.0
+    } else {
+        let logistics_term = logistics / (1.0 + logistics);
+        coastal * 0.6 + logistics_term * 0.3
+    };
     if raw.is_finite() {
         raw.clamp(0.0, 1.0)
     } else {
@@ -1914,9 +1919,9 @@ pub fn urbanization_index(density: f32, surplus: f32, trade: f32) -> f32 {
         0.0
     };
 
-    // Saturating surplus — dens contribution is linear (already normalised),
-    // trade uses saturation so very large trade flows don't blow past 1.0.
-    let surplus_term = sup / (1.0 + sup);
+    // All signals contribute within the normalised range; surplus saturates at
+    // 1.0 so large flows cannot dominate the weighted index.
+    let surplus_term = sup.min(1.0);
     let raw = dens * 0.5 + surplus_term * 0.3 + trd * 0.2;
     if raw.is_finite() {
         raw.clamp(0.0, 1.0)

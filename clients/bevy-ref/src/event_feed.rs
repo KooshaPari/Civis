@@ -214,9 +214,15 @@ pub fn draw_event_feed(
 /// Render the most-recent [`TOAST_COUNT`] events as stacked glass cards,
 /// anchored to the bottom-right corner above the bottom HUD bar (~60 px).
 fn draw_toasts(ctx: &egui::Context, feed: &EventFeed) {
-    let screen = ctx.content_rect();
-    // Anchor: bottom-right with margin above the ~60 px bottom HUD bar.
-    let anchor = egui::pos2(screen.right() - 16.0, screen.bottom() - 68.0);
+    let mut active_events = feed
+        .events
+        .iter()
+        .filter(|event| event.age < TOAST_LIFETIME)
+        .take(TOAST_COUNT)
+        .peekable();
+    if active_events.peek().is_none() {
+        return;
+    }
 
     egui::Area::new(egui::Id::new("civis_toast_area"))
         .anchor(egui::Align2::RIGHT_BOTTOM, egui::vec2(-16.0, -68.0))
@@ -225,15 +231,12 @@ fn draw_toasts(ctx: &egui::Context, feed: &EventFeed) {
         .show(ctx, |ui| {
             ui.set_max_width(320.0);
             ui.with_layout(egui::Layout::bottom_up(egui::Align::RIGHT), |ui| {
-                for ev in feed.events.iter().take(TOAST_COUNT) {
+                for ev in active_events {
                     toast_card(ui, ev);
                     ui.add_space(4.0);
                 }
             });
         });
-
-    // suppress unused variable warning — anchor is only used conceptually.
-    let _ = anchor;
 }
 
 /// Render a single rounded glass toast card with emoji badge, text, and
@@ -254,7 +257,7 @@ fn toast_card(ui: &mut egui::Ui, ev: &GameEvent) {
 
     egui::Frame::NONE
         .fill(fill)
-        .stroke(egui::Stroke::new(1.0, accent_color.gamma_multiply(0.6)))
+        .stroke(egui::Stroke::new(1.0_f32, accent_color.gamma_multiply(0.6)))
         .corner_radius(egui::CornerRadius::same(8))
         .inner_margin(egui::Margin::symmetric(10, 6))
         .show(ui, |ui| {
@@ -279,7 +282,7 @@ fn draw_log_window(ctx: &egui::Context, feed: &EventFeed, log_open: &mut EventLo
         .frame(
             egui::Frame::NONE
                 .fill(PANEL_FILL)
-                .stroke(egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.4)))
+                .stroke(egui::Stroke::new(1.0_f32, ACCENT.gamma_multiply(0.4)))
                 .corner_radius(egui::CornerRadius::same(8))
                 .inner_margin(egui::Margin::same(12)),
         )

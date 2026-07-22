@@ -268,11 +268,7 @@ impl GreedyAtlas {
                 rect
             } else {
                 // Allocate a new shelf at the current bottom.
-                let shelf_bottom: u32 = self
-                    .shelves
-                    .iter()
-                    .map(|s| u32::from(s.y) + u32::from(s.height))
-                    .sum();
+                let shelf_bottom: u32 = self.shelves.iter().map(|s| u32::from(s.height)).sum();
                 if shelf_bottom + u32::from(h) > self.height {
                     return Err(AtlasError::RectTooLarge {
                         id: t.id,
@@ -404,7 +400,7 @@ mod tests {
     fn pack_mixed_heights_uses_multiple_shelves() {
         let mut atlas = GreedyAtlas::new(512, 512);
         let out = atlas
-            .pack(&[rect(1, 100, 200), rect(2, 100, 100), rect(3, 100, 50)])
+            .pack(&[rect(1, 512, 200), rect(2, 100, 100), rect(3, 100, 50)])
             .expect("mixed-height pack");
 
         // Sorted (height desc, id desc): (1, h=200), (2, h=100), (3, h=50).
@@ -420,6 +416,24 @@ mod tests {
         assert_eq!(map[&3].x, 100);
         assert_eq!(atlas.shelf_count(), 2);
         assert_eq!(atlas.packed_height(), 300);
+    }
+
+    /// New shelves are contiguous even when every rectangle fills the atlas
+    /// width; the third shelf must begin immediately after the second one.
+    #[test]
+    fn pack_three_full_width_shelves_accumulates_height_once() {
+        let mut atlas = GreedyAtlas::new(512, 512);
+        let out = atlas
+            .pack(&[rect(1, 512, 200), rect(2, 512, 100), rect(3, 512, 50)])
+            .expect("three full-width shelves fit");
+
+        let map: std::collections::HashMap<u32, AtlasRect> =
+            out.iter().copied().map(|r| (r.id, r)).collect();
+        assert_eq!(map[&1].y, 0);
+        assert_eq!(map[&2].y, 200);
+        assert_eq!(map[&3].y, 300);
+        assert_eq!(atlas.shelf_count(), 3);
+        assert_eq!(atlas.packed_height(), 350);
     }
 
     /// Output order matches input order regardless of how the packer sorted

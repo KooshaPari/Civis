@@ -168,7 +168,13 @@ function connectWatch(
     };
     source.addEventListener("snapshot", (event) => {
       const payload = (event as MessageEvent<string>).data;
-      dispatch({ type: "set_snapshot", snapshot: JSON.parse(payload) });
+      try {
+        dispatch({ type: "set_snapshot", snapshot: JSON.parse(payload) });
+      } catch {
+        dispatch({ type: "set_connection", connection: "disconnected" });
+        scheduleReconnect();
+        return;
+      }
       clearReconnectTimer();
       dispatch({ type: "set_connection", connection: "live" });
       recordAttachFrame(attachFrameAtRef, dispatch);
@@ -216,12 +222,18 @@ function connectServer(
   recentAgentIdsRef: React.MutableRefObject<number[]>,
 ) {
   let closed = false;
+  let connectionGeneration = 0;
   let lastSnapshotRefreshAt = 0;
   const SNAPSHOT_REFRESH_MS = 250;
 
-  const refreshSnapshot = async (ws: WebSocket) => {
+  const isCurrentSocket = (ws: WebSocket, generation: number) =>
+    !closed && wsRef.current === ws && connectionGeneration === generation;
+
+  const refreshSnapshot = async (ws: WebSocket, generation: number) => {
     await jsonRpcCall(ws, "health");
+    if (!isCurrentSocket(ws, generation)) return;
     const result = await jsonRpcCall<unknown>(ws, "sim.snapshot");
+    if (!isCurrentSocket(ws, generation)) return;
     const metrics = normalizeServerSnapshot(result);
     const speed = (metrics.speed_multiplier as TimeSpeed) ?? 1;
     dispatch({ type: "set_server_metrics", metrics });
@@ -231,8 +243,72 @@ function connectServer(
       const started = await jsonRpcCall<{ multiplier?: number }>(ws, "sim.set_speed", {
         multiplier: 1,
       });
+      if (!isCurrentSocket(ws, generation)) return;
       const runSpeed = (started?.multiplier ?? 1) as TimeSpeed;
       dispatch({ type: "set_speed", speed: runSpeed });
+    }
+  };
+
+  const handleMessage = async (ws: WebSocket, generation: number, event: MessageEvent) => {
+    let handled = false;
+    try {
+      if (!isCurrentSocket(ws, generation)) return;
+      let payload: string | Uint8Array;
+      if (typeof event.data === "string") {
+        payload = event.data;
+      } else if (event.data instanceof ArrayBuffer) {
+        payload = new Uint8Array(event.data);
+      } else if (event.data instanceof Blob) {
+        payload = new Uint8Array(await event.data.arrayBuffer());
+      } else {
+        return;
+      }
+      if (!isCurrentSocket(ws, generation)) return;
+      const frame = parseWsPayload(payload);
+      const tick = frame3dTick(frame);
+      const hasChunks = recordVoxelChunks(
+        loadedChunkIdsRef,
+        recentChunkIdsRef,
+        dispatch,
+        frame,
+      );
+      const hasAgents = recordAgentAppearance(
+        seenAgentIdsRef,
+        recentAgentIdsRef,
+        dispatch,
+        frame,
+      );
+      if (tick != null) {
+        dispatch({ type: "set_frame3d_tick", tick });
+        handled = true;
+        const now = performance.now();
+        if (now - lastSnapshotRefreshAt >= SNAPSHOT_REFRESH_MS) {
+          lastSnapshotRefreshAt = now;
+          void refreshSnapshot(ws, generation).catch(() => {
+            /* keep last snapshot on transient RPC errors */
+          });
+        }
+      } else if (hasChunks || hasAgents) {
+        handled = true;
+      }
+    } catch {
+      /* ignore non-frame payloads */
+    }
+    if (handled) recordAttachFrame(attachFrameAtRef, dispatch);
+  };
+
+  const handleOpen = async (ws: WebSocket, generation: number) => {
+    try {
+      await refreshSnapshot(ws, generation);
+      if (!isCurrentSocket(ws, generation)) return;
+      dispatch({ type: "set_connection", connection: "live" });
+      const terrain = await loadWatchTerrain();
+      if (terrain && isCurrentSocket(ws, generation)) {
+        dispatch({ type: "set_terrain", terrain });
+      }
+    } catch {
+      dispatch({ type: "set_connection", connection: "disconnected" });
+      scheduleReconnect();
     }
   };
 
@@ -241,72 +317,17 @@ function connectServer(
     dispatch({ type: "set_connection", connection: "reconnecting" });
     wsRef.current?.close();
     const ws = new WebSocket(wsUrl);
+    const generation = ++connectionGeneration;
     wsRef.current = ws;
 
     ws.onopen = () => {
       setActiveServerSocket(ws);
-      void (async () => {
-        try {
-          await refreshSnapshot(ws);
-          dispatch({ type: "set_connection", connection: "live" });
-          void loadWatchTerrain().then((terrain) => {
-            if (terrain) dispatch({ type: "set_terrain", terrain });
-          });
-        } catch {
-          dispatch({ type: "set_connection", connection: "disconnected" });
-          scheduleReconnect();
-        }
-      })();
+      void handleOpen(ws, generation);
     };
 
     ws.onmessage = (event) => {
       if (preferBinary && typeof event.data === "string") return;
-
-      void (async () => {
-        let handled = false;
-        try {
-          let payload: string | Uint8Array;
-          if (typeof event.data === "string") {
-            payload = event.data;
-          } else if (event.data instanceof ArrayBuffer) {
-            payload = new Uint8Array(event.data);
-          } else if (event.data instanceof Blob) {
-            payload = new Uint8Array(await event.data.arrayBuffer());
-          } else {
-            return;
-          }
-          const frame = parseWsPayload(payload);
-          const tick = frame3dTick(frame);
-          const hasChunks = recordVoxelChunks(
-            loadedChunkIdsRef,
-            recentChunkIdsRef,
-            dispatch,
-            frame,
-          );
-          const hasAgents = recordAgentAppearance(
-            seenAgentIdsRef,
-            recentAgentIdsRef,
-            dispatch,
-            frame,
-          );
-          if (tick != null) {
-            dispatch({ type: "set_frame3d_tick", tick });
-            handled = true;
-            const now = performance.now();
-            if (now - lastSnapshotRefreshAt >= SNAPSHOT_REFRESH_MS) {
-              lastSnapshotRefreshAt = now;
-              void refreshSnapshot(ws).catch(() => {
-                /* keep last snapshot on transient RPC errors */
-              });
-            }
-          } else if (hasChunks || hasAgents) {
-            handled = true;
-          }
-        } catch {
-          /* ignore non-frame payloads */
-        }
-        if (handled) recordAttachFrame(attachFrameAtRef, dispatch);
-      })();
+      void handleMessage(ws, generation, event);
     };
 
     ws.onerror = () => dispatch({ type: "set_connection", connection: "disconnected" });

@@ -6,6 +6,11 @@ export const FRAME_SAMPLE_CAP = 60;
 export const PERF_FPS_WARN = 30;
 export const PERF_FPS_CRITICAL = 15;
 export const PERF_SPIKE_MS = 100;
+export const ADAPTIVE_DPR_SLOW_FRAME_MS = 33;
+export const ADAPTIVE_DPR_FAST_FRAME_MS = 18;
+export const ADAPTIVE_DPR_SLOW_FRAME_COUNT = 30;
+export const ADAPTIVE_DPR_FAST_FRAME_COUNT = 120;
+export const ADAPTIVE_DPR_STEP = 0.5;
 
 /**
  * Append a frame interval sample, keeping the newest `cap` entries.
@@ -179,4 +184,59 @@ export function mockDevFrameMs(index) {
   const base = 16 + Math.sin(index / 6) * 4;
   const spike = index % 23 === 0 ? 28 : 0;
   return Math.max(8, base + spike);
+}
+
+/**
+ * Adjust renderer DPR only after sustained frame-time pressure.
+ * @param {number} initialDpr
+ * @param {number} [minDpr]
+ * @param {number} [slowFrameMs]
+ * @param {number} [fastFrameMs]
+ */
+export function createAdaptiveDprController(
+  initialDpr,
+  minDpr = 1,
+  slowFrameMs = ADAPTIVE_DPR_SLOW_FRAME_MS,
+  fastFrameMs = ADAPTIVE_DPR_FAST_FRAME_MS,
+) {
+  const lowerBound = Math.max(1, minDpr);
+  const initial = Math.max(lowerBound, initialDpr);
+  let dpr = initial;
+  let slowFrames = 0;
+  let fastFrames = 0;
+
+  return {
+    record(frameMs) {
+      if (!Number.isFinite(frameMs) || frameMs <= 0) return dpr;
+
+      if (frameMs >= slowFrameMs) {
+        slowFrames += 1;
+        fastFrames = 0;
+        if (slowFrames >= ADAPTIVE_DPR_SLOW_FRAME_COUNT) {
+          dpr = Math.max(lowerBound, dpr - ADAPTIVE_DPR_STEP);
+          slowFrames = 0;
+        }
+      } else if (frameMs <= fastFrameMs) {
+        fastFrames += 1;
+        slowFrames = 0;
+        if (fastFrames >= ADAPTIVE_DPR_FAST_FRAME_COUNT) {
+          dpr = Math.min(initial, dpr + ADAPTIVE_DPR_STEP);
+          fastFrames = 0;
+        }
+      } else {
+        slowFrames = 0;
+        fastFrames = 0;
+      }
+
+      return dpr;
+    },
+    getDpr() {
+      return dpr;
+    },
+    reset() {
+      dpr = initial;
+      slowFrames = 0;
+      fastFrames = 0;
+    },
+  };
 }

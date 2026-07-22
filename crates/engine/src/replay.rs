@@ -26,6 +26,13 @@ pub enum ReplayEvent {
     },
     /// A queued damage event.
     Damage { tick: u64, event: DamageEvent },
+    /// An explicit player diplomacy action.
+    Diplomacy {
+        tick: u64,
+        source_faction: u32,
+        target_faction: u32,
+        kind: crate::engine::DiplomacyKind,
+    },
     /// Per-soldier combat (war bridge) with attacker/defender pin ids (FR-CIV-TACTICS-025).
     Combat {
         tick: u64,
@@ -150,6 +157,8 @@ pub enum ReplayError {
     ChecksumMismatch,
     /// Stored [`ReplayLog::running_hash`] does not match the chain recomputed from tick events.
     HashChainMismatch,
+    /// Replay events are not ordered by nondecreasing simulation tick.
+    NonMonotonicTick { previous: u64, current: u64 },
 }
 
 impl fmt::Display for ReplayError {
@@ -167,6 +176,10 @@ impl fmt::Display for ReplayError {
             Self::InvalidUtf8(err) => write!(f, "{err}"),
             Self::ChecksumMismatch => write!(f, ".civreplay checksum mismatch"),
             Self::HashChainMismatch => write!(f, "replay hash chain mismatch"),
+            Self::NonMonotonicTick { previous, current } => write!(
+                f,
+                "replay tick moved backwards from {previous} to {current}"
+            ),
         }
     }
 }
@@ -207,6 +220,22 @@ impl ReplayLog {
     /// Record a damage event.
     pub fn record_damage(&mut self, tick: u64, event: DamageEvent) {
         self.events.push(ReplayEvent::Damage { tick, event });
+    }
+
+    /// Record an explicit player diplomacy action.
+    pub fn record_diplomacy_action(
+        &mut self,
+        tick: u64,
+        source_faction: u32,
+        target_faction: u32,
+        kind: crate::engine::DiplomacyKind,
+    ) {
+        self.events.push(ReplayEvent::Diplomacy {
+            tick,
+            source_faction,
+            target_faction,
+            kind,
+        });
     }
 
     /// Record an emergence-dashboard sample (`emergence_metrics.v1`, FR-CIV-EMERG-003).
@@ -581,7 +610,8 @@ impl ReplayLog {
     /// Load the replay log from RON.
     pub fn load(path: impl AsRef<Path>) -> Result<Self, ReplayError> {
         let contents = read_text(path)?;
-        let log = ron::from_str(&contents)?;
+        let log: Self = ron::from_str(&contents)?;
+        log.verify_hash_chain()?;
         Ok(log)
     }
 
@@ -605,6 +635,34 @@ impl ReplayLog {
 
     /// Replay all events into a simulation.
     pub fn replay(&self, into: &mut Simulation) -> Result<(), ReplayError> {
+        let mut previous_tick = None;
+        for event in &self.events {
+            let current_tick = match event {
+                ReplayEvent::VoxelWrite { tick, .. }
+                | ReplayEvent::Damage { tick, .. }
+                | ReplayEvent::Diplomacy { tick, .. }
+                | ReplayEvent::Combat { tick, .. }
+                | ReplayEvent::ResearchOutcome { tick, .. }
+                | ReplayEvent::Climate { tick, .. }
+                | ReplayEvent::Tick { tick }
+                | ReplayEvent::EmergenceMetrics { tick, .. }
+                | ReplayEvent::RngDraw { tick, .. }
+                | ReplayEvent::ModLoaded { tick, .. }
+                | ReplayEvent::ModUnloaded { tick, .. }
+                | ReplayEvent::SessionSaved { tick, .. }
+                | ReplayEvent::ModPermissionViolation { tick, .. } => *tick,
+            };
+            if let Some(previous) = previous_tick {
+                if current_tick < previous {
+                    return Err(ReplayError::NonMonotonicTick {
+                        previous,
+                        current: current_tick,
+                    });
+                }
+            }
+            previous_tick = Some(current_tick);
+        }
+
         for event in &self.events {
             match event {
                 ReplayEvent::VoxelWrite { tick, pos, value } => {
@@ -612,6 +670,19 @@ impl ReplayLog {
                 }
                 ReplayEvent::Damage { tick, event } => {
                     into.apply_replay_damage(*tick, event);
+                }
+                ReplayEvent::Diplomacy {
+                    tick,
+                    source_faction,
+                    target_faction,
+                    kind,
+                } => {
+                    into.apply_replay_diplomacy_action(
+                        *tick,
+                        *source_faction,
+                        *target_faction,
+                        *kind,
+                    );
                 }
                 ReplayEvent::Combat {
                     tick,
@@ -702,6 +773,37 @@ mod tests {
         let loaded = ReplayLog::load(file.path()).expect("load replay log");
         assert_eq!(loaded.events, log.events);
         assert_eq!(loaded.rng_draw_event_count(), 1);
+    }
+
+    #[test]
+    fn plain_ron_load_rejects_tampered_hash_chain() {
+        let mut log = ReplayLog::default();
+        log.record_tick(1);
+        log.running_hash = Some([0u8; HASH_LEN]);
+
+        let file = tempfile::NamedTempFile::new().expect("temp file");
+        log.save(file.path()).expect("save replay log");
+
+        let err = ReplayLog::load(file.path()).expect_err("tampered hash chain must fail");
+        assert!(matches!(err, ReplayError::HashChainMismatch));
+    }
+
+    #[test]
+    fn replay_rejects_descending_ticks_before_mutating_simulation() {
+        let mut log = ReplayLog::default();
+        log.record_tick(2);
+        log.record_tick(1);
+
+        let mut sim = Simulation::with_seed(1);
+        let err = log.replay(&mut sim).expect_err("descending ticks must fail");
+        assert!(matches!(
+            err,
+            ReplayError::NonMonotonicTick {
+                previous: 2,
+                current: 1
+            }
+        ));
+        assert_eq!(sim.state.tick, 0);
     }
 
     #[test]

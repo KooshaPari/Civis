@@ -30,6 +30,7 @@ developer machine                       GitHub Actions
   cargo fmt / clippy / test             checkout
   web_test                              bash scripts/quality/verify-quality-manifest.sh
   dashboard_typecheck                          │
+  dashboard_build                              │
   (opt-in extras)                             ▼
        │                                  pass / fail (≈ 5 s)
        ▼
@@ -167,7 +168,7 @@ CIVIS_QUALITY_EXTRAS=1 lefthook run pre-push
 ```
 
 The default `pre-push` runs the core gates (rust fmt/clippy/test, web test,
-dashboard typecheck, or `just civis-3d-verify`). With `CIVIS_QUALITY_EXTRAS=1`
+dashboard typecheck and production build, or `just civis-3d-verify`). With `CIVIS_QUALITY_EXTRAS=1`
 it additionally runs cargo-audit, cargo-deny, cargo-machete, cargo-semver-checks,
 trufflehog, fr-coverage, docs:check, and security-guard. Each is recorded in
 `.ci/quality-manifest.json` and signed by the manifest hash. CI does **not**

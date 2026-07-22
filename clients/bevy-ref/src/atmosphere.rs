@@ -120,7 +120,7 @@ pub fn setup_atmosphere(
         ..default()
     });
     commands
-        .spawn((StarField, Visibility::Hidden))
+        .spawn((StarField, Visibility::Hidden, Transform::default()))
         .with_children(|parent| {
             for i in 0..STAR_COUNT {
                 let (theta, phi) = star_angles(i as u32);

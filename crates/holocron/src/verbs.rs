@@ -290,7 +290,7 @@ mod tests {
         let verbs = build_mcp_catalog();
         let mut seen = std::collections::HashSet::new();
         for v in verbs {
-            assert!(seen.insert(&v.id), "duplicate verb id: {}", v.id);
+            assert!(seen.insert(v.id.clone()), "duplicate verb id: {}", v.id);
         }
     }
 

@@ -220,7 +220,10 @@ fn save_slot_row(
                     ui.label(egui::RichText::new(tick).monospace().small());
                 });
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button("Delete").clicked() {
+                    if ui
+                        .add_enabled(has_local_sim, egui::Button::new("Delete"))
+                        .clicked()
+                    {
                         *action = Some(SaveSlotAction::Delete(slot.name.clone()));
                     }
                     if ui

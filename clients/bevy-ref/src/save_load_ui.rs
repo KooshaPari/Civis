@@ -301,11 +301,12 @@ fn apply_save_slot_action(
                     panel.last_status = format!("Loaded {name}");
                     panel.visible = false;
                     panel.refresh_requested = true;
-                    if let Some(bridge) = bridge {
-                        bridge.client.clear_outcomes();
-                    }
                     if let (Some(mut gate), Some(mut overlay)) = (gate, overlay) {
-                        begin_player_session(&mut gate, &mut overlay);
+                        begin_player_session(
+                            bridge.map(|bridge| &bridge.client),
+                            &mut gate,
+                            &mut overlay,
+                        );
                     }
                     if let Some(mut boot) = boot {
                         boot.elapsed = 0.0;

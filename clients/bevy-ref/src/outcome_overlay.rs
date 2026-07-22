@@ -46,7 +46,16 @@ pub struct OutcomeOverlayState {
 pub(crate) struct OutcomeEscapeBlock(pub bool);
 
 /// Begin an interactive session from the main menu (clears stale server outcomes).
-pub fn begin_player_session(gate: &mut OutcomeSessionGate, overlay: &mut OutcomeOverlayState) {
+pub fn begin_player_session(
+    client: Option<&crate::ws_client::WsClient>,
+    gate: &mut OutcomeSessionGate,
+    overlay: &mut OutcomeOverlayState,
+) {
+    // Drain at the same boundary as the local session reset. Callers may have
+    // queued an old outcome between their preflight clear and this transition.
+    if let Some(client) = client {
+        client.clear_outcomes();
+    }
     gate.session_active = true;
     gate.first_poll_tick = None;
     overlay.outcome = None;

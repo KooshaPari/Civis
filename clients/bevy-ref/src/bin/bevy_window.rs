@@ -687,14 +687,15 @@ fn apply_live_frames(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut feed: ResMut<EventFeed>,
     gpu_quality: Res<civ_bevy_ref::frame_budget::GpuQualityMode>,
+    mut frame_buffer: Local<Vec<Frame3d>>,
 ) {
     let resets = bridge.client.poll_scene_resets();
     if let Some(reset) = resets.last() {
         scene.reset(&mut commands);
         hud.snapshot.tick = Some(reset.tick);
     }
-    let frames = bridge.client.poll();
-    if !frames.is_empty() {
+    bridge.client.poll_into(&mut frame_buffer);
+    if !frame_buffer.is_empty() {
         hud.snapshot.connected = true;
     }
 
@@ -708,7 +709,7 @@ fn apply_live_frames(
     };
     let wireframe_color = debug.wireframe.then_some(CHUNK_WIREFRAME_LINE_COLOR);
 
-    for frame in frames {
+    for frame in frame_buffer.drain(..) {
         hud.snapshot.tick = Some(frame.tick());
         match frame {
             Frame3d::VoxelDelta(delta) => {

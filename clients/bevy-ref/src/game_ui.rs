@@ -360,6 +360,7 @@ impl Plugin for GameUiPlugin {
             .init_resource::<GameUiSnapshot>()
             .init_resource::<SelectedEntity>()
             .init_resource::<SelectedEntityDetails>()
+            .init_resource::<LiveSelection>()
             .init_resource::<GameSpeed>()
             .init_resource::<ActiveTool>()
             .init_resource::<BuildingSpawnKind>()

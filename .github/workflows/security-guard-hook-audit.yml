@@ -1,8 +1,7 @@
 name: Security Guard (Hooks)
 
-# Local-first: PRs use quality.yml + pr-governance-gate only.
-# Run heavy gates locally: lefthook run pre-push
-# phenoShared reusable is 404; replaced with no-op.
+# Local-first: PRs attest the heavy gates through the quality manifest. This
+# workflow independently audits the security hook wiring on main or dispatch.
 on:
   workflow_dispatch:
   push:
@@ -11,10 +10,34 @@ permissions:
   contents: read
 
 jobs:
-  # TODO: Implement custom security guard hook audit logic.
   guard:
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
-      - run: echo "TODO: replace with custom security-guard-hook-audit logic"
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 1
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
+        with:
+          toolchain: stable
+
+      - name: Install cargo-deny
+        shell: bash
+        run: cargo install cargo-deny --locked --version 0.19.8
+
+      - name: Verify security hook wiring
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x .github/scripts/security-guard.sh
+          test -x .github/hooks/security-guard.sh
+          grep -Fq 'security-guard-pre-commit-pre-push' .pre-commit-config.yaml
+          grep -Fq '.github/scripts/security-guard.sh' .pre-commit-config.yaml
+          bash -n .github/scripts/security-guard.sh .github/hooks/security-guard.sh .github/hooks/pre-commit
+
+      - name: Run advisory policy
+        shell: bash
+        run: cargo deny check advisories

@@ -126,14 +126,8 @@ pub struct SettingsOpen(pub bool);
 pub struct WorldSetupParams {
     /// World seed selected for the current run.
     pub seed: u64,
-    /// World-size preset index mirrored by the settings UI.
-    pub world_size: usize,
     /// Climate / scenario preset index into [`WORLDGEN_PRESETS`].
     pub climate_preset: usize,
-    /// Whether continents favour islands vs contiguous land (UI knob).
-    pub archipelago: bool,
-    /// Starting population density 0..=1.
-    pub population_density: f32,
     /// Local player faction id (0 = Ardani, 1 = Velthari, 2 = Grundak).
     pub player_faction: u32,
 }
@@ -142,17 +136,11 @@ impl Default for WorldSetupParams {
     fn default() -> Self {
         Self {
             seed: 0xC1F1_5EED_D3AD_BEEF,
-            world_size: 1,
             climate_preset: 0,
-            archipelago: false,
-            population_density: 0.45,
             player_faction: 0,
         }
     }
 }
-
-/// Human labels for world-size combo (UI).
-const WORLD_SIZE_LABELS: [&str; 4] = ["Tiny", "Standard", "Large", "Huge"];
 
 /// Transient world-gen boot timer (standalone server attach).
 #[derive(Resource, Default, Debug)]
@@ -689,20 +677,6 @@ fn draw_world_setup(
                         });
                         ui.add_space(10.0);
 
-                        ui.label(egui::RichText::new("Map size").color(DIM).small());
-                        egui::ComboBox::from_id_salt("world_size_combo")
-                            .selected_text(
-                                *WORLD_SIZE_LABELS
-                                    .get(params.world_size % WORLD_SIZE_LABELS.len())
-                                    .unwrap_or(&"Standard"),
-                            )
-                            .show_ui(ui, |ui| {
-                                for (i, label) in WORLD_SIZE_LABELS.iter().enumerate() {
-                                    ui.selectable_value(&mut params.world_size, i, *label);
-                                }
-                            });
-                        ui.add_space(10.0);
-
                         ui.label(egui::RichText::new("Climate / scenario").color(DIM).small());
                         let climate_label = WORLDGEN_PRESETS
                             .get(params.climate_preset % WORLDGEN_PRESETS.len())
@@ -717,19 +691,6 @@ fn draw_world_setup(
                                 }
                             });
                         ui.add_space(10.0);
-
-                        ui.checkbox(&mut params.archipelago, "Archipelago landmass bias");
-                        ui.add_space(6.0);
-                        ui.label(
-                            egui::RichText::new("Starting population density")
-                                .color(DIM)
-                                .small(),
-                        );
-                        ui.add(
-                            egui::Slider::new(&mut params.population_density, 0.05..=1.0)
-                                .show_value(true)
-                                .fixed_decimals(2),
-                        );
 
                         ui.add_space(20.0);
                         ui.horizontal(|ui| {

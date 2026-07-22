@@ -68,23 +68,17 @@ export function attachEndpointUrl(mode: AttachMode, wsUrl: string, origin: strin
   return mode === "server" ? wsUrl : `${origin}/events`;
 }
 
-/** WebSocket URL: use Vite proxy in dev (`/ws` → civ-server). */
+/** WebSocket URL: use trusted build config or same-origin Vite proxy (`/ws`). */
 export function resolveBrowserWsUrl(search = ""): string {
-  const query = search.startsWith("?") ? search.slice(1) : search;
-  const fromQuery = new URLSearchParams(query).get("ws")?.trim();
   let url: string;
-  if (fromQuery) {
-    url = fromQuery;
+  const fromEnv = import.meta.env.VITE_CIVIS_WS_URL as string | undefined;
+  if (fromEnv?.trim()) {
+    url = fromEnv.trim();
+  } else if (typeof window !== "undefined") {
+    const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+    url = `${proto}//${window.location.host}/ws`;
   } else {
-    const fromEnv = import.meta.env.VITE_CIVIS_WS_URL as string | undefined;
-    if (fromEnv?.trim()) {
-      url = fromEnv.trim();
-    } else if (typeof window !== "undefined") {
-      const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-      url = `${proto}//${window.location.host}/ws`;
-    } else {
-      url = `ws://127.0.0.1:${import.meta.env.VITE_CIV_SERVER_PORT ?? "3000"}/ws`;
-    }
+    url = `ws://127.0.0.1:${import.meta.env.VITE_CIV_SERVER_PORT ?? "3000"}/ws`;
   }
   if (resolveWsPreferBinary(search)) {
     return withTickFormatBinaryQuery(url);

@@ -8,10 +8,17 @@ import {
   wsPreferBinary,
 } from "../src/wsUrl.mjs";
 
-test("resolveWsUrlFromQuery prefers ?ws= override", () => {
+test("resolveWsUrlFromQuery ignores untrusted ?ws= override", () => {
   assert.equal(
     resolveWsUrlFromQuery("?ws=ws://custom.test:4444/live"),
-    "ws://custom.test:4444/live",
+    defaultLiveWsUrl(),
+  );
+});
+
+test("resolveWsUrlFromQuery keeps trusted fallback", () => {
+  assert.equal(
+    resolveWsUrlFromQuery("?ws=ws://custom.test:4444/live", "ws://127.0.0.1:3001/ws"),
+    "ws://127.0.0.1:3001/ws",
   );
 });
 

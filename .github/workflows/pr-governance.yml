@@ -83,7 +83,8 @@ jobs:
               /^quality-manifest/i,
             ];
 
-            const pollLimit = 12;
+            // Native client compilation can legitimately take several minutes on a cold runner.
+            const pollLimit = 36;
             const pollDelayMs = 10_000;
             let pr;
             let failures = [];

@@ -1,8 +1,8 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "777bb7a048ab7187353207bc013b66bb4225e2c1",
-  "created_at": "2026-07-22T01:47:44Z",
+  "git_sha": "683eb25d3d062f3d917025302ebd3f7f9935c1b4",
+  "created_at": "2026-07-22T05:09:59Z",
   "runner": {
     "host": "unknown",
     "rust": "rustc 1.97.1 (8bab26f4f 2026-07-14)"
@@ -21,12 +21,12 @@
       "detail": ""
     },
     "dashboard_typecheck": {
-      "status": "fail",
-      "detail": "bun install v1.3.11 (af24e281) Resolving dependencies Resolved, downloaded and extracted [22] error: lockfile had changes, but lockfile is frozen note: try re-running without --frozen-lockfile and commit the updated lockfile "
+      "status": "pass",
+      "detail": ""
     },
     "dashboard_build": {
-      "status": "fail",
-      "detail": "bun install v1.3.11 (af24e281) error: lockfile had changes, but lockfile is frozen note: try re-running without --frozen-lockfile and commit the updated lockfile "
+      "status": "pass",
+      "detail": ""
     },
     "extra_cargo_audit": {
       "status": "skip",
@@ -61,5 +61,5 @@
       "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     }
   },
-  "manifest_hash": "098a228c4f15e637afde29a022657d69de7a959c3082ac0de60609e9a4480627"
+  "manifest_hash": "261b65dbbfc10c47b79b0d6b9dbf38f1aa6f189fad7064f8c5af3e5d4ca7e703"
 }

@@ -1,0 +1,9 @@
+[package]
+name = "civ-voxel-bridge"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+civ-voxel = { path = "../voxel" }

@@ -409,7 +409,13 @@ impl Plugin for GameUiPlugin {
                 // Style/Visuals (Keycap Palette + holocron chrome) before any
                 // draw call can consume it. load_tool_icons and draw_game_ui
                 // follow in order.
-                (apply_keycap_theme, load_tool_icons, load_hud_panel, draw_game_ui).chain(),
+                (
+                    apply_keycap_theme,
+                    load_tool_icons,
+                    load_hud_panel,
+                    draw_game_ui,
+                )
+                    .chain(),
             );
     }
 }

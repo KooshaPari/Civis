@@ -105,7 +105,10 @@ impl Plugin for FactionHudPlugin {
 
 // ── Systems ───────────────────────────────────────────────────────────────────
 
-fn queue_faction_crest_handles(mut crests: ResMut<FactionCrestAssets>, asset_server: Res<AssetServer>) {
+fn queue_faction_crest_handles(
+    mut crests: ResMut<FactionCrestAssets>,
+    asset_server: Res<AssetServer>,
+) {
     crests.handles = FACTION_CREST_PATHS
         .iter()
         .map(|(_, path)| asset_server.load::<Image>(*path))

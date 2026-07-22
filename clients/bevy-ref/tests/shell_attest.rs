@@ -14,12 +14,11 @@ use bevy::prelude::*;
 use bevy::state::app::StatesPlugin;
 use civ_bevy_ref::live_stream::LiveStreamScene;
 use civ_bevy_ref::menus::{
-    AppState, GameUiMode, MainMenuCommand, MainMenuSaves, MenuCommand, WorldGenBoot,
-    WorldSetupParams, advance_worldgen_to_playing, consume_menu_commands,
-    sync_app_state_with_game_mode,
+    advance_worldgen_to_playing, consume_menu_commands, sync_app_state_with_game_mode, AppState,
+    GameUiMode, MainMenuCommand, MainMenuSaves, MenuCommand, WorldGenBoot, WorldSetupParams,
 };
 use civ_bevy_ref::outcome_overlay::{
-    OutcomeOverlayState, OutcomeSessionGate, begin_player_session, end_player_session,
+    begin_player_session, end_player_session, OutcomeOverlayState, OutcomeSessionGate,
 };
 use civ_bevy_ref::settings_ui::{GameSettings, SettingsTab};
 
@@ -116,7 +115,10 @@ fn shipped_hud_chrome_assets_are_present() {
     ] {
         let path = hud_root.join(file);
         let metadata = std::fs::metadata(&path).unwrap_or_else(|error| {
-            panic!("missing shipped HUD chrome asset {}: {error}", path.display())
+            panic!(
+                "missing shipped HUD chrome asset {}: {error}",
+                path.display()
+            )
         });
         assert!(
             metadata.len() > 256,
@@ -128,10 +130,13 @@ fn shipped_hud_chrome_assets_are_present() {
 
 #[test]
 fn shipped_hud_panel_frame_is_present() {
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("assets/ui/hud/panel-frame.png");
+    let path =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/ui/hud/panel-frame.png");
     let metadata = std::fs::metadata(&path).unwrap_or_else(|error| {
-        panic!("missing shipped HUD panel asset {}: {error}", path.display())
+        panic!(
+            "missing shipped HUD panel asset {}: {error}",
+            path.display()
+        )
     });
     assert!(
         metadata.len() > 512,
@@ -183,9 +188,8 @@ fn shipped_launcher_scripts_are_present() {
     let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     for rel in ["Tools/launch-civis.ps1", "Tools/play.ps1"] {
         let path = repo_root.join(rel);
-        let metadata = std::fs::metadata(&path).unwrap_or_else(|error| {
-            panic!("missing launcher script {}: {error}", path.display())
-        });
+        let metadata = std::fs::metadata(&path)
+            .unwrap_or_else(|error| panic!("missing launcher script {}: {error}", path.display()));
         assert!(
             metadata.len() > 64,
             "launcher script is unexpectedly empty: {}",

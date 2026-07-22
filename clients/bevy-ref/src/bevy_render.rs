@@ -11,15 +11,15 @@
 //! `MeshBuffer` chunks via PBR. Per-tick streaming + voxel-delta integration
 //! land in a follow-up PR once the protocol bridge is wired.
 
-use bevy::asset::RenderAssetUsages;
-use bevy::mesh::{Indices, PrimitiveTopology};
-use bevy::pbr::MeshMaterial3d;
-use bevy::prelude::*;
 use crate::{
     chunk_fade_alpha, chunk_fade_color, chunk_fade_complete, presentation_ambient_brightness,
     presentation_ambient_color_rgb, presentation_clear_color_rgb, CameraTarget, MeshBuffer,
     DEBUG_WIREFRAME_OVERLAY_ALPHA,
 };
+use bevy::asset::RenderAssetUsages;
+use bevy::mesh::{Indices, PrimitiveTopology};
+use bevy::pbr::MeshMaterial3d;
+use bevy::prelude::*;
 
 /// Wireframe line colour for chunk debug overlay.
 pub const CHUNK_WIREFRAME_LINE_COLOR: Color = Color::srgba(0.92, 0.94, 0.98, 0.85);

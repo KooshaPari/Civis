@@ -11,10 +11,10 @@ use civ_bevy_ref::atmosphere::{animate_water, setup_atmosphere, update_lighting}
 use civ_bevy_ref::diplomacy_ui::{DiplomacyBridge, DiplomacyUiPlugin};
 #[cfg(feature = "models")]
 use civ_bevy_ref::gltf_models::GltfModelsPlugin;
-#[cfg(feature = "gi")]
-use civ_bevy_ref::lighting_gi::SolariGiPlugin;
 #[cfg(feature = "egui")]
 use civ_bevy_ref::graphics_settings::GraphicsSettingsPlugin;
+#[cfg(feature = "gi")]
+use civ_bevy_ref::lighting_gi::SolariGiPlugin;
 #[cfg(feature = "egui")]
 use civ_bevy_ref::settings_ui::{GameSettings, KeyBinding, SettingsPlugin};
 #[cfg(not(feature = "egui"))]

@@ -117,7 +117,14 @@ mod tests {
     /// FR-CIV-BEVY-026 — backend env var parsing accepts expected adapter aliases.
     #[test]
     fn parse_forced_backend_value_accepts_dx12_aliases() {
-        for raw in ["dx12", "DX12", " d3d12 ", "DirectX", "dx12u", "DX12Ultimate"] {
+        for raw in [
+            "dx12",
+            "DX12",
+            " d3d12 ",
+            "DirectX",
+            "dx12u",
+            "DX12Ultimate",
+        ] {
             assert_eq!(
                 parse_forced_backend_value(raw),
                 Some(Backends::DX12),

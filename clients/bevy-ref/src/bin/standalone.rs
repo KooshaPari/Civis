@@ -6,12 +6,12 @@ use bevy::prelude::*;
 use civ_bevy_ref::animation::ActorAnimationPlugin;
 #[cfg(feature = "models")]
 use civ_bevy_ref::gltf_models::GltfModelsPlugin;
+#[cfg(feature = "egui")]
+use civ_bevy_ref::graphics_settings::GraphicsSettingsPlugin;
 #[cfg(feature = "gi")]
 use civ_bevy_ref::lighting_gi::SolariGiPlugin;
 #[cfg(feature = "voxel")]
 use civ_bevy_ref::ocean::OceanPlugin;
-#[cfg(feature = "egui")]
-use civ_bevy_ref::graphics_settings::GraphicsSettingsPlugin;
 #[cfg(feature = "egui")]
 use civ_bevy_ref::settings_ui::{AntiAliasing, GameSettings, SettingsPlugin};
 use civ_bevy_ref::{
@@ -244,10 +244,7 @@ fn smoke_frames_from_env() -> Option<u32> {
     (n > 0).then_some(n)
 }
 
-fn exit_after_smoke_frames(
-    budget: Res<SmokeExitAfter>,
-    mut frames: Local<u32>,
-) {
+fn exit_after_smoke_frames(budget: Res<SmokeExitAfter>, mut frames: Local<u32>) {
     *frames += 1;
     if *frames >= budget.frames {
         eprintln!(

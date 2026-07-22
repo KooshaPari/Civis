@@ -615,11 +615,7 @@ pub fn gfx_from_game_settings(game: &crate::settings_ui::GameSettings) -> GfxSet
         WindowMode::Borderless => WinMode::Borderless,
         WindowMode::Fullscreen => WinMode::Fullscreen,
     };
-    let fps_cap = if d.fps_uncapped {
-        0
-    } else {
-        d.target_fps
-    };
+    let fps_cap = if d.fps_uncapped { 0 } else { d.target_fps };
 
     GfxSettings {
         backend,
@@ -1197,9 +1193,7 @@ mod tests {
 
     #[test]
     fn gfx_from_game_settings_maps_render_engine_and_display() {
-        use crate::settings_ui::{
-            GameSettings, RenderEngine, ResolutionPreset, WindowMode,
-        };
+        use crate::settings_ui::{GameSettings, RenderEngine, ResolutionPreset, WindowMode};
 
         let mut game = GameSettings::default();
         game.graphics.render_engine = RenderEngine::Vulkan;

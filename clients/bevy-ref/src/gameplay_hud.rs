@@ -12,7 +12,7 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 use crate::live_stream::LiveStreamScene;
-use crate::outcome_overlay::{OutcomeOverlayState, OutcomeSessionGate, outcome_modal_visible};
+use crate::outcome_overlay::{outcome_modal_visible, OutcomeOverlayState, OutcomeSessionGate};
 use crate::{MusicCues, OutcomeProgressHud};
 
 // ── Palette (mirrors emergence_dashboard / faction_hud) ───────────────────────
@@ -58,10 +58,7 @@ impl Plugin for GameplayHudPlugin {
 
 // ── Systems ───────────────────────────────────────────────────────────────────
 
-fn toggle_gameplay_hud(
-    keys: Res<ButtonInput<KeyCode>>,
-    mut open: ResMut<GameplayHudOpen>,
-) {
+fn toggle_gameplay_hud(keys: Res<ButtonInput<KeyCode>>, mut open: ResMut<GameplayHudOpen>) {
     if keys.just_pressed(KeyCode::F9) {
         open.0 = !open.0;
     }
@@ -84,11 +81,18 @@ fn draw_gameplay_hud(
     // Build ranked faction list sorted by treasury (descending).
     let mut factions: Vec<_> = scene.faction_entries.iter().collect();
     factions.sort_by(|a, b| {
-        b.treasury.amount.partial_cmp(&a.treasury.amount).unwrap_or(std::cmp::Ordering::Equal)
+        b.treasury
+            .amount
+            .partial_cmp(&a.treasury.amount)
+            .unwrap_or(std::cmp::Ordering::Equal)
     });
 
     let total_pop: u32 = scene.population_by_faction.values().sum();
-    let max_treasury = factions.first().map(|f| f.treasury.amount).unwrap_or(1.0).max(1.0);
+    let max_treasury = factions
+        .first()
+        .map(|f| f.treasury.amount)
+        .unwrap_or(1.0)
+        .max(1.0);
 
     let outcome = outcome_state.as_deref().and_then(|state| {
         let session_active = session_gate
@@ -124,7 +128,12 @@ fn draw_gameplay_hud(
                         .size(14.0),
                 );
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.label(egui::RichText::new("[F9] hide").color(DIM).small().italics());
+                    ui.label(
+                        egui::RichText::new("[F9] hide")
+                            .color(DIM)
+                            .small()
+                            .italics(),
+                    );
                 });
             });
             ui.add_space(4.0);
@@ -160,16 +169,35 @@ fn draw_gameplay_hud(
             }
 
             // ── Section 2: Faction Leaderboard ──────────────────────────
-            ui.label(egui::RichText::new("Faction Leaderboard").color(GOLD).strong().small());
+            ui.label(
+                egui::RichText::new("Faction Leaderboard")
+                    .color(GOLD)
+                    .strong()
+                    .small(),
+            );
             ui.add_space(4.0);
 
             if factions.is_empty() {
-                ui.label(egui::RichText::new("No faction data yet…").color(DIM).italics().small());
+                ui.label(
+                    egui::RichText::new("No faction data yet…")
+                        .color(DIM)
+                        .italics()
+                        .small(),
+                );
             } else {
                 for (rank, entry) in factions.iter().enumerate() {
-                    let pop = scene.population_by_faction.get(&entry.id).copied().unwrap_or(0);
-                    let treasury_norm = (entry.treasury.amount / max_treasury).clamp(0.0, 1.0) as f32;
-                    let pop_norm = if total_pop > 0 { pop as f32 / total_pop as f32 } else { 0.0 };
+                    let pop = scene
+                        .population_by_faction
+                        .get(&entry.id)
+                        .copied()
+                        .unwrap_or(0);
+                    let treasury_norm =
+                        (entry.treasury.amount / max_treasury).clamp(0.0, 1.0) as f32;
+                    let pop_norm = if total_pop > 0 {
+                        pop as f32 / total_pop as f32
+                    } else {
+                        0.0
+                    };
                     draw_faction_row(ui, rank + 1, entry.id, pop, treasury_norm, pop_norm);
                 }
             }
@@ -179,7 +207,12 @@ fn draw_gameplay_hud(
             ui.add_space(4.0);
 
             // ── Section 3: Victory Progress ──────────────────────────────
-            ui.label(egui::RichText::new("Victory Progress").color(GOLD).strong().small());
+            ui.label(
+                egui::RichText::new("Victory Progress")
+                    .color(GOLD)
+                    .strong()
+                    .small(),
+            );
             ui.add_space(4.0);
 
             let live = outcome_progress.0.as_ref();
@@ -259,9 +292,17 @@ fn draw_outcome_banner(ui: &mut egui::Ui, tag: &str, reason: &str, tick: u64) {
     ui.vertical_centered(|ui| {
         ui.label(egui::RichText::new(label).color(color).size(22.0).strong());
         if !reason.is_empty() {
-            ui.label(egui::RichText::new(reason).color(egui::Color32::WHITE).size(13.0));
+            ui.label(
+                egui::RichText::new(reason)
+                    .color(egui::Color32::WHITE)
+                    .size(13.0),
+            );
         }
-        ui.label(egui::RichText::new(format!("Tick {tick}")).color(DIM).small());
+        ui.label(
+            egui::RichText::new(format!("Tick {tick}"))
+                .color(DIM)
+                .small(),
+        );
     });
 }
 
@@ -280,10 +321,23 @@ fn draw_faction_row(
             3 => egui::Color32::from_rgb(205, 127, 50),
             _ => DIM,
         };
-        ui.label(egui::RichText::new(format!("#{rank}")).color(rank_color).small().strong());
-        ui.label(egui::RichText::new(format!("F{faction_id}")).color(ACCENT).small());
+        ui.label(
+            egui::RichText::new(format!("#{rank}"))
+                .color(rank_color)
+                .small()
+                .strong(),
+        );
+        ui.label(
+            egui::RichText::new(format!("F{faction_id}"))
+                .color(ACCENT)
+                .small(),
+        );
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            ui.label(egui::RichText::new(format!("pop:{population}")).color(DIM).small());
+            ui.label(
+                egui::RichText::new(format!("pop:{population}"))
+                    .color(DIM)
+                    .small(),
+            );
         });
     });
 
@@ -298,7 +352,8 @@ fn sub_bar(ui: &mut egui::Ui, label: &str, fraction: f32, color: egui::Color32) 
     ui.horizontal(|ui| {
         ui.label(egui::RichText::new(label).color(DIM).small());
     });
-    let (bg_rect, _) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 5.0), egui::Sense::hover());
+    let (bg_rect, _) =
+        ui.allocate_exact_size(egui::vec2(ui.available_width(), 5.0), egui::Sense::hover());
     ui.painter().rect_filled(
         bg_rect,
         egui::CornerRadius::same(2),
@@ -306,7 +361,8 @@ fn sub_bar(ui: &mut egui::Ui, label: &str, fraction: f32, color: egui::Color32) 
     );
     let fill_w = (bg_rect.width() * fraction.clamp(0.0, 1.0)).max(0.0);
     let fill_rect = egui::Rect::from_min_size(bg_rect.min, egui::vec2(fill_w, bg_rect.height()));
-    ui.painter().rect_filled(fill_rect, egui::CornerRadius::same(2), color);
+    ui.painter()
+        .rect_filled(fill_rect, egui::CornerRadius::same(2), color);
     ui.add_space(2.0);
 }
 
@@ -318,7 +374,8 @@ fn victory_bar(ui: &mut egui::Ui, label: &str, fraction: f32, value_str: &str) {
         });
     });
     let bar_color = if fraction >= 1.0 { TEAL } else { ACCENT };
-    let (bg_rect, _) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 6.0), egui::Sense::hover());
+    let (bg_rect, _) =
+        ui.allocate_exact_size(egui::vec2(ui.available_width(), 6.0), egui::Sense::hover());
     ui.painter().rect_filled(
         bg_rect,
         egui::CornerRadius::same(3),
@@ -326,7 +383,8 @@ fn victory_bar(ui: &mut egui::Ui, label: &str, fraction: f32, value_str: &str) {
     );
     let fill_w = (bg_rect.width() * fraction.clamp(0.0, 1.0)).max(0.0);
     let fill_rect = egui::Rect::from_min_size(bg_rect.min, egui::vec2(fill_w, bg_rect.height()));
-    ui.painter().rect_filled(fill_rect, egui::CornerRadius::same(3), bar_color);
+    ui.painter()
+        .rect_filled(fill_rect, egui::CornerRadius::same(3), bar_color);
     ui.add_space(4.0);
 }
 

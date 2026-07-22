@@ -19,10 +19,7 @@ impl Plugin for ControlsHelpPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ControlsHelpOpen>()
             .add_systems(Update, toggle_controls_help.run_if(in_game))
-            .add_systems(
-                EguiPrimaryContextPass,
-                draw_controls_help.run_if(in_game),
-            );
+            .add_systems(EguiPrimaryContextPass, draw_controls_help.run_if(in_game));
     }
 }
 

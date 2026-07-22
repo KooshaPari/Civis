@@ -139,9 +139,7 @@ fn matched_verbs(filter: &str) -> Vec<&'static HolocronVerb> {
     VERBS
         .iter()
         .filter(|v| {
-            fuzzy_match(filter, v.id)
-                || fuzzy_match(filter, v.label)
-                || fuzzy_match(filter, v.hint)
+            fuzzy_match(filter, v.id) || fuzzy_match(filter, v.label) || fuzzy_match(filter, v.hint)
         })
         .collect()
 }
@@ -172,16 +170,8 @@ fn fire_verb(
     panel: &GodPanelState,
     requests: &mut MessageWriter<GodActionRequest>,
 ) {
-    let norm_x = if verb.needs_pos {
-        panel.target_x
-    } else {
-        0.5
-    };
-    let norm_y = if verb.needs_pos {
-        panel.target_y
-    } else {
-        0.5
-    };
+    let norm_x = if verb.needs_pos { panel.target_x } else { 0.5 };
+    let norm_y = if verb.needs_pos { panel.target_y } else { 0.5 };
     let target_faction = if verb.needs_faction {
         panel.target_faction
     } else {
@@ -266,11 +256,9 @@ fn draw_holocron_overlay(
                                         let row = egui::Frame::NONE.fill(bg).show(ui, |ui| {
                                             ui.horizontal(|ui| {
                                                 ui.label(
-                                                    egui::RichText::new(verb.label)
-                                                        .strong()
-                                                        .color(egui::Color32::from_rgb(
-                                                            126, 186, 181,
-                                                        )),
+                                                    egui::RichText::new(verb.label).strong().color(
+                                                        egui::Color32::from_rgb(126, 186, 181),
+                                                    ),
                                                 );
                                                 ui.label(
                                                     egui::RichText::new(verb.id)

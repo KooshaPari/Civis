@@ -49,6 +49,7 @@ add audio (and optionally models / voxel / GI).
 | Tier | `--features` | Gate / recipe | What you get |
 |------|--------------|---------------|--------------|
 | **Minimal** | `bevy,egui` | `just bevy-egui-check` / `shell_attest` | Menus, HUD, in-process sim — **no audio**, heightmap terrain fallback. This is what PR compile gates and `civis-3d-live-smoke` `cargo check` use. Desktop `[[bin]]` targets are **not** built (need `client-bins`). |
+| **Native smoke** | `bevy,egui,client-bins` | `just civis-3d-standalone-smoke` | Builds `civ-standalone`, runs with `CIVIS_SMOKE_FRAMES` (default 5), exits after preflight + N Update frames. Needs a GPU. |
 | **Playable** | `bevy,egui,audio,client-bins` (+ optional `models`) | `just civis-bevy-play` | Release `civ-standalone` with ambient SFX + UI sounds. Add `models` when `assets/models/*.glb` are present (otherwise procedural primitives). |
 | **Full sandbox** | above + optional `voxel`, `voxel_stream`, `gi` | manual `cargo build/run` | `voxel` — volumetric CA terrain + water; `voxel_stream` — camera-driven chunk streaming (implies `voxel`); `gi` — Bevy Solari RT GI (needs DXR / Vulkan RT; degrades to no-op). Heavier compile; not in CI. |
 

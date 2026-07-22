@@ -160,16 +160,13 @@ fn main() {
     #[cfg(feature = "egui")]
     app.add_plugins(civ_bevy_ref::game_laws::GameLawsPlugin);
 
-    // Gameplay HUD: faction leaderboard + victory progress + outcome banner (F9).
-    #[cfg(feature = "egui")]
-    app.add_plugins(civ_bevy_ref::gameplay_hud::GameplayHudPlugin);
+    // Gameplay HUD + live-stream overlays require LiveStreamScene from LiveAttach.
+    // Register them only in server attach mode (see block below).
 
-    // Live-client parity panels (previously only on civ-bevy-window).
+    // Shell overlays that work in both sandbox and live attach.
     #[cfg(feature = "egui")]
     {
         app.add_plugins((
-            civ_bevy_ref::faction_hud::FactionHudPlugin,
-            civ_bevy_ref::world_faction_glyphs::WorldFactionGlyphsPlugin,
             civ_bevy_ref::tutorial::TutorialPlugin,
             civ_bevy_ref::controls_help::ControlsHelpPlugin,
             civ_bevy_ref::perf_hud::PerfHudPlugin,
@@ -212,17 +209,56 @@ fn main() {
 
     if attach_mode == AttachMode::Server {
         app.add_plugins(LiveAttachPlugin);
-        // God panel + local preview effects need LiveBridge from LiveAttach.
+        // Live HUD / god tools need LiveBridge + LiveStreamScene from LiveAttach.
         #[cfg(feature = "egui")]
         {
             app.add_plugins((
+                civ_bevy_ref::gameplay_hud::GameplayHudPlugin,
+                civ_bevy_ref::faction_hud::FactionHudPlugin,
+                civ_bevy_ref::world_faction_glyphs::WorldFactionGlyphsPlugin,
                 civ_bevy_ref::god_panel::GodPanelPlugin,
                 civ_bevy_ref::god_actions::GodActionsPlugin,
             ));
         }
     }
 
+    // Bounded native launch smoke: `CIVIS_SMOKE_FRAMES=N` exits after N Update ticks
+    // (preflight already printed). Used by `just civis-3d-standalone-smoke`.
+    if let Some(frames) = smoke_frames_from_env() {
+        app.insert_resource(SmokeExitAfter { frames })
+            .add_systems(Update, exit_after_smoke_frames);
+    }
+
     app.run();
+}
+
+/// How many Update frames to run before exiting (native smoke).
+#[derive(Resource, Debug, Clone, Copy)]
+struct SmokeExitAfter {
+    frames: u32,
+}
+
+fn smoke_frames_from_env() -> Option<u32> {
+    let raw = std::env::var("CIVIS_SMOKE_FRAMES").ok()?;
+    let n: u32 = raw.trim().parse().ok()?;
+    (n > 0).then_some(n)
+}
+
+fn exit_after_smoke_frames(
+    budget: Res<SmokeExitAfter>,
+    mut frames: Local<u32>,
+) {
+    *frames += 1;
+    if *frames >= budget.frames {
+        eprintln!(
+            "[smoke] civ-standalone exiting after {} Update frame(s)",
+            budget.frames
+        );
+        // The interactive runner tears down the primary Egui context after
+        // AppExit is observed, which can race bevy_egui's multipass output
+        // finalization. Smoke mode only needs a bounded launch assertion.
+        std::process::exit(0);
+    }
 }
 
 #[cfg(feature = "egui")]

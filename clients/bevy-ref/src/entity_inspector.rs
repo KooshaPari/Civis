@@ -26,7 +26,9 @@ impl Plugin for EntityInspectorPlugin {
             .add_systems(
                 Update,
                 (
-                    sync_inspector_from_live_selection,
+                    sync_inspector_from_live_selection
+                        .run_if(resource_exists::<LiveSelection>)
+                        .run_if(resource_exists::<LiveStreamScene>),
                     sync_inspector_from_inspected,
                 ),
             )
@@ -120,10 +122,10 @@ fn live_entity_world_position(
 /// Persistent right-side inspector panel (shown while a selection is active).
 fn draw_entity_inspector_panel(
     mut contexts: EguiContexts,
-    selection: Res<LiveSelection>,
+    selection: Option<Res<LiveSelection>>,
     details: Res<SelectedEntityDetails>,
 ) {
-    let has_live = selection.0.is_some();
+    let has_live = selection.as_ref().and_then(|s| s.0).is_some();
     let has_details = !details.name.is_empty() || !details.entity_type.is_empty();
     if !has_live && !has_details {
         return;

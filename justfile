@@ -183,6 +183,13 @@ civis-3d-bevy-window:
 civis-3d-standalone:
     cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone
 
+# Bounded native launch smoke: build + run civ-standalone for N Update frames
+# (default 5), assert preflight + clean AppExit. Needs a GPU adapter.
+# Override frames: `just civis-3d-standalone-smoke FRAMES=12`
+civis-3d-standalone-smoke FRAMES="5":
+    cargo build -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone
+    powershell -NoProfile -Command "$$env:CIVIS_SMOKE_FRAMES='{{FRAMES}}'; $$env:BEVY_ASSET_ROOT=(Join-Path (Get-Location) 'clients/bevy-ref'); $$exe = if ($$env:CARGO_TARGET_DIR) { Join-Path $$env:CARGO_TARGET_DIR 'debug/civ-standalone.exe' } else { 'target/debug/civ-standalone.exe' }; & $$exe; if ($$LASTEXITCODE -ne 0) { exit $$LASTEXITCODE }"
+
 # Standalone client attached to civ-server (requires server running on :3000).
 civis-3d-standalone-live:
     powershell -Command "$env:CIVIS_ATTACH='server'; cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone"

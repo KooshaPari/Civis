@@ -136,7 +136,9 @@ jobs:
               }
               if (node.__typename === "CheckRun") {
                 if (node.status !== "COMPLETED") {
-                  failures.push(`Check '${name}' is still ${node.status}.`);
+                  // Required checks have their own branch-protection gate. Do
+                  // not turn a normal in-progress snapshot into a false failure.
+                  core.warning(`Check '${name}' is still ${node.status}; deferring to its own gate.`);
                   continue;
                 }
                 if (!["SUCCESS", "SKIPPED", "NEUTRAL"].includes(node.conclusion || "")) {

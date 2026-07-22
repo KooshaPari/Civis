@@ -268,6 +268,8 @@ export function Scene3d() {
     scene.add(tacticGroup);
     const hoverRaycaster = new THREE.Raycaster();
     const hoverPointer = new THREE.Vector2();
+    let hoverFrame = 0;
+    let pendingHoverPoint: { clientX: number; clientY: number } | null = null;
     let hoverTarget: { kind: "civilian" | "building"; index: number; x: number; y: number } | null = null;
 
     const civilianGeometry = createCivilianGeometry();
@@ -489,6 +491,7 @@ export function Scene3d() {
       const civs = snapshot?.civ_pins ?? [];
       while (refs.current.civilians.length < CIVILIAN_POOL_SIZE) {
         const mesh = new THREE.Mesh(civilianGeometry, civilianMaterial);
+        mesh.userData.hoverIndex = refs.current.civilians.length;
         mesh.castShadow = true;
         mesh.receiveShadow = false;
         mesh.visible = false;
@@ -630,6 +633,7 @@ export function Scene3d() {
       const buildings = snapshot?.buildings ?? [];
       while (refs.current.buildings.length < buildings.length) {
         const node = createBuildingNode();
+        node.userData.hoverIndex = refs.current.buildings.length;
         buildingGroup.add(node);
         refs.current.buildings.push(node);
       }
@@ -1061,33 +1065,40 @@ export function Scene3d() {
       );
     };
 
-    const onHoverMove = (event: PointerEvent) => {
+    const processHoverMove = (clientX: number, clientY: number) => {
       if (spawnDrag) return;
       const terrain = refs.current.activeTerrain;
       if (!terrain) return;
       const rect = renderer.domElement.getBoundingClientRect();
       hoverPointer.set(
-        ((event.clientX - rect.left) / rect.width) * 2 - 1,
-        -(((event.clientY - rect.top) / rect.height) * 2 - 1),
+        ((clientX - rect.left) / rect.width) * 2 - 1,
+        -(((clientY - rect.top) / rect.height) * 2 - 1),
       );
       hoverRaycaster.setFromCamera(hoverPointer, camera);
       const civilianHit = hoverRaycaster.intersectObjects(refs.current.civilians, false)[0];
       if (civilianHit) {
-        const index = refs.current.civilians.indexOf(
-          civilianHit.object as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>,
-        );
-        hoverTarget = { kind: "civilian", index, x: event.clientX, y: event.clientY };
+        const index = civilianHit.object.userData.hoverIndex as number;
+        hoverTarget = { kind: "civilian", index, x: clientX, y: clientY };
         return;
       }
       const buildingHit = hoverRaycaster.intersectObjects(refs.current.buildings, false)[0];
       if (buildingHit) {
-        const index = refs.current.buildings.indexOf(
-          buildingHit.object as THREE.Group,
-        );
-        hoverTarget = { kind: "building", index, x: event.clientX, y: event.clientY };
+        const index = buildingHit.object.userData.hoverIndex as number;
+        hoverTarget = { kind: "building", index, x: clientX, y: clientY };
         return;
       }
       hoverTarget = null;
+    };
+
+    const onHoverMove = (event: PointerEvent) => {
+      pendingHoverPoint = { clientX: event.clientX, clientY: event.clientY };
+      if (hoverFrame !== 0) return;
+      hoverFrame = window.requestAnimationFrame(() => {
+        hoverFrame = 0;
+        const point = pendingHoverPoint;
+        pendingHoverPoint = null;
+        if (point) processHoverMove(point.clientX, point.clientY);
+      });
     };
 
     const onDoubleClick = (event: MouseEvent) => {
@@ -1537,6 +1548,11 @@ export function Scene3d() {
       window.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.cancelAnimationFrame(raf);
+      if (hoverFrame !== 0) {
+        window.cancelAnimationFrame(hoverFrame);
+        hoverFrame = 0;
+      }
+      pendingHoverPoint = null;
       controls.dispose();
       terrainGroup.clear();
       territoryGroup.clear();

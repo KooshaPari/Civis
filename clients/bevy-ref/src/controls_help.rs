@@ -67,6 +67,8 @@ fn draw_controls_help(mut contexts: EguiContexts, open: Res<ControlsHelpOpen>) {
                 ("R / F", "Raise / lower"),
                 ("Home", "Reset camera"),
                 ("Scroll / = / -", "Zoom"),
+                ("1\u{2013}4", "Sim speed"),
+                ("Shift+1\u{2013}9", "Tool categories"),
                 ("F1", "Faction HUD"),
                 ("F7", "Emergence dashboard"),
                 ("H", "Replay tutorial"),

@@ -1043,38 +1043,38 @@ fn tool_palette_ui(
         ToolDef {
             icon: "\u{1f446}",
             label: "Select",
-            hotkey: "Q",
+            hotkey: "\u{21e7}1",
             tool: Some(SpawnTool::Select),
         },
         ToolDef {
             icon: "\u{1f9cd}",
             label: "Spawn Civ",
-            hotkey: "W",
+            hotkey: "\u{21e7}2",
             tool: Some(SpawnTool::SpawnCivilian),
         },
         ToolDef {
             icon: "\u{1f3e0}",
             label: "Building",
-            hotkey: "E",
+            hotkey: "\u{21e7}3",
             tool: Some(SpawnTool::SpawnBuilding),
         },
         ToolDef {
             icon: "\u{26f0}",
             label: "Terraform",
-            hotkey: "R",
+            hotkey: "\u{21e7}5",
             tool: Some(SpawnTool::Terraform),
         },
         ToolDef {
             icon: "\u{1f4a5}",
             label: "Destroy",
-            hotkey: "T",
+            hotkey: "\u{21e7}7",
             tool: Some(SpawnTool::Destroy),
         },
         // Weather has no SpawnTool variant yet: present but inert.
         ToolDef {
             icon: "\u{1f327}",
             label: "Weather",
-            hotkey: "Y",
+            hotkey: "-",
             tool: None,
         },
     ];

@@ -336,3 +336,21 @@ fn begin_and_end_player_session_reset_gate_and_overlay() {
     assert!(overlay.outcome.is_none());
     assert!(!overlay.dismissed);
 }
+
+#[test]
+fn crash_dir_avoids_cwd_relative_crashes_when_local_data_present() {
+    let dir = civ_bevy_ref::crash_dir();
+    let text = dir.to_string_lossy();
+    if std::env::var_os("LOCALAPPDATA").is_some() {
+        assert!(
+            text.contains("Civis") && text.contains("crashes"),
+            "expected %LOCALAPPDATA%/Civis/crashes, got {text}"
+        );
+        assert!(dir.is_absolute(), "crash_dir should be absolute on Windows");
+    } else {
+        assert!(
+            text.contains("crashes"),
+            "expected a crashes directory, got {text}"
+        );
+    }
+}

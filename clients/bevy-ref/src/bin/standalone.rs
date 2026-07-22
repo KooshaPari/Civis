@@ -222,19 +222,6 @@ fn main() {
         }
     }
 
-    #[cfg(feature = "egui")]
-    {
-        app.init_state::<civ_bevy_ref::menus::AppState>()
-            .add_systems(
-                Update,
-                (
-                    civ_bevy_ref::menus::consume_menu_commands,
-                    civ_bevy_ref::menus::sync_app_state_with_game_mode,
-                    civ_bevy_ref::menus::advance_worldgen_to_playing,
-                ),
-            );
-    }
-
     app.run();
 }
 

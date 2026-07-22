@@ -11,8 +11,9 @@
   },
   "devDependencies": {
     "oxlint": "latest",
-    "typescript": "latest",
-    "vitepress": "latest"
+    "typescript": "^5.9.3",
+    "vitepress": "^1.6.4",
+    "markdown-it-container": "^4.0.0"
   },
   "packageManager": "bun"
 }

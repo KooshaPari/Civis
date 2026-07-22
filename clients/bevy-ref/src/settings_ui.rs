@@ -38,6 +38,8 @@ use serde::{
 };
 
 use crate::ui_theme;
+/// Canonical persisted GPU backend preference, re-exported for API compatibility.
+pub use crate::graphics_settings::BackendPref as RenderEngine;
 #[cfg(feature = "audio")]
 use bevy_kira_audio::prelude::AudioChannel;
 #[cfg(feature = "audio")]
@@ -313,57 +315,6 @@ impl Default for SettingsTab {
 // ---------------------------------------------------------------------------
 // Sub-setting groups
 // ---------------------------------------------------------------------------
-
-/// AAA-style GPU API / render-engine preference (restart required).
-///
-/// Bevy still talks through `wgpu`; this selects the **native HAL**
-/// (`DX12` / `Vulkan`) searched at boot via `CIV_BEVY_BACKEND`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-pub enum RenderEngine {
-    /// Platform default (DX12 Ultimate on Windows, Vulkan on Linux, Metal on macOS).
-    #[default]
-    Auto,
-    /// DirectX 12 Ultimate feature set when the driver supports it.
-    DirectX12Ultimate,
-    /// Vulkan native HAL.
-    Vulkan,
-}
-
-impl RenderEngine {
-    /// All engines shown in the Graphics combo, AAA menu order.
-    pub const ALL: [RenderEngine; 3] = [Self::Auto, Self::DirectX12Ultimate, Self::Vulkan];
-
-    /// Player-facing combo label.
-    #[must_use]
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Auto => "Auto (recommended)",
-            Self::DirectX12Ultimate => "DirectX 12 Ultimate",
-            Self::Vulkan => "Vulkan",
-        }
-    }
-
-    /// `CIV_BEVY_BACKEND` token, or `None` to leave Auto/platform default.
-    #[must_use]
-    pub fn env_token(self) -> Option<&'static str> {
-        match self {
-            Self::Auto => None,
-            Self::DirectX12Ultimate => Some("dx12"),
-            Self::Vulkan => Some("vulkan"),
-        }
-    }
-
-    /// Apply preference to process env for the next (or current pre-init) boot.
-    pub fn apply_to_env(self) {
-        match self.env_token() {
-            Some(token) => std::env::set_var(crate::native_backend::BACKEND_ENV, token),
-            None => {
-                // Auto: clear forced override so native_backend platform default applies.
-                std::env::remove_var(crate::native_backend::BACKEND_ENV);
-            }
-        }
-    }
-}
 
 /// Graphics / video options.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1436,7 +1387,7 @@ fn graphics_tab(ui: &mut egui::Ui, g: &mut GraphicsSettings) -> bool {
             RenderEngine::Auto => {
                 "Auto → DX12 Ultimate on Windows, Vulkan on Linux, Metal on macOS."
             }
-            RenderEngine::DirectX12Ultimate => {
+            RenderEngine::DX12 => {
                 "DirectX 12 Ultimate — DXR / mesh shaders / DLSS path when the driver supports it."
             }
             RenderEngine::Vulkan => "Vulkan — cross-vendor native HAL; full RT/DLSS parity on NVIDIA.",
@@ -2046,13 +1997,17 @@ mod tests {
     fn render_engine_combo_labels_and_env_tokens_match_aaa_api_picker() {
         assert_eq!(RenderEngine::Auto.label(), "Auto (recommended)");
         assert_eq!(
-            RenderEngine::DirectX12Ultimate.label(),
+            RenderEngine::DX12.label(),
             "DirectX 12 Ultimate"
         );
         assert_eq!(RenderEngine::Vulkan.label(), "Vulkan");
         assert_eq!(RenderEngine::Auto.env_token(), None);
-        assert_eq!(RenderEngine::DirectX12Ultimate.env_token(), Some("dx12"));
+        assert_eq!(RenderEngine::DX12.env_token(), Some("dx12"));
         assert_eq!(RenderEngine::Vulkan.env_token(), Some("vulkan"));
+        assert_eq!(
+            ron::from_str::<RenderEngine>("DirectX12Ultimate").expect("legacy backend"),
+            RenderEngine::DX12
+        );
         assert_eq!(
             GraphicsSettings::default().render_engine,
             RenderEngine::Auto

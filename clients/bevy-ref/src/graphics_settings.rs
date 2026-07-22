@@ -69,6 +69,7 @@ use bevy::post_process::motion_blur::MotionBlur;
 use bevy::prelude::*;
 use bevy::render::camera::TemporalJitter;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
+use serde::{Deserialize, Serialize};
 
 use crate::gpu_features::GpuCapabilities;
 use crate::ui_theme;
@@ -80,21 +81,22 @@ use crate::ui_theme;
 /// GPU backend preference.  `Auto` lets `native_backend.rs` decide (default
 /// DX12 on Windows, Metal on macOS, Vulkan on Linux).  Override at boot via
 /// `CIV_BEVY_BACKEND` env — the app must restart for this to take effect.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum BackendPref {
     /// Let the platform decide (see `native_backend.rs`).
     #[default]
     Auto,
     /// Force DX12 (Windows-only; ignored on other OS).
+    #[serde(alias = "DirectX12Ultimate")]
     DX12,
     /// Force Vulkan.
     Vulkan,
 }
 
 impl BackendPref {
-    const ALL: [BackendPref; 3] = [Self::Auto, Self::DX12, Self::Vulkan];
+    pub const ALL: [BackendPref; 3] = [Self::Auto, Self::DX12, Self::Vulkan];
 
-    fn label(self) -> &'static str {
+    pub fn label(self) -> &'static str {
         match self {
             Self::Auto => "Auto (recommended)",
             Self::DX12 => "DirectX 12 Ultimate",
@@ -108,6 +110,14 @@ impl BackendPref {
             Self::Auto => None,
             Self::DX12 => Some("dx12"),
             Self::Vulkan => Some("vulkan"),
+        }
+    }
+
+    /// Apply the persisted backend choice before Bevy performs adapter discovery.
+    pub fn apply_to_env(self) {
+        match self.env_token() {
+            Some(token) => std::env::set_var(crate::native_backend::BACKEND_ENV, token),
+            None => std::env::remove_var(crate::native_backend::BACKEND_ENV),
         }
     }
 }
@@ -558,18 +568,13 @@ impl GfxSettings {
 #[must_use]
 pub fn gfx_from_game_settings(game: &crate::settings_ui::GameSettings) -> GfxSettings {
     use crate::settings_ui::{
-        AntiAliasing, QualityPreset as GameQuality, RenderEngine, ResolutionPreset, ShadowQuality,
-        WindowMode,
+        AntiAliasing, QualityPreset as GameQuality, ResolutionPreset, ShadowQuality, WindowMode,
     };
 
     let g = &game.graphics;
     let d = &game.display;
 
-    let backend = match g.render_engine {
-        RenderEngine::Auto => BackendPref::Auto,
-        RenderEngine::DirectX12Ultimate => BackendPref::DX12,
-        RenderEngine::Vulkan => BackendPref::Vulkan,
-    };
+    let backend = g.render_engine;
     let present_mode = if g.vsync {
         PresentMode::Vsync
     } else {

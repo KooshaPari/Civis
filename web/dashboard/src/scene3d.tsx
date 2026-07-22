@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 // LOS visibility radius (in world units) for each unit when fog-of-war is active
 const LOS_RADIUS = 14;
@@ -115,6 +115,7 @@ type SceneRefs = {
 
 export function Scene3d() {
   const mountRef = useRef<HTMLDivElement | null>(null);
+  const [terrainError, setTerrainError] = useState<string | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const { state, dispatch } = useDashboardStore();
@@ -1524,19 +1525,26 @@ export function Scene3d() {
     };
 
     const initialize = async () => {
-      const terrain = stateRef.current.terrain ?? (await terrainLoader());
-      if (!stateRef.current.terrain) {
-        dispatch({ type: "set_terrain", terrain });
+      try {
+        const terrain = stateRef.current.terrain ?? (await terrainLoader());
+        if (!stateRef.current.terrain) {
+          dispatch({ type: "set_terrain", terrain });
+        }
+        applyTerrain(terrain);
+        updateCivilians();
+        updateMilitary();
+        updateFactions();
+        updateBuildings();
+        updateRoads();
+        updateTradeRoutes();
+        applyWeather();
+        setTerrainError(null);
+        animate();
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Unknown terrain load failure";
+        setTerrainError(`Terrain could not be loaded: ${message}`);
       }
-      applyTerrain(terrain);
-      updateCivilians();
-      updateMilitary();
-      updateFactions();
-      updateBuildings();
-      updateRoads();
-      updateTradeRoutes();
-      applyWeather();
-      animate();
     };
 
     void initialize();
@@ -1674,7 +1682,16 @@ export function Scene3d() {
       ref={mountRef}
       className="scene3d"
       aria-label="Three.js heightmap scene"
-    />
+    >
+      {terrainError ? (
+        <div role="alert" aria-live="assertive" className="scene3d-error">
+          <p>{terrainError}</p>
+          <button type="button" onClick={() => window.location.reload()}>
+            Retry terrain
+          </button>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -2273,28 +2290,47 @@ function interpolateCivPin(refs: SceneRefs, index: number, now: number) {
 }
 
 async function terrainLoader(): Promise<Terrain> {
-  const cachedEtag = localStorage.getItem("civis-terrain-etag");
-  const headers: HeadersInit = {};
-  if (cachedEtag) {
-    headers["If-None-Match"] = cachedEtag;
-  }
-  const response = await fetch("/terrain", { headers });
-  if (response.status === 304 && cachedEtag) {
-    const cachedBody = localStorage.getItem("civis-terrain-body");
-    if (cachedBody) {
-      return JSON.parse(cachedBody) as Terrain;
+  let retryUnconditionally = false;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const cachedEtag = retryUnconditionally
+      ? null
+      : localStorage.getItem("civis-terrain-etag");
+    const headers: HeadersInit = {};
+    if (cachedEtag) headers["If-None-Match"] = cachedEtag;
+    const response = await fetch("/terrain", { headers });
+    if (response.status === 304 && cachedEtag) {
+      const cachedBody = localStorage.getItem("civis-terrain-body");
+      if (cachedBody) {
+        try {
+          return JSON.parse(cachedBody) as Terrain;
+        } catch {
+          localStorage.removeItem("civis-terrain-body");
+        }
+      }
+      localStorage.removeItem("civis-terrain-etag");
+      retryUnconditionally = true;
+      continue;
     }
+    if (!response.ok) throw new Error(`GET /terrain failed with ${response.status}`);
+    const body = await response.text();
+    let terrain: Terrain;
+    try {
+      terrain = JSON.parse(body) as Terrain;
+    } catch (error) {
+      throw new Error(
+        `GET /terrain returned invalid JSON: ${
+          error instanceof Error ? error.message : "parse failure"
+        }`,
+      );
+    }
+    const etag = response.headers.get("ETag");
+    if (etag) {
+      localStorage.setItem("civis-terrain-etag", etag);
+      localStorage.setItem("civis-terrain-body", body);
+    }
+    return terrain;
   }
-  if (!response.ok) {
-    throw new Error(`GET /terrain failed with ${response.status}`);
-  }
-  const etag = response.headers.get("ETag");
-  const body = await response.text();
-  if (etag) {
-    localStorage.setItem("civis-terrain-etag", etag);
-    localStorage.setItem("civis-terrain-body", body);
-  }
-  return JSON.parse(body) as Terrain;
+  throw new Error("GET /terrain returned an unusable cached response");
 }
 
 function terrainHeightAt(terrain: Terrain, x: number, y: number) {

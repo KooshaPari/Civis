@@ -56,6 +56,7 @@ const JOB_COLORS: Record<NonNullable<CivPin["job"]>, number> = {
 const CIVILIAN_POOL_SIZE = 256;
 const TERRAIN_HEIGHT_SCALE = 22;
 const TERRAIN_WATER_LEVEL = TERRAIN_HEIGHT_SCALE * 0.38;
+const TERRAIN_COLOR_UPDATE_INTERVAL_MS = 33;
 
 type SceneRefs = {
   terrainMesh: THREE.Mesh<
@@ -89,6 +90,8 @@ type SceneRefs = {
   currentTerrainSize: number;
   terrainWorldSize: number;
   terrainBaseColors: Float32Array | null;
+  terrainColorLastUpdateAt: number;
+  terrainColorStateKey: string;
   terrainSeason: string;
   terrainWeather: Snapshot["weather"] | null;
   terrainFeatureLabels: {
@@ -141,6 +144,8 @@ export function Scene3d() {
     currentTerrainSize: 0,
     terrainWorldSize: 0,
     terrainBaseColors: null,
+    terrainColorLastUpdateAt: -Infinity,
+    terrainColorStateKey: "",
     terrainSeason: "",
     terrainWeather: null,
     terrainFeatureLabels: { mountain: null, lake: null, forest: null },
@@ -371,6 +376,8 @@ export function Scene3d() {
       }
       geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
       refs.current.terrainBaseColors = colors.slice();
+      refs.current.terrainColorLastUpdateAt = -Infinity;
+      refs.current.terrainColorStateKey = "";
       geometry.computeVertexNormals();
       const normalAttr = geometry.getAttribute("normal") as THREE.BufferAttribute;
       for (let i = 0; i < normalAttr.count; i += 1) {
@@ -2762,17 +2769,30 @@ function animateDecorations(refs: SceneRefs, terrain: Terrain, now: number) {
   const terrainMesh = refs.terrainMesh;
   const baseColors = refs.terrainBaseColors;
   if (terrainMesh && baseColors) {
+    const weather = refs.terrainWeather;
+    const season = refs.terrainSeason || "Summer";
+    const colorStateKey = `${season}:${weather?.precipitation ?? "none"}`;
+    // Terrain color sway is visual polish, not simulation state. Cap it at 30Hz
+    // so a 60/120Hz render loop does not rewrite the full terrain buffer every RAF.
+    if (
+      colorStateKey === refs.terrainColorStateKey &&
+      now - refs.terrainColorLastUpdateAt < TERRAIN_COLOR_UPDATE_INTERVAL_MS
+    ) {
+      return;
+    }
+    refs.terrainColorStateKey = colorStateKey;
+    refs.terrainColorLastUpdateAt = now;
     const colorAttr = terrainMesh.geometry.getAttribute(
       "color",
     ) as THREE.BufferAttribute;
-    const season = refs.terrainSeason || "Summer";
     const seasonBlend = terrainSeasonBlend(season);
-    const weather = refs.terrainWeather;
     const positions = terrainMesh.geometry.getAttribute(
       "position",
     ) as THREE.BufferAttribute;
     const base = new THREE.Color();
     const tint = new THREE.Color(seasonBlend.tint);
+    const snowTint = new THREE.Color(0xf2f6fb);
+    const values = colorAttr.array as Float32Array;
     for (let i = 0; i < colorAttr.count; i += 1) {
       const biome = terrain.biomes[i];
       base.setRGB(
@@ -2784,19 +2804,20 @@ function animateDecorations(refs: SceneRefs, terrain: Terrain, now: number) {
       const z = positions.getZ(i);
       const sway = 0.04 * Math.sin(time * 1.2 + x * 0.25 + z * 0.17);
       if (biome === "grass" || biome === "forest") {
-        const seasonal = base.clone().lerp(tint, seasonBlend.amount);
+        const seasonal = base.lerp(tint, seasonBlend.amount);
         if (weather?.precipitation === "snow") {
-          seasonal.lerp(new THREE.Color(0xf2f6fb), 0.32);
+          seasonal.lerp(snowTint, 0.32);
         }
         seasonal.offsetHSL(0, 0, sway * 0.12);
-        colorAttr.setXYZ(i, seasonal.r, seasonal.g, seasonal.b);
+        const offset = i * 3;
+        values[offset] = seasonal.r;
+        values[offset + 1] = seasonal.g;
+        values[offset + 2] = seasonal.b;
       } else {
-        colorAttr.setXYZ(
-          i,
-          clamp01(base.r + sway * 0.05),
-          clamp01(base.g + sway * 0.05),
-          clamp01(base.b + sway * 0.05),
-        );
+        const offset = i * 3;
+        values[offset] = clamp01(base.r + sway * 0.05);
+        values[offset + 1] = clamp01(base.g + sway * 0.05);
+        values[offset + 2] = clamp01(base.b + sway * 0.05);
       }
     }
     colorAttr.needsUpdate = true;

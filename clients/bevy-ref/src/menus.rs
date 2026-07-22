@@ -176,27 +176,6 @@ pub struct MainMenuTitleAssets {
     pub wordmark: Option<Handle<Image>>,
 }
 
-/// Transient state for the settings window (no persistence yet).
-#[derive(Resource, Debug)]
-pub struct SettingsState {
-    /// 0 = Low, 1 = Medium, 2 = High, 3 = Ultra
-    pub graphics_quality: usize,
-    /// 0.0 – 1.0
-    pub master_volume: f32,
-    /// Tick speed multiplier.
-    pub sim_speed: u32,
-}
-
-impl Default for SettingsState {
-    fn default() -> Self {
-        Self {
-            graphics_quality: 2,
-            master_volume: 0.8,
-            sim_speed: 1,
-        }
-    }
-}
-
 /// Bevy plugin: pause overlay, era banners, settings window.
 pub struct MenusPlugin;
 
@@ -206,7 +185,6 @@ impl Plugin for MenusPlugin {
             .init_resource::<EraBanner>()
             .init_resource::<SettingsOpen>()
             .init_resource::<WorldSetupParams>()
-            .init_resource::<SettingsState>()
             .init_resource::<MenuCommand>()
             .init_resource::<MainMenuSaves>()
             .init_resource::<WorldGenBoot>()

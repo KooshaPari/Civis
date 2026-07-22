@@ -128,7 +128,7 @@ cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone
 | `?` | Controls cheat sheet |
 | Pause overlay **Resume** | Dismiss overlay and restore prior sim speed |
 | HUD pause / `1`–`4` | Speed chips set `GameSpeed` directly (sim pause without overlay) |
-| Settings (pause menu) | Graphics quality, volume, sim speed stubs |
+| Settings (pause menu) | Graphics / audio / controls (persisted `settings.ron`); some display flags need restart |
 | **L** | Toggle scrollable **Event Log** (egui); stacked toasts bottom-right (~8s) |
 | `F1` | Toggle faction HUD |
 | Live attach (`CIVIS_ATTACH=server`) | Toasts on WebSocket `connected` / `reconnecting` / `disconnected` (`EventKind::System`) |

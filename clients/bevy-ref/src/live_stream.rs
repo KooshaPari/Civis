@@ -855,10 +855,10 @@ pub fn apply_voxel_delta_frame(
     material_assets: &mut Assets<StandardMaterial>,
     culling: StreamCulling,
     debug: &DebugRender,
-    delta: VoxelDeltaFrame,
+    delta: &VoxelDeltaFrame,
     wireframe_line_color: Option<Color>,
 ) {
-    for chunk in delta.deltas {
+    for chunk in &delta.deltas {
         let chunk_id = chunk.event.chunk_id;
         if chunk.voxels.len() == LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE {
             scene.chunk_voxels.insert(chunk_id, chunk.voxels.clone());
@@ -1567,7 +1567,7 @@ mod tests {
             &mut material_assets,
             culling,
             &DebugRender::default(),
-            delta,
+            &delta,
             None,
         );
 

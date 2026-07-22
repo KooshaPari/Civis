@@ -4740,13 +4740,7 @@ impl Simulation {
         self.household_bands
             .get(&household_id)
             .copied()
-            .and_then(|b| {
-                if self.household_settlement.get(&household_id) == Some(&settlement_id) {
-                    Some(b)
-                } else {
-                    None
-                }
-            })
+            .filter(|_| self.household_settlement.get(&household_id) == Some(&settlement_id))
     }
 
     /// Set the Gini coefficient for a settlement's wealth distribution. The

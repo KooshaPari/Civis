@@ -191,11 +191,17 @@ impl WsClient {
     /// Drain all currently available frames without blocking the main thread.
     #[must_use]
     pub fn poll(&self) -> Vec<Frame3d> {
-        let mut frames = Vec::new();
-        while let Ok(frame) = self.frame_rx.try_recv() {
-            frames.push(frame);
-        }
+        let mut frames = Vec::with_capacity(self.frame_rx.len());
+        self.poll_into(&mut frames);
         frames
+    }
+
+    /// Drain all currently available frames into caller-owned storage.
+    ///
+    /// Render loops should reuse the destination across updates to avoid a
+    /// per-frame allocation while keeping the channel non-blocking.
+    pub fn poll_into(&self, frames: &mut Vec<Frame3d>) {
+        drain_into(&self.frame_rx, frames);
     }
 
     #[must_use]
@@ -247,6 +253,11 @@ impl WsClient {
         .to_string();
         let _ = self.cmd_tx.send(msg);
     }
+}
+
+fn drain_into<T>(receiver: &crossbeam_channel::Receiver<T>, items: &mut Vec<T>) {
+    items.clear();
+    items.extend(receiver.try_iter());
 }
 
 impl Clone for WsClient {
@@ -624,6 +635,23 @@ mod tests {
         assert_eq!(backoff.next_delay(), Duration::from_secs(16));
         assert_eq!(backoff.next_delay(), Duration::from_secs(30));
         assert_eq!(backoff.next_delay(), Duration::from_secs(30));
+    }
+
+    #[test]
+    fn drain_into_reuses_capacity_across_bursts() {
+        let (sender, receiver) = crossbeam_channel::unbounded();
+        let mut items = Vec::with_capacity(8);
+        let capacity = items.capacity();
+
+        sender.send(1_u8).expect("first item");
+        sender.send(2_u8).expect("second item");
+        drain_into(&receiver, &mut items);
+        assert_eq!(items, vec![1, 2]);
+        assert_eq!(items.capacity(), capacity);
+
+        drain_into(&receiver, &mut items);
+        assert!(items.is_empty());
+        assert_eq!(items.capacity(), capacity);
     }
 
     #[test]

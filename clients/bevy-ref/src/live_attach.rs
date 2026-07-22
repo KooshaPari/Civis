@@ -82,12 +82,17 @@ struct LastConnectionToastState(Option<WsConnectionState>);
 fn sync_live_hud_connection(
     attach: Res<AttachMode>,
     bridge: Res<LiveAttachBridge>,
+    mut state: ResMut<LiveAttachState>,
     mut hud: ResMut<LiveHudSnapshot>,
 ) {
     if *attach != AttachMode::Server {
         return;
     }
-    hud.connection = bridge.client.latest_connection_state();
+    let connection = bridge.client.latest_connection_state();
+    let connected = connection_is_live(connection);
+    state.connected = connected;
+    hud.connected = connected;
+    hud.connection = connection;
 }
 
 fn poll_live_meta(
@@ -268,4 +273,15 @@ mod tests {
         assert!(is_server_attach_mode(AttachMode::Server));
         assert!(!is_server_attach_mode(AttachMode::Standalone));
     }
+
+    #[test]
+    fn connection_indicator_tracks_transport_state() {
+        assert!(connection_is_live(crate::WsConnectionState::Connected));
+        assert!(!connection_is_live(crate::WsConnectionState::Reconnecting));
+        assert!(!connection_is_live(crate::WsConnectionState::Disconnected));
+    }
+}
+
+fn connection_is_live(state: crate::WsConnectionState) -> bool {
+    state == crate::WsConnectionState::Connected
 }

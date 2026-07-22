@@ -60,6 +60,13 @@ export default defineConfig({
         index: path.resolve(__dirname, "index.html"),
         status: path.resolve(__dirname, "status.html"),
       },
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules/@babylonjs/")) return "babylon-vendor";
+          if (id.includes("node_modules/three/")) return "three-vendor";
+          return undefined;
+        },
+      },
     },
   },
 });

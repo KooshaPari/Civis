@@ -312,6 +312,7 @@ pub fn consume_menu_commands(
             });
             commands.insert_resource(PlayerFactionId(params.player_faction));
             if let Some(bridge) = bridge.as_ref() {
+                bridge.client.clear_outcomes();
                 let preset = WORLDGEN_PRESETS
                     .get(params.climate_preset % WORLDGEN_PRESETS.len())
                     .copied()
@@ -334,6 +335,7 @@ pub fn consume_menu_commands(
                 clear_live_stream_scene_in_world(world);
             });
             if let Some(bridge) = bridge.as_ref() {
+                bridge.client.clear_outcomes();
                 let slot_name = saves
                     .preferred_slot
                     .as_deref()

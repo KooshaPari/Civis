@@ -166,6 +166,11 @@ impl WsClient {
         latest
     }
 
+    /// Discard outcomes received before a new player session begins.
+    pub fn clear_outcomes(&self) {
+        drain_outcomes(&self.outcome_rx);
+    }
+
     /// Drain save-list responses from `save.list` (id=2099) RPC replies.
     #[must_use]
     pub fn poll_save_list(&self) -> Vec<SaveListEntry> {
@@ -256,6 +261,10 @@ impl WsClient {
 fn drain_into<T>(receiver: &crossbeam_channel::Receiver<T>, items: &mut Vec<T>) {
     items.clear();
     items.extend(receiver.try_iter());
+}
+
+fn drain_outcomes(rx: &crossbeam_channel::Receiver<OutcomeHudData>) {
+    while rx.try_recv().is_ok() {}
 }
 
 impl Clone for WsClient {
@@ -681,5 +690,17 @@ mod tests {
     fn parse_scene_reset_notification_ignores_rpc_responses() {
         let text = r#"{"jsonrpc":"2.0","id":7,"result":{"tick":42}}"#;
         assert_eq!(parse_scene_reset_notification(text), None);
+    }
+
+    #[test]
+    fn drain_outcomes_removes_queued_session_results() {
+        let (tx, rx) = crossbeam_channel::unbounded();
+        tx.send(OutcomeHudData {
+            tag: "victory".to_string(),
+            ..Default::default()
+        })
+        .expect("queue outcome");
+        drain_outcomes(&rx);
+        assert!(rx.try_recv().is_err());
     }
 }

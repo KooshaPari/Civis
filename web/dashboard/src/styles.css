@@ -575,7 +575,31 @@ h1 { font-size: clamp(1.8rem, 3vw, 3.2rem); line-height: 0.95; }
   width: 100%;
   height: 100%;
   display: block;
+  position: relative;
   background: radial-gradient(circle at top, var(--scene-gradient-top), var(--scene-gradient-bottom));
+}
+.scene3d-error {
+  position: absolute;
+  inset: 1rem;
+  z-index: 5;
+  display: grid;
+  place-content: center;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  color: var(--text);
+  text-align: center;
+  background: rgba(5, 10, 18, 0.88);
+  border: 1px solid rgba(255, 120, 120, 0.45);
+  border-radius: 0.75rem;
+}
+.scene3d-error button {
+  justify-self: center;
+  padding: 0.5rem 0.9rem;
+  color: var(--text);
+  background: rgba(80, 200, 240, 0.16);
+  border: 1px solid rgba(80, 200, 240, 0.5);
+  border-radius: 0.4rem;
+  cursor: pointer;
 }
 .scene-label-layer {
   position: absolute;

@@ -25,7 +25,9 @@ pub struct WindowPolicy;
 
 /// Ring distance calculation.
 pub fn ring_distance(_a: i32, _b: i32, _c: i32) -> u32 {
-    0
+    _a.unsigned_abs()
+        .max(_b.unsigned_abs())
+        .max(_c.unsigned_abs())
 }
 
 /// IO submodule.
@@ -64,7 +66,7 @@ pub mod plan {
 
     /// Prefetch set for chunks.
     pub fn prefetch_set() -> Vec<(i32, i32, i32)> {
-        Vec::new()
+        vec![(0, 0, 0)]
     }
 }
 

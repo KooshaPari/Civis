@@ -300,9 +300,7 @@ play-trace:
 # terrain fallback + sky HDR + UI panel textures) so the root must be the
 # bevy-ref crate.
 play-window:
-    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}" \
-        BEVY_ASSET_ROOT="${BEVY_ASSET_ROOT:-$(pwd)/clients/bevy-ref}" \
-        cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-bevy-window
+    {{ if os_family() == "windows" { "$env:CARGO_TARGET_DIR = if ($env:CARGO_TARGET_DIR) { $env:CARGO_TARGET_DIR } else { \"$(Get-Location)\\target\" }; $env:BEVY_ASSET_ROOT = if ($env:BEVY_ASSET_ROOT) { $env:BEVY_ASSET_ROOT } else { \"$(Get-Location)\\clients\\bevy-ref\" }; cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-bevy-window" } else { "CARGO_TARGET_DIR=\"${CARGO_TARGET_DIR:-$(pwd)/target}\" BEVY_ASSET_ROOT=\"${BEVY_ASSET_ROOT:-$(pwd)/clients/bevy-ref}\" cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-bevy-window" } }}
 
 # Kill a running civ-standalone game process.
 stop:

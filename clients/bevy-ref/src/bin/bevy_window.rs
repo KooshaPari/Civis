@@ -244,7 +244,6 @@ fn main() {
         GameUiPlugin,
     ));
     #[cfg(feature = "egui")]
-    app.init_state::<AppState>();
     app.init_resource::<LiveStreamScene>()
         .init_resource::<civ_bevy_ref::AttachMode>()
         .init_resource::<LiveSceneFocus>()
@@ -261,15 +260,7 @@ fn main() {
         .add_systems(Startup, (setup, setup_atmosphere));
     #[cfg(feature = "egui")]
     {
-        app.add_systems(
-            Update,
-            (
-                civ_bevy_ref::menus::consume_menu_commands,
-                update_mainmenu_saves,
-                civ_bevy_ref::menus::sync_app_state_with_game_mode,
-                civ_bevy_ref::menus::advance_worldgen_to_playing,
-            ),
-        );
+        app.add_systems(Update, update_mainmenu_saves);
         app.add_systems(
             Update,
             (

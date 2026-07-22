@@ -159,6 +159,9 @@ const WORLD_SIZE_LABELS: [&str; 4] = ["Tiny", "Standard", "Large", "Huge"];
 pub struct WorldGenBoot {
     /// Elapsed seconds while in [`AppState::WorldGen`].
     pub elapsed: f32,
+    /// Whether the previous menu command queued a scene clear that must apply
+    /// before an existing scene can satisfy the readiness check.
+    pub scene_clear_pending: bool,
 }
 
 /// Rasterised shell artwork (PNG only; vector sources are documented in PIPELINE.md).
@@ -181,7 +184,8 @@ pub struct MenusPlugin;
 
 impl Plugin for MenusPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<GameUiMode>()
+        app.init_state::<AppState>()
+            .init_resource::<GameUiMode>()
             .init_resource::<EraBanner>()
             .init_resource::<SettingsOpen>()
             .init_resource::<WorldSetupParams>()
@@ -194,6 +198,15 @@ impl Plugin for MenusPlugin {
             .init_resource::<MainMenuTitleAssets>()
             .add_systems(Startup, load_main_menu_title_assets)
             .add_systems(Update, (toggle_pause, tick_era_banner))
+            .add_systems(
+                Update,
+                (
+                    sync_app_state_with_game_mode,
+                    consume_menu_commands,
+                    advance_worldgen_to_playing,
+                )
+                    .chain(),
+            )
             .add_systems(
                 EguiPrimaryContextPass,
                 (
@@ -236,6 +249,11 @@ pub fn advance_worldgen_to_playing(
     };
     if *state.get() != AppState::WorldGen {
         boot.elapsed = 0.0;
+        return;
+    }
+
+    if boot.scene_clear_pending {
+        boot.scene_clear_pending = false;
         return;
     }
 
@@ -304,6 +322,7 @@ pub fn consume_menu_commands(
                 begin_player_session(&mut gate, &mut overlay);
             }
             boot.elapsed = 0.0;
+            boot.scene_clear_pending = true;
             next_state.set(AppState::WorldGen);
         }
         MainMenuCommand::CancelWorldSetup => {
@@ -338,6 +357,7 @@ pub fn consume_menu_commands(
                 begin_player_session(&mut gate, &mut overlay);
             }
             boot.elapsed = 0.0;
+            boot.scene_clear_pending = true;
             next_state.set(AppState::WorldGen);
         }
         MainMenuCommand::LoadGame => {
@@ -351,6 +371,7 @@ pub fn consume_menu_commands(
                 begin_player_session(&mut gate, &mut overlay);
             }
             boot.elapsed = 0.0;
+            boot.scene_clear_pending = true;
             next_state.set(AppState::WorldGen);
         }
         MainMenuCommand::Resume => {

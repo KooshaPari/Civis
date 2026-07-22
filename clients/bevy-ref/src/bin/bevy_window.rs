@@ -239,6 +239,8 @@ fn main() {
         civ_bevy_ref::AgentNeedsPlugin,
         DiplomacyUiPlugin,
         GodPanelPlugin,
+        civ_bevy_ref::god_actions::GodActionsPlugin,
+        civ_bevy_ref::holocron_panel::HolocronPanelPlugin,
         civ_bevy_ref::outcome_overlay::OutcomeOverlayPlugin,
         MenusPlugin,
         GameUiPlugin,

@@ -84,14 +84,40 @@ const TOOL_ICON_PATHS: &[(&str, &str)] = &[
     ("laws", "icons/tool_laws.png"),
 ];
 
-/// Handle keyboard category-hotkey shortcuts (number-row / hotbar bindings).
+/// Handle keyboard category-hotkey shortcuts (Shift+digit `⇧1`–`⇧9`).
 ///
-/// Currently a no-op stub — the full mapping from key → [`ActiveSubTool`] will
-/// be wired in the next tool-taxonomy pass. The system exists so `GameUiPlugin`
-/// can register it in `Update` without conditional compilation.
-pub fn handle_category_hotkeys(_keys: Res<ButtonInput<KeyCode>>, _active: ResMut<ActiveSubTool>) {
-    // TODO(tool-taxonomy-P2): map digit-row / hotbar bindings to SubTool categories.
-    // Do not reclaim F1 (faction HUD) or Q/E (camera orbit) — those are shell defaults.
+/// Bare `1`–`4` remain sim-speed; F1 stays faction HUD; Q/E/R/F stay camera.
+pub fn handle_category_hotkeys(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut active: ResMut<ActiveSubTool>,
+    mut coarse: ResMut<ActiveTool>,
+) {
+    let shift = keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
+    if !shift {
+        return;
+    }
+    const DIGITS: [KeyCode; 9] = [
+        KeyCode::Digit1,
+        KeyCode::Digit2,
+        KeyCode::Digit3,
+        KeyCode::Digit4,
+        KeyCode::Digit5,
+        KeyCode::Digit6,
+        KeyCode::Digit7,
+        KeyCode::Digit8,
+        KeyCode::Digit9,
+    ];
+    for (index, key) in DIGITS.iter().enumerate() {
+        if !keys.just_pressed(*key) {
+            continue;
+        }
+        if active.select_category(index) {
+            if let Some(tool) = active.current.spawn_tool() {
+                coarse.tool = tool;
+            }
+        }
+        break;
+    }
 }
 
 /// Lightweight sim snapshot consumed by the HUD.
@@ -533,6 +559,11 @@ fn handle_speed_shortcuts(
     settings: Option<Res<GameSettings>>,
     mut speed: ResMut<GameSpeed>,
 ) {
+    // Shift+digit is reserved for tool-category hotkeys.
+    if keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight) {
+        return;
+    }
+
     let binding_just_pressed =
         |action: &str, fallback: KeyCode, settings: &Option<Res<GameSettings>>| -> bool {
             settings

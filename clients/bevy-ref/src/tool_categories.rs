@@ -293,67 +293,69 @@ impl Category {
 use SubTool::*;
 
 /// The full category taxonomy. Order = left-to-right toolbar order.
+/// Hotkeys are Shift+digit (`⇧1`–`⇧9`) so bare `1`–`4` stay sim-speed and
+/// Q/E/R/F stay camera.
 pub const CATEGORIES: &[Category] = &[
     Category {
         icon: "\u{1f446}",
         label: "Select",
-        hotkey: "Q",
+        hotkey: "\u{21e7}1",
         accent: ui_theme::ACCENT,
         subtools: &[Select, Inspect],
     },
     Category {
         icon: "\u{1f9cd}",
         label: "Life",
-        hotkey: "E",
+        hotkey: "\u{21e7}2",
         accent: ui_theme::GREEN,
         subtools: &[SpawnOrganism, SpawnHerd, Bless, Curse, Disease, Kill],
     },
     Category {
         icon: "\u{1f3db}",
         label: "Structure",
-        hotkey: "R",
+        hotkey: "\u{21e7}3",
         accent: ui_theme::GOLD,
         subtools: &[House, Farm, Workshop, Market, Wall, Tower, Monument],
     },
     Category {
         icon: "\u{1f6e3}",
         label: "Infra",
-        hotkey: "C",
+        hotkey: "\u{21e7}4",
         accent: ui_theme::ACCENT,
         subtools: &[Road, Trail, Highway, Bridge, Canal],
     },
     Category {
         icon: "\u{26f0}",
         label: "Terraform",
-        hotkey: "T",
+        hotkey: "\u{21e7}5",
         accent: ui_theme::GOLD,
         subtools: &[Raise, Lower, Flatten, PaintBiome],
     },
     Category {
         icon: "\u{1faa8}",
         label: "Material",
-        hotkey: "A",
+        hotkey: "\u{21e7}6",
         accent: ui_theme::ACCENT,
         subtools: &[Water, Sand, Dirt, Stone, Lava, Gas],
     },
     Category {
         icon: "\u{1f4a5}",
         label: "Disaster",
-        hotkey: "X",
+        hotkey: "\u{21e7}7",
         accent: ui_theme::RED,
         subtools: &[Meteor, Flood, Quake, Storm, Wildfire, Plague],
     },
     Category {
         icon: "\u{1f91d}",
         label: "Diplomacy",
-        hotkey: "D",
+        hotkey: "\u{21e7}8",
         accent: ui_theme::VIOLET,
         subtools: &[Alliance, War, Trade],
     },
     Category {
         icon: "\u{1f4dc}",
         label: "Policy",
-        hotkey: "F",
+        hotkey: "\u{21e7}9",
         accent: ui_theme::VIOLET,
         subtools: &[Tax, Edict, Religion],
     },
@@ -388,6 +390,20 @@ impl ActiveSubTool {
         CATEGORIES
             .iter()
             .position(|c| c.subtools.contains(&self.current))
+    }
+
+    /// Open a toolbar category and arm its first active-capable sub-tool.
+    pub fn select_category(&mut self, index: usize) -> bool {
+        let Some(cat) = CATEGORIES.get(index) else {
+            return false;
+        };
+        let Some(&first) = cat.subtools.iter().find(|st| st.is_active_capable()) else {
+            self.open_category = Some(index);
+            return false;
+        };
+        self.current = first;
+        self.open_category = Some(index);
+        true
     }
 }
 
@@ -478,5 +494,23 @@ mod tests {
     fn default_subtool_is_select() {
         assert_eq!(ActiveSubTool::default().current, SubTool::Select);
         assert!(ActiveSubTool::default().open_category.is_none());
+    }
+
+    #[test]
+    fn select_category_arms_first_capable_leaf() {
+        let mut st = ActiveSubTool::default();
+        assert!(st.select_category(0));
+        assert_eq!(st.current, SubTool::Select);
+        assert_eq!(st.open_category, Some(0));
+        assert!(st.select_category(2));
+        assert_eq!(st.current, SubTool::House);
+        assert_eq!(CATEGORIES[2].hotkey, "\u{21e7}3");
+    }
+
+    #[test]
+    fn category_hotkeys_are_shift_digit_row() {
+        for (i, cat) in CATEGORIES.iter().enumerate() {
+            assert_eq!(cat.hotkey, format!("\u{21e7}{}", i + 1));
+        }
     }
 }

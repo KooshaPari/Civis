@@ -1,16 +1,24 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "2a0d7d2286369a0a117e60a8aae8d16d168cd2db",
-  "created_at": "2026-07-22T08:31:41Z",
+  "git_sha": "77b589c242b2eb96be8aeb06595b654e70b3cd1f",
+  "created_at": "2026-07-22T12:06:00Z",
   "runner": {
     "host": "KOOSHAPARI-DESK",
     "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
   },
   "gates": {
     "unreal_preflight": {
-      "status": "skip",
-      "detail": "optional"
+      "status": "fail",
+      "detail": ""
+    },
+    "unreal_build": {
+      "status": "fail",
+      "detail": ""
+    },
+    "dashboard_typecheck": {
+      "status": "pass",
+      "detail": ""
     },
     "web_test": {
       "status": "pass",
@@ -20,7 +28,7 @@
       "status": "skip",
       "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     },
-    "extra_cargo_deny": {
+    "extra_cargo_semver": {
       "status": "skip",
       "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     },
@@ -28,42 +36,34 @@
       "status": "skip",
       "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     },
+    "extra_trufflehog": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "civis_3d_verify": {
+      "status": "pass",
+      "detail": ""
+    },
     "extra_security_guard": {
       "status": "skip",
       "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     },
-    "extra_cargo_semver": {
+    "extra_cargo_machete": {
       "status": "skip",
       "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     },
-    "bevy_egui_check": {
-      "status": "pass",
-      "detail": "just bevy-egui-check"
-    },
-    "dashboard_typecheck": {
-      "status": "pass",
-      "detail": ""
+    "extra_cargo_deny": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     },
     "extra_fr_coverage": {
       "status": "skip",
       "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     },
-    "extra_trufflehog": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    },
-    "unreal_build": {
-      "status": "skip",
-      "detail": "optional"
-    },
-    "civis_3d_verify": {
+    "bevy_egui_check": {
       "status": "pass",
-      "detail": "just civis-3d-verify"
-    },
-    "extra_cargo_machete": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+      "detail": ""
     }
   },
-  "manifest_hash": "371c0edea50c29f1493744a274821c2f32b0a79a166fb66bf405030198ccbab6"
+  "manifest_hash": "dfbdccabcb4da3629b3f972c0e1da39a29a9586cb8adbaf6025e1c45e4980305"
 }

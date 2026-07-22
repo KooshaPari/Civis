@@ -24,14 +24,6 @@ ignore = [
   { id = "RUSTSEC-2025-0141", reason = "bincode 1.x pinned by save format; migrate tracked separately" },
   # crossbeam-epoch fmt::Pointer advisory; no patched release consumed yet.
   { id = "RUSTSEC-2026-0204", reason = "awaiting crossbeam-epoch bump through bevy/rayon stack" },
-  # rsa Marvin attack — no patched 0.9.x; transitive TLS/signing only. First-party mod
-  # signing uses ed25519. Revisit when rsa 0.10+ lands (docs/reports/SECURITY-AUDIT-TRIAGE-2026-07-08.md H2).
-  { id = "RUSTSEC-2023-0071", reason = "rsa 0.9 Marvin; no upstream fix; not used for first-party signing" },
-  # quick-xml quadratic / NsReader — pulled only via wayland-scanner (Bevy/winit Linux).
-  # No Bevy-compatible bump without major winit/wayland upgrade (H1). XML surface is not a
-  # public untrusted ingress on the Civis server path.
-  { id = "RUSTSEC-2026-0194", reason = "quick-xml via wayland-scanner/Bevy; awaiting winit stack bump" },
-  { id = "RUSTSEC-2026-0195", reason = "quick-xml NsReader via wayland-scanner/Bevy; same as 0194" },
 ]
 
 [bans]

@@ -14,11 +14,12 @@ runs:
     - shell: bash
       run: |
         echo "Checking coverage for ${{ inputs.package }} (threshold ${{ inputs.threshold }}%)"
-        # Prefer cargo-tarpaulin; fall back to grcov
+        # Prefer cargo-tarpaulin; use cargo-llvm-cov when tarpaulin is absent.
         if command -v cargo-tarpaulin &>/dev/null; then
           cargo tarpaulin -p "${{ inputs.package }}" --out Xml --threshold ${{ inputs.threshold }}
-        elif command -v grcov &>/dev/null; then
-          echo "grcov coverage check not yet wired — manual verify"
+        elif command -v cargo-llvm-cov &>/dev/null; then
+          cargo llvm-cov -p "${{ inputs.package }}" --all-features --summary-only --fail-under-lines "${{ inputs.threshold }}"
         else
-          echo "No coverage tool found — skipping check"
+          echo "No supported coverage tool found (cargo-tarpaulin or cargo-llvm-cov)" >&2
+          exit 1
         fi

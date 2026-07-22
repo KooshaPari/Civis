@@ -85,9 +85,10 @@ mod tests {
 
         assert_eq!(history.transition_count(), 1);
         assert_eq!(history.transitions()[0].faction_id, 7);
-        assert_eq!(history.chronicle(), vec![
-            "tick 3: faction 7 entered the Bronze age (from Stone)".to_string()
-        ]);
+        assert_eq!(
+            history.chronicle(),
+            vec!["tick 3: faction 7 entered the Bronze age (from Stone)".to_string()]
+        );
     }
 
     #[test]

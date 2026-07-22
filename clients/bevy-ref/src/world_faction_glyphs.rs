@@ -189,6 +189,9 @@ pub struct WorldFactionGlyphsPlugin;
 
 impl Plugin for WorldFactionGlyphsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(EguiPrimaryContextPass, draw_world_faction_glyphs);
+        app.add_systems(
+            EguiPrimaryContextPass,
+            draw_world_faction_glyphs.run_if(resource_exists::<LiveStreamScene>),
+        );
     }
 }

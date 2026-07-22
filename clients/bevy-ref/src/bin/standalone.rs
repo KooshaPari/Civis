@@ -218,6 +218,7 @@ fn main() {
                 civ_bevy_ref::world_faction_glyphs::WorldFactionGlyphsPlugin,
                 civ_bevy_ref::god_panel::GodPanelPlugin,
                 civ_bevy_ref::god_actions::GodActionsPlugin,
+                civ_bevy_ref::holocron_panel::HolocronPanelPlugin,
             ));
         }
     }

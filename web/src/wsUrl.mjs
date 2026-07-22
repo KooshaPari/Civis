@@ -58,8 +58,7 @@ export function resolveWsUrlFromEnv(env = {}) {
  * @param {string} [_search] retained for call-site compatibility with query parsing helpers
  * @param {string} [fallback]
  */
-export function resolveWsUrlFromQuery(search = "", fallback) {
-  void search;
+export function resolveWsUrlFromQuery(_search = "", fallback) {
   return fallback ?? defaultLiveWsUrl();
 }
 

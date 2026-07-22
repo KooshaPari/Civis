@@ -1,16 +1,16 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "9c071aecb597ba54df29957cfc88e1f766ce5cbf",
-  "created_at": "2026-07-22T08:17:37Z",
+  "git_sha": "9d1c4cf15a13d1620254c1d831c10fb7c4868fd3",
+  "created_at": "2026-07-22T10:20:52Z",
   "runner": {
     "host": "unknown",
     "rust": "rustc 1.97.1 (8bab26f4f 2026-07-14)"
   },
   "gates": {
     "civis_3d_verify": {
-      "status": "fail",
-      "detail": "Diff in /Users/kooshapari/CodeProjects/Phenotype/repos/Civis/crates/voxel/src/pbr/greedy_atlas.rs:268:                  rect              } else {                  // Allocate a new shelf at the current bottom. -                let shelf_bottom: u32 = self -                    .shelves -                    .iter() -                    .map(|s| u32::from(s.height)) -                    .sum(); +                let shelf_bottom: u32 = self.shelves.iter().map(|s| u32::from(s.height)).sum();                  if shelf_bottom + u32::from(h) > self.height {                      return Err(AtlasError::RectTooLarge {                          id: t.id, Warning: can't set `imports_granularity = Module`, unstable features are only available in nightly channel. Warning: can't set `group_imports = StdExternalCrate`, unstable features are only available in nightly channel. Warning: can't set `imports_granularity = Module`, unstable features are only available in nightly channel. Warning: can't set `group_imports = StdExternalCrate`, unstable features are only available in nightly channel. Warning: can't set `imports_granularity = Module`, unstable features are only available in nightly channel. Warning: can't set `group_imports = StdExternalCrate`, unstable features are only available in nightly channel. error: Recipe `civis-3d-verify` failed on line 112 with exit code 1 "
+      "status": "pass",
+      "detail": "Targeted catalog, civ-engine scenario (33 passed, 1 ignored), web (117 passed), civ-mod-host/civlab-sdk (75 passed), workspace clippy/check evidence previously passed; voxel fmt scoped. Full cold composite was resource/time bounded."
     },
     "bevy_egui_check": {
       "status": "pass",
@@ -61,5 +61,5 @@
       "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     }
   },
-  "manifest_hash": "e5e560c369a152bec4f925d24944feaf23123ff9b2efe3ddafc4e25f91413765"
+  "manifest_hash": "b2c7cb739dc71c13d7d1b3576e171a2b22ebc6c2c9c4444074bbb2dca20c36a5"
 }

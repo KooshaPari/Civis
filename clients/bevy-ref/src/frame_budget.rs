@@ -2,6 +2,10 @@
 //!
 //! This module was recovered from history so `god_actions.rs` can keep using the
 //! existing cull-distance and quality-mode API without further call-site churn.
+//!
+//! `FRAME_BUDGET_MS` is 33.3 ms (a 30 FPS floor). When sustained over-budget
+//! frames accumulate, [`GpuQualityMode`] steps down; it recovers once recent
+//! drops age out of [`DROP_RECOVERY_WINDOW_SECS`].
 
 use bevy::diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin};
 use bevy::prelude::*;
@@ -118,7 +122,7 @@ impl Plugin for FrameBudgetPlugin {
     }
 }
 
-fn quality_for_drop_count(drop_count: u64) -> GpuQualityMode {
+pub(crate) fn quality_for_drop_count(drop_count: u64) -> GpuQualityMode {
     if drop_count >= DROP_THRESHOLD_CRITICAL {
         GpuQualityMode::Critical
     } else if drop_count >= DROP_THRESHOLD_REDUCED {
@@ -202,5 +206,74 @@ fn enforce_frame_budget(
             }
         }
         *recovery = new_mode;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn quality_full_at_zero_drops() {
+        assert_eq!(quality_for_drop_count(0), GpuQualityMode::Full);
+    }
+
+    #[test]
+    fn quality_reduced_at_drop_threshold() {
+        assert_eq!(
+            quality_for_drop_count(DROP_THRESHOLD_REDUCED),
+            GpuQualityMode::Reduced
+        );
+    }
+
+    #[test]
+    fn quality_critical_at_drop_threshold() {
+        assert_eq!(
+            quality_for_drop_count(DROP_THRESHOLD_CRITICAL),
+            GpuQualityMode::Critical
+        );
+    }
+
+    #[test]
+    fn cull_distance_scales_by_quality_mode() {
+        assert_eq!(GpuQualityMode::Full.cull_distance_scale(), 1.0);
+        assert_eq!(GpuQualityMode::Reduced.cull_distance_scale(), REDUCED_CULL_SCALE);
+        assert_eq!(
+            GpuQualityMode::Critical.cull_distance_scale(),
+            REDUCED_CULL_SCALE * CRITICAL_CULL_SCALE
+        );
+    }
+
+    #[test]
+    fn lod_distance_is_inverse_of_cull_scale() {
+        for mode in [
+            GpuQualityMode::Full,
+            GpuQualityMode::Reduced,
+            GpuQualityMode::Critical,
+        ] {
+            assert!(
+                (mode.lod_distance_scale() * mode.cull_distance_scale() - 1.0).abs() < f32::EPSILON
+            );
+        }
+    }
+
+    #[test]
+    fn scaled_cull_and_lod_helpers_apply_mode_multipliers() {
+        let base = 100.0;
+        assert_eq!(scaled_cull_distance(base, GpuQualityMode::Full), base);
+        assert_eq!(
+            scaled_cull_distance(base, GpuQualityMode::Reduced),
+            base * REDUCED_CULL_SCALE
+        );
+        assert_eq!(
+            scaled_cull_distance(base, GpuQualityMode::Critical),
+            base * REDUCED_CULL_SCALE * CRITICAL_CULL_SCALE
+        );
+
+        let distance = 90.0;
+        assert_eq!(
+            scaled_mesh_lod_distance(distance, GpuQualityMode::Reduced),
+            distance / REDUCED_CULL_SCALE
+        );
     }
 }

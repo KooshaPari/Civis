@@ -199,11 +199,11 @@ civis-3d-standalone-live-url URL:
 civis-3d-live-smoke:
     cargo test -p civ-server frame_triple
     cargo test -p civ-server --test ws_smoke ws_client_receives_binary_frame3d_after_tick
-    cargo test -p civ-bevy-ref --features bevy --lib live_ground::
-    cargo test -p civ-bevy-ref --features bevy --lib live_stream::
-    cargo test -p civ-bevy-ref --features bevy --lib live_focus::
-    cargo test -p civ-bevy-ref --features bevy --lib live_minimap::
-    cargo test -p civ-bevy-ref --features bevy --lib live_pick::
+    cargo test -p civ-bevy-ref --features bevy,egui --lib live_ground::
+    cargo test -p civ-bevy-ref --features bevy,egui --lib live_stream::
+    cargo test -p civ-bevy-ref --features bevy,egui --lib live_focus::
+    cargo test -p civ-bevy-ref --features bevy,egui --lib live_minimap::
+    cargo test -p civ-bevy-ref --features bevy,egui --lib live_pick::
     cargo test -p civ-bevy-ref --lib chunk_to_minimap
     cargo test -p civ-bevy-ref --lib minimap_uv_to_chunk
     cargo check -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone

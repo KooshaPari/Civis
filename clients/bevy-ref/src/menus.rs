@@ -361,18 +361,9 @@ pub fn consume_menu_commands(
             next_state.set(AppState::WorldGen);
         }
         MainMenuCommand::LoadGame => {
-            commands.queue(|world: &mut World| {
-                clear_live_stream_scene_in_world(world);
-            });
             if let Some(save_panel) = save_panel.as_mut() {
                 save_panel.visible = true;
             }
-            if let (Some(mut gate), Some(mut overlay)) = (gate, overlay) {
-                begin_player_session(&mut gate, &mut overlay);
-            }
-            boot.elapsed = 0.0;
-            boot.scene_clear_pending = true;
-            next_state.set(AppState::WorldGen);
         }
         MainMenuCommand::Resume => {
             resume_shell_pause(&mut game_mode, game_speed.as_deref_mut());

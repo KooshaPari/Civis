@@ -268,11 +268,7 @@ impl GreedyAtlas {
                 rect
             } else {
                 // Allocate a new shelf at the current bottom.
-                let shelf_bottom: u32 = self
-                    .shelves
-                    .iter()
-                    .map(|s| u32::from(s.height))
-                    .sum();
+                let shelf_bottom: u32 = self.shelves.iter().map(|s| u32::from(s.height)).sum();
                 if shelf_bottom + u32::from(h) > self.height {
                     return Err(AtlasError::RectTooLarge {
                         id: t.id,

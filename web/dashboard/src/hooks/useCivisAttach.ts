@@ -311,7 +311,6 @@ function connectServer(
       scheduleReconnect();
     }
   };
-
   const connect = () => {
     if (closed) return;
     dispatch({ type: "set_connection", connection: "reconnecting" });

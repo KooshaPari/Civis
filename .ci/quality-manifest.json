@@ -1,9 +1,9 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "dbf9830361ee14eef2c60eb82650545ad539d25a",
-  "content_hash": "c4d1dac4d2ba1517750db619724ab15699d5eb00c169094725c00305c25f887c",
-  "created_at": "2026-07-23T05:20:10Z",
+  "git_sha": "204a0eface0dfe1cde8ab0c678282fb2059a346e",
+  "content_hash": "025284e4a323c7f074ffb67ad2490f78e99321a5a1be67e1881f01036d75b8e9",
+  "created_at": "2026-07-23T05:32:09Z",
   "runner": {
     "host": "KOOSHAPARI-DESK",
     "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
@@ -72,7 +72,11 @@
     "voxel_bridge_presentation_test": {
       "status": "pass",
       "detail": "cargo test -p civ-voxel-bridge --offline: 3 passed, 0 failed; scoped rustfmt check passed"
+    },
+    "voxel_material_ca_test": {
+      "status": "pass",
+      "detail": "cargo test -p civ-voxel --offline: 312 passed, 0 failed, 1 ignored; scoped rustfmt check passed"
     }
   },
-  "manifest_hash": "0f134a6cae26649ad5e59543355d348eb5c47bed0817a2857cb1603fc361cbbe"
+  "manifest_hash": "02e2d4839dfa8a0e6daa2a4c565419984c224a4042fbecd7aeb27472d5822b6f"
 }

@@ -12,7 +12,7 @@
 //! required (charter), but the blake3 cache is **mandatory** for cost/latency
 //! (FR-CIV-AI-007, NFR-CIV-AI-003).
 //!
-//! ## What is working vs stubbed in P1 (S2.W3)
+//! ## Provider status in P1 (S2.W3)
 //! - **Working:** [`AiProvider`] trait, [`DummyAiProvider`], the blake3
 //!   [`cache::AiCache`], [`provenance::AiEvent`] + [`ReplayMode`] reuse, the
 //!   [`pool::AiWorkerPool`] skeleton, [`config::AiConfig`], loud [`preflight`],

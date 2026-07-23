@@ -1012,9 +1012,12 @@ impl GameSettings {
         }
     }
 
-    /// Serialize and write to [`SETTINGS_PATH`], and sync render-engine env.
+    /// Serialize and write to [`SETTINGS_PATH`].
+    ///
+    /// Render-engine environment selection is applied once during startup by
+    /// [`Self::apply_boot_render_engine`]. Keeping it out of this live UI path
+    /// avoids mutating process-wide environment state while Bevy is running.
     pub fn save(&self) {
-        self.graphics.render_engine.apply_to_env();
         match ron::ser::to_string_pretty(self, ron::ser::PrettyConfig::default()) {
             Ok(text) => {
                 if let Err(e) = std::fs::write(SETTINGS_PATH, text) {

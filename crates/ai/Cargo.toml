@@ -20,13 +20,14 @@ reqwest = { version = "0.12", optional = true, default-features = false, feature
 fastembed = { version = "5.17.3", optional = true, default-features = false, features = ["ort-load-dynamic"] }
 # Cloud / dev HTTP providers (feature-gated): reuses civ-research's FirepassKimiClient.
 civ-research = { path = "../research", optional = true, features = ["firepass-kimi"] }
+mistralrs = { version = "0.8.1", optional = true, default-features = false }
 
 [features]
 default = []
 # Cloud heavy-reasoning fallback: wraps civ-research::FirepassKimiClient. Opt-in.
 cloud = ["dep:civ-research"]
-# Local in-process SLM (mistral.rs GGUF). Stub in P1 — full model loading is a later phase.
-local = []
+# Local in-process SLM (mistral.rs GGUF), loaded only from caller-owned files.
+local = ["dep:mistralrs"]
 # Embedding provider (fastembed-rs / ort, MiniLM). Requires a local ORT
 # runtime and a user-supplied model directory; no model download is performed.
 embed = ["dep:fastembed"]

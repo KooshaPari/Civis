@@ -144,7 +144,7 @@ pub enum AiError {
 
 | Provider | `generate` | `embed` | Selection | Notes |
 |---|---|---|---|---|
-| `LocalSlmProvider` | ✅ mistral.rs, GGUF Q4_K_M, in-process | ✗ Unsupported | **DEFAULT in-game** | `model_id`=Qwen2.5-1.5B-Instruct default; llama.cpp bindings held as a perf escape hatch behind the same trait. Loads once at preflight. |
+| `LocalSlmProvider` | ✅ mistral.rs, local GGUF, in-process | ✗ Unsupported | **DEFAULT in-game** | `try_from_gguf` loads caller-owned artifacts once; missing files fail loudly and no network fetch is attempted. |
 | `OllamaDevProvider` | ✅ OpenAI-compatible HTTP | (optional) | dev feature only | Reuses the same `reqwest` chat-completions client shape as `FirepassKimiClient`; **never** in release. |
 | `FirepassKimiProvider` | ✅ wraps `FirepassKimiClient` | ✗ | cloud feature, `CIVAI_ENABLE_CLOUD=1` | Heavy-reasoning fallback only (sagas, tech R&D, summit set-pieces). Missing `KIMI_API_KEY` → `AiError::Unavailable` (loud). |
 | `EmbedProvider` | ✗ Unsupported | ✅ fastembed-rs / `ort`, MiniLM 384-dim | embed feature | Drives drift (§1.4) + log triage (§3). |

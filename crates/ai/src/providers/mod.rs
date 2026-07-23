@@ -4,7 +4,7 @@
 //! |---|---|---|---|---|
 //! | [`DummyAiProvider`] | yes (deterministic) | yes (fixed) | — | **working** |
 //! | `FirepassKimiProvider` | yes (wraps cloud) | no | `cloud` | **wired** |
-//! | `LocalSlmProvider` | yes (mistral.rs GGUF) | no | `local` | **stub** |
+//! | `LocalSlmProvider` | yes (mistral.rs GGUF) | no | `local` | **artifact-backed** |
 //! | `EmbedProvider` | no | yes (MiniLM) | `embed` | **artifact-backed** |
 //! | `OllamaDevProvider` | yes (HTTP) | no | `dev` | **wired** |
 

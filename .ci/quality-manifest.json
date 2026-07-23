@@ -1,9 +1,9 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "99001fa2da6908df1eb1e064c099cbcaff62a637",
-  "content_hash": "70870e64480cba8f2c60e3c32c4df23e16dd337ac98039b0f48494080a7a7629",
-  "created_at": "2026-07-23T07:12:02Z",
+  "git_sha": "019b686972f99bd7f814991a659825f1997d2bbb",
+  "content_hash": "57ac35cebaed754b595536286cb7c2f0092808108226cdef046ffdcaca2cf61d",
+  "created_at": "2026-07-23T09:08:23Z",
   "runner": {
     "host": "KOOSHAPARI-DESK",
     "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
@@ -92,7 +92,15 @@
     "civis_bridge_hook_test": {
       "status": "pass",
       "detail": "cargo test -p civ-voxel-bridge --offline: 4 test binaries passed, 0 failed; cargo fmt scoped check and git diff --check passed; cross-platform pre-push wrapper exercised"
+    },
+    "civ_ai_embed_feature_tests": {
+      "status": "pass",
+      "detail": "cargo test -p civ-ai --features embed --offline with isolated CARGO_TARGET_DIR: 36 unit tests + 10 integration tests + 1 doc test passed; missing-artifact no-download test passed; 1 pre-existing async test ignored"
+    },
+    "civ_ai_default_tests": {
+      "status": "pass",
+      "detail": "cargo test -p civ-ai --offline with isolated CARGO_TARGET_DIR: 35 unit tests + 10 integration tests + 1 doc test passed; 1 pre-existing async test ignored"
     }
   },
-  "manifest_hash": "f937801331095eaafaad6b5d17bbdb40057602c17dd4c29c2371bb6da821c4f5"
+  "manifest_hash": "55950f1c3970ecfd80353e16c667f9e8404bf87627adfccbc83c4d9c9014ac0f"
 }

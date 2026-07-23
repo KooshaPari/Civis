@@ -15,6 +15,9 @@ tracing = "0.1"
 async-trait = "0.1"
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "sync", "macros"] }
 reqwest = { version = "0.12", optional = true, default-features = false, features = ["json", "rustls-tls"] }
+# Dynamic ORT keeps model/runtime downloads out of builds; set ORT_DYLIB_PATH
+# to the approved native runtime before enabling the provider at runtime.
+fastembed = { version = "5.17.3", optional = true, default-features = false, features = ["ort-load-dynamic"] }
 # Cloud / dev HTTP providers (feature-gated): reuses civ-research's FirepassKimiClient.
 civ-research = { path = "../research", optional = true, features = ["firepass-kimi"] }
 
@@ -24,8 +27,9 @@ default = []
 cloud = ["dep:civ-research"]
 # Local in-process SLM (mistral.rs GGUF). Stub in P1 — full model loading is a later phase.
 local = []
-# Embedding provider (fastembed-rs / ort, MiniLM). Stub in P1.
-embed = []
+# Embedding provider (fastembed-rs / ort, MiniLM). Requires a local ORT
+# runtime and a user-supplied model directory; no model download is performed.
+embed = ["dep:fastembed"]
 # Dev-only Ollama provider (OpenAI-compatible HTTP).
 dev = ["dep:reqwest"]
 

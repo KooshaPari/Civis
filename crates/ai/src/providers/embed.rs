@@ -3,18 +3,24 @@
 //! Drives culture/meme drift (§1.4) + log triage (§3). `generate` is
 //! unsupported (loud error). Behind the `embed` feature.
 //!
-//! ## P1 STUB
-//! Real fastembed-rs/ort model loading lands in phase P1.A4 — see
-//! `docs/design/civ-ai-crate.md` §10. This stub advertises `embed` capability
-//! and loudly returns [`AiError::ModelMissing`] until the backend is wired.
-//!
-//! TODO(P1.A4): load MiniLM via fastembed-rs/ort; return 384-dim batches.
+//! Model loading is explicit and artifact-backed: the provider never downloads
+//! weights. `try_from_model_dir` expects the ONNX model plus the four
+//! tokenizer/config JSON files required by fastembed. The ONNX Runtime shared
+//! library must be discoverable through `ORT_DYLIB_PATH` when the `embed`
+//! feature is enabled.
 
 use crate::{AiError, AiProvider, Capabilities, EmbedRequest, GenOutput, GenRequest};
+use std::path::Path;
 
-/// MiniLM embedding provider (P1 stub; backend pending).
+#[cfg(feature = "embed")]
+use std::sync::Mutex;
+
+/// MiniLM-compatible embedding provider.
 pub struct EmbedProvider {
     model_id: String,
+    dimension: usize,
+    #[cfg(feature = "embed")]
+    model: Option<Mutex<fastembed::TextEmbedding>>,
 }
 
 impl EmbedProvider {
@@ -23,7 +29,64 @@ impl EmbedProvider {
     pub fn new(model_id: impl Into<String>) -> Self {
         Self {
             model_id: model_id.into(),
+            dimension: 384,
+            #[cfg(feature = "embed")]
+            model: None,
         }
+    }
+
+    /// Load a user-supplied fastembed model from `model_dir`.
+    ///
+    /// The directory must contain `model.onnx`, `tokenizer.json`,
+    /// `config.json`, `special_tokens_map.json`, and `tokenizer_config.json`.
+    /// No network access or implicit model download occurs.
+    #[cfg(feature = "embed")]
+    pub fn try_from_model_dir(
+        model_id: impl Into<String>,
+        model_dir: impl AsRef<Path>,
+        dimension: usize,
+    ) -> Result<Self, AiError> {
+        if dimension == 0 {
+            return Err(AiError::InvalidResponse(
+                "embedding dimension must be greater than zero".into(),
+            ));
+        }
+        let model_id = model_id.into();
+        let dir = model_dir.as_ref();
+        let read = |name: &str| {
+            std::fs::read(dir.join(name)).map_err(|err| {
+                AiError::ModelMissing(format!(
+                    "embedding model '{}' missing {} in {}: {}",
+                    model_id,
+                    name,
+                    dir.display(),
+                    err
+                ))
+            })
+        };
+        let files = fastembed::TokenizerFiles {
+            tokenizer_file: read("tokenizer.json")?,
+            config_file: read("config.json")?,
+            special_tokens_map_file: read("special_tokens_map.json")?,
+            tokenizer_config_file: read("tokenizer_config.json")?,
+        };
+        let model = fastembed::UserDefinedEmbeddingModel::new(read("model.onnx")?, files)
+            .with_pooling(fastembed::Pooling::Mean);
+        let options = fastembed::InitOptionsUserDefined::new();
+        let model =
+            fastembed::TextEmbedding::try_new_from_user_defined(model, options).map_err(|err| {
+                AiError::Unavailable(format!(
+                    "failed to load embedding model '{}' from {}: {}",
+                    model_id,
+                    dir.display(),
+                    err
+                ))
+            })?;
+        Ok(Self {
+            model_id,
+            dimension,
+            model: Some(Mutex::new(model)),
+        })
     }
 }
 
@@ -33,10 +96,28 @@ impl AiProvider for EmbedProvider {
         Err(AiError::Unsupported("embed-only".into()))
     }
 
-    async fn embed(&self, _req: &EmbedRequest) -> Result<Vec<Vec<f32>>, AiError> {
-        // TODO(P1.A4): replace with fastembed-rs/ort MiniLM inference.
+    async fn embed(&self, req: &EmbedRequest) -> Result<Vec<Vec<f32>>, AiError> {
+        #[cfg(feature = "embed")]
+        if let Some(model) = &self.model {
+            let mut model = model
+                .lock()
+                .map_err(|_| AiError::Unavailable("embedding model mutex poisoned".into()))?;
+            let vectors = model.embed(&req.texts, None).map_err(|err| {
+                AiError::Unavailable(format!(
+                    "embedding inference failed for '{}': {}",
+                    self.model_id, err
+                ))
+            })?;
+            if vectors.iter().any(|vector| vector.len() != self.dimension) {
+                return Err(AiError::InvalidResponse(format!(
+                    "embedding model '{}' returned a vector with unexpected dimension (expected {})",
+                    self.model_id, self.dimension
+                )));
+            }
+            return Ok(vectors);
+        }
         Err(AiError::ModelMissing(format!(
-            "EmbedProvider backend not yet implemented for '{}' (P1.A4)",
+            "embedding model '{}' is not loaded; use try_from_model_dir with the embed feature",
             self.model_id
         )))
     }
@@ -46,14 +127,35 @@ impl AiProvider for EmbedProvider {
     }
 
     fn model_version(&self) -> &str {
-        "384d"
+        "fastembed-user-defined"
     }
 
     fn capabilities(&self) -> Capabilities {
         Capabilities {
             generate: false,
-            embed: true,
+            embed: self.model.is_some(),
             cloud: false,
+        }
+    }
+}
+
+#[cfg(all(test, feature = "embed"))]
+mod tests {
+    use super::EmbedProvider;
+
+    #[test]
+    fn missing_model_artifact_fails_loudly_without_download() {
+        let result = EmbedProvider::try_from_model_dir(
+            "all-MiniLM-L6-v2",
+            "definitely-missing-civis-embed-model",
+            384,
+        );
+        match result {
+            Err(err) => {
+                assert!(err.to_string().contains("embedding model"));
+                assert!(err.to_string().contains("tokenizer.json"));
+            }
+            Ok(_) => panic!("missing local artifacts must fail"),
         }
     }
 }

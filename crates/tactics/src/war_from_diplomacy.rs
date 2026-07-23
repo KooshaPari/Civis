@@ -41,7 +41,7 @@ pub fn check_war_onset(relation: &Relation, current_tick: u64) -> Option<WarStat
 /// Called each tick for pairs that remain unresolved rivals; returns the
 /// reduced standing so callers can decide whether to persist it.
 pub fn apply_rivalry_friction(standing: i32) -> i32 {
-    standing - RIVALRY_FRICTION_DRAIN
+    standing + RIVALRY_FRICTION_DRAIN
 }
 
 /// Convert a slice of [`CombatEngagement`]s into [`InteractionEvent::Combat`]
@@ -108,7 +108,7 @@ mod tests {
         let standing = 10;
         let drained = apply_rivalry_friction(standing);
         assert!(drained < standing);
-        assert_eq!(drained, standing - RIVALRY_FRICTION_DRAIN);
+        assert_eq!(drained, standing + RIVALRY_FRICTION_DRAIN);
     }
 
     #[test]

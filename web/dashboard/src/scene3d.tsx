@@ -20,6 +20,10 @@ import { getActiveServerSocket } from "./lib/civisSocket";
 import { jsonRpcCall, normalizeServerSnapshot } from "./lib/civisServer";
 import { createAdaptiveDprController } from "./lib/framePerf";
 import {
+  createBuildingProximityIndex,
+  isNearBuilding as isNearBuildingIndexed,
+} from "./lib/civilianProximity.mjs";
+import {
   Biome,
   Building,
   CivPin,
@@ -104,6 +108,10 @@ type SceneRefs = {
   previousSnapshot: Snapshot | null;
   currentSnapshot: Snapshot | null;
   snapshotReceivedAt: number;
+  civilianProximityIndex: ReturnType<typeof createBuildingProximityIndex> | null;
+  civilianProximitySnapshot: Snapshot | null;
+  civilianProximityTerrainSize: number;
+  factionIndex: Map<number, Faction>;
   cameraFocusTarget: THREE.Vector3 | null;
   cameraPositionTarget: THREE.Vector3 | null;
   spawnBurst?: (x: number, y: number, color: number, label?: string) => void;
@@ -155,6 +163,10 @@ export function Scene3d() {
     previousSnapshot: null,
     currentSnapshot: null,
     snapshotReceivedAt: performance.now(),
+    civilianProximityIndex: null,
+    civilianProximitySnapshot: null,
+    civilianProximityTerrainSize: 0,
+    factionIndex: new Map(),
     cameraFocusTarget: null,
     cameraPositionTarget: null,
     fogOverlayMesh: null,
@@ -201,7 +213,10 @@ export function Scene3d() {
     if (!mount) return;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x87b7e0);
+    const nightBackground = new THREE.Color(0x0a1530);
+    const dayBackground = new THREE.Color(0x87b7e0);
+    const frameBackground = dayBackground.clone();
+    scene.background = frameBackground;
 
     const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -1469,13 +1484,8 @@ export function Scene3d() {
           terrain.size * 0.55,
         );
         const weather = refs.current.terrainWeather;
-        const bg = new THREE.Color().lerpColors(
-          new THREE.Color(0x0a1530),
-          new THREE.Color(0x87b7e0),
-          d,
-        );
-        scene.background = bg;
-        fog.color.copy(bg);
+        frameBackground.lerpColors(nightBackground, dayBackground, d);
+        fog.color.copy(frameBackground);
         fog.density =
           weather?.precipitation === "rain"
             ? 0.012
@@ -1612,6 +1622,9 @@ export function Scene3d() {
       refs.current.previousSnapshot = refs.current.currentSnapshot;
       refs.current.currentSnapshot = state.snapshot;
       refs.current.snapshotReceivedAt = performance.now();
+      refs.current.factionIndex = new Map(
+        state.snapshot.factions.map((faction) => [faction.id, faction]),
+      );
       const burst = refs.current.spawnBurst;
       if (burst) {
         state.snapshot.birth_events.forEach((event) =>
@@ -1738,6 +1751,7 @@ function updateInterpolatedCivilians(
   const previous = refs.previousSnapshot ?? current;
   if (!current) return;
   const civs = current.civ_pins ?? [];
+  const proximityIndex = getCivilianProximityIndex(refs, terrain, current);
   const duration = Math.max(1, current.tick_dt_ms || 100);
   const t = clamp01((now - refs.snapshotReceivedAt) / duration);
   refs.civilians.forEach((mesh, index) => {
@@ -1759,9 +1773,30 @@ function updateInterpolatedCivilians(
     mesh.position.set(wx, wy, wz);
     mesh.material.color.setHex(jobColor(currentPin.job));
     const scale = hash01(index) * 0.4 + 0.8;
-    const indoors = isNearBuilding(terrain, current.buildings ?? [], { x, y });
+    const indoors = isNearBuildingIndexed(proximityIndex, terrain.size, { x, y });
     mesh.scale.setScalar(scale * (indoors ? 0.7 : 1));
   });
+}
+
+function getCivilianProximityIndex(
+  refs: SceneRefs,
+  terrain: Terrain,
+  snapshot: Snapshot,
+) {
+  if (
+    refs.civilianProximityIndex &&
+    refs.civilianProximitySnapshot === snapshot &&
+    refs.civilianProximityTerrainSize === terrain.size
+  ) {
+    return refs.civilianProximityIndex;
+  }
+  refs.civilianProximityIndex = createBuildingProximityIndex(
+    terrain.size,
+    snapshot.buildings ?? [],
+  );
+  refs.civilianProximitySnapshot = snapshot;
+  refs.civilianProximityTerrainSize = terrain.size;
+  return refs.civilianProximityIndex;
 }
 
 function updateFactionsFromRefs(refs: SceneRefs, snapshot: Snapshot | null) {
@@ -1845,8 +1880,8 @@ function updateTradeRoutesFromRefs(refs: SceneRefs, snapshot: Snapshot | null) {
       if (refs.tradeCargo[index]) refs.tradeCargo[index].visible = false;
       return;
     }
-    const from = factionById(snapshot?.factions ?? [], route.from_faction);
-    const to = factionById(snapshot?.factions ?? [], route.to_faction);
+    const from = refs.factionIndex.get(route.from_faction) ?? null;
+    const to = refs.factionIndex.get(route.to_faction) ?? null;
     if (!from || !to) {
       line.visible = false;
       if (refs.tradeCargo[index]) refs.tradeCargo[index].visible = false;
@@ -2101,8 +2136,8 @@ function animateTradeRoutes(refs: SceneRefs, now: number) {
     const route = snapshot.trade_routes?.[index];
     const cargo = refs.tradeCargo[index];
     if (!route || !cargo || !cargo.visible) return;
-    const from = factionById(snapshot.factions ?? [], route.from_faction);
-    const to = factionById(snapshot.factions ?? [], route.to_faction);
+    const from = refs.factionIndex.get(route.from_faction) ?? null;
+    const to = refs.factionIndex.get(route.to_faction) ?? null;
     if (!from || !to) return;
     const fromX = from.capital[0] * terrain.size - terrain.size / 2;
     const fromZ = from.capital[1] * terrain.size - terrain.size / 2;

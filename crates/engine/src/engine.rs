@@ -9308,29 +9308,21 @@ mod tests {
             live.tick();
         }
         let chunk_live = live.voxel().chunk_count();
-        let combat: Vec<_> = live
+        let combat_count = live
             .replay_log()
             .events
             .iter()
-            .filter_map(|event| match event {
-                ReplayEvent::Combat { tick, event, .. } => Some((*tick, *event)),
-                _ => None,
-            })
-            .collect();
+            .filter(|event| matches!(event, ReplayEvent::Combat { .. }))
+            .count();
         assert!(
-            !combat.is_empty(),
+            combat_count > 0,
             "expected war-bridge combat in replay log"
         );
 
         let mut from_replay = Simulation::with_seed(seed);
-        for (tick, event) in combat {
-            from_replay.apply_replay_combat(tick, &event);
-        }
-        let pending: Vec<DamageEvent> = from_replay.pending_damage.drain(..).collect();
-        for event in pending {
-            let _ = from_replay.apply_damage_now(&event);
-        }
+        live.replay_log().replay(&mut from_replay).unwrap();
         assert_eq!(from_replay.voxel().chunk_count(), chunk_live);
+        assert_eq!(from_replay.state.tick, live.state.tick);
     }
 
     /// FR-CIV-TACTICS-025-int3 — same seed reproduces identical combat replay markers.

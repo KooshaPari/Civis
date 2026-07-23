@@ -207,6 +207,10 @@ fn main() {
     let mut app = App::new();
     app.add_plugins((
         DefaultPlugins
+            .set(AssetPlugin {
+                file_path: concat!(env!("CARGO_MANIFEST_DIR"), "/assets").into(),
+                ..default()
+            })
             .set(WindowPlugin {
                 primary_window: Some(Window {
                     title: "Civis 3D - Bevy reference (live)".to_string(),
@@ -247,7 +251,7 @@ fn main() {
     ));
     #[cfg(feature = "egui")]
     app.init_resource::<LiveStreamScene>()
-        .init_resource::<civ_bevy_ref::AttachMode>()
+        .insert_resource(civ_bevy_ref::resolve_attach_mode_from_env())
         .init_resource::<LiveSceneFocus>()
         .init_resource::<MinimapPopup>()
         .init_resource::<SimSpeedState>()
@@ -256,6 +260,8 @@ fn main() {
         .init_resource::<MusicCues>()
         .init_resource::<OutcomeProgressHud>()
         .init_resource::<SaveListState>()
+        .init_resource::<MainMenuSaves>()
+        .init_resource::<MenuCommand>()
         .insert_resource(ScenePresentation::default())
         .insert_resource(DebugRender::default())
         .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
@@ -676,6 +682,11 @@ fn apply_live_frames(
     mut feed: ResMut<EventFeed>,
     gpu_quality: Res<civ_bevy_ref::frame_budget::GpuQualityMode>,
 ) {
+    let resets = bridge.client.poll_scene_resets();
+    if let Some(reset) = resets.last() {
+        scene.reset(&mut commands);
+        hud.snapshot.tick = Some(reset.tick);
+    }
     let frames = bridge.client.poll();
     if !frames.is_empty() {
         hud.snapshot.connected = true;
@@ -702,13 +713,13 @@ fn apply_live_frames(
                     &mut materials,
                     culling,
                     debug.as_ref(),
-                    delta.clone(),
+                    &delta,
                     wireframe_color,
                 );
                 // FR-CLIENT-render: pair the chunk-mesh update with a
                 // water-surface companion update so the streamed water
                 // plane tracks the chunk's voxel composition on every
-                // delta (re-uses the same delta payload + culling eye).
+                // delta (re-uses the same borrowed payload + culling eye).
                 apply_water_deltas_for_frame(
                     &mut commands,
                     &mut scene,
@@ -743,7 +754,7 @@ fn apply_live_frames(
             Frame3d::FactionState(faction) => apply_faction_state_frame(&mut scene, faction),
             Frame3d::EventFeed(ref event_frame) => {
                 for msg in &event_frame.events {
-                    info!(
+                    debug!(
                         "event feed (tick {}): {}",
                         event_frame.tick,
                         format_event_feed_message(msg),

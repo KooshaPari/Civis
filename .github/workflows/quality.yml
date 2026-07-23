@@ -42,8 +42,8 @@ jobs:
         run: |
           cargo fmt --check
           cargo clippy --workspace --all-targets -- -D warnings
-          cargo test --workspace
-          (cd clients/godot-ref/rust && cargo test)
+          cargo test --workspace --locked
+          (cd clients/godot-ref/rust && cargo test --locked)
           (cd web && npm test)
           (cd web/dashboard && bun install --frozen-lockfile && bun run typecheck && bun run build)
       - name: Run CA dirty-chunk benchmark

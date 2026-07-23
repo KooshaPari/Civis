@@ -32,4 +32,4 @@ jobs:
       - name: Rust clippy
         run: cargo clippy --all-targets -- -D warnings
       - name: Rust test
-        run: cargo test --workspace
+        run: cargo test --workspace --locked

@@ -884,10 +884,10 @@ pub fn apply_voxel_delta_frame(
     material_assets: &mut Assets<StandardMaterial>,
     culling: StreamCulling,
     debug: &DebugRender,
-    delta: VoxelDeltaFrame,
+    delta: &VoxelDeltaFrame,
     wireframe_line_color: Option<Color>,
 ) {
-    for chunk in delta.deltas {
+    for chunk in &delta.deltas {
         let chunk_id = chunk.event.chunk_id;
         if chunk.voxels.len() == LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE {
             scene.chunk_voxels.insert(chunk_id, chunk.voxels.clone());
@@ -1146,9 +1146,12 @@ pub fn apply_agent_appearance_frame_with_labels(
 
         let entity = *scene.agents.entry(update.agent_id).or_insert_with(|| {
             let entity = commands
-                .spawn(LiveAgentTag {
-                    id: update.agent_id,
-                })
+                .spawn((
+                    LiveAgentTag {
+                        id: update.agent_id,
+                    },
+                    Transform::default(),
+                ))
                 .id();
             if labels.enabled {
                 let label = scene
@@ -1593,7 +1596,7 @@ mod tests {
             &mut material_assets,
             culling,
             &DebugRender::default(),
-            delta,
+            &delta,
             None,
         );
 

@@ -39,5 +39,5 @@ jobs:
         with:
           languages: rust,javascript-typescript
           build-mode: manual
-      - run: cargo build --release || cargo build
+      - run: cargo build --locked --release
       - uses: github/codeql-action/analyze@v3

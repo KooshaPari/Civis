@@ -122,14 +122,14 @@ impl SocialEvent {
         }
     }
 
-    /// Convenience constructor for a conflict event with a small magnitude.
+    /// Convenience constructor for a conflict event with a decisive magnitude.
     #[must_use]
     pub fn conflict(a: AgentId, b: AgentId, tick: u64) -> Self {
         Self {
             a,
             b,
             kind: SocialEventKind::Conflict,
-            magnitude: 1.0,
+            magnitude: 2.0,
             tick,
         }
     }
@@ -397,6 +397,7 @@ impl SocialGraph {
     pub fn strongest_grudge(&self, agent: AgentId) -> Option<(AgentId, SocialEdge)> {
         self.neighbors_of(agent)
             .into_iter()
+            .filter(|(_, edge)| edge.weight < 0.0)
             .min_by(|(other_a, ea), (other_b, eb)| {
                 eb.weight
                     .partial_cmp(&ea.weight)

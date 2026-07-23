@@ -348,7 +348,7 @@ fn need_satisfaction_factor(needs: &[Need]) -> f32 {
         return 0.0;
     }
     let mean_urgency: f32 = needs.iter().map(|n| n.urgency()).sum::<f32>() / needs.len() as f32;
-    (1.0 - mean_urgency).clamp(-1.0, 1.0)
+    (1.0 - 2.0 * mean_urgency).clamp(-1.0, 1.0)
 }
 
 /// Mean valence of memory events within the lookback window. Empty (or

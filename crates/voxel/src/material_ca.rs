@@ -1,13 +1,19 @@
-//! Cellular-automaton material simulation.
+//! Compatibility path for the deterministic material cellular automaton.
 //!
-//! Stub — the module is declared in `lib.rs` but no external crate imports from it
-//! directly. Added so the crate compiles while the CA logic is developed.
+//! The implementation lives in [`crate::fluid_ca`]. Keeping this module as a
+//! re-export preserves the historical module path without maintaining a
+//! second, divergent CA state model.
 
-/// Minimum-viable placeholder.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct MaterialCaState;
+pub use crate::fluid_ca::*;
 
-/// Stub — returns default state.
-pub fn simulate(_dt: f64) -> MaterialCaState {
-    MaterialCaState
+#[cfg(test)]
+mod tests {
+    use super::CaGrid;
+
+    #[test]
+    fn compatibility_path_uses_deterministic_ca_grid() {
+        let grid = CaGrid::new([2, 2, 2]);
+        assert_eq!(grid.cells.len(), 8);
+        assert!(grid.dirty_chunks.is_empty());
+    }
 }

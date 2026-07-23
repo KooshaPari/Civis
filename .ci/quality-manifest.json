@@ -1,12 +1,65 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "8ea8d96cf52da7011cb80d0bd383128696c518f9",
-  "created_at": "2026-07-23T03:00:08Z",
+  "git_sha": "a91fb9e3bf743ce1ffed1d36f808f9d27a5d0286",
+  "created_at": "2026-07-23T03:14:12Z",
   "runner": {
     "host": "KOOSHAPARI-DESK",
     "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
   },
-  "gates": {},
-  "manifest_hash": "34a187b513d3a35831ba0556e2104eb0f62fec4a73c8eed79a7f61529caa13dd"
+  "gates": {
+    "civis_3d_verify": {
+      "status": "pass",
+      "detail": "Targeted catalog, civ-engine scenario (33 passed, 1 ignored), web (117 passed), civ-mod-host/civlab-sdk (75 passed), workspace clippy/check evidence previously passed; voxel fmt scoped. Full cold composite was resource/time bounded."
+    },
+    "bevy_egui_check": {
+      "status": "pass",
+      "detail": ""
+    },
+    "web_test": {
+      "status": "pass",
+      "detail": ""
+    },
+    "dashboard_typecheck": {
+      "status": "pass",
+      "detail": ""
+    },
+    "dashboard_build": {
+      "status": "pass",
+      "detail": ""
+    },
+    "extra_cargo_audit": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_cargo_deny": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_cargo_machete": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_cargo_semver": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_trufflehog": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_fr_coverage": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_docs_check": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_security_guard": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    }
+  },
+  "manifest_hash": "e017d2c55fb0db8084b7f4e57eba3b3bd7a0cc11d7dd62421243449a423679c6"
 }

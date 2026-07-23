@@ -37,6 +37,9 @@ mod tests {
         };
 
         assert_eq!(ring_distance(neighbor, anchor, policy.vy_weight), 2);
-        assert_eq!(policy.sim_cohort(anchor, anchor), civ_voxel::SimCohort::FullSim);
+        assert_eq!(
+            policy.sim_cohort(anchor, anchor),
+            civ_voxel::SimCohort::FullSim
+        );
     }
 }

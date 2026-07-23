@@ -3,10 +3,10 @@
 //! The policy implementation is owned by `civ-voxel`; this crate keeps the
 //! client-facing module path stable without maintaining a second stub model.
 
+pub use civ_voxel::window::ring_iter::RingIter;
 pub use civ_voxel::window::{
     ring_distance, ChunkState, EvictionKey, PolicyError, SimCohort, WindowPolicy,
 };
-pub use civ_voxel::window::ring_iter::RingIter;
 
 pub mod io {
     pub use civ_voxel::window::io::*;

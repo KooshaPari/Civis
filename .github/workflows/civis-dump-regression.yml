@@ -26,19 +26,6 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
-      - name: export runner lockfile diagnostic
-        run: |
-          cargo generate-lockfile
-          python3 - <<'PY'
-          import base64
-          import gzip
-          from pathlib import Path
-          encoded = base64.b64encode(gzip.compress(Path("Cargo.lock").read_bytes(), compresslevel=9)).decode()
-          print("LOCK_B64_GZIP_BEGIN")
-          print(encoded)
-          print("LOCK_B64_GZIP_END")
-          PY
-          exit 1
       - name: cargo test -p civis-cli (dump regression)
         run: |
           cargo test --locked -p civis-cli dump::

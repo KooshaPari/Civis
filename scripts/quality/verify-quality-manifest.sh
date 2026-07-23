@@ -50,21 +50,26 @@ if attested != head:
     except subprocess.CalledProcessError:
         parent = ""
     if attested != parent:
+        attested_exists = subprocess.run(
+            ["git", "cat-file", "-e", f"{attested}^{{commit}}"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        ).returncode == 0
+        comparison = [attested, "HEAD"] if attested_exists else [parent, "HEAD"]
         try:
             subprocess.run(
                 [
                     "git",
                     "diff",
                     "--quiet",
-                    attested,
-                    "HEAD",
+                    *comparison,
                     "--",
                     ".",
                     ":(exclude).ci/quality-manifest.json",
                 ],
                 check=True,
             )
-            content_matches = True
+            content_matches = bool(parent) and (attested_exists or comparison == [parent, "HEAD"])
         except subprocess.CalledProcessError:
             content_matches = False
     if attested != parent and not content_matches:

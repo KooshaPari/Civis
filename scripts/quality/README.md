@@ -11,7 +11,7 @@ git add .ci/quality-manifest.json
 git commit -m "chore(ci): refresh quality manifest"
 ```
 
-The manifest records a `git_sha` (HEAD, HEAD^, or a commit with matching non-manifest content after a squash merge) and a blake2b `manifest_hash` over gate statuses. Cloud verify checks out the PR branch tip and rejects stale or tampered manifests.
+The manifest records a `git_sha` (HEAD, HEAD^, or a commit with matching non-manifest content after a squash merge) and a blake2b `manifest_hash` over gate statuses. Cloud verify checks out the PR branch tip and rejects stale or tampered manifests. On a squash-merged default branch, the source commit may be unreachable; in that case only a manifest-only `HEAD^..HEAD` change is accepted.
 
 ## Gate tiers
 

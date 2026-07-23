@@ -1,9 +1,9 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "99001fa2da6908df1eb1e064c099cbcaff62a637",
-  "content_hash": "70870e64480cba8f2c60e3c32c4df23e16dd337ac98039b0f48494080a7a7629",
-  "created_at": "2026-07-23T07:12:02Z",
+  "git_sha": "d4586ebfecaa8ef2cd4c12f23f2bb38749bf62f0",
+  "content_hash": "6220635bbb153835d85ed8ffcaee0f9d8fa7463e195188ad491a4f40acb64b70",
+  "created_at": "2026-07-23T08:14:53Z",
   "runner": {
     "host": "KOOSHAPARI-DESK",
     "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
@@ -92,7 +92,11 @@
     "civis_bridge_hook_test": {
       "status": "pass",
       "detail": "cargo test -p civ-voxel-bridge --offline: 4 test binaries passed, 0 failed; cargo fmt scoped check and git diff --check passed; cross-platform pre-push wrapper exercised"
+    },
+    "civ_ai_embed_feature_tests": {
+      "status": "pass",
+      "detail": "Standalone civ-ai feature-on harness: fastembed/ORT compiled; 36 unit tests + 10 integration tests + 1 doc test passed; missing-artifact no-download test passed; 1 pre-existing async test ignored"
     }
   },
-  "manifest_hash": "f937801331095eaafaad6b5d17bbdb40057602c17dd4c29c2371bb6da821c4f5"
+  "manifest_hash": "4347e25e183d59fe36d828c55dafdd9ca45842908dc937b35e037f69256d5b88"
 }

@@ -747,13 +747,11 @@ fn build_civilian_state_frame(sim: &Simulation, tick: u64) -> CivilianStateFrame
                 profession,
                 genome_summary: GenomeSummary3d {
                     summary: format!("era-{}", wardrobe.era),
-                    lineage: format!(
-                        "faction-{}",
-                        match civilian.alignment {
-                            civ_agents::Alignment::Faction(id) => id,
-                            _ => 0,
-                        }
-                    ),
+                    lineage: match civilian.alignment {
+                        civ_agents::Alignment::Faction(id) => format!("faction-{id}"),
+                        // Empty lineage marks unaligned so the client does not show Ardani.
+                        _ => String::new(),
+                    },
                     traits: Vec::new(),
                 },
                 species: "human".to_string(),
@@ -819,7 +817,8 @@ fn build_faction_state_frame(sim: &Simulation, tick: u64) -> FactionStateFrame {
     {
         let fid = match civilian.alignment {
             civ_agents::Alignment::Faction(id) => id,
-            _ => 0,
+            // Unaligned / other-entity must not inflate faction 0 (Ardani) pop counts.
+            _ => continue,
         };
         *population_by_faction.entry(fid).or_insert(0) += 1;
     }

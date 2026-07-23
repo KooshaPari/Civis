@@ -80,6 +80,7 @@ pub mod history;
 pub mod language;
 pub mod psyche_behavior;
 pub mod religion;
+pub mod writing;
 
 pub mod tutorial;
 

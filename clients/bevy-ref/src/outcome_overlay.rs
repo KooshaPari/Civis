@@ -10,7 +10,29 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 use crate::live_attach::LiveAttachBridge;
+use crate::menus::{toggle_pause, AppState};
 use crate::OutcomeProgressHud;
+
+/// Gates when terminal outcomes may surface the modal (Paradox-style shell).
+#[derive(Resource, Debug)]
+pub struct OutcomeSessionGate {
+    /// False until the player starts a session from the main menu.
+    pub session_active: bool,
+    /// Tick of the first `ongoing` poll after session start.
+    pub first_poll_tick: Option<u64>,
+    /// Ticks after first ongoing poll before terminal outcomes may show.
+    pub grace_ticks: u64,
+}
+
+impl Default for OutcomeSessionGate {
+    fn default() -> Self {
+        Self {
+            session_active: false,
+            first_poll_tick: None,
+            grace_ticks: 120,
+        }
+    }
+}
 
 /// Bevy resource caching the last non-Ongoing outcome received.
 #[derive(Resource, Debug, Default)]
@@ -19,8 +41,44 @@ pub struct OutcomeOverlayState {
     pub dismissed: bool,
 }
 
+/// One-frame flag: escape dismissed the outcome modal this frame (blocks pause toggle).
+#[derive(Resource, Default)]
+pub(crate) struct OutcomeEscapeBlock(pub bool);
+
+/// Begin an interactive session from the main menu (clears stale server outcomes).
+pub fn begin_player_session(
+    client: Option<&crate::ws_client::WsClient>,
+    gate: &mut OutcomeSessionGate,
+    overlay: &mut OutcomeOverlayState,
+) {
+    // Drain at the same boundary as the local session reset. Callers may have
+    // queued an old outcome between their preflight clear and this transition.
+    if let Some(client) = client {
+        client.clear_outcomes();
+    }
+    gate.session_active = true;
+    gate.first_poll_tick = None;
+    overlay.outcome = None;
+    overlay.dismissed = false;
+}
+
+/// End the session when returning to the main menu.
+pub fn end_player_session(gate: &mut OutcomeSessionGate, overlay: &mut OutcomeOverlayState) {
+    gate.session_active = false;
+    gate.first_poll_tick = None;
+    overlay.outcome = None;
+    overlay.dismissed = false;
+}
+
+/// True when the full-screen outcome modal should be shown.
+#[must_use]
+pub fn outcome_modal_visible(state: &OutcomeOverlayState) -> bool {
+    !state.dismissed && state.outcome.is_some()
+}
+
 /// Apply a polled `sim.outcome` payload to overlay + progress HUD state.
-pub(crate) fn apply_outcome_poll(
+pub fn apply_outcome_poll(
+    gate: &mut OutcomeSessionGate,
     state: &mut OutcomeOverlayState,
     progress: &mut OutcomeProgressHud,
     data: crate::OutcomeHudData,
@@ -29,6 +87,22 @@ pub(crate) fn apply_outcome_poll(
         if let Some(snapshot) = data.progress {
             progress.0 = Some(snapshot);
         }
+        if gate.session_active && gate.first_poll_tick.is_none() {
+            gate.first_poll_tick = Some(data.tick);
+        }
+        return;
+    }
+
+    if let Some(snapshot) = data.progress {
+        progress.0 = Some(snapshot);
+    }
+
+    let grace_met = gate
+        .first_poll_tick
+        .map(|first| data.tick.saturating_sub(first) >= gate.grace_ticks)
+        .unwrap_or(false);
+
+    if !gate.session_active || !grace_met {
         return;
     }
 
@@ -40,9 +114,6 @@ pub(crate) fn apply_outcome_poll(
     {
         state.dismissed = false;
     }
-    if let Some(snapshot) = data.progress {
-        progress.0 = Some(snapshot);
-    }
     state.outcome = Some(data);
 }
 
@@ -50,28 +121,65 @@ pub struct OutcomeOverlayPlugin;
 
 impl Plugin for OutcomeOverlayPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<OutcomeOverlayState>()
+        app.init_resource::<OutcomeSessionGate>()
+            .init_resource::<OutcomeOverlayState>()
             .init_resource::<OutcomeProgressHud>()
+            .init_resource::<OutcomeEscapeBlock>()
+            .add_systems(
+                Update,
+                (
+                    clear_outcome_escape_block,
+                    dismiss_outcome_overlay_on_escape,
+                )
+                    .chain()
+                    .before(toggle_pause),
+            )
             .add_systems(Update, poll_outcome_system)
             .add_systems(EguiPrimaryContextPass, draw_outcome_overlay);
     }
 }
 
+fn clear_outcome_escape_block(mut block: ResMut<OutcomeEscapeBlock>) {
+    block.0 = false;
+}
+
+fn dismiss_outcome_overlay_on_escape(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut state: ResMut<OutcomeOverlayState>,
+    mut block: ResMut<OutcomeEscapeBlock>,
+) {
+    if keys.just_pressed(KeyCode::Escape) && outcome_modal_visible(&state) {
+        state.dismissed = true;
+        block.0 = true;
+    }
+}
+
 fn poll_outcome_system(
     bridge: Res<LiveAttachBridge>,
+    mut gate: ResMut<OutcomeSessionGate>,
     mut state: ResMut<OutcomeOverlayState>,
     mut progress: ResMut<OutcomeProgressHud>,
 ) {
     if let Some(data) = bridge.client.poll_outcome() {
-        apply_outcome_poll(&mut state, &mut progress, data);
+        apply_outcome_poll(&mut gate, &mut state, &mut progress, data);
     }
 }
 
 fn draw_outcome_overlay(
     mut contexts: EguiContexts,
+    gate: Res<OutcomeSessionGate>,
     mut state: ResMut<OutcomeOverlayState>,
     bridge: Res<LiveAttachBridge>,
+    app_state: Option<Res<State<AppState>>>,
 ) {
+    if !gate.session_active {
+        return;
+    }
+    if let Some(app_state) = app_state {
+        if *app_state.get() != AppState::Playing && *app_state.get() != AppState::Paused {
+            return;
+        }
+    }
     let Some(ref outcome) = state.outcome.clone() else {
         return;
     };
@@ -92,6 +200,7 @@ fn draw_outcome_overlay(
 
     egui::Area::new(egui::Id::new("outcome_overlay"))
         .fixed_pos(egui::pos2(0.0, 0.0))
+        .order(egui::Order::Middle)
         .show(ctx, |ui| {
             let screen = ctx.content_rect();
             ui.allocate_ui_with_layout(
@@ -166,11 +275,21 @@ mod tests {
         }
     }
 
+    fn active_gate_with_grace_met() -> OutcomeSessionGate {
+        OutcomeSessionGate {
+            session_active: true,
+            first_poll_tick: Some(1),
+            grace_ticks: 120,
+        }
+    }
+
     #[test]
     fn apply_outcome_poll_ignores_ongoing_without_overlay() {
+        let mut gate = OutcomeSessionGate::default();
         let mut state = OutcomeOverlayState::default();
         let mut progress = OutcomeProgressHud::default();
         apply_outcome_poll(
+            &mut gate,
             &mut state,
             &mut progress,
             crate::OutcomeHudData {
@@ -183,10 +302,59 @@ mod tests {
         assert!(state.outcome.is_none());
         assert!(!state.dismissed);
         assert_eq!(progress.0, Some(sample_progress()));
+        assert!(gate.first_poll_tick.is_none());
+    }
+
+    #[test]
+    fn apply_outcome_poll_sets_first_poll_tick_when_session_active() {
+        let mut gate = OutcomeSessionGate {
+            session_active: true,
+            ..Default::default()
+        };
+        let mut state = OutcomeOverlayState::default();
+        let mut progress = OutcomeProgressHud::default();
+        apply_outcome_poll(
+            &mut gate,
+            &mut state,
+            &mut progress,
+            crate::OutcomeHudData {
+                tag: "ongoing".to_string(),
+                reason: String::new(),
+                tick: 42,
+                progress: None,
+            },
+        );
+        assert_eq!(gate.first_poll_tick, Some(42));
+        assert!(state.outcome.is_none());
+    }
+
+    #[test]
+    fn apply_outcome_poll_blocks_terminal_before_grace() {
+        let mut gate = OutcomeSessionGate {
+            session_active: true,
+            first_poll_tick: Some(100),
+            grace_ticks: 120,
+        };
+        let mut state = OutcomeOverlayState::default();
+        let mut progress = OutcomeProgressHud::default();
+        apply_outcome_poll(
+            &mut gate,
+            &mut state,
+            &mut progress,
+            crate::OutcomeHudData {
+                tag: "victory".to_string(),
+                reason: "too soon".to_string(),
+                tick: 150,
+                progress: Some(sample_progress()),
+            },
+        );
+        assert!(state.outcome.is_none());
+        assert_eq!(progress.0, Some(sample_progress()));
     }
 
     #[test]
     fn apply_outcome_poll_surfaces_victory_and_resets_dismissed() {
+        let mut gate = active_gate_with_grace_met();
         let mut state = OutcomeOverlayState {
             outcome: Some(crate::OutcomeHudData {
                 tag: "defeat".to_string(),
@@ -198,12 +366,13 @@ mod tests {
         };
         let mut progress = OutcomeProgressHud::default();
         apply_outcome_poll(
+            &mut gate,
             &mut state,
             &mut progress,
             crate::OutcomeHudData {
                 tag: "victory".to_string(),
                 reason: "population".to_string(),
-                tick: 42,
+                tick: 200,
                 progress: Some(sample_progress()),
             },
         );
@@ -216,6 +385,7 @@ mod tests {
 
     #[test]
     fn apply_outcome_poll_keeps_dismissed_for_same_tag() {
+        let mut gate = active_gate_with_grace_met();
         let mut state = OutcomeOverlayState {
             outcome: Some(crate::OutcomeHudData {
                 tag: "defeat".to_string(),
@@ -227,12 +397,13 @@ mod tests {
         };
         let mut progress = OutcomeProgressHud::default();
         apply_outcome_poll(
+            &mut gate,
             &mut state,
             &mut progress,
             crate::OutcomeHudData {
                 tag: "defeat".to_string(),
                 reason: "second".to_string(),
-                tick: 2,
+                tick: 200,
                 progress: None,
             },
         );

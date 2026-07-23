@@ -25,7 +25,10 @@ pub mod atmosphere;
 pub mod audio;
 #[cfg(feature = "bevy")]
 pub mod camera;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod civ_history;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod controls_help;
 #[cfg(feature = "bevy")]
 pub mod decorations;
 #[cfg(all(feature = "bevy", feature = "egui"))]
@@ -49,13 +52,13 @@ pub mod gameplay_hud;
 pub mod gltf_models;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod god_actions;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod holocron_panel;
 pub mod god_panel;
 #[cfg(feature = "bevy")]
 pub mod gpu_features;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod graphics_settings;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod holocron_panel;
 #[cfg(feature = "bevy")]
 pub mod hud_state;
 #[cfg(feature = "bevy")]
@@ -145,14 +148,21 @@ pub mod voxel_stream;
 pub mod voxel_triplanar;
 #[cfg(feature = "bevy")]
 pub mod window_icon;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod world_faction_glyphs;
 
 pub use civ_agents::NeedAction;
 pub use civ_voxel::{
     ChunkId, CubicMesher, MaterialId, MeshBuffer, MeshVertex, VoxelWorld, WorldCoord,
 };
+pub use crash_handler::{crash_dir, install_crash_handler};
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub use menus::MenusPlugin;
-pub use crash_handler::install_crash_handler;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub use outcome_overlay::{
+    apply_outcome_poll, begin_player_session, end_player_session, OutcomeOverlayState,
+    OutcomeSessionGate,
+};
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub use perf_hud::PerfHudPlugin;
 #[cfg(all(feature = "bevy", feature = "egui"))]

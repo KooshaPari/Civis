@@ -32,8 +32,44 @@ cargo run -p civ-server
 # Bevy window prefers binary F3D0 frames — skip redundant JSON text tick pushes:
 CIVIS_TICK_BROADCAST=binary cargo run -p civ-server
 
-cargo run -p civ-bevy-ref --features bevy --bin civ-bevy-window
+cargo run -p civ-bevy-ref --features bevy,client-bins --bin civ-bevy-window
 ```
+
+Live window with egui shell:
+
+```bash
+cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-bevy-window
+```
+### Local play fingerprints
+
+Feature flags compound — pick the smallest set that matches your goal. CI and
+local play intentionally diverge: compile gates stay minimal; playable builds
+add audio (and optionally models / voxel / GI).
+
+| Tier | `--features` | Gate / recipe | What you get |
+|------|--------------|---------------|--------------|
+| **Minimal** | `bevy,egui` | `just bevy-egui-check` / `shell_attest` | Menus, HUD, in-process sim — **no audio**, heightmap terrain fallback. This is what PR compile gates and `civis-3d-live-smoke` `cargo check` use. Desktop `[[bin]]` targets are **not** built (need `client-bins`). |
+| **Native smoke** | `bevy,egui,client-bins` | `just civis-3d-standalone-smoke` | Builds `civ-standalone`, runs with `CIVIS_SMOKE_FRAMES` (default 5), exits after preflight + N Update frames. Needs a GPU. |
+| **Playable** | `bevy,egui,audio,client-bins` (+ optional `models`) | `just civis-bevy-play` | Release `civ-standalone` with ambient SFX + UI sounds. Add `models` when `assets/models/*.glb` are present (otherwise procedural primitives). |
+| **Full sandbox** | above + optional `voxel`, `voxel_stream`, `gi` | manual `cargo build/run` | `voxel` — volumetric CA terrain + water; `voxel_stream` — camera-driven chunk streaming (implies `voxel`); `gi` — Bevy Solari RT GI (needs DXR / Vulkan RT; degrades to no-op). Heavier compile; not in CI. |
+
+Desktop binaries (`civ-standalone`, `civ-bevy-window`, …) require the empty **`client-bins`** feature so `cargo test --test shell_attest` does not link huge Bevy exes (rust-lld hang on Windows). Recipes under `justfile` / `Tools/play.ps1` already pass it.
+
+**Playable run (after `just civis-bevy-play` builds release):**
+
+```powershell
+# From repo root — BEVY_ASSET_ROOT required when CWD is workspace root (see Tools/play.ps1)
+$env:BEVY_ASSET_ROOT = "$PWD/clients/bevy-ref"
+& "$env:CARGO_TARGET_DIR/release/civ-standalone.exe"   # default target: <repo>/target
+
+# Optional live attach (skip local terrain; remote ticks ignore pause)
+$env:CIVIS_ATTACH = "server"
+$env:CIV_SERVER_PORT = "3010"   # default is 3000; matches civ-server listen port
+# Or full URL (overrides host/port/path):
+$env:CIV_WS_URL = "ws://127.0.0.1:3010/ws?tick_format=binary"
+```
+
+Set `CIVIS_TICK_BROADCAST=binary` on `civ-server` when using `tick_format=binary` on the URL.
 
 ### Live attach smoke (`just civis-3d-live-smoke`)
 
@@ -80,20 +116,24 @@ and ~35° elevation — see `CameraTarget` in `src/lib.rs`.
 
 ### `civ-standalone` sandbox (HUD + menus)
 
-Requires `--features bevy,egui`:
+Requires `--features bevy,egui,client-bins`:
 
 ```bash
-cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone
+cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone
 ```
 
 | Input | Action |
 |-------|--------|
-| `Escape` | Toggle pause overlay (dims world; halts in-process sim ticks) |
-| Pause overlay **Resume** | Dismiss overlay (same as `Escape` while paused) |
-| `Space` | Toggle HUD speed pause (`GameSpeed` `0` / `1x`) |
-| `1`–`3` | HUD speed `1x` / `2x` / `5x` |
-| Settings (pause menu) | Graphics quality, volume, sim speed stubs |
+| `Space` | Toggle pause overlay (dims world; zeros `GameSpeed` and halts in-process sim) |
+| `Escape` | Close panels / also toggles pause when settings are closed |
+| `?` | Controls cheat sheet |
+| Pause overlay **Resume** | Dismiss overlay and restore prior sim speed |
+| HUD pause / `1`–`4` | Speed chips set `GameSpeed` directly (sim pause without overlay) |
+| `Shift`+`1`–`9` | Tool categories (Select…Policy) |
+| `Ctrl`+`K` | Holocron Command‑K verb launcher (live attach; Enter fires `GodActionRequest`) |
+| Settings (pause menu) | Graphics / audio / controls (persisted `settings.ron`); some display flags need restart |
 | **L** | Toggle scrollable **Event Log** (egui); stacked toasts bottom-right (~8s) |
+| `F1` | Toggle faction HUD |
 | Live attach (`CIVIS_ATTACH=server`) | Toasts on WebSocket `connected` / `reconnecting` / `disconnected` (`EventKind::System`) |
 
 Live attach (`CIVIS_ATTACH=server` or `CIV_WS_URL`) skips local terrain; pause does not gate remote ticks.
@@ -104,10 +144,12 @@ Live attach (`CIVIS_ATTACH=server` or `CIV_WS_URL`) skips local terrain; pause d
 |-------|--------|
 | Left drag | Orbit (azimuth / elevation) |
 | Scroll wheel | Zoom (distance) |
-| `R` | Reset to [`CameraTarget::default()`](src/lib.rs) |
+| `Q` / `E` | Pivot rotate (orbit left / right) |
+| `R` / `F` | Raise / lower orbit centre |
+| `Home` | Reset to [`CameraTarget::default()`](src/lib.rs) |
 | `=`, `+` (numpad), `[` | Zoom in (decrease distance) |
 | `-`, numpad `-`, `]` | Zoom out (increase distance) |
-| `W` / `A` / `S` / `D` | Pan orbit centre on the horizontal plane (stub) |
+| `W` / `A` / `S` / `D` | Pan orbit centre on the horizontal plane |
 | `F3` | Toggle chunk mesh wireframe debug overlay |
 
 ### Native GPU backends (`CIV_BEVY_BACKEND`)

@@ -108,7 +108,8 @@ fn check_gpu_adapter() -> Result<String, String> {
         .ok_or_else(|| "no wgpu adapter for native backends".to_string())?;
 
     let info = adapter.get_info();
-    Ok(format!("{} {:?}", info.name, info.backend))
+    let hal = crate::native_backend::describe_hal_path(native_only_backends());
+    Ok(format!("{} {:?} · {hal}", info.name, info.backend))
 }
 
 #[cfg(test)]

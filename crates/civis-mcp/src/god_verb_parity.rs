@@ -6,9 +6,7 @@
 use serde_json::{json, Value};
 
 /// Legacy Bevy god-panel verbs handled by the WS bridge.
-pub const WS_LEGACY_GOD_VERBS: &[&str] = &[
-    "smite", "bless", "earthquake", "plague", "miracle",
-];
+pub const WS_LEGACY_GOD_VERBS: &[&str] = &["smite", "bless", "earthquake", "plague", "miracle"];
 
 /// Substrate life verbs on the Live/WS panel.
 pub const WS_LIFE_VERBS: &[&str] = &["life.spawn_organism", "life.spawn_herd"];
@@ -61,10 +59,7 @@ pub fn build_life_spawn_god_action_params(
         obj.insert("action".to_owned(), json!("life.spawn_herd"));
         obj.insert("count".to_owned(), json!(n));
     }
-    obj.insert(
-        "target_faction".to_owned(),
-        json!(faction.unwrap_or(0)),
-    );
+    obj.insert("target_faction".to_owned(), json!(faction.unwrap_or(0)));
     if let Some(id) = seed_civilian_id {
         obj.insert("seed_civilian_id".to_owned(), json!(id));
     }

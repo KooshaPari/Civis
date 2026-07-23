@@ -3,6 +3,9 @@
 Vector source art for the Civis main-menu and loading screens.  
 Bevy cannot load SVG directly; all files must be rasterised to PNG before use (see below).
 
+For the full cross-DCC pipeline (Blender, Substance, FBX, credits), see
+[`PIPELINE.md`](PIPELINE.md) in this directory.
+
 ---
 
 ## Colour Palette
@@ -129,6 +132,13 @@ pwsh Tools/asset-pipeline/Convert-SvgToPng.ps1 -SourceDir clients/bevy-ref/asset
 | `hud/progress-bar-fill.svg` | `240×20` | 9-slice: x=10/230; clip to % width at runtime |
 | `hud/chip-bg.svg` | `80×28` | 9-slice: x=14/66, y=8/20 |
 | `hud/resource-*.svg` | `32×32` or `64×64` | Square, transparent bg |
+
+### Shipped shell backgrounds
+
+`title-bg.png` and `loading-bg.png` are committed 1536×864 raster key art so
+the default binary never opens onto an untextured/blank shell. The SVG files
+remain editable source references; replacing either PNG requires checking
+legibility of the menu or loading panel at 1280×720 and 1920×1080.
 
 ### 9-slice usage in Bevy
 

@@ -42,14 +42,19 @@
 //! | Resolution preset | **Live** — `Window` resource |
 //! | Upscaling algorithm | **Restart-required** (DLSS/FSR require plugin) |
 //!
-//! ## Relationship to `settings_ui::GraphicsSettings`
+//! ## Relationship to `settings_ui::SettingsPlugin`
 //!
-//! [`settings_ui`] already persists a `GraphicsSettings` sub-struct inside
-//! `GameSettings` (used by the main Settings panel). This module is the
-//! authoritative, fully-wired companion that exposes granular AAA knobs and
-//! drives Bevy resources at runtime.  `settings_ui::GraphicsSettings` is the
-//! serialised mirror shown in the existing tabbed settings page; this module
-//! adds the deeper runtime tier on top.
+//! **Player-facing UI:** open **Settings** (`O`) → **Graphics** tab → **Graphics API**
+//! combo for render-engine / `CIV_BEVY_BACKEND` (restart required). Boot applies the
+//! persisted choice via [`crate::settings_ui::GameSettings::apply_boot_render_engine`].
+//!
+//! [`settings_ui::GraphicsSettings`] (inside [`crate::settings_ui::GameSettings`]) is the
+//! RON-persisted source of truth. [`GfxSettings`] is the runtime apply mirror: when
+//! [`GraphicsSettingsPlugin`] is registered alongside [`crate::settings_ui::SettingsPlugin`],
+//! `sync_gfx_from_game_settings` copies game + display prefs into [`GfxSettings`] and
+//! [`apply_gfx_settings`] patches Bevy presentation resources. The standalone AAA egui
+//! window in this module is **not** wired by default (no hotkey) so it does not compete
+//! with the tabbed Settings panel; set `CIVIS_GFX_PANEL=1` to enable it for dev captures.
 //!
 //! ## Sim isolation charter
 //!
@@ -64,6 +69,7 @@ use bevy::post_process::motion_blur::MotionBlur;
 use bevy::prelude::*;
 use bevy::render::camera::TemporalJitter;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
+use serde::{Deserialize, Serialize};
 
 use crate::gpu_features::GpuCapabilities;
 use crate::ui_theme;
@@ -75,24 +81,25 @@ use crate::ui_theme;
 /// GPU backend preference.  `Auto` lets `native_backend.rs` decide (default
 /// DX12 on Windows, Metal on macOS, Vulkan on Linux).  Override at boot via
 /// `CIV_BEVY_BACKEND` env — the app must restart for this to take effect.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum BackendPref {
     /// Let the platform decide (see `native_backend.rs`).
     #[default]
     Auto,
     /// Force DX12 (Windows-only; ignored on other OS).
+    #[serde(alias = "DirectX12Ultimate")]
     DX12,
     /// Force Vulkan.
     Vulkan,
 }
 
 impl BackendPref {
-    const ALL: [BackendPref; 3] = [Self::Auto, Self::DX12, Self::Vulkan];
+    pub const ALL: [BackendPref; 3] = [Self::Auto, Self::DX12, Self::Vulkan];
 
-    fn label(self) -> &'static str {
+    pub fn label(self) -> &'static str {
         match self {
-            Self::Auto => "Auto",
-            Self::DX12 => "DX12",
+            Self::Auto => "Auto (recommended)",
+            Self::DX12 => "DirectX 12 Ultimate",
             Self::Vulkan => "Vulkan",
         }
     }
@@ -103,6 +110,14 @@ impl BackendPref {
             Self::Auto => None,
             Self::DX12 => Some("dx12"),
             Self::Vulkan => Some("vulkan"),
+        }
+    }
+
+    /// Apply the persisted backend choice before Bevy performs adapter discovery.
+    pub fn apply_to_env(self) {
+        match self.env_token() {
+            Some(token) => std::env::set_var(crate::native_backend::BACKEND_ENV, token),
+            None => std::env::remove_var(crate::native_backend::BACKEND_ENV),
         }
     }
 }
@@ -400,7 +415,7 @@ impl ResPreset {
 /// Bevy render resources via [`apply_gfx_settings`].
 ///
 /// **Sim isolation:** no value from this resource feeds simulation state.
-#[derive(Resource, Debug, Clone)]
+#[derive(Resource, Debug, Clone, PartialEq)]
 pub struct GfxSettings {
     // --- Render engine ---
     /// GPU backend preference (restart-required).
@@ -546,6 +561,97 @@ impl GfxSettings {
 }
 
 // ---------------------------------------------------------------------------
+// Sync from settings_ui (persisted GameSettings → runtime GfxSettings)
+// ---------------------------------------------------------------------------
+
+/// Build [`GfxSettings`] from the tabbed Settings panel state (graphics + display).
+#[must_use]
+pub fn gfx_from_game_settings(game: &crate::settings_ui::GameSettings) -> GfxSettings {
+    use crate::settings_ui::{
+        AntiAliasing, QualityPreset as GameQuality, ResolutionPreset, ShadowQuality, WindowMode,
+    };
+
+    let g = &game.graphics;
+    let d = &game.display;
+
+    let backend = g.render_engine;
+    let present_mode = if g.vsync {
+        PresentMode::Vsync
+    } else {
+        PresentMode::Immediate
+    };
+    let quality = match g.quality {
+        GameQuality::Low => QualityPreset::Low,
+        GameQuality::Medium => QualityPreset::Medium,
+        GameQuality::High => QualityPreset::High,
+        GameQuality::Ultra => QualityPreset::Ultra,
+        GameQuality::Custom => QualityPreset::Custom,
+    };
+    let (shadow_resolution, shadow_cascades) = match g.shadow_quality {
+        ShadowQuality::Off => (ShadowResolution::R512, 1),
+        ShadowQuality::Low => (ShadowResolution::R512, 1),
+        ShadowQuality::Medium => (ShadowResolution::R1024, 2),
+        ShadowQuality::High => (ShadowResolution::R2048, 4),
+        ShadowQuality::Ultra => (ShadowResolution::R4096, 4),
+    };
+    let aa = match g.anti_aliasing {
+        AntiAliasing::Off | AntiAliasing::FXAA => AaMode::Off,
+        AntiAliasing::TAA => AaMode::TAA,
+        AntiAliasing::MSAA => AaMode::MSAA4x,
+    };
+    let tonemapping = if g.tonemapping_enabled {
+        ToneCurve::AcesFit
+    } else {
+        ToneCurve::None
+    };
+    let resolution = match g.resolution {
+        ResolutionPreset::R720p => ResPreset::R720p,
+        ResolutionPreset::R1080p => ResPreset::R1080p,
+        ResolutionPreset::R1440p => ResPreset::R1440p,
+        ResolutionPreset::R2160p => ResPreset::R4K,
+    };
+    let window_mode = match d.window_mode {
+        WindowMode::Windowed => WinMode::Windowed,
+        WindowMode::Borderless => WinMode::Borderless,
+        WindowMode::Fullscreen => WinMode::Fullscreen,
+    };
+    let fps_cap = if d.fps_uncapped { 0 } else { d.target_fps };
+
+    GfxSettings {
+        backend,
+        present_mode,
+        fps_cap,
+        quality,
+        solari_gi: g.gi,
+        shadow_resolution,
+        shadow_cascades,
+        render_scale: g.resolution_scale,
+        upscaling: UpscalingMode::Native,
+        ssao: g.ssao_enabled,
+        bloom: g.bloom,
+        bloom_intensity: if g.bloom { 0.3 } else { 0.0 },
+        aa,
+        tonemapping,
+        motion_blur: g.motion_blur,
+        motion_blur_shutter: 0.5,
+        resolution,
+        window_mode,
+        open: false,
+    }
+}
+
+/// Copies persisted [`crate::settings_ui::GameSettings`] into [`GfxSettings`].
+pub fn sync_gfx_from_game_settings(
+    game: Res<crate::settings_ui::GameSettings>,
+    mut gfx: ResMut<GfxSettings>,
+) {
+    let next = gfx_from_game_settings(&game);
+    if *gfx != next {
+        *gfx = next;
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Apply system — live options only
 // ---------------------------------------------------------------------------
 
@@ -651,15 +757,32 @@ pub fn apply_gfx_settings(
 // Plugin
 // ---------------------------------------------------------------------------
 
-/// Plugin that registers [`GfxSettings`] and wires the settings panel +
-/// apply system.  Does NOT add `EguiPlugin` (owned by `GameUiPlugin`).
+/// Plugin that registers [`GfxSettings`], syncs from [`crate::settings_ui::GameSettings`],
+/// and runs [`apply_gfx_settings`]. Does NOT add `EguiPlugin` (owned by `GameUiPlugin`).
+///
+/// Register alongside [`crate::settings_ui::SettingsPlugin`]. The AAA egui window is
+/// opt-in via `CIVIS_GFX_PANEL=1` so only one settings UI is visible by default.
 pub struct GraphicsSettingsPlugin;
 
 impl Plugin for GraphicsSettingsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GfxSettings>()
-            .add_systems(Update, apply_gfx_settings)
-            .add_systems(EguiPrimaryContextPass, draw_gfx_settings_panel);
+            .add_systems(
+                Startup,
+                (sync_gfx_from_game_settings, apply_gfx_settings).chain(),
+            )
+            .add_systems(
+                Update,
+                (
+                    sync_gfx_from_game_settings
+                        .run_if(resource_changed::<crate::settings_ui::GameSettings>),
+                    apply_gfx_settings,
+                )
+                    .chain(),
+            );
+        if std::env::var("CIVIS_GFX_PANEL").as_deref() == Ok("1") {
+            app.add_systems(EguiPrimaryContextPass, draw_gfx_settings_panel);
+        }
     }
 }
 
@@ -1067,6 +1190,27 @@ fn draw_display_section(ui: &mut egui::Ui, s: &mut GfxSettings) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn gfx_from_game_settings_maps_render_engine_and_display() {
+        use crate::settings_ui::{GameSettings, RenderEngine, ResolutionPreset, WindowMode};
+
+        let mut game = GameSettings::default();
+        game.graphics.render_engine = RenderEngine::Vulkan;
+        game.graphics.resolution = ResolutionPreset::R1440p;
+        game.graphics.vsync = false;
+        game.display.window_mode = WindowMode::Borderless;
+        game.display.fps_uncapped = false;
+        game.display.target_fps = 60;
+
+        let gfx = gfx_from_game_settings(&game);
+        assert_eq!(gfx.backend, BackendPref::Vulkan);
+        assert_eq!(gfx.present_mode, PresentMode::Immediate);
+        assert_eq!(gfx.resolution, ResPreset::R1440p);
+        assert_eq!(gfx.window_mode, WinMode::Borderless);
+        assert_eq!(gfx.fps_cap, 60);
+        assert!(!gfx.open);
+    }
 
     #[test]
     fn default_settings_are_sane() {

@@ -3,23 +3,44 @@
 //! Menus and overlay plugin for the Civis reference client (FR-CIV-BEVY-024 / item 49).
 //! Settings GPU readout: FR-CIV-BEVY-036 / item 61.
 
+use crate::faction_hud::PlayerFactionId;
+use crate::game_ui::GameSpeed;
 use crate::gpu_features::GpuCapabilities;
+use crate::live_attach::LiveAttachBridge;
+use crate::live_stream::{clear_live_stream_scene_in_world, LiveStreamScene};
+use crate::outcome_overlay::{
+    begin_player_session, end_player_session, outcome_modal_visible, OutcomeEscapeBlock,
+    OutcomeOverlayState, OutcomeSessionGate,
+};
 use crate::save_load_ui::SaveLoadPanel;
 use crate::settings_ui::{GameSettings, KeyBinding, ACTION_PAUSE_SIM};
-use crate::ui_theme::{liquid_glass_frame, GLASS_FILL, KC_ACCENT, RADIUS_PANEL, CHIP_FILL};
+use crate::ui_theme::{CHIP_FILL, GLASS_FILL, KC_ACCENT};
 use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
+const WORLDGEN_PRESETS: [&str; 4] = [
+    "single-race-ardani",
+    "three-race-balanced",
+    "ardani-dominant",
+    "lush-frontier",
+];
+const WORLDGEN_DEFAULT_SEED: u64 = 0xC1F1_5EED_D3AD_BEEF;
+const WORLDGEN_BOOT_SECONDS: f32 = 2.0;
+
 const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
-const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
+/// Opaque enough to keep pause chrome readable over bright world / title art.
+const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(12, 14, 22, 248);
 const DIM: egui::Color32 = egui::Color32::from_rgb(150, 158, 178);
-const OVERLAY_DIM: egui::Color32 = egui::Color32::from_rgba_premultiplied(0, 0, 0, 160);
+/// Stronger scrim so shipped backgrounds do not wash out the pause panel.
+const OVERLAY_DIM: egui::Color32 = egui::Color32::from_rgba_premultiplied(0, 0, 0, 210);
 
 /// Shell state used by the Bevy window client (main menu + gameplay + pause states).
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum AppState {
     MainMenu,
+    /// Map / scenario setup before worldgen boots.
+    WorldSetup,
     WorldGen,
     Playing,
     Paused,
@@ -35,7 +56,12 @@ impl Default for AppState {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MainMenuCommand {
     None,
+    /// Open the world / map setup panel (does not boot yet).
     NewWorld,
+    /// Confirm world setup and start generation / live attach.
+    ConfirmWorldSetup,
+    /// Abort world setup back to the title screen.
+    CancelWorldSetup,
     Continue,
     LoadGame,
     Resume,
@@ -100,38 +126,45 @@ pub struct SettingsOpen(pub bool);
 pub struct WorldSetupParams {
     /// World seed selected for the current run.
     pub seed: u64,
-    /// World-size preset index mirrored by the settings UI.
-    pub world_size: usize,
+    /// Climate / scenario preset index into [`WORLDGEN_PRESETS`].
+    pub climate_preset: usize,
+    /// Local player faction id (0 = Ardani, 1 = Velthari, 2 = Grundak).
+    pub player_faction: u32,
 }
 
 impl Default for WorldSetupParams {
     fn default() -> Self {
         Self {
             seed: 0xC1F1_5EED_D3AD_BEEF,
-            world_size: 1,
+            climate_preset: 0,
+            player_faction: 0,
         }
     }
 }
 
-/// Transient state for the settings window (no persistence yet).
-#[derive(Resource, Debug)]
-pub struct SettingsState {
-    /// 0 = Low, 1 = Medium, 2 = High, 3 = Ultra
-    pub graphics_quality: usize,
-    /// 0.0 – 1.0
-    pub master_volume: f32,
-    /// Tick speed multiplier.
-    pub sim_speed: u32,
+/// Transient world-gen boot timer (standalone server attach).
+#[derive(Resource, Default, Debug)]
+pub struct WorldGenBoot {
+    /// Elapsed seconds while in [`AppState::WorldGen`].
+    pub elapsed: f32,
+    /// Whether the previous menu command queued a scene clear that must apply
+    /// before an existing scene can satisfy the readiness check.
+    pub scene_clear_pending: bool,
 }
 
-impl Default for SettingsState {
-    fn default() -> Self {
-        Self {
-            graphics_quality: 2,
-            master_volume: 0.8,
-            sim_speed: 1,
-        }
-    }
+/// Rasterised shell artwork (PNG only; vector sources are documented in PIPELINE.md).
+#[derive(Resource, Default)]
+pub struct MainMenuTitleAssets {
+    /// Full-menu background (`ui/title-bg.png`).
+    pub background: Option<Handle<Image>>,
+    /// World-generation/loading background (`ui/loading-bg.png`).
+    pub loading_background: Option<Handle<Image>>,
+    /// Rotating worldgen emblem (`ui/loading-spinner.png`).
+    pub loading_spinner: Option<Handle<Image>>,
+    /// Logo mark (`ui/logo.png`).
+    pub logo: Option<Handle<Image>>,
+    /// Wordmark (`ui/wordmark.png`).
+    pub wordmark: Option<Handle<Image>>,
 }
 
 /// Bevy plugin: pause overlay, era banners, settings window.
@@ -139,34 +172,317 @@ pub struct MenusPlugin;
 
 impl Plugin for MenusPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<GameUiMode>()
+        app.init_state::<AppState>()
+            .init_resource::<GameUiMode>()
             .init_resource::<EraBanner>()
             .init_resource::<SettingsOpen>()
             .init_resource::<WorldSetupParams>()
-            .init_resource::<SettingsState>()
+            .init_resource::<MenuCommand>()
+            .init_resource::<MainMenuSaves>()
+            .init_resource::<WorldGenBoot>()
+            // Idempotent with OutcomeOverlayPlugin (live attach).
+            .init_resource::<OutcomeSessionGate>()
+            .init_resource::<OutcomeOverlayState>()
+            .init_resource::<MainMenuTitleAssets>()
+            .add_systems(Startup, load_main_menu_title_assets)
             .add_systems(Update, (toggle_pause, tick_era_banner))
             .add_systems(
+                Update,
+                (
+                    sync_app_state_with_game_mode,
+                    consume_menu_commands,
+                    advance_worldgen_to_playing,
+                )
+                    .chain(),
+            )
+            .add_systems(
                 EguiPrimaryContextPass,
-                (draw_pause_menu, draw_era_banner, draw_settings_window),
+                (
+                    draw_main_menu,
+                    draw_world_setup,
+                    draw_worldgen_overlay,
+                    draw_pause_menu,
+                    draw_era_banner,
+                ),
             );
     }
 }
 
-fn toggle_pause(
+/// Sync [`GameUiMode`] pause overlay with [`AppState`] when both are present.
+pub fn sync_app_state_with_game_mode(
+    state: Option<Res<State<AppState>>>,
+    mode: Res<GameUiMode>,
+    mut next_state: ResMut<NextState<AppState>>,
+) {
+    let Some(state) = state else {
+        return;
+    };
+    match (*mode, state.get()) {
+        (GameUiMode::Paused, AppState::Playing) => next_state.set(AppState::Paused),
+        (GameUiMode::Playing, AppState::Paused) => next_state.set(AppState::Playing),
+        _ => {}
+    }
+}
+
+/// Advance from world generation to gameplay after boot timer or live scene readiness.
+pub fn advance_worldgen_to_playing(
+    time: Res<Time>,
+    mut boot: ResMut<WorldGenBoot>,
+    state: Option<Res<State<AppState>>>,
+    scene: Option<Res<LiveStreamScene>>,
+    mut next_state: ResMut<NextState<AppState>>,
+) {
+    let Some(state) = state else {
+        return;
+    };
+    if *state.get() != AppState::WorldGen {
+        boot.elapsed = 0.0;
+        return;
+    }
+
+    if boot.scene_clear_pending {
+        boot.scene_clear_pending = false;
+        // A queued scene clear needs one frame to settle. Headless consumers
+        // without a LiveStreamScene have nothing to drain, so do not delay
+        // their deterministic WorldGen -> Playing transition.
+        if scene.is_some() {
+            return;
+        }
+    }
+
+    boot.elapsed += time.delta_secs();
+
+    let ready = match scene.as_deref() {
+        // Skip the ConfirmWorldSetup frame (elapsed still ~0) so a queued live-scene
+        // clear can apply before we treat leftover chunks as boot-ready.
+        Some(scene) if boot.elapsed < f32::EPSILON => false,
+        Some(scene) => live_stream_has_content(scene) || boot.elapsed >= WORLDGEN_BOOT_SECONDS,
+        None => true,
+    };
+
+    if ready {
+        next_state.set(AppState::Playing);
+        boot.elapsed = 0.0;
+    }
+}
+
+/// Consume one-shot [`MenuCommand`] actions from shell buttons.
+pub fn consume_menu_commands(
+    mut commands: Commands,
+    mut menu_command: ResMut<MenuCommand>,
+    state: Option<Res<State<AppState>>>,
+    mut next_state: ResMut<NextState<AppState>>,
+    bridge: Option<Res<LiveAttachBridge>>,
+    mut save_panel: Option<ResMut<SaveLoadPanel>>,
+    saves: Res<MainMenuSaves>,
+    params: Res<WorldSetupParams>,
+    mut game_mode: ResMut<GameUiMode>,
+    mut exit: MessageWriter<AppExit>,
+    gate: Option<ResMut<OutcomeSessionGate>>,
+    overlay: Option<ResMut<OutcomeOverlayState>>,
+    mut boot: ResMut<WorldGenBoot>,
+    mut game_settings: Option<ResMut<GameSettings>>,
+    mut settings_open: Option<ResMut<SettingsOpen>>,
+    mut game_speed: Option<ResMut<GameSpeed>>,
+) {
+    let Some(state) = state else {
+        return;
+    };
+    if menu_command.action == MainMenuCommand::None {
+        return;
+    }
+
+    let action = menu_command.action;
+    menu_command.action = MainMenuCommand::None;
+    match action {
+        MainMenuCommand::None => {}
+        MainMenuCommand::NewWorld => {
+            next_state.set(AppState::WorldSetup);
+        }
+        MainMenuCommand::ConfirmWorldSetup => {
+            commands.queue(|world: &mut World| {
+                clear_live_stream_scene_in_world(world);
+            });
+            commands.insert_resource(PlayerFactionId(params.player_faction));
+            if let Some(bridge) = bridge.as_ref() {
+                let preset = WORLDGEN_PRESETS
+                    .get(params.climate_preset % WORLDGEN_PRESETS.len())
+                    .copied()
+                    .unwrap_or(WORLDGEN_PRESETS[0]);
+                start_world_boot(&bridge.client, preset, params.seed);
+            }
+            if let (Some(mut gate), Some(mut overlay)) = (gate, overlay) {
+                begin_player_session(
+                    bridge.as_ref().map(|bridge| &bridge.client),
+                    &mut gate,
+                    &mut overlay,
+                );
+            }
+            boot.elapsed = 0.0;
+            boot.scene_clear_pending = true;
+            next_state.set(AppState::WorldGen);
+        }
+        MainMenuCommand::CancelWorldSetup => {
+            next_state.set(AppState::MainMenu);
+            boot.elapsed = 0.0;
+        }
+        MainMenuCommand::Continue => {
+            commands.queue(|world: &mut World| {
+                clear_live_stream_scene_in_world(world);
+            });
+            if let Some(bridge) = bridge.as_ref() {
+                bridge.client.clear_outcomes();
+                let slot_name = saves
+                    .preferred_slot
+                    .as_deref()
+                    .unwrap_or("slot-1")
+                    .to_string();
+                let slot_id = slot_name
+                    .strip_prefix("slot-")
+                    .and_then(|raw| raw.parse::<u32>().ok())
+                    .map(|slot| 2010 + slot)
+                    .unwrap_or(2010);
+                let json = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "id": slot_id,
+                    "method": "save.load",
+                    "params": { "slot_name": slot_name },
+                })
+                .to_string();
+                bridge.client.send_rpc_raw(json);
+            }
+            if let (Some(mut gate), Some(mut overlay)) = (gate, overlay) {
+                begin_player_session(
+                    bridge.as_ref().map(|bridge| &bridge.client),
+                    &mut gate,
+                    &mut overlay,
+                );
+            }
+            boot.elapsed = 0.0;
+            boot.scene_clear_pending = true;
+            next_state.set(AppState::WorldGen);
+        }
+        MainMenuCommand::LoadGame => {
+            if let Some(save_panel) = save_panel.as_mut() {
+                save_panel.visible = true;
+            }
+        }
+        MainMenuCommand::Resume => {
+            resume_shell_pause(&mut game_mode, game_speed.as_deref_mut());
+            if *state.get() == AppState::Paused {
+                next_state.set(AppState::Playing);
+            }
+        }
+        MainMenuCommand::OpenSettings => {
+            if let Some(mut settings) = game_settings {
+                settings.open = true;
+                settings.active_tab = crate::settings_ui::SettingsTab::Graphics;
+            }
+            if let Some(mut flag) = settings_open.as_mut() {
+                flag.0 = true;
+            }
+        }
+        MainMenuCommand::OpenSavePanel => {
+            if let Some(save_panel) = save_panel.as_mut() {
+                save_panel.visible = true;
+            }
+        }
+        MainMenuCommand::ExitToMainMenu => {
+            commands.queue(|world: &mut World| {
+                clear_live_stream_scene_in_world(world);
+            });
+            if let (Some(mut gate), Some(mut overlay)) = (gate, overlay) {
+                end_player_session(&mut gate, &mut overlay);
+            }
+            next_state.set(AppState::MainMenu);
+            *game_mode = GameUiMode::Playing;
+            boot.elapsed = 0.0;
+        }
+        MainMenuCommand::Quit => {
+            *game_mode = GameUiMode::Playing;
+            exit.write(AppExit::Success);
+        }
+    }
+}
+
+pub fn toggle_pause(
     keys: Res<ButtonInput<KeyCode>>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     settings: Option<Res<GameSettings>>,
+    app_state: Option<Res<State<AppState>>>,
+    outcome_overlay: Option<Res<OutcomeOverlayState>>,
+    escape_block: Option<Res<OutcomeEscapeBlock>>,
+    mut controls_help: Option<ResMut<crate::controls_help::ControlsHelpOpen>>,
     mut mode: ResMut<GameUiMode>,
+    mut game_speed: Option<ResMut<GameSpeed>>,
 ) {
+    // Single owner for ACTION_PAUSE_SIM: shell pause overlay (Space default).
+    // Esc remains a hard fallback so Close Panel / overlay escape still works.
+    // game_ui no longer toggles GameSpeed on this action.
     let pause_binding = settings
         .as_ref()
         .and_then(|s| s.key_for(ACTION_PAUSE_SIM))
-        .unwrap_or(KeyBinding::Key(KeyCode::Escape));
-    if pause_binding.is_just_pressed(&keys, &mouse_buttons) {
-        *mode = match *mode {
-            GameUiMode::Playing => GameUiMode::Paused,
-            GameUiMode::Paused => GameUiMode::Playing,
-        };
+        .unwrap_or(KeyBinding::Key(KeyCode::Space));
+    let binding_pressed = pause_binding.is_just_pressed(&keys, &mouse_buttons);
+    let esc_pressed = keys.just_pressed(KeyCode::Escape);
+    if !esc_pressed && !binding_pressed {
+        return;
+    }
+
+    // Same-frame: outcome modal dismissed Esc → do not also toggle pause.
+    if escape_block.map(|block| block.0).unwrap_or(false) {
+        return;
+    }
+    if let Some(overlay) = outcome_overlay.as_ref() {
+        if outcome_modal_visible(overlay) {
+            return;
+        }
+    }
+
+    // Controls cheat sheet owns Esc while open.
+    if esc_pressed {
+        if let Some(help) = controls_help.as_deref_mut() {
+            if help.0 {
+                help.0 = false;
+                return;
+            }
+        }
+    }
+
+    // Settings panel owns Esc while open (Close Panel). MenusPlugin is
+    // registered before SettingsPlugin so `open` is still true this frame.
+    // Only gate the Esc path so a rebound ACTION_PAUSE_SIM can still toggle.
+    if esc_pressed && settings.as_ref().is_some_and(|s| s.open) {
+        return;
+    }
+
+    if let Some(app_state) = app_state {
+        if *app_state.get() != AppState::Playing && *app_state.get() != AppState::Paused {
+            return;
+        }
+    }
+
+    match *mode {
+        GameUiMode::Playing => {
+            *mode = GameUiMode::Paused;
+            // Keep HUD speed chips in sync with the overlay (sim already stops via
+            // GameUiMode in sim_bridge; zeroing makes Resume restore the prior rate).
+            if let Some(speed) = game_speed.as_deref_mut() {
+                speed.remember_non_zero();
+                speed.multiplier = 0.0;
+            }
+        }
+        GameUiMode::Paused => {
+            resume_shell_pause(&mut mode, game_speed.as_deref_mut());
+        }
+    }
+}
+
+/// Clear shell pause overlay and unstick sim speed if it was left at 0.
+fn resume_shell_pause(mode: &mut GameUiMode, speed: Option<&mut GameSpeed>) {
+    *mode = GameUiMode::Playing;
+    if let Some(speed) = speed {
+        speed.restore_after_resume();
     }
 }
 
@@ -187,20 +503,48 @@ fn draw_main_menu(
     state: Option<Res<State<AppState>>>,
     mut command: ResMut<MenuCommand>,
     saves: Res<MainMenuSaves>,
-    mut settings_open: ResMut<SettingsOpen>,
+    titles: Res<MainMenuTitleAssets>,
+    images: Res<Assets<Image>>,
 ) {
     let Some(state) = state else {
         return;
     };
-    if *state != AppState::MainMenu {
+    if *state.get() != AppState::MainMenu {
         return;
     }
+
+    let bg_tex = titles.background.as_ref().and_then(|handle| {
+        images
+            .get(handle)
+            .map(|_| contexts.add_image(bevy_egui::EguiTextureHandle::Strong(handle.clone())))
+    });
+    let title_tex = titles
+        .wordmark
+        .as_ref()
+        .or(titles.logo.as_ref())
+        .and_then(|handle| {
+            images
+                .get(handle)
+                .map(|_| contexts.add_image(bevy_egui::EguiTextureHandle::Strong(handle.clone())))
+        });
+    let title_is_wordmark = titles.wordmark.is_some();
+
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
 
+    if let Some(id) = bg_tex {
+        let screen = ctx.content_rect();
+        egui::Area::new(egui::Id::new("main_menu_bg"))
+            .fixed_pos(screen.min)
+            .order(egui::Order::Background)
+            .show(ctx, |ui| {
+                ui.image((id, screen.size()));
+            });
+    }
+
     egui::Area::new(egui::Id::new("main_menu_area"))
-        .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+        .anchor(egui::Align2::LEFT_CENTER, egui::vec2(72.0, 0.0))
         .order(egui::Order::Foreground)
         .show(ctx, |ui| {
             egui::Frame::NONE
@@ -209,12 +553,24 @@ fn draw_main_menu(
                 .show(ui, |ui| {
                     ui.set_min_width(420.0);
                     ui.vertical_centered(|ui| {
-                        ui.label(
-                            egui::RichText::new("Civis")
-                                .size(52.0)
-                                .color(KC_ACCENT)
-                                .strong(),
-                        );
+                        let mut drew_title = false;
+                        if let Some(id) = title_tex {
+                            let size = if title_is_wordmark {
+                                egui::vec2(360.0, 90.0)
+                            } else {
+                                egui::vec2(320.0, 120.0)
+                            };
+                            ui.image((id, size));
+                            drew_title = true;
+                        }
+                        if !drew_title {
+                            ui.label(
+                                egui::RichText::new("Civis")
+                                    .size(52.0)
+                                    .color(KC_ACCENT)
+                                    .strong(),
+                            );
+                        }
                         ui.label(
                             egui::RichText::new("Main menu")
                                 .size(16.0)
@@ -252,7 +608,6 @@ fn draw_main_menu(
 
                         if menu_button(ui, "\u{2699}  Settings").clicked() {
                             command.action = MainMenuCommand::OpenSettings;
-                            settings_open.0 = true;
                         }
                         ui.add_space(8.0);
                         if menu_button(ui, "\u{23fb}  Quit").clicked() {
@@ -263,16 +618,152 @@ fn draw_main_menu(
         });
 }
 
-fn draw_worldgen_overlay(mut contexts: EguiContexts, state: Option<Res<State<AppState>>>) {
+fn draw_world_setup(
+    mut contexts: EguiContexts,
+    state: Option<Res<State<AppState>>>,
+    mut params: ResMut<WorldSetupParams>,
+    mut command: ResMut<MenuCommand>,
+    mut seed_edit: Local<Option<String>>,
+) {
     let Some(state) = state else {
         return;
     };
-    if *state != AppState::WorldGen {
+    if *state.get() != AppState::WorldSetup {
+        *seed_edit = None;
         return;
     }
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
+
+    egui::Area::new(egui::Id::new("world_setup_area"))
+        .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+        .order(egui::Order::Foreground)
+        .show(ctx, |ui| {
+            egui::Frame::NONE
+                .fill(GLASS_FILL)
+                .inner_margin(egui::Margin::same(28))
+                .corner_radius(egui::CornerRadius::same(12))
+                .stroke(egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.45)))
+                .show(ui, |ui| {
+                    ui.set_min_width(480.0);
+                    ui.vertical(|ui| {
+                        ui.label(
+                            egui::RichText::new("New World")
+                                .size(28.0)
+                                .color(KC_ACCENT)
+                                .strong(),
+                        );
+                        ui.label(
+                            egui::RichText::new("Map generation & scenario")
+                                .size(14.0)
+                                .color(DIM)
+                                .italics(),
+                        );
+                        ui.add_space(16.0);
+
+                        ui.label(egui::RichText::new("World seed").color(DIM).small());
+                        let seed_text =
+                            seed_edit.get_or_insert_with(|| format!("{:016X}", params.seed));
+                        if ui
+                            .add(
+                                egui::TextEdit::singleline(seed_text)
+                                    .desired_width(220.0)
+                                    .hint_text("hex seed"),
+                            )
+                            .changed()
+                        {
+                            if let Ok(parsed) = u64::from_str_radix(seed_text.trim(), 16) {
+                                params.seed = parsed;
+                            }
+                        }
+                        ui.horizontal(|ui| {
+                            if ui.button("Randomize").clicked() {
+                                params.seed = ((std::time::SystemTime::now()
+                                    .duration_since(std::time::UNIX_EPOCH)
+                                    .map(|d| d.as_nanos())
+                                    .unwrap_or(0)
+                                    ^ 0xC1F1_5EED_u128)
+                                    as u64)
+                                    .wrapping_mul(0x9E37_79B9_7F4A_7C15);
+                                *seed_text = format!("{:016X}", params.seed);
+                            }
+                        });
+                        ui.add_space(10.0);
+
+                        ui.label(egui::RichText::new("Climate / scenario").color(DIM).small());
+                        let climate_label = WORLDGEN_PRESETS
+                            .get(params.climate_preset % WORLDGEN_PRESETS.len())
+                            .copied()
+                            .unwrap_or(WORLDGEN_PRESETS[0]);
+                        egui::ComboBox::from_id_salt("climate_preset_combo")
+                            .selected_text(climate_label)
+                            .width(280.0)
+                            .show_ui(ui, |ui| {
+                                for (i, label) in WORLDGEN_PRESETS.iter().enumerate() {
+                                    ui.selectable_value(&mut params.climate_preset, i, *label);
+                                }
+                            });
+                        ui.add_space(10.0);
+
+                        ui.add_space(20.0);
+                        ui.horizontal(|ui| {
+                            if menu_button(ui, "\u{25b6}  Generate").clicked() {
+                                command.action = MainMenuCommand::ConfirmWorldSetup;
+                            }
+                            ui.add_space(12.0);
+                            if menu_button(ui, "Cancel").clicked() {
+                                command.action = MainMenuCommand::CancelWorldSetup;
+                            }
+                        });
+                    });
+                });
+        });
+}
+
+fn draw_worldgen_overlay(
+    mut contexts: EguiContexts,
+    state: Option<Res<State<AppState>>>,
+    boot: Res<WorldGenBoot>,
+    params: Res<WorldSetupParams>,
+    titles: Res<MainMenuTitleAssets>,
+    images: Res<Assets<Image>>,
+) {
+    let Some(state) = state else {
+        return;
+    };
+    if *state.get() != AppState::WorldGen {
+        return;
+    }
+    let bg_tex = titles.loading_background.as_ref().and_then(|handle| {
+        images
+            .get(handle)
+            .map(|_| contexts.add_image(bevy_egui::EguiTextureHandle::Strong(handle.clone())))
+    });
+    let spinner_tex = titles.loading_spinner.as_ref().and_then(|handle| {
+        images
+            .get(handle)
+            .map(|_| contexts.add_image(bevy_egui::EguiTextureHandle::Strong(handle.clone())))
+    });
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
+
+    let progress = (boot.elapsed / WORLDGEN_BOOT_SECONDS).clamp(0.0, 1.0);
+    let preset = WORLDGEN_PRESETS
+        .get(params.climate_preset % WORLDGEN_PRESETS.len())
+        .copied()
+        .unwrap_or(WORLDGEN_PRESETS[0]);
+
+    if let Some(id) = bg_tex {
+        let screen = ctx.content_rect();
+        egui::Area::new(egui::Id::new("worldgen_bg"))
+            .fixed_pos(screen.min)
+            .order(egui::Order::Background)
+            .show(ctx, |ui| {
+                ui.image((id, screen.size()));
+            });
+    }
 
     egui::Area::new(egui::Id::new("worldgen_panel_area"))
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
@@ -281,15 +772,44 @@ fn draw_worldgen_overlay(mut contexts: EguiContexts, state: Option<Res<State<App
             egui::Frame::NONE
                 .fill(GLASS_FILL)
                 .inner_margin(egui::Margin::same(24))
+                .corner_radius(egui::CornerRadius::same(12))
                 .show(ui, |ui| {
+                    ui.set_min_width(420.0);
                     ui.vertical_centered(|ui| {
                         ui.label(
-                            egui::RichText::new("Booting Civis")
+                            egui::RichText::new("Generating world")
                                 .size(28.0)
                                 .color(KC_ACCENT)
                                 .strong(),
                         );
-                        ui.label(egui::RichText::new("Spinning up world generation…").color(DIM));
+                        ui.label(
+                            egui::RichText::new(format!("{preset} · seed {:016X}", params.seed))
+                                .color(DIM),
+                        );
+                        ui.add_space(12.0);
+                        if let Some(id) = spinner_tex {
+                            let angle = boot.elapsed * 1.75;
+                            ui.add(
+                                egui::Image::new((id, egui::vec2(72.0, 72.0)))
+                                    .rotate(angle, egui::vec2(0.5, 0.5)),
+                            );
+                            ui.add_space(8.0);
+                        }
+                        let bar = egui::ProgressBar::new(progress)
+                            .desired_width(320.0)
+                            .show_percentage();
+                        ui.add(bar);
+                        ui.add_space(8.0);
+                        let step = if progress < 0.25 {
+                            "Seeding continents…"
+                        } else if progress < 0.5 {
+                            "Raising terrain & biomes…"
+                        } else if progress < 0.75 {
+                            "Spawning factions…"
+                        } else {
+                            "Streaming first chunks…"
+                        };
+                        ui.label(egui::RichText::new(step).color(DIM).italics());
                     });
                 });
         });
@@ -299,8 +819,10 @@ fn draw_pause_menu(
     mut contexts: EguiContexts,
     mut mode: ResMut<GameUiMode>,
     mut command: ResMut<MenuCommand>,
-    mut settings_open: ResMut<SettingsOpen>,
     mut save_panel: ResMut<SaveLoadPanel>,
+    mut game_settings: Option<ResMut<GameSettings>>,
+    mut settings_open: ResMut<SettingsOpen>,
+    mut game_speed: Option<ResMut<GameSpeed>>,
     mut exit: MessageWriter<AppExit>,
 ) {
     if *mode != GameUiMode::Paused {
@@ -310,18 +832,89 @@ fn draw_pause_menu(
         return;
     };
     dim_overlay(ctx);
+
+    let settings_is_open = game_settings
+        .as_ref()
+        .map(|s| s.open)
+        .unwrap_or(settings_open.0);
+    // Mirror into SettingsOpen so shell consumers stay aligned.
+    settings_open.0 = settings_is_open;
+    // Settings opened from pause: keep dim + cue, hide the button stack so Esc
+    // closing settings returns to this menu instead of a buried / dead-end state.
+    if settings_is_open {
+        egui::Area::new(egui::Id::new("pause_settings_cue"))
+            .anchor(egui::Align2::CENTER_BOTTOM, egui::vec2(0.0, -36.0))
+            .order(egui::Order::Middle)
+            .show(ctx, |ui| {
+                egui::Frame::NONE
+                    .fill(PANEL_FILL)
+                    .corner_radius(egui::CornerRadius::same(8))
+                    .stroke(egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.35)))
+                    .inner_margin(egui::Margin::symmetric(18, 10))
+                    .show(ui, |ui| {
+                        ui.label(
+                            egui::RichText::new("Settings open — Esc returns to pause menu")
+                                .size(14.0)
+                                .color(DIM),
+                        );
+                    });
+            });
+        return;
+    }
+
     egui::Area::new(egui::Id::new("pause_panel_area"))
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
         .order(egui::Order::Foreground)
         .show(ctx, |ui| {
-            pause_panel(
-                ui,
-                &mut *mode,
-                &mut *command,
-                &mut *settings_open,
-                &mut *save_panel,
-                &mut exit,
-            )
+            egui::Frame::NONE
+                .fill(PANEL_FILL)
+                .corner_radius(egui::CornerRadius::same(12))
+                .stroke(egui::Stroke::new(1.5, ACCENT.gamma_multiply(0.5)))
+                .inner_margin(egui::Margin::same(32))
+                .show(ui, |ui| {
+                    ui.set_min_width(300.0);
+                    ui.vertical_centered(|ui| {
+                        ui.label(
+                            egui::RichText::new("\u{23f8} PAUSED")
+                                .size(28.0)
+                                .color(ACCENT)
+                                .strong(),
+                        );
+                        ui.label(
+                            egui::RichText::new("Space / Esc — resume")
+                                .size(13.0)
+                                .color(DIM)
+                                .italics(),
+                        );
+                        ui.add_space(16.0);
+                        if menu_button(ui, "\u{25b6}  Resume").clicked() {
+                            resume_shell_pause(&mut mode, game_speed.as_deref_mut());
+                        }
+                        ui.add_space(6.0);
+                        if menu_button(ui, "\u{2699}  Settings").clicked() {
+                            if let Some(settings) = game_settings.as_mut() {
+                                settings.open = true;
+                                settings.active_tab = crate::settings_ui::SettingsTab::Graphics;
+                            }
+                            settings_open.0 = true;
+                            command.action = MainMenuCommand::OpenSettings;
+                        }
+                        ui.add_space(6.0);
+                        if menu_button(ui, "\u{1f4be}  Save/Load").clicked() {
+                            command.action = MainMenuCommand::OpenSavePanel;
+                            save_panel.visible = true;
+                        }
+                        if menu_button(ui, "\u{1f30d}  Main Menu").clicked() {
+                            command.action = MainMenuCommand::ExitToMainMenu;
+                        }
+                        ui.add_space(14.0);
+                        ui.separator();
+                        ui.add_space(10.0);
+                        if menu_button(ui, "\u{23fb}  Quit").clicked() {
+                            exit.write(AppExit::Success);
+                        }
+                    });
+                });
         });
 }
 
@@ -338,21 +931,6 @@ fn draw_era_banner(mut contexts: EguiContexts, banner: Res<EraBanner>) {
         .show(ctx, |ui| era_banner(ui, &banner));
 }
 
-fn draw_settings_window(
-    mut contexts: EguiContexts,
-    mut settings_open: ResMut<SettingsOpen>,
-    mut state: ResMut<SettingsState>,
-    gpu_caps: Option<Res<GpuCapabilities>>,
-) {
-    if !settings_open.0 {
-        return;
-    }
-    let Ok(ctx) = contexts.ctx_mut() else {
-        return;
-    };
-    settings_window(ctx, &mut *settings_open, &mut *state, gpu_caps.as_deref());
-}
-
 fn dim_overlay(ctx: &egui::Context) {
     let screen = ctx.content_rect();
     egui::Area::new(egui::Id::new("pause_dim_overlay"))
@@ -362,66 +940,6 @@ fn dim_overlay(ctx: &egui::Context) {
             ui.painter()
                 .rect_filled(screen, egui::CornerRadius::ZERO, OVERLAY_DIM);
         });
-}
-
-fn pause_panel(
-    ui: &mut egui::Ui,
-    mode: &mut GameUiMode,
-    command: &mut MenuCommand,
-    settings_open: &mut SettingsOpen,
-    save_panel: &mut SaveLoadPanel,
-    exit: &mut MessageWriter<AppExit>,
-) {
-    egui::Frame::NONE
-        .fill(PANEL_FILL)
-        .corner_radius(egui::CornerRadius::same(12))
-        .stroke(egui::Stroke::new(1.5, ACCENT.gamma_multiply(0.5)))
-        .inner_margin(egui::Margin::same(32))
-        .show(ui, |ui| {
-            ui.set_min_width(280.0);
-            ui.vertical_centered(|ui| {
-                ui.label(
-                    egui::RichText::new("\u{23f8} PAUSED")
-                        .size(28.0)
-                        .color(ACCENT)
-                        .strong(),
-                );
-                ui.add_space(20.0);
-                pause_menu_buttons(ui, mode, command, settings_open, save_panel, exit);
-            });
-        });
-}
-
-fn pause_menu_buttons(
-    ui: &mut egui::Ui,
-    mode: &mut GameUiMode,
-    command: &mut MenuCommand,
-    settings_open: &mut SettingsOpen,
-    save_panel: &mut SaveLoadPanel,
-    exit: &mut MessageWriter<AppExit>,
-) {
-    if menu_button(ui, "\u{25b6}  Resume").clicked() {
-        *mode = GameUiMode::Playing;
-    }
-    ui.add_space(6.0);
-    if menu_button(ui, "\u{2699}  Settings").clicked() {
-        settings_open.0 = !settings_open.0;
-    }
-    ui.add_space(6.0);
-    if menu_button(ui, "\u{1f4be}  Save/Load").clicked() {
-        // Save/Load tab: opens the shared slot browser while the pause shell stays visible.
-        command.action = MainMenuCommand::OpenSavePanel;
-        save_panel.visible = true;
-    }
-    if menu_button(ui, "\u{1f30d}  Main Menu").clicked() {
-        command.action = MainMenuCommand::ExitToMainMenu;
-    }
-    ui.add_space(14.0);
-    ui.separator();
-    ui.add_space(10.0);
-    if menu_button(ui, "\u{23fb}  Quit").clicked() {
-        exit.write(AppExit::Success);
-    }
 }
 
 fn era_banner(ui: &mut egui::Ui, banner: &EraBanner) {
@@ -457,62 +975,6 @@ fn era_banner(ui: &mut egui::Ui, banner: &EraBanner) {
                     .strong(),
             );
         });
-}
-
-fn settings_window(
-    ctx: &egui::Context,
-    settings_open: &mut SettingsOpen,
-    state: &mut SettingsState,
-    gpu_caps: Option<&GpuCapabilities>,
-) {
-    const QUALITIES: &[&str] = &["Low", "Medium", "High", "Ultra"];
-    egui::Window::new(
-        egui::RichText::new("\u{2699} Settings")
-            .color(ACCENT)
-            .strong(),
-    )
-    .collapsible(false)
-    .resizable(false)
-    .min_width(320.0)
-    .frame(
-        egui::Frame::NONE
-            .fill(PANEL_FILL)
-            .corner_radius(egui::CornerRadius::same(10))
-            .stroke(egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.4)))
-            .inner_margin(egui::Margin::same(18)),
-    )
-    .open(&mut settings_open.0)
-    .show(ctx, |ui| settings_rows(ui, state, QUALITIES, gpu_caps));
-}
-
-fn settings_rows(
-    ui: &mut egui::Ui,
-    state: &mut SettingsState,
-    qualities: &[&str],
-    gpu_caps: Option<&GpuCapabilities>,
-) {
-    ui.label(egui::RichText::new("Graphics Quality").color(DIM).small());
-    egui::ComboBox::from_id_salt("graphics_quality_combo")
-        .selected_text(*qualities.get(state.graphics_quality).unwrap_or(&"High"))
-        .show_ui(ui, |ui| {
-            for (i, &label) in qualities.iter().enumerate() {
-                ui.selectable_value(&mut state.graphics_quality, i, label);
-            }
-        });
-    ui.add_space(8.0);
-    ui.label(egui::RichText::new("Master Volume").color(DIM).small());
-    ui.add(egui::Slider::new(&mut state.master_volume, 0.0..=1.0).show_value(true));
-    ui.add_space(8.0);
-    ui.label(egui::RichText::new("Sim Speed").color(DIM).small());
-    ui.add(
-        egui::Slider::new(&mut state.sim_speed, 1..=10)
-            .text("x")
-            .show_value(true),
-    );
-    ui.add_space(12.0);
-    ui.separator();
-    ui.add_space(8.0);
-    gpu_capabilities_settings_section(ui, gpu_caps);
 }
 
 /// User-facing yes/no for read-only GPU capability flags.
@@ -594,6 +1056,51 @@ fn menu_button(ui: &mut egui::Ui, label: &str) -> egui::Response {
     ui.add(btn)
 }
 
+fn ui_png_exists(stem: &str) -> bool {
+    let path = format!("{}/assets/ui/{stem}.png", env!("CARGO_MANIFEST_DIR"));
+    std::path::Path::new(&path).exists()
+}
+
+fn load_main_menu_title_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let mut assets = MainMenuTitleAssets::default();
+    if ui_png_exists("title-bg") {
+        assets.background = Some(asset_server.load("ui/title-bg.png"));
+    }
+    if ui_png_exists("loading-bg") {
+        assets.loading_background = Some(asset_server.load("ui/loading-bg.png"));
+    }
+    if ui_png_exists("loading-spinner") {
+        assets.loading_spinner = Some(asset_server.load("ui/loading-spinner.png"));
+    }
+    if ui_png_exists("logo") {
+        assets.logo = Some(asset_server.load("ui/logo.png"));
+    }
+    if ui_png_exists("wordmark") {
+        assets.wordmark = Some(asset_server.load("ui/wordmark.png"));
+    }
+    commands.insert_resource(assets);
+}
+
+fn live_stream_has_content(scene: &LiveStreamScene) -> bool {
+    !scene.chunks.is_empty()
+        || !scene.agents.is_empty()
+        || !scene.buildings.is_empty()
+        || !scene.graph_parcels.is_empty()
+}
+
+fn start_world_boot(client: &crate::ws_client::WsClient, preset: &str, seed: u64) {
+    let init_seed = if seed == 0 {
+        WORLDGEN_DEFAULT_SEED
+    } else {
+        seed
+    };
+    client.send_rpc(
+        "sim.load_scenario",
+        serde_json::json!({ "preset": preset, "seed": init_seed }),
+    );
+    client.send_rpc("sim.reset", serde_json::json!({ "seed": init_seed }));
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -608,8 +1115,18 @@ mod tests {
     }
 
     #[test]
+    fn app_state_default_is_main_menu() {
+        assert_eq!(AppState::default(), AppState::MainMenu);
+    }
+
+    #[test]
     fn game_ui_mode_default_is_playing() {
         assert_eq!(GameUiMode::default(), GameUiMode::Playing);
+    }
+
+    #[test]
+    fn world_gen_boot_default_is_zero_elapsed() {
+        assert!((WorldGenBoot::default().elapsed).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -641,5 +1158,49 @@ mod tests {
     fn format_gpu_capability_flag_yes_no() {
         assert_eq!(format_gpu_capability_flag(true), "Yes");
         assert_eq!(format_gpu_capability_flag(false), "No");
+    }
+
+    #[test]
+    fn resume_shell_pause_restores_stuck_zero_speed() {
+        let mut mode = GameUiMode::Paused;
+        let mut speed = GameSpeed {
+            multiplier: 0.0,
+            last_non_zero: 2.0,
+        };
+        resume_shell_pause(&mut mode, Some(&mut speed));
+        assert_eq!(mode, GameUiMode::Playing);
+        assert!((speed.multiplier - 2.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn space_pause_binding_toggles_overlay_and_zeros_speed() {
+        use bevy::prelude::{App, ButtonInput, Time, Update};
+        use std::time::Duration;
+
+        let mut app = App::new();
+        app.insert_resource(ButtonInput::<KeyCode>::default());
+        app.insert_resource(ButtonInput::<MouseButton>::default());
+        app.insert_resource(Time::<()>::default());
+        app.insert_resource(GameUiMode::Playing);
+        app.insert_resource(GameSpeed {
+            multiplier: 1.0,
+            last_non_zero: 1.0,
+        });
+        app.insert_resource(GameSettings::default());
+        app.add_systems(Update, toggle_pause);
+
+        {
+            let mut keys = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keys.clear();
+            keys.press(KeyCode::Space);
+        }
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(Duration::from_millis(16));
+        app.update();
+
+        assert_eq!(*app.world().resource::<GameUiMode>(), GameUiMode::Paused);
+        assert_eq!(app.world().resource::<GameSpeed>().multiplier, 0.0);
+        assert!((app.world().resource::<GameSpeed>().last_non_zero - 1.0).abs() < f32::EPSILON);
     }
 }

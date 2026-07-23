@@ -134,7 +134,7 @@ civis-verify with_bevy="":
     cargo test -p civis-cli
     powershell -NoProfile -Command "if ('{{with_bevy}}' -eq '1') { Write-Host '==> civis-cli: cargo check --features bevy (verify bin)'; & cargo check -p civis-cli --features bevy --bin civis-verify; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } } else { Write-Host '==> Skipping bevy check (pass with_bevy=1 to include it).' }"
     @echo "==> Hint: 'cargo run -p civis-cli --bin civis-census' against a live civ-server,"
-    @echo "        or 'cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone' with"
+    @echo "        or 'cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone' with"
     @echo "        BEVY_ASSET_ROOT=clients/bevy-ref for the windowed reference client."
 
 # Feature-gated Bevy client compile oracle (GAP-BEVY-COMPILE-001 / WBS P2.3).
@@ -142,45 +142,84 @@ civis-verify with_bevy="":
 bevy-egui-check:
     cargo check -p civ-bevy-ref --features bevy,egui
 
+# SHELL-FEATURES-001 — fuller local play fingerprint: release civ-standalone + audio.
+# Builds only (interactive window is awkward to auto-run from just on Windows).
+# See clients/bevy-ref/README.md "Local play fingerprints" for run commands.
+# Optional live attach env (PowerShell examples echoed after build):
+#   CIVIS_ATTACH=server
+#   CIV_WS_URL=ws://127.0.0.1:3010/ws?tick_format=binary
+#   CIV_SERVER_PORT=3010   (used when CIV_WS_URL unset; default 3000)
+civis-bevy-play:
+    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}" \
+        BEVY_ASSET_ROOT="${BEVY_ASSET_ROOT:-$(pwd)/clients/bevy-ref}" \
+        cargo build --release -p civ-bevy-ref --features bevy,egui,audio,client-bins --bin civ-standalone
+    @echo ""
+    @echo "==> civis-bevy-play: release civ-standalone built (bevy,egui,audio)."
+    @echo "    Set BEVY_ASSET_ROOT and run the binary from repo root (PowerShell):"
+    @echo "      $$env:BEVY_ASSET_ROOT='$(pwd)/clients/bevy-ref'"
+    @echo "      $$env:CARGO_TARGET_DIR='${CARGO_TARGET_DIR:-$(pwd)/target}'"
+    @echo "      & \"$$env:CARGO_TARGET_DIR/release/civ-standalone.exe\""
+    @echo "    Local sandbox: omit attach env vars."
+    @echo "    Live attach (civ-server on :3010):"
+    @echo "      $$env:CIVIS_ATTACH='server'; $$env:CIV_SERVER_PORT='3010'"
+    @echo "      & \"$$env:CARGO_TARGET_DIR/release/civ-standalone.exe\""
+    @echo "    Or explicit URL:"
+    @echo "      $$env:CIVIS_ATTACH='server'"
+    @echo "      $$env:CIV_WS_URL='ws://127.0.0.1:3010/ws?tick_format=binary'"
+    @echo "      & \"$$env:CARGO_TARGET_DIR/release/civ-standalone.exe\""
+# SHELL-ATTEST-001 — headless AppState / menu smoke (no GPU window).
+# Complements bevy-egui-check compile gate with playability wiring proof.
+bevy-shell-smoke:
+    cargo test -p civ-bevy-ref --features bevy,egui --test shell_attest
+    cargo test -p civ-bevy-ref --features bevy,egui menus::tests::
+    cargo test -p civ-bevy-ref --features bevy,egui outcome_overlay::tests::
+
 # Run the Bevy reference client smoke (headless; meshes one chunk).
 civis-3d-bevy-smoke:
     cargo run -p civ-bevy-ref --bin civ-bevy-ref
 
 # Run the Bevy windowed reference client behind the optional bevy feature.
 civis-3d-bevy-window:
-    cargo run -p civ-bevy-ref --features bevy,egui --bin civ-bevy-window
+    cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-bevy-window
 
 # Run the standalone Bevy client with in-process simulation.
 civis-3d-standalone:
-    cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone
+    cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone
+
+# Bounded native launch smoke: build + run civ-standalone for N Update frames
+# (default 5), assert preflight + clean AppExit. Needs a GPU adapter.
+# Override frames: `just civis-3d-standalone-smoke 12`
+civis-3d-standalone-smoke FRAMES="5":
+    cargo build -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/native-standalone-smoke.ps1 -Frames {{FRAMES}}
 
 # Standalone client attached to civ-server (requires server running on :3000).
 civis-3d-standalone-live:
-    powershell -Command "$env:CIVIS_ATTACH='server'; cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone"
+    powershell -Command "$env:CIVIS_ATTACH='server'; cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone"
 
 # Standalone live attach with explicit WS URL (Tailscale / remote civ-server).
 civis-3d-standalone-live-url URL:
-    powershell -Command "$env:CIVIS_ATTACH='server'; $env:CIV_WS_URL='{{URL}}'; cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone"
+    powershell -Command "$env:CIVIS_ATTACH='server'; $env:CIV_WS_URL='{{URL}}'; cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone"
 
 # Headless live-attach protocol smoke (F3D0 + voxel ground; no GPU window).
 # P-W1 kickoff item 41 / FR-CIV-BEVY-016; item 47 / FR-CIV-BEVY-022; item 50 / FR-CIV-BEVY-025.
 civis-3d-live-smoke:
     cargo test -p civ-server frame_triple
     cargo test -p civ-server --test ws_smoke ws_client_receives_binary_frame3d_after_tick
-    cargo test -p civ-bevy-ref --features bevy --lib live_ground::
-    cargo test -p civ-bevy-ref --features bevy --lib live_stream::
-    cargo test -p civ-bevy-ref --features bevy --lib live_focus::
-    cargo test -p civ-bevy-ref --features bevy --lib live_minimap::
-    cargo test -p civ-bevy-ref --features bevy --lib live_pick::
+    cargo test -p civ-bevy-ref --features bevy,egui --lib live_ground::
+    cargo test -p civ-bevy-ref --features bevy,egui --lib live_stream::
+    cargo test -p civ-bevy-ref --features bevy,egui --lib live_focus::
+    cargo test -p civ-bevy-ref --features bevy,egui --lib live_minimap::
+    cargo test -p civ-bevy-ref --features bevy,egui --lib live_pick::
     cargo test -p civ-bevy-ref --lib chunk_to_minimap
     cargo test -p civ-bevy-ref --lib minimap_uv_to_chunk
-    cargo check -p civ-bevy-ref --features bevy,egui --bin civ-standalone
-    cargo check -p civ-bevy-ref --features bevy,egui --bin civ-bevy-window
+    cargo check -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone
+    cargo check -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-bevy-window
 
 # Run the live Bevy reference client against civ-server's WebSocket bridge.
 # Requires civ-server to be running first.
 civis-3d-bevy-live:
-    cargo run -p civ-bevy-ref --features bevy,egui --bin civ-bevy-window
+    cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-bevy-window
 
 # Run the phenotype-voxel kernel tests (sibling-repo dependency).
 civis-3d-voxel-kernel:
@@ -214,11 +253,11 @@ dev-stop:
 
 # One-shot launch of the standalone sandbox (incremental, no watcher).
 run:
-    cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone
+    cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone
 
 # One-shot launch of the live voxel/windowed client.
 run-voxel:
-    cargo run -p civ-bevy-ref --features bevy,egui --bin civ-bevy-window
+    cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-bevy-window
 
 # Install the dev-loop watch tool (cargo-watch) if missing. Idempotent.
 dev-tools:
@@ -229,15 +268,15 @@ dev-tools:
 # warm rebuilds. Edit a system -> save -> cargo-watch relinks only our crate.
 # Assets (PNG/.glb/WGSL) hot-reload live inside the running process (no rebuild).
 dev-fast: dev-tools
-    cargo watch -x "run -p civ-bevy-ref --features hot,egui --bin civ-standalone"
+    cargo watch -x "run -p civ-bevy-ref --features hot,egui,client-bins --bin civ-standalone"
 
 # Same loop for the live windowed/voxel client.
 dev-fast-voxel: dev-tools
-    cargo watch -x "run -p civ-bevy-ref --features hot --bin civ-bevy-window"
+    cargo watch -x "run -p civ-bevy-ref --features hot,client-bins --bin civ-bevy-window"
 
 # Build + run the standalone Bevy sandbox (release). Encodes the verified
-# boot incantation: `bevy,egui` features, CARGO_TARGET_DIR=G:/civis-target-gate
-# (out-of-tree build dir), and BEVY_ASSET_ROOT=clients/bevy-ref so the bin
+# boot incantation: playable `bevy,egui,audio` features, a caller-overridable target directory,
+# and BEVY_ASSET_ROOT=clients/bevy-ref so the bin
 # finds its assets when launched from the workspace root (Bevy 0.18
 # `AssetPlugin::file_path` defaults to "./assets" relative to CWD, which is
 # the workspace root, not the crate). Both the script and the recipe set the
@@ -245,32 +284,30 @@ dev-fast-voxel: dev-tools
 # Override the target dir by exporting `CARGO_TARGET_DIR` before invoking
 # `just play` (the recipe's default is just a default — caller wins).
 play:
-    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-G:/civis-target-gate}" \
+    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}" \
         BEVY_ASSET_ROOT="${BEVY_ASSET_ROOT:-$(pwd)/clients/bevy-ref}" \
         powershell -NoProfile -ExecutionPolicy Bypass -File Tools/play.ps1
 
 # Same as `play` with RUST_LOG=info,civ_bevy_ref=debug,wgpu=warn.
 play-debug:
-    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-G:/civis-target-gate}" \
+    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}" \
         BEVY_ASSET_ROOT="${BEVY_ASSET_ROOT:-$(pwd)/clients/bevy-ref}" \
         powershell -NoProfile -ExecutionPolicy Bypass -File Tools/play.ps1 -LogLevel 'info,civ_bevy_ref=debug,wgpu=warn'
 
 # Same as `play` with RUST_LOG=info,civ_bevy_ref=debug,wgpu=warn and RUST_BACKTRACE=full.
 play-trace:
-    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-G:/civis-target-gate}" \
+    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$(pwd)/target}" \
         BEVY_ASSET_ROOT="${BEVY_ASSET_ROOT:-$(pwd)/clients/bevy-ref}" \
         powershell -NoProfile -ExecutionPolicy Bypass -File Tools/play.ps1 -LogLevel 'info,civ_bevy_ref=debug,wgpu=warn' -Backtrace full
 
 # Build + run the live windowed Bevy client (civ-bevy-window, F3D0 binary frame
 # attach). Mirrors the `play` verified incantation: `bevy,egui` features,
-# CARGO_TARGET_DIR=G:/civis-target-gate, and BEVY_ASSET_ROOT=clients/bevy-ref.
+# caller-overridable CARGO_TARGET_DIR and BEVY_ASSET_ROOT=clients/bevy-ref.
 # The window client reads the same asset dir as the standalone (sandbox
 # terrain fallback + sky HDR + UI panel textures) so the root must be the
 # bevy-ref crate.
 play-window:
-    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-G:/civis-target-gate}" \
-        BEVY_ASSET_ROOT="${BEVY_ASSET_ROOT:-$(pwd)/clients/bevy-ref}" \
-        cargo run -p civ-bevy-ref --features bevy,egui --bin civ-bevy-window
+    {{ if os_family() == "windows" { "$env:CARGO_TARGET_DIR = if ($env:CARGO_TARGET_DIR) { $env:CARGO_TARGET_DIR } else { \"$(Get-Location)\\target\" }; $env:BEVY_ASSET_ROOT = if ($env:BEVY_ASSET_ROOT) { $env:BEVY_ASSET_ROOT } else { \"$(Get-Location)\\clients\\bevy-ref\" }; cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-bevy-window" } else { "CARGO_TARGET_DIR=\"${CARGO_TARGET_DIR:-$(pwd)/target}\" BEVY_ASSET_ROOT=\"${BEVY_ASSET_ROOT:-$(pwd)/clients/bevy-ref}\" cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-bevy-window" } }}
 
 # Kill a running civ-standalone game process.
 stop:
@@ -326,4 +363,4 @@ register-startmenu:
 # Autograder loop for engine build-green: compile + acceptance tests must pass.
 build-green-engine:
     cargo check -p civ-engine
-    cargo build --release -p civ-bevy-ref --features "bevy egui" --bin civ-bevy-window  # REAL playable gate (release build, not check)
+    cargo build --release -p civ-bevy-ref --features "bevy egui client-bins" --bin civ-bevy-window  # REAL playable gate (release build, not check)

@@ -2,6 +2,10 @@
 //!
 //! This module was recovered from history so `god_actions.rs` can keep using the
 //! existing cull-distance and quality-mode API without further call-site churn.
+//!
+//! `FRAME_BUDGET_MS` is 33.3 ms (a 30 FPS floor). When sustained over-budget
+//! frames accumulate, [`GpuQualityMode`] steps down; it recovers once recent
+//! drops age out of [`DROP_RECOVERY_WINDOW_SECS`].
 
 use bevy::diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin};
 use bevy::prelude::*;
@@ -100,14 +104,6 @@ impl Default for FrameBudgetState {
     }
 }
 
-#[derive(Resource, Default)]
-struct QualityRecoveryState {
-    window_start_secs: f64,
-    drops_at_window_start: u64,
-    last_recovery_warn_at: Option<f64>,
-    initialized: bool,
-}
-
 /// Registers frame-budget tracking against Bevy diagnostics.
 pub struct FrameBudgetPlugin;
 
@@ -119,11 +115,30 @@ impl Plugin for FrameBudgetPlugin {
         app.init_resource::<FrameBudgetMetrics>()
             .init_resource::<FrameBudgetState>()
             .init_resource::<GpuQualityMode>()
-            .init_resource::<QualityRecoveryState>()
             .add_systems(
                 PostUpdate,
                 enforce_frame_budget.after(FrameTimeDiagnosticsPlugin::diagnostic_system),
             );
+    }
+}
+
+pub(crate) fn quality_for_drop_count(drop_count: u64) -> GpuQualityMode {
+    if drop_count >= DROP_THRESHOLD_CRITICAL {
+        GpuQualityMode::Critical
+    } else if drop_count >= DROP_THRESHOLD_REDUCED {
+        GpuQualityMode::Reduced
+    } else {
+        GpuQualityMode::Full
+    }
+}
+
+fn prune_recent_drops(state: &mut FrameBudgetState, now: f64) {
+    while let Some(front) = state.recent_drops.front().copied() {
+        if now - front > DROP_RECOVERY_WINDOW_SECS {
+            state.recent_drops.pop_front();
+        } else {
+            break;
+        }
     }
 }
 
@@ -154,33 +169,114 @@ fn enforce_frame_budget(
         return;
     }
     let avg_ms = state.window.iter().sum::<f32>() / FRAME_BUDGET_WINDOW as f32;
-    if avg_ms <= FRAME_BUDGET_MS {
-        return;
-    }
-    metrics.drop_count = metrics.drop_count.saturating_add(1);
     let now = time.elapsed_secs_f64();
-    state.recent_drops.push_back(now);
-    while let Some(front) = state.recent_drops.front().copied() {
-        if now - front > DROP_RECOVERY_WINDOW_SECS {
-            state.recent_drops.pop_front();
-        } else {
-            break;
+    let over_budget = avg_ms > FRAME_BUDGET_MS;
+
+    if over_budget {
+        metrics.drop_count = metrics.drop_count.saturating_add(1);
+        state.recent_drops.push_back(now);
+        let should_warn = state
+            .last_warn_at
+            .map(|last| now - last >= WARN_THROTTLE_SECS)
+            .unwrap_or(true);
+        if should_warn {
+            warn!("Frame budget exceeded: {avg_ms:.1}ms (target {FRAME_BUDGET_MS})");
+            state.last_warn_at = Some(now);
         }
     }
-    let drop_count = state.recent_drops.len() as u64;
-    *recovery = if drop_count >= DROP_THRESHOLD_CRITICAL {
-        GpuQualityMode::Critical
-    } else if drop_count >= DROP_THRESHOLD_REDUCED {
-        GpuQualityMode::Reduced
-    } else {
-        GpuQualityMode::Full
-    };
-    let should_warn = state
-        .last_warn_at
-        .map(|last| now - last >= WARN_THROTTLE_SECS)
-        .unwrap_or(true);
-    if should_warn {
-        warn!("Frame budget exceeded: {avg_ms:.1}ms (target {FRAME_BUDGET_MS})");
-        state.last_warn_at = Some(now);
+
+    // Always prune aged drops and recompute quality so under-budget frames can
+    // upgrade out of Reduced/Critical (hysteresis via DROP_RECOVERY_WINDOW_SECS).
+    prune_recent_drops(&mut state, now);
+    let new_mode = quality_for_drop_count(state.recent_drops.len() as u64);
+    if new_mode != *recovery {
+        if new_mode.cull_distance_scale() > recovery.cull_distance_scale() {
+            let should_warn = state
+                .last_recovery_warn_at
+                .map(|last| now - last >= WARN_THROTTLE_SECS)
+                .unwrap_or(true);
+            if should_warn {
+                info!(
+                    "GpuQualityMode recovering: {:?} → {:?} (avg {avg_ms:.1}ms, drops {})",
+                    *recovery,
+                    new_mode,
+                    state.recent_drops.len()
+                );
+                state.last_recovery_warn_at = Some(now);
+            }
+        }
+        *recovery = new_mode;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn quality_full_at_zero_drops() {
+        assert_eq!(quality_for_drop_count(0), GpuQualityMode::Full);
+    }
+
+    #[test]
+    fn quality_reduced_at_drop_threshold() {
+        assert_eq!(
+            quality_for_drop_count(DROP_THRESHOLD_REDUCED),
+            GpuQualityMode::Reduced
+        );
+    }
+
+    #[test]
+    fn quality_critical_at_drop_threshold() {
+        assert_eq!(
+            quality_for_drop_count(DROP_THRESHOLD_CRITICAL),
+            GpuQualityMode::Critical
+        );
+    }
+
+    #[test]
+    fn cull_distance_scales_by_quality_mode() {
+        assert_eq!(GpuQualityMode::Full.cull_distance_scale(), 1.0);
+        assert_eq!(
+            GpuQualityMode::Reduced.cull_distance_scale(),
+            REDUCED_CULL_SCALE
+        );
+        assert_eq!(
+            GpuQualityMode::Critical.cull_distance_scale(),
+            REDUCED_CULL_SCALE * CRITICAL_CULL_SCALE
+        );
+    }
+
+    #[test]
+    fn lod_distance_is_inverse_of_cull_scale() {
+        for mode in [
+            GpuQualityMode::Full,
+            GpuQualityMode::Reduced,
+            GpuQualityMode::Critical,
+        ] {
+            assert!(
+                (mode.lod_distance_scale() * mode.cull_distance_scale() - 1.0).abs() < f32::EPSILON
+            );
+        }
+    }
+
+    #[test]
+    fn scaled_cull_and_lod_helpers_apply_mode_multipliers() {
+        let base = 100.0;
+        assert_eq!(scaled_cull_distance(base, GpuQualityMode::Full), base);
+        assert_eq!(
+            scaled_cull_distance(base, GpuQualityMode::Reduced),
+            base * REDUCED_CULL_SCALE
+        );
+        assert_eq!(
+            scaled_cull_distance(base, GpuQualityMode::Critical),
+            base * REDUCED_CULL_SCALE * CRITICAL_CULL_SCALE
+        );
+
+        let distance = 90.0;
+        assert_eq!(
+            scaled_mesh_lod_distance(distance, GpuQualityMode::Reduced),
+            distance / REDUCED_CULL_SCALE
+        );
     }
 }

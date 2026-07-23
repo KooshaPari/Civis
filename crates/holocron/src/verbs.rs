@@ -100,7 +100,6 @@ pub fn build_mcp_catalog() -> Vec<VerbDescriptor> {
             mcp_tool: Some("civ_inspect_law".to_string()),
             use_count: 0,
         },
-
         // ===== Economic =====
         VerbDescriptor {
             id: "civ_adjust_wages".to_string(),
@@ -167,7 +166,6 @@ pub fn build_mcp_catalog() -> Vec<VerbDescriptor> {
             mcp_tool: Some("civ_inspect_market".to_string()),
             use_count: 0,
         },
-
         // ===== Divine =====
         VerbDescriptor {
             id: "civ_disaster_banish".to_string(),
@@ -217,11 +215,11 @@ pub fn build_mcp_catalog() -> Vec<VerbDescriptor> {
             hotkey: None,
             provenance: Provenance::Mcp,
             risk: RiskTier::Cosmetic,
-            description: "Show the cause, severity, and projected end of the current disaster.".to_string(),
+            description: "Show the cause, severity, and projected end of the current disaster."
+                .to_string(),
             mcp_tool: Some("civ_inspect_disaster".to_string()),
             use_count: 0,
         },
-
         // ===== Debug =====
         VerbDescriptor {
             id: "civ_save_snapshot".to_string(),
@@ -330,11 +328,21 @@ mod tests {
     fn covers_all_groups() {
         let verbs = build_mcp_catalog();
         let civic = verbs.iter().filter(|v| v.group == VerbGroup::Civic).count();
-        let economic = verbs.iter().filter(|v| v.group == VerbGroup::Economic).count();
-        let divine = verbs.iter().filter(|v| v.group == VerbGroup::Divine).count();
+        let economic = verbs
+            .iter()
+            .filter(|v| v.group == VerbGroup::Economic)
+            .count();
+        let divine = verbs
+            .iter()
+            .filter(|v| v.group == VerbGroup::Divine)
+            .count();
         let debug = verbs.iter().filter(|v| v.group == VerbGroup::Debug).count();
         assert!(civic >= 3, "need at least 3 civic verbs, got {}", civic);
-        assert!(economic >= 3, "need at least 3 economic verbs, got {}", economic);
+        assert!(
+            economic >= 3,
+            "need at least 3 economic verbs, got {}",
+            economic
+        );
         assert!(divine >= 3, "need at least 3 divine verbs, got {}", divine);
         assert!(debug >= 3, "need at least 3 debug verbs, got {}", debug);
     }

@@ -1,7 +1,7 @@
 #![cfg(all(feature = "bevy", feature = "egui"))]
 
 //! 6-step tutorial hint system (FR-CIV-CLIENT-011).
-//! Shown bottom-centre during InGame. Space/click advances; H replays.
+//! Shown bottom-centre during InGame. Enter/click advances; H replays.
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
@@ -11,7 +11,7 @@ use crate::menus::in_game;
 
 const HINTS: &[&str] = &[
     "Welcome to Civis! Your civilization is emerging. Watch the minimap for faction spread. [M] cycles map modes.",
-    "Press [F] to see your faction's stats - population, treasury, and government type.",
+    "Press [F1] to see your faction's stats - population, treasury, and government type.",
     "Events appear in the feed [N]. Disasters and diplomacy shape your world.",
     "Use [T] to research technologies. Each unlock accelerates your civilization.",
     "Open [D] to manage diplomacy - propose treaties or declare war.",
@@ -58,7 +58,8 @@ fn handle_tutorial_keys(keys: Res<ButtonInput<KeyCode>>, mut state: ResMut<Tutor
     if !state.enabled {
         return;
     }
-    if keys.just_pressed(KeyCode::Space) {
+    // Enter — Space owns pause/resume in the shell.
+    if keys.just_pressed(KeyCode::Enter) {
         advance(&mut state);
     }
 }
@@ -131,7 +132,7 @@ fn draw_tutorial_hint(
                                 clicked = true;
                             }
                             ui.label(
-                                egui::RichText::new("Space or click to advance")
+                                egui::RichText::new("Enter or click to advance")
                                     .color(egui::Color32::from_rgb(100, 110, 120))
                                     .size(10.0),
                             );

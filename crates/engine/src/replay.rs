@@ -158,7 +158,10 @@ pub enum ReplayError {
     /// Stored [`ReplayLog::running_hash`] does not match the chain recomputed from tick events.
     HashChainMismatch,
     /// Replay events are not ordered by nondecreasing simulation tick.
-    NonMonotonicTick { previous: u64, current: u64 },
+    NonMonotonicTick {
+        previous: u64,
+        current: u64,
+    },
 }
 
 impl fmt::Display for ReplayError {
@@ -795,7 +798,9 @@ mod tests {
         log.record_tick(1);
 
         let mut sim = Simulation::with_seed(1);
-        let err = log.replay(&mut sim).expect_err("descending ticks must fail");
+        let err = log
+            .replay(&mut sim)
+            .expect_err("descending ticks must fail");
         assert!(matches!(
             err,
             ReplayError::NonMonotonicTick {

@@ -184,7 +184,9 @@ async fn replay_import_notifies_connected_clients_to_reset_scene() {
 
     let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(88)));
     let addr = spawn_ws_bridge(sim, 4).await;
-    let (mut socket, _) = connect_async(format!("ws://{addr}/ws")).await.expect("ws connect");
+    let (mut socket, _) = connect_async(format!("ws://{addr}/ws"))
+        .await
+        .expect("ws connect");
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     reqwest::Client::new()
@@ -212,7 +214,10 @@ async fn replay_import_notifies_connected_clients_to_reset_scene() {
     .await
     .expect("scene.reset notification timeout");
 
-    assert_eq!(reset.pointer("/params/tick").and_then(|v| v.as_u64()), Some(expected_tick));
+    assert_eq!(
+        reset.pointer("/params/tick").and_then(|v| v.as_u64()),
+        Some(expected_tick)
+    );
 }
 
 #[tokio::test]

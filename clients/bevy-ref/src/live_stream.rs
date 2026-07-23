@@ -4,28 +4,29 @@ use std::collections::{HashMap, HashSet};
 
 #[cfg(feature = "egui")]
 use crate::event_feed::{EventFeed, EventKind};
-use bevy::pbr::MeshMaterial3d;
 use bevy::pbr::wireframe::{Wireframe, WireframeColor};
+use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
 use bevy::sprite::Text2d;
 use bevy::text::{TextColor, TextFont};
 use civ_protocol_3d::{
-    AgentAppearanceFrame, BattleEvent3d, BirthEvent3d, BuildingDiffFrame, BuildingGraph,
-    BuildingKind3d, BuildingProvenance, CivilianStateEntry, CivilianStateFrame, ClimateFrame,
-    DeathEvent3d, DisasterEvent3d, EventFeedMessage3d, FacadeStyle, FactionStateFrame, ParcelKind,
-    TechEvent3d, VoxelDeltaFrame, WorldXZ, agent_world_translation, map_build_provenance,
+    agent_world_translation, map_build_provenance, AgentAppearanceFrame, BattleEvent3d,
+    BirthEvent3d, BuildingDiffFrame, BuildingGraph, BuildingKind3d, BuildingProvenance,
+    CivilianStateEntry, CivilianStateFrame, ClimateFrame, DeathEvent3d, DisasterEvent3d,
+    EventFeedMessage3d, FacadeStyle, FactionStateFrame, ParcelKind, TechEvent3d, VoxelDeltaFrame,
+    WorldXZ,
 };
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId};
 
 use crate::bevy_render::{apply_chunk_material, mesh_buffer_to_bevy};
-use crate::frame_budget::{GpuQualityMode, scaled_mesh_lod_distance};
+use crate::frame_budget::{scaled_mesh_lod_distance, GpuQualityMode};
 use crate::game_ui::civilian_display_name;
-use crate::live_ground::{ChunkVoxelCache, live_ground_y};
+use crate::live_ground::{live_ground_y, ChunkVoxelCache};
 use crate::ws_client::WsClient;
 use crate::{
-    AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH, DebugRender, LiveEntityKind,
-    SelectedLiveEntity, agent_color_from_id, agent_scale_multiplier, chunk_distance_from_camera,
-    decode_chunk_id, mesh_lod_level, should_render_chunk,
+    agent_color_from_id, agent_scale_multiplier, chunk_distance_from_camera, decode_chunk_id,
+    mesh_lod_level, should_render_chunk, DebugRender, LiveEntityKind, SelectedLiveEntity,
+    AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
 };
 
 /// Bevy resource wrapping a [`WsClient`] so egui plugins can send JSON-RPC calls
@@ -328,7 +329,7 @@ impl Default for LiveStreamScene {
 }
 
 impl LiveStreamScene {
-    /// Remove all entities and cached state from the previous authoritative scene.
+    /// Remove all streamed entities and authoritative caches from the prior scene.
     pub fn reset(&mut self, commands: &mut Commands) {
         for entity in self
             .chunks
@@ -340,23 +341,51 @@ impl LiveStreamScene {
         {
             commands.entity(*entity).despawn();
         }
-        self.chunks.clear();
-        self.water_entities.clear();
-        self.chunk_voxels = ChunkVoxelCache::default();
-        self.agents.clear();
-        self.buildings.clear();
-        self.graph_parcels.clear();
-        self.agent_materials.clear();
-        self.building_materials.clear();
-        self.graph_parcel_materials.clear();
-        self.civilian_ids.clear();
-        self.civilian_entries.clear();
-        self.factions.clear();
-        self.faction_entries.clear();
-        self.faction_era = 0;
-        self.population_by_faction.clear();
-        self.climate = None;
-        self.weather = None;
+        *self = Self::default();
+    }
+}
+
+/// Despawn all streamed entities and reset maps so a new WorldGen boot cannot
+/// treat a previous session's chunks/agents as "ready".
+pub fn clear_live_stream_scene(commands: &mut Commands, scene: &mut LiveStreamScene) {
+    let entities: Vec<Entity> = scene
+        .chunks
+        .values()
+        .copied()
+        .chain(scene.water_entities.values().copied())
+        .chain(scene.agents.values().copied())
+        .chain(scene.buildings.values().copied())
+        .chain(scene.graph_parcels.values().copied())
+        .collect();
+    *scene = LiveStreamScene::default();
+    commands.queue(move |world: &mut World| {
+        for entity in entities {
+            let _ = world.despawn(entity);
+        }
+    });
+}
+
+/// World-exclusive clear used from menu commands (avoids `ResMut` conflicts with
+/// [`crate::menus::advance_worldgen_to_playing`]).
+pub fn clear_live_stream_scene_in_world(world: &mut World) {
+    let entities = {
+        let Some(mut scene) = world.get_resource_mut::<LiveStreamScene>() else {
+            return;
+        };
+        let entities: Vec<Entity> = scene
+            .chunks
+            .values()
+            .copied()
+            .chain(scene.water_entities.values().copied())
+            .chain(scene.agents.values().copied())
+            .chain(scene.buildings.values().copied())
+            .chain(scene.graph_parcels.values().copied())
+            .collect();
+        *scene = LiveStreamScene::default();
+        entities
+    };
+    for entity in entities {
+        let _ = world.despawn(entity);
     }
 }
 
@@ -855,17 +884,17 @@ pub fn apply_voxel_delta_frame(
     material_assets: &mut Assets<StandardMaterial>,
     culling: StreamCulling,
     debug: &DebugRender,
-    delta: &VoxelDeltaFrame,
+    delta: VoxelDeltaFrame,
     wireframe_line_color: Option<Color>,
 ) {
-    for chunk in &delta.deltas {
+    for chunk in delta.deltas {
         let chunk_id = chunk.event.chunk_id;
         if chunk.voxels.len() == LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE {
             scene.chunk_voxels.insert(chunk_id, chunk.voxels.clone());
         }
 
-        let max_distance = culling.max_distance * culling.draw_distance_scale();
-        if !should_render_chunk(chunk_id, culling.eye, max_distance) {
+        // `max_distance` is already quality-scaled by the caller (e.g. live_scene).
+        if !should_render_chunk(chunk_id, culling.eye, culling.max_distance) {
             if let Some(entity) = scene.chunks.remove(&chunk_id.0) {
                 commands.entity(entity).despawn();
             }
@@ -1117,12 +1146,9 @@ pub fn apply_agent_appearance_frame_with_labels(
 
         let entity = *scene.agents.entry(update.agent_id).or_insert_with(|| {
             let entity = commands
-                .spawn((
-                    LiveAgentTag {
-                        id: update.agent_id,
-                    },
-                    Transform::default(),
-                ))
+                .spawn(LiveAgentTag {
+                    id: update.agent_id,
+                })
                 .id();
             if labels.enabled {
                 let label = scene
@@ -1411,7 +1437,7 @@ fn building_material_style(
 mod tests {
     use super::*;
     use crate::encode_chunk_id;
-    use crate::live_ground::{ChunkVoxelCache, live_ground_y, live_voxel_surface_y};
+    use crate::live_ground::{live_ground_y, live_voxel_surface_y, ChunkVoxelCache};
     use civ_protocol_3d::{DirtyChunkEvent, VoxelChunkDelta, VoxelDeltaFrame, WriteSeq};
     use civ_voxel::MaterialId;
 
@@ -1567,7 +1593,7 @@ mod tests {
             &mut material_assets,
             culling,
             &DebugRender::default(),
-            &delta,
+            delta,
             None,
         );
 

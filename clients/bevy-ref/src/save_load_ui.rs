@@ -13,6 +13,11 @@ use civ_engine::{
 
 use crate::sim_bridge::SimState;
 use crate::ui_theme::{liquid_glass_frame, GLASS_FILL, KC_ACCENT, RADIUS_PANEL};
+use crate::{
+    live_attach::LiveAttachBridge,
+    menus::{AppState, GameUiMode, WorldGenBoot},
+    outcome_overlay::{begin_player_session, OutcomeOverlayState, OutcomeSessionGate},
+};
 
 /// Panel visibility, cached slot rows, and transient save/load status.
 #[derive(Resource, Debug)]
@@ -114,6 +119,12 @@ fn render_save_slot_browser(
     mut contexts: EguiContexts,
     mut panel: ResMut<SaveLoadPanel>,
     sim: Option<ResMut<SimState>>,
+    bridge: Option<Res<LiveAttachBridge>>,
+    gate: Option<ResMut<OutcomeSessionGate>>,
+    overlay: Option<ResMut<OutcomeOverlayState>>,
+    boot: Option<ResMut<WorldGenBoot>>,
+    game_mode: Option<ResMut<GameUiMode>>,
+    next_state: Option<ResMut<NextState<AppState>>>,
 ) {
     if !panel.visible {
         return;
@@ -143,7 +154,17 @@ fn render_save_slot_browser(
     panel.visible = open;
 
     if let Some(action) = action {
-        apply_save_slot_action(action, &mut panel, sim);
+        apply_save_slot_action(
+            action,
+            &mut panel,
+            sim,
+            bridge.as_deref(),
+            gate,
+            overlay,
+            boot,
+            game_mode,
+            next_state,
+        );
     }
 }
 
@@ -242,6 +263,12 @@ fn apply_save_slot_action(
     action: SaveSlotAction,
     panel: &mut SaveLoadPanel,
     sim: Option<ResMut<SimState>>,
+    bridge: Option<&LiveAttachBridge>,
+    gate: Option<ResMut<OutcomeSessionGate>>,
+    overlay: Option<ResMut<OutcomeOverlayState>>,
+    mut boot: Option<ResMut<WorldGenBoot>>,
+    mut game_mode: Option<ResMut<GameUiMode>>,
+    mut next_state: Option<ResMut<NextState<AppState>>>,
 ) {
     let saves_dir = default_saves_dir();
     if let Err(err) = std::fs::create_dir_all(&saves_dir) {
@@ -274,6 +301,23 @@ fn apply_save_slot_action(
                     panel.last_status = format!("Loaded {name}");
                     panel.visible = false;
                     panel.refresh_requested = true;
+                    if let (Some(mut gate), Some(mut overlay)) = (gate, overlay) {
+                        begin_player_session(
+                            bridge.map(|bridge| &bridge.client),
+                            &mut gate,
+                            &mut overlay,
+                        );
+                    }
+                    if let Some(mut boot) = boot {
+                        boot.elapsed = 0.0;
+                        boot.scene_clear_pending = false;
+                    }
+                    if let Some(mut mode) = game_mode {
+                        *mode = GameUiMode::Playing;
+                    }
+                    if let Some(mut next_state) = next_state {
+                        next_state.set(AppState::Playing);
+                    }
                 }
                 Err(err) => panel.last_status = format!("Load failed: {err}"),
             }

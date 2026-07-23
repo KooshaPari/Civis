@@ -110,7 +110,11 @@ impl Glyph {
 /// # Returns
 ///
 /// A Vec of `Glyph` objects, each with deterministic strokes.
-pub fn glyphs_for_language(inventory_seed: u64, phoneme_count: usize, desired_glyphs: usize) -> Vec<Glyph> {
+pub fn glyphs_for_language(
+    inventory_seed: u64,
+    phoneme_count: usize,
+    desired_glyphs: usize,
+) -> Vec<Glyph> {
     let glyph_count = desired_glyphs.max(4).min(256);
     let mut glyphs = Vec::with_capacity(glyph_count);
 
@@ -329,11 +333,7 @@ mod tests {
 
     #[test]
     fn glyph_serialize_deserialize() {
-        let glyph = Glyph::new(
-            5,
-            vec![Stroke::line(0.0, 0.0, 1.0, 1.0)],
-            vec![2, 3],
-        );
+        let glyph = Glyph::new(5, vec![Stroke::line(0.0, 0.0, 1.0, 1.0)], vec![2, 3]);
         let json = serde_json::to_string(&glyph).expect("serialize");
         let restored: Glyph = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(glyph, restored);

@@ -97,10 +97,7 @@ impl Plugin for SandboxEventFeedPlugin {
 
 // ── Systems ───────────────────────────────────────────────────────────────────
 
-fn toggle_sandbox_feed(
-    keys: Res<ButtonInput<KeyCode>>,
-    mut open: ResMut<SandboxEventFeedOpen>,
-) {
+fn toggle_sandbox_feed(keys: Res<ButtonInput<KeyCode>>, mut open: ResMut<SandboxEventFeedOpen>) {
     if keys.just_pressed(KeyCode::F8) {
         open.0 = !open.0;
     }

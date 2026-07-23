@@ -2,11 +2,12 @@
 
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
-use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 #[cfg(feature = "models")]
 use civ_bevy_ref::animation::ActorAnimationPlugin;
 #[cfg(feature = "models")]
 use civ_bevy_ref::gltf_models::GltfModelsPlugin;
+#[cfg(feature = "egui")]
+use civ_bevy_ref::graphics_settings::GraphicsSettingsPlugin;
 #[cfg(feature = "gi")]
 use civ_bevy_ref::lighting_gi::SolariGiPlugin;
 #[cfg(feature = "voxel")]
@@ -28,6 +29,19 @@ use civ_bevy_ref::{
 
 fn main() {
     civ_bevy_ref::install_crash_handler();
+
+    // Apply AAA Graphics API combo from settings.ron (or Windows DX12 default).
+    #[cfg(feature = "egui")]
+    {
+        civ_bevy_ref::settings_ui::GameSettings::apply_boot_render_engine();
+    }
+    #[cfg(not(feature = "egui"))]
+    if std::env::var_os(civ_bevy_ref::native_backend::BACKEND_ENV).is_none() {
+        #[cfg(target_os = "windows")]
+        {
+            std::env::set_var(civ_bevy_ref::native_backend::BACKEND_ENV, "dx12");
+        }
+    }
 
     let attach_mode = resolve_attach_mode_from_env();
 
@@ -95,7 +109,7 @@ fn main() {
         );
     #[cfg(feature = "egui")]
     {
-        app.add_plugins(SettingsPlugin)
+        app.add_plugins((SettingsPlugin, GraphicsSettingsPlugin))
             .add_systems(Startup, sync_post_fx_from_settings)
             .add_systems(
                 Update,
@@ -146,22 +160,27 @@ fn main() {
     #[cfg(feature = "egui")]
     app.add_plugins(civ_bevy_ref::game_laws::GameLawsPlugin);
 
-    // Gameplay HUD: faction leaderboard + victory progress + outcome banner (F9).
-    #[cfg(feature = "egui")]
-    app.add_plugins(civ_bevy_ref::gameplay_hud::GameplayHudPlugin);
+    // Gameplay HUD + live-stream overlays require LiveStreamScene from LiveAttach.
+    // Register them only in server attach mode (see block below).
 
-    // Settings / options panel (RON-persisted); bevy+egui.
+    // Shell overlays that work in both sandbox and live attach.
     #[cfg(feature = "egui")]
-    app.add_plugins(civ_bevy_ref::settings_ui::SettingsPlugin);
+    {
+        app.add_plugins((
+            civ_bevy_ref::tutorial::TutorialPlugin,
+            civ_bevy_ref::controls_help::ControlsHelpPlugin,
+            civ_bevy_ref::perf_hud::PerfHudPlugin,
+            civ_bevy_ref::AgentNeedsPlugin,
+        ));
+    }
+
     // Ambient + SFX audio (feature-gated).
+    // SettingsPlugin / SolariGi / GltfModels / ActorAnimation are registered once above.
     #[cfg(feature = "audio")]
     app.add_plugins(civ_bevy_ref::audio::CivisAudioPlugin);
     // GPU particle VFX for events (feature-gated).
     #[cfg(feature = "vfx")]
     app.add_plugins(civ_bevy_ref::vfx::VfxPlugin);
-    // Real-time RT global illumination via bevy_solari (feature-gated).
-    #[cfg(feature = "gi")]
-    app.add_plugins(civ_bevy_ref::lighting_gi::SolariGiPlugin);
 
     // P-VM-3: real volumetric voxel material world (replaces the heightmap).
     // `voxel_stream` takes precedence: when enabled, the camera-driven streaming
@@ -188,21 +207,56 @@ fn main() {
     #[cfg(feature = "voxel_stream")]
     app.add_plugins(civ_bevy_ref::voxel_stream::VoxelStreamPlugin);
 
-    // CC0 GLTF models: populate GameModels so sim_bridge swaps capsule/cuboid
-    // primitives for real Knight/house scenes (per-asset primitive fallback).
-    #[cfg(feature = "models")]
-    app.add_plugins(civ_bevy_ref::gltf_models::GltfModelsPlugin);
-
-    // Actor rigging: drive glTF skeletal animation from emergent motion so
-    // agents idle / walk / run + face their heading instead of sliding statically.
-    #[cfg(feature = "models")]
-    app.add_plugins(civ_bevy_ref::animation::ActorAnimationPlugin);
-
     if attach_mode == AttachMode::Server {
         app.add_plugins(LiveAttachPlugin);
+        // Live HUD / god tools need LiveBridge + LiveStreamScene from LiveAttach.
+        #[cfg(feature = "egui")]
+        {
+            app.add_plugins((
+                civ_bevy_ref::gameplay_hud::GameplayHudPlugin,
+                civ_bevy_ref::faction_hud::FactionHudPlugin,
+                civ_bevy_ref::world_faction_glyphs::WorldFactionGlyphsPlugin,
+                civ_bevy_ref::god_panel::GodPanelPlugin,
+                civ_bevy_ref::god_actions::GodActionsPlugin,
+                civ_bevy_ref::holocron_panel::HolocronPanelPlugin,
+            ));
+        }
+    }
+
+    // Bounded native launch smoke: `CIVIS_SMOKE_FRAMES=N` exits after N Update ticks
+    // (preflight already printed). Used by `just civis-3d-standalone-smoke`.
+    if let Some(frames) = smoke_frames_from_env() {
+        app.insert_resource(SmokeExitAfter { frames })
+            .add_systems(Update, exit_after_smoke_frames);
     }
 
     app.run();
+}
+
+/// How many Update frames to run before exiting (native smoke).
+#[derive(Resource, Debug, Clone, Copy)]
+struct SmokeExitAfter {
+    frames: u32,
+}
+
+fn smoke_frames_from_env() -> Option<u32> {
+    let raw = std::env::var("CIVIS_SMOKE_FRAMES").ok()?;
+    let n: u32 = raw.trim().parse().ok()?;
+    (n > 0).then_some(n)
+}
+
+fn exit_after_smoke_frames(budget: Res<SmokeExitAfter>, mut frames: Local<u32>) {
+    *frames += 1;
+    if *frames >= budget.frames {
+        eprintln!(
+            "[smoke] civ-standalone exiting after {} Update frame(s)",
+            budget.frames
+        );
+        // The interactive runner tears down the primary Egui context after
+        // AppExit is observed, which can race bevy_egui's multipass output
+        // finalization. Smoke mode only needs a bounded launch assertion.
+        std::process::exit(0);
+    }
 }
 
 #[cfg(feature = "egui")]

@@ -126,7 +126,7 @@ fn apply_live_scene_frames(
                 &mut materials,
                 culling,
                 debug.as_ref(),
-                &delta,
+                delta,
                 None,
             ),
             Frame3d::AgentAppearance(agents) => {

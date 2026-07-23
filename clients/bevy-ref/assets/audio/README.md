@@ -17,6 +17,11 @@ Battle/Birth/Death/Tech/Disaster paths are pairwise distinct (no disaster-alias 
 | `disaster` | `Disaster` | `sfx_disaster.ogg` | World disaster (severity-scaled) |
 | `build` | `Build` | `build.ogg` | Building constructed |
 
+## Stub notes
+
+`sfx_battle.ogg` is a short synthetic clash stub (distinct from `sfx_disaster.ogg`).
+Replace with a real CC0 combat sting when available — do **not** copy the disaster clip.
+
 ## Other clips
 
 | File | Description | Suggested source |
@@ -26,3 +31,4 @@ Battle/Birth/Death/Tech/Disaster paths are pairwise distinct (no disaster-alias 
 | `ui_click.ogg` | UI button click | kenney.nl "UI Audio" (CC0) |
 
 All files are optional — missing clips play silence without aborting the client.
+`audio.rs` skips `LoadState::Failed` / `NotLoaded` handles so a missing asset never panics.

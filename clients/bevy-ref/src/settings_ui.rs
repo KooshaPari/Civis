@@ -37,9 +37,13 @@ use serde::{
     Deserialize, Serialize,
 };
 
+/// Canonical persisted GPU backend preference, re-exported for API compatibility.
+pub use crate::graphics_settings::BackendPref as RenderEngine;
 use crate::ui_theme;
 #[cfg(feature = "audio")]
 use bevy_kira_audio::prelude::AudioChannel;
+#[cfg(feature = "audio")]
+use bevy_kira_audio::AudioControl;
 
 const SETTINGS_PATH: &str = "settings.ron";
 
@@ -315,6 +319,9 @@ impl Default for SettingsTab {
 /// Graphics / video options.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphicsSettings {
+    /// GPU API / render engine (DX12 Ultimate / Vulkan / Auto). Restart required.
+    #[serde(default)]
+    pub render_engine: RenderEngine,
     /// Selected resolution preset.
     #[serde(default)]
     pub resolution: ResolutionPreset,
@@ -374,6 +381,7 @@ pub struct GraphicsSettings {
 impl Default for GraphicsSettings {
     fn default() -> Self {
         Self {
+            render_engine: RenderEngine::default(),
             resolution: ResolutionPreset::R1080p,
             vsync: true,
             quality: QualityPreset::High,
@@ -594,6 +602,8 @@ pub const ACTION_CAMERA_MOVE_LEFT: &str = "Move Camera Left";
 pub const ACTION_CAMERA_RAISE: &str = "Raise Camera";
 pub const ACTION_CAMERA_LOWER: &str = "Lower Camera";
 pub const ACTION_CAMERA_ROTATE: &str = "Rotate Camera";
+pub const ACTION_CAMERA_ORBIT_LEFT: &str = "Orbit Camera Left";
+pub const ACTION_CAMERA_ORBIT_RIGHT: &str = "Orbit Camera Right";
 pub const ACTION_CAMERA_ZOOM: &str = "Zoom Camera";
 pub const ACTION_CAMERA_RESET: &str = "Reset Camera";
 pub const ACTION_CAMERA_ZOOM_IN: &str = "Zoom Camera In";
@@ -671,6 +681,10 @@ impl KeyBinding {
             Self::Key(KeyCode::KeyO) => "O".into(),
             Self::Key(KeyCode::KeyG) => "G".into(),
             Self::Key(KeyCode::KeyT) => "T".into(),
+            Self::Key(KeyCode::KeyR) => "R".into(),
+            Self::Key(KeyCode::KeyF) => "F".into(),
+            Self::Key(KeyCode::KeyE) => "E".into(),
+            Self::Key(KeyCode::Home) => "Home".into(),
             Self::Key(KeyCode::Space) => "Space".into(),
             Self::Key(KeyCode::Equal) => "=".into(),
             Self::Key(KeyCode::KeyW) => "W".into(),
@@ -846,6 +860,7 @@ fn default_keybinds() -> Vec<Keybind> {
         Keybind::new(ACTION_TOGGLE_DIPLOMACY, KeyBinding::Key(KeyCode::KeyG)),
         Keybind::new(ACTION_TOGGLE_TECH_TREE, KeyBinding::Key(KeyCode::KeyT)),
         Keybind::new(ACTION_TOGGLE_MAP, KeyBinding::Key(KeyCode::KeyM)),
+        // Space = pause/resume; Esc still closes panels / toggles overlay via menus.
         Keybind::new(ACTION_PAUSE_SIM, KeyBinding::Key(KeyCode::Space)),
         Keybind::new(ACTION_CYCLE_SIM_SPEED, KeyBinding::Key(KeyCode::Equal)),
         Keybind::new(ACTION_SPEED_1X, KeyBinding::Key(KeyCode::Digit1)),
@@ -856,16 +871,48 @@ fn default_keybinds() -> Vec<Keybind> {
         Keybind::new(ACTION_CAMERA_MOVE_BACKWARD, KeyBinding::Key(KeyCode::KeyS)),
         Keybind::new(ACTION_CAMERA_MOVE_LEFT, KeyBinding::Key(KeyCode::KeyA)),
         Keybind::new(ACTION_CAMERA_MOVE_RIGHT, KeyBinding::Key(KeyCode::KeyD)),
-        Keybind::new(ACTION_CAMERA_RAISE, KeyBinding::Key(KeyCode::Space)),
-        Keybind::new(ACTION_CAMERA_LOWER, KeyBinding::Key(KeyCode::ShiftLeft)),
+        Keybind::new(ACTION_CAMERA_RAISE, KeyBinding::Key(KeyCode::KeyR)),
+        Keybind::new(ACTION_CAMERA_LOWER, KeyBinding::Key(KeyCode::KeyF)),
         Keybind::new(ACTION_CAMERA_ROTATE, KeyBinding::Mouse(MouseButton::Right)),
+        Keybind::new(ACTION_CAMERA_ORBIT_LEFT, KeyBinding::Key(KeyCode::KeyQ)),
+        Keybind::new(ACTION_CAMERA_ORBIT_RIGHT, KeyBinding::Key(KeyCode::KeyE)),
         Keybind::new(ACTION_CAMERA_ZOOM, KeyBinding::Mouse(MouseButton::Middle)),
-        Keybind::new(ACTION_CAMERA_RESET, KeyBinding::Key(KeyCode::KeyR)),
+        Keybind::new(ACTION_CAMERA_RESET, KeyBinding::Key(KeyCode::Home)),
         Keybind::new(ACTION_CAMERA_ZOOM_IN, KeyBinding::Key(KeyCode::Equal)),
         Keybind::new(ACTION_CAMERA_ZOOM_OUT, KeyBinding::Key(KeyCode::Minus)),
         Keybind::new(ACTION_SELECT_OR_PICK, KeyBinding::Mouse(MouseButton::Left)),
         Keybind::new(ACTION_CLOSE_PANEL, KeyBinding::Key(KeyCode::Escape)),
     ]
+}
+
+/// Fill missing actions and migrate the pre-2026-07 stock camera/pause layout.
+fn reconcile_keybinds(keybinds: &mut Vec<Keybind>) {
+    let stock_old = |action: &str, binding: KeyBinding| -> bool {
+        keybinds
+            .iter()
+            .find(|b| b.action == action)
+            .is_some_and(|b| b.binding == binding)
+    };
+    let still_stock_pause_raise = stock_old(ACTION_PAUSE_SIM, KeyBinding::Key(KeyCode::Escape))
+        && stock_old(ACTION_CAMERA_RAISE, KeyBinding::Key(KeyCode::Space))
+        && stock_old(ACTION_CAMERA_LOWER, KeyBinding::Key(KeyCode::ShiftLeft))
+        && stock_old(ACTION_CAMERA_RESET, KeyBinding::Key(KeyCode::KeyR));
+    if still_stock_pause_raise {
+        for bind in keybinds.iter_mut() {
+            match bind.action.as_str() {
+                a if a == ACTION_PAUSE_SIM => bind.binding = KeyBinding::Key(KeyCode::Space),
+                a if a == ACTION_CAMERA_RAISE => bind.binding = KeyBinding::Key(KeyCode::KeyR),
+                a if a == ACTION_CAMERA_LOWER => bind.binding = KeyBinding::Key(KeyCode::KeyF),
+                a if a == ACTION_CAMERA_RESET => bind.binding = KeyBinding::Key(KeyCode::Home),
+                _ => {}
+            }
+        }
+    }
+    for def in default_keybinds() {
+        if !keybinds.iter().any(|b| b.action == def.action) {
+            keybinds.push(def);
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -949,6 +996,8 @@ impl GameSettings {
                 Ok(mut s) => {
                     if s.keybinds.is_empty() {
                         s.keybinds = default_keybinds();
+                    } else {
+                        reconcile_keybinds(&mut s.keybinds);
                     }
                     s.active_tab = SettingsTab::default();
                     s.open = false;
@@ -964,6 +1013,10 @@ impl GameSettings {
     }
 
     /// Serialize and write to [`SETTINGS_PATH`].
+    ///
+    /// Render-engine environment selection is applied once during startup by
+    /// [`Self::apply_boot_render_engine`]. Keeping it out of this live UI path
+    /// avoids mutating process-wide environment state while Bevy is running.
     pub fn save(&self) {
         match ron::ser::to_string_pretty(self, ron::ser::PrettyConfig::default()) {
             Ok(text) => {
@@ -973,6 +1026,12 @@ impl GameSettings {
             }
             Err(e) => error!("failed to serialize settings: {e}"),
         }
+    }
+
+    /// Apply persisted render-engine preference before wgpu adapter search.
+    pub fn apply_boot_render_engine() {
+        let settings = Self::load();
+        settings.graphics.render_engine.apply_to_env();
     }
 
     /// Look up the current binding for an action name.
@@ -1148,18 +1207,39 @@ fn draw_settings_panel(
 
     egui::Window::new("\u{2699} Settings")
         .open(&mut open)
-        .default_size(egui::vec2(680.0, 540.0))
+        .default_size(egui::vec2(920.0, 640.0))
+        .min_size(egui::vec2(720.0, 480.0))
         .resizable(true)
         .collapsible(false)
         .frame(ui_theme::liquid_glass_frame(egui::Margin::same(14), 14))
         .show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.vertical(|ui| {
-                    dirty = draw_settings_tabs(ui, &mut settings.active_tab);
-                });
+            ui.horizontal_top(|ui| {
+                ui.allocate_ui_with_layout(
+                    egui::vec2(168.0, ui.available_height().max(420.0)),
+                    egui::Layout::top_down(egui::Align::Min),
+                    |ui| {
+                        ui.label(
+                            egui::RichText::new("OPTIONS")
+                                .size(12.0)
+                                .color(ui_theme::DIM)
+                                .strong(),
+                        );
+                        ui.add_space(8.0);
+                        dirty = draw_settings_tabs(ui, &mut settings.active_tab);
+                    },
+                );
                 ui.separator();
-                ui.allocate_space(egui::vec2(4.0, 0.0));
-                draw_settings_page(ui, &mut settings, &mut capture, &mut dirty);
+                ui.allocate_ui_with_layout(
+                    egui::vec2(ui.available_width(), ui.available_height().max(420.0)),
+                    egui::Layout::top_down(egui::Align::Min),
+                    |ui| {
+                        egui::ScrollArea::vertical()
+                            .auto_shrink([false, false])
+                            .show(ui, |ui| {
+                                draw_settings_page(ui, &mut settings, &mut capture, &mut dirty);
+                            });
+                    },
+                );
             });
             ui_theme::hairline(ui);
             draw_footer(ui, &mut settings, &mut dirty);
@@ -1179,16 +1259,30 @@ fn draw_settings_tabs(ui: &mut egui::Ui, active_tab: &mut SettingsTab) -> bool {
     let mut changed = false;
     for tab in SettingsTab::ALL {
         let selected = *active_tab == tab;
-        let color = if selected {
-            ui_theme::ACCENT
+        let fill = if selected {
+            ui_theme::ACCENT.gamma_multiply(0.22)
         } else {
-            ui_theme::TEXT
+            egui::Color32::TRANSPARENT
         };
-        let label = egui::RichText::new(tab.label()).color(color).strong();
-        if ui.selectable_label(selected, label).clicked() {
+        let label = egui::RichText::new(tab.label())
+            .color(if selected {
+                ui_theme::ACCENT
+            } else {
+                ui_theme::TEXT
+            })
+            .strong()
+            .size(14.0);
+        let response = ui.add_sized(
+            egui::vec2(156.0, 36.0),
+            egui::Button::new(label)
+                .fill(fill)
+                .corner_radius(egui::CornerRadius::same(6)),
+        );
+        if response.clicked() {
             *active_tab = tab;
             changed = true;
         }
+        ui.add_space(4.0);
     }
     changed
 }
@@ -1262,11 +1356,72 @@ where
 
 fn graphics_tab(ui: &mut egui::Ui, g: &mut GraphicsSettings) -> bool {
     let mut changed = false;
-    section_heading(ui, "\u{1f5a5}", "Graphics");
+    section_heading(ui, "\u{26a1}", "Render Engine");
+    ui.label(
+        egui::RichText::new(
+            "Same style as AAA PC titles: pick the GPU API. Civis uses wgpu as the \
+             engine layer over a native HAL — not GLES / browser WebGPU. Changing \
+             the engine requires a restart.",
+        )
+        .color(ui_theme::DIM)
+        .small(),
+    );
+    ui.add_space(6.0);
+    ui.horizontal(|ui| {
+        changed |= enum_combo(
+            ui,
+            "Graphics API",
+            &mut g.render_engine,
+            &RenderEngine::ALL,
+            RenderEngine::label,
+        );
+        ui.label(
+            egui::RichText::new("Restart required")
+                .color(egui::Color32::from_rgb(0xe0, 0xb0, 0x4a))
+                .small()
+                .strong(),
+        );
+    });
+    ui.label(
+        egui::RichText::new(match g.render_engine {
+            RenderEngine::Auto => {
+                "Auto → DX12 Ultimate on Windows, Vulkan on Linux, Metal on macOS."
+            }
+            RenderEngine::DX12 => {
+                "DirectX 12 Ultimate — DXR / mesh shaders / DLSS path when the driver supports it."
+            }
+            RenderEngine::Vulkan => {
+                "Vulkan — cross-vendor native HAL; full RT/DLSS parity on NVIDIA."
+            }
+        })
+        .color(ui_theme::DIM)
+        .small(),
+    );
+    ui.add_space(12.0);
+    ui.separator();
+    section_heading(ui, "\u{1f5a5}", "Quality");
     changed |= graphics_quality_preset_row(ui, g);
     changed |= graphics_resolution_row(ui, g);
     changed |= graphics_quality_fields(ui, g);
+    ui.separator();
+    section_heading(ui, "\u{2728}", "Post-process & advanced");
     changed |= graphics_special_toggles(ui, g);
+    ui.add_space(8.0);
+    ui.label(
+        egui::RichText::new("Anisotropy / sharpen")
+            .color(ui_theme::DIM)
+            .small(),
+    );
+    ui.horizontal(|ui| {
+        ui.label("Render scale");
+        changed |= ui
+            .add(
+                egui::Slider::new(&mut g.resolution_scale, 0.5..=2.0)
+                    .show_value(true)
+                    .fixed_decimals(2),
+            )
+            .changed();
+    });
     changed
 }
 
@@ -1544,7 +1699,9 @@ fn display_tab(
         |m| m.label(),
     );
 
-    changed |= ui.checkbox(&mut display.fps_uncapped, "Uncapped").changed();
+    changed |= ui
+        .checkbox(&mut display.fps_uncapped, "Uncapped framerate")
+        .changed();
     if !display.fps_uncapped {
         ui.horizontal(|ui| {
             ui.label(egui::RichText::new("Target FPS").color(ui_theme::DIM));
@@ -1552,6 +1709,34 @@ fn display_tab(
                 .add(egui::Slider::new(&mut display.target_fps, 30..=240).suffix(" fps"))
                 .changed();
         });
+    }
+    ui.separator();
+    section_heading(ui, "\u{1f4bb}", "Monitor & HUD");
+    ui.label(
+        egui::RichText::new(
+            "UI scale, HDR output, and multi-monitor picker wire through display prefs next.",
+        )
+        .color(ui_theme::DIM)
+        .small(),
+    );
+    let mut ui_scale = 1.0_f32;
+    ui.horizontal(|ui| {
+        ui.label(egui::RichText::new("UI scale").color(ui_theme::DIM));
+        let _ = ui.add(egui::Slider::new(&mut ui_scale, 0.75..=1.5).fixed_decimals(2));
+    });
+    let mut hdr = false;
+    let _ = ui.checkbox(&mut hdr, "HDR output (when display supports)");
+    let mut borderless = display.window_mode == WindowMode::Borderless;
+    if ui
+        .checkbox(&mut borderless, "Prefer borderless fullscreen")
+        .changed()
+    {
+        display.window_mode = if borderless {
+            WindowMode::Borderless
+        } else {
+            WindowMode::Fullscreen
+        };
+        changed = true;
     }
     changed
 }
@@ -1562,6 +1747,27 @@ fn audio_tab(ui: &mut egui::Ui, a: &mut AudioSettings) -> bool {
     changed |= volume_slider(ui, "Master", &mut a.master);
     changed |= volume_slider(ui, "Music", &mut a.music);
     changed |= volume_slider(ui, "SFX", &mut a.sfx);
+    ui.separator();
+    section_heading(ui, "\u{1f399}", "Mix");
+    ui.label(
+        egui::RichText::new(
+            "Ambient / voice / UI buses land with the audio kit; sliders reserve the AAA layout.",
+        )
+        .color(ui_theme::DIM)
+        .small(),
+    );
+    let mut ambient = (a.music * 0.85).clamp(0.0, 1.0);
+    let mut ui_bus = (a.sfx * 0.7).clamp(0.0, 1.0);
+    let mut voice = 0.8_f32;
+    if volume_slider(ui, "Ambient", &mut ambient) {
+        a.music = (ambient / 0.85).clamp(0.0, 1.0);
+        changed = true;
+    }
+    if volume_slider(ui, "UI", &mut ui_bus) {
+        a.sfx = (ui_bus / 0.7).clamp(0.0, 1.0);
+        changed = true;
+    }
+    let _ = volume_slider(ui, "Voice (reserved)", &mut voice);
     changed
 }
 
@@ -1635,11 +1841,11 @@ fn sync_audio_settings(
         return;
     }
     if let Some(amb) = ambient {
-        let vol = (settings.audio.master * settings.audio.music) as f64;
+        let vol = settings.audio.master * settings.audio.music;
         amb.set_volume(vol);
     }
     if let Some(sfx) = sfx_ch {
-        let vol = (settings.audio.master * settings.audio.sfx) as f64;
+        let vol = settings.audio.master * settings.audio.sfx;
         sfx.set_volume(vol);
     }
 }
@@ -1660,9 +1866,74 @@ mod tests {
         assert_eq!(s.display.window_mode, WindowMode::Windowed);
         assert_eq!(s.display.target_fps, 120);
         assert!(!s.keybinds.is_empty());
+        assert_eq!(
+            s.key_for(ACTION_PAUSE_SIM),
+            Some(KeyBinding::Key(KeyCode::Space))
+        );
+        assert_eq!(
+            s.key_for(ACTION_CAMERA_RAISE),
+            Some(KeyBinding::Key(KeyCode::KeyR))
+        );
+        assert_eq!(
+            s.key_for(ACTION_CAMERA_LOWER),
+            Some(KeyBinding::Key(KeyCode::KeyF))
+        );
+        assert_eq!(
+            s.key_for(ACTION_CAMERA_ORBIT_LEFT),
+            Some(KeyBinding::Key(KeyCode::KeyQ))
+        );
+        assert_eq!(
+            s.key_for(ACTION_CAMERA_ORBIT_RIGHT),
+            Some(KeyBinding::Key(KeyCode::KeyE))
+        );
+        assert_eq!(
+            s.key_for(ACTION_CAMERA_RESET),
+            Some(KeyBinding::Key(KeyCode::Home))
+        );
         assert!((s.audio.master - 0.8).abs() < f32::EPSILON);
         assert!((s.gameplay.default_sim_speed - 1.0).abs() < f32::EPSILON);
         assert_eq!(s.world.world_size, 1);
+    }
+
+    #[test]
+    fn reconcile_migrates_stock_space_raise_scheme() {
+        let mut keybinds = vec![
+            Keybind::new(ACTION_PAUSE_SIM, KeyBinding::Key(KeyCode::Escape)),
+            Keybind::new(ACTION_CAMERA_RAISE, KeyBinding::Key(KeyCode::Space)),
+            Keybind::new(ACTION_CAMERA_LOWER, KeyBinding::Key(KeyCode::ShiftLeft)),
+            Keybind::new(ACTION_CAMERA_RESET, KeyBinding::Key(KeyCode::KeyR)),
+        ];
+        reconcile_keybinds(&mut keybinds);
+        let lookup = |action: &str| {
+            keybinds
+                .iter()
+                .find(|b| b.action == action)
+                .map(|b| b.binding)
+        };
+        assert_eq!(
+            lookup(ACTION_PAUSE_SIM),
+            Some(KeyBinding::Key(KeyCode::Space))
+        );
+        assert_eq!(
+            lookup(ACTION_CAMERA_RAISE),
+            Some(KeyBinding::Key(KeyCode::KeyR))
+        );
+        assert_eq!(
+            lookup(ACTION_CAMERA_LOWER),
+            Some(KeyBinding::Key(KeyCode::KeyF))
+        );
+        assert_eq!(
+            lookup(ACTION_CAMERA_RESET),
+            Some(KeyBinding::Key(KeyCode::Home))
+        );
+        assert_eq!(
+            lookup(ACTION_CAMERA_ORBIT_LEFT),
+            Some(KeyBinding::Key(KeyCode::KeyQ))
+        );
+        assert_eq!(
+            lookup(ACTION_CAMERA_ORBIT_RIGHT),
+            Some(KeyBinding::Key(KeyCode::KeyE))
+        );
     }
 
     #[test]
@@ -1738,6 +2009,24 @@ mod tests {
     #[test]
     fn default_graphics_settings_enable_color_grading() {
         assert!(GraphicsSettings::default().color_grading_enabled);
+    }
+
+    #[test]
+    fn render_engine_combo_labels_and_env_tokens_match_aaa_api_picker() {
+        assert_eq!(RenderEngine::Auto.label(), "Auto (recommended)");
+        assert_eq!(RenderEngine::DX12.label(), "DirectX 12 Ultimate");
+        assert_eq!(RenderEngine::Vulkan.label(), "Vulkan");
+        assert_eq!(RenderEngine::Auto.env_token(), None);
+        assert_eq!(RenderEngine::DX12.env_token(), Some("dx12"));
+        assert_eq!(RenderEngine::Vulkan.env_token(), Some("vulkan"));
+        assert_eq!(
+            ron::from_str::<RenderEngine>("DirectX12Ultimate").expect("legacy backend"),
+            RenderEngine::DX12
+        );
+        assert_eq!(
+            GraphicsSettings::default().render_engine,
+            RenderEngine::Auto
+        );
     }
 
     #[test]

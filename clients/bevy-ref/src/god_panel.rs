@@ -1,6 +1,7 @@
 #![cfg(all(feature = "bevy", feature = "egui"))]
 //! God-mode intervention panel (FR-CIV-GAME-002). G key toggles.
 
+use crate::god_actions::GodActionRequest;
 use crate::live_stream::LiveBridge;
 use crate::menus::in_game;
 use bevy::prelude::*;
@@ -150,6 +151,7 @@ fn draw_god_panel(
     mut contexts: EguiContexts,
     mut state: ResMut<GodPanelState>,
     bridge: Option<Res<LiveBridge>>,
+    mut requests: MessageWriter<GodActionRequest>,
     mut ran_once: Local<bool>,
 ) {
     if !*ran_once {
@@ -314,6 +316,18 @@ fn draw_god_panel(
         if let Some(ref bridge) = bridge {
             bridge.client.send_rpc("sim.god_action", payload);
         }
+        // Local preview on the streamed chunk cache (does not wait on the wire).
+        requests.write(GodActionRequest {
+            action: action.verb.to_string(),
+            norm_x: state.target_x,
+            norm_y: state.target_y,
+            target_faction: state.target_faction,
+            magnitude: if action.uses_magnitude {
+                state.magnitude
+            } else {
+                0.5
+            },
+        });
         state.status = Some(format!("Invoked: {}", action.verb));
     }
 }
@@ -373,5 +387,33 @@ mod tests {
             assert_eq!(payload["x"], 0.5);
             assert_eq!(payload["y"], 0.5);
         }
+    }
+
+    #[test]
+    fn fire_builds_preview_request_fields() {
+        let state = GodPanelState {
+            target_x: 0.4,
+            target_y: 0.6,
+            target_faction: 3,
+            magnitude: 0.8,
+            ..Default::default()
+        };
+        let action = ACTIONS.iter().find(|a| a.verb == "smite").unwrap();
+        let req = GodActionRequest {
+            action: action.verb.to_string(),
+            norm_x: state.target_x,
+            norm_y: state.target_y,
+            target_faction: state.target_faction,
+            magnitude: if action.uses_magnitude {
+                state.magnitude
+            } else {
+                0.5
+            },
+        };
+        assert_eq!(req.action, "smite");
+        assert!((req.norm_x - 0.4).abs() < 1e-6);
+        assert!((req.norm_y - 0.6).abs() < 1e-6);
+        assert_eq!(req.target_faction, 3);
+        assert!((req.magnitude - 0.8).abs() < 1e-6);
     }
 }

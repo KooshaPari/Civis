@@ -11,6 +11,8 @@ use civ_bevy_ref::atmosphere::{animate_water, setup_atmosphere, update_lighting}
 use civ_bevy_ref::diplomacy_ui::{DiplomacyBridge, DiplomacyUiPlugin};
 #[cfg(feature = "models")]
 use civ_bevy_ref::gltf_models::GltfModelsPlugin;
+#[cfg(feature = "egui")]
+use civ_bevy_ref::graphics_settings::GraphicsSettingsPlugin;
 #[cfg(feature = "gi")]
 use civ_bevy_ref::lighting_gi::SolariGiPlugin;
 #[cfg(feature = "egui")]
@@ -27,7 +29,6 @@ use civ_bevy_ref::{
     focused_chunk_at_grid,
     game_ui::GameUiPlugin,
     god_panel::GodPanelPlugin,
-    holocron_panel::HolocronPanelPlugin,
     gpu_features::GpuFeaturesPlugin,
     live_focus::{
         compute_live_scene_focus, minimap_uv_to_world_xz, LiveSceneFocus, LIVE_FOCUS_LERP_SPEED,
@@ -49,27 +50,28 @@ use civ_bevy_ref::{
         LiveStreamMeshes, LiveStreamScene, LiveWaterMeshes, StreamCulling, LIVE_CHUNK_BASE_COLOR,
         LIVE_CHUNK_EDGE,
     },
-    menus::{AppState, GameUiMode, MainMenuCommand, MainMenuSaves, MenuCommand, WorldSetupParams},
+    menus::{AppState, MainMenuSaves},
     minimap::MinimapRoot,
     minimap_uv_to_chunk_grid,
     native_backend::native_render_plugin,
     post_fx::PostFxPlugin,
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
-    presentation_day_factor_target, resolve_live_ws_url, AttachMode,
-    save_load_ui::{SaveLoadPanel, SaveLoadUiPlugin},
+    presentation_day_factor_target, resolve_live_ws_url,
+    save_load_ui::SaveLoadUiPlugin,
     ws_client::{WsClient, WsClientConfig},
     CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MenusPlugin, MinimapBounds,
     MusicCues, OutcomeProgressHud, PerfHudPlugin, TutorialPlugin, VOXEL_CHUNK_EDGE,
 };
 use civ_protocol_3d::Frame3d;
 use civ_voxel::ChunkId;
-use serde_json;
 
 const CHUNK_BASE_COLOR: [f32; 3] = LIVE_CHUNK_BASE_COLOR;
 const ORBIT_DRAG_SENSITIVITY: f32 = 0.005;
 const ORBIT_SCROLL_SENSITIVITY: f32 = 2.0;
 const ORBIT_KEYBOARD_DISTANCE_STEP: f32 = 4.0;
 const ORBIT_PAN_SPEED: f32 = 12.0;
+const ORBIT_RAISE_SPEED: f32 = 10.0;
+const ORBIT_YAW_SPEED: f32 = 1.5;
 const MIN_ORBIT_ELEVATION: f32 = 0.05;
 const MIN_ORBIT_DISTANCE: f32 = 8.0;
 const MAX_ORBIT_DISTANCE: f32 = 200.0;
@@ -81,15 +83,6 @@ const MINIMAP_HUD_LAYOUT: MinimapDotLayout = MinimapDotLayout::InsetHud {
     inset: MINIMAP_INSET,
     plot_margin_dot: MINIMAP_DOT,
 };
-const WORLDGEN_PRESETS: [&str; 4] = [
-    "single-race-ardani",
-    "three-race-balanced",
-    "ardani-dominant",
-    "lush-frontier",
-];
-const WORLDGEN_SPEED_STEPS: [u32; 3] = [1, 2, 5];
-const WORLDGEN_DEFAULT_SEED: u64 = 0xC1F1_5EED_D3AD_BEEF;
-
 #[derive(Resource, Default)]
 struct SaveListState {
     /// Requested one-time save list query.
@@ -136,6 +129,10 @@ impl OrbitCamera {
         let cos = self.azimuth.cos();
         self.centre[0] += right * cos + forward * sin;
         self.centre[2] += -right * sin + forward * cos;
+    }
+
+    fn raise_centre(&mut self, delta: f32) {
+        self.centre[1] = (self.centre[1] + delta).clamp(0.0, 256.0);
     }
 }
 
@@ -195,24 +192,21 @@ struct MinimapPopup {
     pending: Option<(i32, i32)>,
 }
 
+/// Live-client sim speed mirror for the HUD (RPC-driven; Space/Esc pause is shell-owned).
 #[derive(Resource, Default)]
 struct SimSpeedState {
     multiplier: u32,
-    speed_idx: usize,
-    paused: bool,
 }
 
 #[derive(Resource, Default)]
 struct EmergencePollTimer(f32);
 
 fn main() {
+    civ_bevy_ref::install_crash_handler();
+
     let mut app = App::new();
     app.add_plugins((
         DefaultPlugins
-            .set(AssetPlugin {
-                file_path: concat!(env!("CARGO_MANIFEST_DIR"), "/assets").into(),
-                ..default()
-            })
             .set(WindowPlugin {
                 primary_window: Some(Window {
                     title: "Civis 3D - Bevy reference (live)".to_string(),
@@ -225,14 +219,17 @@ fn main() {
         PostFxPlugin,
         GpuFeaturesPlugin,
         LivePickPlugin,
+        civ_bevy_ref::frame_budget::FrameBudgetPlugin,
     ));
     #[cfg(feature = "audio")]
     app.add_plugins(civ_bevy_ref::audio::CivisAudioPlugin);
     #[cfg(feature = "egui")]
     app.add_plugins((
         FactionHudPlugin,
+        civ_bevy_ref::world_faction_glyphs::WorldFactionGlyphsPlugin,
         SaveLoadUiPlugin,
         TutorialPlugin,
+        civ_bevy_ref::controls_help::ControlsHelpPlugin,
         PerfHudPlugin,
         EventFeedPlugin,
     ));
@@ -242,15 +239,15 @@ fn main() {
         civ_bevy_ref::AgentNeedsPlugin,
         DiplomacyUiPlugin,
         GodPanelPlugin,
-        HolocronPanelPlugin,
+        civ_bevy_ref::god_actions::GodActionsPlugin,
+        civ_bevy_ref::holocron_panel::HolocronPanelPlugin,
         civ_bevy_ref::outcome_overlay::OutcomeOverlayPlugin,
         MenusPlugin,
         GameUiPlugin,
     ));
     #[cfg(feature = "egui")]
-    app.init_state::<AppState>();
     app.init_resource::<LiveStreamScene>()
-        .insert_resource(civ_bevy_ref::resolve_attach_mode_from_env())
+        .init_resource::<civ_bevy_ref::AttachMode>()
         .init_resource::<LiveSceneFocus>()
         .init_resource::<MinimapPopup>()
         .init_resource::<SimSpeedState>()
@@ -259,26 +256,13 @@ fn main() {
         .init_resource::<MusicCues>()
         .init_resource::<OutcomeProgressHud>()
         .init_resource::<SaveListState>()
-        .init_resource::<MainMenuSaves>()
-        .init_resource::<MenuCommand>()
         .insert_resource(ScenePresentation::default())
         .insert_resource(DebugRender::default())
         .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
         .add_systems(Startup, (setup, setup_atmosphere));
     #[cfg(feature = "egui")]
     {
-        app.add_systems(
-            Update,
-            (
-                consume_menu_commands,
-                update_mainmenu_saves,
-                sync_app_state_with_game_mode,
-            ),
-        );
-        app.add_systems(
-            Update,
-            worldgen_to_playing.run_if(in_state(AppState::Playing)),
-        );
+        app.add_systems(Update, update_mainmenu_saves);
         app.add_systems(
             Update,
             (
@@ -346,7 +330,7 @@ fn main() {
     }
     #[cfg(feature = "egui")]
     {
-        app.add_plugins(SettingsPlugin);
+        app.add_plugins((SettingsPlugin, GraphicsSettingsPlugin));
     }
 
     #[cfg(feature = "models")]
@@ -360,114 +344,6 @@ fn main() {
     }
 
     app.run();
-}
-
-fn consume_menu_commands(
-    mut menu_command: ResMut<MenuCommand>,
-    state: Option<Res<State<AppState>>>,
-    mut next_state: ResMut<NextState<AppState>>,
-    bridge: Res<LiveBridge>,
-    mut speed: ResMut<SimSpeedState>,
-    mut save_panel: ResMut<SaveLoadPanel>,
-    saves: Res<MainMenuSaves>,
-    params: Res<WorldSetupParams>,
-    mut game_mode: ResMut<GameUiMode>,
-    mut exit: MessageWriter<AppExit>,
-) {
-    let Some(state) = state else {
-        return;
-    };
-    if menu_command.action == MainMenuCommand::None {
-        return;
-    }
-
-    let action = menu_command.action;
-    menu_command.action = MainMenuCommand::None;
-    match action {
-        MainMenuCommand::None => {}
-        MainMenuCommand::NewWorld => {
-            let preset = WORLDGEN_PRESETS
-                .get(params.world_size % WORLDGEN_PRESETS.len())
-                .copied()
-                .unwrap_or(WORLDGEN_PRESETS[0]);
-            let speed_step =
-                WORLDGEN_SPEED_STEPS[speed.speed_idx.min(WORLDGEN_SPEED_STEPS.len() - 1)];
-            start_world_boot(&bridge, preset, params.seed, speed.as_mut(), speed_step);
-            next_state.set(AppState::WorldGen);
-        }
-        MainMenuCommand::Continue => {
-            let slot_name = saves
-                .preferred_slot
-                .as_deref()
-                .unwrap_or("slot-1")
-                .to_string();
-            let slot_id = slot_name
-                .strip_prefix("slot-")
-                .and_then(|raw| raw.parse::<u32>().ok())
-                .map(|slot| 2010 + slot)
-                .unwrap_or(2010);
-            let json = serde_json::json!({
-                "jsonrpc": "2.0",
-                "id": slot_id,
-                "method": "save.load",
-                "params": { "slot_name": slot_name },
-            })
-            .to_string();
-            bridge.client.send_rpc_raw(json);
-            next_state.set(AppState::WorldGen);
-        }
-        MainMenuCommand::LoadGame => {
-            save_panel.visible = true;
-        }
-        MainMenuCommand::Resume => {
-            if *state == AppState::Paused {
-                next_state.set(AppState::Playing);
-            }
-        }
-        MainMenuCommand::OpenSettings => {}
-        MainMenuCommand::OpenSavePanel => {
-            save_panel.visible = true;
-        }
-        MainMenuCommand::ExitToMainMenu => {
-            next_state.set(AppState::MainMenu);
-            *game_mode = GameUiMode::Playing;
-        }
-        MainMenuCommand::Quit => {
-            *game_mode = GameUiMode::Playing;
-            exit.write(AppExit::Success);
-        }
-    }
-}
-
-fn worldgen_to_playing(
-    state: Option<Res<State<AppState>>>,
-    scene: Res<LiveStreamScene>,
-    mut next_state: ResMut<NextState<AppState>>,
-) {
-    let Some(state) = state else {
-        return;
-    };
-    if *state != AppState::WorldGen {
-        return;
-    }
-    if live_stream_has_content(&scene) {
-        next_state.set(AppState::Playing);
-    }
-}
-
-fn sync_app_state_with_game_mode(
-    state: Option<Res<State<AppState>>>,
-    mode: Res<GameUiMode>,
-    mut next_state: ResMut<NextState<AppState>>,
-) {
-    let Some(state) = state else {
-        return;
-    };
-    match (*mode, state.get()) {
-        (GameUiMode::Paused, AppState::Playing) => next_state.set(AppState::Paused),
-        (GameUiMode::Playing, AppState::Paused) => next_state.set(AppState::Playing),
-        _ => {}
-    }
 }
 
 fn update_mainmenu_saves(
@@ -501,49 +377,6 @@ fn update_mainmenu_saves(
     }
     saves.can_continue = preferred.is_some();
     saves.preferred_slot = preferred.map(|entry| entry.0);
-}
-
-fn start_world_boot(
-    bridge: &LiveBridge,
-    preset: &str,
-    seed: u64,
-    speed: &mut SimSpeedState,
-    multiplier: u32,
-) {
-    if speed.speed_idx >= WORLDGEN_SPEED_STEPS.len()
-        || WORLDGEN_SPEED_STEPS[speed.speed_idx] != multiplier
-    {
-        if let Some(speed_idx) = WORLDGEN_SPEED_STEPS
-            .iter()
-            .position(|value| *value == multiplier)
-        {
-            speed.speed_idx = speed_idx;
-        } else {
-            speed.speed_idx = 0;
-        }
-    }
-    speed.multiplier = multiplier;
-    let init_seed = if seed == 0 {
-        WORLDGEN_DEFAULT_SEED
-    } else {
-        seed
-    };
-    let speed_mult = WORLDGEN_SPEED_STEPS[speed.speed_idx.min(WORLDGEN_SPEED_STEPS.len() - 1)];
-    bridge.client.send_rpc(
-        "sim.load_scenario",
-        serde_json::json!({ "preset": preset, "seed": init_seed }),
-    );
-    bridge.client.send_rpc(
-        "sim.set_speed",
-        serde_json::json!({ "multiplier": speed_mult }),
-    );
-    bridge
-        .client
-        .send_rpc("sim.reset", serde_json::json!({ "seed": init_seed }));
-    bridge.client.send_rpc(
-        "sim.set_speed",
-        serde_json::json!({ "multiplier": multiplier }),
-    );
 }
 
 fn apply_spectator_meta(
@@ -680,7 +513,6 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    attach_mode: Res<AttachMode>,
 ) {
     spawn_default_scene(&mut commands);
     commands.insert_resource(default_stream_meshes(&mut meshes));
@@ -688,11 +520,7 @@ fn setup(
     // water-surface quad + tinted material handles so the streamed world
     // snapshot can drive water companions on every voxel delta.
     commands.insert_resource(default_water_meshes(&mut meshes, &mut materials));
-    let ws_client = if *attach_mode == AttachMode::Server {
-        WsClient::spawn_with_config(resolve_live_ws_url(), WsClientConfig::default())
-    } else {
-        WsClient::disconnected()
-    };
+    let ws_client = WsClient::spawn_with_config(resolve_live_ws_url(), WsClientConfig::default());
     commands.insert_resource(DiplomacyBridge::new(ws_client.rpc_sender()));
     commands.insert_resource(LiveBridge { client: ws_client });
 
@@ -775,43 +603,6 @@ fn debug_render_input(keys: Res<ButtonInput<KeyCode>>, mut debug: ResMut<DebugRe
     }
 }
 
-fn speed_control_input(
-    keys: Res<ButtonInput<KeyCode>>,
-    bridge: Res<LiveBridge>,
-    mut speed: ResMut<SimSpeedState>,
-    mut hud: ResMut<HudState>,
-) {
-    let toggle_pause = keys.just_pressed(KeyCode::Space);
-    let speed_up = keys.just_pressed(KeyCode::Period);
-    let speed_down = keys.just_pressed(KeyCode::Comma);
-
-    if !toggle_pause && !speed_up && !speed_down {
-        return;
-    }
-
-    if toggle_pause {
-        speed.paused = !speed.paused;
-    } else if speed_up {
-        speed.speed_idx = (speed.speed_idx + 1).min(WORLDGEN_SPEED_STEPS.len() - 1);
-        speed.paused = false;
-    } else {
-        speed.speed_idx = speed.speed_idx.saturating_sub(1);
-        speed.paused = false;
-    }
-
-    speed.multiplier = if speed.paused {
-        0
-    } else {
-        WORLDGEN_SPEED_STEPS[speed.speed_idx]
-    };
-    let json = format!(
-        r#"{{"jsonrpc":"2.0","id":1,"method":"sim.set_speed","params":{{"multiplier":{}}}}}"#,
-        speed.multiplier
-    );
-    bridge.client.send_rpc_raw(json);
-    hud.snapshot.speed_multiplier = speed.multiplier;
-}
-
 fn action_pressed(
     #[cfg(feature = "egui")] settings: Option<&GameSettings>,
     action: &str,
@@ -883,28 +674,24 @@ fn apply_live_frames(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut feed: ResMut<EventFeed>,
-    mut frame_buffer: Local<Vec<Frame3d>>,
+    gpu_quality: Res<civ_bevy_ref::frame_budget::GpuQualityMode>,
 ) {
-    let resets = bridge.client.poll_scene_resets();
-    if let Some(reset) = resets.last() {
-        scene.reset(&mut commands);
-        hud.snapshot.tick = Some(reset.tick);
-    }
-    bridge.client.poll_into(&mut frame_buffer);
-    if !frame_buffer.is_empty() {
+    let frames = bridge.client.poll();
+    if !frames.is_empty() {
         hud.snapshot.connected = true;
     }
 
     let target = orbit.as_target();
     let eye = target.orbit_position();
+    let quality = *gpu_quality;
     let culling = StreamCulling {
         eye,
-        max_distance: orbit.distance,
-        gpu_quality: civ_bevy_ref::frame_budget::GpuQualityMode::default(),
+        max_distance: civ_bevy_ref::frame_budget::scaled_cull_distance(orbit.distance, quality),
+        gpu_quality: quality,
     };
     let wireframe_color = debug.wireframe.then_some(CHUNK_WIREFRAME_LINE_COLOR);
 
-    for frame in frame_buffer.drain(..) {
+    for frame in frames {
         hud.snapshot.tick = Some(frame.tick());
         match frame {
             Frame3d::VoxelDelta(delta) => {
@@ -915,13 +702,13 @@ fn apply_live_frames(
                     &mut materials,
                     culling,
                     debug.as_ref(),
-                    &delta,
+                    delta.clone(),
                     wireframe_color,
                 );
                 // FR-CLIENT-render: pair the chunk-mesh update with a
                 // water-surface companion update so the streamed water
                 // plane tracks the chunk's voxel composition on every
-                // delta (re-uses the same borrowed payload + culling eye).
+                // delta (re-uses the same delta payload + culling eye).
                 apply_water_deltas_for_frame(
                     &mut commands,
                     &mut scene,
@@ -956,7 +743,7 @@ fn apply_live_frames(
             Frame3d::FactionState(faction) => apply_faction_state_frame(&mut scene, faction),
             Frame3d::EventFeed(ref event_frame) => {
                 for msg in &event_frame.events {
-                    debug!(
+                    info!(
                         "event feed (tick {}): {}",
                         event_frame.tick,
                         format_event_feed_message(msg),
@@ -1023,12 +810,12 @@ fn orbit_camera_input(
             settings
                 .as_ref()
                 .and_then(|s| s.key_for(civ_bevy_ref::settings_ui::ACTION_CAMERA_RESET))
-                .unwrap_or(KeyBinding::Key(KeyCode::KeyR))
+                .unwrap_or(KeyBinding::Key(KeyCode::Home))
                 .is_just_pressed(&keys, &mouse_buttons)
         }
         #[cfg(not(feature = "egui"))]
         {
-            keys.just_pressed(KeyCode::KeyR)
+            keys.just_pressed(KeyCode::Home)
         }
     };
     if reset_pressed {
@@ -1075,6 +862,8 @@ fn orbit_camera_input(
     }
 
     let pan = ORBIT_PAN_SPEED * time.delta_secs();
+    let raise = ORBIT_RAISE_SPEED * time.delta_secs();
+    let yaw_step = ORBIT_YAW_SPEED * time.delta_secs();
     let mut right = 0.0;
     let mut forward = 0.0;
     let pan_pressed = |action: &str, fallback: KeyCode| -> bool {
@@ -1088,13 +877,7 @@ fn orbit_camera_input(
         }
         #[cfg(not(feature = "egui"))]
         {
-            match fallback {
-                KeyCode::KeyW => keys.pressed(KeyCode::KeyW),
-                KeyCode::KeyS => keys.pressed(KeyCode::KeyS),
-                KeyCode::KeyA => keys.pressed(KeyCode::KeyA),
-                KeyCode::KeyD => keys.pressed(KeyCode::KeyD),
-                _ => false,
-            }
+            keys.pressed(fallback)
         }
     };
 
@@ -1124,6 +907,31 @@ fn orbit_camera_input(
     }
     if right != 0.0 || forward != 0.0 {
         orbit.pan_centre(right, forward);
+    }
+
+    if pan_pressed(
+        civ_bevy_ref::settings_ui::ACTION_CAMERA_RAISE,
+        KeyCode::KeyR,
+    ) {
+        orbit.raise_centre(raise);
+    }
+    if pan_pressed(
+        civ_bevy_ref::settings_ui::ACTION_CAMERA_LOWER,
+        KeyCode::KeyF,
+    ) {
+        orbit.raise_centre(-raise);
+    }
+    if pan_pressed(
+        civ_bevy_ref::settings_ui::ACTION_CAMERA_ORBIT_LEFT,
+        KeyCode::KeyQ,
+    ) {
+        orbit.azimuth += yaw_step;
+    }
+    if pan_pressed(
+        civ_bevy_ref::settings_ui::ACTION_CAMERA_ORBIT_RIGHT,
+        KeyCode::KeyE,
+    ) {
+        orbit.azimuth -= yaw_step;
     }
 }
 

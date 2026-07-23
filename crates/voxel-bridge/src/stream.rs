@@ -1,31 +1,10 @@
-//! TODO(FR): Chunk streaming module stub.
+//! Public adapter for deterministic voxel streaming.
+//!
+//! Storage, seeded regeneration, LRU eviction, and LOD selection are owned by
+//! `civ-voxel`. Re-exporting them here gives clients one bridge dependency and
+//! prevents the adapter from drifting into a second implementation.
 
-/// Chunk edge size constant.
-pub const CHUNK_EDGE: usize = 16;
-
-/// Chunk edge size as i32.
-pub const CHUNK_EDGE_I32: i32 = 16;
-
-/// Chunk store port.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ChunkStorePort;
-
-/// File system chunk store.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct FsChunkStore;
-
-/// Stream configuration.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct StreamConfig;
-
-/// Streaming statistics.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct StreamStats;
-
-/// Streaming world instance.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct StreamingWorld;
-
-/// World generator.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct WorldGen;
+pub use civ_voxel::stream::{
+    ChunkStorePort, FsChunkStore, StreamConfig, StreamStats, StreamingWorld, WorldGen, CHUNK_EDGE,
+    CHUNK_EDGE_I32,
+};

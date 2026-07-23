@@ -29,7 +29,25 @@ jobs:
       - name: diagnose lockfile resolution
         run: |
           cargo generate-lockfile
-          git diff -- Cargo.lock
+          python3 - <<'PY'
+          import subprocess, tempfile, tomllib
+          from pathlib import Path
+
+          old = subprocess.check_output(["git", "show", "HEAD^2:Cargo.lock"])
+          old_path = Path(tempfile.mktemp(suffix=".toml"))
+          old_path.write_bytes(old)
+          before = tomllib.loads(old.decode())
+          after = tomllib.loads(Path("Cargo.lock").read_text())
+          old_pkgs = {(p["name"], p.get("version"), p.get("source")) for p in before["package"]}
+          new_pkgs = {(p["name"], p.get("version"), p.get("source")) for p in after["package"]}
+          print("lock additions:")
+          for item in sorted(new_pkgs - old_pkgs):
+              print("+", item)
+          print("lock removals:")
+          for item in sorted(old_pkgs - new_pkgs):
+              print("-", item)
+          old_path.unlink()
+          PY
       - name: cargo test -p civis-cli (dump regression)
         run: |
           cargo test --locked -p civis-cli dump::

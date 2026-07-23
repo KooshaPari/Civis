@@ -1,9 +1,9 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "49a03357feac46f226ebc373127cdf89f0c637a7",
-  "content_hash": "a41421a3556716542cba5f008b4278c1b5143438235b507a5d1bc504242da3a4",
-  "created_at": "2026-07-23T10:02:08Z",
+  "git_sha": "2622ca03492e932bc2ded111669039cb148aa569",
+  "content_hash": "14738fb08e56f9fc18ec2fc7aedcdfc278024e2bc66c40ce1b7e030ca934796b",
+  "created_at": "2026-07-23T10:58:12Z",
   "runner": {
     "host": "KOOSHAPARI-DESK",
     "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
@@ -102,5 +102,5 @@
       "detail": "cargo test -p civ-ai --offline with isolated CARGO_TARGET_DIR: 35 unit tests + 10 integration tests + 1 doc test passed; 1 pre-existing async test ignored"
     }
   },
-  "manifest_hash": "ffca604ab9431901d909316588216a167fadc4a64a0c887eaba3cd410c4977d7"
+  "manifest_hash": "c9aa77e32fa1f5b7dd7223544522ccead912e5fd5ed90809473c69ec30513c9b"
 }

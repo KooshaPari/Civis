@@ -20,5 +20,5 @@ pre-push:
   piped: false
   commands:
     quality-manifest:
-      run: pwsh -NoProfile -File scripts/quality/emit-quality-manifest.ps1
+      run: bash scripts/quality/pre-push-quality-manifest.sh
       stage_fixed: true

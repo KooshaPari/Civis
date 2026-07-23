@@ -1,5 +1,3 @@
-//! TODO(FR): Voxel world generation module stub.
+//! Public adapter for deterministic voxel world generation.
 
-/// Height field generator.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct HeightFieldGen;
+pub use civ_voxel::worldgen::*;

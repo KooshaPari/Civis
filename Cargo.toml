@@ -4,6 +4,7 @@ members = [
   "crates/civ-traffic",
   "crates/server",
   "crates/voxel",
+  "crates/voxel-bridge",
   "crates/build",
   "crates/genetics",
   "crates/economy",

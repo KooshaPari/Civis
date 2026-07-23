@@ -1,6 +1,7 @@
 //! TODO(FR): LOD management module stub.
 
 use crate::ChunkId;
+use std::sync::{Mutex, OnceLock};
 
 /// Chunk dirty event type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -8,15 +9,45 @@ pub struct ChunkDirty;
 
 /// Drain dirty chunks from the world.
 pub fn drain_dirty_chunks() -> Vec<ChunkId> {
-    Vec::new()
+    dirty_queue()
+        .lock()
+        .expect("dirty queue poisoned")
+        .drain(..)
+        .collect()
 }
 
 /// Mark an LOD chunk as dirty.
-pub fn mark_lod_dirty(_id: ChunkId) {
-    // TODO(FR): implement
+pub fn mark_lod_dirty(id: ChunkId) {
+    mark(id);
 }
 
 /// Mark storage as dirty.
-pub fn mark_storage_dirty(_id: ChunkId) {
-    // TODO(FR): implement
+pub fn mark_storage_dirty(id: ChunkId) {
+    mark(id);
+}
+
+fn dirty_queue() -> &'static Mutex<Vec<ChunkId>> {
+    static QUEUE: OnceLock<Mutex<Vec<ChunkId>>> = OnceLock::new();
+    QUEUE.get_or_init(|| Mutex::new(Vec::new()))
+}
+
+fn mark(id: ChunkId) {
+    let mut queue = dirty_queue().lock().expect("dirty queue poisoned");
+    if !queue.contains(&id) {
+        queue.push(id);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dirty_marks_are_deduplicated_and_drained() {
+        let id = ChunkId(41);
+        mark_lod_dirty(id);
+        mark_storage_dirty(id);
+        assert_eq!(drain_dirty_chunks(), vec![id]);
+        assert!(drain_dirty_chunks().is_empty());
+    }
 }

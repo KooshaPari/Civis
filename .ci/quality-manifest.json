@@ -1,9 +1,9 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "9a2717da48e4ba692234475ffa1ffd7941ee0657",
+  "git_sha": "add8db4dd2a4de848166e352f3dba06fa53b02be",
   "content_hash": "b6f679e0b33f261de75a272d704edb6f6c52d5c750970b3cceb65c0bd7e5b360",
-  "created_at": "2026-07-23T04:18:54Z",
+  "created_at": "2026-07-23T04:20:13Z",
   "runner": {
     "host": "KOOSHAPARI-DESK",
     "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
@@ -62,5 +62,5 @@
       "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     }
   },
-  "manifest_hash": "2000d33269f62684ead2650a073e5f6bd5f7c9e977765e088b38a7161b8c0cb3"
+  "manifest_hash": "129649a787ddcdf9043323db805f65985056f895a845147d4d4c047b12661533"
 }

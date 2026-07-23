@@ -460,7 +460,7 @@ pub fn promote_to_hot(agg: &PsycheAggregate, seed: u64, cfg: &PsycheLodConfig) -
         // Two-sided uniform noise scaled to ±sqrt(var). ±sqrt(var) bounds
         // the *standard deviation*, not the full range — but for our small
         // `var` values it keeps reconstruction inside `tolerance`.
-        let noise = rng.next_unit_symmetric() * var.sqrt();
+        let noise = rng.next_unit_symmetric() * var.sqrt().min(cfg.trait_tolerance);
         let raw = mean + noise;
         *slot = if i == Trait::Mood.index() {
             raw.clamp(-1.0, 1.0)

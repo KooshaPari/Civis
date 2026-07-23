@@ -1,1 +1,3 @@
-//! TODO(FR): Voxel chemical reactions module stub.
+//! Public adapter for deterministic voxel material reactions.
+
+pub use civ_voxel::reactions::*;

@@ -1,9 +1,9 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "b8e0b9873a9966ddae42ec66bb79c5598c1671ea",
-  "content_hash": "09fa9f5c12d3c9c096a20f754ac7a04f2610ea13014f40d572cf246287da821b",
-  "created_at": "2026-07-23T05:59:38Z",
+  "git_sha": "acf4c9ec1f5f1b969239892757dc7810e3b05a5d",
+  "content_hash": "0ba40f3e66aa1ca5b2abfe822cac2ce99a43a425b962d0ba917df52147641bef",
+  "created_at": "2026-07-23T06:26:58Z",
   "runner": {
     "host": "KOOSHAPARI-DESK",
     "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
@@ -80,7 +80,11 @@
     "civ_ai_ollama_provider_test": {
       "status": "pass",
       "detail": "cargo test -p civ-ai --features dev providers::ollama_dev --offline: 2 passed, 0 failed; full civ-ai suite has four pre-existing unrelated failures"
+    },
+    "civ_ai_baseline_tests": {
+      "status": "pass",
+      "detail": "cargo test -p civ-ai --offline: 35 unit tests + 10 integration tests + 1 doc test passed; 1 pre-existing async test ignored"
     }
   },
-  "manifest_hash": "db5d7a94789a4f214bf5274e4b8fa184dc3f25c331cd95be79a878439ca78e23"
+  "manifest_hash": "c9345a131ca940e8c9c7f8f1e9eaab0911f0021daee2c3882fc31e88198b8611"
 }

@@ -24,7 +24,7 @@ jobs:
           # (which prints zero "test result:" lines) cannot masquerade as green.
           # A previous `... | tee || true` swallowed E0382-class build breaks and
           # the TOTAL line read PASSED=0 while the job reported success.
-          cargo test --workspace --no-fail-fast 2>&1 | tee test.log
+          cargo test --workspace --locked --no-fail-fast 2>&1 | tee test.log
           cargo_status=${PIPESTATUS[0]}
           echo "===== TEST RESULT SUMMARY ====="
           grep -E "test result:" test.log || echo "no test-result lines"

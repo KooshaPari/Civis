@@ -61,10 +61,10 @@ jobs:
         include:
           - name: godot
             os: ubuntu-latest
-            command: cargo test --manifest-path clients/godot-ref/rust/Cargo.toml
+            command: cargo test --locked --manifest-path clients/godot-ref/rust/Cargo.toml
           - name: bevy
             os: ubuntu-latest
-            command: cargo build -p civ-bevy-ref --features bevy
+            command: cargo build --locked -p civ-bevy-ref --features bevy
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:

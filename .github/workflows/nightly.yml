@@ -22,7 +22,7 @@ jobs:
         with:
           cache-all-crates: true
       - name: Build Bevy client (release)
-        run: cargo build --release -p civ-bevy-ref --bin civ-bevy-window --features bevy,egui
+        run: cargo build --locked --release -p civ-bevy-ref --bin civ-bevy-window --features bevy,egui
       - name: Package executable + assets
         run: |
           New-Item -ItemType Directory -Path artifact | Out-Null

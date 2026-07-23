@@ -125,6 +125,7 @@ if failed:
 
 attestation = {
     "git_sha": body["git_sha"],
+    "content_hash": body.get("content_hash", ""),
     "gates": sorted(
         [{"key": k, "status": v["status"]} for k, v in gates.items()],
         key=lambda x: x["key"],

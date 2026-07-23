@@ -65,7 +65,9 @@ def main() -> int:
     ).splitlines()
     content_hash = hashlib.blake2b(
         "\n".join(
-            entry for entry in tree_entries if not entry.endswith("\t.ci/quality-manifest.json")
+            entry
+            for entry in tree_entries
+            if not entry.endswith("\t.ci/quality-manifest.json")
         ).encode(),
         digest_size=32,
     ).hexdigest()

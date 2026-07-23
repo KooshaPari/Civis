@@ -383,8 +383,7 @@ pub fn derive_music_cue(
 ) -> MusicCue {
     let trait_mean = traits.iter().copied().sum::<f32>() / traits.len() as f32;
     let cultural_pulse = (((tick.wrapping_add(cluster_id)) % 16) as f32 / 15.0 - 0.5) * 0.08;
-    let intensity = (0.25 + trait_mean * 0.55 + aggression.clamp(0.0, 1.0) * 0.2
-        + cultural_pulse)
+    let intensity = (0.25 + trait_mean * 0.55 + aggression.clamp(0.0, 1.0) * 0.2 + cultural_pulse)
         .clamp(0.0, 1.0);
     let mood = if trait_mean < 0.3 {
         "pastoral"
@@ -395,7 +394,9 @@ pub fn derive_music_cue(
     } else {
         "ceremonial"
     };
-    let tempo = (72.0 + trait_mean * 42.0 + aggression.clamp(0.0, 1.0) * 18.0
+    let tempo = (72.0
+        + trait_mean * 42.0
+        + aggression.clamp(0.0, 1.0) * 18.0
         + ((tick.wrapping_add(cluster_id)) % 8) as f32)
         .round()
         .clamp(40.0, 180.0) as u16;

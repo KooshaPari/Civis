@@ -15,9 +15,9 @@
 use crossbeam_channel::Sender;
 use std::collections::HashMap;
 
-use crate::settings_ui::{ACTION_TOGGLE_DIPLOMACY, GameSettings, KeyBinding};
+use crate::settings_ui::{GameSettings, KeyBinding, ACTION_TOGGLE_DIPLOMACY};
 use bevy::prelude::*;
-use bevy_egui::{EguiContexts, EguiPrimaryContextPass, egui};
+use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 use civ_protocol_3d::{FactionStateEntry, FactionStateFrame, Government3d};
 
 // ---------------------------------------------------------------------------

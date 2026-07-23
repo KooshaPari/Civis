@@ -116,7 +116,9 @@ impl From<VoxelKey> for crate::inspect::WorldPos {
 /// "liquid" against "Liquid" across crates. Each variant has a stable
 /// lower-case [`name`](Self::name) for display, and an [`index`](Self::index)
 /// for sortability and for tests that want a stable ordering.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum Phase {
     /// Solid phase (e.g. rock, ice, wood).

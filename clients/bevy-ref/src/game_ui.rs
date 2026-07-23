@@ -10,15 +10,15 @@
 use crate::tool_categories::ActiveSubTool;
 use crate::ui_theme::CHIP_FILL;
 use bevy::prelude::*;
-use bevy_egui::{EguiContexts, EguiPlugin, EguiPrimaryContextPass, egui};
+use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
 
 use civ_protocol_3d::{CivilianNeeds3d, CivilianStateEntry};
 
 use crate::game_laws::GameLawsOpen;
 use crate::live_pick::LiveSelection;
 use crate::settings_ui::{
-    ACTION_CYCLE_SIM_SPEED, ACTION_PAUSE_SIM, ACTION_SPEED_1X, ACTION_SPEED_2X, ACTION_SPEED_5X,
-    ACTION_SPEED_10X, GameSettings, KeyBinding,
+    GameSettings, KeyBinding, ACTION_CYCLE_SIM_SPEED, ACTION_PAUSE_SIM, ACTION_SPEED_10X,
+    ACTION_SPEED_1X, ACTION_SPEED_2X, ACTION_SPEED_5X,
 };
 use crate::spawn_tools::{ActiveTool, BuildingSpawnKind, SpawnTool};
 use crate::{AttachMode, LiveEntityKind, SelectedLiveEntity};

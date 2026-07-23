@@ -53,8 +53,8 @@ pub use descriptor::VerbDescriptor;
 pub use group::VerbGroup;
 pub use inspect::*;
 pub use provenance::Provenance;
-pub use rank::{rank_by_risk as rank_verbs};
-pub use registry::{VerbRegistry, MatchedVerb as VerbSearchResult};
+pub use rank::rank_by_risk as rank_verbs;
+pub use registry::{MatchedVerb as VerbSearchResult, VerbRegistry};
 pub use risk::RiskTier;
 pub use voxel_inspector::*;
 

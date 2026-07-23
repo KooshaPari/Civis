@@ -39,7 +39,6 @@ pub struct VerbDescriptor {
     pub use_count: u64,
 }
 
-
 impl VerbDescriptor {
     /// Construct a new descriptor via builder pattern (recommended).
     pub fn builder(id: &str, name: &str, group: VerbGroup) -> VerbDescriptorBuilder {

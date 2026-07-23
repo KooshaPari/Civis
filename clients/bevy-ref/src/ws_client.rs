@@ -683,7 +683,10 @@ mod tests {
     #[test]
     fn parse_scene_reset_notification_reads_tick() {
         let text = r#"{"jsonrpc":"2.0","method":"scene.reset","params":{"tick":42}}"#;
-        assert_eq!(parse_scene_reset_notification(text), Some(SceneReset { tick: 42 }));
+        assert_eq!(
+            parse_scene_reset_notification(text),
+            Some(SceneReset { tick: 42 })
+        );
     }
 
     #[test]

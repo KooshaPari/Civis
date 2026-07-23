@@ -1,9 +1,9 @@
 # Run secret scanning on every change; local hooks remain supplemental.
 name: Trufflehog Secrets Scan
-on:
-  push:
-  pull_request:
-  workflow_dispatch:
+# Local hooks plus Security Guard cover automatic secret checks. Keep the
+# heavyweight Trufflehog scan available as an explicit, free-runner escape
+# hatch without creating a billed/duplicate check on every change.
+on: workflow_dispatch
 
 jobs:
   manifest-verify:

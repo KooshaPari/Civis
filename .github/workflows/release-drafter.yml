@@ -1,8 +1,8 @@
 name: Release Drafter
 
-on:
-  push:
-    branches: [main]
+# Placeholder until a maintained release-drafter implementation is restored.
+# Keep it manual so a no-op cannot create a false failing main check.
+on: workflow_dispatch
 
 permissions:
   contents: read
@@ -16,4 +16,4 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - run: echo "TODO: replace with custom release-drafter logic"
+      - run: echo TODO-release-drafter-placeholder

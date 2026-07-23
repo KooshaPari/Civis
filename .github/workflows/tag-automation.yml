@@ -3,10 +3,9 @@ name: Tag Automation
 # phenoShared reusable is 404; replaced with no-op.
 # TODO: Implement custom tag automation logic.
 
-on:
-  push:
-    tags:
-      - 'v*'
+# Placeholder until custom tag automation is implemented.
+# Keep it manual so the no-op cannot create a false release check.
+on: workflow_dispatch
 
 jobs:
   tag:
@@ -14,4 +13,4 @@ jobs:
     permissions:
       contents: write
     steps:
-      - run: echo "TODO: replace with custom tag-automation logic"
+      - run: echo TODO-tag-automation-placeholder

@@ -1,10 +1,9 @@
 # Alert sync to issues. phenoShared reusable is 404; replaced with no-op.
 # TODO: Replace with custom alert-sync logic when needed.
 name: Alert sync issues
-on:
-  schedule:
-    - cron: '17 6 * * 1'
-  workflow_dispatch:
+# Placeholder until custom alert synchronization is implemented.
+# Keep it manual so the no-op cannot create a false scheduled/main failure.
+on: workflow_dispatch
 
 permissions:
   actions: read
@@ -16,4 +15,4 @@ jobs:
   sync:
     runs-on: ubuntu-24.04
     steps:
-      - run: echo "TODO: replace with custom alert-sync logic"
+      - run: echo TODO-alert-sync-placeholder

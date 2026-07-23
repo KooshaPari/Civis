@@ -3,7 +3,9 @@ name: self-merge-gate
 # phenoShared reusable is 404; replaced with no-op.
 # TODO: Implement custom self-merge gate logic.
 
-on: [pull_request_review]
+# Placeholder until custom self-merge policy is implemented.
+# Keep it manual so the no-op cannot create a false merge check.
+on: workflow_dispatch
 
 permissions:
   contents: read
@@ -12,4 +14,4 @@ jobs:
   gate:
     runs-on: ubuntu-24.04
     steps:
-      - run: echo "TODO: replace with custom self-merge-gate logic"
+      - run: echo TODO-self-merge-placeholder

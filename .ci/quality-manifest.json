@@ -1,9 +1,9 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "204a0eface0dfe1cde8ab0c678282fb2059a346e",
-  "content_hash": "025284e4a323c7f074ffb67ad2490f78e99321a5a1be67e1881f01036d75b8e9",
-  "created_at": "2026-07-23T05:32:09Z",
+  "git_sha": "b8e0b9873a9966ddae42ec66bb79c5598c1671ea",
+  "content_hash": "09fa9f5c12d3c9c096a20f754ac7a04f2610ea13014f40d572cf246287da821b",
+  "created_at": "2026-07-23T05:59:38Z",
   "runner": {
     "host": "KOOSHAPARI-DESK",
     "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
@@ -76,7 +76,11 @@
     "voxel_material_ca_test": {
       "status": "pass",
       "detail": "cargo test -p civ-voxel --offline: 312 passed, 0 failed, 1 ignored; scoped rustfmt check passed"
+    },
+    "civ_ai_ollama_provider_test": {
+      "status": "pass",
+      "detail": "cargo test -p civ-ai --features dev providers::ollama_dev --offline: 2 passed, 0 failed; full civ-ai suite has four pre-existing unrelated failures"
     }
   },
-  "manifest_hash": "02e2d4839dfa8a0e6daa2a4c565419984c224a4042fbecd7aeb27472d5822b6f"
+  "manifest_hash": "db5d7a94789a4f214bf5274e4b8fa184dc3f25c331cd95be79a878439ca78e23"
 }

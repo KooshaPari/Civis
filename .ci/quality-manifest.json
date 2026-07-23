@@ -1,8 +1,8 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "d07f835386ebe6694d8db3a76135a92fdb92baaa",
-  "created_at": "2026-07-23T02:27:00Z",
+  "git_sha": "5994cc65ad09cc6f2dfbbd176ccbabc030a287b4",
+  "created_at": "2026-07-23T08:05:10Z",
   "runner": {
     "host": "unknown",
     "rust": "rustc 1.97.1 (8bab26f4f 2026-07-14)"
@@ -22,11 +22,11 @@
     },
     "dashboard_typecheck": {
       "status": "pass",
-      "detail": "Dashboard TypeScript noEmit passed after civilian proximity and faction-index integration."
+      "detail": "Dashboard TypeScript noEmit passed after renderer color reuse optimization."
     },
     "dashboard_build": {
       "status": "pass",
-      "detail": "Dashboard Vite production build passed; existing vendor chunk warning remains."
+      "detail": "Dashboard Vite production build passed; existing Babylon vendor chunk warning remains."
     },
     "extra_cargo_audit": {
       "status": "skip",
@@ -61,5 +61,5 @@
       "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     }
   },
-  "manifest_hash": "bbfaea880876ffcfd88c490603c48a179ac014b6f278fef8f742c8c7805b8122"
+  "manifest_hash": "abe5173dc767de4e32aad2f206a82ce258ab7ff7048be03e2a405bee0361d7df"
 }

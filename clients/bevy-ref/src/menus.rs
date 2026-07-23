@@ -623,11 +623,13 @@ fn draw_world_setup(
     state: Option<Res<State<AppState>>>,
     mut params: ResMut<WorldSetupParams>,
     mut command: ResMut<MenuCommand>,
+    mut seed_edit: Local<Option<String>>,
 ) {
     let Some(state) = state else {
         return;
     };
     if *state.get() != AppState::WorldSetup {
+        *seed_edit = None;
         return;
     }
     let Ok(ctx) = contexts.ctx_mut() else {

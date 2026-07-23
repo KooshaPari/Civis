@@ -9,7 +9,7 @@
 
 use crate::fog_of_war::FogOfWar;
 use crate::formation::{formation_positions, Facing, FormationKind};
-use crate::los::line_of_sight;
+use crate::los::line_of_sight_grid;
 use crate::DamageEvent;
 use civ_voxel::{MaterialId, VoxelWorld, WorldCoord, FIXED_SCALE};
 
@@ -78,7 +78,7 @@ impl Default for WarBridgeConfig {
 
 /// Map a grid cell to a voxel world coordinate (deterministic, Y-up voxel axis).
 pub fn grid_to_world_coord(grid_x: i32, grid_y: i32) -> WorldCoord {
-    let step = FIXED_SCALE / 16;
+    let step = FIXED_SCALE;
     WorldCoord {
         x: i64::from(grid_x) * step,
         y: 0,
@@ -125,7 +125,7 @@ pub fn tick_war_bridge(
     let mut damaged_targets = Vec::new();
 
     for (i, shooter) in units.iter().enumerate() {
-        let from = grid_to_world_coord(shooter.grid_x, shooter.grid_y);
+        let from = (shooter.grid_x, shooter.grid_y);
         let mut best: Option<(usize, i32)> = None;
         for (j, target) in units.iter().enumerate() {
             if i == j || shooter.faction_id == target.faction_id {
@@ -141,8 +141,8 @@ pub fn tick_war_bridge(
             if dist > range {
                 continue;
             }
-            let to = grid_to_world_coord(target.grid_x, target.grid_y);
-            if !line_of_sight(world, from, to) {
+            let to = (target.grid_x, target.grid_y);
+            if !line_of_sight_grid(world, from, to) {
                 continue;
             }
             if let Some(fog) = fog {

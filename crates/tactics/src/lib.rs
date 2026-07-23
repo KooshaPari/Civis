@@ -32,7 +32,7 @@ pub use formation::{
     formation_offsets, formation_positions, rotate_offsets, Facing, FormationKind,
 };
 pub use grid_obstacles::{grid_cell_blocked, grid_cell_impassable, grid_cell_occupied};
-pub use los::line_of_sight;
+pub use los::{line_of_sight, line_of_sight_grid};
 pub use military_phase::MilitaryPhaseConfig;
 pub use morale::*;
 pub use movement::{

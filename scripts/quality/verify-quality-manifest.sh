@@ -44,14 +44,34 @@ attested = body.get("git_sha")
 if not isinstance(attested, str) or not attested:
     raise SystemExit("manifest git_sha is required and must identify HEAD or HEAD^")
 if attested != head:
+    content_matches = False
     try:
         parent = subprocess.check_output(["git", "rev-parse", "HEAD^"], text=True).strip()
     except subprocess.CalledProcessError:
         parent = ""
     if attested != parent:
+        try:
+            subprocess.run(
+                [
+                    "git",
+                    "diff",
+                    "--quiet",
+                    attested,
+                    "HEAD",
+                    "--",
+                    ".",
+                    ":(exclude).ci/quality-manifest.json",
+                ],
+                check=True,
+            )
+            content_matches = True
+        except subprocess.CalledProcessError:
+            content_matches = False
+    if attested != parent and not content_matches:
         raise SystemExit(
             f"stale manifest: git_sha {attested} != HEAD {head}"
             + (f" or parent {parent}" if parent else "")
+            + " or matching non-manifest content"
             + "\nRe-run: lefthook run pre-push && commit .ci/quality-manifest.json"
         )
 

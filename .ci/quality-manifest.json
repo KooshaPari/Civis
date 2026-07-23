@@ -1,8 +1,8 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "8f27013f185e5bfdecfba483840fa981f4f3ff0a",
-  "created_at": "2026-07-23T00:07:41Z",
+  "git_sha": "d5637b1d826828e120527dd8f2731448240448a8",
+  "created_at": "2026-07-23T01:38:20Z",
   "runner": {
     "host": "unknown",
     "rust": "rustc 1.97.1 (8bab26f4f 2026-07-14)"
@@ -10,7 +10,7 @@
   "gates": {
     "civis_3d_verify": {
       "status": "pass",
-      "detail": "Targeted catalog, civ-engine scenario (33 passed, 1 ignored), web (117 passed), civ-mod-host/civlab-sdk (75 passed), workspace clippy/check evidence previously passed; voxel fmt scoped. Full cold composite was resource/time bounded."
+      "detail": "Targeted catalog, civ-engine replay (31 passed), civ-tactics (125 passed), workspace cargo check --locked passed; web/dashboard evidence previously passed. Full cold composite remains resource/time bounded."
     },
     "bevy_egui_check": {
       "status": "pass",
@@ -61,5 +61,5 @@
       "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     }
   },
-  "manifest_hash": "5aefcbe2a79c5aa66514fdeba744e766a63f03f173529dfbd92aae772faa213d"
+  "manifest_hash": "e3bbf7336c54b8dea5a65070b469c91250be4247e03deaeb2acf8f2f75303990"
 }

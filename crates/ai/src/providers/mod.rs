@@ -6,7 +6,7 @@
 //! | `FirepassKimiProvider` | yes (wraps cloud) | no | `cloud` | **wired** |
 //! | `LocalSlmProvider` | yes (mistral.rs GGUF) | no | `local` | **stub** |
 //! | `EmbedProvider` | no | yes (MiniLM) | `embed` | **stub** |
-//! | `OllamaDevProvider` | yes (HTTP) | no | `dev` | **stub** |
+//! | `OllamaDevProvider` | yes (HTTP) | no | `dev` | **wired** |
 
 mod dummy;
 pub use dummy::DummyAiProvider;

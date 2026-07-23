@@ -33,7 +33,7 @@ jobs:
           import subprocess, tempfile, tomllib
           from pathlib import Path
 
-          old = subprocess.check_output(["git", "show", "HEAD^2:Cargo.lock"])
+          old = subprocess.check_output(["git", "show", "HEAD:Cargo.lock"])
           old_path = Path(tempfile.mktemp(suffix=".toml"))
           old_path.write_bytes(old)
           before = tomllib.loads(old.decode())

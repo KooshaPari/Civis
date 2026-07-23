@@ -1,8 +1,8 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "d5637b1d826828e120527dd8f2731448240448a8",
-  "created_at": "2026-07-23T01:38:20Z",
+  "git_sha": "d07f835386ebe6694d8db3a76135a92fdb92baaa",
+  "created_at": "2026-07-23T02:27:00Z",
   "runner": {
     "host": "unknown",
     "rust": "rustc 1.97.1 (8bab26f4f 2026-07-14)"
@@ -18,15 +18,15 @@
     },
     "web_test": {
       "status": "pass",
-      "detail": ""
+      "detail": "Web Node suite: 121 passed, including civilian proximity spatial-index regression tests."
     },
     "dashboard_typecheck": {
       "status": "pass",
-      "detail": ""
+      "detail": "Dashboard TypeScript noEmit passed after civilian proximity and faction-index integration."
     },
     "dashboard_build": {
       "status": "pass",
-      "detail": ""
+      "detail": "Dashboard Vite production build passed; existing vendor chunk warning remains."
     },
     "extra_cargo_audit": {
       "status": "skip",
@@ -61,5 +61,5 @@
       "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     }
   },
-  "manifest_hash": "e3bbf7336c54b8dea5a65070b469c91250be4247e03deaeb2acf8f2f75303990"
+  "manifest_hash": "bbfaea880876ffcfd88c490603c48a179ac014b6f278fef8f742c8c7805b8122"
 }

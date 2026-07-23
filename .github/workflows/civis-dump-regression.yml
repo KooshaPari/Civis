@@ -26,28 +26,6 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
-      - name: diagnose lockfile resolution
-        run: |
-          cargo generate-lockfile
-          python3 - <<'PY'
-          import subprocess, tempfile, tomllib
-          from pathlib import Path
-
-          old = subprocess.check_output(["git", "show", "HEAD:Cargo.lock"])
-          old_path = Path(tempfile.mktemp(suffix=".toml"))
-          old_path.write_bytes(old)
-          before = tomllib.loads(old.decode())
-          after = tomllib.loads(Path("Cargo.lock").read_text())
-          old_pkgs = {p["name"]: (p.get("version"), p.get("source")) for p in before["package"]}
-          new_pkgs = {p["name"]: (p.get("version"), p.get("source")) for p in after["package"]}
-          print("lock package names added:")
-          for name in sorted(set(new_pkgs) - set(old_pkgs)):
-              print("+", name, new_pkgs[name])
-          print("lock package names removed:")
-          for name in sorted(set(old_pkgs) - set(new_pkgs)):
-              print("-", name, old_pkgs[name])
-          old_path.unlink()
-          PY
       - name: cargo test -p civis-cli (dump regression)
         run: |
           cargo test --locked -p civis-cli dump::

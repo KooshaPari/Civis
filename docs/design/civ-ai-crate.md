@@ -148,6 +148,13 @@ pub enum AiError {
 | `OllamaDevProvider` | ✅ OpenAI-compatible HTTP | (optional) | dev feature only | Reuses the same `reqwest` chat-completions client shape as `FirepassKimiClient`; **never** in release. |
 | `FirepassKimiProvider` | ✅ wraps `FirepassKimiClient` | ✗ | cloud feature, `CIVAI_ENABLE_CLOUD=1` | Heavy-reasoning fallback only (sagas, tech R&D, summit set-pieces). Missing `KIMI_API_KEY` → `AiError::Unavailable` (loud). |
 | `EmbedProvider` | ✗ Unsupported | ✅ fastembed-rs / `ort`, MiniLM 384-dim | embed feature | Drives drift (§1.4) + log triage (§3). |
+
+`EmbedProvider` is artifact-backed when the `embed` feature is enabled:
+`try_from_model_dir` loads a user-supplied ONNX model and the four tokenizer
+configuration files through `fastembed` without downloading weights. The ORT
+dynamic library must be provided through `ORT_DYLIB_PATH`; missing artifacts or
+unexpected vector dimensions fail loudly. The compatibility constructor does
+not advertise embedding capability until a model is loaded.
 | `DummyAiProvider` | ✅ deterministic stub | ✅ fixed vectors | tests only | Mirrors `DummyLlmClient`; enables all feature tests with no weights. |
 
 A small **provider registry** (`HashMap<ProviderKind, Arc<dyn AiProvider>>` built from `AiConfig`) lets feature services request a *role* ("narrator", "embedder", "heavy") rather than a concrete provider — config-driven, per "primitives first / provider interface + registry > N classes".

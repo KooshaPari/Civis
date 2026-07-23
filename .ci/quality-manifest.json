@@ -1,9 +1,9 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "b8e0b9873a9966ddae42ec66bb79c5598c1671ea",
-  "content_hash": "09fa9f5c12d3c9c096a20f754ac7a04f2610ea13014f40d572cf246287da821b",
-  "created_at": "2026-07-23T05:59:38Z",
+  "git_sha": "019b686972f99bd7f814991a659825f1997d2bbb",
+  "content_hash": "57ac35cebaed754b595536286cb7c2f0092808108226cdef046ffdcaca2cf61d",
+  "created_at": "2026-07-23T09:08:23Z",
   "runner": {
     "host": "KOOSHAPARI-DESK",
     "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
@@ -80,7 +80,27 @@
     "civ_ai_ollama_provider_test": {
       "status": "pass",
       "detail": "cargo test -p civ-ai --features dev providers::ollama_dev --offline: 2 passed, 0 failed; full civ-ai suite has four pre-existing unrelated failures"
+    },
+    "civ_ai_baseline_tests": {
+      "status": "pass",
+      "detail": "cargo test -p civ-ai --offline: 35 unit tests + 10 integration tests + 1 doc test passed; 1 pre-existing async test ignored"
+    },
+    "civ_ai_provider_status_docs": {
+      "status": "pass",
+      "detail": "cargo test -p civ-ai --offline: 35 unit tests + 10 integration tests + 1 doc test passed; status docs now identify OllamaDevProvider as wired and retain local/embed stubs"
+    },
+    "civis_bridge_hook_test": {
+      "status": "pass",
+      "detail": "cargo test -p civ-voxel-bridge --offline: 4 test binaries passed, 0 failed; cargo fmt scoped check and git diff --check passed; cross-platform pre-push wrapper exercised"
+    },
+    "civ_ai_embed_feature_tests": {
+      "status": "pass",
+      "detail": "cargo test -p civ-ai --features embed --offline with isolated CARGO_TARGET_DIR: 36 unit tests + 10 integration tests + 1 doc test passed; missing-artifact no-download test passed; 1 pre-existing async test ignored"
+    },
+    "civ_ai_default_tests": {
+      "status": "pass",
+      "detail": "cargo test -p civ-ai --offline with isolated CARGO_TARGET_DIR: 35 unit tests + 10 integration tests + 1 doc test passed; 1 pre-existing async test ignored"
     }
   },
-  "manifest_hash": "db5d7a94789a4f214bf5274e4b8fa184dc3f25c331cd95be79a878439ca78e23"
+  "manifest_hash": "55950f1c3970ecfd80353e16c667f9e8404bf87627adfccbc83c4d9c9014ac0f"
 }

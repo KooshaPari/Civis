@@ -6,14 +6,7 @@
 //! `KIMI_API_KEY` / `FIREPASS_BASE_URL` env config. Missing key → loud
 //! [`AiError::Unavailable`] at construction / call site.
 //!
-//! ## P1 note
-//! `civ-research::FirepassKimiClient` currently exposes a tech-card-shaped
-//! method (`propose_tech_card`). For P1 we wrap it for *availability + identity*
-//! and route generic prose generation through the same HTTP client surface; the
-//! generic chat method will be lifted into `civ-research` when `civ-research`
-//! migrates to consume `civ-ai` (design §3). Until then, `generate` returns a
-//! loud [`AiError::Unavailable`] describing the pending wiring rather than
-//! silently degrading.
+//! Generic generation reuses the existing authenticated chat-completions path.
 
 use crate::{AiError, AiProvider, Capabilities, EmbedRequest, GenOutput, GenRequest};
 
@@ -42,12 +35,26 @@ impl FirepassKimiProvider {
 
 #[async_trait::async_trait]
 impl AiProvider for FirepassKimiProvider {
-    async fn generate(&self, _req: &GenRequest) -> Result<GenOutput, AiError> {
-        // TODO(S2.W3 follow-up): route generic prose through a chat method
-        // lifted into civ-research when it migrates to consume civ-ai (§3).
-        Err(AiError::Unavailable(
-            "FirepassKimiProvider::generate pending civ-research chat lift (design §3)".into(),
-        ))
+    async fn generate(&self, req: &GenRequest) -> Result<GenOutput, AiError> {
+        let text = self
+            .inner
+            .generate(
+                &req.prompt,
+                req.max_tokens,
+                req.temperature,
+                req.json_schema.as_deref(),
+            )
+            .await
+            .map_err(|error| match error {
+                civ_research::LlmError::RateLimited => AiError::RateLimited,
+                civ_research::LlmError::InvalidResponse(message) => {
+                    AiError::InvalidResponse(message)
+                }
+                civ_research::LlmError::NetworkUnavailable => {
+                    AiError::Unavailable("Firepass/Kimi request failed".into())
+                }
+            })?;
+        Ok(GenOutput::fresh(text))
     }
 
     async fn embed(&self, _req: &EmbedRequest) -> Result<Vec<Vec<f32>>, AiError> {

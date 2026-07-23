@@ -14,8 +14,8 @@
 //! - Voxel conversion uses [`grid_to_world_coord`] from the war bridge, so all
 //!   LOS checks are anchored in the same voxel space as combat.
 
-use crate::los::line_of_sight;
-use crate::war_bridge::{grid_to_world_coord, MilitaryUnitSample};
+use crate::los::line_of_sight_grid;
+use crate::war_bridge::MilitaryUnitSample;
 use civ_voxel::{MaterialId, VoxelWorld};
 use std::collections::HashMap;
 
@@ -97,8 +97,6 @@ impl FogOfWar {
                     // We just won't mark it visible itself; iterate the box anyway.
                 }
 
-                let unit_wc = grid_to_world_coord(ux, uy);
-
                 for ty in y_min..=y_max {
                     for tx in x_min..=x_max {
                         // Euclidean range check.
@@ -108,9 +106,7 @@ impl FogOfWar {
                             continue;
                         }
 
-                        let tile_wc = grid_to_world_coord(tx as i32, ty as i32);
-
-                        if line_of_sight(voxel_world, unit_wc, tile_wc) {
+                        if line_of_sight_grid(voxel_world, (ux, uy), (tx as i32, ty as i32)) {
                             let idx = ty as usize * self.grid_size as usize + tx as usize;
                             bitmap[idx] = true;
                         }
@@ -152,6 +148,7 @@ impl FogOfWar {
 mod tests {
     use super::*;
     use civ_voxel::WorldCoord;
+    use crate::war_bridge::grid_to_world_coord;
 
     fn empty_world() -> VoxelWorld<MaterialId> {
         VoxelWorld::new(1)

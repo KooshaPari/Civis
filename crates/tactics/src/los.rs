@@ -10,7 +10,7 @@
 //! Neither `from` nor `to` is tested for solidity — the caller owns those cells
 //! (typically the shooter's feet and the target's centre).
 
-use civ_voxel::{MaterialId, VoxelWorld, WorldCoord};
+use civ_voxel::{MaterialId, VoxelWorld, WorldCoord, FIXED_SCALE};
 
 fn material_is_solid(material: MaterialId) -> bool {
     material.0 != 0
@@ -117,6 +117,36 @@ pub fn line_of_sight(world: &VoxelWorld<MaterialId>, from: WorldCoord, to: World
         }
     }
 
+    true
+}
+
+/// Returns whether a tactical grid ray is clear, sampling one terrain voxel per
+/// grid cell. Tactical combat operates on terrain cells, not fixed-point units;
+/// keeping this traversal discrete avoids sub-voxel aliasing and unbounded rays.
+pub fn line_of_sight_grid(
+    world: &VoxelWorld<MaterialId>,
+    from: (i32, i32),
+    to: (i32, i32),
+) -> bool {
+    let dx = to.0 - from.0;
+    let dy = to.1 - from.1;
+    let steps = dx.abs().max(dy.abs());
+    if steps <= 1 {
+        return true;
+    }
+
+    for step in 1..steps {
+        let x = from.0 + (dx * step).div_euclid(steps);
+        let y = from.1 + (dy * step).div_euclid(steps);
+        let material = world.read(WorldCoord {
+            x: i64::from(x) * FIXED_SCALE,
+            y: 0,
+            z: i64::from(y) * FIXED_SCALE,
+        });
+        if material_is_solid(material) {
+            return false;
+        }
+    }
     true
 }
 

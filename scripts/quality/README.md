@@ -11,7 +11,7 @@ git add .ci/quality-manifest.json
 git commit -m "chore(ci): refresh quality manifest"
 ```
 
-The manifest records a `git_sha` (HEAD or HEAD^) and a blake2b `manifest_hash` over gate statuses. Cloud verify checks out the PR branch tip and rejects stale or tampered manifests.
+The manifest records a `git_sha` (HEAD, HEAD^, or a commit with matching non-manifest content after a squash merge) and a blake2b `manifest_hash` over gate statuses. Cloud verify checks out the PR branch tip and rejects stale or tampered manifests.
 
 ## Gate tiers
 

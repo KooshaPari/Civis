@@ -55,23 +55,37 @@ if attested != head:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         ).returncode == 0
-        comparison = [attested, "HEAD"] if attested_exists else [parent, "HEAD"]
-        try:
-            subprocess.run(
-                [
-                    "git",
-                    "diff",
-                    "--quiet",
-                    *comparison,
-                    "--",
-                    ".",
-                    ":(exclude).ci/quality-manifest.json",
-                ],
-                check=True,
-            )
-            content_matches = bool(parent) and (attested_exists or comparison == [parent, "HEAD"])
-        except subprocess.CalledProcessError:
-            content_matches = False
+        if isinstance(body.get("content_hash"), str):
+            entries = subprocess.check_output(
+                ["git", "ls-tree", "-r", "--full-tree", "HEAD"], text=True
+            ).splitlines()
+            current_hash = hashlib.blake2b(
+                "\n".join(
+                    entry
+                    for entry in entries
+                    if not entry.endswith("\t.ci/quality-manifest.json")
+                ).encode(),
+                digest_size=32,
+            ).hexdigest()
+            content_matches = body["content_hash"] == current_hash
+        elif attested_exists:
+            try:
+                subprocess.run(
+                    [
+                        "git",
+                        "diff",
+                        "--quiet",
+                        attested,
+                        "HEAD",
+                        "--",
+                        ".",
+                        ":(exclude).ci/quality-manifest.json",
+                    ],
+                    check=True,
+                )
+                content_matches = True
+            except subprocess.CalledProcessError:
+                content_matches = False
     if attested != parent and not content_matches:
         raise SystemExit(
             f"stale manifest: git_sha {attested} != HEAD {head}"
@@ -111,6 +125,7 @@ if failed:
 
 attestation = {
     "git_sha": body["git_sha"],
+    "content_hash": body.get("content_hash", ""),
     "gates": sorted(
         [{"key": k, "status": v["status"]} for k, v in gates.items()],
         key=lambda x: x["key"],

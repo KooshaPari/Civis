@@ -60,17 +60,30 @@ def main() -> int:
     except Exception:
         rust = "unknown"
     host = os.environ.get("COMPUTERNAME") or os.environ.get("HOSTNAME") or "unknown"
+    tree_entries = subprocess.check_output(
+        ["git", "ls-tree", "-r", "--full-tree", "HEAD"], text=True
+    ).splitlines()
+    content_hash = hashlib.blake2b(
+        "\n".join(
+            entry
+            for entry in tree_entries
+            if not entry.endswith("\t.ci/quality-manifest.json")
+        ).encode(),
+        digest_size=32,
+    ).hexdigest()
 
     body = {
         "version": "1",
         "repo": "Civis",
         "git_sha": git_sha,
+        "content_hash": content_hash,
         "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "runner": {"host": host, "rust": rust},
         "gates": gates,
     }
     attestation = {
         "git_sha": git_sha,
+        "content_hash": content_hash,
         "gates": sorted(
             [{"key": k, "status": v["status"]} for k, v in gates.items()],
             key=lambda x: x["key"],

@@ -1,9 +1,9 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "51e5973f775460185954431aa7017fde4bad3887",
-  "content_hash": "1ac9519ea381fa7bfed9d81356f9eb00b6bed22686c436158b80d2b5bac1d7a2",
-  "created_at": "2026-07-23T09:55:03Z",
+  "git_sha": "d9ec3cf4b13db5a51a372d5e7c5352d3b00b69af",
+  "content_hash": "0ba40f3e66aa1ca5b2abfe822cac2ce99a43a425b962d0ba917df52147641bef",
+  "created_at": "2026-07-23T06:30:47Z",
   "runner": {
     "host": "KOOSHAPARI-DESK",
     "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
@@ -84,23 +84,7 @@
     "civ_ai_baseline_tests": {
       "status": "pass",
       "detail": "cargo test -p civ-ai --offline: 35 unit tests + 10 integration tests + 1 doc test passed; 1 pre-existing async test ignored"
-    },
-    "civ_ai_provider_status_docs": {
-      "status": "pass",
-      "detail": "cargo test -p civ-ai --offline: 35 unit tests + 10 integration tests + 1 doc test passed; status docs now identify OllamaDevProvider as wired and retain local/embed stubs"
-    },
-    "civis_bridge_hook_test": {
-      "status": "pass",
-      "detail": "cargo test -p civ-voxel-bridge --offline: 4 test binaries passed, 0 failed; cargo fmt scoped check and git diff --check passed; cross-platform pre-push wrapper exercised"
-    },
-    "civ_ai_embed_feature_tests": {
-      "status": "pass",
-      "detail": "cargo test -p civ-ai --features embed --offline with isolated CARGO_TARGET_DIR: 36 unit tests + 10 integration tests + 1 doc test passed; missing-artifact no-download test passed; 1 pre-existing async test ignored"
-    },
-    "civ_ai_default_tests": {
-      "status": "pass",
-      "detail": "cargo test -p civ-ai --offline with isolated CARGO_TARGET_DIR: 35 unit tests + 10 integration tests + 1 doc test passed; 1 pre-existing async test ignored"
     }
   },
-  "manifest_hash": "d655b468480c4dffb448619f9b7e1e8a8e276a2f03a4e8e3eee7c266ad1d18cd"
+  "manifest_hash": "a1ed0c6da9571b964e4467a5b5b9df235bc39645bc1410e6293afc63c3e55b88"
 }

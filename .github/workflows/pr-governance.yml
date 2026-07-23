@@ -58,6 +58,8 @@ jobs:
                                   name
                                   status
                                   conclusion
+                                  startedAt
+                                  completedAt
                                 }
                                 ... on StatusContext {
                                   context
@@ -102,10 +104,21 @@ jobs:
               failures = [];
               pending = [];
 
+              // The rollup can contain duplicate contexts from push and PR
+              // events. Evaluate the newest result per check name so a
+              // cancelled superseded run cannot veto a successful PR run.
+              const latestByName = new Map();
               for (const node of contexts) {
                 const name =
                   node.__typename === "CheckRun" ? node.name : node.context;
                 if (!name || !mustComplete.some((re) => re.test(name))) continue;
+                const current = latestByName.get(name);
+                const currentTime = current?.completedAt || current?.startedAt || "";
+                const nodeTime = node.completedAt || node.startedAt || "";
+                if (!current || nodeTime >= currentTime) latestByName.set(name, node);
+              }
+
+              for (const [name, node] of latestByName) {
                 if (node.__typename === "CheckRun") {
                   if (node.status !== "COMPLETED") {
                     pending.push(`Check '${name}' is ${node.status}.`);
@@ -116,6 +129,13 @@ jobs:
                   }
                 } else if (!["SUCCESS", "PENDING"].includes(node.state)) {
                   failures.push(`Status '${name}' is ${node.state}.`);
+                }
+              }
+
+              const present = [...latestByName.keys()];
+              for (const required of mustComplete) {
+                if (!present.some((name) => required.test(name))) {
+                  pending.push(`Required check matching ${required} is missing.`);
                 }
               }
 

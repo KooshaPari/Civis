@@ -213,7 +213,10 @@ export function Scene3d() {
     if (!mount) return;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x87b7e0);
+    const nightBackground = new THREE.Color(0x0a1530);
+    const dayBackground = new THREE.Color(0x87b7e0);
+    const frameBackground = dayBackground.clone();
+    scene.background = frameBackground;
 
     const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -1481,13 +1484,8 @@ export function Scene3d() {
           terrain.size * 0.55,
         );
         const weather = refs.current.terrainWeather;
-        const bg = new THREE.Color().lerpColors(
-          new THREE.Color(0x0a1530),
-          new THREE.Color(0x87b7e0),
-          d,
-        );
-        scene.background = bg;
-        fog.color.copy(bg);
+        frameBackground.lerpColors(nightBackground, dayBackground, d);
+        fog.color.copy(frameBackground);
         fog.density =
           weather?.precipitation === "rain"
             ? 0.012

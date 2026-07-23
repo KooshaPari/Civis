@@ -19,10 +19,11 @@
 //!   and the [`registry::ProviderRegistry`].
 //! - **Wired (feature `cloud`):** [`providers::FirepassKimiProvider`] wraps the
 //!   existing `civ-research::FirepassKimiClient`.
-//! - **Stubbed (features `local` / `embed`):** `LocalSlmProvider` and
-//!   `EmbedProvider` advertise capabilities but return
-//!   [`AiError::ModelMissing`] / [`AiError::Unavailable`] until their model
-//!   loading backends land in a later phase (see each module's `TODO`).
+//! - **Stubbed (feature `local`):** `LocalSlmProvider` remains pending its
+//!   in-process generation backend.
+//! - **Artifact-backed (feature `embed`):** `EmbedProvider` loads a local,
+//!   user-supplied fastembed/ONNX model through `try_from_model_dir`; the
+//!   compatibility constructor remains loud until a model is loaded.
 //! - **Wired (feature `dev`):** `OllamaDevProvider` sends OpenAI-compatible
 //!   chat-completion requests to a configured Ollama endpoint. It is intended
 //!   for development and remains opt-in.

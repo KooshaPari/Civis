@@ -38,14 +38,14 @@ jobs:
           old_path.write_bytes(old)
           before = tomllib.loads(old.decode())
           after = tomllib.loads(Path("Cargo.lock").read_text())
-          old_pkgs = {(p["name"], p.get("version"), p.get("source")) for p in before["package"]}
-          new_pkgs = {(p["name"], p.get("version"), p.get("source")) for p in after["package"]}
-          print("lock additions:")
-          for item in sorted(new_pkgs - old_pkgs):
-              print("+", item)
-          print("lock removals:")
-          for item in sorted(old_pkgs - new_pkgs):
-              print("-", item)
+          old_pkgs = {p["name"]: (p.get("version"), p.get("source")) for p in before["package"]}
+          new_pkgs = {p["name"]: (p.get("version"), p.get("source")) for p in after["package"]}
+          print("lock package names added:")
+          for name in sorted(set(new_pkgs) - set(old_pkgs)):
+              print("+", name, new_pkgs[name])
+          print("lock package names removed:")
+          for name in sorted(set(old_pkgs) - set(new_pkgs)):
+              print("-", name, old_pkgs[name])
           old_path.unlink()
           PY
       - name: cargo test -p civis-cli (dump regression)

@@ -52,7 +52,12 @@ struct Message {
 struct ChatCompletionRequest<'a> {
     model: &'a str,
     messages: Vec<MessageReq<'a>>,
-    response_format: ResponseFormat,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    response_format: Option<ResponseFormat>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    max_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    temperature: Option<f32>,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -82,9 +87,11 @@ impl LlmClient for FirepassKimiClient {
                 role: "user",
                 content: &content,
             }],
-            response_format: ResponseFormat {
+            response_format: Some(ResponseFormat {
                 kind: "json_object",
-            },
+            }),
+            max_tokens: None,
+            temperature: None,
         };
 
         let url = format!("{}/chat/completions", self.base_url.trim_end_matches('/'));
@@ -97,9 +104,13 @@ impl LlmClient for FirepassKimiClient {
             .await
             .map_err(|_| LlmError::NetworkUnavailable)?;
 
-        let response = response
-            .error_for_status()
-            .map_err(|_| LlmError::NetworkUnavailable)?;
+        let response = response.error_for_status().map_err(|error| {
+            if error.status() == Some(reqwest::StatusCode::TOO_MANY_REQUESTS) {
+                LlmError::RateLimited
+            } else {
+                LlmError::NetworkUnavailable
+            }
+        })?;
 
         let chat: ChatResponse = response
             .json()
@@ -108,6 +119,54 @@ impl LlmClient for FirepassKimiClient {
         let content = Self::extract_content(chat)?;
         serde_json::from_str(&content)
             .map_err(|_| LlmError::InvalidResponse("invalid tech-card json".into()))
+    }
+
+    /// Generate generic text through the same authenticated chat-completions
+    /// path used by tech-card proposals.
+    pub async fn generate(
+        &self,
+        prompt: &str,
+        max_tokens: u32,
+        temperature: f32,
+        json_schema: Option<&str>,
+    ) -> Result<String, LlmError> {
+        let prompt = match json_schema {
+            Some(schema) => format!("{prompt}\n\nReturn only JSON matching this schema:\n{schema}"),
+            None => prompt.to_string(),
+        };
+        let request = ChatCompletionRequest {
+            model: "kimi-k2.6-turbo",
+            messages: vec![MessageReq {
+                role: "user",
+                content: &prompt,
+            }],
+            response_format: json_schema.map(|_| ResponseFormat {
+                kind: "json_object",
+            }),
+            max_tokens: Some(max_tokens.max(1)),
+            temperature: Some(temperature.max(0.0)),
+        };
+        let url = format!("{}/chat/completions", self.base_url.trim_end_matches('/'));
+        let response = self
+            .client
+            .post(url)
+            .bearer_auth(&self.api_key)
+            .json(&request)
+            .send()
+            .await
+            .map_err(|_| LlmError::NetworkUnavailable)?;
+        let response = response.error_for_status().map_err(|error| {
+            if error.status() == Some(reqwest::StatusCode::TOO_MANY_REQUESTS) {
+                LlmError::RateLimited
+            } else {
+                LlmError::NetworkUnavailable
+            }
+        })?;
+        let chat: ChatResponse = response
+            .json()
+            .await
+            .map_err(|_| LlmError::InvalidResponse("invalid response envelope".into()))?;
+        Self::extract_content(chat)
     }
 }
 
@@ -154,5 +213,22 @@ mod tests {
         assert_eq!(client.api_key, "test-key");
         std::env::remove_var("KIMI_API_KEY");
         std::env::remove_var("FIREPASS_BASE_URL");
+    }
+
+    #[test]
+    fn generic_request_omits_json_mode_for_plain_text() {
+        let request = ChatCompletionRequest {
+            model: "kimi-k2.6-turbo",
+            messages: vec![MessageReq {
+                role: "user",
+                content: "hello",
+            }],
+            response_format: None,
+            max_tokens: Some(32),
+            temperature: Some(0.2),
+        };
+        let value = serde_json::to_value(request).expect("request json");
+        assert!(value.get("response_format").is_none());
+        assert_eq!(value["max_tokens"], 32);
     }
 }

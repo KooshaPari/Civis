@@ -1,1 +1,106 @@
-{ "version": "1", "repo": "Civis", "git_sha": "d4c96d96beb18315b9245d47cb01b90d9ffd2cc1", "content_hash": "e785bb0359afe01560dbf98da2322282074862efcc29d2bd76f1fc88005f12cf", "created_at": "2026-07-23T12:56:34Z", "runner": { "host": "KOOSHAPARI-DESK", "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)" }, "gates": { "civis_3d_verify": { "status": "pass", "detail": "Targeted catalog, civ-engine scenario (33 passed, 1 ignored), web (117 passed), civ-mod-host/civlab-sdk (75 passed), workspace clippy/check evidence previously passed; voxel fmt scoped. Full cold composite was resource/time bounded." }, "bevy_egui_check": { "status": "pass", "detail": "" }, "web_test": { "status": "pass", "detail": "" }, "dashboard_typecheck": { "status": "pass", "detail": "" }, "dashboard_build": { "status": "pass", "detail": "" }, "extra_cargo_audit": { "status": "skip", "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)" }, "extra_cargo_deny": { "status": "skip", "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)" }, "extra_cargo_machete": { "status": "skip", "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)" }, "extra_cargo_semver": { "status": "skip", "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)" }, "extra_trufflehog": { "status": "skip", "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)" }, "extra_fr_coverage": { "status": "skip", "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)" }, "extra_docs_check": { "status": "skip", "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)" }, "extra_security_guard": { "status": "skip", "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)" }, "voxel_bridge_test": { "status": "pass", "detail": "cargo test -p civ-voxel-bridge --offline: 3 passed, 0 failed; rustfmt scoped check passed" }, "voxel_bridge_simulation_test": { "status": "pass", "detail": "cargo test -p civ-voxel-bridge --offline: 4 passed, 0 failed; scoped rustfmt check passed" }, "voxel_bridge_presentation_test": { "status": "pass", "detail": "cargo test -p civ-voxel-bridge --offline: 3 passed, 0 failed; scoped rustfmt check passed" }, "voxel_material_ca_test": { "status": "pass", "detail": "cargo test -p civ-voxel --offline: 312 passed, 0 failed, 1 ignored; scoped rustfmt check passed" }, "civ_ai_ollama_provider_test": { "status": "pass", "detail": "cargo test -p civ-ai --features dev providers::ollama_dev --offline: 2 passed, 0 failed; full civ-ai suite has four pre-existing unrelated failures" }, "civ_ai_baseline_tests": { "status": "pass", "detail": "cargo test -p civ-ai --offline: 35 unit tests + 10 integration tests + 1 doc test passed; 1 pre-existing async test ignored" }, "civ_ai_provider_status_docs": { "status": "pass", "detail": "cargo test -p civ-ai --offline: 35 unit tests + 10 integration tests + 1 doc test passed; status docs now identify OllamaDevProvider as wired and retain local/embed stubs" }, "civis_bridge_hook_test": { "status": "pass", "detail": "cargo test -p civ-voxel-bridge --offline: 4 test binaries passed, 0 failed; cargo fmt scoped check and git diff --check passed; cross-platform pre-push wrapper exercised" }, "civ_ai_embed_feature_tests": { "status": "pass", "detail": "cargo test -p civ-ai --features embed --offline with isolated CARGO_TARGET_DIR: 36 unit tests + 10 integration tests + 1 doc test passed; missing-artifact no-download test passed; 1 pre-existing async test ignored" }, "civ_ai_default_tests": { "status": "pass", "detail": "cargo test -p civ-ai --offline with isolated CARGO_TARGET_DIR: 35 unit tests + 10 integration tests + 1 doc test passed; 1 pre-existing async test ignored" } }, "manifest_hash": "0ba453d6da43e1327759172211f99ca7510940c9c20b01c2532d397b4abb6690" } 
+{
+  "version": "1",
+  "repo": "Civis",
+  "git_sha": "501ddd53033d6c581ae7bfa34e91cc356236c788",
+  "content_hash": "07998f7e04ae10e271ad8a52ddc79ab4a040eb1effbeb0e4a1bf48ae5939dc9d",
+  "created_at": "2026-07-26T00:34:39Z",
+  "runner": {
+    "host": "KOOSHAPARI-DESK",
+    "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
+  },
+  "gates": {
+    "civis_3d_verify": {
+      "status": "pass",
+      "detail": "Targeted catalog, civ-engine scenario (33 passed, 1 ignored), web (117 passed), civ-mod-host/civlab-sdk (75 passed), workspace clippy/check evidence previously passed; voxel fmt scoped. Full cold composite was resource/time bounded."
+    },
+    "bevy_egui_check": {
+      "status": "pass",
+      "detail": ""
+    },
+    "web_test": {
+      "status": "pass",
+      "detail": ""
+    },
+    "dashboard_typecheck": {
+      "status": "pass",
+      "detail": ""
+    },
+    "dashboard_build": {
+      "status": "pass",
+      "detail": ""
+    },
+    "extra_cargo_audit": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_cargo_deny": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_cargo_machete": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_cargo_semver": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_trufflehog": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_fr_coverage": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_docs_check": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_security_guard": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "voxel_bridge_test": {
+      "status": "pass",
+      "detail": "cargo test -p civ-voxel-bridge --offline: 3 passed, 0 failed; rustfmt scoped check passed"
+    },
+    "voxel_bridge_simulation_test": {
+      "status": "pass",
+      "detail": "cargo test -p civ-voxel-bridge --offline: 4 passed, 0 failed; scoped rustfmt check passed"
+    },
+    "voxel_bridge_presentation_test": {
+      "status": "pass",
+      "detail": "cargo test -p civ-voxel-bridge --offline: 3 passed, 0 failed; scoped rustfmt check passed"
+    },
+    "voxel_material_ca_test": {
+      "status": "pass",
+      "detail": "cargo test -p civ-voxel --offline: 312 passed, 0 failed, 1 ignored; scoped rustfmt check passed"
+    },
+    "civ_ai_ollama_provider_test": {
+      "status": "pass",
+      "detail": "cargo test -p civ-ai --features dev providers::ollama_dev --offline: 2 passed, 0 failed; full civ-ai suite has four pre-existing unrelated failures"
+    },
+    "civ_ai_baseline_tests": {
+      "status": "pass",
+      "detail": "cargo test -p civ-ai --offline: 35 unit tests + 10 integration tests + 1 doc test passed; 1 pre-existing async test ignored"
+    },
+    "civ_ai_provider_status_docs": {
+      "status": "pass",
+      "detail": "cargo test -p civ-ai --offline: 35 unit tests + 10 integration tests + 1 doc test passed; status docs now identify OllamaDevProvider as wired and retain local/embed stubs"
+    },
+    "civis_bridge_hook_test": {
+      "status": "pass",
+      "detail": "cargo test -p civ-voxel-bridge --offline: 4 test binaries passed, 0 failed; cargo fmt scoped check and git diff --check passed; cross-platform pre-push wrapper exercised"
+    },
+    "civ_ai_embed_feature_tests": {
+      "status": "pass",
+      "detail": "cargo test -p civ-ai --features embed --offline with isolated CARGO_TARGET_DIR: 36 unit tests + 10 integration tests + 1 doc test passed; missing-artifact no-download test passed; 1 pre-existing async test ignored"
+    },
+    "civ_ai_default_tests": {
+      "status": "pass",
+      "detail": "cargo test -p civ-ai --offline with isolated CARGO_TARGET_DIR: 35 unit tests + 10 integration tests + 1 doc test passed; 1 pre-existing async test ignored"
+    }
+  },
+  "manifest_hash": "c558efdf31363bae0cf0bf3d06e0ccc1ed0d24390b84703b87c0d962ad853c56"
+}

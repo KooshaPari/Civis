@@ -2860,12 +2860,26 @@ impl Simulation {
             return;
         }
 
-        let signals = DemandSignals {
-            residential: 0.75,
-            commercial: 0.25,
-            industrial: 0.25,
-            civic: 0.75,
-        };
+        self.institution_levels_emitted.insert(key);
+        events.push(InstitutionEvent {
+            settlement_id: sid,
+            kind,
+            level: new_level,
+        });
+    }
+
+    /// Social-mood phase (FR-CIV-GOV-010/100). Computes per-settlement mood
+    /// snapshots based on food stocking, housing capacity, crime pressure, and
+    /// civic institutions. Emits one snapshot per settlement per tick.
+    fn phase_social_mood(&mut self) {
+        let mut snapshots = Vec::new();
+
+        // Iterate over all known settlements and compute their mood snapshots.
+        for (&settlement_id, _) in &self.settlements.clone() {
+            let stocked = self.settlement_food_stocked.get(&settlement_id).copied().unwrap_or(0);
+            let capacity = self.settlement_housing_capacity.get(&settlement_id).copied().unwrap_or(0);
+            let crime_pressure = self.settlement_crime_pressure.get(&settlement_id).copied().unwrap_or(0);
+            let population = self.settlements.get(&settlement_id).copied().unwrap_or(0);
 
             // 1. food_score
             let food_score = (stocked / 200).clamp(MOOD_MIN, MOOD_MAX);

@@ -57,6 +57,9 @@ pub const FRAME_BUNDLE_LEN: usize = 7;
 /// Max `.civreplay` POST body for `/replay/import` (axum default is 2 MiB; warm sims exceed it).
 const REPLAY_IMPORT_BODY_LIMIT_BYTES: usize = 16 * 1024 * 1024;
 
+/// Bound per-client outbound work so a stalled browser cannot grow memory without limit.
+const CLIENT_OUTBOUND_CAPACITY: usize = 32;
+
 /// Which wire encodings the 10 Hz tick loop broadcasts to connected clients.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TickBroadcastFormat {
@@ -148,7 +151,7 @@ impl Default for WsBridgeConfig {
     }
 }
 
-type ClientOutboundTx = mpsc::UnboundedSender<ClientOutbound>;
+type ClientOutboundTx = mpsc::Sender<ClientOutbound>;
 
 /// Outbound WebSocket traffic for one connected client.
 enum ClientOutbound {
@@ -339,7 +342,7 @@ async fn replay_import(
     );
     let mut clients = state.clients.lock().await;
     clients.retain(|tx| {
-        let delivered = tx.send(ClientOutbound::Rpc(reset.clone())).is_ok();
+        let delivered = tx.try_send(ClientOutbound::Rpc(reset.clone())).is_ok();
         if !delivered {
             state.ws_client_disconnects.fetch_add(1, Ordering::Relaxed);
         }
@@ -397,7 +400,7 @@ async fn handle_socket(
     connect_query: WsConnectQuery,
 ) {
     let (mut sender, mut receiver) = socket.split();
-    let (tx, mut rx) = mpsc::unbounded_channel::<ClientOutbound>();
+    let (tx, mut rx) = mpsc::channel::<ClientOutbound>(CLIENT_OUTBOUND_CAPACITY);
     let subscription_filter = Arc::new(tokio::sync::Mutex::new(
         SubscriptionFilter::from_connect_query(&connect_query),
     ));
@@ -470,7 +473,7 @@ async fn handle_socket(
                 )
                 .await;
                 if tx
-                    .send(ClientOutbound::Rpc(Message::Text(response)))
+                    .try_send(ClientOutbound::Rpc(Message::Text(response)))
                     .is_err()
                 {
                     break;
@@ -1652,7 +1655,7 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
     state.tick_batches_sent.fetch_add(1, Ordering::Relaxed);
     let mut clients = state.clients.lock().await;
     clients.retain(|tx| {
-        let delivered = tx.send(ClientOutbound::Tick(Arc::clone(&batch))).is_ok();
+        let delivered = tx.try_send(ClientOutbound::Tick(Arc::clone(&batch))).is_ok();
         if !delivered {
             state.ws_client_disconnects.fetch_add(1, Ordering::Relaxed);
         }

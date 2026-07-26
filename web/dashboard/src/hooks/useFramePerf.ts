@@ -8,8 +8,11 @@ type FramePerfDispatch = React.Dispatch<
   | { type: "reset_frame_samples" }
 >;
 
+const MOCK_SAMPLE_INTERVAL_MS = 125;
+
 /**
- * When no live attach stream is available, seed the sparkline from rAF in dev.
+ * When no live attach stream is available, seed the sparkline from a throttled
+ * synthetic frame clock in dev without driving the dashboard at render rate.
  */
 export function useFramePerfMock(
   connection: "live" | "reconnecting" | "disconnected",
@@ -35,20 +38,19 @@ export function useFramePerfMock(
     if (connection !== "disconnected" || !enabled || !isVisible) return;
 
     dispatch({ type: "set_frame_sample_source", source: "mock" });
-    let raf = 0;
     let index = 0;
 
-    const tick = () => {
+    const sample = () => {
       dispatch({
         type: "push_frame_sample",
         ms: mockDevFrameMs(index),
         source: "mock",
       });
       index += 1;
-      raf = window.requestAnimationFrame(tick);
     };
 
-    raf = window.requestAnimationFrame(tick);
-    return () => window.cancelAnimationFrame(raf);
+    sample();
+    const interval = window.setInterval(sample, MOCK_SAMPLE_INTERVAL_MS);
+    return () => window.clearInterval(interval);
   }, [connection, dispatch, enabled, isVisible]);
 }

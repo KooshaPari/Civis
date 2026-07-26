@@ -710,13 +710,21 @@ export function BottomBar() {
       </div>
 
       {loadOpen ? (
-        <div className="modal-backdrop" onClick={closeLoadDialog}>
+        <dialog
+          open
+          className="modal-backdrop"
+          aria-labelledby="load-save-dialog-title"
+          onCancel={(event) => {
+            event.preventDefault();
+            closeLoadDialog();
+          }}
+          onClick={(event) => {
+            if (event.target === event.currentTarget) closeLoadDialog();
+          }}
+        >
           <div
             ref={loadDialogRef}
             className="modal-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="load-save-dialog-title"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="modal-head">
@@ -743,7 +751,7 @@ export function BottomBar() {
               )}
             </div>
           </div>
-        </div>
+        </dialog>
       ) : null}
 
       <div className="minimap-shell">

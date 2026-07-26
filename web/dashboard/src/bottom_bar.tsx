@@ -35,6 +35,8 @@ export function BottomBar() {
   const [saveName, setSaveName] = useState("");
   const [loadEntries, setLoadEntries] = useState<SaveEntry[]>([]);
   const [loadOpen, setLoadOpen] = useState(false);
+  const loadDialogOpenerRef = useRef<HTMLElement | null>(null);
+  const loadDialogRef = useRef<HTMLDivElement | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<(typeof PRODUCTION_SLOTS)[number]>("slot-1");
   const [minimapZoom, setMinimapZoom] = useState(1.0);
 
@@ -83,6 +85,7 @@ export function BottomBar() {
       dispatch({ type: "set_toast", message: "Save/load is available in civ-watch mode" });
       return;
     }
+    loadDialogOpenerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     try {
       const response = await fetch("/control/saves");
       const entries = (await response.json()) as SaveEntry[];
@@ -93,6 +96,27 @@ export function BottomBar() {
       dispatch({ type: "set_toast", message: err instanceof Error ? err.message : "Load failed" });
     }
   };
+
+  const closeLoadDialog = () => {
+    setLoadOpen(false);
+    setLoadEntries([]);
+    window.requestAnimationFrame(() => loadDialogOpenerRef.current?.focus());
+  };
+
+  useEffect(() => {
+    if (!loadOpen) return;
+    const dialog = loadDialogRef.current;
+    const firstAction = dialog?.querySelector<HTMLElement>("button, [href], input, select, textarea");
+    firstAction?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeLoadDialog();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [loadOpen]);
 
   const loadGame = async (name: string) => {
     try {
@@ -109,7 +133,7 @@ export function BottomBar() {
       autosaveBucketRef.current = Math.floor(tick / 1000);
       dispatch({ type: "set_last_save_tick", tick });
       dispatch({ type: "set_toast", message: `Loaded ${name} @ tick ${tick}` });
-      setLoadOpen(false);
+      closeLoadDialog();
       setLoadEntries([]);
       const snap = await fetch("/snapshot").then((r) => r.json());
       dispatch({ type: "set_snapshot", snapshot: snap });
@@ -686,11 +710,19 @@ export function BottomBar() {
       </div>
 
       {loadOpen ? (
-        <div className="modal-backdrop" onClick={() => setLoadOpen(false)}>
-          <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
+        <dialog
+          open
+          className="modal-backdrop"
+          aria-labelledby="load-save-dialog-title"
+          onCancel={(event) => {
+            event.preventDefault();
+            closeLoadDialog();
+          }}
+        >
+          <div ref={loadDialogRef} className="modal-panel">
             <div className="modal-head">
-              <strong>Load save</strong>
-              <button type="button" onClick={() => setLoadOpen(false)}>
+              <strong id="load-save-dialog-title">Load save</strong>
+              <button type="button" onClick={closeLoadDialog}>
                 Close
               </button>
             </div>
@@ -712,7 +744,7 @@ export function BottomBar() {
               )}
             </div>
           </div>
-        </div>
+        </dialog>
       ) : null}
 
       <div className="minimap-shell">

@@ -718,15 +718,8 @@ export function BottomBar() {
             event.preventDefault();
             closeLoadDialog();
           }}
-          onClick={(event) => {
-            if (event.target === event.currentTarget) closeLoadDialog();
-          }}
         >
-          <div
-            ref={loadDialogRef}
-            className="modal-panel"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div ref={loadDialogRef} className="modal-panel">
             <div className="modal-head">
               <strong id="load-save-dialog-title">Load save</strong>
               <button type="button" onClick={closeLoadDialog}>

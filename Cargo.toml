@@ -36,6 +36,7 @@ members = [
   "crates/audio",
   "crates/holocron",
   "crates/climate",
+  "crates/asset-pipeline",
   "clients/bevy-ref",
   # "clients/fyrox-ref", — excluded until fyrox 1.x API is wired (see docs/research/fyrox-evaluation.md)
 ]

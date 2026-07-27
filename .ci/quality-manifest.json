@@ -1,7 +1,7 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "977fe6c6766caaa81d3dc8cf66af9a096fb48fae",
+  "git_sha": "28ac4df6ef52b29e188ec37f192ff423dfc6aa2f",
   "content_hash": "05deff7c26a4eb5a597cb4af23c2bed270e899c29daf77f6fd908bb6b41839de",
   "created_at": "2026-07-27T01:16:29Z",
   "runner": {
@@ -62,5 +62,5 @@
       "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     }
   },
-  "manifest_hash": "a779579b43f8494304a83c511868eb150a0465a52c40d99107d7284d8a931ce9"
+  "manifest_hash": "0126216f73fe271561e8907b21577a06936851664b3ac1d328b0ce61445129b7"
 }

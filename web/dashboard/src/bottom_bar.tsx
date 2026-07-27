@@ -712,6 +712,8 @@ export function BottomBar() {
       {loadOpen ? (
         <dialog
           open
+          role="dialog"
+          aria-modal="true"
           className="modal-backdrop"
           aria-labelledby="load-save-dialog-title"
           onCancel={(event) => {
@@ -721,7 +723,7 @@ export function BottomBar() {
         >
           <div ref={loadDialogRef} className="modal-panel">
             <div className="modal-head">
-              <strong id="load-save-dialog-title">Load save</strong>
+              <h2 id="load-save-dialog-title">Load save</h2>
               <button type="button" onClick={closeLoadDialog}>
                 Close
               </button>

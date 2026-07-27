@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useDashboardStore } from "./store";
 
 const KIND_CLASS: Record<string, string> = {
@@ -13,16 +13,42 @@ const KIND_CLASS: Record<string, string> = {
 
 export function Notifications() {
   const { state, dispatch } = useDashboardStore();
+  const timersRef = useRef<Map<number, number>>(new Map());
+  const deadlinesRef = useRef<Map<number, number>>(new Map());
 
   useEffect(() => {
-    if (state.notifications.length === 0) return;
-    const timers = state.notifications.map((notification) =>
-      window.setTimeout(() => {
-        dispatch({ type: "dismiss_notification", id: notification.id });
-      }, 5000),
-    );
-    return () => timers.forEach((timer) => window.clearTimeout(timer));
+    const now = Date.now();
+    const activeIds = new Set(state.notifications.map((notification) => notification.id));
+
+    for (const notification of state.notifications) {
+      const { id } = notification;
+      if (!deadlinesRef.current.has(id)) {
+        deadlinesRef.current.set(id, now + 5000);
+      }
+      if (!timersRef.current.has(id)) {
+        const delay = Math.max(0, deadlinesRef.current.get(id)! - now);
+        const timer = window.setTimeout(() => {
+          timersRef.current.delete(id);
+          deadlinesRef.current.delete(id);
+          dispatch({ type: "dismiss_notification", id });
+        }, delay);
+        timersRef.current.set(id, timer);
+      }
+    }
+
+    for (const [id, timer] of timersRef.current) {
+      if (!activeIds.has(id)) {
+        window.clearTimeout(timer);
+        timersRef.current.delete(id);
+        deadlinesRef.current.delete(id);
+      }
+    }
   }, [dispatch, state.notifications]);
+
+  useEffect(() => {
+    const timers = timersRef.current;
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, []);
 
   return (
     <aside className="notification-panel" aria-label="Recent game events">

@@ -61,6 +61,14 @@ fn main() {
         .insert_resource(attach_mode)
         .add_plugins(
             DefaultPlugins
+                .set(bevy::asset::AssetPlugin {
+                    // Resolve assets for both a source checkout and a copied
+                    // standalone build. Bevy otherwise anchors the asset root
+                    // to `target/*`, which makes a playable dev build report
+                    // every texture/UI asset as missing.
+                    file_path: standalone_asset_root(),
+                    ..default()
+                })
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: window_title,
@@ -231,6 +239,28 @@ fn main() {
     }
 
     app.run();
+}
+
+fn standalone_asset_root() -> String {
+    if let Some(root) = std::env::var_os("CIVIS_ASSET_ROOT") {
+        return root.to_string_lossy().into_owned();
+    }
+
+    let mut candidates = Vec::new();
+    if let Ok(cwd) = std::env::current_dir() {
+        candidates.push(cwd.join("assets"));
+        candidates.push(cwd.join("clients").join("bevy-ref").join("assets"));
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        candidates.push(exe.parent().unwrap_or(exe.as_path()).join("assets"));
+    }
+
+    candidates
+        .into_iter()
+        .find(|path| path.is_dir())
+        .unwrap_or_else(|| std::path::PathBuf::from("assets"))
+        .to_string_lossy()
+        .into_owned()
 }
 
 /// How many Update frames to run before exiting (native smoke).

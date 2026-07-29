@@ -14,7 +14,14 @@ import {
   type ServerMetrics,
 } from "../lib/civisServer";
 import { mergeServerSnapshot } from "../lib/mergeSnapshot";
-import { setActiveServerSocket } from "../lib/civisSocket";
+import {
+  recordSocketAttempt,
+  recordSocketConnected,
+  recordSocketError,
+  recordSocketReconnectScheduled,
+  setActiveServerSocket,
+  socketReconnectDelay,
+} from "../lib/civisSocket";
 import type { FrameSampleSource, Snapshot, Terrain, TimeSpeed } from "../store";
 
 type Dispatch = React.Dispatch<
@@ -223,6 +230,7 @@ function connectServer(
 ) {
   let closed = false;
   let connectionGeneration = 0;
+  let reconnectAttempt = 0;
   let lastSnapshotRefreshAt = 0;
   const SNAPSHOT_REFRESH_MS = 250;
 
@@ -301,6 +309,8 @@ function connectServer(
     try {
       await refreshSnapshot(ws, generation);
       if (!isCurrentSocket(ws, generation)) return;
+      reconnectAttempt = 0;
+      recordSocketConnected();
       dispatch({ type: "set_connection", connection: "live" });
       const terrain = await loadWatchTerrain();
       if (terrain && isCurrentSocket(ws, generation)) {
@@ -316,6 +326,7 @@ function connectServer(
     if (closed) return;
     dispatch({ type: "set_connection", connection: "reconnecting" });
     wsRef.current?.close();
+    recordSocketAttempt();
     const ws = new WebSocket(wsUrl);
     const generation = ++connectionGeneration;
     wsRef.current = ws;
@@ -330,7 +341,10 @@ function connectServer(
       void handleMessage(ws, generation, event);
     };
 
-    ws.onerror = () => dispatch({ type: "set_connection", connection: "disconnected" });
+    ws.onerror = (event) => {
+      recordSocketError(event);
+      dispatch({ type: "set_connection", connection: "disconnected" });
+    };
     ws.onclose = () => {
       setActiveServerSocket(null);
       if (!closed) scheduleReconnect();
@@ -340,10 +354,13 @@ function connectServer(
   const scheduleReconnect = () => {
     if (closed || reconnectRef.current !== null) return;
     dispatch({ type: "set_connection", connection: "reconnecting" });
+    const delayMs = socketReconnectDelay(reconnectAttempt);
+    reconnectAttempt += 1;
+    recordSocketReconnectScheduled(delayMs);
     reconnectRef.current = window.setTimeout(() => {
       reconnectRef.current = null;
       connect();
-    }, 3000);
+    }, delayMs);
   };
 
   connect();

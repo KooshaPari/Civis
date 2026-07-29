@@ -14,7 +14,7 @@ import {
   statusClass,
   statusLabel,
 } from "./lib/connectionStatus";
-import { getActiveServerSocket } from "./lib/civisSocket";
+import { sendActiveServerSocket } from "./lib/civisSocket";
 import { useDashboardStore } from "./store";
 
 export function ConnectionStatusCard() {
@@ -36,9 +36,7 @@ export function ConnectionStatusCard() {
   const detail = probeNote ?? connectionDetail(status, state.attachMode);
 
   const sendProbe = () => {
-    const ws = getActiveServerSocket();
-    if (ws?.readyState === WebSocket.OPEN) {
-      ws.send(buildHealthProbe(Date.now()));
+    if (sendActiveServerSocket(buildHealthProbe(Date.now()))) {
       setProbeNote("Sent JSON-RPC health probe");
       if (probeTimerRef.current !== null) {
         window.clearTimeout(probeTimerRef.current);

@@ -64,7 +64,11 @@ function App() {
       <SidePanel />
       <BottomBar />
       <TechTreeModal />
-      {state.toast ? <div className="toast">{state.toast.message}</div> : null}
+      {state.toast ? (
+        <div className="toast" role="status" aria-live="polite" aria-atomic="true">
+          {state.toast.message}
+        </div>
+      ) : null}
     </main>
   );
 }

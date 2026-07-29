@@ -39,6 +39,20 @@ repos:
             entry: mypy src/
             language: python
 
+    # ── Rust ──
+    - repo: local
+      hooks:
+          - id: clippy
+            name: cargo clippy
+            entry: cargo clippy --workspace --all-targets --all-features -- -D warnings
+            language: system
+            pass_filenames: false
+          - id: rustfmt
+            name: cargo fmt
+            entry: cargo fmt --all -- --check
+            language: system
+            pass_filenames: false
+
     # ── JavaScript/TypeScript (biome = fast lint+format) ──
     - repo: https://github.com/biomejs/pre-commit
       rev: v2.0.0

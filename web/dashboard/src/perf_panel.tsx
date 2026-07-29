@@ -48,6 +48,11 @@ export function PerfPanel() {
           <small>{summary.latestMs.toFixed(1)} ms</small>
         </div>
       </div>
+      <div className="perf-percentiles" aria-label="Frame time percentiles">
+        <span>p50 {summary.p50Ms.toFixed(1)} ms</span>
+        <span>p95 {summary.p95Ms.toFixed(1)} ms</span>
+        <span>p99 {summary.p99Ms.toFixed(1)} ms</span>
+      </div>
       <Sparkline samples={frameSamples} />
       <p className="perf-hint">
         Inter-arrival times from the attach stream (or rAF mock when offline in dev).

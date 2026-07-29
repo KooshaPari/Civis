@@ -16,6 +16,7 @@ use crate::save_load_ui::SaveLoadPanel;
 use crate::settings_ui::{GameSettings, KeyBinding, ACTION_PAUSE_SIM};
 use crate::ui_theme::{CHIP_FILL, GLASS_FILL, KC_ACCENT};
 use bevy::app::AppExit;
+use bevy::asset::LoadState;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
@@ -727,6 +728,7 @@ fn draw_worldgen_overlay(
     boot: Res<WorldGenBoot>,
     params: Res<WorldSetupParams>,
     titles: Res<MainMenuTitleAssets>,
+    asset_server: Res<AssetServer>,
     images: Res<Assets<Image>>,
 ) {
     let Some(state) = state else {
@@ -736,11 +738,17 @@ fn draw_worldgen_overlay(
         return;
     }
     let bg_tex = titles.loading_background.as_ref().and_then(|handle| {
+        if !matches!(asset_server.load_state(handle), LoadState::Loaded) {
+            return None;
+        }
         images
             .get(handle)
             .map(|_| contexts.add_image(bevy_egui::EguiTextureHandle::Strong(handle.clone())))
     });
     let spinner_tex = titles.loading_spinner.as_ref().and_then(|handle| {
+        if !matches!(asset_server.load_state(handle), LoadState::Loaded) {
+            return None;
+        }
         images
             .get(handle)
             .map(|_| contexts.add_image(bevy_egui::EguiTextureHandle::Strong(handle.clone())))

@@ -66,7 +66,14 @@ export function ConnectionStatusCard() {
         <div>
           <dt>Status</dt>
           <dd>
-            <span className={`status-pill ${statusClass(status)}`}>{statusLabel(status)}</span>
+            <span
+              className={`status-pill ${statusClass(status)}`}
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {statusLabel(status)}
+            </span>
           </dd>
         </div>
         <div>
@@ -87,7 +94,7 @@ export function ConnectionStatusCard() {
         </div>
         <div>
           <dt>Last detail</dt>
-          <dd>{detail}</dd>
+          <dd aria-live="polite" aria-atomic="true">{detail}</dd>
         </div>
       </dl>
       {state.attachMode === "server" ? (

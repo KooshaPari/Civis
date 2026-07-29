@@ -124,7 +124,14 @@ export function TopBar() {
         >
           {state.soundEnabled ? "🔊 Sound" : "🔇 Muted"}
         </button>
-        <span className={`connection-pill ${state.connection}`}>Connection: {connectionLabel}</span>
+        <span
+          className={`connection-pill ${state.connection}`}
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          Connection: {connectionLabel}
+        </span>
         <a className="status-page-link" href="./status.html" title="WebSocket attach diagnostics">
           Status page
         </a>

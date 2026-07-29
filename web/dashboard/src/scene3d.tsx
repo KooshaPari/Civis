@@ -1697,7 +1697,7 @@ export function Scene3d() {
       aria-label="Three.js heightmap scene"
     >
       {terrainError ? (
-        <div role="alert" aria-live="assertive" className="scene3d-error">
+        <div role="alert" aria-live="assertive" aria-atomic="true" className="scene3d-error">
           <p>{terrainError}</p>
           <button type="button" onClick={() => window.location.reload()}>
             Retry terrain

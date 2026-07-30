@@ -95,3 +95,14 @@ repos:
             language: system
             pass_filenames: false
             stages: [pre-commit, pre-push]
+
+    # ── Trunk.io (dedicated workflow; local CLI when installed) ──
+    # Keep the pre-commit surface offline-safe. The hosted Trunk workflow is the
+    # authoritative gate; developers with Trunk installed still get local parity.
+    - repo: local
+      hooks:
+          - id: trunk-check
+            name: trunk check (if installed)
+            entry: bash -c 'if command -v trunk >/dev/null 2>&1; then exec trunk check --ci; else echo "trunk CLI unavailable; enforced by .github/workflows/trunk-check.yml"; fi'
+            language: system
+            pass_filenames: false

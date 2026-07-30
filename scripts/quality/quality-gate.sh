@@ -155,7 +155,9 @@ gate_1_syntax() {
   fi
 
   if [[ "${HAS_NODE}" == "true" ]]; then
-    for ext in ts tsx js jsx; do
+    # Node's syntax checker only understands JavaScript. TypeScript and TSX
+    # are validated by Gate 3 through the repository's TypeScript compiler.
+    for ext in js jsx; do
       local js_files
       js_files=$(get_target_files "${ext}")
       if [[ -n "${js_files}" ]] && tool_exists node; then

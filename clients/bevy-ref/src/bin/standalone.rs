@@ -248,8 +248,8 @@ fn standalone_asset_root() -> String {
 
     let mut candidates = Vec::new();
     if let Ok(cwd) = std::env::current_dir() {
-        candidates.push(cwd.join("assets"));
         candidates.push(cwd.join("clients").join("bevy-ref").join("assets"));
+        candidates.push(cwd.join("assets"));
     }
     if let Ok(exe) = std::env::current_exe() {
         candidates.push(exe.parent().unwrap_or(exe.as_path()).join("assets"));
@@ -257,7 +257,11 @@ fn standalone_asset_root() -> String {
 
     candidates
         .into_iter()
-        .find(|path| path.is_dir())
+        .find(|path| {
+            path.is_dir()
+                && path.join("ui").join("title-bg.png").is_file()
+                && path.join("icons").join("tool_spawn.png").is_file()
+        })
         .unwrap_or_else(|| std::path::PathBuf::from("assets"))
         .to_string_lossy()
         .into_owned()

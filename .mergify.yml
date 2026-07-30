@@ -20,13 +20,11 @@ pull_request_rules:
           {{ title }} (#{{ number }})
           
           Co-authored-by: {{ author }}
-      post_merge:
-        action: close
 
   # Auto-merge dependabot/Renovate PRs when CI passes
   - name: Auto-merge dependency updates
     conditions:
-      - author=dependabot[bot] | renovate[bot]
+      - author=dependabot[bot]
       - check-success=ci
       - -conflict
       - -closed
@@ -37,13 +35,50 @@ pull_request_rules:
           {{ title }} (#{{ number }})
           
           Co-authored-by: {{ author }}
-      post_merge:
-        action: close
 
-  # Auto-merge bot PRs (CI configs, formatting) when CI passes
-  - name: Auto-merge bot housekeeping PRs
+  # Auto-merge Renovate PRs when CI passes
+  - name: Auto-merge Renovate updates
     conditions:
-      - author=trunk-io[bot] | mergify[bot] | github-actions[bot]
+      - author=renovate[bot]
+      - check-success=ci
+      - -conflict
+      - -closed
+    actions:
+      merge:
+        method: squash
+        commit_message_template: |
+          {{ title }} (#{{ number }})
+
+          Co-authored-by: {{ author }}
+
+  # Auto-merge Trunk PRs (CI configs, formatting) when CI passes
+  - name: Auto-merge Trunk housekeeping PRs
+    conditions:
+      - author=trunk-io[bot]
+      - check-success=ci
+      - check-success=lint
+      - -conflict
+      - -closed
+    actions:
+      merge:
+        method: squash
+
+  # Auto-merge Mergify housekeeping PRs when CI passes
+  - name: Auto-merge Mergify housekeeping PRs
+    conditions:
+      - author=mergify[bot]
+      - check-success=ci
+      - check-success=lint
+      - -conflict
+      - -closed
+    actions:
+      merge:
+        method: squash
+
+  # Auto-merge GitHub Actions housekeeping PRs when CI passes
+  - name: Auto-merge GitHub Actions housekeeping PRs
+    conditions:
+      - author=github-actions[bot]
       - check-success=ci
       - check-success=lint
       - -conflict
@@ -61,7 +96,7 @@ pull_request_rules:
       request_reviews:
         teams:
           - phenotype/core
-        github_accounts:
+        users:
           - KooshaPari
 
   # Label PRs based on changed files
@@ -102,7 +137,7 @@ pull_request_rules:
     conditions:
       - -closed
       - -draft
-      - age>=30d
+      - created-at<now-30d
       - "#review-requested=0"
     actions:
       comment:

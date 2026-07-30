@@ -103,6 +103,8 @@ repos:
       hooks:
           - id: trunk-check
             name: trunk check (if installed)
-            entry: bash -c 'if command -v trunk >/dev/null 2>&1; then exec trunk check --ci; else echo "trunk CLI unavailable; enforced by .github/workflows/trunk-check.yml"; fi'
+            entry:
+                bash -c 'if command -v trunk >/dev/null 2>&1; then exec trunk check --ci; else echo
+                "trunk CLI unavailable; enforced by .github/workflows/trunk-check.yml"; fi'
             language: system
             pass_filenames: false

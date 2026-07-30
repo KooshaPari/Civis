@@ -1,25 +1,25 @@
 version: 0.1
 
 cli:
-  version: 1.25.0
+    version: 1.25.0
 
 plugins:
-  sources:
-    - id: trunk
-      ref: v1.9.0
-      uri: https://github.com/trunk-io/plugins
-    - id: configs
-      ref: v1.2.1
-      uri: https://github.com/trunk-io/configs
+    sources:
+        - id: trunk
+          ref: v1.9.0
+          uri: https://github.com/trunk-io/plugins
+        - id: configs
+          ref: v1.2.1
+          uri: https://github.com/trunk-io/configs
 
 runtimes:
-  enabled:
-    - go@1.21.0
-    - node@22.16.0
+    enabled:
+        - go@1.21.0
+        - node@22.16.0
 
 actions:
-  enabled:
-    - trunk-announce
-    - trunk-check-pre-push
-    - trunk-fmt-pre-commit
-    - trunk-upgrade-available
+    enabled:
+        - trunk-announce
+        - trunk-check-pre-push
+        - trunk-fmt-pre-commit
+        - trunk-upgrade-available

@@ -1,66 +1,66 @@
 {
     "version": "1",
     "repo": "Civis",
-    "git_sha": "5b075fc8c446322f662336213c088d9e692693f6",
-    "content_hash": "23b59d6619bbfd87e3c7deb24aa406d26937920db495405596fd855c478e4184",
-    "created_at": "2026-07-30T06:27:34Z",
+    "git_sha": "9abbd57619061d065ed2e409dd35cf7764c0478f",
+    "content_hash": "b95c0c601d456a699790692f2ddc564ffb5a0e626e98d172348fc3a8ed617e83",
+    "created_at": "2026-07-30T07:37:21Z",
     "runner": {
         "host": "unknown",
         "rust": "rustc 1.97.1 (8bab26f4f 2026-07-14)"
     },
     "gates": {
-        "civis_3d_verify": {
-            "status": "pass",
-            "detail": ""
-        },
         "bevy_egui_check": {
-            "status": "pass",
-            "detail": ""
+            "detail": "",
+            "status": "pass"
         },
-        "web_test": {
-            "status": "pass",
-            "detail": ""
-        },
-        "dashboard_typecheck": {
-            "status": "pass",
-            "detail": ""
+        "civis_3d_verify": {
+            "detail": "",
+            "status": "pass"
         },
         "dashboard_build": {
-            "status": "pass",
-            "detail": ""
+            "detail": "",
+            "status": "pass"
         },
-        "extra_cargo_audit": {
-            "status": "skip",
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-        },
-        "extra_cargo_deny": {
-            "status": "skip",
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-        },
-        "extra_cargo_machete": {
-            "status": "skip",
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+        "web_test": {
+            "detail": "",
+            "status": "pass"
         },
         "extra_cargo_semver": {
-            "status": "skip",
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
+            "status": "skip"
         },
         "extra_trufflehog": {
-            "status": "skip",
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
+            "status": "skip"
+        },
+        "extra_cargo_machete": {
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
+            "status": "skip"
         },
         "extra_fr_coverage": {
-            "status": "skip",
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
+            "status": "skip"
+        },
+        "extra_cargo_deny": {
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
+            "status": "skip"
+        },
+        "dashboard_typecheck": {
+            "detail": "",
+            "status": "pass"
         },
         "extra_docs_check": {
-            "status": "skip",
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
+            "status": "skip"
+        },
+        "extra_cargo_audit": {
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
+            "status": "skip"
         },
         "extra_security_guard": {
-            "status": "skip",
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
+            "status": "skip"
         }
     },
-    "manifest_hash": "0e39fb63e18e3e72e17aba9be0f5bcc528c80ce57ccfee5542af8701334dbde1"
+    "manifest_hash": "c5936309ed577fd0af5de2cef774ed5d76e49ea8977b87f4c73362fd77a20037"
 }

@@ -5,11 +5,14 @@ use bevy::prelude::*;
 use crate::atmosphere::DayNightCycle;
 use crate::live_pick::{LivePickPlugin, LiveSelection};
 use crate::live_scene::LiveScenePlugin;
-use crate::ws_client::{WsClient, WsClientConfig};
+use crate::ws_client::{SimPerfData, WsClient, WsClientConfig};
 use crate::{
     resolve_live_ws_url, AttachMode, LiveHudSnapshot, MusicCues, OutcomeProgressHud,
     WsSpectatorMeta,
 };
+
+const PERF_POLL_SECS: f32 = 2.0;
+const PERF_RPC: &str = r#"{"jsonrpc":"2.0","id":3,"method":"sim.perf","params":{}}"#;
 
 #[cfg(feature = "egui")]
 use crate::WsConnectionState;
@@ -26,6 +29,10 @@ pub struct LiveAttachState {
     pub tick: Option<u64>,
 }
 
+/// Cadence for lightweight server performance telemetry.
+#[derive(Resource, Debug, Clone, Copy, Default)]
+struct PerfPollTimer(pub f32);
+
 /// Active live attach bridge (server mode only).
 ///
 /// Alias of [`crate::live_stream::LiveBridge`] so egui HUD plugins (`outcome_overlay`,
@@ -40,6 +47,7 @@ impl Plugin for LiveAttachPlugin {
         app.add_plugins((LiveScenePlugin, LivePickPlugin))
             .init_resource::<LiveAttachState>()
             .init_resource::<LiveHudSnapshot>()
+            .init_resource::<PerfPollTimer>()
             .insert_resource(LiveAttachBridge {
                 client: WsClient::spawn_with_config(
                     resolve_live_ws_url(),
@@ -50,6 +58,7 @@ impl Plugin for LiveAttachPlugin {
                 Update,
                 (
                     poll_live_meta,
+                    poll_live_perf,
                     sync_live_hud_connection,
                     sync_live_hud_stats,
                     sync_live_selection,
@@ -71,6 +80,28 @@ impl Plugin for LiveAttachPlugin {
                     .chain(),
             );
         }
+    }
+}
+
+fn poll_live_perf(
+    time: Res<Time>,
+    attach: Res<AttachMode>,
+    bridge: Res<LiveAttachBridge>,
+    mut timer: ResMut<PerfPollTimer>,
+    mut hud: ResMut<LiveHudSnapshot>,
+) {
+    if *attach != AttachMode::Server {
+        return;
+    }
+
+    if let Some(sample) = bridge.client.poll_perf() {
+        hud.tick_ms = sample.tick_ms;
+    }
+
+    timer.0 += time.delta_secs();
+    if timer.0 >= PERF_POLL_SECS {
+        timer.0 = 0.0;
+        bridge.client.send_rpc_raw(PERF_RPC.to_owned());
     }
 }
 
@@ -279,6 +310,16 @@ mod tests {
         assert!(connection_is_live(crate::WsConnectionState::Connected));
         assert!(!connection_is_live(crate::WsConnectionState::Reconnecting));
         assert!(!connection_is_live(crate::WsConnectionState::Disconnected));
+    }
+
+    #[test]
+    fn perf_poll_contract_updates_tick_and_is_bounded() {
+        let mut hud = LiveHudSnapshot::default();
+        hud.tick_ms = SimPerfData { tick_ms: 7.5 }.tick_ms;
+        assert_eq!(hud.tick_ms, 7.5);
+        assert_eq!(PERF_POLL_SECS, 2.0);
+        assert!(PERF_RPC.contains("\"id\":3"));
+        assert!(PERF_RPC.contains("sim.perf"));
     }
 }
 

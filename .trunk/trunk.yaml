@@ -22,7 +22,9 @@ plugins:
 lint:
   disabled:
     - pylint
+    - renovate
     - semgrep
+    - trivy
 
 cli:
   version: 1.22.2

@@ -34,6 +34,8 @@ jobs:
 
       - name: Trunk Check
         uses: trunk-io/trunk-action@75699af9e26881e564e9d832ef7dc3af25ec031b  # v1.2.4
+        with:
+          setup-deps: true
 
       - name: Trunk Upgrade (on schedule only)
         if: github.event_name == 'schedule'

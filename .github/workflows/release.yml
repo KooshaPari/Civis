@@ -24,6 +24,7 @@ jobs:
               run: |
                   set -euo pipefail
                   mkdir -p release-evidence
+                  cp .ci/quality-manifest.json release-evidence/quality-manifest.json
                   {
                     printf 'event=%s\n' "${GITHUB_EVENT_NAME}"
                     printf 'ref=%s\n' "${GITHUB_REF}"
@@ -32,7 +33,7 @@ jobs:
                     printf 'subject=%s\n' "$(git log -1 --format=%s)"
                     printf 'manifest_sha256=%s\n' "$(sha256sum .ci/quality-manifest.json | cut -d' ' -f1)"
                   } | tee release-evidence/provenance.txt
-                  sha256sum release-evidence/provenance.txt .ci/quality-manifest.json > release-evidence/SHA256SUMS
+                  sha256sum release-evidence/provenance.txt release-evidence/quality-manifest.json > release-evidence/SHA256SUMS
             - name: Upload release provenance
               if: always()
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a

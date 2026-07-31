@@ -59,6 +59,7 @@ jobs:
               run: |
                   set -euo pipefail
                   mkdir -p live-smoke-evidence
+                  cp .ci/quality-manifest.json live-smoke-evidence/quality-manifest.json
                   {
                     printf 'event=%s\n' "${GITHUB_EVENT_NAME}"
                     printf 'ref=%s\n' "${GITHUB_REF}"
@@ -66,7 +67,7 @@ jobs:
                     printf 'manifest_sha256=%s\n' "$(sha256sum .ci/quality-manifest.json | cut -d' ' -f1)"
                     printf 'smoke_exit_status=%s\n' "${{ job.status }}"
                   } > live-smoke-evidence/provenance.txt
-                  sha256sum live-smoke-evidence/live-smoke.log live-smoke-evidence/provenance.txt .ci/quality-manifest.json > live-smoke-evidence/SHA256SUMS
+                  sha256sum live-smoke-evidence/live-smoke.log live-smoke-evidence/provenance.txt live-smoke-evidence/quality-manifest.json > live-smoke-evidence/SHA256SUMS
             - name: Upload live-smoke evidence
               if: always()
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a

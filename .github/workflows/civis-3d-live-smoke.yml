@@ -9,44 +9,69 @@
 name: Civis 3D Live Smoke
 
 on:
-  workflow_dispatch:
+    workflow_dispatch:
 
 permissions:
-  contents: read
+    contents: read
 
 jobs:
-  manifest-verify:
-    name: manifest-verify (cloud)
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - name: Verify local quality manifest
-        run: bash scripts/quality/verify-quality-manifest.sh
+    manifest-verify:
+        name: manifest-verify (cloud)
+        runs-on: ubuntu-24.04
+        timeout-minutes: 5
+        steps:
+            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+            - name: Verify local quality manifest
+              run: bash scripts/quality/verify-quality-manifest.sh
 
-  live-smoke:
-    # Manual escape hatch: rerun the smoke on a Linux runner with the wgpu
-    # link deps. Heavy (~10–20 min cold build) — never triggers automatically.
-    if: github.event_name == 'workflow_dispatch'
-    name: headless live-attach smoke (no GPU)
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
-      - name: Install Linux deps (Bevy / wgpu link)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            pkg-config \
-            libasound2-dev \
-            libudev-dev \
-            libxkbcommon-dev \
-            libwayland-dev \
-            libx11-dev \
-            libxcursor-dev \
-            libxi-dev \
-            libxrandr-dev
-      - uses: extractions/setup-just@v2
-      - name: civis-3d-live-smoke
-        run: just civis-3d-live-smoke
+    live-smoke:
+        # Manual escape hatch: rerun the smoke on a Linux runner with the wgpu
+        # link deps. Heavy (~10–20 min cold build) — never triggers automatically.
+        if: github.event_name == 'workflow_dispatch'
+        name: headless live-attach smoke (no GPU)
+        runs-on: ubuntu-24.04
+        timeout-minutes: 60
+        steps:
+            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+            - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
+            - name: Install Linux deps (Bevy / wgpu link)
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y \
+                    pkg-config \
+                    libasound2-dev \
+                    libudev-dev \
+                    libxkbcommon-dev \
+                    libwayland-dev \
+                    libx11-dev \
+                    libxcursor-dev \
+                    libxi-dev \
+                    libxrandr-dev
+            - uses: extractions/setup-just@v2
+            - name: civis-3d-live-smoke
+              run: |
+                  set -o pipefail
+                  mkdir -p live-smoke-evidence
+                  just civis-3d-live-smoke 2>&1 | tee live-smoke-evidence/live-smoke.log
+            - name: Capture live-smoke provenance
+              if: always()
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  mkdir -p live-smoke-evidence
+                  {
+                    printf 'event=%s\n' "${GITHUB_EVENT_NAME}"
+                    printf 'ref=%s\n' "${GITHUB_REF}"
+                    printf 'sha=%s\n' "$(git rev-parse HEAD)"
+                    printf 'manifest_sha256=%s\n' "$(sha256sum .ci/quality-manifest.json | cut -d' ' -f1)"
+                    printf 'smoke_exit_status=%s\n' "${{ job.status }}"
+                  } > live-smoke-evidence/provenance.txt
+                  sha256sum live-smoke-evidence/live-smoke.log live-smoke-evidence/provenance.txt .ci/quality-manifest.json > live-smoke-evidence/SHA256SUMS
+            - name: Upload live-smoke evidence
+              if: always()
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+              with:
+                  name: civis-live-smoke-${{ github.run_id }}
+                  path: live-smoke-evidence
+                  if-no-files-found: error
+                  retention-days: 30

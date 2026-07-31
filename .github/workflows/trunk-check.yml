@@ -39,6 +39,9 @@ jobs:
           post-init: |
             ${TRUNK_PATH} install
             echo "$PWD/.trunk/tools" >> "$GITHUB_PATH"
+            if [ -d "$PWD/.trunk/tools" ]; then
+              find "$PWD/.trunk/tools" -type d -print >> "$GITHUB_PATH"
+            fi
 
       - name: Trunk Upgrade (on schedule only)
         if: github.event_name == 'schedule'

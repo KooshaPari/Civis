@@ -6,23 +6,23 @@ name: Trufflehog Secrets Scan
 on: workflow_dispatch
 
 jobs:
-  manifest-verify:
-    name: manifest-verify (cloud)
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-        with:
-          fetch-depth: 0
-      - name: Verify local quality manifest
-        run: bash scripts/quality/verify-quality-manifest.sh
+    manifest-verify:
+        name: manifest-verify (cloud)
+        runs-on: ubuntu-24.04
+        timeout-minutes: 5
+        steps:
+            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+              with:
+                  fetch-depth: 0
+            - name: Verify local quality manifest
+              run: bash scripts/quality/verify-quality-manifest.sh
 
-  trufflehog:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-        with:
-          fetch-depth: 0
-      - uses: trufflehog/actions/setup@main
-      - run: trufflehog github --only-verified --no-update
+    trufflehog:
+        runs-on: ubuntu-24.04
+        timeout-minutes: 30
+        steps:
+            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+              with:
+                  fetch-depth: 0
+            - uses: trufflehog/actions/setup@main
+            - run: trufflehog github --only-verified --no-update

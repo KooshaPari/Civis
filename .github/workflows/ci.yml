@@ -167,7 +167,7 @@ jobs:
             - uses: actions/checkout@v4
             - uses: actions/setup-go@v5
               with:
-                  go-version: "stable"
+                  go-version: stable
             - name: go vet
               run: go vet ./... 2>&1 || echo "::warning::go vet found issues (non-blocking)"
             - name: go build
@@ -238,11 +238,11 @@ jobs:
             - name: Trivy scan
               uses: aquasecurity/trivy-action@master
               with:
-                  scan-type: "fs"
-                  scan-ref: "."
-                  format: "sarif"
-                  output: "trivy-results.sarif"
-                  severity: "CRITICAL,HIGH"
+                  scan-type: fs
+                  scan-ref: .
+                  format: sarif
+                  output: trivy-results.sarif
+                  severity: CRITICAL,HIGH
               continue-on-error: true
             - name: Upload Trivy results
               if: always()

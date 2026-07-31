@@ -36,7 +36,9 @@ jobs:
         uses: trunk-io/trunk-action@75699af9e26881e564e9d832ef7dc3af25ec031b  # v1.2.4
         with:
           setup-deps: true
-          post-init: ${TRUNK_PATH} install
+          post-init: |
+            ${TRUNK_PATH} install
+            echo "$PWD/.trunk/tools" >> "$GITHUB_PATH"
 
       - name: Trunk Upgrade (on schedule only)
         if: github.event_name == 'schedule'

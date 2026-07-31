@@ -96,7 +96,7 @@ def main() -> int:
 
     os.makedirs(os.path.dirname(manifest_path) or ".", exist_ok=True)
     with open(manifest_path, "w", encoding="utf-8") as f:
-        json.dump(body, f, indent=2)
+        json.dump(body, f, indent=4)
         f.write("\n")
 
     # Unreal + opt-in extras gates are optional infrastructure gates; they

@@ -81,7 +81,7 @@ repos:
 
   # ── Secret scanning ──
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.28.1
+    rev: v8.28.0
     hooks:
       - id: gitleaks
 

@@ -4,7 +4,7 @@
 # Detects languages from repo structure, only runs what applies.
 # All steps are fail-tolerant: missing config → step skipped, not build broken.
 # Optimized for: Rust, Python, Go, TypeScript
-# Runners: Blacksmith (fast) → GitHub-hosted fallback
+# Runners: GitHub-hosted Ubuntu 24.04 for language jobs; ubuntu-latest for lightweight jobs.
 # =============================================================================
 
 name: CI

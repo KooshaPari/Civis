@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2310
+# Helper calls intentionally run in conditional contexts for fail-fast handling.
 # quality-gate.sh — 9-gate quality system for per-project CI/pre-push use
 # Language-agnostic: auto-detects stack from marker files
 # Gates: syntax, lint, type-safety, tests, coverage, security, complexity, duplication, dependencies

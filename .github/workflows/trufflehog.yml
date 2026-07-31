@@ -26,5 +26,3 @@ jobs:
           fetch-depth: 0
       - uses: trufflehog/actions/setup@main
       - run: trufflehog github --only-verified --no-update
-        env:
-          # token-less: trufflehog github clones the repo and scans with --no-update

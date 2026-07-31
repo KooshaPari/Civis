@@ -38,19 +38,21 @@ assert_svg() {
     local name="$1"
     local path="$UI_ROOT/$name"
     require_file "$path"
-    grep -Eq 'viewBox="0 0 (2560 1440|120 120)"' "$path" ||
+    local svg_content
+    svg_content="$(perl -0pe 's/<!--[\s\S]*?-->//g' "$path")"
+    grep -Eq 'viewBox="0 0 (2560 1440|120 120)"' <<<"$svg_content" ||
         fail "unexpected viewBox: $name"
-    grep -Fq "$CYAN" "$path" || fail "missing cyan brand token: $name"
+    grep -Fq "$CYAN" <<<"$svg_content" || fail "missing cyan brand token: $name"
     if [[ $name == "loading-spinner.svg" ]]; then
-        grep -Fq "$GOLD" "$path" || fail "missing gold brand token: $name"
+        grep -Fq "$GOLD" <<<"$svg_content" || fail "missing gold brand token: $name"
     fi
-    if grep -q '<animate\|<set ' "$path"; then
+    if grep -Eiq '<[[:space:]]*(animate|set|animateMotion|animateTransform|mpath)([[:space:]>]|/>)' <<<"$svg_content"; then
         fail "runtime animation in $name"
     fi
-    if grep -q 'CURRENT_TIMESTAMP\|Date(' "$path"; then
+    if grep -Eiq 'CURRENT_TIMESTAMP|date[[:space:]]*\(|new[[:space:]]+date|date[.]now|performance[.]now|math[.]random|randomuuid|uuid|timestamp|epoch' <<<"$svg_content"; then
         fail "nondeterminism in $name"
     fi
-    grep -Eq '</svg>[[:space:]]*$' "$path" || fail "incomplete SVG: $name"
+    grep -Eq '</svg>[[:space:]]*$' <<<"$svg_content" || fail "incomplete SVG: $name"
 }
 
 assert_svg loading-bg.svg

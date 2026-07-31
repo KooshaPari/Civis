@@ -12,24 +12,17 @@ plugins:
     - id: trunk
       ref: v1.5.0
       uri: https://github.com/trunk-io/plugins
+    - id: configs
+      ref: v1.0.4
+      uri: https://github.com/trunk-io/configs
 
-# Keep the repository's existing lint and format coverage enabled through the
-# supported Trunk configuration surface. Formatter plugins participate in
-# `trunk check` and `trunk fmt` when listed here.
+# Keep plugin-provided lint and format defaults enabled. Explicit tool names
+# make Trunk CLI 1.22.2 synthesize SYSTEM versions instead of resolving the
+# versions declared by the pinned plugin/config sources.
 lint:
-  enabled:
-    - actionlint
-    - black
-    - clippy
-    - eslint
-    - golangci-lint
-    - mypy
-    - prettier
-    - ruff
-    - rustfmt
-    - shellcheck
-    - taplo
-    - yamllint
+  disabled:
+    - pylint
+    - semgrep
 
 cli:
   version: 1.22.2

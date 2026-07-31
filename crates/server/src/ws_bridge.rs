@@ -1770,6 +1770,24 @@ mod tests {
         assert!(!replay_http_allowed("192.168.1.20:3000".parse().unwrap()));
     }
 
+    #[tokio::test]
+    async fn replay_http_handlers_reject_non_loopback_state() {
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(13)));
+        let (_dir, mut state) = test_app_state(sim, 0, 1, false);
+        state.allow_replay_http = false;
+
+        assert_eq!(
+            replay_import(State(state.clone()), Bytes::new())
+                .await
+                .err(),
+            Some(StatusCode::FORBIDDEN)
+        );
+        assert_eq!(
+            replay_export(State(state)).await.err(),
+            Some(StatusCode::FORBIDDEN)
+        );
+    }
+
     fn test_subscription_filter() -> Arc<tokio::sync::Mutex<SubscriptionFilter>> {
         Arc::new(tokio::sync::Mutex::new(SubscriptionFilter::default()))
     }

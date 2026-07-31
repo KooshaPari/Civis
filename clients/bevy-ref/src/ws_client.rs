@@ -39,6 +39,13 @@ pub struct SceneReset {
     pub tick: u64,
 }
 
+/// Server-reported performance counters from `sim.perf`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SimPerfData {
+    /// Last simulation tick wall-clock duration in milliseconds.
+    pub tick_ms: f64,
+}
+
 /// WebSocket client that bridges the tokio network task to Bevy systems.
 pub struct WsClient {
     frame_rx: Receiver<Frame3d>,
@@ -51,6 +58,8 @@ pub struct WsClient {
     send_tx: Sender<String>,
     /// Inbound parsed EmergenceHudData from id=2 sim.emergence responses.
     emergence_rx: crossbeam_channel::Receiver<EmergenceHudData>,
+    /// Inbound parsed SimPerfData from id=3 sim.perf responses.
+    perf_rx: crossbeam_channel::Receiver<SimPerfData>,
     outcome_rx: crossbeam_channel::Receiver<OutcomeHudData>,
     save_list_rx: crossbeam_channel::Receiver<Vec<SaveListEntry>>,
     scene_reset_rx: Receiver<SceneReset>,
@@ -71,6 +80,7 @@ impl WsClient {
         let (cmd_tx, _cmd_rx) = crossbeam_channel::unbounded::<String>();
         let (send_tx, _send_rx) = crossbeam_channel::unbounded::<String>();
         let (_emergence_tx, emergence_rx) = crossbeam_channel::unbounded();
+        let (_perf_tx, perf_rx) = crossbeam_channel::unbounded();
         let (_outcome_tx, outcome_rx) = crossbeam_channel::unbounded();
         let (_save_list_tx, save_list_rx) = crossbeam_channel::unbounded();
         let (_scene_reset_tx, scene_reset_rx) = crossbeam_channel::unbounded();
@@ -84,6 +94,7 @@ impl WsClient {
             cmd_tx,
             send_tx,
             emergence_rx,
+            perf_rx,
             outcome_rx,
             save_list_rx,
             scene_reset_rx,
@@ -104,6 +115,7 @@ impl WsClient {
         let (cmd_tx, cmd_rx) = crossbeam_channel::unbounded::<String>();
         let (send_tx, send_rx) = crossbeam_channel::unbounded::<String>();
         let (emergence_tx, emergence_rx) = crossbeam_channel::unbounded::<EmergenceHudData>();
+        let (perf_tx, perf_rx) = crossbeam_channel::unbounded::<SimPerfData>();
         let (outcome_tx, outcome_rx) = crossbeam_channel::unbounded::<OutcomeHudData>();
         let (save_list_tx, save_list_rx) = crossbeam_channel::unbounded::<Vec<SaveListEntry>>();
         let (scene_reset_tx, scene_reset_rx) = crossbeam_channel::unbounded::<SceneReset>();
@@ -119,6 +131,7 @@ impl WsClient {
                 cmd_rx,
                 send_rx,
                 emergence_tx,
+                perf_tx,
                 outcome_tx,
                 save_list_tx,
                 scene_reset_tx,
@@ -134,6 +147,7 @@ impl WsClient {
             cmd_tx,
             send_tx,
             emergence_rx,
+            perf_rx,
             outcome_rx,
             save_list_rx,
             scene_reset_rx,
@@ -155,6 +169,16 @@ impl WsClient {
             out.push(em);
         }
         out
+    }
+
+    /// Drain parsed `sim.perf` responses, returning only the newest sample.
+    #[must_use]
+    pub fn poll_perf(&self) -> Option<SimPerfData> {
+        let mut latest = None;
+        while let Ok(perf) = self.perf_rx.try_recv() {
+            latest = Some(perf);
+        }
+        latest
     }
 
     #[must_use]
@@ -278,6 +302,7 @@ impl Clone for WsClient {
             cmd_tx: self.cmd_tx.clone(),
             send_tx: self.send_tx.clone(),
             emergence_rx: self.emergence_rx.clone(),
+            perf_rx: self.perf_rx.clone(),
             outcome_rx: self.outcome_rx.clone(),
             save_list_rx: self.save_list_rx.clone(),
             scene_reset_rx: self.scene_reset_rx.clone(),
@@ -348,6 +373,7 @@ fn run_client(
     cmd_rx: Receiver<String>,
     send_rx: crossbeam_channel::Receiver<String>,
     emergence_tx: Sender<EmergenceHudData>,
+    perf_tx: Sender<SimPerfData>,
     outcome_tx: Sender<OutcomeHudData>,
     save_list_tx: Sender<Vec<SaveListEntry>>,
     scene_reset_tx: Sender<SceneReset>,
@@ -372,6 +398,7 @@ fn run_client(
                 &cmd_rx,
                 &send_rx,
                 &emergence_tx,
+                &perf_tx,
                 &outcome_tx,
                 &save_list_tx,
                 &scene_reset_tx,
@@ -451,6 +478,22 @@ fn parse_emergence_response(text: &str) -> Option<EmergenceHudData> {
             .unwrap_or("SUBCRITICAL")
             .to_owned(),
     })
+}
+
+/// Parse a `sim.perf` (id=3) JSON-RPC response into [`SimPerfData`].
+fn parse_perf_response(text: &str) -> Option<SimPerfData> {
+    let value: serde_json::Value = serde_json::from_str(text).ok()?;
+    if value.get("id").and_then(|id| id.as_i64()) != Some(3) {
+        return None;
+    }
+    let tick_ms = value
+        .get("result")?
+        .get("last_tick_ms")
+        .and_then(|value| value.as_f64())?;
+    if !tick_ms.is_finite() || tick_ms < 0.0 {
+        return None;
+    }
+    Some(SimPerfData { tick_ms })
 }
 
 fn parse_outcome_response(text: &str) -> Option<OutcomeHudData> {
@@ -533,6 +576,7 @@ async fn connect_and_stream(
     cmd_rx: &Receiver<String>,
     send_rx: &crossbeam_channel::Receiver<String>,
     emergence_tx: &Sender<EmergenceHudData>,
+    perf_tx: &Sender<SimPerfData>,
     outcome_tx: &Sender<OutcomeHudData>,
     save_list_tx: &Sender<Vec<SaveListEntry>>,
     scene_reset_tx: &Sender<SceneReset>,
@@ -598,6 +642,10 @@ async fn connect_and_stream(
                 }
                 if let Some(em) = parse_emergence_response(&text) {
                     let _ = emergence_tx.send(em);
+                    continue;
+                }
+                if let Some(perf) = parse_perf_response(&text) {
+                    let _ = perf_tx.send(perf);
                     continue;
                 }
                 if let Some(oc) = parse_outcome_response(&text) {
@@ -672,6 +720,24 @@ mod tests {
         let progress = outcome.progress.expect("progress");
         assert_eq!(progress.population, 10_000);
         assert_eq!(progress.peace_ticks, 10);
+    }
+
+    #[test]
+    fn parse_perf_response_reads_tick_duration() {
+        let text = r#"{"jsonrpc":"2.0","id":3,"result":{"last_tick_ms":8.25}}"#;
+        assert_eq!(parse_perf_response(text), Some(SimPerfData { tick_ms: 8.25 }));
+    }
+
+    #[test]
+    fn parse_perf_response_rejects_wrong_id_errors_and_invalid_values() {
+        let wrong_id = r#"{"jsonrpc":"2.0","id":2,"result":{"last_tick_ms":8.25}}"#;
+        let error = r#"{"jsonrpc":"2.0","id":3,"error":{"code":-32000,"message":"busy"}}"#;
+        let negative = r#"{"jsonrpc":"2.0","id":3,"result":{"last_tick_ms":-1.0}}"#;
+        let malformed = "not json";
+        assert!(parse_perf_response(wrong_id).is_none());
+        assert!(parse_perf_response(error).is_none());
+        assert!(parse_perf_response(negative).is_none());
+        assert!(parse_perf_response(malformed).is_none());
     }
 
     #[test]

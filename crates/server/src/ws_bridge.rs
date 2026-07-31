@@ -199,6 +199,22 @@ struct AppState {
     replays_dir: PathBuf,
     save_db: Arc<SaveDb>,
     session_id: String,
+    /// Replay HTTP endpoints are local-only until a real AuthN/session layer
+    /// exists. The JSON-RPC role parameter is authorization metadata, not AuthN.
+    allow_replay_http: bool,
+}
+
+/// Permit replay import/export only on loopback listeners.
+///
+/// `WsBridgeConfig::require_role` protects privileged JSON-RPC methods, but the
+/// current role parameter is not an authenticated session. Exposing replay
+/// mutation/export on a non-loopback listener would therefore publish an
+/// unauthenticated control/data endpoint. Keep local development behavior
+/// unchanged and fail closed for externally reachable binds until real AuthN
+/// is added.
+#[must_use]
+fn replay_http_allowed(addr: SocketAddr) -> bool {
+    addr.ip().is_loopback()
 }
 
 /// Run the WebSocket bridge and 10 Hz tick loop.
@@ -266,6 +282,7 @@ async fn serve_ws_bridge(
         replays_dir: config.replays_dir,
         save_db,
         session_id,
+        allow_replay_http: replay_http_allowed(config.addr),
     };
 
     let app = Router::new()
@@ -325,6 +342,9 @@ async fn replay_import(
     State(state): State<AppState>,
     body: Bytes,
 ) -> Result<impl IntoResponse, StatusCode> {
+    if !state.allow_replay_http {
+        return Err(StatusCode::FORBIDDEN);
+    }
     let log = decode_civreplay(&body).map_err(|_| StatusCode::BAD_REQUEST)?;
     let mut loaded = Simulation::with_seed(log.seed);
     log.replay(&mut loaded)
@@ -356,6 +376,9 @@ async fn replay_import(
 
 /// Export the current in-memory replay as `.civreplay` bytes (no filesystem path).
 async fn replay_export(State(state): State<AppState>) -> Result<impl IntoResponse, StatusCode> {
+    if !state.allow_replay_http {
+        return Err(StatusCode::FORBIDDEN);
+    }
     let bytes = {
         let sim = state.sim.lock().await;
         encode_civreplay(sim.replay_log()).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
@@ -1734,8 +1757,17 @@ mod tests {
             replays_dir,
             save_db,
             session_id: "test-session".to_string(),
+            allow_replay_http: true,
         };
         (dir, state)
+    }
+
+    #[test]
+    fn replay_http_is_loopback_only_until_authn_exists() {
+        assert!(replay_http_allowed("127.0.0.1:3000".parse().unwrap()));
+        assert!(replay_http_allowed("[::1]:3000".parse().unwrap()));
+        assert!(!replay_http_allowed("0.0.0.0:3000".parse().unwrap()));
+        assert!(!replay_http_allowed("192.168.1.20:3000".parse().unwrap()));
     }
 
     fn test_subscription_filter() -> Arc<tokio::sync::Mutex<SubscriptionFilter>> {

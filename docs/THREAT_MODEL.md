@@ -15,7 +15,7 @@
 
 ## Trust boundaries
 
-1. **Local operator ↔ civ-server** — default local-first; `require_role` is param-asserted (not AuthN). Spoofable if exposed on a network.  
+1. **Local operator ↔ civ-server** — default local-first; `require_role` is param-asserted (not AuthN). Spoofable if exposed on a network. Replay HTTP import/export is therefore loopback-only; non-loopback binds return `403` until a real authenticated session layer exists.
 2. **Mod host ↔ WASM mods** — untrusted; signing + sandbox assumed.  
 3. **MCP client ↔ civis-mcp ↔ civ-server** — agent tools inherit operator capability.
 

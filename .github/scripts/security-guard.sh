@@ -25,7 +25,14 @@ echo "[security-guard] Running ggshield secret scan"
 # Critically, exit 1 is NOT an auth failure — it is "secrets found". Treating it
 # as a skip would let pre-commit pass while the hook printed "skipping" — exactly
 # the failure mode Bugbot flagged. Only exit 3 may short-circuit the hook.
-if ! "${GGSHIELD[@]}" secret scan pre-commit; then
+scan_scope=pre-commit
+if [ -n "${PRE_COMMIT_FROM_REF:-}" ] && [ -n "${PRE_COMMIT_TO_REF:-}" ]; then
+  scan_scope=pre-push
+fi
+
+if "${GGSHIELD[@]}" secret scan "$scan_scope"; then
+  :
+else
   exit_code=$?
   if [ "$exit_code" -eq 3 ]; then
     echo "[security-guard] ggshield not authenticated (exit $exit_code) — skipping secret scan. Set GITGUARDIAN_API_KEY to enable." >&2

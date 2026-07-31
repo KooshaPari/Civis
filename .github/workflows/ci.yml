@@ -4,7 +4,7 @@
 # Detects languages from repo structure, only runs what applies.
 # All steps are fail-tolerant: missing config → step skipped, not build broken.
 # Optimized for: Rust, Python, Go, TypeScript
-# Runners: GitHub-hosted Ubuntu 24.04 for language jobs; ubuntu-latest for lightweight jobs.
+# Runners: GitHub-hosted ubuntu-latest for language jobs and lightweight jobs.
 # =============================================================================
 
 name: CI
@@ -85,7 +85,7 @@ jobs:
         name: Rust
         needs: detect
         if: needs.detect.outputs.rust == 'true'
-        runs-on: ubuntu-24.04
+        runs-on: ubuntu-latest
         continue-on-error: true
         steps:
             - uses: actions/checkout@v4
@@ -123,7 +123,7 @@ jobs:
         name: Python
         needs: detect
         if: needs.detect.outputs.python == 'true'
-        runs-on: ubuntu-24.04
+        runs-on: ubuntu-latest
         continue-on-error: true
         steps:
             - uses: actions/checkout@v4
@@ -161,7 +161,7 @@ jobs:
         name: Go
         needs: detect
         if: needs.detect.outputs.go == 'true'
-        runs-on: ubuntu-24.04
+        runs-on: ubuntu-latest
         continue-on-error: true
         steps:
             - uses: actions/checkout@v4
@@ -179,7 +179,7 @@ jobs:
         name: TS/JS
         needs: detect
         if: needs.detect.outputs.typescript == 'true'
-        runs-on: ubuntu-24.04
+        runs-on: ubuntu-latest
         continue-on-error: true
         steps:
             - uses: actions/checkout@v4
@@ -248,7 +248,7 @@ jobs:
               if: always()
               uses: github/codeql-action/upload-sarif@v3
               with:
-                  sarif_file: "trivy-results.sarif"
+                  sarif_file: trivy-results.sarif
               continue-on-error: true
 
     dependency-review:

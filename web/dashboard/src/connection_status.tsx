@@ -94,7 +94,9 @@ export function ConnectionStatusCard() {
         </div>
         <div>
           <dt>Last detail</dt>
-          <dd aria-live="polite" aria-atomic="true">{detail}</dd>
+          <dd aria-live="polite" aria-atomic="true">
+            {detail}
+          </dd>
         </div>
       </dl>
       {state.attachMode === "server" ? (

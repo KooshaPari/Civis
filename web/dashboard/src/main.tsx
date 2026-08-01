@@ -5,7 +5,14 @@ import { BottomBar } from "./bottom_bar";
 import { EconomyPanel } from "./economy_panel";
 import { useCivisAttach } from "./hooks/useCivisAttach";
 import { useFramePerfMock } from "./hooks/useFramePerf";
-import { playBirth, playClick, playConflict, playDeath, playDisaster, playTech } from "./lib/sounds";
+import {
+  playBirth,
+  playClick,
+  playConflict,
+  playDeath,
+  playDisaster,
+  playTech,
+} from "./lib/sounds";
 import { SceneView } from "./scene_view";
 import { SidePanel } from "./side_panel";
 import { Notifications } from "./notifications";
@@ -94,8 +101,12 @@ function buildNotifications(snapshot: Snapshot, previous: Snapshot, existing: No
     items.push(item);
   };
 
-  const prevBirthKeys = new Set(previous.birth_events.map((event) => `${event.tick}:${event.entity_id}:${event.x}:${event.y}`));
-  const prevDeathKeys = new Set(previous.death_events.map((event) => `${event.tick}:${event.entity_id}:${event.x}:${event.y}`));
+  const prevBirthKeys = new Set(
+    previous.birth_events.map((event) => `${event.tick}:${event.entity_id}:${event.x}:${event.y}`),
+  );
+  const prevDeathKeys = new Set(
+    previous.death_events.map((event) => `${event.tick}:${event.entity_id}:${event.x}:${event.y}`),
+  );
   const prevDamageKeys = new Set(
     previous.damage_events.map(
       (event) => `${event.x}:${event.y}:${event.unit_a ?? ""}:${event.unit_b ?? ""}`,
@@ -103,26 +114,33 @@ function buildNotifications(snapshot: Snapshot, previous: Snapshot, existing: No
   );
   const prevDisasterKeys = new Set(
     previous.disaster_events.map(
-      (event) => `${event.tick}:${event.kind}:${event.x}:${event.y}:${event.radius}:${event.severity}`,
+      (event) =>
+        `${event.tick}:${event.kind}:${event.x}:${event.y}:${event.radius}:${event.severity}`,
     ),
   );
-  const prevDiplomacyKeys = new Set(previous.diplomacy_events.map((event) => `${event.tick}:${event.faction_a}:${event.faction_b}:${event.kind}`));
-  const prevEventKeys = new Set(previous.events.map((event) => `${event.tick}:${event.kind}:${event.message}:${event.faction_id ?? "n"}`));
-
-  snapshot.birth_events.forEach((event) =>
-    {
-      const key = `${event.tick}:${event.entity_id}:${event.x}:${event.y}`;
-      if (prevBirthKeys.has(key)) return;
-      add({
-        id: Number(`${snapshot.tick}${event.entity_id}1`),
-        tick: event.tick,
-        kind: "birth",
-        icon: "/civis-icons/spawn-life.png",
-        message: `Birth at ${event.x.toFixed(2)}, ${event.y.toFixed(2)}`,
-        focus: [event.x, event.y],
-      });
-    },
+  const prevDiplomacyKeys = new Set(
+    previous.diplomacy_events.map(
+      (event) => `${event.tick}:${event.faction_a}:${event.faction_b}:${event.kind}`,
+    ),
   );
+  const prevEventKeys = new Set(
+    previous.events.map(
+      (event) => `${event.tick}:${event.kind}:${event.message}:${event.faction_id ?? "n"}`,
+    ),
+  );
+
+  snapshot.birth_events.forEach((event) => {
+    const key = `${event.tick}:${event.entity_id}:${event.x}:${event.y}`;
+    if (prevBirthKeys.has(key)) return;
+    add({
+      id: Number(`${snapshot.tick}${event.entity_id}1`),
+      tick: event.tick,
+      kind: "birth",
+      icon: "/civis-icons/spawn-life.png",
+      message: `Birth at ${event.x.toFixed(2)}, ${event.y.toFixed(2)}`,
+      focus: [event.x, event.y],
+    });
+  });
   snapshot.death_events.forEach((event) => {
     const key = `${event.tick}:${event.entity_id}:${event.x}:${event.y}`;
     if (prevDeathKeys.has(key)) return;
@@ -143,7 +161,9 @@ function buildNotifications(snapshot: Snapshot, previous: Snapshot, existing: No
         ? ` (units ${event.unit_a} vs ${event.unit_b})`
         : "";
     add({
-      id: Number(`${snapshot.tick}${Math.round(event.x * 1000)}${Math.round(event.y * 1000)}3${index}`),
+      id: Number(
+        `${snapshot.tick}${Math.round(event.x * 1000)}${Math.round(event.y * 1000)}3${index}`,
+      ),
       tick: snapshot.tick,
       kind: "damage",
       icon: "/civis-icons/disaster.png",
@@ -155,7 +175,9 @@ function buildNotifications(snapshot: Snapshot, previous: Snapshot, existing: No
     const key = `${event.tick}:${event.kind}:${event.x}:${event.y}:${event.radius}:${event.severity}`;
     if (prevDisasterKeys.has(key)) return;
     add({
-      id: Number(`${snapshot.tick}${Math.round(event.x * 1000)}${Math.round(event.y * 1000)}7${index}`),
+      id: Number(
+        `${snapshot.tick}${Math.round(event.x * 1000)}${Math.round(event.y * 1000)}7${index}`,
+      ),
       tick: event.tick,
       kind: "disaster",
       icon: "/civis-icons/disaster.png",
@@ -175,7 +197,12 @@ function buildNotifications(snapshot: Snapshot, previous: Snapshot, existing: No
       tick: event.tick,
       kind: "diplomacy",
       icon,
-      message: event.kind === "Conflict" ? "Conflict declared" : event.kind === "TradeAgreement" ? "Trade agreement signed" : "Peace brokered",
+      message:
+        event.kind === "Conflict"
+          ? "Conflict declared"
+          : event.kind === "TradeAgreement"
+            ? "Trade agreement signed"
+            : "Peace brokered",
       focus: faction ? [faction.capital[0], faction.capital[1]] : null,
     });
   });
@@ -189,7 +216,9 @@ function buildNotifications(snapshot: Snapshot, previous: Snapshot, existing: No
         kind: "tech",
         icon: "/civis-icons/infra.png",
         message: event.message || "Technology unlocked",
-        focus: snapshot.factions[0] ? [snapshot.factions[0].capital[0], snapshot.factions[0].capital[1]] : null,
+        focus: snapshot.factions[0]
+          ? [snapshot.factions[0].capital[0], snapshot.factions[0].capital[1]]
+          : null,
       });
     }
     if (event.kind === "trade") {
@@ -199,7 +228,9 @@ function buildNotifications(snapshot: Snapshot, previous: Snapshot, existing: No
         kind: "trade",
         icon: "/civis-icons/spawn-material.png",
         message: event.message || "Trade update",
-        focus: snapshot.factions[0] ? [snapshot.factions[0].capital[0], snapshot.factions[0].capital[1]] : null,
+        focus: snapshot.factions[0]
+          ? [snapshot.factions[0].capital[0], snapshot.factions[0].capital[1]]
+          : null,
       });
     }
   });

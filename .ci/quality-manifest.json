@@ -1,9 +1,9 @@
 {
     "version": "1",
     "repo": "Civis",
-    "git_sha": "5a2cac4e3c74affac320d7c15d6918043597897c",
-    "content_hash": "63944fca61831637e4a73a75d5aff108cb4fc0185580fc3446bc604e4bde7061",
-    "created_at": "2026-08-01T12:24:49Z",
+    "git_sha": "f1c69593445c2e99135b3f48fa4ad23054c85339",
+    "content_hash": "6d2b3cdc9aa2cb5c9857ecafb2acdf0f3eca27f0fb1fa6da5e954359eb343713",
+    "created_at": "2026-08-01T12:40:43Z",
     "runner": {
         "host": "KOOSHAPARI-DESK",
         "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
@@ -112,7 +112,15 @@
         "typescript_ci_cache": {
             "status": "pass",
             "detail": "setup-node has no unconditional npm cache; repository package-manager detection handles root Bun lockfile"
+        },
+        "civis_socket_tests": {
+            "status": "pass",
+            "detail": "bun test web/tests/civisSocket.test.mjs: 3 tests passed"
+        },
+        "eslint_web_sources": {
+            "status": "pass",
+            "detail": "Trunk 1.22.12 targeted ESLint check passed for websocket sources"
         }
     },
-    "manifest_hash": "dfed8aa95e23dd04b12f7a661f4dff8ed4ba26a60b4eb13fa74fa8cda0a4fa46"
+    "manifest_hash": "6dbfd47c8bbdeb3a3d1cf4484d5b887b23eba985779ff66c98e9e5c1a951659a"
 }

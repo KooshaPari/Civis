@@ -40,7 +40,13 @@ assert_svg() {
     require_file "$path"
     local svg_content
     svg_content="$(perl -0pe 's/<!--[\s\S]*?-->//g' "$path")"
-    grep -Eq 'viewBox="0 0 (2560 1440|120 120)"' <<<"$svg_content" ||
+    local expected_viewbox
+    case "$name" in
+        loading-bg.svg) expected_viewbox='viewBox="0 0 2560 1440"' ;;
+        loading-spinner.svg) expected_viewbox='viewBox="0 0 120 120"' ;;
+        *) fail "unexpected SVG asset: $name" ;;
+    esac
+    grep -Fq "$expected_viewbox" <<<"$svg_content" ||
         fail "unexpected viewBox: $name"
     grep -Fq "$CYAN" <<<"$svg_content" || fail "missing cyan brand token: $name"
     if [[ $name == "loading-spinner.svg" ]]; then

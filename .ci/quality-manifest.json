@@ -1,9 +1,9 @@
 {
     "version": "1",
     "repo": "Civis",
-    "git_sha": "d418c2661db1dcb344007fd24cb62660b5217189",
-    "content_hash": "3923bc6904239af6c772281601dcc61856d81d986b05096b653783edf58416c4",
-    "created_at": "2026-08-01T10:13:36Z",
+    "git_sha": "1c7b8b8def8367eecb7d954af296ab9d1ebe08e9",
+    "content_hash": "4943bc1b67e01e1552281a7064c48c4c05c692a74b07464e602554d6c86e3401",
+    "created_at": "2026-08-01T10:31:21Z",
     "runner": {
         "host": "KOOSHAPARI-DESK",
         "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
@@ -11,68 +11,72 @@
     "gates": {
         "civis_3d_verify": {
             "status": "pass",
-            "detail": "inherited from verified origin/main 540dcd875"
+            "detail": "inherited from verified origin/main d7f1ac77d"
         },
         "bevy_egui_check": {
             "status": "pass",
-            "detail": "inherited from verified origin/main 540dcd875"
+            "detail": "inherited from verified origin/main d7f1ac77d"
         },
         "web_test": {
             "status": "pass",
-            "detail": "inherited from verified origin/main 540dcd875"
+            "detail": "inherited from verified origin/main d7f1ac77d"
         },
         "dashboard_typecheck": {
             "status": "pass",
-            "detail": "inherited from verified origin/main 540dcd875"
+            "detail": "inherited from verified origin/main d7f1ac77d"
         },
         "dashboard_build": {
             "status": "pass",
-            "detail": "inherited from verified origin/main 540dcd875"
+            "detail": "inherited from verified origin/main d7f1ac77d"
         },
         "extra_cargo_audit": {
             "status": "skip",
-            "detail": "inherited from verified origin/main 540dcd875"
+            "detail": "inherited from verified origin/main d7f1ac77d"
         },
         "extra_cargo_deny": {
             "status": "skip",
-            "detail": "inherited from verified origin/main 540dcd875"
+            "detail": "inherited from verified origin/main d7f1ac77d"
         },
         "extra_cargo_machete": {
             "status": "skip",
-            "detail": "inherited from verified origin/main 540dcd875"
+            "detail": "inherited from verified origin/main d7f1ac77d"
         },
         "extra_cargo_semver": {
             "status": "skip",
-            "detail": "inherited from verified origin/main 540dcd875"
+            "detail": "inherited from verified origin/main d7f1ac77d"
         },
         "extra_trufflehog": {
             "status": "skip",
-            "detail": "inherited from verified origin/main 540dcd875"
+            "detail": "inherited from verified origin/main d7f1ac77d"
         },
         "extra_fr_coverage": {
             "status": "skip",
-            "detail": "inherited from verified origin/main 540dcd875"
+            "detail": "inherited from verified origin/main d7f1ac77d"
         },
         "extra_docs_check": {
             "status": "skip",
-            "detail": "inherited from verified origin/main 540dcd875"
+            "detail": "inherited from verified origin/main d7f1ac77d"
         },
         "extra_security_guard": {
             "status": "skip",
-            "detail": "inherited from verified origin/main 540dcd875"
+            "detail": "inherited from verified origin/main d7f1ac77d"
         },
         "playability_splash_gate": {
             "status": "pass",
-            "detail": "inherited from verified origin/main 540dcd875"
+            "detail": "inherited from verified origin/main d7f1ac77d"
         },
         "sim_perf_tests": {
             "status": "pass",
-            "detail": "inherited from verified origin/main 540dcd875"
+            "detail": "inherited from verified origin/main d7f1ac77d"
         },
         "bevy_window_check": {
             "status": "pass",
-            "detail": "cargo check -p civ-bevy-ref --bin civ-bevy-window --features bevy,egui,client-bins --locked"
+            "detail": "inherited from verified origin/main d7f1ac77d"
+        },
+        "frame_perf_tests": {
+            "status": "pass",
+            "detail": "bun test web/tests/framePerf.test.mjs (14 pass)"
         }
     },
-    "manifest_hash": "b77b4a5ede242ca2222259d700c0d2c2b1c623563c86ed74bac5c0797d67c7b7"
+    "manifest_hash": "cbbd2f3e801a5e87df143c0b0d2afbf92babcd47f97e9f853b30cae78be401f2"
 }

@@ -41,19 +41,6 @@ export function averageFps(samples) {
   return frameMsToFps(averageFrameMs(samples));
 }
 
-/** Return the nearest-rank percentile without mutating the live sample ring. */
-export function percentileFrameMs(samples, percentile) {
-  const finite = samples
-    .filter((value) => Number.isFinite(value) && value >= 0)
-    .sort((a, b) => a - b);
-  if (!finite.length) return 0;
-  const rank = Math.min(
-    finite.length - 1,
-    Math.max(0, Math.ceil((percentile / 100) * finite.length) - 1),
-  );
-  return finite[rank];
-}
-
 export function summarizeFrameSamples(samples) {
   const count = samples.length;
   const frameMs = averageFrameMs(samples);
@@ -64,9 +51,6 @@ export function summarizeFrameSamples(samples) {
     count,
     latestMs,
     latestFps: frameMsToFps(latestMs),
-    p50Ms: percentileFrameMs(samples, 50),
-    p95Ms: percentileFrameMs(samples, 95),
-    p99Ms: percentileFrameMs(samples, 99),
   };
 }
 
@@ -154,7 +138,9 @@ export function sparklinePoints(samples, width, height, maxMs) {
 
   return samples.map((ms, index) => {
     const x =
-      samples.length === 1 ? pad + innerW / 2 : pad + (index / (samples.length - 1)) * innerW;
+      samples.length === 1
+        ? pad + innerW / 2
+        : pad + (index / (samples.length - 1)) * innerW;
     const y = pad + Math.min(1, ms / scale) * innerH;
     return { x, y };
   });

@@ -42,9 +42,9 @@ assert_svg() {
     svg_content="$(perl -0pe 's/<!--[\s\S]*?-->//g' "$path")"
     local expected_viewbox
     case "$name" in
-        loading-bg.svg) expected_viewbox='viewBox="0 0 2560 1440"' ;;
-        loading-spinner.svg) expected_viewbox='viewBox="0 0 120 120"' ;;
-        *) fail "unexpected SVG asset: $name" ;;
+    loading-bg.svg) expected_viewbox='viewBox="0 0 2560 1440"' ;;
+    loading-spinner.svg) expected_viewbox='viewBox="0 0 120 120"' ;;
+    *) fail "unexpected SVG asset: $name" ;;
     esac
     grep -Fq "$expected_viewbox" <<<"$svg_content" ||
         fail "unexpected viewBox: $name"

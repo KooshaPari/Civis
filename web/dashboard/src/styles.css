@@ -531,15 +531,6 @@ h1 { font-size: clamp(1.8rem, 3vw, 3.2rem); line-height: 0.95; }
   font-size: 0.75rem;
   font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
 }
-.perf-percentiles {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  margin: -2px 0 10px;
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
-}
 .sparkline-canvas {
   display: block;
   width: 100%;

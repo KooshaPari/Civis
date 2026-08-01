@@ -1,17 +1,17 @@
 root: true
 
 env:
-  browser: true
-  es2022: true
-  node: true
+    browser: true
+    es2022: true
+    node: true
 
 extends:
-  - eslint:recommended
+    - eslint:recommended
 
 ignorePatterns:
-  - web/dashboard/**/*.ts
-  - web/dashboard/**/*.tsx
+    - web/dashboard/**/*.ts
+    - web/dashboard/**/*.tsx
 
 parserOptions:
-  ecmaVersion: latest
-  sourceType: module
+    ecmaVersion: latest
+    sourceType: module

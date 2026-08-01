@@ -9,15 +9,16 @@ export function PerfPanel() {
   const budget = evaluatePerfBudget(frameSamples);
 
   const sourceLabel =
-    frameSampleSource === "mock" ? "mock (dev)" : frameSampleSource === "attach" ? "attach" : "idle";
+    frameSampleSource === "mock"
+      ? "mock (dev)"
+      : frameSampleSource === "attach"
+        ? "attach"
+        : "idle";
 
   const panelClass = budget.worstLevel ? ` perf-panel--${budget.worstLevel}` : "";
 
   return (
-    <section
-      className={`inspector-section perf-panel${panelClass}`}
-      aria-labelledby="perf-heading"
-    >
+    <section className={`inspector-section perf-panel${panelClass}`} aria-labelledby="perf-heading">
       <div className="perf-head">
         <h3 id="perf-heading">Frame timing</h3>
         <span className="perf-cap">
@@ -27,10 +28,7 @@ export function PerfPanel() {
       {budget.alerts.length > 0 ? (
         <ul className="perf-budget-alerts" role="status" aria-live="polite">
           {budget.alerts.map((alert) => (
-            <li
-              key={alert.id}
-              className={`perf-budget-alert perf-budget-alert--${alert.level}`}
-            >
+            <li key={alert.id} className={`perf-budget-alert perf-budget-alert--${alert.level}`}>
               {alert.message}
             </li>
           ))}
@@ -48,10 +46,11 @@ export function PerfPanel() {
           <small>{summary.latestMs.toFixed(1)} ms</small>
         </div>
       </div>
-      <div className="perf-percentiles" aria-label="Frame time percentiles">
-        <span>p50 {summary.p50Ms.toFixed(1)} ms</span>
-        <span>p95 {summary.p95Ms.toFixed(1)} ms</span>
-        <span>p99 {summary.p99Ms.toFixed(1)} ms</span>
+      <div className="perf-metric" aria-label="Frame time percentiles">
+        <span>Percentiles</span>
+        <small>p50 {summary.p50Ms.toFixed(1)} ms</small>
+        <small>p95 {summary.p95Ms.toFixed(1)} ms</small>
+        <small>p99 {summary.p99Ms.toFixed(1)} ms</small>
       </div>
       <Sparkline samples={frameSamples} />
       <p className="perf-hint">

@@ -40,11 +40,7 @@ export type FrameSampleSummary = {
   p99Ms: number;
 };
 
-export function pushFrameSample(
-  samples: number[],
-  ms: number,
-  cap = FRAME_SAMPLE_CAP,
-): number[] {
+export function pushFrameSample(samples: number[], ms: number, cap = FRAME_SAMPLE_CAP): number[] {
   const next = [...samples, ms];
   if (next.length > cap) next.splice(0, next.length - cap);
   return next;
@@ -157,9 +153,7 @@ export function sparklinePoints(
 
   return samples.map((ms, index) => {
     const x =
-      samples.length === 1
-        ? pad + innerW / 2
-        : pad + (index / (samples.length - 1)) * innerW;
+      samples.length === 1 ? pad + innerW / 2 : pad + (index / (samples.length - 1)) * innerW;
     const y = pad + Math.min(1, ms / scale) * innerH;
     return { x, y };
   });

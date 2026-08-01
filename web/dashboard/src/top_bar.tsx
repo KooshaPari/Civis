@@ -2,11 +2,7 @@ import { flipTheme, themeToggleLabel } from "./lib/theme";
 import { useDashboardStore } from "./store";
 import { playClick, primeAudio } from "./lib/sounds";
 import { authoringModeLabel } from "../../src/authoringMode.mjs";
-import {
-  attachEndpointLabel,
-  attachModeLabel,
-  resolveBrowserWsUrl,
-} from "./lib/attachConfig";
+import { attachEndpointLabel, attachModeLabel, resolveBrowserWsUrl } from "./lib/attachConfig";
 
 export function TopBar() {
   const { state, dispatch } = useDashboardStore();
@@ -53,11 +49,7 @@ export function TopBar() {
             <Metric label="Buildings" value={metrics?.building_count ?? 0} />
             <Metric
               label="Energy"
-              value={
-                metrics?.energy_budget != null
-                  ? metrics.energy_budget.toFixed(1)
-                  : "—"
-              }
+              value={metrics?.energy_budget != null ? metrics.energy_budget.toFixed(1) : "—"}
             />
             <Metric label="Speed" value={`${metrics?.speed_multiplier ?? state.speed}×`} />
           </>
@@ -71,8 +63,16 @@ export function TopBar() {
       <div className="resource-strip" aria-label="Resource levels">
         <ResourceBar label="Food" value={state.snapshot?.economy.resources.food ?? 0} tone="food" />
         <ResourceBar label="Wood" value={state.snapshot?.economy.resources.wood ?? 0} tone="wood" />
-        <ResourceBar label="Metal" value={state.snapshot?.economy.resources.metal ?? 0} tone="metal" />
-        <ResourceBar label="Energy" value={state.snapshot?.economy.resources.energy ?? 0} tone="energy" />
+        <ResourceBar
+          label="Metal"
+          value={state.snapshot?.economy.resources.metal ?? 0}
+          tone="metal"
+        />
+        <ResourceBar
+          label="Energy"
+          value={state.snapshot?.economy.resources.energy ?? 0}
+          tone="energy"
+        />
         <ResourceBar
           label="Housing vacancy"
           value={(state.snapshot?.housing_stats.vacancy_rate ?? 0) * 100}
@@ -81,7 +81,9 @@ export function TopBar() {
       </div>
       <div className="top-actions">
         <span className="connection-pill">
-          {state.lastSaveTick != null ? `💾 Last save: tick ${state.lastSaveTick}` : "💾 Last save: none"}
+          {state.lastSaveTick != null
+            ? `💾 Last save: tick ${state.lastSaveTick}`
+            : "💾 Last save: none"}
         </span>
         <button
           type="button"
@@ -99,9 +101,7 @@ export function TopBar() {
             <span className="dark-light-icon moon">☾</span>
             <span className="dark-light-thumb" />
           </span>
-          <span className="dark-light-label">
-            {state.theme === "dark" ? "Light" : "Dark"}
-          </span>
+          <span className="dark-light-label">{state.theme === "dark" ? "Light" : "Dark"}</span>
         </button>
         <button
           type="button"
@@ -140,10 +140,14 @@ export function TopBar() {
   );
 }
 
-function formatWeather(weather?: { season: string; temperature: number; precipitation: string } | null) {
+function formatWeather(
+  weather?: { season: string; temperature: number; precipitation: string } | null,
+) {
   if (!weather) return "";
-  const icon = weather.precipitation === "rain" ? "🌧️" : weather.precipitation === "snow" ? "❄️" : "☀️";
-  const precipitation = weather.precipitation === "none" ? "" : ` ${capitalize(weather.precipitation)}`;
+  const icon =
+    weather.precipitation === "rain" ? "🌧️" : weather.precipitation === "snow" ? "❄️" : "☀️";
+  const precipitation =
+    weather.precipitation === "none" ? "" : ` ${capitalize(weather.precipitation)}`;
   return `${icon} ${weather.season} ${Math.round(weather.temperature)}°C${precipitation}`;
 }
 

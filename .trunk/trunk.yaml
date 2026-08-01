@@ -5,29 +5,109 @@
 # https://docs.trunk.io/check/reference
 # =============================================================================
 
-version: 0.1
-
 plugins:
-    sources:
-        - id: trunk
-          ref: v1.5.0
-          uri: https://github.com/trunk-io/plugins
-        - id: configs
-          ref: v1.0.4
-          uri: https://github.com/trunk-io/configs
+  sources:
+    - id: trunk
+      ref: v1.2.2
+    - id: community
+      ref: main
 
-# Keep plugin-provided lint and format defaults enabled. Explicit tool names
-# make Trunk CLI 1.22.2 synthesize SYSTEM versions instead of resolving the
-# versions declared by the pinned plugin/config sources.
-lint:
-    # Cargo.lock v4 requires a clippy toolchain with lockfile-v4 support.
-    enabled:
-        - clippy@1.94.0
-    disabled:
-        - pylint
-        - renovate
-        - semgrep
-        - trivy
+# Linters (auto-detected by file type)
+linters:
+  actionlint:
+    enabled: true
+    commands:
+      - name: actionlint
+        run: actionlint ${target}
+        direct_configs:
+          - .github/workflows/*.yml
+  black:
+    enabled: true
+    commands:
+      - name: black
+        run: black --check --line-length 100 ${target}
+        direct_configs:
+          - pyproject.toml
+          - ruff.toml
+  clippy:
+    enabled: true
+    commands:
+      - name: clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+  eslint:
+    enabled: true
+    direct_configs:
+      - .eslintrc.*
+      - eslint.config.*
+  golangci-lint:
+    enabled: true
+    direct_configs:
+      - .golangci.yml
+      - .golangci.yaml
+  mypy:
+    enabled: true
+    commands:
+      - name: mypy
+        run: mypy --ignore-missing-imports ${target}
+  ruff:
+    enabled: true
+    commands:
+      - name: ruff
+        run: ruff check --output-format=github ${target}
+        direct_configs:
+          - ruff.toml
+          - pyproject.toml
+  shellcheck:
+    enabled: true
+  taplo:
+    enabled: true
+  yamllint:
+    enabled: true
 
+# Formatters
+formatters:
+  black:
+    enabled: true
+    commands:
+      - name: black
+        run: black --line-length 100 ${target}
+        direct_configs:
+          - pyproject.toml
+  prettier:
+    enabled: true
+    direct_configs:
+      - .prettierrc
+      - prettier.config.*
+  rustfmt:
+    enabled: true
+    commands:
+      - name: rustfmt
+        run: rustfmt ${target}
+
+# Actions (CI optimization)
+actions:
+  trunk-check:
+    enabled: true
+    size: 5GB
+    memory: 16GB
+    disk: 10GB
+  trunk-merge:
+    enabled: true
+    size: 5GB
+  trunk-push:
+    enabled: true
+    size: 5GB
+
+# Caching
+cache:
+  enabled: true
+  storage: local
+
+# CLI
 cli:
-    version: 1.22.2
+  version: 1.22.2
+
+# Environment
+env:
+  variables:
+    EDITOR: vim

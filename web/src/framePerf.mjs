@@ -154,9 +154,7 @@ export function sparklinePoints(samples, width, height, maxMs) {
 
   return samples.map((ms, index) => {
     const x =
-      samples.length === 1
-        ? pad + innerW / 2
-        : pad + (index / (samples.length - 1)) * innerW;
+      samples.length === 1 ? pad + innerW / 2 : pad + (index / (samples.length - 1)) * innerW;
     const y = pad + Math.min(1, ms / scale) * innerH;
     return { x, y };
   });

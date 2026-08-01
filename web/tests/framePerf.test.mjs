@@ -13,6 +13,7 @@ import {
   frameMsToFps,
   maxFrameMs,
   mockDevFrameMs,
+  percentileFrameMs,
   pushFrameSample,
   sparklinePoints,
   sparklineScaleMax,
@@ -42,6 +43,17 @@ test("summarizeFrameSamples exposes shared frame-status metrics", () => {
   assert.equal(summary.fps, 50);
   assert.equal(summary.latestMs, 24);
   assert.equal(summary.latestFps, 1000 / 24);
+  assert.equal(summary.p50Ms, 20);
+  assert.equal(summary.p95Ms, 24);
+  assert.equal(summary.p99Ms, 24);
+});
+
+test("percentileFrameMs ignores invalid samples and preserves input order", () => {
+  const samples = [40, Number.NaN, 10, 30, Number.POSITIVE_INFINITY, 20];
+  assert.equal(percentileFrameMs(samples, 50), 20);
+  assert.equal(percentileFrameMs(samples, 95), 40);
+  assert.deepEqual(samples, [40, Number.NaN, 10, 30, Number.POSITIVE_INFINITY, 20]);
+  assert.equal(percentileFrameMs([], 99), 0);
 });
 
 test("sparklinePoints map oldest-left to newest-right", () => {

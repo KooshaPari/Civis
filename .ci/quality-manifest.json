@@ -1,9 +1,9 @@
 {
     "version": "1",
     "repo": "Civis",
-    "git_sha": "5b29b91ebd77434c14522074c2f5a0541abcbd96",
-    "content_hash": "fbce374425c1d5d5daca5904f9f850e469ce6a398db767d39878afe54f24f382",
-    "created_at": "2026-08-01T12:38:25Z",
+    "git_sha": "3e29914dbfd3dfff88b9acb2aef5190821929ccd",
+    "content_hash": "dca0bab7aa3948016eee4b19c03e53df20646a596411527ac89cb8673877d988",
+    "created_at": "2026-08-01T12:54:47Z",
     "runner": {
         "host": "KOOSHAPARI-DESK",
         "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
@@ -117,10 +117,14 @@
             "status": "pass",
             "detail": "bun test web/tests/framePerf.test.mjs: 14 tests passed"
         },
+        "civis_socket_tests": {
+            "status": "pass",
+            "detail": "bun test web/tests/civisSocket.test.mjs: 3 tests passed"
+        },
         "eslint_web_sources": {
             "status": "pass",
-            "detail": "Trunk 1.22.12 targeted ESLint check passed for frame percentile sources"
+            "detail": "Trunk 1.22.12 targeted ESLint check passed for frame percentile and websocket sources"
         }
     },
-    "manifest_hash": "7d2f3bb23713ea3a1be2bd59665d020e0c28fc90d460da84895faa8c8e55654f"
+    "manifest_hash": "2237fd8bb3032db108e6bfd4d5eea2b1f8b90e383853940d23b14dc0eadb9550"
 }

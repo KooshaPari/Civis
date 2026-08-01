@@ -120,7 +120,7 @@ export function socketReconnectDelay(attempt: number, policy: ReconnectPolicy = 
 export function sendActiveServerSocket(payload: SocketPayload): boolean {
   const ws = activeWs;
   const bufferedAmount = ws?.bufferedAmount ?? 0;
-  if (!ws || ws.readyState !== WebSocket.OPEN || bufferedAmount > MAX_BUFFERED_AMOUNT) {
+  if (ws?.readyState !== WebSocket.OPEN || bufferedAmount > MAX_BUFFERED_AMOUNT) {
     updateTelemetry({
       droppedMessages: telemetry.droppedMessages + 1,
       bufferedAmount,

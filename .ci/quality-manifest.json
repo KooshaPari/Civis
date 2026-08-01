@@ -1,9 +1,9 @@
 {
     "version": "1",
     "repo": "Civis",
-    "git_sha": "fda23f55c4a4e8b1b1723f52258ff7a8a7ea5e3f",
-    "content_hash": "4ad3cce3f03309f53969fe13a29aa05cf38a94492e6e8f700fc3c97a91b22d16",
-    "created_at": "2026-08-01T11:34:55Z",
+    "git_sha": "d06a95560461b6432ccc505dc861b67c29712196",
+    "content_hash": "40aa376d2f6d2db73db2e4a5889ad7cff19255bc0016b133be54a2e4931bed8b",
+    "created_at": "2026-08-01T11:45:08Z",
     "runner": {
         "host": "KOOSHAPARI-DESK",
         "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
@@ -88,7 +88,11 @@
         "eslint_config": {
             "status": "pass",
             "detail": "shared root ESLint config covers web JavaScript sources; targeted Trunk ESLint check passed"
+        },
+        "mergify_config": {
+            "status": "pass",
+            "detail": "schema restored from previously validated d7f1ac77d configuration"
         }
     },
-    "manifest_hash": "6e29b97457460ef0182a2c9bc5a355f6cb0c8dbcaf5285efc54f85c158820bcd"
+    "manifest_hash": "ac87df273a21b0a25bc0ebe2d2b84b37e4f1254ea0e1b2dd58ccab350fae4f69"
 }

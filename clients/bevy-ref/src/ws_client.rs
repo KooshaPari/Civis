@@ -725,7 +725,10 @@ mod tests {
     #[test]
     fn parse_perf_response_reads_tick_duration() {
         let text = r#"{"jsonrpc":"2.0","id":3,"result":{"last_tick_ms":8.25}}"#;
-        assert_eq!(parse_perf_response(text), Some(SimPerfData { tick_ms: 8.25 }));
+        assert_eq!(
+            parse_perf_response(text),
+            Some(SimPerfData { tick_ms: 8.25 })
+        );
     }
 
     #[test]

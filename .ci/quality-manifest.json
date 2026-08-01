@@ -1,9 +1,9 @@
 {
     "version": "1",
     "repo": "Civis",
-    "git_sha": "b4e2474f07909c4e12847b847a93bbd1a0fc2d71",
-    "content_hash": "f14be960c017678a774faaf2c91cde1bbcbdd7271d07430d26f03d73e13e3d22",
-    "created_at": "2026-08-01T12:14:43Z",
+    "git_sha": "1f551db110dbe7dcbdd95ed83e909cd5473f5e08",
+    "content_hash": "45644226472ef16f1b882248f2849aa9df98813b4f04942efc63e3fb3e449b56",
+    "created_at": "2026-08-01T12:15:38Z",
     "runner": {
         "host": "KOOSHAPARI-DESK",
         "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
@@ -104,7 +104,11 @@
         "secret_hook_ref": {
             "status": "pass",
             "detail": "gitleaks hook pinned to immutable verified commit b58d3f102cf3a2c84cb7f923d05c25c9b1aed84b"
+        },
+        "precommit_hook_refs": {
+            "status": "pass",
+            "detail": "all third-party pre-commit repositories resolve; Trunk runs in its dedicated workflow, not as a dead hook repository"
         }
     },
-    "manifest_hash": "0340e35d3a99b39446e358b707724fed6713358c5f63fa4fa7e0fd0eb73c131f"
+    "manifest_hash": "18296e0820c33a89525f4c65bfdaeb93dd157c67ceb40dac8f13f6c91e8216e5"
 }

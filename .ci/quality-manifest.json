@@ -1,9 +1,9 @@
 {
     "version": "1",
     "repo": "Civis",
-    "git_sha": "d43753cda1748fa08189a37e8585bf705b46c4c2",
-    "content_hash": "e44f48d488dded07fd6766d0525e2d1f00a40b484c01fed3fb6df06f96038a5f",
-    "created_at": "2026-08-01T12:06:05Z",
+    "git_sha": "7f2511a604555cfccae8c036827354d1600b77ae",
+    "content_hash": "48f015fcff1af059f776a9b247c17a0e9ad1c6f1fd7da472107f0f5c5e98ef8b",
+    "created_at": "2026-08-01T12:07:21Z",
     "runner": {
         "host": "KOOSHAPARI-DESK",
         "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
@@ -98,5 +98,5 @@
             "detail": "Rust CI jobs use GitHub-hosted ubuntu-24.04; no external runner label required"
         }
     },
-    "manifest_hash": "7720b9ad1c1807de2495784a5a92a5db4ac933d85814ffcb62b67963275e04e2"
+    "manifest_hash": "5f348467b8a632cab6822e5d8cce5ca210a736252c400e9712f1f00724bc1e85"
 }

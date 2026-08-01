@@ -237,17 +237,17 @@ jobs:
             - name: Trivy scan
               uses: aquasecurity/trivy-action@master
               with:
-                  scan-type: "fs"
-                  scan-ref: "."
-                  format: "sarif"
-                  output: "trivy-results.sarif"
-                  severity: "CRITICAL,HIGH"
+                  scan-type: fs
+                  scan-ref: .
+                  format: sarif
+                  output: trivy-results.sarif
+                  severity: CRITICAL,HIGH
               continue-on-error: true
             - name: Upload Trivy results
               if: always()
               uses: github/codeql-action/upload-sarif@v3
               with:
-                  sarif_file: "trivy-results.sarif"
+                  sarif_file: trivy-results.sarif
               continue-on-error: true
 
     dependency-review:

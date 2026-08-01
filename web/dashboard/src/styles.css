@@ -1032,18 +1032,6 @@ h1 { font-size: clamp(1.8rem, 3vw, 3.2rem); line-height: 0.95; }
   padding: 10px 14px;
   box-shadow: 0 16px 48px rgba(0,0,0,0.35);
 }
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
 .tech-tree-modal {
   position: fixed;
   inset: 0;

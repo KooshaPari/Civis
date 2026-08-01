@@ -1,5 +1,7 @@
 /** Browser JSON-RPC client for `civ-server` (FR-CIV-WEB-002..005). */
 
+import { getActiveServerSocket, sendActiveServerSocket } from "./civisSocket";
+
 export type ModBrowserEntry = {
   id: string;
   name: string;
@@ -62,6 +64,14 @@ export async function jsonRpcCall<T>(
     };
 
     ws.addEventListener("message", onMessage);
+    if (ws === getActiveServerSocket()) {
+      if (!sendActiveServerSocket(payload)) {
+        window.clearTimeout(timer);
+        ws.removeEventListener("message", onMessage);
+        reject(new Error(`WebSocket unavailable for ${method}`));
+      }
+      return;
+    }
     ws.send(payload);
   });
 }

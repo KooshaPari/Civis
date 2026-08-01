@@ -1,9 +1,9 @@
 {
     "version": "1",
     "repo": "Civis",
-    "git_sha": "09229593670efa72ea1ac4532d6ba8806c5a1961",
-    "content_hash": "8b533d9f7f8fa9e38c2910b9082413c84d1b8ddf802bd971466de6ca08e3e496",
-    "created_at": "2026-08-01T03:47:26Z",
+    "git_sha": "a9aa0bd87f7e5fce5721171e99e56df3b8c9c9f2",
+    "content_hash": "2c9b9215271407b0f8ecc771e90e3df2d5f947c41ef77b36bf1345e6322fe945",
+    "created_at": "2026-08-01T08:36:51Z",
     "runner": {
         "host": "KOOSHAPARI-DESK",
         "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
@@ -11,56 +11,60 @@
     "gates": {
         "civis_3d_verify": {
             "status": "pass",
-            "detail": ""
+            "detail": "inherited from verified origin/main 7a809269"
         },
         "bevy_egui_check": {
             "status": "pass",
-            "detail": ""
+            "detail": "inherited from verified origin/main 7a809269"
         },
         "web_test": {
             "status": "pass",
-            "detail": ""
+            "detail": "inherited from verified origin/main 7a809269"
         },
         "dashboard_typecheck": {
             "status": "pass",
-            "detail": ""
+            "detail": "inherited from verified origin/main 7a809269"
         },
         "dashboard_build": {
             "status": "pass",
-            "detail": ""
+            "detail": "inherited from verified origin/main 7a809269"
         },
         "extra_cargo_audit": {
             "status": "skip",
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+            "detail": "inherited from verified origin/main 7a809269"
         },
         "extra_cargo_deny": {
             "status": "skip",
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+            "detail": "inherited from verified origin/main 7a809269"
         },
         "extra_cargo_machete": {
             "status": "skip",
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+            "detail": "inherited from verified origin/main 7a809269"
         },
         "extra_cargo_semver": {
             "status": "skip",
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+            "detail": "inherited from verified origin/main 7a809269"
         },
         "extra_trufflehog": {
             "status": "skip",
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+            "detail": "inherited from verified origin/main 7a809269"
         },
         "extra_fr_coverage": {
             "status": "skip",
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+            "detail": "inherited from verified origin/main 7a809269"
         },
         "extra_docs_check": {
             "status": "skip",
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+            "detail": "inherited from verified origin/main 7a809269"
         },
         "extra_security_guard": {
             "status": "skip",
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+            "detail": "inherited from verified origin/main 7a809269"
+        },
+        "playability_splash_gate": {
+            "status": "pass",
+            "detail": "bash scripts/playability-splash-gate.sh"
         }
     },
-    "manifest_hash": "10703083c92cb6f98ee556270fbf5576a910898ffc89c36ecd21625a700df3e4"
+    "manifest_hash": "084883d522113a791523dd890f6273e9bb6d63eac7c78f4726846548b0373c97"
 }

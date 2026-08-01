@@ -1,9 +1,9 @@
 {
     "version": "1",
     "repo": "Civis",
-    "git_sha": "df219cb30566dfddae12b2bafa92f0a538776374",
-    "content_hash": "a6636c2a30542b3046e032e6275d3b9856c8fe3ffd2064538618659fce9fd80d",
-    "created_at": "2026-08-01T11:10:22Z",
+    "git_sha": "9fd10442ffcd43b27c60f56184e3ff1bfde0e07a",
+    "content_hash": "b93fbbca24d0854a2f8b5cc379c9092f1108fd422405c0d4af1ea62673a94949",
+    "created_at": "2026-08-01T11:19:47Z",
     "runner": {
         "host": "KOOSHAPARI-DESK",
         "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
@@ -79,8 +79,8 @@
         },
         "precommit_config": {
             "status": "pass",
-            "detail": "mypy hook uses language: python with declared dependencies; pre-commit validate-config passed"
+            "detail": "mypy hook uses managed Python, scripts/**/*.py file scope, and declared dependencies; validate-config and mypy passed"
         }
     },
-    "manifest_hash": "e3a6cdf02da65bda901b6460b325a50e5b0b3715b8c0b7e927e1aa5dc48c6c8d"
+    "manifest_hash": "c774b3c9d88cd504ac13fc2302bac5387c5f3075b384a8f0e77820b587cace8f"
 }

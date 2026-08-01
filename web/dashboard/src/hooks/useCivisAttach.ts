@@ -8,11 +8,7 @@ import {
 import { frame3dTick, frame3dVoxelChunkIds, parseWsPayload } from "../lib/frame3d";
 import { frame3dAgentIds, noteAgentIds } from "../lib/agents";
 import { noteChunkIds } from "../lib/minimap";
-import {
-  jsonRpcCall,
-  normalizeServerSnapshot,
-  type ServerMetrics,
-} from "../lib/civisServer";
+import { jsonRpcCall, normalizeServerSnapshot, type ServerMetrics } from "../lib/civisServer";
 import { mergeServerSnapshot } from "../lib/mergeSnapshot";
 import {
   recordSocketAttempt,
@@ -74,10 +70,7 @@ function recordAgentAppearance(
   return true;
 }
 
-function recordAttachFrame(
-  lastAtRef: React.MutableRefObject<number | null>,
-  dispatch: Dispatch,
-) {
+function recordAttachFrame(lastAtRef: React.MutableRefObject<number | null>, dispatch: Dispatch) {
   const now = performance.now();
   if (lastAtRef.current != null) {
     dispatch({
@@ -140,10 +133,7 @@ export function useCivisAttach(dispatch: Dispatch) {
   }, [dispatch]);
 }
 
-function connectWatch(
-  dispatch: Dispatch,
-  attachFrameAtRef: React.MutableRefObject<number | null>,
-) {
+function connectWatch(dispatch: Dispatch, attachFrameAtRef: React.MutableRefObject<number | null>) {
   let closed = false;
   let source: EventSource | null = null;
   let reconnectTimer: number | null = null;
@@ -274,18 +264,8 @@ function connectServer(
       if (!isCurrentSocket(ws, generation)) return;
       const frame = parseWsPayload(payload);
       const tick = frame3dTick(frame);
-      const hasChunks = recordVoxelChunks(
-        loadedChunkIdsRef,
-        recentChunkIdsRef,
-        dispatch,
-        frame,
-      );
-      const hasAgents = recordAgentAppearance(
-        seenAgentIdsRef,
-        recentAgentIdsRef,
-        dispatch,
-        frame,
-      );
+      const hasChunks = recordVoxelChunks(loadedChunkIdsRef, recentChunkIdsRef, dispatch, frame);
+      const hasAgents = recordAgentAppearance(seenAgentIdsRef, recentAgentIdsRef, dispatch, frame);
       if (tick != null) {
         dispatch({ type: "set_frame3d_tick", tick });
         handled = true;

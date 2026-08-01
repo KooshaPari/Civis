@@ -66,9 +66,7 @@ export function getSocketTelemetry(): SocketTelemetry {
   return { ...telemetry };
 }
 
-export function subscribeSocketTelemetry(
-  listener: (value: SocketTelemetry) => void,
-): () => void {
+export function subscribeSocketTelemetry(listener: (value: SocketTelemetry) => void): () => void {
   telemetryListeners.add(listener);
   listener(getSocketTelemetry());
   return () => telemetryListeners.delete(listener);

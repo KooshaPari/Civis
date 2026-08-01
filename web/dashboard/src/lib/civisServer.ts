@@ -88,8 +88,7 @@ export function normalizeServerSnapshot(result: unknown): ServerMetrics {
     building_count: Number(r.building_count ?? 0),
     energy_budget: r.energy_budget != null ? Number(r.energy_budget) : undefined,
     market_prices: prices,
-    hash_chain_root:
-      typeof r.hash_chain_root === "string" ? r.hash_chain_root : undefined,
+    hash_chain_root: typeof r.hash_chain_root === "string" ? r.hash_chain_root : undefined,
     speed_multiplier: Number(r.speed_multiplier ?? 1),
     mods: Array.isArray(r.mods) ? (r.mods as ModBrowserEntry[]) : undefined,
   };
@@ -152,18 +151,12 @@ export type SaveListResult = {
   has_more: boolean;
 };
 
-export async function jsonRpcSaveSlot(
-  ws: WebSocket,
-  slotName: string,
-): Promise<SaveSlotResult> {
+export async function jsonRpcSaveSlot(ws: WebSocket, slotName: string): Promise<SaveSlotResult> {
   const result = await jsonRpcCall<SaveSlotResult>(ws, "save.slot", { slot_name: slotName });
   return { ...result, tick: Number(result.tick ?? 0) };
 }
 
-export async function jsonRpcLoadSlot(
-  ws: WebSocket,
-  slotName: string,
-): Promise<SaveLoadResult> {
+export async function jsonRpcLoadSlot(ws: WebSocket, slotName: string): Promise<SaveLoadResult> {
   const result = await jsonRpcCall<Record<string, unknown>>(ws, "save.load", {
     slot_name: slotName,
   });

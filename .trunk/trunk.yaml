@@ -22,7 +22,7 @@ plugins:
 lint:
     # Cargo.lock v4 requires a clippy toolchain with lockfile-v4 support.
     enabled:
-        - clippy@1.86.0
+        - clippy@1.94.0
     disabled:
         - pylint
         - renovate

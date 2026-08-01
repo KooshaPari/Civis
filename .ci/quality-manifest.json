@@ -1,9 +1,9 @@
 {
     "version": "1",
     "repo": "Civis",
-    "git_sha": "a9aa0bd87f7e5fce5721171e99e56df3b8c9c9f2",
-    "content_hash": "2c9b9215271407b0f8ecc771e90e3df2d5f947c41ef77b36bf1345e6322fe945",
-    "created_at": "2026-08-01T08:36:51Z",
+    "git_sha": "b3166d848f06b018d946c4a3139b162715e4a122",
+    "content_hash": "9c0c4936451c596d76955c5b41cb7aa296e50fe4bfb809d6aa29614d63582139",
+    "created_at": "2026-08-01T08:43:25Z",
     "runner": {
         "host": "KOOSHAPARI-DESK",
         "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
@@ -66,5 +66,5 @@
             "detail": "bash scripts/playability-splash-gate.sh"
         }
     },
-    "manifest_hash": "084883d522113a791523dd890f6273e9bb6d63eac7c78f4726846548b0373c97"
+    "manifest_hash": "6518b8c24a0fbf3ae91895d28b8151ed2702dd96e24f894f820980da7c50dc2c"
 }

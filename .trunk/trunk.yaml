@@ -20,6 +20,9 @@ plugins:
 # make Trunk CLI 1.22.2 synthesize SYSTEM versions instead of resolving the
 # versions declared by the pinned plugin/config sources.
 lint:
+    # Cargo.lock v4 requires a clippy toolchain with lockfile-v4 support.
+    enabled:
+        - clippy@1.86.0
     disabled:
         - pylint
         - renovate

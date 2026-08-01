@@ -1,9 +1,9 @@
 {
     "version": "1",
     "repo": "Civis",
-    "git_sha": "1f551db110dbe7dcbdd95ed83e909cd5473f5e08",
-    "content_hash": "45644226472ef16f1b882248f2849aa9df98813b4f04942efc63e3fb3e449b56",
-    "created_at": "2026-08-01T12:15:38Z",
+    "git_sha": "766287504f6500f9843add09723067dad70da4bc",
+    "content_hash": "d1f586584cd82b53b08fbdeaabf96f02f34a489fe02861648dda4bac28d9f1c1",
+    "created_at": "2026-08-01T12:21:58Z",
     "runner": {
         "host": "KOOSHAPARI-DESK",
         "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
@@ -75,7 +75,7 @@
         },
         "trunk_action_ref": {
             "status": "pass",
-            "detail": "trunk-action v1.0.4 resolves to commit 22e948f7bb9f870bc6c42625585f1ef27e9c5afc"
+            "detail": "Trunk Action v1.3.1 resolves to 04ba50e7658c81db7356da96657e6e77f220bfa3 and uses cache v5"
         },
         "trunk_config": {
             "status": "pass",
@@ -110,5 +110,5 @@
             "detail": "all third-party pre-commit repositories resolve; Trunk runs in its dedicated workflow, not as a dead hook repository"
         }
     },
-    "manifest_hash": "18296e0820c33a89525f4c65bfdaeb93dd157c67ceb40dac8f13f6c91e8216e5"
+    "manifest_hash": "68cbe930fd09c38d05070fb9e12bd57d7f304335029ffe66d20ee5a4dede0345"
 }

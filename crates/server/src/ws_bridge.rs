@@ -1678,7 +1678,9 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
     state.tick_batches_sent.fetch_add(1, Ordering::Relaxed);
     let mut clients = state.clients.lock().await;
     clients.retain(|tx| {
-        let delivered = tx.try_send(ClientOutbound::Tick(Arc::clone(&batch))).is_ok();
+        let delivered = tx
+            .try_send(ClientOutbound::Tick(Arc::clone(&batch)))
+            .is_ok();
         if !delivered {
             state.ws_client_disconnects.fetch_add(1, Ordering::Relaxed);
         }

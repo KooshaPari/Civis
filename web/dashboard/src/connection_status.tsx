@@ -101,8 +101,8 @@ export function ConnectionStatusCard() {
         </div>
       ) : (
         <p className="connection-hint">
-          Watch mode attaches to civ-watch over SSE.{" "}
-          <a href="./status.html">Open status page</a> to inspect the civ-server WebSocket endpoint.
+          Watch mode attaches to civ-watch over SSE. <a href="./status.html">Open status page</a> to
+          inspect the civ-server WebSocket endpoint.
         </p>
       )}
     </section>

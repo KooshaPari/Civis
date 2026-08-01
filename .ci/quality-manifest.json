@@ -1,9 +1,9 @@
 {
     "version": "1",
     "repo": "Civis",
-    "git_sha": "5a2cac4e3c74affac320d7c15d6918043597897c",
-    "content_hash": "63944fca61831637e4a73a75d5aff108cb4fc0185580fc3446bc604e4bde7061",
-    "created_at": "2026-08-01T12:24:49Z",
+    "git_sha": "5b29b91ebd77434c14522074c2f5a0541abcbd96",
+    "content_hash": "fbce374425c1d5d5daca5904f9f850e469ce6a398db767d39878afe54f24f382",
+    "created_at": "2026-08-01T12:38:25Z",
     "runner": {
         "host": "KOOSHAPARI-DESK",
         "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
@@ -112,7 +112,15 @@
         "typescript_ci_cache": {
             "status": "pass",
             "detail": "setup-node has no unconditional npm cache; repository package-manager detection handles root Bun lockfile"
+        },
+        "frame_perf_tests": {
+            "status": "pass",
+            "detail": "bun test web/tests/framePerf.test.mjs: 14 tests passed"
+        },
+        "eslint_web_sources": {
+            "status": "pass",
+            "detail": "Trunk 1.22.12 targeted ESLint check passed for frame percentile sources"
         }
     },
-    "manifest_hash": "dfed8aa95e23dd04b12f7a661f4dff8ed4ba26a60b4eb13fa74fa8cda0a4fa46"
+    "manifest_hash": "7d2f3bb23713ea3a1be2bd59665d020e0c28fc90d460da84895faa8c8e55654f"
 }

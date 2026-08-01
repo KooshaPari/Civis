@@ -1,25 +1,30 @@
-version: 0.1
+# =============================================================================
+# Trunk.io — Plugin versions for linting/formatting tools
+# =============================================================================
+# This file is auto-generated. Run `trunk upgrade` to update.
+# https://docs.trunk.io/check/reference
+# =============================================================================
 
-cli:
-    version: 1.25.0
+version: 0.1
 
 plugins:
     sources:
         - id: trunk
-          ref: v1.9.0
+          ref: v1.5.0
           uri: https://github.com/trunk-io/plugins
         - id: configs
-          ref: v1.2.1
+          ref: v1.0.4
           uri: https://github.com/trunk-io/configs
 
-runtimes:
-    enabled:
-        - go@1.21.0
-        - node@22.16.0
+# Keep plugin-provided lint and format defaults enabled. Explicit tool names
+# make Trunk CLI 1.22.2 synthesize SYSTEM versions instead of resolving the
+# versions declared by the pinned plugin/config sources.
+lint:
+    disabled:
+        - pylint
+        - renovate
+        - semgrep
+        - trivy
 
-actions:
-    enabled:
-        - trunk-announce
-        - trunk-check-pre-push
-        - trunk-fmt-pre-commit
-        - trunk-upgrade-available
+cli:
+    version: 1.22.2

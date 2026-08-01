@@ -1,9 +1,9 @@
 {
     "version": "1",
     "repo": "Civis",
-    "git_sha": "d06a95560461b6432ccc505dc861b67c29712196",
-    "content_hash": "40aa376d2f6d2db73db2e4a5889ad7cff19255bc0016b133be54a2e4931bed8b",
-    "created_at": "2026-08-01T11:45:08Z",
+    "git_sha": "f4ed0ec0778bb26e332ea0cd80157e3532b4b282",
+    "content_hash": "e44f48d488dded07fd6766d0525e2d1f00a40b484c01fed3fb6df06f96038a5f",
+    "created_at": "2026-08-01T12:03:51Z",
     "runner": {
         "host": "KOOSHAPARI-DESK",
         "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
@@ -92,7 +92,11 @@
         "mergify_config": {
             "status": "pass",
             "detail": "schema restored from previously validated d7f1ac77d configuration"
+        },
+        "ci_runner_labels": {
+            "status": "pass",
+            "detail": "Rust CI jobs use GitHub-hosted ubuntu-24.04; no external runner label required"
         }
     },
-    "manifest_hash": "ac87df273a21b0a25bc0ebe2d2b84b37e4f1254ea0e1b2dd58ccab350fae4f69"
+    "manifest_hash": "83edad1f54d4a0e4d2f900c644e65154ac857661e6d0bad1c356b4a7f99a6657"
 }

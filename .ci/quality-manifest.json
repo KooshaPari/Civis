@@ -1,9 +1,9 @@
 {
     "version": "1",
     "repo": "Civis",
-    "git_sha": "b3166d848f06b018d946c4a3139b162715e4a122",
-    "content_hash": "9c0c4936451c596d76955c5b41cb7aa296e50fe4bfb809d6aa29614d63582139",
-    "created_at": "2026-08-01T08:43:25Z",
+    "git_sha": "48319d55ff86e05056eb0da2fd7652764397224c",
+    "content_hash": "4eed7a5823834546973784ecbcb4e2ce4497e0519e5b21f03c0df2267f47811d",
+    "created_at": "2026-08-01T09:51:31Z",
     "runner": {
         "host": "KOOSHAPARI-DESK",
         "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
@@ -11,60 +11,64 @@
     "gates": {
         "civis_3d_verify": {
             "status": "pass",
-            "detail": "inherited from verified origin/main 7a809269"
+            "detail": "inherited from verified origin/main 85c0c7ad"
         },
         "bevy_egui_check": {
             "status": "pass",
-            "detail": "inherited from verified origin/main 7a809269"
+            "detail": "inherited from verified origin/main 85c0c7ad"
         },
         "web_test": {
             "status": "pass",
-            "detail": "inherited from verified origin/main 7a809269"
+            "detail": "inherited from verified origin/main 85c0c7ad"
         },
         "dashboard_typecheck": {
             "status": "pass",
-            "detail": "inherited from verified origin/main 7a809269"
+            "detail": "inherited from verified origin/main 85c0c7ad"
         },
         "dashboard_build": {
             "status": "pass",
-            "detail": "inherited from verified origin/main 7a809269"
+            "detail": "inherited from verified origin/main 85c0c7ad"
         },
         "extra_cargo_audit": {
             "status": "skip",
-            "detail": "inherited from verified origin/main 7a809269"
+            "detail": "inherited from verified origin/main 85c0c7ad"
         },
         "extra_cargo_deny": {
             "status": "skip",
-            "detail": "inherited from verified origin/main 7a809269"
+            "detail": "inherited from verified origin/main 85c0c7ad"
         },
         "extra_cargo_machete": {
             "status": "skip",
-            "detail": "inherited from verified origin/main 7a809269"
+            "detail": "inherited from verified origin/main 85c0c7ad"
         },
         "extra_cargo_semver": {
             "status": "skip",
-            "detail": "inherited from verified origin/main 7a809269"
+            "detail": "inherited from verified origin/main 85c0c7ad"
         },
         "extra_trufflehog": {
             "status": "skip",
-            "detail": "inherited from verified origin/main 7a809269"
+            "detail": "inherited from verified origin/main 85c0c7ad"
         },
         "extra_fr_coverage": {
             "status": "skip",
-            "detail": "inherited from verified origin/main 7a809269"
+            "detail": "inherited from verified origin/main 85c0c7ad"
         },
         "extra_docs_check": {
             "status": "skip",
-            "detail": "inherited from verified origin/main 7a809269"
+            "detail": "inherited from verified origin/main 85c0c7ad"
         },
         "extra_security_guard": {
             "status": "skip",
-            "detail": "inherited from verified origin/main 7a809269"
+            "detail": "inherited from verified origin/main 85c0c7ad"
         },
         "playability_splash_gate": {
             "status": "pass",
-            "detail": "bash scripts/playability-splash-gate.sh"
+            "detail": "inherited from verified origin/main 85c0c7ad"
+        },
+        "sim_perf_tests": {
+            "status": "pass",
+            "detail": "cargo test -p civ-bevy-ref --features egui --lib parse_perf_response and perf_poll_contract_updates_tick_and_is_bounded --locked"
         }
     },
-    "manifest_hash": "6518b8c24a0fbf3ae91895d28b8151ed2702dd96e24f894f820980da7c50dc2c"
+    "manifest_hash": "223d1fbff6e9a3d1cf69147b8ff2d088cade2fd95e9167dbfcdecbc8a570cf97"
 }

@@ -16,10 +16,12 @@ pull_request_rules:
       actions:
           merge:
               method: squash
-              commit_message_template: |
-                  {{ title }} (#{{ number }})
-
-                  Co-authored-by: {{ author }}
+              # Declarative replacement for the deprecated Jinja template.
+              # The former dynamic Co-authored-by trailer has no equivalent
+              # in Mergify's commit_message_format model.
+              commit_message_format:
+                  title: pr-title
+                  body: empty
 
     # Auto-merge dependabot/Renovate PRs when CI passes
     - name: Auto-merge dependency updates
@@ -31,10 +33,9 @@ pull_request_rules:
       actions:
           merge:
               method: squash
-              commit_message_template: |
-                  {{ title }} (#{{ number }})
-
-                  Co-authored-by: {{ author }}
+              commit_message_format:
+                  title: pr-title
+                  body: empty
 
     # Auto-merge bot PRs (CI configs, formatting) when CI passes
     - name: Auto-merge bot housekeeping PRs

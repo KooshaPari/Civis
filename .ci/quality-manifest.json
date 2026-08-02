@@ -1,9 +1,9 @@
 {
     "version": "1",
     "repo": "Civis",
-    "git_sha": "aa418e4663773c30ea6a8a892113d7838223de58",
-    "content_hash": "dc200904dae4e95acdb39b4c40b86db31a6143e1eeb2362b971189f126b9fdb2",
-    "created_at": "2026-08-02T07:52:30Z",
+    "git_sha": "6b5a457656f64d3c2a8db62fe557c07d779c195e",
+    "content_hash": "cad6674d57e337e6b52a73462bbe4dc968e1fadfc4f2caf63aaebd20953396c1",
+    "created_at": "2026-08-02T21:40:54Z",
     "runner": {
         "host": "KOOSHAPARI-DESK",
         "rust": "unknown"
@@ -19,15 +19,15 @@
         },
         "web_test": {
             "status": "pass",
-            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
+            "detail": "Bun lockfile-only and frozen-lockfile validation passed on docs-toolchain head"
         },
         "dashboard_typecheck": {
             "status": "pass",
-            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
+            "detail": "Bun frozen-lockfile validation passed; dashboard source unchanged"
         },
         "dashboard_build": {
             "status": "pass",
-            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
+            "detail": "Bun frozen-lockfile validation passed; dashboard source unchanged"
         },
         "extra_cargo_audit": {
             "status": "skip",
@@ -126,5 +126,5 @@
             "detail": "Trunk 1.22.12 targeted ESLint check passed for frame percentile and websocket sources"
         }
     },
-    "manifest_hash": "345f021f51316f2a524c07c94c7049b8efd908f023f7a230e8d7abd755c9c6c7"
+    "manifest_hash": "a6b16e20ce759f9d608c087ab145d8b1342da7eedeaf370546fb529acac0b133"
 }

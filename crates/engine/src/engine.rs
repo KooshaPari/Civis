@@ -9319,10 +9319,7 @@ mod tests {
             .iter()
             .filter(|event| matches!(event, ReplayEvent::Combat { .. }))
             .count();
-        assert!(
-            combat_count > 0,
-            "expected war-bridge combat in replay log"
-        );
+        assert!(combat_count > 0, "expected war-bridge combat in replay log");
 
         let mut from_replay = Simulation::with_seed(seed);
         live.replay_log().replay(&mut from_replay).unwrap();

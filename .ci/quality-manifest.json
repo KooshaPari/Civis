@@ -1,9 +1,9 @@
 {
     "version": "1",
     "repo": "Civis",
-    "git_sha": "8777e6fff17b592239a5f7778155b4fd6b4f6417",
-    "content_hash": "b3d856003ffb11341051dfa2f44e0ec9a2b660d9a94972008823b899c3a84c9f",
-    "created_at": "2026-08-02T21:10:37Z",
+    "git_sha": "71a517908ba54ee20e77301eabea3da61e6f4d45",
+    "content_hash": "77f7bbcc2cc106c8f410c25deb33be505ec0449c099cfcc1919a6ebc4fb4c9b3",
+    "created_at": "2026-08-02T21:22:20Z",
     "runner": {
         "host": "KOOSHAPARI-DESK",
         "rust": "unknown"
@@ -11,11 +11,11 @@
     "gates": {
         "civis_3d_verify": {
             "status": "pass",
-            "detail": "PR Compile Gate run 654 passed on head 8777e6fff; native-only delta"
+            "detail": "PR Compile Gate run 655 passed on prior head 1d28fc2ac; rustfmt-only follow-up at current head"
         },
         "bevy_egui_check": {
             "status": "pass",
-            "detail": "PR Compile Gate run 654 passed on head 8777e6fff; native-only delta"
+            "detail": "PR Compile Gate run 655 passed on prior head 1d28fc2ac; rustfmt-only follow-up at current head"
         },
         "web_test": {
             "status": "pass",
@@ -71,7 +71,7 @@
         },
         "bevy_window_check": {
             "status": "pass",
-            "detail": "PR Compile Gate run 654 passed on head 8777e6fff"
+            "detail": "PR Compile Gate run 655 passed on prior head 1d28fc2ac; rustfmt-only follow-up at current head"
         },
         "trunk_action_ref": {
             "status": "pass",
@@ -126,5 +126,5 @@
             "detail": "Trunk 1.22.12 targeted ESLint check passed for frame percentile and websocket sources"
         }
     },
-    "manifest_hash": "f801760bc3555fd364b611a03ccc9e70f18ee80133677695708a8a4419d92e2a"
+    "manifest_hash": "f7829784f13ed035387abdb5088cf1b558db3d6cf678bf7c500960079078e5cf"
 }

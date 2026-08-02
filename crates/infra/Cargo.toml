@@ -16,20 +16,39 @@ cache = ["dep:redis"]
 
 [dependencies]
 thiserror = "1"
-tokio = { version = "1", optional = true, features = ["macros", "rt", "rt-multi-thread", "sync"] }
+tokio = { version = "1", optional = true, features = [
+  "macros",
+  "rt",
+  "rt-multi-thread",
+  "sync",
+] }
 serde = { version = "1", features = ["derive"] }
 bytes = "1"
 
-sqlx = { version = "0.8", optional = true, default-features = false, features = ["postgres", "runtime-tokio-rustls", "migrate"] }
+sqlx = { version = "0.8", optional = true, default-features = false, features = [
+  "postgres",
+  "runtime-tokio-rustls",
+  "migrate",
+] }
 async-nats = { version = "0.49", optional = true }
- aws-config = { version = "1.8", optional = true, default-features = false, features = ["behavior-version-latest", "rustls", "rt-tokio"] }
-aws-sdk-s3 = {
-    version = "1",
-    optional = true,
-    default-features = false,
-    features = ["behavior-version-latest", "default-https-client", "http-1x", "rt-tokio", "sigv4a"],
-}
+aws-config = { version = "1.8", optional = true, default-features = false, features = [
+  "behavior-version-latest",
+  "rustls",
+  "rt-tokio",
+] }
 redis = { version = "0.27", optional = true, features = ["tokio-comp"] }
+
+[dependencies.aws-sdk-s3]
+version = "1"
+optional = true
+default-features = false
+features = [
+  "behavior-version-latest",
+  "default-https-client",
+  "http-1x",
+  "rt-tokio",
+  "sigv4a",
+]
 
 [dev-dependencies]
 tempfile = "3"

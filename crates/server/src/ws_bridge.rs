@@ -1,28 +1,20 @@
-use std::{
-    net::SocketAddr,
-    path::PathBuf,
-    sync::{
-        atomic::{AtomicU32, AtomicU64, Ordering},
-        Arc,
-    },
-};
+use std::net::SocketAddr;
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+use std::sync::Arc;
 
-use axum::{
-    body::Bytes,
-    extract::{
-        ws::{Message, WebSocket, WebSocketUpgrade},
-        DefaultBodyLimit, Query, State,
-    },
-    http::{header, HeaderMap, StatusCode},
-    response::IntoResponse,
-    routing::{get, post},
-    Json, Router,
-};
+use axum::body::Bytes;
+use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
+use axum::extract::{DefaultBodyLimit, Query, State};
+use axum::http::{header, HeaderMap, StatusCode};
+use axum::response::IntoResponse;
+use axum::routing::{get, post};
+use axum::{Json, Router};
 use civ_agents::{Civilian as AgentCivilian, Needs, Tools, Wardrobe};
+use civ_engine::scenario::{load_scenario, preset_scenario_path};
 use civ_engine::{
-    decode_civreplay, encode_civreplay, grid_to_norm, job_type_for_civilian_id,
-    scenario::{load_scenario, preset_scenario_path},
-    Building, BuildingType, Citizen, CivSaveBundle, DiplomacyKind, JobType, Simulation,
+    decode_civreplay, encode_civreplay, grid_to_norm, job_type_for_civilian_id, Building,
+    BuildingType, Citizen, CivSaveBundle, DiplomacyKind, JobType, Simulation,
 };
 use civ_protocol_3d::{
     encode_frame3d_binary, encode_frame3d_binary_from_json, AgentAppearanceFrame,
@@ -34,22 +26,18 @@ use civ_protocol_3d::{
 };
 use civ_save_db::SaveDb;
 use futures::{SinkExt, StreamExt};
-use tokio::{
-    net::TcpListener,
-    sync::{mpsc, Mutex},
-    time::{interval, Duration},
-};
+use tokio::net::TcpListener;
+use tokio::sync::{mpsc, Mutex};
+use tokio::time::{interval, Duration};
 
-use crate::{
-    jsonrpc::{
-        dispatch_request, encode_response, error_code, parse_error_response, parse_request,
-        parse_role_param, set_sim_command_tick, set_spawn_civilian_result, DispatchContext,
-        DispatchEffect, JsonRpcError, JsonRpcMethod, JsonRpcResponse,
-    },
-    saves::save_archive_path,
-    subscription_filter::{SubscriptionFilter, WsConnectQuery},
-    voxel_frame_builder::build_voxel_delta_frame,
+use crate::jsonrpc::{
+    dispatch_request, encode_response, error_code, parse_error_response, parse_request,
+    parse_role_param, set_sim_command_tick, set_spawn_civilian_result, DispatchContext,
+    DispatchEffect, JsonRpcError, JsonRpcMethod, JsonRpcResponse,
 };
+use crate::saves::save_archive_path;
+use crate::subscription_filter::{SubscriptionFilter, WsConnectQuery};
+use crate::voxel_frame_builder::build_voxel_delta_frame;
 
 /// Number of distinct `Frame3d` variants emitted per simulation tick (FR-CIV-BEVY-028 / item 53).
 pub const FRAME_BUNDLE_LEN: usize = 7;
@@ -1151,8 +1139,9 @@ async fn apply_dispatch_effect(
             faction,
             entity_seq,
         } => {
-            use crate::jsonrpc::SpawnEntityKind;
             use civ_engine::{spawn, UnitType};
+
+            use crate::jsonrpc::SpawnEntityKind;
 
             let mut sim = state.sim.lock().await;
             let entity = match kind {
@@ -1678,7 +1667,9 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
     state.tick_batches_sent.fetch_add(1, Ordering::Relaxed);
     let mut clients = state.clients.lock().await;
     clients.retain(|tx| {
-        let delivered = tx.try_send(ClientOutbound::Tick(Arc::clone(&batch))).is_ok();
+        let delivered = tx
+            .try_send(ClientOutbound::Tick(Arc::clone(&batch)))
+            .is_ok();
         if !delivered {
             state.ws_client_disconnects.fetch_add(1, Ordering::Relaxed);
         }
@@ -1700,8 +1691,9 @@ async fn tick_once(state: &AppState) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use civ_save_db::SessionSaveRecord;
+
+    use super::*;
 
     #[test]
     fn need_satisfaction_inverts_and_clamps_pressure() {

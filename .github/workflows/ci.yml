@@ -107,7 +107,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: cargo-deny check
-        uses: EmbarkStudios/cargo-deny-action@v1
+        uses: EmbarkStudios/cargo-deny-action@8f84122a46a358a27cb0625d85ad60ab436a1b87  # cargo-deny 0.19.8
         with:
           arguments: --all-features
 

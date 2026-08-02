@@ -1,9 +1,9 @@
 {
     "version": "1",
     "repo": "Civis",
-    "git_sha": "aa418e4663773c30ea6a8a892113d7838223de58",
-    "content_hash": "dc200904dae4e95acdb39b4c40b86db31a6143e1eeb2362b971189f126b9fdb2",
-    "created_at": "2026-08-02T07:52:30Z",
+    "git_sha": "687201cebe2ebb66a414ca79d269b79b0217d8f4",
+    "content_hash": "2998c28d092e542a91206bac43c6b1adf8d29a21ba7e24cfa9fa61391041d224",
+    "created_at": "2026-08-02T21:54:31Z",
     "runner": {
         "host": "KOOSHAPARI-DESK",
         "rust": "unknown"
@@ -11,7 +11,7 @@
     "gates": {
         "civis_3d_verify": {
             "status": "pass",
-            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
+            "detail": "Inherited origin/main 7f92a2a9; engine-only institution event fix; focused Cargo compile blocked by shared package/build locks"
         },
         "bevy_egui_check": {
             "status": "pass",
@@ -126,5 +126,5 @@
             "detail": "Trunk 1.22.12 targeted ESLint check passed for frame percentile and websocket sources"
         }
     },
-    "manifest_hash": "345f021f51316f2a524c07c94c7049b8efd908f023f7a230e8d7abd755c9c6c7"
+    "manifest_hash": "80595ba12674669926e64b926e56e5ee1547e6967401c72e23f08aac442a2fcd"
 }

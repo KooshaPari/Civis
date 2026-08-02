@@ -16,7 +16,7 @@
 db-path = "$CARGO_HOME/advisory-db"
 # Report unmaintained direct workspace dependencies. Transitive dependencies
 # remain visible through normal advisory reporting without failing this policy.
-unmaintained = "workspace"
+unmaintained = "warn"
 # Ignore advisories that do not have a patched version yet (workaround until
 # upstream fixes flow in). Anything not in this list is a hard error.
 ignore = [

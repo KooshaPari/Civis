@@ -30,6 +30,10 @@ jobs:
 
       - name: Trunk Check
         uses: trunk-io/trunk-action@04ba50e7658c81db7356da96657e6e77f220bfa3  # v1
+        with:
+          # Fork/PR checks cannot post Check Run annotations with the read-only token.
+          save-annotations: true
+          post-annotations: false
 
       - name: Trunk Upgrade (on schedule only)
         if: github.event_name == 'schedule'

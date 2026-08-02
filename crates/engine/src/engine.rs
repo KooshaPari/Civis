@@ -3448,7 +3448,12 @@ impl Simulation {
             // Already emitted this level for this settlement+kind - skip.
             return;
         }
-        self.run_building_emergence_tick();
+        self.institution_levels_emitted.insert(key);
+        events.push(InstitutionEvent {
+            settlement_id: sid,
+            kind,
+            level: new_level,
+        });
     }
 
     fn phase_social_mood(&mut self) {

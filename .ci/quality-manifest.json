@@ -1,17 +1,17 @@
 {
     "version": "1",
     "repo": "Civis",
-    "git_sha": "25e447212c8c13d96dedf9a0f83d09c257b1fa23",
-    "content_hash": "f568326a68025a69ce5e5498ee093556440aae1e572c313891301f992e22f1e1",
-    "created_at": "2026-08-02T21:59:28Z",
+    "git_sha": "a012e4ed37c0da6702499ad8fbb566488f9512e5",
+    "content_hash": "9b4239ecd26fb52518db3a7875bc57e6ca603d1b6eb96e15d24e2a812b88148a",
+    "created_at": "2026-08-03T07:57:42Z",
     "runner": {
-        "host": "KOOSHAPARI-DESK",
-        "rust": "unknown"
+        "host": "unknown",
+        "rust": "rustc 1.97.1 (8bab26f4f 2026-07-14)"
     },
     "gates": {
         "civis_3d_verify": {
             "status": "pass",
-            "detail": "Inherited origin/main 7f92a2a9; engine-only institution event fix; focused Cargo compile blocked by shared package/build locks"
+            "detail": "Focused civ-engine FR-CIV-GOV institution tests pass on rust 1.96.0; public tick/state persistence and per-kind storage fixes"
         },
         "bevy_egui_check": {
             "status": "pass",
@@ -126,5 +126,5 @@
             "detail": "Trunk 1.22.12 targeted ESLint check passed for frame percentile and websocket sources"
         }
     },
-    "manifest_hash": "454d483d14839095545465a5f26d1ffe7745cd03508d1f90ed477af76307645a"
+    "manifest_hash": "4b759d7b29ab837c906edddd16e899ed01af04bd274772f5170284ccdd9ab343"
 }

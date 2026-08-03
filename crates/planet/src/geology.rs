@@ -472,7 +472,11 @@ pub fn compute_drift(
 
     let years = elapsed_years.min(i32::MAX as u64) as i32;
     let temp_delta = (warming_rate_fp.saturating_mul(years) * temp_sign).clamp(-60_000, 55_000);
-    let moisture_delta = (drying_rate_fp.saturating_mul(years) * moist_sign).clamp(-5_000, 5_000);
+    let moisture_delta = drying_rate_fp
+        .saturating_mul(years)
+        .saturating_neg()
+        .saturating_mul(moist_sign)
+        .clamp(-5_000, 5_000);
 
     ClimateDrift {
         temp_delta_fp: temp_delta,
@@ -898,9 +902,17 @@ mod tests {
         assert_eq!(drift, ClimateDrift::NONE);
     }
 
+    /// Positive drying rates lower moisture for a seed whose deterministic
+    /// moisture direction is dryward, matching [`ClimateDrift::advance`].
+    #[test]
+    fn positive_drying_rate_reduces_moisture() {
+        let drift = compute_drift(0, 2, 0, 250);
+        assert_eq!(drift.moisture_delta_fp, -500);
+    }
+
     /// FR-CIV-CLIMATE drift shifts biomes over long runs.
-    /// A hot/dry trend applied for enough years should shift a Plains biome
-    /// toward Desert (temperature rises, moisture drops).
+    /// A hot/dry trend applied for enough years should shift a temperate biome
+    /// toward a hotter, drier biome.
     #[test]
     fn climate_drift_shifts_biome_over_long_run() {
         // Start: temperate plains (15 °C, 60 mm) → Forest under classify_biome
@@ -912,8 +924,9 @@ mod tests {
         let initial_biome = no_drift.classify_with_drift(elevation, base_temp, base_moisture);
         assert_eq!(initial_biome, BiomeKind::Forest);
 
-        // After 200 years of warming (+30 °C) + strong drying (-50 mm):
-        // effective temp ≈ 45 °C, moisture ≈ 10 mm → Desert
+        // After 200 years of warming (+30 °C) + drying, the documented
+        // cumulative moisture clamp limits the change to -5 mm. The effective
+        // climate is therefore about 45 °C and 55 mm/year → Savanna.
         let long_drift = compute_drift(0, 200, 150, 250); // 150 fp/yr * 200 = 30_000 fp (30°C)
         let shifted_biome = long_drift.classify_with_drift(elevation, base_temp, base_moisture);
         assert_ne!(
@@ -922,8 +935,8 @@ mod tests {
         );
         assert_eq!(
             shifted_biome,
-            BiomeKind::Desert,
-            "extreme warming+drying at mid-elevation must produce Desert"
+            BiomeKind::Savanna,
+            "bounded warming+drying at mid-elevation must produce Savanna"
         );
     }
 

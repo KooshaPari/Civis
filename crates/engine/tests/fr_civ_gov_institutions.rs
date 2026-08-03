@@ -85,6 +85,30 @@ fn fr_civ_gov_001_spawns_when_settlement_crosses_threshold() {
     );
 }
 
+/// A high-population settlement retains both institution kinds rather than
+/// allowing the second threshold event to overwrite the first in state.
+#[test]
+fn fr_civ_gov_preserves_temple_and_garrison_state() {
+    let mut sim = Simulation::with_seed(GOV_SEED);
+    sim.set_settlement_population(0, GARRISON_L2_UNLOCK + 1);
+    sim.advance_ticks(1);
+
+    assert_eq!(
+        sim.institutions()
+            .get(&(0, InstitutionKind::Temple))
+            .map(|institution| institution.level),
+        Some(2),
+        "Temple state must survive Garrison insertion for the same settlement"
+    );
+    assert_eq!(
+        sim.institutions()
+            .get(&(0, InstitutionKind::Garrison))
+            .map(|institution| institution.level),
+        Some(2),
+        "Garrison state must be persisted under its own settlement/kind key"
+    );
+}
+
 // ------------------------------------------------------------- FR-CIV-GOV-002
 /// Covers FR-CIV-GOV-002.
 /// `last_tick_institution_events()` MUST expose the per-tick event stream so

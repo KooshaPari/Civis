@@ -1237,10 +1237,10 @@ pub struct Simulation {
     /// so `phase_institutions` can drive Temple/Garrison spawns deterministically
     /// (FR-CIV-GOV-001). Keyed by settlement id (`u32`).
     settlements: BTreeMap<u32, u32>,
-    /// Currently-active institutions per settlement, keyed by
-    /// `(settlement_id, kind)`. Tracks the latest known level so we can detect
-    /// upgrades (FR-CIV-GOV-003).
-    institutions: BTreeMap<u32, civ_institutions::Institution>,
+    /// Currently-active institutions keyed by `(settlement_id, kind)`. Tracks
+    /// the latest known level so Temple and Garrison can coexist in one
+    /// settlement (FR-CIV-GOV-003).
+    institutions: BTreeMap<(u32, civ_institutions::InstitutionKind), civ_institutions::Institution>,
     /// Civic events emitted by the most recent [`Simulation::phase_institutions`]
     /// call (cleared at the start of every [`Simulation::tick`], alongside the
     /// other `last_tick_*` buffers). Surfaced to the JSON-RPC bridge so the
@@ -2399,7 +2399,9 @@ impl Simulation {
 
     /// Read-only view of active institutions (FR-CIV-GOV / emergence oracles).
     #[must_use]
-    pub fn institutions(&self) -> &BTreeMap<u32, civ_institutions::Institution> {
+    pub fn institutions(
+        &self,
+    ) -> &BTreeMap<(u32, civ_institutions::InstitutionKind), civ_institutions::Institution> {
         &self.institutions
     }
 
@@ -2409,7 +2411,7 @@ impl Simulation {
         &self,
     ) -> (
         BTreeMap<u32, u32>,
-        BTreeMap<u32, civ_institutions::Institution>,
+        BTreeMap<(u32, civ_institutions::InstitutionKind), civ_institutions::Institution>,
         BTreeSet<(u32, u8, u8)>,
     ) {
         (
@@ -2423,7 +2425,10 @@ impl Simulation {
     pub(crate) fn restore_institution_state(
         &mut self,
         settlements: BTreeMap<u32, u32>,
-        institutions: BTreeMap<u32, civ_institutions::Institution>,
+        institutions: BTreeMap<
+            (u32, civ_institutions::InstitutionKind),
+            civ_institutions::Institution,
+        >,
 
         institution_levels_emitted: BTreeSet<(u32, u8, u8)>,
     ) {
@@ -3455,7 +3460,7 @@ impl Simulation {
         }
         self.institution_levels_emitted.insert(key);
         self.institutions.insert(
-            sid,
+            (sid, kind),
             civ_institutions::Institution {
                 kind,
                 level: new_level,
@@ -3501,16 +3506,17 @@ impl Simulation {
             let crime_signed = MOOD_CRIME_BASE.saturating_sub(4 * crime_pressure as i64);
             let crime_score = crime_signed.clamp(0, MOOD_CRIME_BASE);
 
-            // 4-5. institution bonuses (settlement may have 0 or 1 institution)
-            let (temple_bonus, garrison_bonus) = match self.institutions.get(&settlement_id) {
-                Some(inst) if inst.kind == civ_institutions::InstitutionKind::Temple => {
-                    (25 + 25 * (inst.level as i32), 0)
-                }
-                Some(inst) if inst.kind == civ_institutions::InstitutionKind::Garrison => {
-                    (0, 15 + 15 * (inst.level as i32))
-                }
-                _ => (0, 0),
-            };
+            // 4-5. institution bonuses (Temple and Garrison may coexist).
+            let temple_bonus = self
+                .institutions
+                .get(&(settlement_id, civ_institutions::InstitutionKind::Temple))
+                .map(|inst| 25 + 25 * (inst.level as i32))
+                .unwrap_or(0);
+            let garrison_bonus = self
+                .institutions
+                .get(&(settlement_id, civ_institutions::InstitutionKind::Garrison))
+                .map(|inst| 15 + 15 * (inst.level as i32))
+                .unwrap_or(0);
 
             // 6. total mood (saturated)
             let total = food_score

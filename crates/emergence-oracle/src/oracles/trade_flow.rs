@@ -10,7 +10,9 @@
 //! (trade-flow must never violate invariants, though zero flow may be valid).
 
 use crate::{FeatureOracle, OracleVerdict};
-use civ_economy::{settlement_trade_flow_from_supply_demand, DEFAULT_SMOOTHING_FACTOR};
+use civ_economy::{
+    settlement_trade_flow_from_supply_demand, SettlementTradeFlowInput, DEFAULT_SMOOTHING_FACTOR,
+};
 use civ_engine::Simulation;
 
 pub struct TradeFlowOracle;
@@ -30,23 +32,24 @@ impl FeatureOracle for TradeFlowOracle {
         let supply = 100i64;
         let demand = 50i64;
 
-        let flow1 = settlement_trade_flow_from_supply_demand(
-            1,
-            2,
-            civ_economy::Good::Food,
+        let flow1 = settlement_trade_flow_from_supply_demand(SettlementTradeFlowInput {
+            from_settlement: 1,
+            to_settlement: 2,
+            good: civ_economy::Good::Food,
             supply,
             demand,
-            low_price,
-            high_price,
-            DEFAULT_SMOOTHING_FACTOR,
-        );
+            low_price_cents: low_price,
+            high_price_cents: high_price,
+            smoothing_factor: DEFAULT_SMOOTHING_FACTOR,
+        });
 
         let mut passed_count = 0;
 
         if let Some(flow) = flow1 {
             // Invariant: flow direction matches (supply > demand → flow exists).
             // Invariant: qty <= min(supply, demand, (high - low) / smoothing_factor).
-            let qty_bound = (supply.min(demand)).min((high_price - low_price) / DEFAULT_SMOOTHING_FACTOR);
+            let qty_bound =
+                (supply.min(demand)).min((high_price - low_price) / DEFAULT_SMOOTHING_FACTOR);
             let dir_ok = supply > demand && flow.qty > 0 && flow.qty <= qty_bound;
             if dir_ok {
                 passed_count += 1;
@@ -61,20 +64,21 @@ impl FeatureOracle for TradeFlowOracle {
         let supply2 = 50i64;
         let demand2 = 100i64;
 
-        let flow2 = settlement_trade_flow_from_supply_demand(
-            3,
-            4,
-            civ_economy::Good::Wood,
-            supply2,
-            demand2,
-            low_price,
-            high_price,
-            DEFAULT_SMOOTHING_FACTOR,
-        );
+        let flow2 = settlement_trade_flow_from_supply_demand(SettlementTradeFlowInput {
+            from_settlement: 3,
+            to_settlement: 4,
+            good: civ_economy::Good::Wood,
+            supply: supply2,
+            demand: demand2,
+            low_price_cents: low_price,
+            high_price_cents: high_price,
+            smoothing_factor: DEFAULT_SMOOTHING_FACTOR,
+        });
 
         if let Some(flow) = flow2 {
             // Invariant: qty <= min(supply, demand, (high - low) / smoothing_factor).
-            let qty_bound = (supply2.min(demand2)).min((high_price - low_price) / DEFAULT_SMOOTHING_FACTOR);
+            let qty_bound =
+                (supply2.min(demand2)).min((high_price - low_price) / DEFAULT_SMOOTHING_FACTOR);
             let bound_ok = flow.qty > 0 && flow.qty <= qty_bound;
             if bound_ok {
                 passed_count += 1;
@@ -87,16 +91,16 @@ impl FeatureOracle for TradeFlowOracle {
         let supply3 = 75i64;
         let demand3 = 75i64;
 
-        let flow3 = settlement_trade_flow_from_supply_demand(
-            5,
-            6,
-            civ_economy::Good::Water,
-            supply3,
-            demand3,
-            low_price,
-            high_price,
-            DEFAULT_SMOOTHING_FACTOR,
-        );
+        let flow3 = settlement_trade_flow_from_supply_demand(SettlementTradeFlowInput {
+            from_settlement: 5,
+            to_settlement: 6,
+            good: civ_economy::Good::Water,
+            supply: supply3,
+            demand: demand3,
+            low_price_cents: low_price,
+            high_price_cents: high_price,
+            smoothing_factor: DEFAULT_SMOOTHING_FACTOR,
+        });
 
         if flow3.is_none() {
             // Correct: when supply == demand, no flow is expected.

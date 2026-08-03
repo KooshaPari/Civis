@@ -99,7 +99,6 @@ mod tests {
     use super::*;
     use crate::prices::PriceState;
     use crate::stocks::{Good, GOODS};
-    use std::collections::BTreeMap;
 
     fn baseline_price_state(cluster_id: ClusterId) -> PriceState {
         let prices = GOODS.iter().map(|&g| (g, 1.0_f32)).collect();
@@ -154,8 +153,16 @@ mod tests {
             severity: 1.0,
         };
         apply_shock(&mut prices, &shock);
-        assert_eq!(prices[0].price(Good::Metal), 10.0, "cluster 0 should be affected");
-        assert_eq!(prices[1].price(Good::Metal), 1.0, "cluster 1 must be unaffected");
+        assert_eq!(
+            prices[0].price(Good::Metal),
+            10.0,
+            "cluster 0 should be affected"
+        );
+        assert_eq!(
+            prices[1].price(Good::Metal),
+            1.0,
+            "cluster 1 must be unaffected"
+        );
     }
 
     #[test]

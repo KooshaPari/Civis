@@ -101,7 +101,10 @@ mod tests {
         let states = vec![make_price_state(0, 1.0), make_price_state(1, 1.0)];
         let flows = compute_trade_flows(&states);
         let food_flows: Vec<_> = flows.iter().filter(|f| f.good == Good::Food).collect();
-        assert!(food_flows.is_empty(), "no flow when price differential is zero");
+        assert!(
+            food_flows.is_empty(),
+            "no flow when price differential is zero"
+        );
     }
 
     #[test]

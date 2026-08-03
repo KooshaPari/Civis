@@ -1,17 +1,17 @@
 {
     "version": "1",
     "repo": "Civis",
-    "git_sha": "99624b97b205b9466731852d678063f6efb5e54f",
+    "git_sha": "8658c654501af361068e461211c575bdeb7270eb",
     "content_hash": "1a2e4300082baa137340cd68027273bae7d747e66e182a07beffb6c8d45f1af7",
-    "created_at": "2026-08-03T22:37:25Z",
+    "created_at": "2026-08-03T23:12:42Z",
     "runner": {
         "host": "unknown",
         "rust": "rustc 1.97.1 (8bab26f4f 2026-07-14)"
     },
     "gates": {
         "civis_3d_verify": {
-            "status": "pass",
-            "detail": "Focused civ-engine FR-CIV-GOV institution tests pass on rust 1.96.0; public tick/state persistence, per-kind storage, and monotonic highest-level fixes"
+            "status": "fail",
+            "detail": "Full just civis-3d-verify attempted; civis-3d-scenario-check failed linking zeroize_derive: ld errno=28 No space left on device (disk 100%, ~718 MiB free). Focused civ-engine FR-CIV-GOV tests pass separately."
         },
         "bevy_egui_check": {
             "status": "pass",
@@ -126,5 +126,5 @@
             "detail": "Trunk 1.22.12 targeted ESLint check passed for frame percentile and websocket sources"
         }
     },
-    "manifest_hash": "47cbd4ddcac605414257d128004698218ed85a2bf98a8888edf5b4af7100c4b9"
+    "manifest_hash": "14bb6bf98ac993196f9942f732095a3725b3d92703a1d0ae3700d6fe16e8698a"
 }

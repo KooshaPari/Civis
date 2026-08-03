@@ -9,6 +9,7 @@
 #![warn(missing_docs)]
 #![allow(missing_docs)]
 
+pub mod authn;
 pub mod autosave;
 pub mod jsonrpc;
 pub mod saves;
@@ -17,6 +18,7 @@ pub mod voxel_frame_builder;
 /// WebSocket bridge and health endpoint for streaming 3D protocol frames.
 pub mod ws_bridge;
 
+pub use authn::{AuthnError, BearerToken, BEARER_SCHEME};
 pub use autosave::{
     autosave_cadence_from_env, autosave_filename_for_tick, autosave_keep_from_env,
     run_autosave_once, spawn_autosave_loop, AutosaveContext, AutosaveResult, DEFAULT_AUTOSAVE_KEEP,

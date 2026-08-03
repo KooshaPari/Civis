@@ -55,7 +55,7 @@ pub type SimBuildingMarkerPublic = SimBuildingMarker;
 
 impl Default for SimState {
     fn default() -> Self {
-        Self(Simulation::default())
+        Self(Simulation::new())
     }
 }
 

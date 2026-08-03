@@ -85,3 +85,13 @@ repos:
       rev: b58d3f102cf3a2c84cb7f923d05c25c9b1aed84b
       hooks:
           - id: gitleaks
+
+    # -- Local security guard (pre-commit and pre-push) --
+    - repo: local
+      hooks:
+          - id: security-guard-pre-commit-pre-push
+            name: security-guard pre-commit/pre-push
+            entry: bash .github/scripts/security-guard.sh
+            language: system
+            pass_filenames: false
+            stages: [pre-commit, pre-push]

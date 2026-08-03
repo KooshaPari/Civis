@@ -14,7 +14,7 @@ use axum::{
         DefaultBodyLimit, Query, State,
     },
     http::{header, HeaderMap, StatusCode},
-    response::IntoResponse,
+    response::{IntoResponse, Response},
     routing::{get, post},
     Json, Router,
 };
@@ -41,6 +41,7 @@ use tokio::{
 };
 
 use crate::{
+    authn::BearerToken,
     jsonrpc::{
         dispatch_request, encode_response, error_code, parse_error_response, parse_request,
         parse_role_param, set_sim_command_tick, set_spawn_civilian_result, DispatchContext,
@@ -200,21 +201,36 @@ struct AppState {
     save_db: Arc<SaveDb>,
     session_id: String,
     /// Replay HTTP endpoints are local-only until a real AuthN/session layer
-    /// exists. The JSON-RPC role parameter is authorization metadata, not AuthN.
+    /// exists for loopback; non-loopback requests require bearer AuthN.
     allow_replay_http: bool,
+    authn_required: bool,
 }
 
-/// Permit replay import/export only on loopback listeners.
+/// Permit replay import/export on loopback listeners or authenticated remote listeners.
 ///
 /// `WsBridgeConfig::require_role` protects privileged JSON-RPC methods, but the
-/// current role parameter is not an authenticated session. Exposing replay
-/// mutation/export on a non-loopback listener would therefore publish an
-/// unauthenticated control/data endpoint. Keep local development behavior
-/// unchanged and fail closed for externally reachable binds until real AuthN
-/// is added.
+/// JSON-RPC role parameter is authorization metadata, not AuthN. Remote
+/// replay access is therefore enabled only when the request carries a valid
+/// bearer header; loopback development remains unauthenticated.
 #[must_use]
-fn replay_http_allowed(addr: SocketAddr) -> bool {
-    addr.ip().is_loopback()
+fn replay_http_allowed(addr: SocketAddr, authn_required: bool) -> bool {
+    addr.ip().is_loopback() || authn_required
+}
+
+fn authn_required_for_addr(addr: SocketAddr) -> bool {
+    !addr.ip().is_loopback()
+}
+
+fn authorize_request(headers: &HeaderMap, required: bool) -> Result<(), StatusCode> {
+    if !required {
+        return Ok(());
+    }
+    let authorization = headers
+        .get(header::AUTHORIZATION)
+        .and_then(|value| value.to_str().ok());
+    BearerToken::parse(authorization)
+        .map(|_| ())
+        .map_err(|_| StatusCode::UNAUTHORIZED)
 }
 
 /// Run the WebSocket bridge and 10 Hz tick loop.
@@ -282,7 +298,8 @@ async fn serve_ws_bridge(
         replays_dir: config.replays_dir,
         save_db,
         session_id,
-        allow_replay_http: replay_http_allowed(config.addr),
+        authn_required: authn_required_for_addr(config.addr),
+        allow_replay_http: replay_http_allowed(config.addr, authn_required_for_addr(config.addr)),
     };
 
     let app = Router::new()
@@ -340,11 +357,13 @@ async fn healthz(State(state): State<AppState>) -> impl IntoResponse {
 /// Load a `.civreplay` byte buffer into the bridge simulation.
 async fn replay_import(
     State(state): State<AppState>,
+    headers: HeaderMap,
     body: Bytes,
 ) -> Result<impl IntoResponse, StatusCode> {
     if !state.allow_replay_http {
         return Err(StatusCode::FORBIDDEN);
     }
+    authorize_request(&headers, state.authn_required)?;
     let log = decode_civreplay(&body).map_err(|_| StatusCode::BAD_REQUEST)?;
     let mut loaded = Simulation::with_seed(log.seed);
     log.replay(&mut loaded)
@@ -375,10 +394,14 @@ async fn replay_import(
 }
 
 /// Export the current in-memory replay as `.civreplay` bytes (no filesystem path).
-async fn replay_export(State(state): State<AppState>) -> Result<impl IntoResponse, StatusCode> {
+async fn replay_export(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<impl IntoResponse, StatusCode> {
     if !state.allow_replay_http {
         return Err(StatusCode::FORBIDDEN);
     }
+    authorize_request(&headers, state.authn_required)?;
     let bytes = {
         let sim = state.sim.lock().await;
         encode_civreplay(sim.replay_log()).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
@@ -402,6 +425,9 @@ async fn ws_handler(
     headers: HeaderMap,
     Query(query): Query<WsConnectQuery>,
 ) -> impl IntoResponse {
+    if let Err(status) = authorize_request(&headers, state.authn_required) {
+        return status.into_response();
+    }
     // The `x-civis-role` header is explicitly ignored for privilege decisions.
     // Accepting a client-supplied header as an authoritative role claim allows
     // unauthenticated role spoofing. Role must be supplied by the caller in
@@ -1760,16 +1786,46 @@ mod tests {
             save_db,
             session_id: "test-session".to_string(),
             allow_replay_http: true,
+            authn_required: false,
         };
         (dir, state)
     }
 
     #[test]
-    fn replay_http_is_loopback_only_until_authn_exists() {
-        assert!(replay_http_allowed("127.0.0.1:3000".parse().unwrap()));
-        assert!(replay_http_allowed("[::1]:3000".parse().unwrap()));
-        assert!(!replay_http_allowed("0.0.0.0:3000".parse().unwrap()));
-        assert!(!replay_http_allowed("192.168.1.20:3000".parse().unwrap()));
+    fn replay_http_requires_authn_for_non_loopback() {
+        assert!(replay_http_allowed(
+            "127.0.0.1:3000".parse().unwrap(),
+            false
+        ));
+        assert!(replay_http_allowed("[::1]:3000".parse().unwrap(), false));
+        assert!(!replay_http_allowed("0.0.0.0:3000".parse().unwrap(), false));
+        assert!(replay_http_allowed(
+            "192.168.1.20:3000".parse().unwrap(),
+            true
+        ));
+    }
+
+    #[test]
+    fn remote_authn_guard_accepts_only_bearer_header() {
+        let missing = HeaderMap::new();
+        assert_eq!(
+            authorize_request(&missing, true),
+            Err(StatusCode::UNAUTHORIZED)
+        );
+
+        let mut headers = HeaderMap::new();
+        headers.insert(header::AUTHORIZATION, "Basic opaque".parse().unwrap());
+        assert_eq!(
+            authorize_request(&headers, true),
+            Err(StatusCode::UNAUTHORIZED)
+        );
+
+        headers.insert(
+            header::AUTHORIZATION,
+            "Bearer opaque-token".parse().unwrap(),
+        );
+        assert_eq!(authorize_request(&headers, true), Ok(()));
+        assert_eq!(authorize_request(&missing, false), Ok(()));
     }
 
     #[tokio::test]
@@ -1779,15 +1835,36 @@ mod tests {
         state.allow_replay_http = false;
 
         assert_eq!(
-            replay_import(State(state.clone()), Bytes::new())
+            replay_import(State(state.clone()), HeaderMap::new(), Bytes::new())
                 .await
                 .err(),
             Some(StatusCode::FORBIDDEN)
         );
         assert_eq!(
-            replay_export(State(state)).await.err(),
+            replay_export(State(state), HeaderMap::new()).await.err(),
             Some(StatusCode::FORBIDDEN)
         );
+    }
+
+    #[tokio::test]
+    async fn remote_replay_handlers_require_bearer_authn() {
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(17)));
+        let (_dir, mut state) = test_app_state(sim, 0, 1, false);
+        state.authn_required = true;
+
+        assert_eq!(
+            replay_export(State(state.clone()), HeaderMap::new())
+                .await
+                .err(),
+            Some(StatusCode::UNAUTHORIZED)
+        );
+
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            header::AUTHORIZATION,
+            "Bearer opaque-test-token".parse().unwrap(),
+        );
+        assert!(replay_export(State(state), headers).await.is_ok());
     }
 
     fn test_subscription_filter() -> Arc<tokio::sync::Mutex<SubscriptionFilter>> {
@@ -2710,7 +2787,7 @@ mod tests {
 
         let sim = Arc::new(Mutex::new(Simulation::with_seed(99)));
         let (_dir, state) = test_app_state(sim, 0, 1, false);
-        let response = replay_import(State(state.clone()), bytes.into())
+        let response = replay_import(State(state.clone()), HeaderMap::new(), bytes.into())
             .await
             .expect("replay import")
             .into_response();
@@ -2733,7 +2810,7 @@ mod tests {
     async fn replay_export_sets_octet_stream_and_attachment_headers() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(31)));
         let (_dir, state) = test_app_state(sim, 0, 1, false);
-        let response = replay_export(State(state))
+        let response = replay_export(State(state), HeaderMap::new())
             .await
             .expect("replay export")
             .into_response();

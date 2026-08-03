@@ -1,9 +1,9 @@
 {
     "version": "1",
     "repo": "Civis",
-    "git_sha": "a012e4ed37c0da6702499ad8fbb566488f9512e5",
-    "content_hash": "9b4239ecd26fb52518db3a7875bc57e6ca603d1b6eb96e15d24e2a812b88148a",
-    "created_at": "2026-08-03T07:57:42Z",
+    "git_sha": "99624b97b205b9466731852d678063f6efb5e54f",
+    "content_hash": "1a2e4300082baa137340cd68027273bae7d747e66e182a07beffb6c8d45f1af7",
+    "created_at": "2026-08-03T22:37:25Z",
     "runner": {
         "host": "unknown",
         "rust": "rustc 1.97.1 (8bab26f4f 2026-07-14)"
@@ -11,7 +11,7 @@
     "gates": {
         "civis_3d_verify": {
             "status": "pass",
-            "detail": "Focused civ-engine FR-CIV-GOV institution tests pass on rust 1.96.0; public tick/state persistence and per-kind storage fixes"
+            "detail": "Focused civ-engine FR-CIV-GOV institution tests pass on rust 1.96.0; public tick/state persistence, per-kind storage, and monotonic highest-level fixes"
         },
         "bevy_egui_check": {
             "status": "pass",
@@ -126,5 +126,5 @@
             "detail": "Trunk 1.22.12 targeted ESLint check passed for frame percentile and websocket sources"
         }
     },
-    "manifest_hash": "4b759d7b29ab837c906edddd16e899ed01af04bd274772f5170284ccdd9ab343"
+    "manifest_hash": "47cbd4ddcac605414257d128004698218ed85a2bf98a8888edf5b4af7100c4b9"
 }

@@ -109,6 +109,45 @@ fn fr_civ_gov_preserves_temple_and_garrison_state() {
     );
 }
 
+/// A settlement that first reaches L2 must retain that highest level when its
+/// population later dips into the L1 range; no late downgrade event is valid.
+#[test]
+fn fr_civ_gov_preserves_highest_level_across_population_dip() {
+    let mut sim = Simulation::with_seed(GOV_SEED);
+    sim.set_settlement_population(0, TEMPLE_L2_UNLOCK + 1);
+    sim.advance_ticks(1);
+    assert_eq!(
+        sim.institutions()
+            .get(&(0, InstitutionKind::Temple))
+            .map(|institution| institution.level),
+        Some(2)
+    );
+
+    sim.set_settlement_population(0, TEMPLE_UNLOCK + 1);
+    sim.advance_ticks(1);
+
+    assert_eq!(
+        sim.institutions()
+            .get(&(0, InstitutionKind::Temple))
+            .map(|institution| institution.level),
+        Some(2),
+        "population dips must not downgrade the persisted institution"
+    );
+    assert!(
+        sim.last_tick_institution_events().iter().all(|event| {
+            !matches!(
+                event,
+                InstitutionEvent {
+                    kind: InstitutionKind::Temple,
+                    level: 1,
+                    ..
+                }
+            )
+        }),
+        "population dips must not emit a late lower-level event"
+    );
+}
+
 // ------------------------------------------------------------- FR-CIV-GOV-002
 /// Covers FR-CIV-GOV-002.
 /// `last_tick_institution_events()` MUST expose the per-tick event stream so

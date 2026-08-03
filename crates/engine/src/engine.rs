@@ -3453,6 +3453,15 @@ impl Simulation {
         new_level: u8,
         events: &mut Vec<InstitutionEvent>,
     ) {
+        // Institution state is monotonic: a population dip must not downgrade
+        // the highest level already reached or emit a late lower-level event.
+        if self
+            .institutions
+            .get(&(sid, kind))
+            .is_some_and(|institution| institution.level >= new_level)
+        {
+            return;
+        }
         let key = (sid, institution_kind_key(kind), new_level);
         if self.institution_levels_emitted.contains(&key) {
             // Already emitted this level for this settlement+kind - skip.

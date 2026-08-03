@@ -101,6 +101,24 @@ def collect_provenance(root: Path, manifest: Path) -> dict[str, str]:
     manifest_hash = body.get("manifest_hash")
     if not isinstance(manifest_hash, str) or not manifest_hash:
         raise EvidenceError("quality manifest manifest_hash is missing")
+    gates = body.get("gates")
+    if not isinstance(gates, dict):
+        raise EvidenceError("quality manifest gates must be an object")
+    attestation = {
+        "git_sha": manifest_sha,
+        "gates": sorted(
+            [
+                {"key": key, "status": value.get("status", "")}
+                for key, value in gates.items()
+            ],
+            key=lambda item: item["key"],
+        ),
+    }
+    expected_hash = hashlib.blake2b(
+        json.dumps(attestation, separators=(",", ":")).encode(), digest_size=32
+    ).hexdigest()
+    if manifest_hash != expected_hash:
+        raise EvidenceError("quality manifest manifest_hash mismatch")
     try:
         manifest_path = manifest.relative_to(root).as_posix()
     except ValueError as exc:

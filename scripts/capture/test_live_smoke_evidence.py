@@ -1,3 +1,4 @@
+import hashlib
 import json
 import subprocess
 import sys
@@ -14,13 +15,17 @@ def _git(root: Path, *args: str) -> str:
 def _manifest(root: Path, sha: str) -> Path:
     path = root / ".ci" / "quality-manifest.json"
     path.parent.mkdir()
+    attestation = {"git_sha": sha, "gates": []}
+    manifest_hash = hashlib.blake2b(
+        json.dumps(attestation, separators=(",", ":")).encode(), digest_size=32
+    ).hexdigest()
     path.write_text(
         json.dumps(
             {
                 "version": "1",
                 "repo": "Civis",
                 "git_sha": sha,
-                "manifest_hash": "a" * 64,
+                "manifest_hash": manifest_hash,
                 "gates": {},
             }
         ),

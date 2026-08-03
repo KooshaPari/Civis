@@ -2909,6 +2909,7 @@ impl Simulation {
         self.last_tick_mood.clear();
         self.last_tick_cohesion_events.clear();
         self.last_tick_unrest_events.clear();
+        self.last_tick_institution_events.clear();
         self.econ_focus_stability.clear();
 
         // Phases in PHASE_ORDER (CIV-0001 partial)
@@ -2925,10 +2926,14 @@ impl Simulation {
         self.phase_voxel();
         self.phase_compact();
         self.phase_buildings();
+        // Institution threshold events are part of the public tick contract;
+        // keep this call on the normal path used by `advance_ticks` and
+        // scenario runners, not only behind the phase dispatcher.
+        self.phase_institutions();
         if famine_at_tick_start {
             self.phase_forced_famine();
         }
-        // NOTE: emergence phase arms (life/research/tech/belief/unrest/cohesion/social_mood/economic_focus_pre/stratification/institutions/economic_focus) removed 2026-06-25 — re-add each arm COUPLED with its impl (see method doc). Premature wiring caused E0599 workspace compile failure.
+        // NOTE: emergence phase arms (life/research/tech/belief/unrest/cohesion/social_mood/economic_focus_pre/stratification/economic_focus) removed 2026-06-25 — re-add each arm COUPLED with its impl (see method doc). Premature wiring caused E0599 workspace compile failure.
         self.phase_diffusion();
         // Let the initial weather snapshot settle before environmental hazards
         // can fire. This avoids a startup burst from the seeded weather grid;
@@ -3449,6 +3454,13 @@ impl Simulation {
             return;
         }
         self.institution_levels_emitted.insert(key);
+        self.institutions.insert(
+            sid,
+            civ_institutions::Institution {
+                kind,
+                level: new_level,
+            },
+        );
         events.push(InstitutionEvent {
             settlement_id: sid,
             kind,

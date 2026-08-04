@@ -10,7 +10,7 @@ on:
     push:
         branches: [main, master]
         paths:
-            - '.github/workflows/infisical.yml'
+            - ".github/workflows/infisical.yml"
 
 # This workflow is intentionally excluded from pull_request events. The token
 # must never be exposed to an untrusted fork or used to publish a secret-bearing
@@ -37,8 +37,12 @@ jobs:
             - name: Pull secrets to process environment
               env:
                   INFISICAL_TOKEN: ${{ secrets.INFISICAL_TOKEN }}
-                  INFISICAL_PROJECT_ID: ${{ vars.INFISICAL_PROJECT_ID || secrets.INFISICAL_PROJECT_ID || '8efe392e-56a6-4c3c-89f9-8141183dd7e8' }}
-                  INFISICAL_ENV: ${{ vars.INFISICAL_ENV || github.ref == 'refs/heads/main' && 'prod' || github.ref == 'refs/heads/staging' && 'staging' || 'dev' }}
+                  INFISICAL_PROJECT_ID:
+                      ${{ vars.INFISICAL_PROJECT_ID || secrets.INFISICAL_PROJECT_ID ||
+                      '8efe392e-56a6-4c3c-89f9-8141183dd7e8' }}
+                  INFISICAL_ENV:
+                      ${{ vars.INFISICAL_ENV || github.ref == 'refs/heads/main' && 'prod' ||
+                      github.ref == 'refs/heads/staging' && 'staging' || 'dev' }}
               run: |
                   # Validate required secrets are present.
                   if [ -z "$INFISICAL_TOKEN" ]; then

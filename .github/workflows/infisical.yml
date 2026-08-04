@@ -5,55 +5,55 @@
 name: Infisical Sync
 
 on:
-  workflow_call:
-  workflow_dispatch:
-  push:
-    branches: [main, master]
-    paths:
-      - '.github/workflows/infisical.yml'
+    workflow_call:
+    workflow_dispatch:
+    push:
+        branches: [main, master]
+        paths:
+            - ".github/workflows/infisical.yml"
 
 # This workflow is intentionally excluded from pull_request events. The token
 # must never be exposed to an untrusted fork or used to publish a secret-bearing
 # failure artifact.
 permissions:
-  contents: read
+    contents: read
 
 jobs:
-  sync-secrets:
-    name: Pull secrets from Infisical
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
+    sync-secrets:
+        name: Pull secrets from Infisical
+        runs-on: ubuntu-24.04
+        timeout-minutes: 5
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  persist-credentials: false
 
-      - name: Install Infisical CLI
-        run: |
-          curl -1sLf "https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.deb.sh" | sudo -E bash
-          sudo apt-get install -y infisical
+            - name: Install Infisical CLI
+              run: |
+                  curl -1sLf "https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.deb.sh" | sudo -E bash
+                  sudo apt-get install -y infisical
 
-      - name: Pull secrets to process environment
-        env:
-          INFISICAL_TOKEN: ${{ secrets.INFISICAL_TOKEN }}
-          INFISICAL_PROJECT_ID: ${{ vars.INFISICAL_PROJECT_ID || secrets.INFISICAL_PROJECT_ID || '8efe392e-56a6-4c3c-89f9-8141183dd7e8' }}
-          INFISICAL_ENV: ${{ vars.INFISICAL_ENV || github.ref == 'refs/heads/main' && 'prod' || github.ref == 'refs/heads/staging' && 'staging' || 'dev' }}
-        run: |
-          # Validate required secrets are present.
-          if [ -z "$INFISICAL_TOKEN" ]; then
-            echo "::error::INFISICAL_TOKEN secret not configured in repo settings"
-            exit 1
-          fi
-          if [ -z "$INFISICAL_PROJECT_ID" ]; then
-            echo "::error::INFISICAL_PROJECT_ID var or secret not set"
-            exit 1
-          fi
+            - name: Pull secrets to process environment
+              env:
+                  INFISICAL_TOKEN: ${{ secrets.INFISICAL_TOKEN }}
+                  INFISICAL_PROJECT_ID: ${{ vars.INFISICAL_PROJECT_ID || secrets.INFISICAL_PROJECT_ID || '8efe392e-56a6-4c3c-89f9-8141183dd7e8' }}
+                  INFISICAL_ENV: ${{ vars.INFISICAL_ENV || github.ref == 'refs/heads/main' && 'prod' || github.ref == 'refs/heads/staging' && 'staging' || 'dev' }}
+              run: |
+                  # Validate required secrets are present.
+                  if [ -z "$INFISICAL_TOKEN" ]; then
+                    echo "::error::INFISICAL_TOKEN secret not configured in repo settings"
+                    exit 1
+                  fi
+                  if [ -z "$INFISICAL_PROJECT_ID" ]; then
+                    echo "::error::INFISICAL_PROJECT_ID var or secret not set"
+                    exit 1
+                  fi
 
-          # Load secrets into the child process without printing their values.
-          # shellcheck disable=SC2016
-          infisical run \
-            --projectId "$INFISICAL_PROJECT_ID" \
-            --env "$INFISICAL_ENV" \
-            --token "$INFISICAL_TOKEN" \
-            -- bash -c 'set -euo pipefail; names=$(env | cut -d= -f1 | grep -E "^[A-Z_]+$" | grep -v -E "^(PATH|HOME|PWD|SHELL|HOSTNAME|TERM|GITHUB_|RUNNER_|CARGO_|DEPLOY_|INPUT_|IMAGE_|ACTIONS_|STEP_|BOOT_|GRUB_|LS_COLORS|INVOCATION_ID|JOURNAL_)" || true); count=$(printf "%s\\n" "$names" | sed "/^$/d" | wc -l); echo "Secrets loaded into process environment successfully ($count variables)"'
+                  # Load secrets into the child process without printing their values.
+                  # shellcheck disable=SC2016
+                  infisical run \
+                    --projectId "$INFISICAL_PROJECT_ID" \
+                    --env "$INFISICAL_ENV" \
+                    --token "$INFISICAL_TOKEN" \
+                    -- bash -c 'set -euo pipefail; names=$(env | cut -d= -f1 | grep -E "^[A-Z_]+$" | grep -v -E "^(PATH|HOME|PWD|SHELL|HOSTNAME|TERM|GITHUB_|RUNNER_|CARGO_|DEPLOY_|INPUT_|IMAGE_|ACTIONS_|STEP_|BOOT_|GRUB_|LS_COLORS|INVOCATION_ID|JOURNAL_)" || true); count=$(printf "%s\\n" "$names" | sed "/^$/d" | wc -l); echo "Secrets loaded into process environment successfully ($count variables)"'

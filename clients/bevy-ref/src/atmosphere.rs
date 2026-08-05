@@ -119,8 +119,12 @@ pub fn setup_atmosphere(
         unlit: true,
         ..default()
     });
+    // Keep the hierarchy transform-complete.  Child star meshes receive a
+    // `GlobalTransform` from Bevy's transform propagation, so their parent
+    // must carry a local `Transform` as well; omitting it emits one B0004
+    // warning per star and leaves child world transforms inconsistent.
     commands
-        .spawn((StarField, Visibility::Hidden))
+        .spawn((StarField, Visibility::Hidden, Transform::default()))
         .with_children(|parent| {
             for i in 0..STAR_COUNT {
                 let (theta, phi) = star_angles(i as u32);

@@ -14,7 +14,7 @@ import {
   statusClass,
   statusLabel,
 } from "./lib/connectionStatus";
-import { getActiveServerSocket } from "./lib/civisSocket";
+import { sendActiveServerSocket } from "./lib/civisSocket";
 import { useDashboardStore } from "./store";
 
 export function ConnectionStatusCard() {
@@ -36,9 +36,7 @@ export function ConnectionStatusCard() {
   const detail = probeNote ?? connectionDetail(status, state.attachMode);
 
   const sendProbe = () => {
-    const ws = getActiveServerSocket();
-    if (ws?.readyState === WebSocket.OPEN) {
-      ws.send(buildHealthProbe(Date.now()));
+    if (sendActiveServerSocket(buildHealthProbe(Date.now()))) {
       setProbeNote("Sent JSON-RPC health probe");
       if (probeTimerRef.current !== null) {
         window.clearTimeout(probeTimerRef.current);
@@ -68,7 +66,14 @@ export function ConnectionStatusCard() {
         <div>
           <dt>Status</dt>
           <dd>
-            <span className={`status-pill ${statusClass(status)}`}>{statusLabel(status)}</span>
+            <span
+              className={`status-pill ${statusClass(status)}`}
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {statusLabel(status)}
+            </span>
           </dd>
         </div>
         <div>
@@ -89,7 +94,9 @@ export function ConnectionStatusCard() {
         </div>
         <div>
           <dt>Last detail</dt>
-          <dd>{detail}</dd>
+          <dd aria-live="polite" aria-atomic="true">
+            {detail}
+          </dd>
         </div>
       </dl>
       {state.attachMode === "server" ? (
@@ -103,8 +110,8 @@ export function ConnectionStatusCard() {
         </div>
       ) : (
         <p className="connection-hint">
-          Watch mode attaches to civ-watch over SSE.{" "}
-          <a href="./status.html">Open status page</a> to inspect the civ-server WebSocket endpoint.
+          Watch mode attaches to civ-watch over SSE. <a href="./status.html">Open status page</a> to
+          inspect the civ-server WebSocket endpoint.
         </p>
       )}
     </section>

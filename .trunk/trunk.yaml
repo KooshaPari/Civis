@@ -1,0 +1,33 @@
+# =============================================================================
+# Trunk.io — Plugin versions for linting/formatting tools
+# =============================================================================
+# This file is auto-generated. Run `trunk upgrade` to update.
+# https://docs.trunk.io/check/reference
+# =============================================================================
+
+version: 0.1
+
+plugins:
+    sources:
+        - id: trunk
+          ref: v1.5.0
+          uri: https://github.com/trunk-io/plugins
+        - id: configs
+          ref: v1.0.4
+          uri: https://github.com/trunk-io/configs
+
+# Keep plugin-provided lint and format defaults enabled. Explicit tool names
+# make Trunk CLI 1.22.2 synthesize SYSTEM versions instead of resolving the
+# versions declared by the pinned plugin/config sources.
+lint:
+    # Cargo.lock v4 requires a clippy toolchain with lockfile-v4 support.
+    enabled:
+        - clippy@1.94.0
+    disabled:
+        - pylint
+        - renovate
+        - semgrep
+        - trivy
+
+cli:
+    version: 1.22.2

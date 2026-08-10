@@ -8,13 +8,16 @@ import {
 import { frame3dTick, frame3dVoxelChunkIds, parseWsPayload } from "../lib/frame3d";
 import { frame3dAgentIds, noteAgentIds } from "../lib/agents";
 import { noteChunkIds } from "../lib/minimap";
-import {
-  jsonRpcCall,
-  normalizeServerSnapshot,
-  type ServerMetrics,
-} from "../lib/civisServer";
+import { jsonRpcCall, normalizeServerSnapshot, type ServerMetrics } from "../lib/civisServer";
 import { mergeServerSnapshot } from "../lib/mergeSnapshot";
-import { setActiveServerSocket } from "../lib/civisSocket";
+import {
+  recordSocketAttempt,
+  recordSocketConnected,
+  recordSocketError,
+  recordSocketReconnectScheduled,
+  setActiveServerSocket,
+  socketReconnectDelay,
+} from "../lib/civisSocket";
 import type { FrameSampleSource, Snapshot, Terrain, TimeSpeed } from "../store";
 
 type Dispatch = React.Dispatch<
@@ -67,10 +70,7 @@ function recordAgentAppearance(
   return true;
 }
 
-function recordAttachFrame(
-  lastAtRef: React.MutableRefObject<number | null>,
-  dispatch: Dispatch,
-) {
+function recordAttachFrame(lastAtRef: React.MutableRefObject<number | null>, dispatch: Dispatch) {
   const now = performance.now();
   if (lastAtRef.current != null) {
     dispatch({
@@ -133,10 +133,7 @@ export function useCivisAttach(dispatch: Dispatch) {
   }, [dispatch]);
 }
 
-function connectWatch(
-  dispatch: Dispatch,
-  attachFrameAtRef: React.MutableRefObject<number | null>,
-) {
+function connectWatch(dispatch: Dispatch, attachFrameAtRef: React.MutableRefObject<number | null>) {
   let closed = false;
   let source: EventSource | null = null;
   let reconnectTimer: number | null = null;
@@ -223,6 +220,7 @@ function connectServer(
 ) {
   let closed = false;
   let connectionGeneration = 0;
+  let reconnectAttempt = 0;
   let lastSnapshotRefreshAt = 0;
   const SNAPSHOT_REFRESH_MS = 250;
 
@@ -266,18 +264,8 @@ function connectServer(
       if (!isCurrentSocket(ws, generation)) return;
       const frame = parseWsPayload(payload);
       const tick = frame3dTick(frame);
-      const hasChunks = recordVoxelChunks(
-        loadedChunkIdsRef,
-        recentChunkIdsRef,
-        dispatch,
-        frame,
-      );
-      const hasAgents = recordAgentAppearance(
-        seenAgentIdsRef,
-        recentAgentIdsRef,
-        dispatch,
-        frame,
-      );
+      const hasChunks = recordVoxelChunks(loadedChunkIdsRef, recentChunkIdsRef, dispatch, frame);
+      const hasAgents = recordAgentAppearance(seenAgentIdsRef, recentAgentIdsRef, dispatch, frame);
       if (tick != null) {
         dispatch({ type: "set_frame3d_tick", tick });
         handled = true;
@@ -301,6 +289,8 @@ function connectServer(
     try {
       await refreshSnapshot(ws, generation);
       if (!isCurrentSocket(ws, generation)) return;
+      reconnectAttempt = 0;
+      recordSocketConnected();
       dispatch({ type: "set_connection", connection: "live" });
       const terrain = await loadWatchTerrain();
       if (terrain && isCurrentSocket(ws, generation)) {
@@ -316,6 +306,7 @@ function connectServer(
     if (closed) return;
     dispatch({ type: "set_connection", connection: "reconnecting" });
     wsRef.current?.close();
+    recordSocketAttempt();
     const ws = new WebSocket(wsUrl);
     const generation = ++connectionGeneration;
     wsRef.current = ws;
@@ -330,7 +321,10 @@ function connectServer(
       void handleMessage(ws, generation, event);
     };
 
-    ws.onerror = () => dispatch({ type: "set_connection", connection: "disconnected" });
+    ws.onerror = (event) => {
+      recordSocketError(event);
+      dispatch({ type: "set_connection", connection: "disconnected" });
+    };
     ws.onclose = () => {
       setActiveServerSocket(null);
       if (!closed) scheduleReconnect();
@@ -340,10 +334,13 @@ function connectServer(
   const scheduleReconnect = () => {
     if (closed || reconnectRef.current !== null) return;
     dispatch({ type: "set_connection", connection: "reconnecting" });
+    const delayMs = socketReconnectDelay(reconnectAttempt);
+    reconnectAttempt += 1;
+    recordSocketReconnectScheduled(delayMs);
     reconnectRef.current = window.setTimeout(() => {
       reconnectRef.current = null;
       connect();
-    }, 3000);
+    }, delayMs);
   };
 
   connect();

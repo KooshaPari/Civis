@@ -1,66 +1,130 @@
 {
-  "version": "1",
-  "repo": "Civis",
-  "git_sha": "b4ca9550721c9e20c8afae6d13eac5a767568d3f",
-  "content_hash": "aff7bcc475007d4a932468aaa88afcf36374e2b72f9a376321c99ae4fed67395",
-  "created_at": "2026-07-29T08:17:25Z",
-  "runner": {
-    "host": "KOOSHAPARI-DESK",
-    "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
-  },
-  "gates": {
-    "civis_3d_verify": {
-      "status": "pass",
-      "detail": ""
+    "version": "1",
+    "repo": "Civis",
+    "git_sha": "aa418e4663773c30ea6a8a892113d7838223de58",
+    "content_hash": "dc200904dae4e95acdb39b4c40b86db31a6143e1eeb2362b971189f126b9fdb2",
+    "created_at": "2026-08-02T07:52:30Z",
+    "runner": {
+        "host": "KOOSHAPARI-DESK",
+        "rust": "unknown"
     },
-    "bevy_egui_check": {
-      "status": "pass",
-      "detail": ""
+    "gates": {
+        "civis_3d_verify": {
+            "status": "pass",
+            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
+        },
+        "bevy_egui_check": {
+            "status": "pass",
+            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
+        },
+        "web_test": {
+            "status": "pass",
+            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
+        },
+        "dashboard_typecheck": {
+            "status": "pass",
+            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
+        },
+        "dashboard_build": {
+            "status": "pass",
+            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
+        },
+        "extra_cargo_audit": {
+            "status": "skip",
+            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
+        },
+        "extra_cargo_deny": {
+            "status": "skip",
+            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
+        },
+        "extra_cargo_machete": {
+            "status": "skip",
+            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
+        },
+        "extra_cargo_semver": {
+            "status": "skip",
+            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
+        },
+        "extra_trufflehog": {
+            "status": "skip",
+            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
+        },
+        "extra_fr_coverage": {
+            "status": "skip",
+            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
+        },
+        "extra_docs_check": {
+            "status": "skip",
+            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
+        },
+        "extra_security_guard": {
+            "status": "skip",
+            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
+        },
+        "playability_splash_gate": {
+            "status": "pass",
+            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
+        },
+        "sim_perf_tests": {
+            "status": "pass",
+            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
+        },
+        "bevy_window_check": {
+            "status": "pass",
+            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
+        },
+        "trunk_action_ref": {
+            "status": "pass",
+            "detail": "Trunk Action v1.3.1 resolves to 04ba50e7658c81db7356da96657e6e77f220bfa3 and uses cache v5"
+        },
+        "trunk_config": {
+            "status": "pass",
+            "detail": "restored schema 0.1 config validated by Trunk 1.22.12"
+        },
+        "precommit_config": {
+            "status": "pass",
+            "detail": "mypy hook uses managed Python, scripts/**/*.py file scope, and declared dependencies; validate-config and mypy passed"
+        },
+        "eslint_config": {
+            "status": "pass",
+            "detail": "shared root ESLint config covers web JavaScript sources; targeted Trunk ESLint check passed"
+        },
+        "mergify_config": {
+            "status": "pass",
+            "detail": "schema restored from previously validated d7f1ac77d configuration"
+        },
+        "ci_runner_labels": {
+            "status": "pass",
+            "detail": "Rust CI jobs use GitHub-hosted ubuntu-24.04; no external runner label required"
+        },
+        "rust_precommit_toolchain": {
+            "status": "pass",
+            "detail": "pre-commit Rust hooks use the installed cargo clippy/cargo fmt toolchain; no mutable nightly checkout"
+        },
+        "secret_hook_ref": {
+            "status": "pass",
+            "detail": "gitleaks hook pinned to immutable verified commit b58d3f102cf3a2c84cb7f923d05c25c9b1aed84b"
+        },
+        "precommit_hook_refs": {
+            "status": "pass",
+            "detail": "all third-party pre-commit repositories resolve; Trunk runs in its dedicated workflow, not as a dead hook repository"
+        },
+        "typescript_ci_cache": {
+            "status": "pass",
+            "detail": "setup-node has no unconditional npm cache; repository package-manager detection handles root Bun lockfile"
+        },
+        "frame_perf_tests": {
+            "status": "pass",
+            "detail": "bun test web/tests/framePerf.test.mjs: 14 tests passed"
+        },
+        "civis_socket_tests": {
+            "status": "pass",
+            "detail": "bun test web/tests/civisSocket.test.mjs: 3 tests passed"
+        },
+        "eslint_web_sources": {
+            "status": "pass",
+            "detail": "Trunk 1.22.12 targeted ESLint check passed for frame percentile and websocket sources"
+        }
     },
-    "web_test": {
-      "status": "pass",
-      "detail": ""
-    },
-    "dashboard_typecheck": {
-      "status": "pass",
-      "detail": ""
-    },
-    "dashboard_build": {
-      "status": "pass",
-      "detail": ""
-    },
-    "extra_cargo_audit": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    },
-    "extra_cargo_deny": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    },
-    "extra_cargo_machete": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    },
-    "extra_cargo_semver": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    },
-    "extra_trufflehog": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    },
-    "extra_fr_coverage": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    },
-    "extra_docs_check": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    },
-    "extra_security_guard": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    }
-  },
-  "manifest_hash": "4b6d7c16c8292eeece4a1b24861e43e06b6bd942a7cd58fda507256fed971fdb"
+    "manifest_hash": "345f021f51316f2a524c07c94c7049b8efd908f023f7a230e8d7abd755c9c6c7"
 }

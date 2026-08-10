@@ -216,6 +216,10 @@ civis-3d-live-smoke:
     cargo check -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone
     cargo check -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-bevy-window
 
+# Headless contract for the first playable loading/splash asset pair.
+playability-splash-gate:
+    bash scripts/playability-splash-gate.sh
+
 # Run the live Bevy reference client against civ-server's WebSocket bridge.
 # Requires civ-server to be running first.
 civis-3d-bevy-live:

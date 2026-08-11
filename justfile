@@ -70,7 +70,7 @@ civis-3d-catalog-check:
 # Scenario YAML + mods validation (civ-engine scenario::* tests).
 civis-3d-scenario-check:
     # Single link job avoids intermittent LNK1104 on Windows when other cargo builds run.
-    CARGO_BUILD_JOBS=1 cargo test -p civ-engine scenario --quiet -j 1
+    cargo test -p civ-engine scenario --quiet -j 1
 
 civis-3d-web-check:
     # Bound worker creation so the local attestation is stable under macOS

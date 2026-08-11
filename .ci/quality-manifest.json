@@ -1,130 +1,74 @@
 {
     "version": "1",
     "repo": "Civis",
-    "git_sha": "aa418e4663773c30ea6a8a892113d7838223de58",
-    "content_hash": "dc200904dae4e95acdb39b4c40b86db31a6143e1eeb2362b971189f126b9fdb2",
-    "created_at": "2026-08-02T07:52:30Z",
+    "git_sha": "9bea369138dce2da07ef96d71177f43b13b18def",
+    "content_hash": "1cb6d79fc4c1ae15e9084fccf278bc491dca2aa36d6f4025e477be53923530bf",
+    "created_at": "2026-08-11T05:20:11Z",
     "runner": {
         "host": "KOOSHAPARI-DESK",
-        "rust": "unknown"
+        "rust": "rustc 1.97.1 (8bab26f4f 2026-07-14)"
     },
     "gates": {
-        "civis_3d_verify": {
-            "status": "pass",
-            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
-        },
-        "bevy_egui_check": {
-            "status": "pass",
-            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
-        },
-        "web_test": {
-            "status": "pass",
-            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
-        },
-        "dashboard_typecheck": {
-            "status": "pass",
-            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
-        },
         "dashboard_build": {
-            "status": "pass",
-            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
-        },
-        "extra_cargo_audit": {
-            "status": "skip",
-            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
-        },
-        "extra_cargo_deny": {
-            "status": "skip",
-            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
-        },
-        "extra_cargo_machete": {
-            "status": "skip",
-            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
-        },
-        "extra_cargo_semver": {
-            "status": "skip",
-            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
+            "detail": "",
+            "status": "pass"
         },
         "extra_trufflehog": {
-            "status": "skip",
-            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
+            "status": "skip"
+        },
+        "civis_3d_verify": {
+            "detail": "",
+            "status": "pass"
+        },
+        "bevy_egui_check": {
+            "detail": "",
+            "status": "pass"
+        },
+        "dashboard_typecheck": {
+            "detail": "",
+            "status": "pass"
+        },
+        "unreal_preflight": {
+            "status": "fail",
+            "detail": ""
+        },
+        "extra_cargo_deny": {
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
+            "status": "skip"
         },
         "extra_fr_coverage": {
-            "status": "skip",
-            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
+            "status": "skip"
+        },
+        "unreal_build": {
+            "status": "fail",
+            "detail": ""
+        },
+        "extra_cargo_semver": {
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
+            "status": "skip"
+        },
+        "web_test": {
+            "detail": "",
+            "status": "pass"
+        },
+        "extra_cargo_machete": {
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
+            "status": "skip"
         },
         "extra_docs_check": {
-            "status": "skip",
-            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
+            "status": "skip"
+        },
+        "extra_cargo_audit": {
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
+            "status": "skip"
         },
         "extra_security_guard": {
-            "status": "skip",
-            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
-        },
-        "playability_splash_gate": {
-            "status": "pass",
-            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
-        },
-        "sim_perf_tests": {
-            "status": "pass",
-            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
-        },
-        "bevy_window_check": {
-            "status": "pass",
-            "detail": "inherited from previously verified origin/main d7f1ac77d; base delta is CI-only"
-        },
-        "trunk_action_ref": {
-            "status": "pass",
-            "detail": "Trunk Action v1.3.1 resolves to 04ba50e7658c81db7356da96657e6e77f220bfa3 and uses cache v5"
-        },
-        "trunk_config": {
-            "status": "pass",
-            "detail": "restored schema 0.1 config validated by Trunk 1.22.12"
-        },
-        "precommit_config": {
-            "status": "pass",
-            "detail": "mypy hook uses managed Python, scripts/**/*.py file scope, and declared dependencies; validate-config and mypy passed"
-        },
-        "eslint_config": {
-            "status": "pass",
-            "detail": "shared root ESLint config covers web JavaScript sources; targeted Trunk ESLint check passed"
-        },
-        "mergify_config": {
-            "status": "pass",
-            "detail": "schema restored from previously validated d7f1ac77d configuration"
-        },
-        "ci_runner_labels": {
-            "status": "pass",
-            "detail": "Rust CI jobs use GitHub-hosted ubuntu-24.04; no external runner label required"
-        },
-        "rust_precommit_toolchain": {
-            "status": "pass",
-            "detail": "pre-commit Rust hooks use the installed cargo clippy/cargo fmt toolchain; no mutable nightly checkout"
-        },
-        "secret_hook_ref": {
-            "status": "pass",
-            "detail": "gitleaks hook pinned to immutable verified commit b58d3f102cf3a2c84cb7f923d05c25c9b1aed84b"
-        },
-        "precommit_hook_refs": {
-            "status": "pass",
-            "detail": "all third-party pre-commit repositories resolve; Trunk runs in its dedicated workflow, not as a dead hook repository"
-        },
-        "typescript_ci_cache": {
-            "status": "pass",
-            "detail": "setup-node has no unconditional npm cache; repository package-manager detection handles root Bun lockfile"
-        },
-        "frame_perf_tests": {
-            "status": "pass",
-            "detail": "bun test web/tests/framePerf.test.mjs: 14 tests passed"
-        },
-        "civis_socket_tests": {
-            "status": "pass",
-            "detail": "bun test web/tests/civisSocket.test.mjs: 3 tests passed"
-        },
-        "eslint_web_sources": {
-            "status": "pass",
-            "detail": "Trunk 1.22.12 targeted ESLint check passed for frame percentile and websocket sources"
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
+            "status": "skip"
         }
     },
-    "manifest_hash": "345f021f51316f2a524c07c94c7049b8efd908f023f7a230e8d7abd755c9c6c7"
+    "manifest_hash": "e128c6cc5f06ea95fb4b06c171c5c9565c6ae8d6d5a4bd5c19e309b1e8d829cd"
 }

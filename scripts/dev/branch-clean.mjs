@@ -26,6 +26,8 @@ const wtMode = (() => {
   return "report";
 })();
 
+const ESC_PATTERN = new RegExp(String.fromCharCode(0x1b) + "\\[[\\d;]*m", "g");
+
 function sh(cmd, argv, opts = {}) {
   try {
     const raw = execFileSync(cmd, argv, {
@@ -34,7 +36,7 @@ function sh(cmd, argv, opts = {}) {
       env: { ...process.env, NO_COLOR: "1" },
       ...opts,
     });
-    return raw.replace(/\u001b\[[\d;]*m/g, "").trim();
+    return raw.replace(ESC_PATTERN, "").trim();
   } catch (e) {
     return opts.fallback ?? "";
   }

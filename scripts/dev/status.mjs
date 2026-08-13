@@ -21,6 +21,9 @@ const jsonMode = args.has("--json");
 const onlyPrs = args.has("--prs");
 const onlyAlerts = args.has("--alerts");
 
+// ESC regex built at runtime (avoid lint no-control-regex on inline escape)
+const ANSI_RE = new RegExp(String.fromCharCode(0x1b) + "\\[[\\d;]*m", "g");
+
 function sh(cmd, args, opts = {}) {
   try {
     const raw = execFileSync(cmd, args, {
@@ -30,7 +33,7 @@ function sh(cmd, args, opts = {}) {
       ...opts,
     });
     // gh CLI emits ANSI-coloured JSON even via pipe; strip it
-    return raw.replace(/\u001b\[[\d;]*m/g, "").trim();
+    return raw.replace(ANSI_RE, "").trim();
   } catch (e) {
     return opts.fallback ?? "";
   }

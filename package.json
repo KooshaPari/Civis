@@ -1,18 +1,21 @@
 {
-  "name": "civ-docs",
-  "private": true,
-  "license": "MIT OR Apache-2.0",
-  "type": "module",
-  "scripts": {
-    "docs:build": "vitepress build docs",
-    "docs:dev": "vitepress dev docs --port 5199",
-    "lint": "oxlint",
-    "format": "oxfmt --write ."
-  },
-  "devDependencies": {
-    "oxlint": "latest",
-    "typescript": "latest",
-    "vitepress": "latest"
-  },
-  "packageManager": "bun"
+    "name": "civ-docs",
+    "private": true,
+    "license": "MIT OR Apache-2.0",
+    "type": "module",
+    "scripts": {
+        "dev:branch-clean": "node scripts/dev/branch-clean.mjs",
+        "dev:smoke": "node scripts/dev/smoke.mjs --quick",
+        "dev:status": "node scripts/dev/status.mjs",
+        "docs:build": "vitepress build docs",
+        "docs:dev": "vitepress dev docs --port 5199",
+        "format": "oxfmt --write .",
+        "lint": "oxlint"
+    },
+    "devDependencies": {
+        "oxlint": "latest",
+        "typescript": "latest",
+        "vitepress": "latest"
+    },
+    "packageManager": "bun"
 }

@@ -11,14 +11,16 @@
 # + web_test + dashboard_typecheck (or `just civis-3d-verify`).
 
 pre-commit:
-  parallel: true
-  commands:
-    security-guard:
-      run: bash .github/hooks/pre-commit
+    parallel: true
+    commands:
+        security-guard:
+            run: bash .github/hooks/pre-commit
 
 pre-push:
-  piped: false
-  commands:
-    quality-manifest:
-      run: bash scripts/quality/pre-push-quality-manifest.sh
-      stage_fixed: true
+    piped: false
+    commands:
+        quality-manifest:
+            run: bash scripts/quality/pre-push-quality-manifest.sh
+            stage_fixed: true
+        branch-clean:
+            run: node scripts/dev/branch-clean.mjs

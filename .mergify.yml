@@ -39,7 +39,7 @@ pull_request_rules:
     # Auto-merge bot PRs (CI configs, formatting) when CI passes
     - name: Auto-merge bot housekeeping PRs
       conditions:
-          - author ~= ^(trunk-io\[bot\]|mergify\[bot\]|github-actions\[bot\])$
+          - author ~= ^(trunk-io\[bot\]|github-actions\[bot\])$
           - check-success=ci
           - check-success=lint
           - -conflict
@@ -47,6 +47,23 @@ pull_request_rules:
       actions:
           merge:
               method: squash
+
+    # Kill Mergify-bot regression loop: the mergify[bot] periodically force-pushes
+    # to `mergify/configuration-deprecated-update` to "upgrade" config. The PRs are
+    # no-op (branch is byte-identical to main). Auto-close + auto-delete-branch on sight.
+    - name: Kill mergify/configuration-deprecated-update regression
+      conditions:
+          - base=main
+          - head~=^mergify/configuration-deprecated-update$
+          - -closed
+      actions:
+          comment:
+              message: >
+                  Auto-closing: this is a Mergify[bot] regression (the bot force-pushes the
+                  deprecated-config branch on a schedule). Branch is byte-identical to main; no
+                  unique work. Closed by the kill-loop rule in `.mergify.yml`.
+          close: {}
+          delete_head_branch: {}
 
     # Label PRs based on changed files
     - name: Label Python changes

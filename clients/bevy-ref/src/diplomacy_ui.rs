@@ -16,8 +16,10 @@ use crossbeam_channel::Sender;
 use std::collections::HashMap;
 
 use crate::settings_ui::{GameSettings, KeyBinding, ACTION_TOGGLE_DIPLOMACY};
+use crate::sim_bridge::SimState;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
+use civ_engine::{DiplomacyEvent, DiplomacyKind};
 use civ_protocol_3d::{FactionStateEntry, FactionStateFrame, Government3d};
 
 // ---------------------------------------------------------------------------
@@ -116,6 +118,8 @@ pub struct DiplomacyState {
     pub open: bool,
     /// Faction pending war-declaration confirmation (two-click guard).
     pub pending_war_target: Option<u32>,
+    /// Newer diplomacy events have already been folded into `relations`.
+    pub(crate) last_event_tick: u64,
 }
 
 impl Default for DiplomacyState {
@@ -125,6 +129,7 @@ impl Default for DiplomacyState {
             relations: Vec::new(),
             open: false,
             pending_war_target: None,
+            last_event_tick: 0,
         }
     }
 }
@@ -163,7 +168,31 @@ impl DiplomacyState {
             relations,
             open: true,
             pending_war_target: None,
+            last_event_tick: 0,
         }
+    }
+
+    fn resize_matrix(&mut self) {
+        let faction_count = self.factions.len();
+        self.relations.resize(faction_count, Vec::new());
+        for row in &mut self.relations {
+            row.resize(faction_count, 0);
+        }
+    }
+
+    fn index_of(&self, faction_id: u32) -> Option<usize> {
+        self.factions
+            .iter()
+            .position(|faction| faction.id == faction_id)
+    }
+
+    fn accumulate_relation(&mut self, faction_a: u32, faction_b: u32, delta: i8) {
+        let (Some(a), Some(b)) = (self.index_of(faction_a), self.index_of(faction_b)) else {
+            return;
+        };
+        let bump = |value: i8| value.saturating_add(delta).clamp(-100, 100);
+        self.relations[a][b] = bump(self.relations[a][b]);
+        self.relations[b][a] = bump(self.relations[b][a]);
     }
 }
 
@@ -185,6 +214,7 @@ pub fn diplomacy_state_from_faction_frame(
         relations,
         open: false,
         pending_war_target: None,
+        last_event_tick: 0,
     }
 }
 
@@ -256,7 +286,7 @@ pub struct DiplomacyUiPlugin;
 impl Plugin for DiplomacyUiPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<DiplomacyState>()
-            .add_systems(Update, toggle_diplomacy_panel)
+            .add_systems(Update, (toggle_diplomacy_panel, sync_diplomacy_from_sim))
             .add_systems(EguiPrimaryContextPass, draw_diplomacy_panel);
     }
 }
@@ -277,6 +307,72 @@ fn toggle_diplomacy_panel(
         .unwrap_or(KeyBinding::Key(KeyCode::KeyG));
     if toggle_binding.is_just_pressed(&keys, &mouse_buttons) {
         state.open = !state.open;
+    }
+}
+
+/// Synchronize the in-process standalone simulation without affecting the
+/// WebSocket client, which intentionally has no [`SimState`] resource.
+fn sync_diplomacy_from_sim(sim: Option<Res<SimState>>, mut state: ResMut<DiplomacyState>) {
+    let Some(sim) = sim else {
+        return;
+    };
+    if !sim.is_changed() {
+        return;
+    }
+
+    let mut faction_ids: Vec<u32> = sim.0.state.factions.keys().copied().collect();
+    faction_ids.sort_unstable();
+    let factions = faction_ids
+        .into_iter()
+        .map(|id| {
+            let name = sim
+                .0
+                .state
+                .factions
+                .get(&id)
+                .cloned()
+                .unwrap_or_else(|| format!("Faction {id}"));
+            let population = sim
+                .0
+                .state
+                .faction_treasury
+                .get(&id)
+                .map(|treasury| treasury.to_f64().max(0.0) as u32)
+                .unwrap_or(0);
+            DipFaction::new(id, name, faction_color_from_id(id), population)
+        })
+        .collect();
+    let snapshot = sim.0.snapshot();
+    sync_local_diplomacy_state(&mut state, factions, &snapshot.diplomacy_events);
+}
+
+fn sync_local_diplomacy_state(
+    state: &mut DiplomacyState,
+    factions: Vec<DipFaction>,
+    diplomacy_events: &[DiplomacyEvent],
+) {
+    let roster_changed = factions.len() != state.factions.len()
+        || factions
+            .iter()
+            .zip(&state.factions)
+            .any(|(next, current)| next.id != current.id);
+    state.factions = factions;
+    if roster_changed {
+        state.relations.clear();
+    }
+    state.resize_matrix();
+
+    for event in diplomacy_events {
+        if event.tick <= state.last_event_tick {
+            continue;
+        }
+        let delta = match event.kind {
+            DiplomacyKind::TradeAgreement => 18,
+            DiplomacyKind::Peace => 8,
+            DiplomacyKind::Conflict => -22,
+        };
+        state.accumulate_relation(event.faction_a, event.faction_b, delta);
+        state.last_event_tick = state.last_event_tick.max(event.tick);
     }
 }
 
@@ -676,5 +772,75 @@ mod tests {
             treasury: FactionTreasury3d::default(),
         };
         assert_eq!(faction_display_name(&entry), "Corporate #7");
+    }
+
+    fn local_factions(ids: &[u32]) -> Vec<DipFaction> {
+        ids.iter()
+            .map(|&id| DipFaction::new(id, format!("Faction {id}"), [0.0; 3], 0))
+            .collect()
+    }
+
+    #[test]
+    fn standalone_sync_folds_new_events_symmetrically_once() {
+        let mut state = DiplomacyState::default();
+        let events = vec![
+            DiplomacyEvent {
+                tick: 4,
+                faction_a: 0,
+                faction_b: 1,
+                kind: DiplomacyKind::TradeAgreement,
+            },
+            DiplomacyEvent {
+                tick: 5,
+                faction_a: 0,
+                faction_b: 1,
+                kind: DiplomacyKind::Conflict,
+            },
+            DiplomacyEvent {
+                tick: 6,
+                faction_a: 1,
+                faction_b: 0,
+                kind: DiplomacyKind::Peace,
+            },
+        ];
+
+        sync_local_diplomacy_state(&mut state, local_factions(&[0, 1]), &events);
+        assert_eq!(state.relations, vec![vec![0, 4], vec![4, 0]]);
+        assert_eq!(state.last_event_tick, 6);
+
+        sync_local_diplomacy_state(&mut state, local_factions(&[0, 1]), &events);
+        assert_eq!(state.relations, vec![vec![0, 4], vec![4, 0]]);
+    }
+
+    #[test]
+    fn standalone_sync_resets_relations_when_roster_changes() {
+        let mut state = DiplomacyState::default();
+        sync_local_diplomacy_state(
+            &mut state,
+            local_factions(&[0, 1]),
+            &[DiplomacyEvent {
+                tick: 3,
+                faction_a: 0,
+                faction_b: 1,
+                kind: DiplomacyKind::Conflict,
+            }],
+        );
+        assert_eq!(state.relations[0][1], -22);
+
+        sync_local_diplomacy_state(&mut state, local_factions(&[0, 1, 2]), &[]);
+        assert_eq!(state.relations, neutral_relations_matrix(3));
+    }
+
+    #[test]
+    fn standalone_sync_is_safe_without_a_sim_resource() {
+        let mut app = App::new();
+        app.init_resource::<DiplomacyState>()
+            .add_systems(Update, sync_diplomacy_from_sim);
+
+        app.update();
+
+        let state = app.world().resource::<DiplomacyState>();
+        assert!(state.factions.is_empty());
+        assert!(state.relations.is_empty());
     }
 }

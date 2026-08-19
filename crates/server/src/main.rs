@@ -2,10 +2,27 @@ use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 
 use civ_engine::{CivSaveBundle, Simulation};
 use civ_server::{most_recent_save_path, run_ws_bridge, TickBroadcastFormat, WsBridgeConfig};
+use opentelemetry::global;
+use opentelemetry::trace::TracerProvider as _;
+use opentelemetry_sdk::trace::SdkTracerProvider;
 use tokio::sync::Mutex;
-
+use tracing_opentelemetry::OpenTelemetryLayer;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 #[tokio::main]
 async fn main() {
+    // Initialize OpenTelemetry
+    global::set_text_map_propagator(opentelemetry_sdk::propagation::TraceContextPropagator::new());
+    let provider = SdkTracerProvider::builder()
+        .with_simple_exporter(opentelemetry_stdout::SpanExporter::default())
+        .build();
+    let tracer = provider.tracer("civ-server");
+    // Initialize tracing with OpenTelemetry layer
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer())
+        .with(OpenTelemetryLayer::new(tracer))
+        .init();
+
     let port = std::env::var("CIV_SERVER_PORT")
         .ok()
         .and_then(|value| value.parse().ok())

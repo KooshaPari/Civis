@@ -41,6 +41,7 @@ members = [
 exclude = [
   "clients/godot-ref/rust",
   "clients/unreal-show/Source/Civis/rust-shim",
+  "fuzz",
 ]
 resolver = "2"
 

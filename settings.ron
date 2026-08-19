@@ -1,0 +1,138 @@
+(
+    graphics: (
+        resolution: R1440p,
+        vsync: false,
+        quality: Custom,
+        resolution_scale: 1.0,
+        shadow_quality: Ultra,
+        anti_aliasing: MSAA,
+        view_distance: 256,
+        texture_quality: High,
+        ambient_occlusion: true,
+        ssao_enabled: true,
+        ssr_enabled: true,
+        volumetric_fog_enabled: true,
+        tonemapping_enabled: true,
+        color_grading_enabled: true,
+        bloom: true,
+        motion_blur: false,
+        gi: true,
+        vfx: true,
+    ),
+    display: (
+        window_mode: Windowed,
+        target_fps: 120,
+        fps_uncapped: false,
+    ),
+    audio: (
+        master: 0.8,
+        music: 0.6,
+        sfx: 0.8,
+    ),
+    gameplay: (
+        default_sim_speed: 1.0,
+        autosave: true,
+        autosave_minutes: 5,
+        difficulty: 0.5,
+        disaster_frequency: 0.5,
+        emergence_intensity: 0.5,
+    ),
+    keybinds: [
+        (
+            action: "Toggle Settings",
+            binding: "key:KeyO",
+        ),
+        (
+            action: "Toggle Diplomacy",
+            binding: "key:KeyG",
+        ),
+        (
+            action: "Toggle Tech Tree",
+            binding: "key:KeyT",
+        ),
+        (
+            action: "Toggle Map",
+            binding: "key:KeyM",
+        ),
+        (
+            action: "Pause / Resume Sim",
+            binding: "key:Space",
+        ),
+        (
+            action: "Cycle Sim Speed",
+            binding: "key:Equal",
+        ),
+        (
+            action: "Set Speed 1x",
+            binding: "key:Digit1",
+        ),
+        (
+            action: "Set Speed 2x",
+            binding: "key:Digit2",
+        ),
+        (
+            action: "Set Speed 5x",
+            binding: "key:Digit3",
+        ),
+        (
+            action: "Set Speed 10x",
+            binding: "key:Digit4",
+        ),
+        (
+            action: "Move Camera Forward",
+            binding: "key:KeyW",
+        ),
+        (
+            action: "Move Camera Backward",
+            binding: "key:KeyS",
+        ),
+        (
+            action: "Move Camera Left",
+            binding: "key:KeyA",
+        ),
+        (
+            action: "Move Camera Right",
+            binding: "key:KeyD",
+        ),
+        (
+            action: "Raise Camera",
+            binding: "key:Space",
+        ),
+        (
+            action: "Lower Camera",
+            binding: "key:ShiftLeft",
+        ),
+        (
+            action: "Rotate Camera",
+            binding: "mouse:right",
+        ),
+        (
+            action: "Zoom Camera",
+            binding: "mouse:middle",
+        ),
+        (
+            action: "Reset Camera",
+            binding: "key:KeyR",
+        ),
+        (
+            action: "Zoom Camera In",
+            binding: "key:Equal",
+        ),
+        (
+            action: "Zoom Camera Out",
+            binding: "key:Minus",
+        ),
+        (
+            action: "Select / Inspect",
+            binding: "mouse:left",
+        ),
+        (
+            action: "Close Panel",
+            binding: "key:Escape",
+        ),
+    ],
+    world: (
+        world_size: 1,
+        default_era: 1,
+    ),
+)

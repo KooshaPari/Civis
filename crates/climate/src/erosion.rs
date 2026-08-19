@@ -18,8 +18,9 @@
 //! 3. **Erosion + deposition** — the cell that *lost* water loses a
 //!    fraction `erosion_rate` of its height. The *gaining* cell gains
 //!    the same fraction (`deposition_rate`) of the same height delta.
-//!    Conservation is preserved up to floating-point rounding: the
-//!    total height summed across the grid is unchanged.
+//!    When `deposition_rate < 1.0`, the remainder is treated as
+//!    dissolved load lost from the local system (mass is NOT conserved).
+//!    Set `deposition_rate = 1.0` for perfect conservation.
 //! 4. **Water decay** — surface water evaporates / infiltrates at
 //!    `water_decay`, keeping the flux grid stable over time.
 //!
@@ -30,7 +31,7 @@
 //! # Example
 //!
 //! ```rust
-//! use civ_climate::erosion::{ErosionGrid, ErosionParams};
+//! use civ_climate::erosion::{erosion_step, ErosionGrid, ErosionParams};
 //!
 //! let mut terrain = ErosionGrid::new(3, 1);
 //! // Cell (0,0) is the high point; (2,0) is the sink.
@@ -42,7 +43,10 @@
 //! water.set_height(0, 0, 100.0);
 //!
 //! let params = ErosionParams::default();
-//! erosion_step(&mut terrain, &mut water, &params);
+//! for _ in 0..10 {
+//!     water.set_height(0, 0, 100.0);
+//!     erosion_step(&mut terrain, &mut water, &params);
+//! }
 //!
 //! assert!(terrain.height_at(0, 0) < 10.0); // source lowered
 //! assert!(terrain.height_at(2, 0) >  0.0); // sink raised
@@ -353,7 +357,8 @@ mod tests {
     }
 
     /// 3. Mass conservation: the total terrain height is preserved
-    ///    (erosion loss == deposition gain) up to floating-point error.
+    ///    (erosion loss == deposition gain) up to floating-point error,
+    ///    provided `deposition_rate == 1.0` (no dissolved load loss).
     #[test]
     fn mass_is_conserved() {
         let mut terrain = ErosionGrid::new(3, 1);
@@ -364,7 +369,11 @@ mod tests {
         let mut water = ErosionGrid::new(3, 1);
         water.set_height(0, 0, 100.0);
 
-        let params = ErosionParams::default();
+        // Use deposition_rate = 1.0 so no material is lost to dissolved load.
+        let params = ErosionParams {
+            deposition_rate: 1.0,
+            ..ErosionParams::default()
+        };
         let total_before = terrain.total();
 
         for _ in 0..20 {

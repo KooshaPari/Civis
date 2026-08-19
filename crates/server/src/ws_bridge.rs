@@ -34,6 +34,7 @@ use civ_protocol_3d::{
 };
 use civ_save_db::SaveDb;
 use futures::{SinkExt, StreamExt};
+use prometheus::{Encoder, IntCounter, IntGauge, Registry, TextEncoder};
 use tokio::{
     net::TcpListener,
     sync::{mpsc, Mutex},
@@ -165,6 +166,53 @@ struct TickBroadcast {
     encoded: Arc<[Message]>,
 }
 
+/// Server-side Prometheus metrics.
+struct ServerMetrics {
+    tick_batches_sent: prometheus::IntCounter,
+    tick_messages_sent: prometheus::IntCounter,
+    ws_client_disconnects: prometheus::IntCounter,
+    connected_clients: prometheus::IntGauge,
+}
+
+impl ServerMetrics {
+    fn new(registry: &Registry) -> Self {
+        let tick_batches_sent =
+            IntCounter::new("civ_tick_batches_sent", "Total tick batches sent").unwrap();
+        let tick_messages_sent =
+            IntCounter::new("civ_tick_messages_sent", "Total tick messages sent").unwrap();
+        let ws_client_disconnects = IntCounter::new(
+            "civ_ws_client_disconnects",
+            "Total WebSocket client disconnects",
+        )
+        .unwrap();
+        let connected_clients = IntGauge::new(
+            "civ_connected_clients",
+            "Current number of connected WebSocket clients",
+        )
+        .unwrap();
+
+        registry
+            .register(Box::new(tick_batches_sent.clone()))
+            .unwrap();
+        registry
+            .register(Box::new(tick_messages_sent.clone()))
+            .unwrap();
+        registry
+            .register(Box::new(ws_client_disconnects.clone()))
+            .unwrap();
+        registry
+            .register(Box::new(connected_clients.clone()))
+            .unwrap();
+
+        Self {
+            tick_batches_sent,
+            tick_messages_sent,
+            ws_client_disconnects,
+            connected_clients,
+        }
+    }
+}
+
 fn resolve_session_id() -> String {
     std::env::var("CIVIS_SESSION_ID")
         .ok()
@@ -185,9 +233,6 @@ struct AppState {
     sim: Arc<Mutex<Simulation>>,
     tick: Arc<AtomicU64>,
     speed_multiplier: Arc<AtomicU32>,
-    tick_batches_sent: Arc<AtomicU64>,
-    tick_messages_sent: Arc<AtomicU64>,
-    ws_client_disconnects: Arc<AtomicU64>,
     clients: Arc<Mutex<Vec<ClientOutboundTx>>>,
     max_clients: usize,
     require_role: bool,
@@ -196,6 +241,8 @@ struct AppState {
     replays_dir: PathBuf,
     save_db: Arc<SaveDb>,
     session_id: String,
+    metrics: Arc<ServerMetrics>,
+    metrics_registry: Registry,
 }
 
 /// Run the WebSocket bridge and 10 Hz tick loop.
@@ -248,13 +295,12 @@ async fn serve_ws_bridge(
     );
     let session_id = resolve_session_id();
     tracing::info!(%session_id, ?save_db_path, "session-scoped save metadata db ready");
+    let metrics_registry = Registry::new();
+    let metrics = Arc::new(ServerMetrics::new(&metrics_registry));
     let state = AppState {
         sim,
         tick: Arc::new(AtomicU64::new(0)),
         speed_multiplier: Arc::new(AtomicU32::new(1)),
-        tick_batches_sent: Arc::new(AtomicU64::new(0)),
-        tick_messages_sent: Arc::new(AtomicU64::new(0)),
-        ws_client_disconnects: Arc::new(AtomicU64::new(0)),
         clients: Arc::new(Mutex::new(Vec::new())),
         max_clients: config.max_clients,
         require_role: config.require_role,
@@ -263,10 +309,13 @@ async fn serve_ws_bridge(
         replays_dir: config.replays_dir,
         save_db,
         session_id,
+        metrics,
+        metrics_registry,
     };
 
     let app = Router::new()
         .route("/healthz", get(healthz))
+        .route("/metrics", get(metrics_handler))
         .route("/replay/export", get(replay_export))
         .route(
             "/replay/import",
@@ -294,26 +343,27 @@ async fn serve_ws_bridge(
 async fn healthz(State(state): State<AppState>) -> impl IntoResponse {
     let tick = state.tick.load(Ordering::SeqCst);
     let clients = state.clients.lock().await.len();
-    let tick_batches_sent = state.tick_batches_sent.load(Ordering::SeqCst);
-    let tick_messages_sent = state.tick_messages_sent.load(Ordering::SeqCst);
-    let ws_client_disconnects = state.ws_client_disconnects.load(Ordering::SeqCst);
-    tracing::info!(
-        tick,
-        clients,
-        tick_batches_sent,
-        tick_messages_sent,
-        ws_client_disconnects,
-        "ws bridge healthz summary"
-    );
+    tracing::info!(tick, clients, "ws bridge healthz summary");
     (
         StatusCode::OK,
         Json(serde_json::json!({
             "tick": tick,
             "clients": clients,
-            "tick_batches_sent": tick_batches_sent,
-            "tick_messages_sent": tick_messages_sent,
-            "ws_client_disconnects": ws_client_disconnects,
         })),
+    )
+}
+
+async fn metrics_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let encoder = TextEncoder::new();
+    let metric_families = state.metrics_registry.gather();
+    let mut buffer = Vec::new();
+    encoder.encode(&metric_families, &mut buffer).unwrap();
+    // Use a static string for the content type to avoid lifetime issues.
+    let content_type = "text/plain; version=0.0.4; charset=utf-8";
+    (
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, content_type)],
+        buffer,
     )
 }
 
@@ -394,10 +444,11 @@ async fn handle_socket(
             return;
         }
         clients.push(tx.clone());
+        state.metrics.connected_clients.inc();
     }
 
     let forward_filter = Arc::clone(&subscription_filter);
-    let tick_messages_sent = Arc::clone(&state.tick_messages_sent);
+    let tick_messages_sent = state.metrics.tick_messages_sent.clone();
     let forward = tokio::spawn(async move {
         while let Some(outbound) = rx.recv().await {
             match outbound {
@@ -413,7 +464,7 @@ async fn handle_socket(
                             if sender.send(msg.clone()).await.is_err() {
                                 return;
                             }
-                            tick_messages_sent.fetch_add(1, Ordering::Relaxed);
+                            tick_messages_sent.inc();
                         }
                         continue;
                     }
@@ -436,7 +487,7 @@ async fn handle_socket(
                         if sender.send(msg).await.is_err() {
                             return;
                         }
-                        tick_messages_sent.fetch_add(1, Ordering::Relaxed);
+                        tick_messages_sent.inc();
                     }
                 }
             }
@@ -1622,12 +1673,13 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
         })
     };
 
-    state.tick_batches_sent.fetch_add(1, Ordering::Relaxed);
+    state.metrics.tick_batches_sent.inc();
     let mut clients = state.clients.lock().await;
     clients.retain(|tx| {
         let delivered = tx.send(ClientOutbound::Tick(Arc::clone(&batch))).is_ok();
         if !delivered {
-            state.ws_client_disconnects.fetch_add(1, Ordering::Relaxed);
+            state.metrics.ws_client_disconnects.inc();
+            state.metrics.connected_clients.dec();
         }
         delivered
     });
@@ -1689,13 +1741,12 @@ mod tests {
         std::fs::create_dir_all(&replays_dir).expect("replays dir");
         let save_db_path = save_db_path_for_saves_dir(&saves_dir);
         let save_db = Arc::new(SaveDb::open(&save_db_path).expect("open save db"));
+        let metrics_registry = Registry::new();
+        let metrics = Arc::new(ServerMetrics::new(&metrics_registry));
         let state = AppState {
             sim,
             tick: Arc::new(AtomicU64::new(tick)),
             speed_multiplier: Arc::new(AtomicU32::new(speed_multiplier)),
-            tick_batches_sent: Arc::new(AtomicU64::new(0)),
-            tick_messages_sent: Arc::new(AtomicU64::new(0)),
-            ws_client_disconnects: Arc::new(AtomicU64::new(0)),
             clients: Arc::new(Mutex::new(Vec::new())),
             max_clients: 1,
             require_role,
@@ -1704,6 +1755,8 @@ mod tests {
             replays_dir,
             save_db,
             session_id: "test-session".to_string(),
+            metrics,
+            metrics_registry,
         };
         (dir, state)
     }

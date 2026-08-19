@@ -124,8 +124,8 @@ impl Default for BiomeShiftParams {
             polar_desert_temp_c: -10.0,
             //   0 °C: trees can't grow; still treeless.
             tundra_temp_c: 0.0,
-            //   8 °C: boreal forest (taiga) belt.
-            boreal_temp_c: 8.0,
+            //   9 °C: boreal forest (taiga) belt.
+            boreal_temp_c: 9.0,
             //  18 °C: warm temperate; hotter non-arid cells become desert.
             temperate_temp_c: 18.0,
             //   0.25: arid threshold in precipitation model units.

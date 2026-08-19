@@ -12,4 +12,5 @@ jobs:
   gate:
     runs-on: ubuntu-24.04
     steps:
-      - run: echo "TODO: replace with custom self-merge-gate logic"
+      - run: |
+          echo 'TODO: replace with custom self-merge-gate logic'

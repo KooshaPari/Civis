@@ -16,4 +16,5 @@ jobs:
   sync:
     runs-on: ubuntu-24.04
     steps:
-      - run: echo "TODO: replace with custom alert-sync logic"
+      - run: |
+          echo 'TODO: replace with custom alert-sync logic'

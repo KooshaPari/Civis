@@ -367,4 +367,27 @@ mod tests {
             Err(TreatyError::InvalidState(TreatyStatus::Expired))
         ));
     }
+
+    #[test]
+    fn test_active_treaty_effects_per_tick() {
+        let mut manager = TreatyManager::new();
+        let id = manager
+            .propose_treaty(
+                p(1),
+                (p(1), p(2)),
+                TreatyType::Alliance,
+                vec![],
+                Some(100),
+            )
+            .unwrap();
+        manager.accept_treaty(p(1), id).unwrap();
+
+        // Check effects multiple times; they should be consistent as long as treaty is active
+        let effects_1 = manager.check_treaty_effects(10);
+        let effects_2 = manager.check_treaty_effects(50);
+        
+        assert_eq!(effects_1.len(), 1);
+        assert_eq!(effects_2.len(), 1);
+        assert_eq!(effects_1[0].standing_delta, 10); // Alliance effect
+    }
 }

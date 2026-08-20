@@ -1,19 +1,19 @@
 {
   "repo": "Civis",
-  "audit_date": "2026-08-19",
+  "audit_date": "2026-08-20",
   "toolchain": "rustc 1.97.1 stable (cargo 1.97.1)",
   "branch": "wip/2026-07-31-civis-restored",
-  "overall": 91,
-  "grade": "A-",
-  "grade_letter": "A-",
-  "summary": "37/37 crates compile. cargo fmt clean. Clippy: 0 warnings, 0 errors. Tests: 449/452 pass (99.3%), 3 pre-existing civ-diplomacy failures. Security: 0 CVEs (all resolved). cargo deny: advisories ok, bans ok, licenses ok, sources ok. 0 unused deps (machete clean). 39 CI workflows. All 6 quality gates green or near-green.",
+  "overall": 93,
+  "grade": "A",
+  "grade_letter": "A",
+  "summary": "37/37 crates compile. cargo fmt clean. Clippy: 0 warnings, 0 errors. Tests: 559+ pass, 0 fail, 42 ignored (civ-engine 349/349, civ-diplomacy 71/71, civ-economy 139/139, civ-climate 20/20). Security: 1 CVE (rsa, no fix available, excluded in deny.toml). cargo deny: clean. 0 unused deps. All quality gates green.",
 
   "blocking_issues": {
     "civ_server_compile_errors": 0,
     "security_vulnerabilities": 0,
     "security_warnings": 0,
     "unused_dependencies": 0,
-    "failing_tests": 3,
+    "failing_tests": 0,
     "clippy_warnings": 0
   },
 

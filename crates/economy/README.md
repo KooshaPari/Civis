@@ -1,33 +1,40 @@
-# civ-economy
+# economy
 
-**Conservation-complete economy layer: double-entry ledger, allocation engines, and district production.**
+> Conservation-complete economy layer with double-entry ledger and allocation engines.
 
-The `civ-economy` crate implements the economic simulation for Civis, ensuring conservation invariants across the system. It handles resource allocation (joules, labor), currency trust, market dynamics, and trade routes, synchronizing with the main engine's energy budget.
+## Overview
 
-## Key Types
+The `economy` crate implements a conservation-complete economic simulation layer. It utilizes a double-entry ledger system to ensure that all resources (joules, goods, labor) are accounted for and that conservation invariants are maintained across the system.
 
-- `EconomyState`: The central state of the economic system for a simulation tick.
-- `AllocationEngine`: Trait and implementations for resource distribution strategies (e.g., `CapitalistAllocator`, `PlannedAllocator`).
-- `JouleAllocator`: Specialized allocator for energy (joules).
-- `CurrencyTrust`: Manages the acceptance and stability of currencies.
+It includes allocation engines for distributing resources, district-level production modeling, and market/trade dynamics. The crate also handles institution accounts, tax policies, currency trust, and the management of trade routes and extraction sites.
 
-## Usage Example
+This crate is designed to be lightweight yet robust, ensuring that the simulation's economic state remains consistent and realistic.
 
-The economy is typically stepped by the engine:
+## Features
+
+- Conservation-complete double-entry ledger
+- Allocation engines (e.g., Capitalist, Planned)
+- District-level production and stocks
+- Market and trade route simulation
+- Institution accounts and tax policies
+- Currency trust and stability modeling
+- Joule budget management
+- Per-good stock tracking
+
+## Usage
 
 ```rust
-use civ_economy::{EconomyState, step};
-
-let mut eco_state = EconomyState::default();
-// ... initialize with data from WorldState ...
-
-step(&mut eco_state);
-// ... write back to WorldState ...
+use economy::*;
 ```
 
-## Dependencies
+## Architecture
 
-This crate is designed to be lightweight:
+- **EconomyState**: The central state of the economic system for a simulation tick.
+- **AllocationEngine**: Trait and implementations for resource distribution strategies.
+- **MultiGoodMarket**: Handles the exchange and pricing of multiple goods.
+- **Stocks**: Tracks per-good resource levels.
+- **InstitutionLedger**: Manages accounts for specific institutions.
 
-- `serde`: Serialization.
-- `tracing`: Logging and diagnostics.
+## License
+
+Part of the [Civis](https://github.com/KooshaPari/Civis) project.

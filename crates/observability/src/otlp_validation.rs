@@ -30,6 +30,9 @@ fn setup_test_observability() -> opentelemetry_sdk::trace::SdkTracerProvider {
 
 #[test]
 fn otlp_pipeline_initialises() {
+    let rt = tokio::runtime::Runtime::new().expect("failed to create tokio runtime");
+    let _guard = rt.enter();
+
     let provider = setup_test_observability();
     let tracer = provider.tracer("otlp-validation");
     // Creating a span should not panic even though no collector is listening.
@@ -96,6 +99,9 @@ fn tracing_spans_created_and_exported() {
     use tracing_subscriber::layer::SubscriberExt;
     use tracing_subscriber::util::SubscriberInitExt;
 
+    let rt = tokio::runtime::Runtime::new().expect("failed to create tokio runtime");
+    let _guard = rt.enter();
+
     let provider = setup_test_observability();
     let tracer = provider.tracer("civis-tracing-test");
 
@@ -124,6 +130,9 @@ fn otel_layer_properly_configured() {
     use opentelemetry::trace::TracerProvider as _;
     use tracing_opentelemetry::OpenTelemetryLayer;
     use tracing_subscriber::layer::SubscriberExt;
+
+    let rt = tokio::runtime::Runtime::new().expect("failed to create tokio runtime");
+    let _guard = rt.enter();
 
     let provider = setup_test_observability();
     let tracer = provider.tracer("civis-layer-test");

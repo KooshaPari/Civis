@@ -3,22 +3,21 @@
 //! Run with:
 //!
 //! ```sh
-//! cargo run -p civis-observability --example otlp_demo
+//! cargo run -p civ-observability --example otlp_demo
 //! ```
 //!
 //! Set `OTEL_EXPORTER_OTLP_ENDPOINT` to point at a running OTLP collector
 //! (default `http://localhost:4317`).  The Prometheus scrape endpoint is
 //! served on port 9090.
 
-use civis_observability::{init_observability, ObservabilityConfig};
+use civ_observability::{init_observability, ObservabilityConfig};
 use opentelemetry::trace::TracerProvider as _;
 use prometheus::{Encoder, TextEncoder};
 use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
-#[tokio::main]
-async fn main() {
+fn main() {
     // ------------------------------------------------------------------
     // 1. Initialise the full observability stack.
     // ------------------------------------------------------------------

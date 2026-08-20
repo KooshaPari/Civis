@@ -2,20 +2,18 @@ use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 
 use civ_engine::{CivSaveBundle, Simulation};
 use civ_server::{most_recent_save_path, run_ws_bridge, TickBroadcastFormat, WsBridgeConfig};
-use opentelemetry::global;
+use civ_observability::{init_observability, ObservabilityConfig};
 use opentelemetry::trace::TracerProvider as _;
-use opentelemetry_sdk::trace::SdkTracerProvider;
-use tokio::sync::Mutex;
 use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 #[tokio::main]
 async fn main() {
-    // Initialize OpenTelemetry
-    global::set_text_map_propagator(opentelemetry_sdk::propagation::TraceContextPropagator::new());
-    let provider = SdkTracerProvider::builder()
-        .with_simple_exporter(opentelemetry_stdout::SpanExporter::default())
-        .build();
+    let provider = init_observability(ObservabilityConfig {
+        service_name: "civ-server".to_string(),
+        otlp_endpoint: None, // reads from OTEL_EXPORTER_OTLP_ENDPOINT env
+        prometheus_port: None, // default 9090
+    });
     let tracer = provider.tracer("civ-server");
     // Initialize tracing with OpenTelemetry layer
     tracing_subscriber::registry()
@@ -50,7 +48,7 @@ async fn main() {
         .ok()
         .and_then(|value| value.parse().ok())
         .unwrap_or(42);
-    let sim = Arc::new(Mutex::new(
+    let sim = Arc::new(tokio::sync::Mutex::new(
         initial_simulation(&saves_dir, autoload, map_seed).await,
     ));
     // require_role defaults to true (deny-by-default); operators may disable

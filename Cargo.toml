@@ -32,6 +32,7 @@ members = [
   "crates/civ-institutions",
   "crates/powers",
   "crates/infra",
+  "crates/observability",
   # "crates/physics-substrate", — CDX sbom only, no Cargo.toml or source
   "crates/audio",
   "crates/climate",

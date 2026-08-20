@@ -1,0 +1,15 @@
+[package]
+name = "civ-observability"
+description = "OpenTelemetry OTLP export pipeline and Prometheus scrape endpoint"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+opentelemetry = { version = "0.28", features = ["trace", "metrics"] }
+opentelemetry-otlp = { version = "0.28", features = ["grpc-tonic"] }
+opentelemetry_sdk = { version = "0.28", features = ["rt-tokio", "metrics"] }
+opentelemetry-prometheus = "0.28"
+prometheus = "0.13"
+tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util"] }

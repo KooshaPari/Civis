@@ -469,18 +469,22 @@ mod tests {
         let mut prev_supply = prev_supply;
         for _ in 0..200 {
             // Each pass: double the supply. Pure runaway.
-            prev_supply = prev_supply.saturating_mul(2).max(1);
-            let _ = step_currency_trust(&mut c, 0, prev_price, prev_price, prev_supply, 0);
+            let current_supply = prev_supply.saturating_mul(2).max(1);
+            let _ = step_currency_trust(&mut c, 0, prev_price, prev_price, current_supply, prev_supply);
+            prev_supply = current_supply;
         }
         assert!(
             c.trust_bp() <= 1_000,
             "200 runaway-supply passes must collapse trust to ≤ 10 % (got {} bp)",
             c.trust_bp()
         );
-        // The hyperinflation pass counter should dominate.
+        // The hyperinflation pass counter should dominate. Supply saturates
+        // at i64::MAX after ~53 doublings from 1000, at which point
+        // period-over-period growth drops to 0 and classification stops.
+        // We expect 1 initial pass + ~53 loop passes ≈ 54 total.
         assert!(
-            c.hyperinflation_passes >= 100,
-            "every runaway pass must be classified as hyperinflationary (got {})",
+            c.hyperinflation_passes >= 50,
+            "most runaway passes must be classified as hyperinflationary (got {})",
             c.hyperinflation_passes
         );
         // Acceptance factor is the same scalar as trust; a near-zero
@@ -541,8 +545,9 @@ mod tests {
         let prev_price = 100;
         let mut prev_supply = 1_000_i64;
         for _ in 0..500 {
-            prev_supply = prev_supply.saturating_mul(2).max(1);
-            let _ = step_currency_trust(&mut d, 0, prev_price, prev_price, prev_supply, 0);
+            let current_supply = prev_supply.saturating_mul(2).max(1);
+            let _ = step_currency_trust(&mut d, 0, prev_price, prev_price, current_supply, prev_supply);
+            prev_supply = current_supply;
         }
         assert_eq!(d.trust_bp(), 0);
     }

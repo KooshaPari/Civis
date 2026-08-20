@@ -6496,6 +6496,7 @@ fn building_signals_limited(signals: DemandSignals, max_parcels: usize) -> Deman
 
 /// FC-3 metal steady-state ceiling (integer metal units) for a cohesion level.
 /// Includes two parcel debits of headroom for discrete cadence oscillation.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn fc3_commercial_metal_steady_ceiling_i64(cohesion: u64) -> i64 {
     let cohesion_signal = ((cohesion as f32) / 1_000_000.0).clamp(0.0, 1.0);
     if cohesion_signal <= FC3_COMMERCIAL_PARCEL_THRESHOLD {
@@ -6508,6 +6509,7 @@ fn fc3_commercial_metal_steady_ceiling_i64(cohesion: u64) -> i64 {
 
 /// Default sentience profile used by [`Simulation::phase_sentience`].
 /// Companion of `Simulation::default_sentience_profile` (associated stub).
+#[allow(dead_code)] // Reserved for future simulation integration
 pub fn default_sentience_profile() -> CognitionTraitProfile {
     CognitionTraitProfile::new(
         "sapient-lineage",
@@ -6516,6 +6518,7 @@ pub fn default_sentience_profile() -> CognitionTraitProfile {
 }
 
 /// Parcels that would be allocated for saturated demand signals (> 0.5).
+#[allow(dead_code)] // Reserved for future simulation integration
 fn building_parcel_count(signals: &DemandSignals) -> usize {
     [
         signals.residential,
@@ -6529,6 +6532,7 @@ fn building_parcel_count(signals: &DemandSignals) -> usize {
 }
 
 /// Construction material debit for `parcel_count` new parcels.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn building_material_cost(parcel_count: usize) -> (Fixed, Fixed) {
     let n = parcel_count as i64;
     (
@@ -6539,20 +6543,24 @@ fn building_material_cost(parcel_count: usize) -> (Fixed, Fixed) {
 
 /// True when the global stockpile can fund `parcel_count` new parcels.
 /// De-silos `resources.wood` / `resources.metal`, which `phase_production` writes.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn building_materials_affordable(wood: Fixed, metal: Fixed, parcel_count: usize) -> bool {
     let (need_wood, need_metal) = building_material_cost(parcel_count);
     wood >= need_wood && metal >= need_metal
 }
 
 /// Belief units that contribute one unit of cohesion growth per tick.
+#[allow(dead_code)] // Reserved for future simulation integration
 const COHESION_BELIEF_DIVISOR: u64 = 200;
 /// Unrest units that fray one unit of cohesion per tick.
+#[allow(dead_code)] // Reserved for future simulation integration
 const COHESION_UNREST_DIVISOR: u64 = 50;
 
 /// Emergence policy (FR-CIV-0100 §3): the social fabric's per-tick change is the
 /// balance of belief (binds, scaled gently) against unrest (frays, scaled
 /// harder, so disorder erodes cohesion faster than faith builds it). Returns a
 /// signed delta; the caller floors the running total at zero.
+#[allow(dead_code)] // Reserved for future simulation integration
 pub fn cohesion_delta(belief: u64, unrest: u64) -> i64 {
     let bind = (belief / COHESION_BELIEF_DIVISOR) as i64;
     let fray = (unrest / COHESION_UNREST_DIVISOR) as i64;
@@ -6565,13 +6573,16 @@ pub fn cohesion_delta(belief: u64, unrest: u64) -> i64 {
 /// existing cohesion bind/frac inputs so the moment of awakening nudges
 /// the social fabric without dominating it; the per-tick cap mirrors the
 /// spirit of [`crate::emergence`] emergence caps.
+#[allow(dead_code)] // Reserved for future simulation integration
 pub(crate) const COHESION_PER_AWAKENING: i64 = 2;
 /// Hard per-tick cap on awakening-driven cohesion nudge (signed i64 so the
 /// existing floored-at-zero cohesion mutator absorbs any overshoot cleanly).
+#[allow(dead_code)] // Reserved for future simulation integration
 pub(crate) const MAX_AWAKENING_COHESION_PER_TICK: i64 = 10;
 /// FR-CIV-GENETICS / FR-CIV-LEGENDS: pure gain fn for the awakening -> cohesion
 /// pulse. Returns a signed i64 (matches `cohesion_delta`'s contract). The
 /// inner product is clamped to the per-tick cap.
+#[allow(dead_code)] // Reserved for future simulation integration
 #[must_use]
 pub fn awakening_cohesion_gain(awakenings_this_tick: usize) -> i64 {
     let raw = (awakenings_this_tick as i64).saturating_mul(COHESION_PER_AWAKENING);
@@ -6581,9 +6592,12 @@ pub fn awakening_cohesion_gain(awakenings_this_tick: usize) -> i64 {
 /// FR-CIV-GENETICS / FR-CIV-LEGENDS: pure gain fn for the awakening -> belief
 /// pulse. Returns a signed i64 and clamps to a small per-tick cap so the
 /// compatibility shim stays bounded and deterministic.
+#[allow(dead_code)] // Reserved for future simulation integration
 pub(crate) const BELIEF_PER_AWAKENING: i64 = 2;
+#[allow(dead_code)] // Reserved for future simulation integration
 pub(crate) const MAX_AWAKENING_BELIEF_PER_TICK: i64 = 10;
 
+#[allow(dead_code)] // Reserved for future simulation integration
 #[must_use]
 pub(crate) fn awakening_belief_gain(awakenings_this_tick: usize) -> i64 {
     let raw = (awakenings_this_tick as i64).saturating_mul(BELIEF_PER_AWAKENING);
@@ -6592,6 +6606,7 @@ pub(crate) fn awakening_belief_gain(awakenings_this_tick: usize) -> i64 {
 
 /// Cohesion absorbs hardship: a strong social fabric damps the per-tick unrest
 /// rise (cohesion -> calmer society), bounded and floored at 1. Decay passes through.
+#[allow(dead_code)] // Reserved for future simulation integration
 pub(crate) fn cohesion_unrest_damp(rise: i64, cohesion: u64) -> i64 {
     if rise <= 0 {
         return rise;
@@ -6602,6 +6617,7 @@ pub(crate) fn cohesion_unrest_damp(rise: i64, cohesion: u64) -> i64 {
 
 /// Surplus differential (resource units) at/above which a route ships its full
 /// boosted volume.
+#[allow(dead_code)] // Reserved for future simulation integration
 const TRADE_GAP_SCALE: i64 = 100;
 
 /// Arbitrage policy (FR-CIV-0100 §3 emergence): trade volume scales with the
@@ -6610,6 +6626,7 @@ const TRADE_GAP_SCALE: i64 = 100;
 /// at 2x so the price↔volume↔treasury↔demand loop self-limits rather than
 /// running away (design-layer criticality bound). No boost when the source is
 /// not in surplus relative to the destination.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn trade_volume_multiplier(from_stock: Fixed, to_stock: Fixed) -> Fixed {
     let gap = (from_stock - to_stock).max(Fixed::ZERO);
     let normalized = (gap / Fixed::from_num(TRADE_GAP_SCALE)).min(Fixed::from_num(1));
@@ -6618,14 +6635,17 @@ fn trade_volume_multiplier(from_stock: Fixed, to_stock: Fixed) -> Fixed {
 
 /// Floor (per-mille) below which unrest cannot throttle trade — even a society
 /// in turmoil keeps half its commerce moving.
+#[allow(dead_code)] // Reserved for future simulation integration
 const UNREST_TRADE_FLOOR_PERMILLE: i64 = 500;
 /// Units of standing unrest that throttle trade by one per-mille.
+#[allow(dead_code)] // Reserved for future simulation integration
 const UNREST_PER_TRADE_PERMILLE: u64 = 4;
 
 /// Downward-causation policy (FR-CIV-0100 §3 emergence): societal unrest
 /// disrupts commerce. Returns a trade-volume factor in `[0.5, 1.0]` — `1.0`
 /// when calm, declining as unrest rises but floored at half so trade never
 /// stops entirely. Makes unrest act on BOTH diplomacy (war) and the economy.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn unrest_trade_factor(unrest: u64) -> Fixed {
     let max_drop = (1_000 - UNREST_TRADE_FLOOR_PERMILLE) as u64;
     let drop = (unrest / UNREST_PER_TRADE_PERMILLE).min(max_drop) as i64;
@@ -6633,16 +6653,21 @@ fn unrest_trade_factor(unrest: u64) -> Fixed {
 }
 
 /// Cohesion units that lift trade volume by one per-mille (social trust greases commerce).
+#[allow(dead_code)] // Reserved for future simulation integration
 const COHESION_PER_TRADE_PERMILLE: u64 = 4;
 /// Cap on cohesion's trade boost (per-mille above 1.0): at most +50% volume.
+#[allow(dead_code)] // Reserved for future simulation integration
 const COHESION_TRADE_CAP_PERMILLE: i64 = 500;
 /// Per-mille trade boost from agent tie trust alone.
+#[allow(dead_code)] // Reserved for future simulation integration
 const MICRO_TRUST_CAP_PERMILLE: u64 = 250;
 /// Combined macro+micro trade boost cap (cohesion 500 + micro 250).
+#[allow(dead_code)] // Reserved for future simulation integration
 const SOCIETY_TRADE_BOOST_CAP_PERMILLE: i64 = 750;
 
 /// Downward-causation policy (FR-CIV-0100 §3): macro cohesion AND cached micro
 /// interpersonal trust lift trade volume. Returns factor in [1.0, 1.75].
+#[allow(dead_code)] // Reserved for future simulation integration
 fn society_trade_factor(cohesion: u64, micro_trust_permille: u64) -> Fixed {
     let cohesion_boost =
         (cohesion / COHESION_PER_TRADE_PERMILLE).min(COHESION_TRADE_CAP_PERMILLE as u64) as i64;
@@ -6654,12 +6679,14 @@ fn society_trade_factor(cohesion: u64, micro_trust_permille: u64) -> Fixed {
 /// Downward-causation policy (FR-CIV-0100 §3): a cohesive society trades MORE —
 /// social trust lowers transaction friction. Returns a factor in [1.0, 1.5],
 /// rising with cohesion, capped so the boost can't run away.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn cohesion_trade_factor(cohesion: u64) -> Fixed {
     society_trade_factor(cohesion, 0)
 }
 
 /// Relations bias trade: allies (positive relation) trade more, rivals (negative)
 /// less. Returns a factor in [0.5, 1.5] from a relation score in [-1, 1], bounded.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn relation_trade_factor(relation: f32) -> Fixed {
     let r = relation.clamp(-1.0, 1.0);
     // map [-1,1] to per-mille [500, 1500], then to a Fixed factor in [0.5, 1.5].
@@ -6668,9 +6695,11 @@ fn relation_trade_factor(relation: f32) -> Fixed {
 }
 
 /// Max per-mille reduction from language barrier (at distance = 1.0).
+#[allow(dead_code)] // Reserved for future simulation integration
 const LANGUAGE_TRADE_PENALTY_PERMILLE: i64 = 500;
 /// Downward-causation (FR-CIV-LANG-001 / FR-CIV-PSYCHE-912): mutually unintelligible
 /// languages impose transaction friction. Returns factor in [0.5, 1.0].
+#[allow(dead_code)] // Reserved for future simulation integration
 fn language_trade_factor(distance: f32) -> Fixed {
     let d = distance.clamp(0.0, 1.0);
     let permille = 1_000 - (d * LANGUAGE_TRADE_PENALTY_PERMILLE as f32).round() as i64;
@@ -6679,32 +6708,45 @@ fn language_trade_factor(distance: f32) -> Fixed {
 
 /// Wealth-disparity (in whole currency units) at which two factions clash when
 /// they share no faith. Above this gap the have-nots turn on the haves.
+#[allow(dead_code)] // Reserved for future simulation integration
 const DIPLOMACY_BASE_CONFLICT_THRESHOLD: i64 = 10_000;
 /// Trade-agreement relation drift (+0.05) via [`DiplomacyMatrix`] trade channel.
+#[allow(dead_code)] // Reserved for future simulation integration
 const FACTION_TRADE_RELATION_SIGNAL: f32 = 0.05 / 0.08;
 /// Conflict relation drift (-0.1) via [`DiplomacyMatrix`] competition channel.
+#[allow(dead_code)] // Reserved for future simulation integration
 const FACTION_CONFLICT_RELATION_SIGNAL: f32 = 0.1 / 0.12;
 /// Per diplomacy phase, unstrengthened relations retain this fraction of magnitude.
+#[allow(dead_code)] // Reserved for future simulation integration
 const FACTION_RELATION_DECAY_FACTOR: f32 = 0.98;
 /// Trade drift per unit signal in [`DiplomacyMatrix::apply_signal`].
+#[allow(dead_code)] // Reserved for future simulation integration
 const DIPLOMACY_TRADE_DRIFT: f32 = 0.08;
 /// Competition drift per unit signal in [`DiplomacyMatrix::apply_signal`].
+#[allow(dead_code)] // Reserved for future simulation integration
 const DIPLOMACY_COMPETITION_DRIFT: f32 = 0.12;
 /// Max threshold shift from a saturated pairwise relation score (`±1.0`).
+#[allow(dead_code)] // Reserved for future simulation integration
 const FACTION_RELATION_THRESHOLD_SPAN: i64 = 5_000;
 /// Max peace bonus from identical pairwise cultural traits (N2 coupling).
+#[allow(dead_code)] // Reserved for future simulation integration
 const CULTURE_PEACE_SPAN: f32 = 3_000.0;
 /// Minimum members for an emergent settlement (matches `phase_life` HUD filter).
+#[allow(dead_code)] // Reserved for future simulation integration
 const SETTLEMENT_MIN_MEMBERS: u32 = 2;
 /// Co-location radius for emergent settlements (matches `phase_life` cluster radius).
+#[allow(dead_code)] // Reserved for future simulation integration
 const SETTLEMENT_CLUSTER_RADIUS_FP: i64 = (6 * FIXED_SCALE) / 100;
 /// Contact radius between settlement pairs (2× cluster radius).
+#[allow(dead_code)] // Reserved for future simulation integration
 const SETTLEMENT_CONTACT_RADIUS_FP: i64 = SETTLEMENT_CLUSTER_RADIUS_FP * 2;
 
+#[allow(dead_code)] // Reserved for settlement membership analysis
 struct SettlementMembershipPayoff<'a> {
     stock_by_cluster: &'a BTreeMap<u64, ClusterStocks>,
 }
 
+#[allow(dead_code)] // Reserved for settlement membership analysis
 impl MembershipPayoff for SettlementMembershipPayoff<'_> {
     fn payoff(&self, _agent_id: u64, cluster: ClusterId) -> f32 {
         let food = self
@@ -6716,6 +6758,7 @@ impl MembershipPayoff for SettlementMembershipPayoff<'_> {
     }
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn settlement_actors_by_settlement(
     actor_settlement: &BTreeMap<u64, u32>,
 ) -> BTreeMap<u32, BTreeSet<u64>> {
@@ -6729,6 +6772,7 @@ fn settlement_actors_by_settlement(
     by_settlement
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn settlement_centroid_position(world: &World, settlement_id: u64) -> Option<Position3d> {
     let mut count = 0_i64;
     let mut sx = 0_i128;
@@ -6752,16 +6796,21 @@ fn settlement_centroid_position(world: &World, settlement_id: u64) -> Option<Pos
 }
 
 /// Belief units required to raise the conflict threshold by one currency unit.
+#[allow(dead_code)] // Reserved for future simulation integration
 const BELIEF_PEACE_DIVISOR: u64 = 50;
 /// Cap on the belief-driven peace bonus: shared faith can at most double a
 /// society's tolerance for inequality — it never makes conflict impossible.
+#[allow(dead_code)] // Reserved for future simulation integration
 const BELIEF_PEACE_CAP: i64 = DIPLOMACY_BASE_CONFLICT_THRESHOLD;
 /// Unrest units required to erode the conflict threshold by one currency unit.
+#[allow(dead_code)] // Reserved for future simulation integration
 const UNREST_WAR_DIVISOR: u64 = 50;
 /// Cap on how much unrest can erode the threshold (currency units).
+#[allow(dead_code)] // Reserved for future simulation integration
 const UNREST_WAR_CAP: i64 = 8_000;
 /// Floor on the conflict threshold: even a furious, faithless society still
 /// needs SOME wealth disparity to go to war — discontent alone is not casus belli.
+#[allow(dead_code)] // Reserved for future simulation integration
 const DIPLOMACY_MIN_CONFLICT_THRESHOLD: i64 = 2_000;
 
 /// Downward-causation policy (FR-CIV-0100 §3 emergence): collective belief and
@@ -6770,6 +6819,7 @@ const DIPLOMACY_MIN_CONFLICT_THRESHOLD: i64 = 2_000;
 /// unrest LOWERS it (internal discontent spills into external aggression). The
 /// threshold is bounded below by `DIPLOMACY_MIN_CONFLICT_THRESHOLD` so conflict
 /// always needs some disparity, and above at `2x` base so peace is never absolute.
+#[allow(dead_code)] // Reserved for future simulation integration
 pub fn diplomacy_conflict_threshold(belief: u64, unrest: u64) -> i64 {
     let peace = (belief / BELIEF_PEACE_DIVISOR).min(BELIEF_PEACE_CAP as u64) as i64;
     let war = (unrest / UNREST_WAR_DIVISOR).min(UNREST_WAR_CAP as u64) as i64;
@@ -6777,11 +6827,13 @@ pub fn diplomacy_conflict_threshold(belief: u64, unrest: u64) -> i64 {
 }
 
 /// Cohesion-driven peace bonus for diplomacy threshold (FR-CIV-RELIGION-002).
+#[allow(dead_code)] // Reserved for future simulation integration
 pub fn cohesion_peace_bonus(cohesion: u64) -> i64 {
     (cohesion / COHESION_BELIEF_DIVISOR).min(BELIEF_PEACE_CAP as u64 / 2) as i64
 }
 
 /// Combined religion→diplomacy threshold: belief, cohesion, unrest, patron veneration.
+#[allow(dead_code)] // Reserved for future simulation integration
 pub fn diplomacy_peace_threshold(belief: u64, cohesion: u64, unrest: u64, has_patron: bool) -> i64 {
     diplomacy_conflict_threshold(belief, unrest)
         + cohesion_peace_bonus(cohesion)
@@ -6789,6 +6841,7 @@ pub fn diplomacy_peace_threshold(belief: u64, cohesion: u64, unrest: u64, has_pa
 }
 
 /// Macro belief plus emergent cluster doctrine strength (FR-CIV-RELIGION / REL-003).
+#[allow(dead_code)] // Reserved for future simulation integration
 pub fn institution_belief_signal(
     macro_belief: u64,
     cluster_beliefs: &BTreeMap<u64, [f32; 4]>,
@@ -6815,6 +6868,7 @@ pub fn institution_divergence_boost(macro_signal: u64, divergence: f32) -> u64 {
 }
 
 /// Pairwise treasury gap between two factions (currency units).
+#[allow(dead_code)] // Reserved for future simulation integration
 fn faction_pair_treasury_disparity(treasury: &HashMap<u32, Fixed>, a: u32, b: u32) -> i64 {
     let va = treasury
         .get(&a)
@@ -6833,11 +6887,13 @@ const AGGRESSION_CONFLICT_BOOST: i64 = 3_000;
 /// N9: conflict-threshold reduction driven by mean pairwise aggression.
 /// Aggressive species are quicker to fight: a mean aggression of 1.0 reduces
 /// the threshold by [`AGGRESSION_CONFLICT_BOOST`] currency units.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn aggression_threshold_reduction(mean: f32) -> i64 {
     (mean.clamp(0.0, 1.0) * AGGRESSION_CONFLICT_BOOST as f32) as i64
 }
 
 /// Threshold bias from emergent faction relation (`relation * 5000`, clamped).
+#[allow(dead_code)] // Reserved for future simulation integration
 fn diplomacy_relation_threshold_bias(relation_score: f32) -> i64 {
     (relation_score.clamp(-1.0, 1.0) * FACTION_RELATION_THRESHOLD_SPAN as f32).round() as i64
 }
@@ -6846,6 +6902,7 @@ fn diplomacy_relation_threshold_bias(relation_score: f32) -> i64 {
 ///
 /// Culturally similar factions tolerate more treasury disparity before conflict;
 /// divergent pairs add zero bonus (neutral default).
+#[allow(dead_code)] // Reserved for future simulation integration
 fn diplomacy_culture_threshold_bias(
     cultures: &BTreeMap<u64, CultureProfile>,
     faction_a: u32,
@@ -6912,6 +6969,7 @@ fn settlement_dominant_factions(
 /// [`settlement_dominant_factions`]. `member_counts` is the cluster membership
 /// rollup from `phase_life`. Clusters with fewer than 2 members are ignored so
 /// lone wanderers cannot anchor a faction's centroid.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn faction_language_centroids(
     cultures: &std::collections::BTreeMap<u64, CultureProfile>,
     dominant: &std::collections::BTreeMap<u64, u32>,
@@ -6947,6 +7005,7 @@ fn faction_language_centroids(
 }
 
 /// Member-weighted per-faction religion signal for culture drift (FR-CIV-CULTURE).
+#[allow(dead_code)] // Reserved for future simulation integration
 fn faction_religion_signals(
     religious_profiles: &BTreeMap<u32, ReligiousProfile>,
     dominant: &BTreeMap<u64, u32>,
@@ -6978,6 +7037,7 @@ fn faction_religion_signals(
         .collect()
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn fabric_tier_signal(fabric: FabricTier) -> f32 {
     match fabric {
         FabricTier::Tight => 1.0,
@@ -6987,6 +7047,7 @@ fn fabric_tier_signal(fabric: FabricTier) -> f32 {
     }
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn settlement_actor_hardship_signal(
     settlement_id: u32,
     settlement_actors: &BTreeMap<u32, BTreeSet<u64>>,
@@ -7005,6 +7066,7 @@ fn settlement_actor_hardship_signal(
     ((sum as f32 / actors.len() as f32) / 1000.0).clamp(0.0, 1.0)
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn settlement_kinship_density_signal(
     settlement_id: u32,
     settlement_actors: &BTreeMap<u32, BTreeSet<u64>>,
@@ -7026,6 +7088,7 @@ fn settlement_kinship_density_signal(
     (internal_edges / possible).clamp(0.0, 1.0)
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn settlement_trade_contact_signal(settlement_id: u32, flows: &[SettlementTradeFlow]) -> f32 {
     let volume: i64 = flows
         .iter()
@@ -7038,6 +7101,7 @@ fn settlement_trade_contact_signal(settlement_id: u32, flows: &[SettlementTradeF
     (volume as f32 / 100.0).clamp(0.0, 1.0)
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn settlement_religion_spread_edges(flows: &[SettlementTradeFlow]) -> BTreeMap<(u32, u32), f32> {
     let mut edges = BTreeMap::new();
     for flow in flows {
@@ -7058,6 +7122,7 @@ fn settlement_religion_spread_edges(flows: &[SettlementTradeFlow]) -> BTreeMap<(
     edges
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn accumulate_profile_diffusion(
     left: &ReligiousProfile,
     right: &ReligiousProfile,
@@ -7080,6 +7145,7 @@ fn accumulate_profile_diffusion(
 }
 
 /// Canonical settlement contact edges when any cross-cluster agents are within radius (N3).
+#[allow(dead_code)] // Reserved for future simulation integration
 fn settlement_contact_pairs(
     world: &World,
     cluster_member_counts: &BTreeMap<u64, u32>,
@@ -7127,6 +7193,7 @@ fn settlement_contact_pairs(
 }
 
 /// Faction pairs implied by contacting settlements with different dominant factions (N3).
+#[allow(dead_code)] // Reserved for future simulation integration
 fn diplomacy_faction_pairs_from_settlement_contact(
     dominant: &BTreeMap<u64, u32>,
     contacts: &BTreeSet<(u64, u64)>,
@@ -7147,6 +7214,7 @@ fn diplomacy_faction_pairs_from_settlement_contact(
 }
 
 /// Select diplomacy faction pair from settlement contact, then presence, then registry (N3).
+#[allow(dead_code)] // Reserved for future simulation integration
 fn diplomacy_pair_from_settlement_overlap(
     world: &World,
     cluster_member_counts: &BTreeMap<u64, u32>,
@@ -7185,6 +7253,7 @@ fn diplomacy_pair_from_settlement_overlap(
 ///
 /// [`DiplomacyMatrix`] has no native decay; calibrated `apply_signal` calls
 /// achieve `score * factor` per pair (FR-CIV-0100 criticality).
+#[allow(dead_code)] // Reserved for future simulation integration
 fn decay_faction_relations(matrix: &mut DiplomacyMatrix, factor: f32) {
     let factor = factor.clamp(0.0, 1.0);
     let pairs = matrix.snapshot();
@@ -7226,6 +7295,7 @@ const MAX_TRADE_ROUTES: usize = 64;
 /// Ticks without resource flow before an emergent route is removed.
 const TRADE_ROUTE_UNUSED_DECAY_TICKS: u32 = 2_000;
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn canonical_faction_pair(a: u32, b: u32) -> (u32, u32) {
     if a <= b {
         (a, b)
@@ -7240,6 +7310,7 @@ fn faction_cluster_id(faction: u32) -> u32 {
 }
 
 /// Round-robin pair selection over the static faction registry (tests / fallback).
+#[allow(dead_code)] // Reserved for future simulation integration
 fn diplomacy_faction_pair(faction_ids: &[u32], tick: u64) -> (u32, u32) {
     if faction_ids.len() < 2 {
         return (0, 0);
@@ -7250,6 +7321,7 @@ fn diplomacy_faction_pair(faction_ids: &[u32], tick: u64) -> (u32, u32) {
     (a, b)
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn all_registered_faction_pairs(faction_ids: &[u32]) -> Vec<(u32, u32)> {
     let mut pairs = Vec::new();
     for i in 0..faction_ids.len() {
@@ -7287,18 +7359,21 @@ pub fn resource_market_key(resource: ResourceType, _region: u32) -> &'static str
     }
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn treasury_disparity_whole(treasury: &HashMap<u32, Fixed>, a: u32, b: u32) -> i64 {
     let ta = treasury.get(&a).copied().unwrap_or(Fixed::ZERO);
     let tb = treasury.get(&b).copied().unwrap_or(Fixed::ZERO);
     (ta.to_bits() - tb.to_bits()).abs() / crate::SCALE
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn mean_pair_aggression(aggression: &BTreeMap<u32, f32>, a: u32, b: u32) -> f32 {
     let aa = aggression.get(&a).copied().unwrap_or(0.0);
     let ab = aggression.get(&b).copied().unwrap_or(0.0);
     (aa + ab) * 0.5
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn shared_religion_cohesion(cultures: &BTreeMap<u64, CultureProfile>, a: u32, b: u32) -> f32 {
     let Some(pa) = cultures.get(&u64::from(a)) else {
         return 0.0;
@@ -7310,6 +7385,7 @@ fn shared_religion_cohesion(cultures: &BTreeMap<u64, CultureProfile>, a: u32, b:
     similarity.clamp(0.0, 1.0)
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn shared_religious_unity(cultures: &BTreeMap<u64, CultureProfile>, a: u32, b: u32) -> bool {
     shared_religion_cohesion(cultures, a, b) >= 0.7
 }
@@ -7338,6 +7414,7 @@ fn resource_competition_signal(ra: &Resources, rb: &Resources) -> f32 {
     }
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn need_complementarity_signal(ra: &Resources, rb: &Resources) -> f32 {
     let pairs = [
         (ra.food, rb.food),
@@ -7365,6 +7442,7 @@ fn need_complementarity_signal(ra: &Resources, rb: &Resources) -> f32 {
     }
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn scarcity_pressure_signal(energy_budget: Fixed, ra: &Resources, rb: &Resources) -> f32 {
     const SCARCITY_GATE: i64 = 100;
     let budget_scarce = i64::from(energy_budget.to_bits()) / crate::SCALE < SCARCITY_GATE;
@@ -7381,6 +7459,7 @@ fn scarcity_pressure_signal(energy_budget: Fixed, ra: &Resources, rb: &Resources
     }
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn trade_volume_signal(routes: &[TradeRoute], a: u32, b: u32) -> f32 {
     let volume: i64 = routes
         .iter()
@@ -7393,6 +7472,7 @@ fn trade_volume_signal(routes: &[TradeRoute], a: u32, b: u32) -> f32 {
     ((volume as f64) / 1_000_000.0).clamp(0.0, 1.0) as f32
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn proximity_signal(
     a: u32,
     b: u32,
@@ -7419,6 +7499,8 @@ fn proximity_signal(
     0.0
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
+#[allow(clippy::too_many_arguments)]
 fn diplomacy_signal_for_pair(
     a: u32,
     b: u32,
@@ -7449,6 +7531,7 @@ fn diplomacy_signal_for_pair(
 }
 
 /// Deterministic goods label from exporter faction id (stable, integer-only).
+#[allow(dead_code)] // Reserved for future simulation integration
 fn emergent_route_goods(from: u32) -> &'static str {
     match from % 3 {
         0 => "grain",
@@ -7457,15 +7540,18 @@ fn emergent_route_goods(from: u32) -> &'static str {
     }
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn record_trade_agreement_streak(streak: &mut BTreeMap<(u32, u32), u32>, a: u32, b: u32) {
     let pair = canonical_faction_pair(a, b);
     *streak.entry(pair).or_default() += 1;
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn reset_trade_agreement_streak(streak: &mut BTreeMap<(u32, u32), u32>, a: u32, b: u32) {
     streak.remove(&canonical_faction_pair(a, b));
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn remove_emergent_routes_between(state: &mut WorldState, a: u32, b: u32) {
     let to_remove: Vec<(u32, u32, String)> = state
         .emergent_trade_route_keys
@@ -7483,6 +7569,7 @@ fn remove_emergent_routes_between(state: &mut WorldState, a: u32, b: u32) {
     });
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn decay_idle_emergent_trade_routes(state: &mut WorldState, flowed: &BTreeSet<(u32, u32, String)>) {
     let emergent: Vec<(u32, u32, String)> =
         state.emergent_trade_route_keys.iter().cloned().collect();
@@ -7510,6 +7597,7 @@ fn decay_idle_emergent_trade_routes(state: &mut WorldState, flowed: &BTreeSet<(u
     }
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn route_resource(goods: &str) -> ResourceType {
     match goods {
         "grain" => ResourceType::Food,
@@ -7520,6 +7608,7 @@ fn route_resource(goods: &str) -> ResourceType {
     }
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn resource_amount(resources: &Resources, resource: ResourceType) -> Fixed {
     match resource {
         ResourceType::Food => resources.food,
@@ -7529,6 +7618,7 @@ fn resource_amount(resources: &Resources, resource: ResourceType) -> Fixed {
     }
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn adjust_resource(resources: &mut Resources, resource: ResourceType, delta: Fixed) {
     match resource {
         ResourceType::Food => resources.food += delta,

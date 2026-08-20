@@ -31,6 +31,7 @@
 
 pub mod cache;
 pub mod config;
+pub mod decision;
 pub mod goal;
 pub mod mood;
 pub mod pool;

@@ -4226,6 +4226,9 @@ dependencies = [
  "opentelemetry_sdk",
  "prometheus",
  "tokio",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
 ]
 
 [[package]]

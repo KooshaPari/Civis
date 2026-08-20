@@ -21,6 +21,7 @@ mod stocks;
 mod tax_policy;
 mod trade_flow;
 mod trade_routes;
+pub mod specialization;
 
 pub use allocation::{
     allocate_by_priority, allocate_with, AllocationEngine, AllocationRegime, CapitalistAllocator,

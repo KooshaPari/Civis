@@ -309,7 +309,7 @@ fn parse_phases(body: &str) -> Result<Vec<Phase>> {
         if ordinal_str.parse::<u8>().is_err() {
             continue;
         }
-        let ordinal: u8 = ordinal_str.parse().unwrap();
+        let ordinal: u8 = ordinal_str.parse().expect("validated parseable above");
         let name = cells[1].trim_matches('`').trim().to_string();
         let dep_str = cells[2].trim();
         let dep = if dep_str == "—" || dep_str == "-" { None } else { Some(dep_str.to_string()) };

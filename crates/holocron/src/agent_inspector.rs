@@ -384,8 +384,9 @@ impl AgentInspectorSummary {
     pub fn dominant_need(&self) -> Option<&NeedLevel> {
         self.needs
             .iter()
-            .filter(|n| n.value.is_some())
-            .min_by_key(|n| n.value.unwrap())
+            .filter_map(|n| n.value.map(|v| (v, n)))
+            .min_by_key(|(v, _)| *v)
+            .map(|(_, n)| n)
     }
 
     /// One-line description for tooltips and the panel header.

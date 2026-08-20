@@ -28,8 +28,8 @@ bevy_rapier3d = { version = "0.29", optional = true }
 crossbeam-channel = "0.5"
 serde = { version = "1", features = ["derive"] }
 # RON persistence for the settings/options panel (src/settings_ui.rs). Pulled in
-# transitively by bevy already; pinned 0.8 to match the workspace lock.
-ron = "0.8"
+# transitively by bevy already; bumped to 0.12 to eliminate base64 0.21 dupe.
+ron = "0.12"
 rand = { version = "0.8", optional = true }
 rand_chacha = { version = "0.3", optional = true }
 surface-nets = "0.1"

@@ -11,4 +11,4 @@ serde = { version = "1", features = ["derive"] }
 civ-voxel = { path = "../voxel" }
 
 [dev-dependencies]
-ron = "0.8"
+ron = "0.12"

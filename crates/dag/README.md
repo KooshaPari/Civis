@@ -1,59 +1,34 @@
 # civ-dag
 
-Master-DAG substrate for the Civis godgame. Parses `CIVIS_GAME_DAG.md`, plans execution waves, dispatches parallel task agents, and renders sponsor-format progress reports.
+**Indefinitely extendable DAG plan + parallel agent dispatch + sponsor-format reporter.**
 
-## Architecture
-
-The crate is organised into four layers:
-
-| Layer | Module | Purpose |
-|---|---|---|
-| Model | `model` | Typed plan, pillars, lanes, nodes, ticks, and states |
-| Loader | `loader` | Markdown spec → `model::Plan` parser |
-| Wave Executor | `wave` | Parallel executor — fan-out by lane, topological ordering by wave |
-| Reporter | `reporter` | Sponsor-format output (progress bars, DAG tree, agent rows) |
+The `civ-dag` crate provides the infrastructure for defining and executing complex, multi-stage tasks using a Directed Acyclic Graph (DAG). It parses markdown-based plan specifications, organizes them into waves for parallel execution, and provides reporting tools for progress tracking.
 
 ## Key Types
 
-```rust
-use civ_dag::{Plan, Node, NodeState, Lane, Layer};
-use civ_dag::wave::{WaveExecutor, RetryPolicy, WaveContext};
-use civ_dag::reporter::{Reporter, ReportSnapshot, DagEvent};
-```
+- `Plan`: The root structure representing a complete DAG plan.
+- `Node`: A single task or step within the plan.
+- `WaveExecutor`: Executes nodes in parallel, respecting topological order and lane constraints.
+- `Layer` / `Lane`: Organizational structures for grouping and parallelizing tasks.
 
-## Usage
+## Usage Example
 
 ```rust
 use civ_dag::{loader, wave::WaveExecutor};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-// Load a plan from markdown
+// Load a plan from a markdown file
 let src = std::fs::read_to_string("CIVIS_GAME_DAG.md").unwrap();
-let plan = Arc::new(
-    loader::load_from_markdown(&src, PathBuf::from("CIVIS_GAME_DAG.md")).unwrap()
-);
+let plan = Arc::new(loader::load_from_markdown(&src, PathBuf::from("CIVIS_GAME_DAG.md")).unwrap());
 
-// Execute waves in parallel
+// Create an executor and run the plan
 let exec = WaveExecutor::new(plan);
-```
-
-## Features
-
-- **`default`** — Pure library
-- **`cli`** — Activates the `civ-dag` binary entry point (`dagr`)
-
-```bash
-# Run the CLI
-cargo run -p civ-dag --features cli -- <path-to-dag.md>
+// exec.run_all().await;
 ```
 
 ## Dependencies
 
-| Crate | Role |
-|---|---|
-| `tokio` | Async runtime for parallel wave execution |
-| `serde` / `serde_json` | Plan serialization |
-| `chrono` | Timestamps and scheduling |
-| `async-trait` | Agent runner trait |
-| `anyhow` / `thiserror` | Error handling |
+- `tokio`: Async runtime for parallel execution.
+- `anyhow` / `thiserror`: Error handling.
+- `chrono`: Timestamps for task tracking.

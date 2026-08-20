@@ -1,49 +1,33 @@
 # civ-economy
 
-Conservation-complete economy layer for Civis (specs CIV-0100 / CIV-0107). Implements a double-entry ledger, allocation engines, district production, and conservation invariants.
+**Conservation-complete economy layer: double-entry ledger, allocation engines, and district production.**
 
-## Overview
-
-`civ-engine::Simulation::phase_economy` synchronises the joule energy budget into `EconomyState`, calls `drain_energy_budget` and `step`, then writes the updated state back to `WorldState`. All mutations are conservation-verified — resources are neither created nor destroyed, only transferred.
-
-## Modules
-
-| Module | Purpose |
-|---|---|
-| `allocation` | Priority-based resource allocation (planned, capitalist, labour-capacity regimes) |
-| `allocator` | Generic allocator trait with `Bid` / `Offer` / `CancelledOrder` types |
-| `currency_trust` | Currency acceptance and trust dynamics |
-| `extraction` | Raw resource extraction from the world |
-| `institution` | Institutional policies and governance |
-| `market` | Market matching and price discovery |
-| `stocks` | Stock/inventory tracking |
-| `tax_policy` | Tax rate and revenue policy |
-| `trade_flow` | Inter-district trade flow modelling |
-| `trade_routes` | Route discovery and maintenance |
+The `civ-economy` crate implements the economic simulation for Civis, ensuring conservation invariants across the system. It handles resource allocation (joules, labor), currency trust, market dynamics, and trade routes, synchronizing with the main engine's energy budget.
 
 ## Key Types
 
-```rust
-use civ_economy::{
-    AllocationEngine, AllocationRegime, CapitalistAllocator,
-    PlannedAllocator, EconomyState, CurrencyTrust,
-};
-```
+- `EconomyState`: The central state of the economic system for a simulation tick.
+- `AllocationEngine`: Trait and implementations for resource distribution strategies (e.g., `CapitalistAllocator`, `PlannedAllocator`).
+- `JouleAllocator`: Specialized allocator for energy (joules).
+- `CurrencyTrust`: Manages the acceptance and stability of currencies.
 
-## Usage
+## Usage Example
 
-The economy crate is driven by the engine's tick loop. Direct usage:
+The economy is typically stepped by the engine:
 
 ```rust
-use civ_economy::{step, drain_energy_budget, EconomyState};
+use civ_economy::{EconomyState, step};
 
-let mut state = EconomyState::default();
-drain_energy_budget(&mut state, joules);
-step(&mut state, tick_number);
+let mut eco_state = EconomyState::default();
+// ... initialize with data from WorldState ...
+
+step(&mut eco_state);
+// ... write back to WorldState ...
 ```
 
 ## Dependencies
 
-- `serde` — Serialization
-- `tracing` — Structured logging
-- `proptest` (dev) — Property-based conservation invariant tests
+This crate is designed to be lightweight:
+
+- `serde`: Serialization.
+- `tracing`: Logging and diagnostics.

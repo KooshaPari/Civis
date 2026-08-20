@@ -341,4 +341,30 @@ mod tests {
             Err(TreatyError::InvalidState(TreatyStatus::Proposed))
         ));
     }
+
+    #[test]
+    fn test_propose_with_non_party() {
+        let mut manager = TreatyManager::new();
+        // Polity 3 is not part of the party (1, 2)
+        let result = manager.propose_treaty(p(3), (p(1), p(2)), TreatyType::Peace, vec![], None);
+        assert!(matches!(result, Err(TreatyError::NotParty(_))));
+    }
+
+    #[test]
+    fn test_break_expired_treaty() {
+        let mut manager = TreatyManager::new();
+        let id = manager
+            .propose_treaty(p(1), (p(1), p(2)), TreatyType::Peace, vec![], Some(10))
+            .unwrap();
+        manager.accept_treaty(p(1), id).unwrap();
+        
+        // Expire the treaty
+        manager.check_treaty_effects(10);
+        
+        // Attempting to break an expired treaty should fail
+        assert!(matches!(
+            manager.break_treaty(p(1), id),
+            Err(TreatyError::InvalidState(TreatyStatus::Expired))
+        ));
+    }
 }

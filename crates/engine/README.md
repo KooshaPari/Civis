@@ -1,51 +1,35 @@
 # civ-engine
 
-Deterministic simulation engine for the Civis godgame, using ECS architecture and fixed-point arithmetic (`i64` with scaling) for reproducible results across runs.
+**Deterministic simulation engine with ECS architecture and fixed-point arithmetic.**
 
-## Architecture
+The `civ-engine` crate provides the core simulation logic for the Civis project. It uses `hecs` for Entity Component System architecture and fixed-point arithmetic (i64 with scaling) to ensure deterministic simulation results across different environments.
 
-The engine orchestrates per-tick simulation phases — economy, diffusion, agent AI, building, and 3D voxel terrain updates — through a central `Simulation` struct backed by the `hecs` ECS. All arithmetic is deterministic: random generators are seeded via `rand_chacha`, and fractional values use fixed-point scaling.
+## Key Types
 
-### Key Types
+- `Simulation`: The main engine struct that manages the simulation loop and world state.
+- `WorldState`: Represents the complete state of the game world at any given tick.
 
-| Type | Purpose |
-|---|---|
-| `Simulation` | Top-level simulation state; drives tick phases |
-| `CivSaveBundle` | Serializable snapshot (compressed with `zstd`) for save/load |
-| `Engine` | High-level facade over the simulation loop |
-
-### Tick Phases
-
-1. **Economy** — drains energy budget, runs allocation engines, writes back to `WorldState`
-2. **Diffusion** — spreads resources across the voxel grid
-3. **Needs / Agents** — evaluates agent desires, dispatches actions
-4. **Build** — processes construction queues
-5. **Voxel** — syncs the adaptive octree with world changes
-
-## Usage
+## Usage Example
 
 ```rust
-use civ_engine::{Simulation, CivSaveBundle};
+use civ_engine::Simulation;
 
-let mut sim = Simulation::new(seed)?;
-sim.tick()?;                // advance one tick
-let bundle: CivSaveBundle = sim.save()?;  // serialize to disk
-let restored = Simulation::load(&bundle)?;
+// Create a new simulation with a specific seed for determinism
+let mut sim = Simulation::new(42);
+
+// Run the simulation for one tick
+sim.tick();
+
+// Access the world state
+let world = sim.world();
 ```
 
 ## Dependencies
 
-| Crate | Role |
-|---|---|
-| `civ-agents` | Agent AI and behavior trees |
-| `civ-needs` | Maslow-style need evaluation |
-| `civ-build` | Construction and building systems |
-| `civ-diffusion` | Resource spread algorithms |
-| `civ-voxel` | 3D voxel terrain (SVO + dense leaf chunks) |
+This crate relies on several sibling crates within the Civis workspace:
 
-## Key External Crates
-
-- `hecs` — Entity Component System
-- `rand` / `rand_chacha` — Seeded deterministic RNG
-- `zstd` — Compression for save bundles
-- `blake3` / `sha2` — Integrity hashing
+- [`civ-agents`](../agents): Agent behaviors and decision-making.
+- [`civ-needs`](../needs): Needs and motivation system for agents.
+- [`civ-build`](../build): Construction and building logic.
+- [`civ-diffusion`](../diffusion): Chemical and energy diffusion.
+- [`civ-voxel`](../voxel): 3D voxel world substrate.

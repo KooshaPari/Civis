@@ -1821,6 +1821,13 @@ impl Simulation {
         let (planet, moon) = defaults_earthlike();
         let climate = compute_climate(0, &planet, &moon);
         let weather_grid = compute_weather(&climate, 0, 16);
+        let civilian_count = count_civilians(&world) as u64;
+        let initial_lifecycle = LifecycleCounters {
+            children: 0,
+            adults: civilian_count as u32,
+            elders: 0,
+            dead: 0,
+        };
         let state = WorldState::default();
 
         Self {
@@ -1845,7 +1852,7 @@ impl Simulation {
             last_births: Vec::new(),
             last_deaths: Vec::new(),
             last_life_deaths: 0,
-            last_tick_lifecycle_metrics: LifecycleCounters::default(),
+            last_tick_lifecycle_metrics: initial_lifecycle,
             econ_focus: BTreeMap::new(),
             econ_focus_stability: Vec::new(),
             diplomacy_events: Vec::new(),
@@ -2006,7 +2013,7 @@ impl Simulation {
             last_births: Vec::new(),
             last_deaths: Vec::new(),
             last_life_deaths: 0,
-            last_tick_lifecycle_metrics: LifecycleCounters::default(),
+            last_tick_lifecycle_metrics: initial_lifecycle,
             econ_focus: BTreeMap::new(),
             econ_focus_stability: Vec::new(),
             diplomacy_events: Vec::new(),

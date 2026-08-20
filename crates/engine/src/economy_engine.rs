@@ -4,7 +4,8 @@
 //! resource allocation, and market mechanics. The actual `phase_economy` method
 //! remains in `engine.rs` as it requires `&mut Simulation` access.
 
-use crate::engine::{Fixed, ResourceType, WorldState, SCALE};
+use crate::engine::{Fixed, ResourceType, WorldState};
+use crate::SCALE;
 use civ_economy::EconomyState;
 
 /// Derive an [`EconomyState`] from the current [`WorldState`].

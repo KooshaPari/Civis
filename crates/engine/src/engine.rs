@@ -957,9 +957,9 @@ impl Default for WorldState {
 pub struct Simulation {
     pub state: WorldState,
     pub world: World,
-    rng: SimRng,
-    planet: PlanetConfig,
-    moon: MoonConfig,
+    pub(crate) rng: SimRng,
+    pub(crate) planet: PlanetConfig,
+    pub(crate) moon: MoonConfig,
     worldgen: WorldgenConfig,
     pub climate: Climate,
     pub current_tick: u64,
@@ -976,7 +976,7 @@ pub struct Simulation {
     /// Per-tick lifecycle rollup (FR-CIV-LIFE P4-A). Updated by phase_life;
     /// read by phase_economy to derive aggregate labor fraction.
     pub last_tick_lifecycle_metrics: LifecycleCounters,
-    diplomacy_events: Vec<DiplomacyEvent>,
+    pub(crate) diplomacy_events: Vec<DiplomacyEvent>,
     next_civilian_id: u64,
     /// Settlement cluster ids from the most recent life rollup (FR-CIV-LIFE-030).
     /// Stored as a deterministic `Vec<u64>` so the HUD roster and JSON-RPC
@@ -1008,7 +1008,7 @@ pub struct Simulation {
     pub faction_ideologies: BTreeMap<u32, FactionIdeologyState>,
     cluster_stocks: BTreeMap<u64, ClusterStocks>,
     /// Last-tick settlement trade flows derived during `phase_economy`.
-    last_tick_settlement_trade_flows: Vec<SettlementTradeFlow>,
+    pub(crate) last_tick_settlement_trade_flows: Vec<SettlementTradeFlow>,
     pub last_settlement_count: u32,
     /// Per-faction aggression (u32 faction id → average aggression).
     pub faction_aggression: std::collections::BTreeMap<u32, f32>,
@@ -1076,7 +1076,7 @@ pub struct Simulation {
     /// LOD tick cadence for Warm/Cold civilian tiers (CIV-0101).
     pub lod_policy: LodPolicy,
     /// Manifest-only mod host (CIV-0700 v2 policy stub); WASM not loaded yet.
-    mod_host: ModHost,
+    pub(crate) mod_host: ModHost,
     /// Military-phase cadence and per-tick movement pulses (FR-CIV-TACTICS-035).
     pub(crate) military_phase: MilitaryPhaseConfig,
     /// Per-faction doctrine libraries evolved on a fixed tick cadence (FR-CIV-TACTICS-010).
@@ -1084,7 +1084,7 @@ pub struct Simulation {
     /// Coastal water columns whose water-level voxel shifts with the tide
     /// offset every tick (FR-CIV-PLANET-020). Keyed by `(x, z)` in fixed-point
     /// world coords; iteration order is deterministic.
-    coastal_columns: BTreeMap<(i64, i64), CoastalColumn>,
+    pub(crate) coastal_columns: BTreeMap<(i64, i64), CoastalColumn>,
     /// Per-region weather grid updated by `phase_planet` each tick (FR-CIV-PLANET-030).
     pub weather_grid: Vec<WeatherCell>,
     /// Construction queue of in-progress `BuildSite`s.
@@ -1116,7 +1116,7 @@ pub struct Simulation {
     /// Per-settlement population snapshot, settable by tests + scenario loaders
     /// so `phase_institutions` can drive Temple/Garrison spawns deterministically
     /// (FR-CIV-GOV-001). Keyed by settlement id (`u32`).
-    settlements: BTreeMap<u32, u32>,
+    pub(crate) settlements: BTreeMap<u32, u32>,
     /// Currently-active institutions per settlement, keyed by
     /// `(settlement_id, kind)`. Tracks the latest known level so we can detect
     /// upgrades (FR-CIV-GOV-003).
@@ -1135,7 +1135,7 @@ pub struct Simulation {
     /// [`Simulation::phase_social_mood`] can derive `food_score` deterministically
     /// (FR-CIV-GOV-100). Keyed by settlement id (`u32`); missing keys default
     /// to `0` in the phase.
-    settlement_food_stocked: BTreeMap<u32, i64>,
+    pub(crate) settlement_food_stocked: BTreeMap<u32, i64>,
     /// Per-settlement housing capacity, settable by tests + scenario loaders
     /// so [`Simulation::phase_social_mood`] can compute `housing_score` as
     /// `2 * (capacity - population)` (FR-CIV-GOV-100). Keyed by settlement id
@@ -2679,19 +2679,6 @@ impl Simulation {
         }
     }
 
-    /// Phase hook for macro-level diplomacy events (FR-CIV-DIPLOMACY).
-    /// Stub: full implementation pending faction_relations field.
-    pub fn run_macro_diplomacy_event(&mut self) {}
-
-    /// Emit a relation-threshold-crossing event (FR-CIV-DIPLOMACY).
-    /// Stub: full implementation pending faction_relations field.
-    pub fn emit_relation_threshold_event(
-        &mut self,
-        _faction_a: u32,
-        _faction_b: u32,
-        _outcome: civ_agents::DiplomacyOutcome,
-    ) {
-    }
 
     /// Default sentience profile for new civilizations (FR-CIV-GENETICS).
     /// Stub-as-associated-fn; callers invoke as `default_sentience_profile()`.
@@ -2925,7 +2912,7 @@ impl Simulation {
     }
 
     /// Ingest mod-host phase log lines: record permission violations on the replay bus and debug-log.
-    fn ingest_mod_phase_lines(&mut self, lines: Vec<String>, tick: u64, phase: &str) {
+    pub(crate) fn ingest_mod_phase_lines(&mut self, lines: Vec<String>, tick: u64, phase: &str) {
         for line in lines {
             if line.contains("mod.permission_violation.v1") {
                 self.replay_log
@@ -2968,99 +2955,6 @@ impl Simulation {
         Ok(sim)
     }
 
-    /// Planet phase - recompute climate and weather grid from the current tick,
-    /// then apply the resulting tide offset to any registered coastal water
-    /// columns (FR-CIV-PLANET-020, FR-CIV-PLANET-030).
-    fn phase_planet(&mut self) {
-        self.climate = compute_climate(self.state.tick, &self.planet, &self.moon);
-        self.weather_grid = compute_weather(
-            &self.climate,
-            self.state.tick,
-            self.weather_grid.len().max(1) as u32,
-        );
-        self.apply_tide_offset();
-    }
-
-    /// Register (or update) a coastal water column at horizontal `(x, z)` with
-    /// sea-level baseline `base_y`. The column's water-marker voxel will be
-    /// shifted vertically each tick by the climate `tide_offset` (FR-CIV-PLANET-020).
-    ///
-    /// Coordinates are fixed-point world units (see [`FIXED_SCALE`]). Calling
-    /// this for an already-registered column resets its baseline; the next
-    /// `phase_planet` will clear the old water voxel and write the new one.
-    pub fn register_coastal_water_column(&mut self, x: i64, z: i64, base_y: i64) {
-        let column = CoastalColumn {
-            base_y,
-            last_water_y: base_y,
-        };
-        // Seed the initial water voxel through the replay-aware write path so
-        // FR-CIV-VOXEL-002 dirty-event invariants stay intact.
-        self.push_voxel_write(WorldCoord { x, y: base_y, z }, WATER_MARKER_MATERIAL);
-        self.coastal_columns.insert((x, z), column);
-    }
-
-    /// Borrow the registered coastal water columns (for tests + tooling).
-    #[must_use]
-    pub fn coastal_column_count(&self) -> usize {
-        self.coastal_columns.len()
-    }
-
-    /// Read the current water-level y for the column at `(x, z)`, if registered.
-    #[must_use]
-    pub fn coastal_water_level(&self, x: i64, z: i64) -> Option<i64> {
-        self.coastal_columns.get(&(x, z)).map(|c| c.last_water_y)
-    }
-
-    /// Shift every registered coastal water-level voxel by the current
-    /// `climate.tide_offset` (FR-CIV-PLANET-020). The offset is scaled into
-    /// fixed-point world units, rounded deterministically, and applied through
-    /// [`VoxelWorld::write`] so dirty events propagate normally
-    /// (FR-CIV-VOXEL-002).
-    ///
-    /// For each column we clear the previously occupied water voxel (write
-    /// `MaterialId(0)`) and write [`WATER_MARKER_MATERIAL`] at the new height.
-    /// If the new height matches the old one we skip the redundant pair of
-    /// writes to avoid emitting spurious dirty events.
-    fn apply_tide_offset(&mut self) {
-        if self.coastal_columns.is_empty() {
-            return;
-        }
-
-        // Fixed-point conversion: `tide_offset` is a float amplitude in the
-        // same world-unit space as the voxel grid; multiply by FIXED_SCALE and
-        // round to the nearest integer for determinism. f32::round() is
-        // deterministic per the IEEE-754 round-half-away-from-zero rule used
-        // across our target platforms.
-        let scale = FIXED_SCALE as f32;
-        let offset_units = (self.climate.tide_offset * scale).round() as i64;
-
-        // Collect updates first so we can mutate `self.voxel` and
-        // `self.coastal_columns` without aliasing.
-        let updates: Vec<((i64, i64), i64, i64)> = self
-            .coastal_columns
-            .iter()
-            .map(|(&(x, z), column)| {
-                let new_y = column.base_y.saturating_add(offset_units);
-                ((x, z), column.last_water_y, new_y)
-            })
-            .collect();
-
-        for ((x, z), prev_y, new_y) in updates {
-            if prev_y == new_y {
-                continue;
-            }
-            // Clear previous water marker, then place the new one. Both go
-            // through `VoxelWorld::write` so the dirty queue stays
-            // deterministic (FR-CIV-VOXEL-002).
-            self.voxel
-                .write(WorldCoord { x, y: prev_y, z }, MaterialId(0));
-            self.voxel
-                .write(WorldCoord { x, y: new_y, z }, WATER_MARKER_MATERIAL);
-            if let Some(column) = self.coastal_columns.get_mut(&(x, z)) {
-                column.last_water_y = new_y;
-            }
-        }
-    }
 
     /// Tactics phase - evolve faction doctrines and apply queued voxel damage.
     fn phase_tactics(&mut self) {
@@ -5224,115 +5118,6 @@ impl Simulation {
         }
     }
 
-    fn phase_diplomacy(&mut self) {
-        if self.state.tick % 500 != 0 {
-            return;
-        }
-        self.run_macro_diplomacy_event();
-    }
-
-    /// Apply an explicit player diplomacy command to the emergent relation substrate.
-    #[must_use]
-    pub fn apply_player_diplomacy_action(
-        &mut self,
-        source_faction: u32,
-        target_faction: u32,
-        kind: DiplomacyKind,
-    ) -> Option<FactionRelationSnapshot> {
-        if source_faction == target_faction
-            || !self.state.factions.contains_key(&source_faction)
-            || !self.state.factions.contains_key(&target_faction)
-        {
-            return None;
-        }
-
-        let signal = match kind {
-            DiplomacyKind::TradeAgreement => DiplomacySignal {
-                trade_volume: 1.0,
-                need_complementarity: 0.5,
-                ..DiplomacySignal::default()
-            },
-            DiplomacyKind::Conflict => DiplomacySignal {
-                resource_competition: 0.5,
-                combat_grievance: 1.0,
-                ..DiplomacySignal::default()
-            },
-            DiplomacyKind::Peace => DiplomacySignal {
-                trade_volume: 0.35,
-                ..DiplomacySignal::default()
-            },
-        };
-
-        let a = faction_cluster_id(source_faction);
-        let b = faction_cluster_id(target_faction);
-        let outcome = self.faction_relations.apply_signal(a, b, signal);
-        self.emit_relation_threshold_event(source_faction, target_faction, outcome);
-        self.diplomacy_events.push(DiplomacyEvent {
-            tick: self.state.tick,
-            faction_a: source_faction,
-            faction_b: target_faction,
-            kind,
-        });
-        let record = self
-            .faction_relations
-            .record(a, b)
-            .expect("relation must exist after apply_signal");
-        Some(FactionRelationSnapshot {
-            faction_a: source_faction,
-            faction_b: target_faction,
-            score: record.score,
-            kind: self.faction_relations.relation(a, b),
-            samples: record.samples,
-        })
-    }
-
-    /// Per-tick relation drift from proximity, competition, trade, religion, and combat.
-    fn tick_faction_relation_drift(&mut self) {
-        self.grief_accumulator.tick_decay();
-        for eng in &self.last_tick_engagements {
-            self.grief_accumulator
-                .add_engagement(eng.shooter_faction, eng.target_faction);
-        }
-
-        let member_counts = rollup_cluster_member_counts(&self.world);
-        let mut faction_ids: Vec<u32> = self.state.factions.keys().copied().collect();
-        faction_ids.sort_unstable();
-        if faction_ids.len() < 2 {
-            return;
-        }
-        let a = faction_ids[(self.state.tick as usize) % faction_ids.len()];
-        let b = faction_ids[((self.state.tick as usize) + 1) % faction_ids.len()];
-        let kind = if self.rng.gen_bool(0.6) {
-            DiplomacyKind::TradeAgreement
-        } else {
-            DiplomacyKind::Conflict
-        };
-        match kind {
-            DiplomacyKind::TradeAgreement => {
-                if let Some(v) = self.state.faction_treasury.get_mut(&a) {
-                    *v += Fixed::from_num(100);
-                }
-                if let Some(v) = self.state.faction_treasury.get_mut(&b) {
-                    *v += Fixed::from_num(100);
-                }
-            }
-            DiplomacyKind::Conflict => {
-                if let Some(v) = self.state.faction_treasury.get_mut(&a) {
-                    *v -= Fixed::from_num(50);
-                }
-                if let Some(v) = self.state.faction_treasury.get_mut(&b) {
-                    *v -= Fixed::from_num(50);
-                }
-            }
-            DiplomacyKind::Peace => {}
-        }
-        self.diplomacy_events.push(DiplomacyEvent {
-            tick: self.state.tick,
-            faction_a: a,
-            faction_b: b,
-            kind,
-        });
-    }
 
     /// Policy phase — read the active [`Policy`] for the current tick and
     /// store the resulting [`ControlSignals`] on
@@ -5356,188 +5141,6 @@ impl Simulation {
     ///
     /// Conservation: budget only decreases; result is clamped to zero (aggregate
     /// energy cannot go negative).
-    fn phase_economy(&mut self) {
-        let tick = self.state.tick;
-        let policy_lines = self.mod_host.tick(tick);
-        self.ingest_mod_phase_lines(policy_lines, tick, "policy");
-        let economy_lines = self.mod_host.economy_tick(tick);
-        self.ingest_mod_phase_lines(economy_lines, tick, "economy");
-
-        self.economy_state.energy_budget_joules =
-            i64::from(self.state.energy_budget_joules.to_bits()) / crate::SCALE;
-
-        let demand = crate::policy::effective_consumption(self.economy_policy) as i64;
-        let budget = self.economy_state.energy_budget_joules;
-
-        // FR-CIV-LIFE P4-A: lifecycle-weighted allocation. The aggregate labor
-        // fraction is derived from the per-tick lifecycle rollup computed in
-        // phase_life (Adult count + 0.5 * Elder count, divided by total living
-        // civilians). Children and the dead contribute 0; adults contribute 1.0;
-        // elders contribute 0.5 (semi-retired, still productive).
-        let metrics = &self.last_tick_lifecycle_metrics;
-        let living = (metrics.children + metrics.adults + metrics.elders) as f64;
-        let labor_fraction = if living > 0.0 {
-            let productive = metrics.adults as f64 + 0.5 * metrics.elders as f64;
-            (productive / living).clamp(0.0, 1.0)
-        } else {
-            0.0
-        };
-        let labor_allocator = LaborCapacityAllocator::new(labor_fraction);
-        let allocated = labor_allocator.allocate(budget, demand);
-        civ_economy::drain_energy_budget(&mut self.economy_state, allocated);
-        civ_economy::step(&mut self.economy_state);
-
-        self.state.energy_budget_joules = Fixed::from_num(self.economy_state.energy_budget_joules);
-        let food_price_before = self
-            .market_state
-            .prices()
-            .get("food")
-            .copied()
-            .unwrap_or(FOOD_SCARCITY_BASELINE);
-        self.tick_settlement_trade_flows();
-        self.tick_trade_routes();
-        self.market_state.step(self.state.tick);
-        if tech_unlocks_for_tier(self.research_tier()) & TECH_STORAGE != 0 {
-            if let Some(price) = self.market_state.prices.get_mut("food") {
-                let delta = *price - food_price_before;
-                *price = food_price_before + delta / 2;
-            }
-        }
-    }
-
-    fn tick_settlement_trade_flows(&mut self) {
-        self.last_tick_settlement_trade_flows.clear();
-
-        let mut settlements: Vec<SettlementMarketSetup> = self
-            .settlements
-            .iter()
-            .map(|(&settlement_id, &population)| {
-                let supply = self
-                    .settlement_food_stocked
-                    .get(&settlement_id)
-                    .copied()
-                    .unwrap_or(0)
-                    .max(0);
-                let demand = i64::from(population);
-                let price = market_price_from_balance(supply, demand);
-                SettlementMarketSetup {
-                    id: settlement_id,
-                    supply,
-                    demand,
-                    price,
-                }
-            })
-            .collect();
-        settlements.sort_by_key(|entry| entry.id);
-
-        for settlement in &settlements {
-            self.market_state
-                .apply_pressure("food", settlement.supply, settlement.demand);
-        }
-
-        for low_idx in 0..settlements.len() {
-            for high_idx in (low_idx + 1)..settlements.len() {
-                let low = &settlements[low_idx];
-                let high = &settlements[high_idx];
-                let Some(flow) = settlement_trade_flow_from_supply_demand(
-                    u64::from(low.id),
-                    u64::from(high.id),
-                    Good::Food,
-                    low.supply,
-                    high.demand,
-                    low.price,
-                    high.price,
-                    civ_economy::DEFAULT_SMOOTHING_FACTOR,
-                ) else {
-                    continue;
-                };
-                self.apply_settlement_flow(low.id, high.id, flow.qty);
-                self.last_tick_settlement_trade_flows.push(flow);
-            }
-        }
-    }
-
-    fn apply_settlement_flow(&mut self, from_settlement: u32, to_settlement: u32, qty: i64) {
-        let from_stock = self
-            .settlement_food_stocked
-            .entry(from_settlement)
-            .or_insert(0);
-        *from_stock = (*from_stock - qty).max(0);
-        let to_stock = self
-            .settlement_food_stocked
-            .entry(to_settlement)
-            .or_insert(0);
-        *to_stock = to_stock.saturating_add(qty);
-    }
-
-    fn tick_trade_routes(&mut self) {
-        for route in &self.state.trade_routes {
-            if route.volume <= Fixed::ZERO || route.from_faction == route.to_faction {
-                continue;
-            }
-
-            let resource = route_resource(&route.goods);
-            let available = {
-                let Some(from_resources) = self.state.faction_resources.get(&route.from_faction)
-                else {
-                    continue;
-                };
-                resource_amount(from_resources, resource)
-            };
-            if available <= Fixed::ZERO {
-                continue;
-            }
-
-            let quantity = route.volume.min(available);
-            {
-                let from_resources = self
-                    .state
-                    .faction_resources
-                    .entry(route.from_faction)
-                    .or_default();
-                adjust_resource(from_resources, resource, Fixed::ZERO - quantity);
-            }
-            {
-                let to_resources = self
-                    .state
-                    .faction_resources
-                    .entry(route.to_faction)
-                    .or_default();
-                adjust_resource(to_resources, resource, quantity);
-            }
-
-            let supply = {
-                let Some(from_resources) = self.state.faction_resources.get(&route.from_faction)
-                else {
-                    continue;
-                };
-                resource_amount(from_resources, resource)
-            };
-            let demand = self
-                .state
-                .faction_resources
-                .get(&route.to_faction)
-                .map_or(Fixed::ZERO, |to_resources| {
-                    resource_amount(to_resources, resource)
-                });
-            let supply_units = i64::from(supply.max(Fixed::ZERO).to_bits()) / crate::SCALE;
-            let demand_units = i64::from(demand.max(Fixed::ZERO).to_bits()) / crate::SCALE;
-            self.market_state.apply_pressure(
-                resource_market_key(resource, 0),
-                supply_units,
-                demand_units,
-            );
-            let margin = (demand - supply).max(Fixed::ZERO);
-            let profit = quantity * (Fixed::from_num(1) + margin / Fixed::from_num(100));
-
-            if let Some(from_treasury) = self.state.faction_treasury.get_mut(&route.from_faction) {
-                *from_treasury += profit;
-            }
-            if let Some(to_treasury) = self.state.faction_treasury.get_mut(&route.to_faction) {
-                *to_treasury -= profit;
-            }
-        }
-    }
 
     /// Apply scenario fog settings to the military phase (FR-CIV-TACTICS-045).
     pub fn configure_military_fog(&mut self, vision_radius: Option<u32>, grid_size: u32) {
@@ -5702,12 +5305,6 @@ impl Simulation {
     }
 }
 
-struct SettlementMarketSetup {
-    id: u32,
-    supply: i64,
-    demand: i64,
-    price: i64,
-}
 
 /// Maximum chronicle history lines retained in [`WorldState::chronicle`].
 #[allow(dead_code)] // Reserved for future simulation integration
@@ -5753,7 +5350,7 @@ pub const TECH_GUNPOWDER: u64 = 1 << 5;
 
 /// Discrete tech unlocks reached by a given research tier (set-only bitmask).
 #[allow(dead_code)] // Reserved for future simulation integration
-fn tech_unlocks_for_tier(research_tier: u64) -> u64 {
+pub(crate) fn tech_unlocks_for_tier(research_tier: u64) -> u64 {
     let mut bits = 0u64;
     if research_tier >= 1 {
         bits |= TECH_IRRIGATION;
@@ -7271,7 +6868,7 @@ fn canonical_faction_pair(a: u32, b: u32) -> (u32, u32) {
 
 /// Map a registered faction id to the diplomacy matrix cluster key (N3 bridge).
 #[allow(dead_code)] // Reserved for future simulation integration
-fn faction_cluster_id(faction: u32) -> u32 {
+pub(crate) fn faction_cluster_id(faction: u32) -> u32 {
     faction
 }
 
@@ -7299,7 +6896,7 @@ fn all_registered_faction_pairs(faction_ids: &[u32]) -> Vec<(u32, u32)> {
 }
 
 #[allow(dead_code)] // Reserved for future simulation integration
-fn rollup_cluster_member_counts(world: &World) -> BTreeMap<u64, u32> {
+pub(crate) fn rollup_cluster_member_counts(world: &World) -> BTreeMap<u64, u32> {
     let mut counts = BTreeMap::new();
     for (_, member) in world.query::<&ClusterMember>().iter() {
         *counts.entry(member.cluster.0).or_insert(0) += 1;
@@ -7568,7 +7165,7 @@ fn decay_idle_emergent_trade_routes(state: &mut WorldState, flowed: &BTreeSet<(u
 }
 
 #[allow(dead_code)] // Reserved for future simulation integration
-fn route_resource(goods: &str) -> ResourceType {
+pub(crate) fn route_resource(goods: &str) -> ResourceType {
     match goods {
         "grain" => ResourceType::Food,
         "timber" => ResourceType::Wood,
@@ -7579,7 +7176,7 @@ fn route_resource(goods: &str) -> ResourceType {
 }
 
 #[allow(dead_code)] // Reserved for future simulation integration
-fn resource_amount(resources: &Resources, resource: ResourceType) -> Fixed {
+pub(crate) fn resource_amount(resources: &Resources, resource: ResourceType) -> Fixed {
     match resource {
         ResourceType::Food => resources.food,
         ResourceType::Wood => resources.wood,
@@ -7589,7 +7186,7 @@ fn resource_amount(resources: &Resources, resource: ResourceType) -> Fixed {
 }
 
 #[allow(dead_code)] // Reserved for future simulation integration
-fn adjust_resource(resources: &mut Resources, resource: ResourceType, delta: Fixed) {
+pub(crate) fn adjust_resource(resources: &mut Resources, resource: ResourceType, delta: Fixed) {
     match resource {
         ResourceType::Food => resources.food += delta,
         ResourceType::Wood => resources.wood += delta,

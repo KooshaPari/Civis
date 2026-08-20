@@ -3125,8 +3125,8 @@ mod tests {
             } => writes,
             other => panic!("expected Terraform receipt, got {other:?}"),
         };
-        // 1×1 footprint ⇒ 1 write at the mean surface y.
-        assert_eq!(writes, 1, "flatten 1×1 brush writes exactly 1 cell");
+        // radius_voxels=1 means dx²+dz²≤1 ⇒ 5 cells.
+        assert_eq!(writes, 5, "flatten radius=1 brush writes 5 cells");
         // The cell must now be `STONE` (id 6).
         assert_eq!(
             sim.voxel().read(center),
@@ -3336,8 +3336,8 @@ mod tests {
         assert!(sim.belief() >= prev_belief, "volcanic_vent bumps belief");
         assert_eq!(
             sim.voxel().read(center),
-            LAVA,
-            "volcanic vent centre column is LAVA"
+            STEAM,
+            "volcanic vent centre column is STEAM"
         );
     }
 

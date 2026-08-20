@@ -59,6 +59,16 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use std::ops::{Deref, DerefMut};
 
+// Re-export types extracted into dedicated subsystem modules so downstream
+// code within this crate (and lib.rs re-exports) continue to compile.
+pub(crate) use crate::climate::{CoastalColumn, WATER_MARKER_MATERIAL};
+pub(crate) use crate::diplomacy::{
+    DiplomacyEvent, DiplomacyKind, FactionRelationRecord, FactionRelationSnapshot,
+    FactionRelations,
+};
+// Economy helpers extracted into `economy_engine` module.
+pub(crate) use crate::economy_engine::{economy_state_from_world, market_price_from_balance};
+
 /// Fixed-point decimal wrapper (sign-magnitude 64-bit, scale = 1_000).
 /// Stub: a custom struct that satisfies `from_num` / `to_bits` / arithmetic
 /// used by callers until the original `fixed`-crate-backed definition is
@@ -402,16 +412,6 @@ pub struct LanguageState {
     pub lexemes: Vec<String>,
 }
 
-/// Snapshot of one pairwise faction-relation row (FR-CIV-DIPLOMACY).
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
-pub struct FactionRelationSnapshot {
-    pub faction_a: u32,
-    pub faction_b: u32,
-    pub score: f32,
-    pub kind: String,
-    pub samples: u32,
-}
-
 /// Sentience-evaluation minimum cognition threshold (FR-CIV-GENETICS).
 pub const SENTIENCE_MIN_COGNITION: f32 = 0.5;
 
@@ -421,95 +421,6 @@ pub const SENTIENCE_MIN_COGNITION: f32 = 0.5;
 #[inline]
 pub fn to_faction<T: Copy>(a: T, _b: T) -> T {
     a
-}
-
-/// Stub per-pair faction-relation record (FR-CIV-DIPLOMACY).
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
-pub struct FactionRelationRecord {
-    pub score: f32,
-    pub samples: u32,
-}
-
-/// Stub faction-relation matrix. Wraps a `BTreeMap<(u32, u32), f32>` with the
-/// `apply_signal` / `record` / `relation` methods the diplomacy phase calls.
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
-pub struct FactionRelations {
-    rows: BTreeMap<(u32, u32), FactionRelationRecord>,
-}
-
-impl FactionRelations {
-    /// Apply a [`civ_agents::DiplomacySignal`] to the `(a, b)` pair and
-    /// return a deterministic [`civ_agents::DiplomacyOutcome`].
-    pub fn apply_signal<A, B>(
-        &mut self,
-        a: A,
-        b: B,
-        signal: civ_agents::DiplomacySignal,
-    ) -> civ_agents::DiplomacyOutcome
-    where
-        A: Into<u32>,
-        B: Into<u32>,
-    {
-        let (a, b) = (a.into(), b.into());
-        let entry = self.rows.entry((a, b)).or_default();
-        entry.score =
-            (entry.score + signal.trade_volume - signal.combat_grievance).clamp(-1.0, 1.0);
-        entry.samples = entry.samples.saturating_add(1);
-        civ_agents::DiplomacyOutcome {
-            before: civ_agents::RelationKind::Neutral,
-            after: civ_agents::RelationKind::Neutral,
-            score: entry.score,
-        }
-    }
-
-    /// Read-only access to the relation record for `(a, b)`.
-    pub fn record<A, B>(&self, a: A, b: B) -> Option<&FactionRelationRecord>
-    where
-        A: Into<u32>,
-        B: Into<u32>,
-    {
-        self.rows.get(&(a.into(), b.into()))
-    }
-
-    /// Map a relation score to a coarse string kind for snapshotting.
-    #[must_use]
-    pub fn relation<A, B>(&self, a: A, b: B) -> String
-    where
-        A: Into<u32>,
-        B: Into<u32>,
-    {
-        let score = self
-            .rows
-            .get(&(a.into(), b.into()))
-            .map(|r| r.score)
-            .unwrap_or(0.0);
-        if score > 0.5 {
-            "allied".to_string()
-        } else if score < -0.5 {
-            "hostile".to_string()
-        } else {
-            "neutral".to_string()
-        }
-    }
-
-    /// Iterate directed relation rows `(a, b) → record`.
-    pub fn iter_rows(&self) -> impl Iterator<Item = (&(u32, u32), &FactionRelationRecord)> {
-        self.rows.iter()
-    }
-
-    /// Mean score across every directed row that mentions `faction`.
-    #[must_use]
-    pub fn mean_score_involving(&self, faction: u32) -> Option<f32> {
-        let mut total = 0.0_f32;
-        let mut count = 0_u32;
-        for ((a, b), record) in &self.rows {
-            if *a == faction || *b == faction {
-                total += record.score;
-                count += 1;
-            }
-        }
-        (count > 0).then_some(total / count as f32)
-    }
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -757,20 +668,7 @@ pub struct TradeRoute {
     pub volume: Fixed,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum DiplomacyKind {
-    TradeAgreement,
-    Conflict,
-    Peace,
-}
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct DiplomacyEvent {
-    pub tick: u64,
-    pub faction_a: u32,
-    pub faction_b: u32,
-    pub kind: DiplomacyKind,
-}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PopulationEvent {
@@ -1793,25 +1691,7 @@ pub struct UnrestSnapshot {
     pub mob_size: u64,
 }
 
-/// Voxel material id used to mark coastal water-level voxels written by
-/// [`Simulation::apply_tide_offset`] (FR-CIV-PLANET-020). Reuses the shared
-/// `civ_voxel::material::WATER` constant so the engine, clients, and worldgen
-/// stay on the same source of truth.
-pub const WATER_MARKER_MATERIAL: MaterialId = WATER;
 
-/// A coastal water column registered with the engine. Each column anchors a
-/// single water-marker voxel that shifts vertically with the climate tide
-/// offset every tick (FR-CIV-PLANET-020). Iteration order is deterministic
-/// because columns live in a [`BTreeMap`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-struct CoastalColumn {
-    /// Sea-level y in fixed-point world units.
-    base_y: i64,
-    /// Last y the water marker was written at (so we can clear it before
-    /// writing the new level — preserves FR-CIV-VOXEL-002 dirty-event
-    /// invariants by going through `VoxelWorld::write`).
-    last_water_y: i64,
-}
 
 /// Default doctrine population for three factions (deterministic seed layout).
 fn default_faction_doctrines() -> Vec<DoctrineLibrary> {
@@ -1832,13 +1712,6 @@ fn default_faction_doctrines() -> Vec<DoctrineLibrary> {
             ],
         })
         .collect()
-}
-
-fn economy_state_from_world(world: &WorldState) -> EconomyState {
-    let energy_budget_joules = i64::from(world.energy_budget_joules.to_bits()) / crate::SCALE;
-    let mut state = EconomyState::with_energy_budget(energy_budget_joules);
-    state.tick = world.tick;
-    state
 }
 
 fn propagate_cohort_wardrobe_with_lod(
@@ -2093,6 +1966,16 @@ impl Simulation {
 
         // Count actual civilians spawned (128: 32 per faction × 4 factions)
         let civilian_count = count_civilians(&world) as u64;
+
+        // Pre-seed lifecycle metrics so phase_economy's labor_fraction
+        // is non-zero on the first tick (phase_life runs after phase_economy
+        // in PHASE_ORDER, so the metrics wouldn't be available otherwise).
+        let initial_lifecycle = LifecycleCounters {
+            children: 0,
+            adults: civilian_count as u32,
+            elders: 0,
+            dead: 0,
+        };
 
         let state = WorldState {
             rng_seed: seed,
@@ -2971,7 +2854,7 @@ impl Simulation {
             "audio" => self.phase_audio(),
             "cluster" => self.phase_cluster(),
             "victory_check" => self.phase_victory_check(),
-            other => panic!("Simulation::run_phase: unknown phase '{other}' in PHASE_ORDER"),
+            other => unreachable!("Simulation::run_phase: unknown phase '{other}' in PHASE_ORDER"),
         }
     }
 
@@ -5817,14 +5700,6 @@ struct SettlementMarketSetup {
     supply: i64,
     demand: i64,
     price: i64,
-}
-
-#[allow(dead_code)] // Reserved for future simulation integration
-fn market_price_from_balance(supply: i64, demand: i64) -> i64 {
-    let supply = supply.max(0);
-    let demand = demand.max(0);
-    let balance = demand.saturating_sub(supply);
-    1_000i64.saturating_add(balance.clamp(-250, 250))
 }
 
 /// Maximum chronicle history lines retained in [`WorldState::chronicle`].

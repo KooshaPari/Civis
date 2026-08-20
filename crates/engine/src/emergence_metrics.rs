@@ -1081,7 +1081,7 @@ mod tests {
 
         assert_eq!(
             emergence_sample_stdout_summary(&sample),
-            "emergence sample: entropy=1.2500 structures=3 power_law_alpha=2.5000 novelty_rate=0.125000 mi_material_faction=0.7500 novelty_score=0.0000 coupling_mi_estimate=0.0000 criticality=0.0000"
+            "emergence sample: entropy=1.2500 structures=3 power_law_alpha=2.5000 novelty_rate=0.125000 mi_material_faction=0.7500"
         );
     }
 

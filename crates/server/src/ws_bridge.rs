@@ -177,32 +177,34 @@ struct ServerMetrics {
 impl ServerMetrics {
     fn new(registry: &Registry) -> Self {
         let tick_batches_sent =
-            IntCounter::new("civ_tick_batches_sent", "Total tick batches sent").unwrap();
+            IntCounter::new("civ_tick_batches_sent", "Total tick batches sent")
+                .expect("failed to create civ_tick_batches_sent metric");
         let tick_messages_sent =
-            IntCounter::new("civ_tick_messages_sent", "Total tick messages sent").unwrap();
+            IntCounter::new("civ_tick_messages_sent", "Total tick messages sent")
+                .expect("failed to create civ_tick_messages_sent metric");
         let ws_client_disconnects = IntCounter::new(
             "civ_ws_client_disconnects",
             "Total WebSocket client disconnects",
         )
-        .unwrap();
+        .expect("failed to create civ_ws_client_disconnects metric");
         let connected_clients = IntGauge::new(
             "civ_connected_clients",
             "Current number of connected WebSocket clients",
         )
-        .unwrap();
+        .expect("failed to create civ_connected_clients metric");
 
         registry
             .register(Box::new(tick_batches_sent.clone()))
-            .unwrap();
+            .expect("failed to register civ_tick_batches_sent");
         registry
             .register(Box::new(tick_messages_sent.clone()))
-            .unwrap();
+            .expect("failed to register civ_tick_messages_sent");
         registry
             .register(Box::new(ws_client_disconnects.clone()))
-            .unwrap();
+            .expect("failed to register civ_ws_client_disconnects");
         registry
             .register(Box::new(connected_clients.clone()))
-            .unwrap();
+            .expect("failed to register civ_connected_clients");
 
         Self {
             tick_batches_sent,
@@ -291,7 +293,7 @@ async fn serve_ws_bridge(
     let save_db_path = save_db_path_for_saves_dir(&config.saves_dir);
     let save_db = Arc::new(
         SaveDb::open(&save_db_path)
-            .unwrap_or_else(|err| panic!("open save db at {save_db_path:?}: {err}")),
+            .expect("failed to open save database")
     );
     let session_id = resolve_session_id();
     tracing::info!(%session_id, ?save_db_path, "session-scoped save metadata db ready");
@@ -357,7 +359,7 @@ async fn metrics_handler(State(state): State<AppState>) -> impl IntoResponse {
     let encoder = TextEncoder::new();
     let metric_families = state.metrics_registry.gather();
     let mut buffer = Vec::new();
-    encoder.encode(&metric_families, &mut buffer).unwrap();
+    encoder.encode(&metric_families, &mut buffer).expect("failed to encode prometheus metrics");
     // Use a static string for the content type to avoid lifetime issues.
     let content_type = "text/plain; version=0.0.4; charset=utf-8";
     (

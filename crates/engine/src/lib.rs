@@ -42,14 +42,17 @@
 //! - `io` - File I/O utilities
 
 pub mod building_emergence;
+pub mod climate;
 pub mod command_queue;
 pub mod conditions;
 pub mod culture;
 pub mod disasters;
+pub mod diplomacy;
 pub mod emergence;
 pub mod emergence_metrics;
 pub mod engine;
 pub mod era;
+pub mod economy_engine;
 pub mod faction_decisions;
 pub mod gameplay;
 pub mod godtools;
@@ -113,12 +116,16 @@ pub use emergence_metrics::{EmergenceBranchingState, EmergenceSample};
 pub use engine::{
     cohesion_delta, diplomacy_conflict_threshold, diplomacy_peace_threshold,
     institution_belief_signal, institution_divergence_boost, job_type_for_civilian_id, Building,
-    BuildingType, Citizen, ClusterStocks, CombatDamagePulse, DiplomacyEvent, DiplomacyKind,
-    EconomicFocus, EconomicFocusEvent, EmotionDrivenBehavior, InstitutionEvent, JobType,
+    BuildingType, Citizen, ClusterStocks, CombatDamagePulse, EconomicFocus, EconomicFocusEvent,
+    EmotionDrivenBehavior, InstitutionEvent, JobType,
     MilitaryUnit, MoodSnapshot, Position, PsycheDrivenBehavior, ResourceType, Resources, Sim,
     SimSeed, Simulation, SimulationSnapshot, StratBand, StratificationEvent,
     StratificationEventKind, StratificationReport, TradeRoute, UnitType, WorldState,
 };
+// Re-export diplomacy types from the extracted diplomacy module.
+pub use diplomacy::{DiplomacyEvent, DiplomacyKind};
+// Re-export climate types from the extracted climate module.
+pub use climate::{CoastalColumn, WATER_MARKER_MATERIAL};
 pub use hash_chain::hash_hex;
 pub use replay::ReplayError;
 pub use replay::ReplayLog;

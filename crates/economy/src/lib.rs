@@ -16,6 +16,7 @@ mod currency_trust;
 mod extraction;
 mod institution;
 mod market;
+mod production;
 mod stocks;
 mod tax_policy;
 mod trade_flow;
@@ -40,6 +41,7 @@ pub use market::{
     GoodId, MarketState, MultiGoodMarket, Order, OrderBook, SettlementTradeFlow, Side, Trade,
     DEFAULT_SMOOTHING_FACTOR,
 };
+pub use production::{produce, ProductionOrder, ProductionQueue, ProductionResult, ResourceType, RESOURCE_TYPES};
 pub use stocks::{
     apply_trade, comparative_advantage, deficit, propose_trade, step_stocks, surplus, Good,
     ProductionProfile, Stocks, TradeOffer, GOODS,

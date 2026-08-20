@@ -1,4 +1,5 @@
 //! Session-scoped SQLite metadata index for save files (CIV-1000 §9.2–9.3 MVP).
+#![forbid(unsafe_code)]
 
 use std::{
     path::Path,

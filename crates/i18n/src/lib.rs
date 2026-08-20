@@ -12,6 +12,7 @@
 //! let greeting = tr!(bundle, "godtools.raise_mountain");
 //! ```
 #![deny(missing_docs)]
+#![forbid(unsafe_code)]
 
 use std::borrow::Cow;
 use serde::Deserialize;

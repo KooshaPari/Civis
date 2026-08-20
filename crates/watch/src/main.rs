@@ -9,5 +9,8 @@ async fn main() {
         )
         .init();
 
-    civ_watch::run().await;
+    if let Err(e) = civ_watch::run().await {
+        eprintln!("civ-watch: {e}");
+        std::process::exit(1);
+    }
 }

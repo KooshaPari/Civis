@@ -15,6 +15,7 @@
 //!
 //! Requirements: FR-CIV-LEGENDS-GRAPH-01, -INGEST-02, -RESOLVE-04, -SIG-05,
 //! -CAUSAL-06, -QUERY-07, -NARRATOR-13; NFR-CIV-LEGENDS-SCALE-02, -CONFIG-04, -LOUD-03.
+#![forbid(unsafe_code)]
 
 pub mod config;
 pub mod decay;

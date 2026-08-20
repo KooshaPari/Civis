@@ -1,13 +1,14 @@
 //! Firepass/Kimi LLM client implementation.
 
 use super::{LlmClient, LlmError, TechCard};
+use secrecy::{ExposeSecret, SecretBox};
 use serde::Deserialize;
 
 /// Firepass-backed Kimi client.
 pub struct FirepassKimiClient {
     client: reqwest::Client,
     base_url: String,
-    api_key: String,
+    api_key: SecretBox<String>,
 }
 
 impl FirepassKimiClient {
@@ -19,7 +20,7 @@ impl FirepassKimiClient {
         Ok(Self {
             client: reqwest::Client::new(),
             base_url,
-            api_key,
+            api_key: SecretBox::new(Box::new(api_key)),
         })
     }
 
@@ -98,7 +99,7 @@ impl LlmClient for FirepassKimiClient {
         let response = self
             .client
             .post(url)
-            .bearer_auth(&self.api_key)
+            .bearer_auth(self.api_key.expose_secret())
             .json(&request)
             .send()
             .await
@@ -150,7 +151,7 @@ impl LlmClient for FirepassKimiClient {
         let response = self
             .client
             .post(url)
-            .bearer_auth(&self.api_key)
+            .bearer_auth(self.api_key.expose_secret())
             .json(&request)
             .send()
             .await
@@ -199,7 +200,7 @@ mod tests {
         std::env::remove_var("FIREPASS_BASE_URL");
         let client = FirepassKimiClient::from_env().expect("client");
         assert_eq!(client.base_url, "https://api.firepass.dev/v1");
-        assert_eq!(client.api_key, "test-key");
+        assert_eq!(client.api_key.expose_secret(), "test-key");
         std::env::remove_var("KIMI_API_KEY");
     }
 
@@ -210,7 +211,7 @@ mod tests {
         std::env::set_var("FIREPASS_BASE_URL", "https://example.invalid/v1");
         let client = FirepassKimiClient::from_env().expect("client");
         assert_eq!(client.base_url, "https://example.invalid/v1");
-        assert_eq!(client.api_key, "test-key");
+        assert_eq!(client.api_key.expose_secret(), "test-key");
         std::env::remove_var("KIMI_API_KEY");
         std::env::remove_var("FIREPASS_BASE_URL");
     }

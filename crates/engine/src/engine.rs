@@ -5802,6 +5802,7 @@ struct SettlementMarketSetup {
     price: i64,
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn market_price_from_balance(supply: i64, demand: i64) -> i64 {
     let supply = supply.max(0);
     let demand = demand.max(0);
@@ -5810,36 +5811,49 @@ fn market_price_from_balance(supply: i64, demand: i64) -> i64 {
 }
 
 /// Maximum chronicle history lines retained in [`WorldState::chronicle`].
+#[allow(dead_code)] // Reserved for future simulation integration
 const CHRONICLE_MAX_LEN: usize = 200;
 
 /// Food units each cluster member adds to settlement stock per tick in
 /// [`Simulation::phase_life`].
+#[allow(dead_code)] // Reserved for future simulation integration
 const CLUSTER_FOOD_PRODUCTION_PER_MEMBER: i64 = 1;
 /// Food units each cluster member drains per tick in
 /// [`Simulation::phase_settlement_consumption`]. Must be >= production so the
 /// accumulator stays bounded (net zero at matched rates; converges toward zero
 /// when strictly greater).
+#[allow(dead_code)] // Reserved for future simulation integration
 const CLUSTER_FOOD_CONSUMPTION_PER_MEMBER: i64 = 1;
 /// Market weight for settlement food commons before pressure scaling (N1).
+#[allow(dead_code)] // Reserved for future simulation integration
 const SETTLEMENT_FOOD_MARKET_WEIGHT: i64 = 2;
 /// Divisor mapping population-scale demand/supply (and settlement commons) into
 /// the capped per-tick food price step (N1: local abundance must move price
 /// within `MarketState::apply_pressure`'s ±8 cent clamp).
+#[allow(dead_code)] // Reserved for future simulation integration
 const FOOD_MARKET_PRESSURE_SCALE: i64 = 500_000;
 
 /// Baseline food clearing price (cents) at which births are unaffected by
 /// scarcity. Matches `MarketState::default()`'s food price.
+#[allow(dead_code)] // Reserved for future simulation integration
 pub(crate) const FOOD_SCARCITY_BASELINE: i64 = 1_000;
 
 /// Tech unlock bits (irreversible, set-only).
+#[allow(dead_code)] // Reserved for future simulation integration
 pub const TECH_IRRIGATION: u64 = 1 << 0;
+#[allow(dead_code)] // Reserved for future simulation integration
 pub const TECH_STORAGE: u64 = 1 << 1;
+#[allow(dead_code)] // Reserved for future simulation integration
 pub const TECH_METALLURGY: u64 = 1 << 2;
+#[allow(dead_code)] // Reserved for future simulation integration
 pub const TECH_WRITING: u64 = 1 << 3;
+#[allow(dead_code)] // Reserved for future simulation integration
 pub const TECH_SANITATION: u64 = 1 << 4;
+#[allow(dead_code)] // Reserved for future simulation integration
 pub const TECH_GUNPOWDER: u64 = 1 << 5;
 
 /// Discrete tech unlocks reached by a given research tier (set-only bitmask).
+#[allow(dead_code)] // Reserved for future simulation integration
 fn tech_unlocks_for_tier(research_tier: u64) -> u64 {
     let mut bits = 0u64;
     if research_tier >= 1 {
@@ -5875,6 +5889,7 @@ fn tech_unlocks_for_tier(research_tier: u64) -> u64 {
 /// birth chance. The factor never reaches zero, so a starving society can still
 /// recover, and it only ever scales births DOWN — population is never reduced
 /// by this coupling.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn food_scarcity_birth_factor(food_price: i64) -> f64 {
     let price = food_price.max(FOOD_SCARCITY_BASELINE);
     (FOOD_SCARCITY_BASELINE as f64 / price as f64).clamp(0.0, 1.0)
@@ -5885,6 +5900,7 @@ fn food_scarcity_birth_factor(food_price: i64) -> f64 {
 /// shortfall (bounded per tick so it walks rather than jumps); at or below
 /// baseline it decays toward contentment by a fixed step. The caller floors the
 /// running total at zero.
+#[allow(dead_code)] // Reserved for future simulation integration
 pub(crate) fn unrest_delta(food_price: i64) -> i64 {
     /// Largest single-tick rise, so a price spike can't instantly max unrest.
     const MAX_RISE: i64 = 50;
@@ -5903,6 +5919,7 @@ pub(crate) fn unrest_delta(food_price: i64) -> i64 {
 /// FR-CIV-ECON: scarcity in NON-food commodities adds bounded unrest
 /// (cost-of-living). Food is owned by unrest_delta(); skipped here to avoid
 /// double-counting. Per-tick clamped to [-DECAY, MAX_RISE] — no runaway.
+#[allow(dead_code)] // Reserved for future simulation integration
 pub(crate) fn commodity_unrest_delta(prices: &std::collections::BTreeMap<String, i64>) -> i64 {
     const BASELINE: i64 = 1_000;
     const CENTS_PER_UNREST: i64 = 40;
@@ -5926,6 +5943,7 @@ pub(crate) fn commodity_unrest_delta(prices: &std::collections::BTreeMap<String,
 /// Effective food-price shadow for one faction's local wealth/scarcity (FR-CIV-0100
 /// §3 emergence). Comfortable treasury and food sit at baseline; shortfall pushes
 /// the shadow above baseline so [`unrest_delta`] accrues faction unrest.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn faction_wealth_scarcity_shadow(treasury: Fixed, resources: &Resources) -> i64 {
     const TREASURY_COMFORT: i64 = 8_000;
     const FOOD_COMFORT: i64 = 80;
@@ -5945,6 +5963,7 @@ fn faction_wealth_scarcity_shadow(treasury: Fixed, resources: &Resources) -> i64
 
 /// Per-tick faction unrest delta from that faction's wealth/scarcity shadow.
 /// Mirrors global food-scarcity [`unrest_delta`].
+#[allow(dead_code)] // Reserved for future simulation integration
 fn faction_unrest_delta_from_shadow(scarcity_shadow: i64) -> i64 {
     unrest_delta(scarcity_shadow)
 }
@@ -5953,6 +5972,7 @@ fn faction_unrest_delta_from_shadow(scarcity_shadow: i64) -> i64 {
 /// A fully-drained energy budget (blackout) adds a fixed unrest increment this
 /// tick; a solvent budget adds none. An acute shock that bypasses the gradual
 /// food-scarcity damping.
+#[allow(dead_code)] // Reserved for future simulation integration
 pub(crate) fn energy_scarcity_unrest(energy_budget: Fixed) -> i64 {
     const BLACKOUT_UNREST: i64 = 15;
     if energy_budget <= Fixed::ZERO {
@@ -5965,6 +5985,7 @@ pub(crate) fn energy_scarcity_unrest(energy_budget: Fixed) -> i64 {
 /// Upward causation (FR-CIV-0100 §3): the mean MISERY of agents (negative Psyche
 /// mood valence) adds to societal unrest. Reuses the ECS Psyche component — the
 /// agent emotional layer feeding the macro web. Returns 0..MAX, bounded.
+#[allow(dead_code)] // Reserved for future simulation integration
 pub(crate) fn agent_misery_unrest(world: &hecs::World) -> i64 {
     const MAX_MISERY_UNREST: i64 = 30;
     let (sum, n) = world
@@ -5982,6 +6003,7 @@ pub(crate) fn agent_misery_unrest(world: &hecs::World) -> i64 {
 
 /// Upward causation (FR-CIV-0100 §3): micro ideology consensus (`Psyche.beliefs[0]`)
 /// binds macro cohesion; polarization frays it. Pure `hecs::World` scan, capped i64.
+#[allow(dead_code)] // Reserved for future simulation integration
 pub(crate) fn micro_cohesion_delta(world: &hecs::World) -> i64 {
     const MICRO_BIND_CAP: i64 = 12;
     const MICRO_FRAY_CAP: i64 = 18;
@@ -6013,6 +6035,7 @@ pub(crate) fn micro_cohesion_delta(world: &hecs::World) -> i64 {
 
 /// Upward causation (FR-CIV-0100 §3): mean positive agent tie trust caches a
 /// trade permille bonus for the next economy tick. Pure `hecs::World` scan.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn micro_social_trust_permille(world: &hecs::World) -> u64 {
     const MICRO_TRUST_SCALE: f32 = 250.0;
     const MICRO_TRUST_CAP: u64 = 250;
@@ -6037,6 +6060,7 @@ fn micro_social_trust_permille(world: &hecs::World) -> u64 {
 
 /// Upward causation (FR-CIV-EMERGENCE-N11): average psyche maturity across all agents.
 /// Mature populations stabilize belief (wisdom = stability). Pure `hecs::World` scan.
+#[allow(dead_code)] // Reserved for future simulation integration
 pub(crate) fn avg_psyche_maturity(world: &hecs::World) -> f32 {
     let mut total = 0.0;
     let mut count = 0u32;
@@ -6053,6 +6077,7 @@ pub(crate) fn avg_psyche_maturity(world: &hecs::World) -> f32 {
 
 /// Upward causation (FR-CIV-EMERGENCE-N10): average kinship across all social ties.
 /// Kinship boosts cohesion (family ties stabilize society). Pure `hecs::World` scan.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn avg_faction_kinship(world: &hecs::World) -> f32 {
     let mut total_kinship = 0.0;
     let mut count = 0u32;
@@ -6070,6 +6095,7 @@ fn avg_faction_kinship(world: &hecs::World) -> f32 {
 }
 
 /// Kinship upward boost applied in [`crate::dormant_phases::Simulation::phase_cohesion`].
+#[allow(dead_code)] // Reserved for future simulation integration
 pub(crate) fn kinship_cohesion_boost(world: &hecs::World) -> i64 {
     const KINSHIP_RATE: f32 = 0.02;
     const KINSHIP_SCALE: f32 = 100_000.0;
@@ -6077,6 +6103,7 @@ pub(crate) fn kinship_cohesion_boost(world: &hecs::World) -> i64 {
 }
 
 /// Apply a signed unrest delta, flooring at zero.
+#[allow(dead_code)] // Reserved for future simulation integration
 pub(crate) fn add_unrest_delta(unrest: &mut u64, delta: i64) {
     if delta >= 0 {
         *unrest = unrest.saturating_add(delta as u64);
@@ -6088,6 +6115,7 @@ pub(crate) fn add_unrest_delta(unrest: &mut u64, delta: i64) {
 /// Upward causation (FR-CIV-EMERGENCE-N12): average affinity across all social ties.
 /// Positive collective affinity (goodwill) raises the diplomacy conflict threshold;
 /// hostility lowers it. Result is clamped to `[-1, 1]`. Pure `hecs::World` scan.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn avg_social_affinity(world: &hecs::World) -> f32 {
     let mut total = 0.0;
     let mut count = 0u32;
@@ -6109,16 +6137,19 @@ fn avg_social_affinity(world: &hecs::World) -> f32 {
 /// N12: bias magnitude for the affinity→diplomacy threshold (FR-CIV-EMERGENCE-N12).
 /// `avg_affinity ∈ [-1, 1]` scaled by this yields the threshold bias in `[-5000, 5000]`,
 /// bounded below by `DIPLOMACY_MIN_CONFLICT_THRESHOLD` at the combination site.
+#[allow(dead_code)] // Reserved for future simulation integration
 const N12_AFFINITY_BIAS_SCALE: f32 = 5_000.0;
 
 /// N12: collective affinity threshold bias. Positive goodwill raises the conflict
 /// threshold (more tolerance before fighting); hostility lowers it. The input is
 /// clamped to `[-1, 1]` so the bias is bounded to `[-5000, 5000]`. Returns i64.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn affinity_threshold_bias(avg_affinity: f32) -> i64 {
     (avg_affinity.clamp(-1.0, 1.0) * N12_AFFINITY_BIAS_SCALE) as i64
 }
 
 /// Maximum peace bonus from shared patron veneration (religion → diplomacy coupling).
+#[allow(dead_code)] // Reserved for future simulation integration
 const RELIGIOUS_UNITY_PEACE_CAP: i64 = 1_000;
 
 /// RELIGION→DIPLOMACY emergence coupling (FR-CIV-RELIGION-002).
@@ -6135,6 +6166,7 @@ const RELIGIOUS_UNITY_PEACE_CAP: i64 = 1_000;
 ///
 /// Called with an immutable copy of `has_patron` (read before any mutable
 /// borrow of `self`) to satisfy the borrow-checker (E0502).
+#[allow(dead_code)] // Reserved for future simulation integration
 fn religious_unity_peace_bonus(has_patron: bool) -> i64 {
     if has_patron {
         RELIGIOUS_UNITY_PEACE_CAP
@@ -6144,6 +6176,7 @@ fn religious_unity_peace_bonus(has_patron: bool) -> i64 {
 }
 
 /// Maximum peace bonus from mutual language intelligibility (language → diplomacy coupling).
+#[allow(dead_code)] // Reserved for future simulation integration
 const LANGUAGE_INTELLIGIBILITY_PEACE_CAP: i64 = 1_200;
 
 /// LANGUAGE→DIPLOMACY emergence coupling.
@@ -6154,6 +6187,7 @@ const LANGUAGE_INTELLIGIBILITY_PEACE_CAP: i64 = 1_200;
 ///
 /// Called with pre-read centroid values (before any mutable borrow of `self`)
 /// to satisfy the borrow-checker (E0502).
+#[allow(dead_code)] // Reserved for future simulation integration
 pub fn language_intelligibility_peace_bonus(language_distance: f32) -> i64 {
     let raw = LANGUAGE_INTELLIGIBILITY_PEACE_CAP as f32 * (1.0 - language_distance.clamp(0.0, 1.0));
     raw.clamp(0.0, LANGUAGE_INTELLIGIBILITY_PEACE_CAP as f32) as i64
@@ -6161,6 +6195,7 @@ pub fn language_intelligibility_peace_bonus(language_distance: f32) -> i64 {
 
 /// Upward causation (FR-CIV-0100): the fraction of sentient agents accelerates
 /// research (awakened minds discover faster). Reuses the ECS; returns 0..MAX bonus.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn sentience_research_bonus(world: &hecs::World) -> u64 {
     const MAX_SENTIENCE_RESEARCH: u64 = 50;
     // Mirrors `EmergenceState::new` sentience profile and threshold.
@@ -6184,6 +6219,7 @@ fn sentience_research_bonus(world: &hecs::World) -> u64 {
 }
 
 /// The economic focus a civilization tends toward, from its strongest sector.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn candidate_economic_focus(
     food: i64,
     research_tier: u64,
@@ -6212,6 +6248,7 @@ fn candidate_economic_focus(
 /// Downward-causation policy (FR-CIV-0100 §3): research raises production yield —
 /// better tools/techniques lift per-building output. +10% per research tier,
 /// capped at +100% (2x). De-silos phase_production, which read no emergent state.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn production_yield_factor(research_tier: u64) -> Fixed {
     let bonus_permille = research_tier.saturating_mul(100).min(1_000) as i64;
     Fixed::from_num(1_000 + bonus_permille) / Fixed::from_num(1_000)
@@ -6221,6 +6258,7 @@ fn production_yield_factor(research_tier: u64) -> Fixed {
 /// production — fertile land grows more food, barren land grows less.  The factor
 /// is a pure multiplier on per-farm output; caller multiplies food output by this.
 /// Returns a value in the range [0.1, 1.5] (clamped).
+#[allow(dead_code)] // Reserved for future simulation integration
 fn biome_yield_factor(biome: civ_planet::BiomeKind) -> Fixed {
     use civ_planet::BiomeKind;
     match biome {
@@ -6249,6 +6287,7 @@ fn biome_yield_factor(biome: civ_planet::BiomeKind) -> Fixed {
 /// Returns the mean `biome_yield_factor` across the slice, clamped to
 /// `[0.1, 1.5]`.  Returns `Fixed::ONE` (neutral) for an empty slice so
 /// callers with no geology data are unaffected.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn aggregate_biome_yield(biomes: &[civ_planet::BiomeKind]) -> Fixed {
     if biomes.is_empty() {
         return Fixed::from_num(1) / Fixed::from_num(1);
@@ -6266,6 +6305,7 @@ fn aggregate_biome_yield(biomes: &[civ_planet::BiomeKind]) -> Fixed {
 /// morale recovery — a unified society's troops rally faster. Returns the
 /// per-tick morale recovery increment, rising with cohesion from a 0.010 base
 /// up to a 0.050 cap.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn morale_recovery_rate(cohesion: u64) -> Fixed {
     const BASE_PERMILLE: i64 = 10;
     const CAP_PERMILLE: i64 = 50;
@@ -6277,6 +6317,7 @@ fn morale_recovery_rate(cohesion: u64) -> Fixed {
 /// (Malthusian pressure). Population beyond the carrying capacity adds unrest
 /// scaled by the percentage overshoot (10% over => +1), capped per tick. A
 /// third unrest driver alongside food scarcity and energy blackout.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn overcrowding_unrest(population: u64, capacity: i64) -> i64 {
     const MAX_OVERCROWD_UNREST: i64 = 30;
     let cap = capacity.max(1) as u64;
@@ -6290,12 +6331,14 @@ fn overcrowding_unrest(population: u64, capacity: i64) -> i64 {
 /// Downward-causation policy (FR-CIV-0100 §3): social cohesion accelerates
 /// research — a unified society collaborates. Returns a per-mille bonus to the
 /// per-tick research contribution, up to +50%.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn cohesion_research_bonus_permille(cohesion: u64) -> u64 {
     (cohesion / 2_000).min(500)
 }
 
 /// The wealth gap (in whole currency units) between the richest and poorest
 /// faction — an emergent measure of structural inequality across the society.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn faction_treasury_spread(treasury: &HashMap<u32, Fixed>) -> i64 {
     let mut min = i64::MAX;
     let mut max = i64::MIN;
@@ -6314,6 +6357,7 @@ fn faction_treasury_spread(treasury: &HashMap<u32, Fixed>) -> i64 {
 /// Downward-causation policy (FR-CIV-0100 §3): structural inequality breeds class
 /// unrest. A wide wealth gap between factions adds unrest scaled by the gap,
 /// capped per tick. Distinct from scarcity — this is about distribution.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn inequality_unrest(treasury_spread: i64) -> i64 {
     const MAX_INEQUALITY_UNREST: i64 = 25;
     const SPREAD_PER_UNREST: i64 = 2_000;
@@ -6323,6 +6367,7 @@ fn inequality_unrest(treasury_spread: i64) -> i64 {
 /// The dispossessed share (per-mille) that a society TENDS TOWARD given its
 /// wealth gap and social fabric: inequality pushes it up, cohesion pulls it
 /// down. Clamped to [0, 1000].
+#[allow(dead_code)] // Reserved for future simulation integration
 fn dispossession_target_permille(treasury_spread: i64, cohesion: u64) -> u64 {
     const SPREAD_PER_PERMILLE: i64 = 200; // currency-units of gap per +1 permille
     let from_inequality = (treasury_spread.max(0) / SPREAD_PER_PERMILLE) as u64;
@@ -6331,16 +6376,19 @@ fn dispossession_target_permille(treasury_spread: i64, cohesion: u64) -> u64 {
 }
 
 /// Max institution level (criticality cap on the belief->temple->belief loop).
+#[allow(dead_code)] // Reserved for future simulation integration
 pub const MAX_INSTITUTION_LEVEL: u32 = 5;
 
 /// Institution level that a driver signal supports: one level per THRESHOLD of
 /// the signal, capped at MAX_INSTITUTION_LEVEL.
+#[allow(dead_code)] // Reserved for future simulation integration
 pub(crate) fn institution_target_level(signal: u64, per_level: u64) -> u32 {
     (signal / per_level.max(1)).min(MAX_INSTITUTION_LEVEL as u64) as u32
 }
 
 /// One-step decay toward target (max 1 level change per tick, so growth/decay
 /// is gradual — hysteresis).
+#[allow(dead_code)] // Reserved for future simulation integration
 pub(crate) fn institution_step(current: u32, target: u32) -> u32 {
     if target > current {
         current + 1
@@ -6353,6 +6401,7 @@ pub(crate) fn institution_step(current: u32, target: u32) -> u32 {
 
 /// One sticky step of the dispossessed share toward its target (max 5 permille
 /// per tick), so the class structure persists rather than tracking instantly.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn dispossession_step(current: u64, target: u64) -> u64 {
     const MAX_STEP: u64 = 5;
     if target > current {
@@ -6363,6 +6412,7 @@ fn dispossession_step(current: u64, target: u64) -> u64 {
 }
 
 /// A large dispossessed underclass adds unrest, scaled by its share, capped.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn dispossession_unrest(dispossessed_permille: u64) -> i64 {
     (dispossessed_permille / 40).min(25) as i64
 }
@@ -6373,6 +6423,7 @@ fn dispossession_unrest(dispossessed_permille: u64) -> i64 {
 /// untouched. The mitigation is bounded (tier capped at 9 → at most a 10x
 /// reduction) and floored at 1, so technology calms a society but never makes
 /// it immune to hardship. Returns the research-adjusted unrest delta.
+#[allow(dead_code)] // Reserved for future simulation integration
 pub(crate) fn research_unrest_mitigation(rise: i64, research_tier: u64) -> i64 {
     if rise <= 0 {
         return rise;
@@ -6385,6 +6436,7 @@ pub(crate) fn research_unrest_mitigation(rise: i64, research_tier: u64) -> i64 {
 /// Each research tier shortens the build cadence (ticks between expansions),
 /// floored so an advanced civilisation never busy-builds every single tick.
 /// De-silos phase_buildings, which previously read no emergent state.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn building_cadence(research_tier: u64) -> u64 {
     const BASE: u64 = 16;
     const FLOOR: u64 = 4;
@@ -6397,6 +6449,7 @@ fn building_cadence(research_tier: u64) -> u64 {
 /// drives commerce, unrest drives civic/governance building. Each in [0,1].
 /// All channels are scaled by wood/metal headroom so construction stops when
 /// stockpiles are depleted (FC-3).
+#[allow(dead_code)] // Reserved for future simulation integration
 fn building_demand_signals(
     population: u64,
     capacity: i64,
@@ -6426,14 +6479,19 @@ fn building_demand_signals(
 }
 
 /// Wood consumed per parcel allocated in [`Simulation::phase_buildings`].
+#[allow(dead_code)] // Reserved for future simulation integration
 const BUILDING_WOOD_PER_PARCEL: i64 = 10;
 /// Metal consumed per parcel allocated in [`Simulation::phase_buildings`].
+#[allow(dead_code)] // Reserved for future simulation integration
 const BUILDING_METAL_PER_PARCEL: i64 = 5;
 /// Stock level (integer units) at which material headroom reaches full strength.
+#[allow(dead_code)] // Reserved for future simulation integration
 const BUILDING_MATERIAL_GATE: i64 = 500;
+#[allow(dead_code)] // Reserved for future simulation integration
 const FC3_COMMERCIAL_PARCEL_THRESHOLD: f32 = 0.5;
 
 /// FC-3: reserve one parcel, then quadratic roll-off in permille (0..=1000).
+#[allow(dead_code)] // Reserved for future simulation integration
 fn building_material_headroom_permille(stock: Fixed, reserve_units: i64, gate_units: i64) -> u64 {
     let reserve = Fixed::from_num(reserve_units);
     let effective = stock.saturating_sub(reserve);
@@ -6447,6 +6505,7 @@ fn building_material_headroom_permille(stock: Fixed, reserve_units: i64, gate_un
 }
 
 /// Parcels fundable from current wood and metal stockpiles (integer division).
+#[allow(dead_code)] // Reserved for future simulation integration
 fn building_affordable_parcel_count(wood: Fixed, metal: Fixed) -> usize {
     let wood_per = Fixed::from_num(BUILDING_WOOD_PER_PARCEL);
     let metal_per = Fixed::from_num(BUILDING_METAL_PER_PARCEL);
@@ -6464,6 +6523,7 @@ fn building_affordable_parcel_count(wood: Fixed, metal: Fixed) -> usize {
 }
 
 /// Keeps the highest-priority saturated signals, zeroing the rest.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn building_signals_limited(signals: DemandSignals, max_parcels: usize) -> DemandSignals {
     let mut active = [
         (0_u8, signals.residential),
@@ -6862,6 +6922,7 @@ pub fn institution_belief_signal(
 /// `divergence` is the max pairwise belief distance `[0.0, 1.0]` from
 /// [`civ_agents::max_cluster_belief_divergence`]. Returns extra belief units to
 /// add to the macro signal, capped so the boost can at most double the signal.
+#[allow(dead_code)] // Reserved for future simulation integration
 pub fn institution_divergence_boost(macro_signal: u64, divergence: f32) -> u64 {
     let bonus = (macro_signal as f32 * divergence.clamp(0.0, 1.0)) as u64;
     macro_signal.saturating_add(bonus)
@@ -6920,6 +6981,7 @@ fn diplomacy_culture_threshold_bias(
 }
 
 /// Dominant explicit faction alignment per multi-member settlement cluster (N3).
+#[allow(dead_code)] // Reserved for future simulation integration
 fn settlement_dominant_factions(
     world: &World,
     cluster_member_counts: &BTreeMap<u64, u32>,
@@ -7287,12 +7349,16 @@ fn decay_faction_relations(matrix: &mut DiplomacyMatrix, factor: f32) {
 }
 
 /// Sustained [`DiplomacyKind::TradeAgreement`] events before an emergent route is born.
+#[allow(dead_code)] // Reserved for future simulation integration
 const TRADE_ROUTE_AGREEMENT_BIRTH_THRESHOLD: u32 = 2;
 /// Minimum pairwise relation score required to birth an emergent route.
+#[allow(dead_code)] // Reserved for future simulation integration
 const TRADE_ROUTE_MIN_RELATION: f32 = 0.0;
 /// Hard cap on total trade routes (bootstrap + emergent) to bound memory and tick cost.
+#[allow(dead_code)] // Reserved for future simulation integration
 const MAX_TRADE_ROUTES: usize = 64;
 /// Ticks without resource flow before an emergent route is removed.
+#[allow(dead_code)] // Reserved for future simulation integration
 const TRADE_ROUTE_UNUSED_DECAY_TICKS: u32 = 2_000;
 
 #[allow(dead_code)] // Reserved for future simulation integration
@@ -7305,6 +7371,7 @@ fn canonical_faction_pair(a: u32, b: u32) -> (u32, u32) {
 }
 
 /// Map a registered faction id to the diplomacy matrix cluster key (N3 bridge).
+#[allow(dead_code)] // Reserved for future simulation integration
 fn faction_cluster_id(faction: u32) -> u32 {
     faction
 }
@@ -7332,6 +7399,7 @@ fn all_registered_faction_pairs(faction_ids: &[u32]) -> Vec<(u32, u32)> {
     pairs
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn rollup_cluster_member_counts(world: &World) -> BTreeMap<u64, u32> {
     let mut counts = BTreeMap::new();
     for (_, member) in world.query::<&ClusterMember>().iter() {
@@ -7343,6 +7411,7 @@ fn rollup_cluster_member_counts(world: &World) -> BTreeMap<u64, u32> {
 /// Per-cluster member count (alias of [`rollup_cluster_member_counts`]).
 /// Stub: same shape so callers can treat settlement/cluster membership
 /// uniformly until the engine fully merges the two.
+#[allow(dead_code)] // Reserved for future simulation integration
 fn settlement_member_counts(world: &World) -> BTreeMap<u64, u32> {
     rollup_cluster_member_counts(world)
 }
@@ -7350,6 +7419,7 @@ fn settlement_member_counts(world: &World) -> BTreeMap<u64, u32> {
 /// Map a `ResourceType` to its market-state key (coerced to a `&'static str`
 /// for the market bus).
 #[must_use]
+#[allow(dead_code)] // Reserved for future simulation integration
 pub fn resource_market_key(resource: ResourceType, _region: u32) -> &'static str {
     match resource {
         ResourceType::Food => "food",
@@ -7390,6 +7460,7 @@ fn shared_religious_unity(cultures: &BTreeMap<u64, CultureProfile>, a: u32, b: u
     shared_religion_cohesion(cultures, a, b) >= 0.7
 }
 
+#[allow(dead_code)] // Reserved for future simulation integration
 fn resource_competition_signal(ra: &Resources, rb: &Resources) -> f32 {
     let overlaps = [
         (ra.food, rb.food),

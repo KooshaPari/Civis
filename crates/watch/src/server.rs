@@ -1,5 +1,6 @@
 //! Axum router construction and HTTP server bootstrap.
 
+use std::fmt;
 use std::{
     net::SocketAddr,
     path::PathBuf,
@@ -8,6 +9,26 @@ use std::{
         Arc,
     },
 };
+
+/// Errors that can occur when starting the watch server.
+#[derive(Debug)]
+pub enum WatchError {
+    /// Failed to open the save database.
+    DatabaseOpen(String),
+    /// Failed to bind to the requested TCP port.
+    BindAddress(String),
+}
+
+impl fmt::Display for WatchError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            WatchError::DatabaseOpen(msg) => write!(f, "save-db open failed: {msg}"),
+            WatchError::BindAddress(msg) => write!(f, "port bind failed: {msg}"),
+        }
+    }
+}
+
+impl std::error::Error for WatchError {}
 
 use axum::{
     routing::{get, post},
@@ -74,7 +95,7 @@ fn build_app(state: AppState) -> Router {
         .layer(CorsLayer::permissive())
 }
 
-pub async fn run() {
+pub async fn run() -> Result<(), WatchError> {
     let (tx, _) = broadcast::channel::<Snapshot>(64);
     let terrain_seed = env_u64("CIVIS_MAP_SEED", 42);
     let terrain = Terrain::generate(terrain_seed);
@@ -85,8 +106,9 @@ pub async fn run() {
     std::fs::create_dir_all(&*saves_dir).expect("create saves dir");
     let save_db_path = data_dir.join("saves.db");
     let save_db = Arc::new(
-        SaveDb::open(&save_db_path)
-            .unwrap_or_else(|err| panic!("open save db at {save_db_path:?}: {err}")),
+        SaveDb::open(&save_db_path).map_err(|err| {
+            WatchError::DatabaseOpen(format!("open save db at {save_db_path:?}: {err}"))
+        })?,
     );
     let session_id = resolve_session_id();
     info!(%session_id, ?save_db_path, "session-scoped save metadata db ready");
@@ -158,6 +180,7 @@ pub async fn run() {
 
     let listener = tokio::net::TcpListener::bind(addr)
         .await
-        .unwrap_or_else(|e| panic!("bind {port}: {e}"));
+        .map_err(|e| WatchError::BindAddress(format!("bind {port}: {e}")))?;
     axum::serve(listener, app).await.expect("axum server");
+    Ok(())
 }

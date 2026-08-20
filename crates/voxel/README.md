@@ -1,32 +1,32 @@
-# civ-voxel
+# voxel
 
-**Civis adapter over the shared `phenotype-voxel` kernel.**
+> Civis adapter over the shared phenotype-voxel kernel.
 
-The `civ-voxel` crate provides the 3D voxel world substrate for Civis, built on top of the shared `phenotype-voxel` engine. It implements adaptive voxel storage using Sparse Voxel Octrees (SVO) and dense 16³ leaf chunks, providing deterministic mesh generation and dirty-chunk tracking for efficient updates.
+## Overview
 
-## Key Types
+The `voxel` crate is the primary interface for the Civis voxel world engine. It wraps the shared phenotype-voxel kernel (Sparse Voxel Octree + dense 16-cubed chunks) and adds Civis-specific features like a rich material palette, fluid cellular automata (CA), and procedural worldgen.
 
-- `VoxelWorld`: The top-level structure representing the 3D voxel grid.
-- `Chunk` / `ChunkCoord`: Represents a 16x16x16 block of voxels and its position.
-- `VoxelOctree`: The sparse octree structure used for efficient spatial queries.
-- `CubicMesher`: Implementation of the `Mesher` trait for generating geometry from voxels.
+It manages LOD (Level of Detail), residency budgets, and PBR material blending. This crate is responsible for translating high-level world commands into efficient voxel data structures and operations.
 
-## Usage Example
+## Features
+
+- Sparse Voxel Octree (SVO) and dense chunk management
+- 30+ material palette with PBR blending
+- Fluid cellular automata (CA) simulation
+- Procedural worldgen and brush systems
+- LOD management and residency budgeting
+- HUD overlay and boundary configuration
+
+## Usage
 
 ```rust
-use civ_voxel::{VoxelWorld, ChunkCoord, MaterialId};
-
-let mut world = VoxelWorld::new();
-
-// Place a block at a specific coordinate
-let coord = ChunkCoord::new(0, 0, 0);
-world.set_voxel(coord, MaterialId::new(1));
-
-// Generate mesh for a chunk
-// let mesh = world.mesh_chunk(coord);
+use voxel::*;
 ```
 
-## Dependencies
+## Architecture
 
-- [`phenotype-voxel`](https://github.com/KooshaPari/phenotype-gfx/tree/main/crates/phenotype-voxel): The shared voxel kernel from Phenotype-org.
-- `bincode`: For efficient binary serialization of the dirty-chunk cache.
+The world is represented by `VoxelWorld`, composed of chunks identified by `ChunkId` and positioned in `WorldCoord`. Materials are referenced by `MaterialId`. Operations like `BrushStamp` allow for high-level modifications to the voxel data.
+
+## License
+
+Part of the [Civis](https://github.com/KooshaPari/Civis) project.

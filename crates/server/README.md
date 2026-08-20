@@ -1,44 +1,31 @@
-# civ-server
+# server
 
-**Server application for the CivLab deterministic simulation engine.**
+> Civis server library exposing the 3D-extension protocol bridge.
 
-The `civ-server` crate acts as the primary interface for the Civis simulation, providing a JSON-RPC WebSocket bridge, health endpoints, and 3D protocol frame builders. It handles client connections, manages simulation state (including autosaves), and exposes the simulation to renderers and replay tools.
+## Overview
 
-## Key Types
+The `server` crate implements the core network and persistence layer for the Civis 3D server. It bridges the 3D extension protocol to client connections via JSON-RPC and WebSocket with SSE streaming. It manages the voxel frame construction, autosave loops, and subscription filtering for connected clients.
 
-- `JsonRpcRequest` / `JsonRpcResponse`: Standard JSON-RPC 2.0 messaging types.
-- `DispatchContext`: Context provided to JSON-RPC method handlers.
-- `AutosaveContext`: Context for managing automated simulation saves.
-- `VoxelFrameBuilder`: Converts simulation voxel events into 3D protocol frames.
+This crate is the "glue" that connects the simulation logic (voxel, simulation) to the external world. It handles the lifecycle of client sessions, ensuring efficient state transmission and synchronization.
 
-## Usage Example
+## Features
 
-The server is typically run as a binary:
+- JSON-RPC method dispatch for client commands
+- WebSocket bridge with Server-Sent Events (SSE) streaming
+- Voxel frame builder for efficient delta transmission
+- Background autosave loop with configurable intervals
+- Subscription filtering for targeted client updates
 
-```bash
-cargo run -p civ-server
-```
-
-As a library, you can dispatch requests:
+## Usage
 
 ```rust
-use civ_server::{DispatchContext, dispatch_request, parse_request};
-
-let raw_json = r#"{"jsonrpc": "2.0", "method": "tick", "id": 1}"#;
-let request = parse_request(raw_json).unwrap();
-// let response = dispatch_request(request, &context);
+use server::*;
 ```
 
-## Dependencies
+## Architecture
 
-The server integrates with almost all other Civis crates:
+The server operates on a `WsBridgeConfig` that defines the transport settings. `JsonRpcMethod` enums route incoming requests. The `AutosaveContext` manages background persistence, while `VoxelFrameBuilder` constructs efficient binary frames for transmission.
 
-- [`civ-engine`](../engine): Core simulation engine.
-- [`civ-agents`](../agents): Agent systems.
-- [`civ-economy`](../economy): Economic simulation.
-- [`civ-voxel`](../voxel): Voxel world data.
-- [`civ-protocol-3d`](../protocol-3d): 3D streaming protocol.
-- [`civ-build`](../build): Building systems.
-- [`civ-mod-host`](../mod-host): Modding interface.
-- [`civ-save-db`](../save-db): Persistent storage for saves.
-- [`civ-observability`](../observability): Logging and tracing.
+## License
+
+Part of the [Civis](https://github.com/KooshaPari/Civis) project.

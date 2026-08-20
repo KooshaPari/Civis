@@ -7,9 +7,9 @@ license.workspace = true
 publish = false
 
 [dependencies]
-opentelemetry = { version = "0.28", features = ["trace", "metrics"] }
-opentelemetry-otlp = { version = "0.28", features = ["grpc-tonic"] }
-opentelemetry_sdk = { version = "0.28", features = ["rt-tokio", "metrics"] }
-opentelemetry-prometheus = "0.28"
-prometheus = "0.13"
+opentelemetry = { version = "0.32", features = ["trace", "metrics"] }
+opentelemetry-otlp = { version = "0.32", features = ["grpc-tonic"] }
+opentelemetry_sdk = { version = "0.32", features = ["rt-tokio", "metrics"] }
+opentelemetry-prometheus = "0.32"
+prometheus = "0.14"
 tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util"] }

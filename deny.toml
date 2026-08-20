@@ -24,15 +24,6 @@ ignore = [
   { id = "RUSTSEC-2025-0141", reason = "bincode 1.x pinned by save format; migrate tracked separately" },
   # crossbeam-epoch fmt::Pointer advisory; no patched release consumed yet.
   { id = "RUSTSEC-2026-0204", reason = "awaiting crossbeam-epoch bump through bevy/rayon stack" },
-  # rsa 0.9.x Marvin Attack (RUSTSEC-2023-0071); upstream has not published
-  # a fixed release. Patched versions are tracked separately in the worklog;
-  # revisit when rustsec issues RUSTSEC-2023-0071 patched release or when
-  # an upstream consumer (webpki/reqwest) ships a version that drops rsa.
-  { id = "RUSTSEC-2023-0071", reason = "no patched rsa release available; transitively required by webpki/reqwest" },
-  # protobuf 2.x (RUSTSEC-2024-0437) — transitive via opentelemetry-prometheus 0.28.x
-  # which is pinned to the 0.28 telemetry stack. Upstream fix is in protobuf 3.7.2+
-  # but opentelemetry-prometheus 0.28.x hardcodes protobuf 2.x.
-  { id = "RUSTSEC-2024-0437", reason = "protobuf 2.x pinned by opentelemetry-prometheus 0.28; upgrade tracked" },
 ]
 
 [bans]

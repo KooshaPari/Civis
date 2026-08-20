@@ -37,6 +37,7 @@ use crate::engine::TECH_STORAGE;
 use crate::engine::tech_unlocks_for_tier;
 use crate::engine::{resource_market_key, route_resource, resource_amount, adjust_resource};
 use civ_economy::{settlement_trade_flow_from_supply_demand, Good};
+use civ_economy::AllocationEngine;
 use civ_economy::LaborCapacityAllocator;
 
 struct SettlementMarketSetup {

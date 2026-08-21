@@ -1,72 +1,23 @@
 {
-  "version": "1",
-  "repo": "Civis",
-  "git_sha": "d9ec3cf4b13db5a51a372d5e7c5352d3b00b69af",
-  "content_hash": "0ba40f3e66aa1ca5b2abfe822cac2ce99a43a425b962d0ba917df52147641bef",
-  "created_at": "2026-07-23T06:30:47Z",
-  "runner": {
-    "host": "KOOSHAPARI-DESK",
-    "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
-  },
-  "gates": {
-    "civis_3d_verify": {
-      "status": "pass",
-      "detail": "Targeted catalog, civ-engine scenario (33 passed, 1 ignored), web (117 passed), civ-mod-host/civlab-sdk (75 passed), workspace clippy/check evidence previously passed; voxel fmt scoped. Full cold composite was resource/time bounded."
-    },
-    "bevy_egui_check": {
-      "status": "pass",
-      "detail": ""
+    "version": "1",
+    "repo": "Civis",
+    "git_sha": "0a30e3b62e97dadc24c0d75eee2432bdec425b18",
+    "content_hash": "48e94cc71f20573c8b76f538cc47c7553338175cd1c47c8baf614e4313bce7db",
+    "created_at": "2026-08-21T01:54:42Z",
+    "runner": {
+        "host": "KOOSHAPARI-DESK",
+        "rust": "rustc 1.97.1 (8bab26f4f 2026-07-14)"
     },
     "gates": {
-        "dashboard_build": {
-            "detail": "",
-            "status": "pass"
-        },
-        "extra_trufflehog": {
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
-            "status": "skip"
-        },
-        "civis_3d_verify": {
-            "detail": "",
-            "status": "pass"
-        },
-        "bevy_egui_check": {
-            "detail": "",
-            "status": "pass"
-        },
-        "dashboard_typecheck": {
-            "detail": "",
-            "status": "pass"
-        },
         "unreal_preflight": {
             "status": "fail",
             "detail": ""
         },
-        "extra_cargo_deny": {
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
-            "status": "skip"
-        },
-        "extra_fr_coverage": {
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
-            "status": "skip"
-        },
-        "unreal_build": {
-            "status": "fail",
-            "detail": ""
-        },
-        "extra_cargo_semver": {
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
-            "status": "skip"
-        },
         "web_test": {
-            "detail": "",
-            "status": "pass"
+            "detail": "exit 1",
+            "status": "fail"
         },
-        "extra_cargo_machete": {
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
-            "status": "skip"
-        },
-        "extra_docs_check": {
+        "extra_cargo_deny": {
             "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
             "status": "skip"
         },
@@ -77,72 +28,47 @@
         "extra_security_guard": {
             "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
             "status": "skip"
+        },
+        "extra_cargo_semver": {
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
+            "status": "skip"
+        },
+        "bevy_egui_check": {
+            "detail": "exit 101",
+            "status": "fail"
+        },
+        "dashboard_typecheck": {
+            "detail": "",
+            "status": "pass"
+        },
+        "civis_3d_verify": {
+            "detail": "exit 1",
+            "status": "fail"
+        },
+        "extra_fr_coverage": {
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
+            "status": "skip"
+        },
+        "extra_trufflehog": {
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
+            "status": "skip"
+        },
+        "unreal_build": {
+            "status": "fail",
+            "detail": ""
+        },
+        "dashboard_build": {
+            "detail": "exit 1",
+            "status": "fail"
+        },
+        "extra_docs_check": {
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
+            "status": "skip"
+        },
+        "extra_cargo_machete": {
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
+            "status": "skip"
         }
     },
-    "dashboard_typecheck": {
-      "status": "pass",
-      "detail": ""
-    },
-    "dashboard_build": {
-      "status": "pass",
-      "detail": ""
-    },
-    "extra_cargo_audit": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    },
-    "extra_cargo_deny": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    },
-    "extra_cargo_machete": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    },
-    "extra_cargo_semver": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    },
-    "extra_trufflehog": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    },
-    "extra_fr_coverage": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    },
-    "extra_docs_check": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    },
-    "extra_security_guard": {
-      "status": "skip",
-      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    },
-    "voxel_bridge_test": {
-      "status": "pass",
-      "detail": "cargo test -p civ-voxel-bridge --offline: 3 passed, 0 failed; rustfmt scoped check passed"
-    },
-    "voxel_bridge_simulation_test": {
-      "status": "pass",
-      "detail": "cargo test -p civ-voxel-bridge --offline: 4 passed, 0 failed; scoped rustfmt check passed"
-    },
-    "voxel_bridge_presentation_test": {
-      "status": "pass",
-      "detail": "cargo test -p civ-voxel-bridge --offline: 3 passed, 0 failed; scoped rustfmt check passed"
-    },
-    "voxel_material_ca_test": {
-      "status": "pass",
-      "detail": "cargo test -p civ-voxel --offline: 312 passed, 0 failed, 1 ignored; scoped rustfmt check passed"
-    },
-    "civ_ai_ollama_provider_test": {
-      "status": "pass",
-      "detail": "cargo test -p civ-ai --features dev providers::ollama_dev --offline: 2 passed, 0 failed; full civ-ai suite has four pre-existing unrelated failures"
-    },
-    "civ_ai_baseline_tests": {
-      "status": "pass",
-      "detail": "cargo test -p civ-ai --offline: 35 unit tests + 10 integration tests + 1 doc test passed; 1 pre-existing async test ignored"
-    }
-  },
-  "manifest_hash": "a1ed0c6da9571b964e4467a5b5b9df235bc39645bc1410e6293afc63c3e55b88"
+    "manifest_hash": "9a5d1408c7edbc85c2abddacabe7f4a880c7aadcfaffe9b3326c469d1c64386f"
 }

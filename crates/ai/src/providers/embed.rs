@@ -158,4 +158,24 @@ mod tests {
             Ok(_) => panic!("missing local artifacts must fail"),
         }
     }
+
+    /// Integration test: requires `CIVIS_EMBED_MODEL_DIR` containing
+    /// model.onnx + tokenizer files. Skipped in CI.
+    #[test]
+    #[ignore]
+    fn embed_roundtrip_with_local_model() {
+        let dir = std::env::var("CIVIS_EMBED_MODEL_DIR")
+            .expect("set CIVIS_EMBED_MODEL_DIR to a dir with ONNX + tokenizer files");
+        let provider = EmbedProvider::try_from_model_dir("test-embed", &dir, 384)
+            .expect("embed model load failed");
+        assert!(provider.capabilities().embed);
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let vectors = rt
+            .block_on(provider.embed(&super::EmbedRequest {
+                texts: vec!["hello world".into()],
+            }))
+            .expect("embed failed");
+        assert_eq!(vectors.len(), 1);
+        assert_eq!(vectors[0].len(), 384, "MiniLM must produce 384-dim vectors");
+    }
 }

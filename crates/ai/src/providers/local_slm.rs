@@ -136,4 +136,28 @@ mod tests {
         .await;
         assert!(matches!(result, Err(AiError::ModelMissing(_))));
     }
+
+    /// Integration test: requires `CIVIS_LOCAL_SLM_DIR` (directory) and
+    /// `CIVIS_LOCAL_SLM_GGUF` (filename within that dir). Skipped in CI.
+    #[tokio::test]
+    #[ignore]
+    async fn local_slm_generate_roundtrip() {
+        let dir = std::env::var("CIVIS_LOCAL_SLM_DIR")
+            .expect("set CIVIS_LOCAL_SLM_DIR to a dir containing a GGUF");
+        let gguf = std::env::var("CIVIS_LOCAL_SLM_GGUF")
+            .expect("set CIVIS_LOCAL_SLM_GGUF to the GGUF filename");
+        let provider = LocalSlmProvider::try_from_gguf("test-local", &dir, &gguf, None::<String>)
+            .await
+            .expect("GGUF load failed");
+        assert!(provider.capabilities().generate);
+        let out = provider
+            .generate(&GenRequest {
+                prompt: "Say hello in exactly 3 words.".into(),
+                temperature: 0.0,
+                max_tokens: 32,
+            })
+            .await
+            .expect("generate failed");
+        assert!(!out.text.is_empty(), "local SLM must return non-empty text");
+    }
 }

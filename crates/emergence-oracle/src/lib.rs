@@ -3,6 +3,7 @@
 //! Each [`FeatureOracle`] implementation maps to a specific FR-EMG-* requirement.
 //! [`OracleRegistry::with_defaults`] wires all 24 domain oracles and [`OracleRegistry::run_all`]
 //! batch-verifies them against a live [`Simulation`].
+#![forbid(unsafe_code)]
 
 pub mod oracles;
 

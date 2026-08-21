@@ -246,7 +246,7 @@ pub(crate) fn resolve_install_source(source: &str, mods_dir: &Path) -> Result<St
         if path.is_file() {
             return Ok(format!(
                 "mods/{}",
-                path.file_name().unwrap().to_string_lossy()
+                path.file_name().expect("path already verified as file").to_string_lossy()
             ));
         }
         return Err(format!("mod archive not found: {normalized}"));

@@ -167,6 +167,7 @@ civis-bevy-play:
     @echo "      $$env:CIVIS_ATTACH='server'"
     @echo "      $$env:CIV_WS_URL='ws://127.0.0.1:3010/ws?tick_format=binary'"
     @echo "      & \"$$env:CARGO_TARGET_DIR/release/civ-standalone.exe\""
+
 # SHELL-ATTEST-001 — headless AppState / menu smoke (no GPU window).
 # Complements bevy-egui-check compile gate with playability wiring proof.
 bevy-shell-smoke:
@@ -215,10 +216,6 @@ civis-3d-live-smoke:
     cargo test -p civ-bevy-ref --lib minimap_uv_to_chunk
     cargo check -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone
     cargo check -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-bevy-window
-
-# Headless contract for the first playable loading/splash asset pair.
-playability-splash-gate:
-    bash scripts/playability-splash-gate.sh
 
 # Run the live Bevy reference client against civ-server's WebSocket bridge.
 # Requires civ-server to be running first.

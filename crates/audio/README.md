@@ -1,25 +1,42 @@
-# civ-audio
+# audio
 
-CIV-0800 audio substrate: four-tier bus mix, biome-driven ambient
-beds, mood-driven score stems, SFX coalescing. Pure-Rust core,
-no engine deps.
+> Pure-Rust audio substrate with four-tier bus mixing, biome-driven ambience, and reactive SFX coalescing.
 
-See [`src/lib.rs`](src/lib.rs) for the full module index and design
-notes. The substrate is consumed by `clients/bevy-ref/src/audio.rs`
-(the kira-bound plugin); the math here is testable in isolation.
+## Overview
 
-## What's in this crate
+The `audio` crate provides the entire audio mixing and routing pipeline for Civis as a pure-Rust, engine-independent layer. It has zero dependencies on game engines or platform audio APIs — all functions are pure and deterministic, making the system trivially testable and replayable.
 
-| Module | FR ID(s) | What it provides |
-|--------|----------|------------------|
-| `bus` | FR-CIV-AUDIO-001 | `BusId` (4 tiers + Master), `BusLevels` |
-| `mix` | FR-CIV-AUDIO-001 | `AudioMix` resource, `AudioMixPreset`, schema version |
-| `ambient` | FR-CIV-AUDIO-002 | `AmbientBed`, `BiomeFootprint`, `BedWeights`, `AmbientBlend` |
-| `mood` | FR-CIV-AUDIO-004 | `MoodVector`, `ScoreStem`, `StemMix`, `ScoreCadence` |
-| `sfx` | FR-CIV-AUDIO-006 | `SfxKind`, `SfxCoalescer`, `SfxQueue`, per-kind cap |
+Audio is organized into a four-tier bus hierarchy: Ambient (biome beds), Score (mood-driven stems), SFX (event-reactive sounds), and UI (interface feedback). Each tier has its own modulation rules, and cross-tier bus ducking ensures the mix stays intelligible under all conditions.
 
-## What is NOT in this crate
+Ambient beds are driven by biome type with diurnal, seasonal, and weather modulation layers. Score stems respond to a mood vector, while SFX events are coalesced to prevent overlapping playback during rapid simulation ticks.
 
-- kira / `bevy_kira_audio` plugin (lives in `clients/bevy-ref`)
-- CC0 audio asset files + `CREDITS.md` (designer + asset lead work)
-- Graceful-silence invariant tests with 0 files (engine concern)
+## Features
+
+- Four-tier bus mix: Ambient, Score, Sfx, Ui
+- Biome-driven ambient bed selection and blending
+- Diurnal, seasonal, and weather modulation layers
+- Mood-driven score stem crossfading
+- Reactive event SFX with coalescing to prevent overlap
+- UI sound language for interface feedback
+- Bus ducking for intelligible mixing
+- Fully pure and deterministic — no I/O or async
+
+## Usage
+
+```rust
+use audio::*;
+```
+
+## Architecture
+
+- **AudioMix** — Top-level mixer holding bus state and producing per-frame sample buffers
+- **AmbientBlend** — Blends biome ambient beds weighted by time of day, season, and weather
+- **ScoreStem** — Mood-driven music stem with crossfade envelopes
+- **SfxCoalescer** — Deduplicates and queues overlapping sound events within a time window
+- **MoodVector** — Continuous mood descriptor driving score selection
+
+All types are constructed from simulation state each tick and return deterministic output, with no hidden I/O.
+
+## License
+
+Part of the [Civis](https://github.com/KooshaPari/Civis) project.

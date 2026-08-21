@@ -16,4 +16,5 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - run: echo TODO-release-drafter-placeholder
+      - run: |
+          echo 'TODO: replace with custom release-drafter logic'

@@ -76,7 +76,7 @@ pub struct RecorderReporter {
 }
 impl Reporter for RecorderReporter {
     fn event(&self, e: DagEvent) {
-        self.events.lock().unwrap().push(e);
+        self.events.lock().expect("mutex poisoned in RecorderReporter").push(e);
     }
     fn snapshot(&self, plan: &Plan) -> ReportSnapshot {
         ReportSnapshot::from_plan(plan)

@@ -630,7 +630,6 @@ fn draw_world_setup(
         return;
     };
     if *state.get() != AppState::WorldSetup {
-        *seed_edit = None;
         return;
     }
     let Ok(ctx) = contexts.ctx_mut() else {
@@ -728,7 +727,6 @@ fn draw_worldgen_overlay(
     boot: Res<WorldGenBoot>,
     params: Res<WorldSetupParams>,
     titles: Res<MainMenuTitleAssets>,
-    asset_server: Res<AssetServer>,
     images: Res<Assets<Image>>,
 ) {
     let Some(state) = state else {
@@ -738,17 +736,11 @@ fn draw_worldgen_overlay(
         return;
     }
     let bg_tex = titles.loading_background.as_ref().and_then(|handle| {
-        if !matches!(asset_server.load_state(handle), LoadState::Loaded) {
-            return None;
-        }
         images
             .get(handle)
             .map(|_| contexts.add_image(bevy_egui::EguiTextureHandle::Strong(handle.clone())))
     });
     let spinner_tex = titles.loading_spinner.as_ref().and_then(|handle| {
-        if !matches!(asset_server.load_state(handle), LoadState::Loaded) {
-            return None;
-        }
         images
             .get(handle)
             .map(|_| contexts.add_image(bevy_egui::EguiTextureHandle::Strong(handle.clone())))
@@ -1064,29 +1056,16 @@ fn menu_button(ui: &mut egui::Ui, label: &str) -> egui::Response {
     ui.add(btn)
 }
 
-fn ui_png_exists(stem: &str) -> bool {
-    let path = format!("{}/assets/ui/{stem}.png", env!("CARGO_MANIFEST_DIR"));
-    std::path::Path::new(&path).exists()
-}
-
 fn load_main_menu_title_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let mut assets = MainMenuTitleAssets::default();
-    if ui_png_exists("title-bg") {
-        assets.background = Some(asset_server.load("ui/title-bg.png"));
-    }
-    if ui_png_exists("loading-bg") {
-        assets.loading_background = Some(asset_server.load("ui/loading-bg.png"));
-    }
-    if ui_png_exists("loading-spinner") {
-        assets.loading_spinner = Some(asset_server.load("ui/loading-spinner.png"));
-    }
-    if ui_png_exists("logo") {
-        assets.logo = Some(asset_server.load("ui/logo.png"));
-    }
-    if ui_png_exists("wordmark") {
-        assets.wordmark = Some(asset_server.load("ui/wordmark.png"));
-    }
-    commands.insert_resource(assets);
+    // Always request via AssetServer; draw_main_menu falls back to text when
+    // handles fail to resolve (shipped builds must not depend on CARGO_MANIFEST_DIR).
+    commands.insert_resource(MainMenuTitleAssets {
+        background: Some(asset_server.load("ui/title-bg.png")),
+        loading_background: Some(asset_server.load("ui/loading-bg.png")),
+        loading_spinner: Some(asset_server.load("ui/loading-spinner.png")),
+        logo: Some(asset_server.load("ui/logo.png")),
+        wordmark: Some(asset_server.load("ui/wordmark.png")),
+    });
 }
 
 fn live_stream_has_content(scene: &LiveStreamScene) -> bool {

@@ -50,7 +50,7 @@ use civ_bevy_ref::{
         LiveStreamMeshes, LiveStreamScene, LiveWaterMeshes, StreamCulling, LIVE_CHUNK_BASE_COLOR,
         LIVE_CHUNK_EDGE,
     },
-    menus::{AppState, MainMenuSaves, MenuCommand},
+    menus::{AppState, MainMenuSaves},
     minimap::MinimapRoot,
     minimap_uv_to_chunk_grid,
     native_backend::native_render_plugin,

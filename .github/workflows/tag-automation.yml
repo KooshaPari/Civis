@@ -13,4 +13,5 @@ jobs:
     permissions:
       contents: write
     steps:
-      - run: echo TODO-tag-automation-placeholder
+      - run: |
+          echo 'TODO: replace with custom tag-automation logic'

@@ -1,0 +1,1460 @@
+
+running 88 tests
+test cluster::tests::cluster_id_is_min_id_and_deterministic ... ok
+test cluster::tests::co_located_agents_cluster_together ... ok
+test cluster::tests::far_apart_agents_get_different_clusters ... ok
+test cluster::tests::clustering_is_order_independent ... ok
+test cluster::tests::reconcile_joins_positive_and_leaves_negative ... ok
+test culture::tests::kinship_resists_external_contact ... ok
+test culture::tests::contact_diffuses_culture_and_creolizes_language ... ok
+test culture::tests::identical_clusters_no_divergence_without_drift ... ok
+test culture::tests::cluster_language_distance_tracks_cultural_divergence ... ok
+test culture::tests::mutation_moves_traits_but_keeps_bounds ... ok
+test culture::tests::language_divergence_correlates_with_cultural_distance ... ok
+test cluster::tests::join_and_leave_respect_threshold ... ok
+test culture::tests::phoneme_vectors_diverge_with_isolated_drift ... ok
+test culture::tests::language_divergence_rises_with_isolation_ticks ... ok
+test culture::tests::isolated_populations_diverge_over_time ... ok
+test culture::tests::language_divergence_bounded_in_unit_interval ... ok
+test daily_path::tests::empty_registry_returns_none ... ok
+test daily_path::tests::path_step_moves_toward_target_without_overshoot ... ok
+test daily_path::tests::nearest_of_kind_picks_closest ... ok
+test daily_path::tests::pick_target_chooses_highest_pressure_need ... ok
+test daily_path::tests::poi_registry_is_empty_tracks_insertions ... ok
+test daily_path::tests::satisfied_needs_do_not_seek ... ok
+test daily_path::tests::scoring_is_deterministic ... ok
+test daily_path::tests::wander_anchor_stays_local ... ok
+test diplomacy::tests::competition_and_proximity_can_drive_war ... ok
+test diplomacy::tests::matrix_is_symmetric_and_empty_defaults_neutral ... ok
+test diplomacy::tests::mixed_interactions_remain_stable_and_clamped ... ok
+test language::tests::lexicon_grows_for_settlement_faction_event ... ok
+test language::tests::lexicon_names_stable_after_evolved_inventory_drift ... ok
+test language::tests::lexicon_coin_evolved_idempotent_for_same_entity ... ok
+test language::tests::lexicon_grows_with_evolved_phoneme_set ... ok
+test psyche::tests::belief_culture_exposure_ignores_non_positive_weights ... ok
+test psyche::tests::beliefs_move_toward_culture_exposure ... ok
+test psyche::tests::genetics_projection_is_bounded_and_sibling_sensitive ... ok
+test psyche::tests::maturity_grows_under_low_stress_and_stalls_under_high_stress ... ok
+test language::tests::diverged_inventories_increase_distance ... ok
+test diplomacy::tests::trade_emerges_toward_alliance ... ok
+test language::tests::coined_names_stable_under_fixed_seed ... ok
+test language::tests::phoneme_drift_deterministic_per_seed ... ok
+test language::tests::tick_seeded_phoneme_drift_accumulates_over_ticks ... ok
+test psyche::tests::test_behavior_modifiers_high_agreeableness ... ok
+test language::tests::tick_seeded_phoneme_drift_differs_across_ticks ... ok
+test psyche::tests::temperament_nudges_but_stays_bounded ... ok
+test psyche::tests::test_behavior_modifiers_high_neuroticism ... ok
+test psyche::tests::mood_tracks_needs_and_reactivity ... ok
+test psyche::tests::test_trait_evolution_determinism ... ok
+test language::tests::phoneme_drift_rate_capped ... ok
+test language::tests::tick_seeded_phoneme_drift_bitwise_equal_across_runs ... ok
+test psyche::tests::test_cluster_profiles_diverge_with_isolation ... ok
+test psyche::tests::test_trait_evolution_under_hardship_pressure ... ok
+test social::tests::asymmetry_is_preserved ... ok
+test social::tests::labels_are_derived_not_stored ... ok
+test social::tests::partnered_couples_with_enough_food_and_safety_can_reproduce ... ok
+test social::tests::decay_reduces_old_ties_and_keeps_kinship ... ok
+test tests::at_target_era_is_a_noop ... ok
+test tests::civilian_composition_smoke ... ok
+test social::tests::cooperation_and_defection_mutate_ties ... ok
+test tests::child_bundle_from_parent_is_deterministic_unit_velocity ... ok
+test tests::drift_toward_home_steers_when_shelter_need_high ... ok
+test tests::count_civilians_reports_correctly ... ok
+test tests::cohort_stats_total_matches_count_civilians ... ok
+test tests::empty_cohort_returns_zeroed_stats ... ok
+test tests::form_faction_kin_ties_count_toward_cohesion ... ok
+test tests::form_faction_requires_cohesion_threshold ... ok
+test tests::infer_alignment_for_spawn_breaks_ties_deterministically ... ok
+test tests::join_faction_requires_acceptance_ties ... ok
+test tests::infer_alignment_for_spawn_majority ... ok
+test tests::lod_gestalt_no_divergence ... ok
+test tests::join_faction_ties_to_non_members_do_not_count ... ok
+test tests::lod_tier_equality_round_trips ... ok
+test tests::join_faction_hostile_ties_do_not_count ... ok
+test tests::infer_alignment_for_spawn_unaligned_only ... ok
+test tests::propagate_cohort_tools_mirrors_wardrobe ... ok
+test tests::score_needs_returns_deterministic_sums ... ok
+test tests::schema_version_stub ... ok
+test tests::should_tick_now_respects_lod_modulo ... ok
+test tests::spawn_child_near_spawns_newborn_within_offset_band ... ok
+test tests::propagate_wardrobe_is_deterministic ... ok
+test tests::propagate_cohort_wardrobe_is_deterministic ... ok
+test tests::spawn_many_produces_sequential_ids ... ok
+test tests::spawn_civilian_inserts_components ... ok
+test tests::tick_movement_updates_position ... ok
+test tests::tick_movement_respects_bounds ... ok
+test tests::propagation_is_monotone ... ok
+test tests::top_action_picks_highest_weighted_unmet_need ... ok
+test tests::tick_movement_avoids_water ... ok
+test tests::wardrobe_tools_deterministic ... ok
+test tests::cohort_wardrobe_converges_over_many_ticks ... ok
+
+test result: ok. 88 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+
+running 35 tests
+test cache::tests::cache_clone_shares_data ... ok
+test cache::tests::cache_multiple_keys_independent ... ok
+test cache::tests::cache_insert_get_roundtrip ... ok
+test goal::tests::all_non_positive_returns_no_useful_goal ... ok
+test goal::tests::empty_candidates_returns_no_candidates ... ok
+test goal::tests::need_urgency_clamps_to_unit_interval ... ok
+test goal::tests::selection_is_order_independent ... ok
+test mood::tests::factor_lookup_is_safe_on_neutral_state ... ok
+test mood::tests::mood_falls_with_negative_events_and_rises_with_positive ... ok
+test mood::tests::lookback_window_ignores_old_events ... ok
+test mood::tests::factors_are_enumerable_for_inspection ... ok
+test cache::tests::cache_overwrite_updates_value ... ok
+test mood::tests::mood_rises_with_need_satisfaction ... ok
+test mood::tests::recompute_is_deterministic_for_same_inputs ... ok
+test psyche_lod::tests::fr_civ_psyche_921_demote_is_a_projection_of_the_mean ... ok
+test config::tests::from_env_honors_each_key ... ok
+test psyche_lod::tests::fr_civ_psyche_921_event_log_caps_at_event_log_cap ... ok
+test config::tests::from_env_ignores_malformed_integers ... ok
+test social_graph::tests::canonical_pair_is_order_independent ... ok
+test psyche_lod::tests::fr_civ_psyche_921_round_trip_preserves_mood_within_tolerance ... ok
+test psyche_lod::tests::fr_civ_psyche_921_lod_tags_are_correct ... ok
+test psyche_lod::tests::fr_civ_psyche_921_promote_is_deterministic ... ok
+test goal::tests::ties_break_by_id_ascending ... ok
+test social_graph::tests::kinship_creates_strong_bond_and_survives_decay ... ok
+test social_graph::tests::fr_civ_psyche_910_acceptance_absence_decays_weight ... ok
+test config::tests::defaults_are_stable ... ok
+test social_graph::tests::stats_track_creates_updates_and_prunes ... ok
+test social_graph::tests::fr_civ_psyche_910_acceptance_interaction_increments_weight ... ok
+test social_graph::tests::repeated_conflict_turns_bond_into_grudge ... ok
+test social_graph::tests::self_event_is_a_no_op ... ok
+test mood::tests::valence_is_clamped_to_unit_interval ... ok
+test social_graph::tests::fr_civ_psyche_910_acceptance_query_returns_strongest_bond ... ok
+test social_graph::tests::strongest_bond_is_none_for_isolated_agent ... ok
+test goal::tests::selects_max_utility_goal ... ok
+test psyche_lod::tests::fr_civ_psyche_921_acceptance_demote_aggregates_promote_reconstructs ... ok
+
+test result: ok. 35 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 11 tests
+test cache_round_trips_generic_value ... ok
+test worker_pool_runs_task_off_thread ... ignored, pre-existing tokio runtime blocking issue
+test fr_civ_llm_002_cache_key_changes_when_prompt_or_model_shift ... ok
+test fr_civ_llm_003_max_concurrent_gen_from_env_is_honored ... ok
+test fr_civ_llm_004_provider_operations_enforce_allowed_use_matrix ... ok
+test dummy_embed_round_trips ... ok
+test cached_generate_hits_on_repeat ... ok
+test registry_required_provider_fails_loud ... ok
+test replay_canonical_refuses_ai_event ... ok
+test fr_civ_llm_001_cache_key_is_stable_for_identical_inputs ... ok
+test dummy_generate_is_deterministic ... ok
+
+test result: ok. 10 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 75 tests
+test ambient::tests::coastal_footprint_lights_water_bed ... ok
+test ambient::tests::blend_is_monotonic_per_slot ... ok
+test ambient::tests::blend_converges_to_target ... ok
+test ambient::tests::fr_audio_002_coast_to_forest_glide_is_continuous ... ok
+test ambient::tests::empty_footprint_returns_wind_floor ... ok
+test ambient::tests::forest_footprint_lights_forest_bed ... ok
+test ambient::tests::nighttime_silences_wildlife_overlay ... ok
+test ambient::tests::weights_are_well_formed_after_footprint_projection ... ok
+test ambient::tests::slot_cap_is_one ... ok
+test ambient::tests::storm_overlay_stronger_than_light_rain ... ok
+test ambient::tests::winter_silences_wildlife_overlay ... ok
+test bus::tests::defaults_follow_audio_direction_table ... ok
+test bus::tests::fr_audio_001_per_tier_mix_is_independent ... ok
+test bus::tests::is_well_formed_rejects_nan_and_out_of_range ... ok
+test bus::tests::set_clamps_out_of_range_to_unit_range ... ok
+test bus::tests::tier_iteration_excludes_master ... ok
+test bus::tests::serde_round_trip_is_bit_identical ... ok
+test ducking::tests::apply_is_idempotent_for_same_reason ... ok
+test ducking::tests::apply_records_duck ... ok
+test ducking::tests::concurrent_ducks_layer_and_loudest_wins ... ok
+test ducking::tests::custom_clamps_target_level ... ok
+test ducking::tests::custom_clamps_tween_ms_to_band ... ok
+test ducking::tests::default_tweens_sit_in_150_400ms_band ... ok
+test ducking::tests::fr_audio_008_bus_ducking_lives_in_audio_direction_band ... ok
+test ducking::tests::restore_clamps_pre_duck_level ... ok
+test ducking::tests::restore_returns_pre_duck_level_and_drops_duck ... ok
+test ducking::tests::restore_with_no_active_duck_returns_none ... ok
+test mix::tests::effective_gain_returns_zero_under_master_mute ... ok
+test mix::tests::apply_preset_clears_mute_and_records_change ... ok
+test mix::tests::default_mix_is_reference_preset ... ok
+test mix::tests::fr_audio_001_mix_persists_and_mute_is_independent ... ok
+test mix::tests::serde_round_trip_preserves_state ... ok
+test mix::tests::silent_ambient_preset_zeros_score_and_ambient ... ok
+test mix::tests::tier_gain_routes_master_through_mute_toggle ... ok
+test mood::tests::all_axes_combined_respect_slot_cap ... ok
+test mood::tests::cadence_does_not_fire_on_zero_dt ... ok
+test mood::tests::cadence_fires_after_period_elapses ... ok
+test mood::tests::fr_audio_004_mood_to_stems_is_monotonic_per_axis ... ok
+test mood::tests::growth_does_not_leak_into_other_stems ... ok
+test mood::tests::high_prosperity_lifts_base_stem ... ok
+test mood::tests::mood_peak_is_max_component ... ok
+test mood::tests::tension_does_not_leak_into_other_stems ... ok
+test mood::tests::wonder_does_not_leak_into_other_stems ... ok
+test sfx::tests::custom_cap_is_respected ... ok
+test sfx::tests::drain_is_pure_across_calls ... ok
+test sfx::tests::drain_output_is_sorted_by_kind ... ok
+test sfx::tests::empty_drain_yields_empty_queue ... ok
+test sfx::tests::for_disaster_label_routes_to_per_kind_stings ... ok
+test sfx::tests::fr_audio_006_birth_storm_coalesces_to_safe_output ... ok
+test mood::tests::zero_mood_yields_base_floor_only ... ok
+test sfx::tests::cap_drops_excess_same_kind ... ok
+test sfx::tests::global_gain_clamp_protects_headroom ... ok
+test sfx::tests::mixed_kinds_each_get_their_own_cap ... ok
+test sfx::tests::single_request_passes_through_at_full_volume ... ok
+test sfx::tests::is_disaster_variant_flags_only_the_six_per_kind_stings ... ok
+test sfx::tests::summed_volume_clamps_to_one_per_kind ... ok
+test triggers::tests::batch_conversion_preserves_order ... ok
+test sfx::tests::ui_kinds_have_cap_of_one ... ok
+test triggers::tests::disaster_kind_routes_through_for_disaster_label ... ok
+test triggers::tests::empty_batch_is_empty ... ok
+test triggers::tests::fr_audio_005_event_triggers_route_to_sfx_requests ... ok
+test triggers::tests::kind_routes_simple_triggers_to_their_target_sfx ... ok
+test triggers::tests::trigger_to_sfx_requests_yields_exactly_one_request ... ok
+test triggers::tests::volume_is_unit_for_simple_triggers_and_clamps_for_scaled ... ok
+test ui_sound::tests::alert_priority_is_highest ... ok
+test ui_sound::tests::budget_decrements_on_try_play ... ok
+test ui_sound::tests::budget_exhaustion_blocks_routine_ui ... ok
+test ui_sound::tests::budget_refill_restores_capacity ... ok
+test ui_sound::tests::budget_starts_full ... ok
+test ui_sound::tests::fr_audio_007_ui_sound_language_maps_to_visual_palette ... ok
+test ui_sound::tests::palette_label_matches_visual_palette ... ok
+test ui_sound::tests::try_play_returns_false_for_non_ui_kinds ... ok
+test ui_sound::tests::ui_alert_is_exempt_from_budget ... ok
+test ui_sound::tests::ui_role_maps_ui_kinds_to_palette ... ok
+test ui_sound::tests::ui_role_returns_none_for_non_ui_kinds ... ok
+
+test result: ok. 75 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 56 tests
+test session::tests::format_stamp_hms_zero_pads ... ok
+test crash_handler::tests::crash_dir_is_non_empty ... ok
+test crash_handler::tests::crash_log_path_includes_pid_and_counter ... ok
+test session::tests::path_uses_slot_name ... ok
+test tests::chunk_to_minimap_uv_centres_single_chunk_bounds ... ok
+test tests::chunk_fade_alpha_ramps_linearly ... ok
+test tests::agent_label_text_prefers_name ... ok
+test tests::agent_color_from_id_is_in_unit_cube_and_distinct ... ok
+test tests::chunk_fade_color_preserves_rgb ... ok
+test tests::agent_scale_multiplier_filters_invalid_values ... ok
+test tests::chunk_to_minimap_uv_maps_chunk_centre_in_bounds ... ok
+test tests::debug_render_wireframe_toggle_flips_state ... ok
+test tests::chunk_fade_complete_after_duration ... ok
+test tests::chunk_distance_from_camera_at_same_point_is_zero ... ok
+test tests::chunk_fade_helpers_ignore_non_finite_elapsed ... ok
+test tests::decode_chunk_id_unpacks_grid_coords ... ok
+test session::tests::ron_round_trip ... ok
+test tests::default_camera_target_is_sensible ... ok
+test tests::default_live_ws_url_matches_builder ... ok
+test tests::encode_chunk_id_roundtrips_decode ... ok
+test tests::focused_chunk_at_grid_prefers_loaded_y_slice ... ok
+test tests::format_live_selection_labels_entity_kind ... ok
+test tests::install_crash_handler_does_not_panic ... ok
+test tests::is_frame3d_binary_detects_magic ... ok
+test tests::live_hud_overlay_combines_focused_chunk_and_selection ... ok
+test tests::live_hud_overlay_includes_connection_and_tick ... ok
+test tests::live_hud_overlay_includes_focused_chunk_id ... ok
+test tests::live_hud_overlay_includes_last_event_suffix ... ok
+test tests::live_hud_overlay_includes_pick_detail_suffix ... ok
+test tests::live_hud_overlay_includes_selected_live_entity ... ok
+test tests::mesh_buffer_default_is_empty ... ok
+test tests::live_hud_overlay_shows_disconnected_without_tick ... ok
+test tests::live_hud_overlay_includes_ws_rtt_when_present ... ok
+test tests::mesh_lod_level_boundary_thresholds ... ok
+test tests::mesh_lod_level_increases_with_distance ... ok
+test tests::minimap_uv_to_chunk_grid_clamps_to_bounds ... ok
+test tests::minimap_uv_to_chunk_grid_inverts_chunk_to_minimap_uv ... ok
+test tests::parse_audio_events_reads_lifecycle_and_research_triggers ... ok
+test tests::parse_jsonrpc_snapshot_meta_ignores_tick_broadcast ... ok
+test tests::parse_jsonrpc_snapshot_meta_reads_is_day_and_tick ... ok
+test tests::parse_frame3d_json_accepts_building_diff ... ok
+test tests::parse_frame3d_binary_roundtrips_building_diff ... ok
+test tests::parse_audio_events_reads_tagged_triggers ... ok
+test tests::parse_ws_binary_env_flag_accepts_common_truthy_values ... ok
+test tests::parse_ws_payload_accepts_binary_and_text ... ok
+test tests::parse_ws_payload_prefers_binary_when_magic_present ... ok
+test tests::presentation_ambient_warm_day_and_cool_night ... ok
+test tests::presentation_clear_color_lerps_day_and_night ... ok
+test tests::presentation_day_factor_target_matches_web_night_blend ... ok
+test tests::parse_ws_payload_decodes_all_frame_kinds ... ok
+test tests::resolve_ws_url_from_env_parses_addr_and_path ... ok
+test tests::parse_music_cues_reads_cluster_map_and_clamps_intensity ... ok
+test tests::should_render_chunk_uses_sphere_distance ... ok
+test tests::with_tick_format_binary_query_appends_once ... ok
+test tests::resolve_attach_mode_server_from_env_strings ... ok
+test tests::resolve_attach_mode_defaults_to_standalone ... ok
+
+test result: ok. 56 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 3 tests
+test requirement_terrain_is_continuous_not_blobs ... ok
+test requirement_native_ocean_renders_with_sea_level_match ... ok
+test requirement_water_only_below_sea ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 48 tests
+test tests::build_002_default_facade_for_era_covers_0_to_5 ... ok
+test tests::build_003_parcels_at_era_filters_correctly ... ok
+test tests::build_004_insert_and_retrieve_parcel_preserves_fields ... ok
+test tests::build_010_zero_signals_produce_no_parcels ... ok
+test tests::build_013_mixed_signals_produce_one_parcel_per_saturated_kind ... ok
+test tests::build_012_deterministic_placement_is_reproducible ... ok
+test tests::build_011_high_residential_signal_places_residential_parcel ... ok
+test tests::build_005_provenance_tagging_round_trips ... ok
+test tests::build_001_building_graph_round_trips_through_ron ... ok
+test tests::fr_arch_003_tilesets_and_adjacency_use_style_vectors ... ok
+test tests::fr_arch_005_tile_set_selection_is_order_independent ... ok
+test tests::demand_allocation_deterministic ... ok
+test tests::fr_arch_004_template_scoring_is_deterministic ... ok
+test tests::fr_arch_008_facade_histogram_tracks_culture_vector_divergence ... ok
+test tests::fr_arch_007_modes_control_facade_resolution ... ok
+test tests::build_014_facade_era_matches_era_argument ... ok
+test tests::build_015_hundred_ticks_of_high_signals_produce_around_hundred_parcels ... ok
+test tests::freehand_matches_grammar ... ok
+test tests::era_grammar_histogram ... ok
+test tiers::tests::biome_bias_changes_facade_materials ... ok
+test tiers::tests::building_graph_cluster_assignment ... ok
+test tiers::tests::building_type_era_gates ... ok
+test tiers::tests::culture_id_from_traits_is_stable_and_distinct ... ok
+test tiers::tests::era_gated_demand_zeroes_locked_channels ... ok
+test tiers::tests::clustered_parcel_offset_is_deterministic ... ok
+test tests::schema_version_stub ... ok
+test tiers::tests::fr_arch_a003_style_varies_by_era ... ok
+test tiers::tests::fr_arch_b003_cluster_centroid_within_bounds ... ok
+test tiers::tests::fr_arch_a002_style_varies_by_biome ... ok
+test tiers::tests::fr_arch_b001_layout_cluster_membership ... ok
+test tiers::tests::fr_arch_b002_cluster_offsets_diverge_from_centre ... ok
+test tiers::tests::fr_arch_b004_distinct_clusters_stay_separate ... ok
+test tiers::tests::fr_arch_c003_building_type_at_min_era_is_unlocked ... ok
+test tiers::tests::fr_arch_c004_parcel_kind_min_era_spec_table ... ok
+test tiers::tests::fr_arch_d001_facade_for_emergence_is_deterministic ... ok
+test tiers::tests::fr_arch_d002_clustered_offset_is_deterministic ... ok
+test tests::graph_ron_roundtrip ... ok
+test tiers::tests::fr_arch_008_histogram_l1_tracks_culture_divergence ... ok
+test tiers::tests::fr_arch_d004_culture_id_is_deterministic ... ok
+test tiers::tests::fr_arch_a001_style_varies_by_culture ... ok
+test tiers::tests::fr_arch_d003_era_index_is_deterministic ... ok
+test tiers::tests::fr_arch_c001_era_gate_suppresses_locked_demand_channels ... ok
+test tiers_build::tests::build_site_progress_and_complete ... ok
+test tiers_build::tests::build_003_override_zero_rate_rejected ... ok
+test tiers_build::tests::record_completed_idempotent ... ok
+test tiers_build::tests::build_001_tier_scaling_monotonic ... ok
+test tiers::tests::fr_arch_c002_building_type_below_min_era_is_locked ... ok
+test tiers_build::tests::build_002_workshop_chain_signatures ... ok
+
+test result: ok. 48 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 36 tests
+test fr_api_003_schema_version_is_non_empty ... ok
+test fr_civ_actor_001_lifecycle_graph_keeps_parcel_id_stable ... ok
+test fr_api_004_schema_version_rounds_trip_stable_prefix ... ok
+test fr_civ_actor_001_parcel_id_is_copyable ... ok
+test fr_civ_bevy_022_allocator_does_not_allocate_below_threshold ... ok
+test fr_civ_actor_002_building_ids_compare_by_ordered_numeric_value ... ok
+test fr_civ_bevy_023_coverage_of_single_high_signal_drops ... ok
+test fr_civ_bevy_024_multi_signal_chooses_multiple_parcels ... ok
+test fr_civ_audio_007_facade_properties_are_stable ... ok
+test fr_civ_audio_003_default_style_has_materials ... ok
+test fr_api_002_schema_version_has_three_segments ... ok
+test fr_civ_audio_005_era_progresses_style_family ... ok
+test fr_civ_act_001_default_provenance_tag_exists ... ok
+test fr_civ_0001_parcel_graph_default_empty ... ok
+test fr_civ_bevy_025_graph_parcel_at_era_filters ... ok
+test fr_civ_audio_008_fallback_style_has_placeholder_name ... ok
+test fr_civ_bevy_016_allocator_deterministic_seed ... ok
+test fr_civ_bevy_026_era_zero_allocates_zero ... ok
+test fr_civ_bio_003_occupied_counts_residential ... ok
+test fr_civ_build_000_schema_version_semver_prefix ... ok
+test fr_civ_build_002_facade_era_matches_argument ... ok
+test fr_civ_bio_002_capacity_counts_only_residential ... ok
+test fr_civ_build_003_era_filter_with_single_parcel ... ok
+test fr_civ_bio_001_round_trip_parcel_facade ... ok
+test fr_civ_build_001_default_provenance_roundtrip ... ok
+test fr_civ_build_010_zero_signals_do_not_allocate ... ok
+test fr_civ_build_020_freehand_and_procedural_use_same_shape_fields ... ok
+test fr_civ_build_030_era_transition_changes_facade_name ... ok
+test fr_civ_client_godot_002_wealth_bucket_is_monotonic_for_growth ... ok
+test fr_civ_climate_001_resolve_prefers_culture_match ... ok
+test fr_civ_climate_002_adjacency_weights_returned ... ok
+test fr_civ_client_godot_001_vector_shape ... ok
+test fr_civ_core_001_facade_score_is_deterministic ... ok
+test fr_civ_climate_003_fallback_style ... ok
+test fr_civ_core_020_select_tile_set_deterministic_with_no_primitive ... ok
+test fr_civ_core_021_missing_primitive_id_falls_back_deterministically ... ok
+
+test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 20 tests
+test biome_shift::tests::drying_and_cooling_tundra_pushes_to_polar_desert ... ok
+test biome_shift::tests::drying_below_threshold_flips_hot_cell_to_desert ... ok
+test biome_shift::tests::warming_tundra_past_threshold_reclassifies ... ok
+test biome_shift::tests::nan_inputs_classify_deterministically ... ok
+test disaster_spread::tests::fire_spreads_then_decays_to_zero ... ok
+test erosion::tests::mass_is_conserved ... ok
+test disaster_spread::tests::ignite_uses_max_intensity ... ok
+test disaster_spread::tests::out_of_bounds_is_noop ... ok
+test erosion::tests::flat_terrain_does_not_erode ... ok
+test biome_shift::tests::warming_polar_desert_reclassifies_to_tundra ... ok
+test biome_shift::tests::subthreshold_warming_does_not_reclassify ... ok
+test erosion::tests::mismatched_grids_are_rejected ... ok
+test tests::new_creates_defaults ... ok
+test season_cycle::tests::temperature_peaks_mid_cycle_and_troughs_at_cycle_ends ... ok
+test tests::sea_level_rises_with_temp ... ok
+test erosion::tests::sustained_flow_lowers_source_and_raises_downslope ... ok
+test erosion::tests::water_decays_without_replenishment ... ok
+test tests::set_co2_changes_state ... ok
+test tests::step_with_emissions_raises_temp ... ok
+test tests::step_zero_emissions ... ok
+
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 16 tests
+test tests::fully_saturated_start_stays_at_one ... ok
+test tests::imitation_dominated_curve_is_faster_than_innovation_only ... ok
+test tests::cumulative_increase_equals_final_minus_initial ... ok
+test tests::schema_version_stub ... ok
+test tests::single_tick_trajectory_matches_advance ... ok
+test tests::zero_ticks_returns_single_element ... ok
+test tests::tick_increase_matches_closed_form ... ok
+test tests::tick_increase_is_always_nonnegative ... ok
+test tests::saturation_produces_zero_increase ... ok
+test tests::trajectory_length_equals_ticks_plus_one ... ok
+test tests::trajectory_first_element_is_initial_value ... ok
+test tests::zero_coefficients_produce_no_growth ... ok
+test tests::trajectories_are_monotone_nondecreasing ... ok
+test tests::out_of_range_inputs_clamp ... ok
+test tests::monotone_spread_with_minimal_coefficients ... ok
+test tests::trajectory_is_deterministic ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 65 tests
+test alliance_formation::tests::alliance_config_zero_min_bloc_size_rejected ... ok
+test concession_rounds::tests::fr_civ_diplo_004_one_offer_per_round ... ok
+test concession_rounds::tests::fr_civ_diplo_004_low_reservation_gap_converges_to_accepted ... ok
+test concession_rounds::tests::fr_civ_diplo_004_initial_gap_zero_closes_in_round_one ... ok
+test concession_rounds::tests::fr_civ_diplo_004_two_stubborn_parties_reach_impasse_with_monotonic_trace ... ok
+test alliance_formation::tests::fr_civ_alliance_form_three_factions_collapse_into_one_bloc ... ok
+test alliance_formation::tests::fr_civ_alliance_form_singleton_blocs_are_not_real ... ok
+test concession_rounds::tests::fr_civ_diplo_004_scripted_fixture_is_monotonic_and_deterministic ... ok
+test emergent::tests::border_friction_drives_rivalry ... ok
+test emergent::tests::determinism_same_inputs_same_outcome ... ok
+test emergent::tests::collapsed_alliance_penalizes_both_members ... ok
+test emergent::tests::allies_emerge_from_shared_enemies ... ok
+test emergent::tests::driver_score_is_pure ... ok
+test emergent::tests::no_shared_enemy_is_zero_strength ... ok
+test alliance_formation::tests::fr_civ_alliance_form_two_high_opinion_factions_form_a_bloc ... ok
+test emergent::tests::allies_emerge_from_trade ... ok
+test emergent::tests::betrayal_lowers_reputation_with_third_parties ... ok
+test alliance_formation::tests::fr_civ_alliance_form_unseen_factions_are_excluded ... ok
+test emergent::tests::reputation_is_clamped ... ok
+test emergent::tests::stance_from_score_partitions_band ... ok
+test emergent::tests::treaty_breaks_at_low_threshold_and_emits_betrayal ... ok
+test emergent::tests::treaty_forms_at_threshold_and_emits_legend_event ... ok
+test emergent::tests::treaty_survives_dip_above_break_threshold ... ok
+test relationship_stance::tests::fr_civ_diplo_stance_opinion_shifts_move_across_buckets ... ok
+test relationship_stance::tests::default_thresholds_validate ... ok
+test relationship_stance::tests::invalid_thresholds_rejected ... ok
+test relationship_stance::tests::relationship_stance_is_symmetric_in_storage ... ok
+test relationship_stance::tests::self_targeted_event_is_noop ... ok
+test relationship_stance::tests::stance_for_partitions_thresholds ... ok
+test relationship_stance::tests::unknown_pair_is_neutral ... ok
+test tests::bump_into_neutral_band_emits_no_event ... ok
+test tests::decay_pulls_negative_standing_toward_zero ... ok
+test tests::combat_bump_is_symmetric_and_hostility_amplifying ... ok
+test tests::decay_eventually_crosses_back_to_neutral ... ok
+test tests::decay_pulls_positive_standing_toward_zero ... ok
+test tests::fr_civ_diplo_004_concession_machine_is_monotonic ... ok
+test tests::fr_civ_diplo_005_structured_transcript_remains_stable_without_garnish ... ok
+test tests::fr_civ_diplo_004_rejects_round_limit ... ok
+test tests::default_config_validates ... ok
+test tests::fr_civ_diplo_006_decision_signatures_have_no_text_input ... ok
+test tests::first_bump_creates_relation_and_records_zero_to_neutral_event ... ok
+test tests::fr_civ_diplo_006_decisions_are_deterministic_under_inert_flavor ... ok
+test tests::fr_civ_diplo_007_polity_ids_are_scalar_clusters ... ok
+test tests::fr_civ_diplo_008_accept_path_for_limited_goal ... ok
+test tests::fr_civ_diplo_008_counter_from_same_actor_is_rejected ... ok
+test tests::fr_civ_diplo_008_counter_and_propose_converge_to_same_level ... ok
+test tests::fr_civ_diplo_008_reject_path_for_total_goal ... ok
+test tests::fr_civ_diplo_008_counter_path_for_surrender_goal ... ok
+test tests::fr_civ_diplo_008_select_war_goal_v2_is_deterministic ... ok
+test tests::fr_civ_diplo_008_select_war_goal_v2_partitions_three_branches ... ok
+test tests::identical_ingest_sequences_produce_identical_states_and_events ... ok
+test tests::overlapping_thresholds_rejected ... ok
+test tests::pair_is_canonical_and_symmetric ... ok
+test tests::positive_hostile_threshold_rejected ... ok
+test tests::pair_with_equal_actors_is_self ... ok
+test tests::schema_version_is_positive ... ok
+test tests::stance_thresholds_partition_real_line ... ok
+test tests::standing_is_clamped_to_max ... ok
+test tests::zero_energy_combat_records_no_standing_change ... ok
+test transcripts::tests::fr_civ_diplo_005_rejection_path_round_trips ... ok
+test transcripts::tests::fr_civ_diplo_005_transcript_round_trips_and_renders_deterministically ... ok
+test tests::self_targeted_event_is_ignored ... ok
+test tests::proptest_bump_direction_is_symmetric ... ok
+test tests::proptest_event_sequence_is_deterministic_under_shuffled_input_pairs ... ok
+test tests::proptest_decay_converges_to_neutral ... ok
+
+test result: ok. 65 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+
+running 120 tests
+test allocation::tests::capitalist_allocator_fills_demand_when_budget_sufficient ... ok
+test allocation::tests::allocate_with_dispatches_per_regime ... ok
+test allocation::tests::joule_allocator_matches_planned_at_single_good ... ok
+test allocation::tests::labor_allocator_clamps_invalid_fractions ... ok
+test allocation::tests::allocate_with_never_exceeds_budget ... ok
+test allocation::tests::capitalist_allocator_rations_proportionally_when_budget_scarce ... ok
+test allocation::tests::labor_allocator_full_labor_meets_capitalist_curve ... ok
+test allocation::tests::capitalist_allocator_returns_zero_for_non_positive_inputs ... ok
+test allocation::tests::priority_starves_lowest_tier_when_budget_tight ... ok
+test allocation::tests::labor_allocator_never_exceeds_budget ... ok
+test allocation::tests::planned_allocator_fills_to_ceiling_then_caps ... ok
+test allocation::tests::priority_fills_subsistence_before_luxury ... ok
+test allocation::tests::labor_allocator_partial_labor_scales_demand ... ok
+test allocation::tests::priority_tier_orders_subsistence_first ... ok
+test allocation::tests::labor_allocator_zero_labor_returns_zero ... ok
+test allocation::tests::priority_zero_budget_grants_nothing ... ok
+test allocator::tests::clear_rationing_splits_across_multiple_bids_deterministically ... ok
+test allocator::tests::clear_conservation_under_random_order_books ... ok
+test allocator::tests::clear_crossing_pair_posts_balanced_transfer_and_advances_tick ... ok
+test allocator::tests::clear_is_deterministic_for_same_order_book ... ok
+test allocator::tests::clear_rationing_when_book_does_not_cross ... ok
+test currency_trust::tests::acceptance_mirrors_trust ... ok
+test allocator::tests::post_bid_rejects_order_id_exhaustion_without_mutation ... ok
+test allocator::tests::clear_routes_distinct_institutions_through_market_passthrough ... ok
+test allocator::tests::post_rejects_negative_quantity_or_price ... ok
+test currency_trust::tests::fr_civ_currency_trust_runaway_supply_collapses_trust ... ok
+test currency_trust::tests::acute_inflation_zeroes_gain_and_applies_penalty ... ok
+test currency_trust::tests::fr_civ_currency_trust_is_deterministic ... ok
+test currency_trust::tests::negative_inputs_are_clamped_to_zero ... ok
+test currency_trust::tests::passes_counter_increments ... ok
+test currency_trust::tests::set_trust_clamps_to_unit_interval ... ok
+test allocator::tests::next_order_id_peek_and_rejected_posts_do_not_bump ... ok
+test currency_trust::tests::gain_scales_with_volume_below_saturation ... ok
+test currency_trust::tests::mild_inflation_reduces_but_does_not_zero_gain ... ok
+test currency_trust::tests::trust_is_bounded_in_unit_interval ... ok
+test allocator::tests::post_bid_assigns_monotonic_ids ... ok
+test currency_trust::tests::fr_civ_currency_trust_stable_trade_raises_trust ... ok
+test institution::tests::collect_taxes_posts_balanced_transfer_at_basis_points_rate ... ok
+test institution::tests::collect_taxes_respects_per_institution_cap ... ok
+test allocation::tests::capitalist_allocator_never_negative ... ok
+test currency_trust::tests::fr_civ_currency_trust_supply_growth_blocks_gain ... ok
+test institution::tests::collect_taxes_stops_when_budget_depleted ... ok
+test institution::tests::collect_taxes_with_no_rates_is_no_op ... ok
+test institution::tests::post_institution_to_institution_conserves_and_non_negative ... ok
+test institution::tests::collect_taxes_zero_rate_skips_institution ... ok
+test allocation::tests::priority_total_within_budget ... ok
+test institution::tests::post_macro_to_institution_conserves_debits_and_credits ... ok
+test institution::tests::collect_taxes_floors_at_zero_for_tiny_rates ... ok
+test institution::tests::post_rejects_negative_institution_balance ... ok
+test institution::tests::post_rejects_self_posting_to_same_institution ... ok
+test allocation::tests::capitalist_allocator_never_exceeds_budget ... ok
+test institution::tests::post_records_split_debit_and_credit_amounts ... ok
+test institution::tests::post_rejects_self_posting_to_same_macro_account ... ok
+test institution::tests::collect_taxes_distributes_to_multiple_institutions ... ok
+test institution::tests::step_institutions_seeds_defaults ... ok
+test institution::tests::verify_conservation_accepts_legacy_posting_without_split_amounts ... ok
+test institution::tests::verify_conservation_rejects_non_positive_posting_amount ... ok
+test market::multigood_tests::bid_price_below_ask_price_emits_no_trades ... ok
+test market::multigood_tests::clear_all_emits_trades_in_ascending_good_id_order ... ok
+test market::multigood_tests::clear_all_is_deterministic_independent_of_insertion_order ... ok
+test market::multigood_tests::empty_book_for_new_good_is_no_op ... ok
+test market::multigood_tests::ensure_book_is_idempotent_and_returns_mutable_handle ... ok
+test market::multigood_tests::simple_book_three_bids_three_asks_clear_at_midpoints ... ok
+test market::multigood_tests::leftover_ask_remains_after_larger_ask_partial_fill ... ok
+test market::tests::apply_pressure_floors_at_min_price ... ok
+test market::tests::apply_pressure_floors_price_at_one ... ok
+test market::tests::apply_pressure_demand_outstrips_supply_lifts_price ... ok
+test institution::tests::verify_conservation_rejects_tampered_posting_amount ... ok
+test market::tests::apply_pressure_keeps_price_when_demand_equals_supply ... ok
+test market::tests::apply_pressure_self_heals_for_new_good ... ok
+test institution::tests::verify_conservation_rejects_self_posting_in_log ... ok
+test market::tests::apply_pressure_supply_outstrips_demand_drops_price ... ok
+test market::tests::fr_civ_market_scarcity_surplus_and_trade_equalize ... ok
+test market::tests::apply_pressure_lowers_price_when_supply_exceeds_demand ... ok
+test market::tests::mean_clearing_price_averages_existing_goods ... ok
+test market::tests::apply_pressure_zero_supply_zero_demand_is_neutral ... ok
+test market::tests::ensure_good_is_idempotent ... ok
+test market::tests::apply_pressure_raises_price_when_demand_exceeds_supply ... ok
+test market::multigood_tests::partial_fill_emits_one_trade_of_smaller_qty ... ok
+test market::multigood_tests::orders_past_uncleared_ttl_dropped_on_second_tick ... ok
+test market::tests::prices_accessor_returns_same_map_reference ... ok
+test market::tests::mean_clearing_price_is_none_when_empty ... ok
+test market::tests::mean_clearing_price_reflects_apply_pressure_changes ... ok
+test market::tests::step_is_deterministic_for_same_tick ... ok
+test allocator::tests::allocator_does_not_drain_macro_budget ... ok
+test market::tests::step_no_op_when_zero_supply ... ok
+test allocator::tests::allocator_conservation_holds_under_random_orders ... ok
+test stocks::tests::comparative_advantage_picks_max_surplus_good ... ok
+test market::tests::step_single_good_updates_only_that_good ... ok
+test stocks::tests::deficit_was_clamped_detects_only_real_clamps ... ok
+test stocks::tests::production_and_consumption_getters_return_profile_rates ... ok
+test market::tests::step_updates_exactly_one_price_from_tick ... ok
+test stocks::tests::apply_trade_conserves_total_stock ... ok
+test stocks::tests::propose_trade_returns_none_without_mutual_benefit ... ok
+test stocks::tests::surplus_and_deficit_signs_are_correct ... ok
+test stocks::tests::step_conserves_and_clamps_to_zero ... ok
+test stocks::tests::trade_gain_reflects_specialization_difference ... ok
+test tax_policy::tests::high_rate_lowers_compliance_and_treasury_fill_per_pass ... ok
+test tax_policy::tests::higher_tax_fills_treasury_faster_but_drops_compliance ... ok
+test tax_policy::tests::moderate_rate_keeps_full_compliance ... ok
+test tests::drain_energy_budget_clamps_at_zero ... ok
+test tests::drain_energy_budget_records_ledger_entry ... ok
+test market::tests::apply_pressure_keeps_prices_positive ... ok
+test tax_policy::tests::negative_production_is_treated_as_zero ... ok
+test stocks::tests::comparative_advantage_is_global_maximum ... ok
+test tax_policy::tests::set_rate_clamps_to_unit_interval ... ok
+test tests::schema_version_present ... ok
+test tests::step_appends_entry_when_budget_changed ... ok
+test tax_policy::tests::target_compliance_is_monotonic_decreasing_in_rate ... ok
+test tax_policy::tests::zero_rate_collects_nothing ... ok
+test tax_policy::tests::passes_counter_increments ... ok
+test stocks::tests::apply_trade_conserves_total_for_valid_offers ... ok
+test trade_flow::tests::fr_civ_trade_route_flow_bounded_by_both_legs ... ok
+test trade_flow::tests::fr_civ_trade_route_is_deterministic ... ok
+test trade_flow::tests::fr_civ_trade_route_rejects_same_side_pairs ... ok
+test trade_flow::tests::fr_civ_trade_route_surplus_and_deficit_pair_with_price_scaled_flow ... ok
+test tests::verify_ledger_conservation_rejects_oversized_ledger ... ok
+test stocks::tests::add_and_step_never_produce_negative_stock ... ok
+test market::tests::prices_remain_positive_after_n_steps ... ok
+test market::tests::same_tick_sequence_yields_identical_prices ... ok
+
+test result: ok. 120 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+
+running 21 tests
+test scenario_all_regimes_return_zero_when_budget_is_zero ... ok
+test scenario_all_regimes_return_zero_when_demand_is_zero ... ok
+test scenario_all_tiers_fully_met_when_budget_is_sufficient ... ok
+test scenario_capitalist_allocator_rations_proportionally_when_budget_is_scarce ... ok
+test scenario_joule_allocator_matches_planned_behavior_for_single_good ... ok
+test scenario_allocate_with_dispatches_all_three_regimes_correctly ... ok
+test scenario_lowest_tier_is_starved_when_budget_is_tight ... ok
+test scenario_allocate_with_never_exceeds_budget_for_any_regime ... ok
+test scenario_mixed_tier_ordering_is_resolved_by_priority_not_by_index ... ok
+test scenario_negative_budget_grants_nothing_across_all_tiers ... ok
+test scenario_partition_sum_never_exceeds_budget ... ok
+test scenario_partition_sum_with_capitalist_engine_rations_at_boundary ... ok
+test scenario_partition_sum_with_joule_engine_matches_planned_budget_exhaustion ... ok
+test scenario_planned_allocator_caps_at_budget_when_demand_exceeds_supply ... ok
+test scenario_planned_allocator_fills_demand_when_budget_is_sufficient ... ok
+test scenario_partition_sum_exactly_equals_budget_when_total_demand_exceeds_budget ... ok
+test scenario_priority_total_with_single_consumer_and_insufficient_budget ... ok
+test scenario_priority_total_with_single_consumer_and_sufficient_budget ... ok
+test scenario_subsistence_is_filled_before_luxury ... ok
+test scenario_zero_or_negative_demands_are_skipped_without_consuming_budget ... ok
+test scenario_zero_budget_grants_nothing_across_all_tiers ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 4 tests
+test multigood_with_ttl_keeps_orders_alive_for_custom_ttl ... ok
+test step_does_not_append_tick_close_when_budget_unchanged ... ok
+test verify_ledger_conservation_rejects_unbalanced_entry ... ok
+test multigood_place_order_matches_place_bid_and_place_ask ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 74 tests
+test criticality::tests::one_half_width_outside_band_halves_score ... ok
+test branching::tests::rolling_mean_sigma_window_four ... ok
+test branching::tests::known_stream_yields_expected_sigma_bar_and_regime ... ok
+test branching::tests::rolling_mean_is_deterministic_for_same_push_sequence ... ok
+test criticality::tests::non_finite_inputs_collapse_to_zero ... ok
+test criticality::tests::on_target_inputs_yield_score_one ... ok
+test criticality::tests::worst_signal_dominates ... ok
+test dashboard::tests::cluster_entropy_three_equal_is_one ... ok
+test dashboard::tests::cluster_entropy_two_equal_clusters_is_one ... ok
+test dashboard::tests::diplomacy_tension_empty_is_zero ... ok
+test criticality::tests::degenerate_band_treats_distance_as_zero ... ok
+test dashboard::tests::diplomacy_tension_extreme_pairs_is_one ... ok
+test dashboard::tests::cluster_entropy_single_cluster_is_zero ... ok
+test dashboard::tests::cluster_entropy_skewed_between_zero_and_one ... ok
+test criticality::tests::far_from_bands_yields_score_near_zero ... ok
+test branching::tests::sigma_a_ratio_and_zero_actor_guard ... ok
+test dashboard::tests::emerg_emerg_001_dashboard_compute_combines_all_five ... ok
+test dashboard::tests::ideology_homophily_all_in_one_bin_is_one ... ok
+test dashboard::tests::ideology_homophily_empty_is_zero ... ok
+test dashboard::tests::emerg_emerg_001_dashboard_compute_empty_inputs_yield_documented_defaults ... ok
+test dashboard::tests::ideology_homophily_zero_bin_width_falls_back_to_default ... ok
+test dashboard::tests::ideology_homophily_uniform_spread_is_one_over_n_bins ... ok
+test dashboard::tests::psyche_stability_mild_spread_between_zero_and_one ... ok
+test dashboard::tests::cluster_entropy_is_permutation_invariant ... ok
+test dashboard::tests::psyche_stability_single_agent_is_one ... ok
+test dashboard::tests::cluster_entropy_empty_is_zero ... ok
+test dashboard::tests::psyche_stability_uniform_mood_is_one ... ok
+test dashboard::tests::sentience_fraction_all_sentient_is_one ... ok
+test branching::tests::sigma_score_endpoints_and_clamp ... ok
+test dashboard::tests::sentience_fraction_clamps_when_sentient_exceeds_total ... ok
+test dashboard::tests::diplomacy_tension_neutral_pairs_is_zero ... ok
+test dashboard::tests::sentience_fraction_half_is_half ... ok
+test dashboard::tests::psyche_stability_empty_is_one ... ok
+test power_law::tests::empty_histogram_returns_zero ... ok
+test power_law::tests::metric_name_is_stable ... ok
+test dashboard::tests::psyche_stability_full_spread_clamps_to_zero ... ok
+test power_law::tests::power_law_fit_on_perfect_data ... ok
+test power_law::tests::power_law_fit_on_uniform_data_has_low_r_squared ... ok
+test mutual_information::tests::mi_zero_for_independent_layers ... ok
+test power_law::tests::trait_compute_returns_alpha ... ok
+test mutual_information::tests::mi_max_for_deterministic_coupling ... ok
+test shannon::tests::dirac_is_zero ... ok
+test shannon::tests::empty_histogram_is_zero ... ok
+test shannon::tests::entropy_uniform_vs_peaked ... ok
+test shannon::tests::metric_name_is_stable ... ok
+test shannon::tests::uniform_eight_bins_is_three_bits ... ok
+test shannon::tests::uniform_histogram_is_log2_n ... ok
+test shannon::tests::metric_trait_returns_bits ... ok
+test structure::tests::all_background_is_zero_components ... ok
+test shannon::tests::synthetic_uniform_across_many_bins ... ok
+test structure::tests::checkerboard_3d_has_many_components ... ok
+test shannon::tests::two_equal_bins_is_one_bit ... ok
+test structure::tests::get_returns_value_and_handles_oob ... ok
+test structure::tests::grid_shape_mismatch_rejected ... ok
+test dashboard::tests::diplomacy_tension_mixed_magnitudes ... ok
+test structure::tests::metric_name_is_stable ... ok
+test structure::tests::face_connectivity_does_not_count_corner_touch ... ok
+test power_law::tests::power_law_fit_on_zipf_like_data ... ok
+test power_law::tests::single_bin_returns_zero ... ok
+test dashboard::tests::sentience_fraction_no_agents_is_zero ... ok
+test structure::tests::full_block_is_one_component ... ok
+test structure::tests::single_voxel_in_corner_is_one_component ... ok
+test mutual_information::tests::mi_handles_empty_degenerate ... ok
+test tests::empty_histogram_p_is_zero ... ok
+test structure::tests::two_disconnected_voxels_in_face_diagonal ... ok
+test tests::uniform_and_dirac ... ok
+test tests::dirac_clamps_hot_index ... ok
+test tests::histogram_total_and_p ... ok
+test shannon::tests::skewed_distribution_between_dirac_and_uniform ... ok
+test structure::tests::compute_on_histogram_returns_largest_fraction ... ok
+test structure::tests::empty_grid_is_zero_components ... ok
+test structure::tests::three_voxels_in_a_row_are_one_component ... ok
+test structure::tests::synthetic_two_block_distribution ... ok
+test shannon::tests::single_bin_is_zero ... ok
+
+test result: ok. 74 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+
+running 4 tests
+test branching_regime_label_covers_all_five_arms ... ok
+test branching_ledger_closed_total_is_monotonic ... ok
+test classify_regime_boundary_values_agree_with_label ... ok
+test joint_histogram_rows_and_cols_match_construction_dimensions ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 9 tests
+test tests::surge_decays_over_time ... ok
+test tests::stress_and_opportunity_aggregates_are_bounded ... ok
+test tests::population_flows_from_stress_to_opportunity ... ok
+test tests::war_triggers_surge ... ok
+test tests::determinism_same_seed_same_outcome ... ok
+test tests::no_flow_without_opportunity ... ok
+test tests::migration_mixes_culture_and_reduces_divergence ... ok
+test tests::disaster_triggers_surge ... ok
+test tests::different_seed_may_differ_but_conserves_population ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 390 tests
+test building_emergence::tests::biome_style_tag_maps_desert_to_arid ... ok
+test command_queue::tests::capacity_enforcement ... ok
+test command_queue::tests::push_pop ... ok
+test command_queue::tests::len ... ok
+test command_queue::tests::drain ... ok
+test building_emergence::tests::building_type_min_era_gates ... ok
+test command_queue::tests::invalid_speed_rejection ... ok
+test culture::tests::two_isolated_factions_diverge_values_over_time ... ok
+test conditions::tests::ongoing_on_fresh_sim ... ok
+test disasters::tests::invoke_divine_disaster_spends_belief_and_smites ... ok
+test disasters::tests::meteor_changes_terrain_and_hits_agents ... ok
+test conditions::tests::defeat_extinction ... ok
+test conditions::tests::victory_population_threshold ... ok
+test disasters::tests::phase_disasters_triggers_quake_on_tectonic_stress ... ok
+test building_emergence::tests::emergent_style_key_uses_population_era ... ok
+test disasters::tests::phase_disasters_quiescent_under_normal_conditions ... ok
+test disasters::tests::phase_disasters_triggers_drought_on_sustained_dry_heat ... ok
+test conditions::tests::outcome_progress_reads_live_population_research_and_peace_state ... ok
+test disasters::tests::wildfire_ignition_mitigation_is_capped ... ok
+test disasters::tests::wildfire_ignition_rises_with_research ... ok
+test disasters::tests::wildfire_ignition_unmitigated_at_tier_zero ... ok
+test disasters::tests::phase_disasters_triggers_flood_on_heavy_precip_low_elevation ... ok
+test disasters::tests::radius_for_is_positive_per_kind ... ok
+test disasters::tests::phase_disasters_triggers_storm_on_high_storm_intensity ... ok
+test disasters::tests::invoke_divine_disaster_requires_faith ... ok
+test disasters::tests::disaster_raises_belief_fear_breeds_faith ... ok
+test emergence::alliance_stability_tests::alliance_stability_is_bounded_and_nan_guarded ... ok
+test emergence::disease_spread_rate_tests::in_range ... ok
+test emergence::diplomacy_warmth_tests::diplomacy_warmth_is_bounded_and_nan_guarded ... ok
+test disasters::tests::phase_hook_is_callable ... ok
+test emergence::emergence_emergent_functions_tests::currency_adoption_is_bounded_and_nan_safe ... ok
+test emergence::art_flourishing_tests::in_range ... ok
+test emergence::emergence_emergent_functions_tests::innovation_rate_is_bounded_and_nan_safe ... ok
+test emergence::climate_stress_index_tests::clamps_and_handles_nan ... ok
+test emergence::famine_severity_tests::in_range ... ok
+test emergence::emergence_emergent_functions_tests::literacy_growth_is_bounded_and_nan_safe ... ok
+test emergence::naval_expansion_tests::deterministic ... ok
+test emergence::plague_tests::plague_outbreak_clamps_invalid_and_negative_inputs ... ok
+test emergence::pilgrimage_draw_tests::in_range ... ok
+test emergence::plague_tests::plague_outbreak_scales_with_density_and_trade ... ok
+test emergence::plague_tests::plague_outbreak_is_deterministic ... ok
+test emergence::tech_diffusion_rate_tests::guards_nan_and_scales_with_inputs ... ok
+test emergence::revolt_likelihood_tests::deterministic ... ok
+test emergence::seafaring_drive_tests::seafaring_drive_is_deterministic_clamped_and_nan_guarded ... ok
+test emergence::ritual_frequency_tests::in_range ... ok
+test emergence::migration_pressure_tests::in_range ... ok
+test emergence::revolt_likelihood_tests::clamp_and_nan_guard ... ok
+test emergence::tests::agent_social_graph_returns_graph_for_known_agent ... ok
+test emergence::tests::register_seed_file_loads_fixture_and_reports_missing ... ignored, Simulation::register_seed_file and seed_library() not implemented
+test emergence::tests::register_seed_set_merges_and_replaces_ids ... ignored, Simulation::register_seed_set and seed_library() not implemented
+test emergence::naval_expansion_tests::clamp_and_nan_guard ... FAILED
+test emergence::coastal_flood_risk_tests::computes_risk_and_displacement ... FAILED
+test disasters::tests::phase_disasters_triggers_wildfire_on_high_heat_low_moisture ... FAILED
+test emergence::tests::seed_selection_is_deterministic_across_library_ordering ... ok
+test emergence::tests::seed_selection_picks_biome_match ... ok
+test emergence::tests::set_active_seed_updates_or_rejects_unknown ... ignored, Simulation::set_active_seed and active_seed_id() not implemented
+test emergence::trade_connectivity_score_tests::clamps_and_guards_nan ... ok
+test emergence::trade_war_intensity_tests::guards_nan_and_multiplies_factors ... ok
+test emergence::unrest_pressure_tests::clamps_and_handles_nan ... ok
+test emergence::urbanization_index_tests::clamp_and_nan_guard ... FAILED
+test emergence::urbanization_index_tests::deterministic ... ok
+test emergence::war_escalation_tests::war_escalation_is_bounded_and_nan_guarded ... ok
+test emergence::tests::legends_phase_ingests_disaster_events ... ok
+test emergence::tests::named_legend_boosts_belief_cohesion ... ok
+test emergence::tests::civ_ai_decisions_populated_after_sentience_tick ... ok
+test emergence_metrics::tests::emerg_emerg_002_dashboard_is_deterministic_same_seed ... ok
+test emergence_metrics::tests::emergence_sample_stdout_summary_has_stable_field_order ... FAILED
+test emergence_metrics::tests::emerg_emerg_001_dashboard_block_populated_from_ecs ... ok
+test emergence_metrics::tests::known_event_stream_yields_expected_sigma_bar_and_regime ... ok
+test emergence::tests::sentience_events_records_threshold_crossings ... ok
+test emergence_metrics::tests::phase_emergence_events_close_updates_branching_state ... ignored, Simulation::branching_ratio() not implemented
+test emergence_metrics::tests::sampler_fires_on_sample_ticks_and_caches ... ok
+test emergence_metrics::tests::mi_material_faction_none_without_factions ... ok
+test emergence_metrics::tests::sampler_no_op_on_non_sample_ticks ... ok
+test emergence_metrics::tests::novelty_rate_positive_on_new_configs ... ok
+test emergence_metrics::tests::novelty_rate_zero_on_repeated_identical_config ... ok
+test emergence_metrics::tests::sampler_counts_compacted_uniform_chunks ... ok
+test emergence_metrics::tests::mi_material_faction_some_with_coupling ... ok
+test emergence_metrics::tests::power_law_alpha_zero_when_too_few_clusters ... ok
+test emergence_metrics::tests::power_law_alpha_populated_on_distribution ... ok
+test engine::tests::aggressive_factions_clash_sooner ... ignored, diplomacy_faction_pair() function not implemented
+test engine::tests::aggression_threshold_reduction_bounded ... ok
+test engine::compat_state_tests::compat_unrest_round_trips_gini ... FAILED
+test engine::tests::apply_scenario_military_wires_overrides_and_clamps_range ... ok
+test engine::compat_state_tests::compat_add_cohesion_records_state ... ok
+test emergence_metrics::tests::sampler_on_two_block_grid_matches_direct_pass ... ok
+test emergence_metrics::tests::sampler_on_uniform_solid_cube_is_dirac_and_one_component ... ok
+test engine::tests::audio_wire_tests::fr_audio_wire_combat_pulse_emits_battle_trigger ... ok
+test engine::tests::audio_wire_tests::fr_audio_wire_disaster_records_routed_trigger ... FAILED
+test engine::tests::audio_wire_tests::fed_stable_population_grows_via_births ... ok
+test engine::tests::audio_wire_tests::fr_audio_wire_unknown_disaster_label_falls_back ... ok
+test engine::tests::audio_wire_tests::fr_music_distinct_culture_cues_evolve_over_time ... FAILED
+test engine::tests::audio_wire_tests::tick_invokes_phase_audio ... ok
+test engine::tests::audio_wire_tests::fr_audio_wire_lifecycle_and_research_emit_birth_death_tech ... ok
+test engine::tests::audio_wire_tests::fr_audio_wire_record_disaster_severity_is_clamped ... ok
+test engine::tests::audio_wire_tests::starving_population_migrates_and_founds_settlement ... FAILED
+test engine::tests::audio_wire_tests::phase_citizen_lifecycle_uses_should_reproduce ... FAILED
+test engine::tests::audio_wire_tests::fr_audio_wire_empty_buffer_clears_across_ticks ... ok
+test engine::tests::choose_named_seed_empty_is_round_robin ... ignored, choose_named_seed() function not implemented
+test engine::tests::choose_named_seed_single_seed_all_that_race ... ignored, choose_named_seed() function not implemented
+test engine::tests::choose_named_seed_weighted_distribution ... ignored, choose_named_seed() function not implemented
+test engine::tests::chronicle_dedups_age ... ignored, WorldState::chronicle_age field, Simulation::phase_chronicle() and chronicle() not implemented
+test engine::tests::chronicle_is_length_capped ... ignored, WorldState::chronicle field and Simulation::phase_chronicle() and chronicle() not implemented
+test engine::tests::chronicle_records_tech_breakthroughs ... ignored, WorldState::research_progress field, Simulation::phase_tech() and phase_chronicle() and chronicle() not implemented
+test engine::tests::combat_events_extend_replay_hash_chain ... ok
+test engine::tests::configure_military_fog_sets_radius_and_clamps_grid ... ok
+test engine::tests::canonical_faction_pair_orders_ascending ... ok
+test engine::tests::daytime_cycles_across_one_full_day ... ok
+test engine::tests::custom_policy_signals_propagate_to_simulation ... ok
+test engine::tests::climate_recomputes_every_tick ... ok
+test engine::tests::default_policy_is_noop ... ok
+test engine::tests::emergent_route_goods_is_deterministic_and_covers_all_labels ... ok
+test engine::tests::diplomacy_relations_evolve_through_sim_tick ... FAILED
+test emergence::tests::legends_query_is_read_only ... ok
+test engine::tests::engine_tick_includes_climate_in_snapshot ... ok
+test engine::tests::faction_decision_hostility_and_trade_intents_persist_on_snapshot ... ok
+test engine::tests::faction_aggression_rebuilt_each_tick ... ok
+test engine::tests::culture_traits_drift_through_sim_tick_for_isolated_factions ... FAILED
+test engine::tests::faction_decision_high_unrest_sets_deterministic_response_intents ... ok
+test engine::tests::cold_tier_diffusion_only_on_cadence_boundaries ... ok
+test engine::tests::faction_wealth_scarcity_shadow_edge_cases ... ok
+test engine::tests::fr_civ_tactics_tick_resolves_in_range_combat ... ok
+test engine::tests::faction_unrest_delta_from_shadow_sign_and_clamp ... ok
+test engine::tests::fr_civ_tutorial_advances_from_tick_progress ... FAILED
+test engine::tests::job_type_for_civilian_id_deterministic_split ... ok
+test engine::tests::language_diplomacy_tests::bonus_bounded_and_monotonic ... ok
+test engine::tests::language_diplomacy_tests::identical_language_max_bonus_more_peaceful ... ok
+test engine::tests::labor_capacity_weighting_threads_through_phase_economy ... ok
+test engine::tests::language_diplomacy_tests::missing_language_legacy_threshold_unchanged ... ok
+test engine::tests::language_drift_wires_through_sim_tick_for_isolated_factions ... FAILED
+test engine::tests::n10_avg_faction_kinship_computes_mean_correctly ... ok
+test engine::tests::fr_core_001_single_tick_event_per_tick ... ok
+test engine::tests::n10_avg_faction_kinship_computes_zero_for_empty_world ... ok
+test engine::tests::language_names_diverge_for_isolated_factions_over_time ... FAILED
+test engine::tests::military_unit_component_is_serializable ... ok
+test engine::tests::lifecycle_classifiers_wired_into_phase_life ... FAILED
+test engine::tests::last_cohort_stats_reflects_population ... ok
+test engine::tests::n10_kinship_coupling_boosts_cohesion_basic ... ignored, Simulation::cohesion() not implemented
+test engine::tests::n11_avg_psyche_maturity_zero_for_empty_world ... ok
+test engine::tests::n11_drift_factor_bounds ... ok
+test engine::tests::n12_avg_social_affinity_zero_for_empty_world ... ok
+test engine::tests::n10_kinship_decay_factor_bounds ... ok
+test engine::tests::n11_avg_psyche_maturity_computes_mean ... ok
+test engine::tests::n12_affinity_bias_direction_and_bounds ... ok
+test engine::tests::n12_avg_social_affinity_computes_mean_and_clamps ... ok
+test engine::tests::n12_high_affinity_keeps_factions_trading ... ignored, diplomacy_faction_pair() function not implemented
+test engine::tests::phase_economy_conserves_non_negative_budget ... FAILED
+test engine::tests::pending_damage_drains_and_reduces_chunk_count ... ok
+test engine::tests::phase_economy_prices_respond_to_supply_shock ... ok
+test engine::tests::phase_economy_steps_market_prices ... ok
+test engine::tests::phase_economy_emits_settlement_trade_flows_and_moves_prices ... ok
+test engine::tests::phase_order_includes_emergence ... ok
+test engine::tests::phase_economy_updates_economy_state ... FAILED
+test engine::tests::phase_economy_uses_capitalist_allocator ... FAILED
+test engine::tests::phase_life_classifier_handles_missing_psyche ... FAILED
+test engine::tests::phase_order_matches_tick_sequence ... ok
+test engine::tests::phase_policy_runs_every_tick ... ok
+test engine::tests::phase_policy_populates_last_control_signals ... ok
+test engine::tests::phase_voxel_ca_none_is_noop ... ignored, Simulation::phase_voxel_ca and last_tick_abiogenesis_sites() not implemented
+test engine::tests::phase_voxel_ca_warm_water_is_viable_stone_is_not ... ignored, Simulation::phase_voxel_ca and last_tick_abiogenesis_sites() not implemented
+test engine::tests::phase_policy_runs_before_phase_economy ... ok
+test engine::tests::player_diplomacy_action_mutates_relation_substrate ... FAILED
+test engine::tests::player_diplomacy_action_rejects_unknown_or_self_pair ... ok
+test engine::tests::push_damage_records_damage_event ... ok
+test engine::tests::player_trade_action_mutates_relation_substrate_positive ... FAILED
+test engine::tests::religion_diplomacy_coupling_phase_picks_trade_over_conflict ... FAILED
+test engine::tests::replay_combat_events_restore_pending_damage ... ok
+test engine::tests::replay_ca_dirty_chunk_bit_identical ... ok
+test engine::tests::replay_log_round_trips_through_save_load ... ok
+test engine::tests::replay_logs_converge_to_identical_voxel_state ... ok
+test engine::tests::replay_reproduces_final_voxel_chunk_count_and_tick ... ok
+test engine::tests::replay_combat_drains_to_same_voxel_state_as_live ... FAILED
+test engine::tests::route_resource_maps_known_goods ... ok
+test engine::tests::scenario_faction_spawn_honors_counts ... ignored, Simulation::with_seed_and_starting_conditions() not implemented
+test engine::tests::set_policy_replaces_active_policy ... ok
+test engine::tests::replay_round_trip_preserves_combat_events ... FAILED
+test engine::tests::simulation_tick_produces_replay_tick_event ... ok
+test engine::tests::snapshot_exposes_research_cache_tech_state ... ok
+test engine::tests::startup_spawns_128_civilians ... ok
+test engine::tests::snapshot_damage_events_reflects_last_tick_pulses ... ok
+test engine::tests::test_faction_archetype_variety ... ok
+test engine::tests::test_initial_entities ... ok
+test engine::tests::test_seed_spawn_determinism ... ok
+test engine::tests::test_tick_advances ... ok
+test engine::tests::test_zero_divergence_exact ... ok
+test engine::tests::phase_tactics_evolve_doctrine_on_cadence ... ok
+test engine::tests::tick_detects_tech_victory ... ok
+test engine::tests::tick_invokes_emergence_phase ... ok
+test engine::tests::replay_combat_log_deterministic_for_seed_rerun ... FAILED
+test engine::tests::tick_with_emergence_source_advances_tick_and_differs_on_ca_grid ... ignored, Simulation::tick_with_emergence_source() not implemented
+test engine::tests::tick_wires_religion_emergence_and_trade_spread ... FAILED
+test engine::tests::voxel_phase_drains_dirty_events_each_tick ... FAILED
+test engine::tests::tide_offset_shifts_coastal_voxel_height ... ok
+test engine::tests::voxel_phase_replay_is_bit_identical ... ok
+test engine::tests::weather_grid_temperature_varies_with_year_phase ... ok
+test engine::tests::with_seed_default_policy_is_noop ... ok
+test era::tests::can_unlock_gates_tech_advancement ... ok
+test era::tests::era_progress_fraction_is_earliest_latest_and_monotonic ... ok
+test engine::tests::war_bridge_records_combat_replay_events ... FAILED
+test era::tests::fr_civ_tech_ticks_unlock_faction_tech ... FAILED
+test engine::tests::compact_runs_every_64_ticks ... ok
+test faction_decisions::tests::high_unrest_faction_picks_unrest_action ... ok
+test faction_decisions::tests::hostile_militarized_faction_flags_hostility ... ok
+test faction_decisions::tests::hostility_intent_applies_relation_score_and_conflict_event ... ok
+test faction_decisions::tests::prosperous_friendly_faction_picks_trade ... ok
+test faction_decisions::tests::trade_open_intent_surfaces_trade_agreement_event ... ok
+test gameplay::tests::collapse_detected_when_faction_loses_all_treasury ... ok
+test gameplay::tests::cultural_victory_requires_nonzero_belief ... ok
+test era::tests::prosperous_faction_out_researches_and_diffuses_to_neighbor ... FAILED
+test gameplay::tests::cultural_victory_triggers_at_threshold ... ok
+test gameplay::tests::defeat_on_extinction ... ok
+test gameplay::tests::domination_victory_not_triggered_below_threshold ... ok
+test gameplay::tests::domination_victory_triggers_at_threshold ... ok
+test gameplay::tests::economic_victory_triggers_at_threshold ... ok
+test gameplay::tests::gameplay_state_detects_domination_victory ... ok
+test gameplay::tests::gameplay_state_ongoing_on_balanced_sim ... ok
+test gameplay::tests::higher_treasury_yields_higher_territory_score ... ok
+test gameplay::tests::scenario_objective_expires_at_tick_limit ... ok
+test gameplay::tests::scenario_cultural_dominance_parses_correctly ... ok
+test gameplay::tests::scenario_survive_1000_parses_correctly ... ok
+test gameplay::tests::scenario_objective_pending_before_tick_limit ... ok
+test gameplay::tests::scores_compute_without_panic ... ok
+test gameplay::tests::score_determinism_same_inputs_same_output ... ok
+test gameplay::tests::scores_sorted_descending_by_total ... ok
+test godtools::tests::disaster_drought_lowers_precip_in_brush ... ok
+test godtools::tests::disaster_meteor_routes_through_substrate ... ok
+test engine::tests::test_determinism ... ok
+test emergence::tests::civ_ai_phase_leaves_observable_emergence_state ... ok
+test engine::tests::civreplay_save_load_restores_tick_after_ticks ... ok
+test godtools::tests::error_serde_round_trip ... ok
+test godtools::tests::disaster_volcanic_vent_writes_lava_and_steam ... FAILED
+test godtools::tests::disaster_tornado_writes_air_or_steam ... ok
+test godtools::tests::law_religion_pressure_routes_through_belief ... ok
+test godtools::tests::law_tax_bias_mutates_faction_treasury ... ok
+test godtools::tests::inspect_probe_is_read_only ... ok
+test godtools::tests::law_difficulty_knob_writes_scarcity_multiplier ... ok
+test godtools::tests::life_spawn_organism_adds_agent ... ok
+test godtools::tests::material_additive_drop_writes_seed_above_center ... ok
+test godtools::tests::life_heal_bumps_actor_health ... FAILED
+test godtools::tests::life_spawn_civ_seed_injects_founders_and_buildings ... ok
+test godtools::tests::material_replace_writes_target_in_footprint ... ok
+test godtools::tests::material_seed_forest_writes_plant ... ok
+test godtools::tests::material_erase_writes_air_in_footprint ... ok
+test godtools::tests::material_pour_liquid_writes_water ... ok
+test godtools::tests::material_surface_paint_writes_topmost_only ... ok
+test godtools::tests::nan_spawn_rejected ... ok
+test godtools::tests::material_seed_snow_writes_snow ... ok
+test godtools::tests::no_op_receipt_carries_verb ... ok
+test godtools::tests::terrain_drop_biome_paints_topmost_to_biome_material ... ok
+test godtools::tests::terrain_flatten_writes_stone_band ... FAILED
+test godtools::tests::terrain_lower_writes_air_at_center ... ok
+test godtools::tests::terrain_raise_mountain_writes_peak ... ok
+test godtools::tests::terrain_raise_writes_stone_at_center ... ok
+test godtools::tests::terrain_slope_writes_stone_gradient ... ok
+test emergence::tests::psyche_phase_mutates_mood_over_ticks ... ok
+test godtools::tests::zero_radius_rejected ... ok
+test hash_chain::tests::chain_is_deterministic ... ok
+test hash_chain::tests::chain_root_from_ticks_matches_incremental ... ok
+test hash_chain::tests::combat_payload_extends_chain ... ok
+test godtools::tests::terrain_dig_ocean_writes_water_cavity ... ok
+test hash_chain::tests::hash_hex_is_lowercase_64_chars ... ok
+test hash_chain::tests::replay_hash_chain_differs_when_climate_changes ... ok
+test engine::tests::phase_diffusion_bumps_wardrobe_eras ... ok
+test hash_chain::tests::tamper_changes_hash ... ok
+test hash_chain::tests::tick_hash_uses_blake3_not_sha256 ... ok
+test history::tests::records_only_forward_transitions_and_chronicle_lines ... ok
+test history::tests::retains_only_the_bounded_tail ... ok
+test history::tests::round_trips_through_serde ... ok
+test integrity::tests::check_integrity_accepts_after_tick ... ok
+test integrity::tests::check_integrity_accepts_fresh_simulation ... ok
+test integrity::tests::check_integrity_rejects_invariant_violation ... FAILED
+test integrity::tests::check_integrity_rejects_tampered_hash_chain ... ok
+test integrity::tests::replay_log_without_stored_hash_skips_chain_check ... ok
+test invariants::tests::check_tick_invariants_accepts_simulation_with_economy_ledger ... FAILED
+test invariants::tests::check_tick_invariants_rejects_oversized_ledger ... FAILED
+test invariants::tests::empty_ledger_skips_growth_check ... ok
+test invariants::tests::unbalanced_ledger_entry_rejected ... ok
+test invariants::tests::negative_economy_budget_rejected_when_ledger_nonempty ... FAILED
+test lod::tests::gestalt_no_divergence ... ok
+test lod::tests::lod_policy_default_matches_agents_cadence ... ok
+test io::tests::test_read_write ... ok
+test lod::tests::operational_hex_data_visible ... ok
+test lod::tests::should_tick_entity_respects_modulo_cadence ... ok
+test lod::tests::should_tick_entity_rejects_zero_warm_cadence - should panic ... ok
+test lod::tests::strategic_aggregation ... ok
+test lod::tests::transition_no_state_mutation ... ok
+test lod::tests::two_levels_defined ... ok
+test metrics::tests::compute_fixed_clamps_negative_inputs ... ok
+test metrics::tests::compute_sanitizes_non_finite_inputs ... ok
+test metrics::tests::compute_fixed_matches_float_within_quantization_tolerance ... ok
+test metrics::tests::test_metrics_basic ... ok
+test metrics::tests::test_metrics_clamp_over_budget ... ok
+test metrics::tests::test_tyranny_index ... ok
+test perf::tests::clear_resets_phases_and_total ... ok
+test perf::tests::record_accumulates_total ... ok
+test perf::tests::phases_over_budget_selects_only_offenders ... ok
+test perf::tests::tick_over_budget_compares_total ... ok
+test perf::tests::slowest_picks_max_duration_phase ... ok
+test policy::tests::capitalist_policy_name ... ok
+test policy::tests::capitalist_policy_evaluate_is_default ... ok
+test policy::tests::noop_policy_evaluate_returns_default ... ok
+test policy::tests::consumption_non_negative ... ok
+test policy::tests::noop_policy_name ... ok
+test policy::tests::policy_from_kind_capitalist ... ok
+test policy::tests::policy_from_kind_empty_string_falls_back_to_noop ... ok
+test policy::tests::policy_from_kind_subsistence_first ... ok
+test policy::tests::policy_from_kind_unknown_falls_back_to_noop ... ok
+test policy::tests::subsistence_first_policy_evaluate_is_default ... ok
+test policy::tests::subsistence_first_policy_name ... ok
+test replay::tests::mod_permission_violation_records_bus_json_at_tick ... ok
+test replay::tests::rng_draw_round_trips_through_save_load ... ok
+test replay::tests::rng_draw_records_event_and_counts ... ok
+test replay::tests::session_saved_records_bus_json_at_tick ... ok
+test replay::tests::session_saved_round_trips_through_save_load ... ok
+test replay_format::tests::civreplay_rejects_all_zero_footer ... ok
+test replay_format::tests::civreplay_rejects_hash_chain_mismatch ... ok
+test integrity::tests::check_integrity_after_replay_load ... ok
+test replay_format::tests::civreplay_rejects_tampered_payload ... ok
+test replay_format::tests::civreplay_rejects_tampered_footer ... ok
+test replay_format::tests::civreplay_roundtrip_preserves_running_hash ... ok
+test replay_format::tests::civreplay_roundtrip_empty_log ... ok
+test replay_format::tests::civreplay_roundtrip_preserves_replay_log ... ok
+test engine::tests::phase_buildings_allocates_over_time_when_signals_are_high ... ok
+test godtools::tests::terrain_add_land_writes_stone_band_above_surface ... ok
+test godtools::tests::disaster_lightning_writes_lava_arc ... ok
+test scenario::tests::baseline_yaml_parses ... ok
+test scenario::tests::all_presets_load_and_validate ... ok
+test scenario::tests::parse_error_includes_field_path ... ok
+test scenario::tests::preset_single_race_is_monocultural ... ok
+test scenario::tests::mod_guest_state_exports_after_baseline_load ... ok
+test scenario::tests::preset_three_race_balanced_has_three_seeds ... ok
+test scenario::tests::rejects_empty_name ... ok
+test scenario::tests::rejects_negative_scarcity ... ok
+test scenario::tests::scenario_divergence_override_parses_and_validates ... ok
+test scenario::tests::scenario_fog_wires_military_phase ... ok
+test scenario::tests::scenario_economy_policy_affects_consumption ... ok
+test scenario::tests::scenario_military_wires_military_phase ... ok
+test scenario::tests::scenario_mods_loads_example_policy ... ok
+test scenario::tests::scenario_policy_signals_propagate_through_tick ... ok
+test scenario::tests::scenario_policy_capitalist_installs_capitalist_policy ... ok
+test scenario::tests::scenario_policy_subsistence_first_installs_subsistence_first_policy ... ok
+test scenario::tests::scenario_seed_mix_absent_is_empty_default ... ok
+test scenario::tests::scenario_seed_mix_parses_and_validates ... ok
+test scenario::tests::scenario_seed_mix_negative_weight_is_invalid ... ok
+test scenario::tests::scenario_starting_conditions_defaults ... ok
+test scenario::tests::scenario_seed_mix_zero_weight_is_invalid ... ok
+test scenario::tests::scenario_starting_conditions_parses ... ok
+test scenario::tests::scenario_starting_conditions_validates_faction_count_too_high ... ok
+test scenario::tests::scenario_starting_conditions_validates_faction_count_zero ... ok
+test save_bundle::tests::fr_civ_saveslot_named_slots_save_list_load_delete ... FAILED
+test scenario::tests::scenario_unknown_policy_kind_falls_back_to_noop ... ok
+test spawn::tests::norm_to_grid_maps_center ... ok
+test scenario::tests::starting_conditions_spawns_expected_count ... ok
+test scenario::tests::scenario_without_policy_field_defaults_to_noop ... ok
+test spawn::tests::spawn_military_and_airport_insert_components ... ok
+test spawn::tests::norm_to_grid_rejects_non_finite_coords - should panic ... ok
+test spectator::tests::civ_pins_include_job_when_citizen_component_present ... ok
+test spectator::tests::fr_civ_web_003_spectator_view_read_only_and_deterministic ... ok
+test spectator::tests::civ_pins_reflect_spawned_agent_coordinates ... ok
+test tests::step_advances_tick ... ok
+test tests::determinism_same_seed_same_output ... ok
+test spectator::tests::spectator_view_has_pins_after_startup ... ok
+test tests::step_decreases_energy ... ok
+test save_bundle::tests::civsave_archive_round_trips_mod_guest_state ... ok
+test writing::tests::glyph_bounding_box_empty ... ok
+test writing::tests::glyph_bounding_box ... ok
+test tests::step_energy_floor_at_zero ... ok
+test writing::tests::glyph_creation ... ok
+test writing::tests::glyphs_for_language_phoneme_mapping ... ok
+test writing::tests::glyphs_for_language_different_seeds_diverge ... ok
+test writing::tests::glyphs_for_language_deterministic_same_seed ... ok
+test writing::tests::glyphs_for_language_returns_correct_count ... ok
+test writing::tests::glyphs_for_language_respects_glyph_count_bounds ... ok
+test writing::tests::glyph_serialize_deserialize ... ok
+test writing::tests::stroke_arc_creation ... ok
+test writing::tests::stroke_clamps_coordinates_to_0_1 ... ok
+test writing::tests::stroke_line_creation ... ok
+test writing::tests::stroke_serialize_deserialize ... ok
+test save_bundle::tests::civsave_folder_round_trips_mod_guest_state ... ok
+test engine::tests::tick_invariants_hold_across_many_ticks ... ok
+test emergence::tests::legends_phase_ingests_death_events ... ok
+test engine::tests::determinism_holds_with_all_phases_enabled ... ok
+test emergence::tests::cluster_beliefs_diverge_between_settlements ... ok
+test emergence::tests::culture_phase_drifts_cluster_profiles ... ok
+test engine::tests::phase_buildings_applies_emergence_facades ... ok
+test integrity::tests::check_integrity_across_many_ticks ... ok
+test era::tests::thriving_faction_advances_era_stagnant_does_not ... ok
+test scenario::tests::baseline_scenario_headless_smoke ... ok
+test emergence::tests::legends_phase_ingests_diplomacy_with_participants has been running for over 60 seconds
+test godtools::tests::material_seed_ore_runs_and_returns_material_receipt ... ok
+test emergence::tests::legends_phase_ingests_diplomacy_with_participants ... ok
+
+failures:
+
+---- emergence::naval_expansion_tests::clamp_and_nan_guard stdout ----
+
+thread 'emergence::naval_expansion_tests::clamp_and_nan_guard' (181928) panicked at crates\engine\src\emergence.rs:1968:9:
+assertion `left == right` failed
+  left: 0.90000004
+ right: 1.0
+
+---- emergence::coastal_flood_risk_tests::computes_risk_and_displacement stdout ----
+
+thread 'emergence::coastal_flood_risk_tests::computes_risk_and_displacement' (191496) panicked at crates\engine\src\emergence.rs:1860:9:
+assertion `left == right` failed
+  left: (0.0, 0)
+ right: (0.5, 0)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- disasters::tests::phase_disasters_triggers_wildfire_on_high_heat_low_moisture stdout ----
+
+thread 'disasters::tests::phase_disasters_triggers_wildfire_on_high_heat_low_moisture' (186056) panicked at crates\engine\src\disasters.rs:753:9:
+Wildfire should be triggered under extreme heat/storm conditions
+
+---- emergence::urbanization_index_tests::clamp_and_nan_guard stdout ----
+
+thread 'emergence::urbanization_index_tests::clamp_and_nan_guard' (192760) panicked at crates\engine\src\emergence.rs:1991:9:
+assertion `left == right` failed
+  left: 0.925
+ right: 1.0
+
+---- emergence_metrics::tests::emergence_sample_stdout_summary_has_stable_field_order stdout ----
+
+thread 'emergence_metrics::tests::emergence_sample_stdout_summary_has_stable_field_order' (184220) panicked at crates\engine\src\emergence_metrics.rs:1082:9:
+assertion `left == right` failed
+  left: "emergence sample: entropy=1.2500 structures=3 power_law_alpha=2.5000 novelty_rate=0.125000 mi_material_faction=0.7500"
+ right: "emergence sample: entropy=1.2500 structures=3 power_law_alpha=2.5000 novelty_rate=0.125000 mi_material_faction=0.7500 novelty_score=0.0000 coupling_mi_estimate=0.0000 criticality=0.0000"
+
+---- engine::compat_state_tests::compat_unrest_round_trips_gini stdout ----
+
+thread 'engine::compat_state_tests::compat_unrest_round_trips_gini' (180028) panicked at crates\engine\src\engine.rs:11676:9:
+assertion `left == right` failed
+  left: Some(Revolting)
+ right: Some(Rioting)
+
+---- engine::tests::audio_wire_tests::fr_audio_wire_disaster_records_routed_trigger stdout ----
+
+thread 'engine::tests::audio_wire_tests::fr_audio_wire_disaster_records_routed_trigger' (173196) panicked at crates\engine\src\engine.rs:10979:13:
+assertion `left == right` failed: one disaster → one trigger
+  left: 0
+ right: 1
+
+---- engine::tests::audio_wire_tests::fr_music_distinct_culture_cues_evolve_over_time stdout ----
+
+thread 'engine::tests::audio_wire_tests::fr_music_distinct_culture_cues_evolve_over_time' (183032) panicked at crates\engine\src\engine.rs:11139:13:
+assertion `left != right` failed: cultures with distinct profiles should surface distinct cue params
+  left: MusicCue { mood: "neutral", intensity: 0.0, tempo_bpm: Some(90) }
+ right: MusicCue { mood: "neutral", intensity: 0.0, tempo_bpm: Some(90) }
+
+---- engine::tests::audio_wire_tests::starving_population_migrates_and_founds_settlement stdout ----
+
+thread 'engine::tests::audio_wire_tests::starving_population_migrates_and_founds_settlement' (11280) panicked at crates\engine\src\engine.rs:11281:13:
+assertion `left == right` failed
+  left: Some(0)
+ right: Some(1)
+
+---- engine::tests::audio_wire_tests::phase_citizen_lifecycle_uses_should_reproduce stdout ----
+
+thread 'engine::tests::audio_wire_tests::phase_citizen_lifecycle_uses_should_reproduce' (193964) panicked at crates\engine\src\engine.rs:11338:13:
+should_reproduce should have produced at least one child (got 0)
+
+---- engine::tests::diplomacy_relations_evolve_through_sim_tick stdout ----
+
+thread 'engine::tests::diplomacy_relations_evolve_through_sim_tick' (189552) panicked at crates\engine\src\engine.rs:2908:9:
+simulation integrity violated
+
+---- engine::tests::culture_traits_drift_through_sim_tick_for_isolated_factions stdout ----
+
+thread 'engine::tests::culture_traits_drift_through_sim_tick_for_isolated_factions' (188816) panicked at crates\engine\src\engine.rs:10912:14:
+faction 1 culture should advance through tick
+
+---- engine::tests::fr_civ_tutorial_advances_from_tick_progress stdout ----
+
+thread 'engine::tests::fr_civ_tutorial_advances_from_tick_progress' (138568) panicked at crates\engine\src\engine.rs:7733:9:
+assertion failed: sim.tutorial_progress.tech_unlocked
+
+---- engine::tests::language_drift_wires_through_sim_tick_for_isolated_factions stdout ----
+
+thread 'engine::tests::language_drift_wires_through_sim_tick_for_isolated_factions' (189040) panicked at crates\engine\src\engine.rs:10810:18:
+faction 1 language state must exist
+
+---- engine::tests::language_names_diverge_for_isolated_factions_over_time stdout ----
+
+thread 'engine::tests::language_names_diverge_for_isolated_factions_over_time' (160116) panicked at crates\engine\src\engine.rs:10728:18:
+faction 1 language state must exist
+
+---- engine::tests::lifecycle_classifiers_wired_into_phase_life stdout ----
+
+thread 'engine::tests::lifecycle_classifiers_wired_into_phase_life' (121300) panicked at crates\engine\src\engine.rs:11473:9:
+age=28 healthy civilian should classify as Adult
+
+---- engine::tests::phase_economy_conserves_non_negative_budget stdout ----
+
+thread 'engine::tests::phase_economy_conserves_non_negative_budget' (146868) panicked at crates\engine\src\engine.rs:8320:9:
+assertion `left == right` failed
+  left: Fixed(1000000000000000)
+ right: Fixed(999999998000000)
+
+---- engine::tests::phase_economy_updates_economy_state stdout ----
+
+thread 'engine::tests::phase_economy_updates_economy_state' (185052) panicked at crates\engine\src\engine.rs:8366:9:
+assertion `left == right` failed
+  left: 1000000000000
+ right: 999999999000
+
+---- engine::tests::phase_economy_uses_capitalist_allocator stdout ----
+
+thread 'engine::tests::phase_economy_uses_capitalist_allocator' (187856) panicked at crates\engine\src\engine.rs:8343:9:
+assertion `left == right` failed
+  left: Fixed(50000)
+ right: Fixed(0)
+
+---- engine::tests::phase_life_classifier_handles_missing_psyche stdout ----
+
+thread 'engine::tests::phase_life_classifier_handles_missing_psyche' (195476) panicked at crates\engine\src\engine.rs:11515:9:
+adult should be classified even without Psyche
+
+---- engine::tests::player_diplomacy_action_mutates_relation_substrate stdout ----
+
+thread 'engine::tests::player_diplomacy_action_mutates_relation_substrate' (147496) panicked at crates\engine\src\engine.rs:9887:9:
+assertion failed: matches!(relation.kind.as_str(), "neutral" | "rivalry" | "war")
+
+---- engine::tests::player_trade_action_mutates_relation_substrate_positive stdout ----
+
+thread 'engine::tests::player_trade_action_mutates_relation_substrate_positive' (190048) panicked at crates\engine\src\engine.rs:9912:9:
+assertion failed: matches!(relation.kind.as_str(), "neutral" | "trade" | "alliance")
+
+---- engine::tests::religion_diplomacy_coupling_phase_picks_trade_over_conflict stdout ----
+
+thread 'engine::tests::religion_diplomacy_coupling_phase_picks_trade_over_conflict' (145684) panicked at crates\engine\src\engine.rs:10056:62:
+event
+
+---- engine::tests::replay_combat_drains_to_same_voxel_state_as_live stdout ----
+
+thread 'engine::tests::replay_combat_drains_to_same_voxel_state_as_live' (186676) panicked at crates\engine\src\engine.rs:9207:9:
+expected war-bridge combat in replay log
+
+---- engine::tests::replay_round_trip_preserves_combat_events stdout ----
+
+thread 'engine::tests::replay_round_trip_preserves_combat_events' (187412) panicked at crates\engine\src\engine.rs:9386:9:
+expected at least one Combat replay event after 16 ticks
+
+---- engine::tests::replay_combat_log_deterministic_for_seed_rerun stdout ----
+
+thread 'engine::tests::replay_combat_log_deterministic_for_seed_rerun' (190592) panicked at crates\engine\src\engine.rs:9262:9:
+assertion failed: !combat_a.is_empty()
+
+---- engine::tests::tick_wires_religion_emergence_and_trade_spread stdout ----
+
+thread 'engine::tests::tick_wires_religion_emergence_and_trade_spread' (191384) panicked at crates\engine\src\engine.rs:8443:14:
+source settlement should have an emergent religion profile
+
+---- engine::tests::voxel_phase_drains_dirty_events_each_tick stdout ----
+
+thread 'engine::tests::voxel_phase_drains_dirty_events_each_tick' (178044) panicked at crates\engine\src\engine.rs:9009:9:
+assertion `left == right` failed
+  left: 517
+ right: 4
+
+---- engine::tests::war_bridge_records_combat_replay_events stdout ----
+
+thread 'engine::tests::war_bridge_records_combat_replay_events' (188632) panicked at crates\engine\src\engine.rs:9273:9:
+assertion failed: sim.replay_log().events.iter().any(|event|
+        {
+            matches!(event, ReplayEvent::Combat { shooter_id, target_id, .. }
+                if *shooter_id != 0 && *target_id != 0)
+        })
+
+---- era::tests::fr_civ_tech_ticks_unlock_faction_tech stdout ----
+
+thread 'era::tests::fr_civ_tech_ticks_unlock_faction_tech' (182752) panicked at crates\engine\src\era.rs:366:9:
+FR-CIV-TECH: research should accumulate during the sim tick
+
+---- era::tests::prosperous_faction_out_researches_and_diffuses_to_neighbor stdout ----
+
+thread 'era::tests::prosperous_faction_out_researches_and_diffuses_to_neighbor' (187232) panicked at crates\engine\src\era.rs:480:9:
+neighbor never gained tech via diffusion
+
+---- godtools::tests::disaster_volcanic_vent_writes_lava_and_steam stdout ----
+
+thread 'godtools::tests::disaster_volcanic_vent_writes_lava_and_steam' (185572) panicked at crates\engine\src\godtools.rs:3337:9:
+assertion `left == right` failed: volcanic vent centre column is LAVA
+  left: MaterialId(9)
+ right: MaterialId(2)
+
+---- godtools::tests::life_heal_bumps_actor_health stdout ----
+
+thread 'godtools::tests::life_heal_bumps_actor_health' (159672) panicked at crates\engine\src\godtools.rs:2575:13:
+spawned entity must carry a Health component
+
+---- godtools::tests::terrain_flatten_writes_stone_band stdout ----
+
+thread 'godtools::tests::terrain_flatten_writes_stone_band' (17304) panicked at crates\engine\src\godtools.rs:3129:9:
+assertion `left == right` failed: flatten 1×1 brush writes exactly 1 cell
+  left: 5
+ right: 1
+
+---- integrity::tests::check_integrity_rejects_invariant_violation stdout ----
+
+thread 'integrity::tests::check_integrity_rejects_invariant_violation' (184924) panicked at crates\engine\src\integrity.rs:98:41:
+called `Result::unwrap_err()` on an `Ok` value: ()
+
+---- invariants::tests::check_tick_invariants_accepts_simulation_with_economy_ledger stdout ----
+
+thread 'invariants::tests::check_tick_invariants_accepts_simulation_with_economy_ledger' (144276) panicked at crates\engine\src\invariants.rs:74:9:
+assertion failed: !sim.economy_state.ledger.is_empty()
+
+---- invariants::tests::check_tick_invariants_rejects_oversized_ledger stdout ----
+
+thread 'invariants::tests::check_tick_invariants_rejects_oversized_ledger' (188976) panicked at crates\engine\src\invariants.rs:89:47:
+called `Result::unwrap_err()` on an `Ok` value: ()
+
+---- invariants::tests::negative_economy_budget_rejected_when_ledger_nonempty stdout ----
+
+thread 'invariants::tests::negative_economy_budget_rejected_when_ledger_nonempty' (164412) panicked at crates\engine\src\invariants.rs:112:47:
+called `Result::unwrap_err()` on an `Ok` value: ()
+
+---- save_bundle::tests::fr_civ_saveslot_named_slots_save_list_load_delete stdout ----
+
+thread 'save_bundle::tests::fr_civ_saveslot_named_slots_save_list_load_delete' (145228) panicked at crates\engine\src\save_bundle.rs:456:9:
+assertion `left == right` failed
+  left: WorldState { tick: 1, population: 128, energy_budget_joules: Fixed(1000000000000000), rng_seed: 31, last_tick_unrest_snapshots: {}, last_tick_cohesion: {}, last_tick_faction_unrest_response_intents: {}, last_tick_faction_hostility_intents: {}, last_tick_faction_trade_open_intents: {}, factions: {0: "Player", 1: "AI Faction A", 2: "AI Faction B"}, faction_treasury: {0: Fixed(10000000), 2: Fixed(8000000), 1: Fixed(8000000)}, faction_resources: {0: Resources { food: Fixed(120000), wood: Fixed(90000), metal: Fixed(70000), energy: Fixed(50000) }, 1: Resources { food: Fixed(80000), wood: Fixed(110000), metal: Fixed(100000), energy: Fixed(40000) }, 2: Resources { food: Fixed(60000), wood: Fixed(70000), metal: Fixed(120000), energy: Fixed(60000) }}, trade_routes: [TradeRoute { from_faction: 0, to_faction: 1, goods: "grain", volume: Fixed(12000) }, TradeRoute { from_faction: 1, to_faction: 2, goods: "ore", volume: Fixed(10000) }, TradeRoute { from_faction: 2, to_faction: 0, goods: "cloth", volume: Fixed(8000) }], belief: 0, cohesion: 0, unrest: 0, emergent_trade_route_keys: {}, trade_route_idle_ticks: {}, resources: Resources { food: Fixed(0), wood: Fixed(0), metal: Fixed(0), energy: Fixed(0) } }
+ right: WorldState { tick: 1, population: 128, energy_budget_joules: Fixed(1000000000000000), rng_seed: 31, last_tick_unrest_snapshots: {}, last_tick_cohesion: {}, last_tick_faction_unrest_response_intents: {}, last_tick_faction_hostility_intents: {}, last_tick_faction_trade_open_intents: {}, factions: {0: "Player", 1: "AI Faction A", 2: "AI Faction B"}, faction_treasury: {2: Fixed(7994480), 0: Fixed(10003520), 1: Fixed(8002000)}, faction_resources: {2: Resources { food: Fixed(60000), wood: Fixed(70000), metal: Fixed(130000), energy: Fixed(52000) }, 1: Resources { food: Fixed(92000), wood: Fixed(110000), metal: Fixed(90000), energy: Fixed(40000) }, 0: Resources { food: Fixed(108000), wood: Fixed(90000), metal: Fixed(70000), energy: Fixed(58000) }}, trade_routes: [TradeRoute { from_faction: 0, to_faction: 1, goods: "grain", volume: Fixed(12000) }, TradeRoute { from_faction: 1, to_faction: 2, goods: "ore", volume: Fixed(10000) }, TradeRoute { from_faction: 2, to_faction: 0, goods: "cloth", volume: Fixed(8000) }], belief: 750, cohesion: 0, unrest: 0, emergent_trade_route_keys: {}, trade_route_idle_ticks: {}, resources: Resources { food: Fixed(0), wood: Fixed(0), metal: Fixed(0), energy: Fixed(0) } }
+
+
+failures:
+    disasters::tests::phase_disasters_triggers_wildfire_on_high_heat_low_moisture
+    emergence::coastal_flood_risk_tests::computes_risk_and_displacement
+    emergence::naval_expansion_tests::clamp_and_nan_guard
+    emergence::urbanization_index_tests::clamp_and_nan_guard
+    emergence_metrics::tests::emergence_sample_stdout_summary_has_stable_field_order
+    engine::compat_state_tests::compat_unrest_round_trips_gini
+    engine::tests::audio_wire_tests::fr_audio_wire_disaster_records_routed_trigger
+    engine::tests::audio_wire_tests::fr_music_distinct_culture_cues_evolve_over_time
+    engine::tests::audio_wire_tests::phase_citizen_lifecycle_uses_should_reproduce
+    engine::tests::audio_wire_tests::starving_population_migrates_and_founds_settlement
+    engine::tests::culture_traits_drift_through_sim_tick_for_isolated_factions
+    engine::tests::diplomacy_relations_evolve_through_sim_tick
+    engine::tests::fr_civ_tutorial_advances_from_tick_progress
+    engine::tests::language_drift_wires_through_sim_tick_for_isolated_factions
+    engine::tests::language_names_diverge_for_isolated_factions_over_time
+    engine::tests::lifecycle_classifiers_wired_into_phase_life
+    engine::tests::phase_economy_conserves_non_negative_budget
+    engine::tests::phase_economy_updates_economy_state
+    engine::tests::phase_economy_uses_capitalist_allocator
+    engine::tests::phase_life_classifier_handles_missing_psyche
+    engine::tests::player_diplomacy_action_mutates_relation_substrate
+    engine::tests::player_trade_action_mutates_relation_substrate_positive
+    engine::tests::religion_diplomacy_coupling_phase_picks_trade_over_conflict
+    engine::tests::replay_combat_drains_to_same_voxel_state_as_live
+    engine::tests::replay_combat_log_deterministic_for_seed_rerun
+    engine::tests::replay_round_trip_preserves_combat_events
+    engine::tests::tick_wires_religion_emergence_and_trade_spread
+    engine::tests::voxel_phase_drains_dirty_events_each_tick
+    engine::tests::war_bridge_records_combat_replay_events
+    era::tests::fr_civ_tech_ticks_unlock_faction_tech
+    era::tests::prosperous_faction_out_researches_and_diffuses_to_neighbor
+    godtools::tests::disaster_volcanic_vent_writes_lava_and_steam
+    godtools::tests::life_heal_bumps_actor_health
+    godtools::tests::terrain_flatten_writes_stone_band
+    integrity::tests::check_integrity_rejects_invariant_violation
+    invariants::tests::check_tick_invariants_accepts_simulation_with_economy_ledger
+    invariants::tests::check_tick_invariants_rejects_oversized_ledger
+    invariants::tests::negative_economy_budget_rejected_when_ledger_nonempty
+    save_bundle::tests::fr_civ_saveslot_named_slots_save_list_load_delete
+
+test result: FAILED. 334 passed; 39 failed; 17 ignored; 0 measured; 0 filtered out; finished in 489.58s
+

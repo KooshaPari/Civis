@@ -32,6 +32,7 @@ members = [
   "crates/civ-institutions",
   "crates/powers",
   "crates/infra",
+  "crates/observability",
   # "crates/physics-substrate", — CDX sbom only, no Cargo.toml or source
   "crates/audio",
   "crates/holocron",
@@ -43,6 +44,7 @@ members = [
 exclude = [
   "clients/godot-ref/rust",
   "clients/unreal-show/Source/Civis/rust-shim",
+  "fuzz",
 ]
 resolver = "2"
 

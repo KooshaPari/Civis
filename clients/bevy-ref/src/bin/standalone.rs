@@ -61,6 +61,14 @@ fn main() {
         .insert_resource(attach_mode)
         .add_plugins(
             DefaultPlugins
+                .set(bevy::asset::AssetPlugin {
+                    // Resolve assets for both a source checkout and a copied
+                    // standalone build. Bevy otherwise anchors the asset root
+                    // to `target/*`, which makes a playable dev build report
+                    // every texture/UI asset as missing.
+                    file_path: standalone_asset_root(),
+                    ..default()
+                })
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: window_title,
@@ -231,6 +239,82 @@ fn main() {
     }
 
     app.run();
+}
+
+fn standalone_asset_root() -> String {
+    if let Some(root) = std::env::var_os("CIVIS_ASSET_ROOT") {
+        return root.to_string_lossy().into_owned();
+    }
+
+    let cwd = std::env::current_dir().ok();
+    let exe = std::env::current_exe().ok();
+    let candidates = asset_root_candidates(cwd.as_deref(), exe.as_deref());
+
+    candidates
+        .into_iter()
+        .find(|path| {
+            path.is_dir()
+                && path.join("ui").join("title-bg.png").is_file()
+                && path.join("icons").join("tool_spawn.png").is_file()
+        })
+        .unwrap_or_else(|| std::path::PathBuf::from("assets"))
+        .to_string_lossy()
+        .into_owned()
+}
+
+fn asset_root_candidates(
+    cwd: Option<&std::path::Path>,
+    exe: Option<&std::path::Path>,
+) -> Vec<std::path::PathBuf> {
+    let mut candidates = Vec::new();
+    if let Some(cwd) = cwd {
+        candidates.push(cwd.join("clients").join("bevy-ref").join("assets"));
+        candidates.push(cwd.join("assets"));
+    }
+    if let Some(exe) = exe {
+        let exe_dir = exe.parent().unwrap_or(exe);
+        // Packaged layout: civ-standalone.exe beside the source-style client
+        // tree, without requiring CIVIS_ASSET_ROOT at runtime.
+        candidates.push(exe_dir.join("clients").join("bevy-ref").join("assets"));
+        candidates.push(exe_dir.join("assets"));
+    }
+    candidates
+}
+
+#[cfg(test)]
+mod asset_root_tests {
+    use super::asset_root_candidates;
+
+    #[test]
+    fn packaged_client_tree_is_checked_beside_executable() {
+        let package_dir = std::path::PathBuf::from("dist");
+        let executable = package_dir.join("civ-standalone.exe");
+        let candidates = asset_root_candidates(None, Some(&executable));
+
+        assert_eq!(
+            candidates[0],
+            package_dir.join("clients").join("bevy-ref").join("assets")
+        );
+        assert_eq!(candidates[1], package_dir.join("assets"));
+    }
+
+    #[test]
+    fn checkout_tree_precedes_packaged_fallbacks() {
+        let checkout = std::path::PathBuf::from("checkout");
+        let package_dir = std::path::PathBuf::from("dist");
+        let executable = package_dir.join("civ-standalone.exe");
+        let candidates = asset_root_candidates(Some(&checkout), Some(&executable));
+
+        assert_eq!(
+            candidates[0],
+            checkout.join("clients").join("bevy-ref").join("assets")
+        );
+        assert_eq!(candidates[1], checkout.join("assets"));
+        assert_eq!(
+            candidates[2],
+            package_dir.join("clients").join("bevy-ref").join("assets")
+        );
+    }
 }
 
 /// How many Update frames to run before exiting (native smoke).

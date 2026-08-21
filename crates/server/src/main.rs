@@ -2,11 +2,30 @@ use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 
 use civ_engine::{CivSaveBundle, Simulation};
 use civ_server::{most_recent_save_path, run_ws_bridge, TickBroadcastFormat, WsBridgeConfig};
-use tokio::sync::Mutex;
-
+use civ_observability::{init_observability, ObservabilityConfig};
+use opentelemetry::trace::TracerProvider as _;
+use tracing_opentelemetry::OpenTelemetryLayer;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 #[tokio::main]
 async fn main() {
-    let addr = server_addr();
+    let provider = init_observability(ObservabilityConfig {
+        service_name: "civ-server".to_string(),
+        otlp_endpoint: None, // reads from OTEL_EXPORTER_OTLP_ENDPOINT env
+        prometheus_port: None, // default 9090
+    });
+    let tracer = provider.tracer("civ-server");
+    // Initialize tracing with OpenTelemetry layer
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer())
+        .with(OpenTelemetryLayer::new(tracer))
+        .init();
+
+    let port = std::env::var("CIV_SERVER_PORT")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(3000);
+    let addr: SocketAddr = SocketAddr::from(([127, 0, 0, 1], port));
     let max_clients = std::env::var("CIVIS_WS_MAX_CLIENTS")
         .ok()
         .and_then(|value| value.parse().ok())
@@ -29,7 +48,7 @@ async fn main() {
         .ok()
         .and_then(|value| value.parse().ok())
         .unwrap_or(42);
-    let sim = Arc::new(Mutex::new(
+    let sim = Arc::new(tokio::sync::Mutex::new(
         initial_simulation(&saves_dir, autoload, map_seed).await,
     ));
     // require_role defaults to true (deny-by-default); operators may disable

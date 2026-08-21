@@ -17,8 +17,8 @@ use civ_protocol_3d::{CivilianNeeds3d, CivilianStateEntry};
 use crate::game_laws::GameLawsOpen;
 use crate::live_pick::LiveSelection;
 use crate::settings_ui::{
-    ACTION_CYCLE_SIM_SPEED, ACTION_PAUSE_SIM, ACTION_SPEED_1X, ACTION_SPEED_2X, ACTION_SPEED_5X,
-    ACTION_SPEED_10X, GameSettings, KeyBinding,
+    GameSettings, KeyBinding, ACTION_CYCLE_SIM_SPEED, ACTION_SPEED_10X, ACTION_SPEED_1X,
+    ACTION_SPEED_2X, ACTION_SPEED_5X,
 };
 use crate::spawn_tools::{ActiveTool, BuildingSpawnKind, SpawnTool};
 use crate::{AttachMode, LiveEntityKind, SelectedLiveEntity};
@@ -1441,7 +1441,7 @@ mod tests {
 
         let entry = CivilianStateEntry {
             id: 42,
-            faction_id: 0,
+            faction_id: 3,
             needs: CivilianNeeds3d {
                 food: 1.0,
                 shelter: 0.5,

@@ -25,7 +25,10 @@ fn enable_utf8_console() {
     extern "system" {
         fn SetConsoleOutputCP(wCodePageID: u32) -> i32;
     }
-    // CP_UTF8 = 65001
+    // SAFETY: SetConsoleOutputCP is a Windows API call that sets the console
+    // output code page to UTF-8 (65001). This is safe to call at startup before
+    // any concurrent access to the console. The return value is intentionally
+    // ignored as UTF-8 is the modern default.\n    // CP_UTF8 = 65001
     unsafe { SetConsoleOutputCP(65001); }
 }
 

@@ -137,23 +137,23 @@ impl Chronicle {
     /// loading a stream then appending more produces the same id
     /// sequence as a single stream of the same total length.
     ///
-    /// Panics if `entries` is non-empty and any id is non-monotonic
+    /// Returns `Err` if `entries` is non-empty and any id is non-monotonic
     /// (strictly increasing), since that would mean the caller broke the
     /// append-only invariant. An empty `entries` slice is always valid.
-    pub fn from_entries(entries: Vec<ChronicleEntry>) -> Self {
+    pub fn from_entries(entries: Vec<ChronicleEntry>) -> Result<Self, String> {
         let mut next_id: u64 = 0;
         for (i, e) in entries.iter().enumerate() {
             if i > 0 && e.id.0 <= entries[i - 1].id.0 {
-                panic!(
+                return Err(format!(
                     "Chronicle::from_entries: ids must be strictly increasing (entry {} id={} <= prev id={})",
                     i,
                     e.id.0,
-                    entries[i - 1].id.0
-                );
+                    entries[i - 1].id.0,
+                ));
             }
             next_id = e.id.0 + 1;
         }
-        Self { entries, next_id }
+        Ok(Self { entries, next_id })
     }
 
     /// Append a new significant event to the chronicle.
@@ -511,7 +511,7 @@ mod tests {
             parts(&[1, 2]),
         );
 
-        let reloaded = Chronicle::from_entries(live.entries.clone());
+        let reloaded = Chronicle::from_entries(live.entries.clone()).unwrap();
         assert_eq!(live.entries, reloaded.entries);
         assert_eq!(live.next_id, reloaded.next_id);
 

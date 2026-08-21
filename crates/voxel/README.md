@@ -1,9 +1,32 @@
-# civ-voxel
+# voxel
 
-Adaptive voxel substrate: sparse octree + dense leaf chunks; deterministic mesh-dirty queue
+> Civis adapter over the shared phenotype-voxel kernel.
 
-**Status:** scaffold stub on `feat/civis-3d-foundation`. No implementation yet.
+## Overview
 
-**FR namespace:** `FR-CIV-VOXEL-*` (see `docs/roadmap/civis-3d-extension.md` / `FUNCTIONAL_REQUIREMENTS.md` once the addendum merges).
+The `voxel` crate is the primary interface for the Civis voxel world engine. It wraps the shared phenotype-voxel kernel (Sparse Voxel Octree + dense 16-cubed chunks) and adds Civis-specific features like a rich material palette, fluid cellular automata (CA), and procedural worldgen.
 
-**Owner:** Civis 3D extension.
+It manages LOD (Level of Detail), residency budgets, and PBR material blending. This crate is responsible for translating high-level world commands into efficient voxel data structures and operations.
+
+## Features
+
+- Sparse Voxel Octree (SVO) and dense chunk management
+- 30+ material palette with PBR blending
+- Fluid cellular automata (CA) simulation
+- Procedural worldgen and brush systems
+- LOD management and residency budgeting
+- HUD overlay and boundary configuration
+
+## Usage
+
+```rust
+use voxel::*;
+```
+
+## Architecture
+
+The world is represented by `VoxelWorld`, composed of chunks identified by `ChunkId` and positioned in `WorldCoord`. Materials are referenced by `MaterialId`. Operations like `BrushStamp` allow for high-level modifications to the voxel data.
+
+## License
+
+Part of the [Civis](https://github.com/KooshaPari/Civis) project.

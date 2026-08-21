@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 /// A simplified climate model simulating CO₂ concentration, mean temperature,
 /// and sea-level response to anthropogenic emissions.
 ///

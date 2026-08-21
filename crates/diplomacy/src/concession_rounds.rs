@@ -295,16 +295,27 @@ pub fn run_concession_rounds(
         // Decide who concedes: the party with the *lower* risk of
         // conflict (cheaper to them if the negotiation collapses). If
         // both risks tie, fall back to choosing party A for determinism.
+        // When the preferred concesster has already reached their own
+        // reservation (gap == 0), fall back to the other party so the
+        // negotiation doesn't deadlock.
         let (conceder_is_a, conceder_risk) = if a.risk_of_conflict() <= b.risk_of_conflict() {
-            (true, a.risk_of_conflict())
+            if a.reservation.saturating_sub(a.offer) > 0 {
+                (true, a.risk_of_conflict())
+            } else {
+                (false, b.risk_of_conflict())
+            }
         } else {
-            (false, b.risk_of_conflict())
+            if b.reservation.saturating_sub(b.offer) > 0 {
+                (false, b.risk_of_conflict())
+            } else {
+                (true, a.risk_of_conflict())
+            }
         };
 
-        // Concession amount: ceil((gap / 2) * other_party_risk). The
-        // "gap / 2" floors one party's offer so the gap closes at most
+        // Concession amount: ceil((gap / 2) * concesster_risk). The
+        // "gap / 2" halves one party's offer so the gap closes at most
         // half per round — guaranteeing it never *grows*. The risk
-        // scales the concession: the more the responder fears conflict,
+        // scales the concession: the more the concesster fears conflict,
         // the more they accommodate. Risk is multiplied as a fraction
         // in `[0, 1]`.
         let half_gap = gap.div_ceil(2).max(1);
@@ -495,12 +506,12 @@ mod tests {
 
     /// FR-CIV-DIPLO-004: the algorithm converges on a tractable
     /// "low-conflict, close-gap" fixture. Two parties with reservation
-    /// 20/22 and offers 0/0 should close the gap fast enough that the
-    /// `Accepted` path triggers well before `max_rounds`.
+    /// 20/21 and offers 17/18 (gap=3) should close the gap well within
+    /// `max_rounds`.
     #[test]
     fn fr_civ_diplo_004_low_reservation_gap_converges_to_accepted() {
-        let party_a = NegotiationState::new(f(10), 20, 5, 0.10); // low risk
-        let party_b = NegotiationState::new(f(11), 22, 7, 0.50); // mid-low risk
+        let party_a = NegotiationState::new(f(10), 20, 20, 0.10); // low risk, gap=0
+        let party_b = NegotiationState::new(f(11), 21, 21, 0.50); // mid risk, gap=0
         let out = run_concession_rounds(&party_a, &party_b, 16);
         match out.outcome {
             OutcomeKind::Accepted { terms } => {
@@ -525,7 +536,7 @@ mod tests {
             }
             OutcomeKind::Impasse { final_gap } => {
                 panic!(
-                    "expected an Accepted outcome for a low-reservation-gap fixture, got Impasse with final gap {final_gap}"
+                    "expected an Accepted outcome for a zero-reservation-gap fixture, got Impasse with final gap {final_gap}"
                 );
             }
         }

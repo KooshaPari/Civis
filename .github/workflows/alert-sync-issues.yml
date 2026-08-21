@@ -15,4 +15,5 @@ jobs:
   sync:
     runs-on: ubuntu-24.04
     steps:
-      - run: echo TODO-alert-sync-placeholder
+      - run: |
+          echo 'TODO: replace with custom alert-sync logic'

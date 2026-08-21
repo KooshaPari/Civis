@@ -1014,9 +1014,9 @@ impl GameSettings {
 
     /// Serialize and write to [`SETTINGS_PATH`].
     ///
-    /// Render-engine environment selection is applied once during startup by
-    /// [`Self::apply_boot_render_engine`]. Keeping it out of this live UI path
-    /// avoids mutating process-wide environment state while Bevy is running.
+    /// Does not mutate process env here — wgpu/backend selection must be applied
+    /// before adapter search via [`Self::apply_boot_render_engine`] (or a
+    /// restart). Concurrent env mutation from Bevy UI schedules is undefined.
     pub fn save(&self) {
         match ron::ser::to_string_pretty(self, ron::ser::PrettyConfig::default()) {
             Ok(text) => {

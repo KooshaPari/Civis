@@ -68,13 +68,7 @@ allow = [
   "0BSD",
   "CC0-1.0",
   "Unicode-3.0",
-  "CDLA-Permissive-2.0",            # webpki-roots (tokio-tungstenite / hyper-rustls)
-  "MPL-2.0",                        # resvg/usvg asset export dependencies
-  "BSL-1.0",                        # clipboard-win via arboard/bevy_egui
-  "MIT-0",                          # encase/bevy_encase_derive in Bevy 0.18
-  "OFL-1.1",                        # font-related transitive dependencies
-  "Ubuntu-font-1.0",                # font-related transitive dependencies
-  "NCSA",                           # font-related dependency dual-license expression
+  "CDLA-Permissive-2.0", # webpki-roots (tokio-tungstenite / hyper-rustls)
 ]
 # Confidence threshold for the SPDX matcher. `threshold = 1.0` is the strictest
 # (exact SPDX match). Lower values may accept near-matches.

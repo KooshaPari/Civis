@@ -2,6 +2,7 @@
 //!
 //! The individual feature modules are intentionally small contracts while
 //! their implementations are being migrated from the historical prototype.
+#![forbid(unsafe_code)]
 
 pub use civ_voxel::{ChunkId, MaterialId};
 

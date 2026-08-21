@@ -282,11 +282,6 @@ impl WsClient {
     }
 }
 
-fn drain_into<T>(receiver: &crossbeam_channel::Receiver<T>, items: &mut Vec<T>) {
-    items.clear();
-    items.extend(receiver.try_iter());
-}
-
 fn drain_outcomes(rx: &crossbeam_channel::Receiver<OutcomeHudData>) {
     while rx.try_recv().is_ok() {}
 }
@@ -747,21 +742,6 @@ mod tests {
     fn parse_outcome_response_ignores_other_rpc_ids() {
         let text = r#"{"jsonrpc":"2.0","id":3,"result":{"outcome":"victory"}}"#;
         assert!(parse_outcome_response(text).is_none());
-    }
-
-    #[test]
-    fn parse_scene_reset_notification_reads_tick() {
-        let text = r#"{"jsonrpc":"2.0","method":"scene.reset","params":{"tick":42}}"#;
-        assert_eq!(
-            parse_scene_reset_notification(text),
-            Some(SceneReset { tick: 42 })
-        );
-    }
-
-    #[test]
-    fn parse_scene_reset_notification_ignores_rpc_responses() {
-        let text = r#"{"jsonrpc":"2.0","id":7,"result":{"tick":42}}"#;
-        assert_eq!(parse_scene_reset_notification(text), None);
     }
 
     #[test]

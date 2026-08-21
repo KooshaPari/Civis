@@ -1006,7 +1006,11 @@ pub use concession_rounds::{
 
 pub mod transcripts;
 
+pub mod treaty;
+
 pub use transcripts::{Transcript, TranscriptClause};
+
+pub use treaty::{Treaty, TreatyEffect, TreatyError, TreatyManager, TreatyStatus, TreatyTerm, TreatyType};
 
 // ---------------------------------------------------------------------------
 // Tests

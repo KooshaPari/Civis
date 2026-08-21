@@ -5,6 +5,7 @@
 //! sandbox controls under `POST /control/*` (place_voxel, spawn_civilian,
 //! damage, speed). Dashboard static build under `web/dashboard/dist` is
 //! served at `GET /`.
+#![forbid(unsafe_code)]
 
 mod app;
 mod control_routes;
@@ -19,4 +20,4 @@ pub mod terrain;
 #[cfg(test)]
 mod api_tests;
 
-pub use server::run;
+pub use server::{run, WatchError};

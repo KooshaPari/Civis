@@ -1,4 +1,7 @@
 //! Public adapter for the validated voxel streaming-window contracts.
+//!
+//! The policy implementation is owned by `civ-voxel`; this crate keeps the
+//! client-facing module path stable without maintaining a second stub model.
 
 pub use civ_voxel::window::ring_iter::RingIter;
 pub use civ_voxel::window::{

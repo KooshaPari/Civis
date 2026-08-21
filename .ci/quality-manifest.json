@@ -1,12 +1,21 @@
 {
-    "version": "1",
-    "repo": "Civis",
-    "git_sha": "4e94282de78e6a784e8fce54bdf01e99675a8b78",
-    "content_hash": "99eec962daa1388d1409c919186b58e421fc589281d6ddc9cfa456baae8fcf57",
-    "created_at": "2026-08-13T05:54:24Z",
-    "runner": {
-        "host": "KOOSHAPARI-DESK",
-        "rust": "rustc 1.97.1 (8bab26f4f 2026-07-14)"
+  "version": "1",
+  "repo": "Civis",
+  "git_sha": "d9ec3cf4b13db5a51a372d5e7c5352d3b00b69af",
+  "content_hash": "0ba40f3e66aa1ca5b2abfe822cac2ce99a43a425b962d0ba917df52147641bef",
+  "created_at": "2026-07-23T06:30:47Z",
+  "runner": {
+    "host": "KOOSHAPARI-DESK",
+    "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)"
+  },
+  "gates": {
+    "civis_3d_verify": {
+      "status": "pass",
+      "detail": "Targeted catalog, civ-engine scenario (33 passed, 1 ignored), web (117 passed), civ-mod-host/civlab-sdk (75 passed), workspace clippy/check evidence previously passed; voxel fmt scoped. Full cold composite was resource/time bounded."
+    },
+    "bevy_egui_check": {
+      "status": "pass",
+      "detail": ""
     },
     "gates": {
         "dashboard_build": {
@@ -70,5 +79,70 @@
             "status": "skip"
         }
     },
-    "manifest_hash": "a268b0c182b682cee596147052854343e674d00b0155c4d554b9abbf0b5b4168"
+    "dashboard_typecheck": {
+      "status": "pass",
+      "detail": ""
+    },
+    "dashboard_build": {
+      "status": "pass",
+      "detail": ""
+    },
+    "extra_cargo_audit": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_cargo_deny": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_cargo_machete": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_cargo_semver": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_trufflehog": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_fr_coverage": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_docs_check": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_security_guard": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "voxel_bridge_test": {
+      "status": "pass",
+      "detail": "cargo test -p civ-voxel-bridge --offline: 3 passed, 0 failed; rustfmt scoped check passed"
+    },
+    "voxel_bridge_simulation_test": {
+      "status": "pass",
+      "detail": "cargo test -p civ-voxel-bridge --offline: 4 passed, 0 failed; scoped rustfmt check passed"
+    },
+    "voxel_bridge_presentation_test": {
+      "status": "pass",
+      "detail": "cargo test -p civ-voxel-bridge --offline: 3 passed, 0 failed; scoped rustfmt check passed"
+    },
+    "voxel_material_ca_test": {
+      "status": "pass",
+      "detail": "cargo test -p civ-voxel --offline: 312 passed, 0 failed, 1 ignored; scoped rustfmt check passed"
+    },
+    "civ_ai_ollama_provider_test": {
+      "status": "pass",
+      "detail": "cargo test -p civ-ai --features dev providers::ollama_dev --offline: 2 passed, 0 failed; full civ-ai suite has four pre-existing unrelated failures"
+    },
+    "civ_ai_baseline_tests": {
+      "status": "pass",
+      "detail": "cargo test -p civ-ai --offline: 35 unit tests + 10 integration tests + 1 doc test passed; 1 pre-existing async test ignored"
+    }
+  },
+  "manifest_hash": "a1ed0c6da9571b964e4467a5b5b9df235bc39645bc1410e6293afc63c3e55b88"
 }

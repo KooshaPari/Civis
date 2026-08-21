@@ -328,23 +328,6 @@ impl Default for LiveStreamScene {
     }
 }
 
-impl LiveStreamScene {
-    /// Remove all streamed entities and authoritative caches from the prior scene.
-    pub fn reset(&mut self, commands: &mut Commands) {
-        for entity in self
-            .chunks
-            .values()
-            .chain(self.water_entities.values())
-            .chain(self.agents.values())
-            .chain(self.buildings.values())
-            .chain(self.graph_parcels.values())
-        {
-            commands.entity(*entity).despawn();
-        }
-        *self = Self::default();
-    }
-}
-
 /// Despawn all streamed entities and reset maps so a new WorldGen boot cannot
 /// treat a previous session's chunks/agents as "ready".
 pub fn clear_live_stream_scene(commands: &mut Commands, scene: &mut LiveStreamScene) {

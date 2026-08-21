@@ -16,12 +16,18 @@ civ-build = { path = "../build" }
 civ-mod-host = { path = "../mod-host" }
 civ-save-db = { path = "../save-db" }
 civ-emergence-metrics = { path = "../civ-emergence-metrics" }
+civ-observability = { path = "../observability" }
 axum = { version = "0.7", features = ["ws"] }
 futures = "0.3"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time", "net"] }
 tracing = "0.1"
+tracing-opentelemetry = "0.33"
+tracing-subscriber = "0.3"
+opentelemetry = "0.32"
+opentelemetry_sdk = { version = "0.32", features = ["rt-tokio"] }
+prometheus = "0.14"
 thiserror = "1"
 uuid = { version = "1", features = ["v4"] }
 

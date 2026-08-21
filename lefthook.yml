@@ -17,10 +17,8 @@ pre-commit:
             run: bash .github/hooks/pre-commit
 
 pre-push:
-    piped: false
-    commands:
-        quality-manifest:
-            run: bash scripts/quality/pre-push-quality-manifest.sh
-            stage_fixed: true
-        branch-clean:
-            run: node scripts/dev/branch-clean.mjs
+  piped: false
+  commands:
+    quality-manifest:
+      run: bash scripts/quality/pre-push-quality-manifest.sh
+      stage_fixed: true

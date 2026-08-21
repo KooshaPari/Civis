@@ -23,17 +23,14 @@ civ-agents = { path = "../../crates/agents" }
 civ-holocron = { path = "../../crates/holocron", optional = true }
 civ-laws = { path = "../../crates/laws", optional = true }
 civ-engine = { path = "../../crates/engine", optional = true }
-# Diplomacy substrate (PR #362 — P4 civ-007 slice): pairwise Relation graph +
-# scalar standing + threshold-crossing events. Pulled in for the Standings
-# section of the Diplomacy panel. Optional, gated behind the `bevy` feature
-# alongside `civ-engine` because the bridge ingests from `civ_engine::DiplomacyEvent`.
-civ-diplomacy = { path = "../../crates/diplomacy", optional = true }
 civ-voxel = { path = "../../crates/voxel" }
+civ-diplomacy = { path = "../../crates/diplomacy", optional = true }
+bevy_rapier3d = { version = "0.29", optional = true }
 crossbeam-channel = "0.5"
 serde = { version = "1", features = ["derive"] }
 # RON persistence for the settings/options panel (src/settings_ui.rs). Pulled in
-# transitively by bevy already; pinned 0.8 to match the workspace lock.
-ron = "0.8"
+# transitively by bevy already; bumped to 0.12 to eliminate base64 0.21 dupe.
+ron = "0.12"
 rand = { version = "0.8", optional = true }
 rand_chacha = { version = "0.3", optional = true }
 surface-nets = "0.1"
@@ -52,8 +49,6 @@ image = { version = "0.25", optional = true, default-features = false, features 
 # winit version already in the workspace lock (0.30, pulled by bevy_winit).
 winit = { version = "0.30", optional = true, default-features = false }
 wgpu = { version = "27", optional = true }
-# Optional physics (not wired yet); keep out of default `bevy` feature to avoid wgpu version clashes.
-bevy_rapier3d = { version = "0.34", optional = true }
 # Audio (ambient soundscape + SFX), gated behind the `audio` feature.
 # Compat (checked 2026-05-30 via crates.io): bevy_kira_audio 0.25.x is the
 # release that targets Bevy 0.18 (0.26.x targets Bevy 0.19-rc), so it matches
@@ -197,3 +192,9 @@ path = "src/bin/native_hal_probe.rs"
 required-features = ["bevy", "client-bins"]
 test = false
 bench = false
+
+[package.metadata.cargo-machete]
+# bevy_rapier3d and civ-diplomacy are optional deps gated behind the `bevy`
+# and `rapier` features; machete's grep-based scan can't see `dep:` usage
+# behind feature flags.
+ignored = ["bevy_rapier3d", "civ-diplomacy"]

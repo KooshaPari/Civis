@@ -1,0 +1,28 @@
+[package]
+name = "civis-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary = { version = "1", features = ["derive"] }
+civ-engine = { path = "../crates/engine" }
+civ-mod-host = { path = "../crates/mod-host" }
+
+[[bin]]
+name = "fuzz_replay"
+path = "fuzz_targets/fuzz_replay.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_wasm"
+path = "fuzz_targets/fuzz_wasm.rs"
+test = false
+doc = false
+bench = false

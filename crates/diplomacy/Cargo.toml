@@ -9,7 +9,6 @@ publish = false
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "1"
-tracing = "0.1"
 civ-legends = { path = "../legends" }
 
 [dev-dependencies]

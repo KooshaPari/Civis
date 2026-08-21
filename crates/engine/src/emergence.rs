@@ -1973,13 +1973,13 @@ mod naval_expansion_tests {
     fn clamp_and_nan_guard() {
         assert_eq!(naval_expansion(f32::NAN, f32::NAN), 0.0);
         assert_eq!(naval_expansion(-1.0, -2.0), 0.0);
-        // Saturating logistics: coastal=1.0*0.6 + 3/(1+3)*0.4 = 0.6+0.3 = 0.9
-        assert!((naval_expansion(2.0, 3.0) - 0.9).abs() < 1e-5);
+        // Fast path: coastal>=1 && surplus>=1 → 1.0
+        assert!((naval_expansion(2.0, 3.0) - 1.0).abs() < 1e-5);
         // coastal share saturated at 1, logistics→0.4/(1+0.4)
         let v = naval_expansion(1.0, 0.4);
         assert!(v.is_finite());
         // 0.6 + 0.4*(0.4/1.4) ≈ 0.714
-        assert!(v > 0.6 && v < 0.8, "got {v}");
+        assert!(v > 0.6 && v < 0.75, "got {v}");
     }
 
     #[test]
@@ -1998,12 +1998,11 @@ mod urbanization_index_tests {
     fn clamp_and_nan_guard() {
         assert_eq!(urbanization_index(f32::NAN, f32::NAN, f32::NAN), 0.0);
         assert_eq!(urbanization_index(-1.0, -2.0, -3.0), 0.0);
-        // Saturating: dens=1.0*0.5 + 3/(1+3)*0.3 + 1.0*0.2 = 0.5+0.225+0.2 = 0.925
-        assert!((urbanization_index(2.0, 3.0, 4.0) - 0.925).abs() < 1e-5);
+        // Fast path: dens=1.0*0.5 + 1.0*0.3 + 1.0*0.2 = 1.0 (surplus capped at 1)
+        assert!((urbanization_index(2.0, 3.0, 4.0) - 1.0).abs() < 1e-5);
         let v = urbanization_index(0.5, 1.0, 0.5);
         assert!(v.is_finite());
-        // 0.5*0.5 + 0.5*0.3 + 0.5*0.2 = 0.5
-        assert!(v >= 0.5 && v < 1.0, "got {v}");
+        assert!(v > 0.5 && v < 0.8, "got {v}");
     }
 
     #[test]

@@ -1008,9 +1008,16 @@ pub mod transcripts;
 
 pub mod treaty;
 
+pub mod effects;
+
 pub use transcripts::{Transcript, TranscriptClause};
 
 pub use treaty::{Treaty, TreatyEffect, TreatyError, TreatyManager, TreatyStatus, TreatyTerm, TreatyType};
+
+pub use effects::{
+    CulturalInfluenceEffect, DiplomacyEvent, MilitaryAllianceEffect, TradeEmbargoEffect,
+    TributeEffect, TributeRelationship, WorldState,
+};
 
 // ---------------------------------------------------------------------------
 // Tests

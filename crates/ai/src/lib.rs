@@ -33,6 +33,7 @@ pub mod cache;
 pub mod config;
 pub mod decision;
 pub mod goal;
+pub mod goal_tree;
 pub mod mood;
 pub mod pool;
 pub mod preflight;

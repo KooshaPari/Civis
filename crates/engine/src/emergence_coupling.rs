@@ -1,18 +1,20 @@
-//! Emergence policy coupling functions (FR-CIV-0100).
+//! Emergence-coupling free functions extracted from `engine.rs`.
 //!
-//! These pure free functions implement downward-causation and upward-causation
-//! couplings between the simulation's macro systems. They are reserved for
-//! future integration and currently have `#[allow(dead_code)]`.
+//! Contains standalone free functions, constants, and helper types that
+//! implement the emergence-coupling logic (FR-CIV-0100). Extracted from the
+//! monolithic `engine.rs` to reduce file size and improve modularity.
 
 use crate::engine::{
     Building, BuildingType, Citizen, ClusterStocks, CohesionEvent, CohesionEventKind,
-    CohesionSnapshot, CombatDamagePulse, EconomicFocus, FabricTier, InvariantError,
+    CohesionSnapshot, CombatDamagePulse, EconomicFocus, FabricTier,
     InstitutionEvent, JobType, KinshipEdge, KinshipKind, LanguageState, MembershipPayoffTotals,
     MilitaryUnit, MoodSnapshot, Position, Production, ReligionEvent,
-    ReligionEventKind, ReligiousProfile, ResearchCache, Resources, ResourceType, Sim,
+    ReligionEventKind, ResearchCache, Resources, ResourceType, Sim,
     SimSeed, Simulation, SimulationSnapshot, StratBand, StratificationEvent,
     StratificationEventKind, StratificationReport, TradeRoute, UnitType, WorldState,
 };
+use crate::invariants::InvariantError;
+use crate::religion::ReligiousProfile;
 use crate::fixed_math::{Fixed, FixedFromNum};
 use crate::SCALE;
 use civ_agents::{
@@ -45,13 +47,13 @@ const CHRONICLE_MAX_LEN: usize = 200;
 /// Food units each cluster member adds to settlement stock per tick in
 /// [`Simulation::phase_life`].
 #[allow(dead_code)] // Reserved for future simulation integration
-const CLUSTER_FOOD_PRODUCTION_PER_MEMBER: i64 = 1;
+pub(crate) const CLUSTER_FOOD_PRODUCTION_PER_MEMBER: i64 = 1;
 /// Food units each cluster member drains per tick in
 /// [`Simulation::phase_settlement_consumption`]. Must be >= production so the
 /// accumulator stays bounded (net zero at matched rates; converges toward zero
 /// when strictly greater).
 #[allow(dead_code)] // Reserved for future simulation integration
-const CLUSTER_FOOD_CONSUMPTION_PER_MEMBER: i64 = 1;
+pub(crate) const CLUSTER_FOOD_CONSUMPTION_PER_MEMBER: i64 = 1;
 /// Market weight for settlement food commons before pressure scaling (N1).
 #[allow(dead_code)] // Reserved for future simulation integration
 const SETTLEMENT_FOOD_MARKET_WEIGHT: i64 = 2;
@@ -448,7 +450,7 @@ fn sentience_research_bonus(world: &hecs::World) -> u64 {
 
 /// The economic focus a civilization tends toward, from its strongest sector.
 #[allow(dead_code)] // Reserved for future simulation integration
-fn candidate_economic_focus(
+pub(crate) fn candidate_economic_focus(
     food: i64,
     research_tier: u64,
     belief: u64,
@@ -1020,17 +1022,17 @@ const FACTION_RELATION_THRESHOLD_SPAN: i64 = 5_000;
 const CULTURE_PEACE_SPAN: f32 = 3_000.0;
 /// Minimum members for an emergent settlement (matches `phase_life` HUD filter).
 #[allow(dead_code)] // Reserved for future simulation integration
-const SETTLEMENT_MIN_MEMBERS: u32 = 2;
+pub(crate) const SETTLEMENT_MIN_MEMBERS: u32 = 2;
 /// Co-location radius for emergent settlements (matches `phase_life` cluster radius).
 #[allow(dead_code)] // Reserved for future simulation integration
-const SETTLEMENT_CLUSTER_RADIUS_FP: i64 = (6 * FIXED_SCALE) / 100;
+pub(crate) const SETTLEMENT_CLUSTER_RADIUS_FP: i64 = (6 * FIXED_SCALE) / 100;
 /// Contact radius between settlement pairs (2Ã— cluster radius).
 #[allow(dead_code)] // Reserved for future simulation integration
-const SETTLEMENT_CONTACT_RADIUS_FP: i64 = SETTLEMENT_CLUSTER_RADIUS_FP * 2;
+pub(crate) const SETTLEMENT_CONTACT_RADIUS_FP: i64 = SETTLEMENT_CLUSTER_RADIUS_FP * 2;
 
 #[allow(dead_code)] // Reserved for settlement membership analysis
-struct SettlementMembershipPayoff<'a> {
-    stock_by_cluster: &'a BTreeMap<u64, ClusterStocks>,
+pub(crate) struct SettlementMembershipPayoff<'a> {
+    pub(crate) stock_by_cluster: &'a BTreeMap<u64, ClusterStocks>,
 }
 
 #[allow(dead_code)] // Reserved for settlement membership analysis
@@ -1046,7 +1048,7 @@ impl civ_agents::cluster::MembershipPayoff for SettlementMembershipPayoff<'_> {
 }
 
 #[allow(dead_code)] // Reserved for future simulation integration
-fn settlement_actors_by_settlement(
+pub(crate) fn settlement_actors_by_settlement(
     actor_settlement: &BTreeMap<u64, u32>,
 ) -> BTreeMap<u32, BTreeSet<u64>> {
     let mut by_settlement: BTreeMap<u32, BTreeSet<u64>> = BTreeMap::new();
@@ -1060,7 +1062,7 @@ fn settlement_actors_by_settlement(
 }
 
 #[allow(dead_code)] // Reserved for future simulation integration
-fn settlement_centroid_position(world: &World, settlement_id: u64) -> Option<Position3d> {
+pub(crate) fn settlement_centroid_position(world: &World, settlement_id: u64) -> Option<Position3d> {
     let mut count = 0_i64;
     let mut sx = 0_i128;
     let mut sy = 0_i128;
@@ -1209,7 +1211,7 @@ fn diplomacy_culture_threshold_bias(
 
 /// Dominant explicit faction alignment per multi-member settlement cluster (N3).
 #[allow(dead_code)] // Reserved for future simulation integration
-fn settlement_dominant_factions(
+pub(crate) fn settlement_dominant_factions(
     world: &World,
     cluster_member_counts: &BTreeMap<u64, u32>,
 ) -> BTreeMap<u64, u32> {
@@ -1259,7 +1261,7 @@ fn settlement_dominant_factions(
 /// rollup from `phase_life`. Clusters with fewer than 2 members are ignored so
 /// lone wanderers cannot anchor a faction's centroid.
 #[allow(dead_code)] // Reserved for future simulation integration
-fn faction_language_centroids(
+pub(crate) fn faction_language_centroids(
     cultures: &std::collections::BTreeMap<u64, CultureProfile>,
     dominant: &std::collections::BTreeMap<u64, u32>,
     member_counts: &std::collections::BTreeMap<u64, u32>,
@@ -1295,7 +1297,7 @@ fn faction_language_centroids(
 
 /// Member-weighted per-faction religion signal for culture drift (FR-CIV-CULTURE).
 #[allow(dead_code)] // Reserved for future simulation integration
-fn faction_religion_signals(
+pub(crate) fn faction_religion_signals(
     religious_profiles: &BTreeMap<u32, ReligiousProfile>,
     dominant: &BTreeMap<u64, u32>,
     member_counts: &BTreeMap<u64, u32>,
@@ -1327,7 +1329,7 @@ fn faction_religion_signals(
 }
 
 #[allow(dead_code)] // Reserved for future simulation integration
-fn fabric_tier_signal(fabric: FabricTier) -> f32 {
+pub(crate) fn fabric_tier_signal(fabric: FabricTier) -> f32 {
     match fabric {
         FabricTier::Tight => 1.0,
         FabricTier::Loosened => 0.7,
@@ -1337,7 +1339,7 @@ fn fabric_tier_signal(fabric: FabricTier) -> f32 {
 }
 
 #[allow(dead_code)] // Reserved for future simulation integration
-fn settlement_actor_hardship_signal(
+pub(crate) fn settlement_actor_hardship_signal(
     settlement_id: u32,
     settlement_actors: &BTreeMap<u32, BTreeSet<u64>>,
     actor_hardship: &BTreeMap<u64, i64>,
@@ -1356,7 +1358,7 @@ fn settlement_actor_hardship_signal(
 }
 
 #[allow(dead_code)] // Reserved for future simulation integration
-fn settlement_kinship_density_signal(
+pub(crate) fn settlement_kinship_density_signal(
     settlement_id: u32,
     settlement_actors: &BTreeMap<u32, BTreeSet<u64>>,
     kinship: &BTreeMap<u64, Vec<KinshipEdge>>,
@@ -1378,7 +1380,7 @@ fn settlement_kinship_density_signal(
 }
 
 #[allow(dead_code)] // Reserved for future simulation integration
-fn settlement_trade_contact_signal(settlement_id: u32, flows: &[SettlementTradeFlow]) -> f32 {
+pub(crate) fn settlement_trade_contact_signal(settlement_id: u32, flows: &[SettlementTradeFlow]) -> f32 {
     let volume: i64 = flows
         .iter()
         .filter(|flow| {
@@ -1391,7 +1393,7 @@ fn settlement_trade_contact_signal(settlement_id: u32, flows: &[SettlementTradeF
 }
 
 #[allow(dead_code)] // Reserved for future simulation integration
-fn settlement_religion_spread_edges(flows: &[SettlementTradeFlow]) -> BTreeMap<(u32, u32), f32> {
+pub(crate) fn settlement_religion_spread_edges(flows: &[SettlementTradeFlow]) -> BTreeMap<(u32, u32), f32> {
     let mut edges = BTreeMap::new();
     for flow in flows {
         if flow.from_settlement == flow.to_settlement || flow.qty <= 0 {
@@ -1412,7 +1414,7 @@ fn settlement_religion_spread_edges(flows: &[SettlementTradeFlow]) -> BTreeMap<(
 }
 
 #[allow(dead_code)] // Reserved for future simulation integration
-fn accumulate_profile_diffusion(
+pub(crate) fn accumulate_profile_diffusion(
     left: &ReligiousProfile,
     right: &ReligiousProfile,
     rate: f32,
@@ -1435,7 +1437,7 @@ fn accumulate_profile_diffusion(
 
 /// Canonical settlement contact edges when any cross-cluster agents are within radius (N3).
 #[allow(dead_code)] // Reserved for future simulation integration
-fn settlement_contact_pairs(
+pub(crate) fn settlement_contact_pairs(
     world: &World,
     cluster_member_counts: &BTreeMap<u64, u32>,
     contact_radius_fp: i64,
@@ -1483,7 +1485,7 @@ fn settlement_contact_pairs(
 
 /// Faction pairs implied by contacting settlements with different dominant factions (N3).
 #[allow(dead_code)] // Reserved for future simulation integration
-fn diplomacy_faction_pairs_from_settlement_contact(
+pub(crate) fn diplomacy_faction_pairs_from_settlement_contact(
     dominant: &BTreeMap<u64, u32>,
     contacts: &BTreeSet<(u64, u64)>,
 ) -> Vec<(u32, u32)> {
@@ -1639,7 +1641,7 @@ pub(crate) fn rollup_cluster_member_counts(world: &World) -> BTreeMap<u64, u32> 
 /// Stub: same shape so callers can treat settlement/cluster membership
 /// uniformly until the engine fully merges the two.
 #[allow(dead_code)] // Reserved for future simulation integration
-fn settlement_member_counts(world: &World) -> BTreeMap<u64, u32> {
+pub(crate) fn settlement_member_counts(world: &World) -> BTreeMap<u64, u32> {
     rollup_cluster_member_counts(world)
 }
 

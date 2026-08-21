@@ -113,9 +113,12 @@ pub use civ_emergence_metrics::branching::BranchingRegime;
 pub use civ_mod_host::{load_manifest, ModBrowserEntry, ModGuestStateSave, ModType};
 pub use emergence::{CivAiDecision, EmergenceFeedEvent, EmergenceState};
 pub use emergence_metrics::{EmergenceBranchingState, EmergenceSample};
-pub use engine::{
+pub use emergence_coupling::{
     cohesion_delta, diplomacy_conflict_threshold, diplomacy_peace_threshold,
-    institution_belief_signal, institution_divergence_boost, job_type_for_civilian_id, Building,
+    institution_belief_signal, institution_divergence_boost,
+};
+pub use engine::{
+    job_type_for_civilian_id, Building,
     BuildingType, Citizen, ClusterStocks, CombatDamagePulse, EconomicFocus, EconomicFocusEvent,
     EmotionDrivenBehavior, InstitutionEvent, JobType,
     MilitaryUnit, MoodSnapshot, Position, PsycheDrivenBehavior, ResourceType, Resources, Sim,

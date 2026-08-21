@@ -38,8 +38,6 @@
 //! - `engine` - Full ECS-based simulation with tick loop
 //! - `step` - Simple step function for basic simulation
 //! - `policy` - Policy/consumption calculations
-//! - `metrics` - Tyranny/legitimacy metrics
-//! - `io` - File I/O utilities
 
 pub mod building_emergence;
 pub mod climate;
@@ -86,6 +84,7 @@ pub mod religion;
 pub mod writing;
 
 pub mod tutorial;
+pub mod fixed_math;
 
 /// Fixed-point scaling factor (1 raw unit = SCALE joules). Engine energy
 /// quantities are stored in fixed-point `i64` for determinism and converted

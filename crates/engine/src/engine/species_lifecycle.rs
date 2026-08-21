@@ -3,8 +3,8 @@
 //! decomposition pass 2 (Civis Engine Decomposition).
 
 use civ_agents::{
-    spawn_child_near, spawn_civilian_at, ActorVisualKind, Alignment,
-    Civilian as AgentCivilian, Needs, Position3d,
+    spawn_child_near, spawn_civilian_at, ActorVisualKind, Alignment, Civilian as AgentCivilian,
+    Needs, Position3d,
 };
 use civ_voxel::FIXED_SCALE;
 use hecs::{Entity, World};
@@ -136,7 +136,11 @@ pub(crate) fn apply_age_stage_effects(age: u16, needs: &mut Needs) {
     }
 }
 
-pub(crate) fn is_fertile_adult(entity: Entity, world: &World, sample: &CivilianLifecycleSample) -> bool {
+pub(crate) fn is_fertile_adult(
+    entity: Entity,
+    world: &World,
+    sample: &CivilianLifecycleSample,
+) -> bool {
     let Ok(needs) = world.get::<&Needs>(entity) else {
         return false;
     };
@@ -149,7 +153,11 @@ pub(crate) fn is_fertile_adult(entity: Entity, world: &World, sample: &CivilianL
         && needs.belonging >= 0.5
 }
 
-pub(crate) fn is_migratory_adult(entity: Entity, world: &World, sample: &CivilianLifecycleSample) -> bool {
+pub(crate) fn is_migratory_adult(
+    entity: Entity,
+    world: &World,
+    sample: &CivilianLifecycleSample,
+) -> bool {
     let Ok(needs) = world.get::<&Needs>(entity) else {
         return false;
     };
@@ -570,9 +578,9 @@ impl Simulation {
         let mut dead = Vec::new();
         let mut births = Vec::new();
 
-        for (entity, (civilian, pos, needs)) in self
-            .world
-            .query_mut::<(&mut AgentCivilian, &Position3d, &mut Needs)>()
+        for (entity, (civilian, pos, needs)) in
+            self.world
+                .query_mut::<(&mut AgentCivilian, &Position3d, &mut Needs)>()
         {
             civilian.age = civilian.age.saturating_add(1);
             if self.state.resources.food.to_bits() > 0 {

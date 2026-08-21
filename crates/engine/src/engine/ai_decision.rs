@@ -67,13 +67,9 @@ impl Simulation {
     /// Clears the per-faction intent sets, evaluates each faction, and
     /// applies the resulting intents.
     pub(crate) fn phase_faction_decisions(&mut self) {
-        self.state
-            .last_tick_faction_unrest_response_intents
-            .clear();
+        self.state.last_tick_faction_unrest_response_intents.clear();
         self.state.last_tick_faction_hostility_intents.clear();
-        self.state
-            .last_tick_faction_trade_open_intents
-            .clear();
+        self.state.last_tick_faction_trade_open_intents.clear();
         for (faction_id, decision) in crate::faction_decisions::compute_faction_decisions(self) {
             match decision {
                 crate::faction_decisions::FactionDecision::RaiseUnrestResponse => {

@@ -304,7 +304,7 @@ impl MythIndex {
             first_epoch: entry.epoch,
             last_epoch: entry.epoch,
         };
-        self.next_id = self.next_id.checked_add(1).expect("MythId overflow");
+        self.next_id = self.next_id.saturating_add(1);
         Some(myth)
     }
 

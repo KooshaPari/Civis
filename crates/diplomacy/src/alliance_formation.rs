@@ -217,6 +217,75 @@ impl AllianceFormation {
     }
 }
 
+/// Dynamic alliance stability metrics.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AllianceStability {
+    /// Trust score between members (0.0 to 1.0).
+    pub trust_score: f64,
+    /// Number of shared historical events (ticks of cooperation).
+    pub shared_history: u32,
+    /// Fraction of resources shared within the alliance (0.0 to 1.0).
+    pub resource_share: f64,
+}
+
+impl AllianceStability {
+    pub fn new(trust: f64, history: u32, share: f64) -> Self {
+        Self {
+            trust_score: trust.clamp(0.0, 1.0),
+            shared_history: history,
+            resource_share: share.clamp(0.0, 1.0),
+        }
+    }
+}
+
+/// Manager for dynamic alliance lifecycle operations.
+pub struct DynamicAllianceManager {
+    /// Maps (FactionId, FactionId) -> AllianceStability
+    stabilities: BTreeMap<(FactionId, FactionId), AllianceStability>,
+    active_alliances: BTreeSet<BTreeSet<FactionId>>,
+}
+
+impl DynamicAllianceManager {
+    pub fn new() -> Self {
+        Self {
+            stabilities: BTreeMap::new(),
+            active_alliances: BTreeSet::new(),
+        }
+    }
+
+    /// Evaluate the stability of a specific pair.
+    pub fn evaluate_stability(&self, a: FactionId, b: FactionId) -> Option<&AllianceStability> {
+        let key = if a < b { (a, b) } else { (b, a) };
+        self.stabilities.get(&key)
+    }
+
+    /// Form a new alliance.
+    pub fn form_alliance(&mut self, members: BTreeSet<FactionId>, initial_stability: AllianceStability) {
+        for &a in &members {
+            for &b in &members {
+                if a < b {
+                    let key = (a, b);
+                    self.stabilities.entry(key).or_insert_with(|| initial_stability.clone());
+                }
+            }
+        }
+        self.active_alliances.insert(members);
+    }
+
+    /// Dissolve an alliance.
+    pub fn dissolve_alliance(&mut self, members: &BTreeSet<FactionId>) {
+        if self.active_alliances.remove(members) {
+            for &a in members {
+                for &b in members {
+                    if a < b {
+                        self.stabilities.remove(&(a, b));
+                    }
+                }
+            }
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -359,5 +428,24 @@ mod tests {
             bad.validate(),
             Err(AllianceConfigError::ZeroMinBlocSize)
         ));
+    }
+
+    #[test]
+    fn dynamic_alliance_form_and_dissolve() {
+        let mut mgr = DynamicAllianceManager::new();
+        let mut members = BTreeSet::new();
+        members.insert(f(1));
+        members.insert(f(2));
+        mgr.form_alliance(members.clone(), AllianceStability::new(0.8, 10, 0.5));
+        assert!(mgr.evaluate_stability(f(1), f(2)).is_some());
+        mgr.dissolve_alliance(&members);
+        assert!(mgr.evaluate_stability(f(1), f(2)).is_none());
+    }
+
+    #[test]
+    fn dynamic_alliance_stability_clamps() {
+        let s = AllianceStability::new(1.5, 5, -0.2);
+        assert_eq!(s.trust_score, 1.0);
+        assert_eq!(s.resource_share, 0.0);
     }
 }

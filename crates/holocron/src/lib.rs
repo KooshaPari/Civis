@@ -27,7 +27,7 @@
 //! # Usage
 //!
 //! ```
-//! use holocron::{VerbRegistry, default_registry};
+//! use civ_holocron::{VerbRegistry, default_registry};
 //!
 //! let registry = default_registry();
 //! assert!(registry.len() >= 50);

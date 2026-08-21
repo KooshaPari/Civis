@@ -1,74 +1,68 @@
 name: Release CLI Binaries
 
 on:
-    push:
-        tags:
-            - "v*"
+  push:
+    tags:
+      - 'v*'
 
 permissions:
-    contents: write
+  contents: write
 
 jobs:
-    build:
-        strategy:
-            matrix:
-                include:
-                    - os: ubuntu-latest
-                      target: x86_64-unknown-linux-gnu
-                      artifact: civis-cli-linux-amd64
-                      ext: tar.gz
-                    - os: windows-latest
-                      target: x86_64-pc-windows-msvc
-                      artifact: civis-cli-windows-amd64
-                      ext: zip
-                    - os: macos-latest
-                      target: aarch64-apple-darwin
-                      artifact: civis-cli-macos-arm64
-                      ext: tar.gz
-        runs-on: ${{ matrix.os }}
-        steps:
-            - uses: actions/checkout@v7
-            - uses: dtolnay/rust-toolchain@stable
-              with:
-                  targets: ${{ matrix.target }}
-            - uses: Swatinem/rust-cache@v2
-              with:
-                  cache-all-crates: true
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact: civis-cli-linux-amd64
+            ext: tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact: civis-cli-windows-amd64
+            ext: zip
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact: civis-cli-macos-arm64
+            ext: tar.gz
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
 
-            - name: Build CLI binaries
-              run:
-                  cargo build --locked --release -p civis-cli --bin civis-pixels --bin civis-census
-                  --bin civis-dump --bin civis-mcp
+      - name: Build CLI binaries
+        run: cargo build --locked --release -p civis-cli --bin civis-pixels --bin civis-census --bin civis-dump --bin civis-mcp
 
-            - name: Package (unix)
-              if: runner.os != 'Windows'
-              run: |
-                  tar czf ${{ matrix.artifact }}.tar.gz -C target/release civis-pixels civis-census civis-dump civis-mcp
+      - name: Package (unix)
+        if: runner.os != 'Windows'
+        run: tar czf ${{ matrix.artifact }}.tar.gz -C target/release civis-pixels civis-census civis-dump civis-mcp
 
-            - name: Package (windows)
-              if: runner.os == 'Windows'
-              run:
-                  Compress-Archive -Path
-                  target/release/civis-pixels.exe,target/release/civis-census.exe,target/release/civis-dump.exe,target/release/civis-mcp.exe
-                  -DestinationPath ${{ matrix.artifact }}.zip
+      - name: Package (windows)
+        if: runner.os == 'Windows'
+        run: Compress-Archive -Path target/release/civis-pixels.exe,target/release/civis-census.exe,target/release/civis-dump.exe,target/release/civis-mcp.exe -DestinationPath ${{ matrix.artifact }}.zip
 
-            - name: Upload artifact
-              uses: actions/upload-artifact@v4
-              with:
-                  name: ${{ matrix.artifact }}
-                  path: ${{ matrix.artifact }}.${{ matrix.ext }}
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}.${{ matrix.ext }}
 
-    release:
-        needs: build
-        runs-on: ubuntu-latest
-        steps:
-            - name: Download all artifacts
-              uses: actions/download-artifact@v4
-              with:
-                  path: artifacts
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
 
-            - name: Create GitHub Release
-              uses: softprops/action-gh-release@v2
-              with:
-                  generate_release_notes: true
-                  files: artifacts/**/*
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: artifacts/**/*

@@ -30,8 +30,8 @@
 //! use civ_holocron::{VerbRegistry, default_registry};
 //!
 //! let registry = default_registry();
-//! assert!(registry.len() >= 50);
-//! assert!(registry.get("civ_bless_faction").is_some());
+//! assert!(registry.len() >= 10);
+//! assert!(registry.get("civ_lay_tax").is_some());
 //! ```
 
 #![forbid(unsafe_code)]

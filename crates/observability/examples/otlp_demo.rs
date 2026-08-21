@@ -27,7 +27,8 @@ fn main() {
         service_name: "civis-otlp-demo".to_string(),
         otlp_endpoint: None, // reads OTEL_EXPORTER_OTLP_ENDPOINT
         prometheus_port: None, // default 9090
-    });
+    })
+    .expect("Failed to initialise observability");
 
     let tracer = provider.tracer("civis-demo");
 

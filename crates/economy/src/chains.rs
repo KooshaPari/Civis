@@ -257,9 +257,10 @@ impl ChainStepReport {
             if !outcome.fired {
                 continue;
             }
-            let recipe = book
-                .get(&outcome.name)
-                .expect("fired outcome has matching recipe");
+            let recipe = match book.get(&outcome.name) {
+                Some(r) => r,
+                None => return Err(ChainConservationError::MissingRecipe(outcome.name.clone())),
+            };
             if recipe.joule_yield != 0 {
                 return Err(ChainConservationError::ValueMinted {
                     joule_delta: outcome.joule_delta,
@@ -318,6 +319,8 @@ pub enum ChainConservationError {
         /// Sum of output leg quantities.
         out_sum: i64,
     },
+    /// Recipe referenced by a fired outcome is missing from the chain book.
+    MissingRecipe(String),
 }
 
 /// Advance the chain runner by exactly one chain tick.

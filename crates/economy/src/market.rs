@@ -131,25 +131,18 @@ impl MarketState {
             return;
         }
         if self.prices.len() == 1 {
-            let key = self
-                .prices
-                .first_key_value()
-                .expect("non-empty prices")
-                .0
-                .clone();
-            let delta = deterministic_price_delta(tick, &key);
-            let price = self.prices.get_mut(&key).expect("key from first_key_value");
-            *price = price.saturating_add(delta);
+            if let Some((key, price)) = self.prices.iter_mut().next() {
+                let delta = deterministic_price_delta(tick, key);
+                *price = price.saturating_add(delta);
+            }
             return;
         }
         let len = self.prices.len();
         let idx = tick as usize % len;
-        let key = self
-            .prices
-            .keys()
-            .nth(idx)
-            .expect("non-empty prices")
-            .clone();
+        let key = match self.prices.keys().nth(idx) {
+            Some(k) => k.clone(),
+            None => return,
+        };
         let delta = deterministic_price_delta(tick, &key);
         if let Some(price) = self.prices.get_mut(&key) {
             *price = price.saturating_add(delta);

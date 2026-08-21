@@ -22,6 +22,7 @@ fn setup_test_observability() -> opentelemetry_sdk::trace::SdkTracerProvider {
         otlp_endpoint: Some("http://127.0.0.1:4318".to_string()),
         prometheus_port: Some(19876),
     })
+    .expect("Failed to initialise test observability")
 }
 
 // ---------------------------------------------------------------------------

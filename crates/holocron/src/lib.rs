@@ -31,7 +31,7 @@
 //!
 //! let registry = default_registry();
 //! assert!(registry.len() >= 50);
-//! assert!(registry.lookup("civ_bless_faction").is_some());
+//! assert!(registry.get("civ_bless_faction").is_some());
 //! ```
 
 #![forbid(unsafe_code)]

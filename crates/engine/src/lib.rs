@@ -51,7 +51,6 @@ pub mod emergence_metrics;
 pub mod engine;
 pub mod era;
 pub mod economy_engine;
-pub mod emergence_coupling;
 pub mod faction_decisions;
 pub mod gameplay;
 pub mod godtools;

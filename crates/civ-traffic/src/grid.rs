@@ -175,10 +175,10 @@ impl ServiceGrid {
             return Ok(self
                 .cells
                 .get(&key)
-                .unwrap_or_else(|| unreachable!("cell was just inserted or already present")));
+                .expect("cell was just inserted or already present"));
         }
         cell.state = CellState::Active;
-        Ok(self.cells.get(&key).unwrap_or_else(|| unreachable!("cell just upserted")))
+        Ok(self.cells.get(&key).expect("cell just upserted"))
     }
 
     /// Number of cells currently in the grid.

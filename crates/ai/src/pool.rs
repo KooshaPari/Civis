@@ -84,13 +84,18 @@ pub struct AiWorkerPool {
 impl AiWorkerPool {
     /// Spawn the pool with a bounded queue of `queue_capacity` and a hard cap of
     /// `max_concurrent` in-flight generations.
-    pub fn spawn(queue_capacity: usize, max_concurrent: usize) -> Result<Self, crate::AiError> {
+    ///
+    /// # Panics
+    /// Panics if the dedicated tokio runtime cannot be built (loud, per the
+    /// failure stance — there is no silent degrade).
+    #[must_use]
+    pub fn spawn(queue_capacity: usize, max_concurrent: usize) -> Self {
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(max_concurrent.max(1))
             .enable_all()
             .thread_name("civ-ai-worker")
             .build()
-            .map_err(|e| crate::AiError::Unavailable(format!("civ-ai worker pool runtime build: {e}")))?;
+            .expect("civ-ai worker pool: failed to build dedicated tokio runtime");
 
         let (task_tx, mut task_rx) = mpsc::channel::<AiTask>(queue_capacity.max(1));
         let (result_tx, result_rx) = mpsc::channel::<AiResult>(queue_capacity.max(1));
@@ -102,10 +107,10 @@ impl AiWorkerPool {
                 let result_tx = result_tx.clone();
                 tokio::spawn(async move {
                     // Hard concurrency cap: never exceed max_concurrent in flight.
-                    let _permit = match permit.acquire().await {
-                        Ok(p) => p,
-                        Err(_) => return, // semaphore closed, task is shutting down
-                    };
+                    let _permit = permit
+                        .acquire()
+                        .await
+                        .expect("civ-ai semaphore closed unexpectedly");
                     let result = run_task(task).await;
                     // Result drain is best-effort: if the sim dropped the
                     // receiver (shutdown), the late result is discarded.
@@ -114,11 +119,11 @@ impl AiWorkerPool {
             }
         });
 
-        Ok(Self {
+        Self {
             _runtime: runtime,
             task_tx,
             result_rx,
-        })
+        }
     }
 
     /// Enqueue a task **without blocking** the caller (the sim never awaits).

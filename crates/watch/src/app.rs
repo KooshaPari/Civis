@@ -17,7 +17,6 @@ use civ_save_db::SaveDb;
 use serde::{Deserialize, Serialize};
 use tokio::sync::{broadcast, Mutex, RwLock};
 
-use crate::server::WatchError;
 use crate::terrain::Terrain;
 
 pub(crate) fn env_u16(name: &str, default: u16) -> u16 {
@@ -316,15 +315,13 @@ pub(crate) struct TerrainCache {
 }
 
 impl TerrainCache {
-    pub(crate) fn from_terrain(terrain: &Terrain) -> Result<Self, WatchError> {
-        let body = Bytes::from(
-            serde_json::to_vec(terrain)
-                .map_err(|e| WatchError::DatabaseOpen(format!("terrain serializes: {e}")))?,
-        );
+    pub(crate) fn from_terrain(terrain: &Terrain) -> Self {
+        let body = Bytes::from(serde_json::to_vec(terrain).expect("terrain serializes"));
         let etag = format!("\"{:016x}\"", terrain.heights_fingerprint());
-        let etag = HeaderValue::from_str(&etag)
-            .map_err(|e| WatchError::BindAddress(format!("invalid etag: {e}")))?;
-        Ok(Self { body, etag })
+        Self {
+            body,
+            etag: HeaderValue::from_str(&etag).expect("valid etag"),
+        }
     }
 }
 

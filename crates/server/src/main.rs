@@ -13,8 +13,7 @@ async fn main() {
         service_name: "civ-server".to_string(),
         otlp_endpoint: None, // reads from OTEL_EXPORTER_OTLP_ENDPOINT env
         prometheus_port: None, // default 9090
-    })
-    .expect("Failed to initialise observability");
+    });
     let tracer = provider.tracer("civ-server");
     // Initialize tracing with OpenTelemetry layer
     tracing_subscriber::registry()

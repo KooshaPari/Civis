@@ -1020,23 +1020,6 @@ pub use effects::{
 };
 
 // ---------------------------------------------------------------------------
-// FR-CIV-DIPLO-003: Shadow network system
-// ---------------------------------------------------------------------------
-
-// Additive slice: covert flows of finance, information, and materiel
-// persist under enforcement. Leakage is conserved (non-negative);
-// every shadow flow is logged; enforcement intensity feeds legitimacy
-// modifier with overreach detection. Lives in its own module and does
-// not modify the substrate above.
-
-pub mod shadow_networks;
-
-pub use shadow_networks::{
-    NonNegativeU64, PairShadowAggregate, ShadowFlow, ShadowFlowType, ShadowNetworkConfig,
-    ShadowNetworkEvent, ShadowNetworkState,
-};
-
-// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 

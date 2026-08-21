@@ -179,42 +179,42 @@ struct ServerMetrics {
 }
 
 impl ServerMetrics {
-    fn new(registry: &Registry) -> Result<Self, String> {
+    fn new(registry: &Registry) -> Self {
         let tick_batches_sent = IntCounter::new("civ_tick_batches_sent", "Total tick batches sent")
-            .map_err(|e| format!("create civ_tick_batches_sent: {e}"))?;
+            .expect("failed to create civ_tick_batches_sent metric");
         let tick_messages_sent =
             IntCounter::new("civ_tick_messages_sent", "Total tick messages sent")
-                .map_err(|e| format!("create civ_tick_messages_sent: {e}"))?;
+                .expect("failed to create civ_tick_messages_sent metric");
         let ws_client_disconnects = IntCounter::new(
             "civ_ws_client_disconnects",
             "Total WebSocket client disconnects",
         )
-        .map_err(|e| format!("create civ_ws_client_disconnects: {e}"))?;
+        .expect("failed to create civ_ws_client_disconnects metric");
         let connected_clients = IntGauge::new(
             "civ_connected_clients",
             "Current number of connected WebSocket clients",
         )
-        .map_err(|e| format!("create civ_connected_clients: {e}"))?;
+        .expect("failed to create civ_connected_clients metric");
 
         registry
             .register(Box::new(tick_batches_sent.clone()))
-            .map_err(|e| format!("register civ_tick_batches_sent: {e}"))?;
+            .expect("failed to register civ_tick_batches_sent");
         registry
             .register(Box::new(tick_messages_sent.clone()))
-            .map_err(|e| format!("register civ_tick_messages_sent: {e}"))?;
+            .expect("failed to register civ_tick_messages_sent");
         registry
             .register(Box::new(ws_client_disconnects.clone()))
-            .map_err(|e| format!("register civ_ws_client_disconnects: {e}"))?;
+            .expect("failed to register civ_ws_client_disconnects");
         registry
             .register(Box::new(connected_clients.clone()))
-            .map_err(|e| format!("register civ_connected_clients: {e}"))?;
+            .expect("failed to register civ_connected_clients");
 
-        Ok(Self {
+        Self {
             tick_batches_sent,
             tick_messages_sent,
             ws_client_disconnects,
             connected_clients,
-        })
+        }
     }
 }
 
@@ -319,7 +319,7 @@ async fn serve_ws_bridge(
     let session_id = resolve_session_id();
     tracing::info!(%session_id, ?save_db_path, "session-scoped save metadata db ready");
     let metrics_registry = Registry::new();
-    let metrics = Arc::new(ServerMetrics::new(&metrics_registry).expect("initialize server metrics"));
+    let metrics = Arc::new(ServerMetrics::new(&metrics_registry));
     let state = AppState {
         sim,
         tick: Arc::new(AtomicU64::new(0)),
@@ -1813,7 +1813,7 @@ mod tests {
         let save_db_path = save_db_path_for_saves_dir(&saves_dir);
         let save_db = Arc::new(SaveDb::open(&save_db_path).expect("open save db"));
         let metrics_registry = Registry::new();
-        let metrics = Arc::new(ServerMetrics::new(&metrics_registry).expect("initialize server metrics"));
+        let metrics = Arc::new(ServerMetrics::new(&metrics_registry));
         let state = AppState {
             sim,
             tick: Arc::new(AtomicU64::new(tick)),

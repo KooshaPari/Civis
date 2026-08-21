@@ -99,11 +99,11 @@ pub async fn run() -> Result<(), WatchError> {
     let (tx, _) = broadcast::channel::<Snapshot>(64);
     let terrain_seed = env_u64("CIVIS_MAP_SEED", 42);
     let terrain = Terrain::generate(terrain_seed);
-    let terrain_cache = TerrainCache::from_terrain(&terrain)?;
+    let terrain_cache = TerrainCache::from_terrain(&terrain);
     let laws = Arc::new(default_law_db());
     let data_dir = resolve_data_dir();
     let saves_dir = Arc::new(data_dir.join("saves"));
-    std::fs::create_dir_all(&*saves_dir).map_err(|e| WatchError::DatabaseOpen(format!("create saves dir: {e}")))?;
+    std::fs::create_dir_all(&*saves_dir).expect("create saves dir");
     let save_db_path = data_dir.join("saves.db");
     let save_db = Arc::new(
         SaveDb::open(&save_db_path).map_err(|err| {
@@ -126,7 +126,7 @@ pub async fn run() -> Result<(), WatchError> {
         .timeout(REMOTE_FETCH_TIMEOUT)
         .redirect(reqwest::redirect::Policy::limited(5))
         .build()
-        .map_err(|e| WatchError::DatabaseOpen(format!("build reqwest client: {e}")))?;
+        .expect("reqwest client");
     info!(
         "terrain: {0}x{0} = {1} cells generated",
         terrain.size,
@@ -175,13 +175,13 @@ pub async fn run() -> Result<(), WatchError> {
     let port = env_u16("CIV_WATCH_PORT", 9090);
     let addr: SocketAddr = format!("0.0.0.0:{port}")
         .parse()
-        .map_err(|e| WatchError::BindAddress(format!("invalid listen address: {e}")))?;
+        .expect("valid listen address");
     info!("civ-watch listening on http://{addr}");
     info!("dashboard: http://localhost:{port}");
 
     let listener = tokio::net::TcpListener::bind(addr)
         .await
         .map_err(|e| WatchError::BindAddress(format!("bind {port}: {e}")))?;
-    axum::serve(listener, app).await.map_err(|e| WatchError::BindAddress(format!("axum server error: {e}")))?;
+    axum::serve(listener, app).await.expect("axum server");
     Ok(())
 }

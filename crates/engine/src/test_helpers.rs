@@ -11,7 +11,7 @@ use super::Simulation;
 /// # Example
 /// ```ignore
 /// let sim = SimulationBuilder::new(42).build();
-/// assert_eq!(sim.tick(), 0);
+/// assert_eq!(sim.current_tick(), 0);
 /// ```
 pub struct SimulationBuilder {
     sim: Simulation,
@@ -44,12 +44,12 @@ mod tests {
     #[test]
     fn builder_creates_simulation() {
         let sim = SimulationBuilder::new(42).build();
-        assert_eq!(sim.tick(), 0);
+        assert_eq!(sim.current_tick(), 0);
     }
 
     #[test]
     fn builder_advances_ticks() {
         let sim = SimulationBuilder::new(42).advance_ticks(5).build();
-        assert!(sim.tick() >= 5);
+        assert!(sim.current_tick() >= 5);
     }
 }

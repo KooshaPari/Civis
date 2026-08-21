@@ -31,9 +31,11 @@
 
 pub mod cache;
 pub mod config;
+pub mod coordination;
 pub mod decision;
 pub mod goal;
 pub mod goal_tree;
+pub mod mcts;
 pub mod mood;
 pub mod pool;
 pub mod preflight;
@@ -45,7 +47,9 @@ pub mod social_graph;
 
 pub use cache::AiCache;
 pub use config::AiConfig;
+pub use coordination::{AgentGroup, CoordinationProtocol, NegotiationOutcome};
 pub use goal::{Goal, GoalChoice, Need};
+pub use mcts::{GameState as MctsGameState, MctsConfig, MctsTree};
 pub use mood::*;
 pub use pool::{AiPayload, AiResult, AiTask, AiWorkerPool, TaskId};
 pub use provenance::{AiEvent, ReplayAdvanceOutcome, ReplayMode, ReplayRefusal};

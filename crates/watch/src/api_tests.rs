@@ -52,7 +52,8 @@ fn test_state_with_seed(seed: u64) -> AppState {
         latest: Arc::new(RwLock::new(None)),
         tx,
         terrain: Arc::new(terrain.clone()),
-        terrain_cache: TerrainCache::from_terrain(&terrain),
+        terrain_cache: TerrainCache::from_terrain(&terrain)
+            .expect("failed to create terrain cache"),
         laws: Arc::new(default_law_db()),
         sim,
         military: Arc::new(Mutex::new(Vec::new())),

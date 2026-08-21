@@ -51,7 +51,7 @@ pub const MOOD_MAX: i64 = 200;
 /// `crime_score` to `0`; lower crime gives a linearly higher score.
 pub const MOOD_CRIME_BASE: i64 = 300;
 
-fn institution_kind_key(kind: civ_institutions::InstitutionKind) -> u8 {
+pub(crate) fn institution_kind_key(kind: civ_institutions::InstitutionKind) -> u8 {
     match kind {
         civ_institutions::InstitutionKind::Temple => 1,
         civ_institutions::InstitutionKind::Garrison => 2,
@@ -203,7 +203,7 @@ pub struct StratificationReport {
 /// Computes the Gini coefficient (0.0 = perfect equality, 1.0 = one household
 /// owns everything) for a slice of household wealth values. Non-finite
 /// results are clamped to `0.0` to satisfy the no-NaN/Inf project policy.
-fn compute_gini(wealths: &[i64]) -> f64 {
+pub(crate) fn compute_gini(wealths: &[i64]) -> f64 {
     if wealths.is_empty() {
         return 0.0;
     }

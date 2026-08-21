@@ -44,14 +44,14 @@ pub mod climate;
 pub mod command_queue;
 pub mod conditions;
 pub mod culture;
-pub mod disasters;
 pub mod diplomacy;
+pub mod disasters;
+pub mod economy_engine;
 pub mod emergence;
+pub mod emergence_coupling;
 pub mod emergence_metrics;
 pub mod engine;
 pub mod era;
-pub mod economy_engine;
-pub mod emergence_coupling;
 pub mod faction_decisions;
 pub mod gameplay;
 pub mod godtools;
@@ -67,6 +67,8 @@ pub mod replay;
 pub mod replay_format;
 pub mod save_bundle;
 pub mod scenario;
+pub mod settlement_helpers;
+pub mod social_types;
 pub mod spawn;
 pub mod spectator;
 pub mod tech;
@@ -84,8 +86,8 @@ pub mod psyche_behavior;
 pub mod religion;
 pub mod writing;
 
-pub mod tutorial;
 pub mod fixed_math;
+pub mod tutorial;
 
 /// Fixed-point scaling factor (1 raw unit = SCALE joules). Engine energy
 /// quantities are stored in fixed-point `i64` for determinism and converted
@@ -112,15 +114,14 @@ pub use civ_build::{BiomeStyleTag, EmergentStyleKey};
 pub use civ_emergence_metrics::branching::BranchingRegime;
 pub use civ_mod_host::{load_manifest, ModBrowserEntry, ModGuestStateSave, ModType};
 pub use emergence::{CivAiDecision, EmergenceFeedEvent, EmergenceState};
-pub use emergence_metrics::{EmergenceBranchingState, EmergenceSample};
 pub use emergence_coupling::{
     cohesion_delta, diplomacy_conflict_threshold, diplomacy_peace_threshold,
     institution_belief_signal, institution_divergence_boost,
 };
+pub use emergence_metrics::{EmergenceBranchingState, EmergenceSample};
 pub use engine::{
-    job_type_for_civilian_id, Building,
-    BuildingType, Citizen, ClusterStocks, CombatDamagePulse, EconomicFocus, EconomicFocusEvent,
-    EmotionDrivenBehavior, InstitutionEvent, JobType,
+    job_type_for_civilian_id, Building, BuildingType, Citizen, ClusterStocks, CombatDamagePulse,
+    EconomicFocus, EconomicFocusEvent, EmotionDrivenBehavior, InstitutionEvent, JobType,
     MilitaryUnit, MoodSnapshot, Position, PsycheDrivenBehavior, ResourceType, Resources, Sim,
     SimSeed, Simulation, SimulationSnapshot, StratBand, StratificationEvent,
     StratificationEventKind, StratificationReport, TradeRoute, UnitType, WorldState,

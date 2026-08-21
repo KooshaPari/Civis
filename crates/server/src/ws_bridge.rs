@@ -180,9 +180,8 @@ struct ServerMetrics {
 
 impl ServerMetrics {
     fn new(registry: &Registry) -> Self {
-        let tick_batches_sent =
-            IntCounter::new("civ_tick_batches_sent", "Total tick batches sent")
-                .expect("failed to create civ_tick_batches_sent metric");
+        let tick_batches_sent = IntCounter::new("civ_tick_batches_sent", "Total tick batches sent")
+            .expect("failed to create civ_tick_batches_sent metric");
         let tick_messages_sent =
             IntCounter::new("civ_tick_messages_sent", "Total tick messages sent")
                 .expect("failed to create civ_tick_messages_sent metric");
@@ -249,6 +248,27 @@ struct AppState {
     session_id: String,
     metrics: Arc<ServerMetrics>,
     metrics_registry: Registry,
+    allow_replay_http: bool,
+    authn_required: bool,
+}
+
+fn authorize_request(headers: &HeaderMap, required: bool) -> Result<(), StatusCode> {
+    if !required {
+        return Ok(());
+    }
+    if let Some(auth) = headers.get("authorization") {
+        if auth.to_str().unwrap_or("").starts_with("Bearer ") {
+            return Ok(());
+        }
+    }
+    Err(StatusCode::UNAUTHORIZED)
+}
+
+fn replay_http_allowed(addr: SocketAddr, is_authorized: bool) -> bool {
+    if is_authorized {
+        return true;
+    }
+    addr.ip().is_loopback()
 }
 
 /// Run the WebSocket bridge and 10 Hz tick loop.
@@ -295,10 +315,7 @@ async fn serve_ws_bridge(
     std::fs::create_dir_all(&config.saves_dir).expect("create saves directory");
     std::fs::create_dir_all(&config.replays_dir).expect("create replays directory");
     let save_db_path = save_db_path_for_saves_dir(&config.saves_dir);
-    let save_db = Arc::new(
-        SaveDb::open(&save_db_path)
-            .expect("failed to open save database")
-    );
+    let save_db = Arc::new(SaveDb::open(&save_db_path).expect("failed to open save database"));
     let session_id = resolve_session_id();
     tracing::info!(%session_id, ?save_db_path, "session-scoped save metadata db ready");
     let metrics_registry = Registry::new();
@@ -317,6 +334,8 @@ async fn serve_ws_bridge(
         session_id,
         metrics,
         metrics_registry,
+        allow_replay_http: true,
+        authn_required: false,
     };
 
     let app = Router::new()
@@ -363,7 +382,9 @@ async fn metrics_handler(State(state): State<AppState>) -> impl IntoResponse {
     let encoder = TextEncoder::new();
     let metric_families = state.metrics_registry.gather();
     let mut buffer = Vec::new();
-    encoder.encode(&metric_families, &mut buffer).expect("failed to encode prometheus metrics");
+    encoder
+        .encode(&metric_families, &mut buffer)
+        .expect("failed to encode prometheus metrics");
     // Use a static string for the content type to avoid lifetime issues.
     let content_type = "text/plain; version=0.0.4; charset=utf-8";
     (
@@ -402,7 +423,7 @@ async fn replay_import(
     clients.retain(|tx| {
         let delivered = tx.try_send(ClientOutbound::Rpc(reset.clone())).is_ok();
         if !delivered {
-            state.ws_client_disconnects.fetch_add(1, Ordering::Relaxed);
+            state.metrics.ws_client_disconnects.inc();
         }
         delivered
     });
@@ -1807,6 +1828,8 @@ mod tests {
             session_id: "test-session".to_string(),
             metrics,
             metrics_registry,
+            allow_replay_http: true,
+            authn_required: false,
         };
         (dir, state)
     }

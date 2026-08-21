@@ -63,17 +63,24 @@ use std::ops::{Deref, DerefMut};
 // code within this crate (and lib.rs re-exports) continue to compile.
 pub(crate) use crate::climate::{CoastalColumn, WATER_MARKER_MATERIAL};
 pub(crate) use crate::diplomacy::{
-    DiplomacyEvent, DiplomacyKind, FactionRelationRecord, FactionRelationSnapshot,
-    FactionRelations,
+    DiplomacyEvent, DiplomacyKind, FactionRelationRecord, FactionRelationSnapshot, FactionRelations,
 };
 // Economy helpers extracted into `economy_engine` module.
 pub(crate) use crate::economy_engine::{economy_state_from_world, market_price_from_balance};
 // Re-export types from sub-modules so downstream code (including
 // lib.rs re-exports) continues to compile.
-pub use self::ai_decision::{action_from_emotion_behavior, AgentAction, EmotionDrivenBehavior, PsycheDrivenBehavior};
-pub use self::species_lifecycle::{LifecycleCounters, PopulationEvent, attach_citizen_to_agents, job_type_for_civilian_id};
+pub use self::ai_decision::{
+    action_from_emotion_behavior, AgentAction, EmotionDrivenBehavior, PsycheDrivenBehavior,
+};
+pub use self::species_lifecycle::{
+    attach_citizen_to_agents, job_type_for_civilian_id, LifecycleCounters, PopulationEvent,
+};
 pub(crate) use self::world_simulation::PHASE_ORDER;
 
+use crate::culture::{
+    advance_faction_ideologies, culture_cooperation_signal, culture_openness_signal,
+    FactionIdeologyState,
+};
 /// Fixed-point decimal wrapper (sign-magnitude 64-bit, scale = 1_000).
 /// Stub: a custom struct that satisfies `from_num` / `to_bits` / arithmetic
 /// used by callers until the original `fixed`-crate-backed definition is
@@ -81,196 +88,7 @@ pub(crate) use self::world_simulation::PHASE_ORDER;
 #[derive(
     Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
 )]
-pub struct Fixed(i64);
-
-/// Internal trait used by `Fixed::from_num` so integer and float types can
-/// both be passed without explicit casts.
-pub trait FixedFromNum: Sized {
-    fn into_fixed(self) -> i64;
-    fn from_fixed(bits: i64) -> Self;
-}
-impl FixedFromNum for i32 {
-    fn into_fixed(self) -> i64 {
-        i64::from(self) * 1_000
-    }
-    fn from_fixed(bits: i64) -> Self {
-        (bits / 1_000) as i32
-    }
-}
-impl FixedFromNum for i64 {
-    fn into_fixed(self) -> i64 {
-        self * 1_000
-    }
-    fn from_fixed(bits: i64) -> Self {
-        bits / 1_000
-    }
-}
-impl FixedFromNum for u32 {
-    fn into_fixed(self) -> i64 {
-        i64::from(self) * 1_000
-    }
-    fn from_fixed(bits: i64) -> Self {
-        (bits / 1_000) as u32
-    }
-}
-impl FixedFromNum for u64 {
-    fn into_fixed(self) -> i64 {
-        (self as i64) * 1_000
-    }
-    fn from_fixed(bits: i64) -> Self {
-        (bits / 1_000) as u64
-    }
-}
-impl FixedFromNum for f32 {
-    fn into_fixed(self) -> i64 {
-        (f64::from(self) * 1_000.0) as i64
-    }
-    fn from_fixed(bits: i64) -> Self {
-        (bits as f32) / 1_000.0
-    }
-}
-impl FixedFromNum for f64 {
-    fn into_fixed(self) -> i64 {
-        (self * 1_000.0) as i64
-    }
-    fn from_fixed(bits: i64) -> Self {
-        (bits as f64) / 1_000.0
-    }
-}
-
-impl Fixed {
-    /// All-zero value.
-    pub const ZERO: Self = Self(0);
-    /// All-one value (scale = 1_000).
-    pub const ONE: Self = Self(1_000);
-
-    /// Construct from an integer or float. `f64`/`f32` callers are
-    /// converted via the 1_000 scale (lossy; matches the lossy semantics
-    /// the original `fixed`-crate-backed `Fixed` exposed for stub use).
-    #[inline]
-    pub fn from_num<T: FixedFromNum>(v: T) -> Self {
-        Self(T::into_fixed(v))
-    }
-
-    /// Direct `f64` constructor (used by callers that can't use the trait
-    /// generic — e.g. `disasters::apply_disaster_resource_loss`).
-    #[inline]
-    pub fn from_f64_direct(v: f64) -> Self {
-        Self((v * 1_000.0) as i64)
-    }
-
-    /// Convenience: directly accept `f64` (used by `disasters.rs`).
-    #[inline]
-    pub fn from_f64_stub(v: f64) -> Self {
-        Self((v * 1_000.0) as i64)
-    }
-
-    /// Convenience: accept a `f64` directly (used by `disasters.rs`).
-    #[inline]
-    pub fn from_f64_lossy(v: f64) -> Self {
-        Self((v * 1_000.0) as i64)
-    }
-
-    /// Construct from a `f64` (rounded; loss of precision expected for stubs).
-    #[inline]
-    pub fn from_f64(v: f64) -> Self {
-        Self((v * 1_000.0) as i64)
-    }
-
-    /// Construct from a `f32` (rounded; loss of precision expected for stubs).
-    #[inline]
-    pub fn from_num_f32(v: f32) -> Self {
-        Self((v * 1_000.0) as i64)
-    }
-
-    /// Construct from a raw i64 bit pattern.
-    #[inline]
-    pub fn from_bits(bits: i64) -> Self {
-        Self(bits)
-    }
-
-    /// Raw i64 bit pattern (used by callers that read it for serialization).
-    #[inline]
-    pub fn to_bits(self) -> i64 {
-        self.0
-    }
-
-    /// Cast to a numeric type. Used for the `to_num` method the original
-    /// `fixed`-crate-backed `Fixed` exposed. For float types the result
-    /// is divided by the internal scale (1_000).
-    #[inline]
-    pub fn to_num<T>(self) -> T
-    where
-        T: FixedFromNum,
-    {
-        T::from_fixed(self.0)
-    }
-
-    /// Minimum of two values.
-    pub fn min(self, other: Self) -> Self {
-        Self(self.0.min(other.0))
-    }
-
-    /// Maximum of two values.
-    pub fn max(self, other: Self) -> Self {
-        Self(self.0.max(other.0))
-    }
-
-    /// Saturating subtraction.
-    pub fn saturating_sub(self, other: Self) -> Self {
-        Self(self.0.saturating_sub(other.0))
-    }
-
-    /// Cast to f64 (lossy; used by callers that bridge into `f32` / `f64`).
-    #[inline]
-    pub fn to_f64(self) -> f64 {
-        self.0 as f64 / 1_000.0
-    }
-}
-
-impl core::ops::Add for Fixed {
-    type Output = Self;
-    fn add(self, rhs: Self) -> Self {
-        Self(self.0 + rhs.0)
-    }
-}
-impl core::ops::Sub for Fixed {
-    type Output = Self;
-    fn sub(self, rhs: Self) -> Self {
-        Self(self.0 - rhs.0)
-    }
-}
-impl core::ops::Mul for Fixed {
-    type Output = Self;
-    fn mul(self, rhs: Self) -> Self {
-        // Truncate to scale; matches the lossy semantics callers expect.
-        Self((self.0 * rhs.0) / 1_000)
-    }
-}
-impl core::ops::Div for Fixed {
-    type Output = Self;
-    fn div(self, rhs: Self) -> Self {
-        if rhs.0 == 0 {
-            Self(0)
-        } else {
-            Self((self.0 * 1_000) / rhs.0)
-        }
-    }
-}
-impl core::ops::AddAssign for Fixed {
-    fn add_assign(&mut self, rhs: Self) {
-        self.0 += rhs.0;
-    }
-}
-impl core::ops::SubAssign for Fixed {
-    fn sub_assign(&mut self, rhs: Self) {
-        self.0 -= rhs.0;
-    }
-}
-use crate::culture::{
-    advance_faction_ideologies, culture_cooperation_signal, culture_openness_signal,
-    FactionIdeologyState,
-};
+pub use crate::fixed_math::{Fixed, FixedFromNum};
 // TODO(cleanup-surgeon): `language`, `psyche_behavior`, `religion` modules
 //  are currently empty `pub mod` stubs. These imports are commented until
 //  the real implementations are restored or the call-sites are rewritten.
@@ -507,8 +325,6 @@ pub struct TradeRoute {
     pub goods: String,
     pub volume: Fixed,
 }
-
-
 
 // Moved to species_lifecycle.rs
 /// A per-settlement event emitted when the expected economic focus changes
@@ -1433,8 +1249,6 @@ pub struct UnrestSnapshot {
     pub mob_size: u64,
 }
 
-
-
 /// Default doctrine population for three factions (deterministic seed layout).
 fn default_faction_doctrines() -> Vec<DoctrineLibrary> {
     (0..3)
@@ -2112,7 +1926,7 @@ impl Simulation {
         kind: DiplomacyKind,
     ) {
         self.state.tick = tick;
-        let _ = self.apply_diplomacy_action(source_faction, target_faction, kind, false);
+        self.apply_player_diplomacy_action(source_faction, target_faction, kind);
     }
 
     pub(crate) fn apply_replay_combat(&mut self, tick: u64, event: &DamageEvent) {
@@ -2432,7 +2246,6 @@ impl Simulation {
         }
     }
 
-
     /// Default sentience profile for new civilizations (FR-CIV-GENETICS).
     /// Stub-as-associated-fn; callers invoke as `default_sentience_profile()`.
     /// The body delegates to `pub free fn default_sentience_profile` below.
@@ -2440,7 +2253,7 @@ impl Simulation {
         default_sentience_profile()
     }
 
-// Moved to ai_decision.rs
+    // Moved to ai_decision.rs
     /// Stable cache key for a (resource, region) pair on the market bus.
     /// Stub: returns empty string; full impl depends on ResourceType enum schema.
     pub fn resource_market_key(_resource: &str, _region: u32) -> String {
@@ -2601,7 +2414,7 @@ impl Simulation {
         }
     }
 
-// Moved to world_simulation.rs
+    // Moved to world_simulation.rs
     fn phase_victory_check(&mut self) {
         self.last_game_outcome = crate::conditions::check_outcome(self);
     }
@@ -2677,7 +2490,6 @@ impl Simulation {
         sim.last_audio_researched_len = sim.research_cache.researched.len();
         Ok(sim)
     }
-
 
     /// Tactics phase - evolve faction doctrines and apply queued voxel damage.
     fn phase_tactics(&mut self) {
@@ -3447,7 +3259,7 @@ impl Simulation {
         self.last_tick_cluster_payoffs = totals.into_values().collect();
     }
 
-// Moved to species_lifecycle.rs
+    // Moved to species_lifecycle.rs
     /// Research phase (FR-ERA): emergent per-faction research progress.
     fn phase_research(&mut self) {
         crate::era::phase_research(self);
@@ -3670,7 +3482,7 @@ impl Simulation {
         }
     }
 
-// Moved to ai_decision.rs
+    // Moved to ai_decision.rs
     /// Set (or replace) the population snapshot for a settlement. Used by
     /// tests + scenario loaders to drive `phase_institutions` deterministically
     /// (FR-CIV-GOV-001).
@@ -3726,7 +3538,7 @@ impl Simulation {
         self.settlement_crime_pressure.insert(settlement_id, units);
     }
 
-// Moved to world_simulation.rs
+    // Moved to world_simulation.rs
     // ===== phase_cohesion (FR-CIV-GOV-030) =====
 
     /// Register a kinship edge from `actor_id` to `target`. The edge contributes
@@ -4280,7 +4092,7 @@ impl Simulation {
         self.state.resources.energy += energy;
     }
 
-// Moved to species_lifecycle.rs
+    // Moved to species_lifecycle.rs
     /// Military phase — morale recovery and Phase-4 war → tactics bridge.
     fn phase_military(&mut self) {
         use crate::spawn::military_pin_id;
@@ -4417,7 +4229,6 @@ impl Simulation {
             let _ = self.world.despawn(entity);
         }
     }
-
 
     /// Policy phase — read the active [`Policy`] for the current tick and
     /// store the resulting [`ControlSignals`] on
@@ -4604,7 +4415,6 @@ impl Simulation {
         }
     }
 }
-
 
 /// Maximum chronicle history lines retained in [`WorldState::chronicle`].
 #[allow(dead_code)] // Reserved for future simulation integration
@@ -8156,10 +7966,7 @@ mod tests {
             .iter()
             .filter(|event| matches!(event, ReplayEvent::Combat { .. }))
             .count();
-        assert!(
-            combat_count > 0,
-            "expected war-bridge combat in replay log"
-        );
+        assert!(combat_count > 0, "expected war-bridge combat in replay log");
 
         let mut from_replay = Simulation::with_seed(seed);
         live.replay_log().replay(&mut from_replay).unwrap();

@@ -31,12 +31,7 @@ pub struct FactionRelations {
 }
 
 impl FactionRelations {
-    pub fn apply_signal<A, B>(
-        &mut self,
-        a: A,
-        b: B,
-        signal: DiplomacySignal,
-    ) -> DiplomacyOutcome
+    pub fn apply_signal<A, B>(&mut self, a: A, b: B, signal: DiplomacySignal) -> DiplomacyOutcome
     where
         A: Into<u32>,
         B: Into<u32>,
@@ -118,9 +113,9 @@ pub struct DiplomacyEvent {
 
 // ---- Simulation diplomacy methods (extracted from engine.rs) ----
 
+use crate::engine::Fixed;
 use crate::engine::Simulation;
 use crate::engine::{faction_cluster_id, rollup_cluster_member_counts};
-use crate::engine::Fixed;
 use rand::Rng;
 
 impl Simulation {

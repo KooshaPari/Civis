@@ -90,7 +90,9 @@ impl AiWorkerPool {
             .enable_all()
             .thread_name("civ-ai-worker")
             .build()
-            .map_err(|e| crate::AiError::Unavailable(format!("civ-ai worker pool runtime build: {e}")))?;
+            .map_err(|e| {
+                crate::AiError::Unavailable(format!("civ-ai worker pool runtime build: {e}"))
+            })?;
 
         let (task_tx, mut task_rx) = mpsc::channel::<AiTask>(queue_capacity.max(1));
         let (result_tx, result_rx) = mpsc::channel::<AiResult>(queue_capacity.max(1));

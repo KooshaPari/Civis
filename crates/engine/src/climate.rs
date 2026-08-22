@@ -26,8 +26,8 @@ pub struct CoastalColumn {
 // ---- Simulation climate/planet methods (extracted from engine.rs) ----
 
 use crate::engine::Simulation;
-use civ_voxel::FIXED_SCALE;
 use civ_planet::{compute_climate, compute_weather};
+use civ_voxel::FIXED_SCALE;
 
 impl Simulation {
     /// Planet phase - recompute climate and weather grid from the current tick,

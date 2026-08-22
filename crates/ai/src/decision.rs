@@ -57,54 +57,61 @@ pub fn evaluate_actions(
     goals: &[Box<dyn Goal>],
     social_pressure: f64,
 ) -> Vec<UtilityScore> {
-    actions.iter().map(|action| {
-        let mut breakdown = HashMap::new();
-        
-        // Need satisfaction: average of unmet needs this action addresses
-        let need_score = weights.need_satisfaction * action.base_utility;
-        breakdown.insert("needs".to_string(), need_score);
-        
-        // Mood alignment: use valence to determine mood factor
-        // Positive valence (Happy/Content) boosts utility, negative (Anxious/Angry) reduces it
-        let mood_factor = match mood.valence {
-            v if v > 0.5 => 1.2,    // Elated
-            v if v > 0.1 => 1.1,    // Content
-            v if v > -0.1 => 1.0,   // Neutral
-            v if v > -0.5 => 0.8,   // Displeased
-            _ => 0.6,               // Miserable
-        };
-        let mood_score = weights.mood_alignment * action.base_utility * mood_factor;
-        breakdown.insert("mood".to_string(), mood_score);
-        
-        // Goal progress: how much this action advances highest-priority goal
-        let goal_score = if let Some(top_goal) = goals.first() {
-            weights.goal_progress * top_goal.utility(needs) as f64
-        } else {
-            0.0
-        };
-        breakdown.insert("goals".to_string(), goal_score);
-        
-        // Social influence: peer pressure factor
-        let social_score = weights.social_influence * social_pressure;
-        breakdown.insert("social".to_string(), social_score);
-        
-        // Risk penalty
-        let risk_penalty = weights.risk_aversion * action.risk_factor * action.resource_cost;
-        breakdown.insert("risk".to_string(), -risk_penalty);
-        
-        let total: f64 = breakdown.values().sum();
-        
-        UtilityScore {
-            action_id: action.id.clone(),
-            total,
-            breakdown,
-        }
-    }).collect()
+    actions
+        .iter()
+        .map(|action| {
+            let mut breakdown = HashMap::new();
+
+            // Need satisfaction: average of unmet needs this action addresses
+            let need_score = weights.need_satisfaction * action.base_utility;
+            breakdown.insert("needs".to_string(), need_score);
+
+            // Mood alignment: use valence to determine mood factor
+            // Positive valence (Happy/Content) boosts utility, negative (Anxious/Angry) reduces it
+            let mood_factor = match mood.valence {
+                v if v > 0.5 => 1.2,  // Elated
+                v if v > 0.1 => 1.1,  // Content
+                v if v > -0.1 => 1.0, // Neutral
+                v if v > -0.5 => 0.8, // Displeased
+                _ => 0.6,             // Miserable
+            };
+            let mood_score = weights.mood_alignment * action.base_utility * mood_factor;
+            breakdown.insert("mood".to_string(), mood_score);
+
+            // Goal progress: how much this action advances highest-priority goal
+            let goal_score = if let Some(top_goal) = goals.first() {
+                weights.goal_progress * top_goal.utility(needs) as f64
+            } else {
+                0.0
+            };
+            breakdown.insert("goals".to_string(), goal_score);
+
+            // Social influence: peer pressure factor
+            let social_score = weights.social_influence * social_pressure;
+            breakdown.insert("social".to_string(), social_score);
+
+            // Risk penalty
+            let risk_penalty = weights.risk_aversion * action.risk_factor * action.resource_cost;
+            breakdown.insert("risk".to_string(), -risk_penalty);
+
+            let total: f64 = breakdown.values().sum();
+
+            UtilityScore {
+                action_id: action.id.clone(),
+                total,
+                breakdown,
+            }
+        })
+        .collect()
 }
 
 /// Select the best action from scored candidates.
 pub fn select_best(scores: &[UtilityScore]) -> Option<&UtilityScore> {
-    scores.iter().max_by(|a, b| a.total.partial_cmp(&b.total).unwrap_or(std::cmp::Ordering::Equal))
+    scores.iter().max_by(|a, b| {
+        a.total
+            .partial_cmp(&b.total)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    })
 }
 
 #[cfg(test)]
@@ -134,8 +141,15 @@ mod tests {
         };
         let needs = vec![Need::Hunger(0.5)];
         let goals: Vec<Box<dyn Goal>> = vec![];
-        
-        let scores = evaluate_actions(&actions, &weights, &needs, &MoodState::neutral(), &goals, 0.0);
+
+        let scores = evaluate_actions(
+            &actions,
+            &weights,
+            &needs,
+            &MoodState::neutral(),
+            &goals,
+            0.0,
+        );
         assert_eq!(scores.len(), 1);
         assert!(scores[0].total > 0.0);
     }
@@ -143,9 +157,21 @@ mod tests {
     #[test]
     fn test_select_best_action() {
         let scores = vec![
-            UtilityScore { action_id: "a".into(), total: 0.5, breakdown: HashMap::new() },
-            UtilityScore { action_id: "b".into(), total: 0.9, breakdown: HashMap::new() },
-            UtilityScore { action_id: "c".into(), total: 0.3, breakdown: HashMap::new() },
+            UtilityScore {
+                action_id: "a".into(),
+                total: 0.5,
+                breakdown: HashMap::new(),
+            },
+            UtilityScore {
+                action_id: "b".into(),
+                total: 0.9,
+                breakdown: HashMap::new(),
+            },
+            UtilityScore {
+                action_id: "c".into(),
+                total: 0.3,
+                breakdown: HashMap::new(),
+            },
         ];
         let best = select_best(&scores).unwrap();
         assert_eq!(best.action_id, "b");
@@ -154,19 +180,22 @@ mod tests {
     #[test]
     fn test_mood_affects_utility() {
         let actions = vec![test_action("socialize", 0.5, 0.1, 0.0)];
-        let weights = UtilityWeights { mood_alignment: 1.0, ..Default::default() };
+        let weights = UtilityWeights {
+            mood_alignment: 1.0,
+            ..Default::default()
+        };
         let needs = vec![];
         let goals: Vec<Box<dyn Goal>> = vec![];
-        
+
         let mut happy_mood = MoodState::neutral();
         happy_mood.valence = 0.8;
-        
+
         let mut sad_mood = MoodState::neutral();
         sad_mood.valence = -0.8;
-        
+
         let happy_scores = evaluate_actions(&actions, &weights, &needs, &happy_mood, &goals, 0.0);
         let sad_scores = evaluate_actions(&actions, &weights, &needs, &sad_mood, &goals, 0.0);
-        
+
         assert!(happy_scores[0].total > sad_scores[0].total);
     }
 
@@ -174,30 +203,64 @@ mod tests {
     fn test_risk_penalty() {
         let safe = test_action("safe_action", 0.5, 0.1, 0.0);
         let risky = test_action("risky_action", 0.5, 0.1, 0.9);
-        let weights = UtilityWeights { risk_aversion: 1.0, ..Default::default() };
+        let weights = UtilityWeights {
+            risk_aversion: 1.0,
+            ..Default::default()
+        };
         let needs = vec![];
         let goals: Vec<Box<dyn Goal>> = vec![];
-        
-        let scores = evaluate_actions(&[safe, risky], &weights, &needs, &MoodState::neutral(), &goals, 0.0);
+
+        let scores = evaluate_actions(
+            &[safe, risky],
+            &weights,
+            &needs,
+            &MoodState::neutral(),
+            &goals,
+            0.0,
+        );
         assert!(scores[0].total > scores[1].total);
     }
 
     #[test]
     fn test_social_influence() {
         let actions = vec![test_action("follow_peers", 0.5, 0.1, 0.0)];
-        let weights = UtilityWeights { social_influence: 1.0, ..Default::default() };
+        let weights = UtilityWeights {
+            social_influence: 1.0,
+            ..Default::default()
+        };
         let needs = vec![];
         let goals: Vec<Box<dyn Goal>> = vec![];
-        
-        let no_pressure = evaluate_actions(&actions, &weights, &needs, &MoodState::neutral(), &goals, 0.0);
-        let high_pressure = evaluate_actions(&actions, &weights, &needs, &MoodState::neutral(), &goals, 1.0);
-        
+
+        let no_pressure = evaluate_actions(
+            &actions,
+            &weights,
+            &needs,
+            &MoodState::neutral(),
+            &goals,
+            0.0,
+        );
+        let high_pressure = evaluate_actions(
+            &actions,
+            &weights,
+            &needs,
+            &MoodState::neutral(),
+            &goals,
+            1.0,
+        );
+
         assert!(high_pressure[0].total > no_pressure[0].total);
     }
 
     #[test]
     fn test_empty_actions() {
-        let scores = evaluate_actions(&[], &UtilityWeights::default(), &[], &MoodState::neutral(), &[], 0.0);
+        let scores = evaluate_actions(
+            &[],
+            &UtilityWeights::default(),
+            &[],
+            &MoodState::neutral(),
+            &[],
+            0.0,
+        );
         assert!(scores.is_empty());
     }
 }

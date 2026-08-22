@@ -31,14 +31,14 @@ pub(crate) fn market_price_from_balance(supply: i64, demand: i64) -> i64 {
 
 // ---- Simulation economy methods (extracted from engine.rs) ----
 
+use crate::engine::tech_unlocks_for_tier;
 use crate::engine::Simulation;
 use crate::engine::FOOD_SCARCITY_BASELINE;
 use crate::engine::TECH_STORAGE;
-use crate::engine::tech_unlocks_for_tier;
-use crate::engine::{resource_market_key, route_resource, resource_amount, adjust_resource};
-use civ_economy::{settlement_trade_flow_from_supply_demand, Good};
+use crate::engine::{adjust_resource, resource_amount, resource_market_key, route_resource};
 use civ_economy::AllocationEngine;
 use civ_economy::LaborCapacityAllocator;
+use civ_economy::{settlement_trade_flow_from_supply_demand, Good};
 
 struct SettlementMarketSetup {
     id: u32,
@@ -149,7 +149,12 @@ impl Simulation {
         }
     }
 
-    pub(crate) fn apply_settlement_flow(&mut self, from_settlement: u32, to_settlement: u32, qty: i64) {
+    pub(crate) fn apply_settlement_flow(
+        &mut self,
+        from_settlement: u32,
+        to_settlement: u32,
+        qty: i64,
+    ) {
         let from_stock = self
             .settlement_food_stocked
             .entry(from_settlement)

@@ -1,9 +1,12 @@
 mod engine_tests {
-    use super::*;
+    use crate::engine::*;
     use crate::lod::{should_tick_entity_with_policy, LodPolicy};
     use crate::replay::{ReplayEvent, ReplayLog};
-    use civ_agents::{count_civilians, LodTier, Wardrobe};
-    use civ_planet::{compute_climate, is_daytime, MoonConfig, PlanetConfig};
+    use civ_agents::{count_civilians, spawn_civilian_at, ActorVisualKind, LodTier, Wardrobe};
+    use civ_audio::triggers::SfxTrigger;
+    use civ_planet::{
+        compute_climate, compute_weather, is_daytime, MoonConfig, PlanetConfig,
+    };
     use civ_voxel::{MaterialId, WorldCoord};
     use tempfile::NamedTempFile;
 

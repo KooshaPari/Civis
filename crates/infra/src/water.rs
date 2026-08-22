@@ -17,25 +17,6 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use serde::{Deserialize, Serialize};
 
-/// Lightweight ordered wrapper around `f32` for use in `BinaryHeap`. Uses
-/// `total_cmp` so positive IEEE-754 floats sort correctly.
-#[derive(Debug, Clone, Copy, PartialEq)]
-struct OrderedF32(f32);
-
-impl Eq for OrderedF32 {}
-
-impl PartialOrd for OrderedF32 {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for OrderedF32 {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.0.total_cmp(&other.0)
-    }
-}
-
 /// Stable identifier for a node in the water network.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct WaterNodeId(pub u32);
@@ -244,12 +225,7 @@ impl WaterSystem {
     }
 
     /// Add a directed pipe. Returns its id.
-    pub fn add_pipe(
-        &mut self,
-        from: WaterNodeId,
-        to: WaterNodeId,
-        capacity: f32,
-    ) -> PipeId {
+    pub fn add_pipe(&mut self, from: WaterNodeId, to: WaterNodeId, capacity: f32) -> PipeId {
         let id = PipeId(self.next_pipe_id);
         self.next_pipe_id = self.next_pipe_id.saturating_add(1);
         let pipe = Pipe {
@@ -378,8 +354,13 @@ impl WaterSystem {
                 };
 
                 let mut bottleneck = src_supply;
-                bottleneck = bottleneck
-                    .min(residual_demand.get(&consumer).copied().unwrap_or(0.0).max(0.0));
+                bottleneck = bottleneck.min(
+                    residual_demand
+                        .get(&consumer)
+                        .copied()
+                        .unwrap_or(0.0)
+                        .max(0.0),
+                );
                 for &pipe_id in &path {
                     bottleneck = bottleneck
                         .min(residual_pipe.get(&pipe_id).copied().unwrap_or(0.0).max(0.0));
@@ -461,9 +442,9 @@ impl WaterSystem {
 
                     // Treatment plants strip everything at their input.
                     let target = self.nodes.get(&pipe.to);
-                    let stripped = if target.map_or(false, |n| {
-                        matches!(n.kind, WaterNodeKind::TreatmentPlant)
-                    }) {
+                    let stripped = if target
+                        .map_or(false, |n| matches!(n.kind, WaterNodeKind::TreatmentPlant))
+                    {
                         BTreeSet::new()
                     } else {
                         combined
@@ -626,10 +607,20 @@ mod tests {
     fn purify_node_clears_contaminants() {
         let mut sys = build_simple_water_system();
         sys.introduce_contaminant(WaterNodeId(0), Contaminant::Sediment);
-        assert!(!sys.nodes().get(&WaterNodeId(0)).unwrap().contaminants.is_empty());
+        assert!(!sys
+            .nodes()
+            .get(&WaterNodeId(0))
+            .unwrap()
+            .contaminants
+            .is_empty());
 
         sys.purify_node(WaterNodeId(0));
-        assert!(sys.nodes().get(&WaterNodeId(0)).unwrap().contaminants.is_empty());
+        assert!(sys
+            .nodes()
+            .get(&WaterNodeId(0))
+            .unwrap()
+            .contaminants
+            .is_empty());
     }
 
     #[test]

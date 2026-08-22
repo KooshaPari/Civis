@@ -34,9 +34,7 @@ impl FitnessMetrics {
     /// Calculate a single weighted fitness score.
     #[must_use]
     pub fn score(&self) -> f64 {
-        (self.energy_efficiency * 0.4)
-            + (self.reproduction_rate * 0.3)
-            + (self.adaptability * 0.3)
+        (self.energy_efficiency * 0.4) + (self.reproduction_rate * 0.3) + (self.adaptability * 0.3)
     }
 }
 
@@ -99,11 +97,7 @@ impl EvolutionEngine {
         scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
         let keep = std::cmp::max(1, scored.len() / 2);
-        scored
-            .into_iter()
-            .take(keep)
-            .map(|(s, _)| s)
-            .collect()
+        scored.into_iter().take(keep).map(|(s, _)| s).collect()
     }
 
     /// Combine the genetic material of two parents to produce an offspring.
@@ -257,10 +251,7 @@ mod tests {
         let mut rng = ChaCha8Rng::seed_from_u64(42);
         let species = test_species(1, vec![1, 2, 3], "human");
 
-        assert!(matches!(
-            eng.mutate(&species, &mut rng),
-            Mutation::Deletion
-        ));
+        assert!(matches!(eng.mutate(&species, &mut rng), Mutation::Deletion));
     }
 
     /// Test 4: Mutation enum equality and inequality.
@@ -391,7 +382,7 @@ mod tests {
         let eng = engine();
         let pop = vec![
             test_species(1, vec![1, 2, 3], "a"),
-            test_species(2, vec![100, 200, 300], "a"),
+            test_species(2, vec![100, 200, 255], "a"),
         ];
 
         let groups = eng.speciation(&pop, 0.1);
@@ -411,17 +402,17 @@ mod tests {
     fn test_speciation_mixed_population() {
         let eng = engine();
         let pop = vec![
-            test_species(1, vec![10, 20, 30], "a"),
-            test_species(2, vec![10, 20, 31], "a"),   // close to #1
-            test_species(3, vec![200, 200, 200], "a"), // far from #1 and #2
+            test_species(1, vec![10, 20, 30, 40, 50], "a"),
+            test_species(2, vec![10, 20, 30, 40, 51], "a"), // 1/5 diff = 0.2 from #1
+            test_species(3, vec![200, 200, 200, 200, 200], "a"), // far from #1 and #2
         ];
 
-        let groups = eng.speciation(&pop, 0.1);
+        // threshold 0.5: #1 and #2 are 0.2 apart (grouped), #3 is far
+        let groups = eng.speciation(&pop, 0.5);
         assert_eq!(groups.len(), 2);
         assert_eq!(groups[0].len(), 2); // #1 and #2
         assert_eq!(groups[1].len(), 1); // #3
     }
-
     // --- FitnessMetrics Tests ---
 
     /// Test 17: FitnessMetrics fields are accessible.

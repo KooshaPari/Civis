@@ -426,6 +426,20 @@ impl WaterSystem {
             }
         }
 
+        // Also seed from nodes whose outgoing pipes are contaminated.
+        // These nodes go into the BFS queue but are NOT marked as contaminated
+        // themselves (only their downstream targets may become contaminated).
+        let mut extra_seeds: Vec<WaterNodeId> = Vec::new();
+        for (&id, edges) in &self.outgoing {
+            if !contaminated.contains(&id) && edges.iter().any(|(_, p)| !p.contaminants.is_empty())
+            {
+                extra_seeds.push(id);
+            }
+        }
+        for id in extra_seeds {
+            queue.push_back(id);
+        }
+
         // BFS downstream.
         while let Some(node) = queue.pop_front() {
             let node_contaminants: BTreeSet<Contaminant> = self
@@ -565,7 +579,12 @@ mod tests {
 
     #[test]
     fn contamination_propagates_downstream() {
-        let mut sys = build_simple_water_system();
+        let mut sys = WaterSystem::new();
+        sys.add_reservoir(WaterNodeId(0), 50.0);
+        sys.add_relay(WaterNodeId(1));
+        sys.add_consumer(WaterNodeId(2), 30.0);
+        sys.add_pipe(WaterNodeId(0), WaterNodeId(1), 50.0);
+        sys.add_pipe(WaterNodeId(1), WaterNodeId(2), 50.0);
         sys.introduce_contaminant(WaterNodeId(0), Contaminant::Chemical);
 
         let mut supply = BTreeMap::new();

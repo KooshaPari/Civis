@@ -337,8 +337,13 @@ impl EnergyGrid {
                 };
 
                 let mut bottleneck = src_supply;
-                bottleneck = bottleneck
-                    .min(residual_demand.get(&consumer).copied().unwrap_or(0.0).max(0.0));
+                bottleneck = bottleneck.min(
+                    residual_demand
+                        .get(&consumer)
+                        .copied()
+                        .unwrap_or(0.0)
+                        .max(0.0),
+                );
                 for &line_id in &path {
                     bottleneck = bottleneck
                         .min(residual_line.get(&line_id).copied().unwrap_or(0.0).max(0.0));
@@ -411,7 +416,7 @@ impl EnergyGrid {
                 }
             });
             if let Some(max_d) = orig {
-                if max_d > 0.0 && (short / max_d) > self.blackout_config.threshold {
+                if max_d > 0.0 && (short / max_d) >= self.blackout_config.threshold {
                     queue.push_back((id, 0));
                     visited.insert(id);
                 }
@@ -454,7 +459,8 @@ impl EnergyGrid {
     ) -> Option<(EnergyNodeId, Vec<TransmissionLineId>)> {
         self.outgoing.get(&start)?;
 
-        let mut parent: BTreeMap<EnergyNodeId, (TransmissionLineId, EnergyNodeId)> = BTreeMap::new();
+        let mut parent: BTreeMap<EnergyNodeId, (TransmissionLineId, EnergyNodeId)> =
+            BTreeMap::new();
         parent.insert(start, (TransmissionLineId(u32::MAX), start));
         let mut frontier: VecDeque<EnergyNodeId> = VecDeque::new();
         frontier.push_back(start);

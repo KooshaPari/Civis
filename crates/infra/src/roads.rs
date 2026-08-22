@@ -319,7 +319,11 @@ impl RoadNetwork {
     /// on the current effective-cost graph. Returns `None` if the destination
     /// is unreachable or either endpoint is unknown / inactive.
     #[must_use]
-    pub fn route(&self, origin: IntersectionId, destination: IntersectionId) -> Option<RouteResult> {
+    pub fn route(
+        &self,
+        origin: IntersectionId,
+        destination: IntersectionId,
+    ) -> Option<RouteResult> {
         if origin == destination {
             return Some(RouteResult {
                 path: vec![origin],
@@ -545,9 +549,18 @@ mod tests {
         net.distribute_volume(&volumes);
 
         let states = net.segment_states();
-        assert_eq!(states.get(&segs[0]).unwrap().congestion, CongestionLevel::FreeFlow);
-        assert_eq!(states.get(&segs[1]).unwrap().congestion, CongestionLevel::Light);
-        assert_eq!(states.get(&segs[2]).unwrap().congestion, CongestionLevel::Severe);
+        assert_eq!(
+            states.get(&segs[0]).unwrap().congestion,
+            CongestionLevel::FreeFlow
+        );
+        assert_eq!(
+            states.get(&segs[1]).unwrap().congestion,
+            CongestionLevel::Light
+        );
+        assert_eq!(
+            states.get(&segs[2]).unwrap().congestion,
+            CongestionLevel::Severe
+        );
     }
 
     #[test]

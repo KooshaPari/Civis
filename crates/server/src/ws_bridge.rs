@@ -319,7 +319,8 @@ async fn serve_ws_bridge(
     let session_id = resolve_session_id();
     tracing::info!(%session_id, ?save_db_path, "session-scoped save metadata db ready");
     let metrics_registry = Registry::new();
-    let metrics = Arc::new(ServerMetrics::new(&metrics_registry).expect("initialize server metrics"));
+    let metrics =
+        Arc::new(ServerMetrics::new(&metrics_registry).expect("initialize server metrics"));
     let state = AppState {
         sim,
         tick: Arc::new(AtomicU64::new(0)),
@@ -1813,7 +1814,8 @@ mod tests {
         let save_db_path = save_db_path_for_saves_dir(&saves_dir);
         let save_db = Arc::new(SaveDb::open(&save_db_path).expect("open save db"));
         let metrics_registry = Registry::new();
-        let metrics = Arc::new(ServerMetrics::new(&metrics_registry).expect("initialize server metrics"));
+        let metrics =
+            Arc::new(ServerMetrics::new(&metrics_registry).expect("initialize server metrics"));
         let state = AppState {
             sim,
             tick: Arc::new(AtomicU64::new(tick)),

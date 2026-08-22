@@ -6,7 +6,6 @@ use testcontainers::runners::AsyncRunner;
 use testcontainers_modules::postgres::Postgres;
 
 #[tokio::test]
-#[ignore = "requires Docker and a running container runtime"]
 async fn save_replay_load_replay_roundtrip() {
     let container = Postgres::default().start().await.expect("start postgres");
     let port = container

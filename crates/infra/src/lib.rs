@@ -31,6 +31,32 @@ pub use utility_grid::{
     UtilityNodeKind,
 };
 
+/// Road network with Dijkstra shortest-path and capacity modeling.
+/// Pure-logic, no Bevy dependency; routes vehicles through intersections,
+/// with congestion multipliers that reroute traffic around saturated segments.
+pub mod roads;
+pub use roads::{
+    CongestionLevel, Intersection, IntersectionId, RoadNetwork, RouteResult, Segment, SegmentId,
+    SegmentState,
+};
+
+/// Energy grid with supply/demand balancing and blackout simulation.
+/// Pure-logic, no Bevy dependency; distributes power from generators to
+/// consumers through transmission lines, with blackout cascade propagation.
+pub mod energy;
+pub use energy::{
+    BalanceResult, BlackoutConfig, EnergyGrid, EnergyNode, EnergyNodeId, EnergyNodeKind,
+    TransmissionLine, TransmissionLineId,
+};
+
+/// Water system with aqueduct network and contamination events.
+/// Pure-logic, no Bevy dependency; routes water from reservoirs through
+/// treatment plants to consumers, tracking contamination propagation.
+pub mod water;
+pub use water::{
+    Contaminant, Pipe, PipeId, WaterNode, WaterNodeId, WaterNodeKind, WaterResult, WaterSystem,
+};
+
 /// Unified infrastructure error.
 #[derive(Debug, thiserror::Error)]
 pub enum InfraError {

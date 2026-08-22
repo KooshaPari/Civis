@@ -162,7 +162,6 @@ mod tests {
     /// Integration test: requires `CIVIS_EMBED_MODEL_DIR` containing
     /// model.onnx + tokenizer files. Skipped in CI.
     #[test]
-    #[ignore]
     fn embed_roundtrip_with_local_model() {
         let dir = std::env::var("CIVIS_EMBED_MODEL_DIR")
             .expect("set CIVIS_EMBED_MODEL_DIR to a dir with ONNX + tokenizer files");

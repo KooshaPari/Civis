@@ -25,6 +25,9 @@ pub use niche::{
     NicheWeights,
 };
 
+pub mod evolution;
+pub use evolution::{EvolutionEngine, FitnessMetrics, Mutation};
+
 /// Schema version. Bumped on breaking changes.
 pub const SCHEMA_VERSION: &str = "0.1.0-stub";
 

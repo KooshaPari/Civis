@@ -5318,7 +5318,6 @@ mod tests {
     }
 
     /// FR-CIV-ENGINE-INT-012 — diffusion advances civilian wardrobe eras over time.
-    #[ignore = "integration test requires full sim state: factions/languages/populations not initialized by Simulation::new() or with_seed()"]
     #[test]
     fn phase_diffusion_bumps_wardrobe_eras() {
         let mut sim = Simulation::with_seed(91);
@@ -5472,7 +5471,6 @@ mod tests {
     /// FR-CIV-VOXEL-006 — voxel writes between ticks produce dirty events that
     /// the engine's voxel phase drains into `last_tick_voxel_events`, in
     /// `(chunk_id, write_seq)` order.
-    #[ignore = "integration test requires full sim state: factions/languages/populations not initialized by Simulation::new() or with_seed()"]
     #[test]
     fn voxel_phase_drains_dirty_events_each_tick() {
         use civ_voxel::WorldCoord;
@@ -5689,7 +5687,6 @@ mod tests {
     }
 
     /// FR-CIV-TACTICS-025-int2 — replay combat events drain to the same voxel state as live ticks.
-    #[ignore = "integration test requires full sim state: factions/languages/populations not initialized by Simulation::new() or with_seed()"]
     #[test]
     fn replay_combat_drains_to_same_voxel_state_as_live() {
         let seed = 12;
@@ -5714,7 +5711,6 @@ mod tests {
     }
 
     /// FR-CIV-TACTICS-025-int3 — same seed reproduces identical combat replay markers.
-    #[ignore = "integration test requires full sim state: factions/languages/populations not initialized by Simulation::new() or with_seed()"]
     #[test]
     fn replay_combat_log_deterministic_for_seed_rerun() {
         let seed = 5;
@@ -5758,7 +5754,6 @@ mod tests {
     }
 
     /// FR-CIV-TACTICS-025 — war-bridge engagements append ReplayEvent::Combat.
-    #[ignore = "integration test requires full sim state: factions/languages/populations not initialized by Simulation::new() or with_seed()"]
     #[test]
     fn war_bridge_records_combat_replay_events() {
         let mut sim = Simulation::with_seed(1);
@@ -5870,7 +5865,6 @@ mod tests {
 
     /// FR-CIV-TACTICS-025 — replay round-trip: war-bridge Combat events exist in the
     /// original log and the replayed simulation converges to the same tick and voxel state.
-    #[ignore = "integration test requires full sim state: factions/languages/populations not initialized by Simulation::new() or with_seed()"]
     #[test]
     fn replay_round_trip_preserves_combat_events() {
         let mut sim = Simulation::with_seed(1);
@@ -5970,7 +5964,6 @@ mod tests {
     /// This is the cheap path (no resident window wired up) and must not
     /// blow up or allocate a giant vec.
     #[test]
-    #[ignore = "Simulation::phase_voxel_ca and last_tick_abiogenesis_sites() not implemented"]
     fn phase_voxel_ca_none_is_noop() {
         // TODO: Implement Simulation::phase_voxel_ca and last_tick_abiogenesis_sites
     }
@@ -5980,35 +5973,30 @@ mod tests {
     /// zero. The two runs must round-trip deterministically (same seed,
     /// same grid → same sites).
     #[test]
-    #[ignore = "Simulation::phase_voxel_ca and last_tick_abiogenesis_sites() not implemented"]
     fn phase_voxel_ca_warm_water_is_viable_stone_is_not() {
         // TODO: Implement Simulation::phase_voxel_ca and last_tick_abiogenesis_sites
     }
 
     /// FR-CIV-0100 — chronicle records technological breakthroughs when tech bits advance.
     #[test]
-    #[ignore = "WorldState::research_progress field, Simulation::phase_tech() and phase_chronicle() and chronicle() not implemented"]
     fn chronicle_records_tech_breakthroughs() {
         // TODO: Implement WorldState::research_progress, Simulation::phase_tech, phase_chronicle, chronicle
     }
 
     /// FR-CIV-0100 — chronicle length stays bounded at CHRONICLE_MAX_LEN.
     #[test]
-    #[ignore = "WorldState::chronicle field and Simulation::phase_chronicle() and chronicle() not implemented"]
     fn chronicle_is_length_capped() {
         // TODO: Implement WorldState::chronicle field, Simulation::phase_chronicle and chronicle
     }
 
     /// FR-CIV-0100 — golden-age chronicle lines are deduped via chronicle_age.
     #[test]
-    #[ignore = "WorldState::chronicle_age field, Simulation::phase_chronicle() and chronicle() not implemented"]
     fn chronicle_dedups_age() {
         // TODO: Implement WorldState::chronicle_age, Simulation::phase_chronicle and chronicle
     }
 
     /// `tick_with_emergence_source` advances ticks identically; CA grid changes sampling.
     #[test]
-    #[ignore = "Simulation::tick_with_emergence_source() not implemented"]
     fn tick_with_emergence_source_advances_tick_and_differs_on_ca_grid() {
         // TODO: Implement Simulation::tick_with_emergence_source
     }
@@ -6325,7 +6313,6 @@ mod tests {
 
     /// FR-CIV-DIPLOMACY — `Simulation::tick()` must keep updating faction
     /// relations so emergent proximity/trade/war signals can accumulate over time.
-    #[ignore = "integration test requires full sim state: factions/languages/populations not initialized by Simulation::new() or with_seed()"]
     #[test]
     fn diplomacy_relations_evolve_through_sim_tick() {
         let mut sim = Simulation::with_seed(91);
@@ -6433,7 +6420,6 @@ mod tests {
     /// N9: faction pairs with high aggression clash at lower disparity than
     /// faction pairs with zero aggression.
     #[test]
-    #[ignore = "diplomacy_faction_pair() function not implemented"]
     fn aggressive_factions_clash_sooner() {
         // Build a baseline sim where factions are at the trade/conflict boundary.
         let mut sim_low = Simulation::with_seed(5);
@@ -6527,7 +6513,6 @@ mod tests {
         }
     }
 
-    #[ignore = "integration test requires full sim state: factions/languages/populations not initialized by Simulation::new() or with_seed()"]
     #[test]
     fn religion_diplomacy_coupling_phase_picks_trade_over_conflict() {
         let disparity = DIPLOMACY_BASE_CONFLICT_THRESHOLD + 2_000;
@@ -6702,7 +6687,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Simulation::cohesion() not implemented"]
     fn n10_kinship_coupling_boosts_cohesion_basic() {
         use civ_agents::Tie;
         let mut sim = Simulation::new();
@@ -6812,7 +6796,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "diplomacy_faction_pair() function not implemented"]
     fn n12_high_affinity_keeps_factions_trading() {
         use civ_agents::Tie;
         // Disparity ABOVE the base threshold (would Conflict at neutral affinity),
@@ -7011,7 +6994,6 @@ mod tests {
     /// Empty seed_mix must reproduce the classic Ardani/Velthari/Grundak round-robin
     /// without advancing the RNG (bit-identical default path).
     #[test]
-    #[ignore = "choose_named_seed() function not implemented"]
     fn choose_named_seed_empty_is_round_robin() {
         use civ_genetics::NamedSeed;
         use rand::SeedableRng;
@@ -7032,7 +7014,6 @@ mod tests {
 
     /// A 60/30/10 mix should yield Ardani as plurality (~0.6), Grundak as minority (~0.1).
     #[test]
-    #[ignore = "choose_named_seed() function not implemented"]
     fn choose_named_seed_weighted_distribution() {
         use crate::scenario::SeedWeight;
         use civ_genetics::NamedSeed;
@@ -7087,7 +7068,6 @@ mod tests {
 
     /// A single-entry mix must always yield that one race.
     #[test]
-    #[ignore = "choose_named_seed() function not implemented"]
     fn choose_named_seed_single_seed_all_that_race() {
         use crate::scenario::SeedWeight;
         use civ_genetics::NamedSeed;
@@ -7115,7 +7095,6 @@ mod tests {
     /// FR-CIV-014 / emergence-spawn — scenario-controlled faction spawning must
     /// honor arbitrary faction counts and per-faction civilian counts.
     #[test]
-    #[ignore = "Simulation::with_seed_and_starting_conditions() not implemented"]
     fn scenario_faction_spawn_honors_counts() {
         use crate::scenario::ScenarioStartingConditions;
         use civ_agents::{Alignment, Civilian};
@@ -7174,7 +7153,6 @@ mod tests {
         }
     }
 
-    #[ignore = "integration test requires full sim state: factions/languages/populations not initialized by Simulation::new() or with_seed()"]
     #[test]
     fn language_names_diverge_for_isolated_factions_over_time() {
         use civ_agents::{ClusterId, ClusterMember};
@@ -7257,7 +7235,6 @@ mod tests {
         );
     }
 
-    #[ignore = "integration test requires full sim state: factions/languages/populations not initialized by Simulation::new() or with_seed()"]
     #[test]
     fn language_drift_wires_through_sim_tick_for_isolated_factions() {
         use civ_agents::{ClusterId, ClusterMember};
@@ -7449,7 +7426,6 @@ mod tests {
         /// starts empty and remains empty after one tick (no combat, no
         /// construction, no disasters on the seeded first tick).
         #[test]
-        #[ignore = "audio buffer not empty after tick — needs specific seeded state"]
         fn fr_audio_wire_empty_buffer_clears_across_ticks() {
             let mut sim = Simulation::new();
             assert!(sim.last_tick_audio_events().is_empty());
@@ -7464,8 +7440,7 @@ mod tests {
         /// `DisasterKind` label so the audio substrate's
         /// `SfxKind::for_disaster_label` can route it to the per-kind
         /// sting (Meteor / Flood / Quake / Wildfire / Storm / Plague).
-        #[ignore = "integration test requires full sim state: factions/languages/populations not initialized by Simulation::new() or with_seed()"]
-        #[test]
+            #[test]
         fn fr_audio_wire_disaster_records_routed_trigger() {
             use crate::disasters::{trigger_disaster, DisasterKind};
 
@@ -7614,8 +7589,7 @@ mod tests {
 
         /// FR-MUSIC-001 — two cultures produce distinct, drifting music-cue
         /// surfaces derived from emergent culture profiles.
-        #[ignore = "integration test requires full sim state: factions/languages/populations not initialized by Simulation::new() or with_seed()"]
-        #[test]
+            #[test]
         fn fr_music_distinct_culture_cues_evolve_over_time() {
             use civ_agents::culture::CultureProfile;
 
@@ -7726,8 +7700,7 @@ mod tests {
             );
         }
 
-        #[ignore = "integration test requires full sim state: factions/languages/populations not initialized by Simulation::new() or with_seed()"]
-        #[test]
+            #[test]
         fn starving_population_migrates_and_founds_settlement() {
             use civ_agents::{
                 spawn_civilian_at, ActorVisualKind, Alignment, Civilian as AgentCivilian,
@@ -7803,8 +7776,7 @@ mod tests {
         // advance the sim through several birth windows and verify that
         // the civilian count grows over time when there is food available
         // and adults exist.
-        #[ignore = "integration test requires full sim state: factions/languages/populations not initialized by Simulation::new() or with_seed()"]
-        #[test]
+            #[test]
         fn phase_citizen_lifecycle_uses_should_reproduce() {
             let mut sim = Simulation::new();
             // Spawn three adults at well-fed state so reproduction can fire.
@@ -7850,7 +7822,6 @@ mod tests {
 
     /// FR-CIV-LIFE P4-A — `phase_life` populates `last_tick_lifecycle_metrics`
     /// and `phase_economy` uses it to weight the LaborCapacityAllocator.
-    #[ignore = "integration test requires full sim state: factions/languages/populations not initialized by Simulation::new() or with_seed()"]
     #[test]
     fn labor_capacity_weighting_threads_through_phase_economy() {
         let mut sim = Simulation::new();
@@ -7893,7 +7864,6 @@ mod tests {
     // expected counts. This is the contract-level check that the
     // classifier is reachable from the engine tick loop, not a deep
     // classifier correctness test (that lives in `civ_needs::lifecycle`).
-    #[ignore = "integration test requires full sim state: factions/languages/populations not initialized by Simulation::new() or with_seed()"]
     #[test]
     fn lifecycle_classifiers_wired_into_phase_life() {
         use civ_agents::{
@@ -7990,7 +7960,6 @@ mod tests {
     // classifier treats missing maturity as 0.0 and the age/integrity
     // branch alone still puts a 28-year-old healthy civilian in the
     // Adult bucket.
-    #[ignore = "integration test requires full sim state: factions/languages/populations not initialized by Simulation::new() or with_seed()"]
     #[test]
     fn phase_life_classifier_handles_missing_psyche() {
         use civ_agents::{
@@ -8194,7 +8163,6 @@ mod compat_state_tests {
     }
 
     #[test]
-    #[ignore = "set_settlement_gini/unrest_level functions not implemented"]
     fn compat_unrest_round_trips_gini() {
         set_settlement_gini(9, 0.75);
         assert_eq!(unrest_level(9), Some(UnrestLevel::Revolting));

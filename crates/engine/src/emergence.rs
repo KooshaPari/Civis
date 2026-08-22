@@ -1231,7 +1231,6 @@ mod tests {
     }
 
     /// FR-CIV-PSYCHE — mood moves after repeated emergence ticks.
-    #[ignore = "integration test requires full sim state: factions/languages/populations not initialized by Simulation::new() or with_seed()"]
     #[test]
     fn psyche_phase_mutates_mood_over_ticks() {
         let mut sim = Simulation::with_seed(7);
@@ -1276,7 +1275,6 @@ mod tests {
     }
 
     /// FR-CIV-GENETICS / culture — cluster cultures diverge over ticks.
-    #[ignore = "integration test requires full sim state: factions/languages/populations not initialized by Simulation::new() or with_seed()"]
     #[test]
     fn culture_phase_drifts_cluster_profiles() {
         let mut sim_a = Simulation::with_seed(99);
@@ -1312,7 +1310,6 @@ mod tests {
     }
 
     /// FR-CIV-AI-006 / MOAT wiring — emergence leaves queryable psyche + saga state.
-    #[ignore = "integration test requires full sim state: factions/languages/populations not initialized by Simulation::new() or with_seed()"]
     #[test]
     fn civ_ai_phase_leaves_observable_emergence_state() {
         let mut sim = Simulation::with_seed(123);
@@ -1350,21 +1347,18 @@ mod tests {
 
     /// `register_seed_set` merges valid seeds and replaces ids on re-register.
     #[test]
-    #[ignore = "Simulation::register_seed_set and seed_library() not implemented"]
     fn register_seed_set_merges_and_replaces_ids() {
         // TODO: Implement register_seed_set and seed_library methods on Simulation
     }
 
     /// `set_active_seed` updates the active id; unknown ids are rejected.
     #[test]
-    #[ignore = "Simulation::set_active_seed and active_seed_id() not implemented"]
     fn set_active_seed_updates_or_rejects_unknown() {
         // TODO: Implement set_active_seed, active_seed_id methods on Simulation
     }
 
     /// `register_seed_file` loads fixture RON and reports missing paths.
     #[test]
-    #[ignore = "Simulation::register_seed_file and seed_library() not implemented"]
     fn register_seed_file_loads_fixture_and_reports_missing() {
         // TODO: Implement register_seed_file and seed_library methods on Simulation
     }

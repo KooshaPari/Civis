@@ -2107,7 +2107,6 @@ mod tests {
 
     /// Manual probe: `cargo test -p civ-server tick_broadcast_encode_bench --release -- --ignored --nocapture`
     #[test]
-    #[ignore = "manual perf probe"]
     fn tick_broadcast_encode_bench() {
         use std::time::Instant;
 

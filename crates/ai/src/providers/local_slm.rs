@@ -140,7 +140,6 @@ mod tests {
     /// Integration test: requires `CIVIS_LOCAL_SLM_DIR` (directory) and
     /// `CIVIS_LOCAL_SLM_GGUF` (filename within that dir). Skipped in CI.
     #[tokio::test]
-    #[ignore]
     async fn local_slm_generate_roundtrip() {
         let dir = std::env::var("CIVIS_LOCAL_SLM_DIR")
             .expect("set CIVIS_LOCAL_SLM_DIR to a dir containing a GGUF");

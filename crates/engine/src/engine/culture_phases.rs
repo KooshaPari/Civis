@@ -1,6 +1,10 @@
 //! Cultural, religion & language phases extracted from engine.rs (Pass 9).
 
-use crate::Simulation;
+use crate::culture::advance_faction_ideologies;
+use crate::language::{
+    borrow_word, ensure_seeded_word, faction_isolation_pressure, person_name_meaning,
+    place_name_meaning, seeded_language_state, tick_language_for_lineage,
+};
 use crate::religion::{
     apply_big_gods_response, substrate_gradients_for, ReligionEvent, ReligiousProfile,
     SubstrateGradients, MAX_MISERY_UNREST,
@@ -13,11 +17,7 @@ use crate::settlement_helpers::{
     settlement_religion_spread_edges, settlement_trade_contact_signal,
     SETTLEMENT_CONTACT_RADIUS_FP,
 };
-use crate::culture::advance_faction_ideologies;
-use crate::language::{
-    borrow_word, ensure_seeded_word, faction_isolation_pressure, person_name_meaning,
-    place_name_meaning, seeded_language_state, tick_language_for_lineage,
-};
+use crate::Simulation;
 use civ_genetics::sentience::{evaluate_sentience, SentienceEvent};
 use civ_genetics::Dna;
 use std::collections::{BTreeMap, BTreeSet};
@@ -81,9 +81,7 @@ impl Simulation {
         let unrest = self
             .last_tick_unrest_snapshots
             .get(&settlement_id)
-            .map(|snapshot| {
-                (snapshot.score.max(0) as f32 / 500.0) * MAX_MISERY_UNREST
-            })
+            .map(|snapshot| (snapshot.score.max(0) as f32 / 500.0) * MAX_MISERY_UNREST)
             .unwrap_or_else(|| {
                 let gini = (self
                     .unrest_settlement_gini
@@ -106,9 +104,7 @@ impl Simulation {
             grad_M: base.grad_M.max(food_pressure),
             grad_B: base.grad_B.max(food_pressure.max(hardship * 0.5)),
             kinship_density: base.kinship_density.min(kinship),
-            unrest: base
-                .unrest
-                .max(unrest.clamp(0.0, MAX_MISERY_UNREST)),
+            unrest: base.unrest.max(unrest.clamp(0.0, MAX_MISERY_UNREST)),
             migration_rate: base
                 .migration_rate
                 .max((1.0_f32 - cohesion).clamp(0.0, 1.0)),

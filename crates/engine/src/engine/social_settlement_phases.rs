@@ -3,17 +3,17 @@
 //! Contains civic institutions, social mood, stratification, cohesion,
 //! unrest, daily-path, and cluster phases.
 
+use super::{InstitutionEvent, MembershipPayoffTotals};
+use crate::settlement_helpers::{
+    settlement_centroid_position, SettlementMembershipPayoff, SETTLEMENT_CLUSTER_RADIUS_FP,
+};
 use crate::social_types::{
     compute_gini, institution_kind_key, CohesionEvent, CohesionEventKind, CohesionSnapshot,
     FabricTier, MoodSnapshot, StratBand, StratQuantiles, StratificationEvent,
     StratificationEventKind, StratificationReport, UnrestEvent, UnrestLevel, UnrestSnapshot,
     MOOD_CRIME_BASE, MOOD_HISTORY_CAP, MOOD_MAX, MOOD_MIN,
 };
-use crate::settlement_helpers::{
-    settlement_centroid_position, SettlementMembershipPayoff, SETTLEMENT_CLUSTER_RADIUS_FP,
-};
 use crate::Simulation;
-use super::{InstitutionEvent, MembershipPayoffTotals};
 use civ_agents::{
     cluster::{cluster_by_colocation, MembershipPayoff},
     daily_path::{pick_target, DailyPathDecision, Poi, PoiKind, PoiRegistry},

@@ -1,9 +1,9 @@
 //! Economic focus & policy phases extracted from engine.rs (Pass 8).
 
-use crate::Simulation;
 use super::{EconomicFocus, EconomicFocusEvent};
 use crate::emergence_coupling::candidate_economic_focus;
 use crate::policy::ControlSignals;
+use crate::Simulation;
 use crate::SCALE;
 
 impl Simulation {

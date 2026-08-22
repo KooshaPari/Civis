@@ -1,0 +1,582 @@
+{
+    "annotations": {
+        "list": [
+            {
+                "builtIn": 1,
+                "datasource": {
+                    "type": "grafana",
+                    "uid": "-- Grafana --"
+                },
+                "enable": true,
+                "hide": true,
+                "iconColor": "rgba(0, 211, 255, 1)",
+                "name": "Annotations & Alerts",
+                "type": "dashboard"
+            }
+        ]
+    },
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 0,
+    "id": null,
+    "links": [],
+    "panels": [
+        {
+            "title": "Simulation Tick Rate",
+            "type": "timeseries",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 0
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisBorderShow": false,
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "ticks/s",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "line",
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "lineInterpolation": "smooth",
+                        "lineWidth": 1,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "auto",
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "short"
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "calcs": [],
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "single",
+                    "sort": "none"
+                }
+            },
+            "targets": [
+                {
+                    "expr": "rate(civis_simulation_ticks_total[5m])",
+                    "legendFormat": "Tick Rate",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "title": "Population Across Civilizations",
+            "type": "timeseries",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 0
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisBorderShow": false,
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "population",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "line",
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "lineInterpolation": "smooth",
+                        "lineWidth": 1,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "never",
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "short"
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "calcs": ["mean"],
+                    "displayMode": "table",
+                    "placement": "right",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            },
+            "targets": [
+                {
+                    "expr": "civis_population_total{civilization=~\"$civilization\"}",
+                    "legendFormat": "{{ civilization }}",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "title": "Economy GDP",
+            "type": "gauge",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 8
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "mappings": [],
+                    "max": 1000000,
+                    "min": 0,
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 500000
+                            },
+                            {
+                                "color": "green",
+                                "value": 800000
+                            }
+                        ]
+                    },
+                    "unit": "currencyUSD"
+                },
+                "overrides": []
+            },
+            "options": {
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": ["lastNotNull"],
+                    "fields": "",
+                    "values": false
+                },
+                "showThresholdLabels": false,
+                "showThresholdMarkers": true
+            },
+            "targets": [
+                {
+                    "expr": "civis_economy_gdp_total",
+                    "legendFormat": "Total GDP",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "title": "Diplomacy Relations",
+            "type": "heatmap",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 8,
+                "y": 8
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "scheme",
+                        "scheme": "Spectral"
+                    },
+                    "custom": {
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": null
+                            },
+                            {
+                                "color": "green",
+                                "value": 0.5
+                            },
+                            {
+                                "color": "blue",
+                                "value": 0.9
+                            }
+                        ]
+                    },
+                    "unit": "short"
+                },
+                "overrides": []
+            },
+            "options": {
+                "calculate": false,
+                "cellGap": 1,
+                "color": {
+                    "mode": "scheme",
+                    "scheme": "Spectral",
+                    "fill": "dark-orange",
+                    "scale": "exponential",
+                    "exponent": 0.5
+                },
+                "cellValues": {
+                    "unit": "short"
+                },
+                "exemplars": {
+                    "color": "rgba(255,0,255,0.7)"
+                },
+                "filterValues": {
+                    "le": 1e-9
+                },
+                "legend": {
+                    "show": true
+                },
+                "rowsFrame": {
+                    "layout": "le"
+                },
+                "tooltip": {
+                    "mode": "single",
+                    "showColorScale": true,
+                    "yHistogram": false
+                },
+                "yAxis": {
+                    "axisLabel": "Relation",
+                    "axisPlacement": "left",
+                    "axisWidth": "auto",
+                    "group": "default",
+                    "reverse": false
+                }
+            },
+            "targets": [
+                {
+                    "expr": "civis_diplomacy_relation_score",
+                    "legendFormat": "{{ source }} -> {{ target }}",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "title": "Active WASM Mods",
+            "type": "stat",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 16,
+                "y": 8
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "short"
+                },
+                "overrides": []
+            },
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": ["lastNotNull"],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto",
+                "wideLayout": true
+            },
+            "targets": [
+                {
+                    "expr": "count(civis_wasm_mod_loaded{status=\"active\"})",
+                    "legendFormat": "Active Mods",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "title": "OTLP Trace Latency",
+            "type": "heatmap",
+            "datasource": {
+                "type": "tempo",
+                "uid": "${DS_TEMPO}"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 24,
+                "x": 0,
+                "y": 16
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "scheme",
+                        "scheme": "Blues"
+                    },
+                    "custom": {
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "scaleDistribution": {
+                            "type": "log",
+                            "log": 2
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "blue",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 200
+                            },
+                            {
+                                "color": "red",
+                                "value": 500
+                            }
+                        ]
+                    },
+                    "unit": "ms"
+                },
+                "overrides": []
+            },
+            "options": {
+                "calculate": false,
+                "cellGap": 1,
+                "color": {
+                    "mode": "scheme",
+                    "scheme": "Blues",
+                    "fill": "dark-orange",
+                    "scale": "exponential",
+                    "exponent": 0.5
+                },
+                "exemplars": {
+                    "color": "rgba(255,0,255,0.7)"
+                },
+                "filterValues": {
+                    "le": 1e-9
+                },
+                "legend": {
+                    "show": true
+                },
+                "rowsFrame": {
+                    "layout": "le"
+                },
+                "tooltip": {
+                    "mode": "single",
+                    "showColorScale": true,
+                    "yHistogram": false
+                },
+                "yAxis": {
+                    "axisLabel": "Duration",
+                    "axisPlacement": "left",
+                    "axisWidth": "auto",
+                    "group": "default",
+                    "reverse": false
+                }
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "tempo",
+                        "uid": "${DS_TEMPO}"
+                    },
+                    "queryType": "traceToMetrics",
+                    "query": "span_name=~\"civis.*\"",
+                    "refId": "A"
+                }
+            ]
+        }
+    ],
+    "refresh": "10s",
+    "schemaVersion": 39,
+    "tags": ["civis", "simulation", "gaming"],
+    "templating": {
+        "list": [
+            {
+                "current": {
+                    "selected": false,
+                    "text": "All",
+                    "value": "$__all"
+                },
+                "datasource": {
+                    "type": "prometheus",
+                    "uid": "${DS_PROMETHEUS}"
+                },
+                "definition": "label_values(civis_population_total, civilization)",
+                "hide": 0,
+                "includeAll": true,
+                "label": "Civilization",
+                "multi": true,
+                "name": "civilization",
+                "options": [],
+                "query": {
+                    "query": "label_values(civis_population_total, civilization)",
+                    "refId": "StandardVariableQuery"
+                },
+                "refresh": 2,
+                "regex": "",
+                "skipUrlSync": false,
+                "sort": 1,
+                "type": "query"
+            },
+            {
+                "current": {
+                    "selected": false,
+                    "text": "Prometheus",
+                    "uid": "prometheus"
+                },
+                "hide": 0,
+                "includeAll": false,
+                "label": "Datasource Prometheus",
+                "multi": false,
+                "name": "DS_PROMETHEUS",
+                "options": [],
+                "query": "prometheus",
+                "refresh": 1,
+                "regex": "",
+                "skipUrlSync": false,
+                "type": "datasource"
+            },
+            {
+                "current": {
+                    "selected": false,
+                    "text": "Tempo",
+                    "uid": "tempo"
+                },
+                "hide": 0,
+                "includeAll": false,
+                "label": "Datasource Tempo",
+                "multi": false,
+                "name": "DS_TEMPO",
+                "options": [],
+                "query": "tempo",
+                "refresh": 1,
+                "regex": "",
+                "skipUrlSync": false,
+                "type": "datasource"
+            }
+        ]
+    },
+    "time": {
+        "from": "now-1h",
+        "to": "now"
+    },
+    "timepicker": {},
+    "timezone": "browser",
+    "title": "Civis Overview",
+    "uid": "civis-overview",
+    "version": 1
+}

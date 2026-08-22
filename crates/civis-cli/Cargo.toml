@@ -28,6 +28,10 @@ name = "civis-dump"
 path = "src/bin/dump.rs"
 
 [[bin]]
+name = "civis"
+path = "src/bin/civis.rs"
+
+[[bin]]
 name = "civis-mcp"
 path = "src/bin/mcp.rs"
 
@@ -38,8 +42,18 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 clap = { version = "4", features = ["derive"] }
 dotenvy = "0.15"
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "sync", "time", "io-util"] }
-tokio-tungstenite = { version = "0.24", default-features = false, features = ["rustls-tls-webpki-roots", "connect"] }
+tokio = { version = "1", features = [
+  "rt-multi-thread",
+  "macros",
+  "net",
+  "sync",
+  "time",
+  "io-util",
+] }
+tokio-tungstenite = { version = "0.24", default-features = false, features = [
+  "rustls-tls-webpki-roots",
+  "connect",
+] }
 futures-util = "0.3"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
@@ -51,6 +65,10 @@ png = "0.17"
 # Bevy behind an opt-in feature so `civis-verify` can launch the windowed
 # renderer and the default `cargo check` stays fast.
 bevy = { version = "0.18", optional = true }
+
+# REPL dependencies
+rustyline = "15"
+colored = "2"
 
 [dev-dependencies]
 proptest = "1.11"

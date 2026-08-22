@@ -1,0 +1,100 @@
+apiVersion: 1
+groups:
+    - orgId: 1
+      name: Civis Alerts
+      folder: Civis
+      interval: 1m
+      rules:
+          - uid: civis-sim-stall-001
+            title: Simulation Stall
+            condition: C
+            data:
+                - refId: A
+                  relativeTimeRange:
+                      from: 600
+                      to: 0
+                  datasourceUid: prometheus
+                  model:
+                      expr: increase(civis_simulation_ticks_total[5m]) < 1
+                      instant: false
+            noDataState: Alerting
+            execErrState: Alerting
+            for: 5m
+            labels:
+                severity: critical
+                component: simulation
+            annotations:
+                summary: "Simulation has stalled"
+                description: "The simulation tick rate has dropped to near zero for over 5 seconds."
+
+          - uid: civis-memory-usage-001
+            title: High Memory Usage
+            condition: C
+            data:
+                - refId: A
+                  relativeTimeRange:
+                      from: 600
+                      to: 0
+                  datasourceUid: prometheus
+                  model:
+                      expr:
+                          (process_resident_memory_bytes / process_virtual_memory_max_bytes) * 100 >
+                          80
+                      instant: false
+            noDataState: OK
+            execErrState: Alerting
+            for: 5m
+            labels:
+                severity: warning
+                component: infrastructure
+            annotations:
+                summary: "Memory usage exceeds 80%"
+                description: "Process memory usage has exceeded 80% of the available limit."
+
+          - uid: civis-test-fail-001
+            title: High Test Failure Rate
+            condition: C
+            data:
+                - refId: A
+                  relativeTimeRange:
+                      from: 3600
+                      to: 0
+                  datasourceUid: prometheus
+                  model:
+                      expr:
+                          (rate(civis_tests_total{status="failed"}[1h]) /
+                          rate(civis_tests_total[1h])) * 100 > 5
+                      instant: false
+            noDataState: OK
+            execErrState: Alerting
+            for: 15m
+            labels:
+                severity: warning
+                component: quality
+            annotations:
+                summary: "Test failure rate is above 5%"
+                description:
+                    "The ratio of failed tests to total tests has exceeded the 5% threshold."
+
+          - uid: civis-cve-detected-001
+            title: CVE Detected in Dependencies
+            condition: C
+            data:
+                - refId: A
+                  relativeTimeRange:
+                      from: 600
+                      to: 0
+                  datasourceUid: prometheus
+                  model:
+                      expr: increase(civis_security_cve_total{severity=~"high|critical"}[1h]) > 0
+                      instant: false
+            noDataState: OK
+            execErrState: Alerting
+            for: 1m
+            labels:
+                severity: critical
+                component: security
+            annotations:
+                summary: "New CVE detected in dependencies"
+                description:
+                    "A new high or critical vulnerability has been detected in a project dependency."

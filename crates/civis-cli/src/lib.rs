@@ -42,6 +42,7 @@ pub mod census;
 pub mod config;
 pub mod dump;
 pub mod pixels;
+pub mod repl;
 
 #[cfg(feature = "bevy")]
 pub mod verify;

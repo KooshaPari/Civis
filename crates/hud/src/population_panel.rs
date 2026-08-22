@@ -111,13 +111,28 @@ mod tests {
             total: 1000,
             growth_rate: 0.05,
             factions: vec![
-                FactionBreakdown { faction_id: 1, count: 600 },
-                FactionBreakdown { faction_id: 2, count: 400 },
+                FactionBreakdown {
+                    faction_id: 1,
+                    count: 600,
+                },
+                FactionBreakdown {
+                    faction_id: 2,
+                    count: 400,
+                },
             ],
             demographics: vec![
-                AgeBandCount { band: AgeBand::Child, count: 200 },
-                AgeBandCount { band: AgeBand::Adult, count: 650 },
-                AgeBandCount { band: AgeBand::Elder, count: 150 },
+                AgeBandCount {
+                    band: AgeBand::Child,
+                    count: 200,
+                },
+                AgeBandCount {
+                    band: AgeBand::Adult,
+                    count: 650,
+                },
+                AgeBandCount {
+                    band: AgeBand::Elder,
+                    count: 150,
+                },
             ],
         }
     }

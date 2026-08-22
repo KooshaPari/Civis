@@ -106,7 +106,11 @@ impl Repl {
     /// This method is the core dispatch and is fully testable without I/O.
     #[must_use]
     pub fn process_command(&mut self, input: &str) -> String {
-        let parts: Vec<&str> = input.splitn(2, char::is_whitespace).collect();
+        let trimmed = input.trim();
+        if trimmed.is_empty() {
+            return String::new();
+        }
+        let parts: Vec<&str> = trimmed.splitn(2, char::is_whitespace).collect();
         let cmd = parts[0].to_lowercase();
         let arg = parts.get(1).map(|s| s.trim()).unwrap_or("");
 
@@ -461,8 +465,11 @@ mod tests {
     fn empty_input_returns_empty_string() {
         let mut repl = make_repl();
         let output = repl.process_command("   ");
-        // Whitespace-only input is filtered by the caller, but process_command
-        // with trailing/leading spaces should still dispatch to the correct cmd.
+        assert!(
+            output.is_empty(),
+            "whitespace-only input should return empty"
+        );
+        // Input with leading/trailing spaces should still dispatch correctly.
         let output = repl.process_command("  help  ");
         assert!(output.contains("Available Commands"));
     }

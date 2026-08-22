@@ -113,12 +113,30 @@ mod tests {
             employment: 800,
             workforce: 1000,
             sectors: vec![
-                EmploymentSector { sector: "agriculture".into(), workers: 400, efficiency: 1.2 },
-                EmploymentSector { sector: "military".into(), workers: 200, efficiency: 0.9 },
+                EmploymentSector {
+                    sector: "agriculture".into(),
+                    workers: 400,
+                    efficiency: 1.2,
+                },
+                EmploymentSector {
+                    sector: "military".into(),
+                    workers: 200,
+                    efficiency: 0.9,
+                },
             ],
             resources: vec![
-                ResourceStock { name: "grain".into(), quantity: 500.0, production_rate: 50.0, consumption_rate: 40.0 },
-                ResourceStock { name: "iron".into(), quantity: 200.0, production_rate: 10.0, consumption_rate: 25.0 },
+                ResourceStock {
+                    name: "grain".into(),
+                    quantity: 500.0,
+                    production_rate: 50.0,
+                    consumption_rate: 40.0,
+                },
+                ResourceStock {
+                    name: "iron".into(),
+                    quantity: 200.0,
+                    production_rate: 10.0,
+                    consumption_rate: 25.0,
+                },
             ],
         }
     }

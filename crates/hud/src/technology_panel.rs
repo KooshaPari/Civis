@@ -90,7 +90,11 @@ impl TechnologyPanel {
     pub fn empty() -> Self {
         Self {
             projects: Vec::new(),
-            tree: TechTreeCoverage { total: 0, unlocked: 0, current_era: 0 },
+            tree: TechTreeCoverage {
+                total: 0,
+                unlocked: 0,
+                current_era: 0,
+            },
             points_this_tick: 0,
         }
     }
@@ -155,7 +159,11 @@ mod tests {
                     weight: 0,
                 },
             ],
-            tree: TechTreeCoverage { total: 40, unlocked: 12, current_era: 3 },
+            tree: TechTreeCoverage {
+                total: 40,
+                unlocked: 12,
+                current_era: 3,
+            },
             points_this_tick: 15,
         }
     }
@@ -193,7 +201,11 @@ mod tests {
 
     #[test]
     fn tree_unlocked_fraction_empty_tree() {
-        let tree = TechTreeCoverage { total: 0, unlocked: 0, current_era: 0 };
+        let tree = TechTreeCoverage {
+            total: 0,
+            unlocked: 0,
+            current_era: 0,
+        };
         assert!((tree.unlocked_fraction() - 0.0).abs() < 1e-6);
     }
 

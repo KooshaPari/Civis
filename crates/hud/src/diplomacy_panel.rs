@@ -92,7 +92,10 @@ impl DiplomacyPanel {
     /// Number of active treaties (status == "active").
     #[must_use]
     pub fn active_treaty_count(&self) -> usize {
-        self.treaties.iter().filter(|t| t.status == "active").count()
+        self.treaties
+            .iter()
+            .filter(|t| t.status == "active")
+            .count()
     }
 
     /// Number of hostile relations.
@@ -124,13 +127,38 @@ mod tests {
     fn sample_panel() -> DiplomacyPanel {
         DiplomacyPanel {
             relations: vec![
-                RelationEntry { polity_a: 1, polity_b: 2, stance: StanceKind::Allied, standing: 150 },
-                RelationEntry { polity_a: 1, polity_b: 3, stance: StanceKind::Hostile, standing: -200 },
-                RelationEntry { polity_a: 2, polity_b: 3, stance: StanceKind::Neutral, standing: 10 },
+                RelationEntry {
+                    polity_a: 1,
+                    polity_b: 2,
+                    stance: StanceKind::Allied,
+                    standing: 150,
+                },
+                RelationEntry {
+                    polity_a: 1,
+                    polity_b: 3,
+                    stance: StanceKind::Hostile,
+                    standing: -200,
+                },
+                RelationEntry {
+                    polity_a: 2,
+                    polity_b: 3,
+                    stance: StanceKind::Neutral,
+                    standing: 10,
+                },
             ],
             treaties: vec![
-                TreatySummary { id: 1, parties: (1, 2), treaty_type: "trade".into(), status: "active".into() },
-                TreatySummary { id: 2, parties: (1, 3), treaty_type: "alliance".into(), status: "proposed".into() },
+                TreatySummary {
+                    id: 1,
+                    parties: (1, 2),
+                    treaty_type: "trade".into(),
+                    status: "active".into(),
+                },
+                TreatySummary {
+                    id: 2,
+                    parties: (1, 3),
+                    treaty_type: "alliance".into(),
+                    status: "proposed".into(),
+                },
             ],
             threat_level: ThreatLevel::AtWar,
         }
@@ -164,9 +192,12 @@ mod tests {
     #[test]
     fn compute_threat_level_tense_when_no_hostile() {
         let p = DiplomacyPanel {
-            relations: vec![
-                RelationEntry { polity_a: 1, polity_b: 2, stance: StanceKind::Neutral, standing: 10 },
-            ],
+            relations: vec![RelationEntry {
+                polity_a: 1,
+                polity_b: 2,
+                stance: StanceKind::Neutral,
+                standing: 10,
+            }],
             treaties: Vec::new(),
             threat_level: ThreatLevel::Peaceful,
         };

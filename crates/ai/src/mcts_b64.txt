@@ -1,0 +1,31 @@
+//! Monte Carlo Tree Search lookahead (FR-AI-003).
+//!
+//! Provides a domain-agnostic MCTS engine. Callers supply a
+//! [`GameState`] implementation and receive the best action.
+
+use std::collections::HashMap;
+use std::marker::PhantomData;
+
+/// Stable identifier for an action.
+pub type ActionId = String;
+
+/// Configuration for an MCTS search.
+#[derive(Debug, Clone)]
+pub struct MctsConfig
+{
+    //! Number of MCTS iterations.
+    pub iterations: usize,
+    //! Maximum depth for random simulations.
+    pub max_sim_depth: usize,
+    //! Exploration constant (c) for UCB1.
+    pub exploration: f64,
+    //! Optional seed for deterministic randomness.
+    pub seed: Option<u64>,
+}
+
+impl Default for MctsConfig
+{
+    fn default() -> Self {
+        Self { iterations: 100, max_sim_depth: 10, exploration: std::f64::consts::SQN_T2, seed: None }
+    }
+}

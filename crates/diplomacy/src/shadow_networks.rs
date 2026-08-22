@@ -31,9 +31,7 @@ use crate::{Pair, PolityId};
 /// enforcement type: the system-level [`ShadowNetworkState::total_leakage`]
 /// is stored as this type, so a negative global invariant is impossible
 /// at the type level.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct NonNegativeU64(u64);
 
 impl NonNegativeU64 {
@@ -241,9 +239,12 @@ impl ShadowNetworkState {
         // Update per-pair aggregate.
         let agg = self.pair_aggregates.entry(pair).or_default();
         agg.total_leakage = agg.total_leakage.saturating_add(quantity);
-        *agg.flows_by_type.entry(flow.flow_type).or_default() =
-            NonNegativeU64::new(agg.flows_by_type.get(&flow.flow_type).map_or(0, |n| n.get()))
-                .saturating_add(quantity);
+        *agg.flows_by_type.entry(flow.flow_type).or_default() = NonNegativeU64::new(
+            agg.flows_by_type
+                .get(&flow.flow_type)
+                .map_or(0, |n| n.get()),
+        )
+        .saturating_add(quantity);
         agg.flow_count += 1;
 
         // Update system-level leakage (non-negative by type).
@@ -251,7 +252,9 @@ impl ShadowNetworkState {
 
         self.next_flow_id += 1;
 
-        ShadowNetworkEvent::FlowRecorded { flow }
+        let event = ShadowNetworkEvent::FlowRecorded { flow };
+        self.pending_events.push(event.clone());
+        event
     }
 
     /// Apply enforcement to a pair, reducing their aggregate leakage.
@@ -269,10 +272,7 @@ impl ShadowNetworkState {
         let mut events = Vec::new();
 
         // Increment enforcement intensity for the enforcer.
-        let intensity = self
-            .enforcement_intensity
-            .entry(enforcer)
-            .or_insert(0);
+        let intensity = self.enforcement_intensity.entry(enforcer).or_insert(0);
         *intensity += 1;
         let current_intensity = *intensity;
 
@@ -338,7 +338,10 @@ impl ShadowNetworkState {
 
     /// Enforcement intensity for a specific polity in the current tick.
     pub fn enforcement_intensity(&self, polity: PolityId) -> u32 {
-        self.enforcement_intensity.get(&polity).copied().unwrap_or(0)
+        self.enforcement_intensity
+            .get(&polity)
+            .copied()
+            .unwrap_or(0)
     }
 
     /// Look up the aggregate shadow activity for a specific pair.
@@ -419,10 +422,7 @@ mod tests {
         };
 
         let event = state.record_flow(flow.clone());
-        assert_eq!(
-            event,
-            ShadowNetworkEvent::FlowRecorded { flow }
-        );
+        assert_eq!(event, ShadowNetworkEvent::FlowRecorded { flow });
 
         let agg = state.get_pair_aggregate(pair(1, 2)).unwrap();
         assert_eq!(agg.total_leakage, NonNegativeU64::new(50));
@@ -538,18 +538,16 @@ mod tests {
 
         // Intensity 1 — no overreach.
         let events = state.enforce(p(1), pair(2, 3), 1);
-        assert!(!events.iter().any(|e| matches!(
-            e,
-            ShadowNetworkEvent::OverreachDetected { .. }
-        )));
+        assert!(!events
+            .iter()
+            .any(|e| matches!(e, ShadowNetworkEvent::OverreachDetected { .. })));
         assert_eq!(state.enforcement_intensity(p(1)), 1);
 
         // Intensity 2 — at threshold, no overreach yet.
         let events = state.enforce(p(1), pair(2, 3), 1);
-        assert!(!events.iter().any(|e| matches!(
-            e,
-            ShadowNetworkEvent::OverreachDetected { .. }
-        )));
+        assert!(!events
+            .iter()
+            .any(|e| matches!(e, ShadowNetworkEvent::OverreachDetected { .. })));
         assert_eq!(state.enforcement_intensity(p(1)), 2);
 
         // Intensity 3 — above threshold, overreach detected.
@@ -576,17 +574,15 @@ mod tests {
 
         // p(1) enforces once — no overreach (intensity=1, threshold=1).
         let events1 = state.enforce(p(1), pair(2, 3), 1);
-        assert!(!events1.iter().any(|e| matches!(
-            e,
-            ShadowNetworkEvent::OverreachDetected { .. }
-        )));
+        assert!(!events1
+            .iter()
+            .any(|e| matches!(e, ShadowNetworkEvent::OverreachDetected { .. })));
 
         // p(2) enforces once — no overreach.
         let events2 = state.enforce(p(2), pair(2, 3), 1);
-        assert!(!events2.iter().any(|e| matches!(
-            e,
-            ShadowNetworkEvent::OverreachDetected { .. }
-        )));
+        assert!(!events2
+            .iter()
+            .any(|e| matches!(e, ShadowNetworkEvent::OverreachDetected { .. })));
 
         // p(1) enforces again — overreach (intensity=2 > threshold=1).
         let events3 = state.enforce(p(1), pair(2, 3), 2);

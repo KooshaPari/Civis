@@ -1,0 +1,18 @@
+# Temp Python scripts (external session artifacts)
+crates/ai/src/_*.py
+
+# Build artifacts
+target/
+Cargo.lock
+
+# Grafana/ops dashboards (auto-generated)
+deploy/
+
+# Trunk cache
+.trunk/
+
+# WASM build artifacts
+clients/unreal-show/Source/Civis/lib/
+
+# CI artifacts
+.ci/quality-manifest.json

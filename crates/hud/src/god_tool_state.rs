@@ -363,13 +363,12 @@ impl GodToolRegistry {
     #[must_use]
     pub fn default_rim() -> Self {
         Self::new([
-            GodToolDef::new(GodToolId::None, "None", "·")
-                .with_param(GodToolParamSpec::new(
-                    "armed",
-                    "Armed",
-                    GodToolParamKind::Bool,
-                    GodToolParamValue::Bool(false),
-                )),
+            GodToolDef::new(GodToolId::None, "None", "·").with_param(GodToolParamSpec::new(
+                "armed",
+                "Armed",
+                GodToolParamKind::Bool,
+                GodToolParamValue::Bool(false),
+            )),
             GodToolDef::new(GodToolId::Select, "Select", "Q").with_param(GodToolParamSpec::new(
                 "inspect_kind",
                 "Inspect kind",
@@ -740,8 +739,11 @@ mod tests {
     fn selecting_a_tool_sets_it_active_and_exposes_its_params() {
         let (reg, mut state) = fresh();
         assert_eq!(state.current(), &GodToolId::None);
-        // Initially: no current tool → empty params vec.
-        assert!(state.current_params(&reg).is_empty());
+        // Initially: no tool selected, but GodToolId::None is registered
+        // with an "armed" param, so current_params returns that.
+        let initial_params = state.current_params(&reg);
+        assert_eq!(initial_params.len(), 1);
+        assert_eq!(initial_params[0].0.name, "armed");
 
         // Select Raise. State flips to Raise.
         assert!(state.select(&reg, GodToolId::Raise));
@@ -803,7 +805,10 @@ mod tests {
         // continuous. They are the spec defaults — not Raise's.
         let swapped = state.current_params(&reg);
         let names: Vec<&str> = swapped.iter().map(|(s, _)| s.name.as_str()).collect();
-        assert_eq!(names, vec!["material", "radius", "drop_height", "continuous"]);
+        assert_eq!(
+            names,
+            vec!["material", "radius", "drop_height", "continuous"]
+        );
         // The new current has its own `radius` default (2.0), NOT
         // Raise's edited 9.5.
         assert!(matches!(
@@ -862,12 +867,7 @@ mod tests {
             GodToolParamValue::Float(1.0),
         ));
         // Kind mismatch: `radius` is Float, not Int.
-        assert!(!state.set_param(
-            &reg,
-            &GodToolId::Raise,
-            "radius",
-            GodToolParamValue::Int(7),
-        ));
+        assert!(!state.set_param(&reg, &GodToolId::Raise, "radius", GodToolParamValue::Int(7),));
         // Kind mismatch: `mode` is Enum, not Text.
         assert!(!state.set_param(
             &reg,

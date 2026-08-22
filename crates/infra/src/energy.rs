@@ -507,6 +507,188 @@ impl EnergyGrid {
     }
 }
 
+// ── Grid stability ────────────────────────────────────────────────
+
+/// Grid stability index: 0.0 = complete instability, 1.0 = perfectly stable.
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
+pub struct StabilityIndex(pub f32);
+
+impl StabilityIndex {
+    /// Create a new stability index, clamped to [0.0, 1.0].
+    #[must_use]
+    pub fn new(value: f32) -> Self {
+        Self(value.clamp(0.0, 1.0))
+    }
+
+    /// Whether the grid is considered stable.
+    #[must_use]
+    pub fn is_stable(self) -> bool {
+        self.0 >= 0.6
+    }
+
+    /// Human-readable label.
+    #[must_use]
+    pub fn label(self) -> &'static str {
+        if self.0 >= 0.9 {
+            "Excellent"
+        } else if self.0 >= 0.7 {
+            "Good"
+        } else if self.0 >= 0.5 {
+            "Marginal"
+        } else if self.0 >= 0.3 {
+            "Poor"
+        } else {
+            "Critical"
+        }
+    }
+}
+
+/// Frequency deviation from nominal (50 Hz or 60 Hz baseline).
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
+pub struct FrequencyDeviation(pub f32);
+
+impl FrequencyDeviation {
+    /// Create from a raw Hz deviation (positive = over-frequency).
+    #[must_use]
+    pub fn new(deviation_hz: f32) -> Self {
+        Self(deviation_hz)
+    }
+
+    /// Whether this deviation is within acceptable bounds (+-0.5 Hz).
+    #[must_use]
+    pub fn is_acceptable(self) -> bool {
+        self.0.abs() <= 0.5
+    }
+
+    /// Severity score: 0.0 = fine, 1.0 = dangerous.
+    #[must_use]
+    pub fn severity(self) -> f32 {
+        (self.0.abs() / 2.0).min(1.0)
+    }
+}
+
+/// Outcome of a grid stability assessment.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct StabilityReport {
+    /// Overall stability index.
+    pub index: StabilityIndex,
+    /// Supply/demand ratio (1.0 = balanced).
+    pub supply_demand_ratio: f32,
+    /// Number of blacked-out consumers.
+    pub blacked_out_consumers: u32,
+    /// Total consumers in the grid.
+    pub total_consumers: u32,
+    /// Total generation capacity (MW).
+    pub total_generation: f32,
+    /// Total demand (MW).
+    pub total_demand: f32,
+    /// Estimated frequency deviation from nominal.
+    pub frequency_deviation: FrequencyDeviation,
+    /// Lines that are at or over capacity.
+    pub overloaded_lines: Vec<TransmissionLineId>,
+}
+
+impl StabilityReport {
+    /// Whether the grid is currently stable.
+    #[must_use]
+    pub fn is_stable(&self) -> bool {
+        self.index.is_stable()
+    }
+}
+
+impl EnergyGrid {
+    /// Assess the current grid stability based on the last balance result.
+    /// Returns a detailed stability report.
+    #[must_use]
+    pub fn assess_stability(&self, last_result: &BalanceResult) -> StabilityReport {
+        let total_generation: f32 = self
+            .nodes
+            .values()
+            .filter(|n| matches!(n.kind, EnergyNodeKind::Generator) && n.energised)
+            .map(|n| n.max_output)
+            .sum();
+
+        let total_demand: f32 = self
+            .nodes
+            .values()
+            .filter(|n| matches!(n.kind, EnergyNodeKind::Consumer) && n.energised)
+            .map(|n| n.max_demand)
+            .sum();
+
+        let total_consumers: u32 = self
+            .nodes
+            .values()
+            .filter(|n| matches!(n.kind, EnergyNodeKind::Consumer))
+            .count() as u32;
+
+        let blacked_out_consumers: u32 = self
+            .nodes
+            .values()
+            .filter(|n| matches!(n.kind, EnergyNodeKind::Consumer) && !n.energised)
+            .count() as u32;
+
+        let supply_demand_ratio = if total_demand > 0.0 {
+            total_generation / total_demand
+        } else {
+            1.0
+        };
+
+        // Frequency deviation: under-frequency when supply < demand.
+        let freq_dev = if supply_demand_ratio < 1.0 {
+            FrequencyDeviation::new(-(1.0 - supply_demand_ratio) * 2.0)
+        } else if supply_demand_ratio > 1.2 {
+            FrequencyDeviation::new((supply_demand_ratio - 1.0) * 1.5)
+        } else {
+            FrequencyDeviation::new(0.0)
+        };
+
+        // Overloaded lines.
+        let overloaded: Vec<TransmissionLineId> = last_result
+            .line_flow
+            .iter()
+            .filter_map(|(&line_id, &flow)| {
+                self.line_index.get(&line_id).and_then(|line| {
+                    if line.capacity > 0.0 && flow / line.capacity >= 0.95 {
+                        Some(line_id)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .collect();
+
+        // Composite stability index.
+        let blackout_penalty = if total_consumers > 0 {
+            blacked_out_consumers as f32 / total_consumers as f32
+        } else {
+            0.0
+        };
+        let supply_factor = supply_demand_ratio.min(1.0);
+        let freq_penalty = freq_dev.severity();
+        let line_penalty = if self.line_index.is_empty() {
+            0.0
+        } else {
+            overloaded.len() as f32 / self.line_index.len() as f32
+        };
+
+        let raw = (supply_factor * 0.4)
+            + ((1.0 - blackout_penalty) * 0.3)
+            + ((1.0 - freq_penalty) * 0.2)
+            + ((1.0 - line_penalty) * 0.1);
+
+        StabilityReport {
+            index: StabilityIndex::new(raw),
+            supply_demand_ratio,
+            blacked_out_consumers,
+            total_consumers,
+            total_generation,
+            total_demand,
+            frequency_deviation: freq_dev,
+            overloaded_lines: overloaded,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -628,5 +810,69 @@ mod tests {
         assert!(result.all_satisfied());
         assert_eq!(result.delivered.get(&EnergyNodeId(2)).copied(), Some(25.0));
         assert_eq!(result.delivered.get(&EnergyNodeId(3)).copied(), Some(25.0));
+    }
+
+    // ── Stability tests ────────────────────────────────────────────
+
+    #[test]
+    fn stability_index_clamping() {
+        assert_eq!(StabilityIndex::new(1.5).0, 1.0);
+        assert_eq!(StabilityIndex::new(-0.5).0, 0.0);
+    }
+
+    #[test]
+    fn stability_index_labels() {
+        assert_eq!(StabilityIndex::new(0.95).label(), "Excellent");
+        assert_eq!(StabilityIndex::new(0.75).label(), "Good");
+        assert_eq!(StabilityIndex::new(0.55).label(), "Marginal");
+        assert_eq!(StabilityIndex::new(0.35).label(), "Poor");
+        assert_eq!(StabilityIndex::new(0.1).label(), "Critical");
+    }
+
+    #[test]
+    fn frequency_deviation_acceptable() {
+        assert!(FrequencyDeviation::new(0.3).is_acceptable());
+        assert!(FrequencyDeviation::new(-0.5).is_acceptable());
+        assert!(!FrequencyDeviation::new(1.0).is_acceptable());
+    }
+
+    #[test]
+    fn balanced_grid_is_stable() {
+        let mut grid = build_simple_grid();
+        let mut supply = BTreeMap::new();
+        supply.insert(EnergyNodeId(0), 50.0);
+        let mut demand = BTreeMap::new();
+        demand.insert(EnergyNodeId(2), 10.0);
+        let result = grid.balance(&supply, &demand);
+        let report = grid.assess_stability(&result);
+        assert!(report.is_stable());
+        assert!(report.index.0 >= 0.6);
+        assert!(report.frequency_deviation.is_acceptable());
+    }
+
+    #[test]
+    fn blackout_reduces_stability() {
+        let mut grid = build_simple_grid();
+        grid.blackout_node(EnergyNodeId(0));
+        let mut supply = BTreeMap::new();
+        supply.insert(EnergyNodeId(0), 50.0);
+        let mut demand = BTreeMap::new();
+        demand.insert(EnergyNodeId(2), 10.0);
+        let result = grid.balance(&supply, &demand);
+        let report = grid.assess_stability(&result);
+        assert!(report.index.0 < 0.7);
+    }
+
+    #[test]
+    fn undersupply_causes_frequency_deviation() {
+        let mut grid = build_simple_grid();
+        let mut supply = BTreeMap::new();
+        supply.insert(EnergyNodeId(0), 5.0);
+        let mut demand = BTreeMap::new();
+        demand.insert(EnergyNodeId(2), 50.0);
+        let result = grid.balance(&supply, &demand);
+        let report = grid.assess_stability(&result);
+        assert!(report.supply_demand_ratio < 1.0);
+        assert!(!report.frequency_deviation.is_acceptable());
     }
 }

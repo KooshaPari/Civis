@@ -4161,6 +4161,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "civ-hud"
+version = "0.1.0"
+dependencies = [
+ "proptest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "civ-infra"
 version = "0.1.0"
 dependencies = [

@@ -533,6 +533,160 @@ impl WaterSystem {
     }
 }
 
+// ── Water quality tracking ────────────────────────────────────────
+
+/// Water quality parameter type.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum QualityParameter {
+    /// pH level (0.0–14.0, ideal: 6.5–8.5).
+    PH,
+    /// Turbidity in NTU (Nephelometric Turbidity Units).
+    Turbidity,
+    /// Dissolved oxygen in mg/L.
+    DissolvedOxygen,
+    /// Chlorine residual in mg/L.
+    ChlorineResidual,
+    /// Temperature in degrees Celsius.
+    Temperature,
+}
+
+/// Quality reading at a specific node.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct QualityReading {
+    /// Node this reading was taken at.
+    pub node_id: WaterNodeId,
+    /// pH value (0.0–14.0).
+    pub ph: f32,
+    /// Turbidity in NTU.
+    pub turbidity: f32,
+    /// Dissolved oxygen in mg/L.
+    pub dissolved_oxygen: f32,
+    /// Chlorine residual in mg/L.
+    pub chlorine_residual: f32,
+    /// Temperature in Celsius.
+    pub temperature: f32,
+}
+
+impl QualityReading {
+    /// Create a new quality reading with ideal defaults.
+    #[must_use]
+    pub fn ideal(node_id: WaterNodeId) -> Self {
+        Self {
+            node_id,
+            ph: 7.0,
+            turbidity: 0.0,
+            dissolved_oxygen: 8.0,
+            chlorine_residual: 1.0,
+            temperature: 20.0,
+        }
+    }
+
+    /// Whether this reading is within safe drinking water standards.
+    #[must_use]
+    pub fn is_safe(&self) -> bool {
+        self.ph >= 6.5 && self.ph <= 8.5 && self.turbidity <= 5.0 && self.dissolved_oxygen >= 5.0
+    }
+
+    /// Compute a composite quality score (0.0 = worst, 1.0 = ideal).
+    #[must_use]
+    pub fn quality_score(&self) -> f32 {
+        // pH score: 1.0 at 7.0, dropping off toward extremes.
+        let ph_score = (1.0 - ((self.ph - 7.0).abs() / 7.0)).max(0.0);
+        // Turbidity score: 1.0 at 0 NTU, 0.0 at 10+ NTU.
+        let turb_score = (1.0 - self.turbidity / 10.0).max(0.0);
+        // DO score: 1.0 at 8+ mg/L, 0.0 at 0 mg/L.
+        let do_score = (self.dissolved_oxygen / 8.0).min(1.0);
+        // Weighted average.
+        (ph_score * 0.35) + (turb_score * 0.35) + (do_score * 0.30)
+    }
+}
+
+/// Quality report summarising the state of the water system.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct QualityReport {
+    /// Per-node quality readings.
+    pub readings: BTreeMap<WaterNodeId, QualityReading>,
+    /// Nodes with unsafe water quality.
+    pub unsafe_nodes: Vec<WaterNodeId>,
+    /// Average quality score across all readings.
+    pub average_score: f32,
+    /// Number of nodes with readings.
+    pub total_readings: u32,
+}
+
+impl QualityReport {
+    /// Whether all nodes have safe water.
+    #[must_use]
+    pub fn is_all_safe(&self) -> bool {
+        self.unsafe_nodes.is_empty()
+    }
+}
+
+impl WaterSystem {
+    /// Assess water quality at a specific node. Returns a reading based
+    /// on the node's current contamination state.
+    #[must_use]
+    pub fn assess_quality(&self, node_id: WaterNodeId) -> Option<QualityReading> {
+        let node = self.nodes.get(&node_id)?;
+        let mut reading = QualityReading::ideal(node_id);
+
+        // Contaminants affect quality.
+        for contaminant in &node.contaminants {
+            match contaminant {
+                Contaminant::Chemical => {
+                    reading.ph = 4.5; // Acidic from chemical runoff
+                    reading.dissolved_oxygen = 2.0;
+                }
+                Contaminant::Biological => {
+                    reading.turbidity = 8.0;
+                    reading.chlorine_residual = 0.0;
+                }
+                Contaminant::Sediment => {
+                    reading.turbidity = 15.0;
+                }
+            }
+        }
+        Some(reading)
+    }
+
+    /// Generate a quality report for all consumer nodes.
+    #[must_use]
+    pub fn quality_report(&self) -> QualityReport {
+        let mut report = QualityReport::default();
+        let mut total_score = 0.0;
+
+        for (&id, node) in &self.nodes {
+            if matches!(node.kind, WaterNodeKind::Consumer) {
+                if let Some(reading) = self.assess_quality(id) {
+                    if !reading.is_safe() {
+                        report.unsafe_nodes.push(id);
+                    }
+                    total_score += reading.quality_score();
+                    report.total_readings += 1;
+                    report.readings.insert(id, reading);
+                }
+            }
+        }
+
+        report.average_score = if report.total_readings > 0 {
+            total_score / report.total_readings as f32
+        } else {
+            1.0
+        };
+        report
+    }
+
+    /// Apply a contamination event and return the quality impact.
+    pub fn contamination_event(
+        &mut self,
+        node_id: WaterNodeId,
+        contaminant: Contaminant,
+    ) -> QualityReport {
+        self.introduce_contaminant(node_id, contaminant);
+        self.quality_report()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -683,5 +837,63 @@ mod tests {
             result.contaminated_nodes.contains(&WaterNodeId(1)),
             "consumer should be contaminated via pipe"
         );
+    }
+
+    // ── Water quality tests ────────────────────────────────────────
+
+    #[test]
+    fn ideal_reading_is_safe() {
+        let reading = QualityReading::ideal(WaterNodeId(0));
+        assert!(reading.is_safe());
+        assert!(reading.quality_score() > 0.9);
+    }
+
+    #[test]
+    fn chemical_contamination_makes_unsafe() {
+        let mut sys = WaterSystem::new();
+        sys.add_consumer(WaterNodeId(0), 10.0);
+        sys.introduce_contaminant(WaterNodeId(0), Contaminant::Chemical);
+        let reading = sys.assess_quality(WaterNodeId(0)).unwrap();
+        assert!(!reading.is_safe());
+        assert!(reading.ph < 6.5);
+    }
+
+    #[test]
+    fn biological_contamination_increases_turbidity() {
+        let mut sys = WaterSystem::new();
+        sys.add_consumer(WaterNodeId(0), 10.0);
+        sys.introduce_contaminant(WaterNodeId(0), Contaminant::Biological);
+        let reading = sys.assess_quality(WaterNodeId(0)).unwrap();
+        assert!(reading.turbidity > 5.0);
+        assert!(!reading.is_safe());
+    }
+
+    #[test]
+    fn quality_report_for_consumers_only() {
+        let mut sys = WaterSystem::new();
+        sys.add_reservoir(WaterNodeId(0), 50.0);
+        sys.add_consumer(WaterNodeId(1), 10.0);
+        sys.add_consumer(WaterNodeId(2), 10.0);
+        let report = sys.quality_report();
+        assert_eq!(report.total_readings, 2);
+        assert!(report.is_all_safe());
+    }
+
+    #[test]
+    fn contamination_event_returns_impact() {
+        let mut sys = WaterSystem::new();
+        sys.add_consumer(WaterNodeId(0), 10.0);
+        let report = sys.contamination_event(WaterNodeId(0), Contaminant::Sediment);
+        assert!(!report.is_all_safe());
+        assert!(report.unsafe_nodes.contains(&WaterNodeId(0)));
+    }
+
+    #[test]
+    fn quality_score_degrades_with_turbidity() {
+        let mut reading = QualityReading::ideal(WaterNodeId(0));
+        let baseline = reading.quality_score();
+        reading.turbidity = 8.0;
+        let degraded = reading.quality_score();
+        assert!(degraded < baseline);
     }
 }

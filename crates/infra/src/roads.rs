@@ -426,6 +426,174 @@ impl RoadNetwork {
     }
 }
 
+// ── Road degradation ──────────────────────────────────────────────
+
+/// Weather or environmental event that degrades road surface.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum WeatherEvent {
+    /// Heavy rain increases wear and reduces effective capacity.
+    HeavyRain,
+    /// Freezing temperatures cause frost damage.
+    Frost,
+    /// Snow accumulation blocks lanes.
+    Snow,
+    /// Extreme heat softens asphalt.
+    Heatwave,
+    /// Severe storm causing physical damage.
+    SevereStorm,
+}
+
+impl WeatherEvent {
+    /// Capacity reduction factor (0.0–1.0) applied by this event.
+    #[must_use]
+    pub fn capacity_factor(self) -> f32 {
+        match self {
+            WeatherEvent::HeavyRain => 0.85,
+            WeatherEvent::Frost => 0.70,
+            WeatherEvent::Snow => 0.50,
+            WeatherEvent::Heatwave => 0.80,
+            WeatherEvent::SevereStorm => 0.40,
+        }
+    }
+
+    /// Base cost multiplier caused by this event.
+    #[must_use]
+    pub fn cost_multiplier(self) -> f32 {
+        match self {
+            WeatherEvent::HeavyRain => 1.2,
+            WeatherEvent::Frost => 1.5,
+            WeatherEvent::Snow => 2.0,
+            WeatherEvent::Heatwave => 1.1,
+            WeatherEvent::SevereStorm => 2.5,
+        }
+    }
+}
+
+/// Severity of road surface degradation (0.0 = pristine, 1.0 = impassable).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct DegradationLevel(pub f32);
+
+impl DegradationLevel {
+    /// Create a new degradation level, clamped to [0.0, 1.0].
+    #[must_use]
+    pub fn new(value: f32) -> Self {
+        Self(value.clamp(0.0, 1.0))
+    }
+
+    /// Whether the road is impassable.
+    #[must_use]
+    pub fn is_impassable(self) -> bool {
+        self.0 >= 0.95
+    }
+
+    /// Effective capacity factor after degradation (1.0 = pristine, 0.0 = none).
+    #[must_use]
+    pub fn capacity_factor(self) -> f32 {
+        (1.0 - self.0).max(0.0)
+    }
+
+    /// Cost multiplier from degradation alone.
+    #[must_use]
+    pub fn cost_multiplier(self) -> f32 {
+        1.0 + self.0 * 4.0 // up to 5x at max degradation
+    }
+}
+
+/// Result of applying degradation to the road network.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct DegradationReport {
+    /// Per-segment degradation levels after the event.
+    pub segment_degradation: BTreeMap<SegmentId, DegradationLevel>,
+    /// Segments that became impassable.
+    pub impassable_segments: Vec<SegmentId>,
+    /// Total cost increase across all segments (estimated).
+    pub total_extra_cost: f32,
+}
+
+impl RoadNetwork {
+    /// Apply a weather event to all segments, adjusting effective capacity
+    /// and cost. Returns a report of the degradation applied.
+    pub fn apply_weather_event(&mut self, event: WeatherEvent) -> DegradationReport {
+        let mut report = DegradationReport::default();
+        let event_factor = event.capacity_factor();
+        let event_cost = event.cost_multiplier();
+
+        for (&seg_id, segment) in &self.segment_index {
+            let effective_capacity = segment.capacity * event_factor;
+            let degradation = DegradationLevel::new(1.0 - event_factor);
+            report.segment_degradation.insert(seg_id, degradation);
+
+            if let Some(state) = self.segment_state.get_mut(&seg_id) {
+                let ratio = if effective_capacity > 0.0 {
+                    state.volume / effective_capacity
+                } else {
+                    f32::INFINITY
+                };
+                state.congestion = CongestionLevel::from_ratio(ratio);
+                state.effective_cost =
+                    segment.base_cost * state.congestion.cost_multiplier() * event_cost;
+                report.total_extra_cost += state.effective_cost - segment.base_cost;
+
+                if degradation.is_impassable() {
+                    report.impassable_segments.push(seg_id);
+                }
+            }
+        }
+        report
+    }
+
+    /// Apply cumulative wear to a specific segment. The `wear` value
+    /// (0.0–1.0) is added to the existing degradation state. Returns the
+    /// new degradation level, or `None` if the segment is unknown.
+    pub fn apply_wear(&mut self, segment_id: SegmentId, wear: f32) -> Option<DegradationLevel> {
+        let segment = self.segment_index.get(&segment_id)?;
+        let current_degradation = self
+            .segment_state
+            .get(&segment_id)
+            .map(|s| {
+                // Infer degradation from effective_cost vs base_cost
+                if segment.base_cost > 0.0 {
+                    (s.effective_cost / segment.base_cost - 1.0) / 4.0
+                } else {
+                    0.0
+                }
+            })
+            .unwrap_or(0.0);
+
+        let new_level = DegradationLevel::new(current_degradation + wear);
+        let factor = new_level.capacity_factor();
+        let cost_mult = new_level.cost_multiplier();
+
+        if let Some(state) = self.segment_state.get_mut(&segment_id) {
+            let effective_capacity = segment.capacity * factor;
+            let ratio = if effective_capacity > 0.0 {
+                state.volume / effective_capacity
+            } else {
+                f32::INFINITY
+            };
+            state.congestion = CongestionLevel::from_ratio(ratio);
+            state.effective_cost = segment.base_cost * cost_mult;
+        }
+        Some(new_level)
+    }
+
+    /// Repair a segment back to pristine condition.
+    pub fn repair_segment(&mut self, segment_id: SegmentId) {
+        if let (Some(state), Some(seg)) = (
+            self.segment_state.get_mut(&segment_id),
+            self.segment_index.get(&segment_id),
+        ) {
+            let ratio = if seg.capacity > 0.0 {
+                state.volume / seg.capacity
+            } else {
+                f32::INFINITY
+            };
+            state.congestion = CongestionLevel::from_ratio(ratio);
+            state.effective_cost = seg.base_cost * state.congestion.cost_multiplier();
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -586,5 +754,66 @@ mod tests {
 
         assert!((net.total_volume() - 32.0).abs() < f32::EPSILON);
         assert_eq!(net.congested_segment_count(), 2);
+    }
+
+    // ── Degradation tests ──────────────────────────────────────────
+
+    #[test]
+    fn weather_event_capacity_factor() {
+        assert_eq!(WeatherEvent::HeavyRain.capacity_factor(), 0.85);
+        assert_eq!(WeatherEvent::Snow.capacity_factor(), 0.50);
+        assert_eq!(WeatherEvent::SevereStorm.capacity_factor(), 0.40);
+    }
+
+    #[test]
+    fn weather_event_cost_multiplier() {
+        assert_eq!(WeatherEvent::Heatwave.cost_multiplier(), 1.1);
+        assert_eq!(WeatherEvent::SevereStorm.cost_multiplier(), 2.5);
+    }
+
+    #[test]
+    fn degradation_level_clamping() {
+        let d = DegradationLevel::new(1.5);
+        assert_eq!(d.0, 1.0);
+        let d2 = DegradationLevel::new(-0.3);
+        assert_eq!(d2.0, 0.0);
+    }
+
+    #[test]
+    fn degradation_impassable_at_095() {
+        assert!(!DegradationLevel::new(0.9).is_impassable());
+        assert!(DegradationLevel::new(0.95).is_impassable());
+        assert!(DegradationLevel::new(1.0).is_impassable());
+    }
+
+    #[test]
+    fn apply_weather_event_increases_cost() {
+        let mut net = build_triangle_network();
+        let segs: Vec<SegmentId> = net.segment_index.keys().copied().collect();
+        net.set_volume(segs[0], 5.0);
+
+        let report = net.apply_weather_event(WeatherEvent::Snow);
+        assert_eq!(report.segment_degradation.len(), 3);
+        assert!(report.total_extra_cost > 0.0);
+    }
+
+    #[test]
+    fn apply_wear_increases_degradation() {
+        let mut net = build_triangle_network();
+        let segs: Vec<SegmentId> = net.segment_index.keys().copied().collect();
+        let level = net.apply_wear(segs[0], 0.3);
+        assert!(level.is_some());
+        assert!(level.unwrap().0 > 0.0);
+    }
+
+    #[test]
+    fn repair_segment_restores_cost() {
+        let mut net = build_triangle_network();
+        let segs: Vec<SegmentId> = net.segment_index.keys().copied().collect();
+        let original_cost = net.segment_index.get(&segs[0]).unwrap().base_cost;
+        net.apply_wear(segs[0], 0.8);
+        net.repair_segment(segs[0]);
+        let state = net.segment_state.get(&segs[0]).unwrap();
+        assert!(state.effective_cost <= original_cost * 1.1);
     }
 }

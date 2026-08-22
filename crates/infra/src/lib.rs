@@ -36,8 +36,8 @@ pub use utility_grid::{
 /// with congestion multipliers that reroute traffic around saturated segments.
 pub mod roads;
 pub use roads::{
-    CongestionLevel, Intersection, IntersectionId, RoadNetwork, RouteResult, Segment, SegmentId,
-    SegmentState,
+    CongestionLevel, DegradationLevel, DegradationReport, Intersection, IntersectionId,
+    RoadNetwork, RouteResult, Segment, SegmentId, SegmentState, WeatherEvent,
 };
 
 /// Energy grid with supply/demand balancing and blackout simulation.
@@ -46,7 +46,7 @@ pub use roads::{
 pub mod energy;
 pub use energy::{
     BalanceResult, BlackoutConfig, EnergyGrid, EnergyNode, EnergyNodeId, EnergyNodeKind,
-    TransmissionLine, TransmissionLineId,
+    FrequencyDeviation, StabilityIndex, StabilityReport, TransmissionLine, TransmissionLineId,
 };
 
 /// Water system with aqueduct network and contamination events.
@@ -54,7 +54,8 @@ pub use energy::{
 /// treatment plants to consumers, tracking contamination propagation.
 pub mod water;
 pub use water::{
-    Contaminant, Pipe, PipeId, WaterNode, WaterNodeId, WaterNodeKind, WaterResult, WaterSystem,
+    Contaminant, Pipe, PipeId, QualityParameter, QualityReading, QualityReport, WaterNode,
+    WaterNodeId, WaterNodeKind, WaterResult, WaterSystem,
 };
 
 /// Unified infrastructure error.

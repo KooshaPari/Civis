@@ -59,20 +59,56 @@ impl Default for EvolutionEngine {
 }
 
 impl EvolutionEngine {
-    /// Apply a mutation to a species' genome and return the type of mutation applied.
+    /// Apply a mutation to a species' genome in place.
     ///
     /// This method examines the rates configured in the engine and the random
-    /// state to determine which mutation, if any, occurs.
-    pub fn mutate(&self, species: &Species, rng: &mut impl Rng) -> Mutation {
-        let _dna = &species.founder_centroid; // available for future mutation logic
-        let roll: f64 = rng.gen();
+    /// state to determine which mutation, if any, occurs, then applies it
+    /// directly to the species' DNA.
+    pub fn mutate(&self, species: &mut Species, rng: &mut impl Rng) {
+        if species.founder_centroid.0.is_empty() {
+            return;
+        }
 
-        if roll < self.mutation_rate {
+        let roll: f64 = rng.gen();
+        let mutation_type = if roll < self.mutation_rate {
             Mutation::PointGene
         } else if roll < self.mutation_rate + self.duplication_rate {
             Mutation::ChromosomalDup
-        } else {
+        } else if roll < self.mutation_rate + self.duplication_rate + self.deletion_rate {
             Mutation::Deletion
+        } else {
+            // No mutation this tick
+            return;
+        };
+
+        match mutation_type {
+            Mutation::PointGene => {
+                let idx = rng.gen_range(0..species.founder_centroid.0.len());
+                species.founder_centroid.0[idx] = rng.gen();
+            }
+            Mutation::ChromosomalDup => {
+                let len = species.founder_centroid.0.len();
+                if len < 2 {
+                    return;
+                }
+                let start = rng.gen_range(0..len);
+                let end = rng.gen_range(start + 1..=len);
+                let segment = species.founder_centroid.0[start..end].to_vec();
+                let insert_at = rng.gen_range(start..=end);
+                species
+                    .founder_centroid
+                    .0
+                    .splice(insert_at..insert_at, segment);
+            }
+            Mutation::Deletion => {
+                let len = species.founder_centroid.0.len();
+                if len < 2 {
+                    return;
+                }
+                let start = rng.gen_range(0..len);
+                let end = rng.gen_range(start + 1..=len);
+                species.founder_centroid.0.drain(start..end);
+            }
         }
     }
 
@@ -158,7 +194,7 @@ impl EvolutionEngine {
     }
 
     /// Calculate the normalized Hamming distance between two DNA strands.
-    fn genetic_distance(&self, dna_a: &Dna, dna_b: &Dna) -> f64 {
+    pub fn genetic_distance(&self, dna_a: &Dna, dna_b: &Dna) -> f64 {
         if dna_a.len() != dna_b.len() || dna_a.is_empty() {
             return 1.0;
         }
@@ -198,63 +234,98 @@ mod tests {
 
     // --- Mutation Tests ---
 
-    /// Test 1: Point mutations are selected at the expected rate.
+    /// Test 1: Point mutations actually modify a DNA byte.
     #[test]
-    fn test_point_mutation_selection() {
-        let eng = engine();
+    fn test_point_mutation_modifies_dna() {
+        let eng = EvolutionEngine {
+            mutation_rate: 1.0, // guaranteed point mutation
+            duplication_rate: 0.0,
+            deletion_rate: 0.0,
+        };
+        let mut species = test_species(1, vec![10, 20, 30], "human");
+        let original_dna = species.founder_centroid.0.clone();
         let mut rng = ChaCha8Rng::seed_from_u64(42);
-        let species = test_species(1, vec![1, 2, 3], "human");
 
-        let mut point_count = 0;
-        for _ in 0..100 {
-            if matches!(eng.mutate(&species, &mut rng), Mutation::PointGene) {
-                point_count += 1;
-            }
-        }
-        assert!(
-            point_count > 5,
-            "Expected some point mutations, got {point_count}"
+        eng.mutate(&mut species, &mut rng);
+
+        // At least one byte should have changed
+        assert_ne!(
+            species.founder_centroid.0, original_dna,
+            "DNA should have been modified by point mutation"
         );
     }
 
-    /// Test 2: Duplication is selected when configured to dominate.
+    /// Test 2: Duplication increases genome length.
     #[test]
-    fn test_duplication_selection() {
+    fn test_duplication_increases_length() {
         let eng = EvolutionEngine {
             mutation_rate: 0.0,
-            duplication_rate: 0.9,
-            deletion_rate: 0.1,
+            duplication_rate: 1.0, // guaranteed duplication
+            deletion_rate: 0.0,
         };
-        let mut rng = ChaCha8Rng::seed_from_u64(42);
-        let species = test_species(1, vec![1, 2, 3], "human");
+        let mut species = test_species(1, vec![1, 2, 3, 4, 5], "human");
+        let original_len = species.founder_centroid.0.len();
+        let mut rng = ChaCha8Rng::seed_from_u64(99);
 
-        let mut dup_count = 0;
-        for _ in 0..100 {
-            if matches!(eng.mutate(&species, &mut rng), Mutation::ChromosomalDup) {
-                dup_count += 1;
-            }
-        }
+        eng.mutate(&mut species, &mut rng);
+
         assert!(
-            dup_count > 80,
-            "Expected high duplication rate, got {dup_count}"
+            species.founder_centroid.0.len() >= original_len,
+            "Duplication should increase or maintain genome length"
         );
     }
 
-    /// Test 3: Deletion is the only possible outcome when all other rates are zero.
+    /// Test 3: Deletion decreases genome length.
     #[test]
-    fn test_deletion_always_selected_when_alone() {
+    fn test_deletion_decreases_length() {
         let eng = EvolutionEngine {
             mutation_rate: 0.0,
             duplication_rate: 0.0,
-            deletion_rate: 1.0,
+            deletion_rate: 1.0, // guaranteed deletion
         };
-        let mut rng = ChaCha8Rng::seed_from_u64(42);
-        let species = test_species(1, vec![1, 2, 3], "human");
+        let mut species = test_species(1, vec![1, 2, 3, 4, 5, 6, 7, 8], "human");
+        let original_len = species.founder_centroid.0.len();
+        let mut rng = ChaCha8Rng::seed_from_u64(77);
 
-        assert!(matches!(eng.mutate(&species, &mut rng), Mutation::Deletion));
+        eng.mutate(&mut species, &mut rng);
+
+        assert!(
+            species.founder_centroid.0.len() < original_len,
+            "Deletion should decrease genome length from {original_len} to {}",
+            species.founder_centroid.0.len()
+        );
     }
 
-    /// Test 4: Mutation enum equality and inequality.
+    /// Test 4: No mutation when roll exceeds all rates.
+    #[test]
+    fn test_no_mutation_when_rates_are_zero() {
+        let eng = EvolutionEngine {
+            mutation_rate: 0.0,
+            duplication_rate: 0.0,
+            deletion_rate: 0.0,
+        };
+        let mut species = test_species(1, vec![1, 2, 3], "human");
+        let original_dna = species.founder_centroid.0.clone();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+
+        eng.mutate(&mut species, &mut rng);
+
+        assert_eq!(species.founder_centroid.0, original_dna);
+    }
+
+    /// Test 5: Mutating an empty DNA is a no-op.
+    #[test]
+    fn test_mutate_empty_dna_no_op() {
+        let eng = engine();
+        let mut species = test_species(1, vec![], "human");
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+
+        eng.mutate(&mut species, &mut rng);
+
+        assert!(species.founder_centroid.0.is_empty());
+    }
+
+    /// Test 6: Mutation enum equality and inequality.
     #[test]
     fn test_mutation_enum_equality() {
         assert_eq!(Mutation::PointGene, Mutation::PointGene);
@@ -262,7 +333,7 @@ mod tests {
         assert_ne!(Mutation::ChromosomalDup, Mutation::Deletion);
     }
 
-    /// Test 5: Default engine has correct rates.
+    /// Test 7: Default engine has correct rates.
     #[test]
     fn test_default_engine() {
         let eng = EvolutionEngine::default();
@@ -273,7 +344,7 @@ mod tests {
 
     // --- Selection Tests ---
 
-    /// Test 6: Selection filters out low-fitness individuals.
+    /// Test 8: Selection filters out low-fitness individuals.
     #[test]
     fn test_selection_filters_low_fitness() {
         let eng = engine();
@@ -289,7 +360,7 @@ mod tests {
         assert_eq!(selected[0].id, 1);
     }
 
-    /// Test 7: Selection keeps at least one individual from a single-member population.
+    /// Test 9: Selection keeps at least one individual from a single-member population.
     #[test]
     fn test_selection_keeps_at_least_one() {
         let eng = engine();
@@ -298,7 +369,7 @@ mod tests {
         assert_eq!(selected.len(), 1);
     }
 
-    /// Test 8: Selection on an empty population returns an empty vector.
+    /// Test 10: Selection on an empty population returns an empty vector.
     #[test]
     fn test_selection_empty_population() {
         let eng = engine();
@@ -306,7 +377,7 @@ mod tests {
         assert!(selected.is_empty());
     }
 
-    /// Test 9: Selection returns individuals sorted by descending fitness.
+    /// Test 11: Selection returns individuals sorted by descending fitness.
     #[test]
     fn test_selection_sorted_by_fitness() {
         let eng = engine();
@@ -326,7 +397,7 @@ mod tests {
 
     // --- Crossover Tests ---
 
-    /// Test 10: Crossover combines DNA from both parents alternately.
+    /// Test 12: Crossover combines DNA from both parents alternately.
     #[test]
     fn test_crossover_combines_dna() {
         let eng = engine();
@@ -338,7 +409,7 @@ mod tests {
         assert_eq!(child.founder_centroid.0, vec![1, 20, 3, 40]);
     }
 
-    /// Test 11: Crossover respects the shorter parent's genome length.
+    /// Test 13: Crossover respects the shorter parent's genome length.
     #[test]
     fn test_crossover_length_respects_shorter_parent() {
         let eng = engine();
@@ -349,7 +420,7 @@ mod tests {
         assert_eq!(child.founder_centroid.len(), 2);
     }
 
-    /// Test 12: Crossover inherits dna_class from parent A.
+    /// Test 14: Crossover inherits dna_class from parent A.
     #[test]
     fn test_crossover_inherits_dna_class() {
         let eng = engine();
@@ -362,7 +433,7 @@ mod tests {
 
     // --- Speciation Tests ---
 
-    /// Test 13: Identical genomes are grouped together.
+    /// Test 15: Identical genomes are grouped together.
     #[test]
     fn test_speciation_groups_identical() {
         let eng = engine();
@@ -376,7 +447,7 @@ mod tests {
         assert_eq!(groups[0].len(), 2);
     }
 
-    /// Test 14: Completely different genomes form separate groups.
+    /// Test 16: Completely different genomes form separate groups.
     #[test]
     fn test_speciation_separates_different() {
         let eng = engine();
@@ -389,7 +460,7 @@ mod tests {
         assert_eq!(groups.len(), 2);
     }
 
-    /// Test 15: Empty population yields no groups.
+    /// Test 17: Empty population yields no groups.
     #[test]
     fn test_speciation_empty_population() {
         let eng = engine();
@@ -397,25 +468,25 @@ mod tests {
         assert!(groups.is_empty());
     }
 
-    /// Test 16: Mixed population forms correct number of groups.
+    /// Test 18: Mixed population forms correct number of groups.
     #[test]
     fn test_speciation_mixed_population() {
         let eng = engine();
         let pop = vec![
             test_species(1, vec![10, 20, 30, 40, 50], "a"),
-            test_species(2, vec![10, 20, 30, 40, 51], "a"), // 1/5 diff = 0.2 from #1
-            test_species(3, vec![200, 200, 200, 200, 200], "a"), // far from #1 and #2
+            test_species(2, vec![10, 20, 30, 40, 51], "a"),
+            test_species(3, vec![200, 200, 200, 200, 200], "a"),
         ];
 
-        // threshold 0.5: #1 and #2 are 0.2 apart (grouped), #3 is far
         let groups = eng.speciation(&pop, 0.5);
         assert_eq!(groups.len(), 2);
-        assert_eq!(groups[0].len(), 2); // #1 and #2
-        assert_eq!(groups[1].len(), 1); // #3
+        assert_eq!(groups[0].len(), 2);
+        assert_eq!(groups[1].len(), 1);
     }
+
     // --- FitnessMetrics Tests ---
 
-    /// Test 17: FitnessMetrics fields are accessible.
+    /// Test 19: FitnessMetrics fields are accessible.
     #[test]
     fn test_fitness_metrics_fields() {
         let metrics = FitnessMetrics {
@@ -428,7 +499,7 @@ mod tests {
         assert_eq!(metrics.adaptability, 0.9);
     }
 
-    /// Test 18: Fitness score is calculated with correct weights.
+    /// Test 20: Fitness score is calculated with correct weights.
     #[test]
     fn test_fitness_score_calculation() {
         let metrics = FitnessMetrics {
@@ -436,11 +507,10 @@ mod tests {
             reproduction_rate: 0.0,
             adaptability: 0.0,
         };
-        // 1.0 * 0.4 + 0 + 0 = 0.4
         assert!((metrics.score() - 0.4).abs() < 1e-6);
     }
 
-    /// Test 19: Genetic distance is zero for identical DNA.
+    /// Test 21: Genetic distance is zero for identical DNA.
     #[test]
     fn test_genetic_distance_zero_for_identical() {
         let eng = engine();
@@ -448,12 +518,129 @@ mod tests {
         assert_eq!(eng.genetic_distance(&dna, &dna), 0.0);
     }
 
-    /// Test 20: Genetic distance is 1.0 for completely different DNA.
+    /// Test 22: Genetic distance is 1.0 for completely different DNA.
     #[test]
     fn test_genetic_distance_one_for_completely_different() {
         let eng = engine();
         let dna_a = Dna(vec![0, 0, 0]);
         let dna_b = Dna(vec![255, 255, 255]);
         assert_eq!(eng.genetic_distance(&dna_a, &dna_b), 1.0);
+    }
+
+    /// Test 23: Fitness score with all fields at 1.0.
+    #[test]
+    fn test_fitness_score_all_max() {
+        let metrics = FitnessMetrics {
+            energy_efficiency: 1.0,
+            reproduction_rate: 1.0,
+            adaptability: 1.0,
+        };
+        assert!((metrics.score() - 1.0).abs() < 1e-6);
+    }
+
+    /// Test 24: Fitness score with all fields at 0.0.
+    #[test]
+    fn test_fitness_score_all_zero() {
+        let metrics = FitnessMetrics {
+            energy_efficiency: 0.0,
+            reproduction_rate: 0.0,
+            adaptability: 0.0,
+        };
+        assert!((metrics.score()).abs() < 1e-6);
+    }
+
+    /// Test 25: Point mutation does not change genome length.
+    #[test]
+    fn test_point_mutation_preserves_length() {
+        let eng = EvolutionEngine {
+            mutation_rate: 1.0,
+            duplication_rate: 0.0,
+            deletion_rate: 0.0,
+        };
+        let mut species = test_species(1, vec![1, 2, 3, 4, 5], "human");
+        let original_len = species.founder_centroid.0.len();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+
+        eng.mutate(&mut species, &mut rng);
+
+        assert_eq!(species.founder_centroid.0.len(), original_len);
+    }
+
+    /// Test 26: Single-byte genome duplication preserves at least the original length.
+    #[test]
+    fn test_duplication_on_single_byte() {
+        let eng = EvolutionEngine {
+            mutation_rate: 0.0,
+            duplication_rate: 1.0,
+            deletion_rate: 0.0,
+        };
+        let mut species = test_species(1, vec![42], "human");
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+
+        eng.mutate(&mut species, &mut rng);
+
+        // Single-byte genome can't duplicate a sub-segment (returns early), so length unchanged.
+        assert_eq!(species.founder_centroid.0.len(), 1);
+    }
+
+    /// Test 27: Deletion on a two-byte genome can reduce to one byte.
+    #[test]
+    fn test_deletion_on_two_bytes() {
+        let eng = EvolutionEngine {
+            mutation_rate: 0.0,
+            duplication_rate: 0.0,
+            deletion_rate: 1.0,
+        };
+        let mut species = test_species(1, vec![10, 20], "human");
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+
+        eng.mutate(&mut species, &mut rng);
+
+        assert!(
+            species.founder_centroid.0.len() < 2,
+            "Two-byte genome should be reduced by deletion"
+        );
+    }
+
+    /// Test 28: Crossover of identical-length genomes produces exact alternating pattern.
+    #[test]
+    fn test_crossover_alternating_pattern() {
+        let eng = engine();
+        let parent_a = test_species(1, vec![0, 0, 0, 0], "test");
+        let parent_b = test_species(2, vec![9, 9, 9, 9], "test");
+
+        let child = eng.crossover(&parent_a, &parent_b);
+        assert_eq!(child.founder_centroid.0, vec![0, 9, 0, 9]);
+    }
+
+    /// Test 29: Speciation with threshold epsilon groups identical genomes only.
+    #[test]
+    fn test_speciation_zero_threshold() {
+        let eng = engine();
+        let pop = vec![
+            test_species(1, vec![1, 2, 3], "a"),
+            test_species(2, vec![1, 2, 3], "a"),
+            test_species(3, vec![1, 2, 4], "a"),
+        ];
+
+        // Use f64::EPSILON so distance 0.0 < EPSILON is true for identical genomes
+        let groups = eng.speciation(&pop, f64::EPSILON);
+        assert_eq!(groups.len(), 2);
+        assert_eq!(groups[0].len(), 2); // identical pair
+        assert_eq!(groups[1].len(), 1); // differs
+    }
+
+    /// Test 30: Selection on a large population keeps the top half.
+    #[test]
+    fn test_selection_large_population() {
+        let eng = engine();
+        let pop: Vec<Species> = (0..10)
+            .map(|i| test_species(i, vec![i as u8], "a"))
+            .collect();
+
+        let selected = eng.select(&pop, |s| s.founder_centroid.0[0] as f64);
+        assert_eq!(selected.len(), 5);
+        // First should be the highest value (9)
+        assert_eq!(selected[0].id, 9);
     }
 }

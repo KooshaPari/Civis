@@ -249,7 +249,7 @@
         },
         {
             "title": "Diplomacy Relations",
-            "type": "heatmap",
+            "type": "stat",
             "datasource": {
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
@@ -263,21 +263,7 @@
             "fieldConfig": {
                 "defaults": {
                     "color": {
-                        "mode": "scheme",
-                        "scheme": "Spectral"
-                    },
-                    "custom": {
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
+                        "mode": "thresholds"
                     },
                     "mappings": [],
                     "thresholds": {
@@ -288,12 +274,12 @@
                                 "value": null
                             },
                             {
-                                "color": "green",
-                                "value": 0.5
+                                "color": "yellow",
+                                "value": 0
                             },
                             {
-                                "color": "blue",
-                                "value": 0.9
+                                "color": "green",
+                                "value": 0.5
                             }
                         ]
                     },
@@ -302,47 +288,22 @@
                 "overrides": []
             },
             "options": {
-                "calculate": false,
-                "cellGap": 1,
-                "color": {
-                    "mode": "scheme",
-                    "scheme": "Spectral",
-                    "fill": "dark-orange",
-                    "scale": "exponential",
-                    "exponent": 0.5
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": ["lastNotNull"],
+                    "fields": "",
+                    "values": false
                 },
-                "cellValues": {
-                    "unit": "short"
-                },
-                "exemplars": {
-                    "color": "rgba(255,0,255,0.7)"
-                },
-                "filterValues": {
-                    "le": 1e-9
-                },
-                "legend": {
-                    "show": true
-                },
-                "rowsFrame": {
-                    "layout": "le"
-                },
-                "tooltip": {
-                    "mode": "single",
-                    "showColorScale": true,
-                    "yHistogram": false
-                },
-                "yAxis": {
-                    "axisLabel": "Relation",
-                    "axisPlacement": "left",
-                    "axisWidth": "auto",
-                    "group": "default",
-                    "reverse": false
-                }
+                "textMode": "auto",
+                "wideLayout": true
             },
             "targets": [
                 {
-                    "expr": "civis_diplomacy_relation_score",
-                    "legendFormat": "{{ source }} -> {{ target }}",
+                    "expr": "avg(civis_diplomacy_relation_score)",
+                    "legendFormat": "Avg Relation",
                     "refId": "A"
                 }
             ]

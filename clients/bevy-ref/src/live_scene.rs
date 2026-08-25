@@ -91,7 +91,29 @@ fn apply_live_scene_frames(
 
     let reset_tick = latest_scene_reset_tick(&bridge.client.poll_scene_resets());
     if let Some(tick) = reset_tick {
-        scene.reset(&mut commands);
+        // Despawn all tracked entities and clear maps
+        for (_, e) in scene.chunks.drain() {
+            commands.entity(e).despawn();
+        }
+        for (_, e) in scene.water_entities.drain() {
+            commands.entity(e).despawn();
+        }
+        for (_, e) in scene.agents.drain() {
+            commands.entity(e).despawn();
+        }
+        for (_, e) in scene.buildings.drain() {
+            commands.entity(e).despawn();
+        }
+        for (_, e) in scene.graph_parcels.drain() {
+            commands.entity(e).despawn();
+        }
+        scene.agent_materials.clear();
+        scene.building_materials.clear();
+        scene.graph_parcel_materials.clear();
+        scene.civilian_ids.clear();
+        scene.civilian_entries.clear();
+        scene.factions.clear();
+        scene.faction_entries.clear();
         state.tick = Some(tick);
         hud.tick = Some(tick);
     }

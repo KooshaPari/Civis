@@ -16,6 +16,15 @@ use serde_json;
 use tokio::runtime::Builder;
 use tokio_tungstenite::tungstenite::Message;
 
+/// Drain all available items from a crossbeam channel into a Vec without blocking.
+/// Reuses the destination's existing capacity to avoid per-frame allocation.
+fn drain_into<T>(rx: &Receiver<T>, dst: &mut Vec<T>) {
+    dst.clear();
+    while let Ok(item) = rx.try_recv() {
+        dst.push(item);
+    }
+}
+
 /// Live attach WebSocket client preferences.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct WsClientConfig {
@@ -228,7 +237,9 @@ impl WsClient {
     /// Render loops should reuse the destination across updates to avoid a
     /// per-frame allocation while keeping the channel non-blocking.
     pub fn poll_into(&self, frames: &mut Vec<Frame3d>) {
-        drain_into(&self.frame_rx, frames);
+        while let Ok(frame) = self.frame_rx.try_recv() {
+            frames.push(frame);
+        }
     }
 
     #[must_use]

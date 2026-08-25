@@ -50,7 +50,7 @@ use civ_bevy_ref::{
         LiveStreamMeshes, LiveStreamScene, LiveWaterMeshes, StreamCulling, LIVE_CHUNK_BASE_COLOR,
         LIVE_CHUNK_EDGE,
     },
-    menus::{AppState, MainMenuSaves},
+    menus::{AppState, MainMenuSaves, MenuCommand},
     minimap::MinimapRoot,
     minimap_uv_to_chunk_grid,
     native_backend::native_render_plugin,
@@ -684,7 +684,9 @@ fn apply_live_frames(
 ) {
     let resets = bridge.client.poll_scene_resets();
     if let Some(reset) = resets.last() {
-        scene.reset(&mut commands);
+        for (_id, entity) in scene.chunks.drain() {
+            commands.entity(entity).despawn();
+        }
         hud.snapshot.tick = Some(reset.tick);
     }
     let frames = bridge.client.poll();

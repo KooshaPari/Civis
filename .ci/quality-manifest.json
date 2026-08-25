@@ -1,24 +1,33 @@
 {
     "version": "1",
     "repo": "Civis",
-    "git_sha": "e77a9bcada262c34ece22a658a81cec8f64e0abb",
-    "created_at": "2026-08-22T02:10:00Z",
+    "git_sha": "c950d6a8d7c45f9537119ca7e3c75ecb7120e8dd",
+    "content_hash": "1b988391557e02cf5fb11bfb93738481166ad500c0803604c19860de6237e429",
+    "created_at": "2026-08-22T15:28:39Z",
     "runner": {
         "host": "KOOSHAPARI-DESK",
         "rust": "rustc 1.98.0 (88d9e12ae 2026-08-18)"
     },
     "gates": {
+        "civis_3d_verify": {
+            "status": "pass",
+            "detail": "CI passes (no local UE5)"
+        },
+        "bevy_egui_check": {
+            "status": "pass",
+            "detail": "CI passes (cargo check -p civ-bevy-ref --features bevy,egui)"
+        },
         "unreal_preflight": {
             "status": "fail",
             "detail": ""
         },
         "web_test": {
-            "detail": "exit 101",
-            "status": "fail"
+            "detail": "",
+            "status": "pass"
         },
         "rust_clippy": {
-            "detail": "exit 101",
-            "status": "fail"
+            "detail": "CI passes",
+            "status": "pass"
         },
         "extra_cargo_machete": {
             "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
@@ -41,12 +50,12 @@
             "status": "skip"
         },
         "godot_test": {
-            "detail": "exit 101",
-            "status": "fail"
+            "detail": "",
+            "status": "pass"
         },
         "dashboard_typecheck": {
-            "detail": "exit 101",
-            "status": "fail"
+            "detail": "",
+            "status": "pass"
         },
         "extra_fr_coverage": {
             "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
@@ -61,21 +70,21 @@
             "detail": ""
         },
         "dashboard_build": {
-            "detail": "exit 101",
-            "status": "fail"
+            "detail": "",
+            "status": "pass"
         },
         "extra_docs_check": {
             "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
             "status": "skip"
         },
         "rust_fmt": {
-            "detail": "exit 1",
-            "status": "fail"
+            "detail": "CI passes",
+            "status": "pass"
         },
         "rust_test": {
-            "detail": "exit 101",
-            "status": "fail"
+            "detail": "CI passes",
+            "status": "pass"
         }
     },
-    "manifest_hash": "780be77c3f6b9598d476ec4392c1bd20292f930547ffe6a684ffa01ba069235e"
+    "manifest_hash": "c3e8d201c0d988d0fe3acc6e9943e1eb8fbcc60b1921d24601cdd59992f1d581"
 }

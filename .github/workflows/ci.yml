@@ -1,17 +1,17 @@
 name: CI
 
 on:
-    push:
-        branches: [main, master, develop]
-    pull_request:
-        branches: [main, master, develop]
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
 
 permissions:
-    contents: read
+  contents: read
 
 concurrency:
-    group: ${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   # ─── Rust Module Graph (cargo-modules graph per workspace package) ──

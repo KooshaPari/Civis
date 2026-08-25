@@ -1,8 +1,8 @@
 {
     "version": "1",
     "repo": "Civis",
-    "git_sha": "c17053201466b72c06bda1c8969ab50b25c81f65",
-    "content_hash": "1b988391557e02cf5fb11bfb93738481166ad500c0803604c19860de6237e429",
+    "git_sha": "999ce495135e6f2a2b2915f2f7d5574d8f5d19e1",
+    "content_hash": "720fb7b8ebf6a2a49c8017206c984009944adfe2885fecd9c4ed4bda9e66a2c8",
     "created_at": "2026-08-22T15:28:39Z",
     "runner": {
         "host": "KOOSHAPARI-DESK",
@@ -86,5 +86,5 @@
             "status": "pass"
         }
     },
-    "manifest_hash": "200a6c6c1f38ec08a46dbfcaa220050492845835c61b8f8b101b3caedbc23f3b"
+    "manifest_hash": "292a3008a4533f045cb2e0c061ab6864198565719356afc1e1eac975f4f1efbc"
 }

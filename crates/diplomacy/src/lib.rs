@@ -43,11 +43,14 @@ use std::collections::BTreeMap;
 use thiserror::Error;
 
 pub mod emergent;
+pub mod stance;
 
 pub use emergent::{
     EmergentConfig, EmergentDiplomacy, EmergentStance, RelationDrivers, Reputation, StanceInputs,
     Territory, TreatyKind, TreatyLedgerEntry, TreatyOutcome,
 };
+
+pub use stance::{DiplomacyStance, DiplomacyStanceEngine, InteractionEvent, RelationQuadrant};
 
 /// Schema version of this crate's public types. Bumped on breaking changes.
 pub const SCHEMA_VERSION: u32 = 1;

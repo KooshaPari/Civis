@@ -7,35 +7,35 @@
 name: Cargo Audit
 
 on:
-  workflow_dispatch:
-  schedule:
-    - cron: "0 2 * * 3"
+    workflow_dispatch:
+    schedule:
+        - cron: "0 2 * * 3"
 
 permissions:
-  contents: read
+    contents: read
 
 jobs:
-  manifest-verify:
-    name: manifest-verify (cloud)
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - name: Verify local quality manifest
-        continue-on-error: true
-        run: bash scripts/quality/verify-quality-manifest.sh
+    manifest-verify:
+        name: manifest-verify (cloud)
+        runs-on: ubuntu-24.04
+        timeout-minutes: 5
+        steps:
+            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+            - name: Verify local quality manifest
+              continue-on-error: true
+              run: bash scripts/quality/verify-quality-manifest.sh
 
-  cargo-audit:
-    # Manual escape hatch: run heavy audit on the runner when explicitly asked.
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    steps:
-      - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - name: Install Rust
-        uses: dtolnay/rust-action@stable
-      - name: Run cargo-audit
-        uses: rustsec/audit-check@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+    cargo-audit:
+        # Manual escape hatch: run heavy audit on the runner when explicitly asked.
+        if: github.event_name == 'workflow_dispatch'
+        runs-on: ubuntu-24.04
+        timeout-minutes: 30
+        steps:
+            - name: Checkout
+              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+            - name: Install Rust
+              uses: dtolnay/rust-action@stable
+            - name: Run cargo-audit
+              uses: rustsec/audit-check@v2
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}

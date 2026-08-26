@@ -1,37 +1,35 @@
 //! FR-CIV-NEEDS-DECAY — additive needs-decay model.
-/// FR-CIV-NEEDS-DECAY — additive needs-decay model.
-///
-/// This module is intentionally narrow and **additive**: it does not modify the
-/// existing [`crate::Needs`] / [`crate::DecayRates`] / health pipeline. It
-/// models a small, focused agent-needs loop that gameplay / AI layers can
-/// layer on top when they need a minimal "hunger / rest / social" driver
-/// without pulling in the full FR-CIV-LIFE sickness / death machinery.
-///
-/// # Semantics
-///
-/// Each [`NeedLevel`] is a *pressure* (deprivation) value in `[0, 1]` where
-/// `1.0` means "fully deprived / critical" and `0.0` means "fully sated".
-/// Every simulation tick the configured [`RiseRates`] are added to the three
-/// levels (hunger / rest / social). When the agent spends a resource to
-/// satisfy a need, [`apply_resource`] subtracts an amount and clamps at `0.0`.
-///
-/// ## Configurable Decay Curves (#959)
-///
-/// The base model uses linear additive decay (`pressure += rate`). The
-/// [`DecayCurve`] enum provides non-linear alternatives:
-///
-/// - **Linear** (default): `delta = rate` — constant pressure increase
-/// - **Exponential**: `delta = rate * (1 + pressure * intensity)` — acceleration
-///   at high deprivation (starvation spiral)
-/// - **Sigmoid**: `delta = rate * sigmoid(pressure * steepness)` — slow start,
-///   rapid middle, plateau at critical (realistic hunger curve)
-///
-/// All arithmetic is `f32` and free of any RNG / wall-clock input, matching
-/// the ADR-008 determinism invariants used by the rest of the crate.
-///
-/// Traceability: `FR-CIV-NEEDS-DECAY` (needs rise over ticks, drop on resource).
-/// FR-CIV-NEEDS-DECAY-01 (configurable decay curves, #959).
-#![forbid(unsafe_code)]
+//!
+//! This module is intentionally narrow and **additive**: it does not modify the
+//! existing [`crate::Needs`] / [`crate::DecayRates`] / health pipeline. It
+//! models a small, focused agent-needs loop that gameplay / AI layers can
+//! layer on top when they need a minimal "hunger / rest / social" driver
+//! without pulling in the full FR-CIV-LIFE sickness / death machinery.
+//!
+//! # Semantics
+//!
+//! Each [`NeedLevel`] is a *pressure* (deprivation) value in `[0, 1]` where
+//! `1.0` means "fully deprived / critical" and `0.0` means "fully sated".
+//! Every simulation tick the configured [`RiseRates`] are added to the three
+//! levels (hunger / rest / social). When the agent spends a resource to
+//! satisfy a need, [`apply_resource`] subtracts an amount and clamps at `0.0`.
+//!
+//! ## Configurable Decay Curves (#959)
+//!
+//! The base model uses linear additive decay (`pressure += rate`). The
+//! [`DecayCurve`] enum provides non-linear alternatives:
+//!
+//! - **Linear** (default): `delta = rate` — constant pressure increase
+//! - **Exponential**: `delta = rate * (1 + pressure * intensity)` — acceleration
+//!   at high deprivation (starvation spiral)
+//! - **Sigmoid**: `delta = rate * sigmoid(pressure * steepness)` — slow start,
+//!   rapid middle, plateau at critical (realistic hunger curve)
+//!
+//! All arithmetic is `f32` and free of any RNG / wall-clock input, matching
+//! the ADR-008 determinism invariants used by the rest of the crate.
+//!
+//! Traceability: `FR-CIV-NEEDS-DECAY` (needs rise over ticks, drop on resource).
+//! `FR-CIV-NEEDS-DECAY-01` (configurable decay curves, #959).
 
 use serde::{Deserialize, Serialize};
 

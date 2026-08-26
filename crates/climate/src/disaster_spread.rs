@@ -43,6 +43,146 @@ pub enum HazardKind {
     Flood,
 }
 
+/// Per-cell terrain type for spread modifiers.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum TerrainKind {
+    /// Open grassland — moderate fire spread, normal flood.
+    #[default]
+    Grassland,
+    /// Dense forest — fast fire spread, slow flood (absorbs water).
+    Forest,
+    /// Rock/barren — slow fire spread, no flood absorption.
+    Rock,
+    /// Water — fire cannot spread here, flood spreads fast.
+    Water,
+    /// Urban/built — fast fire spread (structures fuel), slow flood (drainage).
+    Urban,
+}
+
+impl TerrainKind {
+    /// Fire spread multiplier for this terrain type.
+    pub fn fire_spread_multiplier(self) -> f32 {
+        match self {
+            TerrainKind::Grassland => 1.0,
+            TerrainKind::Forest => 1.8,
+            TerrainKind::Rock => 0.3,
+            TerrainKind::Water => 0.0,
+            TerrainKind::Urban => 1.5,
+        }
+    }
+
+    /// Flood spread multiplier for this terrain type.
+    pub fn flood_spread_multiplier(self) -> f32 {
+        match self {
+            TerrainKind::Grassland => 1.0,
+            TerrainKind::Forest => 0.6,
+            TerrainKind::Rock => 0.2,
+            TerrainKind::Water => 2.0,
+            TerrainKind::Urban => 0.5,
+        }
+    }
+}
+
+/// Wind direction as a 2D vector. The spread model biases propagation
+/// in the wind direction.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct WindDirection {
+    /// Horizontal component `[-1, 1]` (negative = west, positive = east).
+    pub dx: f32,
+    /// Vertical component `[-1, 1]` (negative = south, positive = north).
+    pub dy: f32,
+}
+
+impl WindDirection {
+    /// No wind.
+    pub fn calm() -> Self {
+        Self { dx: 0.0, dy: 0.0 }
+    }
+
+    /// Wind blowing east.
+    pub fn east() -> Self {
+        Self { dx: 1.0, dy: 0.0 }
+    }
+
+    /// Wind blowing north.
+    pub fn north() -> Self {
+        Self { dx: 0.0, dy: 1.0 }
+    }
+
+    /// Create a wind direction from components (clamped to `[-1, 1]`).
+    pub fn new(dx: f32, dy: f32) -> Self {
+        Self {
+            dx: dx.clamp(-1.0, 1.0),
+            dy: dy.clamp(-1.0, 1.0),
+        }
+    }
+
+    /// Wind speed (magnitude). `[0, sqrt(2)]`.
+    pub fn speed(self) -> f32 {
+        (self.dx * self.dx + self.dy * self.dy).sqrt()
+    }
+
+    /// Wind bonus for a neighbor at relative position `(ndx, ndy)`.
+    /// Returns a factor in `[0.5, 1.5]` — downwind neighbors get a bonus,
+    /// upwind neighbors get a penalty.
+    pub fn neighbor_bonus(self, ndx: i32, ndy: i32) -> f32 {
+        let dot = self.dx * ndx as f32 + self.dy * ndy as f32;
+        let speed = self.speed();
+        if speed < 1e-6 {
+            return 1.0; // calm — no bias
+        }
+        // Normalize dot to [-1, 1] then map to [0.5, 1.5]
+        let normalized = dot / speed;
+        1.0 + 0.5 * normalized
+    }
+}
+
+/// Elevation data for flood spread. Flood flows downhill (from high to low).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct ElevationGrid {
+    width: usize,
+    height: usize,
+    cells: Vec<f32>,
+}
+
+impl ElevationGrid {
+    /// New flat elevation grid (all zeros).
+    pub fn flat(width: usize, height: usize) -> Self {
+        Self {
+            width,
+            height,
+            cells: vec![0.0; width * height],
+        }
+    }
+
+    /// Set elevation at `(x, y)`.
+    pub fn set(&mut self, x: usize, y: usize, elevation: f32) {
+        if let Some(idx) = self.index(x, y) {
+            self.cells[idx] = elevation;
+        }
+    }
+
+    /// Get elevation at `(x, y)`. Returns `f32::MAX` for out-of-bounds
+    /// (treats boundaries as infinitely high walls that block flood flow).
+    pub fn get(&self, x: usize, y: usize) -> f32 {
+        self.cells.get(self.index(x, y).unwrap_or(usize::MAX)).copied().unwrap_or(f32::MAX)
+    }
+
+    /// Elevation gradient from `(sx, sy)` toward neighbor `(nx, ny)`.
+    /// Positive = downhill (favorable for flood spread), negative = uphill.
+    pub fn gradient(&self, sx: usize, sy: usize, nx: usize, ny: usize) -> f32 {
+        self.get(sx, sy) - self.get(nx, ny)
+    }
+
+    fn index(&self, x: usize, y: usize) -> Option<usize> {
+        if x < self.width && y < self.height {
+            Some(y * self.width + x)
+        } else {
+            None
+        }
+    }
+}
+
 /// Per-cell hazard state. A cell is "active" when `intensity > 0.0`.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct HazardCell {
@@ -227,6 +367,122 @@ impl DisasterGrid {
     pub fn is_quiescent(&self, params: &DisasterParams) -> bool {
         let threshold = params.ignition_threshold.max(0.0);
         self.cells.iter().all(|c| c.intensity < threshold)
+    }
+
+    /// Enhanced step with terrain, wind, and elevation modifiers.
+    ///
+    /// - **Terrain**: each neighbor's spread rate is multiplied by the
+    ///   terrain's fire/flood multiplier (e.g. forest = 1.8x fire spread).
+    /// - **Wind**: downwind neighbors get a bonus, upwind get a penalty.
+    ///   The bonus/penalty is in `[0.5, 1.5]` multiplied by wind speed.
+    /// - **Elevation**: for floods, spread is biased downhill (positive
+    ///   gradient = faster spread) and blocked uphill (negative gradient
+    ///   reduces spread).
+    ///
+    /// `terrain` maps each cell to its `TerrainKind`. `wind` is the
+    /// global wind direction. `elevation` is the height map (used only
+    /// for flood spread; pass `None` for flat terrain).
+    pub fn step_enhanced(
+        &mut self,
+        params: &DisasterParams,
+        terrain: &[TerrainKind],
+        wind: WindDirection,
+        elevation: Option<&ElevationGrid>,
+    ) {
+        if self.width == 0 || self.height == 0 {
+            return;
+        }
+
+        let mut next: Vec<HazardCell> = vec![HazardCell::default(); self.cells.len()];
+
+        for y in 0..self.height {
+            for x in 0..self.width {
+                let idx = y * self.width + x;
+                let cell = self.cells[idx];
+                if cell.intensity <= 0.0 {
+                    continue;
+                }
+
+                if next[idx].intensity < cell.intensity {
+                    next[idx] = cell;
+                }
+
+                let base_spread = match cell.kind {
+                    HazardKind::Fire => params.fire_spread_rate,
+                    HazardKind::Flood => params.flood_spread_rate,
+                };
+
+                // Terrain multiplier for the source cell
+                let terrain_mult = terrain.get(idx).copied().unwrap_or_default();
+                let terrain_factor = match cell.kind {
+                    HazardKind::Fire => terrain_mult.fire_spread_multiplier(),
+                    HazardKind::Flood => terrain_mult.flood_spread_multiplier(),
+                };
+
+                let neighbours: [(i32, i32); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
+
+                for &(ndx, ndy) in &neighbours {
+                    let nx = x as i32 + ndx;
+                    let ny = y as i32 + ndy;
+                    if nx < 0 || ny < 0 {
+                        continue;
+                    }
+                    let nx = nx as usize;
+                    let ny = ny as usize;
+                    if let Some(nidx) = self.index(nx, ny) {
+                        // Neighbor terrain multiplier
+                        let n_terrain = terrain.get(nidx).copied().unwrap_or_default();
+                        let n_terrain_factor = match cell.kind {
+                            HazardKind::Fire => n_terrain.fire_spread_multiplier(),
+                            HazardKind::Flood => n_terrain.flood_spread_multiplier(),
+                        };
+
+                        // Wind bonus
+                        let wind_bonus = wind.neighbor_bonus(ndx, ndy);
+
+                        // Elevation factor for floods
+                        let elev_factor = if cell.kind == HazardKind::Flood {
+                            if let Some(elev) = elevation {
+                                let gradient = elev.gradient(x, y, nx, ny);
+                                // Positive gradient = downhill = bonus
+                                // Negative gradient = uphill = penalty
+                                (1.0 + gradient * 0.1).clamp(0.1, 3.0)
+                            } else {
+                                1.0
+                            }
+                        } else {
+                            1.0
+                        };
+
+                        let radiation = (base_spread * cell.intensity * terrain_factor
+                            * n_terrain_factor
+                            * wind_bonus
+                            * elev_factor)
+                            .max(0.0);
+
+                        let neighbour = &mut next[nidx];
+                        if neighbour.intensity < radiation {
+                            neighbour.intensity = radiation;
+                            neighbour.kind = cell.kind;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Decay + threshold clamp (same as basic step)
+        let decay = (1.0 - params.decay_rate).clamp(0.0, 1.0);
+        let threshold = params.ignition_threshold.max(0.0);
+        for cell in next.iter_mut() {
+            if cell.intensity > 0.0 {
+                cell.intensity *= decay;
+                if cell.intensity < threshold {
+                    cell.intensity = 0.0;
+                }
+            }
+        }
+
+        self.cells = next;
     }
 
     /// Convert `(x, y)` to a flat index, or `None` if out of bounds.

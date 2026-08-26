@@ -72,7 +72,10 @@ const SEA_LEVEL_SENSITIVITY_M_PER_C: f64 = 0.002;
 /// Disaster-spread model: a hazard (fire/flood) propagates to adjacent cells
 /// by intensity and decays over time. See [`disaster_spread`] for details.
 pub mod disaster_spread;
-pub use disaster_spread::{DisasterGrid, DisasterParams, HazardCell, HazardKind};
+pub use disaster_spread::{
+    DisasterGrid, DisasterParams, ElevationGrid, HazardCell, HazardKind, TerrainKind,
+    WindDirection,
+};
 
 /// Seasonal climate oscillation (FR-CIV-SEASON-CYCLE). Additive temperature
 /// and precipitation offsets over a year-length period. See

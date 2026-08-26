@@ -643,6 +643,162 @@ impl OrderBook {
     pub fn new() -> Self {
         Self::default()
     }
+
+    /// Bid-ask spread in cents. `None` if either side is empty.
+    /// Spread = best ask − best bid. A tight spread means high liquidity.
+    pub fn spread(&self) -> Option<i64> {
+        let best_bid = self.best_bid()?;
+        let best_ask = self.best_ask()?;
+        Some(best_ask - best_bid)
+    }
+
+    /// Best (highest) bid price. `None` if no bids.
+    pub fn best_bid(&self) -> Option<i64> {
+        self.bids.iter().map(|o| o.price_cents).max()
+    }
+
+    /// Best (lowest) ask price. `None` if no asks.
+    pub fn best_ask(&self) -> Option<i64> {
+        self.asks.iter().map(|o| o.price_cents).min()
+    }
+
+    /// Total bid-side liquidity (sum of all bid quantities).
+    pub fn bid_depth(&self) -> i64 {
+        self.bids.iter().map(|o| o.qty).sum()
+    }
+
+    /// Total ask-side liquidity (sum of all ask quantities).
+    pub fn ask_depth(&self) -> i64 {
+        self.asks.iter().map(|o| o.qty).sum()
+    }
+
+    /// Total liquidity (bid + ask depth).
+    pub fn total_liquidity(&self) -> i64 {
+        self.bid_depth() + self.ask_depth()
+    }
+
+    /// Bid-side depth at a specific price level (quantity of bids at exactly `price_cents`).
+    pub fn bid_depth_at(&self, price_cents: i64) -> i64 {
+        self.bids
+            .iter()
+            .filter(|o| o.price_cents == price_cents)
+            .map(|o| o.qty)
+            .sum()
+    }
+
+    /// Ask-side depth at a specific price level.
+    pub fn ask_depth_at(&self, price_cents: i64) -> i64 {
+        self.asks
+            .iter()
+            .filter(|o| o.price_cents == price_cents)
+            .map(|o| o.qty)
+            .sum()
+    }
+
+    /// Volume-weighted average price (VWAP) for the bid side.
+    /// `None` if no bids.
+    pub fn bid_vwap(&self) -> Option<i64> {
+        let total_qty: i64 = self.bids.iter().map(|o| o.qty).sum();
+        if total_qty == 0 {
+            return None;
+        }
+        let total_value: i64 = self.bids.iter().map(|o| o.price_cents * o.qty).sum();
+        Some(total_value / total_qty)
+    }
+
+    /// Volume-weighted average price (VWAP) for the ask side.
+    /// `None` if no asks.
+    pub fn ask_vwap(&self) -> Option<i64> {
+        let total_qty: i64 = self.asks.iter().map(|o| o.qty).sum();
+        if total_qty == 0 {
+            return None;
+        }
+        let total_value: i64 = self.asks.iter().map(|o| o.price_cents * o.qty).sum();
+        Some(total_value / total_qty)
+    }
+
+    /// Estimated price impact of a market order of `qty` units on the `side`.
+    /// Returns the estimated slippage in cents (how much the price moves).
+    ///
+    /// Walks the book from the best price inward and sums the cost of
+    /// consuming `qty` units. Price impact = (volume-weighted avg execution
+    /// price − best price).
+    ///
+    /// `None` if insufficient liquidity to fill `qty`.
+    pub fn price_impact(&self, side: Side, qty: i64) -> Option<i64> {
+        let orders = match side {
+            Side::Bid => &self.asks, // buying consumes asks
+            Side::Ask => &self.bids, // selling consumes bids
+        };
+
+        let mut remaining = qty;
+        let mut total_cost = 0i64;
+        let mut total_filled = 0i64;
+
+        for order in orders {
+            if remaining <= 0 {
+                break;
+            }
+            let fill = remaining.min(order.qty);
+            total_cost += fill * order.price_cents;
+            total_filled += fill;
+            remaining -= fill;
+        }
+
+        if remaining > 0 || total_filled == 0 {
+            return None; // insufficient liquidity
+        }
+
+        let avg_execution = total_cost / total_filled;
+        let best_price = match side {
+            Side::Bid => self.best_ask()?,
+            Side::Ask => self.best_bid()?,
+        };
+
+        Some((avg_execution - best_price).abs())
+    }
+
+    /// Snapshot of the order book's market microstructure.
+    /// Useful for the HUD and JSON-RPC inspection.
+    pub fn microstructure(&self) -> OrderBookSnapshot {
+        OrderBookSnapshot {
+            bid_depth: self.bid_depth(),
+            ask_depth: self.ask_depth(),
+            total_liquidity: self.total_liquidity(),
+            spread: self.spread(),
+            best_bid: self.best_bid(),
+            best_ask: self.best_ask(),
+            bid_vwap: self.bid_vwap(),
+            ask_vwap: self.ask_vwap(),
+            bid_count: self.bids.len(),
+            ask_count: self.asks.len(),
+        }
+    }
+}
+
+/// Snapshot of order book microstructure for inspection/display.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OrderBookSnapshot {
+    /// Total bid-side quantity.
+    pub bid_depth: i64,
+    /// Total ask-side quantity.
+    pub ask_depth: i64,
+    /// Total liquidity (bid + ask).
+    pub total_liquidity: i64,
+    /// Bid-ask spread in cents.
+    pub spread: Option<i64>,
+    /// Best bid price.
+    pub best_bid: Option<i64>,
+    /// Best ask price.
+    pub best_ask: Option<i64>,
+    /// Bid-side volume-weighted average price.
+    pub bid_vwap: Option<i64>,
+    /// Ask-side volume-weighted average price.
+    pub ask_vwap: Option<i64>,
+    /// Number of resting bid orders.
+    pub bid_count: usize,
+    /// Number of resting ask orders.
+    pub ask_count: usize,
 }
 
 /// Filled trade emitted by [`MultiGoodMarket::clear_all`].

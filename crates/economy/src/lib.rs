@@ -39,8 +39,8 @@ pub use institution::{
 };
 pub use market::settlement_trade_flow_from_supply_demand;
 pub use market::{
-    GoodId, MarketState, MultiGoodMarket, Order, OrderBook, SettlementTradeFlow, Side, Trade,
-    DEFAULT_SMOOTHING_FACTOR,
+    GoodId, MarketState, MultiGoodMarket, Order, OrderBook, OrderBookSnapshot, SettlementTradeFlow,
+    Side, Trade, DEFAULT_SMOOTHING_FACTOR,
 };
 pub use production::{produce, ProductionOrder, ProductionQueue, ProductionResult, ResourceType, RESOURCE_TYPES};
 pub use stocks::{

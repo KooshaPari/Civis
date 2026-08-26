@@ -24,6 +24,7 @@ pub mod ids;
 pub mod model;
 pub mod query;
 pub mod rumor;
+pub mod significance;
 pub mod worker;
 
 mod chronicle;
@@ -37,6 +38,9 @@ pub use myth_formation::{Myth, MythFormationConfig, MythId, MythIndex};
 pub use config::LegendsConfig;
 pub use decay::{DecayConfig, Prominence, ProminenceTracker};
 pub use graph::{AggregateKey, EmptySagaReason, GapReport, IngestOutcome, SagaGraph};
+pub use significance::{
+    event_significance, EntitySignificance, SignificanceAccumulator, SignificanceConfig,
+};
 pub use ids::{
     ClusterId, Epoch, LegendEntityId, LegendEventId, NameRef, Provenance, RawEventRef, RegionId,
     SimRef, SimRuntimeId, SourceCrate,

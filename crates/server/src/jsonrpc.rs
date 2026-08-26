@@ -95,6 +95,24 @@ pub enum JsonRpcMethod {
     SimUpdateSubscription,
     /// Query current game outcome state (`sim.outcome`, FR-CIV-GAME-001).
     SimOutcome,
+    /// Query faction list from the live simulation (`sim.get_factions`).
+    SimGetFactions,
+    /// Query resource/economy data from the live simulation (`sim.get_resources`).
+    SimGetResources,
+    /// Query current tick count (`sim.get_tick`).
+    SimGetTick,
+    /// Query latest emergence metrics (`sim.get_emergence_metrics`).
+    SimGetEmergenceMetrics,
+    /// Query psyche snapshot (`psyche.snapshot`).
+    PsycheSnapshot,
+    /// Query psyche/sentience events (`psyche.events`).
+    PsycheEvents,
+    /// Query emergence metrics (`emergence.metrics`).
+    EmergenceMetrics,
+    /// Query emergence dashboard data (`emergence.dashboard`).
+    EmergenceDashboard,
+    /// Query religion state (`sim.religion_state`).
+    SimReligionState,
 }
 
 impl JsonRpcMethod {
@@ -132,6 +150,15 @@ impl JsonRpcMethod {
             Self::SimUnsubscribe => "sim.unsubscribe",
             Self::SimUpdateSubscription => "sim.update_subscription",
             Self::SimOutcome => "sim.outcome",
+            Self::SimGetFactions => "sim.get_factions",
+            Self::SimGetResources => "sim.get_resources",
+            Self::SimGetTick => "sim.get_tick",
+            Self::SimGetEmergenceMetrics => "sim.get_emergence_metrics",
+            Self::PsycheSnapshot => "psyche.snapshot",
+            Self::PsycheEvents => "psyche.events",
+            Self::EmergenceMetrics => "emergence.metrics",
+            Self::EmergenceDashboard => "emergence.dashboard",
+            Self::SimReligionState => "sim.religion_state",
         }
     }
 
@@ -169,6 +196,15 @@ impl JsonRpcMethod {
             "sim.unsubscribe" => Some(Self::SimUnsubscribe),
             "sim.update_subscription" => Some(Self::SimUpdateSubscription),
             "sim.outcome" => Some(Self::SimOutcome),
+            "sim.get_factions" => Some(Self::SimGetFactions),
+            "sim.get_resources" => Some(Self::SimGetResources),
+            "sim.get_tick" => Some(Self::SimGetTick),
+            "sim.get_emergence_metrics" => Some(Self::SimGetEmergenceMetrics),
+            "psyche.snapshot" => Some(Self::PsycheSnapshot),
+            "psyche.events" => Some(Self::PsycheEvents),
+            "emergence.metrics" => Some(Self::EmergenceMetrics),
+            "emergence.dashboard" => Some(Self::EmergenceDashboard),
+            "sim.religion_state" => Some(Self::SimReligionState),
             _ => None,
         }
     }
@@ -2149,6 +2185,170 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             ),
             effect: DispatchEffect::None,
         },
+        JsonRpcMethod::SimGetFactions => {
+            let factions = ctx
+                .snapshot
+                .as_ref()
+                .and_then(|s| s.spectator.as_ref())
+                .map(|spec| serde_json::to_value(&spec.factions).unwrap_or(Value::Array(vec![])))
+                .unwrap_or(Value::Array(vec![]));
+            DispatchPlan {
+                response: JsonRpcResponse::success(
+                    req.id,
+                    serde_json::json!({
+                        "tick": ctx.tick,
+                        "factions": factions,
+                    }),
+                ),
+                effect: DispatchEffect::None,
+            }
+        }
+        JsonRpcMethod::SimGetResources => {
+            let market_prices = ctx
+                .snapshot
+                .as_ref()
+                .map(|s| s.market_prices.clone())
+                .unwrap_or_default();
+            let institutions = ctx
+                .snapshot
+                .as_ref()
+                .map(|s| s.institutions.clone())
+                .unwrap_or_default();
+            DispatchPlan {
+                response: JsonRpcResponse::success(
+                    req.id,
+                    serde_json::json!({
+                        "tick": ctx.tick,
+                        "market_prices": market_prices,
+                        "institutions": institutions,
+                    }),
+                ),
+                effect: DispatchEffect::None,
+            }
+        }
+        JsonRpcMethod::SimGetTick => DispatchPlan {
+            response: JsonRpcResponse::success(req.id, serde_json::json!({ "tick": ctx.tick })),
+            effect: DispatchEffect::None,
+        },
+        JsonRpcMethod::SimGetEmergenceMetrics => {
+            let result = match ctx.emergence.as_ref() {
+                Some(sample) => serde_json::to_value(sample).unwrap_or(serde_json::json!({
+                    "tick": ctx.tick,
+                })),
+                None => serde_json::json!({ "tick": ctx.tick, "sample": serde_json::Value::Null }),
+            };
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, result),
+                effect: DispatchEffect::None,
+            }
+        }
+        JsonRpcMethod::PsycheSnapshot => {
+            // Psyche data not yet fully wired; return a stub snapshot so
+            // MCP clients can query without error.
+            let snapshot = serde_json::json!({
+                "tick": ctx.tick,
+                "agents": [],
+            });
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, snapshot),
+                effect: DispatchEffect::None,
+            }
+        }
+        JsonRpcMethod::PsycheEvents => {
+            // Sentience events not yet populated from live sim; return
+            // an empty list so clients can poll without error.
+            DispatchPlan {
+                response: JsonRpcResponse::success(
+                    req.id,
+                    serde_json::json!({
+                        "tick": ctx.tick,
+                        "events": [],
+                    }),
+                ),
+                effect: DispatchEffect::None,
+            }
+        }
+        JsonRpcMethod::EmergenceMetrics => {
+            let result = match ctx.emergence.as_ref() {
+                Some(sample) => {
+                    let mut obj = serde_json::Map::new();
+                    obj.insert("tick".to_owned(), serde_json::json!(sample.tick));
+                    obj.insert(
+                        "entropy_bits".to_owned(),
+                        serde_json::json!(sample.entropy_bits),
+                    );
+                    obj.insert(
+                        "entropy_norm".to_owned(),
+                        serde_json::json!(sample.entropy_norm),
+                    );
+                    if let Some(count) = sample.structure_count {
+                        obj.insert("structure_count".to_owned(), serde_json::json!(count));
+                    }
+                    if let Some(largest) = sample.structure_largest {
+                        obj.insert("structure_largest".to_owned(), serde_json::json!(largest));
+                    }
+                    obj.insert(
+                        "histogram_total".to_owned(),
+                        serde_json::json!(sample.histogram_total),
+                    );
+                    obj.insert(
+                        "branching_sigma".to_owned(),
+                        serde_json::json!(sample.branching_sigma),
+                    );
+                    obj.insert(
+                        "branching_regime".to_owned(),
+                        serde_json::json!(sample.branching_regime),
+                    );
+                    obj.insert(
+                        "power_law_alpha".to_owned(),
+                        serde_json::json!(sample.power_law_alpha),
+                    );
+                    obj.insert(
+                        "novelty_rate".to_owned(),
+                        serde_json::json!(sample.novelty_rate),
+                    );
+                    Value::Object(obj)
+                }
+                None => serde_json::json!({ "tick": ctx.tick, "sample": Value::Null }),
+            };
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, result),
+                effect: DispatchEffect::None,
+            }
+        }
+        JsonRpcMethod::EmergenceDashboard => {
+            let result = match ctx.emergence.as_ref().and_then(|s| s.dashboard.as_ref()) {
+                Some(dashboard) => serde_json::to_value(dashboard).unwrap_or(serde_json::json!({
+                    "tick": ctx.tick,
+                })),
+                None => serde_json::json!({
+                    "tick": ctx.tick,
+                    "cluster_entropy": 0.0,
+                    "ideology_homophily": 0.0,
+                    "sentience_fraction": 0.0,
+                    "psyche_stability": 0.0,
+                    "diplomacy_tension": 0.0,
+                }),
+            };
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, result),
+                effect: DispatchEffect::None,
+            }
+        }
+        JsonRpcMethod::SimReligionState => {
+            // Religion system not yet implemented; return empty state.
+            DispatchPlan {
+                response: JsonRpcResponse::success(
+                    req.id,
+                    serde_json::json!({
+                        "tick": ctx.tick,
+                        "religions": [],
+                        "belief_points": 0,
+                    }),
+                ),
+                effect: DispatchEffect::None,
+            }
+        }
     }
 }
 

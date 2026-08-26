@@ -31,6 +31,23 @@ pub struct FactionRelations {
 }
 
 impl FactionRelations {
+    /// Map a continuous relation score to a qualitative [`RelationKind`].
+    /// Thresholds mirror the canonical buckets from `DiplomacyMatrix::relation_kind`
+    /// in `civ-agents` for cross-layer consistency.
+    fn score_to_kind(score: f32) -> RelationKind {
+        if score < -0.5 {
+            RelationKind::War
+        } else if score < -0.2 {
+            RelationKind::Rivalry
+        } else if score < 0.2 {
+            RelationKind::Neutral
+        } else if score < 0.5 {
+            RelationKind::Trade
+        } else {
+            RelationKind::Alliance
+        }
+    }
+
     pub fn apply_signal<A, B>(&mut self, a: A, b: B, signal: DiplomacySignal) -> DiplomacyOutcome
     where
         A: Into<u32>,
@@ -38,12 +55,13 @@ impl FactionRelations {
     {
         let (a, b) = (a.into(), b.into());
         let entry = self.rows.entry((a, b)).or_default();
+        let before = Self::score_to_kind(entry.score);
         entry.score =
             (entry.score + signal.trade_volume - signal.combat_grievance).clamp(-1.0, 1.0);
         entry.samples = entry.samples.saturating_add(1);
         DiplomacyOutcome {
-            before: RelationKind::Neutral,
-            after: RelationKind::Neutral,
+            before,
+            after: Self::score_to_kind(entry.score),
             score: entry.score,
         }
     }
@@ -120,17 +138,71 @@ use rand::Rng;
 
 impl Simulation {
     /// Phase hook for macro-level diplomacy events (FR-CIV-DIPLOMACY).
-    /// Stub: full implementation pending faction_relations field.
-    pub fn run_macro_diplomacy_event(&mut self) {}
+    ///
+    /// Runs every 500 ticks via [`Self::phase_diplomacy`].  Performs three things:
+    /// 1. Calls [`Self::tick_faction_relation_drift`] for per-tick grief decay,
+    ///    engagement tracking, treasury adjustments, and a random pair interaction.
+    /// 2. Iterates every faction pair, applies an ambient trade/grievance signal
+    ///    to the relation matrix, and detects qualitative threshold crossings.
+    /// 3. Emits [`EmergenceFeedEvent`]s for any threshold changes so the saga
+    ///    graph and HUD event feed stay current.
+    pub fn run_macro_diplomacy_event(&mut self) {
+        // 1. Per-tick drift: grief decay, engagement tracking, treasury adjustments.
+        self.tick_faction_relation_drift();
+
+        // 2. Iterate all faction pairs and apply ambient interaction signals.
+        let faction_ids: Vec<u32> = self.state.factions.keys().copied().collect();
+        if faction_ids.len() < 2 {
+            return;
+        }
+        for i in 0..faction_ids.len() {
+            for j in (i + 1)..faction_ids.len() {
+                let a = faction_ids[i];
+                let b = faction_ids[j];
+
+                // Ambient interaction: modest trade flow, occasional grievance.
+                let trade = self.rng.gen_range(0.0..0.3);
+                let grievance = self.rng.gen_range(0.0..0.2);
+                let signal = DiplomacySignal {
+                    trade_volume: trade,
+                    combat_grievance: grievance,
+                    ..DiplomacySignal::default()
+                };
+
+                let outcome = self.faction_relations.apply_signal(a, b, signal);
+
+                // 3. Emit an emergence feed event on qualitative threshold crossings.
+                if outcome.before != outcome.after {
+                    self.emit_relation_threshold_event(a, b, outcome);
+                }
+            }
+        }
+    }
 
     /// Emit a relation-threshold-crossing event (FR-CIV-DIPLOMACY).
-    /// Stub: full implementation pending faction_relations field.
+    ///
+    /// Pushes an [`EmergenceFeedEvent`] with the kind `"relation_shift"` so it
+    /// surfaces in the HUD event feed and can be ingested by the legends saga
+    /// graph downstream.
     pub fn emit_relation_threshold_event(
         &mut self,
-        _faction_a: u32,
-        _faction_b: u32,
-        _outcome: civ_agents::DiplomacyOutcome,
+        faction_a: u32,
+        faction_b: u32,
+        outcome: civ_agents::DiplomacyOutcome,
     ) {
+        let tick = self.state.tick;
+        let summary = format!(
+            "factions {faction_a} and {faction_b}: {:?} -> {:?} (score {:.3})",
+            outcome.before, outcome.after, outcome.score,
+        );
+        self.emergence
+            .last_feed
+            .push(crate::emergence::EmergenceFeedEvent {
+                tick,
+                kind: "relation_shift".to_string(),
+                summary,
+                agent_id: None,
+            });
     }
 
     pub(crate) fn phase_diplomacy(&mut self) {

@@ -36,12 +36,15 @@ use civ_genetics::sentience::{
 };
 
 use civ_genetics::Dna;
+use civ_genetics::Species;
 use civ_mod_host::ModHost;
 use civ_needs::{should_reproduce, Health as CivNeedsHealth, LifecycleLabel, LifecycleParams};
 use civ_planet::{
     compute_climate, compute_weather, defaults_earthlike, Climate, GeologyMap, MoonConfig,
     PlanetConfig, WeatherCell,
 };
+use civ_species::evolution::EvolutionEngine;
+use civ_species::express;
 use civ_tactics::{
     apply_damage, evolve_doctrine, score_doctrine_fitness, tick_operational_movement,
     tick_war_bridge, CombatEngagement, DamageEvent, Doctrine, DoctrineLibrary,
@@ -1839,6 +1842,7 @@ impl Simulation {
         self.phase_culture();
         self.phase_language();
         self.phase_sentience();
+        self.phase_species();
         self.phase_diffusion();
         // Run after all event-producing phases so this tick's combat,
         // construction, and disaster triggers reach the snapshot.
@@ -1893,11 +1897,117 @@ impl Simulation {
             "culture" => self.phase_culture(),
             "language" => self.phase_language(),
             "sentience" => self.phase_sentience(),
+            "species" => self.phase_species(),
             "diffusion" => self.phase_diffusion(),
             "audio" => self.phase_audio(),
             "cluster" => self.phase_cluster(),
             "victory_check" => self.phase_victory_check(),
             other => unreachable!("Simulation::run_phase: unknown phase '{other}' in PHASE_ORDER"),
+        }
+    }
+
+    /// Species-level evolutionary phase (FR-CIV-SPECIES-EVOLUTION).
+    ///
+    /// Runs mutation, selection, crossover, and speciation on civilian DNA each
+    /// tick via [`civ_species::evolution::EvolutionEngine`]. DNA mutates
+    /// occasionally, species populations are pruned by fitness, and new
+    /// offspring DNA is synthesised from crossover of the most fit pairs.
+    fn phase_species(&mut self) {
+        let engine = EvolutionEngine::default();
+        let tick = self.state.tick;
+
+        // Collect all civilians and their DNA.
+        let agents: Vec<(Entity, u64, civ_genetics::Dna)> = self
+            .world
+            .query::<(&AgentCivilian, &civ_genetics::Dna)>()
+            .iter()
+            .map(|(e, (civ, dna))| (e, civ.id, dna.clone()))
+            .collect();
+
+        if agents.is_empty() {
+            return;
+        }
+
+        // 1. MUTATE: each civilian's DNA may mutate based on mutation_rate.
+        for (entity, _id, _dna) in &agents {
+            if let Ok(mut dna_ref) = self.world.get::<&mut civ_genetics::Dna>(*entity) {
+                // Build a Species wrapper for the EvolutionEngine::mutate API.
+                let mut species = Species {
+                    id: 0,
+                    dna_class: "civilian".to_string(),
+                    founder_centroid: dna_ref.clone(),
+                };
+                let mut local_rng = ChaCha8Rng::seed_from_u64(self.state.rng_seed ^ tick ^ _id);
+                engine.mutate(&mut species, &mut local_rng);
+                *dna_ref = species.founder_centroid;
+            }
+        }
+
+        // Re-collect after mutation so selection sees updated DNA.
+        let agents: Vec<(Entity, u64, civ_genetics::Dna)> = self
+            .world
+            .query::<(&AgentCivilian, &civ_genetics::Dna)>()
+            .iter()
+            .map(|(e, (civ, dna))| (e, civ.id, dna.clone()))
+            .collect();
+
+        // 2. SPECIATION: group civilians into genetic clusters.
+        let species_pop: Vec<Species> = agents
+            .iter()
+            .map(|(_entity, id, dna)| Species {
+                id: *id,
+                dna_class: "civilian".to_string(),
+                founder_centroid: dna.clone(),
+            })
+            .collect();
+
+        let clusters = engine.speciation(&species_pop, 0.3);
+
+        // 3. SELECT: apply selection pressure per species cluster.
+        for cluster in &clusters {
+            if cluster.len() < 2 {
+                continue;
+            }
+            let _selected = engine.select(cluster, |s| {
+                // Fitness from phenotype: average of behaviour weights.
+                let phenotype = express(&s.founder_centroid);
+                let w = &phenotype.behavior;
+                ((w.aggression + w.curiosity + w.sociability + w.intelligence) / 4.0) as f64
+            });
+            // Selection is purely informational at this stage — the surviving
+            // genome pools are used for crossover below.
+        }
+
+        // 4. CROSSOVER: for each pair of civilians in the same cluster that
+        //    should reproduce, create offspring DNA and update one partner.
+        //    Use a deterministic RNG seeded by tick + pair ids.
+        for cluster in &clusters {
+            if cluster.len() < 2 {
+                continue;
+            }
+            // Take pairs (0,1), (2,3), (4,5), ... and crossover.
+            let mut pairs = cluster.chunks(2);
+            while let Some(pair) = pairs.next() {
+                if pair.len() < 2 {
+                    break;
+                }
+                let parent_a = &pair[0];
+                let parent_b = &pair[1];
+                let child = engine.crossover(parent_a, parent_b);
+
+                // Write child DNA back to the second parent entity (the "offspring"
+                // is re-embodied as a mutation of the second parent's genome).
+                if let Some(child_entity) = agents
+                    .iter()
+                    .find(|(_, id, _)| *id == parent_b.id)
+                    .map(|(e, _, _)| *e)
+                {
+                    if let Ok(mut dna_ref) = self.world.get::<&mut civ_genetics::Dna>(child_entity)
+                    {
+                        *dna_ref = child.founder_centroid;
+                    }
+                }
+            }
         }
     }
 

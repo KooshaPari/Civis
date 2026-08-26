@@ -42,6 +42,7 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "culture",
     "language",
     "sentience",
+    "species",
     "diffusion",
     "audio",
     "victory_check",

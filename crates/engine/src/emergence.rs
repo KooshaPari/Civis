@@ -39,11 +39,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::culture::advance_faction_ideologies;
 use crate::engine::{awakening_belief_gain, awakening_cohesion_gain, Simulation};
-use civ_ai::mcts::{self, GameState, LinearRng, MctsConfig, MctsTree};
 use civ_ai::goal_tree::{
-    AgentContext, GoalTree, Resources, SeekFoodGoal,
-    SeekShelterGoal, SocializeGoal, TradeGoal,
+    AgentContext, GoalTree, Resources, SeekFoodGoal, SeekShelterGoal, SocializeGoal, TradeGoal,
 };
+use civ_ai::mcts::{self, GameState, LinearRng, MctsConfig, MctsTree};
 
 /// Notable emergence this tick — event feed / inspect panels (FR-CIV-LEGENDS-QUERY-07).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -168,7 +167,8 @@ impl GameState for FactionMctsState {
         }
         // Composite score: resource balance + military + diplomacy.
         let resource_balance = 1.0
-            / (1.0 + (self.food - 50.0).abs()
+            / (1.0
+                + (self.food - 50.0).abs()
                 + (self.wood - 40.0).abs()
                 + (self.metal - 30.0).abs());
         let military_score = (self.military_strength / 50.0).min(1.0);
@@ -236,7 +236,7 @@ impl EmergenceState {
         }
     }
 
-    fn push_feed(
+    pub(crate) fn push_feed(
         &mut self,
         tick: u64,
         kind: &str,
@@ -1288,7 +1288,10 @@ impl Simulation {
             let config = MctsConfig {
                 iterations: MCTS_ITERATIONS,
                 max_sim_depth: MCTS_MAX_SIM_DEPTH,
-                seed: Some(tick.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(faction_id as u64)),
+                seed: Some(
+                    tick.wrapping_mul(0x9E37_79B9_7F4A_7C15)
+                        .wrapping_add(faction_id as u64),
+                ),
                 ..Default::default()
             };
             let mut tree = MctsTree::new(&state, config);

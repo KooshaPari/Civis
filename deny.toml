@@ -24,6 +24,12 @@ ignore = [
   { id = "RUSTSEC-2025-0141", reason = "bincode 1.x pinned by save format; migrate tracked separately" },
   # crossbeam-epoch fmt::Pointer advisory; no patched release consumed yet.
   { id = "RUSTSEC-2026-0204", reason = "awaiting crossbeam-epoch bump through bevy/rayon stack" },
+  # paste is unmaintained (RUSTSEC-2024-0436); widely used macro helper, no clean replacement.
+  { id = "RUSTSEC-2024-0436", reason = "paste is transitive; widely used, no replacement" },
+  # ttf-parser is unmaintained (RUSTSEC-2026-0192); active fork in development upstream.
+  { id = "RUSTSEC-2026-0192", reason = "ttf-parser unmaintained; upstream fork in progress" },
+  # num-bigint 0.4.7 was yanked; superseded by 0.4.8 in lockfile.
+  { id = "RUSTSEC-2025-0060", reason = "num-bigint yanked; transitive, will resolve on next cargo update" },
 ]
 
 [bans]

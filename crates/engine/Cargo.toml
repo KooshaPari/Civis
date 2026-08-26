@@ -54,6 +54,7 @@ civ-save-db = { path = "../save-db" }
 civ-legends = { path = "../legends" }
 civ-genetics = { path = "../genetics" }
 civ-species = { path = "../species" }
+civ-ai = { path = "../ai" }
 
 # Weak-emergence / criticality metrics consumed by the Emergence Dashboard
 # (see `docs/design/emergence-dashboard.md`). Stacked on PR #350

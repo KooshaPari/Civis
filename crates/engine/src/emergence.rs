@@ -39,6 +39,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::culture::advance_faction_ideologies;
 use crate::engine::{awakening_belief_gain, awakening_cohesion_gain, Simulation};
+use civ_ai::mcts::{self, GameState, LinearRng, MctsConfig, MctsTree};
+use civ_ai::goal_tree::{
+    AgentContext, GoalTree, Resources, SeekFoodGoal,
+    SeekShelterGoal, SocializeGoal, TradeGoal,
+};
 
 /// Notable emergence this tick — event feed / inspect panels (FR-CIV-LEGENDS-QUERY-07).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -60,6 +65,124 @@ pub struct CivAiDecision {
     pub agent_id: u64,
     pub prompt: String,
     pub output: String,
+}
+
+/// MCTS world-state snapshot for a single faction (FR-AI-003 wiring).
+///
+/// Implements [`civ_ai::mcts::GameState`] so the tree-search planner can
+/// evaluate strategic actions from the faction's perspective. Each action
+/// mutates the snapshot deterministically; the evaluator scores the result
+/// on a composite of resource balance, military strength, and diplomacy.
+#[derive(Debug, Clone)]
+struct FactionMctsState {
+    food: f64,
+    wood: f64,
+    metal: f64,
+    energy: f64,
+    military_strength: f64,
+    diplomacy_score: f64,
+    steps_remaining: usize,
+}
+
+impl FactionMctsState {
+    /// Build a snapshot from live simulation state for the given faction.
+    fn from_simulation(sim: &Simulation, faction_id: u32) -> Self {
+        let res = sim
+            .state
+            .faction_resources
+            .get(&faction_id)
+            .cloned()
+            .unwrap_or_default();
+        let military_strength: f64 = sim
+            .world
+            .query::<&crate::engine::MilitaryUnit>()
+            .iter()
+            .filter(|(_, u)| u.faction_id == faction_id)
+            .map(|(_, u)| u.strength.to_f64())
+            .sum();
+        let diplomacy_score: f64 = sim
+            .faction_relations
+            .iter_rows()
+            .filter(|((a, b), _)| *a == faction_id || *b == faction_id)
+            .map(|((_, _), rec)| rec.score as f64)
+            .sum::<f64>()
+            / (sim.state.faction_resources.len().max(1) as f64 - 1.0).max(1.0);
+        Self {
+            food: res.food.to_f64(),
+            wood: res.wood.to_f64(),
+            metal: res.metal.to_f64(),
+            energy: res.energy.to_f64(),
+            military_strength,
+            diplomacy_score,
+            steps_remaining: 5,
+        }
+    }
+}
+
+/// MCTS budget per faction per tick (keep low to avoid tick slowdown).
+const MCTS_ITERATIONS: usize = 100;
+/// Max simulation depth inside each MCTS rollout.
+const MCTS_MAX_SIM_DEPTH: usize = 5;
+
+impl GameState for FactionMctsState {
+    fn legal_actions(&self) -> Vec<String> {
+        if self.steps_remaining == 0 {
+            return vec![];
+        }
+        vec![
+            "improve_food".into(),
+            "improve_wood".into(),
+            "improve_metal".into(),
+            "build_military".into(),
+            "improve_relations".into(),
+            "maintain".into(),
+        ]
+    }
+
+    fn apply_action(&self, action: &String) -> Self {
+        let mut next = self.clone();
+        next.steps_remaining = next.steps_remaining.saturating_sub(1);
+        match action.as_str() {
+            "improve_food" => next.food += 10.0,
+            "improve_wood" => next.wood += 8.0,
+            "improve_metal" => next.metal += 6.0,
+            "build_military" => {
+                next.military_strength += 5.0;
+                next.metal -= 3.0;
+            }
+            "improve_relations" => {
+                next.diplomacy_score = (next.diplomacy_score + 0.1).min(1.0);
+            }
+            _ => {} // maintain: no-op
+        }
+        next
+    }
+
+    fn is_terminal(&self) -> bool {
+        self.steps_remaining == 0
+    }
+
+    fn reward(&self) -> Option<f64> {
+        if self.steps_remaining > 0 {
+            return None;
+        }
+        // Composite score: resource balance + military + diplomacy.
+        let resource_balance = 1.0
+            / (1.0 + (self.food - 50.0).abs()
+                + (self.wood - 40.0).abs()
+                + (self.metal - 30.0).abs());
+        let military_score = (self.military_strength / 50.0).min(1.0);
+        let diplomacy_bonus = (self.diplomacy_score + 1.0) / 2.0; // map [-1,1] → [0,1]
+        Some(resource_balance * 0.4 + military_score * 0.3 + diplomacy_bonus * 0.3)
+    }
+
+    fn random_action(&self, rng: &mut LinearRng) -> String {
+        let actions = self.legal_actions();
+        if actions.is_empty() {
+            return "maintain".into();
+        }
+        actions[rng.next_usize(actions.len())].clone()
+    }
 }
 
 /// Per-simulation MOAT state (legends graph, cluster cultures, feed buffers).
@@ -214,6 +337,8 @@ impl Simulation {
         self.emergence_genetics_sentience();
         self.emergence_legends();
         self.emergence_civ_ai();
+        self.emergence_mcts();
+        self.emergence_goal_tree();
     }
 
     fn emergence_ensure_genomes(&mut self) {
@@ -1144,6 +1269,106 @@ impl Simulation {
     #[must_use]
     pub fn civ_ai_decisions(&self) -> &[CivAiDecision] {
         &self.emergence.last_ai_decisions
+    }
+
+    /// Per-faction MCTS strategic planning (FR-AI-003 wiring).
+    ///
+    /// For every faction with resources, runs a small-budget MCTS tree search
+    /// to determine the optimal strategic action. The chosen action is logged
+    /// as an emergence feed event; the underlying simulation state is not
+    /// mutated (planner is observational in this phase).
+    fn emergence_mcts(&mut self) {
+        let tick = self.state.tick;
+        let faction_ids: Vec<u32> = self.state.faction_resources.keys().copied().collect();
+        for faction_id in faction_ids {
+            let state = FactionMctsState::from_simulation(self, faction_id);
+            if state.is_terminal() {
+                continue;
+            }
+            let config = MctsConfig {
+                iterations: MCTS_ITERATIONS,
+                max_sim_depth: MCTS_MAX_SIM_DEPTH,
+                seed: Some(tick.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(faction_id as u64)),
+                ..Default::default()
+            };
+            let mut tree = MctsTree::new(&state, config);
+            tree.search(&state);
+            if let Some(best) = tree.best_action() {
+                self.emergence.push_feed(
+                    tick,
+                    "mcts_strategy",
+                    format!("faction {faction_id} MCTS chose: {best}"),
+                    None,
+                );
+            }
+        }
+    }
+
+    /// GoalTree AI — each civilian evaluates hierarchical goals and logs the
+    /// selected goal as an emergence event (FR-AI-002 wiring).
+    fn emergence_goal_tree(&mut self) {
+        let tick = self.state.tick;
+
+        let agents: Vec<(Entity, u64)> = self
+            .world
+            .query::<&Civilian>()
+            .iter()
+            .map(|(e, c)| (e, c.id))
+            .collect();
+
+        for (entity, agent_id) in agents {
+            let position = self
+                .world
+                .get::<&Position3d>(entity)
+                .ok()
+                .map(|p| {
+                    civ_ai::goal_tree::Position::new(
+                        p.coord.x as f64 / FIXED_SCALE as f64,
+                        p.coord.z as f64 / FIXED_SCALE as f64,
+                    )
+                })
+                .unwrap_or(civ_ai::goal_tree::Position::new(0.0, 0.0));
+
+            let needs_vec: Vec<civ_ai::goal::Need> = self
+                .world
+                .get::<&Needs>(entity)
+                .ok()
+                .map(|n| {
+                    vec![
+                        civ_ai::goal::Need::Hunger(n.food),
+                        civ_ai::goal::Need::Safety(n.safety),
+                        civ_ai::goal::Need::Social(n.belonging),
+                        civ_ai::goal::Need::Rest(n.rest),
+                    ]
+                })
+                .unwrap_or_default();
+
+            let ctx = AgentContext {
+                agent_id,
+                position,
+                resources: Resources::new(),
+                nearby_entities: Vec::new(),
+                needs: needs_vec,
+                relationships: std::collections::HashMap::new(),
+                current_goal: None,
+                tick,
+            };
+
+            let mut tree = GoalTree::new();
+            tree.add_goal(Box::new(SeekFoodGoal::default()));
+            tree.add_goal(Box::new(SeekShelterGoal::default()));
+            tree.add_goal(Box::new(SocializeGoal::default()));
+            tree.add_goal(Box::new(TradeGoal::default()));
+
+            if let Some(goal) = tree.select_active(&ctx) {
+                self.emergence.push_feed(
+                    tick,
+                    "goal_tree",
+                    format!("agent {agent_id} plans: {}", goal.id()),
+                    Some(agent_id),
+                );
+            }
+        }
     }
 
     /// Sentience crossings detected this tick.

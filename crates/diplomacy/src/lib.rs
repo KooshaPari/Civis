@@ -50,7 +50,7 @@ pub use emergent::{
     Territory, TreatyKind, TreatyLedgerEntry, TreatyOutcome,
 };
 
-pub use stance::{DiplomacyStance, DiplomacyStanceEngine, InteractionEvent, RelationQuadrant};
+pub use stance::{DiplomacyStance, DiplomacyStanceEngine, RelationQuadrant};
 
 /// Schema version of this crate's public types. Bumped on breaking changes.
 pub const SCHEMA_VERSION: u32 = 1;

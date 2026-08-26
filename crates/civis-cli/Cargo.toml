@@ -69,6 +69,10 @@ bevy = { version = "0.18", optional = true }
 # REPL dependencies
 rustyline = "15"
 colored = "2"
+# Blocking WebSocket client for the interactive REPL.
+tungstenite = { version = "0.24", default-features = false, features = [
+  "rustls-tls-webpki-roots",
+] }
 
 [dev-dependencies]
 proptest = "1.11"

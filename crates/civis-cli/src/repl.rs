@@ -5,6 +5,8 @@
 //! are passed to the `civis` binary, this REPL starts automatically.
 //!
 //! Features:
+//! - Connects to the Civis server over WebSocket JSON-RPC (`CIVIS_WS_URL` or `ws://127.0.0.1:5173/ws`)
+//! - Falls back to offline mode with placeholder data when the server is unreachable
 //! - Command history persisted to `~/.civis_history`
 //! - Graceful `Ctrl+C` handling (cancels current input, not the process)
 //! - Coloured output via the `colored` crate
@@ -15,6 +17,15 @@ use std::path::PathBuf;
 use colored::Colorize;
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
+use serde_json::Value;
+use tungstenite::stream::MaybeTlsStream;
+use tungstenite::{connect, Message, WebSocket};
+
+/// Type alias for the blocking WebSocket stream used by the REPL.
+type WsStream = WebSocket<MaybeTlsStream<std::net::TcpStream>>;
+
+/// Default Civis WebSocket JSON-RPC URL.
+const DEFAULT_WS_URL: &str = "ws://127.0.0.1:5173/ws";
 
 /// REPL configuration.
 #[derive(Debug, Clone)]
@@ -42,15 +53,83 @@ pub struct Repl {
     config: ReplConfig,
     tick: u64,
     running: bool,
+    /// WebSocket URL for the Civis server.
+    ws_url: String,
+    /// Live WebSocket connection (`None` when server is unreachable or in offline/test mode).
+    ws: Option<WsStream>,
+    /// Auto-incrementing JSON-RPC request id.
+    next_rpc_id: u64,
 }
 
 impl Repl {
     /// Create a new REPL with the given configuration.
+    ///
+    /// The WebSocket URL defaults to `ws://127.0.0.1:5173/ws` and can be
+    /// overridden with the `CIVIS_WS_URL` environment variable.
     pub fn new(config: ReplConfig) -> Self {
+        let ws_url = std::env::var("CIVIS_WS_URL").unwrap_or_else(|_| DEFAULT_WS_URL.to_string());
         Self {
             config,
             tick: 0,
             running: true,
+            ws_url,
+            ws: None,
+            next_rpc_id: 1,
+        }
+    }
+
+    /// Attempt to connect to the Civis server over WebSocket.
+    ///
+    /// Returns `Ok(())` on success, or `Err(message)` on failure.
+    /// The REPL remains usable in offline mode when the connection fails.
+    fn connect_ws(&mut self) -> Result<(), String> {
+        let (socket, _response) =
+            connect(&self.ws_url).map_err(|e| format!("WebSocket connect failed: {e}"))?;
+        self.ws = Some(socket);
+        Ok(())
+    }
+
+    /// Send a JSON-RPC request and return the parsed response.
+    ///
+    /// Returns `Ok(Value)` with the full JSON-RPC response on success,
+    /// or `Err(String)` on connection or protocol errors.
+    fn send_rpc(&mut self, method: &str, params: Value) -> Result<Value, String> {
+        let ws = self.ws.as_mut().ok_or("Not connected to server")?;
+        let id = self.next_rpc_id;
+        self.next_rpc_id += 1;
+
+        let request = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "method": method,
+            "params": params,
+        });
+
+        let text = request.to_string();
+        ws.send(Message::Text(text))
+            .map_err(|e| format!("WebSocket send error: {e}"))?;
+
+        // Read responses in a loop, skipping broadcast frames (tick data).
+        // JSON-RPC responses have an "id" field; broadcast frames do not.
+        loop {
+            let msg = ws
+                .read()
+                .map_err(|e| format!("WebSocket recv error: {e}"))?;
+            match msg {
+                Message::Text(text) => {
+                    // Try to parse as JSON-RPC response (has "id" field).
+                    if let Ok(val) = serde_json::from_str::<Value>(&text) {
+                        if val.get("id").is_some() {
+                            return Ok(val);
+                        }
+                        // Otherwise it's a broadcast frame — skip it.
+                    }
+                }
+                Message::Close(_) => {
+                    return Err("WebSocket closed by server".to_string());
+                }
+                _ => {}
+            }
         }
     }
 
@@ -61,6 +140,25 @@ impl Repl {
         // Load history if it exists.
         if self.config.history_path.exists() {
             let _ = rl.load_history(&self.config.history_path);
+        }
+
+        // Attempt WebSocket connection.
+        match self.connect_ws() {
+            Ok(()) => {
+                println!(
+                    "{} Connected to {}",
+                    "\u{2713}".green().bold(),
+                    self.ws_url.green()
+                );
+            }
+            Err(e) => {
+                println!(
+                    "{} {} ({})",
+                    "warning:".yellow().bold(),
+                    "Server unreachable - running in offline mode".yellow(),
+                    e.dimmed()
+                );
+            }
         }
 
         println!("{}", "Civis Interactive REPL".green().bold());
@@ -174,68 +272,364 @@ impl Repl {
     }
 
     /// Show current simulation status.
-    fn cmd_status(&self) -> String {
-        format!(
-            "{}\n  tick: {}\n  entities: {}\n  state: {}\n",
-            "Simulation Status:".green().bold(),
-            self.tick,
-            "0 (no live connection)",
-            "idle".yellow()
-        )
+    ///
+    /// When connected, queries `sim.status` from the server.
+    /// When offline, shows the local tick counter.
+    fn cmd_status(&mut self) -> String {
+        if self.ws.is_some() {
+            match self.send_rpc("sim.status", serde_json::json!({})) {
+                Ok(resp) => {
+                    if let Some(err) = resp.get("error") {
+                        return format!(
+                            "{} {}",
+                            "server error:".red().bold(),
+                            err.get("message")
+                                .and_then(|m| m.as_str())
+                                .unwrap_or("unknown"),
+                        );
+                    }
+                    let result = resp.get("result").cloned().unwrap_or(Value::Null);
+                    let tick = result
+                        .get("tick")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(self.tick);
+                    self.tick = tick;
+                    let population = result
+                        .get("population")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0);
+                    let outcome = result
+                        .get("outcome")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("running");
+                    format!(
+                        "{}\n  tick: {}\n  population: {}\n  state: {}\n",
+                        "Simulation Status:".green().bold(),
+                        tick,
+                        population,
+                        outcome.cyan()
+                    )
+                }
+                Err(e) => format!("{} {}", "error:".red().bold(), e),
+            }
+        } else {
+            format!(
+                "{}\n  tick: {}\n  entities: {}\n  state: {}\n",
+                "Simulation Status (offline):".green().bold(),
+                self.tick,
+                "0 (no live connection)",
+                "idle".yellow()
+            )
+        }
     }
 
     /// Advance the simulation tick counter.
+    ///
+    /// When connected, sends `sim.command` with `action: "tick"`.
+    /// When offline, increments the local counter.
     fn cmd_tick(&mut self) -> String {
-        self.tick += 1;
-        format!("{} tick -> {}", "Advanced:".green().bold(), self.tick)
+        if self.ws.is_some() {
+            match self.send_rpc("sim.command", serde_json::json!({"action": "tick"})) {
+                Ok(resp) => {
+                    if let Some(err) = resp.get("error") {
+                        return format!(
+                            "{} {}",
+                            "server error:".red().bold(),
+                            err.get("message")
+                                .and_then(|m| m.as_str())
+                                .unwrap_or("unknown"),
+                        );
+                    }
+                    let result = resp.get("result").cloned().unwrap_or(Value::Null);
+                    let accepted = result
+                        .get("accepted")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false);
+                    let new_tick = result
+                        .get("tick")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(self.tick + 1);
+                    self.tick = new_tick;
+                    if accepted {
+                        format!("{} tick -> {}", "Advanced:".green().bold(), self.tick)
+                    } else {
+                        format!(
+                            "{} tick rejected (state: {})",
+                            "warning:".yellow().bold(),
+                            result
+                                .get("reason")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("unknown")
+                        )
+                    }
+                }
+                Err(e) => format!("{} {}", "error:".red().bold(), e),
+            }
+        } else {
+            self.tick += 1;
+            format!(
+                "{} tick -> {}",
+                "Advanced (offline):".green().bold(),
+                self.tick
+            )
+        }
     }
 
     /// Inspect an entity by name or id.
-    fn cmd_inspect(&self, entity: &str) -> String {
+    ///
+    /// When connected, sends `sim.inspect_tile` with `{x, y}` coordinates.
+    /// When offline, returns placeholder data.
+    fn cmd_inspect(&mut self, entity: &str) -> String {
         if entity.is_empty() {
             return format!("{} Usage: inspect <entity>", "error:".red().bold());
         }
-        format!(
-            "{} '{}'\n  type: unknown\n  position: (0, 0, 0)\n  state: idle\n",
-            "Inspecting entity:".cyan().bold(),
-            entity
-        )
+
+        if self.ws.is_some() {
+            // Parse "x,y" or "x y" format from the entity string, default to 0,0.
+            let (x, y) = parse_tile_coords(entity);
+            match self.send_rpc("sim.inspect_tile", serde_json::json!({"x": x, "y": y})) {
+                Ok(resp) => {
+                    if let Some(err) = resp.get("error") {
+                        return format!(
+                            "{} {}",
+                            "server error:".red().bold(),
+                            err.get("message")
+                                .and_then(|m| m.as_str())
+                                .unwrap_or("unknown"),
+                        );
+                    }
+                    let result = resp.get("result").cloned().unwrap_or(Value::Null);
+                    let material = result.get("material").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let terrain_height = result
+                        .get("terrain_height")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0);
+                    format!(
+                        "{} '{}'\n  tile: ({}, {})\n  material: {}\n  terrain_height: {}\n",
+                        "Inspecting tile:".cyan().bold(),
+                        entity,
+                        x,
+                        y,
+                        material,
+                        terrain_height,
+                    )
+                }
+                Err(e) => format!("{} {}", "error:".red().bold(), e),
+            }
+        } else {
+            format!(
+                "{} '{}'\n  type: unknown\n  position: (0, 0, 0)\n  state: idle\n",
+                "Inspecting entity (offline):".cyan().bold(),
+                entity
+            )
+        }
     }
 
     /// Spawn a new entity of the given type.
+    ///
+    /// When connected, sends `sim.command` with spawn action.
+    /// When offline, increments the local tick.
     fn cmd_spawn(&mut self, entity_type: &str) -> String {
         if entity_type.is_empty() {
             return format!("{} Usage: spawn <type>", "error:".red().bold());
         }
-        let id = self.tick;
-        self.tick += 1;
-        format!(
-            "{} '{}' with id {}",
-            "Spawned entity:".green().bold(),
-            entity_type.magenta(),
-            id
-        )
+
+        if self.ws.is_some() {
+            match self.send_rpc(
+                "sim.command",
+                serde_json::json!({"action": "spawn", "entity_type": entity_type}),
+            ) {
+                Ok(resp) => {
+                    if let Some(err) = resp.get("error") {
+                        return format!(
+                            "{} {}",
+                            "server error:".red().bold(),
+                            err.get("message")
+                                .and_then(|m| m.as_str())
+                                .unwrap_or("unknown"),
+                        );
+                    }
+                    let result = resp.get("result").cloned().unwrap_or(Value::Null);
+                    let id = result
+                        .get("id")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(self.tick);
+                    self.tick = id.max(self.tick + 1);
+                    format!(
+                        "{} '{}' with id {}",
+                        "Spawned entity:".green().bold(),
+                        entity_type.magenta(),
+                        id
+                    )
+                }
+                Err(e) => format!("{} {}", "error:".red().bold(), e),
+            }
+        } else {
+            let id = self.tick;
+            self.tick += 1;
+            format!(
+                "{} '{}' with id {}",
+                "Spawned entity (offline):".green().bold(),
+                entity_type.magenta(),
+                id
+            )
+        }
     }
 
     /// Show diplomacy overview.
-    fn cmd_diplomacy(&self) -> String {
-        format!(
-            "{}\n  active treaties: 0\n  pending proposals: 0\n  relations: neutral\n",
-            "Diplomacy Overview:".green().bold()
-        )
+    ///
+    /// When connected, sends `sim.diplomacy_action` with query action.
+    /// When offline, shows placeholder data.
+    fn cmd_diplomacy(&mut self) -> String {
+        if self.ws.is_some() {
+            match self.send_rpc(
+                "sim.diplomacy_action",
+                serde_json::json!({"action": "query"}),
+            ) {
+                Ok(resp) => {
+                    if let Some(err) = resp.get("error") {
+                        return format!(
+                            "{} {}",
+                            "server error:".red().bold(),
+                            err.get("message")
+                                .and_then(|m| m.as_str())
+                                .unwrap_or("unknown"),
+                        );
+                    }
+                    let result = resp.get("result").cloned().unwrap_or(Value::Null);
+                    format!(
+                        "{}\n{}\n",
+                        "Diplomacy Overview:".green().bold(),
+                        serde_json::to_string_pretty(&result)
+                            .unwrap_or_else(|_| result.to_string())
+                    )
+                }
+                Err(e) => format!("{} {}", "error:".red().bold(), e),
+            }
+        } else {
+            format!(
+                "{}\n  active treaties: 0\n  pending proposals: 0\n  relations: neutral\n",
+                "Diplomacy Overview (offline):".green().bold()
+            )
+        }
     }
 
     /// Show economy overview.
-    fn cmd_economy(&self) -> String {
-        format!(
-            "{}\n  treasury: 0\n  production: 0\n  trade routes: 0\n",
-            "Economy Overview:".green().bold()
-        )
+    ///
+    /// When connected, sends `sim.snapshot` and extracts economy data.
+    /// When offline, shows placeholder data.
+    fn cmd_economy(&mut self) -> String {
+        if self.ws.is_some() {
+            match self.send_rpc("sim.snapshot", serde_json::json!({})) {
+                Ok(resp) => {
+                    if let Some(err) = resp.get("error") {
+                        return format!(
+                            "{} {}",
+                            "server error:".red().bold(),
+                            err.get("message")
+                                .and_then(|m| m.as_str())
+                                .unwrap_or("unknown"),
+                        );
+                    }
+                    let result = resp.get("result").cloned().unwrap_or(Value::Null);
+
+                    // Update local tick from snapshot.
+                    if let Some(tick) = result.get("tick").and_then(|v| v.as_u64()) {
+                        self.tick = tick;
+                    }
+
+                    let population = result
+                        .get("population")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0);
+                    let treasury = result
+                        .get("treasury")
+                        .and_then(|v| v.as_u64())
+                        .or_else(|| result.get("money").and_then(|v| v.as_u64()))
+                        .unwrap_or(0);
+                    let production = result
+                        .get("production")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0);
+                    let trade_routes = result
+                        .get("trade_routes")
+                        .and_then(|v| v.as_u64())
+                        .or_else(|| result.get("trade").and_then(|v| v.as_u64()))
+                        .unwrap_or(0);
+
+                    format!(
+                        "{}\n  population: {}\n  treasury: {}\n  production: {}\n  trade routes: {}\n",
+                        "Economy Overview:".green().bold(),
+                        population,
+                        treasury,
+                        production,
+                        trade_routes,
+                    )
+                }
+                Err(e) => format!("{} {}", "error:".red().bold(), e),
+            }
+        } else {
+            format!(
+                "{}\n  treasury: 0\n  production: 0\n  trade routes: 0\n",
+                "Economy Overview (offline):".green().bold()
+            )
+        }
     }
 
     /// Save the current simulation state.
-    fn cmd_save(&self, path: &str) -> String {
-        if path.is_empty() {
+    ///
+    /// When connected, sends `save.slot` with the slot name.
+    /// When offline, shows a placeholder message.
+    fn cmd_save(&mut self, path: &str) -> String {
+        let slot_name = if path.is_empty() {
+            "autosave".to_string()
+        } else {
+            // Extract a slot name from the path.
+            PathBuf::from(path)
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("autosave")
+                .to_string()
+        };
+
+        if self.ws.is_some() {
+            match self.send_rpc("save.slot", serde_json::json!({ "slot_name": slot_name })) {
+                Ok(resp) => {
+                    if let Some(err) = resp.get("error") {
+                        return format!(
+                            "{} {}",
+                            "server error:".red().bold(),
+                            err.get("message")
+                                .and_then(|m| m.as_str())
+                                .unwrap_or("unknown"),
+                        );
+                    }
+                    let result = resp.get("result").cloned().unwrap_or(Value::Null);
+                    let saved_tick = result
+                        .get("tick")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(self.tick);
+                    self.tick = saved_tick;
+                    if path.is_empty() {
+                        format!(
+                            "{} saved to slot '{}' (tick: {})",
+                            "State".green().bold(),
+                            slot_name,
+                            saved_tick
+                        )
+                    } else {
+                        format!(
+                            "{} saved to slot '{}' at '{}' (tick: {})",
+                            "State".green().bold(),
+                            slot_name,
+                            path,
+                            saved_tick
+                        )
+                    }
+                }
+                Err(e) => format!("{} {}", "error:".red().bold(), e),
+            }
+        } else if path.is_empty() {
             format!(
                 "{} saved to default location (tick: {})",
                 "State".green().bold(),
@@ -247,8 +641,57 @@ impl Repl {
     }
 
     /// Load a saved simulation state.
+    ///
+    /// When connected, sends `sim.load_replay` with the path.
+    /// When offline, shows a placeholder message.
     fn cmd_load(&mut self, path: &str) -> String {
-        if path.is_empty() {
+        if self.ws.is_some() {
+            let params = if path.is_empty() {
+                serde_json::json!({})
+            } else {
+                serde_json::json!({ "path": path })
+            };
+
+            match self.send_rpc("sim.load_replay", params) {
+                Ok(resp) => {
+                    if let Some(err) = resp.get("error") {
+                        return format!(
+                            "{} {}",
+                            "server error:".red().bold(),
+                            err.get("message")
+                                .and_then(|m| m.as_str())
+                                .unwrap_or("unknown"),
+                        );
+                    }
+                    let result = resp.get("result").cloned().unwrap_or(Value::Null);
+                    let loaded = result
+                        .get("loaded")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(true);
+                    let loaded_tick = result.get("tick").and_then(|v| v.as_u64()).unwrap_or(0);
+                    self.tick = loaded_tick;
+                    if loaded {
+                        if path.is_empty() {
+                            format!(
+                                "{} loaded from default location (tick: {})",
+                                "State".green().bold(),
+                                loaded_tick
+                            )
+                        } else {
+                            format!(
+                                "{} loaded from '{}' (tick: {})",
+                                "State".green().bold(),
+                                path,
+                                loaded_tick
+                            )
+                        }
+                    } else {
+                        format!("{} failed to load from '{}'", "error:".red().bold(), path)
+                    }
+                }
+                Err(e) => format!("{} {}", "error:".red().bold(), e),
+            }
+        } else if path.is_empty() {
             format!("{} loaded from default location", "State".green().bold())
         } else {
             format!("{} loaded from '{}'", "State".green().bold(), path)
@@ -271,6 +714,29 @@ impl Repl {
     fn cmd_version(&self) -> String {
         format!("{} {}", "Civis".green().bold(), crate::HARNESS_VERSION)
     }
+}
+
+/// Parse tile coordinates from a string like "3,5" or "3 5".
+/// Defaults to (0, 0) if parsing fails.
+fn parse_tile_coords(s: &str) -> (i64, i64) {
+    // Try "x,y" format.
+    if let Some((xs, ys)) = s.split_once(',') {
+        if let (Ok(x), Ok(y)) = (xs.trim().parse::<i64>(), ys.trim().parse::<i64>()) {
+            return (x, y);
+        }
+    }
+    // Try "x y" format.
+    let parts: Vec<&str> = s.split_whitespace().collect();
+    if parts.len() == 2 {
+        if let (Ok(x), Ok(y)) = (parts[0].parse::<i64>(), parts[1].parse::<i64>()) {
+            return (x, y);
+        }
+    }
+    // Fallback: treat as a numeric id, use it as x with y=0.
+    if let Ok(x) = s.trim().parse::<i64>() {
+        return (x, 0);
+    }
+    (0, 0)
 }
 
 /// Errors that can occur in the REPL.
@@ -368,7 +834,7 @@ mod tests {
         let mut repl = make_repl();
         let output = repl.process_command("inspect villager_42");
         assert!(output.contains("villager_42"));
-        assert!(output.contains("Inspecting entity"));
+        assert!(output.contains("Inspecting"));
     }
 
     #[test]
@@ -480,5 +946,26 @@ mod tests {
         let long_input = "x ".repeat(1000);
         let output = repl.process_command(long_input.trim());
         assert!(output.contains("Unknown command"));
+    }
+
+    #[test]
+    fn parse_tile_coords_comma_separated() {
+        assert_eq!(parse_tile_coords("3,5"), (3, 5));
+        assert_eq!(parse_tile_coords(" 10 , 20 "), (10, 20));
+    }
+
+    #[test]
+    fn parse_tile_coords_space_separated() {
+        assert_eq!(parse_tile_coords("3 5"), (3, 5));
+    }
+
+    #[test]
+    fn parse_tile_coords_single_number() {
+        assert_eq!(parse_tile_coords("42"), (42, 0));
+    }
+
+    #[test]
+    fn parse_tile_coords_non_numeric() {
+        assert_eq!(parse_tile_coords("villager_42"), (0, 0));
     }
 }

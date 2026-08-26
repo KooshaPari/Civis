@@ -24,7 +24,9 @@ use serde::{Deserialize, Serialize};
 pub mod decay;
 pub mod lifecycle;
 
-pub use decay::{apply_resource, tick_rise, NeedChannel, NeedLevel, RiseRates};
+pub use decay::{
+    apply_resource, tick_rise, tick_rise_curved, DecayCurve, NeedChannel, NeedLevel, RiseRates,
+};
 pub use lifecycle::{
     age_threshold, classify_lifecycle, labor_capacity, LifecycleLabel, LifecycleParams,
 };

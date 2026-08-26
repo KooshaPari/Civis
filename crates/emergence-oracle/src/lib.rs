@@ -58,7 +58,8 @@ impl OracleRegistry {
             diplomacy::DiplomacyOracle, disaster::DisasterOracle, economy::EconomyOracle,
             epidemic::EpidemicOracle, expansion::ExpansionOracle, festival::FestivalOracle,
             genetics::GeneticsOracle, language::LanguageOracle, legends::LegendsOracle,
-            migration::MigrationOracle, migration_flow::MigrationFlowOracle, mood::MoodOracle,
+            migration::MigrationOracle, migration_flow::MigrationFlowOracle,
+            migration_pressure::MigrationPressureOracle, mood::MoodOracle,
             mountain_pass::MountainPassOracle, powers::PowersOracle, psyche::PsycheOracle,
             religion::ReligionOracle, religious_conflict::ReligiousConflictOracle,
             river_trade::RiverTradeOracle, stratification::StratificationOracle,
@@ -89,6 +90,7 @@ impl OracleRegistry {
         registry.register(Box::new(MountainPassOracle));
         registry.register(Box::new(PowersOracle));
         registry.register(Box::new(DesertCaravanOracle));
+        registry.register(Box::new(MigrationPressureOracle));
         registry
     }
 
@@ -113,7 +115,7 @@ mod tests {
         let sim = Simulation::new();
         let registry = OracleRegistry::with_defaults();
         let verdicts = registry.run_all(&sim);
-        assert_eq!(verdicts.len(), 24, "Expected 24 oracle verdicts");
+        assert_eq!(verdicts.len(), 25, "Expected 25 oracle verdicts");
     }
 
     #[test]

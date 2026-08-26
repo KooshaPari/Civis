@@ -47,6 +47,7 @@ pub mod culture;
 pub mod diplomacy;
 pub mod disasters;
 pub mod famine;
+pub mod emergent_migration;
 pub mod economy_engine;
 pub mod emergence;
 pub mod emergence_coupling;

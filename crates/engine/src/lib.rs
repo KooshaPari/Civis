@@ -46,6 +46,7 @@ pub mod conditions;
 pub mod culture;
 pub mod diplomacy;
 pub mod disasters;
+pub mod caravan;
 pub mod famine;
 pub mod emergent_migration;
 pub mod economy_engine;

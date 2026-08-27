@@ -1,13 +1,33 @@
 name: Mutation
 on:
-  push:
-    branches: [main]
-  pull_request:
+    push:
+        branches: [main]
+    pull_request:
 jobs:
-  mutants:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo install cargo-mutants
-      - run: cargo mutants --no-shuffle -j 2 --timeout 120 2>&1 | tail -100 || true
+    mutants:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+            - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+            - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+            - name: Install cargo-mutants
+              run: cargo install cargo-mutants --locked
+            - name: Run cargo-mutants (pre-checked code)
+              run: |
+                  cargo mutants --no-shuffle -j 2 --timeout 120 --no-check 2>&1 | tee mutants.log
+                  # Extract kill rate from the summary line.
+                  KILLED=$(grep -oP '(\d+) caught' mutants.log | head -1 | grep -oP '\d+' || echo "0")
+                  TOTAL=$(grep -oP '(\d+) tested' mutants.log | head -1 | grep -oP '\d+' || echo "1")
+                  if [ "$TOTAL" -eq 0 ]; then
+                    echo "::error::No mutants were generated — check cargo-mutants config"
+                    exit 1
+                  fi
+                  RATE=$(echo "scale=1; $KILLED * 100 / $TOTAL" | bc)
+                  echo "Kill rate: ${RATE}% (${KILLED}/${TOTAL})"
+                  # Fail if kill rate drops below 95% baseline.
+                  PASS=$(echo "$RATE >= 95.0" | bc)
+                  if [ "$PASS" -ne 1 ]; then
+                    echo "::error::Mutation kill rate ${RATE}% is below 95% threshold — untested code path detected"
+                    exit 1
+                  fi
+                  echo "Mutation kill rate ${RATE}% meets 95% threshold"

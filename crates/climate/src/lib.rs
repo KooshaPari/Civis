@@ -96,6 +96,13 @@ pub use erosion::{erosion_step, ErosionGrid, ErosionParams};
 pub mod biome_shift;
 pub use biome_shift::*;
 
+/// Wildfire simulation model (fuel-based, lifecycle-driven fire spread).
+/// Cells progress through `Dormant → Smoldering → Active → Crowning → Dying`
+/// based on heat, fuel, and configurable parameters. See [`wildfire`] for
+/// details.
+pub mod wildfire;
+pub use wildfire::{WildfireCell, WildfireGrid, WildfireParams, WildfireState};
+
 impl ClimateState {
     /// Create a new `ClimateState` initialised to pre-industrial conditions.
     pub fn new() -> Self {

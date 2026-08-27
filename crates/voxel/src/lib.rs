@@ -53,6 +53,7 @@ pub mod scale_budget;
 pub mod scale_stream;
 pub mod stream;
 pub mod window;
+pub mod procedural;
 pub mod worldgen;
 
 pub use hud::{

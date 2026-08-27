@@ -55,6 +55,7 @@ pub mod bus;
 pub mod ducking;
 pub mod mix;
 pub mod mood;
+pub mod placeholder;
 pub mod sfx;
 pub mod triggers;
 pub mod ui_sound;

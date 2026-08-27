@@ -1067,6 +1067,17 @@ pub use shadow_networks::{
 };
 
 // ---------------------------------------------------------------------------
+// FR-CIV-DIPLO-003: Espionage system — covert spy networks
+// ---------------------------------------------------------------------------
+
+pub mod espionage;
+
+pub use espionage::{
+    EspionageAction, EspionageConfig, EspionageConfigError, EspionageEngine, EspionageError,
+    SpyNetwork, SpyResult,
+};
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 

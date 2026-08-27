@@ -40,6 +40,7 @@
 //! - `policy` - Policy/consumption calculations
 
 pub mod building_emergence;
+pub mod building_tiers;
 pub mod climate;
 pub mod command_queue;
 pub mod conditions;
@@ -48,6 +49,7 @@ pub mod diplomacy;
 pub mod disasters;
 pub mod caravan;
 pub mod famine;
+pub mod festivals;
 pub mod emergent_migration;
 pub mod economy_engine;
 pub mod emergence;
@@ -64,6 +66,7 @@ pub mod invariants;
 pub mod io;
 pub mod lod;
 pub mod metrics;
+pub mod mood_integration;
 pub mod perf;
 pub mod policy;
 pub mod replay;

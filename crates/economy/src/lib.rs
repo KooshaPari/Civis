@@ -17,6 +17,7 @@ mod extraction;
 mod institution;
 mod market;
 mod production;
+pub mod shadow;
 mod stocks;
 mod tax_policy;
 mod trade_flow;

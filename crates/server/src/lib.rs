@@ -11,6 +11,8 @@
 
 pub mod authn;
 pub mod autosave;
+/// Runtime metrics collection (tick durations, clients, events, memory).
+pub mod metrics;
 pub mod jsonrpc;
 pub mod saves;
 pub mod subscription_filter;

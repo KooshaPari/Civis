@@ -24,6 +24,7 @@ use civ_engine::{
     scenario::{load_scenario, preset_scenario_path},
     Building, BuildingType, Citizen, CivSaveBundle, DiplomacyKind, JobType, Simulation,
 };
+use civ_observability::{SimMetricSnapshot, SimMetrics};
 use civ_protocol_3d::{
     encode_frame3d_binary, encode_frame3d_binary_from_json, AgentAppearanceFrame,
     AgentAppearanceUpdate, BattleEvent3d, BirthEvent3d, BuildingDiffEntry, BuildingDiffFrame,
@@ -176,6 +177,8 @@ struct ServerMetrics {
     tick_messages_sent: prometheus::IntCounter,
     ws_client_disconnects: prometheus::IntCounter,
     connected_clients: prometheus::IntGauge,
+    /// Per-phase simulation metrics (tick duration, entity count, etc.).
+    sim: SimMetrics,
 }
 
 impl ServerMetrics {
@@ -196,6 +199,8 @@ impl ServerMetrics {
         )
         .map_err(|e| format!("create civ_connected_clients: {e}"))?;
 
+        let sim = SimMetrics::new(registry)?;
+
         registry
             .register(Box::new(tick_batches_sent.clone()))
             .map_err(|e| format!("register civ_tick_batches_sent: {e}"))?;
@@ -214,6 +219,7 @@ impl ServerMetrics {
             tick_messages_sent,
             ws_client_disconnects,
             connected_clients,
+            sim,
         })
     }
 }
@@ -1728,9 +1734,46 @@ fn encode_tick_broadcast_messages(
 async fn advance_one_tick(state: &AppState) -> Result<(), String> {
     let batch = {
         let mut sim = state.sim.lock().await;
+        let tick_start = std::time::Instant::now();
         sim.tick();
+        let tick_duration_secs = tick_start.elapsed().as_secs_f64();
         let tick = sim.state.tick;
         state.tick.store(tick, Ordering::SeqCst);
+
+        // Build per-phase metric snapshot from live simulation state.
+        let civilian_count = sim.world.query::<&civ_engine::Citizen>().iter().count();
+        let building_count = sim.world.query::<&civ_engine::Building>().iter().count();
+        let building_count_i64 = building_count as i64;
+        let military_count = sim
+            .world
+            .query::<&civ_engine::MilitaryUnit>()
+            .iter()
+            .count();
+        let entity_count = (civilian_count + building_count + military_count) as i64;
+        let faction_count = sim.state.factions.len() as i64;
+        let economy_treasury: f64 = sim
+            .state
+            .faction_treasury
+            .values()
+            .map(|v| v.to_f64())
+            .sum();
+        let diplomacy_treaties = sim.state.trade_routes.len() as i64;
+        let emergence_entropy = sim
+            .emergence_sample
+            .as_ref()
+            .map(|s| s.entropy_norm as f64)
+            .unwrap_or(0.0);
+
+        state.metrics.sim.record(&SimMetricSnapshot {
+            tick_duration_secs,
+            entity_count,
+            faction_count,
+            building_count: building_count_i64,
+            economy_treasury,
+            diplomacy_treaties,
+            emergence_entropy,
+        });
+
         let bundle = build_frame_bundle(&sim)?;
         let encoded = Arc::from(
             encode_tick_broadcast_messages(&bundle, state.tick_broadcast_format)?

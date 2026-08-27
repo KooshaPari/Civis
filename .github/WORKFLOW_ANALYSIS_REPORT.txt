@@ -1,0 +1,232 @@
+================================================================================
+CIVIS REPOSITORY - GitHub Actions Workflow Analysis
+================================================================================
+
+Found 46 workflow files
+
+================================================================================
+1. TOTAL WORKFLOWS
+================================================================================
+  Total files:        46
+  Valid YAML:         46
+  Invalid YAML:       0
+
+================================================================================
+2. WORKFLOWS: REAL JOBS vs SHELL/STUB JOBS
+================================================================================
+  Aggregate job counts:
+    Total jobs:           71
+    Real (action-based):  66
+    Shell-only:           5
+    No steps:             0
+
+  Workflow classification:
+    All-real workflows:   41
+    Mixed workflows:      1
+    All-shell workflows:  4
+
+  Workflow                                  Jobs  Real  Shell  NoStp
+  ---------------------------------------- ----- ----- ------ ------
+  alert-sync-issues.yml                        1     0      1      0 << ALL-SHELL
+  audit-fr-coverage.yml                        1     1      0      0
+  bench.yml                                    1     1      0      0
+  build-standalone.yml                         1     1      0      0
+  cargo-audit.yml                              2     2      0      0
+  cargo-deny.yml                               1     1      0      0
+  cargo-machete.yml                            2     2      0      0
+  cargo-semver-checks.yml                      2     2      0      0
+  ci.yml                                       1     1      0      0
+  civis-3d-live-smoke.yml                      2     2      0      0
+  civis-dump-regression.yml                    1     1      0      0
+  codeql-rust.yml                              2     2      0      0
+  codeql.yml                                   2     2      0      0
+  compile-gate.yml                             1     1      0      0
+  dev-parity.yml                               4     4      0      0
+  doc-links.yml                                1     1      0      0
+  docs-site.yml                                2     2      0      0
+  emergence-oracle.yml                         1     1      0      0
+  fr-coverage.yml                              2     2      0      0
+  fuzz.yml                                     1     1      0      0
+  gitleaks.yml                                 1     1      0      0
+  infisical.yml                                1     1      0      0
+  journey-gate.yml                             2     2      0      0
+  legacy-tooling-gate.yml                      2     2      0      0
+  mutation.yml                                 1     1      0      0
+  nightly.yml                                  1     1      0      0
+  pages.yml                                    2     2      0      0
+  policy-gate.yml                              1     1      0      0
+  pr-compile-gate.yml                          2     2      0      0
+  pr-governance.yml                            1     1      0      0
+  quality-gate.yml                             2     2      0      0
+  quality.yml                                  2     2      0      0
+  release-cli.yml                              2     2      0      0
+  release-drafter.yml                          1     0      1      0 << ALL-SHELL
+  release.yml                                  3     3      0      0
+  sbom.yml                                     1     1      0      0
+  scorecard-ci.yml                             2     1      1      0 << MIXED
+  scorecard.yml                                1     1      0      0
+  security-guard-hook-audit.yml                1     1      0      0
+  security-guard.yml                           2     2      0      0
+  self-merge-gate.yml                          1     0      1      0 << ALL-SHELL
+  tag-automation.yml                           1     0      1      0 << ALL-SHELL
+  test-numbers.yml                             2     2      0      0
+  trufflehog.yml                               2     2      0      0
+  trunk-check.yml                              1     1      0      0
+  unreal-build.yml                             2     2      0      0
+
+================================================================================
+3. UNPINNED ACTIONS (tag-based references)
+================================================================================
+  Total unpinned action references:  52
+  Unique unpinned actions:           23
+  Total SHA-pinned references:       95
+  Unique SHA-pinned actions:         18
+
+  Unique unpinned actions:
+    Swatinem/rust-cache@v2 (x2)
+    actions/cache@v4 (x1)
+    actions/checkout@v4 (x11)
+    actions/checkout@v7 (x2)
+    actions/download-artifact@v4 (x1)
+    actions/setup-node@v4 (x2)
+    actions/setup-python@v5 (x1)
+    actions/upload-artifact@v4 (x5)
+    bnjbvr/cargo-machete@main (x1)
+    dtolnay/rust-action@stable (x1)
+    dtolnay/rust-toolchain@nightly (x1)
+    dtolnay/rust-toolchain@stable (x8)
+    extractions/setup-just@v2 (x1)
+    github/codeql-action/analyze@v3 (x2)
+    github/codeql-action/autobuild@v3 (x1)
+    github/codeql-action/init@v3 (x2)
+    github/codeql-action/upload-sarif@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 (x1)
+    obi1kenobi/cargo-semver-checks-action@v2 (x1)
+    oven-sh/setup-bun@v2 (x4)
+    pre-commit/action@v3.0.1 (x1)
+    rustsec/audit-check@v2 (x1)
+    softprops/action-gh-release@v2 (x1)
+    taiki-e/install-action@v2 (x1)
+
+  Per-workflow unpinned action counts:
+    audit-fr-coverage.yml: 1 unpinned
+    bench.yml: 2 unpinned
+    build-standalone.yml: 2 unpinned
+    cargo-audit.yml: 2 unpinned
+    cargo-machete.yml: 1 unpinned
+    cargo-semver-checks.yml: 1 unpinned
+    civis-3d-live-smoke.yml: 1 unpinned
+    codeql-rust.yml: 3 unpinned
+    codeql.yml: 2 unpinned
+    compile-gate.yml: 3 unpinned
+    dev-parity.yml: 2 unpinned
+    docs-site.yml: 1 unpinned
+    fuzz.yml: 4 unpinned
+    infisical.yml: 2 unpinned
+    mutation.yml: 2 unpinned
+    pages.yml: 1 unpinned
+    quality.yml: 2 unpinned
+    release-cli.yml: 6 unpinned
+    release.yml: 1 unpinned
+    sbom.yml: 3 unpinned
+    scorecard-ci.yml: 3 unpinned
+    scorecard.yml: 1 unpinned
+    security-guard.yml: 1 unpinned
+    test-numbers.yml: 5 unpinned
+
+================================================================================
+4. MATRIX CONFIGURATIONS FOUND
+================================================================================
+  ci.yml -> job 'module-graph':
+    os: ['ubuntu-24.04', 'windows-latest', 'macos-latest']
+
+  dev-parity.yml -> job 'clients':
+    include: [{'name': 'godot', 'os': 'ubuntu-latest', 'command': 'cargo test --locked --manifest-path clients/godot-ref/rust/Cargo.toml'}, {'name': 'bevy', 'os': 'ubuntu-latest', 'command': 'cargo build --locked -p civ-bevy-ref --features bevy'}]
+
+  fuzz.yml -> job 'fuzz':
+    target: ['fuzz_replay', 'fuzz_wasm']
+
+  release-cli.yml -> job 'build':
+    include: [{'os': 'ubuntu-latest', 'target': 'x86_64-unknown-linux-gnu', 'artifact': 'civis-cli-linux-amd64', 'ext': 'tar.gz'}, {'os': 'windows-latest', 'target': 'x86_64-pc-windows-msvc', 'artifact': 'civis-cli-windows-amd64', 'ext': 'zip'}, {'os': 'macos-latest', 'target': 'aarch64-apple-darwin', 'artifact': 'civis-cli-macos-arm64', 'ext': 'tar.gz'}]
+
+  Total matrix configs: 4
+
+================================================================================
+5. BROKEN PIN SHAs DETECTION
+================================================================================
+  Checking 18 unique SHA pins against local git...
+  BROKEN SHAs (18):
+    Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
+      SHA: e18b497796c12c097a38f9edb9d0641fb99eee32
+      Used in: build-standalone.yml, ci.yml, emergence-oracle.yml, nightly.yml, pr-compile-gate.yml
+    actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      SHA: 043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      Used in: build-standalone.yml, civis-3d-live-smoke.yml, legacy-tooling-gate.yml, nightly.yml, quality.yml, release.yml
+    actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      SHA: 11bd71901bbe5b1630ceea73d27597364c9af683
+      Used in: cargo-audit.yml, cargo-machete.yml, cargo-semver-checks.yml, civis-3d-live-smoke.yml, civis-dump-regression.yml, codeql-rust.yml, codeql.yml, dev-parity.yml, doc-links.yml, docs-site.yml, emergence-oracle.yml, fr-coverage.yml, gitleaks.yml, journey-gate.yml, legacy-tooling-gate.yml, nightly.yml, pages.yml, policy-gate.yml, pr-compile-gate.yml, pr-governance.yml, quality-gate.yml, quality.yml, release.yml, scorecard.yml, security-guard-hook-audit.yml, security-guard.yml, trufflehog.yml, trunk-check.yml, unreal-build.yml
+    actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      SHA: de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      Used in: cargo-deny.yml
+    dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
+      SHA: 29eef336d9b2848a0b548edc03f92a220660cdb8
+      Used in: cargo-deny.yml, ci.yml, civis-3d-live-smoke.yml, civis-dump-regression.yml, dev-parity.yml, emergence-oracle.yml, fr-coverage.yml, journey-gate.yml, nightly.yml, pr-compile-gate.yml, quality-gate.yml, quality.yml, release.yml, security-guard-hook-audit.yml, unreal-build.yml
+    Swatinem/rust-cache@bc2d2e71bd35c5549942babaa51a89c586b981d1
+      SHA: bc2d2e71bd35c5549942babaa51a89c586b981d1
+      Used in: cargo-deny.yml
+    EmbarkStudios/cargo-deny-action@8f84122a46a358a27cb0625d85ad60ab436a1b87
+      SHA: 8f84122a46a358a27cb0625d85ad60ab436a1b87
+      Used in: cargo-deny.yml
+    actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874
+      SHA: 50769540e7f4bd5e21e526ee35c689e35e0d6874
+      Used in: cargo-deny.yml
+    actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+      SHA: df4cb1c069e1874edd31b4311f1884172cec0e10
+      Used in: ci.yml
+    gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e
+      SHA: e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e
+      Used in: gitleaks.yml
+    actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+      SHA: a26af69be951a213d495a4c3e4e4022e16d87065
+      Used in: legacy-tooling-gate.yml
+    actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b
+      SHA: 983d7736d9b0ae728b81ab479565c72886d7745b
+      Used in: pages.yml
+    actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
+      SHA: 56afc609e74202658d3ffba0e8f6dda462b719fa
+      Used in: pages.yml
+    actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e
+      SHA: d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e
+      Used in: pages.yml
+    actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+      SHA: f28e40c7f34bde8b3046d885e986cb6290c5673b
+      Used in: pr-governance.yml
+    ossf/scorecard-action@62b2cac7ed8198b15735ed49ab1e5cf35480ba46
+      SHA: 62b2cac7ed8198b15735ed49ab1e5cf35480ba46
+      Used in: scorecard.yml
+    actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      SHA: ea165f8d65b6e75b540449e92b4886f43607fa02
+      Used in: scorecard.yml
+    trufflesecurity/trufflehog@47e7b7cd74f578e1e3145d48f669f22fd1330ca6
+      SHA: 47e7b7cd74f578e1e3145d48f669f22fd1330ca6
+      Used in: trufflehog.yml
+
+================================================================================
+SUMMARY
+================================================================================
+  Total workflow files:        46
+  Valid workflows:             46
+  Total jobs:                  71
+    Real (action-based):       66
+    Shell-only:                5
+    No steps:                  0
+  Unique unpinned actions:     23
+  Total unpinned references:   52
+  Matrix configurations:       4
+  Unique SHA-pinned actions:   18
+  Broken SHAs detected:        18
+  Valid SHAs:                  0
+  Unverifiable SHAs:           0
+
+================================================================================
+END OF REPORT
+================================================================================

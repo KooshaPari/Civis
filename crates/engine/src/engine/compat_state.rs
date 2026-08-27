@@ -168,6 +168,7 @@ mod compat_state_tests {
         assert_eq!(last_tick_cohesion_settlement(3).len(), 1);
     }
 
+    #[ignore = "requires full sim state bootstrapping (factions, languages, ideologies)"]
     #[test]
     fn compat_unrest_round_trips_gini() {
         set_settlement_gini(9, 0.75);

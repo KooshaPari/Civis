@@ -52,7 +52,7 @@ impl NoiseLayer {
     #[inline]
     fn hash(x: i32, y: i32) -> u32 {
         let mut h = x as u32;
-        h ^= y.wrapping_mul(0x9e3779b9) as u32;
+        h ^= (y as u32).wrapping_mul(0x9e3779b9);
         h = h.wrapping_mul(0x85ebca6b);
         h ^= h >> 16;
         h

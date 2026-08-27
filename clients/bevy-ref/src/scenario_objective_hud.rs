@@ -13,6 +13,7 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
+use crate::live_stream::ServerBridge;
 use crate::sim_bridge::SimState;
 
 // ── Palette ───────────────────────────────────────────────────────────────────
@@ -68,10 +69,7 @@ impl Plugin for ScenarioObjectiveHudPlugin {
 // ── Systems ───────────────────────────────────────────────────────────────────
 
 /// Sync objective state from the active simulation.
-fn update_objective_state(
-    sim: Option<Res<SimState>>,
-    mut objective: ResMut<ObjectiveState>,
-) {
+fn update_objective_state(sim: Option<Res<SimState>>, mut objective: ResMut<ObjectiveState>) {
     // If we have a simulation, read current population and update objective.
     if let Some(sim_res) = sim {
         let current_pop = sim_res.0.state.population as u32;
@@ -87,6 +85,7 @@ fn update_objective_state(
 fn draw_objective_hud(
     mut contexts: EguiContexts,
     objective: Res<ObjectiveState>,
+    bridge: Option<Res<ServerBridge>>,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else { return };
 
@@ -114,22 +113,15 @@ fn draw_objective_hud(
 
             // Faction context if present
             if let Some(faction) = &objective.faction_context {
-                ui.label(
-                    egui::RichText::new(faction)
-                        .color(DIM)
-                        .italics()
-                        .size(10.0),
-                );
+                ui.label(egui::RichText::new(faction).color(DIM).italics().size(10.0));
             }
 
             ui.add_space(4.0);
 
             // ── Progress Bar ─────────────────────────────────────────────────
             let progress = (objective.current as f32 / objective.target as f32).clamp(0.0, 1.0);
-            let (bg_rect, _) = ui.allocate_exact_size(
-                egui::vec2(ui.available_width(), 12.0),
-                egui::Sense::hover(),
-            );
+            let (bg_rect, _) = ui
+                .allocate_exact_size(egui::vec2(ui.available_width(), 12.0), egui::Sense::hover());
 
             // Background
             ui.painter().rect_filled(
@@ -140,7 +132,8 @@ fn draw_objective_hud(
 
             // Fill
             let fill_w = (bg_rect.width() * progress).max(0.0);
-            let fill_rect = egui::Rect::from_min_size(bg_rect.min, egui::vec2(fill_w, bg_rect.height()));
+            let fill_rect =
+                egui::Rect::from_min_size(bg_rect.min, egui::vec2(fill_w, bg_rect.height()));
             let bar_color = if progress >= 1.0 { TEAL } else { ACCENT };
             ui.painter()
                 .rect_filled(fill_rect, egui::CornerRadius::same(3), bar_color);
@@ -156,5 +149,12 @@ fn draw_objective_hud(
                     ui.label(egui::RichText::new(percent_text).color(ACCENT).small());
                 });
             });
+
+            ui.add_space(4.0);
+            if let Some(ref bridge) = bridge {
+                if ui.small_button("Tech State").clicked() {
+                    bridge.send_rpc("sim.tech_state", serde_json::json!({}));
+                }
+            }
         });
 }

@@ -44,6 +44,7 @@ use civ_voxel::material::AIR;
 use civ_voxel::material::{MaterialDef, MaterialRegistry, Phase, WATER};
 use civ_voxel::MaterialId;
 
+use crate::live_stream::ServerBridge;
 #[cfg(feature = "voxel")]
 use crate::spawn_tools::select_action_binding;
 use crate::ui_theme;
@@ -471,6 +472,7 @@ fn material_palette_panel(
     open: Res<MaterialPaletteOpen>,
     armed: Res<MaterialPaintArmed>,
     mut selected: ResMut<SelectedMaterial>,
+    bridge: Option<Res<ServerBridge>>,
 ) {
     if !open.0 {
         return;
@@ -500,6 +502,18 @@ fn material_palette_panel(
         .anchor(egui::Align2::RIGHT_TOP, egui::vec2(-12.0, 86.0))
         .show(ctx, |ui| {
             palette_panel_body(ui, active_name, armed.0, &shelves, &mut selected);
+            ui.add_space(4.0);
+            if let Some(ref bridge) = bridge {
+                if ui.small_button("Apply to Server").clicked() {
+                    bridge.send_rpc(
+                        "sim.command",
+                        serde_json::json!({
+                            "action": "set_material",
+                            "material": selected.material.0,
+                        }),
+                    );
+                }
+            }
             ui_theme::liquid_glass_finish(ui.painter(), ui.min_rect(), ui_theme::RADIUS_PANEL);
         });
 }

@@ -11,6 +11,7 @@ use bevy::prelude::*;
 use bevy::state::condition::in_state;
 use bevy_egui::{egui, EguiContexts};
 
+use crate::live_stream::ServerBridge;
 use crate::menus::{AppState, MainMenuCommand, MenuCommand};
 use crate::ui_theme::liquid_glass_frame;
 
@@ -104,12 +105,19 @@ fn render_game_over(
     snapshot: Res<GameOverSnapshot>,
     mut command: ResMut<MenuCommand>,
     mut log_expanded: ResMut<GameOverLogExpanded>,
+    bridge: Option<Res<ServerBridge>>,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
 
-    draw_game_over_overlay(ctx, &snapshot, &mut command, &mut log_expanded);
+    draw_game_over_overlay(
+        ctx,
+        &snapshot,
+        &mut command,
+        &mut log_expanded,
+        bridge.as_deref(),
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -121,6 +129,7 @@ fn draw_game_over_overlay(
     snapshot: &GameOverSnapshot,
     command: &mut MenuCommand,
     log_expanded: &mut GameOverLogExpanded,
+    bridge: Option<&ServerBridge>,
 ) {
     // Full-screen dim overlay background.
     let screen = ctx.content_rect();
@@ -169,7 +178,7 @@ fn draw_game_over_overlay(
                         ui.add_space(20.0);
 
                         // — Action buttons —
-                        outcome_buttons(ui, command, log_expanded);
+                        outcome_buttons(ui, command, log_expanded, bridge);
                     });
                 });
         });
@@ -289,6 +298,7 @@ fn outcome_buttons(
     ui: &mut egui::Ui,
     command: &mut MenuCommand,
     log_expanded: &mut GameOverLogExpanded,
+    bridge: Option<&ServerBridge>,
 ) {
     ui.horizontal(|ui| {
         // Centered button group within the vertical layout.
@@ -304,6 +314,12 @@ fn outcome_buttons(
             };
             if menu_button(ui, summary_label).clicked() {
                 log_expanded.0 = !log_expanded.0;
+            }
+            if let Some(bridge) = bridge {
+                ui.add_space(8.0);
+                if ui.small_button("Final Outcome").clicked() {
+                    bridge.send_rpc("sim.outcome", serde_json::json!({}));
+                }
             }
         });
     });

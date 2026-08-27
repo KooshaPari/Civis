@@ -3,6 +3,7 @@
 //! Y key toggles. Samples every 10 ticks. ASCII sparklines (8 levels).
 
 use crate::hud_state::HudState;
+use crate::live_stream::ServerBridge;
 use crate::menus::in_game;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
@@ -150,6 +151,7 @@ fn draw_history_panel(
     open: Res<CivHistoryPanelOpen>,
     hist: Res<CivHistory>,
     mut contexts: EguiContexts,
+    bridge: Option<Res<ServerBridge>>,
 ) {
     if !open.0 {
         return;
@@ -184,6 +186,12 @@ fn draw_history_panel(
             stat_row(ui, "Population", &hist.population);
             stat_row(ui, "Factions", &hist.faction_count);
             stat_row(ui, "Entropy", &hist.entropy);
-            stat_row(ui, "Power-law α", &hist.power_law);
+            stat_row(ui, "Power-law \u{03b1}", &hist.power_law);
+            ui.add_space(4.0);
+            if let Some(ref bridge) = bridge {
+                if ui.small_button("Fetch Legends").clicked() {
+                    bridge.send_rpc("sim.legends", serde_json::json!({}));
+                }
+            }
         });
 }

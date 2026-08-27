@@ -35,6 +35,7 @@
 
 use bevy::prelude::*;
 
+use crate::live_stream::ServerBridge;
 use crate::spawn_tools::{
     select_action_binding, ActiveTool, CursorMarker, GameSettings, KeyBinding, PointerOverUi,
     SpawnTool,
@@ -607,6 +608,7 @@ fn draw_brush_panel(
     mut contexts: bevy_egui::EguiContexts,
     active: Res<ActiveTool>,
     mut brush: ResMut<BrushSettings>,
+    bridge: Option<Res<ServerBridge>>,
 ) {
     use bevy_egui::egui;
 
@@ -627,6 +629,18 @@ fn draw_brush_panel(
             mode_buttons(ui, &mut brush);
             ui.separator();
             brush_param_sliders(ui, &mut brush);
+            ui.add_space(4.0);
+            if let Some(ref bridge) = bridge {
+                if ui.small_button("Terraform Server").clicked() {
+                    bridge.send_rpc(
+                        "sim.command",
+                        serde_json::json!({
+                            "action": "terraform",
+                            "op": brush.op.label().to_ascii_lowercase(),
+                        }),
+                    );
+                }
+            }
         });
 }
 

@@ -14,6 +14,7 @@ use crate::game_ui::{
     SelectedEntityDetails,
 };
 use crate::live_pick::LiveSelection;
+use crate::live_stream::ServerBridge;
 use crate::live_stream::{LiveAgentTag, LiveBuildingTag, LiveGraphParcelTag, LiveStreamScene};
 use crate::{AttachMode, LiveEntityKind, SelectedLiveEntity};
 
@@ -124,6 +125,7 @@ fn draw_entity_inspector_panel(
     mut contexts: EguiContexts,
     selection: Option<Res<LiveSelection>>,
     details: Res<SelectedEntityDetails>,
+    bridge: Option<Res<ServerBridge>>,
 ) {
     let has_live = selection.as_ref().and_then(|s| s.0).is_some();
     let has_details = !details.name.is_empty() || !details.entity_type.is_empty();
@@ -141,6 +143,12 @@ fn draw_entity_inspector_panel(
         .frame(inspector_panel_frame(egui::Margin::same(14)))
         .show(ctx, |ui| {
             inspector_panel_body(ui, &details);
+            ui.add_space(6.0);
+            if let Some(ref bridge) = bridge {
+                if ui.small_button("Server Lookup").clicked() {
+                    bridge.send_rpc("sim.inspect_tile", serde_json::json!({}));
+                }
+            }
         });
 }
 

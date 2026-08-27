@@ -12,6 +12,7 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 use crate::live_stream::LiveStreamScene;
+use crate::live_stream::ServerBridge;
 use crate::outcome_overlay::{outcome_modal_visible, OutcomeOverlayState, OutcomeSessionGate};
 use crate::{MusicCues, OutcomeProgressHud};
 
@@ -72,6 +73,7 @@ fn draw_gameplay_hud(
     outcome_progress: Res<OutcomeProgressHud>,
     outcome_state: Option<Res<OutcomeOverlayState>>,
     session_gate: Option<Res<OutcomeSessionGate>>,
+    bridge: Option<Res<ServerBridge>>,
 ) {
     if !open.0 {
         return;
@@ -277,6 +279,13 @@ fn draw_gameplay_hud(
                 );
             } else {
                 victory_bar(ui, "Peace", 0.0, "awaiting snapshot");
+            }
+
+            ui.add_space(4.0);
+            if let Some(ref bridge) = bridge {
+                if ui.small_button("Refresh from Server").clicked() {
+                    bridge.send_rpc("sim.status", serde_json::json!({}));
+                }
             }
         });
 }

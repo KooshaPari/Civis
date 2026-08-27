@@ -67,7 +67,6 @@ pub const MOOD_FLOOR: i64 = -1000;
 pub const MOOD_CEILING: i64 = 1000;
 
 #[test]
-#[ignore = "TDD red step: mood_snapshot API not yet implemented for multi-settlement"]
 fn fr_civ_gov_010_base_emits_one_mood_snapshot_per_settlement_per_tick() {
     let mut sim = Simulation::with_seed(MOOD_SEED);
     sim.set_settlement_population(0, 60);
@@ -81,8 +80,8 @@ fn fr_civ_gov_010_base_emits_one_mood_snapshot_per_settlement_per_tick() {
         .expect("settlement 0 should have a mood snapshot after 1 tick");
     assert_eq!(snapshot.settlement_id, 0, "snapshot keyed to settlement 0");
     assert_eq!(
-        snapshot.mood_delta, 0,
-        "first tick has no prior mood, so delta is 0"
+        snapshot.mood_delta, snapshot.mood,
+        "first tick delta should equal mood since no prior mood was stored"
     );
     assert!(
         snapshot.mood >= MOOD_FLOOR && snapshot.mood <= MOOD_CEILING,

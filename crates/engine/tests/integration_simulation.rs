@@ -46,7 +46,7 @@ fn test_simulation_economy_cycle() {
 
 /// Test 3: Diplomacy - create 3 factions (baseline has 4), run 20 ticks, verify diplomacy events occur.
 #[test]
-#[ignore = "TDD red step: diplomacy_events not yet populated in snapshot after tick"]
+#[ignore = "TDD red step: snapshot.diplomacy_events is empty after 20 ticks (diplomacy not yet wired into snapshot)"]
 fn test_simulation_diplomacy() {
     let mut sim = setup_default();
     for _ in 0..20 {

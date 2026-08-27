@@ -5,7 +5,7 @@ use civ_engine::{KinshipEdge, KinshipKind, Simulation, UnrestLevel};
 const UNREST_SEED: u64 = 0xA5_A5_00_03;
 
 #[test]
-#[ignore = "TDD red step: unrest API not yet wired for single settlement"]
+#[ignore = "TDD red step: phase_unrest reads last_tick_mood which is always empty (unrest runs before social_mood in PHASE_ORDER)"]
 fn fr_civ_unrest_001_happy_settlement_is_stable() {
     let mut sim = Simulation::with_seed(UNREST_SEED);
     sim.set_settlement_population(0, 200);
@@ -26,6 +26,9 @@ fn fr_civ_unrest_001_happy_settlement_is_stable() {
     );
     sim.add_trust(1, 2, 100);
 
+    // Tick twice: unrest runs before social_mood in PHASE_ORDER,
+    // so unrest lags one tick behind mood computation.
+    sim.tick();
     sim.tick();
 
     let snapshot = sim
@@ -37,7 +40,7 @@ fn fr_civ_unrest_001_happy_settlement_is_stable() {
 }
 
 #[test]
-#[ignore = "TDD red step: unrest score thresholds not yet calibrated"]
+#[ignore = "TDD red step: phase_unrest reads last_tick_mood which is always empty (unrest runs before social_mood in PHASE_ORDER)"]
 fn fr_civ_unrest_002_high_inequality_and_hardship_trigger_unrest() {
     let mut sim = Simulation::with_seed(UNREST_SEED);
     sim.set_settlement_population(0, 100);
@@ -48,6 +51,8 @@ fn fr_civ_unrest_002_high_inequality_and_hardship_trigger_unrest() {
     sim.set_settlement_actor(1, 0);
     sim.set_actor_in_settlement_hardship(1, 300);
 
+    // Tick twice: unrest lags one tick behind mood in PHASE_ORDER.
+    sim.tick();
     sim.tick();
 
     let snapshot = sim
@@ -69,7 +74,7 @@ fn fr_civ_unrest_002_high_inequality_and_hardship_trigger_unrest() {
 }
 
 #[test]
-#[ignore = "TDD red step: unrest de-escalation path not yet implemented"]
+#[ignore = "TDD red step: phase_unrest reads last_tick_mood which is always empty (unrest runs before social_mood in PHASE_ORDER)"]
 fn fr_civ_unrest_003_improved_conditions_deescalate_unrest() {
     let mut sim = Simulation::with_seed(UNREST_SEED);
     sim.set_settlement_population(0, 100);
@@ -79,6 +84,8 @@ fn fr_civ_unrest_003_improved_conditions_deescalate_unrest() {
     sim.set_settlement_gini(0, 1.0);
     sim.set_settlement_actor(1, 0);
     sim.set_actor_in_settlement_hardship(1, 300);
+    // Tick twice so unrest sees the bad-condition mood from tick 1.
+    sim.tick();
     sim.tick();
     let high = sim
         .last_tick_unrest_settlement(0)
@@ -90,6 +97,8 @@ fn fr_civ_unrest_003_improved_conditions_deescalate_unrest() {
     sim.set_settlement_crime_pressure(0, 0);
     sim.set_settlement_gini(0, 0.0);
     sim.set_actor_in_settlement_hardship(1, 0);
+    // Tick twice so unrest sees the good-condition mood from the previous tick.
+    sim.tick();
     sim.tick();
     let low = sim
         .last_tick_unrest_settlement(0)

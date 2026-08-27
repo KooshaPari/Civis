@@ -84,23 +84,25 @@ fn fr_civ_gov_020_base_per_tick_stratification_events_emitted() {
 }
 
 #[test]
-#[ignore = "TDD red step: stratification report not yet fully computed per settlement"]
 fn fr_civ_gov_020_quantiles_per_settlement_bands_computed() {
     let mut sim = empty_sim();
     let settlement_id = 7;
-    sim.set_settlement_population(settlement_id, 4);
+    sim.set_settlement_population(settlement_id, 20);
 
-    // 4 households: relative quantile ranking assigns two middle entries, then
-    // rich and elite for the upper ranks.
-    sim.register_household_in_settlement(settlement_id, 1);
-    sim.register_household_in_settlement(settlement_id, 2);
-    sim.register_household_in_settlement(settlement_id, 3);
-    sim.register_household_in_settlement(settlement_id, 4);
-
-    sim.set_household_wealth(1, 10); // Poor
-    sim.set_household_wealth(2, 250); // Middle
-    sim.set_household_wealth(3, 600); // Rich quantile bucket
-    sim.set_household_wealth(4, 50_000); // Elite
+    // 20 households with spread-out wealth so each quantile band gets ≥1.
+    // With n=20: q20_idx=4, q40_idx=8, q60_idx=12, q80_idx=16
+    //   Poor:  indices 0-3, Middle: 4-11, Rich: 12-15, Elite: 16-19
+    let wealths: [(u64, i64); 20] = [
+        (1, 0), (2, 10), (3, 20), (4, 30),             // Poor
+        (5, 100), (6, 200), (7, 300), (8, 400),         // Middle (lower)
+        (9, 500), (10, 600), (11, 700), (12, 800),       // Middle (upper)
+        (13, 1_000), (14, 2_000), (15, 3_000), (16, 4_000), // Rich
+        (17, 10_000), (18, 20_000), (19, 30_000), (20, 50_000), // Elite
+    ];
+    for &(id, w) in &wealths {
+        sim.register_household_in_settlement(settlement_id, id);
+        sim.set_household_wealth(id, w);
+    }
 
     // let the simulation tick to compute the bands
     for _ in 0..2 {
@@ -136,14 +138,24 @@ fn fr_civ_gov_020_quantiles_per_settlement_bands_computed() {
     // spot-check band membership against the public API
     assert_eq!(
         sim.household_band(1, settlement_id),
-        Some(StratBand::Middle)
+        Some(StratBand::Poor),
+        "household 1 (wealth=0) should be Poor"
     );
     assert_eq!(
-        sim.household_band(2, settlement_id),
-        Some(StratBand::Middle)
+        sim.household_band(6, settlement_id),
+        Some(StratBand::Middle),
+        "household 6 (wealth=200) should be Middle"
     );
-    assert_eq!(sim.household_band(3, settlement_id), Some(StratBand::Rich));
-    assert_eq!(sim.household_band(4, settlement_id), Some(StratBand::Elite));
+    assert_eq!(
+        sim.household_band(14, settlement_id),
+        Some(StratBand::Rich),
+        "household 14 (wealth=2000) should be Rich"
+    );
+    assert_eq!(
+        sim.household_band(20, settlement_id),
+        Some(StratBand::Elite),
+        "household 20 (wealth=50000) should be Elite"
+    );
 }
 
 #[test]

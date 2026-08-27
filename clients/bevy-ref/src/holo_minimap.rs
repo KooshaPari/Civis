@@ -12,6 +12,7 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
+use crate::live_stream::ServerBridge;
 use crate::menus::in_game;
 use crate::minimap::{MINIMAP_INSET, MINIMAP_SIZE};
 use crate::ui_holo::{holo_frame, holo_text, scanlines, HoloPhase};
@@ -41,7 +42,11 @@ fn minimap_content_rect(ctx: &egui::Context) -> egui::Rect {
     )
 }
 
-fn draw_holo_minimap_overlay(mut contexts: EguiContexts, time: Res<Time>) {
+fn draw_holo_minimap_overlay(
+    mut contexts: EguiContexts,
+    time: Res<Time>,
+    bridge: Option<Res<ServerBridge>>,
+) {
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
@@ -77,4 +82,28 @@ fn draw_holo_minimap_overlay(mut contexts: EguiContexts, time: Res<Time>) {
         10.0,
         phase,
     );
+
+    // Server snapshot button (bottom-left corner of minimap)
+    if let Some(ref bridge) = bridge {
+        let btn_rect = egui::Rect::from_min_size(
+            rect.left_bottom() + egui::vec2(4.0, -18.0),
+            egui::vec2(80.0, 14.0),
+        );
+        let btn_resp = painter.interact(
+            btn_rect,
+            egui::Sense::click(),
+            egui::Id::new("holo_minimap_snapshot"),
+        );
+        painter.rect_filled(btn_rect, 4.0, HOLO_DEEP.gamma_multiply(0.6 * op));
+        painter.text(
+            btn_rect.center(),
+            egui::Align2::CENTER_CENTER,
+            "Snapshot",
+            egui::FontId::proportional(9.0),
+            HOLO_CYAN.gamma_multiply(0.9 * op),
+        );
+        if btn_resp.clicked() {
+            bridge.send_rpc("sim.snapshot", serde_json::json!({}));
+        }
+    }
 }

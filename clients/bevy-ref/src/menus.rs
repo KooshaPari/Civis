@@ -7,6 +7,7 @@ use crate::faction_hud::PlayerFactionId;
 use crate::game_ui::GameSpeed;
 use crate::gpu_features::GpuCapabilities;
 use crate::live_attach::LiveAttachBridge;
+use crate::live_stream::ServerBridge;
 use crate::live_stream::{clear_live_stream_scene_in_world, LiveStreamScene};
 use crate::outcome_overlay::{
     begin_player_session, end_player_session, outcome_modal_visible, OutcomeEscapeBlock,
@@ -416,6 +417,7 @@ pub fn toggle_pause(
     mut controls_help: Option<ResMut<crate::controls_help::ControlsHelpOpen>>,
     mut mode: ResMut<GameUiMode>,
     mut game_speed: Option<ResMut<GameSpeed>>,
+    bridge: Option<Res<ServerBridge>>,
 ) {
     // Single owner for ACTION_PAUSE_SIM: shell pause overlay (Space default).
     // Esc remains a hard fallback so Close Panel / overlay escape still works.
@@ -472,9 +474,17 @@ pub fn toggle_pause(
                 speed.remember_non_zero();
                 speed.multiplier = 0.0;
             }
+            // Notify server of pause via JSON-RPC
+            if let Some(ref bridge) = bridge {
+                bridge.send_rpc("sim.command", serde_json::json!({ "action": "pause" }));
+            }
         }
         GameUiMode::Paused => {
             resume_shell_pause(&mut mode, game_speed.as_deref_mut());
+            // Notify server of resume via JSON-RPC
+            if let Some(ref bridge) = bridge {
+                bridge.send_rpc("sim.command", serde_json::json!({ "action": "resume" }));
+            }
         }
     }
 }

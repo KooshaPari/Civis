@@ -434,7 +434,7 @@ mod tests {
     fn engine_applies_event_to_pair() {
         let mut engine = DiplomacyStanceEngine::new(0.02);
         engine.apply(a(), b(), &InteractionEvent::TradeVolume { volume: 0.5 });
-        assert!(engine.get(a(), b).trust > 0.0);
+        assert!(engine.get(a(), b()).trust > 0.0);
         assert_eq!(engine.get(a(), c()).trust, 0.0); // other pair unaffected
     }
 
@@ -442,9 +442,9 @@ mod tests {
     fn engine_decay_reduces_all() {
         let mut engine = DiplomacyStanceEngine::new(0.1);
         engine.apply(a(), b(), &InteractionEvent::TreatyFormed);
-        let before = engine.get(a(), b);
+        let before = engine.get(a(), b());
         engine.tick_decay();
-        let after = engine.get(a(), b);
+        let after = engine.get(a(), b());
         assert!(after.trust < before.trust);
     }
 

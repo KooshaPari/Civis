@@ -30,7 +30,7 @@ pub enum FamineStage {
 }
 
 /// Cascade effects at each famine stage.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 pub struct FamineEffects {
     /// Additional unrest modifier (additive).
     pub unrest_delta: f32,

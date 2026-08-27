@@ -4109,9 +4109,11 @@ dependencies = [
  "bincode",
  "blake3",
  "civ-agents",
+ "civ-ai",
  "civ-audio",
  "civ-build",
  "civ-diffusion",
+ "civ-diplomacy",
  "civ-economy",
  "civ-emergence-metrics",
  "civ-genetics",
@@ -4457,6 +4459,7 @@ dependencies = [
  "tokio-tungstenite 0.24.0",
  "tracing",
  "tracing-subscriber",
+ "tungstenite 0.24.0",
 ]
 
 [[package]]
@@ -14250,6 +14253,7 @@ dependencies = [
  "sha1 0.10.7",
  "thiserror 1.0.69",
  "utf-8",
+ "webpki-roots 0.26.11",
 ]
 
 [[package]]

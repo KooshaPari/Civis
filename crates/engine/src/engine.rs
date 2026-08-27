@@ -799,6 +799,23 @@ pub struct Simulation {
     /// [`Simulation::phase_economic_focus_pre`]. Cleared at the start of
     /// every [`Simulation::tick`]; surfaced to the JSON-RPC bridge.
     econ_focus_stability: Vec<EconomicFocusEvent>,
+
+    // ── New feature wiring fields ─────────────────────────────────────
+    /// Legend significance accumulator (FR-CIV-LEGENDS-010)
+    pub(crate) significance: civ_legends::significance::SignificanceAccumulator,
+    /// Last famine classification
+    pub(crate) last_famine_stage: crate::famine::FamineStage,
+    pub(crate) last_famine_effects: crate::famine::FamineEffects,
+    /// Diplomacy stance engine for per-pair opinion tracking (FR-CIV-DIPLOMACY-004)
+    pub(crate) stance_engine: civ_diplomacy::stance::DiplomacyStanceEngine,
+    /// Active caravans in transit
+    pub(crate) active_caravans: Vec<crate::caravan::Caravan>,
+    /// Caravan configuration
+    pub(crate) caravan_config: crate::caravan::CaravanConfig,
+
+    /// Deep diplomacy state: alliance formation, peace negotiations,
+    /// and cultural assimilation subsystems.
+    pub deep_diplomacy: crate::diplomacy::DeepDiplomacyState,
 }
 
 /// Per-settlement religious event emitted by [`Simulation::phase_belief`]
@@ -901,6 +918,13 @@ impl Simulation {
             last_tick_lifecycle_metrics: initial_lifecycle,
             econ_focus: BTreeMap::new(),
             econ_focus_stability: Vec::new(),
+            significance: civ_legends::significance::SignificanceAccumulator::new(),
+            last_famine_stage: crate::famine::FamineStage::None,
+            last_famine_effects: crate::famine::FamineEffects::default(),
+            stance_engine: civ_diplomacy::stance::DiplomacyStanceEngine::new(0.02),
+            deep_diplomacy: crate::diplomacy::DeepDiplomacyState::default(),
+            active_caravans: Vec::new(),
+            caravan_config: crate::caravan::CaravanConfig::default(),
             diplomacy_events: Vec::new(),
             next_civilian_id: 1_000_000,
             research_cache: ResearchCache::default(),
@@ -1062,6 +1086,12 @@ impl Simulation {
             last_tick_lifecycle_metrics: initial_lifecycle,
             econ_focus: BTreeMap::new(),
             econ_focus_stability: Vec::new(),
+            significance: civ_legends::significance::SignificanceAccumulator::new(),
+            last_famine_stage: crate::famine::FamineStage::None,
+            last_famine_effects: crate::famine::FamineEffects::default(),
+            stance_engine: civ_diplomacy::stance::DiplomacyStanceEngine::new(0.02),
+            active_caravans: Vec::new(),
+            caravan_config: crate::caravan::CaravanConfig::default(),
             diplomacy_events: Vec::new(),
             next_civilian_id: 1_000_000,
             research_cache: ResearchCache::default(),
@@ -1156,6 +1186,7 @@ impl Simulation {
             settlement_gini: BTreeMap::new(),
             last_tick_unrest_events: Vec::new(),
             last_tick_unrest_levels: BTreeMap::new(),
+            deep_diplomacy: crate::diplomacy::DeepDiplomacyState::default(),
         }
     }
 

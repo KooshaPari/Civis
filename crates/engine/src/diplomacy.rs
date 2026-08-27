@@ -4,8 +4,38 @@
 //! diplomacy events, and inter-faction signals.
 
 use civ_agents::{DiplomacyOutcome, DiplomacySignal, RelationKind};
+use civ_diplomacy::{
+    AllianceManager, AlliancePurpose, CulturalExchange, CulturalVectors, PeaceNegotiation,
+    PolityId as DipPolityId,
+};
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
+
+// ---------------------------------------------------------------------------
+// Deep diplomacy state (alliance formation, peace negotiations, cultural assimilation)
+// ---------------------------------------------------------------------------
+
+/// State container for the deep diplomacy subsystems.
+/// Holds the alliance manager, active peace negotiations, and cultural exchanges.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct DeepDiplomacyState {
+    /// Alliance formation manager.
+    pub alliance_manager: AllianceManager,
+    /// Active peace negotiations keyed by (proposer_id, target_id).
+    pub active_negotiations: BTreeMap<(u32, u32), PeaceNegotiation>,
+    /// Active cultural exchanges keyed by (source_id, target_id).
+    pub active_exchanges: BTreeMap<(u32, u32), CulturalExchange>,
+    /// Per-faction cultural vectors for assimilation tracking.
+    pub faction_cultures: BTreeMap<u32, CulturalVectors>,
+    /// Per-faction resource counts (fixed-point, scaled x100).
+    pub faction_resources: BTreeMap<u32, i32>,
+    /// Active wars: pairs of factions currently at war.
+    pub active_wars: BTreeSet<(u32, u32)>,
+    /// Conflict start ticks for active wars.
+    pub war_start_ticks: BTreeMap<(u32, u32), u64>,
+    /// Cumulative casualties per faction in active wars.
+    pub war_casualties: BTreeMap<u32, u32>,
+}
 
 /// Snapshot of one pairwise faction-relation row (FR-CIV-DIPLOMACY).
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -210,6 +240,224 @@ impl Simulation {
             return;
         }
         self.run_macro_diplomacy_event();
+
+        // Deep diplomacy: alliance checks every 1000 ticks.
+        if self.state.tick % 1000 == 0 {
+            self.tick_deep_diplomacy_alliances();
+        }
+        // Deep diplomacy: peace negotiations every 500 ticks.
+        self.tick_deep_diplomacy_peace();
+        // Deep diplomacy: cultural assimilation is continuous (every 500 tick phase).
+        self.tick_deep_diplomacy_assimilation();
+    }
+
+    /// Evaluate and form/dissolve alliances based on faction compatibility.
+    /// Runs every 1000 ticks.
+    pub(crate) fn tick_deep_diplomacy_alliances(&mut self) {
+        let faction_ids: Vec<u32> = self.state.factions.keys().copied().collect();
+        if faction_ids.len() < 2 {
+            return;
+        }
+        let tick = self.state.tick;
+
+        // Check all faction pairs for potential alliance formation.
+        for i in 0..faction_ids.len() {
+            for j in (i + 1)..faction_ids.len() {
+                let a = faction_ids[i];
+                let b = faction_ids[j];
+
+                // Check if already allied (either direction).
+                let already_allied = self
+                    .deep_diplomacy
+                    .alliance_manager
+                    .alliances_for(DipPolityId::new(a))
+                    .iter()
+                    .any(|alliance| alliance.members.contains(&DipPolityId::new(b)));
+                if already_allied {
+                    continue;
+                }
+
+                // Compute criteria from existing relation matrix.
+                let record = self.faction_relations.record(a, b);
+                let score = record.map(|r| r.score).unwrap_or(0.0);
+                let shared_enemy_score = if score < -0.5 { 500 } else { 0 };
+                let trade_volume_score = ((score + 1.0) * 500.0) as i32;
+                let cultural_similarity_score = (
+                    self.deep_diplomacy
+                        .faction_cultures
+                        .get(&a)
+                        .zip(self.deep_diplomacy.faction_cultures.get(&b))
+                        .map(|(ca, cb)| {
+                            let dist = civ_diplomacy::cultural_distance(ca, cb);
+                            10_000 - dist.min(10_000)
+                        })
+                        .unwrap_or(5000)
+                ) as i32;
+                let res_a = self
+                    .deep_diplomacy
+                    .faction_resources
+                    .get(&a)
+                    .copied()
+                    .unwrap_or(0);
+                let res_b = self
+                    .deep_diplomacy
+                    .faction_resources
+                    .get(&b)
+                    .copied()
+                    .unwrap_or(0);
+                let combined_strength = res_a + res_b;
+
+                let criteria = civ_diplomacy::AllianceProposalCriteria {
+                    shared_enemy_score,
+                    trade_volume_score,
+                    cultural_similarity_score,
+                    combined_strength,
+                };
+
+                if self
+                    .deep_diplomacy
+                    .alliance_manager
+                    .evaluate_alliance_proposal(&criteria)
+                {
+                    let mut members = BTreeSet::new();
+                    members.insert(DipPolityId::new(a));
+                    members.insert(DipPolityId::new(b));
+                    let _ = self
+                        .deep_diplomacy
+                        .alliance_manager
+                        .form_alliance(members, AlliancePurpose::Military, tick);
+
+                    self.diplomacy_events.push(DiplomacyEvent {
+                        tick,
+                        faction_a: a,
+                        faction_b: b,
+                        kind: DiplomacyKind::Peace,
+                    });
+                }
+            }
+        }
+    }
+
+    /// Evaluate active peace negotiations and advance or resolve them.
+    /// Runs every 500 ticks.
+    pub(crate) fn tick_deep_diplomacy_peace(&mut self) {
+        let tick = self.state.tick;
+        let completed: Vec<(u32, u32)> = self
+            .deep_diplomacy
+            .active_negotiations
+            .keys()
+            .copied()
+            .collect();
+
+        for (a, b) in completed {
+            if let Some(neg) = self.deep_diplomacy.active_negotiations.get(&(a, b)) {
+                let wear_a = *self
+                    .deep_diplomacy
+                    .war_casualties
+                    .get(&a)
+                    .unwrap_or(&0) as i32 * 10;
+                let wear_b = *self
+                    .deep_diplomacy
+                    .war_casualties
+                    .get(&b)
+                    .unwrap_or(&0) as i32 * 10;
+                let res_a = self
+                    .deep_diplomacy
+                    .faction_resources
+                    .get(&a)
+                    .copied()
+                    .unwrap_or(0);
+                let res_b = self
+                    .deep_diplomacy
+                    .faction_resources
+                    .get(&b)
+                    .copied()
+                    .unwrap_or(0);
+                let strength_ratio = if res_b > 0 {
+                    (res_a * 100) / res_b
+                } else {
+                    i32::MAX
+                };
+                if neg.evaluate_peace(wear_a, wear_b, strength_ratio) {
+                    if let Some(neg_mut) = self.deep_diplomacy.active_negotiations.get_mut(&(a, b)) {
+                        let _ = neg_mut.accept();
+                    }
+                }
+            }
+        }
+
+        // Remove resolved negotiations and end wars.
+        let resolved: Vec<(u32, u32)> = self
+            .deep_diplomacy
+            .active_negotiations
+            .iter()
+            .filter(|(_, neg)| {
+                neg.status == civ_diplomacy::PeaceNegotiationStatus::Accepted
+                    || neg.status == civ_diplomacy::PeaceNegotiationStatus::Rejected
+            })
+            .map(|(&(a, b), _)| (a, b))
+            .collect();
+        for (a, b) in resolved {
+            self.deep_diplomacy.active_negotiations.remove(&(a, b));
+            self.deep_diplomacy.active_wars.remove(&(a, b));
+            self.deep_diplomacy.active_wars.remove(&(b, a));
+        }
+    }
+
+    /// Apply cultural assimilation between neighboring factions.
+    /// Runs continuously (every 500-tick phase).
+    pub(crate) fn tick_deep_diplomacy_assimilation(&mut self) {
+        let faction_ids: Vec<u32> = self.state.factions.keys().copied().collect();
+        if faction_ids.len() < 2 {
+            return;
+        }
+        let tick = self.state.tick;
+
+        for i in 0..faction_ids.len() {
+            for j in (i + 1)..faction_ids.len() {
+                let a = faction_ids[i];
+                let b = faction_ids[j];
+                let key = (a, b);
+
+                // Skip if an exchange is already active.
+                if self.deep_diplomacy.active_exchanges.contains_key(&key) {
+                    continue;
+                }
+
+                // Check if factions are allied (allow assimilation for allied pairs).
+                let allied = self
+                    .deep_diplomacy
+                    .alliance_manager
+                    .alliances_for(DipPolityId::new(a))
+                    .iter()
+                    .any(|alliance| alliance.members.contains(&DipPolityId::new(b)));
+                if !allied {
+                    continue;
+                }
+
+                // Create a cultural exchange for allied pairs.
+                if let (Some(ca), Some(cb)) = (
+                    self.deep_diplomacy.faction_cultures.get(&a).copied(),
+                    self.deep_diplomacy.faction_cultures.get(&b).copied(),
+                ) {
+                    let dist = civ_diplomacy::cultural_distance(&ca, &cb);
+                    if dist > 0 {
+                        let intensity = (10_000 - dist.min(10_000)) / 10; // 0-1000
+                        if let Ok(exchange) = CulturalExchange::new(
+                            DipPolityId::new(a),
+                            DipPolityId::new(b),
+                            intensity,
+                            ca,
+                            tick,
+                        ) {
+                            let (new_cb, _) = exchange.apply_assimilation(&ca, &cb);
+                            self.deep_diplomacy.faction_cultures.insert(b, new_cb);
+                            self.deep_diplomacy.active_exchanges.insert(key, exchange);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// Apply an explicit player diplomacy command to the emergent relation substrate.

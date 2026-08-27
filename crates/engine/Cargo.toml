@@ -63,6 +63,7 @@ civ-ai = { path = "../ai" }
 civ-emergence-metrics = { path = "../civ-emergence-metrics" }
 civ-institutions = { path = "../civ-institutions" }
 civ-audio = { path = "../audio" }
+civ-diplomacy = { path = "../diplomacy" }
 
 [dev-dependencies]
 civ-economy = { path = "../economy" }

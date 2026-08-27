@@ -59,6 +59,12 @@ pub const SCHEMA_VERSION: u32 = 1;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct PolityId(pub u32);
 
+impl std::fmt::Display for PolityId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "PolityId({})", self.0)
+    }
+}
+
 impl PolityId {
     /// Wrap a raw `u32` id.
     pub const fn new(id: u32) -> Self {
@@ -1012,6 +1018,27 @@ pub mod transcripts;
 pub mod treaty;
 
 pub mod effects;
+
+// ---------------------------------------------------------------------------
+// Deep diplomacy: alliance formation, peace negotiations, cultural assimilation
+// ---------------------------------------------------------------------------
+
+pub mod alliance_deep;
+pub mod peace_negotiations;
+pub mod cultural_assimilation;
+
+pub use alliance_deep::{
+    Alliance, AllianceError, AllianceManager, AllianceProposalCriteria, AlliancePurpose,
+};
+
+pub use peace_negotiations::{
+    PeaceError, PeaceNegotiation, PeaceNegotiationStatus, PeaceOutcome, PeaceProposal,
+    PeaceTerms, war_weariness,
+};
+
+pub use cultural_assimilation::{
+    AssimilationError, AssimilationResult, CulturalExchange, CulturalVectors, cultural_distance,
+};
 
 pub use transcripts::{Transcript, TranscriptClause};
 

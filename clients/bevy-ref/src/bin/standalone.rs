@@ -90,7 +90,6 @@ fn main() {
         .add_plugins(civ_bevy_ref::window_icon::WindowIconPlugin)
         .add_plugins(civ_bevy_ref::sim_bridge::SimBridgePlugin)
         .add_plugins(civ_bevy_ref::post_fx::PostFxPlugin)
-        .add_plugins(civ_bevy_ref::vfx::VfxPlugin)
         .add_plugins(civ_bevy_ref::audio::CivisAudioPlugin)
         .add_plugins(civ_bevy_ref::game_ui::GameUiPlugin)
         .add_plugins(civ_bevy_ref::emergence_dashboard::EmergenceDashboardPlugin)
@@ -125,6 +124,11 @@ fn main() {
                 Update,
                 sync_post_fx_from_settings.run_if(resource_changed::<GameSettings>),
             );
+    }
+
+    #[cfg(feature = "vfx")]
+    {
+        app.add_plugins(civ_bevy_ref::vfx::VfxPlugin);
     }
 
     #[cfg(feature = "models")]

@@ -175,19 +175,30 @@ mod tests {
 
     #[test]
     fn compute_trade_routes_empty_for_no_surplus_deficit() {
-        let a = make_settlement(1, (0, 0, 0), Stocks::default(), ProductionProfile::default());
-        let b = make_settlement(2, (10, 0, 0), Stocks::default(), ProductionProfile::default());
+        let a = make_settlement(
+            1,
+            (0, 0, 0),
+            Stocks::default(),
+            ProductionProfile::default(),
+        );
+        let b = make_settlement(
+            2,
+            (10, 0, 0),
+            Stocks::default(),
+            ProductionProfile::default(),
+        );
         let routes = compute_trade_routes(&[a, b]);
         assert!(routes.is_empty());
     }
 
     #[test]
     fn compute_trade_routes_gravity_kernel() {
-        let mut origin_stocks = Stocks::default();
-        origin_stocks.add(Good::Food, 5);
+        // Origin has surplus food (produce 10, consume 0, no initial stock -> surplus 10).
+        let origin_stocks = Stocks::default();
         let origin_profile = ProductionProfile::new([10, 0, 0, 0, 0], [0, 0, 0, 0, 0]);
         let origin = make_settlement(1, (0, 0, 0), origin_stocks, origin_profile);
 
+        // Dest has deficit food (produce 0, consume 5 -> deficit 5).
         let dest_stocks = Stocks::default();
         let dest_profile = ProductionProfile::new([0, 0, 0, 0, 0], [5, 0, 0, 0, 0]);
         let dest = make_settlement(2, (10, 0, 0), dest_stocks, dest_profile);
@@ -197,14 +208,18 @@ mod tests {
         let r = &routes[0];
         assert_eq!(r.from, 1);
         assert_eq!(r.to, 2);
-        // gravity kernel: surplus(10) * deficit(5) / dist²(100) = 1.0
-        assert!((r.volume - 1.0).abs() < 1e-10);
+        // gravity kernel: surplus(10) * deficit(5) / dist²(100) = 0.5
+        assert!((r.volume - 0.5).abs() < 1e-10);
     }
 
     #[test]
     fn compute_trade_routes_skips_same_settlement() {
-        let mut s =
-            make_settlement(1, (0, 0, 0), Stocks::default(), ProductionProfile::default());
+        let mut s = make_settlement(
+            1,
+            (0, 0, 0),
+            Stocks::default(),
+            ProductionProfile::default(),
+        );
         s.stocks.add(Good::Food, 50);
         s.profile = ProductionProfile::new([10, 0, 0, 0, 0], [0, 0, 0, 0, 0]);
         let routes = compute_trade_routes(&[s]);
@@ -221,8 +236,7 @@ mod tests {
         let dest_stocks = Stocks::default();
         let dest_profile = ProductionProfile::new([0, 0, 0, 0, 0], [5, 0, 0, 0, 0]);
 
-        let close_dest =
-            make_settlement(2, (2, 0, 0), dest_stocks.clone(), dest_profile.clone());
+        let close_dest = make_settlement(2, (2, 0, 0), dest_stocks.clone(), dest_profile.clone());
         let far_dest = make_settlement(3, (100, 0, 0), dest_stocks, dest_profile);
 
         let routes = compute_trade_routes(&[origin, close_dest, far_dest]);
@@ -234,9 +248,24 @@ mod tests {
     #[test]
     fn routes_lexicographic_sorts_correctly() {
         let routes = vec![
-            TradeRoute { id: 3, from: 2, to: 1, volume: 5.0 },
-            TradeRoute { id: 1, from: 1, to: 2, volume: 10.0 },
-            TradeRoute { id: 2, from: 1, to: 1, volume: 3.0 },
+            TradeRoute {
+                id: 3,
+                from: 2,
+                to: 1,
+                volume: 5.0,
+            },
+            TradeRoute {
+                id: 1,
+                from: 1,
+                to: 2,
+                volume: 10.0,
+            },
+            TradeRoute {
+                id: 2,
+                from: 1,
+                to: 1,
+                volume: 3.0,
+            },
         ];
         let sorted = routes_lexicographic(&routes);
         assert_eq!(sorted[0].from, 1);
@@ -249,10 +278,18 @@ mod tests {
 
     #[test]
     fn route_flow_returns_none_when_no_complement() {
-        let origin =
-            make_settlement(1, (0, 0, 0), Stocks::default(), ProductionProfile::default());
-        let dest =
-            make_settlement(2, (5, 0, 0), Stocks::default(), ProductionProfile::default());
+        let origin = make_settlement(
+            1,
+            (0, 0, 0),
+            Stocks::default(),
+            ProductionProfile::default(),
+        );
+        let dest = make_settlement(
+            2,
+            (5, 0, 0),
+            Stocks::default(),
+            ProductionProfile::default(),
+        );
         assert_eq!(route_flow(&origin, &dest), None);
     }
 

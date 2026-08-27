@@ -14,7 +14,7 @@ use crate::{ModGuestStateSave, ReplayError, Simulation, WorldState};
 /// Sidecar metadata written beside replay + mod state.
 pub const CIVSAVE_SPEC_ID: &str = "CIV-1000";
 /// Folder format version for `metadata.json`.
-pub const CIVSAVE_FORMAT_VERSION: u32 = 1;
+pub const CIVSAVE_FORMAT_VERSION: u32 = 3;
 /// Default on-disk save extension (zstd-compressed tar).
 pub const CIVSAVE_ARCHIVE_EXTENSION: &str = "civsave.zst";
 
@@ -76,6 +76,20 @@ pub enum SaveBundleError {
         /// Validation failure detail.
         message: String,
     },
+    /// Save file is corrupted or has structural damage.
+    #[error("save corruption: {detail}")]
+    SaveCorruption {
+        /// Human-readable description of the corruption.
+        detail: String,
+    },
+    /// Format version is newer than this engine supports.
+    #[error("unsupported format version {found} (max supported {max})")]
+    UnsupportedFormatVersion {
+        /// Version found on disk.
+        found: u32,
+        /// Maximum version this engine can load.
+        max: u32,
+    },
 }
 
 fn io_err(path: impl AsRef<Path>, err: impl std::fmt::Display) -> SaveBundleError {
@@ -91,6 +105,140 @@ fn archive_err(message: impl std::fmt::Display) -> SaveBundleError {
 
 fn zstd_err(message: impl std::fmt::Display) -> SaveBundleError {
     SaveBundleError::Zstd(message.to_string())
+}
+
+// ---------------------------------------------------------------------------
+// Format-version migration helpers
+// ---------------------------------------------------------------------------
+
+/// Migrate a v1 world_state JSON value to v2.
+///
+/// v1 saves are missing the culture-related top-level fields introduced in v2:
+/// `religion`, `language`, `psyche`, `history`, `writing`, `building_layouts`.
+/// This function inserts `Null` defaults for each missing field so that
+/// downstream deserialization succeeds.
+fn migrate_v1_to_v2(world_state: &mut serde_json::Value) {
+    let obj = match world_state.as_object_mut() {
+        Some(o) => o,
+        None => return,
+    };
+    for field in &[
+        "religion",
+        "language",
+        "psyche",
+        "history",
+        "writing",
+        "building_layouts",
+    ] {
+        obj.entry(*field).or_insert_with(|| serde_json::Value::Null);
+    }
+}
+
+/// Migrate a v2 world_state JSON value to v3.
+///
+/// v3 restructures economy fields for trade routes: a top-level
+/// `economy` object is introduced that wraps the former flat `trade_routes`
+/// list and adds a `trade_route_version` marker. If `trade_routes` is
+/// already wrapped, this is a no-op.
+fn migrate_v2_to_v3(world_state: &mut serde_json::Value) {
+    let obj = match world_state.as_object_mut() {
+        Some(o) => o,
+        None => return,
+    };
+    // Only migrate when `economy` is not yet present.
+    if obj.contains_key("economy") {
+        return;
+    }
+    let trade_routes = obj.remove("trade_routes").unwrap_or(serde_json::json!([]));
+    let economy = serde_json::json!({
+        "trade_route_version": 3,
+        "trade_routes": trade_routes,
+    });
+    obj.insert("economy".to_string(), economy);
+}
+
+/// Apply the full migration chain on a raw world_state JSON value.
+///
+/// The `file_version` is the version recorded in `metadata.json`. Each
+/// migration step bumps the version by one until we reach
+/// `CIVSAVE_FORMAT_VERSION`.
+fn run_migration_chain(
+    world_state: &mut serde_json::Value,
+    file_version: u32,
+) -> Result<(), SaveBundleError> {
+    if file_version > CIVSAVE_FORMAT_VERSION {
+        return Err(SaveBundleError::UnsupportedFormatVersion {
+            found: file_version,
+            max: CIVSAVE_FORMAT_VERSION,
+        });
+    }
+    let mut version = file_version;
+    if version < 2 {
+        migrate_v1_to_v2(world_state);
+        version = 2;
+    }
+    if version < 3 {
+        migrate_v2_to_v3(world_state);
+        version = 3;
+    }
+    Ok(())
+}
+
+/// Migrate and persist a world_state JSON file on disk, rewriting it in-place
+/// at the latest format version.
+fn migrate_world_state_file(
+    dir: &Path,
+    file_version: u32,
+) -> Result<serde_json::Value, SaveBundleError> {
+    let path = dir.join("world_state.json");
+    if !path.is_file() {
+        return Ok(serde_json::json!({}));
+    }
+    let json_str = fs::read_to_string(&path).map_err(|e| io_err(&path, e))?;
+    if json_str.trim().is_empty() {
+        return Err(SaveBundleError::SaveCorruption {
+            detail: format!("world_state.json is empty in {}", dir.display()),
+        });
+    }
+    let mut value: serde_json::Value =
+        serde_json::from_str(&json_str).map_err(SaveBundleError::Json)?;
+    run_migration_chain(&mut value, file_version)?;
+    // Persist the migrated state back so future loads skip migration.
+    fs::write(
+        &path,
+        serde_json::to_string_pretty(&value).map_err(SaveBundleError::Json)?,
+    )
+    .map_err(|e| io_err(&path, e))?;
+    Ok(value)
+}
+
+/// Migrate world_state extracted from a tar archive, returning the migrated
+/// JSON value. The caller is responsible for writing it back.
+fn migrate_world_state_from_tar(
+    tar_bytes: &[u8],
+    file_version: u32,
+) -> Result<Option<serde_json::Value>, SaveBundleError> {
+    use std::io::Read;
+    let mut archive = Archive::new(tar_bytes);
+    for entry in archive.entries().map_err(archive_err)? {
+        let mut entry = entry.map_err(archive_err)?;
+        let entry_path = entry.path().map_err(archive_err)?;
+        if entry_path.file_name().and_then(|s| s.to_str()) != Some("world_state.json") {
+            continue;
+        }
+        let mut json_str = String::new();
+        entry.read_to_string(&mut json_str).map_err(archive_err)?;
+        if json_str.trim().is_empty() {
+            return Err(SaveBundleError::SaveCorruption {
+                detail: "world_state.json is empty in archive".to_string(),
+            });
+        }
+        let mut value: serde_json::Value =
+            serde_json::from_str(&json_str).map_err(SaveBundleError::Json)?;
+        run_migration_chain(&mut value, file_version)?;
+        return Ok(Some(value));
+    }
+    Ok(None)
 }
 
 fn validate_slot_name(name: &str) -> Result<String, SaveBundleError> {
@@ -178,6 +326,33 @@ impl CivSaveBundle {
     /// Load simulation from a `.civsave/` folder.
     pub fn load_dir(dir: impl AsRef<Path>) -> Result<Simulation, SaveBundleError> {
         let dir = dir.as_ref();
+
+        // Check format version via metadata before loading components.
+        let metadata_path = dir.join("metadata.json");
+        let file_version = if metadata_path.is_file() {
+            let json = fs::read_to_string(&metadata_path).map_err(|e| io_err(&metadata_path, e))?;
+            if json.trim().is_empty() {
+                return Err(SaveBundleError::SaveCorruption {
+                    detail: format!("metadata.json is empty in {}", dir.display()),
+                });
+            }
+            let meta: CivSaveMetadata =
+                serde_json::from_str(&json).map_err(SaveBundleError::Json)?;
+            meta.format_version
+        } else {
+            // No metadata implies a legacy v1 save.
+            1
+        };
+        if file_version > CIVSAVE_FORMAT_VERSION {
+            return Err(SaveBundleError::UnsupportedFormatVersion {
+                found: file_version,
+                max: CIVSAVE_FORMAT_VERSION,
+            });
+        }
+
+        // Migrate world_state.json if needed.
+        let migrated_ws = migrate_world_state_file(dir, file_version)?;
+
         let replay_path = dir.join("replay.civreplay");
         if !replay_path.is_file() {
             return Err(SaveBundleError::MissingComponent {
@@ -197,9 +372,22 @@ impl CivSaveBundle {
 
         let world_state_path = dir.join("world_state.json");
         if world_state_path.is_file() {
-            let json =
-                fs::read_to_string(&world_state_path).map_err(|e| io_err(&world_state_path, e))?;
-            sim.state = serde_json::from_str::<WorldState>(&json)?;
+            sim.state = serde_json::from_value(migrated_ws).map_err(SaveBundleError::Json)?;
+        }
+
+        // Update metadata format version so future loads skip migration.
+        if file_version < CIVSAVE_FORMAT_VERSION {
+            let updated_meta = CivSaveMetadata {
+                spec_id: CIVSAVE_SPEC_ID.to_owned(),
+                format_version: CIVSAVE_FORMAT_VERSION,
+                tick: sim.state.tick,
+                scenario_name: None,
+            };
+            fs::write(
+                &metadata_path,
+                serde_json::to_string_pretty(&updated_meta).map_err(SaveBundleError::Json)?,
+            )
+            .map_err(|e| io_err(&metadata_path, e))?;
         }
 
         Ok(sim)
@@ -228,6 +416,32 @@ impl CivSaveBundle {
         let tar_bytes = decode_all(compressed.as_slice()).map_err(zstd_err)?;
         let temp = tempfile::tempdir().map_err(|e| io_err(path, e))?;
         extract_tar(tar_bytes.as_slice(), temp.path())?;
+
+        // Check format version from the extracted metadata.
+        let metadata_path = temp.path().join("metadata.json");
+        let file_version = if metadata_path.is_file() {
+            let json = fs::read_to_string(&metadata_path).map_err(|e| io_err(&metadata_path, e))?;
+            if json.trim().is_empty() {
+                return Err(SaveBundleError::SaveCorruption {
+                    detail: format!("metadata.json is empty in archive {}", path.display()),
+                });
+            }
+            let meta: CivSaveMetadata =
+                serde_json::from_str(&json).map_err(SaveBundleError::Json)?;
+            meta.format_version
+        } else {
+            1
+        };
+        if file_version > CIVSAVE_FORMAT_VERSION {
+            return Err(SaveBundleError::UnsupportedFormatVersion {
+                found: file_version,
+                max: CIVSAVE_FORMAT_VERSION,
+            });
+        }
+
+        // Migrate the world_state inside the extracted directory.
+        let _migrated_ws = migrate_world_state_file(temp.path(), file_version)?;
+
         Self::load_dir(temp.path())
     }
 
@@ -347,6 +561,24 @@ pub fn delete_slot(saves_dir: impl AsRef<Path>, name: &str) -> Result<bool, Save
     }
 }
 
+/// Create a minimal v1 save dir on disk for migration tests.
+fn create_v1_save_dir(dir: &Path, tick: u64, world_state_json: &str) {
+    fs::create_dir_all(dir).unwrap();
+    let meta = CivSaveMetadata {
+        spec_id: CIVSAVE_SPEC_ID.to_owned(),
+        format_version: 1,
+        tick,
+        scenario_name: None,
+    };
+    fs::write(
+        dir.join("metadata.json"),
+        serde_json::to_string_pretty(&meta).unwrap(),
+    )
+    .unwrap();
+    fs::write(dir.join("world_state.json"), world_state_json).unwrap();
+    // Create a minimal replay file (the loader only checks existence).
+    fs::write(dir.join("replay.civreplay"), b"replay-data").unwrap();
+}
 fn tar_dir(dir: &Path) -> Result<Vec<u8>, SaveBundleError> {
     let mut tar_buf = Vec::new();
     {
@@ -475,5 +707,163 @@ mod tests {
             .collect::<Vec<_>>();
         assert!(!names.contains(&"a"));
         assert!(names.contains(&"b"));
+    }
+
+    // -----------------------------------------------------------------------
+    // Migration-specific tests (8 total)
+    // -----------------------------------------------------------------------
+
+    /// 1. Roundtrip: save at v3, load returns v3 metadata.
+    #[test]
+    fn migration_roundtrip_save_load_preserves_version() {
+        let mut sim = Simulation::with_seed(1);
+        sim.tick();
+        let dir = tempdir().expect("tempdir");
+        let save_path = dir.path().join("roundtrip");
+        CivSaveBundle::save_dir(&save_path, &sim).expect("save");
+
+        let meta_path = save_path.join("metadata.json");
+        let meta_str = fs::read_to_string(&meta_path).unwrap();
+        let meta: CivSaveMetadata = serde_json::from_str(&meta_str).unwrap();
+        assert_eq!(meta.format_version, CIVSAVE_FORMAT_VERSION);
+
+        let loaded = CivSaveBundle::load_dir(&save_path).expect("load");
+        assert_eq!(loaded.state.tick, sim.state.tick);
+    }
+
+    /// 2. Loading a v1 save triggers the v1->v2->v3 migration chain.
+    #[test]
+    fn migration_v1_save_gets_upgraded_to_v3() {
+        let ws = serde_json::json!({"tick": 10, "population": 500});
+        let dir = tempdir().expect("tempdir");
+        let save_dir = dir.path().join("old_save");
+        create_v1_save_dir(&save_dir, 10, &ws.to_string());
+
+        let loaded = CivSaveBundle::load_dir(&save_dir).expect("load v1 save");
+        assert_eq!(loaded.state.tick, 10);
+
+        // Metadata should now reflect v3.
+        let meta: CivSaveMetadata =
+            serde_json::from_str(&fs::read_to_string(save_dir.join("metadata.json")).unwrap())
+                .unwrap();
+        assert_eq!(meta.format_version, 3);
+    }
+
+    /// 3. v1->v2 migration adds the culture-related default fields.
+    #[test]
+    fn migration_v1_to_v2_adds_culture_fields() {
+        let mut ws = serde_json::json!({"tick": 5});
+        migrate_v1_to_v2(&mut ws);
+        assert!(ws.get("religion").is_some());
+        assert!(ws.get("language").is_some());
+        assert!(ws.get("psyche").is_some());
+        assert!(ws.get("history").is_some());
+        assert!(ws.get("writing").is_some());
+        assert!(ws.get("building_layouts").is_some());
+    }
+
+    /// 4. v2->v3 migration restructures trade routes under `economy`.
+    #[test]
+    fn migration_v2_to_v3_restructures_trade_routes() {
+        let mut ws = serde_json::json!({
+            "tick": 7,
+            "trade_routes": [{"from": 0, "to": 1}]
+        });
+        migrate_v2_to_v3(&mut ws);
+        assert!(ws.get("trade_routes").is_none());
+        let econ = ws.get("economy").expect("economy should exist");
+        assert_eq!(econ["trade_route_version"], 3);
+        assert!(econ["trade_routes"].is_array());
+    }
+
+    /// 5. run_migration_chain rejects a version newer than CIVSAVE_FORMAT_VERSION.
+    #[test]
+    fn migration_rejects_future_version() {
+        let mut ws = serde_json::json!({"tick": 1});
+        let result = run_migration_chain(&mut ws, CIVSAVE_FORMAT_VERSION + 1);
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            SaveBundleError::UnsupportedFormatVersion { found, max } => {
+                assert_eq!(found, CIVSAVE_FORMAT_VERSION + 1);
+                assert_eq!(max, CIVSAVE_FORMAT_VERSION);
+            }
+            other => panic!("expected UnsupportedFormatVersion, got {:?}", other),
+        }
+    }
+
+    /// 6. run_migration_chain is a no-op when file version == CIVSAVE_FORMAT_VERSION.
+    #[test]
+    fn migration_noop_at_current_version() {
+        let mut ws = serde_json::json!({"tick": 1});
+        run_migration_chain(&mut ws, CIVSAVE_FORMAT_VERSION).unwrap();
+        // economy should NOT have been added (v3 migration only runs when version < 3).
+        assert!(ws.get("economy").is_none());
+    }
+
+    /// 7. Detecting corruption: empty world_state.json triggers SaveCorruption.
+    #[test]
+    fn migration_detects_empty_world_state() {
+        let dir = tempdir().expect("tempdir");
+        let save_dir = dir.path().join("corrupt");
+        fs::create_dir_all(&save_dir).unwrap();
+        let meta = CivSaveMetadata {
+            spec_id: CIVSAVE_SPEC_ID.to_owned(),
+            format_version: 2,
+            tick: 0,
+            scenario_name: None,
+        };
+        fs::write(
+            save_dir.join("metadata.json"),
+            serde_json::to_string_pretty(&meta).unwrap(),
+        )
+        .unwrap();
+        // Empty world_state.json.
+        fs::write(save_dir.join("world_state.json"), "").unwrap();
+        fs::write(save_dir.join("replay.civreplay"), b"r").unwrap();
+
+        let result = CivSaveBundle::load_dir(&save_dir);
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            SaveBundleError::SaveCorruption { detail } => {
+                assert!(detail.contains("empty"));
+            }
+            other => panic!("expected SaveCorruption, got {:?}", other),
+        }
+    }
+
+    /// 8. Version validation: a save with format_version > CIVSAVE_FORMAT_VERSION
+    ///    is rejected with UnsupportedFormatVersion.
+    #[test]
+    fn migration_rejects_future_version_on_disk() {
+        let dir = tempdir().expect("tempdir");
+        let save_dir = dir.path().join("future_save");
+        fs::create_dir_all(&save_dir).unwrap();
+        let meta = CivSaveMetadata {
+            spec_id: CIVSAVE_SPEC_ID.to_owned(),
+            format_version: 999,
+            tick: 0,
+            scenario_name: None,
+        };
+        fs::write(
+            save_dir.join("metadata.json"),
+            serde_json::to_string_pretty(&meta).unwrap(),
+        )
+        .unwrap();
+        fs::write(
+            save_dir.join("world_state.json"),
+            serde_json::json!({"tick": 0}).to_string(),
+        )
+        .unwrap();
+        fs::write(save_dir.join("replay.civreplay"), b"r").unwrap();
+
+        let result = CivSaveBundle::load_dir(&save_dir);
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            SaveBundleError::UnsupportedFormatVersion { found, max } => {
+                assert_eq!(found, 999);
+                assert_eq!(max, CIVSAVE_FORMAT_VERSION);
+            }
+            other => panic!("expected UnsupportedFormatVersion, got {:?}", other),
+        }
     }
 }

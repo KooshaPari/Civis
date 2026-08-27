@@ -339,3 +339,224 @@ mod tests {
         assert_eq!(glyph, restored);
     }
 }
+
+/// Type of writing system script.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ScriptType {
+    Alphabetic,
+    Logographic,
+    Syllabic,
+}
+
+/// A writing system with characters, literacy, and metadata.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WritingSystem {
+    pub name: String,
+    pub script_type: ScriptType,
+    pub characters: Vec<char>,
+    pub literacy_rate: f32,
+    pub created_tick: u64,
+}
+
+impl Default for WritingSystem {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            script_type: ScriptType::Alphabetic,
+            characters: Vec::new(),
+            literacy_rate: 0.0,
+            created_tick: 0,
+        }
+    }
+}
+
+/// A document written in a specific writing system.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Document {
+    pub author: String,
+    pub content: String,
+    pub writing_system: String,
+    pub literacy_level: f32,
+    pub created_tick: u64,
+}
+
+impl Default for Document {
+    fn default() -> Self {
+        Self {
+            author: String::new(),
+            content: String::new(),
+            writing_system: String::new(),
+            literacy_level: 0.0,
+            created_tick: 0,
+        }
+    }
+}
+
+/// Create a deterministic script from a seed, pulling characters from the Greek Unicode block.
+#[must_use]
+pub fn create_script(
+    name: &str,
+    script_type: ScriptType,
+    seed: u64,
+    char_count: usize,
+) -> WritingSystem {
+    let base = 0x0391u32; // Greek Capital Letter Alpha
+    let mut characters = Vec::with_capacity(char_count);
+    for i in 0..char_count {
+        let code = base + ((seed.wrapping_add(i as u64)) % 24) as u32;
+        if let Some(ch) = char::from_u32(code) {
+            characters.push(ch);
+        }
+    }
+    WritingSystem {
+        name: name.to_string(),
+        script_type,
+        characters,
+        literacy_rate: 0.0,
+        created_tick: 0,
+    }
+}
+
+/// Translate content from one writing system to another (character substitution).
+#[must_use]
+pub fn translate(content: &str, source: &WritingSystem, target: &WritingSystem) -> String {
+    let mut result = String::with_capacity(content.len());
+    for ch in content.chars() {
+        if let Some(idx) = source.characters.iter().position(|&c| c == ch) {
+            if idx < target.characters.len() {
+                result.push(target.characters[idx]);
+            } else {
+                result.push(ch);
+            }
+        } else {
+            result.push(ch);
+        }
+    }
+    result
+}
+
+/// Compute literacy rate from literate count and total population.
+#[must_use]
+pub fn compute_literacy_rate(literate_count: u32, total_population: u32) -> f32 {
+    if total_population == 0 {
+        return 0.0;
+    }
+    literate_count as f32 / total_population as f32
+}
+
+/// Archive a document by copying it with updated literacy level from writing system.
+#[must_use]
+pub fn archive_document(doc: &Document, ws: &WritingSystem) -> Document {
+    Document {
+        literacy_level: ws.literacy_rate,
+        ..doc.clone()
+    }
+}
+
+/// Advance a writing system by one tick, increasing literacy by teaching_rate.
+#[must_use]
+pub fn tick_writing_system(ws: &WritingSystem, teaching_rate: f32) -> WritingSystem {
+    WritingSystem {
+        literacy_rate: (ws.literacy_rate + teaching_rate).clamp(0.0, 1.0),
+        ..ws.clone()
+    }
+}
+
+#[cfg(test)]
+mod writing_extended_tests {
+    use super::*;
+
+    #[test]
+    fn create_script_alphabetic() {
+        let ws = create_script("Greek", ScriptType::Alphabetic, 42, 16);
+        assert_eq!(ws.name, "Greek");
+        assert_eq!(ws.script_type, ScriptType::Alphabetic);
+        assert_eq!(ws.characters.len(), 16);
+    }
+
+    #[test]
+    fn create_script_deterministic() {
+        let a = create_script("Test", ScriptType::Logographic, 99, 8);
+        let b = create_script("Test", ScriptType::Logographic, 99, 8);
+        assert_eq!(a.characters, b.characters);
+    }
+
+    #[test]
+    fn create_script_different_seeds() {
+        let a = create_script("A", ScriptType::Syllabic, 1, 8);
+        let b = create_script("A", ScriptType::Syllabic, 2, 8);
+        assert_ne!(a.characters, b.characters);
+    }
+
+    #[test]
+    fn translate_basic() {
+        let src = create_script("Src", ScriptType::Alphabetic, 1, 4);
+        let tgt = create_script("Tgt", ScriptType::Alphabetic, 2, 4);
+        let content: String = src.characters.iter().take(2).collect();
+        let translated = translate(&content, &src, &tgt);
+        assert_eq!(translated.len(), content.len());
+    }
+
+    #[test]
+    fn translate_identity() {
+        let ws = create_script("Same", ScriptType::Alphabetic, 1, 8);
+        let content: String = ws.characters.iter().take(3).collect();
+        let translated = translate(&content, &ws, &ws);
+        assert_eq!(translated, content);
+    }
+
+    #[test]
+    fn compute_literacy_rate_normal() {
+        assert!((compute_literacy_rate(75, 100) - 0.75).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn compute_literacy_rate_zero_pop() {
+        assert_eq!(compute_literacy_rate(0, 0), 0.0);
+    }
+
+    #[test]
+    fn archive_document_updates_level() {
+        let doc = Document {
+            author: "Alice".into(),
+            content: "Hello".into(),
+            writing_system: "Greek".into(),
+            literacy_level: 0.0,
+            created_tick: 5,
+        };
+        let ws = WritingSystem {
+            literacy_rate: 0.75,
+            ..WritingSystem::default()
+        };
+        let archived = archive_document(&doc, &ws);
+        assert!((archived.literacy_level - 0.75).abs() < f32::EPSILON);
+        assert_eq!(archived.author, "Alice");
+    }
+
+    #[test]
+    fn tick_writing_system_increases_literacy() {
+        let ws = WritingSystem {
+            literacy_rate: 0.5,
+            ..WritingSystem::default()
+        };
+        let ticked = tick_writing_system(&ws, 0.1);
+        assert!((ticked.literacy_rate - 0.6).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn tick_writing_system_clamps() {
+        let ws = WritingSystem {
+            literacy_rate: 0.99,
+            ..WritingSystem::default()
+        };
+        let ticked = tick_writing_system(&ws, 0.1);
+        assert!((ticked.literacy_rate - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn writing_system_default() {
+        let ws = WritingSystem::default();
+        assert!(ws.name.is_empty());
+        assert_eq!(ws.literacy_rate, 0.0);
+    }
+}

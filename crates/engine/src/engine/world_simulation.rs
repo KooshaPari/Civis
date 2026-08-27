@@ -44,6 +44,9 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "sentience",
     "species",
     "diffusion",
+    "writing",
+    "building_layouts",
+    "history",
     "audio",
     "victory_check",
 ];

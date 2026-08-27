@@ -39,6 +39,7 @@ use serde::{
 
 /// Canonical persisted GPU backend preference, re-exported for API compatibility.
 pub use crate::graphics_settings::BackendPref as RenderEngine;
+use crate::live_stream::ServerBridge;
 use crate::ui_theme;
 #[cfg(feature = "audio")]
 use bevy_kira_audio::prelude::AudioChannel;
@@ -1194,6 +1195,7 @@ fn draw_settings_panel(
     mut contexts: EguiContexts,
     mut settings: ResMut<GameSettings>,
     mut capture: ResMut<KeybindCaptureState>,
+    bridge: Option<Res<ServerBridge>>,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else { return };
 
@@ -1252,6 +1254,16 @@ fn draw_settings_panel(
 
     if dirty {
         settings.save();
+        // Push gameplay policy to server so sim picks up difficulty/scarcity changes
+        if let Some(ref bridge) = bridge {
+            bridge.send_rpc(
+                "sim.set_policy",
+                serde_json::json!({
+                    "scarcity_multiplier": settings.gameplay.difficulty,
+                    "base_consumption_joules": (settings.gameplay.disaster_frequency * 10000.0) as u64,
+                }),
+            );
+        }
     }
 }
 

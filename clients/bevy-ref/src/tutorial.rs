@@ -7,7 +7,21 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 use serde::{Deserialize, Serialize};
 
+use crate::live_stream::ServerBridge;
 use crate::menus::in_game;
+
+/// Live simulation status snapshot received from the server.
+#[derive(Resource, Default, Clone, Debug)]
+pub struct SimStatusSnapshot {
+    /// Current server tick.
+    pub tick: u64,
+    /// Human-readable era name.
+    pub era: String,
+    /// Total civilian population.
+    pub population: u64,
+    /// Whether the sim is paused server-side.
+    pub paused: bool,
+}
 
 const HINTS: &[&str] = &[
     "Welcome to Civis! Your civilization is emerging. Watch the minimap for faction spread. [M] cycles map modes.",
@@ -39,12 +53,14 @@ pub struct TutorialPlugin;
 
 impl Plugin for TutorialPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<TutorialState>().add_systems(
-            Update,
-            (handle_tutorial_keys, draw_tutorial_hint)
-                .chain()
-                .run_if(in_game),
-        );
+        app.init_resource::<TutorialState>()
+            .init_resource::<SimStatusSnapshot>()
+            .add_systems(
+                Update,
+                (handle_tutorial_keys, draw_tutorial_hint)
+                    .chain()
+                    .run_if(in_game),
+            );
     }
 }
 
@@ -81,11 +97,21 @@ fn draw_tutorial_hint(
     mut contexts: EguiContexts,
     mut state: ResMut<TutorialState>,
     mut ran_once: Local<bool>,
+    bridge: Option<Res<ServerBridge>>,
+    mut sim_status: ResMut<SimStatusSnapshot>,
+    mut sent_subscribe: Local<bool>,
 ) {
     // egui panics if ctx rect/fonts are accessed before its first run; skip frame 1.
     if !*ran_once {
         *ran_once = true;
         return;
+    }
+    // Server: subscribe to sim.status for live tutorial context
+    if let Some(ref bridge) = bridge {
+        if !*sent_subscribe {
+            bridge.send_rpc("sim.status", serde_json::json!({}));
+            *sent_subscribe = true;
+        }
     }
     if !should_show(&state) {
         return;
@@ -126,6 +152,20 @@ fn draw_tutorial_hint(
                                 .color(egui::Color32::from_rgb(126, 186, 181))
                                 .size(11.0),
                         );
+                        // Live sim context from server
+                        if !sim_status.era.is_empty() {
+                            ui.label(
+                                egui::RichText::new(format!(
+                                    "tick {} | pop {} | {}{}",
+                                    sim_status.tick,
+                                    sim_status.population,
+                                    sim_status.era,
+                                    if sim_status.paused { " (paused)" } else { "" },
+                                ))
+                                .color(egui::Color32::from_rgb(100, 110, 120))
+                                .size(10.0),
+                            );
+                        }
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             let label = if step + 1 >= total { "Got it" } else { "Next" };
                             if ui.small_button(label).clicked() {

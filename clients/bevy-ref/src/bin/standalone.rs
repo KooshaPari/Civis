@@ -90,6 +90,8 @@ fn main() {
         .add_plugins(civ_bevy_ref::window_icon::WindowIconPlugin)
         .add_plugins(civ_bevy_ref::sim_bridge::SimBridgePlugin)
         .add_plugins(civ_bevy_ref::post_fx::PostFxPlugin)
+        .add_plugins(civ_bevy_ref::vfx::VfxPlugin)
+        .add_plugins(civ_bevy_ref::audio::CivisAudioPlugin)
         .add_plugins(civ_bevy_ref::game_ui::GameUiPlugin)
         .add_plugins(civ_bevy_ref::emergence_dashboard::EmergenceDashboardPlugin)
         .add_plugins(civ_bevy_ref::tech_tree_ui::TechTreeUiPlugin)

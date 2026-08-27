@@ -41,23 +41,23 @@
 
 pub mod building_emergence;
 pub mod building_tiers;
+pub mod caravan;
 pub mod climate;
 pub mod command_queue;
 pub mod conditions;
 pub mod culture;
 pub mod diplomacy;
 pub mod disasters;
-pub mod caravan;
-pub mod famine;
-pub mod festivals;
-pub mod emergent_migration;
 pub mod economy_engine;
 pub mod emergence;
 pub mod emergence_coupling;
 pub mod emergence_metrics;
+pub mod emergent_migration;
 pub mod engine;
 pub mod era;
 pub mod faction_decisions;
+pub mod famine;
+pub mod festivals;
 pub mod gameplay;
 pub mod godtools;
 pub mod hash_chain;

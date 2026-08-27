@@ -198,26 +198,22 @@ impl ShadowEconomyEngine {
     pub fn tick(&mut self, dt: f32) {
         for market in self.markets.values_mut() {
             // Corruption drives market expansion
-            let growth =
-                (market.corruption_level - market.law_enforcement_strength) * dt * 0.1;
+            let growth = (market.corruption_level - market.law_enforcement_strength) * dt * 0.1;
 
             for listing in &mut market.goods {
                 let quantity_change = (growth * listing.quantity as f32) as i32;
-                listing.quantity =
-                    listing.quantity.saturating_add_signed(quantity_change);
+                listing.quantity = listing.quantity.saturating_add_signed(quantity_change);
 
                 // Price fluctuation
                 listing.price *= 1.0 + (growth * 0.05);
             }
 
             // Grow / shrink corruption level
-            market.corruption_level =
-                (market.corruption_level + growth * 0.001).clamp(0.0, 1.0);
+            market.corruption_level = (market.corruption_level + growth * 0.001).clamp(0.0, 1.0);
         }
 
         // Decay accumulator slightly over time
-        self.corruption_accumulator =
-            (self.corruption_accumulator - dt * 0.005).max(0.0);
+        self.corruption_accumulator = (self.corruption_accumulator - dt * 0.005).max(0.0);
     }
 
     /// Calculate total shadow GDP across all markets.

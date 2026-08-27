@@ -361,9 +361,7 @@ mod tests {
     fn biome_coverage_covers_all_cells() {
         let mut map = TerrainBiomeMap::new(100, 100);
         map.generate(55);
-        let total: f32 = (0..=BIOME_SWAMP)
-            .map(|b| map.biome_coverage(b))
-            .sum();
+        let total: f32 = (0..=BIOME_SWAMP).map(|b| map.biome_coverage(b)).sum();
         assert!(
             (total - 1.0).abs() < f32::EPSILON,
             "biome coverages should sum to 1.0, got {total}"

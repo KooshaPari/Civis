@@ -274,8 +274,7 @@ impl WildfireGrid {
                         cell.fuel_remaining = (cell.fuel_remaining - consumption).max(0.0);
 
                         // Heat is sustained by fuel but slowly decays.
-                        cell.heat = (cell.heat + cell.fuel_remaining * 0.01 * dt
-                            - 0.005 * dt)
+                        cell.heat = (cell.heat + cell.fuel_remaining * 0.01 * dt - 0.005 * dt)
                             .clamp(0.0, 1.0);
 
                         // Transition to Crowning if heat is high enough.
@@ -284,8 +283,7 @@ impl WildfireGrid {
                         }
                         // Transition to Dying if fuel exhausted or burn
                         // duration exceeded.
-                        if cell.fuel_remaining <= 0.0
-                            || cell.burn_time >= self.params.burn_duration
+                        if cell.fuel_remaining <= 0.0 || cell.burn_time >= self.params.burn_duration
                         {
                             cell.state = WildfireState::Dying;
                         }
@@ -297,8 +295,7 @@ impl WildfireGrid {
                         cell.fuel_remaining = (cell.fuel_remaining - consumption).max(0.0);
 
                         // Crown fires maintain high heat.
-                        cell.heat = (cell.heat + cell.fuel_remaining * 0.02 * dt
-                            - 0.01 * dt)
+                        cell.heat = (cell.heat + cell.fuel_remaining * 0.02 * dt - 0.01 * dt)
                             .clamp(0.0, 1.0);
 
                         // Drop back to Active if heat falls below threshold.
@@ -307,8 +304,7 @@ impl WildfireGrid {
                         }
                         // Transition to Dying if fuel exhausted or burn
                         // duration exceeded.
-                        if cell.fuel_remaining <= 0.0
-                            || cell.burn_time >= self.params.burn_duration
+                        if cell.fuel_remaining <= 0.0 || cell.burn_time >= self.params.burn_duration
                         {
                             cell.state = WildfireState::Dying;
                         }
@@ -348,10 +344,7 @@ impl WildfireGrid {
     /// Total damage score: sum of consumed fuel across all cells.
     /// Returns a value in `[0.0, width * height]`.
     pub fn total_damage(&self) -> f32 {
-        self.cells
-            .iter()
-            .map(|c| 1.0 - c.fuel_remaining)
-            .sum()
+        self.cells.iter().map(|c| 1.0 - c.fuel_remaining).sum()
     }
 
     /// Apply rainfall to suppress fire across the entire grid. Each unit
@@ -467,7 +460,10 @@ mod tests {
                 break;
             }
         }
-        assert!(spread_happened, "fire should spread to at least one neighbour");
+        assert!(
+            spread_happened,
+            "fire should spread to at least one neighbour"
+        );
     }
 
     /// Crown fires spread at 2x rate — they reach neighbours faster than
@@ -614,7 +610,10 @@ mod tests {
                 break;
             }
         }
-        assert!(grid.total_burning() > 0, "should have at least one burning cell");
+        assert!(
+            grid.total_burning() > 0,
+            "should have at least one burning cell"
+        );
     }
 
     /// `total_damage` increases as fuel is consumed.

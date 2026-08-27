@@ -128,7 +128,8 @@ impl CulturalExchange {
         religious_difference: i32,
     ) -> i32 {
         let dist = cultural_distance(source, target);
-        let raw = dist * 10 + nationalism_level.clamp(0, 10_000) * 4
+        let raw = dist * 10
+            + nationalism_level.clamp(0, 10_000) * 4
             + religious_difference.clamp(0, 10_000) * 5;
         // Scale down to 0–10000 range.
         (raw / 100).clamp(0, 10_000)
@@ -148,7 +149,8 @@ impl CulturalExchange {
 
         // Compute per-axis shift: intensity% of the gap.
         let shift_lang = ((source_profile.language - target_profile.language) * intensity) / 10_000;
-        let shift_relig = ((source_profile.religion - target_profile.religion) * intensity) / 10_000;
+        let shift_relig =
+            ((source_profile.religion - target_profile.religion) * intensity) / 10_000;
         let shift_cust = ((source_profile.customs - target_profile.customs) * intensity) / 10_000;
 
         let new_target = CulturalVectors {
@@ -178,11 +180,14 @@ impl CulturalExchange {
 
         let net_effect = shift_lang + shift_relig + shift_cust;
 
-        (new_target, AssimilationResult {
-            adopted_practices: adopted,
-            resistance_level: 0, // caller should compute separately
-            net_effect,
-        })
+        (
+            new_target,
+            AssimilationResult {
+                adopted_practices: adopted,
+                resistance_level: 0, // caller should compute separately
+                net_effect,
+            },
+        )
     }
 }
 
@@ -268,25 +273,13 @@ mod tests {
 
     #[test]
     fn new_exchange_rejects_self_assimilation() {
-        let result = CulturalExchange::new(
-            p(1),
-            p(1),
-            5000,
-            CulturalVectors::uniform(5000),
-            100,
-        );
+        let result = CulturalExchange::new(p(1), p(1), 5000, CulturalVectors::uniform(5000), 100);
         assert!(matches!(result, Err(AssimilationError::SelfAssimilation)));
     }
 
     #[test]
     fn new_exchange_rejects_out_of_range_intensity() {
-        let result = CulturalExchange::new(
-            p(1),
-            p(2),
-            15_000,
-            CulturalVectors::uniform(5000),
-            100,
-        );
+        let result = CulturalExchange::new(p(1), p(2), 15_000, CulturalVectors::uniform(5000), 100);
         assert!(matches!(
             result,
             Err(AssimilationError::IntensityOutOfRange(15_000))
@@ -295,14 +288,8 @@ mod tests {
 
     #[test]
     fn new_exchange_accepts_valid_parameters() {
-        let ex = CulturalExchange::new(
-            p(1),
-            p(2),
-            3000,
-            CulturalVectors::uniform(5000),
-            100,
-        )
-        .expect("valid");
+        let ex = CulturalExchange::new(p(1), p(2), 3000, CulturalVectors::uniform(5000), 100)
+            .expect("valid");
         assert_eq!(ex.source_faction, p(1));
         assert_eq!(ex.target_faction, p(2));
         assert_eq!(ex.intensity, 3000);
@@ -312,8 +299,7 @@ mod tests {
     fn compute_resistance_high_distance_high_resistance() {
         let source = CulturalVectors::uniform(10_000);
         let target = CulturalVectors::uniform(0);
-        let resistance =
-            CulturalExchange::compute_resistance(&source, &target, 5000, 5000);
+        let resistance = CulturalExchange::compute_resistance(&source, &target, 5000, 5000);
         // distance = 30000, raw = 30000*10 + 5000*4 + 5000*5 = 300000+20000+25000 = 345000
         // / 100 = 3450, clamped to 10000
         assert_eq!(resistance, 3450);
@@ -323,8 +309,7 @@ mod tests {
     fn compute_resistance_low_distance_low_resistance() {
         let source = CulturalVectors::uniform(5000);
         let target = CulturalVectors::uniform(4900);
-        let resistance =
-            CulturalExchange::compute_resistance(&source, &target, 100, 100);
+        let resistance = CulturalExchange::compute_resistance(&source, &target, 100, 100);
         // distance = 300, raw = 300*10 + 100*4 + 100*5 = 3000+400+500 = 3900
         // / 100 = 39
         assert_eq!(resistance, 39);
@@ -342,8 +327,8 @@ mod tests {
             religion: 2000,
             customs: 2000,
         };
-        let ex = CulturalExchange::new(p(1), p(2), 5000, CulturalVectors::uniform(0), 1)
-            .expect("valid");
+        let ex =
+            CulturalExchange::new(p(1), p(2), 5000, CulturalVectors::uniform(0), 1).expect("valid");
         let (new_target, result) = ex.apply_assimilation(&source, &target);
 
         // shift per axis = (8000-2000)*5000/10000 = 3000
@@ -368,8 +353,8 @@ mod tests {
     fn apply_assimilation_zero_intensity_no_change() {
         let source = CulturalVectors::uniform(10_000);
         let target = CulturalVectors::uniform(0);
-        let ex = CulturalExchange::new(p(1), p(2), 0, CulturalVectors::uniform(0), 1)
-            .expect("valid");
+        let ex =
+            CulturalExchange::new(p(1), p(2), 0, CulturalVectors::uniform(0), 1).expect("valid");
         let (new_target, _) = ex.apply_assimilation(&source, &target);
         assert_eq!(new_target, target);
     }

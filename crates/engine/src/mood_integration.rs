@@ -413,10 +413,7 @@ mod tests {
 
         // Last 3 ticks
         let avg = e.average_mood(3);
-        assert!(
-            (avg - 0.8).abs() < f32::EPSILON,
-            "expected 0.8, got {avg}"
-        );
+        assert!((avg - 0.8).abs() < f32::EPSILON, "expected 0.8, got {avg}");
 
         // More ticks than history → uses all
         let avg_all = e.average_mood(100);

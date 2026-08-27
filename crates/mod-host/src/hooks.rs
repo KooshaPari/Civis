@@ -261,8 +261,7 @@ mod tests {
 
         let results: Vec<(&str, HookResult)> =
             vec![("a", HookResult::Cancel), ("b", HookResult::Continue)];
-        let final_result =
-            engine.execute_with_results(ModHook::OnEvent("fire".into()), &results);
+        let final_result = engine.execute_with_results(ModHook::OnEvent("fire".into()), &results);
         assert_eq!(final_result, HookResult::Cancel);
         // Only "a" should appear in the log because "b" was never reached.
         let log = engine.execution_log();
@@ -368,7 +367,9 @@ mod tests {
 
         assert_eq!(engine.get_registrations(&ModHook::OnTick(0)).len(), 1);
         assert_eq!(
-            engine.get_registrations(&ModHook::OnEvent("flood".into())).len(),
+            engine
+                .get_registrations(&ModHook::OnEvent("flood".into()))
+                .len(),
             1
         );
     }

@@ -155,9 +155,7 @@ impl DecayCurve {
     pub fn delta(self, pressure: f32, rate: f32) -> f32 {
         match self {
             DecayCurve::Linear => rate,
-            DecayCurve::Exponential { intensity } => {
-                rate * (1.0 + pressure * intensity)
-            }
+            DecayCurve::Exponential { intensity } => rate * (1.0 + pressure * intensity),
             DecayCurve::Sigmoid { steepness } => {
                 let x = pressure * steepness;
                 // Sigmoid: 1 / (1 + e^(-x))
@@ -337,14 +335,21 @@ mod tests {
     /// FR-CIV-NEEDS-DECAY-01 — Linear curve matches existing tick_rise behavior.
     #[test]
     fn linear_curve_matches_tick_rise() {
-        let rates = RiseRates { hunger: 0.05, rest: 0.02, social: 0.01 };
+        let rates = RiseRates {
+            hunger: 0.05,
+            rest: 0.02,
+            social: 0.01,
+        };
         let mut needs_a = NeedLevel::sated();
         let mut needs_b = NeedLevel::sated();
 
         tick_rise(&mut needs_a, &rates);
         tick_rise_curved(
-            &mut needs_b, &rates,
-            DecayCurve::Linear, DecayCurve::Linear, DecayCurve::Linear,
+            &mut needs_b,
+            &rates,
+            DecayCurve::Linear,
+            DecayCurve::Linear,
+            DecayCurve::Linear,
         );
 
         assert!((needs_a.hunger - needs_b.hunger).abs() < 1e-6);
@@ -355,18 +360,31 @@ mod tests {
     /// FR-CIV-NEEDS-DECAY-01 — Exponential curve accelerates at high pressure.
     #[test]
     fn exponential_curve_accelerates() {
-        let rates = RiseRates { hunger: 0.05, rest: 0.0, social: 0.0 };
+        let rates = RiseRates {
+            hunger: 0.05,
+            rest: 0.0,
+            social: 0.0,
+        };
         let curve = DecayCurve::Exponential { intensity: 2.0 };
 
         // At low pressure (0.1): delta = 0.05 * (1 + 0.1 * 2) = 0.06
         let delta_low = curve.delta(0.1, 0.05);
-        assert!((delta_low - 0.06).abs() < 1e-6, "low pressure delta: {delta_low}");
+        assert!(
+            (delta_low - 0.06).abs() < 1e-6,
+            "low pressure delta: {delta_low}"
+        );
 
         // At high pressure (0.9): delta = 0.05 * (1 + 0.9 * 2) = 0.14
         let delta_high = curve.delta(0.9, 0.05);
-        assert!((delta_high - 0.14).abs() < 1e-6, "high pressure delta: {delta_high}");
+        assert!(
+            (delta_high - 0.14).abs() < 1e-6,
+            "high pressure delta: {delta_high}"
+        );
 
-        assert!(delta_high > delta_low, "exponential should accelerate at high pressure");
+        assert!(
+            delta_high > delta_low,
+            "exponential should accelerate at high pressure"
+        );
     }
 
     /// FR-CIV-NEEDS-DECAY-01 — Sigmoid curve is slow at extremes, fast in middle.
@@ -381,27 +399,41 @@ mod tests {
         // At high pressure (0.9): sigmoid(9) ≈ 0.9999, delta ≈ 0.050
         let delta_high = curve.delta(0.9, 0.05);
 
-        assert!(delta_mid > delta_low, "sigmoid should be faster at mid than low");
+        assert!(
+            delta_mid > delta_low,
+            "sigmoid should be faster at mid than low"
+        );
         assert!(delta_high >= delta_mid, "sigmoid should plateau at high");
     }
 
     /// FR-CIV-NEEDS-DECAY-01 — Curved decay produces higher final pressure than linear.
     #[test]
     fn exponential_produces_higher_pressure() {
-        let rates = RiseRates { hunger: 0.01, rest: 0.0, social: 0.0 };
+        let rates = RiseRates {
+            hunger: 0.01,
+            rest: 0.0,
+            social: 0.0,
+        };
         let mut needs_linear = NeedLevel::sated();
         let mut needs_exp = NeedLevel::sated();
         let curve = DecayCurve::Exponential { intensity: 3.0 };
 
         for _ in 0..50 {
             tick_rise(&mut needs_linear, &rates);
-            tick_rise_curved(&mut needs_exp, &rates, curve, DecayCurve::Linear, DecayCurve::Linear);
+            tick_rise_curved(
+                &mut needs_exp,
+                &rates,
+                curve,
+                DecayCurve::Linear,
+                DecayCurve::Linear,
+            );
         }
 
         assert!(
             needs_exp.hunger > needs_linear.hunger,
             "exponential should produce higher hunger pressure: exp={}, linear={}",
-            needs_exp.hunger, needs_linear.hunger
+            needs_exp.hunger,
+            needs_linear.hunger
         );
     }
 

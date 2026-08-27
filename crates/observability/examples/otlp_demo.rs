@@ -25,7 +25,7 @@ fn main() {
 
     let provider = init_observability(ObservabilityConfig {
         service_name: "civis-otlp-demo".to_string(),
-        otlp_endpoint: None, // reads OTEL_EXPORTER_OTLP_ENDPOINT
+        otlp_endpoint: None,   // reads OTEL_EXPORTER_OTLP_ENDPOINT
         prometheus_port: None, // default 9090
     })
     .expect("Failed to initialise observability");

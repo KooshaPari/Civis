@@ -1,8 +1,8 @@
 use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 
 use civ_engine::{CivSaveBundle, Simulation};
-use civ_server::{most_recent_save_path, run_ws_bridge, TickBroadcastFormat, WsBridgeConfig};
 use civ_observability::{init_observability, ObservabilityConfig};
+use civ_server::{most_recent_save_path, run_ws_bridge, TickBroadcastFormat, WsBridgeConfig};
 use opentelemetry::trace::TracerProvider as _;
 use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::layer::SubscriberExt;
@@ -11,7 +11,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 async fn main() {
     let provider = init_observability(ObservabilityConfig {
         service_name: "civ-server".to_string(),
-        otlp_endpoint: None, // reads from OTEL_EXPORTER_OTLP_ENDPOINT env
+        otlp_endpoint: None,   // reads from OTEL_EXPORTER_OTLP_ENDPOINT env
         prometheus_port: None, // default 9090
     })
     .expect("Failed to initialise observability");

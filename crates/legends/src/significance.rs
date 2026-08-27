@@ -168,8 +168,8 @@ impl SignificanceAccumulator {
                 let diversity_bonus = 1.0 + (total_roles as f32).min(5.0) * 0.05;
 
                 // Accumulate.
-                let new_score =
-                    (decayed_score + base * cluster_mult * diversity_bonus).min(config.max_significance);
+                let new_score = (decayed_score + base * cluster_mult * diversity_bonus)
+                    .min(config.max_significance);
 
                 let mut es = prev.clone();
                 es.score = new_score;
@@ -210,11 +210,7 @@ impl SignificanceAccumulator {
 
     /// Return all tracked entities sorted by significance (descending).
     pub fn ranked(&self) -> Vec<(LegendEntityId, f32)> {
-        let mut entries: Vec<_> = self
-            .by_entity
-            .iter()
-            .map(|(k, v)| (*k, v.score))
-            .collect();
+        let mut entries: Vec<_> = self.by_entity.iter().map(|(k, v)| (*k, v.score)).collect();
         entries.sort_by(|a, b| b.1.total_cmp(&a.1));
         entries
     }
@@ -276,7 +272,14 @@ mod tests {
         let cfg = SignificanceConfig::default();
         let eid = LegendEntityId(1);
 
-        acc.record_event(eid, Epoch(0), &EventKind::Battle, &[Role::Leader], 0.8, &cfg);
+        acc.record_event(
+            eid,
+            Epoch(0),
+            &EventKind::Battle,
+            &[Role::Leader],
+            0.8,
+            &cfg,
+        );
 
         let sig = acc.get(eid).expect("entity should be tracked");
         assert!(sig.score > 0.0, "score should be positive");
@@ -290,13 +293,30 @@ mod tests {
         let cfg = SignificanceConfig::default();
         let eid = LegendEntityId(1);
 
-        acc.record_event(eid, Epoch(0), &EventKind::Battle, &[Role::Leader], 0.5, &cfg);
+        acc.record_event(
+            eid,
+            Epoch(0),
+            &EventKind::Battle,
+            &[Role::Leader],
+            0.5,
+            &cfg,
+        );
         let score1 = acc.get(eid).unwrap().score;
 
-        acc.record_event(eid, Epoch(1), &EventKind::WarDeclared, &[Role::Leader, Role::Aggressor], 0.9, &cfg);
+        acc.record_event(
+            eid,
+            Epoch(1),
+            &EventKind::WarDeclared,
+            &[Role::Leader, Role::Aggressor],
+            0.9,
+            &cfg,
+        );
         let score2 = acc.get(eid).unwrap().score;
 
-        assert!(score2 > score1, "accumulated score should increase: {score1} -> {score2}");
+        assert!(
+            score2 > score1,
+            "accumulated score should increase: {score1} -> {score2}"
+        );
     }
 
     #[test]
@@ -308,11 +328,25 @@ mod tests {
         };
         let eid = LegendEntityId(1);
 
-        acc.record_event(eid, Epoch(0), &EventKind::Battle, &[Role::Leader], 0.8, &cfg);
+        acc.record_event(
+            eid,
+            Epoch(0),
+            &EventKind::Battle,
+            &[Role::Leader],
+            0.8,
+            &cfg,
+        );
         let score_before = acc.get(eid).unwrap().score;
 
         // Decay for 10 epochs with no new events.
-        acc.record_event(eid, Epoch(10), &EventKind::Birth, &[Role::Witness], 0.1, &cfg);
+        acc.record_event(
+            eid,
+            Epoch(10),
+            &EventKind::Birth,
+            &[Role::Witness],
+            0.1,
+            &cfg,
+        );
         let score_after = acc.get(eid).unwrap().score;
 
         // The score should still increase (new event adds), but the decay
@@ -332,16 +366,44 @@ mod tests {
         let eid = LegendEntityId(1);
 
         // Two events 1 epoch apart (within cluster window).
-        acc.record_event(eid, Epoch(0), &EventKind::Battle, &[Role::Leader], 0.5, &cfg);
+        acc.record_event(
+            eid,
+            Epoch(0),
+            &EventKind::Battle,
+            &[Role::Leader],
+            0.5,
+            &cfg,
+        );
         let score_clustered = acc.get(eid).unwrap().score;
 
-        acc.record_event(eid, Epoch(1), &EventKind::Battle, &[Role::Leader], 0.5, &cfg);
+        acc.record_event(
+            eid,
+            Epoch(1),
+            &EventKind::Battle,
+            &[Role::Leader],
+            0.5,
+            &cfg,
+        );
         let score_final = acc.get(eid).unwrap().score;
 
         // Now reset and do the same with a gap outside the cluster window.
         let mut acc2 = SignificanceAccumulator::new();
-        acc2.record_event(eid, Epoch(0), &EventKind::Battle, &[Role::Leader], 0.5, &cfg);
-        acc2.record_event(eid, Epoch(10), &EventKind::Battle, &[Role::Leader], 0.5, &cfg);
+        acc2.record_event(
+            eid,
+            Epoch(0),
+            &EventKind::Battle,
+            &[Role::Leader],
+            0.5,
+            &cfg,
+        );
+        acc2.record_event(
+            eid,
+            Epoch(10),
+            &EventKind::Battle,
+            &[Role::Leader],
+            0.5,
+            &cfg,
+        );
         let score_gap = acc2.get(eid).unwrap().score;
 
         assert!(
@@ -361,13 +423,26 @@ mod tests {
 
         // Same event repeated with same role.
         for _ in 0..5 {
-            acc.record_event(eid, Epoch(0), &EventKind::Battle, &[Role::Leader], 0.5, &cfg);
+            acc.record_event(
+                eid,
+                Epoch(0),
+                &EventKind::Battle,
+                &[Role::Leader],
+                0.5,
+                &cfg,
+            );
         }
         let score_same = acc.get(eid).unwrap().score;
 
         // Reset and repeat with diverse roles.
         let mut acc2 = SignificanceAccumulator::new();
-        let roles = [Role::Leader, Role::Aggressor, Role::Defender, Role::Builder, Role::Witness];
+        let roles = [
+            Role::Leader,
+            Role::Aggressor,
+            Role::Defender,
+            Role::Builder,
+            Role::Witness,
+        ];
         for r in &roles {
             acc2.record_event(eid, Epoch(0), &EventKind::Battle, &[*r], 0.5, &cfg);
         }
@@ -387,14 +462,24 @@ mod tests {
 
         // Seed with multiple events.
         for tick in 0..10u64 {
-            acc.record_event(eid, Epoch(tick), &EventKind::Battle, &[Role::Leader], 0.8, &cfg);
+            acc.record_event(
+                eid,
+                Epoch(tick),
+                &EventKind::Battle,
+                &[Role::Leader],
+                0.8,
+                &cfg,
+            );
         }
 
         let weight = acc.diffusion_weight(eid);
         assert!(weight > 0.0, "diffusion weight should be positive");
         // With high magnitude + many events, weight should be > raw score.
         let raw_score = acc.get(eid).unwrap().score;
-        assert!(weight > raw_score, "diffusion weight should boost raw score");
+        assert!(
+            weight > raw_score,
+            "diffusion weight should boost raw score"
+        );
     }
 
     #[test]
@@ -403,9 +488,30 @@ mod tests {
         let cfg = SignificanceConfig::default();
 
         // Create 3 entities with different significance levels.
-        acc.record_event(LegendEntityId(1), Epoch(0), &EventKind::Battle, &[Role::Leader], 0.3, &cfg);
-        acc.record_event(LegendEntityId(2), Epoch(0), &EventKind::WarDeclared, &[Role::Leader, Role::Aggressor], 0.9, &cfg);
-        acc.record_event(LegendEntityId(3), Epoch(0), &EventKind::Sickness, &[Role::Witness], 0.1, &cfg);
+        acc.record_event(
+            LegendEntityId(1),
+            Epoch(0),
+            &EventKind::Battle,
+            &[Role::Leader],
+            0.3,
+            &cfg,
+        );
+        acc.record_event(
+            LegendEntityId(2),
+            Epoch(0),
+            &EventKind::WarDeclared,
+            &[Role::Leader, Role::Aggressor],
+            0.9,
+            &cfg,
+        );
+        acc.record_event(
+            LegendEntityId(3),
+            Epoch(0),
+            &EventKind::Sickness,
+            &[Role::Witness],
+            0.1,
+            &cfg,
+        );
 
         let ranked = acc.ranked();
         assert_eq!(ranked.len(), 3);
@@ -423,8 +529,22 @@ mod tests {
             ..Default::default()
         };
 
-        acc.record_event(LegendEntityId(1), Epoch(0), &EventKind::Battle, &[Role::Leader], 0.8, &cfg);
-        acc.record_event(LegendEntityId(2), Epoch(0), &EventKind::Sickness, &[Role::Witness], 0.1, &cfg);
+        acc.record_event(
+            LegendEntityId(1),
+            Epoch(0),
+            &EventKind::Battle,
+            &[Role::Leader],
+            0.8,
+            &cfg,
+        );
+        acc.record_event(
+            LegendEntityId(2),
+            Epoch(0),
+            &EventKind::Sickness,
+            &[Role::Witness],
+            0.1,
+            &cfg,
+        );
 
         // Advance far enough that both decay significantly.
         acc.sweep(Epoch(100), &cfg);
@@ -439,6 +559,9 @@ mod tests {
         assert!(sig > 0.0);
 
         let sig2 = event_significance(&EventKind::Sickness, 0.2, &[Role::Witness], 1);
-        assert!(sig > sig2, "Battle + Leader should be more significant than Sickness + Witness");
+        assert!(
+            sig > sig2,
+            "Battle + Leader should be more significant than Sickness + Witness"
+        );
     }
 }

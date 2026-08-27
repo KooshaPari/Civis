@@ -850,7 +850,9 @@ fn fluid_thermo_pass(
             if let Some((nx, ny, nz, _, nt)) =
                 read_neighbor_scratch(scratch, x, y, z, dir, boundary)
             {
-                let ni = scratch.index(nx, ny, nz).expect("index from read_neighbor_scratch is always valid");
+                let ni = scratch
+                    .index(nx, ny, nz)
+                    .expect("index from read_neighbor_scratch is always valid");
                 let nmat = scratch.cells[ni];
                 if !is_air_like(nmat, reg) {
                     if let Some(d) = reg.get(nmat) {

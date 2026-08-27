@@ -1024,25 +1024,27 @@ pub mod effects;
 // ---------------------------------------------------------------------------
 
 pub mod alliance_deep;
-pub mod peace_negotiations;
 pub mod cultural_assimilation;
+pub mod peace_negotiations;
 
 pub use alliance_deep::{
     Alliance, AllianceError, AllianceManager, AllianceProposalCriteria, AlliancePurpose,
 };
 
 pub use peace_negotiations::{
-    PeaceError, PeaceNegotiation, PeaceNegotiationStatus, PeaceOutcome, PeaceProposal,
-    PeaceTerms, war_weariness,
+    war_weariness, PeaceError, PeaceNegotiation, PeaceNegotiationStatus, PeaceOutcome,
+    PeaceProposal, PeaceTerms,
 };
 
 pub use cultural_assimilation::{
-    AssimilationError, AssimilationResult, CulturalExchange, CulturalVectors, cultural_distance,
+    cultural_distance, AssimilationError, AssimilationResult, CulturalExchange, CulturalVectors,
 };
 
 pub use transcripts::{Transcript, TranscriptClause};
 
-pub use treaty::{Treaty, TreatyEffect, TreatyError, TreatyManager, TreatyStatus, TreatyTerm, TreatyType};
+pub use treaty::{
+    Treaty, TreatyEffect, TreatyError, TreatyManager, TreatyStatus, TreatyTerm, TreatyType,
+};
 
 pub use effects::{
     CulturalInfluenceEffect, DiplomacyEvent, MilitaryAllianceEffect, TradeEmbargoEffect,

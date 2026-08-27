@@ -260,12 +260,18 @@ impl DynamicAllianceManager {
     }
 
     /// Form a new alliance.
-    pub fn form_alliance(&mut self, members: BTreeSet<FactionId>, initial_stability: AllianceStability) {
+    pub fn form_alliance(
+        &mut self,
+        members: BTreeSet<FactionId>,
+        initial_stability: AllianceStability,
+    ) {
         for &a in &members {
             for &b in &members {
                 if a < b {
                     let key = (a, b);
-                    self.stabilities.entry(key).or_insert_with(|| initial_stability.clone());
+                    self.stabilities
+                        .entry(key)
+                        .or_insert_with(|| initial_stability.clone());
                 }
             }
         }

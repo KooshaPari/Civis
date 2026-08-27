@@ -282,17 +282,16 @@ impl Simulation {
                 let score = record.map(|r| r.score).unwrap_or(0.0);
                 let shared_enemy_score = if score < -0.5 { 500 } else { 0 };
                 let trade_volume_score = ((score + 1.0) * 500.0) as i32;
-                let cultural_similarity_score = (
-                    self.deep_diplomacy
-                        .faction_cultures
-                        .get(&a)
-                        .zip(self.deep_diplomacy.faction_cultures.get(&b))
-                        .map(|(ca, cb)| {
-                            let dist = civ_diplomacy::cultural_distance(ca, cb);
-                            10_000 - dist.min(10_000)
-                        })
-                        .unwrap_or(5000)
-                ) as i32;
+                let cultural_similarity_score = (self
+                    .deep_diplomacy
+                    .faction_cultures
+                    .get(&a)
+                    .zip(self.deep_diplomacy.faction_cultures.get(&b))
+                    .map(|(ca, cb)| {
+                        let dist = civ_diplomacy::cultural_distance(ca, cb);
+                        10_000 - dist.min(10_000)
+                    })
+                    .unwrap_or(5000)) as i32;
                 let res_a = self
                     .deep_diplomacy
                     .faction_resources
@@ -322,10 +321,11 @@ impl Simulation {
                     let mut members = BTreeSet::new();
                     members.insert(DipPolityId::new(a));
                     members.insert(DipPolityId::new(b));
-                    let _ = self
-                        .deep_diplomacy
-                        .alliance_manager
-                        .form_alliance(members, AlliancePurpose::Military, tick);
+                    let _ = self.deep_diplomacy.alliance_manager.form_alliance(
+                        members,
+                        AlliancePurpose::Military,
+                        tick,
+                    );
 
                     self.diplomacy_events.push(DiplomacyEvent {
                         tick,
@@ -351,16 +351,8 @@ impl Simulation {
 
         for (a, b) in completed {
             if let Some(neg) = self.deep_diplomacy.active_negotiations.get(&(a, b)) {
-                let wear_a = *self
-                    .deep_diplomacy
-                    .war_casualties
-                    .get(&a)
-                    .unwrap_or(&0) as i32 * 10;
-                let wear_b = *self
-                    .deep_diplomacy
-                    .war_casualties
-                    .get(&b)
-                    .unwrap_or(&0) as i32 * 10;
+                let wear_a = *self.deep_diplomacy.war_casualties.get(&a).unwrap_or(&0) as i32 * 10;
+                let wear_b = *self.deep_diplomacy.war_casualties.get(&b).unwrap_or(&0) as i32 * 10;
                 let res_a = self
                     .deep_diplomacy
                     .faction_resources
@@ -379,7 +371,8 @@ impl Simulation {
                     i32::MAX
                 };
                 if neg.evaluate_peace(wear_a, wear_b, strength_ratio) {
-                    if let Some(neg_mut) = self.deep_diplomacy.active_negotiations.get_mut(&(a, b)) {
+                    if let Some(neg_mut) = self.deep_diplomacy.active_negotiations.get_mut(&(a, b))
+                    {
                         let _ = neg_mut.accept();
                     }
                 }

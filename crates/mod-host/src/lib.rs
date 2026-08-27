@@ -7,11 +7,11 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-pub mod hooks;
 mod capability;
 mod determinism;
 mod float_data_flow;
 mod guest_state;
+pub mod hooks;
 mod policy_action;
 mod signature;
 mod wasm_guest;

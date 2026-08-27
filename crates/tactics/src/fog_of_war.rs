@@ -147,8 +147,8 @@ impl FogOfWar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use civ_voxel::WorldCoord;
     use crate::war_bridge::grid_to_world_coord;
+    use civ_voxel::WorldCoord;
 
     fn empty_world() -> VoxelWorld<MaterialId> {
         VoxelWorld::new(1)

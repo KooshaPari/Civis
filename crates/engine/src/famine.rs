@@ -415,6 +415,9 @@ mod tests {
         let b = famine_effects(FamineStage::Starving);
         a.accumulate(&b);
         assert!(a.unrest_delta > 0.10, "should accumulate unrest");
-        assert!(a.migration_pressure > 0.0, "should pick up migration from b");
+        assert!(
+            a.migration_pressure > 0.0,
+            "should pick up migration from b"
+        );
     }
 }

@@ -100,7 +100,9 @@ impl EvolvedLexicon {
                 entity_id,
             }
         });
-        self.entries.get(&key).unwrap_or_else(|| unreachable!("coin: key just inserted"))
+        self.entries
+            .get(&key)
+            .unwrap_or_else(|| unreachable!("coin: key just inserted"))
     }
 
     #[must_use]
@@ -248,7 +250,10 @@ pub fn coin_evolved<'a>(
         let mut rng = ChaCha8Rng::seed_from_u64(entity_seed ^ entity_id);
         lexicon.coin(&mut rng, inventory, kind, entity_id);
     }
-    lexicon.entries.get(&key).unwrap_or_else(|| unreachable!("coin_evolved: key just inserted"))
+    lexicon
+        .entries
+        .get(&key)
+        .unwrap_or_else(|| unreachable!("coin_evolved: key just inserted"))
 }
 
 fn phoneme_distance(a: &Phoneme, b: &Phoneme) -> f32 {

@@ -854,7 +854,10 @@ mod tests {
     #[test]
     fn schema_version_stub() {
         assert!(!SCHEMA_VERSION.is_empty());
-        let core = SCHEMA_VERSION.split('-').next().expect("SCHEMA_VERSION should contain a semver-like prefix before '-' ");
+        let core = SCHEMA_VERSION
+            .split('-')
+            .next()
+            .expect("SCHEMA_VERSION should contain a semver-like prefix before '-' ");
         let segments: Vec<&str> = core.split('.').collect();
         assert_eq!(segments.len(), 3);
         assert!(segments.iter().all(|part| !part.is_empty()));

@@ -35,9 +35,7 @@ impl FeatureOracle for MigrationPressureOracle {
             passed,
             measured,
             threshold,
-            detail: format!(
-                "settlements={settlement_count} tick={tick}"
-            ),
+            detail: format!("settlements={settlement_count} tick={tick}"),
         }
     }
 }

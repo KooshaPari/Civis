@@ -341,18 +341,14 @@ mod tests {
     #[test]
     fn military_superiority_builds_fear() {
         let mut s = DiplomacyStance::new();
-        s.apply_event(&InteractionEvent::MilitaryContact {
-            superiority: 0.9,
-        });
+        s.apply_event(&InteractionEvent::MilitaryContact { superiority: 0.9 });
         assert!(s.fear > 0.1);
     }
 
     #[test]
     fn cultural_exchange_builds_respect() {
         let mut s = DiplomacyStance::new();
-        s.apply_event(&InteractionEvent::CulturalExchange {
-            similarity: 0.7,
-        });
+        s.apply_event(&InteractionEvent::CulturalExchange { similarity: 0.7 });
         assert!(s.respect > 0.0);
         assert!(s.trust > 0.0);
     }

@@ -47,13 +47,13 @@ pub mod material_pbr;
 /// and the WGSL integration glue layered on top of the FR-001..009 policy
 /// module in `material_pbr`. Additive: does not change existing exports.
 pub mod pbr;
+pub mod procedural;
 pub mod reactions;
 pub mod residency;
 pub mod scale_budget;
 pub mod scale_stream;
 pub mod stream;
 pub mod window;
-pub mod procedural;
 pub mod worldgen;
 
 pub use hud::{
@@ -106,7 +106,10 @@ mod stub_tests {
     #[test]
     fn schema_version_stub() {
         assert!(!SCHEMA_VERSION.is_empty());
-        let core = SCHEMA_VERSION.split('-').next().expect("SCHEMA_VERSION should contain a semver-like prefix before '-' ");
+        let core = SCHEMA_VERSION
+            .split('-')
+            .next()
+            .expect("SCHEMA_VERSION should contain a semver-like prefix before '-' ");
         let segments: Vec<&str> = core.split('.').collect();
         assert_eq!(segments.len(), 3);
         assert!(segments.iter().all(|part| !part.is_empty()));

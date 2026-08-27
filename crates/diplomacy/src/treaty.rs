@@ -128,11 +128,7 @@ impl TreatyManager {
     }
 
     /// Accept a proposed treaty.
-    pub fn accept_treaty(
-        &mut self,
-        accepter: PolityId,
-        treaty_id: u64,
-    ) -> Result<(), TreatyError> {
+    pub fn accept_treaty(&mut self, accepter: PolityId, treaty_id: u64) -> Result<(), TreatyError> {
         let treaty = self
             .treaties
             .get_mut(&treaty_id)
@@ -151,11 +147,7 @@ impl TreatyManager {
     }
 
     /// Break an active treaty.
-    pub fn break_treaty(
-        &mut self,
-        breaker: PolityId,
-        treaty_id: u64,
-    ) -> Result<(), TreatyError> {
+    pub fn break_treaty(&mut self, breaker: PolityId, treaty_id: u64) -> Result<(), TreatyError> {
         let treaty = self
             .treaties
             .get_mut(&treaty_id)
@@ -255,13 +247,7 @@ mod tests {
         }];
 
         let id = manager
-            .propose_treaty(
-                p(1),
-                (p(1), p(2)),
-                TreatyType::Trade,
-                terms,
-                Some(100),
-            )
+            .propose_treaty(p(1), (p(1), p(2)), TreatyType::Trade, terms, Some(100))
             .unwrap();
 
         assert_eq!(id, 1);
@@ -288,13 +274,7 @@ mod tests {
     fn test_treaty_expiration() {
         let mut manager = TreatyManager::new();
         let id = manager
-            .propose_treaty(
-                p(1),
-                (p(1), p(2)),
-                TreatyType::Peace,
-                vec![],
-                Some(10),
-            )
+            .propose_treaty(p(1), (p(1), p(2)), TreatyType::Peace, vec![], Some(10))
             .unwrap();
 
         manager.accept_treaty(p(1), id).unwrap();
@@ -305,7 +285,10 @@ mod tests {
 
         // Expire the treaty
         manager.check_treaty_effects(10);
-        assert_eq!(manager.get_treaty(id).unwrap().status, TreatyStatus::Expired);
+        assert_eq!(
+            manager.get_treaty(id).unwrap().status,
+            TreatyStatus::Expired
+        );
 
         // Should not produce effects after expiration
         let effects = manager.check_treaty_effects(11);
@@ -357,10 +340,10 @@ mod tests {
             .propose_treaty(p(1), (p(1), p(2)), TreatyType::Peace, vec![], Some(10))
             .unwrap();
         manager.accept_treaty(p(1), id).unwrap();
-        
+
         // Expire the treaty
         manager.check_treaty_effects(10);
-        
+
         // Attempting to break an expired treaty should fail
         assert!(matches!(
             manager.break_treaty(p(1), id),
@@ -372,20 +355,14 @@ mod tests {
     fn test_active_treaty_effects_per_tick() {
         let mut manager = TreatyManager::new();
         let id = manager
-            .propose_treaty(
-                p(1),
-                (p(1), p(2)),
-                TreatyType::Alliance,
-                vec![],
-                Some(100),
-            )
+            .propose_treaty(p(1), (p(1), p(2)), TreatyType::Alliance, vec![], Some(100))
             .unwrap();
         manager.accept_treaty(p(1), id).unwrap();
 
         // Check effects multiple times; they should be consistent as long as treaty is active
         let effects_1 = manager.check_treaty_effects(10);
         let effects_2 = manager.check_treaty_effects(50);
-        
+
         assert_eq!(effects_1.len(), 1);
         assert_eq!(effects_2.len(), 1);
         assert_eq!(effects_1[0].standing_delta, 10); // Alliance effect

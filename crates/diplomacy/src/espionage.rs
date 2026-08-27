@@ -223,7 +223,8 @@ impl EspionageEngine {
             return Err(EspionageError::SameFaction);
         }
         let idx = self.networks.len();
-        self.networks.push(SpyNetwork::new(source, target, strength));
+        self.networks
+            .push(SpyNetwork::new(source, target, strength));
         Ok(idx)
     }
 
@@ -250,8 +251,7 @@ impl EspionageEngine {
 
         // Calculate detection chance.
         let risk = action.risk_factor();
-        let detection_chance =
-            self.config.base_detection_chance * (1.0 - network.cover) * risk;
+        let detection_chance = self.config.base_detection_chance * (1.0 - network.cover) * risk;
         let detection_roll = rng();
 
         // Check detection.
@@ -644,8 +644,13 @@ mod tests {
 
     #[test]
     fn action_risk_factors_are_ordered() {
-        assert!(EspionageAction::GatherIntel.risk_factor() < EspionageAction::Sabotage.risk_factor());
-        assert!(EspionageAction::Sabotage.risk_factor() < EspionageAction::AssassinateLeader.risk_factor());
+        assert!(
+            EspionageAction::GatherIntel.risk_factor() < EspionageAction::Sabotage.risk_factor()
+        );
+        assert!(
+            EspionageAction::Sabotage.risk_factor()
+                < EspionageAction::AssassinateLeader.risk_factor()
+        );
         assert_eq!(EspionageAction::AssassinateLeader.risk_factor(), 1.0);
     }
 }

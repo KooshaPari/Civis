@@ -86,7 +86,12 @@ pub struct BuildingTierConfig {
 
 impl BuildingTierConfig {
     /// Create a new config with the given values.
-    pub fn new(tech_level: u32, population_min: u32, resource_cost: u32, maintenance_cost: f32) -> Self {
+    pub fn new(
+        tech_level: u32,
+        population_min: u32,
+        resource_cost: u32,
+        maintenance_cost: f32,
+    ) -> Self {
         Self {
             tech_level,
             population_min,
@@ -285,7 +290,10 @@ impl BuildingTierEngine {
             .position(|b| b.id == building_id)
             .ok_or(UpgradeError::BuildingNotFound)?;
 
-        let prev_tier = self.buildings[idx].tier.prev().ok_or(UpgradeError::AlreadyMaxTier)?;
+        let prev_tier = self.buildings[idx]
+            .tier
+            .prev()
+            .ok_or(UpgradeError::AlreadyMaxTier)?;
 
         self.buildings[idx].tier = prev_tier;
         self.buildings[idx].age = 0;
@@ -426,22 +434,34 @@ mod tests {
         // Upgrade Basic -> Advanced
         let result = engine.upgrade(id, 10, 50, &mut resources);
         assert!(result.is_ok());
-        assert_eq!(engine.get_building(id).unwrap().tier, BuildingTier::Advanced);
+        assert_eq!(
+            engine.get_building(id).unwrap().tier,
+            BuildingTier::Advanced
+        );
 
         // Upgrade Advanced -> Sophisticated
         let result = engine.upgrade(id, 10, 50, &mut resources);
         assert!(result.is_ok());
-        assert_eq!(engine.get_building(id).unwrap().tier, BuildingTier::Sophisticated);
+        assert_eq!(
+            engine.get_building(id).unwrap().tier,
+            BuildingTier::Sophisticated
+        );
 
         // Upgrade Sophisticated -> Monumental
         let result = engine.upgrade(id, 10, 50, &mut resources);
         assert!(result.is_ok());
-        assert_eq!(engine.get_building(id).unwrap().tier, BuildingTier::Monumental);
+        assert_eq!(
+            engine.get_building(id).unwrap().tier,
+            BuildingTier::Monumental
+        );
 
         // Upgrade Monumental -> Legendary
         let result = engine.upgrade(id, 10, 50, &mut resources);
         assert!(result.is_ok());
-        assert_eq!(engine.get_building(id).unwrap().tier, BuildingTier::Legendary);
+        assert_eq!(
+            engine.get_building(id).unwrap().tier,
+            BuildingTier::Legendary
+        );
 
         // Already at max tier
         let result = engine.upgrade(id, 10, 50, &mut resources);
@@ -492,7 +512,10 @@ mod tests {
 
         let result = engine.downgrade(id);
         assert!(result.is_ok());
-        assert_eq!(engine.get_building(id).unwrap().tier, BuildingTier::Primitive);
+        assert_eq!(
+            engine.get_building(id).unwrap().tier,
+            BuildingTier::Primitive
+        );
 
         // Cannot downgrade below Primitive
         let result = engine.downgrade(id);
@@ -599,9 +622,6 @@ mod tests {
             engine.upgrade(9999, 10, 50, &mut resources),
             Err(UpgradeError::BuildingNotFound)
         );
-        assert_eq!(
-            engine.downgrade(9999),
-            Err(UpgradeError::BuildingNotFound)
-        );
+        assert_eq!(engine.downgrade(9999), Err(UpgradeError::BuildingNotFound));
     }
 }

@@ -101,10 +101,7 @@ impl AllianceManager {
     ///   `shared_enemy_score * 0.4 + trade_volume_score * 0.3 + cultural_similarity_score * 0.3`
     ///
     /// (All values are scaled x100; the weights sum to 100.)
-    pub fn evaluate_alliance_proposal(
-        &self,
-        criteria: &AllianceProposalCriteria,
-    ) -> bool {
+    pub fn evaluate_alliance_proposal(&self, criteria: &AllianceProposalCriteria) -> bool {
         // Fixed-point weighted sum: weights x100, scores x100 → result x10000.
         let score = criteria.shared_enemy_score * 40
             + criteria.trade_volume_score * 30
@@ -157,7 +154,10 @@ impl AllianceManager {
         id: u64,
         resources: &BTreeMap<PolityId, i32>,
     ) -> Result<i32, AllianceError> {
-        let alliance = self.active_alliances.get(&id).ok_or(AllianceError::NotFound(id))?;
+        let alliance = self
+            .active_alliances
+            .get(&id)
+            .ok_or(AllianceError::NotFound(id))?;
         if alliance.members.is_empty() {
             return Err(AllianceError::EmptyAlliance);
         }
@@ -300,9 +300,7 @@ mod tests {
         resources.insert(p(2), 600);
         resources.insert(p(3), 900);
         // average = (300+600+900)/3 = 600
-        let power = mgr
-            .compute_alliance_power(id, &resources)
-            .expect("power");
+        let power = mgr.compute_alliance_power(id, &resources).expect("power");
         assert_eq!(power, 600);
     }
 
@@ -314,9 +312,7 @@ mod tests {
             .form_alliance(members, AlliancePurpose::Economic, 1)
             .expect("form");
         let resources = BTreeMap::new(); // empty
-        let power = mgr
-            .compute_alliance_power(id, &resources)
-            .expect("power");
+        let power = mgr.compute_alliance_power(id, &resources).expect("power");
         assert_eq!(power, 0);
     }
 

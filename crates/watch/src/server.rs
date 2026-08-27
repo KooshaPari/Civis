@@ -103,13 +103,12 @@ pub async fn run() -> Result<(), WatchError> {
     let laws = Arc::new(default_law_db());
     let data_dir = resolve_data_dir();
     let saves_dir = Arc::new(data_dir.join("saves"));
-    std::fs::create_dir_all(&*saves_dir).map_err(|e| WatchError::DatabaseOpen(format!("create saves dir: {e}")))?;
+    std::fs::create_dir_all(&*saves_dir)
+        .map_err(|e| WatchError::DatabaseOpen(format!("create saves dir: {e}")))?;
     let save_db_path = data_dir.join("saves.db");
-    let save_db = Arc::new(
-        SaveDb::open(&save_db_path).map_err(|err| {
-            WatchError::DatabaseOpen(format!("open save db at {save_db_path:?}: {err}"))
-        })?,
-    );
+    let save_db = Arc::new(SaveDb::open(&save_db_path).map_err(|err| {
+        WatchError::DatabaseOpen(format!("open save db at {save_db_path:?}: {err}"))
+    })?);
     let session_id = resolve_session_id();
     info!(%session_id, ?save_db_path, "session-scoped save metadata db ready");
     let mods_dir = Arc::new(
@@ -182,6 +181,8 @@ pub async fn run() -> Result<(), WatchError> {
     let listener = tokio::net::TcpListener::bind(addr)
         .await
         .map_err(|e| WatchError::BindAddress(format!("bind {port}: {e}")))?;
-    axum::serve(listener, app).await.map_err(|e| WatchError::BindAddress(format!("axum server error: {e}")))?;
+    axum::serve(listener, app)
+        .await
+        .map_err(|e| WatchError::BindAddress(format!("axum server error: {e}")))?;
     Ok(())
 }

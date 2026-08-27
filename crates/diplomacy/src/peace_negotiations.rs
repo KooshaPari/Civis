@@ -142,11 +142,7 @@ impl PeaceNegotiation {
     }
 
     /// Counter-propose with modified terms.
-    pub fn counter_propose(
-        &mut self,
-        terms: PeaceTerms,
-        tick: u64,
-    ) -> Result<(), PeaceError> {
+    pub fn counter_propose(&mut self, terms: PeaceTerms, tick: u64) -> Result<(), PeaceError> {
         if self.status == PeaceNegotiationStatus::Accepted
             || self.status == PeaceNegotiationStatus::Rejected
         {
@@ -156,10 +152,8 @@ impl PeaceNegotiation {
             return Err(PeaceError::RoundLimitReached(self.max_rounds));
         }
         // Counter from the other party.
-        let (new_proposer, new_target) = (
-            self.current_proposal.target,
-            self.current_proposal.proposer,
-        );
+        let (new_proposer, new_target) =
+            (self.current_proposal.target, self.current_proposal.proposer);
         self.current_proposal = PeaceProposal {
             proposer: new_proposer,
             target: new_target,

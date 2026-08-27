@@ -10,7 +10,7 @@
 use crate::tool_categories::ActiveSubTool;
 use crate::ui_theme::CHIP_FILL;
 use bevy::prelude::*;
-use bevy_egui::{EguiContexts, EguiPlugin, EguiPrimaryContextPass, egui};
+use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
 
 use civ_protocol_3d::{CivilianNeeds3d, CivilianStateEntry};
 

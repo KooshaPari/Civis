@@ -233,7 +233,13 @@ pub fn migration_tick(
             candidates.into_iter().take(config.sample_size).collect()
         };
 
-        if let Some(event) = evaluate_migration(agent, &settlements[agent.settlement_index as usize], &sampled, config, tick) {
+        if let Some(event) = evaluate_migration(
+            agent,
+            &settlements[agent.settlement_index as usize],
+            &sampled,
+            config,
+            tick,
+        ) {
             events.push(event);
         }
     }
@@ -299,7 +305,10 @@ mod tests {
         let s = starving_settlement();
         let c = config();
         let p = home_pressure(&s, &c);
-        assert!(p > 0.5, "starving settlement should have high pressure: {p}");
+        assert!(
+            p > 0.5,
+            "starving settlement should have high pressure: {p}"
+        );
     }
 
     #[test]
@@ -307,7 +316,10 @@ mod tests {
         let s = prosperous_settlement();
         let c = config();
         let p = home_pressure(&s, &c);
-        assert!(p < 0.2, "prosperous settlement should have low pressure: {p}");
+        assert!(
+            p < 0.2,
+            "prosperous settlement should have low pressure: {p}"
+        );
     }
 
     #[test]
@@ -316,7 +328,10 @@ mod tests {
         let a = agent(20, 1);
         let c = config();
         let pull = candidate_pull(&s, &a, &c);
-        assert!(pull > 0.5, "prosperous candidate should have high pull: {pull}");
+        assert!(
+            pull > 0.5,
+            "prosperous candidate should have high pull: {pull}"
+        );
     }
 
     #[test]
@@ -336,13 +351,7 @@ mod tests {
         let a = agent(20, 0);
         let c = config();
 
-        let event = evaluate_migration(
-            &a,
-            &home,
-            &[target],
-            &c,
-            100,
-        );
+        let event = evaluate_migration(&a, &home, &[target], &c, 100);
         assert!(event.is_some(), "desperate agent should migrate");
         let e = event.unwrap();
         assert!(e.source_pressure > 0.5);
@@ -369,26 +378,57 @@ mod tests {
 
         let event = evaluate_migration(&a, &home, &[target], &c, 100);
         // Both are equally good, so threshold prevents migration
-        assert!(event.is_none() || event.as_ref().map_or(false, |e| e.target_pull > e.source_pressure * c.migration_threshold));
+        assert!(
+            event.is_none()
+                || event.as_ref().map_or(false, |e| e.target_pull
+                    > e.source_pressure * c.migration_threshold)
+        );
     }
 
     #[test]
     fn net_migration_positive_for_growth() {
         let events = vec![
-            MigrationEvent { agent_index: 1, source_settlement: 0, target_settlement: 1, source_pressure: 0.8, target_pull: 0.9, tick: 50 },
-            MigrationEvent { agent_index: 2, source_settlement: 0, target_settlement: 1, source_pressure: 0.7, target_pull: 0.85, tick: 50 },
-            MigrationEvent { agent_index: 3, source_settlement: 1, target_settlement: 0, source_pressure: 0.3, target_pull: 0.6, tick: 50 },
+            MigrationEvent {
+                agent_index: 1,
+                source_settlement: 0,
+                target_settlement: 1,
+                source_pressure: 0.8,
+                target_pull: 0.9,
+                tick: 50,
+            },
+            MigrationEvent {
+                agent_index: 2,
+                source_settlement: 0,
+                target_settlement: 1,
+                source_pressure: 0.7,
+                target_pull: 0.85,
+                tick: 50,
+            },
+            MigrationEvent {
+                agent_index: 3,
+                source_settlement: 1,
+                target_settlement: 0,
+                source_pressure: 0.3,
+                target_pull: 0.6,
+                tick: 50,
+            },
         ];
         assert_eq!(settlement_net_migration(&events, 0), -1); // lost 2, gained 1
-        assert_eq!(settlement_net_migration(&events, 1), 1);  // gained 2, lost 1
+        assert_eq!(settlement_net_migration(&events, 1), 1); // gained 2, lost 1
     }
 
     #[test]
     fn config_defaults_are_sane() {
         let c = MigrationConfig::default();
         let total_weight = c.food_weight + c.safety_weight + c.labor_weight + c.social_weight;
-        assert!((total_weight - 1.0).abs() < 0.01, "weights should sum to ~1.0: {total_weight}");
-        assert!(c.migration_threshold > 1.0, "threshold > 1 means only migrate for real gains");
+        assert!(
+            (total_weight - 1.0).abs() < 0.01,
+            "weights should sum to ~1.0: {total_weight}"
+        );
+        assert!(
+            c.migration_threshold > 1.0,
+            "threshold > 1 means only migrate for real gains"
+        );
         assert!(c.sample_size >= 2, "must sample at least 2 candidates");
         assert!(c.eligibility_delay > 0, "must have some warmup period");
     }
@@ -407,16 +447,14 @@ mod tests {
                 population: 30,
             },
         ];
-        let agents = vec![
-            agent(20, 0),
-            agent(25, 0),
-            agent(15, 1),
-            agent(30, 0),
-        ];
+        let agents = vec![agent(20, 0), agent(25, 0), agent(15, 1), agent(30, 0)];
         let c = config();
         let events = migration_tick(&agents, &settlements, &c, 100);
         // At least some agents from starving settlement should migrate
-        assert!(events.len() > 0, "should have migration events from starving settlement");
+        assert!(
+            events.len() > 0,
+            "should have migration events from starving settlement"
+        );
     }
 
     #[test]

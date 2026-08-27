@@ -330,8 +330,7 @@ impl EnergyGrid {
                     continue;
                 }
 
-                let Some((consumer, path)) =
-                    self.shortest_path_to_consumer(src, &residual_demand)
+                let Some((consumer, path)) = self.shortest_path_to_consumer(src, &residual_demand)
                 else {
                     continue;
                 };

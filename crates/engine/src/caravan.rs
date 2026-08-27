@@ -265,7 +265,11 @@ pub fn evaluate_caravan_spawn(
 }
 
 /// Tick a caravan: advance travel, check for raiding.
-pub fn tick_caravan(caravan: &mut Caravan, rng_value: i64, config: &CaravanConfig) -> CaravanOutcome {
+pub fn tick_caravan(
+    caravan: &mut Caravan,
+    rng_value: i64,
+    config: &CaravanConfig,
+) -> CaravanOutcome {
     if caravan.ticks_remaining <= 0 {
         // Already arrived
         return CaravanOutcome::Arrived {

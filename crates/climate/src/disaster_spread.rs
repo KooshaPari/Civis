@@ -165,7 +165,10 @@ impl ElevationGrid {
     /// Get elevation at `(x, y)`. Returns `f32::MAX` for out-of-bounds
     /// (treats boundaries as infinitely high walls that block flood flow).
     pub fn get(&self, x: usize, y: usize) -> f32 {
-        self.cells.get(self.index(x, y).unwrap_or(usize::MAX)).copied().unwrap_or(f32::MAX)
+        self.cells
+            .get(self.index(x, y).unwrap_or(usize::MAX))
+            .copied()
+            .unwrap_or(f32::MAX)
     }
 
     /// Elevation gradient from `(sx, sy)` toward neighbor `(nx, ny)`.
@@ -454,7 +457,9 @@ impl DisasterGrid {
                             1.0
                         };
 
-                        let radiation = (base_spread * cell.intensity * terrain_factor
+                        let radiation = (base_spread
+                            * cell.intensity
+                            * terrain_factor
                             * n_terrain_factor
                             * wind_bonus
                             * elev_factor)

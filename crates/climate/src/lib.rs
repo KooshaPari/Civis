@@ -73,8 +73,7 @@ const SEA_LEVEL_SENSITIVITY_M_PER_C: f64 = 0.002;
 /// by intensity and decays over time. See [`disaster_spread`] for details.
 pub mod disaster_spread;
 pub use disaster_spread::{
-    DisasterGrid, DisasterParams, ElevationGrid, HazardCell, HazardKind, TerrainKind,
-    WindDirection,
+    DisasterGrid, DisasterParams, ElevationGrid, HazardCell, HazardKind, TerrainKind, WindDirection,
 };
 
 /// Seasonal climate oscillation (FR-CIV-SEASON-CYCLE). Additive temperature

@@ -41,19 +41,13 @@ pub fn export_svg(input: &Path, output_dir: &Path) -> Result<(), ExportError> {
     if !input.exists() {
         return Err(ExportError::Io {
             path: input.to_path_buf(),
-            source: std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                "input svg not found",
-            ),
+            source: std::io::Error::new(std::io::ErrorKind::NotFound, "input svg not found"),
         });
     }
     if !output_dir.exists() {
         return Err(ExportError::Io {
             path: output_dir.to_path_buf(),
-            source: std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                "output dir not found",
-            ),
+            source: std::io::Error::new(std::io::ErrorKind::NotFound, "output dir not found"),
         });
     }
     // Scaffold stub: confirms crate skeleton + error path. Full encoder

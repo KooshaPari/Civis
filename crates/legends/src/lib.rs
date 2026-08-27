@@ -38,9 +38,6 @@ pub use myth_formation::{Myth, MythFormationConfig, MythId, MythIndex};
 pub use config::LegendsConfig;
 pub use decay::{DecayConfig, Prominence, ProminenceTracker};
 pub use graph::{AggregateKey, EmptySagaReason, GapReport, IngestOutcome, SagaGraph};
-pub use significance::{
-    event_significance, EntitySignificance, SignificanceAccumulator, SignificanceConfig,
-};
 pub use ids::{
     ClusterId, Epoch, LegendEntityId, LegendEventId, NameRef, Provenance, RawEventRef, RegionId,
     SimRef, SimRuntimeId, SourceCrate,
@@ -56,6 +53,9 @@ pub use query::{
 pub use rumor::{
     register_render, render, retell, witness, Chronicle, ChronicleEntry, DefaultNameResolver,
     HistorianMind, NameResolver, Ocean, Register, Rumor, RumorMill,
+};
+pub use significance::{
+    event_significance, EntitySignificance, SignificanceAccumulator, SignificanceConfig,
 };
 pub use worker::LegendsWorker;
 

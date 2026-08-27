@@ -472,7 +472,14 @@ mod tests {
         for _ in 0..200 {
             // Each pass: double the supply. Pure runaway.
             let current_supply = prev_supply.saturating_mul(2).max(1);
-            let _ = step_currency_trust(&mut c, 0, prev_price, prev_price, current_supply, prev_supply);
+            let _ = step_currency_trust(
+                &mut c,
+                0,
+                prev_price,
+                prev_price,
+                current_supply,
+                prev_supply,
+            );
             prev_supply = current_supply;
         }
         assert!(
@@ -548,7 +555,14 @@ mod tests {
         let mut prev_supply = 1_000_i64;
         for _ in 0..500 {
             let current_supply = prev_supply.saturating_mul(2).max(1);
-            let _ = step_currency_trust(&mut d, 0, prev_price, prev_price, current_supply, prev_supply);
+            let _ = step_currency_trust(
+                &mut d,
+                0,
+                prev_price,
+                prev_price,
+                current_supply,
+                prev_supply,
+            );
             prev_supply = current_supply;
         }
         assert_eq!(d.trust_bp(), 0);

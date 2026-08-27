@@ -23,13 +23,14 @@ jobs:
         run: cargo install cargo-cyclonedx
 
       - name: Generate SBOM (CycloneDX)
-        run: cargo cyclonedx --format json --output-dir sbom/
+        run: |
+          mkdir -p sbom
+          cargo cyclonedx --format json --output-file sbom/civis-bom.json
 
       - name: Generate SBOM (SPDX)
         run: |
-          # Also generate SPDX format for broader compatibility
-          cargo cyclonedx --format spdx --output-dir sbom/
-        continue-on-error: true  # SPDX may not be supported in all versions
+          cargo cyclonedx --format spdx --output-file sbom/civis-bom.spdx.json
+        continue-on-error: true
 
       - name: Upload SBOM to release
         if: github.event_name == 'release'

@@ -4081,6 +4081,7 @@ name = "civ-economy"
 version = "0.1.0"
 dependencies = [
  "proptest",
+ "rand 0.8.7",
  "serde",
  "tracing",
 ]
@@ -4126,6 +4127,7 @@ dependencies = [
  "civ-species",
  "civ-tactics",
  "civ-voxel",
+ "criterion",
  "hecs",
  "proptest",
  "rand 0.8.7",
@@ -4334,6 +4336,7 @@ dependencies = [
  "civ-save-db",
  "civ-voxel",
  "futures",
+ "hecs",
  "http 1.5.0",
  "opentelemetry",
  "opentelemetry_sdk",

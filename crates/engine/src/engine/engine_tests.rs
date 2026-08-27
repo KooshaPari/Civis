@@ -185,6 +185,9 @@ mod engine_tests {
                 "sentience",
                 "species",
                 "diffusion",
+                "writing",
+                "building_layouts",
+                "history",
                 "audio",
                 "victory_check",
             ]

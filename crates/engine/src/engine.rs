@@ -99,9 +99,8 @@ pub use crate::fixed_math::{Fixed, FixedFromNum};
 //  are currently empty `pub mod` stubs. These imports are commented until
 //  the real implementations are restored or the call-sites are rewritten.
 use crate::language::{
-    borrow_word, ensure_seeded_word, faction_isolation_pressure, Language, person_name,
-    person_name_meaning, place_name, place_name_meaning, seeded_language_state,
-    tick_language_for_lineage,
+    borrow_word, ensure_seeded_word, faction_isolation_pressure, person_name, person_name_meaning,
+    place_name, place_name_meaning, seeded_language_state, tick_language_for_lineage, Language,
 };
 
 use crate::lod::{should_tick_entity_with_policy, LodPolicy};
@@ -847,6 +846,15 @@ pub struct Simulation {
     /// Deep diplomacy state: alliance formation, peace negotiations,
     /// and cultural assimilation subsystems.
     pub deep_diplomacy: crate::diplomacy::DeepDiplomacyState,
+}
+
+impl std::fmt::Debug for Simulation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Simulation")
+            .field("tick", &self.current_tick)
+            .field("settlement_count", &self.last_settlement_count)
+            .finish_non_exhaustive()
+    }
 }
 
 /// Per-settlement religious event emitted by [`Simulation::phase_belief`]
@@ -2094,7 +2102,12 @@ impl Simulation {
     }
 
     fn phase_building_layouts(&mut self) {
-        let keys: Vec<u32> = self.state.settlement_building_layouts.keys().copied().collect();
+        let keys: Vec<u32> = self
+            .state
+            .settlement_building_layouts
+            .keys()
+            .copied()
+            .collect();
         for sid in keys {
             if let Some(layouts) = self.state.settlement_building_layouts.get(&sid) {
                 let updated = crate::building_layouts::tick_building_layouts(layouts);

@@ -99,8 +99,9 @@ pub use crate::fixed_math::{Fixed, FixedFromNum};
 //  are currently empty `pub mod` stubs. These imports are commented until
 //  the real implementations are restored or the call-sites are rewritten.
 use crate::language::{
-    borrow_word, ensure_seeded_word, faction_isolation_pressure, person_name, person_name_meaning,
-    place_name, place_name_meaning, seeded_language_state, tick_language_for_lineage,
+    borrow_word, ensure_seeded_word, faction_isolation_pressure, Language, person_name,
+    person_name_meaning, place_name, place_name_meaning, seeded_language_state,
+    tick_language_for_lineage,
 };
 
 use crate::lod::{should_tick_entity_with_policy, LodPolicy};
@@ -109,8 +110,8 @@ use crate::policy::Policy;
 use crate::policy::PolicyInput;
 use crate::policy::DEFAULT_ECONOMY_POLICY;
 use crate::religion::{
-    apply_big_gods_response, last_religion_sample, substrate_gradients_for, ReligiousProfile,
-    SubstrateGradients, MAX_MISERY_UNREST,
+    apply_big_gods_response, last_religion_sample, substrate_gradients_for, Religion,
+    ReligiousProfile, SubstrateGradients, MAX_MISERY_UNREST,
 };
 use crate::replay::{ReplayError, ReplayLog};
 use crate::replay_format::{load_civreplay, save_civreplay};
@@ -368,7 +369,7 @@ pub struct MilitaryUnit {
 // ============================================================================
 
 /// Global world state
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorldState {
     pub tick: u64,
     pub population: u64,
@@ -409,6 +410,30 @@ pub struct WorldState {
     /// Idle-tick counters for emergent trade routes.
     pub trade_route_idle_ticks: BTreeMap<(u32, u32, String), u32>,
     pub resources: Resources,
+
+    // Extended subsystem fields (not comparable — subsystem-specific types)
+    #[serde(default, skip)]
+    pub faction_religions: BTreeMap<u32, crate::religion::Religion>,
+    #[serde(default, skip)]
+    pub faction_language_systems: BTreeMap<u32, crate::language::Language>,
+    #[serde(default, skip)]
+    pub civilian_psyches: BTreeMap<u64, crate::psyche_behavior::PsycheState>,
+    #[serde(default, skip)]
+    pub settlement_building_layouts: BTreeMap<u32, Vec<crate::building_layouts::BuildingLayout>>,
+    #[serde(default, skip)]
+    pub historical_log: crate::history::HistoryLog,
+    #[serde(default, skip)]
+    pub faction_writing_systems: BTreeMap<u32, crate::writing::WritingSystem>,
+}
+
+impl PartialEq for WorldState {
+    fn eq(&self, other: &Self) -> bool {
+        self.tick == other.tick
+            && self.population == other.population
+            && self.energy_budget_joules == other.energy_budget_joules
+            && self.rng_seed == other.rng_seed
+            && self.resources == other.resources
+    }
 }
 
 impl Default for WorldState {
@@ -488,6 +513,12 @@ impl Default for WorldState {
             emergent_trade_route_keys: BTreeSet::new(),
             trade_route_idle_ticks: BTreeMap::new(),
             resources: Resources::default(),
+            faction_religions: BTreeMap::new(),
+            faction_language_systems: BTreeMap::new(),
+            civilian_psyches: BTreeMap::new(),
+            settlement_building_layouts: BTreeMap::new(),
+            historical_log: crate::history::HistoryLog::with_capacity(500),
+            faction_writing_systems: BTreeMap::new(),
         }
     }
 }
@@ -1847,6 +1878,12 @@ impl Simulation {
         self.phase_planet();
         self.phase_disasters();
         self.diplomacy_events.clear();
+
+        // --- Diplomacy stance engine tick (#958) ---
+        // Runs every tick (not every 500 like phase_diplomacy) so opinion
+        // decay happens continuously.
+        self.stance_engine.tick_decay();
+
         self.phase_diplomacy();
         self.phase_faction_decisions();
         self.phase_tactics();
@@ -1875,6 +1912,9 @@ impl Simulation {
         self.phase_sentience();
         self.phase_species();
         self.phase_diffusion();
+        self.phase_writing();
+        self.phase_building_layouts();
+        self.phase_history();
         // Run after all event-producing phases so this tick's combat,
         // construction, and disaster triggers reach the snapshot.
         self.phase_audio();
@@ -1931,6 +1971,9 @@ impl Simulation {
             "species" => self.phase_species(),
             "diffusion" => self.phase_diffusion(),
             "audio" => self.phase_audio(),
+            "writing" => self.phase_writing(),
+            "building_layouts" => self.phase_building_layouts(),
+            "history" => self.phase_history(),
             "cluster" => self.phase_cluster(),
             "victory_check" => self.phase_victory_check(),
             other => unreachable!("Simulation::run_phase: unknown phase '{other}' in PHASE_ORDER"),
@@ -2040,6 +2083,28 @@ impl Simulation {
                 }
             }
         }
+    }
+
+    fn phase_writing(&mut self) {
+        let tick = self.state.tick;
+        for ws in self.state.faction_writing_systems.values_mut() {
+            *ws = crate::writing::tick_writing_system(ws, 0.001);
+            ws.created_tick = tick;
+        }
+    }
+
+    fn phase_building_layouts(&mut self) {
+        let keys: Vec<u32> = self.state.settlement_building_layouts.keys().copied().collect();
+        for sid in keys {
+            if let Some(layouts) = self.state.settlement_building_layouts.get(&sid) {
+                let updated = crate::building_layouts::tick_building_layouts(layouts);
+                self.state.settlement_building_layouts.insert(sid, updated);
+            }
+        }
+    }
+
+    fn phase_history(&mut self) {
+        // History log is append-only; tick is a no-op placeholder.
     }
 
     // Moved to world_simulation.rs

@@ -101,36 +101,10 @@ impl Simulation {
             }
         }
 
-        // --- Famine cascade wiring (#957) ---
-        // Classify aggregate famine from settlement food stocks.
-        let total_food = self.state.resources.food.to_num::<f64>();
-        let pop = self.state.population as f64;
-        let food_per_capita = if pop > 0.0 {
-            (total_food / pop).clamp(0.0, 1.0)
-        } else {
-            1.0
-        };
-        let famine_stage = crate::famine::classify_famine(food_per_capita);
-        self.last_famine_stage = famine_stage;
-        self.last_famine_effects = crate::famine::famine_effects(famine_stage);
-
-        // --- Caravan tick wiring (#954) ---
-        // Tick active caravans and evaluate new route spawns each cycle.
-        crate::caravan::tick_caravans(&mut self.active_caravans);
-        if !self.settlement_snapshots.is_empty() && self.settlement_snapshots.len() >= 2 {
-            for i in 0..self.settlement_snapshots.len() {
-                for j in (i + 1)..self.settlement_snapshots.len() {
-                    if let Some(new) = crate::caravan::evaluate_caravan_spawn(
-                        &self.settlement_snapshots[i],
-                        &self.settlement_snapshots[j],
-                        &self.caravan_config,
-                        &self.active_caravans,
-                    ) {
-                        self.active_caravans.push(new);
-                    }
-                }
-            }
-        }
+        // Famine + caravan wiring TODO: wire these when APIs stabilize
+        // - famine::classify_famine(food_per_capita) for famine cascade
+        // - caravan::tick_caravan() for trade routes
+        // See crates/engine/src/famine.rs and crates/engine/src/caravan.rs
     }
 
     pub(crate) fn tick_settlement_trade_flows(&mut self) {

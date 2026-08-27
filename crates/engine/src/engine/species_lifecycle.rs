@@ -558,6 +558,11 @@ impl Simulation {
         // Dead tally from this tick's despawn list:
         metrics.dead = metrics.dead.saturating_add(dead.len() as u32);
         self.last_tick_lifecycle_metrics = metrics;
+
+        // Emergent migration wiring TODO: wire when MigrationPlanner APIs stabilize
+        // See crates/engine/src/emergent_migration.rs for migration_tick() API
+        // Requires settlement_snapshots, agent_snapshots, migration_planner fields
+        // on Simulation struct to be properly populated each tick.
     }
 
     /// Citizen lifecycle phase — aging, food consumption, birth gating,

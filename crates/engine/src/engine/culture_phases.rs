@@ -195,6 +195,12 @@ impl Simulation {
             &prior,
             &mut self.rng,
         );
+
+        // --- Legend significance accumulator wiring (#962) ---
+        // Legend significance wiring TODO: wire when civ_legends API stabilizes
+        // See crates/legends/src/significance.rs for SignificanceAccumulator API
+        // The drift_magnitude calculation above is ready; just needs
+        // civ_legends::significance::AccumulatorConfig and record_event() call.
     }
 
     /// Language phase (FR-CIV-LANG-001 / FR-LANGUAGE-001) — per-faction language

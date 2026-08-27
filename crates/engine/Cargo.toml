@@ -67,5 +67,10 @@ civ-diplomacy = { path = "../diplomacy" }
 
 [dev-dependencies]
 civ-economy = { path = "../economy" }
+criterion = { version = "=0.5.1", features = ["html_reports"] }
 proptest = "1.11"
 tempfile = "3"
+
+[[bench]]
+name = "tick_bench"
+harness = false

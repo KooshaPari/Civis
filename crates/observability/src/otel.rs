@@ -28,9 +28,15 @@ impl fmt::Display for ObservabilityError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ObservabilityError::OtlpExporter(msg) => write!(f, "OTLP exporter build failed: {msg}"),
-            ObservabilityError::PrometheusExporter(msg) => write!(f, "Prometheus exporter build failed: {msg}"),
-            ObservabilityError::PrometheusRuntime(msg) => write!(f, "Prometheus runtime build failed: {msg}"),
-            ObservabilityError::PrometheusBind(msg) => write!(f, "Prometheus metrics listener bind failed: {msg}"),
+            ObservabilityError::PrometheusExporter(msg) => {
+                write!(f, "Prometheus exporter build failed: {msg}")
+            }
+            ObservabilityError::PrometheusRuntime(msg) => {
+                write!(f, "Prometheus runtime build failed: {msg}")
+            }
+            ObservabilityError::PrometheusBind(msg) => {
+                write!(f, "Prometheus metrics listener bind failed: {msg}")
+            }
         }
     }
 }
@@ -49,7 +55,9 @@ pub struct ObservabilityConfig {
 
 /// Initialise OTLP tracing + Prometheus metrics and return the
 /// [`SdkTracerProvider`] so callers can obtain a Tracer.
-pub fn init_observability(config: ObservabilityConfig) -> Result<SdkTracerProvider, ObservabilityError> {
+pub fn init_observability(
+    config: ObservabilityConfig,
+) -> Result<SdkTracerProvider, ObservabilityError> {
     let endpoint = config.otlp_endpoint.unwrap_or_else(|| {
         std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
             .unwrap_or_else(|_| "http://localhost:4317".to_string())
@@ -80,7 +88,10 @@ pub fn init_observability(config: ObservabilityConfig) -> Result<SdkTracerProvid
         let _keep_alive = prom_exporter;
         let rt = match tokio::runtime::Runtime::new() {
             Ok(r) => r,
-            Err(e) => { tracing::warn!("Prometheus runtime failed: {e}"); return; }
+            Err(e) => {
+                tracing::warn!("Prometheus runtime failed: {e}");
+                return;
+            }
         };
         rt.block_on(async {
             use prometheus::{Encoder, TextEncoder};

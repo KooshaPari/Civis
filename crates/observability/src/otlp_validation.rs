@@ -52,11 +52,9 @@ fn otlp_pipeline_initialises() {
 fn prometheus_metrics_gathered() {
     // Register a test-specific counter so we don't pollute the global
     // registry with counters from other tests.
-    let counter = prometheus::register_counter!(
-        "civis_otlp_validation_total",
-        "Validation test counter"
-    )
-    .expect("failed to register test counter");
+    let counter =
+        prometheus::register_counter!("civis_otlp_validation_total", "Validation test counter")
+            .expect("failed to register test counter");
     counter.inc_by(7.0);
 
     let histogram = prometheus::register_histogram!(

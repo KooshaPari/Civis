@@ -37,6 +37,45 @@ pub struct LiveBridge {
     pub client: WsClient,
 }
 
+/// Lightweight Bevy resource for sending JSON-RPC commands to the server.
+/// Panels use this instead of holding a reference to the full [`WsClient`].
+#[derive(Resource, Clone)]
+pub struct ServerBridge {
+    sender: crossbeam_channel::Sender<String>,
+}
+
+impl Default for ServerBridge {
+    fn default() -> Self {
+        let (tx, _rx) = crossbeam_channel::unbounded();
+        Self { sender: tx }
+    }
+}
+
+impl ServerBridge {
+    /// Create a bridge from an existing channel sender.
+    #[must_use]
+    pub fn new(sender: crossbeam_channel::Sender<String>) -> Self {
+        Self { sender }
+    }
+
+    /// Send a JSON-RPC request (fire-and-forget).
+    pub fn send_rpc(&self, method: &str, params: serde_json::Value) {
+        let msg = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": method,
+            "params": params,
+        })
+        .to_string();
+        let _ = self.sender.send(msg);
+    }
+
+    /// Send a pre-formatted JSON-RPC string (fire-and-forget).
+    pub fn send_rpc_raw(&self, json: String) {
+        let _ = self.sender.send(json);
+    }
+}
+
 /// Chunk edge length in voxels (matches kernel).
 pub const LIVE_CHUNK_EDGE: usize = 16;
 /// Default chunk albedo for streamed meshes.
@@ -2033,5 +2072,40 @@ mod tests {
         assert!(diplomacy.open);
         assert_eq!(diplomacy.factions.len(), 1);
         assert_eq!(diplomacy.factions[0].name, "Junta #1");
+    }
+
+    #[test]
+    fn server_bridge_default_is_disconnected() {
+        let bridge = super::ServerBridge::default();
+        // Should not panic — messages silently drop.
+        bridge.send_rpc("sim.test", serde_json::json!({"key": "value"}));
+        bridge.send_rpc_raw(
+            "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\",\"params\":{}}".to_owned(),
+        );
+    }
+
+    #[test]
+    fn server_bridge_send_rpc_delivers_message() {
+        let (tx, rx) = crossbeam_channel::unbounded();
+        let bridge = super::ServerBridge::new(tx);
+        bridge.send_rpc(
+            "sim.diplomacy_action",
+            serde_json::json!({"action": "propose_alliance"}),
+        );
+        let msg: serde_json::Value =
+            serde_json::from_str(&rx.try_recv().expect("msg delivered")).expect("valid json");
+        assert_eq!(msg["method"], "sim.diplomacy_action");
+        assert_eq!(msg["params"]["action"], "propose_alliance");
+        assert_eq!(msg["jsonrpc"], "2.0");
+    }
+
+    #[test]
+    fn server_bridge_send_rpc_raw_delivers_string() {
+        let (tx, rx) = crossbeam_channel::unbounded();
+        let bridge = super::ServerBridge::new(tx);
+        let raw = r#"{"jsonrpc":"2.0","id":1,"method":"sim.subscribe","params":{}}"#.to_owned();
+        bridge.send_rpc_raw(raw.clone());
+        let got = rx.try_recv().expect("raw delivered");
+        assert_eq!(got, raw);
     }
 }

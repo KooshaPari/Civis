@@ -2,6 +2,7 @@
 //! Era HUD: tracks CivEra from server snapshots, shows era in HUD, toasts on advance (FR-CIV-GAME-003).
 
 use crate::event_feed::{EventFeed, EventKind as FeedKind};
+use crate::live_stream::ServerBridge;
 use crate::menus::in_game;
 use bevy::prelude::*;
 
@@ -22,7 +23,16 @@ fn poll_era(
     mut era_state: ResMut<EraState>,
     hud: Res<crate::HudState>,
     mut feed: ResMut<EventFeed>,
+    bridge: Option<Res<ServerBridge>>,
+    mut sent_tech_state: Local<bool>,
 ) {
+    // Server: periodically request sim.tech_state
+    if let Some(ref bridge) = bridge {
+        if !*sent_tech_state {
+            bridge.send_rpc("sim.tech_state", serde_json::json!({}));
+            *sent_tech_state = true;
+        }
+    }
     let new_era = era_from_snapshot(&hud);
     if !new_era.is_empty() && new_era != era_state.current_era {
         if !era_state.current_era.is_empty() {

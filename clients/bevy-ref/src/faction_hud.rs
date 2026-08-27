@@ -16,6 +16,7 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 use crate::live_stream::LiveStreamScene;
+use crate::live_stream::ServerBridge;
 
 use crate::ui_theme::{ACCENT, DIM, GOLD, GREEN, PANEL_FILL};
 
@@ -152,6 +153,7 @@ fn draw_faction_hud(
     player: Res<PlayerFactionId>,
     scene: Res<LiveStreamScene>,
     crests: Res<FactionCrestAssets>,
+    bridge: Option<Res<ServerBridge>>,
 ) {
     if !open.0 {
         return;
@@ -264,6 +266,30 @@ fn draw_faction_hud(
                     .small()
                     .italics(),
             );
+            // Server: propose alliance button (sim.diplomacy_action)
+            ui.add_space(4.0);
+            if ui
+                .add_sized(
+                    [180.0, 22.0],
+                    egui::Button::new(
+                        egui::RichText::new("Propose Alliance")
+                            .color(egui::Color32::from_rgb(9, 10, 12))
+                            .size(11.0),
+                    )
+                    .fill(ACCENT),
+                )
+                .clicked()
+            {
+                if let Some(ref bridge) = bridge {
+                    bridge.send_rpc(
+                        "sim.diplomacy_action",
+                        serde_json::json!({
+                            "action": "propose_alliance",
+                            "from_faction": player.0,
+                        }),
+                    );
+                }
+            }
         });
 }
 

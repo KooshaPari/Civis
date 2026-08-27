@@ -15,6 +15,7 @@ use civ_bevy_ref::gltf_models::GltfModelsPlugin;
 use civ_bevy_ref::graphics_settings::GraphicsSettingsPlugin;
 #[cfg(feature = "gi")]
 use civ_bevy_ref::lighting_gi::SolariGiPlugin;
+use civ_bevy_ref::live_stream::ServerBridge;
 #[cfg(feature = "egui")]
 use civ_bevy_ref::settings_ui::{GameSettings, KeyBinding, SettingsPlugin};
 #[cfg(not(feature = "egui"))]
@@ -527,7 +528,9 @@ fn setup(
     // snapshot can drive water companions on every voxel delta.
     commands.insert_resource(default_water_meshes(&mut meshes, &mut materials));
     let ws_client = WsClient::spawn_with_config(resolve_live_ws_url(), WsClientConfig::default());
-    commands.insert_resource(DiplomacyBridge::new(ws_client.rpc_sender()));
+    let rpc_sender = ws_client.rpc_sender();
+    commands.insert_resource(DiplomacyBridge::new(rpc_sender.clone()));
+    commands.insert_resource(ServerBridge::new(rpc_sender));
     commands.insert_resource(LiveBridge { client: ws_client });
 
     let text = commands

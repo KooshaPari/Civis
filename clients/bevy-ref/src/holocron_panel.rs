@@ -12,6 +12,7 @@ use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 use crate::god_actions::GodActionRequest;
 use crate::god_panel::GodPanelState;
+use crate::live_stream::ServerBridge;
 use crate::menus::in_game;
 
 /// One searchable god verb surfaced in the overlay.
@@ -192,6 +193,7 @@ fn draw_holocron_overlay(
     mut state: ResMut<HolocronState>,
     panel: Option<Res<GodPanelState>>,
     mut requests: MessageWriter<GodActionRequest>,
+    bridge: Option<Res<ServerBridge>>,
 ) {
     if !state.overlay_visible {
         return;
@@ -203,6 +205,11 @@ fn draw_holocron_overlay(
     let filtered = matched_verbs(&state.filter);
     if !filtered.is_empty() && state.cursor >= filtered.len() {
         state.cursor = 0;
+    }
+
+    // Server: fetch civilization history (sim.legends) when overlay is visible
+    if let Some(ref bridge) = bridge {
+        bridge.send_rpc("sim.legends", serde_json::json!({}));
     }
 
     let mut dismiss = false;

@@ -14,6 +14,7 @@ use std::collections::VecDeque;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
+use crate::live_stream::ServerBridge;
 use crate::menus::GameUiMode;
 use crate::ui_theme::{
     accent_frame, apply_theme, inner_glow, ACCENT_HI, GOLD, GREEN, RADIUS_SM, RED, TEXT, VIOLET,
@@ -132,13 +133,25 @@ fn age_notifications(time: Res<Time>, mut notifications: ResMut<Notifications>) 
     }
 }
 
-fn draw_notifications(mut contexts: EguiContexts, mut notifications_mut: ResMut<Notifications>) {
+fn draw_notifications(
+    mut contexts: EguiContexts,
+    mut notifications_mut: ResMut<Notifications>,
+    bridge: Option<Res<ServerBridge>>,
+    mut sent_subscribe: Local<bool>,
+) {
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
 
     apply_theme(ctx);
-
+    apply_theme(ctx);
+    // Server: subscribe to event frames for real-time alerts
+    if let Some(ref bridge) = bridge {
+        if !*sent_subscribe {
+            bridge.send_rpc("sim.subscribe", serde_json::json!({ "events": true }));
+            *sent_subscribe = true;
+        }
+    }
     let content_rect = ctx.content_rect();
     let anchor = egui::pos2(
         content_rect.left() + PANEL_MARGIN,

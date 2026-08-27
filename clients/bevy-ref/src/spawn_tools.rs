@@ -9,6 +9,7 @@ use bevy::prelude::*;
 
 #[cfg(feature = "models")]
 use crate::gltf_models::{actor_scene, building_scene, ModelOrPrimitive};
+use crate::live_stream::ServerBridge;
 use crate::minimap::MinimapCamera;
 #[cfg(feature = "egui")]
 pub(crate) use crate::settings_ui::GameSettings;
@@ -445,6 +446,7 @@ fn handle_spawn_tool_clicks(
     mut spawn_building: MessageWriter<SpawnBuildingRequest>,
     mut select_entity: MessageWriter<SelectEntityRequest>,
     mut destroy_entity: MessageWriter<DestroyEntityRequest>,
+    bridge: Option<Res<ServerBridge>>,
 ) {
     for event in mouse_wheel.read() {
         if active.tool != SpawnTool::SpawnBuilding {
@@ -480,6 +482,20 @@ fn handle_spawn_tool_clicks(
             spawn_civilian.write(SpawnCivilianRequest { position });
         }
         SpawnTool::SpawnBuilding => {
+            // Server: send building placement via sim.command
+            if let Some(ref bridge) = bridge {
+                bridge.send_rpc(
+                    "sim.command",
+                    serde_json::json!({
+                        "action": "spawn",
+                        "kind": "building",
+                        "building": building_kind.label(),
+                        "x": position.x,
+                        "y": position.y,
+                        "z": position.z,
+                    }),
+                );
+            }
             spawn_building.write(SpawnBuildingRequest {
                 position,
                 kind: *building_kind,

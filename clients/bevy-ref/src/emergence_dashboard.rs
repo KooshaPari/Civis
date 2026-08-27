@@ -5,6 +5,7 @@
 //! Toggle with `E`. Reads `EmergenceHudData` (polled every 10 s via `sim.emergence`
 //! in `bevy_window`, or synced from in-process `SimState` in standalone).
 
+use crate::live_stream::ServerBridge;
 use crate::EmergenceHudData;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
@@ -67,6 +68,7 @@ fn draw_emergence_dashboard(
     mut contexts: EguiContexts,
     state: Res<EmergenceDashboardState>,
     emergence_data: Option<Res<EmergenceHudData>>,
+    bridge: Option<Res<ServerBridge>>,
 ) {
     if !state.visible {
         return;
@@ -109,7 +111,15 @@ fn draw_emergence_dashboard(
             ui.add_space(4.0);
             ui.separator();
             ui.add_space(6.0);
-
+            // Server: fetch emergence metrics (emergence.metrics)
+            if let Some(ref bridge) = bridge {
+                ui.horizontal(|ui| {
+                    if ui.small_button("Refresh Metrics").clicked() {
+                        bridge.send_rpc("emergence.metrics", serde_json::json!({}));
+                    }
+                });
+                ui.add_space(4.0);
+            }
             match emergence {
                 None => {
                     ui.label(

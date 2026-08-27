@@ -13,6 +13,7 @@
 //! as research completes.  EguiPlugin is owned by `GameUiPlugin`; this module
 //! never re-registers it.
 
+use crate::live_stream::ServerBridge;
 use crate::settings_ui::{GameSettings, KeyBinding, ACTION_TOGGLE_TECH_TREE};
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
@@ -202,6 +203,7 @@ pub fn draw_tech_tree(
     mut contexts: EguiContexts,
     state: Res<TechTreeState>,
     mut open: ResMut<TechTreeOpen>,
+    bridge: Option<Res<ServerBridge>>,
 ) {
     if !open.0 {
         return;
@@ -226,6 +228,38 @@ pub fn draw_tech_tree(
         .show(ctx, |ui| {
             draw_progress_header(ui, &state);
             ui.add_space(8.0);
+            // Server: invest button header
+            if let Some(ref bridge) = bridge {
+                ui.horizontal(|ui| {
+                    if ui
+                        .add(
+                            egui::Button::new(
+                                egui::RichText::new("Invest in Tech")
+                                    .color(egui::Color32::from_rgb(9, 10, 12))
+                                    .size(11.0),
+                            )
+                            .fill(ACCENT),
+                        )
+                        .clicked()
+                    {
+                        if let Some(node) = state.nodes.iter().find(|n| !n.unlocked) {
+                            bridge.send_rpc(
+                                "sim.command",
+                                serde_json::json!({
+                                    "action": "invest_tech",
+                                    "tech_id": node.id,
+                                }),
+                            );
+                        }
+                    }
+                    ui.label(
+                        egui::RichText::new("auto-invest next locked")
+                            .color(LOCKED_DIM)
+                            .small(),
+                    );
+                });
+            }
+            ui.add_space(4.0);
             egui::ScrollArea::horizontal()
                 .auto_shrink([false; 2])
                 .show(ui, |ui| {

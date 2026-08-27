@@ -21,6 +21,7 @@
 
 use bevy::prelude::*;
 
+use crate::live_stream::ServerBridge;
 #[cfg(feature = "egui")]
 use crate::tool_categories::{ActiveSubTool, SubTool};
 
@@ -122,6 +123,7 @@ fn emit_disaster_clicks(
     over_ui: Res<crate::spawn_tools::PointerOverUi>,
     marker: Res<crate::spawn_tools::CursorMarker>,
     mut requests: MessageWriter<DisasterRequest>,
+    bridge: Option<Res<ServerBridge>>,
 ) {
     let Some(kind) = DisasterKind::from_subtool(sub.current) else {
         return;
@@ -133,6 +135,26 @@ fn emit_disaster_clicks(
         return;
     };
     requests.write(DisasterRequest { center, kind });
+    // Server: send disaster command via sim.command
+    if let Some(ref bridge) = bridge {
+        let action = match kind {
+            DisasterKind::Meteor => "meteor",
+            DisasterKind::Flood => "flood",
+            DisasterKind::Quake => "earthquake",
+            DisasterKind::Storm => "storm",
+            DisasterKind::Wildfire => "wildfire",
+            DisasterKind::Plague => "plague",
+        };
+        bridge.send_rpc(
+            "sim.command",
+            serde_json::json!({
+                "action": action,
+                "x": center.x,
+                "y": center.y,
+                "z": center.z,
+            }),
+        );
+    }
     info!("[disaster] {:?} requested at {:?}", kind, center);
 }
 

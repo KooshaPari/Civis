@@ -16,6 +16,7 @@ use std::collections::VecDeque;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
+use crate::live_stream::ServerBridge;
 use crate::ui_theme::{ACCENT, CHIP_FILL, PANEL_FILL};
 
 // ---------------------------------------------------------------------------
@@ -191,6 +192,7 @@ pub fn draw_event_feed(
     feed: Res<EventFeed>,
     mut log_open: ResMut<EventLogOpen>,
     keys: Res<ButtonInput<KeyCode>>,
+    bridge: Option<Res<ServerBridge>>,
 ) {
     if keys.just_pressed(KeyCode::KeyL) {
         log_open.0 = !log_open.0;
@@ -203,7 +205,7 @@ pub fn draw_event_feed(
     draw_toasts(ctx, &feed);
 
     if log_open.0 {
-        draw_log_window(ctx, &feed, &mut log_open);
+        draw_log_window(ctx, &feed, &mut log_open, bridge.as_deref());
     }
 }
 
@@ -273,7 +275,12 @@ fn toast_card(ui: &mut egui::Ui, ev: &GameEvent) {
 }
 
 /// Render the scrollable "📜 Event Log" window, toggled by [`EventLogOpen`].
-fn draw_log_window(ctx: &egui::Context, feed: &EventFeed, log_open: &mut EventLogOpen) {
+fn draw_log_window(
+    ctx: &egui::Context,
+    feed: &EventFeed,
+    log_open: &mut EventLogOpen,
+    bridge: Option<&ServerBridge>,
+) {
     let mut open = log_open.0;
     egui::Window::new("📜 Event Log")
         .open(&mut open)
@@ -292,6 +299,19 @@ fn draw_log_window(ctx: &egui::Context, feed: &EventFeed, log_open: &mut EventLo
                     .color(egui::Color32::from_rgb(150, 158, 178))
                     .small(),
             );
+            // Server: subscribe to event frames (sim.subscribe)
+            if let Some(bridge) = bridge {
+                ui.horizontal(|ui| {
+                    if ui.small_button("Subscribe to Events").clicked() {
+                        bridge.send_rpc("sim.subscribe", serde_json::json!({ "events": true }));
+                    }
+                    ui.label(
+                        egui::RichText::new("live feed")
+                            .color(egui::Color32::from_rgb(100, 108, 128))
+                            .small(),
+                    );
+                });
+            }
             ui.add_space(4.0);
             egui::ScrollArea::vertical()
                 .auto_shrink([false; 2])

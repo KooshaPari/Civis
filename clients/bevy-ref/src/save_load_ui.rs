@@ -15,6 +15,7 @@ use crate::sim_bridge::SimState;
 use crate::ui_theme::{liquid_glass_frame, GLASS_FILL, KC_ACCENT, RADIUS_PANEL};
 use crate::{
     live_attach::LiveAttachBridge,
+    live_stream::ServerBridge,
     menus::{AppState, GameUiMode, WorldGenBoot},
     outcome_overlay::{begin_player_session, OutcomeOverlayState, OutcomeSessionGate},
 };
@@ -120,6 +121,7 @@ fn render_save_slot_browser(
     mut panel: ResMut<SaveLoadPanel>,
     sim: Option<ResMut<SimState>>,
     bridge: Option<Res<LiveAttachBridge>>,
+    server_bridge: Option<Res<ServerBridge>>,
     gate: Option<ResMut<OutcomeSessionGate>>,
     overlay: Option<ResMut<OutcomeOverlayState>>,
     boot: Option<ResMut<WorldGenBoot>>,
@@ -159,6 +161,7 @@ fn render_save_slot_browser(
             &mut panel,
             sim,
             bridge.as_deref(),
+            server_bridge.as_deref(),
             gate,
             overlay,
             boot,
@@ -264,6 +267,7 @@ fn apply_save_slot_action(
     panel: &mut SaveLoadPanel,
     sim: Option<ResMut<SimState>>,
     bridge: Option<&LiveAttachBridge>,
+    server_bridge: Option<&ServerBridge>,
     gate: Option<ResMut<OutcomeSessionGate>>,
     overlay: Option<ResMut<OutcomeOverlayState>>,
     mut boot: Option<ResMut<WorldGenBoot>>,
@@ -278,6 +282,12 @@ fn apply_save_slot_action(
 
     match action {
         SaveSlotAction::SaveAs(name) => {
+            if let Some(bridge) = server_bridge {
+                bridge.send_rpc(
+                    "save.slot",
+                    serde_json::json!({ "name": name, "action": "save" }),
+                );
+            }
             let Some(sim) = sim else {
                 panel.last_status = "No local simulation to save.".to_string();
                 return;
@@ -291,6 +301,12 @@ fn apply_save_slot_action(
             }
         }
         SaveSlotAction::Load(name) => {
+            if let Some(bridge) = server_bridge {
+                bridge.send_rpc(
+                    "save.slot",
+                    serde_json::json!({ "name": name, "action": "load" }),
+                );
+            }
             let Some(mut sim) = sim else {
                 panel.last_status = "No local simulation to load into.".to_string();
                 return;
@@ -331,6 +347,9 @@ fn apply_save_slot_action(
             Err(err) => panel.last_status = format!("Delete failed: {err}"),
         },
         SaveSlotAction::Refresh => {
+            if let Some(bridge) = server_bridge {
+                bridge.send_rpc("save.list", serde_json::json!({}));
+            }
             panel.refresh_requested = true;
         }
     }

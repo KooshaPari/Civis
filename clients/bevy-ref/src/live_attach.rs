@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use crate::atmosphere::DayNightCycle;
 use crate::live_pick::{LivePickPlugin, LiveSelection};
 use crate::live_scene::LiveScenePlugin;
+use crate::live_stream::ServerBridge;
 use crate::ws_client::{SimPerfData, WsClient, WsClientConfig};
 use crate::{
     resolve_live_ws_url, AttachMode, LiveHudSnapshot, MusicCues, OutcomeProgressHud,
@@ -44,16 +45,15 @@ pub struct LiveAttachPlugin;
 
 impl Plugin for LiveAttachPlugin {
     fn build(&self, app: &mut App) {
+        let ws = WsClient::spawn_with_config(resolve_live_ws_url(), WsClientConfig::default());
+        let rpc_sender = ws.rpc_sender();
+
         app.add_plugins((LiveScenePlugin, LivePickPlugin))
             .init_resource::<LiveAttachState>()
             .init_resource::<LiveHudSnapshot>()
             .init_resource::<PerfPollTimer>()
-            .insert_resource(LiveAttachBridge {
-                client: WsClient::spawn_with_config(
-                    resolve_live_ws_url(),
-                    WsClientConfig::default(),
-                ),
-            })
+            .insert_resource(LiveAttachBridge { client: ws })
+            .insert_resource(ServerBridge::new(rpc_sender))
             .add_systems(
                 Update,
                 (

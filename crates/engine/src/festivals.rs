@@ -64,7 +64,7 @@ impl Default for FestivalType {
 
 /// Snapshot of settlement metrics fed into festival evaluation.
 /// Kept intentionally lightweight so callers don't need the full Sim.
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 pub struct SettlementState {
     /// Unique settlement identifier.
     pub settlement_id: u32,
@@ -149,7 +149,7 @@ pub struct Festival {
 
 /// Output deltas produced by a festival, consumed by the simulation's
 /// economy, unrest, and social phases.
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 pub struct FestivalEffects {
     /// Happiness change per tick (positive = boost).
     pub happiness_delta: f32,

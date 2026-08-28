@@ -283,7 +283,10 @@ fn sync_visible_gameplay(
                 if let Ok(prev_pos) = prev_positions.get(entity) {
                     let delta = target - prev_pos.0;
                     if delta.xz().length_squared() > 0.001 {
-                        let facing = Quat::from_rotation_arc(-Vec3::Z, Vec3::new(delta.x, 0.0, delta.z).normalize());
+                        let facing = Quat::from_rotation_arc(
+                            -Vec3::Z,
+                            Vec3::new(delta.x, 0.0, delta.z).normalize(),
+                        );
                         commands.entity(entity).insert((
                             Transform::from_translation(target).with_rotation(facing),
                             PrevWorldPosition(target),
@@ -419,11 +422,14 @@ fn spawn_civilian_visual(
         // GameModels resource not loaded yet: spawn procedural rig as fallback.
         let color = faction_color(&Alignment::with_faction(faction));
         let root = spawn_procedural_actor(commands, meshes, materials, visual, color, *world_pos);
-        commands.entity(root).insert((SimCivilianMarker {
-            id: civilian_id,
-            faction,
-            visual,
-        }, PrevWorldPosition(*world_pos + Vec3::Y * 0.25)));
+        commands.entity(root).insert((
+            SimCivilianMarker {
+                id: civilian_id,
+                faction,
+                visual,
+            },
+            PrevWorldPosition(*world_pos + Vec3::Y * 0.25),
+        ));
         return root;
     };
     match actor_scene(models, visual, faction) {
@@ -444,11 +450,14 @@ fn spawn_civilian_visual(
             let color = faction_color(&Alignment::with_faction(faction));
             let root =
                 spawn_procedural_actor(commands, meshes, materials, visual, color, *world_pos);
-            commands.entity(root).insert((SimCivilianMarker {
-                id: civilian_id,
-                faction,
-                visual,
-            }, PrevWorldPosition(*world_pos + Vec3::Y * 0.25)));
+            commands.entity(root).insert((
+                SimCivilianMarker {
+                    id: civilian_id,
+                    faction,
+                    visual,
+                },
+                PrevWorldPosition(*world_pos + Vec3::Y * 0.25),
+            ));
             root
         }
     }

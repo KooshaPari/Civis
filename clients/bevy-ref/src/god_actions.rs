@@ -438,10 +438,7 @@ fn apply_god_action_requests(
                     Color::srgb(0.2, 0.85, 0.45),
                     3.0,
                 );
-                format!(
-                    "Spawn organism at ({:.2},{:.2})",
-                    req.norm_x, req.norm_y
-                )
+                format!("Spawn organism at ({:.2},{:.2})", req.norm_x, req.norm_y)
             }
             "life.spawn_herd" => {
                 spawn_effect_flash(
@@ -452,16 +449,17 @@ fn apply_god_action_requests(
                     Color::srgb(0.2, 0.85, 0.45),
                     5.0,
                 );
-                format!(
-                    "Spawn herd at ({:.2},{:.2})",
-                    req.norm_x, req.norm_y
-                )
+                format!("Spawn herd at ({:.2},{:.2})", req.norm_x, req.norm_y)
             }
 
             // ---- Disaster verbs ----
             "disaster.wildfire" => {
-                let (cells, dirty) =
-                    apply_terrain_verb(&mut scene.chunk_voxels, center, TerrainVerb::Meteor, mag * 0.4);
+                let (cells, dirty) = apply_terrain_verb(
+                    &mut scene.chunk_voxels,
+                    center,
+                    TerrainVerb::Meteor,
+                    mag * 0.4,
+                );
                 remesh_dirty_chunks(
                     &mut commands,
                     &mut scene,
@@ -488,8 +486,12 @@ fn apply_god_action_requests(
                 )
             }
             "disaster.flood" => {
-                let (cells, dirty) =
-                    apply_terrain_verb(&mut scene.chunk_voxels, center, TerrainVerb::Meteor, mag * 0.2);
+                let (cells, dirty) = apply_terrain_verb(
+                    &mut scene.chunk_voxels,
+                    center,
+                    TerrainVerb::Meteor,
+                    mag * 0.2,
+                );
                 remesh_dirty_chunks(
                     &mut commands,
                     &mut scene,

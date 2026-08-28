@@ -568,10 +568,7 @@ fn handle_spawn_tool_clicks(
             });
         }
         // Road tools start a drag-to-draw stroke.
-        SpawnTool::Road
-        | SpawnTool::Trail
-        | SpawnTool::Highway
-        | SpawnTool::Bridge => {
+        SpawnTool::Road | SpawnTool::Trail | SpawnTool::Highway | SpawnTool::Bridge => {
             // Road/Trail/Highway/Bridge are drag-to-draw tools.
             // The first click starts the RoadDraft; subsequent movement
             // adds points; mouse-up fires PlaceRoadRequest.

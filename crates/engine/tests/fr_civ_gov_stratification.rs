@@ -93,11 +93,26 @@ fn fr_civ_gov_020_quantiles_per_settlement_bands_computed() {
     // With n=20: q20_idx=4, q40_idx=8, q60_idx=12, q80_idx=16
     //   Poor:  indices 0-3, Middle: 4-11, Rich: 12-15, Elite: 16-19
     let wealths: [(u64, i64); 20] = [
-        (1, 0), (2, 10), (3, 20), (4, 30),             // Poor
-        (5, 100), (6, 200), (7, 300), (8, 400),         // Middle (lower)
-        (9, 500), (10, 600), (11, 700), (12, 800),       // Middle (upper)
-        (13, 1_000), (14, 2_000), (15, 3_000), (16, 4_000), // Rich
-        (17, 10_000), (18, 20_000), (19, 30_000), (20, 50_000), // Elite
+        (1, 0),
+        (2, 10),
+        (3, 20),
+        (4, 30), // Poor
+        (5, 100),
+        (6, 200),
+        (7, 300),
+        (8, 400), // Middle (lower)
+        (9, 500),
+        (10, 600),
+        (11, 700),
+        (12, 800), // Middle (upper)
+        (13, 1_000),
+        (14, 2_000),
+        (15, 3_000),
+        (16, 4_000), // Rich
+        (17, 10_000),
+        (18, 20_000),
+        (19, 30_000),
+        (20, 50_000), // Elite
     ];
     for &(id, w) in &wealths {
         sim.register_household_in_settlement(settlement_id, id);

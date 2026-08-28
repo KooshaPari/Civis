@@ -623,7 +623,9 @@ fn draw_game_ui(
     _god_action_toast: Res<GodActionToast>,
     hud_panels: Res<HudPanelAssets>,
 ) {
-    if !crate::menus::in_playing(mode) { return; }
+    if !crate::menus::in_playing(mode) {
+        return;
+    }
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };

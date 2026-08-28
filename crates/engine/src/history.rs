@@ -929,10 +929,7 @@ mod new_history_tests {
 
     #[test]
     fn alternate_timeline_add_branch_and_explore() {
-        let events = vec![
-            make_event(5, "Election", 0.4),
-            make_event(15, "War", 0.9),
-        ];
+        let events = vec![make_event(5, "Election", 0.4), make_event(15, "War", 0.9)];
         let mut alt = AlternateTimeline::new(events, 10);
         alt.add_branch(BranchPoint {
             tick: 10,

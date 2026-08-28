@@ -568,7 +568,11 @@ impl LiteracyTracker {
     /// Scholars contribute to literacy growth; non-scholars contribute to
     /// literacy decay (knowledge erosion). Literacy is clamped to [0.0, 1.0].
     pub fn update(&mut self, faction_id: u32, population: u32, scholars: u32) {
-        let current = self.faction_literacy.get(&faction_id).copied().unwrap_or(0.0);
+        let current = self
+            .faction_literacy
+            .get(&faction_id)
+            .copied()
+            .unwrap_or(0.0);
 
         if population == 0 {
             self.faction_literacy.insert(faction_id, 0.0);
@@ -589,7 +593,10 @@ impl LiteracyTracker {
     /// Returns 0.0 if the faction has no recorded literacy.
     #[must_use]
     pub fn get_literacy(&self, faction_id: u32) -> f32 {
-        self.faction_literacy.get(&faction_id).copied().unwrap_or(0.0)
+        self.faction_literacy
+            .get(&faction_id)
+            .copied()
+            .unwrap_or(0.0)
     }
 
     /// Compute the average literacy across all tracked factions.
@@ -673,10 +680,26 @@ pub fn generate_literary_work(
 
     let suffix_index = (combined % 20) as usize;
     let suffixes = [
-        "Kings", "Stars", "Rivers", "Mountains", "Thunder",
-        "Dawn", "Fate", "Memory", "Fire", "Wisdom",
-        "Valor", "Silence", "Harvest", "Tides", "Shadows",
-        "Light", "Stone", "Wind", "Earth", "Sky",
+        "Kings",
+        "Stars",
+        "Rivers",
+        "Mountains",
+        "Thunder",
+        "Dawn",
+        "Fate",
+        "Memory",
+        "Fire",
+        "Wisdom",
+        "Valor",
+        "Silence",
+        "Harvest",
+        "Tides",
+        "Shadows",
+        "Light",
+        "Stone",
+        "Wind",
+        "Earth",
+        "Sky",
     ];
 
     let faction_label = match faction_id % 5 {
@@ -687,13 +710,28 @@ pub fn generate_literary_work(
         _ => "the Mighty",
     };
 
-    let title = format!("{} {} {}", title_prefix, faction_label, suffixes[suffix_index]);
+    let title = format!(
+        "{} {} {}",
+        title_prefix, faction_label, suffixes[suffix_index]
+    );
 
     // Deterministic author name
     let author_names = [
-        "Hammurabi", "Sappho", "Confucius", "Herodotus", "Virgil",
-        "Hesiod", "Plato", "Socrates", "Sophocles", "Cicero",
-        "Laozi", "Sun Tzu", "Vishnu", "Odin", "Isis",
+        "Hammurabi",
+        "Sappho",
+        "Confucius",
+        "Herodotus",
+        "Virgil",
+        "Hesiod",
+        "Plato",
+        "Socrates",
+        "Sophocles",
+        "Cicero",
+        "Laozi",
+        "Sun Tzu",
+        "Vishnu",
+        "Odin",
+        "Isis",
     ];
     let author_index = (combined >> 8) % author_names.len() as u64;
     let author = author_names[author_index as usize].to_string();
@@ -1033,7 +1071,10 @@ mod literacy_tracker_tests {
         tracker.update(1, 100, 50);
         tracker.update(2, 200, 100);
         let avg = tracker.average_literacy();
-        assert!(avg > 0.0, "average should be positive with multiple factions");
+        assert!(
+            avg > 0.0,
+            "average should be positive with multiple factions"
+        );
     }
 
     #[test]
@@ -1202,7 +1243,10 @@ mod printing_press_tests {
     fn press_literacy_boost_positive() {
         let press = invent_printing_press(0, 2.0);
         let boost = press_literacy_boost(&press, 0.3, 1000);
-        assert!(boost > 0.0, "boost should be positive for non-zero population");
+        assert!(
+            boost > 0.0,
+            "boost should be positive for non-zero population"
+        );
     }
 
     #[test]
@@ -1236,10 +1280,7 @@ mod printing_press_tests {
         let press = invent_printing_press(0, 2.0);
         let near = press_cultural_effect(&press, 10.0);
         let far = press_cultural_effect(&press, 500.0);
-        assert!(
-            near > far,
-            "effect should decrease with distance"
-        );
+        assert!(near > far, "effect should decrease with distance");
     }
 
     #[test]
@@ -1247,7 +1288,10 @@ mod printing_press_tests {
         let press = invent_printing_press(0, 1.0);
         let range = press.distribution_range as f32;
         let effect = press_cultural_effect(&press, range * 10.0);
-        assert!((effect - 0.0).abs() < 0.01, "effect should be near zero at far distance");
+        assert!(
+            (effect - 0.0).abs() < 0.01,
+            "effect should be near zero at far distance"
+        );
     }
 
     #[test]

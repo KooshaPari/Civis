@@ -537,9 +537,7 @@ pub enum ScriptEvolution {
 #[must_use]
 pub fn evolve_script(current: ScriptEvolution, complexity_factor: f32) -> ScriptEvolution {
     match current {
-        ScriptEvolution::Pictographic if complexity_factor >= 0.25 => {
-            ScriptEvolution::Ideographic
-        }
+        ScriptEvolution::Pictographic if complexity_factor >= 0.25 => ScriptEvolution::Ideographic,
         ScriptEvolution::Ideographic if complexity_factor >= 0.50 => ScriptEvolution::Syllabic,
         ScriptEvolution::Syllabic if complexity_factor >= 0.75 => ScriptEvolution::Alphabetic,
         other => other,
@@ -597,9 +595,9 @@ pub fn translation_difficulty(a: &Language, b: &Language) -> f32 {
         .grammar_rules
         .iter()
         .filter(|rule_a| {
-            b.grammar_rules
-                .iter()
-                .any(|rule_b| rule_a.pattern == rule_b.pattern && rule_a.replacement == rule_b.replacement)
+            b.grammar_rules.iter().any(|rule_b| {
+                rule_a.pattern == rule_b.pattern && rule_a.replacement == rule_b.replacement
+            })
         })
         .count() as u32;
     let grammar_total = a.grammar_rules.len().max(b.grammar_rules.len()) as f32;
@@ -639,8 +637,7 @@ mod language_extended_tests {
 
     #[test]
     fn create_language_basic() {
-        let lang =
-            create_language("Common", vec!["a".into(), "b".into(), "c".into()], 10);
+        let lang = create_language("Common", vec!["a".into(), "b".into(), "c".into()], 10);
         assert_eq!(lang.name, "Common");
         assert_eq!(lang.phonemes.len(), 3);
         assert_eq!(lang.created_tick, 10);
@@ -676,7 +673,10 @@ mod language_extended_tests {
         let src = add_vocabulary(&create_language("Src", vec![], 0), "water", "agua");
         let tgt = create_language("Tgt", vec![], 0);
         let result = loan_word(&tgt, &src, "water");
-        assert_eq!(result.vocabulary.get("water").expect("should have water"), "agua");
+        assert_eq!(
+            result.vocabulary.get("water").expect("should have water"),
+            "agua"
+        );
     }
 
     #[test]
@@ -816,11 +816,7 @@ mod language_extended_tests {
 
     #[test]
     fn drift_vocabulary_deterministic() {
-        let lang = add_vocabulary(
-            &create_language("DriftTest", vec![], 0),
-            "fire",
-            "ignis",
-        );
+        let lang = add_vocabulary(&create_language("DriftTest", vec![], 0), "fire", "ignis");
         let drift = VocabularyDrift {
             drift_rate: 1.0,
             mutation_probability: 1.0,
@@ -855,10 +851,7 @@ mod language_extended_tests {
         };
         let result = drift_vocabulary(&lang, &drift, 1);
         assert_eq!(result.vocabulary.len(), 1);
-        assert_eq!(
-            result.vocabulary.get("fire").expect("word exists"),
-            "ignis"
-        );
+        assert_eq!(result.vocabulary.get("fire").expect("word exists"), "ignis");
     }
 
     #[test]
@@ -1030,8 +1023,16 @@ mod language_extended_tests {
 
     #[test]
     fn translation_difficulty_identical_vocabulary() {
-        let a = add_vocabulary(&add_vocabulary(&create_language("A", vec![], 0), "x", "1"), "y", "2");
-        let b = add_vocabulary(&add_vocabulary(&create_language("B", vec![], 0), "x", "1"), "y", "2");
+        let a = add_vocabulary(
+            &add_vocabulary(&create_language("A", vec![], 0), "x", "1"),
+            "y",
+            "2",
+        );
+        let b = add_vocabulary(
+            &add_vocabulary(&create_language("B", vec![], 0), "x", "1"),
+            "y",
+            "2",
+        );
         let d = translation_difficulty(&a, &b);
         // High vocabulary overlap => low difficulty.
         assert!(d < 0.5);

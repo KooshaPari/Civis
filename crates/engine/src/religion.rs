@@ -481,8 +481,7 @@ pub fn compute_spread_rate(
     } else {
         0.0
     };
-    let pop_component =
-        mechanics.population_factor * (1.0 + target_population as f32).ln();
+    let pop_component = mechanics.population_factor * (1.0 + target_population as f32).ln();
     let resistance_damping = (1.0 - mechanics.cultural_resistance).max(0.0);
 
     mechanics.base_spread_rate
@@ -508,10 +507,8 @@ pub fn convert_settlement(
     let distance_decay = (-distance).exp();
     let resistance_damping = (1.0 - mechanics.cultural_resistance).max(0.0);
 
-    (mechanics.base_spread_rate * differential * distance_decay * resistance_damping).clamp(
-        0.0,
-        1.0,
-    )
+    (mechanics.base_spread_rate * differential * distance_decay * resistance_damping)
+        .clamp(0.0, 1.0)
 }
 
 // ===========================================================================
@@ -683,7 +680,10 @@ pub fn resolve_holy_war(
         -(1.0 + aggressor_share) * impact
     };
 
-    (aggressor_change.clamp(-1.0, 0.0), defender_change.clamp(-1.0, 0.0))
+    (
+        aggressor_change.clamp(-1.0, 0.0),
+        defender_change.clamp(-1.0, 0.0),
+    )
 }
 
 // ===========================================================================

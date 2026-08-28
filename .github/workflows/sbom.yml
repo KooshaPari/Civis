@@ -25,11 +25,15 @@ jobs:
       - name: Generate SBOM (CycloneDX)
         run: |
           mkdir -p sbom
-          cargo cyclonedx --format json --output-file sbom/civis-bom.json
+          cargo cyclonedx --format json > sbom/civis-bom.json 2>/dev/null || \
+          cargo cyclonedx sbom --output-file sbom/civis-bom.json || \
+          cargo cyclonedx --output-directory sbom --format json
 
       - name: Generate SBOM (SPDX)
         run: |
-          cargo cyclonedx --format spdx --output-file sbom/civis-bom.spdx.json
+          cargo cyclonedx --format spdx > sbom/civis-bom.spdx.json 2>/dev/null || \
+          cargo cyclonedx sbom --output-file sbom/civis-bom.spdx.json || \
+          cargo cyclonedx --output-directory sbom --format spdx
         continue-on-error: true
 
       - name: Upload SBOM to release

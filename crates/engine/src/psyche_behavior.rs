@@ -501,16 +501,12 @@ impl BigFive {
 #[must_use]
 pub fn personality_modifier(big5: &BigFive, situation: &str) -> f32 {
     match situation {
-        "social_gathering" => {
-            (big5.extraversion * 0.6 + big5.agreeableness * 0.4 - 0.5) * 2.0
-        }
+        "social_gathering" => (big5.extraversion * 0.6 + big5.agreeableness * 0.4 - 0.5) * 2.0,
         "danger" => {
             // High neuroticism = more scared, high conscientiousness = more cautious
             ((1.0 - big5.neuroticism) * 0.5 + big5.conscientiousness * 0.5 - 0.5) * 2.0
         }
-        "creative_task" => {
-            (big5.openness * 0.7 + big5.conscientiousness * 0.3 - 0.5) * 2.0
-        }
+        "creative_task" => (big5.openness * 0.7 + big5.conscientiousness * 0.3 - 0.5) * 2.0,
         "conflict" => {
             // High agreeableness resists conflict
             (big5.agreeableness * 0.6 + (1.0 - big5.neuroticism) * 0.4 - 0.5) * -2.0
@@ -534,8 +530,8 @@ pub fn compatibility_score(a: &BigFive, b: &BigFive) -> f32 {
     let neuroticism_diff = (a.neuroticism - b.neuroticism).abs();
 
     // Similarity in most traits is good; high difference in neuroticism is bad.
-    let avg_similarity =
-        1.0 - (openness_diff + conscientiousness_diff + extraversion_diff + agreeableness_diff) / 4.0;
+    let avg_similarity = 1.0
+        - (openness_diff + conscientiousness_diff + extraversion_diff + agreeableness_diff) / 4.0;
     let neuroticism_penalty = neuroticism_diff * 0.3;
 
     (avg_similarity - neuroticism_penalty).clamp(MOOD_MIN, MOOD_MAX)
@@ -684,9 +680,9 @@ pub fn obedience_level(dynamics: &GroupDynamics, authority_trust: f32) -> f32 {
     let panic_penalty = dynamics.panic_level * 0.4;
     let size_pressure = (dynamics.group_size as f32 / 200.0).clamp(MOOD_MIN, MOOD_MAX);
 
-    let obedience =
-        (trust_factor * 0.4 + leader_factor * 0.3 + size_pressure * 0.3 - panic_penalty)
-            .clamp(MOOD_MIN, MOOD_MAX);
+    let obedience = (trust_factor * 0.4 + leader_factor * 0.3 + size_pressure * 0.3
+        - panic_penalty)
+        .clamp(MOOD_MIN, MOOD_MAX);
     obedience
 }
 
@@ -889,7 +885,10 @@ mod psyche_extended_tests {
             beliefs: [0.5; 4],
             maturity: 0.5,
         };
-        assert_eq!(behavior_from_psyche(&psyche), EmotionDrivenBehavior::Neutral);
+        assert_eq!(
+            behavior_from_psyche(&psyche),
+            EmotionDrivenBehavior::Neutral
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -919,10 +918,7 @@ mod psyche_extended_tests {
             esteem: 1.0,
             self_actualization: 1.0,
         };
-        assert_eq!(
-            evaluate_current_level(&h),
-            MaslowLevel::SelfActualization
-        );
+        assert_eq!(evaluate_current_level(&h), MaslowLevel::SelfActualization);
         assert!((maslow_completeness(&h) - 1.0).abs() < f32::EPSILON);
     }
 

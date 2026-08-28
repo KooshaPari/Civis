@@ -135,26 +135,76 @@ pub fn spawn_procedural_actor(
         }};
     }
 
-    let torso = bone!
-        (0.35 * x_scale * BONE_SCALE, 0.5 * y_scale * BONE_SCALE, 0.2 * BONE_SCALE, Vec3::new(0.0, torso_y, 0.0), mat.clone());
-    let head = bone!
-        (0.22 * x_scale * BONE_SCALE, 0.22 * y_scale * BONE_SCALE, 0.22 * BONE_SCALE, Vec3::new(0.0, head_y, 0.0), mat.clone());
-    let left_upper_arm = bone!
-        (0.1 * BONE_SCALE, 0.35 * y_scale * BONE_SCALE, 0.1 * BONE_SCALE, Vec3::new(-ARM_SPREAD, upper_arm_y, 0.0), mat.clone());
-    let right_upper_arm = bone!
-        (0.1 * BONE_SCALE, 0.35 * y_scale * BONE_SCALE, 0.1 * BONE_SCALE, Vec3::new(ARM_SPREAD, upper_arm_y, 0.0), mat.clone());
-    let left_forearm = bone!
-        (0.09 * BONE_SCALE, 0.30 * y_scale * BONE_SCALE, 0.09 * BONE_SCALE, Vec3::new(-ARM_SPREAD, forearm_y, 0.0), mat.clone());
-    let right_forearm = bone!
-        (0.09 * BONE_SCALE, 0.30 * y_scale * BONE_SCALE, 0.09 * BONE_SCALE, Vec3::new(ARM_SPREAD, forearm_y, 0.0), mat.clone());
-    let left_thigh = bone!
-        (0.13 * BONE_SCALE, 0.35 * y_scale * BONE_SCALE, 0.13 * BONE_SCALE, Vec3::new(-LEG_SPREAD, thigh_y, 0.0), mat.clone());
-    let right_thigh = bone!
-        (0.13 * BONE_SCALE, 0.35 * y_scale * BONE_SCALE, 0.13 * BONE_SCALE, Vec3::new(LEG_SPREAD, thigh_y, 0.0), mat.clone());
-    let left_shin = bone!
-        (0.11 * BONE_SCALE, 0.32 * y_scale * BONE_SCALE, 0.11 * BONE_SCALE, Vec3::new(-LEG_SPREAD, shin_y, 0.0), mat.clone());
-    let right_shin = bone!
-        (0.11 * BONE_SCALE, 0.32 * y_scale * BONE_SCALE, 0.11 * BONE_SCALE, Vec3::new(LEG_SPREAD, shin_y, 0.0), mat);
+    let torso = bone!(
+        0.35 * x_scale * BONE_SCALE,
+        0.5 * y_scale * BONE_SCALE,
+        0.2 * BONE_SCALE,
+        Vec3::new(0.0, torso_y, 0.0),
+        mat.clone()
+    );
+    let head = bone!(
+        0.22 * x_scale * BONE_SCALE,
+        0.22 * y_scale * BONE_SCALE,
+        0.22 * BONE_SCALE,
+        Vec3::new(0.0, head_y, 0.0),
+        mat.clone()
+    );
+    let left_upper_arm = bone!(
+        0.1 * BONE_SCALE,
+        0.35 * y_scale * BONE_SCALE,
+        0.1 * BONE_SCALE,
+        Vec3::new(-ARM_SPREAD, upper_arm_y, 0.0),
+        mat.clone()
+    );
+    let right_upper_arm = bone!(
+        0.1 * BONE_SCALE,
+        0.35 * y_scale * BONE_SCALE,
+        0.1 * BONE_SCALE,
+        Vec3::new(ARM_SPREAD, upper_arm_y, 0.0),
+        mat.clone()
+    );
+    let left_forearm = bone!(
+        0.09 * BONE_SCALE,
+        0.30 * y_scale * BONE_SCALE,
+        0.09 * BONE_SCALE,
+        Vec3::new(-ARM_SPREAD, forearm_y, 0.0),
+        mat.clone()
+    );
+    let right_forearm = bone!(
+        0.09 * BONE_SCALE,
+        0.30 * y_scale * BONE_SCALE,
+        0.09 * BONE_SCALE,
+        Vec3::new(ARM_SPREAD, forearm_y, 0.0),
+        mat.clone()
+    );
+    let left_thigh = bone!(
+        0.13 * BONE_SCALE,
+        0.35 * y_scale * BONE_SCALE,
+        0.13 * BONE_SCALE,
+        Vec3::new(-LEG_SPREAD, thigh_y, 0.0),
+        mat.clone()
+    );
+    let right_thigh = bone!(
+        0.13 * BONE_SCALE,
+        0.35 * y_scale * BONE_SCALE,
+        0.13 * BONE_SCALE,
+        Vec3::new(LEG_SPREAD, thigh_y, 0.0),
+        mat.clone()
+    );
+    let left_shin = bone!(
+        0.11 * BONE_SCALE,
+        0.32 * y_scale * BONE_SCALE,
+        0.11 * BONE_SCALE,
+        Vec3::new(-LEG_SPREAD, shin_y, 0.0),
+        mat.clone()
+    );
+    let right_shin = bone!(
+        0.11 * BONE_SCALE,
+        0.32 * y_scale * BONE_SCALE,
+        0.11 * BONE_SCALE,
+        Vec3::new(LEG_SPREAD, shin_y, 0.0),
+        mat
+    );
 
     commands.entity(root).insert(ProceduralRig {
         torso,

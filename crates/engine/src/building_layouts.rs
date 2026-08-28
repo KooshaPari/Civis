@@ -266,11 +266,7 @@ pub fn style_properties(style: ArchitecturalStyle) -> StyleProperties {
         ArchitecturalStyle::Ancient => StyleProperties {
             style: ArchitecturalStyle::Ancient,
             max_height: 3,
-            material_preference: vec![
-                "stone".to_string(),
-                "wood".to_string(),
-                "clay".to_string(),
-            ],
+            material_preference: vec!["stone".to_string(), "wood".to_string(), "clay".to_string()],
             ornamentation_level: 0.2,
             durability: 0.6,
         },
@@ -288,11 +284,7 @@ pub fn style_properties(style: ArchitecturalStyle) -> StyleProperties {
         ArchitecturalStyle::Industrial => StyleProperties {
             style: ArchitecturalStyle::Industrial,
             max_height: 10,
-            material_preference: vec![
-                "brick".to_string(),
-                "iron".to_string(),
-                "glass".to_string(),
-            ],
+            material_preference: vec!["brick".to_string(), "iron".to_string(), "glass".to_string()],
             ornamentation_level: 0.3,
             durability: 0.8,
         },
@@ -332,11 +324,9 @@ pub fn style_for_era(era_name: &str) -> ArchitecturalStyle {
         ArchitecturalStyle::Futuristic
     } else if lower.contains("modern") || lower.contains("contemporary") || lower.contains("now") {
         ArchitecturalStyle::Modern
-    } else if lower.contains("industr") || lower.contains("victorian") || lower.contains("steam")
-    {
+    } else if lower.contains("industr") || lower.contains("victorian") || lower.contains("steam") {
         ArchitecturalStyle::Industrial
-    } else if lower.contains("medieval") || lower.contains("feudal") || lower.contains("middle")
-    {
+    } else if lower.contains("medieval") || lower.contains("feudal") || lower.contains("middle") {
         ArchitecturalStyle::Medieval
     } else {
         ArchitecturalStyle::Ancient
@@ -384,7 +374,10 @@ struct Lcg {
 
 impl Lcg {
     fn next_u64(&mut self) -> u64 {
-        self.state = self.state.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1);
+        self.state = self
+            .state
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1);
         self.state
     }
 
@@ -567,13 +560,14 @@ pub fn material_compatibility(mat_a: &str, mat_b: &str) -> f32 {
         vec!["glass", "crystal", "plexiglass"],
         vec!["concrete", "cement", "mortar"],
         vec!["thatch", "straw", "reed"],
-        vec!["composite", "carbon-fiber", "nano-alloy", "nano-coating", "membrane"],
         vec![
-            "corrugated-iron",
-            "tin",
-            "zinc",
-            "aluminum",
+            "composite",
+            "carbon-fiber",
+            "nano-alloy",
+            "nano-coating",
+            "membrane",
         ],
+        vec!["corrugated-iron", "tin", "zinc", "aluminum"],
     ];
 
     for family in &families {
@@ -687,22 +681,14 @@ pub fn expansion_cost(plan: &ExpansionPlan) -> f32 {
         ExpansionDirection::East | ExpansionDirection::West => 1.2,
     };
     let base_per_room = 100.0;
-    base_per_room
-        * plan.rooms_to_add as f32
-        * style_factor
-        * dir_multiplier
-        * plan.cost_multiplier
+    base_per_room * plan.rooms_to_add as f32 * style_factor * dir_multiplier * plan.cost_multiplier
 }
 
 /// Produce a new [`BuildingLayout`] that incorporates rooms from an expansion
 /// plan. The expansion is deterministic — the same inputs always produce the
 /// same output.
 #[must_use]
-pub fn plan_expansion(
-    layout: &BuildingLayout,
-    plan: &ExpansionPlan,
-    seed: u64,
-) -> BuildingLayout {
+pub fn plan_expansion(layout: &BuildingLayout, plan: &ExpansionPlan, seed: u64) -> BuildingLayout {
     let mut rng = Lcg { state: seed };
     let style_props = style_properties(plan.style);
 
@@ -710,21 +696,11 @@ pub fn plan_expansion(
     let (off_x, off_y) = match plan.direction {
         ExpansionDirection::North => (0, -1),
         ExpansionDirection::South => {
-            let max_y = layout
-                .footprint
-                .iter()
-                .map(|(_, y)| *y)
-                .max()
-                .unwrap_or(0);
+            let max_y = layout.footprint.iter().map(|(_, y)| *y).max().unwrap_or(0);
             (0, max_y + 1)
         }
         ExpansionDirection::East => {
-            let max_x = layout
-                .footprint
-                .iter()
-                .map(|(x, _)| *x)
-                .max()
-                .unwrap_or(0);
+            let max_x = layout.footprint.iter().map(|(x, _)| *x).max().unwrap_or(0);
             (max_x + 1, 0)
         }
         ExpansionDirection::West => (-1, 0),
@@ -897,34 +873,19 @@ mod building_layouts_tests {
 
     #[test]
     fn style_for_era_mapping() {
-        assert_eq!(
-            style_for_era("feudal age"),
-            ArchitecturalStyle::Medieval
-        );
-        assert_eq!(
-            style_for_era("steam era"),
-            ArchitecturalStyle::Industrial
-        );
-        assert_eq!(
-            style_for_era("modern world"),
-            ArchitecturalStyle::Modern
-        );
+        assert_eq!(style_for_era("feudal age"), ArchitecturalStyle::Medieval);
+        assert_eq!(style_for_era("steam era"), ArchitecturalStyle::Industrial);
+        assert_eq!(style_for_era("modern world"), ArchitecturalStyle::Modern);
         assert_eq!(
             style_for_era("space exploration"),
             ArchitecturalStyle::Futuristic
         );
-        assert_eq!(
-            style_for_era("bronze age"),
-            ArchitecturalStyle::Ancient
-        );
+        assert_eq!(style_for_era("bronze age"), ArchitecturalStyle::Ancient);
     }
 
     #[test]
     fn style_for_era_case_insensitive() {
-        assert_eq!(
-            style_for_era("MEDIEVAL"),
-            ArchitecturalStyle::Medieval
-        );
+        assert_eq!(style_for_era("MEDIEVAL"), ArchitecturalStyle::Medieval);
         assert_eq!(style_for_era("Modern"), ArchitecturalStyle::Modern);
     }
 

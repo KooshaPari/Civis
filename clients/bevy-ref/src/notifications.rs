@@ -8,6 +8,10 @@
 //! - the overlay is themed through [`crate::ui_theme`].
 //! - the UI is gated to [`crate::menus::GameUiMode::Playing`] so menus and
 //!   loading screens stay uncluttered.
+//!
+//! **Server-wired** — sends `sim.subscribe` with `{ "events": true }` on
+//! first draw (line ~151) to receive real-time event-feed frames from the
+//! server via the [`ServerBridge`](crate::live_stream::ServerBridge).
 
 use std::collections::VecDeque;
 

@@ -2,6 +2,10 @@
 
 //! AAA graphics-settings resource + egui panel for the Civis Bevy client.
 //!
+//! **Intentionally local-only** — this panel manages client-side graphics
+//! settings (quality, resolution, post-FX) and does not communicate with
+//! the server via JSON-RPC.
+//!
 //! # Design
 //!
 //! [`GfxSettings`] is a [`Resource`] that owns the full render-option tree.

@@ -2,6 +2,9 @@
 
 //! 6-step tutorial hint system (FR-CIV-CLIENT-011).
 //! Shown bottom-centre during InGame. Enter/click advances; H replays.
+//!
+//! **Intentionally local-only** — this panel displays static tutorial
+//! content and does not communicate with the server via JSON-RPC.
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};

@@ -2,6 +2,10 @@
 
 //! Settings / Options panel for the Civis reference client.
 //!
+//! **Intentionally local-only** — this panel manages client-side settings
+//! (keybinds, audio, gameplay) and does not communicate with the server
+//! via JSON-RPC.
+//!
 //! A themed (via [`crate::ui_theme`]) egui overlay covering the six standard
 //! option groups players expect from a Cities-Skylines / Empire-at-War class
 //! game:

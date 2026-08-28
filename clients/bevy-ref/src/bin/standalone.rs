@@ -184,6 +184,8 @@ fn main() {
             civ_bevy_ref::tutorial::TutorialPlugin,
             civ_bevy_ref::controls_help::ControlsHelpPlugin,
             civ_bevy_ref::perf_hud::PerfHudPlugin,
+            civ_bevy_ref::scenario_objectives::ScenarioObjectivesPlugin,
+            civ_bevy_ref::replay_controls::ReplayControlsPlugin,
             civ_bevy_ref::AgentNeedsPlugin,
         ));
     }

@@ -1,6 +1,9 @@
 #![cfg(all(feature = "bevy", feature = "egui"))]
 
 //! In-game controls cheat sheet (`?` / Slash). Matches the RTS shell defaults.
+//!
+//! **Intentionally local-only** — this panel is a pure display of keyboard
+//! shortcuts and does not communicate with the server via JSON-RPC.
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};

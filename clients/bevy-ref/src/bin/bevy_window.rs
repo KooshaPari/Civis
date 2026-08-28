@@ -247,6 +247,8 @@ fn main() {
         civ_bevy_ref::god_actions::GodActionsPlugin,
         civ_bevy_ref::holocron_panel::HolocronPanelPlugin,
         civ_bevy_ref::outcome_overlay::OutcomeOverlayPlugin,
+        civ_bevy_ref::scenario_objectives::ScenarioObjectivesPlugin,
+        civ_bevy_ref::replay_controls::ReplayControlsPlugin,
         MenusPlugin,
         GameUiPlugin,
     ));

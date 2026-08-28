@@ -177,12 +177,25 @@ fn sync_minimap_dots(
     mut commands: Commands,
     roots: Query<Entity, With<MinimapRoot>>,
     existing: Query<Entity, With<MinimapDot>>,
+    // Server-mode queries: read positions from live-streamed entities.
+    live_agents: Query<
+        (&crate::live_stream::LiveAgentTag, &Transform),
+        With<crate::live_stream::LiveAgentTag>,
+    >,
+    live_buildings: Query<
+        (&crate::live_stream::LiveBuildingTag, &Transform),
+        With<crate::live_stream::LiveBuildingTag>,
+    >,
 ) {
-    if *attach == AttachMode::Server {
+    if !sim.is_changed() && *attach == AttachMode::Standalone {
         return;
     }
-    if !sim.is_changed() {
-        return;
+
+    // In server mode, always re-sync from live-streamed entity transforms.
+    let is_server = *attach == AttachMode::Server;
+    if is_server && !sim.is_changed() {
+        // Still allow initial population; skip only if no agents/buildings exist yet
+        // and the scene hasn't changed.
     }
 
     for entity in &existing {
@@ -194,45 +207,89 @@ fn sync_minimap_dots(
     };
 
     commands.entity(root).with_children(|parent| {
-        for (_, (civilian, position)) in sim
-            .0
-            .world
-            .query::<(&AgentCivilian, &civ_agents::Position3d)>()
-            .iter()
-        {
-            let uv = world_to_minimap_uv(world_position_for_civilian(civilian, position));
-            parent.spawn((
-                Node {
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(uv.x * MINIMAP_SIZE - MINIMAP_CIVILIAN_DOT * 0.5),
-                    top: Val::Px(uv.y * MINIMAP_SIZE - MINIMAP_CIVILIAN_DOT * 0.5),
-                    width: Val::Px(MINIMAP_CIVILIAN_DOT),
-                    height: Val::Px(MINIMAP_CIVILIAN_DOT),
-                    border_radius: BorderRadius::MAX,
-                    ..default()
-                },
-                BackgroundColor(civilian_color(civilian)),
-                MinimapDot,
-                FocusPolicy::Pass,
-            ));
-        }
+        if is_server {
+            // Draw dots from live-streamed agent positions.
+            for (_tag, transform) in live_agents.iter() {
+                let pos = transform.translation;
+                let uv = world_to_minimap_uv(pos);
+                parent.spawn((
+                    Node {
+                        position_type: PositionType::Absolute,
+                        left: Val::Px(uv.x * MINIMAP_SIZE - MINIMAP_CIVILIAN_DOT * 0.5),
+                        top: Val::Px(uv.y * MINIMAP_SIZE - MINIMAP_CIVILIAN_DOT * 0.5),
+                        width: Val::Px(MINIMAP_CIVILIAN_DOT),
+                        height: Val::Px(MINIMAP_CIVILIAN_DOT),
+                        border_radius: BorderRadius::MAX,
+                        ..default()
+                    },
+                    BackgroundColor(Color::hsla(0.0, 0.75, 0.58, 1.0)),
+                    MinimapDot,
+                    FocusPolicy::Pass,
+                ));
+            }
 
-        for (_, building) in sim.0.world.query::<&Building>().iter() {
-            let uv = world_to_minimap_uv(world_position_for_building(building));
-            parent.spawn((
-                Node {
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(uv.x * MINIMAP_SIZE - MINIMAP_BUILDING_DOT * 0.5),
-                    top: Val::Px(uv.y * MINIMAP_SIZE - MINIMAP_BUILDING_DOT * 0.5),
-                    width: Val::Px(MINIMAP_BUILDING_DOT),
-                    height: Val::Px(MINIMAP_BUILDING_DOT),
-                    border_radius: BorderRadius::MAX,
-                    ..default()
-                },
-                BackgroundColor(Color::WHITE),
-                MinimapDot,
-                FocusPolicy::Pass,
-            ));
+            // Draw dots from live-streamed building positions.
+            for (_tag, transform) in live_buildings.iter() {
+                let pos = transform.translation;
+                let uv = world_to_minimap_uv(pos);
+                parent.spawn((
+                    Node {
+                        position_type: PositionType::Absolute,
+                        left: Val::Px(uv.x * MINIMAP_SIZE - MINIMAP_BUILDING_DOT * 0.5),
+                        top: Val::Px(uv.y * MINIMAP_SIZE - MINIMAP_BUILDING_DOT * 0.5),
+                        width: Val::Px(MINIMAP_BUILDING_DOT),
+                        height: Val::Px(MINIMAP_BUILDING_DOT),
+                        border_radius: BorderRadius::MAX,
+                        ..default()
+                    },
+                    BackgroundColor(Color::srgb(0.92, 0.90, 0.86)),
+                    MinimapDot,
+                    FocusPolicy::Pass,
+                ));
+            }
+        } else {
+            // Standalone mode: read directly from the in-process simulation.
+            for (_, (civilian, position)) in sim
+                .0
+                .world
+                .query::<(&AgentCivilian, &civ_agents::Position3d)>()
+                .iter()
+            {
+                let uv =
+                    world_to_minimap_uv(world_position_for_civilian(civilian, position));
+                parent.spawn((
+                    Node {
+                        position_type: PositionType::Absolute,
+                        left: Val::Px(uv.x * MINIMAP_SIZE - MINIMAP_CIVILIAN_DOT * 0.5),
+                        top: Val::Px(uv.y * MINIMAP_SIZE - MINIMAP_CIVILIAN_DOT * 0.5),
+                        width: Val::Px(MINIMAP_CIVILIAN_DOT),
+                        height: Val::Px(MINIMAP_CIVILIAN_DOT),
+                        border_radius: BorderRadius::MAX,
+                        ..default()
+                    },
+                    BackgroundColor(civilian_color(civilian)),
+                    MinimapDot,
+                    FocusPolicy::Pass,
+                ));
+            }
+
+            for (_, building) in sim.0.world.query::<&Building>().iter() {
+                let uv = world_to_minimap_uv(world_position_for_building(building));
+                parent.spawn((
+                    Node {
+                        position_type: PositionType::Absolute,
+                        left: Val::Px(uv.x * MINIMAP_SIZE - MINIMAP_BUILDING_DOT * 0.5),
+                        top: Val::Px(uv.y * MINIMAP_SIZE - MINIMAP_BUILDING_DOT * 0.5),
+                        width: Val::Px(MINIMAP_BUILDING_DOT),
+                        height: Val::Px(MINIMAP_BUILDING_DOT),
+                        border_radius: BorderRadius::MAX,
+                        ..default()
+                    },
+                    BackgroundColor(Color::WHITE),
+                    MinimapDot,
+                    FocusPolicy::Pass,
+                ));
+            }
         }
     });
 }

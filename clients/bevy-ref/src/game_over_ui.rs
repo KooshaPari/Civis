@@ -304,6 +304,10 @@ fn outcome_buttons(
         // Centered button group within the vertical layout.
         ui.vertical_centered(|ui| {
             if menu_button(ui, "Restart").clicked() {
+                // In server mode, send sim.reset before transitioning to menu.
+                if let Some(bridge) = bridge {
+                    bridge.send_rpc("sim.reset", serde_json::json!({"seed": 0}));
+                }
                 command.action = MainMenuCommand::ExitToMainMenu;
             }
             ui.add_space(8.0);

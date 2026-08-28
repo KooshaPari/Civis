@@ -109,7 +109,11 @@ pub mod preflight;
 #[cfg(feature = "bevy")]
 pub mod procedural_actor;
 #[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod replay_controls;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod sandbox_event_feed;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod scenario_objectives;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod save_load_ui;
 pub mod session;

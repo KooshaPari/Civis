@@ -501,21 +501,110 @@ fn handle_spawn_tool_clicks(
                 kind: *building_kind,
             });
         }
-        SpawnTool::Terraform | SpawnTool::PaintMaterial => {}
+        SpawnTool::Terraform => {
+            // Terraform: raise terrain at clicked point
+            if let Some(ref bridge) = bridge {
+                bridge.send_rpc(
+                    "sim.command",
+                    serde_json::json!({
+                        "action": "terraform",
+                        "kind": "raise",
+                        "x": position.x,
+                        "y": position.y,
+                        "z": position.z,
+                    }),
+                );
+            }
+        }
+        SpawnTool::PaintMaterial => {
+            // Material paint is handled by the material brush sync system
+            // (tool_categories::paint_material_name → brush).
+            // Click here sends the painted position.
+            if let Some(ref bridge) = bridge {
+                bridge.send_rpc(
+                    "sim.command",
+                    serde_json::json!({
+                        "action": "paint",
+                        "x": position.x,
+                        "y": position.y,
+                        "z": position.z,
+                    }),
+                );
+            }
+        }
         SpawnTool::Destroy => {
             destroy_entity.write(DestroyEntityRequest { position });
         }
-        // Road/structure/vehicle tools are handled by dedicated draw/place systems.
-        SpawnTool::Road
-        | SpawnTool::Trail
-        | SpawnTool::Highway
-        | SpawnTool::Bridge
-        | SpawnTool::House
+        // Structure placement tools — each sends a distinct building kind.
+        SpawnTool::House
         | SpawnTool::Farm
         | SpawnTool::Workshop
         | SpawnTool::Market
-        | SpawnTool::Wall
-        | SpawnTool::Vehicle => {}
+        | SpawnTool::Wall => {
+            if let Some(ref bridge) = bridge {
+                let kind = match active.tool {
+                    SpawnTool::House => "House",
+                    SpawnTool::Farm => "Farm",
+                    SpawnTool::Workshop => "Workshop",
+                    SpawnTool::Market => "Market",
+                    SpawnTool::Wall => "Wall",
+                    _ => unreachable!(),
+                };
+                bridge.send_rpc(
+                    "sim.command",
+                    serde_json::json!({
+                        "action": "spawn",
+                        "kind": "building",
+                        "building": kind,
+                        "x": position.x,
+                        "y": position.y,
+                        "z": position.z,
+                    }),
+                );
+            }
+            spawn_building.write(SpawnBuildingRequest {
+                position,
+                kind: BuildingSpawnKind::CityCenter, // generic structure
+            });
+        }
+        // Road tools start a drag-to-draw stroke.
+        SpawnTool::Road
+        | SpawnTool::Trail
+        | SpawnTool::Highway
+        | SpawnTool::Bridge => {
+            // Road/Trail/Highway/Bridge are drag-to-draw tools.
+            // The first click starts the RoadDraft; subsequent movement
+            // adds points; mouse-up fires PlaceRoadRequest.
+            // For single-click: send a short segment at the click point.
+            if let Some(ref bridge) = bridge {
+                bridge.send_rpc(
+                    "sim.command",
+                    serde_json::json!({
+                        "action": "road",
+                        "kind": format!("{:?}", active.tool).to_lowercase(),
+                        "points": [
+                            {"x": position.x, "z": position.z},
+                            {"x": position.x + 5.0, "z": position.z + 5.0}
+                        ],
+                    }),
+                );
+            }
+        }
+        SpawnTool::Vehicle => {
+            // Vehicle placement
+            if let Some(ref bridge) = bridge {
+                bridge.send_rpc(
+                    "sim.command",
+                    serde_json::json!({
+                        "action": "spawn",
+                        "kind": "vehicle",
+                        "x": position.x,
+                        "y": position.y,
+                        "z": position.z,
+                    }),
+                );
+            }
+        }
     }
 }
 

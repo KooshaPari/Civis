@@ -428,6 +428,93 @@ fn apply_god_action_requests(
                 );
                 msg
             }
+            // ---- Life verbs ----
+            "life.spawn_organism" => {
+                spawn_effect_flash(
+                    &mut commands,
+                    &effect_meshes,
+                    &mut materials,
+                    center,
+                    Color::srgb(0.2, 0.85, 0.45),
+                    3.0,
+                );
+                format!(
+                    "Spawn organism at ({:.2},{:.2})",
+                    req.norm_x, req.norm_y
+                )
+            }
+            "life.spawn_herd" => {
+                spawn_effect_flash(
+                    &mut commands,
+                    &effect_meshes,
+                    &mut materials,
+                    center + Vec3::Y * 1.5,
+                    Color::srgb(0.2, 0.85, 0.45),
+                    5.0,
+                );
+                format!(
+                    "Spawn herd at ({:.2},{:.2})",
+                    req.norm_x, req.norm_y
+                )
+            }
+
+            // ---- Disaster verbs ----
+            "disaster.wildfire" => {
+                let (cells, dirty) =
+                    apply_terrain_verb(&mut scene.chunk_voxels, center, TerrainVerb::Meteor, mag * 0.4);
+                remesh_dirty_chunks(
+                    &mut commands,
+                    &mut scene,
+                    &focus,
+                    &debug,
+                    &frame_budget_recovery,
+                    &effect_meshes,
+                    &mut meshes,
+                    &mut materials,
+                    &dirty,
+                    gpu_quality.as_deref().copied().unwrap_or_default(),
+                );
+                spawn_effect_flash(
+                    &mut commands,
+                    &effect_meshes,
+                    &mut materials,
+                    center + Vec3::Y * 3.0,
+                    Color::srgb(1.0, 0.25, 0.05),
+                    8.0 + mag * 6.0,
+                );
+                format!(
+                    "Wildfire at ({:.2},{:.2}) — scorching {cells} voxels",
+                    req.norm_x, req.norm_y
+                )
+            }
+            "disaster.flood" => {
+                let (cells, dirty) =
+                    apply_terrain_verb(&mut scene.chunk_voxels, center, TerrainVerb::Meteor, mag * 0.2);
+                remesh_dirty_chunks(
+                    &mut commands,
+                    &mut scene,
+                    &focus,
+                    &debug,
+                    &frame_budget_recovery,
+                    &effect_meshes,
+                    &mut meshes,
+                    &mut materials,
+                    &dirty,
+                    gpu_quality.as_deref().copied().unwrap_or_default(),
+                );
+                spawn_effect_flash(
+                    &mut commands,
+                    &effect_meshes,
+                    &mut materials,
+                    center + Vec3::Y * 1.5,
+                    Color::srgb(0.15, 0.45, 0.95),
+                    6.0 + mag * 8.0,
+                );
+                format!(
+                    "Flood at ({:.2},{:.2}) — {cells} voxels inundated",
+                    req.norm_x, req.norm_y
+                )
+            }
             other => format!("Unknown god action: {other}"),
         };
         panel.status = Some(status.clone());

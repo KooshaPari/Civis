@@ -41,6 +41,9 @@ const ARM_SWING_HZ: f32 = 2.0;
 const LEG_SWING_AMP: f32 = 0.35;
 /// Speed below which the actor is considered idle.
 const IDLE_SPEED: f32 = 0.4;
+/// Bone mesh scale multiplier — bones were 0.5x (too small); 0.85x reads as
+/// a stylised character without being as bulky as full-scale cuboids.
+const BONE_SCALE: f32 = 0.85;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Components
@@ -132,76 +135,26 @@ pub fn spawn_procedural_actor(
         }};
     }
 
-    let torso = bone!(
-        0.35 * x_scale * 0.5,
-        0.5 * y_scale * 0.5,
-        0.2 * 0.5,
-        Vec3::new(0.0, torso_y, 0.0),
-        mat.clone()
-    );
-    let head = bone!(
-        0.22 * x_scale * 0.5,
-        0.22 * y_scale * 0.5,
-        0.22 * 0.5,
-        Vec3::new(0.0, head_y, 0.0),
-        mat.clone()
-    );
-    let left_upper_arm = bone!(
-        0.1 * 0.5,
-        0.35 * y_scale * 0.5,
-        0.1 * 0.5,
-        Vec3::new(-ARM_SPREAD, upper_arm_y, 0.0),
-        mat.clone()
-    );
-    let right_upper_arm = bone!(
-        0.1 * 0.5,
-        0.35 * y_scale * 0.5,
-        0.1 * 0.5,
-        Vec3::new(ARM_SPREAD, upper_arm_y, 0.0),
-        mat.clone()
-    );
-    let left_forearm = bone!(
-        0.09 * 0.5,
-        0.30 * y_scale * 0.5,
-        0.09 * 0.5,
-        Vec3::new(-ARM_SPREAD, forearm_y, 0.0),
-        mat.clone()
-    );
-    let right_forearm = bone!(
-        0.09 * 0.5,
-        0.30 * y_scale * 0.5,
-        0.09 * 0.5,
-        Vec3::new(ARM_SPREAD, forearm_y, 0.0),
-        mat.clone()
-    );
-    let left_thigh = bone!(
-        0.13 * 0.5,
-        0.35 * y_scale * 0.5,
-        0.13 * 0.5,
-        Vec3::new(-LEG_SPREAD, thigh_y, 0.0),
-        mat.clone()
-    );
-    let right_thigh = bone!(
-        0.13 * 0.5,
-        0.35 * y_scale * 0.5,
-        0.13 * 0.5,
-        Vec3::new(LEG_SPREAD, thigh_y, 0.0),
-        mat.clone()
-    );
-    let left_shin = bone!(
-        0.11 * 0.5,
-        0.32 * y_scale * 0.5,
-        0.11 * 0.5,
-        Vec3::new(-LEG_SPREAD, shin_y, 0.0),
-        mat.clone()
-    );
-    let right_shin = bone!(
-        0.11 * 0.5,
-        0.32 * y_scale * 0.5,
-        0.11 * 0.5,
-        Vec3::new(LEG_SPREAD, shin_y, 0.0),
-        mat
-    );
+    let torso = bone!
+        (0.35 * x_scale * BONE_SCALE, 0.5 * y_scale * BONE_SCALE, 0.2 * BONE_SCALE, Vec3::new(0.0, torso_y, 0.0), mat.clone());
+    let head = bone!
+        (0.22 * x_scale * BONE_SCALE, 0.22 * y_scale * BONE_SCALE, 0.22 * BONE_SCALE, Vec3::new(0.0, head_y, 0.0), mat.clone());
+    let left_upper_arm = bone!
+        (0.1 * BONE_SCALE, 0.35 * y_scale * BONE_SCALE, 0.1 * BONE_SCALE, Vec3::new(-ARM_SPREAD, upper_arm_y, 0.0), mat.clone());
+    let right_upper_arm = bone!
+        (0.1 * BONE_SCALE, 0.35 * y_scale * BONE_SCALE, 0.1 * BONE_SCALE, Vec3::new(ARM_SPREAD, upper_arm_y, 0.0), mat.clone());
+    let left_forearm = bone!
+        (0.09 * BONE_SCALE, 0.30 * y_scale * BONE_SCALE, 0.09 * BONE_SCALE, Vec3::new(-ARM_SPREAD, forearm_y, 0.0), mat.clone());
+    let right_forearm = bone!
+        (0.09 * BONE_SCALE, 0.30 * y_scale * BONE_SCALE, 0.09 * BONE_SCALE, Vec3::new(ARM_SPREAD, forearm_y, 0.0), mat.clone());
+    let left_thigh = bone!
+        (0.13 * BONE_SCALE, 0.35 * y_scale * BONE_SCALE, 0.13 * BONE_SCALE, Vec3::new(-LEG_SPREAD, thigh_y, 0.0), mat.clone());
+    let right_thigh = bone!
+        (0.13 * BONE_SCALE, 0.35 * y_scale * BONE_SCALE, 0.13 * BONE_SCALE, Vec3::new(LEG_SPREAD, thigh_y, 0.0), mat.clone());
+    let left_shin = bone!
+        (0.11 * BONE_SCALE, 0.32 * y_scale * BONE_SCALE, 0.11 * BONE_SCALE, Vec3::new(-LEG_SPREAD, shin_y, 0.0), mat.clone());
+    let right_shin = bone!
+        (0.11 * BONE_SCALE, 0.32 * y_scale * BONE_SCALE, 0.11 * BONE_SCALE, Vec3::new(LEG_SPREAD, shin_y, 0.0), mat);
 
     commands.entity(root).insert(ProceduralRig {
         torso,

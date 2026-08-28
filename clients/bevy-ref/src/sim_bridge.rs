@@ -38,6 +38,10 @@ pub struct SimCivilianMarker {
     pub visual: ActorVisualKind,
 }
 
+/// Tracks previous world position for facing direction computation.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct PrevWorldPosition(pub Vec3);
+
 /// Public alias for attach-mode policy tests and headless scene dump.
 pub type SimCivilianMarkerPublic = SimCivilianMarker;
 
@@ -227,6 +231,7 @@ fn sync_visible_gameplay(
     sim: Res<SimState>,
     existing_civilians: Query<(Entity, &SimCivilianMarker)>,
     existing_buildings: Query<(Entity, &SimBuildingMarker)>,
+    prev_positions: Query<&PrevWorldPosition>,
     marker_meshes: Res<GameplayMarkerMeshes>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -268,14 +273,33 @@ fn sync_visible_gameplay(
             Some((entity, old_faction, old_visual))
                 if old_faction == faction_id && old_visual == visual =>
             {
-                commands.entity(entity).insert(Transform::from_translation(
-                    world_pos
-                        + if matches!(visual, ActorVisualKind::Humanoid) {
-                            Vec3::Y * 0.8
-                        } else {
-                            Vec3::Y * 0.25
-                        },
-                ));
+                let target = world_pos
+                    + if matches!(visual, ActorVisualKind::Humanoid) {
+                        Vec3::Y * 0.8
+                    } else {
+                        Vec3::Y * 0.25
+                    };
+                // Compute facing direction from movement delta
+                if let Ok(prev_pos) = prev_positions.get(entity) {
+                    let delta = target - prev_pos.0;
+                    if delta.xz().length_squared() > 0.001 {
+                        let facing = Quat::from_rotation_arc(-Vec3::Z, Vec3::new(delta.x, 0.0, delta.z).normalize());
+                        commands.entity(entity).insert((
+                            Transform::from_translation(target).with_rotation(facing),
+                            PrevWorldPosition(target),
+                        ));
+                    } else {
+                        commands.entity(entity).insert((
+                            Transform::from_translation(target),
+                            PrevWorldPosition(target),
+                        ));
+                    }
+                } else {
+                    commands.entity(entity).insert((
+                        Transform::from_translation(target),
+                        PrevWorldPosition(target),
+                    ));
+                }
                 entity
             }
             Some((entity, _, _)) => {
@@ -395,11 +419,11 @@ fn spawn_civilian_visual(
         // GameModels resource not loaded yet: spawn procedural rig as fallback.
         let color = faction_color(&Alignment::with_faction(faction));
         let root = spawn_procedural_actor(commands, meshes, materials, visual, color, *world_pos);
-        commands.entity(root).insert(SimCivilianMarker {
+        commands.entity(root).insert((SimCivilianMarker {
             id: civilian_id,
             faction,
             visual,
-        });
+        }, PrevWorldPosition(*world_pos + Vec3::Y * 0.25)));
         return root;
     };
     match actor_scene(models, visual, faction) {
@@ -410,6 +434,7 @@ fn spawn_civilian_visual(
                     faction,
                     visual,
                 },
+                PrevWorldPosition(*world_pos + Vec3::Y * 0.25),
                 scene_root,
                 Transform::from_translation(*world_pos + Vec3::Y * 0.25),
             ))
@@ -419,11 +444,11 @@ fn spawn_civilian_visual(
             let color = faction_color(&Alignment::with_faction(faction));
             let root =
                 spawn_procedural_actor(commands, meshes, materials, visual, color, *world_pos);
-            commands.entity(root).insert(SimCivilianMarker {
+            commands.entity(root).insert((SimCivilianMarker {
                 id: civilian_id,
                 faction,
                 visual,
-            });
+            }, PrevWorldPosition(*world_pos + Vec3::Y * 0.25)));
             root
         }
     }

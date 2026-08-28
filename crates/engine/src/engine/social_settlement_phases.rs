@@ -64,13 +64,18 @@ impl Simulation {
         sid: u32,
         kind: civ_institutions::InstitutionKind,
         new_level: u8,
-        _events: &mut Vec<InstitutionEvent>,
+        events: &mut Vec<InstitutionEvent>,
     ) {
         let key = (sid, institution_kind_key(kind), new_level);
         if self.institution_levels_emitted.contains(&key) {
             return;
         }
-        self.run_building_emergence_tick();
+        self.institution_levels_emitted.insert(key);
+        events.push(InstitutionEvent {
+            kind,
+            level: new_level,
+            settlement_id: sid,
+        });
     }
 
     pub(crate) fn phase_social_mood(&mut self) {

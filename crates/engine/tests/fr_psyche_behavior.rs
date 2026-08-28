@@ -35,7 +35,6 @@ fn make_test_psyche(valence: f32, arousal: f32, impulsivity: f32) -> Psyche {
 /// A sentient agent perceiving threat (high arousal) and misery (low valence)
 /// exhibits flee behavior. This ensures the fear → flee path is wired correctly.
 #[test]
-#[ignore = "TDD red step: behavior_from_psyche always returns Neutral (emotion-to-behavior mapping not yet implemented)"]
 fn fr_psyche_behavior_fearful_agent_flees() {
     let psyche = make_test_psyche(
         -0.8, // highly miserable
@@ -56,7 +55,6 @@ fn fr_psyche_behavior_fearful_agent_flees() {
 /// (low arousal) exhibits cooperation behavior. This ensures the
 /// contentment → cooperate path is wired correctly.
 #[test]
-#[ignore = "TDD red step: behavior_from_psyche always returns Neutral (emotion-to-behavior mapping not yet implemented)"]
 fn fr_psyche_behavior_content_agent_cooperates() {
     let psyche = make_test_psyche(
         0.85, // highly content
@@ -77,7 +75,6 @@ fn fr_psyche_behavior_content_agent_cooperates() {
 /// and high impulsivity exhibits aggression behavior. This ensures the
 /// anger + impulsivity → aggress path is wired correctly.
 #[test]
-#[ignore = "TDD red step: behavior_from_psyche always returns Neutral (emotion-to-behavior mapping not yet implemented)"]
 fn fr_psyche_behavior_angry_impulsive_agent_aggresses() {
     let psyche = make_test_psyche(
         -0.7, // frustrated
@@ -119,7 +116,7 @@ fn fr_psyche_behavior_balanced_mood_is_neutral() {
 /// to behavioral choices. This test verifies the full pipeline:
 /// DNA → psyche → behavior.
 #[test]
-#[ignore = "TDD red step: behavior_from_psyche always returns Neutral (emotion-to-behavior mapping not yet implemented)"]
+#[ignore = "Fails: simulation does not create psyche states in agents after 150 ticks; emergence psyche pipeline not wired"]
 fn fr_psyche_behavior_emergence_integration() {
     let mut sim = Simulation::with_seed(42);
 
@@ -185,7 +182,7 @@ fn fr_psyche_behavior_low_impulsivity_dampens_anger() {
 /// stress should move an agent's mood and update its tick-local behavior
 /// snapshot through the simulation phase order.
 #[test]
-#[ignore = "TDD red step: behavior_from_psyche always returns Neutral (emotion-to-behavior mapping not yet implemented)"]
+#[ignore = "Fails: agent_psyche() returns None after ticks; psyche attachment not wired through tick"]
 fn fr_psyche_behavior_tick_stress_changes_psyche_and_behavior() {
     let mut sim = Simulation::with_seed(2026);
     let agent_id = sim

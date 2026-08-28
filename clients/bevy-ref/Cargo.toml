@@ -55,6 +55,8 @@ wgpu = { version = "27", optional = true }
 # our `bevy = "0.18"` pin. default-features off → only the `ogg` decoder is
 # pulled (CC0 clips ship as .ogg), avoiding extra codec deps. See src/audio.rs.
 bevy_kira_audio = { version = "0.25", optional = true, default-features = false, features = ["ogg"] }
+# GPU particle effects — optional dep behind the `vfx` feature (src/vfx.rs).
+bevy_hanabi = { version = "0.18", optional = true }
 # PART A — bevy_atmosphere (real physically-based sky).
 # NOTE (checked 2026-05-29 via crates.io): the latest published bevy_atmosphere
 # is 0.13.0 (2025-05-06) which depends on `bevy ^0.16` — there is NO release
@@ -138,7 +140,6 @@ models = ["bevy"]
 audio = ["bevy", "dep:bevy_kira_audio"]
 # GPU particle effects via bevy_hanabi. See src/vfx.rs (VfxPlugin).
 # OFF by default; enable: `--features vfx`.
-bevy_hanabi = { version = "0.18", optional = true }
 vfx = ["bevy", "dep:bevy_hanabi"]
 # `pbr-textures` — enable PBR texture asset loading (normal/roughness/AO maps) on
 # top of the base material pipeline (src/materials.rs). OFF by default so CI builds

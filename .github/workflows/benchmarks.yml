@@ -33,8 +33,19 @@ jobs:
       - name: Install cargo-criterion
         run: cargo install cargo-criterion --locked
 
-      - name: Run benchmarks (all workspace crates)
-        run: cargo bench --workspace
+      # Validate every benchmark binary in the workspace.  `--test` runs each
+      # benchmark once and exits — it exercises the full setup/teardown paths
+      # and catches runtime regressions without paying for the full Criterion
+      # measurement loop.  Full performance numbers come from the dedicated
+      # performance-bench workflow that runs nightly against `main`.
+      - name: Run benchmarks (validation, --test mode)
+        run: cargo bench --workspace -- --test 2>&1 | tail -80
+
+      # Compile-only check that covers every [[bench]] target, including ones
+      # gated behind features that the default `--workspace` invocation skips.
+      # Mirrors the compile gate that ci.yml applies to lib + test targets.
+      - name: Verify benchmark binaries compile (all features)
+        run: cargo bench --workspace --all-features --no-run 2>&1 | tail -40
 
       - name: Upload benchmark results
         if: always()

@@ -243,7 +243,7 @@ impl Repl {
                 "inspect <entity>, i <entity>",
                 "Inspect details of an entity",
             ),
-            ("spawn <type>", "Spawn a new entity of the given type"),
+            ("spawn <type> [x] [y] [faction]", "Spawn a new entity of the given type"),
             ("diplomacy, dip", "Show diplomacy overview"),
             ("economy, eco", "Show economy overview"),
             ("save [path]", "Save the current simulation state"),
@@ -425,19 +425,25 @@ impl Repl {
         }
     }
 
-    /// Spawn a new entity of the given type.
+    /// Spawn a new civilian entity on the live simulation.
     ///
-    /// When connected, sends `sim.command` with spawn action.
-    /// When offline, increments the local tick.
+    /// When connected, sends `sim.spawn_civilian` with `{x, y, faction}`.
+    /// The argument is parsed as optional coordinates and faction:
+    ///   - `spawn`            → error (needs an argument)
+    ///   - `spawn villager`   → default coords (0.5, 0.5), faction 0
+    ///   - `spawn 0.5 0.3`    → coords (0.5, 0.3), faction 0
+    ///   - `spawn 0.5 0.3 1`  → coords (0.5, 0.3), faction 1
+    /// When offline, shows a placeholder message.
     fn cmd_spawn(&mut self, entity_type: &str) -> String {
         if entity_type.is_empty() {
-            return format!("{} Usage: spawn <type>", "error:".red().bold());
+            return format!("{} Usage: spawn <type> [x] [y] [faction]", "error:".red().bold());
         }
 
         if self.ws.is_some() {
+            let (x, y, faction) = parse_spawn_params(entity_type);
             match self.send_rpc(
-                "sim.command",
-                serde_json::json!({"action": "spawn", "entity_type": entity_type}),
+                "sim.spawn_civilian",
+                serde_json::json!({"x": x, "y": y, "faction": faction}),
             ) {
                 Ok(resp) => {
                     if let Some(err) = resp.get("error") {
@@ -449,43 +455,42 @@ impl Repl {
                                 .unwrap_or("unknown"),
                         );
                     }
-                    let result = resp.get("result").cloned().unwrap_or(Value::Null);
-                    let id = result
-                        .get("id")
-                        .and_then(|v| v.as_u64())
-                        .unwrap_or(self.tick);
-                    self.tick = id.max(self.tick + 1);
-                    format!(
-                        "{} '{}' with id {}",
-                        "Spawned entity:".green().bold(),
-                        entity_type.magenta(),
-                        id
-                    )
+                    let accepted = resp
+                        .get("result")
+                        .and_then(|r| r.get("accepted"))
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false);
+                    if accepted {
+                        format!(
+                            "{} '{}' at ({}, {}) faction {}",
+                            "Spawned entity:".green().bold(),
+                            entity_type.magenta(),
+                            x,
+                            y,
+                            faction,
+                        )
+                    } else {
+                        format!("{} server rejected spawn", "error:".red().bold())
+                    }
                 }
                 Err(e) => format!("{} {}", "error:".red().bold(), e),
             }
         } else {
-            let id = self.tick;
-            self.tick += 1;
             format!(
-                "{} '{}' with id {}",
+                "{} '{}' (offline — no server connection)",
                 "Spawned entity (offline):".green().bold(),
                 entity_type.magenta(),
-                id
             )
         }
     }
 
-    /// Show diplomacy overview.
+    /// Show diplomacy overview by querying factions from the live simulation.
     ///
-    /// When connected, sends `sim.diplomacy_action` with query action.
+    /// When connected, sends `sim.get_factions` to retrieve the faction list.
     /// When offline, shows placeholder data.
     fn cmd_diplomacy(&mut self) -> String {
         if self.ws.is_some() {
-            match self.send_rpc(
-                "sim.diplomacy_action",
-                serde_json::json!({"action": "query"}),
-            ) {
+            match self.send_rpc("sim.get_factions", serde_json::json!({})) {
                 Ok(resp) => {
                     if let Some(err) = resp.get("error") {
                         return format!(
@@ -497,30 +502,58 @@ impl Repl {
                         );
                     }
                     let result = resp.get("result").cloned().unwrap_or(Value::Null);
-                    format!(
-                        "{}\n{}\n",
+                    let factions = result
+                        .get("factions")
+                        .cloned()
+                        .unwrap_or(Value::Array(vec![]));
+                    let faction_count = factions
+                        .as_array()
+                        .map(|a| a.len())
+                        .unwrap_or(0);
+                    let tick = result
+                        .get("tick")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(self.tick);
+                    self.tick = tick;
+                    let mut out = format!(
+                        "{}\n  tick: {}\n  factions: {}\n",
                         "Diplomacy Overview:".green().bold(),
-                        serde_json::to_string_pretty(&result)
-                            .unwrap_or_else(|_| result.to_string())
-                    )
+                        tick,
+                        faction_count,
+                    );
+                    if let Some(arr) = factions.as_array() {
+                        for f in arr {
+                            let name = f
+                                .get("name")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("?");
+                            let id = f
+                                .get("id")
+                                .and_then(|v| v.as_u64())
+                                .unwrap_or(0);
+                            out.push_str(&format!("  faction {}: {}\n", id, name.cyan()));
+                        }
+                    }
+                    out
                 }
                 Err(e) => format!("{} {}", "error:".red().bold(), e),
             }
         } else {
             format!(
-                "{}\n  active treaties: 0\n  pending proposals: 0\n  relations: neutral\n",
-                "Diplomacy Overview (offline):".green().bold()
+                "{}\n  factions: 0 (offline)\n",
+                "Diplomacy Overview:".green().bold()
             )
         }
     }
 
-    /// Show economy overview.
+    /// Show economy overview by querying resources from the live simulation.
     ///
-    /// When connected, sends `sim.snapshot` and extracts economy data.
+    /// When connected, sends `sim.get_resources` to retrieve market prices
+    /// and institution balances.
     /// When offline, shows placeholder data.
     fn cmd_economy(&mut self) -> String {
         if self.ws.is_some() {
-            match self.send_rpc("sim.snapshot", serde_json::json!({})) {
+            match self.send_rpc("sim.get_resources", serde_json::json!({})) {
                 Ok(resp) => {
                     if let Some(err) = resp.get("error") {
                         return format!(
@@ -533,38 +566,53 @@ impl Repl {
                     }
                     let result = resp.get("result").cloned().unwrap_or(Value::Null);
 
-                    // Update local tick from snapshot.
+                    // Update local tick from response.
                     if let Some(tick) = result.get("tick").and_then(|v| v.as_u64()) {
                         self.tick = tick;
                     }
 
-                    let population = result
-                        .get("population")
-                        .and_then(|v| v.as_u64())
-                        .unwrap_or(0);
-                    let treasury = result
-                        .get("treasury")
-                        .and_then(|v| v.as_u64())
-                        .or_else(|| result.get("money").and_then(|v| v.as_u64()))
-                        .unwrap_or(0);
-                    let production = result
-                        .get("production")
-                        .and_then(|v| v.as_u64())
-                        .unwrap_or(0);
-                    let trade_routes = result
-                        .get("trade_routes")
-                        .and_then(|v| v.as_u64())
-                        .or_else(|| result.get("trade").and_then(|v| v.as_u64()))
-                        .unwrap_or(0);
+                    let market_prices = result.get("market_prices").cloned().unwrap_or(Value::Object(serde_json::Map::new()));
+                    let institutions = result.get("institutions").cloned().unwrap_or(Value::Array(vec![]));
 
-                    format!(
-                        "{}\n  population: {}\n  treasury: {}\n  production: {}\n  trade routes: {}\n",
+                    let mut out = format!(
+                        "{}\n  tick: {}\n",
                         "Economy Overview:".green().bold(),
-                        population,
-                        treasury,
-                        production,
-                        trade_routes,
-                    )
+                        self.tick,
+                    );
+
+                    // Display market prices.
+                    if let Some(obj) = market_prices.as_object() {
+                        if obj.is_empty() {
+                            out.push_str("  market prices: (none)\n");
+                        } else {
+                            out.push_str("  market prices:\n");
+                            for (good, price) in obj {
+                                out.push_str(&format!("    {}: {}\n", good.cyan(), price));
+                            }
+                        }
+                    }
+
+                    // Display institutions.
+                    if let Some(arr) = institutions.as_array() {
+                        if arr.is_empty() {
+                            out.push_str("  institutions: (none)\n");
+                        } else {
+                            out.push_str("  institutions:\n");
+                            for inst in arr {
+                                let kind = inst
+                                    .get("kind")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("?");
+                                let balance = inst
+                                    .get("balance_joules")
+                                    .and_then(|v| v.as_i64())
+                                    .unwrap_or(0);
+                                out.push_str(&format!("    {} balance: {} J\n", kind.magenta(), balance));
+                            }
+                        }
+                    }
+
+                    out
                 }
                 Err(e) => format!("{} {}", "error:".red().bold(), e),
             }
@@ -640,19 +688,23 @@ impl Repl {
         }
     }
 
-    /// Load a saved simulation state.
+    /// Load a saved simulation state from a production slot.
     ///
-    /// When connected, sends `sim.load_replay` with the path.
+    /// When connected, sends `save.load` with `{ slot_name }`.
     /// When offline, shows a placeholder message.
     fn cmd_load(&mut self, path: &str) -> String {
-        if self.ws.is_some() {
-            let params = if path.is_empty() {
-                serde_json::json!({})
-            } else {
-                serde_json::json!({ "path": path })
-            };
+        let slot_name = if path.is_empty() {
+            "autosave".to_string()
+        } else {
+            PathBuf::from(path)
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("autosave")
+                .to_string()
+        };
 
-            match self.send_rpc("sim.load_replay", params) {
+        if self.ws.is_some() {
+            match self.send_rpc("save.load", serde_json::json!({ "slot_name": slot_name })) {
                 Ok(resp) => {
                     if let Some(err) = resp.get("error") {
                         return format!(
@@ -673,28 +725,30 @@ impl Repl {
                     if loaded {
                         if path.is_empty() {
                             format!(
-                                "{} loaded from default location (tick: {})",
+                                "{} loaded from slot '{}' (tick: {})",
                                 "State".green().bold(),
+                                slot_name,
                                 loaded_tick
                             )
                         } else {
                             format!(
-                                "{} loaded from '{}' (tick: {})",
+                                "{} loaded from slot '{}' at '{}' (tick: {})",
                                 "State".green().bold(),
+                                slot_name,
                                 path,
                                 loaded_tick
                             )
                         }
                     } else {
-                        format!("{} failed to load from '{}'", "error:".red().bold(), path)
+                        format!("{} failed to load slot '{}'", "error:".red().bold(), slot_name)
                     }
                 }
                 Err(e) => format!("{} {}", "error:".red().bold(), e),
             }
         } else if path.is_empty() {
-            format!("{} loaded from default location", "State".green().bold())
+            format!("{} loaded from default slot (offline)", "State".green().bold())
         } else {
-            format!("{} loaded from '{}'", "State".green().bold(), path)
+            format!("{} loaded from '{}' (offline)", "State".green().bold(), path)
         }
     }
 
@@ -737,6 +791,69 @@ fn parse_tile_coords(s: &str) -> (i64, i64) {
         return (x, 0);
     }
     (0, 0)
+}
+
+/// Parse spawn parameters from a string.
+///
+/// Accepts formats:
+/// - `"0.5 0.3"` → x=0.5, y=0.3, faction=0
+/// - `"0.5 0.3 1"` → x=0.5, y=0.3, faction=1
+/// - `"villager"` → x=0.5, y=0.5, faction=0 (default coords)
+/// - `"villager 0.2 0.8"` → x=0.2, y=0.8, faction=0
+/// - `"villager 0.2 0.8 2"` → x=0.2, y=0.8, faction=2
+fn parse_spawn_params(s: &str) -> (f32, f32, u32) {
+    let parts: Vec<&str> = s.split_whitespace().collect();
+    if parts.len() == 1 {
+        // Single token: could be coordinates or a type name.
+        // If it parses as a float, treat as x with y=0.
+        if let Ok(x) = parts[0].parse::<f32>() {
+            return (x, 0.0, 0);
+        }
+        // Otherwise it's a type name — use default coords.
+        return (0.5, 0.5, 0);
+    }
+    if parts.len() == 2 {
+        // Could be "x y" (numeric) or "type x".
+        if let (Ok(x), Ok(y)) = (parts[0].parse::<f32>(), parts[1].parse::<f32>()) {
+            return (x, y, 0);
+        }
+        // "type x" → parse the second as x, y=0.
+        if let Ok(x) = parts[1].parse::<f32>() {
+            return (x, 0.0, 0);
+        }
+        return (0.5, 0.5, 0);
+    }
+    if parts.len() >= 3 {
+        // "type x y [faction]" or "x y faction".
+        // Try to parse the last up to 3 tokens as numbers.
+        if parts.len() == 3 {
+            if let (Ok(x), Ok(y), Ok(f)) = (
+                parts[0].parse::<f32>(),
+                parts[1].parse::<f32>(),
+                parts[2].parse::<u32>(),
+            ) {
+                return (x, y, f);
+            }
+        }
+        // "type x y faction"
+        let nums: Vec<&str> = parts.iter().rev().take(3).copied().collect();
+        if nums.len() == 3 {
+            if let (Ok(f), Ok(y), Ok(x)) = (
+                nums[0].parse::<u32>(),
+                nums[1].parse::<f32>(),
+                nums[2].parse::<f32>(),
+            ) {
+                return (x, y, f);
+            }
+        }
+        if parts.len() == 3 {
+            if let (Ok(x), Ok(y)) = (parts[1].parse::<f32>(), parts[2].parse::<f32>()) {
+                return (x, y, 0);
+            }
+        }
+        return (0.5, 0.5, 0);
+    }
+    (0.5, 0.5, 0)
 }
 
 /// Errors that can occur in the REPL.
@@ -850,8 +967,7 @@ mod tests {
         repl.tick = 5;
         let output = repl.process_command("spawn warrior");
         assert!(output.contains("warrior"));
-        assert!(output.contains("id 5"));
-        assert_eq!(repl.tick, 6);
+        assert!(output.contains("Spawned entity (offline)"));
     }
 
     #[test]
@@ -862,10 +978,59 @@ mod tests {
     }
 
     #[test]
+    fn parse_spawn_params_type_only() {
+        let (x, y, f) = super::parse_spawn_params("villager");
+        assert!((x - 0.5).abs() < 0.001);
+        assert!((y - 0.5).abs() < 0.001);
+        assert_eq!(f, 0);
+    }
+
+    #[test]
+    fn parse_spawn_params_xy() {
+        let (x, y, f) = super::parse_spawn_params("0.2 0.8");
+        assert!((x - 0.2).abs() < 0.001);
+        assert!((y - 0.8).abs() < 0.001);
+        assert_eq!(f, 0);
+    }
+
+    #[test]
+    fn parse_spawn_params_xy_faction() {
+        let (x, y, f) = super::parse_spawn_params("0.3 0.7 2");
+        assert!((x - 0.3).abs() < 0.001);
+        assert!((y - 0.7).abs() < 0.001);
+        assert_eq!(f, 2);
+    }
+
+    #[test]
+    fn parse_spawn_params_type_xy_faction() {
+        let (x, y, f) = super::parse_spawn_params("warrior 0.1 0.9 3");
+        assert!((x - 0.1).abs() < 0.001);
+        assert!((y - 0.9).abs() < 0.001);
+        assert_eq!(f, 3);
+    }
+
+    #[test]
+    fn parse_spawn_params_single_number() {
+        let (x, y, f) = super::parse_spawn_params("0.7");
+        assert!((x - 0.7).abs() < 0.001);
+        assert!((y - 0.0).abs() < 0.001);
+        assert_eq!(f, 0);
+    }
+
+    #[test]
+    fn parse_spawn_params_type_xy() {
+        let (x, y, f) = super::parse_spawn_params("warrior 0.4 0.6");
+        assert!((x - 0.4).abs() < 0.001);
+        assert!((y - 0.6).abs() < 0.001);
+        assert_eq!(f, 0);
+    }
+
+    #[test]
     fn diplomacy_returns_overview() {
         let mut repl = make_repl();
         let output = repl.process_command("diplomacy");
         assert!(output.contains("Diplomacy Overview"));
+        assert!(output.contains("offline"));
     }
 
     #[test]
@@ -908,7 +1073,7 @@ mod tests {
     fn load_without_path_uses_default() {
         let mut repl = make_repl();
         let output = repl.process_command("load");
-        assert!(output.contains("default location"));
+        assert!(output.contains("default slot"));
     }
 
     #[test]

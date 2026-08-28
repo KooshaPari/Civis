@@ -424,15 +424,22 @@ mod tests {
     fn test_upgrade_progression() {
         let mut engine = test_engine();
         let id = engine.spawn(BuildingTier::Primitive, 1);
-        let mut resources: u32 = 1000;
+        let mut resources: u32 = 5000;
 
-        // Upgrade Primitive -> Basic (needs tech >= 3, pop >= 20, cost >= 150)
-        let result = engine.upgrade(id, 10, 50, &mut resources);
+        // Configs are scaled per tier:
+        //   Basic(idx1):      tech>=3,  pop>=20,  cost=150
+        //   Advanced(idx2):   tech>=5,  pop>=30,  cost=200
+        //   Sophisticated(3): tech>=7,  pop>=40,  cost=250
+        //   Monumental(idx4): tech>=9,  pop>=50,  cost=300
+        //   Legendary(idx5):  tech>=11, pop>=60,  cost=350
+
+        // Upgrade Primitive -> Basic
+        let result = engine.upgrade(id, 15, 100, &mut resources);
         assert!(result.is_ok());
         assert_eq!(engine.get_building(id).unwrap().tier, BuildingTier::Basic);
 
         // Upgrade Basic -> Advanced
-        let result = engine.upgrade(id, 10, 50, &mut resources);
+        let result = engine.upgrade(id, 15, 100, &mut resources);
         assert!(result.is_ok());
         assert_eq!(
             engine.get_building(id).unwrap().tier,
@@ -440,7 +447,7 @@ mod tests {
         );
 
         // Upgrade Advanced -> Sophisticated
-        let result = engine.upgrade(id, 10, 50, &mut resources);
+        let result = engine.upgrade(id, 15, 100, &mut resources);
         assert!(result.is_ok());
         assert_eq!(
             engine.get_building(id).unwrap().tier,
@@ -448,7 +455,7 @@ mod tests {
         );
 
         // Upgrade Sophisticated -> Monumental
-        let result = engine.upgrade(id, 10, 50, &mut resources);
+        let result = engine.upgrade(id, 15, 100, &mut resources);
         assert!(result.is_ok());
         assert_eq!(
             engine.get_building(id).unwrap().tier,
@@ -456,7 +463,7 @@ mod tests {
         );
 
         // Upgrade Monumental -> Legendary
-        let result = engine.upgrade(id, 10, 50, &mut resources);
+        let result = engine.upgrade(id, 15, 100, &mut resources);
         assert!(result.is_ok());
         assert_eq!(
             engine.get_building(id).unwrap().tier,
@@ -464,7 +471,7 @@ mod tests {
         );
 
         // Already at max tier
-        let result = engine.upgrade(id, 10, 50, &mut resources);
+        let result = engine.upgrade(id, 15, 100, &mut resources);
         assert_eq!(result, Err(UpgradeError::AlreadyMaxTier));
     }
 

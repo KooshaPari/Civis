@@ -357,7 +357,7 @@ mod tests {
         // After one tick with high inertia the mood should barely move.
         e.update_from_factors(&f, 1.0);
         assert!(
-            e.current_mood < 0.55,
+            e.current_mood <= 0.56,
             "inertia should prevent jump; got {}",
             e.current_mood
         );

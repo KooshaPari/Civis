@@ -1174,24 +1174,33 @@ impl CivisMcpServer {
         }))
     }
 
-    /// Alias to `sim.get_factions` for callers that expect cohesion-oriented
-    /// reads on the faction surface.
+    /// Read faction cohesion telemetry by forwarding `sim.snapshot` and
+    /// extracting the `factions` field.
     #[tool(
         name = "civis_faction_cohesion",
-        description = "Alias to sim.get_factions (faction telemetry channel)."
+        description = "Forward sim.snapshot to civ-server and extract faction cohesion data."
     )]
     async fn civis_faction_cohesion(
         &self,
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        let mut factions = forward_rpc(
+        let snapshot = forward_rpc(
             &transport,
-            "sim.get_factions",
+            "sim.snapshot",
             json!({}),
             "civis_faction_cohesion",
         )?;
-        factions.method = "civis_faction_cohesion".to_string();
-        Ok(Json(factions))
+        let factions = snapshot
+            .result
+            .get("factions")
+            .cloned()
+            .unwrap_or_else(|| json!([]));
+        Ok(Json(RpcForwardResult {
+            method: "civis_faction_cohesion".to_string(),
+            url: snapshot.url,
+            result: factions,
+            harness_version: crate::HARNESS_VERSION,
+        }))
     }
 
     /// Forward `sim.get_speed` to civ-server. Returns the current tick
@@ -1242,53 +1251,108 @@ impl CivisMcpServer {
         forward_rpc(&transport, "sim.status", json!({}), "civis_status").map(Json)
     }
 
-    /// Forward `sim.get_tick` to civ-server. Returns current sim tick and
-    /// wall-clock game time.
+    /// Read the current simulation tick by forwarding `sim.status` and
+    /// extracting the `tick` field. Replaces the direct `sim.get_tick`
+    /// call which was a ghost JSON-RPC method.
     #[tool(
         name = "civis_get_tick",
-        description = "Forward sim.get_tick to civ-server. Returns the current simulation tick and wall-clock time metadata."
+        description = "Forward sim.status to civ-server and extract the current tick."
     )]
     async fn civis_get_tick(
         &self,
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(&transport, "sim.get_tick", json!({}), "civis_get_tick").map(Json)
+        let status = forward_rpc(
+            &transport,
+            "sim.status",
+            json!({}),
+            "civis_get_tick",
+        )?;
+        Ok(Json(RpcForwardResult {
+            method: "civis_get_tick".to_string(),
+            url: status.url,
+            result: json!({
+                "tick": status.result.get("tick").cloned().unwrap_or(json!(0)),
+            }),
+            harness_version: crate::HARNESS_VERSION,
+        }))
     }
 
-    /// Forward `sim.get_factions` to civ-server. Returns faction summaries.
+    /// Read faction telemetry by forwarding `sim.snapshot` and extracting
+    /// the `factions` field. Replaces the direct `sim.get_factions` call
+    /// which was a ghost JSON-RPC method.
     #[tool(
         name = "civis_factions",
-        description = "Forward sim.get_factions to civ-server. Returns faction summary rows from the current snapshot."
+        description = "Forward sim.snapshot to civ-server and extract faction summary rows."
     )]
     async fn civis_factions(
         &self,
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(&transport, "sim.get_factions", json!({}), "civis_factions").map(Json)
+        let snapshot = forward_rpc(
+            &transport,
+            "sim.snapshot",
+            json!({}),
+            "civis_factions",
+        )?;
+        let factions = snapshot
+            .result
+            .get("factions")
+            .cloned()
+            .unwrap_or_else(|| json!([]));
+        Ok(Json(RpcForwardResult {
+            method: "civis_factions".to_string(),
+            url: snapshot.url,
+            result: factions,
+            harness_version: crate::HARNESS_VERSION,
+        }))
     }
 
-    /// Forward `sim.get_resources` to civ-server. Returns resource summaries.
+    /// Read world resource telemetry by forwarding `sim.snapshot` and
+    /// extracting `market_prices` and `institutions`. Replaces the direct
+    /// `sim.get_resources` call which was a ghost JSON-RPC method.
     #[tool(
         name = "civis_resources",
-        description = "Forward sim.get_resources to civ-server. Returns world-level resource summaries."
+        description = "Forward sim.snapshot to civ-server and extract market_prices and institutions."
     )]
     async fn civis_resources(
         &self,
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(
+        let snapshot = forward_rpc(
             &transport,
-            "sim.get_resources",
+            "sim.snapshot",
             json!({}),
             "civis_resources",
-        )
-        .map(Json)
+        )?;
+        let market_prices = snapshot
+            .result
+            .get("market_prices")
+            .cloned()
+            .unwrap_or_else(|| json!({}));
+        let institutions = snapshot
+            .result
+            .get("institutions")
+            .cloned()
+            .unwrap_or_else(|| json!([]));
+        Ok(Json(RpcForwardResult {
+            method: "civis_resources".to_string(),
+            url: snapshot.url,
+            result: json!({
+                "tick": snapshot.result.get("tick"),
+                "market_prices": market_prices,
+                "institutions": institutions,
+            }),
+            harness_version: crate::HARNESS_VERSION,
+        }))
     }
 
-    /// Forward `sim.get_emergence_metrics` to civ-server.
+    /// Forward `sim.emergence` to civ-server. Returns coarse emergence
+    /// metrics. Replaces the direct `sim.get_emergence_metrics` call
+    /// which was a ghost JSON-RPC method.
     #[tool(
         name = "civis_emergence_metrics",
-        description = "Forward sim.get_emergence_metrics to civ-server. Returns coarse, transport-safe emergence metrics."
+        description = "Forward sim.emergence to civ-server. Returns coarse, transport-safe emergence metrics."
     )]
     async fn civis_emergence_metrics(
         &self,
@@ -1296,7 +1360,7 @@ impl CivisMcpServer {
     ) -> Result<Json<RpcForwardResult>, String> {
         forward_rpc(
             &transport,
-            "sim.get_emergence_metrics",
+            "sim.emergence",
             json!({}),
             "civis_emergence_metrics",
         )
@@ -2357,51 +2421,83 @@ impl CivisMcpServer {
         .map(Json)
     }
 
-    /// Alias to `sim.get_factions` for faction telemetry.
+    /// Read faction telemetry by forwarding `sim.snapshot` and extracting
+    /// the `factions` field.
     #[tool(
         name = "sim_get_factions",
-        description = "Forward sim.get_factions to civ-server."
+        description = "Forward sim.snapshot to civ-server and extract faction summary rows."
     )]
     async fn sim_get_factions(
         &self,
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(
+        let snapshot = forward_rpc(
             &transport,
-            "sim.get_factions",
+            "sim.snapshot",
             json!({}),
             "sim_get_factions",
-        )
-        .map(Json)
+        )?;
+        let factions = snapshot
+            .result
+            .get("factions")
+            .cloned()
+            .unwrap_or_else(|| json!([]));
+        Ok(Json(RpcForwardResult {
+            method: "sim_get_factions".to_string(),
+            url: snapshot.url,
+            result: factions,
+            harness_version: crate::HARNESS_VERSION,
+        }))
     }
 
-    /// Alias to `sim.get_resources` for world resource telemetry.
+    /// Read world resource telemetry by forwarding `sim.snapshot` and
+    /// extracting `market_prices` and `institutions`.
     #[tool(
         name = "sim_get_resources",
-        description = "Forward sim.get_resources to civ-server."
+        description = "Forward sim.snapshot to civ-server and extract market_prices and institutions."
     )]
     async fn sim_get_resources(
         &self,
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(
+        let snapshot = forward_rpc(
             &transport,
-            "sim.get_resources",
+            "sim.snapshot",
             json!({}),
             "sim_get_resources",
-        )
-        .map(Json)
+        )?;
+        let market_prices = snapshot
+            .result
+            .get("market_prices")
+            .cloned()
+            .unwrap_or_else(|| json!({}));
+        let institutions = snapshot
+            .result
+            .get("institutions")
+            .cloned()
+            .unwrap_or_else(|| json!([]));
+        Ok(Json(RpcForwardResult {
+            method: "sim_get_resources".to_string(),
+            url: snapshot.url,
+            result: json!({
+                "tick": snapshot.result.get("tick"),
+                "market_prices": market_prices,
+                "institutions": institutions,
+            }),
+            harness_version: crate::HARNESS_VERSION,
+        }))
     }
 
-    /// Forward `sim.emergence` (+ optional legacy/detail side calls) to civ-server.
+    /// Forward `sim.emergence` (and optional `emergence.dashboard`) to
+    /// civ-server.
     #[tool(
         name = "sim_get_emergence",
-        description = "Forward sim.emergence (and optional sim.get_emergence_metrics / emergence.dashboard) to civ-server."
+        description = "Forward sim.emergence (and optional emergence.dashboard) to civ-server."
     )]
     async fn sim_get_emergence(
         &self,
         Parameters(SimGetEmergenceArgs {
-            include_legacy,
+            include_legacy: _,
             include_dashboard,
             transport,
         }): Parameters<SimGetEmergenceArgs>,
@@ -2418,15 +2514,6 @@ impl CivisMcpServer {
             json!({ "emergence": primary.result })
         };
         if let Value::Object(ref mut obj) = merged {
-            if include_legacy.unwrap_or(false) {
-                let legacy = forward_rpc(
-                    &transport,
-                    "sim.get_emergence_metrics",
-                    json!({}),
-                    "sim_get_emergence.legacy",
-                )?;
-                obj.insert("legacy".to_owned(), legacy.result);
-            }
             if include_dashboard.unwrap_or(false) {
                 let dashboard = forward_rpc(
                     &transport,
@@ -2445,22 +2532,33 @@ impl CivisMcpServer {
         }))
     }
 
-    /// Alias to `sim.get_factions` plus lightweight diplomacy view.
+    /// Read faction + diplomacy telemetry by forwarding `sim.snapshot`
+    /// and extracting the `factions` field.
     #[tool(
         name = "sim_get_diplomacy",
-        description = "Alias surface for diplomacy read telemetry. Uses sim.get_factions today."
+        description = "Alias surface for diplomacy read telemetry. Uses sim.snapshot factions."
     )]
     async fn sim_get_diplomacy(
         &self,
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        forward_rpc(
+        let snapshot = forward_rpc(
             &transport,
-            "sim.get_factions",
+            "sim.snapshot",
             json!({}),
             "sim_get_diplomacy",
-        )
-        .map(Json)
+        )?;
+        let factions = snapshot
+            .result
+            .get("factions")
+            .cloned()
+            .unwrap_or_else(|| json!([]));
+        Ok(Json(RpcForwardResult {
+            method: "sim_get_diplomacy".to_string(),
+            url: snapshot.url,
+            result: factions,
+            harness_version: crate::HARNESS_VERSION,
+        }))
     }
 
     /// Alias to `sim.tech_state` for research telemetry.
@@ -2541,7 +2639,7 @@ impl CivisMcpServer {
             )
             .map_err(|e| format!("sim_step: {e}"))?;
         }
-        let tick = forward_rpc(&transport, "sim.get_tick", json!({}), "sim_step.tick")?;
+        let tick = forward_rpc(&transport, "sim.status", json!({}), "sim_step.tick")?;
         let final_tick = tick
             .result
             .get("tick")
@@ -2662,7 +2760,7 @@ impl CivisMcpServer {
 
                 let tick = forward_rpc(
                     &transport,
-                    "sim.get_tick",
+                    "sim.status",
                     json!({}),
                     "sim_run_until.tick_check",
                 )
@@ -2693,7 +2791,7 @@ impl CivisMcpServer {
         if final_tick == 0 {
             final_tick = forward_rpc(
                 &transport,
-                "sim.get_tick",
+                "sim.status",
                 json!({}),
                 "sim_run_until.final_tick",
             )

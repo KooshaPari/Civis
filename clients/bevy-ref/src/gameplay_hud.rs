@@ -53,7 +53,10 @@ impl Plugin for GameplayHudPlugin {
             .init_resource::<MusicCues>()
             .init_resource::<OutcomeProgressHud>()
             .add_systems(Update, toggle_gameplay_hud)
-            .add_systems(EguiPrimaryContextPass, draw_gameplay_hud);
+            .add_systems(
+                EguiPrimaryContextPass,
+                draw_gameplay_hud.run_if(crate::menus::in_playing),
+            );
     }
 }
 

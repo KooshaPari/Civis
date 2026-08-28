@@ -1101,7 +1101,10 @@ impl Plugin for SettingsPlugin {
             .insert_resource(KeybindCaptureState::default())
             .add_systems(Update, (open_settings_for_autoshot, toggle_settings_panel))
             .add_systems(Update, capture_keybind_input)
-            .add_systems(EguiPrimaryContextPass, draw_settings_panel);
+            .add_systems(
+                EguiPrimaryContextPass,
+                draw_settings_panel.run_if(crate::menus::in_playing),
+            );
         #[cfg(feature = "audio")]
         app.add_systems(Update, sync_audio_settings);
     }

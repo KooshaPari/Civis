@@ -7,6 +7,7 @@
 //! untouched. The HUD draws an AAA-styled glassmorphism shell: a stat-chip top
 //! bar, a tool-palette + speed-control bottom bar, and a selection inspector.
 
+use crate::menus::{in_playing, GameUiMode};
 use crate::tool_categories::ActiveSubTool;
 use crate::ui_theme::CHIP_FILL;
 use bevy::prelude::*;
@@ -608,6 +609,7 @@ fn handle_speed_shortcuts(
 #[allow(clippy::too_many_arguments)]
 fn draw_game_ui(
     mut contexts: EguiContexts,
+    mode: Res<GameUiMode>,
     snapshot: Res<GameUiSnapshot>,
     selected: Res<SelectedEntity>,
     live_selection: Res<LiveSelection>,
@@ -621,6 +623,7 @@ fn draw_game_ui(
     _god_action_toast: Res<GodActionToast>,
     hud_panels: Res<HudPanelAssets>,
 ) {
+    if !crate::menus::in_playing(mode) { return; }
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };

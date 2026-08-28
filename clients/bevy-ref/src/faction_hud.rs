@@ -100,7 +100,10 @@ impl Plugin for FactionHudPlugin {
                 EguiPrimaryContextPass,
                 load_faction_crests.before(draw_faction_hud),
             )
-            .add_systems(EguiPrimaryContextPass, draw_faction_hud);
+            .add_systems(
+                EguiPrimaryContextPass,
+                draw_faction_hud.run_if(crate::menus::in_playing),
+            );
     }
 }
 

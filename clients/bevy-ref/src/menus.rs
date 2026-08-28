@@ -123,6 +123,12 @@ impl EraBanner {
 #[derive(Resource, Default, Debug)]
 pub struct SettingsOpen(pub bool);
 
+/// System condition: true only when the game is actively playing (not in a menu).
+/// Used as `.run_if(in_playing)` on draw systems to prevent HUD bleed-through.
+pub fn in_playing(mode: Res<GameUiMode>) -> bool {
+    *mode == GameUiMode::Playing
+}
+
 /// Per-world setup parameters shared by voxel generation and the map view.
 #[derive(Resource, Clone, Copy, Debug)]
 pub struct WorldSetupParams {

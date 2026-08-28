@@ -610,7 +610,8 @@ pub struct SimInspectArgs {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct SimGetEmergenceArgs {
-    /// Include legacy coarse metrics from `sim.get_emergence_metrics`.
+    /// Include legacy coarse metrics (no-op; kept for backward compatibility).
+    #[allow(dead_code)]
     pub include_legacy: Option<bool>,
     /// Include `emergence.dashboard`.
     pub include_dashboard: Option<bool>,

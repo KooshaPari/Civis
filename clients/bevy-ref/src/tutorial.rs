@@ -11,7 +11,7 @@ use bevy_egui::{egui, EguiContexts};
 use serde::{Deserialize, Serialize};
 
 use crate::live_stream::ServerBridge;
-use crate::menus::in_game;
+use crate::menus::in_playing_state;
 
 /// Live simulation status snapshot received from the server.
 #[derive(Resource, Default, Clone, Debug)]
@@ -62,7 +62,7 @@ impl Plugin for TutorialPlugin {
                 Update,
                 (handle_tutorial_keys, draw_tutorial_hint)
                     .chain()
-                    .run_if(in_game),
+                    .run_if(in_playing_state),
             );
     }
 }

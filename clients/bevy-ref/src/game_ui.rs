@@ -407,41 +407,39 @@ impl Plugin for GameUiPlugin {
             .add_systems(
                 EguiPrimaryContextPass,
                 // apply_keycap_theme MUST run first: it sets the global egui
-                // Style/Visuals (Keycap Palette + holocron chrome) before any
-                // draw call can consume it. load_tool_icons and draw_game_ui
-                // follow in order.
+            // apply_keycap_theme MUST run first: it sets the global egui
+            // Style/Visuals (Keycap Palette + holocron chrome) before any
+            // draw call can consume it. load_tool_icons and draw_game_ui
+            // follow in order.
+            //
+            // Note: apply_keycap_theme is a one-shot Startup system (registered
+            // via add_systems(Startup, …) below) — re-applying every frame
+            // causes a "broken lightbulb" flicker between text rendering and
+            // the panel chrome texture paint.
                 (
-                    apply_keycap_theme,
                     load_tool_icons,
                     load_hud_panel,
                     draw_game_ui,
                 )
                     .chain(),
             );
+
+        // Apply the keycap theme exactly once at Startup so per-frame theme
+        // re-application (which causes visible flicker with the panel chrome
+        // textures) never happens.
+        app.add_systems(Startup, apply_keycap_theme_once);
     }
 }
 
-/// Global egui theme system — runs first in every [`EguiPrimaryContextPass`] frame.
-///
-/// Applies the Phenotype Keycap Palette + holocron command-deck chrome:
-/// - Background: midnight `#090a0c` / `#1a1e24` (GRAPHITE_900) surfaces
-/// - Primary accent: teal `#7ebab5` on edges, selection, and active strokes only
-///   (never as a large fill — "neon-as-signal" rule)
-/// - Holographic glass panels: frosted DECK_GLASS fill + DECK_BORDER rim
-/// - Colored teal rim-glow on focus (not white)
-/// - Rounded corners (8 px buttons, 12 px panels)
-/// - Drop shadows for depth hierarchy
-/// - Montserrat (body), JetBrains Mono (numeric), Bricolage Grotesque (display)
-///
-/// Delegates to [`crate::ui_theme::apply_theme`] which is the canonical
-/// implementation; this system exists purely to give it an explicit, named place
-/// in the Bevy schedule and to separate theming from HUD draw logic.
-fn apply_keycap_theme(mut contexts: EguiContexts) {
+/// One-shot application of the egui theme at Startup. Re-applying every frame
+/// caused a visible flicker against the `chip-bg` / `button` / `button-hover`
+/// panel chrome textures — the egui style was being reset and the painter
+/// pass that draws the texture rect was being recreated every frame.
+fn apply_keycap_theme_once(mut contexts: EguiContexts) {
     if let Ok(ctx) = contexts.ctx_mut() {
         apply_theme(ctx);
     }
 }
-
 fn queue_hud_panel_handle(mut hud: ResMut<HudPanelAssets>, asset_server: Res<AssetServer>) {
     hud.handles = HUD_CHROME_PATHS
         .iter()

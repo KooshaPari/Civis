@@ -1,5 +1,6 @@
 (
     graphics: (
+        render_engine: Auto,
         resolution: R1440p,
         vsync: false,
         quality: Custom,
@@ -26,7 +27,7 @@
     ),
     audio: (
         master: 0.8,
-        music: 0.6,
+        music: 0.59999996,
         sfx: 0.8,
     ),
     gameplay: (
@@ -129,6 +130,14 @@
         (
             action: "Close Panel",
             binding: "key:Escape",
+        ),
+        (
+            action: "Orbit Camera Left",
+            binding: "key:KeyQ",
+        ),
+        (
+            action: "Orbit Camera Right",
+            binding: "key:KeyE",
         ),
     ],
     world: (

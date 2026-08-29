@@ -164,8 +164,9 @@ fn economy_cycle_production_market_trade() {
         name: "Plain Farmer".to_string(),
         position: (0, 0, 0),
         stocks: Stocks::default(),
-        // Net +10 food ⇒ surplus
-        profile: ProductionProfile::new([10, 0, 0, 0, 0], [0, 0, 0, 0, 0]),
+        // Net +10 food ⇒ surplus; consumes 5 metal ⇒ metal deficit
+        // GOOD indices: Food=0, Water=1, Wood=2, Metal=3, Tools=4
+        profile: ProductionProfile::new([10, 0, 0, 0, 0], [0, 0, 0, 5, 0]),
     };
     let highland_mines = EconSettlement {
         id: u64::from(HIGHLAND_FACTION),
@@ -173,7 +174,8 @@ fn economy_cycle_production_market_trade() {
         position: (500, 0, 0), // far away → distance damping applies
         stocks: Stocks::default(),
         // Net -5 food ⇒ deficit; +5 metal ⇒ surplus
-        profile: ProductionProfile::new([0, 0, 5, 0, 0], [5, 0, 0, 0, 0]),
+        // GOOD indices: Food=0, Water=1, Wood=2, Metal=3, Tools=4
+        profile: ProductionProfile::new([0, 0, 0, 5, 0], [5, 0, 0, 0, 0]),
     };
     let kernel_routes = compute_trade_routes(&[plain_farmer, highland_mines]);
     assert!(
@@ -259,16 +261,18 @@ fn economy_cycle_production_market_trade() {
     );
     // Conservation: units debited from supplier equal units credited to recipient
     // (the engine transfers `min(volume, available)` per tick).
-    let expected_delta = TRADE_VOLUME_PER_TICK * SETUP_TICKS as i64;
+    // Note: to_bits() returns raw fixed-point representation (scale factor 1000),
+    // so expected_delta must also be in raw bits.
+    let expected_delta = TRADE_VOLUME_PER_TICK * SETUP_TICKS as i64 * civ_engine::SCALE;
     assert_eq!(
         highland_metal_before - highland_metal_after,
         expected_delta,
-        "supplier should debit exactly volume×ticks metal"
+        "supplier should debit exactly volume×ticks metal (in raw bits)"
     );
     assert_eq!(
         faction0_metal_after - faction0_metal_before,
         expected_delta,
-        "recipient should credit exactly volume×ticks metal"
+        "recipient should credit exactly volume×ticks metal (in raw bits)"
     );
 }
 

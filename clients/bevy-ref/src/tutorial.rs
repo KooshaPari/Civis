@@ -127,11 +127,13 @@ fn draw_tutorial_hint(
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-    let screen = ctx.content_rect();
 
     let mut clicked = false;
+    // Anchor to true screen centre, well above the bottom toolbar (which
+    // lives at CENTER_BOTTOM with offset -12). Width 560 is centred via
+    // 0.5px × width offset so the popup is always pixel-perfectly centred.
     egui::Area::new(egui::Id::new("tutorial_hint"))
-        .fixed_pos(egui::pos2(screen.center().x - 280.0, screen.max.y - 110.0))
+        .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
         .show(ctx, |ui| {
             egui::Frame::none()
                 .fill(egui::Color32::from_rgba_premultiplied(9, 10, 12, 230))

@@ -630,7 +630,10 @@ fn draw_game_ui(
 
     let panel_tex = hud_panels.texture("panel-frame");
     let chrome = &*hud_panels;
-    apply_theme(ctx);
+    // NOTE: apply_theme(ctx) is intentionally NOT called here — it is a
+    // one-shot Startup system (apply_keycap_theme_once). Calling it per
+    // frame causes a visible "broken lightbulb" flicker between the
+    // panel-chrome texture paint and the text rendering pass.
 
     top_center_cluster(
         ctx,
@@ -1080,7 +1083,9 @@ fn tool_palette_ui(
             hotkey: "\u{21e7}7",
             tool: Some(SpawnTool::Destroy),
         },
-        // Weather has no SpawnTool variant yet: present but inert.
+        // Weather has no SpawnTool variant yet: present but inert. Make this
+        // explicit with a tooltip so the player isn't confused about why
+        // clicking the button does nothing.
         ToolDef {
             icon: "\u{1f327}",
             label: "Weather",
@@ -1097,7 +1102,11 @@ fn tool_palette_ui(
                 if let Some(tool) = def.tool {
                     active.tool = tool;
                 }
-                // Weather (tool == None) is intentionally a no-op for now.
+                // Weather (tool == None) is intentionally inert for now —
+                // there is no SpawnTool variant and the disaster verbs are
+                // dispatched from the god-panel action column, not the
+                // bottom palette. The tooltip on the button makes this
+                // clear to the player.
             }
             if is_building && is_active {
                 ui.label(

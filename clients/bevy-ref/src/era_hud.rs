@@ -3,7 +3,7 @@
 
 use crate::event_feed::{EventFeed, EventKind as FeedKind};
 use crate::live_stream::ServerBridge;
-use crate::menus::in_game;
+use crate::menus::in_playing_state;
 use bevy::prelude::*;
 
 #[derive(Resource, Default)]
@@ -15,7 +15,7 @@ pub struct EraHudPlugin;
 impl Plugin for EraHudPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<EraState>()
-            .add_systems(Update, poll_era.run_if(in_game));
+            .add_systems(Update, poll_era.run_if(in_playing_state));
     }
 }
 

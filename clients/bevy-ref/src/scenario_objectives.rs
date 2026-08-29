@@ -16,7 +16,7 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 use crate::live_stream::ServerBridge;
-use crate::menus::{in_playing, GameUiMode};
+use crate::menus::{in_playing_state, AppState, GameUiMode};
 use crate::ui_theme::CHIP_FILL;
 use crate::OutcomeProgressHud;
 use crate::OutcomeProgressHudData;
@@ -35,7 +35,7 @@ impl Plugin for ScenarioObjectivesPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            request_objective_progress.run_if(in_playing),
+            request_objective_progress.run_if(in_playing_state),
         )
         .add_systems(EguiPrimaryContextPass, draw_scenario_objectives);
     }
@@ -63,11 +63,11 @@ fn request_objective_progress(
 /// Renders a small objective-progress card when in playing state.
 fn draw_scenario_objectives(
     mut contexts: EguiContexts,
-    mode: Res<GameUiMode>,
+    app_state: Res<State<AppState>>,
     progress: Res<OutcomeProgressHud>,
     bridge: Option<Res<ServerBridge>>,
 ) {
-    if !in_playing(mode) {
+    if !in_playing_state(app_state) {
         return;
     }
     let Some(data) = &progress.0 else {

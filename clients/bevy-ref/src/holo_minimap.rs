@@ -13,7 +13,7 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 use crate::live_stream::ServerBridge;
-use crate::menus::in_game;
+use crate::menus::in_playing_state;
 use crate::minimap::{MINIMAP_INSET, MINIMAP_SIZE};
 use crate::ui_holo::{holo_frame, holo_text, scanlines, HoloPhase};
 use crate::ui_theme::{DECK_BORDER, HOLO_CYAN, HOLO_DEEP, RADIUS_PANEL};
@@ -25,7 +25,7 @@ impl Plugin for HoloMinimapPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             EguiPrimaryContextPass,
-            draw_holo_minimap_overlay.run_if(in_game),
+            draw_holo_minimap_overlay.run_if(in_playing_state),
         );
     }
 }

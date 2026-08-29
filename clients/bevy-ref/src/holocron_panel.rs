@@ -13,7 +13,7 @@ use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 use crate::god_actions::GodActionRequest;
 use crate::god_panel::GodPanelState;
 use crate::live_stream::ServerBridge;
-use crate::menus::in_game;
+use crate::menus::in_playing_state;
 
 /// One searchable god verb surfaced in the overlay.
 #[derive(Clone, Copy, Debug)]
@@ -115,10 +115,10 @@ pub struct HolocronPanelPlugin;
 impl Plugin for HolocronPanelPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<HolocronState>()
-            .add_systems(Update, toggle_cmdk.run_if(in_game))
+            .add_systems(Update, toggle_cmdk.run_if(in_playing_state))
             .add_systems(
                 EguiPrimaryContextPass,
-                draw_holocron_overlay.run_if(in_game),
+                draw_holocron_overlay.run_if(in_playing_state),
             );
     }
 }

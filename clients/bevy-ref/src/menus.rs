@@ -519,7 +519,8 @@ pub fn in_game(mode: Res<GameUiMode>) -> bool {
 /// This is the correct gate for in-game UI — unlike `in_game` which
 /// checks GameUiMode (default Playing), this checks AppState (default MainMenu).
 pub fn in_playing_state(state: Res<State<AppState>>) -> bool {
-    *state.get() == AppState::Playing || *state.get() == AppState::Paused
+    let s: AppState = state.get().clone();
+    s == AppState::Playing || s == AppState::Paused
 }
 
 fn draw_main_menu(

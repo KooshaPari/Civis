@@ -19,7 +19,7 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 use crate::live_stream::ServerBridge;
-use crate::menus::GameUiMode;
+use crate::menus::{in_playing_state, GameUiMode};
 use crate::ui_theme::{
     accent_frame, apply_theme, inner_glow, ACCENT_HI, GOLD, GREEN, RADIUS_SM, RED, TEXT, VIOLET,
 };
@@ -118,10 +118,10 @@ pub struct NotificationsPlugin;
 impl Plugin for NotificationsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Notifications>()
-            .add_systems(Update, age_notifications.run_if(in_playing))
+            .add_systems(Update, age_notifications.run_if(in_playing_state))
             .add_systems(
                 EguiPrimaryContextPass,
-                draw_notifications.run_if(in_playing),
+                draw_notifications.run_if(in_playing_state),
             );
     }
 }

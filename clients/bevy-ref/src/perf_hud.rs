@@ -6,7 +6,7 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 
-use crate::menus::in_game;
+use crate::menus::in_playing_state;
 
 /// Latest snapshot values forwarded from HudState each frame.
 #[derive(Resource, Default, Clone)]
@@ -32,7 +32,7 @@ impl Plugin for PerfHudPlugin {
             .init_resource::<PerfMetrics>()
             .add_systems(
                 Update,
-                (toggle_perf_hud, draw_perf_hud).chain().run_if(in_game),
+                (toggle_perf_hud, draw_perf_hud).chain().run_if(in_playing_state),
             );
     }
 }

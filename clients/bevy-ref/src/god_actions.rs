@@ -23,7 +23,7 @@ use crate::god_panel::GodPanelState;
 use crate::live_focus::LiveSceneFocus;
 use crate::live_ground::{live_ground_y, ChunkVoxelCache};
 use crate::live_stream::{remesh_cached_chunks, LiveStreamScene, StreamCulling, LIVE_CHUNK_EDGE};
-use crate::menus::in_game;
+use crate::menus::in_playing_state;
 use crate::terrain::{terrain_surface_y, WORLD_SIZE};
 use crate::{decode_chunk_id, encode_chunk_id, DebugRender};
 
@@ -62,15 +62,15 @@ impl Plugin for GodActionsPlugin {
                 Update,
                 (apply_god_action_requests, tick_god_effect_flashes)
                     .chain()
-                    .run_if(in_game),
+                    .run_if(in_playing_state),
             )
             .add_systems(
                 Update,
-                crate::game_ui::tick_god_action_toast.run_if(in_game),
+                crate::game_ui::tick_god_action_toast.run_if(in_playing_state),
             )
             .add_systems(
                 EguiPrimaryContextPass,
-                crate::game_ui::draw_god_action_toast_system.run_if(in_game),
+                crate::game_ui::draw_god_action_toast_system.run_if(in_playing_state),
             );
     }
 }

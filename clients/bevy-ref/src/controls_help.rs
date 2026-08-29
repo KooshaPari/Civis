@@ -8,7 +8,7 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
-use crate::menus::in_game;
+use crate::menus::in_playing_state;
 use crate::ui_theme::{DIM, PANEL_FILL, TEXT};
 
 /// Whether the controls cheat sheet is open.
@@ -21,8 +21,8 @@ pub struct ControlsHelpPlugin;
 impl Plugin for ControlsHelpPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ControlsHelpOpen>()
-            .add_systems(Update, toggle_controls_help.run_if(in_game))
-            .add_systems(EguiPrimaryContextPass, draw_controls_help.run_if(in_game));
+            .add_systems(Update, toggle_controls_help.run_if(in_playing_state))
+            .add_systems(EguiPrimaryContextPass, draw_controls_help.run_if(in_playing_state));
     }
 }
 

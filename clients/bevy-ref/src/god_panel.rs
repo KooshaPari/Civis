@@ -3,7 +3,7 @@
 
 use crate::god_actions::GodActionRequest;
 use crate::live_stream::LiveBridge;
-use crate::menus::in_game;
+use crate::menus::in_playing_state;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 use serde_json::{json, Value};
@@ -111,7 +111,7 @@ impl Plugin for GodPanelPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GodPanelState>().add_systems(
             Update,
-            (toggle_god_panel, draw_god_panel).chain().run_if(in_game),
+            (toggle_god_panel, draw_god_panel).chain().run_if(in_playing_state),
         );
     }
 }

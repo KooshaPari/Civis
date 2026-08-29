@@ -4,7 +4,7 @@
 
 use crate::hud_state::HudState;
 use crate::live_stream::ServerBridge;
-use crate::menus::in_game;
+use crate::menus::in_playing_state;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 use std::collections::VecDeque;
@@ -54,7 +54,7 @@ impl Plugin for CivHistoryPlugin {
                 Update,
                 (toggle_history_panel, sample_history, draw_history_panel)
                     .chain()
-                    .run_if(in_game),
+                    .run_if(in_playing_state),
             );
     }
 }

@@ -515,6 +515,13 @@ pub fn in_game(mode: Res<GameUiMode>) -> bool {
     *mode == GameUiMode::Playing
 }
 
+/// System condition: true only when AppState is Playing or Paused.
+/// This is the correct gate for in-game UI — unlike `in_game` which
+/// checks GameUiMode (default Playing), this checks AppState (default MainMenu).
+pub fn in_playing_state(state: Res<State<AppState>>) -> bool {
+    *state.get() == AppState::Playing || *state.get() == AppState::Paused
+}
+
 fn draw_main_menu(
     mut contexts: EguiContexts,
     state: Option<Res<State<AppState>>>,

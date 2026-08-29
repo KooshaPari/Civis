@@ -293,8 +293,11 @@ impl Simulation {
     /// Audio phase (FR-AUDIO-wire) — translate per-tick substrate events
     /// into substrate-level [`SfxTrigger`]s.
     pub(crate) fn phase_audio(&mut self) {
-        let mut events: Vec<SfxTrigger> =
-            Vec::with_capacity(self.last_tick_audio_events.capacity());
+        // Match the SmallVec type of `last_tick_audio_events` so the
+        // `events` buffer stays on the stack for the common 0-2 event case.
+        let mut events: smallvec::SmallVec<[SfxTrigger; 8]> = smallvec::SmallVec::with_capacity(
+            self.last_tick_audio_events.capacity(),
+        );
 
         events.extend(self.last_births.iter().map(|_| SfxTrigger::Birth));
         events.extend(self.last_deaths.iter().map(|_| SfxTrigger::Death));

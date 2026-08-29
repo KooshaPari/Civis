@@ -34,6 +34,7 @@ use civ_economy::{
 use civ_genetics::sentience::{
     cognition_score, evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold,
 };
+use smallvec::SmallVec;
 
 use civ_genetics::Dna;
 use civ_genetics::Species;
@@ -599,7 +600,9 @@ pub struct Simulation {
     last_tick_voxel_events: Vec<DirtyChunkEvent>,
     last_tick_voxel_damage_count: usize,
     /// Per-soldier damage pulses from the most recent tactics phase (FR-CIV-TACTICS-024).
-    last_tick_combat_pulses: Vec<CombatDamagePulse>,
+    /// `SmallVec<[_; 8]>` keeps the typical 0-2 pulse case on the stack and
+    /// avoids the per-tick `Vec` allocation that ran inside the military phase.
+    last_tick_combat_pulses: SmallVec<[CombatDamagePulse; 8]>,
     /// Disasters resolved this tick (FR-CIV-LEGENDS ingest).
     pub(crate) last_tick_disaster_pulses: Vec<crate::disasters::DisasterPulse>,
     /// Engagements resolved this tick (war bridge); feeds doctrine fitness.
@@ -613,7 +616,9 @@ pub struct Simulation {
     /// JSON-RPC bridge (`sim.snapshot.audio_events`) and the WebSocket
     /// tick broadcast; clients translate each entry into a kira SFX
     /// trigger via [`civ_audio::triggers::trigger_to_sfx_requests`].
-    last_tick_audio_events: Vec<civ_audio::triggers::SfxTrigger>,
+    /// `SmallVec<[_; 8]>` because typical ticks emit 0-2 events; the prior
+    /// `Vec` allocation was paid every tick.
+    last_tick_audio_events: SmallVec<[civ_audio::triggers::SfxTrigger; 8]>,
     /// Last-tick decisions for the daily-path phase (FR-CIV-LIFE-010..016).
     pub last_tick_daily_path: Vec<DailyPathDecision>,
     /// Per-cluster payoffs emitted by the cluster phase (FR-CIV-LIFE-030..035).
@@ -668,7 +673,9 @@ pub struct Simulation {
     /// Construction events emitted during the most recent tick (FR-CIV-BUILD-002).
     /// Reset at the start of every [`Simulation::tick`]; surfaced through the
     /// JSON-RPC bridge so Bevy clients can render scaffolding + completion FX.
-    last_tick_construction_events: Vec<ProductionEvent>,
+    /// `SmallVec<[_; 8]>` because most ticks see 0-4 events and the prior
+    /// `Vec` allocation was paid every tick.
+    last_tick_construction_events: SmallVec<[ProductionEvent; 8]>,
     /// Emergent language state (FR-CIV-LANG-001). Driven by
     /// [`Simulation::phase_language_drift`]; consumed by the diplomacy pipeline via
     /// [`language_intelligibility_peace_bonus`].
@@ -1031,11 +1038,11 @@ impl Simulation {
             voxel: VoxelWorld::new(FIXED_SCALE),
             last_tick_voxel_events: Vec::new(),
             last_tick_voxel_damage_count: 0,
-            last_tick_combat_pulses: Vec::new(),
+            last_tick_combat_pulses: SmallVec::new(),
             last_tick_disaster_pulses: Vec::new(),
             last_tick_engagements: Vec::new(),
             last_tick_mod_lifecycle: Vec::new(),
-            last_tick_audio_events: Vec::new(),
+            last_tick_audio_events: SmallVec::new(),
             last_tick_daily_path: Vec::new(),
             last_tick_cluster_payoffs: Vec::new(),
             last_tick_music_cues: BTreeMap::new(),
@@ -1057,7 +1064,7 @@ impl Simulation {
             coastal_columns: BTreeMap::new(),
             weather_grid,
             build_sites: Vec::new(),
-            last_tick_construction_events: Vec::new(),
+            last_tick_construction_events: SmallVec::new(),
             language_state: LanguageState::default(),
             faction_languages: BTreeMap::new(),
             sentience_profile: default_sentience_profile(),
@@ -1199,10 +1206,10 @@ impl Simulation {
             voxel: VoxelWorld::new(FIXED_SCALE),
             last_tick_voxel_events: Vec::new(),
             last_tick_voxel_damage_count: 0,
-            last_tick_combat_pulses: Vec::new(),
+            last_tick_combat_pulses: SmallVec::new(),
             last_tick_engagements: Vec::new(),
             last_tick_mod_lifecycle: Vec::new(),
-            last_tick_audio_events: Vec::new(),
+            last_tick_audio_events: SmallVec::new(),
             last_tick_daily_path: Vec::new(),
             last_tick_cluster_payoffs: Vec::new(),
             last_tick_music_cues: BTreeMap::new(),
@@ -1224,7 +1231,7 @@ impl Simulation {
             coastal_columns: BTreeMap::new(),
             weather_grid,
             build_sites: Vec::new(),
-            last_tick_construction_events: Vec::new(),
+            last_tick_construction_events: SmallVec::new(),
             language_state: LanguageState::default(),
             faction_languages: BTreeMap::new(),
             sentience_profile: default_sentience_profile(),

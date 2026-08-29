@@ -50,6 +50,7 @@ use crate::{
         DispatchEffect, JsonRpcError, JsonRpcMethod, JsonRpcResponse,
     },
     saves::save_archive_path,
+    session::{SessionSnapshot, SharedSession},
     subscription_filter::{SubscriptionFilter, WsConnectQuery},
     voxel_frame_builder::build_voxel_delta_frame,
 };
@@ -256,6 +257,12 @@ struct AppState {
     metrics_registry: Registry,
     allow_replay_http: bool,
     authn_required: bool,
+    /// Per-connection `SharedSession` registry for the multiplayer bridge.
+    ///
+    /// Keyed by stable `connection_id` (UUID v4 hex string). Populated
+    /// in `ws_handler` upgrade, mutated by JSON-RPC handlers that need
+    /// to update `subscribed_frame_kinds` or `role`, swept on close.
+    sessions: Arc<Mutex<std::collections::HashMap<String, SharedSession>>>,
 }
 
 fn authorize_request(headers: &HeaderMap, required: bool) -> Result<(), StatusCode> {
@@ -343,6 +350,7 @@ async fn serve_ws_bridge(
         metrics_registry,
         allow_replay_http: true,
         authn_required: false,
+        sessions: Arc::new(Mutex::new(std::collections::HashMap::new())),
     };
 
     let app = Router::new()
@@ -502,6 +510,12 @@ async fn handle_socket(
     ));
     let tick_broadcast_format = state.tick_broadcast_format;
 
+    // Multiplayer bridge: mint a stable connection_id (UUID v4) and
+    // register a SharedSession so per-client attribution works for
+    // god actions and snapshot queries. If max_clients is reached we
+    // send Close and exit before allocating the session.
+    let session = SharedSession::with_new_connection_id();
+    let connection_id = session.connection_id.clone();
     {
         let mut clients = state.clients.lock().await;
         if clients.len() >= state.max_clients {
@@ -510,10 +524,15 @@ async fn handle_socket(
         }
         clients.push(tx.clone());
         state.metrics.connected_clients.inc();
+
+        let mut sessions = state.sessions.lock().await;
+        sessions.insert(connection_id.clone(), session);
     }
 
     let forward_filter = Arc::clone(&subscription_filter);
     let tick_messages_sent = state.metrics.tick_messages_sent.clone();
+    let state_for_forward = state.clone();
+    let connection_id_for_forward = connection_id.clone();
     let forward = tokio::spawn(async move {
         while let Some(outbound) = rx.recv().await {
             match outbound {
@@ -523,6 +542,17 @@ async fn handle_socket(
                     }
                 }
                 ClientOutbound::Tick(broadcast) => {
+                    // Advance the session's last_acked_tick + receive
+                    // counter so the per-session audit log tracks the
+                    // broadcast. Best-effort: if the session map is
+                    // already cleared (e.g. race with close) we skip
+                    // the bookkeeping.
+                    {
+                        let mut sessions = state_for_forward.sessions.lock().await;
+                        if let Some(s) = sessions.get_mut(&connection_id_for_forward) {
+                            s.record_tick_delivery(broadcast.tick);
+                        }
+                    }
                     let filter = forward_filter.lock().await.clone();
                     if !filter.is_active() {
                         for msg in broadcast.encoded.iter() {
@@ -567,6 +597,7 @@ async fn handle_socket(
                     &state,
                     &mut connection_role,
                     Arc::clone(&subscription_filter),
+                    &connection_id,
                 )
                 .await;
                 if tx
@@ -582,6 +613,11 @@ async fn handle_socket(
         }
     }
     forward.abort();
+    // Multiplayer cleanup: drop the session so future calls to
+    // `sim.get_snapshot_for_session` for this connection_id fail-fast
+    // (the bridge returns the "unknown connection_id" error).
+    let mut sessions = state.sessions.lock().await;
+    sessions.remove(&connection_id);
 }
 
 fn voxel_axis_span<F>(_voxel: &civ_voxel::VoxelWorld<civ_voxel::MaterialId>, axis: F) -> f32
@@ -598,17 +634,25 @@ async fn handle_jsonrpc_text(
     state: &AppState,
     connection_role: &mut Option<String>,
     subscription_filter: Arc<tokio::sync::Mutex<SubscriptionFilter>>,
+    connection_id: &str,
 ) -> String {
     match parse_request(text) {
         Ok(req) => {
             if let Some(response) =
-                handle_subscription_jsonrpc(&req, state, &subscription_filter).await
+                handle_subscription_jsonrpc(&req, state, &subscription_filter, connection_id).await
             {
                 return encode_response(&response);
             }
             if connection_role.is_none() {
                 if let Some(role) = parse_role_param(req.params.as_ref()) {
                     *connection_role = Some(role);
+                    // Mirror the role onto the SharedSession so
+                    // downstream consumers (audit log, snapshots)
+                    // see the resolved role.
+                    let mut sessions = state.sessions.lock().await;
+                    if let Some(s) = sessions.get_mut(connection_id) {
+                        s.set_role(connection_role.clone());
+                    }
                 }
             }
             let tick = state.tick.load(Ordering::SeqCst);
@@ -687,6 +731,35 @@ async fn handle_jsonrpc_text(
             } else {
                 None
             };
+            // Multiplayer: build a per-session `SessionSnapshot` for
+            // `sim.get_snapshot_for_session` so the response shape
+            // includes connection_id / last_acked_tick alongside the
+            // standard snapshot payload.
+            let session_snapshot = if req.method == crate::jsonrpc::JsonRpcMethod::SimGetSnapshotForSession {
+                let sim = state.sim.lock().await;
+                let subscribed_frame_kinds = {
+                    let sessions = state.sessions.lock().await;
+                    sessions
+                        .get(connection_id)
+                        .map(|s| s.subscribed_frame_kinds.clone())
+                        .unwrap_or_default()
+                };
+                let last_acked_tick = {
+                    let sessions = state.sessions.lock().await;
+                    sessions
+                        .get(connection_id)
+                        .map(|s| s.last_acked_tick)
+                        .unwrap_or(0)
+                };
+                Some(SessionSnapshot::new(
+                    connection_id,
+                    last_acked_tick,
+                    subscribed_frame_kinds,
+                    &sim,
+                ))
+            } else {
+                None
+            };
             let mut plan = dispatch_request(
                 req,
                 DispatchContext {
@@ -709,7 +782,21 @@ async fn handle_jsonrpc_text(
                     religion_state: None,
                 },
             );
-            apply_dispatch_effect(&mut plan.response, plan.effect, state).await;
+            // Stash session_snapshot into response.result for the
+            // multiplayer handler. The dispatch path always succeeds
+            // for SimGetSnapshotForSession because the handler just
+            // echoes the snapshot we built above.
+            if let Some(snap) = session_snapshot {
+                if let Some(result) = plan.response.result.as_mut() {
+                    if let Some(obj) = result.as_object_mut() {
+                        obj.insert(
+                            "session_snapshot".to_owned(),
+                            serde_json::to_value(&snap).unwrap_or(serde_json::Value::Null),
+                        );
+                    }
+                }
+            }
+            apply_dispatch_effect(&mut plan.response, plan.effect, state, connection_id).await;
             encode_response(&plan.response)
         }
         Err(err) => encode_response(&parse_error_response(text, err)),
@@ -720,19 +807,39 @@ async fn handle_subscription_jsonrpc(
     req: &crate::jsonrpc::JsonRpcRequest,
     state: &AppState,
     subscription_filter: &Arc<tokio::sync::Mutex<SubscriptionFilter>>,
+    connection_id: &str,
 ) -> Option<JsonRpcResponse> {
     match req.method {
         JsonRpcMethod::SimSubscribe | JsonRpcMethod::SimUpdateSubscription => {
             let tick = state.tick.load(Ordering::SeqCst);
             let mut filter = subscription_filter.lock().await;
             match filter.apply_subscribe_params(req.params.as_ref(), tick) {
-                Ok(result) => Some(JsonRpcResponse::success(req.id.clone(), result)),
+                Ok(result) => {
+                    // Mirror the subscribed frame kinds onto the
+                    // SharedSession so the per-session audit + snapshot
+                    // endpoints see what the client is subscribed to.
+                    if let Ok(kinds) = serde_json::from_value::<Vec<String>>(
+                        serde_json::to_value(&result).unwrap_or_default(),
+                    ) {
+                        let mut sessions = state.sessions.lock().await;
+                        if let Some(s) = sessions.get_mut(connection_id) {
+                            s.set_subscribed_frame_kinds(kinds.clone());
+                        }
+                    }
+                    Some(JsonRpcResponse::success(req.id.clone(), result))
+                }
                 Err(error) => Some(JsonRpcResponse::failure(req.id.clone(), error)),
             }
         }
         JsonRpcMethod::SimUnsubscribe => {
             let mut filter = subscription_filter.lock().await;
             filter.clear();
+            {
+                let mut sessions = state.sessions.lock().await;
+                if let Some(s) = sessions.get_mut(connection_id) {
+                    s.set_subscribed_frame_kinds(Vec::new());
+                }
+            }
             Some(JsonRpcResponse::success(
                 req.id.clone(),
                 serde_json::json!({ "unsubscribed": true }),
@@ -1090,6 +1197,7 @@ async fn apply_dispatch_effect(
     response: &mut JsonRpcResponse,
     effect: DispatchEffect,
     state: &AppState,
+    connection_id: &str,
 ) {
     match effect {
         DispatchEffect::None => {}
@@ -1672,6 +1780,41 @@ async fn apply_dispatch_effect(
                 }
                 _ => {}
             }
+            // Multiplayer audit: record the action with the
+            // connection_id so the engine log knows which client
+            // triggered the verb. `category` is derived from the verb
+            // prefix so dashboards can bucket the audit log without
+            // parsing the verb string.
+            let category = if action.starts_with("terrain.") {
+                "terraform"
+            } else if action.starts_with("material.") {
+                "material"
+            } else if action.starts_with("life.") {
+                "life"
+            } else if action.starts_with("disaster.") {
+                "disaster"
+            } else if action.starts_with("law.") {
+                "law"
+            } else if action.starts_with("inspect.") {
+                "inspect"
+            } else {
+                "legacy"
+            };
+            let params_json = serde_json::json!({
+                "action": action,
+                "x": x,
+                "y": y,
+                "target_faction": target_faction,
+                "magnitude": magnitude,
+                "radius_voxels": radius_voxels,
+                "strength": strength,
+                "material_id": material_id,
+                "drop_height": drop_height,
+                "count": count,
+                "seed_civilian_id": seed_civilian_id,
+            })
+            .to_string();
+            sim.record_god_action(Some(connection_id), &action, category, &params_json);
             if let Some(result) = response.result.as_mut() {
                 if let Some(obj) = result.as_object_mut() {
                     obj.insert("applied".to_owned(), serde_json::json!(false));
@@ -1875,6 +2018,7 @@ mod tests {
             metrics_registry,
             allow_replay_http: true,
             authn_required: false,
+            sessions: Arc::new(Mutex::new(std::collections::HashMap::new())),
         };
         (dir, state)
     }
@@ -2621,6 +2765,7 @@ mod tests {
             &state,
             &mut connection_role,
             test_subscription_filter(),
+            "test-connection-id",
         )
         .await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("error response json");
@@ -2646,6 +2791,7 @@ mod tests {
             &state,
             &mut connection_role,
             test_subscription_filter(),
+            "test-connection-id",
         )
         .await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("sim.status json");
@@ -2689,6 +2835,7 @@ mod tests {
             &state,
             &mut connection_role,
             test_subscription_filter(),
+            "test-connection-id",
         )
         .await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("sim.snapshot json");
@@ -2750,6 +2897,7 @@ mod tests {
             &state,
             &mut connection_role,
             test_subscription_filter(),
+            "test-connection-id",
         )
         .await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("sim.tech_state json");
@@ -2774,6 +2922,7 @@ mod tests {
             &state,
             &mut connection_role,
             test_subscription_filter(),
+            "test-connection-id",
         )
         .await;
         let value: serde_json::Value =
@@ -2802,6 +2951,7 @@ mod tests {
             &state,
             &mut connection_role,
             Arc::clone(&filter),
+            "test-connection-id",
         )
         .await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("subscribe json");
@@ -2829,6 +2979,7 @@ mod tests {
             &state,
             &mut connection_role,
             Arc::clone(&filter),
+            "test-connection-id",
         )
         .await;
         assert!(subscribe.contains("\"subscribed\":true"));
@@ -2837,6 +2988,7 @@ mod tests {
             &state,
             &mut connection_role,
             Arc::clone(&filter),
+            "test-connection-id",
         )
         .await;
         assert!(unsubscribe.contains("\"unsubscribed\":true"));
@@ -2928,6 +3080,7 @@ mod tests {
             &state,
             &mut connection_role,
             test_subscription_filter(),
+            "test-connection-id",
         )
         .await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("set_policy json");
@@ -2962,6 +3115,7 @@ mod tests {
             &state,
             &mut connection_role,
             test_subscription_filter(),
+            "test-connection-id",
         )
         .await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("set_speed json");
@@ -2986,6 +3140,7 @@ mod tests {
             &state,
             &mut connection_role,
             test_subscription_filter(),
+            "test-connection-id",
         )
         .await;
         let set_value: serde_json::Value = serde_json::from_str(&set_text).expect("set_speed json");
@@ -2998,6 +3153,7 @@ mod tests {
             &state,
             &mut connection_role,
             test_subscription_filter(),
+            "test-connection-id",
         )
         .await;
         let get_value: serde_json::Value = serde_json::from_str(&get_text).expect("get_speed json");
@@ -3019,6 +3175,7 @@ mod tests {
             &state,
             &mut connection_role,
             test_subscription_filter(),
+            "test-connection-id",
         )
         .await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("forbidden json");
@@ -3049,6 +3206,7 @@ mod tests {
             &state,
             &mut connection_role,
             test_subscription_filter(),
+            "test-connection-id",
         )
         .await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("save.slot json");

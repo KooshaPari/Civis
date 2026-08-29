@@ -90,6 +90,7 @@ pub(crate) struct CivilianLifecycleSample {
 /// `Default::default()` so the lifecycle classifier uses the integrity axis
 /// deterministically. Public so the test module can reuse the mapping without
 /// duplicating the formula.
+#[inline]
 pub(crate) fn civilian_to_health(needs: &Needs) -> civ_needs::Health {
     let integrity =
         ((needs.food + needs.shelter + needs.safety + needs.belonging) * 0.25).clamp(0.0, 1.0);
@@ -99,12 +100,14 @@ pub(crate) fn civilian_to_health(needs: &Needs) -> civ_needs::Health {
     }
 }
 
+#[inline]
 pub(crate) fn lifecycle_distance(ax: f32, ay: f32, bx: f32, by: f32) -> f32 {
     let dx = ax - bx;
     let dy = ay - by;
     (dx * dx + dy * dy).sqrt()
 }
 
+#[inline]
 pub(crate) fn fertility_score(age: u16, needs: &Needs) -> f32 {
     let age_factor = if (18..=42).contains(&age) {
         1.0
@@ -118,12 +121,14 @@ pub(crate) fn fertility_score(age: u16, needs: &Needs) -> f32 {
     (0.55 * age_factor + 0.45 * need_factor).clamp(0.0, 1.0)
 }
 
+#[inline]
 pub(crate) fn migration_pressure(needs: &Needs, resource_pressure: f32) -> f32 {
     let deprivation =
         1.0 - ((needs.food + needs.rest + needs.safety + needs.belonging) * 0.25).clamp(0.0, 1.0);
     (0.7 * deprivation + 0.3 * resource_pressure).clamp(0.0, 1.0)
 }
 
+#[inline]
 pub(crate) fn apply_age_stage_effects(age: u16, needs: &mut Needs) {
     if age < 18 {
         needs.belonging = (needs.belonging + 0.01).min(1.0);
@@ -136,6 +141,7 @@ pub(crate) fn apply_age_stage_effects(age: u16, needs: &mut Needs) {
     }
 }
 
+#[inline]
 pub(crate) fn is_fertile_adult(
     entity: Entity,
     world: &World,
@@ -153,6 +159,7 @@ pub(crate) fn is_fertile_adult(
         && needs.belonging >= 0.5
 }
 
+#[inline]
 pub(crate) fn is_migratory_adult(
     entity: Entity,
     world: &World,
@@ -167,6 +174,7 @@ pub(crate) fn is_migratory_adult(
         && (needs.rest <= 0.75 || needs.safety <= 0.75 || needs.belonging <= 0.75)
 }
 
+#[inline]
 pub(crate) fn settlement_anchor_for(settlement_id: u32, x: f32, y: f32) -> (f32, f32) {
     let seed = settlement_id as f32 * 0.137_503_2;
     let nx = (x + seed.sin() * 0.08).clamp(0.05, 0.95);
@@ -175,6 +183,7 @@ pub(crate) fn settlement_anchor_for(settlement_id: u32, x: f32, y: f32) -> (f32,
 }
 
 /// Deterministic job assignment for agent civilians (stable across seeds).
+#[inline]
 pub fn job_type_for_civilian_id(id: u64) -> crate::engine::JobType {
     match id % 7 {
         0 => crate::engine::JobType::Farmer,
@@ -215,6 +224,7 @@ pub(crate) fn spawn_faction_civilians(world: &mut World, rng: &mut SimRng) {
 }
 
 /// Spawn civilians for each faction with custom parameters.
+#[inline]
 pub(crate) fn spawn_faction_civilians_custom(
     world: &mut World,
     rng: &mut SimRng,
@@ -260,6 +270,7 @@ use crate::engine::{KinshipEdge, KinshipKind};
 
 impl Simulation {
     /// Helper: compute resource pressure from food stockpiles.
+    #[inline]
     pub(crate) fn resource_pressure(&self) -> f32 {
         let food = self.state.resources.food.to_bits().max(0) as f32;
         let pressure = if food <= 0.0_f32 {
@@ -271,6 +282,7 @@ impl Simulation {
     }
 
     /// Helper: compute unrest pressure from the latest unrest snapshots.
+    #[inline]
     pub(crate) fn unrest_pressure(&self) -> f32 {
         let max_unrest = self
             .last_tick_unrest_snapshots
@@ -282,6 +294,7 @@ impl Simulation {
     }
 
     /// Derive the next settlement id from the current settlement map.
+    #[inline]
     pub(crate) fn next_settlement_id(&self) -> u32 {
         self.settlements
             .keys()
@@ -298,6 +311,11 @@ impl Simulation {
         self.last_births.clear();
         self.last_deaths.clear();
 
+        // PERF: hoist `resource_pressure()` out of the per-civilian
+        // collection loop. The pressure only depends on the global food
+        // stock, not on the civilian being inspected, so caching the
+        // value once saves N virtual method calls per tick.
+        let resource_pressure_cached = self.resource_pressure();
         let mut records: Vec<(Entity, u64, CivilianLifecycleSample)> = self
             .world
             .query::<(&AgentCivilian, &Position3d, &Needs)>()
@@ -312,7 +330,7 @@ impl Simulation {
                         x: pos.coord.x as f32 / FIXED_SCALE as f32,
                         y: pos.coord.z as f32 / FIXED_SCALE as f32,
                         fertility_score: fertility_score(civilian.age, needs),
-                        migration_pressure: migration_pressure(needs, self.resource_pressure()),
+                        migration_pressure: migration_pressure(needs, resource_pressure_cached),
                     },
                 )
             })
@@ -520,6 +538,19 @@ impl Simulation {
         // labor fraction. Uses LifecycleLabel from civ_needs. Children are
         // tagged by age; elders by age >= 65. Dead civilians come from the
         // `dead` despawn list captured earlier this tick.
+        //
+        // PERF: read the dominant maturity once (was previously a per-civilian
+        // `world.query::<&Psyche>().iter().next()` call that turned the metrics
+        // pass into O(n²) over the civilian population).
+        let maturity: f32 = self
+            .world
+            .query::<&civ_agents::Psyche>()
+            .iter()
+            .next()
+            .map(|(_, p)| p.maturity)
+            .unwrap_or(0.0);
+        let labor_cap_zero_dna = civ_genetics::Dna::zero(0);
+        let lifecycle_params_default = civ_needs::LifecycleParams::default();
         let mut metrics = LifecycleCounters::default();
         for (_entity, _id, sample) in records.iter() {
             // Use the existing fertility_score as a proxy for general
@@ -532,20 +563,11 @@ impl Simulation {
                 integrity,
                 ..civ_needs::Health::default()
             };
-            // Maturity: read from the first civilian's Psyche if available,
-            // otherwise default 0 (Child band).
-            let maturity = self
-                .world
-                .query::<&civ_agents::Psyche>()
-                .iter()
-                .next()
-                .map(|(_, p)| p.maturity)
-                .unwrap_or(0.0);
             let labor_cap = civ_needs::labor_capacity(
                 sample.age,
                 &health,
-                &civ_genetics::Dna::zero(0),
-                &civ_needs::LifecycleParams::default(),
+                &labor_cap_zero_dna,
+                &lifecycle_params_default,
             );
             match civ_needs::classify_lifecycle(sample.age, &health, maturity, labor_cap) {
                 civ_needs::LifecycleLabel::Child => metrics.children += 1,

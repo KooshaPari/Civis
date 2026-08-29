@@ -16,6 +16,7 @@ use civ_build::{BuildSite, DemandSignals, ProductionEvent};
 use civ_diffusion::DiffusionParams;
 use std::collections::BTreeMap;
 
+#[inline]
 fn propagate_cohort_wardrobe_with_lod(
     world: &mut hecs::World,
     target_era: u16,
@@ -62,6 +63,7 @@ fn propagate_cohort_wardrobe_with_lod(
     }
 }
 
+#[inline]
 fn propagate_cohort_tools_with_lod(
     world: &mut hecs::World,
     target_era: u16,
@@ -109,6 +111,7 @@ fn propagate_cohort_tools_with_lod(
 }
 
 /// Derive a per-cluster music cue from culture traits (stub).
+#[inline]
 pub fn derive_music_cue(
     traits: TraitVector,
     cluster_id: u64,
@@ -203,27 +206,29 @@ impl Simulation {
             }
         }
 
-        // ---- 2. Construction progress (every tick) ----
-        let mut completed_ids = Vec::new();
+        // ---- 2. Construction progress + 3. production events (single pass) ----
+        // PERF: previously this was three separate iterations over
+        // `self.build_sites` (progress / retain / produce). Folding the
+        // production-events pass into the same loop halves the iteration
+        // count and keeps the borrow checker happy with `iter_mut()`.
+        let mut events = std::mem::take(&mut self.last_tick_construction_events);
+        let mut completed_ids: smallvec::SmallVec<[civ_build::BuildingId; 8]> =
+            smallvec::SmallVec::new();
         for site in self.build_sites.iter_mut() {
             if site.is_complete() {
                 continue;
             }
-            if let Some(_completion) = site.tick() {
-                completed_ids.push(site.id());
+            if site.tick().is_some() {
+                let site_id = site.id();
+                completed_ids.push(site_id);
                 self.building_graph.record_completed(site);
-            }
-        }
-        self.build_sites
-            .retain(|site| !site.is_complete() || completed_ids.contains(&site.id()));
-
-        // ---- 3. Production events for completed buildings (every tick) ----
-        let mut events = std::mem::take(&mut self.last_tick_construction_events);
-        for site in self.build_sites.iter_mut() {
-            if completed_ids.contains(&site.id()) {
                 events.extend(site.produce_and_collect(&mut self.economy_state, tick));
             }
         }
+        // Drop sites that completed on a previous tick (their `id()` won't
+        // appear in `completed_ids` for this tick).
+        self.build_sites
+            .retain(|site| !site.is_complete() || completed_ids.contains(&site.id()));
         self.last_tick_construction_events = events;
     }
 
@@ -372,6 +377,7 @@ impl Simulation {
     }
 
     /// Production phase - buildings produce resources.
+    #[inline]
     pub(crate) fn phase_production(&mut self) {
         let mut food = Fixed::ZERO;
         let wood = Fixed::ZERO;

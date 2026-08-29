@@ -15,6 +15,9 @@ pub mod jsonrpc;
 /// Runtime metrics collection (tick durations, clients, events, memory).
 pub mod metrics;
 pub mod saves;
+/// Per-client session tracking for the multiplayer bridge (connection id,
+/// subscription filter mirror, last-acked tick).
+pub mod session;
 pub mod subscription_filter;
 pub mod voxel_frame_builder;
 /// WebSocket bridge and health endpoint for streaming 3D protocol frames.
@@ -36,6 +39,7 @@ pub use jsonrpc::{
 pub use saves::{
     list_saves, most_recent_save_path, save_archive_path, validate_production_slot, SaveListEntry,
 };
+pub use session::{SessionSnapshot, SharedSession, SESSION_HISTORY_CAP};
 pub use voxel_frame_builder::{build_voxel_delta_frame, VoxelFrameBuilderError};
 pub use ws_bridge::{
     run_ws_bridge, spawn_ws_bridge, spawn_ws_bridge_with_config, TickBroadcastFormat,

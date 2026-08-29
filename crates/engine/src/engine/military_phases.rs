@@ -15,6 +15,7 @@ use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
 /// Default doctrine population for three factions (deterministic seed layout).
+#[inline]
 pub(crate) fn default_faction_doctrines() -> Vec<DoctrineLibrary> {
     (0..3)
         .map(|faction| DoctrineLibrary {
@@ -112,41 +113,45 @@ impl Simulation {
 
         let phase_cfg = self.military_phase;
 
-        let morale_updates: Vec<(Entity, crate::engine::MilitaryUnit)> = self
+        // PERF: snapshot every `MilitaryUnit` once. The previous code
+        // called `world.query::<&MilitaryUnit>().iter()` five times per
+        // tick (morale / samples / movement-update / damage-update / dead),
+        // and two of those were nested inside the engagement/movement
+        // loops — turning what should be O(n) into O(n*m). Holding the
+        // snapshot lets us do all mutation against `units` (Vec indexed
+        // by the same position as `entities`) and write back in one
+        // final pass. Movement/damage updates become O(1) via the
+        // already-computed index.
+        let (mut entities, mut units): (Vec<Entity>, Vec<crate::engine::MilitaryUnit>) = self
             .world
             .query::<&crate::engine::MilitaryUnit>()
             .iter()
-            .filter_map(|(entity, unit)| {
-                if unit.morale >= Fixed::from_num(1) {
-                    return None;
-                }
-                let mut updated = unit.clone();
-                updated.morale = (updated.morale + Fixed::from_num(1) / Fixed::from_num(100))
+            .map(|(e, u)| (e, u.clone()))
+            .unzip();
+
+        // 1. Morale recovery.
+        for unit in &mut units {
+            if unit.morale < Fixed::from_num(1) {
+                unit.morale = (unit.morale + Fixed::from_num(1) / Fixed::from_num(100))
                     .min(Fixed::from_num(1));
-                Some((entity, updated))
-            })
-            .collect();
-        for (entity, unit) in morale_updates {
-            let _ = self.world.insert(entity, (unit,));
+            }
         }
 
-        let mut entities: Vec<Entity> = Vec::new();
-        let mut samples: Vec<MilitaryUnitSample> = self
-            .world
-            .query::<&crate::engine::MilitaryUnit>()
+        // 2. Build per-unit samples for the war/tactics bridge.
+        let mut samples: Vec<MilitaryUnitSample> = entities
             .iter()
+            .zip(units.iter())
             .enumerate()
-            .map(|(idx, (entity, unit))| {
-                entities.push(entity);
-                MilitaryUnitSample {
-                    unit_id: military_pin_id(entity, idx),
-                    faction_id: unit.faction_id,
-                    grid_x: unit.position.x,
-                    grid_y: unit.position.y,
-                }
+            .map(|(idx, (&entity, unit))| MilitaryUnitSample {
+                unit_id: military_pin_id(entity, idx),
+                faction_id: unit.faction_id,
+                grid_x: unit.position.x,
+                grid_y: unit.position.y,
             })
             .collect();
 
+        // 3. Operational movement — mutate both the sample (for the bridge
+        // downstream) and the unit snapshot (for write-back at the end).
         for grid_move in tick_operational_movement(
             self.state.tick,
             &phase_cfg.movement,
@@ -158,26 +163,13 @@ impl Simulation {
                 sample.grid_x = grid_move.new_grid_x;
                 sample.grid_y = grid_move.new_grid_y;
             }
-            if let Some(target_entity) = entities.get(grid_move.unit_index).copied() {
-                let movement_update = self
-                    .world
-                    .query::<&crate::engine::MilitaryUnit>()
-                    .iter()
-                    .find_map(|(entity, unit)| {
-                        if entity != target_entity {
-                            return None;
-                        }
-                        let mut updated = unit.clone();
-                        updated.position.x = grid_move.new_grid_x;
-                        updated.position.y = grid_move.new_grid_y;
-                        Some(updated)
-                    });
-                if let Some(updated) = movement_update {
-                    let _ = self.world.insert(target_entity, (updated,));
-                }
+            if let Some(unit) = units.get_mut(grid_move.unit_index) {
+                unit.position.x = grid_move.new_grid_x;
+                unit.position.y = grid_move.new_grid_y;
             }
         }
 
+        // 4. War bridge / engagements.
         let config = phase_cfg.war;
         let fog = civ_tactics::build_fog_for_units(&config, &samples, &self.voxel);
         let engagements = tick_war_bridge(
@@ -200,23 +192,11 @@ impl Simulation {
                 engagement.target_id,
                 engagement.damage,
             );
-            if let Some(target_entity) = entities.get(engagement.target_index).copied() {
-                let damage_update = self
-                    .world
-                    .query::<&crate::engine::MilitaryUnit>()
-                    .iter()
-                    .find_map(|(entity, unit)| {
-                        if entity != target_entity {
-                            return None;
-                        }
-                        let mut updated = unit.clone();
-                        updated.hp = (updated.hp - hp_loss).max(Fixed::from_num(0));
-                        updated.strength = updated.hp;
-                        Some(updated)
-                    });
-                if let Some(updated) = damage_update {
-                    let _ = self.world.insert(target_entity, (updated,));
-                }
+            // Apply damage to the snapshot directly (O(1) by index, no
+            // re-query of the world).
+            if let Some(unit) = units.get_mut(engagement.target_index) {
+                unit.hp = (unit.hp - hp_loss).max(Fixed::from_num(0));
+                unit.strength = unit.hp;
             }
             self.last_tick_combat_pulses.push(CombatDamagePulse {
                 x: (engagement.damage.center.x as f32 / scale).clamp(0.0, 1.0),
@@ -227,15 +207,19 @@ impl Simulation {
             self.pending_damage.push(engagement.damage);
         }
 
-        let dead: Vec<Entity> = self
-            .world
-            .query::<&crate::engine::MilitaryUnit>()
-            .iter()
-            .filter(|(_, unit)| unit.hp <= Fixed::from_num(0))
-            .map(|(entity, _)| entity)
-            .collect();
-        for entity in dead {
-            let _ = self.world.despawn(entity);
+        // 5. Single write-back pass: despawn dead units and re-insert
+        // survivors. `swap_remove` keeps the snapshot and entity list
+        // aligned so the engagement indices from step 4 still line up.
+        let mut i = 0;
+        while i < entities.len() {
+            if units[i].hp <= Fixed::from_num(0) {
+                let _ = self.world.despawn(entities[i]);
+                entities.swap_remove(i);
+                units.swap_remove(i);
+            } else {
+                let _ = self.world.insert(entities[i], (units[i].clone(),));
+                i += 1;
+            }
         }
     }
 

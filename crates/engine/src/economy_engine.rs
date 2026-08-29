@@ -19,16 +19,17 @@ pub(crate) fn economy_state_from_world(world: &WorldState) -> EconomyState {
 }
 
 /// Compute a baseline market price from supply/demand balance.
+/// Compute a baseline market price from supply/demand balance.
 ///
-/// Returns a price in milliunits centered on `1_000` with a \u00b1250 band
+/// Returns a price in milliunits centered on `1_000` with a ±250 band
 /// driven by the demand surplus or deficit.
+#[inline]
 pub(crate) fn market_price_from_balance(supply: i64, demand: i64) -> i64 {
     let supply = supply.max(0);
     let demand = demand.max(0);
     let balance = demand.saturating_sub(supply);
     1_000i64.saturating_add(balance.clamp(-250, 250))
 }
-
 // ---- Simulation economy methods (extracted from engine.rs) ----
 
 use crate::engine::tech_unlocks_for_tier;
@@ -247,6 +248,7 @@ impl Simulation {
     }
 
     /// Map an extraction [`ExtractionKind`] to an engine [`ResourceType`].
+    #[inline]
     fn extraction_kind_to_resource(kind: ExtractionKind) -> ResourceType {
         match kind {
             ExtractionKind::Ore => ResourceType::Metal,
@@ -258,6 +260,7 @@ impl Simulation {
 
     /// Deterministic position derived from a faction ID for gravity-kernel
     /// distance calculations.
+    #[inline]
     fn faction_position(faction_id: u32) -> (i32, i32, i32) {
         let x = (faction_id as i32) * 100;
         let y = ((faction_id as i32) * 37) % 50;
@@ -267,6 +270,7 @@ impl Simulation {
 
     /// Convert engine faction resources into a [`civ_economy::Settlement`] for
     /// gravity-kernel trade-route computation.
+    #[inline]
     fn build_economy_settlement(
         faction_id: u32,
         resources: &crate::engine::Resources,
@@ -304,6 +308,15 @@ impl Simulation {
             return;
         }
 
+        // PERF: build a once-per-tick `id -> Settlement` index so the
+        // origin/dest lookups inside the route loop are O(1) instead of
+        // `settlements.iter().find(...)` (which was O(n) per lookup).
+        let mut by_id: std::collections::HashMap<u64, &civ_economy::Settlement> =
+            std::collections::HashMap::with_capacity(settlements.len());
+        for s in &settlements {
+            by_id.insert(s.id, s);
+        }
+
         let econ_routes = civ_economy::compute_trade_routes(&settlements);
 
         for econ_route in econ_routes {
@@ -313,8 +326,8 @@ impl Simulation {
             if volume <= Fixed::ZERO || from_faction == to_faction {
                 continue;
             }
-            let origin = settlements.iter().find(|s| s.id == econ_route.from);
-            let dest = settlements.iter().find(|s| s.id == econ_route.to);
+            let origin = by_id.get(&econ_route.from).copied();
+            let dest = by_id.get(&econ_route.to).copied();
             let goods_label = match (origin, dest) {
                 (Some(o), Some(d)) => {
                     let mut best_good = "grain";

@@ -103,6 +103,12 @@ pub enum JsonRpcMethod {
     SimGetTick,
     /// Query latest emergence metrics (`sim.get_emergence_metrics`).
     SimGetEmergenceMetrics,
+    /// Per-session multiplayer snapshot view
+    /// (`sim.get_snapshot_for_session`, FR-MULTIPLAYER-SYNC). Returns the
+    /// standard snapshot payload tagged with the caller's
+    /// `connection_id` and `last_acked_tick` so a multiplayer client
+    /// can confirm it is reading its own session's view.
+    SimGetSnapshotForSession,
     /// Query psyche snapshot (`psyche.snapshot`).
     PsycheSnapshot,
     /// Query psyche/sentience events (`psyche.events`).
@@ -154,6 +160,7 @@ impl JsonRpcMethod {
             Self::SimGetResources => "sim.get_resources",
             Self::SimGetTick => "sim.get_tick",
             Self::SimGetEmergenceMetrics => "sim.get_emergence_metrics",
+            Self::SimGetSnapshotForSession => "sim.get_snapshot_for_session",
             Self::PsycheSnapshot => "psyche.snapshot",
             Self::PsycheEvents => "psyche.events",
             Self::EmergenceMetrics => "emergence.metrics",
@@ -200,6 +207,7 @@ impl JsonRpcMethod {
             "sim.get_resources" => Some(Self::SimGetResources),
             "sim.get_tick" => Some(Self::SimGetTick),
             "sim.get_emergence_metrics" => Some(Self::SimGetEmergenceMetrics),
+            "sim.get_snapshot_for_session" => Some(Self::SimGetSnapshotForSession),
             "psyche.snapshot" => Some(Self::PsycheSnapshot),
             "psyche.events" => Some(Self::PsycheEvents),
             "emergence.metrics" => Some(Self::EmergenceMetrics),
@@ -2237,6 +2245,21 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 })),
                 None => serde_json::json!({ "tick": ctx.tick, "sample": serde_json::Value::Null }),
             };
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, result),
+                effect: DispatchEffect::None,
+            }
+        }
+        JsonRpcMethod::SimGetSnapshotForSession => {
+            // Per-session multiplayer view. The handler does not have
+            // access to the bridge's session map here, so it returns
+            // a placeholder marker; the bridge overwrites the
+            // `session_snapshot` field with the live data after
+            // dispatch (see `handle_jsonrpc_text`).
+            let result = serde_json::json!({
+                "tick": ctx.tick,
+                "marker": "session_snapshot_filled_by_bridge",
+            });
             DispatchPlan {
                 response: JsonRpcResponse::success(req.id, result),
                 effect: DispatchEffect::None,

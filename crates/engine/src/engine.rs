@@ -624,6 +624,12 @@ pub struct Simulation {
     last_tick_music_cues: BTreeMap<u64, MusicCue>,
     /// Per-tick disaster events surfaced in snapshots.
     pub(crate) last_tick_disaster_events: Vec<crate::disasters::DisasterTickEvent>,
+    /// Per-tick god-action audit log (FR-MULTIPLAYER-AUDIT). Cleared at
+    /// the start of every [`Simulation::tick`]; cap-bounded at
+    /// [`GOD_ACTION_AUDIT_CAP`] so bursty god-button UIs can't OOM the
+    /// engine. Read by the multiplayer bridge to surface "client X
+    /// triggered verb Y at tick T" alongside the tick broadcast.
+    pub(crate) last_god_actions: Vec<GodActionRecord>,
     /// Most recent deterministic victory/defeat assessment.
     pub last_game_outcome: GameOutcome,
 
@@ -889,6 +895,45 @@ pub enum ReligionEventKind {
     Dissolved,
 }
 
+/// Per-client god-action audit entry recorded by the multiplayer bridge.
+///
+/// Each time a connected client issues a `sim.god_action` (or any other
+/// state-mutating dispatch the bridge chooses to attribute), the
+/// [`Simulation`] records a [`GodActionRecord`] carrying the
+/// `connection_id` of the session that triggered it. The audit log is
+/// per-tick (cleared at the start of every [`Simulation::tick`]) so
+/// downstream consumers can read it after the broadcast and surface it
+/// alongside `last_tick_disaster_events`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GodActionRecord {
+    /// Engine tick the action was applied at.
+    pub tick: u64,
+    /// Stable connection id of the WebSocket session that issued the
+    /// action. `None` for actions triggered headless (tests, scenarios).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection_id: Option<String>,
+    /// Verb id (e.g. `"terrain.add_land"`, `"life.spawn_organism"`,
+    /// `"disaster.wildfire"`).
+    pub action: String,
+    /// Stable verb category so dashboards can bucket the audit log
+    /// without parsing the verb string. Mirrors the `GodToolRequest`
+    /// tags: `terraform`, `material`, `life`, `disaster`, `inspect`,
+    /// `law`, or `legacy` for verbs that bypass `apply_god_tool`.
+    #[serde(default)]
+    pub category: String,
+    /// Original RPC params as a JSON string. Cheap to store, lets audit
+    /// consumers reconstruct the exact request without depending on
+    /// typed verb params.
+    #[serde(default)]
+    pub params_json: String,
+}
+
+/// Maximum number of [`GodActionRecord`] entries retained per tick.
+///
+/// Picked to comfortably cover bursty god-button UIs (each frame can fire
+/// a verb) without unbounded growth.
+pub const GOD_ACTION_AUDIT_CAP: usize = 256;
+
 /// Civic institution event emitted by [`Simulation::phase_institutions`]
 /// (FR-CIV-GOV-001/002/003). Consumed by the JSON-RPC bridge in
 /// `crates/server/src/ws_bridge.rs` to surface the civil layer to clients.
@@ -995,6 +1040,7 @@ impl Simulation {
             last_tick_cluster_payoffs: Vec::new(),
             last_tick_music_cues: BTreeMap::new(),
             last_tick_disaster_events: Vec::new(),
+            last_god_actions: Vec::new(),
             last_game_outcome: GameOutcome::Ongoing,
             operational: NoopOperationalLayer,
             replay_log: ReplayLog {
@@ -1161,6 +1207,7 @@ impl Simulation {
             last_tick_cluster_payoffs: Vec::new(),
             last_tick_music_cues: BTreeMap::new(),
             last_tick_disaster_events: Vec::new(),
+            last_god_actions: Vec::new(),
             last_game_outcome: GameOutcome::Ongoing,
             operational: NoopOperationalLayer,
             replay_log: ReplayLog {
@@ -1875,6 +1922,10 @@ impl Simulation {
         self.last_tick_mood.clear();
         self.last_tick_cohesion_events.clear();
         self.last_tick_unrest_events.clear();
+        // FR-MULTIPLAYER-AUDIT: reset the per-tick god-action audit log
+        // alongside the other last_tick_* buffers so each tick's audit
+        // entries correspond exactly to that tick's dispatches.
+        self.last_god_actions.clear();
         self.econ_focus_stability.clear();
 
         // Phases in PHASE_ORDER (CIV-0001)
@@ -2381,6 +2432,55 @@ impl Simulation {
             .record_session_saved(session_id, save_id, slot, tick, byte_size);
     }
 
+    /// Append a god-action audit entry to the current tick's audit log.
+    ///
+    /// Called by the multiplayer WebSocket bridge every time a connected
+    /// client triggers a god verb. The entry is tagged with the
+    /// `connection_id` of the issuing session so the audit log answers
+    /// "which client did what?" without re-parsing the RPC params. The
+    /// log is bounded by [`GOD_ACTION_AUDIT_CAP`] (oldest entries are
+    /// dropped first when the cap is exceeded) and is cleared at the
+    /// start of every [`Simulation::tick`].
+    pub fn record_god_action(
+        &mut self,
+        connection_id: Option<&str>,
+        action: &str,
+        category: &str,
+        params_json: &str,
+    ) {
+        let tick = self.state.tick;
+        let record = GodActionRecord {
+            tick,
+            connection_id: connection_id.map(str::to_owned),
+            action: action.to_owned(),
+            category: category.to_owned(),
+            params_json: params_json.to_owned(),
+        };
+        if self.last_god_actions.len() >= GOD_ACTION_AUDIT_CAP {
+            // Drop oldest to keep the cap invariant. We never fail the
+            // dispatch because the audit log is full.
+            self.last_god_actions.remove(0);
+        }
+        self.last_god_actions.push(record);
+    }
+
+    /// Read-only view of the current tick's god-action audit log.
+    ///
+    /// Mirrors the pattern used for `last_tick_disaster_events` etc.:
+    /// the log is cleared at the start of each tick and populated by
+    /// dispatches that occur between ticks (mirroring how god actions
+    /// are applied between broadcast ticks).
+    #[must_use]
+    pub fn last_god_actions(&self) -> &[GodActionRecord] {
+        &self.last_god_actions
+    }
+
+    /// Explicitly clear the god-action audit log. Mainly useful for
+    /// tests; the regular tick boundary clears it automatically.
+    pub fn clear_god_actions(&mut self) {
+        self.last_god_actions.clear();
+    }
+
     /// Latest BLAKE3 hash-chain root after the most recent tick, if any.
     pub fn hash_chain_root(&self) -> Option<[u8; crate::hash_chain::HASH_LEN]> {
         self.replay_log.running_hash
@@ -2732,6 +2832,61 @@ impl Simulation {
     #[must_use]
     pub fn cluster_stocks(&self) -> &BTreeMap<u64, ClusterStocks> {
         &self.cluster_stocks
+    }
+
+    /// Build a per-client snapshot view for the multiplayer bridge.
+    ///
+    /// Returns a JSON object whose shape matches the `sim.get_snapshot_for_session`
+    /// JSON-RPC handler: it embeds the standard [`SimulationSnapshot`] payload
+    /// (the same fields `sim.snapshot` returns) plus the per-client context
+    /// (`connection_id` and `last_acked_tick`) so a multiplayer client can
+    /// confirm it is reading its own session's view. The simulation is shared
+    /// across all clients, so the snapshot data is identical between sessions;
+    /// the wrapper exists to surface the session attribution in the response
+    /// shape and to provide a stable extension point for per-client deltas
+    /// (frame-kind filters, faction pinned views, etc.) in follow-up lanes.
+    #[must_use]
+    pub fn get_snapshot_for_session(
+        &self,
+        connection_id: &str,
+        last_acked_tick: u64,
+        subscribed_frame_kinds: &[String],
+    ) -> serde_json::Value {
+        let snapshot = self.snapshot();
+        let snap_value = serde_json::to_value(&snapshot).unwrap_or(serde_json::Value::Null);
+        let mut obj = serde_json::Map::new();
+        obj.insert(
+            "tick".to_owned(),
+            serde_json::json!(snapshot.tick),
+        );
+        obj.insert(
+            "connection_id".to_owned(),
+            serde_json::Value::String(connection_id.to_owned()),
+        );
+        obj.insert(
+            "last_acked_tick".to_owned(),
+            serde_json::json!(last_acked_tick),
+        );
+        obj.insert(
+            "subscribed_frame_kinds".to_owned(),
+            serde_json::json!(subscribed_frame_kinds),
+        );
+        obj.insert(
+            "population".to_owned(),
+            serde_json::json!(snapshot.population),
+        );
+        obj.insert(
+            "building_count".to_owned(),
+            serde_json::json!(snapshot.building_count),
+        );
+        obj.insert("snapshot".to_owned(), snap_value);
+        serde_json::Value::Object(obj)
+    }
+
+    /// Latest god-action audit log for the current tick.
+    #[must_use]
+    pub fn snapshot_god_actions(&self) -> serde_json::Value {
+        serde_json::to_value(&self.last_god_actions).unwrap_or(serde_json::Value::Null)
     }
 
     /// Last-tick settlement trade flows computed in `phase_economy`.

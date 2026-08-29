@@ -127,9 +127,9 @@ pub use emergence_coupling::{
 pub use emergence_metrics::{EmergenceBranchingState, EmergenceSample};
 pub use engine::{
     job_type_for_civilian_id, Building, BuildingType, Citizen, ClusterStocks, CombatDamagePulse,
-    EconomicFocus, EconomicFocusEvent, EmotionDrivenBehavior, InstitutionEvent, JobType,
-    MilitaryUnit, MoodSnapshot, Position, PsycheDrivenBehavior, ResourceType, Resources, Sim,
-    SimSeed, Simulation, SimulationSnapshot, StratBand, StratificationEvent,
+    EconomicFocus, EconomicFocusEvent, EmotionDrivenBehavior, GodActionRecord, InstitutionEvent,
+    JobType, MilitaryUnit, MoodSnapshot, Position, PsycheDrivenBehavior, ResourceType, Resources,
+    Sim, SimSeed, Simulation, SimulationSnapshot, StratBand, StratificationEvent,
     StratificationEventKind, StratificationReport, TradeRoute, UnitType, WorldState,
 };
 // Re-export diplomacy types from the extracted diplomacy module.

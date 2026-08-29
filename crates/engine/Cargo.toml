@@ -38,6 +38,11 @@ civ-build = { path = "../build" }
 civ-diffusion = { path = "../diffusion" }
 civ-voxel = { path = "../voxel" }
 
+# Stack-allocated small vectors for per-tick phase accumulators
+# (FR-CIV-PERF-tick). `serde` feature lets the same buffers stay
+# Serialize/Deserialize-compatible.
+smallvec = { version = "1", features = ["serde"] }
+
 # Planet and tactics foundations.
 civ-planet = { path = "../planet" }
 civ-tactics = { path = "../tactics" }
@@ -73,4 +78,8 @@ tempfile = "3"
 
 [[bench]]
 name = "tick_bench"
+harness = false
+
+[[bench]]
+name = "tick_loop"
 harness = false

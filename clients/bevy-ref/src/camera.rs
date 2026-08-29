@@ -11,8 +11,8 @@ use crate::settings_ui::{
 const PAN_SPEED: f32 = 90.0;
 const YAW_SPEED: f32 = 1.5;
 const SCROLL_DISTANCE_PER_LINE: f32 = 15.0;
-const MIN_ORBIT_DISTANCE: f32 = 12.0;
-const MAX_ORBIT_DISTANCE: f32 = 600.0;
+const MIN_ORBIT_DISTANCE: f32 = 4.0;
+const MAX_ORBIT_DISTANCE: f32 = 800.0;
 const MIN_PITCH: f32 = -1.5;
 const MAX_PITCH: f32 = 0.6;
 

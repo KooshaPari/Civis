@@ -43,7 +43,7 @@ const LEG_SWING_AMP: f32 = 0.35;
 const IDLE_SPEED: f32 = 0.4;
 /// Bone mesh scale multiplier — bones were 0.5x (too small); 0.85x reads as
 /// a stylised character without being as bulky as full-scale cuboids.
-const BONE_SCALE: f32 = 0.85;
+const BONE_SCALE: f32 = 1.4;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Components

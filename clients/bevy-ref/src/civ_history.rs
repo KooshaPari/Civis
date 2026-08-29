@@ -189,9 +189,14 @@ fn draw_history_panel(
             stat_row(ui, "Power-law \u{03b1}", &hist.power_law);
             ui.add_space(4.0);
             if let Some(ref bridge) = bridge {
-                if ui.small_button("Fetch Legends").clicked() {
-                    bridge.send_rpc("sim.legends", serde_json::json!({}));
-                }
+                ui.horizontal(|ui| {
+                    if ui.small_button("Fetch Legends").clicked() {
+                        bridge.send_rpc("sim.legends", serde_json::json!({}));
+                    }
+                    if ui.small_button("Fetch Outcome").clicked() {
+                        bridge.send_rpc("sim.outcome", serde_json::json!({}));
+                    }
+                });
             }
         });
 }

@@ -89,8 +89,14 @@ fn main() {
         // embedded icon on the primary winit window at startup.
         .add_plugins(civ_bevy_ref::window_icon::WindowIconPlugin)
         .add_plugins(civ_bevy_ref::sim_bridge::SimBridgePlugin)
-        .add_plugins(civ_bevy_ref::post_fx::PostFxPlugin)
-        .add_plugins(civ_bevy_ref::audio::CivisAudioPlugin)
+        .add_plugins(civ_bevy_ref::post_fx::PostFxPlugin);
+    // The audio plugin lives behind the `audio` feature; gate it so the bin
+    // compiles even when the feature is disabled (e.g. `client-bins`-only).
+    #[cfg(feature = "audio")]
+    {
+        app.add_plugins(civ_bevy_ref::audio::CivisAudioPlugin);
+    }
+    let app = app
         .add_plugins(civ_bevy_ref::game_ui::GameUiPlugin)
         .add_plugins(civ_bevy_ref::emergence_dashboard::EmergenceDashboardPlugin)
         .add_plugins(civ_bevy_ref::tech_tree_ui::TechTreeUiPlugin)

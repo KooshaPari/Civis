@@ -111,11 +111,14 @@ fn draw_emergence_dashboard(
             ui.add_space(4.0);
             ui.separator();
             ui.add_space(6.0);
-            // Server: fetch emergence metrics (emergence.metrics)
+            // Server: fetch emergence metrics (emergence.metrics or sim.emergence)
             if let Some(ref bridge) = bridge {
                 ui.horizontal(|ui| {
                     if ui.small_button("Refresh Metrics").clicked() {
                         bridge.send_rpc("emergence.metrics", serde_json::json!({}));
+                    }
+                    if ui.small_button("Fetch Emergence").clicked() {
+                        bridge.send_rpc("sim.emergence", serde_json::json!({}));
                     }
                 });
                 ui.add_space(4.0);

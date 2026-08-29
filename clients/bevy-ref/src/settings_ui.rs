@@ -282,16 +282,19 @@ pub enum SettingsTab {
     Controls,
     /// World/session defaults and game-rule sliders.
     World,
+    /// Server connection settings (WebSocket endpoint URL, auth token, etc.).
+    Network,
 }
 
 impl SettingsTab {
-    const ALL: [SettingsTab; 6] = [
+    const ALL: [SettingsTab; 7] = [
         Self::Graphics,
         Self::Display,
         Self::Audio,
         Self::Gameplay,
         Self::World,
         Self::Controls,
+        Self::Network,
     ];
 
     fn label(self) -> &'static str {
@@ -302,6 +305,7 @@ impl SettingsTab {
             Self::Gameplay => "Gameplay",
             Self::Controls => "Controls",
             Self::World => "World / Game",
+            Self::Network => "Network",
         }
     }
 }
@@ -942,6 +946,9 @@ pub struct GameSettings {
     /// Session/world defaults mirror.
     #[serde(default)]
     pub world: WorldSettings,
+    /// Server connection settings (WebSocket URL, auth token, etc.).
+    #[serde(default)]
+    pub network: NetworkSettings,
     /// Active tab in the settings panel.
     #[serde(skip)]
     pub active_tab: SettingsTab,
@@ -966,6 +973,7 @@ impl Default for GameSettings {
             gameplay: GameplaySettings::default(),
             keybinds: default_keybinds(),
             world: WorldSettings::default(),
+            network: NetworkSettings::default(),
             active_tab: SettingsTab::default(),
             open: false,
         }
@@ -988,6 +996,70 @@ impl Default for WorldSettings {
         Self {
             world_size: 1,
             default_era: 1,
+        }
+    }
+}
+
+/// Server connection settings surfaced through the Network tab.
+///
+/// These values feed the `live_attach` bridge when the user picks
+/// "Connect to Server" on the main menu. Default endpoint matches the
+/// `civ-server` listen address used by the workspace tests / MCP smoke
+/// (`ws://127.0.0.1:3000/ws`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NetworkSettings {
+    /// WebSocket URL of the `civ-server` JSON-RPC endpoint, e.g.
+    /// `ws://127.0.0.1:3000/ws`. The UI rejects an empty string and falls
+    /// back to the default.
+    #[serde(default = "default_server_url")]
+    pub server_url: String,
+    /// Optional bearer token forwarded as the `Authorization` header on the
+    /// WebSocket upgrade (matches `CIVIS_AUTH_TOKEN` on the server side).
+    #[serde(default)]
+    pub auth_token: String,
+    /// Whether the client should auto-reconnect on disconnect.
+    #[serde(default = "network_default_true")]
+    pub auto_reconnect: bool,
+    /// Snapshot polling interval in seconds (defaults to match the ws client's
+    /// `SNAPSHOT_POLL_SECS = 2`).
+    #[serde(default = "default_snapshot_interval")]
+    pub snapshot_interval_secs: u32,
+}
+
+fn default_server_url() -> String {
+    "ws://127.0.0.1:3000/ws".to_string()
+}
+
+/// `#[serde(default = ...)]` helper for `NetworkSettings::auto_reconnect` —
+/// renamed to avoid colliding with the global `default_true` used by
+/// `DisplaySettings` / `AudioSettings`.
+fn network_default_true() -> bool {
+    true
+}
+
+fn default_snapshot_interval() -> u32 {
+    2
+}
+
+impl Default for NetworkSettings {
+    fn default() -> Self {
+        Self {
+            server_url: default_server_url(),
+            auth_token: String::new(),
+            auto_reconnect: true,
+            snapshot_interval_secs: 2,
+        }
+    }
+}
+
+impl NetworkSettings {
+    /// Return the persisted URL, falling back to the default if empty.
+    #[must_use]
+    pub fn resolved_url(&self) -> String {
+        if self.server_url.trim().is_empty() {
+            default_server_url()
+        } else {
+            self.server_url.clone()
         }
     }
 }
@@ -1245,7 +1317,13 @@ fn draw_settings_panel(
                         egui::ScrollArea::vertical()
                             .auto_shrink([false, false])
                             .show(ui, |ui| {
-                                draw_settings_page(ui, &mut settings, &mut capture, &mut dirty);
+                                draw_settings_page(
+                                    ui,
+                                    &mut settings,
+                                    &mut capture,
+                                    &mut dirty,
+                                    bridge.as_deref(),
+                                );
                             });
                     },
                 );
@@ -1311,6 +1389,7 @@ fn draw_settings_page(
     settings: &mut GameSettings,
     capture: &mut KeybindCaptureState,
     dirty: &mut bool,
+    bridge: Option<&ServerBridge>,
 ) {
     *dirty |= match settings.active_tab {
         SettingsTab::Graphics => graphics_tab(ui, &mut settings.graphics),
@@ -1319,6 +1398,7 @@ fn draw_settings_page(
         SettingsTab::Gameplay => gameplay_tab(ui, &mut settings.gameplay),
         SettingsTab::Controls => controls_tab(ui, settings, capture),
         SettingsTab::World => world_tab(ui, settings),
+        SettingsTab::Network => network_tab(ui, &mut settings.network, bridge),
     };
 }
 
@@ -1699,6 +1779,104 @@ fn world_tab(ui: &mut egui::Ui, settings: &mut GameSettings) -> bool {
         );
     });
     ui.label(egui::RichText::new("Session defaults are read-only mirrors until the world setup menu is wired through settings.").color(ui_theme::DIM).small());
+    changed
+}
+
+/// Network tab — lets the player configure the `civ-server` endpoint URL,
+/// auth token, and reconnect cadence. "Test Connection" fires `sim.status`
+/// over the [`ServerBridge`] so the player can confirm the endpoint
+/// responds without leaving the settings screen.
+fn network_tab(
+    ui: &mut egui::Ui,
+    network: &mut NetworkSettings,
+    bridge: Option<&ServerBridge>,
+) -> bool {
+    let mut changed = false;
+    section_heading(ui, "\u{1f4f6}", "Network");
+    ui.label(
+        egui::RichText::new(
+            "Server connection settings for the live-attach (`civ-server`) bridge. \
+             The default endpoint matches the workspace smoke-test server.",
+        )
+        .color(ui_theme::DIM)
+        .small(),
+    );
+    ui.add_space(6.0);
+
+    ui.horizontal(|ui| {
+        ui.label(egui::RichText::new("Server URL").color(ui_theme::DIM));
+        changed |= ui
+            .add(
+                egui::TextEdit::singleline(&mut network.server_url)
+                    .hint_text("ws://127.0.0.1:3000/ws")
+                    .desired_width(ui.available_width() - 100.0),
+            )
+            .changed();
+    });
+    ui.horizontal(|ui| {
+        ui.label(egui::RichText::new("Auth token").color(ui_theme::DIM));
+        changed |= ui
+            .add(
+                egui::TextEdit::singleline(&mut network.auth_token)
+                    .hint_text("(optional bearer token)")
+                    .password(true)
+                    .desired_width(ui.available_width() - 100.0),
+            )
+            .changed();
+    });
+    ui.horizontal(|ui| {
+        ui.label(egui::RichText::new("Auto-reconnect").color(ui_theme::DIM));
+        changed |= ui
+            .checkbox(&mut network.auto_reconnect, "Reconnect on disconnect")
+            .changed();
+    });
+    ui.horizontal(|ui| {
+        ui.label(egui::RichText::new("Snapshot interval").color(ui_theme::DIM));
+        changed |= ui
+            .add(egui::DragValue::new(&mut network.snapshot_interval_secs).range(1..=60))
+            .changed();
+        ui.label(egui::RichText::new("seconds").color(ui_theme::DIM));
+    });
+    ui.add_space(6.0);
+    ui.separator();
+    ui.add_space(4.0);
+    ui.horizontal(|ui| {
+        ui.label(
+            egui::RichText::new(format!(
+                "Effective URL: {}",
+                network.resolved_url()
+            ))
+            .color(ui_theme::ACCENT)
+            .small(),
+        );
+    });
+    ui.horizontal(|ui| {
+        if let Some(bridge) = bridge {
+            if ui
+                .add(egui::Button::new("\u{1f50d} Test Connection"))
+                .on_hover_text("Fire sim.status at the server")
+                .clicked()
+            {
+                bridge.send_rpc("sim.status", serde_json::json!({}));
+            }
+            if ui
+                .add(egui::Button::new("\u{1f4e1} Force Reconnect"))
+                .on_hover_text("Send sim.reset (force a fresh session)")
+                .clicked()
+            {
+                bridge.send_rpc(
+                    "sim.reset",
+                    serde_json::json!({ "seed": 0 }),
+                );
+            }
+        } else {
+            ui.label(
+                egui::RichText::new("(no live bridge attached)")
+                    .color(ui_theme::DIM)
+                    .italics(),
+            );
+        }
+    });
     changed
 }
 

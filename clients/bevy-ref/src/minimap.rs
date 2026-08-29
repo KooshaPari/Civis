@@ -8,6 +8,7 @@ use civ_agents::{Alignment, Civilian as AgentCivilian};
 use civ_engine::Building;
 
 use crate::camera::CameraRig;
+use crate::live_stream::ServerBridge;
 use crate::sim_bridge::SimState;
 use crate::spawn_tools::{select_action_binding, GameSettings};
 use crate::terrain::WORLD_SIZE;
@@ -42,11 +43,55 @@ pub struct MinimapPlugin;
 
 impl Plugin for MinimapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            Startup,
-            (setup_minimap_render_target, setup_minimap).chain(),
-        )
-        .add_systems(Update, (sync_minimap_dots, teleport_camera_from_minimap));
+        app.init_resource::<MinimapSnapshotState>()
+            .add_systems(
+                Startup,
+                (setup_minimap_render_target, setup_minimap).chain(),
+            )
+            .add_systems(Update, (sync_minimap_dots, teleport_camera_from_minimap))
+            // Server-mode: keep the minimap terrain in sync with the live server
+            // snapshot. The polling interval (5 s) is slower than the ws client's
+            // own `sim.snapshot` poll (2 s) so this just enforces a fresh fetch
+            // for the minimap texture; if the ws-client is disconnected the
+            // periodic call still tries to fire (fire-and-forget) so when the
+            // server comes back the minimap catches up immediately.
+            .add_systems(Update, request_minimap_snapshot);
+    }
+}
+
+/// Seconds between minimap-initiated `sim.snapshot` RPCs in server mode.
+const MINIMAP_SNAPSHOT_INTERVAL_SECS: f32 = 5.0;
+/// Resource tracking the last snapshot fire time so we can throttle the poll.
+#[derive(Resource, Debug, Default, Clone, Copy)]
+pub struct MinimapSnapshotState {
+    /// Seconds elapsed (game clock) when the last `sim.snapshot` was fired.
+    /// `None` means we haven't fired yet.
+    pub last_fired_secs: Option<f32>,
+}
+
+/// Periodically request a fresh `sim.snapshot` so the minimap terrain texture
+/// stays in sync with the live server view. Runs only in server attach mode —
+/// standalone mode reads from the in-process simulation directly.
+fn request_minimap_snapshot(
+    attach: Res<AttachMode>,
+    bridge: Option<Res<ServerBridge>>,
+    mut state: ResMut<MinimapSnapshotState>,
+    time: Res<Time>,
+) {
+    if *attach != AttachMode::Server {
+        return;
+    }
+    let Some(ref bridge) = bridge else {
+        return;
+    };
+    let now = time.elapsed_secs();
+    let due = match state.last_fired_secs {
+        None => true,
+        Some(prev) => now - prev >= MINIMAP_SNAPSHOT_INTERVAL_SECS,
+    };
+    if due {
+        bridge.send_rpc("sim.snapshot", serde_json::json!({}));
+        state.last_fired_secs = Some(now);
     }
 }
 

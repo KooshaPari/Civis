@@ -55,13 +55,24 @@ export default defineConfig({
         ],
       },
     ],
-    sidebar: [{ text: 'Categories', items: [
-      { text: 'Wiki', link: '/wiki/' },
-      { text: 'Development Guide', link: '/development-guide/' },
-      { text: 'Document Index', link: '/document-index/' },
-      { text: 'API', link: '/api/' },
-      { text: 'Roadmap', link: '/roadmap/' }
-    ] }],
+    sidebar: [
+      { text: 'Docs', items: [
+        { text: 'Architecture', link: '/architecture/' },
+        { text: 'Simulation', link: '/simulation/' },
+        { text: 'Diplomacy', link: '/diplomacy/' },
+        { text: 'Economy', link: '/economy/' },
+        { text: 'AI', link: '/ai/' },
+        { text: 'API', link: '/api/' },
+        { text: 'Development', link: '/development/' },
+        { text: 'Deployment', link: '/deployment/' },
+      ] },
+      { text: 'Categories', items: [
+        { text: 'Wiki', link: '/wiki/' },
+        { text: 'Development Guide', link: '/development-guide/' },
+        { text: 'Document Index', link: '/document-index/' },
+        { text: 'Roadmap', link: '/roadmap/' }
+      ] },
+    ],
     outline: {
       level: [2, 3],
       label: 'On this page',

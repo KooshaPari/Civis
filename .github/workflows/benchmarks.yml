@@ -1,56 +1,56 @@
 name: Benchmarks
 
 on:
-  push:
-    branches: [main, master]
-  pull_request:
-    branches: [main, master]
+    push:
+        branches: [main, master]
+    pull_request:
+        branches: [main, master]
 
 permissions:
-  contents: read
+    contents: read
 
 concurrency:
-  group: benchmarks-${{ github.ref }}
-  cancel-in-progress: true
+    group: benchmarks-${{ github.ref }}
+    cancel-in-progress: true
 
 jobs:
-  bench:
-    name: Criterion Benchmarks (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    steps:
-      - uses: actions/checkout@v4
+    bench:
+        name: Criterion Benchmarks (${{ matrix.os }})
+        runs-on: ${{ matrix.os }}
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-latest, windows-latest]
+        steps:
+            - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@stable
+            - uses: dtolnay/rust-toolchain@stable
 
-      - uses: Swatinem/rust-cache@v2
-        with:
-          cache-on-failure: true
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  cache-on-failure: true
 
-      - name: Install cargo-criterion
-        run: cargo install cargo-criterion --locked
+            - name: Install cargo-criterion
+              run: cargo install cargo-criterion --locked
 
-      # Validate every benchmark binary in the workspace.  `--test` runs each
-      # benchmark once and exits — it exercises the full setup/teardown paths
-      # and catches runtime regressions without paying for the full Criterion
-      # measurement loop.  Full performance numbers come from the dedicated
-      # performance-bench workflow that runs nightly against `main`.
-      - name: Run benchmarks (validation, --test mode)
-        run: cargo bench --workspace -- --test 2>&1 | tail -80
+            # Validate every benchmark binary in the workspace.  `--test` runs each
+            # benchmark once and exits — it exercises the full setup/teardown paths
+            # and catches runtime regressions without paying for the full Criterion
+            # measurement loop.  Full performance numbers come from the dedicated
+            # performance-bench workflow that runs nightly against `main`.
+            - name: Run benchmarks (validation, --test mode)
+              run: cargo bench --workspace -- --test 2>&1 | tail -80
 
-      # Compile-only check that covers every [[bench]] target, including ones
-      # gated behind features that the default `--workspace` invocation skips.
-      # Mirrors the compile gate that ci.yml applies to lib + test targets.
-      - name: Verify benchmark binaries compile (all features)
-        run: cargo bench --workspace --all-features --no-run 2>&1 | tail -40
+            # Compile-only check that covers every [[bench]] target, including ones
+            # gated behind features that the default `--workspace` invocation skips.
+            # Mirrors the compile gate that ci.yml applies to lib + test targets.
+            - name: Verify benchmark binaries compile (all features)
+              run: cargo bench --workspace --all-features --no-run 2>&1 | tail -40
 
-      - name: Upload benchmark results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: criterion-results-${{ matrix.os }}
-          path: target/criterion
-          retention-days: 14
+            - name: Upload benchmark results
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: criterion-results-${{ matrix.os }}
+                  path: target/criterion
+                  retention-days: 14

@@ -146,6 +146,12 @@ mod engine_tests {
     }
 
     /// CIV-0001 partial — `PHASE_ORDER` matches the sequence in `Simulation::tick`.
+    ///
+    /// FR-CIV-phasewire: this test was updated to reflect the renamed legacy
+    /// phases (`buildings` → `construction_sites`, `language` → `language_drift`)
+    /// plus the six newly added top-level phases (`religion`, `language`,
+    /// `psyche`, `buildings`, `history`, `writing`). Update this list whenever
+    /// `PHASE_ORDER` changes.
     #[test]
     fn phase_order_matches_tick_sequence() {
         assert_eq!(
@@ -163,7 +169,8 @@ mod engine_tests {
                 "tactics",
                 "voxel",
                 "compact",
-                "buildings",
+                // FR-CIV-phasewire: was "buildings".
+                "construction_sites",
                 "life",
                 "daily_path",
                 "cluster",
@@ -181,13 +188,26 @@ mod engine_tests {
                 "tutorial",
                 "psyche_behavior",
                 "culture",
-                "language",
+                // FR-CIV-phasewire: was "language", legacy drift kept alongside
+                // the new top-level `phase_language` (which drives
+                // `language::tick_language_system`).
+                "language_drift",
                 "sentience",
                 "species",
                 "diffusion",
-                "writing",
+                // Legacy aliases — preserved so old test fixtures remain valid.
+                "writing_apply",
                 "building_layouts",
+                "history_archive",
+                // FR-CIV-phasewire: six new top-level phases that wire the
+                // expanded modules' exported `tick_*` fns into the engine
+                // tick loop.
+                "religion",
+                "language",
+                "psyche",
+                "buildings",
                 "history",
+                "writing",
                 "audio",
                 "victory_check",
             ]
@@ -392,10 +412,14 @@ mod engine_tests {
             "emergence (idx {emergence_idx}) must run after life (idx {life_idx}) \
              so agent state is finalized first"
         );
+        // FR-CIV-phasewire: was "language"; the legacy drift phase lives
+        // under "language_drift" while the new top-level module tick lives
+        // under the plain "language" entry (added by the audit FR-CIV-phasewire
+        // migration). Either ordering constraint still pins culture → language.
         let language_idx = PHASE_ORDER
             .iter()
-            .position(|p| *p == "language")
-            .expect("PHASE_ORDER must include 'language' (FR-ENGINE-phaseorder)");
+            .position(|p| *p == "language" || *p == "language_drift")
+            .expect("PHASE_ORDER must include 'language' or 'language_drift' (FR-ENGINE-phaseorder)");
         let culture_idx = PHASE_ORDER
             .iter()
             .position(|p| *p == "culture")
@@ -3042,7 +3066,7 @@ mod engine_tests {
             ));
         }
 
-        sim.phase_language();
+        sim.phase_language_drift();
         let baseline_distance = average_language_distance(
             sim.faction_languages()
                 .get(&1)
@@ -3053,7 +3077,7 @@ mod engine_tests {
         );
 
         for _ in 0..20 {
-            sim.phase_language();
+            sim.phase_language_drift();
         }
 
         let final_distance = average_language_distance(
@@ -3125,7 +3149,7 @@ mod engine_tests {
             ));
         }
 
-        sim.phase_language();
+        sim.phase_language_drift();
         let baseline = average_language_distance(
             sim.faction_languages()
                 .get(&1)

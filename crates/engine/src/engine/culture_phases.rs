@@ -203,9 +203,13 @@ impl Simulation {
         // civ_legends::significance::AccumulatorConfig and record_event() call.
     }
 
-    /// Language phase (FR-CIV-LANG-001 / FR-LANGUAGE-001) — per-faction language
-    /// emerges from current cluster culture vectors (`cluster_cultures`) and drifts
-    /// under isolation pressure.
+    /// Language drift phase (FR-CIV-LANG-001 / FR-LANGUAGE-001).
+    ///
+    /// Previously named `phase_language`; renamed to `phase_language_drift` so the
+    /// engine can add a top-level `phase_language` that calls `tick_language_system`
+    /// directly on each faction's stored `Language` (see `engine.rs`). This method
+    /// keeps all existing per-faction language-state seeding, isolation pressure,
+    /// and word-borrowing logic unchanged.
     ///
     /// Emergence flow is:
     /// - seed / refresh each active faction's `LanguageState` from dominant
@@ -214,7 +218,7 @@ impl Simulation {
     ///   greater divergence);
     /// - borrow naming words for contact-connected factions so contact zones
     ///   reduce divergence.
-    pub(crate) fn phase_language(&mut self) {
+    pub(crate) fn phase_language_drift(&mut self) {
         let cluster_member_counts = settlement_member_counts(&self.world);
         let dominant = settlement_dominant_factions(&self.world, &cluster_member_counts);
         let centroids =
@@ -301,7 +305,7 @@ impl Simulation {
     /// produce `SentienceEvent` records that downstream emergence coupling
     /// (cohesion pulse, awakening→cohesion nudge, etc.) consumes.
     ///
-    /// Runs AFTER [`Self::phase_emergence`] and [`Self::phase_language`] so
+    /// Runs AFTER [`Self::phase_emergence`] and [`Self::phase_language_drift`] so
     /// the dependent couplings observe the post-emergence agent state; runs
     /// BEFORE [`Self::phase_diffusion`] so diffusion does not re-mutate the
     /// just-evaluated agent set this tick. The set of crossings is captured

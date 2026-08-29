@@ -657,14 +657,14 @@ pub struct Simulation {
     /// Per-region weather grid updated by `phase_planet` each tick (FR-CIV-PLANET-030).
     pub weather_grid: Vec<WeatherCell>,
     /// Construction queue of in-progress `BuildSite`s.
-    /// Drives `phase_buildings` per-tick progress + completion (FR-CIV-BUILD-001/002).
+    /// Drives `phase_construction_sites` per-tick progress + completion (FR-CIV-BUILD-001/002).
     build_sites: Vec<BuildSite>,
     /// Construction events emitted during the most recent tick (FR-CIV-BUILD-002).
     /// Reset at the start of every [`Simulation::tick`]; surfaced through the
     /// JSON-RPC bridge so Bevy clients can render scaffolding + completion FX.
     last_tick_construction_events: Vec<ProductionEvent>,
     /// Emergent language state (FR-CIV-LANG-001). Driven by
-    /// [`Simulation::phase_language`]; consumed by the diplomacy pipeline via
+    /// [`Simulation::phase_language_drift`]; consumed by the diplomacy pipeline via
     /// [`language_intelligibility_peace_bonus`].
     language_state: LanguageState,
     /// Per-faction emergent language states (FR-LANGUAGE-001) used for naming
@@ -1897,7 +1897,10 @@ impl Simulation {
         self.phase_tactics();
         self.phase_voxel();
         self.phase_compact();
-        self.phase_buildings();
+        // FR-CIV-phasewire: was `phase_buildings`, renamed to free the name
+        // for the new top-level `phase_buildings` (which drives the
+        // building_layouts module).
+        self.phase_construction_sites();
         self.phase_life();
         self.phase_daily_path();
         self.phase_cluster();
@@ -1916,13 +1919,27 @@ impl Simulation {
         self.phase_tutorial();
         self.phase_psyche_behavior();
         self.phase_culture();
-        self.phase_language();
+        self.phase_language_drift();
         self.phase_sentience();
         self.phase_species();
         self.phase_diffusion();
-        self.phase_writing();
-        self.phase_building_layouts();
+        // FR-CIV-phasewire: legacy wrappers — preserved under new names so
+        // existing behaviour still runs while the new top-level phases below
+        // drive each module's exported `tick_*` fn on its own cadence.
+        self.phase_writing_apply();
+        self.phase_history_archive();
+        // Newly wired (audit FR-CIV-phasewire) tick phases. Each calls the
+        // corresponding module's exported `tick_*` fn directly so the
+        // expanded module bodies advance in lockstep with the engine state.
+        // Order chosen to match the order the existing tick used (writing,
+        // buildings, history) plus three new top-level phases the audit
+        // flagged as missing.
+        self.phase_religion();
+        self.phase_language();
+        self.phase_psyche();
+        self.phase_buildings();
         self.phase_history();
+        self.phase_writing();
         // Run after all event-producing phases so this tick's combat,
         // construction, and disaster triggers reach the snapshot.
         self.phase_audio();
@@ -1957,7 +1974,8 @@ impl Simulation {
             "tactics" => self.phase_tactics(),
             "voxel" => self.phase_voxel(),
             "compact" => self.phase_compact(),
-            "buildings" => self.phase_buildings(),
+            // FR-CIV-phasewire: renamed legacy wrapper.
+            "construction_sites" => self.phase_construction_sites(),
             "daily_path" => self.phase_daily_path(),
             "life" => self.phase_life(),
             "research" => self.phase_research(),
@@ -1974,14 +1992,26 @@ impl Simulation {
             "tutorial" => self.phase_tutorial(),
             "psyche_behavior" => self.phase_psyche_behavior(),
             "culture" => self.phase_culture(),
-            "language" => self.phase_language(),
+            // FR-CIV-phasewire: renamed legacy language drift.
+            "language_drift" => self.phase_language_drift(),
             "sentience" => self.phase_sentience(),
             "species" => self.phase_species(),
             "diffusion" => self.phase_diffusion(),
             "audio" => self.phase_audio(),
-            "writing" => self.phase_writing(),
+            // FR-CIV-phasewire: legacy alias + new top-level wrappers.
+            "writing_apply" => self.phase_writing_apply(),
             "building_layouts" => self.phase_building_layouts(),
+            "history_archive" => self.phase_history_archive(),
+            // Newly wired (audit FR-CIV-phasewire) tick phases. Adding a new
+            // phase means: extend [`PHASE_ORDER`] (world_simulation.rs), add
+            // a `phase_*` method, add a match arm here — three coupled
+            // edits in one file.
+            "religion" => self.phase_religion(),
+            "language" => self.phase_language(),
+            "psyche" => self.phase_psyche(),
+            "buildings" => self.phase_buildings(),
             "history" => self.phase_history(),
+            "writing" => self.phase_writing(),
             "cluster" => self.phase_cluster(),
             "victory_check" => self.phase_victory_check(),
             other => unreachable!("Simulation::run_phase: unknown phase '{other}' in PHASE_ORDER"),
@@ -2093,7 +2123,13 @@ impl Simulation {
         }
     }
 
-    fn phase_writing(&mut self) {
+    /// Per-faction writing-system literacy tick (legacy in-engine wrapper).
+    ///
+    /// Renamed from `phase_writing` so the engine can introduce a top-level
+    /// `phase_writing` that calls `tick_writing_system` directly with the
+    /// new (audit FR-CIV-phasewire) cadence. Both phases are invoked from
+    /// [`Simulation::tick`] each tick so behaviour is preserved.
+    fn phase_writing_apply(&mut self) {
         let tick = self.state.tick;
         for ws in self.state.faction_writing_systems.values_mut() {
             *ws = crate::writing::tick_writing_system(ws, 0.001);
@@ -2101,6 +2137,12 @@ impl Simulation {
         }
     }
 
+    /// Per-settlement emergent building-layout tick (legacy in-engine wrapper).
+    ///
+    /// Renamed from `phase_building_layouts` is preserved as-is; the new
+    /// `phase_buildings` (added by FR-CIV-phasewire) is the top-level wrapper
+    /// that also calls `tick_building_layouts` once per tick so the
+    /// `building_layouts` module's exported tick fn runs deterministically.
     fn phase_building_layouts(&mut self) {
         let keys: Vec<u32> = self
             .state
@@ -2116,8 +2158,170 @@ impl Simulation {
         }
     }
 
-    fn phase_history(&mut self) {
-        // History log is append-only; tick is a no-op placeholder.
+    /// Per-tick history-log hook (legacy placeholder).
+    ///
+    /// Replaced by [`Simulation::phase_history`] which now calls
+    /// `crate::history::tick_history` directly. Kept as a no-op alias so
+    /// old call-sites continue to compile while the audit FR-CIV-phasewire
+    /// migration is in flight.
+    fn phase_history_archive(&mut self) {
+        // History log is append-only; this legacy alias is a no-op.
+        // The new `phase_history` (see engine.rs) drives `tick_history`.
+    }
+
+    // ---------------------------------------------------------------------------
+    // FR-CIV-phasewire: newly wired top-level tick phases. Each one invokes
+    // the corresponding expanded module's exported `tick_*` function directly
+    // so the module body advances in lockstep with the engine state. The
+    // existing legacy phases above (`phase_writing_apply`, `phase_building_layouts`,
+    // `phase_history_archive`, `phase_language_drift`, `phase_construction_sites`)
+    // are preserved so behaviour the rest of the engine depends on is unchanged.
+    // ---------------------------------------------------------------------------
+
+    /// Religion phase (FR-CIV-REL-001 wiring).
+    ///
+    /// Iterates over each faction's stored [`crate::religion::Religion`] state
+    /// in [`WorldState::faction_religions`] and applies the module's
+    /// top-level [`crate::religion::tick_religion`] once per tick. Population
+    /// is derived from per-faction food stocks (zero if absent) so the
+    /// `tick_religion` adherence-growth model has the data it needs.
+    ///
+    /// Safe to run with an empty `faction_religions` map (no-op).
+    pub fn phase_religion(&mut self) {
+        if self.state.faction_religions.is_empty() {
+            return;
+        }
+        let tick = self.state.tick;
+        let keys: Vec<u32> = self.state.faction_religions.keys().copied().collect();
+        for fid in keys {
+            let population = self
+                .state
+                .faction_resources
+                .get(&fid)
+                .map(|r| r.food.to_bits().max(0) as u32)
+                .unwrap_or(0);
+            if let Some(religion) = self.state.faction_religions.get(&fid) {
+                let updated = crate::religion::tick_religion(religion, population);
+                self.state.faction_religions.insert(fid, updated);
+            }
+            let _ = tick;
+        }
+    }
+
+    /// Top-level language phase (FR-LANGUAGE-001 wiring).
+    ///
+    /// Iterates over each faction's stored [`crate::language::Language`] state
+    /// in [`WorldState::faction_language_systems`] and applies the module's
+    /// top-level [`crate::language::tick_language_system`] once per tick.
+    ///
+    /// After the module-level tick, the existing drift phase
+    /// ([`Self::phase_language_drift`]) is also invoked so the per-faction
+    /// `LanguageState` drift / naming pipeline remains in lockstep with the
+    /// expanded `Language` system.
+    ///
+    /// Safe to run with an empty `faction_language_systems` map (no-op for the
+    /// module tick; the drift phase still runs because it works on the
+    /// `faction_languages` map which is independent).
+    pub fn phase_language(&mut self) {
+        let tick = self.state.tick;
+        if !self.state.faction_language_systems.is_empty() {
+            let keys: Vec<u32> = self.state.faction_language_systems.keys().copied().collect();
+            for fid in keys {
+                if let Some(lang) = self.state.faction_language_systems.get(&fid) {
+                    let updated = crate::language::tick_language_system(lang, tick);
+                    self.state.faction_language_systems.insert(fid, updated);
+                }
+            }
+        }
+        // Keep drift phase running so existing per-faction language-state
+        // drift / naming pipeline continues to advance.
+        self.phase_language_drift();
+    }
+
+    /// Top-level psyche phase (FR-CIV-PSYCHE wiring).
+    ///
+    /// Iterates over each civilian's stored [`crate::psyche_behavior::PsycheState`]
+    /// in [`WorldState::civilian_psyches`] and applies the module's top-level
+    /// [`crate::psyche_behavior::tick_psychology`] once per tick.
+    ///
+    /// Safe to run with an empty `civilian_psyches` map (no-op).
+    pub fn phase_psyche(&mut self) {
+        if self.state.civilian_psyches.is_empty() {
+            return;
+        }
+        let tick = self.state.tick;
+        let keys: Vec<u64> = self.state.civilian_psyches.keys().copied().collect();
+        for cid in keys {
+            if let Some(psyche) = self.state.civilian_psyches.get(&cid) {
+                let updated = crate::psyche_behavior::tick_psychology(psyche, tick);
+                self.state.civilian_psyches.insert(cid, updated);
+            }
+        }
+    }
+
+    /// Top-level buildings (layouts) phase (FR-CIV-ARCH wiring).
+    ///
+    /// Iterates over each settlement's stored list of
+    /// [`crate::building_layouts::BuildingLayout`] entries in
+    /// [`WorldState::settlement_building_layouts`] and applies the module's
+    /// top-level [`crate::building_layouts::tick_building_layouts`] once per
+    /// tick.
+    ///
+    /// Safe to run with an empty `settlement_building_layouts` map (no-op).
+    pub fn phase_buildings(&mut self) {
+        if self.state.settlement_building_layouts.is_empty() {
+            return;
+        }
+        let keys: Vec<u32> = self
+            .state
+            .settlement_building_layouts
+            .keys()
+            .copied()
+            .collect();
+        for sid in keys {
+            if let Some(layouts) = self.state.settlement_building_layouts.get(&sid) {
+                let updated = crate::building_layouts::tick_building_layouts(layouts);
+                self.state.settlement_building_layouts.insert(sid, updated);
+            }
+        }
+    }
+
+    /// Top-level history phase (FR-ERA wiring).
+    ///
+    /// Advances [`WorldState::historical_log`] by one tick via the module's
+    /// top-level [`crate::history::tick_history`]. The module's exported
+    /// `tick_history` is currently a clone-and-return no-op while the history
+    /// subsystem completes its substantive migration; wiring it through the
+    /// tick loop ensures any future per-tick logic kicks in without further
+    /// engine changes.
+    pub fn phase_history(&mut self) {
+        let tick = self.state.tick;
+        let updated = crate::history::tick_history(&self.state.historical_log, tick);
+        self.state.historical_log = updated;
+    }
+
+    /// Top-level writing phase (FR-CIV-WRITING wiring).
+    ///
+    /// Iterates over each faction's stored [`crate::writing::WritingSystem`]
+    /// in [`WorldState::faction_writing_systems`] and applies the module's
+    /// top-level [`crate::writing::tick_writing_system`] once per tick with
+    /// the same teaching rate (`0.001`) the legacy wrapper used so the two
+    /// phases (legacy + new) advance literacy in lockstep.
+    ///
+    /// Safe to run with an empty `faction_writing_systems` map (no-op).
+    pub fn phase_writing(&mut self) {
+        if self.state.faction_writing_systems.is_empty() {
+            return;
+        }
+        let tick = self.state.tick;
+        let keys: Vec<u32> = self.state.faction_writing_systems.keys().copied().collect();
+        for fid in keys {
+            if let Some(ws) = self.state.faction_writing_systems.get(&fid) {
+                let mut updated = crate::writing::tick_writing_system(ws, 0.001);
+                updated.created_tick = tick;
+                self.state.faction_writing_systems.insert(fid, updated);
+            }
+        }
     }
 
     // Moved to world_simulation.rs

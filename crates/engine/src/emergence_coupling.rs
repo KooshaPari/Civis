@@ -648,7 +648,7 @@ pub(crate) fn research_unrest_mitigation(rise: i64, research_tier: u64) -> i64 {
 /// Downward-causation policy (FR-CIV-0100 Ã‚Â§3): research accelerates construction.
 /// Each research tier shortens the build cadence (ticks between expansions),
 /// floored so an advanced civilisation never busy-builds every single tick.
-/// De-silos phase_buildings, which previously read no emergent state.
+/// De-silos phase_construction_sites, which previously read no emergent state.
 #[allow(dead_code)] // Reserved for future simulation integration
 fn building_cadence(research_tier: u64) -> u64 {
     const BASE: u64 = 16;
@@ -691,10 +691,10 @@ fn building_demand_signals(
     }
 }
 
-/// Wood consumed per parcel allocated in [`Simulation::phase_buildings`].
+/// Wood consumed per parcel allocated in [`Simulation::phase_construction_sites`].
 #[allow(dead_code)] // Reserved for future simulation integration
 const BUILDING_WOOD_PER_PARCEL: i64 = 10;
-/// Metal consumed per parcel allocated in [`Simulation::phase_buildings`].
+/// Metal consumed per parcel allocated in [`Simulation::phase_construction_sites`].
 #[allow(dead_code)] // Reserved for future simulation integration
 const BUILDING_METAL_PER_PARCEL: i64 = 5;
 /// Stock level (integer units) at which material headroom reaches full strength.

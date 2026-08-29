@@ -156,8 +156,11 @@ impl Simulation {
         }
     }
 
-    /// Buildings phase - expands the parcel graph on a fixed cadence when demand is high.
-    pub(crate) fn phase_buildings(&mut self) {
+    /// Construction sites phase - expands the parcel graph on a fixed cadence when demand is high.
+    /// (Renamed from `phase_buildings` so the engine can introduce a `phase_buildings`
+    ///  that drives the `building_layouts` module on its own cadence — see
+    ///  `Simulation::phase_buildings` in `engine.rs`.)
+    pub(crate) fn phase_construction_sites(&mut self) {
         let tick = self.state.tick;
 
         // ---- 1. Parcel allocation cadence (every 16 ticks) ----

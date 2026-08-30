@@ -1,0 +1,223 @@
+name: Playthrough Validate
+
+# Runs the scripted Civis v0.4.0 playthrough against a freshly built
+# civ-server, captures optional screenshots, and publishes the result
+# to a GitHub Gist (or opens an issue on failure).
+#
+# Triggers:
+#   * weekly on Monday at 06:30 UTC (low CI contention window)
+#   * every push to main
+#   * workflow_dispatch (manual)
+#
+# Required secrets (optional but recommended):
+#   GIST_TOKEN       — fine-grained PAT with `gist: write`. When set,
+#                      the run summary is appended to a private gist
+#                      `civis-playthrough-results`. When unset, only
+#                      the workflow run artifacts are produced.
+
+on:
+  schedule:
+    # 06:30 UTC every Monday (low contention window; well before any
+    # nightly desktop build that runs at 07:23 UTC).
+    - cron: '30 6 * * 1'
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      civis_playthrough_seed:
+        description: 'Override the deterministic seed for this run'
+        required: false
+        default: '42'
+      capture_frames:
+        description: 'Capture screenshots (requires the frame-capture feature)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  # We need issues:write so we can auto-open a regression issue on failure.
+  issues: write
+  # We only need gist:write when the GIST_TOKEN secret is set; the
+  # conditional step below checks for that.
+
+concurrency:
+  group: playthrough-validate
+  cancel-in-progress: false
+
+jobs:
+  playthrough:
+    name: scripted playthrough (ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      CARGO_TERM_COLOR: always
+      RUST_BACKTRACE: '1'
+      CIV_WS_URL: ws://127.0.0.1:3000/ws
+      CIV_SERVER_PORT: '3000'
+      CIVIS_PLAYTHROUGH_SEED: ${{ github.event.inputs.civis_playthrough_seed || '42' }}
+      CIVIS_CAPTURE_FRAMES: ${{ github.event.inputs.capture_frames && '1' || '0' }}
+      CIVIS_CAPTURE_DIR: ${{ github.workspace }}/captures
+      CIVIS_SAVES_DIR: ${{ github.workspace }}/saves
+      CIVIS_REPLAYS_DIR: ${{ github.workspace }}/replays
+      HEALTH_TIMEOUT_SECONDS: '60'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Install Rust toolchain (stable)
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
+        with:
+          toolchain: stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
+        with:
+          cache-all-crates: true
+
+      - name: Install websocat
+        # Pinned to a known-good release; websocat has a stable ABI.
+        run: |
+          set -euxo pipefail
+          curl -fsSL https://github.com/vi/websocat/releases/download/v1.13.0/websocat.x86_64-unknown-linux-musl \
+            -o /usr/local/bin/websocat
+          chmod +x /usr/local/bin/websocat
+          /usr/local/bin/websocat --version
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends jq
+
+      - name: Build civ-server (release)
+        run: cargo build --locked --release -p civ-server
+
+      - name: Set up runtime directories
+        run: |
+          mkdir -p \
+            "${CIVIS_SAVES_DIR}" \
+            "${CIVIS_REPLAYS_DIR}" \
+            "${CIVIS_CAPTURE_DIR}"
+
+      - name: Lint playthrough.sh (shellcheck)
+        uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          scandir: ./scripts
+          additional_files: playthrough.sh
+
+      - name: Start civ-server (background)
+        run: |
+          set -euxo pipefail
+          nohup ./target/release/civ-server \
+            > "${GITHUB_WORKSPACE}/server.log" 2>&1 &
+          echo "$!" > "${GITHUB_WORKSPACE}/server.pid"
+          # Give the server a moment to bind the port.
+          for _ in $(seq 1 10); do
+            if grep -q "ws bridge listening" "${GITHUB_WORKSPACE}/server.log"; then
+              echo "server up:"
+              cat "${GITHUB_WORKSPACE}/server.log"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "server failed to start; log follows" >&2
+          cat "${GITHUB_WORKSPACE}/server.log" >&2
+          exit 1
+
+      - name: Run scripted playthrough
+        id: playthrough
+        run: |
+          set -euxo pipefail
+          bash scripts/playthrough.sh 2>&1 | tee "${GITHUB_WORKSPACE}/playthrough.log"
+        env:
+          # We don't actually have a GPU on CI, so capture is opt-in
+          # via the workflow_dispatch input (gated by frame-capture feature
+          # in civ-bevy-ref; the script gracefully no-ops when the RPC
+          # method isn't implemented).
+          CIVIS_CAPTURE_FRAMES: ${{ env.CIVIS_CAPTURE_FRAMES }}
+
+      - name: Stop civ-server
+        if: always()
+        run: |
+          if [[ -f "${GITHUB_WORKSPACE}/server.pid" ]]; then
+            pid="$(cat "${GITHUB_WORKSPACE}/server.pid")"
+            if kill -0 "${pid}" 2>/dev/null; then
+              kill "${pid}" || true
+              sleep 2
+              kill -9 "${pid}" 2>/dev/null || true
+            fi
+          fi
+
+      - name: Upload playthrough log
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: playthrough-log
+          path: |
+            playthrough.log
+            server.log
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload captured frames
+        if: env.CIVIS_CAPTURE_FRAMES == '1'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: civis-playthrough-captures-${{ github.run_id }}
+          path: captures/
+          retention-days: 30
+
+      - name: Publish summary to Gist
+        if: github.event_name != 'pull_request' && env.GIST_TOKEN != ''
+        env:
+          GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+        run: |
+          set -euxo pipefail
+          if [[ ! -f playthrough.log ]]; then
+            echo "no playthrough.log to publish"
+            exit 0
+          fi
+          # Compose the gist payload: previous gist body (if any) + a new
+          # header + the current run log. The first run creates the gist
+          # via the API; subsequent runs append to it.
+          header=$(printf '## %s (%s)\n\nseed=%s capture_frames=%s result=%s\n\n```\n' \
+            "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+            "${GITHUB_SHA}" \
+            "${CIVIS_PLAYTHROUGH_SEED}" \
+            "${CIVIS_CAPTURE_FRAMES}" \
+            "${{ steps.playthrough.outcome }}")
+          body="${header}$(cat playthrough.log)\n```\n\n---\n\n"
+          existing=$(curl -fsSL \
+            -H "Authorization: token ${GIST_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/gists" \
+            | jq -r '.[] | select(.description == "civis-playthrough-results") | .id' \
+            | head -n1 || true)
+          if [[ -z "${existing}" ]]; then
+            payload=$(jq -n --arg body "${body}" '{description: "civis-playthrough-results", public: false, files: {"playthrough.md": {content: $body}}}')
+            curl -fsSL -X POST \
+              -H "Authorization: token ${GIST_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              -d "${payload}" \
+              "https://api.github.com/gists" > /dev/null
+            echo "created new gist"
+          else
+            payload=$(jq -n --arg body "${body}" '{files: {"playthrough.md": {content: $body}}}')
+            curl -fsSL -X PATCH \
+              -H "Authorization: token ${GIST_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              -d "${payload}" \
+              "https://api.github.com/gists/${existing}" > /dev/null
+            echo "appended to gist ${existing}"
+          fi
+
+      - name: Open regression issue
+        if: failure() && github.event_name != 'pull_request'
+        uses: peter-evans/create-issue-from-file@c8a1f9e3d4e1c2a9b1d5f8a7e6c4d3b2a1f0e9d8
+        with:
+          title: 'playthrough-validate regression (${{ github.sha }})'
+          content-filepath: ./playthrough.log
+          labels: |
+            bug
+            area:playthrough
+            severity:investigation

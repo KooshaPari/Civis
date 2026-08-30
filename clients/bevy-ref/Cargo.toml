@@ -48,7 +48,14 @@ image = { version = "0.25", optional = true, default-features = false, features 
 # re-exports only selected winit items (not `Icon`), so we depend on the same
 # winit version already in the workspace lock (0.30, pulled by bevy_winit).
 winit = { version = "0.30", optional = true, default-features = false }
+# Phase 6.1 — `civ_postfx` (src/civ_postfx.rs) uses wgpu compute pipelines +
+# storage textures directly. Same version Bevy 0.18 already pulls in (lock
+# pin); declared explicitly so the API path is visible in the dep tree.
 wgpu = { version = "27", optional = true }
+# `bytemuck` — used by `civ_postfx` to `cast_slice` upload buffers into
+# wgpu's `write_buffer` call. Pulled transitively by Bevy already (lock pin
+# 1.25.x); declared explicitly so the import path is visible.
+bytemuck = { version = "1.25", optional = true }
 # Audio (ambient soundscape + SFX), gated behind the `audio` feature.
 # Compat (checked 2026-05-30 via crates.io): bevy_kira_audio 0.25.x is the
 # release that targets Bevy 0.18 (0.26.x targets Bevy 0.19-rc), so it matches
@@ -83,12 +90,17 @@ serde_json = "1"
 # P2 visible-citizen-lifecycle test: the sim-side `hecs::Entity` is the unit
 # we despawn from the in-process sim world. Kept as a dev-dep only.
 hecs = "0.10"
+# Phase 6.1 — `civ_postfx` headless GPU smoke test (#[ignore]d). pollster
+# blocks on the wgpu async request_adapter / request_device futures inside the
+# test body. Tiny dep; no transitive cargo cost outside this dev-dep tree.
+pollster = "0.4"
 
 [features]
 default = []
 bevy = [
     "dep:bevy",
     "dep:wgpu",
+    "dep:bytemuck",
     "dep:tokio",
     "dep:tokio-tungstenite",
     "dep:futures-util",
@@ -191,4 +203,4 @@ bench = false
 # bevy_rapier3d and civ-diplomacy are optional deps gated behind the `bevy`
 # and `rapier` features; machete's grep-based scan can't see `dep:` usage
 # behind feature flags.
-ignored = ["bevy_rapier3d", "civ-diplomacy"]
+ignored = ["bevy_rapier3d", "civ-diplomacy", "bytemuck", "wgpu"]

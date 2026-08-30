@@ -24,6 +24,7 @@ use civ_bevy_ref::spawn_tools::{GameSettings, KeyBinding};
 use civ_bevy_ref::{
     bevy_render::{apply_chunk_material, spawn_default_scene, CHUNK_WIREFRAME_LINE_COLOR},
     chunk_fade_complete, chunk_raycast_terrain, chunk_to_minimap_uv,
+    civ_postfx::CivPostFxPlugin,
     emergence_dashboard::EmergenceDashboardPlugin,
     event_feed::{EventFeed, EventFeedPlugin},
     faction_hud::FactionHudPlugin,
@@ -222,6 +223,7 @@ fn main() {
             .set(native_render_plugin()),
         WireframePlugin::default(),
         PostFxPlugin,
+        CivPostFxPlugin,
         GpuFeaturesPlugin,
         LivePickPlugin,
         civ_bevy_ref::frame_budget::FrameBudgetPlugin,
@@ -247,6 +249,7 @@ fn main() {
         civ_bevy_ref::god_actions::GodActionsPlugin,
         civ_bevy_ref::holocron_panel::HolocronPanelPlugin,
         civ_bevy_ref::outcome_overlay::OutcomeOverlayPlugin,
+        civ_bevy_ref::party_actions::PartyActionsPlugin,
         civ_bevy_ref::scenario_objectives::ScenarioObjectivesPlugin,
         civ_bevy_ref::replay_controls::ReplayControlsPlugin,
         MenusPlugin,

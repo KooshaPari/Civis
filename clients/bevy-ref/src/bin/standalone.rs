@@ -89,7 +89,10 @@ fn main() {
         // embedded icon on the primary winit window at startup.
         .add_plugins(civ_bevy_ref::window_icon::WindowIconPlugin)
         .add_plugins(civ_bevy_ref::sim_bridge::SimBridgePlugin)
-        .add_plugins(civ_bevy_ref::post_fx::PostFxPlugin);
+        .add_plugins(civ_bevy_ref::post_fx::PostFxPlugin)
+        // Phase 6.1 — custom GPU compute SSAO + Bloom passes. See
+        // `civ_postfx` module docs.
+        .add_plugins(civ_bevy_ref::civ_postfx::CivPostFxPlugin);
     // The audio plugin lives behind the `audio` feature; gate it so the bin
     // compiles even when the feature is disabled (e.g. `client-bins`-only).
     #[cfg(feature = "audio")]
@@ -241,6 +244,7 @@ fn main() {
                 civ_bevy_ref::god_panel::GodPanelPlugin,
                 civ_bevy_ref::god_actions::GodActionsPlugin,
                 civ_bevy_ref::holocron_panel::HolocronPanelPlugin,
+                civ_bevy_ref::party_actions::PartyActionsPlugin,
             ));
         }
     }

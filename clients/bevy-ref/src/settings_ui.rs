@@ -385,6 +385,16 @@ pub struct GraphicsSettings {
     /// Particle / screen VFX feature toggle.
     #[serde(default)]
     pub vfx: bool,
+    // --- Phase 6.1: custom GPU compute post-FX (civ_postfx) ---
+    /// Master switch for the WGSL compute SSAO + Bloom passes.
+    #[serde(default = "default_true")]
+    pub postfx_enabled: bool,
+    /// Per-pass toggle for the custom WGSL SSAO compute pass.
+    #[serde(default = "default_true")]
+    pub postfx_ssao: bool,
+    /// Per-pass toggle for the custom WGSL Bloom compute pass.
+    #[serde(default = "default_true")]
+    pub postfx_bloom: bool,
 }
 
 impl Default for GraphicsSettings {
@@ -409,6 +419,12 @@ impl Default for GraphicsSettings {
             motion_blur: false,
             gi: false,
             vfx: true,
+            // Phase 6.1 — match `CivPostFxToggle::default()` so persisted
+            // settings files written before this field existed deserialize
+            // to a working "everything on" state.
+            postfx_enabled: true,
+            postfx_ssao: true,
+            postfx_bloom: true,
         }
     }
 }
@@ -485,6 +501,33 @@ impl GraphicsSettings {
                 self.motion_blur = true;
                 self.gi = true;
                 self.vfx = true;
+            }
+            QualityPreset::Custom => {}
+        }
+        // Phase 6.1 — preset-driven defaults for the custom WGSL compute
+        // post-FX. Low turns it off (perf), Medium keeps bloom only (cheaper
+        // visual), High and Ultra turn everything on (matches the existing
+        // "more is better" ramp for AO/Bloom).
+        match preset {
+            QualityPreset::Low => {
+                self.postfx_enabled = false;
+                self.postfx_ssao = false;
+                self.postfx_bloom = false;
+            }
+            QualityPreset::Medium => {
+                self.postfx_enabled = true;
+                self.postfx_ssao = false;
+                self.postfx_bloom = true;
+            }
+            QualityPreset::High => {
+                self.postfx_enabled = true;
+                self.postfx_ssao = true;
+                self.postfx_bloom = true;
+            }
+            QualityPreset::Ultra => {
+                self.postfx_enabled = true;
+                self.postfx_ssao = true;
+                self.postfx_bloom = true;
             }
             QualityPreset::Custom => {}
         }

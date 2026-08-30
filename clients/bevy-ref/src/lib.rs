@@ -100,6 +100,10 @@ pub mod notifications;
 #[cfg(all(feature = "bevy", feature = "voxel"))]
 pub mod ocean;
 pub mod outcome_overlay;
+/// Multiplayer party actions panel — connected players list + action
+/// attribution log + multiplayer-safe action buttons (Phase 6.3).
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod party_actions;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod perf_hud;
 #[cfg(feature = "bevy")]
@@ -141,6 +145,11 @@ pub mod ui_holo;
 pub mod ui_theme;
 #[cfg(all(feature = "bevy", feature = "vfx"))]
 pub mod vfx;
+/// Phase 6.1 — Custom GPU compute post-FX passes (SSAO + Bloom). See the
+/// module docs for the architecture; the [`CivPostFxToggle`] resource exposes
+/// the menubar `postfx_enabled` flag.
+#[cfg(feature = "bevy")]
+pub mod civ_postfx;
 #[cfg(feature = "voxel")]
 pub mod voxel_sim;
 #[cfg(feature = "voxel")]
@@ -172,6 +181,10 @@ pub use outcome_overlay::{
 pub use perf_hud::PerfHudPlugin;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub use tutorial::TutorialPlugin;
+#[cfg(feature = "bevy")]
+pub use civ_postfx::{
+    CivPostFxDispatcher, CivPostFxPlugin, CivPostFxStats, CivPostFxToggle,
+};
 
 /// Default orbit azimuth in radians (45° — camera south-east of centre).
 pub const DEFAULT_CAMERA_AZIMUTH_RAD: f32 = std::f32::consts::FRAC_PI_4;

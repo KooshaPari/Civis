@@ -449,9 +449,9 @@ pub struct GfxSettings {
     pub upscaling: UpscalingMode,
 
     // --- Post-process ---
-    /// Screen-space ambient occlusion.
+    /// Screen-space ambient occlusion (Bevy built-in).
     pub ssao: bool,
-    /// Bloom (lens flare-style glow on bright surfaces).
+    /// Bloom (lens flare-style glow on bright surfaces, Bevy built-in).
     pub bloom: bool,
     /// Bloom intensity (0.0–1.0).
     pub bloom_intensity: f32,
@@ -463,6 +463,15 @@ pub struct GfxSettings {
     pub motion_blur: bool,
     /// Motion blur shutter angle (0.0–1.0; only used when `motion_blur` is on).
     pub motion_blur_shutter: f32,
+    // --- Custom GPU compute post-FX (Phase 6.1) ---
+    /// Master switch for the `civ_postfx` module's two WGSL compute passes
+    /// (SSAO + Bloom). When false, no GPU work is dispatched even if the
+    /// per-pass flags below are on. Wired live into [`crate::civ_postfx::CivPostFxToggle`].
+    pub postfx_enabled: bool,
+    /// Run the custom WGSL SSAO compute pass (`civ_postfx`).
+    pub postfx_ssao: bool,
+    /// Run the custom WGSL Bloom compute pass (`civ_postfx`).
+    pub postfx_bloom: bool,
 
     // --- Display ---
     /// Window resolution preset.
@@ -494,6 +503,12 @@ impl Default for GfxSettings {
             tonemapping: ToneCurve::AcesFit,
             motion_blur: false,
             motion_blur_shutter: 0.5,
+            // Phase 6.1 — custom GPU compute post-FX defaults match the
+            // `CivPostFxToggle::default()` so the live dispatcher starts
+            // dispatching the moment the renderer comes up.
+            postfx_enabled: true,
+            postfx_ssao: true,
+            postfx_bloom: true,
             resolution: ResPreset::R1080p,
             window_mode: WinMode::Windowed,
             open: false,
@@ -638,6 +653,9 @@ pub fn gfx_from_game_settings(game: &crate::settings_ui::GameSettings) -> GfxSet
         tonemapping,
         motion_blur: g.motion_blur,
         motion_blur_shutter: 0.5,
+        postfx_enabled: g.postfx_enabled,
+        postfx_ssao: g.postfx_ssao,
+        postfx_bloom: g.postfx_bloom,
         resolution,
         window_mode,
         open: false,
@@ -675,6 +693,7 @@ pub fn apply_gfx_settings(
         Option<&mut MotionBlur>,
         Option<&mut Msaa>,
     )>,
+    mut postfx_toggle: Option<ResMut<crate::civ_postfx::CivPostFxToggle>>,
 ) {
     if !settings.is_changed() {
         return;
@@ -754,6 +773,17 @@ pub fn apply_gfx_settings(
                 }
             }
         }
+    }
+
+    // --- Phase 6.1: custom WGSL post-FX compute passes ---
+    // Sync the runtime toggle from `GfxSettings` into the live dispatcher
+    // resource so the player can A/B compare without recreating the plugin.
+    // Done here (and not in the camera loop above) because the toggle is a
+    // singleton resource, not a per-camera component.
+    if let Some(mut toggle) = postfx_toggle {
+        toggle.enabled = settings.postfx_enabled;
+        toggle.ssao_pass = settings.postfx_ssao;
+        toggle.bloom_pass = settings.postfx_bloom;
     }
 }
 
@@ -1114,6 +1144,37 @@ fn draw_post_section(ui: &mut egui::Ui, s: &mut GfxSettings) -> bool {
     {
         s.mark_custom();
         changed = true;
+    }
+
+    // --- Phase 6.1: custom GPU compute post-FX (civ_postfx) ---
+    ui.horizontal(|ui| {
+        row_label(ui, "GPU Compute FX");
+        if ui
+            .checkbox(&mut s.postfx_enabled, "Enabled (master switch)")
+            .changed()
+        {
+            s.mark_custom();
+            changed = true;
+        }
+    });
+    if s.postfx_enabled {
+        ui.horizontal(|ui| {
+            row_label(ui, "  SSAO compute");
+            if ui.checkbox(&mut s.postfx_ssao, "").changed() {
+                s.mark_custom();
+                changed = true;
+            }
+        });
+        ui.horizontal(|ui| {
+            row_label(ui, "  Bloom compute");
+            if ui.checkbox(&mut s.postfx_bloom, "").changed() {
+                s.mark_custom();
+                changed = true;
+            }
+        });
+        ui.weak(
+            "Custom WGSL compute passes — see `civ_postfx` module. Toggling live does not panic.",
+        );
     }
 
     // AA

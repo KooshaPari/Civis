@@ -832,16 +832,24 @@ mod tests {
             ssao_pass: false,
             ..CivPostFxToggle::default()
         };
-        assert!(t.will_dispatch_ssao());
+        // With ssao_pass off, the SSAO pass itself must not dispatch either.
+        assert!(!t.will_dispatch_ssao());
+        // Bloom is gated on SSAO upstream, so it auto-disables too.
         assert!(!t.will_dispatch_bloom());
     }
 
     #[test]
     fn postfx_toggle_flip_master() {
         let mut t = CivPostFxToggle::default();
-        assert!(t.toggle(), "first flip turns it off → returns false");
+        assert!(
+            !t.toggle(),
+            "first flip turns it off — toggle() returns false (the new value)"
+        );
         assert!(!t.enabled);
-        assert!(t.toggle(), "second flip turns it back on → returns true");
+        assert!(
+            t.toggle(),
+            "second flip turns it back on — toggle() returns true"
+        );
         assert!(t.enabled);
     }
 

@@ -14,7 +14,7 @@ jobs:
               run: cargo install cargo-mutants --locked
             - name: Run cargo-mutants (pre-checked code)
               run: |
-                  cargo mutants --no-shuffle -j 2 --timeout 120 --no-check 2>&1 | tee mutants.log
+                  cargo mutants --no-shuffle -j 2 --timeout 120 2>&1 | tee mutants.log
                   # Extract kill rate from the summary line.
                   KILLED=$(grep -oP '(\d+) caught' mutants.log | head -1 | grep -oP '\d+' || echo "0")
                   TOTAL=$(grep -oP '(\d+) tested' mutants.log | head -1 | grep -oP '\d+' || echo "1")

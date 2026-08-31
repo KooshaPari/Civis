@@ -213,7 +213,7 @@ jobs:
 
       - name: Open regression issue
         if: failure() && github.event_name != 'pull_request'
-        uses: peter-evans/create-issue-from-file@c8a1f9e3d4e1c2a9b1d5f8a7e6c4d3b2a1f0e9d8
+        uses: peter-evans/create-issue-from-file@fca9117c27cdc29c6c4db3b86c48e4115a786710
         with:
           title: 'playthrough-validate regression (${{ github.sha }})'
           content-filepath: ./playthrough.log

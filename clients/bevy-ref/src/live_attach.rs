@@ -14,12 +14,18 @@ use crate::{
 
 const PERF_POLL_SECS: f32 = 2.0;
 const PERF_RPC: &str = r#"{"jsonrpc":"2.0","id":3,"method":"sim.perf","params":{}}"#;
+const SIM_EVENTS_POLL_SECS: f32 = 2.0;
+const SIM_EVENTS_RPC: &str =
+    r#"{"jsonrpc":"2.0","id":9011,"method":"sim.sim_events","params":{}}"#;
 
 #[cfg(feature = "egui")]
 use crate::WsConnectionState;
 
 #[cfg(feature = "egui")]
 use crate::event_feed::{connection_toast_message, EventFeed, EventKind};
+
+#[cfg(feature = "egui")]
+use crate::notifications::{NotificationKind, Notifications};
 
 /// Connection state mirrored from the live attach WebSocket client.
 #[derive(Resource, Debug, Clone, Default)]
@@ -52,6 +58,7 @@ impl Plugin for LiveAttachPlugin {
             .init_resource::<LiveAttachState>()
             .init_resource::<LiveHudSnapshot>()
             .init_resource::<PerfPollTimer>()
+            .init_resource::<SimEventsPollTimer>()
             .insert_resource(LiveAttachBridge { client: ws })
             .insert_resource(ServerBridge::new(rpc_sender))
             .add_systems(
@@ -59,6 +66,7 @@ impl Plugin for LiveAttachPlugin {
                 (
                     poll_live_meta,
                     poll_live_perf,
+                    poll_live_sim_events,
                     sync_live_hud_connection,
                     sync_live_hud_stats,
                     sync_live_selection,
@@ -102,6 +110,98 @@ fn poll_live_perf(
     if timer.0 >= PERF_POLL_SECS {
         timer.0 = 0.0;
         bridge.client.send_rpc_raw(PERF_RPC.to_owned());
+    }
+}
+
+#[derive(Resource, Default)]
+struct SimEventsPollTimer(f32);
+
+/// Poll the server's `sim.sim_events` channel and surface the aggregated per-tick
+/// buffers (damage, audio, research, faith, legend count) as EventFeed
+/// notifications so the player sees the simulation actually doing things.
+fn poll_live_sim_events(
+    time: Res<Time>,
+    attach: Res<AttachMode>,
+    bridge: Res<LiveAttachBridge>,
+    mut timer: ResMut<SimEventsPollTimer>,
+    mut feed: ResMut<EventFeed>,
+    #[cfg(feature = "egui")] mut notifs: ResMut<Notifications>,
+) {
+    if *attach != AttachMode::Server {
+        return;
+    }
+
+    // Drain all pending sim_events messages (the background poll keeps a small queue).
+    while let Some(events) = bridge.client.poll_sim_events() {
+        // Damage
+        if events.damage_events_count > 0 {
+            feed.push(
+                EventKind::Disaster,
+                format!("{} damage event(s) this tick", events.damage_events_count),
+            );
+            notifs.notify(
+                NotificationKind::Disaster,
+                format!(
+                    "Damage: {} voxel hits (-{} material)",
+                    events.damage_events_count, events.voxel_damage_removed
+                ),
+            );
+        }
+
+        // Research advances
+        if events.research_advances > 0 {
+            feed.push(
+                EventKind::Tech,
+                format!("{} research advance(s)", events.research_advances),
+            );
+            notifs.notify(
+                NotificationKind::Tech,
+                format!("{} research advance(s) unlocked", events.research_advances),
+            );
+        }
+
+        // Audio events count (count-only — full playback goes through live_meta)
+        if events.audio_event_count > 0 {
+            // Note: AudioEvent has no dedicated EventKind; route via System feed
+            feed.push(
+                EventKind::System,
+                format!("{} audio cue(s) fired", events.audio_event_count),
+            );
+        }
+
+        // Faith intensity
+        if events.faith_intensity > 0.7 {
+            feed.push(
+                EventKind::System,
+                format!("Faith intensifies ({:.2})", events.faith_intensity),
+            );
+        }
+
+        // Branching alert
+        if events.is_branching {
+            feed.push(
+                EventKind::System,
+                "Emergence: branching — critical regime entered".to_owned(),
+            );
+            notifs.notify(
+                NotificationKind::Disaster,
+                "Emergence branching detected — system in critical regime",
+            );
+        }
+
+        // Legend event count delta (informational, low-frequency)
+        if events.legend_event_count > 0 {
+            feed.push(
+                EventKind::System,
+                format!("Legend: {} events recorded", events.legend_event_count),
+            );
+        }
+    }
+
+    timer.0 += time.delta_secs();
+    if timer.0 >= SIM_EVENTS_POLL_SECS {
+        timer.0 = 0.0;
+        bridge.client.send_rpc_raw(SIM_EVENTS_RPC.to_owned());
     }
 }
 

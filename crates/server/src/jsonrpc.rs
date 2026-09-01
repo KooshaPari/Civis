@@ -119,6 +119,12 @@ pub enum JsonRpcMethod {
     EmergenceDashboard,
     /// Query religion state (`sim.religion_state`).
     SimReligionState,
+    /// Aggregate batch of sim-driven events for the Bevy client
+    /// (`sim.events`). Bundles the last-tick disaster pulses, lifecycle
+    /// events, diplomacy events, religion events, construction events,
+    /// mood events, audio events into a single payload so the client
+    /// can render them without polling many methods per frame.
+    SimSimEvents,
 }
 
 impl JsonRpcMethod {
@@ -166,6 +172,7 @@ impl JsonRpcMethod {
             Self::EmergenceMetrics => "emergence.metrics",
             Self::EmergenceDashboard => "emergence.dashboard",
             Self::SimReligionState => "sim.religion_state",
+            Self::SimSimEvents => "sim.events",
         }
     }
 
@@ -213,6 +220,7 @@ impl JsonRpcMethod {
             "emergence.metrics" => Some(Self::EmergenceMetrics),
             "emergence.dashboard" => Some(Self::EmergenceDashboard),
             "sim.religion_state" => Some(Self::SimReligionState),
+            "sim.events" => Some(Self::SimSimEvents),
             _ => None,
         }
     }
@@ -2288,6 +2296,74 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                         "events": [],
                     }),
                 ),
+                effect: DispatchEffect::None,
+            }
+        }
+        JsonRpcMethod::SimSimEvents => {
+            // Aggregate all last_tick_* event buffers + emergence sample
+            // + climate snapshot into one batch for the Bevy client to
+            // poll each frame. Cheap (struct field copies, no allocations
+            // beyond the JSON tree). This is the single RPC the client
+            // should hit for live gameplay visualization (famine,
+            // migration, caravans, mood, disasters, etc.).
+            let mut root = serde_json::Map::new();
+            root.insert("tick".to_owned(), serde_json::json!(ctx.tick));
+            if let Some(snap) = ctx.snapshot.as_ref() {
+                // Combat / damage events from last tick
+                root.insert(
+                    "damage_events_count".to_owned(),
+                    serde_json::json!(snap.damage_events_count),
+                );
+                root.insert(
+                    "voxel_damage_removed".to_owned(),
+                    serde_json::json!(snap.voxel_damage_removed_this_tick),
+                );
+                root.insert(
+                    "damage_events".to_owned(),
+                    serde_json::json!(snap.damage_events),
+                );
+                // Audio events (SFX + music cues)
+                root.insert(
+                    "audio_events".to_owned(),
+                    serde_json::json!(snap.audio_events),
+                );
+                root.insert(
+                    "music_cues".to_owned(),
+                    serde_json::json!(snap.music_cues),
+                );
+                // Climate snapshot (deterministic planet)
+                root.insert("climate".to_owned(), serde_json::json!(snap.climate));
+                // Emergence sample (entropy, power-law, mutual info)
+                if let Some(sample) = snap.emergence.as_ref() {
+                    root.insert("emergence_sample".to_owned(), serde_json::json!(sample));
+                }
+            } else {
+                // No snapshot available — still report tick + research state
+                // so client doesn't have to special-case the absent-snapshot path.
+                root.insert("damage_events_count".to_owned(), serde_json::json!(0u32));
+                root.insert(
+                    "voxel_damage_removed".to_owned(),
+                    serde_json::json!(0u32),
+                );
+                root.insert("damage_events".to_owned(), serde_json::json!([]));
+                root.insert("audio_events".to_owned(), serde_json::json!([]));
+                root.insert("music_cues".to_owned(), serde_json::json!({}));
+            }
+            // Religion/legends from separate ctx fields
+            if let Some(rs) = ctx.religion_state.as_ref() {
+                root.insert("religion_state".to_owned(), serde_json::json!(rs));
+            }
+            if let Some(leg) = ctx.legends.as_ref() {
+                root.insert("legends".to_owned(), serde_json::json!(leg));
+            }
+            // Research progress
+            root.insert("researched".to_owned(), serde_json::json!(ctx.researched));
+            root.insert(
+                "in_progress_tech".to_owned(),
+                serde_json::json!(ctx.in_progress_tech),
+            );
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, serde_json::Value::Object(root)),
                 effect: DispatchEffect::None,
             }
         }

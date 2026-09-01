@@ -55,6 +55,34 @@ pub struct SimPerfData {
     pub tick_ms: f64,
 }
 
+/// Aggregated last-tick sim events from `sim.sim.events` (id=9011).
+///
+/// Bundles every per-tick buffer the engine flushes (disaster pulses, audio
+/// cues, construction events, mood snapshots, research progress, religion,
+/// legends, emergence sample) into one round-trip so the Bevy client can
+/// reflect sim state in a single poll.
+#[derive(Debug, Clone, Default)]
+pub struct SimSimEventsData {
+    /// Server tick this snapshot represents.
+    pub tick: u64,
+    /// Voxel damage events emitted this tick.
+    pub damage_events_count: u32,
+    /// Voxel material removed by damage this tick.
+    pub voxel_damage_removed: u32,
+    /// Audio events (SFX triggers, music cues) for this tick.
+    pub audio_event_count: u32,
+    /// Number of research advances triggered this tick.
+    pub research_advances: u32,
+    /// Faith / belief intensity averaged over all active belief systems.
+    pub faith_intensity: f32,
+    /// Total legendary events recorded since simulation start.
+    pub legend_event_count: u64,
+    /// Emergence dashboard entropy bits (mirrors EmergenceHudData).
+    pub entropy_bits: f32,
+    /// Whether the emergence sample is in the critical regime.
+    pub is_branching: bool,
+}
+
 /// WebSocket client that bridges the tokio network task to Bevy systems.
 pub struct WsClient {
     frame_rx: Receiver<Frame3d>,
@@ -69,6 +97,8 @@ pub struct WsClient {
     emergence_rx: crossbeam_channel::Receiver<EmergenceHudData>,
     /// Inbound parsed SimPerfData from id=3 sim.perf responses.
     perf_rx: crossbeam_channel::Receiver<SimPerfData>,
+    /// Inbound aggregated sim.events from id=9011 sim.sim.events responses.
+    sim_events_rx: crossbeam_channel::Receiver<SimSimEventsData>,
     outcome_rx: crossbeam_channel::Receiver<OutcomeHudData>,
     save_list_rx: crossbeam_channel::Receiver<Vec<SaveListEntry>>,
     scene_reset_rx: Receiver<SceneReset>,
@@ -90,6 +120,7 @@ impl WsClient {
         let (send_tx, _send_rx) = crossbeam_channel::unbounded::<String>();
         let (_emergence_tx, emergence_rx) = crossbeam_channel::unbounded();
         let (_perf_tx, perf_rx) = crossbeam_channel::unbounded();
+        let (_sim_events_tx, sim_events_rx) = crossbeam_channel::unbounded();
         let (_outcome_tx, outcome_rx) = crossbeam_channel::unbounded();
         let (_save_list_tx, save_list_rx) = crossbeam_channel::unbounded();
         let (_scene_reset_tx, scene_reset_rx) = crossbeam_channel::unbounded();
@@ -104,6 +135,7 @@ impl WsClient {
             send_tx,
             emergence_rx,
             perf_rx,
+            sim_events_rx,
             outcome_rx,
             save_list_rx,
             scene_reset_rx,
@@ -125,6 +157,7 @@ impl WsClient {
         let (send_tx, send_rx) = crossbeam_channel::unbounded::<String>();
         let (emergence_tx, emergence_rx) = crossbeam_channel::unbounded::<EmergenceHudData>();
         let (perf_tx, perf_rx) = crossbeam_channel::unbounded::<SimPerfData>();
+        let (sim_events_tx, sim_events_rx) = crossbeam_channel::unbounded::<SimSimEventsData>();
         let (outcome_tx, outcome_rx) = crossbeam_channel::unbounded::<OutcomeHudData>();
         let (save_list_tx, save_list_rx) = crossbeam_channel::unbounded::<Vec<SaveListEntry>>();
         let (scene_reset_tx, scene_reset_rx) = crossbeam_channel::unbounded::<SceneReset>();
@@ -141,6 +174,7 @@ impl WsClient {
                 send_rx,
                 emergence_tx,
                 perf_tx,
+                sim_events_tx,
                 outcome_tx,
                 save_list_tx,
                 scene_reset_tx,
@@ -157,6 +191,7 @@ impl WsClient {
             send_tx,
             emergence_rx,
             perf_rx,
+            sim_events_rx,
             outcome_rx,
             save_list_rx,
             scene_reset_rx,
@@ -186,6 +221,18 @@ impl WsClient {
         let mut latest = None;
         while let Ok(perf) = self.perf_rx.try_recv() {
             latest = Some(perf);
+        }
+        latest
+    }
+
+    /// Drain parsed `sim/sim_events` responses, returning only the newest sample.
+    /// This is the unified stream of last_tick_* event buffers (damage events,
+    /// audio events, research state, religion, legends, emergence sample, climate).
+    #[must_use]
+    pub fn poll_sim_events(&self) -> Option<SimSimEventsData> {
+        let mut latest = None;
+        while let Ok(ev) = self.sim_events_rx.try_recv() {
+            latest = Some(ev);
         }
         latest
     }
@@ -312,12 +359,17 @@ impl Clone for WsClient {
             outcome_rx: self.outcome_rx.clone(),
             save_list_rx: self.save_list_rx.clone(),
             scene_reset_rx: self.scene_reset_rx.clone(),
+            sim_events_rx: self.sim_events_rx.clone(),
         }
     }
 }
 
 const OUTCOME_RPC: &str = r#"{"jsonrpc":"2.0","id":9003,"method":"sim.outcome","params":{}}"#;
 const OUTCOME_POLL_SECS: u64 = 30;
+const SIM_EVENTS_RPC: &str = r#"{"jsonrpc":"2.0","id":9011,"method":"sim.events","params":{}}"#;
+/// Poll cadence for sim.events — fast (10 Hz) because it carries ephemeral
+/// disaster pulses / audio cues that the Bevy client renders immediately.
+const SIM_EVENTS_POLL_SECS: u64 = 2;
 const SNAPSHOT_RPC: &str = r#"{"jsonrpc":"2.0","id":9001,"method":"sim.snapshot","params":{}}"#;
 const SNAPSHOT_POLL_SECS: u64 = 2;
 
@@ -380,6 +432,7 @@ fn run_client(
     send_rx: crossbeam_channel::Receiver<String>,
     emergence_tx: Sender<EmergenceHudData>,
     perf_tx: Sender<SimPerfData>,
+    sim_events_tx: Sender<SimSimEventsData>,
     outcome_tx: Sender<OutcomeHudData>,
     save_list_tx: Sender<Vec<SaveListEntry>>,
     scene_reset_tx: Sender<SceneReset>,
@@ -405,6 +458,7 @@ fn run_client(
                 &send_rx,
                 &emergence_tx,
                 &perf_tx,
+                &sim_events_tx,
                 &outcome_tx,
                 &save_list_tx,
                 &scene_reset_tx,
@@ -502,6 +556,54 @@ fn parse_perf_response(text: &str) -> Option<SimPerfData> {
     Some(SimPerfData { tick_ms })
 }
 
+/// Parse a `sim.sim.events` (id=9011) JSON-RPC response into [`SimSimEventsData`].
+///
+/// Tolerates missing / malformed nested fields by defaulting to 0 / false rather
+/// than dropping the whole payload — a partial sim events snapshot is more useful
+/// to the Bevy client than no snapshot at all (silent render drops are debug-hostile).
+fn parse_sim_events_response(text: &str) -> Option<SimSimEventsData> {
+    let value: serde_json::Value = serde_json::from_str(text).ok()?;
+    if value.get("id").and_then(|id| id.as_i64()) != Some(9011) {
+        return None;
+    }
+    let result = value.get("result")?;
+    Some(SimSimEventsData {
+        tick: result.get("tick").and_then(|t| t.as_u64()).unwrap_or(0),
+        damage_events_count: result
+            .get("damage_events_count")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as u32,
+        voxel_damage_removed: result
+            .get("voxel_damage_removed")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as u32,
+        audio_event_count: result
+            .get("audio_event_count")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as u32,
+        research_advances: result
+            .get("research_advances")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as u32,
+        faith_intensity: result
+            .get("faith_intensity")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0) as f32,
+        legend_event_count: result
+            .get("legend_event_count")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0),
+        entropy_bits: result
+            .get("entropy_bits")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0) as f32,
+        is_branching: result
+            .get("is_branching")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false),
+    })
+}
+
 fn parse_outcome_response(text: &str) -> Option<OutcomeHudData> {
     let v: serde_json::Value = serde_json::from_str(text).ok()?;
     if v.get("id").and_then(|i| i.as_i64()) != Some(9003) {
@@ -583,6 +685,7 @@ async fn connect_and_stream(
     send_rx: &crossbeam_channel::Receiver<String>,
     emergence_tx: &Sender<EmergenceHudData>,
     perf_tx: &Sender<SimPerfData>,
+    sim_events_tx: &Sender<SimSimEventsData>,
     outcome_tx: &Sender<OutcomeHudData>,
     save_list_tx: &Sender<Vec<SaveListEntry>>,
     scene_reset_tx: &Sender<SceneReset>,
@@ -599,6 +702,7 @@ async fn connect_and_stream(
 
     let mut last_snapshot = std::time::Instant::now();
     let mut last_outcome = std::time::Instant::now();
+    let mut last_sim_events = std::time::Instant::now();
 
     loop {
         // Flush outbound commands (speed/pause RPCs) before blocking on next inbound frame.
@@ -624,6 +728,13 @@ async fn connect_and_stream(
                 .map_err(|e| e.to_string())?;
             last_outcome = std::time::Instant::now();
         }
+        if last_sim_events.elapsed() >= Duration::from_secs(SIM_EVENTS_POLL_SECS) {
+            write
+                .send(Message::Text(SIM_EVENTS_RPC.into()))
+                .await
+                .map_err(|e| e.to_string())?;
+            last_sim_events = std::time::Instant::now();
+        }
         if last_snapshot.elapsed() >= Duration::from_secs(SNAPSHOT_POLL_SECS) {
             request_snapshot(&mut write, &mut snapshot_ping).await?;
             last_snapshot = std::time::Instant::now();
@@ -644,6 +755,10 @@ async fn connect_and_stream(
                     if meta_tx.send(meta).is_err() {
                         return Err("bevy meta receiver dropped".into());
                     }
+                    continue;
+                }
+                if let Some(events) = parse_sim_events_response(&text) {
+                    let _ = sim_events_tx.send(events);
                     continue;
                 }
                 if let Some(em) = parse_emergence_response(&text) {

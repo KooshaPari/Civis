@@ -20,6 +20,8 @@
 
 **Civis** is a Bevy 0.18 desktop godgame (DX12/Windows primary) built on a headless, deterministic civilization simulation engine. Life, society, language, culture, economy, law, and politics emerge from physical and genomic laws — you play the role of a god watching (and intervening in) a world that writes its own history.
 
+[![AI slop inside](https://sladge.net/badge.svg)](https://sladge.net) [![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/KooshaPari/Civis/total)](https://github.com/KooshaPari/Civis/releases)
+
 The simulation core runs headlessly over WebSocket JSON-RPC + binary frames. Multiple renderer clients (Bevy reference, Godot, Unreal, Web) can attach to the same world timeline simultaneously.
 
 ---

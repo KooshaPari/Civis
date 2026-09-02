@@ -59,8 +59,11 @@ pub struct SimPerfData {
 ///
 /// Bundles every per-tick buffer the engine flushes (disaster pulses, audio
 /// cues, construction events, mood snapshots, research progress, religion,
-/// legends, emergence sample) into one round-trip so the Bevy client can
-/// reflect sim state in a single poll.
+/// legends, emergence sample, climate snapshot) into one round-trip so the
+/// Bevy client can reflect sim state in a single poll.
+///
+/// Mirrors the server's `SimSimEvents` payload shape — uses `serde_json::Value`
+/// for nested collections so client and server stay decoupled on item shape.
 #[derive(Debug, Clone, Default)]
 pub struct SimSimEventsData {
     /// Server tick this snapshot represents.
@@ -69,18 +72,25 @@ pub struct SimSimEventsData {
     pub damage_events_count: u32,
     /// Voxel material removed by damage this tick.
     pub voxel_damage_removed: u32,
-    /// Audio events (SFX triggers, music cues) for this tick.
-    pub audio_event_count: u32,
-    /// Number of research advances triggered this tick.
-    pub research_advances: u32,
-    /// Faith / belief intensity averaged over all active belief systems.
-    pub faith_intensity: f32,
-    /// Total legendary events recorded since simulation start.
-    pub legend_event_count: u64,
-    /// Emergence dashboard entropy bits (mirrors EmergenceHudData).
-    pub entropy_bits: f32,
-    /// Whether the emergence sample is in the critical regime.
-    pub is_branching: bool,
+    /// Per-event damage records (kind, voxel, target). Empty array when no
+    /// snapshot was available on the server.
+    pub damage_events: Vec<serde_json::Value>,
+    /// SFX / ambient audio events queued this tick.
+    pub audio_events: Vec<serde_json::Value>,
+    /// Music cues keyed by cue id (loops, stingers).
+    pub music_cues: serde_json::Value,
+    /// Climate snapshot (temperature, humidity, season, day_phase).
+    pub climate: Option<serde_json::Value>,
+    /// Emergence dashboard sample (entropy_bits, branching, mi_score...).
+    pub emergence_sample: Option<serde_json::Value>,
+    /// Optional religion state blob (sects, intensities, schisms).
+    pub religion_state: Option<serde_json::Value>,
+    /// Optional legends/saga blob (sagas, nodes, weights).
+    pub legends: Option<serde_json::Value>,
+    /// Array of tech ids that completed this tick (or recently).
+    pub researched: Vec<serde_json::Value>,
+    /// Currently researching tech name + progress percentage.
+    pub in_progress_tech: serde_json::Value,
 }
 
 /// WebSocket client that bridges the tokio network task to Bevy systems.
@@ -558,9 +568,10 @@ fn parse_perf_response(text: &str) -> Option<SimPerfData> {
 
 /// Parse a `sim.sim.events` (id=9011) JSON-RPC response into [`SimSimEventsData`].
 ///
-/// Tolerates missing / malformed nested fields by defaulting to 0 / false rather
-/// than dropping the whole payload — a partial sim events snapshot is more useful
-/// to the Bevy client than no snapshot at all (silent render drops are debug-hostile).
+/// Tolerates missing / malformed nested fields by defaulting to empty collections
+/// rather than dropping the whole payload — a partial sim events snapshot is more
+/// useful to the Bevy client than no snapshot at all (silent render drops are
+/// debug-hostile).
 fn parse_sim_events_response(text: &str) -> Option<SimSimEventsData> {
     let value: serde_json::Value = serde_json::from_str(text).ok()?;
     if value.get("id").and_then(|id| id.as_i64()) != Some(9011) {
@@ -577,30 +588,63 @@ fn parse_sim_events_response(text: &str) -> Option<SimSimEventsData> {
             .get("voxel_damage_removed")
             .and_then(|v| v.as_u64())
             .unwrap_or(0) as u32,
-        audio_event_count: result
-            .get("audio_event_count")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0) as u32,
-        research_advances: result
-            .get("research_advances")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0) as u32,
-        faith_intensity: result
-            .get("faith_intensity")
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.0) as f32,
-        legend_event_count: result
-            .get("legend_event_count")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0),
-        entropy_bits: result
-            .get("entropy_bits")
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.0) as f32,
-        is_branching: result
-            .get("is_branching")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false),
+        damage_events: result
+            .get("damage_events")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|v| match v {
+                serde_json::Value::Object(_) => Some(v),
+                _ => None,
+            })
+            .collect(),
+        audio_events: result
+            .get("audio_events")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|v| match v {
+                serde_json::Value::Object(_) => Some(v),
+                _ => None,
+            })
+            .collect(),
+        music_cues: result
+            .get("music_cues")
+            .cloned()
+            .unwrap_or_else(|| serde_json::json!({})),
+        climate: result
+            .get("climate")
+            .cloned()
+            .filter(|v| v.is_object()),
+        emergence_sample: result
+            .get("emergence_sample")
+            .cloned()
+            .filter(|v| v.is_object()),
+        religion_state: result
+            .get("religion_state")
+            .cloned()
+            .filter(|v| v.is_object()),
+        legends: result
+            .get("legends")
+            .cloned()
+            .filter(|v| v.is_object()),
+        researched: result
+            .get("researched")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|v| match v {
+                serde_json::Value::String(_) | serde_json::Value::Object(_) => Some(v),
+                _ => None,
+            })
+            .collect(),
+        in_progress_tech: result
+            .get("in_progress_tech")
+            .cloned()
+            .unwrap_or_else(|| serde_json::json!({})),
     })
 }
 

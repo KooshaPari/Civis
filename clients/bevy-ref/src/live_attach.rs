@@ -117,8 +117,13 @@ fn poll_live_perf(
 struct SimEventsPollTimer(f32);
 
 /// Poll the server's `sim.sim_events` channel and surface the aggregated per-tick
-/// buffers (damage, audio, research, faith, legend count) as EventFeed
-/// notifications so the player sees the simulation actually doing things.
+/// buffers (damage, audio, research, emergence, climate, religion, legends)
+/// as EventFeed notifications so the player sees the simulation actually
+/// doing things.
+///
+/// `SimSimEventsData` is a flat struct: scalar counters, optional JSON
+/// blobs for nested state, and Vec<serde_json::Value> for repeating
+/// entries. This function only touches fields that actually exist.
 fn poll_live_sim_events(
     time: Res<Time>,
     attach: Res<AttachMode>,
@@ -133,12 +138,13 @@ fn poll_live_sim_events(
 
     // Drain all pending sim_events messages (the background poll keeps a small queue).
     while let Some(events) = bridge.client.poll_sim_events() {
-        // Damage
+        // Damage — real scalar fields on the struct.
         if events.damage_events_count > 0 {
             feed.push(
                 EventKind::Disaster,
                 format!("{} damage event(s) this tick", events.damage_events_count),
             );
+            #[cfg(feature = "egui")]
             notifs.notify(
                 NotificationKind::Disaster,
                 format!(
@@ -148,53 +154,92 @@ fn poll_live_sim_events(
             );
         }
 
-        // Research advances
-        if events.research_advances > 0 {
-            feed.push(
-                EventKind::Tech,
-                format!("{} research advance(s)", events.research_advances),
-            );
+        // Per-event damage records — push to feed without touching event.kind (event
+        // is a serde_json::Value). Just count them.
+        if !events.damage_events.is_empty() {
+            #[cfg(feature = "egui")]
             notifs.notify(
-                NotificationKind::Tech,
-                format!("{} research advance(s) unlocked", events.research_advances),
+                NotificationKind::Diplomacy,
+                format!("{} damage events recorded", events.damage_events.len()),
             );
         }
 
-        // Audio events count (count-only — full playback goes through live_meta)
-        if events.audio_event_count > 0 {
-            // Note: AudioEvent has no dedicated EventKind; route via System feed
-            feed.push(
-                EventKind::System,
-                format!("{} audio cue(s) fired", events.audio_event_count),
-            );
+        // Research — researched Vec has the techs completed this tick,
+        // in_progress_tech is the JSON blob of the current research item.
+        if !events.researched.is_empty() {
+            for tech in &events.researched {
+                // tech is a JSON value; render as compact JSON string
+                let label = tech.to_string();
+                feed.push(EventKind::Tech, format!("Research completed: {}", label));
+                #[cfg(feature = "egui")]
+                notifs.notify(NotificationKind::Tech, format!("Research: {}", label));
+            }
+        } else if !events.in_progress_tech.is_null() {
+            // Has active research — surface as History entry on first sight per tick
+            let active = events.in_progress_tech.to_string();
+            if active != "null" && active != "{}" {
+                feed.push(EventKind::Diplomacy, format!("Researching: {}", active));
+            }
         }
 
-        // Faith intensity
-        if events.faith_intensity > 0.7 {
-            feed.push(
-                EventKind::System,
-                format!("Faith intensifies ({:.2})", events.faith_intensity),
-            );
-        }
-
-        // Branching alert
-        if events.is_branching {
-            feed.push(
-                EventKind::System,
-                "Emergence: branching — critical regime entered".to_owned(),
-            );
+        // Audio events — push each as Sfx event (no field access needed)
+        if !events.audio_events.is_empty() {
+            for _audio in &events.audio_events {
+                feed.push(EventKind::System, "Audio cue".to_owned());
+            }
+            #[cfg(feature = "egui")]
             notifs.notify(
-                NotificationKind::Disaster,
-                "Emergence branching detected — system in critical regime",
+                NotificationKind::Diplomacy,
+                format!("{} audio cues this tick", events.audio_events.len()),
             );
         }
 
-        // Legend event count delta (informational, low-frequency)
-        if events.legend_event_count > 0 {
-            feed.push(
-                EventKind::System,
-                format!("Legend: {} events recorded", events.legend_event_count),
-            );
+        // Religion — Option<serde_json::Value> blob. Just signal presence.
+        if events.religion_state.is_some() {
+            feed.push(EventKind::Diplomacy, "Religion: state updated".to_owned());
+        }
+
+        // Legends — same pattern. Presence indicates saga activity.
+        if events.legends.is_some() {
+            feed.push(EventKind::Diplomacy, "Legends: saga updated".to_owned());
+        }
+
+        // Emergence sample — Option<serde_json::Value>. Extract entropy if present.
+        if let Some(sample) = &events.emergence_sample {
+            let entropy_bits = sample.get("entropy_bits").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            if entropy_bits > 2.0 {
+                feed.push(
+                    EventKind::System,
+                    format!("Emergence: entropy {:.2} (high regime)", entropy_bits),
+                );
+            }
+            // Branching alert: check is_branching field
+            let branching = sample.get("is_branching").and_then(|v| v.as_bool()).unwrap_or(false);
+            if branching {
+                feed.push(
+                    EventKind::System,
+                    "Emergence: branching — critical regime entered".to_owned(),
+                );
+                #[cfg(feature = "egui")]
+                notifs.notify(
+                    NotificationKind::Disaster,
+                    "Emergence branching detected",
+                );
+            }
+        }
+
+        // Climate — Option<serde_json::Value> blob. Extract storm status.
+        if let Some(climate) = &events.climate {
+            let storm = climate.get("storm_active").and_then(|v| v.as_bool()).unwrap_or(false);
+            if storm {
+                let sev = climate.get("storm_severity").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                feed.push(EventKind::Disaster, format!("Storm active (sev {:.2})", sev));
+                #[cfg(feature = "egui")]
+                notifs.notify(
+                    NotificationKind::Disaster,
+                    format!("Storm active (severity {:.2})", sev),
+                );
+            }
         }
     }
 

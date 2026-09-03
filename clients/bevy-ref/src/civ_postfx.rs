@@ -424,7 +424,7 @@ impl CivPostFxGpu {
                     binding: 2,
                     visibility: wgpu::ShaderStages::COMPUTE,
                     ty: wgpu::BindingType::StorageTexture {
-                        access: wgpu::StorageTextureAccess::ReadWrite,
+                        access: wgpu::StorageTextureAccess::WriteOnly,
                         format: wgpu::TextureFormat::Rgba8Unorm,
                         view_dimension: wgpu::TextureViewDimension::D2,
                     },
@@ -459,7 +459,7 @@ impl CivPostFxGpu {
                     binding: 2,
                     visibility: wgpu::ShaderStages::COMPUTE,
                     ty: wgpu::BindingType::StorageTexture {
-                        access: wgpu::StorageTextureAccess::ReadWrite,
+                        access: wgpu::StorageTextureAccess::WriteOnly,
                         format: wgpu::TextureFormat::Rgba8Unorm,
                         view_dimension: wgpu::TextureViewDimension::D2,
                     },

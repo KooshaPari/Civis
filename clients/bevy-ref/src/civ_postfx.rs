@@ -706,6 +706,10 @@ impl Plugin for CivPostFxPlugin {
         if let Some(render_app) = app.get_sub_app_mut(RenderApp) {
             render_app
                 .init_resource::<CivPostFxRenderState>()
+                // `dispatch_civ_postfx` runs in the Render world and needs its
+                // own copy of the stats resource there (the Main-world copy is
+                // for the toggle/tracking side).
+                .init_resource::<CivPostFxStats>()
                 .add_systems(Render, (init_civ_postfx_gpu, dispatch_civ_postfx).chain());
         }
     }

@@ -741,7 +741,7 @@ fn init_civ_postfx_gpu(
 fn dispatch_civ_postfx(
     mut state: ResMut<CivPostFxRenderState>,
     mut stats: ResMut<CivPostFxStats>,
-    toggle: Res<CivPostFxToggle>,
+    toggle: Option<Res<CivPostFxToggle>>,
     render_device: Res<RenderDevice>,
     render_queue: Res<RenderQueue>,
 ) {
@@ -763,7 +763,7 @@ fn dispatch_civ_postfx(
     let _ = gpu.dispatch(
         render_device.wgpu_device(),
         &**render_queue,
-        toggle.as_ref(),
+        toggle.as_deref().unwrap_or(&CivPostFxToggle::default()),
         stats.as_mut(),
         tick,
     );

@@ -191,7 +191,7 @@ struct CivPostFxUniforms {
 
 @group(0) @binding(0) var<storage, read>       input_depths: array<u32>;
 @group(0) @binding(1) var<uniform>              uniforms:    CivPostFxUniforms;
-@group(0) @binding(2) var<storage, read_write>  ao_output:   texture_storage_2d<rgba8unorm, read_write>;
+@group(0) @binding(2) var ao_output:   texture_storage_2d<rgba8unorm, write>;
 
 @compute @workgroup_size(4, 4, 1)
 fn civ_ssao_main(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -248,7 +248,7 @@ struct CivPostFxUniforms {
 
 @group(0) @binding(0) var<storage, read>       live_ticks:    array<u32>;
 @group(0) @binding(1) var<uniform>              uniforms:      CivPostFxUniforms;
-@group(0) @binding(2) var<storage, read_write> bloom_output:  texture_storage_2d<rgba8unorm, read_write>;
+@group(0) @binding(2) var bloom_output:  texture_storage_2d<rgba8unorm, write>;
 
 @compute @workgroup_size(4, 4, 1)
 fn civ_bloom_main(@builtin(global_invocation_id) id: vec3<u32>) {

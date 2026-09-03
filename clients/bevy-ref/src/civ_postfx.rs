@@ -269,7 +269,7 @@ fn civ_bloom_main(@builtin(global_invocation_id) id: vec3<u32>) {
 
     let tick_byte = u32(uniforms.tick & 0xffu);
     let r = u32(glow * 255.0);
-    let g = (r.wrapping_mul(2u).wrapping_add(tick_byte)) & 0xffu;
+    let g = (r * 2u + tick_byte) & 0xffu;
     let b = (r ^ tick_byte) & 0xffu;
     let color = vec4<f32>(
         f32(r) / 255.0,

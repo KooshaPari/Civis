@@ -9,6 +9,7 @@ use crate::material::{
     MaterialRegistry, Phase, ACID, AIR, ICE, LAVA, MOLTEN_METAL, MUD, OIL, SALT_WATER, SNOW, STEAM,
     WATER,
 };
+use crate::reactions::reaction_for;
 use crate::{MaterialId, VoxelWorld, WorldCoord};
 use std::cmp::Reverse;
 use std::collections::HashSet;
@@ -1324,6 +1325,61 @@ fn phase_transition_pass(grid: &mut CaGrid, reg: MaterialRegistry, cells: &[usiz
     }
 }
 
+/// FR-CIV-CA-011 — pairwise material reactions applied per dirty cell.
+///
+/// For each dirty cell, look up the material-pair reaction against each of its
+/// six face-neighbours using the `reaction_for` table (Tuesday/Powder-Toy/Noita
+/// style). When a rule matches, write the result pair into both cells and mark
+/// both dirty. Reads use the live `grid.cells`; writes are applied immediately
+/// (matching `phase_transition_pass` snapshot semantics) so a hot neighbour set
+/// can ignite a full fuel cell in one pass.
+fn reaction_pass(grid: &mut CaGrid, cells: &[usize]) {
+    let area = grid.dims[0] * grid.dims[1];
+    let xw = grid.dims[0];
+    let yw = grid.dims[1];
+    let zw = grid.dims[2];
+    for &idx in cells {
+        let left = grid.cells[idx];
+        if left.0 == 0 {
+            continue; // AIR never reacts
+        }
+        let z = idx / area;
+        let rem = idx - z * area;
+        let y = rem / xw;
+        let x = rem % xw;
+        // Reusable closure to attempt a reaction between `idx` and neighbour.
+        let mut try_pair = |grid: &mut CaGrid, nx: i32, ny: i32, nz: i32, idx: usize| {
+            if nx < 0 || ny < 0 || nz < 0 || nx >= xw as i32 || ny >= yw as i32 || nz >= zw as i32 {
+                return;
+            }
+            let n_i = (nz as usize * area) + (ny as usize * xw) + nx as usize;
+            let right = grid.cells[n_i];
+            if let Some(rule) = reaction_for(left, right) {
+                grid.cells[idx] = rule.result.left;
+                grid.cells[n_i] = rule.result.right;
+                grid.mark_dirty_cell(x, y, z);
+                grid.mark_dirty_cell(nx as usize, ny as usize, nz as usize);
+            }
+        };
+        let xz = x as i32;
+        let yz = y as i32;
+        let zz = z as i32;
+        try_pair(grid, xz, yz, zz, idx);
+        #[allow(clippy::cast_possible_wrap)]
+        try_pair(grid, xz - 1, yz, zz, idx);
+        #[allow(clippy::cast_possible_wrap)]
+        try_pair(grid, xz + 1, yz, zz, idx);
+        #[allow(clippy::cast_possible_wrap)]
+        try_pair(grid, xz, yz - 1, zz, idx);
+        #[allow(clippy::cast_possible_wrap)]
+        try_pair(grid, xz, yz + 1, zz, idx);
+        #[allow(clippy::cast_possible_wrap)]
+        try_pair(grid, xz, yz, zz - 1, idx);
+        try_pair(grid, xz, yz, zz + 1, idx);
+    }
+}
+
+#[allow(clippy::cast_possible_wrap)]
 fn percolation_pass(
     grid: &mut CaGrid,
     scratch: &ScratchView,
@@ -1607,6 +1663,13 @@ fn run_rule_passes(
     // tick's conduction; the per-cell `phase_budget` accumulator is a
     // private field on `CaGrid` and doesn't need a scratch round-trip.
     phase_transition_pass(grid, reg, &cells);
+    // FR-CIV-CA-011 — material reaction cascade: apply the binary reaction
+    // table (fire->wood/plant combustion, lava->ice/water thermal, acid->stone,
+    // fire+water boil-off) pairwise against each cell's active 6-neighbourhood.
+    // Grounded in the Powder-Toy/Noita reference: reactions fire and produce
+    // immediate, visible material change (the "friction" that makes a sandbox
+    // feel alive) rather than leaving materials to silently swap.
+    reaction_pass(grid, &cells);
     grid.refresh_scratch();
     scratch = grid.scratch_view();
     evaporation_pass(grid, &scratch, reg, boundary, tick, &cells);

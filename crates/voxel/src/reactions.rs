@@ -82,6 +82,41 @@ pub const REACTIONS: &[ReactionRule] = &[
             right: crate::material::FIRE,
         },
     },
+    // --- Combustion / ignition (Powder-Toy/Noita heat loops) ---
+    ReactionRule {
+        a: crate::material::FIRE,
+        b: crate::material::WOOD,
+        result: ReactionResult {
+            left: crate::material::FIRE,
+            right: crate::material::FIRE,
+        },
+    },
+    ReactionRule {
+        a: crate::material::FIRE,
+        b: crate::material::PLANT,
+        result: ReactionResult {
+            left: crate::material::FIRE,
+            right: crate::material::FIRE,
+        },
+    },
+    // --- Boil-off: fire quenched by water becomes steam ---
+    ReactionRule {
+        a: crate::material::FIRE,
+        b: crate::material::WATER,
+        result: ReactionResult {
+            left: crate::material::STEAM,
+            right: crate::material::STEAM,
+        },
+    },
+    // --- Thermal: lava rapidly boils ice into steam, leaving stone ---
+    ReactionRule {
+        a: crate::material::LAVA,
+        b: crate::material::ICE,
+        result: ReactionResult {
+            left: crate::material::STONE,
+            right: crate::material::STEAM,
+        },
+    },
 ];
 
 /// Looks up the first matching rule for an unordered pair.
@@ -115,5 +150,29 @@ mod tests {
         assert!(reaction_for(crate::material::FIRE, crate::material::OIL).is_some());
         assert!(reaction_for(crate::material::WATER, crate::material::ICE).is_some());
         assert!(reaction_for(crate::material::GUNPOWDER, crate::material::FIRE).is_some());
+    }
+
+    #[test]
+    fn combustion_and_thermal_cascades_resolve() {
+        // Fire + Wood / Plant both sustain combustion (wood-like fuel).
+        let wood_fire =
+            reaction_for(crate::material::FIRE, crate::material::WOOD).expect("fire + wood");
+        assert_eq!(wood_fire.result.left, crate::material::FIRE);
+
+        let plant_fire =
+            reaction_for(crate::material::PLANT, crate::material::FIRE).expect("fire + plant");
+        assert_eq!(plant_fire.result.right, crate::material::FIRE);
+
+        // Fire + Water quenches into steam (boil-off).
+        let fire_water =
+            reaction_for(crate::material::FIRE, crate::material::WATER).expect("fire + water");
+        assert_eq!(fire_water.result.left, crate::material::STEAM);
+        assert_eq!(fire_water.result.right, crate::material::STEAM);
+
+        // Lava + Ice boils into stone + steam.
+        let lava_ice =
+            reaction_for(crate::material::LAVA, crate::material::ICE).expect("lava + ice");
+        assert_eq!(lava_ice.result.left, crate::material::STONE);
+        assert_eq!(lava_ice.result.right, crate::material::STEAM);
     }
 }

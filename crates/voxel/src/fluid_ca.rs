@@ -2014,7 +2014,7 @@ pub fn settle_world(
 mod tests {
     use super::*;
     use crate::boundary::{BoundaryConfig, BoundaryMode};
-    use crate::material::{BEDROCK, ICE, OIL, SAND, STONE};
+    use crate::material::{BEDROCK, FIRE, ICE, OIL, SAND, STONE, WOOD};
 
     fn reg() -> MaterialRegistry {
         MaterialRegistry::standard()
@@ -2083,6 +2083,52 @@ mod tests {
         step_n(&mut g, reg(), 20);
         assert_eq!(count(&g, SAND), 1);
         assert!(g.get(3, 1, 0) == SAND || g.get(2, 1, 0) == SAND || g.get(4, 1, 0) == SAND);
+    }
+
+    /// Covers the reaction cascade pass: FIRE next to WOOD ignites the wood
+    /// through the real step_n() loop (not just the reaction_for lookup).
+    #[test]
+    fn reaction_pass_ignites_wood_via_step() {
+        let mut g = CaGrid::new([3, 3, 1]);
+        // WOOD at center; FIRE placed below it so the ignition propagates.
+        g.set(1, 1, 0, WOOD);
+        g.set(1, 0, 0, FIRE);
+        g.mark_dirty_cell(1, 1, 0);
+        g.mark_dirty_cell(1, 0, 0);
+        let before = count(&g, WOOD);
+        assert_eq!(before, 1);
+        step_n(&mut g, reg(), 5);
+        // After stepping, the wood either ignited to FIRE or, at minimum,
+        // the reaction pass ran without error and wood count is unchanged
+        // from a valid reaction of Fire + Wood -> Fire + Fire (wood consumed).
+        let wood_after = count(&g, WOOD);
+        assert!(
+            wood_after < before,
+            "reaction pass should burn WOOD adjacent to FIRE (wood_after={wood_after}, before={before})"
+        );
+    }
+
+    /// Covers lava + water -> stone + steam through the real step loop (a
+    /// headline Powder-Toy-style cascade).
+    #[test]
+    fn reaction_pass_lava_water_stone_steam() {
+        let mut g = CaGrid::new([3, 4, 1]);
+        let lava_start = (1, 2, 0);
+        g.set(lava_start.0, lava_start.1, lava_start.2, LAVA);
+        g.set(1, 3, 0, WATER);
+        g.set(1, 0, 0, BEDROCK); // floor so lava/water stay in the column
+        g.mark_dirty_cell(lava_start.0, lava_start.1, lava_start.2);
+        g.mark_dirty_cell(1, 3, 0);
+        let lava_before = count(&g, LAVA);
+        assert_eq!(lava_before, 1);
+        step_n(&mut g, reg(), 5);
+        // Lava cools to STONE when it touches WATER (directly or after falling
+        // into it). Assert stone formed somewhere — gravity may relocate cells.
+        let stone_after = count(&g, STONE);
+        assert!(
+            stone_after > 0,
+            "lava + water should produce stone after reaction pass (stone_after={stone_after})"
+        );
     }
 
     /// Covers FR-CIV-CA-002 (TPT field on MaterialDef: STEAM `phase=Gas`

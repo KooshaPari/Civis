@@ -662,7 +662,7 @@ impl LiveHudSnapshot {
 pub const DEFAULT_WS_HOST: &str = "127.0.0.1";
 
 /// Default Civis JSON-RPC WebSocket port.
-pub const DEFAULT_WS_PORT: u16 = 3000;
+pub const DEFAULT_WS_PORT: u16 = 3800;
 
 /// Default Civis JSON-RPC WebSocket path.
 pub const DEFAULT_WS_PATH: &str = "/ws";
@@ -1665,11 +1665,11 @@ mod tests {
             AttachMode::Server
         );
         assert_eq!(
-            resolve_attach_mode(None, Some("ws://127.0.0.1:3000/ws")),
+            resolve_attach_mode(None, Some("ws://127.0.0.1:3800/ws")),
             AttachMode::Server
         );
         assert_eq!(
-            resolve_attach_mode(Some("standalone"), Some("ws://127.0.0.1:3000/ws")),
+            resolve_attach_mode(Some("standalone"), Some("ws://127.0.0.1:3800/ws")),
             AttachMode::Server
         );
     }

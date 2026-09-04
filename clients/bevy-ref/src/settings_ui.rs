@@ -1048,11 +1048,11 @@ impl Default for WorldSettings {
 /// These values feed the `live_attach` bridge when the user picks
 /// "Connect to Server" on the main menu. Default endpoint matches the
 /// `civ-server` listen address used by the workspace tests / MCP smoke
-/// (`ws://127.0.0.1:3000/ws`).
+/// (`ws://127.0.0.1:3800/ws`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NetworkSettings {
     /// WebSocket URL of the `civ-server` JSON-RPC endpoint, e.g.
-    /// `ws://127.0.0.1:3000/ws`. The UI rejects an empty string and falls
+    /// `ws://127.0.0.1:3800/ws`. The UI rejects an empty string and falls
     /// back to the default.
     #[serde(default = "default_server_url")]
     pub server_url: String,
@@ -1070,7 +1070,7 @@ pub struct NetworkSettings {
 }
 
 fn default_server_url() -> String {
-    "ws://127.0.0.1:3000/ws".to_string()
+    "ws://127.0.0.1:3800/ws".to_string()
 }
 
 /// `#[serde(default = ...)]` helper for `NetworkSettings::auto_reconnect` —
@@ -1851,7 +1851,7 @@ fn network_tab(
         changed |= ui
             .add(
                 egui::TextEdit::singleline(&mut network.server_url)
-                    .hint_text("ws://127.0.0.1:3000/ws")
+                    .hint_text("ws://127.0.0.1:3800/ws")
                     .desired_width(ui.available_width() - 100.0),
             )
             .changed();

@@ -145,7 +145,7 @@ pub struct WsBridgeConfig {
 impl Default for WsBridgeConfig {
     fn default() -> Self {
         Self {
-            addr: SocketAddr::from(([127, 0, 0, 1], 3000)),
+            addr: SocketAddr::from(([127, 0, 0, 1], 3800)),
             max_clients: 16,
             require_role: true,
             tick_broadcast_format: TickBroadcastFormat::default(),

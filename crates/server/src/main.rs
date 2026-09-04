@@ -25,7 +25,7 @@ async fn main() {
     let port = std::env::var("CIV_SERVER_PORT")
         .ok()
         .and_then(|value| value.parse().ok())
-        .unwrap_or(3000);
+        .unwrap_or(3800);
     let addr: SocketAddr = SocketAddr::from(([127, 0, 0, 1], port));
     let max_clients = std::env::var("CIVIS_WS_MAX_CLIENTS")
         .ok()
@@ -87,7 +87,7 @@ fn parse_server_addr(ws_addr: Option<&str>, server_port: Option<&str>) -> Socket
     }
     let port = server_port
         .and_then(|value| value.parse().ok())
-        .unwrap_or(3000);
+        .unwrap_or(3800);
     SocketAddr::from(([127, 0, 0, 1], port))
 }
 

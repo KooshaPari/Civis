@@ -102,7 +102,7 @@ impl Plugin for FactionHudPlugin {
             )
             .add_systems(
                 EguiPrimaryContextPass,
-                draw_faction_hud.run_if(crate::menus::in_playing),
+                draw_faction_hud.run_if(crate::menus::in_playing_state),
             );
     }
 }
@@ -159,6 +159,11 @@ fn draw_faction_hud(
     bridge: Option<Res<ServerBridge>>,
 ) {
     if !open.0 {
+        return;
+    }
+    // Skip until factions actually exist in the simulation — showing a hardcoded
+    // "Ardani" panel before emergence produces factions misleads the player.
+    if scene.faction_entries.is_empty() && scene.population_by_faction.is_empty() {
         return;
     }
     let Ok(ctx) = contexts.ctx_mut() else { return };

@@ -1049,7 +1049,7 @@ fn tool_palette_ui(
     ui: &mut egui::Ui,
     chrome: &HudPanelAssets,
     active: &mut ActiveTool,
-    building_kind: &mut BuildingSpawnKind,
+    _building_kind: &mut BuildingSpawnKind,
     speed: &mut GameSpeed,
 ) {
     let tools = [
@@ -1059,18 +1059,9 @@ fn tool_palette_ui(
             hotkey: "\u{21e7}1",
             tool: Some(SpawnTool::Select),
         },
-        ToolDef {
-            icon: "\u{1f9cd}",
-            label: "Spawn Civ",
-            hotkey: "\u{21e7}2",
-            tool: Some(SpawnTool::SpawnCivilian),
-        },
-        ToolDef {
-            icon: "\u{1f3e0}",
-            label: "Building",
-            hotkey: "\u{21e7}3",
-            tool: Some(SpawnTool::SpawnBuilding),
-        },
+        // Spawn Civ / Building are removed from the palette: in an emergent
+        // godgame, spawning citizens/buildings wholesale is meaningless and
+        // the player rejected it. Emergence spawns life/factions itself.
         ToolDef {
             icon: "\u{26f0}",
             label: "Terraform",
@@ -1083,55 +1074,15 @@ fn tool_palette_ui(
             hotkey: "\u{21e7}7",
             tool: Some(SpawnTool::Destroy),
         },
-        // Weather has no SpawnTool variant yet: present but inert. Make this
-        // explicit with a tooltip so the player isn't confused about why
-        // clicking the button does nothing.
-        ToolDef {
-            icon: "\u{1f327}",
-            label: "Weather",
-            hotkey: "-",
-            tool: None,
-        },
     ];
 
     ui.horizontal(|ui| {
         for def in &tools {
             let is_active = def.tool == Some(active.tool);
-            let is_building = def.tool == Some(SpawnTool::SpawnBuilding);
             if tool_button(ui, chrome, def, is_active).clicked() {
                 if let Some(tool) = def.tool {
                     active.tool = tool;
                 }
-                // Weather (tool == None) is intentionally inert for now —
-                // there is no SpawnTool variant and the disaster verbs are
-                // dispatched from the god-panel action column, not the
-                // bottom palette. The tooltip on the button makes this
-                // clear to the player.
-            }
-            if is_building && is_active {
-                ui.label(
-                    egui::RichText::new(building_kind.label())
-                        .color(DIM)
-                        .small(),
-                );
-            }
-        }
-
-        if active.tool == SpawnTool::SpawnBuilding {
-            ui.separator();
-            ui.label(egui::RichText::new("Building").color(DIM).small());
-            if ui
-                .button(
-                    egui::RichText::new(building_kind.label())
-                        .color(ACCENT)
-                        .strong(),
-                )
-                .on_hover_text(
-                    "Right-click or scroll while the build tool is active to cycle building type.",
-                )
-                .clicked()
-            {
-                *building_kind = building_kind.next();
             }
         }
 

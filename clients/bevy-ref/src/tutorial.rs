@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::live_stream::ServerBridge;
 use crate::menus::in_playing_state;
+use crate::settings_ui::GameSettings;
 
 /// Live simulation status snapshot received from the server.
 #[derive(Resource, Default, Clone, Debug)]
@@ -58,6 +59,7 @@ impl Plugin for TutorialPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<TutorialState>()
             .init_resource::<SimStatusSnapshot>()
+            .add_systems(Startup, apply_persisted_tutorial_skip)
             .add_systems(
                 Update,
                 (handle_tutorial_keys, draw_tutorial_hint)
@@ -67,7 +69,24 @@ impl Plugin for TutorialPlugin {
     }
 }
 
-fn handle_tutorial_keys(keys: Res<ButtonInput<KeyCode>>, mut state: ResMut<TutorialState>) {
+/// On startup, honour the persisted "skipped tutorial" preference so the
+/// hint is not re-shown on every launch once the player dismisses it.
+fn apply_persisted_tutorial_skip(
+    mut state: ResMut<TutorialState>,
+    settings: Res<GameSettings>,
+) {
+    if settings.tutorial_skipped {
+        state.enabled = false;
+        state.step = 0;
+        state.acknowledged = true;
+    }
+}
+
+fn handle_tutorial_keys(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut state: ResMut<TutorialState>,
+    mut settings: ResMut<GameSettings>,
+) {
     if keys.just_pressed(KeyCode::KeyH) {
         state.enabled = true;
         state.step = 0;
@@ -77,18 +96,32 @@ fn handle_tutorial_keys(keys: Res<ButtonInput<KeyCode>>, mut state: ResMut<Tutor
     if !state.enabled {
         return;
     }
+    // Escape skips the tutorial and remembers that choice across launches.
+    if keys.just_pressed(KeyCode::Escape) {
+        state.enabled = false;
+        state.acknowledged = true;
+        settings.tutorial_skipped = true;
+        settings.save();
+        return;
+    }
     // Enter — Space owns pause/resume in the shell.
     if keys.just_pressed(KeyCode::Enter) {
-        advance(&mut state);
+        if advance(&mut state) && !settings.tutorial_skipped {
+            settings.tutorial_skipped = true;
+            settings.save();
+        }
     }
 }
 
-fn advance(state: &mut TutorialState) {
+/// Returns true when the tutorial reached completion AND was disabled.
+fn advance(state: &mut TutorialState) -> bool {
     if state.step as usize + 1 >= HINTS.len() {
         state.enabled = false;
+        true
     } else {
         state.step += 1;
         state.acknowledged = false;
+        false
     }
 }
 
@@ -103,6 +136,7 @@ fn draw_tutorial_hint(
     bridge: Option<Res<ServerBridge>>,
     mut sim_status: ResMut<SimStatusSnapshot>,
     mut sent_subscribe: Local<bool>,
+    mut settings: ResMut<GameSettings>,
 ) {
     // egui panics if ctx rect/fonts are accessed before its first run; skip frame 1.
     if !*ran_once {
@@ -187,6 +221,9 @@ fn draw_tutorial_hint(
         });
 
     if clicked {
-        advance(&mut state);
+        if advance(&mut state) && !settings.tutorial_skipped {
+            settings.tutorial_skipped = true;
+            settings.save();
+        }
     }
 }

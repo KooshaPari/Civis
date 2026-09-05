@@ -635,11 +635,71 @@ fn draw_main_menu(
                             command.action = MainMenuCommand::OpenSettings;
                         }
                         ui.add_space(8.0);
-                        if menu_button(ui, "\u{23fb}  Quit").clicked() {
+                        if menu_button(ui, "✕  Quit").clicked() {
                             command.action = MainMenuCommand::Quit;
                         }
                     });
                 });
+        });
+
+    // Right-side enrichment panel (banners + stat tile)
+    egui::Area::new(egui::Id::new("main_menu_right"))
+        .anchor(egui::Align2::RIGHT_CENTER, egui::vec2(-48.0, 0.0))
+        .order(egui::Order::Foreground)
+        .show(ctx, |ui| {
+            egui::Frame::NONE
+                .fill(GLASS_FILL)
+                .inner_margin(egui::Margin::same(24))
+                .show(ui, |ui| {
+                    ui.set_min_width(300.0);
+                    ui.vertical(|ui| {
+                        ui.label(
+                            egui::RichText::new("WHATS NEW").size(13.0).color(DIM).strong(),
+                        );
+                        ui.add_space(8.0);
+                        banner_tile(
+                            ui,
+                            "Sandbox Reactions",
+                            "Fire burns wood, lava makes steam + stone — material physics are live.",
+                            KC_ACCENT,
+                        );
+                        ui.add_space(10.0);
+                        banner_tile(
+                            ui,
+                            "Emergent Civ",
+                            "30+ simulation phases run every tick. Watch civs form, trade, and grow.",
+                            CHIP_FILL,
+                        );
+                        ui.add_space(14.0);
+                        ui.separator();
+                        ui.add_space(10.0);
+                        egui::Frame::NONE
+                            .fill(CHIP_FILL)
+                            .rounding(egui::Rounding::same(10))
+                            .inner_margin(egui::Margin::same(16))
+                            .show(ui, |ui| {
+                                ui.horizontal(|ui| {
+                                    ui.label(egui::RichText::new("VERSION").size(12.0).color(DIM).strong());
+                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                        ui.label(egui::RichText::new("v0.5").size(15.0).color(KC_ACCENT).strong());
+                                    });
+                                });
+                            });
+                    });
+                });
+        });
+}
+
+fn banner_tile(ui: &mut egui::Ui, title: &str, body: &str, accent: egui::Color32) {
+    egui::Frame::NONE
+        .fill(CHIP_FILL)
+        .rounding(egui::Rounding::same(10))
+        .inner_margin(egui::Margin::same(14))
+        .show(ui, |ui| {
+            ui.set_min_width(272.0);
+            ui.label(egui::RichText::new(title).size(16.0).color(accent).strong());
+            ui.add_space(4.0);
+            ui.label(egui::RichText::new(body).size(13.0).color(DIM));
         });
 }
 
@@ -934,7 +994,7 @@ fn draw_pause_menu(
                         ui.add_space(14.0);
                         ui.separator();
                         ui.add_space(10.0);
-                        if menu_button(ui, "\u{23fb}  Quit").clicked() {
+                        if menu_button(ui, "✕  Quit").clicked() {
                             exit.write(AppExit::Success);
                         }
                     });
@@ -1075,8 +1135,8 @@ fn gpu_capabilities_settings_section(ui: &mut egui::Ui, gpu_caps: Option<&GpuCap
 fn menu_button(ui: &mut egui::Ui, label: &str) -> egui::Response {
     let btn = egui::Button::new(egui::RichText::new(label).size(16.0))
         .fill(CHIP_FILL)
-        .min_size(egui::vec2(220.0, 40.0))
-        .corner_radius(egui::CornerRadius::same(8));
+        .min_size(egui::vec2(260.0, 46.0))
+        .corner_radius(egui::CornerRadius::same(10));
     ui.add(btn)
 }
 

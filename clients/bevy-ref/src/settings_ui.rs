@@ -998,6 +998,10 @@ pub struct GameSettings {
     /// Whether the panel is currently visible (not persisted).
     #[serde(skip)]
     pub open: bool,
+    /// Whether the user has skipped/dismissed the tutorial. Persisted so it
+    /// is not re-shown every launch. Defaults to false (show on first run).
+    #[serde(default)]
+    pub tutorial_skipped: bool,
 }
 
 /// Non-persisted state for rebinding capture.
@@ -1019,6 +1023,7 @@ impl Default for GameSettings {
             network: NetworkSettings::default(),
             active_tab: SettingsTab::default(),
             open: false,
+            tutorial_skipped: false,
         }
     }
 }

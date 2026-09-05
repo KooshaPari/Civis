@@ -385,8 +385,9 @@ pub struct GraphicsSettings {
     /// Particle / screen VFX feature toggle.
     #[serde(default)]
     pub vfx: bool,
-    // --- Phase 6.1: custom GPU compute post-FX (civ_postfx) ---
-    /// Master switch for the WGSL compute SSAO + Bloom passes.
+    // --- Phase 6.1 / Phase 7.3: custom GPU compute post-FX (civ_postfx) ---
+    /// Master switch for the WGSL compute SSAO + Bloom + SSGI + ACES +
+    /// Vignette + Chromatic + LUT passes.
     #[serde(default = "default_true")]
     pub postfx_enabled: bool,
     /// Per-pass toggle for the custom WGSL SSAO compute pass.
@@ -395,6 +396,21 @@ pub struct GraphicsSettings {
     /// Per-pass toggle for the custom WGSL Bloom compute pass.
     #[serde(default = "default_true")]
     pub postfx_bloom: bool,
+    /// Per-pass toggle for the custom WGSL SSGI compute pass.
+    #[serde(default = "default_true")]
+    pub postfx_ssgi: bool,
+    /// Per-pass toggle for the custom WGSL ACES tonemapping pass.
+    #[serde(default = "default_true")]
+    pub postfx_aces: bool,
+    /// Per-pass toggle for the custom WGSL Vignette pass.
+    #[serde(default = "default_true")]
+    pub postfx_vignette: bool,
+    /// Per-pass toggle for the custom WGSL Chromatic Aberration pass.
+    #[serde(default = "default_true")]
+    pub postfx_chromatic: bool,
+    /// Per-pass toggle for the custom WGSL LUT color-grading pass.
+    #[serde(default = "default_true")]
+    pub postfx_lut: bool,
 }
 
 impl Default for GraphicsSettings {
@@ -419,12 +435,17 @@ impl Default for GraphicsSettings {
             motion_blur: false,
             gi: false,
             vfx: true,
-            // Phase 6.1 — match `CivPostFxToggle::default()` so persisted
-            // settings files written before this field existed deserialize
-            // to a working "everything on" state.
+            // Phase 6.1 / Phase 7.3 — match `CivPostFxToggle::default()` so
+            // persisted settings files written before these fields existed
+            // deserialize to a working "everything on" state.
             postfx_enabled: true,
             postfx_ssao: true,
             postfx_bloom: true,
+            postfx_ssgi: true,
+            postfx_aces: true,
+            postfx_vignette: true,
+            postfx_chromatic: true,
+            postfx_lut: true,
         }
     }
 }
@@ -504,30 +525,50 @@ impl GraphicsSettings {
             }
             QualityPreset::Custom => {}
         }
-        // Phase 6.1 — preset-driven defaults for the custom WGSL compute
-        // post-FX. Low turns it off (perf), Medium keeps bloom only (cheaper
-        // visual), High and Ultra turn everything on (matches the existing
-        // "more is better" ramp for AO/Bloom).
+        // Phase 6.1 / Phase 7.3 — preset-driven defaults for the custom WGSL
+        // compute post-FX. Low turns everything off (perf), Medium keeps
+        // Bloom (cheapest visual), High enables SSAO+Bloom+ACES+Vignette,
+        // Ultra enables everything.
         match preset {
             QualityPreset::Low => {
                 self.postfx_enabled = false;
                 self.postfx_ssao = false;
                 self.postfx_bloom = false;
+                self.postfx_ssgi = false;
+                self.postfx_aces = false;
+                self.postfx_vignette = false;
+                self.postfx_chromatic = false;
+                self.postfx_lut = false;
             }
             QualityPreset::Medium => {
                 self.postfx_enabled = true;
                 self.postfx_ssao = false;
                 self.postfx_bloom = true;
+                self.postfx_ssgi = false;
+                self.postfx_aces = true;
+                self.postfx_vignette = false;
+                self.postfx_chromatic = false;
+                self.postfx_lut = false;
             }
             QualityPreset::High => {
                 self.postfx_enabled = true;
                 self.postfx_ssao = true;
                 self.postfx_bloom = true;
+                self.postfx_ssgi = false;
+                self.postfx_aces = true;
+                self.postfx_vignette = true;
+                self.postfx_chromatic = false;
+                self.postfx_lut = true;
             }
             QualityPreset::Ultra => {
                 self.postfx_enabled = true;
                 self.postfx_ssao = true;
                 self.postfx_bloom = true;
+                self.postfx_ssgi = true;
+                self.postfx_aces = true;
+                self.postfx_vignette = true;
+                self.postfx_chromatic = true;
+                self.postfx_lut = true;
             }
             QualityPreset::Custom => {}
         }

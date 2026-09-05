@@ -463,15 +463,26 @@ pub struct GfxSettings {
     pub motion_blur: bool,
     /// Motion blur shutter angle (0.0–1.0; only used when `motion_blur` is on).
     pub motion_blur_shutter: f32,
-    // --- Custom GPU compute post-FX (Phase 6.1) ---
-    /// Master switch for the `civ_postfx` module's two WGSL compute passes
-    /// (SSAO + Bloom). When false, no GPU work is dispatched even if the
-    /// per-pass flags below are on. Wired live into [`crate::civ_postfx::CivPostFxToggle`].
+    // --- Custom GPU compute post-FX (Phase 6.1 / Phase 7.3) ---
+    /// Master switch for the `civ_postfx` module's seven WGSL compute passes
+    /// (SSAO + Bloom + SSGI + ACES + Vignette + Chromatic + LUT). When false,
+    /// no GPU work is dispatched even if the per-pass flags below are on.
+    /// Wired live into [`crate::civ_postfx::CivPostFxToggle`].
     pub postfx_enabled: bool,
     /// Run the custom WGSL SSAO compute pass (`civ_postfx`).
     pub postfx_ssao: bool,
     /// Run the custom WGSL Bloom compute pass (`civ_postfx`).
     pub postfx_bloom: bool,
+    /// Run the custom WGSL SSGI compute pass (`civ_postfx`).
+    pub postfx_ssgi: bool,
+    /// Run the custom WGSL ACES tonemapping pass (`civ_postfx`).
+    pub postfx_aces: bool,
+    /// Run the custom WGSL Vignette pass (`civ_postfx`).
+    pub postfx_vignette: bool,
+    /// Run the custom WGSL Chromatic Aberration pass (`civ_postfx`).
+    pub postfx_chromatic: bool,
+    /// Run the custom WGSL LUT color-grading pass (`civ_postfx`).
+    pub postfx_lut: bool,
 
     // --- Display ---
     /// Window resolution preset.
@@ -503,12 +514,17 @@ impl Default for GfxSettings {
             tonemapping: ToneCurve::AcesFit,
             motion_blur: false,
             motion_blur_shutter: 0.5,
-            // Phase 6.1 — custom GPU compute post-FX defaults match the
-            // `CivPostFxToggle::default()` so the live dispatcher starts
-            // dispatching the moment the renderer comes up.
+            // Phase 6.1 / Phase 7.3 — custom GPU compute post-FX defaults
+            // match the `CivPostFxToggle::default()` so the live dispatcher
+            // starts dispatching the moment the renderer comes up.
             postfx_enabled: true,
             postfx_ssao: true,
             postfx_bloom: true,
+            postfx_ssgi: true,
+            postfx_aces: true,
+            postfx_vignette: true,
+            postfx_chromatic: true,
+            postfx_lut: true,
             resolution: ResPreset::R1080p,
             window_mode: WinMode::Windowed,
             open: false,
@@ -656,6 +672,11 @@ pub fn gfx_from_game_settings(game: &crate::settings_ui::GameSettings) -> GfxSet
         postfx_enabled: g.postfx_enabled,
         postfx_ssao: g.postfx_ssao,
         postfx_bloom: g.postfx_bloom,
+        postfx_ssgi: g.postfx_ssgi,
+        postfx_aces: g.postfx_aces,
+        postfx_vignette: g.postfx_vignette,
+        postfx_chromatic: g.postfx_chromatic,
+        postfx_lut: g.postfx_lut,
         resolution,
         window_mode,
         open: false,
@@ -775,7 +796,7 @@ pub fn apply_gfx_settings(
         }
     }
 
-    // --- Phase 6.1: custom WGSL post-FX compute passes ---
+    // --- Phase 6.1 / Phase 7.3: custom WGSL post-FX compute passes ---
     // Sync the runtime toggle from `GfxSettings` into the live dispatcher
     // resource so the player can A/B compare without recreating the plugin.
     // Done here (and not in the camera loop above) because the toggle is a
@@ -784,6 +805,11 @@ pub fn apply_gfx_settings(
         toggle.enabled = settings.postfx_enabled;
         toggle.ssao_pass = settings.postfx_ssao;
         toggle.bloom_pass = settings.postfx_bloom;
+        toggle.ssgi_pass = settings.postfx_ssgi;
+        toggle.aces_pass = settings.postfx_aces;
+        toggle.vignette_pass = settings.postfx_vignette;
+        toggle.chromatic_pass = settings.postfx_chromatic;
+        toggle.lut_pass = settings.postfx_lut;
     }
 }
 

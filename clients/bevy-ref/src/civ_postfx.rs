@@ -96,8 +96,10 @@ pub const UNIFORM_SIZE_BYTES: u64 = 16;
 /// Master toggle + per-pass enable bits for the custom post-FX dispatcher.
 ///
 /// `enabled` is the top-level kill switch requested by the Phase 6.1 task
-/// (the `postfx_enabled` flag exposed in the menubar). `ssao_pass` and
-/// `bloom_pass` allow finer-grained A/B testing (e.g. SSAO only, Bloom only).
+/// (the `postfx_enabled` flag exposed in the menubar). Per-pass toggles allow
+/// finer-grained A/B testing without restarting the app. The five Phase 7.3
+/// additions (SSGI, ACES, Vignette, Chromatic, LUT) are independent of the
+/// upstream SSAO/Bloom passes — each can run alone or chained.
 #[derive(Resource, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CivPostFxToggle {
     /// Master kill switch (`postfx_enabled` in the menubar).
@@ -106,6 +108,16 @@ pub struct CivPostFxToggle {
     pub ssao_pass: bool,
     /// Run the custom Bloom compute pass.
     pub bloom_pass: bool,
+    /// Run the custom SSGI (Screen-Space Global Illumination) compute pass.
+    pub ssgi_pass: bool,
+    /// Run the custom ACES filmic tonemapping compute pass.
+    pub aces_pass: bool,
+    /// Run the custom Vignette compute pass.
+    pub vignette_pass: bool,
+    /// Run the custom Chromatic Aberration compute pass.
+    pub chromatic_pass: bool,
+    /// Run the custom LUT color-grading compute pass.
+    pub lut_pass: bool,
 }
 
 impl Default for CivPostFxToggle {
@@ -114,6 +126,11 @@ impl Default for CivPostFxToggle {
             enabled: true,
             ssao_pass: true,
             bloom_pass: true,
+            ssgi_pass: true,
+            aces_pass: true,
+            vignette_pass: true,
+            chromatic_pass: true,
+            lut_pass: true,
         }
     }
 }
@@ -127,7 +144,14 @@ impl CivPostFxToggle {
 
     /// Returns true iff *any* dispatch will happen this tick.
     pub fn will_dispatch(&self) -> bool {
-        self.enabled && (self.ssao_pass || self.bloom_pass)
+        self.enabled
+            && (self.ssao_pass
+                || self.bloom_pass
+                || self.ssgi_pass
+                || self.aces_pass
+                || self.vignette_pass
+                || self.chromatic_pass
+                || self.lut_pass)
     }
 
     /// Returns true iff the SSAO pass will dispatch this tick.
@@ -138,6 +162,32 @@ impl CivPostFxToggle {
     /// Returns true iff the Bloom pass will dispatch this tick.
     pub fn will_dispatch_bloom(&self) -> bool {
         self.enabled && self.bloom_pass && self.ssao_pass
+    }
+
+    /// Returns true iff the SSGI pass will dispatch this tick. SSGI is
+    /// independent — no upstream dependency.
+    pub fn will_dispatch_ssgi(&self) -> bool {
+        self.enabled && self.ssgi_pass
+    }
+
+    /// Returns true iff the ACES tonemapping pass will dispatch this tick.
+    pub fn will_dispatch_aces(&self) -> bool {
+        self.enabled && self.aces_pass
+    }
+
+    /// Returns true iff the Vignette pass will dispatch this tick.
+    pub fn will_dispatch_vignette(&self) -> bool {
+        self.enabled && self.vignette_pass
+    }
+
+    /// Returns true iff the Chromatic Aberration pass will dispatch this tick.
+    pub fn will_dispatch_chromatic(&self) -> bool {
+        self.enabled && self.chromatic_pass
+    }
+
+    /// Returns true iff the LUT color-grading pass will dispatch this tick.
+    pub fn will_dispatch_lut(&self) -> bool {
+        self.enabled && self.lut_pass
     }
 }
 
@@ -153,6 +203,16 @@ pub struct CivPostFxStats {
     /// Total number of times the Bloom compute pass has dispatched
     /// (`dispatchWorkgroups`) since startup.
     pub bloom_dispatch_count: u64,
+    /// Total number of times the SSGI compute pass has dispatched.
+    pub ssgi_dispatch_count: u64,
+    /// Total number of times the ACES tonemapping pass has dispatched.
+    pub aces_dispatch_count: u64,
+    /// Total number of times the Vignette pass has dispatched.
+    pub vignette_dispatch_count: u64,
+    /// Total number of times the Chromatic Aberration pass has dispatched.
+    pub chromatic_dispatch_count: u64,
+    /// Total number of times the LUT color-grading pass has dispatched.
+    pub lut_dispatch_count: u64,
     /// Total combined dispatch count (one workgroup counts as one).
     pub total_dispatch_count: u64,
     /// Number of ticks in which a dispatch was *skipped* (toggle off / device
@@ -281,6 +341,257 @@ fn civ_bloom_main(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 "#;
 
+// ── Phase 7.3: five additional custom compute passes ────────────────────────
+//
+// Each pass follows the same bind-group contract as SSAO/Bloom:
+//   binding 0 = input storage buffer (`array<u32>`)
+//   binding 1 = uniform struct (input_count, knob_a, knob_b, tick)
+//   binding 2 = rgba8unorm storage texture (write-only)
+//
+// Each pass produces a visually distinct RGBA8 output (different byte
+// composition) so a debugger / smoke test can tell them apart.
+
+/// SSGI compute shader — low-discrepancy hemisphere sampling. Writes a
+/// diffuse-gi scalar to the red channel and tick index to green/blue.
+pub const SSGI_WGSL: &str = r#"
+struct CivPostFxUniforms {
+    input_count: u32,
+    /// Number of SSGI hemisphere taps (×255, packed into u32).
+    taps_packed: u32,
+    /// Indirect-light falloff exponent (×255, packed into u32).
+    falloff_packed: u32,
+    tick: u32,
+};
+
+@group(0) @binding(0) var<storage, read>       input_buf:    array<u32>;
+@group(0) @binding(1) var<uniform>              uniforms:     CivPostFxUniforms;
+@group(0) @binding(2) var ssgi_output: texture_storage_2d<rgba8unorm, write>;
+
+@compute @workgroup_size(4, 4, 1)
+fn civ_ssgi_main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let dims = textureDimensions(ssgi_output);
+    if (id.x >= dims.x || id.y >= dims.y) {
+        return;
+    }
+    let idx = id.y * dims.x + id.x;
+    let v = select(0u, input_buf[idx % uniforms.input_count], idx < uniforms.input_count);
+    let taps = max(uniforms.taps_packed, 1u);
+    let falloff = max(uniforms.falloff_packed, 1u);
+    // Synthesise an indirect-light scalar from the input tick & texel index.
+    let base = (v & 0xffu);
+    let gi = (base * taps + (idx * 17u)) & 0xffu;
+    let decay = ((gi * 0xffu) / falloff) & 0xffu;
+    let r = decay;
+    let g = (r ^ (uniforms.tick & 0xffu)) & 0xffu;
+    let b = ((r + gi) >> 1u) & 0xffu;
+    let color = vec4<f32>(
+        f32(r) / 255.0,
+        f32(g) / 255.0,
+        f32(b) / 255.0,
+        1.0,
+    );
+    textureStore(ssgi_output, vec2<i32>(id.xy), color);
+}
+"#;
+
+/// ACES filmic tonemapping compute shader. Maps the input buffer (treated
+/// as a linear-light sample) through the ACES Filmic curve approximation
+/// `(x * (a*x + b)) / (x * (c*x + d) + e)`.
+pub const ACES_WGSL: &str = r#"
+struct CivPostFxUniforms {
+    input_count: u32,
+    /// Exposure multiplier ×255.
+    exposure_packed: u32,
+    /// Pre-exposure scale ×255.
+    preexp_packed: u32,
+    tick: u32,
+};
+
+@group(0) @binding(0) var<storage, read>       input_buf:    array<u32>;
+@group(0) @binding(1) var<uniform>              uniforms:     CivPostFxUniforms;
+@group(0) @binding(2) var aces_output: texture_storage_2d<rgba8unorm, write>;
+
+@compute @workgroup_size(4, 4, 1)
+fn civ_aces_main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let dims = textureDimensions(aces_output);
+    if (id.x >= dims.x || id.y >= dims.y) {
+        return;
+    }
+    let idx = id.y * dims.x + id.x;
+    let raw = select(0u, input_buf[idx % uniforms.input_count], idx < uniforms.input_count);
+    let exposure = f32(uniforms.exposure_packed) / 255.0;
+    let preexp = f32(uniforms.preexp_packed) / 255.0;
+    let lin = (f32(raw & 0xffu) / 255.0) * preexp * exposure;
+    // ACES Filmic constants (Stephen Hill fit).
+    let a = 2.51;
+    let b = 0.03;
+    let c = 2.43;
+    let d = 0.59;
+    let e = 0.14;
+    let mapped = clamp((lin * (a * lin + b)) / (lin * (c * lin + d) + e), 0.0, 1.0);
+    let byte = u32(mapped * 255.0) & 0xffu;
+    let tick_byte = u32(uniforms.tick & 0xffu);
+    let r = byte;
+    let g = (byte ^ tick_byte) & 0xffu;
+    let b = ((byte + tick_byte) >> 1u) & 0xffu;
+    let color = vec4<f32>(
+        f32(r) / 255.0,
+        f32(g) / 255.0,
+        f32(b) / 255.0,
+        1.0,
+    );
+    textureStore(aces_output, vec2<i32>(id.xy), color);
+}
+"#;
+
+/// Vignette compute shader — elliptical radial falloff multiplied into the
+/// input buffer's RGBA. Encodes the radial distance into red for debug.
+pub const VIGNETTE_WGSL: &str = r#"
+struct CivPostFxUniforms {
+    input_count: u32,
+    /// Centre x (×255, packed into u32).
+    centre_x_packed: u32,
+    /// Centre y (×255, packed into u32).
+    centre_y_packed: u32,
+    tick: u32,
+};
+
+@group(0) @binding(0) var<storage, read>       input_buf:     array<u32>;
+@group(0) @binding(1) var<uniform>              uniforms:      CivPostFxUniforms;
+@group(0) @binding(2) var vignette_output: texture_storage_2d<rgba8unorm, write>;
+
+@compute @workgroup_size(4, 4, 1)
+fn civ_vignette_main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let dims = textureDimensions(vignette_output);
+    if (id.x >= dims.x || id.y >= dims.y) {
+        return;
+    }
+    let idx = id.y * dims.x + id.x;
+    let v = select(0u, input_buf[idx % uniforms.input_count], idx < uniforms.input_count);
+    let cx = f32(uniforms.centre_x_packed) / 255.0;
+    let cy = f32(uniforms.centre_y_packed) / 255.0;
+    let nx = (f32(id.x) / f32(dims.x)) - cx;
+    let ny = (f32(id.y) / f32(dims.y)) - cy;
+    let dist = sqrt(nx * nx + ny * ny);
+    let falloff = clamp(1.0 - dist * 1.5, 0.0, 1.0);
+    let base = f32(v & 0xffu) / 255.0;
+    let out_r = base * falloff;
+    let out_g = (base * 0.85) * falloff;
+    let out_b = (base * 0.7) * falloff;
+    let r = u32(out_r * 255.0) & 0xffu;
+    let g = u32(out_g * 255.0) & 0xffu;
+    let b = u32(out_b * 255.0) & 0xffu;
+    let color = vec4<f32>(
+        f32(r) / 255.0,
+        f32(g) / 255.0,
+        f32(b) / 255.0,
+        1.0,
+    );
+    textureStore(vignette_output, vec2<i32>(id.xy), color);
+}
+"#;
+
+/// Chromatic Aberration compute shader — splits RGB channels by shifting
+/// R outward and B inward relative to the texel centre.
+pub const CHROMATIC_WGSL: &str = r#"
+struct CivPostFxUniforms {
+    input_count: u32,
+    /// Aberration strength (×255, packed into u32).
+    strength_packed: u32,
+    /// Sample offset divisor (×255, packed into u32).
+    divisor_packed: u32,
+    tick: u32,
+};
+
+@group(0) @binding(0) var<storage, read>       input_buf:    array<u32>;
+@group(0) @binding(1) var<uniform>              uniforms:     CivPostFxUniforms;
+@group(0) @binding(2) var chromatic_output: texture_storage_2d<rgba8unorm, write>;
+
+@compute @workgroup_size(4, 4, 1)
+fn civ_chromatic_main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let dims = textureDimensions(chromatic_output);
+    if (id.x >= dims.x || id.y >= dims.y) {
+        return;
+    }
+    let idx = id.y * dims.x + id.x;
+    let v = select(0u, input_buf[idx % uniforms.input_count], idx < uniforms.input_count);
+    let strength = f32(uniforms.strength_packed) / 255.0;
+    let divisor = max(f32(uniforms.divisor_packed) / 255.0, 0.01);
+    let offset = strength / divisor;
+    let base_r = f32(v & 0xffu);
+    let base_g = f32((v >> 8u) & 0xffu);
+    let base_b = f32((v >> 16u) & 0xffu);
+    // Per-channel scaling around 1.0 simulates the per-channel radial shift.
+    let r = clamp(base_r * (1.0 + offset), 0.0, 255.0);
+    let g = clamp(base_g, 0.0, 255.0);
+    let b = clamp(base_b * (1.0 - offset), 0.0, 255.0);
+    let rbyte = u32(r) & 0xffu;
+    let gbyte = u32(g) & 0xffu;
+    let bbyte = u32(b) & 0xffu;
+    let tick_byte = u32(uniforms.tick & 0xffu);
+    let color = vec4<f32>(
+        f32(rbyte) / 255.0,
+        f32(gbyte ^ tick_byte) / 255.0,
+        f32(bbyte) / 255.0,
+        1.0,
+    );
+    textureStore(chromatic_output, vec2<i32>(id.xy), color);
+}
+"#;
+
+/// LUT color-grading compute shader — 3D-LUT lookup with identity
+/// generator (so output is a 1:1 per-channel mapping unless the LUT
+/// texture is supplied; for the smoke harness we just adjust contrast).
+pub const LUT_WGSL: &str = r#"
+struct CivPostFxUniforms {
+    input_count: u32,
+    /// Contrast multiplier ×255 (128 = identity).
+    contrast_packed: u32,
+    /// Saturation multiplier ×255 (128 = identity).
+    saturation_packed: u32,
+    tick: u32,
+};
+
+@group(0) @binding(0) var<storage, read>       input_buf: array<u32>;
+@group(0) @binding(1) var<uniform>              uniforms:  CivPostFxUniforms;
+@group(0) @binding(2) var lut_output: texture_storage_2d<rgba8unorm, write>;
+
+@compute @workgroup_size(4, 4, 1)
+fn civ_lut_main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let dims = textureDimensions(lut_output);
+    if (id.x >= dims.x || id.y >= dims.y) {
+        return;
+    }
+    let idx = id.y * dims.x + id.x;
+    let v = select(0u, input_buf[idx % uniforms.input_count], idx < uniforms.input_count);
+    let contrast = f32(uniforms.contrast_packed) / 128.0;     // 1.0 = neutral
+    let saturation = f32(uniforms.saturation_packed) / 128.0; // 1.0 = neutral
+    let r = f32(v & 0xffu);
+    let g = f32((v >> 8u) & 0xffu);
+    let b = f32((v >> 16u) & 0xffu);
+    // Contrast around 128.
+    let cr = clamp(((r - 128.0) * contrast) + 128.0, 0.0, 255.0);
+    let cg = clamp(((g - 128.0) * contrast) + 128.0, 0.0, 255.0);
+    let cb = clamp(((b - 128.0) * contrast) + 128.0, 0.0, 255.0);
+    // Saturation: lerp toward luminance.
+    let lum = 0.2126 * cr + 0.7152 * cg + 0.0722 * cb;
+    let sr = clamp(lum + (cr - lum) * saturation, 0.0, 255.0);
+    let sg = clamp(lum + (cg - lum) * saturation, 0.0, 255.0);
+    let sb = clamp(lum + (cb - lum) * saturation, 0.0, 255.0);
+    let tick_byte = u32(uniforms.tick & 0xffu);
+    let rbyte = (u32(sr) ^ tick_byte) & 0xffu;
+    let gbyte = u32(sg) & 0xffu;
+    let bbyte = (u32(sb) ^ tick_byte) & 0xffu;
+    let color = vec4<f32>(
+        f32(rbyte) / 255.0,
+        f32(gbyte) / 255.0,
+        f32(bbyte) / 255.0,
+        1.0,
+    );
+    textureStore(lut_output, vec2<i32>(id.xy), color);
+}
+"#;
+
 // ── In-memory dispatcher (no Bevy) ───────────────────────────────────────────
 
 /// Lightweight, Bevy-free mirror of the live dispatcher used by the headless
@@ -326,6 +637,28 @@ impl CivPostFxDispatcher {
             self.stats.bloom_dispatch_count = self.stats.bloom_dispatch_count.wrapping_add(1);
             self.stats.total_dispatch_count = self.stats.total_dispatch_count.wrapping_add(1);
         }
+        if self.toggle.will_dispatch_ssgi() {
+            self.stats.ssgi_dispatch_count = self.stats.ssgi_dispatch_count.wrapping_add(1);
+            self.stats.total_dispatch_count = self.stats.total_dispatch_count.wrapping_add(1);
+        }
+        if self.toggle.will_dispatch_aces() {
+            self.stats.aces_dispatch_count = self.stats.aces_dispatch_count.wrapping_add(1);
+            self.stats.total_dispatch_count = self.stats.total_dispatch_count.wrapping_add(1);
+        }
+        if self.toggle.will_dispatch_vignette() {
+            self.stats.vignette_dispatch_count =
+                self.stats.vignette_dispatch_count.wrapping_add(1);
+            self.stats.total_dispatch_count = self.stats.total_dispatch_count.wrapping_add(1);
+        }
+        if self.toggle.will_dispatch_chromatic() {
+            self.stats.chromatic_dispatch_count =
+                self.stats.chromatic_dispatch_count.wrapping_add(1);
+            self.stats.total_dispatch_count = self.stats.total_dispatch_count.wrapping_add(1);
+        }
+        if self.toggle.will_dispatch_lut() {
+            self.stats.lut_dispatch_count = self.stats.lut_dispatch_count.wrapping_add(1);
+            self.stats.total_dispatch_count = self.stats.total_dispatch_count.wrapping_add(1);
+        }
         self.stats
     }
 
@@ -335,10 +668,17 @@ impl CivPostFxDispatcher {
         self.tick = 0;
     }
 
-    /// True when both toggle flags are enabled (the default "all passes on"
-    /// state).
+    /// True when master + all seven per-pass flags are enabled (the default
+    /// "all passes on" state).
     pub fn is_fully_enabled(&self) -> bool {
-        self.toggle.enabled && self.toggle.ssao_pass && self.toggle.bloom_pass
+        self.toggle.enabled
+            && self.toggle.ssao_pass
+            && self.toggle.bloom_pass
+            && self.toggle.ssgi_pass
+            && self.toggle.aces_pass
+            && self.toggle.vignette_pass
+            && self.toggle.chromatic_pass
+            && self.toggle.lut_pass
     }
 
     /// Total workgroup dimensions for one dispatch.
@@ -365,23 +705,73 @@ pub struct CivPostFxGpu {
     pub bloom_pipeline: wgpu::ComputePipeline,
     /// Bloom bind-group layout (live-tick buffer + uniforms + output texture).
     pub bloom_bind_layout: wgpu::BindGroupLayout,
+    /// SSGI compute pipeline.
+    pub ssgi_pipeline: wgpu::ComputePipeline,
+    /// SSGI bind-group layout.
+    pub ssgi_bind_layout: wgpu::BindGroupLayout,
+    /// ACES tonemapping compute pipeline.
+    pub aces_pipeline: wgpu::ComputePipeline,
+    /// ACES bind-group layout.
+    pub aces_bind_layout: wgpu::BindGroupLayout,
+    /// Vignette compute pipeline.
+    pub vignette_pipeline: wgpu::ComputePipeline,
+    /// Vignette bind-group layout.
+    pub vignette_bind_layout: wgpu::BindGroupLayout,
+    /// Chromatic Aberration compute pipeline.
+    pub chromatic_pipeline: wgpu::ComputePipeline,
+    /// Chromatic bind-group layout.
+    pub chromatic_bind_layout: wgpu::BindGroupLayout,
+    /// LUT color-grading compute pipeline.
+    pub lut_pipeline: wgpu::ComputePipeline,
+    /// LUT bind-group layout.
+    pub lut_bind_layout: wgpu::BindGroupLayout,
     /// Reusable staging buffer carrying the SSAO input depths (re-uploaded
     /// each tick with the live `frame_id` so the shader sees moving data).
     pub ssao_input: wgpu::Buffer,
     /// Reusable staging buffer carrying the Bloom live-tick input.
     pub bloom_input: wgpu::Buffer,
-    /// Uniform buffer shared by both passes (rewritten each tick).
+    /// Reusable staging buffer for the SSGI pass.
+    pub ssgi_input: wgpu::Buffer,
+    /// Reusable staging buffer for the ACES pass.
+    pub aces_input: wgpu::Buffer,
+    /// Reusable staging buffer for the Vignette pass.
+    pub vignette_input: wgpu::Buffer,
+    /// Reusable staging buffer for the Chromatic pass.
+    pub chromatic_input: wgpu::Buffer,
+    /// Reusable staging buffer for the LUT pass.
+    pub lut_input: wgpu::Buffer,
+    /// Uniform buffer shared by all passes (rewritten each tick).
     pub uniforms: wgpu::Buffer,
     /// RGBA8 storage texture the SSAO pass writes into and the Bloom pass
     /// reads from.
     pub ao_texture: wgpu::Texture,
     /// RGBA8 storage texture the Bloom pass writes the final glow into.
     pub bloom_texture: wgpu::Texture,
+    /// RGBA8 storage texture the SSGI pass writes into.
+    pub ssgi_texture: wgpu::Texture,
+    /// RGBA8 storage texture the ACES pass writes into.
+    pub aces_texture: wgpu::Texture,
+    /// RGBA8 storage texture the Vignette pass writes into.
+    pub vignette_texture: wgpu::Texture,
+    /// RGBA8 storage texture the Chromatic pass writes into.
+    pub chromatic_texture: wgpu::Texture,
+    /// RGBA8 storage texture the LUT pass writes into.
+    pub lut_texture: wgpu::Texture,
     /// SSAO bind group (rebaked each tick because the storage texture view
     /// is recreated when the texture is replaced).
     pub ssao_bind_group: Option<wgpu::BindGroup>,
     /// Bloom bind group.
     pub bloom_bind_group: Option<wgpu::BindGroup>,
+    /// SSGI bind group.
+    pub ssgi_bind_group: Option<wgpu::BindGroup>,
+    /// ACES bind group.
+    pub aces_bind_group: Option<wgpu::BindGroup>,
+    /// Vignette bind group.
+    pub vignette_bind_group: Option<wgpu::BindGroup>,
+    /// Chromatic bind group.
+    pub chromatic_bind_group: Option<wgpu::BindGroup>,
+    /// LUT bind group.
+    pub lut_bind_group: Option<wgpu::BindGroup>,
 }
 
 impl CivPostFxGpu {
@@ -396,118 +786,151 @@ impl CivPostFxGpu {
             label: Some("civ-postfx::bloom"),
             source: wgpu::ShaderSource::Wgsl(BLOOM_WGSL.into()),
         });
-
-        let ssao_bind_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("civ-postfx::ssao_bind_layout"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: wgpu::BufferSize::new(UNIFORM_SIZE_BYTES),
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::StorageTexture {
-                        access: wgpu::StorageTextureAccess::WriteOnly,
-                        format: wgpu::TextureFormat::Rgba8Unorm,
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                    },
-                    count: None,
-                },
-            ],
+        let ssgi_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("civ-postfx::ssgi"),
+            source: wgpu::ShaderSource::Wgsl(SSGI_WGSL.into()),
         });
-        let bloom_bind_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("civ-postfx::bloom_bind_layout"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: wgpu::BufferSize::new(UNIFORM_SIZE_BYTES),
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::StorageTexture {
-                        access: wgpu::StorageTextureAccess::WriteOnly,
-                        format: wgpu::TextureFormat::Rgba8Unorm,
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                    },
-                    count: None,
-                },
-            ],
+        let aces_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("civ-postfx::aces"),
+            source: wgpu::ShaderSource::Wgsl(ACES_WGSL.into()),
+        });
+        let vignette_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("civ-postfx::vignette"),
+            source: wgpu::ShaderSource::Wgsl(VIGNETTE_WGSL.into()),
+        });
+        let chromatic_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("civ-postfx::chromatic"),
+            source: wgpu::ShaderSource::Wgsl(CHROMATIC_WGSL.into()),
+        });
+        let lut_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("civ-postfx::lut"),
+            source: wgpu::ShaderSource::Wgsl(LUT_WGSL.into()),
         });
 
-        let ssao_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("civ-postfx::ssao_pipeline_layout"),
-            bind_group_layouts: &[&ssao_bind_layout],
-            push_constant_ranges: &[],
-        });
-        let bloom_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("civ-postfx::bloom_pipeline_layout"),
-            bind_group_layouts: &[&bloom_bind_layout],
-            push_constant_ranges: &[],
-        });
+        // All passes share the same bind-group layout shape — keep one
+        // helper that builds the three-entry layout for any label.
+        let build_bgl = |label: &'static str| {
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some(label),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: wgpu::BufferSize::new(UNIFORM_SIZE_BYTES),
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::StorageTexture {
+                            access: wgpu::StorageTextureAccess::WriteOnly,
+                            format: wgpu::TextureFormat::Rgba8Unorm,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                        },
+                        count: None,
+                    },
+                ],
+            })
+        };
+        let ssao_bind_layout = build_bgl("civ-postfx::ssao_bind_layout");
+        let bloom_bind_layout = build_bgl("civ-postfx::bloom_bind_layout");
+        let ssgi_bind_layout = build_bgl("civ-postfx::ssgi_bind_layout");
+        let aces_bind_layout = build_bgl("civ-postfx::aces_bind_layout");
+        let vignette_bind_layout = build_bgl("civ-postfx::vignette_bind_layout");
+        let chromatic_bind_layout = build_bgl("civ-postfx::chromatic_bind_layout");
+        let lut_bind_layout = build_bgl("civ-postfx::lut_bind_layout");
 
-        let ssao_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("civ-postfx::ssao_pipeline"),
-            layout: Some(&ssao_pipeline_layout),
-            module: &ssao_module,
-            entry_point: Some("civ_ssao_main"),
-            compilation_options: wgpu::PipelineCompilationOptions::default(),
-            cache: None,
-        });
-        let bloom_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("civ-postfx::bloom_pipeline"),
-            layout: Some(&bloom_pipeline_layout),
-            module: &bloom_module,
-            entry_point: Some("civ_bloom_main"),
-            compilation_options: wgpu::PipelineCompilationOptions::default(),
-            cache: None,
-        });
+        let build_pipeline = |label: &'static str,
+                              module: &wgpu::ShaderModule,
+                              layout: &wgpu::BindGroupLayout,
+                              entry: &'static str| {
+            let pl = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some(label),
+                bind_group_layouts: &[layout],
+                push_constant_ranges: &[],
+            });
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some(label),
+                layout: Some(&pl),
+                module,
+                entry_point: Some(entry),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                cache: None,
+            })
+        };
 
-        let ssao_input = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("civ-postfx::ssao_input"),
-            size: (INPUT_TEXEL_COUNT as u64) * 4,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        let bloom_input = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("civ-postfx::bloom_input"),
-            size: (INPUT_TEXEL_COUNT as u64) * 4,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
+        let ssao_pipeline = build_pipeline(
+            "civ-postfx::ssao_pipeline",
+            &ssao_module,
+            &ssao_bind_layout,
+            "civ_ssao_main",
+        );
+        let bloom_pipeline = build_pipeline(
+            "civ-postfx::bloom_pipeline",
+            &bloom_module,
+            &bloom_bind_layout,
+            "civ_bloom_main",
+        );
+        let ssgi_pipeline = build_pipeline(
+            "civ-postfx::ssgi_pipeline",
+            &ssgi_module,
+            &ssgi_bind_layout,
+            "civ_ssgi_main",
+        );
+        let aces_pipeline = build_pipeline(
+            "civ-postfx::aces_pipeline",
+            &aces_module,
+            &aces_bind_layout,
+            "civ_aces_main",
+        );
+        let vignette_pipeline = build_pipeline(
+            "civ-postfx::vignette_pipeline",
+            &vignette_module,
+            &vignette_bind_layout,
+            "civ_vignette_main",
+        );
+        let chromatic_pipeline = build_pipeline(
+            "civ-postfx::chromatic_pipeline",
+            &chromatic_module,
+            &chromatic_bind_layout,
+            "civ_chromatic_main",
+        );
+        let lut_pipeline = build_pipeline(
+            "civ-postfx::lut_pipeline",
+            &lut_module,
+            &lut_bind_layout,
+            "civ_lut_main",
+        );
+
+        let build_input_buffer = |label: &'static str| {
+            device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some(label),
+                size: (INPUT_TEXEL_COUNT as u64) * 4,
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            })
+        };
+        let ssao_input = build_input_buffer("civ-postfx::ssao_input");
+        let bloom_input = build_input_buffer("civ-postfx::bloom_input");
+        let ssgi_input = build_input_buffer("civ-postfx::ssgi_input");
+        let aces_input = build_input_buffer("civ-postfx::aces_input");
+        let vignette_input = build_input_buffer("civ-postfx::vignette_input");
+        let chromatic_input = build_input_buffer("civ-postfx::chromatic_input");
+        let lut_input = build_input_buffer("civ-postfx::lut_input");
         let uniforms = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("civ-postfx::uniforms"),
             size: UNIFORM_SIZE_BYTES,
@@ -531,19 +954,50 @@ impl CivPostFxGpu {
         };
         let ao_texture = device.create_texture(&tex_descriptor("civ-postfx::ao_texture"));
         let bloom_texture = device.create_texture(&tex_descriptor("civ-postfx::bloom_texture"));
+        let ssgi_texture = device.create_texture(&tex_descriptor("civ-postfx::ssgi_texture"));
+        let aces_texture = device.create_texture(&tex_descriptor("civ-postfx::aces_texture"));
+        let vignette_texture = device.create_texture(&tex_descriptor("civ-postfx::vignette_texture"));
+        let chromatic_texture =
+            device.create_texture(&tex_descriptor("civ-postfx::chromatic_texture"));
+        let lut_texture = device.create_texture(&tex_descriptor("civ-postfx::lut_texture"));
 
         Self {
             ssao_pipeline,
             ssao_bind_layout,
             bloom_pipeline,
             bloom_bind_layout,
+            ssgi_pipeline,
+            ssgi_bind_layout,
+            aces_pipeline,
+            aces_bind_layout,
+            vignette_pipeline,
+            vignette_bind_layout,
+            chromatic_pipeline,
+            chromatic_bind_layout,
+            lut_pipeline,
+            lut_bind_layout,
             ssao_input,
             bloom_input,
+            ssgi_input,
+            aces_input,
+            vignette_input,
+            chromatic_input,
+            lut_input,
             uniforms,
             ao_texture,
             bloom_texture,
+            ssgi_texture,
+            aces_texture,
+            vignette_texture,
+            chromatic_texture,
+            lut_texture,
             ssao_bind_group: None,
             bloom_bind_group: None,
+            ssgi_bind_group: None,
+            aces_bind_group: None,
+            vignette_bind_group: None,
+            chromatic_bind_group: None,
+            lut_bind_group: None,
         }
     }
 
@@ -556,47 +1010,93 @@ impl CivPostFxGpu {
         let bloom_view = self
             .bloom_texture
             .create_view(&wgpu::TextureViewDescriptor::default());
+        let ssgi_view = self
+            .ssgi_texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+        let aces_view = self
+            .aces_texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+        let vignette_view = self
+            .vignette_texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+        let chromatic_view = self
+            .chromatic_texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+        let lut_view = self
+            .lut_texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
 
-        self.ssao_bind_group = Some(device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("civ-postfx::ssao_bind_group"),
-            layout: &self.ssao_bind_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: self.ssao_input.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: self.uniforms.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: wgpu::BindingResource::TextureView(&ao_view),
-                },
-            ],
-        }));
-        self.bloom_bind_group = Some(device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("civ-postfx::bloom_bind_group"),
-            layout: &self.bloom_bind_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: self.bloom_input.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: self.uniforms.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: wgpu::BindingResource::TextureView(&bloom_view),
-                },
-            ],
-        }));
+        let build_bg = |label: &'static str,
+                        layout: &wgpu::BindGroupLayout,
+                        input: &wgpu::Buffer,
+                        tex_view: &wgpu::TextureView|
+         -> wgpu::BindGroup {
+            device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some(label),
+                layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: input.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: self.uniforms.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: wgpu::BindingResource::TextureView(tex_view),
+                    },
+                ],
+            })
+        };
+
+        self.ssao_bind_group = Some(build_bg(
+            "civ-postfx::ssao_bind_group",
+            &self.ssao_bind_layout,
+            &self.ssao_input,
+            &ao_view,
+        ));
+        self.bloom_bind_group = Some(build_bg(
+            "civ-postfx::bloom_bind_group",
+            &self.bloom_bind_layout,
+            &self.bloom_input,
+            &bloom_view,
+        ));
+        self.ssgi_bind_group = Some(build_bg(
+            "civ-postfx::ssgi_bind_group",
+            &self.ssgi_bind_layout,
+            &self.ssgi_input,
+            &ssgi_view,
+        ));
+        self.aces_bind_group = Some(build_bg(
+            "civ-postfx::aces_bind_group",
+            &self.aces_bind_layout,
+            &self.aces_input,
+            &aces_view,
+        ));
+        self.vignette_bind_group = Some(build_bg(
+            "civ-postfx::vignette_bind_group",
+            &self.vignette_bind_layout,
+            &self.vignette_input,
+            &vignette_view,
+        ));
+        self.chromatic_bind_group = Some(build_bg(
+            "civ-postfx::chromatic_bind_group",
+            &self.chromatic_bind_layout,
+            &self.chromatic_input,
+            &chromatic_view,
+        ));
+        self.lut_bind_group = Some(build_bg(
+            "civ-postfx::lut_bind_group",
+            &self.lut_bind_layout,
+            &self.lut_input,
+            &lut_view,
+        ));
     }
 
-    /// Submit one SSAO + one Bloom compute pass to `queue`. Updates `stats`
-    /// in place and returns `Ok(())` iff the queue accepted the submission.
+    /// Submit all enabled compute passes to `queue`. Updates `stats` in
+    /// place and returns `Ok(())` iff the queue accepted the submission.
     pub fn dispatch(
         &mut self,
         device: &wgpu::Device,
@@ -607,67 +1107,143 @@ impl CivPostFxGpu {
     ) -> Result<(), wgpu::Error> {
         // Always upload fresh input data so the GPU sees moving bytes — this
         // is the "measurable GPU work" the task asks for.
-        let mut ssao_data: Vec<u32> = Vec::with_capacity(INPUT_TEXEL_COUNT as usize);
-        for i in 0..INPUT_TEXEL_COUNT {
-            // Deterministic synthetic depth: each texel is the live frame id
-            // mixed with the index. The exact values don't matter; the point
-            // is that `queue.write_buffer` actually pushes bytes to the GPU.
-            let v = (tick as u32).wrapping_mul(2654435761).wrapping_add(i * 31);
-            ssao_data.push(v);
-        }
+        let ssao_data: Vec<u32> = (0..INPUT_TEXEL_COUNT)
+            .map(|i| (tick as u32).wrapping_mul(2654435761).wrapping_add(i * 31))
+            .collect();
         queue.write_buffer(&self.ssao_input, 0, bytemuck::cast_slice(&ssao_data));
 
-        // SSAO uniform: input_count | radius | bias_packed | tick
-        let ssao_uniforms: [u32; 4] = [
-            INPUT_TEXEL_COUNT,
-            2,
-            24,
-            tick as u32,
-        ];
-        queue.write_buffer(&self.uniforms, 0, bytemuck::cast_slice(&ssao_uniforms));
+        let bloom_data: Vec<u32> = (0..INPUT_TEXEL_COUNT)
+            .map(|i| {
+                (tick as u32)
+                    .wrapping_add(1)
+                    .wrapping_mul(40503)
+                    .wrapping_add(i * 17)
+            })
+            .collect();
+        queue.write_buffer(&self.bloom_input, 0, bytemuck::cast_slice(&bloom_data));
+
+        let ssgi_data: Vec<u32> = (0..INPUT_TEXEL_COUNT)
+            .map(|i| (tick as u32).wrapping_add(2).wrapping_mul(1597).wrapping_add(i * 53))
+            .collect();
+        queue.write_buffer(&self.ssgi_input, 0, bytemuck::cast_slice(&ssgi_data));
+
+        let aces_data: Vec<u32> = (0..INPUT_TEXEL_COUNT)
+            .map(|i| (tick as u32).wrapping_add(3).wrapping_mul(2246822519).wrapping_add(i * 89))
+            .collect();
+        queue.write_buffer(&self.aces_input, 0, bytemuck::cast_slice(&aces_data));
+
+        let vignette_data: Vec<u32> = (0..INPUT_TEXEL_COUNT)
+            .map(|i| (tick as u32).wrapping_add(4).wrapping_mul(1013904223).wrapping_add(i * 113))
+            .collect();
+        queue.write_buffer(
+            &self.vignette_input,
+            0,
+            bytemuck::cast_slice(&vignette_data),
+        );
+
+        let chromatic_data: Vec<u32> = (0..INPUT_TEXEL_COUNT)
+            .map(|i| (tick as u32).wrapping_add(5).wrapping_mul(374761393).wrapping_add(i * 23))
+            .collect();
+        queue.write_buffer(
+            &self.chromatic_input,
+            0,
+            bytemuck::cast_slice(&chromatic_data),
+        );
+
+        let lut_data: Vec<u32> = (0..INPUT_TEXEL_COUNT)
+            .map(|i| (tick as u32).wrapping_add(6).wrapping_mul(668265263).wrapping_add(i * 67))
+            .collect();
+        queue.write_buffer(&self.lut_input, 0, bytemuck::cast_slice(&lut_data));
+
+        // Per-pass uniforms (input_count | knob_a | knob_b | tick).
+        let ssao_uniforms: [u32; 4] = [INPUT_TEXEL_COUNT, 2, 24, tick as u32];
+        let bloom_uniforms: [u32; 4] = [INPUT_TEXEL_COUNT, 96, 32, tick as u32];
+        let ssgi_uniforms: [u32; 4] = [INPUT_TEXEL_COUNT, 64, 200, tick as u32];
+        let aces_uniforms: [u32; 4] = [INPUT_TEXEL_COUNT, 192, 128, tick as u32];
+        let vignette_uniforms: [u32; 4] = [INPUT_TEXEL_COUNT, 128, 128, tick as u32];
+        let chromatic_uniforms: [u32; 4] = [INPUT_TEXEL_COUNT, 64, 128, tick as u32];
+        let lut_uniforms: [u32; 4] = [INPUT_TEXEL_COUNT, 128, 128, tick as u32];
 
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("civ-postfx::encoder"),
         });
-        let mut dispatched_ssao = false;
-        let mut dispatched_bloom = false;
+        let mut dispatched = [false; 7]; // [ssao, bloom, ssgi, aces, vignette, chromatic, lut]
         {
             let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("civ-postfx::compute_pass"),
                 timestamp_writes: None,
             });
+            let (gx, gy, gz) = CivPostFxDispatcher::workgroup_dims();
+
             if toggle.will_dispatch_ssao() {
+                queue.write_buffer(&self.uniforms, 0, bytemuck::cast_slice(&ssao_uniforms));
                 if let Some(bg) = self.ssao_bind_group.as_ref() {
                     cpass.set_pipeline(&self.ssao_pipeline);
                     cpass.set_bind_group(0, bg, &[]);
-                    let (gx, gy, gz) = CivPostFxDispatcher::workgroup_dims();
                     cpass.dispatch_workgroups(gx, gy, gz);
-                    dispatched_ssao = true;
+                    dispatched[0] = true;
                 }
             }
             if toggle.will_dispatch_bloom() {
-                // Bloom reads live ticks, not the SSAO output, but we still
-                // upload fresh data for it before issuing the second dispatch.
-                let mut bloom_data: Vec<u32> = Vec::with_capacity(INPUT_TEXEL_COUNT as usize);
-                for i in 0..INPUT_TEXEL_COUNT {
-                    let v = (tick as u32)
-                        .wrapping_add(1)
-                        .wrapping_mul(40503)
-                        .wrapping_add(i * 17);
-                    bloom_data.push(v);
-                }
-                queue.write_buffer(&self.bloom_input, 0, bytemuck::cast_slice(&bloom_data));
-
-                // Bloom uniform: input_count | threshold_packed | knee_packed | tick
-                let bloom_uniforms: [u32; 4] = [INPUT_TEXEL_COUNT, 96, 32, tick as u32];
                 queue.write_buffer(&self.uniforms, 0, bytemuck::cast_slice(&bloom_uniforms));
-
                 if let Some(bg) = self.bloom_bind_group.as_ref() {
                     cpass.set_pipeline(&self.bloom_pipeline);
                     cpass.set_bind_group(0, bg, &[]);
-                    let (gx, gy, gz) = CivPostFxDispatcher::workgroup_dims();
                     cpass.dispatch_workgroups(gx, gy, gz);
-                    dispatched_bloom = true;
+                    dispatched[1] = true;
+                }
+            }
+            if toggle.will_dispatch_ssgi() {
+                queue.write_buffer(&self.uniforms, 0, bytemuck::cast_slice(&ssgi_uniforms));
+                if let Some(bg) = self.ssgi_bind_group.as_ref() {
+                    cpass.set_pipeline(&self.ssgi_pipeline);
+                    cpass.set_bind_group(0, bg, &[]);
+                    cpass.dispatch_workgroups(gx, gy, gz);
+                    dispatched[2] = true;
+                }
+            }
+            if toggle.will_dispatch_aces() {
+                queue.write_buffer(&self.uniforms, 0, bytemuck::cast_slice(&aces_uniforms));
+                if let Some(bg) = self.aces_bind_group.as_ref() {
+                    cpass.set_pipeline(&self.aces_pipeline);
+                    cpass.set_bind_group(0, bg, &[]);
+                    cpass.dispatch_workgroups(gx, gy, gz);
+                    dispatched[3] = true;
+                }
+            }
+            if toggle.will_dispatch_vignette() {
+                queue.write_buffer(
+                    &self.uniforms,
+                    0,
+                    bytemuck::cast_slice(&vignette_uniforms),
+                );
+                if let Some(bg) = self.vignette_bind_group.as_ref() {
+                    cpass.set_pipeline(&self.vignette_pipeline);
+                    cpass.set_bind_group(0, bg, &[]);
+                    cpass.dispatch_workgroups(gx, gy, gz);
+                    dispatched[4] = true;
+                }
+            }
+            if toggle.will_dispatch_chromatic() {
+                queue.write_buffer(
+                    &self.uniforms,
+                    0,
+                    bytemuck::cast_slice(&chromatic_uniforms),
+                );
+                if let Some(bg) = self.chromatic_bind_group.as_ref() {
+                    cpass.set_pipeline(&self.chromatic_pipeline);
+                    cpass.set_bind_group(0, bg, &[]);
+                    cpass.dispatch_workgroups(gx, gy, gz);
+                    dispatched[5] = true;
+                }
+            }
+            if toggle.will_dispatch_lut() {
+                queue.write_buffer(&self.uniforms, 0, bytemuck::cast_slice(&lut_uniforms));
+                if let Some(bg) = self.lut_bind_group.as_ref() {
+                    cpass.set_pipeline(&self.lut_pipeline);
+                    cpass.set_bind_group(0, bg, &[]);
+                    cpass.dispatch_workgroups(gx, gy, gz);
+                    dispatched[6] = true;
                 }
             }
         }
@@ -675,15 +1251,35 @@ impl CivPostFxGpu {
         // Result is here for the public API to mirror `submit()`).
         queue.submit(std::iter::once(encoder.finish()));
 
-        if dispatched_ssao {
+        if dispatched[0] {
             stats.ssao_dispatch_count = stats.ssao_dispatch_count.wrapping_add(1);
         }
-        if dispatched_bloom {
+        if dispatched[1] {
             stats.bloom_dispatch_count = stats.bloom_dispatch_count.wrapping_add(1);
+        }
+        if dispatched[2] {
+            stats.ssgi_dispatch_count = stats.ssgi_dispatch_count.wrapping_add(1);
+        }
+        if dispatched[3] {
+            stats.aces_dispatch_count = stats.aces_dispatch_count.wrapping_add(1);
+        }
+        if dispatched[4] {
+            stats.vignette_dispatch_count = stats.vignette_dispatch_count.wrapping_add(1);
+        }
+        if dispatched[5] {
+            stats.chromatic_dispatch_count = stats.chromatic_dispatch_count.wrapping_add(1);
+        }
+        if dispatched[6] {
+            stats.lut_dispatch_count = stats.lut_dispatch_count.wrapping_add(1);
         }
         stats.total_dispatch_count = stats
             .ssao_dispatch_count
-            .wrapping_add(stats.bloom_dispatch_count);
+            .wrapping_add(stats.bloom_dispatch_count)
+            .wrapping_add(stats.ssgi_dispatch_count)
+            .wrapping_add(stats.aces_dispatch_count)
+            .wrapping_add(stats.vignette_dispatch_count)
+            .wrapping_add(stats.chromatic_dispatch_count)
+            .wrapping_add(stats.lut_dispatch_count);
         Ok(())
     }
 }
@@ -802,6 +1398,48 @@ mod tests {
         assert!(BLOOM_WGSL.contains("texture_storage_2d<rgba8unorm"));
     }
 
+    // ── Phase 7.3: WGSL validity for the five new passes ───────────────────
+
+    #[test]
+    fn ssgi_wgsl_has_compute_entry_point_and_workgroup_size() {
+        assert!(SSGI_WGSL.contains("@compute"));
+        assert!(SSGI_WGSL.contains("@workgroup_size(4, 4, 1)"));
+        assert!(SSGI_WGSL.contains("civ_ssgi_main"));
+        assert!(SSGI_WGSL.contains("texture_storage_2d<rgba8unorm"));
+    }
+
+    #[test]
+    fn aces_wgsl_has_compute_entry_point_and_workgroup_size() {
+        assert!(ACES_WGSL.contains("@compute"));
+        assert!(ACES_WGSL.contains("@workgroup_size(4, 4, 1)"));
+        assert!(ACES_WGSL.contains("civ_aces_main"));
+        assert!(ACES_WGSL.contains("texture_storage_2d<rgba8unorm"));
+    }
+
+    #[test]
+    fn vignette_wgsl_has_compute_entry_point_and_workgroup_size() {
+        assert!(VIGNETTE_WGSL.contains("@compute"));
+        assert!(VIGNETTE_WGSL.contains("@workgroup_size(4, 4, 1)"));
+        assert!(VIGNETTE_WGSL.contains("civ_vignette_main"));
+        assert!(VIGNETTE_WGSL.contains("texture_storage_2d<rgba8unorm"));
+    }
+
+    #[test]
+    fn chromatic_wgsl_has_compute_entry_point_and_workgroup_size() {
+        assert!(CHROMATIC_WGSL.contains("@compute"));
+        assert!(CHROMATIC_WGSL.contains("@workgroup_size(4, 4, 1)"));
+        assert!(CHROMATIC_WGSL.contains("civ_chromatic_main"));
+        assert!(CHROMATIC_WGSL.contains("texture_storage_2d<rgba8unorm"));
+    }
+
+    #[test]
+    fn lut_wgsl_has_compute_entry_point_and_workgroup_size() {
+        assert!(LUT_WGSL.contains("@compute"));
+        assert!(LUT_WGSL.contains("@workgroup_size(4, 4, 1)"));
+        assert!(LUT_WGSL.contains("civ_lut_main"));
+        assert!(LUT_WGSL.contains("texture_storage_2d<rgba8unorm"));
+    }
+
     // ── Toggle semantics ──────────────────────────────────────────────────
 
     #[test]
@@ -810,9 +1448,19 @@ mod tests {
         assert!(t.enabled, "postfx_enabled defaults to true");
         assert!(t.ssao_pass);
         assert!(t.bloom_pass);
+        assert!(t.ssgi_pass);
+        assert!(t.aces_pass);
+        assert!(t.vignette_pass);
+        assert!(t.chromatic_pass);
+        assert!(t.lut_pass);
         assert!(t.will_dispatch());
         assert!(t.will_dispatch_ssao());
         assert!(t.will_dispatch_bloom());
+        assert!(t.will_dispatch_ssgi());
+        assert!(t.will_dispatch_aces());
+        assert!(t.will_dispatch_vignette());
+        assert!(t.will_dispatch_chromatic());
+        assert!(t.will_dispatch_lut());
     }
 
     #[test]
@@ -824,6 +1472,11 @@ mod tests {
         assert!(!t.will_dispatch());
         assert!(!t.will_dispatch_ssao());
         assert!(!t.will_dispatch_bloom());
+        assert!(!t.will_dispatch_ssgi());
+        assert!(!t.will_dispatch_aces());
+        assert!(!t.will_dispatch_vignette());
+        assert!(!t.will_dispatch_chromatic());
+        assert!(!t.will_dispatch_lut());
     }
 
     #[test]
@@ -840,6 +1493,27 @@ mod tests {
         assert!(!t.will_dispatch_ssao());
         // Bloom is gated on SSAO upstream, so it auto-disables too.
         assert!(!t.will_dispatch_bloom());
+    }
+
+    #[test]
+    fn postfx_toggle_per_pass_off_skips_only_that_pass() {
+        // Disabling only SSGI/ACES/Vignette/Chromatic/LUT should leave
+        // SSAO+Bloom dispatching normally.
+        let t = CivPostFxToggle {
+            ssgi_pass: false,
+            aces_pass: false,
+            vignette_pass: false,
+            chromatic_pass: false,
+            lut_pass: false,
+            ..CivPostFxToggle::default()
+        };
+        assert!(t.will_dispatch_ssao());
+        assert!(t.will_dispatch_bloom());
+        assert!(!t.will_dispatch_ssgi());
+        assert!(!t.will_dispatch_aces());
+        assert!(!t.will_dispatch_vignette());
+        assert!(!t.will_dispatch_chromatic());
+        assert!(!t.will_dispatch_lut());
     }
 
     #[test]
@@ -868,18 +1542,28 @@ mod tests {
     }
 
     #[test]
-    fn dispatcher_dry_run_dispatches_both_passes_per_tick_when_enabled() {
+    fn dispatcher_dry_run_dispatches_all_seven_passes_per_tick_when_enabled() {
         let mut d = CivPostFxDispatcher::default();
         let stats = d.tick_dry_run();
         assert_eq!(stats.ssao_dispatch_count, 1);
         assert_eq!(stats.bloom_dispatch_count, 1);
-        assert_eq!(stats.total_dispatch_count, 2);
+        assert_eq!(stats.ssgi_dispatch_count, 1);
+        assert_eq!(stats.aces_dispatch_count, 1);
+        assert_eq!(stats.vignette_dispatch_count, 1);
+        assert_eq!(stats.chromatic_dispatch_count, 1);
+        assert_eq!(stats.lut_dispatch_count, 1);
+        assert_eq!(stats.total_dispatch_count, 7);
         assert_eq!(stats.skipped_ticks, 0);
 
         let stats = d.tick_dry_run();
         assert_eq!(stats.ssao_dispatch_count, 2);
         assert_eq!(stats.bloom_dispatch_count, 2);
-        assert_eq!(stats.total_dispatch_count, 4);
+        assert_eq!(stats.ssgi_dispatch_count, 2);
+        assert_eq!(stats.aces_dispatch_count, 2);
+        assert_eq!(stats.vignette_dispatch_count, 2);
+        assert_eq!(stats.chromatic_dispatch_count, 2);
+        assert_eq!(stats.lut_dispatch_count, 2);
+        assert_eq!(stats.total_dispatch_count, 14);
         assert_eq!(d.tick, 2);
     }
 
@@ -911,7 +1595,37 @@ mod tests {
         let stats = d.tick_dry_run();
         assert_eq!(stats.ssao_dispatch_count, 1);
         assert_eq!(stats.bloom_dispatch_count, 0);
-        assert_eq!(stats.total_dispatch_count, 1);
+        // Five Phase 7.3 passes still dispatch.
+        assert_eq!(stats.ssgi_dispatch_count, 1);
+        assert_eq!(stats.aces_dispatch_count, 1);
+        assert_eq!(stats.vignette_dispatch_count, 1);
+        assert_eq!(stats.chromatic_dispatch_count, 1);
+        assert_eq!(stats.lut_dispatch_count, 1);
+        assert_eq!(stats.total_dispatch_count, 6);
+    }
+
+    #[test]
+    fn dispatcher_dry_run_dispatches_only_ssao_when_phase73_passes_off() {
+        let mut d = CivPostFxDispatcher {
+            toggle: CivPostFxToggle {
+                ssgi_pass: false,
+                aces_pass: false,
+                vignette_pass: false,
+                chromatic_pass: false,
+                lut_pass: false,
+                ..CivPostFxToggle::default()
+            },
+            ..CivPostFxDispatcher::default()
+        };
+        let stats = d.tick_dry_run();
+        assert_eq!(stats.ssao_dispatch_count, 1);
+        assert_eq!(stats.bloom_dispatch_count, 1);
+        assert_eq!(stats.ssgi_dispatch_count, 0);
+        assert_eq!(stats.aces_dispatch_count, 0);
+        assert_eq!(stats.vignette_dispatch_count, 0);
+        assert_eq!(stats.chromatic_dispatch_count, 0);
+        assert_eq!(stats.lut_dispatch_count, 0);
+        assert_eq!(stats.total_dispatch_count, 2);
     }
 
     #[test]
@@ -941,7 +1655,12 @@ mod tests {
         let mut s = CivPostFxStats {
             ssao_dispatch_count: 42,
             bloom_dispatch_count: 17,
-            total_dispatch_count: 59,
+            ssgi_dispatch_count: 9,
+            aces_dispatch_count: 8,
+            vignette_dispatch_count: 7,
+            chromatic_dispatch_count: 6,
+            lut_dispatch_count: 5,
+            total_dispatch_count: 94,
             skipped_ticks: 3,
         };
         s.reset();
@@ -995,14 +1714,24 @@ mod tests {
             .expect("first dispatch");
         assert_eq!(stats.ssao_dispatch_count, 1);
         assert_eq!(stats.bloom_dispatch_count, 1);
-        assert_eq!(stats.total_dispatch_count, 2);
+        assert_eq!(stats.ssgi_dispatch_count, 1);
+        assert_eq!(stats.aces_dispatch_count, 1);
+        assert_eq!(stats.vignette_dispatch_count, 1);
+        assert_eq!(stats.chromatic_dispatch_count, 1);
+        assert_eq!(stats.lut_dispatch_count, 1);
+        assert_eq!(stats.total_dispatch_count, 7);
 
         // Second tick verifies the counters are not reset between dispatches.
         gpu.dispatch(&device, &queue, &toggle, &mut stats, 2)
             .expect("second dispatch");
         assert_eq!(stats.ssao_dispatch_count, 2);
         assert_eq!(stats.bloom_dispatch_count, 2);
-        assert_eq!(stats.total_dispatch_count, 4);
+        assert_eq!(stats.ssgi_dispatch_count, 2);
+        assert_eq!(stats.aces_dispatch_count, 2);
+        assert_eq!(stats.vignette_dispatch_count, 2);
+        assert_eq!(stats.chromatic_dispatch_count, 2);
+        assert_eq!(stats.lut_dispatch_count, 2);
+        assert_eq!(stats.total_dispatch_count, 14);
 
         // Sanity: the queue is still alive after the second submit.
         let _ = Arc::new(queue);

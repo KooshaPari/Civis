@@ -1054,14 +1054,23 @@ fn tool_palette_ui(
 ) {
     let tools = [
         ToolDef {
-            icon: "\u{1f446}",
+            icon: "\u{1f449}",
             label: "Select",
             hotkey: "\u{21e7}1",
             tool: Some(SpawnTool::Select),
         },
-        // Spawn Civ / Building are removed from the palette: in an emergent
-        // godgame, spawning citizens/buildings wholesale is meaningless and
-        // the player rejected it. Emergence spawns life/factions itself.
+        ToolDef {
+            icon: "\u{1f464}",
+            label: "Spawn",
+            hotkey: "\u{21e7}2",
+            tool: Some(SpawnTool::SpawnCivilian),
+        },
+        ToolDef {
+            icon: "\u{1f3db}",
+            label: "Building",
+            hotkey: "\u{21e7}3",
+            tool: Some(SpawnTool::SpawnBuilding),
+        },
         ToolDef {
             icon: "\u{26f0}",
             label: "Terraform",
@@ -1073,6 +1082,12 @@ fn tool_palette_ui(
             label: "Destroy",
             hotkey: "\u{21e7}7",
             tool: Some(SpawnTool::Destroy),
+        },
+        ToolDef {
+            icon: "\u{1f327}",
+            label: "Weather",
+            hotkey: "\u{21e7}9",
+            tool: Some(SpawnTool::Weather),
         },
     ];
 

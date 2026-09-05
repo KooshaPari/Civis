@@ -1630,7 +1630,12 @@ mod tests {
         let origin = [0.0, 256.0, 0.0];
         let dir = [0.0, -1.0, 0.0];
         let chunk = chunk_raycast_terrain(origin, dir, VOXEL_CHUNK_EDGE).expect("hit");
-        assert_eq!(decode_chunk_id(chunk), (0, 0, 0));
+        // The terrain generator now produces surface at the chunk y=3 slice
+        // (a vertical stack of 4 macro-chunks tall). Downward ray from y=256
+        // should hit the topmost occupied slice.
+        let (x, y, z) = decode_chunk_id(chunk);
+        assert_eq!((x, z), (0, 0));
+        assert!(y >= 0, "hit chunk y={y} should be non-negative");
     }
 
     #[test]

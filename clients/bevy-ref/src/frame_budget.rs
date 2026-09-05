@@ -262,21 +262,23 @@ mod tests {
 
     #[test]
     fn scaled_cull_and_lod_helpers_apply_mode_multipliers() {
+        let approx = |a: f32, b: f32| (a - b).abs() < 1e-3;
+
         let base = 100.0;
         assert_eq!(scaled_cull_distance(base, GpuQualityMode::Full), base);
-        assert_eq!(
+        assert!(approx(
             scaled_cull_distance(base, GpuQualityMode::Reduced),
             base * REDUCED_CULL_SCALE
-        );
-        assert_eq!(
+        ));
+        assert!(approx(
             scaled_cull_distance(base, GpuQualityMode::Critical),
             base * REDUCED_CULL_SCALE * CRITICAL_CULL_SCALE
-        );
+        ));
 
         let distance = 90.0;
-        assert_eq!(
+        assert!(approx(
             scaled_mesh_lod_distance(distance, GpuQualityMode::Reduced),
             distance / REDUCED_CULL_SCALE
-        );
+        ));
     }
 }

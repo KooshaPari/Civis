@@ -118,6 +118,8 @@ pub enum SpawnTool {
     Vehicle,
     /// Paint the selected material into the voxel grid.
     PaintMaterial,
+    /// Trigger a weather actor at the clicked point (rain/storm clear-out).
+    Weather,
 }
 
 impl SpawnTool {
@@ -535,6 +537,21 @@ fn handle_spawn_tool_clicks(
         SpawnTool::Destroy => {
             destroy_entity.write(DestroyEntityRequest { position });
         }
+        SpawnTool::Weather => {
+            // Trigger a weather actor at the clicked terrain point.
+            if let Some(ref bridge) = bridge {
+                bridge.send_rpc(
+                    "sim.command",
+                    serde_json::json!({
+                        "action": "weather",
+                        "kind": "storm",
+                        "x": position.x,
+                        "y": position.y,
+                        "z": position.z,
+                    }),
+                );
+            }
+        }
         // Structure placement tools — each sends a distinct building kind.
         SpawnTool::House
         | SpawnTool::Farm
@@ -669,7 +686,11 @@ fn raycast_to_terrain(origin: Vec3, direction: Vec3) -> Option<Vec3> {
         }
 
         let err = terrain_error(point);
-        if err <= 0.0 && prev_err > 0.0 {
+        // Detect crossing from at/above the surface (prev_err <= 0) into the
+        // terrain (err > 0). This is the entry point for a downward ray (e.g. a
+        // spawn/placement raycast). The previous inverted condition only caught
+        // upward rays exiting the terrain, so downward rays never registered.
+        if err > 0.0 && prev_err <= 0.0 {
             return Some(refine_terrain_hit(prev_point, point));
         }
         prev_point = point;

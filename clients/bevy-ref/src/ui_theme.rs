@@ -58,8 +58,10 @@ impl UiAnimState {
     /// closed→open so the flyout animates up from scratch.
     pub fn set_open(&mut self, to_open: bool) {
         let new_target = if to_open { 1.0 } else { 0.0 };
-        if self.target < 0.5 && new_target > 0.5 {
-            // closed→open: animate from 0
+        if to_open {
+            // opening: restart the animation from fully closed regardless of the
+            // previous settled state (both opening from closed AND re-opening an
+            // already-open panel restart from 0).
             self.current = 0.0;
         }
         self.target = new_target;

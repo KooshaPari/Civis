@@ -9,7 +9,8 @@ use bevy::prelude::*;
 
 #[cfg(feature = "models")]
 use crate::gltf_models::{actor_scene, building_scene, ModelOrPrimitive};
-use crate::live_stream::ServerBridge;
+use crate::live_ground::ChunkVoxelCache;
+use crate::live_stream::{LiveBridge, LiveStreamScene, ServerBridge};
 use crate::minimap::MinimapCamera;
 #[cfg(feature = "egui")]
 pub(crate) use crate::settings_ui::GameSettings;
@@ -20,6 +21,7 @@ use crate::settings_ui::ACTION_SELECT_OR_PICK;
 use crate::terrain::{terrain_height, WORLD_SIZE};
 #[cfg(feature = "voxel")]
 use crate::voxel_sim::VoxelSimState;
+use crate::ws_client::RpcTicket;
 #[cfg(feature = "voxel")]
 use civ_voxel::material::AIR;
 
@@ -290,9 +292,24 @@ pub struct PlaceStructureRequest {
 /// Plugin that wires the tool state, ray hit test, and cursor marker together.
 pub struct SpawnToolsPlugin;
 
+#[derive(Resource, Default)]
+struct PendingTerrainStamps {
+    tickets: Vec<(RpcTicket, std::time::Instant)>,
+    errors: Vec<String>,
+}
+
+pub(crate) fn server_tools_active(mode: Option<&crate::AttachMode>, bridge_present: bool) -> bool {
+    match mode {
+        Some(crate::AttachMode::Standalone) => false,
+        Some(crate::AttachMode::Server) => true,
+        None => bridge_present,
+    }
+}
+
 impl Plugin for SpawnToolsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ActiveTool>()
+            .init_resource::<PendingTerrainStamps>()
             .init_resource::<BuildingSpawnKind>()
             .init_resource::<SelectedEntity>()
             .init_resource::<CursorMarker>()
@@ -307,7 +324,8 @@ impl Plugin for SpawnToolsPlugin {
             .add_systems(Startup, spawn_cursor_marker);
 
         #[cfg(feature = "egui")]
-        app.add_systems(Update, update_pointer_over_ui);
+        app.init_resource::<crate::event_feed::EventFeed>()
+            .add_systems(Update, (update_pointer_over_ui, report_terrain_stamps));
 
         app.add_systems(
             Update,
@@ -368,6 +386,9 @@ fn update_cursor_marker(
     cameras: Query<(&Camera, &GlobalTransform), (With<Camera3d>, Without<MinimapCamera>)>,
     over_ui: Res<PointerOverUi>,
     mut marker: ResMut<CursorMarker>,
+    live: Option<Res<LiveStreamScene>>,
+    bridge: Option<Res<ServerBridge>>,
+    mode: Option<Res<crate::AttachMode>>,
     #[cfg(feature = "voxel")] voxel: Option<Res<VoxelSimState>>,
 ) {
     if over_ui.0 {
@@ -379,6 +400,8 @@ fn update_cursor_marker(
     let hit = cursor_terrain_hit(
         &windows,
         &cameras,
+        live.as_deref().map(|scene| &scene.chunk_voxels),
+        server_tools_active(mode.as_deref(), bridge.is_some()),
         #[cfg(feature = "voxel")]
         voxel.as_deref(),
     );
@@ -389,12 +412,19 @@ fn update_cursor_marker(
 fn cursor_terrain_hit(
     windows: &Query<&Window>,
     cameras: &Query<(&Camera, &GlobalTransform), (With<Camera3d>, Without<MinimapCamera>)>,
+    live: Option<&ChunkVoxelCache>,
+    attached: bool,
     #[cfg(feature = "voxel")] voxel: Option<&VoxelSimState>,
 ) -> Option<Vec3> {
     let window = windows.single().ok()?;
     let cursor = window.cursor_position()?;
     let (camera, camera_transform) = cameras.single().ok()?;
     let ray = camera.viewport_to_world(camera_transform, cursor).ok()?;
+    if attached {
+        // An attached client must never aim using a different, local world.
+        return live
+            .and_then(|cache| raycast_to_live_voxels(cache, ray.origin, ray.direction.as_vec3()));
+    }
     #[cfg(feature = "voxel")]
     if let Some(state) = voxel {
         if !state.grid.cells.is_empty() {
@@ -402,6 +432,100 @@ fn cursor_terrain_hit(
         }
     }
     raycast_to_terrain(ray.origin, ray.direction.as_vec3())
+}
+
+fn raycast_to_live_voxels(cache: &ChunkVoxelCache, origin: Vec3, direction: Vec3) -> Option<Vec3> {
+    let direction = direction.normalize_or_zero();
+    if !origin.is_finite() || !direction.is_finite() || direction == Vec3::ZERO {
+        return None;
+    }
+    let hit_distance = |centre: Vec3, half: f32| {
+        crate::live_pick::ray_aabb_hit_distance(
+            origin.to_array(),
+            direction.to_array(),
+            centre.to_array(),
+            [half; 3],
+        )
+    };
+    let mut closest: Option<f32> = None;
+    for (&id, voxels) in cache.chunks() {
+        let (cx, cy, cz) = crate::decode_chunk_id(civ_voxel::ChunkId(id));
+        let base = Vec3::new(cx as f32, cy as f32, cz as f32) * 16.0;
+        if hit_distance(base + Vec3::splat(8.0), 8.0).is_none() {
+            continue;
+        }
+        for (index, material) in voxels.iter().enumerate() {
+            if material.0 == 0 {
+                continue;
+            }
+            let cell = Vec3::new(
+                (index % 16) as f32,
+                ((index / 16) % 16) as f32,
+                (index / 256) as f32,
+            );
+            if let Some(distance) = hit_distance(base + cell + Vec3::splat(0.5), 0.5) {
+                closest = Some(closest.map_or(distance, |old| old.min(distance)));
+            }
+        }
+    }
+    closest.map(|distance| origin + direction * distance)
+}
+
+fn terrain_stamp_params(position: Vec3, material: u16, radius: u8) -> serde_json::Value {
+    let scale = civ_voxel::FIXED_SCALE as f64;
+    serde_json::json!({
+        "x": (f64::from(position.x.floor()) * scale) as i64,
+        "y": (f64::from(position.y.floor()) * scale) as i64,
+        "z": (f64::from(position.z.floor()) * scale) as i64,
+        "op": "raise",
+        "material": material,
+        "radius": radius,
+        "role": "operator",
+    })
+}
+
+fn terrain_stamp_feedback(result: Result<serde_json::Value, String>) -> String {
+    match result {
+        Ok(value) if value.get("ok").and_then(|v| v.as_bool()) == Some(true) => {
+            match value
+                .get("writes")
+                .and_then(|v| v.as_u64())
+                .filter(|&n| n > 0)
+            {
+                Some(writes) => format!("Server applied terrain disk: {writes} voxel writes"),
+                None => "Terrain stamp failed: server returned no voxel write receipt".to_owned(),
+            }
+        }
+        Ok(_) => "Terrain stamp failed: invalid server acknowledgment".to_owned(),
+        Err(error) => format!("Terrain stamp failed: {error}"),
+    }
+}
+
+#[cfg(feature = "egui")]
+fn report_terrain_stamps(
+    mut pending: ResMut<PendingTerrainStamps>,
+    mut feed: ResMut<crate::event_feed::EventFeed>,
+) {
+    for error in pending.errors.drain(..) {
+        feed.push(crate::event_feed::EventKind::System, error);
+    }
+    pending.tickets.retain(|(ticket, sent_at)| {
+        if let Some(result) = ticket.try_recv() {
+            feed.push(
+                crate::event_feed::EventKind::System,
+                terrain_stamp_feedback(result),
+            );
+            false
+        } else if sent_at.elapsed() >= std::time::Duration::from_secs(10) {
+            feed.push(
+                crate::event_feed::EventKind::System,
+                "Terrain stamp timed out; the result is unknown. Check the world before retrying.",
+            );
+            false
+        } else {
+            true
+        }
+    });
 }
 
 #[cfg(feature = "voxel")]
@@ -449,6 +573,10 @@ fn handle_spawn_tool_clicks(
     mut select_entity: MessageWriter<SelectEntityRequest>,
     mut destroy_entity: MessageWriter<DestroyEntityRequest>,
     bridge: Option<Res<ServerBridge>>,
+    live: Option<Res<LiveBridge>>,
+    mut terrain_stamps: ResMut<PendingTerrainStamps>,
+    mode: Option<Res<crate::AttachMode>>,
+    #[cfg(feature = "egui")] brush: Option<Res<crate::material_brush_ui::SelectedMaterial>>,
 ) {
     for event in mouse_wheel.read() {
         if active.tool != SpawnTool::SpawnBuilding {
@@ -504,18 +632,29 @@ fn handle_spawn_tool_clicks(
             });
         }
         SpawnTool::Terraform => {
-            // Terraform: raise terrain at clicked point
-            if let Some(ref bridge) = bridge {
-                bridge.send_rpc(
-                    "sim.command",
-                    serde_json::json!({
-                        "action": "terraform",
-                        "kind": "raise",
-                        "x": position.x,
-                        "y": position.y,
-                        "z": position.z,
-                    }),
-                );
+            // The server contract is a one-layer disk, not a
+            // spherical material brush. Its reply, not the click, confirms it.
+            if server_tools_active(mode.as_deref(), bridge.is_some()) {
+                let mut material = civ_voxel::default_material_for_op("raise").0;
+                let mut radius = 3;
+                #[cfg(feature = "egui")]
+                if let Some(brush) = brush.as_deref() {
+                    material = brush.material.0;
+                    radius = brush.clamped_size().round() as u8;
+                }
+                if let Some(ref live) = live {
+                    terrain_stamps.tickets.push((
+                        live.client.request_rpc(
+                            "sim.terraform_extent",
+                            terrain_stamp_params(position, material, radius),
+                        ),
+                        std::time::Instant::now(),
+                    ));
+                } else {
+                    terrain_stamps.errors.push(
+                        "Terrain stamp failed: live command connection unavailable".to_owned(),
+                    );
+                }
             }
         }
         SpawnTool::PaintMaterial => {
@@ -738,6 +877,61 @@ fn nearest_entity(position: Vec3, entities: &Query<(Entity, &GlobalTransform)>) 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn terrain_stamp_serializes_fixed_world_coordinates_and_selected_brush() {
+        let params = terrain_stamp_params(Vec3::new(-0.1, 7.0, 16.9), 7, 5);
+        assert_eq!(params["x"], -civ_voxel::FIXED_SCALE);
+        assert_eq!(params["y"], 7 * civ_voxel::FIXED_SCALE);
+        assert_eq!(params["z"], 16 * civ_voxel::FIXED_SCALE);
+        assert_eq!(params["material"], 7);
+        assert_eq!(params["radius"], 5);
+        assert_eq!(params["op"], "raise");
+        assert_eq!(params["role"], "operator");
+    }
+
+    #[test]
+    fn standalone_tools_remain_local_even_with_disconnected_bridge() {
+        assert!(!server_tools_active(
+            Some(&crate::AttachMode::Standalone),
+            true
+        ));
+        assert!(server_tools_active(Some(&crate::AttachMode::Server), false));
+        assert!(server_tools_active(None, true));
+        assert!(!server_tools_active(None, false));
+    }
+
+    #[test]
+    fn live_terrain_raycast_uses_non_air_payload_and_negative_chunk_coordinates() {
+        let mut cache = ChunkVoxelCache::new();
+        let mut voxels = vec![civ_voxel::MaterialId(0); 4096];
+        voxels[15 + 2 * 16 + 4 * 256] = civ_voxel::MaterialId(1);
+        cache.insert(crate::encode_chunk_id(-1, 0, 0), voxels);
+        let hit = raycast_to_live_voxels(&cache, Vec3::new(-0.5, 20.0, 4.5), -Vec3::Y)
+            .expect("streamed solid voxel");
+        assert_eq!(hit, Vec3::new(-0.5, 3.0, 4.5));
+        assert!(raycast_to_live_voxels(&cache, Vec3::new(-1.5, 20.0, 4.5), -Vec3::Y).is_none());
+        assert!(raycast_to_live_voxels(&ChunkVoxelCache::new(), Vec3::Y, -Vec3::Y).is_none());
+    }
+
+    #[test]
+    fn terrain_stamp_only_reports_success_for_real_write_receipt() {
+        assert_eq!(
+            terrain_stamp_feedback(Ok(serde_json::json!({"ok":true,"writes":29}))),
+            "Server applied terrain disk: 29 voxel writes"
+        );
+        for value in [
+            serde_json::json!({"ok":true}),
+            serde_json::json!({"ok":true,"writes":0}),
+            serde_json::json!({}),
+        ] {
+            assert!(terrain_stamp_feedback(Ok(value)).starts_with("Terrain stamp failed:"));
+        }
+        assert!(
+            terrain_stamp_feedback(Err("Forbidden: operator role required".to_owned()))
+                .contains("Forbidden: operator role required")
+        );
+    }
 
     #[test]
     fn active_tool_defaults_to_select() {

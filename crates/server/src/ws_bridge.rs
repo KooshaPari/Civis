@@ -52,7 +52,7 @@ use crate::{
     saves::save_archive_path,
     session::{SessionSnapshot, SharedSession},
     subscription_filter::{SubscriptionFilter, WsConnectQuery},
-    voxel_frame_builder::build_voxel_delta_frame,
+    voxel_frame_builder::{build_voxel_delta_frame, build_voxel_snapshot_frame},
 };
 
 /// Number of distinct `Frame3d` variants emitted per simulation tick (FR-CIV-BEVY-028 / item 53).
@@ -168,6 +168,8 @@ enum ClientOutbound {
 /// One simulation tick's `Frame3d` bundle shared across connected clients.
 struct TickBroadcast {
     tick: u64,
+    scene_generation: u64,
+    full_scene: bool,
     frames: Arc<[Frame3d]>,
     encoded: Arc<[Message]>,
 }
@@ -244,6 +246,8 @@ fn save_db_path_for_saves_dir(saves_dir: &std::path::Path) -> PathBuf {
 struct AppState {
     sim: Arc<Mutex<Simulation>>,
     tick: Arc<AtomicU64>,
+    /// Updated under the simulation lock; queued batches retain their original generation.
+    scene_generation: Arc<AtomicU64>,
     speed_multiplier: Arc<AtomicU32>,
     clients: Arc<Mutex<Vec<ClientOutboundTx>>>,
     max_clients: usize,
@@ -263,6 +267,65 @@ struct AppState {
     /// in `ws_handler` upgrade, mutated by JSON-RPC handlers that need
     /// to update `subscribed_frame_kinds` or `role`, swept on close.
     sessions: Arc<Mutex<std::collections::HashMap<String, SharedSession>>>,
+}
+
+fn scene_reset_message(tick: u64, generation: u64) -> Message {
+    Message::Text(
+        serde_json::json!({
+            "jsonrpc": "2.0", "method": "scene.reset",
+            "params": { "tick": tick, "scene_generation": generation }
+        })
+        .to_string(),
+    )
+}
+
+/// Replace the world and enqueue its full baseline before another tick can run.
+/// A previously built batch can enqueue late, but its generation is rejected by the forwarder.
+async fn replace_simulation(state: &AppState, loaded: Simulation) -> Result<u64, String> {
+    let tick = loaded.state.tick;
+    let mut frames = build_frame_bundle(&loaded)?;
+    frames[0] = Frame3d::VoxelDelta(
+        build_voxel_snapshot_frame(tick, loaded.voxel()).map_err(|e| e.to_string())?,
+    );
+    let encoded = Arc::from(
+        encode_tick_broadcast_messages(&frames, state.tick_broadcast_format)?.into_boxed_slice(),
+    );
+    let mut sim = state.sim.lock().await;
+    let generation = state.scene_generation.fetch_add(1, Ordering::SeqCst) + 1;
+    *sim = loaded;
+    state.tick.store(tick, Ordering::SeqCst);
+    let batch = Arc::new(TickBroadcast {
+        tick,
+        scene_generation: generation,
+        full_scene: true,
+        frames: Arc::from(frames),
+        encoded,
+    });
+    let mut clients = state.clients.lock().await;
+    clients.retain(|tx| {
+        tx.try_send(ClientOutbound::Tick(Arc::clone(&batch)))
+            .is_ok()
+    });
+    Ok(generation)
+}
+
+async fn replace_simulation_reply(
+    state: &AppState,
+    loaded: Simulation,
+    response: &mut JsonRpcResponse,
+) {
+    match replace_simulation(state, loaded).await {
+        Ok(generation) => {
+            if let Some(result) = response
+                .result
+                .as_mut()
+                .and_then(serde_json::Value::as_object_mut)
+            {
+                result.insert("scene_generation".to_owned(), serde_json::json!(generation));
+            }
+        }
+        Err(error) => set_replay_io_error(response, error),
+    }
 }
 
 fn authorize_request(headers: &HeaderMap, required: bool) -> Result<(), StatusCode> {
@@ -337,6 +400,7 @@ async fn serve_ws_bridge(
     let state = AppState {
         sim,
         tick: Arc::new(AtomicU64::new(0)),
+        scene_generation: Arc::new(AtomicU64::new(0)),
         speed_multiplier: Arc::new(AtomicU32::new(1)),
         clients: Arc::new(Mutex::new(Vec::new())),
         max_clients: config.max_clients,
@@ -424,27 +488,12 @@ async fn replay_import(
     log.replay(&mut loaded)
         .map_err(|_| StatusCode::BAD_REQUEST)?;
     let tick = loaded.state.tick;
-    *state.sim.lock().await = loaded;
-    state.tick.store(tick, Ordering::SeqCst);
-    let reset = Message::Text(
-        serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "scene.reset",
-            "params": { "tick": tick },
-        })
-        .to_string(),
-    );
-    let mut clients = state.clients.lock().await;
-    clients.retain(|tx| {
-        let delivered = tx.try_send(ClientOutbound::Rpc(reset.clone())).is_ok();
-        if !delivered {
-            state.metrics.ws_client_disconnects.inc();
-        }
-        delivered
-    });
+    let generation = replace_simulation(&state, loaded)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok((
         StatusCode::OK,
-        Json(serde_json::json!({ "tick": tick, "ok": true })),
+        Json(serde_json::json!({ "tick": tick, "ok": true, "scene_generation": generation })),
     ))
 }
 
@@ -534,6 +583,7 @@ async fn handle_socket(
     let state_for_forward = state.clone();
     let connection_id_for_forward = connection_id.clone();
     let forward = tokio::spawn(async move {
+        let mut delivered_generation = None;
         while let Some(outbound) = rx.recv().await {
             match outbound {
                 ClientOutbound::Rpc(msg) => {
@@ -542,6 +592,18 @@ async fn handle_socket(
                     }
                 }
                 ClientOutbound::Tick(broadcast) => {
+                    if broadcast.scene_generation
+                        != state_for_forward.scene_generation.load(Ordering::SeqCst)
+                    {
+                        continue;
+                    }
+                    if delivered_generation != Some(broadcast.scene_generation) {
+                        let reset = scene_reset_message(broadcast.tick, broadcast.scene_generation);
+                        if sender.send(reset).await.is_err() {
+                            return;
+                        }
+                        delivered_generation = Some(broadcast.scene_generation);
+                    }
                     // Advance the session's last_acked_tick + receive
                     // counter so the per-session audit log tracks the
                     // broadcast. Best-effort: if the session map is
@@ -563,7 +625,7 @@ async fn handle_socket(
                         }
                         continue;
                     }
-                    if !filter.should_deliver_tick(broadcast.tick) {
+                    if !broadcast.full_scene && !filter.should_deliver_tick(broadcast.tick) {
                         continue;
                     }
                     let frames = filter.filter_frames(broadcast.frames.as_ref());
@@ -735,31 +797,32 @@ async fn handle_jsonrpc_text(
             // `sim.get_snapshot_for_session` so the response shape
             // includes connection_id / last_acked_tick alongside the
             // standard snapshot payload.
-            let session_snapshot = if req.method == crate::jsonrpc::JsonRpcMethod::SimGetSnapshotForSession {
-                let sim = state.sim.lock().await;
-                let subscribed_frame_kinds = {
-                    let sessions = state.sessions.lock().await;
-                    sessions
-                        .get(connection_id)
-                        .map(|s| s.subscribed_frame_kinds.clone())
-                        .unwrap_or_default()
+            let session_snapshot =
+                if req.method == crate::jsonrpc::JsonRpcMethod::SimGetSnapshotForSession {
+                    let sim = state.sim.lock().await;
+                    let subscribed_frame_kinds = {
+                        let sessions = state.sessions.lock().await;
+                        sessions
+                            .get(connection_id)
+                            .map(|s| s.subscribed_frame_kinds.clone())
+                            .unwrap_or_default()
+                    };
+                    let last_acked_tick = {
+                        let sessions = state.sessions.lock().await;
+                        sessions
+                            .get(connection_id)
+                            .map(|s| s.last_acked_tick)
+                            .unwrap_or(0)
+                    };
+                    Some(SessionSnapshot::new(
+                        connection_id,
+                        last_acked_tick,
+                        subscribed_frame_kinds,
+                        &sim,
+                    ))
+                } else {
+                    None
                 };
-                let last_acked_tick = {
-                    let sessions = state.sessions.lock().await;
-                    sessions
-                        .get(connection_id)
-                        .map(|s| s.last_acked_tick)
-                        .unwrap_or(0)
-                };
-                Some(SessionSnapshot::new(
-                    connection_id,
-                    last_acked_tick,
-                    subscribed_frame_kinds,
-                    &sim,
-                ))
-            } else {
-                None
-            };
             let mut plan = dispatch_request(
                 req,
                 DispatchContext {
@@ -1247,8 +1310,7 @@ async fn apply_dispatch_effect(
             match Simulation::load_replay_from_file(&resolved) {
                 Ok(loaded) => {
                     let tick = loaded.state.tick;
-                    *state.sim.lock().await = loaded;
-                    state.tick.store(tick, Ordering::SeqCst);
+                    replace_simulation_reply(state, loaded, response).await;
                     if let Some(result) = response.result.as_mut() {
                         if let Some(obj) = result.as_object_mut() {
                             obj.insert("tick".to_owned(), serde_json::json!(tick));
@@ -1262,14 +1324,17 @@ async fn apply_dispatch_effect(
             }
         }
         DispatchEffect::ResetSimulation { seed } => {
-            *state.sim.lock().await = Simulation::with_seed(seed);
-            state.tick.store(0, Ordering::SeqCst);
+            replace_simulation_reply(state, Simulation::with_seed(seed), response).await;
         }
         DispatchEffect::LoadScenario { preset, seed } => {
             match load_scenario(preset_scenario_path(&preset)) {
                 Ok(scenario) => {
-                    *state.sim.lock().await = scenario.into_simulation(seed);
-                    state.tick.store(0, Ordering::SeqCst);
+                    replace_simulation_reply(
+                        state,
+                        scenario.into_playable_simulation(seed),
+                        response,
+                    )
+                    .await;
                     tracing::info!(%preset, seed, "loaded scenario preset");
                 }
                 Err(err) => {
@@ -1475,8 +1540,7 @@ async fn apply_dispatch_effect(
             match CivSaveBundle::load(&path) {
                 Ok(loaded) => {
                     let tick = loaded.state.tick;
-                    *state.sim.lock().await = loaded;
-                    state.tick.store(tick, Ordering::SeqCst);
+                    replace_simulation_reply(state, loaded, response).await;
                     if let Some(result) = response.result.as_mut() {
                         if let Some(obj) = result.as_object_mut() {
                             obj.insert("tick".to_owned(), serde_json::json!(tick));
@@ -1924,6 +1988,8 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
         );
         Arc::new(TickBroadcast {
             tick,
+            scene_generation: state.scene_generation.load(Ordering::SeqCst),
+            full_scene: false,
             frames: Arc::from(bundle),
             encoded,
         })
@@ -1958,6 +2024,109 @@ async fn tick_once(state: &AppState) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn scene_generation_preserves_loaded_preset_and_failed_load_keeps_world() {
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(10)));
+        let (_dir, state) = test_app_state(sim, 0, 0, false);
+        let mut role = None;
+        let load_started = std::time::Instant::now();
+        let reply = handle_jsonrpc_text(
+            r#"{"jsonrpc":"2.0","id":1000000,"method":"sim.load_scenario","params":{"preset":"three-race-balanced","seed":987}}"#,
+            &state, &mut role, test_subscription_filter(), "generation-test").await;
+        eprintln!(
+            "playable scenario load RPC handler: {:?}",
+            load_started.elapsed()
+        );
+        let reply: serde_json::Value = serde_json::from_str(&reply).unwrap();
+        assert_eq!(reply["result"]["scene_generation"], 1, "{reply}");
+        {
+            let sim = state.sim.lock().await;
+            assert_eq!(sim.state.rng_seed, 987);
+            assert_eq!(sim.world.query::<&AgentCivilian>().iter().count(), 144);
+            let terrain =
+                crate::voxel_frame_builder::build_voxel_snapshot_frame(sim.state.tick, sim.voxel())
+                    .unwrap();
+            assert!(
+                !terrain.deltas.is_empty(),
+                "playable preset must stream actual terrain"
+            );
+        }
+        let failed = handle_jsonrpc_text(
+            r#"{"jsonrpc":"2.0","id":1000001,"method":"sim.load_scenario","params":{"preset":"does-not-exist","seed":123}}"#,
+            &state, &mut role, test_subscription_filter(), "generation-test").await;
+        let failed: serde_json::Value = serde_json::from_str(&failed).unwrap();
+        assert!(failed.get("error").is_some());
+        assert_eq!(state.scene_generation.load(Ordering::SeqCst), 1);
+        assert_eq!(state.sim.lock().await.state.rng_seed, 987);
+    }
+
+    #[tokio::test]
+    async fn scene_generation_full_baseline_precedes_terrain_and_rejects_late_old_batch() {
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(10)));
+        let (_dir, mut state) = test_app_state(sim, 0, 0, false);
+        state.tick_broadcast_format = TickBroadcastFormat::Binary;
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("ws://{}/ws", listener.local_addr().unwrap());
+        let app = Router::new()
+            .route("/ws", get(ws_handler))
+            .with_state(state.clone());
+        let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let (mut ws, _) = tokio_tungstenite::connect_async(url).await.unwrap();
+        ws.send(tokio_tungstenite::tungstenite::Message::Text(
+            r#"{"jsonrpc":"2.0","id":1,"method":"sim.status"}"#.to_owned().into(),
+        ))
+        .await
+        .unwrap();
+        ws.next().await.unwrap().unwrap(); // Connection is registered before status responds.
+
+        let old_frames = build_frame_bundle(&*state.sim.lock().await).unwrap();
+        let old = Arc::new(TickBroadcast {
+            tick: 999,
+            scene_generation: 0,
+            full_scene: false,
+            encoded: Arc::from(
+                encode_tick_broadcast_messages(&old_frames, TickBroadcastFormat::Binary)
+                    .unwrap()
+                    .into_boxed_slice(),
+            ),
+            frames: Arc::from(old_frames),
+        });
+        let mut loaded = Simulation::with_seed(77);
+        loaded
+            .voxel_mut()
+            .write(WorldCoord { x: 0, y: 0, z: 0 }, MaterialId(1));
+        assert_eq!(replace_simulation(&state, loaded).await.unwrap(), 1);
+        let tx = state.clients.lock().await[0].clone();
+        tx.send(ClientOutbound::Tick(old)).await.unwrap(); // Reproduce old ticker enqueue AFTER replacement.
+
+        let reset = tokio::time::timeout(Duration::from_secs(2), ws.next())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        let reset: serde_json::Value = serde_json::from_str(reset.to_text().unwrap()).unwrap();
+        assert_eq!(reset["method"], "scene.reset");
+        assert_eq!(reset["params"]["scene_generation"], 1);
+        for index in 0..FRAME_BUNDLE_LEN {
+            let message = tokio::time::timeout(Duration::from_secs(2), ws.next())
+                .await
+                .unwrap()
+                .unwrap()
+                .unwrap();
+            assert!(
+                message.is_binary(),
+                "baseline frame {index} must follow reset"
+            );
+        }
+        assert!(
+            tokio::time::timeout(Duration::from_millis(100), ws.next())
+                .await
+                .is_err(),
+            "obsolete generation was delivered after the fresh full baseline"
+        );
+        server.abort();
+    }
     use civ_save_db::SessionSaveRecord;
 
     #[test]
@@ -2005,6 +2174,7 @@ mod tests {
         let state = AppState {
             sim,
             tick: Arc::new(AtomicU64::new(tick)),
+            scene_generation: Arc::new(AtomicU64::new(0)),
             speed_multiplier: Arc::new(AtomicU32::new(speed_multiplier)),
             clients: Arc::new(Mutex::new(Vec::new())),
             max_clients: 1,

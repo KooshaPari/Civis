@@ -331,6 +331,39 @@ impl Scenario {
         sim
     }
 
+    /// Playable scenario with the canonical generated voxel substrate.
+    ///
+    /// Scenario presets currently describe demographics/economics, not terrain
+    /// sizes. Use the existing Small world dimensions until that model exists;
+    /// headless callers retain the lightweight `into_simulation` constructor.
+    pub fn into_playable_simulation(self, rng_seed: u64) -> Simulation {
+        let mut sim = self.into_simulation(rng_seed);
+        let dims = [96, 64, 96];
+        let generated = civ_voxel::worldgen::generate(dims, rng_seed);
+        let mut voxel = sim.voxel_mut();
+        for z in 0..dims[2] {
+            for y in 0..dims[1] {
+                for x in 0..dims[0] {
+                    let material = generated.cells[x + y * dims[0] + z * dims[0] * dims[1]];
+                    if material == civ_voxel::material::AIR {
+                        continue;
+                    }
+                    // Center X/Z on the live camera; Y remains generator Y-up.
+                    // Replay-aware writes preserve this substrate on replay load.
+                    voxel.write(
+                        civ_voxel::WorldCoord {
+                            x: (x as i64 - dims[0] as i64 / 2) * civ_voxel::FIXED_SCALE,
+                            y: y as i64 * civ_voxel::FIXED_SCALE,
+                            z: (z as i64 - dims[2] as i64 / 2) * civ_voxel::FIXED_SCALE,
+                        },
+                        material,
+                    );
+                }
+            }
+        }
+        sim
+    }
+
     /// Validate field constraints after deserialization.
     pub fn validate(&self, path: &Path) -> Result<(), ScenarioError> {
         let path = path.to_path_buf();
@@ -1042,6 +1075,90 @@ starting_conditions:
                 );
             }
         }
+    }
+
+    #[test]
+    fn playable_presets_generate_bounded_deterministic_replayable_terrain() {
+        fn terrain_digest(sim: &Simulation) -> blake3::Hash {
+            let mut chunks: Vec<_> = sim.voxel().chunks_dense().collect();
+            chunks.sort_by_key(|(coord, _)| coord.chunk_id().0);
+            assert!(!chunks.is_empty());
+            assert!(chunks.len() <= 6 * 4 * 6, "Small terrain chunk budget");
+            let mut hash = blake3::Hasher::new();
+            for (coord, chunk) in chunks {
+                hash.update(&coord.chunk_id().0.to_le_bytes());
+                for material in &chunk.voxels {
+                    hash.update(&material.0.to_le_bytes());
+                }
+            }
+            hash.finalize()
+        }
+
+        let mut expected = None;
+        for (index, name) in preset_names().iter().enumerate() {
+            let start = std::time::Instant::now();
+            let sim = load_scenario(preset_scenario_path(name))
+                .unwrap()
+                .into_playable_simulation(987);
+            eprintln!(
+                "playable preset {name}: generation {:?}, {} chunks, {} replay events",
+                start.elapsed(),
+                sim.voxel().chunks_dense().count(),
+                sim.replay_log().events.len()
+            );
+            assert!(sim.replay_log().events.len() <= 96 * 64 * 96 + 100);
+            let digest = terrain_digest(&sim);
+            // Presets describe society; the same seed selects the same terrain.
+            if let Some(expected) = expected {
+                assert_eq!(digest, expected);
+            } else {
+                expected = Some(digest);
+            }
+            let scale = civ_voxel::FIXED_SCALE;
+            for x in [-48, 47] {
+                assert_ne!(
+                    sim.voxel().read(civ_voxel::WorldCoord {
+                        x: x * scale,
+                        y: 0,
+                        z: 0
+                    }),
+                    civ_voxel::material::AIR
+                );
+            }
+            assert_eq!(
+                sim.voxel().read(civ_voxel::WorldCoord {
+                    x: 48 * scale,
+                    y: 0,
+                    z: 0
+                }),
+                civ_voxel::material::AIR
+            );
+            if index == 0 {
+                let start = std::time::Instant::now();
+                let mut replayed = Simulation::with_seed(987);
+                sim.replay_log().replay(&mut replayed).unwrap();
+                eprintln!("playable terrain replay: {:?}", start.elapsed());
+                assert_eq!(
+                    terrain_digest(&replayed),
+                    digest,
+                    "all terrain chunks survive replay"
+                );
+            }
+        }
+        let name = preset_names()[0];
+        let repeat = load_scenario(preset_scenario_path(name))
+            .unwrap()
+            .into_playable_simulation(987);
+        assert_eq!(Some(terrain_digest(&repeat)), expected);
+        drop(repeat);
+        let changed = load_scenario(preset_scenario_path(name))
+            .unwrap()
+            .into_playable_simulation(988);
+        assert_ne!(Some(terrain_digest(&changed)), expected);
+        let headless = load_scenario(preset_scenario_path(name))
+            .unwrap()
+            .into_simulation(987);
+        assert_eq!(headless.voxel().chunks_dense().count(), 0);
     }
 
     /// `three-race-balanced` must carry exactly 3 seeds: Ardani, Velthari, Grundak.

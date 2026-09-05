@@ -196,7 +196,7 @@ async fn replay_import_notifies_connected_clients_to_reset_scene() {
         .expect("ws connect");
     tokio::time::sleep(Duration::from_millis(50)).await;
 
-    reqwest::Client::new()
+    let imported = reqwest::Client::new()
         .post(format!("http://{addr}/replay/import"))
         .header(reqwest::header::CONTENT_TYPE, "application/octet-stream")
         .body(bytes)
@@ -204,7 +204,15 @@ async fn replay_import_notifies_connected_clients_to_reset_scene() {
         .await
         .expect("replay import request")
         .error_for_status()
-        .expect("replay import success");
+        .expect("replay import success")
+        .json::<serde_json::Value>()
+        .await
+        .expect("replay import acknowledgement");
+    let expected_generation = imported["scene_generation"]
+        .as_u64()
+        .expect("import generation");
+    assert!(expected_generation > 0);
+    assert_eq!(imported["tick"].as_u64(), Some(expected_tick));
 
     let reset = timeout(Duration::from_secs(2), async {
         while let Some(frame) = socket.next().await {
@@ -213,7 +221,18 @@ async fn replay_import_notifies_connected_clients_to_reset_scene() {
             };
             let value: serde_json::Value = serde_json::from_str(&text).expect("json frame");
             if value.get("method").and_then(|v| v.as_str()) == Some("scene.reset") {
-                return value;
+                assert_eq!(value["jsonrpc"], "2.0");
+                let generation = value["params"]["scene_generation"]
+                    .as_u64()
+                    .expect("reset generation");
+                assert!(value["params"]["tick"].as_u64().is_some(), "reset tick");
+                assert!(
+                    generation <= expected_generation,
+                    "unexpected future scene reset"
+                );
+                if generation == expected_generation {
+                    return value;
+                }
             }
         }
         panic!("ws closed before scene.reset notification");
@@ -588,7 +607,20 @@ async fn ws_smoke() {
                             }
                         }
                         Message::Text(text) => {
-                            panic!("binary-only bridge emitted text frame: {text}");
+                            let control: serde_json::Value =
+                                serde_json::from_str(&text).expect("JSON control message");
+                            assert_eq!(control["jsonrpc"], "2.0", "{text}");
+                            assert_eq!(
+                                control["method"], "scene.reset",
+                                "binary-only bridge emitted non-control text: {text}"
+                            );
+                            assert!(control.get("id").is_none(), "reset is a notification");
+                            assert_eq!(
+                                control["params"]["scene_generation"].as_u64(),
+                                Some(0),
+                                "fresh bridge generation"
+                            );
+                            assert!(control["params"]["tick"].as_u64().is_some(), "reset tick");
                         }
                         _ => {}
                     }

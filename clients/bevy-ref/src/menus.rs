@@ -28,7 +28,7 @@ const WORLDGEN_PRESETS: [&str; 4] = [
     "lush-frontier",
 ];
 const WORLDGEN_DEFAULT_SEED: u64 = 0xC1F1_5EED_D3AD_BEEF;
-const WORLDGEN_BOOT_SECONDS: f32 = 2.0;
+const WORLDGEN_TIMEOUT_SECONDS: f32 = 30.0;
 
 const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
 /// Opaque enough to keep pause chrome readable over bright world / title art.
@@ -62,6 +62,8 @@ pub enum MainMenuCommand {
     NewWorld,
     /// Confirm world setup and start generation / live attach.
     ConfirmWorldSetup,
+    /// Retry the failed new-world or save-load operation.
+    RetryWorldLoad,
     /// Abort world setup back to the title screen.
     CancelWorldSetup,
     Continue,
@@ -158,7 +160,16 @@ pub struct WorldGenBoot {
     /// Whether the previous menu command queued a scene clear that must apply
     /// before an existing scene can satisfy the readiness check.
     pub scene_clear_pending: bool,
+    /// A visible terminal failure; elapsed time never implies a ready world.
+    pub error: Option<String>,
+    pending: Option<crate::ws_client::RpcTicket>,
+    generation: Option<u64>,
+    retry_action: MainMenuCommand,
 }
+
+/// Marks the supported in-process heightmap once its mesh has been spawned.
+#[derive(Component, Debug)]
+pub struct LocalTerrainReady;
 
 /// Rasterised shell artwork (PNG only; vector sources are documented in PIPELINE.md).
 #[derive(Resource, Default)]
@@ -232,12 +243,20 @@ pub fn sync_app_state_with_game_mode(
     }
 }
 
-/// Advance from world generation to gameplay after boot timer or live scene readiness.
+/// Admit only acknowledged replacement terrain, or the existing in-process bootstrap.
 pub fn advance_worldgen_to_playing(
+    mut commands: Commands,
     time: Res<Time>,
     mut boot: ResMut<WorldGenBoot>,
     state: Option<Res<State<AppState>>>,
     scene: Option<Res<LiveStreamScene>>,
+    bridge: Option<Res<LiveAttachBridge>>,
+    attach_mode: Option<Res<crate::AttachMode>>,
+    local_world: (
+        Option<Res<crate::sim_bridge::SimState>>,
+        Query<&Mesh3d, With<LocalTerrainReady>>,
+        Option<Res<Assets<Mesh>>>,
+    ),
     mut next_state: ResMut<NextState<AppState>>,
 ) {
     let Some(state) = state else {
@@ -246,6 +265,41 @@ pub fn advance_worldgen_to_playing(
     if *state.get() != AppState::WorldGen {
         boot.elapsed = 0.0;
         return;
+    }
+
+    if boot.error.is_some() {
+        return;
+    }
+    if let Some((connection, reply)) = boot.pending.as_ref().and_then(|ticket| {
+        ticket
+            .try_recv()
+            .map(|reply| (ticket.connection_id(), reply))
+    }) {
+        boot.pending = None;
+        match reply.and_then(world_load_generation) {
+            Ok(generation) => {
+                let Some(bridge) = bridge.as_ref() else {
+                    boot.error = Some(
+                        "The server connection is unavailable. Retry after reconnecting."
+                            .to_owned(),
+                    );
+                    return;
+                };
+                let client = bridge.client.clone();
+                commands.queue(move |world: &mut World| {
+                    client.install_world_generation(generation, connection, || {
+                        clear_live_stream_scene_in_world(world)
+                    });
+                });
+                boot.generation = Some(generation);
+                boot.scene_clear_pending = true;
+                return;
+            }
+            Err(error) => {
+                boot.error = Some(error);
+                return;
+            }
+        }
     }
 
     if boot.scene_clear_pending {
@@ -260,18 +314,56 @@ pub fn advance_worldgen_to_playing(
 
     boot.elapsed += time.delta_secs();
 
-    let ready = match scene.as_deref() {
-        // Skip the ConfirmWorldSetup frame (elapsed still ~0) so a queued live-scene
-        // clear can apply before we treat leftover chunks as boot-ready.
-        Some(scene) if boot.elapsed < f32::EPSILON => false,
-        Some(scene) => live_stream_has_content(scene) || boot.elapsed >= WORLDGEN_BOOT_SECONDS,
-        None => true,
+    let is_local = matches!(attach_mode.as_deref(), Some(crate::AttachMode::Standalone))
+        || (attach_mode.is_none() && bridge.is_none() && scene.is_none());
+    let ready = if is_local {
+        let (sim, terrain, meshes) = &local_world;
+        sim.is_some()
+            && terrain.iter().any(|mesh| {
+                meshes
+                    .as_ref()
+                    .is_some_and(|assets| assets.get(&mesh.0).is_some())
+            })
+    } else {
+        match (scene.as_deref(), boot.generation) {
+            (Some(scene), Some(generation)) => {
+                if !bridge
+                    .as_ref()
+                    .is_some_and(|b| b.client.world_generation_is_active(generation))
+                {
+                    boot.error =
+                        Some("Connection changed while loading. Reconnect and retry.".to_owned());
+                    return;
+                }
+                live_stream_has_content(scene)
+            }
+            _ => false,
+        }
     };
 
     if ready {
+        if let Some(bridge) = bridge.as_ref() {
+            bridge.client.finish_world_load();
+        }
         next_state.set(AppState::Playing);
         boot.elapsed = 0.0;
+    } else if boot.elapsed >= WORLDGEN_TIMEOUT_SECONDS {
+        boot.pending = None;
+        boot.error = Some(if boot.generation.is_some() {
+            "The server accepted the world, but no terrain was rendered. Check the server connection and retry."
+        } else {
+            "The server did not finish loading the world. Check the connection and retry."
+        }.to_owned());
     }
+}
+
+fn world_load_generation(result: serde_json::Value) -> Result<u64, String> {
+    result
+        .get("scene_generation")
+        .and_then(serde_json::Value::as_u64)
+        .ok_or_else(|| {
+            "This server cannot confirm a fresh world. Update the server and retry.".to_owned()
+        })
 }
 
 /// Consume one-shot [`MenuCommand`] actions from shell buttons.
@@ -280,7 +372,10 @@ pub fn consume_menu_commands(
     mut menu_command: ResMut<MenuCommand>,
     state: Option<Res<State<AppState>>>,
     mut next_state: ResMut<NextState<AppState>>,
-    bridge: Option<Res<LiveAttachBridge>>,
+    connection: (
+        Option<Res<LiveAttachBridge>>,
+        Option<Res<crate::AttachMode>>,
+    ),
     mut save_panel: Option<ResMut<SaveLoadPanel>>,
     saves: Res<MainMenuSaves>,
     params: Res<WorldSetupParams>,
@@ -293,6 +388,12 @@ pub fn consume_menu_commands(
     mut settings_open: Option<ResMut<SettingsOpen>>,
     mut game_speed: Option<ResMut<GameSpeed>>,
 ) {
+    let (bridge, attach_mode) = connection;
+    let bridge = if matches!(attach_mode.as_deref(), Some(crate::AttachMode::Standalone)) {
+        None
+    } else {
+        bridge
+    };
     let Some(state) = state else {
         return;
     };
@@ -300,24 +401,30 @@ pub fn consume_menu_commands(
         return;
     }
 
-    let action = menu_command.action;
+    let action = if menu_command.action == MainMenuCommand::RetryWorldLoad {
+        boot.retry_action
+    } else {
+        menu_command.action
+    };
     menu_command.action = MainMenuCommand::None;
     match action {
-        MainMenuCommand::None => {}
+        MainMenuCommand::None | MainMenuCommand::RetryWorldLoad => {}
         MainMenuCommand::NewWorld => {
             next_state.set(AppState::WorldSetup);
         }
         MainMenuCommand::ConfirmWorldSetup => {
-            commands.queue(|world: &mut World| {
-                clear_live_stream_scene_in_world(world);
-            });
+            *boot = WorldGenBoot {
+                retry_action: action,
+                ..Default::default()
+            };
             commands.insert_resource(PlayerFactionId(params.player_faction));
             if let Some(bridge) = bridge.as_ref() {
                 let preset = WORLDGEN_PRESETS
                     .get(params.climate_preset % WORLDGEN_PRESETS.len())
                     .copied()
                     .unwrap_or(WORLDGEN_PRESETS[0]);
-                start_world_boot(&bridge.client, preset, params.seed);
+                bridge.client.suspend_world_stream();
+                boot.pending = Some(start_world_boot(&bridge.client, preset, params.seed));
             }
             if let (Some(mut gate), Some(mut overlay)) = (gate, overlay) {
                 begin_player_session(
@@ -327,17 +434,17 @@ pub fn consume_menu_commands(
                 );
             }
             boot.elapsed = 0.0;
-            boot.scene_clear_pending = true;
             next_state.set(AppState::WorldGen);
         }
         MainMenuCommand::CancelWorldSetup => {
             next_state.set(AppState::MainMenu);
-            boot.elapsed = 0.0;
+            *boot = WorldGenBoot::default();
         }
         MainMenuCommand::Continue => {
-            commands.queue(|world: &mut World| {
-                clear_live_stream_scene_in_world(world);
-            });
+            *boot = WorldGenBoot {
+                retry_action: action,
+                ..Default::default()
+            };
             if let Some(bridge) = bridge.as_ref() {
                 bridge.client.clear_outcomes();
                 let slot_name = saves
@@ -345,19 +452,12 @@ pub fn consume_menu_commands(
                     .as_deref()
                     .unwrap_or("slot-1")
                     .to_string();
-                let slot_id = slot_name
-                    .strip_prefix("slot-")
-                    .and_then(|raw| raw.parse::<u32>().ok())
-                    .map(|slot| 2010 + slot)
-                    .unwrap_or(2010);
-                let json = serde_json::json!({
-                    "jsonrpc": "2.0",
-                    "id": slot_id,
-                    "method": "save.load",
-                    "params": { "slot_name": slot_name },
-                })
-                .to_string();
-                bridge.client.send_rpc_raw(json);
+                bridge.client.suspend_world_stream();
+                boot.pending = Some(
+                    bridge
+                        .client
+                        .request_rpc("save.load", serde_json::json!({ "slot_name": slot_name })),
+                );
             }
             if let (Some(mut gate), Some(mut overlay)) = (gate, overlay) {
                 begin_player_session(
@@ -367,7 +467,6 @@ pub fn consume_menu_commands(
                 );
             }
             boot.elapsed = 0.0;
-            boot.scene_clear_pending = true;
             next_state.set(AppState::WorldGen);
         }
         MainMenuCommand::LoadGame => {
@@ -404,7 +503,10 @@ pub fn consume_menu_commands(
             }
             next_state.set(AppState::MainMenu);
             *game_mode = GameUiMode::Playing;
-            boot.elapsed = 0.0;
+            *boot = WorldGenBoot::default();
+            if let Some(bridge) = bridge.as_ref() {
+                bridge.client.finish_world_load();
+            }
         }
         MainMenuCommand::Quit => {
             *game_mode = GameUiMode::Playing;
@@ -812,6 +914,7 @@ fn draw_worldgen_overlay(
     params: Res<WorldSetupParams>,
     titles: Res<MainMenuTitleAssets>,
     images: Res<Assets<Image>>,
+    mut menu_command: ResMut<MenuCommand>,
 ) {
     let Some(state) = state else {
         return;
@@ -833,7 +936,6 @@ fn draw_worldgen_overlay(
         return;
     };
 
-    let progress = (boot.elapsed / WORLDGEN_BOOT_SECONDS).clamp(0.0, 1.0);
     let preset = WORLDGEN_PRESETS
         .get(params.climate_preset % WORLDGEN_PRESETS.len())
         .copied()
@@ -861,10 +963,14 @@ fn draw_worldgen_overlay(
                     ui.set_min_width(420.0);
                     ui.vertical_centered(|ui| {
                         ui.label(
-                            egui::RichText::new("Generating world")
-                                .size(28.0)
-                                .color(KC_ACCENT)
-                                .strong(),
+                            egui::RichText::new(if boot.error.is_some() {
+                                "World could not be loaded"
+                            } else {
+                                "Loading world"
+                            })
+                            .size(28.0)
+                            .color(KC_ACCENT)
+                            .strong(),
                         );
                         ui.label(
                             egui::RichText::new(format!("{preset} · seed {:016X}", params.seed))
@@ -879,21 +985,23 @@ fn draw_worldgen_overlay(
                             );
                             ui.add_space(8.0);
                         }
-                        let bar = egui::ProgressBar::new(progress)
-                            .desired_width(320.0)
-                            .show_percentage();
-                        ui.add(bar);
-                        ui.add_space(8.0);
-                        let step = if progress < 0.25 {
-                            "Seeding continents…"
-                        } else if progress < 0.5 {
-                            "Raising terrain & biomes…"
-                        } else if progress < 0.75 {
-                            "Spawning factions…"
+                        if let Some(error) = &boot.error {
+                            ui.label(egui::RichText::new(error).color(DIM));
+                            if ui.button("Retry").clicked() {
+                                menu_command.action = MainMenuCommand::RetryWorldLoad;
+                            }
                         } else {
-                            "Streaming first chunks…"
-                        };
-                        ui.label(egui::RichText::new(step).color(DIM).italics());
+                            ui.spinner();
+                            let step = if boot.generation.is_some() {
+                                "World accepted. Waiting for terrain…"
+                            } else {
+                                "Waiting for the world to load…"
+                            };
+                            ui.label(egui::RichText::new(step).color(DIM).italics());
+                        }
+                        if ui.button("Back to menu").clicked() {
+                            menu_command.action = MainMenuCommand::ExitToMainMenu;
+                        }
                     });
                 });
         });
@@ -1154,27 +1262,126 @@ fn load_main_menu_title_assets(mut commands: Commands, asset_server: Res<AssetSe
 
 fn live_stream_has_content(scene: &LiveStreamScene) -> bool {
     !scene.chunks.is_empty()
-        || !scene.agents.is_empty()
-        || !scene.buildings.is_empty()
-        || !scene.graph_parcels.is_empty()
 }
 
-fn start_world_boot(client: &crate::ws_client::WsClient, preset: &str, seed: u64) {
+fn start_world_boot(
+    client: &crate::ws_client::WsClient,
+    preset: &str,
+    seed: u64,
+) -> crate::ws_client::RpcTicket {
     let init_seed = if seed == 0 {
         WORLDGEN_DEFAULT_SEED
     } else {
         seed
     };
-    client.send_rpc(
+    client.request_rpc(
         "sim.load_scenario",
         serde_json::json!({ "preset": preset, "seed": init_seed }),
-    );
-    client.send_rpc("sim.reset", serde_json::json!({ "seed": init_seed }));
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn world_boot_sends_one_scenario_request_without_reset() {
+        let (client, requests) = crate::ws_client::WsClient::test_rpc_client();
+        let ticket = start_world_boot(&client, "three-race-balanced", 987);
+        let request: serde_json::Value = serde_json::from_str(&requests.recv().unwrap()).unwrap();
+        assert_eq!(request["id"].as_u64(), Some(ticket.id));
+        assert_eq!(request["method"], "sim.load_scenario");
+        assert_eq!(request["params"]["seed"], 987);
+        assert!(
+            requests.try_recv().is_err(),
+            "a second reset would discard the preset"
+        );
+        assert!(
+            world_load_generation(serde_json::json!({"accepted":true})).is_err(),
+            "an older server must not silently satisfy fresh-world readiness"
+        );
+    }
+
+    fn world_boot_app() -> (App, crate::ws_client::WsClient, u64, Entity) {
+        let (client, _requests) = crate::ws_client::WsClient::test_rpc_client();
+        client.suspend_world_stream();
+        let ticket = client.request_rpc("sim.load_scenario", serde_json::json!({}));
+        let id = ticket.id;
+        let mut app = App::new();
+        app.add_plugins(bevy::state::app::StatesPlugin)
+            .init_state::<AppState>()
+            .insert_resource(Time::<()>::default())
+            .insert_resource(LiveAttachBridge {
+                client: client.clone(),
+            })
+            .insert_resource(crate::AttachMode::Server)
+            .insert_resource(WorldGenBoot {
+                pending: Some(ticket),
+                ..Default::default()
+            })
+            .insert_resource(LiveStreamScene::default())
+            .add_systems(Update, advance_worldgen_to_playing);
+        let old = app.world_mut().spawn_empty().id();
+        app.world_mut()
+            .resource_mut::<LiveStreamScene>()
+            .chunks
+            .insert(1, old);
+        app.world_mut()
+            .resource_mut::<NextState<AppState>>()
+            .set(AppState::WorldGen);
+        (app, client, id, old)
+    }
+
+    #[test]
+    fn world_boot_failed_reply_preserves_old_scene_and_blocks_playing() {
+        let (mut app, client, id, old) = world_boot_app();
+        client.test_complete_rpc(id, Err("preset not found"));
+        app.update();
+        assert_eq!(
+            app.world().resource::<State<AppState>>().get(),
+            &AppState::WorldGen
+        );
+        assert_eq!(
+            app.world().resource::<WorldGenBoot>().error.as_deref(),
+            Some("preset not found")
+        );
+        assert_eq!(
+            app.world().resource::<LiveStreamScene>().chunks.get(&1),
+            Some(&old)
+        );
+        assert!(app.world().get_entity(old).is_ok());
+    }
+
+    #[test]
+    fn world_boot_ack_clears_previous_scene_before_new_terrain_can_play() {
+        let (mut app, client, id, old) = world_boot_app();
+        app.update();
+        assert_eq!(
+            app.world().resource::<LiveStreamScene>().chunks.get(&1),
+            Some(&old)
+        );
+        client.test_complete_rpc(id, Ok(serde_json::json!({"scene_generation":2})));
+        app.update();
+        assert!(app.world().resource::<LiveStreamScene>().chunks.is_empty());
+        assert!(app.world().get_entity(old).is_err());
+        app.update(); // Clear barrier settles.
+        app.update(); // An ACK alone still does not represent rendered terrain.
+        assert_eq!(
+            app.world().resource::<State<AppState>>().get(),
+            &AppState::WorldGen
+        );
+        let fresh = app.world_mut().spawn_empty().id();
+        app.world_mut()
+            .resource_mut::<LiveStreamScene>()
+            .chunks
+            .insert(2, fresh);
+        app.update();
+        app.update();
+        assert_eq!(
+            app.world().resource::<State<AppState>>().get(),
+            &AppState::Playing
+        );
+    }
 
     /// FR-CIV-BEVY-024 — pause/state transition helpers exercise menu-path and world-setup behavior.
     #[test]

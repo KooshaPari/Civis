@@ -1,5 +1,9 @@
 use std::{
-    sync::atomic::{AtomicU32, Ordering},
+    collections::HashMap,
+    sync::{
+        atomic::{AtomicU32, AtomicU64, Ordering},
+        Arc, Mutex, Weak,
+    },
     thread,
     time::Duration,
 };
@@ -46,6 +50,155 @@ impl Default for WsClientConfig {
 pub struct SceneReset {
     /// Tick represented by the replacement scene.
     pub tick: u64,
+}
+
+/// A correlated request. Polling never blocks the render thread.
+#[derive(Debug)]
+pub struct RpcTicket {
+    pub id: u64,
+    connection: u64,
+    reply: Receiver<Result<serde_json::Value, String>>,
+    state: Weak<Mutex<RpcState>>,
+}
+
+impl Drop for RpcTicket {
+    fn drop(&mut self) {
+        if let Some(state) = self.state.upgrade() {
+            state
+                .lock()
+                .expect("RPC state lock")
+                .pending
+                .remove(&self.id);
+        }
+    }
+}
+
+impl RpcTicket {
+    pub(crate) fn connection_id(&self) -> u64 {
+        self.connection
+    }
+
+    pub fn try_recv(&self) -> Option<Result<serde_json::Value, String>> {
+        if self
+            .state
+            .upgrade()
+            .is_none_or(|state| state.lock().expect("RPC state lock").connection != self.connection)
+        {
+            return Some(Err(
+                "Connection changed before the reply was applied. Retry the operation.".to_owned(),
+            ));
+        }
+        match self.reply.try_recv() {
+            Ok(reply) => Some(reply),
+            Err(crossbeam_channel::TryRecvError::Empty) => None,
+            Err(crossbeam_channel::TryRecvError::Disconnected) => Some(Err(
+                "The server request was interrupted. Retry the operation.".to_owned(),
+            )),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum StreamGate {
+    Unrestricted,
+    Suspended,
+    Generation { connection: u64, generation: u64 },
+}
+
+#[derive(Debug)]
+struct RpcState {
+    pending: HashMap<u64, Sender<Result<serde_json::Value, String>>>,
+    connection: u64,
+    generation: Option<u64>,
+    gate: StreamGate,
+}
+
+impl Default for RpcState {
+    fn default() -> Self {
+        Self {
+            pending: HashMap::new(),
+            connection: 0,
+            generation: None,
+            gate: StreamGate::Unrestricted,
+        }
+    }
+}
+
+type SharedRpcState = Arc<Mutex<RpcState>>;
+
+struct ReceivedFrame {
+    connection: u64,
+    generation: Option<u64>,
+    frame: Frame3d,
+}
+
+fn route_rpc_reply(text: &str, state: &SharedRpcState) -> bool {
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(text) else {
+        return false;
+    };
+    let Some(id) = value.get("id").and_then(serde_json::Value::as_u64) else {
+        return false;
+    };
+    let mut state = state.lock().expect("RPC state lock");
+    let Some(reply) = state.pending.remove(&id) else {
+        return id >= 1_000_000;
+    };
+    let result = if let Some(error) = value.get("error") {
+        Err(error
+            .get("message")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("Server rejected the request")
+            .to_owned())
+    } else {
+        value
+            .get("result")
+            .cloned()
+            .ok_or_else(|| "Server reply has no result".to_owned())
+    };
+    let _ = reply.send(result);
+    true
+}
+
+fn interrupt_requests(state: &SharedRpcState) {
+    let mut state = state.lock().expect("RPC state lock");
+    for (_, reply) in state.pending.drain() {
+        let _ = reply.send(Err(
+            "Connection interrupted. Reconnect and retry.".to_owned()
+        ));
+    }
+    state.connection = state.connection.wrapping_add(1);
+    state.generation = None;
+    if state.gate != StreamGate::Unrestricted {
+        state.gate = StreamGate::Suspended;
+    }
+}
+
+fn enqueue_frame(
+    frame: Frame3d,
+    tx: &Sender<ReceivedFrame>,
+    state: &SharedRpcState,
+) -> Result<(), String> {
+    let state = state.lock().expect("RPC state lock");
+    tx.send(ReceivedFrame {
+        connection: state.connection,
+        generation: state.generation,
+        frame,
+    })
+    .map_err(|_| "bevy frame receiver dropped".to_owned())
+}
+
+fn queued_request_is_active(text: &str, state: &SharedRpcState) -> bool {
+    let id = serde_json::from_str::<serde_json::Value>(text)
+        .ok()
+        .and_then(|value| value.get("id").and_then(serde_json::Value::as_u64));
+    !id.is_some_and(|id| {
+        id >= 1_000_000
+            && !state
+                .lock()
+                .expect("RPC state lock")
+                .pending
+                .contains_key(&id)
+    })
 }
 
 /// Server-reported performance counters from `sim.perf`.
@@ -95,7 +248,7 @@ pub struct SimSimEventsData {
 
 /// WebSocket client that bridges the tokio network task to Bevy systems.
 pub struct WsClient {
-    frame_rx: Receiver<Frame3d>,
+    frame_rx: Receiver<ReceivedFrame>,
     meta_rx: Receiver<WsSpectatorMeta>,
     rtt_rx: Receiver<f32>,
     state_rx: Receiver<WsConnectionState>,
@@ -112,6 +265,7 @@ pub struct WsClient {
     outcome_rx: crossbeam_channel::Receiver<OutcomeHudData>,
     save_list_rx: crossbeam_channel::Receiver<Vec<SaveListEntry>>,
     scene_reset_rx: Receiver<SceneReset>,
+    rpc_state: SharedRpcState,
 }
 
 impl WsClient {
@@ -134,6 +288,7 @@ impl WsClient {
         let (_outcome_tx, outcome_rx) = crossbeam_channel::unbounded();
         let (_save_list_tx, save_list_rx) = crossbeam_channel::unbounded();
         let (_scene_reset_tx, scene_reset_rx) = crossbeam_channel::unbounded();
+        let rpc_state = SharedRpcState::default();
 
         Self {
             frame_rx,
@@ -149,6 +304,7 @@ impl WsClient {
             outcome_rx,
             save_list_rx,
             scene_reset_rx,
+            rpc_state,
         }
     }
 
@@ -172,6 +328,8 @@ impl WsClient {
         let (save_list_tx, save_list_rx) = crossbeam_channel::unbounded::<Vec<SaveListEntry>>();
         let (scene_reset_tx, scene_reset_rx) = crossbeam_channel::unbounded::<SceneReset>();
 
+        let rpc_state = SharedRpcState::default();
+        let network_rpc_state = Arc::clone(&rpc_state);
         thread::spawn(move || {
             run_client(
                 url,
@@ -188,6 +346,7 @@ impl WsClient {
                 outcome_tx,
                 save_list_tx,
                 scene_reset_tx,
+                network_rpc_state,
             );
         });
 
@@ -205,6 +364,7 @@ impl WsClient {
             outcome_rx,
             save_list_rx,
             scene_reset_rx,
+            rpc_state,
         }
     }
 
@@ -275,6 +435,11 @@ impl WsClient {
     #[must_use]
     pub fn poll_scene_resets(&self) -> Vec<SceneReset> {
         let mut resets = Vec::new();
+        if self.rpc_state.lock().expect("RPC state lock").gate != StreamGate::Unrestricted {
+            // Tracked world boots clear the scene and admit a generation together.
+            while self.scene_reset_rx.try_recv().is_ok() {}
+            return resets;
+        }
         while let Ok(reset) = self.scene_reset_rx.try_recv() {
             resets.push(reset);
         }
@@ -294,9 +459,120 @@ impl WsClient {
     /// Render loops should reuse the destination across updates to avoid a
     /// per-frame allocation while keeping the channel non-blocking.
     pub fn poll_into(&self, frames: &mut Vec<Frame3d>) {
-        while let Ok(frame) = self.frame_rx.try_recv() {
-            frames.push(frame);
+        let state = self.rpc_state.lock().expect("RPC state lock");
+        if state.gate == StreamGate::Suspended {
+            return;
         }
+        while let Ok(frame) = self.frame_rx.try_recv() {
+            let admitted = match state.gate {
+                StreamGate::Unrestricted => {
+                    frame.connection == state.connection && frame.generation == state.generation
+                }
+                StreamGate::Generation {
+                    connection,
+                    generation,
+                } => frame.connection == connection && frame.generation == Some(generation),
+                StreamGate::Suspended => false,
+            };
+            if admitted {
+                frames.push(frame.frame);
+            }
+        }
+    }
+
+    /// Hold incoming world frames until an acknowledged replacement is installed.
+    pub fn suspend_world_stream(&self) {
+        self.rpc_state.lock().expect("RPC state lock").gate = StreamGate::Suspended;
+    }
+
+    /// Apply the scene clear and frame admission under one connection check.
+    /// An ACK from a previous socket cannot admit a reused server generation.
+    pub fn install_world_generation(
+        &self,
+        generation: u64,
+        connection: u64,
+        clear: impl FnOnce(),
+    ) -> bool {
+        let mut state = self.rpc_state.lock().expect("RPC state lock");
+        if state.connection != connection {
+            return false;
+        }
+        clear();
+        // Replies received before the load ACK describe the previous world.
+        while self.meta_rx.try_recv().is_ok() {}
+        while self.outcome_rx.try_recv().is_ok() {}
+        while self.sim_events_rx.try_recv().is_ok() {}
+        while self.emergence_rx.try_recv().is_ok() {}
+        state.gate = StreamGate::Generation {
+            connection,
+            generation,
+        };
+        true
+    }
+
+    /// A reconnect invalidates the generation even when the new server reuses its number.
+    pub fn world_generation_is_active(&self, generation: u64) -> bool {
+        let state = self.rpc_state.lock().expect("RPC state lock");
+        matches!(state.gate, StreamGate::Generation { connection, generation: expected }
+            if connection == state.connection && expected == generation)
+            && state.generation.is_none_or(|seen| seen <= generation)
+    }
+
+    /// Release bootstrap admission once its terrain is installed, or after cancelling.
+    pub fn finish_world_load(&self) {
+        let mut state = self.rpc_state.lock().expect("RPC state lock");
+        while self.scene_reset_rx.try_recv().is_ok() {}
+        state.gate = StreamGate::Unrestricted;
+    }
+
+    /// Queue an RPC with an ID reserved independently of legacy polling requests.
+    pub fn request_rpc(&self, method: &str, params: serde_json::Value) -> RpcTicket {
+        static NEXT_REQUEST: AtomicU64 = AtomicU64::new(1_000_000);
+        let id = NEXT_REQUEST.fetch_add(1, Ordering::Relaxed);
+        let (reply, receiver) = crossbeam_channel::bounded(1);
+        let connection = {
+            let mut state = self.rpc_state.lock().expect("RPC state lock");
+            state.pending.insert(id, reply);
+            state.connection
+        };
+        let request =
+            serde_json::json!({"jsonrpc":"2.0", "id":id, "method":method, "params":params});
+        if self.cmd_tx.send(request.to_string()).is_err() {
+            if let Some(reply) = self
+                .rpc_state
+                .lock()
+                .expect("RPC state lock")
+                .pending
+                .remove(&id)
+            {
+                let _ = reply.send(Err(
+                    "No server connection is available. Reconnect and retry.".to_owned(),
+                ));
+            }
+        }
+        RpcTicket {
+            id,
+            connection,
+            reply: receiver,
+            state: Arc::downgrade(&self.rpc_state),
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_rpc_client() -> (Self, Receiver<String>) {
+        let mut client = Self::disconnected();
+        let (tx, rx) = crossbeam_channel::unbounded();
+        client.cmd_tx = tx;
+        (client, rx)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_complete_rpc(&self, id: u64, result: Result<serde_json::Value, &str>) {
+        let value = match result {
+            Ok(result) => serde_json::json!({"id":id, "result":result}),
+            Err(error) => serde_json::json!({"id":id, "error":{"message":error}}),
+        };
+        assert!(route_rpc_reply(&value.to_string(), &self.rpc_state));
     }
 
     #[must_use]
@@ -369,6 +645,7 @@ impl Clone for WsClient {
             outcome_rx: self.outcome_rx.clone(),
             save_list_rx: self.save_list_rx.clone(),
             scene_reset_rx: self.scene_reset_rx.clone(),
+            rpc_state: Arc::clone(&self.rpc_state),
             sim_events_rx: self.sim_events_rx.clone(),
         }
     }
@@ -434,7 +711,7 @@ fn publish_state(state_tx: &Sender<WsConnectionState>, state: WsConnectionState)
 fn run_client(
     url: String,
     config: WsClientConfig,
-    frame_tx: Sender<Frame3d>,
+    frame_tx: Sender<ReceivedFrame>,
     meta_tx: Sender<WsSpectatorMeta>,
     rtt_tx: Sender<f32>,
     state_tx: Sender<WsConnectionState>,
@@ -446,6 +723,7 @@ fn run_client(
     outcome_tx: Sender<OutcomeHudData>,
     save_list_tx: Sender<Vec<SaveListEntry>>,
     scene_reset_tx: Sender<SceneReset>,
+    rpc_state: SharedRpcState,
 ) {
     let Ok(runtime) = Builder::new_multi_thread().enable_all().build() else {
         eprintln!("bevy ws client: failed to build tokio runtime — staying disconnected");
@@ -472,13 +750,16 @@ fn run_client(
                 &outcome_tx,
                 &save_list_tx,
                 &scene_reset_tx,
+                &rpc_state,
             )
             .await
             {
                 Ok(()) => {
+                    interrupt_requests(&rpc_state);
                     backoff.reset();
                 }
                 Err(err) => {
+                    interrupt_requests(&rpc_state);
                     eprintln!("bevy ws client disconnected: {err}");
                     let delay = backoff.next_delay();
                     thread::sleep(delay);
@@ -614,10 +895,7 @@ fn parse_sim_events_response(text: &str) -> Option<SimSimEventsData> {
             .get("music_cues")
             .cloned()
             .unwrap_or_else(|| serde_json::json!({})),
-        climate: result
-            .get("climate")
-            .cloned()
-            .filter(|v| v.is_object()),
+        climate: result.get("climate").cloned().filter(|v| v.is_object()),
         emergence_sample: result
             .get("emergence_sample")
             .cloned()
@@ -626,10 +904,7 @@ fn parse_sim_events_response(text: &str) -> Option<SimSimEventsData> {
             .get("religion_state")
             .cloned()
             .filter(|v| v.is_object()),
-        legends: result
-            .get("legends")
-            .cloned()
-            .filter(|v| v.is_object()),
+        legends: result.get("legends").cloned().filter(|v| v.is_object()),
         researched: result
             .get("researched")
             .and_then(|v| v.as_array())
@@ -721,7 +996,7 @@ fn parse_scene_reset_notification(text: &str) -> Option<SceneReset> {
 async fn connect_and_stream(
     url: &str,
     config: WsClientConfig,
-    frame_tx: &Sender<Frame3d>,
+    frame_tx: &Sender<ReceivedFrame>,
     meta_tx: &Sender<WsSpectatorMeta>,
     rtt_tx: &Sender<f32>,
     state_tx: &Sender<WsConnectionState>,
@@ -733,6 +1008,7 @@ async fn connect_and_stream(
     outcome_tx: &Sender<OutcomeHudData>,
     save_list_tx: &Sender<Vec<SaveListEntry>>,
     scene_reset_tx: &Sender<SceneReset>,
+    rpc_state: &SharedRpcState,
 ) -> Result<(), String> {
     let (ws, _) = tokio_tungstenite::connect_async(url)
         .await
@@ -751,6 +1027,9 @@ async fn connect_and_stream(
     loop {
         // Flush outbound commands (speed/pause RPCs) before blocking on next inbound frame.
         while let Ok(cmd) = cmd_rx.try_recv() {
+            if !queued_request_is_active(&cmd, rpc_state) {
+                continue; // A cancelled/disconnected ticket must never replay on reconnect.
+            }
             write
                 .send(Message::Text(cmd.into()))
                 .await
@@ -784,13 +1063,21 @@ async fn connect_and_stream(
             last_snapshot = std::time::Instant::now();
         }
 
-        let msg = match read.next().await {
-            Some(msg) => msg.map_err(|err| err.to_string())?,
-            None => break,
+        let msg = match tokio::time::timeout(Duration::from_millis(100), read.next()).await {
+            Ok(Some(msg)) => msg.map_err(|err| err.to_string())?,
+            Ok(None) => break,
+            Err(_) => continue, // Keep flushing user commands even when a paused server emits no ticks.
         };
         match msg {
             Message::Text(text) => {
+                if route_rpc_reply(&text, rpc_state) {
+                    continue;
+                }
                 if let Some(reset) = parse_scene_reset_notification(&text) {
+                    let value: serde_json::Value =
+                        serde_json::from_str(&text).map_err(|e| e.to_string())?;
+                    rpc_state.lock().expect("RPC state lock").generation =
+                        value["params"]["scene_generation"].as_u64();
                     let _ = scene_reset_tx.send(reset);
                     continue;
                 }
@@ -825,15 +1112,11 @@ async fn connect_and_stream(
                     continue;
                 }
                 let frame = parse_ws_payload(text.as_bytes())?;
-                if frame_tx.send(frame).is_err() {
-                    return Err("bevy frame receiver dropped".into());
-                }
+                enqueue_frame(frame, frame_tx, rpc_state)?;
             }
             Message::Binary(bytes) => {
                 let frame = parse_ws_payload(&bytes)?;
-                if frame_tx.send(frame).is_err() {
-                    return Err("bevy frame receiver dropped".into());
-                }
+                enqueue_frame(frame, frame_tx, rpc_state)?;
             }
             _ => {}
         }
@@ -845,6 +1128,165 @@ async fn connect_and_stream(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rpc_ticket_correlates_errors_and_ignores_cancelled_replies() {
+        let (client, queue) = WsClient::test_rpc_client();
+        let first = client.request_rpc("sim.load_scenario", serde_json::json!({}));
+        let second = client.request_rpc("sim.terraform_extent", serde_json::json!({}));
+        assert_ne!(first.id, second.id);
+        client.test_complete_rpc(second.id, Err("permission denied"));
+        assert_eq!(second.try_recv(), Some(Err("permission denied".to_owned())));
+        assert!(first.try_recv().is_none());
+        let stale_id = first.id;
+        drop(first);
+        let cancelled = queue.recv().unwrap();
+        assert!(!queued_request_is_active(&cancelled, &client.rpc_state));
+        client.test_complete_rpc(stale_id, Ok(serde_json::json!({"scene_generation":1})));
+    }
+
+    #[test]
+    fn rpc_ticket_disconnect_cancels_queued_mutations_but_keeps_explicit_retry() {
+        let (client, queue) = WsClient::test_rpc_client();
+        let first = client.request_rpc("sim.load_scenario", serde_json::json!({}));
+        let queued = queue.recv().unwrap();
+        interrupt_requests(&client.rpc_state);
+        assert!(first.try_recv().unwrap().is_err());
+        assert!(!queued_request_is_active(&queued, &client.rpc_state));
+        let retry = client.request_rpc("sim.load_scenario", serde_json::json!({}));
+        assert!(queued_request_is_active(
+            &queue.recv().unwrap(),
+            &client.rpc_state
+        ));
+        assert_ne!(retry.id, first.id);
+    }
+
+    #[test]
+    fn rpc_ticket_queued_ack_and_deferred_install_reject_reconnected_socket() {
+        let (client, _queue) = WsClient::test_rpc_client();
+        client.suspend_world_stream();
+        let queued = client.request_rpc("sim.load_scenario", serde_json::json!({}));
+        client.test_complete_rpc(queued.id, Ok(serde_json::json!({"scene_generation":7})));
+        interrupt_requests(&client.rpc_state);
+        client.rpc_state.lock().unwrap().generation = Some(7);
+        assert!(
+            queued.try_recv().unwrap().is_err(),
+            "a queued old-socket ACK must fail"
+        );
+
+        let retry = client.request_rpc("sim.load_scenario", serde_json::json!({}));
+        client.test_complete_rpc(retry.id, Ok(serde_json::json!({"scene_generation":7})));
+        let reply = retry.try_recv().unwrap().unwrap();
+        let connection = retry.connection_id();
+        interrupt_requests(&client.rpc_state); // Disconnect between reply poll and deferred scene clear.
+        client.rpc_state.lock().unwrap().generation = Some(7);
+        let mut cleared = false;
+        assert!(!client.install_world_generation(
+            reply["scene_generation"].as_u64().unwrap(),
+            connection,
+            || cleared = true
+        ));
+        assert!(
+            !cleared,
+            "old ACK must preserve existing scene on the replacement socket"
+        );
+        assert!(!client.world_generation_is_active(7));
+    }
+
+    #[test]
+    fn world_boot_admits_only_matched_generation_in_both_ack_reset_orders() {
+        for reset_first in [false, true] {
+            let (mut client, _) = WsClient::test_rpc_client();
+            let (tx, rx) = crossbeam_channel::unbounded();
+            client.frame_rx = rx;
+            let frame = || {
+                Frame3d::VoxelDelta(civ_protocol_3d::VoxelDeltaFrame {
+                    tick: 1,
+                    deltas: vec![],
+                })
+            };
+            client.rpc_state.lock().unwrap().generation = Some(1);
+            enqueue_frame(frame(), &tx, &client.rpc_state).unwrap();
+            client.suspend_world_stream();
+            if reset_first {
+                client.rpc_state.lock().unwrap().generation = Some(2);
+                enqueue_frame(frame(), &tx, &client.rpc_state).unwrap();
+            }
+            assert!(client.poll().is_empty()); // No frames before scene clear/admission.
+            assert!(client.install_world_generation(2, 0, || {}));
+            if !reset_first {
+                assert!(client.poll().is_empty()); // Older buffered scene cannot satisfy the ACK.
+                client.rpc_state.lock().unwrap().generation = Some(2);
+                enqueue_frame(frame(), &tx, &client.rpc_state).unwrap();
+            }
+            assert_eq!(client.poll().len(), 1);
+            interrupt_requests(&client.rpc_state);
+            client.rpc_state.lock().unwrap().generation = Some(2); // Restart reuses number.
+            assert!(!client.world_generation_is_active(2));
+        }
+    }
+
+    #[tokio::test]
+    async fn rpc_ticket_sends_when_server_has_no_inbound_ticks() {
+        use tokio::net::TcpListener;
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("ws://{}", listener.local_addr().unwrap());
+        let (client, cmd_rx) = WsClient::test_rpc_client();
+        let (frame_tx, _frame_rx) = crossbeam_channel::unbounded();
+        let (meta_tx, _meta_rx) = crossbeam_channel::unbounded();
+        let (rtt_tx, _rtt_rx) = crossbeam_channel::unbounded();
+        let (state_tx, _state_rx) = crossbeam_channel::unbounded();
+        let (_send_tx, send_rx) = crossbeam_channel::unbounded();
+        let (emergence_tx, _emergence_rx) = crossbeam_channel::unbounded();
+        let (perf_tx, _perf_rx) = crossbeam_channel::unbounded();
+        let (events_tx, _events_rx) = crossbeam_channel::unbounded();
+        let (outcome_tx, _outcome_rx) = crossbeam_channel::unbounded();
+        let (saves_tx, _saves_rx) = crossbeam_channel::unbounded();
+        let (reset_tx, _reset_rx) = crossbeam_channel::unbounded();
+        let server = async {
+            let (socket, _) = listener.accept().await.unwrap();
+            let mut ws = tokio_tungstenite::accept_async(socket).await.unwrap();
+            ws.next().await.unwrap().unwrap(); // Initial snapshot request; deliberately send nothing.
+            tokio::time::sleep(Duration::from_millis(150)).await;
+            let ticket = client.request_rpc("sim.load_scenario", serde_json::json!({}));
+            let request = tokio::time::timeout(Duration::from_secs(2), ws.next())
+                .await
+                .unwrap()
+                .unwrap()
+                .unwrap();
+            let request: serde_json::Value =
+                serde_json::from_str(request.to_text().unwrap()).unwrap();
+            assert_eq!(request["id"].as_u64(), Some(ticket.id));
+            ws.send(Message::Text(
+                serde_json::json!({"id":ticket.id,"result":{"scene_generation":7}})
+                    .to_string()
+                    .into(),
+            ))
+            .await
+            .unwrap();
+            ws.close(None).await.unwrap();
+            ticket
+        };
+        let network = connect_and_stream(
+            &url,
+            WsClientConfig::default(),
+            &frame_tx,
+            &meta_tx,
+            &rtt_tx,
+            &state_tx,
+            &cmd_rx,
+            &send_rx,
+            &emergence_tx,
+            &perf_tx,
+            &events_tx,
+            &outcome_tx,
+            &saves_tx,
+            &reset_tx,
+            &client.rpc_state,
+        );
+        let (ticket, _) = tokio::join!(server, network);
+        assert_eq!(ticket.try_recv().unwrap().unwrap()["scene_generation"], 7);
+    }
 
     #[test]
     fn reconnect_backoff_doubles_until_cap() {

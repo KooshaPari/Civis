@@ -473,6 +473,7 @@ fn material_palette_panel(
     armed: Res<MaterialPaintArmed>,
     mut selected: ResMut<SelectedMaterial>,
     bridge: Option<Res<ServerBridge>>,
+    mode: Option<Res<crate::AttachMode>>,
 ) {
     if !open.0 {
         return;
@@ -501,19 +502,8 @@ fn material_palette_panel(
         // The y-offset drops it below the top-center stat cluster.
         .anchor(egui::Align2::RIGHT_TOP, egui::vec2(-12.0, 86.0))
         .show(ctx, |ui| {
-            palette_panel_body(ui, active_name, armed.0, &shelves, &mut selected);
-            ui.add_space(4.0);
-            if let Some(ref bridge) = bridge {
-                if ui.small_button("Apply to Server").clicked() {
-                    bridge.send_rpc(
-                        "sim.command",
-                        serde_json::json!({
-                            "action": "set_material",
-                            "material": selected.material.0,
-                        }),
-                    );
-                }
-            }
+            let live = crate::spawn_tools::server_tools_active(mode.as_deref(), bridge.is_some());
+            palette_panel_body(ui, active_name, armed.0, &shelves, &mut selected, live);
             ui_theme::liquid_glass_finish(ui.painter(), ui.min_rect(), ui_theme::RADIUS_PANEL);
         });
 }
@@ -525,10 +515,20 @@ fn palette_panel_body(
     armed: bool,
     shelves: &[(MaterialFamily, Vec<&'static MaterialDef>)],
     selected: &mut SelectedMaterial,
+    live: bool,
 ) {
     palette_header(ui, active_name, armed);
     ui.add_space(4.0);
-    brush_cluster_combo(ui, selected);
+    if live {
+        ui.label("Terraform: click to stamp a solid disk, one voxel layer.");
+        ui.add(
+            egui::Slider::new(&mut selected.size, BRUSH_RADIUS_MIN..=BRUSH_RADIUS_MAX)
+                .text("disk radius")
+                .fixed_decimals(0),
+        );
+    } else {
+        brush_cluster_combo(ui, selected);
+    }
     ui_theme::hairline(ui);
     egui::ScrollArea::vertical()
         .max_height(360.0)
@@ -697,7 +697,12 @@ fn paint_into_voxel_grid(
     marker: Res<crate::spawn_tools::CursorMarker>,
     over_ui: Res<crate::spawn_tools::PointerOverUi>,
     mut sim: ResMut<crate::voxel_sim::VoxelSimState>,
+    bridge: Option<Res<ServerBridge>>,
+    mode: Option<Res<crate::AttachMode>>,
 ) {
+    if crate::spawn_tools::server_tools_active(mode.as_deref(), bridge.is_some()) {
+        return;
+    }
     let paint_pressed = select_action_binding(settings.as_deref()).is_pressed(&keys, &buttons);
     if !armed.0 || over_ui.0 || !paint_pressed {
         return;

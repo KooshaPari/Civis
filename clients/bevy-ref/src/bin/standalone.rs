@@ -397,6 +397,7 @@ fn setup_sandbox_terrain(
     let biome = civ_bevy_ref::terrain::pbr_biome_at_height(centre_h);
     commands.spawn((
         Mesh3d(meshes.add(terrain)),
+        civ_bevy_ref::menus::LocalTerrainReady,
         MeshMaterial3d(biome_materials.handle(biome).clone()),
         Transform::from_xyz(0.0, 0.0, 0.0),
     ));
@@ -413,6 +414,7 @@ fn setup_sandbox_terrain(
     let terrain = terrain_mesh();
     commands.spawn((
         Mesh3d(meshes.add(terrain)),
+        civ_bevy_ref::menus::LocalTerrainReady,
         MeshMaterial3d(materials.add(StandardMaterial {
             base_color: Color::srgb(0.45, 0.62, 0.38),
             perceptual_roughness: 0.95,

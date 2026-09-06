@@ -1457,9 +1457,9 @@ async fn apply_dispatch_effect(
                 SpawnEntityKind::Vehicle => {
                     spawn::spawn_military_at(&mut sim.world, faction, x, y, UnitType::Knight)
                 }
-                SpawnEntityKind::Airport => spawn::spawn_airport_at(&mut sim.world, x, y),
-                SpawnEntityKind::Port => spawn::spawn_port_at(&mut sim.world, x, y),
-                SpawnEntityKind::Hangar => spawn::spawn_hangar_at(&mut sim.world, x, y),
+                SpawnEntityKind::Airport => sim.spawn_airport_at(x, y),
+                SpawnEntityKind::Port => sim.spawn_port_at(x, y),
+                SpawnEntityKind::Hangar => sim.spawn_hangar_at(x, y),
             };
             set_spawn_civilian_result(response, entity.id());
             if matches!(

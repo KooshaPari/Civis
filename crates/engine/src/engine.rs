@@ -1512,6 +1512,58 @@ impl Simulation {
             .record_voxel_write(self.state.tick, pos, value);
     }
 
+    /// Create a replayable civic hub at normalized horizontal map coordinates.
+    pub fn spawn_airport_at(&mut self, x: f32, y: f32) -> hecs::Entity {
+        let entity = crate::spawn::spawn_airport_at(&mut self.world, x, y);
+        self.record_authored_building(entity);
+        entity
+    }
+
+    /// Create a replayable market at normalized horizontal map coordinates.
+    pub fn spawn_port_at(&mut self, x: f32, y: f32) -> hecs::Entity {
+        let entity = crate::spawn::spawn_port_at(&mut self.world, x, y);
+        self.record_authored_building(entity);
+        entity
+    }
+
+    /// Create replayable barracks at normalized horizontal map coordinates.
+    pub fn spawn_hangar_at(&mut self, x: f32, y: f32) -> hecs::Entity {
+        let entity = crate::spawn::spawn_hangar_at(&mut self.world, x, y);
+        self.record_authored_building(entity);
+        entity
+    }
+
+    fn record_authored_building(&mut self, entity: hecs::Entity) {
+        let building = *self
+            .world
+            .get::<&Building>(entity)
+            .expect("newly spawned building");
+        self.replay_log
+            .record_building_spawn(self.state.tick, entity.to_bits().get(), building);
+    }
+
+    pub(crate) fn apply_replay_building_spawn(
+        &mut self,
+        tick: u64,
+        entity_bits: u64,
+        building: Building,
+    ) -> Result<(), ReplayError> {
+        let entity = crate::replay::building_replay_entity(entity_bits)?;
+        if self
+            .world
+            .iter()
+            .any(|existing| existing.entity().id() == entity.id())
+        {
+            return Err(ReplayError::InvalidBuildingSpawn {
+                entity_bits,
+                reason: "entity index is already occupied",
+            });
+        }
+        self.world.spawn_at(entity, (building,));
+        self.state.tick = tick;
+        Ok(())
+    }
+
     /// Apply tactical voxel damage immediately, bypassing the queue.
     pub fn apply_damage_now(&mut self, event: &DamageEvent) -> usize {
         apply_damage(&mut self.voxel, event)

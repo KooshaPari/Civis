@@ -4,10 +4,7 @@ use bevy::prelude::*;
 use civ_agents::{
     infer_alignment_for_spawn, spawn_civilian_at, ActorVisual, ActorVisualKind, Alignment, Civilian,
 };
-use civ_engine::{
-    spawn::{spawn_airport_at, spawn_hangar_at, spawn_port_at},
-    Building, BuildingType, Simulation,
-};
+use civ_engine::{Building, BuildingType, Simulation};
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use std::collections::HashMap;
@@ -135,6 +132,68 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn standalone_building_requests_record_once_at_clicked_coordinates() {
+        use crate::spawn_tools::BuildingSpawnKind;
+        use civ_engine::replay::ReplayEvent;
+
+        let mut app = App::new();
+        app.insert_resource(SimState(Simulation::with_seed(419)))
+            .add_message::<SpawnBuildingRequest>()
+            .add_systems(Update, apply_spawn_building_requests);
+        for kind in [
+            BuildingSpawnKind::CityCenter,
+            BuildingSpawnKind::Market,
+            BuildingSpawnKind::Barracks,
+        ] {
+            app.world_mut().write_message(SpawnBuildingRequest {
+                position: Vec3::new(64.0, 17.0, -64.0),
+                kind,
+            });
+        }
+        app.update();
+        app.update();
+        let sim = &app.world().resource::<SimState>().0;
+        let authored: Vec<_> = sim
+            .replay_log()
+            .events
+            .iter()
+            .filter_map(|event| {
+                if let ReplayEvent::BuildingSpawn {
+                    entity_bits,
+                    building,
+                    ..
+                } = event
+                {
+                    Some((*entity_bits, *building))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert_eq!(authored.len(), 3, "each message records exactly once");
+        assert_eq!(sim.replay_log().schema_version, 2);
+        assert_eq!(
+            authored
+                .iter()
+                .map(|(_, building)| building.building_type)
+                .collect::<Vec<_>>(),
+            [
+                BuildingType::CityCenter,
+                BuildingType::Market,
+                BuildingType::Barracks
+            ]
+        );
+        for (bits, building) in authored {
+            assert_eq!(
+                building.position,
+                civ_engine::spawn::norm_to_grid(0.75, 0.25)
+            );
+            let entity = hecs::Entity::from_bits(bits).unwrap();
+            assert_eq!(*sim.world.get::<&Building>(entity).unwrap(), building);
+        }
+    }
 }
 
 fn advance_simulation(
@@ -216,13 +275,13 @@ fn apply_spawn_building_requests(
         let (nx, ny) = world_to_norm(request.position);
         match request.kind {
             crate::spawn_tools::BuildingSpawnKind::CityCenter => {
-                spawn_airport_at(&mut sim.0.world, nx, ny);
+                sim.0.spawn_airport_at(nx, ny);
             }
             crate::spawn_tools::BuildingSpawnKind::Market => {
-                spawn_port_at(&mut sim.0.world, nx, ny);
+                sim.0.spawn_port_at(nx, ny);
             }
             crate::spawn_tools::BuildingSpawnKind::Barracks => {
-                spawn_hangar_at(&mut sim.0.world, nx, ny);
+                sim.0.spawn_hangar_at(nx, ny);
             }
         }
     }

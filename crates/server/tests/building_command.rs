@@ -446,3 +446,259 @@ async fn paused_building_spawn_publishes_to_both_clients_without_ticking() {
         "placement must not tick"
     );
 }
+
+fn building_state(sim: &Simulation) -> Vec<(u64, Building)> {
+    let mut buildings: Vec<_> = sim
+        .world
+        .query::<&Building>()
+        .iter()
+        .map(|(entity, building)| (entity.to_bits().get(), *building))
+        .collect();
+    buildings.sort_by_key(|(id, _)| *id);
+    buildings
+}
+#[tokio::test]
+async fn building_palette_and_interleaved_terrain_survive_replay_without_duplication() {
+    use civ_engine::{decode_civreplay, encode_civreplay};
+    use civ_voxel::{
+        material::{STONE, WOOD},
+        WorldCoord,
+    };
+
+    let storage = tempfile::tempdir().unwrap();
+    let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(419)));
+    let address = spawn_ws_bridge_with_config(
+        sim.clone(),
+        WsBridgeConfig {
+            tick_broadcast_format: TickBroadcastFormat::Binary,
+            saves_dir: storage.path().join("saves"),
+            replays_dir: storage.path().join("replays"),
+            ..Default::default()
+        },
+    )
+    .await;
+    let (mut socket, _) = connect_async(format!("ws://{address}/ws?tick_format=binary"))
+        .await
+        .unwrap();
+    let mut frames = Vec::new();
+    let paused = rpc(
+        &mut socket,
+        &mut frames,
+        200,
+        "sim.set_speed",
+        json!({"multiplier":0,"role":"operator"}),
+    )
+    .await;
+    assert_eq!(
+        paused.pointer("/result/multiplier"),
+        Some(&json!(0)),
+        "{paused}"
+    );
+    let baseline_count = building_state(&*sim.lock().await).len();
+    let initial_event_count = sim.lock().await.replay_log().events.len();
+    let point = WorldCoord { x: 0, y: 0, z: 0 };
+    for (index, (alias, x, y, material)) in [
+        ("airport", 0.75, 0.25, WOOD),
+        ("port", 0.25, 0.75, STONE),
+        ("hangar", 0.625, 0.375, WOOD),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let terrain = rpc(
+            &mut socket,
+            &mut frames,
+            201 + index as u64 * 2,
+            "sim.place_voxel",
+            json!({"x":point.x,"y":point.y,"z":point.z,"material":material.0,"role":"operator"}),
+        )
+        .await;
+        assert_eq!(
+            terrain.pointer("/result/ok"),
+            Some(&json!(true)),
+            "{terrain}"
+        );
+        let spawn = rpc(
+            &mut socket,
+            &mut frames,
+            202 + index as u64 * 2,
+            "sim.spawn_entity",
+            json!({"kind":alias,"x":x,"y":y,"role":"operator"}),
+        )
+        .await;
+        assert_eq!(spawn.pointer("/result/ok"), Some(&json!(true)), "{spawn}");
+    }
+    let (expected, expected_tick, source_log) = {
+        let authoritative = sim.lock().await;
+        assert_eq!(authoritative.voxel().read(point), WOOD);
+        (
+            building_state(&authoritative),
+            authoritative.state.tick,
+            authoritative.replay_log().clone(),
+        )
+    };
+    assert_eq!(expected.len(), baseline_count + 3);
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(10))
+        .build()
+        .unwrap();
+    let response = client
+        .get(format!("http://{address}/replay/export"))
+        .send()
+        .await
+        .unwrap();
+    assert!(response.status().is_success());
+    let bytes = response.bytes().await.unwrap();
+    let log = decode_civreplay(&bytes).unwrap();
+    assert_eq!(
+        log, source_log,
+        "export preserves the authoritative event order"
+    );
+    assert_eq!(encode_civreplay(&log).unwrap(), bytes.as_ref());
+
+    assert_eq!(log.schema_version, 2);
+    let order: Vec<_> = log.events[initial_event_count..]
+        .iter()
+        .map(|event| match event {
+            civ_engine::replay::ReplayEvent::VoxelWrite { .. } => "terrain",
+            civ_engine::replay::ReplayEvent::BuildingSpawn { .. } => "building",
+            _ => "unexpected",
+        })
+        .collect();
+    assert_eq!(
+        order,
+        ["terrain", "building", "terrain", "building", "terrain", "building"]
+    );
+    let mut replayed = Simulation::with_seed(log.seed);
+    let initial_events = replayed.replay_log().events.len();
+    log.replay(&mut replayed).unwrap();
+    assert_eq!(
+        building_state(&replayed),
+        expected,
+        "replay must retain each building type, grid position, hp and max_hp"
+    );
+    assert_eq!(
+        replayed.voxel().read(point),
+        WOOD,
+        "interleaved voxel writes retain their order"
+    );
+    assert_eq!(replayed.state.tick, expected_tick);
+    assert_eq!(
+        replayed.replay_log().events.len(),
+        initial_events,
+        "playback must not record the authoring events again"
+    );
+
+    let first_path = storage.path().join("palette.civreplay");
+    std::fs::write(&first_path, &bytes).unwrap();
+    let loaded = Simulation::load_replay_from_file(&first_path).unwrap();
+    assert_eq!(building_state(&loaded), expected);
+    assert_eq!(loaded.voxel().read(point), WOOD);
+    assert_eq!(
+        loaded.replay_log(),
+        &log,
+        "file loading retains one copy of each event"
+    );
+    let second_path = storage.path().join("palette-resaved.civreplay");
+    loaded.save_replay(&second_path).unwrap();
+    let reloaded = Simulation::load_replay_from_file(&second_path).unwrap();
+    assert_eq!(
+        building_state(&reloaded),
+        expected,
+        "save/reload must not duplicate authored buildings"
+    );
+    assert_eq!(reloaded.voxel().read(point), WOOD);
+    assert_eq!(reloaded.replay_log(), &log);
+
+    // Exercise the active production archive path, then author after restoring.
+    let save = rpc(
+        &mut socket,
+        &mut frames,
+        220,
+        "save.slot",
+        json!({"slot_name":"slot-1","role":"operator"}),
+    )
+    .await;
+    assert!(save.get("error").is_none(), "{save}");
+    let reset = rpc(
+        &mut socket,
+        &mut frames,
+        221,
+        "sim.reset",
+        json!({"seed":999,"role":"operator"}),
+    )
+    .await;
+    assert!(reset.get("error").is_none(), "{reset}");
+    let load = rpc(
+        &mut socket,
+        &mut frames,
+        222,
+        "save.load",
+        json!({"slot_name":"slot-1","role":"operator"}),
+    )
+    .await;
+    assert!(load.get("error").is_none(), "{load}");
+    assert_eq!(
+        building_state(&*sim.lock().await),
+        expected,
+        "active archive must retain full entity bits and building state"
+    );
+    assert_eq!(sim.lock().await.voxel().read(point), WOOD);
+    let next = rpc(
+        &mut socket,
+        &mut frames,
+        223,
+        "sim.spawn_entity",
+        json!({"kind":"airport","x":0.125,"y":0.875,"role":"operator"}),
+    )
+    .await;
+    assert_eq!(next.pointer("/result/ok"), Some(&json!(true)), "{next}");
+    let continued = building_state(&*sim.lock().await);
+    assert_eq!(
+        continued.len(),
+        expected.len() + 1,
+        "post-load authoring adds exactly one building"
+    );
+    let save = rpc(
+        &mut socket,
+        &mut frames,
+        224,
+        "save.slot",
+        json!({"slot_name":"slot-2","role":"operator"}),
+    )
+    .await;
+    assert!(save.get("error").is_none(), "{save}");
+    let load = rpc(
+        &mut socket,
+        &mut frames,
+        225,
+        "save.load",
+        json!({"slot_name":"slot-2","role":"operator"}),
+    )
+    .await;
+    assert!(load.get("error").is_none(), "{load}");
+    assert_eq!(
+        building_state(&*sim.lock().await),
+        continued,
+        "resaving after new authoring must not collide or duplicate IDs"
+    );
+    let response = client
+        .get(format!("http://{address}/replay/export"))
+        .send()
+        .await
+        .unwrap();
+    assert!(response.status().is_success());
+    let continued_log = decode_civreplay(&response.bytes().await.unwrap()).unwrap();
+    assert_eq!(
+        continued_log
+            .events
+            .iter()
+            .filter(|event| matches!(event, civ_engine::replay::ReplayEvent::BuildingSpawn { .. }))
+            .count(),
+        4
+    );
+    let mut continued_replay = Simulation::with_seed(continued_log.seed);
+    continued_log.replay(&mut continued_replay).unwrap();
+    assert_eq!(building_state(&continued_replay), continued);
+    assert_eq!(continued_replay.voxel().read(point), WOOD);
+}

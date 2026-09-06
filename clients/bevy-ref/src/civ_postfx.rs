@@ -433,11 +433,11 @@ fn civ_aces_main(@builtin(global_invocation_id) id: vec3<u32>) {
     let tick_byte = u32(uniforms.tick & 0xffu);
     let r = byte;
     let g = (byte ^ tick_byte) & 0xffu;
-    let b = ((byte + tick_byte) >> 1u) & 0xffu;
+    let blue = ((byte + tick_byte) >> 1u) & 0xffu;
     let color = vec4<f32>(
         f32(r) / 255.0,
         f32(g) / 255.0,
-        f32(b) / 255.0,
+        f32(blue) / 255.0,
         1.0,
     );
     textureStore(aces_output, vec2<i32>(id.xy), color);

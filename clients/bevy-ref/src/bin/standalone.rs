@@ -2,6 +2,7 @@
 
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
+use bevy::render::view::NoIndirectDrawing;
 #[cfg(feature = "models")]
 use civ_bevy_ref::animation::ActorAnimationPlugin;
 #[cfg(feature = "models")]
@@ -381,6 +382,10 @@ fn in_sandbox_attach_mode(mode: Res<AttachMode>) -> bool {
 fn setup_camera(mut commands: Commands) {
     commands.spawn((
         Camera3d::default(),
+        // Bevy 0.18's DX12 GPU-culling multi-draw path asserts when this
+        // mixed sandbox scene is first populated. Keep normal rendering and
+        // preprocessing, but issue direct draws for the standalone camera.
+        NoIndirectDrawing,
         Transform::from_xyz(0.0, 90.0, 150.0).looking_at(Vec3::new(0.0, 12.0, 0.0), Vec3::Y),
     ));
 }

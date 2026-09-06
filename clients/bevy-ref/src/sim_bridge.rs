@@ -83,10 +83,6 @@ fn sim_state_enabled(mode: AttachMode) -> bool {
     !is_server_attach_mode(mode)
 }
 
-fn init_sim_state(mut commands: Commands) {
-    commands.init_resource::<SimState>();
-}
-
 /// Wires spawn-tool messages into the ECS simulation and optional HUD sync.
 #[derive(Default)]
 pub struct SimBridgePlugin;
@@ -94,8 +90,11 @@ pub struct SimBridgePlugin;
 impl Plugin for SimBridgePlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(ProceduralActorPlugin);
-        app.insert_resource(SimTickAccumulator(0.0))
-            .add_systems(Startup, init_sim_state.run_if(in_process_sim_active))
+        // UI plugins share this resource's type in both attach modes.  In
+        // server mode it remains an inert default; every system that advances
+        // or projects the local simulation is still gated below.
+        app.init_resource::<SimState>()
+            .insert_resource(SimTickAccumulator(0.0))
             .add_systems(Startup, setup_gameplay_marker_meshes)
             .add_systems(
                 Update,
@@ -122,6 +121,13 @@ mod tests {
     fn server_attach_does_not_enable_local_simulation_state() {
         assert!(!sim_state_enabled(AttachMode::Server));
         assert!(sim_state_enabled(AttachMode::Standalone));
+    }
+
+    #[test]
+    fn shared_sim_state_resource_exists_for_ui_plugins() {
+        let mut app = App::new();
+        app.add_plugins(SimBridgePlugin);
+        assert!(app.world().contains_resource::<SimState>());
     }
 }
 

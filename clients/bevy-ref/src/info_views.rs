@@ -832,10 +832,15 @@ mod plugin {
     /// the surface. Cheap, deterministic, and GPU-light for the sandbox.
     fn render_active_overlay(
         registry: Res<InfoViewRegistry>,
-        sim: Res<SimState>,
+        sim: Option<Res<SimState>>,
         mut gizmos: Gizmos,
     ) {
         let Some(overlay) = registry.active_overlay() else {
+            return;
+        };
+        // In live-attach mode the authoritative state comes from the server;
+        // this standalone overlay has no local SimState to sample.
+        let Some(sim) = sim else {
             return;
         };
         let res = registry.grid_resolution.max(2);

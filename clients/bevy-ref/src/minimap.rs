@@ -2,6 +2,7 @@ use bevy::asset::RenderAssetUsages;
 use bevy::camera::{ClearColorConfig, RenderTarget, ScalingMode};
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages};
+use bevy::render::view::NoIndirectDrawing;
 use bevy::ui::widget::ImageNode;
 use bevy::ui::{FocusPolicy, RelativeCursorPosition};
 use civ_agents::{Alignment, Civilian as AgentCivilian};
@@ -119,6 +120,9 @@ fn setup_minimap_render_target(mut commands: Commands, mut images: ResMut<Assets
 
     commands.spawn((
         Camera3d::default(),
+        // Keep the offscreen minimap on the same direct-draw compatibility
+        // path as the main standalone camera.
+        NoIndirectDrawing,
         Camera {
             order: 1,
             clear_color: ClearColorConfig::Custom(Color::srgba(0.05, 0.08, 0.12, 1.0)),

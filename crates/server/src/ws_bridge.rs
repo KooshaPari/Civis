@@ -165,11 +165,13 @@ enum ClientOutbound {
     Tick(Arc<TickBroadcast>),
 }
 
-/// One simulation tick's `Frame3d` bundle shared across connected clients.
+/// Authoritative frames from a tick, world replacement, or authoring command.
 struct TickBroadcast {
     tick: u64,
     scene_generation: u64,
-    full_scene: bool,
+    /// Explicit authoring updates and world baselines bypass tick sampling,
+    /// while still honoring each client's selected frame kinds.
+    bypass_cadence: bool,
     frames: Arc<[Frame3d]>,
     encoded: Arc<[Message]>,
 }
@@ -297,7 +299,7 @@ async fn replace_simulation(state: &AppState, loaded: Simulation) -> Result<u64,
     let batch = Arc::new(TickBroadcast {
         tick,
         scene_generation: generation,
-        full_scene: true,
+        bypass_cadence: true,
         frames: Arc::from(frames),
         encoded,
     });
@@ -326,6 +328,32 @@ async fn replace_simulation_reply(
         }
         Err(error) => set_replay_io_error(response, error),
     }
+}
+
+/// Publish the current building state without advancing time. The caller keeps
+/// the simulation lock through capture and enqueue, just like tick publication,
+/// so an older same-generation snapshot cannot follow this authoring update.
+async fn publish_building_update(state: &AppState, sim: &Simulation) -> Result<(), String> {
+    let tick = sim.state.tick;
+    let frames = vec![Frame3d::BuildingDiff(build_building_diff_frame(sim, tick))];
+    let encoded = Arc::from(
+        encode_tick_broadcast_messages(&frames, state.tick_broadcast_format)?.into_boxed_slice(),
+    );
+    let batch = Arc::new(TickBroadcast {
+        tick,
+        scene_generation: state.scene_generation.load(Ordering::SeqCst),
+        bypass_cadence: true,
+        frames: Arc::from(frames),
+        encoded,
+    });
+    let mut clients = state.clients.lock().await;
+    // Queue only; network writes happen in the connection forwarder after the
+    // lock is released. The normal correlated ACK follows on the same FIFO.
+    clients.retain(|tx| {
+        tx.try_send(ClientOutbound::Tick(Arc::clone(&batch)))
+            .is_ok()
+    });
+    Ok(())
 }
 
 fn authorize_request(headers: &HeaderMap, required: bool) -> Result<(), StatusCode> {
@@ -625,7 +653,7 @@ async fn handle_socket(
                         }
                         continue;
                     }
-                    if !broadcast.full_scene && !filter.should_deliver_tick(broadcast.tick) {
+                    if !broadcast.bypass_cadence && !filter.should_deliver_tick(broadcast.tick) {
                         continue;
                     }
                     let frames = filter.filter_frames(broadcast.frames.as_ref());
@@ -1434,6 +1462,14 @@ async fn apply_dispatch_effect(
                 SpawnEntityKind::Hangar => spawn::spawn_hangar_at(&mut sim.world, x, y),
             };
             set_spawn_civilian_result(response, entity.id());
+            if matches!(
+                kind,
+                SpawnEntityKind::Airport | SpawnEntityKind::Port | SpawnEntityKind::Hangar
+            ) {
+                if let Err(error) = publish_building_update(state, &sim).await {
+                    set_replay_io_error(response, format!("Building was created, but its live update failed: {error}. Check the world before retrying."));
+                }
+            }
         }
         DispatchEffect::PlaceVoxel { x, y, z, material } => {
             let mut sim = state.sim.lock().await;
@@ -1948,8 +1984,10 @@ fn encode_tick_broadcast_messages(
 }
 
 async fn advance_one_tick(state: &AppState) -> Result<(), String> {
+    // Keep mutation, capture, and queue publication in one order with authoring
+    // commands and scene replacement. No socket sends occur under this lock.
+    let mut sim = state.sim.lock().await;
     let batch = {
-        let mut sim = state.sim.lock().await;
         let tick_start = std::time::Instant::now();
         sim.tick();
         let tick_duration_secs = tick_start.elapsed().as_secs_f64();
@@ -1998,7 +2036,7 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
         Arc::new(TickBroadcast {
             tick,
             scene_generation: state.scene_generation.load(Ordering::SeqCst),
-            full_scene: false,
+            bypass_cadence: false,
             frames: Arc::from(bundle),
             encoded,
         })
@@ -2033,6 +2071,73 @@ async fn tick_once(state: &AppState) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn building_publication_keeps_older_tick_before_same_generation_spawn() {
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(42)));
+        let (_dir, state) = test_app_state(sim, 0, 0, false);
+        let (tx, mut rx) = mpsc::channel(8);
+        let mut clients = state.clients.lock().await;
+        clients.push(tx);
+
+        // Stop the old tick exactly at publication, without timing assumptions.
+        let tick = advance_one_tick(&state);
+        tokio::pin!(tick);
+        assert!(futures::poll!(tick.as_mut()).is_pending());
+        assert!(
+            state.sim.try_lock().is_err(),
+            "tick must retain the simulation lock until its batch is queued"
+        );
+
+        let mut role = None;
+        let spawn = handle_jsonrpc_text(
+            r#"{"jsonrpc":"2.0","id":700,"method":"sim.spawn_entity","params":{"kind":"airport","x":0.25,"y":0.75}}"#,
+            &state,
+            &mut role,
+            test_subscription_filter(),
+            "building-order-test",
+        );
+        tokio::pin!(spawn);
+        assert!(
+            futures::poll!(spawn.as_mut()).is_pending(),
+            "authoring must wait behind the old tick publication"
+        );
+        assert!(rx.try_recv().is_err());
+
+        drop(clients);
+        tick.await.unwrap();
+        let response: serde_json::Value = serde_json::from_str(&spawn.await).unwrap();
+        assert_eq!(response["result"]["ok"], true);
+        let ClientOutbound::Tick(older) = rx.try_recv().unwrap() else {
+            panic!("older tick batch");
+        };
+        let ClientOutbound::Tick(created) = rx.try_recv().unwrap() else {
+            panic!("building update");
+        };
+        assert_eq!(older.frames.len(), FRAME_BUNDLE_LEN);
+        assert_eq!(
+            created.frames.len(),
+            1,
+            "publish just one authoritative building frame"
+        );
+        let Frame3d::BuildingDiff(before) = &older.frames[1] else {
+            panic!("tick buildings");
+        };
+        let Frame3d::BuildingDiff(after) = &created.frames[0] else {
+            panic!("created buildings");
+        };
+        assert_eq!(after.buildings.len(), before.buildings.len() + 1);
+        assert!(before
+            .buildings
+            .iter()
+            .all(|old| after.buildings.iter().any(|new| old.id == new.id)));
+        assert_eq!(older.tick, created.tick, "authoring must not advance time");
+        assert_eq!(older.scene_generation, created.scene_generation);
+        assert_eq!(state.scene_generation.load(Ordering::SeqCst), 0);
+        assert_eq!(state.speed_multiplier.load(Ordering::SeqCst), 0);
+        assert!(created.bypass_cadence);
+        assert!(rx.try_recv().is_err(), "no duplicate building batch");
+    }
 
     #[tokio::test]
     async fn scene_generation_preserves_loaded_preset_and_failed_load_keeps_world() {
@@ -2093,7 +2198,7 @@ mod tests {
         let old = Arc::new(TickBroadcast {
             tick: 999,
             scene_generation: 0,
-            full_scene: false,
+            bypass_cadence: false,
             encoded: Arc::from(
                 encode_tick_broadcast_messages(&old_frames, TickBroadcastFormat::Binary)
                     .unwrap()

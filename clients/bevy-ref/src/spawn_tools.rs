@@ -593,7 +593,7 @@ fn building_placement_feedback(
                 && value["entity_id"].as_u64().is_some() =>
         {
             format!(
-                "Server created {} (entity {}); awaiting a world update (resume if paused).",
+                "Server created {} (entity {}); awaiting a world update.",
                 kind.label(),
                 value["entity_id"]
             )
@@ -1034,7 +1034,8 @@ mod tests {
             Ok(serde_json::json!({"accepted":true,"ok":true,"kind":"airport","entity_id":0})),
         );
         assert!(success.contains("Server created City Center"));
-        assert!(success.contains("resume if paused"));
+        assert!(success.contains("awaiting a world update"));
+        assert!(!success.contains("resume if paused"));
         assert!(!success.contains("airport"));
         assert!(building_placement_feedback(
             BuildingSpawnKind::CityCenter,

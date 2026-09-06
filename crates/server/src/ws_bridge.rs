@@ -1210,6 +1210,18 @@ fn frame_building_provenance(graph: &civ_build::BuildingGraph) -> BuildingProven
     }
 }
 
+/// Convert the legacy authoring grid to the centered 256-unit terrain map.
+/// `sim.spawn_entity` still accepts normalized coordinates and spectator pins
+/// stay normalized; only the WorldXZ building-frame field uses world units.
+/// Grid rounding makes placement accurate to half a cell (128 / 127 units).
+fn building_world_xz(position: civ_engine::Position) -> WorldXZ {
+    let (x, z) = grid_to_norm(position);
+    WorldXZ {
+        x: x * 256.0 - 128.0,
+        z: z * 256.0 - 128.0,
+    }
+}
+
 /// Live BuildingDiff: ECS markers + full [`BuildingGraph`] so Bevy can show cities.
 fn build_building_diff_frame(sim: &Simulation, tick: u64) -> BuildingDiffFrame {
     let graph = sim.building_graph().clone();
@@ -1217,14 +1229,11 @@ fn build_building_diff_frame(sim: &Simulation, tick: u64) -> BuildingDiffFrame {
         .world
         .query::<&Building>()
         .iter()
-        .map(|(entity, building)| {
-            let (x, z) = grid_to_norm(building.position);
-            BuildingDiffEntry {
-                id: entity.to_bits().get(),
-                kind: building_kind_3d(building.building_type),
-                tier: 0,
-                position: WorldXZ { x, z },
-            }
+        .map(|(entity, building)| BuildingDiffEntry {
+            id: entity.to_bits().get(),
+            kind: building_kind_3d(building.building_type),
+            tier: 0,
+            position: building_world_xz(building.position),
         })
         .collect();
     buildings.sort_by_key(|entry| entry.id);
@@ -2643,6 +2652,48 @@ mod tests {
                 "seed {seed} must return exactly {FRAME_BUNDLE_LEN} frames"
             );
         }
+    }
+
+    #[test]
+    fn building_frames_place_palette_kinds_in_centered_world_units() {
+        let mut sim = Simulation::with_seed(77);
+        let mut expected = Vec::new();
+        for (kind, x, z) in [
+            (BuildingKind3d::CityCenter, -36.0, 20.0),
+            (BuildingKind3d::Market, 28.0, -4.0),
+            (BuildingKind3d::Barracks, -18.0, -32.0),
+        ] {
+            let nx = (x + 128.0) / 256.0;
+            let nz = (z + 128.0) / 256.0;
+            let entity = match kind {
+                BuildingKind3d::CityCenter => civ_engine::spawn_airport_at(&mut sim.world, nx, nz),
+                BuildingKind3d::Market => civ_engine::spawn_port_at(&mut sim.world, nx, nz),
+                BuildingKind3d::Barracks => civ_engine::spawn_hangar_at(&mut sim.world, nx, nz),
+                _ => unreachable!(),
+            };
+            expected.push((entity.to_bits().get(), kind, x, z));
+        }
+        let frame = Frame3d::BuildingDiff(build_building_diff_frame(&sim, 0));
+        let encoded = encode_frame3d_binary(&frame).unwrap();
+        let Frame3d::BuildingDiff(decoded) =
+            civ_protocol_3d::decode_frame3d_binary(&encoded).unwrap()
+        else {
+            panic!("expected building frame");
+        };
+        for (id, kind, x, z) in expected {
+            let entry = decoded
+                .buildings
+                .iter()
+                .find(|entry| entry.id == id)
+                .unwrap();
+            assert_eq!(entry.kind, kind);
+            assert!((entry.position.x - x).abs() <= 128.0 / 127.0 + 0.0001);
+            assert!((entry.position.z - z).abs() <= 128.0 / 127.0 + 0.0001);
+        }
+        let low = building_world_xz(civ_engine::Position { x: -64, y: -64 });
+        let high = building_world_xz(civ_engine::Position { x: 63, y: 63 });
+        assert_eq!((low.x, low.z), (-128.0, -128.0));
+        assert_eq!((high.x, high.z), (128.0, 128.0));
     }
 
     /// Live BuildingDiff carries ECS markers on every seed; graph grows with demand.

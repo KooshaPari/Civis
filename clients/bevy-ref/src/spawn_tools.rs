@@ -3,6 +3,7 @@
 //! This module owns the click-to-terrain hit test, active tool state, cursor
 //! marker, and local selection/destruction behavior.
 
+use bevy::ecs::system::SystemParam;
 use bevy::input::mouse::MouseWheel;
 use bevy::math::primitives::Circle;
 use bevy::prelude::*;
@@ -178,6 +179,15 @@ pub enum BuildingSpawnKind {
 }
 
 impl BuildingSpawnKind {
+    /// Existing server palette aliases for the corresponding engine buildings.
+    const fn rpc_kind(self) -> &'static str {
+        match self {
+            Self::CityCenter => "airport",
+            Self::Market => "port",
+            Self::Barracks => "hangar",
+        }
+    }
+
     /// Advance to the next building type in the build palette.
     pub const fn next(self) -> Self {
         match self {
@@ -298,6 +308,18 @@ struct PendingTerrainStamps {
     errors: Vec<String>,
 }
 
+#[derive(Resource, Default)]
+struct PendingBuildingPlacements {
+    tickets: Vec<(BuildingSpawnKind, RpcTicket, std::time::Instant)>,
+    messages: Vec<String>,
+}
+
+#[derive(SystemParam)]
+struct PendingToolRequests<'w> {
+    terrain: ResMut<'w, PendingTerrainStamps>,
+    buildings: ResMut<'w, PendingBuildingPlacements>,
+}
+
 pub(crate) fn server_tools_active(mode: Option<&crate::AttachMode>, bridge_present: bool) -> bool {
     match mode {
         Some(crate::AttachMode::Standalone) => false,
@@ -310,6 +332,7 @@ impl Plugin for SpawnToolsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ActiveTool>()
             .init_resource::<PendingTerrainStamps>()
+            .init_resource::<PendingBuildingPlacements>()
             .init_resource::<BuildingSpawnKind>()
             .init_resource::<SelectedEntity>()
             .init_resource::<CursorMarker>()
@@ -325,7 +348,14 @@ impl Plugin for SpawnToolsPlugin {
 
         #[cfg(feature = "egui")]
         app.init_resource::<crate::event_feed::EventFeed>()
-            .add_systems(Update, (update_pointer_over_ui, report_terrain_stamps));
+            .add_systems(
+                Update,
+                (
+                    update_pointer_over_ui,
+                    report_terrain_stamps,
+                    report_building_placements,
+                ),
+            );
 
         app.add_systems(
             Update,
@@ -501,6 +531,102 @@ fn terrain_stamp_feedback(result: Result<serde_json::Value, String>) -> String {
     }
 }
 
+fn building_placement_params(
+    position: Vec3,
+    kind: BuildingSpawnKind,
+) -> Result<serde_json::Value, String> {
+    let half = WORLD_SIZE * 0.5;
+    if !position.is_finite() || position.x.abs() > half || position.z.abs() > half {
+        return Err("placement is outside the supported map bounds".to_owned());
+    }
+    // The existing spawn API takes normalized horizontal map coordinates.
+    // Its `y` is map Z, not terrain elevation; the live renderer seats the building.
+    Ok(serde_json::json!({
+        "kind": kind.rpc_kind(),
+        "x": (position.x + half) / WORLD_SIZE,
+        "y": (position.z + half) / WORLD_SIZE,
+        "role": "operator",
+    }))
+}
+
+fn request_building_placement(
+    position: Vec3,
+    kind: BuildingSpawnKind,
+    live: Option<&LiveBridge>,
+    pending: &mut PendingBuildingPlacements,
+) {
+    let params = match building_placement_params(position, kind) {
+        Ok(params) => params,
+        Err(error) => {
+            pending
+                .messages
+                .push(format!("{} placement failed: {error}", kind.label()));
+            return;
+        }
+    };
+    let Some(live) = live else {
+        pending.messages.push(format!(
+            "{} placement failed: live command connection unavailable",
+            kind.label()
+        ));
+        return;
+    };
+    pending.tickets.push((
+        kind,
+        live.client.request_rpc("sim.spawn_entity", params),
+        std::time::Instant::now(),
+    ));
+    pending
+        .messages
+        .push(format!("{} placement sent; awaiting server.", kind.label()));
+}
+
+fn building_placement_feedback(
+    kind: BuildingSpawnKind,
+    result: Result<serde_json::Value, String>,
+) -> String {
+    match result {
+        Ok(value)
+            if value["ok"].as_bool() == Some(true)
+                && value["accepted"].as_bool() == Some(true)
+                && value["kind"].as_str() == Some(kind.rpc_kind())
+                && value["entity_id"].as_u64().is_some() =>
+        {
+            format!(
+                "Server created {} (entity {}); awaiting a world update (resume if paused).",
+                kind.label(),
+                value["entity_id"]
+            )
+        }
+        Ok(_) => format!(
+            "{} placement failed: invalid server acknowledgment",
+            kind.label()
+        ),
+        Err(error) => format!("{} placement failed: {error}", kind.label()),
+    }
+}
+
+#[cfg(feature = "egui")]
+fn report_building_placements(
+    mut pending: ResMut<PendingBuildingPlacements>,
+    mut feed: ResMut<crate::event_feed::EventFeed>,
+) {
+    for message in pending.messages.drain(..) {
+        feed.push(crate::event_feed::EventKind::System, message);
+    }
+    pending.tickets.retain(|(kind, ticket, sent_at)| {
+        if let Some(result) = ticket.try_recv() {
+            feed.push(crate::event_feed::EventKind::System, building_placement_feedback(*kind, result));
+            false
+        } else if sent_at.elapsed() >= std::time::Duration::from_secs(10) {
+            feed.push(crate::event_feed::EventKind::System, format!("{} placement timed out; the result is unknown. Check the world before retrying.", kind.label()));
+            false
+        } else {
+            true
+        }
+    });
+}
+
 #[cfg(feature = "egui")]
 fn report_terrain_stamps(
     mut pending: ResMut<PendingTerrainStamps>,
@@ -574,7 +700,7 @@ fn handle_spawn_tool_clicks(
     mut destroy_entity: MessageWriter<DestroyEntityRequest>,
     bridge: Option<Res<ServerBridge>>,
     live: Option<Res<LiveBridge>>,
-    mut terrain_stamps: ResMut<PendingTerrainStamps>,
+    mut pending: PendingToolRequests,
     mode: Option<Res<crate::AttachMode>>,
     #[cfg(feature = "egui")] brush: Option<Res<crate::material_brush_ui::SelectedMaterial>>,
 ) {
@@ -612,24 +738,19 @@ fn handle_spawn_tool_clicks(
             spawn_civilian.write(SpawnCivilianRequest { position });
         }
         SpawnTool::SpawnBuilding => {
-            // Server: send building placement via sim.command
-            if let Some(ref bridge) = bridge {
-                bridge.send_rpc(
-                    "sim.command",
-                    serde_json::json!({
-                        "action": "spawn",
-                        "kind": "building",
-                        "building": building_kind.label(),
-                        "x": position.x,
-                        "y": position.y,
-                        "z": position.z,
-                    }),
+            if server_tools_active(mode.as_deref(), bridge.is_some() || live.is_some()) {
+                request_building_placement(
+                    position,
+                    *building_kind,
+                    live.as_deref(),
+                    &mut pending.buildings,
                 );
+            } else {
+                spawn_building.write(SpawnBuildingRequest {
+                    position,
+                    kind: *building_kind,
+                });
             }
-            spawn_building.write(SpawnBuildingRequest {
-                position,
-                kind: *building_kind,
-            });
         }
         SpawnTool::Terraform => {
             // The server contract is a one-layer disk, not a
@@ -643,7 +764,7 @@ fn handle_spawn_tool_clicks(
                     radius = brush.clamped_size().round() as u8;
                 }
                 if let Some(ref live) = live {
-                    terrain_stamps.tickets.push((
+                    pending.terrain.tickets.push((
                         live.client.request_rpc(
                             "sim.terraform_extent",
                             terrain_stamp_params(position, material, radius),
@@ -651,7 +772,7 @@ fn handle_spawn_tool_clicks(
                         std::time::Instant::now(),
                     ));
                 } else {
-                    terrain_stamps.errors.push(
+                    pending.terrain.errors.push(
                         "Terrain stamp failed: live command connection unavailable".to_owned(),
                     );
                 }
@@ -697,31 +818,25 @@ fn handle_spawn_tool_clicks(
         | SpawnTool::Workshop
         | SpawnTool::Market
         | SpawnTool::Wall => {
-            if let Some(ref bridge) = bridge {
-                let kind = match active.tool {
-                    SpawnTool::House => "House",
-                    SpawnTool::Farm => "Farm",
-                    SpawnTool::Workshop => "Workshop",
-                    SpawnTool::Market => "Market",
-                    SpawnTool::Wall => "Wall",
-                    _ => unreachable!(),
-                };
-                bridge.send_rpc(
-                    "sim.command",
-                    serde_json::json!({
-                        "action": "spawn",
-                        "kind": "building",
-                        "building": kind,
-                        "x": position.x,
-                        "y": position.y,
-                        "z": position.z,
-                    }),
-                );
+            if server_tools_active(mode.as_deref(), bridge.is_some() || live.is_some()) {
+                if active.tool == SpawnTool::Market {
+                    request_building_placement(
+                        position,
+                        BuildingSpawnKind::Market,
+                        live.as_deref(),
+                        &mut pending.buildings,
+                    );
+                } else {
+                    pending.buildings.messages.push(
+                        "This structure is not supported by the live building API.".to_owned(),
+                    );
+                }
+            } else {
+                spawn_building.write(SpawnBuildingRequest {
+                    position,
+                    kind: BuildingSpawnKind::CityCenter, // Existing standalone structure behavior.
+                });
             }
-            spawn_building.write(SpawnBuildingRequest {
-                position,
-                kind: BuildingSpawnKind::CityCenter, // generic structure
-            });
         }
         // Road tools start a drag-to-draw stroke.
         SpawnTool::Road | SpawnTool::Trail | SpawnTool::Highway | SpawnTool::Bridge => {
@@ -877,6 +992,263 @@ fn nearest_entity(position: Vec3, entities: &Query<(Entity, &GlobalTransform)>) 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn building_placement_uses_existing_palette_and_horizontal_normalized_coordinates() {
+        for (kind, alias) in [
+            (BuildingSpawnKind::CityCenter, "airport"),
+            (BuildingSpawnKind::Market, "port"),
+            (BuildingSpawnKind::Barracks, "hangar"),
+        ] {
+            let params = building_placement_params(Vec3::new(-64.5, 47.0, 32.25), kind).unwrap();
+            assert_eq!(params["kind"], alias);
+            assert_eq!(params["x"], (128.0 - 64.5) / 256.0);
+            assert_eq!(params["y"], (128.0 + 32.25) / 256.0);
+            assert!(params.get("z").is_none());
+            assert_eq!(params["role"], "operator");
+        }
+        for position in [
+            Vec3::new(-128.1, 0.0, 0.0),
+            Vec3::new(0.0, 0.0, 128.1),
+            Vec3::splat(f32::NAN),
+        ] {
+            assert!(building_placement_params(position, BuildingSpawnKind::CityCenter).is_err());
+        }
+    }
+
+    #[test]
+    fn building_placement_feedback_requires_matching_created_entity_receipt() {
+        for value in [
+            serde_json::json!({}),
+            serde_json::json!({"accepted":true,"kind":"airport"}),
+            serde_json::json!({"accepted":true,"ok":true,"kind":"airport"}),
+            serde_json::json!({"accepted":true,"ok":true,"kind":"port","entity_id":1}),
+        ] {
+            assert!(
+                building_placement_feedback(BuildingSpawnKind::CityCenter, Ok(value))
+                    .contains("failed")
+            );
+        }
+        let success = building_placement_feedback(
+            BuildingSpawnKind::CityCenter,
+            Ok(serde_json::json!({"accepted":true,"ok":true,"kind":"airport","entity_id":0})),
+        );
+        assert!(success.contains("Server created City Center"));
+        assert!(success.contains("resume if paused"));
+        assert!(!success.contains("airport"));
+        assert!(building_placement_feedback(
+            BuildingSpawnKind::CityCenter,
+            Err("Forbidden: operator required".into())
+        )
+        .contains("Forbidden"));
+    }
+
+    #[cfg(feature = "egui")]
+    fn building_test_app(
+        mode: crate::AttachMode,
+    ) -> (
+        App,
+        crossbeam_channel::Receiver<String>,
+        crossbeam_channel::Receiver<String>,
+    ) {
+        let (client, requests) = crate::ws_client::WsClient::test_rpc_client();
+        let (legacy_tx, legacy_rx) = crossbeam_channel::unbounded();
+        let mut app = App::new();
+        app.insert_resource(mode)
+            .insert_resource(LiveBridge { client })
+            .insert_resource(ServerBridge::new(legacy_tx))
+            .init_resource::<ButtonInput<MouseButton>>()
+            .init_resource::<ButtonInput<KeyCode>>()
+            .insert_resource(ActiveTool {
+                tool: SpawnTool::SpawnBuilding,
+            })
+            .insert_resource(CursorMarker {
+                position: Some(Vec3::new(-64.5, 47.0, 32.25)),
+                visible: true,
+            })
+            .init_resource::<BuildingSpawnKind>()
+            .init_resource::<PendingTerrainStamps>()
+            .init_resource::<PendingBuildingPlacements>()
+            .init_resource::<crate::event_feed::EventFeed>()
+            .add_message::<MouseWheel>()
+            .add_message::<SpawnCivilianRequest>()
+            .add_message::<SpawnBuildingRequest>()
+            .add_message::<SelectEntityRequest>()
+            .add_message::<DestroyEntityRequest>()
+            .add_systems(
+                Update,
+                (handle_spawn_tool_clicks, report_building_placements).chain(),
+            );
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .press(MouseButton::Left);
+        (app, requests, legacy_rx)
+    }
+
+    #[cfg(feature = "egui")]
+    #[test]
+    fn building_click_waits_for_correlated_receipt_without_local_mirror() {
+        let (mut app, requests, legacy) = building_test_app(crate::AttachMode::Server);
+        app.update();
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .clear();
+        let request: serde_json::Value =
+            serde_json::from_str(&requests.try_recv().unwrap()).unwrap();
+        assert_eq!(request["method"], "sim.spawn_entity");
+        assert_eq!(request["params"]["kind"], "airport");
+        assert!(legacy.try_recv().is_err());
+        assert_eq!(
+            app.world()
+                .resource::<Messages<SpawnBuildingRequest>>()
+                .len(),
+            0
+        );
+        assert!(!app
+            .world()
+            .resource::<crate::event_feed::EventFeed>()
+            .events
+            .iter()
+            .any(|event| event.text.contains("Server created")));
+        let id = request["id"].as_u64().unwrap();
+        app.world()
+            .resource::<LiveBridge>()
+            .client
+            .test_complete_rpc(
+                id + 100,
+                Ok(serde_json::json!({"accepted":true,"ok":true,"kind":"airport","entity_id":7})),
+            );
+        app.update();
+        assert_eq!(
+            app.world()
+                .resource::<PendingBuildingPlacements>()
+                .tickets
+                .len(),
+            1
+        );
+        app.world()
+            .resource::<LiveBridge>()
+            .client
+            .test_complete_rpc(
+                id,
+                Ok(serde_json::json!({"accepted":true,"ok":true,"kind":"airport","entity_id":7})),
+            );
+        app.update();
+        assert!(app
+            .world()
+            .resource::<PendingBuildingPlacements>()
+            .tickets
+            .is_empty());
+        assert!(app
+            .world()
+            .resource::<crate::event_feed::EventFeed>()
+            .events
+            .iter()
+            .any(|event| event.text.contains("Server created City Center")));
+        assert!(requests.try_recv().is_err());
+    }
+
+    #[cfg(feature = "egui")]
+    #[test]
+    fn building_click_stays_local_in_standalone_even_with_live_bridge() {
+        let (mut app, requests, legacy) = building_test_app(crate::AttachMode::Standalone);
+        app.update();
+        assert!(requests.try_recv().is_err());
+        assert!(legacy.try_recv().is_err());
+        let messages: Vec<_> = app
+            .world_mut()
+            .resource_mut::<Messages<SpawnBuildingRequest>>()
+            .drain()
+            .collect();
+        assert_eq!(messages.len(), 1);
+        assert_eq!(messages[0].kind, BuildingSpawnKind::CityCenter);
+        assert_eq!(messages[0].position, Vec3::new(-64.5, 47.0, 32.25));
+    }
+
+    #[cfg(feature = "egui")]
+    #[test]
+    fn building_click_reports_timeout_as_unknown_without_retry() {
+        let (mut app, requests, _) = building_test_app(crate::AttachMode::Server);
+        app.update();
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .clear();
+        requests.try_recv().unwrap();
+        app.world_mut()
+            .resource_mut::<PendingBuildingPlacements>()
+            .tickets[0]
+            .2 = std::time::Instant::now() - std::time::Duration::from_secs(11);
+        app.update();
+        assert!(app
+            .world()
+            .resource::<PendingBuildingPlacements>()
+            .tickets
+            .is_empty());
+        assert!(requests.try_recv().is_err());
+        assert!(app
+            .world()
+            .resource::<crate::event_feed::EventFeed>()
+            .events
+            .iter()
+            .any(|event| event.text.contains("result is unknown")));
+    }
+
+    #[cfg(feature = "egui")]
+    #[test]
+    fn building_click_reports_missing_connection_and_server_rejection() {
+        let (mut app, requests, legacy) = building_test_app(crate::AttachMode::Server);
+        app.world_mut().remove_resource::<LiveBridge>();
+        app.update();
+        assert!(requests.try_recv().is_err());
+        assert!(legacy.try_recv().is_err());
+        assert_eq!(
+            app.world()
+                .resource::<Messages<SpawnBuildingRequest>>()
+                .len(),
+            0
+        );
+        assert!(app
+            .world()
+            .resource::<crate::event_feed::EventFeed>()
+            .events
+            .iter()
+            .any(|event| event.text.contains("connection unavailable")));
+
+        let (mut app, requests, _) = building_test_app(crate::AttachMode::Server);
+        app.update();
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .clear();
+        let request: serde_json::Value =
+            serde_json::from_str(&requests.try_recv().unwrap()).unwrap();
+        app.world()
+            .resource::<LiveBridge>()
+            .client
+            .test_complete_rpc(
+                request["id"].as_u64().unwrap(),
+                Err("Forbidden: operator required"),
+            );
+        app.update();
+        assert!(app
+            .world()
+            .resource::<PendingBuildingPlacements>()
+            .tickets
+            .is_empty());
+        assert!(app
+            .world()
+            .resource::<crate::event_feed::EventFeed>()
+            .events
+            .iter()
+            .any(|event| event
+                .text
+                .contains("City Center placement failed: Forbidden")));
+        assert!(!app
+            .world()
+            .resource::<crate::event_feed::EventFeed>()
+            .events
+            .iter()
+            .any(|event| event.text.contains("Server created")));
+    }
 
     #[test]
     fn terrain_stamp_serializes_fixed_world_coordinates_and_selected_brush() {

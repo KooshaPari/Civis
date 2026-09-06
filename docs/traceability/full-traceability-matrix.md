@@ -301,8 +301,22 @@ flagged:
 
 | Epic/Phase | User Story | FR ID | NFR ID(s) | Acceptance Criteria (concise) | Implementing crate/module | Verifying test(s) | Client(s) | Status |
 |---|---|---|---|---|---|---|---|---|
+| P-W1 | gameplay base | FR-CIV-BEVY-001 | see NFR doc | Standalone wires simulation bridge, HUD, spawn tools, and minimap | `clients/bevy-ref` (`bevy_render`, `sim_bridge`, `spawn_tools`, `minimap`, `bin/standalone.rs`) | `bevy_render::mesh_buffer_converts_quad`, `shell_attest` | **Bevy** | Done |
+| P-W1 | live scene sync | FR-CIV-BEVY-002 | see NFR doc | Server attach decodes and applies streamed voxels, agents, buildings, and graph parcels | `clients/bevy-ref` (`live_attach`, `live_stream`, `live_scene`) | `parse_ws_payload_accepts_binary_and_text`, `live_stream::apply_voxel_delta_frame_spawns_chunk_in_scene` | **Bevy** | Done |
+| P-W1 | binary frames | FR-CIV-BEVY-003 | see NFR doc | F3D0 `Frame3d` payloads parse without a live socket | `clients/bevy-ref/src/lib.rs` | `parse_frame3d_binary_roundtrips_building_diff` | **Bevy** | Done |
+| P-W1 | live minimap | FR-CIV-BEVY-013 | see NFR doc | Shared bounds, UV, colors, and spawn helpers serve both desktop paths | `clients/bevy-ref/src/live_minimap.rs` | `live_minimap::*` | **Bevy** | Done |
+| P-W1 | stream apply | FR-CIV-BEVY-014 | see NFR doc | Voxel deltas, ground anchoring, and provenance styling are deterministic | `clients/bevy-ref/src/live_stream.rs` | `live_stream::apply_voxel_delta_frame_spawns_chunk_in_scene` | **Bevy** | Done |
+| P-W1 | scene focus | FR-CIV-BEVY-015 | see NFR doc | Shared focus drives orbit target and minimap conversion | `clients/bevy-ref/src/live_focus.rs`, `bin/bevy_window.rs` | `live_focus::minimap_uv_roundtrips_world_xz` | **Bevy** | Done |
+| P-W1 | live smoke v2 | FR-CIV-BEVY-016 | see NFR doc | Stream, minimap, and both desktop bins are covered by the recipe | `justfile`, `clients/bevy-ref` | `just civis-3d-live-smoke` | **Bevy** | Done |
+| P-W1 | live HUD | FR-CIV-BEVY-017 | see NFR doc | HUD exposes connection, tick, counts, and snapshot RTT | `clients/bevy-ref` (`lib.rs`, `live_attach`) | `live_hud_overlay_includes_connection_and_tick`, `live_hud_overlay_includes_ws_rtt_when_present` | **Bevy** | Done |
+| P-W1 | reconnect | FR-CIV-BEVY-018 | see NFR doc | Backoff is bounded and state reaches the HUD | `clients/bevy-ref/src/ws_client.rs`, `live_attach.rs` | `ws_client::reconnect_backoff_doubles_until_cap` | **Bevy** | Done |
+| P-W1 | live pick | FR-CIV-BEVY-019 | see NFR doc | Nearest valid streamed marker is selected by ray | `clients/bevy-ref/src/live_pick.rs` | `live_pick::pick_live_entity_prefers_nearest_along_ray` | **Bevy** | Done |
+| P-W1 | day/night | FR-CIV-BEVY-020 | see NFR doc | Snapshot day state drives desktop lighting | `clients/bevy-ref` (`lib.rs`, `live_attach`, `bin/bevy_window.rs`) | `parse_jsonrpc_snapshot_meta_reads_is_day_and_tick` | **Bevy** | Done |
+| P-W1 | live-smoke CI | FR-CIV-BEVY-021 | see NFR doc | Path-filtered workflow invokes the live smoke recipe | `.github/workflows/civis-3d-live-smoke.yml`, `justfile` | `just civis-3d-live-smoke` | **Bevy** | Done |
+| P-W1 | live smoke v3 | FR-CIV-BEVY-022 | see NFR doc | Focus and minimap helper coverage is in the recipe | `justfile`, `clients/bevy-ref` | `just civis-3d-live-smoke` | **Bevy** | Done |
 | P-W1 | event feed | FR-CIV-BEVY-023 | see NFR doc | `event_feed` egui toasts + log; `live_attach` pushes System events on WS state | `clients/bevy-ref` (`event_feed`, `live_attach`, `standalone`) | `event_feed::*` (cargo test), `civ-standalone` cargo check | **Bevy** | Done |
 | P-W1 | menus | FR-CIV-BEVY-024 | see NFR doc | `MenusPlugin`: Escape pause overlay, settings stub, era banner; sim gated while paused | `clients/bevy-ref` (`menus`, `lib.rs`, `bin/standalone.rs`, `sim_bridge`) | `menus::*` (cargo test), `civ-standalone` cargo check | **Bevy** | Done |
+| P-W1 | live smoke v4 | FR-CIV-BEVY-025 | see NFR doc | Deterministic entity-picking helpers are included in the recipe | `justfile`, `clients/bevy-ref/src/live_pick.rs` | `just civis-3d-live-smoke`, `live_pick::pick_live_entity_prefers_nearest_along_ray` | **Bevy** | Done |
 | P-W1 | GPU backend | FR-CIV-BEVY-026 | see NFR doc | Native GPU backend selection (`CIV_BEVY_BACKEND`; DX12/Vulkan/Metal; no GLES) | `clients/bevy-ref` (`native_backend`), README, `docs/research/wgpu-native-escape-hatches.md` | `native_backend` (cargo test), `just civis-3d-live-smoke` | **Bevy** | Done |
 
 ---

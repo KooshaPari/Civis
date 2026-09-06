@@ -170,6 +170,13 @@ struct TickBroadcast {
     tick: u64,
     frames: Arc<[Frame3d]>,
     encoded: Arc<[Message]>,
+    graph_frames: Arc<[Frame3d]>,
+    graph_encoded: Arc<[Message]>,
+    graph_changed: bool,
+}
+
+fn should_send_building_graph(sent_building_graph: bool, graph_changed: bool) -> bool {
+    !sent_building_graph || graph_changed
 }
 
 /// Server-side Prometheus metrics.
@@ -263,6 +270,8 @@ struct AppState {
     /// in `ws_handler` upgrade, mutated by JSON-RPC handlers that need
     /// to update `subscribed_frame_kinds` or `role`, swept on close.
     sessions: Arc<Mutex<std::collections::HashMap<String, SharedSession>>>,
+    /// Last graph snapshot broadcast to live clients; unchanged ticks omit the full graph.
+    last_building_graph_json: Arc<Mutex<Option<Vec<u8>>>>,
 }
 
 fn authorize_request(headers: &HeaderMap, required: bool) -> Result<(), StatusCode> {
@@ -351,6 +360,7 @@ async fn serve_ws_bridge(
         allow_replay_http: true,
         authn_required: false,
         sessions: Arc::new(Mutex::new(std::collections::HashMap::new())),
+        last_building_graph_json: Arc::new(Mutex::new(None)),
     };
 
     let app = Router::new()
@@ -534,6 +544,7 @@ async fn handle_socket(
     let state_for_forward = state.clone();
     let connection_id_for_forward = connection_id.clone();
     let forward = tokio::spawn(async move {
+        let mut sent_building_graph = false;
         while let Some(outbound) = rx.recv().await {
             match outbound {
                 ClientOutbound::Rpc(msg) => {
@@ -542,6 +553,11 @@ async fn handle_socket(
                     }
                 }
                 ClientOutbound::Tick(broadcast) => {
+                    let include_graph =
+                        should_send_building_graph(sent_building_graph, broadcast.graph_changed);
+                    if include_graph {
+                        sent_building_graph = true;
+                    }
                     // Advance the session's last_acked_tick + receive
                     // counter so the per-session audit log tracks the
                     // broadcast. Best-effort: if the session map is
@@ -555,7 +571,12 @@ async fn handle_socket(
                     }
                     let filter = forward_filter.lock().await.clone();
                     if !filter.is_active() {
-                        for msg in broadcast.encoded.iter() {
+                        let encoded = if include_graph {
+                            &broadcast.graph_encoded
+                        } else {
+                            &broadcast.encoded
+                        };
+                        for msg in encoded.iter() {
                             if sender.send(msg.clone()).await.is_err() {
                                 return;
                             }
@@ -566,7 +587,12 @@ async fn handle_socket(
                     if !filter.should_deliver_tick(broadcast.tick) {
                         continue;
                     }
-                    let frames = filter.filter_frames(broadcast.frames.as_ref());
+                    let source_frames = if include_graph {
+                        broadcast.graph_frames.as_ref()
+                    } else {
+                        broadcast.frames.as_ref()
+                    };
+                    let frames = filter.filter_frames(source_frames);
                     if frames.is_empty() {
                         continue;
                     }
@@ -1148,8 +1174,12 @@ fn frame_building_provenance(graph: &civ_build::BuildingGraph) -> BuildingProven
 }
 
 /// Live BuildingDiff: ECS markers + full [`BuildingGraph`] so Bevy can show cities.
-fn build_building_diff_frame(sim: &Simulation, tick: u64) -> BuildingDiffFrame {
-    let graph = sim.building_graph().clone();
+fn build_building_diff_frame(
+    sim: &Simulation,
+    tick: u64,
+    include_graph: bool,
+) -> BuildingDiffFrame {
+    let graph = include_graph.then(|| sim.building_graph().clone());
     let mut buildings: Vec<BuildingDiffEntry> = sim
         .world
         .query::<&Building>()
@@ -1167,17 +1197,20 @@ fn build_building_diff_frame(sim: &Simulation, tick: u64) -> BuildingDiffFrame {
     buildings.sort_by_key(|entry| entry.id);
     BuildingDiffFrame {
         tick,
-        provenance: frame_building_provenance(&graph),
+        provenance: frame_building_provenance(sim.building_graph()),
         buildings,
-        graph: Some(graph),
+        graph,
     }
 }
 
-fn build_frame_bundle(sim: &Simulation) -> Result<[Frame3d; FRAME_BUNDLE_LEN], String> {
+fn build_frame_bundle(
+    sim: &Simulation,
+    include_building_graph: bool,
+) -> Result<[Frame3d; FRAME_BUNDLE_LEN], String> {
     let tick = sim.state.tick;
     let voxel = build_voxel_delta_frame(tick, sim.last_tick_voxel_events(), sim.voxel())
         .map_err(|e| e.to_string())?;
-    let building = build_building_diff_frame(sim, tick);
+    let building = build_building_diff_frame(sim, tick, include_building_graph);
     Ok([
         Frame3d::VoxelDelta(voxel),
         Frame3d::BuildingDiff(building),
@@ -1270,6 +1303,7 @@ async fn apply_dispatch_effect(
                 Ok(scenario) => {
                     *state.sim.lock().await = scenario.into_simulation(seed);
                     state.tick.store(0, Ordering::SeqCst);
+                    *state.last_building_graph_json.lock().await = None;
                     tracing::info!(%preset, seed, "loaded scenario preset");
                 }
                 Err(err) => {
@@ -1917,15 +1951,33 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
             emergence_entropy,
         });
 
-        let bundle = build_frame_bundle(&sim)?;
+        let graph_json = serde_json::to_vec(sim.building_graph()).map_err(|e| e.to_string())?;
+        let include_building_graph = {
+            let mut last = state.last_building_graph_json.lock().await;
+            if last.as_ref() == Some(&graph_json) {
+                false
+            } else {
+                *last = Some(graph_json);
+                true
+            }
+        };
+        let bundle = build_frame_bundle(&sim, false)?;
+        let graph_bundle = build_frame_bundle(&sim, true)?;
         let encoded = Arc::from(
             encode_tick_broadcast_messages(&bundle, state.tick_broadcast_format)?
+                .into_boxed_slice(),
+        );
+        let graph_encoded = Arc::from(
+            encode_tick_broadcast_messages(&graph_bundle, state.tick_broadcast_format)?
                 .into_boxed_slice(),
         );
         Arc::new(TickBroadcast {
             tick,
             frames: Arc::from(bundle),
             encoded,
+            graph_frames: Arc::from(graph_bundle),
+            graph_encoded,
+            graph_changed: include_building_graph,
         })
     };
 
@@ -2019,6 +2071,7 @@ mod tests {
             allow_replay_http: true,
             authn_required: false,
             sessions: Arc::new(Mutex::new(std::collections::HashMap::new())),
+            last_building_graph_json: Arc::new(Mutex::new(None)),
         };
         (dir, state)
     }
@@ -2238,7 +2291,7 @@ mod tests {
     #[test]
     fn frame_bundle_includes_all_wire_kinds() {
         let sim = Simulation::with_seed(11);
-        let bundle = build_frame_bundle(&sim).expect("bundle");
+        let bundle = build_frame_bundle(&sim, true).expect("bundle");
         assert_eq!(bundle.len(), FRAME_BUNDLE_LEN);
         let mut kinds = [false; FRAME_BUNDLE_LEN];
         for frame in &bundle {
@@ -2270,7 +2323,7 @@ mod tests {
     #[test]
     fn agent_appearance_ids_match_civilian_state_ids() {
         let sim = Simulation::with_seed(11);
-        let bundle = build_frame_bundle(&sim).expect("bundle");
+        let bundle = build_frame_bundle(&sim, true).expect("bundle");
         let Frame3d::AgentAppearance(appearance) = &bundle[2] else {
             panic!("expected agent appearance frame");
         };
@@ -2466,7 +2519,7 @@ mod tests {
     fn build_frame_bundle_returns_exact_frame_count() {
         for seed in [1, 5, 11, 37, 42, 99] {
             let sim = Simulation::with_seed(seed);
-            let bundle = build_frame_bundle(&sim).expect("bundle");
+            let bundle = build_frame_bundle(&sim, true).expect("bundle");
             assert_eq!(
                 bundle.len(),
                 FRAME_BUNDLE_LEN,
@@ -2482,7 +2535,7 @@ mod tests {
         sim.state.resources.wood = civ_engine::Fixed::from_num(800);
         sim.state.resources.metal = civ_engine::Fixed::from_num(800);
 
-        let fresh = build_building_diff_frame(&sim, sim.state.tick);
+        let fresh = build_building_diff_frame(&sim, sim.state.tick, true);
         assert!(
             !fresh.buildings.is_empty(),
             "seed sims spawn city center + farms into ECS"
@@ -2500,7 +2553,7 @@ mod tests {
         for _ in 0..200 {
             sim.tick();
         }
-        let warmed = build_building_diff_frame(&sim, sim.state.tick);
+        let warmed = build_building_diff_frame(&sim, sim.state.tick, true);
         let after_parcels = warmed.graph.as_ref().map(|g| g.parcels.len()).unwrap_or(0);
         assert!(
             after_parcels > before_parcels,
@@ -2510,10 +2563,27 @@ mod tests {
     }
 
     #[test]
+    fn unchanged_building_graph_is_omitted_after_the_initial_snapshot() {
+        let sim = Simulation::with_seed(77);
+        let initial = build_building_diff_frame(&sim, sim.state.tick, true);
+        let unchanged = build_building_diff_frame(&sim, sim.state.tick + 1, false);
+        assert!(initial.graph.is_some(), "initial frame carries the graph");
+        assert!(unchanged.graph.is_none(), "unchanged frame omits the graph");
+        assert_eq!(initial.buildings, unchanged.buildings);
+    }
+
+    #[test]
+    fn late_join_receives_settled_graph_then_omits_unchanged_ticks() {
+        assert!(should_send_building_graph(false, false));
+        assert!(!should_send_building_graph(true, false));
+        assert!(should_send_building_graph(true, true));
+    }
+
+    #[test]
     fn build_frame_bundle_all_frames_have_matching_tick() {
         let sim = Simulation::with_seed(17);
         let expected_tick = sim.state.tick;
-        let bundle = build_frame_bundle(&sim).expect("bundle");
+        let bundle = build_frame_bundle(&sim, true).expect("bundle");
         for frame in &bundle {
             assert_eq!(
                 frame.tick(),
@@ -2703,7 +2773,7 @@ mod tests {
     #[tokio::test]
     async fn build_frame_bundle_integrates_all_builders() {
         let sim = Simulation::with_seed(11);
-        let bundle = build_frame_bundle(&sim).expect("bundle");
+        let bundle = build_frame_bundle(&sim, true).expect("bundle");
         // Verify all 7 frame types are present
         let mut found = [false; 7];
         for frame in &bundle {

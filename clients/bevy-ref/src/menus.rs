@@ -1169,7 +1169,8 @@ fn start_world_boot(client: &crate::ws_client::WsClient, preset: &str, seed: u64
         "sim.load_scenario",
         serde_json::json!({ "preset": preset, "seed": init_seed }),
     );
-    client.send_rpc("sim.reset", serde_json::json!({ "seed": init_seed }));
+    // `sim.load_scenario` already replaces the simulation. A follow-up reset
+    // would discard the selected preset before its first tick.
 }
 
 #[cfg(test)]

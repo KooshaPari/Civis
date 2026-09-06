@@ -38,7 +38,7 @@ use futures::{SinkExt, StreamExt};
 use prometheus::{Encoder, IntCounter, IntGauge, Registry, TextEncoder};
 use tokio::{
     net::TcpListener,
-    sync::{mpsc, Mutex},
+    sync::{mpsc, watch, Mutex},
     time::{interval, Duration},
 };
 
@@ -62,7 +62,7 @@ pub const FRAME_BUNDLE_LEN: usize = 7;
 const REPLAY_IMPORT_BODY_LIMIT_BYTES: usize = 16 * 1024 * 1024;
 
 /// Bound per-client outbound work so a stalled browser cannot grow memory without limit.
-const CLIENT_OUTBOUND_CAPACITY: usize = 32;
+const CLIENT_CONTROL_CAPACITY: usize = 32;
 
 /// Which wire encodings the 10 Hz tick loop broadcasts to connected clients.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -155,14 +155,21 @@ impl Default for WsBridgeConfig {
     }
 }
 
-type ClientOutboundTx = mpsc::Sender<ClientOutbound>;
+/// Per-client outbound lanes.
+///
+/// RPC/control messages retain FIFO ordering. Render ticks use a single latest-value
+/// slot: a slow renderer skips obsolete world snapshots instead of filling a queue
+/// and disconnecting its WebSocket session.
+#[derive(Clone)]
+struct ClientOutboundTx {
+    control: mpsc::Sender<Message>,
+    latest_tick: watch::Sender<Option<Arc<TickBroadcast>>>,
+}
 
-/// Outbound WebSocket traffic for one connected client.
-enum ClientOutbound {
-    /// Immediate JSON-RPC (or error) text frame.
-    Rpc(Message),
-    /// Shared simulation tick bundle filtered per connection.
-    Tick(Arc<TickBroadcast>),
+impl ClientOutboundTx {
+    fn publish_tick(&self, tick: Arc<TickBroadcast>) {
+        self.latest_tick.send_replace(Some(tick));
+    }
 }
 
 /// One simulation tick's `Frame3d` bundle shared across connected clients.
@@ -446,7 +453,7 @@ async fn replay_import(
     );
     let mut clients = state.clients.lock().await;
     clients.retain(|tx| {
-        let delivered = tx.try_send(ClientOutbound::Rpc(reset.clone())).is_ok();
+        let delivered = tx.control.try_send(reset.clone()).is_ok();
         if !delivered {
             state.metrics.ws_client_disconnects.inc();
         }
@@ -514,7 +521,12 @@ async fn handle_socket(
     connect_query: WsConnectQuery,
 ) {
     let (mut sender, mut receiver) = socket.split();
-    let (tx, mut rx) = mpsc::channel::<ClientOutbound>(CLIENT_OUTBOUND_CAPACITY);
+    let (control_tx, mut control_rx) = mpsc::channel::<Message>(CLIENT_CONTROL_CAPACITY);
+    let (latest_tick, mut tick_rx) = watch::channel::<Option<Arc<TickBroadcast>>>(None);
+    let tx = ClientOutboundTx {
+        control: control_tx,
+        latest_tick,
+    };
     let subscription_filter = Arc::new(tokio::sync::Mutex::new(
         SubscriptionFilter::from_connect_query(&connect_query),
     ));
@@ -545,70 +557,33 @@ async fn handle_socket(
     let connection_id_for_forward = connection_id.clone();
     let forward = tokio::spawn(async move {
         let mut sent_building_graph = false;
-        while let Some(outbound) = rx.recv().await {
-            match outbound {
-                ClientOutbound::Rpc(msg) => {
-                    if sender.send(msg).await.is_err() {
+        loop {
+            tokio::select! {
+                biased;
+                control = control_rx.recv() => {
+                    let Some(control) = control else { return; };
+                    if sender.send(control).await.is_err() {
                         return;
                     }
                 }
-                ClientOutbound::Tick(broadcast) => {
-                    let include_graph =
-                        should_send_building_graph(sent_building_graph, broadcast.graph_changed);
-                    if include_graph {
-                        sent_building_graph = true;
+                changed = tick_rx.changed() => {
+                    if changed.is_err() {
+                        return;
                     }
-                    // Advance the session's last_acked_tick + receive
-                    // counter so the per-session audit log tracks the
-                    // broadcast. Best-effort: if the session map is
-                    // already cleared (e.g. race with close) we skip
-                    // the bookkeeping.
-                    {
-                        let mut sessions = state_for_forward.sessions.lock().await;
-                        if let Some(s) = sessions.get_mut(&connection_id_for_forward) {
-                            s.record_tick_delivery(broadcast.tick);
-                        }
-                    }
-                    let filter = forward_filter.lock().await.clone();
-                    if !filter.is_active() {
-                        let encoded = if include_graph {
-                            &broadcast.graph_encoded
-                        } else {
-                            &broadcast.encoded
-                        };
-                        for msg in encoded.iter() {
-                            if sender.send(msg.clone()).await.is_err() {
-                                return;
-                            }
-                            tick_messages_sent.inc();
-                        }
+                    let Some(broadcast) = tick_rx.borrow_and_update().clone() else {
                         continue;
-                    }
-                    if !filter.should_deliver_tick(broadcast.tick) {
-                        continue;
-                    }
-                    let source_frames = if include_graph {
-                        broadcast.graph_frames.as_ref()
-                    } else {
-                        broadcast.frames.as_ref()
                     };
-                    let frames = filter.filter_frames(source_frames);
-                    if frames.is_empty() {
-                        continue;
-                    }
-                    let messages =
-                        match encode_tick_broadcast_messages(&frames, tick_broadcast_format) {
-                            Ok(messages) => messages,
-                            Err(err) => {
-                                tracing::error!("tick broadcast encode failed: {err}");
-                                continue;
-                            }
-                        };
-                    for msg in messages {
-                        if sender.send(msg).await.is_err() {
-                            return;
-                        }
-                        tick_messages_sent.inc();
+                    if !forward_latest_tick(
+                        &mut sender,
+                        broadcast,
+                        &forward_filter,
+                        &state_for_forward,
+                        &connection_id_for_forward,
+                        &tick_messages_sent,
+                        tick_broadcast_format,
+                        &mut sent_building_graph,
+                    ).await {
+                        return;
                     }
                 }
             }
@@ -626,10 +601,7 @@ async fn handle_socket(
                     &connection_id,
                 )
                 .await;
-                if tx
-                    .try_send(ClientOutbound::Rpc(Message::Text(response)))
-                    .is_err()
-                {
+                if tx.control.try_send(Message::Text(response)).is_err() {
                     break;
                 }
             }
@@ -639,11 +611,92 @@ async fn handle_socket(
         }
     }
     forward.abort();
+    // Remove the outbound lanes even when the peer closes without a close
+    // handshake. Keeping a disconnected watch sender would retain its latest
+    // tick and make max-client accounting drift.
+    let removed = {
+        let mut clients = state.clients.lock().await;
+        let before = clients.len();
+        clients.retain(|client| !client.control.same_channel(&tx.control));
+        clients.len() != before
+    };
+    if removed {
+        state.metrics.connected_clients.dec();
+    }
     // Multiplayer cleanup: drop the session so future calls to
     // `sim.get_snapshot_for_session` for this connection_id fail-fast
     // (the bridge returns the "unknown connection_id" error).
     let mut sessions = state.sessions.lock().await;
     sessions.remove(&connection_id);
+}
+
+/// Forward the newest available render tick for one client.
+///
+/// This is deliberately called from a `watch` receiver, so a delayed send sees
+/// at most one pending render snapshot. RPC/control traffic stays on its own
+/// FIFO lane and is selected first by the socket task.
+async fn forward_latest_tick(
+    sender: &mut futures::stream::SplitSink<WebSocket, Message>,
+    broadcast: Arc<TickBroadcast>,
+    subscription_filter: &Arc<tokio::sync::Mutex<SubscriptionFilter>>,
+    state: &AppState,
+    connection_id: &str,
+    tick_messages_sent: &IntCounter,
+    tick_broadcast_format: TickBroadcastFormat,
+    sent_building_graph: &mut bool,
+) -> bool {
+    let include_graph = should_send_building_graph(*sent_building_graph, broadcast.graph_changed);
+    if include_graph {
+        *sent_building_graph = true;
+    }
+    {
+        let mut sessions = state.sessions.lock().await;
+        if let Some(session) = sessions.get_mut(connection_id) {
+            session.record_tick_delivery(broadcast.tick);
+        }
+    }
+
+    let filter = subscription_filter.lock().await.clone();
+    if !filter.is_active() {
+        let encoded = if include_graph {
+            &broadcast.graph_encoded
+        } else {
+            &broadcast.encoded
+        };
+        for message in encoded.iter() {
+            if sender.send(message.clone()).await.is_err() {
+                return false;
+            }
+            tick_messages_sent.inc();
+        }
+        return true;
+    }
+    if !filter.should_deliver_tick(broadcast.tick) {
+        return true;
+    }
+    let source_frames = if include_graph {
+        broadcast.graph_frames.as_ref()
+    } else {
+        broadcast.frames.as_ref()
+    };
+    let frames = filter.filter_frames(source_frames);
+    if frames.is_empty() {
+        return true;
+    }
+    let messages = match encode_tick_broadcast_messages(&frames, tick_broadcast_format) {
+        Ok(messages) => messages,
+        Err(error) => {
+            tracing::error!("tick broadcast encode failed: {error}");
+            return true;
+        }
+    };
+    for message in messages {
+        if sender.send(message).await.is_err() {
+            return false;
+        }
+        tick_messages_sent.inc();
+    }
+    true
 }
 
 fn voxel_axis_span<F>(_voxel: &civ_voxel::VoxelWorld<civ_voxel::MaterialId>, axis: F) -> f32
@@ -761,31 +814,32 @@ async fn handle_jsonrpc_text(
             // `sim.get_snapshot_for_session` so the response shape
             // includes connection_id / last_acked_tick alongside the
             // standard snapshot payload.
-            let session_snapshot = if req.method == crate::jsonrpc::JsonRpcMethod::SimGetSnapshotForSession {
-                let sim = state.sim.lock().await;
-                let subscribed_frame_kinds = {
-                    let sessions = state.sessions.lock().await;
-                    sessions
-                        .get(connection_id)
-                        .map(|s| s.subscribed_frame_kinds.clone())
-                        .unwrap_or_default()
+            let session_snapshot =
+                if req.method == crate::jsonrpc::JsonRpcMethod::SimGetSnapshotForSession {
+                    let sim = state.sim.lock().await;
+                    let subscribed_frame_kinds = {
+                        let sessions = state.sessions.lock().await;
+                        sessions
+                            .get(connection_id)
+                            .map(|s| s.subscribed_frame_kinds.clone())
+                            .unwrap_or_default()
+                    };
+                    let last_acked_tick = {
+                        let sessions = state.sessions.lock().await;
+                        sessions
+                            .get(connection_id)
+                            .map(|s| s.last_acked_tick)
+                            .unwrap_or(0)
+                    };
+                    Some(SessionSnapshot::new(
+                        connection_id,
+                        last_acked_tick,
+                        subscribed_frame_kinds,
+                        &sim,
+                    ))
+                } else {
+                    None
                 };
-                let last_acked_tick = {
-                    let sessions = state.sessions.lock().await;
-                    sessions
-                        .get(connection_id)
-                        .map(|s| s.last_acked_tick)
-                        .unwrap_or(0)
-                };
-                Some(SessionSnapshot::new(
-                    connection_id,
-                    last_acked_tick,
-                    subscribed_frame_kinds,
-                    &sim,
-                ))
-            } else {
-                None
-            };
             let mut plan = dispatch_request(
                 req,
                 DispatchContext {
@@ -1909,6 +1963,11 @@ fn encode_tick_broadcast_messages(
 }
 
 async fn advance_one_tick(state: &AppState) -> Result<(), String> {
+    // A headless simulation still advances, but there is nobody to receive a
+    // render bundle. Building both the normal and graph-inclusive bundles
+    // serializes every live entity twice per tick, so defer that work until a
+    // client is actually connected.
+    let has_clients = !state.clients.lock().await.is_empty();
     let batch = {
         let mut sim = state.sim.lock().await;
         let tick_start = std::time::Instant::now();
@@ -1951,48 +2010,48 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
             emergence_entropy,
         });
 
-        let graph_json = serde_json::to_vec(sim.building_graph()).map_err(|e| e.to_string())?;
-        let include_building_graph = {
-            let mut last = state.last_building_graph_json.lock().await;
-            if last.as_ref() == Some(&graph_json) {
-                false
-            } else {
-                *last = Some(graph_json);
-                true
-            }
-        };
-        let bundle = build_frame_bundle(&sim, false)?;
-        let graph_bundle = build_frame_bundle(&sim, true)?;
-        let encoded = Arc::from(
-            encode_tick_broadcast_messages(&bundle, state.tick_broadcast_format)?
-                .into_boxed_slice(),
-        );
-        let graph_encoded = Arc::from(
-            encode_tick_broadcast_messages(&graph_bundle, state.tick_broadcast_format)?
-                .into_boxed_slice(),
-        );
-        Arc::new(TickBroadcast {
-            tick,
-            frames: Arc::from(bundle),
-            encoded,
-            graph_frames: Arc::from(graph_bundle),
-            graph_encoded,
-            graph_changed: include_building_graph,
-        })
+        if !has_clients {
+            None
+        } else {
+            let graph_json = serde_json::to_vec(sim.building_graph()).map_err(|e| e.to_string())?;
+            let include_building_graph = {
+                let mut last = state.last_building_graph_json.lock().await;
+                if last.as_ref() == Some(&graph_json) {
+                    false
+                } else {
+                    *last = Some(graph_json);
+                    true
+                }
+            };
+            let bundle = build_frame_bundle(&sim, false)?;
+            let graph_bundle = build_frame_bundle(&sim, true)?;
+            let encoded = Arc::from(
+                encode_tick_broadcast_messages(&bundle, state.tick_broadcast_format)?
+                    .into_boxed_slice(),
+            );
+            let graph_encoded = Arc::from(
+                encode_tick_broadcast_messages(&graph_bundle, state.tick_broadcast_format)?
+                    .into_boxed_slice(),
+            );
+            Some(Arc::new(TickBroadcast {
+                tick,
+                frames: Arc::from(bundle),
+                encoded,
+                graph_frames: Arc::from(graph_bundle),
+                graph_encoded,
+                graph_changed: include_building_graph,
+            }))
+        }
     };
 
+    let Some(batch) = batch else {
+        return Ok(());
+    };
     state.metrics.tick_batches_sent.inc();
-    let mut clients = state.clients.lock().await;
-    clients.retain(|tx| {
-        let delivered = tx
-            .try_send(ClientOutbound::Tick(Arc::clone(&batch)))
-            .is_ok();
-        if !delivered {
-            state.metrics.ws_client_disconnects.inc();
-            state.metrics.connected_clients.dec();
-        }
-        delivered
-    });
+    let clients = state.clients.lock().await;
+    for client in clients.iter() {
+        client.publish_tick(Arc::clone(&batch));
+    }
     Ok(())
 }
 
@@ -2011,6 +2070,59 @@ async fn tick_once(state: &AppState) -> Result<(), String> {
 mod tests {
     use super::*;
     use civ_save_db::SessionSaveRecord;
+
+    fn tick_for_delivery_test(tick: u64) -> Arc<TickBroadcast> {
+        Arc::new(TickBroadcast {
+            tick,
+            frames: Arc::<[Frame3d]>::from([]),
+            encoded: Arc::<[Message]>::from([]),
+            graph_frames: Arc::<[Frame3d]>::from([]),
+            graph_encoded: Arc::<[Message]>::from([]),
+            graph_changed: false,
+        })
+    }
+
+    #[tokio::test]
+    async fn slow_client_keeps_only_the_newest_tick_without_filling_control_lane() {
+        let (control, mut control_rx) = mpsc::channel(CLIENT_CONTROL_CAPACITY);
+        let (latest_tick, mut tick_rx) = watch::channel(None);
+        let client = ClientOutboundTx {
+            control,
+            latest_tick,
+        };
+
+        // A renderer that cannot read for more than the old FIFO capacity must
+        // still retain a current world snapshot and stay eligible for controls.
+        for tick in 1..=(CLIENT_CONTROL_CAPACITY as u64 + 9) {
+            client.publish_tick(tick_for_delivery_test(tick));
+        }
+        client
+            .control
+            .try_send(Message::Text("first-control".into()))
+            .expect("render tick backlog must not fill the control lane");
+        client
+            .control
+            .try_send(Message::Text("second-control".into()))
+            .expect("render tick backlog must not disconnect the client");
+
+        tick_rx
+            .changed()
+            .await
+            .expect("latest-tick sender stays alive");
+        assert_eq!(
+            tick_rx.borrow_and_update().as_ref().map(|tick| tick.tick),
+            Some(CLIENT_CONTROL_CAPACITY as u64 + 9),
+            "obsolete render generations must coalesce to the newest tick"
+        );
+        assert!(matches!(
+            control_rx.recv().await,
+            Some(Message::Text(text)) if text == "first-control"
+        ));
+        assert!(matches!(
+            control_rx.recv().await,
+            Some(Message::Text(text)) if text == "second-control"
+        ));
+    }
 
     #[test]
     fn need_satisfaction_inverts_and_clamps_pressure() {
@@ -2812,6 +2924,17 @@ mod tests {
         assert!(!frame.deltas.is_empty());
     }
 
+    #[tokio::test]
+    async fn idle_server_ticks_without_building_a_client_broadcast() {
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(11)));
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
+
+        advance_one_tick(&state).await.expect("idle tick");
+
+        assert_eq!(state.tick.load(Ordering::SeqCst), 1);
+        assert_eq!(state.metrics.tick_batches_sent.get(), 0);
+        assert!(state.last_building_graph_json.lock().await.is_none());
+    }
     #[tokio::test]
     async fn frame_bundle_is_deterministic_for_fixed_seed() {
         let make = || async {

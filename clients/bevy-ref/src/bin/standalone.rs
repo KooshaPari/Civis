@@ -202,10 +202,6 @@ fn main() {
         ));
     }
 
-    // GPU particle VFX for events (feature-gated).
-    #[cfg(feature = "vfx")]
-    app.add_plugins(civ_bevy_ref::vfx::VfxPlugin);
-
     // P-VM-3: real volumetric voxel material world (replaces the heightmap).
     // `voxel_stream` takes precedence: when enabled, the camera-driven streaming
     // sandbox owns the world instead of the bounded dense `VoxelSimPlugin`.

@@ -3,11 +3,11 @@
 //! Menus and overlay plugin for the Civis reference client (FR-CIV-BEVY-024 / item 49).
 //! Settings GPU readout: FR-CIV-BEVY-036 / item 61.
 
+use crate::event_feed::{EventFeed, EventKind};
 use crate::faction_hud::PlayerFactionId;
 use crate::game_ui::GameSpeed;
 use crate::gpu_features::GpuCapabilities;
 use crate::live_attach::LiveAttachBridge;
-use crate::live_stream::ServerBridge;
 use crate::live_stream::{clear_live_stream_scene_in_world, LiveStreamScene};
 use crate::outcome_overlay::{
     begin_player_session, end_player_session, outcome_modal_visible, OutcomeEscapeBlock,
@@ -20,6 +20,7 @@ use bevy::app::AppExit;
 use bevy::asset::LoadState;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
+use std::time::{Duration, Instant};
 
 const WORLDGEN_PRESETS: [&str; 4] = [
     "single-race-ardani",
@@ -102,6 +103,121 @@ pub enum GameUiMode {
     Playing,
     /// Pause overlay is shown; in-process sim ticks halt.
     Paused,
+}
+
+const LIVE_SPEED_REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// One live speed request retained until a terminal server response arrives.
+/// This prevents the local shell from claiming an unacknowledged pause/resume.
+#[derive(Resource, Default)]
+pub struct PendingSimSpeed {
+    request: Option<PendingSimSpeedRequest>,
+}
+
+struct PendingSimSpeedRequest {
+    ticket: crate::ws_client::RpcTicket,
+    multiplier: u32,
+    shell_mode: Option<GameUiMode>,
+    sent_at: Instant,
+}
+
+/// Queue a server-authoritative speed change. A second request waits for the
+/// first request's terminal reply rather than overwriting its ticket.
+pub fn request_live_speed(
+    pending: &mut PendingSimSpeed,
+    bridge: Option<&LiveAttachBridge>,
+    multiplier: u32,
+    shell_mode: Option<GameUiMode>,
+) -> bool {
+    let Some(bridge) = bridge else {
+        return false;
+    };
+    if pending.request.is_some() {
+        return false;
+    }
+    pending.request = Some(PendingSimSpeedRequest {
+        ticket: bridge
+            .client
+            .request_rpc("sim.set_speed", serde_json::json!({ "multiplier": multiplier })),
+        multiplier,
+        shell_mode,
+        sent_at: Instant::now(),
+    });
+    true
+}
+
+/// Map standalone-only 5x/10x values to the server's supported 4x/8x values.
+fn server_speed_multiplier(speed: f32) -> u32 {
+    match speed.round() as u32 {
+        1 | 2 | 4 | 8 => speed.round() as u32,
+        5 => 4,
+        10 => 8,
+        _ => 1,
+    }
+}
+
+fn accepted_speed_multiplier(
+    result: Result<serde_json::Value, String>,
+    requested: u32,
+) -> Result<u32, String> {
+    let result = result?;
+    if result.get("accepted").and_then(serde_json::Value::as_bool) != Some(true) {
+        return Err("The server did not accept the speed change.".to_owned());
+    }
+    let multiplier = result
+        .get("multiplier")
+        .and_then(serde_json::Value::as_u64)
+        .and_then(|value| u32::try_from(value).ok())
+        .ok_or_else(|| "The server reply did not include a valid speed multiplier.".to_owned())?;
+    if multiplier != requested {
+        return Err(format!(
+            "The server acknowledged speed {multiplier}x, not the requested {requested}x."
+        ));
+    }
+    Ok(multiplier)
+}
+
+fn reconcile_live_speed_request(
+    mut pending: ResMut<PendingSimSpeed>,
+    mut mode: ResMut<GameUiMode>,
+    mut speed: ResMut<GameSpeed>,
+    mut feed: Option<ResMut<EventFeed>>,
+) {
+    let completed = pending.request.as_ref().and_then(|request| {
+        request
+            .ticket
+            .try_recv()
+            .map(|reply| (reply, false))
+            .or_else(|| {
+                (request.sent_at.elapsed() >= LIVE_SPEED_REQUEST_TIMEOUT).then_some((
+                    Err("The server did not reply; simulation speed is unknown.".to_owned()),
+                    true,
+                ))
+            })
+    });
+    let Some((reply, timed_out)) = completed else {
+        return;
+    };
+    let request = pending.request.take().expect("pending speed request exists");
+    match accepted_speed_multiplier(reply, request.multiplier) {
+        Ok(multiplier) => {
+            speed.multiplier = multiplier as f32;
+            speed.remember_non_zero();
+            if let Some(shell_mode) = request.shell_mode {
+                *mode = shell_mode;
+            }
+        }
+        Err(error) => {
+            if let Some(feed) = feed.as_deref_mut() {
+                let prefix = if timed_out {
+                    "Simulation speed request timed out"
+                } else {
+                    "Simulation speed request failed"
+                };
+                feed.push(EventKind::System, format!("{prefix}: {error}"));
+            }
+        }
+    }
 }
 
 /// Timed era-advancement banner shown at the top of the viewport.
@@ -193,6 +309,7 @@ impl Plugin for MenusPlugin {
     fn build(&self, app: &mut App) {
         app.init_state::<AppState>()
             .init_resource::<GameUiMode>()
+            .init_resource::<PendingSimSpeed>()
             .init_resource::<EraBanner>()
             .init_resource::<SettingsOpen>()
             .init_resource::<WorldSetupParams>()
@@ -204,7 +321,10 @@ impl Plugin for MenusPlugin {
             .init_resource::<OutcomeOverlayState>()
             .init_resource::<MainMenuTitleAssets>()
             .add_systems(Startup, load_main_menu_title_assets)
-            .add_systems(Update, (toggle_pause, tick_era_banner))
+            .add_systems(
+                Update,
+                (toggle_pause, reconcile_live_speed_request, tick_era_banner).chain(),
+            )
             .add_systems(
                 Update,
                 (
@@ -525,7 +645,9 @@ pub fn toggle_pause(
     mut controls_help: Option<ResMut<crate::controls_help::ControlsHelpOpen>>,
     mut mode: ResMut<GameUiMode>,
     mut game_speed: Option<ResMut<GameSpeed>>,
-    bridge: Option<Res<ServerBridge>>,
+    attach_mode: Option<Res<crate::AttachMode>>,
+    bridge: Option<Res<LiveAttachBridge>>,
+    mut pending_speed: ResMut<PendingSimSpeed>,
 ) {
     // Single owner for ACTION_PAUSE_SIM: shell pause overlay (Space default).
     // Esc remains a hard fallback so Close Panel / overlay escape still works.
@@ -573,6 +695,26 @@ pub fn toggle_pause(
         }
     }
 
+    let server_attach = attach_mode.is_some_and(|attach| *attach == crate::AttachMode::Server);
+    if server_attach {
+        let (multiplier, shell_mode) = match *mode {
+            GameUiMode::Playing => (0, GameUiMode::Paused),
+            GameUiMode::Paused => (
+                game_speed
+                    .as_deref()
+                    .map_or(1, |speed| server_speed_multiplier(speed.last_non_zero)),
+                GameUiMode::Playing,
+            ),
+        };
+        request_live_speed(
+            &mut pending_speed,
+            bridge.as_deref(),
+            multiplier,
+            Some(shell_mode),
+        );
+        return;
+    }
+
     match *mode {
         GameUiMode::Playing => {
             *mode = GameUiMode::Paused;
@@ -582,18 +724,8 @@ pub fn toggle_pause(
                 speed.remember_non_zero();
                 speed.multiplier = 0.0;
             }
-            // Notify server of pause via JSON-RPC
-            if let Some(ref bridge) = bridge {
-                bridge.send_rpc("sim.command", serde_json::json!({ "action": "pause" }));
-            }
         }
-        GameUiMode::Paused => {
-            resume_shell_pause(&mut mode, game_speed.as_deref_mut());
-            // Notify server of resume via JSON-RPC
-            if let Some(ref bridge) = bridge {
-                bridge.send_rpc("sim.command", serde_json::json!({ "action": "resume" }));
-            }
-        }
+        GameUiMode::Paused => resume_shell_pause(&mut mode, game_speed.as_deref_mut()),
     }
 }
 
@@ -1460,6 +1592,7 @@ mod tests {
         app.insert_resource(ButtonInput::<MouseButton>::default());
         app.insert_resource(Time::<()>::default());
         app.insert_resource(GameUiMode::Playing);
+        app.init_resource::<PendingSimSpeed>();
         app.insert_resource(GameSpeed {
             multiplier: 1.0,
             last_non_zero: 1.0,
@@ -1480,5 +1613,93 @@ mod tests {
         assert_eq!(*app.world().resource::<GameUiMode>(), GameUiMode::Paused);
         assert_eq!(app.world().resource::<GameSpeed>().multiplier, 0.0);
         assert!((app.world().resource::<GameSpeed>().last_non_zero - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn live_pause_and_resume_wait_for_set_speed_acknowledgements() {
+        use bevy::prelude::{App, ButtonInput, Time, Update};
+        use std::time::Duration;
+
+        let (client, requests) = crate::ws_client::WsClient::test_rpc_client();
+        let mut app = App::new();
+        app.insert_resource(ButtonInput::<KeyCode>::default())
+            .insert_resource(ButtonInput::<MouseButton>::default())
+            .insert_resource(Time::<()>::default())
+            .insert_resource(GameUiMode::Playing)
+            .insert_resource(GameSpeed {
+                multiplier: 1.0,
+                last_non_zero: 1.0,
+            })
+            .insert_resource(GameSettings::default())
+            .insert_resource(crate::AttachMode::Server)
+            .insert_resource(LiveAttachBridge {
+                client: client.clone(),
+            })
+            .init_resource::<PendingSimSpeed>()
+            .add_systems(Update, (toggle_pause, reconcile_live_speed_request).chain());
+
+        let press_space = |app: &mut App| {
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .clear();
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .press(KeyCode::Space);
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(Duration::from_millis(16));
+            app.update();
+        };
+        let release_space = |app: &mut App| {
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .release(KeyCode::Space);
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(Duration::from_millis(16));
+            app.update();
+        };
+
+        press_space(&mut app);
+        let pause: serde_json::Value = serde_json::from_str(
+            &requests
+                .recv_timeout(Duration::from_secs(1))
+                .expect("pause request queued"),
+        )
+        .unwrap();
+        assert_eq!(pause["method"], "sim.set_speed");
+        assert_eq!(pause["params"]["multiplier"], 0);
+        assert_eq!(*app.world().resource::<GameUiMode>(), GameUiMode::Playing);
+        assert_eq!(app.world().resource::<GameSpeed>().multiplier, 1.0);
+
+        let pause_id = pause["id"].as_u64().unwrap();
+        client.test_complete_rpc(
+            pause_id,
+            Ok(serde_json::json!({"accepted": true, "multiplier": 0})),
+        );
+        app.update();
+        assert_eq!(*app.world().resource::<GameUiMode>(), GameUiMode::Paused);
+        assert_eq!(app.world().resource::<GameSpeed>().multiplier, 0.0);
+
+        release_space(&mut app);
+        press_space(&mut app);
+        let resume: serde_json::Value = serde_json::from_str(
+            &requests
+                .recv_timeout(Duration::from_secs(1))
+                .expect("resume request queued"),
+        )
+        .unwrap();
+        assert_eq!(resume["method"], "sim.set_speed");
+        assert_eq!(resume["params"]["multiplier"], 1);
+        assert_eq!(*app.world().resource::<GameUiMode>(), GameUiMode::Paused);
+
+        let resume_id = resume["id"].as_u64().unwrap();
+        client.test_complete_rpc(
+            resume_id,
+            Ok(serde_json::json!({"accepted": true, "multiplier": 1})),
+        );
+        app.update();
+        assert_eq!(*app.world().resource::<GameUiMode>(), GameUiMode::Playing);
+        assert_eq!(app.world().resource::<GameSpeed>().multiplier, 1.0);
     }
 }

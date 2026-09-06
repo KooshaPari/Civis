@@ -201,7 +201,7 @@ mod plugin {
     fn classify_inspection(
         mut requests: MessageReader<SelectEntityRequest>,
         mut details: ResMut<InspectedDetails>,
-        sim: Res<SimState>,
+        sim: Option<Res<SimState>>,
         structures: Query<(&GlobalTransform, &InspectableStructure)>,
     ) {
         for request in requests.read() {
@@ -209,7 +209,7 @@ mod plugin {
             // Civilians live in the hecs sim world (not Bevy entities), so pick
             // from `SimState` using the same deterministic position mapping the
             // population / needs overlays use.
-            if let Some(d) = pick_agent(pos, &sim) {
+            if let Some(d) = sim.as_deref().and_then(|state| pick_agent(pos, state)) {
                 details.0 = d;
             } else if let Some(d) = pick_structure(pos, &structures) {
                 details.0 = d;

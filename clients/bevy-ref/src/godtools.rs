@@ -54,10 +54,13 @@ impl Plugin for GodToolsPlugin {
 }
 
 pub fn dispatch_god_tool_requests(
-    mut sim: ResMut<SimState>,
+    sim: Option<ResMut<SimState>>,
     mut requests: MessageReader<GodToolRequestEvent>,
     mut log: ResMut<GodToolEventLog>,
 ) {
+    let Some(mut sim) = sim else {
+        return;
+    };
     for event in requests.read() {
         match sim.0.apply_god_tool(event.request.clone()) {
             Ok(receipt) => log.push(receipt),

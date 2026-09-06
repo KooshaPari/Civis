@@ -218,7 +218,7 @@ fn world_position_for_building(building: &Building) -> Vec3 {
 
 fn sync_minimap_dots(
     attach: Res<AttachMode>,
-    sim: Res<SimState>,
+    sim: Option<Res<SimState>>,
     mut commands: Commands,
     roots: Query<Entity, With<MinimapRoot>>,
     existing: Query<Entity, With<MinimapDot>>,
@@ -232,13 +232,13 @@ fn sync_minimap_dots(
         With<crate::live_stream::LiveBuildingTag>,
     >,
 ) {
-    if !sim.is_changed() && *attach == AttachMode::Standalone {
+    if *attach == AttachMode::Standalone && !sim.as_ref().is_some_and(|state| state.is_changed()) {
         return;
     }
 
     // In server mode, always re-sync from live-streamed entity transforms.
     let is_server = *attach == AttachMode::Server;
-    if is_server && !sim.is_changed() {
+    if is_server && !sim.as_ref().is_some_and(|state| state.is_changed()) {
         // Still allow initial population; skip only if no agents/buildings exist yet
         // and the scene hasn't changed.
     }
@@ -293,6 +293,9 @@ fn sync_minimap_dots(
                 ));
             }
         } else {
+            let Some(sim) = sim.as_deref() else {
+                return;
+            };
             // Standalone mode: read directly from the in-process simulation.
             for (_, (civilian, position)) in sim
                 .0

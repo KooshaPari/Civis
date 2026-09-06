@@ -832,7 +832,7 @@ mod plugin {
     /// the surface. Cheap, deterministic, and GPU-light for the sandbox.
     fn render_active_overlay(
         registry: Res<InfoViewRegistry>,
-        sim: Res<SimState>,
+        sim: Option<Res<SimState>>,
         mut gizmos: Gizmos,
     ) {
         let Some(overlay) = registry.active_overlay() else {
@@ -843,11 +843,12 @@ mod plugin {
         let step = WORLD_SIZE / res as f32;
         let cell = step * 0.45;
 
-        let agents = if overlay.uses_sim {
-            collect_agent_field(&sim, res)
-        } else {
-            AgentField::empty(res)
-        };
+        // Live attach has no in-process SimState. Keep terrain-derived overlays
+        // visible there and use an empty agent field until streamed aggregates arrive.
+        let agents = sim
+            .as_deref()
+            .filter(|_| overlay.uses_sim)
+            .map_or_else(|| AgentField::empty(res), |state| collect_agent_field(state, res));
 
         for gz in 0..res {
             for gx in 0..res {

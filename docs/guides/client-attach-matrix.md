@@ -4,12 +4,12 @@ Single reference for how each client talks to **civ-server** (WS JSON-RPC + opti
 
 | Client | Primary attach | Default URL | Terrain | Snapshot / pins | Spawn / place | F3D0 voxels | Default mode | Exact override | Validation command |
 |--------|----------------|-------------|---------|-----------------|---------------|-------------|--------------|---------------|-------------------|
-| **Godot** (`clients/godot-ref`) | `attach_mode=server` | WS `ws://127.0.0.1:3000/ws?tick_format=binary` | HTTP `http://127.0.0.1:9090/terrain` | `sim.snapshot` on WS (F3D0-throttled) | WS: `sim.spawn_civilian`, `sim.place_voxel` | **16³ procedural mesh** when dense `voxels` (4096); else chunk markers + throttle | Spectator by default (`spectator_mode=true`) | Inspector toggle to `spectator_mode=false` | `cargo run -p civ-server` |
+| **Godot** (`clients/godot-ref`) | `attach_mode=server` | Client default WS `ws://127.0.0.1:3000/ws?tick_format=binary` | HTTP `http://127.0.0.1:9090/terrain` | `sim.snapshot` on WS (F3D0-throttled) | WS: `sim.spawn_civilian`, `sim.place_voxel` | **16³ procedural mesh** when dense `voxels` (4096); else chunk markers + throttle | Spectator by default (`spectator_mode=true`) | Start server with `CIV_SERVER_PORT=3000`, or set Inspector `ws_url` to `:3800` | `CIV_SERVER_PORT=3000 cargo run -p civ-server` |
 | **Godot** watch mode | `attach_mode=watch` | HTTP `http://127.0.0.1:9090` | Same | SSE / poll via watch | `POST /control/*` when not spectator | — | Spectator / read-only by default | Set the same `spectator_mode` / authoring override used by the embedding scene | `cargo run -p civ-watch` |
-| **Web dashboard** | civ-watch HTTP + optional WS | `http://127.0.0.1:9090`, dev `5173` | `/terrain` | `/snapshot` or WS | L2 authoring routes | — | Authoring by default (`spectator_mode=false`) | `?spectator=1` or `?authoring=0` | `cd web && npm run build` |
-| **Bevy window** | civ-server WS | `ws://127.0.0.1:3000/ws?tick_format=binary` | Optional watch HTTP | `sim.snapshot` side-channel | WS spawn RPCs | Binary F3D0 path | N/A (tooling) | N/A | `just civis-3d-verify` |
-| **Unreal CivShow** | WS + watch HTTP | Same as Godot defaults in `CivShowGameMode` | `UCivProtocolClient` → `/terrain` | `UCivWsClient` → `sim.snapshot` | WS `sim.spawn_*` + HTTP `POST /control/*` | **16³ procedural mesh** when dense `voxels` (4096); else chunk markers (`OnF3d0FrameReceived`) | Editor PIE / authoring session | PIE session, or the project-specific auth path that flips `spectator_mode` off | `.\clients\unreal-show\scripts\build.ps1` |
-| **civ-server tests** | In-process | `127.0.0.1:3000` | — | JSON-RPC | Full RPC surface | Replay tests | N/A | N/A | `just civis-3d-catalog-check` |
+| **Web dashboard** | civ-watch HTTP + optional WS | `http://127.0.0.1:9090`, dev `5173` | `/terrain` | `/snapshot` or WS | L2 authoring routes | — | Authoring by default (`spectator_mode=false`) | Server WS defaults to `:3000`; set `CIV_SERVER_PORT=3000` on civ-server or configure the dashboard WS endpoint for `:3800` | `cd web && bun test; bun run build` |
+| **Bevy window** | civ-server WS | `ws://127.0.0.1:3800/ws?tick_format=binary` | Optional watch HTTP | `sim.snapshot` side-channel | WS spawn RPCs | Binary F3D0 path | N/A (tooling) | `CIV_SERVER_PORT`, `CIV_WS_HOST`, `CIV_WS_PATH`, or `CIV_WS_URL` | `just civis-3d-live-smoke` (headless); native lifecycle separately |
+| **Unreal CivShow** | WS + watch HTTP | Client default `ws://127.0.0.1:3000/ws?tick_format=binary` | `UCivProtocolClient` → `/terrain` | `UCivWsClient` → `sim.snapshot` | WS `sim.spawn_*` + HTTP `POST /control/*` | **16³ procedural mesh** when dense `voxels` (4096); else chunk markers (`OnF3d0FrameReceived`) | Editor PIE / authoring session | PIE session, or the project-specific auth path that flips `spectator_mode` off | `.\clients\unreal-show\scripts\build.ps1` |
+| **civ-server tests** | In-process | Ephemeral loopback listener | — | JSON-RPC | Full RPC surface | Replay tests | N/A | Test fixture assigns the listener | `cargo test -p civ-server --test ws_smoke` + `just civis-3d-catalog-check` |
 
 ### UX-05 — `spectator_mode` defaults
 
@@ -48,10 +48,19 @@ Unreal: `UCivWsClient::SpawnEntity` / `UCivProtocolClient::SpawnEntity` — HTTP
 | Web dashboard | 160×160 terrain canvas; **left-click** → UV → chunk grid → `set_camera_focus` — [`minimap-conventions.md`](minimap-conventions.md) |
 | **Unreal CivShow** | **Partial** — `ACivMinimapCapture` (256² ortho at ~(64,800,64), width 512) + `UCivMinimapWidget` UMG; **left-click** → UV → world XZ → `ACivShowGameMode::FocusCameraAtWorldLocation` |
 
+## Endpoint compatibility
+
+`civ-server` and `civ-bevy-ref` default to port **3800**. Godot, Unreal, and the
+web attach helper currently default to port **3000**. For a cross-client demo,
+choose one endpoint explicitly. The command below uses `:3000` for the Godot,
+Unreal, and web defaults; set their endpoint overrides to use a server started
+with its native `:3800` default instead.
+
 ## Services to start (local demo)
 
 ```powershell
-# Terminal 1 — simulation authority
+# Terminal 1 — simulation authority, selected for Godot/Unreal/web defaults
+$env:CIV_SERVER_PORT = "3000"
 cargo run -p civ-server
 
 # Terminal 2 — terrain + HTTP dashboard host
@@ -64,7 +73,7 @@ cargo run -p civ-watch
 
 | Variable | Default | Used by |
 |----------|---------|---------|
-| `CIV_SERVER_PORT` | `3000` | `civ-server` WS |
+| `CIV_SERVER_PORT` | `3800` for `civ-server` and Bevy; `3000` in Godot/Unreal/web client defaults | Selects a shared WS endpoint when set consistently |
 | `CIV_WATCH_PORT` | `9090` | `civ-watch` HTTP |
 | `UE_ROOT` | auto-detect `UE_5.7` | `clients/unreal-show/scripts/build.ps1` |
 

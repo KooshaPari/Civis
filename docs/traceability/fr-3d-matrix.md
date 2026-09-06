@@ -172,8 +172,24 @@ Finish-readiness rule: a row is only safe to treat as release-ready when the lis
 | FR ID | Requirement Summary | Crate / Source Path | Test Name Pattern | Status |
 |---|---|---|---|---|
 | FR-CIV-BEVY-023 | P-W1 kickoff **item 48**: `event_feed` egui toasts + scrollable log on `civ-standalone`; `live_attach` pushes `EventKind::System` on WebSocket `connected` / `reconnecting` / `disconnected`. | `clients/bevy-ref` (`event_feed`, `live_attach`, `standalone`) | `cargo test -p civ-bevy-ref --features bevy,egui --lib event_feed::`, `cargo check -p civ-bevy-ref --features bevy,egui --bin civ-standalone` | implemented |
-| FR-CIV-BEVY-024 | P-W1 kickoff **item 49**: `MenusPlugin` on `civ-standalone` — Escape pause overlay, settings stub, era banner; in-process sim tick gated while paused (`GameUiMode` / HUD speed `0`). | `clients/bevy-ref` (`menus`, `lib.rs`, `bin/standalone.rs`, `sim_bridge`) | `cargo check -p civ-bevy-ref --features bevy,egui --bin civ-standalone`, `cargo test -p civ-bevy-ref --features bevy,egui --lib menus::` | implemented |
+| FR-CIV-BEVY-024 | P-W1 kickoff **item 49**: `MenusPlugin` on `civ-standalone` — Escape pause overlay, settings stub, era banner; in-process sim tick gated while paused (`GameUiMode` / HUD speed `0`). In server attach, pause/resume waits for an accepted `sim.set_speed` reply before changing shell state. | `clients/bevy-ref` (`menus`, `lib.rs`, `bin/standalone.rs`, `sim_bridge`) | `cargo check -p civ-bevy-ref --features bevy,egui --bin civ-standalone`, `cargo test -p civ-bevy-ref --features bevy,egui --lib menus::tests::live_pause_and_resume_wait_for_set_speed_acknowledgements` | implemented |
 | FR-CIV-BEVY-026 | P-W1 kickoff **item 51**: document and test native GPU backend selection (`CIV_BEVY_BACKEND`, DX12/Vulkan/Metal; no GLES). | `clients/bevy-ref` (`native_backend`), `clients/bevy-ref/README.md`, `docs/research/wgpu-native-escape-hatches.md` | `cargo test -p civ-bevy-ref --features bevy --lib native_backend`, `just civis-3d-live-smoke` | implemented |
+
+### Bevy operational acceptance boundaries
+
+The following safeguards are implemented code but do not have an assigned
+`FR-CIV-BEVY-*` row in `fr-3d-additions.md`; they must not be used to imply
+complete native-lifecycle acceptance.
+
+| Area | Code / mechanical proof | Acceptance still required |
+|---|---|---|
+| DX12 minimized surface | `NativeWindowLifecyclePlugin` is installed by both desktop binaries; `only_a_changed_minimized_extent_uses_the_cached_surface_size` covers its cached-extent rule. | Native minimize, restore, and normal window-close trials on the target adapter. `just civis-3d-standalone-smoke` only proves scripted startup and exit. |
+| Server-attached pause/resume | `live_pause_and_resume_wait_for_set_speed_acknowledgements` checks that `GameUiMode` changes only after the matching `sim.set_speed` acceptance. | A running-server UI trial, including error/timeout observation, if release evidence needs end-to-end interaction. |
+
+The P-W1 kickoff records more Bevy completion claims than this matrix currently
+contains. IDs absent here remain traceability debt until their source, test, and
+acceptance gate are entered; absence is not evidence that the implementation is
+missing.
 
 ---
 
@@ -211,4 +227,4 @@ Finish-readiness rule: a row is only safe to treat as release-ready when the lis
 
 ---
 
-*Last updated: 2026-07-12. Source of truth for FR text: `docs/development-guide/fr-3d-additions.md`.*
+*Last updated: 2026-09-06. Source of truth for FR text: `docs/development-guide/fr-3d-additions.md`.*

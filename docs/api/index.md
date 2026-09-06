@@ -11,7 +11,7 @@ agents do not treat future WebSocket/JSON-RPC specs as implemented code.
 | Surface | Status | Source |
 | --- | --- | --- |
 | Rust engine crate | Implemented | `crates/engine/src/lib.rs` |
-| Rust CLI/server binary | Implemented as a smoke executable | `crates/server/src/main.rs` |
+| Rust server binary | Implemented WebSocket/HTTP bridge | `crates/server/src/main.rs`, `crates/server/src/ws_bridge.rs` |
 | WebSocket JSON-RPC protocol | Implemented (`civ-server`) | [`jsonrpc-surface.md`](jsonrpc-surface.md) · `docs/specs/CIV-0200-client-protocol.md` |
 | Metrics export endpoint | Planned | `docs/traceability/EVENT_TAXONOMY.md` |
 
@@ -163,26 +163,25 @@ Both return `std::io::Result`.
 
 ## Server Binary
 
-`crates/server` is currently a smoke executable, not a long-running network
-server. Running it performs one deterministic step and prints a metrics line:
+`civ-server` is the long-running local WebSocket/HTTP bridge. Its default bind
+is `127.0.0.1:3800`; override it with `CIV_SERVER_PORT`. It owns the live
+JSON-RPC dispatch and F3D0 tick broadcast. Run it with:
 
-```bash
+```powershell
 cargo run -p civ-server
 ```
 
-Example output shape:
+The machine-readable method catalog and its checked documentation are
+[`jsonrpc-surface.md`](jsonrpc-surface.md). Use
+`just civis-3d-catalog-check` to detect catalog drift. Client endpoint defaults
+are not uniform; follow the explicit compatibility instructions in
+[`client-attach-matrix.md`](../guides/client-attach-matrix.md).
 
-```text
-tick=1 energy=995000000000 waste=500000000 surplus=990000000000 tyranny=0.005025 legitimacy=0.994975
-```
+## Protocol Status
 
-Use this binary as a quick wiring check for `civ-engine`, `step`, and
-`metrics::compute`.
-
-## Planned Protocol
-
-The WebSocket JSON-RPC and binary-frame protocol is specified but not implemented
-in the current codebase. Treat these as contracts for future work:
+The WebSocket JSON-RPC and binary-frame protocol are implemented in
+`civ-server`. The protocol spec and event taxonomy remain normative design
+references; they do not imply that every specified future surface is shipped:
 
 - `docs/specs/CIV-0200-client-protocol.md`
 - `docs/models/civ-sim/API_EVENTS_SPEC.md`

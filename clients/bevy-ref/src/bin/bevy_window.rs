@@ -56,6 +56,7 @@ use civ_bevy_ref::{
     minimap::MinimapRoot,
     minimap_uv_to_chunk_grid,
     native_backend::native_render_plugin,
+    native_window_lifecycle::NativeWindowLifecyclePlugin,
     post_fx::PostFxPlugin,
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
     presentation_day_factor_target, resolve_live_ws_url,
@@ -227,6 +228,7 @@ fn main() {
         GpuFeaturesPlugin,
         LivePickPlugin,
         civ_bevy_ref::frame_budget::FrameBudgetPlugin,
+        NativeWindowLifecyclePlugin,
     ));
     #[cfg(feature = "audio")]
     app.add_plugins(civ_bevy_ref::audio::CivisAudioPlugin);

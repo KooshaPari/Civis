@@ -94,6 +94,8 @@ pub mod minimap;
 #[cfg(feature = "bevy")]
 pub mod native_backend;
 #[cfg(feature = "bevy")]
+pub mod native_window_lifecycle;
+#[cfg(feature = "bevy")]
 pub mod native_renderer;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod notifications;

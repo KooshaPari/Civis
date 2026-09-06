@@ -22,6 +22,7 @@ use civ_bevy_ref::{
     gpu_features::GpuFeaturesPlugin,
     live_attach::LiveAttachPlugin,
     native_backend::native_render_plugin,
+    native_window_lifecycle::NativeWindowLifecyclePlugin,
     post_fx::PostFxSettings,
     resolve_attach_mode_from_env,
     terrain::{terrain_mesh, WORLD_SIZE},
@@ -80,6 +81,7 @@ fn main() {
                 .set(native_render_plugin()),
         )
         .add_plugins(GpuFeaturesPlugin)
+        .add_plugins(NativeWindowLifecyclePlugin)
         // Frame diagnostics: emit `FrameTime` + `SystemInformation` once per
         // second at INFO so the 90s frame-budget profile has a measurable
         // signal. See `docs/audits/frame-budget-baseline-2026-06-10.md`.

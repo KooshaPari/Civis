@@ -637,7 +637,8 @@ mod plugin {
                 )
                 .add_systems(
                     EguiPrimaryContextPass,
-                    draw_nearby_counts_overlay.run_if(crate::menus::in_game),
+                    (draw_nearby_counts_overlay, draw_overlay_availability)
+                        .run_if(crate::menus::in_game),
                 );
         }
     }
@@ -652,6 +653,26 @@ mod plugin {
         if keys.just_pressed(KeyCode::Escape) && overlay.visible {
             overlay.visible = false;
         }
+    }
+
+    fn draw_overlay_availability(
+        attach: Res<AttachMode>,
+        registry: Res<InfoViewRegistry>,
+        mut contexts: EguiContexts,
+    ) {
+        if !is_server_attach_mode(*attach) || !registry.is_active() {
+            return;
+        }
+        let Ok(ctx) = contexts.ctx_mut() else {
+            return;
+        };
+        egui::Area::new(egui::Id::new("live_terrain_overlay_unavailable"))
+            .anchor(egui::Align2::CENTER_TOP, egui::vec2(0.0, 48.0))
+            .show(ctx, |ui| {
+                egui::Frame::popup(ui.style()).show(ui, |ui| {
+                    ui.label("Terrain overlays are unavailable in live attach.");
+                });
+            });
     }
 
     fn is_nearby(eye: Vec3, pos: Vec3) -> bool {
@@ -831,18 +852,18 @@ mod plugin {
     /// draws a coloured quad (two gizmo triangles → cross) hovering just above
     /// the surface. Cheap, deterministic, and GPU-light for the sandbox.
     fn render_active_overlay(
+        attach: Res<AttachMode>,
         registry: Res<InfoViewRegistry>,
         sim: Option<Res<SimState>>,
         mut gizmos: Gizmos,
     ) {
+        if is_server_attach_mode(*attach) {
+            return;
+        }
         let Some(overlay) = registry.active_overlay() else {
             return;
         };
-        // In live-attach mode the authoritative state comes from the server;
-        // this standalone overlay has no local SimState to sample.
-        let Some(sim) = sim else {
-            return;
-        };
+        let sim = sim.expect("standalone info views require SimState");
         let res = registry.grid_resolution.max(2);
         let half = WORLD_SIZE * 0.5;
         let step = WORLD_SIZE / res as f32;

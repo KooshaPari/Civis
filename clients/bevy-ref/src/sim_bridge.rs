@@ -23,7 +23,8 @@ type ModelResourceRef<'a> = Option<&'a Res<civ_bevy_ref::gltf_models::GameModels
 #[cfg(not(feature = "models"))]
 type ModelResourceRef<'a> = Option<()>;
 
-/// Live simulation state shared by the minimap, HUD, and spawn tools.
+/// Authoritative in-process state. Absent in Server mode: live consumers must
+/// read streamed state rather than treating a default simulation as server data.
 #[derive(Resource)]
 pub struct SimState(pub Simulation);
 
@@ -90,11 +91,11 @@ pub struct SimBridgePlugin;
 impl Plugin for SimBridgePlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(ProceduralActorPlugin);
-        // UI plugins share this resource's type in both attach modes.  In
-        // server mode it remains an inert default; every system that advances
-        // or projects the local simulation is still gated below.
-        app.init_resource::<SimState>()
-            .insert_resource(SimTickAccumulator(0.0))
+        let mode = *app.world().resource::<AttachMode>();
+        if sim_state_enabled(mode) {
+            app.init_resource::<SimState>();
+        }
+        app.insert_resource(SimTickAccumulator(0.0))
             .add_systems(Startup, setup_gameplay_marker_meshes)
             .add_systems(
                 Update,
@@ -124,10 +125,15 @@ mod tests {
     }
 
     #[test]
-    fn shared_sim_state_resource_exists_for_ui_plugins() {
-        let mut app = App::new();
-        app.add_plugins(SimBridgePlugin);
-        assert!(app.world().contains_resource::<SimState>());
+    fn local_sim_state_exists_only_for_standalone_plugins() {
+        for mode in [AttachMode::Server, AttachMode::Standalone] {
+            let mut app = App::new();
+            app.insert_resource(mode).add_plugins(SimBridgePlugin);
+            assert_eq!(
+                app.world().contains_resource::<SimState>(),
+                mode == AttachMode::Standalone
+            );
+        }
     }
 }
 

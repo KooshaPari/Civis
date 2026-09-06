@@ -222,7 +222,7 @@ fn world_position_for_building(building: &Building) -> Vec3 {
 
 fn sync_minimap_dots(
     attach: Res<AttachMode>,
-    sim: Res<SimState>,
+    sim: Option<Res<SimState>>,
     mut commands: Commands,
     roots: Query<Entity, With<MinimapRoot>>,
     existing: Query<Entity, With<MinimapDot>>,
@@ -236,15 +236,16 @@ fn sync_minimap_dots(
         With<crate::live_stream::LiveBuildingTag>,
     >,
 ) {
-    if !sim.is_changed() && *attach == AttachMode::Standalone {
-        return;
-    }
-
     // In server mode, always re-sync from live-streamed entity transforms.
     let is_server = *attach == AttachMode::Server;
-    if is_server && !sim.is_changed() {
-        // Still allow initial population; skip only if no agents/buildings exist yet
-        // and the scene hasn't changed.
+    if !is_server
+        && !sim
+            .as_ref()
+            .expect("standalone minimap requires SimState")
+            .is_changed()
+        && !attach.is_changed()
+    {
+        return;
     }
 
     for entity in &existing {
@@ -298,14 +299,14 @@ fn sync_minimap_dots(
             }
         } else {
             // Standalone mode: read directly from the in-process simulation.
+            let sim = sim.as_ref().expect("standalone minimap requires SimState");
             for (_, (civilian, position)) in sim
                 .0
                 .world
                 .query::<(&AgentCivilian, &civ_agents::Position3d)>()
                 .iter()
             {
-                let uv =
-                    world_to_minimap_uv(world_position_for_civilian(civilian, position));
+                let uv = world_to_minimap_uv(world_position_for_civilian(civilian, position));
                 parent.spawn((
                     Node {
                         position_type: PositionType::Absolute,
@@ -366,4 +367,76 @@ fn teleport_camera_from_minimap(
     let world = minimap_uv_to_world(normalized);
     rig.target.x = world.x;
     rig.target.z = world.z;
+}
+
+#[cfg(test)]
+mod attach_mode_tests {
+    use super::*;
+    use crate::live_stream::{LiveAgentTag, LiveBuildingTag};
+
+    #[test]
+    fn server_minimap_uses_only_streamed_entities_without_local_state() {
+        let mut app = App::new();
+        app.insert_resource(AttachMode::Server)
+            .add_systems(Update, sync_minimap_dots);
+        app.world_mut().spawn((Node::default(), MinimapRoot));
+        let agent = app
+            .world_mut()
+            .spawn((
+                LiveAgentTag { id: 777 },
+                Transform::from_xyz(32.0, 8.0, -16.0),
+            ))
+            .id();
+        app.world_mut().spawn((
+            LiveBuildingTag { id: 888 },
+            Transform::from_xyz(-32.0, 0.0, 16.0),
+        ));
+        app.update();
+        assert_eq!(
+            app.world_mut()
+                .query_filtered::<Entity, With<MinimapDot>>()
+                .iter(app.world())
+                .count(),
+            2
+        );
+        assert!(!app.world().contains_resource::<SimState>());
+
+        // An incidental local resource must never add its default population.
+        app.insert_resource(SimState::default());
+        app.world_mut().despawn(agent);
+        app.update();
+        assert_eq!(
+            app.world_mut()
+                .query_filtered::<Entity, With<MinimapDot>>()
+                .iter(app.world())
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn standalone_minimap_keeps_local_population() {
+        let mut app = App::new();
+        let sim = SimState::default();
+        let expected = sim
+            .0
+            .world
+            .query::<(&AgentCivilian, &civ_agents::Position3d)>()
+            .iter()
+            .count()
+            + sim.0.world.query::<&Building>().iter().count();
+        assert!(expected > 0);
+        app.insert_resource(AttachMode::Standalone)
+            .insert_resource(sim)
+            .add_systems(Update, sync_minimap_dots);
+        app.world_mut().spawn((Node::default(), MinimapRoot));
+        app.update();
+        assert_eq!(
+            app.world_mut()
+                .query_filtered::<Entity, With<MinimapDot>>()
+                .iter(app.world())
+                .count(),
+            expected
+        );
+    }
 }

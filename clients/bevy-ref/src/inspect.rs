@@ -188,7 +188,16 @@ mod plugin {
     }
 
     /// Refresh the god-hand hover readout from the shared cursor marker.
-    fn update_hover_readout(marker: Res<CursorMarker>, mut hover: ResMut<HoverReadout>) {
+    fn update_hover_readout(
+        attach: Res<crate::AttachMode>,
+        marker: Res<CursorMarker>,
+        mut hover: ResMut<HoverReadout>,
+    ) {
+        if *attach == crate::AttachMode::Server {
+            // This procedural readout cannot describe streamed voxel terrain.
+            hover.cell = None;
+            return;
+        }
         hover.cell = marker
             .position
             .filter(|_| marker.visible)
@@ -199,11 +208,20 @@ mod plugin {
     /// with the real state of the picked agent / structure / cell.
     #[allow(clippy::type_complexity)]
     fn classify_inspection(
+        attach: Res<crate::AttachMode>,
         mut requests: MessageReader<SelectEntityRequest>,
         mut details: ResMut<InspectedDetails>,
-        sim: Res<SimState>,
+        sim: Option<Res<SimState>>,
         structures: Query<(&GlobalTransform, &InspectableStructure)>,
     ) {
+        if *attach == crate::AttachMode::Server {
+            // LivePickPlugin and the streamed inspector own server selection.
+            // Drain local clicks without replacing their authoritative details.
+            requests.clear();
+            details.0 = SelectedEntityDetails::default();
+            return;
+        }
+        let sim = sim.expect("standalone inspection requires SimState");
         for request in requests.read() {
             let pos = request.position;
             // Civilians live in the hecs sim world (not Bevy entities), so pick
@@ -347,6 +365,75 @@ mod plugin {
                     ui.label(cell.tooltip());
                 });
             });
+    }
+
+    #[cfg(test)]
+    mod attach_mode_tests {
+        use super::*;
+
+        #[test]
+        fn server_inspection_does_not_fabricate_local_readouts_or_replace_live_details() {
+            for incidental_local_state in [false, true] {
+                let mut app = App::new();
+                app.insert_resource(crate::AttachMode::Server)
+                    .insert_resource(CursorMarker {
+                        position: Some(Vec3::ZERO),
+                        visible: true,
+                    })
+                    .insert_resource(HoverReadout {
+                        cell: Some(CellReadout::sample(0.0, 0.0)),
+                    })
+                    .init_resource::<InspectedDetails>()
+                    .insert_resource(SelectedEntityDetails {
+                        name: "Server citizen 777".into(),
+                        health: "87%".into(),
+                        ..default()
+                    })
+                    .add_message::<SelectEntityRequest>()
+                    .add_systems(Update, (update_hover_readout, classify_inspection));
+                if incidental_local_state {
+                    app.insert_resource(SimState::default());
+                }
+                app.world_mut().write_message(SelectEntityRequest {
+                    position: Vec3::ZERO,
+                });
+                app.update();
+                assert!(app.world().resource::<HoverReadout>().cell.is_none());
+                assert!(app
+                    .world()
+                    .resource::<InspectedDetails>()
+                    .0
+                    .entity_type
+                    .is_empty());
+                let live = app.world().resource::<SelectedEntityDetails>();
+                assert_eq!(live.name, "Server citizen 777");
+                assert_eq!(live.health, "87%");
+            }
+        }
+
+        #[test]
+        fn standalone_inspection_keeps_procedural_hover_and_cell_details() {
+            let mut app = App::new();
+            let pos = Vec3::new(10_000.0, 0.0, 10_000.0);
+            app.insert_resource(crate::AttachMode::Standalone)
+                .insert_resource(SimState::default())
+                .insert_resource(CursorMarker {
+                    position: Some(pos),
+                    visible: true,
+                })
+                .init_resource::<HoverReadout>()
+                .init_resource::<InspectedDetails>()
+                .add_message::<SelectEntityRequest>()
+                .add_systems(Update, (update_hover_readout, classify_inspection));
+            app.world_mut()
+                .write_message(SelectEntityRequest { position: pos });
+            app.update();
+            assert!(app.world().resource::<HoverReadout>().cell.is_some());
+            assert_eq!(
+                app.world().resource::<InspectedDetails>().0.entity_type,
+                "Cell"
+            );
+        }
     }
 }
 

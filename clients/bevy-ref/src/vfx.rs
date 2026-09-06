@@ -24,18 +24,18 @@
 //! app.add_plugins(VfxPlugin);
 //!
 //! // From any system:
-//! fn on_meteor(mut ev: EventWriter<SpawnEffect>) {
+//! fn on_meteor(mut ev: MessageWriter<SpawnEffect>) {
 //!     ev.write(SpawnEffect { kind: EffectKind::Explosion, pos: Vec3::ZERO });
 //! }
 //! ```
 //!
 //! A free helper [`spawn_effect`] is also exposed for systems that already hold
-//! an [`EventWriter<SpawnEffect>`].
+//! an [`MessageWriter<SpawnEffect>`].
 
 #![cfg(feature = "vfx")]
 
 use bevy::prelude::*;
-use bevy_hanabi::prelude::*;
+use bevy_hanabi::{prelude::*, Gradient as HanabiGradient};
 
 /// Kinds of one-shot particle effects keyed to Civis game events.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -64,7 +64,7 @@ impl EffectKind {
 }
 
 /// Event requesting a one-shot particle effect of `kind` at world `pos`.
-#[derive(Event, Debug, Clone, Copy)]
+#[derive(Message, Debug, Clone, Copy)]
 pub struct SpawnEffect {
     /// Which effect to play.
     pub kind: EffectKind,
@@ -73,14 +73,14 @@ pub struct SpawnEffect {
 }
 
 /// Convenience helper: enqueue a one-shot effect from any system that holds an
-/// [`EventWriter<SpawnEffect>`].
+/// [`MessageWriter<SpawnEffect>`].
 ///
 /// ```ignore
-/// fn sys(mut w: EventWriter<SpawnEffect>) {
+/// fn sys(mut w: MessageWriter<SpawnEffect>) {
 ///     spawn_effect(&mut w, EffectKind::Splash, Vec3::new(10.0, 0.0, 4.0));
 /// }
 /// ```
-pub fn spawn_effect(writer: &mut EventWriter<SpawnEffect>, kind: EffectKind, pos: Vec3) {
+pub fn spawn_effect(writer: &mut MessageWriter<SpawnEffect>, kind: EffectKind, pos: Vec3) {
     writer.write(SpawnEffect { kind, pos });
 }
 
@@ -124,7 +124,7 @@ impl Plugin for VfxPlugin {
             app.add_plugins(HanabiPlugin);
         }
         app.init_resource::<VfxAssets>()
-            .add_event::<SpawnEffect>()
+            .add_message::<SpawnEffect>()
             .add_systems(Startup, bake_effects)
             .add_systems(Update, (handle_spawn_events, reap_finished));
     }
@@ -147,7 +147,7 @@ fn bake_effects(mut assets: ResMut<VfxAssets>, mut effects: ResMut<Assets<Effect
 /// Spawn a fresh particle-effect entity for each requested event.
 fn handle_spawn_events(
     mut commands: Commands,
-    mut events: EventReader<SpawnEffect>,
+    mut events: MessageReader<SpawnEffect>,
     assets: Res<VfxAssets>,
 ) {
     for ev in events.read() {
@@ -170,7 +170,7 @@ fn reap_finished(
     mut q: Query<(Entity, &mut VfxLifetime)>,
 ) {
     for (e, mut life) in &mut q {
-        if life.0.tick(time.delta()).finished() {
+        if life.0.tick(time.delta()).is_finished() {
             commands.entity(e).despawn();
         }
     }
@@ -204,8 +204,8 @@ fn build_effect(kind: EffectKind) -> EffectAsset {
 }
 
 /// Small helper: a constant-color gradient that fades alpha 1 -> 0.
-fn fade_gradient(rgb: Vec3) -> Gradient<Vec4> {
-    let mut g = Gradient::new();
+fn fade_gradient(rgb: Vec3) -> HanabiGradient<Vec4> {
+    let mut g = HanabiGradient::new();
     g.add_key(0.0, rgb.extend(1.0));
     g.add_key(0.7, rgb.extend(0.8));
     g.add_key(1.0, rgb.extend(0.0));
@@ -238,13 +238,13 @@ fn fire_effect() -> EffectAsset {
     let update_accel = AccelModifier::new(writer.lit(Vec3::new(0.0, 6.0, 0.0)).expr());
     let update_drag = LinearDragModifier::new(writer.lit(1.5).expr());
 
-    let mut color = Gradient::new();
+    let mut color = HanabiGradient::new();
     color.add_key(0.0, Vec4::new(6.0, 4.0, 1.0, 1.0)); // bright orange (HDR for bloom)
     color.add_key(0.4, Vec4::new(3.0, 1.0, 0.2, 0.9)); // deep red
     color.add_key(0.8, Vec4::new(0.3, 0.3, 0.3, 0.4)); // smoke grey
     color.add_key(1.0, Vec4::new(0.1, 0.1, 0.1, 0.0)); // fade out
 
-    let mut size = Gradient::new();
+    let mut size = HanabiGradient::new();
     size.add_key(0.0, Vec3::splat(0.3));
     size.add_key(1.0, Vec3::splat(0.9));
 
@@ -291,7 +291,7 @@ fn splash_effect() -> EffectAsset {
     // Real gravity pulls droplets back down.
     let update_accel = AccelModifier::new(writer.lit(Vec3::new(0.0, -16.0, 0.0)).expr());
 
-    let mut size = Gradient::new();
+    let mut size = HanabiGradient::new();
     size.add_key(0.0, Vec3::splat(0.15));
     size.add_key(1.0, Vec3::splat(0.05));
 
@@ -341,7 +341,7 @@ fn dust_effect() -> EffectAsset {
 
     let update_drag = LinearDragModifier::new(writer.lit(2.5).expr());
 
-    let mut size = Gradient::new();
+    let mut size = HanabiGradient::new();
     size.add_key(0.0, Vec3::splat(0.4));
     size.add_key(1.0, Vec3::splat(1.2));
 
@@ -387,13 +387,13 @@ fn sparkle_effect() -> EffectAsset {
     // Gentle upward float.
     let update_accel = AccelModifier::new(writer.lit(Vec3::new(0.0, 2.0, 0.0)).expr());
 
-    let mut color = Gradient::new();
+    let mut color = HanabiGradient::new();
     color.add_key(0.0, Vec4::new(5.0, 4.0, 1.5, 0.0)); // fade in (HDR gold)
     color.add_key(0.2, Vec4::new(5.0, 4.0, 1.5, 1.0));
     color.add_key(0.8, Vec4::new(4.0, 3.0, 1.0, 0.8));
     color.add_key(1.0, Vec4::new(2.0, 1.5, 0.5, 0.0));
 
-    let mut size = Gradient::new();
+    let mut size = HanabiGradient::new();
     size.add_key(0.0, Vec3::splat(0.05));
     size.add_key(0.5, Vec3::splat(0.18));
     size.add_key(1.0, Vec3::splat(0.02));
@@ -441,13 +441,13 @@ fn explosion_effect() -> EffectAsset {
     let update_drag = LinearDragModifier::new(writer.lit(5.0).expr());
     let update_accel = AccelModifier::new(writer.lit(Vec3::new(0.0, -12.0, 0.0)).expr());
 
-    let mut color = Gradient::new();
+    let mut color = HanabiGradient::new();
     color.add_key(0.0, Vec4::new(8.0, 6.0, 2.0, 1.0)); // white-hot (HDR)
     color.add_key(0.3, Vec4::new(6.0, 2.0, 0.4, 1.0)); // orange
     color.add_key(0.7, Vec4::new(1.5, 0.4, 0.2, 0.7)); // red embers
     color.add_key(1.0, Vec4::new(0.2, 0.2, 0.2, 0.0)); // smoke fade
 
-    let mut size = Gradient::new();
+    let mut size = HanabiGradient::new();
     size.add_key(0.0, Vec3::splat(0.5));
     size.add_key(1.0, Vec3::splat(0.1));
 
@@ -468,4 +468,26 @@ fn explosion_effect() -> EffectAsset {
             gradient: size,
             screen_space_size: false,
         })
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_effect_kind_bakes_a_named_effect_with_a_positive_ttl() {
+        let expected = [
+            (EffectKind::Fire, "vfx_fire", 2048),
+            (EffectKind::Splash, "vfx_splash", 1024),
+            (EffectKind::Dust, "vfx_dust", 1024),
+            (EffectKind::Sparkle, "vfx_sparkle", 1024),
+            (EffectKind::Explosion, "vfx_explosion", 8192),
+        ];
+
+        for (kind, name, capacity) in expected {
+            let effect = build_effect(kind);
+            assert_eq!(effect.name, name);
+            assert_eq!(effect.capacity(), capacity);
+            assert!(effect_ttl_secs(kind) > 0.0);
+        }
+    }
 }

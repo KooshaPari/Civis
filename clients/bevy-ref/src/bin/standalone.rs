@@ -202,10 +202,6 @@ fn main() {
         ));
     }
 
-    // Ambient + SFX audio (feature-gated).
-    // SettingsPlugin / SolariGi / GltfModels / ActorAnimation are registered once above.
-    #[cfg(feature = "audio")]
-    app.add_plugins(civ_bevy_ref::audio::CivisAudioPlugin);
     // GPU particle VFX for events (feature-gated).
     #[cfg(feature = "vfx")]
     app.add_plugins(civ_bevy_ref::vfx::VfxPlugin);

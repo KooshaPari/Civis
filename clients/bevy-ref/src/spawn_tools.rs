@@ -238,6 +238,23 @@ pub struct CursorMarker {
     pub visible: bool,
 }
 
+/// Bounds attached-tool diagnostics so a held or repeated click cannot flood
+/// the event feed while a terrain marker is unavailable.
+#[cfg(feature = "egui")]
+#[derive(Resource, Default)]
+struct AttachedMarkerDiagnostic {
+    last_reported: Option<std::time::Instant>,
+    messages: Vec<String>,
+}
+
+const ATTACHED_MARKER_DIAGNOSTIC_COOLDOWN: std::time::Duration =
+    std::time::Duration::from_secs(2);
+
+fn is_server_authoring_tool(mode: Option<&crate::AttachMode>, tool: SpawnTool) -> bool {
+    matches!(mode, Some(crate::AttachMode::Server))
+        && !matches!(tool, SpawnTool::Select | SpawnTool::Destroy)
+}
+
 /// Marker for entities created/owned by the sandbox spawn tools.
 #[derive(Component, Debug, Clone, Copy)]
 pub struct SandboxEntity;
@@ -318,6 +335,8 @@ struct PendingBuildingPlacements {
 struct PendingToolRequests<'w> {
     terrain: ResMut<'w, PendingTerrainStamps>,
     buildings: ResMut<'w, PendingBuildingPlacements>,
+    #[cfg(feature = "egui")]
+    marker_diagnostic: ResMut<'w, AttachedMarkerDiagnostic>,
 }
 
 pub(crate) fn server_tools_active(mode: Option<&crate::AttachMode>, bridge_present: bool) -> bool {
@@ -348,12 +367,14 @@ impl Plugin for SpawnToolsPlugin {
 
         #[cfg(feature = "egui")]
         app.init_resource::<crate::event_feed::EventFeed>()
+            .init_resource::<AttachedMarkerDiagnostic>()
             .add_systems(
                 Update,
                 (
                     update_pointer_over_ui,
                     report_terrain_stamps,
                     report_building_placements,
+                    report_attached_marker_diagnostics,
                 ),
             );
 
@@ -628,6 +649,16 @@ fn report_building_placements(
 }
 
 #[cfg(feature = "egui")]
+fn report_attached_marker_diagnostics(
+    mut diagnostic: ResMut<AttachedMarkerDiagnostic>,
+    mut feed: ResMut<crate::event_feed::EventFeed>,
+) {
+    for message in diagnostic.messages.drain(..) {
+        feed.push(crate::event_feed::EventKind::System, message);
+    }
+}
+
+#[cfg(feature = "egui")]
 fn report_terrain_stamps(
     mut pending: ResMut<PendingTerrainStamps>,
     mut feed: ResMut<crate::event_feed::EventFeed>,
@@ -727,6 +758,19 @@ fn handle_spawn_tool_clicks(
         return;
     }
     let Some(position) = marker.position else {
+        #[cfg(feature = "egui")]
+        if is_server_authoring_tool(mode.as_deref(), active.tool)
+            && pending
+                .marker_diagnostic
+                .last_reported
+                .is_none_or(|reported| reported.elapsed() >= ATTACHED_MARKER_DIAGNOSTIC_COOLDOWN)
+        {
+            pending.marker_diagnostic.last_reported = Some(std::time::Instant::now());
+            pending.marker_diagnostic.messages.push(format!(
+                "{:?} not sent: attached terrain marker is unavailable; move over streamed terrain and retry.",
+                active.tool
+            ));
+        }
         return;
     };
 
@@ -1070,6 +1114,7 @@ mod tests {
             .init_resource::<BuildingSpawnKind>()
             .init_resource::<PendingTerrainStamps>()
             .init_resource::<PendingBuildingPlacements>()
+            .init_resource::<AttachedMarkerDiagnostic>()
             .init_resource::<crate::event_feed::EventFeed>()
             .add_message::<MouseWheel>()
             .add_message::<SpawnCivilianRequest>()
@@ -1078,7 +1123,12 @@ mod tests {
             .add_message::<DestroyEntityRequest>()
             .add_systems(
                 Update,
-                (handle_spawn_tool_clicks, report_building_placements).chain(),
+                (
+                    handle_spawn_tool_clicks,
+                    report_attached_marker_diagnostics,
+                    report_building_placements,
+                )
+                    .chain(),
             );
         app.world_mut()
             .resource_mut::<ButtonInput<MouseButton>>()
@@ -1147,6 +1197,34 @@ mod tests {
             .iter()
             .any(|event| event.text.contains("Server created City Center")));
         assert!(requests.try_recv().is_err());
+    }
+
+    #[cfg(feature = "egui")]
+    #[test]
+    fn server_authoring_click_with_no_marker_reports_once_without_sending() {
+        let (mut app, requests, legacy) = building_test_app(crate::AttachMode::Server);
+        app.world_mut().resource_mut::<CursorMarker>().position = None;
+
+        app.update();
+        assert!(requests.try_recv().is_err());
+        assert!(legacy.try_recv().is_err());
+        let feed = app.world().resource::<crate::event_feed::EventFeed>();
+        assert_eq!(feed.events.len(), 1);
+        assert!(feed.events.front().unwrap().text.contains("SpawnBuilding not sent"));
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .clear();
+        app.update();
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .press(MouseButton::Left);
+        app.update();
+        assert_eq!(
+            app.world().resource::<crate::event_feed::EventFeed>().events.len(),
+            1,
+            "the two-second cooldown must prevent repeated click spam"
+        );
     }
 
     #[cfg(feature = "egui")]
@@ -1272,6 +1350,27 @@ mod tests {
         assert!(server_tools_active(Some(&crate::AttachMode::Server), false));
         assert!(server_tools_active(None, true));
         assert!(!server_tools_active(None, false));
+    }
+
+    #[test]
+    fn marker_diagnostic_is_limited_to_server_authoring_tools() {
+        assert!(is_server_authoring_tool(
+            Some(&crate::AttachMode::Server),
+            SpawnTool::Terraform
+        ));
+        assert!(is_server_authoring_tool(
+            Some(&crate::AttachMode::Server),
+            SpawnTool::SpawnBuilding
+        ));
+        assert!(!is_server_authoring_tool(
+            Some(&crate::AttachMode::Server),
+            SpawnTool::Select
+        ));
+        assert!(!is_server_authoring_tool(
+            Some(&crate::AttachMode::Standalone),
+            SpawnTool::Terraform
+        ));
+        assert!(!is_server_authoring_tool(None, SpawnTool::Terraform));
     }
 
     #[test]

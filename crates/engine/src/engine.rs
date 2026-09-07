@@ -1507,6 +1507,11 @@ impl Simulation {
 
     /// Apply a voxel write and record it in the replay log.
     pub fn push_voxel_write(&mut self, pos: civ_voxel::WorldCoord, value: MaterialId) {
+        // Re-applying the current material does not change simulation state. Avoid
+        // retaining an unbounded duplicate replay record during persistent hazards.
+        if self.voxel.read(pos) == value {
+            return;
+        }
         self.voxel.write(pos, value);
         self.replay_log
             .record_voxel_write(self.state.tick, pos, value);

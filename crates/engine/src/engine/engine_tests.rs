@@ -3869,4 +3869,13 @@ mod engine_tests {
             "adult should be classified even without Psyche"
         );
     }
+    #[test]
+    fn idempotent_voxel_write_is_not_retained_in_replay() {
+        let mut sim = Simulation::with_seed(42);
+        let pos = WorldCoord { x: 7, y: 11, z: 13 };
+        sim.push_voxel_write(pos, MaterialId(9));
+        sim.push_voxel_write(pos, MaterialId(9));
+        assert_eq!(sim.replay_log().events.len(), 1);
+        assert_eq!(sim.voxel().read(pos), MaterialId(9));
+    }
 }

@@ -163,7 +163,8 @@ impl Default for WsBridgeConfig {
 #[derive(Clone)]
 struct ClientOutboundTx {
     control: mpsc::Sender<ClientOutbound>,
-    latest_authoritative: watch::Sender<Option<Arc<TickBroadcast>>>,
+    control_state: Arc<std::sync::Mutex<ClientControlState>>,
+    latest_authoritative: watch::Sender<Option<RecoveryTick>>,
     latest_tick: watch::Sender<Option<Arc<TickBroadcast>>>,
 }
 
@@ -173,13 +174,47 @@ impl ClientOutboundTx {
     }
 
     fn publish_authoritative_tick(&self, batch: Arc<TickBroadcast>) {
-        match self.control.try_send(ClientOutbound::Tick(Arc::clone(&batch))) {
+        match self.try_send_control(ClientOutbound::Tick(Arc::clone(&batch))) {
             Ok(()) | Err(mpsc::error::TrySendError::Closed(_)) => {}
             Err(mpsc::error::TrySendError::Full(_)) => {
-                self.latest_authoritative.send_replace(Some(batch));
+                let after_control = self.control_state.lock().unwrap().enqueued;
+                self.latest_authoritative
+                    .send_replace(Some(RecoveryTick { batch, after_control }));
             }
         }
     }
+
+    fn try_send_control(
+        &self,
+        outbound: ClientOutbound,
+    ) -> Result<(), mpsc::error::TrySendError<ClientOutbound>> {
+        let mut state = self.control_state.lock().unwrap();
+        self.control.try_send(outbound)?;
+        state.enqueued += 1;
+        Ok(())
+    }
+
+    fn send_reserved(
+        &self,
+        permit: mpsc::OwnedPermit<ClientOutbound>,
+        outbound: ClientOutbound,
+    ) {
+        let mut state = self.control_state.lock().unwrap();
+        permit.send(outbound);
+        state.enqueued += 1;
+    }
+}
+
+#[derive(Default)]
+struct ClientControlState {
+    enqueued: u64,
+}
+
+#[derive(Clone)]
+struct RecoveryTick {
+    batch: Arc<TickBroadcast>,
+    /// Number of FIFO controls that must be consumed before this recovery may write.
+    after_control: u64,
 }
 
 /// Outbound WebSocket traffic for one connected client.
@@ -698,11 +733,12 @@ async fn handle_socket(
 ) {
     let (mut sender, mut receiver) = socket.split();
     let (control, mut control_rx) = mpsc::channel::<ClientOutbound>(CLIENT_CONTROL_CAPACITY);
-    let (latest_authoritative, mut authoritative_rx) =
-        watch::channel::<Option<Arc<TickBroadcast>>>(None);
+    let control_state = Arc::new(std::sync::Mutex::new(ClientControlState::default()));
+    let (latest_authoritative, mut authoritative_rx) = watch::channel::<Option<RecoveryTick>>(None);
     let (latest_tick, mut tick_rx) = watch::channel::<Option<Arc<TickBroadcast>>>(None);
     let tx = ClientOutboundTx {
         control,
+        control_state,
         latest_authoritative,
         latest_tick,
     };
@@ -736,18 +772,26 @@ async fn handle_socket(
     let mut forward = tokio::spawn(async move {
         let mut delivered_generation = None;
         let mut control_burst = 0usize;
+        let mut delivered_control = 0u64;
+        let mut pending_recovery = None;
         loop {
-            let outbound = if control_burst < CONTROL_BURST_LIMIT {
+            if authoritative_rx.has_changed().unwrap_or(false) {
+                pending_recovery = authoritative_rx.borrow_and_update().clone();
+            }
+            let recovery_ready = pending_recovery
+                .as_ref()
+                .is_some_and(|recovery: &RecoveryTick| delivered_control >= recovery.after_control);
+            let outbound = if recovery_ready {
+                Some(ForwardItem::Recovery(pending_recovery.take().unwrap()))
+            } else if control_burst < CONTROL_BURST_LIMIT {
                 tokio::select! {
                     biased;
-                    changed = authoritative_rx.changed() => changed.ok().and_then(|_| authoritative_rx.borrow_and_update().clone()).map(ForwardItem::Tick),
                     control = control_rx.recv() => control.map(ForwardItem::Control),
                     changed = tick_rx.changed() => changed.ok().and_then(|_| tick_rx.borrow_and_update().clone()).map(ForwardItem::Tick),
                 }
             } else {
                 tokio::select! {
                     biased;
-                    changed = authoritative_rx.changed() => changed.ok().and_then(|_| authoritative_rx.borrow_and_update().clone()).map(ForwardItem::Tick),
                     changed = tick_rx.changed() => changed.ok().and_then(|_| tick_rx.borrow_and_update().clone()).map(ForwardItem::Tick),
                     control = control_rx.recv() => control.map(ForwardItem::Control),
                 }
@@ -759,6 +803,7 @@ async fn handle_socket(
                         return;
                     }
                     control_burst += 1;
+                    delivered_control += 1;
                 }
                 ForwardItem::Control(ClientOutbound::Tick(batch)) => {
                     if forward_tick(
@@ -777,6 +822,7 @@ async fn handle_socket(
                         return;
                     }
                     control_burst += 1;
+                    delivered_control += 1;
                 }
                 ForwardItem::Tick(batch) => {
                     if forward_tick(
@@ -796,11 +842,29 @@ async fn handle_socket(
                     }
                     control_burst = 0;
                 }
+                ForwardItem::Recovery(recovery) => {
+                    if forward_tick(
+                        &mut sender,
+                        recovery.batch,
+                        &state_for_forward,
+                        &forward_filter,
+                        tick_broadcast_format,
+                        &mut delivered_generation,
+                        &connection_id_for_forward,
+                        &tick_messages_sent,
+                    )
+                    .await
+                    .is_err()
+                    {
+                        return;
+                    }
+                    control_burst += 1;
+                }
             }
         }
     });
 
-    loop {
+    'connection: loop {
         tokio::select! {
             forward_result = &mut forward => {
                 let _ = forward_result;
@@ -810,19 +874,31 @@ async fn handle_socket(
                 let Some(incoming) = incoming else { break; };
                 match incoming {
                     Ok(Message::Text(text)) => {
-                        let permit = match tx.control.clone().reserve_owned().await {
+                        let permit = match tokio::select! {
+                            forward_result = &mut forward => {
+                                let _ = forward_result;
+                                break 'connection;
+                            }
+                            permit = tx.control.clone().reserve_owned() => permit,
+                        } {
                             Ok(permit) => permit,
                             Err(_) => break,
                         };
-                        let response = handle_jsonrpc_text(
+                        let dispatch = handle_jsonrpc_text(
                             &text,
                             &state,
                             &mut connection_role,
                             Arc::clone(&subscription_filter),
                             &connection_id,
-                        )
-                        .await;
-                        permit.send(ClientOutbound::Rpc(Message::Text(response)));
+                        );
+                        let response = tokio::select! {
+                            forward_result = &mut forward => {
+                                let _ = forward_result;
+                                break 'connection;
+                            }
+                            response = dispatch => response,
+                        };
+                        tx.send_reserved(permit, ClientOutbound::Rpc(Message::Text(response)));
                     }
                     Ok(Message::Close(_)) | Err(_) => break,
                     Ok(_) => {}
@@ -837,6 +913,7 @@ async fn handle_socket(
 enum ForwardItem {
     Control(ClientOutbound),
     Tick(Arc<TickBroadcast>),
+    Recovery(RecoveryTick),
 }
 
 fn voxel_axis_span<F>(_voxel: &civ_voxel::VoxelWorld<civ_voxel::MaterialId>, axis: F) -> f32
@@ -2206,11 +2283,12 @@ mod tests {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(42)));
         let (_dir, state) = test_app_state(sim, 0, 0, false);
         let (control, mut rx) = mpsc::channel(8);
-        let (latest_authoritative, _) = watch::channel(None);
+        let (latest_authoritative, _) = watch::channel::<Option<RecoveryTick>>(None);
         let (latest_tick, mut latest_tick_rx) = watch::channel(None);
         let mut clients = state.clients.lock().await;
         clients.push(ClientOutboundTx {
             control,
+            control_state: Arc::new(std::sync::Mutex::new(ClientControlState::default())),
             latest_authoritative,
             latest_tick,
         });
@@ -2462,10 +2540,11 @@ mod tests {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(42)));
         let (_dir, state) = test_app_state(sim, 0, 1, false);
         let (control, mut control_rx) = mpsc::channel(CLIENT_CONTROL_CAPACITY);
-        let (latest_authoritative, _) = watch::channel(None);
+        let (latest_authoritative, _) = watch::channel::<Option<RecoveryTick>>(None);
         let (latest_tick, mut latest_tick_rx) = watch::channel(None);
         let client = ClientOutboundTx {
             control,
+            control_state: Arc::new(std::sync::Mutex::new(ClientControlState::default())),
             latest_authoritative,
             latest_tick,
         };
@@ -2498,10 +2577,11 @@ mod tests {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(42)));
         let (_dir, state) = test_app_state(sim, 0, 1, false);
         let (control, _control_rx) = mpsc::channel(CLIENT_CONTROL_CAPACITY);
-        let (latest_authoritative, mut authoritative_rx) = watch::channel(None);
+        let (latest_authoritative, mut authoritative_rx) = watch::channel::<Option<RecoveryTick>>(None);
         let (latest_tick, mut latest_tick_rx) = watch::channel(None);
         let client = ClientOutboundTx {
             control,
+            control_state: Arc::new(std::sync::Mutex::new(ClientControlState::default())),
             latest_authoritative,
             latest_tick,
         };
@@ -2528,18 +2608,52 @@ mod tests {
             authoritative_rx
                 .borrow_and_update()
                 .as_ref()
-                .map(|batch| batch.tick),
+                .map(|recovery| recovery.batch.tick),
             Some(900)
+        );
+    }
+
+    #[tokio::test]
+    async fn coalesced_recovery_waits_for_older_fifo_control_before_socket_forwarding() {
+        let (control, mut control_rx) = mpsc::channel(1);
+        let (latest_authoritative, mut authoritative_rx) =
+            watch::channel::<Option<RecoveryTick>>(None);
+        let (latest_tick, _) = watch::channel(None);
+        let client = ClientOutboundTx {
+            control,
+            control_state: Arc::new(std::sync::Mutex::new(ClientControlState::default())),
+            latest_authoritative,
+            latest_tick,
+        };
+        client
+            .try_send_control(ClientOutbound::Rpc(Message::Text("A".into())))
+            .unwrap();
+        client.publish_authoritative_tick(tick_for_delivery_test(901, true));
+        authoritative_rx.changed().await.unwrap();
+        let recovery = authoritative_rx.borrow_and_update().clone().unwrap();
+        assert_eq!(recovery.after_control, 1, "recovery follows queued control A");
+        assert!(
+            0 < recovery.after_control,
+            "forwarder must not write recovery B before FIFO A"
+        );
+        assert!(matches!(
+            control_rx.recv().await,
+            Some(ClientOutbound::Rpc(Message::Text(text))) if text == "A"
+        ));
+        assert_eq!(
+            1, recovery.after_control,
+            "after A is consumed, the forwarder may write whole-state B"
         );
     }
 
     #[tokio::test]
     async fn authoritative_snapshot_and_rpc_retain_fifo_order_after_normal_backpressure() {
         let (control, mut control_rx) = mpsc::channel(CLIENT_CONTROL_CAPACITY);
-        let (latest_authoritative, _) = watch::channel(None);
+        let (latest_authoritative, _) = watch::channel::<Option<RecoveryTick>>(None);
         let (latest_tick, _) = watch::channel(None);
         let client = ClientOutboundTx {
             control,
+            control_state: Arc::new(std::sync::Mutex::new(ClientControlState::default())),
             latest_authoritative,
             latest_tick,
         };

@@ -711,6 +711,111 @@ async fn forward_tick(
     Ok(())
 }
 
+async fn forward_socket(
+    mut sender: futures::stream::SplitSink<WebSocket, Message>,
+    mut control_rx: mpsc::Receiver<ClientOutbound>,
+    mut authoritative_rx: watch::Receiver<Option<RecoveryTick>>,
+    mut tick_rx: watch::Receiver<Option<Arc<TickBroadcast>>>,
+    state_for_forward: AppState,
+    forward_filter: Arc<tokio::sync::Mutex<SubscriptionFilter>>,
+    tick_broadcast_format: TickBroadcastFormat,
+    connection_id_for_forward: String,
+    tick_messages_sent: prometheus::IntCounter,
+) {
+    let mut delivered_generation = None;
+    let mut control_burst = 0usize;
+    let mut delivered_control = 0u64;
+    let mut pending_recovery = None;
+    loop {
+        if authoritative_rx.has_changed().unwrap_or(false) {
+            pending_recovery = authoritative_rx.borrow_and_update().clone();
+        }
+        let recovery_ready = pending_recovery
+            .as_ref()
+            .is_some_and(|recovery: &RecoveryTick| delivered_control >= recovery.after_control);
+        let outbound = if recovery_ready {
+            Some(ForwardItem::Recovery(pending_recovery.take().unwrap()))
+        } else if control_burst < CONTROL_BURST_LIMIT {
+            tokio::select! {
+                biased;
+                control = control_rx.recv() => control.map(ForwardItem::Control),
+                changed = tick_rx.changed() => changed.ok().and_then(|_| tick_rx.borrow_and_update().clone()).map(ForwardItem::Tick),
+            }
+        } else {
+            tokio::select! {
+                biased;
+                changed = tick_rx.changed() => changed.ok().and_then(|_| tick_rx.borrow_and_update().clone()).map(ForwardItem::Tick),
+                control = control_rx.recv() => control.map(ForwardItem::Control),
+            }
+        };
+        let Some(outbound) = outbound else { return; };
+        match outbound {
+            ForwardItem::Control(ClientOutbound::Rpc(message)) => {
+                if sender.send(message).await.is_err() {
+                    return;
+                }
+                control_burst += 1;
+                delivered_control += 1;
+            }
+            ForwardItem::Control(ClientOutbound::Tick(batch)) => {
+                if forward_tick(
+                    &mut sender,
+                    batch,
+                    &state_for_forward,
+                    &forward_filter,
+                    tick_broadcast_format,
+                    &mut delivered_generation,
+                    &connection_id_for_forward,
+                    &tick_messages_sent,
+                )
+                .await
+                .is_err()
+                {
+                    return;
+                }
+                control_burst += 1;
+                delivered_control += 1;
+            }
+            ForwardItem::Tick(batch) => {
+                if forward_tick(
+                    &mut sender,
+                    batch,
+                    &state_for_forward,
+                    &forward_filter,
+                    tick_broadcast_format,
+                    &mut delivered_generation,
+                    &connection_id_for_forward,
+                    &tick_messages_sent,
+                )
+                .await
+                .is_err()
+                {
+                    return;
+                }
+                control_burst = 0;
+            }
+            ForwardItem::Recovery(recovery) => {
+                if forward_tick(
+                    &mut sender,
+                    recovery.batch,
+                    &state_for_forward,
+                    &forward_filter,
+                    tick_broadcast_format,
+                    &mut delivered_generation,
+                    &connection_id_for_forward,
+                    &tick_messages_sent,
+                )
+                .await
+                .is_err()
+                {
+                    return;
+                }
+                control_burst += 1;
+            }
+        }
+    }
+}
+
 async fn unregister_client(state: &AppState, tx: &ClientOutboundTx, connection_id: &str) {
     let removed = {
         let mut clients = state.clients.lock().await;
@@ -732,10 +837,10 @@ async fn handle_socket(
     connect_query: WsConnectQuery,
 ) {
     let (mut sender, mut receiver) = socket.split();
-    let (control, mut control_rx) = mpsc::channel::<ClientOutbound>(CLIENT_CONTROL_CAPACITY);
+    let (control, control_rx) = mpsc::channel::<ClientOutbound>(CLIENT_CONTROL_CAPACITY);
     let control_state = Arc::new(std::sync::Mutex::new(ClientControlState::default()));
-    let (latest_authoritative, mut authoritative_rx) = watch::channel::<Option<RecoveryTick>>(None);
-    let (latest_tick, mut tick_rx) = watch::channel::<Option<Arc<TickBroadcast>>>(None);
+    let (latest_authoritative, authoritative_rx) = watch::channel::<Option<RecoveryTick>>(None);
+    let (latest_tick, tick_rx) = watch::channel::<Option<Arc<TickBroadcast>>>(None);
     let tx = ClientOutboundTx {
         control,
         control_state,
@@ -769,100 +874,17 @@ async fn handle_socket(
     let tick_messages_sent = state.metrics.tick_messages_sent.clone();
     let state_for_forward = state.clone();
     let connection_id_for_forward = connection_id.clone();
-    let mut forward = tokio::spawn(async move {
-        let mut delivered_generation = None;
-        let mut control_burst = 0usize;
-        let mut delivered_control = 0u64;
-        let mut pending_recovery = None;
-        loop {
-            if authoritative_rx.has_changed().unwrap_or(false) {
-                pending_recovery = authoritative_rx.borrow_and_update().clone();
-            }
-            let recovery_ready = pending_recovery
-                .as_ref()
-                .is_some_and(|recovery: &RecoveryTick| delivered_control >= recovery.after_control);
-            let outbound = if recovery_ready {
-                Some(ForwardItem::Recovery(pending_recovery.take().unwrap()))
-            } else if control_burst < CONTROL_BURST_LIMIT {
-                tokio::select! {
-                    biased;
-                    control = control_rx.recv() => control.map(ForwardItem::Control),
-                    changed = tick_rx.changed() => changed.ok().and_then(|_| tick_rx.borrow_and_update().clone()).map(ForwardItem::Tick),
-                }
-            } else {
-                tokio::select! {
-                    biased;
-                    changed = tick_rx.changed() => changed.ok().and_then(|_| tick_rx.borrow_and_update().clone()).map(ForwardItem::Tick),
-                    control = control_rx.recv() => control.map(ForwardItem::Control),
-                }
-            };
-            let Some(outbound) = outbound else { return; };
-            match outbound {
-                ForwardItem::Control(ClientOutbound::Rpc(message)) => {
-                    if sender.send(message).await.is_err() {
-                        return;
-                    }
-                    control_burst += 1;
-                    delivered_control += 1;
-                }
-                ForwardItem::Control(ClientOutbound::Tick(batch)) => {
-                    if forward_tick(
-                        &mut sender,
-                        batch,
-                        &state_for_forward,
-                        &forward_filter,
-                        tick_broadcast_format,
-                        &mut delivered_generation,
-                        &connection_id_for_forward,
-                        &tick_messages_sent,
-                    )
-                    .await
-                    .is_err()
-                    {
-                        return;
-                    }
-                    control_burst += 1;
-                    delivered_control += 1;
-                }
-                ForwardItem::Tick(batch) => {
-                    if forward_tick(
-                        &mut sender,
-                        batch,
-                        &state_for_forward,
-                        &forward_filter,
-                        tick_broadcast_format,
-                        &mut delivered_generation,
-                        &connection_id_for_forward,
-                        &tick_messages_sent,
-                    )
-                    .await
-                    .is_err()
-                    {
-                        return;
-                    }
-                    control_burst = 0;
-                }
-                ForwardItem::Recovery(recovery) => {
-                    if forward_tick(
-                        &mut sender,
-                        recovery.batch,
-                        &state_for_forward,
-                        &forward_filter,
-                        tick_broadcast_format,
-                        &mut delivered_generation,
-                        &connection_id_for_forward,
-                        &tick_messages_sent,
-                    )
-                    .await
-                    .is_err()
-                    {
-                        return;
-                    }
-                    control_burst += 1;
-                }
-            }
-        }
-    });
+    let mut forward = tokio::spawn(forward_socket(
+        sender,
+        control_rx,
+        authoritative_rx,
+        tick_rx,
+        state_for_forward,
+        forward_filter,
+        tick_broadcast_format,
+        connection_id_for_forward,
+        tick_messages_sent,
+    ));
 
     'connection: loop {
         tokio::select! {
@@ -2644,6 +2666,65 @@ mod tests {
             1, recovery.after_control,
             "after A is consumed, the forwarder may write whole-state B"
         );
+    }
+
+    #[tokio::test]
+    async fn raw_websocket_forwarder_delivers_fifo_control_before_coalesced_recovery() {
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(42)));
+        let (_dir, state) = test_app_state(sim, 0, 0, false);
+        let (control_tx, control_rx) = mpsc::channel(1);
+        let (authoritative_tx, authoritative_rx) = watch::channel::<Option<RecoveryTick>>(None);
+        let (_normal_tx, tick_rx) = watch::channel::<Option<Arc<TickBroadcast>>>(None);
+        control_tx
+            .try_send(ClientOutbound::Rpc(Message::Text("A".into())))
+            .expect("prefill FIFO control");
+        let recovery = Arc::new(TickBroadcast {
+            tick: 901,
+            scene_generation: 0,
+            bypass_cadence: true,
+            frames: Arc::from(Vec::<Frame3d>::new()),
+            encoded: Arc::from(vec![Message::Text("B".into())].into_boxed_slice()),
+        });
+        authoritative_tx.send_replace(Some(RecoveryTick { batch: recovery, after_control: 1 }));
+
+        let control_rx = Arc::new(Mutex::new(Some(control_rx)));
+        let authoritative_rx = Arc::new(Mutex::new(Some(authoritative_rx)));
+        let tick_rx = Arc::new(Mutex::new(Some(tick_rx)));
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("ws://{}/ws", listener.local_addr().unwrap());
+        let forward_state = state.clone();
+        let app = Router::new().route("/ws", get(move |ws: WebSocketUpgrade| {
+            let state = forward_state.clone();
+            let control_rx = Arc::clone(&control_rx);
+            let authoritative_rx = Arc::clone(&authoritative_rx);
+            let tick_rx = Arc::clone(&tick_rx);
+            async move {
+                let control_rx = control_rx.lock().await.take().expect("single test connection");
+                let authoritative_rx = authoritative_rx.lock().await.take().expect("single test connection");
+                let tick_rx = tick_rx.lock().await.take().expect("single test connection");
+                let filter = Arc::new(tokio::sync::Mutex::new(SubscriptionFilter::default()));
+                let format = state.tick_broadcast_format;
+                let metrics = state.metrics.tick_messages_sent.clone();
+                ws.on_upgrade(move |socket| forward_socket(
+                    socket.split().0, control_rx, authoritative_rx, tick_rx, state, filter,
+                    format, "raw-forwarder-order-test".to_string(), metrics,
+                ))
+            }
+        }));
+        let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let (mut ws, _) = tokio_tungstenite::connect_async(url).await.unwrap();
+
+        let first = tokio::time::timeout(Duration::from_secs(2), ws.next()).await
+            .expect("FIFO control arrives").expect("open socket").expect("valid websocket frame");
+        assert_eq!(first.to_text().unwrap(), "A");
+        let reset = tokio::time::timeout(Duration::from_secs(2), ws.next()).await
+            .expect("recovery reset arrives").expect("open socket").expect("valid websocket frame");
+        let reset: serde_json::Value = serde_json::from_str(reset.to_text().unwrap()).unwrap();
+        assert_eq!(reset["method"], "scene.reset");
+        let recovered = tokio::time::timeout(Duration::from_secs(2), ws.next()).await
+            .expect("coalesced recovery arrives after FIFO control").expect("open socket").expect("valid websocket frame");
+        assert_eq!(recovered.to_text().unwrap(), "B");
+        server.abort();
     }
 
     #[tokio::test]

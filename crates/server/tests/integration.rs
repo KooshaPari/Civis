@@ -50,17 +50,21 @@ async fn test_sim_reset_clears_state() {
 }
 
 #[tokio::test]
-async fn test_load_scenario_ardani() {
+async fn test_load_scenario_default_worldgen_preset() {
     let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(SEED)));
     let addr = spawn_ws_bridge(sim, 4).await;
     let url = format!("ws://{addr}/ws");
     let (mut ws, _) = connect_async(&url).await.expect("connect");
 
-    let load = r#"{"jsonrpc":"2.0","id":2,"method":"sim.load_scenario","params":{"preset":"Ardani","seed":42}}"#;
+    let load = r#"{"jsonrpc":"2.0","id":2,"method":"sim.load_scenario","params":{"preset":"single-race-ardani","seed":42}}"#;
     ws.send(Message::Text(load.to_owned()))
         .await
         .expect("send load");
-    let _load_resp = recv_rpc(&mut ws, 2).await;
+    let load_resp = recv_rpc(&mut ws, 2).await;
+    assert!(
+        load_resp.get("error").is_none(),
+        "the default WorldGen preset must load from this checkout: {load_resp}"
+    );
 
     let status = r#"{"jsonrpc":"2.0","id":3,"method":"sim.status","params":{}}"#;
     ws.send(Message::Text(status.to_owned()))

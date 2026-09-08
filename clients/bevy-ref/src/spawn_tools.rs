@@ -238,6 +238,41 @@ pub struct CursorMarker {
     pub visible: bool,
 }
 
+/// Why an attached client currently has no authoritative terrain marker.
+///
+/// Attached tools deliberately do not fall back to local terrain. Retaining the
+/// immediate reason lets the rate-limited authoring feedback distinguish an
+/// input/UI problem from a streamed-world problem without exposing protocol
+/// details to the player.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AttachedMarkerUnavailable {
+    PointerOverUi,
+    InputUnavailable,
+    CacheUnavailable,
+    CacheEmpty,
+    RayMiss { cached_chunks: usize },
+}
+
+impl AttachedMarkerUnavailable {
+    fn summary(self) -> String {
+        match self {
+            Self::PointerOverUi => "pointer is captured by the UI".to_owned(),
+            Self::InputUnavailable => "window, cursor, or camera input is unavailable".to_owned(),
+            Self::CacheUnavailable => "streamed terrain cache is unavailable".to_owned(),
+            Self::CacheEmpty => "streamed terrain cache is empty (0 chunks)".to_owned(),
+            Self::RayMiss { cached_chunks } => {
+                format!("ray missed streamed terrain ({cached_chunks} cached chunks)")
+            }
+        }
+    }
+}
+
+/// Latest attached-marker diagnostic, updated together with [`CursorMarker`].
+#[derive(Resource, Debug, Default, Clone, Copy)]
+struct AttachedMarkerStatus {
+    unavailable: Option<AttachedMarkerUnavailable>,
+}
+
 /// Bounds attached-tool diagnostics so a held or repeated click cannot flood
 /// the event feed while a terrain marker is unavailable.
 #[cfg(feature = "egui")]
@@ -247,8 +282,7 @@ struct AttachedMarkerDiagnostic {
     messages: Vec<String>,
 }
 
-const ATTACHED_MARKER_DIAGNOSTIC_COOLDOWN: std::time::Duration =
-    std::time::Duration::from_secs(2);
+const ATTACHED_MARKER_DIAGNOSTIC_COOLDOWN: std::time::Duration = std::time::Duration::from_secs(2);
 
 fn is_server_authoring_tool(mode: Option<&crate::AttachMode>, tool: SpawnTool) -> bool {
     matches!(mode, Some(crate::AttachMode::Server))
@@ -335,6 +369,7 @@ struct PendingBuildingPlacements {
 struct PendingToolRequests<'w> {
     terrain: ResMut<'w, PendingTerrainStamps>,
     buildings: ResMut<'w, PendingBuildingPlacements>,
+    marker_status: Res<'w, AttachedMarkerStatus>,
     #[cfg(feature = "egui")]
     marker_diagnostic: ResMut<'w, AttachedMarkerDiagnostic>,
 }
@@ -355,6 +390,7 @@ impl Plugin for SpawnToolsPlugin {
             .init_resource::<BuildingSpawnKind>()
             .init_resource::<SelectedEntity>()
             .init_resource::<CursorMarker>()
+            .init_resource::<AttachedMarkerStatus>()
             .init_resource::<PointerOverUi>()
             .init_resource::<RoadDraft>()
             .add_message::<SpawnCivilianRequest>()
@@ -437,52 +473,100 @@ fn update_cursor_marker(
     cameras: Query<(&Camera, &GlobalTransform), (With<Camera3d>, Without<MinimapCamera>)>,
     over_ui: Res<PointerOverUi>,
     mut marker: ResMut<CursorMarker>,
+    mut attached_status: ResMut<AttachedMarkerStatus>,
     live: Option<Res<LiveStreamScene>>,
     bridge: Option<Res<ServerBridge>>,
     mode: Option<Res<crate::AttachMode>>,
     #[cfg(feature = "voxel")] voxel: Option<Res<VoxelSimState>>,
 ) {
+    let attached = server_tools_active(mode.as_deref(), bridge.is_some());
     if over_ui.0 {
         marker.visible = false;
         marker.position = None;
+        attached_status.unavailable = attached.then_some(AttachedMarkerUnavailable::PointerOverUi);
+        return;
+    }
+
+    if attached {
+        match attached_cursor_terrain_hit(
+            &windows,
+            &cameras,
+            live.as_deref().map(|scene| &scene.chunk_voxels),
+        ) {
+            Ok(hit) => {
+                marker.position = Some(hit);
+                marker.visible = true;
+                attached_status.unavailable = None;
+            }
+            Err(reason) => {
+                marker.position = None;
+                marker.visible = false;
+                attached_status.unavailable = Some(reason);
+            }
+        }
         return;
     }
 
     let hit = cursor_terrain_hit(
         &windows,
         &cameras,
-        live.as_deref().map(|scene| &scene.chunk_voxels),
-        server_tools_active(mode.as_deref(), bridge.is_some()),
         #[cfg(feature = "voxel")]
         voxel.as_deref(),
     );
     marker.position = hit;
     marker.visible = hit.is_some();
+    attached_status.unavailable = None;
 }
 
 fn cursor_terrain_hit(
     windows: &Query<&Window>,
     cameras: &Query<(&Camera, &GlobalTransform), (With<Camera3d>, Without<MinimapCamera>)>,
-    live: Option<&ChunkVoxelCache>,
-    attached: bool,
     #[cfg(feature = "voxel")] voxel: Option<&VoxelSimState>,
 ) -> Option<Vec3> {
+    let (origin, direction) = cursor_world_ray(windows, cameras)?;
+    #[cfg(feature = "voxel")]
+    if let Some(state) = voxel {
+        if !state.grid.cells.is_empty() {
+            return raycast_to_voxel(&state.grid, origin, direction);
+        }
+    }
+    raycast_to_terrain(origin, direction)
+}
+
+fn cursor_world_ray(
+    windows: &Query<&Window>,
+    cameras: &Query<(&Camera, &GlobalTransform), (With<Camera3d>, Without<MinimapCamera>)>,
+) -> Option<(Vec3, Vec3)> {
     let window = windows.single().ok()?;
     let cursor = window.cursor_position()?;
     let (camera, camera_transform) = cameras.single().ok()?;
     let ray = camera.viewport_to_world(camera_transform, cursor).ok()?;
-    if attached {
-        // An attached client must never aim using a different, local world.
-        return live
-            .and_then(|cache| raycast_to_live_voxels(cache, ray.origin, ray.direction.as_vec3()));
+    Some((ray.origin, ray.direction.as_vec3()))
+}
+
+fn attached_cursor_terrain_hit(
+    windows: &Query<&Window>,
+    cameras: &Query<(&Camera, &GlobalTransform), (With<Camera3d>, Without<MinimapCamera>)>,
+    cache: Option<&ChunkVoxelCache>,
+) -> Result<Vec3, AttachedMarkerUnavailable> {
+    let (origin, direction) =
+        cursor_world_ray(windows, cameras).ok_or(AttachedMarkerUnavailable::InputUnavailable)?;
+    attached_cache_hit(cache, origin, direction)
+}
+
+fn attached_cache_hit(
+    cache: Option<&ChunkVoxelCache>,
+    origin: Vec3,
+    direction: Vec3,
+) -> Result<Vec3, AttachedMarkerUnavailable> {
+    let cache = cache.ok_or(AttachedMarkerUnavailable::CacheUnavailable)?;
+    let cached_chunks = cache.chunks().len();
+    if cached_chunks == 0 {
+        return Err(AttachedMarkerUnavailable::CacheEmpty);
     }
-    #[cfg(feature = "voxel")]
-    if let Some(state) = voxel {
-        if !state.grid.cells.is_empty() {
-            return raycast_to_voxel(&state.grid, ray.origin, ray.direction.as_vec3());
-        }
-    }
-    raycast_to_terrain(ray.origin, ray.direction.as_vec3())
+    // An attached client must never aim using a different, local world.
+    raycast_to_live_voxels(cache, origin, direction)
+        .ok_or(AttachedMarkerUnavailable::RayMiss { cached_chunks })
 }
 
 fn raycast_to_live_voxels(cache: &ChunkVoxelCache, origin: Vec3, direction: Vec3) -> Option<Vec3> {
@@ -766,9 +850,14 @@ fn handle_spawn_tool_clicks(
                 .is_none_or(|reported| reported.elapsed() >= ATTACHED_MARKER_DIAGNOSTIC_COOLDOWN)
         {
             pending.marker_diagnostic.last_reported = Some(std::time::Instant::now());
+            let reason = pending
+                .marker_status
+                .unavailable
+                .map(AttachedMarkerUnavailable::summary)
+                .unwrap_or_else(|| "marker state has not been sampled yet".to_owned());
             pending.marker_diagnostic.messages.push(format!(
-                "{:?} not sent: attached terrain marker is unavailable; move over streamed terrain and retry.",
-                active.tool
+                "{:?} not sent: attached terrain marker is unavailable ({reason}); move over streamed terrain and retry.",
+                active.tool,
             ));
         }
         return;
@@ -1115,6 +1204,7 @@ mod tests {
             .init_resource::<PendingTerrainStamps>()
             .init_resource::<PendingBuildingPlacements>()
             .init_resource::<AttachedMarkerDiagnostic>()
+            .init_resource::<AttachedMarkerStatus>()
             .init_resource::<crate::event_feed::EventFeed>()
             .add_message::<MouseWheel>()
             .add_message::<SpawnCivilianRequest>()
@@ -1204,13 +1294,27 @@ mod tests {
     fn server_authoring_click_with_no_marker_reports_once_without_sending() {
         let (mut app, requests, legacy) = building_test_app(crate::AttachMode::Server);
         app.world_mut().resource_mut::<CursorMarker>().position = None;
+        app.world_mut()
+            .resource_mut::<AttachedMarkerStatus>()
+            .unavailable = Some(AttachedMarkerUnavailable::CacheEmpty);
 
         app.update();
         assert!(requests.try_recv().is_err());
         assert!(legacy.try_recv().is_err());
         let feed = app.world().resource::<crate::event_feed::EventFeed>();
         assert_eq!(feed.events.len(), 1);
-        assert!(feed.events.front().unwrap().text.contains("SpawnBuilding not sent"));
+        assert!(feed
+            .events
+            .front()
+            .unwrap()
+            .text
+            .contains("SpawnBuilding not sent"));
+        assert!(feed
+            .events
+            .front()
+            .unwrap()
+            .text
+            .contains("streamed terrain cache is empty (0 chunks)"));
 
         app.world_mut()
             .resource_mut::<ButtonInput<MouseButton>>()
@@ -1221,7 +1325,10 @@ mod tests {
             .press(MouseButton::Left);
         app.update();
         assert_eq!(
-            app.world().resource::<crate::event_feed::EventFeed>().events.len(),
+            app.world()
+                .resource::<crate::event_feed::EventFeed>()
+                .events
+                .len(),
             1,
             "the two-second cooldown must prevent repeated click spam"
         );
@@ -1384,6 +1491,60 @@ mod tests {
         assert_eq!(hit, Vec3::new(-0.5, 3.0, 4.5));
         assert!(raycast_to_live_voxels(&cache, Vec3::new(-1.5, 20.0, 4.5), -Vec3::Y).is_none());
         assert!(raycast_to_live_voxels(&ChunkVoxelCache::new(), Vec3::Y, -Vec3::Y).is_none());
+    }
+
+    #[test]
+    fn authoritative_live_cache_payload_produces_attached_raycast_hit() {
+        let mut scene = LiveStreamScene::default();
+        let mut voxels = vec![civ_voxel::MaterialId(0); 16 * 16 * 16];
+        voxels[4 + 3 * 16 + 5 * 256] = civ_voxel::MaterialId(1);
+        scene
+            .chunk_voxels
+            .insert(crate::encode_chunk_id(0, 0, 0), voxels);
+
+        let hit = attached_cache_hit(
+            Some(&scene.chunk_voxels),
+            Vec3::new(4.5, 20.0, 5.5),
+            -Vec3::Y,
+        )
+        .expect("authoritative 4096-cell payload must be targetable");
+        assert_eq!(scene.chunk_voxels.chunks().len(), 1);
+        assert_eq!(hit, Vec3::new(4.5, 4.0, 5.5));
+    }
+
+    #[test]
+    fn attached_marker_diagnostic_classifies_input_cache_and_ray_failures() {
+        assert_eq!(
+            AttachedMarkerUnavailable::PointerOverUi.summary(),
+            "pointer is captured by the UI"
+        );
+        assert_eq!(
+            AttachedMarkerUnavailable::InputUnavailable.summary(),
+            "window, cursor, or camera input is unavailable"
+        );
+        assert_eq!(
+            attached_cache_hit(None, Vec3::Y, -Vec3::Y),
+            Err(AttachedMarkerUnavailable::CacheUnavailable)
+        );
+        assert_eq!(
+            attached_cache_hit(Some(&ChunkVoxelCache::new()), Vec3::Y, -Vec3::Y),
+            Err(AttachedMarkerUnavailable::CacheEmpty)
+        );
+
+        let mut cache = ChunkVoxelCache::new();
+        cache.insert(
+            crate::encode_chunk_id(0, 0, 0),
+            vec![civ_voxel::MaterialId(0); 16 * 16 * 16],
+        );
+        let miss = attached_cache_hit(Some(&cache), Vec3::Y, -Vec3::Y);
+        assert_eq!(
+            miss,
+            Err(AttachedMarkerUnavailable::RayMiss { cached_chunks: 1 })
+        );
+        assert_eq!(
+            (AttachedMarkerUnavailable::RayMiss { cached_chunks: 1 }).summary(),
+            "ray missed streamed terrain (1 cached chunks)"
+        );
     }
 
     #[test]

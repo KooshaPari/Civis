@@ -737,6 +737,30 @@ fn resume_shell_pause(mode: &mut GameUiMode, speed: Option<&mut GameSpeed>) {
     }
 }
 
+/// Resume the visible pause menu without claiming a live-server resume before
+/// its `sim.set_speed` acknowledgement arrives.
+fn resume_from_pause_menu(
+    mode: &mut GameUiMode,
+    speed: Option<&mut GameSpeed>,
+    server_attach: bool,
+    bridge: Option<&LiveAttachBridge>,
+    pending_speed: &mut PendingSimSpeed,
+) {
+    if server_attach {
+        let multiplier = speed
+            .as_deref()
+            .map_or(1, |speed| server_speed_multiplier(speed.last_non_zero));
+        request_live_speed(
+            pending_speed,
+            bridge,
+            multiplier,
+            Some(GameUiMode::Playing),
+        );
+    } else {
+        resume_shell_pause(mode, speed);
+    }
+}
+
 fn tick_era_banner(mut banner: ResMut<EraBanner>, time: Res<Time>) {
     if banner.show_timer > 0.0 {
         banner.show_timer = (banner.show_timer - time.delta_secs()).max(0.0);
@@ -1147,6 +1171,9 @@ fn draw_pause_menu(
     mut game_settings: Option<ResMut<GameSettings>>,
     mut settings_open: ResMut<SettingsOpen>,
     mut game_speed: Option<ResMut<GameSpeed>>,
+    attach_mode: Option<Res<crate::AttachMode>>,
+    bridge: Option<Res<LiveAttachBridge>>,
+    mut pending_speed: ResMut<PendingSimSpeed>,
     mut exit: MessageWriter<AppExit>,
 ) {
     if *mode != GameUiMode::Paused {
@@ -1212,7 +1239,16 @@ fn draw_pause_menu(
                         );
                         ui.add_space(16.0);
                         if menu_button(ui, "\u{25b6}  Resume").clicked() {
-                            resume_shell_pause(&mut mode, game_speed.as_deref_mut());
+                            let server_attach = attach_mode
+                                .as_deref()
+                                .is_some_and(|attach| *attach == crate::AttachMode::Server);
+                            resume_from_pause_menu(
+                                &mut mode,
+                                game_speed.as_deref_mut(),
+                                server_attach,
+                                bridge.as_deref(),
+                                &mut pending_speed,
+                            );
                         }
                         ui.add_space(6.0);
                         if menu_button(ui, "\u{2699}  Settings").clicked() {
@@ -1580,6 +1616,39 @@ mod tests {
         resume_shell_pause(&mut mode, Some(&mut speed));
         assert_eq!(mode, GameUiMode::Playing);
         assert!((speed.multiplier - 2.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn pause_menu_resume_in_server_attach_waits_for_speed_acknowledgement() {
+        use std::time::Duration;
+
+        let (client, requests) = crate::ws_client::WsClient::test_rpc_client();
+        let bridge = LiveAttachBridge { client };
+        let mut mode = GameUiMode::Paused;
+        let mut speed = GameSpeed {
+            multiplier: 0.0,
+            last_non_zero: 2.0,
+        };
+        let mut pending = PendingSimSpeed::default();
+
+        resume_from_pause_menu(
+            &mut mode,
+            Some(&mut speed),
+            true,
+            Some(&bridge),
+            &mut pending,
+        );
+
+        let request: serde_json::Value = serde_json::from_str(
+            &requests
+                .recv_timeout(Duration::from_secs(1))
+                .expect("pause-menu resume request queued"),
+        )
+        .unwrap();
+        assert_eq!(request["method"], "sim.set_speed");
+        assert_eq!(request["params"]["multiplier"], 2);
+        assert_eq!(mode, GameUiMode::Paused);
+        assert_eq!(speed.multiplier, 0.0);
     }
 
     #[test]

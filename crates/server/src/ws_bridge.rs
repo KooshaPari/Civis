@@ -38,7 +38,7 @@ use futures::{SinkExt, StreamExt};
 use prometheus::{Encoder, IntCounter, IntGauge, Registry, TextEncoder};
 use tokio::{
     net::TcpListener,
-    sync::{mpsc, Mutex},
+    sync::{mpsc, watch, Mutex},
     time::{interval, Duration},
 };
 
@@ -61,8 +61,8 @@ pub const FRAME_BUNDLE_LEN: usize = 7;
 /// Max `.civreplay` POST body for `/replay/import` (axum default is 2 MiB; warm sims exceed it).
 const REPLAY_IMPORT_BODY_LIMIT_BYTES: usize = 16 * 1024 * 1024;
 
-/// Bound per-client outbound work so a stalled browser cannot grow memory without limit.
-const CLIENT_OUTBOUND_CAPACITY: usize = 32;
+/// Bound FIFO control work per client. Render ticks use a separate latest-value lane.
+const CLIENT_CONTROL_CAPACITY: usize = 32;
 
 /// Which wire encodings the 10 Hz tick loop broadcasts to connected clients.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -155,7 +155,19 @@ impl Default for WsBridgeConfig {
     }
 }
 
-type ClientOutboundTx = mpsc::Sender<ClientOutbound>;
+/// Per-client outbound lanes. Control traffic is FIFO; normal render ticks keep
+/// only their newest value so a slow renderer cannot evict a live connection.
+#[derive(Clone)]
+struct ClientOutboundTx {
+    control: mpsc::Sender<ClientOutbound>,
+    latest_tick: watch::Sender<Option<Arc<TickBroadcast>>>,
+}
+
+impl ClientOutboundTx {
+    fn publish_normal_tick(&self, batch: Arc<TickBroadcast>) {
+        self.latest_tick.send_replace(Some(batch));
+    }
+}
 
 /// Outbound WebSocket traffic for one connected client.
 enum ClientOutbound {
@@ -252,6 +264,9 @@ struct AppState {
     scene_generation: Arc<AtomicU64>,
     speed_multiplier: Arc<AtomicU32>,
     clients: Arc<Mutex<Vec<ClientOutboundTx>>>,
+    /// Serializes simulation capture and publication without holding the
+    /// simulation mutex across outbound queue operations.
+    publication: Arc<Mutex<()>>,
     max_clients: usize,
     require_role: bool,
     tick_broadcast_format: TickBroadcastFormat,
@@ -292,10 +307,13 @@ async fn replace_simulation(state: &AppState, loaded: Simulation) -> Result<u64,
     let encoded = Arc::from(
         encode_tick_broadcast_messages(&frames, state.tick_broadcast_format)?.into_boxed_slice(),
     );
-    let mut sim = state.sim.lock().await;
+    let _publication = state.publication.lock().await;
     let generation = state.scene_generation.fetch_add(1, Ordering::SeqCst) + 1;
-    *sim = loaded;
-    state.tick.store(tick, Ordering::SeqCst);
+    {
+        let mut sim = state.sim.lock().await;
+        *sim = loaded;
+        state.tick.store(tick, Ordering::SeqCst);
+    }
     let batch = Arc::new(TickBroadcast {
         tick,
         scene_generation: generation,
@@ -303,11 +321,7 @@ async fn replace_simulation(state: &AppState, loaded: Simulation) -> Result<u64,
         frames: Arc::from(frames),
         encoded,
     });
-    let mut clients = state.clients.lock().await;
-    clients.retain(|tx| {
-        tx.try_send(ClientOutbound::Tick(Arc::clone(&batch)))
-            .is_ok()
-    });
+    publish_authoritative_batch(state, batch).await;
     Ok(generation)
 }
 
@@ -330,30 +344,55 @@ async fn replace_simulation_reply(
     }
 }
 
-/// Publish the current building state without advancing time. The caller keeps
-/// the simulation lock through capture and enqueue, just like tick publication,
-/// so an older same-generation snapshot cannot follow this authoring update.
-async fn publish_building_update(state: &AppState, sim: &Simulation) -> Result<(), String> {
+/// Capture the current building state without advancing time. Publication happens
+/// after the caller releases the simulation mutex.
+fn build_building_update(state: &AppState, sim: &Simulation) -> Result<Arc<TickBroadcast>, String> {
     let tick = sim.state.tick;
     let frames = vec![Frame3d::BuildingDiff(build_building_diff_frame(sim, tick))];
     let encoded = Arc::from(
         encode_tick_broadcast_messages(&frames, state.tick_broadcast_format)?.into_boxed_slice(),
     );
-    let batch = Arc::new(TickBroadcast {
+    Ok(Arc::new(TickBroadcast {
         tick,
         scene_generation: state.scene_generation.load(Ordering::SeqCst),
         bypass_cadence: true,
         frames: Arc::from(frames),
         encoded,
-    });
-    let mut clients = state.clients.lock().await;
-    // Queue only; network writes happen in the connection forwarder after the
-    // lock is released. The normal correlated ACK follows on the same FIFO.
-    clients.retain(|tx| {
-        tx.try_send(ClientOutbound::Tick(Arc::clone(&batch)))
-            .is_ok()
-    });
-    Ok(())
+    }))
+}
+
+/// Queue a baseline or authoring update in FIFO order. Waiting for a live but
+/// slow client is deliberate: only a closed outbound lane is removed.
+async fn publish_authoritative_batch(state: &AppState, batch: Arc<TickBroadcast>) {
+    let clients = state.clients.lock().await.clone();
+    let mut closed = Vec::new();
+    for client in clients {
+        if client
+            .control
+            .send(ClientOutbound::Tick(Arc::clone(&batch)))
+            .await
+            .is_err()
+        {
+            closed.push(client.control);
+        }
+    }
+    if !closed.is_empty() {
+        let mut clients = state.clients.lock().await;
+        let before = clients.len();
+        clients.retain(|client| !closed.iter().any(|tx| tx.same_channel(&client.control)));
+        for _ in clients.len()..before {
+            state.metrics.connected_clients.dec();
+            state.metrics.ws_client_disconnects.inc();
+        }
+    }
+}
+
+/// Replace stale normal render work with one current tick per client.
+async fn publish_normal_tick(state: &AppState, batch: Arc<TickBroadcast>) {
+    let clients = state.clients.lock().await.clone();
+    for client in clients {
+        client.publish_normal_tick(Arc::clone(&batch));
+    }
 }
 
 fn authorize_request(headers: &HeaderMap, required: bool) -> Result<(), StatusCode> {
@@ -431,6 +470,7 @@ async fn serve_ws_bridge(
         scene_generation: Arc::new(AtomicU64::new(0)),
         speed_multiplier: Arc::new(AtomicU32::new(1)),
         clients: Arc::new(Mutex::new(Vec::new())),
+        publication: Arc::new(Mutex::new(())),
         max_clients: config.max_clients,
         require_role: config.require_role,
         tick_broadcast_format: config.tick_broadcast_format,
@@ -581,7 +621,12 @@ async fn handle_socket(
     connect_query: WsConnectQuery,
 ) {
     let (mut sender, mut receiver) = socket.split();
-    let (tx, mut rx) = mpsc::channel::<ClientOutbound>(CLIENT_OUTBOUND_CAPACITY);
+    let (control, mut control_rx) = mpsc::channel::<ClientOutbound>(CLIENT_CONTROL_CAPACITY);
+    let (latest_tick, mut tick_rx) = watch::channel::<Option<Arc<TickBroadcast>>>(None);
+    let tx = ClientOutboundTx {
+        control,
+        latest_tick,
+    };
     let subscription_filter = Arc::new(tokio::sync::Mutex::new(
         SubscriptionFilter::from_connect_query(&connect_query),
     ));
@@ -612,8 +657,12 @@ async fn handle_socket(
     let connection_id_for_forward = connection_id.clone();
     let forward = tokio::spawn(async move {
         let mut delivered_generation = None;
-        while let Some(outbound) = rx.recv().await {
-            match outbound {
+        loop {
+            tokio::select! {
+                biased;
+                outbound = control_rx.recv() => {
+                    let Some(outbound) = outbound else { return; };
+                    match outbound {
                 ClientOutbound::Rpc(msg) => {
                     if sender.send(msg).await.is_err() {
                         return;
@@ -675,6 +724,64 @@ async fn handle_socket(
                         tick_messages_sent.inc();
                     }
                 }
+                    }
+                }
+                changed = tick_rx.changed() => {
+                    if changed.is_err() {
+                        return;
+                    }
+                    let Some(broadcast) = tick_rx.borrow_and_update().clone() else {
+                        continue;
+                    };
+                    if broadcast.scene_generation
+                        != state_for_forward.scene_generation.load(Ordering::SeqCst)
+                    {
+                        continue;
+                    }
+                    if delivered_generation != Some(broadcast.scene_generation) {
+                        let reset = scene_reset_message(broadcast.tick, broadcast.scene_generation);
+                        if sender.send(reset).await.is_err() {
+                            return;
+                        }
+                        delivered_generation = Some(broadcast.scene_generation);
+                    }
+                    {
+                        let mut sessions = state_for_forward.sessions.lock().await;
+                        if let Some(s) = sessions.get_mut(&connection_id_for_forward) {
+                            s.record_tick_delivery(broadcast.tick);
+                        }
+                    }
+                    let filter = forward_filter.lock().await.clone();
+                    if !filter.is_active() {
+                        for msg in broadcast.encoded.iter() {
+                            if sender.send(msg.clone()).await.is_err() {
+                                return;
+                            }
+                            tick_messages_sent.inc();
+                        }
+                        continue;
+                    }
+                    if !broadcast.bypass_cadence && !filter.should_deliver_tick(broadcast.tick) {
+                        continue;
+                    }
+                    let frames = filter.filter_frames(broadcast.frames.as_ref());
+                    if frames.is_empty() {
+                        continue;
+                    }
+                    let messages = match encode_tick_broadcast_messages(&frames, tick_broadcast_format) {
+                        Ok(messages) => messages,
+                        Err(err) => {
+                            tracing::error!("tick broadcast encode failed: {err}");
+                            continue;
+                        }
+                    };
+                    for msg in messages {
+                        if sender.send(msg).await.is_err() {
+                            return;
+                        }
+                        tick_messages_sent.inc();
+                    }
+                }
             }
         }
     });
@@ -690,10 +797,7 @@ async fn handle_socket(
                     &connection_id,
                 )
                 .await;
-                if tx
-                    .try_send(ClientOutbound::Rpc(Message::Text(response)))
-                    .is_err()
-                {
+                if tx.control.send(ClientOutbound::Rpc(Message::Text(response))).await.is_err() {
                     break;
                 }
             }
@@ -703,6 +807,18 @@ async fn handle_socket(
         }
     }
     forward.abort();
+    // A peer close or socket error is the only normal removal path. This frees
+    // its slot for a reconnect and drops the retained latest render tick.
+    let removed = {
+        let mut clients = state.clients.lock().await;
+        let before = clients.len();
+        clients.retain(|client| !client.control.same_channel(&tx.control));
+        clients.len() != before
+    };
+    if removed {
+        state.metrics.connected_clients.dec();
+        state.metrics.ws_client_disconnects.inc();
+    }
     // Multiplayer cleanup: drop the session so future calls to
     // `sim.get_snapshot_for_session` for this connection_id fail-fast
     // (the bridge returns the "unknown connection_id" error).
@@ -1438,6 +1554,7 @@ async fn apply_dispatch_effect(
             use crate::jsonrpc::SpawnEntityKind;
             use civ_engine::{spawn, UnitType};
 
+            let _publication = state.publication.lock().await;
             let mut sim = state.sim.lock().await;
             let entity = match kind {
                 SpawnEntityKind::Civilian => {
@@ -1462,12 +1579,19 @@ async fn apply_dispatch_effect(
                 SpawnEntityKind::Hangar => sim.spawn_hangar_at(x, y),
             };
             set_spawn_civilian_result(response, entity.id());
-            if matches!(
+            let building_update = if matches!(
                 kind,
                 SpawnEntityKind::Airport | SpawnEntityKind::Port | SpawnEntityKind::Hangar
             ) {
-                if let Err(error) = publish_building_update(state, &sim).await {
-                    set_replay_io_error(response, format!("Building was created, but its live update failed: {error}. Check the world before retrying."));
+                Some(build_building_update(state, &sim))
+            } else {
+                None
+            };
+            drop(sim);
+            if let Some(building_update) = building_update {
+                match building_update {
+                    Ok(building_update) => publish_authoritative_batch(state, building_update).await,
+                    Err(error) => set_replay_io_error(response, format!("Building was created, but its live update failed: {error}. Check the world before retrying.")),
                 }
             }
         }
@@ -1984,8 +2108,9 @@ fn encode_tick_broadcast_messages(
 }
 
 async fn advance_one_tick(state: &AppState) -> Result<(), String> {
-    // Keep mutation, capture, and queue publication in one order with authoring
-    // commands and scene replacement. No socket sends occur under this lock.
+    // Serialize capture and publication with authoring commands and replacement,
+    // but release the simulation mutex before touching outbound lanes.
+    let _publication = state.publication.lock().await;
     let mut sim = state.sim.lock().await;
     let batch = {
         let tick_start = std::time::Instant::now();
@@ -2042,18 +2167,9 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
         })
     };
 
+    drop(sim);
     state.metrics.tick_batches_sent.inc();
-    let mut clients = state.clients.lock().await;
-    clients.retain(|tx| {
-        let delivered = tx
-            .try_send(ClientOutbound::Tick(Arc::clone(&batch)))
-            .is_ok();
-        if !delivered {
-            state.metrics.ws_client_disconnects.inc();
-            state.metrics.connected_clients.dec();
-        }
-        delivered
-    });
+    publish_normal_tick(state, batch).await;
     Ok(())
 }
 
@@ -2076,17 +2192,21 @@ mod tests {
     async fn building_publication_keeps_older_tick_before_same_generation_spawn() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(42)));
         let (_dir, state) = test_app_state(sim, 0, 0, false);
-        let (tx, mut rx) = mpsc::channel(8);
+        let (control, mut rx) = mpsc::channel(8);
+        let (latest_tick, mut latest_tick_rx) = watch::channel(None);
         let mut clients = state.clients.lock().await;
-        clients.push(tx);
+        clients.push(ClientOutboundTx {
+            control,
+            latest_tick,
+        });
 
         // Stop the old tick exactly at publication, without timing assumptions.
         let tick = advance_one_tick(&state);
         tokio::pin!(tick);
         assert!(futures::poll!(tick.as_mut()).is_pending());
         assert!(
-            state.sim.try_lock().is_err(),
-            "tick must retain the simulation lock until its batch is queued"
+            state.publication.try_lock().is_err(),
+            "tick must retain publication order until its batch is queued"
         );
 
         let mut role = None;
@@ -2108,9 +2228,11 @@ mod tests {
         tick.await.unwrap();
         let response: serde_json::Value = serde_json::from_str(&spawn.await).unwrap();
         assert_eq!(response["result"]["ok"], true);
-        let ClientOutbound::Tick(older) = rx.try_recv().unwrap() else {
-            panic!("older tick batch");
-        };
+        latest_tick_rx.changed().await.expect("latest tick update");
+        let older = latest_tick_rx
+            .borrow_and_update()
+            .clone()
+            .expect("latest tick");
         let ClientOutbound::Tick(created) = rx.try_recv().unwrap() else {
             panic!("building update");
         };
@@ -2212,7 +2334,10 @@ mod tests {
             .write(WorldCoord { x: 0, y: 0, z: 0 }, MaterialId(1));
         assert_eq!(replace_simulation(&state, loaded).await.unwrap(), 1);
         let tx = state.clients.lock().await[0].clone();
-        tx.send(ClientOutbound::Tick(old)).await.unwrap(); // Reproduce old ticker enqueue AFTER replacement.
+        tx.control
+            .send(ClientOutbound::Tick(old))
+            .await
+            .unwrap(); // Reproduce old ticker enqueue AFTER replacement.
 
         let reset = tokio::time::timeout(Duration::from_secs(2), ws.next())
             .await
@@ -2291,6 +2416,7 @@ mod tests {
             scene_generation: Arc::new(AtomicU64::new(0)),
             speed_multiplier: Arc::new(AtomicU32::new(speed_multiplier)),
             clients: Arc::new(Mutex::new(Vec::new())),
+            publication: Arc::new(Mutex::new(())),
             max_clients: 1,
             require_role,
             tick_broadcast_format: TickBroadcastFormat::Both,
@@ -2305,6 +2431,119 @@ mod tests {
             sessions: Arc::new(Mutex::new(std::collections::HashMap::new())),
         };
         (dir, state)
+    }
+
+    fn tick_for_delivery_test(tick: u64, bypass_cadence: bool) -> Arc<TickBroadcast> {
+        Arc::new(TickBroadcast {
+            tick,
+            scene_generation: 0,
+            bypass_cadence,
+            frames: Arc::from(Vec::<Frame3d>::new()),
+            encoded: Arc::from(Vec::<Message>::new()),
+        })
+    }
+
+    #[tokio::test]
+    async fn saturated_normal_ticks_coalesce_without_evicting_rpc_control() {
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(42)));
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
+        let (control, mut control_rx) = mpsc::channel(CLIENT_CONTROL_CAPACITY);
+        let (latest_tick, mut latest_tick_rx) = watch::channel(None);
+        let client = ClientOutboundTx {
+            control,
+            latest_tick,
+        };
+        state.clients.lock().await.push(client.clone());
+
+        for tick in 1..=(CLIENT_CONTROL_CAPACITY as u64 + 9) {
+            publish_normal_tick(&state, tick_for_delivery_test(tick, false)).await;
+        }
+
+        assert_eq!(state.clients.lock().await.len(), 1, "normal backlog keeps client registered");
+        client
+            .control
+            .try_send(ClientOutbound::Rpc(Message::Text("rpc-after-stall".into())))
+            .expect("normal ticks must not fill the RPC/control lane");
+
+        latest_tick_rx.changed().await.expect("latest tick available");
+        assert_eq!(
+            latest_tick_rx.borrow_and_update().as_ref().map(|tick| tick.tick),
+            Some(CLIENT_CONTROL_CAPACITY as u64 + 9),
+            "only the newest normal tick is retained"
+        );
+        assert!(matches!(
+            control_rx.recv().await,
+            Some(ClientOutbound::Rpc(Message::Text(text))) if text == "rpc-after-stall"
+        ));
+    }
+
+    #[tokio::test]
+    async fn authoritative_snapshot_and_rpc_retain_fifo_order_after_normal_backpressure() {
+        let (control, mut control_rx) = mpsc::channel(CLIENT_CONTROL_CAPACITY);
+        let (latest_tick, _) = watch::channel(None);
+        let client = ClientOutboundTx {
+            control,
+            latest_tick,
+        };
+        for tick in 1..=(CLIENT_CONTROL_CAPACITY as u64 + 1) {
+            client.publish_normal_tick(tick_for_delivery_test(tick, false));
+        }
+        client
+            .control
+            .send(ClientOutbound::Tick(tick_for_delivery_test(700, true)))
+            .await
+            .unwrap();
+        client
+            .control
+            .send(ClientOutbound::Rpc(Message::Text("snapshot-ack".into())))
+            .await
+            .unwrap();
+
+        assert!(matches!(
+            control_rx.recv().await,
+            Some(ClientOutbound::Tick(batch)) if batch.tick == 700 && batch.bypass_cadence
+        ));
+        assert!(matches!(
+            control_rx.recv().await,
+            Some(ClientOutbound::Rpc(Message::Text(text))) if text == "snapshot-ack"
+        ));
+    }
+
+    #[tokio::test]
+    async fn closed_socket_releases_client_slot_for_reconnect() {
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(42)));
+        let (_dir, state) = test_app_state(sim, 0, 0, false);
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("ws://{}/ws", listener.local_addr().unwrap());
+        let app = Router::new()
+            .route("/ws", get(ws_handler))
+            .with_state(state.clone());
+        let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+
+        let (mut first, _) = tokio_tungstenite::connect_async(&url).await.unwrap();
+        first.close(None).await.unwrap();
+        tokio::time::timeout(Duration::from_secs(2), async {
+            while !state.clients.lock().await.is_empty() {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .expect("closed peer releases its client slot");
+
+        let (mut replacement, _) = tokio_tungstenite::connect_async(&url).await.unwrap();
+        replacement
+            .send(tokio_tungstenite::tungstenite::Message::Text(
+                r#"{"jsonrpc":"2.0","id":812,"method":"sim.status"}"#.into(),
+            ))
+            .await
+            .unwrap();
+        let reply = tokio::time::timeout(Duration::from_secs(2), replacement.next())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        assert!(reply.to_text().unwrap().contains("812"));
+        server.abort();
     }
 
     #[test]

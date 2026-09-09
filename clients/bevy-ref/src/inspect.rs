@@ -227,7 +227,7 @@ mod plugin {
             // Civilians live in the hecs sim world (not Bevy entities), so pick
             // from `SimState` using the same deterministic position mapping the
             // population / needs overlays use.
-            if let Some(d) = sim.as_deref().and_then(|state| pick_agent(pos, state)) {
+            if let Some(d) = pick_agent(pos, &sim) {
                 details.0 = d;
             } else if let Some(d) = pick_structure(pos, &structures) {
                 details.0 = d;

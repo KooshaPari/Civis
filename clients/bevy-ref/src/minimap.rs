@@ -298,9 +298,6 @@ fn sync_minimap_dots(
                 ));
             }
         } else {
-            let Some(sim) = sim.as_deref() else {
-                return;
-            };
             // Standalone mode: read directly from the in-process simulation.
             let sim = sim.as_ref().expect("standalone minimap requires SimState");
             for (_, (civilian, position)) in sim

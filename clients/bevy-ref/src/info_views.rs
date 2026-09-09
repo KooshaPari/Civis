@@ -869,12 +869,11 @@ mod plugin {
         let step = WORLD_SIZE / res as f32;
         let cell = step * 0.45;
 
-        // Live attach has no in-process SimState. Keep terrain-derived overlays
-        // visible there and use an empty agent field until streamed aggregates arrive.
-        let agents = sim
-            .as_deref()
-            .filter(|_| overlay.uses_sim)
-            .map_or_else(|| AgentField::empty(res), |state| collect_agent_field(state, res));
+        let agents = if overlay.uses_sim {
+            collect_agent_field(&sim, res)
+        } else {
+            AgentField::empty(res)
+        };
 
         for gz in 0..res {
             for gx in 0..res {

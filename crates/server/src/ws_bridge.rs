@@ -486,6 +486,32 @@ fn build_building_update(state: &AppState, sim: &Simulation) -> Result<Arc<TickB
     )
 }
 
+fn build_terraform_update(
+    state: &AppState,
+    sim: &Simulation,
+) -> Result<Arc<TickBroadcast>, String> {
+    let tick = sim.state.tick;
+    // This is deliberately a full terrain baseline, rather than the dirty
+    // events from only this authoring request. `latest_authoritative` keeps
+    // one newest recovery batch when a client's FIFO control lane is full.
+    // A later baseline therefore contains every earlier terrain edit and
+    // cannot discard a chunk merely because its earlier delta was coalesced.
+    // Unlike `drain_dirty`, a snapshot does not interfere with the next
+    // simulation tick's normal dirty-event publication.
+    let voxel = build_voxel_snapshot_frame(tick, sim.voxel()).map_err(|error| error.to_string())?;
+    if voxel.deltas.is_empty() {
+        return Err("terraform mutation produced no voxel delta".to_owned());
+    }
+    make_tick_broadcast(
+        state,
+        tick,
+        state.scene_generation.load(Ordering::SeqCst),
+        true,
+        vec![Frame3d::VoxelDelta(voxel)],
+        observe_building_graph(state, sim)?,
+    )
+}
+
 /// Queue a baseline or authoring update without allowing an unread socket to
 /// stall simulation publication. A saturated control lane retains the newest
 /// authoritative recovery batch in one bounded watch slot.
@@ -1845,6 +1871,7 @@ async fn apply_dispatch_effect(
             material,
             radius,
         } => {
+            let _publication = state.publication.lock().await;
             let mut sim = state.sim.lock().await;
             let stamp = civ_voxel::BrushStamp {
                 center: civ_voxel::WorldCoord { x, y, z },
@@ -1857,11 +1884,23 @@ async fn apply_dispatch_effect(
                 let mut proxy = sim.voxel_mut();
                 civ_voxel::stamp_footprint(&mut proxy, &stamp)
             };
+            let terraform_update = if receipt.writes > 0 {
+                Some(build_terraform_update(state, &mut sim))
+            } else {
+                None
+            };
             if let Some(result) = response.result.as_mut() {
                 if let Some(obj) = result.as_object_mut() {
                     obj.insert("ok".to_owned(), serde_json::json!(true));
                     obj.insert("writes".to_owned(), serde_json::json!(receipt.writes));
                     obj.insert("op".to_owned(), serde_json::json!(op));
+                }
+            }
+            drop(sim);
+            if let Some(terraform_update) = terraform_update {
+                match terraform_update {
+                    Ok(batch) => publish_authoritative_batch(state, batch).await,
+                    Err(error) => set_replay_io_error(response, format!("Terrain was edited, but its live update failed: {error}. Check the world before retrying.")),
                 }
             }
         }
@@ -2943,6 +2982,86 @@ mod tests {
                 .as_ref()
                 .map(|recovery| recovery.batch.tick),
             Some(900)
+        );
+    }
+
+    #[tokio::test]
+    async fn terraform_recovery_snapshot_retains_two_chunks_when_backpressured() {
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(43)));
+        let (_dir, state) = test_app_state(Arc::clone(&sim), 0, 1, false);
+        let (control, _control_rx) = mpsc::channel(CLIENT_CONTROL_CAPACITY);
+        let (latest_authoritative, mut authoritative_rx) =
+            watch::channel::<Option<RecoveryTick>>(None);
+        let (latest_tick, _) = watch::channel(None);
+        let client = ClientOutboundTx {
+            control,
+            control_state: Arc::new(std::sync::Mutex::new(ClientControlState::default())),
+            latest_authoritative,
+            latest_tick,
+        };
+        for index in 0..CLIENT_CONTROL_CAPACITY {
+            client
+                .control
+                .try_send(ClientOutbound::Rpc(Message::Text(format!(
+                    "queued-{index}"
+                ))))
+                .expect("fill the FIFO control lane");
+        }
+        state.clients.lock().await.push(client);
+
+        let (first, second) = {
+            let mut sim = sim.lock().await;
+            sim.voxel_mut()
+                .write(WorldCoord { x: 0, y: 0, z: 0 }, MaterialId(4));
+            let first = build_terraform_update(&state, &sim).expect("first snapshot");
+
+            sim.voxel_mut().write(
+                WorldCoord {
+                    x: 16 * civ_voxel::FIXED_SCALE,
+                    y: 0,
+                    z: 0,
+                },
+                MaterialId(9),
+            );
+            let second = build_terraform_update(&state, &sim).expect("second snapshot");
+            (first, second)
+        };
+        publish_authoritative_batch(&state, first).await;
+        publish_authoritative_batch(&state, Arc::clone(&second)).await;
+        authoritative_rx
+            .changed()
+            .await
+            .expect("latest recovery snapshot available");
+        let batch = authoritative_rx
+            .borrow_and_update()
+            .clone()
+            .expect("recovery batch")
+            .batch;
+        assert!(
+            Arc::ptr_eq(&batch, &second),
+            "newest snapshot replaces the stale one"
+        );
+
+        let Frame3d::VoxelDelta(voxel) = &batch.frames[0] else {
+            panic!("terraform recovery must contain a voxel baseline");
+        };
+        assert_eq!(
+            voxel.deltas.len(),
+            2,
+            "the newest baseline retains both chunks"
+        );
+        assert_eq!(voxel.deltas[0].voxels[0], MaterialId(4));
+        assert_eq!(voxel.deltas[1].voxels[0], MaterialId(9));
+
+        let messages = encode_tick_broadcast_messages(&batch.frames, TickBroadcastFormat::Binary)
+            .expect("encode binary terrain baseline");
+        assert_eq!(messages.len(), 1, "one voxel frame has one binary response");
+        let Message::Binary(bytes) = &messages[0] else {
+            panic!("terraform baseline must use the binary frame envelope");
+        };
+        assert_eq!(
+            civ_protocol_3d::decode_frame3d_binary(bytes).expect("decode voxel response"),
+            Frame3d::VoxelDelta(voxel.clone())
         );
     }
 

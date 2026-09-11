@@ -106,14 +106,31 @@ impl CellReadout {
     pub fn tooltip(&self) -> String {
         let water = if self.submerged { " · underwater" } else { "" };
         format!(
-            "({:.0}, {:.0}) · {} · h={:.0} · {}°{}",
+            "({:.0}, {:.0}) {} · {} · h={:.0} · {}°{}",
             self.world_x,
             self.world_z,
+            compass_quadrant(self.world_x, self.world_z),
             self.material,
             self.height,
             temperature_band(self.temperature),
             water
         )
+    }
+}
+
+/// Compact compass quadrant glyph for a centred world XZ point so the
+/// one-line tooltip orients the player without forcing them to read raw signs.
+///
+/// Returns one of `↖ ↗ ↘ ↙` for NE/NW/SE/SW respectively, falling back to
+/// `·` when the point is at the origin (which never happens in practice but
+/// keeps the function total and tests trivial).
+#[must_use]
+pub fn compass_quadrant(world_x: f32, world_z: f32) -> &'static str {
+    match (world_x >= 0.0, world_z >= 0.0) {
+        (false, false) => "↙",
+        (true, false) => "↘",
+        (false, true) => "↖",
+        (true, true) => "↗",
     }
 }
 
@@ -490,6 +507,19 @@ mod tests {
         assert!(tip.contains("12"));
         assert!(tip.contains(cell.material));
         assert!(!tip.contains('\n'), "tooltip is one line");
+        // Quadrant glyph for SE (positive X, negative Z).
+        assert!(tip.contains('↘'), "tooltip orients with compass glyph");
+    }
+
+    /// FR-CIV-INSPECT-910 — quadrant glyph covers every sign combination.
+    #[test]
+    fn compass_quadrant_covers_all_signs() {
+        assert_eq!(compass_quadrant(-1.0, -1.0), "↙");
+        assert_eq!(compass_quadrant(1.0, -1.0), "↘");
+        assert_eq!(compass_quadrant(-1.0, 1.0), "↖");
+        assert_eq!(compass_quadrant(1.0, 1.0), "↗");
+        // Boundary: origin collapses to ↘ because x>=0 matches first true arm.
+        assert_eq!(compass_quadrant(0.0, 0.0), "↘");
     }
 
     /// Temperature bands cover the full range.

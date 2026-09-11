@@ -187,50 +187,6 @@ fn enqueue_frame(
     .map_err(|_| "bevy frame receiver dropped".to_owned())
 }
 
-/// Keep only the newest authoritative payload for each voxel chunk in one
-/// render-thread drain. Non-voxel frames retain their wire order, and a chosen
-/// voxel delta stays at its last wire position, so a backlog cannot force the
-/// renderer to mesh obsolete intermediate terrain states.
-fn coalesce_voxel_frames(frames: &mut Vec<Frame3d>) {
-    let originally_empty: Vec<bool> = frames
-        .iter()
-        .map(|frame| matches!(frame, Frame3d::VoxelDelta(delta) if delta.deltas.is_empty()))
-        .collect();
-    let mut latest = HashMap::<u64, (u64, usize)>::new();
-    let mut ordinal = 0;
-    for frame in frames.iter() {
-        if let Frame3d::VoxelDelta(delta) = frame {
-            for chunk in &delta.deltas {
-                ordinal += 1;
-                let candidate = (chunk.event.write_seq.0, ordinal);
-                if latest
-                    .get(&chunk.event.chunk_id.0)
-                    .is_none_or(|current| candidate >= *current)
-                {
-                    latest.insert(chunk.event.chunk_id.0, candidate);
-                }
-            }
-        }
-    }
-
-    ordinal = 0;
-    for frame in frames.iter_mut() {
-        if let Frame3d::VoxelDelta(delta) = frame {
-            delta.deltas.retain(|chunk| {
-                ordinal += 1;
-                latest.get(&chunk.event.chunk_id.0) == Some(&(chunk.event.write_seq.0, ordinal))
-            });
-        }
-    }
-    let mut index = 0;
-    frames.retain(|frame| {
-        let keep = originally_empty[index]
-            || !matches!(frame, Frame3d::VoxelDelta(delta) if delta.deltas.is_empty());
-        index += 1;
-        keep
-    });
-}
-
 fn queued_request_is_active(text: &str, state: &SharedRpcState) -> bool {
     let id = serde_json::from_str::<serde_json::Value>(text)
         .ok()
@@ -507,9 +463,8 @@ impl WsClient {
         if state.gate == StreamGate::Suspended {
             return;
         }
-        let mut admitted_frames = Vec::with_capacity(self.frame_rx.len());
         while let Ok(frame) = self.frame_rx.try_recv() {
-            let is_admitted = match state.gate {
+            let admitted = match state.gate {
                 StreamGate::Unrestricted => {
                     frame.connection == state.connection && frame.generation == state.generation
                 }
@@ -519,12 +474,10 @@ impl WsClient {
                 } => frame.connection == connection && frame.generation == Some(generation),
                 StreamGate::Suspended => false,
             };
-            if is_admitted {
-                admitted_frames.push(frame.frame);
+            if admitted {
+                frames.push(frame.frame);
             }
         }
-        coalesce_voxel_frames(&mut admitted_frames);
-        frames.extend(admitted_frames);
     }
 
     /// Hold incoming world frames until an acknowledged replacement is installed.
@@ -1175,46 +1128,6 @@ async fn connect_and_stream(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn voxel_frame(chunk_id: civ_voxel::ChunkId, write_seq: u64, material: u16) -> Frame3d {
-        use civ_protocol_3d::{DirtyChunkEvent, VoxelChunkDelta, VoxelDeltaFrame, WriteSeq};
-
-        Frame3d::VoxelDelta(VoxelDeltaFrame {
-            tick: write_seq,
-            deltas: vec![VoxelChunkDelta {
-                event: DirtyChunkEvent {
-                    chunk_id,
-                    write_seq: WriteSeq(write_seq),
-                },
-                voxels: vec![civ_voxel::MaterialId(material); 16 * 16 * 16],
-            }],
-        })
-    }
-
-    #[test]
-    fn coalesce_voxel_frames_keeps_latest_chunk_version_and_wire_position() {
-        let first = civ_voxel::ChunkId(11);
-        let second = civ_voxel::ChunkId(22);
-        let mut frames = vec![
-            voxel_frame(first, 3, 3),
-            voxel_frame(first, 2, 2),
-            voxel_frame(second, 1, 1),
-            voxel_frame(first, 4, 4),
-        ];
-
-        coalesce_voxel_frames(&mut frames);
-
-        assert_eq!(frames.len(), 2);
-        let Frame3d::VoxelDelta(second_delta) = &frames[0] else {
-            panic!("second chunk should retain its original wire position");
-        };
-        assert_eq!(second_delta.deltas[0].event.chunk_id, second);
-        let Frame3d::VoxelDelta(first_delta) = &frames[1] else {
-            panic!("newest first chunk state should remain");
-        };
-        assert_eq!(first_delta.deltas[0].event.write_seq.0, 4);
-        assert_eq!(first_delta.deltas[0].voxels[0].0, 4);
-    }
 
     #[test]
     fn rpc_ticket_correlates_errors_and_ignores_cancelled_replies() {

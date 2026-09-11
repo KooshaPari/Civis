@@ -22,9 +22,8 @@ use crate::live_stream::apply_event_feed_frame;
 use crate::live_stream::{
     apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
     apply_civilian_state_frame, apply_faction_state_frame, apply_voxel_delta_frame,
-    default_stream_meshes, mesh_pending_voxel_chunks, AgentLabelConfig, LiveAgentTag,
-    LiveBuildingTag, LiveChunkFade, LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene,
-    StreamCulling, LIVE_CHUNK_EDGE,
+    default_stream_meshes, AgentLabelConfig, LiveAgentTag, LiveBuildingTag, LiveChunkFade,
+    LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene, StreamCulling, LIVE_CHUNK_EDGE,
 };
 use crate::minimap::{MinimapCamera, MinimapDot, MinimapRoot, MINIMAP_SIZE};
 use crate::ws_client::SceneReset;
@@ -142,9 +141,16 @@ fn apply_live_scene_frames(
         state.tick = Some(tick);
         hud.tick = Some(tick);
         match frame {
-            Frame3d::VoxelDelta(delta) => {
-                apply_voxel_delta_frame(&mut scene, delta);
-            }
+            Frame3d::VoxelDelta(delta) => apply_voxel_delta_frame(
+                &mut commands,
+                &mut scene,
+                &mut meshes,
+                &mut materials,
+                culling,
+                debug.as_ref(),
+                &delta,
+                None,
+            ),
             Frame3d::AgentAppearance(agents) => {
                 apply_agent_appearance_frame_with_labels(
                     &mut commands,
@@ -177,15 +183,6 @@ fn apply_live_scene_frames(
             Frame3d::Climate(_) => {}
         }
     }
-    mesh_pending_voxel_chunks(
-        &mut commands,
-        &mut scene,
-        &mut meshes,
-        &mut materials,
-        culling,
-        debug.as_ref(),
-        None,
-    );
 }
 
 fn latest_scene_reset_tick(resets: &[SceneReset]) -> Option<u64> {

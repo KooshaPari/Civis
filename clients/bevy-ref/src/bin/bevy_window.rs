@@ -47,10 +47,10 @@ use civ_bevy_ref::{
         apply_civilian_state_frame, apply_climate_frame, apply_event_feed_frame,
         apply_faction_state_frame, apply_voxel_delta_frame, apply_water_deltas_for_frame,
         default_stream_meshes, default_water_meshes, format_event_feed_message, latest_climate,
-        push_event_feed_to_hud_summary, sync_agent_labels_from_civilians, AgentLabelConfig,
-        LiveAgentTag, LiveBridge, LiveBuildingTag, LiveChunkFade, LiveChunkTag, LiveGraphParcelTag,
-        LiveStreamMeshes, LiveStreamScene, LiveWaterMeshes, StreamCulling, LIVE_CHUNK_BASE_COLOR,
-        LIVE_CHUNK_EDGE,
+        mesh_pending_voxel_chunks, push_event_feed_to_hud_summary,
+        sync_agent_labels_from_civilians, AgentLabelConfig, LiveAgentTag, LiveBridge,
+        LiveBuildingTag, LiveChunkFade, LiveChunkTag, LiveGraphParcelTag, LiveStreamMeshes,
+        LiveStreamScene, LiveWaterMeshes, StreamCulling, LIVE_CHUNK_BASE_COLOR, LIVE_CHUNK_EDGE,
     },
     menus::{AppState, MainMenuSaves, MenuCommand},
     minimap::MinimapRoot,
@@ -718,27 +718,16 @@ fn apply_live_frames(
         hud.snapshot.tick = Some(frame.tick());
         match frame {
             Frame3d::VoxelDelta(delta) => {
-                apply_voxel_delta_frame(
-                    &mut commands,
-                    &mut scene,
-                    &mut meshes,
-                    &mut materials,
-                    culling,
-                    debug.as_ref(),
-                    &delta,
-                    wireframe_color,
-                );
+                let admitted = apply_voxel_delta_frame(&mut scene, delta);
                 // FR-CLIENT-render: pair the chunk-mesh update with a
-                // water-surface companion update so the streamed water
-                // plane tracks the chunk's voxel composition on every
-                // delta (re-uses the same borrowed payload + culling eye).
+                // water-surface companion update for admitted current state.
                 apply_water_deltas_for_frame(
                     &mut commands,
                     &mut scene,
                     water_meshes.as_ref(),
                     culling.eye,
                     culling.max_distance,
-                    &delta,
+                    &admitted,
                 );
             }
             Frame3d::AgentAppearance(agents) => {
@@ -781,6 +770,15 @@ fn apply_live_frames(
             Frame3d::Climate(climate) => apply_climate_frame(&mut scene, climate),
         }
     }
+    mesh_pending_voxel_chunks(
+        &mut commands,
+        &mut scene,
+        &mut meshes,
+        &mut materials,
+        culling,
+        debug.as_ref(),
+        wireframe_color,
+    );
 }
 
 fn orbit_camera_input(

@@ -1,6 +1,6 @@
 //! Shared `Frame3d` entity sync for live attach clients (`live_scene`, `bevy_window`).
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 #[cfg(feature = "egui")]
 use crate::event_feed::{EventFeed, EventKind};
@@ -314,6 +314,14 @@ pub struct LiveStreamScene {
     /// Water surface companion entities keyed by raw chunk id.
     pub water_entities: HashMap<u64, Entity>,
     pub chunk_voxels: ChunkVoxelCache,
+    /// Last authoritative write sequence admitted for each streamed chunk.
+    /// Older frames can arrive after a reconnect backlog and must not replace
+    /// a newer cached terrain payload.
+    pub chunk_write_sequences: HashMap<u64, u64>,
+    /// Unique FIFO of accepted chunks awaiting synchronous mesh work.
+    /// Repeated updates replace the cached payload but keep one queue slot.
+    pending_chunk_meshes: VecDeque<ChunkId>,
+    queued_chunk_meshes: HashSet<u64>,
     pub agents: HashMap<u64, Entity>,
     pub buildings: HashMap<u64, Entity>,
     pub graph_parcels: HashMap<u64, Entity>,
@@ -345,6 +353,9 @@ impl Default for LiveStreamScene {
             chunks: HashMap::default(),
             water_entities: HashMap::default(),
             chunk_voxels: ChunkVoxelCache::default(),
+            chunk_write_sequences: HashMap::default(),
+            pending_chunk_meshes: VecDeque::default(),
+            queued_chunk_meshes: HashSet::default(),
             agents: HashMap::default(),
             buildings: HashMap::default(),
             graph_parcels: HashMap::default(),
@@ -898,43 +909,77 @@ pub fn apply_water_for_chunk(
     ));
 }
 
-/// Applies a voxel delta frame (caches voxels, meshes in-range chunks).
+/// Maximum number of in-range stream chunks meshed in one Bevy update.
+///
+/// The FIFO below carries the remainder forward, while every entry reads the
+/// newest payload from [`LiveStreamScene::chunk_voxels`].
+pub const MAX_STREAM_CHUNK_MESHES_PER_UPDATE: usize = 2;
+
+/// Admits an authoritative voxel delta into the cache and queues its chunk for
+/// bounded mesh work. Returns the chunk ids whose latest state was admitted so
+/// companion renderers can update only non-stale state.
 pub fn apply_voxel_delta_frame(
+    scene: &mut LiveStreamScene,
+    delta: VoxelDeltaFrame,
+) -> Vec<ChunkId> {
+    let mut admitted = Vec::with_capacity(delta.deltas.len());
+    for chunk in delta.deltas {
+        let chunk_id = chunk.event.chunk_id;
+        if chunk.voxels.len() != LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE {
+            continue;
+        }
+        let write_seq = chunk.event.write_seq.0;
+        if scene
+            .chunk_write_sequences
+            .get(&chunk_id.0)
+            .is_some_and(|latest| *latest >= write_seq)
+        {
+            continue;
+        }
+        scene.chunk_write_sequences.insert(chunk_id.0, write_seq);
+        scene.chunk_voxels.insert(chunk_id, chunk.voxels);
+        if scene.queued_chunk_meshes.insert(chunk_id.0) {
+            scene.pending_chunk_meshes.push_back(chunk_id);
+        }
+        admitted.push(chunk_id);
+    }
+    admitted
+}
+
+/// Meshes the next deterministic FIFO slice of accepted stream chunks.
+pub fn mesh_pending_voxel_chunks(
     commands: &mut Commands,
     scene: &mut LiveStreamScene,
     mesh_assets: &mut Assets<Mesh>,
     material_assets: &mut Assets<StandardMaterial>,
     culling: StreamCulling,
     debug: &DebugRender,
-    delta: &VoxelDeltaFrame,
     wireframe_line_color: Option<Color>,
 ) {
-    for chunk in &delta.deltas {
-        let chunk_id = chunk.event.chunk_id;
-        if chunk.voxels.len() == LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE {
-            scene.chunk_voxels.insert(chunk_id, chunk.voxels.clone());
-        }
-
-        // `max_distance` is already quality-scaled by the caller (e.g. live_scene).
+    for _ in 0..MAX_STREAM_CHUNK_MESHES_PER_UPDATE {
+        let Some(chunk_id) = scene.pending_chunk_meshes.pop_front() else {
+            break;
+        };
+        scene.queued_chunk_meshes.remove(&chunk_id.0);
+        // `max_distance` is already quality-scaled by the caller.
         if !should_render_chunk(chunk_id, culling.eye, culling.max_distance) {
             if let Some(entity) = scene.chunks.remove(&chunk_id.0) {
                 commands.entity(entity).despawn();
             }
             continue;
         }
-
-        if chunk.voxels.len() != LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE {
+        let Some(voxels) = scene.chunk_voxels.get_chunk(chunk_id) else {
             continue;
-        }
-
-        let chunk_view = ChunkView {
-            id: chunk.event.chunk_id,
-            voxels: &chunk.voxels,
         };
-        let distance =
-            chunk_distance_from_camera(chunk.event.chunk_id, culling.eye, LIVE_CHUNK_EDGE as f32);
-        let lod_distance = scaled_mesh_lod_distance(distance, culling.gpu_quality);
-        let lod = LodLevel(mesh_lod_level(lod_distance));
+        let chunk_view = ChunkView {
+            id: chunk_id,
+            voxels,
+        };
+        let distance = chunk_distance_from_camera(chunk_id, culling.eye, LIVE_CHUNK_EDGE as f32);
+        let lod = LodLevel(mesh_lod_level(scaled_mesh_lod_distance(
+            distance,
+            culling.gpu_quality,
+        )));
         let Ok(mesh_buffer) = CubicMesher::mesh_cubic(chunk_view, lod) else {
             continue;
         };
@@ -951,28 +996,18 @@ pub fn apply_voxel_delta_frame(
             Some(0.0),
         );
         let material_handle = material_assets.add(material);
-        let transform = chunk_transform(chunk.event.chunk_id);
-
-        let entity = *scene
-            .chunks
-            .entry(chunk.event.chunk_id.0)
-            .or_insert_with(|| {
-                commands
-                    .spawn((
-                        LiveChunkTag {
-                            id: chunk.event.chunk_id,
-                        },
-                        Transform::default(),
-                    ))
-                    .id()
-            });
+        let transform = chunk_transform(chunk_id);
+        let entity = *scene.chunks.entry(chunk_id.0).or_insert_with(|| {
+            commands
+                .spawn((LiveChunkTag { id: chunk_id }, Transform::default()))
+                .id()
+        });
         commands.entity(entity).insert((
             Mesh3d(mesh),
             MeshMaterial3d(material_handle),
             transform,
             LiveChunkFade::new(),
         ));
-
         if let Some(color) = wireframe_line_color {
             commands
                 .entity(entity)
@@ -1066,10 +1101,9 @@ pub fn apply_water_deltas_for_frame(
     water_meshes: &LiveWaterMeshes,
     culling_eye: [f32; 3],
     culling_max_distance: f32,
-    delta: &VoxelDeltaFrame,
+    chunk_ids: &[ChunkId],
 ) {
-    for chunk in &delta.deltas {
-        let chunk_id = chunk.event.chunk_id;
+    for &chunk_id in chunk_ids {
         let in_range = should_render_chunk(chunk_id, culling_eye, culling_max_distance);
         if !in_range {
             // Mirror the chunk-entity eviction rule: drop the water
@@ -1079,10 +1113,29 @@ pub fn apply_water_deltas_for_frame(
             }
             continue;
         }
-        if chunk.voxels.len() != LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE {
+        let water_surface_y = scene.chunk_voxels.get_chunk(chunk_id).and_then(|voxels| {
+            let (_, chunk_y, _) = decode_chunk_id(chunk_id);
+            chunk_has_water(voxels)
+                .then(|| chunk_water_top_y(voxels, chunk_y))
+                .flatten()
+        });
+        let Some(surface_y) = water_surface_y else {
+            if let Some(entity) = scene.water_entities.remove(&chunk_id.0) {
+                commands.entity(entity).despawn();
+            }
             continue;
-        }
-        apply_water_for_chunk(commands, scene, water_meshes, chunk_id, &chunk.voxels);
+        };
+        let origin = chunk_transform(chunk_id);
+        let entity = *scene.water_entities.entry(chunk_id.0).or_insert_with(|| {
+            commands
+                .spawn((LiveWaterTag { chunk: chunk_id }, Transform::default()))
+                .id()
+        });
+        commands.entity(entity).insert((
+            Mesh3d(water_meshes.surface_mesh.clone()),
+            MeshMaterial3d(water_meshes.surface_material.clone()),
+            Transform::from_xyz(origin.translation.x, surface_y, origin.translation.z),
+        ));
     }
 }
 
@@ -1478,6 +1531,19 @@ mod tests {
         voxels
     }
 
+    fn chunk_delta(chunk_id: ChunkId, write_seq: u64, material: MaterialId) -> VoxelDeltaFrame {
+        VoxelDeltaFrame {
+            tick: write_seq,
+            deltas: vec![VoxelChunkDelta {
+                event: DirtyChunkEvent {
+                    chunk_id,
+                    write_seq: WriteSeq(write_seq),
+                },
+                voxels: vec![material; CHUNK_VOXELS],
+            }],
+        }
+    }
+
     fn color_rgb(c: Color) -> [f32; 3] {
         let s = c.to_srgba();
         [s.red, s.green, s.blue]
@@ -1611,19 +1677,84 @@ mod tests {
 
         let mut scene = LiveStreamScene::default();
         let mut commands = world.commands();
-        apply_voxel_delta_frame(
+        apply_voxel_delta_frame(&mut scene, delta);
+        mesh_pending_voxel_chunks(
             &mut commands,
             &mut scene,
             &mut mesh_assets,
             &mut material_assets,
             culling,
             &DebugRender::default(),
-            &delta,
             None,
         );
 
         assert_eq!(scene.chunks.len(), 1);
         assert!(scene.chunk_voxels.chunks().contains_key(&chunk_id.0));
+    }
+
+    #[test]
+    fn voxel_delta_rejects_stale_chunk_state() {
+        let chunk_id = encode_chunk_id(0, 0, 0);
+        let mut scene = LiveStreamScene::default();
+        assert_eq!(
+            apply_voxel_delta_frame(&mut scene, chunk_delta(chunk_id, 9, MaterialId(9))),
+            vec![chunk_id]
+        );
+        assert!(
+            apply_voxel_delta_frame(&mut scene, chunk_delta(chunk_id, 8, MaterialId(8))).is_empty()
+        );
+        assert_eq!(scene.chunk_write_sequences[&chunk_id.0], 9);
+        assert_eq!(
+            scene.chunk_voxels.get_chunk(chunk_id).unwrap()[0],
+            MaterialId(9)
+        );
+    }
+
+    #[test]
+    fn mesh_budget_carries_unique_chunks_to_the_next_update() {
+        use bevy::prelude::*;
+
+        let mut world = World::new();
+        let mut commands = world.commands();
+        let mut meshes = Assets::<Mesh>::default();
+        let mut materials = Assets::<StandardMaterial>::default();
+        let mut scene = LiveStreamScene::default();
+        let ids = [
+            encode_chunk_id(0, 0, 0),
+            encode_chunk_id(1, 0, 0),
+            encode_chunk_id(2, 0, 0),
+        ];
+        for (index, id) in ids.into_iter().enumerate() {
+            apply_voxel_delta_frame(
+                &mut scene,
+                chunk_delta(id, (index + 1) as u64, MaterialId(1)),
+            );
+        }
+        let culling = StreamCulling {
+            eye: [8.0, 8.0, 8.0],
+            max_distance: 512.0,
+            gpu_quality: GpuQualityMode::Full,
+        };
+        mesh_pending_voxel_chunks(
+            &mut commands,
+            &mut scene,
+            &mut meshes,
+            &mut materials,
+            culling,
+            &DebugRender::default(),
+            None,
+        );
+        assert_eq!(scene.chunks.len(), MAX_STREAM_CHUNK_MESHES_PER_UPDATE);
+        mesh_pending_voxel_chunks(
+            &mut commands,
+            &mut scene,
+            &mut meshes,
+            &mut materials,
+            culling,
+            &DebugRender::default(),
+            None,
+        );
+        assert_eq!(scene.chunks.len(), ids.len());
     }
 
     #[test]

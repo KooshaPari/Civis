@@ -676,14 +676,14 @@ fn request_building_placement(
         ));
         return;
     };
-    pending.tickets.push((
-        kind,
-        live.client.request_rpc("sim.spawn_entity", params),
-        std::time::Instant::now(),
-    ));
+    let ticket = live.client.request_rpc("sim.spawn_entity", params);
+    let ticket_id = ticket.id;
     pending
-        .messages
-        .push(format!("{} placement sent; awaiting server.", kind.label()));
+        .tickets
+        .push((kind, ticket, std::time::Instant::now()));
+    pending.messages.push(format!(
+        "building placement rpc #{ticket_id} sent; awaiting server."
+    ));
 }
 
 fn building_placement_feedback(
@@ -897,13 +897,19 @@ fn handle_spawn_tool_clicks(
                     radius = brush.clamped_size().round() as u8;
                 }
                 if let Some(ref live) = live {
-                    pending.terrain.tickets.push((
-                        live.client.request_rpc(
-                            "sim.terraform_extent",
-                            terrain_stamp_params(position, material, radius),
-                        ),
-                        std::time::Instant::now(),
-                    ));
+                    let ticket = live.client.request_rpc(
+                        "sim.terraform_extent",
+                        terrain_stamp_params(position, material, radius),
+                    );
+                    let ticket_id = ticket.id;
+                    pending
+                        .terrain
+                        .tickets
+                        .push((ticket, std::time::Instant::now()));
+                    pending
+                        .terrain
+                        .errors
+                        .push(format!("terraform rpc #{ticket_id} sent; awaiting server."));
                 } else {
                     pending.terrain.errors.push(
                         "Terrain stamp failed: live command connection unavailable".to_owned(),
@@ -1224,6 +1230,97 @@ mod tests {
             .resource_mut::<ButtonInput<MouseButton>>()
             .press(MouseButton::Left);
         (app, requests, legacy_rx)
+    }
+
+    #[cfg(feature = "egui")]
+    fn terraform_test_app() -> (App, crossbeam_channel::Receiver<String>) {
+        let (client, requests) = crate::ws_client::WsClient::test_rpc_client();
+        let (legacy_tx, _legacy_rx) = crossbeam_channel::unbounded();
+        let mut app = App::new();
+        app.insert_resource(crate::AttachMode::Server)
+            .insert_resource(LiveBridge { client })
+            .insert_resource(ServerBridge::new(legacy_tx))
+            .init_resource::<ButtonInput<MouseButton>>()
+            .init_resource::<ButtonInput<KeyCode>>()
+            .insert_resource(ActiveTool {
+                tool: SpawnTool::Terraform,
+            })
+            .insert_resource(CursorMarker {
+                position: Some(Vec3::new(-64.5, 47.0, 32.25)),
+                visible: true,
+            })
+            .init_resource::<BuildingSpawnKind>()
+            .init_resource::<PendingTerrainStamps>()
+            .init_resource::<PendingBuildingPlacements>()
+            .init_resource::<AttachedMarkerDiagnostic>()
+            .init_resource::<AttachedMarkerStatus>()
+            .init_resource::<crate::event_feed::EventFeed>()
+            .add_message::<MouseWheel>()
+            .add_message::<SpawnCivilianRequest>()
+            .add_message::<SpawnBuildingRequest>()
+            .add_message::<SelectEntityRequest>()
+            .add_message::<DestroyEntityRequest>()
+            .add_systems(
+                Update,
+                (
+                    handle_spawn_tool_clicks,
+                    report_terrain_stamps,
+                    report_attached_marker_diagnostics,
+                )
+                    .chain(),
+            );
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .press(MouseButton::Left);
+        (app, requests)
+    }
+
+    #[cfg(feature = "egui")]
+    #[test]
+    fn terraform_click_reports_only_its_correlated_rpc_ticket() {
+        let (mut app, requests) = terraform_test_app();
+        app.update();
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .clear();
+        let request: serde_json::Value =
+            serde_json::from_str(&requests.try_recv().expect("terraform request")).unwrap();
+        let id = request["id"].as_u64().expect("request ticket id");
+        assert_eq!(request["method"], "sim.terraform_extent");
+        assert!(app
+            .world()
+            .resource::<crate::event_feed::EventFeed>()
+            .events
+            .iter()
+            .any(|event| event.text.contains(&format!("terraform rpc #{id} sent"))));
+
+        app.world()
+            .resource::<LiveBridge>()
+            .client
+            .test_complete_rpc(id + 1, Ok(serde_json::json!({ "ok": true, "writes": 99 })));
+        app.update();
+        assert_eq!(
+            app.world().resource::<PendingTerrainStamps>().tickets.len(),
+            1,
+            "a reply for another ticket must not complete this Terraform action"
+        );
+
+        app.world()
+            .resource::<LiveBridge>()
+            .client
+            .test_complete_rpc(id, Ok(serde_json::json!({ "ok": true, "writes": 49 })));
+        app.update();
+        assert!(app
+            .world()
+            .resource::<PendingTerrainStamps>()
+            .tickets
+            .is_empty());
+        assert!(app
+            .world()
+            .resource::<crate::event_feed::EventFeed>()
+            .events
+            .iter()
+            .any(|event| event.text == "Server applied terrain disk: 49 voxel writes"));
     }
 
     #[cfg(feature = "egui")]

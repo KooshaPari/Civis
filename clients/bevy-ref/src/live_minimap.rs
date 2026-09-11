@@ -35,6 +35,20 @@ pub const LIVE_MINIMAP_CHUNK_LOADED_COLOR: Color = Color::srgb(0.72, 0.69, 0.62)
 /// Camera / orbit centre marker on the HUD minimap.
 pub const LIVE_MINIMAP_CAMERA_COLOR: Color = Color::srgb(0.95, 0.95, 0.98);
 
+/// Order-independent signature for the live chunk set used by the HUD cache.
+pub fn minimap_chunk_signature(keys: impl Iterator<Item = u64>) -> u128 {
+    let mut count = 0_u64;
+    let mut xor = 0_u64;
+    let mut sum = 0_u64;
+    for key in keys {
+        let mixed = key.wrapping_mul(0x9e37_79b9_7f4a_7c15).rotate_left(17);
+        count += 1;
+        xor ^= mixed;
+        sum = sum.wrapping_add(mixed);
+    }
+    (u128::from(count) << 64) | u128::from(xor ^ sum.rotate_left(29))
+}
+
 /// World-space rectangle for focus-driven minimap UV (live_scene ortho camera).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MinimapFocusRect {
@@ -228,5 +242,21 @@ mod tests {
         let raw = ChunkId(0).0;
         let bounds = minimap_bounds_from_keys(&[raw]).expect("bounds");
         assert_eq!(bounds, (0, 0, 0, 0));
+    }
+
+    #[test]
+    fn chunk_signature_is_order_independent() {
+        assert_eq!(
+            minimap_chunk_signature([7, 3, 11].into_iter()),
+            minimap_chunk_signature([11, 7, 3].into_iter())
+        );
+    }
+
+    #[test]
+    fn chunk_signature_distinguishes_changed_set() {
+        assert_ne!(
+            minimap_chunk_signature([7, 3, 11].into_iter()),
+            minimap_chunk_signature([7, 3, 12].into_iter())
+        );
     }
 }

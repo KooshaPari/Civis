@@ -128,24 +128,25 @@ impl NeedChannel {
 ///
 /// Wraps the base linear model with non-linear alternatives. All curves
 /// produce deterministic, pure `f32` results — no RNG, no wall-clock.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Default)]
 pub enum DecayCurve {
     /// Linear: `delta = rate` (default, matches existing behavior).
+    #[default]
     Linear,
     /// Exponential: `delta = rate * (1 + pressure * intensity)`.
     /// Accelerates at high deprivation — models starvation spiral.
     /// `intensity` controls acceleration: 0.0 = linear, 1.0 = strong spiral.
-    Exponential { intensity: f32 },
+    Exponential {
+        /// Acceleration strength for the starvation spiral.
+        intensity: f32,
+    },
     /// Sigmoid: `delta = rate * sigmoid(pressure * steepness)`.
     /// Slow start, rapid middle, plateau at critical — realistic hunger curve.
     /// `steepness` controls the sigmoid slope: higher = sharper transition.
-    Sigmoid { steepness: f32 },
-}
-
-impl Default for DecayCurve {
-    fn default() -> Self {
-        DecayCurve::Linear
-    }
+    Sigmoid {
+        /// Slope of the sigmoid transition.
+        steepness: f32,
+    },
 }
 
 impl DecayCurve {
@@ -360,11 +361,6 @@ mod tests {
     /// FR-CIV-NEEDS-DECAY-01 — Exponential curve accelerates at high pressure.
     #[test]
     fn exponential_curve_accelerates() {
-        let rates = RiseRates {
-            hunger: 0.05,
-            rest: 0.0,
-            social: 0.0,
-        };
         let curve = DecayCurve::Exponential { intensity: 2.0 };
 
         // At low pressure (0.1): delta = 0.05 * (1 + 0.1 * 2) = 0.06

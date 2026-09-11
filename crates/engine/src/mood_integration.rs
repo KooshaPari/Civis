@@ -446,4 +446,72 @@ mod tests {
             e.mood_history.len()
         );
     }
+
+    #[test]
+    fn starvation_drives_mood_to_miserable() {
+        let mut e = MoodEngine::new();
+        e.mood_inertia = 0.0; // instant response
+
+        // Fully starved factors: no food, no shelter, isolated, high threat.
+        let starved = MoodFactors {
+            food_safety: 0.0,
+            shelter_quality: 0.0,
+            social_connection: 0.0,
+            threat_level: 1.0,
+            festival_happiness: 0.0,
+            religious_fulfillment: 0.0,
+        };
+
+        for _ in 0..5 {
+            e.update_from_factors(&starved, 1.0);
+        }
+
+        // Starvation must pull mood to the Miserable band (score <= 0.2).
+        assert!(
+            e.current_mood <= 0.2,
+            "starvation should drive mood to miserable (=<0.2), got {}",
+            e.current_mood
+        );
+        assert_eq!(e.current_state(), MoodState::Miserable);
+    }
+
+    #[test]
+    fn abundant_factors_recover_mood_from_miserable() {
+        let mut e = MoodEngine::new();
+        e.mood_inertia = 0.0;
+
+        // Starve first.
+        let starved = MoodFactors {
+            food_safety: 0.0,
+            shelter_quality: 0.0,
+            social_connection: 0.0,
+            threat_level: 1.0,
+            festival_happiness: 0.0,
+            religious_fulfillment: 0.0,
+        };
+        for _ in 0..5 {
+            e.update_from_factors(&starved, 1.0);
+        }
+        assert_eq!(e.current_state(), MoodState::Miserable);
+
+        // Then flood with abundance; mood must recover out of miserable.
+        let abundant = MoodFactors {
+            food_safety: 1.0,
+            shelter_quality: 1.0,
+            social_connection: 1.0,
+            threat_level: 0.0,
+            festival_happiness: 1.0,
+            religious_fulfillment: 1.0,
+        };
+        for _ in 0..5 {
+            e.update_from_factors(&abundant, 1.0);
+        }
+
+        assert!(
+            e.current_mood > 0.2,
+            "abundance should recover mood above 0.2, got {}",
+            e.current_mood
+        );
+        assert_ne!(e.current_state(), MoodState::Miserable);
+    }
 }

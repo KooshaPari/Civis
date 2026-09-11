@@ -134,7 +134,7 @@ git clone https://github.com/KooshaPari/Civis.git && cd Civis
 lefthook install
 cargo build --workspace && cargo test --workspace
 just civis-3d-verify          # or: lefthook run pre-push (emits manifest + runs gates)
-cargo run -p civ-server       # http://127.0.0.1:3000  (override with CIVIS_WS_ADDR)
+cargo run -p civ-server       # http://127.0.0.1:3800  (override with CIV_SERVER_PORT)
 ```
 
 ### Launch the standalone game (Bevy)
@@ -222,7 +222,7 @@ Optional full sweep on Actions (manual only): **Actions → Quality → Run work
 
 Binary layout: `F3D0` magic (4) · kind tag (1: voxel / building / agent) · payload length BE (4) · JSON body (`civ-protocol-3d`). `cargo run -p civ-server` reads `CIVIS_TICK_BROADCAST` (`text` | `binary` | `both`, default `both`). Bevy clients that prefer binary-only tick frames should start the server with `CIVIS_TICK_BROADCAST=binary`. When embedding `run_ws_bridge`, set `tick_broadcast_format` on `WsBridgeConfig` directly.
 
-Examples (send as WebSocket text frames after connecting to `ws://127.0.0.1:3000/ws`):
+Examples (send as WebSocket text frames after connecting to `ws://127.0.0.1:3800/ws`):
 
 ```json
 {"jsonrpc":"2.0","id":1,"method":"health","params":{}}

@@ -4,10 +4,7 @@ use bevy::prelude::*;
 use civ_agents::{
     infer_alignment_for_spawn, spawn_civilian_at, ActorVisual, ActorVisualKind, Alignment, Civilian,
 };
-use civ_engine::{
-    spawn::{spawn_airport_at, spawn_hangar_at, spawn_port_at},
-    Building, BuildingType, Simulation,
-};
+use civ_engine::{Building, BuildingType, Simulation};
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use std::collections::HashMap;
@@ -23,7 +20,8 @@ type ModelResourceRef<'a> = Option<&'a Res<civ_bevy_ref::gltf_models::GameModels
 #[cfg(not(feature = "models"))]
 type ModelResourceRef<'a> = Option<()>;
 
-/// Live simulation state shared by the minimap, HUD, and spawn tools.
+/// Authoritative in-process state. Absent in Server mode: live consumers must
+/// read streamed state rather than treating a default simulation as server data.
 #[derive(Resource)]
 pub struct SimState(pub Simulation);
 
@@ -83,10 +81,6 @@ fn sim_state_enabled(mode: AttachMode) -> bool {
     !is_server_attach_mode(mode)
 }
 
-fn init_sim_state(mut commands: Commands) {
-    commands.init_resource::<SimState>();
-}
-
 /// Wires spawn-tool messages into the ECS simulation and optional HUD sync.
 #[derive(Default)]
 pub struct SimBridgePlugin;
@@ -94,8 +88,11 @@ pub struct SimBridgePlugin;
 impl Plugin for SimBridgePlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(ProceduralActorPlugin);
+        let mode = *app.world().resource::<AttachMode>();
+        if sim_state_enabled(mode) {
+            app.init_resource::<SimState>();
+        }
         app.insert_resource(SimTickAccumulator(0.0))
-            .add_systems(Startup, init_sim_state.run_if(in_process_sim_active))
             .add_systems(Startup, setup_gameplay_marker_meshes)
             .add_systems(
                 Update,
@@ -122,6 +119,80 @@ mod tests {
     fn server_attach_does_not_enable_local_simulation_state() {
         assert!(!sim_state_enabled(AttachMode::Server));
         assert!(sim_state_enabled(AttachMode::Standalone));
+    }
+
+    #[test]
+    fn local_sim_state_exists_only_for_standalone_plugins() {
+        for mode in [AttachMode::Server, AttachMode::Standalone] {
+            let mut app = App::new();
+            app.insert_resource(mode).add_plugins(SimBridgePlugin);
+            assert_eq!(
+                app.world().contains_resource::<SimState>(),
+                mode == AttachMode::Standalone
+            );
+        }
+    }
+
+    #[test]
+    fn standalone_building_requests_record_once_at_clicked_coordinates() {
+        use crate::spawn_tools::BuildingSpawnKind;
+        use civ_engine::replay::ReplayEvent;
+
+        let mut app = App::new();
+        app.insert_resource(SimState(Simulation::with_seed(419)))
+            .add_message::<SpawnBuildingRequest>()
+            .add_systems(Update, apply_spawn_building_requests);
+        for kind in [
+            BuildingSpawnKind::CityCenter,
+            BuildingSpawnKind::Market,
+            BuildingSpawnKind::Barracks,
+        ] {
+            app.world_mut().write_message(SpawnBuildingRequest {
+                position: Vec3::new(64.0, 17.0, -64.0),
+                kind,
+            });
+        }
+        app.update();
+        app.update();
+        let sim = &app.world().resource::<SimState>().0;
+        let authored: Vec<_> = sim
+            .replay_log()
+            .events
+            .iter()
+            .filter_map(|event| {
+                if let ReplayEvent::BuildingSpawn {
+                    entity_bits,
+                    building,
+                    ..
+                } = event
+                {
+                    Some((*entity_bits, *building))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert_eq!(authored.len(), 3, "each message records exactly once");
+        assert_eq!(sim.replay_log().schema_version, 2);
+        assert_eq!(
+            authored
+                .iter()
+                .map(|(_, building)| building.building_type)
+                .collect::<Vec<_>>(),
+            [
+                BuildingType::CityCenter,
+                BuildingType::Market,
+                BuildingType::Barracks
+            ]
+        );
+        for (bits, building) in authored {
+            assert_eq!(
+                building.position,
+                civ_engine::spawn::norm_to_grid(0.75, 0.25)
+            );
+            let entity = hecs::Entity::from_bits(bits).unwrap();
+            assert_eq!(*sim.world.get::<&Building>(entity).unwrap(), building);
+        }
     }
 }
 
@@ -204,13 +275,13 @@ fn apply_spawn_building_requests(
         let (nx, ny) = world_to_norm(request.position);
         match request.kind {
             crate::spawn_tools::BuildingSpawnKind::CityCenter => {
-                spawn_airport_at(&mut sim.0.world, nx, ny);
+                sim.0.spawn_airport_at(nx, ny);
             }
             crate::spawn_tools::BuildingSpawnKind::Market => {
-                spawn_port_at(&mut sim.0.world, nx, ny);
+                sim.0.spawn_port_at(nx, ny);
             }
             crate::spawn_tools::BuildingSpawnKind::Barracks => {
-                spawn_hangar_at(&mut sim.0.world, nx, ny);
+                sim.0.spawn_hangar_at(nx, ny);
             }
         }
     }

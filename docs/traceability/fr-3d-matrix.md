@@ -171,9 +171,39 @@ Finish-readiness rule: a row is only safe to treat as release-ready when the lis
 
 | FR ID | Requirement Summary | Crate / Source Path | Test Name Pattern | Status |
 |---|---|---|---|---|
+| FR-CIV-BEVY-001 | P-W1 item 26: standalone gameplay base wires the simulation bridge, HUD, spawn tools, and minimap. | `clients/bevy-ref` (`bevy_render`, `sim_bridge`, `spawn_tools`, `minimap`, `bin/standalone.rs`) | `bevy_render::tests::mesh_buffer_converts_quad`, `shell_attest` | implemented |
+| FR-CIV-BEVY-002 | P-W1 items 27-28: server attach decodes `Frame3d` data and applies streamed voxels, agents, buildings, and graph parcels. | `clients/bevy-ref` (`live_attach`, `live_stream`, `live_scene`) | `parse_ws_payload_accepts_binary_and_text`, `live_stream::apply_voxel_delta_frame_spawns_chunk_in_scene` | implemented |
+| FR-CIV-BEVY-003 | Binary F3D0 `Frame3d` payloads parse without a live socket. | `clients/bevy-ref/src/lib.rs` | `parse_frame3d_binary_roundtrips_building_diff`, `parse_ws_payload_prefers_binary_when_magic_present` | implemented |
+| FR-CIV-BEVY-013 | P-W1 item 38: shared live minimap computes bounds, UV positions, colors, and spawn helpers for both desktop paths. | `clients/bevy-ref/src/live_minimap.rs` | `live_minimap::focus_rect_maps_centre_to_mid_uv`, `live_minimap::bounds_from_keys_spans_chunks` | implemented |
+| FR-CIV-BEVY-014 | P-W1 item 39: shared stream apply keeps voxel deltas, ground anchoring, and provenance styling deterministic. | `clients/bevy-ref/src/live_stream.rs` | `live_stream::apply_voxel_delta_frame_spawns_chunk_in_scene`, `live_stream::stream_ground_y_uses_voxel_surface_plus_agent_offset` | implemented |
+| FR-CIV-BEVY-015 | P-W1 item 40: shared live-scene focus drives orbit targeting and minimap world/UV conversion. | `clients/bevy-ref/src/live_focus.rs`, `bin/bevy_window.rs` | `live_focus::minimap_uv_roundtrips_world_xz` | implemented |
+| FR-CIV-BEVY-016 | P-W1 item 41: the live-attach smoke recipe covers stream apply, minimap UV helpers, and both desktop bins. | `justfile`, `clients/bevy-ref` | `just civis-3d-live-smoke` | implemented |
+| FR-CIV-BEVY-017 | P-W1 item 42: the live HUD exposes connection, tick, streamed counts, and optional snapshot RTT. | `clients/bevy-ref` (`lib.rs`, `live_attach`, `bin/bevy_window.rs`) | `live_hud_overlay_includes_connection_and_tick`, `live_hud_overlay_includes_ws_rtt_when_present` | implemented |
+| FR-CIV-BEVY-018 | P-W1 item 43: WebSocket reconnect backoff is bounded and HUD state reflects connection transitions. | `clients/bevy-ref/src/ws_client.rs`, `live_attach.rs` | `ws_client::reconnect_backoff_doubles_until_cap` | implemented |
+| FR-CIV-BEVY-019 | P-W1 item 44: live entity ray picking selects the nearest valid marker and updates HUD selection. | `clients/bevy-ref/src/live_pick.rs`, `live_stream.rs` | `live_pick::pick_live_entity_prefers_nearest_along_ray`, `live_stream::format_live_pick_hud_line_civilian_entry_shows_name_profession_health` | implemented |
+| FR-CIV-BEVY-020 | P-W1 item 45: snapshot day/night state drives desktop presentation lighting. | `clients/bevy-ref` (`lib.rs`, `live_attach`, `bin/bevy_window.rs`) | `parse_jsonrpc_snapshot_meta_reads_is_day_and_tick`, `presentation_clear_color_lerps_day_and_night` | implemented |
+| FR-CIV-BEVY-021 | P-W1 item 46: path-filtered CI invokes the headless live-attach smoke recipe. | `.github/workflows/civis-3d-live-smoke.yml`, `justfile` | `just civis-3d-live-smoke` | implemented |
+| FR-CIV-BEVY-022 | P-W1 item 47: live smoke includes focus and minimap helper coverage. | `justfile`, `clients/bevy-ref` (`live_focus`, `live_minimap`) | `just civis-3d-live-smoke`, `live_focus::minimap_uv_roundtrips_world_xz` | implemented |
+| FR-CIV-BEVY-025 | P-W1 item 50: live smoke includes deterministic entity-picking helper coverage. | `justfile`, `clients/bevy-ref/src/live_pick.rs` | `just civis-3d-live-smoke`, `live_pick::pick_live_entity_prefers_nearest_along_ray` | implemented
 | FR-CIV-BEVY-023 | P-W1 kickoff **item 48**: `event_feed` egui toasts + scrollable log on `civ-standalone`; `live_attach` pushes `EventKind::System` on WebSocket `connected` / `reconnecting` / `disconnected`. | `clients/bevy-ref` (`event_feed`, `live_attach`, `standalone`) | `cargo test -p civ-bevy-ref --features bevy,egui --lib event_feed::`, `cargo check -p civ-bevy-ref --features bevy,egui --bin civ-standalone` | implemented |
-| FR-CIV-BEVY-024 | P-W1 kickoff **item 49**: `MenusPlugin` on `civ-standalone` — Escape pause overlay, settings stub, era banner; in-process sim tick gated while paused (`GameUiMode` / HUD speed `0`). | `clients/bevy-ref` (`menus`, `lib.rs`, `bin/standalone.rs`, `sim_bridge`) | `cargo check -p civ-bevy-ref --features bevy,egui --bin civ-standalone`, `cargo test -p civ-bevy-ref --features bevy,egui --lib menus::` | implemented |
+| FR-CIV-BEVY-024 | P-W1 kickoff **item 49**: `MenusPlugin` on `civ-standalone` — Escape pause overlay, settings stub, era banner; in-process sim tick gated while paused (`GameUiMode` / HUD speed `0`). In server attach, pause/resume waits for an accepted `sim.set_speed` reply before changing shell state. | `clients/bevy-ref` (`menus`, `lib.rs`, `bin/standalone.rs`, `sim_bridge`) | `cargo check -p civ-bevy-ref --features bevy,egui --bin civ-standalone`, `cargo test -p civ-bevy-ref --features bevy,egui --lib menus::tests::live_pause_and_resume_wait_for_set_speed_acknowledgements` | implemented |
 | FR-CIV-BEVY-026 | P-W1 kickoff **item 51**: document and test native GPU backend selection (`CIV_BEVY_BACKEND`, DX12/Vulkan/Metal; no GLES). | `clients/bevy-ref` (`native_backend`), `clients/bevy-ref/README.md`, `docs/research/wgpu-native-escape-hatches.md` | `cargo test -p civ-bevy-ref --features bevy --lib native_backend`, `just civis-3d-live-smoke` | implemented |
+
+### Bevy operational acceptance boundaries
+
+The following safeguards are implemented code but do not have an assigned
+`FR-CIV-BEVY-*` row in `fr-3d-additions.md`; they must not be used to imply
+complete native-lifecycle acceptance.
+
+| Area | Code / mechanical proof | Acceptance still required |
+|---|---|---|
+| DX12 minimized surface | `NativeWindowLifecyclePlugin` is installed by both desktop binaries; `only_a_changed_minimized_extent_uses_the_cached_surface_size` covers its cached-extent rule. | Native minimize, restore, and normal window-close trials on the target adapter. `just civis-3d-standalone-smoke` only proves scripted startup and exit. |
+| Server-attached pause/resume | `live_pause_and_resume_wait_for_set_speed_acknowledgements` checks that `GameUiMode` changes only after the matching `sim.set_speed` acceptance. | A running-server UI trial, including error/timeout observation, if release evidence needs end-to-end interaction. |
+
+The P-W1 kickoff records more Bevy completion claims than this matrix currently
+contains. IDs absent here remain traceability debt until their source, test, and
+acceptance gate are entered; absence is not evidence that the implementation is
+missing.
 
 ---
 
@@ -211,4 +241,4 @@ Finish-readiness rule: a row is only safe to treat as release-ready when the lis
 
 ---
 
-*Last updated: 2026-07-12. Source of truth for FR text: `docs/development-guide/fr-3d-additions.md`.*
+*Last updated: 2026-09-06. Source of truth for FR text: `docs/development-guide/fr-3d-additions.md`.*

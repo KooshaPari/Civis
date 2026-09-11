@@ -2,16 +2,17 @@
 
 //! Replay / simulation playback controls.
 //!
-//! Provides a compact play/pause/step bar that sends `sim.command` RPCs
-//! through the [`ServerBridge`](crate::live_stream::ServerBridge). In
-//! standalone mode the buttons manipulate the local [`GameSpeed`](crate::game_ui::GameSpeed).
+//! Provides a compact play/pause/step bar. Live speed changes use correlated
+//! `sim.set_speed` requests; standalone mode changes local
+//! [`GameSpeed`](crate::game_ui::GameSpeed).
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 use crate::game_ui::GameSpeed;
+use crate::live_attach::LiveAttachBridge;
 use crate::live_stream::ServerBridge;
-use crate::menus::{in_playing, GameUiMode};
+use crate::menus::{in_playing, request_live_speed, GameUiMode, PendingSimSpeed};
 use crate::ui_theme::CHIP_FILL;
 use crate::AttachMode;
 
@@ -36,7 +37,9 @@ fn draw_replay_controls(
     mut contexts: EguiContexts,
     mode: Res<GameUiMode>,
     attach: Res<AttachMode>,
+    live_bridge: Option<Res<LiveAttachBridge>>,
     bridge: Option<Res<ServerBridge>>,
+    mut pending_speed: ResMut<PendingSimSpeed>,
     mut speed: ResMut<GameSpeed>,
 ) {
     if !in_playing(mode) {
@@ -48,6 +51,7 @@ fn draw_replay_controls(
 
     let is_paused = speed.multiplier < 0.01;
     let bridge_ref = bridge.as_deref();
+    let live_bridge_ref = live_bridge.as_deref();
 
     egui::Area::new(egui::Id::new("replay_controls_bar"))
         .anchor(egui::Align2::CENTER_BOTTOM, [0.0, -56.0])
@@ -73,24 +77,24 @@ fn draw_replay_controls(
                             if is_paused {
                                 // Resume
                                 if *attach == AttachMode::Server {
-                                    if let Some(bridge) = bridge_ref {
-                                        bridge.send_rpc(
-                                            "sim.command",
-                                            serde_json::json!({"action": "resume"}),
-                                        );
-                                    }
+                                    request_live_speed(
+                                        &mut pending_speed,
+                                        live_bridge_ref,
+                                        1,
+                                        None,
+                                    );
                                 } else {
                                     speed.restore_after_resume();
                                 }
                             } else {
                                 // Pause
                                 if *attach == AttachMode::Server {
-                                    if let Some(bridge) = bridge_ref {
-                                        bridge.send_rpc(
-                                            "sim.command",
-                                            serde_json::json!({"action": "pause"}),
-                                        );
-                                    }
+                                    request_live_speed(
+                                        &mut pending_speed,
+                                        live_bridge_ref,
+                                        0,
+                                        None,
+                                    );
                                 } else {
                                     speed.remember_non_zero();
                                     speed.multiplier = 0.0;
@@ -114,7 +118,12 @@ fn draw_replay_controls(
 
                         // Speed indicators
                         ui.separator();
-                        for (mult, label) in [(1.0, "1x"), (2.0, "2x"), (5.0, "5x"), (10.0, "10x")] {
+                        let speed_steps: &[(f32, &str)] = if *attach == AttachMode::Server {
+                            &[(1.0, "1x"), (2.0, "2x"), (4.0, "4x"), (8.0, "8x")]
+                        } else {
+                            &[(1.0, "1x"), (2.0, "2x"), (5.0, "5x"), (10.0, "10x")]
+                        };
+                        for &(mult, label) in speed_steps {
                             let active =
                                 (speed.multiplier - mult).abs() < 0.01;
                             let btn = egui::Button::new(
@@ -129,15 +138,12 @@ fn draw_replay_controls(
                             });
                             if ui.add(btn).clicked() {
                                 if *attach == AttachMode::Server {
-                                    if let Some(bridge) = bridge_ref {
-                                        bridge.send_rpc(
-                                            "sim.command",
-                                            serde_json::json!({
-                                                "action": "set_speed",
-                                                "speed": mult as u32,
-                                            }),
-                                        );
-                                    }
+                                    request_live_speed(
+                                        &mut pending_speed,
+                                        live_bridge_ref,
+                                        mult as u32,
+                                        None,
+                                    );
                                 } else {
                                     speed.multiplier = mult;
                                 }

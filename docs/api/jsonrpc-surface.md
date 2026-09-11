@@ -8,7 +8,7 @@
 
 ---
 
-## Method catalog (31)
+## Method catalog (42)
 
 | Method | Role (when `require_role`) | Params | Success result (dispatch; bridge may enrich) | `ws_smoke` integration test |
 |--------|----------------------------|--------|---------------------------------------------|------------------------------|
@@ -43,10 +43,33 @@
 | `save.slot` | — | `{ "slot_name": "slot-1" … "slot-5" }` | `{ "saved": true, "slot_name", "tick", "path" }` (writes `{saves_dir}/{slot_name}.civsave.zst`) | [`ws_jsonrpc_save_slot_roundtrip`](../../crates/server/tests/ws_smoke.rs) |
 | `save.load` | — | `{ "slot_name": "slot-1" … "slot-5" }` | `{ "loaded": true, "slot_name", "tick" }` | [`ws_jsonrpc_save_slot_roundtrip`](../../crates/server/tests/ws_smoke.rs) |
 | `save.list` | — | `{}` or omit | `[ { "name", "tick", "save_type": "slot" \| "auto" \| "manual" }, … ]` | [`ws_jsonrpc_save_slot_roundtrip`](../../crates/server/tests/ws_smoke.rs) |
+| `sim.get_factions` | - | `{}` or omit | `{ "tick", "factions": [] }`; faction rows from spectator snapshot when present | No dedicated WS assertion established |
+| `sim.get_resources` | - | `{}` or omit | `{ "tick", "market_prices", "institutions" }`; empty collections without snapshot | No dedicated WS assertion established |
+| `sim.get_tick` | - | `{}` or omit | `{ "tick" }` | No dedicated WS assertion established |
+| `sim.get_emergence_metrics` | - | `{}` or omit | Serialized emergence sample; otherwise `{ "tick", "sample": null }` | No dedicated WS assertion established |
+| `sim.get_snapshot_for_session` | - | `{}` or omit | Dispatch marker `{ "tick", "marker": "session_snapshot_filled_by_bridge" }`; bridge supplies session view | See session handling in `ws_bridge.rs` |
+| `psyche.snapshot` | - | `{}` or omit | Placeholder `{ "tick", "agents": [] }`; live psyche data not wired in dispatch | No dedicated WS assertion established |
+| `psyche.events` | - | `{}` or omit | Placeholder `{ "tick", "events": [] }`; live events not wired in dispatch | No dedicated WS assertion established |
+| `sim.events` | - | `{}` or omit | Tick, damage/audio/music and research fields; climate, emergence, religion and legends when available | No dedicated WS assertion established |
+| `emergence.metrics` | - | `{}` or omit | Tick, entropy, histogram, branching, power-law and novelty metrics; optional structure fields; `{ "tick", "sample": null }` without sample | No dedicated WS assertion established |
+| `emergence.dashboard` | - | `{}` or omit | Serialized dashboard; without one, tick and zero-valued cluster entropy, ideology homophily, sentience, psyche stability and diplomacy tension | No dedicated WS assertion established |
+| `sim.religion_state` | - | `{}` or omit | Placeholder `{ "tick", "religions": [], "belief_points": 0 }` in dispatch | No dedicated WS assertion established |
 
 **Invalid `sim.command` action:** `-32601` `Method not found` (not `-32602`).
 
 **Parse / protocol errors (not methods):** invalid JSON → `-32700`; bad request shape / batch → `-32600`; unknown method name → `-32601`. Covered by [`ws_jsonrpc_invalid_json_returns_parse_error`](../../crates/server/tests/ws_smoke.rs) and `jsonrpc.rs` unit tests.
+
+---
+
+## World replacement identity
+
+The live `sim.load_scenario` path initializes canonical Small terrain (96 x 64 x 96 cells), seeded by the requested seed and centered on X/Z. The four society presets share that terrain generator; their actor/faction setup remains preset-specific. Initial material writes are recorded for replay. Headless `Scenario::into_simulation` retains its existing terrain-free behavior.
+
+Successful `sim.load_scenario`, `sim.reset`, `save.load`, and `sim.load_replay` responses include `scene_generation` (an unsigned integer) in `result`, in addition to their existing fields. The response `id` still identifies the request. `scene.reset` notifications include the same `scene_generation` and `tick` in `params` before the first frame batch for that generation.
+
+A generation identifies a world within one server process; it can restart from zero when the server restarts. Clients must bind it to the connection lifetime, not compare generation numbers across reconnects. A replacement acknowledgement and its reset notification may be observed in either order. Suspend old-world rendering while a replacement is pending, correlate the response by request ID, clear the old scene, and admit only frames belonging to the acknowledged generation on that connection. An interrupted request is not proof that the server did or did not apply it; reconnect and explicitly retry rather than silently replaying it.
+
+The server publishes a full voxel baseline for replacements, including paused simulations, and rejects queued tick batches from older generations. Missing `scene_generation` is a compatibility error for clients using this handshake, not permission to accept stale frames. Legacy snapshot and frame schemas otherwise remain unchanged.
 
 ---
 
@@ -68,6 +91,8 @@ When the bridge supplies live `SnapshotFields`, the result may include:
 ---
 
 ## HTTP routes (not JSON-RPC)
+
+Successful `POST /replay/import` returns `{ "ok": true, "tick": <u64>, "scene_generation": <u64> }`. Its generation matches the `scene.reset` notification sent to connected WebSocket clients for that replacement. Clients observing multiple resets must match the acknowledged generation, rather than assuming the first reset after connection belongs to the import.
 
 Documented alongside WS in root [`README.md`](../../README.md): `GET /healthz`, `GET /replay/export`, `POST /replay/import`. Integration tests: `healthz_returns_ok_with_tick`, `replay_*` in [`ws_smoke.rs`](../../crates/server/tests/ws_smoke.rs).
 

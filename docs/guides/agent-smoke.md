@@ -44,8 +44,8 @@ The `playable` block groups the `ws_smoke`, `civ-watch`, and Unreal steps above 
 Agent smoke does **not** run TypeScript tests. After protocol changes or `web/` edits:
 
 ```powershell
-cd web && npm test
-cd web && npm run build
+cd web && bun test
+cd web && bun run build
 ```
 
 FR closure: [`docs/traceability/fr-web-matrix.md`](../traceability/fr-web-matrix.md).
@@ -56,11 +56,33 @@ FR closure: [`docs/traceability/fr-web-matrix.md`](../traceability/fr-web-matrix
 just civis-3d-verify
 ```
 
-Rust-only; add `cd web && npm test` when the dashboard or shared `web/src` helpers change.
+Rust-only; add `cd web && bun test` when the dashboard or shared `web/src` helpers change.
+
+## Bevy native and live-attach boundaries
+
+`agent-smoke.ps1` and `just civis-3d-live-smoke` are headless protocol gates.
+They do not open a native window or require a running server. For the windowed
+standalone startup/clean-exit path, run:
+
+```powershell
+just civis-3d-standalone-smoke
+```
+
+That recipe builds `civ-standalone` and runs it for a bounded number of update
+frames (`CIVIS_SMOKE_FRAMES`, default `5`) on a GPU adapter. It proves startup
+and its scripted `AppExit`; it does **not** prove operating-system minimize,
+restore, close-button behavior, or live-server gameplay. Treat those as
+separate acceptance evidence.
+
+The menu-level live pause/resume acknowledgement is covered without a window by:
+
+```powershell
+cargo test -p civ-bevy-ref --features bevy,egui --lib menus::tests::live_pause_and_resume_wait_for_set_speed_acknowledgements
+```
 
 ## Live client attach
 
-After smoke passes, start services and attach per [`client-attach-matrix.md`](client-attach-matrix.md).
+After smoke passes, start services and attach per [`client-attach-matrix.md`](client-attach-matrix.md). The matrix records the current `:3800` server/Bevy versus `:3000` Godot/Unreal/web endpoint split; select one explicit endpoint before running a cross-client session.
 
 ## Unreal compile (human or agent with UE installed)
 

@@ -15,6 +15,27 @@ use crate::io::{read_text, write_text};
 use civ_planet::{Climate, GeologyMap, WeatherCell};
 use civ_voxel::MaterialId;
 
+/// Maximum dense entity-slot span accepted when restoring recorded identities.
+/// This accommodates the scenario ceiling of 6.4 million civilians plus entity
+/// headroom, while rejecting corrupt sparse IDs before hecs allocates storage.
+/// Indices at or above this limit are unsupported, never silently remapped.
+pub const MAX_REPLAY_ENTITY_SLOTS: u32 = 8 * 1024 * 1024;
+
+pub(crate) fn building_replay_entity(entity_bits: u64) -> Result<hecs::Entity, ReplayError> {
+    let invalid = |reason| ReplayError::InvalidBuildingSpawn {
+        entity_bits,
+        reason,
+    };
+    let entity =
+        hecs::Entity::from_bits(entity_bits).ok_or_else(|| invalid("invalid entity identity"))?;
+    if entity.id() >= MAX_REPLAY_ENTITY_SLOTS {
+        return Err(invalid(
+            "entity index exceeds the 8388608-slot replay restoration limit",
+        ));
+    }
+    Ok(entity)
+}
+
 /// A single replayable simulation event.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ReplayEvent {
@@ -113,6 +134,13 @@ pub enum ReplayEvent {
         #[serde(default)]
         bus_json: String,
     },
+    /// Explicit player-authored building, including its stable ECS identity.
+    /// Appended to preserve existing enum discriminants in older serializers.
+    BuildingSpawn {
+        tick: u64,
+        entity_bits: u64,
+        building: crate::Building,
+    },
 }
 
 /// Persistent replay log.
@@ -147,6 +175,13 @@ pub enum ReplayError {
     InvalidMagic,
     /// Unsupported `.civreplay` container format version.
     UnsupportedFormatVersion(u32),
+    /// Unsupported replay event schema (separate from the container version).
+    UnsupportedSchemaVersion(u32),
+    /// A building event cannot be applied without corrupting entity state.
+    InvalidBuildingSpawn {
+        entity_bits: u64,
+        reason: &'static str,
+    },
     /// File shorter than header, payload, or footer.
     Truncated,
     /// RON payload exceeds `u32::MAX` bytes.
@@ -174,6 +209,11 @@ impl fmt::Display for ReplayError {
             Self::UnsupportedFormatVersion(v) => {
                 write!(f, "unsupported .civreplay format version {v}")
             }
+            Self::UnsupportedSchemaVersion(v) => write!(f, "unsupported replay schema version {v}"),
+            Self::InvalidBuildingSpawn {
+                entity_bits,
+                reason,
+            } => write!(f, "invalid building spawn {entity_bits}: {reason}"),
             Self::Truncated => write!(f, "truncated .civreplay file"),
             Self::PayloadTooLarge => write!(f, ".civreplay RON payload too large"),
             Self::InvalidUtf8(err) => write!(f, "{err}"),
@@ -214,6 +254,41 @@ impl From<std::str::Utf8Error> for ReplayError {
 }
 
 impl ReplayLog {
+    /// Accept legacy logs and the additive building-authoring schema.
+    pub fn validate_schema_version(&self) -> Result<(), ReplayError> {
+        if !(1..=2).contains(&self.schema_version) {
+            return Err(ReplayError::UnsupportedSchemaVersion(self.schema_version));
+        }
+        if self.schema_version < 2 {
+            if let Some(ReplayEvent::BuildingSpawn { entity_bits, .. }) = self
+                .events
+                .iter()
+                .find(|event| matches!(event, ReplayEvent::BuildingSpawn { .. }))
+            {
+                return Err(ReplayError::InvalidBuildingSpawn {
+                    entity_bits: *entity_bits,
+                    reason: "building events require replay schema 2",
+                });
+            }
+        }
+        Ok(())
+    }
+
+    /// Record the exact building produced by an authoring command.
+    pub fn record_building_spawn(
+        &mut self,
+        tick: u64,
+        entity_bits: u64,
+        building: crate::Building,
+    ) {
+        self.schema_version = self.schema_version.max(2);
+        self.events.push(ReplayEvent::BuildingSpawn {
+            tick,
+            entity_bits,
+            building,
+        });
+    }
+
     /// Record a voxel write.
     pub fn record_voxel_write(&mut self, tick: u64, pos: WorldCoord, value: MaterialId) {
         self.events
@@ -614,6 +689,7 @@ impl ReplayLog {
     pub fn load(path: impl AsRef<Path>) -> Result<Self, ReplayError> {
         let contents = read_text(path)?;
         let log: Self = ron::from_str(&contents)?;
+        log.validate_schema_version()?;
         log.verify_hash_chain()?;
         Ok(log)
     }
@@ -638,7 +714,15 @@ impl ReplayLog {
 
     /// Replay all events into a simulation.
     pub fn replay(&self, into: &mut Simulation) -> Result<(), ReplayError> {
+        self.validate_schema_version()?;
         let mut previous_tick = None;
+        // spawn_at replaces an occupied index even when its generation differs.
+        // Validate every authoring event before applying any replay mutation.
+        let mut occupied: std::collections::HashSet<u32> = into
+            .world
+            .iter()
+            .map(|entity| entity.entity().id())
+            .collect();
         for event in &self.events {
             let current_tick = match event {
                 ReplayEvent::VoxelWrite { tick, .. }
@@ -653,7 +737,8 @@ impl ReplayLog {
                 | ReplayEvent::ModLoaded { tick, .. }
                 | ReplayEvent::ModUnloaded { tick, .. }
                 | ReplayEvent::SessionSaved { tick, .. }
-                | ReplayEvent::ModPermissionViolation { tick, .. } => *tick,
+                | ReplayEvent::ModPermissionViolation { tick, .. }
+                | ReplayEvent::BuildingSpawn { tick, .. } => *tick,
             };
             if let Some(previous) = previous_tick {
                 if current_tick < previous {
@@ -664,10 +749,44 @@ impl ReplayLog {
                 }
             }
             previous_tick = Some(current_tick);
+            if let ReplayEvent::BuildingSpawn {
+                entity_bits,
+                building,
+                ..
+            } = event
+            {
+                let invalid = |reason| ReplayError::InvalidBuildingSpawn {
+                    entity_bits: *entity_bits,
+                    reason,
+                };
+                let entity = building_replay_entity(*entity_bits)?;
+                if !occupied.insert(entity.id()) {
+                    return Err(invalid("entity index is already occupied"));
+                }
+                if !matches!(
+                    building.building_type,
+                    crate::BuildingType::CityCenter
+                        | crate::BuildingType::Market
+                        | crate::BuildingType::Barracks
+                ) || !(-64..=63).contains(&building.position.x)
+                    || !(-64..=63).contains(&building.position.y)
+                    || building.hp <= crate::Fixed::from_num(0)
+                    || building.max_hp < building.hp
+                {
+                    return Err(invalid("invalid building kind, position, or health"));
+                }
+            }
         }
 
         for event in &self.events {
             match event {
+                ReplayEvent::BuildingSpawn {
+                    tick,
+                    entity_bits,
+                    building,
+                } => {
+                    into.apply_replay_building_spawn(*tick, *entity_bits, *building)?;
+                }
                 ReplayEvent::VoxelWrite { tick, pos, value } => {
                     into.apply_replay_voxel_write(*tick, *pos, *value);
                 }
@@ -733,6 +852,188 @@ fn parse_world_domain_label(label: &str) -> Option<civ_mod_host::WorldDomain> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn building_spawn_identity_budget_rejects_sparse_allocation_before_replay() {
+        let bits = |index: u32| (1_u64 << 32) | u64::from(index);
+        assert!(building_replay_entity(bits(MAX_REPLAY_ENTITY_SLOTS - 1)).is_ok());
+        for index in [MAX_REPLAY_ENTITY_SLOTS, u32::MAX] {
+            let error = building_replay_entity(bits(index)).unwrap_err();
+            assert!(error.to_string().contains("restoration limit"));
+        }
+    }
+
+    #[test]
+    fn building_spawn_roundtrip_preserves_identity_components_and_does_not_rerecord() {
+        let mut source = Simulation::with_seed(77);
+        assert_eq!(source.replay_log().schema_version, 1);
+        let entities = [
+            source.spawn_airport_at(0.25, 0.75),
+            source.spawn_port_at(0.1, 0.2),
+            source.spawn_hangar_at(0.8, 0.3),
+        ];
+        let expected: Vec<_> = entities
+            .into_iter()
+            .map(|entity| {
+                (
+                    entity,
+                    *source.world.get::<&crate::Building>(entity).unwrap(),
+                )
+            })
+            .collect();
+        let log = source.replay_log().clone();
+        assert_eq!(log.schema_version, 2);
+        assert_eq!(
+            log.events
+                .iter()
+                .filter(|event| matches!(event, ReplayEvent::BuildingSpawn { .. }))
+                .count(),
+            3
+        );
+        let bytes = crate::encode_civreplay(&log).unwrap();
+        let decoded = crate::decode_civreplay(&bytes).unwrap();
+        assert_eq!(decoded, log);
+        let mut restored = Simulation::with_seed(77);
+        let original_log_len = restored.replay_log().events.len();
+        decoded.replay(&mut restored).unwrap();
+        for (entity, building) in expected {
+            assert_eq!(
+                *restored.world.get::<&crate::Building>(entity).unwrap(),
+                building
+            );
+        }
+        assert_eq!(restored.replay_log().events.len(), original_log_len);
+        assert_eq!(restored.state.tick, source.state.tick);
+    }
+
+    #[test]
+    fn building_spawn_schema_keeps_legacy_ron_and_rejects_future_or_mislabeled_logs() {
+        let legacy: ReplayLog =
+            ron::from_str("(events:[Tick(tick:4)],seed:77,schema_version:1,running_hash:None)")
+                .unwrap();
+        let decoded = crate::decode_civreplay(&crate::encode_civreplay(&legacy).unwrap()).unwrap();
+        assert_eq!(decoded, legacy);
+        let mut restored = Simulation::with_seed(77);
+        decoded.replay(&mut restored).unwrap();
+        assert_eq!(restored.state.tick, 4);
+
+        let future = ReplayLog {
+            schema_version: 3,
+            ..ReplayLog::default()
+        };
+        assert!(matches!(
+            crate::decode_civreplay(&crate::encode_civreplay(&future).unwrap()),
+            Err(ReplayError::UnsupportedSchemaVersion(3))
+        ));
+        let mut source = Simulation::with_seed(77);
+        source.spawn_airport_at(0.5, 0.5);
+        let mut mislabeled = source.replay_log().clone();
+        mislabeled.schema_version = 1;
+        assert!(matches!(
+            crate::decode_civreplay(&crate::encode_civreplay(&mislabeled).unwrap()),
+            Err(ReplayError::InvalidBuildingSpawn { .. })
+        ));
+    }
+
+    #[test]
+    fn building_spawn_rejects_occupied_index_even_with_different_generation_before_any_mutation() {
+        let mut generations = hecs::World::new();
+        let first = generations.spawn(());
+        generations.despawn(first).unwrap();
+        let reused = generations.spawn(());
+        assert_eq!(first.id(), reused.id());
+        assert_ne!(first, reused);
+        let building = crate::Building {
+            building_type: crate::BuildingType::CityCenter,
+            hp: crate::Fixed::from_num(500),
+            max_hp: crate::Fixed::from_num(500),
+            position: crate::Position { x: 0, y: 0 },
+        };
+        let pos = WorldCoord { x: 0, y: 0, z: 0 };
+        for collision in [first, reused] {
+            let mut target = Simulation::with_seed(77);
+            let occupied = target
+                .world
+                .iter()
+                .find(|entity| entity.entity().id() == collision.id())
+                .unwrap()
+                .entity();
+            let original_len = target.world.len();
+            let original_material = target.voxel().read(pos);
+            let log = ReplayLog {
+                schema_version: 2,
+                events: vec![
+                    ReplayEvent::VoxelWrite {
+                        tick: 0,
+                        pos,
+                        value: MaterialId(7),
+                    },
+                    ReplayEvent::BuildingSpawn {
+                        tick: 0,
+                        entity_bits: collision.to_bits().get(),
+                        building,
+                    },
+                ],
+                ..ReplayLog::default()
+            };
+            assert!(matches!(
+                log.replay(&mut target),
+                Err(ReplayError::InvalidBuildingSpawn { .. })
+            ));
+            assert_eq!(target.world.len(), original_len);
+            assert!(target.world.contains(occupied));
+            assert_eq!(target.voxel().read(pos), original_material);
+        }
+    }
+
+    #[test]
+    fn building_spawn_rejects_duplicate_identity_bad_payload_and_descending_tick() {
+        let mut source = Simulation::with_seed(77);
+        source.spawn_airport_at(0.25, 0.75);
+        let valid = source.replay_log().clone();
+        let event = valid
+            .events
+            .iter()
+            .find(|event| matches!(event, ReplayEvent::BuildingSpawn { .. }))
+            .unwrap()
+            .clone();
+        let mut duplicate = valid.clone();
+        duplicate.events.push(event);
+        assert!(matches!(
+            duplicate.replay(&mut Simulation::with_seed(77)),
+            Err(ReplayError::InvalidBuildingSpawn { .. })
+        ));
+        for bad in 0..3 {
+            let mut invalid = valid.clone();
+            let ReplayEvent::BuildingSpawn {
+                entity_bits,
+                building,
+                ..
+            } = invalid
+                .events
+                .iter_mut()
+                .find(|event| matches!(event, ReplayEvent::BuildingSpawn { .. }))
+                .unwrap()
+            else {
+                unreachable!()
+            };
+            match bad {
+                0 => *entity_bits = 0,
+                1 => building.hp = crate::Fixed::from_num(-1),
+                _ => building.position.x = 64,
+            }
+            assert!(matches!(
+                invalid.replay(&mut Simulation::with_seed(77)),
+                Err(ReplayError::InvalidBuildingSpawn { .. })
+            ));
+        }
+        let mut descending = valid;
+        descending.events.insert(0, ReplayEvent::Tick { tick: 1 });
+        assert!(matches!(
+            descending.replay(&mut Simulation::with_seed(77)),
+            Err(ReplayError::NonMonotonicTick { .. })
+        ));
+    }
 
     #[test]
     fn mod_permission_violation_records_bus_json_at_tick() {

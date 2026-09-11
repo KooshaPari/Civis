@@ -26,7 +26,7 @@ Live window (WebSocket attach + HUD overlay):
 # P-W1 item 41 / FR-CIV-BEVY-016; item 47 / FR-CIV-BEVY-022; item 50 / FR-CIV-BEVY-025 — run before merging live-attach changes
 just civis-3d-live-smoke
 
-# Start civ-server first (default ws://127.0.0.1:3000/ws, tick broadcast Both)
+# Start civ-server first (default ws://127.0.0.1:3800/ws, tick broadcast Both)
 cargo run -p civ-server
 
 # Bevy window prefers binary F3D0 frames — skip redundant JSON text tick pushes:
@@ -64,7 +64,7 @@ $env:BEVY_ASSET_ROOT = "$PWD/clients/bevy-ref"
 
 # Optional live attach (skip local terrain; remote ticks ignore pause)
 $env:CIVIS_ATTACH = "server"
-$env:CIV_SERVER_PORT = "3010"   # default is 3000; matches civ-server listen port
+$env:CIV_SERVER_PORT = "3010"   # overrides the default 3800; matches civ-server listen port
 # Or full URL (overrides host/port/path):
 $env:CIV_WS_URL = "ws://127.0.0.1:3010/ws?tick_format=binary"
 ```
@@ -91,8 +91,8 @@ Headless gate for live attach — no window or running civ-server required:
 
 | Client | Local default | Remote (Tailscale / LAN) |
 |--------|---------------|---------------------------|
-| `civ-bevy-window` | `CIVIS_WS_URL` or `CIVIS_WS_ADDR` → `ws://127.0.0.1:3000/ws` | Set env before run, e.g. `CIVIS_WS_URL=ws://100.x.x.x:3000/ws?tick_format=binary` |
-| `civ-standalone` (live attach) | `just civis-3d-standalone-live` (`CIVIS_ATTACH=server`) | `just civis-3d-standalone-live-url URL=ws://host:3000/ws?tick_format=binary` |
+| `civ-bevy-window` | `CIVIS_WS_URL` or `CIVIS_WS_ADDR` → `ws://127.0.0.1:3800/ws` | Set env before run, e.g. `CIVIS_WS_URL=ws://100.x.x.x:3800/ws?tick_format=binary` |
+| `civ-standalone` (live attach) | `just civis-3d-standalone-live` (`CIVIS_ATTACH=server`) | `just civis-3d-standalone-live-url URL=ws://host:3800/ws?tick_format=binary` |
 
 Prefer `tick_format=binary` on the URL when the server runs with `CIVIS_TICK_BROADCAST=binary`.
 

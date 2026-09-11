@@ -15,7 +15,8 @@ use bevy::state::app::StatesPlugin;
 use civ_bevy_ref::live_stream::LiveStreamScene;
 use civ_bevy_ref::menus::{
     advance_worldgen_to_playing, consume_menu_commands, sync_app_state_with_game_mode, AppState,
-    GameUiMode, MainMenuCommand, MainMenuSaves, MenuCommand, WorldGenBoot, WorldSetupParams,
+    GameUiMode, LocalTerrainReady, MainMenuCommand, MainMenuSaves, MenuCommand, WorldGenBoot,
+    WorldSetupParams,
 };
 use civ_bevy_ref::outcome_overlay::{
     begin_player_session, end_player_session, OutcomeOverlayState, OutcomeSessionGate,
@@ -24,6 +25,13 @@ use civ_bevy_ref::settings_ui::{GameSettings, SettingsTab};
 
 fn shell_smoke_app() -> App {
     let mut app = App::new();
+    let mut meshes = Assets::<Mesh>::default();
+    let terrain = meshes.add(Mesh::from(Cuboid::new(1.0, 1.0, 1.0)));
+    app.insert_resource(meshes)
+        .insert_resource(civ_bevy_ref::sim_bridge::SimState(
+            civ_engine::Simulation::with_seed(42),
+        ));
+    app.world_mut().spawn((LocalTerrainReady, Mesh3d(terrain)));
     // Headless: StatesPlugin (not DefaultPlugins) so init_state has StateTransition.
     app.add_plugins(StatesPlugin)
         .init_state::<AppState>()
@@ -254,7 +262,7 @@ fn open_settings_opens_game_settings_panel() {
 }
 
 #[test]
-fn advance_worldgen_waits_for_boot_timer_with_empty_live_scene() {
+fn advance_worldgen_never_plays_an_empty_live_scene_on_timeout() {
     let mut app = shell_smoke_app();
     app.insert_resource(LiveStreamScene::default());
 
@@ -266,19 +274,23 @@ fn advance_worldgen_waits_for_boot_timer_with_empty_live_scene() {
     assert_eq!(
         current_app_state(&app),
         AppState::WorldGen,
-        "empty live scene should wait for boot timer"
+        "empty live scene must wait for acknowledged terrain"
     );
 
     advance_time(&mut app, 2.0);
-    assert_eq!(current_app_state(&app), AppState::Playing);
+    assert_eq!(current_app_state(&app), AppState::WorldGen);
+    advance_time(&mut app, 30.0);
+    assert_eq!(current_app_state(&app), AppState::WorldGen);
+    assert!(app.world().resource::<WorldGenBoot>().error.is_some());
 }
 
 #[test]
-fn confirm_world_setup_clears_stale_live_scene_before_boot() {
+fn confirm_world_setup_preserves_stale_scene_until_load_is_acknowledged() {
     let mut app = shell_smoke_app();
     let mut stale = LiveStreamScene::default();
     // Mark as "has content" without real entities — WorldGen must not skip boot.
-    stale.buildings.insert(1, Entity::from_bits(1));
+    let previous_entity = app.world_mut().spawn_empty().id();
+    stale.buildings.insert(1, previous_entity);
     app.insert_resource(stale);
 
     dispatch_menu(&mut app, MainMenuCommand::NewWorld);
@@ -287,16 +299,37 @@ fn confirm_world_setup_clears_stale_live_scene_before_boot() {
 
     let scene = app.world().resource::<LiveStreamScene>();
     assert!(
-        scene.buildings.is_empty(),
-        "ConfirmWorldSetup must clear stale streamed buildings"
+        scene.buildings.contains_key(&1),
+        "An unacknowledged or failed load must preserve the previous scene"
     );
 
     advance_time(&mut app, 0.5);
     assert_eq!(
         current_app_state(&app),
         AppState::WorldGen,
-        "cleared scene should still wait for boot timer"
+        "previous scene content must not satisfy the new load"
     );
+}
+
+#[test]
+fn local_world_ignores_disconnected_bridge_but_requires_simulation_and_terrain() {
+    let mut app = shell_smoke_app();
+    app.insert_resource(civ_bevy_ref::AttachMode::Standalone);
+    app.insert_resource(civ_bevy_ref::live_stream::LiveBridge {
+        client: civ_bevy_ref::ws_client::WsClient::disconnected(),
+    });
+    app.insert_resource(LiveStreamScene::default());
+    dispatch_menu(&mut app, MainMenuCommand::ConfirmWorldSetup);
+    assert_eq!(current_app_state(&app), AppState::Playing);
+
+    let mut missing = shell_smoke_app();
+    missing.insert_resource(civ_bevy_ref::AttachMode::Standalone);
+    missing
+        .world_mut()
+        .remove_resource::<civ_bevy_ref::sim_bridge::SimState>();
+    dispatch_menu(&mut missing, MainMenuCommand::ConfirmWorldSetup);
+    assert_eq!(current_app_state(&missing), AppState::WorldGen);
+    assert!(missing.world().resource::<WorldGenBoot>().error.is_none());
 }
 
 #[test]

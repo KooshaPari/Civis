@@ -28,7 +28,7 @@ See [`docs/guides/client-attach-matrix.md`](docs/guides/client-attach-matrix.md)
 
 Default stack:
 
-- `cargo run -p civ-server` → WS `ws://127.0.0.1:3000/ws?tick_format=binary`
+- `cargo run -p civ-server` → WS `ws://127.0.0.1:3800/ws?tick_format=binary`
 - `cargo run -p civ-watch` → HTTP `http://127.0.0.1:9090` (terrain + dashboard)
 
 ## FR / playbook index

@@ -9,8 +9,10 @@
 
 use civ_protocol_3d::{VoxelChunkDelta, VoxelDeltaFrame};
 use civ_voxel::{
-    to_chunk_coord, ChunkId, DirtyChunkEvent, MaterialId, VoxelWorld, WorldCoord, FIXED_SCALE,
+    to_chunk_coord, ChunkCoord, ChunkId, DirtyChunkEvent, MaterialId, VoxelWorld, WorldCoord,
+    WriteSeq, FIXED_SCALE,
 };
+use std::collections::BTreeMap;
 
 const CHUNK_EDGE: i32 = 16;
 
@@ -54,6 +56,7 @@ pub fn build_voxel_delta_frame(
     // Group by chunk_id while keeping the highest write_seq event per chunk.
     // Input is already sorted, so we walk it once.
     let mut deltas: Vec<VoxelChunkDelta> = Vec::new();
+    let coordinates = chunk_coordinates(world);
     let mut current: Option<DirtyChunkEvent> = None;
     for ev in events {
         match current {
@@ -63,7 +66,7 @@ pub fn build_voxel_delta_frame(
             }
             Some(prev) => {
                 // Chunk transition — flush the previous chunk's delta.
-                deltas.push(build_chunk_delta(prev, world)?);
+                deltas.push(build_chunk_delta(prev, world, &coordinates)?);
                 current = Some(*ev);
             }
             None => {
@@ -72,7 +75,7 @@ pub fn build_voxel_delta_frame(
         }
     }
     if let Some(last) = current {
-        deltas.push(build_chunk_delta(last, world)?);
+        deltas.push(build_chunk_delta(last, world, &coordinates)?);
     }
 
     Ok(VoxelDeltaFrame { tick, deltas })
@@ -80,17 +83,56 @@ pub fn build_voxel_delta_frame(
 
 fn build_chunk_delta(
     event: DirtyChunkEvent,
-    _world: &VoxelWorld<MaterialId>,
+    world: &VoxelWorld<MaterialId>,
+    coordinates: &BTreeMap<ChunkId, ChunkCoord>,
 ) -> Result<VoxelChunkDelta, VoxelFrameBuilderError> {
-    // We don't have a `VoxelWorld::chunk(coord) -> Option<&Chunk>` API yet —
-    // the kernel exposes read(world_coord) and chunk_count(). Until the
-    // chunk-access API lands in P-V1.2, build a zero-payload delta that still
-    // carries the event so consumers know to re-fetch the chunk. The kernel
-    // upgrade in a follow-up PR replaces this with the actual dense payload.
-    Ok(VoxelChunkDelta {
-        event,
-        voxels: Vec::new(),
-    })
+    let missing = || VoxelFrameBuilderError::ChunkNotFound {
+        chunk_id: event.chunk_id,
+    };
+    let coord = *coordinates.get(&event.chunk_id).ok_or_else(missing)?;
+    let voxels = if let Some(chunk) = world.chunk(coord) {
+        chunk.voxels.clone()
+    } else if let Some(material) = world.octree().uniform_value(coord) {
+        vec![material; 16 * 16 * 16]
+    } else {
+        return Err(missing());
+    };
+    Ok(VoxelChunkDelta { event, voxels })
+}
+
+fn chunk_coordinates(world: &VoxelWorld<MaterialId>) -> BTreeMap<ChunkId, ChunkCoord> {
+    world
+        .octree()
+        .nodes
+        .keys()
+        .copied()
+        .chain(world.chunks_dense().map(|(coord, _)| coord))
+        .map(|coord| (coord.chunk_id(), coord))
+        .collect()
+}
+
+/// Full authoritative terrain for an attaching client, including compacted
+/// uniform chunks. Snapshot events use sequence zero as a baseline; subsequent
+/// dirty frames retain the kernel's actual write sequence. No dirty state is drained.
+pub fn build_voxel_snapshot_frame(
+    tick: u64,
+    world: &VoxelWorld<MaterialId>,
+) -> Result<VoxelDeltaFrame, VoxelFrameBuilderError> {
+    let coordinates = chunk_coordinates(world);
+    let deltas = coordinates
+        .keys()
+        .map(|&chunk_id| {
+            build_chunk_delta(
+                DirtyChunkEvent {
+                    chunk_id,
+                    write_seq: WriteSeq(0),
+                },
+                world,
+                &coordinates,
+            )
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(VoxelDeltaFrame { tick, deltas })
 }
 
 /// Helper for callers that want to convert a world position into the (chunk_id, _)
@@ -103,16 +145,90 @@ fn build_chunk_delta(
 #[must_use]
 pub fn world_coord_to_chunk_id(pos: WorldCoord) -> ChunkId {
     let c = to_chunk_coord(pos, FIXED_SCALE, CHUNK_EDGE);
-    let cx = (c.cx as u32) as u64;
-    let cy = (c.cy as u32) as u64;
-    let cz = (c.cz as u32) as u64;
-    ChunkId((cx << 40) | (cy << 16) | (cz & 0xFFFF))
+    c.chunk_id()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use civ_voxel::WriteSeq;
+
+    #[test]
+    fn dirty_payload_contains_authoritative_materials_in_dense_index_order() {
+        let mut world = VoxelWorld::new(FIXED_SCALE);
+        let position = WorldCoord {
+            x: -FIXED_SCALE,
+            y: 2 * FIXED_SCALE,
+            z: 4 * FIXED_SCALE,
+        };
+        world.write(position, MaterialId(7));
+        let events = world.drain_dirty();
+        let frame = build_voxel_delta_frame(4, &events, &world).expect("dense frame");
+        assert_eq!(frame.deltas.len(), 1);
+        assert_eq!(
+            frame.deltas[0].event.chunk_id,
+            world_coord_to_chunk_id(position)
+        );
+        assert_eq!(frame.deltas[0].voxels.len(), 4096);
+        assert_eq!(frame.deltas[0].voxels[15 + 2 * 16 + 4 * 256], MaterialId(7));
+        assert_eq!(frame.deltas[0].voxels[0], MaterialId(0));
+    }
+
+    #[test]
+    fn snapshot_includes_compacted_air_and_solid_chunks_without_draining_events() {
+        let mut world = VoxelWorld::new(FIXED_SCALE);
+        for z in 0..16 {
+            for y in 0..16 {
+                for x in 0..16 {
+                    world.write(
+                        WorldCoord {
+                            x: x * FIXED_SCALE,
+                            y: y * FIXED_SCALE,
+                            z: z * FIXED_SCALE,
+                        },
+                        MaterialId(3),
+                    );
+                }
+            }
+        }
+        let erased = WorldCoord {
+            x: 16 * FIXED_SCALE,
+            y: 0,
+            z: 0,
+        };
+        world.write(erased, MaterialId(9));
+        world.write(erased, MaterialId(0));
+        assert_eq!(world.compact(), 2);
+        let frame = build_voxel_snapshot_frame(12, &world).expect("uniform snapshot");
+        assert_eq!(frame.tick, 12);
+        assert_eq!(frame.deltas.len(), 2);
+        assert!(frame.deltas[0].voxels.iter().all(|&m| m == MaterialId(3)));
+        assert!(frame.deltas[1].voxels.iter().all(|&m| m == MaterialId(0)));
+        assert_eq!(frame.deltas[1].voxels.len(), 4096);
+        let events = world.drain_dirty();
+        assert!(!events.is_empty());
+        let dirty = build_voxel_delta_frame(13, &events, &world).expect("compacted dirty frame");
+        assert_eq!(dirty.deltas.len(), 2);
+        assert!(dirty.deltas[1].voxels.iter().all(|&m| m == MaterialId(0)));
+    }
+
+    #[test]
+    fn absent_dirty_chunk_is_an_error_instead_of_an_empty_payload() {
+        let world = VoxelWorld::new(FIXED_SCALE);
+        let result = build_voxel_delta_frame(
+            1,
+            &[DirtyChunkEvent {
+                chunk_id: ChunkId(8),
+                write_seq: WriteSeq(1),
+            }],
+            &world,
+        );
+        assert!(matches!(
+            result,
+            Err(VoxelFrameBuilderError::ChunkNotFound {
+                chunk_id: ChunkId(8)
+            })
+        ));
+    }
 
     /// FR-CIV-PROTO3D-010 — empty event slice produces an empty frame.
     #[test]
@@ -127,7 +243,15 @@ mod tests {
     /// single delta carrying the highest-write_seq event.
     #[test]
     fn multiple_writes_same_chunk_collapse_to_one_delta() {
-        let world: VoxelWorld<MaterialId> = VoxelWorld::new(FIXED_SCALE);
+        let mut world: VoxelWorld<MaterialId> = VoxelWorld::new(FIXED_SCALE);
+        world.write(
+            WorldCoord {
+                x: 0,
+                y: 0,
+                z: 7 * 16 * FIXED_SCALE,
+            },
+            MaterialId(1),
+        );
         let events = vec![
             DirtyChunkEvent {
                 chunk_id: ChunkId(7),
@@ -151,7 +275,17 @@ mod tests {
     /// chunk in their input (sorted) order.
     #[test]
     fn events_across_chunks_produce_one_delta_each() {
-        let world: VoxelWorld<MaterialId> = VoxelWorld::new(FIXED_SCALE);
+        let mut world: VoxelWorld<MaterialId> = VoxelWorld::new(FIXED_SCALE);
+        for z in 1..=3 {
+            world.write(
+                WorldCoord {
+                    x: 0,
+                    y: 0,
+                    z: z * 16 * FIXED_SCALE,
+                },
+                MaterialId(z as u16),
+            );
+        }
         let events = vec![
             DirtyChunkEvent {
                 chunk_id: ChunkId(1),

@@ -92,6 +92,7 @@ pub fn decode_civreplay(data: &[u8]) -> Result<ReplayLog, ReplayError> {
 
     let payload = std::str::from_utf8(&data[HEADER_LEN..payload_end])?;
     let log: ReplayLog = ron::from_str(payload)?;
+    log.validate_schema_version()?;
     log.verify_hash_chain()?;
     Ok(log)
 }

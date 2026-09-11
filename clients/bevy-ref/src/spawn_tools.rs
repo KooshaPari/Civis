@@ -3,13 +3,15 @@
 //! This module owns the click-to-terrain hit test, active tool state, cursor
 //! marker, and local selection/destruction behavior.
 
+use bevy::ecs::system::SystemParam;
 use bevy::input::mouse::MouseWheel;
 use bevy::math::primitives::Circle;
 use bevy::prelude::*;
 
 #[cfg(feature = "models")]
 use crate::gltf_models::{actor_scene, building_scene, ModelOrPrimitive};
-use crate::live_stream::ServerBridge;
+use crate::live_ground::ChunkVoxelCache;
+use crate::live_stream::{LiveBridge, LiveStreamScene, ServerBridge};
 use crate::minimap::MinimapCamera;
 #[cfg(feature = "egui")]
 pub(crate) use crate::settings_ui::GameSettings;
@@ -20,6 +22,7 @@ use crate::settings_ui::ACTION_SELECT_OR_PICK;
 use crate::terrain::{terrain_height, WORLD_SIZE};
 #[cfg(feature = "voxel")]
 use crate::voxel_sim::VoxelSimState;
+use crate::ws_client::RpcTicket;
 #[cfg(feature = "voxel")]
 use civ_voxel::material::AIR;
 
@@ -176,6 +179,15 @@ pub enum BuildingSpawnKind {
 }
 
 impl BuildingSpawnKind {
+    /// Existing server palette aliases for the corresponding engine buildings.
+    const fn rpc_kind(self) -> &'static str {
+        match self {
+            Self::CityCenter => "airport",
+            Self::Market => "port",
+            Self::Barracks => "hangar",
+        }
+    }
+
     /// Advance to the next building type in the build palette.
     pub const fn next(self) -> Self {
         match self {
@@ -224,6 +236,57 @@ pub struct CursorMarker {
     pub position: Option<Vec3>,
     /// Whether the marker should be visible.
     pub visible: bool,
+}
+
+/// Why an attached client currently has no authoritative terrain marker.
+///
+/// Attached tools deliberately do not fall back to local terrain. Retaining the
+/// immediate reason lets the rate-limited authoring feedback distinguish an
+/// input/UI problem from a streamed-world problem without exposing protocol
+/// details to the player.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AttachedMarkerUnavailable {
+    PointerOverUi,
+    InputUnavailable,
+    CacheUnavailable,
+    CacheEmpty,
+    RayMiss { cached_chunks: usize },
+}
+
+impl AttachedMarkerUnavailable {
+    fn summary(self) -> String {
+        match self {
+            Self::PointerOverUi => "pointer is captured by the UI".to_owned(),
+            Self::InputUnavailable => "window, cursor, or camera input is unavailable".to_owned(),
+            Self::CacheUnavailable => "streamed terrain cache is unavailable".to_owned(),
+            Self::CacheEmpty => "streamed terrain cache is empty (0 chunks)".to_owned(),
+            Self::RayMiss { cached_chunks } => {
+                format!("ray missed streamed terrain ({cached_chunks} cached chunks)")
+            }
+        }
+    }
+}
+
+/// Latest attached-marker diagnostic, updated together with [`CursorMarker`].
+#[derive(Resource, Debug, Default, Clone, Copy)]
+struct AttachedMarkerStatus {
+    unavailable: Option<AttachedMarkerUnavailable>,
+}
+
+/// Bounds attached-tool diagnostics so a held or repeated click cannot flood
+/// the event feed while a terrain marker is unavailable.
+#[cfg(feature = "egui")]
+#[derive(Resource, Default)]
+struct AttachedMarkerDiagnostic {
+    last_reported: Option<std::time::Instant>,
+    messages: Vec<String>,
+}
+
+const ATTACHED_MARKER_DIAGNOSTIC_COOLDOWN: std::time::Duration = std::time::Duration::from_secs(2);
+
+fn is_server_authoring_tool(mode: Option<&crate::AttachMode>, tool: SpawnTool) -> bool {
+    matches!(mode, Some(crate::AttachMode::Server))
+        && !matches!(tool, SpawnTool::Select | SpawnTool::Destroy)
 }
 
 /// Marker for entities created/owned by the sandbox spawn tools.
@@ -290,12 +353,44 @@ pub struct PlaceStructureRequest {
 /// Plugin that wires the tool state, ray hit test, and cursor marker together.
 pub struct SpawnToolsPlugin;
 
+#[derive(Resource, Default)]
+struct PendingTerrainStamps {
+    tickets: Vec<(RpcTicket, std::time::Instant)>,
+    errors: Vec<String>,
+}
+
+#[derive(Resource, Default)]
+struct PendingBuildingPlacements {
+    tickets: Vec<(BuildingSpawnKind, RpcTicket, std::time::Instant)>,
+    messages: Vec<String>,
+}
+
+#[derive(SystemParam)]
+struct PendingToolRequests<'w> {
+    terrain: ResMut<'w, PendingTerrainStamps>,
+    buildings: ResMut<'w, PendingBuildingPlacements>,
+    marker_status: Res<'w, AttachedMarkerStatus>,
+    #[cfg(feature = "egui")]
+    marker_diagnostic: ResMut<'w, AttachedMarkerDiagnostic>,
+}
+
+pub(crate) fn server_tools_active(mode: Option<&crate::AttachMode>, bridge_present: bool) -> bool {
+    match mode {
+        Some(crate::AttachMode::Standalone) => false,
+        Some(crate::AttachMode::Server) => true,
+        None => bridge_present,
+    }
+}
+
 impl Plugin for SpawnToolsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ActiveTool>()
+            .init_resource::<PendingTerrainStamps>()
+            .init_resource::<PendingBuildingPlacements>()
             .init_resource::<BuildingSpawnKind>()
             .init_resource::<SelectedEntity>()
             .init_resource::<CursorMarker>()
+            .init_resource::<AttachedMarkerStatus>()
             .init_resource::<PointerOverUi>()
             .init_resource::<RoadDraft>()
             .add_message::<SpawnCivilianRequest>()
@@ -307,7 +402,17 @@ impl Plugin for SpawnToolsPlugin {
             .add_systems(Startup, spawn_cursor_marker);
 
         #[cfg(feature = "egui")]
-        app.add_systems(Update, update_pointer_over_ui);
+        app.init_resource::<crate::event_feed::EventFeed>()
+            .init_resource::<AttachedMarkerDiagnostic>()
+            .add_systems(
+                Update,
+                (
+                    update_pointer_over_ui,
+                    report_terrain_stamps,
+                    report_building_placements,
+                    report_attached_marker_diagnostics,
+                ),
+            );
 
         app.add_systems(
             Update,
@@ -368,11 +473,37 @@ fn update_cursor_marker(
     cameras: Query<(&Camera, &GlobalTransform), (With<Camera3d>, Without<MinimapCamera>)>,
     over_ui: Res<PointerOverUi>,
     mut marker: ResMut<CursorMarker>,
+    mut attached_status: ResMut<AttachedMarkerStatus>,
+    live: Option<Res<LiveStreamScene>>,
+    bridge: Option<Res<ServerBridge>>,
+    mode: Option<Res<crate::AttachMode>>,
     #[cfg(feature = "voxel")] voxel: Option<Res<VoxelSimState>>,
 ) {
+    let attached = server_tools_active(mode.as_deref(), bridge.is_some());
     if over_ui.0 {
         marker.visible = false;
         marker.position = None;
+        attached_status.unavailable = attached.then_some(AttachedMarkerUnavailable::PointerOverUi);
+        return;
+    }
+
+    if attached {
+        match attached_cursor_terrain_hit(
+            &windows,
+            &cameras,
+            live.as_deref().map(|scene| &scene.chunk_voxels),
+        ) {
+            Ok(hit) => {
+                marker.position = Some(hit);
+                marker.visible = true;
+                attached_status.unavailable = None;
+            }
+            Err(reason) => {
+                marker.position = None;
+                marker.visible = false;
+                attached_status.unavailable = Some(reason);
+            }
+        }
         return;
     }
 
@@ -384,6 +515,7 @@ fn update_cursor_marker(
     );
     marker.position = hit;
     marker.visible = hit.is_some();
+    attached_status.unavailable = None;
 }
 
 fn cursor_terrain_hit(
@@ -391,17 +523,250 @@ fn cursor_terrain_hit(
     cameras: &Query<(&Camera, &GlobalTransform), (With<Camera3d>, Without<MinimapCamera>)>,
     #[cfg(feature = "voxel")] voxel: Option<&VoxelSimState>,
 ) -> Option<Vec3> {
+    let (origin, direction) = cursor_world_ray(windows, cameras)?;
+    #[cfg(feature = "voxel")]
+    if let Some(state) = voxel {
+        if !state.grid.cells.is_empty() {
+            return raycast_to_voxel(&state.grid, origin, direction);
+        }
+    }
+    raycast_to_terrain(origin, direction)
+}
+
+fn cursor_world_ray(
+    windows: &Query<&Window>,
+    cameras: &Query<(&Camera, &GlobalTransform), (With<Camera3d>, Without<MinimapCamera>)>,
+) -> Option<(Vec3, Vec3)> {
     let window = windows.single().ok()?;
     let cursor = window.cursor_position()?;
     let (camera, camera_transform) = cameras.single().ok()?;
     let ray = camera.viewport_to_world(camera_transform, cursor).ok()?;
-    #[cfg(feature = "voxel")]
-    if let Some(state) = voxel {
-        if !state.grid.cells.is_empty() {
-            return raycast_to_voxel(&state.grid, ray.origin, ray.direction.as_vec3());
+    Some((ray.origin, ray.direction.as_vec3()))
+}
+
+fn attached_cursor_terrain_hit(
+    windows: &Query<&Window>,
+    cameras: &Query<(&Camera, &GlobalTransform), (With<Camera3d>, Without<MinimapCamera>)>,
+    cache: Option<&ChunkVoxelCache>,
+) -> Result<Vec3, AttachedMarkerUnavailable> {
+    let (origin, direction) =
+        cursor_world_ray(windows, cameras).ok_or(AttachedMarkerUnavailable::InputUnavailable)?;
+    attached_cache_hit(cache, origin, direction)
+}
+
+fn attached_cache_hit(
+    cache: Option<&ChunkVoxelCache>,
+    origin: Vec3,
+    direction: Vec3,
+) -> Result<Vec3, AttachedMarkerUnavailable> {
+    let cache = cache.ok_or(AttachedMarkerUnavailable::CacheUnavailable)?;
+    let cached_chunks = cache.chunks().len();
+    if cached_chunks == 0 {
+        return Err(AttachedMarkerUnavailable::CacheEmpty);
+    }
+    // An attached client must never aim using a different, local world.
+    raycast_to_live_voxels(cache, origin, direction)
+        .ok_or(AttachedMarkerUnavailable::RayMiss { cached_chunks })
+}
+
+fn raycast_to_live_voxels(cache: &ChunkVoxelCache, origin: Vec3, direction: Vec3) -> Option<Vec3> {
+    let direction = direction.normalize_or_zero();
+    if !origin.is_finite() || !direction.is_finite() || direction == Vec3::ZERO {
+        return None;
+    }
+    let hit_distance = |centre: Vec3, half: f32| {
+        crate::live_pick::ray_aabb_hit_distance(
+            origin.to_array(),
+            direction.to_array(),
+            centre.to_array(),
+            [half; 3],
+        )
+    };
+    let mut closest: Option<f32> = None;
+    for (&id, voxels) in cache.chunks() {
+        let (cx, cy, cz) = crate::decode_chunk_id(civ_voxel::ChunkId(id));
+        let base = Vec3::new(cx as f32, cy as f32, cz as f32) * 16.0;
+        if hit_distance(base + Vec3::splat(8.0), 8.0).is_none() {
+            continue;
+        }
+        for (index, material) in voxels.iter().enumerate() {
+            if material.0 == 0 {
+                continue;
+            }
+            let cell = Vec3::new(
+                (index % 16) as f32,
+                ((index / 16) % 16) as f32,
+                (index / 256) as f32,
+            );
+            if let Some(distance) = hit_distance(base + cell + Vec3::splat(0.5), 0.5) {
+                closest = Some(closest.map_or(distance, |old| old.min(distance)));
+            }
         }
     }
-    raycast_to_terrain(ray.origin, ray.direction.as_vec3())
+    closest.map(|distance| origin + direction * distance)
+}
+
+fn terrain_stamp_params(position: Vec3, material: u16, radius: u8) -> serde_json::Value {
+    let scale = civ_voxel::FIXED_SCALE as f64;
+    serde_json::json!({
+        "x": (f64::from(position.x.floor()) * scale) as i64,
+        "y": (f64::from(position.y.floor()) * scale) as i64,
+        "z": (f64::from(position.z.floor()) * scale) as i64,
+        "op": "raise",
+        "material": material,
+        "radius": radius,
+        "role": "operator",
+    })
+}
+
+fn terrain_stamp_feedback(result: Result<serde_json::Value, String>) -> String {
+    match result {
+        Ok(value) if value.get("ok").and_then(|v| v.as_bool()) == Some(true) => {
+            match value
+                .get("writes")
+                .and_then(|v| v.as_u64())
+                .filter(|&n| n > 0)
+            {
+                Some(writes) => format!("Server applied terrain disk: {writes} voxel writes"),
+                None => "Terrain stamp failed: server returned no voxel write receipt".to_owned(),
+            }
+        }
+        Ok(_) => "Terrain stamp failed: invalid server acknowledgment".to_owned(),
+        Err(error) => format!("Terrain stamp failed: {error}"),
+    }
+}
+
+fn building_placement_params(
+    position: Vec3,
+    kind: BuildingSpawnKind,
+) -> Result<serde_json::Value, String> {
+    let half = WORLD_SIZE * 0.5;
+    if !position.is_finite() || position.x.abs() > half || position.z.abs() > half {
+        return Err("placement is outside the supported map bounds".to_owned());
+    }
+    // The existing spawn API takes normalized horizontal map coordinates.
+    // Its `y` is map Z, not terrain elevation; the live renderer seats the building.
+    Ok(serde_json::json!({
+        "kind": kind.rpc_kind(),
+        "x": (position.x + half) / WORLD_SIZE,
+        "y": (position.z + half) / WORLD_SIZE,
+        "role": "operator",
+    }))
+}
+
+fn request_building_placement(
+    position: Vec3,
+    kind: BuildingSpawnKind,
+    live: Option<&LiveBridge>,
+    pending: &mut PendingBuildingPlacements,
+) {
+    let params = match building_placement_params(position, kind) {
+        Ok(params) => params,
+        Err(error) => {
+            pending
+                .messages
+                .push(format!("{} placement failed: {error}", kind.label()));
+            return;
+        }
+    };
+    let Some(live) = live else {
+        pending.messages.push(format!(
+            "{} placement failed: live command connection unavailable",
+            kind.label()
+        ));
+        return;
+    };
+    pending.tickets.push((
+        kind,
+        live.client.request_rpc("sim.spawn_entity", params),
+        std::time::Instant::now(),
+    ));
+    pending
+        .messages
+        .push(format!("{} placement sent; awaiting server.", kind.label()));
+}
+
+fn building_placement_feedback(
+    kind: BuildingSpawnKind,
+    result: Result<serde_json::Value, String>,
+) -> String {
+    match result {
+        Ok(value)
+            if value["ok"].as_bool() == Some(true)
+                && value["accepted"].as_bool() == Some(true)
+                && value["kind"].as_str() == Some(kind.rpc_kind())
+                && value["entity_id"].as_u64().is_some() =>
+        {
+            format!(
+                "Server created {} (entity {}); awaiting a world update.",
+                kind.label(),
+                value["entity_id"]
+            )
+        }
+        Ok(_) => format!(
+            "{} placement failed: invalid server acknowledgment",
+            kind.label()
+        ),
+        Err(error) => format!("{} placement failed: {error}", kind.label()),
+    }
+}
+
+#[cfg(feature = "egui")]
+fn report_building_placements(
+    mut pending: ResMut<PendingBuildingPlacements>,
+    mut feed: ResMut<crate::event_feed::EventFeed>,
+) {
+    for message in pending.messages.drain(..) {
+        feed.push(crate::event_feed::EventKind::System, message);
+    }
+    pending.tickets.retain(|(kind, ticket, sent_at)| {
+        if let Some(result) = ticket.try_recv() {
+            feed.push(crate::event_feed::EventKind::System, building_placement_feedback(*kind, result));
+            false
+        } else if sent_at.elapsed() >= std::time::Duration::from_secs(10) {
+            feed.push(crate::event_feed::EventKind::System, format!("{} placement timed out; the result is unknown. Check the world before retrying.", kind.label()));
+            false
+        } else {
+            true
+        }
+    });
+}
+
+#[cfg(feature = "egui")]
+fn report_attached_marker_diagnostics(
+    mut diagnostic: ResMut<AttachedMarkerDiagnostic>,
+    mut feed: ResMut<crate::event_feed::EventFeed>,
+) {
+    for message in diagnostic.messages.drain(..) {
+        feed.push(crate::event_feed::EventKind::System, message);
+    }
+}
+
+#[cfg(feature = "egui")]
+fn report_terrain_stamps(
+    mut pending: ResMut<PendingTerrainStamps>,
+    mut feed: ResMut<crate::event_feed::EventFeed>,
+) {
+    for error in pending.errors.drain(..) {
+        feed.push(crate::event_feed::EventKind::System, error);
+    }
+    pending.tickets.retain(|(ticket, sent_at)| {
+        if let Some(result) = ticket.try_recv() {
+            feed.push(
+                crate::event_feed::EventKind::System,
+                terrain_stamp_feedback(result),
+            );
+            false
+        } else if sent_at.elapsed() >= std::time::Duration::from_secs(10) {
+            feed.push(
+                crate::event_feed::EventKind::System,
+                "Terrain stamp timed out; the result is unknown. Check the world before retrying.",
+            );
+            false
+        } else {
+            true
+        }
+    });
 }
 
 #[cfg(feature = "voxel")]
@@ -449,6 +814,10 @@ fn handle_spawn_tool_clicks(
     mut select_entity: MessageWriter<SelectEntityRequest>,
     mut destroy_entity: MessageWriter<DestroyEntityRequest>,
     bridge: Option<Res<ServerBridge>>,
+    live: Option<Res<LiveBridge>>,
+    mut pending: PendingToolRequests,
+    mode: Option<Res<crate::AttachMode>>,
+    #[cfg(feature = "egui")] brush: Option<Res<crate::material_brush_ui::SelectedMaterial>>,
 ) {
     for event in mouse_wheel.read() {
         if active.tool != SpawnTool::SpawnBuilding {
@@ -473,6 +842,24 @@ fn handle_spawn_tool_clicks(
         return;
     }
     let Some(position) = marker.position else {
+        #[cfg(feature = "egui")]
+        if is_server_authoring_tool(mode.as_deref(), active.tool)
+            && pending
+                .marker_diagnostic
+                .last_reported
+                .is_none_or(|reported| reported.elapsed() >= ATTACHED_MARKER_DIAGNOSTIC_COOLDOWN)
+        {
+            pending.marker_diagnostic.last_reported = Some(std::time::Instant::now());
+            let reason = pending
+                .marker_status
+                .unavailable
+                .map(AttachedMarkerUnavailable::summary)
+                .unwrap_or_else(|| "marker state has not been sampled yet".to_owned());
+            pending.marker_diagnostic.messages.push(format!(
+                "{:?} not sent: attached terrain marker is unavailable ({reason}); move over streamed terrain and retry.",
+                active.tool,
+            ));
+        }
         return;
     };
 
@@ -484,38 +871,44 @@ fn handle_spawn_tool_clicks(
             spawn_civilian.write(SpawnCivilianRequest { position });
         }
         SpawnTool::SpawnBuilding => {
-            // Server: send building placement via sim.command
-            if let Some(ref bridge) = bridge {
-                bridge.send_rpc(
-                    "sim.command",
-                    serde_json::json!({
-                        "action": "spawn",
-                        "kind": "building",
-                        "building": building_kind.label(),
-                        "x": position.x,
-                        "y": position.y,
-                        "z": position.z,
-                    }),
+            if server_tools_active(mode.as_deref(), bridge.is_some() || live.is_some()) {
+                request_building_placement(
+                    position,
+                    *building_kind,
+                    live.as_deref(),
+                    &mut pending.buildings,
                 );
+            } else {
+                spawn_building.write(SpawnBuildingRequest {
+                    position,
+                    kind: *building_kind,
+                });
             }
-            spawn_building.write(SpawnBuildingRequest {
-                position,
-                kind: *building_kind,
-            });
         }
         SpawnTool::Terraform => {
-            // Terraform: raise terrain at clicked point
-            if let Some(ref bridge) = bridge {
-                bridge.send_rpc(
-                    "sim.command",
-                    serde_json::json!({
-                        "action": "terraform",
-                        "kind": "raise",
-                        "x": position.x,
-                        "y": position.y,
-                        "z": position.z,
-                    }),
-                );
+            // The server contract is a one-layer disk, not a
+            // spherical material brush. Its reply, not the click, confirms it.
+            if server_tools_active(mode.as_deref(), bridge.is_some()) {
+                let mut material = civ_voxel::default_material_for_op("raise").0;
+                let mut radius = 3;
+                #[cfg(feature = "egui")]
+                if let Some(brush) = brush.as_deref() {
+                    material = brush.material.0;
+                    radius = brush.clamped_size().round() as u8;
+                }
+                if let Some(ref live) = live {
+                    pending.terrain.tickets.push((
+                        live.client.request_rpc(
+                            "sim.terraform_extent",
+                            terrain_stamp_params(position, material, radius),
+                        ),
+                        std::time::Instant::now(),
+                    ));
+                } else {
+                    pending.terrain.errors.push(
+                        "Terrain stamp failed: live command connection unavailable".to_owned(),
+                    );
+                }
             }
         }
         SpawnTool::PaintMaterial => {
@@ -558,31 +951,25 @@ fn handle_spawn_tool_clicks(
         | SpawnTool::Workshop
         | SpawnTool::Market
         | SpawnTool::Wall => {
-            if let Some(ref bridge) = bridge {
-                let kind = match active.tool {
-                    SpawnTool::House => "House",
-                    SpawnTool::Farm => "Farm",
-                    SpawnTool::Workshop => "Workshop",
-                    SpawnTool::Market => "Market",
-                    SpawnTool::Wall => "Wall",
-                    _ => unreachable!(),
-                };
-                bridge.send_rpc(
-                    "sim.command",
-                    serde_json::json!({
-                        "action": "spawn",
-                        "kind": "building",
-                        "building": kind,
-                        "x": position.x,
-                        "y": position.y,
-                        "z": position.z,
-                    }),
-                );
+            if server_tools_active(mode.as_deref(), bridge.is_some() || live.is_some()) {
+                if active.tool == SpawnTool::Market {
+                    request_building_placement(
+                        position,
+                        BuildingSpawnKind::Market,
+                        live.as_deref(),
+                        &mut pending.buildings,
+                    );
+                } else {
+                    pending.buildings.messages.push(
+                        "This structure is not supported by the live building API.".to_owned(),
+                    );
+                }
+            } else {
+                spawn_building.write(SpawnBuildingRequest {
+                    position,
+                    kind: BuildingSpawnKind::CityCenter, // Existing standalone structure behavior.
+                });
             }
-            spawn_building.write(SpawnBuildingRequest {
-                position,
-                kind: BuildingSpawnKind::CityCenter, // generic structure
-            });
         }
         // Road tools start a drag-to-draw stroke.
         SpawnTool::Road | SpawnTool::Trail | SpawnTool::Highway | SpawnTool::Bridge => {
@@ -738,6 +1125,446 @@ fn nearest_entity(position: Vec3, entities: &Query<(Entity, &GlobalTransform)>) 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn building_placement_uses_existing_palette_and_horizontal_normalized_coordinates() {
+        for (kind, alias) in [
+            (BuildingSpawnKind::CityCenter, "airport"),
+            (BuildingSpawnKind::Market, "port"),
+            (BuildingSpawnKind::Barracks, "hangar"),
+        ] {
+            let params = building_placement_params(Vec3::new(-64.5, 47.0, 32.25), kind).unwrap();
+            assert_eq!(params["kind"], alias);
+            assert_eq!(params["x"], (128.0 - 64.5) / 256.0);
+            assert_eq!(params["y"], (128.0 + 32.25) / 256.0);
+            assert!(params.get("z").is_none());
+            assert_eq!(params["role"], "operator");
+        }
+        for position in [
+            Vec3::new(-128.1, 0.0, 0.0),
+            Vec3::new(0.0, 0.0, 128.1),
+            Vec3::splat(f32::NAN),
+        ] {
+            assert!(building_placement_params(position, BuildingSpawnKind::CityCenter).is_err());
+        }
+    }
+
+    #[test]
+    fn building_placement_feedback_requires_matching_created_entity_receipt() {
+        for value in [
+            serde_json::json!({}),
+            serde_json::json!({"accepted":true,"kind":"airport"}),
+            serde_json::json!({"accepted":true,"ok":true,"kind":"airport"}),
+            serde_json::json!({"accepted":true,"ok":true,"kind":"port","entity_id":1}),
+        ] {
+            assert!(
+                building_placement_feedback(BuildingSpawnKind::CityCenter, Ok(value))
+                    .contains("failed")
+            );
+        }
+        let success = building_placement_feedback(
+            BuildingSpawnKind::CityCenter,
+            Ok(serde_json::json!({"accepted":true,"ok":true,"kind":"airport","entity_id":0})),
+        );
+        assert!(success.contains("Server created City Center"));
+        assert!(success.contains("awaiting a world update"));
+        assert!(!success.contains("resume if paused"));
+        assert!(!success.contains("airport"));
+        assert!(building_placement_feedback(
+            BuildingSpawnKind::CityCenter,
+            Err("Forbidden: operator required".into())
+        )
+        .contains("Forbidden"));
+    }
+
+    #[cfg(feature = "egui")]
+    fn building_test_app(
+        mode: crate::AttachMode,
+    ) -> (
+        App,
+        crossbeam_channel::Receiver<String>,
+        crossbeam_channel::Receiver<String>,
+    ) {
+        let (client, requests) = crate::ws_client::WsClient::test_rpc_client();
+        let (legacy_tx, legacy_rx) = crossbeam_channel::unbounded();
+        let mut app = App::new();
+        app.insert_resource(mode)
+            .insert_resource(LiveBridge { client })
+            .insert_resource(ServerBridge::new(legacy_tx))
+            .init_resource::<ButtonInput<MouseButton>>()
+            .init_resource::<ButtonInput<KeyCode>>()
+            .insert_resource(ActiveTool {
+                tool: SpawnTool::SpawnBuilding,
+            })
+            .insert_resource(CursorMarker {
+                position: Some(Vec3::new(-64.5, 47.0, 32.25)),
+                visible: true,
+            })
+            .init_resource::<BuildingSpawnKind>()
+            .init_resource::<PendingTerrainStamps>()
+            .init_resource::<PendingBuildingPlacements>()
+            .init_resource::<AttachedMarkerDiagnostic>()
+            .init_resource::<AttachedMarkerStatus>()
+            .init_resource::<crate::event_feed::EventFeed>()
+            .add_message::<MouseWheel>()
+            .add_message::<SpawnCivilianRequest>()
+            .add_message::<SpawnBuildingRequest>()
+            .add_message::<SelectEntityRequest>()
+            .add_message::<DestroyEntityRequest>()
+            .add_systems(
+                Update,
+                (
+                    handle_spawn_tool_clicks,
+                    report_attached_marker_diagnostics,
+                    report_building_placements,
+                )
+                    .chain(),
+            );
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .press(MouseButton::Left);
+        (app, requests, legacy_rx)
+    }
+
+    #[cfg(feature = "egui")]
+    #[test]
+    fn building_click_waits_for_correlated_receipt_without_local_mirror() {
+        let (mut app, requests, legacy) = building_test_app(crate::AttachMode::Server);
+        app.update();
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .clear();
+        let request: serde_json::Value =
+            serde_json::from_str(&requests.try_recv().unwrap()).unwrap();
+        assert_eq!(request["method"], "sim.spawn_entity");
+        assert_eq!(request["params"]["kind"], "airport");
+        assert!(legacy.try_recv().is_err());
+        assert_eq!(
+            app.world()
+                .resource::<Messages<SpawnBuildingRequest>>()
+                .len(),
+            0
+        );
+        assert!(!app
+            .world()
+            .resource::<crate::event_feed::EventFeed>()
+            .events
+            .iter()
+            .any(|event| event.text.contains("Server created")));
+        let id = request["id"].as_u64().unwrap();
+        app.world()
+            .resource::<LiveBridge>()
+            .client
+            .test_complete_rpc(
+                id + 100,
+                Ok(serde_json::json!({"accepted":true,"ok":true,"kind":"airport","entity_id":7})),
+            );
+        app.update();
+        assert_eq!(
+            app.world()
+                .resource::<PendingBuildingPlacements>()
+                .tickets
+                .len(),
+            1
+        );
+        app.world()
+            .resource::<LiveBridge>()
+            .client
+            .test_complete_rpc(
+                id,
+                Ok(serde_json::json!({"accepted":true,"ok":true,"kind":"airport","entity_id":7})),
+            );
+        app.update();
+        assert!(app
+            .world()
+            .resource::<PendingBuildingPlacements>()
+            .tickets
+            .is_empty());
+        assert!(app
+            .world()
+            .resource::<crate::event_feed::EventFeed>()
+            .events
+            .iter()
+            .any(|event| event.text.contains("Server created City Center")));
+        assert!(requests.try_recv().is_err());
+    }
+
+    #[cfg(feature = "egui")]
+    #[test]
+    fn server_authoring_click_with_no_marker_reports_once_without_sending() {
+        let (mut app, requests, legacy) = building_test_app(crate::AttachMode::Server);
+        app.world_mut().resource_mut::<CursorMarker>().position = None;
+        app.world_mut()
+            .resource_mut::<AttachedMarkerStatus>()
+            .unavailable = Some(AttachedMarkerUnavailable::CacheEmpty);
+
+        app.update();
+        assert!(requests.try_recv().is_err());
+        assert!(legacy.try_recv().is_err());
+        let feed = app.world().resource::<crate::event_feed::EventFeed>();
+        assert_eq!(feed.events.len(), 1);
+        assert!(feed
+            .events
+            .front()
+            .unwrap()
+            .text
+            .contains("SpawnBuilding not sent"));
+        assert!(feed
+            .events
+            .front()
+            .unwrap()
+            .text
+            .contains("streamed terrain cache is empty (0 chunks)"));
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .clear();
+        app.update();
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .press(MouseButton::Left);
+        app.update();
+        assert_eq!(
+            app.world()
+                .resource::<crate::event_feed::EventFeed>()
+                .events
+                .len(),
+            1,
+            "the two-second cooldown must prevent repeated click spam"
+        );
+    }
+
+    #[cfg(feature = "egui")]
+    #[test]
+    fn building_click_stays_local_in_standalone_even_with_live_bridge() {
+        let (mut app, requests, legacy) = building_test_app(crate::AttachMode::Standalone);
+        app.update();
+        assert!(requests.try_recv().is_err());
+        assert!(legacy.try_recv().is_err());
+        let messages: Vec<_> = app
+            .world_mut()
+            .resource_mut::<Messages<SpawnBuildingRequest>>()
+            .drain()
+            .collect();
+        assert_eq!(messages.len(), 1);
+        assert_eq!(messages[0].kind, BuildingSpawnKind::CityCenter);
+        assert_eq!(messages[0].position, Vec3::new(-64.5, 47.0, 32.25));
+    }
+
+    #[cfg(feature = "egui")]
+    #[test]
+    fn building_click_reports_timeout_as_unknown_without_retry() {
+        let (mut app, requests, _) = building_test_app(crate::AttachMode::Server);
+        app.update();
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .clear();
+        requests.try_recv().unwrap();
+        app.world_mut()
+            .resource_mut::<PendingBuildingPlacements>()
+            .tickets[0]
+            .2 = std::time::Instant::now() - std::time::Duration::from_secs(11);
+        app.update();
+        assert!(app
+            .world()
+            .resource::<PendingBuildingPlacements>()
+            .tickets
+            .is_empty());
+        assert!(requests.try_recv().is_err());
+        assert!(app
+            .world()
+            .resource::<crate::event_feed::EventFeed>()
+            .events
+            .iter()
+            .any(|event| event.text.contains("result is unknown")));
+    }
+
+    #[cfg(feature = "egui")]
+    #[test]
+    fn building_click_reports_missing_connection_and_server_rejection() {
+        let (mut app, requests, legacy) = building_test_app(crate::AttachMode::Server);
+        app.world_mut().remove_resource::<LiveBridge>();
+        app.update();
+        assert!(requests.try_recv().is_err());
+        assert!(legacy.try_recv().is_err());
+        assert_eq!(
+            app.world()
+                .resource::<Messages<SpawnBuildingRequest>>()
+                .len(),
+            0
+        );
+        assert!(app
+            .world()
+            .resource::<crate::event_feed::EventFeed>()
+            .events
+            .iter()
+            .any(|event| event.text.contains("connection unavailable")));
+
+        let (mut app, requests, _) = building_test_app(crate::AttachMode::Server);
+        app.update();
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .clear();
+        let request: serde_json::Value =
+            serde_json::from_str(&requests.try_recv().unwrap()).unwrap();
+        app.world()
+            .resource::<LiveBridge>()
+            .client
+            .test_complete_rpc(
+                request["id"].as_u64().unwrap(),
+                Err("Forbidden: operator required"),
+            );
+        app.update();
+        assert!(app
+            .world()
+            .resource::<PendingBuildingPlacements>()
+            .tickets
+            .is_empty());
+        assert!(app
+            .world()
+            .resource::<crate::event_feed::EventFeed>()
+            .events
+            .iter()
+            .any(|event| event
+                .text
+                .contains("City Center placement failed: Forbidden")));
+        assert!(!app
+            .world()
+            .resource::<crate::event_feed::EventFeed>()
+            .events
+            .iter()
+            .any(|event| event.text.contains("Server created")));
+    }
+
+    #[test]
+    fn terrain_stamp_serializes_fixed_world_coordinates_and_selected_brush() {
+        let params = terrain_stamp_params(Vec3::new(-0.1, 7.0, 16.9), 7, 5);
+        assert_eq!(params["x"], -civ_voxel::FIXED_SCALE);
+        assert_eq!(params["y"], 7 * civ_voxel::FIXED_SCALE);
+        assert_eq!(params["z"], 16 * civ_voxel::FIXED_SCALE);
+        assert_eq!(params["material"], 7);
+        assert_eq!(params["radius"], 5);
+        assert_eq!(params["op"], "raise");
+        assert_eq!(params["role"], "operator");
+    }
+
+    #[test]
+    fn standalone_tools_remain_local_even_with_disconnected_bridge() {
+        assert!(!server_tools_active(
+            Some(&crate::AttachMode::Standalone),
+            true
+        ));
+        assert!(server_tools_active(Some(&crate::AttachMode::Server), false));
+        assert!(server_tools_active(None, true));
+        assert!(!server_tools_active(None, false));
+    }
+
+    #[test]
+    fn marker_diagnostic_is_limited_to_server_authoring_tools() {
+        assert!(is_server_authoring_tool(
+            Some(&crate::AttachMode::Server),
+            SpawnTool::Terraform
+        ));
+        assert!(is_server_authoring_tool(
+            Some(&crate::AttachMode::Server),
+            SpawnTool::SpawnBuilding
+        ));
+        assert!(!is_server_authoring_tool(
+            Some(&crate::AttachMode::Server),
+            SpawnTool::Select
+        ));
+        assert!(!is_server_authoring_tool(
+            Some(&crate::AttachMode::Standalone),
+            SpawnTool::Terraform
+        ));
+        assert!(!is_server_authoring_tool(None, SpawnTool::Terraform));
+    }
+
+    #[test]
+    fn live_terrain_raycast_uses_non_air_payload_and_negative_chunk_coordinates() {
+        let mut cache = ChunkVoxelCache::new();
+        let mut voxels = vec![civ_voxel::MaterialId(0); 4096];
+        voxels[15 + 2 * 16 + 4 * 256] = civ_voxel::MaterialId(1);
+        cache.insert(crate::encode_chunk_id(-1, 0, 0), voxels);
+        let hit = raycast_to_live_voxels(&cache, Vec3::new(-0.5, 20.0, 4.5), -Vec3::Y)
+            .expect("streamed solid voxel");
+        assert_eq!(hit, Vec3::new(-0.5, 3.0, 4.5));
+        assert!(raycast_to_live_voxels(&cache, Vec3::new(-1.5, 20.0, 4.5), -Vec3::Y).is_none());
+        assert!(raycast_to_live_voxels(&ChunkVoxelCache::new(), Vec3::Y, -Vec3::Y).is_none());
+    }
+
+    #[test]
+    fn authoritative_live_cache_payload_produces_attached_raycast_hit() {
+        let mut scene = LiveStreamScene::default();
+        let mut voxels = vec![civ_voxel::MaterialId(0); 16 * 16 * 16];
+        voxels[4 + 3 * 16 + 5 * 256] = civ_voxel::MaterialId(1);
+        scene
+            .chunk_voxels
+            .insert(crate::encode_chunk_id(0, 0, 0), voxels);
+
+        let hit = attached_cache_hit(
+            Some(&scene.chunk_voxels),
+            Vec3::new(4.5, 20.0, 5.5),
+            -Vec3::Y,
+        )
+        .expect("authoritative 4096-cell payload must be targetable");
+        assert_eq!(scene.chunk_voxels.chunks().len(), 1);
+        assert_eq!(hit, Vec3::new(4.5, 4.0, 5.5));
+    }
+
+    #[test]
+    fn attached_marker_diagnostic_classifies_input_cache_and_ray_failures() {
+        assert_eq!(
+            AttachedMarkerUnavailable::PointerOverUi.summary(),
+            "pointer is captured by the UI"
+        );
+        assert_eq!(
+            AttachedMarkerUnavailable::InputUnavailable.summary(),
+            "window, cursor, or camera input is unavailable"
+        );
+        assert_eq!(
+            attached_cache_hit(None, Vec3::Y, -Vec3::Y),
+            Err(AttachedMarkerUnavailable::CacheUnavailable)
+        );
+        assert_eq!(
+            attached_cache_hit(Some(&ChunkVoxelCache::new()), Vec3::Y, -Vec3::Y),
+            Err(AttachedMarkerUnavailable::CacheEmpty)
+        );
+
+        let mut cache = ChunkVoxelCache::new();
+        cache.insert(
+            crate::encode_chunk_id(0, 0, 0),
+            vec![civ_voxel::MaterialId(0); 16 * 16 * 16],
+        );
+        let miss = attached_cache_hit(Some(&cache), Vec3::Y, -Vec3::Y);
+        assert_eq!(
+            miss,
+            Err(AttachedMarkerUnavailable::RayMiss { cached_chunks: 1 })
+        );
+        assert_eq!(
+            (AttachedMarkerUnavailable::RayMiss { cached_chunks: 1 }).summary(),
+            "ray missed streamed terrain (1 cached chunks)"
+        );
+    }
+
+    #[test]
+    fn terrain_stamp_only_reports_success_for_real_write_receipt() {
+        assert_eq!(
+            terrain_stamp_feedback(Ok(serde_json::json!({"ok":true,"writes":29}))),
+            "Server applied terrain disk: 29 voxel writes"
+        );
+        for value in [
+            serde_json::json!({"ok":true}),
+            serde_json::json!({"ok":true,"writes":0}),
+            serde_json::json!({}),
+        ] {
+            assert!(terrain_stamp_feedback(Ok(value)).starts_with("Terrain stamp failed:"));
+        }
+        assert!(
+            terrain_stamp_feedback(Err("Forbidden: operator role required".to_owned()))
+                .contains("Forbidden: operator role required")
+        );
+    }
 
     #[test]
     fn active_tool_defaults_to_select() {

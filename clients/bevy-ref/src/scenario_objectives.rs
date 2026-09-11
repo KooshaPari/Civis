@@ -33,7 +33,11 @@ pub struct ScenarioObjectivesPlugin;
 
 impl Plugin for ScenarioObjectivesPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
+        // This plugin reads the progress resource directly.  Both the live
+        // overlay and gameplay HUD also initialise it, but standalone only
+        // installs this panel, so make the dependency explicit here.
+        app.init_resource::<OutcomeProgressHud>()
+            .add_systems(
             Update,
             request_objective_progress.run_if(in_playing_state),
         )
@@ -132,4 +136,16 @@ fn objective_row(ui: &mut egui::Ui, label: &str, current: u64, target: u64) {
             .text(format!("{current} / {target}")),
     );
     ui.add_space(2.0);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn plugin_initializes_its_progress_resource() {
+        let mut app = App::new();
+        app.add_plugins(ScenarioObjectivesPlugin);
+        assert!(app.world().contains_resource::<OutcomeProgressHud>());
+    }
 }

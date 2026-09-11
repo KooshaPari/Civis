@@ -2,6 +2,7 @@
 
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
+use bevy::render::view::NoIndirectDrawing;
 #[cfg(feature = "models")]
 use civ_bevy_ref::animation::ActorAnimationPlugin;
 #[cfg(feature = "models")]
@@ -21,6 +22,7 @@ use civ_bevy_ref::{
     gpu_features::GpuFeaturesPlugin,
     live_attach::LiveAttachPlugin,
     native_backend::native_render_plugin,
+    native_window_lifecycle::NativeWindowLifecyclePlugin,
     post_fx::PostFxSettings,
     resolve_attach_mode_from_env,
     terrain::{terrain_mesh, WORLD_SIZE},
@@ -79,6 +81,7 @@ fn main() {
                 .set(native_render_plugin()),
         )
         .add_plugins(GpuFeaturesPlugin)
+        .add_plugins(NativeWindowLifecyclePlugin)
         // Frame diagnostics: emit `FrameTime` + `SystemInformation` once per
         // second at INFO so the 90s frame-budget profile has a measurable
         // signal. See `docs/audits/frame-budget-baseline-2026-06-10.md`.
@@ -198,14 +201,6 @@ fn main() {
             civ_bevy_ref::AgentNeedsPlugin,
         ));
     }
-
-    // Ambient + SFX audio (feature-gated).
-    // SettingsPlugin / SolariGi / GltfModels / ActorAnimation are registered once above.
-    #[cfg(feature = "audio")]
-    app.add_plugins(civ_bevy_ref::audio::CivisAudioPlugin);
-    // GPU particle VFX for events (feature-gated).
-    #[cfg(feature = "vfx")]
-    app.add_plugins(civ_bevy_ref::vfx::VfxPlugin);
 
     // P-VM-3: real volumetric voxel material world (replaces the heightmap).
     // `voxel_stream` takes precedence: when enabled, the camera-driven streaming
@@ -381,6 +376,10 @@ fn in_sandbox_attach_mode(mode: Res<AttachMode>) -> bool {
 fn setup_camera(mut commands: Commands) {
     commands.spawn((
         Camera3d::default(),
+        // Bevy 0.18's DX12 GPU-culling multi-draw path asserts when this
+        // mixed sandbox scene is first populated. Keep normal rendering and
+        // preprocessing, but issue direct draws for the standalone camera.
+        NoIndirectDrawing,
         Transform::from_xyz(0.0, 90.0, 150.0).looking_at(Vec3::new(0.0, 12.0, 0.0), Vec3::Y),
     ));
 }
@@ -397,6 +396,7 @@ fn setup_sandbox_terrain(
     let biome = civ_bevy_ref::terrain::pbr_biome_at_height(centre_h);
     commands.spawn((
         Mesh3d(meshes.add(terrain)),
+        civ_bevy_ref::menus::LocalTerrainReady,
         MeshMaterial3d(biome_materials.handle(biome).clone()),
         Transform::from_xyz(0.0, 0.0, 0.0),
     ));
@@ -413,6 +413,7 @@ fn setup_sandbox_terrain(
     let terrain = terrain_mesh();
     commands.spawn((
         Mesh3d(meshes.add(terrain)),
+        civ_bevy_ref::menus::LocalTerrainReady,
         MeshMaterial3d(materials.add(StandardMaterial {
             base_color: Color::srgb(0.45, 0.62, 0.38),
             perceptual_roughness: 0.95,

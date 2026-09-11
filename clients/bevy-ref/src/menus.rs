@@ -3,11 +3,11 @@
 //! Menus and overlay plugin for the Civis reference client (FR-CIV-BEVY-024 / item 49).
 //! Settings GPU readout: FR-CIV-BEVY-036 / item 61.
 
+use crate::event_feed::{EventFeed, EventKind};
 use crate::faction_hud::PlayerFactionId;
 use crate::game_ui::GameSpeed;
 use crate::gpu_features::GpuCapabilities;
 use crate::live_attach::LiveAttachBridge;
-use crate::live_stream::ServerBridge;
 use crate::live_stream::{clear_live_stream_scene_in_world, LiveStreamScene};
 use crate::outcome_overlay::{
     begin_player_session, end_player_session, outcome_modal_visible, OutcomeEscapeBlock,
@@ -20,6 +20,7 @@ use bevy::app::AppExit;
 use bevy::asset::LoadState;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
+use std::time::{Duration, Instant};
 
 const WORLDGEN_PRESETS: [&str; 4] = [
     "single-race-ardani",
@@ -28,7 +29,7 @@ const WORLDGEN_PRESETS: [&str; 4] = [
     "lush-frontier",
 ];
 const WORLDGEN_DEFAULT_SEED: u64 = 0xC1F1_5EED_D3AD_BEEF;
-const WORLDGEN_BOOT_SECONDS: f32 = 2.0;
+const WORLDGEN_TIMEOUT_SECONDS: f32 = 30.0;
 
 const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
 /// Opaque enough to keep pause chrome readable over bright world / title art.
@@ -62,6 +63,8 @@ pub enum MainMenuCommand {
     NewWorld,
     /// Confirm world setup and start generation / live attach.
     ConfirmWorldSetup,
+    /// Retry the failed new-world or save-load operation.
+    RetryWorldLoad,
     /// Abort world setup back to the title screen.
     CancelWorldSetup,
     Continue,
@@ -100,6 +103,121 @@ pub enum GameUiMode {
     Playing,
     /// Pause overlay is shown; in-process sim ticks halt.
     Paused,
+}
+
+const LIVE_SPEED_REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// One live speed request retained until a terminal server response arrives.
+/// This prevents the local shell from claiming an unacknowledged pause/resume.
+#[derive(Resource, Default)]
+pub struct PendingSimSpeed {
+    request: Option<PendingSimSpeedRequest>,
+}
+
+struct PendingSimSpeedRequest {
+    ticket: crate::ws_client::RpcTicket,
+    multiplier: u32,
+    shell_mode: Option<GameUiMode>,
+    sent_at: Instant,
+}
+
+/// Queue a server-authoritative speed change. A second request waits for the
+/// first request's terminal reply rather than overwriting its ticket.
+pub fn request_live_speed(
+    pending: &mut PendingSimSpeed,
+    bridge: Option<&LiveAttachBridge>,
+    multiplier: u32,
+    shell_mode: Option<GameUiMode>,
+) -> bool {
+    let Some(bridge) = bridge else {
+        return false;
+    };
+    if pending.request.is_some() {
+        return false;
+    }
+    pending.request = Some(PendingSimSpeedRequest {
+        ticket: bridge
+            .client
+            .request_rpc("sim.set_speed", serde_json::json!({ "multiplier": multiplier })),
+        multiplier,
+        shell_mode,
+        sent_at: Instant::now(),
+    });
+    true
+}
+
+/// Map standalone-only 5x/10x values to the server's supported 4x/8x values.
+fn server_speed_multiplier(speed: f32) -> u32 {
+    match speed.round() as u32 {
+        1 | 2 | 4 | 8 => speed.round() as u32,
+        5 => 4,
+        10 => 8,
+        _ => 1,
+    }
+}
+
+fn accepted_speed_multiplier(
+    result: Result<serde_json::Value, String>,
+    requested: u32,
+) -> Result<u32, String> {
+    let result = result?;
+    if result.get("accepted").and_then(serde_json::Value::as_bool) != Some(true) {
+        return Err("The server did not accept the speed change.".to_owned());
+    }
+    let multiplier = result
+        .get("multiplier")
+        .and_then(serde_json::Value::as_u64)
+        .and_then(|value| u32::try_from(value).ok())
+        .ok_or_else(|| "The server reply did not include a valid speed multiplier.".to_owned())?;
+    if multiplier != requested {
+        return Err(format!(
+            "The server acknowledged speed {multiplier}x, not the requested {requested}x."
+        ));
+    }
+    Ok(multiplier)
+}
+
+fn reconcile_live_speed_request(
+    mut pending: ResMut<PendingSimSpeed>,
+    mut mode: ResMut<GameUiMode>,
+    mut speed: ResMut<GameSpeed>,
+    mut feed: Option<ResMut<EventFeed>>,
+) {
+    let completed = pending.request.as_ref().and_then(|request| {
+        request
+            .ticket
+            .try_recv()
+            .map(|reply| (reply, false))
+            .or_else(|| {
+                (request.sent_at.elapsed() >= LIVE_SPEED_REQUEST_TIMEOUT).then_some((
+                    Err("The server did not reply; simulation speed is unknown.".to_owned()),
+                    true,
+                ))
+            })
+    });
+    let Some((reply, timed_out)) = completed else {
+        return;
+    };
+    let request = pending.request.take().expect("pending speed request exists");
+    match accepted_speed_multiplier(reply, request.multiplier) {
+        Ok(multiplier) => {
+            speed.multiplier = multiplier as f32;
+            speed.remember_non_zero();
+            if let Some(shell_mode) = request.shell_mode {
+                *mode = shell_mode;
+            }
+        }
+        Err(error) => {
+            if let Some(feed) = feed.as_deref_mut() {
+                let prefix = if timed_out {
+                    "Simulation speed request timed out"
+                } else {
+                    "Simulation speed request failed"
+                };
+                feed.push(EventKind::System, format!("{prefix}: {error}"));
+            }
+        }
+    }
 }
 
 /// Timed era-advancement banner shown at the top of the viewport.
@@ -158,7 +276,16 @@ pub struct WorldGenBoot {
     /// Whether the previous menu command queued a scene clear that must apply
     /// before an existing scene can satisfy the readiness check.
     pub scene_clear_pending: bool,
+    /// A visible terminal failure; elapsed time never implies a ready world.
+    pub error: Option<String>,
+    pending: Option<crate::ws_client::RpcTicket>,
+    generation: Option<u64>,
+    retry_action: MainMenuCommand,
 }
+
+/// Marks the supported in-process heightmap once its mesh has been spawned.
+#[derive(Component, Debug)]
+pub struct LocalTerrainReady;
 
 /// Rasterised shell artwork (PNG only; vector sources are documented in PIPELINE.md).
 #[derive(Resource, Default)]
@@ -182,6 +309,7 @@ impl Plugin for MenusPlugin {
     fn build(&self, app: &mut App) {
         app.init_state::<AppState>()
             .init_resource::<GameUiMode>()
+            .init_resource::<PendingSimSpeed>()
             .init_resource::<EraBanner>()
             .init_resource::<SettingsOpen>()
             .init_resource::<WorldSetupParams>()
@@ -193,7 +321,10 @@ impl Plugin for MenusPlugin {
             .init_resource::<OutcomeOverlayState>()
             .init_resource::<MainMenuTitleAssets>()
             .add_systems(Startup, load_main_menu_title_assets)
-            .add_systems(Update, (toggle_pause, tick_era_banner))
+            .add_systems(
+                Update,
+                (toggle_pause, reconcile_live_speed_request, tick_era_banner).chain(),
+            )
             .add_systems(
                 Update,
                 (
@@ -232,12 +363,20 @@ pub fn sync_app_state_with_game_mode(
     }
 }
 
-/// Advance from world generation to gameplay after boot timer or live scene readiness.
+/// Admit only acknowledged replacement terrain, or the existing in-process bootstrap.
 pub fn advance_worldgen_to_playing(
+    mut commands: Commands,
     time: Res<Time>,
     mut boot: ResMut<WorldGenBoot>,
     state: Option<Res<State<AppState>>>,
     scene: Option<Res<LiveStreamScene>>,
+    bridge: Option<Res<LiveAttachBridge>>,
+    attach_mode: Option<Res<crate::AttachMode>>,
+    local_world: (
+        Option<Res<crate::sim_bridge::SimState>>,
+        Query<&Mesh3d, With<LocalTerrainReady>>,
+        Option<Res<Assets<Mesh>>>,
+    ),
     mut next_state: ResMut<NextState<AppState>>,
 ) {
     let Some(state) = state else {
@@ -246,6 +385,41 @@ pub fn advance_worldgen_to_playing(
     if *state.get() != AppState::WorldGen {
         boot.elapsed = 0.0;
         return;
+    }
+
+    if boot.error.is_some() {
+        return;
+    }
+    if let Some((connection, reply)) = boot.pending.as_ref().and_then(|ticket| {
+        ticket
+            .try_recv()
+            .map(|reply| (ticket.connection_id(), reply))
+    }) {
+        boot.pending = None;
+        match reply.and_then(world_load_generation) {
+            Ok(generation) => {
+                let Some(bridge) = bridge.as_ref() else {
+                    boot.error = Some(
+                        "The server connection is unavailable. Retry after reconnecting."
+                            .to_owned(),
+                    );
+                    return;
+                };
+                let client = bridge.client.clone();
+                commands.queue(move |world: &mut World| {
+                    client.install_world_generation(generation, connection, || {
+                        clear_live_stream_scene_in_world(world)
+                    });
+                });
+                boot.generation = Some(generation);
+                boot.scene_clear_pending = true;
+                return;
+            }
+            Err(error) => {
+                boot.error = Some(error);
+                return;
+            }
+        }
     }
 
     if boot.scene_clear_pending {
@@ -260,18 +434,56 @@ pub fn advance_worldgen_to_playing(
 
     boot.elapsed += time.delta_secs();
 
-    let ready = match scene.as_deref() {
-        // Skip the ConfirmWorldSetup frame (elapsed still ~0) so a queued live-scene
-        // clear can apply before we treat leftover chunks as boot-ready.
-        Some(scene) if boot.elapsed < f32::EPSILON => false,
-        Some(scene) => live_stream_has_content(scene) || boot.elapsed >= WORLDGEN_BOOT_SECONDS,
-        None => true,
+    let is_local = matches!(attach_mode.as_deref(), Some(crate::AttachMode::Standalone))
+        || (attach_mode.is_none() && bridge.is_none() && scene.is_none());
+    let ready = if is_local {
+        let (sim, terrain, meshes) = &local_world;
+        sim.is_some()
+            && terrain.iter().any(|mesh| {
+                meshes
+                    .as_ref()
+                    .is_some_and(|assets| assets.get(&mesh.0).is_some())
+            })
+    } else {
+        match (scene.as_deref(), boot.generation) {
+            (Some(scene), Some(generation)) => {
+                if !bridge
+                    .as_ref()
+                    .is_some_and(|b| b.client.world_generation_is_active(generation))
+                {
+                    boot.error =
+                        Some("Connection changed while loading. Reconnect and retry.".to_owned());
+                    return;
+                }
+                live_stream_has_content(scene)
+            }
+            _ => false,
+        }
     };
 
     if ready {
+        if let Some(bridge) = bridge.as_ref() {
+            bridge.client.finish_world_load();
+        }
         next_state.set(AppState::Playing);
         boot.elapsed = 0.0;
+    } else if boot.elapsed >= WORLDGEN_TIMEOUT_SECONDS {
+        boot.pending = None;
+        boot.error = Some(if boot.generation.is_some() {
+            "The server accepted the world, but no terrain was rendered. Check the server connection and retry."
+        } else {
+            "The server did not finish loading the world. Check the connection and retry."
+        }.to_owned());
     }
+}
+
+fn world_load_generation(result: serde_json::Value) -> Result<u64, String> {
+    result
+        .get("scene_generation")
+        .and_then(serde_json::Value::as_u64)
+        .ok_or_else(|| {
+            "This server cannot confirm a fresh world. Update the server and retry.".to_owned()
+        })
 }
 
 /// Consume one-shot [`MenuCommand`] actions from shell buttons.
@@ -280,7 +492,10 @@ pub fn consume_menu_commands(
     mut menu_command: ResMut<MenuCommand>,
     state: Option<Res<State<AppState>>>,
     mut next_state: ResMut<NextState<AppState>>,
-    bridge: Option<Res<LiveAttachBridge>>,
+    connection: (
+        Option<Res<LiveAttachBridge>>,
+        Option<Res<crate::AttachMode>>,
+    ),
     mut save_panel: Option<ResMut<SaveLoadPanel>>,
     saves: Res<MainMenuSaves>,
     params: Res<WorldSetupParams>,
@@ -293,6 +508,12 @@ pub fn consume_menu_commands(
     mut settings_open: Option<ResMut<SettingsOpen>>,
     mut game_speed: Option<ResMut<GameSpeed>>,
 ) {
+    let (bridge, attach_mode) = connection;
+    let bridge = if matches!(attach_mode.as_deref(), Some(crate::AttachMode::Standalone)) {
+        None
+    } else {
+        bridge
+    };
     let Some(state) = state else {
         return;
     };
@@ -300,24 +521,30 @@ pub fn consume_menu_commands(
         return;
     }
 
-    let action = menu_command.action;
+    let action = if menu_command.action == MainMenuCommand::RetryWorldLoad {
+        boot.retry_action
+    } else {
+        menu_command.action
+    };
     menu_command.action = MainMenuCommand::None;
     match action {
-        MainMenuCommand::None => {}
+        MainMenuCommand::None | MainMenuCommand::RetryWorldLoad => {}
         MainMenuCommand::NewWorld => {
             next_state.set(AppState::WorldSetup);
         }
         MainMenuCommand::ConfirmWorldSetup => {
-            commands.queue(|world: &mut World| {
-                clear_live_stream_scene_in_world(world);
-            });
+            *boot = WorldGenBoot {
+                retry_action: action,
+                ..Default::default()
+            };
             commands.insert_resource(PlayerFactionId(params.player_faction));
             if let Some(bridge) = bridge.as_ref() {
                 let preset = WORLDGEN_PRESETS
                     .get(params.climate_preset % WORLDGEN_PRESETS.len())
                     .copied()
                     .unwrap_or(WORLDGEN_PRESETS[0]);
-                start_world_boot(&bridge.client, preset, params.seed);
+                bridge.client.suspend_world_stream();
+                boot.pending = Some(start_world_boot(&bridge.client, preset, params.seed));
             }
             if let (Some(mut gate), Some(mut overlay)) = (gate, overlay) {
                 begin_player_session(
@@ -327,17 +554,17 @@ pub fn consume_menu_commands(
                 );
             }
             boot.elapsed = 0.0;
-            boot.scene_clear_pending = true;
             next_state.set(AppState::WorldGen);
         }
         MainMenuCommand::CancelWorldSetup => {
             next_state.set(AppState::MainMenu);
-            boot.elapsed = 0.0;
+            *boot = WorldGenBoot::default();
         }
         MainMenuCommand::Continue => {
-            commands.queue(|world: &mut World| {
-                clear_live_stream_scene_in_world(world);
-            });
+            *boot = WorldGenBoot {
+                retry_action: action,
+                ..Default::default()
+            };
             if let Some(bridge) = bridge.as_ref() {
                 bridge.client.clear_outcomes();
                 let slot_name = saves
@@ -345,19 +572,12 @@ pub fn consume_menu_commands(
                     .as_deref()
                     .unwrap_or("slot-1")
                     .to_string();
-                let slot_id = slot_name
-                    .strip_prefix("slot-")
-                    .and_then(|raw| raw.parse::<u32>().ok())
-                    .map(|slot| 2010 + slot)
-                    .unwrap_or(2010);
-                let json = serde_json::json!({
-                    "jsonrpc": "2.0",
-                    "id": slot_id,
-                    "method": "save.load",
-                    "params": { "slot_name": slot_name },
-                })
-                .to_string();
-                bridge.client.send_rpc_raw(json);
+                bridge.client.suspend_world_stream();
+                boot.pending = Some(
+                    bridge
+                        .client
+                        .request_rpc("save.load", serde_json::json!({ "slot_name": slot_name })),
+                );
             }
             if let (Some(mut gate), Some(mut overlay)) = (gate, overlay) {
                 begin_player_session(
@@ -367,7 +587,6 @@ pub fn consume_menu_commands(
                 );
             }
             boot.elapsed = 0.0;
-            boot.scene_clear_pending = true;
             next_state.set(AppState::WorldGen);
         }
         MainMenuCommand::LoadGame => {
@@ -404,7 +623,10 @@ pub fn consume_menu_commands(
             }
             next_state.set(AppState::MainMenu);
             *game_mode = GameUiMode::Playing;
-            boot.elapsed = 0.0;
+            *boot = WorldGenBoot::default();
+            if let Some(bridge) = bridge.as_ref() {
+                bridge.client.finish_world_load();
+            }
         }
         MainMenuCommand::Quit => {
             *game_mode = GameUiMode::Playing;
@@ -423,7 +645,9 @@ pub fn toggle_pause(
     mut controls_help: Option<ResMut<crate::controls_help::ControlsHelpOpen>>,
     mut mode: ResMut<GameUiMode>,
     mut game_speed: Option<ResMut<GameSpeed>>,
-    bridge: Option<Res<ServerBridge>>,
+    attach_mode: Option<Res<crate::AttachMode>>,
+    bridge: Option<Res<LiveAttachBridge>>,
+    mut pending_speed: ResMut<PendingSimSpeed>,
 ) {
     // Single owner for ACTION_PAUSE_SIM: shell pause overlay (Space default).
     // Esc remains a hard fallback so Close Panel / overlay escape still works.
@@ -471,6 +695,26 @@ pub fn toggle_pause(
         }
     }
 
+    let server_attach = attach_mode.is_some_and(|attach| *attach == crate::AttachMode::Server);
+    if server_attach {
+        let (multiplier, shell_mode) = match *mode {
+            GameUiMode::Playing => (0, GameUiMode::Paused),
+            GameUiMode::Paused => (
+                game_speed
+                    .as_deref()
+                    .map_or(1, |speed| server_speed_multiplier(speed.last_non_zero)),
+                GameUiMode::Playing,
+            ),
+        };
+        request_live_speed(
+            &mut pending_speed,
+            bridge.as_deref(),
+            multiplier,
+            Some(shell_mode),
+        );
+        return;
+    }
+
     match *mode {
         GameUiMode::Playing => {
             *mode = GameUiMode::Paused;
@@ -480,18 +724,8 @@ pub fn toggle_pause(
                 speed.remember_non_zero();
                 speed.multiplier = 0.0;
             }
-            // Notify server of pause via JSON-RPC
-            if let Some(ref bridge) = bridge {
-                bridge.send_rpc("sim.command", serde_json::json!({ "action": "pause" }));
-            }
         }
-        GameUiMode::Paused => {
-            resume_shell_pause(&mut mode, game_speed.as_deref_mut());
-            // Notify server of resume via JSON-RPC
-            if let Some(ref bridge) = bridge {
-                bridge.send_rpc("sim.command", serde_json::json!({ "action": "resume" }));
-            }
-        }
+        GameUiMode::Paused => resume_shell_pause(&mut mode, game_speed.as_deref_mut()),
     }
 }
 
@@ -500,6 +734,30 @@ fn resume_shell_pause(mode: &mut GameUiMode, speed: Option<&mut GameSpeed>) {
     *mode = GameUiMode::Playing;
     if let Some(speed) = speed {
         speed.restore_after_resume();
+    }
+}
+
+/// Resume the visible pause menu without claiming a live-server resume before
+/// its `sim.set_speed` acknowledgement arrives.
+fn resume_from_pause_menu(
+    mode: &mut GameUiMode,
+    speed: Option<&mut GameSpeed>,
+    server_attach: bool,
+    bridge: Option<&LiveAttachBridge>,
+    pending_speed: &mut PendingSimSpeed,
+) {
+    if server_attach {
+        let multiplier = speed
+            .as_deref()
+            .map_or(1, |speed| server_speed_multiplier(speed.last_non_zero));
+        request_live_speed(
+            pending_speed,
+            bridge,
+            multiplier,
+            Some(GameUiMode::Playing),
+        );
+    } else {
+        resume_shell_pause(mode, speed);
     }
 }
 
@@ -812,6 +1070,7 @@ fn draw_worldgen_overlay(
     params: Res<WorldSetupParams>,
     titles: Res<MainMenuTitleAssets>,
     images: Res<Assets<Image>>,
+    mut menu_command: ResMut<MenuCommand>,
 ) {
     let Some(state) = state else {
         return;
@@ -833,7 +1092,6 @@ fn draw_worldgen_overlay(
         return;
     };
 
-    let progress = (boot.elapsed / WORLDGEN_BOOT_SECONDS).clamp(0.0, 1.0);
     let preset = WORLDGEN_PRESETS
         .get(params.climate_preset % WORLDGEN_PRESETS.len())
         .copied()
@@ -861,10 +1119,14 @@ fn draw_worldgen_overlay(
                     ui.set_min_width(420.0);
                     ui.vertical_centered(|ui| {
                         ui.label(
-                            egui::RichText::new("Generating world")
-                                .size(28.0)
-                                .color(KC_ACCENT)
-                                .strong(),
+                            egui::RichText::new(if boot.error.is_some() {
+                                "World could not be loaded"
+                            } else {
+                                "Loading world"
+                            })
+                            .size(28.0)
+                            .color(KC_ACCENT)
+                            .strong(),
                         );
                         ui.label(
                             egui::RichText::new(format!("{preset} · seed {:016X}", params.seed))
@@ -879,21 +1141,23 @@ fn draw_worldgen_overlay(
                             );
                             ui.add_space(8.0);
                         }
-                        let bar = egui::ProgressBar::new(progress)
-                            .desired_width(320.0)
-                            .show_percentage();
-                        ui.add(bar);
-                        ui.add_space(8.0);
-                        let step = if progress < 0.25 {
-                            "Seeding continents…"
-                        } else if progress < 0.5 {
-                            "Raising terrain & biomes…"
-                        } else if progress < 0.75 {
-                            "Spawning factions…"
+                        if let Some(error) = &boot.error {
+                            ui.label(egui::RichText::new(error).color(DIM));
+                            if ui.button("Retry").clicked() {
+                                menu_command.action = MainMenuCommand::RetryWorldLoad;
+                            }
                         } else {
-                            "Streaming first chunks…"
-                        };
-                        ui.label(egui::RichText::new(step).color(DIM).italics());
+                            ui.spinner();
+                            let step = if boot.generation.is_some() {
+                                "World accepted. Waiting for terrain…"
+                            } else {
+                                "Waiting for the world to load…"
+                            };
+                            ui.label(egui::RichText::new(step).color(DIM).italics());
+                        }
+                        if ui.button("Back to menu").clicked() {
+                            menu_command.action = MainMenuCommand::ExitToMainMenu;
+                        }
                     });
                 });
         });
@@ -907,6 +1171,9 @@ fn draw_pause_menu(
     mut game_settings: Option<ResMut<GameSettings>>,
     mut settings_open: ResMut<SettingsOpen>,
     mut game_speed: Option<ResMut<GameSpeed>>,
+    attach_mode: Option<Res<crate::AttachMode>>,
+    bridge: Option<Res<LiveAttachBridge>>,
+    mut pending_speed: ResMut<PendingSimSpeed>,
     mut exit: MessageWriter<AppExit>,
 ) {
     if *mode != GameUiMode::Paused {
@@ -972,7 +1239,16 @@ fn draw_pause_menu(
                         );
                         ui.add_space(16.0);
                         if menu_button(ui, "\u{25b6}  Resume").clicked() {
-                            resume_shell_pause(&mut mode, game_speed.as_deref_mut());
+                            let server_attach = attach_mode
+                                .as_deref()
+                                .is_some_and(|attach| *attach == crate::AttachMode::Server);
+                            resume_from_pause_menu(
+                                &mut mode,
+                                game_speed.as_deref_mut(),
+                                server_attach,
+                                bridge.as_deref(),
+                                &mut pending_speed,
+                            );
                         }
                         ui.add_space(6.0);
                         if menu_button(ui, "\u{2699}  Settings").clicked() {
@@ -1154,28 +1430,126 @@ fn load_main_menu_title_assets(mut commands: Commands, asset_server: Res<AssetSe
 
 fn live_stream_has_content(scene: &LiveStreamScene) -> bool {
     !scene.chunks.is_empty()
-        || !scene.agents.is_empty()
-        || !scene.buildings.is_empty()
-        || !scene.graph_parcels.is_empty()
 }
 
-fn start_world_boot(client: &crate::ws_client::WsClient, preset: &str, seed: u64) {
+fn start_world_boot(
+    client: &crate::ws_client::WsClient,
+    preset: &str,
+    seed: u64,
+) -> crate::ws_client::RpcTicket {
     let init_seed = if seed == 0 {
         WORLDGEN_DEFAULT_SEED
     } else {
         seed
     };
-    client.send_rpc(
+    client.request_rpc(
         "sim.load_scenario",
         serde_json::json!({ "preset": preset, "seed": init_seed }),
-    );
-    // `sim.load_scenario` already replaces the simulation. A follow-up reset
-    // would discard the selected preset before its first tick.
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn world_boot_sends_one_scenario_request_without_reset() {
+        let (client, requests) = crate::ws_client::WsClient::test_rpc_client();
+        let ticket = start_world_boot(&client, "three-race-balanced", 987);
+        let request: serde_json::Value = serde_json::from_str(&requests.recv().unwrap()).unwrap();
+        assert_eq!(request["id"].as_u64(), Some(ticket.id));
+        assert_eq!(request["method"], "sim.load_scenario");
+        assert_eq!(request["params"]["seed"], 987);
+        assert!(
+            requests.try_recv().is_err(),
+            "a second reset would discard the preset"
+        );
+        assert!(
+            world_load_generation(serde_json::json!({"accepted":true})).is_err(),
+            "an older server must not silently satisfy fresh-world readiness"
+        );
+    }
+
+    fn world_boot_app() -> (App, crate::ws_client::WsClient, u64, Entity) {
+        let (client, _requests) = crate::ws_client::WsClient::test_rpc_client();
+        client.suspend_world_stream();
+        let ticket = client.request_rpc("sim.load_scenario", serde_json::json!({}));
+        let id = ticket.id;
+        let mut app = App::new();
+        app.add_plugins(bevy::state::app::StatesPlugin)
+            .init_state::<AppState>()
+            .insert_resource(Time::<()>::default())
+            .insert_resource(LiveAttachBridge {
+                client: client.clone(),
+            })
+            .insert_resource(crate::AttachMode::Server)
+            .insert_resource(WorldGenBoot {
+                pending: Some(ticket),
+                ..Default::default()
+            })
+            .insert_resource(LiveStreamScene::default())
+            .add_systems(Update, advance_worldgen_to_playing);
+        let old = app.world_mut().spawn_empty().id();
+        app.world_mut()
+            .resource_mut::<LiveStreamScene>()
+            .chunks
+            .insert(1, old);
+        app.world_mut()
+            .resource_mut::<NextState<AppState>>()
+            .set(AppState::WorldGen);
+        (app, client, id, old)
+    }
+
+    #[test]
+    fn world_boot_failed_reply_preserves_old_scene_and_blocks_playing() {
+        let (mut app, client, id, old) = world_boot_app();
+        client.test_complete_rpc(id, Err("preset not found"));
+        app.update();
+        assert_eq!(
+            app.world().resource::<State<AppState>>().get(),
+            &AppState::WorldGen
+        );
+        assert_eq!(
+            app.world().resource::<WorldGenBoot>().error.as_deref(),
+            Some("preset not found")
+        );
+        assert_eq!(
+            app.world().resource::<LiveStreamScene>().chunks.get(&1),
+            Some(&old)
+        );
+        assert!(app.world().get_entity(old).is_ok());
+    }
+
+    #[test]
+    fn world_boot_ack_clears_previous_scene_before_new_terrain_can_play() {
+        let (mut app, client, id, old) = world_boot_app();
+        app.update();
+        assert_eq!(
+            app.world().resource::<LiveStreamScene>().chunks.get(&1),
+            Some(&old)
+        );
+        client.test_complete_rpc(id, Ok(serde_json::json!({"scene_generation":2})));
+        app.update();
+        assert!(app.world().resource::<LiveStreamScene>().chunks.is_empty());
+        assert!(app.world().get_entity(old).is_err());
+        app.update(); // Clear barrier settles.
+        app.update(); // An ACK alone still does not represent rendered terrain.
+        assert_eq!(
+            app.world().resource::<State<AppState>>().get(),
+            &AppState::WorldGen
+        );
+        let fresh = app.world_mut().spawn_empty().id();
+        app.world_mut()
+            .resource_mut::<LiveStreamScene>()
+            .chunks
+            .insert(2, fresh);
+        app.update();
+        app.update();
+        assert_eq!(
+            app.world().resource::<State<AppState>>().get(),
+            &AppState::Playing
+        );
+    }
 
     /// FR-CIV-BEVY-024 — pause/state transition helpers exercise menu-path and world-setup behavior.
     #[test]
@@ -1245,6 +1619,39 @@ mod tests {
     }
 
     #[test]
+    fn pause_menu_resume_in_server_attach_waits_for_speed_acknowledgement() {
+        use std::time::Duration;
+
+        let (client, requests) = crate::ws_client::WsClient::test_rpc_client();
+        let bridge = LiveAttachBridge { client };
+        let mut mode = GameUiMode::Paused;
+        let mut speed = GameSpeed {
+            multiplier: 0.0,
+            last_non_zero: 2.0,
+        };
+        let mut pending = PendingSimSpeed::default();
+
+        resume_from_pause_menu(
+            &mut mode,
+            Some(&mut speed),
+            true,
+            Some(&bridge),
+            &mut pending,
+        );
+
+        let request: serde_json::Value = serde_json::from_str(
+            &requests
+                .recv_timeout(Duration::from_secs(1))
+                .expect("pause-menu resume request queued"),
+        )
+        .unwrap();
+        assert_eq!(request["method"], "sim.set_speed");
+        assert_eq!(request["params"]["multiplier"], 2);
+        assert_eq!(mode, GameUiMode::Paused);
+        assert_eq!(speed.multiplier, 0.0);
+    }
+
+    #[test]
     fn space_pause_binding_toggles_overlay_and_zeros_speed() {
         use bevy::prelude::{App, ButtonInput, Time, Update};
         use std::time::Duration;
@@ -1254,6 +1661,7 @@ mod tests {
         app.insert_resource(ButtonInput::<MouseButton>::default());
         app.insert_resource(Time::<()>::default());
         app.insert_resource(GameUiMode::Playing);
+        app.init_resource::<PendingSimSpeed>();
         app.insert_resource(GameSpeed {
             multiplier: 1.0,
             last_non_zero: 1.0,
@@ -1274,5 +1682,93 @@ mod tests {
         assert_eq!(*app.world().resource::<GameUiMode>(), GameUiMode::Paused);
         assert_eq!(app.world().resource::<GameSpeed>().multiplier, 0.0);
         assert!((app.world().resource::<GameSpeed>().last_non_zero - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn live_pause_and_resume_wait_for_set_speed_acknowledgements() {
+        use bevy::prelude::{App, ButtonInput, Time, Update};
+        use std::time::Duration;
+
+        let (client, requests) = crate::ws_client::WsClient::test_rpc_client();
+        let mut app = App::new();
+        app.insert_resource(ButtonInput::<KeyCode>::default())
+            .insert_resource(ButtonInput::<MouseButton>::default())
+            .insert_resource(Time::<()>::default())
+            .insert_resource(GameUiMode::Playing)
+            .insert_resource(GameSpeed {
+                multiplier: 1.0,
+                last_non_zero: 1.0,
+            })
+            .insert_resource(GameSettings::default())
+            .insert_resource(crate::AttachMode::Server)
+            .insert_resource(LiveAttachBridge {
+                client: client.clone(),
+            })
+            .init_resource::<PendingSimSpeed>()
+            .add_systems(Update, (toggle_pause, reconcile_live_speed_request).chain());
+
+        let press_space = |app: &mut App| {
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .clear();
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .press(KeyCode::Space);
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(Duration::from_millis(16));
+            app.update();
+        };
+        let release_space = |app: &mut App| {
+            app.world_mut()
+                .resource_mut::<ButtonInput<KeyCode>>()
+                .release(KeyCode::Space);
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(Duration::from_millis(16));
+            app.update();
+        };
+
+        press_space(&mut app);
+        let pause: serde_json::Value = serde_json::from_str(
+            &requests
+                .recv_timeout(Duration::from_secs(1))
+                .expect("pause request queued"),
+        )
+        .unwrap();
+        assert_eq!(pause["method"], "sim.set_speed");
+        assert_eq!(pause["params"]["multiplier"], 0);
+        assert_eq!(*app.world().resource::<GameUiMode>(), GameUiMode::Playing);
+        assert_eq!(app.world().resource::<GameSpeed>().multiplier, 1.0);
+
+        let pause_id = pause["id"].as_u64().unwrap();
+        client.test_complete_rpc(
+            pause_id,
+            Ok(serde_json::json!({"accepted": true, "multiplier": 0})),
+        );
+        app.update();
+        assert_eq!(*app.world().resource::<GameUiMode>(), GameUiMode::Paused);
+        assert_eq!(app.world().resource::<GameSpeed>().multiplier, 0.0);
+
+        release_space(&mut app);
+        press_space(&mut app);
+        let resume: serde_json::Value = serde_json::from_str(
+            &requests
+                .recv_timeout(Duration::from_secs(1))
+                .expect("resume request queued"),
+        )
+        .unwrap();
+        assert_eq!(resume["method"], "sim.set_speed");
+        assert_eq!(resume["params"]["multiplier"], 1);
+        assert_eq!(*app.world().resource::<GameUiMode>(), GameUiMode::Paused);
+
+        let resume_id = resume["id"].as_u64().unwrap();
+        client.test_complete_rpc(
+            resume_id,
+            Ok(serde_json::json!({"accepted": true, "multiplier": 1})),
+        );
+        app.update();
+        assert_eq!(*app.world().resource::<GameUiMode>(), GameUiMode::Playing);
+        assert_eq!(app.world().resource::<GameSpeed>().multiplier, 1.0);
     }
 }

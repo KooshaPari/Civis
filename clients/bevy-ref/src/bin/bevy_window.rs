@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
 use bevy::pbr::MeshMaterial3d;
@@ -37,9 +39,10 @@ use civ_bevy_ref::{
     },
     live_minimap::{
         chunk_centre_world_xz, live_building_dot_color, minimap_bounds_from_keys,
-        spawn_minimap_dot, world_minimap_uv, MinimapDotLayout, MinimapFocusRect,
-        LIVE_MINIMAP_AGENT_COLOR, LIVE_MINIMAP_CAMERA_COLOR, LIVE_MINIMAP_CHUNK_FOCUSED_COLOR,
-        LIVE_MINIMAP_CHUNK_LOADED_COLOR, LIVE_MINIMAP_DOT, LIVE_MINIMAP_GRAPH_DOT_SCALE,
+        minimap_chunk_signature, spawn_minimap_dot, world_minimap_uv, MinimapDotLayout,
+        MinimapFocusRect, LIVE_MINIMAP_AGENT_COLOR, LIVE_MINIMAP_CAMERA_COLOR,
+        LIVE_MINIMAP_CHUNK_FOCUSED_COLOR, LIVE_MINIMAP_CHUNK_LOADED_COLOR, LIVE_MINIMAP_DOT,
+        LIVE_MINIMAP_GRAPH_DOT_SCALE,
     },
     live_pick::{LivePickPlugin, LiveSelection},
     live_stream::{
@@ -181,11 +184,14 @@ impl Default for ScenePresentation {
 #[derive(Resource, Default)]
 struct MinimapCache {
     chunk_keys: Vec<u64>,
+    chunk_signature: u128,
     agent_count: usize,
     building_count: usize,
     graph_count: usize,
     bounds: Option<MinimapBounds>,
     focus: Option<LiveSceneFocus>,
+    focused_chunk: Option<ChunkId>,
+    building_provenance: Option<civ_protocol_3d::BuildingProvenance>,
     use_focus_bounds: bool,
 }
 
@@ -1020,8 +1026,15 @@ fn update_minimap(
     graph_parcels: Query<&Transform, With<LiveGraphParcelTag>>,
     graph_parcels_changed: Query<&Transform, (With<LiveGraphParcelTag>, Changed<Transform>)>,
 ) {
-    let mut keys: Vec<u64> = scene.chunks.keys().copied().collect();
-    keys.sort_unstable();
+    let chunk_signature = minimap_chunk_signature(scene.chunks.keys().copied());
+    let chunks_changed = chunk_signature != cache.chunk_signature;
+    let keys = if chunks_changed {
+        let mut keys: Vec<u64> = scene.chunks.keys().copied().collect();
+        keys.sort_unstable();
+        Cow::Owned(keys)
+    } else {
+        Cow::Borrowed(cache.chunk_keys.as_slice())
+    };
     let agent_count = scene.agents.len();
     let building_count = scene.buildings.len();
     let graph_count = scene.graph_parcels.len();
@@ -1030,6 +1043,8 @@ fn update_minimap(
         || !graph_parcels_changed.is_empty();
     let use_focus_bounds = hud.snapshot.connected && live_stream_has_content(&scene);
     let focus_snapshot = use_focus_bounds.then_some(*focus);
+    let focused_chunk = hud.snapshot.focused_chunk;
+    let building_provenance = scene.building_provenance;
     let new_bounds = minimap_bounds_from_keys(&keys);
 
     let camera_uv = if let Some(focus) = focus_snapshot {
@@ -1054,23 +1069,30 @@ fn update_minimap(
         }
     }
 
-    if keys == cache.chunk_keys
+    if !chunks_changed
         && agent_count == cache.agent_count
         && building_count == cache.building_count
         && graph_count == cache.graph_count
         && use_focus_bounds == cache.use_focus_bounds
         && focus_snapshot == cache.focus
+        && focused_chunk == cache.focused_chunk
+        && cache.building_provenance == Some(building_provenance)
         && !transforms_changed
     {
         return;
     }
 
-    cache.chunk_keys = keys.clone();
+    if chunks_changed {
+        cache.chunk_keys = keys.into_owned();
+        cache.chunk_signature = chunk_signature;
+    }
     cache.agent_count = agent_count;
     cache.building_count = building_count;
     cache.graph_count = graph_count;
     cache.use_focus_bounds = use_focus_bounds;
     cache.focus = focus_snapshot;
+    cache.focused_chunk = focused_chunk;
+    cache.building_provenance = Some(building_provenance);
     cache.bounds = new_bounds;
 
     for child in children
@@ -1081,8 +1103,9 @@ fn update_minimap(
         commands.entity(child).despawn();
     }
 
-    let building_dot = live_building_dot_color(scene.building_provenance);
-    let focused = hud.snapshot.focused_chunk;
+    let keys = cache.chunk_keys.as_slice();
+    let building_dot = live_building_dot_color(building_provenance);
+    let focused = focused_chunk;
 
     commands.entity(minimap.dots).with_children(|parent| {
         if let Some(focus) = focus_snapshot {
@@ -1092,7 +1115,7 @@ fn update_minimap(
                 half_extent: focus.half_extent,
             };
 
-            for &raw in &keys {
+            for &raw in keys.iter() {
                 let (x, z) = chunk_centre_world_xz(ChunkId(raw), LIVE_CHUNK_EDGE);
                 let uv = focus_rect.world_to_uv(x, z);
                 let dot_color = if focused.map(|id| id.0 == raw).unwrap_or(false) {
@@ -1153,7 +1176,7 @@ fn update_minimap(
             return;
         };
 
-        for &raw in &keys {
+        for &raw in keys.iter() {
             let uv = chunk_to_minimap_uv(ChunkId(raw), bounds);
             let dot_color = if focused.map(|id| id.0 == raw).unwrap_or(false) {
                 LIVE_MINIMAP_CHUNK_FOCUSED_COLOR

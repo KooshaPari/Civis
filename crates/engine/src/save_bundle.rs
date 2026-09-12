@@ -11,6 +11,7 @@ use thiserror::Error;
 use zstd::stream::{decode_all, encode_all};
 
 use crate::{ClusterStocks, ModGuestStateSave, ReplayError, Simulation, WorldState};
+use civ_planet::{Climate, MoonConfig, PlanetConfig, WeatherCell};
 
 /// Sidecar metadata written beside replay + mod state.
 pub const CIVSAVE_SPEC_ID: &str = "CIV-1000";
@@ -21,6 +22,8 @@ pub const CIVSAVE_ARCHIVE_EXTENSION: &str = "civsave.zst";
 /// Optional sidecar introduced after the initial replay-only bundle format.
 /// Its absence represents the empty stockpile state used by legacy saves.
 const CLUSTER_STOCKS_FILE: &str = "cluster_stocks.json";
+/// Optional environment snapshot for bundles created after replay-only saves.
+const ENVIRONMENT_FILE: &str = "environment.json";
 
 /// Zstd frame magic (little-endian `0xFD2FB528`).
 const ZSTD_FRAME_MAGIC: [u8; 4] = [0x28, 0xB5, 0x2F, 0xFD];
@@ -36,6 +39,15 @@ pub struct CivSaveMetadata {
     pub tick: u64,
     /// Optional scenario label for UI.
     pub scenario_name: Option<String>,
+}
+
+/// Environment state that replay does not reconstruct.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+struct SavedEnvironment {
+    planet: PlanetConfig,
+    moon: MoonConfig,
+    climate: Climate,
+    weather_grid: Vec<WeatherCell>,
 }
 
 /// Errors reading or writing save folders.
@@ -322,6 +334,16 @@ impl CivSaveBundle {
         fs::write(&world_state_path, serde_json::to_string(&sim.state)?)
             .map_err(|e| io_err(&world_state_path, e))?;
 
+        let environment_path = dir.join(ENVIRONMENT_FILE);
+        let environment = SavedEnvironment {
+            planet: *sim.planet(),
+            moon: *sim.moon(),
+            climate: sim.climate,
+            weather_grid: sim.weather_grid().to_vec(),
+        };
+        fs::write(&environment_path, serde_json::to_string(&environment)?)
+            .map_err(|e| io_err(&environment_path, e))?;
+
         let cluster_stocks_path = dir.join(CLUSTER_STOCKS_FILE);
         fs::write(
             &cluster_stocks_path,
@@ -384,6 +406,20 @@ impl CivSaveBundle {
         let world_state_path = dir.join("world_state.json");
         if world_state_path.is_file() {
             sim.state = serde_json::from_value(migrated_ws).map_err(SaveBundleError::Json)?;
+        }
+
+        let environment_path = dir.join(ENVIRONMENT_FILE);
+        if let Some(json) = match fs::read_to_string(&environment_path) {
+            Ok(json) => Some(json),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+            Err(error) => return Err(io_err(&environment_path, error)),
+        } {
+            let environment: SavedEnvironment =
+                serde_json::from_str(&json).map_err(SaveBundleError::Json)?;
+            sim.planet = environment.planet;
+            sim.moon = environment.moon;
+            sim.climate = environment.climate;
+            sim.weather_grid = environment.weather_grid;
         }
 
         let cluster_stocks_path = dir.join(CLUSTER_STOCKS_FILE);
@@ -696,6 +732,99 @@ mod tests {
     }
 
     #[test]
+    fn civsave_folder_round_trips_environment_state() {
+        let sim = configured_environment_sim();
+        let expected_planet = *sim.planet();
+        let expected_moon = *sim.moon();
+        let expected_climate = sim.climate;
+        let expected_weather = sim.weather_grid().to_vec();
+
+        let dir = tempdir().expect("tempdir");
+        let save_path = dir.path().join("environment");
+        CivSaveBundle::save_dir(&save_path, &sim).expect("save");
+        assert!(save_path.join(ENVIRONMENT_FILE).is_file());
+
+        let loaded = CivSaveBundle::load_dir(&save_path).expect("load");
+        assert_eq!(*loaded.planet(), expected_planet);
+        assert_eq!(*loaded.moon(), expected_moon);
+        assert_eq!(loaded.climate, expected_climate);
+        assert_eq!(loaded.weather_grid(), expected_weather);
+    }
+
+    fn configured_environment_sim() -> Simulation {
+        let mut sim = Simulation::with_seed(37);
+        sim.planet.day_length_ticks = 73;
+        sim.planet.year_length_ticks = 977;
+        sim.moon.orbit_period_ticks = 29;
+        sim.moon.tidal_amplitude = 3.5;
+        sim.climate = civ_planet::Climate {
+            tick: 321,
+            day_phase: 0.45,
+            year_phase: 0.78,
+            moon_phase: 0.12,
+            tide_offset: -2.3,
+        };
+        sim.weather_grid = vec![civ_planet::WeatherCell {
+            region_id: 9,
+            latitude_fp: -12_345,
+            season: civ_planet::SeasonKind::Winter,
+            kind: civ_planet::WeatherKind::Snow,
+            temp_c_fp: -7_000,
+            precip_mm_fp: 880,
+            storm_intensity_fp: 321,
+        }];
+        sim
+    }
+
+    #[test]
+    fn civsave_archive_round_trips_environment_state() {
+        let sim = configured_environment_sim();
+        let expected_planet = *sim.planet();
+        let expected_moon = *sim.moon();
+        let expected_climate = sim.climate;
+        let expected_weather = sim.weather_grid().to_vec();
+
+        let dir = tempdir().expect("tempdir");
+        let save_path = dir.path().join("environment.civsave.zst");
+        CivSaveBundle::save_archive(&save_path, &sim).expect("save");
+
+        let loaded = CivSaveBundle::load_archive(&save_path).expect("load");
+        assert_eq!(*loaded.planet(), expected_planet);
+        assert_eq!(*loaded.moon(), expected_moon);
+        assert_eq!(loaded.climate, expected_climate);
+        assert_eq!(loaded.weather_grid(), expected_weather);
+    }
+
+    #[test]
+    fn restored_environment_advances_the_next_planet_phase() {
+        let mut source = configured_environment_sim();
+        let dir = tempdir().expect("tempdir");
+        let save_path = dir.path().join("environment-continuation");
+        CivSaveBundle::save_dir(&save_path, &source).expect("save");
+        let mut loaded = CivSaveBundle::load_dir(&save_path).expect("load");
+
+        source.phase_planet();
+        loaded.phase_planet();
+
+        assert_eq!(loaded.climate, source.climate);
+        assert_eq!(loaded.weather_grid(), source.weather_grid());
+    }
+
+    #[test]
+    fn malformed_environment_sidecar_fails_load() {
+        let sim = Simulation::with_seed(61);
+        let dir = tempdir().expect("tempdir");
+        let save_path = dir.path().join("malformed-environment");
+        CivSaveBundle::save_dir(&save_path, &sim).expect("save");
+        fs::write(save_path.join(ENVIRONMENT_FILE), "not json").expect("malformed sidecar");
+
+        assert!(matches!(
+            CivSaveBundle::load_dir(&save_path),
+            Err(SaveBundleError::Json(_))
+        ));
+    }
+
+    #[test]
     fn civsave_folder_round_trips_cluster_stocks() {
         let mut sim = Simulation::with_seed(41);
         let mut cluster_stocks = BTreeMap::new();
@@ -740,6 +869,10 @@ mod tests {
 
         let loaded = CivSaveBundle::load_dir(&save_path).expect("load legacy");
         assert!(loaded.cluster_stocks().is_empty());
+        assert_eq!(*loaded.planet(), *sim.planet());
+        assert_eq!(*loaded.moon(), *sim.moon());
+        assert_eq!(loaded.climate, sim.climate);
+        assert_eq!(loaded.weather_grid(), sim.weather_grid());
     }
 
     fn write_legacy_bundle_without_cluster_stocks(path: &Path, sim: &Simulation) {

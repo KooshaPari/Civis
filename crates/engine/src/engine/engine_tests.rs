@@ -18,6 +18,45 @@ mod engine_tests {
         }
     }
 
+    /// Seed two inhabited, spatially separated settlements into the same
+    /// emergence-owned culture store that production phases consume.
+    fn seed_two_settlement_culture_fixture(sim: &mut Simulation) {
+        use civ_agents::{Alignment, Civilian as AgentCivilian, ClusterId, ClusterMember};
+
+        sim.world = World::new();
+        sim.emergence.cluster_cultures.clear();
+        sim.faction_ideologies.clear();
+        sim.faction_aggression.clear();
+        sim.religious_profiles.clear();
+        sim.emergence
+            .cluster_cultures
+            .insert(1, CultureProfile::new([0.15, 0.15, 0.15, 0.15]));
+        sim.emergence
+            .cluster_cultures
+            .insert(2, CultureProfile::new([0.85, 0.85, 0.85, 0.85]));
+
+        for (id, cluster, faction, x) in [
+            (1_u64, 1_u64, 1_u32, 0_i64),
+            (2, 1, 1, 1),
+            (3, 2, 2, 200_000),
+            (4, 2, 2, 200_001),
+        ] {
+            let _ = sim.world.spawn((
+                AgentCivilian {
+                    id,
+                    alignment: Alignment::Faction(faction),
+                    age: 20,
+                },
+                ClusterMember {
+                    cluster: ClusterId(cluster),
+                },
+                Position3d {
+                    coord: WorldCoord { x, y: 0, z: 0 },
+                },
+            ));
+        }
+    }
+
     /// FR-CIV-ENGINE-INT-010 — startup spawns 128 civilians across four factions.
     #[test]
     fn startup_spawns_128_civilians() {
@@ -3075,13 +3114,15 @@ mod engine_tests {
 
         let mut sim = Simulation::new();
         sim.world = World::new();
-        sim.cluster_cultures.clear();
+        sim.emergence.cluster_cultures.clear();
         sim.faction_languages.clear();
         sim.language_state = LanguageState::default();
 
-        sim.cluster_cultures
+        sim.emergence
+            .cluster_cultures
             .insert(1, CultureProfile::new([0.15, 0.15, 0.15, 0.15]));
-        sim.cluster_cultures
+        sim.emergence
+            .cluster_cultures
             .insert(2, CultureProfile::new([0.85, 0.85, 0.85, 0.85]));
 
         for (entity_id, cluster_id, faction_id, base_x) in [
@@ -3158,13 +3199,15 @@ mod engine_tests {
 
         let mut sim = Simulation::new();
         sim.world = World::new();
-        sim.cluster_cultures.clear();
+        sim.emergence.cluster_cultures.clear();
         sim.faction_languages.clear();
         sim.language_state = LanguageState::default();
 
-        sim.cluster_cultures
+        sim.emergence
+            .cluster_cultures
             .insert(1, CultureProfile::new([0.15, 0.15, 0.15, 0.15]));
-        sim.cluster_cultures
+        sim.emergence
+            .cluster_cultures
             .insert(2, CultureProfile::new([0.85, 0.85, 0.85, 0.85]));
 
         for (entity_id, cluster_id, faction_id, base_x) in [
@@ -3225,18 +3268,48 @@ mod engine_tests {
     }
 
     #[test]
+    fn culture_and_audio_consume_emergence_owned_profiles_through_tick() {
+        let mut sim = Simulation::new();
+        seed_two_settlement_culture_fixture(&mut sim);
+
+        assert!(sim.cluster_cultures.is_empty());
+        sim.tick();
+
+        let culture_ids: Vec<u64> = sim.cluster_cultures().keys().copied().collect();
+        assert!(
+            culture_ids.len() >= 2,
+            "emergence must retain both settlement cultures"
+        );
+        assert!(
+            sim.faction_ideologies().contains_key(&1) && sim.faction_ideologies().contains_key(&2),
+            "culture phase must derive faction ideologies from emergence-owned profiles"
+        );
+        let snapshot = sim.snapshot();
+        assert_eq!(snapshot.music_cues.len(), culture_ids.len());
+        assert!(culture_ids
+            .iter()
+            .all(|id| snapshot.music_cues.contains_key(id)));
+        assert!(
+            sim.cluster_cultures.is_empty(),
+            "inactive duplicate must not become a writer"
+        );
+    }
+
+    #[test]
     fn culture_traits_drift_through_sim_tick_for_isolated_factions() {
         use civ_agents::{ClusterId, ClusterMember};
         use civ_voxel::WorldCoord;
 
         let mut sim = Simulation::new();
         sim.world = World::new();
-        sim.cluster_cultures.clear();
+        sim.emergence.cluster_cultures.clear();
         sim.faction_ideologies.clear();
 
-        sim.cluster_cultures
+        sim.emergence
+            .cluster_cultures
             .insert(1, CultureProfile::new([0.15, 0.15, 0.15, 0.15]));
-        sim.cluster_cultures
+        sim.emergence
+            .cluster_cultures
             .insert(2, CultureProfile::new([0.85, 0.85, 0.85, 0.85]));
         sim.religious_profiles.insert(
             1,
@@ -3489,17 +3562,14 @@ mod engine_tests {
 
         #[test]
         fn tick_invokes_phase_audio() {
-            use civ_agents::culture::CultureProfile;
-
             let mut sim = Simulation::new();
-            sim.cluster_cultures
-                .insert(7, CultureProfile::new([0.4, 0.5, 0.6, 0.7]));
+            seed_two_settlement_culture_fixture(&mut sim);
             assert!(sim.last_tick_music_cues.is_empty());
 
             sim.tick();
 
             assert!(
-                sim.last_tick_music_cues.contains_key(&7),
+                !sim.last_tick_music_cues.is_empty(),
                 "tick should run phase_audio and populate music cues"
             );
         }
@@ -3508,47 +3578,44 @@ mod engine_tests {
         /// surfaces derived from emergent culture profiles.
         #[test]
         fn fr_music_distinct_culture_cues_evolve_over_time() {
-            use civ_agents::culture::CultureProfile;
-
             let mut sim = Simulation::new();
-            sim.cluster_cultures
-                .insert(100, CultureProfile::new([0.14, 0.14, 0.14, 0.14]));
-            sim.cluster_cultures
-                .insert(200, CultureProfile::new([0.86, 0.86, 0.86, 0.86]));
+            seed_two_settlement_culture_fixture(&mut sim);
             sim.faction_aggression.insert(0, 0.1);
             sim.faction_aggression.insert(1, 0.2);
 
             sim.tick();
             let snap_a = sim.snapshot();
-            let cue_a_100 = snap_a
+            let culture_ids: Vec<u64> = sim.cluster_cultures().keys().copied().collect();
+            assert_eq!(culture_ids.len(), 2, "fixture should retain two cultures");
+            let cue_a_left = snap_a
                 .music_cues
-                .get(&100)
+                .get(&culture_ids[0])
                 .cloned()
-                .expect("seeded cluster 100 should have a cue");
-            let cue_a_200 = snap_a
+                .expect("first emergence cluster should have a cue");
+            let cue_a_right = snap_a
                 .music_cues
-                .get(&200)
+                .get(&culture_ids[1])
                 .cloned()
-                .expect("seeded cluster 200 should have a cue");
+                .expect("second emergence cluster should have a cue");
             assert_ne!(
-                cue_a_100, cue_a_200,
+                cue_a_left, cue_a_right,
                 "cultures with distinct profiles should surface distinct cue params"
             );
 
             sim.tick();
             let snap_b = sim.snapshot();
-            let cue_b_100 = snap_b
+            let cue_b_left = snap_b
                 .music_cues
-                .get(&100)
+                .get(&culture_ids[0])
                 .cloned()
-                .expect("seeded cluster 100 should persist");
-            let cue_b_200 = snap_b
+                .expect("first emergence cluster should persist");
+            let cue_b_right = snap_b
                 .music_cues
-                .get(&200)
+                .get(&culture_ids[1])
                 .cloned()
-                .expect("seeded cluster 200 should persist");
-            assert_ne!(cue_a_100, cue_b_100);
-            assert_ne!(cue_a_200, cue_b_200);
+                .expect("second emergence cluster should persist");
+            assert_ne!(cue_a_left, cue_b_left);
+            assert_ne!(cue_a_right, cue_b_right);
         }
 
         #[test]

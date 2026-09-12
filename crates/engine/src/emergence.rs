@@ -331,6 +331,9 @@ impl Simulation {
 
         self.emergence_ensure_genomes();
         self.emergence_culture();
+        // Coin names from the current culture phonemes once clusters/factions
+        // have been refreshed for this tick.
+        self.emergence_language_lexicon(self.state.tick);
         self.emergence_social();
         self.emergence_psyche();
         self.emergence_accrue_cluster_beliefs();

@@ -11,7 +11,6 @@ fn run_ticks(sim: &mut Simulation, n: u64) {
 }
 
 #[test]
-#[ignore = "TDD red step: cluster_lexicons() returns empty (lexicon growth not yet wired through tick)"]
 fn lang_lexicon_grows_after_warmup() {
     let mut sim = Simulation::with_seed(42);
     run_ticks(&mut sim, 300);
@@ -64,7 +63,6 @@ fn lang_cluster_divergence_couples_culture_and_language() {
 }
 
 #[test]
-#[ignore = "TDD red step: cluster_lexicons() returns empty (faction lexicon access not yet wired)"]
 fn lang_faction_names_coined_from_lexicon() {
     let mut sim = Simulation::with_seed(55);
     run_ticks(&mut sim, 100);

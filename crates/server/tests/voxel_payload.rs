@@ -52,6 +52,18 @@ async fn rpc(
     method: &str,
     params: Value,
 ) -> Value {
+    let value = rpc_response(socket, frames, id, method, params).await;
+    assert!(value.get("error").is_none(), "RPC failed: {value}");
+    value
+}
+
+async fn rpc_response(
+    socket: &mut WebSocketStream<MaybeTlsStream<TcpStream>>,
+    frames: &mut Vec<Frame3d>,
+    id: u64,
+    method: &str,
+    params: Value,
+) -> Value {
     socket
         .send(Message::Text(
             json!({"jsonrpc":"2.0","id":id,"method":method,"params":params}).to_string(),
@@ -64,7 +76,6 @@ async fn rpc(
                 Message::Text(text) => {
                     let value: Value = serde_json::from_str(&text).expect("JSON frame");
                     if value.get("id") == Some(&json!(id)) {
-                        assert!(value.get("error").is_none(), "RPC failed: {value}");
                         return value;
                     }
                 }
@@ -78,6 +89,74 @@ async fn rpc(
     })
     .await
     .expect("RPC response deadline")
+}
+
+#[tokio::test]
+async fn ws_malformed_material_is_rejected_without_terrain_mutation() {
+    let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(919)));
+    let address = spawn_ws_bridge(sim.clone(), 4).await;
+    let (mut socket, _) = connect_async(format!("ws://{address}/ws?tick_format=binary"))
+        .await
+        .unwrap();
+    let mut frames = Vec::new();
+    rpc(
+        &mut socket,
+        &mut frames,
+        1,
+        "sim.set_speed",
+        json!({"multiplier":0}),
+    )
+    .await;
+    let pos = WorldCoord {
+        x: 5 * FIXED_SCALE,
+        y: 4 * FIXED_SCALE,
+        z: 6 * FIXED_SCALE,
+    };
+    sim.lock().await.voxel_mut().write(pos, STONE);
+    sim.lock().await.voxel_mut().drain_dirty();
+    let tick = sim.lock().await.state.tick;
+    let mut id = 2;
+    for method in ["sim.place_voxel", "sim.terraform_extent"] {
+        for material in [
+            json!("wood"),
+            json!(null),
+            json!(-1),
+            json!(1.5),
+            json!(65536),
+            json!(u64::MAX),
+        ] {
+            let reply = rpc_response(
+                &mut socket,
+                &mut frames,
+                id,
+                method,
+                json!({"x":pos.x,"y":pos.y,"z":pos.z,"material":material,"radius":1}),
+            )
+            .await;
+            assert_eq!(
+                reply.pointer("/error/code"),
+                Some(&json!(-32602)),
+                "{method}: {reply}"
+            );
+            assert!(
+                reply.get("result").is_none(),
+                "rejected request must not claim success: {reply}"
+            );
+            let mut authoritative = sim.lock().await;
+            assert_eq!(
+                authoritative.voxel().read(pos),
+                STONE,
+                "{method}: {material}"
+            );
+            assert_eq!(authoritative.state.tick, tick);
+            assert!(
+                authoritative.voxel_mut().drain_dirty().is_empty(),
+                "rejected edit dirtied terrain"
+            );
+            id += 1;
+        }
+    }
+    socket.close(None).await.unwrap();
 }
 
 #[tokio::test]

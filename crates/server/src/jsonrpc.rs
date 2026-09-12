@@ -2327,10 +2327,7 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                     "audio_events".to_owned(),
                     serde_json::json!(snap.audio_events),
                 );
-                root.insert(
-                    "music_cues".to_owned(),
-                    serde_json::json!(snap.music_cues),
-                );
+                root.insert("music_cues".to_owned(), serde_json::json!(snap.music_cues));
                 // Climate snapshot (deterministic planet)
                 root.insert("climate".to_owned(), serde_json::json!(snap.climate));
                 // Emergence sample (entropy, power-law, mutual info)
@@ -2341,10 +2338,7 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 // No snapshot available — still report tick + research state
                 // so client doesn't have to special-case the absent-snapshot path.
                 root.insert("damage_events_count".to_owned(), serde_json::json!(0u32));
-                root.insert(
-                    "voxel_damage_removed".to_owned(),
-                    serde_json::json!(0u32),
-                );
+                root.insert("voxel_damage_removed".to_owned(), serde_json::json!(0u32));
                 root.insert("damage_events".to_owned(), serde_json::json!([]));
                 root.insert("audio_events".to_owned(), serde_json::json!([]));
                 root.insert("music_cues".to_owned(), serde_json::json!({}));
@@ -2592,11 +2586,11 @@ pub fn parse_place_voxel_params(
         .get("z")
         .and_then(|v| v.as_i64())
         .ok_or(invalid_params("z"))?;
-    let material = p
-        .get("material")
-        .and_then(|v| v.as_u64())
-        .map(|v| v as u16)
-        .unwrap_or(0);
+    let material = match p.get("material") {
+        Some(value) => u16::try_from(value.as_u64().ok_or_else(|| invalid_params("material"))?)
+            .map_err(|_| invalid_params("material"))?,
+        None => 0,
+    };
     Ok((x, y, z, material))
 }
 
@@ -2627,12 +2621,8 @@ pub fn parse_terraform_extent_params(
         .unwrap_or("raise")
         .to_owned();
     let material = match p.get("material") {
-        Some(value) => u16::try_from(
-            value
-                .as_u64()
-                .ok_or_else(|| invalid_params("material"))?,
-        )
-        .map_err(|_| invalid_params("material"))?,
+        Some(value) => u16::try_from(value.as_u64().ok_or_else(|| invalid_params("material"))?)
+            .map_err(|_| invalid_params("material"))?,
         None => civ_voxel::default_material_for_op(&op).0 as u16,
     };
     let radius = match p.get("radius") {
@@ -3477,6 +3467,16 @@ mod tests {
         let params = serde_json::json!({ "x": 1, "y": 2, "z": 3, "material": 4 });
         let (x, y, z, material) = parse_place_voxel_params(Some(&params)).expect("place params");
         assert_eq!((x, y, z, material), (1, 2, 3, 4));
+    }
+
+    #[test]
+    fn place_voxel_material_defaults_and_u16_boundaries_remain_valid() {
+        let mut params = serde_json::json!({"x":1,"y":2,"z":3});
+        assert_eq!(parse_place_voxel_params(Some(&params)).unwrap().3, 0);
+        for material in [0, u16::MAX] {
+            params["material"] = serde_json::json!(material);
+            assert_eq!(parse_place_voxel_params(Some(&params)).unwrap().3, material);
+        }
     }
 
     #[test]

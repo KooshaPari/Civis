@@ -1674,12 +1674,17 @@ async fn apply_dispatch_effect(
     match effect {
         DispatchEffect::None => {}
         DispatchEffect::AdvanceTick => {
-            if let Err(err) = advance_one_tick_authoritative(state).await {
-                tracing::error!("sim.command tick failed: {err}");
-                set_replay_io_error(response, err);
-            } else {
-                let tick_after = state.tick.load(Ordering::SeqCst);
-                set_sim_command_tick(response, tick_after);
+            // A manual tick is authoritative: retain its batch in the FIFO
+            // lane so a later periodic tick cannot replace the response's
+            // exact render state. The tick is captured under the publication
+            // guard instead of reread from global state after another ticker
+            // can run.
+            match advance_one_tick_authoritative(state).await {
+                Ok(tick) => set_sim_command_tick(response, tick),
+                Err(err) => {
+                    tracing::error!("sim.command tick failed: {err}");
+                    set_replay_io_error(response, err);
+                }
             }
         }
         DispatchEffect::SaveReplay { path } => {
@@ -2377,27 +2382,33 @@ fn encode_tick_broadcast_messages(
 }
 
 async fn advance_one_tick(state: &AppState) -> Result<(), String> {
-    advance_one_tick_with_delivery(state, false).await
+    advance_one_tick_with_delivery(state, false)
+        .await
+        .map(|_| ())
 }
 
 /// Advance one tick and retain its bundle in the FIFO control lane.
 ///
 /// Explicit `sim.command` ticks are operator-visible actions. They must not be
 /// coalesced away by a newer normal render tick before the client can consume
-/// them, so their bundle uses the authoritative delivery path.
-async fn advance_one_tick_authoritative(state: &AppState) -> Result<(), String> {
+/// them, so their bundle uses the authoritative delivery path. If that bounded
+/// control lane is saturated, the existing latest-authoritative recovery slot
+/// may coalesce to its newest batch to preserve backpressure limits.
+async fn advance_one_tick_authoritative(state: &AppState) -> Result<u64, String> {
     advance_one_tick_with_delivery(state, true).await
 }
 
 async fn advance_one_tick_with_delivery(
     state: &AppState,
     authoritative: bool,
-) -> Result<(), String> {
+) -> Result<u64, String> {
+    // Periodic ticks use the newest-value render lane; an explicit command
+    // uses the FIFO lane (with its existing bounded latest-value fallback).
     // Serialize capture and publication with authoring commands and replacement,
     // but release the simulation mutex before touching outbound lanes.
     let _publication = state.publication.lock().await;
     let mut sim = state.sim.lock().await;
-    let batch = {
+    let (tick, batch) = {
         let tick_start = std::time::Instant::now();
         sim.tick();
         let tick_duration_secs = tick_start.elapsed().as_secs_f64();
@@ -2441,7 +2452,7 @@ async fn advance_one_tick_with_delivery(
         // A headless simulation still advances and records metrics, but no render
         // bundle is built until a client is present. A client attaching just after
         // this snapshot receives the next 10 Hz normal tick.
-        if state.clients.lock().await.is_empty() {
+        let batch = if state.clients.lock().await.is_empty() {
             None
         } else {
             let building_graph_version = observe_building_graph(state, &sim)?;
@@ -2454,12 +2465,13 @@ async fn advance_one_tick_with_delivery(
                 bundle.to_vec(),
                 building_graph_version,
             )?)
-        }
+        };
+        (tick, batch)
     };
 
     drop(sim);
     let Some(batch) = batch else {
-        return Ok(());
+        return Ok(tick);
     };
     state.metrics.tick_batches_sent.inc();
     if authoritative {
@@ -2467,7 +2479,7 @@ async fn advance_one_tick_with_delivery(
     } else {
         publish_normal_tick(state, batch).await;
     }
-    Ok(())
+    Ok(tick)
 }
 
 async fn tick_once(state: &AppState) -> Result<(), String> {
@@ -2615,6 +2627,47 @@ mod tests {
             "command response and outbound batch must identify the same tick"
         );
         assert!(control_rx.try_recv().is_err(), "no duplicate command batch");
+    }
+
+    #[tokio::test]
+    async fn authoritative_tick_returns_captured_tick_when_global_tick_advances() {
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(42)));
+        let (_dir, state) = test_app_state(sim, 0, 0, false);
+        let (control, mut control_rx) = mpsc::channel(CLIENT_CONTROL_CAPACITY);
+        let (latest_authoritative, _) = watch::channel::<Option<RecoveryTick>>(None);
+        let (latest_tick, _) = watch::channel(None);
+        let client = ClientOutboundTx {
+            control,
+            control_state: Arc::new(std::sync::Mutex::new(ClientControlState::default())),
+            latest_authoritative,
+            latest_tick,
+        };
+        state.clients.lock().await.push(client);
+
+        // Hold the client registry at the first outbound client-snapshot
+        // barrier. The command has already captured/stored tick 1 when this
+        // future is pending, so advancing the shared atomic here models a
+        // later global tick without relying on scheduler timing.
+        let clients = state.clients.lock().await;
+        let command = advance_one_tick_authoritative(&state);
+        tokio::pin!(command);
+        assert!(
+            futures::poll!(command.as_mut()).is_pending(),
+            "command should wait at the outbound publication barrier"
+        );
+        state.tick.store(900, Ordering::SeqCst);
+        drop(clients);
+
+        let returned_tick = command.await.expect("authoritative command tick");
+        assert_eq!(
+            returned_tick, 1,
+            "command retains its captured tick identity"
+        );
+        assert_eq!(state.tick.load(Ordering::SeqCst), 900);
+        let Some(ClientOutbound::Tick(batch)) = control_rx.try_recv().ok() else {
+            panic!("captured command batch must use the authoritative lane");
+        };
+        assert_eq!(batch.tick, returned_tick);
     }
 
     #[tokio::test]

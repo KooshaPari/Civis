@@ -5,6 +5,7 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat, T
 use bevy::render::view::NoIndirectDrawing;
 use bevy::ui::widget::ImageNode;
 use bevy::ui::{FocusPolicy, RelativeCursorPosition};
+use bevy::window::WindowResolution;
 use civ_agents::{Alignment, Civilian as AgentCivilian};
 use civ_engine::Building;
 
@@ -39,6 +40,18 @@ pub struct MinimapDot;
 #[derive(Component)]
 pub struct MinimapCamera;
 
+/// Marker for the rectangular viewport indicator overlay drawn on top of the
+/// minimap terrain. Its `Node` rect is updated each frame to outline the area
+/// visible to the main camera, projected to the world XZ plane.
+#[derive(Component)]
+pub struct MinimapViewport;
+
+/// Vertical field-of-view (degrees) used to project the main camera's visible
+/// rectangle onto the minimap. Matches the Bevy `PerspectiveProjection` default
+/// and the value set in `setup_minimap_render_target`'s analogue for the main
+/// camera (`Camera3d::default`).
+const MINIMAP_VIEWPORT_FOV_DEG: f32 = 45.0;
+
 /// Plugin that renders a top-down minimap and lets the player click to teleport the main camera.
 pub struct MinimapPlugin;
 
@@ -49,7 +62,14 @@ impl Plugin for MinimapPlugin {
                 Startup,
                 (setup_minimap_render_target, setup_minimap).chain(),
             )
-            .add_systems(Update, (sync_minimap_dots, teleport_camera_from_minimap))
+            .add_systems(
+                Update,
+                (
+                    sync_minimap_dots,
+                    update_minimap_viewport,
+                    teleport_camera_from_minimap,
+                ),
+            )
             // Server-mode: keep the minimap terrain in sync with the live server
             // snapshot. The polling interval (5 s) is slower than the ws client's
             // own `sim.snapshot` poll (2 s) so this just enforces a fresh fetch
@@ -168,6 +188,24 @@ fn setup_minimap(mut commands: Commands, minimap_target: Res<MinimapRenderTarget
                     height: Val::Percent(100.0),
                     ..default()
                 },
+            ));
+            // Viewport indicator overlay: a transparent rect whose border
+            // outlines the main camera's visible area on the world XZ plane.
+            // Sized/positioned by `update_minimap_viewport` each frame.
+            parent.spawn((
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(0.0),
+                    top: Val::Px(0.0),
+                    width: Val::Px(0.0),
+                    height: Val::Px(0.0),
+                    border: UiRect::all(Val::Px(2.0)),
+                    ..default()
+                },
+                BorderColor::all(Color::srgba(1.0, 0.95, 0.55, 0.95)),
+                BackgroundColor(Color::srgba(1.0, 0.95, 0.55, 0.10)),
+                FocusPolicy::Pass,
+                MinimapViewport,
             ));
         });
 }
@@ -369,6 +407,61 @@ fn teleport_camera_from_minimap(
     rig.target.z = world.z;
 }
 
+/// Project the main camera's ground-plane footprint onto the minimap and update
+/// the `MinimapViewport` rect to outline that area. Uses the camera's `target`
+/// + `distance` + `pitch` + `yaw` from `CameraRig`, and the window's logical
+/// aspect ratio for the horizontal extent. The indicator stays inside the
+/// minimap even when the camera is over-zoomed or the rig is pointed past
+/// the world bounds.
+fn update_minimap_viewport(
+    rig: Res<CameraRig>,
+    windows: Query<&Window>,
+    mut indicators: Query<&mut Node, With<MinimapViewport>>,
+) {
+    let Ok(window) = windows.single() else {
+        return;
+    };
+    let Ok(mut node) = indicators.single_mut() else {
+        return;
+    };
+
+    let aspect = if window.height() > 0.0 {
+        window.width() / window.height()
+    } else {
+        1.0
+    };
+
+    // Camera distance is measured along the view direction; the distance from
+    // the rig target to the ground plane along that direction is
+    // `distance * cos(pitch)`. The visible half-height on the ground plane is
+    // that distance times tan(fov/2); visible half-width is half-height * aspect.
+    let ground_distance = (rig.distance * rig.pitch.cos()).max(1.0);
+    let half_height = ground_distance * (MINIMAP_VIEWPORT_FOV_DEG * 0.5).to_radians().tan();
+    let half_width = half_height * aspect;
+    let world_height = half_height * 2.0;
+    let world_width = half_width * 2.0;
+
+    // Convert the world-space footprint to minimap-pixel position. The viewport
+    // box is centered on `rig.target` projected via the same UV mapping used by
+    // the dots, then we clamp the pixel rect to the minimap bounds so the
+    // indicator never spills outside when the camera sees beyond the world edge.
+    let uv_center = world_to_minimap_uv(rig.target);
+    let center_px = Vec2::new(uv_center.x, uv_center.y) * MINIMAP_SIZE;
+    // UV -> pixel scale: `world_size / UV_UNITS_PER_WORLD`. The UV mapping uses
+    // the world span 0..MINIMAP_WORLD_MAX and renders at MINIMAP_SIZE pixels,
+    // so 1 world unit = (MINIMAP_SIZE / MINIMAP_WORLD_MAX) pixels.
+    let px_per_world = MINIMAP_SIZE / (MINIMAP_WORLD_MAX - MINIMAP_WORLD_MIN).max(1.0);
+    let width_px = (world_width * px_per_world).clamp(8.0, MINIMAP_SIZE);
+    let height_px = (world_height * px_per_world).clamp(8.0, MINIMAP_SIZE);
+
+    let left = (center_px.x - width_px * 0.5).clamp(0.0, MINIMAP_SIZE - width_px);
+    let top = (center_px.y - height_px * 0.5).clamp(0.0, MINIMAP_SIZE - height_px);
+    node.left = Val::Px(left);
+    node.top = Val::Px(top);
+    node.width = Val::Px(width_px);
+    node.height = Val::Px(height_px);
+}
+
 #[cfg(test)]
 mod attach_mode_tests {
     use super::*;
@@ -437,6 +530,141 @@ mod attach_mode_tests {
                 .iter(app.world())
                 .count(),
             expected
+        );
+    }
+}
+
+#[cfg(test)]
+mod viewport_indicator_tests {
+    use super::*;
+
+    /// Build an app with the viewport system, a tiny camera distance, and a
+    /// 16:9 window. Returns the indicator's `Node` after one update.
+    fn run_indicator(rig: CameraRig, window_size: (f32, f32)) -> Node {
+        let mut app = App::new();
+        app.insert_resource(rig);
+        // Bevy Window resource needs concrete physical / logical size before
+        // `Window::width()/height()` work. Provide a minimal one.
+        let (w, h) = window_size;
+        app.world_mut().spawn(Window {
+            resolution: WindowResolution::new(w as u32, h as u32),
+            ..default()
+        });
+        app.add_systems(Update, update_minimap_viewport);
+        app.world_mut().spawn((Node::default(), MinimapViewport));
+        app.update();
+        let mut q = app
+            .world_mut()
+            .query_filtered::<&Node, With<MinimapViewport>>();
+        let node = q.single(app.world()).expect("viewport indicator");
+        node.clone()
+    }
+
+    #[test]
+    fn indicator_keeps_camera_centered_at_default_target() {
+        let rig = CameraRig::default();
+        let node = run_indicator(rig, (1600.0, 900.0));
+        // The `world_to_minimap_uv` mapping uses world span 0..MINIMAP_WORLD_MAX,
+        // so the rig's default target of (0,0,0) projects to UV (0,1) which in
+        // flipped-V UI space lands at the bottom-left of the minimap. The
+        // indicator's centre should land there, NOT the geometric centre.
+        let left = match node.left {
+            Val::Px(v) => v,
+            _ => panic!("expected pixel left"),
+        };
+        let top = match node.top {
+            Val::Px(v) => v,
+            _ => panic!("expected pixel top"),
+        };
+        let width = match node.width {
+            Val::Px(v) => v,
+            _ => panic!("expected pixel width"),
+        };
+        let height = match node.height {
+            Val::Px(v) => v,
+            _ => panic!("expected pixel height"),
+        };
+        let cx = left + width * 0.5;
+        let cy = top + height * 0.5;
+        // Bottom-left of the minimap: cx should be a small positive value
+        // (close to the indicator's half-width), cy at MINIMAP_SIZE - half-height.
+        assert!(
+            cx < width + 2.0,
+            "indicator cx={} should be at the bottom-left (~width/2), got > width+2",
+            cx,
+        );
+        assert!(
+            cy > MINIMAP_SIZE - height - 2.0,
+            "indicator cy={} should be near the bottom of the minimap (MINIMAP_SIZE - height/2 = {}), got < {}",
+            cy,
+            MINIMAP_SIZE - height,
+            MINIMAP_SIZE - height - 2.0,
+        );
+    }
+
+    #[test]
+    fn indicator_stays_within_minimap_bounds_when_zoomed_out() {
+        let mut rig = CameraRig::default();
+        rig.distance = 900.0; // pushed to the max zoom
+        let node = run_indicator(rig, (1600.0, 900.0));
+        // Far zoom produces a wide world footprint → the clamped pixel size
+        // should be at MINIMAP_SIZE — confirming the safety clamp works.
+        let width = match node.width {
+            Val::Px(v) => v,
+            _ => panic!("expected pixel width"),
+        };
+        let height = match node.height {
+            Val::Px(v) => v,
+            _ => panic!("expected pixel height"),
+        };
+        assert!(
+            width <= MINIMAP_SIZE + f32::EPSILON,
+            "indicator width={} should not exceed minimap size {}",
+            width,
+            MINIMAP_SIZE,
+        );
+        assert!(
+            height <= MINIMAP_SIZE + f32::EPSILON,
+            "indicator height={} should not exceed minimap size {}",
+            height,
+            MINIMAP_SIZE,
+        );
+    }
+
+    #[test]
+    fn indicator_pixels_grow_when_aspect_widens() {
+        let mut rig = CameraRig::default();
+        rig.distance = 60.0;
+        let wide = run_indicator(rig, (2560.0, 900.0));
+        let tall = run_indicator(rig, (900.0, 900.0));
+        let wide_w = match wide.width {
+            Val::Px(v) => v,
+            _ => panic!("expected pixel width"),
+        };
+        let tall_w = match tall.width {
+            Val::Px(v) => v,
+            _ => panic!("expected pixel width"),
+        };
+        let wide_h = match wide.height {
+            Val::Px(v) => v,
+            _ => panic!("expected pixel height"),
+        };
+        let tall_h = match tall.height {
+            Val::Px(v) => v,
+            _ => panic!("expected pixel height"),
+        };
+        // Wider aspect -> strictly wider indicator; vertical extent identical.
+        assert!(
+            wide_w > tall_w,
+            "wide aspect indicator width={} should exceed square aspect width={}",
+            wide_w,
+            tall_w,
+        );
+        assert!(
+            (wide_h - tall_h).abs() < 0.5,
+            "vertical extent must track FOV alone (wide_h={}, tall_h={})",
+            wide_h,
+            tall_h,
         );
     }
 }

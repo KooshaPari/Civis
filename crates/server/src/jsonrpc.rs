@@ -2626,16 +2626,22 @@ pub fn parse_terraform_extent_params(
         .and_then(|v| v.as_str())
         .unwrap_or("raise")
         .to_owned();
-    let material = p
-        .get("material")
-        .and_then(|v| v.as_u64())
-        .map(|v| v as u16)
-        .unwrap_or_else(|| civ_voxel::default_material_for_op(&op).0 as u16);
-    let radius = p
-        .get("radius")
-        .and_then(|v| v.as_u64())
-        .map(|v| v.clamp(1, 32) as u8)
-        .unwrap_or(3);
+    let material = match p.get("material") {
+        Some(value) => u16::try_from(
+            value
+                .as_u64()
+                .ok_or_else(|| invalid_params("material"))?,
+        )
+        .map_err(|_| invalid_params("material"))?,
+        None => civ_voxel::default_material_for_op(&op).0 as u16,
+    };
+    let radius = match p.get("radius") {
+        Some(value) => value
+            .as_u64()
+            .ok_or_else(|| invalid_params("radius"))?
+            .clamp(1, 32) as u8,
+        None => 3,
+    };
     Ok((x, y, z, op, material, radius))
 }
 
@@ -3471,6 +3477,50 @@ mod tests {
         let params = serde_json::json!({ "x": 1, "y": 2, "z": 3, "material": 4 });
         let (x, y, z, material) = parse_place_voxel_params(Some(&params)).expect("place params");
         assert_eq!((x, y, z, material), (1, 2, 3, 4));
+    }
+
+    #[test]
+    fn parse_terraform_extent_params_defaults_material_and_radius() {
+        let params = serde_json::json!({ "x": 1, "y": 2, "z": 3, "op": "lower" });
+        let parsed = parse_terraform_extent_params(Some(&params)).expect("terraform params");
+        assert_eq!(parsed, (1, 2, 3, "lower".to_owned(), 0, 3));
+    }
+
+    #[test]
+    fn parse_terraform_extent_params_rejects_malformed_optional_values() {
+        let bad_material = serde_json::json!({
+            "x": 1,
+            "y": 2,
+            "z": 3,
+            "material": "wood"
+        });
+        assert_eq!(
+            parse_terraform_extent_params(Some(&bad_material))
+                .expect_err("string material must be rejected")
+                .message,
+            "Invalid params: missing or invalid `material`"
+        );
+
+        let overflowing_material = serde_json::json!({
+            "x": 1,
+            "y": 2,
+            "z": 3,
+            "material": 65_536
+        });
+        assert_eq!(
+            parse_terraform_extent_params(Some(&overflowing_material))
+                .expect_err("overflowing material must be rejected")
+                .message,
+            "Invalid params: missing or invalid `material`"
+        );
+
+        let bad_radius = serde_json::json!({ "x": 1, "y": 2, "z": 3, "radius": "large" });
+        assert_eq!(
+            parse_terraform_extent_params(Some(&bad_radius))
+                .expect_err("string radius must be rejected")
+                .message,
+            "Invalid params: missing or invalid `radius`"
+        );
     }
 
     #[test]

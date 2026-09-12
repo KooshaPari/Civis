@@ -657,6 +657,9 @@ async fn healthz(State(state): State<AppState>) -> impl IntoResponse {
         Json(serde_json::json!({
             "tick": tick,
             "clients": clients,
+            "tick_batches_sent": state.metrics.tick_batches_sent.get(),
+            "tick_messages_sent": state.metrics.tick_messages_sent.get(),
+            "ws_client_disconnects": state.metrics.ws_client_disconnects.get(),
         })),
     )
 }
@@ -4480,6 +4483,18 @@ mod tests {
         let value: serde_json::Value = serde_json::from_slice(&body).expect("healthz json");
         assert_eq!(value.get("tick"), Some(&serde_json::json!(123)));
         assert_eq!(value.get("clients"), Some(&serde_json::json!(0)));
+        assert_eq!(
+            value.get("tick_batches_sent"),
+            Some(&serde_json::json!(0))
+        );
+        assert_eq!(
+            value.get("tick_messages_sent"),
+            Some(&serde_json::json!(0))
+        );
+        assert_eq!(
+            value.get("ws_client_disconnects"),
+            Some(&serde_json::json!(0))
+        );
     }
 
     #[tokio::test]

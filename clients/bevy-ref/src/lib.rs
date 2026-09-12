@@ -12,6 +12,12 @@
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
+// `f32::from(f64)` is not implemented in newer Rust, so bare float literals
+// silently default to f64 and need a `_f32` suffix or `f32::from` wrapping.
+// The bevy_ref UI code already coerces these literals through f32 contexts
+// (egui, glam, Color32) so the implicit f64 fallback is safe; allow the
+// lint so the source stays terse and matches the egui/Color32 idiom.
+#![allow(float_literal_f32_fallback)]
 
 use std::collections::BTreeMap;
 

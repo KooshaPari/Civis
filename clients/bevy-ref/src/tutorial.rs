@@ -134,7 +134,7 @@ fn draw_tutorial_hint(
     mut state: ResMut<TutorialState>,
     mut ran_once: Local<bool>,
     bridge: Option<Res<ServerBridge>>,
-    mut sim_status: ResMut<SimStatusSnapshot>,
+    sim_status: Res<SimStatusSnapshot>,
     mut sent_subscribe: Local<bool>,
     mut settings: ResMut<GameSettings>,
 ) {
@@ -169,7 +169,7 @@ fn draw_tutorial_hint(
     egui::Area::new(egui::Id::new("tutorial_hint"))
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
         .show(ctx, |ui| {
-            egui::Frame::none()
+            egui::Frame::new()
                 .fill(egui::Color32::from_rgba_premultiplied(9, 10, 12, 230))
                 .stroke(egui::Stroke::new(
                     1.0,

@@ -19,6 +19,7 @@ use tokio_tungstenite::tungstenite::Message;
 
 /// Drain all available items from a crossbeam channel into a Vec without blocking.
 /// Reuses the destination's existing capacity to avoid per-frame allocation.
+#[allow(dead_code)]
 fn drain_into<T>(rx: &Receiver<T>, dst: &mut Vec<T>) {
     dst.clear();
     while let Ok(item) = rx.try_recv() {
@@ -115,6 +116,7 @@ pub struct RpcTicket {
 /// the previous live-stream scene exactly once when the new terrain lands.
 struct WorldGenState {
     generation: u64,
+    #[allow(dead_code)]
     connection_id: String,
     clear_fn: Option<Box<dyn FnOnce() + Send>>,
 }

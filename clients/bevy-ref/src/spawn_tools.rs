@@ -26,8 +26,11 @@ use crate::ws_client::RpcTicket;
 #[cfg(feature = "voxel")]
 use civ_voxel::material::AIR;
 
+#[allow(dead_code)]
 const CIVILIAN_RADIUS: f32 = 1.4;
+#[allow(dead_code)]
 const CIVILIAN_BODY: f32 = 3.2;
+#[allow(dead_code)]
 const CIVILIAN_HALF_HEIGHT: f32 = CIVILIAN_BODY * 0.5 + CIVILIAN_RADIUS;
 #[cfg(all(feature = "models", feature = "voxel"))]
 const CIVILIAN_MODEL_SCALE: f32 = 8.0;
@@ -41,8 +44,11 @@ const HERD_MODEL_SCALE: f32 = 2.4;
 const BUILDING_MODEL_SCALE: f32 = 4.0;
 #[cfg(all(feature = "models", not(feature = "voxel")))]
 const BUILDING_MODEL_SCALE: f32 = 6.0;
+#[allow(dead_code)]
 const BUILDING_EXTENTS: Vec3 = Vec3::new(7.0, 12.0, 7.0);
+#[allow(dead_code)]
 const BUILDING_HALF_HEIGHT: f32 = BUILDING_EXTENTS.y * 0.5;
+#[allow(dead_code)]
 const ROAD_SEGMENT_THICKNESS: f32 = 0.6;
 
 #[cfg(not(feature = "egui"))]

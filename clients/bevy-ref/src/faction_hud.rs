@@ -21,6 +21,7 @@ use crate::live_stream::ServerBridge;
 use crate::ui_theme::{ACCENT, DIM, GOLD, GREEN, PANEL_FILL};
 
 // CHIP_FILL: local tint not present in ui_theme (different from GRAPHITE_700)
+#[allow(dead_code)]
 const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);
 
 /// Header crest display size (logical px).

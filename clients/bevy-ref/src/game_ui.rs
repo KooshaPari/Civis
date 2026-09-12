@@ -543,6 +543,7 @@ fn load_tool_icons(
 }
 
 #[cfg(feature = "egui")]
+#[allow(dead_code)]
 fn sync_initial_game_speed_from_settings(
     settings: Option<Res<GameSettings>>,
     mut speed: ResMut<GameSpeed>,
@@ -915,6 +916,7 @@ fn apply_theme(ctx: &egui::Context) {
 }
 
 /// Shared rounded glass frame for the HUD panels.
+#[allow(dead_code)]
 fn panel_frame(margin: egui::Margin) -> egui::Frame {
     egui::Frame::NONE
         .fill(PANEL_FILL)

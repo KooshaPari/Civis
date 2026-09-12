@@ -22,6 +22,7 @@ const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20,
 const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
 const DIM: egui::Color32 = egui::Color32::from_rgb(150, 158, 178);
 const GREEN: egui::Color32 = egui::Color32::from_rgb(100, 210, 120);
+#[allow(dead_code)]
 const GOLD: egui::Color32 = egui::Color32::from_rgb(240, 200, 90);
 const RED: egui::Color32 = egui::Color32::from_rgb(220, 80, 80);
 const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);

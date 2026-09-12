@@ -633,7 +633,7 @@ pub fn consume_menu_commands(
     }
 }
 
-pub fn toggle_pause(
+pub(crate) fn toggle_pause(
     keys: Res<ButtonInput<KeyCode>>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     settings: Option<Res<GameSettings>>,
@@ -931,7 +931,7 @@ fn draw_main_menu(
                         ui.add_space(10.0);
                         egui::Frame::NONE
                             .fill(CHIP_FILL)
-                            .rounding(egui::Rounding::same(10))
+                            .corner_radius(egui::CornerRadius::same(10))
                             .inner_margin(egui::Margin::same(16))
                             .show(ui, |ui| {
                                 ui.horizontal(|ui| {
@@ -949,7 +949,7 @@ fn draw_main_menu(
 fn banner_tile(ui: &mut egui::Ui, title: &str, body: &str, accent: egui::Color32) {
     egui::Frame::NONE
         .fill(CHIP_FILL)
-        .rounding(egui::Rounding::same(10))
+        .corner_radius(egui::CornerRadius::same(10))
         .inner_margin(egui::Margin::same(14))
         .show(ui, |ui| {
             ui.set_min_width(272.0);
@@ -1382,6 +1382,7 @@ pub fn format_gpu_capabilities_unavailable_message() -> &'static str {
     "GPU capabilities unavailable (headless or still starting up)"
 }
 
+#[allow(dead_code)]
 fn gpu_capabilities_settings_section(ui: &mut egui::Ui, gpu_caps: Option<&GpuCapabilities>) {
     ui.label(
         egui::RichText::new("GPU (detected)")

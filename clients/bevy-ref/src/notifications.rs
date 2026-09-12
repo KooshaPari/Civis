@@ -126,6 +126,7 @@ impl Plugin for NotificationsPlugin {
     }
 }
 
+#[allow(dead_code)]
 fn in_playing(mode: Res<GameUiMode>) -> bool {
     *mode == GameUiMode::Playing
 }

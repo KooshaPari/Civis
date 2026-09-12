@@ -6,7 +6,9 @@ use crate::atmosphere::DayNightCycle;
 use crate::live_pick::{LivePickPlugin, LiveSelection};
 use crate::live_scene::LiveScenePlugin;
 use crate::live_stream::ServerBridge;
-use crate::ws_client::{SimPerfData, WsClient, WsClientConfig};
+use crate::ws_client::{WsClient, WsClientConfig};
+#[cfg(test)]
+use crate::ws_client::SimPerfData;
 use crate::{
     resolve_live_ws_url, AttachMode, LiveHudSnapshot, MusicCues, OutcomeProgressHud,
     WsSpectatorMeta,

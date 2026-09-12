@@ -2,7 +2,6 @@
 
 use civ_engine::scenario::{baseline_scenario_path, load_scenario};
 use civ_engine::{Simulation, SimulationSnapshot};
-use std::path::PathBuf;
 
 /// Helper to get a default simulation.
 fn setup_default() -> Simulation {
@@ -44,12 +43,12 @@ fn test_simulation_economy_cycle() {
     );
 }
 
-/// Test 3: Diplomacy - create 3 factions (baseline has 4), run 20 ticks, verify diplomacy events occur.
+/// Test 3: Diplomacy - run through the 500-tick macro diplomacy cadence and
+/// verify the resulting events are present in the public snapshot.
 #[test]
-#[ignore = "TDD red step: snapshot.diplomacy_events is empty after 20 ticks (diplomacy not yet wired into snapshot)"]
 fn test_simulation_diplomacy() {
     let mut sim = setup_default();
-    for _ in 0..20 {
+    for _ in 0..500 {
         sim.tick();
     }
     let snapshot = sim.snapshot();

@@ -1,5 +1,6 @@
 //! CIV-1000 save layouts: uncompressed `.civsave/` folder (debug) and `.civsave.zst` archive (default).
 
+use std::collections::BTreeMap;
 use std::fs::{self, File};
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -9,7 +10,7 @@ use tar::{Archive, Builder};
 use thiserror::Error;
 use zstd::stream::{decode_all, encode_all};
 
-use crate::{ModGuestStateSave, ReplayError, Simulation, WorldState};
+use crate::{ClusterStocks, ModGuestStateSave, ReplayError, Simulation, WorldState};
 
 /// Sidecar metadata written beside replay + mod state.
 pub const CIVSAVE_SPEC_ID: &str = "CIV-1000";
@@ -17,6 +18,9 @@ pub const CIVSAVE_SPEC_ID: &str = "CIV-1000";
 pub const CIVSAVE_FORMAT_VERSION: u32 = 3;
 /// Default on-disk save extension (zstd-compressed tar).
 pub const CIVSAVE_ARCHIVE_EXTENSION: &str = "civsave.zst";
+/// Optional sidecar introduced after the initial replay-only bundle format.
+/// Its absence represents the empty stockpile state used by legacy saves.
+const CLUSTER_STOCKS_FILE: &str = "cluster_stocks.json";
 
 /// Zstd frame magic (little-endian `0xFD2FB528`).
 const ZSTD_FRAME_MAGIC: [u8; 4] = [0x28, 0xB5, 0x2F, 0xFD];
@@ -318,6 +322,13 @@ impl CivSaveBundle {
         fs::write(&world_state_path, serde_json::to_string(&sim.state)?)
             .map_err(|e| io_err(&world_state_path, e))?;
 
+        let cluster_stocks_path = dir.join(CLUSTER_STOCKS_FILE);
+        fs::write(
+            &cluster_stocks_path,
+            serde_json::to_string(sim.cluster_stocks())?,
+        )
+        .map_err(|e| io_err(&cluster_stocks_path, e))?;
+
         let replay_path = dir.join("replay.civreplay");
         sim.save_replay(&replay_path)?;
         Ok(())
@@ -373,6 +384,17 @@ impl CivSaveBundle {
         let world_state_path = dir.join("world_state.json");
         if world_state_path.is_file() {
             sim.state = serde_json::from_value(migrated_ws).map_err(SaveBundleError::Json)?;
+        }
+
+        let cluster_stocks_path = dir.join(CLUSTER_STOCKS_FILE);
+        if let Some(json) = match fs::read_to_string(&cluster_stocks_path) {
+            Ok(json) => Some(json),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+            Err(error) => return Err(io_err(&cluster_stocks_path, error)),
+        } {
+            let cluster_stocks: BTreeMap<u64, ClusterStocks> =
+                serde_json::from_str(&json).map_err(SaveBundleError::Json)?;
+            sim.restore_cluster_stocks(cluster_stocks);
         }
 
         // Update metadata format version so future loads skip migration.
@@ -671,6 +693,104 @@ mod tests {
             loaded.mod_host().guest_memory_snapshot("archive-mod"),
             vec![1, 2]
         );
+    }
+
+    #[test]
+    fn civsave_folder_round_trips_cluster_stocks() {
+        let mut sim = Simulation::with_seed(41);
+        let mut cluster_stocks = BTreeMap::new();
+        let mut first = ClusterStocks::default();
+        first.add(civ_economy::Good::Food, 73);
+        cluster_stocks.insert(7001, first);
+        let mut second = ClusterStocks::default();
+        second.add(civ_economy::Good::Wood, 29);
+        cluster_stocks.insert(7002, second);
+        sim.restore_cluster_stocks(cluster_stocks);
+        let expected = sim.cluster_stocks().clone();
+
+        let dir = tempdir().expect("tempdir");
+        let save_path = dir.path().join("cluster-stocks");
+        CivSaveBundle::save_dir(&save_path, &sim).expect("save");
+        assert!(save_path.join(CLUSTER_STOCKS_FILE).is_file());
+
+        let loaded = CivSaveBundle::load_dir(&save_path).expect("load");
+        assert_eq!(loaded.cluster_stocks(), &expected);
+    }
+
+    #[test]
+    fn civsave_archive_round_trips_cluster_stocks() {
+        let mut sim = Simulation::with_seed(43);
+        sim.test_set_cluster_food_stock(7002, 91);
+        let expected = sim.cluster_stocks().clone();
+
+        let dir = tempdir().expect("tempdir");
+        let archive_path = dir.path().join("cluster-stocks.civsave.zst");
+        CivSaveBundle::save_archive(&archive_path, &sim).expect("save archive");
+
+        let loaded = CivSaveBundle::load_archive(&archive_path).expect("load archive");
+        assert_eq!(loaded.cluster_stocks(), &expected);
+    }
+
+    #[test]
+    fn legacy_bundle_without_cluster_stocks_sidecar_loads_empty_stocks() {
+        let sim = Simulation::with_seed(47);
+        let dir = tempdir().expect("tempdir");
+        let save_path = dir.path().join("legacy");
+        write_legacy_bundle_without_cluster_stocks(&save_path, &sim);
+
+        let loaded = CivSaveBundle::load_dir(&save_path).expect("load legacy");
+        assert!(loaded.cluster_stocks().is_empty());
+    }
+
+    fn write_legacy_bundle_without_cluster_stocks(path: &Path, sim: &Simulation) {
+        fs::create_dir_all(path).expect("legacy directory");
+        let metadata = CivSaveMetadata {
+            spec_id: CIVSAVE_SPEC_ID.to_owned(),
+            format_version: CIVSAVE_FORMAT_VERSION,
+            tick: sim.state.tick,
+            scenario_name: None,
+        };
+        fs::write(
+            path.join("metadata.json"),
+            serde_json::to_string(&metadata).expect("metadata json"),
+        )
+        .expect("metadata");
+        fs::write(
+            path.join("world_state.json"),
+            serde_json::to_string(&sim.state).expect("world state json"),
+        )
+        .expect("world state");
+        sim.save_replay(path.join("replay.civreplay"))
+            .expect("replay");
+    }
+
+    #[test]
+    fn malformed_cluster_stocks_sidecar_fails_load() {
+        let sim = Simulation::with_seed(53);
+        let dir = tempdir().expect("tempdir");
+        let save_path = dir.path().join("malformed-sidecar");
+        CivSaveBundle::save_dir(&save_path, &sim).expect("save");
+        fs::write(save_path.join(CLUSTER_STOCKS_FILE), "not json").expect("malformed sidecar");
+
+        assert!(matches!(
+            CivSaveBundle::load_dir(&save_path),
+            Err(SaveBundleError::Json(_))
+        ));
+    }
+
+    #[test]
+    fn unreadable_cluster_stocks_sidecar_fails_load() {
+        let sim = Simulation::with_seed(59);
+        let dir = tempdir().expect("tempdir");
+        let save_path = dir.path().join("directory-sidecar");
+        write_legacy_bundle_without_cluster_stocks(&save_path, &sim);
+        let sidecar_path = save_path.join(CLUSTER_STOCKS_FILE);
+        fs::create_dir(&sidecar_path).expect("directory sidecar");
+
+        assert!(matches!(
+            CivSaveBundle::load_dir(&save_path),
+            Err(SaveBundleError::Io { .. })
+        ));
     }
 
     /// FR-CIV-SAVESLOT.

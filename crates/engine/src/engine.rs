@@ -2945,6 +2945,11 @@ impl Simulation {
         &self.cluster_stocks
     }
 
+    /// Replace the persisted per-cluster stockpile snapshot during save load.
+    pub(crate) fn restore_cluster_stocks(&mut self, cluster_stocks: BTreeMap<u64, ClusterStocks>) {
+        self.cluster_stocks = cluster_stocks;
+    }
+
     /// Build a per-client snapshot view for the multiplayer bridge.
     ///
     /// Returns a JSON object whose shape matches the `sim.get_snapshot_for_session`

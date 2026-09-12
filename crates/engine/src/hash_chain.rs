@@ -94,6 +94,19 @@ pub fn chain_root_from_payloads(
     }
 }
 
+/// Canonical research-event payload for the replay hash chain.
+///
+/// Layout (all little-endian): `"research"(8) | tick(8) | snapshot_hash(len) | accepted(1)`.
+#[must_use]
+pub fn research_event_bytes(tick: u64, snapshot_hash: &[u8], accepted: bool) -> Vec<u8> {
+    let mut out = Vec::with_capacity(8 + 8 + snapshot_hash.len() + 1);
+    out.extend_from_slice(b"research");
+    out.extend_from_slice(&tick.to_le_bytes());
+    out.extend_from_slice(snapshot_hash);
+    out.push(if accepted { 1 } else { 0 });
+    out
+}
+
 /// Canonical combat-event payload for the replay hash chain (FR-CIV-TACTICS-041).
 ///
 /// The 9-field layout (all little-endian) encodes the full engagement context:

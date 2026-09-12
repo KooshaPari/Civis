@@ -9,7 +9,7 @@ use std::path::Path;
 
 use crate::hash_chain::{
     chain_advance, chain_root_from_payloads, climate_event_bytes, combat_event_bytes,
-    tick_event_bytes, GENESIS, HASH_LEN,
+    research_event_bytes, tick_event_bytes, GENESIS, HASH_LEN,
 };
 use crate::io::{read_text, write_text};
 use civ_planet::{Climate, GeologyMap, WeatherCell};
@@ -375,13 +375,16 @@ impl ReplayLog {
         self.running_hash = Some(chain_advance(&prev, &payload));
     }
 
-    /// Record a research outcome.
+    /// Record a research outcome and extend the hash chain.
     pub fn record_research(&mut self, tick: u64, snapshot_hash: Vec<u8>, accepted: bool) {
         self.events.push(ReplayEvent::ResearchOutcome {
             tick,
-            snapshot_hash,
+            snapshot_hash: snapshot_hash.clone(),
             accepted,
         });
+        let prev = self.running_hash.unwrap_or(GENESIS);
+        let payload = research_event_bytes(tick, &snapshot_hash, accepted);
+        self.running_hash = Some(chain_advance(&prev, &payload));
     }
 
     /// Record a climate snapshot and fold it into the running hash chain
@@ -531,8 +534,12 @@ impl ReplayLog {
     }
 
     /// Record a `mod.permission_violation.v1` event from replay-bus JSON emitted by mod-host.
+    /// **Fixed**: Now validates JSON parsing and rejects malformed events instead of silently swallowing them.
     pub fn record_mod_permission_violation_bus(&mut self, tick: u64, bus_json: &str) {
-        let parsed = serde_json::from_str::<serde_json::Value>(bus_json).unwrap_or_default();
+        // Validate JSON parsing - reject malformed events instead of swallowing them.
+        let Ok(parsed) = serde_json::from_str::<serde_json::Value>(bus_json) else {
+            return; // Reject silently; malformed bus JSON is never forwarded as an event.
+        };
         let mod_id = parsed
             .get("mod_id")
             .and_then(|value| value.as_str())
@@ -620,7 +627,7 @@ impl ReplayLog {
         self.running_hash = Some(chain_advance(&prev, &tick_event_bytes(tick)));
     }
 
-    /// Recompute the hash-chain root from tick + combat + climate markers in event order.
+    /// Recompute the hash-chain root from tick + combat + climate + research markers in event order.
     #[must_use]
     pub fn recompute_running_hash(&self) -> Option<[u8; HASH_LEN]> {
         chain_root_from_payloads(self.events.iter().filter_map(|event| match event {
@@ -652,6 +659,9 @@ impl ReplayLog {
                 weather_grid,
                 geology_map,
             )),
+            ReplayEvent::ResearchOutcome { tick, snapshot_hash, accepted } => {
+                Some(research_event_bytes(*tick, snapshot_hash, *accepted))
+            }
             _ => None,
         }))
     }

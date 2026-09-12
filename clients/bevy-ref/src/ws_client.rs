@@ -7,8 +7,8 @@ use std::{
 use civ_protocol_3d::Frame3d;
 
 use crate::{
-    EmergenceHudData, OutcomeHudData, WsConnectionState, WsSpectatorMeta,
-    parse_jsonrpc_snapshot_meta, parse_ws_payload, ws_prefer_binary_from_env,
+    parse_jsonrpc_snapshot_meta, parse_ws_payload, ws_prefer_binary_from_env, EmergenceHudData,
+    OutcomeHudData, WsConnectionState, WsSpectatorMeta,
 };
 use crossbeam_channel::{Receiver, Sender};
 use futures_util::{SinkExt, StreamExt};
@@ -1349,6 +1349,130 @@ mod tests {
         server_done_rx
             .recv_timeout(Duration::from_secs(1))
             .expect("server completed ticket exchange");
+        server.join().expect("server exited");
+    }
+
+    #[test]
+    fn reconnect_does_not_replay_failed_ticket_and_accepts_fresh_ticket() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind test websocket");
+        listener.set_nonblocking(true).expect("set nonblocking");
+        let address = listener.local_addr().expect("test websocket address");
+        let (first_ready_tx, first_ready_rx) = std::sync::mpsc::channel();
+        let (close_first_tx, close_first_rx) = std::sync::mpsc::channel();
+        let (second_ready_tx, second_ready_rx) = std::sync::mpsc::channel();
+        let (replayed_tx, replayed_rx) = std::sync::mpsc::channel();
+
+        let server = thread::spawn(move || {
+            Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .expect("server runtime")
+                .block_on(async move {
+                    let listener = tokio::net::TcpListener::from_std(listener).expect("tokio listener");
+                    let (first_stream, _) = tokio::time::timeout(Duration::from_secs(5), listener.accept())
+                        .await
+                        .expect("first client accept timed out")
+                        .expect("accept first client");
+                    let mut first = tokio_tungstenite::accept_async(first_stream)
+                        .await
+                        .expect("first websocket handshake");
+                    let Some(Ok(Message::Text(snapshot))) = tokio::time::timeout(Duration::from_secs(5), first.next())
+                        .await
+                        .expect("first snapshot request timed out") else {
+                        panic!("first client snapshot request");
+                    };
+                    assert_eq!(serde_json::from_str::<serde_json::Value>(&snapshot).unwrap()["id"], 9001);
+                    first
+                        .send(Message::Text(
+                            r#"{"jsonrpc":"2.0","id":9001,"result":{"is_day":true,"tick":1}}"#.into(),
+                        ))
+                        .await
+                        .expect("first snapshot response");
+                    first_ready_tx.send(()).expect("first connection ready");
+                    close_first_rx.recv_timeout(Duration::from_secs(1)).expect("close first connection");
+                    first.close(None).await.expect("close first socket");
+                    drop(first);
+
+                    let (second_stream, _) = tokio::time::timeout(Duration::from_secs(5), listener.accept())
+                        .await
+                        .expect("reconnect accept timed out")
+                        .expect("accept reconnect");
+                    let mut second = tokio_tungstenite::accept_async(second_stream)
+                        .await
+                        .expect("second websocket handshake");
+                    let Some(Ok(Message::Text(snapshot))) = tokio::time::timeout(Duration::from_secs(5), second.next())
+                        .await
+                        .expect("second snapshot request timed out") else {
+                        panic!("second client snapshot request");
+                    };
+                    assert_eq!(serde_json::from_str::<serde_json::Value>(&snapshot).unwrap()["id"], 9001);
+                    second
+                        .send(Message::Text(
+                            r#"{"jsonrpc":"2.0","id":9001,"result":{"is_day":true,"tick":2}}"#.into(),
+                        ))
+                        .await
+                        .expect("second snapshot response");
+                    second_ready_tx.send(()).expect("second connection ready");
+
+                    loop {
+                        let Some(Ok(Message::Text(text))) = tokio::time::timeout(Duration::from_secs(5), second.next())
+                            .await
+                            .expect("second ticket request timed out") else {
+                            break;
+                        };
+                        let request: serde_json::Value = serde_json::from_str(&text).expect("ticket json");
+                        let id = request["id"].as_u64();
+                        if id == Some(FIRST_TICKET_ID) {
+                            let _ = replayed_tx.send(());
+                            break;
+                        }
+                        if id == Some(FIRST_TICKET_ID + 1) {
+                            second
+                                .send(Message::Text(
+                                    format!(r#"{{"jsonrpc":"2.0","id":{},"result":{{"accepted":true}}}}"#, FIRST_TICKET_ID + 1).into(),
+                                ))
+                                .await
+                                .expect("fresh ticket response");
+                            break;
+                        }
+                    }
+                });
+        });
+
+        let client = WsClient::spawn_with_config(
+            format!("ws://{address}"),
+            WsClientConfig {
+                prefer_binary: true,
+            },
+        );
+        first_ready_rx
+            .recv_timeout(Duration::from_secs(1))
+            .expect("first attach");
+        let failed = client.request_rpc("sim.first", serde_json::json!({}));
+        close_first_tx.send(()).expect("request disconnect");
+        let deadline = std::time::Instant::now() + Duration::from_secs(2);
+        let mut failure = None;
+        while std::time::Instant::now() < deadline && failure.is_none() {
+            failure = failed.try_recv();
+            thread::sleep(Duration::from_millis(10));
+        }
+        assert!(matches!(failure, Some(Err(message)) if message.contains("connection closed")));
+
+        second_ready_rx
+            .recv_timeout(Duration::from_secs(2))
+            .expect("reconnect attach");
+        let fresh = client.request_rpc("sim.fresh", serde_json::json!({}));
+        let deadline = std::time::Instant::now() + Duration::from_secs(2);
+        let mut fresh_reply = None;
+        while std::time::Instant::now() < deadline && fresh_reply.is_none() {
+            fresh_reply = fresh.try_recv();
+            thread::sleep(Duration::from_millis(10));
+        }
+        assert_eq!(fresh_reply, Some(Ok(serde_json::json!({"accepted": true}))));
+        assert!(
+            replayed_rx.try_recv().is_err(),
+            "failed ticket replayed after reconnect"
+        );
         server.join().expect("server exited");
     }
 }

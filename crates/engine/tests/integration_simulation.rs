@@ -14,6 +14,7 @@ fn setup_with_seed(seed: u64) -> Simulation {
 }
 
 /// Helper to get a simulation from the baseline scenario.
+#[allow(dead_code)]
 fn setup_from_baseline() -> Simulation {
     let scenario = load_scenario(baseline_scenario_path()).expect("baseline scenario should load");
     scenario.into_simulation(42)

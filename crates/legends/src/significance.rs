@@ -267,7 +267,7 @@ pub fn event_significance(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ids::{LegendEntityId, LegendEventId};
+    use crate::ids::LegendEntityId;
     use crate::model::{EventKind, Role};
 
     #[test]

@@ -1609,7 +1609,7 @@ impl Simulation {
         kind: DiplomacyKind,
     ) {
         self.state.tick = tick;
-        self.apply_player_diplomacy_action(source_faction, target_faction, kind);
+        let _ = self.apply_player_diplomacy_action(source_faction, target_faction, kind);
     }
 
     pub(crate) fn apply_replay_combat(&mut self, tick: u64, event: &DamageEvent) {

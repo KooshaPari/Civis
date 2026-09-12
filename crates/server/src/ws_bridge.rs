@@ -43,7 +43,6 @@ use tokio::{
 };
 
 use crate::{
-    authn::BearerToken,
     jsonrpc::{
         dispatch_request, encode_response, error_code, parse_error_response, parse_request,
         parse_role_param, set_sim_command_tick, set_spawn_civilian_result, DispatchContext,
@@ -566,6 +565,7 @@ fn authorize_request(headers: &HeaderMap, required: bool) -> Result<(), StatusCo
     Err(StatusCode::UNAUTHORIZED)
 }
 
+#[allow(dead_code)]
 fn replay_http_allowed(addr: SocketAddr, is_authorized: bool) -> bool {
     if is_authorized {
         return true;

@@ -924,7 +924,7 @@ mod tests {
         let mut repl = make_repl();
         for alias in &["quit", "q", "exit"] {
             repl.running = true;
-            repl.process_command(alias);
+            let _ = repl.process_command(alias);
             assert!(!repl.running, "alias '{alias}' should stop the REPL");
         }
     }

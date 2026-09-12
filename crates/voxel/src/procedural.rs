@@ -50,6 +50,7 @@ impl NoiseLayer {
 
     /// Hash an `(i32, i32)` coordinate pair into a pseudo-random `u32`.
     #[inline]
+    #[allow(dead_code)]
     fn hash(x: i32, y: i32) -> u32 {
         let mut h = x as u32;
         h ^= (y as u32).wrapping_mul(0x9e3779b9);

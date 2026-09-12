@@ -1348,7 +1348,7 @@ fn reaction_pass(grid: &mut CaGrid, cells: &[usize]) {
         let y = rem / xw;
         let x = rem % xw;
         // Reusable closure to attempt a reaction between `idx` and neighbour.
-        let mut try_pair = |grid: &mut CaGrid, nx: i32, ny: i32, nz: i32, idx: usize| {
+        let try_pair = |grid: &mut CaGrid, nx: i32, ny: i32, nz: i32, idx: usize| {
             if nx < 0 || ny < 0 || nz < 0 || nx >= xw as i32 || ny >= yw as i32 || nz >= zw as i32 {
                 return;
             }

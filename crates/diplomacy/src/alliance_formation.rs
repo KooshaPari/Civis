@@ -229,6 +229,8 @@ pub struct AllianceStability {
 }
 
 impl AllianceStability {
+    /// Construct a new stability record with `trust` and `share` clamped into
+    /// `[0.0, 1.0]`; `history` is stored verbatim.
     pub fn new(trust: f64, history: u32, share: f64) -> Self {
         Self {
             trust_score: trust.clamp(0.0, 1.0),
@@ -246,6 +248,7 @@ pub struct DynamicAllianceManager {
 }
 
 impl DynamicAllianceManager {
+    /// Construct an empty manager.
     pub fn new() -> Self {
         Self {
             stabilities: BTreeMap::new(),

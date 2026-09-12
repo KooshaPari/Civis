@@ -72,12 +72,14 @@ async fn main() {
     .await;
 }
 
+#[allow(dead_code)]
 fn server_addr() -> SocketAddr {
     let ws_addr = std::env::var("CIVIS_WS_ADDR").ok();
     let server_port = std::env::var("CIV_SERVER_PORT").ok();
     parse_server_addr(ws_addr.as_deref(), server_port.as_deref())
 }
 
+#[allow(dead_code)]
 fn parse_server_addr(ws_addr: Option<&str>, server_port: Option<&str>) -> SocketAddr {
     if let Some(value) = ws_addr {
         if let Ok(addr) = value.parse() {

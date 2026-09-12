@@ -232,8 +232,8 @@ fn run_migration_chain(
     Ok(())
 }
 
-/// Migrate and persist a world_state JSON file on disk, rewriting it in-place
-/// at the latest format version.
+/// Read and migrate world state in memory, preserving the source on both
+/// successful and failed loads. Only an explicit save writes migrated state.
 fn migrate_world_state_file(
     dir: &Path,
     file_version: u32,
@@ -251,12 +251,6 @@ fn migrate_world_state_file(
     let mut value: serde_json::Value =
         serde_json::from_str(&json_str).map_err(SaveBundleError::Json)?;
     run_migration_chain(&mut value, file_version)?;
-    // Persist the migrated state back so future loads skip migration.
-    fs::write(
-        &path,
-        serde_json::to_string_pretty(&value).map_err(SaveBundleError::Json)?,
-    )
-    .map_err(|e| io_err(&path, e))?;
     Ok(value)
 }
 
@@ -587,9 +581,7 @@ impl CivSaveBundle {
             });
         }
 
-        // Migrate the world_state inside the extracted directory.
-        let _migrated_ws = migrate_world_state_file(temp.path(), file_version)?;
-
+        // The directory loader performs the migration once, in memory.
         Self::load_dir(temp.path())
     }
 
@@ -906,11 +898,15 @@ mod tests {
                 assert!(state.get("trade_routes").is_none());
                 fs::write(&world_path, serde_json::to_string(&state).unwrap()).unwrap();
             }
+            let world_path = path.join("world_state.json");
+            let original_world = fs::read(&world_path).unwrap();
             let loaded = CivSaveBundle::load_dir(&path).expect("legacy load");
             assert!(loaded.institutions().is_empty());
             assert_eq!(loaded.state.trade_routes, sim.state.trade_routes);
             assert_eq!(fs::read_to_string(&meta_path).unwrap(), original);
+            assert_eq!(fs::read(&world_path).unwrap(), original_world);
             CivSaveBundle::load_dir(&path).expect("legacy repeat load");
+            assert_eq!(fs::read(&world_path).unwrap(), original_world);
             // Archive the legacy folder directly: save_archive would create v4.
             let archive_path = dir.path().join(format!("v{version}.civsave.zst"));
             let bytes = encode_all(tar_dir(&path).unwrap().as_slice(), 3).unwrap();
@@ -920,6 +916,40 @@ mod tests {
             assert_eq!(archived.state.trade_routes, sim.state.trade_routes);
             assert_eq!(fs::read(&archive_path).unwrap(), bytes);
         }
+    }
+
+    #[test]
+    fn current_and_failed_loads_preserve_source_bytes() {
+        let dir = tempdir().expect("tempdir");
+        let sim = Simulation::with_seed(127);
+        let path = dir.path().join("source-preservation");
+        CivSaveBundle::save_dir(&path, &sim).unwrap();
+        let world_path = path.join("world_state.json");
+        // Noncanonical whitespace makes even a semantically unchanged rewrite
+        // visible. A load must preserve the authored bytes, not just the value.
+        let original_world = format!("\n{}\n", fs::read_to_string(&world_path).unwrap());
+        fs::write(&world_path, original_world.as_bytes()).unwrap();
+        let original_metadata = fs::read(path.join("metadata.json")).unwrap();
+        CivSaveBundle::load_dir(&path).expect("current load");
+        assert_eq!(fs::read(&world_path).unwrap(), original_world.as_bytes());
+        assert_eq!(
+            fs::read(path.join("metadata.json")).unwrap(),
+            original_metadata
+        );
+
+        // This error occurs after world-state migration, unlike a missing
+        // required sidecar, which is rejected before migration starts.
+        fs::write(path.join(INSTITUTIONS_FILE), "{broken").unwrap();
+        assert!(matches!(
+            CivSaveBundle::load_dir(&path),
+            Err(SaveBundleError::Json(_))
+        ));
+        assert_eq!(fs::read(&world_path).unwrap(), original_world.as_bytes());
+        assert_eq!(
+            fs::read(path.join("metadata.json")).unwrap(),
+            original_metadata
+        );
+        assert_eq!(fs::read(path.join(INSTITUTIONS_FILE)).unwrap(), b"{broken");
     }
 
     #[test]

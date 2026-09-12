@@ -48,16 +48,6 @@ impl NoiseLayer {
         Self { seed }
     }
 
-    /// Hash an `(i32, i32)` coordinate pair into a pseudo-random `u32`.
-    #[inline]
-    fn hash(x: i32, y: i32) -> u32 {
-        let mut h = x as u32;
-        h ^= (y as u32).wrapping_mul(0x9e3779b9);
-        h = h.wrapping_mul(0x85ebca6b);
-        h ^= h >> 16;
-        h
-    }
-
     /// Sample the noise at floating-point coordinates `x`, `y` (before any
     /// frequency scaling).  Returns a value in `[-1.0, 1.0]`.
     pub fn sample(&self, x: f32, y: f32) -> f32 {
@@ -208,8 +198,10 @@ impl TerrainBiomeMap {
     /// noise; moisture uses the same parameters but with `seed + 1` to produce
     /// an independent field.
     pub fn generate(&mut self, seed: u64) {
-        let mut config = BiomeNoiseConfig::default();
-        config.seed = seed;
+        let config = BiomeNoiseConfig {
+            seed,
+            ..BiomeNoiseConfig::default()
+        };
 
         let height_noise = NoiseLayer::new(seed);
         let moisture_noise = NoiseLayer::new(seed.wrapping_add(1));

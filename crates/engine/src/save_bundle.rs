@@ -10,7 +10,7 @@ use tar::{Archive, Builder};
 use thiserror::Error;
 use zstd::stream::{decode_all, encode_all};
 
-use crate::{ClusterStocks, ModGuestStateSave, ReplayError, Simulation, WorldState};
+use crate::{ClusterStocks, CoastalColumn, ModGuestStateSave, ReplayError, Simulation, WorldState};
 use civ_planet::{Climate, MoonConfig, PlanetConfig, WeatherCell};
 
 /// Sidecar metadata written beside replay + mod state.
@@ -48,6 +48,18 @@ struct SavedEnvironment {
     moon: MoonConfig,
     climate: Climate,
     weather_grid: Vec<WeatherCell>,
+    #[serde(default)]
+    coastal_columns: Vec<SavedCoastalColumn>,
+}
+
+/// A coastal column as an explicit JSON record, because JSON object keys must
+/// be strings and the runtime registry is keyed by integer `(x, z)` pairs.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct SavedCoastalColumn {
+    x: i64,
+    z: i64,
+    base_y: i64,
+    last_water_y: i64,
 }
 
 /// Errors reading or writing save folders.
@@ -340,6 +352,16 @@ impl CivSaveBundle {
             moon: *sim.moon(),
             climate: sim.climate,
             weather_grid: sim.weather_grid().to_vec(),
+            coastal_columns: sim
+                .coastal_columns
+                .iter()
+                .map(|(&(x, z), column)| SavedCoastalColumn {
+                    x,
+                    z,
+                    base_y: column.base_y,
+                    last_water_y: column.last_water_y,
+                })
+                .collect(),
         };
         fs::write(&environment_path, serde_json::to_string(&environment)?)
             .map_err(|e| io_err(&environment_path, e))?;
@@ -420,6 +442,26 @@ impl CivSaveBundle {
             sim.moon = environment.moon;
             sim.climate = environment.climate;
             sim.weather_grid = environment.weather_grid;
+            let mut coastal_columns = BTreeMap::new();
+            for column in environment.coastal_columns {
+                let key = (column.x, column.z);
+                let previous = coastal_columns.insert(
+                    key,
+                    CoastalColumn {
+                        base_y: column.base_y,
+                        last_water_y: column.last_water_y,
+                    },
+                );
+                if previous.is_some() {
+                    return Err(SaveBundleError::SaveCorruption {
+                        detail: format!(
+                            "environment.json has duplicate coastal column at ({}, {})",
+                            column.x, column.z
+                        ),
+                    });
+                }
+            }
+            sim.coastal_columns = coastal_columns;
         }
 
         let cluster_stocks_path = dir.join(CLUSTER_STOCKS_FILE);
@@ -808,6 +850,80 @@ mod tests {
 
         assert_eq!(loaded.climate, source.climate);
         assert_eq!(loaded.weather_grid(), source.weather_grid());
+    }
+
+    #[test]
+    fn restored_environment_keeps_coastal_columns_for_the_next_tide_phase() {
+        let mut source = Simulation::with_seed(67);
+        source.moon.orbit_period_ticks = 8;
+        source.moon.tidal_amplitude = 1.0;
+        let (x, z, base_y) = (40, -20, 700);
+        source.register_coastal_water_column(x, z, base_y);
+        let base_pos = civ_voxel::WorldCoord { x, y: base_y, z };
+        assert_eq!(source.voxel().read(base_pos), civ_voxel::material::WATER);
+
+        let dir = tempdir().expect("tempdir");
+        let save_path = dir.path().join("coastal-continuation");
+        CivSaveBundle::save_dir(&save_path, &source).expect("save");
+        let mut loaded = CivSaveBundle::load_dir(&save_path).expect("load");
+        assert_eq!(loaded.coastal_water_level(x, z), Some(base_y));
+        assert_eq!(loaded.voxel().read(base_pos), civ_voxel::material::WATER);
+
+        source.state.tick = 2;
+        loaded.state.tick = 2;
+        source.phase_planet();
+        loaded.phase_planet();
+
+        let moved_y = source
+            .coastal_water_level(x, z)
+            .expect("source coastal column");
+        assert_eq!(moved_y, base_y + civ_voxel::FIXED_SCALE);
+        assert_ne!(moved_y, base_y);
+        assert_eq!(loaded.coastal_water_level(x, z), Some(moved_y));
+        let moved_pos = civ_voxel::WorldCoord { x, y: moved_y, z };
+        assert_eq!(source.voxel().read(moved_pos), civ_voxel::material::WATER);
+        assert_eq!(loaded.voxel().read(moved_pos), civ_voxel::material::WATER);
+        assert_eq!(source.voxel().read(base_pos), civ_voxel::MaterialId(0));
+        assert_eq!(loaded.voxel().read(base_pos), civ_voxel::MaterialId(0));
+    }
+
+    #[test]
+    fn archived_environment_keeps_coastal_columns() {
+        let mut source = Simulation::with_seed(68);
+        source.register_coastal_water_column(40, -20, 700);
+
+        let dir = tempdir().expect("tempdir");
+        let save_path = dir.path().join("coastal-archive.civsave.zst");
+        CivSaveBundle::save_archive(&save_path, &source).expect("save");
+
+        let loaded = CivSaveBundle::load_archive(&save_path).expect("load");
+        assert_eq!(loaded.coastal_column_count(), 1);
+        assert_eq!(loaded.coastal_water_level(40, -20), Some(700));
+    }
+
+    #[test]
+    fn legacy_environment_without_coastal_columns_defaults_empty() {
+        let sim = Simulation::with_seed(69);
+        let dir = tempdir().expect("tempdir");
+        let save_path = dir.path().join("legacy-environment");
+        CivSaveBundle::save_dir(&save_path, &sim).expect("save");
+
+        let environment_path = save_path.join(ENVIRONMENT_FILE);
+        let mut environment: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&environment_path).expect("environment"))
+                .expect("parse environment");
+        environment
+            .as_object_mut()
+            .expect("environment object")
+            .remove("coastal_columns");
+        fs::write(
+            &environment_path,
+            serde_json::to_string(&environment).expect("serialize legacy environment"),
+        )
+        .expect("write legacy environment");
+
+        let loaded = CivSaveBundle::load_dir(&save_path).expect("load legacy environment");
+        assert_eq!(loaded.coastal_column_count(), 0);
     }
 
     #[test]

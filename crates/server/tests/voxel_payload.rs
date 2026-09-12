@@ -155,6 +155,28 @@ async fn ws_terraform_writes_material_visible_in_binary_chunk() {
     })
     .await
     .expect("authoritative voxel delta deadline");
+    assert_eq!(
+        response.pointer("/result/authoritative"),
+        Some(&json!(true)),
+        "terraform RPC must identify its authoritative publication"
+    );
+    assert_eq!(
+        response.pointer("/result/tick"),
+        Some(&json!(wire_frame.tick)),
+        "terraform RPC tick must match the published voxel delta"
+    );
+    assert_eq!(
+        response.pointer("/result/scene_generation"),
+        Some(&json!(0)),
+        "terraform RPC must report the scene generation"
+    );
+    assert!(
+        response
+            .pointer("/result/building_graph_version")
+            .and_then(Value::as_u64)
+            .is_some(),
+        "terraform RPC must report the graph revision paired with its batch"
+    );
     assert_material_roundtrip(Frame3d::VoxelDelta(wire_frame), 5 + 4 * 16 + 6 * 256, WOOD);
     let mut authoritative = sim.lock().await;
     assert_eq!(authoritative.voxel().read(pos), WOOD);

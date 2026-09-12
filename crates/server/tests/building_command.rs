@@ -111,6 +111,30 @@ async fn palette_aliases_spawn_authoritative_buildings_and_publish_world_coordin
         assert_eq!(response.pointer("/result/accepted"), Some(&json!(true)));
         assert_eq!(response.pointer("/result/ok"), Some(&json!(true)));
         assert_eq!(response.pointer("/result/kind"), Some(&json!(alias)));
+        assert_eq!(
+            response.pointer("/result/authoritative"),
+            Some(&json!(true)),
+            "building RPC must identify its authoritative publication"
+        );
+        assert_eq!(
+            response.pointer("/result/scene_generation"),
+            Some(&json!(0)),
+            "building RPC must report the scene generation"
+        );
+        assert!(
+            response
+                .pointer("/result/tick")
+                .and_then(Value::as_u64)
+                .is_some(),
+            "building RPC must report the publication tick"
+        );
+        assert!(
+            response
+                .pointer("/result/building_graph_version")
+                .and_then(Value::as_u64)
+                .is_some(),
+            "building RPC must report the graph revision paired with its batch"
+        );
         let receipt_id = response
             .pointer("/result/entity_id")
             .and_then(Value::as_u64)

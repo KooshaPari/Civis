@@ -512,6 +512,30 @@ fn build_terraform_update(
     )
 }
 
+/// Add the authoritative publication identity to a successful authoring RPC.
+///
+/// The JSON-RPC envelope already carries the request id.  These fields bind
+/// that request to the exact tick, scene generation, and graph revision used
+/// by the binary update sent through the authoritative lane.
+fn set_authoritative_batch_metadata(response: &mut JsonRpcResponse, batch: &TickBroadcast) {
+    if let Some(result) = response
+        .result
+        .as_mut()
+        .and_then(serde_json::Value::as_object_mut)
+    {
+        result.insert("authoritative".to_owned(), serde_json::json!(true));
+        result.insert("tick".to_owned(), serde_json::json!(batch.tick));
+        result.insert(
+            "scene_generation".to_owned(),
+            serde_json::json!(batch.scene_generation),
+        );
+        result.insert(
+            "building_graph_version".to_owned(),
+            serde_json::json!(batch.building_graph_version),
+        );
+    }
+}
+
 /// Queue a baseline or authoring update without allowing an unread socket to
 /// stall simulation publication. A saturated control lane retains the newest
 /// authoritative recovery batch in one bounded watch slot.
@@ -1854,7 +1878,10 @@ async fn apply_dispatch_effect(
             drop(sim);
             if let Some(building_update) = building_update {
                 match building_update {
-                    Ok(building_update) => publish_authoritative_batch(state, building_update).await,
+                    Ok(building_update) => {
+                        set_authoritative_batch_metadata(response, &building_update);
+                        publish_authoritative_batch(state, building_update).await
+                    }
                     Err(error) => set_replay_io_error(response, format!("Building was created, but its live update failed: {error}. Check the world before retrying.")),
                 }
             }
@@ -1907,7 +1934,10 @@ async fn apply_dispatch_effect(
             drop(sim);
             if let Some(terraform_update) = terraform_update {
                 match terraform_update {
-                    Ok(batch) => publish_authoritative_batch(state, batch).await,
+                    Ok(batch) => {
+                        set_authoritative_batch_metadata(response, &batch);
+                        publish_authoritative_batch(state, batch).await
+                    }
                     Err(error) => set_replay_io_error(response, format!("Terrain was edited, but its live update failed: {error}. Check the world before retrying.")),
                 }
             }

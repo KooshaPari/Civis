@@ -53,16 +53,16 @@ The script now has a named `playable` block for the terrain gate: `civ-server` W
 
 ## What it covers
 
-| Check | Proves |
-|-------|--------|
-| `cargo test -p civ-server --test ws_smoke` | JSON-RPC health, snapshot shape, spawn → `civ_pins`, **`civ_pins[].job`** (UX-01) |
-| `just civis-3d-catalog-check` | `jsonrpc.rs` ↔ `jsonrpc-surface.md` drift |
-| `just civis-3d-scenario-check` | `civ-engine` `scenario::*` tests (`-j 1` on Windows — avoids LNK1104 when other cargo builds run) |
-| `just civis-3d-mod-check` | `civ-mod-host` + `civlab-sdk` unit tests |
-| `just godot-test` | `cargo test --manifest-path clients/godot-ref/rust/Cargo.toml` (F3D0 mesh + WS decode) |
-| `cargo test -p civ-watch` | HTTP terrain/snapshot/control contracts |
-| `verify-unreal-ready.ps1` (default) | Target.cs, rust `.lib`, UE path scaffolding |
-| `build.ps1` (`-FullUnreal`) | Full rust-shim + CivShowEditor UBT when engine installed |
+| Check                                      | Proves                                                                                            |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| `cargo test -p civ-server --test ws_smoke` | JSON-RPC health, snapshot shape, spawn → `civ_pins`, **`civ_pins[].job`** (UX-01)                 |
+| `just civis-3d-catalog-check`              | `jsonrpc.rs` ↔ `jsonrpc-surface.md` drift                                                        |
+| `just civis-3d-scenario-check`             | `civ-engine` `scenario::*` tests (`-j 1` on Windows — avoids LNK1104 when other cargo builds run) |
+| `just civis-3d-mod-check`                  | `civ-mod-host` + `civlab-sdk` unit tests                                                          |
+| `just godot-test`                          | `cargo test --manifest-path clients/godot-ref/rust/Cargo.toml` (F3D0 mesh + WS decode)            |
+| `cargo test -p civ-watch`                  | HTTP terrain/snapshot/control contracts                                                           |
+| `verify-unreal-ready.ps1` (default)        | Target.cs, rust `.lib`, UE path scaffolding                                                       |
+| `build.ps1` (`-FullUnreal`)                | Full rust-shim + CivShowEditor UBT when engine installed                                          |
 
 `just godot-test` preserves an inherited `CARGO_TARGET_DIR`; when the variable is
 unset, it falls back to the recipe-local `target-godot-smoke` directory. The

@@ -2259,7 +2259,7 @@ async fn ws_sub_filter_query_limits_tick_broadcast_frames() {
     );
 }
 
-/// `sim.subscribe` over JSON-RPC applies the same per-connection frame filter.
+/// Explicit ticks bypass subscription cadence while retaining the frame-kind filter.
 #[tokio::test]
 async fn ws_sim_subscribe_limits_tick_broadcast_frames() {
     let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(32)));
@@ -2280,7 +2280,7 @@ async fn ws_sim_subscribe_limits_tick_broadcast_frames() {
 
     socket
         .send(Message::Text(
-            r#"{"jsonrpc":"2.0","id":1,"method":"sim.subscribe","params":{"frame_kinds":["event_feed"]}}"#
+            r#"{"jsonrpc":"2.0","id":1,"method":"sim.subscribe","params":{"frame_kinds":["event_feed"],"tick_stride":1000000}}"#
                 .into(),
         ))
         .await

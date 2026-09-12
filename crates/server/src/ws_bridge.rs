@@ -191,21 +191,31 @@ impl ClientOutboundTx {
         outbound: ClientOutbound,
     ) -> Result<(), mpsc::error::TrySendError<ClientOutbound>> {
         let mut state = self.control_state.lock().unwrap();
+        let authoritative = matches!(outbound, ClientOutbound::Tick(_));
         self.control.try_send(outbound)?;
         state.enqueued += 1;
+        if authoritative {
+            state.authoritative_enqueued = state.enqueued;
+        }
         Ok(())
     }
 
     fn send_reserved(&self, permit: mpsc::OwnedPermit<ClientOutbound>, outbound: ClientOutbound) {
         let mut state = self.control_state.lock().unwrap();
+        let authoritative = matches!(outbound, ClientOutbound::Tick(_));
         permit.send(outbound);
         state.enqueued += 1;
+        if authoritative {
+            state.authoritative_enqueued = state.enqueued;
+        }
     }
 }
 
 #[derive(Default)]
 struct ClientControlState {
     enqueued: u64,
+    /// Newer normal state must not overtake queued command events.
+    authoritative_enqueued: u64,
 }
 
 #[derive(Clone)]
@@ -470,19 +480,27 @@ async fn replace_simulation_reply(
     }
 }
 
-/// Capture the current building state without advancing time. Publication happens
-/// after the caller releases the simulation mutex.
-fn build_building_update(state: &AppState, sim: &Simulation) -> Result<Arc<TickBroadcast>, String> {
+/// Capture a complete authoring baseline without advancing time. A full bundle
+/// lets a latest-authoritative recovery replace either building or terrain edits
+/// without losing other state when an equal-tick normal bundle is superseded.
+fn build_authoring_update(
+    state: &AppState,
+    sim: &Simulation,
+) -> Result<Arc<TickBroadcast>, String> {
     let tick = sim.state.tick;
-    let frames = vec![Frame3d::BuildingDiff(build_building_diff_frame(sim, tick))];
-    let building_graph_version = observe_building_graph(state, sim)?;
+    let mut frames = build_frame_bundle(sim)?;
+    // Snapshot rather than drain: preserve all edits across coalesced recovery,
+    // and leave dirty events available to the next normal simulation tick.
+    frames[0] = Frame3d::VoxelDelta(
+        build_voxel_snapshot_frame(tick, sim.voxel()).map_err(|error| error.to_string())?,
+    );
     make_tick_broadcast(
         state,
         tick,
         state.scene_generation.load(Ordering::SeqCst),
         true,
-        frames,
-        building_graph_version,
+        frames.to_vec(),
+        observe_building_graph(state, sim)?,
     )
 }
 
@@ -490,26 +508,11 @@ fn build_terraform_update(
     state: &AppState,
     sim: &Simulation,
 ) -> Result<Arc<TickBroadcast>, String> {
-    let tick = sim.state.tick;
-    // This is deliberately a full terrain baseline, rather than the dirty
-    // events from only this authoring request. `latest_authoritative` keeps
-    // one newest recovery batch when a client's FIFO control lane is full.
-    // A later baseline therefore contains every earlier terrain edit and
-    // cannot discard a chunk merely because its earlier delta was coalesced.
-    // Unlike `drain_dirty`, a snapshot does not interfere with the next
-    // simulation tick's normal dirty-event publication.
-    let voxel = build_voxel_snapshot_frame(tick, sim.voxel()).map_err(|error| error.to_string())?;
-    if voxel.deltas.is_empty() {
+    let batch = build_authoring_update(state, sim)?;
+    if matches!(&batch.frames[0], Frame3d::VoxelDelta(voxel) if voxel.deltas.is_empty()) {
         return Err("terraform mutation produced no voxel delta".to_owned());
     }
-    make_tick_broadcast(
-        state,
-        tick,
-        state.scene_generation.load(Ordering::SeqCst),
-        true,
-        vec![Frame3d::VoxelDelta(voxel)],
-        observe_building_graph(state, sim)?,
-    )
+    Ok(batch)
 }
 
 /// Add the authoritative publication identity to a successful authoring RPC.
@@ -540,6 +543,7 @@ fn set_authoritative_batch_metadata(response: &mut JsonRpcResponse, batch: &Tick
 /// stall simulation publication. A saturated control lane retains the newest
 /// authoritative recovery batch in one bounded watch slot.
 async fn publish_authoritative_batch(state: &AppState, batch: Arc<TickBroadcast>) {
+    state.metrics.tick_batches_sent.inc();
     let clients = state.clients.lock().await.clone();
     for client in clients {
         client.publish_authoritative_tick(Arc::clone(&batch));
@@ -790,11 +794,20 @@ async fn forward_tick(
     subscription_filter: &Arc<tokio::sync::Mutex<SubscriptionFilter>>,
     tick_broadcast_format: TickBroadcastFormat,
     delivered_generation: &mut Option<u64>,
+    delivered_tick: &mut Option<u64>,
+    delivered_event_tick: &mut Option<u64>,
     delivered_graph_version: &mut Option<u64>,
     connection_id: &str,
     tick_messages_sent: &prometheus::IntCounter,
 ) -> Result<(), ()> {
     if !tick_is_current(state, &broadcast) {
+        return Ok(());
+    }
+    if *delivered_generation == Some(broadcast.scene_generation)
+        && delivered_tick.is_some_and(|tick| {
+            broadcast.tick < tick || (broadcast.tick == tick && !broadcast.bypass_cadence)
+        })
+    {
         return Ok(());
     }
     if *delivered_generation != Some(broadcast.scene_generation) {
@@ -812,6 +825,8 @@ async fn forward_tick(
             return Err(());
         }
         *delivered_generation = Some(broadcast.scene_generation);
+        *delivered_tick = None;
+        *delivered_event_tick = None;
         *delivered_graph_version = None;
     }
     let include_graph = should_send_full_graph(
@@ -825,32 +840,44 @@ async fn forward_tick(
         broadcast.compact_frames.as_ref()
     };
     let filter = subscription_filter.lock().await.clone();
-    let (messages, delivered_full_graph) = if !filter.is_active() {
-        let encoded = if include_graph {
-            &broadcast.encoded
+    let event_already_delivered = *delivered_event_tick == Some(broadcast.tick);
+    let (messages, delivered_full_graph, delivered_events) =
+        if !filter.is_active() && !event_already_delivered {
+            let encoded = if include_graph {
+                &broadcast.encoded
+            } else {
+                &broadcast.compact_encoded
+            };
+            (
+                encoded.iter().cloned().collect(),
+                include_graph && frames_carry_building_graph(selected_frames),
+                selected_frames
+                    .iter()
+                    .any(|frame| matches!(frame, Frame3d::EventFeed(_))),
+            )
         } else {
-            &broadcast.compact_encoded
+            if !broadcast.bypass_cadence && !filter.should_deliver_tick(broadcast.tick) {
+                return Ok(());
+            }
+            let mut frames = filter.filter_frames(selected_frames);
+            if event_already_delivered {
+                frames.retain(|frame| !matches!(frame, Frame3d::EventFeed(_)));
+            }
+            if frames.is_empty() {
+                return Ok(());
+            }
+            let delivered_full_graph = include_graph && frames_carry_building_graph(&frames);
+            let delivered_events = frames
+                .iter()
+                .any(|frame| matches!(frame, Frame3d::EventFeed(_)));
+            (
+                encode_tick_broadcast_messages(&frames, tick_broadcast_format).map_err(|err| {
+                    tracing::error!("tick broadcast encode failed: {err}");
+                })?,
+                delivered_full_graph,
+                delivered_events,
+            )
         };
-        (
-            encoded.iter().cloned().collect(),
-            include_graph && frames_carry_building_graph(selected_frames),
-        )
-    } else {
-        if !broadcast.bypass_cadence && !filter.should_deliver_tick(broadcast.tick) {
-            return Ok(());
-        }
-        let frames = filter.filter_frames(selected_frames);
-        if frames.is_empty() {
-            return Ok(());
-        }
-        let delivered_full_graph = include_graph && frames_carry_building_graph(&frames);
-        (
-            encode_tick_broadcast_messages(&frames, tick_broadcast_format).map_err(|err| {
-                tracing::error!("tick broadcast encode failed: {err}");
-            })?,
-            delivered_full_graph,
-        )
-    };
     for message in messages {
         if !tick_is_current(state, &broadcast) {
             return Ok(());
@@ -861,6 +888,10 @@ async fn forward_tick(
         tick_messages_sent.inc();
     }
     if tick_is_current(state, &broadcast) {
+        *delivered_tick = Some(broadcast.tick);
+        if delivered_events {
+            *delivered_event_tick = Some(broadcast.tick);
+        }
         if delivered_full_graph {
             *delivered_graph_version = Some(broadcast.building_graph_version);
         }
@@ -875,6 +906,7 @@ async fn forward_tick(
 async fn forward_socket(
     mut sender: futures::stream::SplitSink<WebSocket, Message>,
     mut control_rx: mpsc::Receiver<ClientOutbound>,
+    control_state: Arc<std::sync::Mutex<ClientControlState>>,
     mut authoritative_rx: watch::Receiver<Option<RecoveryTick>>,
     mut tick_rx: watch::Receiver<Option<Arc<TickBroadcast>>>,
     state_for_forward: AppState,
@@ -884,30 +916,44 @@ async fn forward_socket(
     tick_messages_sent: prometheus::IntCounter,
 ) {
     let mut delivered_generation = None;
+    let mut delivered_tick = None;
+    let mut delivered_event_tick = None;
     let mut delivered_graph_version = None;
     let mut control_burst = 0usize;
     let mut delivered_control = 0u64;
     let mut pending_recovery = None;
+    let mut pending_normal = None;
     loop {
+        if tick_rx.has_changed().unwrap_or(false) {
+            pending_normal = tick_rx.borrow_and_update().clone();
+        }
         if authoritative_rx.has_changed().unwrap_or(false) {
             pending_recovery = authoritative_rx.borrow_and_update().clone();
         }
         let recovery_ready = pending_recovery
             .as_ref()
             .is_some_and(|recovery: &RecoveryTick| delivered_control >= recovery.after_control);
+        let normal_ready = pending_normal.is_some()
+            && pending_recovery.is_none()
+            && delivered_control >= control_state.lock().unwrap().authoritative_enqueued;
         let outbound = if recovery_ready {
             Some(ForwardItem::Recovery(pending_recovery.take().unwrap()))
-        } else if control_burst < CONTROL_BURST_LIMIT {
-            tokio::select! {
-                biased;
-                control = control_rx.recv() => control.map(ForwardItem::Control),
-                changed = tick_rx.changed() => changed.ok().and_then(|_| tick_rx.borrow_and_update().clone()).map(ForwardItem::Tick),
-            }
+        } else if normal_ready && (control_burst >= CONTROL_BURST_LIMIT || control_rx.is_empty()) {
+            Some(ForwardItem::Tick(pending_normal.take().unwrap()))
         } else {
             tokio::select! {
                 biased;
-                changed = tick_rx.changed() => changed.ok().and_then(|_| tick_rx.borrow_and_update().clone()).map(ForwardItem::Tick),
                 control = control_rx.recv() => control.map(ForwardItem::Control),
+                changed = authoritative_rx.changed() => {
+                    if changed.is_err() { return; }
+                    pending_recovery = authoritative_rx.borrow_and_update().clone();
+                    continue;
+                }
+                changed = tick_rx.changed() => {
+                    if changed.is_err() { return; }
+                    pending_normal = tick_rx.borrow_and_update().clone();
+                    continue;
+                }
             }
         };
         let Some(outbound) = outbound else {
@@ -929,6 +975,8 @@ async fn forward_socket(
                     &forward_filter,
                     tick_broadcast_format,
                     &mut delivered_generation,
+                    &mut delivered_tick,
+                    &mut delivered_event_tick,
                     &mut delivered_graph_version,
                     &connection_id_for_forward,
                     &tick_messages_sent,
@@ -942,6 +990,14 @@ async fn forward_socket(
                 delivered_control += 1;
             }
             ForwardItem::Tick(batch) => {
+                // A command may enqueue after selection. Keep its event-bearing
+                // FIFO batch ahead of a newer normal state, even at the burst limit.
+                if delivered_control < control_state.lock().unwrap().authoritative_enqueued
+                    || authoritative_rx.has_changed().unwrap_or(false)
+                {
+                    pending_normal = Some(batch);
+                    continue;
+                }
                 if forward_tick(
                     &mut sender,
                     batch,
@@ -949,6 +1005,8 @@ async fn forward_socket(
                     &forward_filter,
                     tick_broadcast_format,
                     &mut delivered_generation,
+                    &mut delivered_tick,
+                    &mut delivered_event_tick,
                     &mut delivered_graph_version,
                     &connection_id_for_forward,
                     &tick_messages_sent,
@@ -968,6 +1026,8 @@ async fn forward_socket(
                     &forward_filter,
                     tick_broadcast_format,
                     &mut delivered_generation,
+                    &mut delivered_tick,
+                    &mut delivered_event_tick,
                     &mut delivered_graph_version,
                     &connection_id_for_forward,
                     &tick_messages_sent,
@@ -1048,6 +1108,7 @@ async fn handle_socket(
     let mut forward = tokio::spawn(forward_socket(
         sender,
         control_rx,
+        Arc::clone(&tx.control_state),
         authoritative_rx,
         tick_rx,
         state_for_forward,
@@ -1871,7 +1932,7 @@ async fn apply_dispatch_effect(
                 kind,
                 SpawnEntityKind::Airport | SpawnEntityKind::Port | SpawnEntityKind::Hangar
             ) {
-                Some(build_building_update(state, &sim))
+                Some(build_authoring_update(state, &sim))
             } else {
                 None
             };
@@ -2508,7 +2569,7 @@ async fn advance_one_tick_with_delivery(
                 state,
                 tick,
                 state.scene_generation.load(Ordering::SeqCst),
-                false,
+                authoritative,
                 bundle.to_vec(),
                 building_graph_version,
             )?)
@@ -2520,10 +2581,10 @@ async fn advance_one_tick_with_delivery(
     let Some(batch) = batch else {
         return Ok(tick);
     };
-    state.metrics.tick_batches_sent.inc();
     if authoritative {
         publish_authoritative_batch(state, batch).await;
     } else {
+        state.metrics.tick_batches_sent.inc();
         publish_normal_tick(state, batch).await;
     }
     Ok(tick)
@@ -2598,13 +2659,13 @@ mod tests {
         assert_eq!(older.frames.len(), FRAME_BUNDLE_LEN);
         assert_eq!(
             created.frames.len(),
-            1,
-            "publish just one authoritative building frame"
+            FRAME_BUNDLE_LEN,
+            "authoring must publish a complete current baseline"
         );
         let Frame3d::BuildingDiff(before) = &older.frames[1] else {
             panic!("tick buildings");
         };
-        let Frame3d::BuildingDiff(after) = &created.frames[0] else {
+        let Frame3d::BuildingDiff(after) = &created.frames[1] else {
             panic!("created buildings");
         };
         assert_eq!(after.buildings.len(), before.buildings.len() + 1);
@@ -2618,6 +2679,17 @@ mod tests {
         assert_eq!(state.speed_multiplier.load(Ordering::SeqCst), 0);
         assert!(created.bypass_cadence);
         assert!(rx.try_recv().is_err(), "no duplicate building batch");
+        assert_eq!(
+            state.metrics.tick_batches_sent.get(),
+            2,
+            "normal tick and building publication are counted"
+        );
+        advance_one_tick_authoritative(&state).await.unwrap();
+        assert_eq!(
+            state.metrics.tick_batches_sent.get(),
+            3,
+            "authoritative command tick is counted exactly once"
+        );
     }
 
     #[tokio::test]
@@ -3231,7 +3303,11 @@ mod tests {
 
         let messages = encode_tick_broadcast_messages(&batch.frames, TickBroadcastFormat::Binary)
             .expect("encode binary terrain baseline");
-        assert_eq!(messages.len(), 1, "one voxel frame has one binary response");
+        assert_eq!(
+            messages.len(),
+            FRAME_BUNDLE_LEN,
+            "recovery retains every state component"
+        );
         let Message::Binary(bytes) = &messages[0] else {
             panic!("terraform baseline must use the binary frame envelope");
         };
@@ -3277,13 +3353,300 @@ mod tests {
         );
     }
 
+    type DeliveryTestSocket = tokio_tungstenite::WebSocketStream<
+        tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+    >;
+
+    async fn connect_delivery_test_socket(
+        state: AppState,
+        control_state: Arc<std::sync::Mutex<ClientControlState>>,
+        control_rx: mpsc::Receiver<ClientOutbound>,
+        authoritative_rx: watch::Receiver<Option<RecoveryTick>>,
+        tick_rx: watch::Receiver<Option<Arc<TickBroadcast>>>,
+    ) -> (DeliveryTestSocket, tokio::task::JoinHandle<()>) {
+        let receivers = Arc::new(Mutex::new(Some((control_rx, authoritative_rx, tick_rx))));
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("ws://{}/ws", listener.local_addr().unwrap());
+        let app = Router::new().route(
+            "/ws",
+            get(move |ws: WebSocketUpgrade| {
+                let state = state.clone();
+                let control_state = Arc::clone(&control_state);
+                let receivers = Arc::clone(&receivers);
+                async move {
+                    let (control_rx, authoritative_rx, tick_rx) =
+                        receivers.lock().await.take().unwrap();
+                    let metrics = state.metrics.tick_messages_sent.clone();
+                    ws.on_upgrade(move |socket| {
+                        forward_socket(
+                            socket.split().0,
+                            control_rx,
+                            control_state,
+                            authoritative_rx,
+                            tick_rx,
+                            state,
+                            test_subscription_filter(),
+                            TickBroadcastFormat::Binary,
+                            "delivery-regression".to_string(),
+                            metrics,
+                        )
+                    })
+                }
+            }),
+        );
+        let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let (socket, _) = tokio_tungstenite::connect_async(url).await.unwrap();
+        (socket, server)
+    }
+
+    async fn delivery_test_message(
+        socket: &mut DeliveryTestSocket,
+    ) -> tokio_tungstenite::tungstenite::Message {
+        tokio::time::timeout(Duration::from_secs(3), socket.next())
+            .await
+            .expect("delivery deadline")
+            .expect("open socket")
+            .expect("valid frame")
+    }
+
+    async fn delivery_test_frames(socket: &mut DeliveryTestSocket, count: usize) -> Vec<Frame3d> {
+        let mut frames = Vec::new();
+        for _ in 0..count {
+            let message = delivery_test_message(socket).await;
+            assert!(
+                message.is_binary(),
+                "expected binary state, got {message:?}"
+            );
+            frames.push(civ_protocol_3d::decode_frame3d_binary(&message.into_data()).unwrap());
+        }
+        frames
+    }
+
+    #[tokio::test]
+    async fn paused_authoring_recovery_retains_every_component_and_delivers_events_once() {
+        for building_last in [false, true] {
+            let mut simulation = Simulation::with_seed(43);
+            simulation.tick();
+            let tick = simulation.state.tick;
+            simulation.push_diplomacy_event(civ_engine::DiplomacyEvent {
+                tick,
+                faction_a: 0,
+                faction_b: 1,
+                kind: DiplomacyKind::TradeAgreement,
+            });
+            let sim = Arc::new(Mutex::new(simulation));
+            let (_dir, mut state) = test_app_state(Arc::clone(&sim), tick, 0, false);
+            state.tick_broadcast_format = TickBroadcastFormat::Binary;
+            let (control, control_rx) = mpsc::channel(1);
+            let (latest_authoritative, authoritative_rx) = watch::channel(None);
+            let (latest_tick, tick_rx) = watch::channel(None);
+            let client = ClientOutboundTx {
+                control,
+                control_state: Arc::new(std::sync::Mutex::new(ClientControlState::default())),
+                latest_authoritative,
+                latest_tick,
+            };
+            client
+                .try_send_control(ClientOutbound::Rpc(Message::Text("DRAIN".into())))
+                .unwrap();
+            state.clients.lock().await.push(client.clone());
+            let normal = {
+                let sim = sim.lock().await;
+                make_tick_broadcast(
+                    &state,
+                    tick,
+                    0,
+                    false,
+                    build_frame_bundle(&sim).unwrap().to_vec(),
+                    observe_building_graph(&state, &sim).unwrap(),
+                )
+                .unwrap()
+            };
+            client.publish_normal_tick(normal);
+            let building = r#"{"jsonrpc":"2.0","id":1,"method":"sim.spawn_entity","params":{"kind":"airport","x":0.25,"y":0.75}}"#;
+            let terrain = r#"{"jsonrpc":"2.0","id":2,"method":"sim.place_voxel","params":{"x":0,"y":0,"z":0,"material":4}}"#;
+            let requests = if building_last {
+                [terrain, building]
+            } else {
+                [building, terrain]
+            };
+            let mut role = None;
+            for request in requests {
+                let response = handle_jsonrpc_text(
+                    request,
+                    &state,
+                    &mut role,
+                    test_subscription_filter(),
+                    "delivery-regression",
+                )
+                .await;
+                let response: serde_json::Value = serde_json::from_str(&response).unwrap();
+                assert!(response.get("error").is_none(), "{response}");
+                assert_eq!(response["result"]["authoritative"], true);
+            }
+            let expected = build_authoring_update(&state, &*sim.lock().await).unwrap();
+            assert!(expected
+                .frames
+                .iter()
+                .any(|frame| matches!(frame, Frame3d::EventFeed(feed) if !feed.events.is_empty())));
+            assert!(
+                matches!(&expected.frames[0], Frame3d::VoxelDelta(voxel) if !voxel.deltas.is_empty())
+            );
+            let (mut socket, server) = connect_delivery_test_socket(
+                state.clone(),
+                Arc::clone(&client.control_state),
+                control_rx,
+                authoritative_rx,
+                tick_rx,
+            )
+            .await;
+            assert_eq!(
+                delivery_test_message(&mut socket).await.to_text().unwrap(),
+                "DRAIN"
+            );
+            let reset = delivery_test_message(&mut socket).await;
+            assert_eq!(
+                serde_json::from_str::<serde_json::Value>(reset.to_text().unwrap()).unwrap()
+                    ["method"],
+                "scene.reset"
+            );
+            assert_eq!(delivery_test_frames(&mut socket, FRAME_BUNDLE_LEN).await, expected.frames.as_ref(), "latest authoring must retain building, terrain, civilian and event state in either order");
+            assert!(
+                tokio::time::timeout(Duration::from_millis(100), socket.next())
+                    .await
+                    .is_err(),
+                "superseded normal must not repeat the baseline"
+            );
+
+            let response = handle_jsonrpc_text(r#"{"jsonrpc":"2.0","id":3,"method":"sim.spawn_entity","params":{"kind":"hangar","x":0.5,"y":0.5}}"#, &state, &mut role, test_subscription_filter(), "delivery-regression").await;
+            assert!(serde_json::from_str::<serde_json::Value>(&response)
+                .unwrap()
+                .get("error")
+                .is_none());
+            let repeated = build_authoring_update(&state, &*sim.lock().await).unwrap();
+            let expected: Vec<_> = repeated
+                .frames
+                .iter()
+                .filter(|frame| !matches!(frame, Frame3d::EventFeed(_)))
+                .cloned()
+                .collect();
+            assert_eq!(
+                delivery_test_frames(&mut socket, FRAME_BUNDLE_LEN - 1).await,
+                expected
+            );
+            assert!(
+                tokio::time::timeout(Duration::from_millis(100), socket.next())
+                    .await
+                    .is_err(),
+                "paused authoring must not replay already delivered tick events"
+            );
+            server.abort();
+        }
+    }
+
+    #[tokio::test]
+    async fn command_events_precede_newer_normal_state_across_control_fairness_boundary() {
+        let mut simulation = Simulation::with_seed(44);
+        simulation.push_diplomacy_event(civ_engine::DiplomacyEvent {
+            tick: 0,
+            faction_a: 0,
+            faction_b: 1,
+            kind: DiplomacyKind::Peace,
+        });
+        let sim = Arc::new(Mutex::new(simulation));
+        let (_dir, mut state) = test_app_state(Arc::clone(&sim), 0, 0, false);
+        state.tick_broadcast_format = TickBroadcastFormat::Binary;
+        let (control, control_rx) = mpsc::channel(CONTROL_BURST_LIMIT * 3);
+        let (latest_authoritative, authoritative_rx) = watch::channel(None);
+        let (latest_tick, tick_rx) = watch::channel(None);
+        let client = ClientOutboundTx {
+            control,
+            control_state: Arc::new(std::sync::Mutex::new(ClientControlState::default())),
+            latest_authoritative,
+            latest_tick,
+        };
+        for index in 0..CONTROL_BURST_LIMIT {
+            client
+                .try_send_control(ClientOutbound::Rpc(Message::Text(format!(
+                    "before-{index}"
+                ))))
+                .unwrap();
+        }
+        let command = build_authoring_update(&state, &*sim.lock().await).unwrap();
+        assert!(command
+            .frames
+            .iter()
+            .any(|frame| matches!(frame, Frame3d::EventFeed(feed) if !feed.events.is_empty())));
+        client.publish_authoritative_tick(Arc::clone(&command));
+        for index in 0..CONTROL_BURST_LIMIT {
+            client
+                .try_send_control(ClientOutbound::Rpc(Message::Text(format!("after-{index}"))))
+                .unwrap();
+        }
+        let normal = {
+            let mut sim = sim.lock().await;
+            sim.tick();
+            make_tick_broadcast(
+                &state,
+                sim.state.tick,
+                0,
+                false,
+                build_frame_bundle(&sim).unwrap().to_vec(),
+                observe_building_graph(&state, &sim).unwrap(),
+            )
+            .unwrap()
+        };
+        client.publish_normal_tick(Arc::clone(&normal));
+        let (mut socket, server) = connect_delivery_test_socket(
+            state,
+            Arc::clone(&client.control_state),
+            control_rx,
+            authoritative_rx,
+            tick_rx,
+        )
+        .await;
+        for index in 0..CONTROL_BURST_LIMIT {
+            assert_eq!(
+                delivery_test_message(&mut socket).await.to_text().unwrap(),
+                format!("before-{index}")
+            );
+        }
+        let reset = delivery_test_message(&mut socket).await;
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(reset.to_text().unwrap()).unwrap()["params"]
+                ["tick"],
+            0
+        );
+        assert_eq!(
+            delivery_test_frames(&mut socket, FRAME_BUNDLE_LEN).await,
+            command.frames.as_ref(),
+            "command event batch must not be overtaken or discarded"
+        );
+        let frames = delivery_test_frames(&mut socket, FRAME_BUNDLE_LEN).await;
+        assert!(frames.iter().all(|frame| frame.tick() == normal.tick));
+        assert!(frames.iter().any(|frame| matches!(frame, Frame3d::EventFeed(feed) if !feed.events.iter().any(|event| matches!(event, EventFeedMessage3d::Battle(battle) if battle.outcome == "peace")))));
+        // Normal state still gets a fairness turn ahead of later RPC-only traffic.
+        for index in 0..CONTROL_BURST_LIMIT {
+            assert_eq!(
+                delivery_test_message(&mut socket).await.to_text().unwrap(),
+                format!("after-{index}")
+            );
+        }
+        server.abort();
+    }
+
     #[tokio::test]
     async fn raw_websocket_forwarder_delivers_fifo_control_before_coalesced_recovery() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(42)));
         let (_dir, state) = test_app_state(sim, 0, 0, false);
         let (control_tx, control_rx) = mpsc::channel(1);
         let (authoritative_tx, authoritative_rx) = watch::channel::<Option<RecoveryTick>>(None);
-        let (_normal_tx, tick_rx) = watch::channel::<Option<Arc<TickBroadcast>>>(None);
+        let (normal_tx, tick_rx) = watch::channel::<Option<Arc<TickBroadcast>>>(None);
+        let mut stale = tick_for_delivery_test(900, false);
+        let stale_batch = Arc::get_mut(&mut stale).unwrap();
+        stale_batch.encoded = Arc::from(vec![Message::Text("STALE".into())]);
+        stale_batch.compact_encoded = Arc::clone(&stale_batch.encoded);
+        normal_tx.send_replace(Some(stale));
         control_tx
             .try_send(ClientOutbound::Rpc(Message::Text("A".into())))
             .expect("prefill FIFO control");
@@ -3334,6 +3697,7 @@ mod tests {
                         forward_socket(
                             socket.split().0,
                             control_rx,
+                            Arc::new(std::sync::Mutex::new(ClientControlState::default())),
                             authoritative_rx,
                             tick_rx,
                             state,
@@ -3368,6 +3732,68 @@ mod tests {
             .expect("open socket")
             .expect("valid websocket frame");
         assert_eq!(recovered.to_text().unwrap(), "B");
+        assert!(
+            tokio::time::timeout(Duration::from_millis(100), ws.next())
+                .await
+                .is_err(),
+            "the pending normal tick must not roll the socket back after recovery"
+        );
+        let mut current = tick_for_delivery_test(902, false);
+        let current_batch = Arc::get_mut(&mut current).unwrap();
+        current_batch.encoded = Arc::from(vec![Message::Text("C".into())]);
+        current_batch.compact_encoded = Arc::clone(&current_batch.encoded);
+        normal_tx.send_replace(Some(current));
+        let current = tokio::time::timeout(Duration::from_secs(2), ws.next())
+            .await
+            .expect("newer normal tick arrives")
+            .unwrap()
+            .unwrap();
+        assert_eq!(current.to_text().unwrap(), "C");
+        let mut authoring = tick_for_delivery_test(902, true);
+        let authoring_batch = Arc::get_mut(&mut authoring).unwrap();
+        authoring_batch.encoded = Arc::from(vec![Message::Text("D".into())]);
+        authoring_batch.compact_encoded = Arc::clone(&authoring_batch.encoded);
+        control_tx
+            .send(ClientOutbound::Tick(authoring))
+            .await
+            .unwrap();
+        let authored = tokio::time::timeout(Duration::from_secs(2), ws.next())
+            .await
+            .expect("same-tick authoring remains deliverable")
+            .unwrap()
+            .unwrap();
+        assert_eq!(authored.to_text().unwrap(), "D");
+        let mut duplicate = tick_for_delivery_test(902, false);
+        let duplicate_batch = Arc::get_mut(&mut duplicate).unwrap();
+        duplicate_batch.encoded = Arc::from(vec![Message::Text("DUPLICATE".into())]);
+        duplicate_batch.compact_encoded = Arc::clone(&duplicate_batch.encoded);
+        normal_tx.send_replace(Some(duplicate));
+        assert!(
+            tokio::time::timeout(Duration::from_millis(100), ws.next())
+                .await
+                .is_err(),
+            "an equal-tick normal batch must not overwrite authoritative authoring"
+        );
+        state.scene_generation.store(1, Ordering::SeqCst);
+        let mut reset_tick = tick_for_delivery_test(1, false);
+        let reset_batch = Arc::get_mut(&mut reset_tick).unwrap();
+        reset_batch.scene_generation = 1;
+        reset_batch.encoded = Arc::from(vec![Message::Text("NEW-GENERATION".into())]);
+        reset_batch.compact_encoded = Arc::clone(&reset_batch.encoded);
+        normal_tx.send_replace(Some(reset_tick));
+        let reset = tokio::time::timeout(Duration::from_secs(2), ws.next())
+            .await
+            .expect("new generation reset arrives")
+            .unwrap()
+            .unwrap();
+        let reset: serde_json::Value = serde_json::from_str(reset.to_text().unwrap()).unwrap();
+        assert_eq!(reset["params"]["scene_generation"], 1);
+        let restarted = tokio::time::timeout(Duration::from_secs(2), ws.next())
+            .await
+            .expect("lower tick in new generation arrives")
+            .unwrap()
+            .unwrap();
+        assert_eq!(restarted.to_text().unwrap(), "NEW-GENERATION");
         server.abort();
     }
 
@@ -4527,14 +4953,8 @@ mod tests {
         let value: serde_json::Value = serde_json::from_slice(&body).expect("healthz json");
         assert_eq!(value.get("tick"), Some(&serde_json::json!(123)));
         assert_eq!(value.get("clients"), Some(&serde_json::json!(0)));
-        assert_eq!(
-            value.get("tick_batches_sent"),
-            Some(&serde_json::json!(0))
-        );
-        assert_eq!(
-            value.get("tick_messages_sent"),
-            Some(&serde_json::json!(0))
-        );
+        assert_eq!(value.get("tick_batches_sent"), Some(&serde_json::json!(0)));
+        assert_eq!(value.get("tick_messages_sent"), Some(&serde_json::json!(0)));
         assert_eq!(
             value.get("ws_client_disconnects"),
             Some(&serde_json::json!(0))

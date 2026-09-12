@@ -37,7 +37,6 @@ use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
-use crate::culture::advance_faction_ideologies;
 use crate::engine::{awakening_belief_gain, awakening_cohesion_gain, Simulation};
 use civ_ai::goal_tree::{
     AgentContext, GoalTree, Resources, SeekFoodGoal, SeekShelterGoal, SocializeGoal, TradeGoal,
@@ -464,56 +463,6 @@ impl Simulation {
             self.emergence.cluster_cultures.insert(key, profile);
         }
 
-        // Derive per-cluster dominant faction + member counts + contact edges so
-        // the religion rollup below has the inputs it needs (FR-CIV-RELIGION-001).
-        let mut dominant_by_cluster: BTreeMap<u64, u32> = BTreeMap::new();
-        for (_, member) in self.world.query::<&ClusterMember>().iter() {
-            *dominant_by_cluster.entry(member.cluster.0).or_insert(0) += 1;
-        }
-        let cluster_member_counts = cluster_member_counts(&self.world);
-        let settlement_contacts = settlement_contacts();
-
-        let faction_religion = faction_religion(
-            &dominant_by_cluster,
-            &BTreeMap::new(),
-            &cluster_member_counts,
-            &settlement_contacts,
-        );
-        let mut faction_religion_signal = BTreeMap::new();
-        for (faction_id, (monitor_sum, count)) in faction_religion {
-            if count > 0 {
-                faction_religion_signal
-                    .insert(faction_id, (monitor_sum / (count as f32)).clamp(0.0, 1.0));
-            }
-        }
-
-        let (cluster_cultures, era_faction_ages, faction_ideologies, climate) = {
-            (
-                self.emergence.cluster_cultures.clone(),
-                self.era_progression.faction_ages.clone(),
-                self.faction_ideologies.clone(),
-                self.climate.clone(),
-            )
-        };
-        let rng = self.rng_mut();
-        self.faction_ideologies = advance_faction_ideologies(
-            tick,
-            &cluster_cultures,
-            &dominant_by_cluster,
-            &cluster_member_counts,
-            &settlement_contacts,
-            &climate,
-            &faction_religion_signal,
-            &era_faction_ages,
-            &faction_ideologies,
-            rng,
-        );
-        self.faction_aggression.clear();
-        for (faction_id, state) in &self.faction_ideologies {
-            self.faction_aggression
-                .insert(*faction_id, state.aggression);
-        }
-
         if tick % 128 == 0 && !self.emergence.cluster_cultures.is_empty() {
             let n = self.emergence.cluster_cultures.len();
             self.emergence.push_feed(
@@ -523,6 +472,7 @@ impl Simulation {
                 None,
             );
         }
+        // Per-faction ideology and its aggression mirror advance in phase_culture.
     }
 
     /// Coin settlement/faction/event lexemes from drifted phoneme inventories.

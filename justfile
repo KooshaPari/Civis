@@ -236,8 +236,14 @@ civis-3d-watch-build:
     cd web/dashboard && bun install && bun run build
 
 # Godot GDExtension crate (excluded from workspace; test in-tree).
+# Platform-specific: PowerShell on Windows, bash on Unix. Preserves
+# CARGO_TARGET_DIR semantics on both branches (caller value wins;
+# recipe-local "target-godot-smoke" is the fallback when unset).
+# The Windows branch keeps the single-line powershell shape so the
+# synthetic routing test (scripts/tests/godot-target-routing.tests.ps1)
+# can still pin the env-preservation contract.
 godot-test:
-    powershell -NoProfile -ExecutionPolicy Bypass -Command '$target = if ($env:CARGO_TARGET_DIR) { $env:CARGO_TARGET_DIR } else { "target-godot-smoke" }; $env:CARGO_TARGET_DIR = $target; cargo test --manifest-path clients/godot-ref/rust/Cargo.toml -j 1; exit $LASTEXITCODE'
+    {{ if os_family() == "windows" { "powershell -NoProfile -ExecutionPolicy Bypass -Command '$target = if ($env:CARGO_TARGET_DIR) { $env:CARGO_TARGET_DIR } else { \"target-godot-smoke\" }; $env:CARGO_TARGET_DIR = $target; cargo test --manifest-path clients/godot-ref/rust/Cargo.toml -j 1; exit $LASTEXITCODE'" } else { "CARGO_TARGET_DIR=\"${CARGO_TARGET_DIR:-target-godot-smoke}\" cargo test --manifest-path clients/godot-ref/rust/Cargo.toml -j 1" } }}
 
 # Full local dev stack: infra + civ-watch.
 dev:

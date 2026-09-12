@@ -702,7 +702,7 @@ pub struct Simulation {
     /// Currently-active institutions per settlement, keyed by
     /// `(settlement_id, kind)`. Tracks the latest known level so we can detect
     /// upgrades (FR-CIV-GOV-003).
-    institutions: BTreeMap<u32, civ_institutions::Institution>,
+    institutions: BTreeMap<u32, Vec<civ_institutions::Institution>>,
     /// Civic events emitted by the most recent [`Simulation::phase_institutions`]
     /// call (cleared at the start of every [`Simulation::tick`], alongside the
     /// other `last_tick_*` buffers). Surfaced to the JSON-RPC bridge so the
@@ -1453,7 +1453,7 @@ impl Simulation {
 
     /// Read-only view of active institutions (FR-CIV-GOV / emergence oracles).
     #[must_use]
-    pub fn institutions(&self) -> &BTreeMap<u32, civ_institutions::Institution> {
+    pub fn institutions(&self) -> &BTreeMap<u32, Vec<civ_institutions::Institution>> {
         &self.institutions
     }
 
@@ -1463,7 +1463,7 @@ impl Simulation {
         &self,
     ) -> (
         BTreeMap<u32, u32>,
-        BTreeMap<u32, civ_institutions::Institution>,
+        BTreeMap<u32, Vec<civ_institutions::Institution>>,
         BTreeSet<(u32, u8, u8)>,
     ) {
         (
@@ -1477,7 +1477,7 @@ impl Simulation {
     pub(crate) fn restore_institution_state(
         &mut self,
         settlements: BTreeMap<u32, u32>,
-        institutions: BTreeMap<u32, civ_institutions::Institution>,
+        institutions: BTreeMap<u32, Vec<civ_institutions::Institution>>,
 
         institution_levels_emitted: BTreeSet<(u32, u8, u8)>,
     ) {
@@ -1609,7 +1609,7 @@ impl Simulation {
         kind: DiplomacyKind,
     ) {
         self.state.tick = tick;
-        self.apply_player_diplomacy_action(source_faction, target_faction, kind);
+        let _ = self.apply_player_diplomacy_action(source_faction, target_faction, kind);
     }
 
     pub(crate) fn apply_replay_combat(&mut self, tick: u64, event: &DamageEvent) {
@@ -1813,8 +1813,11 @@ impl Simulation {
     /// at least one living aligned civilian.
     #[must_use]
     pub fn faction_alignment(&self, faction_id: usize) -> civ_agents::Alignment {
-        if crate::tech::faction_populations(self).contains_key(&(faction_id as u32)) {
-            civ_agents::Alignment::Faction(faction_id as u32)
+        let Ok(faction_id) = u32::try_from(faction_id) else {
+            return civ_agents::Alignment::None;
+        };
+        if crate::tech::faction_populations(self).contains_key(&faction_id) {
+            civ_agents::Alignment::Faction(faction_id)
         } else {
             civ_agents::Alignment::None
         }
@@ -2064,12 +2067,12 @@ impl Simulation {
         self.phase_research();
         self.phase_tech();
         self.phase_belief();
+        self.phase_institutions();
         self.phase_social_mood();
         self.phase_unrest();
         self.phase_cohesion();
         self.phase_economic_focus_pre();
         self.phase_stratification();
-        self.phase_institutions();
         self.phase_economic_focus();
         self.phase_emergence();
         self.phase_emergence_events_close();

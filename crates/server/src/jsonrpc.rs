@@ -475,6 +475,9 @@ pub struct InstitutionSnapshot {
 /// Snapshot fields from `Simulation::snapshot()` for read-only RPC handlers.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SnapshotFields {
+    /// Deterministic per-region weather; absent in older serialized snapshots.
+    #[serde(default)]
+    pub weather_grid: Vec<civ_planet::WeatherCell>,
     /// Engine tick at snapshot time.
     pub tick: u64,
     /// World population.
@@ -875,6 +878,7 @@ pub fn snapshot_fields_from_sim(
 ) -> SnapshotFields {
     let snap = sim.snapshot();
     SnapshotFields {
+        weather_grid: snap.weather_grid.clone(),
         tick: snap.tick,
         population: snap.population,
         building_count: snap.building_count,
@@ -2330,6 +2334,10 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 root.insert("music_cues".to_owned(), serde_json::json!(snap.music_cues));
                 // Climate snapshot (deterministic planet)
                 root.insert("climate".to_owned(), serde_json::json!(snap.climate));
+                root.insert(
+                    "weather_grid".to_owned(),
+                    serde_json::json!(snap.weather_grid),
+                );
                 // Emergence sample (entropy, power-law, mutual info)
                 if let Some(sample) = snap.emergence.as_ref() {
                     root.insert("emergence_sample".to_owned(), serde_json::json!(sample));
@@ -2342,6 +2350,7 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 root.insert("damage_events".to_owned(), serde_json::json!([]));
                 root.insert("audio_events".to_owned(), serde_json::json!([]));
                 root.insert("music_cues".to_owned(), serde_json::json!({}));
+                root.insert("weather_grid".to_owned(), serde_json::json!([]));
             }
             // Religion/legends from separate ctx fields
             if let Some(rs) = ctx.religion_state.as_ref() {
@@ -3407,6 +3416,52 @@ mod tests {
     }
 
     #[test]
+    fn sim_events_preserves_actual_weather_and_defaults_absent_snapshots() {
+        let sim = civ_engine::Simulation::with_seed(7);
+        let fields = snapshot_fields_from_sim(&sim, 1);
+        assert!(!fields.weather_grid.is_empty());
+        assert_eq!(fields.weather_grid, sim.snapshot().weather_grid);
+        let expected = serde_json::to_value(sim.weather_grid()).unwrap();
+        let mut legacy = serde_json::to_value(&fields).unwrap();
+        legacy.as_object_mut().unwrap().remove("weather_grid");
+        let legacy: SnapshotFields = serde_json::from_value(legacy).unwrap();
+        assert!(legacy.weather_grid.is_empty());
+        for snapshot in [Some(fields), None] {
+            let expected = if snapshot.is_some() {
+                expected.clone()
+            } else {
+                serde_json::json!([])
+            };
+            let req =
+                parse_request(r#"{"jsonrpc":"2.0","id":1,"method":"sim.events","params":{}}"#)
+                    .unwrap();
+            let plan = dispatch_request(
+                req,
+                DispatchContext {
+                    tick: sim.state.tick,
+                    population: None,
+                    snapshot,
+                    tile_probe: None,
+                    require_role: false,
+                    speed_multiplier: 1,
+                    connection_role: None,
+                    saves_dir: None,
+                    emergence: None,
+                    legends: None,
+                    researched: vec![],
+                    in_progress_tech: None,
+                    last_tick_ms: 0.0,
+                    outcome_fields: None,
+                    psyche_snapshot: None,
+                    sentience_events: None,
+                    religion_state: None,
+                },
+            );
+            assert_eq!(plan.response.result.unwrap()["weather_grid"], expected);
+        }
+    }
+
+    #[test]
     fn snapshot_fields_from_sim_includes_spectator_pins() {
         let sim = civ_engine::Simulation::with_seed(7);
         let fields = snapshot_fields_from_sim(&sim, 1);
@@ -3745,6 +3800,7 @@ mod tests {
                 tick: 99,
                 population: None,
                 snapshot: Some(SnapshotFields {
+                    weather_grid: vec![],
                     tick: 42,
                     population: 1_000_000,
                     building_count: 7,
@@ -3861,6 +3917,7 @@ mod tests {
                 tick: 1,
                 population: None,
                 snapshot: Some(SnapshotFields {
+                    weather_grid: vec![],
                     tick: 1,
                     population: 500,
                     building_count: 2,
@@ -3957,6 +4014,7 @@ mod tests {
                 tick: 1,
                 population: None,
                 snapshot: Some(SnapshotFields {
+                    weather_grid: vec![],
                     tick: 1,
                     population: 500,
                     building_count: 2,
@@ -4839,6 +4897,7 @@ mod tests {
             mi_material_faction_norm: Some(0.42),
         };
         let fields = SnapshotFields {
+            weather_grid: vec![],
             tick: 5,
             population: 0,
             building_count: 0,

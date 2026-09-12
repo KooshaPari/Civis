@@ -56,7 +56,7 @@ pub struct SimPerfData {
     pub tick_ms: f64,
 }
 
-/// Aggregated last-tick sim events from `sim.sim.events` (id=9011).
+/// Aggregated last-tick sim events from `sim.events` (id=9011).
 ///
 /// Bundles every per-tick buffer the engine flushes (disaster pulses, audio
 /// cues, construction events, mood snapshots, research progress, religion,
@@ -84,6 +84,8 @@ pub struct SimSimEventsData {
     pub climate: Option<serde_json::Value>,
     /// Emergence dashboard sample (entropy_bits, branching, mi_score...).
     pub emergence_sample: Option<serde_json::Value>,
+    /// Per-region weather cells from `sim.events` (absent on older servers).
+    pub weather_grid: Vec<serde_json::Value>,
     /// Optional religion state blob (sects, intensities, schisms).
     pub religion_state: Option<serde_json::Value>,
     /// Optional legends/saga blob (sagas, nodes, weights).
@@ -92,6 +94,31 @@ pub struct SimSimEventsData {
     pub researched: Vec<serde_json::Value>,
     /// Currently researching tech name + progress percentage.
     pub in_progress_tech: serde_json::Value,
+}
+
+/// Return the server label only for branching regimes that warrant an alert.
+#[cfg(any(feature = "egui", test))]
+pub(crate) fn branching_alert(sample: &serde_json::Value) -> Option<&str> {
+    match sample.get("branching_regime")?.as_str()? {
+        label @ ("Near-supercritical" | "Supercritical (explosion risk)") => Some(label),
+        _ => None,
+    }
+}
+
+/// Count active Storm cells and report their maximum fixed-point intensity.
+#[cfg(any(feature = "egui", test))]
+pub(crate) fn storm_summary(grid: &[serde_json::Value]) -> Option<(usize, i32)> {
+    let mut intensities = grid.iter().filter_map(|cell| {
+        if cell.get("kind")?.as_str()? != "Storm" {
+            return None;
+        }
+        let intensity = i32::try_from(cell.get("storm_intensity_fp")?.as_i64()?).ok()?;
+        (intensity > 0).then_some(intensity)
+    });
+    let first = intensities.next()?;
+    Some(intensities.fold((1, first), |(count, max), intensity| {
+        (count + 1, max.max(intensity))
+    }))
 }
 
 /// A pending JSON-RPC request with a stable correlation ID and connection origin.
@@ -135,7 +162,7 @@ pub struct WsClient {
     emergence_rx: crossbeam_channel::Receiver<EmergenceHudData>,
     /// Inbound parsed SimPerfData from id=3 sim.perf responses.
     perf_rx: crossbeam_channel::Receiver<SimPerfData>,
-    /// Inbound aggregated sim.events from id=9011 sim.sim.events responses.
+    /// Inbound aggregated sim.events from id=9011 sim.events responses.
     sim_events_rx: crossbeam_channel::Receiver<SimSimEventsData>,
     outcome_rx: crossbeam_channel::Receiver<OutcomeHudData>,
     save_list_rx: crossbeam_channel::Receiver<Vec<SaveListEntry>>,
@@ -426,6 +453,7 @@ impl WsClient {
     /// (in tests) or until the server replies in production. The `RpcTicket` provides
     /// both a stable ID for matching replies and a "connection_id" for the caller's
     /// `install_world_generation`.
+    /// A closed outbound transport completes the ticket with an error immediately.
     pub fn request_rpc(&self, method: &str, params: serde_json::Value) -> RpcTicket {
         let id = self.next_request_id.fetch_add(1, Ordering::Relaxed);
         let (tx, rx) = crossbeam_channel::bounded(1);
@@ -437,11 +465,22 @@ impl WsClient {
             .unwrap()
             .insert(id, (connection_id.clone(), tx));
         // Send the JSON-RPC text frame to the network task.
-        let mut payload =
+        let payload =
             serde_json::json!({"jsonrpc": "2.0", "id": id, "method": method, "params": params});
         let json = serde_json::to_string(&payload).unwrap();
-        let _ = self.ticket_tx.send((id, json.clone()));
-        self.mirror_outbound(&json);
+        // The test observer acts as the transport for manually completed requests.
+        let sent = if let Some(observer) = &self.inbound_json_tx {
+            observer.send(json).is_ok()
+        } else {
+            self.ticket_tx.send((id, json)).is_ok()
+        };
+        if !sent {
+            if let Some((_, pending_tx)) = self.pending_rpcs.lock().unwrap().remove(&id) {
+                let _ = pending_tx.send(Err(format!(
+                    "WebSocket client is disconnected; cannot send RPC '{method}' (id={id})"
+                )));
+            }
+        }
         RpcTicket {
             id,
             connection_id,
@@ -590,8 +629,7 @@ pub const FIRST_TICKET_ID: u64 = 1 << 32;
 const OUTCOME_RPC: &str = r#"{"jsonrpc":"2.0","id":9003,"method":"sim.outcome","params":{}}"#;
 const OUTCOME_POLL_SECS: u64 = 30;
 const SIM_EVENTS_RPC: &str = r#"{"jsonrpc":"2.0","id":9011,"method":"sim.events","params":{}}"#;
-/// Poll cadence for sim.events — fast (10 Hz) because it carries ephemeral
-/// disaster pulses / audio cues that the Bevy client renders immediately.
+/// Poll cadence for aggregated simulation events, owned by the socket loop.
 const SIM_EVENTS_POLL_SECS: u64 = 2;
 const SNAPSHOT_RPC: &str = r#"{"jsonrpc":"2.0","id":9001,"method":"sim.snapshot","params":{}}"#;
 const SNAPSHOT_POLL_SECS: u64 = 2;
@@ -792,7 +830,7 @@ fn parse_perf_response(text: &str) -> Option<SimPerfData> {
     Some(SimPerfData { tick_ms })
 }
 
-/// Parse a `sim.sim.events` (id=9011) JSON-RPC response into [`SimSimEventsData`].
+/// Parse a `sim.events` (id=9011) JSON-RPC response into [`SimSimEventsData`].
 ///
 /// Tolerates missing / malformed nested fields by defaulting to empty collections
 /// rather than dropping the whole payload — a partial sim events snapshot is more
@@ -845,6 +883,11 @@ fn parse_sim_events_response(text: &str) -> Option<SimSimEventsData> {
             .get("emergence_sample")
             .cloned()
             .filter(|v| v.is_object()),
+        weather_grid: result
+            .get("weather_grid")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default(),
         religion_state: result
             .get("religion_state")
             .cloned()
@@ -1236,6 +1279,75 @@ mod tests {
             client.request_rpc("sim.test", serde_json::json!({})).id,
             FIRST_TICKET_ID
         );
+    }
+
+    #[test]
+    fn disconnected_client_request_rpc_completes_with_terminal_error() {
+        let client = WsClient::disconnected();
+        let ticket = client.request_rpc("sim.unreachable", serde_json::json!({}));
+        let reply = ticket.try_recv().expect("terminal reply");
+        assert!(matches!(&reply, Err(message) if message.contains("disconnected")));
+        assert!(!client.pending_rpcs.lock().unwrap().contains_key(&ticket.id));
+    }
+
+    #[test]
+    fn test_transport_preserves_request_and_manual_completion() {
+        let (client, requests) = WsClient::test_rpc_client();
+        let ticket = client.request_rpc("sim.test", serde_json::json!({"value": 3}));
+        let request: serde_json::Value =
+            serde_json::from_str(&requests.try_recv().unwrap()).unwrap();
+        assert_eq!(request["id"], ticket.id);
+        assert_eq!(request["method"], "sim.test");
+        assert_eq!(request["params"]["value"], 3);
+        assert!(ticket.try_recv().is_none());
+        client.test_complete_rpc(ticket.id, Ok(serde_json::json!({"done": true})));
+        assert_eq!(
+            ticket.try_recv(),
+            Some(Ok(serde_json::json!({"done": true})))
+        );
+        assert!(client.pending_rpcs.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn event_weather_fixture_alerts_only_on_positive_storm_cells() {
+        let payload = serde_json::json!({"jsonrpc": "2.0", "id": 9011, "result": {
+            "tick": 1,
+            "weather_grid": [
+                {"kind": "Storm", "storm_intensity_fp": 420},
+                {"kind": "Storm", "storm_intensity_fp": 750},
+                {"kind": "Rain", "storm_intensity_fp": 999},
+                {"kind": "Storm", "storm_intensity_fp": 0},
+                {"kind": "Storm", "storm_intensity_fp": -1},
+                {"kind": "Storm", "storm_intensity_fp": 4294967297_u64},
+                {"kind": 3, "storm_intensity_fp": 900},
+                {"kind": "Storm"}, null
+            ]
+        }});
+        let parsed = parse_sim_events_response(&payload.to_string()).unwrap();
+        assert_eq!(storm_summary(&parsed.weather_grid), Some((2, 750)));
+        assert_eq!(storm_summary(&parsed.weather_grid[2..]), None);
+        let older = parse_sim_events_response(r#"{"id":9011,"result":{"tick":1}}"#).unwrap();
+        assert!(older.weather_grid.is_empty());
+        assert_eq!(storm_summary(&older.weather_grid), None);
+    }
+
+    #[test]
+    fn branching_alert_uses_wire_labels() {
+        for label in ["Near-supercritical", "Supercritical (explosion risk)"] {
+            let sample = serde_json::json!({"branching_regime": label});
+            assert_eq!(branching_alert(&sample), Some(label));
+        }
+        for sample in [
+            serde_json::json!({"branching_regime": "Subcritical (heat-death risk)"}),
+            serde_json::json!({"branching_regime": "Subcritical → critical transition"}),
+            serde_json::json!({"branching_regime": "Edge of chaos (target)"}),
+            serde_json::json!({"branching_regime": "unknown"}),
+            serde_json::json!({"branching_regime": 42}),
+            serde_json::json!({"is_branching": true}),
+            serde_json::json!({}),
+        ] {
+            assert_eq!(branching_alert(&sample), None);
+        }
     }
 
     #[test]

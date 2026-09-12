@@ -529,6 +529,7 @@ async fn building_palette_and_interleaved_terrain_survive_replay_without_duplica
     .into_iter()
     .enumerate()
     {
+        let frame_start = frames.len();
         let terrain = rpc(
             &mut socket,
             &mut frames,
@@ -557,7 +558,7 @@ async fn building_palette_and_interleaved_terrain_survive_replay_without_duplica
             .and_then(Value::as_u64)
             .expect("place voxel publication tick");
         assert!(
-            frames.iter().any(|frame| matches!(
+            frames[frame_start..].iter().any(|frame| matches!(
                 frame,
                 Frame3d::VoxelDelta(delta) if delta.tick == terrain_tick
             )),

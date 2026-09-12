@@ -6,6 +6,8 @@ use crate::atmosphere::DayNightCycle;
 use crate::live_pick::{LivePickPlugin, LiveSelection};
 use crate::live_scene::LiveScenePlugin;
 use crate::live_stream::ServerBridge;
+#[cfg(feature = "egui")]
+use crate::ws_client::{branching_alert, storm_summary};
 use crate::ws_client::{SimPerfData, WsClient, WsClientConfig};
 use crate::{
     resolve_live_ws_url, AttachMode, LiveHudSnapshot, MusicCues, OutcomeProgressHud,
@@ -14,11 +16,6 @@ use crate::{
 
 const PERF_POLL_SECS: f32 = 2.0;
 const PERF_RPC: &str = r#"{"jsonrpc":"2.0","id":3,"method":"sim.perf","params":{}}"#;
-#[cfg(feature = "egui")]
-const SIM_EVENTS_POLL_SECS: f32 = 2.0;
-#[cfg(feature = "egui")]
-const SIM_EVENTS_RPC: &str = r#"{"jsonrpc":"2.0","id":9011,"method":"sim.sim_events","params":{}}"#;
-
 #[cfg(feature = "egui")]
 use crate::WsConnectionState;
 
@@ -73,8 +70,7 @@ impl Plugin for LiveAttachPlugin {
             );
         #[cfg(feature = "egui")]
         {
-            app.init_resource::<SimEventsPollTimer>()
-                .add_systems(Update, poll_live_sim_events);
+            app.add_systems(Update, consume_live_sim_events);
         }
         #[cfg(all(feature = "bevy", feature = "egui"))]
         {
@@ -117,24 +113,12 @@ fn poll_live_perf(
     }
 }
 
-#[derive(Resource, Default)]
+/// Consume the background WebSocket poll's aggregated `sim.events` replies.
+/// The transport owns polling and restarts its timer on each reconnect.
 #[cfg(feature = "egui")]
-struct SimEventsPollTimer(f32);
-
-/// Poll the server's `sim.sim_events` channel and surface the aggregated per-tick
-/// buffers (damage, audio, research, emergence, climate, religion, legends)
-/// as EventFeed notifications so the player sees the simulation actually
-/// doing things.
-///
-/// `SimSimEventsData` is a flat struct: scalar counters, optional JSON
-/// blobs for nested state, and Vec<serde_json::Value> for repeating
-/// entries. This function only touches fields that actually exist.
-#[cfg(feature = "egui")]
-fn poll_live_sim_events(
-    time: Res<Time>,
+fn consume_live_sim_events(
     attach: Res<AttachMode>,
     bridge: Res<LiveAttachBridge>,
-    mut timer: ResMut<SimEventsPollTimer>,
     mut feed: ResMut<EventFeed>,
     #[cfg(feature = "egui")] mut notifs: ResMut<Notifications>,
 ) {
@@ -142,7 +126,7 @@ fn poll_live_sim_events(
         return;
     }
 
-    // Drain all pending sim_events messages (the background poll keeps a small queue).
+    // Drain pending responses without issuing a second poll from the UI.
     while let Some(events) = bridge.client.poll_sim_events() {
         // Damage — real scalar fields on the struct.
         if events.damage_events_count > 0 {
@@ -210,7 +194,7 @@ fn poll_live_sim_events(
             feed.push(EventKind::Diplomacy, "Legends: saga updated".to_owned());
         }
 
-        // Emergence sample — Option<serde_json::Value>. Extract entropy if present.
+        // Emergence fields use the dashboard's stable regime labels.
         if let Some(sample) = &events.emergence_sample {
             let entropy_bits = sample
                 .get("entropy_bits")
@@ -222,49 +206,24 @@ fn poll_live_sim_events(
                     format!("Emergence: entropy {:.2} (high regime)", entropy_bits),
                 );
             }
-            // Branching alert: check is_branching field
-            let branching = sample
-                .get("is_branching")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false);
-            if branching {
-                feed.push(
-                    EventKind::System,
-                    "Emergence: branching — critical regime entered".to_owned(),
-                );
-                #[cfg(feature = "egui")]
-                notifs.notify(NotificationKind::Disaster, "Emergence branching detected");
-            }
-        }
-
-        // Climate — Option<serde_json::Value> blob. Extract storm status.
-        if let Some(climate) = &events.climate {
-            let storm = climate
-                .get("storm_active")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false);
-            if storm {
-                let sev = climate
-                    .get("storm_severity")
-                    .and_then(|v| v.as_f64())
-                    .unwrap_or(0.0);
-                feed.push(
-                    EventKind::Disaster,
-                    format!("Storm active (sev {:.2})", sev),
-                );
+            if let Some(label) = branching_alert(sample) {
+                feed.push(EventKind::System, format!("Emergence: branching — {label}"));
                 #[cfg(feature = "egui")]
                 notifs.notify(
                     NotificationKind::Disaster,
-                    format!("Storm active (severity {:.2})", sev),
+                    format!("Emergence branching: {label}"),
                 );
             }
         }
-    }
 
-    timer.0 += time.delta_secs();
-    if timer.0 >= SIM_EVENTS_POLL_SECS {
-        timer.0 = 0.0;
-        bridge.client.send_rpc_raw(SIM_EVENTS_RPC.to_owned());
+        if let Some((storm_cells, intensity_fp)) = storm_summary(&events.weather_grid) {
+            let message = format!(
+                "{storm_cells} storm cell(s) active (max intensity {:.2})",
+                f64::from(intensity_fp) / 1_000.0
+            );
+            feed.push(EventKind::Disaster, message.clone());
+            notifs.notify(NotificationKind::Disaster, message);
+        }
     }
 }
 

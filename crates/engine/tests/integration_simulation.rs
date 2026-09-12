@@ -54,7 +54,7 @@ fn test_simulation_diplomacy() {
     let snapshot = sim.snapshot();
     assert!(
         !snapshot.diplomacy_events.is_empty(),
-        "Diplomacy events should occur after 20 ticks"
+        "Diplomacy events should occur after 500 ticks"
     );
 }
 

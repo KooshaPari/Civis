@@ -87,7 +87,7 @@ pub fn behavior_from_psyche(psyche: &Psyche) -> EmotionDrivenBehavior {
         return EmotionDrivenBehavior::Aggress;
     }
     // High arousal + negative valence → Flee (fearful)
-    if arousal > 0.7 && valence <= 0.0 {
+    if arousal > 0.7 && valence < 0.0 {
         return EmotionDrivenBehavior::Flee;
     }
     // Positive valence + low arousal → Cooperate (content)
@@ -889,6 +889,26 @@ mod psyche_extended_tests {
             behavior_from_psyche(&psyche),
             EmotionDrivenBehavior::Neutral
         );
+    }
+
+    #[test]
+    fn high_arousal_requires_negative_valence_to_flee() {
+        let mut psyche = Psyche {
+            drives: [0.3; 4],
+            temperament: civ_agents::Temperament::neutral(),
+            mood: civ_agents::Mood {
+                valence: 0.0,
+                arousal: 0.9,
+            },
+            beliefs: [0.5; 4],
+            maturity: 0.5,
+        };
+        assert_eq!(
+            behavior_from_psyche(&psyche),
+            EmotionDrivenBehavior::Neutral
+        );
+        psyche.mood.valence = -f32::EPSILON;
+        assert_eq!(behavior_from_psyche(&psyche), EmotionDrivenBehavior::Flee);
     }
 
     // -----------------------------------------------------------------------

@@ -18,16 +18,44 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $justLines = Get-Content -LiteralPath (Join-Path $repoRoot 'justfile')
 $recipeIndex = [Array]::IndexOf($justLines, 'godot-test:')
 Assert-True ($recipeIndex -ge 0 -and $recipeIndex + 1 -lt $justLines.Count) 'godot-test recipe missing'
-$recipeLine = $justLines[$recipeIndex + 1]
-$recipeMatch = [regex]::Match($recipeLine, "^\s*powershell\s+-NoProfile\s+-ExecutionPolicy\s+Bypass\s+-Command\s+'(?<command>.*)'\s*$")
-Assert-True $recipeMatch.Success 'godot-test recipe command shape changed unexpectedly'
-$command = $recipeMatch.Groups['command'].Value
-Assert-True ($command -match '\$env:CARGO_TARGET_DIR') 'recipe does not inspect CARGO_TARGET_DIR'
-Assert-True ($command -match 'target-godot-smoke') 'recipe fallback is missing'
-Assert-True ($command -match 'exit \$LASTEXITCODE') 'recipe does not propagate Cargo exit code'
+# Recipe body may be platform-guarded (os_family() conditional). Collect all
+# body lines so the Windows powershell shape is still observable even when the
+# recipe is split across an `if/else` branch.
+$recipeBodyLines = @()
+for ($i = $recipeIndex + 1; $i -lt $justLines.Count; $i++) {
+    $line = $justLines[$i]
+    if ($line -match '^[^\s]' -and $line -notmatch '^#') { break }
+    $recipeBodyLines += $line
+}
+$recipeBody = $recipeBodyLines -join "`n"
+# Source-level assertions: the raw justfile must declare both branches and the
+# unix branch must wire bash-style CARGO_TARGET_DIR defaulting so a caller can
+# still override it.
+Assert-True ($recipeBody -match 'os_family\(\)\s*==\s*"windows"') 'recipe is not platform-guarded'
+Assert-True ($recipeBody -match '\$env:CARGO_TARGET_DIR') 'recipe does not inspect CARGO_TARGET_DIR'
+Assert-True ($recipeBody -match 'target-godot-smoke') 'recipe fallback is missing'
+Assert-True ($recipeBody -match 'exit \$LASTEXITCODE') 'recipe does not propagate Cargo exit code'
+$unixMatch = [regex]::Match($recipeBody, 'CARGO_TARGET_DIR=\\"\$\{CARGO_TARGET_DIR:-target-godot-smoke\}\\"\s+cargo\s+test\s+--manifest-path\s+clients/godot-ref/rust/Cargo\.toml\s+-j\s+1')
+Assert-True $unixMatch.Success 'godot-test recipe unix branch missing or changed'
+# Rendered-output assertion: ask `just -n` to print the evaluated recipe body
+# for the current platform. On Windows, the rendered line must still match the
+# single-line powershell contract so the synthetic cargo shim below can observe
+# CARGO_TARGET_DIR propagation end-to-end. `--show` only prints the raw source
+# (still escaped); -n is what the shell actually sees.
+$justExe = (Get-Command 'just' -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1)
+if (-not $justExe) { $justExe = Get-Item 'C:\Users\koosh\agents\sandbox\tools\just-1.58.0\bin\just.exe' -ErrorAction SilentlyContinue }
+Assert-True ($null -ne $justExe) 'just binary not found for rendered-recipe check'
+$justPath = if ($justExe -is [System.Management.Automation.ApplicationInfo]) { $justExe.Path } else { $justExe.FullName }
+$rendered = (& $justPath -f (Join-Path $repoRoot 'justfile') -n godot-test 2>&1) -join "`n"
+$renderedMatch = [regex]::Match($rendered, "powershell\s+-NoProfile\s+-ExecutionPolicy\s+Bypass\s+-Command\s+'(?<command>[^']*)'")
+Assert-True $renderedMatch.Success 'rendered godot-test recipe does not match Windows powershell contract'
+$command = $renderedMatch.Groups['command'].Value
+Assert-True ($command -match '\$env:CARGO_TARGET_DIR') 'rendered recipe does not inspect CARGO_TARGET_DIR'
+Assert-True ($command -match 'target-godot-smoke') 'rendered recipe fallback is missing'
+Assert-True ($command -match 'exit \$LASTEXITCODE') 'rendered recipe does not propagate Cargo exit code'
 
 $powershell = (Get-Command powershell.exe -CommandType Application -ErrorAction Stop | Select-Object -First 1).Path
-$caseRoot = Join-Path (Join-Path $repoRoot '..\agents\sandbox') ("godot-target-routing-" + [guid]::NewGuid().ToString('N'))
+$caseRoot = Join-Path (Join-Path ([Environment]::GetFolderPath('UserProfile')) 'agents\sandbox') ("godot-target-routing-" + [guid]::NewGuid().ToString('N'))
 $shimRoot = Join-Path $caseRoot 'shim'
 $explicitLogPath = Join-Path $caseRoot 'explicit.log'
 $fallbackLogPath = Join-Path $caseRoot 'fallback.log'

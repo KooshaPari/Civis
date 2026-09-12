@@ -166,10 +166,12 @@ impl Simulation {
     /// Culture phase (FR-CIV-CULTURE) — advance per-faction ideology/trait
     /// drift from fresh settlement culture, contact, religion, era, and climate
     /// signals.
+    /// This is the sole per-tick owner of faction ideology and its aggression mirror.
     pub(crate) fn phase_culture(&mut self) {
         let cluster_member_counts = settlement_member_counts(&self.world);
         let dominant = settlement_dominant_factions(&self.world, &cluster_member_counts);
         if dominant.is_empty() || self.emergence.cluster_cultures.is_empty() {
+            self.prune_extinct_factions();
             return;
         }
 
@@ -183,7 +185,7 @@ impl Simulation {
         let faction_ages = self.era_progression.faction_ages.clone();
         let prior = self.faction_ideologies.clone();
 
-        self.faction_ideologies = advance_faction_ideologies(
+        let updated = advance_faction_ideologies(
             self.state.tick,
             &self.emergence.cluster_cultures,
             &dominant,
@@ -196,11 +198,32 @@ impl Simulation {
             &mut self.rng,
         );
 
+        self.faction_ideologies = updated;
+
+        self.faction_aggression.clear();
+        for (faction_id, state) in &self.faction_ideologies {
+            self.faction_aggression
+                .insert(*faction_id, state.aggression);
+        }
+
+        self.prune_extinct_factions();
+
         // --- Legend significance accumulator wiring (#962) ---
         // Legend significance wiring TODO: wire when civ_legends API stabilizes
         // See crates/legends/src/significance.rs for SignificanceAccumulator API
         // The drift_magnitude calculation above is ready; just needs
         // civ_legends::significance::AccumulatorConfig and record_event() call.
+    }
+
+    /// Remove derived faction state after its last aligned civilian dies.
+    fn prune_extinct_factions(&mut self) {
+        let populations = crate::tech::faction_populations(self);
+        self.faction_ideologies
+            .retain(|fid, _| populations.contains_key(fid));
+        self.faction_aggression
+            .retain(|fid, _| populations.contains_key(fid));
+        self.faction_languages
+            .retain(|fid, _| populations.contains_key(fid));
     }
 
     /// Language drift phase (FR-CIV-LANG-001 / FR-LANGUAGE-001).
@@ -321,5 +344,103 @@ impl Simulation {
             ));
         }
         self.last_tick_sentience_events = events;
+    }
+}
+
+#[cfg(test)]
+mod culture_phase_cadence_tests {
+    use super::*;
+    use civ_agents::{Alignment, Civilian, ClusterId, ClusterMember, Position3d};
+    use civ_voxel::WorldCoord;
+    use rand::RngCore;
+
+    fn populated_sim() -> Simulation {
+        let mut sim = Simulation::with_seed(7);
+        sim.world = hecs::World::new();
+        for (id, faction, x) in [(1, 1, 0), (2, 1, 1), (3, 2, 200_000), (4, 2, 200_001)] {
+            sim.world.spawn((
+                Civilian {
+                    id,
+                    alignment: Alignment::Faction(faction),
+                    age: 20,
+                },
+                ClusterMember {
+                    cluster: ClusterId(if faction == 1 { 1 } else { 3 }),
+                },
+                Position3d {
+                    coord: WorldCoord { x, y: 0, z: 0 },
+                },
+            ));
+        }
+        sim
+    }
+
+    #[test]
+    fn emergence_preserves_ideology_then_culture_advances_exactly_once() {
+        let mut sim = populated_sim();
+        sim.faction_ideologies
+            .insert(1, crate::culture::FactionIdeologyState::default());
+        let before = sim.faction_ideologies.clone();
+        sim.phase_emergence();
+        assert_eq!(
+            sim.emergence.cluster_cultures.len(),
+            2,
+            "fixture must exercise the inhabited multi-culture path"
+        );
+        assert_eq!(
+            sim.faction_ideologies, before,
+            "emergence must not perform an ideology transition"
+        );
+        sim.religious_profiles.insert(
+            1,
+            ReligiousProfile {
+                monitoring: 0.9,
+                ..Default::default()
+            },
+        );
+        let counts = settlement_member_counts(&sim.world);
+        let dominant = settlement_dominant_factions(&sim.world, &counts);
+        let contacts = settlement_contact_pairs(&sim.world, &counts, SETTLEMENT_CONTACT_RADIUS_FP);
+        let religion = faction_religion_signals(&sim.religious_profiles, &dominant, &counts);
+        let mut expected_rng = sim.rng.clone();
+        let expected = advance_faction_ideologies(
+            sim.state.tick,
+            &sim.emergence.cluster_cultures,
+            &dominant,
+            &counts,
+            &contacts,
+            &sim.climate,
+            &religion,
+            &sim.era_progression.faction_ages,
+            &before,
+            &mut expected_rng,
+        );
+        assert!(!expected.is_empty());
+        sim.phase_culture();
+        assert_eq!(sim.faction_ideologies, expected);
+        assert_eq!(
+            sim.rng.next_u64(),
+            expected_rng.next_u64(),
+            "culture must consume exactly one transition's RNG draws"
+        );
+        for (fid, state) in &expected {
+            assert_eq!(sim.faction_aggression[fid], state.aggression);
+        }
+    }
+
+    #[test]
+    fn extinct_registered_faction_loses_derived_state() {
+        let mut sim = populated_sim();
+        // Registration survives population loss, so it must not keep stale state alive.
+        assert!(sim.state.factions.contains_key(&0));
+        sim.faction_ideologies
+            .insert(0, crate::culture::FactionIdeologyState::default());
+        sim.faction_aggression.insert(0, 0.42);
+        sim.faction_languages
+            .insert(0, seeded_language_state([0.5; 4]));
+        sim.phase_culture();
+        assert!(!sim.faction_ideologies.contains_key(&0));
+        assert!(!sim.faction_aggression.contains_key(&0));
+        assert!(!sim.faction_languages.contains_key(&0));
     }
 }

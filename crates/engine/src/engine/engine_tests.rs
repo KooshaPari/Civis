@@ -33,7 +33,7 @@ mod engine_tests {
             .insert(1, CultureProfile::new([0.15, 0.15, 0.15, 0.15]));
         sim.emergence
             .cluster_cultures
-            .insert(2, CultureProfile::new([0.85, 0.85, 0.85, 0.85]));
+            .insert(3, CultureProfile::new([0.85, 0.85, 0.85, 0.85]));
 
         for (id, cluster, faction, x) in [
             (1_u64, 1_u64, 1_u32, 0_i64),
@@ -55,6 +55,23 @@ mod engine_tests {
                 },
             ));
         }
+    }
+
+    #[cfg(target_pointer_width = "64")]
+    #[test]
+    fn faction_alignment_rejects_ids_that_would_truncate_to_living_faction() {
+        let mut sim = Simulation::with_seed(123);
+        sim.world = World::new();
+        sim.world.spawn((civ_agents::Civilian {
+            id: 1,
+            alignment: civ_agents::Alignment::Faction(7),
+            age: 20,
+        },));
+        assert_eq!(sim.faction_alignment(7), civ_agents::Alignment::Faction(7));
+        assert_eq!(
+            sim.faction_alignment((1_usize << 32) + 7),
+            civ_agents::Alignment::None
+        );
     }
 
     /// FR-CIV-ENGINE-INT-010 — startup spawns 128 civilians across four factions.
@@ -216,12 +233,12 @@ mod engine_tests {
                 "research",
                 "tech",
                 "belief",
+                "institutions",
                 "social_mood",
                 "unrest",
                 "cohesion",
                 "economic_focus_pre",
                 "stratification",
-                "institutions",
                 "economic_focus",
                 "emergence",
                 "tutorial",
@@ -3991,5 +4008,42 @@ mod engine_tests {
         sim.push_voxel_write(pos, MaterialId(9));
         assert_eq!(sim.replay_log().events.len(), 1);
         assert_eq!(sim.voxel().read(pos), MaterialId(9));
+    }
+
+    #[test]
+    fn tide_movement_preserves_authored_voxel_at_previous_marker() {
+        let mut sim = Simulation::with_seed(91);
+        sim.moon = MoonConfig {
+            orbit_period_ticks: 4,
+            tidal_amplitude: 1.0,
+        };
+        let (x, z, base_y) = (123, -456, 3_000);
+        sim.register_coastal_water_column(x, z, base_y);
+        sim.state.tick = 1;
+        sim.phase_planet();
+        let previous = WorldCoord {
+            x,
+            y: base_y + FIXED_SCALE,
+            z,
+        };
+        assert_eq!(
+            sim.voxel().read(previous),
+            crate::climate::WATER_MARKER_MATERIAL
+        );
+        sim.voxel_mut().write(previous, MaterialId(77));
+
+        sim.state.tick = 3;
+        sim.phase_planet();
+        assert_eq!(sim.voxel().read(previous), MaterialId(77));
+        let current = WorldCoord {
+            x,
+            y: base_y - FIXED_SCALE,
+            z,
+        };
+        assert_eq!(
+            sim.voxel().read(current),
+            crate::climate::WATER_MARKER_MATERIAL
+        );
+        assert_eq!(sim.coastal_water_level(x, z), Some(current.y));
     }
 }

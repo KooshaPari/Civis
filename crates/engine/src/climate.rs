@@ -126,7 +126,11 @@ impl Simulation {
             if prev_y == new_y {
                 continue;
             }
-            self.push_voxel_write(WorldCoord { x, y: prev_y, z }, MaterialId(0));
+            // Preserve an authored voxel that replaced the previous water marker.
+            let prev_pos = WorldCoord { x, y: prev_y, z };
+            if self.voxel.read(prev_pos) == WATER_MARKER_MATERIAL {
+                self.push_voxel_write(prev_pos, MaterialId(0));
+            }
             self.push_voxel_write(WorldCoord { x, y: new_y, z }, WATER_MARKER_MATERIAL);
             if let Some(column) = self.coastal_columns.get_mut(&(x, z)) {
                 column.last_water_y = new_y;

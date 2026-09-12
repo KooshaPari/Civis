@@ -5,6 +5,7 @@ param(
     [Parameter(Mandatory)][string]$ReceiptDirectory
 )
 $ErrorActionPreference = 'Stop'
+$TargetDirectory = (Get-Item -LiteralPath $TargetDirectory).FullName
 
 function Assert-True {
     param([Parameter(Mandatory)][bool]$Condition,[Parameter(Mandatory)][string]$Message)
@@ -45,7 +46,7 @@ Assert-True ($successStdout -match 'CARGO_BUILD_JOBS=7') 'child jobs env missing
 # Keep a synthetic child alive long enough to verify that the active log can
 # be opened by a reader while the writer still owns it.
 $readerChildJson = (@('-NoProfile','-Command',
-        'Write-Output "reader-start"; Start-Sleep -Seconds 3; Write-Output "reader-end"'
+        'Write-Output "reader-start"; Start-Sleep -Seconds 15; Write-Output "reader-end"'
     ) | ConvertTo-Json -Compress)
 $readerParameters = @(
     '-NoProfile','-ExecutionPolicy','Bypass','-File',$helper,
@@ -53,7 +54,10 @@ $readerParameters = @(
     '-TargetDirectory',$TargetDirectory,'-ExpectedGrowthBytes','1',
     '-ReserveBytes','1','-Jobs','2','-ReceiptDirectory',$ReceiptDirectory,'-Execute'
 )
-$readerBefore = @(Get-ChildItem -LiteralPath $ReceiptDirectory -Filter 'agent-smoke-budget-*.stdout.log' -File -ErrorAction SilentlyContinue | ForEach-Object FullName)
+# Isolate each concurrent-reader run so stale receipts cannot satisfy the test.
+$readerRoot = Join-Path $ReceiptDirectory ("reader-" + [guid]::NewGuid().ToString('N'))
+$null = New-Item -ItemType Directory -Path $readerRoot
+$readerParameters[$readerParameters.IndexOf('-ReceiptDirectory') + 1] = $readerRoot
 $readerStart = [Diagnostics.ProcessStartInfo]::new($pwsh)
 $readerStart.UseShellExecute = $false
 $readerStart.CreateNoWindow = $true
@@ -61,22 +65,44 @@ $readerStart.RedirectStandardOutput = $true
 $readerStart.RedirectStandardError = $true
 foreach ($argument in $readerParameters) { $readerStart.ArgumentList.Add([string]$argument) }
 $readerProcess = [Diagnostics.Process]::Start($readerStart)
-$readerLog = $null
 $readerOpened = $false
-for ($attempt = 0; $attempt -lt 50 -and -not $readerLog; $attempt++) {
+$deadline = [DateTime]::UtcNow.AddSeconds(45)
+while (-not $readerOpened -and -not $readerProcess.HasExited -and [DateTime]::UtcNow -lt $deadline) {
     Start-Sleep -Milliseconds 100
-    $readerLog = Get-ChildItem -LiteralPath $ReceiptDirectory -Filter 'agent-smoke-budget-*.stdout.log' -File -ErrorAction SilentlyContinue |
-        Where-Object { $readerBefore -notcontains $_.FullName } | Select-Object -First 1
-    if ($readerLog) {
-        try { $null = Get-Content -LiteralPath $readerLog.FullName -Raw; $readerOpened = $true } catch { $readerOpened = $false }
-    }
+    $receipt = Get-ChildItem -LiteralPath $readerRoot -Filter '*.json' -File | Select-Object -First 1
+    if (-not $receipt) { continue }
+    try { $running = Get-Content -LiteralPath $receipt.FullName -Raw | ConvertFrom-Json } catch { continue }
+    if ($running.state -ne 'running') { continue }
+    $stream = [IO.File]::Open($running.stdoutLog, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite)
+    $stream.Dispose()
+    $readerOpened = -not $readerProcess.HasExited
 }
+Assert-True $readerOpened 'stdout log was not readable while the helper was running'
+
+# A second helper on the same volume must reject while the first owns the gate.
+$contenderParameters = $successParameters.Clone()
+$contenderOutput = @(& $pwsh -NoProfile -ExecutionPolicy Bypass -File $helper @contenderParameters)
+$contenderCode = $LASTEXITCODE
+$contenderResult = ($contenderOutput -join [Environment]::NewLine) | ConvertFrom-Json
+$contenderReceipt = Get-Content -LiteralPath $contenderResult.receipt -Raw | ConvertFrom-Json
+Assert-True ($contenderCode -eq 2) 'concurrent helper did not reject execution'
+Assert-True ($contenderReceipt.rejectionReason -eq 'serialized') 'concurrent helper bypassed the volume gate'
+Assert-True ($null -eq $contenderReceipt.childPid) 'rejected helper started a child'
+Assert-True (-not $readerProcess.HasExited) 'holder exited before contention was observed'
 $readerProcess.WaitForExit()
 $readerProcessCode = $readerProcess.ExitCode
-$null = $readerProcess.StandardOutput.ReadToEnd()
-$null = $readerProcess.StandardError.ReadToEnd()
-Assert-True ($readerProcessCode -eq 0) "concurrent-reader child exit code was $readerProcessCode"
-Assert-True $readerOpened 'active stdout log could not be opened by a reader'
+$readerOutput = $readerProcess.StandardOutput.ReadToEnd()
+$readerError = $readerProcess.StandardError.ReadToEnd()
+$readerProcess.Dispose()
+Assert-True ($readerProcessCode -eq 0) "concurrent-reader helper failed: $readerError"
+
+# Successful admission after the first child exits proves gate release.
+$releasedOutput = @(& $pwsh -NoProfile -ExecutionPolicy Bypass -File $helper @successParameters)
+Assert-True ($LASTEXITCODE -eq 0) 'volume gate was not released after child completion'
+$releasedResult = ($releasedOutput -join [Environment]::NewLine) | ConvertFrom-Json
+$releasedReceipt = Get-Content -LiteralPath $releasedResult.receipt -Raw | ConvertFrom-Json
+Assert-True ($releasedReceipt.admitted -and $releasedReceipt.volumeGate.acquired) 'released gate did not admit next child'
+Assert-True ($releasedReceipt.budget.freeBytes -gt 0) 'admitted run did not sample capacity'
 
 $rejectParameters = $successParameters.Clone()
 $rejectParameters.ExpectedGrowthBytes = 9000000000000000000

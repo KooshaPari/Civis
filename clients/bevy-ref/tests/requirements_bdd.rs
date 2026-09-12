@@ -393,19 +393,27 @@ fn requirement_faction_roster_is_consistent_and_deterministic() {
     }
 
     let count = sim.faction_count();
-    assert!(count >= 1, "expected at least one faction with living civilians");
+    assert!(
+        count >= 1,
+        "expected at least one faction with living civilians"
+    );
 
     let populations = sim.faction_populations();
-    assert_eq!(populations.len(), count, "population map size matches faction count");
+    assert_eq!(
+        populations.len(),
+        count,
+        "population map size matches faction count"
+    );
 
-    for id in 0..count {
+    // Live faction IDs can be sparse after extinctions.
+    for (&id, &population) in &populations {
         assert_eq!(
-            sim.faction_alignment(id),
-            civ_agents::Alignment::Faction(id as u32),
+            sim.faction_alignment(id as usize),
+            civ_agents::Alignment::Faction(id),
             "faction {id} must resolve to its own alignment while populated"
         );
         assert!(
-            populations.get(&(id as u32)).copied().unwrap_or(0) > 0,
+            population > 0,
             "faction {id} must have a non-zero live population"
         );
     }

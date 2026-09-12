@@ -407,21 +407,16 @@ impl Plugin for GameUiPlugin {
             .add_systems(
                 EguiPrimaryContextPass,
                 // apply_keycap_theme MUST run first: it sets the global egui
-            // apply_keycap_theme MUST run first: it sets the global egui
-            // Style/Visuals (Keycap Palette + holocron chrome) before any
-            // draw call can consume it. load_tool_icons and draw_game_ui
-            // follow in order.
-            //
-            // Note: apply_keycap_theme is a one-shot Startup system (registered
-            // via add_systems(Startup, …) below) — re-applying every frame
-            // causes a "broken lightbulb" flicker between text rendering and
-            // the panel chrome texture paint.
-                (
-                    load_tool_icons,
-                    load_hud_panel,
-                    draw_game_ui,
-                )
-                    .chain(),
+                // apply_keycap_theme MUST run first: it sets the global egui
+                // Style/Visuals (Keycap Palette + holocron chrome) before any
+                // draw call can consume it. load_tool_icons and draw_game_ui
+                // follow in order.
+                //
+                // Note: apply_keycap_theme is a one-shot Startup system (registered
+                // via add_systems(Startup, …) below) — re-applying every frame
+                // causes a "broken lightbulb" flicker between text rendering and
+                // the panel chrome texture paint.
+                (load_tool_icons, load_hud_panel, draw_game_ui).chain(),
             );
 
         // Apply the keycap theme exactly once at Startup so per-frame theme
@@ -767,14 +762,12 @@ fn bottom_cluster(
 }
 
 /// Display name for a civilian wire entry (genome summary or stable id).
-#[must_use]
-pub fn civilian_display_name(entry: &CivilianStateEntry) -> String {
-    if entry.genome_summary.summary.is_empty() {
-        format!("Civilian #{}", entry.id)
-    } else {
-        entry.genome_summary.summary.clone()
-    }
-}
+///
+/// Pure formatter — lives in [`crate::civilian_name`] so the live-streamed
+/// Bevy `Text2d` agent labels can render with only the `bevy` feature. The
+/// egui HUD re-exports the same function under this path to keep its public
+/// API stable.
+pub use crate::civilian_name::civilian_display_name;
 
 /// Faction label for inspector / HUD rows.
 ///

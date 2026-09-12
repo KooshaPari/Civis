@@ -686,6 +686,7 @@ fn sync_emergence_hud(sim: Res<SimState>, mut hud: ResMut<crate::EmergenceHudDat
     };
 }
 
+#[cfg(feature = "egui")]
 fn sync_game_ui_snapshot(
     sim: Res<SimState>,
     speed: Res<crate::game_ui::GameSpeed>,

@@ -3022,6 +3022,51 @@ mod engine_tests {
         }
     }
 
+    #[test]
+    fn language_phase_removes_isolation_drift_for_fully_contacting_faction() {
+        use civ_agents::{ClusterId, ClusterMember};
+        use civ_voxel::WorldCoord;
+
+        let mut sim = Simulation::new();
+        sim.world = World::new();
+        sim.emergence.cluster_cultures.clear();
+        sim.faction_languages.clear();
+        sim.language_state = LanguageState::default();
+        sim.emergence
+            .cluster_cultures
+            .insert(1, CultureProfile::new([0.2, 0.2, 0.2, 0.2]));
+        sim.emergence
+            .cluster_cultures
+            .insert(2, CultureProfile::new([0.8, 0.8, 0.8, 0.8]));
+
+        for (id, cluster, faction, x) in [(1, 1, 1, 0), (2, 1, 1, 1), (3, 2, 2, 0), (4, 2, 2, 1)] {
+            let _ = sim.world.spawn((
+                AgentCivilian {
+                    id,
+                    alignment: Alignment::Faction(faction),
+                    age: 20,
+                },
+                ClusterMember {
+                    cluster: ClusterId(cluster),
+                },
+                Position3d {
+                    coord: WorldCoord { x, y: 0, z: 0 },
+                },
+            ));
+        }
+
+        sim.phase_language_drift();
+
+        assert_eq!(
+            sim.faction_languages()
+                .get(&1)
+                .expect("contacting faction language state")
+                .drift_rate,
+            0.05,
+            "all faction residents have a foreign settlement contact, so the phase must add no isolation drift"
+        );
+    }
+
     #[ignore = "requires full sim state bootstrapping (factions, languages, ideologies)"]
     #[test]
     fn language_names_diverge_for_isolated_factions_over_time() {

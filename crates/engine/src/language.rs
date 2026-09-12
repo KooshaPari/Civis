@@ -135,12 +135,60 @@ pub fn person_name(_state: &LanguageState, faction_id: u32, person_id: u32) -> S
 #[must_use]
 pub fn faction_isolation_pressure(
     faction_id: u32,
-    _dominant: &BTreeMap<u64, u32>,
-    _member_counts: &BTreeMap<u64, u32>,
-    _contacts: &BTreeSet<(u64, u64)>,
+    dominant: &BTreeMap<u64, u32>,
+    member_counts: &BTreeMap<u64, u32>,
+    contacts: &BTreeSet<(u64, u64)>,
 ) -> f32 {
-    let _ = faction_id;
-    0.5
+    let mut target_members = 0u64;
+    let mut target_settlements = BTreeSet::new();
+
+    for (&settlement_id, &dominant_faction) in dominant {
+        if dominant_faction == faction_id {
+            target_settlements.insert(settlement_id);
+            target_members = target_members.saturating_add(u64::from(
+                member_counts.get(&settlement_id).copied().unwrap_or(0),
+            ));
+        }
+    }
+
+    // A contact edge only establishes that a settlement's residents have a
+    // foreign contact. Count that settlement once: otherwise a large number
+    // of neighbouring settlements would make the same residents appear less
+    // isolated than their population warrants.
+    let mut foreign_contact_settlements = BTreeSet::new();
+    for &(left, right) in contacts {
+        let (Some(&left_faction), Some(&right_faction)) =
+            (dominant.get(&left), dominant.get(&right))
+        else {
+            continue;
+        };
+        if left_faction == right_faction {
+            continue;
+        }
+
+        if left_faction == faction_id
+            && target_settlements.contains(&left)
+            && member_counts.get(&right).copied().unwrap_or(0) > 0
+        {
+            foreign_contact_settlements.insert(left);
+        }
+        if right_faction == faction_id
+            && target_settlements.contains(&right)
+            && member_counts.get(&left).copied().unwrap_or(0) > 0
+        {
+            foreign_contact_settlements.insert(right);
+        }
+    }
+
+    if target_members == 0 {
+        return 0.0;
+    }
+    let contacting_members: u64 = foreign_contact_settlements
+        .iter()
+        .map(|settlement_id| u64::from(member_counts.get(settlement_id).copied().unwrap_or(0)))
+        .sum();
+    let contact_ratio = (contacting_members as f32 / target_members as f32).clamp(0.0, 1.0);
+    (1.0 - contact_ratio).clamp(0.0, 1.0)
 }
 
 // ---------------------------------------------------------------------------
@@ -1129,5 +1177,58 @@ mod language_extended_tests {
         borrow_word(&mut target, &source, WordKind::Person);
         assert_eq!(target.lexemes.len(), 1);
         assert_eq!(target.lexemes[0], "borrow:person");
+    }
+
+    #[test]
+    fn faction_isolation_is_maximal_without_foreign_contact() {
+        let dominant = BTreeMap::from([(10, 1), (20, 2)]);
+        let members = BTreeMap::from([(10, 12), (20, 12)]);
+
+        assert_eq!(
+            faction_isolation_pressure(1, &dominant, &members, &BTreeSet::new()),
+            1.0
+        );
+    }
+
+    #[test]
+    fn faction_isolation_decreases_for_cross_faction_contact() {
+        let dominant = BTreeMap::from([(10, 1), (20, 2)]);
+        let members = BTreeMap::from([(10, 12), (20, 3)]);
+        let contacts = BTreeSet::from([(10, 20)]);
+
+        let isolated = faction_isolation_pressure(1, &dominant, &members, &BTreeSet::new());
+        let connected = faction_isolation_pressure(1, &dominant, &members, &contacts);
+
+        assert!(connected < isolated);
+        assert_eq!(connected, 0.0, "all faction residents have foreign contact");
+    }
+
+    #[test]
+    fn faction_isolation_weights_and_deduplicates_contacting_settlements() {
+        let dominant = BTreeMap::from([(10, 1), (11, 1), (20, 2), (21, 2)]);
+        let members = BTreeMap::from([(10, 3), (11, 9), (20, 1), (21, 500)]);
+        let contacts = BTreeSet::from([(10, 20), (10, 21)]);
+
+        let isolation = faction_isolation_pressure(1, &dominant, &members, &contacts);
+        assert!(
+            (isolation - 0.75).abs() < f32::EPSILON,
+            "only the three residents of settlement 10 have foreign contact"
+        );
+    }
+
+    #[test]
+    fn faction_isolation_ignores_same_faction_unknown_and_empty_contacts() {
+        let dominant = BTreeMap::from([(10, 1), (11, 1), (20, 2)]);
+        let members = BTreeMap::from([(10, 5), (11, 5), (20, 0)]);
+        let contacts = BTreeSet::from([(10, 11), (10, 20), (10, 999)]);
+
+        assert_eq!(
+            faction_isolation_pressure(1, &dominant, &members, &contacts),
+            1.0
+        );
+        assert_eq!(
+            faction_isolation_pressure(42, &dominant, &members, &contacts),
+            0.0
+        );
     }
 }

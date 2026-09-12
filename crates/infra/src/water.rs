@@ -456,7 +456,7 @@ impl WaterSystem {
                     // Treatment plants strip everything at their input.
                     let target = self.nodes.get(&pipe.to);
                     let stripped = if target
-                        .map_or(false, |n| matches!(n.kind, WaterNodeKind::TreatmentPlant))
+                        .is_some_and(|n| matches!(n.kind, WaterNodeKind::TreatmentPlant))
                     {
                         BTreeSet::new()
                     } else {

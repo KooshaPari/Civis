@@ -277,7 +277,7 @@ mod tests {
         let mut map = TerrainBiomeMap::new(64, 64);
         map.generate(42);
         for &h in &map.height_data {
-            assert!(h >= 0.0 && h <= 1.0, "height out of range: {h}");
+            assert!((0.0..=1.0).contains(&h), "height out of range: {h}");
         }
     }
 

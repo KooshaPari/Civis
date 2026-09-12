@@ -169,7 +169,7 @@ impl Simulation {
     pub(crate) fn phase_culture(&mut self) {
         let cluster_member_counts = settlement_member_counts(&self.world);
         let dominant = settlement_dominant_factions(&self.world, &cluster_member_counts);
-        if dominant.is_empty() || self.cluster_cultures.is_empty() {
+        if dominant.is_empty() || self.emergence.cluster_cultures.is_empty() {
             return;
         }
 
@@ -185,7 +185,7 @@ impl Simulation {
 
         self.faction_ideologies = advance_faction_ideologies(
             self.state.tick,
-            &self.cluster_cultures,
+            &self.emergence.cluster_cultures,
             &dominant,
             &cluster_member_counts,
             &contacts,

@@ -331,7 +331,7 @@ impl Simulation {
         let cluster_member_counts = settlement_member_counts(&self.world);
         let dominant = settlement_dominant_factions(&self.world, &cluster_member_counts);
         let mut cues = BTreeMap::new();
-        for (&cluster_id, profile) in &self.cluster_cultures {
+        for (&cluster_id, profile) in self.cluster_cultures() {
             let faction_id = dominant.get(&cluster_id).copied();
             let aggression = faction_id
                 .and_then(|id| self.faction_aggression.get(&id))

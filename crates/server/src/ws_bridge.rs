@@ -1887,15 +1887,29 @@ async fn apply_dispatch_effect(
             }
         }
         DispatchEffect::PlaceVoxel { x, y, z, material } => {
+            let _publication = state.publication.lock().await;
             let mut sim = state.sim.lock().await;
             sim.voxel_mut().write(
                 civ_voxel::WorldCoord { x, y, z },
                 civ_voxel::MaterialId(material),
             );
+            let terrain_update = build_terraform_update(state, &mut sim);
             if let Some(result) = response.result.as_mut() {
                 if let Some(obj) = result.as_object_mut() {
                     obj.insert("ok".to_owned(), serde_json::json!(true));
+                    obj.insert("writes".to_owned(), serde_json::json!(1));
                 }
+            }
+            drop(sim);
+            match terrain_update {
+                Ok(batch) => {
+                    set_authoritative_batch_metadata(response, &batch);
+                    publish_authoritative_batch(state, batch).await;
+                }
+                Err(error) => set_replay_io_error(
+                    response,
+                    format!("Voxel was edited, but its live update failed: {error}. Check the world before retrying."),
+                ),
             }
         }
         DispatchEffect::TerraformExtent {

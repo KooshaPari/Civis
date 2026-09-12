@@ -542,6 +542,27 @@ async fn building_palette_and_interleaved_terrain_survive_replay_without_duplica
             Some(&json!(true)),
             "{terrain}"
         );
+        assert_eq!(
+            terrain.pointer("/result/authoritative"),
+            Some(&json!(true)),
+            "place voxel must identify its authoritative publication"
+        );
+        assert_eq!(
+            terrain.pointer("/result/writes"),
+            Some(&json!(1)),
+            "place voxel reports its single write"
+        );
+        let terrain_tick = terrain
+            .pointer("/result/tick")
+            .and_then(Value::as_u64)
+            .expect("place voxel publication tick");
+        assert!(
+            frames.iter().any(|frame| matches!(
+                frame,
+                Frame3d::VoxelDelta(delta) if delta.tick == terrain_tick
+            )),
+            "place voxel response must correspond to a published voxel delta"
+        );
         let spawn = rpc(
             &mut socket,
             &mut frames,

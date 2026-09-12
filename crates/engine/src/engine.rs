@@ -2064,9 +2064,9 @@ impl Simulation {
         self.phase_research();
         self.phase_tech();
         self.phase_belief();
+        self.phase_social_mood();
         self.phase_unrest();
         self.phase_cohesion();
-        self.phase_social_mood();
         self.phase_economic_focus_pre();
         self.phase_stratification();
         self.phase_institutions();

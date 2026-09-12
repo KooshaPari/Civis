@@ -39,9 +39,10 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "research",
     "tech",
     "belief",
+    // Mood is produced before unrest consumes it for the same settlement.
+    "social_mood",
     "unrest",
     "cohesion",
-    "social_mood",
     "economic_focus_pre",
     "stratification",
     "institutions",

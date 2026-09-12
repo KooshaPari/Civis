@@ -464,6 +464,9 @@ impl Simulation {
             self.last_tick_unrest_levels.insert(settlement_id, level);
         }
         self.last_tick_unrest_snapshots = new_snapshots;
+        // Keep the public per-tick event stream in sync with the internal
+        // phase buffer consumed by the engine's wire/snapshot adapters.
+        self.last_tick_unrest = self.last_tick_unrest_events.clone();
     }
 
     /// Daily-path phase (FR-CIV-LIFE-001 / FR-CIV-LIFE-002).

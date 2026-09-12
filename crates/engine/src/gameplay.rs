@@ -884,4 +884,49 @@ mod tests {
             "should detect domination victory in gameplay state"
         );
     }
+
+    /// FR-CIV-GAME-002 — scenario objectives progress deterministically over ticks.
+    ///
+    /// Builds a `ScenarioObjective` with a 0.75 domination threshold
+    /// (using `VictoryCondition::effective_threshold` → `DOMINATION_TERRITORY_THRESHOLD`).
+    /// A fresh sim with normal treasury gives a tiny faction share,
+    /// so the condition stays unmet (`None`). Once `tick >= tick_limit`,
+    /// the objective returns `Defeat("Domination objective expired ...")`.
+    #[test]
+    fn objectives_progression_over_ticks() {
+        let mut sim = Simulation::with_seed(42);
+        // Faction 0 starts with minimal treasury relative to others
+        // so its domination share stays below 0.75.
+        sim.state.faction_treasury.insert(0, Fixed::from_num(1i64));
+        let obj = ScenarioObjective {
+            condition: VictoryCondition {
+                victory_type: VictoryType::Domination,
+                faction_id: 0,
+                threshold: Some(DOMINATION_TERRITORY_THRESHOLD),
+            },
+            tick_limit: Some(100),
+        };
+
+        // Before tick limit: condition unmet, tick not reached → None (Ongoing).
+        assert!(
+            obj.evaluate(&sim).is_none(),
+            "before tick limit, objective should be Ongoing, got {:?}",
+            obj.evaluate(&sim)
+        );
+
+        // Advance past tick limit.
+        sim.state.tick = obj.tick_limit.unwrap();
+        let out = obj.evaluate(&sim);
+        assert!(
+            matches!(out, Some(GameOutcome::Defeat(_))),
+            "at tick limit, objective should be Defeat, got {:?}",
+            out
+        );
+        if let Some(GameOutcome::Defeat(reason)) = out {
+            assert!(
+                reason.contains("expired"),
+                "defeat reason should mention expired, got: {reason}"
+            );
+        }
+    }
 }

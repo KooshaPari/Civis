@@ -138,7 +138,7 @@ impl ProductionQueue {
     ///
     /// Returns the list of production results.
     pub fn process_tick(&mut self, stocks: &mut Stocks) -> Vec<ProductionResult> {
-        let orders: Vec<ProductionOrder> = self.pending.drain(..).collect();
+        let orders = std::mem::take(&mut self.pending);
         self.completed.clear();
 
         for order in orders {
@@ -506,5 +506,60 @@ mod tests {
         assert_eq!(results[0].produced_qty, 3); // Only 3 can be produced.
         assert!(!results[0].fully_satisfied);
         assert_eq!(stocks.get(Good::Food), 0);
+    }
+
+    /// FR-ECON-001 gameplay loop — a full production chain runs in a single
+    /// deterministic tick, each step consuming its input good and producing a
+    /// distinct output good without any cross-contamination of stock levels.
+    ///
+    /// Asserts the exact post-tick inventory for every good, proving the
+    /// production/consumption gameplay loop is wired end-to-end in the economy.
+    #[test]
+    fn economy_production_consumption_progression() {
+        let mut stocks = Stocks::default();
+        stocks.add(Good::Food, 100);
+        stocks.add(Good::Wood, 50);
+        stocks.add(Good::Metal, 25);
+        stocks.add(Good::Tools, 10);
+
+        let mut queue = ProductionQueue::new();
+        queue.submit(ResourceType::Food, 10, 1, 0); // no input -> produces Food
+        queue.submit(ResourceType::Energy, 5, 1, 1); // consumes 5 Food -> 5 Wood
+        queue.submit(ResourceType::Materials, 3, 1, 2); // consumes 3 Wood -> 3 Metal
+        queue.submit(ResourceType::Technology, 2, 1, 3); // consumes 2 Metal -> 2 Tools
+
+        let results = queue.process_tick(&mut stocks);
+
+        assert_eq!(results.len(), 4);
+
+        // Food: 10 produced (no input consumed). Energy then consumes 5 Food.
+        let food = &results[0];
+        assert_eq!(food.produced_qty, 10);
+        assert!(food.fully_satisfied);
+
+        // Energy: consumes 5 Food, produces 5 Wood.
+        let energy = &results[1];
+        assert_eq!(energy.produced_qty, 5);
+        assert!(energy.fully_satisfied);
+
+        // Materials: consumes 3 Wood, produces 3 Metal.
+        let materials = &results[2];
+        assert_eq!(materials.produced_qty, 3);
+        assert!(materials.fully_satisfied);
+
+        // Technology: consumes 2 Metal, produces 2 Tools.
+        let tech = &results[3];
+        assert_eq!(tech.produced_qty, 2);
+        assert!(tech.fully_satisfied);
+
+        // Exact post-tick stock levels:
+        // Food: initial 100 + produced 10 - consumed 5 = 105
+        // Wood: initial 50 + produced 5 - consumed 3 = 52
+        // Metal: initial 25 + produced 3 - consumed 2 = 26
+        // Tools: initial 10 + produced 2 = 12
+        assert_eq!(stocks.get(Good::Food), 105);
+        assert_eq!(stocks.get(Good::Wood), 52);
+        assert_eq!(stocks.get(Good::Metal), 26);
+        assert_eq!(stocks.get(Good::Tools), 12);
     }
 }

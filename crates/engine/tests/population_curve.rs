@@ -43,11 +43,6 @@ fn spawn_varied_civilians(sim: &mut Simulation, count: u32, rng: &mut ChaCha8Rng
     // ~178 civilians for 128 ticks with comfortable margin.
     sim.state.resources.food = civ_engine::Fixed::from_num(100_000_i64);
     sim.state.resources.wood = civ_engine::Fixed::from_num(5_000_i64);
-    // Sync the population bookkeeping counter with the actual entity count
-    // so the snapshot reports the real headcount (the50 extra civilians we
-    // spawn below are added to the hecs world but `state.population` is
-    // only updated by lifecycle phases, not by raw spawns).
-    sim.state.population = civ_agents::count_civilians(&sim.world) as u64;
     // Start the civilian id range above the engine's default `1_000_000`
     // baseline so the new agents don't collide with existing entity ids.
     let mut next_id: u64 = 2_000_000;
@@ -67,6 +62,13 @@ fn spawn_varied_civilians(sim: &mut Simulation, count: u32, rng: &mut ChaCha8Rng
         );
         next_id += 1;
     }
+    // Sync the population bookkeeping counter to the post-spawn world count
+    // so the snapshot reports the real headcount and `phase_citizen_lifecycle`
+    // does not treat the freshly spawned civilians as "over capacity" and
+    // starve them to death during the run. `state.population` is only updated
+    // by lifecycle phases, not by raw spawns, so we must set it explicitly
+    // here — after the spawn loop — to match `actual_count > max_pop = false`.
+    sim.state.population = civ_agents::count_civilians(&sim.world) as u64;
     // Boost health for ALL civilians so the old-age death gate
     // (`age >= 65 && health <= 0.15`) never fires during our 100-tick run.
     // Without this, the default lifecycle health decay (−0.01/tick for

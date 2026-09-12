@@ -25,7 +25,14 @@ fn fr_civ_unrest_001_happy_settlement_is_stable() {
     );
     sim.add_trust(1, 2, 100);
 
-    // Mood is produced before unrest in the normal phase pipeline.
+    // FR-CIV-phase-reconcile: `phase_unrest` runs BEFORE `phase_social_mood`
+    // in PHASE_ORDER so the per-tick `last_tick_mood` buffer is empty when
+    // `phase_unrest` reads it. To preserve the same-tick mood coupling these
+    // tests assert, `phase_unrest` computes its mood inputs inline from the
+    // same sources (`settlement_food_stocked`, `settlement_housing_capacity`,
+    // `settlement_crime_pressure`, `institutions`) that `phase_social_mood`
+    // would use, so a single `tick()` is enough for `phase_unrest` to see
+    // the current tick's conditions.
     sim.tick();
 
     let snapshot = sim
@@ -47,7 +54,9 @@ fn fr_civ_unrest_002_high_inequality_and_hardship_trigger_unrest() {
     sim.set_settlement_actor(1, 0);
     sim.set_actor_in_settlement_hardship(1, 300);
 
-    // Mood is produced before unrest in the normal phase pipeline.
+    // See FR-CIV-phase-reconcile note in test 001 above. `phase_unrest`
+    // computes the current tick's mood inline so a single `tick()` is
+    // sufficient to observe the Revolting level + Stable→Revolting event.
     sim.tick();
 
     let snapshot = sim
@@ -78,7 +87,9 @@ fn fr_civ_unrest_003_improved_conditions_deescalate_unrest() {
     sim.set_settlement_gini(0, 1.0);
     sim.set_settlement_actor(1, 0);
     sim.set_actor_in_settlement_hardship(1, 300);
-    // Mood is produced before unrest in the normal phase pipeline.
+    // See FR-CIV-phase-reconcile note in test 001 above. A single `tick()`
+    // is enough to surface the bad-condition mood to `phase_unrest` because
+    // it computes mood inline from the same inputs `phase_social_mood` uses.
     sim.tick();
     let high = sim
         .last_tick_unrest_settlement(0)
@@ -90,7 +101,8 @@ fn fr_civ_unrest_003_improved_conditions_deescalate_unrest() {
     sim.set_settlement_crime_pressure(0, 0);
     sim.set_settlement_gini(0, 0.0);
     sim.set_actor_in_settlement_hardship(1, 0);
-    // One tick is enough because mood now precedes unrest.
+    // Same FR-CIV-phase-reconcile note: one tick is enough for `phase_unrest`
+    // to pick up the now-improved conditions via its inline mood path.
     sim.tick();
     let low = sim
         .last_tick_unrest_settlement(0)

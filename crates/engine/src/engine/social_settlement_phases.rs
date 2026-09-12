@@ -115,30 +115,16 @@ impl Simulation {
                 .cloned()
                 .unwrap_or(0);
 
-            let food_score = (stocked / 200).clamp(MOOD_MIN, MOOD_MAX);
-            let housing_signed = (capacity as i64)
-                .saturating_sub(population as i64)
-                .saturating_mul(2);
-            let housing_score = housing_signed.clamp(MOOD_MIN, MOOD_MAX);
-            let crime_signed = MOOD_CRIME_BASE.saturating_sub(4 * crime_pressure as i64);
-            let crime_score = crime_signed.clamp(0, MOOD_CRIME_BASE);
-
-            let (temple_bonus, garrison_bonus) = match self.institutions.get(&settlement_id) {
-                Some(inst) if inst.kind == civ_institutions::InstitutionKind::Temple => {
-                    (25 + 25 * (inst.level as i32), 0)
-                }
-                Some(inst) if inst.kind == civ_institutions::InstitutionKind::Garrison => {
-                    (0, 15 + 15 * (inst.level as i32))
-                }
-                _ => (0, 0),
-            };
-
-            let total = food_score
-                .saturating_add(housing_score)
-                .saturating_add(crime_score)
-                .saturating_add(temple_bonus as i64)
-                .saturating_add(garrison_bonus as i64)
-                .clamp(MOOD_MIN, MOOD_MAX);
+            let (temple_bonus, garrison_bonus) =
+                institution_mood_bonuses(self.institutions.get(&settlement_id));
+            let parts = compute_mood_parts(
+                population,
+                stocked,
+                capacity,
+                crime_pressure,
+                temple_bonus,
+                garrison_bonus,
+            );
 
             let prev = self
                 .mood_history
@@ -147,17 +133,17 @@ impl Simulation {
                 .find(|s| s.settlement_id == settlement_id)
                 .map(|s| s.mood)
                 .unwrap_or(0);
-            let mood_delta = total - prev;
+            let mood_delta = parts.total - prev;
 
             snapshots.push(MoodSnapshot {
                 settlement_id,
-                mood: total,
+                mood: parts.total,
                 mood_delta,
-                food_score,
-                housing_score,
-                crime_score,
-                temple_bonus,
-                garrison_bonus,
+                food_score: parts.food_score,
+                housing_score: parts.housing_score,
+                crime_score: parts.crime_score,
+                temple_bonus: parts.temple_bonus,
+                garrison_bonus: parts.garrison_bonus,
             });
         }
 
@@ -371,6 +357,16 @@ impl Simulation {
     }
 
     /// Unrest phase (FR-CIV-UNREST-001).
+    ///
+    /// FR-CIV-phase-reconcile: this phase runs BEFORE `phase_social_mood`, so
+    /// the per-tick `last_tick_mood` buffer is empty when we look at it. We
+    /// therefore compute the per-settlement mood inline from the same inputs
+    /// (`settlement_food_stocked`, `settlement_housing_capacity`,
+    /// `settlement_crime_pressure`, `institutions`) that `phase_social_mood`
+    /// consumes — see [`compute_mood_parts`]. This keeps the same-tick mood
+    /// coupling (unrest reacts to the current tick's mood) while letting
+    /// `last_tick_mood` stay empty at the top of every tick, which is the
+    /// invariant the long-running `population_curve` test depends on.
     pub(crate) fn phase_unrest(&mut self) {
         self.last_tick_unrest_events.clear();
         let mut new_snapshots: BTreeMap<u32, UnrestSnapshot> = BTreeMap::new();
@@ -384,11 +380,10 @@ impl Simulation {
         }
 
         for &settlement_id in &settlement_ids {
-            let mood = self
-                .last_tick_mood
-                .iter()
-                .find(|m| m.settlement_id == settlement_id)
-                .map_or(0i32, |m| m.mood as i32);
+            // FR-CIV-phase-reconcile: compute mood inline (see fn doc above).
+            // `phase_social_mood` runs later this tick and will repopulate
+            // `self.last_tick_mood`, but we cannot depend on that ordering.
+            let mood: i32 = self.mood_parts_for_unrest(settlement_id);
 
             let gini_x100 = self
                 .settlement_gini
@@ -563,5 +558,116 @@ impl Simulation {
         }
 
         self.last_tick_cluster_payoffs = totals.into_values().collect();
+    }
+
+    /// FR-CIV-phase-reconcile: read the settlement's mood inputs and return
+    /// the total mood (post-saturation, signed) that `phase_unrest` will
+    /// use for its unrest score. This is the per-settlement inline mood
+    /// computation that replaces reading `self.last_tick_mood` (which is
+    /// empty when `phase_unrest` runs because `phase_social_mood` hasn't
+    /// fired yet this tick).
+    fn mood_parts_for_unrest(&self, settlement_id: u32) -> i32 {
+        let population = self.settlements.get(&settlement_id).copied().unwrap_or(0);
+        let stocked = self
+            .settlement_food_stocked
+            .get(&settlement_id)
+            .copied()
+            .unwrap_or(0);
+        let capacity = self
+            .settlement_housing_capacity
+            .get(&settlement_id)
+            .copied()
+            .unwrap_or(0);
+        let crime_pressure = self
+            .settlement_crime_pressure
+            .get(&settlement_id)
+            .copied()
+            .unwrap_or(0);
+        let (temple_bonus, garrison_bonus) =
+            institution_mood_bonuses(self.institutions.get(&settlement_id));
+        let parts = compute_mood_parts(
+            population,
+            stocked,
+            capacity,
+            crime_pressure,
+            temple_bonus,
+            garrison_bonus,
+        );
+        parts.total as i32
+    }
+}
+
+// ---------------------------------------------------------------------------
+// FR-CIV-phase-reconcile: shared mood helpers.
+// `phase_social_mood` and `phase_unrest` both need to compute the same
+// per-settlement mood total from the same inputs. To keep them in lockstep,
+// the formula lives in one place: [`compute_mood_parts`].
+// ---------------------------------------------------------------------------
+
+/// Per-settlement mood sub-scores produced by [`compute_mood_parts`].
+///
+/// All sub-scores are pre-institution-bonus, pre-saturation where noted.
+/// `total` is the post-saturation mood value used by both
+/// `phase_social_mood` (as `MoodSnapshot.mood`) and `phase_unrest` (as the
+/// `mood` field of its unrest score).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct MoodParts {
+    food_score: i64,
+    housing_score: i64,
+    crime_score: i64,
+    temple_bonus: i32,
+    garrison_bonus: i32,
+    total: i64,
+}
+
+/// Compute the per-settlement mood sub-scores and the saturated total from
+/// the same inputs `phase_social_mood` reads. Used by both `phase_social_mood`
+/// (to populate `last_tick_mood`) and `phase_unrest` (to read the mood for
+/// its unrest score — see FR-CIV-phase-reconcile note in [`Simulation::phase_unrest`]).
+fn compute_mood_parts(
+    population: u32,
+    food_stocked: i64,
+    housing_capacity: u32,
+    crime_pressure: i32,
+    temple_bonus: i32,
+    garrison_bonus: i32,
+) -> MoodParts {
+    let food_score = (food_stocked / 200).clamp(MOOD_MIN, MOOD_MAX);
+    let housing_signed = (housing_capacity as i64)
+        .saturating_sub(population as i64)
+        .saturating_mul(2);
+    let housing_score = housing_signed.clamp(MOOD_MIN, MOOD_MAX);
+    let crime_signed = MOOD_CRIME_BASE.saturating_sub(4 * crime_pressure as i64);
+    let crime_score = crime_signed.clamp(0, MOOD_CRIME_BASE);
+    let total = food_score
+        .saturating_add(housing_score)
+        .saturating_add(crime_score)
+        .saturating_add(temple_bonus as i64)
+        .saturating_add(garrison_bonus as i64)
+        .clamp(MOOD_MIN, MOOD_MAX);
+    MoodParts {
+        food_score,
+        housing_score,
+        crime_score,
+        temple_bonus,
+        garrison_bonus,
+        total,
+    }
+}
+
+/// Resolve `(temple_bonus, garrison_bonus)` from a settlement's optional
+/// institution record. `phase_social_mood` and `phase_unrest` both need
+/// this mapping; centralising it keeps the bonus formula in lockstep.
+fn institution_mood_bonuses(
+    institution: Option<&civ_institutions::Institution>,
+) -> (i32, i32) {
+    match institution {
+        Some(inst) if inst.kind == civ_institutions::InstitutionKind::Temple => {
+            (25 + 25 * (inst.level as i32), 0)
+        }
+        Some(inst) if inst.kind == civ_institutions::InstitutionKind::Garrison => {
+            (0, 15 + 15 * (inst.level as i32))
+        }
+        _ => (0, 0),
     }
 }

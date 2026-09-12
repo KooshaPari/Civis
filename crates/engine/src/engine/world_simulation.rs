@@ -39,10 +39,17 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "research",
     "tech",
     "belief",
-    // Mood is produced before unrest consumes it for the same settlement.
-    "social_mood",
+    // FR-CIV-phase-reconcile: `unrest` runs BEFORE `social_mood` so the
+    // per-tick `last_tick_mood` buffer (cleared at the top of every tick)
+    // stays empty when `tick()` starts. `phase_unrest` computes its mood
+    // inputs inline from the same sources `phase_social_mood` reads, so the
+    // same-tick coupling is preserved without depending on the buffer
+    // ordering. `phase_social_mood` then runs afterward to populate the
+    // HUD/JSON-RPC `sim.snapshot.mood` field. See `Simulation::tick` for
+    // the full rationale.
     "unrest",
     "cohesion",
+    "social_mood",
     "economic_focus_pre",
     "stratification",
     "institutions",

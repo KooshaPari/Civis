@@ -1674,7 +1674,7 @@ async fn apply_dispatch_effect(
     match effect {
         DispatchEffect::None => {}
         DispatchEffect::AdvanceTick => {
-            if let Err(err) = advance_one_tick(state).await {
+            if let Err(err) = advance_one_tick_authoritative(state).await {
                 tracing::error!("sim.command tick failed: {err}");
                 set_replay_io_error(response, err);
             } else {
@@ -2377,6 +2377,22 @@ fn encode_tick_broadcast_messages(
 }
 
 async fn advance_one_tick(state: &AppState) -> Result<(), String> {
+    advance_one_tick_with_delivery(state, false).await
+}
+
+/// Advance one tick and retain its bundle in the FIFO control lane.
+///
+/// Explicit `sim.command` ticks are operator-visible actions. They must not be
+/// coalesced away by a newer normal render tick before the client can consume
+/// them, so their bundle uses the authoritative delivery path.
+async fn advance_one_tick_authoritative(state: &AppState) -> Result<(), String> {
+    advance_one_tick_with_delivery(state, true).await
+}
+
+async fn advance_one_tick_with_delivery(
+    state: &AppState,
+    authoritative: bool,
+) -> Result<(), String> {
     // Serialize capture and publication with authoring commands and replacement,
     // but release the simulation mutex before touching outbound lanes.
     let _publication = state.publication.lock().await;
@@ -2446,7 +2462,11 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
         return Ok(());
     };
     state.metrics.tick_batches_sent.inc();
-    publish_normal_tick(state, batch).await;
+    if authoritative {
+        publish_authoritative_batch(state, batch).await;
+    } else {
+        publish_normal_tick(state, batch).await;
+    }
     Ok(())
 }
 
@@ -2539,6 +2559,62 @@ mod tests {
         assert_eq!(state.speed_multiplier.load(Ordering::SeqCst), 0);
         assert!(created.bypass_cadence);
         assert!(rx.try_recv().is_err(), "no duplicate building batch");
+    }
+
+    #[tokio::test]
+    async fn command_tick_response_keeps_identity_when_newer_normal_tick_publishes() {
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(42)));
+        let (_dir, state) = test_app_state(sim, 0, 0, false);
+        let (control, mut control_rx) = mpsc::channel(CLIENT_CONTROL_CAPACITY);
+        let (latest_authoritative, _) = watch::channel::<Option<RecoveryTick>>(None);
+        let (latest_tick, mut latest_tick_rx) = watch::channel(None);
+        let client = ClientOutboundTx {
+            control,
+            control_state: Arc::new(std::sync::Mutex::new(ClientControlState::default())),
+            latest_authoritative,
+            latest_tick,
+        };
+        state.clients.lock().await.push(client.clone());
+
+        let mut response = JsonRpcResponse::success(
+            crate::jsonrpc::RequestId::Number(1),
+            serde_json::json!({ "accepted": true }),
+        );
+        apply_dispatch_effect(
+            &mut response,
+            DispatchEffect::AdvanceTick,
+            &state,
+            "command-identity-test",
+        )
+        .await;
+        let response_tick = response
+            .result
+            .as_ref()
+            .and_then(|result| result.get("tick"))
+            .and_then(serde_json::Value::as_u64)
+            .expect("command response tick");
+
+        // This is the deterministic equivalent of the live ticker winning the
+        // normal single-slot lane immediately after the command publication.
+        client.publish_normal_tick(tick_for_delivery_test(response_tick + 1, false));
+        latest_tick_rx.changed().await.expect("newer normal tick");
+        assert_eq!(
+            latest_tick_rx.borrow_and_update().as_ref().unwrap().tick,
+            response_tick + 1,
+            "normal render ticks remain newest-value coalesced"
+        );
+
+        let command_batch = control_rx
+            .try_recv()
+            .expect("command tick must retain an ordered outbound batch");
+        let ClientOutbound::Tick(command_batch) = command_batch else {
+            panic!("command tick must be an outbound tick batch");
+        };
+        assert_eq!(
+            command_batch.tick, response_tick,
+            "command response and outbound batch must identify the same tick"
+        );
+        assert!(control_rx.try_recv().is_err(), "no duplicate command batch");
     }
 
     #[tokio::test]

@@ -270,9 +270,9 @@ fn apply_save_slot_action(
     server_bridge: Option<&ServerBridge>,
     gate: Option<ResMut<OutcomeSessionGate>>,
     overlay: Option<ResMut<OutcomeOverlayState>>,
-    mut boot: Option<ResMut<WorldGenBoot>>,
-    mut game_mode: Option<ResMut<GameUiMode>>,
-    mut next_state: Option<ResMut<NextState<AppState>>>,
+    boot: Option<ResMut<WorldGenBoot>>,
+    game_mode: Option<ResMut<GameUiMode>>,
+    next_state: Option<ResMut<NextState<AppState>>>,
 ) {
     let saves_dir = default_saves_dir();
     if let Err(err) = std::fs::create_dir_all(&saves_dir) {

@@ -437,7 +437,7 @@ impl WsClient {
             .unwrap()
             .insert(id, (connection_id.clone(), tx));
         // Send the JSON-RPC text frame to the network task.
-        let mut payload =
+        let payload =
             serde_json::json!({"jsonrpc": "2.0", "id": id, "method": method, "params": params});
         let json = serde_json::to_string(&payload).unwrap();
         let _ = self.ticket_tx.send((id, json.clone()));

@@ -17,7 +17,6 @@ use crate::save_load_ui::SaveLoadPanel;
 use crate::settings_ui::{GameSettings, KeyBinding, ACTION_PAUSE_SIM};
 use crate::ui_theme::{CHIP_FILL, GLASS_FILL, KC_ACCENT};
 use bevy::app::AppExit;
-use bevy::asset::LoadState;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 use std::time::{Duration, Instant};
@@ -604,7 +603,7 @@ pub fn consume_menu_commands(
                 settings.open = true;
                 settings.active_tab = crate::settings_ui::SettingsTab::Graphics;
             }
-            if let Some(mut flag) = settings_open.as_mut() {
+            if let Some(flag) = settings_open.as_mut() {
                 flag.0 = true;
             }
         }

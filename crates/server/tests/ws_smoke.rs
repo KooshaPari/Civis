@@ -1624,7 +1624,7 @@ async fn wait_for_jsonrpc_id(
         tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
     >,
     id: u64,
-) {
+) -> serde_json::Value {
     timeout(Duration::from_secs(2), async {
         while let Some(frame) = socket.next().await {
             let Message::Text(text) = frame.expect("ws frame") else {
@@ -1632,13 +1632,13 @@ async fn wait_for_jsonrpc_id(
             };
             let value: serde_json::Value = serde_json::from_str(&text).expect("json text frame");
             if value.get("id") == Some(&serde_json::json!(id)) {
-                return;
+                return value;
             }
         }
         panic!("ws closed before jsonrpc id {id}");
     })
     .await
-    .unwrap_or_else(|_| panic!("jsonrpc id {id} timeout"));
+    .unwrap_or_else(|_| panic!("jsonrpc id {id} timeout"))
 }
 
 #[tokio::test]
@@ -2285,7 +2285,11 @@ async fn ws_sim_subscribe_limits_tick_broadcast_frames() {
         ))
         .await
         .expect("subscribe");
-    wait_for_jsonrpc_id(&mut socket, 1).await;
+    let subscribed = wait_for_jsonrpc_id(&mut socket, 1).await;
+    assert!(subscribed.get("error").is_none(), "{subscribed}");
+    assert_eq!(subscribed["result"]["subscribed"], true);
+    assert_eq!(subscribed["result"]["filter_active"], true);
+    assert_eq!(subscribed["result"]["tick_stride"], 1_000_000);
 
     socket
         .send(Message::Text(

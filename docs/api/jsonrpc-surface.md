@@ -87,16 +87,17 @@ Control storage remains bounded. When its FIFO is full, one latest-authoritative
 
 When the bridge supplies live `SnapshotFields`, the result may include:
 
-| Field                                                                    | Notes                                             |
-| ------------------------------------------------------------------------ | ------------------------------------------------- |
-| `tick`, `population`, `building_count`                                   | Always                                            |
-| `market_prices`                                                          | `BTreeMap` good → cents                           |
-| `speed_multiplier`                                                       | Bridge multiplier                                 |
-| `energy_budget`, `hash_chain_root`                                       | Omitted when unset                                |
-| `civ_pins`, `factions`, `buildings`, `is_day`                            | From `SpectatorView` when present                 |
-| `institutions`                                                           | `{ id, kind, balance_joules }[]` when non-empty   |
-| `military_units`                                                         | Pin rows (`unit_type` e.g. `Vehicle` for knights) |
-| `damage_events`, `damage_events_count`, `voxel_damage_removed_this_tick` | Tactical damage telemetry                         |
+| Field                                                                    | Notes                                                      |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| `tick`, `population`, `building_count`                                   | Always                                                     |
+| `market_prices`                                                          | `BTreeMap` good → cents                                    |
+| `speed_multiplier`                                                       | Bridge multiplier                                          |
+| `weather_grid`                                                           | Live `WeatherCell` array; empty for legacy snapshot fields |
+| `energy_budget`, `hash_chain_root`                                       | Omitted when unset                                         |
+| `civ_pins`, `factions`, `buildings`, `is_day`                            | From `SpectatorView` when present                          |
+| `institutions`                                                           | `{ id, kind, balance_joules }[]` when non-empty            |
+| `military_units`                                                         | Pin rows (`unit_type` e.g. `Vehicle` for knights)          |
+| `damage_events`, `damage_events_count`, `voxel_damage_removed_this_tick` | Tactical damage telemetry                                  |
 
 ---
 

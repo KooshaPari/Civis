@@ -195,33 +195,93 @@ try {
 
     $stdout = $null
     $stderr = $null
+    $process = $null
+    $outCopy = $null
+    $errCopy = $null
+    $observerError = $null
+    $recoveryErrors = [Collections.Generic.List[string]]::new()
     try {
         $stdout = New-LogStream $stdoutPath
         $stderr = New-LogStream $stderrPath
         $record.state = 'launching'
         Save-Receipt $receiptPath $record
         $process = [Diagnostics.Process]::Start($start)
+        $outCopy = $process.StandardOutput.BaseStream.CopyToAsync($stdout)
+        $errCopy = $process.StandardError.BaseStream.CopyToAsync($stderr)
         $record.childPid = $process.Id
         $record.childStartUtc = $process.StartTime.ToUniversalTime().ToString('o')
         $record.state = 'running'
         Save-Receipt $receiptPath $record
-        $outCopy = $process.StandardOutput.BaseStream.CopyToAsync($stdout)
-        $errCopy = $process.StandardError.BaseStream.CopyToAsync($stderr)
         $process.WaitForExit()
         [void]$outCopy.GetAwaiter().GetResult()
         [void]$errCopy.GetAwaiter().GetResult()
         $record.exitCode = $process.ExitCode
         $record.state = if ($process.ExitCode -eq 0) { 'completed' } else { 'failed' }
     } catch {
+        $observerError = $_
         $record.state = 'observer_error'
         $record.error = $_.Exception.Message
-        throw
     } finally {
+        if ($observerError -and $process) {
+            # Keep the volume gate until our child and observed descendants exit.
+            # Capture process handles before killing: WaitForExit on the root alone
+            # does not wait for descendants, and a saved PID could later be reused.
+            $descendants = [Collections.Generic.List[Diagnostics.Process]]::new()
+            if (-not $process.HasExited) {
+                try {
+                    $snapshot = @(Get-CimInstance Win32_Process)
+                    $parents = [Collections.Generic.HashSet[int]]::new()
+                    [void]$parents.Add($process.Id)
+                    do {
+                        $added = $false
+                        foreach ($entry in $snapshot) {
+                            if ($parents.Contains([int]$entry.ParentProcessId) -and
+                                -not $parents.Contains([int]$entry.ProcessId) -and
+                                $entry.CreationDate -ge $process.StartTime) {
+                                try {
+                                    $descendant = [Diagnostics.Process]::GetProcessById([int]$entry.ProcessId)
+                                    if ([Math]::Abs(($descendant.StartTime.ToUniversalTime() - $entry.CreationDate.ToUniversalTime()).Ticks) -lt 10) {
+                                        $descendants.Add($descendant)
+                                        [void]$parents.Add($descendant.Id)
+                                        $added = $true
+                                    } else { $descendant.Dispose() }
+                                } catch { $recoveryErrors.Add("descendant observation: $($_.Exception.Message)") }
+                            }
+                        }
+                    } while ($added)
+                } catch { $recoveryErrors.Add("tree observation: $($_.Exception.Message)") }
+                try { $process.Kill($true) }
+                catch { $recoveryErrors.Add("tree termination: $($_.Exception.Message)") }
+            }
+            # If termination failed, retain admission until natural completion.
+            $process.WaitForExit()
+            $record.observedDescendantPids = @($descendants | ForEach-Object { $_.Id })
+            foreach ($descendant in $descendants) {
+                $descendant.WaitForExit()
+                $descendant.Dispose()
+            }
+            $record.childExitConfirmed = $process.HasExited
+            $record.observedDescendantsExited = $descendants.Count
+            $record.exitCode = $process.ExitCode
+        }
+        foreach ($copy in @($outCopy, $errCopy)) {
+            if ($copy) {
+                try { [void]$copy.GetAwaiter().GetResult() }
+                catch { $recoveryErrors.Add("log drain: $($_.Exception.Message)") }
+            }
+        }
         if ($stdout) { $stdout.Dispose() }
         if ($stderr) { $stderr.Dispose() }
+        if ($process) { $process.Dispose() }
+        $record.recoveryErrors = @($recoveryErrors)
         $record.finishedUtc = [DateTime]::UtcNow.ToString('o')
-        Save-Receipt $receiptPath $record
+        try { Save-Receipt $receiptPath $record }
+        catch {
+            if (-not $observerError) { throw }
+            Write-Warning "Observer recovery receipt failed: $($_.Exception.Message); original error: $($observerError.Exception.Message); recovery errors: $($recoveryErrors -join '; ')"
+        }
     }
+    if ($observerError) { throw $observerError }
     [pscustomobject]@{receipt=$receiptPath;state=$record.state;admitted=$record.admitted;rejectionReason=$reason;childPid=$record.childPid;exitCode=$record.exitCode;stdoutLog=$stdoutPath;stderrLog=$stderrPath;volumeGate=$record.volumeGate} | ConvertTo-Json -Depth 5
     exit ([int]$record.exitCode)
 } finally {

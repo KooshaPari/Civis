@@ -72,6 +72,8 @@ impl Plugin for LiveAttachPlugin {
         {
             app.add_systems(Update, consume_live_sim_events);
         }
+        #[cfg(not(feature = "egui"))]
+        app.add_systems(Update, drain_live_sim_events);
         #[cfg(all(feature = "bevy", feature = "egui"))]
         {
             app.add_plugins(crate::outcome_overlay::OutcomeOverlayPlugin);
@@ -115,6 +117,11 @@ fn poll_live_perf(
 
 /// Consume the background WebSocket poll's aggregated `sim.events` replies.
 /// The transport owns polling and restarts its timer on each reconnect.
+#[cfg(not(feature = "egui"))]
+fn drain_live_sim_events(bridge: Res<LiveAttachBridge>) {
+    while bridge.client.poll_sim_events().is_some() {}
+}
+
 #[cfg(feature = "egui")]
 fn consume_live_sim_events(
     attach: Res<AttachMode>,
@@ -420,6 +427,38 @@ pub fn is_server_attach_mode(mode: AttachMode) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(not(feature = "egui"))]
+    #[test]
+    fn no_egui_update_drains_all_event_batches() {
+        let (client, sender) = WsClient::test_sim_events_client();
+        let mut app = App::new();
+        app.insert_resource(LiveAttachBridge { client });
+        app.add_systems(Update, drain_live_sim_events);
+        for tick in [1, 2] {
+            sender
+                .send(crate::ws_client::SimSimEventsData {
+                    tick,
+                    ..Default::default()
+                })
+                .unwrap();
+        }
+        app.update();
+        assert!(app
+            .world()
+            .resource::<LiveAttachBridge>()
+            .client
+            .poll_sim_events()
+            .is_none());
+        sender.send(Default::default()).unwrap();
+        app.update();
+        assert!(app
+            .world()
+            .resource::<LiveAttachBridge>()
+            .client
+            .poll_sim_events()
+            .is_none());
+    }
 
     #[test]
     fn server_attach_mode_helper() {

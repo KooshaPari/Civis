@@ -171,6 +171,7 @@ impl Simulation {
         let cluster_member_counts = settlement_member_counts(&self.world);
         let dominant = settlement_dominant_factions(&self.world, &cluster_member_counts);
         if dominant.is_empty() || self.emergence.cluster_cultures.is_empty() {
+            self.faction_aggression.clear();
             self.prune_extinct_factions();
             return;
         }
@@ -381,7 +382,13 @@ mod culture_phase_cadence_tests {
         sim.faction_ideologies
             .insert(1, crate::culture::FactionIdeologyState::default());
         let before = sim.faction_ideologies.clone();
+        sim.faction_aggression.insert(1, 0.73);
+        let prior_aggression = sim.faction_aggression.clone();
         sim.phase_emergence();
+        assert_eq!(
+            sim.faction_aggression, prior_aggression,
+            "genetics must not overwrite the culture-owned aggression mirror"
+        );
         assert_eq!(
             sim.emergence.cluster_cultures.len(),
             2,
@@ -425,6 +432,33 @@ mod culture_phase_cadence_tests {
         );
         for (fid, state) in &expected {
             assert_eq!(sim.faction_aggression[fid], state.aggression);
+        }
+    }
+
+    #[test]
+    fn culture_early_return_clears_aggression_for_living_factions() {
+        for missing_dominant in [false, true] {
+            let mut sim = populated_sim();
+            if missing_dominant {
+                sim.world = hecs::World::new();
+                sim.world.spawn((Civilian {
+                    id: 1,
+                    alignment: Alignment::Faction(1),
+                    age: 20,
+                },));
+                sim.emergence
+                    .cluster_cultures
+                    .insert(1, civ_agents::culture::CultureProfile::new([0.5; 4]));
+            }
+            sim.faction_ideologies
+                .insert(1, crate::culture::FactionIdeologyState::default());
+            sim.faction_aggression.insert(1, 0.73);
+            sim.phase_culture();
+            assert!(sim.faction_aggression.is_empty());
+            assert!(
+                sim.faction_ideologies.contains_key(&1),
+                "the faction is alive; only the unavailable aggression signal is cleared"
+            );
         }
     }
 

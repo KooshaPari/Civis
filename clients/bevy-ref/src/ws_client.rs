@@ -325,16 +325,20 @@ impl WsClient {
         latest
     }
 
-    /// Drain parsed `sim/sim_events` responses, returning only the newest sample.
+    /// Return the next parsed `sim.events` response in receive order.
     /// This is the unified stream of last_tick_* event buffers (damage events,
     /// audio events, research state, religion, legends, emergence sample, climate).
     #[must_use]
     pub fn poll_sim_events(&self) -> Option<SimSimEventsData> {
-        let mut latest = None;
-        while let Ok(ev) = self.sim_events_rx.try_recv() {
-            latest = Some(ev);
-        }
-        latest
+        self.sim_events_rx.try_recv().ok()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_sim_events_client() -> (Self, Sender<SimSimEventsData>) {
+        let mut client = Self::disconnected();
+        let (sender, receiver) = crossbeam_channel::unbounded();
+        client.sim_events_rx = receiver;
+        (client, sender)
     }
 
     #[must_use]
@@ -1185,6 +1189,31 @@ async fn connect_and_stream(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sim_events_preserves_queued_batches_in_receive_order() {
+        let (client, sender) = WsClient::test_sim_events_client();
+        for tick in [11, 12] {
+            sender
+                .send(SimSimEventsData {
+                    tick,
+                    damage_events_count: tick as u32,
+                    researched: vec![serde_json::json!(format!("tech-{tick}"))],
+                    ..Default::default()
+                })
+                .unwrap();
+        }
+        for tick in [11, 12] {
+            let events = client.poll_sim_events().expect("queued batch");
+            assert_eq!(events.tick, tick);
+            assert_eq!(events.damage_events_count, tick as u32);
+            assert_eq!(
+                events.researched,
+                vec![serde_json::json!(format!("tech-{tick}"))]
+            );
+        }
+        assert!(client.poll_sim_events().is_none());
+    }
 
     #[test]
     fn reconnect_backoff_doubles_until_cap() {

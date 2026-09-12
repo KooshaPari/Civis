@@ -732,6 +732,10 @@ pub fn snapshot_result_json(fields: &SnapshotFields) -> Value {
         serde_json::to_value(fields.climate).unwrap_or(Value::Null),
     );
     obj.insert(
+        "weather_grid".to_owned(),
+        serde_json::to_value(&fields.weather_grid).unwrap_or(Value::Array(vec![])),
+    );
+    obj.insert(
         "music_cues".to_owned(),
         serde_json::to_value(&fields.music_cues).unwrap_or(Value::Null),
     );
@@ -3416,7 +3420,7 @@ mod tests {
     }
 
     #[test]
-    fn sim_events_preserves_actual_weather_and_defaults_absent_snapshots() {
+    fn snapshot_and_event_results_preserve_actual_weather_and_legacy_defaults() {
         let sim = civ_engine::Simulation::with_seed(7);
         let fields = snapshot_fields_from_sim(&sim, 1);
         assert!(!fields.weather_grid.is_empty());
@@ -3426,15 +3430,17 @@ mod tests {
         legacy.as_object_mut().unwrap().remove("weather_grid");
         let legacy: SnapshotFields = serde_json::from_value(legacy).unwrap();
         assert!(legacy.weather_grid.is_empty());
-        for snapshot in [Some(fields), None] {
-            let expected = if snapshot.is_some() {
-                expected.clone()
-            } else {
-                serde_json::json!([])
-            };
-            let req =
-                parse_request(r#"{"jsonrpc":"2.0","id":1,"method":"sim.events","params":{}}"#)
-                    .unwrap();
+        for (method, snapshot, expected) in [
+            ("sim.snapshot", Some(fields.clone()), expected.clone()),
+            ("sim.snapshot", Some(legacy), serde_json::json!([])),
+            ("sim.events", Some(fields), expected),
+            ("sim.events", None, serde_json::json!([])),
+        ] {
+            let req = parse_request(
+                &serde_json::json!({"jsonrpc":"2.0","id":1,"method":method,"params":{}})
+                    .to_string(),
+            )
+            .unwrap();
             let plan = dispatch_request(
                 req,
                 DispatchContext {

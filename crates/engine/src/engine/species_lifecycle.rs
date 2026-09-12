@@ -649,10 +649,9 @@ impl Simulation {
             if self.state.tick % LIFECYCLE_YEAR_TICKS == 0 {
                 civilian.age = civilian.age.saturating_add(1);
             }
-            if self.state.resources.food.to_bits() > 0 {
+            if self.state.resources.food >= Fixed::ONE {
                 needs.food = (needs.food + 0.008).min(1.0);
-                self.state.resources.food =
-                    (self.state.resources.food - Fixed::from_num(1)).max(Fixed::ZERO);
+                self.state.resources.food -= Fixed::ONE;
             } else {
                 needs.food = (needs.food - 0.03).max(0.0);
             }
@@ -933,6 +932,34 @@ mod daily_food_capacity_tests {
             );
             assert_eq!(exact_count.state.population, 2);
             assert_eq!(stale_count.state.population, 2000);
+        }
+    }
+
+    #[test]
+    fn feeding_requires_whole_rations_and_preserves_fractional_stock() {
+        for (bits, fed, remaining) in [
+            (0, 0, 0),
+            (1, 0, 1),
+            (999, 0, 999),
+            (1000, 1, 0),
+            (1999, 1, 999),
+            (2000, 2, 0),
+        ] {
+            let mut sim = cohort(Fixed::from_bits(bits), 2);
+            sim.phase_citizen_lifecycle();
+            let mut actual: Vec<_> = food_needs(&sim).values().copied().collect();
+            actual.sort_by(f32::total_cmp);
+            let pressure = if fed < 2 { 0.012 } else { 0.0 };
+            let mut expected = vec![0.5 - 0.03 - pressure; 2 - fed];
+            expected.extend(vec![0.5 + 0.008 - pressure; fed]);
+            for (actual, expected) in actual.iter().zip(&expected) {
+                assert!(
+                    (actual - expected).abs() < 1e-6,
+                    "food bits {bits}: {actual} != {expected}"
+                );
+            }
+            assert_eq!(actual.len(), 2);
+            assert_eq!(sim.state.resources.food, Fixed::from_bits(remaining));
         }
     }
 

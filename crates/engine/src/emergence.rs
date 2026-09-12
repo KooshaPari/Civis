@@ -774,39 +774,16 @@ impl Simulation {
         let tick = self.state.tick;
         let profile = self.emergence.sentience_profile.clone();
         let threshold = self.emergence.sentience_threshold;
-        // N9: collect (agent_id, faction_id_opt, dna) so we can build per-faction
-        // mean aggression without a second world scan.
-        let agents: Vec<(u64, Option<u32>, Dna)> = self
+        // Snapshot genomes before mutating sentience state. Culture owns the
+        // per-faction aggression mirror independently of this genetics phase.
+        let agents: Vec<(u64, Dna)> = self
             .world
             .query::<(&Civilian, &Dna)>()
             .iter()
-            .map(|(_, (c, d))| {
-                let faction = match c.alignment {
-                    Alignment::Faction(fid) => Some(fid),
-                    _ => None,
-                };
-                (c.id, faction, d.clone())
-            })
+            .map(|(_, (civilian, dna))| (civilian.id, dna.clone()))
             .collect();
 
-        // N9: rebuild faction_aggression from this tick's scan.
-        {
-            let mut faction_agg_sum: BTreeMap<u32, (f32, u32)> = BTreeMap::new();
-            for (_, faction_opt, dna) in &agents {
-                if let Some(fid) = faction_opt {
-                    let agg = express(dna).behavior.aggression;
-                    let entry = faction_agg_sum.entry(*fid).or_insert((0.0, 0));
-                    entry.0 += agg;
-                    entry.1 += 1;
-                }
-            }
-            self.faction_aggression = faction_agg_sum
-                .into_iter()
-                .map(|(fid, (sum, count))| (fid, sum / count as f32))
-                .collect();
-        }
-
-        for (agent_id, _faction_opt, dna) in agents {
+        for (agent_id, dna) in agents {
             let event = evaluate_sentience(Some(agent_id), &dna, &profile, threshold);
             if event.crossed && self.emergence.sentient_agents.insert(agent_id) {
                 self.emergence.last_sentience.push(event.clone());
@@ -2495,11 +2472,10 @@ pub fn dominant_by_cluster(
     BTreeMap::new()
 }
 
-/// Stub: alias of `rollup_cluster_member_counts`.
+/// Count members of each cluster using the shared settlement aggregation.
 #[must_use]
 pub fn cluster_member_counts(world: &hecs::World) -> BTreeMap<u64, u32> {
-    let _ = world;
-    BTreeMap::new()
+    crate::settlement_helpers::rollup_cluster_member_counts(world)
 }
 
 /// Stub: settlement contact edges — empty until the contact-pair helper is
@@ -2512,6 +2488,22 @@ pub fn settlement_contacts() -> BTreeSet<(u64, u64)> {
 #[cfg(test)]
 mod emergence_emergent_functions_tests {
     use super::*;
+
+    #[test]
+    fn public_cluster_member_counts_aggregates_each_cluster() {
+        let mut world = hecs::World::new();
+        assert!(cluster_member_counts(&world).is_empty());
+        for cluster in [7, 7, 42] {
+            world.spawn((ClusterMember {
+                cluster: civ_agents::ClusterId(cluster),
+            },));
+        }
+        world.spawn((123_u32,)); // An entity without cluster membership is excluded.
+        assert_eq!(
+            cluster_member_counts(&world),
+            BTreeMap::from([(7, 2), (42, 1)])
+        );
+    }
 
     #[test]
     fn innovation_rate_is_bounded_and_nan_safe() {

@@ -130,4 +130,80 @@ Assert-True ($smokeReceiptPath -and (Test-Path -LiteralPath $smokeReceiptPath -P
 $smokeReceipt = Get-Content -LiteralPath $smokeReceiptPath -Raw | ConvertFrom-Json
 Assert-True ($smokeReceipt.state -eq 'rejected') 'agent-smoke did not preserve helper rejection'
 
+# Inject a receipt-write failure into a sandbox copy of the current helper.
+# The owned child creates one sleeping descendant before the failure fires.
+$failureRoot = Join-Path $ReceiptDirectory ("observer-failure-" + [guid]::NewGuid().ToString('N'))
+$null = New-Item -ItemType Directory -Path $failureRoot
+$failureHelper = Join-Path $failureRoot 'injected-helper.ps1'
+$failureChild = Join-Path $failureRoot 'owned-child.ps1'
+$identityPath = Join-Path $failureRoot 'owned-processes.json'
+@'
+param([string]$IdentityPath)
+$start = [Diagnostics.ProcessStartInfo]::new((Get-Process -Id $PID).Path)
+$start.UseShellExecute = $false
+$start.CreateNoWindow = $true
+foreach ($argument in @('-NoProfile', '-Command', 'Start-Sleep -Seconds 30')) { $start.ArgumentList.Add($argument) }
+$descendant = [Diagnostics.Process]::Start($start)
+@{
+    child = $PID
+    childStartUtc = (Get-Process -Id $PID).StartTime.ToUniversalTime().ToString('o')
+    descendant = $descendant.Id
+    descendantStartUtc = $descendant.StartTime.ToUniversalTime().ToString('o')
+} | ConvertTo-Json | Set-Content -LiteralPath $IdentityPath
+$descendant.WaitForExit()
+'@ | Set-Content -LiteralPath $failureChild -Encoding utf8
+$injection = @'
+    if ($Record.state -eq 'running') {
+        $identity = Join-Path (Split-Path $Path) 'owned-processes.json'
+        $deadline = [DateTime]::UtcNow.AddSeconds(10)
+        while (-not (Test-Path -LiteralPath $identity) -and [DateTime]::UtcNow -lt $deadline) {
+            Start-Sleep -Milliseconds 50
+        }
+        if (-not (Test-Path -LiteralPath $identity)) { throw 'synthetic child did not report its descendant' }
+        throw 'synthetic running receipt failure'
+    }
+'@
+$helperSource = Get-Content -LiteralPath $helper -Raw
+$faultMarker = '    $temporary = "$Path.tmp"'
+Assert-True ($helperSource.Contains($faultMarker)) 'receipt fault-injection marker missing'
+$helperSource.Replace($faultMarker, $injection + [Environment]::NewLine + $faultMarker) |
+    Set-Content -LiteralPath $failureHelper -Encoding utf8
+$failureParameters = $successParameters.Clone()
+$failureParameters.ReceiptDirectory = $failureRoot
+$failureParameters.ChildArgumentsJson = @('-NoProfile', '-File', $failureChild, '-IdentityPath', $identityPath) | ConvertTo-Json -Compress
+$failureStdout = Join-Path $failureRoot 'helper.stdout.log'
+$failureStderr = Join-Path $failureRoot 'helper.stderr.log'
+& $pwsh -NoProfile -File $failureHelper @failureParameters 1> $failureStdout 2> $failureStderr
+$failureCode = $LASTEXITCODE
+$identities = Get-Content -LiteralPath $identityPath -Raw | ConvertFrom-Json
+try {
+    Assert-True ($failureCode -ne 0) 'observer failure incorrectly succeeded'
+    $failureReceipt = Get-ChildItem -LiteralPath $failureRoot -Filter 'agent-smoke-budget-*.json' -File |
+        ForEach-Object { Get-Content -LiteralPath $_.FullName -Raw | ConvertFrom-Json } |
+        Select-Object -First 1
+    Assert-True ($failureReceipt.state -eq 'observer_error') 'observer failure receipt state missing'
+    Assert-True ($failureReceipt.error -eq 'synthetic running receipt failure') 'original observer error was replaced'
+    Assert-True ($failureReceipt.childExitConfirmed) 'child exit was not confirmed before helper return'
+    Assert-True ($failureReceipt.observedDescendantPids -contains $identities.descendant) 'owned descendant was not tracked'
+    Assert-True ($failureReceipt.observedDescendantsExited -eq @($failureReceipt.observedDescendantPids).Count) 'observed descendant exits were not confirmed'
+    Assert-True (@($failureReceipt.recoveryErrors).Count -eq 0) 'observer recovery reported errors'
+    foreach ($ownedId in @($identities.child, $identities.descendant)) {
+        Assert-True ($null -eq (Get-Process -Id $ownedId -ErrorAction SilentlyContinue)) "owned process $ownedId survived helper exit"
+    }
+    $afterFailureOutput = @(& $pwsh -NoProfile -File $helper @successParameters)
+    Assert-True ($LASTEXITCODE -eq 0) 'volume gate was not released after observer recovery'
+} finally {
+    # Only these synthetic processes belong to this regression. Normal recovery
+    # has already stopped both; failure cleanup never scans or stops other owners.
+    foreach ($role in @('child', 'descendant')) {
+        $owned = Get-Process -Id $identities.$role -ErrorAction SilentlyContinue
+        $expectedStart = [DateTime]$identities.("${role}StartUtc")
+        if ($owned -and $owned.StartTime.ToUniversalTime() -eq $expectedStart.ToUniversalTime()) {
+            $owned.Kill($true)
+            $owned.WaitForExit()
+        }
+        if ($owned) { $owned.Dispose() }
+    }
+}
+
 Write-Output "agent-smoke budgeted synthetic tests passed; success=$successReceiptPath helperRejection=$rejectReceiptPath smokeRejection=$smokeReceiptPath"

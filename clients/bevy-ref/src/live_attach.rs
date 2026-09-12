@@ -14,9 +14,10 @@ use crate::{
 
 const PERF_POLL_SECS: f32 = 2.0;
 const PERF_RPC: &str = r#"{"jsonrpc":"2.0","id":3,"method":"sim.perf","params":{}}"#;
+#[cfg(feature = "egui")]
 const SIM_EVENTS_POLL_SECS: f32 = 2.0;
-const SIM_EVENTS_RPC: &str =
-    r#"{"jsonrpc":"2.0","id":9011,"method":"sim.sim_events","params":{}}"#;
+#[cfg(feature = "egui")]
+const SIM_EVENTS_RPC: &str = r#"{"jsonrpc":"2.0","id":9011,"method":"sim.sim_events","params":{}}"#;
 
 #[cfg(feature = "egui")]
 use crate::WsConnectionState;
@@ -58,7 +59,6 @@ impl Plugin for LiveAttachPlugin {
             .init_resource::<LiveAttachState>()
             .init_resource::<LiveHudSnapshot>()
             .init_resource::<PerfPollTimer>()
-            .init_resource::<SimEventsPollTimer>()
             .insert_resource(LiveAttachBridge { client: ws })
             .insert_resource(ServerBridge::new(rpc_sender))
             .add_systems(
@@ -66,12 +66,16 @@ impl Plugin for LiveAttachPlugin {
                 (
                     poll_live_meta,
                     poll_live_perf,
-                    poll_live_sim_events,
                     sync_live_hud_connection,
                     sync_live_hud_stats,
                     sync_live_selection,
                 ),
             );
+        #[cfg(feature = "egui")]
+        {
+            app.init_resource::<SimEventsPollTimer>()
+                .add_systems(Update, poll_live_sim_events);
+        }
         #[cfg(all(feature = "bevy", feature = "egui"))]
         {
             app.add_plugins(crate::outcome_overlay::OutcomeOverlayPlugin);
@@ -114,6 +118,7 @@ fn poll_live_perf(
 }
 
 #[derive(Resource, Default)]
+#[cfg(feature = "egui")]
 struct SimEventsPollTimer(f32);
 
 /// Poll the server's `sim.sim_events` channel and surface the aggregated per-tick
@@ -124,6 +129,7 @@ struct SimEventsPollTimer(f32);
 /// `SimSimEventsData` is a flat struct: scalar counters, optional JSON
 /// blobs for nested state, and Vec<serde_json::Value> for repeating
 /// entries. This function only touches fields that actually exist.
+#[cfg(feature = "egui")]
 fn poll_live_sim_events(
     time: Res<Time>,
     attach: Res<AttachMode>,
@@ -206,7 +212,10 @@ fn poll_live_sim_events(
 
         // Emergence sample — Option<serde_json::Value>. Extract entropy if present.
         if let Some(sample) = &events.emergence_sample {
-            let entropy_bits = sample.get("entropy_bits").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let entropy_bits = sample
+                .get("entropy_bits")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0);
             if entropy_bits > 2.0 {
                 feed.push(
                     EventKind::System,
@@ -214,26 +223,35 @@ fn poll_live_sim_events(
                 );
             }
             // Branching alert: check is_branching field
-            let branching = sample.get("is_branching").and_then(|v| v.as_bool()).unwrap_or(false);
+            let branching = sample
+                .get("is_branching")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
             if branching {
                 feed.push(
                     EventKind::System,
                     "Emergence: branching — critical regime entered".to_owned(),
                 );
                 #[cfg(feature = "egui")]
-                notifs.notify(
-                    NotificationKind::Disaster,
-                    "Emergence branching detected",
-                );
+                notifs.notify(NotificationKind::Disaster, "Emergence branching detected");
             }
         }
 
         // Climate — Option<serde_json::Value> blob. Extract storm status.
         if let Some(climate) = &events.climate {
-            let storm = climate.get("storm_active").and_then(|v| v.as_bool()).unwrap_or(false);
+            let storm = climate
+                .get("storm_active")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
             if storm {
-                let sev = climate.get("storm_severity").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                feed.push(EventKind::Disaster, format!("Storm active (sev {:.2})", sev));
+                let sev = climate
+                    .get("storm_severity")
+                    .and_then(|v| v.as_f64())
+                    .unwrap_or(0.0);
+                feed.push(
+                    EventKind::Disaster,
+                    format!("Storm active (sev {:.2})", sev),
+                );
                 #[cfg(feature = "egui")]
                 notifs.notify(
                     NotificationKind::Disaster,

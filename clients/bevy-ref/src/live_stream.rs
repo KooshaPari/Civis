@@ -19,8 +19,8 @@ use civ_protocol_3d::{
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId};
 
 use crate::bevy_render::{apply_chunk_material, mesh_buffer_to_bevy};
+use crate::civilian_name::civilian_display_name;
 use crate::frame_budget::{scaled_mesh_lod_distance, GpuQualityMode};
-use crate::game_ui::civilian_display_name;
 use crate::live_ground::{live_ground_y, ChunkVoxelCache};
 use crate::ws_client::WsClient;
 use crate::{

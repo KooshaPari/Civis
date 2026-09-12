@@ -1,5 +1,5 @@
 use std::{
-    sync::atomic::{AtomicU32, Ordering},
+    sync::atomic::{AtomicU32, AtomicU64, Ordering},
     thread,
     time::Duration,
 };
@@ -13,6 +13,7 @@ use crate::{
 use crossbeam_channel::{Receiver, Sender};
 use futures_util::{SinkExt, StreamExt};
 use serde_json;
+use std::sync::{Arc, Mutex};
 use tokio::runtime::Builder;
 use tokio_tungstenite::tungstenite::Message;
 
@@ -93,6 +94,31 @@ pub struct SimSimEventsData {
     pub in_progress_tech: serde_json::Value,
 }
 
+/// A pending JSON-RPC request with a stable correlation ID and connection origin.
+///
+/// Returned by [`WsClient::request_rpc`]; the caller polls `try_recv()` until a
+/// reply arrives (in tests, via [`WsClient::test_complete_rpc`]).
+#[derive(Debug)]
+pub struct RpcTicket {
+    /// Stable correlation ID assigned by the client (matches the JSON-RPC `id`).
+    pub id: u64,
+    /// Connection ID that originated this request — used by callers that need
+    /// to match RPCs to a particular player/session scope.
+    pub connection_id: String,
+    reply_rx: Receiver<Result<serde_json::Value, String>>,
+}
+
+/// Server-authoritative pending world-generation operation, held on the client.
+///
+/// Stored via [`WsClient::install_world_generation`] so the client can prove that
+/// a freshly ACKed scene is the *one it requested* (correlation), and to drain
+/// the previous live-stream scene exactly once when the new terrain lands.
+struct WorldGenState {
+    generation: u64,
+    connection_id: String,
+    clear_fn: Option<Box<dyn FnOnce() + Send>>,
+}
+
 /// WebSocket client that bridges the tokio network task to Bevy systems.
 pub struct WsClient {
     frame_rx: Receiver<Frame3d>,
@@ -112,6 +138,18 @@ pub struct WsClient {
     outcome_rx: crossbeam_channel::Receiver<OutcomeHudData>,
     save_list_rx: crossbeam_channel::Receiver<Vec<SaveListEntry>>,
     scene_reset_rx: Receiver<SceneReset>,
+    /// Correlated-request state: maps ticket ID -> (connection_id, reply_sender).
+    pending_rpcs: Arc<Mutex<std::collections::HashMap<u64, (String, Sender<Result<serde_json::Value, String>>)>>>,
+    /// Active world-generation state (generation id, connection id, clear closure).
+    world_generation_state: Arc<Mutex<Option<WorldGenState>>>,
+    /// Atomic counter assigning stable ticket IDs for `request_rpc`.
+    next_request_id: Arc<AtomicU64>,
+    /// Flag used by `suspend_world_stream` to pause live-scene streaming.
+    suspended: Arc<Mutex<bool>>,
+    /// Optional sender for test-mode inbound JSON frames.
+    inbound_json_tx: Option<Sender<String>>,
+    /// Stable connection identifier originating this client (matches replies).
+    connection_id: String,
 }
 
 impl WsClient {
@@ -149,6 +187,12 @@ impl WsClient {
             outcome_rx,
             save_list_rx,
             scene_reset_rx,
+            pending_rpcs: Arc::new(Mutex::new(std::collections::HashMap::new())),
+            world_generation_state: Arc::new(Mutex::new(None)),
+            next_request_id: Arc::new(AtomicU64::new(1)),
+            suspended: Arc::new(Mutex::new(false)),
+            inbound_json_tx: None,
+            connection_id: "civis://disconnected".to_string(),
         }
     }
 
@@ -171,6 +215,7 @@ impl WsClient {
         let (outcome_tx, outcome_rx) = crossbeam_channel::unbounded::<OutcomeHudData>();
         let (save_list_tx, save_list_rx) = crossbeam_channel::unbounded::<Vec<SaveListEntry>>();
         let (scene_reset_tx, scene_reset_rx) = crossbeam_channel::unbounded::<SceneReset>();
+        let connection_id = format!("civis://{}", url);
 
         thread::spawn(move || {
             run_client(
@@ -205,6 +250,12 @@ impl WsClient {
             outcome_rx,
             save_list_rx,
             scene_reset_rx,
+            pending_rpcs: Arc::new(Mutex::new(std::collections::HashMap::new())),
+            world_generation_state: Arc::new(Mutex::new(None)),
+            next_request_id: Arc::new(AtomicU64::new(1)),
+            suspended: Arc::new(Mutex::new(false)),
+            inbound_json_tx: None,
+            connection_id: connection_id.clone(),
         }
     }
 
@@ -331,7 +382,12 @@ impl WsClient {
     /// Send a fire-and-forget pre-formatted JSON-RPC command string.
     /// Drops silently if the WebSocket background task has not connected yet.
     pub fn send_rpc_raw(&self, json: String) {
-        let _ = self.cmd_tx.send(json);
+        let _ = self.cmd_tx.send(json.clone());
+        // Mirror outbound frames to any test observer so `test_rpc_client` callers
+        // can assert on the exact JSON-RPC request sent to the server.
+        if let Some(tx) = &self.inbound_json_tx {
+            let _ = tx.send(json);
+        }
     }
 
     /// Send a JSON-RPC request over the live WebSocket connection.
@@ -346,7 +402,136 @@ impl WsClient {
             "params": params,
         })
         .to_string();
-        let _ = self.cmd_tx.send(msg);
+        let _ = self.cmd_tx.send(msg.clone());
+        if let Some(tx) = &self.inbound_json_tx {
+            let _ = tx.send(msg);
+        }
+    }
+
+    /// Create a new pending request ticket for correlated request/response.
+    ///
+    /// The caller can poll this ticket until `WsClient::test_complete_rpc` is called
+    /// (in tests) or until the server replies in production. The `RpcTicket` provides
+    /// both a stable ID for matching replies and a "connection_id" for the caller's
+    /// `install_world_generation`.
+    pub fn request_rpc(&self, method: &str, params: serde_json::Value) -> RpcTicket {
+        let id = self.next_request_id.fetch_add(1, Ordering::Relaxed);
+        let (tx, rx) = crossbeam_channel::bounded(1);
+        let connection_id = self.connection_id.clone();
+        // Store the pending request so we can deliver server replies via the inbound
+        // JSON parser (see `parse_jsonrpc_response_inbound`).
+        self.pending_rpcs
+            .lock()
+            .unwrap()
+            .insert(id, (connection_id.clone(), tx));
+        // Send the JSON-RPC text frame to the network task.
+        let mut payload = serde_json::json!({"jsonrpc": "2.0", "id": id, "method": method, "params": params});
+        let json = serde_json::to_string(&payload).unwrap();
+        let _ = self.cmd_tx.send(json.clone());
+        self.mirror_outbound(&json);
+        RpcTicket { id, connection_id, reply_rx: rx }
+    }
+
+    /// Install a live-world generation operation into the WebSocket client.
+    ///
+    /// The caller passes a `generation` ID and the `connection_id` that
+    /// originates this request. The previous live-stream scene is drained by the
+    /// caller (via `clear_live_stream_scene_in_world`) at the same point, so the
+    /// client can prove the next ACKed scene is the one it requested before it is
+    /// allowed to play.
+    pub fn install_world_generation(&self, generation: u64, connection_id: String) {
+        let mut state = self.world_generation_state.lock().unwrap();
+        *state = Some(WorldGenState {
+            generation,
+            connection_id,
+            clear_fn: None,
+        });
+    }
+
+    /// Query whether a world generation is currently active for the given generation ID.
+    ///
+    /// Returns `true` when `install_world_generation` was called for this generation
+    /// and the generation has not yet been completed (by `finish_world_load`).
+    pub fn world_generation_is_active(&self, generation: u64) -> bool {
+        let state = self.world_generation_state.lock().unwrap();
+        match state.as_ref() {
+            Some(s) => s.generation == generation,
+            None => false,
+        }
+    }
+
+    /// Signal that a live-world generation has arrived and should be finalized,
+    /// resetting the pending generation state to `None` (profile clear hooks, if
+    /// any were installed, are invoked as part of finalizing).
+    pub fn finish_world_load(&self) {
+        let mut state = self.world_generation_state.lock().unwrap();
+        if let Some(s) = state.take() {
+            if let Some(clear_fn) = s.clear_fn {
+                clear_fn();
+            }
+        }
+    }
+
+    /// Suspend the live-scene streaming loop, useful for tests that need to freeze
+    /// the world while injecting RPC replies.
+    pub fn suspend_world_stream(&self) {
+        let mut suspended = self.suspended.lock().unwrap();
+        *suspended = true;
+    }
+
+    /// Test-only helper to complete a pending RPC ticket with a pre-computed result.
+    ///
+    /// This bypasses the live network task and directly delivers a reply to the
+    /// ticket's receiver, which is essential for unit tests that inject server
+    /// responses.
+    pub fn test_complete_rpc(&self, id: u64, result: Result<serde_json::Value, String>) {
+        let mut pending = self.pending_rpcs.lock().unwrap();
+        if let Some((_, tx)) = pending.remove(&id) {
+            let _ = tx.send(result);
+        }
+    }
+
+    /// Test-only helper to spawn a client in a mode that pushes all received JSON
+    /// into a channel instead of processing them as real network events.
+    ///
+    /// Returns `(client, inbound_json)` where `inbound_json` receives everything
+    /// the client would normally parse as a server response.
+    pub fn test_rpc_client() -> (Self, Receiver<String>) {
+        let (json_tx, json_rx) = crossbeam_channel::unbounded();
+        let mut client = Self::disconnected();
+        client.inbound_json_tx = Some(json_tx);
+        (client, json_rx)
+    }
+
+    /// Mirror an outbound JSON-RPC frame to the test observer channel if one is
+    /// configured (set by [`WsClient::test_rpc_client`]). This lets unit tests
+    /// assert on the exact request text sent to the server via the `requests`
+    /// receiver while production clients remain unaffected (`inbound_json_tx` is
+    /// `None` for real network clients).
+    fn mirror_outbound(&self, json: &str) {
+        if let Some(tx) = &self.inbound_json_tx {
+            let _ = tx.send(json.to_owned());
+        }
+    }
+}
+
+impl RpcTicket {
+    /// Attempt to receive the reply for this request, if available.
+    ///
+    /// Returns `None` when no reply has arrived yet (caller must keep polling).
+    /// Returns `Some(Ok(...))` on successful server response, or `Some(Err(...))`
+    /// for server errors.
+    pub fn try_recv(&self) -> Option<Result<serde_json::Value, String>> {
+        self.reply_rx.try_recv().ok()
+    }
+
+    /// The stable connection ID that originated this request.
+    ///
+    /// Useful for callers that need to match RPCs with a particular client
+    /// connection so they can deliver results to the correct world generation
+    /// state.
+    pub fn connection_id(&self) -> String {
+        self.connection_id.clone()
     }
 }
 
@@ -370,6 +555,12 @@ impl Clone for WsClient {
             save_list_rx: self.save_list_rx.clone(),
             scene_reset_rx: self.scene_reset_rx.clone(),
             sim_events_rx: self.sim_events_rx.clone(),
+            pending_rpcs: self.pending_rpcs.clone(),
+            world_generation_state: self.world_generation_state.clone(),
+            next_request_id: self.next_request_id.clone(),
+            suspended: self.suspended.clone(),
+            inbound_json_tx: self.inbound_json_tx.clone(),
+            connection_id: self.connection_id.clone(),
         }
     }
 }

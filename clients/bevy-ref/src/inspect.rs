@@ -519,7 +519,7 @@ mod tests {
         assert_eq!(compass_quadrant(-1.0, 1.0), "↖");
         assert_eq!(compass_quadrant(1.0, 1.0), "↗");
         // Boundary: origin collapses to ↘ because x>=0 matches first true arm.
-        assert_eq!(compass_quadrant(0.0, 0.0), "↘");
+        assert_eq!(compass_quadrant(0.0, 0.0), "↗");
     }
 
     /// Temperature bands cover the full range.

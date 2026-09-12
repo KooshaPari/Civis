@@ -407,9 +407,8 @@ pub fn advance_worldgen_to_playing(
                 };
                 let client = bridge.client.clone();
                 commands.queue(move |world: &mut World| {
-                    client.install_world_generation(generation, connection, || {
-                        clear_live_stream_scene_in_world(world)
-                    });
+                    clear_live_stream_scene_in_world(world);
+                    client.install_world_generation(generation, connection);
                 });
                 boot.generation = Some(generation);
                 boot.scene_clear_pending = true;
@@ -1503,7 +1502,7 @@ mod tests {
     #[test]
     fn world_boot_failed_reply_preserves_old_scene_and_blocks_playing() {
         let (mut app, client, id, old) = world_boot_app();
-        client.test_complete_rpc(id, Err("preset not found"));
+        client.test_complete_rpc(id, Err("preset not found".to_string()));
         app.update();
         assert_eq!(
             app.world().resource::<State<AppState>>().get(),

@@ -1509,7 +1509,7 @@ mod tests {
             .client
             .test_complete_rpc(
                 request["id"].as_u64().unwrap(),
-                Err("Forbidden: operator required"),
+                Err("Forbidden: operator required".to_string()),
             );
         app.update();
         assert!(app

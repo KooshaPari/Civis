@@ -150,7 +150,6 @@ fn fr_civ_gov_010_crime_score_uses_linear_decreasing_formula() {
 }
 
 #[test]
-#[ignore = "TDD red step: institution bonuses not yet wired into mood calculation"]
 fn fr_civ_gov_010_institution_bonuses_apply_when_settlement_has_temple_or_garrison() {
     let mut sim = Simulation::with_seed(MOOD_SEED);
     sim.set_settlement_population(0, 100);

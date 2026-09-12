@@ -71,6 +71,24 @@ impl Simulation {
             return;
         }
         self.institution_levels_emitted.insert(key);
+        // Keep the first institution kind as the settlement's active civic
+        // record. The current public storage is one record per settlement;
+        // later kinds still emit their own events but do not overwrite the
+        // existing Temple/Garrison mood source. Upgrades for that active kind
+        // replace its level monotonically.
+        let replace_active = match self.institutions.get(&sid) {
+            None => true,
+            Some(active) => active.kind == kind && new_level > active.level,
+        };
+        if replace_active {
+            self.institutions.insert(
+                sid,
+                civ_institutions::Institution {
+                    kind,
+                    level: new_level,
+                },
+            );
+        }
         events.push(InstitutionEvent {
             kind,
             level: new_level,

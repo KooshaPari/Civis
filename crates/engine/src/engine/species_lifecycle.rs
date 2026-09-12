@@ -15,6 +15,10 @@ use std::collections::BTreeSet;
 use super::Simulation;
 use crate::engine::{Fixed, SimRng};
 
+/// Simulation ticks are daily; chronological age advances once per in-game
+/// year rather than once per frame.
+const LIFECYCLE_YEAR_TICKS: u64 = 365;
+
 // PopulationEvent and LifecycleCounters are defined in this file.
 
 use std::collections::BTreeMap;
@@ -343,18 +347,15 @@ impl Simulation {
         let mut found_new_settlements = Vec::new();
         let mut next_settlement_id = self.next_settlement_id();
 
+        let ages_this_tick = self.state.tick % LIFECYCLE_YEAR_TICKS == 0;
         for (entity, id, sample) in records.iter() {
-            let next_age = {
-                let Ok(mut civilian) = self.world.get::<&mut AgentCivilian>(*entity) else {
-                    continue;
-                };
-                civilian.age = civilian.age.saturating_add(1);
-                civilian.age
-            };
+            let next_age = sample.age;
             let Ok(mut needs) = self.world.get::<&mut Needs>(*entity) else {
                 continue;
             };
-            apply_age_stage_effects(next_age, &mut needs);
+            if ages_this_tick {
+                apply_age_stage_effects(next_age, &mut needs);
+            }
 
             if sample.alignment == Alignment::None {
                 continue;
@@ -365,55 +366,61 @@ impl Simulation {
             }
         }
 
-        for (left_idx, left) in records.iter().enumerate() {
-            if paired_adults.contains(&left.1) {
-                continue;
-            }
-            if !is_fertile_adult(left.0, &self.world, &left.2) {
-                continue;
-            }
-
-            let mut partner: Option<&(Entity, u64, CivilianLifecycleSample)> = None;
-            for right in records.iter().skip(left_idx + 1) {
-                if paired_adults.contains(&right.1) {
+        // Evaluate reproduction on the existing 200-tick cadence. Pairing on
+        // every frame lets the same adults reproduce indefinitely, exhausting
+        // food and destabilizing normal emergence runs.
+        let birth_window = self.state.tick == 0 || self.state.tick % 200 == 0;
+        if birth_window {
+            for (left_idx, left) in records.iter().enumerate() {
+                if paired_adults.contains(&left.1) {
                     continue;
                 }
-                if !is_fertile_adult(right.0, &self.world, &right.2) {
+                if !is_fertile_adult(left.0, &self.world, &left.2) {
                     continue;
                 }
-                if left.2.alignment != right.2.alignment {
+
+                let mut partner: Option<&(Entity, u64, CivilianLifecycleSample)> = None;
+                for right in records.iter().skip(left_idx + 1) {
+                    if paired_adults.contains(&right.1) {
+                        continue;
+                    }
+                    if !is_fertile_adult(right.0, &self.world, &right.2) {
+                        continue;
+                    }
+                    if left.2.alignment != right.2.alignment {
+                        continue;
+                    }
+                    if lifecycle_distance(left.2.x, left.2.y, right.2.x, right.2.y) > 0.04 {
+                        continue;
+                    }
+                    partner = Some(right);
+                    break;
+                }
+
+                let Some(right) = partner else {
+                    continue;
+                };
+
+                let birth_pressure = ((left.2.fertility_score + right.2.fertility_score) * 0.5)
+                    * (1.0
+                        - left
+                            .2
+                            .migration_pressure
+                            .max(right.2.migration_pressure)
+                            .clamp(0.0, 1.0));
+                if birth_pressure < 0.68 {
                     continue;
                 }
-                if lifecycle_distance(left.2.x, left.2.y, right.2.x, right.2.y) > 0.04 {
-                    continue;
-                }
-                partner = Some(right);
-                break;
+
+                paired_adults.insert(left.1);
+                paired_adults.insert(right.1);
+
+                let child_id = self.next_civilian_id;
+                self.next_civilian_id += 1;
+                let x = ((left.2.x + right.2.x) * 0.5).clamp(0.01, 0.99);
+                let y = ((left.2.y + right.2.y) * 0.5).clamp(0.01, 0.99);
+                births.push((child_id, x, y, left.2.alignment, left.1, right.1));
             }
-
-            let Some(right) = partner else {
-                continue;
-            };
-
-            let birth_pressure = ((left.2.fertility_score + right.2.fertility_score) * 0.5)
-                * (1.0
-                    - left
-                        .2
-                        .migration_pressure
-                        .max(right.2.migration_pressure)
-                        .clamp(0.0, 1.0));
-            if birth_pressure < 0.68 {
-                continue;
-            }
-
-            paired_adults.insert(left.1);
-            paired_adults.insert(right.1);
-
-            let child_id = self.next_civilian_id;
-            self.next_civilian_id += 1;
-            let x = ((left.2.x + right.2.x) * 0.5).clamp(0.01, 0.99);
-            let y = ((left.2.y + right.2.y) * 0.5).clamp(0.01, 0.99);
-            births.push((child_id, x, y, left.2.alignment, left.1, right.1));
         }
 
         for (entity, id, x, y) in dead.iter().copied() {
@@ -596,6 +603,7 @@ impl Simulation {
         let population = civ_agents::count_civilians(&self.world) as f64;
         let max_pop = self.state.population.max(1) as f64;
         let overcrowding_factor = (population / max_pop).clamp(0.0, 1.0);
+        let over_capacity = population > max_pop;
         // FR-CIV-LIFE-003: birth probability is now derived per-civilian from
         // `civ_needs::should_reproduce`, which consults the lifecycle label
         // (Adult only), the food/safety thresholds, and the configurable
@@ -609,7 +617,9 @@ impl Simulation {
             self.world
                 .query_mut::<(&mut AgentCivilian, &Position3d, &mut Needs)>()
         {
-            civilian.age = civilian.age.saturating_add(1);
+            if self.state.tick % LIFECYCLE_YEAR_TICKS == 0 {
+                civilian.age = civilian.age.saturating_add(1);
+            }
             if self.state.resources.food.to_bits() > 0 {
                 needs.food = (needs.food + 0.008).min(1.0);
                 self.state.resources.food =
@@ -617,7 +627,12 @@ impl Simulation {
             } else {
                 needs.food = (needs.food - 0.03).max(0.0);
             }
-            if needs.food < 0.05 && self.state.resources.food.to_bits() <= 0 {
+            // A cohort above authoritative capacity competes for the same
+            // stockpile; apply bounded pressure before declaring famine.
+            if over_capacity {
+                needs.food = (needs.food - 0.012).max(0.0);
+            }
+            if needs.food < 0.05 && (self.state.resources.food.to_bits() <= 0 || over_capacity) {
                 dead.push((entity, civilian.id, pos.coord));
                 continue;
             }

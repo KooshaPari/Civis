@@ -295,9 +295,8 @@ impl Simulation {
     pub(crate) fn phase_audio(&mut self) {
         // Match the SmallVec type of `last_tick_audio_events` so the
         // `events` buffer stays on the stack for the common 0-2 event case.
-        let mut events: smallvec::SmallVec<[SfxTrigger; 8]> = smallvec::SmallVec::with_capacity(
-            self.last_tick_audio_events.capacity(),
-        );
+        let mut events: smallvec::SmallVec<[SfxTrigger; 8]> =
+            smallvec::SmallVec::with_capacity(self.last_tick_audio_events.capacity());
 
         events.extend(self.last_births.iter().map(|_| SfxTrigger::Birth));
         events.extend(self.last_deaths.iter().map(|_| SfxTrigger::Death));

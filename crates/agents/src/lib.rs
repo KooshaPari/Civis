@@ -466,7 +466,17 @@ pub fn spawn_civilian(
         lod,
     } = bundle;
     world.spawn((
-        civilian, position, velocity, wardrobe, tools, needs, lod, dna,
+        civilian,
+        position,
+        velocity,
+        wardrobe,
+        tools,
+        needs,
+        lod,
+        dna,
+        // Keep the survival-needs vector present from spawn so lifecycle,
+        // disaster, and emergence phases all observe the same agent state.
+        civ_needs::Needs::sated(),
     ))
 }
 

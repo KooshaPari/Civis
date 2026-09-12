@@ -961,6 +961,14 @@ pub struct InstitutionEvent {
 pub type Sim = Simulation;
 
 impl Simulation {
+    /// Seed `with_seed` simulations with a bounded reserve so the initial
+    /// cohort reaches emergence checkpoints before ordinary consumption and
+    /// disaster losses are allowed to induce famine.
+    #[inline]
+    fn starting_food(civilian_count: u64) -> Fixed {
+        Fixed::from_num((civilian_count.saturating_mul(200)) as i64)
+    }
+
     /// Create new simulation with default state
     pub fn new() -> Self {
         let rng = SimRng::seed_from_u64(42);
@@ -1149,6 +1157,10 @@ impl Simulation {
         let state = WorldState {
             rng_seed: seed,
             population: civilian_count,
+            resources: Resources {
+                food: Self::starting_food(civilian_count),
+                ..Resources::default()
+            },
             ..Default::default()
         };
 
@@ -1778,6 +1790,36 @@ impl Simulation {
         &self.faction_ideologies
     }
 
+    /// Number of distinct factions that currently hold at least one aligned civilian.
+    ///
+    /// This is live-ECS-derived via [`crate::tech::faction_populations`]: a faction
+    /// is counted only while at least one of its civilians is alive, so the value
+    /// reflects the emergent population dynamics rather than a fixed roster.
+    #[must_use]
+    pub fn faction_count(&self) -> usize {
+        crate::tech::faction_populations(self).len()
+    }
+
+    /// Live per-faction civilian populations keyed by faction id.
+    ///
+    /// Derived from the ECS world so the values reflect real births/deaths and
+    /// are therefore seed-dependent once simulation diverges.
+    #[must_use]
+    pub fn faction_populations(&self) -> BTreeMap<u32, u32> {
+        crate::tech::faction_populations(self)
+    }
+
+    /// The alignment band for a faction id, present while that faction still has
+    /// at least one living aligned civilian.
+    #[must_use]
+    pub fn faction_alignment(&self, faction_id: usize) -> civ_agents::Alignment {
+        if crate::tech::faction_populations(self).contains_key(&(faction_id as u32)) {
+            civ_agents::Alignment::Faction(faction_id as u32)
+        } else {
+            civ_agents::Alignment::None
+        }
+    }
+
     pub fn last_births(&self) -> &[PopulationEvent] {
         &self.last_births
     }
@@ -2340,7 +2382,12 @@ impl Simulation {
     pub fn phase_language(&mut self) {
         let tick = self.state.tick;
         if !self.state.faction_language_systems.is_empty() {
-            let keys: Vec<u32> = self.state.faction_language_systems.keys().copied().collect();
+            let keys: Vec<u32> = self
+                .state
+                .faction_language_systems
+                .keys()
+                .copied()
+                .collect();
             for fid in keys {
                 if let Some(lang) = self.state.faction_language_systems.get(&fid) {
                     let updated = crate::language::tick_language_system(lang, tick);
@@ -2919,10 +2966,7 @@ impl Simulation {
         let snapshot = self.snapshot();
         let snap_value = serde_json::to_value(&snapshot).unwrap_or(serde_json::Value::Null);
         let mut obj = serde_json::Map::new();
-        obj.insert(
-            "tick".to_owned(),
-            serde_json::json!(snapshot.tick),
-        );
+        obj.insert("tick".to_owned(), serde_json::json!(snapshot.tick));
         obj.insert(
             "connection_id".to_owned(),
             serde_json::Value::String(connection_id.to_owned()),

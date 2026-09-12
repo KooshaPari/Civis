@@ -237,7 +237,7 @@ civis-3d-watch-build:
 
 # Godot GDExtension crate (excluded from workspace; test in-tree).
 godot-test:
-    powershell -NoProfile -ExecutionPolicy Bypass -Command 'Set-Item Env:CARGO_TARGET_DIR target-godot-smoke; cargo test --manifest-path clients/godot-ref/rust/Cargo.toml -j 1'
+    powershell -NoProfile -ExecutionPolicy Bypass -Command '$target = if ($env:CARGO_TARGET_DIR) { $env:CARGO_TARGET_DIR } else { "target-godot-smoke" }; $env:CARGO_TARGET_DIR = $target; cargo test --manifest-path clients/godot-ref/rust/Cargo.toml -j 1; exit $LASTEXITCODE'
 
 # Full local dev stack: infra + civ-watch.
 dev:

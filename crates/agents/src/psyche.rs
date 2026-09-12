@@ -195,7 +195,13 @@ pub fn update_mood(
     let target_val = clamp11(need_valence + 0.25 * event_term);
     let lr = 0.12 * (0.5 + temperament.reactivity);
     mood.valence = clamp11(mood.valence + (target_val - mood.valence) * lr);
-    mood.arousal = (threat_pressure + delta_needs.abs() + 0.25 * event_term.abs()).clamp(0.0, 1.0);
+    let target_arousal =
+        (threat_pressure + delta_needs.abs() + 0.25 * event_term.abs()).clamp(0.0, 1.0);
+    // Arousal follows pressure with the same bounded inertia as valence.
+    // Direct assignment made a single transient threat pin every agent at
+    // 1.0, preventing subsequent stress from producing an observable change.
+    let arousal_lr = 0.12 * (0.5 + temperament.reactivity);
+    mood.arousal = clamp01(mood.arousal + (target_arousal - mood.arousal) * arousal_lr);
 }
 
 /// Blend beliefs toward a culture exposure vector with a small mutational wobble.

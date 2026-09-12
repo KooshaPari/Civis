@@ -87,7 +87,7 @@ pub fn behavior_from_psyche(psyche: &Psyche) -> EmotionDrivenBehavior {
         return EmotionDrivenBehavior::Aggress;
     }
     // High arousal + negative valence → Flee (fearful)
-    if arousal > 0.7 && valence < -0.5 {
+    if arousal > 0.7 && valence <= 0.0 {
         return EmotionDrivenBehavior::Flee;
     }
     // Positive valence + low arousal → Cooperate (content)

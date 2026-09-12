@@ -419,7 +419,9 @@ mod engine_tests {
         let language_idx = PHASE_ORDER
             .iter()
             .position(|p| *p == "language" || *p == "language_drift")
-            .expect("PHASE_ORDER must include 'language' or 'language_drift' (FR-ENGINE-phaseorder)");
+            .expect(
+                "PHASE_ORDER must include 'language' or 'language_drift' (FR-ENGINE-phaseorder)",
+            );
         let culture_idx = PHASE_ORDER
             .iter()
             .position(|p| *p == "culture")

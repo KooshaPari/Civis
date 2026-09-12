@@ -20,6 +20,35 @@ Optional:
 
 Default (no switches): Rust smokes + `verify-unreal-ready.ps1` offline preflight (no UBT compile).
 
+### Capacity-budgeted opt-in
+
+Use `-Budgeted` when the smoke must run under an explicit D:/G: capacity gate. The
+budget values and receipt directory are intentionally mandatory; the receipt
+directory must already exist under `agents\sandbox`.
+
+```powershell
+.\scripts\agent-smoke.ps1 -SkipUnreal -Budgeted `
+  -TargetDirectory G:\GameDev-Infra\CargoTargets\Civis-clone `
+  -ExpectedGrowthBytes 8000000000 `
+  -ReserveBytes 50000000000 `
+  -Jobs 2 `
+  -ReceiptDirectory C:\Users\koosh\agents\sandbox
+```
+
+The budgeted path performs a point-in-time healthy-volume, ordinary-directory,
+capacity, and advisory same-target Rust/Cargo-owner preflight, then launches the existing
+smoke script as a `pwsh` child. Only that child receives `CARGO_TARGET_DIR` and
+`CARGO_BUILD_JOBS`; the caller's environment is unchanged. Receipt JSON and
+captured child stdout/stderr are written to the explicit sandbox directory.
+The owner scan is command-line based and cannot prove ownership when a build
+keeps its target directory only in inherited environment variables.
+Readers may inspect the log files while the child runs; output is buffered until
+the child stream flushes, so this is not a line-live monitoring guarantee.
+
+This is opt-in and only covers `agent-smoke.ps1` plus the Cargo commands it
+starts. Direct `cargo`, `just`, `process-compose`, or other raw launchers still
+bypass this gate and must not be described as budgeted.
+
 The script now has a named `playable` block for the terrain gate: `civ-server` WS smoke, `civ-watch` API smoke, and Unreal preflight or full UBT build when requested.
 
 ## What it covers
@@ -34,6 +63,10 @@ The script now has a named `playable` block for the terrain gate: `civ-server` W
 | `cargo test -p civ-watch` | HTTP terrain/snapshot/control contracts |
 | `verify-unreal-ready.ps1` (default) | Target.cs, rust `.lib`, UE path scaffolding |
 | `build.ps1` (`-FullUnreal`) | Full rust-shim + CivShowEditor UBT when engine installed |
+
+`just godot-test` preserves an inherited `CARGO_TARGET_DIR`; when the variable is
+unset, it falls back to the recipe-local `target-godot-smoke` directory. The
+recipe returns Cargo's exit code so target routing and failures remain visible.
 
 The `playable` block groups the `ws_smoke`, `civ-watch`, and Unreal steps above so terrain playability stays a single fail-fast sequence.
 

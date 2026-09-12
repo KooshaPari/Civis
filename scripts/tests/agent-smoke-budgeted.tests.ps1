@@ -113,7 +113,7 @@ $rejectReceiptPath = [regex]::Match($rejectText,'"receipt"\s*:\s*"([^"]+)"').Gro
 Assert-True ($rejectCode -eq 2) "rejection exit code was $rejectCode"
 Assert-True ($rejectReceiptPath -and (Test-Path -LiteralPath $rejectReceiptPath -PathType Leaf)) 'rejection receipt missing'
 $rejectReceipt = Get-Content -LiteralPath $rejectReceiptPath -Raw | ConvertFrom-Json
-Assert-True ($rejectReceipt.state -eq 'rejected' -and $rejectReceipt.childPid -eq $null) 'rejected run launched a child'
+Assert-True ($rejectReceipt.state -eq 'rejected' -and $null -eq $rejectReceipt.childPid) 'rejected run launched a child'
 
 # Exercise agent-smoke's native hashtable splatting into a real pwsh helper
 # process. The deliberately impossible budget proves argument binding and
@@ -132,25 +132,28 @@ Assert-True ($smokeReceipt.state -eq 'rejected') 'agent-smoke did not preserve h
 
 # Inject a receipt-write failure into a sandbox copy of the current helper.
 # The owned child creates one sleeping descendant before the failure fires.
+foreach ($rootExits in @($false, $true)) {
 $failureRoot = Join-Path $ReceiptDirectory ("observer-failure-" + [guid]::NewGuid().ToString('N'))
 $null = New-Item -ItemType Directory -Path $failureRoot
 $failureHelper = Join-Path $failureRoot 'injected-helper.ps1'
 $failureChild = Join-Path $failureRoot 'owned-child.ps1'
 $identityPath = Join-Path $failureRoot 'owned-processes.json'
 @'
-param([string]$IdentityPath)
+param([string]$IdentityPath, [switch]$RootExits)
 $start = [Diagnostics.ProcessStartInfo]::new((Get-Process -Id $PID).Path)
 $start.UseShellExecute = $false
 $start.CreateNoWindow = $true
-foreach ($argument in @('-NoProfile', '-Command', 'Start-Sleep -Seconds 30')) { $start.ArgumentList.Add($argument) }
+$seconds = if ($RootExits) { 3 } else { 30 }
+foreach ($argument in @('-NoProfile', '-Command', "Start-Sleep -Seconds $seconds")) { $start.ArgumentList.Add($argument) }
 $descendant = [Diagnostics.Process]::Start($start)
 @{
     child = $PID
     childStartUtc = (Get-Process -Id $PID).StartTime.ToUniversalTime().ToString('o')
     descendant = $descendant.Id
     descendantStartUtc = $descendant.StartTime.ToUniversalTime().ToString('o')
+    rootExits = [bool]$RootExits
 } | ConvertTo-Json | Set-Content -LiteralPath $IdentityPath
-$descendant.WaitForExit()
+if (-not $RootExits) { $descendant.WaitForExit() }
 '@ | Set-Content -LiteralPath $failureChild -Encoding utf8
 $injection = @'
     if ($Record.state -eq 'running') {
@@ -160,17 +163,31 @@ $injection = @'
             Start-Sleep -Milliseconds 50
         }
         if (-not (Test-Path -LiteralPath $identity)) { throw 'synthetic child did not report its descendant' }
+        $identities = Get-Content -LiteralPath $identity -Raw | ConvertFrom-Json
+        if ($identities.rootExits) {
+            $process.WaitForExit()
+            $stillRunning = Get-Process -Id $identities.descendant -ErrorAction Stop
+            if ($stillRunning.HasExited) { throw 'descendant exited before observer failure' }
+            Set-Content -LiteralPath (Join-Path (Split-Path $Path) 'root-exited-before-failure.txt') -Value $process.HasExited
+        }
         throw 'synthetic running receipt failure'
     }
 '@
 $helperSource = Get-Content -LiteralPath $helper -Raw
+# Fail after each real cleanup call to verify diagnostics cannot mask the
+# observer error even when the caller promotes warnings to terminating errors.
+$helperSource = $helperSource.Replace('$mutex.ReleaseMutex()', '$mutex.ReleaseMutex(); throw "synthetic release diagnostic"')
+$helperSource = $helperSource.Replace('$mutex.Dispose()', '$mutex.Dispose(); throw "synthetic disposal diagnostic"')
 $faultMarker = '    $temporary = "$Path.tmp"'
 Assert-True ($helperSource.Contains($faultMarker)) 'receipt fault-injection marker missing'
 $helperSource.Replace($faultMarker, $injection + [Environment]::NewLine + $faultMarker) |
     Set-Content -LiteralPath $failureHelper -Encoding utf8
 $failureParameters = $successParameters.Clone()
+$failureParameters.WarningAction = 'Stop'
 $failureParameters.ReceiptDirectory = $failureRoot
-$failureParameters.ChildArgumentsJson = @('-NoProfile', '-File', $failureChild, '-IdentityPath', $identityPath) | ConvertTo-Json -Compress
+$failureArguments = @('-NoProfile', '-File', $failureChild, '-IdentityPath', $identityPath)
+if ($rootExits) { $failureArguments += '-RootExits' }
+$failureParameters.ChildArgumentsJson = $failureArguments | ConvertTo-Json -Compress
 $failureStdout = Join-Path $failureRoot 'helper.stdout.log'
 $failureStderr = Join-Path $failureRoot 'helper.stderr.log'
 & $pwsh -NoProfile -File $failureHelper @failureParameters 1> $failureStdout 2> $failureStderr
@@ -183,6 +200,12 @@ try {
         Select-Object -First 1
     Assert-True ($failureReceipt.state -eq 'observer_error') 'observer failure receipt state missing'
     Assert-True ($failureReceipt.error -eq 'synthetic running receipt failure') 'original observer error was replaced'
+    if ($rootExits) {
+        Assert-True ((Get-Content -LiteralPath (Join-Path $failureRoot 'root-exited-before-failure.txt') -Raw).Trim() -eq 'True') 'root did not exit before observer failure'
+    }
+    Assert-True ((Get-Content -LiteralPath $failureStderr -Raw) -match 'synthetic running receipt failure') 'original observer error was not rethrown'
+    $cleanupWarnings = Get-Content -LiteralPath $failureStdout -Raw
+    Assert-True ($cleanupWarnings -match 'synthetic release diagnostic' -and $cleanupWarnings -match 'synthetic disposal diagnostic') 'cleanup failures were not reported'
     Assert-True ($failureReceipt.childExitConfirmed) 'child exit was not confirmed before helper return'
     Assert-True ($failureReceipt.observedDescendantPids -contains $identities.descendant) 'owned descendant was not tracked'
     Assert-True ($failureReceipt.observedDescendantsExited -eq @($failureReceipt.observedDescendantPids).Count) 'observed descendant exits were not confirmed'
@@ -204,6 +227,7 @@ try {
         }
         if ($owned) { $owned.Dispose() }
     }
+}
 }
 
 Write-Output "agent-smoke budgeted synthetic tests passed; success=$successReceiptPath helperRejection=$rejectReceiptPath smokeRejection=$smokeReceiptPath"

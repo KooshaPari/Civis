@@ -3874,6 +3874,7 @@ mod tests {
                 "tick": 42,
                 "population": 1_000_000,
                 "building_count": 7,
+                "weather_grid": [],
                 "energy_budget": 1_000_000.0,
                 "market_prices": {
                     "food": 1_000,
@@ -3977,6 +3978,7 @@ mod tests {
                 "tick": 1,
                 "population": 500,
                 "building_count": 2,
+                "weather_grid": [],
                 "energy_budget": 100.0,
                 "market_prices": {
                     "food": 1_000,
@@ -4077,6 +4079,7 @@ mod tests {
                 "tick": 1,
                 "population": 500,
                 "building_count": 2,
+                "weather_grid": [],
                 "market_prices": {
                     "food": 1_000,
                     "energy": 1_000,

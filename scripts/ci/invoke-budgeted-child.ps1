@@ -227,33 +227,38 @@ try {
             # Capture process handles before killing: WaitForExit on the root alone
             # does not wait for descendants, and a saved PID could later be reused.
             $descendants = [Collections.Generic.List[Diagnostics.Process]]::new()
-            if (-not $process.HasExited) {
-                try {
-                    $snapshot = @(Get-CimInstance Win32_Process)
-                    $parents = [Collections.Generic.HashSet[int]]::new()
-                    [void]$parents.Add($process.Id)
-                    do {
-                        $added = $false
-                        foreach ($entry in $snapshot) {
-                            if ($parents.Contains([int]$entry.ParentProcessId) -and
-                                -not $parents.Contains([int]$entry.ProcessId) -and
-                                $entry.CreationDate -ge $process.StartTime) {
-                                try {
-                                    $descendant = [Diagnostics.Process]::GetProcessById([int]$entry.ProcessId)
-                                    if ([Math]::Abs(($descendant.StartTime.ToUniversalTime() - $entry.CreationDate.ToUniversalTime()).Ticks) -lt 10) {
-                                        $descendants.Add($descendant)
-                                        [void]$parents.Add($descendant.Id)
-                                        $added = $true
-                                    } else { $descendant.Dispose() }
-                                } catch { $recoveryErrors.Add("descendant observation: $($_.Exception.Message)") }
-                            }
+            try {
+                $snapshot = @(Get-CimInstance Win32_Process)
+                $parents = [Collections.Generic.Dictionary[int,DateTime]]::new()
+                $parents.Add($process.Id, $process.StartTime)
+                $rootExit = if ($process.HasExited) { $process.ExitTime } else { [DateTime]::MaxValue }
+                do {
+                    $added = $false
+                    foreach ($entry in $snapshot) {
+                        if ($parents.ContainsKey([int]$entry.ParentProcessId) -and
+                            -not $parents.ContainsKey([int]$entry.ProcessId) -and
+                            $entry.CreationDate -ge $parents[[int]$entry.ParentProcessId] -and
+                            ($entry.ParentProcessId -ne $process.Id -or $entry.CreationDate -le $rootExit)) {
+                            try {
+                                $descendant = [Diagnostics.Process]::GetProcessById([int]$entry.ProcessId)
+                                if ([Math]::Abs(($descendant.StartTime.ToUniversalTime() - $entry.CreationDate.ToUniversalTime()).Ticks) -lt 10) {
+                                    $descendants.Add($descendant)
+                                    $parents.Add($descendant.Id, $descendant.StartTime)
+                                    $added = $true
+                                } else { $descendant.Dispose() }
+                            } catch { $recoveryErrors.Add("descendant observation: $($_.Exception.Message)") }
                         }
-                    } while ($added)
-                } catch { $recoveryErrors.Add("tree observation: $($_.Exception.Message)") }
+                    }
+                } while ($added)
+            } catch { $recoveryErrors.Add("tree observation: $($_.Exception.Message)") }
+            if (-not $process.HasExited) {
                 try { $process.Kill($true) }
                 catch { $recoveryErrors.Add("tree termination: $($_.Exception.Message)") }
             }
-            # If termination failed, retain admission until natural completion.
+            # Also retain admission when the root exited before observer failure:
+            # its captured descendants still belong to this invocation. Direct
+            # children must have started within the root's lifetime, not a later
+            # process that reused its PID. If termination failed, await completion.
             $process.WaitForExit()
             $record.observedDescendantPids = @($descendants | ForEach-Object { $_.Id })
             foreach ($descendant in $descendants) {
@@ -278,7 +283,7 @@ try {
         try { Save-Receipt $receiptPath $record }
         catch {
             if (-not $observerError) { throw }
-            Write-Warning "Observer recovery receipt failed: $($_.Exception.Message); original error: $($observerError.Exception.Message); recovery errors: $($recoveryErrors -join '; ')"
+            Write-Warning "Observer recovery receipt failed: $($_.Exception.Message); original error: $($observerError.Exception.Message); recovery errors: $($recoveryErrors -join '; ')" -WarningAction Continue
         }
     }
     if ($observerError) { throw $observerError }
@@ -286,7 +291,9 @@ try {
     exit ([int]$record.exitCode)
 } finally {
     if ($acquired) {
-        try { $mutex.ReleaseMutex() } catch { }
+        try { $mutex.ReleaseMutex() }
+        catch { Write-Warning "Volume gate release failed for ${volumeLetter}: $($_.Exception.Message)" -WarningAction Continue }
     }
-    try { $mutex.Dispose() } catch { }
+    try { $mutex.Dispose() }
+    catch { Write-Warning "Volume gate disposal failed for ${volumeLetter}: $($_.Exception.Message)" -WarningAction Continue }
 }

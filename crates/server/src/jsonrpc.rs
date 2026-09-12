@@ -2632,6 +2632,14 @@ pub fn parse_terraform_extent_params(
             .clamp(1, 32) as u8,
         None => 3,
     };
+    // The disk brush offsets x/z in fixed-point units. Reject an extent
+    // that would overflow before the brush can perform any partial writes.
+    let extent = i64::from(radius) * civ_voxel::FIXED_SCALE;
+    for (field, center) in [("x", x), ("z", z)] {
+        if center.checked_sub(extent).is_none() || center.checked_add(extent).is_none() {
+            return Err(invalid_params(field));
+        }
+    }
     Ok((x, y, z, op, material, radius))
 }
 
@@ -3476,6 +3484,26 @@ mod tests {
         for material in [0, u16::MAX] {
             params["material"] = serde_json::json!(material);
             assert_eq!(parse_place_voxel_params(Some(&params)).unwrap().3, material);
+        }
+    }
+
+    #[test]
+    fn terraform_extent_rejects_coordinate_overflow_before_dispatch() {
+        for field in ["x", "z"] {
+            for center in [i64::MIN, i64::MAX] {
+                let mut params = serde_json::json!({"x":0,"y":0,"z":0,"radius":32});
+                params[field] = serde_json::json!(center);
+                let error = parse_terraform_extent_params(Some(&params)).unwrap_err();
+                assert_eq!(error.code, error_code::INVALID_PARAMS);
+                assert!(error.message.contains(field));
+                let extent = 32 * civ_voxel::FIXED_SCALE;
+                params[field] = serde_json::json!(if center < 0 {
+                    center + extent
+                } else {
+                    center - extent
+                });
+                assert!(parse_terraform_extent_params(Some(&params)).is_ok());
+            }
         }
     }
 

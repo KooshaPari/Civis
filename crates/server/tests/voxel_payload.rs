@@ -92,7 +92,7 @@ async fn rpc_response(
 }
 
 #[tokio::test]
-async fn ws_malformed_material_is_rejected_without_terrain_mutation() {
+async fn ws_invalid_terrain_edits_are_rejected_without_mutation() {
     let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(919)));
     let address = spawn_ws_bridge(sim.clone(), 4).await;
     let (mut socket, _) = connect_async(format!("ws://{address}/ws?tick_format=binary"))
@@ -153,6 +153,24 @@ async fn ws_malformed_material_is_rejected_without_terrain_mutation() {
                 authoritative.voxel_mut().drain_dirty().is_empty(),
                 "rejected edit dirtied terrain"
             );
+            id += 1;
+        }
+    }
+    for field in ["x", "z"] {
+        for center in [i64::MIN, i64::MAX] {
+            let mut params = json!({"x":pos.x,"y":pos.y,"z":pos.z,"material":WOOD.0,"radius":32});
+            params[field] = json!(center);
+            let reply =
+                rpc_response(&mut socket, &mut frames, id, "sim.terraform_extent", params).await;
+            assert_eq!(
+                reply.pointer("/error/code"),
+                Some(&json!(-32602)),
+                "{reply}"
+            );
+            let mut authoritative = sim.lock().await;
+            assert_eq!(authoritative.voxel().read(pos), STONE);
+            assert!(authoritative.voxel_mut().drain_dirty().is_empty());
+            assert_eq!(authoritative.state.tick, tick);
             id += 1;
         }
     }

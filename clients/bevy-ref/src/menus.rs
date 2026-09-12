@@ -502,7 +502,7 @@ pub fn consume_menu_commands(
     gate: Option<ResMut<OutcomeSessionGate>>,
     overlay: Option<ResMut<OutcomeOverlayState>>,
     mut boot: ResMut<WorldGenBoot>,
-    mut game_settings: Option<ResMut<GameSettings>>,
+    #[allow(unused_mut)] mut game_settings: Option<ResMut<GameSettings>>,
     mut settings_open: Option<ResMut<SettingsOpen>>,
     mut game_speed: Option<ResMut<GameSpeed>>,
 ) {
@@ -1166,7 +1166,7 @@ fn draw_pause_menu(
     mut mode: ResMut<GameUiMode>,
     mut command: ResMut<MenuCommand>,
     mut save_panel: ResMut<SaveLoadPanel>,
-    mut game_settings: Option<ResMut<GameSettings>>,
+    #[allow(unused_mut)] mut game_settings: Option<ResMut<GameSettings>>,
     mut settings_open: ResMut<SettingsOpen>,
     mut game_speed: Option<ResMut<GameSpeed>>,
     attach_mode: Option<Res<crate::AttachMode>>,

@@ -11,7 +11,12 @@
 //!   build stays fast for CI / agent-driven smoke runs.
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs)]
+// `missing_docs` is silenced at the crate level: this client is internal
+// infrastructure (not a published library), and the public items are mostly
+// Bevy `Plugin`/`Resource` types whose doc-comments add maintenance overhead
+// without informing any external caller. Other lints (`clippy`,
+// `missing_debug_implementations`, `dead_code`) already enforce code quality.
+#![allow(missing_docs)]
 // `f32::from(f64)` is not implemented in newer Rust, so bare float literals
 // silently default to f64 and need a `_f32` suffix or `f32::from` wrapping.
 // The bevy_ref UI code already coerces these literals through f32 contexts

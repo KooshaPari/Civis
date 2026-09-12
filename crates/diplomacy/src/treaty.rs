@@ -88,6 +88,12 @@ pub struct TreatyManager {
     treaties: BTreeMap<u64, Treaty>,
 }
 
+impl Default for TreatyManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TreatyManager {
     /// Create a new empty treaty manager.
     pub fn new() -> Self {

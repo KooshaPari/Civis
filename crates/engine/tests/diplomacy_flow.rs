@@ -24,7 +24,7 @@ use civ_engine::spawn::{spawn_airport_at, spawn_military_at, spawn_port_at};
 use civ_engine::{Fixed, Simulation, SimulationSnapshot, UnitType};
 
 /// Deterministic seed for the diplomacy flow test.
-const DIPLO_SEED: u64 = 0xD17_01_05;
+const DIPLO_SEED: u64 = 0x0D17_0105;
 
 /// Three regional spawn anchors (normalized 0..1 map coords).
 const REGIONS: [(f32, f32); 3] = [

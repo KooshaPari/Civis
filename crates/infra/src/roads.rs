@@ -357,7 +357,7 @@ impl RoadNetwork {
             let mut edges: Vec<(SegmentId, Segment)> = self
                 .outgoing
                 .get(&node)
-                .map(|v| v.iter().copied().collect())
+                .map(|v| v.to_vec())
                 .unwrap_or_default();
             edges.sort_by_key(|(id, _)| *id);
 
@@ -600,21 +600,21 @@ mod tests {
 
     fn build_triangle_network() -> RoadNetwork {
         let mut net = RoadNetwork::new();
-        let _ = net.add_intersection_with_id(
+        net.add_intersection_with_id(
             IntersectionId(0),
             Intersection {
                 position: (0.0, 0.0),
                 active: true,
             },
         );
-        let _ = net.add_intersection_with_id(
+        net.add_intersection_with_id(
             IntersectionId(1),
             Intersection {
                 position: (1.0, 0.0),
                 active: true,
             },
         );
-        let _ = net.add_intersection_with_id(
+        net.add_intersection_with_id(
             IntersectionId(2),
             Intersection {
                 position: (1.0, 1.0),
@@ -659,14 +659,14 @@ mod tests {
     #[test]
     fn unreachable_destination_returns_none() {
         let mut net = RoadNetwork::new();
-        let _ = net.add_intersection_with_id(
+        net.add_intersection_with_id(
             IntersectionId(0),
             Intersection {
                 position: (0.0, 0.0),
                 active: true,
             },
         );
-        let _ = net.add_intersection_with_id(
+        net.add_intersection_with_id(
             IntersectionId(1),
             Intersection {
                 position: (5.0, 5.0),

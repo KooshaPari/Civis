@@ -31,7 +31,7 @@ use crate::{Pair, PolityId};
 /// enforcement type: the system-level [`ShadowNetworkState::total_leakage`]
 /// is stored as this type, so a negative global invariant is impossible
 /// at the type level.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct NonNegativeU64(u64);
 
 impl NonNegativeU64 {
@@ -53,12 +53,6 @@ impl NonNegativeU64 {
     /// Saturating addition. Clamps at `u64::MAX`.
     pub fn saturating_add(self, rhs: u64) -> Self {
         Self(self.0.saturating_add(rhs))
-    }
-}
-
-impl Default for NonNegativeU64 {
-    fn default() -> Self {
-        Self(0)
     }
 }
 

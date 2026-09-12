@@ -92,7 +92,7 @@ fn economy_cycle_production_market_trade() {
         // production / consumption bookkeeping has stopped.
         assert_eq!(
             sim.economy_state.tick,
-            initial_econ_tick + tick_idx as u64 + 1,
+            initial_econ_tick + tick_idx + 1,
             "economy phase tick should advance each simulation tick (tick_idx={tick_idx})"
         );
 

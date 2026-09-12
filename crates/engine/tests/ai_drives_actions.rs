@@ -446,7 +446,7 @@ fn ai_goal_tree_drives_civilian_actions_over_100_ticks() {
     //    (b) The total civilian count dropped (starvation pruned the
     //        population).
     let final_count = count_civilians(&sim.world) as i64;
-    let deaths_occurred = sim.last_deaths().len() > 0;
+    let deaths_occurred = !sim.last_deaths().is_empty();
     let population_shrank = final_count < initial_civilian_count as i64;
     assert!(
         deaths_occurred || population_shrank,

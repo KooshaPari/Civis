@@ -17,6 +17,8 @@
 //! - [`Simulation::phase_history`] — drives [`crate::history::tick_history`]
 //! - [`Simulation::phase_writing`] — drives [`crate::writing::tick_writing_system`]
 
+#![allow(clippy::field_reassign_with_default)] // tests use default-init then field-set for readability
+
 use civ_engine::Simulation;
 
 // ---------------------------------------------------------------------------

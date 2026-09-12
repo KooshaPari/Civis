@@ -1,3 +1,4 @@
+#[allow(clippy::module_inception)] // outer `engine_tests` is the module name; inner is logical grouping
 mod engine_tests {
     use crate::engine::*;
     use crate::lod::{should_tick_entity_with_policy, LodPolicy};
@@ -216,9 +217,12 @@ mod engine_tests {
                 "research",
                 "tech",
                 "belief",
-                "social_mood",
+                // FR-CIV-phase-reconcile: `unrest` runs BEFORE `social_mood`
+                // so `last_tick_mood` is empty when `tick()` starts. See
+                // `Simulation::tick` for the rationale.
                 "unrest",
                 "cohesion",
+                "social_mood",
                 "economic_focus_pre",
                 "stratification",
                 "institutions",

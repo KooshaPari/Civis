@@ -431,8 +431,7 @@ pub fn generate_floor_plan(seed: u64, room_count: u32, style: ArchitecturalStyle
         let area = (base_area as f32 * scale_factor) as u32;
 
         let width = (area as f32).sqrt().ceil() as u32;
-        let height = if width > 0 { area / width } else { 1 };
-        let height = height.max(1);
+        let height = width.checked_sub(1).map(|_| area / width).unwrap_or(1).max(1);
 
         let position = (cursor_x, (i * 2) as i32);
         cursor_x += width as i32 + 1;
@@ -571,9 +570,9 @@ pub fn material_compatibility(mat_a: &str, mat_b: &str) -> f32 {
     ];
 
     for family in &families {
-        let in_a = family.iter().any(|m| *m == a.as_str());
-        let in_b = family.iter().any(|m| *m == b.as_str());
-        if in_a && in_b {
+        let a_str = a.as_str();
+        let b_str = b.as_str();
+        if family.contains(&a_str) && family.contains(&b_str) {
             return 0.8;
         }
     }
@@ -587,9 +586,9 @@ pub fn material_compatibility(mat_a: &str, mat_b: &str) -> f32 {
     ];
 
     for (group, score) in &cross_compat {
-        let in_a = group.iter().any(|m| *m == a.as_str());
-        let in_b = group.iter().any(|m| *m == b.as_str());
-        if in_a && in_b {
+        let a_str = a.as_str();
+        let b_str = b.as_str();
+        if group.contains(&a_str) && group.contains(&b_str) {
             return *score;
         }
     }
@@ -903,7 +902,7 @@ mod building_layouts_tests {
     #[test]
     fn floor_plan_room_count_minimum_one() {
         let plan = generate_floor_plan(1, 0, ArchitecturalStyle::Ancient);
-        assert!(plan.rooms.len() >= 1);
+        assert!(!plan.rooms.is_empty());
     }
 
     #[test]

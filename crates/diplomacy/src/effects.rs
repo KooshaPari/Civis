@@ -573,6 +573,7 @@ impl TributeEffect {
 // ---------------------------------------------------------------------------
 
 #[cfg(test)]
+#[allow(clippy::field_reassign_with_default)] // tests use default-init then field-set for readability
 mod tests {
     use super::*;
 

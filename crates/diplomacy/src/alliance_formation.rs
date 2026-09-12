@@ -247,6 +247,13 @@ pub struct DynamicAllianceManager {
     active_alliances: BTreeSet<BTreeSet<FactionId>>,
 }
 
+impl Default for DynamicAllianceManager {
+    /// Construct an empty manager.
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DynamicAllianceManager {
     /// Construct an empty manager.
     pub fn new() -> Self {

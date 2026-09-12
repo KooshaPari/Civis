@@ -380,7 +380,7 @@ mod tests {
         // Both are equally good, so threshold prevents migration
         assert!(
             event.is_none()
-                || event.as_ref().map_or(false, |e| e.target_pull
+                || event.as_ref().is_some_and(|e| e.target_pull
                     > e.source_pressure * c.migration_threshold)
         );
     }
@@ -452,7 +452,7 @@ mod tests {
         let events = migration_tick(&agents, &settlements, &c, 100);
         // At least some agents from starving settlement should migrate
         assert!(
-            events.len() > 0,
+            !events.is_empty(),
             "should have migration events from starving settlement"
         );
     }

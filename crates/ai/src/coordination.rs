@@ -302,7 +302,7 @@ mod tests {
         assert!((g.priorities[&1] - 5.0).abs() < f64::EPSILON);
         // Non-member cannot have priority set
         g.set_priority(99, 10.0);
-        assert!(g.priorities.get(&99).is_none());
+        assert!(!g.priorities.contains_key(&99));
     }
 
     #[test]

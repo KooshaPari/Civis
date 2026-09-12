@@ -248,8 +248,6 @@ impl SignificanceAccumulator {
 }
 
 /// Count distinct roles in a slice (for diversity tracking).
-
-
 /// Weighted significance score for a single event (used by the narrator
 /// and inspector to rank events in epoch digests).
 pub fn event_significance(

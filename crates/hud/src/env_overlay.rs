@@ -412,7 +412,7 @@ impl TemperatureField {
         self.raw
             .get(&cell)
             .copied()
-            .unwrap_or_else(|| (self.min_raw + self.max_raw) * 0.5)
+            .unwrap_or((self.min_raw + self.max_raw) * 0.5)
     }
 
     /// Normalize a raw °C value to `0.0..=1.0` (cold → hot).

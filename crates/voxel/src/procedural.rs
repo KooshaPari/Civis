@@ -209,8 +209,7 @@ impl TerrainBiomeMap {
     /// noise; moisture uses the same parameters but with `seed + 1` to produce
     /// an independent field.
     pub fn generate(&mut self, seed: u64) {
-        let mut config = BiomeNoiseConfig::default();
-        config.seed = seed;
+        let config = BiomeNoiseConfig { seed, ..BiomeNoiseConfig::default() };
 
         let height_noise = NoiseLayer::new(seed);
         let moisture_noise = NoiseLayer::new(seed.wrapping_add(1));
@@ -286,7 +285,7 @@ mod tests {
         let mut map = TerrainBiomeMap::new(64, 64);
         map.generate(42);
         for &h in &map.height_data {
-            assert!(h >= 0.0 && h <= 1.0, "height out of range: {h}");
+            assert!((0.0..=1.0).contains(&h), "height out of range: {h}");
         }
     }
 

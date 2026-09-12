@@ -2064,9 +2064,20 @@ impl Simulation {
         self.phase_research();
         self.phase_tech();
         self.phase_belief();
-        self.phase_social_mood();
+        // FR-CIV-phase-reconcile: `phase_unrest` runs BEFORE `phase_social_mood`
+        // so the per-tick `last_tick_mood` buffer stays empty when `tick()`
+        // starts (cleared at the top of every tick) — keeping the lifecycle
+        // mortality in `phase_life` from collapsing over long runs. `phase_unrest`
+        // therefore computes its own per-settlement mood inline from the same
+        // inputs (`settlement_food_stocked`, `settlement_housing_capacity`,
+        // `settlement_crime_pressure`, `institutions`) that `phase_social_mood`
+        // uses, preserving the same-tick coupling without depending on the
+        // buffer ordering. `phase_social_mood` still runs afterward so the
+        // external `last_tick_mood` consumer (HUD, JSON-RPC `sim.snapshot.mood`)
+        // observes a freshly-populated snapshot by the time `tick()` returns.
         self.phase_unrest();
         self.phase_cohesion();
+        self.phase_social_mood();
         self.phase_economic_focus_pre();
         self.phase_stratification();
         self.phase_institutions();
@@ -2255,8 +2266,7 @@ impl Simulation {
                 continue;
             }
             // Take pairs (0,1), (2,3), (4,5), ... and crossover.
-            let mut pairs = cluster.chunks(2);
-            while let Some(pair) = pairs.next() {
+            for pair in cluster.chunks(2) {
                 if pair.len() < 2 {
                     break;
                 }

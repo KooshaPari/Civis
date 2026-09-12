@@ -103,7 +103,7 @@ async fn collect_tick_bundle(
         for f in &frames {
             *by_tick.entry(f.tick()).or_insert(0) += 1;
         }
-        if let Some((&tick, &count)) = by_tick.iter().rev().next() {
+        if let Some((&tick, &count)) = by_tick.iter().next_back() {
             if tick >= min_tick && count >= bundle_len {
                 break;
             }

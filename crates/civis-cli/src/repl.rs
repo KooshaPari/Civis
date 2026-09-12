@@ -433,6 +433,7 @@ impl Repl {
     ///   - `spawn villager`   → default coords (0.5, 0.5), faction 0
     ///   - `spawn 0.5 0.3`    → coords (0.5, 0.3), faction 0
     ///   - `spawn 0.5 0.3 1`  → coords (0.5, 0.3), faction 1
+    ///
     /// When offline, shows a placeholder message.
     fn cmd_spawn(&mut self, entity_type: &str) -> String {
         if entity_type.is_empty() {

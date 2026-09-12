@@ -599,10 +599,11 @@ pub fn recover_from_trauma(response: &mut StressResponse, recovery_rate: f32) {
     response.current_stress = (response.current_stress - rate).max(MOOD_MIN);
 
     // Mark traumas older than 100 ticks as recovered.
+    // The overflow guard (`trauma.tick + 100 < trauma.tick`) is unreachable on
+    // u64; replace it with a real age comparison once a current-tick argument
+    // is threaded through. For now, recover any not-yet-recovered entry.
     for trauma in &mut response.trauma_history {
-        if !trauma.recovered && trauma.tick + 100 < trauma.tick {
-            // This is a safety check; in practice, use the current tick.
-            // We mark anything that hasn't been recovered yet as eligible.
+        if !trauma.recovered {
             trauma.recovered = true;
         }
     }
@@ -1274,6 +1275,6 @@ mod psyche_extended_tests {
             panic_level: 0.3,
         };
         let o = obedience_level(&g, 0.6);
-        assert!(o >= 0.0 && o <= 1.0);
+        assert!((0.0..=1.0).contains(&o));
     }
 }

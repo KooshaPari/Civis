@@ -34,9 +34,10 @@
 #![forbid(unsafe_code)]
 
 /// Lifecycle state of a single wildfire cell.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum WildfireState {
     /// No fire activity — cell is unburned or has no heat.
+    #[default]
     Dormant,
     /// Low heat, beginning to combust. Transitions to Active once heat
     /// exceeds the ignition threshold.
@@ -47,12 +48,6 @@ pub enum WildfireState {
     Crowning,
     /// Fire is consuming the last of the fuel. Heat dissipates.
     Dying,
-}
-
-impl Default for WildfireState {
-    fn default() -> Self {
-        Self::Dormant
-    }
 }
 
 /// Tunable parameters governing wildfire behaviour.

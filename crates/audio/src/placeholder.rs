@@ -262,7 +262,7 @@ impl AudioPlaceholderEngine {
         let dt = dt.max(0.0);
         let mut to_remove: Vec<String> = Vec::new();
 
-        for (_name, elapsed) in &mut self.channels_elapsed {
+        for elapsed in self.channels_elapsed.values_mut() {
             *elapsed += dt;
         }
 

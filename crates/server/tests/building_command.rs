@@ -263,9 +263,10 @@ async fn receive_building(
             }) {
                 return frame;
             }
-            match socket.next().await.expect("open socket").expect("WS frame") {
-                Message::Binary(bytes) => frames.push(decode_frame3d_binary(&bytes).unwrap()),
-                _ => {}
+            if let Some(frame) = socket.next().await.expect("open socket").expect("WS frame") {
+                if let Message::Binary(bytes) = frame {
+                    frames.push(decode_frame3d_binary(&bytes).unwrap())
+                }
             }
         }
     })

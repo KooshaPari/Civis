@@ -1,3 +1,9 @@
+// Allow functions with many parameters in the WebSocket bridge layer; the
+// `forward_*` helpers accept the live state and forwarding channels as
+// separate arguments rather than packing them into a single struct so the
+// pipeline stages stay inspectable.
+#![allow(clippy::too_many_arguments)]
+
 use std::{
     net::SocketAddr,
     path::PathBuf,
@@ -1893,7 +1899,7 @@ async fn apply_dispatch_effect(
                 civ_voxel::WorldCoord { x, y, z },
                 civ_voxel::MaterialId(material),
             );
-            let terrain_update = build_terraform_update(state, &mut sim);
+            let terrain_update = build_terraform_update(state, &sim);
             if let Some(result) = response.result.as_mut() {
                 if let Some(obj) = result.as_object_mut() {
                     obj.insert("ok".to_owned(), serde_json::json!(true));
@@ -1934,7 +1940,7 @@ async fn apply_dispatch_effect(
                 civ_voxel::stamp_footprint(&mut proxy, &stamp)
             };
             let terraform_update = if receipt.writes > 0 {
-                Some(build_terraform_update(state, &mut sim))
+                Some(build_terraform_update(state, &sim))
             } else {
                 None
             };
@@ -2766,7 +2772,7 @@ mod tests {
         let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
         let (mut ws, _) = tokio_tungstenite::connect_async(url).await.unwrap();
         ws.send(tokio_tungstenite::tungstenite::Message::Text(
-            r#"{"jsonrpc":"2.0","id":1,"method":"sim.status"}"#.to_owned().into(),
+            r#"{"jsonrpc":"2.0","id":1,"method":"sim.status"}"#.into(),
         ))
         .await
         .unwrap();

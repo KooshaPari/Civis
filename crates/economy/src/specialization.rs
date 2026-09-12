@@ -8,36 +8,53 @@ use std::collections::HashMap;
 /// A type of good that can be produced and traded.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct GoodType {
+    /// Identifier used to associate this good with regional advantages and trade.
     pub id: String,
+    /// Display name of the good.
     pub name: String,
+    /// Broad economic category of the good.
     pub category: GoodCategory,
 }
 
+/// Broad categories of goods produced and traded by regions.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum GoodCategory {
+    /// Food and agricultural produce.
     Food,
+    /// Raw and processed materials.
     Materials,
+    /// Technological goods and equipment.
     Technology,
+    /// Luxury goods.
     Luxury,
+    /// Military supplies and equipment.
     Military,
 }
 
 /// Natural advantage of a region for producing a good.
 #[derive(Debug, Clone)]
 pub struct RegionAdvantage {
-    pub resource_multiplier: f64,  // Natural resource abundance (0.0-2.0)
-    pub infrastructure_level: f64, // Infrastructure quality (0.0-1.0)
-    pub skill_base: f64,           // Workforce skill (0.0-1.0)
-    pub historical_bonus: f64,     // Trade network effects (0.0-1.0)
+    /// Natural resource abundance, conventionally between 0.0 and 2.0.
+    pub resource_multiplier: f64,
+    /// Infrastructure quality, conventionally between 0.0 and 1.0.
+    pub infrastructure_level: f64,
+    /// Workforce skill, conventionally between 0.0 and 1.0.
+    pub skill_base: f64,
+    /// Trade network effects, conventionally between 0.0 and 1.0.
+    pub historical_bonus: f64,
 }
 
 /// A region's specialization profile.
 #[derive(Debug, Clone)]
 pub struct RegionSpecialization {
+    /// Identifier of the region described by this profile.
     pub region_id: String,
-    pub advantages: HashMap<String, RegionAdvantage>, // good_id -> advantage
-    pub production_focus: Vec<String>,                // top good IDs in priority order
-    pub trade_surplus: HashMap<String, f64>,          // good_id -> surplus amount
+    /// Production advantages indexed by good identifier.
+    pub advantages: HashMap<String, RegionAdvantage>,
+    /// Top good identifiers in production priority order.
+    pub production_focus: Vec<String>,
+    /// Surplus amounts indexed by good identifier.
+    pub trade_surplus: HashMap<String, f64>,
 }
 
 /// Calculate the production efficiency for a good in a region.

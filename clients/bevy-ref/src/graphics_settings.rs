@@ -1388,4 +1388,159 @@ mod tests {
         assert_eq!(ResPreset::R4K.dimensions(), (3840, 2160));
         assert_eq!(ResPreset::R720p.dimensions(), (1280, 720));
     }
+
+    // ─── Quality preset monotonicity invariants ────────────────────────────────
+    // Low → Medium → High → Ultra must be strictly non-decreasing along every
+    // measurable axis (render_scale, shadow texels, shadow cascades, presence of
+    // expensive features). These tests catch regressions where a future preset
+    // addition accidentally downgrades a previously-shipped tier.
+
+    fn snapshot(s: &GfxSettings) -> (f32, u32, u32, bool, bool, bool, bool, bool) {
+        (
+            s.render_scale,
+            s.shadow_resolution.texels(),
+            s.shadow_cascades,
+            s.ssao,
+            s.bloom,
+            s.solari_gi,
+            s.motion_blur,
+            s.postfx_enabled,
+        )
+    }
+
+    #[test]
+    fn preset_render_scale_is_non_decreasing() {
+        let mut s = GfxSettings::default();
+        let mut prev = 0.0f32;
+        for preset in [
+            QualityPreset::Low,
+            QualityPreset::Medium,
+            QualityPreset::High,
+            QualityPreset::Ultra,
+        ] {
+            s.apply_preset(preset);
+            assert!(
+                s.render_scale >= prev,
+                "render_scale must be non-decreasing across {:?} (got {} < {})",
+                preset,
+                s.render_scale,
+                prev
+            );
+            prev = s.render_scale;
+        }
+    }
+
+    #[test]
+    fn preset_shadow_resolution_is_non_decreasing() {
+        let mut s = GfxSettings::default();
+        let mut prev = 0u32;
+        for preset in [
+            QualityPreset::Low,
+            QualityPreset::Medium,
+            QualityPreset::High,
+            QualityPreset::Ultra,
+        ] {
+            s.apply_preset(preset);
+            assert!(
+                s.shadow_resolution.texels() >= prev,
+                "shadow texels must be non-decreasing across {:?}",
+                preset
+            );
+            prev = s.shadow_resolution.texels();
+        }
+    }
+
+    #[test]
+    fn preset_shadow_cascades_are_in_bounds() {
+        for preset in [
+            QualityPreset::Low,
+            QualityPreset::Medium,
+            QualityPreset::High,
+            QualityPreset::Ultra,
+        ] {
+            let mut s = GfxSettings::default();
+            s.apply_preset(preset);
+            assert!(
+                (1..=4).contains(&s.shadow_cascades),
+                "{:?} must select cascades in [1, 4], got {}",
+                preset,
+                s.shadow_cascades
+            );
+        }
+    }
+
+    #[test]
+    fn preset_full_truth_table_matches_documented_pairs() {
+        let mut s = GfxSettings::default();
+        s.apply_preset(QualityPreset::Low);
+        assert_eq!(
+            snapshot(&s),
+            (0.5, 512, 1, false, false, false, false, true),
+            "Low preset full state should match"
+        );
+
+        s.apply_preset(QualityPreset::Medium);
+        assert_eq!(
+            snapshot(&s),
+            (1.0, 1024, 2, false, true, false, false, true),
+            "Medium preset full state should match"
+        );
+
+        s.apply_preset(QualityPreset::High);
+        assert_eq!(
+            snapshot(&s),
+            (1.0, 2048, 4, true, true, false, false, true),
+            "High preset full state should match"
+        );
+
+        s.apply_preset(QualityPreset::Ultra);
+        assert_eq!(
+            snapshot(&s),
+            (1.5, 4096, 4, true, true, true, true, true),
+            "Ultra preset full state should match"
+        );
+    }
+
+    #[test]
+    fn preset_custom_preserves_all_other_fields() {
+        let mut s = GfxSettings::default();
+        s.apply_preset(QualityPreset::Ultra);
+        let before = snapshot(&s);
+        s.apply_preset(QualityPreset::Custom);
+        assert_eq!(s.quality, QualityPreset::Custom);
+        assert_eq!(
+            snapshot(&s),
+            before,
+            "Custom preset must be a no-op on every other field"
+        );
+    }
+
+    #[test]
+    fn preset_keeps_backend_window_resolution_and_upscaling_untouched() {
+        let mut s = GfxSettings::default();
+        s.backend = BackendPref::Vulkan;
+        s.window_mode = WinMode::Fullscreen;
+        s.resolution = ResPreset::R4K;
+        s.upscaling = UpscalingMode::DLSS;
+        s.apply_preset(QualityPreset::Ultra);
+        assert_eq!(s.backend, BackendPref::Vulkan);
+        assert_eq!(s.window_mode, WinMode::Fullscreen);
+        assert_eq!(s.resolution, ResPreset::R4K);
+        assert_eq!(s.upscaling, UpscalingMode::DLSS);
+    }
+
+    #[test]
+    fn msaa_sample_counts_match_aamode_label() {
+        assert_eq!(AaMode::Off.msaa_samples(), None);
+        assert_eq!(AaMode::MSAA2x.msaa_samples(), Some(2));
+        assert_eq!(AaMode::MSAA4x.msaa_samples(), Some(4));
+        assert_eq!(AaMode::MSAA8x.msaa_samples(), Some(8));
+        assert_eq!(AaMode::TAA.msaa_samples(), None, "TAA is not MSAA");
+    }
+
+    #[test]
+    fn default_preset_is_high() {
+        let s = GfxSettings::default();
+        assert_eq!(s.quality, QualityPreset::High);
+    }
 }

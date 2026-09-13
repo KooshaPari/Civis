@@ -171,11 +171,17 @@ fn apply_live_scene_frames(
             ),
             Frame3d::CivilianState(civilian) => apply_civilian_state_frame(&mut scene, civilian),
             Frame3d::FactionState(faction) => apply_faction_state_frame(&mut scene, faction),
-            #[cfg(feature = "egui")]
             Frame3d::EventFeed(event_frame) => {
-                if let Some(feed) = event_feed.as_mut() {
-                    apply_event_feed_frame(feed, event_frame);
+                #[cfg(feature = "egui")]
+                {
+                    if let Some(feed) = event_feed.as_mut() {
+                        apply_event_feed_frame(feed, event_frame);
+                    }
                 }
+                // No egui: EventFeed frames are silently consumed. The
+                // capture-or-sink for them lives in the egui UI path.
+                #[cfg(not(feature = "egui"))]
+                let _ = event_frame;
             }
             Frame3d::Climate(_) => {}
             #[cfg(not(feature = "egui"))]

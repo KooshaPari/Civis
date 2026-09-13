@@ -594,15 +594,20 @@ pub fn experience_stress(response: &mut StressResponse, stressor: f32, tick: u64
 }
 
 /// Slowly recover from accumulated stress and mark old traumas as recovered.
-pub fn recover_from_trauma(response: &mut StressResponse, recovery_rate: f32) {
+///
+/// The caller supplies the current simulation tick. Trauma timestamps in the
+/// future are left unrecovered; only events older than 100 ticks are recovered.
+pub fn recover_from_trauma(response: &mut StressResponse, recovery_rate: f32, current_tick: u64) {
     let rate = recovery_rate * (0.5 + response.resilience * 0.5);
     response.current_stress = (response.current_stress - rate).max(MOOD_MIN);
 
     // Mark traumas older than 100 ticks as recovered.
     for trauma in &mut response.trauma_history {
-        if !trauma.recovered && trauma.tick + 100 < trauma.tick {
-            // This is a safety check; in practice, use the current tick.
-            // We mark anything that hasn't been recovered yet as eligible.
+        if !trauma.recovered
+            && current_tick
+                .checked_sub(trauma.tick)
+                .is_some_and(|age| age > 100)
+        {
             trauma.recovered = true;
         }
     }
@@ -1173,8 +1178,40 @@ mod psyche_extended_tests {
             current_stress: 0.8,
             ..StressResponse::default()
         };
-        recover_from_trauma(&mut r, 0.1);
+        recover_from_trauma(&mut r, 0.1, 0);
         assert!(r.current_stress < 0.8);
+    }
+
+    #[test]
+    fn trauma_recovery_uses_elapsed_ticks_without_overflow() {
+        for (occurred, current, recovered) in [
+            (10, 109, false),
+            (10, 110, false),
+            (10, 111, true),
+            (111, 110, false),
+            (u64::MAX, 0, false),
+            (u64::MAX, u64::MAX, false),
+            (u64::MAX - 100, u64::MAX, false),
+            (u64::MAX - 101, u64::MAX, true),
+            (0, u64::MAX, true),
+        ] {
+            let mut response = StressResponse {
+                current_stress: 0.8,
+                trauma_history: vec![TraumaEvent {
+                    description: "test trauma".to_owned(),
+                    severity: 0.8,
+                    tick: occurred,
+                    recovered: false,
+                }],
+                ..StressResponse::default()
+            };
+            recover_from_trauma(&mut response, 0.1, current);
+            assert_eq!(
+                response.trauma_history[0].recovered, recovered,
+                "occurred={occurred}, current={current}"
+            );
+            assert!(response.current_stress < 0.8);
+        }
     }
 
     #[test]
@@ -1294,6 +1331,6 @@ mod psyche_extended_tests {
             panic_level: 0.3,
         };
         let o = obedience_level(&g, 0.6);
-        assert!(o >= 0.0 && o <= 1.0);
+        assert!((0.0..=1.0).contains(&o));
     }
 }

@@ -2258,8 +2258,7 @@ impl Simulation {
                 continue;
             }
             // Take pairs (0,1), (2,3), (4,5), ... and crossover.
-            let mut pairs = cluster.chunks(2);
-            while let Some(pair) = pairs.next() {
+            for pair in cluster.chunks(2) {
                 if pair.len() < 2 {
                     break;
                 }

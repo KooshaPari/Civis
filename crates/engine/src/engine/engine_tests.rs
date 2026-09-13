@@ -1,4 +1,4 @@
-mod engine_tests {
+mod tests {
     use crate::engine::*;
     use crate::lod::{should_tick_entity_with_policy, LodPolicy};
     use crate::replay::{ReplayEvent, ReplayLog};

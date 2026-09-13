@@ -206,6 +206,13 @@ pub use engine::{
     last_tick_unrest, last_tick_unrest_settlement, set_settlement_gini, unrest_level, UnrestEvent,
     UnrestLevel, UnrestSnapshot,
 };
+
+// FR-CIV-ORDER-001. Re-exported so callers can name the order types as
+// `civ_engine::OrderEvent` etc. without pulling the private `engine`
+// module path. Mirrors the unrest re-export block above.
+pub use engine::{
+    last_tick_order, last_tick_order_settlement, order_level, OrderEvent, OrderLevel, OrderSnapshot,
+};
 pub use integrity::{check_integrity, IntegrityError};
 pub use invariants::{check_tick_invariants, InvariantError};
 pub use lod::LodTier;

@@ -9,9 +9,9 @@ use crate::settlement_helpers::{
 };
 use crate::social_types::{
     compute_gini, institution_kind_key, CohesionEvent, CohesionEventKind, CohesionSnapshot,
-    FabricTier, MoodSnapshot, StratBand, StratQuantiles, StratificationEvent,
-    StratificationEventKind, StratificationReport, UnrestEvent, UnrestLevel, UnrestSnapshot,
-    MOOD_CRIME_BASE, MOOD_HISTORY_CAP, MOOD_MAX, MOOD_MIN,
+    FabricTier, MoodSnapshot, OrderEvent, OrderLevel, OrderSnapshot, StratBand, StratQuantiles,
+    StratificationEvent, StratificationEventKind, StratificationReport, UnrestEvent, UnrestLevel,
+    UnrestSnapshot, MOOD_CRIME_BASE, MOOD_HISTORY_CAP, MOOD_MAX, MOOD_MIN,
 };
 use crate::Simulation;
 use civ_agents::{
@@ -594,6 +594,103 @@ impl Simulation {
             garrison_bonus,
         );
         parts.total as i32
+    }
+
+    /// Order / government-stability phase (FR-CIV-ORDER-001).
+    ///
+    /// Runs **after** `phase_unrest` and `phase_institutions` so it can read
+    /// the just-computed per-settlement unrest score and the institution kind
+    /// + level that will govern legitimacy. The phase computes
+    ///
+    /// `revolt_likelihood(unrest_norm, legitimacy)` per settlement using the
+    /// same helper the unit tests in [`crate::emergence`] cover, then bins
+    /// the result into [`OrderLevel`] and emits an event on level changes.
+    ///
+    /// Legitimacy model:
+    ///   * No institution: `0.0`
+    ///   * Temple L1/L2: `0.35 / 0.55` (cultural legitimacy cushion)
+    ///   * Garrison L1/L2: `0.20 / 0.30` (coercive legitimacy cushion)
+    ///
+    /// `unrest_norm` is `min(unrest_score / 500, 1.0)`. A settlement that
+    /// escalates into `UnrestLevel::Rioting` (score >= 150) and holds no
+    /// institution crosses `OrderLevel::Strained` within a single tick.
+    pub(crate) fn phase_order(&mut self) {
+        self.last_tick_order_events.clear();
+        let mut new_snapshots: BTreeMap<u32, OrderSnapshot> = BTreeMap::new();
+
+        // Iterate over the union of (settlements with an unrest snapshot) ∪
+        // (settlements that hold an institution this tick). Either set alone
+        // must drive an order snapshot.
+        let mut settlement_ids: BTreeSet<u32> = BTreeSet::new();
+        for &sid in self.last_tick_unrest_snapshots.keys() {
+            settlement_ids.insert(sid);
+        }
+        for &sid in self.institutions.keys() {
+            settlement_ids.insert(sid);
+        }
+
+        for &settlement_id in &settlement_ids {
+            let unrest_score = self
+                .last_tick_unrest_snapshots
+                .get(&settlement_id)
+                .map_or(0, |s| s.score);
+            let unrest_norm: f32 = (unrest_score as f32 / 500.0).clamp(0.0, 1.0);
+
+            // Institution-derived legitimacy cushion (FR-CIV-ORDER-001 spec).
+            let (legitimacy, institution_level, institution_kind) =
+                match self.institutions.get(&settlement_id) {
+                    Some(inst) if inst.kind == civ_institutions::InstitutionKind::Temple => {
+                        let base = if inst.level >= 2 { 0.55 } else { 0.35 };
+                        (base, inst.level, 1u8)
+                    }
+                    Some(inst) if inst.kind == civ_institutions::InstitutionKind::Garrison => {
+                        let base = if inst.level >= 2 { 0.30 } else { 0.20 };
+                        (base, inst.level, 2u8)
+                    }
+                    _ => (0.0_f32, 0u8, 0u8),
+                };
+
+            let likelihood = crate::emergence::revolt_likelihood(unrest_norm, legitimacy);
+            let level = OrderLevel::from_revolt_likelihood(likelihood);
+
+            let prev_level = self
+                .last_tick_order_levels
+                .get(&settlement_id)
+                .copied()
+                .unwrap_or(OrderLevel::Holding);
+            let level_delta = level.to_rank() as i32 - prev_level.to_rank() as i32;
+
+            // Emit only on level change (mirrors `phase_unrest` event policy)
+            // so wire consumers don't see a flood of "still Holding" rows.
+            if level != prev_level {
+                self.last_tick_order_events.push(OrderEvent {
+                    settlement_id,
+                    level,
+                    level_delta,
+                    revolt_likelihood: likelihood,
+                    unrest_score,
+                    legitimacy,
+                    institution_level,
+                    institution_kind,
+                });
+            }
+
+            let snapshot = OrderSnapshot {
+                settlement_id,
+                level,
+                revolt_likelihood: likelihood,
+                unrest_score,
+                legitimacy,
+                institution_level,
+                institution_kind,
+            };
+            new_snapshots.insert(settlement_id, snapshot);
+            self.last_tick_order_levels.insert(settlement_id, level);
+        }
+        self.last_tick_order_snapshots = new_snapshots;
+        // Keep the public per-tick event stream in sync with the internal
+        // phase buffer (same pattern as `phase_unrest`).
+        self.last_tick_order = self.last_tick_order_events.clone();
     }
 }
 

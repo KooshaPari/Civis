@@ -386,3 +386,87 @@ pub struct UnrestSnapshot {
     pub migrants_count: u64,
     pub mob_size: u64,
 }
+
+// ============================================================================
+// FR-CIV-ORDER-001 — order / government stability types.
+// ============================================================================
+
+/// Per-settlement government-order level, derived from
+/// [`crate::emergence::revolt_likelihood`] (the same net-pressure formula
+/// `unrest - legitimacy` that the unit-tested helper exposes). Bins are
+/// chosen so the four levels line up with [`UnrestLevel`] but represent the
+/// *outcome* side: high order = legitimacy holds; collapsing order = revolt
+/// is imminent.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+)]
+pub enum OrderLevel {
+    /// Legitimacy comfortably exceeds unrest; no revolt pressure.
+    Holding,
+    /// Unrest and legitimacy are roughly equal; pressure rising but stable.
+    Strained,
+    /// Unrest dominates legitimacy; revolt likely.
+    Collapsing,
+    /// Revolt is essentially certain; no legitimacy cushion remaining.
+    Revolted,
+}
+
+impl OrderLevel {
+    /// Classify a `revolt_likelihood` result (0..1) into an [`OrderLevel`].
+    /// Bin edges match the `UnrestLevel` boundaries for symmetry: a settlement
+    /// that crosses into `UnrestLevel::Rioting` will land in
+    /// [`OrderLevel::Collapsing`] under zero legitimacy, and vice versa.
+    pub fn from_revolt_likelihood(p: f32) -> Self {
+        if !p.is_finite() || p < 0.2 {
+            OrderLevel::Holding
+        } else if p < 0.5 {
+            OrderLevel::Strained
+        } else if p < 0.8 {
+            OrderLevel::Collapsing
+        } else {
+            OrderLevel::Revolted
+        }
+    }
+
+    pub const fn to_rank(self) -> u8 {
+        match self {
+            OrderLevel::Holding => 0,
+            OrderLevel::Strained => 1,
+            OrderLevel::Collapsing => 2,
+            OrderLevel::Revolted => 3,
+        }
+    }
+}
+
+/// Per-tick event emitted when a settlement's order level changes
+/// (FR-CIV-ORDER-001). Mirrors the shape of [`UnrestEvent`] so the wire
+/// adapter and HUD can show a unified pressure trace per settlement.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct OrderEvent {
+    pub settlement_id: u32,
+    pub level: OrderLevel,
+    pub level_delta: i32,
+    pub revolt_likelihood: f32,
+    pub unrest_score: i32,
+    pub legitimacy: f32,
+    pub institution_level: u8,
+    pub institution_kind: u8,
+}
+
+/// Per-settlement government-order snapshot for the last tick
+/// (FR-CIV-ORDER-001). Carries the raw inputs (`unrest_score`, `legitimacy`,
+/// `institution_level`) and the derived [`OrderLevel`] so downstream
+/// consumers (HUD, JSON-RPC `sim.snapshot.order`, `faction_decisions`)
+/// observe the same coupling the phase computes.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct OrderSnapshot {
+    pub settlement_id: u32,
+    pub level: OrderLevel,
+    pub revolt_likelihood: f32,
+    pub unrest_score: i32,
+    pub legitimacy: f32,
+    pub institution_level: u8,
+    /// Discriminant for the active institution kind (0 = none, 1 = Temple,
+    /// 2 = Garrison) so the HUD can color the snapshot without re-mapping.
+    pub institution_kind: u8,
+}

@@ -86,9 +86,9 @@ pub(crate) use self::world_simulation::PHASE_ORDER;
 use crate::social_types::{compute_gini, institution_kind_key};
 pub use crate::social_types::{
     CohesionEvent, CohesionEventKind, CohesionSnapshot, FabricTier, KinshipEdge, KinshipKind,
-    MoodSnapshot, SimSeed, StratBand, StratQuantiles, StratificationEvent, StratificationEventKind,
-    StratificationReport, UnrestEvent, UnrestLevel, UnrestSnapshot, MOOD_CRIME_BASE,
-    MOOD_HISTORY_CAP, MOOD_MAX, MOOD_MIN,
+    MoodSnapshot, OrderEvent, OrderLevel, OrderSnapshot, SimSeed, StratBand, StratQuantiles,
+    StratificationEvent, StratificationEventKind, StratificationReport, UnrestEvent, UnrestLevel,
+    UnrestSnapshot, MOOD_CRIME_BASE, MOOD_HISTORY_CAP, MOOD_MAX, MOOD_MIN,
 };
 
 use crate::culture::{
@@ -133,8 +133,8 @@ pub use self::world_phases::derive_music_cue;
 pub mod compat_state;
 pub use self::compat_state::{
     add_cohesion, add_trust, faction_count, last_tick_cohesion, last_tick_cohesion_settlement,
-    last_tick_unrest, last_tick_unrest_settlement, set_settlement_gini, settlement_gini,
-    unrest_level,
+    last_tick_order, last_tick_order_settlement, last_tick_unrest, last_tick_unrest_settlement,
+    order_level, set_settlement_gini, settlement_gini, unrest_level,
 };
 
 // --- Local stubs for removed upstream types ----------------------------------
@@ -832,6 +832,20 @@ pub struct Simulation {
     /// Per-settlement migrant accumulator used by `phase_unrest`.
     pub migrant_accumulator: BTreeMap<u32, i64>,
 
+    // ── Phase A6: Order (FR-CIV-ORDER-001) ──────────────────────────────
+    /// Per-settlement last order level, used to compute `level_delta` in the
+    /// order event stream. Defaults to [`OrderLevel::Holding`].
+    last_tick_order_levels: BTreeMap<u32, OrderLevel>,
+
+    /// Per-settlement government-order snapshot keyed by settlement id.
+    /// Populated by `phase_order` (FR-CIV-ORDER-001) from the unrest score,
+    /// institution level, and an institution-derived legitimacy cushion.
+    pub last_tick_order_snapshots: BTreeMap<u32, OrderSnapshot>,
+
+    /// Per-tick buffer of [`OrderEvent`]s emitted by `phase_order`.
+    pub last_tick_order: Vec<OrderEvent>,
+    last_tick_order_events: Vec<OrderEvent>,
+
     // ── Phase A10/A11: Economic Focus (FR-CIV-ECON-001) ───────────────────
     /// Current economic focus per settlement.
     /// Populated by [`Simulation::phase_economic_focus`] each tick.
@@ -1120,6 +1134,10 @@ impl Simulation {
             settlement_gini: BTreeMap::new(),
             last_tick_unrest_events: Vec::new(),
             last_tick_unrest_levels: BTreeMap::new(),
+            last_tick_order_levels: BTreeMap::new(),
+            last_tick_order_snapshots: BTreeMap::new(),
+            last_tick_order: Vec::new(),
+            last_tick_order_events: Vec::new(),
         }
     }
 
@@ -1291,6 +1309,10 @@ impl Simulation {
             settlement_gini: BTreeMap::new(),
             last_tick_unrest_events: Vec::new(),
             last_tick_unrest_levels: BTreeMap::new(),
+            last_tick_order_levels: BTreeMap::new(),
+            last_tick_order_snapshots: BTreeMap::new(),
+            last_tick_order: Vec::new(),
+            last_tick_order_events: Vec::new(),
             deep_diplomacy: crate::diplomacy::DeepDiplomacyState::default(),
         }
     }
@@ -2028,6 +2050,12 @@ impl Simulation {
         self.last_tick_mood.clear();
         self.last_tick_cohesion_events.clear();
         self.last_tick_unrest_events.clear();
+        // FR-CIV-ORDER-001: `phase_order` overwrites this with the per-settlement
+        // order snapshots each tick; downstream consumers (`last_tick_order`,
+        // `last_tick_order_snapshots`) read a fresh value when called after
+        // `tick()` returns. Mirrors the `last_tick_mood` clear pattern.
+        self.last_tick_order_events.clear();
+        self.last_tick_order.clear();
         // FR-MULTIPLAYER-AUDIT: reset the per-tick god-action audit log
         // alongside the other last_tick_* buffers so each tick's audit
         // entries correspond exactly to that tick's dispatches.
@@ -2081,6 +2109,12 @@ impl Simulation {
         self.phase_economic_focus_pre();
         self.phase_stratification();
         self.phase_institutions();
+        // FR-CIV-ORDER-001: `phase_order` runs AFTER `phase_unrest` (which
+        // populated `last_tick_unrest_snapshots`) and AFTER `phase_institutions`
+        // (which wrote this tick's institution level + kind into `institutions`),
+        // so it can compute `revolt_likelihood(unrest_norm, legitimacy)` from
+        // the freshest inputs each tick.
+        self.phase_order();
         self.phase_economic_focus();
         self.phase_emergence();
         self.phase_emergence_events_close();
@@ -2155,6 +2189,7 @@ impl Simulation {
             "economic_focus_pre" => self.phase_economic_focus_pre(),
             "stratification" => self.phase_stratification(),
             "institutions" => self.phase_institutions(),
+            "order" => self.phase_order(),
             "economic_focus" => self.phase_economic_focus(),
             "emergence" => self.phase_emergence(),
             "tutorial" => self.phase_tutorial(),
@@ -2833,6 +2868,28 @@ impl Simulation {
     /// recent tick's snapshot. `None` if no snapshot has been recorded yet.
     pub fn unrest_level(&self, settlement_id: u32) -> Option<UnrestLevel> {
         self.last_tick_unrest_snapshots
+            .get(&settlement_id)
+            .map(|s| s.level)
+    }
+
+    // ── FR-CIV-ORDER-001 accessors ─────────────────────────────────────
+    /// Read-only access to the `phase_order` event stream for the most
+    /// recent tick. The slice is reset by `tick()` and repopulated by the
+    /// next `phase_order` invocation.
+    pub fn last_tick_order(&self) -> &[OrderEvent] {
+        &self.last_tick_order
+    }
+
+    /// Per-settlement order snapshot from the most recent tick, if any
+    /// snapshot was recorded for that settlement.
+    pub fn last_tick_order_settlement(&self, settlement_id: u32) -> Option<OrderSnapshot> {
+        self.last_tick_order_snapshots.get(&settlement_id).cloned()
+    }
+
+    /// The current [`OrderLevel`] for a settlement, derived from the most
+    /// recent tick's snapshot. `None` if no snapshot has been recorded yet.
+    pub fn order_level(&self, settlement_id: u32) -> Option<OrderLevel> {
+        self.last_tick_order_snapshots
             .get(&settlement_id)
             .map(|s| s.level)
     }

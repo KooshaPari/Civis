@@ -28,10 +28,42 @@ use crate::ui_theme::{
 const NOTIFICATION_CAP: usize = 64;
 /// Seconds after which a notification fades out of the toast stack.
 const TOAST_LIFETIME_SECS: f32 = 8.0;
+/// Seconds the fade-IN ramps from 0 → 1 (smoothstep, perceptually soft).
+const TOAST_FADE_IN_SECS: f32 = 0.35;
 /// Maximum number of newest notifications shown as stacked toasts.
 const TOAST_STACK: usize = 6;
 /// Bottom-left overlay margin.
 const PANEL_MARGIN: f32 = 16.0;
+
+/// Pure helper — visibility alpha for a toast at the given age (seconds).
+///
+/// Returns a value in `[0.0, 1.0]`:
+/// - `age <= 0` or `age >= TOAST_LIFETIME_SECS` → 0.0
+/// - `age < TOAST_FADE_IN_SECS` → smoothstep ramp 0 → 1 (soft entrance)
+/// - `age in [TOAST_FADE_IN_SECS, TOAST_LIFETIME_SECS]` → 1.0 (fully visible)
+/// - `age in [TOAST_LIFETIME_SECS - 1.0, TOAST_LIFETIME_SECS]` → linear ramp to 0
+///   (last second is a soft fade-out so the dismiss is gentle, not abrupt).
+///
+/// The last-second fade-out matches the prior behaviour (`fade = 1 - age/8`)
+/// but is now bounded so a notification at exactly `TOAST_LIFETIME_SECS` is
+/// invisible rather than partially translucent.
+fn toast_alpha(age_secs: f32) -> f32 {
+    if age_secs <= 0.0 || age_secs >= TOAST_LIFETIME_SECS {
+        return 0.0;
+    }
+    // Fade-in: smoothstep ramp over TOAST_FADE_IN_SECS.
+    if age_secs < TOAST_FADE_IN_SECS {
+        let t = age_secs / TOAST_FADE_IN_SECS;
+        // smoothstep: 3t² - 2t³
+        return t * t * (3.0 - 2.0 * t);
+    }
+    // Steady state: full opacity through the middle of the lifetime.
+    if age_secs < TOAST_LIFETIME_SECS - 1.0_f32 {
+        return 1.0;
+    }
+    // Last-second fade-out: linear ramp to 0 at TOAST_LIFETIME_SECS.
+    (TOAST_LIFETIME_SECS - age_secs).clamp(0.0, 1.0)
+}
 
 /// Notification categories used by the event feed.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -195,8 +227,8 @@ fn draw_notifications(
 }
 
 fn toast_card(ui: &mut egui::Ui, index: usize, notification: &Notification) -> egui::Response {
-    let fade = 1.0 - (notification.age_secs / TOAST_LIFETIME_SECS).clamp(0.0, 1.0);
-    let alpha = (fade * 235.0).max(40.0) as u8;
+    let alpha_factor = toast_alpha(notification.age_secs);
+    let alpha = (alpha_factor * 235.0).max(40.0) as u8;
     let accent = notification.kind.accent();
     let fill = egui::Color32::from_rgba_premultiplied(16, 20, 30, alpha);
     let text_color = egui::Color32::from_rgba_unmultiplied(TEXT.r(), TEXT.g(), TEXT.b(), alpha);
@@ -233,7 +265,7 @@ fn toast_card(ui: &mut egui::Ui, index: usize, notification: &Notification) -> e
 
     let response = ui.interact(response.rect, id, egui::Sense::click());
 
-    let stroke = egui::Stroke::new(1.0, accent.gamma_multiply(0.5));
+    let stroke = egui::Stroke::new(1.0_f32, accent.gamma_multiply(0.5));
     ui.painter().rect_stroke(
         response.rect,
         egui::CornerRadius::same(RADIUS_SM),
@@ -282,5 +314,98 @@ mod tests {
         assert_eq!(kind_label(&NotificationKind::Diplomacy), "Diplomacy");
         assert_eq!(kind_label(&NotificationKind::Tech), "Technology");
         assert_eq!(kind_label(&NotificationKind::Disaster), "Disaster");
+    }
+
+    #[test]
+    fn toast_alpha_is_zero_at_boundaries() {
+        assert_eq!(toast_alpha(0.0), 0.0, "at age 0, alpha must be 0 (start of fade-in)");
+        assert_eq!(
+            toast_alpha(-1.0),
+            0.0,
+            "negative ages (clock skew) must clamp to 0"
+        );
+        assert_eq!(
+            toast_alpha(TOAST_LIFETIME_SECS),
+            0.0,
+            "at age == LIFETIME, alpha must be 0 (item is being dismissed)"
+        );
+        assert_eq!(
+            toast_alpha(TOAST_LIFETIME_SECS + 1.0),
+            0.0,
+            "past lifetime, alpha must remain 0"
+        );
+    }
+
+    #[test]
+    fn toast_alpha_smoothstep_inflection_at_midpoint() {
+        let mid = toast_alpha(TOAST_FADE_IN_SECS * 0.5);
+        // Smoothstep at t=0.5 is exactly 0.5 by construction:
+        //   3(0.25) - 2(0.125) = 0.75 - 0.25 = 0.5
+        assert!(
+            (mid - 0.5).abs() < 1e-5,
+            "smoothstep midpoint should be 0.5, got {mid}"
+        );
+        // Below midpoint must be sub-linear; above must be super-linear.
+        let quarter = toast_alpha(TOAST_FADE_IN_SECS * 0.25);
+        let three_quarter = toast_alpha(TOAST_FADE_IN_SECS * 0.75);
+        assert!(
+            quarter < 0.25,
+            "smoothstep at t=0.25 should be < 0.25 (sub-linear), got {quarter}"
+        );
+        assert!(
+            three_quarter > 0.75,
+            "smoothstep at t=0.75 should be > 0.75 (super-linear), got {three_quarter}"
+        );
+    }
+
+    #[test]
+    fn toast_alpha_reaches_full_visibility_in_steady_state() {
+        assert_eq!(
+            toast_alpha(TOAST_FADE_IN_SECS),
+            1.0,
+            "end of fade-in window must be fully visible"
+        );
+        assert_eq!(
+            toast_alpha(TOAST_LIFETIME_SECS * 0.5),
+            1.0,
+            "midpoint of lifetime must be fully visible"
+        );
+        assert_eq!(
+            toast_alpha(TOAST_LIFETIME_SECS - 1.0 - 0.001),
+            1.0,
+            "one second before end must still be fully visible"
+        );
+    }
+
+    #[test]
+    fn toast_alpha_is_monotonically_increasing_through_fade_in() {
+        // Sample the fade-in window at 16 points and assert strict monotonicity
+        // plus non-overshoot (alpha never exceeds 1.0 mid-fade-in).
+        let mut prev = 0.0;
+        for step in 1..=16 {
+            let age = (step as f32 / 16.0) * TOAST_FADE_IN_SECS;
+            let alpha = toast_alpha(age);
+            assert!(
+                alpha > prev,
+                "alpha must strictly increase during fade-in (step {step}, age {age:.3}): {prev:.3} -> {alpha:.3}"
+            );
+            assert!(alpha <= 1.0, "alpha must not overshoot during fade-in");
+            prev = alpha;
+        }
+        assert_eq!(prev, 1.0, "fade-in must end exactly at 1.0");
+    }
+
+    #[test]
+    fn toast_alpha_fades_out_smoothly_in_last_second() {
+        // The last 1.0s of the lifetime is a linear ramp from 1.0 -> 0.0.
+        let start = toast_alpha(TOAST_LIFETIME_SECS - 1.0);
+        let half = toast_alpha(TOAST_LIFETIME_SECS - 0.5);
+        let end = toast_alpha(TOAST_LIFETIME_SECS);
+        assert_eq!(start, 1.0, "last-second fade-out should start at 1.0");
+        assert!(
+            (half - 0.5).abs() < 1e-5,
+            "last-second fade-out midpoint should be 0.5, got {half}"
+        );
+        assert_eq!(end, 0.0, "last-second fade-out should end at 0.0");
     }
 }

@@ -411,6 +411,29 @@ pub struct WorldState {
     pub trade_route_idle_ticks: BTreeMap<(u32, u32, String), u32>,
     pub resources: Resources,
 
+    /// Settlement registry: `settlement_id -> population`. Feeds
+    /// `phase_institutions`, `phase_order`, and the economy gameplay loop.
+    /// Persisted so `.civsave.zst` archive reloads resume the population that
+    /// scenario loaders / tests seed (`set_settlement_population`).
+    #[serde(default)]
+    pub settlements: BTreeMap<u32, u32>,
+    /// Per-settlement food stock (`settlement_id -> food`), read by
+    /// `phase_social_mood` and the economy loop's `per_tick_wealth`.
+    #[serde(default)]
+    pub settlement_food_stocked: BTreeMap<u32, i64>,
+    /// Per-settlement housing capacity (`settlement_id -> capacity`), read by
+    /// `phase_social_mood` for the `housing_score` term.
+    #[serde(default)]
+    pub settlement_housing_capacity: BTreeMap<u32, u32>,
+    /// Per-settlement crime pressure (`settlement_id -> pressure`), read by
+    /// `phase_social_mood` for the `crime_score` term.
+    #[serde(default)]
+    pub settlement_crime_pressure: BTreeMap<u32, i32>,
+    /// Per-settlement Gini coefficient scaled ×100 (`settlement_id -> gini*100`),
+    /// read by `phase_unrest` for inequality amplification.
+    #[serde(default)]
+    pub settlement_gini: BTreeMap<u32, i32>,
+
     /// Macro economy state (FR-ECON-GAMEPLAY). Persisted into world_state.json
     /// so the gameplay-loop budget survives save->load. Defaulted on legacy
     /// v3 saves (the field was absent before format bump to v4).
@@ -528,6 +551,11 @@ impl Default for WorldState {
             emergent_trade_route_keys: BTreeSet::new(),
             trade_route_idle_ticks: BTreeMap::new(),
             resources: Resources::default(),
+            settlements: BTreeMap::new(),
+            settlement_food_stocked: BTreeMap::new(),
+            settlement_housing_capacity: BTreeMap::new(),
+            settlement_crime_pressure: BTreeMap::new(),
+            settlement_gini: BTreeMap::new(),
             economy_state: civ_economy::EconomyState::default(),
             settlement_wealth_snapshot:
                 civ_economy::gameplay_loop::SettlementWealthSnapshot::default(),
@@ -747,13 +775,13 @@ pub struct Simulation {
     /// so [`Simulation::phase_social_mood`] can compute `housing_score` as
     /// `2 * (capacity - population)` (FR-CIV-GOV-100). Keyed by settlement id
     /// (`u32`); missing keys default to `0` in the phase.
-    settlement_housing_capacity: BTreeMap<u32, u32>,
+    pub(crate) settlement_housing_capacity: BTreeMap<u32, u32>,
     /// Per-settlement crime pressure, settable by tests + scenario loaders so
     /// [`Simulation::phase_social_mood`] can compute `crime_score`
     /// (FR-CIV-GOV-100). Keyed by settlement id (`u32`); missing keys default
     /// to `0` in the phase. Treated as `i32` so the `4 * pressure` term
     /// saturates cleanly in `i64` arithmetic.
-    settlement_crime_pressure: BTreeMap<u32, i32>,
+    pub(crate) settlement_crime_pressure: BTreeMap<u32, i32>,
     /// Flat mood history ring (test convenience). At most
     /// [`MOOD_HISTORY_CAP`] * 8 entries are kept; older entries are drained
     /// from the front. Mirrors the per-settlement ring in
@@ -841,7 +869,7 @@ pub struct Simulation {
     pub last_tick_unrest: Vec<UnrestEvent>,
     last_tick_unrest_events: Vec<UnrestEvent>,
     last_tick_unrest_levels: BTreeMap<u32, UnrestLevel>,
-    settlement_gini: BTreeMap<u32, i32>,
+    pub(crate) settlement_gini: BTreeMap<u32, i32>,
 
     /// Per-settlement unrest snapshot keyed by settlement id. Populated by
     /// `phase_unrest` whenever a settlement's level changes.

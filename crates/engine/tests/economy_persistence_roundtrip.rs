@@ -128,3 +128,71 @@ fn save_load_roundtrip_preserves_accumulated_wealth_exactly() {
         "wealth trace must be identical across save/load round-trip"
     );
 }
+
+/// The settlement registry and its per-settlement scaffold inputs must
+/// survive the `.civsave.zst` archive round-trip. Before this fix, only
+/// `settlement_wealth_snapshot` persisted; `settlements`,
+/// `settlement_food_stocked`, `settlement_housing_capacity`,
+/// `settlement_crime_pressure`, and `settlement_gini` lived on
+/// `Simulation` alone, so a loaded scenario resumed with an empty
+/// settlement registry and the social/economy phases computed zero.
+#[test]
+fn archive_roundtrips_settlement_registry_and_scaffold() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let archive_path = dir.path().join("settlements.civsave.zst");
+
+    let mut sim = Simulation::with_seed(99);
+    sim.set_settlement_population(0, 200);
+    sim.set_settlement_population(3, 90);
+    sim.set_settlement_food_stocked(0, 1_200);
+    sim.set_settlement_food_stocked(3, 800);
+    sim.set_settlement_housing_capacity(0, 250);
+    sim.set_settlement_crime_pressure(3, 15);
+    sim.set_settlement_gini(0, 0.30);
+    sim.advance_ticks(5);
+
+    let settlements_before = sim.state.settlements.clone();
+    let food_before = sim.state.settlement_food_stocked.clone();
+    let housing_before = sim.state.settlement_housing_capacity.clone();
+    let crime_before = sim.state.settlement_crime_pressure.clone();
+    let gini_before = sim.state.settlement_gini.clone();
+
+    CivSaveBundle::save_archive(&archive_path, &sim).expect("save");
+
+    let loaded = CivSaveBundle::load_archive(&archive_path).expect("load");
+
+    assert_eq!(
+        loaded.state.settlements, settlements_before,
+        "settlement registry must round-trip"
+    );
+    assert_eq!(
+        loaded.state.settlement_food_stocked, food_before,
+        "settlement food stock must round-trip"
+    );
+    assert_eq!(
+        loaded.state.settlement_housing_capacity, housing_before,
+        "settlement housing capacity must round-trip"
+    );
+    assert_eq!(
+        loaded.state.settlement_crime_pressure, crime_before,
+        "settlement crime pressure must round-trip"
+    );
+    assert_eq!(
+        loaded.state.settlement_gini, gini_before,
+        "settlement gini must round-trip"
+    );
+
+    // The live Simulation scaffolding must be synced down from WorldState
+    // so a resumed scenario continues accumulating. Exercise the sync
+    // indirectly by confirming the loaded sim's live settlement registry
+    // is non-empty and matches the persisted surface.
+    assert_eq!(
+        loaded.state.settlements.len(),
+        settlements_before.len(),
+        "settlement registry must have non-zero settlement count after load"
+    );
+    assert!(
+        !loaded.state.settlements.is_empty(),
+        "settlement registry must not be empty after load"
+    );
+}

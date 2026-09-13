@@ -434,6 +434,15 @@ impl CivSaveBundle {
             sim.economy_state = sim.state.economy_state.clone();
             sim.settlement_wealth_snapshot = sim.state.settlement_wealth_snapshot.clone();
             sim.market_state = sim.state.market_state.clone();
+
+            // Load-side mirror: restore the settlement registry + per-settlement
+            // scaffolding so phase_economy / unrest / social_mood / cohesion /
+            // order resume from the persisted population.
+            sim.settlements = sim.state.settlements.clone();
+            sim.settlement_food_stocked = sim.state.settlement_food_stocked.clone();
+            sim.settlement_housing_capacity = sim.state.settlement_housing_capacity.clone();
+            sim.settlement_crime_pressure = sim.state.settlement_crime_pressure.clone();
+            sim.settlement_gini = sim.state.settlement_gini.clone();
         }
 
         let environment_path = dir.join(ENVIRONMENT_FILE);

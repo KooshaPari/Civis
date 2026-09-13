@@ -185,6 +185,15 @@ impl Simulation {
         self.state.economy_state = self.economy_state.clone();
         self.state.settlement_wealth_snapshot = self.settlement_wealth_snapshot.clone();
         self.state.market_state = self.market_state.clone();
+
+        // Persist the settlement registry + per-settlement scaffolding so the
+        // archive reload resumes the population that drives the social/economy
+        // phases (save-side mirror).
+        self.state.settlements = self.settlements.clone();
+        self.state.settlement_food_stocked = self.settlement_food_stocked.clone();
+        self.state.settlement_housing_capacity = self.settlement_housing_capacity.clone();
+        self.state.settlement_crime_pressure = self.settlement_crime_pressure.clone();
+        self.state.settlement_gini = self.settlement_gini.clone();
     }
 
     pub(crate) fn tick_settlement_trade_flows(&mut self) {

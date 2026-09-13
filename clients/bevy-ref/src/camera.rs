@@ -5,7 +5,8 @@ use bevy::prelude::*;
 use crate::settings_ui::{
     GameSettings, KeyBinding, ACTION_CAMERA_LOWER, ACTION_CAMERA_MOVE_BACKWARD,
     ACTION_CAMERA_MOVE_FORWARD, ACTION_CAMERA_MOVE_LEFT, ACTION_CAMERA_MOVE_RIGHT,
-    ACTION_CAMERA_ORBIT_LEFT, ACTION_CAMERA_ORBIT_RIGHT, ACTION_CAMERA_RAISE, ACTION_CAMERA_ROTATE,
+    ACTION_CAMERA_ORBIT_LEFT, ACTION_CAMERA_ORBIT_RIGHT, ACTION_CAMERA_RAISE, ACTION_CAMERA_RESET,
+    ACTION_CAMERA_ROTATE,
 };
 
 const PAN_SPEED: f32 = 90.0;
@@ -114,6 +115,21 @@ pub fn camera_input(
         rig.distance = (rig.distance + scroll * SCROLL_DISTANCE_PER_LINE)
             .clamp(MIN_ORBIT_DISTANCE, MAX_ORBIT_DISTANCE);
     }
+
+    // One-shot reset: snap rig back to the framed-default target, distance,
+    // and neutral pitch/yaw. Triggered by the user-rebindable
+    // ACTION_CAMERA_RESET (default: Home key).
+    if settings
+        .as_ref()
+        .and_then(|s| s.key_for(ACTION_CAMERA_RESET))
+        .is_some_and(|b| b.is_just_pressed(&keys, &mouse_buttons))
+    {
+        let defaults = CameraRig::default();
+        rig.target = defaults.target;
+        rig.yaw = defaults.yaw;
+        rig.pitch = defaults.pitch;
+        rig.distance = defaults.distance;
+    }
 }
 
 #[cfg(not(feature = "egui"))]
@@ -177,6 +193,17 @@ pub fn camera_input(
         rig.distance = (rig.distance + scroll * SCROLL_DISTANCE_PER_LINE)
             .clamp(MIN_ORBIT_DISTANCE, MAX_ORBIT_DISTANCE);
     }
+
+    // One-shot reset: snap rig back to framed defaults. See the egui branch
+    // above for full context. The non-egui build uses Home as the fixed
+    // binding because GameSettings isn't wired without egui.
+    if keys.just_pressed(KeyCode::Home) {
+        let defaults = CameraRig::default();
+        rig.target = defaults.target;
+        rig.yaw = defaults.yaw;
+        rig.pitch = defaults.pitch;
+        rig.distance = defaults.distance;
+    }
 }
 
 pub fn update_camera(
@@ -209,6 +236,8 @@ mod tests {
         app.insert_resource(CameraRig::default());
         app.add_message::<MouseMotion>();
         app.add_message::<MouseWheel>();
+        #[cfg(feature = "egui")]
+        app.insert_resource(crate::settings_ui::GameSettings::default());
         app.add_systems(Update, camera_input);
         app
     }
@@ -264,5 +293,68 @@ mod tests {
         }
         app.update();
         assert_eq!(app.world().resource::<CameraRig>().distance, 200.0);
+    }
+
+    /// Reset (Home key) restores the rig to CameraRig::default() in one shot.
+    /// The player pans around freely, hits Home, and the camera snaps back to
+    /// the framed-default target / yaw / pitch / distance.
+    #[test]
+    fn home_resets_rig_to_default() {
+        let defaults = CameraRig::default();
+        let mut app = camera_input_app();
+        // Seed the rig with non-default values (player has panned, orbited,
+        // and zoomed).
+        {
+            let mut rig = app.world_mut().resource_mut::<CameraRig>();
+            rig.target = Vec3::new(200.0, 80.0, -150.0);
+            rig.yaw = 1.2;
+            rig.pitch = -0.2;
+            rig.distance = 480.0;
+        }
+        {
+            let mut keys = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keys.clear();
+            keys.press(KeyCode::Home);
+        }
+        app.update();
+        let rig = app.world().resource::<CameraRig>();
+        assert_eq!(rig.target, defaults.target);
+        assert_eq!(rig.yaw, defaults.yaw);
+        assert_eq!(rig.pitch, defaults.pitch);
+        assert_eq!(rig.distance, defaults.distance);
+    }
+
+    /// Pressing a non-reset key (e.g. W) without pressing Home does not
+    /// trigger the reset. This guards against accidental widening of the
+    /// reset trigger condition in future edits.
+    #[test]
+    fn non_reset_key_press_does_not_trigger_reset() {
+        let mut app = camera_input_app();
+        let initial = {
+            let mut rig = app.world_mut().resource_mut::<CameraRig>();
+            rig.target = Vec3::new(75.0, 25.0, 40.0);
+            rig.yaw = 0.3;
+            rig.distance = 250.0;
+            rig.target
+        };
+        {
+            let mut keys = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keys.clear();
+            keys.press(KeyCode::KeyW);
+        }
+        app.update();
+        let rig = app.world().resource::<CameraRig>();
+        // Target should be unchanged (or moved by WASD panning, but not reset
+        // to defaults). Without dt advancement the WASD pan won't move it,
+        // so the target stays put.
+        assert_eq!(
+            rig.target.x, initial.x,
+            "W press alone must not trigger camera reset"
+        );
+        assert_eq!(rig.yaw, 0.3, "yaw must not change from a W press alone");
+        assert_eq!(
+            rig.distance, 250.0,
+            "distance must not change from a W press alone"
+        );
     }
 }

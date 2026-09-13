@@ -1595,22 +1595,20 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "pre-existing: u8 vs u8 > comparison doesn't compile; belongs to game_ui lane"]
     fn tool_button_fill_active_dominates_hover() {
-
         let active = tool_button_fill(true, false);
         let active_hover = tool_button_fill(true, true);
         // Both variants stay ACCENT-derived (green+blue dominant), so the
         // active signal is never replaced by the hover variant.
         for c in [active, active_hover] {
             assert!(
-                c.g() > c.r(),
+                i32::from(c.g()) > i32::from(c.r()),
                 "active must be green-dominant (g={}, r={})",
                 c.g(),
                 c.r()
             );
             assert!(
-                c.b() > c.r(),
+                i32::from(c.b()) > i32::from(c.r()),
                 "active must be blue-dominant (b={}, r={})",
                 c.b(),
                 c.r()
@@ -1641,9 +1639,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "pre-existing: u8 vs u8 > comparison doesn't compile; belongs to game_ui lane"]
     fn tool_button_label_color_active_is_brightest() {
-
         let idle = tool_button_label_color(false, false);
         let hover = tool_button_label_color(false, true);
         let active = tool_button_label_color(true, false);

@@ -244,6 +244,69 @@ pub struct CursorMarker {
     pub visible: bool,
 }
 
+/// Footprint of the placement ghost for a given tool.
+///
+/// The ghost uses world-space extents so the player can see exactly where the
+/// structure will sit before clicking. For tools without a clear footprint
+/// (Select / Destroy / paint / weather) we return `None` to signal that the
+/// ghost should be hidden.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct GhostFootprint {
+    /// Half-extents of the preview box on X / Z; full Y extent is fixed by
+    /// `BUILDING_EXTENTS` so the preview matches what will be spawned.
+    pub half_width: f32,
+    pub half_depth: f32,
+    /// Full height of the preview box.
+    pub full_height: f32,
+}
+
+impl GhostFootprint {
+    /// Build a footprint from world-space full extents.
+    const fn from_extents(extents: Vec3) -> Self {
+        Self {
+            half_width: extents.x * 0.5,
+            half_depth: extents.z * 0.5,
+            full_height: extents.y,
+        }
+    }
+
+    /// Footprint shown when the active tool is a structure placer.
+    pub fn for_tool(tool: SpawnTool) -> Option<Self> {
+        if tool.is_structure() || matches!(tool, SpawnTool::SpawnBuilding) {
+            Some(Self::from_extents(BUILDING_EXTENTS))
+        } else {
+            None
+        }
+    }
+}
+
+/// State of the placement ghost preview.
+///
+/// Updated by `update_ghost_preview` each frame and rendered by
+/// `apply_ghost_preview_visuals`. Holds the resolved footprint so the render
+/// side can paint a translucent box without re-deriving the active tool.
+#[derive(Resource, Debug, Default, Clone, Copy)]
+pub struct GhostPreview {
+    /// Tool whose footprint is currently being previewed, if any.
+    pub tool: Option<SpawnTool>,
+    /// World-space position the ghost sits at, if visible.
+    pub position: Option<Vec3>,
+    /// Whether the ghost is currently rendered.
+    pub visible: bool,
+}
+
+impl GhostPreview {
+    /// True when the ghost should appear at the given cursor position.
+    ///
+    /// A ghost is shown iff:
+    /// - a structure tool is active,
+    /// - the cursor marker resolved a world position, and
+    /// - the marker is reported visible (e.g. not hidden behind UI).
+    pub fn should_render(&self, marker: &CursorMarker) -> bool {
+        self.tool.is_some() && marker.visible && marker.position.is_some() && self.position.is_some()
+    }
+}
+
 /// Why an attached client currently has no authoritative terrain marker.
 ///
 /// Attached tools deliberately do not fall back to local terrain. Retaining the
@@ -396,6 +459,7 @@ impl Plugin for SpawnToolsPlugin {
             .init_resource::<BuildingSpawnKind>()
             .init_resource::<SelectedEntity>()
             .init_resource::<CursorMarker>()
+            .init_resource::<GhostPreview>()
             .init_resource::<AttachedMarkerStatus>()
             .init_resource::<PointerOverUi>()
             .init_resource::<RoadDraft>()
@@ -405,7 +469,7 @@ impl Plugin for SpawnToolsPlugin {
             .add_message::<DestroyEntityRequest>()
             .add_message::<PlaceRoadRequest>()
             .add_message::<PlaceStructureRequest>()
-            .add_systems(Startup, spawn_cursor_marker);
+            .add_systems(Startup, (spawn_cursor_marker, spawn_ghost_preview));
 
         #[cfg(feature = "egui")]
         app.init_resource::<crate::event_feed::EventFeed>()
@@ -424,9 +488,11 @@ impl Plugin for SpawnToolsPlugin {
             Update,
             (
                 update_cursor_marker,
+                update_ghost_preview,
                 handle_spawn_tool_clicks,
                 resolve_selection_and_destruction,
                 apply_cursor_marker_visuals,
+                apply_ghost_preview_visuals,
             )
                 .chain(),
         );
@@ -1062,6 +1128,86 @@ fn apply_cursor_marker_visuals(
     }
 }
 
+/// Derive the ghost-preview state from the current tool + cursor marker.
+///
+/// Runs every frame before `apply_ghost_preview_visuals` so the render-side
+/// system just copies the resource into the entity transform.
+fn update_ghost_preview(
+    active: Res<ActiveTool>,
+    marker: Res<CursorMarker>,
+    mut ghost: ResMut<GhostPreview>,
+) {
+    let footprint = GhostFootprint::for_tool(active.tool);
+    ghost.tool = footprint.map(|_| active.tool);
+    ghost.position = if footprint.is_some() {
+        marker.position
+    } else {
+        None
+    };
+    ghost.visible = ghost.should_render(&marker);
+}
+
+/// Marker for the spawned ghost preview entity.
+#[derive(Component)]
+pub struct SpawnGhostPreview;
+
+/// Spawn a translucent box used as the placement ghost.
+///
+/// Default position is the world origin; visibility is hidden so the ghost
+/// does not flash before `update_ghost_preview` runs.
+fn spawn_ghost_preview(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    let half = BUILDING_EXTENTS.x * 0.5;
+    let depth_half = BUILDING_EXTENTS.z * 0.5;
+    let half_height = BUILDING_EXTENTS.y * 0.5;
+    let mesh = Mesh::from(Cuboid::new(
+        half * 2.0,
+        BUILDING_EXTENTS.y,
+        depth_half * 2.0,
+    ));
+    let material = StandardMaterial {
+        base_color: Color::srgba(0.35, 0.85, 1.0, 0.25),
+        emissive: Color::srgba(0.35, 0.85, 1.0, 0.45).into(),
+        alpha_mode: AlphaMode::Blend,
+        unlit: true,
+        cull_mode: None,
+        ..default()
+    };
+
+    commands.spawn((
+        SpawnGhostPreview,
+        Mesh3d(meshes.add(mesh)),
+        MeshMaterial3d(materials.add(material)),
+        // Lift so the box bottom sits on the terrain (cursor sits at surface).
+        Transform::from_xyz(0.0, half_height + 0.05, 0.0),
+        Visibility::Hidden,
+    ));
+}
+
+/// Push the resource-driven ghost state into the rendered entity.
+fn apply_ghost_preview_visuals(
+    ghost: Res<GhostPreview>,
+    mut query: Query<(&mut Transform, &mut Visibility), With<SpawnGhostPreview>>,
+) {
+    let Ok((mut transform, mut visibility)) = query.single_mut() else {
+        return;
+    };
+    if let Some(position) = ghost.position {
+        let half_height = BUILDING_EXTENTS.y * 0.5;
+        transform.translation = position + Vec3::Y * (half_height + 0.05);
+        *visibility = if ghost.visible {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        };
+    } else {
+        *visibility = Visibility::Hidden;
+    }
+}
+
 fn raycast_to_terrain(origin: Vec3, direction: Vec3) -> Option<Vec3> {
     let dir = direction.normalize_or_zero();
     if dir == Vec3::ZERO {
@@ -1137,6 +1283,108 @@ fn nearest_entity(position: Vec3, entities: &Query<(Entity, &GlobalTransform)>) 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ghost_footprint_returns_none_for_non_structure_tools() {
+        // Select / Destroy / paint / weather should never show a placement
+        // ghost because there is no building-shaped footprint for them.
+        for tool in [
+            SpawnTool::Select,
+            SpawnTool::Destroy,
+            SpawnTool::PaintMaterial,
+            SpawnTool::Weather,
+        ] {
+            assert_eq!(
+                GhostFootprint::for_tool(tool),
+                None,
+                "{tool:?} must not produce a ghost footprint"
+            );
+        }
+    }
+
+    #[test]
+    fn ghost_footprint_matches_building_extents_for_structure_tools() {
+        // Every structure placer must share the same footprint as the
+        // BUILDING_EXTENTS constant so the preview matches what will spawn.
+        let expected_half_x = BUILDING_EXTENTS.x * 0.5;
+        let expected_half_z = BUILDING_EXTENTS.z * 0.5;
+        for tool in [
+            SpawnTool::SpawnBuilding,
+            SpawnTool::House,
+            SpawnTool::Farm,
+            SpawnTool::Workshop,
+            SpawnTool::Market,
+            SpawnTool::Wall,
+        ] {
+            let fp = GhostFootprint::for_tool(tool)
+                .unwrap_or_else(|| panic!("{tool:?} must produce a ghost footprint"));
+            assert!(
+                (fp.half_width - expected_half_x).abs() < 1e-4,
+                "{tool:?}: half_width mismatch"
+            );
+            assert!(
+                (fp.half_depth - expected_half_z).abs() < 1e-4,
+                "{tool:?}: half_depth mismatch"
+            );
+            assert!(
+                (fp.full_height - BUILDING_EXTENTS.y).abs() < 1e-4,
+                "{tool:?}: full_height mismatch"
+            );
+        }
+    }
+
+    #[test]
+    fn ghost_preview_should_render_requires_tool_and_visible_cursor() {
+        let pos = Some(Vec3::new(1.0, 2.0, 3.0));
+        // No tool: ghost never renders, even with a visible cursor.
+        let marker = CursorMarker {
+            position: pos,
+            visible: true,
+        };
+        let ghost = GhostPreview {
+            tool: None,
+            position: pos,
+            visible: true,
+        };
+        assert!(!ghost.should_render(&marker));
+
+        // Has tool but cursor hidden behind UI: ghost hides.
+        let ghost = GhostPreview {
+            tool: Some(SpawnTool::House),
+            position: pos,
+            visible: true,
+        };
+        let marker = CursorMarker {
+            position: pos,
+            visible: false,
+        };
+        assert!(!ghost.should_render(&marker));
+
+        // Has tool but cursor ray missed terrain.
+        let ghost = GhostPreview {
+            tool: Some(SpawnTool::House),
+            position: pos,
+            visible: true,
+        };
+        let marker = CursorMarker {
+            position: None,
+            visible: true,
+        };
+        assert!(!ghost.should_render(&marker));
+
+        // Happy path: structure tool + visible cursor + a resolved world
+        // position. Ghost renders.
+        let ghost = GhostPreview {
+            tool: Some(SpawnTool::House),
+            position: pos,
+            visible: true,
+        };
+        let marker = CursorMarker {
+            position: pos,
+            visible: true,
+        };
+        assert!(ghost.should_render(&marker));
+    }
 
     #[test]
     fn building_placement_uses_existing_palette_and_horizontal_normalized_coordinates() {

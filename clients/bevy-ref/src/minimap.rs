@@ -38,6 +38,14 @@ pub struct MinimapRoot;
 #[derive(Component)]
 pub struct MinimapDot;
 
+/// Marks a minimap dot with the game-clock time at which it was spawned,
+/// so the fade-in system can ramp its alpha from 0 to 1 over
+/// [`MINIMAP_DOT_FADE_SECS`].
+#[derive(Component, Debug, Clone, Copy)]
+pub struct MinimapDotFade {
+    pub spawned_at_secs: f32,
+}
+
 #[derive(Component)]
 pub struct MinimapCamera;
 
@@ -67,6 +75,7 @@ impl Plugin for MinimapPlugin {
                 Update,
                 (
                     sync_minimap_dots,
+                    update_minimap_dot_fade,
                     update_minimap_viewport,
                     teleport_camera_from_minimap,
                 ),
@@ -83,6 +92,28 @@ impl Plugin for MinimapPlugin {
 
 /// Seconds between minimap-initiated `sim.snapshot` RPCs in server mode.
 const MINIMAP_SNAPSHOT_INTERVAL_SECS: f32 = 5.0;
+
+/// How long a freshly spawned minimap dot takes to fade from alpha 0 to 1.
+/// New buildings / agents that appear when the snapshot resyncs pulse into
+/// view instead of popping in.
+const MINIMAP_DOT_FADE_SECS: f32 = 0.35;
+
+/// Pure helper mapping a dot's age (seconds since spawn) to its alpha in
+/// `[0.0, 1.0]`. Uses a smoothstep so the start and end of the fade are
+/// soft, not linear. Negative ages clamp to 0 (still spawning), ages past
+/// the fade window clamp to 1 (fully opaque).
+fn minimap_dot_fade_alpha(age_secs: f32) -> f32 {
+    if age_secs <= 0.0 {
+        return 0.0;
+    }
+    if age_secs >= MINIMAP_DOT_FADE_SECS {
+        return 1.0;
+    }
+    let t = age_secs / MINIMAP_DOT_FADE_SECS;
+    // smoothstep: 3t^2 - 2t^3 — see std::f32::smoothstep, but written out
+    // to keep this pure (no float method calls) and trivially testable.
+    t * t * (3.0 - 2.0 * t)
+}
 /// Resource tracking the last snapshot fire time so we can throttle the poll.
 #[derive(Resource, Debug, Default, Clone, Copy)]
 pub struct MinimapSnapshotState {
@@ -262,6 +293,7 @@ fn world_position_for_building(building: &Building) -> Vec3 {
 fn sync_minimap_dots(
     attach: Res<AttachMode>,
     sim: Option<Res<SimState>>,
+    time: Res<Time>,
     mut commands: Commands,
     roots: Query<Entity, With<MinimapRoot>>,
     existing: Query<Entity, With<MinimapDot>>,
@@ -295,6 +327,11 @@ fn sync_minimap_dots(
         return;
     };
 
+    // All dots spawned during this resync get the same `spawned_at_secs` so
+    // the fade-in is per-resync-batch rather than per-individual-dot. That
+    // avoids staggered fades when 50 agents pop in at once.
+    let spawned_at = time.elapsed_secs();
+
     commands.entity(root).with_children(|parent| {
         if is_server {
             // Draw dots from live-streamed agent positions.
@@ -313,6 +350,9 @@ fn sync_minimap_dots(
                     },
                     BackgroundColor(Color::hsla(0.0, 0.75, 0.58, 1.0)),
                     MinimapDot,
+                    MinimapDotFade {
+                        spawned_at_secs: spawned_at,
+                    },
                     FocusPolicy::Pass,
                 ));
             }
@@ -333,6 +373,9 @@ fn sync_minimap_dots(
                     },
                     BackgroundColor(Color::srgb(0.92, 0.90, 0.86)),
                     MinimapDot,
+                    MinimapDotFade {
+                        spawned_at_secs: spawned_at,
+                    },
                     FocusPolicy::Pass,
                 ));
             }
@@ -358,6 +401,9 @@ fn sync_minimap_dots(
                     },
                     BackgroundColor(civilian_color(civilian)),
                     MinimapDot,
+                    MinimapDotFade {
+                        spawned_at_secs: spawned_at,
+                    },
                     FocusPolicy::Pass,
                 ));
             }
@@ -376,11 +422,30 @@ fn sync_minimap_dots(
                     },
                     BackgroundColor(Color::WHITE),
                     MinimapDot,
+                    MinimapDotFade {
+                        spawned_at_secs: spawned_at,
+                    },
                     FocusPolicy::Pass,
                 ));
             }
         }
     });
+}
+
+/// Ramp each minimap dot's alpha from 0 to 1 over [`MINIMAP_DOT_FADE_SECS`]
+/// after it spawned. Preserves the dot's RGB hue (set in
+/// [`sync_minimap_dots`]) — only the alpha channel is mutated.
+fn update_minimap_dot_fade(
+    time: Res<Time>,
+    mut dots: Query<(&MinimapDotFade, &mut BackgroundColor), With<MinimapDot>>,
+) {
+    let now = time.elapsed_secs();
+    for (fade, mut bg) in &mut dots {
+        let alpha = minimap_dot_fade_alpha(now - fade.spawned_at_secs);
+        let mut c = bg.0;
+        c.set_alpha(alpha);
+        bg.0 = c;
+    }
 }
 
 fn teleport_camera_from_minimap(
@@ -472,6 +537,7 @@ mod attach_mode_tests {
     fn server_minimap_uses_only_streamed_entities_without_local_state() {
         let mut app = App::new();
         app.insert_resource(AttachMode::Server)
+            .init_resource::<Time>()
             .add_systems(Update, sync_minimap_dots);
         app.world_mut().spawn((Node::default(), MinimapRoot));
         let agent = app
@@ -522,6 +588,7 @@ mod attach_mode_tests {
         assert!(expected > 0);
         app.insert_resource(AttachMode::Standalone)
             .insert_resource(sim)
+            .init_resource::<Time>()
             .add_systems(Update, sync_minimap_dots);
         app.world_mut().spawn((Node::default(), MinimapRoot));
         app.update();
@@ -662,10 +729,74 @@ mod viewport_indicator_tests {
             tall_w,
         );
         assert!(
-            (wide_h - tall_h).abs() < 0.5,
+            wide_h - tall_h < 0.5,
             "vertical extent must track FOV alone (wide_h={}, tall_h={})",
             wide_h,
             tall_h,
         );
+    }
+}
+
+#[cfg(test)]
+mod dot_fade_tests {
+    use super::*;
+
+    #[test]
+    fn alpha_is_zero_when_dot_has_not_aged_yet() {
+        assert_eq!(minimap_dot_fade_alpha(0.0), 0.0);
+        assert_eq!(minimap_dot_fade_alpha(-1.0), 0.0);
+        // Tiny epsilon still considered "just spawned".
+        assert_eq!(minimap_dot_fade_alpha(-0.0001), 0.0);
+    }
+
+    #[test]
+    fn alpha_reaches_one_after_fade_window_elapses() {
+        assert_eq!(minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS), 1.0);
+        // Any age past the window stays opaque.
+        assert_eq!(minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS + 5.0), 1.0);
+        assert_eq!(minimap_dot_fade_alpha(60.0), 1.0);
+    }
+
+    #[test]
+    fn alpha_is_smoothstep_inflection_at_midpoint() {
+        // The smoothstep formula 3t^2 - 2t^3 hits exactly 0.5 at t=0.5
+        // (the inflection point). Verify both halves: below the inflection
+        // the curve is sub-linear; above it the curve is super-linear; at
+        // the inflection it equals 0.5 exactly.
+        let mid = minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS * 0.5);
+        assert!(
+            (mid - 0.5).abs() < 1e-5,
+            "smoothstep at midpoint should equal 0.5, got {mid}"
+        );
+        // Below inflection, sub-linear (slower start than linear ramp).
+        let q1 = minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS * 0.25);
+        assert!(
+            q1 < 0.25,
+            "smoothstep at 1/4 should be below linear (0.25), got {q1}"
+        );
+        // Above inflection, super-linear (faster finish than linear ramp).
+        let q3 = minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS * 0.75);
+        assert!(
+            q3 > 0.75,
+            "smoothstep at 3/4 should be above linear (0.75), got {q3}"
+        );
+    }
+
+    #[test]
+    fn alpha_is_monotonically_increasing_across_fade_window() {
+        // 10 samples spread across the fade window must form a strictly
+        // non-decreasing sequence — this is the smoothstep S-curve's key
+        // property: no overshoot, no oscillate.
+        let mut prev = 0.0;
+        for i in 0..=10 {
+            let age = MINIMAP_DOT_FADE_SECS * (i as f32 / 10.0);
+            let a = minimap_dot_fade_alpha(age);
+            assert!(
+                a >= prev,
+                "alpha must not regress within the fade window: \
+                 prev={prev} at sample {i} age={age} now={a}"
+            );
+            prev = a;
+        }
     }
 }

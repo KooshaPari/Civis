@@ -69,7 +69,7 @@ fn draw_perf_hud(mut contexts: EguiContexts, state: Res<PerfHudState>, metrics: 
     egui::Area::new(egui::Id::new("perf_hud"))
         .fixed_pos(egui::pos2(screen.max.x - 230.0, 8.0))
         .show(ctx, |ui| {
-            egui::Frame::none()
+            egui::Frame::new()
                 .fill(egui::Color32::from_rgba_premultiplied(9, 10, 12, 210))
                 .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(40, 45, 55)))
                 .corner_radius(egui::CornerRadius::same(6))

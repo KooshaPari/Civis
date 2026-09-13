@@ -16,10 +16,8 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 use crate::live_stream::ServerBridge;
-use crate::menus::{in_playing_state, AppState, GameUiMode};
-use crate::ui_theme::CHIP_FILL;
+use crate::menus::{in_playing_state, AppState};
 use crate::OutcomeProgressHud;
-use crate::OutcomeProgressHudData;
 
 /// Accent colour for objective labels.
 const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);

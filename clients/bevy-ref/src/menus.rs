@@ -17,7 +17,6 @@ use crate::save_load_ui::SaveLoadPanel;
 use crate::settings_ui::{GameSettings, KeyBinding, ACTION_PAUSE_SIM};
 use crate::ui_theme::{CHIP_FILL, GLASS_FILL, KC_ACCENT};
 use bevy::app::AppExit;
-use bevy::asset::LoadState;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 use std::time::{Duration, Instant};
@@ -502,10 +501,10 @@ pub fn consume_menu_commands(
     mut exit: MessageWriter<AppExit>,
     gate: Option<ResMut<OutcomeSessionGate>>,
     overlay: Option<ResMut<OutcomeOverlayState>>,
-    mut boot: ResMut<WorldGenBoot>,
-    mut game_settings: Option<ResMut<GameSettings>>,
-    mut settings_open: Option<ResMut<SettingsOpen>>,
-    mut game_speed: Option<ResMut<GameSpeed>>,
+    #[allow(unused_mut)] mut boot: ResMut<WorldGenBoot>,
+    #[allow(unused_mut)] mut game_settings: Option<ResMut<GameSettings>>,
+    #[allow(unused_mut)] mut settings_open: Option<ResMut<SettingsOpen>>,
+    #[allow(unused_mut)] mut game_speed: Option<ResMut<GameSpeed>>,
 ) {
     let (bridge, attach_mode) = connection;
     let bridge = if matches!(attach_mode.as_deref(), Some(crate::AttachMode::Standalone)) {
@@ -604,7 +603,7 @@ pub fn consume_menu_commands(
                 settings.open = true;
                 settings.active_tab = crate::settings_ui::SettingsTab::Graphics;
             }
-            if let Some(mut flag) = settings_open.as_mut() {
+            if let Some(flag) = settings_open.as_mut() {
                 flag.0 = true;
             }
         }
@@ -634,7 +633,7 @@ pub fn consume_menu_commands(
     }
 }
 
-pub fn toggle_pause(
+pub(crate) fn toggle_pause(
     keys: Res<ButtonInput<KeyCode>>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     settings: Option<Res<GameSettings>>,
@@ -932,7 +931,7 @@ fn draw_main_menu(
                         ui.add_space(10.0);
                         egui::Frame::NONE
                             .fill(CHIP_FILL)
-                            .rounding(egui::Rounding::same(10))
+                            .corner_radius(egui::CornerRadius::same(10))
                             .inner_margin(egui::Margin::same(16))
                             .show(ui, |ui| {
                                 ui.horizontal(|ui| {
@@ -950,7 +949,7 @@ fn draw_main_menu(
 fn banner_tile(ui: &mut egui::Ui, title: &str, body: &str, accent: egui::Color32) {
     egui::Frame::NONE
         .fill(CHIP_FILL)
-        .rounding(egui::Rounding::same(10))
+        .corner_radius(egui::CornerRadius::same(10))
         .inner_margin(egui::Margin::same(14))
         .show(ui, |ui| {
             ui.set_min_width(272.0);
@@ -1378,11 +1377,12 @@ pub fn format_gpu_vram_label_mb(max_vram_mb: u32) -> String {
 }
 
 /// Message when [`GpuCapabilities`] is not on the main world yet (headless / pre-startup).
-#[must_use]
+#[allow(dead_code)] // surfaced via the GPU unavailable flag in the settings panel
 pub fn format_gpu_capabilities_unavailable_message() -> &'static str {
     "GPU capabilities unavailable (headless or still starting up)"
 }
 
+#[allow(dead_code)] // surfaced via the GPU unavailable flag in the settings panel
 fn gpu_capabilities_settings_section(ui: &mut egui::Ui, gpu_caps: Option<&GpuCapabilities>) {
     ui.label(
         egui::RichText::new("GPU (detected)")

@@ -239,6 +239,7 @@ fn hide_3d_scene_when_map_active(
 
 /// Biome-ish palette by elevation + water, mirroring the 3D `terrain` look but
 /// flattened for a clean cartographic read. Returns linear-ish sRGB 0..1.
+#[allow(dead_code)] // kept for procedural basemap palette variants
 fn map_palette(h: f32) -> [f32; 3] {
     let sea = WATER_LEVEL;
     if h < sea - 0.05 * HEIGHT_SCALE {
@@ -264,6 +265,7 @@ fn map_palette(h: f32) -> [f32; 3] {
 }
 
 /// 4x4 Bayer ordered-dither matrix scaled to ±~1/512 so bands don't posterise.
+#[allow(dead_code)] // kept for future basemap dithering variants
 const BAYER4: [[f32; 4]; 4] = [
     [0.0, 8.0, 2.0, 10.0],
     [12.0, 4.0, 14.0, 6.0],
@@ -886,6 +888,7 @@ fn norm_to_screen(map_rect: egui::Rect, n: egui::Vec2) -> egui::Pos2 {
     )
 }
 
+#[allow(dead_code)] // kept for future click-to-pin coordinate lookup
 fn screen_to_norm(map_rect: egui::Rect, p: egui::Pos2) -> egui::Vec2 {
     let side = map_rect.width().max(1.0);
     egui::vec2(

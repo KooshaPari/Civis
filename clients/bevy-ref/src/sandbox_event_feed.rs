@@ -22,13 +22,17 @@ const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20,
 const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
 const DIM: egui::Color32 = egui::Color32::from_rgb(150, 158, 178);
 const GREEN: egui::Color32 = egui::Color32::from_rgb(100, 210, 120);
+#[allow(dead_code)] // reserved for legend swatches
 const GOLD: egui::Color32 = egui::Color32::from_rgb(240, 200, 90);
+#[allow(dead_code)] // reserved for severity-aware chips
 const RED: egui::Color32 = egui::Color32::from_rgb(220, 80, 80);
 const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);
 
 // ── Thresholds for emergence anomaly detection ────────────────────────────────
 
+#[allow(dead_code)] // consumed by anomaly detectors in anomaly tests
 const ENTROPY_HIGH_THRESHOLD: f32 = 0.85;
+#[allow(dead_code)] // consumed by anomaly detectors in anomaly tests
 const ENTROPY_LOW_THRESHOLD: f32 = 0.15;
 const NOVELTY_BURST_THRESHOLD: f32 = 0.05;
 const ALPHA_OUT_OF_RANGE_LOW: f32 = 1.5;
@@ -314,6 +318,7 @@ fn event_row(ui: &mut egui::Ui, ev: &GameEvent) {
         });
 }
 
+#[allow(dead_code)] // exposed for future event-feed palette extensions
 fn regime_badge_info(regime: &str) -> (&'static str, egui::Color32) {
     let lower = regime.trim().to_ascii_lowercase();
     if lower.contains("supercritical") || lower.contains("explosion") {

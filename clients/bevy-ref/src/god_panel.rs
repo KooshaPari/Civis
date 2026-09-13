@@ -199,7 +199,7 @@ fn draw_god_panel(
                             egui::Color32::from_rgb(160, 170, 180)
                         };
                         if ui
-                            .add(egui::SelectableLabel::new(
+                            .add(egui::Button::selectable(
                                 selected,
                                 egui::RichText::new(action.verb).color(color).monospace(),
                             ))
@@ -242,7 +242,7 @@ fn draw_god_panel(
                     ui.add(
                         egui::DragValue::new(&mut state.target_x)
                             .speed(0.01)
-                            .clamp_range(0.0..=1.0f32),
+                            .range(0.0..=1.0_f32),
                     );
                     ui.label(
                         egui::RichText::new("Y:")
@@ -252,7 +252,7 @@ fn draw_god_panel(
                     ui.add(
                         egui::DragValue::new(&mut state.target_y)
                             .speed(0.01)
-                            .clamp_range(0.0..=1.0f32),
+                            .range(0.0..=1.0_f32),
                     );
                 });
             }
@@ -267,7 +267,7 @@ fn draw_god_panel(
                     ui.add(
                         egui::DragValue::new(&mut state.target_faction)
                             .speed(1.0)
-                            .clamp_range(0..=255u32),
+                            .range(0..=255_u32),
                     );
                 });
             }
@@ -282,7 +282,7 @@ fn draw_god_panel(
                     ui.add(
                         egui::DragValue::new(&mut state.herd_count)
                             .speed(1.0)
-                            .clamp_range(1..=64u32),
+                            .range(1..=64_u32),
                     );
                 });
             }

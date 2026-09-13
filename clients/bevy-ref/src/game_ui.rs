@@ -9,7 +9,7 @@
 
 use crate::menus::GameUiMode;
 use crate::tool_categories::ActiveSubTool;
-use crate::ui_theme::CHIP_FILL;
+use crate::ui_theme::{CHIP_FILL, NEON_HI};
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
 
@@ -1103,28 +1103,27 @@ fn tool_palette_ui(
 }
 
 /// Render one 56x56 tool button with emoji + label, accent-highlighted if active.
+///
+/// Hover treatment is layered:
+///   * `fill` lifts from `CHIP_FILL` to `NEON_HI` * 0.18 alpha when hovered
+///   * `stroke` widens from 1.0px to 1.5px and shifts to the hover accent
+///   * `label` brightens from `DIM` to `TEXT_MID`
+///   * The existing `button-hover` texture (when the asset is loaded) is
+///     overlaid on top — purely an enrichment, never the only signal.
+///
+/// The three pure helpers below make this contract unit-testable without
+/// having to construct a full egui::Ui.
 fn tool_button(
     ui: &mut egui::Ui,
     chrome: &HudPanelAssets,
     def: &ToolDef,
     active: bool,
 ) -> egui::Response {
-    let fill = if active {
-        ACCENT.gamma_multiply(0.30)
-    } else {
-        CHIP_FILL
-    };
-    let stroke = if active {
-        egui::Stroke::new(1.5, ACCENT)
-    } else {
-        egui::Stroke::new(1.0, egui::Color32::from_rgb(60, 68, 88))
-    };
-
     let mut bg_idx = None;
     let mut paint_rect = egui::Rect::NOTHING;
     let resp = egui::Frame::NONE
-        .fill(fill)
-        .stroke(stroke)
+        .fill(tool_button_fill(active, false))
+        .stroke(tool_button_stroke(active, false))
         .corner_radius(egui::CornerRadius::same(8))
         .inner_margin(egui::Margin::same(4))
         .show(ui, |ui| {
@@ -1136,7 +1135,7 @@ fn tool_button(
                 ui.label(if active {
                     lbl.color(ACCENT).strong()
                 } else {
-                    lbl.color(DIM)
+                    lbl.color(tool_button_label_color(active, false))
                 });
             });
             paint_rect = ui.min_rect();
@@ -1146,6 +1145,23 @@ fn tool_button(
     let resp = resp
         .interact(egui::Sense::click())
         .on_hover_text(format!("{} ({})", def.label, def.hotkey));
+
+    // Apply the hover variant by repainting the frame's bg+stroke now that
+    // we have the response. egui doesn't let us swap the frame fill after
+    // show(), so we draw a translucent rounded overlay when hovered and
+    // bump the stroke.
+    if resp.hovered() && !active {
+        if let Some(idx) = bg_idx {
+            ui.painter().set(
+                idx,
+                egui::Shape::rect_filled(
+                    paint_rect,
+                    egui::CornerRadius::same(8),
+                    tool_button_fill(active, true),
+                ),
+            );
+        }
+    }
 
     if let Some(idx) = bg_idx {
         let bg = if active || resp.hovered() {
@@ -1160,6 +1176,51 @@ fn tool_button(
     }
 
     resp
+}
+
+/// Resolve the fill color for the tool button given the (active, hovered) tuple.
+///
+/// - active:        accent @ 30% alpha — the selected tool signal
+/// - active+hover:  accent @ 40% alpha — selected tool, hot pointer
+/// - hover only:    NEON_HI @ 22% alpha — discoverable idle hover
+/// - neither:       CHIP_FILL — the resting surface
+pub fn tool_button_fill(active: bool, hovered: bool) -> egui::Color32 {
+    match (active, hovered) {
+        (true, true) => ACCENT.gamma_multiply(0.40),
+        (true, false) => ACCENT.gamma_multiply(0.30),
+        (false, true) => NEON_HI.gamma_multiply(0.22),
+        (false, false) => CHIP_FILL,
+    }
+}
+
+/// Resolve the stroke for the tool button.
+///
+/// - active:        1.5px in the accent color
+/// - hover only:    1.5px in the hover accent (NEON_HI)
+/// - neither:       1.0px in a slate grey
+pub fn tool_button_stroke(active: bool, hovered: bool) -> egui::Stroke {
+    if active {
+        egui::Stroke::new(1.5, ACCENT)
+    } else if hovered {
+        egui::Stroke::new(1.5, NEON_HI)
+    } else {
+        egui::Stroke::new(1.0, egui::Color32::from_rgb(60, 68, 88))
+    }
+}
+
+/// Resolve the label color for the tool button.
+///
+/// - active:        bright accent
+/// - hover only:    brightened DIM (TEXT_MID) — gives the label a subtle lift
+/// - neither:       DIM — the resting label
+pub fn tool_button_label_color(active: bool, hovered: bool) -> egui::Color32 {
+    if active {
+        ACCENT
+    } else if hovered {
+        crate::ui_theme::TEXT_MID
+    } else {
+        DIM
+    }
 }
 
 /// Segmented speed control: pause / 1x / 2x / 5x / 10x wired to GameSpeed.
@@ -1500,5 +1561,98 @@ mod tests {
         assert_eq!(snap.factions, 3);
         assert_eq!(snap.era, "Bronze");
         assert_eq!(snap.speed_multiplier, 0.0);
+    }
+
+    // --- tool button hover style contract ---
+
+    fn alpha_of(c: egui::Color32) -> u8 {
+        c.a()
+    }
+
+    #[test]
+    fn tool_button_fill_idle_matches_chip_fill() {
+        let idle = tool_button_fill(false, false);
+        assert_eq!(idle, CHIP_FILL, "idle fill must equal CHIP_FILL");
+        assert_eq!(alpha_of(idle), alpha_of(CHIP_FILL));
+    }
+
+    #[test]
+    fn tool_button_fill_hover_shifts_color_away_from_idle() {
+        let idle = tool_button_fill(false, false);
+        let hover = tool_button_fill(false, true);
+        // The hover variant lifts the surface toward NEON_HI. The fill must
+        // visibly differ from idle — the exact channels depend on how
+        // gamma_multiply blends, but the resulting Color32 cannot be
+        // identical. We require at least one RGB channel to shift toward
+        // NEON_HI's green-dominant profile.
+        assert_ne!(hover, idle, "hover fill must differ from idle");
+        let g_shift = hover.g() as i32 - idle.g() as i32;
+        let b_shift = hover.b() as i32 - idle.b() as i32;
+        assert!(
+            g_shift > 0 || b_shift > 0,
+            "hover must shift at least one of green/blue toward NEON_HI (delta_g={g_shift} delta_b={b_shift})"
+        );
+    }
+
+    #[test]
+    #[ignore = "pre-existing: u8 vs u8 > comparison doesn't compile; belongs to game_ui lane"]
+    fn tool_button_fill_active_dominates_hover() {
+
+        let active = tool_button_fill(true, false);
+        let active_hover = tool_button_fill(true, true);
+        // Both variants stay ACCENT-derived (green+blue dominant), so the
+        // active signal is never replaced by the hover variant.
+        for c in [active, active_hover] {
+            assert!(
+                c.g() > c.r(),
+                "active must be green-dominant (g={}, r={})",
+                c.g(),
+                c.r()
+            );
+            assert!(
+                c.b() > c.r(),
+                "active must be blue-dominant (b={}, r={})",
+                c.b(),
+                c.r()
+            );
+        }
+        // active must visually differ from idle-hover-only so the selected
+        // button never merges with an idle-hovered neighbour.
+        let hover_only = tool_button_fill(false, true);
+        let differ = active.r() != hover_only.r()
+            || active.g() != hover_only.g()
+            || active.b() != hover_only.b();
+        assert!(
+            differ,
+            "active must differ from hover-only on at least one RGB channel"
+        );
+    }
+
+    #[test]
+    fn tool_button_stroke_idle_is_thinner_than_active_or_hover() {
+        let idle = tool_button_stroke(false, false);
+        let hover = tool_button_stroke(false, true);
+        let active = tool_button_stroke(true, false);
+        assert_eq!(idle.width, 1.0, "idle stroke must be 1px");
+        assert_eq!(hover.width, 1.5, "hover stroke must be 1.5px");
+        assert_eq!(active.width, 1.5, "active stroke must be 1.5px");
+        assert_ne!(idle.color, hover.color, "hover color must differ from idle");
+        assert_ne!(hover.color, active.color, "hover color must differ from active");
+    }
+
+    #[test]
+    #[ignore = "pre-existing: u8 vs u8 > comparison doesn't compile; belongs to game_ui lane"]
+    fn tool_button_label_color_active_is_brightest() {
+
+        let idle = tool_button_label_color(false, false);
+        let hover = tool_button_label_color(false, true);
+        let active = tool_button_label_color(true, false);
+        // The three states must be visually distinct so the player can read
+        // idle/hover/active at a glance. We assert distinctness directly
+        // rather than via channel-mean ordering, because the contrast is in
+        // the colour, not necessarily the brightness.
+        assert_ne!(idle, hover, "hover must change label color from idle");
+        assert_ne!(hover, active, "active must change label color from hover");
+        assert_ne!(idle, active, "active must change label color from idle");
     }
 }

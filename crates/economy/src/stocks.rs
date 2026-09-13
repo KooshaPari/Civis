@@ -277,13 +277,40 @@ fn offer_better(candidate: &TradeOffer, current: &TradeOffer) -> bool {
 }
 
 /// Applies a trade offer while conserving the combined stock total.
+///
+/// Each leg is clamped to what the source actually has in stock, so a stale
+/// offer (proposed before intervening consumption) cannot transfer phantom
+/// inventory or trip the conservation invariant. The two transferred
+/// quantities are independent: B receives exactly what A gave, and A receives
+/// exactly what B gave — both may be smaller than the offer claimed.
+///
+/// Conservation property: the combined stock total across `a` and `b` is
+/// unchanged by this call (modulo the per-leg clamp).
 pub fn apply_trade(a: &mut Stocks, b: &mut Stocks, offer: &TradeOffer) {
+    // Clamp each leg to actual stock. `Stocks::add` returns the *signed*
+    // applied delta, so a withdrawal of 0 stock returns 0; otherwise it
+    // returns the negative (or positive) amount that actually moved.
     let removed_a = a.add(offer.good_a_to_b, -offer.qty_a_to_b);
-    let added_b = b.add(offer.good_a_to_b, offer.qty_a_to_b);
+    // Symmetrically transfer only what A actually gave to B.
+    let added_b = if removed_a < 0 {
+        b.add(offer.good_a_to_b, removed_a.saturating_neg())
+    } else {
+        0
+    };
+
     let removed_b = b.add(offer.good_b_to_a, -offer.qty_b_to_a);
-    let added_a = a.add(offer.good_b_to_a, offer.qty_b_to_a);
-    debug_assert_eq!(removed_a.abs(), added_b.abs());
-    debug_assert_eq!(removed_b.abs(), added_a.abs());
+    let added_a = if removed_b < 0 {
+        a.add(offer.good_b_to_a, removed_b.saturating_neg())
+    } else {
+        0
+    };
+
+    // Conservation invariant: by construction `removed_a` and `added_b` are
+    // the same magnitude (and likewise for the B→A leg). Asserted in debug
+    // builds; the production path is silent if a caller somehow violates the
+    // type-level guarantee.
+    debug_assert_eq!(removed_a, -added_b);
+    debug_assert_eq!(removed_b, -added_a);
 }
 
 #[cfg(test)]

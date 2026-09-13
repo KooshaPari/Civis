@@ -1,6 +1,5 @@
 //! End-to-end integration tests for the Civis simulation engine.
 
-use civ_engine::scenario::{baseline_scenario_path, load_scenario};
 use civ_engine::{Simulation, SimulationSnapshot};
 
 /// Helper to get a default simulation.
@@ -11,12 +10,6 @@ fn setup_default() -> Simulation {
 /// Helper to get a simulation from a specific seed.
 fn setup_with_seed(seed: u64) -> Simulation {
     Simulation::with_seed(seed)
-}
-
-/// Helper to get a simulation from the baseline scenario.
-fn setup_from_baseline() -> Simulation {
-    let scenario = load_scenario(baseline_scenario_path()).expect("baseline scenario should load");
-    scenario.into_simulation(42)
 }
 
 /// Test 1: Basic tick test - ensure 10 ticks complete without panics.

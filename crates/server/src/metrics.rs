@@ -127,6 +127,12 @@ pub struct MetricsCollector {
     start_time: u64,
 }
 
+impl Default for MetricsCollector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MetricsCollector {
     /// Maximum number of tick durations retained for histogram computation.
     const HISTORY_CAP: usize = 100;

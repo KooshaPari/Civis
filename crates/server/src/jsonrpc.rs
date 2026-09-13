@@ -1244,7 +1244,7 @@ pub enum DispatchEffect {
         y: i64,
         /// World Z coordinate.
         z: i64,
-        /// Material id (0–255).
+        /// Material id (0–u16::MAX).
         material: u16,
     },
     /// Stamp a circular footprint (`sim.terraform_extent`).
@@ -1257,7 +1257,7 @@ pub enum DispatchEffect {
         z: i64,
         /// Brush operation name.
         op: String,
-        /// Material id (0–255).
+        /// Material id (0–u16::MAX).
         material: u16,
         /// Radius in voxel cells.
         radius: u8,

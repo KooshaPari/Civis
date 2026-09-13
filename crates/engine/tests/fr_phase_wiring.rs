@@ -82,14 +82,18 @@ fn phase_writing_runs_on_empty_world_state() {
 fn phase_religion_advances_adherence_when_faction_religions_present() {
     let mut sim = Simulation::with_seed(11);
     // Stage a religion + matching faction resources so the tick has inputs.
-    let mut religion = civ_engine::religion::Religion::default();
-    religion.adherence = 0.10;
-    religion.spread_rate = 0.5;
-    religion.name = "Tester".to_string();
+    let religion = civ_engine::religion::Religion {
+        adherence: 0.10,
+        spread_rate: 0.5,
+        name: "Tester".to_string(),
+        ..Default::default()
+    };
     sim.state.faction_religions.insert(1, religion.clone());
 
-    let mut resources = civ_engine::Resources::default();
-    resources.food = civ_engine::Fixed::from_num(1000);
+    let resources = civ_engine::Resources {
+        food: civ_engine::Fixed::from_num(1000),
+        ..Default::default()
+    };
     sim.state.faction_resources.insert(1, resources);
 
     sim.phase_religion();
@@ -112,9 +116,11 @@ fn phase_religion_advances_adherence_when_faction_religions_present() {
 #[test]
 fn phase_psyche_decays_anxiety_when_civilian_psyches_present() {
     let mut sim = Simulation::with_seed(12);
-    let mut psyche = civ_engine::psyche_behavior::PsycheState::default();
-    psyche.anxiety = 0.9;
-    psyche.mood = 0.5;
+    let psyche = civ_engine::psyche_behavior::PsycheState {
+        anxiety: 0.9,
+        mood: 0.5,
+        ..Default::default()
+    };
     sim.state.civilian_psyches.insert(7, psyche.clone());
 
     sim.phase_psyche();
@@ -160,8 +166,10 @@ fn phase_buildings_decays_efficiency_when_settlement_layouts_present() {
 #[test]
 fn phase_history_logs_events_through_tick() {
     let mut sim = Simulation::with_seed(14);
-    let mut event = civ_engine::history::HistoricalEvent::default();
-    event.tick = 0;
+    let event = civ_engine::history::HistoricalEvent {
+        tick: 0,
+        ..Default::default()
+    };
     sim.state.historical_log.record_event(event);
 
     for _ in 0..3 {
@@ -179,9 +187,11 @@ fn phase_history_logs_events_through_tick() {
 #[test]
 fn phase_writing_advances_literacy_when_faction_writing_systems_present() {
     let mut sim = Simulation::with_seed(15);
-    let mut ws = civ_engine::writing::WritingSystem::default();
-    ws.literacy_rate = 0.10;
-    ws.name = "TestScript".to_string();
+    let ws = civ_engine::writing::WritingSystem {
+        literacy_rate: 0.10,
+        name: "TestScript".to_string(),
+        ..Default::default()
+    };
     sim.state.faction_writing_systems.insert(2, ws.clone());
 
     sim.phase_writing();
@@ -203,11 +213,13 @@ fn phase_writing_advances_literacy_when_faction_writing_systems_present() {
 #[test]
 fn phase_language_advances_tick_on_populated_systems() {
     let mut sim = Simulation::with_seed(16);
-    let mut lang = civ_engine::language::Language::default();
-    lang.name = "TesterLang".to_string();
-    lang.phonemes = vec!["a".to_string(), "b".to_string()];
-    lang.drift_factor = 0.05;
-    lang.intelligibility_baseline = 0.9;
+    let lang = civ_engine::language::Language {
+        name: "TesterLang".to_string(),
+        phonemes: vec!["a".to_string(), "b".to_string()],
+        drift_factor: 0.05,
+        intelligibility_baseline: 0.9,
+        ..Default::default()
+    };
     sim.state.faction_language_systems.insert(1, lang.clone());
 
     sim.phase_language();

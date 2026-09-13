@@ -43,7 +43,6 @@ use tokio::{
 };
 
 use crate::{
-    authn::BearerToken,
     jsonrpc::{
         dispatch_request, encode_response, error_code, parse_error_response, parse_request,
         parse_role_param, set_sim_command_tick, set_spawn_civilian_result, DispatchContext,
@@ -570,6 +569,7 @@ fn authorize_request(headers: &HeaderMap, required: bool) -> Result<(), StatusCo
     Err(StatusCode::UNAUTHORIZED)
 }
 
+#[cfg(test)]
 fn replay_http_allowed(addr: SocketAddr, is_authorized: bool) -> bool {
     if is_authorized {
         return true;
@@ -787,6 +787,9 @@ fn tick_is_current(state: &AppState, broadcast: &TickBroadcast) -> bool {
 
 /// Write one tick bundle, checking its generation immediately before every
 /// socket write so a replacement cannot append an obsolete frame after reset.
+// Keep each delivery watermark explicit so generation resets and frame delivery
+// update the same per-connection state owned by the socket forwarder.
+#[allow(clippy::too_many_arguments)]
 async fn forward_tick(
     sender: &mut futures::stream::SplitSink<WebSocket, Message>,
     broadcast: Arc<TickBroadcast>,
@@ -903,6 +906,9 @@ async fn forward_tick(
     Ok(())
 }
 
+// The separate control, recovery, and tick channels carry distinct ordering
+// guarantees and are passed with their per-connection delivery configuration.
+#[allow(clippy::too_many_arguments)]
 async fn forward_socket(
     mut sender: futures::stream::SplitSink<WebSocket, Message>,
     mut control_rx: mpsc::Receiver<ClientOutbound>,
@@ -1954,7 +1960,7 @@ async fn apply_dispatch_effect(
                 civ_voxel::WorldCoord { x, y, z },
                 civ_voxel::MaterialId(material),
             );
-            let terrain_update = build_terraform_update(state, &mut sim);
+            let terrain_update = build_terraform_update(state, &sim);
             if let Some(result) = response.result.as_mut() {
                 if let Some(obj) = result.as_object_mut() {
                     obj.insert("ok".to_owned(), serde_json::json!(true));
@@ -1995,7 +2001,7 @@ async fn apply_dispatch_effect(
                 civ_voxel::stamp_footprint(&mut proxy, &stamp)
             };
             let terraform_update = if receipt.writes > 0 {
-                Some(build_terraform_update(state, &mut sim))
+                Some(build_terraform_update(state, &sim))
             } else {
                 None
             };
@@ -2838,7 +2844,7 @@ mod tests {
         let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
         let (mut ws, _) = tokio_tungstenite::connect_async(url).await.unwrap();
         ws.send(tokio_tungstenite::tungstenite::Message::Text(
-            r#"{"jsonrpc":"2.0","id":1,"method":"sim.status"}"#.to_owned().into(),
+            r#"{"jsonrpc":"2.0","id":1,"method":"sim.status"}"#.to_owned(),
         ))
         .await
         .unwrap();

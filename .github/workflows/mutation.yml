@@ -13,13 +13,31 @@ jobs:
             - name: Install cargo-mutants
               run: cargo install cargo-mutants --locked
             - name: Run cargo-mutants (pre-checked code)
+              shell: bash
               run: |
+                  set +e
                   cargo mutants --no-shuffle -j 2 --timeout 120 2>&1 | tee mutants.log
+                  statuses=("${PIPESTATUS[@]}")
+                  set -e
+                  if [ "${statuses[1]}" -ne 0 ]; then
+                    echo "::error::Could not retain mutation output; no kill rate is available"
+                    exit "${statuses[1]}"
+                  fi
+                  case "${statuses[0]}" in
+                    0|2) ;; # Complete results; missed mutants are evaluated against 95% below.
+                    *) echo "::error::Mutation execution failed (exit ${statuses[0]}); no kill rate is available"
+                       exit "${statuses[0]}" ;;
+                  esac
                   # Extract kill rate from the summary line.
-                  KILLED=$(grep -oP '(\d+) caught' mutants.log | head -1 | grep -oP '\d+' || echo "0")
-                  TOTAL=$(grep -oP '(\d+) tested' mutants.log | head -1 | grep -oP '\d+' || echo "1")
-                  if [ "$TOTAL" -eq 0 ]; then
-                    echo "::error::No mutants were generated — check cargo-mutants config"
+                  SUMMARY=$(sed 's/\x1b\[[0-9;]*m//g' mutants.log | grep -E '^[0-9]+ mutants? tested in ' | tail -1 || true)
+                  TOTAL=$(printf '%s\n' "$SUMMARY" | awk '{print $1}')
+                  if ! [[ "$TOTAL" =~ ^[0-9]+$ ]] || [ "$TOTAL" -eq 0 ]; then
+                    echo "::error::Mutation run produced no valid tested count; no kill rate is available"
+                    exit 1
+                  fi
+                  KILLED=$(printf '%s\n' "$SUMMARY" | grep -oP '(\d+) caught' | grep -oP '\d+' || echo "0")
+                  if ! [[ "$KILLED" =~ ^[0-9]+$ ]] || [ "$KILLED" -gt "$TOTAL" ]; then
+                    echo "::error::Mutation summary has an invalid caught count; no kill rate is available"
                     exit 1
                   fi
                   RATE=$(echo "scale=1; $KILLED * 100 / $TOTAL" | bc)

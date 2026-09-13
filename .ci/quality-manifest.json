@@ -1,9 +1,9 @@
 {
     "version": "1",
     "repo": "Civis",
-    "git_sha": "250a94bd9f08f95b8e87857274c192edb8a0069e",
-    "content_hash": "e86ca55ffcc7e6963de84e67b840e022360dece938c356f55218e4b126d9a681",
-    "created_at": "2026-09-13T03:45:02Z",
+    "git_sha": "809e511132bae3986a35a5acd27a3c8e4f6f8fe6",
+    "content_hash": "fd45772f0cd754420af0709c41a88dcc57b4772072882bdfd1ad710d5c2ff9ca",
+    "created_at": "2026-09-13T04:34:26Z",
     "runner": {
         "host": "KOOSHAPARI-DESK",
         "rust": "unknown"
@@ -12,26 +12,26 @@
         "web_test": {
             "tool": "node --test --test-concurrency=1 tests/*.test.mjs",
             "status": "pass",
-            "detail": "Executed locally on 73a03e29125a086e328ac19d7ff3d4f6adfbdf04; all 159 recorded source SHA256 hashes rechecked unchanged against 250a94bd9f08f95b8e87857274c192edb8a0069e on 2026-09-13 03:43 UTC. Web: 125 tests; dashboard typecheck and production build passed."
+            "detail": "Executed locally on 73a03e29125a086e328ac19d7ff3d4f6adfbdf04; all 159 recorded source SHA256 hashes rechecked unchanged against 250a94bd9f08f95b8e87857274c192edb8a0069e on 2026-09-13 03:43 UTC. Web: 125 tests; dashboard typecheck and production build passed. Carried evidence revalidated 2026-09-13T04:34:26Z for 809e511132bae3986a35a5acd27a3c8e4f6f8fe6, not a fresh execution of this gate: git diff from 250a94bd9f08f95b8e87857274c192edb8a0069e changes only .ci/quality-manifest.json and .github/workflows/mutation.yml; all tracked gate inputs remain identical. All 159 source SHA256 hashes in the original local receipt were independently rechecked with zero mismatches. Original execution SHAs and commands above remain the execution provenance."
         },
         "dashboard_build": {
             "tool": "bun run build --outDir ../../.recovery-receipts/client-0056-dashboard-dist",
             "status": "pass",
-            "detail": "Executed locally on 73a03e29125a086e328ac19d7ff3d4f6adfbdf04; all 159 recorded source SHA256 hashes rechecked unchanged against 250a94bd9f08f95b8e87857274c192edb8a0069e on 2026-09-13 03:43 UTC. Web: 125 tests; dashboard typecheck and production build passed."
+            "detail": "Executed locally on 73a03e29125a086e328ac19d7ff3d4f6adfbdf04; all 159 recorded source SHA256 hashes rechecked unchanged against 250a94bd9f08f95b8e87857274c192edb8a0069e on 2026-09-13 03:43 UTC. Web: 125 tests; dashboard typecheck and production build passed. Carried evidence revalidated 2026-09-13T04:34:26Z for 809e511132bae3986a35a5acd27a3c8e4f6f8fe6, not a fresh execution of this gate: git diff from 250a94bd9f08f95b8e87857274c192edb8a0069e changes only .ci/quality-manifest.json and .github/workflows/mutation.yml; all tracked gate inputs remain identical. All 159 source SHA256 hashes in the original local receipt were independently rechecked with zero mismatches. Original execution SHAs and commands above remain the execution provenance."
         },
         "dashboard_typecheck": {
             "tool": "bun run typecheck",
             "status": "pass",
-            "detail": "Executed locally on 73a03e29125a086e328ac19d7ff3d4f6adfbdf04; all 159 recorded source SHA256 hashes rechecked unchanged against 250a94bd9f08f95b8e87857274c192edb8a0069e on 2026-09-13 03:43 UTC. Web: 125 tests; dashboard typecheck and production build passed."
+            "detail": "Executed locally on 73a03e29125a086e328ac19d7ff3d4f6adfbdf04; all 159 recorded source SHA256 hashes rechecked unchanged against 250a94bd9f08f95b8e87857274c192edb8a0069e on 2026-09-13 03:43 UTC. Web: 125 tests; dashboard typecheck and production build passed. Carried evidence revalidated 2026-09-13T04:34:26Z for 809e511132bae3986a35a5acd27a3c8e4f6f8fe6, not a fresh execution of this gate: git diff from 250a94bd9f08f95b8e87857274c192edb8a0069e changes only .ci/quality-manifest.json and .github/workflows/mutation.yml; all tracked gate inputs remain identical. All 159 source SHA256 hashes in the original local receipt were independently rechecked with zero mismatches. Original execution SHAs and commands above remain the execution provenance."
         },
         "civis_3d_verify": {
             "status": "pass",
-            "detail": "Composite recipe evidence for 250a94bd9f08f95b8e87857274c192edb8a0069e; no claim of a local just invocation. JSON-RPC catalog (42 methods), web (125 tests), and voxel format passed locally with unchanged input hashes verified 2026-09-13 03:43 UTC. Journey https://github.com/KooshaPari/Civis/actions/runs/34730556703/job/103652435526 on Ubuntu/Rust 1.98.1 passed cargo clippy --keep-going --all-targets -- -D warnings (virtual workspace defaults to all members) and cargo test --workspace --locked --no-fail-fast, covering scenario and civ-mod-host/civlab-sdk tests: 3676 passed, 0 failed, 28 ignored. Workspace all-targets check passed in PR Compile run 34730554484; merge checkout tree d2db6528f16c4c8f6ecc9baf801a69a5a519c3a7 matches source head exactly."
+            "detail": "Composite recipe evidence for 250a94bd9f08f95b8e87857274c192edb8a0069e; no claim of a local just invocation. JSON-RPC catalog (42 methods), web (125 tests), and voxel format passed locally with unchanged input hashes verified 2026-09-13 03:43 UTC. Journey https://github.com/KooshaPari/Civis/actions/runs/34730556703/job/103652435526 on Ubuntu/Rust 1.98.1 passed cargo clippy --keep-going --all-targets -- -D warnings (virtual workspace defaults to all members) and cargo test --workspace --locked --no-fail-fast, covering scenario and civ-mod-host/civlab-sdk tests: 3676 passed, 0 failed, 28 ignored. Workspace all-targets check passed in PR Compile run 34730554484; merge checkout tree d2db6528f16c4c8f6ecc9baf801a69a5a519c3a7 matches source head exactly. Carried evidence revalidated 2026-09-13T04:34:26Z for 809e511132bae3986a35a5acd27a3c8e4f6f8fe6, not a fresh execution of this gate: git diff from 250a94bd9f08f95b8e87857274c192edb8a0069e changes only .ci/quality-manifest.json and .github/workflows/mutation.yml; all tracked gate inputs remain identical. All 159 source SHA256 hashes in the original local receipt were independently rechecked with zero mismatches. Original execution SHAs and commands above remain the execution provenance."
         },
         "bevy_egui_check": {
             "status": "pass",
-            "detail": "cargo check -p civ-bevy-ref --features bevy,egui passed on Windows/Rust 1.98.1 in https://github.com/KooshaPari/Civis/actions/runs/34730554484. Checkout 86266ba427efca912dd1edf04f3b54ffe837eeec has tree d2db6528f16c4c8f6ecc9baf801a69a5a519c3a7, exactly matching 250a94bd9f08f95b8e87857274c192edb8a0069e. Manifest runner metadata describes the local emitter, not this cloud execution."
+            "detail": "cargo check -p civ-bevy-ref --features bevy,egui passed on Windows/Rust 1.98.1 in https://github.com/KooshaPari/Civis/actions/runs/34730554484. Checkout 86266ba427efca912dd1edf04f3b54ffe837eeec has tree d2db6528f16c4c8f6ecc9baf801a69a5a519c3a7, exactly matching 250a94bd9f08f95b8e87857274c192edb8a0069e. Manifest runner metadata describes the local emitter, not this cloud execution. Carried evidence revalidated 2026-09-13T04:34:26Z for 809e511132bae3986a35a5acd27a3c8e4f6f8fe6, not a fresh execution of this gate: git diff from 250a94bd9f08f95b8e87857274c192edb8a0069e changes only .ci/quality-manifest.json and .github/workflows/mutation.yml; all tracked gate inputs remain identical. All 159 source SHA256 hashes in the original local receipt were independently rechecked with zero mismatches. Original execution SHAs and commands above remain the execution provenance."
         }
     },
-    "manifest_hash": "3a67a67a3cda15643b4975dfb95554739c48252986f39c61b018b3b634f00dd4"
+    "manifest_hash": "aebea10142c88d8fe61e4d292e2165d99a7a350cc97c3bf6185b4013298f81a1"
 }

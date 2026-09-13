@@ -309,3 +309,155 @@ fn archive_roundtrips_faction_doctrines_after_ga_evolution() {
         "Simulation.faction_doctrines and WorldState.faction_doctrines must agree after load"
     );
 }
+
+/// `FR-CIV-COHESION-001` round-trip: the per-actor social-fabric state
+/// (`actor_settlement`, `actor_hardship`, `actor_institutions`, `kinship`,
+/// `trust`) must survive the `.civsave.zst` archive boundary, so the
+/// `phase_cohesion` / `phase_unrest` / `phase_order` consumers resume
+/// with the same actor registry and fabric inputs they had at save.
+#[test]
+fn archive_roundtrips_actor_social_fabric_state() {
+    use civ_engine::{KinshipEdge, KinshipKind};
+
+    let mut sim = Simulation::with_seed(99);
+    sim.advance_ticks(1);
+
+    // Seed a non-trivial actor registry across two settlements with
+    // distinguishable hardship, institution coverage, kinship, and trust.
+    sim.set_settlement_actor(101, 0);
+    sim.set_settlement_actor(102, 0);
+    sim.set_settlement_actor(201, 1);
+    sim.set_settlement_actor(202, 1);
+    sim.set_actor_in_settlement_hardship(101, 80);
+    sim.set_actor_in_settlement_hardship(102, 20);
+    sim.set_actor_in_settlement_hardship(201, 50);
+    sim.set_actor_in_settlement_hardship(202, 75);
+    sim.set_actor_in_settlement_institutions(101, true, false);
+    sim.set_actor_in_settlement_institutions(102, false, true);
+    sim.set_actor_in_settlement_institutions(201, true, true);
+    sim.set_actor_in_settlement_institutions(202, false, false);
+    sim.register_kinship(
+        101,
+        KinshipEdge {
+            kind: KinshipKind::Family,
+            target: 102,
+        },
+    );
+    sim.register_kinship(
+        201,
+        KinshipEdge {
+            kind: KinshipKind::Guild,
+            target: 202,
+        },
+    );
+    sim.add_trust(101, 102, 42);
+    sim.add_trust(201, 202, 17);
+    sim.add_trust(102, 101, 9);
+
+    // Advance a tick so the save-side mirror (right before replay_log.record_tick)
+    // runs and serializes the actor-state onto WorldState.
+    sim.advance_ticks(1);
+
+    // Pre-save sanity: live fields must agree with state (save-side mirror).
+    assert_eq!(
+        sim.actor_settlement, sim.state.actor_settlement,
+        "actor_settlement must mirror WorldState before save"
+    );
+    assert_eq!(
+        sim.actor_hardship, sim.state.actor_hardship,
+        "actor_hardship must mirror WorldState before save"
+    );
+    assert_eq!(
+        sim.actor_institutions, sim.state.actor_institutions,
+        "actor_institutions must mirror WorldState before save"
+    );
+    assert_eq!(
+        sim.kinship, sim.state.kinship,
+        "kinship must mirror WorldState before save"
+    );
+    assert_eq!(
+        sim.trust, sim.state.trust,
+        "trust must mirror WorldState before save"
+    );
+
+    // Snapshot the live actor-state for the post-load equality assertions.
+    let expected_actor_settlement = sim.actor_settlement.clone();
+    let expected_actor_hardship = sim.actor_hardship.clone();
+    let expected_actor_institutions = sim.actor_institutions.clone();
+    let expected_kinship = sim.kinship.clone();
+    let expected_trust = sim.trust.clone();
+
+    // Round-trip through the archive format.
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let archive_path = tmp.path().join("actor-fabric.civsave.zst");
+    CivSaveBundle::save_archive(&archive_path, &sim).expect("save archive");
+    let loaded = CivSaveBundle::load_archive(&archive_path).expect("load archive");
+
+    // WorldState side: byte-for-byte equality with the pre-save live state.
+    assert_eq!(
+        loaded.state.actor_settlement, expected_actor_settlement,
+        "WorldState.actor_settlement must round-trip byte-for-byte through the archive"
+    );
+    assert_eq!(
+        loaded.state.actor_hardship, expected_actor_hardship,
+        "WorldState.actor_hardship must round-trip byte-for-byte through the archive"
+    );
+    assert_eq!(
+        loaded.state.actor_institutions, expected_actor_institutions,
+        "WorldState.actor_institutions must round-trip byte-for-byte through the archive"
+    );
+    assert_eq!(
+        loaded.state.kinship, expected_kinship,
+        "WorldState.kinship must round-trip byte-for-byte through the archive"
+    );
+    assert_eq!(
+        loaded.state.trust, expected_trust,
+        "WorldState.trust must round-trip byte-for-byte through the archive"
+    );
+
+    // Simulation side: the load-side mirror must restore the live fields
+    // so phase_cohesion, phase_unrest, and phase_order see the same
+    // actor registry post-load.
+    assert_eq!(
+        loaded.actor_settlement, expected_actor_settlement,
+        "Simulation.actor_settlement must be restored by the load-side mirror"
+    );
+    assert_eq!(
+        loaded.actor_hardship, expected_actor_hardship,
+        "Simulation.actor_hardship must be restored by the load-side mirror"
+    );
+    assert_eq!(
+        loaded.actor_institutions, expected_actor_institutions,
+        "Simulation.actor_institutions must be restored by the load-side mirror"
+    );
+    assert_eq!(
+        loaded.kinship, expected_kinship,
+        "Simulation.kinship must be restored by the load-side mirror"
+    );
+    assert_eq!(
+        loaded.trust, expected_trust,
+        "Simulation.trust must be restored by the load-side mirror"
+    );
+
+    // Lockstep: after load, the live fields must agree with WorldState.
+    assert_eq!(
+        loaded.actor_settlement, loaded.state.actor_settlement,
+        "Simulation.actor_settlement and WorldState.actor_settlement must agree after load"
+    );
+    assert_eq!(
+        loaded.actor_hardship, loaded.state.actor_hardship,
+        "Simulation.actor_hardship and WorldState.actor_hardship must agree after load"
+    );
+    assert_eq!(
+        loaded.actor_institutions, loaded.state.actor_institutions,
+        "Simulation.actor_institutions and WorldState.actor_institutions must agree after load"
+    );
+    assert_eq!(
+        loaded.kinship, loaded.state.kinship,
+        "Simulation.kinship and WorldState.kinship must agree after load"
+    );
+    assert_eq!(
+        loaded.trust, loaded.state.trust,
+        "Simulation.trust and WorldState.trust must agree after load"
+    );
+}

@@ -462,6 +462,35 @@ pub struct WorldState {
     /// factions to `default_faction_doctrines()` and the GA starts over.
     #[serde(default)]
     pub faction_doctrines: Vec<DoctrineLibrary>,
+    /// Per-actor settlement assignment (FR-CIV-COHESION-001). Maps actor id
+    /// to settlement id; read by `phase_cohesion` to group actors by
+    /// settlement for fabric computation. Persisted so a loaded world resumes
+    /// with its actor registry intact — otherwise every social phase
+    /// (`phase_cohesion`, `phase_unrest`, `phase_order`) iterates an empty
+    /// set and the world effectively has no actors post-load.
+    #[serde(default)]
+    pub actor_settlement: BTreeMap<u64, u32>,
+    /// Per-actor hardship level (0..1000 scale). Read by `phase_cohesion`
+    /// as a fabric-eroding input. Persisted so social-fabric erosion state
+    /// survives archive round-trip.
+    #[serde(default)]
+    pub actor_hardship: BTreeMap<u64, i64>,
+    /// Per-actor institution presence tuple `(has_temple, has_garrison)`.
+    /// Read by `phase_cohesion` and `phase_order`. Persisted so institution
+    /// coverage at the actor level survives archive round-trip.
+    #[serde(default)]
+    pub actor_institutions: BTreeMap<u64, (bool, bool)>,
+    /// Directed kinship edges indexed by actor id (FR-CIV-COHESION-001).
+    /// Persisted so the social-fabric kinship graph survives archive
+    /// round-trip; otherwise `phase_cohesion` recomputes trust and fabric
+    /// without any kinship data, producing silent fabric underestimation.
+    #[serde(default)]
+    pub kinship: BTreeMap<u64, Vec<KinshipEdge>>,
+    /// Weighted directed trust network. `trust[a][b] = amount` means actor
+    /// `a` trusts actor `b` by `amount`. Persisted so the trust fabric
+    /// (the cohesion backbone) survives archive round-trip.
+    #[serde(default)]
+    pub trust: BTreeMap<u64, BTreeMap<u64, i64>>,
     // Extended subsystem fields (not comparable — subsystem-specific types)
     #[serde(default, skip)]
     pub faction_religions: BTreeMap<u32, crate::religion::Religion>,
@@ -575,6 +604,11 @@ impl Default for WorldState {
             market_state: civ_economy::MarketState::default(),
             last_game_outcome: GameOutcome::Ongoing,
             faction_doctrines: Vec::new(),
+            actor_settlement: BTreeMap::new(),
+            actor_hardship: BTreeMap::new(),
+            actor_institutions: BTreeMap::new(),
+            kinship: BTreeMap::new(),
+            trust: BTreeMap::new(),
             faction_religions: BTreeMap::new(),
             faction_language_systems: BTreeMap::new(),
             civilian_psyches: BTreeMap::new(),
@@ -840,24 +874,24 @@ pub struct Simulation {
     /// Per-actor settlement assignment used by `phase_cohesion` to group
     /// actors by settlement for fabric computation.
     /// Inserted via [`Simulation::set_settlement_actor`].
-    actor_settlement: BTreeMap<u64, u32>,
+    pub actor_settlement: BTreeMap<u64, u32>,
 
     /// Per-actor hardship level (0..1000 scale). Inserted via
     /// [`Simulation::set_actor_in_settlement_hardship`]; consumed by
     /// `phase_cohesion` as a fabric-eroding input.
-    actor_hardship: BTreeMap<u64, i64>,
+    pub actor_hardship: BTreeMap<u64, i64>,
 
     /// Per-actor institution presence tuple `(has_temple, has_garrison)`.
     /// Inserted via [`Simulation::set_actor_in_settlement_institutions`].
-    actor_institutions: BTreeMap<u64, (bool, bool)>,
+    pub actor_institutions: BTreeMap<u64, (bool, bool)>,
 
     /// Directed kinship edges indexed by actor id. Inserted via
     /// [`Simulation::register_kinship`].
-    kinship: BTreeMap<u64, Vec<KinshipEdge>>,
+    pub kinship: BTreeMap<u64, Vec<KinshipEdge>>,
 
     /// Weighted directed trust network. `trust[a][b] = amount` means actor
     /// `a` trusts actor `b` by `amount`. Inserted via [`Simulation::add_trust`].
-    trust: BTreeMap<u64, BTreeMap<u64, i64>>,
+    pub trust: BTreeMap<u64, BTreeMap<u64, i64>>,
 
     /// Last per-tick fabric score for each actor, used by `phase_cohesion`
     /// to detect delta and emit [`CohesionEvent`]s.
@@ -2221,6 +2255,18 @@ impl Simulation {
         // (save-side mirror). Recomputed each tick by phase_victory_check, so
         // legacy saves deserialize as Ongoing and immediately get re-derived.
         self.state.last_game_outcome = self.last_game_outcome.clone();
+        // Mirror the live actor/social-fabric state onto WorldState so
+        // save_archive serializes it (FR-CIV-COHESION-001 save-side mirror).
+        // These maps are mutated externally via set_settlement_actor,
+        // set_actor_in_settlement_hardship, set_actor_in_settlement_institutions,
+        // register_kinship, and add_trust — never by tick phases — so a
+        // single end-of-tick mirror is sufficient and runs at most once
+        // per tick.
+        self.state.actor_settlement = self.actor_settlement.clone();
+        self.state.actor_hardship = self.actor_hardship.clone();
+        self.state.actor_institutions = self.actor_institutions.clone();
+        self.state.kinship = self.kinship.clone();
+        self.state.trust = self.trust.clone();
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]

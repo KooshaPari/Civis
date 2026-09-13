@@ -451,6 +451,17 @@ impl CivSaveBundle {
             // a faction that spent 200 ticks running the genetic algorithm
             // doesn't reset to `default_faction_doctrines()` after a reload.
             sim.faction_doctrines = sim.state.faction_doctrines.clone();
+            // Load-side mirror: restore the per-actor social-fabric state
+            // (FR-CIV-COHESION-001) so a loaded world resumes with its actor
+            // registry, hardship, institution coverage, kinship graph, and
+            // trust network intact. Without this mirror every social phase
+            // (phase_cohesion, phase_unrest, phase_order) iterates an empty
+            // actor set and the world effectively has no actors post-load.
+            sim.actor_settlement = sim.state.actor_settlement.clone();
+            sim.actor_hardship = sim.state.actor_hardship.clone();
+            sim.actor_institutions = sim.state.actor_institutions.clone();
+            sim.kinship = sim.state.kinship.clone();
+            sim.trust = sim.state.trust.clone();
         }
 
         let environment_path = dir.join(ENVIRONMENT_FILE);

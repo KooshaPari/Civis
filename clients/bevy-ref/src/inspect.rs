@@ -181,11 +181,32 @@ mod plugin {
     /// structure before falling back to the bare cell.
     pub const PICK_RADIUS: f32 = 3.0;
 
+    /// Duration of the popup fade-in (seconds). Smoothstep eased.
+    pub const TOOLTIP_FADE_SECS: f32 = 0.35;
+
     /// God-hand hover state — the cell under the cursor, refreshed each frame.
     #[derive(Resource, Debug, Clone, Copy, Default)]
     pub struct HoverReadout {
         /// The cell currently under the cursor, if the cursor is over terrain.
         pub cell: Option<CellReadout>,
+        /// Game-clock time at which `cell` last transitioned from None → Some.
+        /// Used to drive the smoothstep fade-in of `draw_hover_tooltip`.
+        pub cell_visible_since_secs: Option<f32>,
+    }
+
+    /// Smoothstep ease-out for the tooltip popup (age in seconds → alpha in
+    /// [0.0, 1.0]). At age == 0 returns 0 (invisible); at age >=
+    /// `TOOLTIP_FADE_SECS` returns 1 (fully visible).
+    pub fn tooltip_fade_alpha(age_secs: f32) -> f32 {
+        if age_secs <= 0.0 {
+            0.0
+        } else if age_secs >= TOOLTIP_FADE_SECS {
+            1.0
+        } else {
+            let t = age_secs / TOOLTIP_FADE_SECS;
+            // Standard smoothstep: 3t² - 2t³, soft start, soft end.
+            t * t * (3.0 - 2.0 * t)
+        }
     }
 
     /// Plugin: hover readout, click-to-inspect classification, tooltip + inspector.
@@ -209,16 +230,26 @@ mod plugin {
         attach: Res<crate::AttachMode>,
         marker: Res<CursorMarker>,
         mut hover: ResMut<HoverReadout>,
+        time: Res<bevy::prelude::Time>,
     ) {
         if *attach == crate::AttachMode::Server {
             // This procedural readout cannot describe streamed voxel terrain.
             hover.cell = None;
+            hover.cell_visible_since_secs = None;
             return;
         }
-        hover.cell = marker
+        let new_cell = marker
             .position
             .filter(|_| marker.visible)
             .map(|p| CellReadout::sample(p.x, p.z));
+        // None → Some edge: stamp the time the cell first became visible so
+        // draw_hover_tooltip can fade the popup in over TOOLTIP_FADE_SECS.
+        if new_cell.is_some() && hover.cell.is_none() {
+            hover.cell_visible_since_secs = Some(time.elapsed_secs());
+        } else if new_cell.is_none() {
+            hover.cell_visible_since_secs = None;
+        }
+        hover.cell = new_cell;
     }
 
     /// On a select click, classify the hit and populate the inspector details
@@ -362,28 +393,56 @@ mod plugin {
     }
 
     /// Draw the god-hand hover tooltip near the cursor (FR-CIV-INSPECT-910).
-    fn draw_hover_tooltip(mut contexts: EguiContexts, hover: Res<HoverReadout>) {
+    fn draw_hover_tooltip(
+        mut contexts: EguiContexts,
+        hover: Res<HoverReadout>,
+        time: Res<bevy::prelude::Time>,
+    ) {
         let Some(cell) = hover.cell else {
             return;
         };
         let Ok(ctx) = contexts.ctx_mut() else {
             return;
         };
+        // Drive fade-in from the time-stamp captured at the None → Some edge.
+        let alpha = hover
+            .cell_visible_since_secs
+            .map(|since| tooltip_fade_alpha(time.elapsed_secs() - since))
+            .unwrap_or(1.0);
         let pointer = ctx.pointer_hover_pos();
         egui::Area::new(egui::Id::new("civis_godhand_tooltip"))
             .order(egui::Order::Tooltip)
+            .interactable(false)
             .fixed_pos(
                 pointer
                     .map(|p| egui::pos2(p.x + 16.0, p.y + 16.0))
                     .unwrap_or(egui::pos2(20.0, 20.0)),
             )
             .show(ctx, |ui| {
-                egui::Frame::popup(ui.style()).show(ui, |ui| {
-                    ui.label(cell.tooltip());
-                });
+                // Scale the popup frame fill + stroke + text colour by the fade
+                // alpha so the whole tooltip interpolates smoothly from
+                // invisible → visible over TOOLTIP_FADE_SECS. We mutate a clone
+                // of the style (egui styles are Arc-shared) and push it onto
+                // the local Ui so label colour and frame inherit the alpha.
+                let visuals = ui.visuals();
+                let fill = visuals.window_fill.linear_multiply(alpha);
+                let stroke_color = visuals.window_stroke.color.linear_multiply(alpha);
+                let override_text =
+                    visuals.override_text_color.map(|c| c.linear_multiply(alpha));
+                let stroke_width = visuals.window_stroke.width;
+                let mut style = ui.style().as_ref().clone();
+                style.visuals.window_fill = fill;
+                style.visuals.window_stroke.color = stroke_color;
+                style.visuals.override_text_color = override_text;
+                ui.set_style(style);
+                egui::Frame::popup(ui.style())
+                    .fill(fill)
+                    .stroke(egui::Stroke::new(stroke_width, stroke_color))
+                    .show(ui, |ui| {
+                        ui.label(cell.tooltip());
+                    });
             });
     }
-
     #[cfg(test)]
     mod attach_mode_tests {
         use super::*;
@@ -393,12 +452,14 @@ mod plugin {
             for incidental_local_state in [false, true] {
                 let mut app = App::new();
                 app.insert_resource(crate::AttachMode::Server)
+                    .init_resource::<bevy::prelude::Time>()
                     .insert_resource(CursorMarker {
                         position: Some(Vec3::ZERO),
                         visible: true,
                     })
                     .insert_resource(HoverReadout {
                         cell: Some(CellReadout::sample(0.0, 0.0)),
+                        cell_visible_since_secs: None,
                     })
                     .init_resource::<InspectedDetails>()
                     .insert_resource(SelectedEntityDetails {
@@ -433,6 +494,7 @@ mod plugin {
             let mut app = App::new();
             let pos = Vec3::new(10_000.0, 0.0, 10_000.0);
             app.insert_resource(crate::AttachMode::Standalone)
+                .init_resource::<bevy::prelude::Time>()
                 .insert_resource(SimState::default())
                 .insert_resource(CursorMarker {
                     position: Some(pos),
@@ -536,5 +598,29 @@ mod tests {
         assert_eq!(InspectKind::Agent.label(), "Agent");
         assert_eq!(InspectKind::Cell.label(), "Cell");
         assert_eq!(InspectKind::None.label(), "—");
+    }
+
+    /// Tooltip fade helper covers the age=0, age=fade, and infimum boundaries
+    /// and is monotonically non-decreasing across the fade window so the
+    /// popup never flashes backwards (alpha would look like jitter).
+    #[test]
+    fn tooltip_fade_alpha_is_well_defined_at_boundaries_and_monotonic() {
+        assert_eq!(tooltip_fade_alpha(0.0), 0.0);
+        assert_eq!(tooltip_fade_alpha(-0.01), 0.0);
+        assert_eq!(tooltip_fade_alpha(TOOLTIP_FADE_SECS), 1.0);
+        assert_eq!(tooltip_fade_alpha(TOOLTIP_FADE_SECS + 10.0), 1.0);
+        // Sampled across the fade window, never decreases.
+        let mut prev = tooltip_fade_alpha(0.0);
+        let steps = 32;
+        for i in 1..=steps {
+            let age = TOOLTIP_FADE_SECS * (i as f32) / (steps as f32);
+            let a = tooltip_fade_alpha(age);
+            assert!(a >= prev, "alpha regressed at age={age}: {a} < {prev}");
+            prev = a;
+        }
+        // Smoothstep inflection is at the midpoint.
+        let mid = TOOLTIP_FADE_SECS * 0.5;
+        let mid_alpha = tooltip_fade_alpha(mid);
+        assert!((mid_alpha - 0.5).abs() < 1e-3, "midpoint alpha = {mid_alpha}");
     }
 }

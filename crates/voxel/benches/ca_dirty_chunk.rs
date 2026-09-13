@@ -24,7 +24,7 @@ fn reference_grid_fixture() -> (CaGrid, MaterialRegistry) {
         for cx in 0..64 {
             // Keep the reference workload at ~1% dirty chunks so the bench
             // mirrors the spec's 64×64 / 1% writes shape.
-            if chunk_index % 100 != 0 {
+            if !chunk_index.is_multiple_of(100) {
                 chunk_index += 1;
                 continue;
             }

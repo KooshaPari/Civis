@@ -483,7 +483,7 @@ impl EnergyGrid {
             edges.sort_by_key(|(eid, nid)| (*eid, *nid));
             for (line_id, neighbour) in edges {
                 let node_e = self.nodes.get(&neighbour);
-                if node_e.map_or(true, |n| !n.energised) {
+                if node_e.is_none_or(|n| !n.energised) {
                     continue;
                 }
                 if let std::collections::btree_map::Entry::Vacant(entry) = parent.entry(neighbour) {

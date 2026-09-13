@@ -117,7 +117,7 @@ pub fn tick_war_bridge(
     world: &VoxelWorld<MaterialId>,
     fog: Option<&FogOfWar>,
 ) -> Vec<CombatEngagement> {
-    if config.cadence_ticks == 0 || tick % config.cadence_ticks != 0 {
+    if config.cadence_ticks == 0 || !tick.is_multiple_of(config.cadence_ticks) {
         return Vec::new();
     }
     let range = config.engage_range_grid.max(1);

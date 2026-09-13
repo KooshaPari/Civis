@@ -220,7 +220,7 @@ fn decode_png_to_rgb(bytes: &[u8]) -> Result<DecodedRgb, String> {
     let rgb: Vec<u8> = match frame.color_type {
         png::ColorType::Rgb => buf[..frame.buffer_size()].to_vec(),
         png::ColorType::Rgba => buf[..frame.buffer_size()]
-            .chunks_exact(4)
+            .as_chunks::<4>().0.iter()
             .flat_map(|px| [px[0], px[1], px[2]])
             .collect(),
         png::ColorType::Grayscale => buf[..frame.buffer_size()]
@@ -228,7 +228,7 @@ fn decode_png_to_rgb(bytes: &[u8]) -> Result<DecodedRgb, String> {
             .flat_map(|&v| [v, v, v])
             .collect(),
         png::ColorType::GrayscaleAlpha => buf[..frame.buffer_size()]
-            .chunks_exact(2)
+            .as_chunks::<2>().0.iter()
             .flat_map(|px| [px[0], px[0], px[0]])
             .collect(),
         png::ColorType::Indexed => return Err("indexed PNGs are not supported".to_string()),

@@ -364,7 +364,7 @@ impl RoadNetwork {
             for (seg_id, seg) in edges {
                 let to_node = seg.to;
                 let to_intersection = self.intersections.get(&to_node);
-                if to_intersection.map_or(true, |i| !i.active) {
+                if to_intersection.is_none_or(|i| !i.active) {
                     continue;
                 }
                 let effective = self

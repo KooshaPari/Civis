@@ -349,7 +349,7 @@ mod tests {
         );
         // 50 same-tab pairs would push the sum well past MAX_MULT
         // without the clamp.
-        let seq: Vec<&PowerDef> = std::iter::repeat(&raise).take(51).collect();
+        let seq: Vec<&PowerDef> = std::iter::repeat_n(&raise, 51).collect();
         let outcome = synergy_multiplier(&seq);
         assert!(
             outcome.multiplier <= MAX_MULT,

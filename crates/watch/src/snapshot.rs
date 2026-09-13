@@ -353,7 +353,7 @@ pub(crate) fn disaster_events(
     factions: &[Faction],
     buildings: &[Building],
 ) -> Vec<DisasterEvent> {
-    if tick == 0 || tick % 1000 != 0 {
+    if tick == 0 || !tick.is_multiple_of(1000) {
         return Vec::new();
     }
     let roll = hash01(tick as f32 * 0.017);

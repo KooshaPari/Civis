@@ -172,7 +172,7 @@ pub fn generate_layout(building_type: &str, size_hint: u32, seed: u64) -> Buildi
     for y in 0..side {
         for x in 0..side {
             let point_hash = hash.wrapping_add(y as u64 * 1000 + x as u64);
-            if point_hash % 3 != 0 || footprint.len() < 2 {
+            if !point_hash.is_multiple_of(3) || footprint.len() < 2 {
                 footprint.push((x, y));
             }
         }
@@ -718,7 +718,7 @@ pub fn plan_expansion(layout: &BuildingLayout, plan: &ExpansionPlan, seed: u64) 
         for dy in 0..room_side {
             for dx in 0..room_side {
                 let point_hash = rng.next_u64();
-                if point_hash % 3 != 0 || new_footprint.len() < 4 {
+                if !point_hash.is_multiple_of(3) || new_footprint.len() < 4 {
                     let cell = (base_x + dx, base_y + dy);
                     // Avoid duplicates.
                     if !new_footprint.contains(&cell) {

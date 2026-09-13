@@ -160,7 +160,7 @@ fn stone_or_ore(seed: u64, ore_seed: u64, x: usize, y: usize, z: usize) -> Mater
 fn ore_pocket(seed: u64, ore_seed: u64, x: usize, y: usize, z: usize) -> bool {
     let n = hash3(ore_seed, x as u64, y as u64, z as u64);
     let band = hash3(seed ^ 0x4d59_5df4_d0f3_3173, x as u64, y as u64, z as u64);
-    n % 29 == 0 && band % 5 != 0
+    n.is_multiple_of(29) && !band.is_multiple_of(5)
 }
 
 fn soil_depth(seed: u64, x: usize, z: usize, height: usize) -> usize {

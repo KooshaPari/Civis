@@ -159,7 +159,7 @@ impl SubscriptionFilter {
         if !self.active || self.tick_stride <= 1 {
             return true;
         }
-        tick % u64::from(self.tick_stride) == 0
+        tick.is_multiple_of(u64::from(self.tick_stride))
     }
 
     /// Return the subset of frames allowed by this filter (cloned).

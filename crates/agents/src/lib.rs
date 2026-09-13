@@ -666,8 +666,8 @@ pub fn top_action(needs: &Needs, weights: &UtilityWeights) -> NeedAction {
 pub fn should_tick_now(tier: LodTier, current_tick: u64) -> bool {
     match tier {
         LodTier::Hot => true,
-        LodTier::Warm => current_tick % 4 == 0,
-        LodTier::Cold => current_tick % 16 == 0,
+        LodTier::Warm => current_tick.is_multiple_of(4),
+        LodTier::Cold => current_tick.is_multiple_of(16),
     }
 }
 

@@ -212,4 +212,104 @@ mod tests {
         assert!(s.volumetric_fog);
         assert!(s.taa);
     }
+
+    // ─── Per-flag independence & matrix coverage ────────────────────────────────
+    // Every flag in `PostFxSettings` should be toggleable independently. These
+    // tests walk the full toggle matrix in a way that catches accidental
+    // coupled resets (e.g., a refactor that turns ssao off also disables ssr).
+
+    fn check_flag(name: &'static str, off: PostFxSettings) {
+        assert!(off.is_off(name), "{name} should be off when explicitly disabled");
+        for other in [
+            "aces",
+            "tonemapping",
+            "color_grading",
+            "bloom",
+            "ssao",
+            "ssr",
+            "volumetric_fog",
+            "taa",
+        ] {
+            if other == name {
+                continue;
+            }
+            assert!(
+                !off.is_off(other),
+                "flag {other} should remain on when only {name} is disabled"
+            );
+        }
+    }
+
+    #[test]
+    fn post_fx_settings_each_flag_can_be_off_independently() {
+        let _ = PostFxSettings::default();
+        check_flag("aces", PostFxSettings { aces: false, ..PostFxSettings::default() });
+        check_flag(
+            "tonemapping",
+            PostFxSettings { tonemapping: false, ..PostFxSettings::default() },
+        );
+        check_flag(
+            "color_grading",
+            PostFxSettings { color_grading: false, ..PostFxSettings::default() },
+        );
+        check_flag(
+            "bloom",
+            PostFxSettings { bloom: false, ..PostFxSettings::default() },
+        );
+        check_flag("ssao", PostFxSettings { ssao: false, ..PostFxSettings::default() });
+        check_flag("ssr", PostFxSettings { ssr: false, ..PostFxSettings::default() });
+        check_flag(
+            "volumetric_fog",
+            PostFxSettings {
+                volumetric_fog: false,
+                ..PostFxSettings::default()
+            },
+        );
+        check_flag("taa", PostFxSettings { taa: false, ..PostFxSettings::default() });
+    }
+
+    #[test]
+    fn post_fx_settings_all_off_round_trips() {
+        let s = PostFxSettings {
+            aces: false,
+            tonemapping: false,
+            color_grading: false,
+            bloom: false,
+            ssao: false,
+            ssr: false,
+            volumetric_fog: false,
+            taa: false,
+        };
+        assert!(s.is_off("aces"));
+        assert!(s.is_off("tonemapping"));
+        assert!(s.is_off("color_grading"));
+        assert!(s.is_off("bloom"));
+        assert!(s.is_off("ssao"));
+        assert!(s.is_off("ssr"));
+        assert!(s.is_off("volumetric_fog"));
+        assert!(s.is_off("taa"));
+    }
+}
+
+// ── Test-local trait (defined below the test module so it cannot leak into
+// the public API surface). ───────────────────────────────────────────────────
+
+trait PostFxProbe {
+    fn is_off(&self, name: &str) -> bool;
+}
+
+impl PostFxProbe for PostFxSettings {
+    fn is_off(&self, name: &str) -> bool {
+        match name {
+            "aces" => !self.aces,
+            "tonemapping" => !self.tonemapping,
+            "color_grading" => !self.color_grading,
+            "bloom" => !self.bloom,
+            "ssao" => !self.ssao,
+            "ssr" => !self.ssr,
+            "volumetric_fog" => !self.volumetric_fog,
+            "taa" => !self.taa,
+            _ => panic!("unknown post-fx flag: {name}"),
+        }
+    }
 }

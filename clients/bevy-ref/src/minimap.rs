@@ -5,6 +5,8 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat, T
 use bevy::render::view::NoIndirectDrawing;
 use bevy::ui::widget::ImageNode;
 use bevy::ui::{FocusPolicy, RelativeCursorPosition};
+#[cfg(test)]
+use bevy::window::WindowResolution;
 use civ_agents::{Alignment, Civilian as AgentCivilian};
 use civ_engine::Building;
 
@@ -36,8 +38,28 @@ pub struct MinimapRoot;
 #[derive(Component)]
 pub struct MinimapDot;
 
+/// Marks a minimap dot with the game-clock time at which it was spawned,
+/// so the fade-in system can ramp its alpha from 0 to 1 over
+/// [`MINIMAP_DOT_FADE_SECS`].
+#[derive(Component, Debug, Clone, Copy)]
+pub struct MinimapDotFade {
+    pub spawned_at_secs: f32,
+}
+
 #[derive(Component)]
 pub struct MinimapCamera;
+
+/// Marker for the rectangular viewport indicator overlay drawn on top of the
+/// minimap terrain. Its `Node` rect is updated each frame to outline the area
+/// visible to the main camera, projected to the world XZ plane.
+#[derive(Component)]
+pub struct MinimapViewport;
+
+/// Vertical field-of-view (degrees) used to project the main camera's visible
+/// rectangle onto the minimap. Matches the Bevy `PerspectiveProjection` default
+/// and the value set in `setup_minimap_render_target`'s analogue for the main
+/// camera (`Camera3d::default`).
+const MINIMAP_VIEWPORT_FOV_DEG: f32 = 45.0;
 
 /// Plugin that renders a top-down minimap and lets the player click to teleport the main camera.
 pub struct MinimapPlugin;
@@ -49,7 +71,15 @@ impl Plugin for MinimapPlugin {
                 Startup,
                 (setup_minimap_render_target, setup_minimap).chain(),
             )
-            .add_systems(Update, (sync_minimap_dots, teleport_camera_from_minimap))
+            .add_systems(
+                Update,
+                (
+                    sync_minimap_dots,
+                    update_minimap_dot_fade,
+                    update_minimap_viewport,
+                    teleport_camera_from_minimap,
+                ),
+            )
             // Server-mode: keep the minimap terrain in sync with the live server
             // snapshot. The polling interval (5 s) is slower than the ws client's
             // own `sim.snapshot` poll (2 s) so this just enforces a fresh fetch
@@ -62,6 +92,28 @@ impl Plugin for MinimapPlugin {
 
 /// Seconds between minimap-initiated `sim.snapshot` RPCs in server mode.
 const MINIMAP_SNAPSHOT_INTERVAL_SECS: f32 = 5.0;
+
+/// How long a freshly spawned minimap dot takes to fade from alpha 0 to 1.
+/// New buildings / agents that appear when the snapshot resyncs pulse into
+/// view instead of popping in.
+const MINIMAP_DOT_FADE_SECS: f32 = 0.35;
+
+/// Pure helper mapping a dot's age (seconds since spawn) to its alpha in
+/// `[0.0, 1.0]`. Uses a smoothstep so the start and end of the fade are
+/// soft, not linear. Negative ages clamp to 0 (still spawning), ages past
+/// the fade window clamp to 1 (fully opaque).
+fn minimap_dot_fade_alpha(age_secs: f32) -> f32 {
+    if age_secs <= 0.0 {
+        return 0.0;
+    }
+    if age_secs >= MINIMAP_DOT_FADE_SECS {
+        return 1.0;
+    }
+    let t = age_secs / MINIMAP_DOT_FADE_SECS;
+    // smoothstep: 3t^2 - 2t^3 — see std::f32::smoothstep, but written out
+    // to keep this pure (no float method calls) and trivially testable.
+    t * t * (3.0 - 2.0 * t)
+}
 /// Resource tracking the last snapshot fire time so we can throttle the poll.
 #[derive(Resource, Debug, Default, Clone, Copy)]
 pub struct MinimapSnapshotState {
@@ -169,6 +221,24 @@ fn setup_minimap(mut commands: Commands, minimap_target: Res<MinimapRenderTarget
                     ..default()
                 },
             ));
+            // Viewport indicator overlay: a transparent rect whose border
+            // outlines the main camera's visible area on the world XZ plane.
+            // Sized/positioned by `update_minimap_viewport` each frame.
+            parent.spawn((
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(0.0),
+                    top: Val::Px(0.0),
+                    width: Val::Px(0.0),
+                    height: Val::Px(0.0),
+                    border: UiRect::all(Val::Px(2.0)),
+                    ..default()
+                },
+                BorderColor::all(Color::srgba(1.0, 0.95, 0.55, 0.95)),
+                BackgroundColor(Color::srgba(1.0, 0.95, 0.55, 0.10)),
+                FocusPolicy::Pass,
+                MinimapViewport,
+            ));
         });
 }
 
@@ -223,6 +293,7 @@ fn world_position_for_building(building: &Building) -> Vec3 {
 fn sync_minimap_dots(
     attach: Res<AttachMode>,
     sim: Option<Res<SimState>>,
+    time: Res<Time>,
     mut commands: Commands,
     roots: Query<Entity, With<MinimapRoot>>,
     existing: Query<Entity, With<MinimapDot>>,
@@ -256,6 +327,11 @@ fn sync_minimap_dots(
         return;
     };
 
+    // All dots spawned during this resync get the same `spawned_at_secs` so
+    // the fade-in is per-resync-batch rather than per-individual-dot. That
+    // avoids staggered fades when 50 agents pop in at once.
+    let spawned_at = time.elapsed_secs();
+
     commands.entity(root).with_children(|parent| {
         if is_server {
             // Draw dots from live-streamed agent positions.
@@ -274,6 +350,9 @@ fn sync_minimap_dots(
                     },
                     BackgroundColor(Color::hsla(0.0, 0.75, 0.58, 1.0)),
                     MinimapDot,
+                    MinimapDotFade {
+                        spawned_at_secs: spawned_at,
+                    },
                     FocusPolicy::Pass,
                 ));
             }
@@ -294,6 +373,9 @@ fn sync_minimap_dots(
                     },
                     BackgroundColor(Color::srgb(0.92, 0.90, 0.86)),
                     MinimapDot,
+                    MinimapDotFade {
+                        spawned_at_secs: spawned_at,
+                    },
                     FocusPolicy::Pass,
                 ));
             }
@@ -319,6 +401,9 @@ fn sync_minimap_dots(
                     },
                     BackgroundColor(civilian_color(civilian)),
                     MinimapDot,
+                    MinimapDotFade {
+                        spawned_at_secs: spawned_at,
+                    },
                     FocusPolicy::Pass,
                 ));
             }
@@ -337,11 +422,30 @@ fn sync_minimap_dots(
                     },
                     BackgroundColor(Color::WHITE),
                     MinimapDot,
+                    MinimapDotFade {
+                        spawned_at_secs: spawned_at,
+                    },
                     FocusPolicy::Pass,
                 ));
             }
         }
     });
+}
+
+/// Ramp each minimap dot's alpha from 0 to 1 over [`MINIMAP_DOT_FADE_SECS`]
+/// after it spawned. Preserves the dot's RGB hue (set in
+/// [`sync_minimap_dots`]) — only the alpha channel is mutated.
+fn update_minimap_dot_fade(
+    time: Res<Time>,
+    mut dots: Query<(&MinimapDotFade, &mut BackgroundColor), With<MinimapDot>>,
+) {
+    let now = time.elapsed_secs();
+    for (fade, mut bg) in &mut dots {
+        let alpha = minimap_dot_fade_alpha(now - fade.spawned_at_secs);
+        let mut c = bg.0;
+        c.set_alpha(alpha);
+        bg.0 = c;
+    }
 }
 
 fn teleport_camera_from_minimap(
@@ -369,6 +473,61 @@ fn teleport_camera_from_minimap(
     rig.target.z = world.z;
 }
 
+/// Project the main camera's ground-plane footprint onto the minimap and update
+/// the `MinimapViewport` rect to outline that area. Uses the camera's `target`
+/// + `distance` + `pitch` + `yaw` from `CameraRig`, and the window's logical
+/// aspect ratio for the horizontal extent. The indicator stays inside the
+/// minimap even when the camera is over-zoomed or the rig is pointed past
+/// the world bounds.
+fn update_minimap_viewport(
+    rig: Res<CameraRig>,
+    windows: Query<&Window>,
+    mut indicators: Query<&mut Node, With<MinimapViewport>>,
+) {
+    let Ok(window) = windows.single() else {
+        return;
+    };
+    let Ok(mut node) = indicators.single_mut() else {
+        return;
+    };
+
+    let aspect = if window.height() > 0.0 {
+        window.width() / window.height()
+    } else {
+        1.0
+    };
+
+    // Camera distance is measured along the view direction; the distance from
+    // the rig target to the ground plane along that direction is
+    // `distance * cos(pitch)`. The visible half-height on the ground plane is
+    // that distance times tan(fov/2); visible half-width is half-height * aspect.
+    let ground_distance = (rig.distance * rig.pitch.cos()).max(1.0);
+    let half_height = ground_distance * (MINIMAP_VIEWPORT_FOV_DEG * 0.5).to_radians().tan();
+    let half_width = half_height * aspect;
+    let world_height = half_height * 2.0;
+    let world_width = half_width * 2.0;
+
+    // Convert the world-space footprint to minimap-pixel position. The viewport
+    // box is centered on `rig.target` projected via the same UV mapping used by
+    // the dots, then we clamp the pixel rect to the minimap bounds so the
+    // indicator never spills outside when the camera sees beyond the world edge.
+    let uv_center = world_to_minimap_uv(rig.target);
+    let center_px = Vec2::new(uv_center.x, uv_center.y) * MINIMAP_SIZE;
+    // UV -> pixel scale: `world_size / UV_UNITS_PER_WORLD`. The UV mapping uses
+    // the world span 0..MINIMAP_WORLD_MAX and renders at MINIMAP_SIZE pixels,
+    // so 1 world unit = (MINIMAP_SIZE / MINIMAP_WORLD_MAX) pixels.
+    let px_per_world = MINIMAP_SIZE / (MINIMAP_WORLD_MAX - MINIMAP_WORLD_MIN).max(1.0);
+    let width_px = (world_width * px_per_world).clamp(8.0, MINIMAP_SIZE);
+    let height_px = (world_height * px_per_world).clamp(8.0, MINIMAP_SIZE);
+
+    let left = (center_px.x - width_px * 0.5).clamp(0.0, MINIMAP_SIZE - width_px);
+    let top = (center_px.y - height_px * 0.5).clamp(0.0, MINIMAP_SIZE - height_px);
+    node.left = Val::Px(left);
+    node.top = Val::Px(top);
+    node.width = Val::Px(width_px);
+    node.height = Val::Px(height_px);
+}
+
 #[cfg(test)]
 mod attach_mode_tests {
     use super::*;
@@ -378,6 +537,7 @@ mod attach_mode_tests {
     fn server_minimap_uses_only_streamed_entities_without_local_state() {
         let mut app = App::new();
         app.insert_resource(AttachMode::Server)
+            .init_resource::<Time>()
             .add_systems(Update, sync_minimap_dots);
         app.world_mut().spawn((Node::default(), MinimapRoot));
         let agent = app
@@ -428,6 +588,7 @@ mod attach_mode_tests {
         assert!(expected > 0);
         app.insert_resource(AttachMode::Standalone)
             .insert_resource(sim)
+            .init_resource::<Time>()
             .add_systems(Update, sync_minimap_dots);
         app.world_mut().spawn((Node::default(), MinimapRoot));
         app.update();
@@ -438,5 +599,204 @@ mod attach_mode_tests {
                 .count(),
             expected
         );
+    }
+}
+
+#[cfg(test)]
+mod viewport_indicator_tests {
+    use super::*;
+
+    /// Build an app with the viewport system, a tiny camera distance, and a
+    /// 16:9 window. Returns the indicator's `Node` after one update.
+    fn run_indicator(rig: CameraRig, window_size: (f32, f32)) -> Node {
+        let mut app = App::new();
+        app.insert_resource(rig);
+        // Bevy Window resource needs concrete physical / logical size before
+        // `Window::width()/height()` work. Provide a minimal one.
+        let (w, h) = window_size;
+        app.world_mut().spawn(Window {
+            resolution: WindowResolution::new(w as u32, h as u32),
+            ..default()
+        });
+        app.add_systems(Update, update_minimap_viewport);
+        app.world_mut().spawn((Node::default(), MinimapViewport));
+        app.update();
+        let mut q = app
+            .world_mut()
+            .query_filtered::<&Node, With<MinimapViewport>>();
+        let node = q.single(app.world()).expect("viewport indicator");
+        node.clone()
+    }
+
+    #[test]
+    fn indicator_keeps_camera_centered_at_default_target() {
+        let rig = CameraRig::default();
+        let node = run_indicator(rig, (1600.0, 900.0));
+        // The `world_to_minimap_uv` mapping uses world span 0..MINIMAP_WORLD_MAX,
+        // so the rig's default target of (0,0,0) projects to UV (0,1) which in
+        // flipped-V UI space lands at the bottom-left of the minimap. The
+        // indicator's centre should land there, NOT the geometric centre.
+        let left = match node.left {
+            Val::Px(v) => v,
+            _ => panic!("expected pixel left"),
+        };
+        let top = match node.top {
+            Val::Px(v) => v,
+            _ => panic!("expected pixel top"),
+        };
+        let width = match node.width {
+            Val::Px(v) => v,
+            _ => panic!("expected pixel width"),
+        };
+        let height = match node.height {
+            Val::Px(v) => v,
+            _ => panic!("expected pixel height"),
+        };
+        let cx = left + width * 0.5;
+        let cy = top + height * 0.5;
+        // Bottom-left of the minimap: cx should be a small positive value
+        // (close to the indicator's half-width), cy at MINIMAP_SIZE - half-height.
+        assert!(
+            cx < width + 2.0,
+            "indicator cx={} should be at the bottom-left (~width/2), got > width+2",
+            cx,
+        );
+        assert!(
+            cy > MINIMAP_SIZE - height - 2.0,
+            "indicator cy={} should be near the bottom of the minimap (MINIMAP_SIZE - height/2 = {}), got < {}",
+            cy,
+            MINIMAP_SIZE - height,
+            MINIMAP_SIZE - height - 2.0,
+        );
+    }
+
+    #[test]
+    fn indicator_stays_within_minimap_bounds_when_zoomed_out() {
+        let mut rig = CameraRig::default();
+        rig.distance = 900.0; // pushed to the max zoom
+        let node = run_indicator(rig, (1600.0, 900.0));
+        // Far zoom produces a wide world footprint → the clamped pixel size
+        // should be at MINIMAP_SIZE — confirming the safety clamp works.
+        let width = match node.width {
+            Val::Px(v) => v,
+            _ => panic!("expected pixel width"),
+        };
+        let height = match node.height {
+            Val::Px(v) => v,
+            _ => panic!("expected pixel height"),
+        };
+        assert!(
+            width <= MINIMAP_SIZE + f32::EPSILON,
+            "indicator width={} should not exceed minimap size {}",
+            width,
+            MINIMAP_SIZE,
+        );
+        assert!(
+            height <= MINIMAP_SIZE + f32::EPSILON,
+            "indicator height={} should not exceed minimap size {}",
+            height,
+            MINIMAP_SIZE,
+        );
+    }
+
+    #[test]
+    fn indicator_pixels_grow_when_aspect_widens() {
+        let mut rig = CameraRig::default();
+        rig.distance = 60.0;
+        let wide = run_indicator(rig, (2560.0, 900.0));
+        let tall = run_indicator(rig, (900.0, 900.0));
+        let wide_w = match wide.width {
+            Val::Px(v) => v,
+            _ => panic!("expected pixel width"),
+        };
+        let tall_w = match tall.width {
+            Val::Px(v) => v,
+            _ => panic!("expected pixel width"),
+        };
+        let wide_h = match wide.height {
+            Val::Px(v) => v,
+            _ => panic!("expected pixel height"),
+        };
+        let tall_h = match tall.height {
+            Val::Px(v) => v,
+            _ => panic!("expected pixel height"),
+        };
+        // Wider aspect -> strictly wider indicator; vertical extent identical.
+        assert!(
+            wide_w > tall_w,
+            "wide aspect indicator width={} should exceed square aspect width={}",
+            wide_w,
+            tall_w,
+        );
+        assert!(
+            wide_h - tall_h < 0.5,
+            "vertical extent must track FOV alone (wide_h={}, tall_h={})",
+            wide_h,
+            tall_h,
+        );
+    }
+}
+
+#[cfg(test)]
+mod dot_fade_tests {
+    use super::*;
+
+    #[test]
+    fn alpha_is_zero_when_dot_has_not_aged_yet() {
+        assert_eq!(minimap_dot_fade_alpha(0.0), 0.0);
+        assert_eq!(minimap_dot_fade_alpha(-1.0), 0.0);
+        // Tiny epsilon still considered "just spawned".
+        assert_eq!(minimap_dot_fade_alpha(-0.0001), 0.0);
+    }
+
+    #[test]
+    fn alpha_reaches_one_after_fade_window_elapses() {
+        assert_eq!(minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS), 1.0);
+        // Any age past the window stays opaque.
+        assert_eq!(minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS + 5.0), 1.0);
+        assert_eq!(minimap_dot_fade_alpha(60.0), 1.0);
+    }
+
+    #[test]
+    fn alpha_is_smoothstep_inflection_at_midpoint() {
+        // The smoothstep formula 3t^2 - 2t^3 hits exactly 0.5 at t=0.5
+        // (the inflection point). Verify both halves: below the inflection
+        // the curve is sub-linear; above it the curve is super-linear; at
+        // the inflection it equals 0.5 exactly.
+        let mid = minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS * 0.5);
+        assert!(
+            (mid - 0.5).abs() < 1e-5,
+            "smoothstep at midpoint should equal 0.5, got {mid}"
+        );
+        // Below inflection, sub-linear (slower start than linear ramp).
+        let q1 = minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS * 0.25);
+        assert!(
+            q1 < 0.25,
+            "smoothstep at 1/4 should be below linear (0.25), got {q1}"
+        );
+        // Above inflection, super-linear (faster finish than linear ramp).
+        let q3 = minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS * 0.75);
+        assert!(
+            q3 > 0.75,
+            "smoothstep at 3/4 should be above linear (0.75), got {q3}"
+        );
+    }
+
+    #[test]
+    fn alpha_is_monotonically_increasing_across_fade_window() {
+        // 10 samples spread across the fade window must form a strictly
+        // non-decreasing sequence — this is the smoothstep S-curve's key
+        // property: no overshoot, no oscillate.
+        let mut prev = 0.0;
+        for i in 0..=10 {
+            let age = MINIMAP_DOT_FADE_SECS * (i as f32 / 10.0);
+            let a = minimap_dot_fade_alpha(age);
+            assert!(
+                a >= prev,
+                "alpha must not regress within the fade window: \
+                 prev={prev} at sample {i} age={age} now={a}"
+            );
+            prev = a;
+        }
     }
 }

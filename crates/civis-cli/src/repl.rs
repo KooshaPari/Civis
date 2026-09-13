@@ -243,7 +243,10 @@ impl Repl {
                 "inspect <entity>, i <entity>",
                 "Inspect details of an entity",
             ),
-            ("spawn <type> [x] [y] [faction]", "Spawn a new entity of the given type"),
+            (
+                "spawn <type> [x] [y] [faction]",
+                "Spawn a new entity of the given type",
+            ),
             ("diplomacy, dip", "Show diplomacy overview"),
             ("economy, eco", "Show economy overview"),
             ("save [path]", "Save the current simulation state"),
@@ -433,10 +436,14 @@ impl Repl {
     ///   - `spawn villager`   → default coords (0.5, 0.5), faction 0
     ///   - `spawn 0.5 0.3`    → coords (0.5, 0.3), faction 0
     ///   - `spawn 0.5 0.3 1`  → coords (0.5, 0.3), faction 1
+    ///
     /// When offline, shows a placeholder message.
     fn cmd_spawn(&mut self, entity_type: &str) -> String {
         if entity_type.is_empty() {
-            return format!("{} Usage: spawn <type> [x] [y] [faction]", "error:".red().bold());
+            return format!(
+                "{} Usage: spawn <type> [x] [y] [faction]",
+                "error:".red().bold()
+            );
         }
 
         if self.ws.is_some() {
@@ -506,10 +513,7 @@ impl Repl {
                         .get("factions")
                         .cloned()
                         .unwrap_or(Value::Array(vec![]));
-                    let faction_count = factions
-                        .as_array()
-                        .map(|a| a.len())
-                        .unwrap_or(0);
+                    let faction_count = factions.as_array().map(|a| a.len()).unwrap_or(0);
                     let tick = result
                         .get("tick")
                         .and_then(|v| v.as_u64())
@@ -523,14 +527,8 @@ impl Repl {
                     );
                     if let Some(arr) = factions.as_array() {
                         for f in arr {
-                            let name = f
-                                .get("name")
-                                .and_then(|v| v.as_str())
-                                .unwrap_or("?");
-                            let id = f
-                                .get("id")
-                                .and_then(|v| v.as_u64())
-                                .unwrap_or(0);
+                            let name = f.get("name").and_then(|v| v.as_str()).unwrap_or("?");
+                            let id = f.get("id").and_then(|v| v.as_u64()).unwrap_or(0);
                             out.push_str(&format!("  faction {}: {}\n", id, name.cyan()));
                         }
                     }
@@ -571,8 +569,14 @@ impl Repl {
                         self.tick = tick;
                     }
 
-                    let market_prices = result.get("market_prices").cloned().unwrap_or(Value::Object(serde_json::Map::new()));
-                    let institutions = result.get("institutions").cloned().unwrap_or(Value::Array(vec![]));
+                    let market_prices = result
+                        .get("market_prices")
+                        .cloned()
+                        .unwrap_or(Value::Object(serde_json::Map::new()));
+                    let institutions = result
+                        .get("institutions")
+                        .cloned()
+                        .unwrap_or(Value::Array(vec![]));
 
                     let mut out = format!(
                         "{}\n  tick: {}\n",
@@ -599,15 +603,16 @@ impl Repl {
                         } else {
                             out.push_str("  institutions:\n");
                             for inst in arr {
-                                let kind = inst
-                                    .get("kind")
-                                    .and_then(|v| v.as_str())
-                                    .unwrap_or("?");
+                                let kind = inst.get("kind").and_then(|v| v.as_str()).unwrap_or("?");
                                 let balance = inst
                                     .get("balance_joules")
                                     .and_then(|v| v.as_i64())
                                     .unwrap_or(0);
-                                out.push_str(&format!("    {} balance: {} J\n", kind.magenta(), balance));
+                                out.push_str(&format!(
+                                    "    {} balance: {} J\n",
+                                    kind.magenta(),
+                                    balance
+                                ));
                             }
                         }
                     }
@@ -740,15 +745,26 @@ impl Repl {
                             )
                         }
                     } else {
-                        format!("{} failed to load slot '{}'", "error:".red().bold(), slot_name)
+                        format!(
+                            "{} failed to load slot '{}'",
+                            "error:".red().bold(),
+                            slot_name
+                        )
                     }
                 }
                 Err(e) => format!("{} {}", "error:".red().bold(), e),
             }
         } else if path.is_empty() {
-            format!("{} loaded from default slot (offline)", "State".green().bold())
+            format!(
+                "{} loaded from default slot (offline)",
+                "State".green().bold()
+            )
         } else {
-            format!("{} loaded from '{}' (offline)", "State".green().bold(), path)
+            format!(
+                "{} loaded from '{}' (offline)",
+                "State".green().bold(),
+                path
+            )
         }
     }
 
@@ -924,7 +940,7 @@ mod tests {
         let mut repl = make_repl();
         for alias in &["quit", "q", "exit"] {
             repl.running = true;
-            repl.process_command(alias);
+            assert!(repl.process_command(alias).contains("Goodbye"));
             assert!(!repl.running, "alias '{alias}' should stop the REPL");
         }
     }

@@ -98,12 +98,11 @@ async fn collect_tick_bundle(
         if let Ok(decoded) = serde_json::from_value::<Frame3d>(v) {
             frames.push(decoded);
         }
-        let mut by_tick: std::collections::BTreeMap<u64, usize> =
-            std::collections::BTreeMap::new();
+        let mut by_tick: std::collections::BTreeMap<u64, usize> = std::collections::BTreeMap::new();
         for f in &frames {
             *by_tick.entry(f.tick()).or_insert(0) += 1;
         }
-        if let Some((&tick, &count)) = by_tick.iter().rev().next() {
+        if let Some((&tick, &count)) = by_tick.iter().next_back() {
             if tick >= min_tick && count >= bundle_len {
                 break;
             }
@@ -115,7 +114,10 @@ async fn collect_tick_bundle(
 /// Find a god-action entry in the engine audit log under the
 /// assumption that no auto-tick has cleared it yet. Reads `sim` under
 /// a brief lock and returns the first entry matching `action`.
-async fn read_audit_entry(sim: &Arc<tokio::sync::Mutex<Simulation>>, action: &str) -> civ_engine::GodActionRecord {
+async fn read_audit_entry(
+    sim: &Arc<tokio::sync::Mutex<Simulation>>,
+    action: &str,
+) -> civ_engine::GodActionRecord {
     let guard = sim.lock().await;
     guard
         .last_god_actions()
@@ -154,8 +156,14 @@ async fn two_clients_receive_tick_broadcasts() {
         .map(|f| f.tick())
         .max()
         .expect("client B received a tick frame");
-    assert!(tick_a >= 1, "client A should observe a tick frame (got {tick_a})");
-    assert!(tick_b >= 1, "client B should observe a tick frame (got {tick_b})");
+    assert!(
+        tick_a >= 1,
+        "client A should observe a tick frame (got {tick_a})"
+    );
+    assert!(
+        tick_b >= 1,
+        "client B should observe a tick frame (got {tick_b})"
+    );
 }
 
 #[tokio::test]
@@ -185,7 +193,10 @@ async fn god_action_from_client_a_visible_to_client_b() {
             "params": {"multiplier": 0}
         })
         .to_string();
-        socket_a.send(Message::Text(pause)).await.expect("send pause");
+        socket_a
+            .send(Message::Text(pause))
+            .await
+            .expect("send pause");
         let _ = recv_rpc(&mut socket_a, 90).await;
     }
 
@@ -307,7 +318,10 @@ async fn both_clients_observe_subsequent_ticks_after_write_through() {
             "params": {"multiplier": 0}
         })
         .to_string();
-        socket_a.send(Message::Text(pause)).await.expect("send pause");
+        socket_a
+            .send(Message::Text(pause))
+            .await
+            .expect("send pause");
         let _ = recv_rpc(&mut socket_a, 190).await;
     }
 
@@ -356,7 +370,10 @@ async fn both_clients_observe_subsequent_ticks_after_write_through() {
         "params": {"multiplier": 1}
     })
     .to_string();
-    socket_a.send(Message::Text(resume)).await.expect("send resume");
+    socket_a
+        .send(Message::Text(resume))
+        .await
+        .expect("send resume");
     let _ = recv_rpc(&mut socket_a, 201).await;
 
     let frames_a = collect_tick_bundle(&mut socket_a, 1, 7, Duration::from_secs(3)).await;
@@ -420,7 +437,10 @@ async fn get_snapshot_for_session_returns_per_session_view() {
         "params": {}
     })
     .to_string();
-    socket_a.send(Message::Text(req)).await.expect("send get_snapshot_for_session");
+    socket_a
+        .send(Message::Text(req))
+        .await
+        .expect("send get_snapshot_for_session");
     let resp = recv_rpc(&mut socket_a, 300).await;
     assert!(
         resp.get("error").is_none(),
@@ -451,7 +471,10 @@ async fn get_snapshot_for_session_returns_per_session_view() {
         "params": {}
     })
     .to_string();
-    socket_b.send(Message::Text(req_b)).await.expect("send get_snapshot_for_session B");
+    socket_b
+        .send(Message::Text(req_b))
+        .await
+        .expect("send get_snapshot_for_session B");
     let resp_b = recv_rpc(&mut socket_b, 301).await;
     let session_b = resp_b
         .pointer("/result/session_snapshot")

@@ -22,11 +22,7 @@ async fn main() {
         .with(OpenTelemetryLayer::new(tracer))
         .init();
 
-    let port = std::env::var("CIV_SERVER_PORT")
-        .ok()
-        .and_then(|value| value.parse().ok())
-        .unwrap_or(3800);
-    let addr: SocketAddr = SocketAddr::from(([127, 0, 0, 1], port));
+    let addr = server_addr();
     let max_clients = std::env::var("CIVIS_WS_MAX_CLIENTS")
         .ok()
         .and_then(|value| value.parse().ok())

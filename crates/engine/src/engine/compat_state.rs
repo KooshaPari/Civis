@@ -6,7 +6,8 @@
 //! requiring callers to go through the `Simulation` struct.
 
 use crate::social_types::{
-    CohesionEvent, CohesionEventKind, CohesionSnapshot, FabricTier, UnrestEvent, UnrestLevel,
+    CohesionEvent, CohesionEventKind, CohesionSnapshot, FabricTier, OrderEvent, OrderLevel,
+    UnrestEvent, UnrestLevel,
 };
 use std::collections::BTreeMap;
 
@@ -142,6 +143,52 @@ pub fn unrest_level(settlement_id: u32) -> Option<UnrestLevel> {
         .copied()
 }
 
+/// Get last tick's order events (currently empty stub).
+///
+/// Mirrors [`last_tick_unrest`] for `OrderEvent` so callers can use the
+/// same accessor shape across both phases (FR-CIV-ORDER-001).
+pub fn last_tick_order() -> &'static [OrderEvent] {
+    Box::leak(
+        compat_state()
+            .lock()
+            .expect("compat state poisoned")
+            .order_events
+            .clone()
+            .into_boxed_slice(),
+    )
+}
+
+/// Get last tick's order events for a settlement (currently empty stub).
+///
+/// Mirrors [`last_tick_unrest_settlement`] for the order phase so
+/// downstream consumers (HUD, JSON-RPC) can slice by settlement id
+/// without re-walking the global vector.
+pub fn last_tick_order_settlement(settlement_id: u32) -> &'static [OrderEvent] {
+    let events: Vec<OrderEvent> = compat_state()
+        .lock()
+        .expect("compat state poisoned")
+        .order_events
+        .iter()
+        .filter(|event| event.settlement_id == settlement_id)
+        .cloned()
+        .collect();
+    Box::leak(events.into_boxed_slice())
+}
+
+/// Get order level for a settlement (currently None stub).
+///
+/// Returns the level recorded by `phase_order` for `settlement_id`, if
+/// any. Symmetric with [`unrest_level`] so the two phases share an
+/// accessor shape.
+pub fn order_level(settlement_id: u32) -> Option<OrderLevel> {
+    compat_state()
+        .lock()
+        .expect("compat state poisoned")
+        .order_levels
+        .get(&settlement_id)
+        .copied()
+}
+
 #[derive(Default)]
 struct CompatState {
     faction_count: u32,
@@ -149,6 +196,8 @@ struct CompatState {
     unrest_events: Vec<UnrestEvent>,
     unrest_levels: BTreeMap<u32, UnrestLevel>,
     settlement_gini: BTreeMap<u32, f64>,
+    order_events: Vec<OrderEvent>,
+    order_levels: BTreeMap<u32, OrderLevel>,
 }
 
 fn compat_state() -> &'static std::sync::Mutex<CompatState> {

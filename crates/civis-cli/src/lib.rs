@@ -17,6 +17,7 @@
 //! | `civis-census` | Query entity counts / sim stats via the WS JSON-RPC bridge | civ-server `ws://host:port/ws` |
 //! | `civis-dump`   | Validate/diff `CIVIS_DUMP` scene+sim JSON (render-frame regression) | local JSON file or marker-wrapped stdout |
 //! | `civis-mcp`   | Thin JSON-RPC server exposing harness tools as MCP-shaped `tools/call` | stdin/stdout newline-delimited JSON |
+//! | `civis-loadsmoke` | Load a `.civsave.zst`, tick N times, emit a structured JSON receipt | local file (no Bevy, no server) |
 //!
 //! ## Public layout
 //!
@@ -26,6 +27,7 @@
 //! - [`census`] — pure JSON-RPC dispatcher + response struct decoders; no
 //!   network — the bin provides the transport.
 //! - [`verify`] — types only (no Bevy runtime); the bin wires Bevy.
+//! - [`loadsmoke`] — load `.civsave.zst` offline, advance, emit receipt.
 //! - [`config`] — `.env` + `CIV_*` env-var helpers, shared by every bin.
 //!
 //! ## Why a CLI instead of a `tools/` subcommand on `civ-server`?
@@ -41,6 +43,7 @@
 pub mod census;
 pub mod config;
 pub mod dump;
+pub mod loadsmoke;
 pub mod pixels;
 pub mod repl;
 

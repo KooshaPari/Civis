@@ -5,6 +5,7 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat, T
 use bevy::render::view::NoIndirectDrawing;
 use bevy::ui::widget::ImageNode;
 use bevy::ui::{FocusPolicy, RelativeCursorPosition};
+#[cfg(test)]
 use bevy::window::WindowResolution;
 use civ_agents::{Alignment, Civilian as AgentCivilian};
 use civ_engine::Building;

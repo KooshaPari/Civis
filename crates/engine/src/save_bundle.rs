@@ -447,6 +447,10 @@ impl CivSaveBundle {
             // world frozen at Victory/Defeat reads the same outcome back; will
             // be re-derived on the next tick by phase_victory_check anyway.
             sim.last_game_outcome = sim.state.last_game_outcome.clone();
+            // Load-side mirror: restore the GA-evolved doctrine libraries so
+            // a faction that spent 200 ticks running the genetic algorithm
+            // doesn't reset to `default_faction_doctrines()` after a reload.
+            sim.faction_doctrines = sim.state.faction_doctrines.clone();
         }
 
         let environment_path = dir.join(ENVIRONMENT_FILE);

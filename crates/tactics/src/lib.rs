@@ -101,7 +101,7 @@ impl DamageEvent {
 }
 
 /// A doctrine candidate for the GA.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct Doctrine {
     /// Stable doctrine identifier.
     pub id: u64,
@@ -112,7 +112,7 @@ pub struct Doctrine {
 }
 
 /// Doctrine population and generation counter.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct DoctrineLibrary {
     /// Current population.
     pub current: Vec<Doctrine>,

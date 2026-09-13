@@ -454,6 +454,14 @@ pub struct WorldState {
     /// each tick via `check_outcome`, so legacy saves default to `Ongoing`.
     #[serde(default)]
     pub last_game_outcome: GameOutcome,
+    /// Per-faction doctrine libraries (FR-CIV-TACTICS-010). Mutated every
+    /// `DOCTRINE_EVOLVE_MODULO` ticks (64) by `phase_tactics` via a
+    /// deterministic RNG seeded from `state.rng_seed ^ tick ^ faction_id`.
+    /// Persisted so the genetic algorithm's evolved fitness scores survive
+    /// the `.civsave.zst` archive round-trip — otherwise reload resets all
+    /// factions to `default_faction_doctrines()` and the GA starts over.
+    #[serde(default)]
+    pub faction_doctrines: Vec<DoctrineLibrary>,
     // Extended subsystem fields (not comparable — subsystem-specific types)
     #[serde(default, skip)]
     pub faction_religions: BTreeMap<u32, crate::religion::Religion>,
@@ -566,6 +574,7 @@ impl Default for WorldState {
                 civ_economy::gameplay_loop::SettlementWealthSnapshot::default(),
             market_state: civ_economy::MarketState::default(),
             last_game_outcome: GameOutcome::Ongoing,
+            faction_doctrines: Vec::new(),
             faction_religions: BTreeMap::new(),
             faction_language_systems: BTreeMap::new(),
             civilian_psyches: BTreeMap::new(),
@@ -719,7 +728,7 @@ pub struct Simulation {
     /// Military-phase cadence and per-tick movement pulses (FR-CIV-TACTICS-035).
     pub(crate) military_phase: MilitaryPhaseConfig,
     /// Per-faction doctrine libraries evolved on a fixed tick cadence (FR-CIV-TACTICS-010).
-    faction_doctrines: Vec<DoctrineLibrary>,
+    pub(crate) faction_doctrines: Vec<DoctrineLibrary>,
     /// Coastal water columns whose water-level voxel shifts with the tide
     /// offset every tick (FR-CIV-PLANET-020). Keyed by `(x, z)` in fixed-point
     /// world coords; iteration order is deterministic.
@@ -1530,7 +1539,7 @@ impl Simulation {
     }
 
     /// Restore doctrine libraries after simulation state load.
-    pub(crate) fn restore_faction_doctrines(&mut self, doctrines: Vec<DoctrineLibrary>) {
+    pub fn restore_faction_doctrines(&mut self, doctrines: Vec<DoctrineLibrary>) {
         self.faction_doctrines = doctrines;
     }
 

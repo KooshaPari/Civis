@@ -100,6 +100,12 @@ impl Simulation {
                 evolve_doctrine(library, &mut rng, 0.2);
             }
         }
+        // Save-side mirror: keep state.faction_doctrines in lockstep with the
+        // live factions so the .civsave.zst archive captures the GA's
+        // current evolution on every tick (the archive saves state, not
+        // the live Simulation fields). The clone is cheap — small Vec per
+        // faction and only triggered when the GA evolution step ran above.
+        self.state.faction_doctrines = self.faction_doctrines.clone();
     }
 
     // Moved to species_lifecycle.rs

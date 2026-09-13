@@ -18,7 +18,7 @@
 //! across the save→load boundary, completing the Replay/import
 //! dimension from 30% → ~85% on the parent scorecard.
 
-use civ_engine::{CivSaveBundle, GameOutcome, Simulation};
+use civ_engine::{CivSaveBundle, Doctrine, DoctrineLibrary, GameOutcome, Simulation};
 use std::collections::BTreeMap;
 
 /// Snapshot the per-settlement wealth trace, sorted by settlement id.
@@ -245,5 +245,67 @@ fn archive_roundtrips_last_game_outcome() {
     assert_eq!(
         loaded.last_game_outcome, loaded.state.last_game_outcome,
         "Simulation.last_game_outcome and WorldState.last_game_outcome must agree after load"
+    );
+}
+
+/// Regression for the military-genetics persistence gap (FR-CIV-TACTICS-010).
+///
+/// `faction_doctrines` are mutated every `DOCTRINE_EVOLVE_MODULO` (64)
+/// ticks by `phase_tactics` via deterministic RNG seeding. Before this
+/// commit the field lived only on `Simulation` and reset to
+/// `default_faction_doctrines()` after every archive reload — wiping the
+/// GA's evolved fitness scores. This test forces doctrine evolution,
+/// saves, loads, and asserts the doctrine library round-trips
+/// byte-for-byte.
+#[test]
+fn archive_roundtrips_faction_doctrines_after_ga_evolution() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let archive_path = dir.path().join("doctrines.civsave.zst");
+
+    let mut sim = Simulation::with_seed(2024);
+    // Replace the auto-seeded 4 factions with a single deterministic
+    // doctrine library so the GA-evolved values are easy to assert on.
+    sim.restore_faction_doctrines(vec![DoctrineLibrary {
+        current: vec![Doctrine {
+            id: 7,
+            unit_composition: vec![3, 4, 5],
+            score: 0.0,
+        }],
+        generation: 0,
+    }]);
+    // 65 ticks forces `phase_tactics` to run its genetic-algorithm step
+    // (every 64th tick) and re-score every doctrine in `current`.
+    sim.advance_ticks(65);
+
+    let live_before: Vec<DoctrineLibrary> = sim.faction_doctrines().to_vec();
+    let state_before: Vec<DoctrineLibrary> = sim.state.faction_doctrines.clone();
+    assert_eq!(
+        live_before, state_before,
+        "save-side mirror must keep Simulation.faction_doctrines and WorldState.faction_doctrines in lockstep after evolution"
+    );
+    // The GA must have actually mutated at least one doctrine score,
+    // otherwise the test would pass trivially on a Default-equal copy.
+    assert!(
+        live_before[0].current.iter().any(|d| d.score != 0.0),
+        "test setup must trigger at least one GA-evolved score change, got {:?}",
+        live_before
+    );
+
+    CivSaveBundle::save_archive(&archive_path, &sim).expect("save archive");
+    let loaded = CivSaveBundle::load_archive(&archive_path).expect("load archive");
+
+    assert_eq!(
+        loaded.state.faction_doctrines, live_before,
+        "WorldState.faction_doctrines must round-trip byte-for-byte through the archive"
+    );
+    assert_eq!(
+        loaded.faction_doctrines().to_vec(),
+        live_before,
+        "Simulation.faction_doctrines must mirror WorldState after load (load-side mirror)"
+    );
+    assert_eq!(
+        loaded.faction_doctrines().to_vec(),
+        loaded.state.faction_doctrines,
+        "Simulation.faction_doctrines and WorldState.faction_doctrines must agree after load"
     );
 }

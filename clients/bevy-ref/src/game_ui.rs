@@ -7,7 +7,7 @@
 //! untouched. The HUD draws an AAA-styled glassmorphism shell: a stat-chip top
 //! bar, a tool-palette + speed-control bottom bar, and a selection inspector.
 
-use crate::menus::{in_playing, GameUiMode};
+use crate::menus::GameUiMode;
 use crate::tool_categories::ActiveSubTool;
 use crate::ui_theme::{CHIP_FILL, NEON_HI};
 use bevy::prelude::*;
@@ -538,6 +538,7 @@ fn load_tool_icons(
 }
 
 #[cfg(feature = "egui")]
+#[allow(dead_code)] // wired up by egui build via separate plugin in future iterations
 fn sync_initial_game_speed_from_settings(
     settings: Option<Res<GameSettings>>,
     mut speed: ResMut<GameSpeed>,
@@ -908,6 +909,7 @@ fn apply_theme(ctx: &egui::Context) {
 }
 
 /// Shared rounded glass frame for the HUD panels.
+#[allow(dead_code)] // kept for future HUD panel rebuilds
 fn panel_frame(margin: egui::Margin) -> egui::Frame {
     egui::Frame::NONE
         .fill(PANEL_FILL)

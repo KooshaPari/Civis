@@ -158,6 +158,7 @@ impl Plugin for NotificationsPlugin {
     }
 }
 
+#[allow(dead_code)] // retained for future playing-only gating of additional systems
 fn in_playing(mode: Res<GameUiMode>) -> bool {
     *mode == GameUiMode::Playing
 }

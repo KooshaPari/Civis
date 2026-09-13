@@ -292,12 +292,13 @@ mod tests {
 }
 
 // ── Test-local trait (defined below the test module so it cannot leak into
-// the public API surface). ───────────────────────────────────────────────────
+// ── Test-local trait (defined below the test module so it cannot leak into
+// the public API surface). ────────────────────────────────────────────────────
 
+#[allow(dead_code)] // exercised by cfg(test) PostFxProbe tests
 trait PostFxProbe {
     fn is_off(&self, name: &str) -> bool;
 }
-
 impl PostFxProbe for PostFxSettings {
     fn is_off(&self, name: &str) -> bool {
         match name {

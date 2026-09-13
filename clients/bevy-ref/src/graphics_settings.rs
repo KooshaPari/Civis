@@ -714,7 +714,7 @@ pub fn apply_gfx_settings(
         Option<&mut MotionBlur>,
         Option<&mut Msaa>,
     )>,
-    mut postfx_toggle: Option<ResMut<crate::civ_postfx::CivPostFxToggle>>,
+    postfx_toggle: Option<ResMut<crate::civ_postfx::CivPostFxToggle>>,
 ) {
     if !settings.is_changed() {
         return;
@@ -1085,7 +1085,7 @@ fn draw_upscaling_section(
                 changed |= ui
                     .add_enabled(
                         true,
-                        egui::SelectableLabel::new(
+                        egui::Button::selectable(
                             s.upscaling == UpscalingMode::FSR,
                             UpscalingMode::FSR.label(),
                         ),

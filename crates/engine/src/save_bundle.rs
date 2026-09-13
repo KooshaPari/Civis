@@ -462,8 +462,11 @@ impl CivSaveBundle {
             sim.actor_institutions = sim.state.actor_institutions.clone();
             sim.kinship = sim.state.kinship.clone();
             sim.trust = sim.state.trust.clone();
+            // FR-CIV-BELIEF-001: mirror emergent religious profiles so the
+            // post-load sim resumes with its per-settlement mythic coherence,
+            // monitoring, and uncertainty-reduction state intact.
+            sim.religious_profiles = sim.state.religious_profiles.clone();
         }
-
         let environment_path = dir.join(ENVIRONMENT_FILE);
         if let Some(json) = match fs::read_to_string(&environment_path) {
             Ok(json) => Some(json),

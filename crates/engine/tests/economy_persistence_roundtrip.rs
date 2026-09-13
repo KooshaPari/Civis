@@ -18,7 +18,7 @@
 //! across the save→load boundary, completing the Replay/import
 //! dimension from 30% → ~85% on the parent scorecard.
 
-use civ_engine::{CivSaveBundle, Doctrine, DoctrineLibrary, GameOutcome, Simulation};
+use civ_engine::{CivSaveBundle, Doctrine, DoctrineLibrary, GameOutcome, ReligiousProfile, Simulation};
 use std::collections::BTreeMap;
 
 /// Snapshot the per-settlement wealth trace, sorted by settlement id.
@@ -459,5 +459,64 @@ fn archive_roundtrips_actor_social_fabric_state() {
     assert_eq!(
         loaded.trust, loaded.state.trust,
         "Simulation.trust and WorldState.trust must agree after load"
+    );
+}
+
+/// `FR-CIV-RELIGION-001` round-trip: the per-settlement religious profile
+/// map (`religious_profiles`) must survive the `.civsave.zst` archive
+/// boundary, so `phase_culture` / `phase_emergence` resume with the same
+/// monitoring / mythic-coherence / uncertainty-reduction state.
+#[test]
+fn archive_roundtrips_religious_profiles() {
+    let mut sim = Simulation::with_seed(77);
+    sim.religious_profiles = BTreeMap::from([
+        (
+            0,
+            ReligiousProfile {
+                settlement_id: 0,
+                population: 400,
+                monitoring: 0.42,
+                mythic_coherence: 0.91,
+                uncertainty_reduction: 0.17,
+                created_tick: 3,
+            },
+        ),
+        (
+            1,
+            ReligiousProfile {
+                settlement_id: 1,
+                population: 150,
+                monitoring: 0.70,
+                mythic_coherence: 0.55,
+                uncertainty_reduction: 0.45,
+                created_tick: 7,
+            },
+        ),
+    ]);
+    let expected = sim.religious_profiles.clone();
+
+    // Advance a tick so the save-side mirror fires, then pre-save lockstep.
+    sim.advance_ticks(1);
+    assert_eq!(
+        sim.religious_profiles, sim.state.religious_profiles,
+        "save-side mirror must keep Simulation.religious_profiles and WorldState.religious_profiles in lockstep"
+    );
+
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let archive_path = tmp.path().join("religion.civsave.zst");
+    CivSaveBundle::save_archive(&archive_path, &sim).expect("save archive");
+    let loaded = CivSaveBundle::load_archive(&archive_path).expect("load archive");
+
+    assert_eq!(
+        loaded.state.religious_profiles, expected,
+        "WorldState.religious_profiles must round-trip byte-for-byte through the archive"
+    );
+    assert_eq!(
+        loaded.religious_profiles, expected,
+        "Simulation.religious_profiles must be restored by the load-side mirror"
+    );
+    assert_eq!(
+        loaded.religious_profiles, loaded.state.religious_profiles,
+        "Simulation.religious_profiles and WorldState.religious_profiles must agree after load"
     );
 }

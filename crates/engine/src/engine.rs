@@ -491,6 +491,15 @@ pub struct WorldState {
     /// (the cohesion backbone) survives archive round-trip.
     #[serde(default)]
     pub trust: BTreeMap<u64, BTreeMap<u64, i64>>,
+    /// Per-settlement emergent religious profile (FR-CIV-BELIEF-001 §8).
+    /// Mutated every tick by `phase_culture` (culture_phases.rs) via
+    /// schism/conversion/heresy mechanics, and read by `phase_emergence`
+    /// for faction-religion signals. Persisted so the emergent religious
+    /// profile of each settlement survives archive round-trip — otherwise
+    /// reload resets every settlement's profile to default and the
+    /// adherence/belief feedback loop loses its accumulator.
+    #[serde(default)]
+    pub religious_profiles: BTreeMap<u32, crate::religion::ReligiousProfile>,
     // Extended subsystem fields (not comparable — subsystem-specific types)
     #[serde(default, skip)]
     pub faction_religions: BTreeMap<u32, crate::religion::Religion>,
@@ -609,6 +618,7 @@ impl Default for WorldState {
             actor_institutions: BTreeMap::new(),
             kinship: BTreeMap::new(),
             trust: BTreeMap::new(),
+            religious_profiles: BTreeMap::new(),
             faction_religions: BTreeMap::new(),
             faction_language_systems: BTreeMap::new(),
             civilian_psyches: BTreeMap::new(),
@@ -2267,6 +2277,7 @@ impl Simulation {
         self.state.actor_institutions = self.actor_institutions.clone();
         self.state.kinship = self.kinship.clone();
         self.state.trust = self.trust.clone();
+        self.state.religious_profiles = self.religious_profiles.clone();
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]

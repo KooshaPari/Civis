@@ -233,6 +233,10 @@ pub use replay_format::{
     load_civreplay, save_civreplay, FOOTER_CHECKSUM_LEN, FORMAT_VERSION, MAGIC,
 };
 pub use save_bundle::{CivSaveMetadata, SaveBundleError, CIVSAVE_FORMAT_VERSION, CIVSAVE_SPEC_ID};
+// FR-CIV-GAME-001: cached victory/defeat assessment. Re-exported so callers
+// can name the type as `civ_engine::GameOutcome` and compare outcomes
+// without pulling the private `conditions` module path.
+pub use conditions::{check_outcome, GameOutcome, OutcomeProgress};
 pub use scenario::{
     baseline_scenario_path, load_scenario, Scenario, ScenarioError, ScenarioMilitary,
     SCENARIO_SCHEMA_VERSION,

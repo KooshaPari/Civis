@@ -443,6 +443,10 @@ impl CivSaveBundle {
             sim.settlement_housing_capacity = sim.state.settlement_housing_capacity.clone();
             sim.settlement_crime_pressure = sim.state.settlement_crime_pressure.clone();
             sim.settlement_gini = sim.state.settlement_gini.clone();
+            // Load-side mirror: restore the cached victory/defeat outcome so a
+            // world frozen at Victory/Defeat reads the same outcome back; will
+            // be re-derived on the next tick by phase_victory_check anyway.
+            sim.last_game_outcome = sim.state.last_game_outcome.clone();
         }
 
         let environment_path = dir.join(ENVIRONMENT_FILE);

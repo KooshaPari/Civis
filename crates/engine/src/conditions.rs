@@ -61,6 +61,16 @@ pub enum GameOutcome {
     Ongoing,
 }
 
+/// Legacy `world_state.json` snapshots predate `last_game_outcome` on the
+/// `WorldState` struct; serde needs a `Default` impl to materialize a value
+/// for the absent field during deserialization. We pick `Ongoing` because
+/// `phase_victory_check` re-derives the true outcome on the very next tick.
+impl Default for GameOutcome {
+    fn default() -> Self {
+        Self::Ongoing
+    }
+}
+
 impl GameOutcome {
     pub fn tag(&self) -> &'static str {
         match self {

@@ -18,7 +18,7 @@
 //! across the save→load boundary, completing the Replay/import
 //! dimension from 30% → ~85% on the parent scorecard.
 
-use civ_engine::{CivSaveBundle, Simulation};
+use civ_engine::{CivSaveBundle, GameOutcome, Simulation};
 use std::collections::BTreeMap;
 
 /// Snapshot the per-settlement wealth trace, sorted by settlement id.
@@ -194,5 +194,56 @@ fn archive_roundtrips_settlement_registry_and_scaffold() {
     assert!(
         !loaded.state.settlements.is_empty(),
         "settlement registry must not be empty after load"
+    );
+}
+
+/// `last_game_outcome` is the cached victory/defeat assessment that
+/// `phase_victory_check` writes each tick. Before this fix it lived only
+/// on `Simulation`; a `.civsave.zst` archive frozen at a Victory or
+/// Defeat reloaded with `Ongoing` until the next tick re-derived it.
+/// This test forces a Defeat outcome, saves, loads, and asserts the
+/// cached outcome survives the round-trip byte-for-byte.
+#[test]
+fn archive_roundtrips_last_game_outcome() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let archive_path = dir.path().join("outcome.civsave.zst");
+
+    let mut sim = Simulation::with_seed(123);
+    // Drop the population to zero while leaving at least one faction:
+    // `check_outcome` treats (factions non-empty, population == 0) as
+    // "Civilization Collapsed" (see conditions.rs Defeat branch).
+    sim.state.population = 0;
+    sim.state.factions.entry(0).or_insert_with(|| "TestFaction".to_owned());
+    // One advance so phase_victory_check writes the cached outcome AND
+    // the save-side mirror runs (it sits right after phase_victory_check
+    // in Simulation::tick).
+    sim.advance_ticks(1);
+
+    let cached_before = sim.last_game_outcome.clone();
+    let state_before = sim.state.last_game_outcome.clone();
+    assert!(
+        matches!(cached_before, GameOutcome::Defeat(_)),
+        "test setup must force a Defeat outcome, got {:?}",
+        cached_before
+    );
+    assert_eq!(
+        cached_before, state_before,
+        "save-side mirror must keep Simulation.last_game_outcome and WorldState.last_game_outcome in lockstep"
+    );
+
+    CivSaveBundle::save_archive(&archive_path, &sim).expect("save archive");
+    let loaded = CivSaveBundle::load_archive(&archive_path).expect("load archive");
+
+    assert_eq!(
+        loaded.state.last_game_outcome, cached_before,
+        "WorldState.last_game_outcome must round-trip byte-for-byte through the archive"
+    );
+    assert_eq!(
+        loaded.last_game_outcome, cached_before,
+        "Simulation.last_game_outcome must mirror WorldState after load (load-side mirror)"
+    );
+    assert_eq!(
+        loaded.last_game_outcome, loaded.state.last_game_outcome,
+        "Simulation.last_game_outcome and WorldState.last_game_outcome must agree after load"
     );
 }

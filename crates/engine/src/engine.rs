@@ -448,7 +448,12 @@ pub struct WorldState {
     /// gameplay-loop wealth trace remains deterministic across the boundary.
     #[serde(default)]
     pub market_state: civ_economy::MarketState,
-
+    /// Most recent deterministic victory/defeat assessment (FR-CIV-GAME-001).
+    /// Persisted so a `.civsave.zst` archive frozen at a Victory or Defeat
+    /// state reloads with the same outcome visible to callers. Recomputed
+    /// each tick via `check_outcome`, so legacy saves default to `Ongoing`.
+    #[serde(default)]
+    pub last_game_outcome: GameOutcome,
     // Extended subsystem fields (not comparable — subsystem-specific types)
     #[serde(default, skip)]
     pub faction_religions: BTreeMap<u32, crate::religion::Religion>,
@@ -560,6 +565,7 @@ impl Default for WorldState {
             settlement_wealth_snapshot:
                 civ_economy::gameplay_loop::SettlementWealthSnapshot::default(),
             market_state: civ_economy::MarketState::default(),
+            last_game_outcome: GameOutcome::Ongoing,
             faction_religions: BTreeMap::new(),
             faction_language_systems: BTreeMap::new(),
             civilian_psyches: BTreeMap::new(),
@@ -2202,6 +2208,10 @@ impl Simulation {
         self.phase_audio();
         // Victory/defeat after event phases so last_game_outcome matches this tick.
         self.phase_victory_check();
+        // Mirror the live outcome onto WorldState so save_archive serializes it
+        // (save-side mirror). Recomputed each tick by phase_victory_check, so
+        // legacy saves deserialize as Ongoing and immediately get re-derived.
+        self.state.last_game_outcome = self.last_game_outcome.clone();
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]

@@ -243,9 +243,7 @@ mod tests {
         }
         assert!(!should_speciate(&a, &b, &class));
         // Flip everything — above threshold.
-        for byte in &mut b.0 {
-            *byte = 0xff;
-        }
+        b.0.fill(0xff);
         assert!(should_speciate(&a, &b, &class));
     }
 

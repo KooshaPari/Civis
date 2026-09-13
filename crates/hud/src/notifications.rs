@@ -16,10 +16,13 @@ use serde::{Deserialize, Serialize};
 ///
 /// Ordering is meaningful: `Info < Warning < Critical < Fatal`. The
 /// `severity_at_least` filter and `Severity::iter` rely on this order.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum Severity {
     /// Informational — neutral events worth surfacing.
+    #[default]
     Info,
     /// Warning — something the player should pay attention to.
     Warning,
@@ -46,12 +49,6 @@ impl Severity {
     #[must_use]
     pub const fn at_least(self, threshold: Severity) -> bool {
         (self as u8) >= (threshold as u8)
-    }
-}
-
-impl Default for Severity {
-    fn default() -> Self {
-        Severity::Info
     }
 }
 

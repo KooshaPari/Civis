@@ -26,7 +26,7 @@ pub struct CoastalColumn {
 // ---- Simulation climate/planet methods (extracted from engine.rs) ----
 
 use crate::engine::Simulation;
-use civ_planet::{compute_climate, compute_weather};
+use civ_planet::{compute_climate, compute_weather, MoonConfig};
 use civ_voxel::FIXED_SCALE;
 
 impl Simulation {
@@ -48,16 +48,31 @@ impl Simulation {
     /// shifted vertically each tick by the climate `tide_offset` (FR-CIV-PLANET-020).
     ///
     /// Coordinates are fixed-point world units (see [`FIXED_SCALE`]). Calling
-    /// this for an already-registered column resets its baseline; the next
-    /// `phase_planet` will clear the old water voxel and write the new one.
+    /// this for an already-registered column resets its baseline, clears its
+    /// prior marker when it is still water, and writes the new baseline marker.
     pub fn register_coastal_water_column(&mut self, x: i64, z: i64, base_y: i64) {
+        let new_pos = WorldCoord { x, y: base_y, z };
+        if let Some(previous) = self.coastal_columns.get(&(x, z)).copied() {
+            if previous.last_water_y != base_y {
+                let old_pos = WorldCoord {
+                    x,
+                    y: previous.last_water_y,
+                    z,
+                };
+                if self.voxel.read(old_pos) == WATER_MARKER_MATERIAL {
+                    self.push_voxel_write(old_pos, MaterialId(0));
+                }
+                self.push_voxel_write(new_pos, WATER_MARKER_MATERIAL);
+            } else if self.voxel.read(new_pos) != WATER_MARKER_MATERIAL {
+                self.push_voxel_write(new_pos, WATER_MARKER_MATERIAL);
+            }
+        } else {
+            self.push_voxel_write(new_pos, WATER_MARKER_MATERIAL);
+        }
         let column = CoastalColumn {
             base_y,
             last_water_y: base_y,
         };
-        // Seed the initial water voxel through the replay-aware write path so
-        // FR-CIV-VOXEL-002 dirty-event invariants stay intact.
-        self.push_voxel_write(WorldCoord { x, y: base_y, z }, WATER_MARKER_MATERIAL);
         self.coastal_columns.insert((x, z), column);
     }
 
@@ -76,7 +91,7 @@ impl Simulation {
     /// Shift every registered coastal water-level voxel by the current
     /// `climate.tide_offset` (FR-CIV-PLANET-020). The offset is scaled into
     /// fixed-point world units, rounded deterministically, and applied through
-    /// [`VoxelWorld::write`] so dirty events propagate normally
+    /// [`Simulation::push_voxel_write`] so replay and dirty events propagate normally
     /// (FR-CIV-VOXEL-002).
     ///
     /// For each column we clear the previously occupied water voxel (write
@@ -111,16 +126,157 @@ impl Simulation {
             if prev_y == new_y {
                 continue;
             }
-            // Clear previous water marker, then place the new one. Both go
-            // through `VoxelWorld::write` so the dirty queue stays
-            // deterministic (FR-CIV-VOXEL-002).
-            self.voxel
-                .write(WorldCoord { x, y: prev_y, z }, MaterialId(0));
-            self.voxel
-                .write(WorldCoord { x, y: new_y, z }, WATER_MARKER_MATERIAL);
+            // Preserve an authored voxel that replaced the previous water marker.
+            let prev_pos = WorldCoord { x, y: prev_y, z };
+            if self.voxel.read(prev_pos) == WATER_MARKER_MATERIAL {
+                self.push_voxel_write(prev_pos, MaterialId(0));
+            }
+            self.push_voxel_write(WorldCoord { x, y: new_y, z }, WATER_MARKER_MATERIAL);
             if let Some(column) = self.coastal_columns.get_mut(&(x, z)) {
                 column.last_water_y = new_y;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::save_bundle::CivSaveBundle;
+    use tempfile::tempdir;
+
+    #[test]
+    fn tide_movement_survives_save_and_load() {
+        let mut sim = Simulation::with_seed(72);
+        sim.moon = MoonConfig {
+            orbit_period_ticks: 4,
+            tidal_amplitude: 1.0,
+        };
+        let (x, z, base_y) = (39, -19, 600);
+        sim.register_coastal_water_column(x, z, base_y);
+        sim.state.tick = 1;
+        sim.phase_planet();
+        let moved = WorldCoord {
+            x,
+            y: base_y + FIXED_SCALE,
+            z,
+        };
+        assert_eq!(
+            sim.voxel().read(WorldCoord { x, y: base_y, z }),
+            MaterialId(0)
+        );
+        assert_eq!(sim.voxel().read(moved), WATER_MARKER_MATERIAL);
+        let dir = tempdir().expect("tempdir");
+        let save_path = dir.path().join("moved-coastal");
+        CivSaveBundle::save_dir(&save_path, &sim).expect("save after tide movement");
+        let mut loaded = CivSaveBundle::load_dir(&save_path).expect("load");
+        assert_eq!(
+            loaded.voxel().read(WorldCoord { x, y: base_y, z }),
+            MaterialId(0)
+        );
+        assert_eq!(loaded.voxel().read(moved), WATER_MARKER_MATERIAL);
+        assert_eq!(loaded.coastal_water_level(x, z), Some(moved.y));
+        loaded.state.tick = 2;
+        loaded.phase_planet();
+        assert_eq!(loaded.voxel().read(moved), MaterialId(0));
+        assert_eq!(
+            loaded.voxel().read(WorldCoord { x, y: base_y, z }),
+            WATER_MARKER_MATERIAL
+        );
+    }
+
+    #[test]
+    fn reregistering_a_moved_coastal_column_survives_save_and_the_next_tide() {
+        let mut sim = Simulation::with_seed(73);
+        sim.moon = MoonConfig {
+            orbit_period_ticks: 4,
+            tidal_amplitude: 1.0,
+        };
+        let (x, z, initial_base) = (40, -20, 700);
+        let moved_base = initial_base + 3 * FIXED_SCALE;
+        sim.register_coastal_water_column(x, z, initial_base);
+        sim.state.tick = 1;
+        sim.phase_planet();
+        let old_marker = WorldCoord {
+            x,
+            y: initial_base + FIXED_SCALE,
+            z,
+        };
+        sim.register_coastal_water_column(x, z, moved_base);
+        let new_marker = WorldCoord {
+            x,
+            y: moved_base,
+            z,
+        };
+        assert_eq!(sim.voxel().read(old_marker), MaterialId(0));
+        assert_eq!(sim.voxel().read(new_marker), WATER_MARKER_MATERIAL);
+        let dir = tempdir().expect("tempdir");
+        let save_path = dir.path().join("reregistered-coastal");
+        CivSaveBundle::save_dir(&save_path, &sim).expect("save");
+        let mut loaded = CivSaveBundle::load_dir(&save_path).expect("load");
+        assert_eq!(
+            loaded.voxel().read(WorldCoord {
+                x,
+                y: initial_base,
+                z
+            }),
+            MaterialId(0)
+        );
+        assert_eq!(loaded.voxel().read(old_marker), MaterialId(0));
+        assert_eq!(loaded.voxel().read(new_marker), WATER_MARKER_MATERIAL);
+        loaded.state.tick = 3;
+        loaded.phase_planet();
+        let next_marker = WorldCoord {
+            x,
+            y: moved_base - FIXED_SCALE,
+            z,
+        };
+        assert_eq!(loaded.voxel().read(new_marker), MaterialId(0));
+        assert_eq!(loaded.voxel().read(next_marker), WATER_MARKER_MATERIAL);
+    }
+
+    #[test]
+    fn reregistering_preserves_an_intervening_authored_voxel() {
+        let mut sim = Simulation::with_seed(74);
+        sim.moon = MoonConfig {
+            orbit_period_ticks: 4,
+            tidal_amplitude: 1.0,
+        };
+        let (x, z, base_y) = (41, -21, 800);
+        sim.register_coastal_water_column(x, z, base_y);
+        sim.state.tick = 1;
+        sim.phase_planet();
+        let former_marker = WorldCoord {
+            x,
+            y: base_y + FIXED_SCALE,
+            z,
+        };
+        sim.voxel_mut().write(former_marker, MaterialId(77));
+        let new_base = base_y + 3 * FIXED_SCALE;
+        sim.register_coastal_water_column(x, z, new_base);
+        assert_eq!(sim.voxel().read(former_marker), MaterialId(77));
+        assert_eq!(
+            sim.voxel().read(WorldCoord { x, y: new_base, z }),
+            WATER_MARKER_MATERIAL
+        );
+    }
+
+    #[test]
+    fn reregistering_an_unchanged_column_repairs_only_a_replaced_marker() {
+        let mut sim = Simulation::with_seed(75);
+        let pos = WorldCoord {
+            x: 42,
+            y: 900,
+            z: -22,
+        };
+        sim.register_coastal_water_column(pos.x, pos.z, pos.y);
+        let after_seed = sim.replay_log().events.len();
+        sim.register_coastal_water_column(pos.x, pos.z, pos.y);
+        assert_eq!(sim.replay_log().events.len(), after_seed);
+        sim.voxel_mut().write(pos, MaterialId(77));
+        let after_authored_write = sim.replay_log().events.len();
+        sim.register_coastal_water_column(pos.x, pos.z, pos.y);
+        assert_eq!(sim.voxel().read(pos), WATER_MARKER_MATERIAL);
+        assert_eq!(sim.replay_log().events.len(), after_authored_write + 1);
     }
 }

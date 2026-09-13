@@ -71,6 +71,16 @@ impl Simulation {
             return;
         }
         self.institution_levels_emitted.insert(key);
+        let institutions = self.institutions.entry(sid).or_default();
+        if let Some(active) = institutions.iter_mut().find(|inst| inst.kind == kind) {
+            active.level = active.level.max(new_level);
+        } else {
+            institutions.push(civ_institutions::Institution {
+                kind,
+                level: new_level,
+            });
+            institutions.sort_by_key(|inst| inst.kind);
+        }
         events.push(InstitutionEvent {
             kind,
             level: new_level,
@@ -105,15 +115,17 @@ impl Simulation {
             let crime_signed = MOOD_CRIME_BASE.saturating_sub(4 * crime_pressure as i64);
             let crime_score = crime_signed.clamp(0, MOOD_CRIME_BASE);
 
-            let (temple_bonus, garrison_bonus) = match self.institutions.get(&settlement_id) {
-                Some(inst) if inst.kind == civ_institutions::InstitutionKind::Temple => {
-                    (25 + 25 * (inst.level as i32), 0)
+            let (mut temple_bonus, mut garrison_bonus) = (0, 0);
+            for inst in self.institutions.get(&settlement_id).into_iter().flatten() {
+                match inst.kind {
+                    civ_institutions::InstitutionKind::Temple => {
+                        temple_bonus = 25 + 25 * i32::from(inst.level);
+                    }
+                    civ_institutions::InstitutionKind::Garrison => {
+                        garrison_bonus = 15 + 15 * i32::from(inst.level);
+                    }
                 }
-                Some(inst) if inst.kind == civ_institutions::InstitutionKind::Garrison => {
-                    (0, 15 + 15 * (inst.level as i32))
-                }
-                _ => (0, 0),
-            };
+            }
 
             let total = food_score
                 .saturating_add(housing_score)
@@ -446,6 +458,9 @@ impl Simulation {
             self.last_tick_unrest_levels.insert(settlement_id, level);
         }
         self.last_tick_unrest_snapshots = new_snapshots;
+        // Keep the public per-tick event stream in sync with the internal
+        // phase buffer consumed by the engine's wire/snapshot adapters.
+        self.last_tick_unrest = self.last_tick_unrest_events.clone();
     }
 
     /// Daily-path phase (FR-CIV-LIFE-001 / FR-CIV-LIFE-002).

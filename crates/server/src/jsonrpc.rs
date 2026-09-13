@@ -475,6 +475,9 @@ pub struct InstitutionSnapshot {
 /// Snapshot fields from `Simulation::snapshot()` for read-only RPC handlers.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SnapshotFields {
+    /// Deterministic per-region weather; absent in older serialized snapshots.
+    #[serde(default)]
+    pub weather_grid: Vec<civ_planet::WeatherCell>,
     /// Engine tick at snapshot time.
     pub tick: u64,
     /// World population.
@@ -729,6 +732,10 @@ pub fn snapshot_result_json(fields: &SnapshotFields) -> Value {
         serde_json::to_value(fields.climate).unwrap_or(Value::Null),
     );
     obj.insert(
+        "weather_grid".to_owned(),
+        serde_json::to_value(&fields.weather_grid).unwrap_or(Value::Array(vec![])),
+    );
+    obj.insert(
         "music_cues".to_owned(),
         serde_json::to_value(&fields.music_cues).unwrap_or(Value::Null),
     );
@@ -875,6 +882,7 @@ pub fn snapshot_fields_from_sim(
 ) -> SnapshotFields {
     let snap = sim.snapshot();
     SnapshotFields {
+        weather_grid: snap.weather_grid.clone(),
         tick: snap.tick,
         population: snap.population,
         building_count: snap.building_count,
@@ -1236,7 +1244,7 @@ pub enum DispatchEffect {
         y: i64,
         /// World Z coordinate.
         z: i64,
-        /// Material id (0–255).
+        /// Material id (0–u16::MAX).
         material: u16,
     },
     /// Stamp a circular footprint (`sim.terraform_extent`).
@@ -1249,7 +1257,7 @@ pub enum DispatchEffect {
         z: i64,
         /// Brush operation name.
         op: String,
-        /// Material id (0–255).
+        /// Material id (0–u16::MAX).
         material: u16,
         /// Radius in voxel cells.
         radius: u8,
@@ -2327,12 +2335,13 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                     "audio_events".to_owned(),
                     serde_json::json!(snap.audio_events),
                 );
-                root.insert(
-                    "music_cues".to_owned(),
-                    serde_json::json!(snap.music_cues),
-                );
+                root.insert("music_cues".to_owned(), serde_json::json!(snap.music_cues));
                 // Climate snapshot (deterministic planet)
                 root.insert("climate".to_owned(), serde_json::json!(snap.climate));
+                root.insert(
+                    "weather_grid".to_owned(),
+                    serde_json::json!(snap.weather_grid),
+                );
                 // Emergence sample (entropy, power-law, mutual info)
                 if let Some(sample) = snap.emergence.as_ref() {
                     root.insert("emergence_sample".to_owned(), serde_json::json!(sample));
@@ -2341,13 +2350,11 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 // No snapshot available — still report tick + research state
                 // so client doesn't have to special-case the absent-snapshot path.
                 root.insert("damage_events_count".to_owned(), serde_json::json!(0u32));
-                root.insert(
-                    "voxel_damage_removed".to_owned(),
-                    serde_json::json!(0u32),
-                );
+                root.insert("voxel_damage_removed".to_owned(), serde_json::json!(0u32));
                 root.insert("damage_events".to_owned(), serde_json::json!([]));
                 root.insert("audio_events".to_owned(), serde_json::json!([]));
                 root.insert("music_cues".to_owned(), serde_json::json!({}));
+                root.insert("weather_grid".to_owned(), serde_json::json!([]));
             }
             // Religion/legends from separate ctx fields
             if let Some(rs) = ctx.religion_state.as_ref() {
@@ -2592,11 +2599,11 @@ pub fn parse_place_voxel_params(
         .get("z")
         .and_then(|v| v.as_i64())
         .ok_or(invalid_params("z"))?;
-    let material = p
-        .get("material")
-        .and_then(|v| v.as_u64())
-        .map(|v| v as u16)
-        .unwrap_or(0);
+    let material = match p.get("material") {
+        Some(value) => u16::try_from(value.as_u64().ok_or_else(|| invalid_params("material"))?)
+            .map_err(|_| invalid_params("material"))?,
+        None => 0,
+    };
     Ok((x, y, z, material))
 }
 
@@ -2626,16 +2633,26 @@ pub fn parse_terraform_extent_params(
         .and_then(|v| v.as_str())
         .unwrap_or("raise")
         .to_owned();
-    let material = p
-        .get("material")
-        .and_then(|v| v.as_u64())
-        .map(|v| v as u16)
-        .unwrap_or_else(|| civ_voxel::default_material_for_op(&op).0 as u16);
-    let radius = p
-        .get("radius")
-        .and_then(|v| v.as_u64())
-        .map(|v| v.clamp(1, 32) as u8)
-        .unwrap_or(3);
+    let material = match p.get("material") {
+        Some(value) => u16::try_from(value.as_u64().ok_or_else(|| invalid_params("material"))?)
+            .map_err(|_| invalid_params("material"))?,
+        None => civ_voxel::default_material_for_op(&op).0 as u16,
+    };
+    let radius = match p.get("radius") {
+        Some(value) => value
+            .as_u64()
+            .ok_or_else(|| invalid_params("radius"))?
+            .clamp(1, 32) as u8,
+        None => 3,
+    };
+    // The disk brush offsets x/z in fixed-point units. Reject an extent
+    // that would overflow before the brush can perform any partial writes.
+    let extent = i64::from(radius) * civ_voxel::FIXED_SCALE;
+    for (field, center) in [("x", x), ("z", z)] {
+        if center.checked_sub(extent).is_none() || center.checked_add(extent).is_none() {
+            return Err(invalid_params(field));
+        }
+    }
     Ok((x, y, z, op, material, radius))
 }
 
@@ -3403,6 +3420,54 @@ mod tests {
     }
 
     #[test]
+    fn snapshot_and_event_results_preserve_actual_weather_and_legacy_defaults() {
+        let sim = civ_engine::Simulation::with_seed(7);
+        let fields = snapshot_fields_from_sim(&sim, 1);
+        assert!(!fields.weather_grid.is_empty());
+        assert_eq!(fields.weather_grid, sim.snapshot().weather_grid);
+        let expected = serde_json::to_value(sim.weather_grid()).unwrap();
+        let mut legacy = serde_json::to_value(&fields).unwrap();
+        legacy.as_object_mut().unwrap().remove("weather_grid");
+        let legacy: SnapshotFields = serde_json::from_value(legacy).unwrap();
+        assert!(legacy.weather_grid.is_empty());
+        for (method, snapshot, expected) in [
+            ("sim.snapshot", Some(fields.clone()), expected.clone()),
+            ("sim.snapshot", Some(legacy), serde_json::json!([])),
+            ("sim.events", Some(fields), expected),
+            ("sim.events", None, serde_json::json!([])),
+        ] {
+            let req = parse_request(
+                &serde_json::json!({"jsonrpc":"2.0","id":1,"method":method,"params":{}})
+                    .to_string(),
+            )
+            .unwrap();
+            let plan = dispatch_request(
+                req,
+                DispatchContext {
+                    tick: sim.state.tick,
+                    population: None,
+                    snapshot,
+                    tile_probe: None,
+                    require_role: false,
+                    speed_multiplier: 1,
+                    connection_role: None,
+                    saves_dir: None,
+                    emergence: None,
+                    legends: None,
+                    researched: vec![],
+                    in_progress_tech: None,
+                    last_tick_ms: 0.0,
+                    outcome_fields: None,
+                    psyche_snapshot: None,
+                    sentience_events: None,
+                    religion_state: None,
+                },
+            );
+            assert_eq!(plan.response.result.unwrap()["weather_grid"], expected);
+        }
+    }
+
+    #[test]
     fn snapshot_fields_from_sim_includes_spectator_pins() {
         let sim = civ_engine::Simulation::with_seed(7);
         let fields = snapshot_fields_from_sim(&sim, 1);
@@ -3471,6 +3536,80 @@ mod tests {
         let params = serde_json::json!({ "x": 1, "y": 2, "z": 3, "material": 4 });
         let (x, y, z, material) = parse_place_voxel_params(Some(&params)).expect("place params");
         assert_eq!((x, y, z, material), (1, 2, 3, 4));
+    }
+
+    #[test]
+    fn place_voxel_material_defaults_and_u16_boundaries_remain_valid() {
+        let mut params = serde_json::json!({"x":1,"y":2,"z":3});
+        assert_eq!(parse_place_voxel_params(Some(&params)).unwrap().3, 0);
+        for material in [0, u16::MAX] {
+            params["material"] = serde_json::json!(material);
+            assert_eq!(parse_place_voxel_params(Some(&params)).unwrap().3, material);
+        }
+    }
+
+    #[test]
+    fn terraform_extent_rejects_coordinate_overflow_before_dispatch() {
+        for field in ["x", "z"] {
+            for center in [i64::MIN, i64::MAX] {
+                let mut params = serde_json::json!({"x":0,"y":0,"z":0,"radius":32});
+                params[field] = serde_json::json!(center);
+                let error = parse_terraform_extent_params(Some(&params)).unwrap_err();
+                assert_eq!(error.code, error_code::INVALID_PARAMS);
+                assert!(error.message.contains(field));
+                let extent = 32 * civ_voxel::FIXED_SCALE;
+                params[field] = serde_json::json!(if center < 0 {
+                    center + extent
+                } else {
+                    center - extent
+                });
+                assert!(parse_terraform_extent_params(Some(&params)).is_ok());
+            }
+        }
+    }
+
+    #[test]
+    fn parse_terraform_extent_params_defaults_material_and_radius() {
+        let params = serde_json::json!({ "x": 1, "y": 2, "z": 3, "op": "lower" });
+        let parsed = parse_terraform_extent_params(Some(&params)).expect("terraform params");
+        assert_eq!(parsed, (1, 2, 3, "lower".to_owned(), 0, 3));
+    }
+
+    #[test]
+    fn parse_terraform_extent_params_rejects_malformed_optional_values() {
+        let bad_material = serde_json::json!({
+            "x": 1,
+            "y": 2,
+            "z": 3,
+            "material": "wood"
+        });
+        assert_eq!(
+            parse_terraform_extent_params(Some(&bad_material))
+                .expect_err("string material must be rejected")
+                .message,
+            "Invalid params: missing or invalid `material`"
+        );
+
+        let overflowing_material = serde_json::json!({
+            "x": 1,
+            "y": 2,
+            "z": 3,
+            "material": 65_536
+        });
+        assert_eq!(
+            parse_terraform_extent_params(Some(&overflowing_material))
+                .expect_err("overflowing material must be rejected")
+                .message,
+            "Invalid params: missing or invalid `material`"
+        );
+
+        let bad_radius = serde_json::json!({ "x": 1, "y": 2, "z": 3, "radius": "large" });
+        assert_eq!(
+            parse_terraform_extent_params(Some(&bad_radius))
+                .expect_err("string radius must be rejected")
+                .message,
+            "Invalid params: missing or invalid `radius`"
+        );
     }
 
     #[test]
@@ -3667,6 +3806,7 @@ mod tests {
                 tick: 99,
                 population: None,
                 snapshot: Some(SnapshotFields {
+                    weather_grid: vec![],
                     tick: 42,
                     population: 1_000_000,
                     building_count: 7,
@@ -3734,6 +3874,7 @@ mod tests {
                 "tick": 42,
                 "population": 1_000_000,
                 "building_count": 7,
+                "weather_grid": [],
                 "energy_budget": 1_000_000.0,
                 "market_prices": {
                     "food": 1_000,
@@ -3783,6 +3924,7 @@ mod tests {
                 tick: 1,
                 population: None,
                 snapshot: Some(SnapshotFields {
+                    weather_grid: vec![],
                     tick: 1,
                     population: 500,
                     building_count: 2,
@@ -3836,6 +3978,7 @@ mod tests {
                 "tick": 1,
                 "population": 500,
                 "building_count": 2,
+                "weather_grid": [],
                 "energy_budget": 100.0,
                 "market_prices": {
                     "food": 1_000,
@@ -3879,6 +4022,7 @@ mod tests {
                 tick: 1,
                 population: None,
                 snapshot: Some(SnapshotFields {
+                    weather_grid: vec![],
                     tick: 1,
                     population: 500,
                     building_count: 2,
@@ -3935,6 +4079,7 @@ mod tests {
                 "tick": 1,
                 "population": 500,
                 "building_count": 2,
+                "weather_grid": [],
                 "market_prices": {
                     "food": 1_000,
                     "energy": 1_000,
@@ -4761,6 +4906,7 @@ mod tests {
             mi_material_faction_norm: Some(0.42),
         };
         let fields = SnapshotFields {
+            weather_grid: vec![],
             tick: 5,
             population: 0,
             building_count: 0,

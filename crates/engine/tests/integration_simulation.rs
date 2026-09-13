@@ -1,8 +1,6 @@
 //! End-to-end integration tests for the Civis simulation engine.
 
-use civ_engine::scenario::{baseline_scenario_path, load_scenario};
 use civ_engine::{Simulation, SimulationSnapshot};
-use std::path::PathBuf;
 
 /// Helper to get a default simulation.
 fn setup_default() -> Simulation {
@@ -12,12 +10,6 @@ fn setup_default() -> Simulation {
 /// Helper to get a simulation from a specific seed.
 fn setup_with_seed(seed: u64) -> Simulation {
     Simulation::with_seed(seed)
-}
-
-/// Helper to get a simulation from the baseline scenario.
-fn setup_from_baseline() -> Simulation {
-    let scenario = load_scenario(baseline_scenario_path()).expect("baseline scenario should load");
-    scenario.into_simulation(42)
 }
 
 /// Test 1: Basic tick test - ensure 10 ticks complete without panics.
@@ -44,18 +36,18 @@ fn test_simulation_economy_cycle() {
     );
 }
 
-/// Test 3: Diplomacy - create 3 factions (baseline has 4), run 20 ticks, verify diplomacy events occur.
+/// Test 3: Diplomacy - run through the 500-tick macro diplomacy cadence and
+/// verify the resulting events are present in the public snapshot.
 #[test]
-#[ignore = "TDD red step: snapshot.diplomacy_events is empty after 20 ticks (diplomacy not yet wired into snapshot)"]
 fn test_simulation_diplomacy() {
     let mut sim = setup_default();
-    for _ in 0..20 {
+    for _ in 0..500 {
         sim.tick();
     }
     let snapshot = sim.snapshot();
     assert!(
         !snapshot.diplomacy_events.is_empty(),
-        "Diplomacy events should occur after 20 ticks"
+        "Diplomacy events should occur after 500 ticks"
     );
 }
 

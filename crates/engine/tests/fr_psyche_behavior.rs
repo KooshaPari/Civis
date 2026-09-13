@@ -116,7 +116,6 @@ fn fr_psyche_behavior_balanced_mood_is_neutral() {
 /// to behavioral choices. This test verifies the full pipeline:
 /// DNA → psyche → behavior.
 #[test]
-#[ignore = "Fails: simulation does not create psyche states in agents after 150 ticks; emergence psyche pipeline not wired"]
 fn fr_psyche_behavior_emergence_integration() {
     let mut sim = Simulation::with_seed(42);
 
@@ -182,7 +181,6 @@ fn fr_psyche_behavior_low_impulsivity_dampens_anger() {
 /// stress should move an agent's mood and update its tick-local behavior
 /// snapshot through the simulation phase order.
 #[test]
-#[ignore = "Fails: agent_psyche() returns None after ticks; psyche attachment not wired through tick"]
 fn fr_psyche_behavior_tick_stress_changes_psyche_and_behavior() {
     let mut sim = Simulation::with_seed(2026);
     let agent_id = sim

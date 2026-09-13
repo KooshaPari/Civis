@@ -1,90 +1,37 @@
 {
     "version": "1",
     "repo": "Civis",
-    "git_sha": "999ce495135e6f2a2b2915f2f7d5574d8f5d19e1",
-    "content_hash": "720fb7b8ebf6a2a49c8017206c984009944adfe2885fecd9c4ed4bda9e66a2c8",
-    "created_at": "2026-08-22T15:28:39Z",
+    "git_sha": "250a94bd9f08f95b8e87857274c192edb8a0069e",
+    "content_hash": "e86ca55ffcc7e6963de84e67b840e022360dece938c356f55218e4b126d9a681",
+    "created_at": "2026-09-13T03:45:02Z",
     "runner": {
         "host": "KOOSHAPARI-DESK",
-        "rust": "rustc 1.98.0 (88d9e12ae 2026-08-18)"
+        "rust": "unknown"
     },
     "gates": {
+        "web_test": {
+            "tool": "node --test --test-concurrency=1 tests/*.test.mjs",
+            "status": "pass",
+            "detail": "Executed locally on 73a03e29125a086e328ac19d7ff3d4f6adfbdf04; all 159 recorded source SHA256 hashes rechecked unchanged against 250a94bd9f08f95b8e87857274c192edb8a0069e on 2026-09-13 03:43 UTC. Web: 125 tests; dashboard typecheck and production build passed."
+        },
+        "dashboard_build": {
+            "tool": "bun run build --outDir ../../.recovery-receipts/client-0056-dashboard-dist",
+            "status": "pass",
+            "detail": "Executed locally on 73a03e29125a086e328ac19d7ff3d4f6adfbdf04; all 159 recorded source SHA256 hashes rechecked unchanged against 250a94bd9f08f95b8e87857274c192edb8a0069e on 2026-09-13 03:43 UTC. Web: 125 tests; dashboard typecheck and production build passed."
+        },
+        "dashboard_typecheck": {
+            "tool": "bun run typecheck",
+            "status": "pass",
+            "detail": "Executed locally on 73a03e29125a086e328ac19d7ff3d4f6adfbdf04; all 159 recorded source SHA256 hashes rechecked unchanged against 250a94bd9f08f95b8e87857274c192edb8a0069e on 2026-09-13 03:43 UTC. Web: 125 tests; dashboard typecheck and production build passed."
+        },
         "civis_3d_verify": {
             "status": "pass",
-            "detail": "CI passes (no local UE5)"
+            "detail": "Composite recipe evidence for 250a94bd9f08f95b8e87857274c192edb8a0069e; no claim of a local just invocation. JSON-RPC catalog (42 methods), web (125 tests), and voxel format passed locally with unchanged input hashes verified 2026-09-13 03:43 UTC. Journey https://github.com/KooshaPari/Civis/actions/runs/34730556703/job/103652435526 on Ubuntu/Rust 1.98.1 passed cargo clippy --keep-going --all-targets -- -D warnings (virtual workspace defaults to all members) and cargo test --workspace --locked --no-fail-fast, covering scenario and civ-mod-host/civlab-sdk tests: 3676 passed, 0 failed, 28 ignored. Workspace all-targets check passed in PR Compile run 34730554484; merge checkout tree d2db6528f16c4c8f6ecc9baf801a69a5a519c3a7 matches source head exactly."
         },
         "bevy_egui_check": {
             "status": "pass",
-            "detail": "CI passes (cargo check -p civ-bevy-ref --features bevy,egui)"
-        },
-        "unreal_preflight": {
-            "status": "fail",
-            "detail": ""
-        },
-        "web_test": {
-            "detail": "",
-            "status": "pass"
-        },
-        "rust_clippy": {
-            "detail": "CI passes",
-            "status": "pass"
-        },
-        "extra_cargo_machete": {
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
-            "status": "skip"
-        },
-        "extra_cargo_deny": {
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
-            "status": "skip"
-        },
-        "extra_cargo_audit": {
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
-            "status": "skip"
-        },
-        "extra_security_guard": {
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
-            "status": "skip"
-        },
-        "extra_cargo_semver": {
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
-            "status": "skip"
-        },
-        "godot_test": {
-            "detail": "",
-            "status": "pass"
-        },
-        "dashboard_typecheck": {
-            "detail": "",
-            "status": "pass"
-        },
-        "extra_fr_coverage": {
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
-            "status": "skip"
-        },
-        "extra_trufflehog": {
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
-            "status": "skip"
-        },
-        "unreal_build": {
-            "status": "fail",
-            "detail": ""
-        },
-        "dashboard_build": {
-            "detail": "",
-            "status": "pass"
-        },
-        "extra_docs_check": {
-            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)",
-            "status": "skip"
-        },
-        "rust_fmt": {
-            "detail": "CI passes",
-            "status": "pass"
-        },
-        "rust_test": {
-            "detail": "CI passes",
-            "status": "pass"
+            "detail": "cargo check -p civ-bevy-ref --features bevy,egui passed on Windows/Rust 1.98.1 in https://github.com/KooshaPari/Civis/actions/runs/34730554484. Checkout 86266ba427efca912dd1edf04f3b54ffe837eeec has tree d2db6528f16c4c8f6ecc9baf801a69a5a519c3a7, exactly matching 250a94bd9f08f95b8e87857274c192edb8a0069e. Manifest runner metadata describes the local emitter, not this cloud execution."
         }
     },
-    "manifest_hash": "292a3008a4533f045cb2e0c061ab6864198565719356afc1e1eac975f4f1efbc"
+    "manifest_hash": "3a67a67a3cda15643b4975dfb95554739c48252986f39c61b018b3b634f00dd4"
 }

@@ -247,9 +247,6 @@ impl SignificanceAccumulator {
     }
 }
 
-/// Count distinct roles in a slice (for diversity tracking).
-
-
 /// Weighted significance score for a single event (used by the narrator
 /// and inspector to rank events in epoch digests).
 pub fn event_significance(
@@ -267,7 +264,7 @@ pub fn event_significance(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ids::{LegendEntityId, LegendEventId};
+    use crate::ids::LegendEntityId;
     use crate::model::{EventKind, Role};
 
     #[test]
@@ -278,7 +275,14 @@ mod tests {
 
         // Same role, 3 events.
         for _ in 0..3 {
-            acc.record_event(eid, Epoch(0), &EventKind::Battle, &[Role::Leader], 0.3, &cfg);
+            acc.record_event(
+                eid,
+                Epoch(0),
+                &EventKind::Battle,
+                &[Role::Leader],
+                0.3,
+                &cfg,
+            );
         }
         let score_same = acc.get(eid).unwrap().score;
 

@@ -150,10 +150,9 @@ fn fr_civ_gov_010_crime_score_uses_linear_decreasing_formula() {
 }
 
 #[test]
-#[ignore = "TDD red step: institution bonuses not yet wired into mood calculation"]
 fn fr_civ_gov_010_institution_bonuses_apply_when_settlement_has_temple_or_garrison() {
     let mut sim = Simulation::with_seed(MOOD_SEED);
-    sim.set_settlement_population(0, 100);
+    sim.set_settlement_population(0, 40);
     sim.set_settlement_housing_capacity(0, 100);
     sim.set_settlement_food_stocked(0, 0);
     sim.set_settlement_crime_pressure(0, 0);
@@ -177,8 +176,8 @@ fn fr_civ_gov_010_institution_bonuses_apply_when_settlement_has_temple_or_garris
     let snap_both = sim.last_tick_mood(0).unwrap();
     assert_eq!(snap_both.temple_bonus, TEMPLE_BONUS);
     assert_eq!(
-        snap_both.garrison_bonus, 0,
-        "current single-institution mood storage keeps the Temple bonus when both unlock events fire"
+        snap_both.garrison_bonus, GARRISON_BONUS,
+        "Garrison and Temple bonuses both apply on the unlock tick"
     );
 }
 

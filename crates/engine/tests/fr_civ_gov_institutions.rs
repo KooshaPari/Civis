@@ -37,7 +37,6 @@ const GARRISON_L2_UNLOCK: u32 = 500;
 /// crosses the `temple_unlock_population` threshold and a garrison when it
 /// crosses `garrison_unlock_population`.
 #[test]
-#[ignore = "Fails: events empty after tick; phase_institutions wiring incomplete"]
 fn fr_civ_gov_001_spawns_when_settlement_crosses_threshold() {
     let mut sim = Simulation::with_seed(GOV_SEED);
     // Pre-population: no institutions.
@@ -91,7 +90,6 @@ fn fr_civ_gov_001_spawns_when_settlement_crosses_threshold() {
 /// `last_tick_institution_events()` MUST expose the per-tick event stream so
 /// the HUD and ws_bridge can render the civil layer.
 #[test]
-#[ignore = "Fails: events empty after tick; phase_institutions event emission incomplete"]
 fn fr_civ_gov_002_events_accessible_via_accessor() {
     let mut sim = Simulation::with_seed(GOV_SEED);
 
@@ -137,7 +135,6 @@ fn fr_civ_gov_002_events_accessible_via_accessor() {
 /// L1->L2 at `temple_l2_unlock_population`, Garrison L1->L2 at
 /// `garrison_l2_unlock_population`) and MUST emit an `Upgraded` event.
 #[test]
-#[ignore = "Fails: events empty after tick; phase_institutions event emission incomplete"]
 fn fr_civ_gov_003_upgrade_gated_by_population_threshold() {
     let mut sim = Simulation::with_seed(GOV_SEED);
 

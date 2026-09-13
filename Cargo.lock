@@ -4359,6 +4359,7 @@ dependencies = [
  "civ-engine",
  "civ-mod-host",
  "civ-observability",
+ "civ-planet",
  "civ-protocol-3d",
  "civ-save-db",
  "civ-voxel",

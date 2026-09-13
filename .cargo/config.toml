@@ -8,9 +8,11 @@
 # (rust-lld), which produces a functionally identical binary — it only links
 # faster than the default MSVC `link.exe`.
 #
-# NOTE: this file deliberately sets NO `[build] target-dir`. A user-level
-# ~/.cargo/config.toml already redirects the target dir off the C: drive;
-# overriding it here would refill C:. Do not add a `target-dir` key.
+# NOTE: this file deliberately sets NO `[build] target-dir`. This does not
+# guarantee an off-C target: CARGO_TARGET_DIR and user configuration are local
+# environment choices. For explicit Windows capacity admission and child-only
+# target routing, use scripts/agent-smoke.ps1 -Budgeted (see its guide).
+# Keep machine-specific target paths out of this shared configuration.
 
 [build]
 # Incremental compilation: reuse codegen units across warm rebuilds. This is the

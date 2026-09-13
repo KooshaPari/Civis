@@ -111,6 +111,30 @@ async fn palette_aliases_spawn_authoritative_buildings_and_publish_world_coordin
         assert_eq!(response.pointer("/result/accepted"), Some(&json!(true)));
         assert_eq!(response.pointer("/result/ok"), Some(&json!(true)));
         assert_eq!(response.pointer("/result/kind"), Some(&json!(alias)));
+        assert_eq!(
+            response.pointer("/result/authoritative"),
+            Some(&json!(true)),
+            "building RPC must identify its authoritative publication"
+        );
+        assert_eq!(
+            response.pointer("/result/scene_generation"),
+            Some(&json!(0)),
+            "building RPC must report the scene generation"
+        );
+        assert!(
+            response
+                .pointer("/result/tick")
+                .and_then(Value::as_u64)
+                .is_some(),
+            "building RPC must report the publication tick"
+        );
+        assert!(
+            response
+                .pointer("/result/building_graph_version")
+                .and_then(Value::as_u64)
+                .is_some(),
+            "building RPC must report the graph revision paired with its batch"
+        );
         let receipt_id = response
             .pointer("/result/entity_id")
             .and_then(Value::as_u64)
@@ -239,9 +263,10 @@ async fn receive_building(
             }) {
                 return frame;
             }
-            match socket.next().await.expect("open socket").expect("WS frame") {
-                Message::Binary(bytes) => frames.push(decode_frame3d_binary(&bytes).unwrap()),
-                _ => {}
+            if let Message::Binary(bytes) =
+                socket.next().await.expect("open socket").expect("WS frame")
+            {
+                frames.push(decode_frame3d_binary(&bytes).unwrap());
             }
         }
     })
@@ -505,6 +530,7 @@ async fn building_palette_and_interleaved_terrain_survive_replay_without_duplica
     .into_iter()
     .enumerate()
     {
+        let frame_start = frames.len();
         let terrain = rpc(
             &mut socket,
             &mut frames,
@@ -517,6 +543,27 @@ async fn building_palette_and_interleaved_terrain_survive_replay_without_duplica
             terrain.pointer("/result/ok"),
             Some(&json!(true)),
             "{terrain}"
+        );
+        assert_eq!(
+            terrain.pointer("/result/authoritative"),
+            Some(&json!(true)),
+            "place voxel must identify its authoritative publication"
+        );
+        assert_eq!(
+            terrain.pointer("/result/writes"),
+            Some(&json!(1)),
+            "place voxel reports its single write"
+        );
+        let terrain_tick = terrain
+            .pointer("/result/tick")
+            .and_then(Value::as_u64)
+            .expect("place voxel publication tick");
+        assert!(
+            frames[frame_start..].iter().any(|frame| matches!(
+                frame,
+                Frame3d::VoxelDelta(delta) if delta.tick == terrain_tick
+            )),
+            "place voxel response must correspond to a published voxel delta"
         );
         let spawn = rpc(
             &mut socket,

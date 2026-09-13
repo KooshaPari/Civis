@@ -1,7 +1,7 @@
 //! Data/query layer for the overlay legend — `FR-CIV-INFOVIEW-920`.
 //!
 //! Per `FR-CIV-INFOVIEW-920`: **each overlay exposes a legend (scale min/max
-//! + units) updating with live values.** This module is the substrate-neutral
+//! and units) updating with live values.** This module is the substrate-neutral
 //! data structure that any host client (Bevy / Godot / Unreal / web) reads
 //! to render the legend strip beside an info-view.
 //!

@@ -352,8 +352,10 @@ impl Simulation {
         self.emergence_branching.sigma_score = sigma_score(sigma_bar);
         self.emergence_branching.regime = classify_regime(sigma_bar);
 
-        let subcritical = sigma_bar < SIGMA_SUBCRITICAL
-            || (silence && self.emergence_branching.ledger.is_empty());
+        // An empty ledger means no avalanche observation, so a zero rolling
+        // mean is unknown rather than evidence of sustained subcriticality.
+        let subcritical = !self.emergence_branching.ledger.is_empty()
+            && sigma_bar < SIGMA_SUBCRITICAL;
         self.emergence_branching.subcritical_tick_streak = if subcritical {
             self.emergence_branching
                 .subcritical_tick_streak

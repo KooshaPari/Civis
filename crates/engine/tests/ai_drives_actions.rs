@@ -92,33 +92,29 @@ fn build_scenario() -> Simulation {
     // 2) Place food sources (Farms) nearby so the SeekFoodGoal and the
     //    engine's daily-path food-source POI have a target.
     for i in 0..5_i32 {
-        let _ = sim.world.spawn((
-            Building {
-                building_type: BuildingType::Farm,
-                hp: Fixed::from_num(200),
-                max_hp: Fixed::from_num(200),
-                position: Position {
-                    x: (ANCHOR_X * 100.0) as i32 + i - 2,
-                    y: ((ANCHOR_Y + 0.05) * 100.0) as i32,
-                },
+        let _ = sim.world.spawn((Building {
+            building_type: BuildingType::Farm,
+            hp: Fixed::from_num(200),
+            max_hp: Fixed::from_num(200),
+            position: Position {
+                x: (ANCHOR_X * 100.0) as i32 + i - 2,
+                y: ((ANCHOR_Y + 0.05) * 100.0) as i32,
             },
-        ));
+        },));
     }
 
     // 3) Place shelter nearby so the SeekShelterGoal and the engine's
     //    daily-path shelter POI have a target.
     for i in 0..3_i32 {
-        let _ = sim.world.spawn((
-            Building {
-                building_type: BuildingType::House,
-                hp: Fixed::from_num(150),
-                max_hp: Fixed::from_num(150),
-                position: Position {
-                    x: (ANCHOR_X * 100.0) as i32 + i - 1,
-                    y: ((ANCHOR_Y - 0.05) * 100.0) as i32,
-                },
+        let _ = sim.world.spawn((Building {
+            building_type: BuildingType::House,
+            hp: Fixed::from_num(150),
+            max_hp: Fixed::from_num(150),
+            position: Position {
+                x: (ANCHOR_X * 100.0) as i32 + i - 1,
+                y: ((ANCHOR_Y - 0.05) * 100.0) as i32,
             },
-        ));
+        },));
     }
 
     sim
@@ -156,7 +152,10 @@ fn goal_tree_tick_executes_and_promotes() {
         .expect("sub-goal parent exists");
     assert_eq!(tree.len(), 1, "sub-goals don't count toward top-level len");
     let sub_count = tree.sub_goals_of("seek_food").len();
-    assert_eq!(sub_count, 1, "seek_food should have one registered sub-goal");
+    assert_eq!(
+        sub_count, 1,
+        "seek_food should have one registered sub-goal"
+    );
 
     // Context where food need is satisfied (low urgency) + a lone agent
     // neighbour for social.  Expect seek_food to complete and the
@@ -360,8 +359,7 @@ fn ai_goal_tree_drives_civilian_actions_over_100_ticks() {
             saw_cluster_payoff = !sim.last_tick_cluster_payoffs.is_empty();
         }
         if !any_lifecycle_event {
-            any_lifecycle_event = !sim.last_deaths().is_empty()
-                || !sim.last_births().is_empty();
+            any_lifecycle_event = !sim.last_deaths().is_empty() || !sim.last_births().is_empty();
         }
     }
 
@@ -375,7 +373,9 @@ fn ai_goal_tree_drives_civilian_actions_over_100_ticks() {
     //    (e.g. phase_daily_path recomputing POIs) so we can prove the
     //    movement mechanism itself works.
     {
-        use civ_agents::{spawn_civilian_at as spawn_at, tick_movement as tm, ActorVisualKind as AV};
+        use civ_agents::{
+            spawn_civilian_at as spawn_at, tick_movement as tm, ActorVisualKind as AV,
+        };
         let mut probe = hecs::World::new();
         let mut probe_rng = ChaCha8Rng::seed_from_u64(0xDEAD_BEEF);
         let probe_id: u64 = 99_999;
@@ -446,7 +446,7 @@ fn ai_goal_tree_drives_civilian_actions_over_100_ticks() {
     //    (b) The total civilian count dropped (starvation pruned the
     //        population).
     let final_count = count_civilians(&sim.world) as i64;
-    let deaths_occurred = sim.last_deaths().len() > 0;
+    let deaths_occurred = !sim.last_deaths().is_empty();
     let population_shrank = final_count < initial_civilian_count as i64;
     assert!(
         deaths_occurred || population_shrank,
@@ -545,7 +545,11 @@ fn ai_goal_tree_drives_civilian_actions_over_100_ticks() {
                 faction_id: None,
             },
         ],
-        needs: vec![AiNeed::Hunger(0.9), AiNeed::Safety(0.9), AiNeed::Social(0.9)],
+        needs: vec![
+            AiNeed::Hunger(0.9),
+            AiNeed::Safety(0.9),
+            AiNeed::Social(0.9),
+        ],
         relationships: Default::default(),
         current_goal: None,
         tick: 1,

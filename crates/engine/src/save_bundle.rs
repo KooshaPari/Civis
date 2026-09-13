@@ -1,5 +1,6 @@
 //! CIV-1000 save layouts: uncompressed `.civsave/` folder (debug) and `.civsave.zst` archive (default).
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{self, File};
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -9,14 +10,27 @@ use tar::{Archive, Builder};
 use thiserror::Error;
 use zstd::stream::{decode_all, encode_all};
 
-use crate::{ModGuestStateSave, ReplayError, Simulation, WorldState};
+use crate::{ClusterStocks, CoastalColumn, ModGuestStateSave, ReplayError, Simulation, WorldState};
+use civ_planet::{Climate, MoonConfig, PlanetConfig, WeatherCell};
 
 /// Sidecar metadata written beside replay + mod state.
 pub const CIVSAVE_SPEC_ID: &str = "CIV-1000";
 /// Folder format version for `metadata.json`.
-pub const CIVSAVE_FORMAT_VERSION: u32 = 3;
+pub const CIVSAVE_FORMAT_VERSION: u32 = 4;
 /// Default on-disk save extension (zstd-compressed tar).
 pub const CIVSAVE_ARCHIVE_EXTENSION: &str = "civsave.zst";
+/// Required in v4; absence in earlier versions represents empty stockpiles.
+const CLUSTER_STOCKS_FILE: &str = "cluster_stocks.json";
+/// Required in v4; older replay-only saves may omit the environment.
+const ENVIRONMENT_FILE: &str = "environment.json";
+const INSTITUTIONS_FILE: &str = "institutions.json";
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+struct SavedInstitutions {
+    settlements: BTreeMap<u32, u32>,
+    institutions: BTreeMap<u32, Vec<civ_institutions::Institution>>,
+    levels_emitted: BTreeSet<(u32, u8, u8)>,
+}
 
 /// Zstd frame magic (little-endian `0xFD2FB528`).
 const ZSTD_FRAME_MAGIC: [u8; 4] = [0x28, 0xB5, 0x2F, 0xFD];
@@ -32,6 +46,27 @@ pub struct CivSaveMetadata {
     pub tick: u64,
     /// Optional scenario label for UI.
     pub scenario_name: Option<String>,
+}
+
+/// Environment state that replay does not reconstruct.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+struct SavedEnvironment {
+    planet: PlanetConfig,
+    moon: MoonConfig,
+    climate: Climate,
+    weather_grid: Vec<WeatherCell>,
+    #[serde(default)]
+    coastal_columns: Vec<SavedCoastalColumn>,
+}
+
+/// A coastal column as an explicit JSON record, because JSON object keys must
+/// be strings and the runtime registry is keyed by integer `(x, z)` pairs.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct SavedCoastalColumn {
+    x: i64,
+    z: i64,
+    base_y: i64,
+    last_water_y: i64,
 }
 
 /// Errors reading or writing save folders.
@@ -160,8 +195,8 @@ fn migrate_v2_to_v3(world_state: &mut serde_json::Value) {
 /// Apply the full migration chain on a raw world_state JSON value.
 ///
 /// The `file_version` is the version recorded in `metadata.json`. Each
-/// migration step bumps the version by one until we reach
-/// `CIVSAVE_FORMAT_VERSION`.
+/// migration step advances the world-state schema. Version 4 adds required
+/// sidecars and has no world-state transform; only an explicit save writes them.
 fn run_migration_chain(
     world_state: &mut serde_json::Value,
     file_version: u32,
@@ -179,13 +214,26 @@ fn run_migration_chain(
     }
     if version < 3 {
         migrate_v2_to_v3(world_state);
-        version = 3;
+    }
+    // Historical v3 migration wrapped routes under economy, while the compiled
+    // WorldState still stores them at the top level. Restore that canonical
+    // field without discarding the legacy wrapper or any route records.
+    if let Some(obj) = world_state.as_object_mut() {
+        if !obj.contains_key("trade_routes") {
+            if let Some(routes) = obj
+                .get("economy")
+                .and_then(|value| value.get("trade_routes"))
+                .cloned()
+            {
+                obj.insert("trade_routes".to_owned(), routes);
+            }
+        }
     }
     Ok(())
 }
 
-/// Migrate and persist a world_state JSON file on disk, rewriting it in-place
-/// at the latest format version.
+/// Read and migrate world state in memory, preserving the source on both
+/// successful and failed loads. Only an explicit save writes migrated state.
 fn migrate_world_state_file(
     dir: &Path,
     file_version: u32,
@@ -203,12 +251,6 @@ fn migrate_world_state_file(
     let mut value: serde_json::Value =
         serde_json::from_str(&json_str).map_err(SaveBundleError::Json)?;
     run_migration_chain(&mut value, file_version)?;
-    // Persist the migrated state back so future loads skip migration.
-    fs::write(
-        &path,
-        serde_json::to_string_pretty(&value).map_err(SaveBundleError::Json)?,
-    )
-    .map_err(|e| io_err(&path, e))?;
     Ok(value)
 }
 
@@ -318,6 +360,45 @@ impl CivSaveBundle {
         fs::write(&world_state_path, serde_json::to_string(&sim.state)?)
             .map_err(|e| io_err(&world_state_path, e))?;
 
+        let environment_path = dir.join(ENVIRONMENT_FILE);
+        let environment = SavedEnvironment {
+            planet: *sim.planet(),
+            moon: *sim.moon(),
+            climate: sim.climate,
+            weather_grid: sim.weather_grid().to_vec(),
+            coastal_columns: sim
+                .coastal_columns
+                .iter()
+                .map(|(&(x, z), column)| SavedCoastalColumn {
+                    x,
+                    z,
+                    base_y: column.base_y,
+                    last_water_y: column.last_water_y,
+                })
+                .collect(),
+        };
+        fs::write(&environment_path, serde_json::to_string(&environment)?)
+            .map_err(|e| io_err(&environment_path, e))?;
+
+        let cluster_stocks_path = dir.join(CLUSTER_STOCKS_FILE);
+        fs::write(
+            &cluster_stocks_path,
+            serde_json::to_string(sim.cluster_stocks())?,
+        )
+        .map_err(|e| io_err(&cluster_stocks_path, e))?;
+
+        let (settlements, institutions, levels_emitted) = sim.saveable_institution_state();
+        let institutions_path = dir.join(INSTITUTIONS_FILE);
+        fs::write(
+            &institutions_path,
+            serde_json::to_string(&SavedInstitutions {
+                settlements,
+                institutions,
+                levels_emitted,
+            })?,
+        )
+        .map_err(|e| io_err(&institutions_path, e))?;
+
         let replay_path = dir.join("replay.civreplay");
         sim.save_replay(&replay_path)?;
         Ok(())
@@ -350,6 +431,19 @@ impl CivSaveBundle {
             });
         }
 
+        // A v4 writer promises these snapshots. A missing file is corruption,
+        // not permission to silently rebuild default state from replay.
+        if file_version >= 4 {
+            for component in [ENVIRONMENT_FILE, CLUSTER_STOCKS_FILE, INSTITUTIONS_FILE] {
+                if !dir.join(component).is_file() {
+                    return Err(SaveBundleError::MissingComponent {
+                        dir: dir.to_path_buf(),
+                        component,
+                    });
+                }
+            }
+        }
+
         // Migrate world_state.json if needed.
         let migrated_ws = migrate_world_state_file(dir, file_version)?;
 
@@ -375,20 +469,68 @@ impl CivSaveBundle {
             sim.state = serde_json::from_value(migrated_ws).map_err(SaveBundleError::Json)?;
         }
 
-        // Update metadata format version so future loads skip migration.
-        if file_version < CIVSAVE_FORMAT_VERSION {
-            let updated_meta = CivSaveMetadata {
-                spec_id: CIVSAVE_SPEC_ID.to_owned(),
-                format_version: CIVSAVE_FORMAT_VERSION,
-                tick: sim.state.tick,
-                scenario_name: None,
-            };
-            fs::write(
-                &metadata_path,
-                serde_json::to_string_pretty(&updated_meta).map_err(SaveBundleError::Json)?,
-            )
-            .map_err(|e| io_err(&metadata_path, e))?;
+        let environment_path = dir.join(ENVIRONMENT_FILE);
+        if let Some(json) = match fs::read_to_string(&environment_path) {
+            Ok(json) => Some(json),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+            Err(error) => return Err(io_err(&environment_path, error)),
+        } {
+            let environment: SavedEnvironment =
+                serde_json::from_str(&json).map_err(SaveBundleError::Json)?;
+            sim.planet = environment.planet;
+            sim.moon = environment.moon;
+            sim.climate = environment.climate;
+            sim.weather_grid = environment.weather_grid;
+            let mut coastal_columns = BTreeMap::new();
+            for column in environment.coastal_columns {
+                let key = (column.x, column.z);
+                let previous = coastal_columns.insert(
+                    key,
+                    CoastalColumn {
+                        base_y: column.base_y,
+                        last_water_y: column.last_water_y,
+                    },
+                );
+                if previous.is_some() {
+                    return Err(SaveBundleError::SaveCorruption {
+                        detail: format!(
+                            "environment.json has duplicate coastal column at ({}, {})",
+                            column.x, column.z
+                        ),
+                    });
+                }
+            }
+            sim.coastal_columns = coastal_columns;
         }
+
+        let cluster_stocks_path = dir.join(CLUSTER_STOCKS_FILE);
+        if let Some(json) = match fs::read_to_string(&cluster_stocks_path) {
+            Ok(json) => Some(json),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+            Err(error) => return Err(io_err(&cluster_stocks_path, error)),
+        } {
+            let cluster_stocks: BTreeMap<u64, ClusterStocks> =
+                serde_json::from_str(&json).map_err(SaveBundleError::Json)?;
+            sim.restore_cluster_stocks(cluster_stocks);
+        }
+
+        let institutions_path = dir.join(INSTITUTIONS_FILE);
+        match fs::read_to_string(&institutions_path) {
+            Ok(json) => {
+                let saved: SavedInstitutions = serde_json::from_str(&json)?;
+                sim.restore_institution_state(
+                    saved.settlements,
+                    saved.institutions,
+                    saved.levels_emitted,
+                );
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(io_err(&institutions_path, error)),
+        }
+
+        // Loading legacy bundles must not promote their metadata to v4: their
+        // optional sidecars may still be absent. An explicit save writes all
+        // components and is the point at which a bundle becomes v4.
 
         Ok(sim)
     }
@@ -439,9 +581,7 @@ impl CivSaveBundle {
             });
         }
 
-        // Migrate the world_state inside the extracted directory.
-        let _migrated_ws = migrate_world_state_file(temp.path(), file_version)?;
-
+        // The directory loader performs the migration once, in memory.
         Self::load_dir(temp.path())
     }
 
@@ -673,6 +813,429 @@ mod tests {
         );
     }
 
+    #[test]
+    fn institutions_round_trip_without_reemitting_unlocks() {
+        use civ_institutions::InstitutionKind::{Garrison, Temple};
+        let mut source = Simulation::with_seed(123);
+        source.set_settlement_population(71, 150);
+        source.phase_institutions();
+        assert_eq!(source.institutions()[&71].len(), 2);
+        let expected = source.saveable_institution_state();
+        let dir = tempdir().expect("tempdir");
+        let folder = dir.path().join("institutions");
+        let archive = dir.path().join("institutions.civsave.zst");
+        CivSaveBundle::save_dir(&folder, &source).expect("save folder");
+        CivSaveBundle::save_archive(&archive, &source).expect("save archive");
+        for mut loaded in [
+            CivSaveBundle::load_dir(&folder).unwrap(),
+            CivSaveBundle::load_archive(&archive).unwrap(),
+        ] {
+            assert_eq!(loaded.saveable_institution_state(), expected);
+            loaded.phase_institutions();
+            assert!(loaded.last_tick_institution_events().is_empty());
+            loaded.phase_social_mood();
+            let mood = loaded.last_tick_mood(71).unwrap();
+            assert_eq!((mood.temple_bonus, mood.garrison_bonus), (50, 30));
+            loaded.set_settlement_population(71, 400);
+            loaded.phase_institutions();
+            assert_eq!(loaded.last_tick_institution_events().len(), 2);
+            assert_eq!(
+                loaded.institutions()[&71]
+                    .iter()
+                    .map(|inst| (inst.kind, inst.level))
+                    .collect::<Vec<_>>(),
+                vec![(Temple, 2), (Garrison, 2)]
+            );
+            loaded.set_settlement_population(71, 150);
+            loaded.phase_institutions();
+            assert!(loaded.last_tick_institution_events().is_empty());
+            assert!(loaded.institutions()[&71]
+                .iter()
+                .all(|inst| inst.level == 2));
+        }
+    }
+
+    #[test]
+    fn current_bundle_requires_all_state_sidecars() {
+        let dir = tempdir().expect("tempdir");
+        let sim = Simulation::with_seed(124);
+        for component in [ENVIRONMENT_FILE, CLUSTER_STOCKS_FILE, INSTITUTIONS_FILE] {
+            let path = dir.path().join(component);
+            CivSaveBundle::save_dir(&path, &sim).unwrap();
+            fs::rename(path.join(component), path.join("withheld.json")).unwrap();
+            assert!(
+                matches!(CivSaveBundle::load_dir(&path), Err(SaveBundleError::MissingComponent { component: missing, .. }) if missing == component)
+            );
+        }
+    }
+
+    #[test]
+    fn legacy_load_does_not_claim_complete_current_state() {
+        let dir = tempdir().expect("tempdir");
+        let mut sim = Simulation::with_seed(125);
+        sim.state.trade_routes.push(crate::TradeRoute {
+            from_faction: 0,
+            to_faction: 1,
+            goods: "grain".to_owned(),
+            volume: crate::Fixed::from_num(12),
+        });
+        for version in [1, 2, 3] {
+            let path = dir.path().join(format!("v{version}"));
+            write_legacy_bundle_without_cluster_stocks(&path, &sim);
+            let meta_path = path.join("metadata.json");
+            let mut metadata: CivSaveMetadata =
+                serde_json::from_str(&fs::read_to_string(&meta_path).unwrap()).unwrap();
+            metadata.format_version = version;
+            let original = serde_json::to_string(&metadata).unwrap();
+            fs::write(&meta_path, &original).unwrap();
+            if version == 3 {
+                // Exercise the historical v3 wrapper, not just a modern state
+                // with its metadata relabelled as legacy.
+                let world_path = path.join("world_state.json");
+                let mut state: serde_json::Value =
+                    serde_json::from_str(&fs::read_to_string(&world_path).unwrap()).unwrap();
+                migrate_v2_to_v3(&mut state);
+                assert!(state.get("trade_routes").is_none());
+                fs::write(&world_path, serde_json::to_string(&state).unwrap()).unwrap();
+            }
+            let world_path = path.join("world_state.json");
+            let original_world = fs::read(&world_path).unwrap();
+            let loaded = CivSaveBundle::load_dir(&path).expect("legacy load");
+            assert!(loaded.institutions().is_empty());
+            assert_eq!(loaded.state.trade_routes, sim.state.trade_routes);
+            assert_eq!(fs::read_to_string(&meta_path).unwrap(), original);
+            assert_eq!(fs::read(&world_path).unwrap(), original_world);
+            CivSaveBundle::load_dir(&path).expect("legacy repeat load");
+            assert_eq!(fs::read(&world_path).unwrap(), original_world);
+            // Archive the legacy folder directly: save_archive would create v4.
+            let archive_path = dir.path().join(format!("v{version}.civsave.zst"));
+            let bytes = encode_all(tar_dir(&path).unwrap().as_slice(), 3).unwrap();
+            fs::write(&archive_path, &bytes).unwrap();
+            let archived = CivSaveBundle::load_archive(&archive_path).expect("legacy archive load");
+            assert!(archived.institutions().is_empty());
+            assert_eq!(archived.state.trade_routes, sim.state.trade_routes);
+            assert_eq!(fs::read(&archive_path).unwrap(), bytes);
+        }
+    }
+
+    #[test]
+    fn current_and_failed_loads_preserve_source_bytes() {
+        let dir = tempdir().expect("tempdir");
+        let sim = Simulation::with_seed(127);
+        let path = dir.path().join("source-preservation");
+        CivSaveBundle::save_dir(&path, &sim).unwrap();
+        let world_path = path.join("world_state.json");
+        // Noncanonical whitespace makes even a semantically unchanged rewrite
+        // visible. A load must preserve the authored bytes, not just the value.
+        let original_world = format!("\n{}\n", fs::read_to_string(&world_path).unwrap());
+        fs::write(&world_path, original_world.as_bytes()).unwrap();
+        let original_metadata = fs::read(path.join("metadata.json")).unwrap();
+        CivSaveBundle::load_dir(&path).expect("current load");
+        assert_eq!(fs::read(&world_path).unwrap(), original_world.as_bytes());
+        assert_eq!(
+            fs::read(path.join("metadata.json")).unwrap(),
+            original_metadata
+        );
+
+        // This error occurs after world-state migration, unlike a missing
+        // required sidecar, which is rejected before migration starts.
+        fs::write(path.join(INSTITUTIONS_FILE), "{broken").unwrap();
+        assert!(matches!(
+            CivSaveBundle::load_dir(&path),
+            Err(SaveBundleError::Json(_))
+        ));
+        assert_eq!(fs::read(&world_path).unwrap(), original_world.as_bytes());
+        assert_eq!(
+            fs::read(path.join("metadata.json")).unwrap(),
+            original_metadata
+        );
+        assert_eq!(fs::read(path.join(INSTITUTIONS_FILE)).unwrap(), b"{broken");
+    }
+
+    #[test]
+    fn malformed_required_sidecars_fail_load() {
+        let dir = tempdir().expect("tempdir");
+        let sim = Simulation::with_seed(126);
+        for component in [ENVIRONMENT_FILE, CLUSTER_STOCKS_FILE, INSTITUTIONS_FILE] {
+            let path = dir.path().join(component);
+            CivSaveBundle::save_dir(&path, &sim).unwrap();
+            fs::write(path.join(component), "{broken").unwrap();
+            assert!(matches!(
+                CivSaveBundle::load_dir(&path),
+                Err(SaveBundleError::Json(_))
+            ));
+        }
+    }
+
+    #[test]
+    fn civsave_folder_round_trips_environment_state() {
+        let sim = configured_environment_sim();
+        let expected_planet = *sim.planet();
+        let expected_moon = *sim.moon();
+        let expected_climate = sim.climate;
+        let expected_weather = sim.weather_grid().to_vec();
+
+        let dir = tempdir().expect("tempdir");
+        let save_path = dir.path().join("environment");
+        CivSaveBundle::save_dir(&save_path, &sim).expect("save");
+        assert!(save_path.join(ENVIRONMENT_FILE).is_file());
+
+        let loaded = CivSaveBundle::load_dir(&save_path).expect("load");
+        assert_eq!(*loaded.planet(), expected_planet);
+        assert_eq!(*loaded.moon(), expected_moon);
+        assert_eq!(loaded.climate, expected_climate);
+        assert_eq!(loaded.weather_grid(), expected_weather);
+    }
+
+    fn configured_environment_sim() -> Simulation {
+        let mut sim = Simulation::with_seed(37);
+        sim.planet.day_length_ticks = 73;
+        sim.planet.year_length_ticks = 977;
+        sim.moon.orbit_period_ticks = 29;
+        sim.moon.tidal_amplitude = 3.5;
+        sim.climate = civ_planet::Climate {
+            tick: 321,
+            day_phase: 0.45,
+            year_phase: 0.78,
+            moon_phase: 0.12,
+            tide_offset: -2.3,
+        };
+        sim.weather_grid = vec![civ_planet::WeatherCell {
+            region_id: 9,
+            latitude_fp: -12_345,
+            season: civ_planet::SeasonKind::Winter,
+            kind: civ_planet::WeatherKind::Snow,
+            temp_c_fp: -7_000,
+            precip_mm_fp: 880,
+            storm_intensity_fp: 321,
+        }];
+        sim
+    }
+
+    #[test]
+    fn civsave_archive_round_trips_environment_state() {
+        let sim = configured_environment_sim();
+        let expected_planet = *sim.planet();
+        let expected_moon = *sim.moon();
+        let expected_climate = sim.climate;
+        let expected_weather = sim.weather_grid().to_vec();
+
+        let dir = tempdir().expect("tempdir");
+        let save_path = dir.path().join("environment.civsave.zst");
+        CivSaveBundle::save_archive(&save_path, &sim).expect("save");
+
+        let loaded = CivSaveBundle::load_archive(&save_path).expect("load");
+        assert_eq!(*loaded.planet(), expected_planet);
+        assert_eq!(*loaded.moon(), expected_moon);
+        assert_eq!(loaded.climate, expected_climate);
+        assert_eq!(loaded.weather_grid(), expected_weather);
+    }
+
+    #[test]
+    fn restored_environment_advances_the_next_planet_phase() {
+        let mut source = configured_environment_sim();
+        let dir = tempdir().expect("tempdir");
+        let save_path = dir.path().join("environment-continuation");
+        CivSaveBundle::save_dir(&save_path, &source).expect("save");
+        let mut loaded = CivSaveBundle::load_dir(&save_path).expect("load");
+
+        source.phase_planet();
+        loaded.phase_planet();
+
+        assert_eq!(loaded.climate, source.climate);
+        assert_eq!(loaded.weather_grid(), source.weather_grid());
+    }
+
+    #[test]
+    fn restored_environment_keeps_coastal_columns_for_the_next_tide_phase() {
+        let mut source = Simulation::with_seed(67);
+        source.moon.orbit_period_ticks = 8;
+        source.moon.tidal_amplitude = 1.0;
+        let (x, z, base_y) = (40, -20, 700);
+        source.register_coastal_water_column(x, z, base_y);
+        let base_pos = civ_voxel::WorldCoord { x, y: base_y, z };
+        assert_eq!(source.voxel().read(base_pos), civ_voxel::material::WATER);
+
+        let dir = tempdir().expect("tempdir");
+        let save_path = dir.path().join("coastal-continuation");
+        CivSaveBundle::save_dir(&save_path, &source).expect("save");
+        let mut loaded = CivSaveBundle::load_dir(&save_path).expect("load");
+        assert_eq!(loaded.coastal_water_level(x, z), Some(base_y));
+        assert_eq!(loaded.voxel().read(base_pos), civ_voxel::material::WATER);
+
+        source.state.tick = 2;
+        loaded.state.tick = 2;
+        source.phase_planet();
+        loaded.phase_planet();
+
+        let moved_y = source
+            .coastal_water_level(x, z)
+            .expect("source coastal column");
+        assert_eq!(moved_y, base_y + civ_voxel::FIXED_SCALE);
+        assert_ne!(moved_y, base_y);
+        assert_eq!(loaded.coastal_water_level(x, z), Some(moved_y));
+        let moved_pos = civ_voxel::WorldCoord { x, y: moved_y, z };
+        assert_eq!(source.voxel().read(moved_pos), civ_voxel::material::WATER);
+        assert_eq!(loaded.voxel().read(moved_pos), civ_voxel::material::WATER);
+        assert_eq!(source.voxel().read(base_pos), civ_voxel::MaterialId(0));
+        assert_eq!(loaded.voxel().read(base_pos), civ_voxel::MaterialId(0));
+    }
+
+    #[test]
+    fn archived_environment_keeps_coastal_columns() {
+        let mut source = Simulation::with_seed(68);
+        source.register_coastal_water_column(40, -20, 700);
+
+        let dir = tempdir().expect("tempdir");
+        let save_path = dir.path().join("coastal-archive.civsave.zst");
+        CivSaveBundle::save_archive(&save_path, &source).expect("save");
+
+        let loaded = CivSaveBundle::load_archive(&save_path).expect("load");
+        assert_eq!(loaded.coastal_column_count(), 1);
+        assert_eq!(loaded.coastal_water_level(40, -20), Some(700));
+    }
+
+    #[test]
+    fn legacy_environment_without_coastal_columns_defaults_empty() {
+        let sim = Simulation::with_seed(69);
+        let dir = tempdir().expect("tempdir");
+        let save_path = dir.path().join("legacy-environment");
+        CivSaveBundle::save_dir(&save_path, &sim).expect("save");
+
+        let environment_path = save_path.join(ENVIRONMENT_FILE);
+        let mut environment: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&environment_path).expect("environment"))
+                .expect("parse environment");
+        environment
+            .as_object_mut()
+            .expect("environment object")
+            .remove("coastal_columns");
+        fs::write(
+            &environment_path,
+            serde_json::to_string(&environment).expect("serialize legacy environment"),
+        )
+        .expect("write legacy environment");
+
+        let loaded = CivSaveBundle::load_dir(&save_path).expect("load legacy environment");
+        assert_eq!(loaded.coastal_column_count(), 0);
+    }
+
+    #[test]
+    fn malformed_environment_sidecar_fails_load() {
+        let sim = Simulation::with_seed(61);
+        let dir = tempdir().expect("tempdir");
+        let save_path = dir.path().join("malformed-environment");
+        CivSaveBundle::save_dir(&save_path, &sim).expect("save");
+        fs::write(save_path.join(ENVIRONMENT_FILE), "not json").expect("malformed sidecar");
+
+        assert!(matches!(
+            CivSaveBundle::load_dir(&save_path),
+            Err(SaveBundleError::Json(_))
+        ));
+    }
+
+    #[test]
+    fn civsave_folder_round_trips_cluster_stocks() {
+        let mut sim = Simulation::with_seed(41);
+        let mut cluster_stocks = BTreeMap::new();
+        let mut first = ClusterStocks::default();
+        first.add(civ_economy::Good::Food, 73);
+        cluster_stocks.insert(7001, first);
+        let mut second = ClusterStocks::default();
+        second.add(civ_economy::Good::Wood, 29);
+        cluster_stocks.insert(7002, second);
+        sim.restore_cluster_stocks(cluster_stocks);
+        let expected = sim.cluster_stocks().clone();
+
+        let dir = tempdir().expect("tempdir");
+        let save_path = dir.path().join("cluster-stocks");
+        CivSaveBundle::save_dir(&save_path, &sim).expect("save");
+        assert!(save_path.join(CLUSTER_STOCKS_FILE).is_file());
+
+        let loaded = CivSaveBundle::load_dir(&save_path).expect("load");
+        assert_eq!(loaded.cluster_stocks(), &expected);
+    }
+
+    #[test]
+    fn civsave_archive_round_trips_cluster_stocks() {
+        let mut sim = Simulation::with_seed(43);
+        sim.test_set_cluster_food_stock(7002, 91);
+        let expected = sim.cluster_stocks().clone();
+
+        let dir = tempdir().expect("tempdir");
+        let archive_path = dir.path().join("cluster-stocks.civsave.zst");
+        CivSaveBundle::save_archive(&archive_path, &sim).expect("save archive");
+
+        let loaded = CivSaveBundle::load_archive(&archive_path).expect("load archive");
+        assert_eq!(loaded.cluster_stocks(), &expected);
+    }
+
+    #[test]
+    fn legacy_bundle_without_cluster_stocks_sidecar_loads_empty_stocks() {
+        let sim = Simulation::with_seed(47);
+        let dir = tempdir().expect("tempdir");
+        let save_path = dir.path().join("legacy");
+        write_legacy_bundle_without_cluster_stocks(&save_path, &sim);
+
+        let loaded = CivSaveBundle::load_dir(&save_path).expect("load legacy");
+        assert!(loaded.cluster_stocks().is_empty());
+        assert_eq!(*loaded.planet(), *sim.planet());
+        assert_eq!(*loaded.moon(), *sim.moon());
+        assert_eq!(loaded.climate, sim.climate);
+        assert_eq!(loaded.weather_grid(), sim.weather_grid());
+    }
+
+    fn write_legacy_bundle_without_cluster_stocks(path: &Path, sim: &Simulation) {
+        fs::create_dir_all(path).expect("legacy directory");
+        let metadata = CivSaveMetadata {
+            spec_id: CIVSAVE_SPEC_ID.to_owned(),
+            format_version: 3,
+            tick: sim.state.tick,
+            scenario_name: None,
+        };
+        fs::write(
+            path.join("metadata.json"),
+            serde_json::to_string(&metadata).expect("metadata json"),
+        )
+        .expect("metadata");
+        fs::write(
+            path.join("world_state.json"),
+            serde_json::to_string(&sim.state).expect("world state json"),
+        )
+        .expect("world state");
+        sim.save_replay(path.join("replay.civreplay"))
+            .expect("replay");
+    }
+
+    #[test]
+    fn malformed_cluster_stocks_sidecar_fails_load() {
+        let sim = Simulation::with_seed(53);
+        let dir = tempdir().expect("tempdir");
+        let save_path = dir.path().join("malformed-sidecar");
+        CivSaveBundle::save_dir(&save_path, &sim).expect("save");
+        fs::write(save_path.join(CLUSTER_STOCKS_FILE), "not json").expect("malformed sidecar");
+
+        assert!(matches!(
+            CivSaveBundle::load_dir(&save_path),
+            Err(SaveBundleError::Json(_))
+        ));
+    }
+
+    #[test]
+    fn unreadable_cluster_stocks_sidecar_fails_load() {
+        let sim = Simulation::with_seed(59);
+        let dir = tempdir().expect("tempdir");
+        let save_path = dir.path().join("directory-sidecar");
+        write_legacy_bundle_without_cluster_stocks(&save_path, &sim);
+        let sidecar_path = save_path.join(CLUSTER_STOCKS_FILE);
+        fs::create_dir(&sidecar_path).expect("directory sidecar");
+
+        assert!(matches!(
+            CivSaveBundle::load_dir(&save_path),
+            Err(SaveBundleError::Io { .. })
+        ));
+    }
+
     /// FR-CIV-SAVESLOT.
     #[test]
     fn fr_civ_saveslot_named_slots_save_list_load_delete() {
@@ -713,7 +1276,7 @@ mod tests {
     // Migration-specific tests (8 total)
     // -----------------------------------------------------------------------
 
-    /// 1. Roundtrip: save at v3, load returns v3 metadata.
+    /// 1. Roundtrip: current saves retain the current format version.
     #[test]
     fn migration_roundtrip_save_load_preserves_version() {
         let mut sim = Simulation::with_seed(1);
@@ -743,11 +1306,11 @@ mod tests {
         let loaded = CivSaveBundle::load_dir(&save_dir).expect("load v1 save");
         assert_eq!(loaded.state.tick, 10);
 
-        // Metadata should now reflect v3.
+        // Loading preserves legacy metadata until an explicit complete save.
         let meta: CivSaveMetadata =
             serde_json::from_str(&fs::read_to_string(save_dir.join("metadata.json")).unwrap())
                 .unwrap();
-        assert_eq!(meta.format_version, 3);
+        assert_eq!(meta.format_version, 1);
     }
 
     /// 3. v1->v2 migration adds the culture-related default fields.

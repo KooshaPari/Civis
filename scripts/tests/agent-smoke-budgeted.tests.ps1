@@ -1,0 +1,270 @@
+#requires -Version 7.0
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory)][string]$TargetDirectory,
+    [Parameter(Mandatory)][string]$ReceiptDirectory
+)
+$ErrorActionPreference = 'Stop'
+$TargetDirectory = (Get-Item -LiteralPath $TargetDirectory).FullName
+
+function Assert-True {
+    param([Parameter(Mandatory)][bool]$Condition,[Parameter(Mandatory)][string]$Message)
+    if (-not $Condition) { throw "ASSERTION FAILED: $Message" }
+}
+
+$helper = (Resolve-Path (Join-Path $PSScriptRoot '..\ci\invoke-budgeted-child.ps1')).Path
+$pwsh = (Get-Command pwsh -CommandType Application | Select-Object -First 1).Path
+
+# Exercise the actual writer with an open reader: the old handle and the
+# replacement pathname must each expose a complete, valid JSON document.
+$tokens = $null
+$parseErrors = $null
+$helperAst = [Management.Automation.Language.Parser]::ParseFile($helper, [ref]$tokens, [ref]$parseErrors)
+Assert-True ($parseErrors.Count -eq 0) 'helper parse failed'
+$writerAst = $helperAst.Find({ param($node)
+    $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Save-Receipt'
+}, $true)
+Assert-True ($null -ne $writerAst) 'receipt writer missing'
+. ([scriptblock]::Create($writerAst.Extent.Text))
+$atomicPath = Join-Path $ReceiptDirectory ('atomic-' + [guid]::NewGuid().ToString('N') + '.json')
+Save-Receipt $atomicPath @{ state = 'old' }
+$shared = [IO.File]::Open($atomicPath, [IO.FileMode]::Open, [IO.FileAccess]::Read,
+    ([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
+$sharedReader = [IO.StreamReader]::new($shared)
+try {
+    Save-Receipt $atomicPath @{ state = 'new' }
+    Assert-True (($sharedReader.ReadToEnd() | ConvertFrom-Json).state -eq 'old') 'open reader lost its valid old receipt'
+    Assert-True (([IO.File]::ReadAllText($atomicPath) | ConvertFrom-Json).state -eq 'new') 'replacement receipt is not valid new JSON'
+} finally { $sharedReader.Dispose() }
+$exclusive = [IO.File]::Open($atomicPath, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite)
+try {
+    $replacementFailed = $false
+    try { Save-Receipt $atomicPath @{ state = 'blocked' } } catch { $replacementFailed = $true }
+    Assert-True $replacementFailed 'non-delete-sharing reader did not reject replacement'
+    Assert-True (([IO.File]::ReadAllText($atomicPath) | ConvertFrom-Json).state -eq 'new') 'failed replacement changed the valid receipt'
+} finally { $exclusive.Dispose() }
+$childArgumentsJson = (@('-NoProfile','-Command',
+        'Write-Output ("CARGO_TARGET_DIR=" + $env:CARGO_TARGET_DIR); Write-Output ("CARGO_BUILD_JOBS=" + $env:CARGO_BUILD_JOBS)'
+    ) | ConvertTo-Json -Compress)
+
+$beforeTarget = $env:CARGO_TARGET_DIR
+$beforeJobs = $env:CARGO_BUILD_JOBS
+$successParameters = @{
+    ChildPath = $pwsh
+    ChildArgumentsJson = $childArgumentsJson
+    TargetDirectory = $TargetDirectory
+    ExpectedGrowthBytes = 1
+    ReserveBytes = 1
+    Jobs = 7
+    ReceiptDirectory = $ReceiptDirectory
+    Execute = $true
+}
+$successOutput = @(& $pwsh -NoProfile -ExecutionPolicy Bypass -File $helper @successParameters)
+$successCode = $LASTEXITCODE
+$successText = $successOutput -join [Environment]::NewLine
+$successReceiptPath = [regex]::Match($successText,'"receipt"\s*:\s*"([^"]+)"').Groups[1].Value
+Assert-True ($successCode -eq 0) "synthetic child exit code was $successCode"
+Assert-True ($successReceiptPath -and (Test-Path -LiteralPath $successReceiptPath -PathType Leaf)) 'success receipt missing'
+Assert-True ($env:CARGO_TARGET_DIR -eq $beforeTarget -and $env:CARGO_BUILD_JOBS -eq $beforeJobs) 'caller environment changed'
+$successReceipt = Get-Content -LiteralPath $successReceiptPath -Raw | ConvertFrom-Json
+$successStdout = Get-Content -LiteralPath $successReceipt.stdoutLog -Raw
+Assert-True ($successReceipt.state -eq 'completed' -and $successReceipt.exitCode -eq 0) 'synthetic child did not complete'
+Assert-True ($successStdout -match [regex]::Escape("CARGO_TARGET_DIR=$TargetDirectory")) 'child target env missing'
+Assert-True ($successStdout -match 'CARGO_BUILD_JOBS=7') 'child jobs env missing'
+
+# Keep a synthetic child alive long enough to verify that the active log can
+# be opened by a reader while the writer still owns it.
+$readerChildJson = (@('-NoProfile','-Command',
+        'Write-Output "reader-start"; Start-Sleep -Seconds 15; Write-Output "reader-end"'
+    ) | ConvertTo-Json -Compress)
+$readerParameters = @(
+    '-NoProfile','-ExecutionPolicy','Bypass','-File',$helper,
+    '-ChildPath',$pwsh,'-ChildArgumentsJson',$readerChildJson,
+    '-TargetDirectory',$TargetDirectory,'-ExpectedGrowthBytes','1',
+    '-ReserveBytes','1','-Jobs','2','-ReceiptDirectory',$ReceiptDirectory,'-Execute'
+)
+# Isolate each concurrent-reader run so stale receipts cannot satisfy the test.
+$readerRoot = Join-Path $ReceiptDirectory ("reader-" + [guid]::NewGuid().ToString('N'))
+$null = New-Item -ItemType Directory -Path $readerRoot
+$readerParameters[$readerParameters.IndexOf('-ReceiptDirectory') + 1] = $readerRoot
+$readerStart = [Diagnostics.ProcessStartInfo]::new($pwsh)
+$readerStart.UseShellExecute = $false
+$readerStart.CreateNoWindow = $true
+$readerStart.RedirectStandardOutput = $true
+$readerStart.RedirectStandardError = $true
+foreach ($argument in $readerParameters) { $readerStart.ArgumentList.Add([string]$argument) }
+$readerProcess = [Diagnostics.Process]::Start($readerStart)
+$readerOpened = $false
+$deadline = [DateTime]::UtcNow.AddSeconds(45)
+while (-not $readerOpened -and -not $readerProcess.HasExited -and [DateTime]::UtcNow -lt $deadline) {
+    Start-Sleep -Milliseconds 100
+    $receipt = Get-ChildItem -LiteralPath $readerRoot -Filter '*.json' -File | Select-Object -First 1
+    if (-not $receipt) { continue }
+    # Atomic replacement requires Delete sharing on Windows; dispose before
+    # polling again so an observer never blocks the receipt writer.
+    $receiptReader = $null
+    try {
+        $receiptStream = [IO.File]::Open($receipt.FullName, [IO.FileMode]::Open, [IO.FileAccess]::Read,
+            ([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
+        $receiptReader = [IO.StreamReader]::new($receiptStream)
+        $running = $receiptReader.ReadToEnd() | ConvertFrom-Json
+    } catch { continue } finally { if ($receiptReader) { $receiptReader.Dispose() } }
+    if ($running.state -ne 'running') { continue }
+    $stream = [IO.File]::Open($running.stdoutLog, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite)
+    $stream.Dispose()
+    $readerOpened = -not $readerProcess.HasExited
+}
+Assert-True $readerOpened 'stdout log was not readable while the helper was running'
+
+# A second helper on the same volume must reject while the first owns the gate.
+$contenderParameters = $successParameters.Clone()
+$contenderOutput = @(& $pwsh -NoProfile -ExecutionPolicy Bypass -File $helper @contenderParameters)
+$contenderCode = $LASTEXITCODE
+$contenderResult = ($contenderOutput -join [Environment]::NewLine) | ConvertFrom-Json
+$contenderReceipt = Get-Content -LiteralPath $contenderResult.receipt -Raw | ConvertFrom-Json
+Assert-True ($contenderCode -eq 2) 'concurrent helper did not reject execution'
+Assert-True ($contenderReceipt.rejectionReason -eq 'serialized') 'concurrent helper bypassed the volume gate'
+Assert-True ($null -eq $contenderReceipt.childPid) 'rejected helper started a child'
+Assert-True (-not $readerProcess.HasExited) 'holder exited before contention was observed'
+$readerProcess.WaitForExit()
+$readerProcessCode = $readerProcess.ExitCode
+$readerOutput = $readerProcess.StandardOutput.ReadToEnd()
+$readerError = $readerProcess.StandardError.ReadToEnd()
+$readerProcess.Dispose()
+Assert-True ($readerProcessCode -eq 0) "concurrent-reader helper failed: $readerError"
+
+# Successful admission after the first child exits proves gate release.
+$releasedOutput = @(& $pwsh -NoProfile -ExecutionPolicy Bypass -File $helper @successParameters)
+Assert-True ($LASTEXITCODE -eq 0) 'volume gate was not released after child completion'
+$releasedResult = ($releasedOutput -join [Environment]::NewLine) | ConvertFrom-Json
+$releasedReceipt = Get-Content -LiteralPath $releasedResult.receipt -Raw | ConvertFrom-Json
+Assert-True ($releasedReceipt.admitted -and $releasedReceipt.volumeGate.acquired) 'released gate did not admit next child'
+Assert-True ($releasedReceipt.budget.freeBytes -gt 0) 'admitted run did not sample capacity'
+
+$rejectParameters = $successParameters.Clone()
+$rejectParameters.ExpectedGrowthBytes = 9000000000000000000
+$rejectOutput = @(& $pwsh -NoProfile -ExecutionPolicy Bypass -File $helper @rejectParameters)
+$rejectCode = $LASTEXITCODE
+$rejectText = $rejectOutput -join [Environment]::NewLine
+$rejectReceiptPath = [regex]::Match($rejectText,'"receipt"\s*:\s*"([^"]+)"').Groups[1].Value
+Assert-True ($rejectCode -eq 2) "rejection exit code was $rejectCode"
+Assert-True ($rejectReceiptPath -and (Test-Path -LiteralPath $rejectReceiptPath -PathType Leaf)) 'rejection receipt missing'
+$rejectReceipt = Get-Content -LiteralPath $rejectReceiptPath -Raw | ConvertFrom-Json
+Assert-True ($rejectReceipt.state -eq 'rejected' -and $null -eq $rejectReceipt.childPid) 'rejected run launched a child'
+
+# Exercise agent-smoke's native hashtable splatting into a real pwsh helper
+# process. The deliberately impossible budget proves argument binding and
+# rejection without entering the smoke/build body.
+$agentSmoke = (Resolve-Path (Join-Path $PSScriptRoot '..\agent-smoke.ps1')).Path
+$smokeOutput = @(& $pwsh -NoProfile -ExecutionPolicy Bypass -File $agentSmoke -SkipUnreal -Budgeted `
+        -TargetDirectory $TargetDirectory -ExpectedGrowthBytes 9000000000000000000 `
+        -ReserveBytes 1 -Jobs 2 -ReceiptDirectory $ReceiptDirectory)
+$smokeCode = $LASTEXITCODE
+$smokeText = $smokeOutput -join [Environment]::NewLine
+$smokeReceiptPath = [regex]::Match($smokeText,'"receipt"\s*:\s*"([^"]+)"').Groups[1].Value
+Assert-True ($smokeCode -eq 2) "agent-smoke rejection exit code was $smokeCode"
+Assert-True ($smokeReceiptPath -and (Test-Path -LiteralPath $smokeReceiptPath -PathType Leaf)) 'agent-smoke rejection receipt missing'
+$smokeReceipt = Get-Content -LiteralPath $smokeReceiptPath -Raw | ConvertFrom-Json
+Assert-True ($smokeReceipt.state -eq 'rejected') 'agent-smoke did not preserve helper rejection'
+
+# Inject a receipt-write failure into a sandbox copy of the current helper.
+# The owned child creates one sleeping descendant before the failure fires.
+foreach ($rootExits in @($false, $true)) {
+$failureRoot = Join-Path $ReceiptDirectory ("observer-failure-" + [guid]::NewGuid().ToString('N'))
+$null = New-Item -ItemType Directory -Path $failureRoot
+$failureHelper = Join-Path $failureRoot 'injected-helper.ps1'
+$failureChild = Join-Path $failureRoot 'owned-child.ps1'
+$identityPath = Join-Path $failureRoot 'owned-processes.json'
+@'
+param([string]$IdentityPath, [switch]$RootExits)
+$start = [Diagnostics.ProcessStartInfo]::new((Get-Process -Id $PID).Path)
+$start.UseShellExecute = $false
+$start.CreateNoWindow = $true
+$seconds = if ($RootExits) { 3 } else { 30 }
+foreach ($argument in @('-NoProfile', '-Command', "Start-Sleep -Seconds $seconds")) { $start.ArgumentList.Add($argument) }
+$descendant = [Diagnostics.Process]::Start($start)
+@{
+    child = $PID
+    childStartUtc = (Get-Process -Id $PID).StartTime.ToUniversalTime().ToString('o')
+    descendant = $descendant.Id
+    descendantStartUtc = $descendant.StartTime.ToUniversalTime().ToString('o')
+    rootExits = [bool]$RootExits
+} | ConvertTo-Json | Set-Content -LiteralPath $IdentityPath
+if (-not $RootExits) { $descendant.WaitForExit() }
+'@ | Set-Content -LiteralPath $failureChild -Encoding utf8
+$injection = @'
+    if ($Record.state -eq 'running') {
+        $identity = Join-Path (Split-Path $Path) 'owned-processes.json'
+        $deadline = [DateTime]::UtcNow.AddSeconds(10)
+        while (-not (Test-Path -LiteralPath $identity) -and [DateTime]::UtcNow -lt $deadline) {
+            Start-Sleep -Milliseconds 50
+        }
+        if (-not (Test-Path -LiteralPath $identity)) { throw 'synthetic child did not report its descendant' }
+        $identities = Get-Content -LiteralPath $identity -Raw | ConvertFrom-Json
+        if ($identities.rootExits) {
+            $process.WaitForExit()
+            $stillRunning = Get-Process -Id $identities.descendant -ErrorAction Stop
+            if ($stillRunning.HasExited) { throw 'descendant exited before observer failure' }
+            Set-Content -LiteralPath (Join-Path (Split-Path $Path) 'root-exited-before-failure.txt') -Value $process.HasExited
+        }
+        throw 'synthetic running receipt failure'
+    }
+'@
+$helperSource = Get-Content -LiteralPath $helper -Raw
+# Fail after each real cleanup call to verify diagnostics cannot mask the
+# observer error even when the caller promotes warnings to terminating errors.
+$helperSource = $helperSource.Replace('$mutex.ReleaseMutex()', '$mutex.ReleaseMutex(); throw "synthetic release diagnostic"')
+$helperSource = $helperSource.Replace('$mutex.Dispose()', '$mutex.Dispose(); throw "synthetic disposal diagnostic"')
+$faultMarker = '    $temporary = "$Path.tmp"'
+Assert-True ($helperSource.Contains($faultMarker)) 'receipt fault-injection marker missing'
+$helperSource.Replace($faultMarker, $injection + [Environment]::NewLine + $faultMarker) |
+    Set-Content -LiteralPath $failureHelper -Encoding utf8
+$failureParameters = $successParameters.Clone()
+$failureParameters.WarningAction = 'Stop'
+$failureParameters.ReceiptDirectory = $failureRoot
+$failureArguments = @('-NoProfile', '-File', $failureChild, '-IdentityPath', $identityPath)
+if ($rootExits) { $failureArguments += '-RootExits' }
+$failureParameters.ChildArgumentsJson = $failureArguments | ConvertTo-Json -Compress
+$failureStdout = Join-Path $failureRoot 'helper.stdout.log'
+$failureStderr = Join-Path $failureRoot 'helper.stderr.log'
+& $pwsh -NoProfile -File $failureHelper @failureParameters 1> $failureStdout 2> $failureStderr
+$failureCode = $LASTEXITCODE
+$identities = Get-Content -LiteralPath $identityPath -Raw | ConvertFrom-Json
+try {
+    Assert-True ($failureCode -ne 0) 'observer failure incorrectly succeeded'
+    $failureReceipt = Get-ChildItem -LiteralPath $failureRoot -Filter 'agent-smoke-budget-*.json' -File |
+        ForEach-Object { Get-Content -LiteralPath $_.FullName -Raw | ConvertFrom-Json } |
+        Select-Object -First 1
+    Assert-True ($failureReceipt.state -eq 'observer_error') 'observer failure receipt state missing'
+    Assert-True ($failureReceipt.error -eq 'synthetic running receipt failure') 'original observer error was replaced'
+    if ($rootExits) {
+        Assert-True ((Get-Content -LiteralPath (Join-Path $failureRoot 'root-exited-before-failure.txt') -Raw).Trim() -eq 'True') 'root did not exit before observer failure'
+    }
+    Assert-True ((Get-Content -LiteralPath $failureStderr -Raw) -match 'synthetic running receipt failure') 'original observer error was not rethrown'
+    $cleanupWarnings = Get-Content -LiteralPath $failureStdout -Raw
+    Assert-True ($cleanupWarnings -match 'synthetic release diagnostic' -and $cleanupWarnings -match 'synthetic disposal diagnostic') 'cleanup failures were not reported'
+    Assert-True ($failureReceipt.childExitConfirmed) 'child exit was not confirmed before helper return'
+    Assert-True ($failureReceipt.observedDescendantPids -contains $identities.descendant) 'owned descendant was not tracked'
+    Assert-True ($failureReceipt.observedDescendantsExited -eq @($failureReceipt.observedDescendantPids).Count) 'observed descendant exits were not confirmed'
+    Assert-True (@($failureReceipt.recoveryErrors).Count -eq 0) 'observer recovery reported errors'
+    foreach ($ownedId in @($identities.child, $identities.descendant)) {
+        Assert-True ($null -eq (Get-Process -Id $ownedId -ErrorAction SilentlyContinue)) "owned process $ownedId survived helper exit"
+    }
+    $afterFailureOutput = @(& $pwsh -NoProfile -File $helper @successParameters)
+    Assert-True ($LASTEXITCODE -eq 0) 'volume gate was not released after observer recovery'
+} finally {
+    # Only these synthetic processes belong to this regression. Normal recovery
+    # has already stopped both; failure cleanup never scans or stops other owners.
+    foreach ($role in @('child', 'descendant')) {
+        $owned = Get-Process -Id $identities.$role -ErrorAction SilentlyContinue
+        $expectedStart = [DateTime]$identities.("${role}StartUtc")
+        if ($owned -and $owned.StartTime.ToUniversalTime() -eq $expectedStart.ToUniversalTime()) {
+            $owned.Kill($true)
+            $owned.WaitForExit()
+        }
+        if ($owned) { $owned.Dispose() }
+    }
+}
+}
+
+Write-Output "agent-smoke budgeted synthetic tests passed; success=$successReceiptPath helperRejection=$rejectReceiptPath smokeRejection=$smokeReceiptPath"

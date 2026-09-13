@@ -59,7 +59,7 @@ use serde::{Deserialize, Serialize};
 /// The falloff is what makes the brush "feel" like a tool: a Hard edge
 /// stamps a flat plateau, a Linear falloff ramps evenly, a Smooth falloff
 /// eases in/out so the edge is feathered.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum BrushFalloff {
     /// No falloff. Every cell inside the footprint gets the full
@@ -67,6 +67,7 @@ pub enum BrushFalloff {
     /// for `t ∈ [0, 1)`.
     Hard,
     /// Linear ramp: `weight(t) = 1 - t`.
+    #[default]
     Linear,
     /// Smooth ease-in/ease-out (`smoothstep`): `weight(t) = 1 - t² ·
     /// (3 - 2t)`. The edges feather to zero with continuous first
@@ -117,12 +118,6 @@ impl BrushFalloff {
     }
 }
 
-impl Default for BrushFalloff {
-    fn default() -> Self {
-        BrushFalloff::Linear
-    }
-}
-
 /// Brush footprint shape — the **planar** outline of the kernel.
 ///
 /// `Circle` is the default and the most common (round brushes, world-edit
@@ -133,10 +128,11 @@ impl Default for BrushFalloff {
 /// The shape only affects which cells are *in the footprint at all* (the
 /// radius-edge gating). The falloff is what modulates weight *within*
 /// the footprint.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum BrushShape {
     /// Round footprint — Euclidean distance ≤ radius.
+    #[default]
     Circle,
     /// Grid-aligned square — Chebyshev distance ≤ radius (so a
     /// `radius = 2` square is 5×5 cells).
@@ -183,12 +179,6 @@ impl BrushShape {
             // Manhattan: |dx| + |dy| ≤ r.
             BrushShape::Diamond => (adx + ady) <= radius as u32,
         }
-    }
-}
-
-impl Default for BrushShape {
-    fn default() -> Self {
-        BrushShape::Circle
     }
 }
 

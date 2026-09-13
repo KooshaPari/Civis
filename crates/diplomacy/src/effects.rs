@@ -588,8 +588,10 @@ mod tests {
 
     #[test]
     fn cultural_drift_converges_profiles() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
         world.cultural_profiles.insert(
             p(1),
             CulturalProfile {
@@ -634,8 +636,10 @@ mod tests {
 
     #[test]
     fn cultural_no_shared_borders_no_effect() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
         world
             .cultural_profiles
             .insert(p(1), CulturalProfile::uniform(10));
@@ -650,8 +654,10 @@ mod tests {
 
     #[test]
     fn cultural_missing_profile_skips_pair() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
         world
             .cultural_profiles
             .insert(p(1), CulturalProfile::uniform(10));
@@ -665,8 +671,10 @@ mod tests {
 
     #[test]
     fn cultural_same_profiles_no_event() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
         world
             .cultural_profiles
             .insert(p(1), CulturalProfile::uniform(50));
@@ -682,8 +690,10 @@ mod tests {
 
     #[test]
     fn cultural_drift_is_symmetric() {
-        let mut world_a = WorldState::default();
-        world_a.tick = 1;
+        let mut world_a = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
         world_a.cultural_profiles.insert(
             p(1),
             CulturalProfile {
@@ -717,8 +727,10 @@ mod tests {
 
     #[test]
     fn cultural_rate_clamped_to_max() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
         world.cultural_profiles.insert(
             p(1),
             CulturalProfile {
@@ -751,8 +763,10 @@ mod tests {
 
     #[test]
     fn embargo_impose_sets_efficiency_to_zero() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
         world.trade_efficiency.insert(pair(1, 2), 80);
 
         let effect = TradeEmbargoEffect::default();
@@ -765,8 +779,10 @@ mod tests {
 
     #[test]
     fn embargo_impose_idempotent() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
         world.trade_efficiency.insert(pair(1, 2), 80);
 
         let effect = TradeEmbargoEffect::default();
@@ -779,8 +795,10 @@ mod tests {
 
     #[test]
     fn embargo_lift_restores_efficiency() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
         world.trade_efficiency.insert(pair(1, 2), 80);
 
         let effect = TradeEmbargoEffect {
@@ -796,8 +814,10 @@ mod tests {
 
     #[test]
     fn embargo_lift_idempotent() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
 
         let effect = TradeEmbargoEffect::default();
         let event = effect.lift(&mut world, p(1), p(2));
@@ -806,8 +826,10 @@ mod tests {
 
     #[test]
     fn embargo_apply_enforces_zero_efficiency() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
         world.embargoes.insert(pair(1, 2), true);
         world.trade_efficiency.insert(pair(1, 2), 42);
 
@@ -820,8 +842,10 @@ mod tests {
 
     #[test]
     fn embargo_symmetric_application() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
 
         let effect = TradeEmbargoEffect::default();
         // Impose from a->b
@@ -835,8 +859,10 @@ mod tests {
 
     #[test]
     fn alliance_grants_bonus_and_intel() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
 
         let effect = MilitaryAllianceEffect {
             combat_bonus: 20,
@@ -866,8 +892,10 @@ mod tests {
 
     #[test]
     fn alliance_form_idempotent() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
 
         let effect = MilitaryAllianceEffect::default();
         let e1 = effect.form(&mut world, p(1), p(2));
@@ -879,8 +907,10 @@ mod tests {
 
     #[test]
     fn alliance_dissolve_removes_bonuses() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
 
         let effect = MilitaryAllianceEffect::default();
         effect.form(&mut world, p(1), p(2));
@@ -909,8 +939,10 @@ mod tests {
 
     #[test]
     fn alliance_dissolve_idempotent() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
 
         let effect = MilitaryAllianceEffect::default();
         let event = effect.dissolve(&mut world, p(1), p(2));
@@ -919,8 +951,10 @@ mod tests {
 
     #[test]
     fn alliance_apply_ensures_bonus_present() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
         // Alliance exists but bonus was somehow removed.
         world.military_alliances.insert(pair(1, 2), true);
 
@@ -937,8 +971,10 @@ mod tests {
 
     #[test]
     fn alliance_event_tick_matches_world_tick() {
-        let mut world = WorldState::default();
-        world.tick = 42;
+        let mut world = WorldState {
+            tick: 42,
+            ..WorldState::default()
+        };
 
         let effect = MilitaryAllianceEffect::default();
         let event = effect.form(&mut world, p(1), p(2)).unwrap();
@@ -952,8 +988,10 @@ mod tests {
 
     #[test]
     fn tribute_impose_transfers_resources() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
         world.resources.insert(p(1), 500); // dominant
         world.resources.insert(p(2), 100); // vassal
 
@@ -979,8 +1017,10 @@ mod tests {
 
     #[test]
     fn tribute_requires_power_imbalance() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
         world.resources.insert(p(1), 50);
         world.resources.insert(p(2), 100); // vassal is stronger
 
@@ -991,8 +1031,10 @@ mod tests {
 
     #[test]
     fn tribute_requires_strictly_weaker_vassal() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
         world.resources.insert(p(1), 100);
         world.resources.insert(p(2), 100); // equal resources
 
@@ -1003,8 +1045,10 @@ mod tests {
 
     #[test]
     fn tribute_capped_by_max() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
         world.resources.insert(p(1), 1000);
         world.resources.insert(p(2), 500);
 
@@ -1015,8 +1059,10 @@ mod tests {
 
     #[test]
     fn tribute_capped_by_available_resources() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
         world.resources.insert(p(1), 1000);
         world.resources.insert(p(2), 5); // very poor vassal
 
@@ -1037,8 +1083,10 @@ mod tests {
 
     #[test]
     fn tribute_per_tick_extraction() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
         world.resources.insert(p(1), 500);
         world.resources.insert(p(2), 1000);
 
@@ -1067,8 +1115,10 @@ mod tests {
 
     #[test]
     fn tribute_stops_when_vassal_broke() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
         world.resources.insert(p(1), 15); // very poor vassal
         world.resources.insert(p(2), 500); // rich dominant
 
@@ -1099,8 +1149,10 @@ mod tests {
 
     #[test]
     fn tribute_release_removes_relationship() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
         world.resources.insert(p(1), 500);
         world.resources.insert(p(2), 100);
 
@@ -1117,8 +1169,10 @@ mod tests {
 
     #[test]
     fn tribute_self_is_noop() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
         world.resources.insert(p(1), 100);
 
         let effect = TributeEffect::default();
@@ -1128,8 +1182,10 @@ mod tests {
 
     #[test]
     fn tribute_impose_idempotent() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
         world.resources.insert(p(1), 500);
         world.resources.insert(p(2), 100);
 
@@ -1145,8 +1201,10 @@ mod tests {
     #[test]
     fn cultural_influence_is_deterministic() {
         let build = || {
-            let mut world = WorldState::default();
-            world.tick = 5;
+            let mut world = WorldState {
+                tick: 5,
+                ..WorldState::default()
+            };
             world.cultural_profiles.insert(
                 p(1),
                 CulturalProfile {
@@ -1178,8 +1236,10 @@ mod tests {
     #[test]
     fn tribute_extraction_is_deterministic() {
         let build = || {
-            let mut world = WorldState::default();
-            world.tick = 10;
+            let mut world = WorldState {
+                tick: 10,
+                ..WorldState::default()
+            };
             world.resources.insert(p(1), 500);
             world.resources.insert(p(2), 1000);
             let effect = TributeEffect { max_tribute: 30 };
@@ -1246,8 +1306,10 @@ mod tests {
 
     #[test]
     fn combined_effects_on_shared_world() {
-        let mut world = WorldState::default();
-        world.tick = 1;
+        let mut world = WorldState {
+            tick: 1,
+            ..WorldState::default()
+        };
 
         // Set up cultural profiles, trade, and resources.
         world.cultural_profiles.insert(

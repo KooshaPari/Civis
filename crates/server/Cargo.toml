@@ -8,6 +8,7 @@ publish = false
 
 [dependencies]
 civ-engine = { path = "../engine", version = "0.1.0" }
+civ-planet = { path = "../planet" }
 civ-agents = { path = "../agents" }
 civ-economy = { path = "../economy" }
 civ-voxel = { path = "../voxel" }

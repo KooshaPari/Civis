@@ -571,7 +571,8 @@ impl FrequencyDeviation {
 pub struct StabilityReport {
     /// Overall stability index.
     pub index: StabilityIndex,
-    /// Supply/demand ratio (1.0 = balanced).
+    /// Delivered/requested power ratio for the last balance (1.0 = fully served).
+    /// A tick with no requested load is treated as fully served.
     pub supply_demand_ratio: f32,
     /// Number of blacked-out consumers.
     pub blacked_out_consumers: u32,
@@ -579,7 +580,7 @@ pub struct StabilityReport {
     pub total_consumers: u32,
     /// Total generation capacity (MW).
     pub total_generation: f32,
-    /// Total demand (MW).
+    /// Requested load in the last balance, including unmet demand (MW).
     pub total_demand: f32,
     /// Estimated frequency deviation from nominal.
     pub frequency_deviation: FrequencyDeviation,
@@ -607,12 +608,10 @@ impl EnergyGrid {
             .map(|n| n.max_output)
             .sum();
 
-        let total_demand: f32 = self
-            .nodes
-            .values()
-            .filter(|n| matches!(n.kind, EnergyNodeKind::Consumer) && n.energised)
-            .map(|n| n.max_demand)
-            .sum();
+        // Use the completed tick's load, before its blackout cascade changed
+        // node energisation. Nameplate capacity is not actual dispatched power.
+        let total_delivered = last_result.total_delivered();
+        let total_demand = total_delivered + last_result.total_shortfall();
 
         let total_consumers: u32 = self
             .nodes
@@ -627,16 +626,15 @@ impl EnergyGrid {
             .count() as u32;
 
         let supply_demand_ratio = if total_demand > 0.0 {
-            total_generation / total_demand
+            total_delivered / total_demand
         } else {
             1.0
         };
 
-        // Frequency deviation: under-frequency when supply < demand.
+        // Unserved load produces under-frequency. Balance caps delivered power
+        // at requested load, so unused generation capacity is not over-frequency.
         let freq_dev = if supply_demand_ratio < 1.0 {
             FrequencyDeviation::new(-(1.0 - supply_demand_ratio) * 2.0)
-        } else if supply_demand_ratio > 1.2 {
-            FrequencyDeviation::new((supply_demand_ratio - 1.0) * 1.5)
         } else {
             FrequencyDeviation::new(0.0)
         };
@@ -844,6 +842,10 @@ mod tests {
         demand.insert(EnergyNodeId(2), 10.0);
         let result = grid.balance(&supply, &demand);
         let report = grid.assess_stability(&result);
+        assert_eq!(report.total_generation, 50.0);
+        assert_eq!(report.total_demand, 10.0);
+        assert_eq!(report.supply_demand_ratio, 1.0);
+        assert_eq!(report.frequency_deviation.0, 0.0);
         assert!(report.is_stable());
         assert!(report.index.0 >= 0.6);
         assert!(report.frequency_deviation.is_acceptable());
@@ -871,7 +873,44 @@ mod tests {
         demand.insert(EnergyNodeId(2), 50.0);
         let result = grid.balance(&supply, &demand);
         let report = grid.assess_stability(&result);
+        assert_eq!(result.total_delivered(), 5.0);
+        assert_eq!(result.total_shortfall(), 25.0);
+        assert_eq!(report.blacked_out_consumers, 1);
+        assert_eq!(report.total_demand, 30.0);
+        assert!((report.supply_demand_ratio - 1.0 / 6.0).abs() < 1e-6);
         assert!(report.supply_demand_ratio < 1.0);
         assert!(!report.frequency_deviation.is_acceptable());
+    }
+
+    #[test]
+    fn transmission_shortfall_remains_visible_after_blackout() {
+        let mut grid = build_simple_grid();
+        let supply = BTreeMap::from([(EnergyNodeId(0), 50.0)]);
+        let demand = BTreeMap::from([(EnergyNodeId(2), 30.0)]);
+        let result = grid.balance(&supply, &demand);
+        let report = grid.assess_stability(&result);
+
+        assert_eq!(result.total_delivered(), 15.0);
+        assert_eq!(result.total_shortfall(), 15.0);
+        assert_eq!(report.blacked_out_consumers, 1);
+        assert_eq!(report.total_generation, 50.0);
+        assert_eq!(report.total_demand, 30.0);
+        assert_eq!(report.supply_demand_ratio, 0.5);
+        assert_eq!(report.frequency_deviation.0, -1.0);
+        assert_eq!(report.overloaded_lines, vec![TransmissionLineId(1)]);
+    }
+
+    #[test]
+    fn no_requested_load_is_fully_served_despite_unused_capacity() {
+        let mut grid = build_simple_grid();
+        let supply = BTreeMap::from([(EnergyNodeId(0), 50.0)]);
+        let result = grid.balance(&supply, &BTreeMap::new());
+        let report = grid.assess_stability(&result);
+
+        assert_eq!(report.total_generation, 50.0);
+        assert_eq!(report.total_demand, 0.0);
+        assert_eq!(report.supply_demand_ratio, 1.0);
+        assert_eq!(report.frequency_deviation.0, 0.0);
+        assert!(report.is_stable());
     }
 }

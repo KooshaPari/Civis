@@ -15,6 +15,10 @@ use std::collections::BTreeSet;
 use super::Simulation;
 use crate::engine::{Fixed, SimRng};
 
+/// Simulation ticks are daily; chronological age advances once per in-game
+/// year rather than once per frame.
+const LIFECYCLE_YEAR_TICKS: u64 = 365;
+
 // PopulationEvent and LifecycleCounters are defined in this file.
 
 use std::collections::BTreeMap;
@@ -128,6 +132,12 @@ pub(crate) fn migration_pressure(needs: &Needs, resource_pressure: f32) -> f32 {
     (0.7 * deprivation + 0.3 * resource_pressure).clamp(0.0, 1.0)
 }
 
+/// Cadence-sensitive stage effects applied once per in-game year (every
+/// [`LIFECYCLE_YEAR_TICKS`] ticks): children accrue belonging/safety at a slow
+/// social-development rate and working-age adults get a small food bump.
+/// Mature/elderly physiological decay intentionally lives in
+/// [`apply_elder_decay_per_tick`] so it remains on the daily-cadence timeline
+/// independent of age-increment cadence.
 #[inline]
 pub(crate) fn apply_age_stage_effects(age: u16, needs: &mut Needs) {
     if age < 18 {
@@ -135,7 +145,19 @@ pub(crate) fn apply_age_stage_effects(age: u16, needs: &mut Needs) {
         needs.safety = (needs.safety + 0.01).min(1.0);
     } else if age < 50 {
         needs.food = (needs.food + 0.005).min(1.0);
-    } else {
+    }
+    // Elder (age >= 50) decay moved to apply_elder_decay_per_tick.
+}
+
+/// Daily-cadence elder physiological decay: rest and health slowly decline on
+/// every tick for mature adults (age >= 50). This is split out from
+/// [`apply_age_stage_effects`] so the slowing rest/health of elders stays
+/// proportional to the daily tick loop instead of being throttled to
+/// once-per-year alongside chronological age increments (see
+/// [`LIFECYCLE_YEAR_TICKS`]).
+#[inline]
+pub(crate) fn apply_elder_decay_per_tick(age: u16, needs: &mut Needs) {
+    if age >= 50 {
         needs.rest = (needs.rest - 0.01).max(0.0);
         needs.health = (needs.health - 0.01).max(0.0);
     }
@@ -343,18 +365,19 @@ impl Simulation {
         let mut found_new_settlements = Vec::new();
         let mut next_settlement_id = self.next_settlement_id();
 
+        let ages_this_tick = self.state.tick % LIFECYCLE_YEAR_TICKS == 0;
         for (entity, id, sample) in records.iter() {
-            let next_age = {
-                let Ok(mut civilian) = self.world.get::<&mut AgentCivilian>(*entity) else {
-                    continue;
-                };
-                civilian.age = civilian.age.saturating_add(1);
-                civilian.age
-            };
+            let next_age = sample.age;
             let Ok(mut needs) = self.world.get::<&mut Needs>(*entity) else {
                 continue;
             };
-            apply_age_stage_effects(next_age, &mut needs);
+            // Elder rest/health decay runs every tick (daily-cadence): the
+            // physiological decay of mature adults must not be throttled to
+            // once-per-year alongside age increments.
+            apply_elder_decay_per_tick(next_age, &mut needs);
+            if ages_this_tick {
+                apply_age_stage_effects(next_age, &mut needs);
+            }
 
             if sample.alignment == Alignment::None {
                 continue;
@@ -365,55 +388,61 @@ impl Simulation {
             }
         }
 
-        for (left_idx, left) in records.iter().enumerate() {
-            if paired_adults.contains(&left.1) {
-                continue;
-            }
-            if !is_fertile_adult(left.0, &self.world, &left.2) {
-                continue;
-            }
-
-            let mut partner: Option<&(Entity, u64, CivilianLifecycleSample)> = None;
-            for right in records.iter().skip(left_idx + 1) {
-                if paired_adults.contains(&right.1) {
+        // Evaluate reproduction on the existing 200-tick cadence. Pairing on
+        // every frame lets the same adults reproduce indefinitely, exhausting
+        // food and destabilizing normal emergence runs.
+        let birth_window = self.state.tick == 0 || self.state.tick % 200 == 0;
+        if birth_window {
+            for (left_idx, left) in records.iter().enumerate() {
+                if paired_adults.contains(&left.1) {
                     continue;
                 }
-                if !is_fertile_adult(right.0, &self.world, &right.2) {
+                if !is_fertile_adult(left.0, &self.world, &left.2) {
                     continue;
                 }
-                if left.2.alignment != right.2.alignment {
+
+                let mut partner: Option<&(Entity, u64, CivilianLifecycleSample)> = None;
+                for right in records.iter().skip(left_idx + 1) {
+                    if paired_adults.contains(&right.1) {
+                        continue;
+                    }
+                    if !is_fertile_adult(right.0, &self.world, &right.2) {
+                        continue;
+                    }
+                    if left.2.alignment != right.2.alignment {
+                        continue;
+                    }
+                    if lifecycle_distance(left.2.x, left.2.y, right.2.x, right.2.y) > 0.04 {
+                        continue;
+                    }
+                    partner = Some(right);
+                    break;
+                }
+
+                let Some(right) = partner else {
+                    continue;
+                };
+
+                let birth_pressure = ((left.2.fertility_score + right.2.fertility_score) * 0.5)
+                    * (1.0
+                        - left
+                            .2
+                            .migration_pressure
+                            .max(right.2.migration_pressure)
+                            .clamp(0.0, 1.0));
+                if birth_pressure < 0.68 {
                     continue;
                 }
-                if lifecycle_distance(left.2.x, left.2.y, right.2.x, right.2.y) > 0.04 {
-                    continue;
-                }
-                partner = Some(right);
-                break;
+
+                paired_adults.insert(left.1);
+                paired_adults.insert(right.1);
+
+                let child_id = self.next_civilian_id;
+                self.next_civilian_id += 1;
+                let x = ((left.2.x + right.2.x) * 0.5).clamp(0.01, 0.99);
+                let y = ((left.2.y + right.2.y) * 0.5).clamp(0.01, 0.99);
+                births.push((child_id, x, y, left.2.alignment, left.1, right.1));
             }
-
-            let Some(right) = partner else {
-                continue;
-            };
-
-            let birth_pressure = ((left.2.fertility_score + right.2.fertility_score) * 0.5)
-                * (1.0
-                    - left
-                        .2
-                        .migration_pressure
-                        .max(right.2.migration_pressure)
-                        .clamp(0.0, 1.0));
-            if birth_pressure < 0.68 {
-                continue;
-            }
-
-            paired_adults.insert(left.1);
-            paired_adults.insert(right.1);
-
-            let child_id = self.next_civilian_id;
-            self.next_civilian_id += 1;
-            let x = ((left.2.x + right.2.x) * 0.5).clamp(0.01, 0.99);
-            let y = ((left.2.y + right.2.y) * 0.5).clamp(0.01, 0.99);
-            births.push((child_id, x, y, left.2.alignment, left.1, right.1));
         }
 
         for (entity, id, x, y) in dead.iter().copied() {
@@ -593,9 +622,17 @@ impl Simulation {
         attach_citizen_to_agents(&mut self.world);
         self.last_births.clear();
         self.last_deaths.clear();
-        let population = civ_agents::count_civilians(&self.world) as f64;
-        let max_pop = self.state.population.max(1) as f64;
-        let overcrowding_factor = (population / max_pop).clamp(0.0, 1.0);
+        let population = civ_agents::count_civilians(&self.world) as u64;
+        // Each civilian consumes one food unit below. Snapshot the complete
+        // daily rations before consumption, independently of population accounting.
+        // Replenishing food raises this capacity on the next tick.
+        let daily_food_capacity = self.state.resources.food.max(Fixed::ZERO).to_num::<u64>();
+        let overcrowding_factor = if daily_food_capacity == 0 {
+            1.0
+        } else {
+            (population as f32 / daily_food_capacity as f32).clamp(0.0, 1.0)
+        };
+        let over_capacity = population > daily_food_capacity;
         // FR-CIV-LIFE-003: birth probability is now derived per-civilian from
         // `civ_needs::should_reproduce`, which consults the lifecycle label
         // (Adult only), the food/safety thresholds, and the configurable
@@ -609,15 +646,21 @@ impl Simulation {
             self.world
                 .query_mut::<(&mut AgentCivilian, &Position3d, &mut Needs)>()
         {
-            civilian.age = civilian.age.saturating_add(1);
-            if self.state.resources.food.to_bits() > 0 {
+            if self.state.tick % LIFECYCLE_YEAR_TICKS == 0 {
+                civilian.age = civilian.age.saturating_add(1);
+            }
+            if self.state.resources.food >= Fixed::ONE {
                 needs.food = (needs.food + 0.008).min(1.0);
-                self.state.resources.food =
-                    (self.state.resources.food - Fixed::from_num(1)).max(Fixed::ZERO);
+                self.state.resources.food -= Fixed::ONE;
             } else {
                 needs.food = (needs.food - 0.03).max(0.0);
             }
-            if needs.food < 0.05 && self.state.resources.food.to_bits() <= 0 {
+            // A cohort above authoritative capacity competes for the same
+            // stockpile; apply bounded pressure before declaring famine.
+            if over_capacity {
+                needs.food = (needs.food - 0.012).max(0.0);
+            }
+            if needs.food < 0.05 && (self.state.resources.food.to_bits() <= 0 || over_capacity) {
                 dead.push((entity, civilian.id, pos.coord));
                 continue;
             }
@@ -633,7 +676,7 @@ impl Simulation {
                     &health,
                     needs.food,
                     needs.safety,
-                    overcrowding_factor as f32,
+                    overcrowding_factor,
                     &lifecycle_params,
                 );
                 if self.rng.gen_bool(should_birth.clamp(0.0, 1.0) as f64) {
@@ -678,5 +721,269 @@ impl Simulation {
         self.last_life_deaths = deaths_count as u32;
         self.state.population = self.state.population.saturating_add(births_count);
         self.state.population = self.state.population.saturating_sub(deaths_count);
+    }
+}
+
+#[cfg(test)]
+mod age_stage_cadence_tests {
+    use super::{apply_age_stage_effects, apply_elder_decay_per_tick};
+    use civ_agents::Needs;
+
+    fn fresh_needs() -> Needs {
+        Needs {
+            food: 0.5,
+            shelter: 0.5,
+            safety: 0.5,
+            belonging: 0.5,
+            rest: 0.5,
+            health: 0.5,
+        }
+    }
+
+    /// FR-CIV-LIFE / engine-cadence — `apply_age_stage_effects` no longer
+    /// mutates elder `rest` / `health`. The age-tiered bumps (child
+    /// belonging/safety, adult food) remain on the annual cadence; the
+    /// elder physiological decay moved to [`apply_elder_decay_per_tick`]
+    /// so it tracks the daily tick loop instead of being throttled to
+    /// once-per-year.
+    #[test]
+    fn apply_age_stage_effects_is_now_purely_annual_and_does_not_decay_elder_needs() {
+        let mut elder = fresh_needs();
+        apply_age_stage_effects(70, &mut elder);
+        // No decay in the annual pass for an elder: rest/health must be
+        // untouched (the decay was relocated to the daily helper).
+        assert!(
+            (elder.rest - 0.5).abs() < f32::EPSILON,
+            "annual stage pass must not decay elder rest, got {}",
+            elder.rest
+        );
+        assert!(
+            (elder.health - 0.5).abs() < f32::EPSILON,
+            "annual stage pass must not decay elder health, got {}",
+            elder.health
+        );
+    }
+
+    /// FR-CIV-LIFE / engine-cadence — `apply_elder_decay_per_tick` runs every
+    /// tick and drains elder rest/health at the documented rate until they
+    /// hit 0.0 (the clamp we already had in the original `apply_age_stage_effects`
+    /// else-branch). Adult needs untouched.
+    #[test]
+    fn apply_elder_decay_per_tick_drains_rest_and_health_each_tick() {
+        let mut elder = fresh_needs();
+        // Single call: rest + health -0.01, others untouched.
+        apply_elder_decay_per_tick(70, &mut elder);
+        assert!(
+            (elder.rest - 0.49).abs() < 1e-6,
+            "elder rest must drop 0.01 per tick, got {}",
+            elder.rest
+        );
+        assert!(
+            (elder.health - 0.49).abs() < 1e-6,
+            "elder health must drop 0.01 per tick, got {}",
+            elder.health
+        );
+        assert!(
+            (elder.food - 0.5).abs() < f32::EPSILON,
+            "elder food must not move, got {}",
+            elder.food
+        );
+
+        // Drive rest to clamp: 100 calls × 0.01 = 1.00 of decay from 0.5,
+        // rest floors at 0.0.
+        let mut drained = fresh_needs();
+        for _ in 0..100 {
+            apply_elder_decay_per_tick(70, &mut drained);
+        }
+        assert!(
+            drained.rest <= 0.0,
+            "elder rest must clamp at 0.0, got {}",
+            drained.rest
+        );
+        assert!(
+            drained.health <= 0.0,
+            "elder health must clamp at 0.0, got {}",
+            drained.health
+        );
+    }
+
+    /// FR-CIV-LIFE / engine-cadence — adult needs (18-49) untouched by the
+    /// daily decay helper; only elder needs move. Guards against accidental
+    /// pan-handling of the lower age branch.
+    #[test]
+    fn apply_elder_decay_per_tick_skips_adults_and_children() {
+        let mut adult = fresh_needs();
+        apply_elder_decay_per_tick(40, &mut adult);
+        assert!(
+            (adult.rest - 0.5).abs() < f32::EPSILON,
+            "adult rest must not decay, got {}",
+            adult.rest
+        );
+        assert!(
+            (adult.health - 0.5).abs() < f32::EPSILON,
+            "adult health must not decay, got {}",
+            adult.health
+        );
+
+        let mut child = fresh_needs();
+        apply_elder_decay_per_tick(10, &mut child);
+        assert!(
+            (child.rest - 0.5).abs() < f32::EPSILON,
+            "child rest must not decay, got {}",
+            child.rest
+        );
+        assert!(
+            (child.health - 0.5).abs() < f32::EPSILON,
+            "child health must not decay, got {}",
+            child.health
+        );
+    }
+}
+
+#[cfg(test)]
+mod daily_food_capacity_tests {
+    use super::*;
+    use civ_voxel::WorldCoord;
+
+    fn cohort(food: Fixed, recorded_population: u64) -> Simulation {
+        let mut sim = Simulation::with_seed(171);
+        sim.world = World::new();
+        sim.state.tick = 1; // Exclude birth and annual-age cadence.
+        sim.state.population = recorded_population;
+        sim.state.resources.food = food;
+        for id in [1, 2] {
+            sim.world.spawn((
+                AgentCivilian {
+                    id,
+                    age: 25,
+                    alignment: Alignment::Faction(1),
+                },
+                Position3d {
+                    coord: WorldCoord {
+                        x: id as i64,
+                        y: 0,
+                        z: 0,
+                    },
+                },
+                Needs {
+                    food: 0.5,
+                    shelter: 0.5,
+                    safety: 0.5,
+                    belonging: 0.5,
+                    rest: 0.5,
+                    health: 0.5,
+                },
+            ));
+        }
+        sim
+    }
+
+    fn food_needs(sim: &Simulation) -> BTreeMap<u64, f32> {
+        sim.world
+            .query::<(&AgentCivilian, &Needs)>()
+            .iter()
+            .map(|(_, (agent, needs))| (agent.id, needs.food))
+            .collect()
+    }
+
+    #[test]
+    fn life_phase_decays_elder_health_on_non_annual_ticks() {
+        let mut sim = cohort(Fixed::from_num(100), 2);
+        for (_, agent) in sim.world.query_mut::<&mut AgentCivilian>() {
+            agent.age = 70;
+        }
+        for tick in [1, 2] {
+            sim.state.tick = tick;
+            sim.phase_life();
+        }
+        for (_, (agent, needs)) in sim.world.query::<(&AgentCivilian, &Needs)>().iter() {
+            assert_eq!(agent.age, 70);
+            assert!((needs.health - 0.48).abs() < 1e-6);
+            assert!((needs.rest - 0.48).abs() < 1e-6);
+        }
+        assert_eq!(civ_agents::count_civilians(&sim.world), 2);
+    }
+
+    #[test]
+    fn ration_capacity_is_independent_of_recorded_population_and_uses_whole_units() {
+        for food in [
+            Fixed::from_num(1),
+            Fixed::from_bits(1999),
+            Fixed::from_num(2),
+        ] {
+            let mut exact_count = cohort(food, 2);
+            let mut stale_count = cohort(food, 2000);
+            exact_count.phase_citizen_lifecycle();
+            stale_count.phase_citizen_lifecycle();
+            assert_eq!(food_needs(&exact_count), food_needs(&stale_count));
+            assert_eq!(exact_count.last_deaths(), stale_count.last_deaths());
+            let maximum = food_needs(&exact_count)
+                .values()
+                .copied()
+                .fold(0.0_f32, f32::max);
+            let expected = if food < Fixed::from_num(2) {
+                0.496
+            } else {
+                0.508
+            };
+            assert!(
+                (maximum - expected).abs() < 1e-6,
+                "daily pressure must start below two complete rations"
+            );
+            assert_eq!(exact_count.state.population, 2);
+            assert_eq!(stale_count.state.population, 2000);
+        }
+    }
+
+    #[test]
+    fn feeding_requires_whole_rations_and_preserves_fractional_stock() {
+        for (bits, fed, remaining) in [
+            (0, 0, 0),
+            (1, 0, 1),
+            (999, 0, 999),
+            (1000, 1, 0),
+            (1999, 1, 999),
+            (2000, 2, 0),
+        ] {
+            let mut sim = cohort(Fixed::from_bits(bits), 2);
+            sim.phase_citizen_lifecycle();
+            let mut actual: Vec<_> = food_needs(&sim).values().copied().collect();
+            actual.sort_by(f32::total_cmp);
+            let pressure = if fed < 2 { 0.012 } else { 0.0 };
+            let mut expected = vec![0.5 - 0.03 - pressure; 2 - fed];
+            expected.extend(vec![0.5 + 0.008 - pressure; fed]);
+            for (actual, expected) in actual.iter().zip(&expected) {
+                assert!(
+                    (actual - expected).abs() < 1e-6,
+                    "food bits {bits}: {actual} != {expected}"
+                );
+            }
+            assert_eq!(actual.len(), 2);
+            assert_eq!(sim.state.resources.food, Fixed::from_bits(remaining));
+        }
+    }
+
+    #[test]
+    fn replenishing_food_removes_capacity_pressure_next_tick() {
+        let mut sim = cohort(Fixed::from_num(1), 2);
+        sim.phase_citizen_lifecycle();
+        let before = food_needs(&sim);
+        sim.state.resources.food = Fixed::from_num(4);
+        sim.phase_citizen_lifecycle();
+        for (id, food) in food_needs(&sim) {
+            assert!((food - before[&id] - 0.008).abs() < 1e-6);
+        }
+    }
+
+    #[test]
+    fn empty_rations_cause_famine_and_update_population_by_death_events() {
+        let mut sim = cohort(Fixed::ZERO, 2);
+        for (_, needs) in sim.world.query_mut::<&mut Needs>() {
+            needs.food = 0.06;
+        }
+        sim.phase_citizen_lifecycle();
+        assert_eq!(sim.last_deaths().len(), 2);
+        assert_eq!(sim.state.population, 0);
+        assert_eq!(civ_agents::count_civilians(&sim.world), 0);
     }
 }

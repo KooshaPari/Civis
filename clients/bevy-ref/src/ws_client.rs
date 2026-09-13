@@ -56,7 +56,7 @@ pub struct SimPerfData {
     pub tick_ms: f64,
 }
 
-/// Aggregated last-tick sim events from `sim.sim.events` (id=9011).
+/// Aggregated last-tick sim events from `sim.events` (id=9011).
 ///
 /// Bundles every per-tick buffer the engine flushes (disaster pulses, audio
 /// cues, construction events, mood snapshots, research progress, religion,
@@ -84,6 +84,8 @@ pub struct SimSimEventsData {
     pub climate: Option<serde_json::Value>,
     /// Emergence dashboard sample (entropy_bits, branching, mi_score...).
     pub emergence_sample: Option<serde_json::Value>,
+    /// Per-region weather cells from `sim.events` (absent on older servers).
+    pub weather_grid: Vec<serde_json::Value>,
     /// Optional religion state blob (sects, intensities, schisms).
     pub religion_state: Option<serde_json::Value>,
     /// Optional legends/saga blob (sagas, nodes, weights).
@@ -92,6 +94,31 @@ pub struct SimSimEventsData {
     pub researched: Vec<serde_json::Value>,
     /// Currently researching tech name + progress percentage.
     pub in_progress_tech: serde_json::Value,
+}
+
+/// Return the server label only for branching regimes that warrant an alert.
+#[cfg(any(feature = "egui", test))]
+pub(crate) fn branching_alert(sample: &serde_json::Value) -> Option<&str> {
+    match sample.get("branching_regime")?.as_str()? {
+        label @ ("Near-supercritical" | "Supercritical (explosion risk)") => Some(label),
+        _ => None,
+    }
+}
+
+/// Count active Storm cells and report their maximum fixed-point intensity.
+#[cfg(any(feature = "egui", test))]
+pub(crate) fn storm_summary(grid: &[serde_json::Value]) -> Option<(usize, i32)> {
+    let mut intensities = grid.iter().filter_map(|cell| {
+        if cell.get("kind")?.as_str()? != "Storm" {
+            return None;
+        }
+        let intensity = i32::try_from(cell.get("storm_intensity_fp")?.as_i64()?).ok()?;
+        (intensity > 0).then_some(intensity)
+    });
+    let first = intensities.next()?;
+    Some(intensities.fold((1, first), |(count, max), intensity| {
+        (count + 1, max.max(intensity))
+    }))
 }
 
 /// A pending JSON-RPC request with a stable correlation ID and connection origin.
@@ -129,17 +156,21 @@ pub struct WsClient {
     cmd_tx: Sender<String>,
     /// Channel for outbound JSON-RPC text frames (fire-and-forget).
     send_tx: Sender<String>,
+    /// Ticketed frames are separate so failed tickets cannot replay after reconnect.
+    ticket_tx: Sender<(u64, String)>,
     /// Inbound parsed EmergenceHudData from id=2 sim.emergence responses.
     emergence_rx: crossbeam_channel::Receiver<EmergenceHudData>,
     /// Inbound parsed SimPerfData from id=3 sim.perf responses.
     perf_rx: crossbeam_channel::Receiver<SimPerfData>,
-    /// Inbound aggregated sim.events from id=9011 sim.sim.events responses.
+    /// Inbound aggregated sim.events from id=9011 sim.events responses.
     sim_events_rx: crossbeam_channel::Receiver<SimSimEventsData>,
     outcome_rx: crossbeam_channel::Receiver<OutcomeHudData>,
     save_list_rx: crossbeam_channel::Receiver<Vec<SaveListEntry>>,
     scene_reset_rx: Receiver<SceneReset>,
     /// Correlated-request state: maps ticket ID -> (connection_id, reply_sender).
-    pending_rpcs: Arc<Mutex<std::collections::HashMap<u64, (String, Sender<Result<serde_json::Value, String>>)>>>,
+    pending_rpcs: Arc<
+        Mutex<std::collections::HashMap<u64, (String, Sender<Result<serde_json::Value, String>>)>>,
+    >,
     /// Active world-generation state (generation id, connection id, clear closure).
     world_generation_state: Arc<Mutex<Option<WorldGenState>>>,
     /// Atomic counter assigning stable ticket IDs for `request_rpc`.
@@ -166,6 +197,7 @@ impl WsClient {
         let (_state_tx, state_rx) = crossbeam_channel::unbounded();
         let (cmd_tx, _cmd_rx) = crossbeam_channel::unbounded::<String>();
         let (send_tx, _send_rx) = crossbeam_channel::unbounded::<String>();
+        let (ticket_tx, _ticket_rx) = crossbeam_channel::unbounded::<(u64, String)>();
         let (_emergence_tx, emergence_rx) = crossbeam_channel::unbounded();
         let (_perf_tx, perf_rx) = crossbeam_channel::unbounded();
         let (_sim_events_tx, sim_events_rx) = crossbeam_channel::unbounded();
@@ -181,6 +213,7 @@ impl WsClient {
             latest_state: AtomicU32::new(state_to_atomic(WsConnectionState::Disconnected)),
             cmd_tx,
             send_tx,
+            ticket_tx,
             emergence_rx,
             perf_rx,
             sim_events_rx,
@@ -189,7 +222,7 @@ impl WsClient {
             scene_reset_rx,
             pending_rpcs: Arc::new(Mutex::new(std::collections::HashMap::new())),
             world_generation_state: Arc::new(Mutex::new(None)),
-            next_request_id: Arc::new(AtomicU64::new(1)),
+            next_request_id: Arc::new(AtomicU64::new(FIRST_TICKET_ID)),
             suspended: Arc::new(Mutex::new(false)),
             inbound_json_tx: None,
             connection_id: "civis://disconnected".to_string(),
@@ -209,6 +242,7 @@ impl WsClient {
         let (state_tx, state_rx) = crossbeam_channel::unbounded();
         let (cmd_tx, cmd_rx) = crossbeam_channel::unbounded::<String>();
         let (send_tx, send_rx) = crossbeam_channel::unbounded::<String>();
+        let (ticket_tx, ticket_rx) = crossbeam_channel::unbounded::<(u64, String)>();
         let (emergence_tx, emergence_rx) = crossbeam_channel::unbounded::<EmergenceHudData>();
         let (perf_tx, perf_rx) = crossbeam_channel::unbounded::<SimPerfData>();
         let (sim_events_tx, sim_events_rx) = crossbeam_channel::unbounded::<SimSimEventsData>();
@@ -216,6 +250,8 @@ impl WsClient {
         let (save_list_tx, save_list_rx) = crossbeam_channel::unbounded::<Vec<SaveListEntry>>();
         let (scene_reset_tx, scene_reset_rx) = crossbeam_channel::unbounded::<SceneReset>();
         let connection_id = format!("civis://{}", url);
+        let pending_rpcs = Arc::new(Mutex::new(std::collections::HashMap::new()));
+        let network_pending_rpcs = pending_rpcs.clone();
 
         thread::spawn(move || {
             run_client(
@@ -227,12 +263,14 @@ impl WsClient {
                 state_tx,
                 cmd_rx,
                 send_rx,
+                ticket_rx,
                 emergence_tx,
                 perf_tx,
                 sim_events_tx,
                 outcome_tx,
                 save_list_tx,
                 scene_reset_tx,
+                network_pending_rpcs,
             );
         });
 
@@ -244,15 +282,16 @@ impl WsClient {
             latest_state: AtomicU32::new(state_to_atomic(WsConnectionState::Disconnected)),
             cmd_tx,
             send_tx,
+            ticket_tx,
             emergence_rx,
             perf_rx,
             sim_events_rx,
             outcome_rx,
             save_list_rx,
             scene_reset_rx,
-            pending_rpcs: Arc::new(Mutex::new(std::collections::HashMap::new())),
+            pending_rpcs,
             world_generation_state: Arc::new(Mutex::new(None)),
-            next_request_id: Arc::new(AtomicU64::new(1)),
+            next_request_id: Arc::new(AtomicU64::new(FIRST_TICKET_ID)),
             suspended: Arc::new(Mutex::new(false)),
             inbound_json_tx: None,
             connection_id: connection_id.clone(),
@@ -286,16 +325,20 @@ impl WsClient {
         latest
     }
 
-    /// Drain parsed `sim/sim_events` responses, returning only the newest sample.
+    /// Return the next parsed `sim.events` response in receive order.
     /// This is the unified stream of last_tick_* event buffers (damage events,
     /// audio events, research state, religion, legends, emergence sample, climate).
     #[must_use]
     pub fn poll_sim_events(&self) -> Option<SimSimEventsData> {
-        let mut latest = None;
-        while let Ok(ev) = self.sim_events_rx.try_recv() {
-            latest = Some(ev);
-        }
-        latest
+        self.sim_events_rx.try_recv().ok()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_sim_events_client() -> (Self, Sender<SimSimEventsData>) {
+        let mut client = Self::disconnected();
+        let (sender, receiver) = crossbeam_channel::unbounded();
+        client.sim_events_rx = receiver;
+        (client, sender)
     }
 
     #[must_use]
@@ -414,22 +457,39 @@ impl WsClient {
     /// (in tests) or until the server replies in production. The `RpcTicket` provides
     /// both a stable ID for matching replies and a "connection_id" for the caller's
     /// `install_world_generation`.
+    /// A closed outbound transport completes the ticket with an error immediately.
     pub fn request_rpc(&self, method: &str, params: serde_json::Value) -> RpcTicket {
         let id = self.next_request_id.fetch_add(1, Ordering::Relaxed);
         let (tx, rx) = crossbeam_channel::bounded(1);
         let connection_id = self.connection_id.clone();
-        // Store the pending request so we can deliver server replies via the inbound
-        // JSON parser (see `parse_jsonrpc_response_inbound`).
+        // Store the pending request so the live socket receive path can deliver
+        // the matching JSON-RPC response.
         self.pending_rpcs
             .lock()
             .unwrap()
             .insert(id, (connection_id.clone(), tx));
         // Send the JSON-RPC text frame to the network task.
-        let mut payload = serde_json::json!({"jsonrpc": "2.0", "id": id, "method": method, "params": params});
+        let payload =
+            serde_json::json!({"jsonrpc": "2.0", "id": id, "method": method, "params": params});
         let json = serde_json::to_string(&payload).unwrap();
-        let _ = self.cmd_tx.send(json.clone());
-        self.mirror_outbound(&json);
-        RpcTicket { id, connection_id, reply_rx: rx }
+        // The test observer acts as the transport for manually completed requests.
+        let sent = if let Some(observer) = &self.inbound_json_tx {
+            observer.send(json).is_ok()
+        } else {
+            self.ticket_tx.send((id, json)).is_ok()
+        };
+        if !sent {
+            if let Some((_, pending_tx)) = self.pending_rpcs.lock().unwrap().remove(&id) {
+                let _ = pending_tx.send(Err(format!(
+                    "WebSocket client is disconnected; cannot send RPC '{method}' (id={id})"
+                )));
+            }
+        }
+        RpcTicket {
+            id,
+            connection_id,
+            reply_rx: rx,
+        }
     }
 
     /// Install a live-world generation operation into the WebSocket client.
@@ -549,6 +609,7 @@ impl Clone for WsClient {
             latest_state: AtomicU32::new(self.latest_state.load(Ordering::Relaxed)),
             cmd_tx: self.cmd_tx.clone(),
             send_tx: self.send_tx.clone(),
+            ticket_tx: self.ticket_tx.clone(),
             emergence_rx: self.emergence_rx.clone(),
             perf_rx: self.perf_rx.clone(),
             outcome_rx: self.outcome_rx.clone(),
@@ -565,14 +626,20 @@ impl Clone for WsClient {
     }
 }
 
+/// First client-generated JSON-RPC request ID. Fixed polling IDs stay in the
+/// low range, so ticket replies cannot be mistaken for poll replies.
+pub const FIRST_TICKET_ID: u64 = 1 << 32;
+
 const OUTCOME_RPC: &str = r#"{"jsonrpc":"2.0","id":9003,"method":"sim.outcome","params":{}}"#;
 const OUTCOME_POLL_SECS: u64 = 30;
 const SIM_EVENTS_RPC: &str = r#"{"jsonrpc":"2.0","id":9011,"method":"sim.events","params":{}}"#;
-/// Poll cadence for sim.events — fast (10 Hz) because it carries ephemeral
-/// disaster pulses / audio cues that the Bevy client renders immediately.
+/// Poll cadence for aggregated simulation events, owned by the socket loop.
 const SIM_EVENTS_POLL_SECS: u64 = 2;
 const SNAPSHOT_RPC: &str = r#"{"jsonrpc":"2.0","id":9001,"method":"sim.snapshot","params":{}}"#;
 const SNAPSHOT_POLL_SECS: u64 = 2;
+/// While the server is quiet, wake often enough to flush user RPCs without
+/// adding meaningful idle traffic or making the Bevy thread wait on a frame.
+const OUTBOUND_WAKE_MILLIS: u64 = 20;
 
 /// First reconnect delay after a disconnect.
 pub const RECONNECT_BACKOFF_INITIAL_SECS: u64 = 1;
@@ -631,12 +698,16 @@ fn run_client(
     state_tx: Sender<WsConnectionState>,
     cmd_rx: Receiver<String>,
     send_rx: crossbeam_channel::Receiver<String>,
+    ticket_rx: Receiver<(u64, String)>,
     emergence_tx: Sender<EmergenceHudData>,
     perf_tx: Sender<SimPerfData>,
     sim_events_tx: Sender<SimSimEventsData>,
     outcome_tx: Sender<OutcomeHudData>,
     save_list_tx: Sender<Vec<SaveListEntry>>,
     scene_reset_tx: Sender<SceneReset>,
+    pending_rpcs: Arc<
+        Mutex<std::collections::HashMap<u64, (String, Sender<Result<serde_json::Value, String>>)>>,
+    >,
 ) {
     let Ok(runtime) = Builder::new_multi_thread().enable_all().build() else {
         eprintln!("bevy ws client: failed to build tokio runtime — staying disconnected");
@@ -657,12 +728,14 @@ fn run_client(
                 &state_tx,
                 &cmd_rx,
                 &send_rx,
+                &ticket_rx,
                 &emergence_tx,
                 &perf_tx,
                 &sim_events_tx,
                 &outcome_tx,
                 &save_list_tx,
                 &scene_reset_tx,
+                &pending_rpcs,
             )
             .await
             {
@@ -670,6 +743,10 @@ fn run_client(
                     backoff.reset();
                 }
                 Err(err) => {
+                    fail_pending_rpcs(
+                        &pending_rpcs,
+                        "WebSocket connection closed before the server replied.",
+                    );
                     eprintln!("bevy ws client disconnected: {err}");
                     let delay = backoff.next_delay();
                     thread::sleep(delay);
@@ -757,7 +834,7 @@ fn parse_perf_response(text: &str) -> Option<SimPerfData> {
     Some(SimPerfData { tick_ms })
 }
 
-/// Parse a `sim.sim.events` (id=9011) JSON-RPC response into [`SimSimEventsData`].
+/// Parse a `sim.events` (id=9011) JSON-RPC response into [`SimSimEventsData`].
 ///
 /// Tolerates missing / malformed nested fields by defaulting to empty collections
 /// rather than dropping the whole payload — a partial sim events snapshot is more
@@ -805,22 +882,21 @@ fn parse_sim_events_response(text: &str) -> Option<SimSimEventsData> {
             .get("music_cues")
             .cloned()
             .unwrap_or_else(|| serde_json::json!({})),
-        climate: result
-            .get("climate")
-            .cloned()
-            .filter(|v| v.is_object()),
+        climate: result.get("climate").cloned().filter(|v| v.is_object()),
         emergence_sample: result
             .get("emergence_sample")
             .cloned()
             .filter(|v| v.is_object()),
+        weather_grid: result
+            .get("weather_grid")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default(),
         religion_state: result
             .get("religion_state")
             .cloned()
             .filter(|v| v.is_object()),
-        legends: result
-            .get("legends")
-            .cloned()
-            .filter(|v| v.is_object()),
+        legends: result.get("legends").cloned().filter(|v| v.is_object()),
         researched: result
             .get("researched")
             .and_then(|v| v.as_array())
@@ -909,6 +985,57 @@ fn parse_scene_reset_notification(text: &str) -> Option<SceneReset> {
     })
 }
 
+/// Deliver a JSON-RPC response to its matching ticket, if the client owns it.
+///
+/// Ticket IDs begin above the fixed polling range; routing tickets first keeps
+/// each response on its exact request/response path.
+fn complete_pending_rpc(
+    pending_rpcs: &Arc<
+        Mutex<std::collections::HashMap<u64, (String, Sender<Result<serde_json::Value, String>>)>>,
+    >,
+    text: &str,
+) -> bool {
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(text) else {
+        return false;
+    };
+    let Some(id) = value.get("id").and_then(serde_json::Value::as_u64) else {
+        return false;
+    };
+    if value.get("result").is_none() && value.get("error").is_none() {
+        return false;
+    }
+    let Some((_, tx)) = pending_rpcs.lock().unwrap().remove(&id) else {
+        return false;
+    };
+    let reply = match value.get("result") {
+        Some(result) => Ok(result.clone()),
+        None => Err(value
+            .get("error")
+            .and_then(|error| error.get("message"))
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_owned)
+            .unwrap_or_else(|| "JSON-RPC request failed".to_owned())),
+    };
+    let _ = tx.send(reply);
+    true
+}
+
+/// Resolve every outstanding ticket after a connection ends.
+///
+/// Requests are scoped to a socket session: a later reconnect must never leave
+/// UI operations waiting for a response that was lost with the old socket.
+fn fail_pending_rpcs(
+    pending_rpcs: &Arc<
+        Mutex<std::collections::HashMap<u64, (String, Sender<Result<serde_json::Value, String>>)>>,
+    >,
+    message: &str,
+) {
+    let pending = std::mem::take(&mut *pending_rpcs.lock().unwrap());
+    for (_, (_, tx)) in pending {
+        let _ = tx.send(Err(message.to_owned()));
+    }
+}
+
 async fn connect_and_stream(
     url: &str,
     config: WsClientConfig,
@@ -918,12 +1045,16 @@ async fn connect_and_stream(
     state_tx: &Sender<WsConnectionState>,
     cmd_rx: &Receiver<String>,
     send_rx: &crossbeam_channel::Receiver<String>,
+    ticket_rx: &Receiver<(u64, String)>,
     emergence_tx: &Sender<EmergenceHudData>,
     perf_tx: &Sender<SimPerfData>,
     sim_events_tx: &Sender<SimSimEventsData>,
     outcome_tx: &Sender<OutcomeHudData>,
     save_list_tx: &Sender<Vec<SaveListEntry>>,
     scene_reset_tx: &Sender<SceneReset>,
+    pending_rpcs: &Arc<
+        Mutex<std::collections::HashMap<u64, (String, Sender<Result<serde_json::Value, String>>)>>,
+    >,
 ) -> Result<(), String> {
     let (ws, _) = tokio_tungstenite::connect_async(url)
         .await
@@ -938,6 +1069,8 @@ async fn connect_and_stream(
     let mut last_snapshot = std::time::Instant::now();
     let mut last_outcome = std::time::Instant::now();
     let mut last_sim_events = std::time::Instant::now();
+    let mut outbound_wake = tokio::time::interval(Duration::from_millis(OUTBOUND_WAKE_MILLIS));
+    outbound_wake.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
     loop {
         // Flush outbound commands (speed/pause RPCs) before blocking on next inbound frame.
@@ -950,6 +1083,18 @@ async fn connect_and_stream(
 
         // Drain any outbound RPC frames queued by Bevy systems.
         while let Ok(json) = send_rx.try_recv() {
+            write
+                .send(Message::Text(json.into()))
+                .await
+                .map_err(|e| e.to_string())?;
+        }
+
+        // A ticket failed on an earlier socket must not be replayed after a
+        // reconnect. Raw frames above retain their fire-and-forget semantics.
+        while let Ok((id, json)) = ticket_rx.try_recv() {
+            if !pending_rpcs.lock().unwrap().contains_key(&id) {
+                continue;
+            }
             write
                 .send(Message::Text(json.into()))
                 .await
@@ -975,13 +1120,19 @@ async fn connect_and_stream(
             last_snapshot = std::time::Instant::now();
         }
 
-        let msg = match read.next().await {
-            Some(Ok(msg)) => msg,
-            Some(Err(error)) => return Err(format!("websocket receiver error: {error}")),
-            None => return Err("websocket receiver reached EOF".into()),
+        let msg = tokio::select! {
+            message = read.next() => match message {
+                Some(Ok(message)) => message,
+                Some(Err(error)) => return Err(format!("websocket receiver error: {error}")),
+                None => return Err("websocket receiver reached EOF".into()),
+            },
+            _ = outbound_wake.tick() => continue,
         };
         match msg {
             Message::Text(text) => {
+                if complete_pending_rpc(pending_rpcs, &text) {
+                    continue;
+                }
                 if let Some(reset) = parse_scene_reset_notification(&text) {
                     let _ = scene_reset_tx.send(reset);
                     continue;
@@ -1038,6 +1189,31 @@ async fn connect_and_stream(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sim_events_preserves_queued_batches_in_receive_order() {
+        let (client, sender) = WsClient::test_sim_events_client();
+        for tick in [11, 12] {
+            sender
+                .send(SimSimEventsData {
+                    tick,
+                    damage_events_count: tick as u32,
+                    researched: vec![serde_json::json!(format!("tech-{tick}"))],
+                    ..Default::default()
+                })
+                .unwrap();
+        }
+        for tick in [11, 12] {
+            let events = client.poll_sim_events().expect("queued batch");
+            assert_eq!(events.tick, tick);
+            assert_eq!(events.damage_events_count, tick as u32);
+            assert_eq!(
+                events.researched,
+                vec![serde_json::json!(format!("tech-{tick}"))]
+            );
+        }
+        assert!(client.poll_sim_events().is_none());
+    }
 
     #[test]
     fn reconnect_backoff_doubles_until_cap() {
@@ -1117,5 +1293,327 @@ mod tests {
         .expect("queue outcome");
         drain_outcomes(&rx);
         assert!(rx.try_recv().is_err());
+    }
+
+    #[test]
+    fn ticket_ids_are_disjoint_from_builtin_poll_ids() {
+        assert!(FIRST_TICKET_ID > 1);
+        assert!(FIRST_TICKET_ID > 2);
+        assert!(FIRST_TICKET_ID > 3);
+        assert!(FIRST_TICKET_ID > 9001);
+        assert!(FIRST_TICKET_ID > 9003);
+        assert!(FIRST_TICKET_ID > 9011);
+        let client = WsClient::disconnected();
+        assert_eq!(
+            client.request_rpc("sim.test", serde_json::json!({})).id,
+            FIRST_TICKET_ID
+        );
+    }
+
+    #[test]
+    fn disconnected_client_request_rpc_completes_with_terminal_error() {
+        let client = WsClient::disconnected();
+        let ticket = client.request_rpc("sim.unreachable", serde_json::json!({}));
+        let reply = ticket.try_recv().expect("terminal reply");
+        assert!(matches!(&reply, Err(message) if message.contains("disconnected")));
+        assert!(!client.pending_rpcs.lock().unwrap().contains_key(&ticket.id));
+    }
+
+    #[test]
+    fn test_transport_preserves_request_and_manual_completion() {
+        let (client, requests) = WsClient::test_rpc_client();
+        let ticket = client.request_rpc("sim.test", serde_json::json!({"value": 3}));
+        let request: serde_json::Value =
+            serde_json::from_str(&requests.try_recv().unwrap()).unwrap();
+        assert_eq!(request["id"], ticket.id);
+        assert_eq!(request["method"], "sim.test");
+        assert_eq!(request["params"]["value"], 3);
+        assert!(ticket.try_recv().is_none());
+        client.test_complete_rpc(ticket.id, Ok(serde_json::json!({"done": true})));
+        assert_eq!(
+            ticket.try_recv(),
+            Some(Ok(serde_json::json!({"done": true})))
+        );
+        assert!(client.pending_rpcs.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn event_weather_fixture_alerts_only_on_positive_storm_cells() {
+        let payload = serde_json::json!({"jsonrpc": "2.0", "id": 9011, "result": {
+            "tick": 1,
+            "weather_grid": [
+                {"kind": "Storm", "storm_intensity_fp": 420},
+                {"kind": "Storm", "storm_intensity_fp": 750},
+                {"kind": "Rain", "storm_intensity_fp": 999},
+                {"kind": "Storm", "storm_intensity_fp": 0},
+                {"kind": "Storm", "storm_intensity_fp": -1},
+                {"kind": "Storm", "storm_intensity_fp": 4294967297_u64},
+                {"kind": 3, "storm_intensity_fp": 900},
+                {"kind": "Storm"}, null
+            ]
+        }});
+        let parsed = parse_sim_events_response(&payload.to_string()).unwrap();
+        assert_eq!(storm_summary(&parsed.weather_grid), Some((2, 750)));
+        assert_eq!(storm_summary(&parsed.weather_grid[2..]), None);
+        let older = parse_sim_events_response(r#"{"id":9011,"result":{"tick":1}}"#).unwrap();
+        assert!(older.weather_grid.is_empty());
+        assert_eq!(storm_summary(&older.weather_grid), None);
+    }
+
+    #[test]
+    fn branching_alert_uses_wire_labels() {
+        for label in ["Near-supercritical", "Supercritical (explosion risk)"] {
+            let sample = serde_json::json!({"branching_regime": label});
+            assert_eq!(branching_alert(&sample), Some(label));
+        }
+        for sample in [
+            serde_json::json!({"branching_regime": "Subcritical (heat-death risk)"}),
+            serde_json::json!({"branching_regime": "Subcritical → critical transition"}),
+            serde_json::json!({"branching_regime": "Edge of chaos (target)"}),
+            serde_json::json!({"branching_regime": "unknown"}),
+            serde_json::json!({"branching_regime": 42}),
+            serde_json::json!({"is_branching": true}),
+            serde_json::json!({}),
+        ] {
+            assert_eq!(branching_alert(&sample), None);
+        }
+    }
+
+    #[test]
+    fn live_socket_routes_ticket_results_errors_notifications_and_disconnects() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind test websocket");
+        listener.set_nonblocking(true).expect("set nonblocking");
+        let address = listener.local_addr().expect("test websocket address");
+        let (server_done_tx, server_done_rx) = std::sync::mpsc::channel();
+
+        let server = thread::spawn(move || {
+            Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .expect("server runtime")
+                .block_on(async move {
+                    let listener = tokio::net::TcpListener::from_std(listener).expect("tokio listener");
+                    let (stream, _) = listener.accept().await.expect("accept client");
+                    let mut socket = tokio_tungstenite::accept_async(stream)
+                        .await
+                        .expect("websocket handshake");
+                    while let Some(Ok(Message::Text(text))) = socket.next().await {
+                        let value: serde_json::Value = serde_json::from_str(&text).expect("json request");
+                        match value.get("id").and_then(serde_json::Value::as_u64) {
+                            Some(9001) => {
+                                socket
+                                    .send(Message::Text(
+                                        r#"{"jsonrpc":"2.0","id":9001,"result":{"is_day":true,"tick":1}}"#.into(),
+                                    ))
+                                    .await
+                                    .expect("snapshot response");
+                                socket
+                                    .send(Message::Text(
+                                        r#"{"jsonrpc":"2.0","id":2,"result":{"entropy_bits":7.0,"entropy_norm":0.5,"power_law_alpha":1.2,"novelty_rate":0.1}}"#.into(),
+                                    ))
+                                    .await
+                                    .expect("reserved poll response");
+                            }
+                            Some(id) if id == FIRST_TICKET_ID => {
+                                socket
+                                    .send(Message::Text(
+                                        r#"{"jsonrpc":"2.0","method":"scene.reset","params":{"tick":2}}"#.into(),
+                                    ))
+                                    .await
+                                    .expect("scene notification");
+                                socket
+                                    .send(Message::Text(
+                                        format!(r#"{{"jsonrpc":"2.0","id":{id},"result":{{"accepted":true}}}}"#).into(),
+                                    ))
+                                    .await
+                                    .expect("first ticket response");
+                            }
+                            Some(id) if id == FIRST_TICKET_ID + 1 => socket
+                                .send(Message::Text(
+                                    format!(r#"{{"jsonrpc":"2.0","id":{id},"error":{{"code":-32001,"message":"denied"}}}}"#).into(),
+                                ))
+                                .await
+                                .expect("second ticket error"),
+                            Some(id) if id == FIRST_TICKET_ID + 2 => break,
+                            _ => {}
+                        }
+                    }
+                });
+            let _ = server_done_tx.send(());
+        });
+
+        let client = WsClient::spawn_with_config(
+            format!("ws://{address}"),
+            WsClientConfig {
+                prefer_binary: true,
+            },
+        );
+        let initial_deadline = std::time::Instant::now() + Duration::from_secs(1);
+        let mut initial_emergence = Vec::new();
+        while std::time::Instant::now() < initial_deadline && initial_emergence.is_empty() {
+            initial_emergence = client.poll_emergence();
+            thread::sleep(Duration::from_millis(10));
+        }
+        assert_eq!(
+            initial_emergence.len(),
+            1,
+            "client consumed the reserved poll reply"
+        );
+        thread::sleep(Duration::from_millis(OUTBOUND_WAKE_MILLIS * 3));
+        let accepted = client.request_rpc("sim.first", serde_json::json!({}));
+        let denied = client.request_rpc("sim.second", serde_json::json!({}));
+        let disconnected = client.request_rpc("sim.third", serde_json::json!({}));
+
+        let deadline = std::time::Instant::now() + Duration::from_secs(3);
+        let mut accepted_reply = None;
+        let mut denied_reply = None;
+        let mut disconnected_reply = None;
+        while std::time::Instant::now() < deadline
+            && (accepted_reply.is_none() || denied_reply.is_none() || disconnected_reply.is_none())
+        {
+            accepted_reply = accepted_reply.or_else(|| accepted.try_recv());
+            denied_reply = denied_reply.or_else(|| denied.try_recv());
+            disconnected_reply = disconnected_reply.or_else(|| disconnected.try_recv());
+            thread::sleep(Duration::from_millis(10));
+        }
+
+        assert_eq!(
+            accepted_reply,
+            Some(Ok(serde_json::json!({"accepted": true})))
+        );
+        assert_eq!(denied_reply, Some(Err("denied".to_owned())));
+        assert!(matches!(
+            disconnected_reply,
+            Some(Err(message)) if message.contains("connection closed")
+        ));
+        assert_eq!(client.poll_scene_resets(), vec![SceneReset { tick: 2 }]);
+        server_done_rx
+            .recv_timeout(Duration::from_secs(1))
+            .expect("server completed ticket exchange");
+        server.join().expect("server exited");
+    }
+
+    #[test]
+    fn reconnect_does_not_replay_failed_ticket_and_accepts_fresh_ticket() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind test websocket");
+        listener.set_nonblocking(true).expect("set nonblocking");
+        let address = listener.local_addr().expect("test websocket address");
+        let (first_ready_tx, first_ready_rx) = std::sync::mpsc::channel();
+        let (close_first_tx, close_first_rx) = std::sync::mpsc::channel();
+        let (second_ready_tx, second_ready_rx) = std::sync::mpsc::channel();
+        let (replayed_tx, replayed_rx) = std::sync::mpsc::channel();
+
+        let server = thread::spawn(move || {
+            Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .expect("server runtime")
+                .block_on(async move {
+                    let listener = tokio::net::TcpListener::from_std(listener).expect("tokio listener");
+                    let (first_stream, _) = tokio::time::timeout(Duration::from_secs(5), listener.accept())
+                        .await
+                        .expect("first client accept timed out")
+                        .expect("accept first client");
+                    let mut first = tokio_tungstenite::accept_async(first_stream)
+                        .await
+                        .expect("first websocket handshake");
+                    let Some(Ok(Message::Text(snapshot))) = tokio::time::timeout(Duration::from_secs(5), first.next())
+                        .await
+                        .expect("first snapshot request timed out") else {
+                        panic!("first client snapshot request");
+                    };
+                    assert_eq!(serde_json::from_str::<serde_json::Value>(&snapshot).unwrap()["id"], 9001);
+                    first
+                        .send(Message::Text(
+                            r#"{"jsonrpc":"2.0","id":9001,"result":{"is_day":true,"tick":1}}"#.into(),
+                        ))
+                        .await
+                        .expect("first snapshot response");
+                    first_ready_tx.send(()).expect("first connection ready");
+                    close_first_rx.recv_timeout(Duration::from_secs(1)).expect("close first connection");
+                    first.close(None).await.expect("close first socket");
+                    drop(first);
+
+                    let (second_stream, _) = tokio::time::timeout(Duration::from_secs(5), listener.accept())
+                        .await
+                        .expect("reconnect accept timed out")
+                        .expect("accept reconnect");
+                    let mut second = tokio_tungstenite::accept_async(second_stream)
+                        .await
+                        .expect("second websocket handshake");
+                    let Some(Ok(Message::Text(snapshot))) = tokio::time::timeout(Duration::from_secs(5), second.next())
+                        .await
+                        .expect("second snapshot request timed out") else {
+                        panic!("second client snapshot request");
+                    };
+                    assert_eq!(serde_json::from_str::<serde_json::Value>(&snapshot).unwrap()["id"], 9001);
+                    second
+                        .send(Message::Text(
+                            r#"{"jsonrpc":"2.0","id":9001,"result":{"is_day":true,"tick":2}}"#.into(),
+                        ))
+                        .await
+                        .expect("second snapshot response");
+                    second_ready_tx.send(()).expect("second connection ready");
+
+                    loop {
+                        let Some(Ok(Message::Text(text))) = tokio::time::timeout(Duration::from_secs(5), second.next())
+                            .await
+                            .expect("second ticket request timed out") else {
+                            break;
+                        };
+                        let request: serde_json::Value = serde_json::from_str(&text).expect("ticket json");
+                        let id = request["id"].as_u64();
+                        if id == Some(FIRST_TICKET_ID) {
+                            let _ = replayed_tx.send(());
+                            break;
+                        }
+                        if id == Some(FIRST_TICKET_ID + 1) {
+                            second
+                                .send(Message::Text(
+                                    format!(r#"{{"jsonrpc":"2.0","id":{},"result":{{"accepted":true}}}}"#, FIRST_TICKET_ID + 1).into(),
+                                ))
+                                .await
+                                .expect("fresh ticket response");
+                            break;
+                        }
+                    }
+                });
+        });
+
+        let client = WsClient::spawn_with_config(
+            format!("ws://{address}"),
+            WsClientConfig {
+                prefer_binary: true,
+            },
+        );
+        first_ready_rx
+            .recv_timeout(Duration::from_secs(1))
+            .expect("first attach");
+        let failed = client.request_rpc("sim.first", serde_json::json!({}));
+        close_first_tx.send(()).expect("request disconnect");
+        let deadline = std::time::Instant::now() + Duration::from_secs(2);
+        let mut failure = None;
+        while std::time::Instant::now() < deadline && failure.is_none() {
+            failure = failed.try_recv();
+            thread::sleep(Duration::from_millis(10));
+        }
+        assert!(matches!(failure, Some(Err(message)) if message.contains("connection closed")));
+
+        second_ready_rx
+            .recv_timeout(Duration::from_secs(2))
+            .expect("reconnect attach");
+        let fresh = client.request_rpc("sim.fresh", serde_json::json!({}));
+        let deadline = std::time::Instant::now() + Duration::from_secs(2);
+        let mut fresh_reply = None;
+        while std::time::Instant::now() < deadline && fresh_reply.is_none() {
+            fresh_reply = fresh.try_recv();
+            thread::sleep(Duration::from_millis(10));
+        }
+        assert_eq!(fresh_reply, Some(Ok(serde_json::json!({"accepted": true}))));
+        assert!(
+            replayed_rx.try_recv().is_err(),
+            "failed ticket replayed after reconnect"
+        );
+        server.join().expect("server exited");
     }
 }

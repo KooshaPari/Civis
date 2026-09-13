@@ -11,7 +11,13 @@
 param(
     [switch] $SkipUnreal,
     [switch] $FullUnreal,
-    [switch] $IncludeBevy
+    [switch] $IncludeBevy,
+    [switch] $Budgeted,
+    [string] $TargetDirectory,
+    [long] $ExpectedGrowthBytes,
+    [long] $ReserveBytes,
+    [int] $Jobs,
+    [string] $ReceiptDirectory
 )
 
 Set-StrictMode -Version Latest
@@ -30,6 +36,43 @@ function Test-UnrealUbtAvailable {
     if (-not (Test-Path -LiteralPath $detect)) { return $false }
     & powershell -NoProfile -ExecutionPolicy Bypass -File $detect *> $null
     return ($LASTEXITCODE -eq 0)
+}
+
+if ($Budgeted) {
+    foreach ($name in @('TargetDirectory','ExpectedGrowthBytes','ReserveBytes','Jobs','ReceiptDirectory')) {
+        if (-not $PSBoundParameters.ContainsKey($name)) {
+            throw "-Budgeted requires explicit -$name"
+        }
+    }
+    if ($ExpectedGrowthBytes -le 0 -or $ReserveBytes -le 0 -or $Jobs -lt 1 -or $Jobs -gt 64) {
+        throw '-Budgeted requires positive ExpectedGrowthBytes/ReserveBytes and Jobs in the range 1..64'
+    }
+
+    $helper = Join-Path $PSScriptRoot 'ci\invoke-budgeted-child.ps1'
+    if (-not (Test-Path -LiteralPath $helper -PathType Leaf)) {
+        throw "Budgeted helper missing: $helper"
+    }
+    $pwsh = (Get-Command pwsh -CommandType Application -ErrorAction Stop | Select-Object -First 1).Path
+    $childArguments = [System.Collections.Generic.List[string]]::new()
+    foreach ($argument in @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Resolve-Path -LiteralPath $PSCommandPath).Path)) {
+        [void]$childArguments.Add($argument)
+    }
+    if ($SkipUnreal) { [void]$childArguments.Add('-SkipUnreal') }
+    if ($FullUnreal) { [void]$childArguments.Add('-FullUnreal') }
+    if ($IncludeBevy) { [void]$childArguments.Add('-IncludeBevy') }
+
+    $helperParameters = @{
+        ChildPath = $pwsh
+        ChildArgumentsJson = ($childArguments.ToArray() | ConvertTo-Json -Compress)
+        TargetDirectory = $TargetDirectory
+        ExpectedGrowthBytes = $ExpectedGrowthBytes
+        ReserveBytes = $ReserveBytes
+        Jobs = $Jobs
+        ReceiptDirectory = $ReceiptDirectory
+        Execute = $true
+    }
+    & $pwsh -NoProfile -ExecutionPolicy Bypass -File $helper @helperParameters
+    exit $LASTEXITCODE
 }
 
 function Invoke-PlayableGate {

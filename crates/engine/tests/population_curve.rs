@@ -50,8 +50,7 @@ fn spawn_varied_civilians(sim: &mut Simulation, count: u32, rng: &mut ChaCha8Rng
     sim.state.population = civ_agents::count_civilians(&sim.world) as u64;
     // Start the civilian id range above the engine's default `1_000_000`
     // baseline so the new agents don't collide with existing entity ids.
-    let mut next_id: u64 = 2_000_000;
-    for _ in 0..count {
+    for next_id in 2_000_000_u64..2_000_000_u64 + u64::from(count) {
         // Pick a non-trivial normalized position inside the playable grid
         // (matches `spawn_faction_civilians_custom`'s [0, 1] layout).
         let x = 0.45 + (next_id % 100) as f32 / 1000.0;
@@ -65,7 +64,6 @@ fn spawn_varied_civilians(sim: &mut Simulation, count: u32, rng: &mut ChaCha8Rng
             ActorVisualKind::Humanoid,
             rng,
         );
-        next_id += 1;
     }
     // Boost health for ALL civilians so the old-age death gate
     // (`age >= 65 && health <= 0.15`) never fires during our 100-tick run.
@@ -148,7 +146,10 @@ fn population_curve_50_civilians_100_ticks() {
     let (first_tick, first_pop) = trajectory.first().unwrap();
     assert_eq!(*first_tick, 0, "trajectory must begin at tick 0");
     let (last_tick, last_pop) = trajectory.last().unwrap();
-    assert_eq!(*last_tick, POP_CURVE_TICKS, "trajectory must end at the requested tick");
+    assert_eq!(
+        *last_tick, POP_CURVE_TICKS,
+        "trajectory must end at the requested tick"
+    );
     assert!(
         *first_pop > 0 && *last_pop > 0,
         "both ends of the trajectory must be > 0 ({} -> {})",

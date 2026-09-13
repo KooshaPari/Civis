@@ -22,11 +22,11 @@
 //! `crates/engine/src/economy_engine.rs` (wiring), and the matrix in
 //! `docs/traceability/TRACEABILITY_MATRIX.md`.
 
-use civ_engine::{BuildingType, Resources, ResourceType, Simulation, TradeRoute};
 use civ_economy::{
     compute_trade_routes, GoodId, MarketState, MultiGoodMarket, ProductionProfile,
     Settlement as EconSettlement, Stocks,
 };
+use civ_engine::{BuildingType, ResourceType, Resources, Simulation, TradeRoute};
 use std::collections::HashMap;
 
 // 100 ticks exercises every code path that the spec requires:
@@ -92,7 +92,7 @@ fn economy_cycle_production_market_trade() {
         // production / consumption bookkeeping has stopped.
         assert_eq!(
             sim.economy_state.tick,
-            initial_econ_tick + tick_idx as u64 + 1,
+            initial_econ_tick + tick_idx + 1,
             "economy phase tick should advance each simulation tick (tick_idx={tick_idx})"
         );
 
@@ -125,8 +125,7 @@ fn economy_cycle_production_market_trade() {
     // that *some* trade activity happened during the 100-tick window —
     // either resources drifted or the gravity kernel appended new routes.
     let post_100_ticks_resources = sim.state.faction_resources.clone();
-    let total_drift =
-        resource_drift_total(&initial_resources, &post_100_ticks_resources);
+    let total_drift = resource_drift_total(&initial_resources, &post_100_ticks_resources);
     let routes_grew = sim.state.trade_routes.len() > initial_routes;
     assert!(
         total_drift > 0 || routes_grew,
@@ -370,7 +369,11 @@ fn multigood_order_book_clears_at_midpoint() {
     market.place_ask(grain, 200, 5, 150, 0);
 
     let trades = market.clear_all(0);
-    assert_eq!(trades.len(), 1, "exactly one trade emitted for crossed book");
+    assert_eq!(
+        trades.len(),
+        1,
+        "exactly one trade emitted for crossed book"
+    );
     let trade = &trades[0];
     assert_eq!(trade.buyer, 100);
     assert_eq!(trade.seller, 200);
@@ -398,10 +401,7 @@ fn snapshot_prices(market: &MarketState) -> Vec<(String, i64)> {
     market.prices.iter().map(|(k, v)| (k.clone(), *v)).collect()
 }
 
-fn resource_drift_total(
-    prev: &HashMap<u32, Resources>,
-    curr: &HashMap<u32, Resources>,
-) -> i64 {
+fn resource_drift_total(prev: &HashMap<u32, Resources>, curr: &HashMap<u32, Resources>) -> i64 {
     let mut total = 0i64;
     for (faction, prev_res) in prev {
         if let Some(curr_res) = curr.get(faction) {

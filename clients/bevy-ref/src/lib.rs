@@ -27,6 +27,9 @@ pub mod audio;
 pub mod camera;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod civ_history;
+/// Shared civilian names for Bevy labels and the optional egui HUD.
+#[cfg(feature = "bevy")]
+pub mod civilian_name;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod controls_help;
 #[cfg(feature = "bevy")]

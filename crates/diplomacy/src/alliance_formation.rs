@@ -229,6 +229,7 @@ pub struct AllianceStability {
 }
 
 impl AllianceStability {
+    /// Create stability metrics, clamping trust and resource share to 0.0..=1.0.
     pub fn new(trust: f64, history: u32, share: f64) -> Self {
         Self {
             trust_score: trust.clamp(0.0, 1.0),
@@ -245,7 +246,14 @@ pub struct DynamicAllianceManager {
     active_alliances: BTreeSet<BTreeSet<FactionId>>,
 }
 
+impl Default for DynamicAllianceManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DynamicAllianceManager {
+    /// Create a manager with no active alliances or recorded stability metrics.
     pub fn new() -> Self {
         Self {
             stabilities: BTreeMap::new(),

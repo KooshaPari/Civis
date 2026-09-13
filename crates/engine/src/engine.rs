@@ -702,7 +702,7 @@ pub struct Simulation {
     /// Currently-active institutions per settlement, keyed by
     /// `(settlement_id, kind)`. Tracks the latest known level so we can detect
     /// upgrades (FR-CIV-GOV-003).
-    institutions: BTreeMap<u32, civ_institutions::Institution>,
+    institutions: BTreeMap<u32, Vec<civ_institutions::Institution>>,
     /// Civic events emitted by the most recent [`Simulation::phase_institutions`]
     /// call (cleared at the start of every [`Simulation::tick`], alongside the
     /// other `last_tick_*` buffers). Surfaced to the JSON-RPC bridge so the
@@ -961,6 +961,14 @@ pub struct InstitutionEvent {
 pub type Sim = Simulation;
 
 impl Simulation {
+    /// Seed `with_seed` simulations with a bounded reserve so the initial
+    /// cohort reaches emergence checkpoints before ordinary consumption and
+    /// disaster losses are allowed to induce famine.
+    #[inline]
+    fn starting_food(civilian_count: u64) -> Fixed {
+        Fixed::from_num((civilian_count.saturating_mul(200)) as i64)
+    }
+
     /// Create new simulation with default state
     pub fn new() -> Self {
         let rng = SimRng::seed_from_u64(42);
@@ -1149,6 +1157,10 @@ impl Simulation {
         let state = WorldState {
             rng_seed: seed,
             population: civilian_count,
+            resources: Resources {
+                food: Self::starting_food(civilian_count),
+                ..Resources::default()
+            },
             ..Default::default()
         };
 
@@ -1441,7 +1453,7 @@ impl Simulation {
 
     /// Read-only view of active institutions (FR-CIV-GOV / emergence oracles).
     #[must_use]
-    pub fn institutions(&self) -> &BTreeMap<u32, civ_institutions::Institution> {
+    pub fn institutions(&self) -> &BTreeMap<u32, Vec<civ_institutions::Institution>> {
         &self.institutions
     }
 
@@ -1451,7 +1463,7 @@ impl Simulation {
         &self,
     ) -> (
         BTreeMap<u32, u32>,
-        BTreeMap<u32, civ_institutions::Institution>,
+        BTreeMap<u32, Vec<civ_institutions::Institution>>,
         BTreeSet<(u32, u8, u8)>,
     ) {
         (
@@ -1465,7 +1477,7 @@ impl Simulation {
     pub(crate) fn restore_institution_state(
         &mut self,
         settlements: BTreeMap<u32, u32>,
-        institutions: BTreeMap<u32, civ_institutions::Institution>,
+        institutions: BTreeMap<u32, Vec<civ_institutions::Institution>>,
 
         institution_levels_emitted: BTreeSet<(u32, u8, u8)>,
     ) {
@@ -1597,7 +1609,7 @@ impl Simulation {
         kind: DiplomacyKind,
     ) {
         self.state.tick = tick;
-        self.apply_player_diplomacy_action(source_faction, target_faction, kind);
+        let _ = self.apply_player_diplomacy_action(source_faction, target_faction, kind);
     }
 
     pub(crate) fn apply_replay_combat(&mut self, tick: u64, event: &DamageEvent) {
@@ -1776,6 +1788,39 @@ impl Simulation {
     #[must_use]
     pub fn faction_ideologies(&self) -> &BTreeMap<u32, FactionIdeologyState> {
         &self.faction_ideologies
+    }
+
+    /// Number of distinct factions that currently hold at least one aligned civilian.
+    ///
+    /// This is live-ECS-derived via [`crate::tech::faction_populations`]: a faction
+    /// is counted only while at least one of its civilians is alive, so the value
+    /// reflects the emergent population dynamics rather than a fixed roster.
+    #[must_use]
+    pub fn faction_count(&self) -> usize {
+        crate::tech::faction_populations(self).len()
+    }
+
+    /// Live per-faction civilian populations keyed by faction id.
+    ///
+    /// Derived from the ECS world so the values reflect real births/deaths and
+    /// are therefore seed-dependent once simulation diverges.
+    #[must_use]
+    pub fn faction_populations(&self) -> BTreeMap<u32, u32> {
+        crate::tech::faction_populations(self)
+    }
+
+    /// The alignment band for a faction id, present while that faction still has
+    /// at least one living aligned civilian.
+    #[must_use]
+    pub fn faction_alignment(&self, faction_id: usize) -> civ_agents::Alignment {
+        let Ok(faction_id) = u32::try_from(faction_id) else {
+            return civ_agents::Alignment::None;
+        };
+        if crate::tech::faction_populations(self).contains_key(&faction_id) {
+            civ_agents::Alignment::Faction(faction_id)
+        } else {
+            civ_agents::Alignment::None
+        }
     }
 
     pub fn last_births(&self) -> &[PopulationEvent] {
@@ -2022,12 +2067,12 @@ impl Simulation {
         self.phase_research();
         self.phase_tech();
         self.phase_belief();
+        self.phase_institutions();
+        self.phase_social_mood();
         self.phase_unrest();
         self.phase_cohesion();
-        self.phase_social_mood();
         self.phase_economic_focus_pre();
         self.phase_stratification();
-        self.phase_institutions();
         self.phase_economic_focus();
         self.phase_emergence();
         self.phase_emergence_events_close();
@@ -2213,8 +2258,7 @@ impl Simulation {
                 continue;
             }
             // Take pairs (0,1), (2,3), (4,5), ... and crossover.
-            let mut pairs = cluster.chunks(2);
-            while let Some(pair) = pairs.next() {
+            for pair in cluster.chunks(2) {
                 if pair.len() < 2 {
                     break;
                 }
@@ -2340,7 +2384,12 @@ impl Simulation {
     pub fn phase_language(&mut self) {
         let tick = self.state.tick;
         if !self.state.faction_language_systems.is_empty() {
-            let keys: Vec<u32> = self.state.faction_language_systems.keys().copied().collect();
+            let keys: Vec<u32> = self
+                .state
+                .faction_language_systems
+                .keys()
+                .copied()
+                .collect();
             for fid in keys {
                 if let Some(lang) = self.state.faction_language_systems.get(&fid) {
                     let updated = crate::language::tick_language_system(lang, tick);
@@ -2898,6 +2947,11 @@ impl Simulation {
         &self.cluster_stocks
     }
 
+    /// Replace the persisted per-cluster stockpile snapshot during save load.
+    pub(crate) fn restore_cluster_stocks(&mut self, cluster_stocks: BTreeMap<u64, ClusterStocks>) {
+        self.cluster_stocks = cluster_stocks;
+    }
+
     /// Build a per-client snapshot view for the multiplayer bridge.
     ///
     /// Returns a JSON object whose shape matches the `sim.get_snapshot_for_session`
@@ -2919,10 +2973,7 @@ impl Simulation {
         let snapshot = self.snapshot();
         let snap_value = serde_json::to_value(&snapshot).unwrap_or(serde_json::Value::Null);
         let mut obj = serde_json::Map::new();
-        obj.insert(
-            "tick".to_owned(),
-            serde_json::json!(snapshot.tick),
-        );
+        obj.insert("tick".to_owned(), serde_json::json!(snapshot.tick));
         obj.insert(
             "connection_id".to_owned(),
             serde_json::Value::String(connection_id.to_owned()),

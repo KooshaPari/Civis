@@ -428,6 +428,12 @@ impl CivSaveBundle {
         let world_state_path = dir.join("world_state.json");
         if world_state_path.is_file() {
             sim.state = serde_json::from_value(migrated_ws).map_err(SaveBundleError::Json)?;
+            // Load-side mirror: restore the macro economy state + wealth
+            // snapshot from the deserialized WorldState so the gameplay loop
+            // continues from the persisted accumulation rather than resetting.
+            sim.economy_state = sim.state.economy_state.clone();
+            sim.settlement_wealth_snapshot = sim.state.settlement_wealth_snapshot.clone();
+            sim.market_state = sim.state.market_state.clone();
         }
 
         let environment_path = dir.join(ENVIRONMENT_FILE);

@@ -411,6 +411,21 @@ pub struct WorldState {
     pub trade_route_idle_ticks: BTreeMap<(u32, u32, String), u32>,
     pub resources: Resources,
 
+    /// Macro economy state (FR-ECON-GAMEPLAY). Persisted into world_state.json
+    /// so the gameplay-loop budget survives save->load. Defaulted on legacy
+    /// v3 saves (the field was absent before format bump to v4).
+    #[serde(default)]
+    pub economy_state: civ_economy::EconomyState,
+    /// Per-settlement accumulated wealth (FR-ECON-GAMEPLAY). Persisted into
+    /// world_state.json so the gameplay-loop wealth trace survives save->load.
+    #[serde(default)]
+    pub settlement_wealth_snapshot: civ_economy::gameplay_loop::SettlementWealthSnapshot,
+    /// Per-good market price history (FR-ECON-GAMEPLAY). Persisted into
+    /// world_state.json so `mean_clearing_price` survives save->load and the
+    /// gameplay-loop wealth trace remains deterministic across the boundary.
+    #[serde(default)]
+    pub market_state: civ_economy::MarketState,
+
     // Extended subsystem fields (not comparable — subsystem-specific types)
     #[serde(default, skip)]
     pub faction_religions: BTreeMap<u32, crate::religion::Religion>,
@@ -513,6 +528,10 @@ impl Default for WorldState {
             emergent_trade_route_keys: BTreeSet::new(),
             trade_route_idle_ticks: BTreeMap::new(),
             resources: Resources::default(),
+            economy_state: civ_economy::EconomyState::default(),
+            settlement_wealth_snapshot:
+                civ_economy::gameplay_loop::SettlementWealthSnapshot::default(),
+            market_state: civ_economy::MarketState::default(),
             faction_religions: BTreeMap::new(),
             faction_language_systems: BTreeMap::new(),
             civilian_psyches: BTreeMap::new(),

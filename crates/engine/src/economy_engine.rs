@@ -179,6 +179,12 @@ impl Simulation {
         // Sync the macro budget back into WorldState.
         self.state.energy_budget_joules =
             Fixed::from_num(self.economy_state.energy_budget_joules);
+
+        // Persist the full economy state + wealth snapshot onto WorldState so
+        // save_dir serializes them into world_state.json (save-side mirror).
+        self.state.economy_state = self.economy_state.clone();
+        self.state.settlement_wealth_snapshot = self.settlement_wealth_snapshot.clone();
+        self.state.market_state = self.market_state.clone();
     }
 
     pub(crate) fn tick_settlement_trade_flows(&mut self) {

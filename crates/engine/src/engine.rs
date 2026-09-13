@@ -500,6 +500,15 @@ pub struct WorldState {
     /// adherence/belief feedback loop loses its accumulator.
     #[serde(default)]
     pub religious_profiles: BTreeMap<u32, crate::religion::ReligiousProfile>,
+    /// Per-faction resolved gameplay state (FR-CIV-GAME-001 §9).
+    /// Recomputed each tick by `phase_victory_check` via
+    /// [`crate::gameplay::compute_gameplay_state`]; persisted so the
+    /// faction leaderboard and resolved outcome survive archive
+    /// round-trip. Previously this running state was recomputed fresh
+    /// per call and never stored, so the client had no authoritative
+    /// post-load leaderboard to render.
+    #[serde(default)]
+    pub gameplay_state: crate::gameplay::GameplayState,
     // Extended subsystem fields (not comparable — subsystem-specific types)
     #[serde(default, skip)]
     pub faction_religions: BTreeMap<u32, crate::religion::Religion>,
@@ -619,6 +628,7 @@ impl Default for WorldState {
             kinship: BTreeMap::new(),
             trust: BTreeMap::new(),
             religious_profiles: BTreeMap::new(),
+            gameplay_state: crate::gameplay::GameplayState::default(),
             faction_religions: BTreeMap::new(),
             faction_language_systems: BTreeMap::new(),
             civilian_psyches: BTreeMap::new(),
@@ -2665,6 +2675,10 @@ impl Simulation {
     // Moved to world_simulation.rs
     fn phase_victory_check(&mut self) {
         self.last_game_outcome = crate::conditions::check_outcome(self);
+        // Persist the per-faction gameplay leaderboard so it survives the
+        // archive round-trip (was previously only computed on-demand in tests).
+        self.state.gameplay_state =
+            crate::gameplay::compute_gameplay_state(self);
     }
 
     fn phase_tutorial(&mut self) {

@@ -520,3 +520,29 @@ fn archive_roundtrips_religious_profiles() {
         "Simulation.religious_profiles and WorldState.religious_profiles must agree after load"
     );
 }
+
+/// The per-faction `GameplayState` leaderboard is recomputed every tick by
+/// `phase_victory_check` and stored directly on `WorldState.gameplay_state`,
+/// so it must survive the `.civsave.zst` archive round-trip so a resumed
+/// campaign keeps its objective/victory scoreboard intact.
+#[test]
+fn archive_roundtrips_gameplay_state() {
+    let mut sim = Simulation::with_seed(11);
+    // Two factions so the faction-progress leaderboard has entries to score.
+    for f in 0..2u32 {
+        sim.state.factions.insert(f, format!("faction-{f}"));
+    }
+    sim.advance_ticks(1);
+
+    let expected = sim.state.gameplay_state.clone();
+
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let archive_path = tmp.path().join("gameplay.civsave.zst");
+    CivSaveBundle::save_archive(&archive_path, &sim).expect("save archive");
+    let loaded = CivSaveBundle::load_archive(&archive_path).expect("load archive");
+
+    assert_eq!(
+        loaded.state.gameplay_state, expected,
+        "GameplayState leaderboard must round-trip byte-for-byte through the archive"
+    );
+}

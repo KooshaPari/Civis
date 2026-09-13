@@ -1006,3 +1006,286 @@ pub(crate) const FACTION_RELATION_THRESHOLD_SPAN: i64 = 5_000;
 pub(crate) const CULTURE_PEACE_SPAN: f32 = 3_000.0;
 
 pub use crate::settlement_helpers::*;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ---------------------------------------------------------------------
+    // tech_unlocks_for_tier: set-only bitmask ladder
+    // ---------------------------------------------------------------------
+    #[test]
+    fn tech_unlocks_ladder_is_monotonic_and_set_only() {
+        // tier 0 unlocks nothing.
+        assert_eq!(tech_unlocks_for_tier(0), 0);
+        // Each tier adds exactly one more bit; every lower tier remains set.
+        assert_eq!(tech_unlocks_for_tier(1), TECH_IRRIGATION);
+        assert_eq!(
+            tech_unlocks_for_tier(2),
+            TECH_IRRIGATION | TECH_STORAGE
+        );
+        assert_eq!(
+            tech_unlocks_for_tier(3),
+            TECH_IRRIGATION | TECH_STORAGE | TECH_METALLURGY
+        );
+        assert_eq!(
+            tech_unlocks_for_tier(4),
+            TECH_IRRIGATION | TECH_STORAGE | TECH_METALLURGY | TECH_WRITING
+        );
+        assert_eq!(
+            tech_unlocks_for_tier(5),
+            TECH_IRRIGATION
+                | TECH_STORAGE
+                | TECH_METALLURGY
+                | TECH_WRITING
+                | TECH_SANITATION
+        );
+        assert_eq!(
+            tech_unlocks_for_tier(6),
+            TECH_IRRIGATION
+                | TECH_STORAGE
+                | TECH_METALLURGY
+                | TECH_WRITING
+                | TECH_SANITATION
+                | TECH_GUNPOWDER
+        );
+        // Saturated: tiers above 6 change nothing.
+        assert_eq!(tech_unlocks_for_tier(100), tech_unlocks_for_tier(6));
+    }
+
+    // ---------------------------------------------------------------------
+    // unrest_delta: scarcity rise bounded, abundance decays
+    // ---------------------------------------------------------------------
+    #[test]
+    fn unrest_delta_rises_bounded_above_baseline() {
+        // At baseline (or abundance) unrest decays by the fixed step.
+        assert_eq!(unrest_delta(FOOD_SCARCITY_BASELINE), -10);
+        assert_eq!(unrest_delta(0), -10);
+        // Just above baseline by 20 cents => +1 unrest.
+        assert_eq!(unrest_delta(FOOD_SCARCITY_BASELINE + 20), 1);
+        // Shortfall scales: 200 cents => +10.
+        assert_eq!(unrest_delta(FOOD_SCARCITY_BASELINE + 200), 10);
+        // A massive spike is clamped to the per-tick max rise.
+        assert_eq!(unrest_delta(FOOD_SCARCITY_BASELINE + 1_000_000), 50);
+    }
+
+    #[test]
+    fn commodity_unrest_delta_skips_food_and_aggregates() {
+        let mut prices = std::collections::BTreeMap::new();
+        prices.insert("wood".to_string(), 2_000);
+        prices.insert("metal".to_string(), 800);
+        // food is skipped even when scarce.
+        prices.insert("food".to_string(), 9_999);
+        // wood: (2000-1000)/40 = 25, clamped per-good to 15 -> rise 15.
+        // metal: below baseline -> saturating_sub(5) -> 10.
+        // food skipped. Aggregate nets to 10, still within clamp [-5, 15].
+        assert_eq!(commodity_unrest_delta(&prices), 10);
+    }
+
+    // ---------------------------------------------------------------------
+    // faction_wealth_scarcity_shadow
+    // ---------------------------------------------------------------------
+    #[test]
+    fn scarcity_shadow_is_baseline_when_wealthy_and_rises_when_poor() {
+        let rich = Resources {
+            food: Fixed::from_num(10_000),
+            ..Default::default()
+        };
+        // Comfortable treasury (>= 8000) + huge food => baseline.
+        assert_eq!(
+            faction_wealth_scarcity_shadow(Fixed::from_num(100_000), &rich),
+            FOOD_SCARCITY_BASELINE
+        );
+        // Destitute treasury, no food => shadow above baseline.
+        let poor = Resources {
+            food: Fixed::ZERO,
+            ..Default::default()
+        };
+        let shadow = faction_wealth_scarcity_shadow(Fixed::ZERO, &poor);
+        assert!(shadow > FOOD_SCARCITY_BASELINE);
+    }
+
+    // ---------------------------------------------------------------------
+    // energy_scarcity_unrest
+    // ---------------------------------------------------------------------
+    #[test]
+    fn blackout_adds_unrest_solvent_adds_none() {
+        // `energy_budget <= ZERO` covers the blackout branch (Fixed has no Neg,
+        // so a literal negative budget can't be constructed — ZERO is its guard).
+        assert_eq!(energy_scarcity_unrest(Fixed::ZERO), 15);
+        assert_eq!(energy_scarcity_unrest(Fixed::from_num(1)), 0);
+        assert_eq!(energy_scarcity_unrest(Fixed::from_num(1_000)), 0);
+    }
+
+    // ---------------------------------------------------------------------
+    // cohesion_delta + awakening pulse
+    // ---------------------------------------------------------------------
+    #[test]
+    fn cohesion_delta_binds_belief_and_frays_unrest() {
+        // belief 400 => +2 bind; unrest 100 => -2 fray => 0.
+        assert_eq!(cohesion_delta(400, 100), 0);
+        // belief 200 => +1; unrest 0 => -0 => +1.
+        assert_eq!(cohesion_delta(200, 0), 1);
+        // belief 0; unrest 100 => -2.
+        assert_eq!(cohesion_delta(0, 100), -2);
+    }
+
+    #[test]
+    fn awakening_gains_are_capped_and_none_when_zero() {
+        assert_eq!(awakening_cohesion_gain(0), 0);
+        assert_eq!(awakening_belief_gain(0), 0);
+        // 2 per awakening, capped at 10.
+        assert_eq!(awakening_cohesion_gain(3), 6);
+        assert_eq!(awakening_belief_gain(3), 6);
+        assert_eq!(awakening_cohesion_gain(1_000), 10);
+        assert_eq!(awakening_belief_gain(1_000), 10);
+    }
+
+    // ---------------------------------------------------------------------
+    // language / religious diplomacy peace bonuses
+    // ---------------------------------------------------------------------
+    #[test]
+    fn language_peace_bonus_declines_with_distance() {
+        // Zero distance => full cap.
+        assert_eq!(language_intelligibility_peace_bonus(0.0), 1_200);
+        // Half distance => half cap.
+        assert_eq!(language_intelligibility_peace_bonus(0.5), 600);
+        // Full distance => no bonus.
+        assert_eq!(language_intelligibility_peace_bonus(1.0), 0);
+        // Out-of-range is clamped.
+        assert_eq!(language_intelligibility_peace_bonus(5.0), 0);
+    }
+
+    #[test]
+    fn religious_peace_bonus_is_binary() {
+        assert_eq!(religious_unity_peace_bonus(true), 1_000);
+        assert_eq!(religious_unity_peace_bonus(false), 0);
+    }
+
+    // ---------------------------------------------------------------------
+    // candidate_economic_focus: strongest sector wins
+    // ---------------------------------------------------------------------
+    #[test]
+    fn economic_focus_picks_strongest_sector() {
+        // All zero => Balanced.
+        assert_eq!(
+            candidate_economic_focus(0, 0, 0, 0),
+            EconomicFocus::Balanced
+        );
+        // Food dominates => Agrarian.
+        assert_eq!(
+            candidate_economic_focus(1_000_000, 0, 0, 0),
+            EconomicFocus::Agrarian
+        );
+        // research_tier 2 => industrial = 100_000, beats food 1 => Industrial.
+        assert_eq!(
+            candidate_economic_focus(1, 2, 0, 0),
+            EconomicFocus::Industrial
+        );
+        // belief 1_000_000 => sac = 250_000 => Sacred.
+        assert_eq!(
+            candidate_economic_focus(0, 0, 1_000_000, 0),
+            EconomicFocus::Sacred
+        );
+        // treasury 1_000_000 => mer = 250_000 => Mercantile.
+        assert_eq!(
+            candidate_economic_focus(0, 0, 0, 1_000_000),
+            EconomicFocus::Mercantile
+        );
+    }
+
+    // ---------------------------------------------------------------------
+    // research / cohesion unrest mitigation
+    // ---------------------------------------------------------------------
+    #[test]
+    fn research_unrest_mitigation_never_gates_decay_and_floors_at_one() {
+        // Decay passes through untouched.
+        assert_eq!(research_unrest_mitigation(-10, 9), -10);
+        // rise 40 / (1 + 3) = 10.
+        assert_eq!(research_unrest_mitigation(40, 3), 10);
+        // Floored at 1 even at high tier.
+        assert_eq!(research_unrest_mitigation(1, 9), 1);
+        // Tier capped at 9 => divisor 10.
+        assert_eq!(research_unrest_mitigation(100, 100), 10);
+    }
+
+    #[test]
+    fn cohesion_unrest_damp_passes_decay_and_floors_at_one() {
+        assert_eq!(cohesion_unrest_damp(-5, 1_000_000), -5);
+        // rise 30 with cohesion 200 => divisor 2 => 15.
+        assert_eq!(cohesion_unrest_damp(30, 200), 15);
+        // floored at 1.
+        assert_eq!(cohesion_unrest_damp(1, 9_999), 1);
+    }
+
+    // ---------------------------------------------------------------------
+    // institution target + step hysteresis
+    // ---------------------------------------------------------------------
+    #[test]
+    fn institution_target_level_caps_at_max() {
+        assert_eq!(institution_target_level(0, 10), 0);
+        // signal 50 with per_level 10 => level 5 (capped).
+        assert_eq!(institution_target_level(100, 10), 5);
+        // per_level 0 is clamped to 1 so no division by zero.
+        assert_eq!(institution_target_level(3, 0), 3);
+    }
+
+    #[test]
+    fn institution_step_moves_one_level_per_tick() {
+        assert_eq!(institution_step(0, 3), 1);
+        assert_eq!(institution_step(3, 0), 2);
+        assert_eq!(institution_step(2, 2), 2);
+    }
+
+    // ---------------------------------------------------------------------
+    // add_unrest_delta floors at zero
+    // ---------------------------------------------------------------------
+    #[test]
+    fn add_unrest_delta_floors_at_zero_and_saturates() {
+        let mut unrest = 0u64;
+        add_unrest_delta(&mut unrest, -50);
+        assert_eq!(unrest, 0);
+        add_unrest_delta(&mut unrest, 30);
+        assert_eq!(unrest, 30);
+        add_unrest_delta(&mut unrest, -100);
+        assert_eq!(unrest, 0);
+        // Positive addition: i64::MAX saturating-adds to i64::MAX (u64 can exceed
+        // it, but a single i64 delta can only reach i64::MAX).
+        add_unrest_delta(&mut unrest, i64::MAX);
+        assert_eq!(unrest, i64::MAX as u64);
+    }
+
+    // ---------------------------------------------------------------------
+    // affinity_threshold_bias clamps to [-5000, 5000]
+    // ---------------------------------------------------------------------
+    #[test]
+    fn affinity_bias_is_bounded() {
+        assert_eq!(affinity_threshold_bias(1.0), 5_000);
+        assert_eq!(affinity_threshold_bias(-1.0), -5_000);
+        assert_eq!(affinity_threshold_bias(0.0), 0);
+        // Out-of-range clamped.
+        assert_eq!(affinity_threshold_bias(100.0), 5_000);
+        assert_eq!(affinity_threshold_bias(-100.0), -5_000);
+    }
+
+    // ---------------------------------------------------------------------
+    // diplomacy thresholds (re-exported from settlement_helpers)
+    // ---------------------------------------------------------------------
+    #[test]
+    fn diplomacy_conflict_threshold_is_bounded_below() {
+        // belief 0, unrest huge => war cap 8000 floors threshold at min 2000.
+        assert_eq!(diplomacy_conflict_threshold(0, 1_000_000), 2_000);
+        // belief 10_000 => peace = 10_000/50 = 200; unrest 0 => base + 200.
+        assert_eq!(diplomacy_conflict_threshold(10_000, 0), 10_200);
+    }
+
+    #[test]
+    fn diplomacy_peace_threshold_combines_cohesion_and_patron() {
+        // No belief/cohesion/patron, no unrest => base threshold.
+        let base = diplomacy_peace_threshold(0, 0, 0, false);
+        assert_eq!(base, DIPLOMACY_BASE_CONFLICT_THRESHOLD);
+        // With patron => +1000.
+        let with_patron = diplomacy_peace_threshold(0, 0, 0, true);
+        assert_eq!(with_patron, DIPLOMACY_BASE_CONFLICT_THRESHOLD + 1_000);
+    }
+}

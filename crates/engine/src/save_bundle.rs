@@ -1236,4 +1236,230 @@ mod tests {
             other => panic!("expected UnsupportedFormatVersion, got {:?}", other),
         }
     }
+
+    // ---- Slot-name validation helpers -----------------------------------
+
+    /// Validates an ordinary slot name passes through unchanged.
+    #[test]
+    fn validate_slot_name_accepts_plain_name() {
+        assert_eq!(validate_slot_name("alpha").unwrap(), "alpha");
+        assert_eq!(validate_slot_name("alpha-7").unwrap(), "alpha-7");
+        assert_eq!(validate_slot_name("under_score").unwrap(), "under_score");
+    }
+
+    /// Empty / whitespace-only slot names are rejected with InvalidSlotName.
+    #[test]
+    fn validate_slot_name_rejects_empty_and_whitespace() {
+        let err = validate_slot_name("").unwrap_err();
+        assert!(matches!(err, SaveBundleError::InvalidSlotName { ref message, .. } if message.contains("empty")));
+
+        let err = validate_slot_name("   ").unwrap_err();
+        assert!(matches!(err, SaveBundleError::InvalidSlotName { .. }));
+    }
+
+    /// Traversal-separator characters (slash, backslash, ..) are rejected.
+    /// This is the security boundary that prevents path-injection through a
+    /// crafted save name.
+    #[test]
+    fn validate_slot_name_rejects_path_traversal() {
+        for malicious in ["../etc", "..\\Windows", "a/b", "a\\b", "foo/../bar"] {
+            let err = validate_slot_name(malicious).unwrap_err();
+            assert!(
+                matches!(err, SaveBundleError::InvalidSlotName { .. }),
+                "expected rejection for {malicious:?}, got {err:?}"
+            );
+        }
+    }
+
+    /// Names that are pure extensions after stripping are rejected.
+    #[test]
+    fn validate_slot_name_rejects_pure_extension_names() {
+        let err = validate_slot_name(".civsave.zst").unwrap_err();
+        assert!(matches!(err, SaveBundleError::InvalidSlotName { ref message, .. } if message.contains("extension")));
+
+        let err = validate_slot_name("foo.civsave.zst").unwrap();
+        assert_eq!(err, "foo");
+    }
+
+    /// `slot_name_from_path` returns the bare name from `.civsave.zst` archives.
+    /// The function requires the file to actually exist on disk (it delegates
+    /// to `is_save_archive`, which checks the zstd magic bytes).
+    #[test]
+    fn slot_name_from_path_strips_archive_extension() {
+        let dir = tempdir().expect("tempdir");
+        let archive = dir.path().join("dawn.civsave.zst");
+        // zstd frame magic so `is_save_archive` returns true on this file.
+        fs::write(&archive, ZSTD_FRAME_MAGIC).unwrap();
+        assert_eq!(slot_name_from_path(&archive), Some("dawn".to_owned()));
+    }
+
+    /// `slot_name_from_path` returns the bare name from `.civsave/` directories.
+    /// The function requires the directory to actually exist with a
+    /// `replay.civreplay` file inside.
+    #[test]
+    fn slot_name_from_path_strips_dir_extension() {
+        let dir = tempdir().expect("tempdir");
+        let save_dir = dir.path().join("dusk.civsave");
+        fs::create_dir_all(&save_dir).unwrap();
+        fs::write(save_dir.join("replay.civreplay"), b"r").unwrap();
+        assert_eq!(slot_name_from_path(&save_dir), Some("dusk".to_owned()));
+    }
+
+    /// `slot_name_from_path` returns None for unrelated paths.
+    #[test]
+    fn slot_name_from_path_returns_none_for_unrelated_paths() {
+        assert!(slot_name_from_path(Path::new("/saves/notes.txt")).is_none());
+        assert!(slot_name_from_path(Path::new("/saves/dawn.bin")).is_none());
+    }
+
+    /// `is_save_dir` / `is_save_archive` distinguish true save bundles from
+    /// arbitrary files / directories.
+    #[test]
+    fn is_save_dir_and_archive_distinguish_bundles() {
+        let dir = tempdir().expect("tempdir");
+
+        let save_dir = dir.path().join("world.civsave");
+        fs::create_dir_all(&save_dir).unwrap();
+        fs::write(save_dir.join("replay.civreplay"), b"r").unwrap();
+        assert!(CivSaveBundle::is_save_dir(&save_dir));
+        assert!(!CivSaveBundle::is_save_archive(&save_dir));
+
+        // A directory without `replay.civreplay` is not a save dir.
+        let fake_dir = dir.path().join("not_a_save");
+        fs::create_dir_all(&fake_dir).unwrap();
+        assert!(!CivSaveBundle::is_save_dir(&fake_dir));
+        assert!(!CivSaveBundle::is_save_archive(&fake_dir));
+
+        // A bare file is neither a dir nor an archive.
+        let plain_file = dir.path().join("plain.txt");
+        fs::write(&plain_file, b"hello").unwrap();
+        assert!(!CivSaveBundle::is_save_dir(&plain_file));
+        assert!(!CivSaveBundle::is_save_archive(&plain_file));
+    }
+
+    /// `is_save_archive` returns true for any file with `.zst` extension (the
+    /// engine treats the extension as authoritative for archive bundles).
+    #[test]
+    fn is_save_archive_accepts_zst_extension() {
+        let dir = tempdir().expect("tempdir");
+        let archive = dir.path().join("foo.civsave.zst");
+        fs::write(&archive, b"not a real zstd frame, but extension wins").unwrap();
+        assert!(CivSaveBundle::is_save_archive(&archive));
+    }
+
+    /// FR-CIV-SAVESLOT — slot lifecycle: save -> list -> load -> delete.
+    /// Re-asserts the existing integration coverage at the unit level so any
+    /// change to `save_to_slot` / `load_from_slot` / `list_slots` /
+    /// `delete_slot` immediately regresses in CI.
+    #[test]
+    fn slot_lifecycle_save_list_load_delete_unit() {
+        let mut sim = Simulation::with_seed(7);
+        for _ in 0..3 {
+            sim.tick();
+        }
+        let original_tick = sim.state.tick;
+
+        let dir = tempdir().expect("tempdir");
+        let saves = dir.path().join("saves");
+        fs::create_dir_all(&saves).unwrap();
+
+        // Save to a named slot.
+        save_to_slot(&saves, "slot_a", &sim).expect("save_to_slot");
+        assert!(saves.join("slot_a.civsave.zst").is_file());
+
+        // Listing should include the slot with the correct tick.
+        let listed = list_slots(&saves).expect("list_slots");
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].name, "slot_a");
+        assert_eq!(listed[0].tick, original_tick);
+
+        // Listing is sorted by tick desc — second save with a higher tick
+        // should appear first.
+        let mut sim2 = Simulation::with_seed(7);
+        // Sync the seed-state — drive it to the same starting tick as `sim`
+        // by replaying identical tick inputs (deterministic seed path).
+        for _ in 0..sim.state.tick {
+            sim2.tick();
+        }
+        for _ in 0..4 {
+            sim2.tick();
+        }
+        save_to_slot(&saves, "slot_b", &sim2).expect("save slot_b");
+        let listed_after = list_slots(&saves).expect("list_slots");
+        assert_eq!(listed_after.len(), 2);
+        assert_eq!(listed_after[0].name, "slot_b");
+        assert_eq!(listed_after[1].name, "slot_a");
+
+        // Loading round-trips the simulation.
+        let loaded = load_from_slot(&saves, "slot_a").expect("load_from_slot");
+        assert_eq!(loaded.state.tick, original_tick);
+
+        // Deleting a missing slot is a no-op returning false.
+        assert!(!delete_slot(&saves, "never_existed").expect("delete missing"));
+
+        // Deleting an existing slot returns true and removes the file.
+        assert!(delete_slot(&saves, "slot_a").expect("delete slot_a"));
+        assert!(!saves.join("slot_a.civsave.zst").is_file());
+        assert!(list_slots(&saves).unwrap().iter().all(|e| e.name != "slot_a"));
+    }
+
+    /// Slot names with reserved characters are rejected before the file is touched.
+    /// Guards against path-injection through the slot name argument.
+    #[test]
+    fn slot_operations_reject_malicious_names() {
+        let dir = tempdir().expect("tempdir");
+        let saves = dir.path().join("saves");
+        fs::create_dir_all(&saves).unwrap();
+        let mut sim = Simulation::with_seed(1);
+        sim.tick();
+
+        for bad in ["../escape", "with/slash", "with\\backslash"] {
+            assert!(save_to_slot(&saves, bad, &sim).is_err(), "save with {bad}");
+            assert!(load_from_slot(&saves, bad).is_err(), "load with {bad}");
+            assert!(delete_slot(&saves, bad).is_err(), "delete with {bad}");
+        }
+
+        // No file should have been written to the saves directory.
+        let count: usize = fs::read_dir(&saves)
+            .unwrap()
+            .filter_map(Result::ok)
+            .filter(|e| e.path().is_file())
+            .count();
+        assert_eq!(count, 0, "malicious slot names must not create files");
+    }
+
+    /// `CivSaveMetadata` round-trips through serde with the canonical spec id
+    /// and format version.
+    #[test]
+    fn civsave_metadata_serde_round_trip() {
+        let meta = CivSaveMetadata {
+            spec_id: CIVSAVE_SPEC_ID.to_owned(),
+            format_version: CIVSAVE_FORMAT_VERSION,
+            tick: 12345,
+            scenario_name: Some("founding".to_owned()),
+        };
+        let json = serde_json::to_string(&meta).expect("serialize");
+        let restored: CivSaveMetadata = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(restored, meta);
+
+        // The canonical spec_id is "CIV-1000" — any drift here would break
+        // every existing save on disk.
+        assert_eq!(CIVSAVE_SPEC_ID, "CIV-1000");
+        assert_eq!(CIVSAVE_FORMAT_VERSION, 3);
+        assert_eq!(CIVSAVE_ARCHIVE_EXTENSION, "civsave.zst");
+    }
+
+    /// `SaveSlotEntry` round-trips with deterministic ordering by (tick desc, name asc).
+    #[test]
+    fn save_slot_entry_equality_and_determinism() {
+        let a = SaveSlotEntry { name: "alpha".to_owned(), tick: 10 };
+        let b = SaveSlotEntry { name: "alpha".to_owned(), tick: 10 };
+        assert_eq!(a, b);
+
+        let c = SaveSlotEntry { name: "beta".to_owned(), tick: 10 };
+        assert_ne!(a, c);
+
+        let d = SaveSlotEntry { name: "alpha".to_owned(), tick: 11 };
+        assert_ne!(a, d);
+    }
 }

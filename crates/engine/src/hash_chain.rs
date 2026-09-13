@@ -359,4 +359,166 @@ mod tests {
         };
         assert_ne!(hash, sha256_first);
     }
+
+    // ---- Pure payload-helper invariants ---------------------------------
+
+    /// `tick_event_bytes` is a deterministic little-endian u64 encoding,
+    /// exactly 8 bytes long.
+    #[test]
+    fn tick_event_bytes_is_little_endian_u64() {
+        let bytes = tick_event_bytes(1);
+        assert_eq!(bytes, [1, 0, 0, 0, 0, 0, 0, 0]);
+
+        let bytes = tick_event_bytes(0x0102030405060708);
+        assert_eq!(
+            bytes,
+            [0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01]
+        );
+
+        let bytes = tick_event_bytes(u64::MAX);
+        assert_eq!(bytes, [0xff; 8]);
+    }
+
+    /// `hash_hex` always emits exactly 64 lowercase hex characters, regardless of input.
+    #[test]
+    fn hash_hex_emits_64_lowercase_chars_for_any_input() {
+        for seed in [0u8, 1, 0xab, 0xff, 0x42] {
+            let mut bytes = [0u8; HASH_LEN];
+            for (i, slot) in bytes.iter_mut().enumerate() {
+                *slot = seed.wrapping_add(i as u8);
+            }
+            let hex = hash_hex(&bytes);
+            assert_eq!(hex.len(), 64, "hex output must be exactly 64 chars");
+            assert!(
+                hex.chars().all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()),
+                "hex output must be lowercase"
+            );
+        }
+    }
+
+    /// `chain_advance` is functionally identical to `tick_hash` — pure
+    /// delegation. Any drift here breaks the public hash-chain contract.
+    #[test]
+    fn chain_advance_is_tick_hash() {
+        let payload = b"some_canonical_bytes";
+        let via_chain_advance = chain_advance(&GENESIS, payload);
+        let via_tick_hash = tick_hash(&GENESIS, payload);
+        assert_eq!(via_chain_advance, via_tick_hash);
+    }
+
+    /// `chain_root_from_payloads` matches the incremental `HashChainState` advance.
+    /// It is the equivalent of `chain_root_from_ticks` but for arbitrary
+    /// canonical payloads (combat, climate, research).
+    #[test]
+    fn chain_root_from_payloads_matches_incremental() {
+        let payloads: Vec<Vec<u8>> = vec![b"alpha".to_vec(), b"beta".to_vec(), b"gamma".to_vec()];
+
+        let mut state = HashChainState::new();
+        for p in &payloads {
+            state.advance(p);
+        }
+        assert_eq!(
+            chain_root_from_payloads(payloads.iter()),
+            Some(state.running_hash)
+        );
+    }
+
+    /// `chain_root_from_payloads` returns None for an empty input sequence.
+    #[test]
+    fn chain_root_from_payloads_empty_is_none() {
+        let empty: Vec<Vec<u8>> = vec![];
+        assert_eq!(chain_root_from_payloads(empty.iter()), None);
+
+        // An empty iterator (other concrete type) must also yield None.
+        let empty_bytes: Vec<&[u8]> = vec![];
+        assert_eq!(chain_root_from_payloads(empty_bytes), None);
+    }
+
+    /// `research_event_bytes` always begins with the 8-byte ASCII tag
+    /// "research", then the little-endian tick. This is the wire format
+    /// every downstream consumer (integrity.rs, replay_format.rs) relies on.
+    #[test]
+    fn research_event_bytes_prefix_and_tick_order() {
+        let bytes = research_event_bytes(0x1234_5678, &[0xaa, 0xbb, 0xcc], true);
+        assert_eq!(&bytes[..8], b"research");
+        // tick is little-endian u64, immediately after the 8-byte tag
+        assert_eq!(
+            &bytes[8..16],
+            &[0x78, 0x56, 0x34, 0x12, 0, 0, 0, 0]
+        );
+        // snapshot_hash follows immediately
+        assert_eq!(&bytes[16..19], &[0xaa, 0xbb, 0xcc]);
+        // accepted flag is the final byte
+        assert_eq!(bytes[bytes.len() - 1], 1);
+
+        // accepted=false must toggle the trailing flag byte.
+        let rejected = research_event_bytes(0, &[], false);
+        assert_eq!(rejected[rejected.len() - 1], 0);
+    }
+
+    /// `combat_event_bytes` has a fixed 63-byte wire layout: 6-byte tag
+    /// "combat", then 6 little-endian u64 fields (tick, shooter_id,
+    /// target_id, center_x, center_y, center_z), then 1 byte (radius),
+    /// then 2 little-endian u32 fields (energy, strength_damage).
+    /// Total = 6 + 6×8 + 1 + 2×4 = 63 bytes.
+    /// Every downstream hash consumer depends on this layout.
+    #[test]
+    fn combat_event_bytes_has_fixed_63_byte_layout() {
+        let bytes = combat_event_bytes(
+            /* tick */ 1,
+            /* shooter_id */ 10,
+            /* target_id */ 20,
+            /* center_x */ 100,
+            /* center_y */ 200,
+            /* center_z */ 300,
+            /* radius_voxels */ 7,
+            /* energy */ 1_000,
+            /* strength_damage */ 2_500,
+        );
+        assert_eq!(bytes.len(), 63, "combat event must be exactly 63 bytes");
+        assert_eq!(&bytes[..6], b"combat");
+        // tick at bytes [6..14]
+        assert_eq!(&bytes[6..14], &1u64.to_le_bytes());
+        // shooter_id at [14..22]
+        assert_eq!(&bytes[14..22], &10u64.to_le_bytes());
+        // target_id at [22..30]
+        assert_eq!(&bytes[22..30], &20u64.to_le_bytes());
+        // cx, cy, cz at [30..38], [38..46], [46..54]
+        assert_eq!(&bytes[30..38], &100i64.to_le_bytes());
+        assert_eq!(&bytes[38..46], &200i64.to_le_bytes());
+        assert_eq!(&bytes[46..54], &300i64.to_le_bytes());
+        // radius at [54]
+        assert_eq!(bytes[54], 7);
+        // energy at [55..59], strength at [59..63]
+        assert_eq!(&bytes[55..59], &1_000u32.to_le_bytes());
+        assert_eq!(&bytes[59..63], &2_500u32.to_le_bytes());
+    }
+
+    /// Identical inputs to `combat_event_bytes` always produce the same payload
+    /// bytes — wire-level determinism guarantee.
+    #[test]
+    fn combat_event_bytes_is_deterministic() {
+        let a = combat_event_bytes(42, 7, 11, 1, 2, 3, 5, 100, 200);
+        let b = combat_event_bytes(42, 7, 11, 1, 2, 3, 5, 100, 200);
+        assert_eq!(a, b);
+        assert_eq!(a.len(), 63);
+    }
+
+    /// `HashChainState::default()` is equivalent to a freshly constructed chain.
+    #[test]
+    fn hash_chain_state_default_equals_new() {
+        assert_eq!(HashChainState::default(), HashChainState::new());
+        assert_eq!(HashChainState::default().running_hash, GENESIS);
+    }
+
+    /// Advancing a `HashChainState` then querying `running_hash` returns the
+    /// same value as a manual `chain_advance` chain.
+    #[test]
+    fn hash_chain_state_advance_matches_manual() {
+        let mut state = HashChainState::new();
+        let manual = chain_advance(&chain_advance(&GENESIS, b"a"), b"b");
+        state.advance(b"a");
+        state.advance(b"b");
+        assert_eq!(state.running_hash, manual);
+    }
 }

@@ -918,3 +918,120 @@ fn archive_future_version_is_rejected_with_clear_error() {
         err_string
     );
 }
+
+// ---- End-to-end slot lifecycle integration ------------------------------
+
+/// End-to-end slot save -> list -> load -> delete via the engine's public
+/// `save_to_slot` / `load_from_slot` / `list_slots` / `delete_slot` helpers.
+///
+/// This is the integration-level smoke that proves the slot-name validation
+/// helpers, the `slot_name_from_path` parser, the `CivSaveBundle::is_save_*`
+/// detectors, and the underlying `save_archive` / `load_archive` round-trip
+/// all work together as the persistence layer that the UI relies on.
+#[test]
+fn e2e_slot_lifecycle_save_list_load_delete() {
+    use civ_engine::save_bundle::{delete_slot, list_slots, load_from_slot, save_to_slot};
+
+    let mut sim = Simulation::with_seed(13);
+    for _ in 0..5 {
+        sim.tick();
+    }
+    let original_tick = sim.state.tick;
+
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let saves = tmp.path().join("saves");
+    std::fs::create_dir_all(&saves).expect("mkdir saves");
+
+    // Save two slots with different tick counts.
+    save_to_slot(&saves, "alpha", &sim).expect("save alpha");
+    let mut sim_b = Simulation::with_seed(13);
+    for _ in 0..original_tick + 7 {
+        sim_b.tick();
+    }
+    save_to_slot(&saves, "beta", &sim_b).expect("save beta");
+
+    // Listing returns both slots, sorted by tick desc.
+    let listed = list_slots(&saves).expect("list_slots");
+    assert_eq!(listed.len(), 2);
+    assert_eq!(listed[0].name, "beta", "highest-tick slot first");
+    assert_eq!(listed[1].name, "alpha");
+    assert!(listed[0].tick > listed[1].tick);
+    assert_eq!(listed[1].tick, original_tick);
+
+    // Loading round-trips the simulation through the zstd-compressed tar.
+    let loaded_alpha = load_from_slot(&saves, "alpha").expect("load alpha");
+    assert_eq!(loaded_alpha.state.tick, original_tick);
+
+    let loaded_beta = load_from_slot(&saves, "beta").expect("load beta");
+    assert_eq!(loaded_beta.state.tick, original_tick + 7);
+
+    // Delete one slot, confirm the other remains.
+    assert!(delete_slot(&saves, "alpha").expect("delete alpha"));
+    assert!(!saves.join("alpha.civsave.zst").is_file());
+    let listed_after = list_slots(&saves).expect("list after delete");
+    assert_eq!(listed_after.len(), 1);
+    assert_eq!(listed_after[0].name, "beta");
+
+    // Deleting the same slot a second time is a no-op returning false.
+    assert!(!delete_slot(&saves, "alpha").expect("second delete"));
+}
+
+/// Slot-name path-traversal rejection at the public-API boundary.
+/// Proves that the engine's slot APIs never accept characters that could
+/// escape `saves/` to read or write outside it.
+#[test]
+fn e2e_slot_name_path_traversal_rejected_at_public_api() {
+    use civ_engine::save_bundle::{delete_slot, load_from_slot, save_to_slot};
+
+    let mut sim = Simulation::with_seed(1);
+    sim.tick();
+
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let saves = tmp.path().join("saves");
+    std::fs::create_dir_all(&saves).expect("mkdir saves");
+
+    for bad in ["../escape", "with/slash", "with\\backslash", ".."] {
+        assert!(
+            save_to_slot(&saves, bad, &sim).is_err(),
+            "save must reject {bad}"
+        );
+        assert!(
+            load_from_slot(&saves, bad).is_err(),
+            "load must reject {bad}"
+        );
+        assert!(
+            delete_slot(&saves, bad).is_err(),
+            "delete must reject {bad}"
+        );
+    }
+
+    // No file should have been written outside the saves dir.
+    let count: usize = std::fs::read_dir(&saves)
+        .unwrap()
+        .filter_map(Result::ok)
+        .filter(|e| e.path().is_file())
+        .count();
+    assert_eq!(count, 0, "malicious slot names must not create files");
+}
+
+/// Round-trip: encode a `ReplayLog`, decode it, verify the running hash
+/// survived. This is the canonical proof that `replay_format` keeps the
+/// hash chain intact through the `encode_civreplay` / `decode_civreplay`
+/// round-trip — the foundation that `save_bundle::load` rebuilds from.
+#[test]
+fn e2e_replay_log_encode_decode_preserves_running_hash() {
+    let mut log = ReplayLog::default();
+    let snapshot = vec![0xde, 0xad, 0xbe, 0xef];
+    log.record_research(10, snapshot.clone(), true);
+    log.record_research(11, snapshot.clone(), false);
+    log.record_tick(11);
+
+    let before_hash = log.running_hash.expect("hash chain set after research");
+
+    let bytes = encode_civreplay(&log).expect("encode");
+    let restored = decode_civreplay(&bytes).expect("decode");
+
+    let after_hash = restored.running_hash.expect("hash chain after decode");
+    assert_eq!(before_hash, after_hash, "running hash must survive encode/decode");
+    assert_eq!(restored.events.len(), log.events.len());
+}

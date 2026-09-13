@@ -17,6 +17,7 @@ mod extraction;
 mod institution;
 mod market;
 mod production;
+pub mod gameplay_loop;
 pub mod shadow;
 pub mod specialization;
 mod stocks;
@@ -32,6 +33,11 @@ pub use allocator::{Allocator, Bid, CancelledOrder, Offer};
 pub use currency_trust::{acceptance, step_currency_trust, CurrencyTrust, CurrencyTrustOutcome};
 pub use extraction::{
     find_extraction_site, tick_extraction, ExtractionSite, Extractor, ResourceKind,
+};
+pub use gameplay_loop::{
+    accumulated_for, accumulate_wealth, apply_economy_pressure, compute_outputs, effective_demand,
+    per_tick_wealth, tick_settlement_economy, wealth_factor_millionths, SettlementEconomyInputs,
+    SettlementEconomyOutputs, SettlementWealthSnapshot, WEALTH_SATURATION_REF,
 };
 pub use institution::{
     collect_taxes, step_institutions, InstitutionAccount, InstitutionId, InstitutionKind,

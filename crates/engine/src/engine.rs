@@ -653,6 +653,12 @@ pub struct Simulation {
     pub economy_state: EconomyState,
     /// Per-good clearing prices (`civ-economy`); advanced in [`phase_economy`].
     pub market_state: MarketState,
+    /// Per-settlement wealth scalar + last-tick snapshot for the
+    /// FR-ECON-GAMEPLAY demand/supply feedback loop. Accumulated wealth
+    /// is monotone non-decreasing and survives save/load via the
+    /// existing `EconomyState` serde path. Reset only on `new()` /
+    /// `with_seed` constructors.
+    pub settlement_wealth_snapshot: civ_economy::gameplay_loop::SettlementWealthSnapshot,
     /// LOD tick cadence for Warm/Cold civilian tiers (CIV-0101).
     pub lod_policy: LodPolicy,
     /// Manifest-only mod host (CIV-0700 v2 policy stub); WASM not loaded yet.
@@ -1010,6 +1016,7 @@ impl Simulation {
             current_tick: 0,
             economy_state: economy_state_from_world(&state),
             market_state: MarketState::default(),
+            settlement_wealth_snapshot: civ_economy::gameplay_loop::SettlementWealthSnapshot::default(),
             state,
             world,
             worldgen: WorldgenConfig::default(),
@@ -1185,6 +1192,7 @@ impl Simulation {
         Self {
             economy_state: economy_state_from_world(&state),
             market_state: MarketState::default(),
+            settlement_wealth_snapshot: civ_economy::gameplay_loop::SettlementWealthSnapshot::default(),
             state,
             world,
             rng,

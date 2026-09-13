@@ -51,6 +51,11 @@ struct SettlementMarketSetup {
     price: i64,
 }
 
+use civ_economy::gameplay_loop::{
+    tick_settlement_economy as tick_economy_gameplay_loop, SettlementEconomyInputs,
+    SettlementWealthSnapshot,
+};
+
 impl Simulation {
     pub(crate) fn phase_economy(&mut self) {
         let tick = self.state.tick;
@@ -83,6 +88,10 @@ impl Simulation {
         civ_economy::drain_energy_budget(&mut self.economy_state, allocated);
         civ_economy::step(&mut self.economy_state);
 
+        // Sync budget back BEFORE the gameplay-loop income side: the
+        // gameplay loop credits income into the macro budget based on
+        // per-settlement supply/effective demand, and that income must
+        // be visible to the next phase's read.
         self.state.energy_budget_joules = Fixed::from_num(self.economy_state.energy_budget_joules);
         let food_price_before = self
             .market_state
@@ -102,10 +111,74 @@ impl Simulation {
             }
         }
 
+        // FR-ECON-GAMEPLAY: drive the settlement-coupled gameplay loop on
+        // top of the per-good market. After this point the macro budget
+        // reflects the conservation-respecting union of consumption
+        // (above) and scarcity income (here).
+        self.tick_settlement_economy_gameplay_loop();
+
         // Famine + caravan wiring TODO: wire these when APIs stabilize
         // - famine::classify_famine(food_per_capita) for famine cascade
         // - caravan::tick_caravan() for trade routes
         // See crates/engine/src/famine.rs and crates/engine/src/caravan.rs
+    }
+
+    /// FR-ECON-GAMEPLAY: drive the settlement-coupled economy gameplay
+    /// loop. For each settlement in `self.settlements`, derive
+    /// `effective_demand = population × wealth_factor`, apply market
+    /// pressure on the shared `civ_economy::MarketState`, credit any
+    /// scarcity income into the macro budget, and accumulate the
+    /// per-tick wealth scalar.
+    ///
+    /// Order: must run AFTER `tick_settlement_trade_flows` /
+    /// `tick_extraction_sites` so the per-settlement stock / treasury
+    /// / faction-treasury state is current. Runs BEFORE the next
+    /// `phase_economy`'s read of `economy_state.energy_budget_joules`
+    /// so income is visible to phase_life / phase_unrest.
+    pub(crate) fn tick_settlement_economy_gameplay_loop(&mut self) {
+        // Snapshot settlement ids + per-settlement stock data first to
+        // avoid a mutable-borrow conflict with the per-iteration market
+        // mutation. (We can't hold `&self` while mutating
+        // `self.economy_state`.)
+        let settlement_count = self.settlements.len().max(1) as i64;
+        // Aggregate treasury across factions, then equally share per
+        // settlement. `treasury_share` is intentionally coarse — the
+        // wealth scalar is informational, not authoritative.
+        let treasury_i64_total: i64 = self
+            .state
+            .faction_treasury
+            .values()
+            .map(|v| i64::from(v.to_bits()) / crate::SCALE)
+            .sum();
+        let shared_treasury = treasury_i64_total / settlement_count;
+
+        let settlement_inputs: Vec<SettlementEconomyInputs> = self
+            .settlements
+            .iter()
+            .map(|(&sid, &pop)| SettlementEconomyInputs {
+                settlement_id: sid,
+                population: pop as i64,
+                food_stocked: self
+                    .settlement_food_stocked
+                    .get(&sid)
+                    .copied()
+                    .unwrap_or(0),
+                treasury_share: shared_treasury,
+            })
+            .collect();
+
+        for inputs in settlement_inputs {
+            tick_economy_gameplay_loop(
+                &mut self.market_state,
+                &mut self.economy_state,
+                &mut self.settlement_wealth_snapshot,
+                inputs,
+            );
+        }
+
+        // Sync the macro budget back into WorldState.
+        self.state.energy_budget_joules =
+            Fixed::from_num(self.economy_state.energy_budget_joules);
     }
 
     pub(crate) fn tick_settlement_trade_flows(&mut self) {

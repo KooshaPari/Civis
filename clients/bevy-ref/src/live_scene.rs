@@ -22,6 +22,7 @@ use crate::live_stream::apply_event_feed_frame;
 use crate::live_stream::{
     apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
     apply_civilian_state_frame, apply_faction_state_frame, apply_voxel_delta_frame,
+    mesh_pending_voxel_chunks,
     default_stream_meshes, AgentLabelConfig, LiveAgentTag, LiveBuildingTag, LiveChunkFade,
     LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene, StreamCulling, LIVE_CHUNK_EDGE,
 };
@@ -141,16 +142,18 @@ fn apply_live_scene_frames(
         state.tick = Some(tick);
         hud.tick = Some(tick);
         match frame {
-            Frame3d::VoxelDelta(delta) => apply_voxel_delta_frame(
-                &mut commands,
-                &mut scene,
-                &mut meshes,
-                &mut materials,
-                culling,
-                debug.as_ref(),
-                &delta,
-                None,
-            ),
+            Frame3d::VoxelDelta(delta) => {
+                apply_voxel_delta_frame(&mut scene, delta);
+                mesh_pending_voxel_chunks(
+                    &mut commands,
+                    &mut scene,
+                    &mut meshes,
+                    &mut materials,
+                    culling,
+                    debug.as_ref(),
+                    None,
+                );
+            }
             Frame3d::AgentAppearance(agents) => {
                 apply_agent_appearance_frame_with_labels(
                     &mut commands,

@@ -62,7 +62,13 @@ function Save-Receipt {
     param([Parameter(Mandatory)][string]$Path,[Parameter(Mandatory)][hashtable]$Record)
     $temporary = "$Path.tmp"
     $Record | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $temporary -Encoding utf8
-    [IO.File]::Move($temporary,$Path,$true)
+    if ([IO.File]::Exists($Path)) {
+        # Windows readers must share Delete to permit atomic replacement.
+        # Retain the previous valid receipt instead of removing it in-place.
+        [IO.File]::Replace($temporary,$Path,"$Path.previous")
+    } else {
+        [IO.File]::Move($temporary,$Path)
+    }
 }
 
 function New-LogStream {

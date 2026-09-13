@@ -114,13 +114,15 @@ async fn census_call(
             .await
             .map_err(|err| CensusCallError::Connect {
                 url: url.to_string(),
-                source: err,
+                source: Box::new(err),
             })?;
     let (mut ws, _response) = connect;
 
     ws.send(Message::Text(request_frame.to_string()))
         .await
-        .map_err(|err| CensusCallError::Send { source: err })?;
+        .map_err(|err| CensusCallError::Send {
+            source: Box::new(err),
+        })?;
 
     let frame = timeout(request_timeout, ws.next())
         .await
@@ -129,7 +131,7 @@ async fn census_call(
             timeout_ms: request_timeout.as_millis() as u64,
         })?
         .ok_or(CensusCallError::Closed)?
-        .map_err(CensusCallError::Transport)?;
+        .map_err(|err| CensusCallError::Transport(Box::new(err)))?;
 
     let text = match frame {
         Message::Text(text) => text,
@@ -157,14 +159,14 @@ enum CensusCallError {
         url: String,
         /// Underlying tungstenite error.
         #[source]
-        source: tokio_tungstenite::tungstenite::Error,
+        source: Box<tokio_tungstenite::tungstenite::Error>,
     },
     /// The request text frame could not be sent.
     #[error("send sim.status request failed: {source}")]
     Send {
         /// Underlying tungstenite error.
         #[source]
-        source: tokio_tungstenite::tungstenite::Error,
+        source: Box<tokio_tungstenite::tungstenite::Error>,
     },
     /// No frame arrived before the per-request timeout fired.
     #[error("civ-server at {url} did not respond within {timeout_ms}ms")]
@@ -179,7 +181,7 @@ enum CensusCallError {
     Closed,
     /// The transport raised a non-fatal error mid-stream.
     #[error("civ-server WS transport error: {0}")]
-    Transport(#[source] tokio_tungstenite::tungstenite::Error),
+    Transport(#[source] Box<tokio_tungstenite::tungstenite::Error>),
     /// The server sent a binary frame that was not valid UTF-8.
     #[error("sim.status binary frame was not valid UTF-8: {source}")]
     Decode {

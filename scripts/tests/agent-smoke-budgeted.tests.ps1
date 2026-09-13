@@ -14,6 +14,35 @@ function Assert-True {
 
 $helper = (Resolve-Path (Join-Path $PSScriptRoot '..\ci\invoke-budgeted-child.ps1')).Path
 $pwsh = (Get-Command pwsh -CommandType Application | Select-Object -First 1).Path
+
+# Exercise the actual writer with an open reader: the old handle and the
+# replacement pathname must each expose a complete, valid JSON document.
+$tokens = $null
+$parseErrors = $null
+$helperAst = [Management.Automation.Language.Parser]::ParseFile($helper, [ref]$tokens, [ref]$parseErrors)
+Assert-True ($parseErrors.Count -eq 0) 'helper parse failed'
+$writerAst = $helperAst.Find({ param($node)
+    $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Save-Receipt'
+}, $true)
+Assert-True ($null -ne $writerAst) 'receipt writer missing'
+. ([scriptblock]::Create($writerAst.Extent.Text))
+$atomicPath = Join-Path $ReceiptDirectory ('atomic-' + [guid]::NewGuid().ToString('N') + '.json')
+Save-Receipt $atomicPath @{ state = 'old' }
+$shared = [IO.File]::Open($atomicPath, [IO.FileMode]::Open, [IO.FileAccess]::Read,
+    ([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
+$sharedReader = [IO.StreamReader]::new($shared)
+try {
+    Save-Receipt $atomicPath @{ state = 'new' }
+    Assert-True (($sharedReader.ReadToEnd() | ConvertFrom-Json).state -eq 'old') 'open reader lost its valid old receipt'
+    Assert-True (([IO.File]::ReadAllText($atomicPath) | ConvertFrom-Json).state -eq 'new') 'replacement receipt is not valid new JSON'
+} finally { $sharedReader.Dispose() }
+$exclusive = [IO.File]::Open($atomicPath, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite)
+try {
+    $replacementFailed = $false
+    try { Save-Receipt $atomicPath @{ state = 'blocked' } } catch { $replacementFailed = $true }
+    Assert-True $replacementFailed 'non-delete-sharing reader did not reject replacement'
+    Assert-True (([IO.File]::ReadAllText($atomicPath) | ConvertFrom-Json).state -eq 'new') 'failed replacement changed the valid receipt'
+} finally { $exclusive.Dispose() }
 $childArgumentsJson = (@('-NoProfile','-Command',
         'Write-Output ("CARGO_TARGET_DIR=" + $env:CARGO_TARGET_DIR); Write-Output ("CARGO_BUILD_JOBS=" + $env:CARGO_BUILD_JOBS)'
     ) | ConvertTo-Json -Compress)
@@ -71,7 +100,15 @@ while (-not $readerOpened -and -not $readerProcess.HasExited -and [DateTime]::Ut
     Start-Sleep -Milliseconds 100
     $receipt = Get-ChildItem -LiteralPath $readerRoot -Filter '*.json' -File | Select-Object -First 1
     if (-not $receipt) { continue }
-    try { $running = Get-Content -LiteralPath $receipt.FullName -Raw | ConvertFrom-Json } catch { continue }
+    # Atomic replacement requires Delete sharing on Windows; dispose before
+    # polling again so an observer never blocks the receipt writer.
+    $receiptReader = $null
+    try {
+        $receiptStream = [IO.File]::Open($receipt.FullName, [IO.FileMode]::Open, [IO.FileAccess]::Read,
+            ([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
+        $receiptReader = [IO.StreamReader]::new($receiptStream)
+        $running = $receiptReader.ReadToEnd() | ConvertFrom-Json
+    } catch { continue } finally { if ($receiptReader) { $receiptReader.Dispose() } }
     if ($running.state -ne 'running') { continue }
     $stream = [IO.File]::Open($running.stdoutLog, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite)
     $stream.Dispose()

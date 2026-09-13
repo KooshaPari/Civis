@@ -56,9 +56,22 @@ jobs:
 
             - name: Run fuzz target
               run: |
+                  if [[ ! "$FUZZ_DURATION" =~ ^([0-9]{1,10})([smh]?)$ ]]; then
+                    echo "Fuzz duration must be a positive integer with optional s, m, or h suffix" >&2
+                    exit 1
+                  fi
+                  duration_seconds=$((10#${BASH_REMATCH[1]}))
+                  case "${BASH_REMATCH[2]}" in
+                    m) duration_seconds=$((duration_seconds * 60)) ;;
+                    h) duration_seconds=$((duration_seconds * 3600)) ;;
+                  esac
+                  if ((duration_seconds <= 0 || duration_seconds > 2147483647)); then
+                    echo "Fuzz duration must fit a positive signed 32-bit number of seconds" >&2
+                    exit 1
+                  fi
                   rustup override set nightly
-                  cargo fuzz run ${{ matrix.target }} --
-                    -max_total_time=${{ env.FUZZ_DURATION }}
+                  cargo fuzz run ${{ matrix.target }} -- \
+                    "-max_total_time=$duration_seconds" \
                     -print_final_stats=1
 
             - name: Upload crash artifacts

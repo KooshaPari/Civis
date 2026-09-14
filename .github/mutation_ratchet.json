@@ -1,0 +1,13 @@
+{
+  "note": "Coverage ratchet floor for the mutation gate. The gate targets the self-contained civ-save-db crate (no internal path deps) which completes a real baseline in ~14s and yields a measurable kill rate. The gate passes only if the run's kill rate is AT OR ABOVE the recorded floor. Raise 'floor' by opening a PR that bumps it after coverage improves; it may then only move upward (monotonic).",
+  "scope": ["-p", "civ-save-db"],
+  "floor": 65.0,
+  "seeded_from": {
+    "tested": 20,
+    "caught": 13,
+    "unviable": 7,
+    "rate_pct": 65.0,
+    "measured_at": "2026-09-13",
+    "benchmark": "cargo mutants -p civ-save-db --no-shuffle -j 2 --timeout 300 (ubuntu-24.04, cargo-mutants 27.1.0: 20 mutants in 39s, 13 caught/7 unviable) — local win repro was 70% (14/20) with -j 4 due to scheduling variance"
+  }
+}

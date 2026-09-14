@@ -14,6 +14,7 @@ use crate::god_actions::GodActionRequest;
 use crate::god_panel::GodPanelState;
 use crate::live_stream::ServerBridge;
 use crate::menus::in_playing_state;
+use crate::ui_theme::banner_alpha;
 
 /// One searchable god verb surfaced in the overlay.
 #[derive(Clone, Copy, Debug)]
@@ -100,6 +101,14 @@ pub struct HolocronState {
     pub cursor: usize,
 }
 
+/// Timestamp (in `Res<Time>::elapsed_secs` terms) the holocron overlay
+/// was most-recently opened. Reset to `None` on close so the next open
+/// triggers a fresh fade-in.
+#[derive(Resource, Default)]
+pub struct HolocronOpenedAt {
+    pub secs: Option<f32>,
+}
+
 impl Default for HolocronState {
     fn default() -> Self {
         Self {
@@ -115,11 +124,27 @@ pub struct HolocronPanelPlugin;
 impl Plugin for HolocronPanelPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<HolocronState>()
-            .add_systems(Update, toggle_cmdk.run_if(in_playing_state))
+            .init_resource::<HolocronOpenedAt>()
+            .add_systems(Update, (toggle_cmdk, track_holocron_open_edge).run_if(in_playing_state))
             .add_systems(
                 EguiPrimaryContextPass,
                 draw_holocron_overlay.run_if(in_playing_state),
             );
+    }
+}
+
+/// Stamp [`HolocronOpenedAt::secs`] on the open edge and clear it on close.
+fn track_holocron_open_edge(
+    state: Res<HolocronState>,
+    mut opened_at: ResMut<HolocronOpenedAt>,
+    time: Res<Time>,
+) {
+    if state.overlay_visible {
+        if opened_at.secs.is_none() {
+            opened_at.secs = Some(time.elapsed_secs() as f32);
+        }
+    } else if opened_at.secs.is_some() {
+        opened_at.secs = None;
     }
 }
 
@@ -194,6 +219,8 @@ fn draw_holocron_overlay(
     panel: Option<Res<GodPanelState>>,
     mut requests: MessageWriter<GodActionRequest>,
     bridge: Option<Res<ServerBridge>>,
+    opened_at: Res<HolocronOpenedAt>,
+    time: Res<Time>,
 ) {
     if !state.overlay_visible {
         return;
@@ -201,6 +228,11 @@ fn draw_holocron_overlay(
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
+
+    let overlay_alpha = opened_at
+        .secs
+        .map(|opened| banner_alpha((time.elapsed_secs() as f32) - opened))
+        .unwrap_or(1.0);
 
     let filtered = matched_verbs(&state.filter);
     if !filtered.is_empty() && state.cursor >= filtered.len() {
@@ -217,17 +249,23 @@ fn draw_holocron_overlay(
     let mut cursor_delta: i32 = 0;
 
     egui::CentralPanel::default()
-        .frame(egui::Frame::NONE.fill(egui::Color32::from_black_alpha(200)))
+        .frame(
+            egui::Frame::NONE.fill(
+                egui::Color32::from_black_alpha(200).gamma_multiply(overlay_alpha),
+            ),
+        )
         .show(ctx, |ui| {
             let avail = ui.available_size();
             let panel_w = (avail.x * 0.55).min(640.0).max(300.0);
             let panel_h = (avail.y * 0.60).min(480.0).max(200.0);
 
+            let panel_fill = egui::Color32::from_rgb(22, 22, 30).gamma_multiply(overlay_alpha);
+
             egui::Area::new(egui::Id::new("cmdk-overlay"))
                 .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, -40.0))
                 .show(ui.ctx(), |ui| {
                     egui::Frame::NONE
-                        .fill(egui::Color32::from_rgb(22, 22, 30))
+                        .fill(panel_fill)
                         .inner_margin(12.0)
                         .show(ui, |ui| {
                             ui.set_min_width(panel_w);

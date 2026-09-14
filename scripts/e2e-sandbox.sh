@@ -15,9 +15,10 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-cd "$REPO_ROOT"
+cd "${REPO_ROOT}"
 
 QUICK=0
+APP_TEST=0
 SEED="${CIVIS_PLAYTHROUGH_SEED:-42}"
 SERVER_PORT="${CIV_SERVER_PORT:-3000}"
 TIMEOUT="${HEALTH_TIMEOUT_SECONDS:-60}"
@@ -26,14 +27,15 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --quick)  QUICK=1; shift ;;
         --seed)   SEED="$2"; shift 2 ;;
+        --app)    APP_TEST=1; shift ;;
         *) echo "Unknown arg: $1"; exit 1 ;;
     esac
 done
 
-export CIVIS_PLAYTHROUGH_SEED="$SEED"
-export CIV_SERVER_PORT="$SERVER_PORT"
+export CIVIS_PLAYTHROUGH_SEED="${SEED}"
+export CIV_SERVER_PORT="${SERVER_PORT}"
 export CIV_WS_URL="ws://127.0.0.1:${SERVER_PORT}/ws"
-export HEALTH_TIMEOUT_SECONDS="$TIMEOUT"
+export HEALTH_TIMEOUT_SECONDS="${TIMEOUT}"
 
 SANDBOX_DIR="${REPO_ROOT}/.e2e-sandbox"
 LOG_DIR="${SANDBOX_DIR}/logs"
@@ -41,17 +43,17 @@ SAVE_DIR="${SANDBOX_DIR}/saves"
 REPLAY_DIR="${SANDBOX_DIR}/replays"
 
 C_OK="\033[32m"; C_FAIL="\033[31m"; C_INFO="\033[36m"; C_RST="\033[0m"
-step()  { printf '%b[e2e]%b %s\n' "$C_INFO" "$C_RST" "$*"; }
-ok()    { printf '%b  ok  %b %s\n' "$C_OK"  "$C_RST" "$*"; }
-fail()  { printf '%b FAIL %b %s\n' "$C_FAIL" "$C_RST" "$*" >&2; }
+step()  { printf '%b[e2e]%b %s\n' "${C_INFO}" "${C_RST}" "$*"; }
+ok()    { printf '%b  ok  %b %s\n' "${C_OK}"  "${C_RST}" "$*"; }
+fail()  { printf '%b FAIL %b %s\n' "${C_FAIL}" "${C_RST}" "$*" >&2; }
 
 # Preflight
 step "Setting up sandbox..."
 mkdir -p "$LOG_DIR" "$SAVE_DIR" "$REPLAY_DIR"
 
 if lsof -ti :"$SERVER_PORT" &>/dev/null 2>&1; then
-    step "Killing existing server on port $SERVER_PORT..."
-    kill $(lsof -ti :"$SERVER_PORT") 2>/dev/null || true
+    step "Killing existing server on port ${SERVER_PORT}..."
+    kill "$(lsof -ti :"${SERVER_PORT}")" 2>/dev/null || true
     sleep 1
 fi
 
@@ -68,7 +70,7 @@ done
 
 # Build
 SERVER_BINARY="target/release/civ-server"
-if [[ "$QUICK" -eq 1 ]] && [[ -f "$SERVER_BINARY" ]]; then
+if [[ "${QUICK}" -eq 1 ]] && [[ -f "${SERVER_BINARY}" ]]; then
     step "Skipping build (--quick)"
 else
     step "Building civ-server (release)..."
@@ -106,10 +108,21 @@ cleanup() {
 }
 trap cleanup EXIT
 
+if [[ "$APP_TEST" -eq 1 ]]; then
+    step "Building macOS .app bundle..."
+    bash "${REPO_ROOT}/scripts/build-macos-app.sh" --no-build 2>/dev/null || \
+        bash "${REPO_ROOT}/scripts/build-macos-app.sh"
+    if [[ -f "${REPO_ROOT}/Civis.app/Contents/MacOS/civ-bevy-window" ]]; then
+        ok ".app bundle exists"
+    else
+        fail ".app bundle not created"; exit 4
+    fi
+fi
+
 # Playthrough
-step "Running playthrough (seed=$SEED)..."
+step "Running playthrough (seed=${SEED})..."
 PLAYTHROUGH_LOG="${LOG_DIR}/playthrough.log"
-if bash "${REPO_ROOT}/scripts/playthrough.sh" 2>&1 | tee "$PLAYTHROUGH_LOG"; then
+if bash "${REPO_ROOT}/scripts/playthrough.sh" 2>&1 | tee "${PLAYTHROUGH_LOG}"; then
     ok "Playthrough PASSED"
 else
     fail "Playthrough FAILED"; exit 3
@@ -131,7 +144,11 @@ else
 fi
 
 echo ""
+if [[ "${APP_TEST}" -eq 1 ]]; then
+    step "App test complete"
+fi
+
 ok "=== E2E Sandbox: ALL PASSED ==="
-echo "  Seed:  $SEED"
+echo "  Seeds: ${SEED}"
 echo "  Logs:  ${LOG_DIR}/"
 echo "  Saves: ${SAVE_DIR}/"

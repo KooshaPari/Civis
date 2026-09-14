@@ -12,8 +12,8 @@ permissions:
     contents: read
 
 jobs:
-    build-standalone:
-        name: build civ-standalone (windows)
+    build-windows:
+        name: civ-standalone (windows)
         runs-on: windows-latest
         steps:
             - name: Checkout
@@ -27,9 +27,7 @@ jobs:
               with:
                   cache-all-crates: true
             - name: Build civ-standalone
-              run:
-                  cargo build --locked --release -p civ-bevy-ref --bin civ-standalone --features
-                  bevy,egui
+              run: cargo build --locked --release -p civ-bevy-ref --bin civ-standalone --features bevy,egui,client-bins
             - name: Package executable + assets
               run: |
                   New-Item -ItemType Directory -Path artifact | Out-Null
@@ -42,3 +40,88 @@ jobs:
                   path: |
                       artifact/civ-standalone.exe
                       artifact/assets
+
+    build-macos:
+        name: civ-standalone (macOS)
+        runs-on: macos-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v7
+            - name: Install Rust toolchain (stable)
+              uses: dtolnay/rust-toolchain@stable
+              with:
+                  toolchain: stable
+            - name: Cache cargo
+              uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
+              with:
+                  cache-all-crates: true
+            - name: Build civ-standalone
+              run: cargo build --locked --release -p civ-bevy-ref --bin civ-standalone --features bevy,egui,client-bins
+            - name: Package
+              run: |
+                  mkdir -p artifact
+                  cp target/release/civ-standalone artifact/civ-standalone
+                  cp -R clients/bevy-ref/assets artifact/assets
+                  tar czf civis-macos-nightly.tar.gz -C artifact .
+            - name: Upload artifact
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+              with:
+                  name: civ-standalone-macos
+                  path: |
+                      artifact/civ-standalone
+                      artifact/assets
+
+    build-linux:
+        name: civ-standalone (linux)
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v7
+            - name: Install Rust toolchain (stable)
+              uses: dtolnay/rust-toolchain@stable
+              with:
+                  toolchain: stable
+            - name: Install Vulkan SDK
+              run: sudo apt-get update && sudo apt-get install -y libvulkan-dev libwayland-dev libxkbcommon-dev
+            - name: Cache cargo
+              uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
+              with:
+                  cache-all-crates: true
+            - name: Build civ-standalone
+              run: cargo build --locked --release -p civ-bevy-ref --bin civ-standalone --features bevy,egui,client-bins
+            - name: Package
+              run: |
+                  mkdir -p artifact
+                  cp target/release/civ-standalone artifact/civ-standalone
+                  cp -R clients/bevy-ref/assets artifact/assets
+                  tar czf civis-linux-nightly.tar.gz -C artifact .
+            - name: Upload artifact
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+              with:
+                  name: civ-standalone-linux
+                  path: |
+                      artifact/civ-standalone
+                      artifact/assets
+
+    build-macos-app:
+        name: Civis.app (macOS)
+        runs-on: macos-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v7
+            - name: Install Rust toolchain (stable)
+              uses: dtolnay/rust-toolchain@stable
+              with:
+                  toolchain: stable
+            - name: Cache cargo
+              uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
+              with:
+                  cache-all-crates: true
+            - name: Build .app bundle
+              run: bash scripts/build-macos-app.sh
+            - name: Upload artifact
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+              with:
+                  name: civis-macos-app
+                  path: Civis.app/
+                  retention-days: 30

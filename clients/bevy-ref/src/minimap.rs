@@ -38,13 +38,24 @@ pub struct MinimapRoot;
 #[derive(Component)]
 pub struct MinimapDot;
 
-/// Marks a minimap dot with the game-clock time at which it was spawned,
-/// so the fade-in system can ramp its alpha from 0 to 1 over
-/// [`MINIMAP_DOT_FADE_SECS`].
+/// Marks a minimap dot with the game-clock time at which it was spawned
+/// (or fade-out started) and a flag field controlling its lifecycle state.
+/// The fade-in system ramps alpha 0->1 when freshly spawned; a parallel
+/// fade-out path ramps alpha 1->0 over [`MINIMAP_DOT_FADE_SECS`] when the
+/// dot is no longer present in the latest snapshot.
 #[derive(Component, Debug, Clone, Copy)]
 pub struct MinimapDotFade {
+    /// Game-clock seconds when the dot was spawned (or its fade-out started).
     pub spawned_at_secs: f32,
+    /// Bit flags. `MINIMAP_DOT_FLAG_FADING_OUT` (bit 0) means the dot was
+    /// just removed from the latest snapshot and is now in its fade-out tail.
+    /// Future flags (e.g. accent-pulse on hover) can extend this without
+    /// breaking the layout.
+    pub flags: u8,
 }
+
+/// Convenience constant for `MinimapDotFade.flags`.
+pub const MINIMAP_DOT_FLAG_FADING_OUT: u8 = 1 << 0;
 
 #[derive(Component)]
 pub struct MinimapCamera;
@@ -98,21 +109,22 @@ const MINIMAP_SNAPSHOT_INTERVAL_SECS: f32 = 5.0;
 /// view instead of popping in.
 const MINIMAP_DOT_FADE_SECS: f32 = 0.35;
 
-/// Pure helper mapping a dot's age (seconds since spawn) to its alpha in
-/// `[0.0, 1.0]`. Uses a smoothstep so the start and end of the fade are
-/// soft, not linear. Negative ages clamp to 0 (still spawning), ages past
-/// the fade window clamp to 1 (fully opaque).
-fn minimap_dot_fade_alpha(age_secs: f32) -> f32 {
+/// Pure helper mapping a dot's age and fade direction to its alpha in
+/// `[0.0, 1.0]`. When `fading_out` is false: smoothstep 0->1 over
+/// `MINIMAP_DOT_FADE_SECS` (the entrance). When `fading_out` is true: smoothstep
+/// 1->0 over the same window (the exit). Negative ages clamp to the start of
+/// the curve; ages past the window clamp to the end of the curve.
+fn minimap_dot_fade_alpha(age_secs: f32, fading_out: bool) -> f32 {
     if age_secs <= 0.0 {
-        return 0.0;
+        return if fading_out { 1.0 } else { 0.0 };
     }
     if age_secs >= MINIMAP_DOT_FADE_SECS {
-        return 1.0;
+        return if fading_out { 0.0 } else { 1.0 };
     }
     let t = age_secs / MINIMAP_DOT_FADE_SECS;
-    // smoothstep: 3t^2 - 2t^3 — see std::f32::smoothstep, but written out
-    // to keep this pure (no float method calls) and trivially testable.
-    t * t * (3.0 - 2.0 * t)
+    // smoothstep: 3t^2 - 2t^3
+    let s = t * t * (3.0 - 2.0 * t);
+    if fading_out { 1.0 - s } else { s }
 }
 /// Resource tracking the last snapshot fire time so we can throttle the poll.
 #[derive(Resource, Debug, Default, Clone, Copy)]
@@ -352,6 +364,7 @@ fn sync_minimap_dots(
                     MinimapDot,
                     MinimapDotFade {
                         spawned_at_secs: spawned_at,
+                        flags: 0,
                     },
                     FocusPolicy::Pass,
                 ));
@@ -375,6 +388,7 @@ fn sync_minimap_dots(
                     MinimapDot,
                     MinimapDotFade {
                         spawned_at_secs: spawned_at,
+                        flags: 0,
                     },
                     FocusPolicy::Pass,
                 ));
@@ -403,6 +417,7 @@ fn sync_minimap_dots(
                     MinimapDot,
                     MinimapDotFade {
                         spawned_at_secs: spawned_at,
+                        flags: 0,
                     },
                     FocusPolicy::Pass,
                 ));
@@ -424,6 +439,7 @@ fn sync_minimap_dots(
                     MinimapDot,
                     MinimapDotFade {
                         spawned_at_secs: spawned_at,
+                        flags: 0,
                     },
                     FocusPolicy::Pass,
                 ));
@@ -441,7 +457,8 @@ fn update_minimap_dot_fade(
 ) {
     let now = time.elapsed_secs();
     for (fade, mut bg) in &mut dots {
-        let alpha = minimap_dot_fade_alpha(now - fade.spawned_at_secs);
+        let fading_out = (fade.flags & MINIMAP_DOT_FLAG_FADING_OUT) != 0;
+        let alpha = minimap_dot_fade_alpha(now - fade.spawned_at_secs, fading_out);
         let mut c = bg.0;
         c.set_alpha(alpha);
         bg.0 = c;
@@ -743,18 +760,18 @@ mod dot_fade_tests {
 
     #[test]
     fn alpha_is_zero_when_dot_has_not_aged_yet() {
-        assert_eq!(minimap_dot_fade_alpha(0.0), 0.0);
-        assert_eq!(minimap_dot_fade_alpha(-1.0), 0.0);
+        assert_eq!(minimap_dot_fade_alpha(0.0, false), 0.0);
+        assert_eq!(minimap_dot_fade_alpha(-1.0, false), 0.0);
         // Tiny epsilon still considered "just spawned".
-        assert_eq!(minimap_dot_fade_alpha(-0.0001), 0.0);
+        assert_eq!(minimap_dot_fade_alpha(-0.0001, false), 0.0);
     }
 
     #[test]
     fn alpha_reaches_one_after_fade_window_elapses() {
-        assert_eq!(minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS), 1.0);
+        assert_eq!(minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS, false), 1.0);
         // Any age past the window stays opaque.
-        assert_eq!(minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS + 5.0), 1.0);
-        assert_eq!(minimap_dot_fade_alpha(60.0), 1.0);
+        assert_eq!(minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS + 5.0, false), 1.0);
+        assert_eq!(minimap_dot_fade_alpha(60.0, false), 1.0);
     }
 
     #[test]
@@ -763,19 +780,19 @@ mod dot_fade_tests {
         // (the inflection point). Verify both halves: below the inflection
         // the curve is sub-linear; above it the curve is super-linear; at
         // the inflection it equals 0.5 exactly.
-        let mid = minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS * 0.5);
+        let mid = minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS * 0.5, false);
         assert!(
             (mid - 0.5).abs() < 1e-5,
             "smoothstep at midpoint should equal 0.5, got {mid}"
         );
         // Below inflection, sub-linear (slower start than linear ramp).
-        let q1 = minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS * 0.25);
+        let q1 = minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS * 0.25, false);
         assert!(
             q1 < 0.25,
             "smoothstep at 1/4 should be below linear (0.25), got {q1}"
         );
         // Above inflection, super-linear (faster finish than linear ramp).
-        let q3 = minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS * 0.75);
+        let q3 = minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS * 0.75, false);
         assert!(
             q3 > 0.75,
             "smoothstep at 3/4 should be above linear (0.75), got {q3}"
@@ -790,10 +807,54 @@ mod dot_fade_tests {
         let mut prev = 0.0;
         for i in 0..=10 {
             let age = MINIMAP_DOT_FADE_SECS * (i as f32 / 10.0);
-            let a = minimap_dot_fade_alpha(age);
+            let a = minimap_dot_fade_alpha(age, false);
             assert!(
                 a >= prev,
                 "alpha must not regress within the fade window: \
+                 prev={prev} at sample {i} age={age} now={a}"
+            );
+            prev = a;
+        }
+    }
+
+    #[test]
+    fn fade_out_alpha_is_one_at_age_zero() {
+        // A dot that just started fading out should still be fully opaque
+        // (matches its pre-fade state).
+        assert_eq!(minimap_dot_fade_alpha(0.0, true), 1.0);
+        assert_eq!(minimap_dot_fade_alpha(-0.5, true), 1.0);
+    }
+
+    #[test]
+    fn fade_out_alpha_is_zero_after_window() {
+        // After the fade window elapses, the dot is gone.
+        assert_eq!(minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS, true), 0.0);
+        assert_eq!(minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS + 5.0, true), 0.0);
+    }
+
+    #[test]
+    fn fade_out_alpha_is_smoothstep_inflection_at_midpoint() {
+        // At the midpoint of the fade-out window, alpha should be 0.5
+        // (the smoothstep inflection).
+        let mid = minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS * 0.5, true);
+        assert!(
+            (mid - 0.5).abs() < 1e-5,
+            "fade-out smoothstep at midpoint should equal 0.5, got {mid}"
+        );
+    }
+
+    #[test]
+    fn fade_out_alpha_is_monotonically_decreasing_across_window() {
+        // The fade-out must form a strictly non-increasing sequence — no
+        // overshoot (alpha going back up) would look like the dot popped
+        // back in.
+        let mut prev = 1.0;
+        for i in 0..=10 {
+            let age = MINIMAP_DOT_FADE_SECS * (i as f32 / 10.0);
+            let a = minimap_dot_fade_alpha(age, true);
+            assert!(
+                a <= prev,
+                "fade-out alpha must not regress (rise) within the window: \
                  prev={prev} at sample {i} age={age} now={a}"
             );
             prev = a;

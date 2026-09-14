@@ -717,7 +717,7 @@ pub struct Simulation {
     pub weather_grid: Vec<WeatherCell>,
     /// Construction queue of in-progress `BuildSite`s.
     /// Drives `phase_construction_sites` per-tick progress + completion (FR-CIV-BUILD-001/002).
-    pub(crate) build_sites: Vec<BuildSite>,
+    pub build_sites: Vec<BuildSite>,
     /// Construction events emitted during the most recent tick (FR-CIV-BUILD-002).
     /// Reset at the start of every [`Simulation::tick`]; surfaced through the
     /// JSON-RPC bridge so Bevy clients can render scaffolding + completion FX.
@@ -750,7 +750,7 @@ pub struct Simulation {
     /// Currently-active institutions per settlement, keyed by
     /// `(settlement_id, kind)`. Tracks the latest known level so we can detect
     /// upgrades (FR-CIV-GOV-003).
-    pub(crate) institutions: BTreeMap<u32, Vec<civ_institutions::Institution>>,
+    pub institutions: BTreeMap<u32, Vec<civ_institutions::Institution>>,
     /// Civic events emitted by the most recent [`Simulation::phase_institutions`]
     /// call (cleared at the start of every [`Simulation::tick`], alongside the
     /// other `last_tick_*` buffers). Surfaced to the JSON-RPC bridge so the
@@ -759,7 +759,7 @@ pub struct Simulation {
     /// Monotonic set of `(settlement_id, kind, level)` we have already emitted
     /// as an `Upgraded` event. Guarantees one-shot upgrade emission even
     /// across population dips/rebounds (FR-CIV-GOV-003).
-    pub(crate) institution_levels_emitted: BTreeSet<(u32, u8, u8)>,
+    pub institution_levels_emitted: BTreeSet<(u32, u8, u8)>,
 
     /// Per-settlement food stock, settable by tests + scenario loaders so
     /// [`Simulation::phase_social_mood`] can derive `food_score` deterministically
@@ -883,7 +883,7 @@ pub struct Simulation {
     // ── Phase A10/A11: Economic Focus (FR-CIV-ECON-001) ───────────────────
     /// Per-settlement economic focus state (FR-CIV-ECON-001). Last-known focus
     /// per settlement, surfaced through `last_tick_economic_focus`.
-    pub(crate) econ_focus: BTreeMap<u32, EconomicFocus>,
+    pub econ_focus: BTreeMap<u32, EconomicFocus>,
 
     /// Per-tick buffer of [`EconomicFocusEvent`]s emitted by
     /// [`Simulation::phase_economic_focus_pre`]. Cleared at the start of
@@ -3013,6 +3013,17 @@ impl Simulation {
     #[must_use]
     pub fn settlement_count(&self) -> u32 {
         self.last_settlement_count
+    }
+
+    /// Ids of emergent settlements from the most recent life phase. Used by
+    /// persistence round-trip tests and any consumer that needs the actual
+    /// settlement roster (not just the count). Returned in ascending order
+    /// for stable persistence assertions.
+    #[must_use]
+    pub fn last_tick_settlement_ids(&self) -> Vec<u32> {
+        let mut ids: Vec<u32> = self.settlements.keys().copied().collect();
+        ids.sort_unstable();
+        ids
     }
 
     /// Per-cluster (settlement) resource stocks keyed by `ClusterId` value, for

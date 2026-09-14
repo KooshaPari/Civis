@@ -424,6 +424,16 @@ pub struct WorldState {
     pub historical_log: crate::history::HistoryLog,
     #[serde(default, skip)]
     pub faction_writing_systems: BTreeMap<u32, crate::writing::WritingSystem>,
+
+    // Diplomacy state (FR-CIV-DIPLOMACY-004) — durable across archive round-trip.
+    #[serde(default)]
+    pub stance_engine: civ_diplomacy::stance::DiplomacyStanceEngine,
+    #[serde(default)]
+    pub deep_diplomacy: crate::diplomacy::DeepDiplomacyState,
+    #[serde(default)]
+    pub faction_relations: crate::diplomacy::FactionRelations,
+    #[serde(default)]
+    pub grief_accumulator: civ_agents::diplomacy::GriefAccumulator,
 }
 
 impl PartialEq for WorldState {
@@ -519,6 +529,10 @@ impl Default for WorldState {
             settlement_building_layouts: BTreeMap::new(),
             historical_log: crate::history::HistoryLog::with_capacity(500),
             faction_writing_systems: BTreeMap::new(),
+            stance_engine: civ_diplomacy::stance::DiplomacyStanceEngine::default(),
+            deep_diplomacy: crate::diplomacy::DeepDiplomacyState::default(),
+            faction_relations: crate::diplomacy::FactionRelations::default(),
+            grief_accumulator: civ_agents::diplomacy::GriefAccumulator::default(),
         }
     }
 }
@@ -2105,6 +2119,17 @@ impl Simulation {
         self.phase_audio();
         // Victory/defeat after event phases so last_game_outcome matches this tick.
         self.phase_victory_check();
+        // Persistence mirrors (FR-CIV-DIPLOMACY-001): the four diplomacy
+        // state surfaces are Simulation-owned, mutated every tick by
+        // phase_diplomacy + phase_faction_decisions + stance_engine
+        // decay, but the .civsave.zst archive only persists the
+        // WorldState side. Mirror live -> state right before the
+        // replay tick event so the archive snapshot captures the
+        // latest post-tick diplomacy values.
+        self.state.faction_relations = self.faction_relations.clone();
+        self.state.grief_accumulator = self.grief_accumulator.clone();
+        self.state.stance_engine = self.stance_engine.clone();
+        self.state.deep_diplomacy = self.deep_diplomacy.clone();
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]

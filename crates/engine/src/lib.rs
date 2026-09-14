@@ -206,6 +206,11 @@ pub use engine::{
     last_tick_unrest, last_tick_unrest_settlement, set_settlement_gini, unrest_level, UnrestEvent,
     UnrestLevel, UnrestSnapshot,
 };
+// FR-CIV-LANG-001 (culture/language drift). Re-exported so callers can
+// name the language types as `civ_engine::LanguageState` etc. without
+// pulling the private `engine` module path.
+pub use engine::LanguageState;
+
 pub use integrity::{check_integrity, IntegrityError};
 pub use invariants::{check_tick_invariants, InvariantError};
 pub use lod::LodTier;

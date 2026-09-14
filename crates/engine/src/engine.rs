@@ -434,6 +434,14 @@ pub struct WorldState {
     pub faction_relations: crate::diplomacy::FactionRelations,
     #[serde(default)]
     pub grief_accumulator: civ_agents::diplomacy::GriefAccumulator,
+
+    // Language state (FR-CIV-LANG-001) — durable across archive round-trip.
+    // Mutated every tick by phase_culture; loss on reload silently resets
+    // emergent language drift and faction-level intelligibility bonuses.
+    #[serde(default)]
+    pub language_state: LanguageState,
+    #[serde(default)]
+    pub faction_languages: BTreeMap<u32, LanguageState>,
 }
 
 impl PartialEq for WorldState {
@@ -533,6 +541,8 @@ impl Default for WorldState {
             deep_diplomacy: crate::diplomacy::DeepDiplomacyState::default(),
             faction_relations: crate::diplomacy::FactionRelations::default(),
             grief_accumulator: civ_agents::diplomacy::GriefAccumulator::default(),
+            language_state: LanguageState::default(),
+            faction_languages: BTreeMap::new(),
         }
     }
 }
@@ -693,10 +703,10 @@ pub struct Simulation {
     /// Emergent language state (FR-CIV-LANG-001). Driven by
     /// [`Simulation::phase_language_drift`]; consumed by the diplomacy pipeline via
     /// [`language_intelligibility_peace_bonus`].
-    language_state: LanguageState,
+    pub(crate) language_state: LanguageState,
     /// Per-faction emergent language states (FR-LANGUAGE-001) used for naming
     /// and isolation-aware drift coupling.
-    faction_languages: BTreeMap<u32, LanguageState>,
+    pub(crate) faction_languages: BTreeMap<u32, LanguageState>,
     /// Per-tick sentience evaluation profile (FR-CIV-GENETICS / FR-CIV-LEGENDS).
     /// Read by [`Simulation::phase_sentience`] to determine which lineages
     /// cross the cognition threshold this tick.
@@ -2130,6 +2140,13 @@ impl Simulation {
         self.state.grief_accumulator = self.grief_accumulator.clone();
         self.state.stance_engine = self.stance_engine.clone();
         self.state.deep_diplomacy = self.deep_diplomacy.clone();
+        // Persistence mirrors (FR-CIV-LANG-001): language_state and
+        // faction_languages are Simulation-owned, mutated every tick by
+        // phase_language_drift + phase_culture. Without these mirrors
+        // the .civsave.zst archive would never capture the emergent
+        // language drift state, silently resetting it on every reload.
+        self.state.language_state = self.language_state.clone();
+        self.state.faction_languages = self.faction_languages.clone();
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]
@@ -2878,7 +2895,7 @@ impl Simulation {
         &self.faction_languages
     }
 
-    pub(crate) fn set_faction_languages(
+    pub fn set_faction_languages(
         &mut self,
         faction_languages: BTreeMap<u32, LanguageState>,
     ) {

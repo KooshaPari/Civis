@@ -475,6 +475,12 @@ impl CivSaveBundle {
             sim.grief_accumulator = sim.state.grief_accumulator.clone();
             sim.stance_engine = sim.state.stance_engine.clone();
             sim.deep_diplomacy = sim.state.deep_diplomacy.clone();
+            // Mirror persisted language-drift state back onto the live
+            // Simulation so phase_language_drift resumes with the same
+            // emergent phoneme inventory / intelligibility matrix as the
+            // pre-save run.
+            sim.language_state = sim.state.language_state.clone();
+            sim.faction_languages = sim.state.faction_languages.clone();
         }
 
         let environment_path = dir.join(ENVIRONMENT_FILE);

@@ -14,6 +14,7 @@ use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 use crate::live_stream::LiveStreamScene;
 use crate::live_stream::ServerBridge;
 use crate::outcome_overlay::{outcome_modal_visible, OutcomeOverlayState, OutcomeSessionGate};
+use crate::ui_theme::{banner_alpha, BANNER_FADE_IN_SECS};
 use crate::{MusicCues, OutcomeProgressHud};
 
 // ── Palette (mirrors emergence_dashboard / faction_hud) ───────────────────────
@@ -42,6 +43,14 @@ impl Default for GameplayHudOpen {
     }
 }
 
+/// Wall-clock timestamp at which the current outcome banner first became visible.
+/// Used to drive `banner_alpha(age)` for the in-game outcome banner so the
+/// banner fades in over `BANNER_FADE_IN_SECS` (consistent with toast/tooltip/
+/// minimap-dot fade-in). Cleared when the outcome disappears so the next
+/// banner starts from zero age again.
+#[derive(Resource, Debug, Clone, Copy, Default)]
+pub struct GameplayHudOutcomeVisibleSince(pub Option<f32>);
+
 // ── Plugin ────────────────────────────────────────────────────────────────────
 
 /// Registers the gameplay HUD (F9 toggle).
@@ -52,7 +61,8 @@ impl Plugin for GameplayHudPlugin {
         app.init_resource::<GameplayHudOpen>()
             .init_resource::<MusicCues>()
             .init_resource::<OutcomeProgressHud>()
-            .add_systems(Update, toggle_gameplay_hud)
+            .init_resource::<GameplayHudOutcomeVisibleSince>()
+            .add_systems(Update, (toggle_gameplay_hud, track_outcome_visible_since))
             .add_systems(
                 EguiPrimaryContextPass,
                 draw_gameplay_hud.run_if(crate::menus::in_playing),
@@ -68,15 +78,45 @@ fn toggle_gameplay_hud(keys: Res<ButtonInput<KeyCode>>, mut open: ResMut<Gamepla
     }
 }
 
+/// Sets `visible_since_secs` on the None->Some edge for the gameplay HUD
+/// outcome banner so the banner fades in over `BANNER_FADE_IN_SECS`.
+fn track_outcome_visible_since(
+    time: Res<Time>,
+    outcome_state: Option<Res<OutcomeOverlayState>>,
+    session_gate: Option<Res<OutcomeSessionGate>>,
+    mut visible_since: ResMut<GameplayHudOutcomeVisibleSince>,
+) {
+    let now = time.elapsed_secs();
+    let session_active = session_gate
+        .as_deref()
+        .map(|gate| gate.session_active)
+        .unwrap_or(false);
+    let banner_visible = outcome_state
+        .as_deref()
+        .map(|state| session_active && outcome_modal_visible(state))
+        .unwrap_or(false);
+    match (banner_visible, visible_since.0) {
+        (true, None) => visible_since.0 = Some(now),
+        (false, _) => visible_since.0 = None,
+        _ => {}
+    }
+    // Touch the constant to keep the import live if `time` is unused by the
+    // toolchain's dead-code elimination pass on optional `Res` access.
+    let _ = BANNER_FADE_IN_SECS;
+}
+
 fn draw_gameplay_hud(
     mut contexts: EguiContexts,
     open: Res<GameplayHudOpen>,
+    bridge: Option<Res<ServerBridge>>,
+    live_bridge: Option<Res<crate::live_attach::LiveAttachBridge>>,
     scene: Res<LiveStreamScene>,
     music_cues: Res<MusicCues>,
-    outcome_progress: Res<OutcomeProgressHud>,
     outcome_state: Option<Res<OutcomeOverlayState>>,
     session_gate: Option<Res<OutcomeSessionGate>>,
-    bridge: Option<Res<ServerBridge>>,
+    outcome_progress: Res<OutcomeProgressHud>,
+    visible_since: Res<GameplayHudOutcomeVisibleSince>,
+    time: Res<Time>,
 ) {
     if !open.0 {
         return;

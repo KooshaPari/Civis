@@ -11,6 +11,7 @@ use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 use crate::live_attach::LiveAttachBridge;
 use crate::menus::{toggle_pause, AppState};
+use crate::ui_theme::banner_alpha;
 use crate::OutcomeProgressHud;
 
 /// Gates when terminal outcomes may surface the modal (Paradox-style shell).
@@ -39,6 +40,10 @@ impl Default for OutcomeSessionGate {
 pub struct OutcomeOverlayState {
     pub outcome: Option<crate::OutcomeHudData>,
     pub dismissed: bool,
+    /// Game-clock seconds when the current outcome became visible (None→Some edge).
+    /// Used by `draw_outcome_overlay` to compute the fade-in alpha via
+    /// `crate::ui_theme::banner_alpha`.
+    pub visible_since_secs: Option<f32>,
 }
 
 /// One-frame flag: escape dismissed the outcome modal this frame (blocks pause toggle).
@@ -117,6 +122,15 @@ pub fn apply_outcome_poll(
     state.outcome = Some(data);
 }
 
+/// Stamp `visible_since_secs` when an outcome transitions from None → Some so
+/// `draw_outcome_overlay` can apply the banner fade-in. Caller passes `now_secs`
+/// (typically `Time::elapsed_secs()`).
+pub fn mark_outcome_visible(state: &mut OutcomeOverlayState, now_secs: f32) {
+    if state.outcome.is_some() && state.visible_since_secs.is_none() {
+        state.visible_since_secs = Some(now_secs);
+    }
+}
+
 pub struct OutcomeOverlayPlugin;
 
 impl Plugin for OutcomeOverlayPlugin {
@@ -159,9 +173,11 @@ fn poll_outcome_system(
     mut gate: ResMut<OutcomeSessionGate>,
     mut state: ResMut<OutcomeOverlayState>,
     mut progress: ResMut<OutcomeProgressHud>,
+    time: Res<Time>,
 ) {
     if let Some(data) = bridge.client.poll_outcome() {
         apply_outcome_poll(&mut gate, &mut state, &mut progress, data);
+        mark_outcome_visible(&mut state, time.elapsed_secs());
     }
 }
 
@@ -171,6 +187,7 @@ fn draw_outcome_overlay(
     mut state: ResMut<OutcomeOverlayState>,
     bridge: Res<LiveAttachBridge>,
     app_state: Option<Res<State<AppState>>>,
+    time: Res<Time>,
 ) {
     if !gate.session_active {
         return;
@@ -198,6 +215,13 @@ fn draw_outcome_overlay(
         egui::Color32::from_rgb(0xe0, 0x5c, 0x5c) // red
     };
 
+    // Banner fade-in alpha — ramp 0 -> 1 over BANNER_FADE_IN_SECS, hold, fade-out.
+    let age_secs = state
+        .visible_since_secs
+        .map(|t0| (time.elapsed_secs() - t0).max(0.0))
+        .unwrap_or(0.0);
+    let alpha = banner_alpha(age_secs);
+
     egui::Area::new(egui::Id::new("outcome_overlay"))
         .fixed_pos(egui::pos2(0.0, 0.0))
         .order(egui::Order::Middle)
@@ -207,16 +231,26 @@ fn draw_outcome_overlay(
                 screen.size(),
                 egui::Layout::centered_and_justified(egui::Direction::TopDown),
                 |ui| {
-                    // dim backdrop
+                    // dim backdrop — alpha ramps from 0 -> 210 over BANNER_FADE_IN_SECS
                     ui.painter().rect_filled(
                         screen,
                         0.0,
-                        egui::Color32::from_rgba_unmultiplied(9, 10, 12, 210),
+                        egui::Color32::from_rgba_unmultiplied(9, 10, 12, (210.0 * alpha) as u8),
                     );
 
+                    let frame_alpha = (240.0 * alpha) as u8;
+                    let stroke_alpha = (255.0 * alpha) as u8;
                     egui::Frame::NONE
-                        .fill(egui::Color32::from_rgba_unmultiplied(9, 10, 12, 240))
-                        .stroke(egui::Stroke::new(1.5, header_color))
+                        .fill(egui::Color32::from_rgba_unmultiplied(9, 10, 12, frame_alpha))
+                        .stroke(egui::Stroke::new(
+                            1.5,
+                            egui::Color32::from_rgba_unmultiplied(
+                                header_color.r(),
+                                header_color.g(),
+                                header_color.b(),
+                                stroke_alpha,
+                            ),
+                        ))
                         .inner_margin(egui::Margin::same(40))
                         .corner_radius(egui::CornerRadius::same(8))
                         .show(ui, |ui| {
@@ -229,10 +263,23 @@ fn draw_outcome_overlay(
                                 egui::RichText::new(label).size(36.0).strong(),
                             );
                             ui.colored_label(
-                                egui::Color32::WHITE,
+                                egui::Color32::from_rgba_unmultiplied(
+                                    255,
+                                    255,
+                                    255,
+                                    stroke_alpha,
+                                ),
                                 egui::RichText::new(&outcome.reason).size(20.0),
                             );
-                            ui.colored_label(egui::Color32::GRAY, format!("Tick {}", outcome.tick));
+                            ui.colored_label(
+                                egui::Color32::from_rgba_unmultiplied(
+                                    180,
+                                    180,
+                                    180,
+                                    stroke_alpha,
+                                ),
+                                format!("Tick {}", outcome.tick),
+                            );
 
                             ui.add_space(8.0);
                             ui.horizontal(|ui| {
@@ -363,6 +410,7 @@ mod tests {
                 progress: None,
             }),
             dismissed: true,
+            visible_since_secs: None,
         };
         let mut progress = OutcomeProgressHud::default();
         apply_outcome_poll(
@@ -394,6 +442,7 @@ mod tests {
                 progress: None,
             }),
             dismissed: true,
+            visible_since_secs: None,
         };
         let mut progress = OutcomeProgressHud::default();
         apply_outcome_poll(

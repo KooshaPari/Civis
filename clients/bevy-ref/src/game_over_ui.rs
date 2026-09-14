@@ -13,7 +13,7 @@ use bevy_egui::{egui, EguiContexts};
 
 use crate::live_stream::ServerBridge;
 use crate::menus::{AppState, MainMenuCommand, MenuCommand};
-use crate::ui_theme::liquid_glass_frame;
+use crate::ui_theme::{banner_alpha, liquid_glass_frame};
 
 // ---------------------------------------------------------------------------
 // Theme constants (match menus.rs)
@@ -69,6 +69,13 @@ impl Default for GameOverSnapshot {
 #[derive(Resource, Default, Debug)]
 pub struct GameOverLogExpanded(pub bool);
 
+/// Wall-clock time (seconds since app startup) when the game-over state
+/// was first entered for the current snapshot. Set on the snapshot-fresh
+/// edge so [`banner_alpha`](crate::ui_theme::banner_alpha) can drive the
+/// fade-in for the outcome panel.
+#[derive(Resource, Debug, Default)]
+pub struct GameOverVisibleSince(pub Option<f32>);
+
 // ---------------------------------------------------------------------------
 // Plugin
 // ---------------------------------------------------------------------------
@@ -83,6 +90,7 @@ impl Plugin for GameOverPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GameOverSnapshot>()
             .init_resource::<GameOverLogExpanded>()
+            .init_resource::<GameOverVisibleSince>()
             .add_systems(
                 Update,
                 render_game_over.run_if(in_state(AppState::GameOver)),
@@ -105,11 +113,29 @@ fn render_game_over(
     snapshot: Res<GameOverSnapshot>,
     mut command: ResMut<MenuCommand>,
     mut log_expanded: ResMut<GameOverLogExpanded>,
+    mut visible_since: ResMut<GameOverVisibleSince>,
+    time: Res<Time>,
     bridge: Option<Res<ServerBridge>>,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
+
+    // Stamp the first frame we observe the current snapshot as the
+    // banner's visible-since mark. `tick > 0` is the proxy for "snapshot
+    // is populated" (defaults are all zero).
+    let snap_is_fresh = snapshot.tick > 0;
+    if snap_is_fresh && visible_since.0.is_none() {
+        visible_since.0 = Some(time.elapsed_secs());
+    } else if !snap_is_fresh {
+        visible_since.0 = None;
+    }
+
+    let banner_age = visible_since
+        .0
+        .map(|since| (time.elapsed_secs() - since).max(0.0))
+        .unwrap_or(0.0);
+    let alpha = banner_alpha(banner_age);
 
     draw_game_over_overlay(
         ctx,
@@ -117,6 +143,7 @@ fn render_game_over(
         &mut command,
         &mut log_expanded,
         bridge.as_deref(),
+        alpha,
     );
 }
 
@@ -130,15 +157,19 @@ fn draw_game_over_overlay(
     command: &mut MenuCommand,
     log_expanded: &mut GameOverLogExpanded,
     bridge: Option<&ServerBridge>,
+    alpha: f32,
 ) {
-    // Full-screen dim overlay background.
+    // Full-screen dim overlay background. Dim and panel fade together so
+    // the banner reads as a single animation unit.
     let screen = ctx.content_rect();
+    let overlay_dim = OVERLAY_DIM.gamma_multiply(alpha);
+    let panel_fill = PANEL_FILL.gamma_multiply(alpha);
     egui::Area::new(egui::Id::new("game_over_dim"))
         .fixed_pos(egui::pos2(0.0, 0.0))
         .order(egui::Order::Middle)
         .show(ctx, |ui| {
             ui.painter()
-                .rect_filled(screen, egui::CornerRadius::ZERO, OVERLAY_DIM);
+                .rect_filled(screen, egui::CornerRadius::ZERO, overlay_dim);
         });
 
     // Centered outcome panel.
@@ -148,7 +179,7 @@ fn draw_game_over_overlay(
         .show(ctx, |ui| {
             egui::Frame::NONE
                 .corner_radius(egui::CornerRadius::same(crate::ui_theme::RADIUS_PANEL))
-                .fill(PANEL_FILL)
+                .fill(panel_fill)
                 .stroke(egui::Stroke::new(1.0, crate::ui_theme::GLASS_EDGE))
                 .inner_margin(egui::Margin::same(28))
                 .show(ui, |ui| {

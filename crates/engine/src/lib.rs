@@ -116,7 +116,7 @@ pub use building_emergence::{
     emergent_style_key_for_sim, resource_stock_units, settlement_build_anchor,
 };
 pub use civ_audio::triggers::SfxTrigger;
-pub use civ_build::{BiomeStyleTag, EmergentStyleKey};
+pub use civ_build::{BiomeStyleTag, DemandSignals, EmergentStyleKey};
 pub use civ_emergence_metrics::branching::BranchingRegime;
 pub use civ_mod_host::{load_manifest, ModBrowserEntry, ModGuestStateSave, ModType};
 pub use emergence::{CivAiDecision, EmergenceFeedEvent, EmergenceState};
@@ -210,6 +210,9 @@ pub use engine::{
 // name the language types as `civ_engine::LanguageState` etc. without
 // pulling the private `engine` module path.
 pub use engine::LanguageState;
+
+// FR-CIV-BUILD-001 (build site placement). `BuildSite` is already
+// re-exported at the top of this file from `civ_build`.
 
 pub use integrity::{check_integrity, IntegrityError};
 pub use invariants::{check_tick_invariants, InvariantError};

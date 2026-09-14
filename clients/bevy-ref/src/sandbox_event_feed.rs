@@ -13,6 +13,7 @@ use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 use crate::{
     event_feed::{EventFeed, EventKind, GameEvent},
+    ui_theme::{banner_alpha, BANNER_FADE_IN_SECS},
     EmergenceHudData,
 };
 
@@ -49,6 +50,13 @@ impl Default for SandboxEventFeedOpen {
         Self(false)
     }
 }
+
+/// Wall-clock seconds at which the sandbox event-feed panel was last
+/// opened (false→true edge). Cleared when the panel closes. The draw
+/// system uses this to ramp the panel from invisible to opaque over
+/// `BANNER_FADE_IN_SECS` so the panel never pops in.
+#[derive(Resource, Debug, Default)]
+pub struct SandboxEventFeedOpenedAt(pub Option<f32>);
 
 // ── Resource: tracked emergence state for change detection ────────────────────
 
@@ -93,8 +101,9 @@ pub struct SandboxEventFeedPlugin;
 impl Plugin for SandboxEventFeedPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<SandboxEventFeedOpen>()
+            .init_resource::<SandboxEventFeedOpenedAt>()
             .init_resource::<EmergenceEventTracker>()
-            .add_systems(Update, (toggle_sandbox_feed, detect_emergence_events))
+            .add_systems(Update, (toggle_sandbox_feed, detect_emergence_events, track_sandbox_feed_open_edge))
             .add_systems(EguiPrimaryContextPass, draw_sandbox_event_feed);
     }
 }
@@ -104,6 +113,23 @@ impl Plugin for SandboxEventFeedPlugin {
 fn toggle_sandbox_feed(keys: Res<ButtonInput<KeyCode>>, mut open: ResMut<SandboxEventFeedOpen>) {
     if keys.just_pressed(KeyCode::F8) {
         open.0 = !open.0;
+    }
+}
+
+/// Capture the false→true edge of [`SandboxEventFeedOpen`] into
+/// [`SandboxEventFeedOpenedAt`]. The draw function uses this timestamp
+/// to ramp the panel alpha from 0 to 1 over `BANNER_FADE_IN_SECS`.
+fn track_sandbox_feed_open_edge(
+    open: Res<SandboxEventFeedOpen>,
+    time: Res<Time>,
+    mut opened_at: ResMut<SandboxEventFeedOpenedAt>,
+) {
+    if open.0 {
+        if opened_at.0.is_none() {
+            opened_at.0 = Some(time.elapsed_secs());
+        }
+    } else {
+        opened_at.0 = None;
     }
 }
 
@@ -181,6 +207,7 @@ fn detect_emergence_events(
 fn draw_sandbox_event_feed(
     mut contexts: EguiContexts,
     open: Res<SandboxEventFeedOpen>,
+    opened_at: Res<SandboxEventFeedOpenedAt>,
     feed: Res<EventFeed>,
     emergence_data: Option<Res<EmergenceHudData>>,
 ) {
@@ -191,6 +218,21 @@ fn draw_sandbox_event_feed(
         return;
     };
 
+    // Ramp the panel from 0 to 1 alpha over BANNER_FADE_IN_SECS so it
+    // never pops in instantly. Skip the fade entirely if the open-edge
+    // timestamp isn't available (e.g. before the first toggle).
+    let age_secs = opened_at
+        .0
+        .map(|t| ctx.input(|i| i.time as f32) - t)
+        .unwrap_or(BANNER_FADE_IN_SECS);
+    let alpha = banner_alpha(age_secs);
+
+    // Apply the fade to text by overriding override_text_color + faint
+    // bg color with the alpha-multiplied versions. egui::Ui doesn't
+    // expose a per-closure opacity override directly, so we set the
+    // style override inside the closure.
+    let dim_text = egui::Color32::from_rgba_unmultiplied(170, 170, 180, (220.0 * alpha) as u8);
+
     egui::Window::new("Sandbox Event Feed")
         .anchor(egui::Align2::LEFT_TOP, egui::vec2(8.0, 8.0))
         .default_width(340.0)
@@ -200,11 +242,12 @@ fn draw_sandbox_event_feed(
         .title_bar(false)
         .frame(
             egui::Frame::NONE
-                .fill(PANEL_FILL)
+                .fill(PANEL_FILL.gamma_multiply(alpha))
                 .inner_margin(egui::Margin::same(14))
                 .corner_radius(egui::CornerRadius::same(10)),
         )
         .show(ctx, |ui| {
+            ui.visuals_mut().override_text_color = Some(dim_text);
             draw_header(ui, &emergence_data);
             ui.add_space(4.0);
             ui.separator();

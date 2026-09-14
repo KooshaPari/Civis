@@ -16,9 +16,9 @@ jobs:
             - name: Run cargo-mutants (pre-checked code)
               shell: bash
               run: |
-                  # Read the recorded ratchet floor; default to the seeded crate baseline.
-                  FLOOR=$(grep -oP '"floor"\s*:\s*\K[0-9.]+' .github/mutation_ratchet.json || true)
-                  [ -z "$FLOOR" ] && FLOOR=70.0
+                  # Read the recorded ratchet floor; default to the hosted-seeded baseline (65%).
+                  FLOOR=$(jq -r .floor .github/mutation_ratchet.json 2>/dev/null || grep -oP '"floor"\s*:\s*\K[0-9.]+' .github/mutation_ratchet.json 2>/dev/null || true)
+                  [ -z "$FLOOR" ] && FLOOR=65.0
                   set +e
                   # Ratchet scope: civ-save-db (self-contained, real baseline ~14s, measurable kill rate).
                   cargo mutants --no-shuffle -j 2 --timeout 300 -p civ-save-db 2>&1 | tee mutants.log

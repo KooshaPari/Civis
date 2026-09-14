@@ -48,6 +48,12 @@ const FACTION_CREST_PATHS: &[(&str, &str)] = &[
 #[derive(Resource, Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct PlayerFactionId(pub u32);
 
+/// Tracks the wall-clock instant the panel was most recently opened, so
+/// `draw_faction_hud` can apply a smoothstep fade-in via `banner_alpha`.
+/// `None` while closed.
+#[derive(Resource, Debug, Clone, Copy, Default)]
+pub struct FactionHudOpenedAt(pub Option<f32>);
+
 /// HUD open/closed toggle state.
 #[derive(Resource, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct FactionHudOpen(pub bool);
@@ -93,9 +99,10 @@ impl Plugin for FactionHudPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PlayerFactionId>()
             .init_resource::<FactionHudOpen>()
+            .init_resource::<FactionHudOpenedAt>()
             .init_resource::<FactionCrestAssets>()
             .add_systems(Startup, queue_faction_crest_handles)
-            .add_systems(Update, toggle_faction_hud)
+            .add_systems(Update, (toggle_faction_hud, track_faction_hud_open_edge).chain())
             // Register crests before draw (Bevy 0.18: avoid `.chain()` on 2-tuples).
             .add_systems(
                 EguiPrimaryContextPass,
@@ -151,9 +158,25 @@ fn toggle_faction_hud(keys: Res<ButtonInput<KeyCode>>, mut open: ResMut<FactionH
     }
 }
 
+/// Stamps `FactionHudOpenedAt` on every closed→open edge so
+/// `draw_faction_hud` can fade the panel in from `banner_alpha`.
+fn track_faction_hud_open_edge(
+    open: Res<FactionHudOpen>,
+    time: Res<Time>,
+    mut opened_at: ResMut<FactionHudOpenedAt>,
+) {
+    if open.0 && opened_at.0.is_none() {
+        opened_at.0 = Some(time.elapsed_secs());
+    } else if !open.0 {
+        opened_at.0 = None;
+    }
+}
+
 fn draw_faction_hud(
     mut contexts: EguiContexts,
     open: Res<FactionHudOpen>,
+    opened_at: Res<FactionHudOpenedAt>,
+    time: Res<Time>,
     player: Res<PlayerFactionId>,
     scene: Res<LiveStreamScene>,
     crests: Res<FactionCrestAssets>,
@@ -185,6 +208,15 @@ fn draw_faction_hud(
     let total_civilians = scene.civilian_ids.len();
     let crest_tex = crests.texture_for_faction(player.0);
 
+    // Smooth fade-in on the open edge: 0 → 1 over BANNER_FADE_IN_SECS,
+    // then hold at 1 while the panel is open. Mirrors the toast/tooltip
+    // /minimap-dot/banner fade language.
+    let banner_alpha = opened_at
+        .0
+        .map(|t| crate::ui_theme::banner_alpha(time.elapsed_secs() - t))
+        .unwrap_or(1.0);
+    let panel_fill = PANEL_FILL.linear_multiply(banner_alpha);
+
     egui::Window::new("Faction")
         .anchor(egui::Align2::LEFT_TOP, egui::vec2(8.0, 8.0))
         .resizable(false)
@@ -192,11 +224,24 @@ fn draw_faction_hud(
         .title_bar(false)
         .frame(
             egui::Frame::NONE
-                .fill(PANEL_FILL)
+                .fill(panel_fill)
                 .inner_margin(egui::Margin::same(12))
                 .corner_radius(egui::CornerRadius::same(10)),
         )
         .show(ctx, |ui| {
+            // Inner widgets inherit the alpha via override_text_color so
+            // labels and accents ride the same fade as the panel fill.
+            let faded = ui.style().visuals.override_text_color.map(|c| {
+                egui::Color32::from_rgba_unmultiplied(
+                    c.r(),
+                    c.g(),
+                    c.b(),
+                    (c.a() as f32 * banner_alpha) as u8,
+                )
+            });
+            if let Some(c) = faded {
+                ui.visuals_mut().override_text_color = Some(c);
+            }
             ui.set_min_width(200.0);
 
             // Header: faction crest (or colour swatch fallback) + name

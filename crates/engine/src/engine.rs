@@ -442,6 +442,26 @@ pub struct WorldState {
     pub language_state: LanguageState,
     #[serde(default)]
     pub faction_languages: BTreeMap<u32, LanguageState>,
+
+    // Civic institutions (FR-CIV-INSTITUTIONS-001) — durable across archive round-trip.
+    // Mutated by phase_institutions every tick (Temple/Garrison unlocks + level
+    // emissions). Loss on reload silently resets every civic institution.
+    #[serde(default)]
+    pub institutions: BTreeMap<u32, Vec<civ_institutions::Institution>>,
+    #[serde(default)]
+    pub institution_levels_emitted: BTreeSet<(u32, u8, u8)>,
+
+    // Construction sites (FR-CIV-CONSTRUCTION-001) — durable across archive round-trip.
+    // Mutated by phase_construction_sites every tick; loss on reload resets
+    // every build-in-progress structure.
+    #[serde(default)]
+    pub build_sites: Vec<civ_build::BuildSite>,
+
+    // Economic focus (FR-CIV-ECON-FOCUS-001) — durable across archive round-trip.
+    // Mutated by phase_policy_econ every tick; loss on reload resets every
+    // settlement's resource-allocation policy.
+    #[serde(default)]
+    pub econ_focus: BTreeMap<u32, EconomicFocus>,
 }
 
 impl PartialEq for WorldState {
@@ -543,6 +563,10 @@ impl Default for WorldState {
             grief_accumulator: civ_agents::diplomacy::GriefAccumulator::default(),
             language_state: LanguageState::default(),
             faction_languages: BTreeMap::new(),
+            institutions: BTreeMap::new(),
+            institution_levels_emitted: BTreeSet::new(),
+            build_sites: Vec::new(),
+            econ_focus: BTreeMap::new(),
         }
     }
 }
@@ -693,7 +717,7 @@ pub struct Simulation {
     pub weather_grid: Vec<WeatherCell>,
     /// Construction queue of in-progress `BuildSite`s.
     /// Drives `phase_construction_sites` per-tick progress + completion (FR-CIV-BUILD-001/002).
-    build_sites: Vec<BuildSite>,
+    pub(crate) build_sites: Vec<BuildSite>,
     /// Construction events emitted during the most recent tick (FR-CIV-BUILD-002).
     /// Reset at the start of every [`Simulation::tick`]; surfaced through the
     /// JSON-RPC bridge so Bevy clients can render scaffolding + completion FX.
@@ -726,7 +750,7 @@ pub struct Simulation {
     /// Currently-active institutions per settlement, keyed by
     /// `(settlement_id, kind)`. Tracks the latest known level so we can detect
     /// upgrades (FR-CIV-GOV-003).
-    institutions: BTreeMap<u32, Vec<civ_institutions::Institution>>,
+    pub(crate) institutions: BTreeMap<u32, Vec<civ_institutions::Institution>>,
     /// Civic events emitted by the most recent [`Simulation::phase_institutions`]
     /// call (cleared at the start of every [`Simulation::tick`], alongside the
     /// other `last_tick_*` buffers). Surfaced to the JSON-RPC bridge so the
@@ -735,7 +759,7 @@ pub struct Simulation {
     /// Monotonic set of `(settlement_id, kind, level)` we have already emitted
     /// as an `Upgraded` event. Guarantees one-shot upgrade emission even
     /// across population dips/rebounds (FR-CIV-GOV-003).
-    institution_levels_emitted: BTreeSet<(u32, u8, u8)>,
+    pub(crate) institution_levels_emitted: BTreeSet<(u32, u8, u8)>,
 
     /// Per-settlement food stock, settable by tests + scenario loaders so
     /// [`Simulation::phase_social_mood`] can derive `food_score` deterministically
@@ -857,10 +881,9 @@ pub struct Simulation {
     pub migrant_accumulator: BTreeMap<u32, i64>,
 
     // ── Phase A10/A11: Economic Focus (FR-CIV-ECON-001) ───────────────────
-    /// Current economic focus per settlement.
-    /// Populated by [`Simulation::phase_economic_focus`] each tick.
-    /// Defaults to [`EconomicFocus::Balanced`] for unseen settlements.
-    econ_focus: BTreeMap<u32, EconomicFocus>,
+    /// Per-settlement economic focus state (FR-CIV-ECON-001). Last-known focus
+    /// per settlement, surfaced through `last_tick_economic_focus`.
+    pub(crate) econ_focus: BTreeMap<u32, EconomicFocus>,
 
     /// Per-tick buffer of [`EconomicFocusEvent`]s emitted by
     /// [`Simulation::phase_economic_focus_pre`]. Cleared at the start of
@@ -2147,6 +2170,16 @@ impl Simulation {
         // language drift state, silently resetting it on every reload.
         self.state.language_state = self.language_state.clone();
         self.state.faction_languages = self.faction_languages.clone();
+        // Persistence mirrors (FR-CIV-INSTITUTIONS-001 + FR-CIV-CONSTRUCTION-001
+        // + FR-CIV-ECON-FOCUS-001): civic institutions, construction sites,
+        // and economic focus are Simulation-owned, mutated every tick by
+        // phase_institutions / phase_construction_sites / phase_policy_econ.
+        // Without these mirrors the .civsave.zst archive silently resets
+        // all three to defaults on every reload.
+        self.state.institutions = self.institutions.clone();
+        self.state.institution_levels_emitted = self.institution_levels_emitted.clone();
+        self.state.build_sites = self.build_sites.clone();
+        self.state.econ_focus = self.econ_focus.clone();
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]

@@ -481,6 +481,16 @@ impl CivSaveBundle {
             // pre-save run.
             sim.language_state = sim.state.language_state.clone();
             sim.faction_languages = sim.state.faction_languages.clone();
+            // Mirror persisted civic institutions, construction sites,
+            // and economic-focus state back onto the live Simulation so
+            // phase_institutions / phase_construction_sites /
+            // phase_policy_econ resume with the same authoritative
+            // post-save values.
+            sim.institutions = sim.state.institutions.clone();
+            sim.institution_levels_emitted =
+                sim.state.institution_levels_emitted.clone();
+            sim.build_sites = sim.state.build_sites.clone();
+            sim.econ_focus = sim.state.econ_focus.clone();
         }
 
         let environment_path = dir.join(ENVIRONMENT_FILE);

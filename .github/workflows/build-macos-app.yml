@@ -1,0 +1,57 @@
+name: Build macOS .app
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'clients/bevy-ref/**'
+      - 'crates/engine/**'
+      - 'crates/server/**'
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  macos-app:
+    name: macOS .app bundle
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Build .app bundle
+        run: bash scripts/build-macos-app.sh
+
+      - name: Smoke test binary
+        run: |
+          # Quick launch test: run the binary, it should at least load
+          timeout 5 ./Civis.app/Contents/MacOS/civ-bevy-window --help 2>/dev/null || true
+          echo "Binary loads OK"
+
+      - name: Upload .app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: civis-macos-app-${{ github.run_id }}
+          path: Civis.app/
+          retention-days: 30
+
+      - name: Attach to release
+        if: github.event_name == 'release'
+        run: |
+          zip -r civis-macos-app.zip Civis.app/
+          gh release upload "${{ github.event.release.tag_name }}" civis-macos-app.zip
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

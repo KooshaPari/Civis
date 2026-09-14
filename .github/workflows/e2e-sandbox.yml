@@ -1,0 +1,46 @@
+name: E2E Sandbox
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'crates/engine/**'
+      - 'crates/server/**'
+      - 'scripts/playthrough.sh'
+
+concurrency:
+  group: e2e-sandbox
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    name: sandbox playthrough
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      CIVIS_PLAYTHROUGH_SEED: "42"
+      CIV_SERVER_PORT: "3000"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Install websocat
+        run: |
+          curl -fsSL https://github.com/vi/websocat/releases/download/v1.13.0/websocat.x86_64-unknown-linux-musl \
+            -o /usr/local/bin/websocat
+          chmod +x /usr/local/bin/websocat
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends jq
+
+      - name: Run E2E sandbox
+        run: bash scripts/e2e-sandbox.sh

@@ -435,7 +435,7 @@ impl Simulation {
 
     fn sample_emergence_with_source(&mut self, source: Option<&CaGrid>) -> bool {
         let tick = self.state.tick;
-        if tick == 0 || tick % EMERGENCE_SAMPLE_INTERVAL != 0 {
+        if tick == 0 || !tick.is_multiple_of(EMERGENCE_SAMPLE_INTERVAL) {
             return false;
         }
 

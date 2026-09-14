@@ -59,7 +59,7 @@ impl Simulation {
         }
 
         const DOCTRINE_EVOLVE_MODULO: u64 = 64;
-        if self.state.tick % DOCTRINE_EVOLVE_MODULO == 0 {
+        if self.state.tick.is_multiple_of(DOCTRINE_EVOLVE_MODULO) {
             let mut faction_stats =
                 vec![FactionEngagementStats::default(); self.faction_doctrines.len()];
             for engagement in &self.last_tick_engagements {

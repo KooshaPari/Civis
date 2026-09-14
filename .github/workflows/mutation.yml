@@ -22,6 +22,7 @@ jobs:
                   set +e
                   # Ratchet scope: civ-save-db (self-contained, real baseline ~14s, measurable kill rate).
                   cargo mutants --no-shuffle -j 2 --timeout 300 -p civ-save-db 2>&1 | tee mutants.log
+
                   statuses=("${PIPESTATUS[@]}")
                   set -e
                   if [ "${statuses[1]}" -ne 0 ]; then

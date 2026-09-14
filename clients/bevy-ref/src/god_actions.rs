@@ -146,7 +146,7 @@ fn voxel_index(ix: usize, iy: usize, iz: usize) -> usize {
 
 fn disaster_cell_material(
     verb: TerrainVerb,
-    dx: i64,
+    _dx: i64,
     dy: i64,
     dist2: f32,
     r2: f32,
@@ -531,7 +531,7 @@ fn remesh_dirty_chunks(
     scene: &mut LiveStreamScene,
     focus: &LiveSceneFocus,
     debug: &DebugRender,
-    frame_budget_recovery: &FrameBudgetRecovery,
+    _frame_budget_recovery: &FrameBudgetRecovery,
     _effect_meshes: &GodEffectMeshes,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,

@@ -365,7 +365,7 @@ impl Simulation {
         let mut found_new_settlements = Vec::new();
         let mut next_settlement_id = self.next_settlement_id();
 
-        let ages_this_tick = self.state.tick % LIFECYCLE_YEAR_TICKS == 0;
+        let ages_this_tick = self.state.tick.is_multiple_of(LIFECYCLE_YEAR_TICKS);
         for (entity, id, sample) in records.iter() {
             let next_age = sample.age;
             let Ok(mut needs) = self.world.get::<&mut Needs>(*entity) else {
@@ -391,7 +391,7 @@ impl Simulation {
         // Evaluate reproduction on the existing 200-tick cadence. Pairing on
         // every frame lets the same adults reproduce indefinitely, exhausting
         // food and destabilizing normal emergence runs.
-        let birth_window = self.state.tick == 0 || self.state.tick % 200 == 0;
+        let birth_window = self.state.tick == 0 || self.state.tick.is_multiple_of(200);
         if birth_window {
             for (left_idx, left) in records.iter().enumerate() {
                 if paired_adults.contains(&left.1) {
@@ -638,7 +638,7 @@ impl Simulation {
         // (Adult only), the food/safety thresholds, and the configurable
         // `LifecycleParams` fertility curves.
         let lifecycle_params = civ_needs::LifecycleParams::default();
-        let birth_window = self.state.tick % 200 == 0;
+        let birth_window = self.state.tick.is_multiple_of(200);
         let mut dead = Vec::new();
         let mut births = Vec::new();
 
@@ -646,7 +646,7 @@ impl Simulation {
             self.world
                 .query_mut::<(&mut AgentCivilian, &Position3d, &mut Needs)>()
         {
-            if self.state.tick % LIFECYCLE_YEAR_TICKS == 0 {
+            if self.state.tick.is_multiple_of(LIFECYCLE_YEAR_TICKS) {
                 civilian.age = civilian.age.saturating_add(1);
             }
             if self.state.resources.food >= Fixed::ONE {

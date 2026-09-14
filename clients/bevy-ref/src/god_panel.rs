@@ -4,6 +4,7 @@
 use crate::god_actions::GodActionRequest;
 use crate::live_stream::LiveBridge;
 use crate::menus::in_playing_state;
+use crate::ui_theme::banner_alpha;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 use serde_json::{json, Value};
@@ -11,6 +12,7 @@ use serde_json::{json, Value};
 #[derive(Resource, Default)]
 pub struct GodPanelState {
     pub visible: bool,
+    pub visible_since_secs: Option<f32>,
     pub selected_action: usize,
     pub magnitude: f32,
     pub target_x: f32,
@@ -116,9 +118,18 @@ impl Plugin for GodPanelPlugin {
     }
 }
 
-fn toggle_god_panel(keys: Res<ButtonInput<KeyCode>>, mut state: ResMut<GodPanelState>) {
+fn toggle_god_panel(
+    keys: Res<ButtonInput<KeyCode>>,
+    time: Res<Time>,
+    mut state: ResMut<GodPanelState>,
+) {
     if keys.just_pressed(KeyCode::KeyG) {
         state.visible = !state.visible;
+        if state.visible {
+            state.visible_since_secs = Some(time.elapsed_secs());
+        } else {
+            state.visible_since_secs = None;
+        }
         if state.magnitude == 0.0 {
             state.magnitude = 0.5;
         }
@@ -151,6 +162,7 @@ fn draw_god_panel(
     mut contexts: EguiContexts,
     mut state: ResMut<GodPanelState>,
     bridge: Option<Res<LiveBridge>>,
+    time: Res<Time>,
     mut requests: MessageWriter<GodActionRequest>,
     mut ran_once: Local<bool>,
 ) {
@@ -166,6 +178,15 @@ fn draw_god_panel(
     };
     let screen = ctx.content_rect();
 
+    // Compute the fade-in alpha from the visible-since edge.
+    let alpha = state
+        .visible_since_secs
+        .map(|t| banner_alpha((time.elapsed_secs() - t).max(0.0) as f32))
+        .unwrap_or(1.0);
+    if alpha <= 0.0 {
+        return;
+    }
+
     let mut fire: Option<usize> = None;
     egui::Window::new("God Mode")
         .fixed_pos(egui::pos2(screen.max.x - 310.0, screen.center().y - 220.0))
@@ -174,13 +195,20 @@ fn draw_god_panel(
         .title_bar(true)
         .frame(
             egui::Frame::window(ctx.style().as_ref())
-                .fill(egui::Color32::from_rgba_premultiplied(9, 10, 12, 230))
+                .fill(
+                    egui::Color32::from_rgba_premultiplied(9, 10, 12, 230)
+                        .gamma_multiply(alpha),
+                )
                 .stroke(egui::Stroke::new(
                     1.5,
-                    egui::Color32::from_rgb(126, 186, 181),
+                    egui::Color32::from_rgb(126, 186, 181).gamma_multiply(alpha),
                 )),
         )
         .show(ctx, |ui| {
+            if alpha < 1.0 {
+                ui.visuals_mut().override_text_color =
+                    Some(ui.visuals().override_text_color.unwrap_or(ui.style().visuals.text_color()).gamma_multiply(alpha));
+            }
             ui.label(
                 egui::RichText::new("Direct Intervention")
                     .color(egui::Color32::from_rgb(126, 186, 181))
@@ -199,7 +227,7 @@ fn draw_god_panel(
                             egui::Color32::from_rgb(160, 170, 180)
                         };
                         if ui
-                            .add(egui::SelectableLabel::new(
+                            .add(egui::Button::selectable(
                                 selected,
                                 egui::RichText::new(action.verb).color(color).monospace(),
                             ))
@@ -242,7 +270,7 @@ fn draw_god_panel(
                     ui.add(
                         egui::DragValue::new(&mut state.target_x)
                             .speed(0.01)
-                            .clamp_range(0.0..=1.0f32),
+                            .range(0.0..=1.0_f32),
                     );
                     ui.label(
                         egui::RichText::new("Y:")
@@ -252,7 +280,7 @@ fn draw_god_panel(
                     ui.add(
                         egui::DragValue::new(&mut state.target_y)
                             .speed(0.01)
-                            .clamp_range(0.0..=1.0f32),
+                            .range(0.0..=1.0_f32),
                     );
                 });
             }
@@ -267,7 +295,7 @@ fn draw_god_panel(
                     ui.add(
                         egui::DragValue::new(&mut state.target_faction)
                             .speed(1.0)
-                            .clamp_range(0..=255u32),
+                            .range(0..=255_u32),
                     );
                 });
             }
@@ -282,7 +310,7 @@ fn draw_god_panel(
                     ui.add(
                         egui::DragValue::new(&mut state.herd_count)
                             .speed(1.0)
-                            .clamp_range(1..=64u32),
+                            .range(1..=64_u32),
                     );
                 });
             }

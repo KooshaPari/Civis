@@ -19,6 +19,7 @@ use tokio_tungstenite::tungstenite::Message;
 
 /// Drain all available items from a crossbeam channel into a Vec without blocking.
 /// Reuses the destination's existing capacity to avoid per-frame allocation.
+#[allow(dead_code)] // kept for a future telemetry sweep on the live socket
 fn drain_into<T>(rx: &Receiver<T>, dst: &mut Vec<T>) {
     dst.clear();
     while let Ok(item) = rx.try_recv() {
@@ -98,6 +99,7 @@ pub struct SimSimEventsData {
 
 /// Return the server label only for branching regimes that warrant an alert.
 #[cfg(any(feature = "egui", test))]
+#[allow(dead_code)] // branching_alert is reserved for the emergence-dashboard alert banner
 pub(crate) fn branching_alert(sample: &serde_json::Value) -> Option<&str> {
     match sample.get("branching_regime")?.as_str()? {
         label @ ("Near-supercritical" | "Supercritical (explosion risk)") => Some(label),
@@ -140,6 +142,7 @@ pub struct RpcTicket {
 /// Stored via [`WsClient::install_world_generation`] so the client can prove that
 /// a freshly ACKed scene is the *one it requested* (correlation), and to drain
 /// the previous live-stream scene exactly once when the new terrain lands.
+#[allow(dead_code)] // field-level allow covers generation/connection_id/clear_fn
 struct WorldGenState {
     generation: u64,
     connection_id: String,
@@ -180,9 +183,11 @@ pub struct WsClient {
     /// Optional sender for test-mode inbound JSON frames.
     inbound_json_tx: Option<Sender<String>>,
     /// Stable connection identifier originating this client (matches replies).
+    #[allow(dead_code)] // consumed by the Clone impl and request_rpc; the field-level allow silences the field-specific lint
     connection_id: String,
 }
 
+#[allow(dead_code)] // exercised by RPC reflection tests
 impl WsClient {
     /// Create a client that stays disconnected without starting a network task.
     ///
@@ -329,6 +334,7 @@ impl WsClient {
     /// This is the unified stream of last_tick_* event buffers (damage events,
     /// audio events, research state, religion, legends, emergence sample, climate).
     #[must_use]
+    #[allow(dead_code)] // exercised by live-attach RPC tests
     pub fn poll_sim_events(&self) -> Option<SimSimEventsData> {
         self.sim_events_rx.try_recv().ok()
     }

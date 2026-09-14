@@ -424,6 +424,44 @@ pub struct WorldState {
     pub historical_log: crate::history::HistoryLog,
     #[serde(default, skip)]
     pub faction_writing_systems: BTreeMap<u32, crate::writing::WritingSystem>,
+
+    // Diplomacy state (FR-CIV-DIPLOMACY-004) — durable across archive round-trip.
+    #[serde(default)]
+    pub stance_engine: civ_diplomacy::stance::DiplomacyStanceEngine,
+    #[serde(default)]
+    pub deep_diplomacy: crate::diplomacy::DeepDiplomacyState,
+    #[serde(default)]
+    pub faction_relations: crate::diplomacy::FactionRelations,
+    #[serde(default)]
+    pub grief_accumulator: civ_agents::diplomacy::GriefAccumulator,
+
+    // Language state (FR-CIV-LANG-001) — durable across archive round-trip.
+    // Mutated every tick by phase_culture; loss on reload silently resets
+    // emergent language drift and faction-level intelligibility bonuses.
+    #[serde(default)]
+    pub language_state: LanguageState,
+    #[serde(default)]
+    pub faction_languages: BTreeMap<u32, LanguageState>,
+
+    // Civic institutions (FR-CIV-INSTITUTIONS-001) — durable across archive round-trip.
+    // Mutated by phase_institutions every tick (Temple/Garrison unlocks + level
+    // emissions). Loss on reload silently resets every civic institution.
+    #[serde(default)]
+    pub institutions: BTreeMap<u32, Vec<civ_institutions::Institution>>,
+    #[serde(default)]
+    pub institution_levels_emitted: BTreeSet<(u32, u8, u8)>,
+
+    // Construction sites (FR-CIV-CONSTRUCTION-001) — durable across archive round-trip.
+    // Mutated by phase_construction_sites every tick; loss on reload resets
+    // every build-in-progress structure.
+    #[serde(default)]
+    pub build_sites: Vec<civ_build::BuildSite>,
+
+    // Economic focus (FR-CIV-ECON-FOCUS-001) — durable across archive round-trip.
+    // Mutated by phase_policy_econ every tick; loss on reload resets every
+    // settlement's resource-allocation policy.
+    #[serde(default)]
+    pub econ_focus: BTreeMap<u32, EconomicFocus>,
 }
 
 impl PartialEq for WorldState {
@@ -519,6 +557,16 @@ impl Default for WorldState {
             settlement_building_layouts: BTreeMap::new(),
             historical_log: crate::history::HistoryLog::with_capacity(500),
             faction_writing_systems: BTreeMap::new(),
+            stance_engine: civ_diplomacy::stance::DiplomacyStanceEngine::default(),
+            deep_diplomacy: crate::diplomacy::DeepDiplomacyState::default(),
+            faction_relations: crate::diplomacy::FactionRelations::default(),
+            grief_accumulator: civ_agents::diplomacy::GriefAccumulator::default(),
+            language_state: LanguageState::default(),
+            faction_languages: BTreeMap::new(),
+            institutions: BTreeMap::new(),
+            institution_levels_emitted: BTreeSet::new(),
+            build_sites: Vec::new(),
+            econ_focus: BTreeMap::new(),
         }
     }
 }
@@ -669,7 +717,7 @@ pub struct Simulation {
     pub weather_grid: Vec<WeatherCell>,
     /// Construction queue of in-progress `BuildSite`s.
     /// Drives `phase_construction_sites` per-tick progress + completion (FR-CIV-BUILD-001/002).
-    build_sites: Vec<BuildSite>,
+    pub build_sites: Vec<BuildSite>,
     /// Construction events emitted during the most recent tick (FR-CIV-BUILD-002).
     /// Reset at the start of every [`Simulation::tick`]; surfaced through the
     /// JSON-RPC bridge so Bevy clients can render scaffolding + completion FX.
@@ -679,10 +727,10 @@ pub struct Simulation {
     /// Emergent language state (FR-CIV-LANG-001). Driven by
     /// [`Simulation::phase_language_drift`]; consumed by the diplomacy pipeline via
     /// [`language_intelligibility_peace_bonus`].
-    language_state: LanguageState,
+    pub(crate) language_state: LanguageState,
     /// Per-faction emergent language states (FR-LANGUAGE-001) used for naming
     /// and isolation-aware drift coupling.
-    faction_languages: BTreeMap<u32, LanguageState>,
+    pub(crate) faction_languages: BTreeMap<u32, LanguageState>,
     /// Per-tick sentience evaluation profile (FR-CIV-GENETICS / FR-CIV-LEGENDS).
     /// Read by [`Simulation::phase_sentience`] to determine which lineages
     /// cross the cognition threshold this tick.
@@ -702,7 +750,7 @@ pub struct Simulation {
     /// Currently-active institutions per settlement, keyed by
     /// `(settlement_id, kind)`. Tracks the latest known level so we can detect
     /// upgrades (FR-CIV-GOV-003).
-    institutions: BTreeMap<u32, Vec<civ_institutions::Institution>>,
+    pub institutions: BTreeMap<u32, Vec<civ_institutions::Institution>>,
     /// Civic events emitted by the most recent [`Simulation::phase_institutions`]
     /// call (cleared at the start of every [`Simulation::tick`], alongside the
     /// other `last_tick_*` buffers). Surfaced to the JSON-RPC bridge so the
@@ -711,7 +759,7 @@ pub struct Simulation {
     /// Monotonic set of `(settlement_id, kind, level)` we have already emitted
     /// as an `Upgraded` event. Guarantees one-shot upgrade emission even
     /// across population dips/rebounds (FR-CIV-GOV-003).
-    institution_levels_emitted: BTreeSet<(u32, u8, u8)>,
+    pub institution_levels_emitted: BTreeSet<(u32, u8, u8)>,
 
     /// Per-settlement food stock, settable by tests + scenario loaders so
     /// [`Simulation::phase_social_mood`] can derive `food_score` deterministically
@@ -833,10 +881,9 @@ pub struct Simulation {
     pub migrant_accumulator: BTreeMap<u32, i64>,
 
     // ── Phase A10/A11: Economic Focus (FR-CIV-ECON-001) ───────────────────
-    /// Current economic focus per settlement.
-    /// Populated by [`Simulation::phase_economic_focus`] each tick.
-    /// Defaults to [`EconomicFocus::Balanced`] for unseen settlements.
-    econ_focus: BTreeMap<u32, EconomicFocus>,
+    /// Per-settlement economic focus state (FR-CIV-ECON-001). Last-known focus
+    /// per settlement, surfaced through `last_tick_economic_focus`.
+    pub econ_focus: BTreeMap<u32, EconomicFocus>,
 
     /// Per-tick buffer of [`EconomicFocusEvent`]s emitted by
     /// [`Simulation::phase_economic_focus_pre`]. Cleared at the start of
@@ -2105,6 +2152,34 @@ impl Simulation {
         self.phase_audio();
         // Victory/defeat after event phases so last_game_outcome matches this tick.
         self.phase_victory_check();
+        // Persistence mirrors (FR-CIV-DIPLOMACY-001): the four diplomacy
+        // state surfaces are Simulation-owned, mutated every tick by
+        // phase_diplomacy + phase_faction_decisions + stance_engine
+        // decay, but the .civsave.zst archive only persists the
+        // WorldState side. Mirror live -> state right before the
+        // replay tick event so the archive snapshot captures the
+        // latest post-tick diplomacy values.
+        self.state.faction_relations = self.faction_relations.clone();
+        self.state.grief_accumulator = self.grief_accumulator.clone();
+        self.state.stance_engine = self.stance_engine.clone();
+        self.state.deep_diplomacy = self.deep_diplomacy.clone();
+        // Persistence mirrors (FR-CIV-LANG-001): language_state and
+        // faction_languages are Simulation-owned, mutated every tick by
+        // phase_language_drift + phase_culture. Without these mirrors
+        // the .civsave.zst archive would never capture the emergent
+        // language drift state, silently resetting it on every reload.
+        self.state.language_state = self.language_state.clone();
+        self.state.faction_languages = self.faction_languages.clone();
+        // Persistence mirrors (FR-CIV-INSTITUTIONS-001 + FR-CIV-CONSTRUCTION-001
+        // + FR-CIV-ECON-FOCUS-001): civic institutions, construction sites,
+        // and economic focus are Simulation-owned, mutated every tick by
+        // phase_institutions / phase_construction_sites / phase_policy_econ.
+        // Without these mirrors the .civsave.zst archive silently resets
+        // all three to defaults on every reload.
+        self.state.institutions = self.institutions.clone();
+        self.state.institution_levels_emitted = self.institution_levels_emitted.clone();
+        self.state.build_sites = self.build_sites.clone();
+        self.state.econ_focus = self.econ_focus.clone();
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]
@@ -2853,7 +2928,7 @@ impl Simulation {
         &self.faction_languages
     }
 
-    pub(crate) fn set_faction_languages(
+    pub fn set_faction_languages(
         &mut self,
         faction_languages: BTreeMap<u32, LanguageState>,
     ) {
@@ -2938,6 +3013,17 @@ impl Simulation {
     #[must_use]
     pub fn settlement_count(&self) -> u32 {
         self.last_settlement_count
+    }
+
+    /// Ids of emergent settlements from the most recent life phase. Used by
+    /// persistence round-trip tests and any consumer that needs the actual
+    /// settlement roster (not just the count). Returned in ascending order
+    /// for stable persistence assertions.
+    #[must_use]
+    pub fn last_tick_settlement_ids(&self) -> Vec<u32> {
+        let mut ids: Vec<u32> = self.settlements.keys().copied().collect();
+        ids.sort_unstable();
+        ids
     }
 
     /// Per-cluster (settlement) resource stocks keyed by `ClusterId` value, for

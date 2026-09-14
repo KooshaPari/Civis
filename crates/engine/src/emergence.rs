@@ -463,7 +463,7 @@ impl Simulation {
             self.emergence.cluster_cultures.insert(key, profile);
         }
 
-        if tick % 128 == 0 && !self.emergence.cluster_cultures.is_empty() {
+        if tick.is_multiple_of(128) && !self.emergence.cluster_cultures.is_empty() {
             let n = self.emergence.cluster_cultures.len();
             self.emergence.push_feed(
                 tick,
@@ -491,7 +491,7 @@ impl Simulation {
                 LexemeKind::Settlement,
                 *cluster_id,
             );
-            if tick % 128 == 0 {
+            if tick.is_multiple_of(128) {
                 lexicon.coin(&mut rng, &profile.phonemes, LexemeKind::Event, tick);
             }
         }
@@ -753,7 +753,7 @@ impl Simulation {
             let _ = tick_u32;
         }
 
-        if tick % 64 == 0 {
+        if tick.is_multiple_of(64) {
             if let Some((_, (civ, psyche))) =
                 self.world.query::<(&Civilian, &Psyche)>().iter().next()
             {

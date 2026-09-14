@@ -2743,7 +2743,7 @@ impl CivisMcpServer {
             ticks += 1;
 
             let should_poll =
-                (ticks % poll_every == 0) || (ticks >= max_ticks) || (final_outcome != "ongoing");
+                ticks.is_multiple_of(poll_every) || (ticks >= max_ticks) || (final_outcome != "ongoing");
             if should_poll {
                 let outcome = forward_rpc(
                     &transport,

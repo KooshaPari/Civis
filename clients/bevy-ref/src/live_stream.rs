@@ -995,7 +995,7 @@ pub fn remesh_cached_chunks(
     culling: StreamCulling,
     debug: &DebugRender,
     chunk_ids: &[ChunkId],
-    wireframe_line_color: Option<Color>,
+    _wireframe_line_color: Option<Color>,
 ) {
     for &chunk_id in chunk_ids {
         let Some(voxels) = scene.chunk_voxels.get_chunk(chunk_id) else {

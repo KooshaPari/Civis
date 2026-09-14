@@ -307,7 +307,7 @@ mod stub_tests {
         let mesh = CubicMesher::mesh_cubic(view, LodLevel(0)).expect("mesh");
         assert_eq!(mesh.vertices.len(), 54 * 4);
         assert_eq!(mesh.indices.len(), 54 * 6);
-        assert!(mesh.indices.len() % 6 == 0);
+        assert!(mesh.indices.len().is_multiple_of(6));
     }
 
     /// FR-CIV-VOXEL-005 (early smoke) — VoxelWorld replay is bit-identical when

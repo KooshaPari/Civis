@@ -61,7 +61,7 @@ pub fn should_tick_entity(tick: u64, tier: LodTier) -> bool {
 pub fn should_tick_entity_with_policy(tick: u64, tier: LodTier, policy: LodPolicy) -> bool {
     match tier {
         LodTier::Hot => true,
-        LodTier::Warm | LodTier::Cold => tick % policy.cadence_for(tier) == 0,
+        LodTier::Warm | LodTier::Cold => tick.is_multiple_of(policy.cadence_for(tier)),
     }
 }
 

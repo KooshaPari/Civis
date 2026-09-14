@@ -154,7 +154,7 @@ impl Simulation {
 
     /// Compact the voxel world periodically.
     pub(crate) fn phase_compact(&mut self) {
-        if self.state.tick % self.tick_modulo_compact == 0 {
+        if self.state.tick.is_multiple_of(self.tick_modulo_compact) {
             self.voxel.compact();
         }
     }
@@ -167,7 +167,7 @@ impl Simulation {
         let tick = self.state.tick;
 
         // ---- 1. Parcel allocation cadence (every 16 ticks) ----
-        if tick % 16 == 0 {
+        if tick.is_multiple_of(16) {
             let signals = DemandSignals {
                 residential: 0.75,
                 commercial: 0.25,

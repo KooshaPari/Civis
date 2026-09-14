@@ -1657,7 +1657,7 @@ impl Simulation {
                             // ORE voxels; the rest are left
                             // alone so the vein looks like a
                             // natural deposit.
-                            if pattern % 4 == 0 {
+                            if pattern.is_multiple_of(4) {
                                 self.push_voxel_write(
                                     WorldCoord {
                                         x: col_x,

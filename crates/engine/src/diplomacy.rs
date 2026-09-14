@@ -236,13 +236,13 @@ impl Simulation {
     }
 
     pub(crate) fn phase_diplomacy(&mut self) {
-        if self.state.tick % 500 != 0 {
+        if !self.state.tick.is_multiple_of(500) {
             return;
         }
         self.run_macro_diplomacy_event();
 
         // Deep diplomacy: alliance checks every 1000 ticks.
-        if self.state.tick % 1000 == 0 {
+        if self.state.tick.is_multiple_of(1000) {
             self.tick_deep_diplomacy_alliances();
         }
         // Deep diplomacy: peace negotiations every 500 ticks.

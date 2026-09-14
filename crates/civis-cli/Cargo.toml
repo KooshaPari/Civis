@@ -35,6 +35,10 @@ path = "src/bin/civis.rs"
 name = "civis-mcp"
 path = "src/bin/mcp.rs"
 
+[[bin]]
+name = "civis-3d-quality"
+path = "src/bin/three_d_quality.rs"
+
 [dependencies]
 # Always-on: pixel stats + JSON-RPC census + env loading.
 civ-server = { path = "../server" }

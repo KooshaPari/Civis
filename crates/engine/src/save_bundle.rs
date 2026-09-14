@@ -467,6 +467,30 @@ impl CivSaveBundle {
         let world_state_path = dir.join("world_state.json");
         if world_state_path.is_file() {
             sim.state = serde_json::from_value(migrated_ws).map_err(SaveBundleError::Json)?;
+            // Mirror the persisted WorldState side back onto the live
+            // Simulation so diplomacy, caravans, weather, language drift,
+            // grief accumulator, etc. all resume in lockstep with the
+            // authoritative post-load world state.
+            sim.faction_relations = sim.state.faction_relations.clone();
+            sim.grief_accumulator = sim.state.grief_accumulator.clone();
+            sim.stance_engine = sim.state.stance_engine.clone();
+            sim.deep_diplomacy = sim.state.deep_diplomacy.clone();
+            // Mirror persisted language-drift state back onto the live
+            // Simulation so phase_language_drift resumes with the same
+            // emergent phoneme inventory / intelligibility matrix as the
+            // pre-save run.
+            sim.language_state = sim.state.language_state.clone();
+            sim.faction_languages = sim.state.faction_languages.clone();
+            // Mirror persisted civic institutions, construction sites,
+            // and economic-focus state back onto the live Simulation so
+            // phase_institutions / phase_construction_sites /
+            // phase_policy_econ resume with the same authoritative
+            // post-save values.
+            sim.institutions = sim.state.institutions.clone();
+            sim.institution_levels_emitted =
+                sim.state.institution_levels_emitted.clone();
+            sim.build_sites = sim.state.build_sites.clone();
+            sim.econ_focus = sim.state.econ_focus.clone();
         }
 
         let environment_path = dir.join(ENVIRONMENT_FILE);

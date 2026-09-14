@@ -467,8 +467,8 @@ pub fn compute_drift(
     drying_rate_fp: i32,
 ) -> ClimateDrift {
     // Seed-derived sign flip so different planets drift in different directions.
-    let temp_sign: i32 = if planet_seed % 2 == 0 { 1 } else { -1 };
-    let moist_sign: i32 = if (planet_seed / 3) % 2 == 0 { 1 } else { -1 };
+    let temp_sign: i32 = if planet_seed.is_multiple_of(2) { 1 } else { -1 };
+    let moist_sign: i32 = if (planet_seed / 3).is_multiple_of(2) { 1 } else { -1 };
 
     let years = elapsed_years.min(i32::MAX as u64) as i32;
     let temp_delta = (warming_rate_fp.saturating_mul(years) * temp_sign).clamp(-60_000, 55_000);

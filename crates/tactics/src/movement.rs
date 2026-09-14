@@ -99,7 +99,7 @@ pub fn tick_operational_movement(
     pulses: u8,
     world: &VoxelWorld<MaterialId>,
 ) -> Vec<GridMove> {
-    if config.cadence_ticks == 0 || tick % config.cadence_ticks != 0 || pulses == 0 {
+    if config.cadence_ticks == 0 || !tick.is_multiple_of(config.cadence_ticks) || pulses == 0 {
         return Vec::new();
     }
     let mut all_moves = Vec::new();

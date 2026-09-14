@@ -14,6 +14,7 @@ use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 use crate::live_stream::LiveStreamScene;
 use crate::live_stream::ServerBridge;
 use crate::outcome_overlay::{outcome_modal_visible, OutcomeOverlayState, OutcomeSessionGate};
+use crate::ui_theme::banner_alpha;
 use crate::{MusicCues, OutcomeProgressHud};
 
 // ── Palette (mirrors emergence_dashboard / faction_hud) ───────────────────────
@@ -42,6 +43,14 @@ impl Default for GameplayHudOpen {
     }
 }
 
+/// Wall-clock timestamp at which the current outcome banner first became visible.
+/// Used to drive `banner_alpha(age)` for the in-game outcome banner so the
+/// banner fades in over `BANNER_FADE_IN_SECS` (consistent with toast/tooltip/
+/// minimap-dot fade-in). Cleared when the outcome disappears so the next
+/// banner starts from zero age again.
+#[derive(Resource, Debug, Clone, Copy, Default)]
+pub struct GameplayHudOutcomeVisibleSince(pub Option<f32>);
+
 // ── Plugin ────────────────────────────────────────────────────────────────────
 
 /// Registers the gameplay HUD (F9 toggle).
@@ -52,7 +61,8 @@ impl Plugin for GameplayHudPlugin {
         app.init_resource::<GameplayHudOpen>()
             .init_resource::<MusicCues>()
             .init_resource::<OutcomeProgressHud>()
-            .add_systems(Update, toggle_gameplay_hud)
+            .init_resource::<GameplayHudOutcomeVisibleSince>()
+            .add_systems(Update, (toggle_gameplay_hud, track_outcome_visible_since))
             .add_systems(
                 EguiPrimaryContextPass,
                 draw_gameplay_hud.run_if(crate::menus::in_playing),
@@ -68,15 +78,42 @@ fn toggle_gameplay_hud(keys: Res<ButtonInput<KeyCode>>, mut open: ResMut<Gamepla
     }
 }
 
+/// Sets `visible_since_secs` on the None->Some edge for the gameplay HUD
+/// outcome banner so the banner fades in over `BANNER_FADE_IN_SECS`.
+fn track_outcome_visible_since(
+    time: Res<Time>,
+    outcome_state: Option<Res<OutcomeOverlayState>>,
+    session_gate: Option<Res<OutcomeSessionGate>>,
+    mut visible_since: ResMut<GameplayHudOutcomeVisibleSince>,
+) {
+    let now = time.elapsed_secs();
+    let session_active = session_gate
+        .as_deref()
+        .map(|gate| gate.session_active)
+        .unwrap_or(false);
+    let banner_visible = outcome_state
+        .as_deref()
+        .map(|state| session_active && outcome_modal_visible(state))
+        .unwrap_or(false);
+    match (banner_visible, visible_since.0) {
+        (true, None) => visible_since.0 = Some(now),
+        (false, _) => visible_since.0 = None,
+        _ => {}
+    }
+}
+
 fn draw_gameplay_hud(
     mut contexts: EguiContexts,
     open: Res<GameplayHudOpen>,
+    bridge: Option<Res<ServerBridge>>,
+    _live_bridge: Option<Res<crate::live_attach::LiveAttachBridge>>,
     scene: Res<LiveStreamScene>,
     music_cues: Res<MusicCues>,
-    outcome_progress: Res<OutcomeProgressHud>,
     outcome_state: Option<Res<OutcomeOverlayState>>,
     session_gate: Option<Res<OutcomeSessionGate>>,
-    bridge: Option<Res<ServerBridge>>,
+    outcome_progress: Res<OutcomeProgressHud>,
+    visible_since: Res<GameplayHudOutcomeVisibleSince>,
+    time: Res<Time>,
 ) {
     if !open.0 {
         return;
@@ -167,7 +204,10 @@ fn draw_gameplay_hud(
 
             // ── Section 1: Outcome Banner ────────────────────────────────
             if let Some(od) = outcome {
-                draw_outcome_banner(ui, od.tag.as_str(), od.reason.as_str(), od.tick);
+                let now = time.elapsed_secs();
+                let age = visible_since.0.map(|t| (now - t).max(0.0)).unwrap_or(0.0);
+                let alpha = banner_alpha(age);
+                draw_outcome_banner(ui, od.tag.as_str(), od.reason.as_str(), od.tick, alpha);
                 ui.add_space(6.0);
                 ui.separator();
                 ui.add_space(4.0);
@@ -295,27 +335,38 @@ fn draw_gameplay_hud(
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-fn draw_outcome_banner(ui: &mut egui::Ui, tag: &str, reason: &str, tick: u64) {
+fn draw_outcome_banner(ui: &mut egui::Ui, tag: &str, reason: &str, tick: u64, alpha: f32) {
     let (label, color) = if tag == "victory" {
         ("VICTORY", TEAL)
     } else {
         ("DEFEAT", RED)
     };
+    let color = fade_color(color, alpha);
+    let reason_color = fade_color(egui::Color32::WHITE, alpha);
+    let dim_color = fade_color(DIM, alpha);
     ui.vertical_centered(|ui| {
         ui.label(egui::RichText::new(label).color(color).size(22.0).strong());
         if !reason.is_empty() {
             ui.label(
                 egui::RichText::new(reason)
-                    .color(egui::Color32::WHITE)
+                    .color(reason_color)
                     .size(13.0),
             );
         }
         ui.label(
             egui::RichText::new(format!("Tick {tick}"))
-                .color(DIM)
+                .color(dim_color)
                 .small(),
         );
     });
+}
+
+/// Multiplies the alpha channel of `color` by `alpha`, preserving the hue.
+/// Straight (non-premultiplied) alpha semantics: 0.0 -> fully transparent,
+/// 1.0 -> color returned unchanged.
+fn fade_color(color: egui::Color32, alpha: f32) -> egui::Color32 {
+    let a = ((color.a() as f32) * alpha.clamp(0.0, 1.0)).round() as u8;
+    egui::Color32::from_rgba_unmultiplied(color.r(), color.g(), color.b(), a)
 }
 
 fn draw_faction_row(

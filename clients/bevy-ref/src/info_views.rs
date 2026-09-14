@@ -755,7 +755,7 @@ mod plugin {
         let Ok(ctx) = contexts.ctx_mut() else {
             return;
         };
-        let screen = ctx.screen_rect();
+        let screen = ctx.content_rect();
         egui::Area::new(egui::Id::new("nearby_counts_overlay"))
             .fixed_pos(egui::pos2(screen.center().x - 220.0, 72.0))
             .show(ctx, |ui| {

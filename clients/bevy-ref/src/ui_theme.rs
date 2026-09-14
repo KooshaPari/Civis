@@ -93,6 +93,59 @@ pub fn ease_towards(state: &mut UiAnimState, dt: f32) {
     }
 }
 
+// ── Banner alpha (outcome / game-over entrance + hold + exit) ──────────────
+
+/// Smoothstep ramp length for outcome and game-over banners. Matches the
+/// polish motion language: 350-450ms is the perceived-snappy threshold.
+pub const BANNER_FADE_IN_SECS: f32 = 0.45;
+
+/// Time the banner holds at full alpha so the player has time to read it
+/// before it starts fading out.
+pub const BANNER_HOLD_SECS: f32 = 4.0;
+
+/// Linear fade-out length at the end of the banner lifetime.
+pub const BANNER_FADE_OUT_SECS: f32 = 1.0;
+
+/// Total visible lifetime of a banner (fade-in + hold + fade-out).
+pub const BANNER_LIFETIME_SECS: f32 =
+    BANNER_FADE_IN_SECS + BANNER_HOLD_SECS + BANNER_FADE_OUT_SECS;
+
+/// Compute the alpha multiplier for an outcome/game-over banner given its
+/// age in seconds since it became visible.
+///
+/// Curve:
+/// - 0..`BANNER_FADE_IN_SECS`: smoothstep ramp 0 -> 1
+/// - `BANNER_FADE_IN_SECS`..(`BANNER_FADE_IN_SECS`+`BANNER_HOLD_SECS`): 1.0
+/// - (`BANNER_FADE_IN_SECS`+`BANNER_HOLD_SECS`)..`BANNER_LIFETIME_SECS`:
+///   linear 1.0 -> 0.0
+/// - >`BANNER_LIFETIME_SECS` or <0: clamped to 0.0 (clock skew, paused
+///   menu, end of life)
+#[must_use]
+pub fn banner_alpha(age_secs: f32) -> f32 {
+    if age_secs <= 0.0 || age_secs >= BANNER_LIFETIME_SECS {
+        return 0.0;
+    }
+    if age_secs < BANNER_FADE_IN_SECS {
+        // Smoothstep: 3t^2 - 2t^3 where t = age / fade_in
+        let t = age_secs / BANNER_FADE_IN_SECS;
+        let s = t * t * (3.0 - 2.0 * t);
+        s.clamp(0.0, 1.0)
+    } else if age_secs < BANNER_FADE_IN_SECS + BANNER_HOLD_SECS {
+        1.0
+    } else {
+        // Linear fade-out across the final BANNER_FADE_OUT_SECS
+        let t = (age_secs - BANNER_FADE_IN_SECS - BANNER_HOLD_SECS) / BANNER_FADE_OUT_SECS;
+        (1.0 - t).clamp(0.0, 1.0)
+    }
+}
+
+/// Apply an alpha multiplier to a color, preserving its RGB hue.
+#[must_use]
+pub fn fade_color(base: egui::Color32, alpha: f32) -> egui::Color32 {
+    let a = alpha.clamp(0.0, 1.0);
+    egui::Color32::from_rgba_unmultiplied(base.r(), base.g(), base.b(), (base.a() as f32 * a) as u8)
+}
+
 /// Per-category rim palette: returns the outer-glow + inner-glow color pair for
 /// a given category accent and focus state. Honors the holocron design law
 /// ("colored rim glow, not white") and the "neon-as-signal" rule (the rim
@@ -1175,10 +1228,92 @@ mod tests {
 
     #[test]
     fn rim_palette_idle_is_dimmest() {
-        // Hover/focus-state contrast: focused outer alpha 0.65 > hover 0.32.
         let accent = KC_ACCENT;
         let h = rim_palette(accent, false);
         let luma = |c: egui::Color32| c.r() as u32 + c.g() as u32 + c.b() as u32;
         assert!(luma(h.outer) < luma(rim_palette(accent, true).outer));
+    }
+
+    // ── banner_alpha (outcome / game-over entrance + hold + exit) ──────────
+
+    #[test]
+    fn banner_alpha_is_zero_before_lifetime_starts() {
+        // Negative ages (clock skew, paused menu) and zero should clamp to 0.
+        assert_eq!(banner_alpha(0.0), 0.0);
+        assert_eq!(banner_alpha(-0.5), 0.0);
+    }
+
+    #[test]
+    fn banner_alpha_smoothstep_inflection_at_midpoint() {
+        // At half the fade-in window, smoothstep produces exactly 0.5.
+        let half = BANNER_FADE_IN_SECS * 0.5;
+        let actual = banner_alpha(half);
+        assert!((actual - 0.5).abs() < 0.01, "expected ~0.5, got {}", actual);
+    }
+
+    #[test]
+    fn banner_alpha_is_strictly_monotonic_in_fade_in_window() {
+        // Sample at 5 points across the fade-in window; each should be >= the previous.
+        let mut prev = banner_alpha(0.05);
+        for i in 1..5 {
+            let t = BANNER_FADE_IN_SECS * (i as f32) / 5.0;
+            let cur = banner_alpha(t);
+            assert!(
+                cur >= prev,
+                "non-monotonic at t={}: prev={}, cur={}",
+                t,
+                prev,
+                cur
+            );
+            prev = cur;
+        }
+        assert_eq!(banner_alpha(BANNER_FADE_IN_SECS), 1.0);
+    }
+
+    #[test]
+    fn banner_alpha_holds_one_through_steady_state() {
+        // Anywhere from end-of-fade-in through end-of-hold returns exactly 1.0.
+        let mid_hold = BANNER_FADE_IN_SECS + BANNER_HOLD_SECS * 0.5;
+        let end_hold = BANNER_FADE_IN_SECS + BANNER_HOLD_SECS - 0.001;
+        assert_eq!(banner_alpha(mid_hold), 1.0);
+        assert_eq!(banner_alpha(end_hold), 1.0);
+    }
+
+    #[test]
+    fn banner_alpha_fades_smoothly_during_last_second() {
+        // Linear 1.0 -> 0.0 over BANNER_FADE_OUT_SECS.
+        let mid_fade = BANNER_FADE_IN_SECS + BANNER_HOLD_SECS + BANNER_FADE_OUT_SECS * 0.5;
+        let mid = banner_alpha(mid_fade);
+        assert!((mid - 0.5).abs() < 0.01, "expected ~0.5 mid fade-out, got {}", mid);
+        // End of lifetime -> 0.0.
+        let just_before_end = BANNER_LIFETIME_SECS - 0.001;
+        assert!(banner_alpha(just_before_end) < 0.01);
+        assert_eq!(banner_alpha(BANNER_LIFETIME_SECS), 0.0);
+    }
+
+    #[test]
+    fn banner_alpha_total_lifetime_is_consistent() {
+        // BANNER_LIFETIME_SECS must equal the sum of its parts.
+        assert!(
+            (BANNER_LIFETIME_SECS - (BANNER_FADE_IN_SECS + BANNER_HOLD_SECS + BANNER_FADE_OUT_SECS))
+                .abs()
+                < f32::EPSILON
+        );
+    }
+
+    #[test]
+    fn fade_color_preserves_rgb_and_multiplies_alpha() {
+        let base = egui::Color32::from_rgba_unmultiplied(200, 100, 50, 200);
+        let half = fade_color(base, 0.5);
+        assert_eq!(half.r(), base.r());
+        assert_eq!(half.g(), base.g());
+        assert_eq!(half.b(), base.b());
+        // 200 * 0.5 = 100
+        assert_eq!(half.a(), 100);
+
+        let full = fade_color(base, 1.0);
+        assert_eq!(full.a(), base.a());
+        let zero = fade_color(base, 0.0);
+        assert_eq!(zero.a(), 0);
     }
 }

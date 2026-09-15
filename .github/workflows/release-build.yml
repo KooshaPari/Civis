@@ -1,6 +1,6 @@
 name: Release Build
 
-# Unified release workflow: builds CLI tools + standalone game client
+# Unified release workflow: builds CLI tools, server, and standalone game client
 # for all platforms, generates changelog, and publishes a GitHub Release.
 #
 # Complements release.yml (crates.io publish) which also triggers on v* tags.
@@ -178,6 +178,87 @@ jobs:
             ${{ env.ASSET }}.sha256
           if-no-files-found: error
 
+  # ─── Build server binary (cross-platform) ──────────────────────────────
+  build-server:
+    name: Server (${{ matrix.label }})
+    needs: preflight
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            label: linux-amd64
+            ext: tar.gz
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            label: macos-arm64
+            ext: tar.gz
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            label: macos-amd64
+            ext: tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            label: windows-amd64
+            ext: zip
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
+        with:
+          cache-all-crates: true
+          key: server-${{ matrix.target }}
+
+      - name: Build server binary
+        run: >
+          cargo build --locked --release
+          -p civ-server
+          --bin civ-server
+          --target ${{ matrix.target }}
+
+      - name: Package (unix)
+        if: runner.os != 'Windows'
+        run: |
+          TAG="${{ inputs.tag || github.ref_name }}"
+          STAGING="civ-server-${TAG}-${{ matrix.label }}"
+          mkdir -p "$STAGING"
+          cp "target/${{ matrix.target }}/release/civ-server" "$STAGING/"
+          tar czf "${STAGING}.tar.gz" "$STAGING"
+          echo "ASSET=${STAGING}.tar.gz" >> "$GITHUB_ENV"
+
+      - name: Package (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $tag = "${{ inputs.tag || github.ref_name }}"
+          $staging = "civ-server-${tag}-${{ matrix.label }}"
+          New-Item -ItemType Directory -Path $staging | Out-Null
+          Copy-Item -Path "target/${{ matrix.target }}/release/civ-server.exe" -Destination "$staging/"
+          Compress-Archive -Path "$staging/*" -DestinationPath "${staging}.zip"
+          echo "ASSET=${staging}.zip" >> $env:GITHUB_ENV
+
+      - name: Generate checksums
+        shell: bash
+        run: |
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            certutil -hashfile "$ASSET" SHA256 | tail -1 > "${ASSET}.sha256"
+          else
+            sha256sum "$ASSET" > "${ASSET}.sha256"
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: civis-server-${{ matrix.label }}
+          path: |
+            ${{ env.ASSET }}
+            ${{ env.ASSET }}.sha256
+          if-no-files-found: error
+
   # ─── Build standalone game client (cross-platform) ────────────────────
   build-game:
     name: Game client (${{ matrix.label }})
@@ -315,6 +396,7 @@ jobs:
     needs:
       - changelog
       - build-cli
+      - build-server
       - build-game
       - build-macos-app
     runs-on: ubuntu-24.04
@@ -366,6 +448,27 @@ jobs:
             echo "# Add civis-cli to your PATH"
             echo '```'
             echo ""
+            echo "### Server"
+            echo ""
+            echo "The \`civ-server\` binary runs the Civis simulation server:"
+            echo ""
+            echo "**Linux (amd64):**"
+            echo '```bash'
+            echo "curl -sL https://github.com/${REPO}/releases/download/${TAG}/civ-server-${TAG}-linux-amd64.tar.gz | tar xz"
+            echo "sudo mv civ-server-${TAG}-linux-amd64/civ-server /usr/local/bin/"
+            echo '```'
+            echo "**macOS (Apple Silicon):**"
+            echo '```bash'
+            echo "curl -sL https://github.com/${REPO}/releases/download/${TAG}/civ-server-${TAG}-macos-arm64.tar.gz | tar xz"
+            echo "sudo mv civ-server-${TAG}-macos-arm64/civ-server /usr/local/bin/"
+            echo '```'
+            echo "**Windows (PowerShell):**"
+            echo '```powershell'
+            echo "Invoke-WebRequest -Uri \"https://github.com/${REPO}/releases/download/${TAG}/civ-server-${TAG}-windows-amd64.zip\" -OutFile civ-server.zip"
+            echo "Expand-Archive civ-server.zip -DestinationPath civ-server"
+            echo "# Add civ-server to your PATH"
+            echo '```'
+            echo ""
             echo "### Game Client"
             echo ""
             echo "Download the standalone game client for your platform:"
@@ -412,6 +515,7 @@ jobs:
           prerelease: ${{ contains(inputs.tag || github.ref_name, '-') }}
           files: |
             artifacts/civis-cli-*/civis-cli-*
+            artifacts/civis-server-*/civis-server-*
             artifacts/civis-game-*/civis-game-*
             artifacts/civis-macos-app/civis-macos-app-*
         env:

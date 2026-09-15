@@ -607,7 +607,7 @@ fn requirement_terrain_is_continuous_not_blobs() {
         mesh.vertices.len()
     );
     assert!(
-        mesh.indices.len() % 6 == 0,
+        mesh.indices.len().is_multiple_of(6),
         "faces must stay in full quads (indices divisible by 6)"
     );
 }

@@ -13,7 +13,13 @@
 #   bash scripts/game-e2e.sh --quick              # skip build, use existing binary
 #   bash scripts/game-e2e.sh --update-baselines   # capture new baselines
 #
-# Requirements: bash 4+, cargo, jq, Xvfb (headless), imagemagick (compare)
+# Requirements: bash 4+, cargo, jq, Xvfb (headless), xdotool (headless),
+#                xwd+imagemagick or imagemagick (window capture)
+#
+# Capture strategy (Linux/Xvfb):
+#   1. Bevy native: xdotool sends F9 to game window -> Screenshot::primary_window()
+#   2. X11 window: xwd -id <window_id> + convert, or import -window <id>
+#   3. macOS: screencapture -x -w (frontmost window)
 #
 # Exit codes: 0=pass, 1=build, 2=launch, 3=flow, 4=visual
 
@@ -173,22 +179,139 @@ ok "Game running"
 # ── Capture screenshots at key moments ───────────────────────────────
 step "Capturing game screens..."
 
+# ── Window-targeted screenshot helpers ───────────────────────────────────
+# Detect the game window ID (cached after first lookup).
+_GAME_WINDOW_ID=""
+find_game_window() {
+    if [[ -n "${_GAME_WINDOW_ID}" ]]; then
+        return 0
+    fi
+    if [[ "${HEADLESS}" -eq 1 ]] && command -v xdotool &>/dev/null; then
+        # Search for the window by class or title.  Bevy's default window
+        # title contains the app name; fall back to any non-root window on
+        # the Xvfb display.
+        _GAME_WINDOW_ID=$(xdotool search --name "civ" 2>/dev/null | head -1) || true
+        if [[ -z "${_GAME_WINDOW_ID}" ]]; then
+            _GAME_WINDOW_ID=$(xdotool search --class "civ" 2>/dev/null | head -1) || true
+        fi
+        if [[ -z "${_GAME_WINDOW_ID}" ]]; then
+            # Last resort: any non-root window (the game is the only app)
+            _GAME_WINDOW_ID=$(xdotool search --onlyvisible "" 2>/dev/null | grep -v '^1$' | head -1) || true
+        fi
+    fi
+    if [[ -n "${_GAME_WINDOW_ID}" ]]; then
+        dim "Game window ID: ${_GAME_WINDOW_ID}"
+    fi
+}
+
+# Try to trigger Bevy's built-in screenshot by sending F9 to the game window.
+# dev_capture.rs handles F9 -> Screenshot::primary_window() -> save_to_disk().
+# Returns 0 if a capture file appeared, 1 otherwise.
+try_bevy_capture() {
+    local shot_file="$1"
+    local timeout_secs="${2:-8}"
+
+    if [[ "${HEADLESS}" -eq 1 ]] && command -v xdotool &>/dev/null; then
+        find_game_window || return 1
+        [[ -n "${_GAME_WINDOW_ID}" ]] || return 1
+
+        local captures_dir="${REPO_ROOT}/captures"
+        local before_count
+        before_count=$(find "${captures_dir}" -name 'shot-*.png' 2>/dev/null | wc -l | tr -d ' ')
+
+        # Send F9 to the game window specifically (not root)
+        xdotool key --window "${_GAME_WINDOW_ID}" F9 2>/dev/null || return 1
+
+        # Wait for the capture file to appear
+        local waited=0
+        while [[ "${waited}" -lt "${timeout_secs}" ]]; do
+            sleep 1
+            waited=$((waited + 1))
+            local after_count
+            after_count=$(find "${captures_dir}" -name 'shot-*.png' 2>/dev/null | wc -l | tr -d ' ')
+            if [[ "${after_count}" -gt "${before_count}" ]]; then
+                # New capture appeared — copy the newest one
+                local newest
+                newest=$(ls -t "${captures_dir}"/shot-*.png 2>/dev/null | head -1)
+                if [[ -n "${newest}" ]] && [[ -f "${newest}" ]]; then
+                    cp "${newest}" "${shot_file}"
+                    return 0
+                fi
+            fi
+        done
+    fi
+    return 1
+}
+
+# Window-targeted X11 capture using xwd + ImageMagick convert.
+# Falls back to import with -window <id> if xwd is unavailable.
+try_xwd_capture() {
+    local shot_file="$1"
+
+    if [[ "${HEADLESS}" -eq 1 ]]; then
+        find_game_window || return 1
+        [[ -n "${_GAME_WINDOW_ID}" ]] || return 1
+
+        if command -v xwd &>/dev/null && command -v convert &>/dev/null; then
+            xwd -id "${_GAME_WINDOW_ID}" -out "${shot_file}.xwd" 2>/dev/null || return 1
+            convert "${shot_file}.xwd" "${shot_file}" 2>/dev/null || return 1
+            rm -f "${shot_file}.xwd"
+            return 0
+        elif command -v import &>/dev/null; then
+            # ImageMagick import with explicit window ID (not -window root)
+            import -window "${_GAME_WINDOW_ID}" "${shot_file}" 2>/dev/null || return 1
+            return 0
+        fi
+    fi
+    return 1
+}
+
+# macOS desktop capture — captures the frontmost game window via screencapture.
+try_macos_capture() {
+    local shot_file="$1"
+
+    if [[ "$(uname)" == "Darwin" ]] && command -v screencapture &>/dev/null; then
+        # -l captures a specific window by its CGWindowID; find the game window.
+        local cgwid
+        cgwid=$(osascript -e '
+            tell application "System Events"
+                set wins to every window of (first process whose name contains "civ")
+                if (count of wins) > 0 then
+                    set w to first item of wins
+                    -- get the AX window role ID (not ideal but works for screencapture -l)
+                end if
+            end tell' 2>/dev/null) || true
+        # Simpler: just capture the frontmost window
+        screencapture -x -w "${shot_file}" 2>/dev/null || return 1
+        return 0
+    fi
+    return 1
+}
+
 capture_screenshot() {
     local name="$1"
     local delay="${2:-3}"
     local shot_file="${CAPTURES}/${name}.png"
+    local captured=0
 
-    if [[ "${HEADLESS}" -eq 1 ]]; then
-        # Use xdotool + import (ImageMagick) for headless capture
-        sleep "${delay}"
-        import -window root "${shot_file}" 2>/dev/null || true
-    else
-        # On desktop, the game's dev_capture handles screenshots via F9
-        # We'll use the game's built-in capture system
-        sleep "${delay}"
+    sleep "${delay}"
+
+    # Strategy 1: Trigger Bevy's native screenshot API via F9 hotkey (best quality)
+    if try_bevy_capture "${shot_file}" 6; then
+        captured=1
     fi
 
-    if [[ -f "${shot_file}" ]]; then
+    # Strategy 2: Window-targeted X11 capture (xwd or import with window ID)
+    if [[ "${captured}" -eq 0 ]] && try_xwd_capture "${shot_file}"; then
+        captured=1
+    fi
+
+    # Strategy 3: macOS screencapture (window mode)
+    if [[ "${captured}" -eq 0 ]] && try_macos_capture "${shot_file}"; then
+        captured=1
+    fi
+
+    if [[ "${captured}" -eq 1 ]] && [[ -f "${shot_file}" ]]; then
         local size
         size=$(stat -c%s "${shot_file}" 2>/dev/null || stat -f%z "${shot_file}" 2>/dev/null || echo 0)
         if [[ "${size}" -gt 1000 ]]; then
@@ -196,7 +319,7 @@ capture_screenshot() {
             return 0
         fi
     fi
-    dim "  ${name} (not captured — may need Xvfb/ImageMagick)"
+    dim "  ${name} (not captured — game window may not be visible)"
     return 1
 }
 

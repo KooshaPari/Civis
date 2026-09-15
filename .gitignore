@@ -118,3 +118,4 @@ yarn-error.log*
 /TEST_SPECS_*.md
 Civis-codex-finalize/
 target-codex-menus-pr1411/  
+.game-e2e/

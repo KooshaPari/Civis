@@ -1,0 +1,195 @@
+name: Game E2E (Visual)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'clients/bevy-ref/**'
+      - 'crates/engine/**'
+      - 'crates/server/**'
+  pull_request:
+    paths:
+      - 'clients/bevy-ref/**'
+      - 'crates/engine/**'
+      - 'crates/server/**'
+  workflow_dispatch:
+    inputs:
+      update_baselines:
+        description: "Update visual baselines"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: game-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  game-flow:
+    name: game flow (headless)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      CIV_BEVY_BACKEND: gl
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      GALLIUM_DRIVER: llvmpipe
+      MESA_GL_VERSION_OVERRIDE: "3.3"
+      DISPLAY: ":99"
+      CIVIS_PLAYTHROUGH_SEED: "42"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            xvfb \
+            xdotool \
+            imagemagick \
+            libasound2-dev \
+            libudev-dev \
+            libxkbcommon-dev \
+            libwayland-dev \
+            libx11-dev \
+            libxcursor-dev \
+            libxi-dev \
+            libxrandr-dev \
+            pkg-config \
+            jq
+
+      - name: Install websocat
+        run: |
+          curl -fsSL https://github.com/vi/websocat/releases/download/v1.13.0/websocat.x86_64-unknown-linux-musl \
+            -o /usr/local/bin/websocat
+          chmod +x /usr/local/bin/websocat
+
+      - name: Build game client + server
+        run: |
+          cargo build --locked --release \
+            -p civ-server \
+            -p civ-bevy-ref \
+            --bin civ-standalone \
+            --features bevy,egui,client-bins
+
+      - name: Start Xvfb
+        run: |
+          Xvfb :99 -screen 0 1920x1080x24 +extension RANDR &
+          sleep 2
+          echo "Xvfb started"
+
+      - name: Run game E2E
+        run: bash scripts/game-e2e.sh --headless --quick
+        timeout-minutes: 15
+
+      - name: Upload captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: game-e2e-captures-${{ github.run_id }}
+          path: .game-e2e/
+          retention-days: 14
+
+      - name: Upload game logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: game-e2e-logs-${{ github.run_id }}
+          path: |
+            .game-e2e/logs/game.log
+            .game-e2e/logs/server.log
+          retention-days: 7
+
+  visual-regression:
+    name: visual regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: game-flow
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download captures
+        uses: actions/download-artifact@v4
+        with:
+          name: game-e2e-captures-${{ github.run_id }}
+          path: .game-e2e/
+
+      - name: Check baselines exist
+        run: |
+          if ls tests/game-e2e/baselines/*.png &>/dev/null; then
+            echo "Baselines found — running visual diff"
+          else
+            echo "No baselines yet — run with --update-baselines to capture them"
+            exit 0
+          fi
+
+      - name: Compare against baselines
+        run: |
+          DIFF_COUNT=0
+          for shot in .game-e2e/captures/*.png; do
+            [[ -f "${shot}" ]] || continue
+            name=$(basename "${shot}")
+            baseline="tests/game-e2e/baselines/${name}"
+            if [[ -f "${baseline}" ]]; then
+              if compare -metric AE "${baseline}" "${shot}" ".game-e2e/diff_${name}" 2>/dev/null; then
+                echo "  ok: ${name}"
+              else
+                echo "  DIFF: ${name}"
+                DIFF_COUNT=$((DIFF_COUNT + 1))
+              fi
+            fi
+          done
+
+          if [[ "${DIFF_COUNT}" -gt 0 ]]; then
+            echo "Visual regressions detected in ${DIFF_COUNT} screenshots"
+            echo "Diff images in .game-e2e/"
+            exit 1
+          fi
+
+      - name: Upload diffs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-diffs-${{ github.run_id }}
+          path: .game-e2e/diff_*.png
+          retention-days: 7
+
+  update-baselines:
+    name: update baselines
+    runs-on: ubuntu-latest
+    if: github.event.inputs.update_baselines == 'true'
+    needs: game-flow
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download captures
+        uses: actions/download-artifact@v4
+        with:
+          name: game-e2e-captures-${{ github.run_id }}
+          path: .game-e2e/
+
+      - name: Update baselines
+        run: |
+          mkdir -p tests/game-e2e/baselines
+          cp .game-e2e/captures/*.png tests/game-e2e/baselines/ 2>/dev/null || true
+          echo "Baselines updated"
+          ls -la tests/game-e2e/baselines/
+
+      - name: Commit baselines
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add tests/game-e2e/baselines/
+          git diff --cached --quiet || git commit -m "test: update visual baselines [skip ci]"
+          git push

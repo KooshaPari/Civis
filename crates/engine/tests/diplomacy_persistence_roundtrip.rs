@@ -33,18 +33,20 @@ fn archive_roundtrips_diplomacy_state_after_save_load() {
     // Round-trip via the .civsave.zst archive path.
     let dir = tempfile::tempdir().expect("tempdir");
     let archive_path = dir.path().join("diplomacy.civsave.zst");
-    CivSaveBundle::save_archive(&archive_path, &sim).expect("save_archive");
+    let expected_live = sim.deep_diplomacy.faction_resources.clone();
+    let expected_state = sim.state.deep_diplomacy.faction_resources.clone();
+    CivSaveBundle::save_archive(&archive_path, &mut sim).expect("save_archive");
     let loaded = CivSaveBundle::load_archive(&archive_path).expect("load_archive");
 
     // Post-load WorldState side must equal pre-save live values byte-for-byte.
     assert_eq!(
-        loaded.state.deep_diplomacy.faction_resources, sim.deep_diplomacy.faction_resources,
-        "loaded WorldState.deep_diplomacy.faction_resources must equal pre-save live"
+        loaded.state.deep_diplomacy.faction_resources, expected_state,
+        "loaded WorldState.deep_diplomacy.faction_resources must equal pre-save state"
     );
 
-    // Post-load Simulation side must equal WorldState side (load-side mirror).
+    // Post-load Simulation side must equal pre-save live (load-side mirror).
     assert_eq!(
-        loaded.deep_diplomacy.faction_resources, loaded.state.deep_diplomacy.faction_resources,
-        "post-load Simulation.deep_diplomacy.faction_resources must match WorldState"
+        loaded.deep_diplomacy.faction_resources, expected_live,
+        "loaded Simulation.deep_diplomacy.faction_resources must equal pre-save live"
     );
 }

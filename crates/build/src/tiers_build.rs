@@ -18,9 +18,10 @@ use crate::{BuildingGraph, BuildingId};
 
 /// Era-driven tier classification for a building. Each tier scales slot
 /// counts, joule cost, and construction time (`FR-CIV-BUILD-001`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default)]
 pub enum BuildingTier {
     /// Hand-crafted, low-throughput (1 input + 1 output slot).
+    #[default]
     Primitive,
     /// Skilled-trade era workshops (2 + 2 slots).
     Artisan,
@@ -75,9 +76,10 @@ impl BuildingTier {
 /// (`FR-CIV-BUILD-002`). Each chain pins its input and output good
 /// signatures so that scenario YAML, production logic, and tests share a
 /// single source of truth.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub enum ProductionChain {
     /// Agricultural production — consumes no inputs, produces food.
+    #[default]
     Farm,
     /// Skilled workshop — consumes wood, produces tools.
     Workshop,
@@ -123,6 +125,18 @@ pub struct BuildingSpec {
     pub chain: ProductionChain,
     /// Output multiplier applied per tick. Must be >= 1.
     pub production_rate: u32,
+}
+
+impl Default for BuildingSpec {
+    /// Minimal viable spec: Primitive tier + Farm chain + rate 1. This is the
+    /// safe null value the archive round-trip machinery falls back on.
+    fn default() -> Self {
+        Self {
+            tier: BuildingTier::Primitive,
+            chain: ProductionChain::Farm,
+            production_rate: 1,
+        }
+    }
 }
 
 impl BuildingSpec {
@@ -298,6 +312,18 @@ pub struct BuildSite {
     progress: u32,
     /// Whether the site has finished construction.
     complete: bool,
+}
+
+impl Default for BuildSite {
+    fn default() -> Self {
+        Self {
+            id: BuildingId::default(),
+            spec: BuildingSpec::default(),
+            origin: WorldCoord { x: 0, y: 0, z: 0 },
+            progress: 0,
+            complete: false,
+        }
+    }
 }
 
 impl BuildSite {

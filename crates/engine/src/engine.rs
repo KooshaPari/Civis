@@ -210,15 +210,15 @@ pub struct MembershipPayoffTotals {
 
 // Moved to world_simulation.rs
 /// Broad economic orientation inferred from a civilization's strongest signal.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EconomicFocus {
+    #[default]
     Balanced,
     Agrarian,
     Industrial,
     Sacred,
     Mercantile,
 }
-
 /// Seeded RNG for reproducible simulation
 pub type SimRng = ChaCha8Rng;
 
@@ -2047,6 +2047,37 @@ impl Simulation {
         &self.last_control_signals
     }
 
+    /// Mirror authoritative Simulation-owned state into the per-tick `WorldState`
+    /// snapshot. This runs at the end of every [`tick`](Self::tick) so the
+    /// `.civsave.zst` archive path captures the latest post-tick values, and
+    /// is also invoked explicitly by [`CivSaveBundle::save_dir`] so post-tick
+    /// direct mutations (e.g. scenario loaders, integration tests) are
+    /// captured too.
+    pub fn save_state_mirror(&mut self) {
+        // Persistence mirrors (FR-CIV-DIPLOMACY-001): faction_relations,
+        // grief_accumulator, stance_engine, deep_diplomacy are mutated
+        // every tick by phase_diplomacy + phase_faction_decisions + stance
+        // decay, but the archive only persists the WorldState side. Mirror
+        // live -> state right before serialization.
+        self.state.faction_relations = self.faction_relations.clone();
+        self.state.grief_accumulator = self.grief_accumulator.clone();
+        self.state.stance_engine = self.stance_engine.clone();
+        self.state.deep_diplomacy = self.deep_diplomacy.clone();
+        // Persistence mirrors (FR-CIV-LANG-001): language_state and
+        // faction_languages are Simulation-owned, mutated every tick by
+        // phase_language_drift + phase_culture.
+        self.state.language_state = self.language_state.clone();
+        self.state.faction_languages = self.faction_languages.clone();
+        // Persistence mirrors (FR-CIV-INSTITUTIONS-001 + FR-CIV-CONSTRUCTION-001
+        // + FR-CIV-ECON-FOCUS-001): civic institutions, construction sites,
+        // and economic focus are Simulation-owned, mutated every tick by
+        // phase_institutions / phase_construction_sites / phase_policy_econ.
+        self.state.institutions = self.institutions.clone();
+        self.state.institution_levels_emitted = self.institution_levels_emitted.clone();
+        self.state.build_sites = self.build_sites.clone();
+        self.state.econ_focus = self.econ_focus.clone();
+    }
+
     /// Advance simulation by one tick.
     ///
     /// Phases run in [`PHASE_ORDER`] (CIV-0001 partial — engine-side deterministic
@@ -2159,27 +2190,7 @@ impl Simulation {
         // WorldState side. Mirror live -> state right before the
         // replay tick event so the archive snapshot captures the
         // latest post-tick diplomacy values.
-        self.state.faction_relations = self.faction_relations.clone();
-        self.state.grief_accumulator = self.grief_accumulator.clone();
-        self.state.stance_engine = self.stance_engine.clone();
-        self.state.deep_diplomacy = self.deep_diplomacy.clone();
-        // Persistence mirrors (FR-CIV-LANG-001): language_state and
-        // faction_languages are Simulation-owned, mutated every tick by
-        // phase_language_drift + phase_culture. Without these mirrors
-        // the .civsave.zst archive would never capture the emergent
-        // language drift state, silently resetting it on every reload.
-        self.state.language_state = self.language_state.clone();
-        self.state.faction_languages = self.faction_languages.clone();
-        // Persistence mirrors (FR-CIV-INSTITUTIONS-001 + FR-CIV-CONSTRUCTION-001
-        // + FR-CIV-ECON-FOCUS-001): civic institutions, construction sites,
-        // and economic focus are Simulation-owned, mutated every tick by
-        // phase_institutions / phase_construction_sites / phase_policy_econ.
-        // Without these mirrors the .civsave.zst archive silently resets
-        // all three to defaults on every reload.
-        self.state.institutions = self.institutions.clone();
-        self.state.institution_levels_emitted = self.institution_levels_emitted.clone();
-        self.state.build_sites = self.build_sites.clone();
-        self.state.econ_focus = self.econ_focus.clone();
+        self.save_state_mirror();
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]

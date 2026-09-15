@@ -18,7 +18,7 @@ fn archive_roundtrips_language_state_after_save_load() {
         sim.faction_languages().clone();
 
     let temp = std::env::temp_dir().join("civis_lang_roundtrip.civsave.zst");
-    CivSaveBundle::save_archive(&temp, &sim).expect("save should succeed");
+    CivSaveBundle::save_archive(&temp, &mut sim).expect("save should succeed");
     let loaded = CivSaveBundle::load_archive(&temp).expect("load should succeed");
 
     let loaded_lang = loaded.language_state();
@@ -59,7 +59,7 @@ fn archive_roundtrips_modified_faction_language_via_public_setter() {
     sim.advance_ticks(1);
 
     let temp = std::env::temp_dir().join("civis_lang_setter.civsave.zst");
-    CivSaveBundle::save_archive(&temp, &sim).expect("save should succeed");
+    CivSaveBundle::save_archive(&temp, &mut sim).expect("save should succeed");
     let loaded = CivSaveBundle::load_archive(&temp).expect("load should succeed");
 
     let loaded_lang = loaded

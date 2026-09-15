@@ -52,7 +52,19 @@ pub enum BuildingProvenance {
 pub const SCHEMA_VERSION: &str = "0.1.0-stub";
 
 /// Stable identifier for a building parcel.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Default,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Serialize,
+    Deserialize,
+)]
 pub struct BuildingId(pub u64);
 
 /// Parcel classification used by the city growth grammar.

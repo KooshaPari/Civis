@@ -80,7 +80,7 @@ pub struct TradeRoute {
 }
 
 /// A spawned caravan entity.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Caravan {
     /// Unique identifier.
     pub id: u32,
@@ -116,7 +116,7 @@ pub enum CaravanOutcome {
 }
 
 /// Configuration for the caravan system.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct CaravanConfig {
     /// Minimum safety to spawn a caravan.
     pub min_safety: i64,

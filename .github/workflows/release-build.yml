@@ -1,0 +1,418 @@
+name: Release Build
+
+# Unified release workflow: builds CLI tools + standalone game client
+# for all platforms, generates changelog, and publishes a GitHub Release.
+#
+# Complements release.yml (crates.io publish) which also triggers on v* tags.
+# This workflow handles binary distribution via GitHub Releases.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to build (e.g. v0.1.0). Defaults to the pushed tag."
+        required: false
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  # ─── Preflight: fast-fail before expensive cross-platform builds ──────
+  preflight:
+    name: Preflight checks
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
+        with:
+          cache-all-crates: true
+      - name: Validate tag format
+        run: |
+          TAG="${{ inputs.tag || github.ref_name }}"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "::error::Tag '$TAG' does not match semver pattern v*.*.*"
+            exit 1
+          fi
+          echo "Building release for tag: $TAG"
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Workspace tests
+        run: cargo test --workspace --all-targets --locked
+      - name: Strict clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+  # ─── Generate changelog from conventional commits ──────────────────────
+  changelog:
+    name: Generate changelog
+    runs-on: ubuntu-24.04
+    outputs:
+      release_notes: ${{ steps.changelog.outputs.notes }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - name: Install git-cliff
+        run: cargo install git-cliff --locked
+      - name: Generate changelog
+        id: changelog
+        run: |
+          TAG="${{ inputs.tag || github.ref_name }}"
+          git-cliff --tag "$TAG" --output cliff-release.md
+          git-cliff --output CHANGELOG.md
+          NOTES=$(cat cliff-release.md)
+          {
+            echo "notes<<CLIFF_EOF"
+            echo "$NOTES"
+            echo "CLIFF_EOF"
+          } >> "$GITHUB_OUTPUT"
+      - name: Upload changelog artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: changelog
+          path: |
+            cliff-release.md
+            CHANGELOG.md
+
+  # ─── Build CLI binaries (cross-platform) ──────────────────────────────
+  build-cli:
+    name: CLI (${{ matrix.label }})
+    needs: preflight
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            label: linux-amd64
+            ext: tar.gz
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            label: macos-arm64
+            ext: tar.gz
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            label: macos-amd64
+            ext: tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            label: windows-amd64
+            ext: zip
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
+        with:
+          cache-all-crates: true
+          key: cli-${{ matrix.target }}
+
+      - name: Build CLI binaries
+        run: >
+          cargo build --locked --release
+          -p civis-cli
+          --bin civis
+          --bin civis-pixels
+          --bin civis-census
+          --bin civis-dump
+          --bin civis-mcp
+          --target ${{ matrix.target }}
+
+      - name: Package (unix)
+        if: runner.os != 'Windows'
+        run: |
+          TAG="${{ inputs.tag || github.ref_name }}"
+          STAGING="civis-cli-${TAG}-${{ matrix.label }}"
+          mkdir -p "$STAGING"
+          cp target/${{ matrix.target }}/release/civis "$STAGING/"
+          cp target/${{ matrix.target }}/release/civis-pixels "$STAGING/"
+          cp target/${{ matrix.target }}/release/civis-census "$STAGING/"
+          cp target/${{ matrix.target }}/release/civis-dump "$STAGING/"
+          cp target/${{ matrix.target }}/release/civis-mcp "$STAGING/"
+          tar czf "${STAGING}.tar.gz" "$STAGING"
+          echo "ASSET=${STAGING}.tar.gz" >> "$GITHUB_ENV"
+
+      - name: Package (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $tag = "${{ inputs.tag || github.ref_name }}"
+          $staging = "civis-cli-${tag}-${{ matrix.label }}"
+          New-Item -ItemType Directory -Path $staging | Out-Null
+          Copy-Item -Path "target/${{ matrix.target }}/release/civis.exe" -Destination "$staging/"
+          Copy-Item -Path "target/${{ matrix.target }}/release/civis-pixels.exe" -Destination "$staging/"
+          Copy-Item -Path "target/${{ matrix.target }}/release/civis-census.exe" -Destination "$staging/"
+          Copy-Item -Path "target/${{ matrix.target }}/release/civis-dump.exe" -Destination "$staging/"
+          Copy-Item -Path "target/${{ matrix.target }}/release/civis-mcp.exe" -Destination "$staging/"
+          Compress-Archive -Path "$staging/*" -DestinationPath "${staging}.zip"
+          echo "ASSET=${staging}.zip" >> $env:GITHUB_ENV
+
+      - name: Generate checksums
+        shell: bash
+        run: |
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            certutil -hashfile "$ASSET" SHA256 | tail -1 > "${ASSET}.sha256"
+          else
+            sha256sum "$ASSET" > "${ASSET}.sha256"
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: civis-cli-${{ matrix.label }}
+          path: |
+            ${{ env.ASSET }}
+            ${{ env.ASSET }}.sha256
+          if-no-files-found: error
+
+  # ─── Build standalone game client (cross-platform) ────────────────────
+  build-game:
+    name: Game client (${{ matrix.label }})
+    needs: preflight
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            label: linux-amd64
+            ext: tar.gz
+            extra_deps: |
+              sudo apt-get update
+              sudo apt-get install -y libvulkan-dev libwayland-dev libxkbcommon-dev
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            label: macos-arm64
+            ext: tar.gz
+            extra_deps: "true"
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            label: macos-amd64
+            ext: tar.gz
+            extra_deps: "true"
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            label: windows-amd64
+            ext: zip
+            extra_deps: "true"
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
+        with:
+          cache-all-crates: true
+          key: game-${{ matrix.target }}
+
+      - name: Install platform dependencies
+        run: ${{ matrix.extra_deps }}
+
+      - name: Build standalone client
+        run: >
+          cargo build --locked --release
+          -p civ-bevy-ref
+          --bin civ-standalone
+          --features bevy,egui,client-bins
+          --target ${{ matrix.target }}
+
+      - name: Package (unix)
+        if: runner.os != 'Windows'
+        run: |
+          TAG="${{ inputs.tag || github.ref_name }}"
+          STAGING="civis-game-${TAG}-${{ matrix.label }}"
+          mkdir -p "$STAGING"
+          cp "target/${{ matrix.target }}/release/civ-standalone" "$STAGING/"
+          cp -R clients/bevy-ref/assets "$STAGING/assets"
+          tar czf "${STAGING}.tar.gz" "$STAGING"
+          echo "ASSET=${STAGING}.tar.gz" >> "$GITHUB_ENV"
+
+      - name: Package (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $tag = "${{ inputs.tag || github.ref_name }}"
+          $staging = "civis-game-${tag}-${{ matrix.label }}"
+          New-Item -ItemType Directory -Path $staging | Out-Null
+          Copy-Item -Path "target/${{ matrix.target }}/release/civ-standalone.exe" -Destination "$staging/"
+          Copy-Item -Path "clients/bevy-ref/assets" -Destination "$staging/assets" -Recurse
+          Compress-Archive -Path "$staging/*" -DestinationPath "${staging}.zip"
+          echo "ASSET=${staging}.zip" >> $env:GITHUB_ENV
+
+      - name: Generate checksums
+        shell: bash
+        run: |
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            certutil -hashfile "$ASSET" SHA256 | tail -1 > "${ASSET}.sha256"
+          else
+            sha256sum "$ASSET" > "${ASSET}.sha256"
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: civis-game-${{ matrix.label }}
+          path: |
+            ${{ env.ASSET }}
+            ${{ env.ASSET }}.sha256
+          if-no-files-found: error
+
+  # ─── Build macOS .app bundle ──────────────────────────────────────────
+  build-macos-app:
+    name: macOS .app bundle
+    needs: preflight
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
+        with:
+          cache-all-crates: true
+          key: macos-app
+
+      - name: Build .app bundle
+        run: bash scripts/build-macos-app.sh
+
+      - name: Smoke test binary
+        run: |
+          timeout 5 ./Civis.app/Contents/MacOS/civ-bevy-window --help 2>/dev/null || true
+          echo "Binary loads OK"
+
+      - name: Package .app
+        run: |
+          TAG="${{ inputs.tag || github.ref_name }}"
+          zip -r "civis-macos-app-${TAG}.zip" Civis.app/
+          echo "ASSET=civis-macos-app-${TAG}.zip" >> "$GITHUB_ENV"
+
+      - name: Generate checksums
+        run: sha256sum "$ASSET" > "${ASSET}.sha256"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: civis-macos-app
+          path: |
+            ${{ env.ASSET }}
+            ${{ env.ASSET }}.sha256
+
+  # ─── Publish GitHub Release ───────────────────────────────────────────
+  release:
+    name: Publish GitHub Release
+    needs:
+      - changelog
+      - build-cli
+      - build-game
+      - build-macos-app
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          path: artifacts
+
+      - name: Compose release body
+        id: body
+        shell: bash
+        run: |
+          TAG="${{ inputs.tag || github.ref_name }}"
+          REPO="${{ github.repository }}"
+
+          # Find previous tag for changelog link
+          PREV_TAG=$(git tag --sort=-v:refname | grep -A1 "^${TAG}$" | tail -1 || echo "")
+
+          # Header
+          {
+            echo "## Civis ${TAG}"
+            echo ""
+            echo "### Install"
+            echo ""
+            echo "**macOS (Apple Silicon):**"
+            echo '```bash'
+            echo "curl -sL https://github.com/${REPO}/releases/download/${TAG}/civis-cli-${TAG}-macos-arm64.tar.gz | tar xz"
+            echo "sudo mv civis-cli-${TAG}-macos-arm64/civis /usr/local/bin/"
+            echo '```'
+            echo "**macOS (Intel):**"
+            echo '```bash'
+            echo "curl -sL https://github.com/${REPO}/releases/download/${TAG}/civis-cli-${TAG}-macos-amd64.tar.gz | tar xz"
+            echo "sudo mv civis-cli-${TAG}-macos-amd64/civis /usr/local/bin/"
+            echo '```'
+            echo "**Linux (amd64):**"
+            echo '```bash'
+            echo "curl -sL https://github.com/${REPO}/releases/download/${TAG}/civis-cli-${TAG}-linux-amd64.tar.gz | tar xz"
+            echo "sudo mv civis-cli-${TAG}-linux-amd64/civis /usr/local/bin/"
+            echo '```'
+            echo "**Windows (PowerShell):**"
+            echo '```powershell'
+            echo "Invoke-WebRequest -Uri \"https://github.com/${REPO}/releases/download/${TAG}/civis-cli-${TAG}-windows-amd64.zip\" -OutFile civis-cli.zip"
+            echo "Expand-Archive civis-cli.zip -DestinationPath civis-cli"
+            echo "# Add civis-cli to your PATH"
+            echo '```'
+            echo ""
+            echo "### Game Client"
+            echo ""
+            echo "Download the standalone game client for your platform:"
+            echo "- **Linux (amd64):** \`civis-game-${TAG}-linux-amd64.tar.gz\`"
+            echo "- **macOS (Apple Silicon):** \`civis-game-${TAG}-macos-arm64.tar.gz\` or \`civis-macos-app-${TAG}.zip\` (.app bundle)"
+            echo "- **macOS (Intel):** \`civis-game-${TAG}-macos-amd64.tar.gz\`"
+            echo "- **Windows (amd64):** \`civis-game-${TAG}-windows-amd64.zip\`"
+            echo ""
+            echo "### What Changed"
+            echo ""
+          } > release-body.md
+
+          # Append generated changelog
+          if [[ -f artifacts/changelog/cliff-release.md ]]; then
+            cat artifacts/changelog/cliff-release.md >> release-body.md
+          fi
+
+          # Checksums section
+          {
+            echo ""
+            echo "### Checksums (SHA-256)"
+            echo ""
+          } >> release-body.md
+
+          find artifacts -name '*.sha256' | sort | while read -r f; do
+            echo '```' >> release-body.md
+            cat "$f" >> release-body.md
+            echo '```' >> release-body.md
+          done
+
+          # Changelog link
+          if [[ -n "$PREV_TAG" ]]; then
+            echo "" >> release-body.md
+            echo "**Full Changelog**: https://github.com/${REPO}/compare/${PREV_TAG}...${TAG}" >> release-body.md
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          name: "Civis ${{ inputs.tag || github.ref_name }}"
+          body_path: release-body.md
+          draft: false
+          prerelease: ${{ contains(inputs.tag || github.ref_name, '-') }}
+          files: |
+            artifacts/civis-cli-*/civis-cli-*
+            artifacts/civis-game-*/civis-game-*
+            artifacts/civis-macos-app/civis-macos-app-*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

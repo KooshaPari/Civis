@@ -136,6 +136,7 @@ pub use engine::{
 pub use diplomacy::{DiplomacyEvent, DiplomacyKind};
 // Re-export climate types from the extracted climate module.
 pub use climate::{CoastalColumn, WATER_MARKER_MATERIAL};
+pub use culture::FactionIdeologyState;
 pub use hash_chain::hash_hex;
 pub use replay::ReplayError;
 pub use replay::ReplayLog;

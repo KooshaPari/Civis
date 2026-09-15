@@ -356,9 +356,20 @@ impl CivSaveBundle {
         fs::write(&mod_state_path, sim.export_mod_guest_state().to_json()?)
             .map_err(|e| io_err(&mod_state_path, e))?;
 
+        // Mirror authoritative Simulation-owned state into a clone of
+        // `state` so direct mutations done after the last tick (scenario
+        // loaders, integration tests, parallel agents) are captured
+        // before serialization. The mirror is `&self`-safe so the public
+        // `save_dir`/`save_archive` signatures can stay `&Simulation`.
+        let mut world_state_for_save = sim.state.clone();
+        sim.save_state_mirror_to(&mut world_state_for_save);
+
         let world_state_path = dir.join("world_state.json");
-        fs::write(&world_state_path, serde_json::to_string(&sim.state)?)
-            .map_err(|e| io_err(&world_state_path, e))?;
+        fs::write(
+            &world_state_path,
+            serde_json::to_string(&world_state_for_save)?,
+        )
+        .map_err(|e| io_err(&world_state_path, e))?;
 
         let environment_path = dir.join(ENVIRONMENT_FILE);
         let environment = SavedEnvironment {

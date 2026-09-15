@@ -2118,6 +2118,30 @@ impl Simulation {
         self.state.unrest_settlement_gini = self.unrest_settlement_gini.clone();
     }
 
+    /// Read-only mirror variant: copies authoritative Simulation-owned state
+    /// into a caller-supplied `&mut WorldState` so external callers that
+    /// only have `&Simulation` (e.g. `CivSaveBundle::save_dir`) can still
+    /// capture post-tick mutations before serializing the archive. Mirrors
+    /// the exact same 22 fields as [`save_state_mirror`](Self::save_state_mirror)
+    /// but does so without needing `&mut self`, which is required because
+    /// `save_dir`/`save_archive` accept `&Simulation`.
+    pub fn save_state_mirror_to(&self, target: &mut WorldState) {
+        target.faction_relations = self.faction_relations.clone();
+        target.grief_accumulator = self.grief_accumulator.clone();
+        target.stance_engine = self.stance_engine.clone();
+        target.deep_diplomacy = self.deep_diplomacy.clone();
+        target.language_state = self.language_state.clone();
+        target.faction_languages = self.faction_languages.clone();
+        target.institutions = self.institutions.clone();
+        target.institution_levels_emitted = self.institution_levels_emitted.clone();
+        target.build_sites = self.build_sites.clone();
+        target.econ_focus = self.econ_focus.clone();
+        target.cluster_cultures = self.cluster_cultures.clone();
+        target.faction_ideologies = self.faction_ideologies.clone();
+        target.faction_aggression = self.faction_aggression.clone();
+        target.unrest_settlement_gini = self.unrest_settlement_gini.clone();
+    }
+
     /// Advance simulation by one tick.
     ///
     /// Phases run in [`PHASE_ORDER`] (CIV-0001 partial — engine-side deterministic

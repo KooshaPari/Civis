@@ -168,7 +168,7 @@ mod tests {
         assert_eq!(sim.voxel().read(moved), WATER_MARKER_MATERIAL);
         let dir = tempdir().expect("tempdir");
         let save_path = dir.path().join("moved-coastal");
-        CivSaveBundle::save_dir(&save_path, &mut sim).expect("save after tide movement");
+        CivSaveBundle::save_dir(&save_path, &sim).expect("save after tide movement");
         let mut loaded = CivSaveBundle::load_dir(&save_path).expect("load");
         assert_eq!(
             loaded.voxel().read(WorldCoord { x, y: base_y, z }),
@@ -212,8 +212,8 @@ mod tests {
         assert_eq!(sim.voxel().read(new_marker), WATER_MARKER_MATERIAL);
         let dir = tempdir().expect("tempdir");
         let save_path = dir.path().join("reregistered-coastal");
-        CivSaveBundle::save_dir(&save_path, &mut sim).expect("save");
-        let mut loaded = CivSaveBundle::load_dir(&save_path).expect("load");
+        CivSaveBundle::save_dir(&save_path, &sim).expect("save after tide movement");
+        let mut loaded = CivSaveBundle::load_dir(&save_path).expect("load after tide movement");
         assert_eq!(
             loaded.voxel().read(WorldCoord {
                 x,

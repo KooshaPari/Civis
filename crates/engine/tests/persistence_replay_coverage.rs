@@ -100,7 +100,7 @@ fn replay_after_load_preserves_institutions_buildsites_econfocus_mutations() {
 
     let dir = tempfile::tempdir().expect("tempdir");
     let archive_path = dir.path().join("persist.civsave.zst");
-    CivSaveBundle::save_archive(&archive_path, &mut sim).expect("save_archive");
+    CivSaveBundle::save_archive(&archive_path, &sim).expect("save_archive");
 
     let mut loaded = CivSaveBundle::load_archive(&archive_path).expect("load_archive");
 
@@ -144,7 +144,7 @@ fn replay_after_load_preserves_deep_diplomacy_faction_resources() {
 
     let dir = tempfile::tempdir().expect("tempdir");
     let archive_path = dir.path().join("diplo.civsave.zst");
-    CivSaveBundle::save_archive(&archive_path, &mut sim).expect("save_archive");
+    CivSaveBundle::save_archive(&archive_path, &sim).expect("save_archive");
     let mut loaded = CivSaveBundle::load_archive(&archive_path).expect("load_archive");
 
     // Right after load: live == mirror (load-side mirror already ran).

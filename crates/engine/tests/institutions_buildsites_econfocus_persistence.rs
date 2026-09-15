@@ -55,7 +55,7 @@ fn archive_roundtrips_econ_focus_through_world_state() {
     let state_expected: BTreeMap<u32, EconomicFocus> = sim.state.econ_focus.clone();
 
     let path = tmp_path("econ_focus");
-    CivSaveBundle::save_archive(&path, &mut sim).expect("save_archive");
+    CivSaveBundle::save_archive(&path, &sim).expect("save_archive");
     let loaded = CivSaveBundle::load_archive(&path).expect("load_archive");
 
     assert_eq!(

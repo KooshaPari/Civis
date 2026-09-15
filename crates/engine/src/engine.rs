@@ -462,6 +462,32 @@ pub struct WorldState {
     // settlement's resource-allocation policy.
     #[serde(default)]
     pub econ_focus: BTreeMap<u32, EconomicFocus>,
+
+    // Cluster cultures (FR-CIV-CULTURE-001) — durable across archive round-trip.
+    // Mutated by phase_culture every tick via culture_profiles_for(); the
+    // accumulated monitoring/mythic-coherence/uncertainty-reduction per
+    // settlement survives across reloads. Default to empty BTreeMap so
+    // legacy v3 saves with no culture field still deserialize.
+    #[serde(default)]
+    pub cluster_cultures: BTreeMap<u64, civ_agents::culture::CultureProfile>,
+
+    // Faction ideologies (FR-CIV-IDEOLOGY-001) — durable across archive
+    // round-trip. Mutated by phase_ideology; per-faction cultural doctrine
+    // flags survive reload.
+    #[serde(default)]
+    pub faction_ideologies: BTreeMap<u32, FactionIdeologyState>,
+
+    // Faction aggression (FR-CIV-AGGRESSION-001) — durable across archive
+    // round-trip. Mutated by phase_aggression; per-faction sentiment vector
+    // survives reload.
+    #[serde(default)]
+    pub faction_aggression: BTreeMap<u32, f32>,
+
+    // Unrest settlement gini (FR-CIV-UNREST-001) — durable across archive
+    // round-trip. Mutated by phase_unrest every tick; legacy v3 saves
+    // deserialize to empty.
+    #[serde(default)]
+    pub unrest_settlement_gini: BTreeMap<u32, f64>,
 }
 
 impl PartialEq for WorldState {
@@ -567,6 +593,10 @@ impl Default for WorldState {
             institution_levels_emitted: BTreeSet::new(),
             build_sites: Vec::new(),
             econ_focus: BTreeMap::new(),
+            cluster_cultures: BTreeMap::new(),
+            faction_ideologies: BTreeMap::new(),
+            faction_aggression: BTreeMap::new(),
+            unrest_settlement_gini: BTreeMap::new(),
         }
     }
 }
@@ -2076,6 +2106,16 @@ impl Simulation {
         self.state.institution_levels_emitted = self.institution_levels_emitted.clone();
         self.state.build_sites = self.build_sites.clone();
         self.state.econ_focus = self.econ_focus.clone();
+        // Persistence mirrors (FR-CIV-CULTURE-001 + FR-CIV-IDEOLOGY-001
+        // + FR-CIV-AGGRESSION-001 + FR-CIV-UNREST-001): cluster_cultures,
+        // faction_ideologies, faction_aggression, and unrest_settlement_gini
+        // are Simulation-owned, mutated by phase_culture / phase_aggression
+        // / phase_unrest every tick. Mirror live -> state right before
+        // serialization so round-trip archive recovery is exact.
+        self.state.cluster_cultures = self.cluster_cultures.clone();
+        self.state.faction_ideologies = self.faction_ideologies.clone();
+        self.state.faction_aggression = self.faction_aggression.clone();
+        self.state.unrest_settlement_gini = self.unrest_settlement_gini.clone();
     }
 
     /// Advance simulation by one tick.

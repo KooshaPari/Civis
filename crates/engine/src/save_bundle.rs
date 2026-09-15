@@ -491,6 +491,15 @@ impl CivSaveBundle {
                 sim.state.institution_levels_emitted.clone();
             sim.build_sites = sim.state.build_sites.clone();
             sim.econ_focus = sim.state.econ_focus.clone();
+            // Mirror persisted culture, ideology, aggression, and
+            // unrest-gini state back onto the live Simulation so
+            // phase_culture / phase_aggression / phase_unrest resume
+            // with the same authoritative post-save values.
+            sim.cluster_cultures = sim.state.cluster_cultures.clone();
+            sim.faction_ideologies = sim.state.faction_ideologies.clone();
+            sim.faction_aggression = sim.state.faction_aggression.clone();
+            sim.unrest_settlement_gini =
+                sim.state.unrest_settlement_gini.clone();
         }
 
         let environment_path = dir.join(ENVIRONMENT_FILE);

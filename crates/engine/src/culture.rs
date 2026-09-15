@@ -14,7 +14,7 @@ use rand::Rng;
 const DIM: usize = 4;
 const MAX_DRIFT_RATE: f32 = 0.09;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct FactionIdeologyState {
     /// Core values vector (values). Divergence pressure is strongest here.
     pub values: [f32; DIM],

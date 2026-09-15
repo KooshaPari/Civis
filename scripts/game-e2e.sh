@@ -187,16 +187,13 @@ find_game_window() {
         return 0
     fi
     if [[ "${HEADLESS}" -eq 1 ]] && command -v xdotool &>/dev/null; then
-        # Search for the window by class or title.  Bevy's default window
-        # title contains the app name; fall back to any non-root window on
-        # the Xvfb display.
-        _GAME_WINDOW_ID=$(xdotool search --name "civ" 2>/dev/null | head -1) || true
+        # Match the Bevy window title "Civis — Bevy standalone"
+        _GAME_WINDOW_ID=$(xdotool search --name "Civis" 2>/dev/null | head -1) || true
         if [[ -z "${_GAME_WINDOW_ID}" ]]; then
-            _GAME_WINDOW_ID=$(xdotool search --class "civ" 2>/dev/null | head -1) || true
+            _GAME_WINDOW_ID=$(xdotool search --class "Civis" 2>/dev/null | head -1) || true
         fi
         if [[ -z "${_GAME_WINDOW_ID}" ]]; then
-            # Last resort: any non-root window (the game is the only app)
-            _GAME_WINDOW_ID=$(xdotool search --onlyvisible "" 2>/dev/null | grep -v '^1$' | head -1) || true
+            _GAME_WINDOW_ID=$(xdotool search --name "civ" 2>/dev/null | head -1) || true
         fi
     fi
     if [[ -n "${_GAME_WINDOW_ID}" ]]; then
@@ -243,23 +240,26 @@ try_bevy_capture() {
     return 1
 }
 
-# Window-targeted X11 capture using xwd + ImageMagick convert.
-# Falls back to import with -window <id> if xwd is unavailable.
+# Window-targeted X11 capture using xdotool + xwd + ImageMagick convert.
+# Falls back to import -window root (full display) if xdotool cannot locate
+# the game window.
 try_xwd_capture() {
     local shot_file="$1"
 
     if [[ "${HEADLESS}" -eq 1 ]]; then
-        find_game_window || return 1
-        [[ -n "${_GAME_WINDOW_ID}" ]] || return 1
+        find_game_window || true
 
-        if command -v xwd &>/dev/null && command -v convert &>/dev/null; then
+        # xwd -id captures just the game window (preferred)
+        if [[ -n "${_GAME_WINDOW_ID}" ]] && command -v xwd &>/dev/null && command -v convert &>/dev/null; then
             xwd -id "${_GAME_WINDOW_ID}" -out "${shot_file}.xwd" 2>/dev/null || return 1
             convert "${shot_file}.xwd" "${shot_file}" 2>/dev/null || return 1
             rm -f "${shot_file}.xwd"
             return 0
-        elif command -v import &>/dev/null; then
-            # ImageMagick import with explicit window ID (not -window root)
-            import -window "${_GAME_WINDOW_ID}" "${shot_file}" 2>/dev/null || return 1
+        fi
+
+        # import -window root fallback (captures full Xvfb display)
+        if command -v import &>/dev/null; then
+            import -window root "${shot_file}" 2>/dev/null || return 1
             return 0
         fi
     fi

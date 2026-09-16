@@ -490,6 +490,24 @@ pub struct WorldState {
     #[serde(default)]
     pub unrest_settlement_gini: BTreeMap<u32, f64>,
 
+    // Riot accumulator (FR-CIV-UNREST-002) — durable across archive round-trip.
+    // Mutated by phase_unrest every tick; per-settlement riot accumulator
+    // survives reload. Legacy v3 saves deserialize to empty.
+    #[serde(default)]
+    pub riot_accumulator: BTreeMap<u32, i64>,
+
+    // Migrant accumulator (FR-CIV-UNREST-002) — durable across archive round-trip.
+    // Mutated by phase_unrest every tick; per-settlement migrant accumulator
+    // survives reload. Legacy v3 saves deserialize to empty.
+    #[serde(default)]
+    pub migrant_accumulator: BTreeMap<u32, i64>,
+
+    // Scenario taxation (FR-CIV-ECON-010) — durable across archive round-trip.
+    // Mutated by apply_scenario_taxation; scenario-level taxation policy
+    // survives reload. Legacy v3 saves deserialize to default (zeroes).
+    #[serde(default)]
+    pub scenario_taxation: civ_economy::Taxation,
+
     // Era progression (FR-CIV-ERA-001) — durable across archive round-trip.
     // Mutated by phase_era every tick; era gates and per-faction era
     // history survive reload. legacy v3 saves deserialize to default.
@@ -617,6 +635,9 @@ impl Default for WorldState {
             faction_ideologies: BTreeMap::new(),
             faction_aggression: BTreeMap::new(),
             unrest_settlement_gini: BTreeMap::new(),
+            riot_accumulator: BTreeMap::new(),
+            migrant_accumulator: BTreeMap::new(),
+            scenario_taxation: civ_economy::Taxation::default(),
             era_progression: crate::era::EraProgressionState::default(),
             emergence_sample: None,
             significance: civ_legends::significance::SignificanceAccumulator::default(),
@@ -2139,6 +2160,12 @@ impl Simulation {
         self.state.faction_ideologies = self.faction_ideologies.clone();
         self.state.faction_aggression = self.faction_aggression.clone();
         self.state.unrest_settlement_gini = self.unrest_settlement_gini.clone();
+        // Persistence mirrors (FR-CIV-UNREST-002 + FR-CIV-ECON-010):
+        // riot_accumulator, migrant_accumulator are mutated every tick by
+        // phase_unrest; scenario_taxation is set by apply_scenario_taxation.
+        self.state.riot_accumulator = self.riot_accumulator.clone();
+        self.state.migrant_accumulator = self.migrant_accumulator.clone();
+        self.state.scenario_taxation = self.scenario_taxation.clone();
     }
 
     /// Read-only mirror variant: copies authoritative Simulation-owned state
@@ -2163,6 +2190,9 @@ impl Simulation {
         target.faction_ideologies = self.faction_ideologies.clone();
         target.faction_aggression = self.faction_aggression.clone();
         target.unrest_settlement_gini = self.unrest_settlement_gini.clone();
+        target.riot_accumulator = self.riot_accumulator.clone();
+        target.migrant_accumulator = self.migrant_accumulator.clone();
+        target.scenario_taxation = self.scenario_taxation.clone();
         target.era_progression = self.era_progression.clone();
         target.emergence_sample = self.emergence_sample.clone();
         target.significance = self.significance.clone();

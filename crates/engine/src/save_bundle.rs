@@ -511,6 +511,13 @@ impl CivSaveBundle {
             sim.faction_aggression = sim.state.faction_aggression.clone();
             sim.unrest_settlement_gini =
                 sim.state.unrest_settlement_gini.clone();
+            // Mirror persisted riot/migrant accumulators and scenario
+            // taxation back onto the live Simulation so phase_unrest /
+            // apply_scenario_taxation resume with the same authoritative
+            // post-save values.
+            sim.riot_accumulator = sim.state.riot_accumulator.clone();
+            sim.migrant_accumulator = sim.state.migrant_accumulator.clone();
+            sim.scenario_taxation = sim.state.scenario_taxation.clone();
             sim.era_progression = sim.state.era_progression.clone();
             sim.emergence_sample = sim.state.emergence_sample.clone();
             sim.significance = sim.state.significance.clone();

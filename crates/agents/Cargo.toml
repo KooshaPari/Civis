@@ -22,3 +22,5 @@ hecs = "0.10"
 
 [dev-dependencies]
 proptest = "1.11"
+rand = "0.8.6"
+rand_chacha = "0.3"

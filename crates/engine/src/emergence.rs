@@ -185,6 +185,7 @@ impl GameState for FactionMctsState {
 }
 
 /// Per-simulation MOAT state (legends graph, cluster cultures, feed buffers).
+#[derive(Clone)]
 pub struct EmergenceState {
     pub(crate) legends: LegendsWorker,
     pub(crate) cluster_cultures: BTreeMap<u64, CultureProfile>,
@@ -248,6 +249,12 @@ impl EmergenceState {
             summary: summary.into(),
             agent_id,
         });
+    }
+}
+
+impl Default for EmergenceState {
+    fn default() -> Self {
+        Self::new(0)
     }
 }
 

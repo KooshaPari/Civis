@@ -49,7 +49,7 @@ impl BranchingRegime {
 }
 
 /// One closed avalanche entry in the ledger.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 struct ClosedAvalanche {
     sigma_a: f32,
     size: u64,
@@ -57,7 +57,7 @@ struct ClosedAvalanche {
 }
 
 /// Fixed-capacity ring buffer of closed `(σ_a, s_a, close_tick)` tuples.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BranchingLedger {
     entries: Vec<ClosedAvalanche>,
     capacity: usize,

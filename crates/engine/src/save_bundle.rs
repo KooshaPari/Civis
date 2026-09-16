@@ -511,6 +511,9 @@ impl CivSaveBundle {
             sim.faction_aggression = sim.state.faction_aggression.clone();
             sim.unrest_settlement_gini =
                 sim.state.unrest_settlement_gini.clone();
+            sim.era_progression = sim.state.era_progression.clone();
+            sim.emergence_sample = sim.state.emergence_sample.clone();
+            sim.significance = sim.state.significance.clone();
         }
 
         let environment_path = dir.join(ENVIRONMENT_FILE);

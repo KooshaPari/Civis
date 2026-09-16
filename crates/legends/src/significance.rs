@@ -16,9 +16,10 @@
 
 use crate::ids::{Epoch, LegendEntityId};
 use crate::model::{EventKind, Role};
+use serde::{Deserialize, Serialize};
 
 /// Configuration for the significance accumulator.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SignificanceConfig {
     /// Per-epoch exponential decay factor for accumulated significance.
     /// 0.95 = slow decay (events stay significant for ~44 epochs).
@@ -44,7 +45,7 @@ impl Default for SignificanceConfig {
 }
 
 /// Per-entity accumulated significance state.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EntitySignificance {
     /// Rolling accumulated significance score (0..=1).
     pub score: f32,
@@ -83,7 +84,7 @@ impl EntitySignificance {
 /// let sig = acc.get(entity_id);
 /// assert!(sig.score > 0.0);
 /// ```
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct SignificanceAccumulator {
     /// Entity id → accumulated significance.
     by_entity: std::collections::HashMap<LegendEntityId, EntitySignificance>,

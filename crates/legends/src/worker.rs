@@ -12,6 +12,7 @@ use crate::ids::Epoch;
 use crate::model::RawSimEvent;
 
 /// Drains raw events into the saga graph off the sim hot path.
+#[derive(Clone)]
 pub struct LegendsWorker {
     pub graph: SagaGraph,
     last_maintained_epoch: Epoch,

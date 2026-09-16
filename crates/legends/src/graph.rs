@@ -42,6 +42,7 @@ pub struct IngestOutcome {
 }
 
 /// The saga graph + all side indices (spec §3.5), kept consistent on every mutation.
+#[derive(Clone)]
 pub struct SagaGraph {
     pub(crate) g: StableDiGraph<LegendNode, LegendEdge>,
     pub config: LegendsConfig,

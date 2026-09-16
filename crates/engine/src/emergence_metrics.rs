@@ -77,7 +77,7 @@ const SUBCRITICAL_TICK_ALARM: u32 = 100;
 const SUPERCRITICAL_AVALANCHE_ALARM: u32 = 10;
 
 /// Open avalanche tracked between seed tick and closure.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OpenAvalanche {
     seed_tick: u64,
     seed_actors: u32,
@@ -87,7 +87,7 @@ pub struct OpenAvalanche {
 }
 
 /// Live branching-ratio state on [`Simulation`].
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EmergenceBranchingState {
     /// Ring buffer of closed avalanches.
     pub ledger: BranchingLedger,

@@ -95,6 +95,7 @@ use crate::culture::{
     advance_faction_ideologies, culture_cooperation_signal, culture_openness_signal,
     FactionIdeologyState,
 };
+use crate::emergence::EmergenceState;
 pub use crate::fixed_math::{Fixed, FixedFromNum};
 // TODO(cleanup-surgeon): `language`, `psyche_behavior`, `religion` modules
 //  are currently empty `pub mod` stubs. These imports are commented until
@@ -488,6 +489,25 @@ pub struct WorldState {
     // deserialize to empty.
     #[serde(default)]
     pub unrest_settlement_gini: BTreeMap<u32, f64>,
+
+    // Era progression (FR-CIV-ERA-001) — durable across archive round-trip.
+    // Mutated by phase_era every tick; era gates and per-faction era
+    // history survive reload. legacy v3 saves deserialize to default.
+    #[serde(default)]
+    pub era_progression: crate::era::EraProgressionState,
+
+    // Emergence sample (FR-CIV-EMERGENCE-001) — durable across archive
+    // round-trip. `EmergenceSample` derives Serialize/Deserialize so the
+    // lightweight per-tick sample survives reload. legacy v3 saves
+    // deserialize to default.
+    #[serde(default)]
+    pub emergence_sample: Option<crate::emergence_metrics::EmergenceSample>,
+
+    // Legends significance (FR-CIV-LEGENDS-001) — durable across archive
+    // round-trip. Mutated by phase_legends; per-entity significance
+    // accumulators survive reload. legacy v3 saves deserialize to default.
+    #[serde(default)]
+    pub significance: civ_legends::significance::SignificanceAccumulator,
 }
 
 impl PartialEq for WorldState {
@@ -597,6 +617,9 @@ impl Default for WorldState {
             faction_ideologies: BTreeMap::new(),
             faction_aggression: BTreeMap::new(),
             unrest_settlement_gini: BTreeMap::new(),
+            era_progression: crate::era::EraProgressionState::default(),
+            emergence_sample: None,
+            significance: civ_legends::significance::SignificanceAccumulator::default(),
         }
     }
 }
@@ -638,7 +661,7 @@ pub struct Simulation {
     /// from replaying as fresh audio after construction or replay load.
     last_audio_researched_len: usize,
     /// Per-faction emergent era/tech progression (FR-ERA).
-    pub(crate) era_progression: crate::era::EraProgressionState,
+    pub era_progression: crate::era::EraProgressionState,
     /// Per-faction relation matrix (FR-CIV-DIPLOMACY).
     /// Stub: an empty [`FactionRelations`] until DiplomacyMatrix schema is
     /// finalized and the matrix methods replace the field-level accessors.
@@ -922,7 +945,7 @@ pub struct Simulation {
 
     // ── New feature wiring fields ─────────────────────────────────────
     /// Legend significance accumulator (FR-CIV-LEGENDS-010)
-    pub(crate) significance: civ_legends::significance::SignificanceAccumulator,
+    pub significance: civ_legends::significance::SignificanceAccumulator,
     /// Last famine classification
     pub(crate) last_famine_stage: crate::famine::FamineStage,
     pub(crate) last_famine_effects: crate::famine::FamineEffects,
@@ -1116,9 +1139,7 @@ impl Simulation {
             last_tick_settlement_trade_flows: Vec::new(),
             last_settlement_count: 0,
             faction_aggression: BTreeMap::new(),
-            emergence: crate::emergence::EmergenceState::new(42),
             tutorial_progress: TutorialProgress::default(),
-            emergence_branching: crate::emergence_metrics::EmergenceBranchingState::default(),
             emergence_sample: None,
             voxel: VoxelWorld::new(FIXED_SCALE),
             last_tick_voxel_events: Vec::new(),
@@ -1197,6 +1218,8 @@ impl Simulation {
             settlement_gini: BTreeMap::new(),
             last_tick_unrest_events: Vec::new(),
             last_tick_unrest_levels: BTreeMap::new(),
+            emergence: EmergenceState::default(),
+            emergence_branching: Default::default(),
         }
     }
 
@@ -1288,9 +1311,7 @@ impl Simulation {
             last_tick_settlement_trade_flows: Vec::new(),
             last_settlement_count: 0,
             faction_aggression: BTreeMap::new(),
-            emergence: crate::emergence::EmergenceState::new(seed),
             tutorial_progress: TutorialProgress::default(),
-            emergence_branching: crate::emergence_metrics::EmergenceBranchingState::default(),
             emergence_sample: None,
             voxel: VoxelWorld::new(FIXED_SCALE),
             last_tick_voxel_events: Vec::new(),
@@ -1368,6 +1389,8 @@ impl Simulation {
             settlement_gini: BTreeMap::new(),
             last_tick_unrest_events: Vec::new(),
             last_tick_unrest_levels: BTreeMap::new(),
+            emergence: EmergenceState::default(),
+            emergence_branching: Default::default(),
             deep_diplomacy: crate::diplomacy::DeepDiplomacyState::default(),
         }
     }
@@ -2140,6 +2163,9 @@ impl Simulation {
         target.faction_ideologies = self.faction_ideologies.clone();
         target.faction_aggression = self.faction_aggression.clone();
         target.unrest_settlement_gini = self.unrest_settlement_gini.clone();
+        target.era_progression = self.era_progression.clone();
+        target.emergence_sample = self.emergence_sample.clone();
+        target.significance = self.significance.clone();
     }
 
     /// Advance simulation by one tick.

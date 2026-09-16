@@ -118,6 +118,7 @@ pub use building_emergence::{
 pub use civ_audio::triggers::SfxTrigger;
 pub use civ_build::{BiomeStyleTag, DemandSignals, EmergentStyleKey};
 pub use civ_emergence_metrics::branching::BranchingRegime;
+pub use civ_legends::significance::{EntitySignificance, SignificanceAccumulator, SignificanceConfig};
 pub use civ_mod_host::{load_manifest, ModBrowserEntry, ModGuestStateSave, ModType};
 pub use emergence::{CivAiDecision, EmergenceFeedEvent, EmergenceState};
 pub use emergence_coupling::{

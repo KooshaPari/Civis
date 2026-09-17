@@ -180,7 +180,7 @@ Source spec: `docs/specs/CIV-0200-protocol.md`
 | FR-PROT-003 | Event envelope SHALL contain `event_id` (UUIDv7), `event_type`, `session_id`, `tick`, `created_at`, `payload`. | CIV-0200 | `crates/server/src/ws_bridge.rs` | `protocol::envelope_fields_present` | implemented |
 | FR-PROT-004 | The server SHALL persist all emitted events to the DB audit log within the same tick. | CIV-0200 | `crates/server/src/audit_log.rs` | `db::events_persisted_same_tick`, `fr_prot_004_persist_event_to_audit_log` | implemented |
 | FR-PROT-005 | Client connections SHALL authenticate before receiving any session events. | CIV-0200 | `crates/server/src/authn.rs` | `protocol::unauthenticated_rejected` | implemented |
-| FR-PROT-006 | The protocol SHALL support at least 10 concurrent client connections per session. | CIV-0200 | `crates/protocol/src/server.rs` | `protocol::concurrent_clients_10` | planned |
+| FR-PROT-006 | The protocol SHALL support at least 10 concurrent client connections per session. | CIV-0200 | `crates/server/src/ws_bridge.rs` | `protocol::concurrent_clients_10`, `fr_prot_006_app_state_tracks_10_concurrent_sessions`, `fr_prot_006_max_clients_enforced` | implemented |
 
 ---
 

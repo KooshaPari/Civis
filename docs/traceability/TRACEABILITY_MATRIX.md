@@ -36,9 +36,9 @@ Source spec: `docs/specs/CIV-0001-core-simulation-loop.md`
 | FR-CORE-002 | The engine SHALL produce identical output for identical seed and input sequence (determinism). | CIV-0001 | `crates/engine/src/engine.rs` | `determinism_same_seed_same_output`, `test_determinism`, `determinism_holds_with_all_phases_enabled` | in_progress |
 | FR-CORE-003 | The engine SHALL use ChaCha20Rng seeded per-run; no global mutable RNG state. | CIV-0001 | `crates/engine/src/lib.rs` (`ChaCha8Rng` today) | *(no dedicated test)* | in_progress |
 | FR-CORE-004 | Each tick SHALL complete within 100 ms wall-clock on the reference hardware profile. | CIV-0001 | `crates/engine/src/engine.rs` | `perf::tick_under_100ms` | planned |
-| FR-CORE-005 | The engine SHALL emit a BLAKE3 hash of full world state at the end of every tick. | CIV-0001 | *(not present — target `hash_chain.rs`)* | `hash_chain::tick_hash_emitted` | planned |
-| FR-CORE-006 | Consecutive tick hashes SHALL form an append-only chain (each hash includes prior hash). | CIV-0001 | *(not present — target `hash_chain.rs`)* | `hash_chain::chain_includes_prior` | planned |
-| FR-CORE-007 | The engine SHALL surface a `run.hash.mismatch.v1` event when replayed state diverges. | CIV-0001 | *(not present — target `integrity.rs`)* | `integrity::mismatch_event_emitted` | planned |
+| FR-CORE-005 | The engine SHALL emit a BLAKE3 hash of full world state at the end of every tick. | CIV-0001 | `crates/engine/src/hash_chain.rs` | `hash_chain::tick_hash_emitted` | implemented |
+| FR-CORE-006 | Consecutive tick hashes SHALL form an append-only chain (each hash includes prior hash). | CIV-0001 | `crates/engine/src/hash_chain.rs` | `hash_chain::chain_includes_prior` | implemented |
+| FR-CORE-007 | The engine SHALL surface a `run.hash.mismatch.v1` event when replayed state diverges. | CIV-0001 | `crates/engine/src/integrity.rs` | `integrity::mismatch_event_emitted` | implemented |
 | FR-CORE-008 | World state SHALL be modelled as bevy_ecs 0.18.x `World`; no global singletons. | CIV-0001 | `crates/engine/src/engine.rs` (`hecs::World`) | `world::no_global_resources` | in_progress |
 | FR-CORE-009 | Hex grid SHALL use `hexx` 0.21.x axial coordinates throughout engine and render crates. | CIV-0001 | `crates/engine/src/engine.rs` (`Position {x,y}` only) | `grid::axial_roundtrip` | planned |
 | FR-CORE-010 | All integer quantities SHALL use fixed-point types (`FixedI32\<U16\>`, `i64` KiloJoules, `i64` MilliCredits). | CIV-0001 | `crates/engine/src/lib.rs` (`Fixed` i64 scale) | `numerics::no_float_in_state` | in_progress |
@@ -53,9 +53,9 @@ Source specs: `docs/specs/CIV-0100-economy.md`, `docs/specs/CIV-0107-joule-econo
 
 | FR ID | Requirement Summary | Spec Doc | Crate / Source Path | Test Name Pattern | Status |
 |---|---|---|---|---|---|
-| FR-ECON-001 | Each district SHALL produce Joules each tick according to its resource type and capacity. | CIV-0100 | `crates/economy/src/production.rs` *(target)* | `production::district_produces_joules` | planned |
-| FR-ECON-002 | Joule consumption SHALL be deducted from district reserves before regional distribution. | CIV-0107 | `crates/economy/src/consumption.rs` *(target)* | `consumption::deducted_before_distribution` | planned |
-| FR-ECON-003 | Joule consumption per tick SHALL never be negative (consumption_non_negative invariant). | CIV-0107 | `crates/economy/src/consumption.rs` *(target)* | `consumption::consumption_non_negative` | planned |
+| FR-ECON-001 | Each district SHALL produce Joules each tick according to its resource type and capacity. | CIV-0100 | `crates/economy/src/production.rs` | `production::district_produces_joules` | implemented |
+| FR-ECON-002 | Joule consumption SHALL be deducted from district reserves before regional distribution. | CIV-0107 | `crates/economy/src/allocation.rs` | `consumption::deducted_before_distribution` | in_progress |
+| FR-ECON-003 | Joule consumption per tick SHALL never be negative (consumption_non_negative invariant). | CIV-0107 | `crates/economy/src/allocation.rs` | `consumption::consumption_non_negative` | in_progress |
 | FR-ECON-004 | Surplus Joules SHALL flow to adjacent districts via the distribution graph each tick. | CIV-0100 | `crates/economy/src/distribution.rs` | `distribution::surplus_flows_adjacent` | in_progress |
 | FR-ECON-005 | Waste heat SHALL be computed as a percentage of total Joules consumed per tick. | CIV-0107 | `crates/economy/src/waste.rs` | `waste::heat_computed_from_consumption` | implemented |
 | FR-ECON-006 | GDP SHALL be derived from sum of regional Joule throughput converted at a fixed exchange rate. | CIV-0100 | `crates/economy/src/gdp.rs` | `gdp::sum_of_regional_joules` | implemented |

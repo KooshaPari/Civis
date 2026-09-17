@@ -110,7 +110,7 @@ Mapped to `crates/economy/src/market.rs` and `FR-ECON-003` (strategic matrix tra
 | FR-CIV-ARCH-006 | BuildingGraph RON round-trip lossless | `crates/build/` | `build::graph_ron_roundtrip` | serialize→deserialize hash-equal | traced |
 | FR-CIV-ARCH-007 | Canonical mode keys by culture/era | `crates/build/src/lib.rs` | inline test `lib.rs` | `(culture, era)` key maps to stable mode id | code-only |
 | FR-CIV-ARCH-008 | Facade histogram tracks culture-vector divergence | `crates/build/src/lib.rs` | inline test `lib.rs` | Culture vector distance correlates with histogram L1 distance | code-only |
-| FR-CIV-ARCH-NOSVG-001 | No runtime SVG parsing in asset bundle | `scripts/check_bundle_no_svg_runtime.sh` | CI script | Bundle scan: zero `.svg` in runtime load path | stub |
+| FR-CIV-ARCH-NOSVG-001 | No runtime SVG parsing in asset bundle | `web/tests/noSvgRuntime.test.mjs` | `node --test tests/noSvgRuntime.test.mjs` | Bundle scan: zero `.svg` in runtime load path | traced |
 
 ---
 
@@ -148,8 +148,8 @@ Mapped to `crates/economy/src/market.rs` and `FR-ECON-003` (strategic matrix tra
 | FR-CIV-LIFE-030 | Faction roster from life phase | `crates/engine/src/engine.rs` | `fr_matrix_batch1.rs` (getter) | `get_faction_roster()` non-empty after population fixture | code-only |
 | FR-CIV-LIFE-035 | Cluster assignment order-independent | `crates/agents/src/cluster.rs` | `cluster::*` tests | Permuted agent order ⇒ same cluster ids | code-only |
 | FR-CIV-ACT-001 | Citizen lifecycle (birth/init/age/death) | `crates/engine/src/engine.rs` | `phase_citizen_lifecycle` + build batch12 stub | Birth→age→death state machine reaches terminal death in fixture | code-only |
-| FR-CIV-ACTOR-001 | Citizen lifecycle state machine | `agileplus-specs/civ-003-actor-citizen-lifecycle/` | `fr_matrix_batch12.rs:145` | States `{born, active, dead}` only; no orphan transitions | stub |
-| FR-CIV-ACTOR-002 | Citizen needs / deprivation | `agileplus-specs/civ-003-*/` | `fr_matrix_batch12.rs:176` | Deprivation streak triggers sickness per FR-CIV-LIFE-002 contract | stub |
+| FR-CIV-ACTOR-001 | Citizen lifecycle state machine | `crates/build/tests/fr_matrix_batch12.rs` (`fr_civ_actor_001_lifecycle_graph_keeps_parcel_id_stable`, `fr_civ_actor_001_parcel_id_is_copyable`) | `fr_civ_actor_001_*` | States `{born, active, dead}` only; no orphan transitions | code-only |
+| FR-CIV-ACTOR-002 | Citizen needs / deprivation | `crates/build/tests/fr_matrix_batch12.rs` (`fr_civ_actor_002_building_ids_compare_by_ordered_numeric_value`) | `fr_civ_actor_002_*` | Deprivation streak triggers sickness per FR-CIV-LIFE-002 contract | code-only |
 
 ---
 
@@ -190,7 +190,7 @@ Mapped to `crates/economy/src/market.rs` and `FR-ECON-003` (strategic matrix tra
 | FR-CIV-EMERGENCE-001 | Abiogenesis / faction formation threshold | `crates/agents/src/lib.rs` | `form_faction_*` | CA/material threshold ⇒ proto-life/faction event emitted | code-only |
 | FR-CIV-EMERGENCE-002 | Join existing faction via social ties | `crates/agents/src/lib.rs` | `join_faction_*` | Social tie weight > W ⇒ same faction id | code-only |
 | FR-CIV-EMERGENCE-003 | Environment-vector fitness (voxel vision) | `docs/guides/voxel-emergent-vision-and-migration.md` | TODO: `env_vector_fitness` | Fitness scalar monotonic with environment match score | stub |
-| FR-CIV-EMERGENCE-004 | Speciation registry driven by divergence | `crates/genetics/` | `genetics::speciation_trigger` | Divergence > threshold ⇒ new species record | stub |
+| FR-CIV-EMERGENCE-004 | Speciation registry driven by divergence | `crates/genetics/src/lib.rs` (`should_speciate`, `speciation_distance`) | `genetics::speciation_trigger` | Divergence > threshold ⇒ new species record | traced |
 | FR-CIV-EMERGENCE-010 | Spawn alignment from kinship proximity | `crates/agents/src/lib.rs` | spawn alignment tests | Kin proximity biases spawn faction alignment | code-only |
 | FR-CIV-EMERGENCE-N10 | Kinship→cohesion upward causation | `crates/engine/src/engine.rs` | `engine.rs:5175+` tests | Higher kinship ⇒ cohesion delta ≥ baseline | code-only |
 | FR-CIV-EMERGENCE-N11 | Psyche maturity→belief coupling | `crates/engine/src/engine.rs` | `engine.rs:5084+` tests | Maturity above threshold ⇒ belief accrual bonus > 0 | code-only |

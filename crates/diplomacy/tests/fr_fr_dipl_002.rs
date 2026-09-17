@@ -11,7 +11,7 @@ fn p(id: u32) -> PolityId {
 
 /// FR-DIPL-002: Signing a peace treaty emits PeaceSigned event.
 #[test]
-fn peace::signed_emits_event() {
+fn peace_signed_emits_event() {
     let mut mgr = PeaceTreatyManager::new();
     let event = mgr.sign_treaty(p(1), p(2), 500, 100, false, 10).expect("sign");
     assert!(matches!(event, PeaceEvent::PeaceSigned { .. }));
@@ -25,7 +25,7 @@ fn peace::signed_emits_event() {
 
 /// FR-DIPL-002: Cannot sign treaty with yourself.
 #[test]
-fn peace::cannot_sign_with_self() {
+fn peace_cannot_sign_with_self() {
     let mut mgr = PeaceTreatyManager::new();
     assert!(matches!(
         mgr.sign_treaty(p(1), p(1), 500, 0, false, 1),
@@ -35,7 +35,7 @@ fn peace::cannot_sign_with_self() {
 
 /// FR-DIPL-002: Peace treaty is detected as active.
 #[test]
-fn peace::has_peace_check() {
+fn peace_has_peace_check() {
     let mut mgr = PeaceTreatyManager::new();
     assert!(!mgr.has_peace(p(1), p(2)));
     mgr.sign_treaty(p(1), p(2), 500, 0, false, 1).expect("sign");
@@ -45,7 +45,7 @@ fn peace::has_peace_check() {
 
 /// FR-DIPL-002: Peace treaty expires after duration.
 #[test]
-fn peace::treaty_expires() {
+fn peace_treaty_expires() {
     let mut mgr = PeaceTreatyManager::new();
     mgr.sign_treaty(p(1), p(2), 100, 0, false, 10).expect("sign");
     assert!(mgr.has_peace(p(1), p(2)));
@@ -61,7 +61,7 @@ fn peace::treaty_expires() {
 
 /// FR-DIPL-002: Events are drained properly.
 #[test]
-fn peace::events_drained() {
+fn peace_events_drained() {
     let mut mgr = PeaceTreatyManager::new();
     mgr.sign_treaty(p(1), p(2), 100, 0, false, 1).expect("sign");
     let events = mgr.drain_events();
@@ -72,7 +72,7 @@ fn peace::events_drained() {
 
 /// FR-DIPL-002: Treaty stores territorial concessions flag.
 #[test]
-fn peace::territorial_concessions_recorded() {
+fn peace_territorial_concessions_recorded() {
     let mut mgr = PeaceTreatyManager::new();
     mgr.sign_treaty(p(1), p(2), 500, 200, true, 1).expect("sign");
     let treaties = mgr.treaties_for(p(1));
@@ -82,7 +82,7 @@ fn peace::territorial_concessions_recorded() {
 
 /// FR-DIPL-002: Multiple treaties can exist for different pairs.
 #[test]
-fn peace::multiple_treaties() {
+fn peace_multiple_treaties() {
     let mut mgr = PeaceTreatyManager::new();
     mgr.sign_treaty(p(1), p(2), 100, 0, false, 1).expect("t1");
     mgr.sign_treaty(p(3), p(4), 200, 50, false, 2).expect("t2");

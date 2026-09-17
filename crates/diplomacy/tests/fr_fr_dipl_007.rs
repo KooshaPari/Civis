@@ -14,7 +14,7 @@ fn p(id: u32) -> PolityId {
 
 /// FR-DIPL-007: influence_accumulates — flows increase aggregate leakage.
 #[test]
-fn shadow::influence_accumulates() {
+fn shadow_influence_accumulates() {
     let mut state = ShadowNetworkState::new(ShadowNetworkConfig::default());
 
     // Record three flows between the same pair
@@ -35,7 +35,7 @@ fn shadow::influence_accumulates() {
 
 /// FR-DIPL-007: Total system-level leakage accumulates across all pairs.
 #[test]
-fn shadow::total_leakage_accumulates() {
+fn shadow_total_leakage_accumulates() {
     let mut state = ShadowNetworkState::new(ShadowNetworkConfig::default());
 
     state.record_flow(ShadowFlow {
@@ -59,7 +59,7 @@ fn shadow::total_leakage_accumulates() {
 
 /// FR-DIPL-007: NonNegativeU64 clamps at zero (conservation invariant).
 #[test]
-fn shadow::non_negative_u64_saturating_sub() {
+fn shadow_non_negative_u64_saturating_sub() {
     let val = NonNegativeU64::new(10);
     assert_eq!(val.saturating_sub(5), NonNegativeU64::new(5));
     assert_eq!(val.saturating_sub(100), NonNegativeU64::new(0));
@@ -69,7 +69,7 @@ fn shadow::non_negative_u64_saturating_sub() {
 
 /// FR-DIPL-007: Flow events are recorded and can be drained.
 #[test]
-fn shadow::events_recorded() {
+fn shadow_events_recorded() {
     let mut state = ShadowNetworkState::new(ShadowNetworkConfig::default());
     state.record_flow(ShadowFlow {
         source: p(1),
@@ -86,7 +86,7 @@ fn shadow::events_recorded() {
 
 /// FR-DIPL-007: Influence per flow type is tracked separately.
 #[test]
-fn shadow::flows_by_type_tracked() {
+fn shadow_flows_by_type_tracked() {
     let mut state = ShadowNetworkState::new(ShadowNetworkConfig::default());
 
     state.record_flow(ShadowFlow {
@@ -126,7 +126,7 @@ fn shadow::flows_by_type_tracked() {
 
 /// FR-DIPL-007: Influence accumulates across multiple ticks.
 #[test]
-fn shadow::influence_accumulates_across_ticks() {
+fn shadow_influence_accumulates_across_ticks() {
     let mut state = ShadowNetworkState::new(ShadowNetworkConfig::default());
 
     // Tick 1
@@ -155,7 +155,7 @@ fn shadow::influence_accumulates_across_ticks() {
 
 /// FR-DIPL-007: Enforcement reduces leakage.
 #[test]
-fn shadow::enforcement_reduces_leakage() {
+fn shadow_enforcement_reduces_leakage() {
     let mut state = ShadowNetworkState::new(ShadowNetworkConfig::default());
     let pair = Pair::new(p(1), p(2));
 

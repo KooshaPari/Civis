@@ -6,7 +6,7 @@ use civ_diplomacy::{EspionageAction, EspionageConfig, EspionageEngine};
 
 /// FR-DIPL-005: detection_probability_applied — probability is computed from config.
 #[test]
-fn espionage::detection_probability_applied() {
+fn espionage_detection_probability_applied() {
     let config = EspionageConfig {
         base_detection_chance: 0.20,
         cover_decay: 0.0,
@@ -25,7 +25,7 @@ fn espionage::detection_probability_applied() {
 
 /// FR-DIPL-005: Detection probability increases as cover decreases.
 #[test]
-fn espionage::detection_scales_with_cover() {
+fn espionage_detection_scales_with_cover() {
     let config = EspionageConfig {
         base_detection_chance: 0.50,
         cover_decay: 0.0,
@@ -53,7 +53,7 @@ fn espionage::detection_scales_with_cover() {
 
 /// FR-DIPL-005: Detection probability varies by action risk factor.
 #[test]
-fn espionage::detection_scales_with_risk() {
+fn espionage_detection_scales_with_risk() {
     let config = EspionageConfig {
         base_detection_chance: 0.50,
         cover_decay: 0.0,
@@ -80,7 +80,7 @@ fn espionage::detection_scales_with_risk() {
 
 /// FR-DIPL-005: Detection probability is clamped to [0.0, 1.0].
 #[test]
-fn espionage::detection_probability_clamped() {
+fn espionage_detection_probability_clamped() {
     let config = EspionageConfig {
         base_detection_chance: 1.0,
         cover_decay: 0.0,
@@ -100,7 +100,7 @@ fn espionage::detection_probability_clamped() {
 
 /// FR-DIPL-005: Configurable base_detection_chance affects all operations.
 #[test]
-fn espionage::configurable_detection_chance() {
+fn espionage_configurable_detection_chance() {
     let mut eng_low = EspionageEngine::new(EspionageConfig {
         base_detection_chance: 0.10,
         ..Default::default()

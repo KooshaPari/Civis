@@ -85,12 +85,12 @@ Source spec: `docs/specs/CIV-0102-climate.md`
 
 | FR ID | Requirement Summary | Spec Doc | Crate / Source Path | Test Name Pattern | Status |
 |---|---|---|---|---|---|
-| FR-CLIM-001 | Atmospheric CO2 SHALL accumulate each tick based on industrial Joule consumption. | CIV-0102 | `crates/climate/src/co2.rs` | `co2::accumulates_with_consumption` | planned |
-| FR-CLIM-002 | Global mean temperature SHALL be derived from CO2 concentration via parameterised formula. | CIV-0102 | `crates/climate/src/temperature.rs` | `temperature::derived_from_co2` | planned |
-| FR-CLIM-003 | The engine SHALL emit `climate.threshold.crossed.v1` when temperature crosses a defined level. | CIV-0102 | `crates/climate/src/events.rs` | `climate_events::threshold_event_emitted` | planned |
-| FR-CLIM-004 | Climate damage SHALL reduce district Joule production capacity when temperature exceeds threshold. | CIV-0102 | `crates/climate/src/damage.rs` | `damage::reduces_production_above_threshold` | planned |
-| FR-CLIM-005 | The engine SHALL model at least one tipping-point cascade (e.g. ice-albedo) above critical temperature. | CIV-0102 | `crates/climate/src/tipping.rs` | `tipping::cascade_triggered` | planned |
-| FR-CLIM-006 | Civilizations SHALL be able to invest MilliCredits into adaptation to reduce climate damage. | CIV-0102 | `crates/climate/src/adaptation.rs` | `adaptation::investment_reduces_damage` | planned |
+| FR-CLIM-001 | Atmospheric CO2 SHALL accumulate each tick based on industrial Joule consumption. | CIV-0102 | `crates/climate/src/co2.rs` | `co2::accumulates_with_consumption` | implemented |
+| FR-CLIM-002 | Global mean temperature SHALL be derived from CO2 concentration via parameterised formula. | CIV-0102 | `crates/climate/src/temperature.rs` | `temperature::derived_from_co2` | implemented |
+| FR-CLIM-003 | The engine SHALL emit `climate.threshold.crossed.v1` when temperature crosses a defined level. | CIV-0102 | `crates/climate/src/events.rs` | `climate_events::threshold_event_emitted` | implemented |
+| FR-CLIM-004 | Climate damage SHALL reduce district Joule production capacity when temperature exceeds threshold. | CIV-0102 | `crates/climate/src/damage.rs` | `damage::reduces_production_above_threshold` | implemented |
+| FR-CLIM-005 | The engine SHALL model at least one tipping-point cascade (e.g. ice-albedo) above critical temperature. | CIV-0102 | `crates/climate/src/tipping.rs` | `tipping::cascade_triggered` | implemented |
+| FR-CLIM-006 | Civilizations SHALL be able to invest MilliCredits into adaptation to reduce climate damage. | CIV-0102 | `crates/climate/src/adaptation.rs` | `adaptation::investment_reduces_damage` | implemented |
 
 ---
 

@@ -14,7 +14,7 @@ fn p(id: u32) -> PolityId {
 
 /// FR-DIPL-004: Active treaty with non-aggression term breached by war emits event.
 #[test]
-fn treaty::breach_emits_event_and_penalty() {
+fn treaty_breach_emits_event_and_penalty() {
     let treaty = Treaty {
         id: 1,
         parties: (p(1), p(2)),
@@ -47,7 +47,7 @@ fn treaty::breach_emits_event_and_penalty() {
 
 /// FR-DIPL-004: No breach if no war declared.
 #[test]
-fn treaty::no_breach_without_war() {
+fn treaty_no_breach_without_war() {
     let treaty = Treaty {
         id: 1,
         parties: (p(1), p(2)),
@@ -66,7 +66,7 @@ fn treaty::no_breach_without_war() {
 
 /// FR-DIPL-004: No breach for non-binding treaty.
 #[test]
-fn treaty::no_breach_for_trade_only() {
+fn treaty_no_breach_for_trade_only() {
     let treaty = Treaty {
         id: 1,
         parties: (p(1), p(2)),
@@ -85,7 +85,7 @@ fn treaty::no_breach_for_trade_only() {
 
 /// FR-DIPL-004: Breach from either party is detected.
 #[test]
-fn treaty::breach_from_defender() {
+fn treaty_breach_from_defender() {
     let treaty = Treaty {
         id: 1,
         parties: (p(1), p(2)),
@@ -107,13 +107,13 @@ fn treaty::breach_from_defender() {
 
 /// FR-DIPL-004: Breach penalty constant is -500.
 #[test]
-fn treaty::reputation_penalty_value() {
+fn treaty_reputation_penalty_value() {
     assert_eq!(BREACH_REPUTATION_PENALTY, -500);
 }
 
 /// FR-DIPL-004: No breach for expired treaty.
 #[test]
-fn treaty::no_breach_for_expired_treaty() {
+fn treaty_no_breach_for_expired_treaty() {
     let treaty = Treaty {
         id: 1,
         parties: (p(1), p(2)),

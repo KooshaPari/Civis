@@ -11,7 +11,7 @@ fn p(id: u32) -> PolityId {
 
 /// FR-DIPL-001: Declaring war emits a WarDeclared event.
 #[test]
-fn war::declare_emits_event() {
+fn war_declare_emits_event() {
     let mut mgr = WarDeclarationManager::new();
     let event = mgr.declare_war(p(1), p(2), 10).expect("declare war");
     assert!(matches!(event, WarEvent::WarDeclared { .. }));
@@ -24,7 +24,7 @@ fn war::declare_emits_event() {
 
 /// FR-DIPL-001: Cannot declare war on yourself.
 #[test]
-fn war::cannot_declare_on_self() {
+fn war_cannot_declare_on_self() {
     let mut mgr = WarDeclarationManager::new();
     assert!(matches!(
         mgr.declare_war(p(1), p(1), 1),
@@ -34,7 +34,7 @@ fn war::cannot_declare_on_self() {
 
 /// FR-DIPL-001: Cannot declare war twice between same polities.
 #[test]
-fn war::cannot_declare_twice() {
+fn war_cannot_declare_twice() {
     let mut mgr = WarDeclarationManager::new();
     mgr.declare_war(p(1), p(2), 1).expect("first");
     assert!(matches!(
@@ -45,7 +45,7 @@ fn war::cannot_declare_twice() {
 
 /// FR-DIPL-001: War declared event appears in the pending event buffer.
 #[test]
-fn war::event_in_buffer() {
+fn war_event_in_buffer() {
     let mut mgr = WarDeclarationManager::new();
     mgr.declare_war(p(1), p(2), 5).expect("declare");
     let events = mgr.drain_events();
@@ -55,7 +55,7 @@ fn war::event_in_buffer() {
 
 /// FR-DIPL-001: Ending a war emits WarEnded event.
 #[test]
-fn war::end_war_emits_event() {
+fn war_end_war_emits_event() {
     let mut mgr = WarDeclarationManager::new();
     mgr.declare_war(p(1), p(2), 1).expect("declare");
     let pair = civ_diplomacy::Pair::new(p(1), p(2));
@@ -65,7 +65,7 @@ fn war::end_war_emits_event() {
 
 /// FR-DIPL-001: War duration is computed correctly.
 #[test]
-fn war::duration_computed() {
+fn war_duration_computed() {
     let mut mgr = WarDeclarationManager::new();
     mgr.declare_war(p(1), p(2), 10).expect("declare");
     let pair = civ_diplomacy::Pair::new(p(1), p(2));
@@ -76,7 +76,7 @@ fn war::duration_computed() {
 
 /// FR-DIPL-001: is_at_war reflects active war state.
 #[test]
-fn war::is_at_war_check() {
+fn war_is_at_war_check() {
     let mut mgr = WarDeclarationManager::new();
     assert!(!mgr.is_at_war(p(1), p(2)));
     mgr.declare_war(p(1), p(2), 1).expect("declare");
@@ -86,7 +86,7 @@ fn war::is_at_war_check() {
 
 /// FR-DIPL-001: Multiple simultaneous wars with different polities.
 #[test]
-fn war::multiple_simultaneous_wars() {
+fn war_multiple_simultaneous_wars() {
     let mut mgr = WarDeclarationManager::new();
     mgr.declare_war(p(1), p(2), 1).expect("w1");
     mgr.declare_war(p(1), p(3), 2).expect("w2");

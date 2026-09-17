@@ -6,8 +6,7 @@ fn scores_all_moves() {
     use civ_ai::utility::{Move, UtilityScorer};
 
     let scorer = UtilityScorer::default_scorer();
-    let moves = vec
-![
+    let moves = vec![
         Move {
             id: "expand".into(),
             resource_value: 0.9,
@@ -48,8 +47,7 @@ fn scores_all_moves() {
 fn custom_weights_change_ranking() {
     use civ_ai::utility::{Move, UtilityScorer, UtilityWeights};
 
-    let moves = vec
-![
+    let moves = vec![
         Move {
             id: "aggressive".into(),
             resource_value: 0.5,

@@ -44,8 +44,7 @@ fn personality_changes_move_ranking() {
     use civ_ai::personality::{PersonalityKind, PersonalityProfile};
     use civ_ai::utility::{Move, UtilityScorer, UtilityWeights};
 
-    let moves = vec
-![
+    let moves = vec![
         Move {
             id: "trade_route".into(),
             resource_value: 0.6,

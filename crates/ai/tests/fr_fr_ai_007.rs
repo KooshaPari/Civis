@@ -18,11 +18,9 @@ impl SlowGame {
 impl MctsGameState for SlowGame {
     fn legal_actions(&self) -> Vec<civ_ai::mcts::ActionId> {
         if self.depth >= 4 {
-            return vec
-![];
+            return vec![];
         }
-        vec
-!["a".into(), "b".into(), "c".into(), "d".into()]
+        vec!["a".into(), "b".into(), "c".into(), "d".into()]
     }
 
     fn apply_action(&self, _action: &civ_ai::mcts::ActionId) -> Self {

@@ -31,7 +31,10 @@ fn investment_reduces_damage() {
 /// FR-CLIM-006: More investment provides more reduction (with diminishing returns).
 #[test]
 fn more_investment_more_reduction() {
-    let cfg = AdaptationConfig::default();
+    let cfg = AdaptationConfig {
+        scale: 5, // Small scale so 10k doesn't max out immediately
+        max_reduction_bp: 5_000,
+    };
     let mut t = AdaptationTracker::new();
 
     let r1 = t.invest(10_000, &cfg);

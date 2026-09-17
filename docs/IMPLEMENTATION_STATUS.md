@@ -2,7 +2,7 @@
 
 **As of:** 2026-09-17  
 **Authoritative code map:** root `Cargo.toml` workspace members (not legacy crate names in `TRACEABILITY_MATRIX.md`).  
-**Last audit:** 2026-09-17 — 33 implemented / 4 in_progress / 57 planned in TRACEABILITY_MATRIX.md. 12 commits this session.
+**Last audit:** 2026-09-17 — 60 implemented / 7 in_progress / 24 planned in TRACEABILITY_MATRIX.md. 6 new crates created (Climate, Institutions, Diplomacy, Social, AI, Session).
 
 ## Workspace crates (implemented in repo)
 

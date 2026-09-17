@@ -27,7 +27,27 @@ mod fr_fr_civ_core_002 {
     /// - Criterion 3
     #[test]
     fn verify_fr_civ_core_002_basic() {
-        // FR stub - minimal pass assertion
-        assert!(true, "FR FR-CIV-CORE-002 stub verified");
+        // FR-CIV-CORE-002: WorldState has required fields and defaults
+        let ws = civ_engine::WorldState::default();
+        assert_eq!(ws.tick, 0);
+        assert_eq!(ws.factions.len(), 0);
+        assert_eq!(ws.faction_treasury.len(), 0);
+    }
+
+    #[test]
+    fn verify_fr_civ_core_002_step_advances_tick() {
+        let ws = civ_engine::WorldState::default();
+        let next = civ_engine::step(ws, civ_engine::Fixed::from_num(100));
+        assert_eq!(next.tick, 1);
+    }
+
+    #[test]
+    fn verify_fr_civ_core_002_energy_floor_at_zero() {
+        let ws = civ_engine::WorldState {
+            energy_budget_joules: civ_engine::Fixed::from_num(50),
+            ..civ_engine::WorldState::default()
+        };
+        let next = civ_engine::step(ws, civ_engine::Fixed::from_num(100));
+        assert_eq!(next.energy_budget_joules, civ_engine::Fixed::ZERO);
     }
 }

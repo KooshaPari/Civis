@@ -14,7 +14,9 @@ mod allocation;
 mod allocator;
 mod budget;
 mod currency_trust;
+mod district;
 mod extraction;
+mod gdp;
 mod institution;
 mod market;
 pub mod metrics;
@@ -25,6 +27,7 @@ mod stocks;
 mod tax_policy;
 mod trade_flow;
 mod trade_routes;
+mod waste;
 
 pub use allocation::{
     allocate_by_priority, allocate_with, AllocationEngine, AllocationRegime, CapitalistAllocator,
@@ -53,8 +56,11 @@ pub use stocks::{
     ProductionProfile, Stocks, TradeOffer, GOODS,
 };
 pub use budget::{BudgetBucket, BudgetPlan, BudgetSnapshot, BudgetVariance, fiscal_health};
+pub use district::{tick_district_collapse, CollapseCheck, DistrictCollapseEvent, DistrictEnergyState, DEFAULT_DEFICIT_TICKS};
+pub use gdp::{compute_gdp, GdpResult, RegionGdp};
 pub use metrics::{compute_metrics, EconomyMetrics, EconomyMetricsFixed};
 pub use tax_policy::{apply_tax_policy, TaxPolicy, TaxPolicyOutcome};
+pub use waste::{compute_waste_heat, WasteHeatConfig, WasteHeatResult};
 pub use trade_flow::{
     complementary_round_trips, complementary_routes, ComplementaryTradeFlow, SettlementFlow,
 };

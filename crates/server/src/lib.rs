@@ -40,7 +40,8 @@ pub use jsonrpc::{
     SimCommandAction, SnapshotFields, JSONRPC_VERSION, OPERATOR_ROLE,
 };
 pub use saves::{
-    list_saves, most_recent_save_path, save_archive_path, validate_production_slot, SaveListEntry,
+    list_saves, most_recent_save_path, save_archive_path, validate_production_slot, SaveEvent,
+    SaveListEntry,
 };
 pub use session::{SessionSnapshot, SharedSession, SESSION_HISTORY_CAP};
 pub use voxel_frame_builder::{build_voxel_delta_frame, VoxelFrameBuilderError};

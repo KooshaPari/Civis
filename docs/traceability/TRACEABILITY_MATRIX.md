@@ -184,6 +184,18 @@ Source spec: `docs/specs/CIV-0200-protocol.md`
 
 ---
 
+## Save/Load (FR-SAVE-*)
+
+Source spec: `docs/specs/CIV-1000-save-load.md`
+
+| FR ID | Requirement Summary | Spec Doc | Crate / Source Path | Test Name Pattern | Status |
+|---|---|---|---|---|---|
+| FR-SAVE-002 | Save SHALL emit `session.saved.v1` or `session.save_failed.v1` events. | CIV-1000 | `crates/server/src/saves.rs` | `fr_save_002_success_emits_session_saved_v1`, `fr_save_002_failure_emits_session_save_failed_v1`, `fr_save_002_roundtrip_serialize_deserialize` | implemented |
+| FR-SAVE-003 | Load SHALL restore byte-identical state (determinism guarantee). | CIV-1000 | `crates/engine/src/save_bundle.rs` | `fr_save_003_load_restores_byte_identical_state` | planned |
+| FR-SAVE-005 | Save format SHALL include schema version; old saves SHALL be rejected. | CIV-1000 | `crates/engine/src/save_bundle.rs` | `fr_save_005_schema_version_rejects_old_saves` | planned |
+
+---
+
 ## UI/UX (FR-UX-*)
 
 Source spec: `docs/specs/CIV-0300-ui-ux.md`

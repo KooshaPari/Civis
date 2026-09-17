@@ -363,6 +363,60 @@ pub fn most_recent_save_path(dir: &Path) -> Result<Option<PathBuf>, std::io::Err
     Ok(best.map(|(path, _, _)| path))
 }
 
+// -- FR-SAVE-002 ------------------------------------------------------------
+//
+// FR-SAVE-002 — Save emits `session.saved.v1` or `session.save_failed.v1`
+// events. `SaveEvent` provides a typed representation of save outcomes that
+// the bridge can emit on the event bus.
+
+/// Outcome of a save operation, emitted as a JSON-RPC notification on the
+/// event bus per the EVENT_TAXONOMY (`session.saved.v1` / `session.save_failed.v1`).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "outcome", rename_all = "snake_case")]
+pub enum SaveEvent {
+    /// Save completed successfully.
+    Success {
+        /// Session that triggered the save.
+        session_id: String,
+        /// Unique save identifier.
+        save_id: String,
+        /// Slot name (e.g. `"slot-1"`).
+        slot: String,
+        /// Engine tick at save time.
+        tick: u64,
+        /// Size of the saved file in bytes.
+        byte_size: u64,
+    },
+    /// Save failed.
+    Failure {
+        /// Session that triggered the save.
+        session_id: String,
+        /// Slot name that was targeted.
+        slot: String,
+        /// Engine tick at the time of the failed save attempt.
+        tick: u64,
+        /// Human-readable error message.
+        error: String,
+    },
+}
+
+impl SaveEvent {
+    /// The event_type string for JSON-RPC notification.
+    #[must_use]
+    pub fn event_type(&self) -> &'static str {
+        match self {
+            Self::Success { .. } => "session.saved.v1",
+            Self::Failure { .. } => "session.save_failed.v1",
+        }
+    }
+
+    /// Serialize to a JSON-RPC notification payload string.
+    #[must_use]
+    pub fn to_json(&self) -> String {
+        serde_json::to_string(self).expect("SaveEvent should always serialize")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -695,5 +749,59 @@ mod tests {
         assert!(parse_slot_name_params(Some(&json!({}))).is_err());
         assert!(parse_slot_name_params(Some(&json!({"slot_name":""}))).is_err());
         assert!(parse_slot_name_params(Some(&json!({"slot_name":"bogus-slot"}))).is_err());
+    }
+
+    // -- FR-SAVE-002 --------------------------------------------------------
+
+    #[test]
+    fn fr_save_002_success_emits_session_saved_v1() {
+        let event = SaveEvent::Success {
+            session_id: "sess-1".to_string(),
+            save_id: "save-abc".to_string(),
+            slot: "slot-1".to_string(),
+            tick: 42,
+            byte_size: 2048,
+        };
+        assert_eq!(event.event_type(), "session.saved.v1");
+        let json = event.to_json();
+        let value: serde_json::Value = serde_json::from_str(&json).expect("parse");
+        assert_eq!(value["outcome"], "success");
+        assert_eq!(value["session_id"], "sess-1");
+        assert_eq!(value["save_id"], "save-abc");
+        assert_eq!(value["slot"], "slot-1");
+        assert_eq!(value["tick"], 42);
+        assert_eq!(value["byte_size"], 2048);
+    }
+
+    #[test]
+    fn fr_save_002_failure_emits_session_save_failed_v1() {
+        let event = SaveEvent::Failure {
+            session_id: "sess-2".to_string(),
+            slot: "slot-3".to_string(),
+            tick: 10,
+            error: "disk full".to_string(),
+        };
+        assert_eq!(event.event_type(), "session.save_failed.v1");
+        let json = event.to_json();
+        let value: serde_json::Value = serde_json::from_str(&json).expect("parse");
+        assert_eq!(value["outcome"], "failure");
+        assert_eq!(value["session_id"], "sess-2");
+        assert_eq!(value["slot"], "slot-3");
+        assert_eq!(value["tick"], 10);
+        assert_eq!(value["error"], "disk full");
+    }
+
+    #[test]
+    fn fr_save_002_roundtrip_serialize_deserialize() {
+        let original = SaveEvent::Success {
+            session_id: "s".to_string(),
+            save_id: "id".to_string(),
+            slot: "slot-1".to_string(),
+            tick: 1,
+            byte_size: 100,
+        };
+        let json = original.to_json();
+        let restored: SaveEvent = serde_json::from_str(&json).expect("roundtrip");
+        assert_eq!(original, restored);
     }
 }

@@ -271,10 +271,10 @@ Source spec: `docs/specs/CIV-1000-save-load.md`
 | FR ID | Requirement Summary | Spec Doc | Crate / Source Path | Test Name Pattern | Status |
 |---|---|---|---|---|---|
 | FR-SAVE-001 | Quicksave SHALL serialize full world state to a named slot within 500 ms. | CIV-1000 | `crates/server/src/saves.rs` | `save::quicksave_under_500ms` | implemented |
-| FR-SAVE-002 | Save SHALL emit `session.saved.v1` on success or `session.save_failed.v1` on error. | CIV-1000 | `crates/db/src/save.rs` | `save::save_events_emitted` | planned |
-| FR-SAVE-003 | Load SHALL restore world state to byte-identical engine state (determinism guarantee). | CIV-1000 | `crates/db/src/load.rs` | `save::load_restores_identical_state` | planned |
+| FR-SAVE-002 | Save SHALL emit `session.saved.v1` on success or `session.save_failed.v1` on error. | CIV-1000 | `crates/server/src/saves.rs` | `save::save_events_emitted` | implemented |
+| FR-SAVE-003 | Load SHALL restore world state to byte-identical engine state (determinism guarantee). | CIV-1000 | `crates/engine/src/save_bundle.rs` | `save::load_restores_identical_state` | implemented |
 | FR-SAVE-004 | Autosave SHALL trigger every N ticks (configurable, default 100). | CIV-1000 | `crates/server/src/autosave.rs` | `save::autosave_every_n_ticks` | implemented |
-| FR-SAVE-005 | Save format SHALL include a schema version; older saves SHALL be rejected with an error (no silent migration). | CIV-1000 | `crates/db/src/schema.rs` | `save::old_schema_rejected_explicitly` | planned |
+| FR-SAVE-005 | Save format SHALL include a schema version; older saves SHALL be rejected with an error (no silent migration). | CIV-1000 | `crates/engine/src/save_bundle.rs` | `save::old_schema_rejected_explicitly` | implemented |
 
 ---
 

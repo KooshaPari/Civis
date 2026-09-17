@@ -20,6 +20,7 @@ mod gdp;
 mod institution;
 mod market;
 pub mod metrics;
+mod prices;
 mod production;
 pub mod shadow;
 pub mod specialization;

@@ -4325,6 +4325,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "civ-render"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "civ-research"
 version = "0.1.0"
 dependencies = [

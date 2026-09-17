@@ -33,8 +33,8 @@ The **Acceptance Contract** column is the machine-checkable oracle hook — thre
 |--------|------------------------|-----------------|--------------|---------------------|--------|
 | NFR-CIV-DET-001 | Cross-run bit-identical replay on same platform | `crates/engine/` | `tests/determinism_replay_same_platform` | 100% of per-tick state hashes match between two runs (same seed, scenario, tick count) | traced |
 | NFR-CIV-DET-002 | Cross-platform bit-identical replay | `crates/engine/` | `determinism_cross_platform` (CI matrix) | Per-tick state hashes identical across Windows, macOS, Linux for canonical 50-tick scenario | code-only |
-| NFR-CIV-DET-003 | Fixed-point arithmetic in state-mutation paths | `crates/engine/` | clippy float deny + `tests/fixed_point_float_agreement` | Zero f32/f64 in sim state-mutation modules; fixed vs float agree within 10⁻⁶ | code-only |
-| NFR-CIV-DET-004 | Every RNG draw logged before consumption | `crates/engine/` | `tests/rng_draw_log_completeness` | `rng_draw` event count == instrumented draw count after 1,000 ticks (delta = 0) | code-only |
+| NFR-CIV-DET-003 | Fixed-point arithmetic in state-mutation paths | `crates/engine/tests/fr_nfr_civ_det_003.rs` | `fixed_point_float_agreement` | Zero f32/f64 in sim state-mutation modules; fixed vs float agree within 10⁻⁶ | traced |
+| NFR-CIV-DET-004 | Every RNG draw logged before consumption | `crates/engine/tests/fr_nfr_civ_det_004.rs` | `rng_draw_log_completeness` | `rng_draw` event count == instrumented draw count after 1,000 ticks (delta = 0) | traced |
 
 ---
 
@@ -58,9 +58,9 @@ The **Acceptance Contract** column is the machine-checkable oracle hook — thre
 | NFR-ID | Requirement (1-line) | Crate/File path | Test pattern | Acceptance Contract | Status |
 |--------|------------------------|-----------------|--------------|---------------------|--------|
 | NFR-CIV-REL-001 | No panics in steady-state simulation | `crates/engine/` | clippy deny unwrap + `tests/stress_10k_ticks` | Zero panics in 10,000-tick stress run; clippy unwrap/expect deny passes | code-only |
-| NFR-CIV-REL-002 | Loud preflight failure for missing required deps | `crates/server/` | `tests/preflight_missing_deps` | Non-zero exit within 5 s; stderr lists each missing dependency by name | code-only |
+| NFR-CIV-REL-002 | Loud preflight failure for missing required deps | *(none — no preflight surface in `crates/server/`)* | `tests/preflight_missing_deps` | Non-zero exit within 5 s; stderr lists each missing dependency by name | stub |
 | NFR-CIV-REL-003 | Autosave checkpoint at least every 60 s wall-clock | `crates/engine/` | `tests/autosave_cadence` | ≥ 1 checkpoint event per 60 s sim time in 10-minute headless run | code-only |
-| NFR-CIV-REL-004 | Corrupted replay checksum is hard fatal | `crates/replay/` | `tests/replay_checksum_corruption` | Bit-flipped `.civreplay` load returns `Err` containing `checksum`; never loads silently | code-only |
+| NFR-CIV-REL-004 | Corrupted replay checksum is hard fatal | `crates/engine/tests/fr_nfr_civ_rel_004.rs` | `replay_checksum_corruption` | Bit-flipped `.civreplay` load returns `Err` containing `checksum`; never loads silently | traced |
 
 ---
 

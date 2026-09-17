@@ -272,7 +272,7 @@ Source spec: `docs/specs/CIV-0500-performance.md`
 
 | FR ID | Requirement Summary | Spec Doc | Crate / Source Path | Test Name Pattern | Status |
 |---|---|---|---|---|---|
-| FR-PERF-001 | The engine SHALL sustain 100 ms/tick (10 ticks/s) with 8 civilizations and 1,000 hex cells. | CIV-0500 | `crates/engine/src/tick.rs` | `perf::sustained_10_ticks_per_sec` | planned |
+| FR-PERF-001 | The engine SHALL sustain 100 ms/tick (10 ticks/s) with 8 civilizations and 1,000 hex cells. | CIV-0500 | `crates/engine/src/perf.rs` | `perf::sustained_10_ticks_per_sec` | in_progress |
 | FR-PERF-002 | Engine heap allocation per tick SHALL not exceed 1 MiB outside of initial world setup. | CIV-0500 | `crates/engine/src/tick.rs` | `perf::heap_under_1mib_per_tick` | planned |
 | FR-PERF-003 | The render crate SHALL maintain 60 fps at 1080p on the reference GPU profile. | CIV-0500 | `crates/render/src/frame.rs` | `perf::render_60fps_1080p` | planned |
 | FR-PERF-004 | DB write throughput SHALL not become a bottleneck for tick latency (async writes). | CIV-0500 | `crates/db/src/writer.rs` | `perf::db_writes_async_nonblocking` | planned |

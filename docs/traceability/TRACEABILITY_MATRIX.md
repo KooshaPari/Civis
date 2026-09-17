@@ -32,16 +32,16 @@ Source spec: `docs/specs/CIV-0001-core-simulation-loop.md`
 
 | FR ID | Requirement Summary | Spec Doc | Crate / Source Path | Test Name Pattern | Status |
 |---|---|---|---|---|---|
-| FR-CORE-001 | The engine SHALL advance simulation state by exactly one tick per `Engine::step()` invocation. | CIV-0001 | `crates/engine/src/lib.rs`, `crates/engine/src/engine.rs` | `step_advances_tick`, `test_tick_advances` | in_progress |
-| FR-CORE-002 | The engine SHALL produce identical output for identical seed and input sequence (determinism). | CIV-0001 | `crates/engine/src/engine.rs` | `determinism_same_seed_same_output`, `test_determinism`, `determinism_holds_with_all_phases_enabled` | in_progress |
-| FR-CORE-003 | The engine SHALL use ChaCha20Rng seeded per-run; no global mutable RNG state. | CIV-0001 | `crates/engine/src/lib.rs` (`ChaCha8Rng` today) | *(no dedicated test)* | in_progress |
+| FR-CORE-001 | The engine SHALL advance simulation state by exactly one tick per `Engine::step()` invocation. | CIV-0001 | `crates/engine/src/lib.rs`, `crates/engine/src/engine.rs` | `step_advances_tick`, `test_tick_advances` | implemented |
+| FR-CORE-002 | The engine SHALL produce identical output for identical seed and input sequence (determinism). | CIV-0001 | `crates/engine/src/engine.rs` | `determinism_same_seed_same_output`, `test_determinism`, `determinism_holds_with_all_phases_enabled` | implemented |
+| FR-CORE-003 | The engine SHALL use ChaCha20Rng seeded per-run; no global mutable RNG state. | CIV-0001 | `crates/engine/src/engine.rs` (`ChaCha8Rng`; deviation tracked in `docs/adr/ADR-022-runtime-representation-deviations.md`) | `rng::no_global_rng_state` (seeded-per-run + no shared state verified) | in_progress |
 | FR-CORE-004 | Each tick SHALL complete within 100 ms wall-clock on the reference hardware profile. | CIV-0001 | `crates/engine/src/engine.rs` | `perf::tick_under_100ms`, `tick_perf_100_ticks_under_10s` | implemented |
 | FR-CORE-005 | The engine SHALL emit a BLAKE3 hash of full world state at the end of every tick. | CIV-0001 | `crates/engine/src/hash_chain.rs` | `hash_chain::tick_hash_emitted` | implemented |
 | FR-CORE-006 | Consecutive tick hashes SHALL form an append-only chain (each hash includes prior hash). | CIV-0001 | `crates/engine/src/hash_chain.rs` | `hash_chain::chain_includes_prior` | implemented |
 | FR-CORE-007 | The engine SHALL surface a `run.hash.mismatch.v1` event when replayed state diverges. | CIV-0001 | `crates/engine/src/integrity.rs` | `integrity::mismatch_event_emitted` | implemented |
-| FR-CORE-008 | World state SHALL be modelled as bevy_ecs 0.18.x `World`; no global singletons. | CIV-0001 | `crates/engine/src/engine.rs` (`hecs::World`) | `world::no_global_resources` | in_progress |
+| FR-CORE-008 | World state SHALL be modelled as bevy_ecs 0.18.x `World`; no global singletons. | CIV-0001 | `crates/engine/src/engine.rs` (`hecs::World`; deviation tracked in `docs/adr/ADR-022-runtime-representation-deviations.md`) | `world::no_global_resources` | in_progress |
 | FR-CORE-009 | Hex grid SHALL use `hexx` 0.21.x axial coordinates throughout engine and render crates. | CIV-0001 | `crates/engine/src/grid.rs` (`PositionAxial`, `PositionCube`) | `grid::axial_roundtrip`, `grid::cube_roundtrip` | implemented |
-| FR-CORE-010 | All integer quantities SHALL use fixed-point types (`FixedI32\<U16\>`, `i64` KiloJoules, `i64` MilliCredits). | CIV-0001 | `crates/engine/src/lib.rs` (`Fixed` i64 scale) | `numerics::no_float_in_state` | in_progress |
+| FR-CORE-010 | All integer quantities SHALL use fixed-point types (`FixedI32\<U16\>`, `i64` KiloJoules, `i64` MilliCredits). | CIV-0001 | `crates/engine/src/fixed_math.rs` (`Fixed` i64; deviation tracked in `docs/adr/ADR-022-runtime-representation-deviations.md`) | `numerics::integer_quantities_use_fixed_point` | in_progress |
 
 ---
 
@@ -54,9 +54,9 @@ Source specs: `docs/specs/CIV-0100-economy.md`, `docs/specs/CIV-0107-joule-econo
 | FR ID | Requirement Summary | Spec Doc | Crate / Source Path | Test Name Pattern | Status |
 |---|---|---|---|---|---|
 | FR-ECON-001 | Each district SHALL produce Joules each tick according to its resource type and capacity. | CIV-0100 | `crates/economy/src/production.rs` | `production::district_produces_joules` | implemented |
-| FR-ECON-002 | Joule consumption SHALL be deducted from district reserves before regional distribution. | CIV-0107 | `crates/economy/src/allocation.rs` | `consumption::deducted_before_distribution` | in_progress |
-| FR-ECON-003 | Joule consumption per tick SHALL never be negative (consumption_non_negative invariant). | CIV-0107 | `crates/economy/src/allocation.rs` | `consumption::consumption_non_negative` | in_progress |
-| FR-ECON-004 | Surplus Joules SHALL flow to adjacent districts via the distribution graph each tick. | CIV-0100 | `crates/economy/src/distribution.rs` | `distribution::surplus_flows_adjacent` | in_progress |
+| FR-ECON-002 | Joule consumption SHALL be deducted from district reserves before regional distribution. | CIV-0107 | `crates/economy/src/distribution.rs` (`deduct_consumption`, `step_distribution`) | `deducted_before_distribution` | implemented |
+| FR-ECON-003 | Joule consumption per tick SHALL never be negative (consumption_non_negative invariant). | CIV-0107 | `crates/engine/src/policy.rs` (`effective_consumption`) | `consumption_non_negative` | implemented |
+| FR-ECON-004 | Surplus Joules SHALL flow to adjacent districts via the distribution graph each tick. | CIV-0100 | `crates/economy/src/distribution.rs` (`distribute_surplus`, `DistrictGraph`) | `surplus_flows_adjacent` | implemented |
 | FR-ECON-005 | Waste heat SHALL be computed as a percentage of total Joules consumed per tick. | CIV-0107 | `crates/economy/src/waste.rs` | `waste::heat_computed_from_consumption` | implemented |
 | FR-ECON-006 | GDP SHALL be derived from sum of regional Joule throughput converted at a fixed exchange rate. | CIV-0100 | `crates/economy/src/gdp.rs` | `gdp::sum_of_regional_joules` | implemented |
 | FR-ECON-007 | Trade agreements SHALL transfer Joules and MilliCredits between civilizations each tick. | CIV-0100 | `crates/economy/src/trade.rs` (`TradeAgreement`, `bilateral_transfer`) | `trade::bilateral_transfer_balanced`, `bilateral_transfer_insufficient_joules` | implemented |
@@ -284,7 +284,7 @@ Source spec: `docs/specs/CIV-0500-performance.md`
 
 | FR ID | Requirement Summary | Spec Doc | Crate / Source Path | Test Name Pattern | Status |
 |---|---|---|---|---|---|
-| FR-PERF-001 | The engine SHALL sustain 100 ms/tick (10 ticks/s) with 8 civilizations and 1,000 hex cells. | CIV-0500 | `crates/engine/src/perf.rs` | `perf::sustained_10_ticks_per_sec` | in_progress |
+| FR-PERF-001 | The engine SHALL sustain 100 ms/tick (10 ticks/s) with 8 civilizations and 1,000 hex cells. | CIV-0500 | `crates/engine/tests/fr_fr_perf_001.rs` | `sustained_10_ticks_per_sec` | implemented |
 | FR-PERF-002 | Engine heap allocation per tick SHALL not exceed 1 MiB outside of initial world setup. | CIV-0500 | `crates/engine/src/perf.rs` | `perf::heap_under_1mib_per_tick` | implemented |
 | FR-PERF-003 | The render crate SHALL maintain 60 fps at 1080p on the reference GPU profile. | CIV-0500 | `crates/render/src/frame.rs` (`FrameBudget`) | `frame::frame_budget_60fps_1080p`, `frame::frame_budget_type_exists` | implemented |
 | FR-PERF-004 | DB write throughput SHALL not become a bottleneck for tick latency (async writes). | CIV-0500 | `crates/save-db/src/lib.rs` (`AsyncWriter`) | `async_writer_is_send_sync`, `async_writer_write_tick_enqueues` | implemented |

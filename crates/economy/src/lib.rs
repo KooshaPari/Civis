@@ -15,6 +15,7 @@ mod allocator;
 mod budget;
 mod currency_trust;
 mod district;
+pub mod distribution;
 mod extraction;
 mod gdp;
 mod institution;
@@ -61,6 +62,11 @@ pub use stocks::{
 };
 pub use budget::{BudgetBucket, BudgetPlan, BudgetSnapshot, BudgetVariance, fiscal_health};
 pub use district::{tick_district_collapse, CollapseCheck, DistrictCollapseEvent, DistrictEnergyState, DEFAULT_DEFICIT_TICKS};
+pub use distribution::{
+    deduct_consumption, distribute_surplus, step_distribution, DistributionConfig,
+    DistributionReport, DistrictGraph, Transfer, DEFAULT_MAX_TRANSFER_PER_TICK,
+    DEFAULT_RESERVE_FLOOR,
+};
 pub use gdp::{compute_gdp, GdpResult, RegionGdp};
 pub use metrics::{compute_metrics, EconomyMetrics, EconomyMetricsFixed};
 pub use tax_policy::{apply_tax_policy, TaxPolicy, TaxPolicyOutcome};

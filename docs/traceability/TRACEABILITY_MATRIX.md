@@ -59,10 +59,10 @@ Source specs: `docs/specs/CIV-0100-economy.md`, `docs/specs/CIV-0107-joule-econo
 | FR-ECON-004 | Surplus Joules SHALL flow to adjacent districts via the distribution graph each tick. | CIV-0100 | `crates/economy/src/distribution.rs` | `distribution::surplus_flows_adjacent` | in_progress |
 | FR-ECON-005 | Waste heat SHALL be computed as a percentage of total Joules consumed per tick. | CIV-0107 | `crates/economy/src/waste.rs` | `waste::heat_computed_from_consumption` | implemented |
 | FR-ECON-006 | GDP SHALL be derived from sum of regional Joule throughput converted at a fixed exchange rate. | CIV-0100 | `crates/economy/src/gdp.rs` | `gdp::sum_of_regional_joules` | implemented |
-| FR-ECON-007 | Trade agreements SHALL transfer Joules and MilliCredits between civilizations each tick. | CIV-0100 | `crates/economy/src/trade.rs` | `trade::bilateral_transfer_balanced` | planned |
+| FR-ECON-007 | Trade agreements SHALL transfer Joules and MilliCredits between civilizations each tick. | CIV-0100 | `crates/economy/src/trade.rs` (`TradeAgreement`, `bilateral_transfer`) | `trade::bilateral_transfer_balanced`, `bilateral_transfer_insufficient_joules` | implemented |
 | FR-ECON-008 | A district in Joule deficit for 3 consecutive ticks SHALL emit `economy.district.collapsed.v1`. | CIV-0100 | `crates/economy/src/district.rs` | `district::collapse_after_deficit_ticks` | implemented |
-| FR-ECON-009 | Subsistence mode SHALL activate when a civilization's total Joule balance drops below threshold. | CIV-0107 | `crates/economy/src/subsistence.rs` | `subsistence::activates_below_threshold` | planned |
-| FR-ECON-010 | Treasury balance SHALL be tracked in MilliCredits (`i64`) with no floating-point accumulation. | CIV-0100 | `crates/economy/src/treasury.rs` | `treasury::milliCredits_no_float` | planned |
+| FR-ECON-009 | Subsistence mode SHALL activate when a civilization's total Joule balance drops below threshold. | CIV-0107 | `crates/economy/src/subsistence.rs` (`SubsistenceMode`) | `subsistence::activates_below_threshold`, `subsistence_deactivates_above_threshold` | implemented |
+| FR-ECON-010 | Treasury balance SHALL be tracked in MilliCredits (`i64`) with no floating-point accumulation. | CIV-0100 | `crates/economy/src/treasury.rs` (`Treasury`) | `treasury::no_float_accumulation`, `treasury_credit_debit_joules` | implemented |
 
 ---
 

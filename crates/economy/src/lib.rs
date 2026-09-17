@@ -25,9 +25,12 @@ pub mod shadow;
 pub mod specialization;
 mod stocks;
 mod tax_policy;
+mod trade;
 mod trade_flow;
 mod trade_routes;
 mod waste;
+pub mod subsistence;
+pub mod treasury;
 
 pub use allocation::{
     allocate_by_priority, allocate_with, AllocationEngine, AllocationRegime, CapitalistAllocator,
@@ -60,10 +63,13 @@ pub use district::{tick_district_collapse, CollapseCheck, DistrictCollapseEvent,
 pub use gdp::{compute_gdp, GdpResult, RegionGdp};
 pub use metrics::{compute_metrics, EconomyMetrics, EconomyMetricsFixed};
 pub use tax_policy::{apply_tax_policy, TaxPolicy, TaxPolicyOutcome};
+pub use subsistence::{SubsistenceMode, DEFAULT_SUBSISTENCE_THRESHOLD};
+pub use treasury::Treasury;
 pub use waste::{compute_waste_heat, WasteHeatConfig, WasteHeatResult};
 pub use trade_flow::{
     complementary_round_trips, complementary_routes, ComplementaryTradeFlow, SettlementFlow,
 };
+pub use trade::{TradeAgreement, TradeAgreementError};
 pub use trade_routes::{
     compute_trade_routes, route_flow, routes_lexicographic, Settlement, SettlementId, TradeRoute,
 };

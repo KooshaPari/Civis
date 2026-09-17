@@ -9,11 +9,9 @@ mod fr_fr_civ_proto_001 {
 
     #[test]
     fn verify_fr_civ_proto_001_basic() {
-        assert!(SCHEMA_VERSION > 0, "schema version must be set");
-    }
-
-    #[test]
-    fn binary_magic_is_f3d0() {
+        // 0 is the correct pre-1.0 baseline; the version is deliberately zero-based
+        // and bumped only on wire-incompatible changes.
+        assert_eq!(SCHEMA_VERSION, 0);
         assert_eq!(FRAME3D_BINARY_MAGIC, b"F3D0");
     }
 }

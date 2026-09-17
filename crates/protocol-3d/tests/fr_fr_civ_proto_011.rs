@@ -9,11 +9,10 @@ mod fr_fr_civ_proto_011 {
 
     #[test]
     fn verify_fr_civ_proto_011_basic() {
-        let frame = Frame3d::VoxelDelta {
-            tick: 99, chunk_id: 7,
-            material: civ_protocol_3d::MaterialId(3),
-            write_seq: 42, dirty_cells: vec![],
-        };
+        let frame = Frame3d::VoxelDelta(civ_protocol_3d::VoxelDeltaFrame {
+            tick: 99,
+            deltas: vec![],
+        });
         let a = encode_frame3d_binary(&frame).unwrap();
         let b = encode_frame3d_binary(&frame).unwrap();
         assert_eq!(a, b, "encoding must be deterministic");

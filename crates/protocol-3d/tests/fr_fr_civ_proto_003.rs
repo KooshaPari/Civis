@@ -9,16 +9,15 @@ mod fr_fr_civ_proto_003 {
 
     #[test]
     fn verify_fr_civ_proto_003_basic() {
-        let frame = Frame3d::VoxelDelta {
-            tick: 42, chunk_id: 0,
-            material: civ_protocol_3d::MaterialId(1),
-            write_seq: 0, dirty_cells: vec![],
-        };
+        let frame = Frame3d::VoxelDelta(civ_protocol_3d::VoxelDeltaFrame {
+            tick: 42,
+            deltas: vec![],
+        });
         let encoded = encode_frame3d_binary(&frame).expect("encode");
         assert_eq!(&encoded[0..4], FRAME3D_BINARY_MAGIC);
         let decoded = decode_frame3d_binary(&encoded).expect("decode");
         match decoded {
-            Frame3d::VoxelDelta { tick, .. } => assert_eq!(tick, 42),
+            Frame3d::VoxelDelta(f) => assert_eq!(f.tick, 42),
             _ => panic!("expected VoxelDelta"),
         }
     }

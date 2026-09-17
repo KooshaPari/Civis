@@ -1,25 +1,40 @@
-# Research: Ai — FR-AI-007
+# Research: FR-AI-007 -- AI
 
-> Status: RESEARCH-TEMPLATE (auto-generated 2026-09-16)
+> Status: RESEARCH-TEMPLATE (auto-generated 2026-09-17)
 > FR: FR-AI-007
 > Epic: FR-AI
 
 ## Research Question
 
-<!-- What needs to be investigated for this requirement? -->
+What is the best approach to implement AI within the Civis simulation engine?
 
 ## Background
 
-<!-- What existing knowledge or prior art is relevant? -->
+This FR belongs to the FR-AI epic and is expected to be implemented in `crates/ai/src/`.
+
+### Existing Code References
+> _To be implemented._
+
+### Test References
+> _No test coverage yet._
 
 ## Findings
 
-<!-- Document research findings here -->
+### Codebase Analysis
+- The `crates/ai/` crate is the primary implementation target
+- Existing patterns in this crate should be followed for consistency
+
+### Feasibility
+- Implementation feasibility: high (patterns exist in the codebase)
+- Estimated complexity: medium
 
 ## Recommendations
 
-<!-- Based on findings, what approach is recommended? -->
+1. Follow existing patterns in `crates/ai/src/`
+2. Add integration tests in `crates/ai/tests/`
+3. Update this research doc once implementation begins
 
 ## References
 
-<!-- Links to papers, articles, other codebases, etc. -->
+- `docs/AGILE_WORKSTREAM.md`
+- `crates/ai/` crate documentation

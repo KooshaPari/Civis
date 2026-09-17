@@ -1,25 +1,42 @@
-# Research: Climate, weather, and seasons — FR-CIV-CLIMATE-002
+# Research: FR-CIV-CLIMATE-002 -- Climate, weather, seasons
 
-> Status: RESEARCH-TEMPLATE (auto-generated 2026-09-16)
+> Status: RESEARCH-TEMPLATE (auto-generated 2026-09-17)
 > FR: FR-CIV-CLIMATE-002
 > Epic: FR-CIV-CLIMATE
 
 ## Research Question
 
-<!-- What needs to be investigated for this requirement? -->
+What is the best approach to implement Climate, weather, seasons within the Civis simulation engine?
 
 ## Background
 
-<!-- What existing knowledge or prior art is relevant? -->
+This FR belongs to the FR-CIV-CLIMATE epic and is expected to be implemented in `crates/climate/src/`.
+
+### Existing Code References
+- `docs/reference/agileplus-artifacts-index.md:105`
+- `docs/reference/agileplus-artifacts-index.md:276`
+
+### Test References
+- `crates/build/tests/fr_matrix_batch12.rs:656`
+- `crates/build/tests/fr_matrix_batch12.rs:659`
 
 ## Findings
 
-<!-- Document research findings here -->
+### Codebase Analysis
+- The `crates/climate/` crate is the primary implementation target
+- Existing patterns in this crate should be followed for consistency
+
+### Feasibility
+- Implementation feasibility: high (patterns exist in the codebase)
+- Estimated complexity: medium
 
 ## Recommendations
 
-<!-- Based on findings, what approach is recommended? -->
+1. Follow existing patterns in `crates/climate/src/`
+2. Add integration tests in `crates/climate/tests/`
+3. Update this research doc once implementation begins
 
 ## References
 
-<!-- Links to papers, articles, other codebases, etc. -->
+- `docs/AGILE_WORKSTREAM.md`
+- `crates/climate/` crate documentation

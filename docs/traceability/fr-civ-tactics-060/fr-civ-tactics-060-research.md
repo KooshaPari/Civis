@@ -1,25 +1,43 @@
-# Research: Tactics and strategy — FR-CIV-TACTICS-060
+# Research: FR-CIV-TACTICS-060 -- Tactics and strategy
 
-> Status: RESEARCH-TEMPLATE (auto-generated 2026-09-16)
+> Status: RESEARCH-TEMPLATE (auto-generated 2026-09-17)
 > FR: FR-CIV-TACTICS-060
 > Epic: FR-CIV-TACTICS
 
 ## Research Question
 
-<!-- What needs to be investigated for this requirement? -->
+What is the best approach to implement Tactics and strategy within the Civis simulation engine?
 
 ## Background
 
-<!-- What existing knowledge or prior art is relevant? -->
+This FR belongs to the FR-CIV-TACTICS epic and is expected to be implemented in `crates/tactics/src/`.
+
+### Existing Code References
+- `docs/development-guide/p-w1-kickoff.md:63`
+
+### Test References
+- `crates/mod-host/tests/fr_matrix_batch10.rs:13`
+- `crates/mod-host/tests/fr_matrix_batch10.rs:87`
+- `crates/mod-host/tests/fr_matrix_batch10.rs:88`
+- `crates/mod-host/tests/fr_matrix_batch10.rs:89`
 
 ## Findings
 
-<!-- Document research findings here -->
+### Codebase Analysis
+- The `crates/tactics/` crate is the primary implementation target
+- Existing patterns in this crate should be followed for consistency
+
+### Feasibility
+- Implementation feasibility: high (patterns exist in the codebase)
+- Estimated complexity: medium
 
 ## Recommendations
 
-<!-- Based on findings, what approach is recommended? -->
+1. Follow existing patterns in `crates/tactics/src/`
+2. Add integration tests in `crates/tactics/tests/`
+3. Update this research doc once implementation begins
 
 ## References
 
-<!-- Links to papers, articles, other codebases, etc. -->
+- `docs/AGILE_WORKSTREAM.md`
+- `crates/tactics/` crate documentation

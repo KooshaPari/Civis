@@ -1,25 +1,41 @@
-# Research: Legend ingestion pipeline — FR-CIV-LEGENDS-INGEST-02
+# Research: FR-CIV-LEGENDS-INGEST-02 -- Civ Legends Ingest
 
-> Status: RESEARCH-TEMPLATE (auto-generated 2026-09-16)
+> Status: RESEARCH-TEMPLATE (auto-generated 2026-09-17)
 > FR: FR-CIV-LEGENDS-INGEST-02
 > Epic: FR-CIV-LEGENDS-INGEST
 
 ## Research Question
 
-<!-- What needs to be investigated for this requirement? -->
+What is the best approach to implement Civ Legends Ingest within the Civis simulation engine?
 
 ## Background
 
-<!-- What existing knowledge or prior art is relevant? -->
+This FR belongs to the FR-CIV-LEGENDS-INGEST epic and is expected to be implemented in `crates/legends/src/`.
+
+### Existing Code References
+- `crates/legends/src/worker.rs:1`
+- `docs/design/legends-engine.md:437`
+
+### Test References
+- `crates/engine/src/emergence.rs:798`
 
 ## Findings
 
-<!-- Document research findings here -->
+### Codebase Analysis
+- The `crates/legends/` crate is the primary implementation target
+- Existing patterns in this crate should be followed for consistency
+
+### Feasibility
+- Implementation feasibility: high (patterns exist in the codebase)
+- Estimated complexity: medium
 
 ## Recommendations
 
-<!-- Based on findings, what approach is recommended? -->
+1. Follow existing patterns in `crates/legends/src/`
+2. Add integration tests in `crates/legends/tests/`
+3. Update this research doc once implementation begins
 
 ## References
 
-<!-- Links to papers, articles, other codebases, etc. -->
+- `docs/AGILE_WORKSTREAM.md`
+- `crates/legends/` crate documentation

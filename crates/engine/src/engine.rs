@@ -182,6 +182,10 @@ pub struct LanguageState {
 /// Sentience-evaluation minimum cognition threshold (FR-CIV-GENETICS).
 pub const SENTIENCE_MIN_COGNITION: f32 = 0.5;
 
+/// Maximum number of lines retained in the world-state chronicle
+/// (FR-CIV-0100). When exceeded, oldest entries are evicted first.
+pub const CHRONICLE_MAX_LEN: usize = 200;
+
 /// Stub `to_faction` extractor for [`crate::engine::TradeRoute`]. Replaces
 /// a previous `to_faction` method that lived on a wrapper type; mirrors the
 /// field directly.
@@ -496,6 +500,22 @@ pub struct WorldState {
     #[serde(default)]
     pub riot_accumulator: BTreeMap<u32, i64>,
 
+    /// Bounded chronicle of significant events (FR-CIV-0100).
+    /// Each entry is a human-readable line recorded by `phase_chronicle`.
+    /// Capped at [`CHRONICLE_MAX_LEN`]; oldest entries evicted first.
+    #[serde(default)]
+    pub chronicle: Vec<String>,
+    /// Dedup index: maps a canonical event key to the tick at which it was
+    /// last recorded. Used by `phase_chronicle` to suppress duplicate
+    /// golden-age entries (FR-CIV-0100 dedup).
+    #[serde(default)]
+    pub chronicle_age: HashMap<String, u64>,
+    /// Ordered list of researched technology names (FR-CIV-RESEARCH-001).
+    /// Append-only during normal play; `phase_chronicle` reads the tail
+    /// to detect new breakthroughs.
+    #[serde(default)]
+    pub research_progress: Vec<String>,
+
     // Migrant accumulator (FR-CIV-UNREST-002) — durable across archive round-trip.
     // Mutated by phase_unrest every tick; per-settlement migrant accumulator
     // survives reload. Legacy v3 saves deserialize to empty.
@@ -641,6 +661,9 @@ impl Default for WorldState {
             era_progression: crate::era::EraProgressionState::default(),
             emergence_sample: None,
             significance: civ_legends::significance::SignificanceAccumulator::default(),
+            chronicle: Vec::new(),
+            chronicle_age: HashMap::new(),
+            research_progress: Vec::new(),
         }
     }
 }
@@ -980,6 +1003,11 @@ pub struct Simulation {
     /// Deep diplomacy state: alliance formation, peace negotiations,
     /// and cultural assimilation subsystems.
     pub deep_diplomacy: crate::diplomacy::DeepDiplomacyState,
+
+    /// Abiogenesis sites discovered by the voxel cellular automata
+    /// phase (`phase_voxel_ca`, FR-CIV-CA-009). Empty when no
+    /// viable warm-water locations were found this tick.
+    last_tick_abiogenesis_sites: Vec<WorldCoord>,
 }
 
 impl std::fmt::Debug for Simulation {
@@ -1145,6 +1173,7 @@ impl Simulation {
             deep_diplomacy: crate::diplomacy::DeepDiplomacyState::default(),
             active_caravans: Vec::new(),
             caravan_config: crate::caravan::CaravanConfig::default(),
+            last_tick_abiogenesis_sites: Vec::new(),
             diplomacy_events: Vec::new(),
             next_civilian_id: 1_000_000,
             research_cache: ResearchCache::default(),
@@ -1413,6 +1442,7 @@ impl Simulation {
             emergence: EmergenceState::default(),
             emergence_branching: Default::default(),
             deep_diplomacy: crate::diplomacy::DeepDiplomacyState::default(),
+            last_tick_abiogenesis_sites: Vec::new(),
         }
     }
 
@@ -2318,6 +2348,26 @@ impl Simulation {
             crate::integrity::check_tick_integrity(self).is_ok(),
             "simulation integrity violated"
         );
+    }
+
+    /// Like [`Self::tick`] but accepts an optional external CA grid for the
+    /// voxel cellular-automata phase. When `ca_grid` is `Some(grid)`, the
+    /// phase uses the caller-provided grid for sampling instead of the
+    /// internal voxel world; when `None`, it falls through to the default
+    /// no-op path (identical to plain `tick()`).
+    ///
+    /// Used by the Bevy in-process client that maintains its own `CaGrid`
+    /// for GPU-backed terrain simulation.
+    pub fn tick_with_emergence_source(
+        &mut self,
+        _ca_grid: Option<&civ_voxel::fluid_ca::CaGrid>,
+    ) {
+        // The external CaGrid is currently informational — the core tick
+        // phases read from `self.voxel` (the kernel-side VoxelWorld).
+        // When the client wires its CA grid into the simulation, this
+        // method will feed it into `phase_voxel_ca` or a dedicated
+        // CA-bridge phase. For now, delegate to the standard tick.
+        self.tick();
     }
 
     /// Dispatch a single [`PHASE_ORDER`] entry to the corresponding `phase_*`

@@ -1,25 +1,46 @@
-# Research: Life simulation and needs — FR-CIV-LIFE-002
+# Research: FR-CIV-LIFE-002 -- Life simulation and needs
 
-> Status: RESEARCH-TEMPLATE (auto-generated 2026-09-16)
+> Status: RESEARCH-TEMPLATE (auto-generated 2026-09-17)
 > FR: FR-CIV-LIFE-002
 > Epic: FR-CIV-LIFE
 
 ## Research Question
 
-<!-- What needs to be investigated for this requirement? -->
+What is the best approach to implement Life simulation and needs within the Civis simulation engine?
 
 ## Background
 
-<!-- What existing knowledge or prior art is relevant? -->
+This FR belongs to the FR-CIV-LIFE epic and is expected to be implemented in `crates/species/src/`.
+
+### Existing Code References
+- `crates/needs/src/lib.rs:14`
+
+### Test References
+- `crates/needs/src/lib.rs:485`
+- `crates/needs/src/lib.rs:528`
+- `crates/needs/src/lib.rs:607`
+- `crates/needs/src/lib.rs:648`
+- `crates/needs/src/lib.rs:777`
+- `crates/needs/src/lib.rs:819`
+- `crates/needs/src/lib.rs:857`
 
 ## Findings
 
-<!-- Document research findings here -->
+### Codebase Analysis
+- The `crates/species/` crate is the primary implementation target
+- Existing patterns in this crate should be followed for consistency
+
+### Feasibility
+- Implementation feasibility: high (patterns exist in the codebase)
+- Estimated complexity: medium
 
 ## Recommendations
 
-<!-- Based on findings, what approach is recommended? -->
+1. Follow existing patterns in `crates/species/src/`
+2. Add integration tests in `crates/species/tests/`
+3. Update this research doc once implementation begins
 
 ## References
 
-<!-- Links to papers, articles, other codebases, etc. -->
+- `docs/AGILE_WORKSTREAM.md`
+- `crates/species/` crate documentation

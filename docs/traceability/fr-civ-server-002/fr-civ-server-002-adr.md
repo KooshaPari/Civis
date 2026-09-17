@@ -1,30 +1,45 @@
-# ADR-22: Server infrastructure — FR-CIV-SERVER-002
+# ADR: FR-CIV-SERVER-002 -- Server infrastructure
 
 > Status: Proposed
-> Date: 2026-09-16
+> Date: 2026-09-17
 > Deciders: CivLab
 > Relates to: FR-CIV-SERVER-002
+> Epic: FR-CIV-SERVER
 
 ## Context
 
-<!-- What is the architectural decision that needs to be made for FR-CIV-SERVER-002? -->
+FR-CIV-SERVER-002 is part of the FR-CIV-SERVER epic. This functional requirement captures: Server infrastructure.
+
+Implementing crate: `crates/server/src/`
+
+### Referenced Source
+- `PLAN.md:176`
+- `PLAN.md:177`
+
+### Test Coverage
+> _No test coverage yet._
 
 ## Decision
 
-<!-- What was decided? -->
+TBD -- The architectural decision for FR-CIV-SERVER-002 needs to be finalized based on implementation exploration.
+
+### Key Considerations
+- Integration with the Bevy ECS engine architecture
+- Consistency with existing patterns in `crates/server/`
+- Performance implications for tick-based simulation
 
 ## Consequences
 
 ### Positive
-- 
+- Fulfills the Server infrastructure requirement in the simulation
 
 ### Negative
-- 
+- Adds complexity to the server crate
 
 ### Risks
-- 
+- Implementation may surface unforeseen coupling with other FRs
 
 ## Alternatives Considered
 
-1. **Option A**: <!-- describe -->
-2. **Option B**: <!-- describe -->
+1. **Option A**: Direct implementation in `crates/server/`
+2. **Option B**: Extract into a dedicated sub-crate

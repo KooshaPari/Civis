@@ -1,25 +1,41 @@
-# Research: Technology research — FR-CIV-RESEARCH-002-SNAPSHOT
+# Research: FR-CIV-RESEARCH-002-SNAPSHOT -- Technology research
 
-> Status: RESEARCH-TEMPLATE (auto-generated 2026-09-16)
+> Status: RESEARCH-TEMPLATE (auto-generated 2026-09-17)
 > FR: FR-CIV-RESEARCH-002-SNAPSHOT
 > Epic: FR-CIV-RESEARCH
 
 ## Research Question
 
-<!-- What needs to be investigated for this requirement? -->
+What is the best approach to implement Technology research within the Civis simulation engine?
 
 ## Background
 
-<!-- What existing knowledge or prior art is relevant? -->
+This FR belongs to the FR-CIV-RESEARCH epic and is expected to be implemented in `crates/research/src/`.
+
+### Existing Code References
+- `PLAN.md:235`
+- `PLAN.md:236`
+
+### Test References
+> _No test coverage yet._
 
 ## Findings
 
-<!-- Document research findings here -->
+### Codebase Analysis
+- The `crates/research/` crate is the primary implementation target
+- Existing patterns in this crate should be followed for consistency
+
+### Feasibility
+- Implementation feasibility: high (patterns exist in the codebase)
+- Estimated complexity: medium
 
 ## Recommendations
 
-<!-- Based on findings, what approach is recommended? -->
+1. Follow existing patterns in `crates/research/src/`
+2. Add integration tests in `crates/research/tests/`
+3. Update this research doc once implementation begins
 
 ## References
 
-<!-- Links to papers, articles, other codebases, etc. -->
+- `docs/AGILE_WORKSTREAM.md`
+- `crates/research/` crate documentation

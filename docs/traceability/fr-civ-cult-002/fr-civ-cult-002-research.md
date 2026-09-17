@@ -1,25 +1,41 @@
-# Research: Culture system — FR-CIV-CULT-002
+# Research: FR-CIV-CULT-002 -- Culture system
 
-> Status: RESEARCH-TEMPLATE (auto-generated 2026-09-16)
+> Status: RESEARCH-TEMPLATE (auto-generated 2026-09-17)
 > FR: FR-CIV-CULT-002
 > Epic: FR-CIV-CULT
 
 ## Research Question
 
-<!-- What needs to be investigated for this requirement? -->
+What is the best approach to implement Culture system within the Civis simulation engine?
 
 ## Background
 
-<!-- What existing knowledge or prior art is relevant? -->
+This FR belongs to the FR-CIV-CULT epic and is expected to be implemented in `crates/civ-institutions/src/`.
+
+### Existing Code References
+- `docs/reference/agileplus-artifacts-index.md:169`
+- `docs/reference/agileplus-artifacts-index.md:291`
+
+### Test References
+> _No test coverage yet._
 
 ## Findings
 
-<!-- Document research findings here -->
+### Codebase Analysis
+- The `crates/civ-institutions/` crate is the primary implementation target
+- Existing patterns in this crate should be followed for consistency
+
+### Feasibility
+- Implementation feasibility: high (patterns exist in the codebase)
+- Estimated complexity: medium
 
 ## Recommendations
 
-<!-- Based on findings, what approach is recommended? -->
+1. Follow existing patterns in `crates/civ-institutions/src/`
+2. Add integration tests in `crates/civ-institutions/tests/`
+3. Update this research doc once implementation begins
 
 ## References
 
-<!-- Links to papers, articles, other codebases, etc. -->
+- `docs/AGILE_WORKSTREAM.md`
+- `crates/civ-institutions/` crate documentation

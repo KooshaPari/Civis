@@ -1,30 +1,46 @@
-# ADR-22: Emergence metrics and dashboards — FR-CIV-EMERGENCE-001
+# ADR: FR-CIV-EMERGENCE-001 -- Emergence metrics
 
 > Status: Proposed
-> Date: 2026-09-16
+> Date: 2026-09-17
 > Deciders: CivLab
 > Relates to: FR-CIV-EMERGENCE-001
+> Epic: FR-CIV-EMERGENCE
 
 ## Context
 
-<!-- What is the architectural decision that needs to be made for FR-CIV-EMERGENCE-001? -->
+FR-CIV-EMERGENCE-001 is part of the FR-CIV-EMERGENCE epic. This functional requirement captures: Emergence metrics.
+
+Implementing crate: `crates/emergence-oracle/src/`
+
+### Referenced Source
+- `docs/guides/voxel-emergent-vision-and-migration.md:97`
+- `docs/guides/voxel-emergent-vision-and-migration.md:133`
+- `docs/guides/voxel-emergent-vision-and-migration.md:137`
+
+### Test Coverage
+> _No test coverage yet._
 
 ## Decision
 
-<!-- What was decided? -->
+TBD -- The architectural decision for FR-CIV-EMERGENCE-001 needs to be finalized based on implementation exploration.
+
+### Key Considerations
+- Integration with the Bevy ECS engine architecture
+- Consistency with existing patterns in `crates/emergence-oracle/`
+- Performance implications for tick-based simulation
 
 ## Consequences
 
 ### Positive
-- 
+- Fulfills the Emergence metrics requirement in the simulation
 
 ### Negative
-- 
+- Adds complexity to the emergence-oracle crate
 
 ### Risks
-- 
+- Implementation may surface unforeseen coupling with other FRs
 
 ## Alternatives Considered
 
-1. **Option A**: <!-- describe -->
-2. **Option B**: <!-- describe -->
+1. **Option A**: Direct implementation in `crates/emergence-oracle/`
+2. **Option B**: Extract into a dedicated sub-crate

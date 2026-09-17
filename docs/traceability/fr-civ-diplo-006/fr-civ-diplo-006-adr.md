@@ -1,30 +1,47 @@
-# ADR-22: Diplomacy and treaties — FR-CIV-DIPLO-006
+# ADR: FR-CIV-DIPLO-006 -- Diplomacy and treaties
 
 > Status: Proposed
-> Date: 2026-09-16
+> Date: 2026-09-17
 > Deciders: CivLab
 > Relates to: FR-CIV-DIPLO-006
+> Epic: FR-CIV-DIPLO
 
 ## Context
 
-<!-- What is the architectural decision that needs to be made for FR-CIV-DIPLO-006? -->
+FR-CIV-DIPLO-006 is part of the FR-CIV-DIPLO epic. This functional requirement captures: Diplomacy and treaties.
+
+Implementing crate: `crates/diplomacy/src/`
+
+### Referenced Source
+> _To be implemented._
+
+### Test Coverage
+- `crates/diplomacy/src/lib.rs:1304`
+- `crates/diplomacy/src/lib.rs:1306`
+- `crates/diplomacy/src/lib.rs:1316`
+- `crates/diplomacy/src/lib.rs:1543`
 
 ## Decision
 
-<!-- What was decided? -->
+TBD -- The architectural decision for FR-CIV-DIPLO-006 needs to be finalized based on implementation exploration.
+
+### Key Considerations
+- Integration with the Bevy ECS engine architecture
+- Consistency with existing patterns in `crates/diplomacy/`
+- Performance implications for tick-based simulation
 
 ## Consequences
 
 ### Positive
-- 
+- Fulfills the Diplomacy and treaties requirement in the simulation
 
 ### Negative
-- 
+- Adds complexity to the diplomacy crate
 
 ### Risks
-- 
+- Implementation may surface unforeseen coupling with other FRs
 
 ## Alternatives Considered
 
-1. **Option A**: <!-- describe -->
-2. **Option B**: <!-- describe -->
+1. **Option A**: Direct implementation in `crates/diplomacy/`
+2. **Option B**: Extract into a dedicated sub-crate

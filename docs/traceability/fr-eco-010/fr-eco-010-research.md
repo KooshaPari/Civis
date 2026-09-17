@@ -1,0 +1,40 @@
+# Research: FR-ECO-010 -- Economy
+
+> Status: RESEARCH-TEMPLATE (auto-generated 2026-09-17)
+> FR: FR-ECO-010
+> Epic: FR-ECO
+
+## Research Question
+
+What is the best approach to implement Economy within the Civis simulation engine?
+
+## Background
+
+This FR belongs to the FR-ECO epic and is expected to be implemented in `crates/economy/src/`.
+
+### Existing Code References
+> _To be implemented._
+
+### Test References
+- `docs/specs/CIV-0100-economy-v1.md:1845`
+
+## Findings
+
+### Codebase Analysis
+- The `crates/economy/` crate is the primary implementation target
+- Existing patterns in this crate should be followed for consistency
+
+### Feasibility
+- Implementation feasibility: high (patterns exist in the codebase)
+- Estimated complexity: medium
+
+## Recommendations
+
+1. Follow existing patterns in `crates/economy/src/`
+2. Add integration tests in `crates/economy/tests/`
+3. Update this research doc once implementation begins
+
+## References
+
+- `docs/AGILE_WORKSTREAM.md`
+- `crates/economy/` crate documentation

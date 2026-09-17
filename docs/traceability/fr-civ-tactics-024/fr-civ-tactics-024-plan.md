@@ -1,0 +1,49 @@
+# Plan: FR-CIV-TACTICS-024 -- Tactics and strategy
+
+> Date: 2026-09-17
+> FR: FR-CIV-TACTICS-024
+> Epic: FR-CIV-TACTICS
+> Status: DRAFT
+
+## Implementation Steps
+
+1. **Research and Design** -- Review existing code in `crates/tactics/src/` and finalize the ADR
+2. **Core Implementation** -- Implement the Tactics and strategy logic
+3. **Integration** -- Wire into the Bevy ECS tick system and existing systems
+4. **Testing** -- Add unit tests and integration tests
+5. **Documentation** -- Update spec, ADR, and this plan with final decisions
+
+### Referenced Source Files
+- `crates/engine/src/engine.rs:411`
+- `crates/engine/src/engine.rs:2245`
+- `crates/tactics/src/war_bridge.rs:29`
+- `docs/development-guide/p-w1-kickoff.md:27`
+
+### Test Coverage
+- `crates/engine/src/engine.rs:3278`
+- `crates/tactics/src/war_bridge.rs:351`
+- `crates/tactics/tests/fr_matrix_batch2.rs:201`
+- `crates/tactics/tests/fr_matrix_batch2.rs:204`
+- `crates/tactics/tests/fr_matrix_batch2.rs:205`
+- `crates/tactics/tests/fr_matrix_batch5.rs:14`
+- `crates/tactics/tests/fr_matrix_batch5.rs:208`
+- `crates/tactics/tests/fr_matrix_batch5.rs:209`
+
+## Dependencies
+
+- Epic: FR-CIV-TACTICS
+- Implementing crate: `crates/tactics/src/`
+- Engine core: `crates/engine/src/`
+
+## Verification
+
+1. `cargo check -p tactics`
+2. `cargo test -p tactics`
+3. `cargo clippy -p tactics`
+4. Manual verification in the simulation runtime
+
+## Estimated Effort
+
+- Implementation: TBD
+- Testing: TBD
+- Total: TBD

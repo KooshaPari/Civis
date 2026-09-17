@@ -1,25 +1,44 @@
-# Research: Voxel rendering — FR-CIV-VOXEL-000
+# Research: FR-CIV-VOXEL-000 -- Voxel rendering
 
-> Status: RESEARCH-TEMPLATE (auto-generated 2026-09-16)
+> Status: RESEARCH-TEMPLATE (auto-generated 2026-09-17)
 > FR: FR-CIV-VOXEL-000
 > Epic: FR-CIV-VOXEL
 
 ## Research Question
 
-<!-- What needs to be investigated for this requirement? -->
+What is the best approach to implement Voxel rendering within the Civis simulation engine?
 
 ## Background
 
-<!-- What existing knowledge or prior art is relevant? -->
+This FR belongs to the FR-CIV-VOXEL epic and is expected to be implemented in `crates/voxel/src/`.
+
+### Existing Code References
+- `docs/design/emergence-dashboard.md:7`
+- `docs/development-guide/fr-3d-additions.md:15`
+
+### Test References
+- `crates/voxel/src/lib.rs:81`
+- `crates/voxel/src/lib.rs:82`
+- `crates/voxel/src/lib.rs:92`
+- `crates/voxel/src/lib.rs:94`
 
 ## Findings
 
-<!-- Document research findings here -->
+### Codebase Analysis
+- The `crates/voxel/` crate is the primary implementation target
+- Existing patterns in this crate should be followed for consistency
+
+### Feasibility
+- Implementation feasibility: high (patterns exist in the codebase)
+- Estimated complexity: medium
 
 ## Recommendations
 
-<!-- Based on findings, what approach is recommended? -->
+1. Follow existing patterns in `crates/voxel/src/`
+2. Add integration tests in `crates/voxel/tests/`
+3. Update this research doc once implementation begins
 
 ## References
 
-<!-- Links to papers, articles, other codebases, etc. -->
+- `docs/AGILE_WORKSTREAM.md`
+- `crates/voxel/` crate documentation

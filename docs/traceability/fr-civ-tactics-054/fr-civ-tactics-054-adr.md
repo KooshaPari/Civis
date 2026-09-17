@@ -1,30 +1,47 @@
-# ADR-22: Tactics and strategy — FR-CIV-TACTICS-054
+# ADR: FR-CIV-TACTICS-054 -- Tactics and strategy
 
 > Status: Proposed
-> Date: 2026-09-16
+> Date: 2026-09-17
 > Deciders: CivLab
 > Relates to: FR-CIV-TACTICS-054
+> Epic: FR-CIV-TACTICS
 
 ## Context
 
-<!-- What is the architectural decision that needs to be made for FR-CIV-TACTICS-054? -->
+FR-CIV-TACTICS-054 is part of the FR-CIV-TACTICS epic. This functional requirement captures: Tactics and strategy.
+
+Implementing crate: `crates/tactics/src/`
+
+### Referenced Source
+- `crates/mod-host/src/lib.rs:439`
+- `crates/server/src/jsonrpc.rs:403`
+- `crates/watch/src/app.rs:300`
+- `docs/development-guide/p-w1-kickoff.md:56`
+
+### Test Coverage
+- `crates/mod-host/src/lib.rs:1358`
 
 ## Decision
 
-<!-- What was decided? -->
+TBD -- The architectural decision for FR-CIV-TACTICS-054 needs to be finalized based on implementation exploration.
+
+### Key Considerations
+- Integration with the Bevy ECS engine architecture
+- Consistency with existing patterns in `crates/tactics/`
+- Performance implications for tick-based simulation
 
 ## Consequences
 
 ### Positive
-- 
+- Fulfills the Tactics and strategy requirement in the simulation
 
 ### Negative
-- 
+- Adds complexity to the tactics crate
 
 ### Risks
-- 
+- Implementation may surface unforeseen coupling with other FRs
 
 ## Alternatives Considered
 
-1. **Option A**: <!-- describe -->
-2. **Option B**: <!-- describe -->
+1. **Option A**: Direct implementation in `crates/tactics/`
+2. **Option B**: Extract into a dedicated sub-crate

@@ -1,25 +1,42 @@
-# Research: Psychological and social modelling — FR-CIV-PSYCHE-011
+# Research: FR-CIV-PSYCHE-011 -- Psychological and social modelling
 
-> Status: RESEARCH-TEMPLATE (auto-generated 2026-09-16)
+> Status: RESEARCH-TEMPLATE (auto-generated 2026-09-17)
 > FR: FR-CIV-PSYCHE-011
 > Epic: FR-CIV-PSYCHE
 
 ## Research Question
 
-<!-- What needs to be investigated for this requirement? -->
+What is the best approach to implement Psychological and social modelling within the Civis simulation engine?
 
 ## Background
 
-<!-- What existing knowledge or prior art is relevant? -->
+This FR belongs to the FR-CIV-PSYCHE epic and is expected to be implemented in `crates/needs/src/`.
+
+### Existing Code References
+- `docs/design/psyche-social.md:191`
+- `docs/design/psyche-social.md:259`
+- `docs/design/psyche-social.md:278`
+
+### Test References
+> _No test coverage yet._
 
 ## Findings
 
-<!-- Document research findings here -->
+### Codebase Analysis
+- The `crates/needs/` crate is the primary implementation target
+- Existing patterns in this crate should be followed for consistency
+
+### Feasibility
+- Implementation feasibility: high (patterns exist in the codebase)
+- Estimated complexity: medium
 
 ## Recommendations
 
-<!-- Based on findings, what approach is recommended? -->
+1. Follow existing patterns in `crates/needs/src/`
+2. Add integration tests in `crates/needs/tests/`
+3. Update this research doc once implementation begins
 
 ## References
 
-<!-- Links to papers, articles, other codebases, etc. -->
+- `docs/AGILE_WORKSTREAM.md`
+- `crates/needs/` crate documentation

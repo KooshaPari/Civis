@@ -1,30 +1,46 @@
-# ADR-22: Agent systems — FR-CIV-AGENTS-001
+# ADR: FR-CIV-AGENTS-001 -- Agent systems
 
 > Status: Proposed
-> Date: 2026-09-16
+> Date: 2026-09-17
 > Deciders: CivLab
 > Relates to: FR-CIV-AGENTS-001
+> Epic: FR-CIV-AGENTS
 
 ## Context
 
-<!-- What is the architectural decision that needs to be made for FR-CIV-AGENTS-001? -->
+FR-CIV-AGENTS-001 is part of the FR-CIV-AGENTS epic. This functional requirement captures: Agent systems.
+
+Implementing crate: `crates/ai/src/`
+
+### Referenced Source
+- `docs/design/emergence-dashboard.md:7`
+- `docs/development-guide/fr-3d-additions.md:57`
+
+### Test Coverage
+- `crates/agents/src/lib.rs:710`
+- `crates/agents/src/lib.rs:737`
 
 ## Decision
 
-<!-- What was decided? -->
+TBD -- The architectural decision for FR-CIV-AGENTS-001 needs to be finalized based on implementation exploration.
+
+### Key Considerations
+- Integration with the Bevy ECS engine architecture
+- Consistency with existing patterns in `crates/ai/`
+- Performance implications for tick-based simulation
 
 ## Consequences
 
 ### Positive
-- 
+- Fulfills the Agent systems requirement in the simulation
 
 ### Negative
-- 
+- Adds complexity to the ai crate
 
 ### Risks
-- 
+- Implementation may surface unforeseen coupling with other FRs
 
 ## Alternatives Considered
 
-1. **Option A**: <!-- describe -->
-2. **Option B**: <!-- describe -->
+1. **Option A**: Direct implementation in `crates/ai/`
+2. **Option B**: Extract into a dedicated sub-crate

@@ -1,30 +1,52 @@
-# ADR-22: Tactics and strategy — FR-CIV-TACTICS-023
+# ADR: FR-CIV-TACTICS-023 -- Tactics and strategy
 
 > Status: Proposed
-> Date: 2026-09-16
+> Date: 2026-09-17
 > Deciders: CivLab
 > Relates to: FR-CIV-TACTICS-023
+> Epic: FR-CIV-TACTICS
 
 ## Context
 
-<!-- What is the architectural decision that needs to be made for FR-CIV-TACTICS-023? -->
+FR-CIV-TACTICS-023 is part of the FR-CIV-TACTICS epic. This functional requirement captures: Tactics and strategy.
+
+Implementing crate: `crates/tactics/src/`
+
+### Referenced Source
+- `crates/tactics/src/doctrine_fitness.rs:1`
+- `docs/design/warfare.md:122`
+- `docs/development-guide/p-w1-kickoff.md:26`
+
+### Test Coverage
+- `crates/tactics/src/lib.rs:450`
+- `crates/tactics/tests/fr_matrix_batch2.rs:179`
+- `crates/tactics/tests/fr_matrix_batch2.rs:182`
+- `crates/tactics/tests/fr_matrix_batch2.rs:183`
+- `crates/tactics/tests/fr_matrix_batch5.rs:13`
+- `crates/tactics/tests/fr_matrix_batch5.rs:188`
+- `crates/tactics/tests/fr_matrix_batch5.rs:189`
 
 ## Decision
 
-<!-- What was decided? -->
+TBD -- The architectural decision for FR-CIV-TACTICS-023 needs to be finalized based on implementation exploration.
+
+### Key Considerations
+- Integration with the Bevy ECS engine architecture
+- Consistency with existing patterns in `crates/tactics/`
+- Performance implications for tick-based simulation
 
 ## Consequences
 
 ### Positive
-- 
+- Fulfills the Tactics and strategy requirement in the simulation
 
 ### Negative
-- 
+- Adds complexity to the tactics crate
 
 ### Risks
-- 
+- Implementation may surface unforeseen coupling with other FRs
 
 ## Alternatives Considered
 
-1. **Option A**: <!-- describe -->
-2. **Option B**: <!-- describe -->
+1. **Option A**: Direct implementation in `crates/tactics/`
+2. **Option B**: Extract into a dedicated sub-crate

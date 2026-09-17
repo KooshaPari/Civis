@@ -1,30 +1,47 @@
-# ADR-22: War and conflict — FR-CIV-WAR-002-COMBAT
+# ADR: FR-CIV-WAR-002-COMBAT -- War and conflict
 
 > Status: Proposed
-> Date: 2026-09-16
+> Date: 2026-09-17
 > Deciders: CivLab
 > Relates to: FR-CIV-WAR-002-COMBAT
+> Epic: FR-CIV-WAR
 
 ## Context
 
-<!-- What is the architectural decision that needs to be made for FR-CIV-WAR-002-COMBAT? -->
+FR-CIV-WAR-002-COMBAT is part of the FR-CIV-WAR epic. This functional requirement captures: War and conflict.
+
+Implementing crate: `crates/tactics/src/`
+
+### Referenced Source
+- `PLAN.md:205`
+- `PLAN.md:206`
+
+### Test Coverage
+- `crates/tactics/src/lib.rs:318`
+- `crates/tactics/src/war_bridge.rs:292`
+- `crates/tactics/src/war_bridge.rs:327`
 
 ## Decision
 
-<!-- What was decided? -->
+TBD -- The architectural decision for FR-CIV-WAR-002-COMBAT needs to be finalized based on implementation exploration.
+
+### Key Considerations
+- Integration with the Bevy ECS engine architecture
+- Consistency with existing patterns in `crates/tactics/`
+- Performance implications for tick-based simulation
 
 ## Consequences
 
 ### Positive
-- 
+- Fulfills the War and conflict requirement in the simulation
 
 ### Negative
-- 
+- Adds complexity to the tactics crate
 
 ### Risks
-- 
+- Implementation may surface unforeseen coupling with other FRs
 
 ## Alternatives Considered
 
-1. **Option A**: <!-- describe -->
-2. **Option B**: <!-- describe -->
+1. **Option A**: Direct implementation in `crates/tactics/`
+2. **Option B**: Extract into a dedicated sub-crate

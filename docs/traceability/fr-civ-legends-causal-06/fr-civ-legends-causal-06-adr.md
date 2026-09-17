@@ -1,30 +1,44 @@
-# ADR-22: Causal legend tracking — FR-CIV-LEGENDS-CAUSAL-06
+# ADR: FR-CIV-LEGENDS-CAUSAL-06 -- Civ Legends Causal
 
 > Status: Proposed
-> Date: 2026-09-16
+> Date: 2026-09-17
 > Deciders: CivLab
 > Relates to: FR-CIV-LEGENDS-CAUSAL-06
+> Epic: FR-CIV-LEGENDS-CAUSAL
 
 ## Context
 
-<!-- What is the architectural decision that needs to be made for FR-CIV-LEGENDS-CAUSAL-06? -->
+FR-CIV-LEGENDS-CAUSAL-06 is part of the FR-CIV-LEGENDS-CAUSAL epic. This functional requirement captures: Civ Legends Causal.
+
+Implementing crate: `crates/legends/src/`
+
+### Referenced Source
+- `docs/design/legends-engine.md:441`
+
+### Test Coverage
+> _No test coverage yet._
 
 ## Decision
 
-<!-- What was decided? -->
+TBD -- The architectural decision for FR-CIV-LEGENDS-CAUSAL-06 needs to be finalized based on implementation exploration.
+
+### Key Considerations
+- Integration with the Bevy ECS engine architecture
+- Consistency with existing patterns in `crates/legends/`
+- Performance implications for tick-based simulation
 
 ## Consequences
 
 ### Positive
-- 
+- Fulfills the Civ Legends Causal requirement in the simulation
 
 ### Negative
-- 
+- Adds complexity to the legends crate
 
 ### Risks
-- 
+- Implementation may surface unforeseen coupling with other FRs
 
 ## Alternatives Considered
 
-1. **Option A**: <!-- describe -->
-2. **Option B**: <!-- describe -->
+1. **Option A**: Direct implementation in `crates/legends/`
+2. **Option B**: Extract into a dedicated sub-crate

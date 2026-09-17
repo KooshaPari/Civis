@@ -14,6 +14,7 @@ use civ_agents::{CohortStats, LodTier, Tools, Wardrobe};
 use civ_audio::triggers::SfxTrigger;
 use civ_build::{BuildSite, DemandSignals, ProductionEvent};
 use civ_diffusion::DiffusionParams;
+use civ_voxel::WorldCoord;
 use std::collections::BTreeMap;
 
 #[inline]
@@ -404,5 +405,122 @@ impl Simulation {
         self.state.resources.wood += wood;
         self.state.resources.metal += metal;
         self.state.resources.energy += energy;
+    }
+
+    /// Voxel cellular automata phase (FR-CIV-CA-009).
+    ///
+    /// When `window` is `None`, this is a cheap no-op: no abiogenesis sites
+    /// are discovered and `last_tick_abiogenesis_sites` is left empty.
+    ///
+    /// When `window` is `Some((radius, temperature))`, the phase scans the
+    /// voxel world within `radius` of the origin for `WATER` cells at a
+    /// temperature above zero (i.e. "warm liquid water"). Each such cell
+    /// becomes a viable abiogenesis site. Pure `STONE` or `AIR` chunks
+    /// produce zero sites.
+    ///
+    /// The method is deterministic: identical `(seed, grid, window)` inputs
+    /// always produce the same set of sites.
+    pub(crate) fn phase_voxel_ca(&mut self, window: Option<(i64, i16)>) {
+        use civ_voxel::material::{self, MaterialRegistry};
+
+        self.last_tick_abiogenesis_sites.clear();
+
+        let Some((radius, temperature)) = window else {
+            return;
+        };
+
+        if radius <= 0 {
+            return;
+        }
+
+        let registry = MaterialRegistry::standard();
+        let water_id = material::WATER;
+
+        let origin = WorldCoord { x: 0, y: 0, z: 0 };
+        for dx in -radius..=radius {
+            for dy in -radius..=radius {
+                for dz in -radius..=radius {
+                    let coord = WorldCoord {
+                        x: origin.x + dx,
+                        y: origin.y + dy,
+                        z: origin.z + dz,
+                    };
+                    let mat = self.voxel.read(coord);
+                    if mat == water_id {
+                        if let Some(def) = registry.get(mat) {
+                            if def.phase == material::Phase::Liquid
+                                && temperature > def.melting_point
+                            {
+                                self.last_tick_abiogenesis_sites.push(coord);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Read-only view of the most recent abiogenesis sites discovered by
+    /// `phase_voxel_ca`.
+    pub fn last_tick_abiogenesis_sites(&self) -> &[WorldCoord] {
+        &self.last_tick_abiogenesis_sites
+    }
+
+    /// Chronicle phase (FR-CIV-0100).
+    ///
+    /// Detects new entries in `WorldState::research_progress` and appends
+    /// human-readable breakthrough lines to `WorldState::chronicle`. The
+    /// chronicle is bounded at [`super::CHRONICLE_MAX_LEN`]; oldest entries
+    /// are evicted when the cap is exceeded.
+    ///
+    /// Dedup: the canonical key `"research:{name}"` is checked against
+    /// `WorldState::chronicle_age`. An entry is only appended when the
+    /// name is not yet in `chronicle_age` (or the recorded tick differs,
+    /// allowing golden-age re-records after enough time has passed).
+    pub fn phase_chronicle(&mut self) {
+        let tick = self.state.tick;
+        let prev_len = self.research_cache.researched.len();
+
+        // Detect new research entries since last time.
+        if prev_len > 0 {
+            let new_entries: Vec<String> = self.research_cache.researched[..prev_len]
+                .iter()
+                .filter(|name| !self.state.research_progress.contains(name))
+                .cloned()
+                .collect();
+
+            for name in &new_entries {
+                let key = format!("research:{name}");
+                let last_tick = self.state.chronicle_age.get(&key).copied().unwrap_or(0);
+
+                // Only append if not already recorded, or if enough time
+                // has passed for a golden-age re-record (1000 ticks).
+                if last_tick == 0 || tick.saturating_sub(last_tick) >= 1000 {
+                    let line = format!("tick {tick}: {name} researched");
+                    self.state.chronicle.push(line);
+                    self.state.chronicle_age.insert(key, tick);
+                }
+            }
+
+            // Copy newly discovered entries into research_progress.
+            self.state
+                .research_progress
+                .extend(new_entries);
+        }
+
+        // Enforce the chronicle cap.
+        while self.state.chronicle.len() > super::CHRONICLE_MAX_LEN {
+            self.state.chronicle.remove(0);
+        }
+    }
+
+    /// Read-only view of the chronicle lines.
+    pub fn chronicle(&self) -> &[String] {
+        &self.state.chronicle
+    }
+
+    /// Read-only view of the research progress list.
+    pub fn research_progress(&self) -> &[String] {
+        &self.state.research_progress
     }
 }

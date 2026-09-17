@@ -1,0 +1,41 @@
+# Plan: FR-CIV-PROTO3D -- Core civilisation simulation
+
+> Date: 2026-09-17
+> FR: FR-CIV-PROTO3D
+> Epic: FR-CIV
+> Status: DRAFT
+
+## Implementation Steps
+
+1. **Research and Design** -- Review existing code in `crates/protocol-3d/src/` and finalize the ADR
+2. **Core Implementation** -- Implement the Core civilisation simulation logic
+3. **Integration** -- Wire into the Bevy ECS tick system and existing systems
+4. **Testing** -- Add unit tests and integration tests
+5. **Documentation** -- Update spec, ADR, and this plan with final decisions
+
+### Referenced Source Files
+- `crates/protocol-3d/README.md:7`
+- `crates/protocol-3d/src/lib.rs:23`
+- `docs/development-guide/fr-3d-additions.md:100`
+
+### Test Coverage
+> _No test coverage yet._
+
+## Dependencies
+
+- Epic: FR-CIV
+- Implementing crate: `crates/protocol-3d/src/`
+- Engine core: `crates/engine/src/`
+
+## Verification
+
+1. `cargo check -p protocol-3d`
+2. `cargo test -p protocol-3d`
+3. `cargo clippy -p protocol-3d`
+4. Manual verification in the simulation runtime
+
+## Estimated Effort
+
+- Implementation: TBD
+- Testing: TBD
+- Total: TBD

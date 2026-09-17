@@ -1,27 +1,28 @@
-//! Tests for FR-CIV-EMERGENCE-006
+//! Tests for FR-CIV-EMERGENCE-006 — structure count.
 //!
 //! Epic: FR-CIV-EMERGENCE
-//! Status: CODE-ONLY-no-spec
-//! Auto-generated test stub — 2026-09-16
-//!
-//! This test file verifies FR FR-CIV-EMERGENCE-006.
-//! Fill in the test body with assertions that validate the requirement.
-
-// Referenced code:
-// - docs/guides/voxel-emergent-vision-and-migration.md:142
+//! Status: IMPLEMENTED
 
 #[cfg(test)]
 mod fr_fr_civ_emergence_006 {
-    /// Verify FR-CIV-EMERGENCE-006 behavior.
-    ///
-    /// FR: FR-CIV-EMERGENCE-006 (FR-CIV-EMERGENCE)
-    /// Acceptance criteria:
-    /// - Criterion 1
-    /// - Criterion 2
-    /// - Criterion 3
+    use civ_emergence_metrics::structure::StructureCount;
+    use civ_emergence_metrics::{Histogram, Metric};
+
     #[test]
     fn verify_fr_civ_emergence_006_basic() {
-        // FR stub - minimal pass assertion
-        assert!(true, "FR FR-CIV-EMERGENCE-006 stub verified");
+        // Single connected component of active cells
+        let sc = StructureCount::new();
+        // Empty histogram → 0 structures
+        let h = Histogram::from_counts(vec![0, 0, 0]);
+        let count = sc.compute(&h);
+        assert_eq!(count, 0.0);
+    }
+
+    #[test]
+    fn all_active_single_component() {
+        let sc = StructureCount::new();
+        let h = Histogram::from_counts(vec![1, 1, 1, 1]);
+        let count = sc.compute(&h);
+        assert!(count >= 1.0, "should find at least 1 structure");
     }
 }

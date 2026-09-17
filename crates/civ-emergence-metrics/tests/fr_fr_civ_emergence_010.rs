@@ -1,29 +1,35 @@
-//! Tests for FR-CIV-EMERGENCE-010
+//! Tests for FR-CIV-EMERGENCE-010 — Shannon entropy.
 //!
 //! Epic: FR-CIV-EMERGENCE
-//! Status: CODE-ONLY-no-spec
-//! Auto-generated test stub — 2026-09-16
-//!
-//! This test file verifies FR FR-CIV-EMERGENCE-010.
-//! Fill in the test body with assertions that validate the requirement.
-
-// Referenced code:
-// - docs/guides/voxel-emergent-vision-and-migration.md:98
-// - docs/guides/voxel-emergent-vision-and-migration.md:143
-// - docs/guides/voxel-emergent-vision-and-migration.md:213
+//! Status: IMPLEMENTED
 
 #[cfg(test)]
 mod fr_fr_civ_emergence_010 {
-    /// Verify FR-CIV-EMERGENCE-010 behavior.
-    ///
-    /// FR: FR-CIV-EMERGENCE-010 (FR-CIV-EMERGENCE)
-    /// Acceptance criteria:
-    /// - Criterion 1
-    /// - Criterion 2
-    /// - Criterion 3
+    use civ_emergence_metrics::shannon::ShannonEntropy;
+    use civ_emergence_metrics::{Histogram, Metric};
+
     #[test]
     fn verify_fr_civ_emergence_010_basic() {
-        // FR stub - minimal pass assertion
-        assert!(true, "FR FR-CIV-EMERGENCE-010 stub verified");
+        let se = ShannonEntropy::new();
+        // Uniform distribution → max entropy
+        let h = Histogram::uniform(4, 25);
+        let e = se.compute(&h);
+        assert!(e > 1.9, "4-bin uniform should have entropy ~2.0, got {e}");
+    }
+
+    #[test]
+    fn dirac_distribution_zero_entropy() {
+        let se = ShannonEntropy::new();
+        let h = Histogram::dirac(100);
+        let e = se.compute(&h);
+        assert_eq!(e, 0.0, "single-bin should have zero entropy");
+    }
+
+    #[test]
+    fn empty_histogram_zero_entropy() {
+        let se = ShannonEntropy::new();
+        let h = Histogram::from_counts(vec![]);
+        let e = se.compute(&h);
+        assert_eq!(e, 0.0);
     }
 }

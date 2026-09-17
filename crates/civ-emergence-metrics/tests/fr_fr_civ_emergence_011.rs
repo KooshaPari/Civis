@@ -1,28 +1,24 @@
-//! Tests for FR-CIV-EMERGENCE-011
+//! Tests for FR-CIV-EMERGENCE-011 — sample snapshot.
 //!
 //! Epic: FR-CIV-EMERGENCE
-//! Status: CODE-ONLY-no-spec
-//! Auto-generated test stub — 2026-09-16
-//!
-//! This test file verifies FR FR-CIV-EMERGENCE-011.
-//! Fill in the test body with assertions that validate the requirement.
-
-// Referenced code:
-// - docs/guides/voxel-emergent-vision-and-migration.md:98
-// - docs/guides/voxel-emergent-vision-and-migration.md:144
+//! Status: IMPLEMENTED
 
 #[cfg(test)]
 mod fr_fr_civ_emergence_011 {
-    /// Verify FR-CIV-EMERGENCE-011 behavior.
-    ///
-    /// FR: FR-CIV-EMERGENCE-011 (FR-CIV-EMERGENCE)
-    /// Acceptance criteria:
-    /// - Criterion 1
-    /// - Criterion 2
-    /// - Criterion 3
+    use civ_emergence_metrics::sample_snapshot::EmergenceSample;
+
     #[test]
     fn verify_fr_civ_emergence_011_basic() {
-        // FR stub - minimal pass assertion
-        assert!(true, "FR FR-CIV-EMERGENCE-011 stub verified");
+        let sample = EmergenceSample::default();
+        assert_eq!(sample.tick, 0, "default sample tick should be 0");
+    }
+
+    #[test]
+    fn sample_serializes_roundtrip() {
+        use serde_json;
+        let sample = EmergenceSample::default();
+        let json = serde_json::to_string(&sample).expect("serialize");
+        let back: EmergenceSample = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(sample.tick, back.tick);
     }
 }

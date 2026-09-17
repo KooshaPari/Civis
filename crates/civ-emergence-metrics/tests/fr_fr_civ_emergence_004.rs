@@ -1,29 +1,45 @@
-//! Tests for FR-CIV-EMERGENCE-004
+//! Tests for FR-CIV-EMERGENCE-004 — mutual information.
 //!
 //! Epic: FR-CIV-EMERGENCE
-//! Status: IMPL-NO-TEST
-//! Auto-generated test stub — 2026-09-16
-//!
-//! This test file verifies FR FR-CIV-EMERGENCE-004.
-//! Fill in the test body with assertions that validate the requirement.
-
-// Referenced code:
-// - docs/guides/voxel-emergent-vision-and-migration.md:97
-// - docs/guides/voxel-emergent-vision-and-migration.md:140
-// - docs/guides/voxel-emergent-vision-and-migration.md:207
+//! Status: IMPLEMENTED
 
 #[cfg(test)]
 mod fr_fr_civ_emergence_004 {
-    /// Verify FR-CIV-EMERGENCE-004 behavior.
-    ///
-    /// FR: FR-CIV-EMERGENCE-004 (FR-CIV-EMERGENCE)
-    /// Acceptance criteria:
-    /// - Criterion 1
-    /// - Criterion 2
-    /// - Criterion 3
+    use civ_emergence_metrics::{mutual_information_bits, mutual_information_normalised, JointHistogram};
+
     #[test]
     fn verify_fr_civ_emergence_004_basic() {
-        // FR stub - minimal pass assertion
-        assert!(true, "FR FR-CIV-EMERGENCE-004 stub verified");
+        // Perfectly correlated: MI should be high
+        let mut jh = JointHistogram::new(3, 3);
+        for i in 0..100 {
+            jh.observe(i % 3, i % 3);
+        }
+        let mi = mutual_information_bits(&jh);
+        assert!(mi > 1.0, "perfect correlation should have high MI, got {mi}");
+    }
+
+    #[test]
+    fn independent_variables_mi_near_zero() {
+        let mut jh = JointHistogram::new(3, 3);
+        // Fill uniformly: each cell gets ~11 observations
+        for a in 0..3 {
+            for b in 0..3 {
+                for _ in 0..11 {
+                    jh.observe(a, b);
+                }
+            }
+        }
+        let mi = mutual_information_bits(&jh);
+        assert!(mi.abs() < 0.1, "independent should have near-zero MI, got {mi}");
+    }
+
+    #[test]
+    fn normalised_mi_bounded() {
+        let mut jh = JointHistogram::new(4, 4);
+        for i in 0..200 {
+            jh.observe(i % 4, i % 4);
+        }
+        let nmi = mutual_information_normalised(&jh);
+        assert!(nmi >= 0.0 && nmi <= 1.0, "NMI should be in [0,1], got {nmi}");
     }
 }

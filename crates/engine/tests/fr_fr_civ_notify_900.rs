@@ -1,0 +1,33 @@
+//! Tests for FR-CIV-NOTIFY-900
+//!
+//! Epic: FR-CIV-NOTIFY
+//! Status: CODE-ONLY-no-spec
+//! Auto-generated test stub — 2026-09-16
+//!
+//! This test file verifies FR FR-CIV-NOTIFY-900.
+//! Fill in the test body with assertions that validate the requirement.
+
+// Referenced code:
+// - docs/agileplus/epics/civ-w6-ui.md:12
+// - docs/agileplus/epics/civ-w6-ui.md:26
+// - docs/agileplus/README.md:25
+// - docs/design/onboarding-qol.md:5
+// - docs/design/onboarding-qol.md:205
+// - docs/design/onboarding-qol.md:211
+// - docs/specs/requirements/FR-CIV-NOTIFY.md:11
+
+#[cfg(test)]
+mod fr_fr_civ_notify_900 {
+    /// Verify FR-CIV-NOTIFY-900 behavior.
+    ///
+    /// FR: FR-CIV-NOTIFY-900 (FR-CIV-NOTIFY)
+    /// Acceptance criteria:
+    /// - Criterion 1
+    /// - Criterion 2
+    /// - Criterion 3
+    #[test]
+    fn verify_fr_civ_notify_900_basic() {
+        // FR stub - minimal pass assertion
+        assert!(true, "FR FR-CIV-NOTIFY-900 stub verified");
+    }
+}

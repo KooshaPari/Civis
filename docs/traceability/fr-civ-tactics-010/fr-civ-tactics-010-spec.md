@@ -1,0 +1,57 @@
+# FR-CIV-TACTICS-010 — Tactics and strategy
+
+> Status: SPEC-TEMPLATE (auto-generated 2026-09-16)
+> Epic: FR-CIV-TACTICS
+> Traceability ID: FR-CIV-TACTICS-010
+
+> General spec: `docs/traceability/fr-3d-matrix.md`
+
+## Requirement
+
+<!-- Describe the specific functional requirement this FR captures -->
+
+## Rationale / Intent
+
+<!-- Why does this requirement exist? What problem does it solve? What was the original intent? -->
+
+## Acceptance Criteria
+
+- [ ] Criterion 1
+- [ ] Criterion 2
+- [ ] Criterion 3
+
+## Architecture Decision
+
+<!-- Link to ADR or document the architectural decision for this FR -->
+
+## Dependencies
+
+<!-- What other FRs or systems does this depend on? -->
+
+## Implementation Notes
+
+<!-- Any technical notes about how this is or should be implemented -->
+
+## Implementing Code
+- `crates/engine/src/engine.rs:436`
+- `docs/development-guide/fr-3d-additions.md:87`
+- `docs/development-guide/p-w1-kickoff.md:14`
+- `docs/development-guide/p-w1-kickoff.md:22`
+
+## Test Coverage
+- `crates/engine/src/engine.rs:2670`
+- `crates/tactics/src/lib.rs:262`
+- `crates/tactics/tests/fr_matrix_batch2.rs:78`
+- `crates/tactics/tests/fr_matrix_batch2.rs:81`
+- `crates/tactics/tests/fr_matrix_batch2.rs:83`
+- `crates/tactics/tests/fr_matrix_batch5.rs:9`
+- `crates/tactics/tests/fr_matrix_batch5.rs:105`
+- `crates/tactics/tests/fr_matrix_batch5.rs:106`
+
+## Research
+
+<!-- Link to research documents or note research findings -->
+
+## Plan / Work Artifact
+
+<!-- Link to agileplus-spec plan, sprint backlog, or work tracking -->

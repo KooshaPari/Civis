@@ -1,0 +1,55 @@
+# FR-CIV-LIFE-020 — Life simulation and needs
+
+> Status: SPEC-TEMPLATE (auto-generated 2026-09-16)
+> Epic: FR-CIV-LIFE
+> Traceability ID: FR-CIV-LIFE-020
+
+> General spec: `FUNCTIONAL_REQUIREMENTS.md`
+
+## Requirement
+
+<!-- Describe the specific functional requirement this FR captures -->
+
+## Rationale / Intent
+
+<!-- Why does this requirement exist? What problem does it solve? What was the original intent? -->
+
+## Acceptance Criteria
+
+- [ ] Criterion 1
+- [ ] Criterion 2
+- [ ] Criterion 3
+
+## Architecture Decision
+
+<!-- Link to ADR or document the architectural decision for this FR -->
+
+## Dependencies
+
+<!-- What other FRs or systems does this depend on? -->
+
+## Implementation Notes
+
+<!-- Any technical notes about how this is or should be implemented -->
+
+## Implementing Code
+- `crates/engine/src/engine.rs:445`
+- `crates/engine/src/engine.rs:2163`
+
+## Test Coverage
+- `crates/economy/src/stocks.rs:285`
+- `crates/economy/src/stocks.rs:452`
+- `crates/economy/tests/fr_matrix_batch7.rs:8`
+- `crates/economy/tests/fr_matrix_batch7.rs:46`
+- `crates/economy/tests/fr_matrix_batch7.rs:49`
+- `crates/economy/tests/fr_matrix_batch7.rs:61`
+- `crates/economy/tests/fr_matrix_batch7.rs:77`
+- `crates/economy/tests/fr_matrix_batch7.rs:106`
+
+## Research
+
+<!-- Link to research documents or note research findings -->
+
+## Plan / Work Artifact
+
+<!-- Link to agileplus-spec plan, sprint backlog, or work tracking -->

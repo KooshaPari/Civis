@@ -1,0 +1,30 @@
+# ADR-22: Building tiers and construction — FR-CIV-BUILD-012
+
+> Status: Proposed
+> Date: 2026-09-16
+> Deciders: CivLab
+> Relates to: FR-CIV-BUILD-012
+
+## Context
+
+<!-- What is the architectural decision that needs to be made for FR-CIV-BUILD-012? -->
+
+## Decision
+
+<!-- What was decided? -->
+
+## Consequences
+
+### Positive
+- 
+
+### Negative
+- 
+
+### Risks
+- 
+
+## Alternatives Considered
+
+1. **Option A**: <!-- describe -->
+2. **Option B**: <!-- describe -->

@@ -75,7 +75,7 @@ ADR-009 / CIV-0300 visuals in reference clients — not `crates/render`. Cross-c
 | Climate (CIV-0102) | `crates/climate` | **No** | `civ-planet` orbital climate; not CIV-0102 CO₂ model |
 | Institutions, citizens, diplomacy | dedicated crates | **No** | Citizen components in `civ-engine` ECS only |
 | Social (CIV-0106) | `crates/social` | **Yes** | `IdeologyScore`, `StressAccumulator`, `InsurgencyTracker`, health index + crisis events; FR-SOCI-001 through FR-SOCI-006 |
-| AI (CIV-0400) | `crates/ai` | **No** | |
+| AI (FR-AI-*) | `crates/ai` | **Yes** | `UtilityScorer`, `MctsTree` (depth>1+time cap), `PersonalityProfile`, `PersonalityDrift`, `FairPlayCap`, `DecisionEvent`; FR-AI-001 through FR-AI-007 |
 | Protocol (CIV-0200) | `crates/protocol-3d`, `crates/server` | **Partial** | JSON-RPC + HTTP replay I/O + `F3D0` WS tick broadcast (`TickBroadcastFormat`) |
 | UI / assets (CIV-0300, 060x) | reference clients | **Partial** | **GFX / UI** above; no production `crates/render` |
 | Save/load, DB (CIV-1000) | `crates/db` | **No** | `ReplayLog` / `.civreplay` in engine + WS/HTTP; no persistence DB |
@@ -83,7 +83,7 @@ ADR-009 / CIV-0300 visuals in reference clients — not `crates/render`. Cross-c
 
 ## FR traceability gap (2026-09-17 audit)
 
-**TRACEABILITY_MATRIX.md** has 97 strategic FRs: 28 implemented, 7 in_progress, 62 planned.
+**TRACEABILITY_MATRIX.md** has 97 strategic FRs: 35 implemented, 7 in_progress, 55 planned.
 
 | Subsystem | Planned FRs | Needs new crate? | Effort |
 |-----------|-------------|-------------------|--------|
@@ -95,7 +95,7 @@ ADR-009 / CIV-0300 visuals in reference clients — not `crates/render`. Cross-c
 | Theorems (FR-THRY-*) | 0 | No — `crates/engine/src/invariants.rs` done | Done |
 | Diplomacy (FR-DIPL-*) | 0 | **Yes** — `crates/diplomacy` | Done |
 | Social (FR-SOCI-*) | 0 | **Yes** — `crates/social` (ideology, stress, insurgency, health) | Done |
-| AI (FR-AI-*) | 7 | **Yes** — `crates/ai` | High |
+| AI (FR-AI-*) | 0 | **Yes** — `crates/ai` | Done |
 | Protocol (FR-PROT-*) | 2 | No — extend `crates/server` + `crates/protocol-3d` | Medium |
 | UI/UX (FR-UX-*) | 5 | Partial — reference clients exist | Medium |
 | Assets (FR-ASSET-*) | 4 | Partial — reference clients exist | Low |

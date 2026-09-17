@@ -43,14 +43,22 @@ use std::collections::BTreeMap;
 use thiserror::Error;
 
 pub mod emergent;
+pub mod peace;
 pub mod stance;
+pub mod war;
 
 pub use emergent::{
     EmergentConfig, EmergentDiplomacy, EmergentStance, RelationDrivers, Reputation, StanceInputs,
     Territory, TreatyKind, TreatyLedgerEntry, TreatyOutcome,
 };
 
+pub use peace::{PeaceError, PeaceEvent, PeaceTreaty, PeaceTreatyManager};
 pub use stance::{DiplomacyStance, DiplomacyStanceEngine, RelationQuadrant};
+pub use treaty::{
+    detect_breach, Treaty, TreatyBreachEvent, TreatyEffect, TreatyError, TreatyManager,
+    TreatyStatus, TreatyTerm, TreatyTerms, TreatyType, BREACH_REPUTATION_PENALTY,
+};
+pub use war::{War, WarDeclarationManager, WarError, WarEvent};
 
 /// Schema version of this crate's public types. Bumped on breaking changes.
 pub const SCHEMA_VERSION: u32 = 1;
@@ -1032,7 +1040,7 @@ pub use alliance_deep::{
 };
 
 pub use peace_negotiations::{
-    war_weariness, PeaceError, PeaceNegotiation, PeaceNegotiationStatus, PeaceOutcome,
+    war_weariness, PeaceNegotiation, PeaceNegotiationStatus, PeaceOutcome,
     PeaceProposal, PeaceTerms,
 };
 
@@ -1041,10 +1049,6 @@ pub use cultural_assimilation::{
 };
 
 pub use transcripts::{Transcript, TranscriptClause};
-
-pub use treaty::{
-    Treaty, TreatyEffect, TreatyError, TreatyManager, TreatyStatus, TreatyTerm, TreatyType,
-};
 
 pub use effects::{
     CulturalInfluenceEffect, DiplomacyEvent, MilitaryAllianceEffect, TradeEmbargoEffect,
@@ -1076,7 +1080,7 @@ pub mod espionage;
 
 pub use espionage::{
     EspionageAction, EspionageConfig, EspionageConfigError, EspionageEngine, EspionageError,
-    SpyNetwork, SpyResult,
+    EspionageEvent, SpyNetwork, SpyResult,
 };
 
 // ---------------------------------------------------------------------------

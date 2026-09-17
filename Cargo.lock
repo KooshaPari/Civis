@@ -4082,6 +4082,9 @@ dependencies = [
 [[package]]
 name = "civ-climate"
 version = "0.1.0"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "civ-diffusion"
@@ -4381,6 +4384,25 @@ dependencies = [
  "tracing-opentelemetry",
  "tracing-subscriber",
  "uuid 1.24.1",
+]
+
+[[package]]
+name = "civ-session"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.20",
+ "uuid 1.24.1",
+]
+
+[[package]]
+name = "civ-social"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

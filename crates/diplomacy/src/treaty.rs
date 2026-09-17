@@ -1,6 +1,15 @@
-//! FR-DIPL-001: Treaty logic
+//! FR-DIPL-001/003/004: Treaty logic
 //!
-//! Implements the lifecycle and effects of treaties between polities.
+//! Implements the lifecycle, structured terms, and breach detection of
+//! treaties between polities.
+//!
+//! FR-DIPL-003: Treaties SHALL encode terms (trade ratios, non-aggression,
+//! alliance) as structured data.
+//!
+//! FR-DIPL-004: Treaty breach SHALL emit `diplomacy.treaty.broken.v1` and
+//! apply reputation penalty.
+//!
+//! All computation is integer-only. No RNG, no floating-point accumulation.
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -231,6 +240,138 @@ pub struct TreatyEffect {
     pub standing_delta: i32,
     /// A multiplier or additive bonus to resource production (e.g., 10 = 10%).
     pub resource_modifier: i32,
+}
+
+// ---------------------------------------------------------------------------
+// FR-DIPL-003: Structured Treaty Terms
+// ---------------------------------------------------------------------------
+
+/// Structured terms encoded in a treaty. Replaces loose key-value pairs
+/// with a typed representation of trade ratios, non-aggression commitments,
+/// and alliance obligations.
+///
+/// FR-DIPL-003: Treaties SHALL encode terms (trade ratios, non-aggression,
+/// alliance) as structured data.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TreatyTerms {
+    /// Trade ratio for party A (basis points, 10_000 = 100%).
+    /// E.g. 2_500 means party A trades at 25% of nominal.
+    pub trade_ratio_a: i64,
+    /// Trade ratio for party B (basis points).
+    pub trade_ratio_b: i64,
+    /// Whether non-aggression is committed.
+    pub non_aggression: bool,
+    /// Whether a military alliance is committed.
+    pub alliance: bool,
+    /// Whether mutual defense is committed.
+    pub mutual_defense: bool,
+}
+
+impl Default for TreatyTerms {
+    fn default() -> Self {
+        Self {
+            trade_ratio_a: 10_000,
+            trade_ratio_b: 10_000,
+            non_aggression: false,
+            alliance: false,
+            mutual_defense: false,
+        }
+    }
+}
+
+impl TreatyTerms {
+    /// Create terms for a non-aggression pact.
+    pub fn non_aggression() -> Self {
+        Self {
+            non_aggression: true,
+            ..Default::default()
+        }
+    }
+
+    /// Create terms for an alliance.
+    pub fn alliance() -> Self {
+        Self {
+            alliance: true,
+            non_aggression: true,
+            ..Default::default()
+        }
+    }
+
+    /// Create terms for a trade agreement with custom ratios.
+    pub fn trade(ratio_a: i64, ratio_b: i64) -> Self {
+        Self {
+            trade_ratio_a: ratio_a.clamp(0, 10_000),
+            trade_ratio_b: ratio_b.clamp(0, 10_000),
+            ..Default::default()
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// FR-DIPL-004: Treaty Breach Detection
+// ---------------------------------------------------------------------------
+
+/// Reputation penalty applied when a treaty is breached.
+pub const BREACH_REPUTATION_PENALTY: i32 = -500;
+
+/// Events emitted by breach detection.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum TreatyBreachEvent {
+    /// A treaty was breached. Emits `diplomacy.treaty.broken.v1`.
+    TreatyBroken {
+        /// Treaty ID.
+        treaty_id: u64,
+        /// The polity that breached.
+        breacher: PolityId,
+        /// The other party.
+        victim: PolityId,
+        /// Reputation penalty applied to the breacher.
+        reputation_penalty: i32,
+        /// Tick of the breach.
+        tick: u64,
+    },
+}
+
+/// Detect breaches in active treaties. A breach occurs when an active treaty
+/// contains non-aggression or alliance terms, and a war is declared between
+/// the same parties.
+///
+/// FR-DIPL-004: Treaty breach SHALL emit `diplomacy.treaty.broken.v1` and
+/// apply reputation penalty.
+pub fn detect_breach(
+    treaty: &Treaty,
+    war_declared: bool,
+    breacher: PolityId,
+    tick: u64,
+) -> Option<TreatyBreachEvent> {
+    if treaty.status != TreatyStatus::Active {
+        return None;
+    }
+    if !war_declared {
+        return None;
+    }
+    // Check if the treaty has non-aggression or alliance terms
+    let is_binding = treaty
+        .terms
+        .iter()
+        .any(|t| t.key == "non_aggression" || t.key == "alliance" || t.key == "mutual_defense");
+    if !is_binding {
+        return None;
+    }
+
+    let victim = if breacher == treaty.parties.0 {
+        treaty.parties.1
+    } else {
+        treaty.parties.0
+    };
+
+    Some(TreatyBreachEvent::TreatyBroken {
+        treaty_id: treaty.id,
+        breacher,
+        victim,
+        reputation_penalty: BREACH_REPUTATION_PENALTY,
+        tick,
+    })
 }
 
 #[cfg(test)]

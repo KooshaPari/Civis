@@ -20,6 +20,9 @@ pub struct MctsConfig {
     pub exploration: f64,
     /// Optional seed for deterministic randomness.
     pub seed: Option<u64>,
+    /// Optional time budget in milliseconds. When set, `search()` stops
+    /// after this many ms even if iterations remain (FR-AI-007).
+    pub time_budget_ms: Option<u64>,
 }
 
 impl Default for MctsConfig {
@@ -29,6 +32,7 @@ impl Default for MctsConfig {
             max_sim_depth: 10,
             exploration: std::f64::consts::SQRT_2,
             seed: None,
+            time_budget_ms: None,
         }
     }
 }
@@ -146,14 +150,23 @@ impl<G: GameState> MctsTree<G> {
         &self.root
     }
     /// Run the MCTS search iterations.
-    /// Run the MCTS search iterations.
+    /// Run the MCTS search iterations, respecting the optional time budget.
     pub fn search(&mut self, state: &G) {
         if state.is_terminal() {
             return;
         }
         let seed = self.config.seed.unwrap_or(42);
         let mut rng = LinearRng::new(seed);
+        let deadline = self
+            .config
+            .time_budget_ms
+            .map(|ms| std::time::Instant::now() + std::time::Duration::from_millis(ms));
         for _ in 0..self.config.iterations {
+            if let Some(ref dl) = deadline {
+                if std::time::Instant::now() >= *dl {
+                    break;
+                }
+            }
             self.run_one_iteration(state, &mut rng);
         }
     }

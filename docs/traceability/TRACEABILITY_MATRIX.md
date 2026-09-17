@@ -144,12 +144,12 @@ Source spec: `docs/specs/CIV-0106-social.md`
 
 | FR ID | Requirement Summary | Spec Doc | Crate / Source Path | Test Name Pattern | Status |
 |---|---|---|---|---|---|
-| FR-SOCI-001 | Ideological alignment SHALL be tracked per-citizen cohort as a continuous score. | CIV-0106 | `crates/social/src/ideology.rs` | `ideology::per_cohort_continuous` | planned |
-| FR-SOCI-002 | Citizen stress SHALL accumulate when Joule access falls below subsistence level. | CIV-0106 | `crates/social/src/stress.rs` | `stress::accumulates_below_subsistence` | planned |
-| FR-SOCI-003 | Insurgency SHALL start when aggregate stress exceeds the configured threshold. | CIV-0106 | `crates/social/src/insurgency.rs` | `insurgency::starts_above_threshold` | planned |
-| FR-SOCI-004 | The engine SHALL emit `social.insurgency.started.v1` and `social.insurgency.ended.v1`. | CIV-0106 | `crates/social/src/events.rs` | `social_events::insurgency_lifecycle_events` | planned |
-| FR-SOCI-005 | Health index SHALL be computed from food Joules, clean water, and medical infrastructure. | CIV-0106 | `crates/social/src/health.rs` | `health::computed_from_inputs` | planned |
-| FR-SOCI-006 | A health crisis SHALL emit `social.health.crisis.v1` and reduce labor productivity. | CIV-0106 | `crates/social/src/health.rs` | `health::crisis_emits_event_reduces_labor` | planned |
+| FR-SOCI-001 | Ideological alignment SHALL be tracked per-citizen cohort as a continuous score. | CIV-0106 | `crates/social/src/ideology.rs` | `ideology::per_cohort_continuous` | implemented |
+| FR-SOCI-002 | Citizen stress SHALL accumulate when Joule access falls below subsistence level. | CIV-0106 | `crates/social/src/stress.rs` | `stress::accumulates_below_subsistence` | implemented |
+| FR-SOCI-003 | Insurgency SHALL start when aggregate stress exceeds the configured threshold. | CIV-0106 | `crates/social/src/insurgency.rs` | `insurgency::starts_above_threshold` | implemented |
+| FR-SOCI-004 | The engine SHALL emit `social.insurgency.started.v1` and `social.insurgency.ended.v1`. | CIV-0106 | `crates/social/src/events.rs` | `social_events::insurgency_lifecycle_events` | implemented |
+| FR-SOCI-005 | Health index SHALL be computed from food Joules, clean water, and medical infrastructure. | CIV-0106 | `crates/social/src/health.rs` | `health::computed_from_inputs` | implemented |
+| FR-SOCI-006 | A health crisis SHALL emit `social.health.crisis.v1` and reduce labor productivity. | CIV-0106 | `crates/social/src/health.rs` | `health::crisis_emits_event_reduces_labor` | implemented |
 
 ---
 

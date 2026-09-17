@@ -81,6 +81,39 @@ pub enum EspionageAction {
     CounterEspionage,
 }
 
+// ---------------------------------------------------------------------------
+// FR-DIPL-005/006: Espionage Events
+// ---------------------------------------------------------------------------
+
+/// Events emitted by the espionage system.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum EspionageEvent {
+    /// Spy network was detected during an action.
+    Detected {
+        /// The faction whose spy was detected.
+        source_faction: u32,
+        /// The faction that detected the spy.
+        target_faction: u32,
+        /// The action that was detected.
+        action: EspionageAction,
+        /// Tick of detection.
+        tick: u64,
+    },
+    /// Spy action completed successfully.
+    ActionCompleted {
+        /// The faction that performed the action.
+        source_faction: u32,
+        /// The target faction.
+        target_faction: u32,
+        /// The action performed.
+        action: EspionageAction,
+        /// Result description.
+        result: String,
+        /// Tick of completion.
+        tick: u64,
+    },
+}
+
 impl EspionageAction {
     /// Risk factor for detection — higher means easier to detect.
     pub fn risk_factor(self) -> f32 {
@@ -194,6 +227,8 @@ pub struct EspionageEngine {
     pub networks: Vec<SpyNetwork>,
     /// Engine configuration.
     pub config: EspionageConfig,
+    /// Pending espionage events.
+    pub events: Vec<EspionageEvent>,
 }
 
 impl EspionageEngine {
@@ -204,6 +239,7 @@ impl EspionageEngine {
         Ok(Self {
             networks: Vec::new(),
             config,
+            events: Vec::new(),
         })
     }
 
@@ -258,6 +294,13 @@ impl EspionageEngine {
         if detection_roll < detection_chance {
             // Agent is detected — zero cover and return Detected.
             network.cover = 0.0;
+            let event = EspionageEvent::Detected {
+                source_faction: network.source_faction,
+                target_faction: network.target_faction,
+                action,
+                tick: 0, // tick is not tracked per-call; callers set via events
+            };
+            self.events.push(event);
             return Ok(SpyResult::Detected);
         }
 
@@ -354,6 +397,42 @@ impl EspionageEngine {
         } else {
             false
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // FR-DIPL-005: Configurable detection probability per tick
+    // -----------------------------------------------------------------------
+
+    /// Compute the detection probability for a specific action on a network.
+    ///
+    /// FR-DIPL-005: Espionage operations SHALL have a configurable detection
+    /// probability per tick.
+    ///
+    /// Formula: `base_detection_chance * (1.0 - cover) * action_risk_factor`
+    pub fn detection_probability(
+        &self,
+        action: EspionageAction,
+        network_id: usize,
+    ) -> Result<f32, EspionageError> {
+        if network_id >= self.networks.len() {
+            return Err(EspionageError::InvalidNetwork(network_id));
+        }
+        let network = &self.networks[network_id];
+        let risk = action.risk_factor();
+        let probability =
+            self.config.base_detection_chance * (1.0 - network.cover) * risk;
+        Ok(probability.clamp(0.0, 1.0))
+    }
+
+    // -----------------------------------------------------------------------
+    // FR-DIPL-006: Detection event emission
+    // -----------------------------------------------------------------------
+
+    /// Drain all pending espionage events.
+    ///
+    /// FR-DIPL-006: Detected espionage SHALL emit a detection event.
+    pub fn drain_events(&mut self) -> Vec<EspionageEvent> {
+        std::mem::take(&mut self.events)
     }
 }
 

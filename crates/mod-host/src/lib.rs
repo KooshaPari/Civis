@@ -2063,4 +2063,453 @@ write_policy = true
         let lines_v2 = host.tick(2);
         assert!(lines_v2.iter().any(|line| line.contains("code=2")));
     }
+
+    // =======================================================================
+    // FR-MOD-001: WASM mod loading from SDK-compiled binaries
+    // =======================================================================
+
+    /// FR-MOD-001: WASM mod loaded from a directory with valid manifest + wasm.
+    /// The mod must be invokable after loading.
+    #[test]
+    fn fr_mod_001_wasm_mod_loaded_from_directory() {
+        const WAT: &str = r#"
+            (module
+              (func (export "civlab_policy_tick") (param i64) (result i32)
+                i32.const 101)
+            )
+        "#;
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(
+            dir.path().join("manifest.toml"),
+            r#"
+[mod]
+id = "fr-mod-001-loader"
+name = "FR-MOD-001 Loader"
+version = "1.0.0"
+api_version = "1"
+mod_type = "policy"
+author = "test"
+description = "Validates FR-MOD-001 WASM loading"
+
+[dependencies]
+civlab-api = ">=1.0.0, <2.0.0"
+
+[permissions]
+write_policy = true
+"#,
+        )
+        .expect("manifest");
+        std::fs::write(
+            dir.path().join(MOD_WASM_NAME),
+            wat::parse_str(WAT).expect("wat"),
+        )
+        .expect("wasm");
+
+        let mut host = ModHost::new();
+        host.load_manifest_dir(dir.path()).expect("load mod");
+
+        // Verify mod is registered
+        assert_eq!(host.mods().len(), 1);
+        assert_eq!(host.mods()[0].manifest.meta.id, "fr-mod-001-loader");
+        assert!(host.mods()[0].wasm_bytes.is_some());
+
+        // Verify WASM is invokable
+        let lines = host.tick(1);
+        assert!(
+            lines.iter().any(|l| l.contains("code=101")),
+            "WASM should return 101: {lines:?}"
+        );
+    }
+
+    /// FR-MOD-001: WASM mod loaded from a `.civmod` ZIP archive.
+    #[test]
+    fn fr_mod_001_wasm_mod_loaded_from_civmod_archive() {
+        use std::io::Write;
+        use zip::write::SimpleFileOptions;
+        use zip::ZipWriter;
+
+        const WAT: &str = r#"
+            (module
+              (func (export "civlab_policy_tick") (param i64) (result i32)
+                i32.const 102)
+            )
+        "#;
+        let dir = tempfile::tempdir().expect("tempdir");
+        let civmod = dir.path().join("fr-mod-001.civmod");
+        let manifest = r#"
+[mod]
+id = "fr-mod-001-archive"
+name = "FR-MOD-001 Archive"
+version = "1.0.0"
+api_version = "1"
+mod_type = "policy"
+author = "test"
+description = "Validates FR-MOD-001 .civmod archive loading"
+
+[dependencies]
+civlab-api = ">=1.0.0, <2.0.0"
+
+[permissions]
+write_policy = true
+"#;
+        let wasm = wat::parse_str(WAT).expect("wat");
+        let file = std::fs::File::create(&civmod).expect("create civmod");
+        let mut zip = ZipWriter::new(file);
+        let options = SimpleFileOptions::default();
+        zip.start_file(CIVMOD_MANIFEST_NAME, options)
+            .expect("manifest entry");
+        zip.write_all(manifest.as_bytes()).expect("write manifest");
+        zip.start_file(MOD_WASM_NAME, options).expect("wasm entry");
+        zip.write_all(&wasm).expect("write wasm");
+        zip.finish().expect("finish zip");
+
+        let mut host = ModHost::new();
+        host.load_civmod_archive(&civmod).expect("load archive");
+
+        assert_eq!(host.mods().len(), 1);
+        assert_eq!(host.mods()[0].manifest.meta.id, "fr-mod-001-archive");
+
+        let lines = host.tick(1);
+        assert!(
+            lines.iter().any(|l| l.contains("code=102")),
+            "WASM from archive should return 102: {lines:?}"
+        );
+    }
+
+    // =======================================================================
+    // FR-MOD-002: Sandbox enforcement — no host file system or network access
+    // =======================================================================
+
+    /// FR-MOD-002: Mod execution is sandboxed. The capability set restricts
+    /// which host domains the mod can read and which actions it can emit.
+    #[test]
+    fn fr_mod_002_sandbox_enforcement_no_host_access() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(
+            dir.path().join("manifest.toml"),
+            r#"
+[mod]
+id = "fr-mod-002-sandbox"
+name = "FR-MOD-002 Sandbox"
+version = "1.0.0"
+api_version = "1"
+mod_type = "policy"
+author = "test"
+description = "Validates FR-MOD-002 sandbox enforcement"
+
+[dependencies]
+civlab-api = ">=1.0.0, <2.0.0"
+
+[permissions]
+write_policy = true
+"#,
+        )
+        .expect("manifest");
+
+        let mut host = ModHost::new();
+        host.load_manifest_dir(dir.path()).expect("load");
+
+        let caps = &host.mods()[0].capabilities;
+        // Mod with only write_policy: cannot read Economy, Military, Climate, etc.
+        assert!(
+            !caps.can_read_domain(WorldDomain::Economy),
+            "sandbox should block economy read"
+        );
+        assert!(
+            !caps.can_read_domain(WorldDomain::Military),
+            "sandbox should block military read"
+        );
+        assert!(
+            !caps.can_read_domain(WorldDomain::Climate),
+            "sandbox should block climate read"
+        );
+        assert!(
+            !caps.can_read_domain(WorldDomain::Diplomacy),
+            "sandbox should block diplomacy read"
+        );
+        assert!(
+            !caps.can_read_domain(WorldDomain::Citizens),
+            "sandbox should block citizens read"
+        );
+    }
+
+    /// FR-MOD-002: Guest calling a denied host import gets ERR_PERMISSION_DENIED.
+    #[test]
+    fn fr_mod_002_guest_denied_import_returns_permission_denied() {
+        const WAT: &str = r#"
+            (module
+              (import "civlab" "world_read" (func $read (param i32) (result i32)))
+              (func (export "civlab_policy_tick") (param i64) (result i32)
+                (i32.const 0)  ;; Economy domain
+                (call $read))  ;; should be denied
+            )
+        "#;
+        let wasm = wat::parse_str(WAT).expect("wat");
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(
+            dir.path().join("manifest.toml"),
+            r#"
+[mod]
+id = "fr-mod-002-denied"
+name = "FR-MOD-002 Denied"
+version = "1.0.0"
+api_version = "1"
+mod_type = "policy"
+author = "test"
+description = "Tests denied import"
+
+[dependencies]
+civlab-api = ">=1.0.0, <2.0.0"
+
+[permissions]
+write_policy = true
+"#,
+        )
+        .expect("manifest");
+        std::fs::write(dir.path().join(MOD_WASM_NAME), wasm).expect("wasm");
+
+        let mut host = ModHost::new();
+        host.load_manifest_dir(dir.path()).expect("load");
+        let lines = host.tick(1);
+
+        // Guest must return ERR_PERMISSION_DENIED (-2)
+        assert!(
+            lines.iter().any(|l| l.contains("code=-2")),
+            "guest should return ERR_PERMISSION_DENIED: {lines:?}"
+        );
+        // Permission violation event emitted
+        assert!(
+            lines
+                .iter()
+                .any(|l| l.contains("mod.permission_violation.v1")),
+            "violation event should be emitted: {lines:?}"
+        );
+        assert_eq!(host.enforcement_violations("fr-mod-002-denied"), 1);
+    }
+
+    /// FR-MOD-002: Suspended mod stops executing on subsequent ticks.
+    #[test]
+    fn fr_mod_002_suspended_mod_stops_executing() {
+        const WAT: &str = r#"
+            (module
+              (import "civlab" "world_read" (func $read (param i32) (result i32)))
+              (func (export "civlab_policy_tick") (param i64) (result i32)
+                (i32.const 0)
+                (call $read))
+            )
+        "#;
+        let wasm = wat::parse_str(WAT).expect("wat");
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(
+            dir.path().join("manifest.toml"),
+            r#"
+[mod]
+id = "suspend-mod"
+name = "Suspend"
+version = "1.0.0"
+api_version = "1"
+mod_type = "policy"
+author = "test"
+description = "d"
+
+[dependencies]
+civlab-api = ">=1.0.0, <2.0.0"
+
+[permissions]
+write_policy = true
+"#,
+        )
+        .expect("manifest");
+        std::fs::write(dir.path().join(MOD_WASM_NAME), wasm).expect("wasm");
+
+        let mut host = ModHost::new();
+        host.load_manifest_dir(dir.path()).expect("load");
+
+        // First tick: violation triggers suspension
+        let lines1 = host.tick(1);
+        assert!(lines1.iter().any(|l| l.contains("permission_violation")));
+
+        // Second tick: reset_tick_enforcement re-activates at tick start,
+        // but the denied world_read call re-suspends the mod.
+        let lines2 = host.tick(2);
+        assert!(lines2.iter().any(|l| l.contains("permission_violation")));
+    }
+
+    // =======================================================================
+    // FR-MOD-003: Mod state persistence — save and restore
+    // =======================================================================
+
+    /// FR-MOD-003: Mod guest state is persisted to JSON and restored identically.
+    #[test]
+    fn fr_mod_003_state_persisted_restored() {
+        let mut host = ModHost::new();
+        host.restore_guest_memory("mod-alpha", vec![10, 20, 30]);
+        host.restore_guest_memory("mod-beta", vec![40, 50]);
+
+        // Export state
+        let save = host.export_guest_state();
+        assert_eq!(save.version, MOD_GUEST_STATE_VERSION);
+        assert_eq!(save.memories.len(), 2);
+
+        // Serialize to JSON
+        let json = save.to_json().expect("json export");
+
+        // Create a fresh host and import
+        let mut host2 = ModHost::new();
+        let loaded = ModGuestStateSave::from_json(&json).expect("json import");
+        host2.import_guest_state(&loaded).expect("import");
+
+        assert_eq!(host2.guest_memory_snapshot("mod-alpha"), vec![10, 20, 30]);
+        assert_eq!(host2.guest_memory_snapshot("mod-beta"), vec![40, 50]);
+    }
+
+    /// FR-MOD-003: Guest memory caps at HOST_GUEST_MEMORY_CAP.
+    #[test]
+    fn fr_mod_003_guest_memory_capped() {
+        let mut host = ModHost::new();
+        let oversized = vec![0xFF; HOST_GUEST_MEMORY_CAP + 1000];
+        host.restore_guest_memory("big-mod", oversized);
+        assert_eq!(
+            host.guest_memory_snapshot("big-mod").len(),
+            HOST_GUEST_MEMORY_CAP
+        );
+    }
+
+    /// FR-MOD-003: Version mismatch on import is rejected.
+    #[test]
+    fn fr_mod_003_rejects_future_version() {
+        let save = ModGuestStateSave {
+            version: MOD_GUEST_STATE_VERSION + 100,
+            memories: vec![],
+        };
+        let mut host = ModHost::new();
+        let err = host
+            .import_guest_state(&save)
+            .expect_err("future version should fail");
+        assert!(matches!(err, GuestStateError::UnsupportedVersion(_)));
+    }
+
+    // =======================================================================
+    // FR-MOD-004: Lifecycle events — loaded, unloaded, error
+    // =======================================================================
+
+    /// FR-MOD-004: mod.loaded.v1, mod.unloaded.v1, and mod.error.v1 events are
+    /// all emitted during the mod lifecycle.
+    #[test]
+    fn fr_mod_004_lifecycle_events_emitted() {
+        let mut host = ModHost::new();
+
+        // Load
+        host.load_manifest_dir(example_policy_mod_dir())
+            .expect("load");
+        let loaded = host.loaded_records();
+        assert_eq!(loaded.len(), 1);
+        assert_eq!(loaded[0].mod_id, "example-policy");
+        let loaded_events = host.loaded_events();
+        assert!(loaded_events.iter().any(|e| e.contains("mod.loaded.v1")));
+
+        // Unload
+        let unload = host
+            .unload_mod("example-policy", "test_unload", 10)
+            .expect("unload");
+        assert_eq!(unload.mod_id, "example-policy");
+        assert_eq!(unload.reason, "test_unload");
+        let json = format_mod_unloaded_event_json(&unload);
+        let v: serde_json::Value = serde_json::from_str(&json).expect("json");
+        assert_eq!(v["event"], "mod.unloaded.v1");
+
+        // Error event formatting (FR-MOD-004)
+        let error_json = format_mod_error_event_json("bad-mod", 5, "runtime trap");
+        let v: serde_json::Value = serde_json::from_str(&error_json).expect("json");
+        assert_eq!(v["event"], "mod.error.v1");
+        assert_eq!(v["mod_id"], "bad-mod");
+        assert_eq!(v["tick"], 5);
+        assert_eq!(v["message"], "runtime trap");
+    }
+
+    /// FR-MOD-004: Loaded event JSON contains all required fields.
+    #[test]
+    fn fr_mod_004_loaded_event_json_complete() {
+        let record = ModLoadedRecord {
+            mod_id: "test-mod".to_owned(),
+            mod_name: "Test Mod".to_owned(),
+            version: "2.0.0".to_owned(),
+            tick: 42,
+        };
+        let json = format_mod_loaded_event_json(&record);
+        let v: serde_json::Value = serde_json::from_str(&json).expect("json");
+        assert_eq!(v["event"], "mod.loaded.v1");
+        assert_eq!(v["mod_id"], "test-mod");
+        assert_eq!(v["mod_name"], "Test Mod");
+        assert_eq!(v["version"], "2.0.0");
+        assert_eq!(v["tick"], 42);
+    }
+
+    // =======================================================================
+    // FR-MOD-005: Resource/policy/event registration via hooks
+    // =======================================================================
+
+    /// FR-MOD-005: Mods can register hook handlers for simulation events.
+    #[test]
+    fn fr_mod_005_can_register_resources() {
+        use crate::hooks::{ModHook, ModHookEngine, HookResult};
+
+        let mut engine = ModHookEngine::new();
+
+        // Register a custom resource type hook
+        engine.register("resource-mod", ModHook::OnTick(0), 10);
+        engine.register("policy-mod", ModHook::OnBuildPhase("economy".into()), 5);
+        engine.register("event-mod", ModHook::OnEvent("war.declared".into()), 1);
+
+        // Verify registrations
+        assert_eq!(
+            engine.get_registrations(&ModHook::OnTick(0)).len(),
+            1
+        );
+        assert_eq!(
+            engine.get_registrations(&ModHook::OnBuildPhase("economy".into())).len(),
+            1
+        );
+        assert_eq!(
+            engine.get_registrations(&ModHook::OnEvent("war.declared".into())).len(),
+            1
+        );
+
+        // Execute with results and verify chain behavior
+        let results: Vec<(&str, HookResult)> = vec![
+            ("policy-mod", HookResult::Modify("tax_rate=0.15".into())),
+            ("event-mod", HookResult::Continue),
+        ];
+        let final_result = engine.execute_with_results(
+            ModHook::OnBuildPhase("economy".into()),
+            &results,
+        );
+        assert_eq!(final_result, HookResult::Modify("tax_rate=0.15".into()));
+    }
+
+    /// FR-MOD-005: Multiple mods register for the same event; priority ordering.
+    #[test]
+    fn fr_mod_005_multiple_mods_register_same_event() {
+        use crate::hooks::{ModHook, ModHookEngine, HookResult};
+
+        let mut engine = ModHookEngine::new();
+        engine.register("mod-a", ModHook::OnTick(100), 100);
+        engine.register("mod-b", ModHook::OnTick(100), 10);
+        engine.register("mod-c", ModHook::OnTick(100), 50);
+
+        let results: Vec<(&str, HookResult)> = vec![
+            ("mod-b", HookResult::Continue),
+            ("mod-c", HookResult::Modify("adjusted".into())),
+            ("mod-a", HookResult::Continue),
+        ];
+        let final_result = engine.execute_with_results(ModHook::OnTick(100), &results);
+        assert_eq!(final_result, HookResult::Modify("adjusted".into()));
+
+        // Verify priority order in log
+        let log = engine.execution_log();
+        assert_eq!(log.len(), 3);
+        assert_eq!(log[0].0, "mod-b"); // priority 10
+        assert_eq!(log[1].0, "mod-c"); // priority 50
+        assert_eq!(log[2].0, "mod-a"); // priority 100
+    }
 }

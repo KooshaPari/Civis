@@ -1,6 +1,6 @@
 [package]
-name = "civ-climate"
-description = "CIV-0102 climate model: CO₂ accumulation, temperature, damage, tipping points, adaptation"
+name = "civ-social"
+description = "CIV-0106 social layer: ideology, stress, insurgency, health"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,3 +8,6 @@ publish = false
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
+serde_json = "1.0"

@@ -17,6 +17,7 @@
 | `crates/tactics` | `civ-tactics` | Voxel damage events |
 | `crates/genetics` | `civ-genetics` | DNA stubs / schema version |
 | `crates/economy` | `civ-economy` | `EconomyState`, `InstitutionLedger` stub, `CapitalistAllocator`, `MarketState::step` |
+| `crates/social` | `civ-social` | `IdeologyScore`, `StressAccumulator`, `InsurgencyTracker`, health index + crisis events |
 | `crates/species` | `civ-species` | Phenotype mapping stubs |
 | `crates/laws` | `civ-laws` | RON law schema stubs |
 | `crates/research` | `civ-research` | ADR-006 stubs: `TechCard` validator, `ReplayMode`, `LlmEvent`, hash-keyed cache; no live LLM client |
@@ -72,7 +73,8 @@ ADR-009 / CIV-0300 visuals in reference clients — not `crates/render`. Cross-c
 | Research (FR-CIV-RESEARCH-*) | `crates/research` | **Partial** | ADR-006 types/cache; no live LLM |
 | LOD (CIV-0101) | `crates/engine/src/lod.rs` | **Partial** | `LodPolicy`, `should_tick_entity`, zoom stubs + FR-LOD tests; engine `phase_diffusion` skips Warm/Cold civilians off cadence |
 | Climate (CIV-0102) | `crates/climate` | **No** | `civ-planet` orbital climate; not CIV-0102 CO₂ model |
-| Institutions, citizens, social, diplomacy | dedicated crates | **No** | Citizen components in `civ-engine` ECS only |
+| Institutions, citizens, diplomacy | dedicated crates | **No** | Citizen components in `civ-engine` ECS only |
+| Social (CIV-0106) | `crates/social` | **Yes** | `IdeologyScore`, `StressAccumulator`, `InsurgencyTracker`, health index + crisis events; FR-SOCI-001 through FR-SOCI-006 |
 | AI (CIV-0400) | `crates/ai` | **No** | |
 | Protocol (CIV-0200) | `crates/protocol-3d`, `crates/server` | **Partial** | JSON-RPC + HTTP replay I/O + `F3D0` WS tick broadcast (`TickBroadcastFormat`) |
 | UI / assets (CIV-0300, 060x) | reference clients | **Partial** | **GFX / UI** above; no production `crates/render` |
@@ -81,7 +83,7 @@ ADR-009 / CIV-0300 visuals in reference clients — not `crates/render`. Cross-c
 
 ## FR traceability gap (2026-09-17 audit)
 
-**TRACEABILITY_MATRIX.md** has 97 strategic FRs: 22 implemented, 7 in_progress, 68 planned.
+**TRACEABILITY_MATRIX.md** has 97 strategic FRs: 28 implemented, 7 in_progress, 62 planned.
 
 | Subsystem | Planned FRs | Needs new crate? | Effort |
 |-----------|-------------|-------------------|--------|
@@ -92,7 +94,7 @@ ADR-009 / CIV-0300 visuals in reference clients — not `crates/render`. Cross-c
 | Institutions (FR-INST-*) | 6 | **Yes** — `crates/institutions` | High |
 | Theorems (FR-THRY-*) | 0 | No — `crates/engine/src/invariants.rs` done | Done |
 | Diplomacy (FR-DIPL-*) | 7 | **Yes** — `crates/diplomacy` | High |
-| Social (FR-SOCI-*) | 6 | **Yes** — `crates/social` | High |
+| Social (FR-SOCI-*) | 0 | **Yes** — `crates/social` (ideology, stress, insurgency, health) | Done |
 | AI (FR-AI-*) | 7 | **Yes** — `crates/ai` | High |
 | Protocol (FR-PROT-*) | 2 | No — extend `crates/server` + `crates/protocol-3d` | Medium |
 | UI/UX (FR-UX-*) | 5 | Partial — reference clients exist | Medium |
@@ -102,13 +104,14 @@ ADR-009 / CIV-0300 visuals in reference clients — not `crates/render`. Cross-c
 | Session (FR-SESS-*) | 5 | **Yes** — `crates/session` | High |
 | Save/Load (FR-SAVE-*) | 3 | Partial — `crates/save-db` exists | Medium |
 | Performance (FR-PERF-*) | 5 | No — extend existing crates | Medium |
-| **Total** | **68** | | |
+| **Total** | **62** | | |
 
 **Recommended next session:** Start with FRs that extend existing crates (Core, Economy, LOD, Theorems, Protocol, Save/Load, Performance) before creating new crates (Climate, Institutions, Diplomacy, Social, AI, Session).
 ## What is tested today
 
 - **`cargo test -p civ-engine`** (+ `determinism_proptest`, `invariants_proptest`) — tick/replay/economy/metrics/invariants
 - **`cargo test -p civ-economy`** — allocator, ledger, market
+- **`cargo test -p civ-social`** — ideology, stress, insurgency, health (FR-SOCI-001 through FR-SOCI-006)
 - **`cargo test -p civ-research`** — ADR-006 validator/cache
 - **`cargo test -p civ-protocol-3d`** — `F3D0` roundtrip
 - **`cargo test -p civ-server`** — jsonrpc + ws_bridge + ws_smoke (28+)

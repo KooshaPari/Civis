@@ -64,10 +64,35 @@ pub struct ClimateState {
 }
 
 /// Pre-industrial baseline temperature used for anomaly calculations.
-const BASELINE_TEMP_C: f64 = 14.0;
+/// Canonical definition also lives in `temperature` module.
+pub const BASELINE_TEMP_C: f64 = 14.0;
 
 /// Sea-level sensitivity (metres of rise per °C of anomaly per tick).
 const SEA_LEVEL_SENSITIVITY_M_PER_C: f64 = 0.002;
+
+/// FR-CLIM-001 — Atmospheric CO₂ accumulation from industrial Joule consumption.
+pub mod co2;
+pub use co2::{Co2Config, Co2Tracker, DEFAULT_ABSORPTION_BP_PER_TICK, DEFAULT_EMISSION_FACTOR_PPM_PER_MJ, PRE_INDUSTRIAL_CO2_PPM as CO2_PRE_INDUSTRIAL_PPM};
+
+/// FR-CLIM-002 — Global mean temperature derived from CO₂ concentration.
+pub mod temperature;
+pub use temperature::{temperature_anomaly_from_co2, temperature_from_co2, TemperatureConfig, TemperatureTracker, BASELINE_TEMP_C as TEMP_BASELINE_TEMP_C, DEFAULT_ECS_C};
+
+/// FR-CLIM-003 — Threshold crossing events when temperature exceeds defined levels.
+pub mod events;
+pub use events::{ThresholdEvent, ThresholdLevel, ThresholdTracker};
+
+/// FR-CLIM-004 — Climate damage reduces district Joule production capacity.
+pub mod damage;
+pub use damage::{apply_damage_to_production, compute_damage, DamageConfig, DamageResult, DamageTracker};
+
+/// FR-CLIM-005 — Tipping-point cascade modelling (ice-albedo, permafrost, etc.).
+pub mod tipping;
+pub use tipping::{CascadeResult, CascadeTracker, TippingPoint, TippingPointConfig};
+
+/// FR-CLIM-006 — Adaptation investment reduces climate damage.
+pub mod adaptation;
+pub use adaptation::{AdaptationConfig, AdaptationResult, AdaptationTracker};
 
 /// Disaster-spread model: a hazard (fire/flood) propagates to adjacent cells
 /// by intensity and decays over time. See [`disaster_spread`] for details.

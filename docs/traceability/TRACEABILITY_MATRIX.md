@@ -47,8 +47,7 @@ Source spec: `docs/specs/CIV-0001-core-simulation-loop.md`
 
 ## Economy (FR-ECON-*)
 
-> **Crate `crates/economy` is not in the workspace.** Joule-like energy is a single
-> `WorldState::energy_budget_joules` field updated in `civ-engine::phase_economy()`.
+> **Crate `crates/economy`:** Active workspace crate with production, consumption, waste, GDP, district, trade, and metrics modules.
 
 Source specs: `docs/specs/CIV-0100-economy.md`, `docs/specs/CIV-0107-joule-economy.md`
 
@@ -58,10 +57,10 @@ Source specs: `docs/specs/CIV-0100-economy.md`, `docs/specs/CIV-0107-joule-econo
 | FR-ECON-002 | Joule consumption SHALL be deducted from district reserves before regional distribution. | CIV-0107 | `crates/economy/src/consumption.rs` *(target)* | `consumption::deducted_before_distribution` | planned |
 | FR-ECON-003 | Joule consumption per tick SHALL never be negative (consumption_non_negative invariant). | CIV-0107 | `crates/economy/src/consumption.rs` *(target)* | `consumption::consumption_non_negative` | planned |
 | FR-ECON-004 | Surplus Joules SHALL flow to adjacent districts via the distribution graph each tick. | CIV-0100 | `crates/economy/src/distribution.rs` | `distribution::surplus_flows_adjacent` | in_progress |
-| FR-ECON-005 | Waste heat SHALL be computed as a percentage of total Joules consumed per tick. | CIV-0107 | `crates/economy/src/waste.rs` | `waste::heat_computed_from_consumption` | planned |
-| FR-ECON-006 | GDP SHALL be derived from sum of regional Joule throughput converted at a fixed exchange rate. | CIV-0100 | `crates/economy/src/gdp.rs` | `gdp::sum_of_regional_joules` | planned |
+| FR-ECON-005 | Waste heat SHALL be computed as a percentage of total Joules consumed per tick. | CIV-0107 | `crates/economy/src/waste.rs` | `waste::heat_computed_from_consumption` | implemented |
+| FR-ECON-006 | GDP SHALL be derived from sum of regional Joule throughput converted at a fixed exchange rate. | CIV-0100 | `crates/economy/src/gdp.rs` | `gdp::sum_of_regional_joules` | implemented |
 | FR-ECON-007 | Trade agreements SHALL transfer Joules and MilliCredits between civilizations each tick. | CIV-0100 | `crates/economy/src/trade.rs` | `trade::bilateral_transfer_balanced` | planned |
-| FR-ECON-008 | A district in Joule deficit for 3 consecutive ticks SHALL emit `economy.district.collapsed.v1`. | CIV-0100 | `crates/economy/src/district.rs` | `district::collapse_after_deficit_ticks` | planned |
+| FR-ECON-008 | A district in Joule deficit for 3 consecutive ticks SHALL emit `economy.district.collapsed.v1`. | CIV-0100 | `crates/economy/src/district.rs` | `district::collapse_after_deficit_ticks` | implemented |
 | FR-ECON-009 | Subsistence mode SHALL activate when a civilization's total Joule balance drops below threshold. | CIV-0107 | `crates/economy/src/subsistence.rs` | `subsistence::activates_below_threshold` | planned |
 | FR-ECON-010 | Treasury balance SHALL be tracked in MilliCredits (`i64`) with no floating-point accumulation. | CIV-0100 | `crates/economy/src/treasury.rs` | `treasury::milliCredits_no_float` | planned |
 

@@ -11,6 +11,8 @@
 
 pub mod authn;
 pub mod autosave;
+/// FR-PROT-004: In-memory event collector that batches entries per tick for DB persistence.
+pub mod audit_log;
 pub mod jsonrpc;
 /// Runtime metrics collection (tick durations, clients, events, memory).
 pub mod metrics;
@@ -24,6 +26,7 @@ pub mod voxel_frame_builder;
 pub mod ws_bridge;
 
 pub use authn::{AuthnError, BearerToken, BEARER_SCHEME};
+pub use audit_log::{AuditEntry, AuditLog};
 pub use autosave::{
     autosave_cadence_from_env, autosave_filename_for_tick, autosave_keep_from_env,
     run_autosave_once, spawn_autosave_loop, AutosaveContext, AutosaveResult, DEFAULT_AUTOSAVE_KEEP,

@@ -178,7 +178,7 @@ Source spec: `docs/specs/CIV-0200-protocol.md`
 | FR-PROT-001 | The engine SHALL expose a JSON-RPC 2.0 API over WebSocket. | CIV-0200 | `crates/server/src/jsonrpc.rs` | `protocol::jsonrpc_handshake` | implemented |
 | FR-PROT-002 | All events SHALL be emitted as JSON-RPC notifications with a common envelope. | CIV-0200 | `crates/server/src/ws_bridge.rs` | `protocol::event_envelope_valid` | implemented |
 | FR-PROT-003 | Event envelope SHALL contain `event_id` (UUIDv7), `event_type`, `session_id`, `tick`, `created_at`, `payload`. | CIV-0200 | `crates/server/src/ws_bridge.rs` | `protocol::envelope_fields_present` | implemented |
-| FR-PROT-004 | The server SHALL persist all emitted events to the DB audit log within the same tick. | CIV-0200 | `crates/db/src/audit_log.rs` | `db::events_persisted_same_tick` | planned |
+| FR-PROT-004 | The server SHALL persist all emitted events to the DB audit log within the same tick. | CIV-0200 | `crates/server/src/audit_log.rs` | `db::events_persisted_same_tick`, `fr_prot_004_persist_event_to_audit_log` | implemented |
 | FR-PROT-005 | Client connections SHALL authenticate before receiving any session events. | CIV-0200 | `crates/server/src/authn.rs` | `protocol::unauthenticated_rejected` | implemented |
 | FR-PROT-006 | The protocol SHALL support at least 10 concurrent client connections per session. | CIV-0200 | `crates/protocol/src/server.rs` | `protocol::concurrent_clients_10` | planned |
 
@@ -231,9 +231,9 @@ Source spec: `docs/specs/CIV-0800-audio.md`
 
 | FR ID | Requirement Summary | Spec Doc | Crate / Source Path | Test Name Pattern | Status |
 |---|---|---|---|---|---|
-| FR-AUD-001 | Background music SHALL be driven by Kira and adapt to game state each tick. | CIV-0800 | `crates/render/src/audio.rs` | `audio::kira_initialized` | planned |
-| FR-AUD-002 | Music layers SHALL fade in/out based on tension, prosperity, and war state. | CIV-0800 | `crates/render/src/audio.rs` | `audio::layers_respond_to_state` | planned |
-| FR-AUD-003 | SFX SHALL be triggered by specific events (war declared, district collapsed, etc.). | CIV-0800 | `crates/render/src/audio.rs` | `audio::sfx_triggered_by_events` | planned |
+| FR-AUD-001 | Background music SHALL be driven by Kira and adapt to game state each tick. | CIV-0800 | `crates/render/src/audio.rs` (`KiraMusic`) | `audio::kira_music_init`, `audio::kira_music_set_tension_clamps` | implemented |
+| FR-AUD-002 | Music layers SHALL fade in/out based on tension, prosperity, and war state. | CIV-0800 | `crates/render/src/audio.rs` (`MusicLayers`) | `audio::layers_fade_in_out`, `audio::layers_respond_to_state` | implemented |
+| FR-AUD-003 | SFX SHALL be triggered by specific events (war declared, district collapsed, etc.). | CIV-0800 | `crates/render/src/audio.rs` (`SfxTriggerEvent`) | `audio::sfx_triggered_by_events`, `audio::sfx_all_kinds_produce_commands` | implemented |
 
 ---
 
@@ -274,8 +274,8 @@ Source spec: `docs/specs/CIV-0500-performance.md`
 |---|---|---|---|---|---|
 | FR-PERF-001 | The engine SHALL sustain 100 ms/tick (10 ticks/s) with 8 civilizations and 1,000 hex cells. | CIV-0500 | `crates/engine/src/perf.rs` | `perf::sustained_10_ticks_per_sec` | in_progress |
 | FR-PERF-002 | Engine heap allocation per tick SHALL not exceed 1 MiB outside of initial world setup. | CIV-0500 | `crates/engine/src/perf.rs` | `perf::heap_under_1mib_per_tick` | implemented |
-| FR-PERF-003 | The render crate SHALL maintain 60 fps at 1080p on the reference GPU profile. | CIV-0500 | `crates/render/src/frame.rs` | `perf::render_60fps_1080p` | planned |
-| FR-PERF-004 | DB write throughput SHALL not become a bottleneck for tick latency (async writes). | CIV-0500 | `crates/db/src/writer.rs` | `perf::db_writes_async_nonblocking` | planned |
+| FR-PERF-003 | The render crate SHALL maintain 60 fps at 1080p on the reference GPU profile. | CIV-0500 | `crates/render/src/frame.rs` (`FrameBudget`) | `frame::frame_budget_60fps_1080p`, `frame::frame_budget_type_exists` | implemented |
+| FR-PERF-004 | DB write throughput SHALL not become a bottleneck for tick latency (async writes). | CIV-0500 | `crates/save-db/src/lib.rs` (`AsyncWriter`) | `async_writer_is_send_sync`, `async_writer_write_tick_enqueues` | implemented |
 | FR-PERF-005 | JSON-RPC serialization SHALL complete within 5 ms per event batch. | CIV-0500 | `crates/engine/src/perf.rs` | `perf::serialization_under_5ms` | implemented |
 
 ---

@@ -12,6 +12,10 @@ use thiserror::Error;
 use uuid::Uuid;
 
 const SCHEMA: &str = r"
+CREATE TABLE IF NOT EXISTS save_schema_version (
+    version     INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS save_slots (
     id          TEXT PRIMARY KEY,
     session_id  TEXT NOT NULL,
@@ -37,12 +41,25 @@ CREATE TABLE IF NOT EXISTS autosaves (
 CREATE INDEX IF NOT EXISTS idx_autosaves_session_id ON autosaves (session_id);
 ";
 
+/// FR-SAVE-005: Schema version for the save-db SQLite database.
+/// Bumped on breaking schema changes (column additions, renames, index changes).
+/// Old databases with a lower version are rejected on open.
+pub const SCHEMA_VERSION: u32 = 1;
+
 #[derive(Debug, Error)]
 pub enum SaveDbError {
     #[error("sqlite error: {0}")]
     Sqlite(#[from] rusqlite::Error),
     #[error("lock poisoned")]
     LockPoisoned,
+    /// FR-SAVE-005: The on-disk schema version is newer than this build supports.
+    #[error("outdated schema version {found}; this build supports up to version {max}")]
+    OutdatedSchemaVersion {
+        /// Schema version found in the database.
+        found: u32,
+        /// Maximum schema version this library can handle.
+        max: u32,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
@@ -81,9 +98,11 @@ impl SaveDb {
     pub fn open_in_memory() -> Result<Self, SaveDbError> {
         let conn = Connection::open_in_memory()?;
         conn.execute_batch(SCHEMA)?;
-        Ok(Self {
+        let db = Self {
             conn: Mutex::new(conn),
-        })
+        };
+        db.init_or_check_version()?;
+        Ok(db)
     }
 
     pub fn open(path: &Path) -> Result<Self, SaveDbError> {
@@ -97,9 +116,43 @@ impl SaveDb {
         }
         let conn = Connection::open(path)?;
         conn.execute_batch(SCHEMA)?;
-        Ok(Self {
+        let db = Self {
             conn: Mutex::new(conn),
-        })
+        };
+        db.init_or_check_version()?;
+        Ok(db)
+    }
+
+    /// FR-SAVE-005: Write current SCHEMA_VERSION on fresh databases; reject
+    /// if the on-disk version is newer than what this build supports.
+    fn init_or_check_version(&self) -> Result<(), SaveDbError> {
+        let conn = self.conn()?;
+        let existing: Option<u32> = conn
+            .query_row(
+                "SELECT version FROM save_schema_version LIMIT 1",
+                [],
+                |row| row.get(0),
+            )
+            .ok();
+        match existing {
+            None => {
+                // Fresh database — stamp the current version.
+                conn.execute(
+                    "INSERT INTO save_schema_version (version) VALUES (?1)",
+                    params![SCHEMA_VERSION],
+                )?;
+            }
+            Some(v) if v > SCHEMA_VERSION => {
+                return Err(SaveDbError::OutdatedSchemaVersion {
+                    found: v,
+                    max: SCHEMA_VERSION,
+                });
+            }
+            Some(_) => {
+                // Version is <= SCHEMA_VERSION; acceptable.
+            }
+        }
+        Ok(())
     }
 
     pub fn record_slot_save(
@@ -495,6 +548,71 @@ mod tests {
         match result {
             AsyncWriteResult::Ok { byte_size } => assert_eq!(byte_size, 1024),
             AsyncWriteResult::Err(_) => panic!("expected Ok"),
+        }
+    }
+
+    // -- FR-SAVE-005 --------------------------------------------------------
+
+    #[test]
+    fn fr_save_005_schema_version_stamped_on_fresh_db() {
+        let db = match SaveDb::open_in_memory() {
+            Ok(d) => d,
+            Err(e) => panic!("open failed: {e}"),
+        };
+        let conn = db.conn().expect("lock");
+        let version: u32 = conn
+            .query_row(
+                "SELECT version FROM save_schema_version LIMIT 1",
+                [],
+                |row| row.get(0),
+            )
+            .expect("read version");
+        assert_eq!(version, SCHEMA_VERSION);
+    }
+
+    #[test]
+    fn fr_save_005_schema_version_rejects_old_saves() {
+        // Simulate a database written by a future build with schema version 999.
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("future.db");
+        {
+            let conn = rusqlite::Connection::open(&path).expect("open raw");
+            conn.execute_batch(SCHEMA).expect("create schema");
+            conn.execute(
+                "INSERT INTO save_schema_version (version) VALUES (999)",
+                [],
+            )
+            .expect("stamp future version");
+        }
+        // Opening this database should fail with OutdatedSchemaVersion.
+        let result = SaveDb::open(&path);
+        match result {
+            Err(SaveDbError::OutdatedSchemaVersion { found, max }) => {
+                assert_eq!(found, 999);
+                assert_eq!(max, SCHEMA_VERSION);
+            }
+            other => panic!("expected OutdatedSchemaVersion, got a different error"),
+        }
+    }
+
+    #[test]
+    fn fr_save_005_schema_version_accepts_matching_version() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("matching.db");
+        // Create a DB with the current SCHEMA_VERSION.
+        {
+            let conn = rusqlite::Connection::open(&path).expect("open raw");
+            conn.execute_batch(SCHEMA).expect("create schema");
+            conn.execute(
+                "INSERT INTO save_schema_version (version) VALUES (?1)",
+                params![SCHEMA_VERSION],
+            )
+            .expect("stamp current version");
+        }
+        // Opening should succeed (no error).
+        match SaveDb::open(&path) {
+            Ok(_) => {}
+            Err(e) => panic!("should accept matching version, got: {e}"),
         }
     }
 }

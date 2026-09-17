@@ -1,7 +1,8 @@
 # Implementation Status
 
-**As of:** 2026-05-25  
-**Authoritative code map:** root `Cargo.toml` workspace members (not legacy crate names in `TRACEABILITY_MATRIX.md`).
+**As of:** 2026-09-17  
+**Authoritative code map:** root `Cargo.toml` workspace members (not legacy crate names in `TRACEABILITY_MATRIX.md`).  
+**Last audit:** 2026-09-17 — 3 implemented / 4 in_progress / 90 planned in TRACEABILITY_MATRIX.md. 8 commits this session.
 
 ## Workspace crates (implemented in repo)
 
@@ -77,6 +78,33 @@ ADR-009 / CIV-0300 visuals in reference clients — not `crates/render`. Cross-c
 | UI / assets (CIV-0300, 060x) | reference clients | **Partial** | **GFX / UI** above; no production `crates/render` |
 | Save/load, DB (CIV-1000) | `crates/db` | **No** | `ReplayLog` / `.civreplay` in engine + WS/HTTP; no persistence DB |
 | Modding, audio, session (CIV-07–09) | various | **No** | Spec-closed; not wired |
+
+## FR traceability gap (2026-09-17 audit)
+
+**TRACEABILITY_MATRIX.md** has 97 strategic FRs: 3 implemented, 4 in_progress, 90 planned.
+
+| Subsystem | Planned FRs | Needs new crate? | Effort |
+|-----------|-------------|-------------------|--------|
+| Core (FR-CORE-*) | 7 | No — extend `crates/engine` | Medium |
+| Economy (FR-ECON-*) | 7 | No — extend `crates/economy` | Medium |
+| LOD (FR-LOD-*) | 4 | No — extend `crates/engine/src/lod.rs` | Low |
+| Climate (FR-CLIM-*) | 6 | **Yes** — `crates/climate` | High |
+| Institutions (FR-INST-*) | 6 | **Yes** — `crates/institutions` | High |
+| Theorems (FR-THRY-*) | 4 | No — extend `crates/engine/src/invariants.rs` | Medium |
+| Diplomacy (FR-DIPL-*) | 7 | **Yes** — `crates/diplomacy` | High |
+| Social (FR-SOCI-*) | 6 | **Yes** — `crates/social` | High |
+| AI (FR-AI-*) | 7 | **Yes** — `crates/ai` | High |
+| Protocol (FR-PROT-*) | 6 | No — extend `crates/server` + `crates/protocol-3d` | Medium |
+| UI/UX (FR-UX-*) | 5 | Partial — reference clients exist | Medium |
+| Assets (FR-ASSET-*) | 4 | Partial — reference clients exist | Low |
+| Modding (FR-MOD-*) | 5 | **Yes** — `crates/mod-host` exists but needs impl | High |
+| Audio (FR-AUD-*) | 3 | No — extend `crates/render` or reference clients | Low |
+| Session (FR-SESS-*) | 6 | **Yes** — `crates/session` | High |
+| Save/Load (FR-SAVE-*) | 5 | Partial — `crates/save-db` exists | Medium |
+| Performance (FR-PERF-*) | 5 | No — extend existing crates | Medium |
+| **Total** | **90** | | |
+
+**Recommended next session:** Start with FRs that extend existing crates (Core, Economy, LOD, Theorems, Protocol, Save/Load, Performance) before creating new crates (Climate, Institutions, Diplomacy, Social, AI, Session).
 ## What is tested today
 
 - **`cargo test -p civ-engine`** (+ `determinism_proptest`, `invariants_proptest`) — tick/replay/economy/metrics/invariants

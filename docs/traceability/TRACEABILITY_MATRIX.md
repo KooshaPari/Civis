@@ -128,13 +128,13 @@ Source spec: `docs/specs/CIV-0105-war-diplomacy.md`
 
 | FR ID | Requirement Summary | Spec Doc | Crate / Source Path | Test Name Pattern | Status |
 |---|---|---|---|---|---|
-| FR-DIPL-001 | Civilizations SHALL be able to declare war, producing `diplomacy.war.declared.v1`. | CIV-0105 | `crates/diplomacy/src/war.rs` | `war::declare_emits_event` | planned |
-| FR-DIPL-002 | Peace SHALL be negotiated via signed treaty, producing `diplomacy.peace.signed.v1`. | CIV-0105 | `crates/diplomacy/src/peace.rs` | `peace::signed_emits_event` | planned |
-| FR-DIPL-003 | Treaties SHALL encode terms (trade ratios, non-aggression, alliance) as structured data. | CIV-0105 | `crates/diplomacy/src/treaty.rs` | `treaty::terms_structured` | planned |
-| FR-DIPL-004 | Treaty breach SHALL emit `diplomacy.treaty.broken.v1` and apply reputation penalty. | CIV-0105 | `crates/diplomacy/src/treaty.rs` | `treaty::breach_emits_event_and_penalty` | planned |
-| FR-DIPL-005 | Espionage operations SHALL have a configurable detection probability per tick. | CIV-0105 | `crates/diplomacy/src/espionage.rs` | `espionage::detection_probability_applied` | planned |
-| FR-DIPL-006 | Detected espionage SHALL emit `diplomacy.espionage.detected.v1`. | CIV-0105 | `crates/diplomacy/src/espionage.rs` | `espionage::detected_emits_event` | planned |
-| FR-DIPL-007 | Shadow networks SHALL model covert influence as a hidden resource accumulating per tick. | CIV-0105 | `crates/diplomacy/src/shadow.rs` | `shadow::influence_accumulates` | planned |
+| FR-DIPL-001 | Civilizations SHALL be able to declare war, producing `diplomacy.war.declared.v1`. | CIV-0105 | `crates/diplomacy/src/war.rs` | `war::declare_emits_event` | implemented |
+| FR-DIPL-002 | Peace SHALL be negotiated via signed treaty, producing `diplomacy.peace.signed.v1`. | CIV-0105 | `crates/diplomacy/src/peace.rs` | `peace::signed_emits_event` | implemented |
+| FR-DIPL-003 | Treaties SHALL encode terms (trade ratios, non-aggression, alliance) as structured data. | CIV-0105 | `crates/diplomacy/src/treaty.rs` | `treaty::terms_structured` | implemented |
+| FR-DIPL-004 | Treaty breach SHALL emit `diplomacy.treaty.broken.v1` and apply reputation penalty. | CIV-0105 | `crates/diplomacy/src/treaty.rs` | `treaty::breach_emits_event_and_penalty` | implemented |
+| FR-DIPL-005 | Espionage operations SHALL have a configurable detection probability per tick. | CIV-0105 | `crates/diplomacy/src/espionage.rs` | `espionage::detection_probability_applied` | implemented |
+| FR-DIPL-006 | Detected espionage SHALL emit `diplomacy.espionage.detected.v1`. | CIV-0105 | `crates/diplomacy/src/espionage.rs` | `espionage::detected_emits_event` | implemented |
+| FR-DIPL-007 | Shadow networks SHALL model covert influence as a hidden resource accumulating per tick. | CIV-0105 | `crates/diplomacy/src/shadow.rs` | `shadow::influence_accumulates` | implemented |
 
 ---
 
@@ -159,13 +159,13 @@ Source spec: `docs/specs/CIV-0400-ai.md`
 
 | FR ID | Requirement Summary | Spec Doc | Crate / Source Path | Test Name Pattern | Status |
 |---|---|---|---|---|---|
-| FR-AI-001 | AI civilizations SHALL select actions using a utility scoring function over available moves. | CIV-0400 | `crates/ai/src/utility.rs` | `utility::scores_all_moves` | planned |
-| FR-AI-002 | MCTS SHALL be used for multi-step lookahead planning beyond depth 1. | CIV-0400 | `crates/ai/src/mcts.rs` | `mcts::lookahead_depth_gt_1` | planned |
-| FR-AI-003 | Each AI leader SHALL have a personality profile affecting utility weights. | CIV-0400 | `crates/ai/src/personality.rs` | `personality::weights_differ_per_profile` | planned |
-| FR-AI-004 | Personality drift SHALL accumulate stochastically each N ticks. | CIV-0400 | `crates/ai/src/personality.rs` | `personality::drift_accumulates_stochastically` | planned |
-| FR-AI-005 | AI SHALL never exceed a configurable MilliCredit/Joule expenditure per tick (fair-play cap). | CIV-0400 | `crates/ai/src/fair_play.rs` | `fair_play::cap_enforced_per_tick` | planned |
-| FR-AI-006 | AI decision events SHALL be emitted for post-run analysis and replay. | CIV-0400 | `crates/ai/src/events.rs` | `ai_events::decision_emitted` | planned |
-| FR-AI-007 | MCTS computation time SHALL be capped at a fraction of the 100 ms tick budget. | CIV-0400 | `crates/ai/src/mcts.rs` | `mcts::time_capped_within_budget` | planned |
+| FR-AI-001 | AI civilizations SHALL select actions using a utility scoring function over available moves. | CIV-0400 | `crates/ai/src/utility.rs` | `utility::scores_all_moves` | implemented |
+| FR-AI-002 | MCTS SHALL be used for multi-step lookahead planning beyond depth 1. | CIV-0400 | `crates/ai/src/mcts.rs` | `mcts::lookahead_depth_gt_1` | implemented |
+| FR-AI-003 | Each AI leader SHALL have a personality profile affecting utility weights. | CIV-0400 | `crates/ai/src/personality.rs` | `personality::weights_differ_per_profile` | implemented |
+| FR-AI-004 | Personality drift SHALL accumulate stochastically each N ticks. | CIV-0400 | `crates/ai/src/personality.rs` | `personality::drift_accumulates_stochastically` | implemented |
+| FR-AI-005 | AI SHALL never exceed a configurable MilliCredit/Joule expenditure per tick (fair-play cap). | CIV-0400 | `crates/ai/src/fair_play.rs` | `fair_play::cap_enforced_per_tick` | implemented |
+| FR-AI-006 | AI decision events SHALL be emitted for post-run analysis and replay. | CIV-0400 | `crates/ai/src/events.rs` | `ai_events::decision_emitted` | implemented |
+| FR-AI-007 | MCTS computation time SHALL be capped at a fraction of the 100 ms tick budget. | CIV-0400 | `crates/ai/src/mcts.rs` | `mcts::time_capped_within_budget` | implemented |
 
 ---
 
@@ -217,11 +217,11 @@ Source spec: `docs/specs/CIV-0700-modding.md`
 
 | FR ID | Requirement Summary | Spec Doc | Crate / Source Path | Test Name Pattern | Status |
 |---|---|---|---|---|---|
-| FR-MOD-001 | Mods SHALL be loaded from WASM binaries compiled against the published SDK. | CIV-0700 | `crates/engine/src/mod_loader.rs` | `modding::wasm_mod_loaded` | planned |
-| FR-MOD-002 | Mod execution SHALL be sandboxed; mods SHALL NOT access host file system or network. | CIV-0700 | `crates/engine/src/mod_sandbox.rs` | `modding::sandbox_no_host_access` | planned |
-| FR-MOD-003 | Mod state SHALL be persisted and restored as part of save/load (CIV-1000). | CIV-0700 | `crates/engine/src/mod_state.rs` | `modding::state_persisted_restored` | planned |
-| FR-MOD-004 | The engine SHALL emit `mod.loaded.v1`, `mod.unloaded.v1`, and `mod.error.v1` events. | CIV-0700 | `crates/engine/src/mod_events.rs` | `modding::lifecycle_events_emitted` | planned |
-| FR-MOD-005 | Mods SHALL be able to register new resource types, policy levers, and event handlers. | CIV-0700 | `crates/engine/src/mod_registry.rs` | `modding::can_register_resources` | planned |
+| FR-MOD-001 | Mods SHALL be loaded from WASM binaries compiled against the published SDK. | CIV-0700 | `crates/mod-host/src/lib.rs` | `modding::wasm_mod_loaded` | implemented |
+| FR-MOD-002 | Mod execution SHALL be sandboxed; mods SHALL NOT access host file system or network. | CIV-0700 | `crates/mod-host/src/capability.rs` | `modding::sandbox_no_host_access` | implemented |
+| FR-MOD-003 | Mod state SHALL be persisted and restored as part of save/load (CIV-1000). | CIV-0700 | `crates/mod-host/src/guest_state.rs` | `modding::state_persisted_restored` | implemented |
+| FR-MOD-004 | The engine SHALL emit `mod.loaded.v1`, `mod.unloaded.v1`, and `mod.error.v1` events. | CIV-0700 | `crates/mod-host/src/lib.rs` | `modding::lifecycle_events_emitted` | implemented |
+| FR-MOD-005 | Mods SHALL be able to register new resource types, policy levers, and event handlers. | CIV-0700 | `crates/mod-host/src/hooks.rs` | `modding::can_register_resources` | implemented |
 
 ---
 
@@ -243,12 +243,12 @@ Source spec: `docs/specs/CIV-0900-pve-session.md`
 
 | FR ID | Requirement Summary | Spec Doc | Crate / Source Path | Test Name Pattern | Status |
 |---|---|---|---|---|---|
-| FR-SESS-001 | The engine SHALL support PvE (human vs AI) sessions. | CIV-0900 | `crates/engine/src/session.rs` | `session::pve_mode_supported` | planned |
-| FR-SESS-002 | Hot-seat multiplayer SHALL allow multiple human players per session. | CIV-0900 | `crates/engine/src/session.rs` | `session::hotseat_multi_human` | planned |
-| FR-SESS-003 | Observer mode SHALL allow read-only session access without influencing simulation. | CIV-0900 | `crates/engine/src/session.rs` | `session::observer_read_only` | planned |
-| FR-SESS-004 | Challenge mode SHALL allow async submission of a civilization seed for scoring. | CIV-0900 | `crates/engine/src/challenge.rs` | `challenge::async_submission_accepted` | planned |
+| FR-SESS-001 | The engine SHALL support PvE (human vs AI) sessions. | CIV-0900 | `crates/session/src/lib.rs` | `session::pve_mode_supported` | implemented |
+| FR-SESS-002 | Hot-seat multiplayer SHALL allow multiple human players per session. | CIV-0900 | `crates/session/src/lib.rs` | `session::hotseat_multi_human` | implemented |
+| FR-SESS-003 | Observer mode SHALL allow read-only session access without influencing simulation. | CIV-0900 | `crates/session/src/lib.rs` | `session::observer_read_only` | implemented |
+| FR-SESS-004 | Challenge mode SHALL allow async submission of a civilization seed for scoring. | CIV-0900 | `crates/session/src/lib.rs` | `challenge::async_submission_accepted` | implemented |
 | FR-SESS-005 | Session speed SHALL be configurable (1x, 2x, 4x, paused) and emit `session.speed_changed.v1`. | CIV-0900 | `crates/server/src/jsonrpc.rs` (`sim.set_speed`) | `session::speed_change_emits_event` | implemented |
-| FR-SESS-006 | Turn boundaries in hot-seat mode SHALL emit `session.turn.start.v1` and `session.turn.end.v1`. | CIV-0900 | `crates/engine/src/session.rs` | `session::turn_events_emitted` | planned |
+| FR-SESS-006 | Turn boundaries in hot-seat mode SHALL emit `session.turn.start.v1` and `session.turn.end.v1`. | CIV-0900 | `crates/session/src/lib.rs` | `session::turn_events_emitted` | implemented |
 
 ---
 
@@ -273,10 +273,10 @@ Source spec: `docs/specs/CIV-0500-performance.md`
 | FR ID | Requirement Summary | Spec Doc | Crate / Source Path | Test Name Pattern | Status |
 |---|---|---|---|---|---|
 | FR-PERF-001 | The engine SHALL sustain 100 ms/tick (10 ticks/s) with 8 civilizations and 1,000 hex cells. | CIV-0500 | `crates/engine/src/perf.rs` | `perf::sustained_10_ticks_per_sec` | in_progress |
-| FR-PERF-002 | Engine heap allocation per tick SHALL not exceed 1 MiB outside of initial world setup. | CIV-0500 | `crates/engine/src/tick.rs` | `perf::heap_under_1mib_per_tick` | planned |
+| FR-PERF-002 | Engine heap allocation per tick SHALL not exceed 1 MiB outside of initial world setup. | CIV-0500 | `crates/engine/src/perf.rs` | `perf::heap_under_1mib_per_tick` | implemented |
 | FR-PERF-003 | The render crate SHALL maintain 60 fps at 1080p on the reference GPU profile. | CIV-0500 | `crates/render/src/frame.rs` | `perf::render_60fps_1080p` | planned |
 | FR-PERF-004 | DB write throughput SHALL not become a bottleneck for tick latency (async writes). | CIV-0500 | `crates/db/src/writer.rs` | `perf::db_writes_async_nonblocking` | planned |
-| FR-PERF-005 | JSON-RPC serialization SHALL complete within 5 ms per event batch. | CIV-0500 | `crates/protocol/src/serializer.rs` | `perf::serialization_under_5ms` | planned |
+| FR-PERF-005 | JSON-RPC serialization SHALL complete within 5 ms per event batch. | CIV-0500 | `crates/engine/src/perf.rs` | `perf::serialization_under_5ms` | implemented |
 
 ---
 

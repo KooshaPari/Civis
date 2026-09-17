@@ -93,7 +93,7 @@ ADR-009 / CIV-0300 visuals in reference clients — not `crates/render`. Cross-c
 | Climate (FR-CLIM-*) | 0 | **Yes** — `crates/climate` | Done |
 | Institutions (FR-INST-*) | 6 | **Yes** — `crates/institutions` | High |
 | Theorems (FR-THRY-*) | 0 | No — `crates/engine/src/invariants.rs` done | Done |
-| Diplomacy (FR-DIPL-*) | 7 | **Yes** — `crates/diplomacy` | High |
+| Diplomacy (FR-DIPL-*) | 0 | **Yes** — `crates/diplomacy` | Done |
 | Social (FR-SOCI-*) | 0 | **Yes** — `crates/social` (ideology, stress, insurgency, health) | Done |
 | AI (FR-AI-*) | 7 | **Yes** — `crates/ai` | High |
 | Protocol (FR-PROT-*) | 2 | No — extend `crates/server` + `crates/protocol-3d` | Medium |

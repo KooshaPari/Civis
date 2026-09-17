@@ -89,7 +89,7 @@ fn custom_weights_change_ranking() {
 
 #[test]
 fn empty_moves_returns_empty() {
-    use civ_ai::utility::{Move, UtilityScorer};
+    use civ_ai::utility::UtilityScorer;
 
     let scorer = UtilityScorer::default_scorer();
     let scored: Vec<_> = scorer.score_all(&[]);

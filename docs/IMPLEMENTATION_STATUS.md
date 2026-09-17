@@ -2,7 +2,7 @@
 
 **As of:** 2026-09-17  
 **Authoritative code map:** root `Cargo.toml` workspace members (not legacy crate names in `TRACEABILITY_MATRIX.md`).  
-**Last audit:** 2026-09-17 — 3 implemented / 4 in_progress / 90 planned in TRACEABILITY_MATRIX.md. 8 commits this session.
+**Last audit:** 2026-09-17 — 33 implemented / 4 in_progress / 57 planned in TRACEABILITY_MATRIX.md. 12 commits this session.
 
 ## Workspace crates (implemented in repo)
 
@@ -18,6 +18,7 @@
 | `crates/genetics` | `civ-genetics` | DNA stubs / schema version |
 | `crates/economy` | `civ-economy` | `EconomyState`, `InstitutionLedger` stub, `CapitalistAllocator`, `MarketState::step` |
 | `crates/social` | `civ-social` | `IdeologyScore`, `StressAccumulator`, `InsurgencyTracker`, health index + crisis events |
+| `crates/ai` | `civ-ai` | `UtilityScorer`, `MctsTree`, `PersonalityProfile`, `PersonalityDrift`, `FairPlayCap`, `DecisionEvent` |
 | `crates/species` | `civ-species` | Phenotype mapping stubs |
 | `crates/laws` | `civ-laws` | RON law schema stubs |
 | `crates/research` | `civ-research` | ADR-006 stubs: `TechCard` validator, `ReplayMode`, `LlmEvent`, hash-keyed cache; no live LLM client |
@@ -25,6 +26,8 @@
 | `crates/server` | `civ-server` | WebSocket JSON-RPC + HTTP `healthz`, `GET /replay/export`, `POST /replay/import` |
 | `crates/infra` | `civ-infra` | Infra helpers (PG replay stubs) |
 | `crates/watch` | `civ-watch` | Live-dev harness: background sim, HTTP `/snapshot` `/terrain` `/events`, `/control/*` |
+| `crates/session` | `civ-session` | PvE, hot-seat, observer, and challenge session management (CIV-0900) |
+| `crates/mod-host` | `civ-mod-host` | WASM mod loading, sandbox enforcement, state persistence, lifecycle events (CIV-0700) |
 | `clients/bevy-ref` | `civ-bevy-ref` | Headless mesh smoke; `bevy` feature → renderer + `ws_client` |
 | `clients/godot-ref/rust` | `civis-godot-rust` | Godot 4 GDExtension; HTTP client to civ-watch (`127.0.0.1:9090`); workspace member |
 
@@ -79,7 +82,7 @@ ADR-009 / CIV-0300 visuals in reference clients — not `crates/render`. Cross-c
 | Protocol (CIV-0200) | `crates/protocol-3d`, `crates/server` | **Partial** | JSON-RPC + HTTP replay I/O + `F3D0` WS tick broadcast (`TickBroadcastFormat`) |
 | UI / assets (CIV-0300, 060x) | reference clients | **Partial** | **GFX / UI** above; no production `crates/render` |
 | Save/load, DB (CIV-1000) | `crates/db` | **No** | `ReplayLog` / `.civreplay` in engine + WS/HTTP; no persistence DB |
-| Modding, audio, session (CIV-07–09) | various | **No** | Spec-closed; not wired |
+| Session (CIV-0900) | `crates/session` | **Yes** | PvE, hot-seat, observer, challenge modes; turn events; FR-SESS-001 through FR-SESS-006 |
 
 ## FR traceability gap (2026-09-17 audit)
 
@@ -99,12 +102,12 @@ ADR-009 / CIV-0300 visuals in reference clients — not `crates/render`. Cross-c
 | Protocol (FR-PROT-*) | 2 | No — extend `crates/server` + `crates/protocol-3d` | Medium |
 | UI/UX (FR-UX-*) | 5 | Partial — reference clients exist | Medium |
 | Assets (FR-ASSET-*) | 4 | Partial — reference clients exist | Low |
-| Modding (FR-MOD-*) | 5 | **Yes** — `crates/mod-host` exists but needs impl | High |
+| Modding (FR-MOD-*) | 0 | **Yes** — `crates/mod-host` (WASM, sandbox, state, lifecycle, hooks) | Done |
 | Audio (FR-AUD-*) | 3 | No — extend `crates/render` or reference clients | Low |
-| Session (FR-SESS-*) | 5 | **Yes** — `crates/session` | High |
+| Session (FR-SESS-*) | 0 | **Yes** — `crates/session` (PvE, hot-seat, observer, challenge, turn events) | Done |
 | Save/Load (FR-SAVE-*) | 3 | Partial — `crates/save-db` exists | Medium |
-| Performance (FR-PERF-*) | 5 | No — extend existing crates | Medium |
-| **Total** | **62** | | |
+| Performance (FR-PERF-*) | 3 | No — extend existing crates | Medium |
+| **Total** | **57** | | |
 
 **Recommended next session:** Start with FRs that extend existing crates (Core, Economy, LOD, Theorems, Protocol, Save/Load, Performance) before creating new crates (Climate, Institutions, Diplomacy, Social, AI, Session).
 ## What is tested today
@@ -117,6 +120,9 @@ ADR-009 / CIV-0300 visuals in reference clients — not `crates/render`. Cross-c
 - **`cargo test -p civ-server`** — jsonrpc + ws_bridge + ws_smoke (28+)
 - **`cargo test -p civ-watch`** — 16 tests: `/terrain`, `/snapshot`, `/events`, `/control/spawn_entity`, `damage`, save/load
 - **`cargo test -p civ-bevy-ref`** / **`civis-godot-rust`** — reference client surface (GFX / UI)
+- **`cargo test -p civ-session`** — 20 tests: PvE, hot-seat, observer, challenge, turn events, serialization
+- **`cargo test -p civ-mod-host`** — 76+ tests: WASM loading, sandbox enforcement, state persistence, lifecycle events, hooks registration
+- **`cargo test -p civ-engine --lib perf::tests`** — FR-PERF-002 heap tracking, FR-PERF-005 serialization timing
 - **`cargo test -p civ-infra`** (+ `--features pg`; integration `#[ignore]` without Docker Postgres)
 - **CI / docs / web** — `fr-coverage.yml`; `docs:check`; `web/dashboard` npm test (GFX / UI)
 

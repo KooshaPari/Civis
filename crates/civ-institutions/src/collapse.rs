@@ -24,7 +24,7 @@ pub enum CollapseCause {
 
 /// Event emitted when institutional collapse triggers a governance
 /// type transition.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CollapseTransitionEvent {
     /// Tick at which collapse occurred.
     pub tick: u64,

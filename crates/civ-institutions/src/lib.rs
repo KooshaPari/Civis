@@ -56,7 +56,7 @@ pub mod governance;
 pub mod legitimacy;
 
 pub use capture::{CaptureConfig, CaptureScore, CAPTURE_THRESHOLD_BP};
-pub use collapse::{check_collapse, CollapseCause, CollapseTransitionEvent};
+pub use collapse::{check_collapse, transition_target, CollapseCause, CollapseTransitionEvent};
 pub use events::{check_capture_threshold, CaptureThresholdEvent, CAPTURE_THRESHOLD_EVENT};
 pub use faction_split::{
     maybe_split_faction, splinter_id, splinter_name, Faction, FactionSplitEvent,

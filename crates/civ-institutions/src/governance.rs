@@ -9,9 +9,9 @@ use serde::{Deserialize, Serialize};
 
 /// Institutional governance type for a civilization.
 ///
-//! Each civilization SHALL have exactly one active [`GovernanceType`] at any
-//! given tick. The type is assigned at initialization and may transition
-//! when institutional collapse triggers a regime change.
+/// Each civilization SHALL have exactly one active [`GovernanceType`] at any
+/// given tick. The type is assigned at initialization and may transition
+/// when institutional collapse triggers a regime change.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum GovernanceType {
     /// Power concentrated in a single ruler or ruling party.

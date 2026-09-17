@@ -100,12 +100,12 @@ Source spec: `docs/specs/CIV-0103-institutions.md`
 
 | FR ID | Requirement Summary | Spec Doc | Crate / Source Path | Test Name Pattern | Status |
 |---|---|---|---|---|---|
-| FR-INST-001 | Each civilization SHALL have an institutional type (democracy, autocracy, technocracy, etc.). | CIV-0103 | `crates/institutions/src/governance.rs` | `governance::type_assigned_at_init` | planned |
-| FR-INST-002 | Institutional capture score SHALL accumulate each tick based on resource concentration. | CIV-0103 | `crates/institutions/src/capture.rs` | `capture::accumulates_with_concentration` | planned |
-| FR-INST-003 | The engine SHALL emit `institution.capture.threshold.v1` when capture crosses 0.75. | CIV-0103 | `crates/institutions/src/events.rs` | `inst_events::capture_threshold_event` | planned |
-| FR-INST-004 | Institutional collapse SHALL trigger a governance type transition. | CIV-0103 | `crates/institutions/src/collapse.rs` | `collapse::triggers_type_transition` | planned |
-| FR-INST-005 | Institution time-series data SHALL be stored in the metrics DB for post-run analysis. | CIV-0103 | `crates/db/src/institution_series.rs` | `db::institution_series_stored` | planned |
-| FR-INST-006 | Citizen lifecycle (birth, migration, death) SHALL be driven by institutional and economic state. | CIV-0103 | `crates/citizens/src/lifecycle.rs` | `lifecycle::driven_by_inst_economy` | planned |
+| FR-INST-001 | Each civilization SHALL have an institutional type (democracy, autocracy, technocracy, etc.). | CIV-0103 | `crates/civ-institutions/src/governance.rs` | `governance_type_assigned_at_init` | implemented |
+| FR-INST-002 | Institutional capture score SHALL accumulate each tick based on resource concentration. | CIV-0103 | `crates/civ-institutions/src/capture.rs` | `capture_accumulates_with_concentration` | implemented |
+| FR-INST-003 | The engine SHALL emit `institution.capture.threshold.v1` when capture crosses 0.75. | CIV-0103 | `crates/civ-institutions/src/events.rs` | `inst_events_capture_threshold_event` | implemented |
+| FR-INST-004 | Institutional collapse SHALL trigger a governance type transition. | CIV-0103 | `crates/civ-institutions/src/collapse.rs` | `collapse_triggers_type_transition` | implemented |
+| FR-INST-005 | Institution time-series data SHALL be stored in the metrics DB for post-run analysis. | CIV-0103 | `crates/civ-institutions/src/lib.rs` (`InstitutionTimeSeries`) | `db_institution_series_stored` | implemented |
+| FR-INST-006 | Citizen lifecycle (birth, migration, death) SHALL be driven by institutional and economic state. | CIV-0103 | `crates/civ-institutions/src/lib.rs` (`evaluate_lifecycle`) | `lifecycle_driven_by_inst_economy` | implemented |
 
 ---
 

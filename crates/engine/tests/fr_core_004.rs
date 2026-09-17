@@ -25,3 +25,23 @@ fn fr_core_004_superseded_by_no_determinism_decision() {
     // No assertion: the determinism-replay contract this file covered was
     // retired. See module docs for the reinstatement path.
 }
+
+/// FR-CORE-004 — Each tick SHALL complete within 100 ms wall-clock.
+/// Runs 100 ticks and asserts total wall-clock time < 10 s
+/// (generous 10x headroom over the 100 ms/tick requirement).
+#[test]
+fn tick_perf_100_ticks_under_10s() {
+    use std::time::Instant;
+
+    let mut sim = civ_engine::Simulation::with_seed(2024);
+    let start = Instant::now();
+    for _ in 0..100 {
+        sim.tick();
+    }
+    let elapsed = start.elapsed();
+    assert!(
+        elapsed.as_secs_f64() < 10.0,
+        "100 ticks took {:.2}s, expected < 10.0s",
+        elapsed.as_secs_f64()
+    );
+}

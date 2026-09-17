@@ -12,10 +12,12 @@
 
 mod allocation;
 mod allocator;
+mod budget;
 mod currency_trust;
 mod extraction;
 mod institution;
 mod market;
+pub mod metrics;
 mod production;
 pub mod shadow;
 pub mod specialization;
@@ -50,6 +52,8 @@ pub use stocks::{
     apply_trade, comparative_advantage, deficit, propose_trade, step_stocks, surplus, Good,
     ProductionProfile, Stocks, TradeOffer, GOODS,
 };
+pub use budget::{BudgetBucket, BudgetPlan, BudgetSnapshot, BudgetVariance, fiscal_health};
+pub use metrics::{compute_metrics, EconomyMetrics, EconomyMetricsFixed};
 pub use tax_policy::{apply_tax_policy, TaxPolicy, TaxPolicyOutcome};
 pub use trade_flow::{
     complementary_round_trips, complementary_routes, ComplementaryTradeFlow, SettlementFlow,

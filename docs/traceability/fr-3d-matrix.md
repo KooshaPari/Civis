@@ -96,6 +96,7 @@ Finish-readiness rule: a row is only safe to treat as release-ready when the lis
 | FR-CIV-RESEARCH-001 | LLM cache hit is byte-identical to cached value. | `crates/research/` | `research::llm_cache_hit` | implemented |
 | FR-CIV-RESEARCH-002 | Canonical replay refuses first `LlmEvent` in log. | `crates/research/` | `research::canonical_replay_refuses_llm` | implemented |
 | FR-CIV-RESEARCH-003 | Hybrid replay on cache miss refuses to advance. | `crates/research/` | `research::hybrid_cache_miss_refuses` | implemented |
+| FR-CIV-RESEARCH-004 | `LlmEvent::cache_key` is deterministic and byte-composed of `(prompt_hash, input_snapshot_hash, model_id, model_version)`. | `crates/research/src/lib.rs` (`LlmEvent::cache_key`) | `research::cache_key_is_deterministic`, `research::cache_key_composite_structure`, `research::cache_key_changes_with_component` | implemented |
 
 ---
 
@@ -224,6 +225,7 @@ missing.
 | FR-CIV-PROTO3D-000 | Stub. | `crates/protocol-3d/` | `protocol3d::schema_version_stub` | implemented |
 | FR-CIV-PROTO3D-001 | Voxel delta frames binary serialize; lossless round-trip. | `crates/protocol-3d/` | `protocol3d::voxel_delta_roundtrip` | implemented |
 | FR-CIV-PROTO3D-002 | Building diff frames carry procedural vs freehand provenance. | `crates/protocol-3d/` | `protocol3d::building_diff_provenance` | implemented |
+| FR-CIV-PROTO3D-014 | All `Frame3d` variants (`VoxelDelta`, `BuildingDiff`, `AgentAppearance`, `CivilianState`, `FactionState`, `EventFeed`, `Climate`) round-trip through the F3D0 binary envelope losslessly. | `crates/protocol-3d/src/lib.rs` (`Frame3d`, `encode_frame3d_binary` / `decode_frame3d_binary`) | `fr_civ_proto3d_epic_all_frame3d_variants_f3d0_roundtrip` | implemented |
 | FR-CIV-PROTO3D-009-live | Live `BuildingDiffFrame` fills ECS `buildings` + `BuildingGraph` (not empty stub). | `crates/server/src/ws_bridge.rs` `build_building_diff_frame` | `build_building_diff_frame_emits_ecs_buildings_and_graph` | implemented |
 | FR-CIV-BUILD-010-live | Demand allocation graph reaches Bevy via tick bundle `Frame3d::BuildingDiff.graph`. | `crates/server/src/ws_bridge.rs`, `clients/bevy-ref/src/live_stream.rs` | `build_building_diff_frame_emits_ecs_buildings_and_graph`, `phase_buildings_allocates_over_time_when_signals_are_high` | implemented |
 

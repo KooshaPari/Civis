@@ -81,12 +81,12 @@ ADR-009 / CIV-0300 visuals in reference clients — not `crates/render`. Cross-c
 
 ## FR traceability gap (2026-09-17 audit)
 
-**TRACEABILITY_MATRIX.md** has 97 strategic FRs: 7 implemented, 4 in_progress, 86 planned.
+**TRACEABILITY_MATRIX.md** has 97 strategic FRs: 11 implemented, 6 in_progress, 80 planned.
 
 | Subsystem | Planned FRs | Needs new crate? | Effort |
 |-----------|-------------|-------------------|--------|
-| Core (FR-CORE-*) | 7 | No — extend `crates/engine` | Medium |
-| Economy (FR-ECON-*) | 7 | No — extend `crates/economy` | Medium |
+| Core (FR-CORE-*) | 2 | No — extend `crates/engine` | Medium |
+| Economy (FR-ECON-*) | 4 | No — extend `crates/economy` | Medium |
 | LOD (FR-LOD-*) | 4 | No — extend `crates/engine/src/lod.rs` | Low |
 | Climate (FR-CLIM-*) | 6 | **Yes** — `crates/climate` | High |
 | Institutions (FR-INST-*) | 6 | **Yes** — `crates/institutions` | High |
@@ -102,7 +102,7 @@ ADR-009 / CIV-0300 visuals in reference clients — not `crates/render`. Cross-c
 | Session (FR-SESS-*) | 6 | **Yes** — `crates/session` | High |
 | Save/Load (FR-SAVE-*) | 5 | Partial — `crates/save-db` exists | Medium |
 | Performance (FR-PERF-*) | 5 | No — extend existing crates | Medium |
-| **Total** | **86** | | |
+| **Total** | **80** | | |
 
 **Recommended next session:** Start with FRs that extend existing crates (Core, Economy, LOD, Theorems, Protocol, Save/Load, Performance) before creating new crates (Climate, Institutions, Diplomacy, Social, AI, Session).
 ## What is tested today

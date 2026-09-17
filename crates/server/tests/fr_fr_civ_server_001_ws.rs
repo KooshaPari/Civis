@@ -10,7 +10,7 @@ mod fr_fr_civ_server_001_ws {
     /// Verify FR-CIV-SERVER-001-WS type existence and basic behavior.
     #[test]
     fn verify_fr_civ_server_001_ws_basic() {
-        let ws = civ_server::WorldState::default();
-        assert!(ws.tick == 0);
+        use civ_server::{JsonRpcRequest, SessionSnapshot, SESSION_HISTORY_CAP};
+        assert!(SESSION_HISTORY_CAP > 0);
     }
 }

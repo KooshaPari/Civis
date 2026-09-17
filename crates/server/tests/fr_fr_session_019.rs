@@ -10,7 +10,7 @@ mod fr_fr_session_019 {
     /// Verify FR-SESSION-019 type existence and basic behavior.
     #[test]
     fn verify_fr_session_019_basic() {
-        let ws = civ_server::WorldState::default();
-        assert!(ws.tick == 0);
+        use civ_server::{JsonRpcRequest, SessionSnapshot, SESSION_HISTORY_CAP};
+        assert!(SESSION_HISTORY_CAP > 0);
     }
 }

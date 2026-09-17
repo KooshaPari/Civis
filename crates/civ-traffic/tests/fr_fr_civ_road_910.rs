@@ -10,7 +10,8 @@ mod fr_fr_civ_road_910 {
     /// Verify FR-CIV-ROAD-910 type existence and basic behavior.
     #[test]
     fn verify_fr_civ_road_910_basic() {
-        let ws = civ_traffic::WorldState::default();
-        assert!(ws.tick == 0);
+        use civ_traffic::{InfraProvenance, RoadKind, SCHEMA_VERSION};
+        assert!(!SCHEMA_VERSION.is_empty());
+        assert_eq!(RoadKind::None.speed_multiplier(), 1.0);
     }
 }

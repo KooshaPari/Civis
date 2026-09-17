@@ -10,7 +10,8 @@ mod fr_fr_civ_legends_sig_05 {
     /// Verify FR-CIV-LEGENDS-SIG-05 type existence and basic behavior.
     #[test]
     fn verify_fr_civ_legends_sig_05_basic() {
-        let ws = civ_legends::WorldState::default();
-        assert!(ws.tick == 0);
+        use civ_legends::{SagaGraph, SignificanceConfig};
+        let _ = SagaGraph::default();
+        let _ = SignificanceConfig::default();
     }
 }

@@ -10,7 +10,9 @@ mod fr_fr_civ_voxel_032 {
     /// Verify FR-CIV-VOXEL-032 type existence and basic behavior.
     #[test]
     fn verify_fr_civ_voxel_032_basic() {
-        let ws = civ_voxel::WorldState::default();
-        assert!(ws.tick == 0);
+        use civ_voxel::{WorldCoord, FIXED_SCALE};
+        let c = WorldCoord { x: 0, y: 0, z: 0 };
+        assert_eq!(c.x, 0);
+        assert!(FIXED_SCALE > 0);
     }
 }

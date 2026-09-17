@@ -10,7 +10,8 @@ mod fr_fr_civ_ai_014 {
     /// Verify FR-CIV-AI-014 type existence and basic behavior.
     #[test]
     fn verify_fr_civ_ai_014_basic() {
-        let ws = civ_ai::WorldState::default();
-        assert!(ws.tick == 0);
+        use civ_ai::{AiConfig, SCHEMA_VERSION};
+        assert_eq!(SCHEMA_VERSION, 0);
+        let _ = AiConfig::default();
     }
 }

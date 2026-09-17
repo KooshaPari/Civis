@@ -46,7 +46,7 @@ The **Acceptance Contract** column is the machine-checkable oracle hook — thre
 | NFR-CIV-SCALE-002 | Chunk streaming keeps render thread hitch-free | `clients/bevy-ref/` | manual fly-through + frame-time recording | Zero frames with duration > 2× median attributable to chunk I/O during 30 s fly-through at 100 cells/s | stub |
 | NFR-CIV-SCALE-003 | 10 simultaneous WS clients without tick regression | `crates/server/` | `tests/proto/10_client_load` | P99 tick processing regression ≤ 2 ms vs 0-client baseline; P99 delta delivery ≤ 50 ms loopback | code-only |
 | NFR-CIV-SCALE-900 | 20mi×20mi world extent via SVO + 16³ leaf chunks | `crates/voxel/` | TODO: `full_map_extent_instantiates` | `WorldCoord` addressing covers 32km×32km extent without precision loss | stub |
-| NFR-CIV-SCALE-901 | Active working set resident; rest streams from disk | `crates/voxel/` | TODO: `streaming_memory_budget` | Resident chunk count ≤ configured budget during full-map pan; evicted chunks reload on approach | stub |
+| NFR-CIV-SCALE-901 | Active working set resident; rest streams from disk | `crates/voxel/tests/fr_nfr_civ_scale_901.rs` | `streaming_memory_budget` | Resident chunk count ≤ configured budget during full-map pan; evicted chunks reload on approach | traced |
 | NFR-CIV-SCALE-902 | Compact on-disk chunk format (LOD pyramids + compression) | `crates/voxel/` | TODO: `disk_footprint_estimate` | Documented bytes/voxel estimate for 20mi target; chunks stored compressed with LOD mips | stub |
 | NFR-CIV-SCALE-910 | LOD-tiered agent simulation (Hot/Warm/Cold) | `crates/agents/` | `agents::lod_gestalt_no_divergence` | Cold→Hot promotion yields same determinism hash as always-Hot run (same seed/path) | code-only |
 | NFR-CIV-SCALE-920 | LOD/streaming transitions preserve determinism | `crates/engine/` | TODO: `determinism_across_lod` | Same seed + camera path → bit-identical sim state regardless of chunk residency history | stub |
@@ -114,3 +114,47 @@ The **Acceptance Contract** column is the machine-checkable oracle hook — thre
 **43 rows** (35 canonical `NFR-CIV-*` from `non-functional-requirements.md` + 8 3D extension `900`-series rows). COVERAGE_AUDIT enumerated 34 unique `NFR-*` tokens before this matrix; this file is the superset oracle spine.
 
 *Generated 2026-06-25 for P3-T2 traceability spine.*
+
+### Status audit 2026-09-17
+
+Every `code-only`/`stub` row was re-checked against the workspace. Of the 25
+oracle test names this matrix cites, only 3 existed (`autosave_cadence`,
+`dirty_queue_deterministic`, `lod_gestalt_no_divergence`). The rest are broken
+down as follows.
+
+**Promoted to `traced`** (headless oracle added and passing):
+
+| Row | Test |
+|-----|------|
+| NFR-CIV-DET-003 | `` `crates/engine/tests/fr_nfr_civ_det_003.rs` `` |
+| NFR-CIV-DET-004 | `` `crates/engine/tests/fr_nfr_civ_det_004.rs` `` |
+| NFR-CIV-REL-004 | `` `crates/engine/tests/fr_nfr_civ_rel_004.rs` `` |
+| NFR-CIV-SCALE-901 | `` `crates/voxel/tests/fr_nfr_civ_scale_901.rs` `` |
+
+**Demoted to `stub`** — `code-only` overstated what exists; there is no
+implementation surface to test:
+
+| Row | Why |
+|-----|-----|
+| NFR-CIV-REL-002 | No preflight surface anywhere in `crates/server/`. |
+
+**Deliberately not converted to headless tests.** These rows keep `code-only`
+because their acceptance contract is not assertable in a unit test. Converting
+them would mean asserting a proxy, which would make the row look traced
+without actually verifying the requirement:
+
+| Row | Gating constraint |
+|-----|-------------------|
+| NFR-CIV-PERF-001/002, NFR-CIV-PERF-900/901 | GPU + 60-second wall-clock frame-time percentiles; needs a real renderer and hardware. |
+| NFR-CIV-PERF-005, NFR-CIV-SCALE-002 | GPU mesh throughput / manual fly-through frame recording. |
+| NFR-CIV-PERF-007, NFR-CIV-SCALE-003 | 60-second aggregate bandwidth across 10 live WS clients. |
+| NFR-CIV-PERF-006 | Peak RSS measurement over 500 ticks. |
+| NFR-CIV-DET-001/002 | Cross-platform CI matrix (Windows/macOS/Linux hash equality). |
+| NFR-CIV-SEC-002/004 | External scanners (trufflehog, bandit, semgrep) in CI. |
+| NFR-CIV-SEC-003 | Requires instrumenting outbound syscalls for a 500-tick run. |
+| NFR-CIV-ACC-001 | Colourblind simulation over the palette; needs the accessibility toolchain. |
+| NFR-CIV-ACC-002/003/004, NFR-CIV-PORT-002 | Bevy client UI / ADR lint, outside the headless core. |
+| NFR-CIV-PORT-001/003 | Platform build matrix. |
+| NFR-CIV-MAINT-001..006 | Workspace-wide CI quality gates (llvm-cov, jscpd, tach, ratchets). |
+| NFR-CIV-SCALE-902, NFR-CIV-SCALE-920 | Disk-footprint estimate / determinism across LOD residency history. |
+

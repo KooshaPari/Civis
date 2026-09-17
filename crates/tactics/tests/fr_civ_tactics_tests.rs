@@ -4,7 +4,7 @@
 
 use civ_tactics::{
     FogOfWar, FormationKind, MoraleState, UnitStance,
-    FactionEngagementStats, formation_offsets, score_doctrine_fitness,
+    FactionEngagementStats, formation_offsets,
 };
 
 /// FR-CIV-TACTICS-025 — FogOfWar can be constructed with grid size.

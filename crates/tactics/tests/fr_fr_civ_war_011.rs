@@ -2,27 +2,26 @@
 //!
 //! Epic: FR-CIV-WAR
 //! Status: CODE-ONLY-no-spec
-//! Auto-generated test stub — 2026-09-16
 //!
-//! This test file verifies FR FR-CIV-WAR-011.
-//! Fill in the test body with assertions that validate the requirement.
+//! FR-CIV-WAR-011: Maneuver — operational movement driven by objectives + supply.
 
-// Referenced code:
-// - docs/design/warfare.md:83
-// - docs/design/warfare.md:192
+use civ_tactics::OperationalMovementConfig;
 
 #[cfg(test)]
 mod fr_fr_civ_war_011 {
-    /// Verify FR-CIV-WAR-011 behavior.
-    ///
-    /// FR: FR-CIV-WAR-011 (FR-CIV-WAR)
-    /// Acceptance criteria:
-    /// - Criterion 1
-    /// - Criterion 2
-    /// - Criterion 3
+    use super::*;
+
+    /// FR-CIV-WAR-011: Operational movement config defaults are sane.
     #[test]
     fn verify_fr_civ_war_011_basic() {
-        // FR stub - minimal pass assertion
-        assert!(true, "FR FR-CIV-WAR-011 stub verified");
+        let config = OperationalMovementConfig::default();
+        assert!(config.cadence_ticks > 0, "cadence must be positive");
+    }
+
+    /// FR-CIV-WAR-011: Path search radius is positive.
+    #[test]
+    fn movement_config_search_radius_positive() {
+        let config = OperationalMovementConfig::default();
+        assert!(config.path_search_radius > 0, "search radius must be positive");
     }
 }

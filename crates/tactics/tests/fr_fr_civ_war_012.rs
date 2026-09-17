@@ -2,27 +2,33 @@
 //!
 //! Epic: FR-CIV-WAR
 //! Status: CODE-ONLY-no-spec
-//! Auto-generated test stub — 2026-09-16
 //!
-//! This test file verifies FR FR-CIV-WAR-012.
-//! Fill in the test body with assertions that validate the requirement.
+//! FR-CIV-WAR-012: Attrition & cohesion — drains strength/cohesion before engagements.
 
-// Referenced code:
-// - docs/design/warfare.md:86
-// - docs/design/warfare.md:193
+use civ_tactics::compute_war_economy_drain;
 
 #[cfg(test)]
 mod fr_fr_civ_war_012 {
-    /// Verify FR-CIV-WAR-012 behavior.
-    ///
-    /// FR: FR-CIV-WAR-012 (FR-CIV-WAR)
-    /// Acceptance criteria:
-    /// - Criterion 1
-    /// - Criterion 2
-    /// - Criterion 3
+    use super::*;
+
+    /// FR-CIV-WAR-012: War drain is proportional to casualties.
     #[test]
     fn verify_fr_civ_war_012_basic() {
-        // FR stub - minimal pass assertion
-        assert!(true, "FR FR-CIV-WAR-012 stub verified");
+        let drain_low = compute_war_economy_drain(10_000, 10, true);
+        let drain_high = compute_war_economy_drain(10_000, 100, true);
+        assert!(
+            drain_high.population_loss >= drain_low.population_loss,
+            "higher casualties should cause more population loss"
+        );
+    }
+
+    /// FR-CIV-WAR-012: Economy exhaustion flag set when treasury critically low.
+    #[test]
+    fn economy_exhaustion_detected() {
+        let drain = compute_war_economy_drain(10, 0, true);
+        assert!(
+            drain.economically_exhausted,
+            "very low treasury should trigger exhaustion"
+        );
     }
 }

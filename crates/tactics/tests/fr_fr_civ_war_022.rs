@@ -2,27 +2,44 @@
 //!
 //! Epic: FR-CIV-WAR
 //! Status: CODE-ONLY-no-spec
-//! Auto-generated test stub — 2026-09-16
 //!
-//! This test file verifies FR FR-CIV-WAR-022.
-//! Fill in the test body with assertions that validate the requirement.
+//! FR-CIV-WAR-022: Voxel destruction feedback — DamageEvents reshape terrain.
+//! Tests that damage events carry valid world coordinates and radii.
 
-// Referenced code:
-// - docs/design/warfare.md:114
-// - docs/design/warfare.md:197
+use civ_tactics::DamageEvent;
+use civ_voxel::WorldCoord;
 
 #[cfg(test)]
 mod fr_fr_civ_war_022 {
-    /// Verify FR-CIV-WAR-022 behavior.
-    ///
-    /// FR: FR-CIV-WAR-022 (FR-CIV-WAR)
-    /// Acceptance criteria:
-    /// - Criterion 1
-    /// - Criterion 2
-    /// - Criterion 3
+    use super::*;
+
+    /// FR-CIV-WAR-022: Damage event with positive energy produces casualties.
     #[test]
     fn verify_fr_civ_war_022_basic() {
-        // FR stub - minimal pass assertion
-        assert!(true, "FR FR-CIV-WAR-022 stub verified");
+        let de = DamageEvent {
+            center: WorldCoord { x: 5, y: 5, z: 3 },
+            radius_voxels: 2,
+            energy: 500,
+        };
+        assert!(
+            de.estimated_casualties() > 0,
+            "non-zero damage event should produce casualties"
+        );
+    }
+
+    /// FR-CIV-WAR-022: Larger radius at same energy increases blast footprint.
+    #[test]
+    fn larger_radius_increases_damage_footprint() {
+        let small = DamageEvent {
+            center: WorldCoord { x: 0, y: 0, z: 0 },
+            radius_voxels: 1,
+            energy: 300,
+        };
+        let large = DamageEvent {
+            center: WorldCoord { x: 0, y: 0, z: 0 },
+            radius_voxels: 5,
+            energy: 300,
+        };
+        assert!(large.estimated_casualties() > small.estimated_casualties());
     }
 }

@@ -2,23 +2,28 @@
 //!
 //! Epic: FR-CIV-TACTICS
 //! Status: SPEC-ONLY
-//! Auto-generated test stub — 2026-09-16
 //!
-//! This test file verifies FR FR-CIV-TACTICS-101.
-//! Fill in the test body with assertions that validate the requirement.
+//! FR-CIV-TACTICS-101: Pathfinding BFS next step toward a target.
+
+use civ_tactics::bfs_next_step;
 
 #[cfg(test)]
 mod fr_fr_civ_tactics_101 {
-    /// Verify FR-CIV-TACTICS-101 behavior.
-    ///
-    /// FR: FR-CIV-TACTICS-101 (FR-CIV-TACTICS)
-    /// Acceptance criteria:
-    /// - Criterion 1
-    /// - Criterion 2
-    /// - Criterion 3
+    use super::*;
+
+    /// FR-CIV-TACTICS-101: BFS moves one step toward target.
     #[test]
     fn verify_fr_civ_tactics_101_basic() {
-        // FR stub - minimal pass assertion
-        assert!(true, "FR FR-CIV-TACTICS-101 stub verified");
+        let step = bfs_next_step((0, 0), (5, 0), 100);
+        assert!(step.is_some(), "BFS should find a step toward (5,0)");
+        let (x, y) = step.unwrap();
+        assert_eq!(y, 0, "should move along x axis");
+        assert!(x > 0, "should move in positive x direction");
+    }
+
+    /// FR-CIV-TACTICS-101: BFS returns None when already at goal.
+    #[test]
+    fn bfs_returns_none_at_goal() {
+        assert!(bfs_next_step((3, 3), (3, 3), 100).is_none());
     }
 }

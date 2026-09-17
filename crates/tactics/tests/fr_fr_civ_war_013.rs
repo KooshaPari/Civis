@@ -2,27 +2,33 @@
 //!
 //! Epic: FR-CIV-WAR
 //! Status: CODE-ONLY-no-spec
-//! Auto-generated test stub — 2026-09-16
 //!
-//! This test file verifies FR FR-CIV-WAR-013.
-//! Fill in the test body with assertions that validate the requirement.
+//! FR-CIV-WAR-013: Bridge to tactical — operational layer hands off to war bridge.
 
-// Referenced code:
-// - docs/design/warfare.md:89
-// - docs/design/warfare.md:194
+use civ_tactics::{CombatEngagement, DamageEvent};
+use civ_voxel::WorldCoord;
 
 #[cfg(test)]
 mod fr_fr_civ_war_013 {
-    /// Verify FR-CIV-WAR-013 behavior.
-    ///
-    /// FR: FR-CIV-WAR-013 (FR-CIV-WAR)
-    /// Acceptance criteria:
-    /// - Criterion 1
-    /// - Criterion 2
-    /// - Criterion 3
+    use super::*;
+
+    /// FR-CIV-WAR-013: Combat engagement struct is constructible with valid fields.
     #[test]
     fn verify_fr_civ_war_013_basic() {
-        // FR stub - minimal pass assertion
-        assert!(true, "FR FR-CIV-WAR-013 stub verified");
+        let engagement = CombatEngagement {
+            shooter_id: 100,
+            target_id: 200,
+            shooter_faction: 1,
+            target_faction: 2,
+            damage: DamageEvent {
+                center: WorldCoord { x: 10, y: 20, z: 5 },
+                radius_voxels: 3,
+                energy: 200,
+            },
+            target_index: 0,
+        };
+        assert_eq!(engagement.shooter_faction, 1);
+        assert_eq!(engagement.target_faction, 2);
+        assert!(engagement.damage.estimated_casualties() > 0);
     }
 }

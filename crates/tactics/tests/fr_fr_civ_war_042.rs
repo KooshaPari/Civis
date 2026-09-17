@@ -2,27 +2,33 @@
 //!
 //! Epic: FR-CIV-WAR
 //! Status: CODE-ONLY-no-spec
-//! Auto-generated test stub — 2026-09-16
 //!
-//! This test file verifies FR FR-CIV-WAR-042.
-//! Fill in the test body with assertions that validate the requirement.
+//! FR-CIV-WAR-042: Reconstruction — post-war rebuilding via existing emergence.
+//! Tests that economy exhaustion is detectable (a prerequisite for reconstruction timing).
 
-// Referenced code:
-// - docs/design/warfare.md:150
-// - docs/design/warfare.md:201
+use civ_tactics::compute_war_economy_drain;
 
 #[cfg(test)]
 mod fr_fr_civ_war_042 {
-    /// Verify FR-CIV-WAR-042 behavior.
-    ///
-    /// FR: FR-CIV-WAR-042 (FR-CIV-WAR)
-    /// Acceptance criteria:
-    /// - Criterion 1
-    /// - Criterion 2
-    /// - Criterion 3
+    use super::*;
+
+    /// FR-CIV-WAR-042: Sustained war can exhaust the economy (reconstruction trigger).
     #[test]
     fn verify_fr_civ_war_042_basic() {
-        // FR stub - minimal pass assertion
-        assert!(true, "FR FR-CIV-WAR-042 stub verified");
+        let drain = compute_war_economy_drain(10, 100, true);
+        assert!(
+            drain.economically_exhausted,
+            "very low treasury should be marked economically exhausted"
+        );
+    }
+
+    /// FR-CIV-WAR-042: Healthy treasury is not exhausted.
+    #[test]
+    fn healthy_treasury_not_exhausted() {
+        let drain = compute_war_economy_drain(1_000_000, 10, true);
+        assert!(
+            !drain.economically_exhausted,
+            "large treasury should not be exhausted"
+        );
     }
 }

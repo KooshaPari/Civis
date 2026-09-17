@@ -2,23 +2,24 @@
 //!
 //! Epic: FR-CIV-FOG
 //! Status: SPEC-ONLY
-//! Auto-generated test stub — 2026-09-16
 //!
-//! This test file verifies FR FR-CIV-FOG-005.
-//! Fill in the test body with assertions that validate the requirement.
+//! FR-CIV-FOG-005: FogOfWar resets visibility when update() is called.
+
+use civ_tactics::FogOfWar;
+use civ_voxel::{MaterialId, VoxelWorld};
 
 #[cfg(test)]
 mod fr_fr_civ_fog_005 {
-    /// Verify FR-CIV-FOG-005 behavior.
-    ///
-    /// FR: FR-CIV-FOG-005 (FR-CIV-FOG)
-    /// Acceptance criteria:
-    /// - Criterion 1
-    /// - Criterion 2
-    /// - Criterion 3
+    use super::*;
+
+    /// FR-CIV-FOG-005: Visibility is recomputed on update (not incremental).
     #[test]
     fn verify_fr_civ_fog_005_basic() {
-        // FR stub - minimal pass assertion
-        assert!(true, "FR FR-CIV-FOG-005 stub verified");
+        let mut fog = FogOfWar::new(32, None);
+        let world = VoxelWorld::<MaterialId>::new(32);
+        fog.update(&[], &world);
+        assert!(!fog.is_visible(0, (0, 0)));
+        fog.update(&[], &world);
+        assert!(!fog.is_visible(0, (0, 0)));
     }
 }

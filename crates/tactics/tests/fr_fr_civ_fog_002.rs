@@ -2,23 +2,26 @@
 //!
 //! Epic: FR-CIV-FOG
 //! Status: SPEC-ONLY
-//! Auto-generated test stub — 2026-09-16
 //!
-//! This test file verifies FR FR-CIV-FOG-002.
-//! Fill in the test body with assertions that validate the requirement.
+//! FR-CIV-FOG-002: FogOfWar visibility can be queried per faction.
+
+use civ_tactics::FogOfWar;
 
 #[cfg(test)]
 mod fr_fr_civ_fog_002 {
-    /// Verify FR-CIV-FOG-002 behavior.
-    ///
-    /// FR: FR-CIV-FOG-002 (FR-CIV-FOG)
-    /// Acceptance criteria:
-    /// - Criterion 1
-    /// - Criterion 2
-    /// - Criterion 3
+    use super::*;
+
+    /// FR-CIV-FOG-002: New fog has no visible cells for any faction.
     #[test]
     fn verify_fr_civ_fog_002_basic() {
-        // FR stub - minimal pass assertion
-        assert!(true, "FR FR-CIV-FOG-002 stub verified");
+        let fog = FogOfWar::new(16, None);
+        assert!(!fog.is_visible(0, (0, 0)));
+    }
+
+    /// FR-CIV-FOG-002: Visibility query for unknown faction returns false.
+    #[test]
+    fn fog_visibility_unknown_faction_returns_false() {
+        let fog = FogOfWar::new(16, None);
+        assert!(!fog.is_visible(999, (5, 5)));
     }
 }

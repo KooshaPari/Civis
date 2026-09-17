@@ -2,26 +2,29 @@
 //!
 //! Epic: FR-CIV-TACTICS
 //! Status: IMPL-NO-TEST
-//! Auto-generated test stub — 2026-09-16
 //!
-//! This test file verifies FR FR-CIV-TACTICS-051.
-//! Fill in the test body with assertions that validate the requirement.
+//! FR-CIV-TACTICS-051: Formation offset generation for squad positioning.
 
-// Referenced code:
-// - docs/development-guide/p-w1-kickoff.md:53
+use civ_tactics::{formation_offsets, FormationKind};
 
 #[cfg(test)]
 mod fr_fr_civ_tactics_051 {
-    /// Verify FR-CIV-TACTICS-051 behavior.
-    ///
-    /// FR: FR-CIV-TACTICS-051 (FR-CIV-TACTICS)
-    /// Acceptance criteria:
-    /// - Criterion 1
-    /// - Criterion 2
-    /// - Criterion 3
+    use super::*;
+
+    /// FR-CIV-TACTICS-051: Line formation produces correct number of offsets.
     #[test]
     fn verify_fr_civ_tactics_051_basic() {
-        // FR stub - minimal pass assertion
-        assert!(true, "FR FR-CIV-TACTICS-051 stub verified");
+        let offsets = formation_offsets(FormationKind::Line, 5);
+        assert_eq!(offsets.len(), 5);
+    }
+
+    /// FR-CIV-TACTICS-051: Column formation produces unique positions.
+    #[test]
+    fn formation_column_offsets_are_unique() {
+        let offsets = formation_offsets(FormationKind::Column, 4);
+        let mut positions: Vec<_> = offsets.iter().collect();
+        positions.sort();
+        positions.dedup();
+        assert_eq!(positions.len(), 4, "all column positions should be unique");
     }
 }

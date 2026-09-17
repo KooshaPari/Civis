@@ -2,23 +2,40 @@
 //!
 //! Epic: FR-CIV-TACTICS
 //! Status: SPEC-ONLY
-//! Auto-generated test stub — 2026-09-16
 //!
-//! This test file verifies FR FR-CIV-TACTICS-001-.
-//! Fill in the test body with assertions that validate the requirement.
+//! FR-CIV-TACTICS-001-: DamageEvent voxel-destructible combat basics.
+
+use civ_tactics::DamageEvent;
+use civ_voxel::WorldCoord;
 
 #[cfg(test)]
 mod fr_fr_civ_tactics_001_ {
-    /// Verify FR-CIV-TACTICS-001- behavior.
-    ///
-    /// FR: FR-CIV-TACTICS-001- (FR-CIV-TACTICS)
-    /// Acceptance criteria:
-    /// - Criterion 1
-    /// - Criterion 2
-    /// - Criterion 3
+    use super::*;
+
+    /// FR-CIV-TACTICS-001-: DamageEvent with zero energy produces zero casualties.
     #[test]
     fn verify_fr_civ_tactics_001__basic() {
-        // FR stub - minimal pass assertion
-        assert!(true, "FR FR-CIV-TACTICS-001- stub verified");
+        let de = DamageEvent {
+            center: WorldCoord { x: 0, y: 0, z: 0 },
+            radius_voxels: 0,
+            energy: 0,
+        };
+        assert_eq!(de.estimated_casualties(), 0);
+    }
+
+    /// FR-CIV-TACTICS-001-: Larger radius and energy yield more casualties.
+    #[test]
+    fn damage_event_casualties_monotonic_in_radius() {
+        let small = DamageEvent {
+            center: WorldCoord { x: 0, y: 0, z: 0 },
+            radius_voxels: 1,
+            energy: 100,
+        };
+        let large = DamageEvent {
+            center: WorldCoord { x: 0, y: 0, z: 0 },
+            radius_voxels: 3,
+            energy: 100,
+        };
+        assert!(large.estimated_casualties() > small.estimated_casualties());
     }
 }

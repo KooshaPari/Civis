@@ -2,23 +2,20 @@
 //!
 //! Epic: FR-CIV-TACTICS
 //! Status: SPEC-ONLY
-//! Auto-generated test stub — 2026-09-16
 //!
-//! This test file verifies FR FR-CIV-TACTICS-100.
-//! Fill in the test body with assertions that validate the requirement.
+//! FR-CIV-TACTICS-100: Tactical combat resolution across the full war bridge pipeline.
+
+use civ_tactics::compute_war_economy_drain;
 
 #[cfg(test)]
 mod fr_fr_civ_tactics_100 {
-    /// Verify FR-CIV-TACTICS-100 behavior.
-    ///
-    /// FR: FR-CIV-TACTICS-100 (FR-CIV-TACTICS)
-    /// Acceptance criteria:
-    /// - Criterion 1
-    /// - Criterion 2
-    /// - Criterion 3
+    use super::*;
+
+    /// FR-CIV-TACTICS-100: War economy drain is zero when not at war.
     #[test]
     fn verify_fr_civ_tactics_100_basic() {
-        // FR stub - minimal pass assertion
-        assert!(true, "FR FR-CIV-TACTICS-100 stub verified");
+        let drain = compute_war_economy_drain(10_000, 50, false);
+        assert_eq!(drain.treasury_drain, 0);
+        assert_eq!(drain.population_loss, 0);
     }
 }

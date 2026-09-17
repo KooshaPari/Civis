@@ -72,10 +72,10 @@ Source spec: `docs/specs/CIV-0101-lod.md`
 
 | FR ID | Requirement Summary | Spec Doc | Crate / Source Path | Test Name Pattern | Status |
 |---|---|---|---|---|---|
-| FR-LOD-001 | The engine SHALL support two zoom levels: strategic (region) and operational (district/hex). | CIV-0101 | `crates/engine/src/lod.rs` | `lod::two_levels_defined` | planned |
-| FR-LOD-002 | Strategic view SHALL aggregate district data into region summaries each tick. | CIV-0101 | `crates/engine/src/lod.rs` | `lod::strategic_aggregation` | planned |
-| FR-LOD-003 | LOD transitions SHALL not alter simulation state, only view projection. | CIV-0101 | `crates/engine/src/lod.rs` | `lod::transition_no_state_mutation` | planned |
-| FR-LOD-004 | Operational view SHALL expose individual hex-cell resource and population data. | CIV-0101 | `crates/engine/src/lod.rs` | `lod::operational_hex_data_visible` | planned |
+| FR-LOD-001 | The engine SHALL support two zoom levels: strategic (region) and operational (district/hex). | CIV-0101 | `crates/engine/src/lod.rs` | `lod::two_levels_defined` | implemented |
+| FR-LOD-002 | Strategic view SHALL aggregate district data into region summaries each tick. | CIV-0101 | `crates/engine/src/lod.rs` | `lod::strategic_aggregation` | implemented |
+| FR-LOD-003 | LOD transitions SHALL not alter simulation state, only view projection. | CIV-0101 | `crates/engine/src/lod.rs` | `lod::transition_no_state_mutation` | implemented |
+| FR-LOD-004 | Operational view SHALL expose individual hex-cell resource and population data. | CIV-0101 | `crates/engine/src/lod.rs` | `lod::operational_hex_data_visible` | implemented |
 
 ---
 
@@ -175,11 +175,11 @@ Source spec: `docs/specs/CIV-0200-protocol.md`
 
 | FR ID | Requirement Summary | Spec Doc | Crate / Source Path | Test Name Pattern | Status |
 |---|---|---|---|---|---|
-| FR-PROT-001 | The engine SHALL expose a JSON-RPC 2.0 API over WebSocket. | CIV-0200 | `crates/protocol/src/server.rs` | `protocol::jsonrpc_handshake` | planned |
-| FR-PROT-002 | All events SHALL be emitted as JSON-RPC notifications with a common envelope. | CIV-0200 | `crates/protocol/src/events.rs` | `protocol::event_envelope_valid` | planned |
-| FR-PROT-003 | Event envelope SHALL contain `event_id` (UUIDv7), `event_type`, `session_id`, `tick`, `created_at`, `payload`. | CIV-0200 | `crates/protocol/src/events.rs` | `protocol::envelope_fields_present` | planned |
+| FR-PROT-001 | The engine SHALL expose a JSON-RPC 2.0 API over WebSocket. | CIV-0200 | `crates/server/src/jsonrpc.rs` | `protocol::jsonrpc_handshake` | implemented |
+| FR-PROT-002 | All events SHALL be emitted as JSON-RPC notifications with a common envelope. | CIV-0200 | `crates/server/src/ws_bridge.rs` | `protocol::event_envelope_valid` | implemented |
+| FR-PROT-003 | Event envelope SHALL contain `event_id` (UUIDv7), `event_type`, `session_id`, `tick`, `created_at`, `payload`. | CIV-0200 | `crates/server/src/ws_bridge.rs` | `protocol::envelope_fields_present` | implemented |
 | FR-PROT-004 | The server SHALL persist all emitted events to the DB audit log within the same tick. | CIV-0200 | `crates/db/src/audit_log.rs` | `db::events_persisted_same_tick` | planned |
-| FR-PROT-005 | Client connections SHALL authenticate before receiving any session events. | CIV-0200 | `crates/protocol/src/auth.rs` | `protocol::unauthenticated_rejected` | planned |
+| FR-PROT-005 | Client connections SHALL authenticate before receiving any session events. | CIV-0200 | `crates/server/src/authn.rs` | `protocol::unauthenticated_rejected` | implemented |
 | FR-PROT-006 | The protocol SHALL support at least 10 concurrent client connections per session. | CIV-0200 | `crates/protocol/src/server.rs` | `protocol::concurrent_clients_10` | planned |
 
 ---
@@ -258,10 +258,10 @@ Source spec: `docs/specs/CIV-1000-save-load.md`
 
 | FR ID | Requirement Summary | Spec Doc | Crate / Source Path | Test Name Pattern | Status |
 |---|---|---|---|---|---|
-| FR-SAVE-001 | Quicksave SHALL serialize full world state to a named slot within 500 ms. | CIV-1000 | `crates/db/src/save.rs` | `save::quicksave_under_500ms` | planned |
+| FR-SAVE-001 | Quicksave SHALL serialize full world state to a named slot within 500 ms. | CIV-1000 | `crates/server/src/saves.rs` | `save::quicksave_under_500ms` | implemented |
 | FR-SAVE-002 | Save SHALL emit `session.saved.v1` on success or `session.save_failed.v1` on error. | CIV-1000 | `crates/db/src/save.rs` | `save::save_events_emitted` | planned |
 | FR-SAVE-003 | Load SHALL restore world state to byte-identical engine state (determinism guarantee). | CIV-1000 | `crates/db/src/load.rs` | `save::load_restores_identical_state` | planned |
-| FR-SAVE-004 | Autosave SHALL trigger every N ticks (configurable, default 100). | CIV-1000 | `crates/db/src/autosave.rs` | `save::autosave_every_n_ticks` | planned |
+| FR-SAVE-004 | Autosave SHALL trigger every N ticks (configurable, default 100). | CIV-1000 | `crates/server/src/autosave.rs` | `save::autosave_every_n_ticks` | implemented |
 | FR-SAVE-005 | Save format SHALL include a schema version; older saves SHALL be rejected with an error (no silent migration). | CIV-1000 | `crates/db/src/schema.rs` | `save::old_schema_rejected_explicitly` | planned |
 
 ---

@@ -115,10 +115,10 @@ Source spec: `docs/specs/CIV-0104-theorem.md`
 
 | FR ID | Requirement Summary | Spec Doc | Crate / Source Path | Test Name Pattern | Status |
 |---|---|---|---|---|---|
-| FR-THRY-001 | Total Joule energy in a closed system SHALL be conserved each tick (production - consumption - waste = 0). | CIV-0104 | `crates/engine/src/invariants.rs` | `invariants::joule_conservation` | planned |
-| FR-THRY-002 | Total MilliCredit supply SHALL remain constant absent explicit treasury mint/burn operations. | CIV-0104 | `crates/engine/src/invariants.rs` | `invariants::credit_supply_conserved` | planned |
-| FR-THRY-003 | Population delta per tick SHALL equal births minus deaths minus emigration plus immigration. | CIV-0104 | `crates/engine/src/invariants.rs` | `invariants::population_delta_balanced` | planned |
-| FR-THRY-004 | The invariant checker SHALL run every tick and panic in debug builds on violation. | CIV-0104 | `crates/engine/src/invariants.rs` | `invariants::checker_panics_on_violation` | planned |
+| FR-THRY-001 | Total Joule energy in a closed system SHALL be conserved each tick (production - consumption - waste = 0). | CIV-0104 | `crates/engine/src/invariants.rs` | `invariants::joule_conservation` | implemented |
+| FR-THRY-002 | Total MilliCredit supply SHALL remain constant absent explicit treasury mint/burn operations. | CIV-0104 | `crates/engine/src/invariants.rs` | `invariants::credit_supply_conserved` | implemented |
+| FR-THRY-003 | Population delta per tick SHALL equal births minus deaths minus emigration plus immigration. | CIV-0104 | `crates/engine/src/invariants.rs` | `invariants::population_delta_balanced` | implemented |
+| FR-THRY-004 | The invariant checker SHALL run every tick and panic in debug builds on violation. | CIV-0104 | `crates/engine/src/invariants.rs` | `invariants::checker_panics_on_violation` | implemented |
 
 ---
 

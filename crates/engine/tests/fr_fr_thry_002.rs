@@ -1,16 +1,43 @@
 //! Tests for FR-THRY-002
 //!
-//! Epic: auto-generated
-//! Upgraded from stub to real assertions.
+//! FR-THRY-002: Total MilliCredit supply SHALL remain constant absent explicit
+//! treasury mint/burn operations.
 //!
-//! This test file verifies FR FR-THRY-002.
+//! Verifies economy ledger conservation includes credit balance checks.
+
+use civ_engine::invariants;
+use civ_engine::Simulation;
 
 #[cfg(test)]
 mod fr_fr_thry_002 {
-    /// Verify FR-THRY-002 type existence and basic behavior.
+    use super::*;
+
+    /// FR-THRY-002: Economy ledger conservation passes after tick (credits balanced).
     #[test]
-    fn verify_fr_thry_002_basic() {
-        let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+    fn credit_supply_conserved_after_tick() {
+        let mut sim = Simulation::with_seed(55);
+        sim.tick();
+        let result = invariants::check_tick_invariants(&sim);
+        assert!(
+            result.is_ok(),
+            "FR-THRY-002 credit supply conservation violated: {:?}",
+            result.err()
+        );
+    }
+
+    /// FR-THRY-002: Credit conservation holds across multiple ticks.
+    #[test]
+    fn credit_supply_conserved_across_ticks() {
+        let mut sim = Simulation::with_seed(88);
+        for _ in 0..20 {
+            sim.tick();
+            let result = invariants::check_tick_invariants(&sim);
+            assert!(
+                result.is_ok(),
+                "FR-THRY-002 violated at tick {}: {:?}",
+                sim.state.tick,
+                result.err()
+            );
+        }
     }
 }

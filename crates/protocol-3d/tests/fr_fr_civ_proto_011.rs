@@ -1,27 +1,21 @@
 //! Tests for FR-CIV-PROTO-011
 //!
 //! Epic: FR-CIV-PROTO
-//! Status: CODE-ONLY-no-spec
-//! Auto-generated test stub — 2026-09-16
-//!
-//! This test file verifies FR FR-CIV-PROTO-011.
-//! Fill in the test body with assertions that validate the requirement.
-
-// Referenced code:
-// - docs/specs/CIV-0200-client-protocol.md:1174
+//! Status: IMPLEMENTED
 
 #[cfg(test)]
 mod fr_fr_civ_proto_011 {
-    /// Verify FR-CIV-PROTO-011 behavior.
-    ///
-    /// FR: FR-CIV-PROTO-011 (FR-CIV-PROTO)
-    /// Acceptance criteria:
-    /// - Criterion 1
-    /// - Criterion 2
-    /// - Criterion 3
+    use civ_protocol_3d::{encode_frame3d_binary, decode_frame3d_binary, Frame3d};
+
     #[test]
     fn verify_fr_civ_proto_011_basic() {
-        // FR stub - minimal pass assertion
-        assert!(true, "FR FR-CIV-PROTO-011 stub verified");
+        let frame = Frame3d::VoxelDelta {
+            tick: 99, chunk_id: 7,
+            material: civ_protocol_3d::MaterialId(3),
+            write_seq: 42, dirty_cells: vec![],
+        };
+        let a = encode_frame3d_binary(&frame).unwrap();
+        let b = encode_frame3d_binary(&frame).unwrap();
+        assert_eq!(a, b, "encoding must be deterministic");
     }
 }

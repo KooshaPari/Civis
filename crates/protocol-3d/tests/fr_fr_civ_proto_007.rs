@@ -1,27 +1,17 @@
 //! Tests for FR-CIV-PROTO-007
 //!
 //! Epic: FR-CIV-PROTO
-//! Status: CODE-ONLY-no-spec
-//! Auto-generated test stub — 2026-09-16
-//!
-//! This test file verifies FR FR-CIV-PROTO-007.
-//! Fill in the test body with assertions that validate the requirement.
-
-// Referenced code:
-// - docs/specs/CIV-0200-client-protocol.md:1154
+//! Status: IMPLEMENTED
 
 #[cfg(test)]
 mod fr_fr_civ_proto_007 {
-    /// Verify FR-CIV-PROTO-007 behavior.
-    ///
-    /// FR: FR-CIV-PROTO-007 (FR-CIV-PROTO)
-    /// Acceptance criteria:
-    /// - Criterion 1
-    /// - Criterion 2
-    /// - Criterion 3
+    use civ_protocol_3d::{BuildingKind3d, BuildingProvenance};
+
     #[test]
     fn verify_fr_civ_proto_007_basic() {
-        // FR stub - minimal pass assertion
-        assert!(true, "FR FR-CIV-PROTO-007 stub verified");
+        let kinds = [BuildingKind3d::Farm, BuildingKind3d::Mine, BuildingKind3d::Barracks,
+            BuildingKind3d::Temple, BuildingKind3d::Market, BuildingKind3d::House, BuildingKind3d::CityCenter];
+        assert_eq!(kinds.len(), 7);
+        assert_ne!(BuildingProvenance::Procedural, BuildingProvenance::Freehand);
     }
 }

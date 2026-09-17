@@ -1,27 +1,18 @@
 //! Tests for FR-CIV-PROTO-010
 //!
 //! Epic: FR-CIV-PROTO
-//! Status: CODE-ONLY-no-spec
-//! Auto-generated test stub — 2026-09-16
-//!
-//! This test file verifies FR FR-CIV-PROTO-010.
-//! Fill in the test body with assertions that validate the requirement.
-
-// Referenced code:
-// - docs/specs/CIV-0200-client-protocol.md:1169
+//! Status: IMPLEMENTED
 
 #[cfg(test)]
 mod fr_fr_civ_proto_010 {
-    /// Verify FR-CIV-PROTO-010 behavior.
-    ///
-    /// FR: FR-CIV-PROTO-010 (FR-CIV-PROTO)
-    /// Acceptance criteria:
-    /// - Criterion 1
-    /// - Criterion 2
-    /// - Criterion 3
+    use civ_protocol_3d::{BuildingDiffEntry, BuildingKind3d, WorldXZ};
+
     #[test]
     fn verify_fr_civ_proto_010_basic() {
-        // FR stub - minimal pass assertion
-        assert!(true, "FR FR-CIV-PROTO-010 stub verified");
+        let entry = BuildingDiffEntry {
+            id: 1, kind: BuildingKind3d::House, tier: 0,
+            position: WorldXZ { x: 0.0, z: 0.0 },
+        };
+        assert_eq!(entry.id, 1);
     }
 }

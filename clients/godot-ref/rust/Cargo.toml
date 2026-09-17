@@ -7,7 +7,9 @@ license = "MIT OR Apache-2.0"
 [workspace]
 
 [lib]
-crate-type = ["cdylib"]
+# `rlib` is required so the integration tests under `tests/` can link the
+# crate; `cdylib` remains the shipped GDExtension artifact.
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 civ-engine = { path = "../../../crates/engine" }

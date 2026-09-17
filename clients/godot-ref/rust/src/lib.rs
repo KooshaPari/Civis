@@ -1,8 +1,8 @@
 #![allow(clippy::result_large_err)] // godot_api generated closures
 
-mod f3d0_mesh;
-mod ux;
-mod ws_frame;
+pub mod f3d0_mesh;
+pub mod ux;
+pub mod ws_frame;
 
 use civ_engine::{Simulation, SimulationSnapshot};
 use civ_voxel::WorldCoord;

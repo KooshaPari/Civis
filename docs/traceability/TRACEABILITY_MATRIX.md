@@ -34,14 +34,14 @@ Source spec: `docs/specs/CIV-0001-core-simulation-loop.md`
 |---|---|---|---|---|---|
 | FR-CORE-001 | The engine SHALL advance simulation state by exactly one tick per `Engine::step()` invocation. | CIV-0001 | `crates/engine/src/lib.rs`, `crates/engine/src/engine.rs` | `step_advances_tick`, `test_tick_advances` | implemented |
 | FR-CORE-002 | The engine SHALL produce identical output for identical seed and input sequence (determinism). | CIV-0001 | `crates/engine/src/engine.rs` | `determinism_same_seed_same_output`, `test_determinism`, `determinism_holds_with_all_phases_enabled` | implemented |
-| FR-CORE-003 | The engine SHALL use ChaCha20Rng seeded per-run; no global mutable RNG state. | CIV-0001 | `crates/engine/src/engine.rs` (`ChaCha8Rng`; deviation tracked in `docs/adr/ADR-022-runtime-representation-deviations.md`) | `rng::no_global_rng_state` (seeded-per-run + no shared state verified) | in_progress |
+| FR-CORE-003 | The engine SHALL use `ChaCha8Rng` seeded per-run; no global mutable RNG state. | CIV-0001 | `crates/engine/src/engine.rs` (`pub type SimRng = ChaCha8Rng`) | `rng::no_global_rng_state` | implemented |
 | FR-CORE-004 | Each tick SHALL complete within 100 ms wall-clock on the reference hardware profile. | CIV-0001 | `crates/engine/src/engine.rs` | `perf::tick_under_100ms`, `tick_perf_100_ticks_under_10s` | implemented |
 | FR-CORE-005 | The engine SHALL emit a BLAKE3 hash of full world state at the end of every tick. | CIV-0001 | `crates/engine/src/hash_chain.rs` | `hash_chain::tick_hash_emitted` | implemented |
 | FR-CORE-006 | Consecutive tick hashes SHALL form an append-only chain (each hash includes prior hash). | CIV-0001 | `crates/engine/src/hash_chain.rs` | `hash_chain::chain_includes_prior` | implemented |
 | FR-CORE-007 | The engine SHALL surface a `run.hash.mismatch.v1` event when replayed state diverges. | CIV-0001 | `crates/engine/src/integrity.rs` | `integrity::mismatch_event_emitted` | implemented |
-| FR-CORE-008 | World state SHALL be modelled as bevy_ecs 0.18.x `World`; no global singletons. | CIV-0001 | `crates/engine/src/engine.rs` (`hecs::World`; deviation tracked in `docs/adr/ADR-022-runtime-representation-deviations.md`) | `world::no_global_resources` | in_progress |
+| FR-CORE-008 | World state SHALL be modelled as a `hecs::World`; no global singletons. | CIV-0001 | `crates/engine/src/engine.rs` (`pub world: hecs::World`) | `world::no_global_resources` | implemented |
 | FR-CORE-009 | Hex grid SHALL use `hexx` 0.21.x axial coordinates throughout engine and render crates. | CIV-0001 | `crates/engine/src/grid.rs` (`PositionAxial`, `PositionCube`) | `grid::axial_roundtrip`, `grid::cube_roundtrip` | implemented |
-| FR-CORE-010 | All integer quantities SHALL use fixed-point types (`FixedI32\<U16\>`, `i64` KiloJoules, `i64` MilliCredits). | CIV-0001 | `crates/engine/src/fixed_math.rs` (`Fixed` i64; deviation tracked in `docs/adr/ADR-022-runtime-representation-deviations.md`) | `numerics::integer_quantities_use_fixed_point` | in_progress |
+| FR-CORE-010 | All integer quantities SHALL use fixed-point types (`civ_engine::Fixed` (i64-backed), `i64` KiloJoules, `i64` MilliCredits). | CIV-0001 | `crates/engine/src/fixed_math.rs` (`pub struct Fixed(i64)`) | `numerics::integer_quantities_use_fixed_point` | implemented |
 
 ---
 

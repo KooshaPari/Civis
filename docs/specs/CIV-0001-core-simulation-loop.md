@@ -301,7 +301,7 @@ fn compute_snapshot(state: &State, control: &Control, seed: u64) -> (Snapshot, S
     let state_det = deterministic_transition(&state, control);
 
     // 2. Stochastic events (using seeded RNG)
-    let mut rng = ChaCha20Rng::seed_from_u64(seed);
+    let mut rng = ChaCha8Rng::seed_from_u64(seed);
     let (state_new, events) = stochastic_phase(&state_det, &mut rng);
 
     // 3. Metrics
@@ -461,9 +461,9 @@ let price: f64 = 12.34;  // Loses precision
 let price_cents: i64 = 1234;  // Exact
 ```
 
-#### I2: ChaCha20Rng Seeded, Not Unseeded
+#### I2: ChaCha8Rng Seeded, Not Unseeded
 
-**Rule:** All randomness via seeded `ChaCha20Rng`. No `rand::random()`.
+**Rule:** All randomness via seeded `ChaCha8Rng`. No `rand::random()`.
 
 **Violation Example (❌):**
 ```rust
@@ -472,7 +472,7 @@ let choice = rand::random::<usize>() % options.len();  // Non-deterministic
 
 **Correct (✅):**
 ```rust
-let mut rng = ChaCha20Rng::seed_from_u64(seed);
+let mut rng = ChaCha8Rng::seed_from_u64(seed);
 let choice = rng.gen_range(0..options.len());  // Deterministic
 ```
 
@@ -875,7 +875,7 @@ TickFrame unpack_frame(const std::vector<uint8_t>& raw) {
 **Status:** Open
 
 ### FR-CIV-CORE-003: Seeded RNG in Stochastic Phase
-**Spec:** Stochastic events use ChaCha20Rng seeded with seed parameter.
+**Spec:** Stochastic events use ChaCha8Rng seeded with seed parameter.
 **Test:** Same seed → identical events; different seed → different (but valid) events.
 **Status:** Open
 
@@ -1036,7 +1036,7 @@ mod tests {
 - **CIV-0100:** Economy v1 Spec
 - **CIV-0107:** Joule Economy System v1
 - **Rust ECS:** https://github.com/ivankabestwill/hecs (zero-copy queries)
-- **ChaCha20Rng:** https://docs.rs/rand_chacha/
+- **ChaCha8Rng:** https://docs.rs/rand_chacha/
 - **JSON-RPC 2.0:** https://www.jsonrpc.org/specification
 
 ---

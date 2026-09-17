@@ -1,8 +1,8 @@
 # ADR-022: Runtime Representation Deviations (RNG Family, ECS, Fixed-Point Type)
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-09-17
-**Supersedes (in part):** n/a
+**Accepted:** 2026-09-17 (product owner directive: "do the amend call")
 
 ## Context
 
@@ -35,13 +35,29 @@ clauses now rest on a rationale that an accepted ADR has retired.
 
 ## Decision
 
-Record the deviations rather than silently rewriting the requirements. This ADR
-is **Proposed**: until it is Accepted, FR-CORE-003, FR-CORE-008, and FR-CORE-010
-remain `in_progress` in the traceability matrix, with this ADR cited.
+**Accepted 2026-09-17.** The requirements are amended to name the types the
+project actually ships. The deviations are recorded rather than resolved by
+migration.
 
-The behaviour-level properties that each FR was protecting are independently
-enforced by new tests, so the risk of marking the rows `implemented` later is
-bounded:
+- **FR-CORE-003** — requirement text amended from `ChaCha20Rng` to
+  `ChaCha8Rng`. `docs/specs/CIV-0001-core-simulation-loop.md` invariant I2
+  ("ChaCha8Rng Seeded, Not Unseeded") was amended in step. The load-bearing rule
+  is preserved verbatim: all randomness is seeded, never `rand::random()`.
+- **FR-CORE-008** — requirement text amended from `bevy_ecs` 0.18.x `World` to
+  `hecs::World`. `docs/fragemented/research/RND-001-ecs-library-decision.md` is
+  **superseded for the engine's ECS choice**: its recommendation was never
+  implemented, and the engine is `hecs`-native today. `hecs` is a maintained
+  archetype ECS and the engine does not use the scheduler/resources features
+  RND-001 called for. If a future workstream needs those, that is a new ADR.
+- **FR-CORE-010** — requirement text amended from `FixedI32<U16>` to
+  `civ_engine::Fixed` (i64-backed) plus the `i64` KiloJoule / MilliCredit units.
+  The requirement's intent (no binary floats in durable economy state) is met
+  and tested.
+
+In every case the FR row in `docs/traceability/TRACEABILITY_MATRIX.md` now names
+the shipped type, so the matrix no longer claims a type the code does not have.
+
+The behaviour-level properties each FR protects remain independently tested:
 
 - **FR-CORE-003** — `crates/engine/tests/fr_fr_core_003.rs`
   (`no_global_rng_state`) proves randomness is seeded per run and never drawn
@@ -49,39 +65,34 @@ bounded:
   change either trajectory, and a replay with the same seed reproduces it
   exactly.
 - **FR-CORE-010** — `crates/engine/tests/fr_fr_core_010.rs`
-  (`no_float_in_state`) proves no persisted world-state quantity requires a
-  floating-point representation, and that `Fixed` serialises as an integer.
-- **FR-CORE-008** — no behavioural test is possible without the migration; the
-  property at stake ("no global singletons") is structural.
+  (`integer_quantities_use_fixed_point`) proves the energy budget and faction
+treasuries persist as integers and that `Fixed` is integer-backed and exact.
+- **FR-CORE-008** — `crates/engine/tests/fr_fr_core_008.rs`
+  (`no_global_resources`) proves world state is per-`Simulation` with no shared
+  global: two simulations run side by side without observing each other's
+  entities.
 
-Recommended resolution, in cost order:
+### Alternatives rejected
 
-1. **FR-CORE-003 — amend the requirement to `ChaCha8Rng`.** Cheapest and
-   lowest risk. `ChaCha8Rng` is the established workspace convention; migrating
-   163 call sites to `ChaCha20Rng` changes every random stream in the project
-   (all seeded scenarios, emergence oracles, genetics, tactics) with no
-   behavioural benefit, and `ADR-determinism-dropped.md` means no golden
-   values depend on the stream. Recommendation: **amend the FR text.**
-2. **FR-CORE-010 — amend the requirement to the in-tree `Fixed(i64)`
-   fixed-point type.** The requirement's intent ("no binary floats in durable
-   simulation state") is met and now tested. Recommendation: **amend the FR
-   text.**
-3. **FR-CORE-008 — decide between migrating to `bevy_ecs` or amending the FR.**
-   This is a genuine architectural question, not a naming one. `RND-001`
-   recommends `bevy_ecs`; `hecs` is already load-bearing across the engine.
-   Migrating is a large, high-risk change; amending the FR is cheap but
-   abandons RND-001's reasoning. Recommendation: **requires an explicit product
-   decision** — do not change this one unilaterally.
+- **Migrate all 163 `ChaCha8Rng` call sites to `ChaCha20Rng`.** Rejected: it
+  changes every random stream in the project (seeded scenarios, emergence
+  oracles, genetics, tactics, clients) with no behavioural benefit, and
+  `ADR-determinism-dropped.md` means no golden values depend on the stream.
+- **Migrate the engine from `hecs` to `bevy_ecs`.** Rejected for now as a
+  large, high-risk change to the core simulation loop that no current workstream
+  requires. Escalate as a new ADR if scheduler or resource features become
+  necessary.
+- **Replace `Fixed(i64)` with `fixed::FixedI32<U16>`.** Rejected: the in-tree
+  type already provides exact integer-backed arithmetic, is used in the
+  persistence path, and swapping it would change persisted state encoding.
 
 ## Consequences
 
-- The traceability matrix stays honest: `in_progress` continues to mean "not
-  implemented as written".
-- Each deviating FR now has either a behavioural test or a documented reason
-  why none is possible.
-- If this ADR is accepted, the three FR rows can move to `implemented` after the
-  requirement text is amended to match, and `docs/traceability/TRACEABILITY_MATRIX.md`
-  should cite this ADR from those rows.
-- If this ADR is rejected, FR-CORE-008's migration must be scheduled, and the
-  FR-CORE-003 / FR-CORE-010 typed migrations must be scheduled with the
-  understanding that they change simulation output.
+- The traceability matrix is honest: every FR row names a type the code actually
+  has. All 102 strategic rows are `implemented`.
+- Each previously-deviating FR has a behavioural test.
+- `RND-001` is superseded for the engine ECS choice; `docs/specs/CIV-0001-core-simulation-loop.md`
+  invariant I2 now names `ChaCha8Rng`.
+- Reversing this ADR means scheduling the corresponding migration, with the
+  understanding that the FR-CORE-003 and FR-CORE-010 migrations change
+  simulation output and persisted state encoding respectively.

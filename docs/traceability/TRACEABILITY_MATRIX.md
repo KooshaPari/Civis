@@ -202,11 +202,11 @@ Source spec: `docs/specs/CIV-0300-ui-ux.md`
 
 | FR ID | Requirement Summary | Spec Doc | Crate / Source Path | Test Name Pattern | Status |
 |---|---|---|---|---|---|
-| FR-UX-001 | The UI SHALL render the hex map using the `crates/render` crate at 60 fps target. | CIV-0300 | `crates/render/src/hex_map.rs` | `render::hex_map_60fps` | planned |
-| FR-UX-002 | The UI SHALL support RTS-style camera pan, zoom, and unit selection. | CIV-0300 | `crates/render/src/camera.rs` | `render::rts_camera_controls` | planned |
-| FR-UX-003 | A timeline scrubber SHALL display tick history and allow rewind to any stored tick. | CIV-0300 | `crates/render/src/timeline.rs` | `render::timeline_scrubber_rewind` | planned |
-| FR-UX-004 | LOD transitions SHALL be visually seamless within one rendered frame. | CIV-0300 | `crates/render/src/lod.rs` | `render::lod_seamless_transition` | planned |
-| FR-UX-005 | All UI state changes SHALL derive from events; no direct engine state polling. | CIV-0300 | `crates/render/src/state.rs` | `render::state_from_events_only` | planned |
+| FR-UX-001 | The UI SHALL render the hex map using the `crates/render` crate at 60 fps target. | CIV-0300 | `crates/render/src/hex_map.rs` | `render::hex_map_60fps` | implemented |
+| FR-UX-002 | The UI SHALL support RTS-style camera pan, zoom, and unit selection. | CIV-0300 | `crates/render/src/camera.rs` | `render::rts_camera_controls` | implemented |
+| FR-UX-003 | A timeline scrubber SHALL display tick history and allow rewind to any stored tick. | CIV-0300 | `crates/render/src/timeline.rs` | `render::timeline_scrubber_rewind` | implemented |
+| FR-UX-004 | LOD transitions SHALL be visually seamless within one rendered frame. | CIV-0300 | `crates/render/src/lod.rs` | `render::lod_seamless_transition` | implemented |
+| FR-UX-005 | All UI state changes SHALL derive from events; no direct engine state polling. | CIV-0300 | `crates/render/src/state.rs` | `render::state_from_events_only` | implemented |
 
 ---
 
@@ -216,10 +216,10 @@ Source specs: `docs/specs/CIV-0600-2d-assets.md`, `docs/specs/CIV-0601-3d-assets
 
 | FR ID | Requirement Summary | Spec Doc | Crate / Source Path | Test Name Pattern | Status |
 |---|---|---|---|---|---|
-| FR-ASSET-001 | All 2D tile sprites SHALL be derived from SVG sources and rasterised at build time. | CIV-0600 | `crates/render/src/atlas.rs` | `asset::svg_rasterised_at_build` | planned |
-| FR-ASSET-002 | The asset pipeline SHALL pack all tile sprites into a single texture atlas per LOD level. | CIV-0600 | `crates/render/src/atlas.rs` | `asset::atlas_packed_per_lod` | planned |
-| FR-ASSET-003 | Atlas build SHALL emit `asset.atlas.built.v1` on success or `asset.generation.failed.v1` on error. | CIV-0600 | `crates/render/src/atlas.rs` | `asset::atlas_build_events` | planned |
-| FR-ASSET-004 | 3D assets SHALL be stored as glTF 2.0 and loaded lazily on demand. | CIV-0601 | `crates/render/src/gltf.rs` | `asset::gltf_lazy_loaded` | planned |
+| FR-ASSET-001 | All 2D tile sprites SHALL be derived from SVG sources and rasterised at build time. | CIV-0600 | `crates/render/src/atlas.rs` | `asset::svg_rasterised_at_build` | implemented |
+| FR-ASSET-002 | The asset pipeline SHALL pack all tile sprites into a single texture atlas per LOD level. | CIV-0600 | `crates/render/src/atlas.rs` | `asset::atlas_packed_per_lod` | implemented |
+| FR-ASSET-003 | Atlas build SHALL emit `asset.atlas.built.v1` on success or `asset.generation.failed.v1` on error. | CIV-0600 | `crates/render/src/atlas.rs` | `asset::atlas_build_events` | implemented |
+| FR-ASSET-004 | 3D assets SHALL be stored as glTF 2.0 and loaded lazily on demand. | CIV-0601 | `crates/render/src/gltf.rs` | `asset::gltf_lazy_loaded` | implemented |
 
 ---
 

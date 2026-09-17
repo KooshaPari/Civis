@@ -261,6 +261,7 @@ fn mcts_planner_runs_and_picks_winner() {
         max_sim_depth: 10,
         exploration: std::f64::consts::SQRT_2,
         seed: Some(SIM_SEED),
+        time_budget_ms: None,
     };
     let mut tree = MctsTree::new(&ToyMctsGame::fresh(), cfg.clone());
     tree.search(&ToyMctsGame::fresh());

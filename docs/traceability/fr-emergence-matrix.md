@@ -4,7 +4,7 @@
 **Charter:** [`emergent-systems-tracelinks.md`](emergent-systems-tracelinks.md) + `FR-CIV-0100` §3 emergence.
 **Format:** FR-ID | Requirement (1-line) | Crate/File path | Test pattern | **Acceptance Contract** | Status
 
-Status values: `traced` (prior matrix row) | `code-only` (implemented, no matrix until now) | `stub` (spec/design only) | `dormant` (code exists, not in `Simulation::tick`).
+Status values: `traced` (prior matrix row) | `code-only` (implemented, no matrix until now) | `stub` (spec/design only) | `dormant` (code exists, not in `Simulation::tick`) | `alias` (not a requirement — collapses into another FR).
 
 The **Acceptance Contract** column is the machine-checkable oracle hook — concrete pass/fail predicates for batchable agent iteration.
 
@@ -269,10 +269,10 @@ Emergent population migration: flows computed from cluster state (scarcity/disas
 
 | FR-ID | Requirement (1-line) | Crate/File path | Test pattern | Acceptance Contract | Status |
 |-------|------------------------|-----------------|--------------|---------------------|--------|
-| FR-CIV-SOCIAL-001 | Institution system with policies/members/budget | `agileplus-specs/civ-003-*/` | partial `economy/institution.rs` | Institution has members list + budget field | dormant |
-| FR-CIV-SOCIAL-002 | Citizen ideology field + drift | `crates/agents/src/psyche.rs` | psyche tests | Ideology vector changes after social event fixture | code-only |
-| FR-CIV-SOCIAL-001-INSTITUTIONS | Alias → institutions (civ-021) | `agileplus-specs/civ-021-*/` | TODO | Collapse alias to FR-CIV-SOCIAL-001 | stub |
-| FR-CIV-SOCIAL-002-IDEOLOGY | Alias → ideology (civ-021) | `agileplus-specs/civ-021-*/` | TODO | Collapse alias to FR-CIV-SOCIAL-002 | stub |
+| FR-CIV-SOCIAL-001 | Institution system with policies/members/budget | *(no implementation — see audit note)* | `agileplus-specs/civ-003-actor-citizen-lifecycle/spec.md:26` specifies `Institution { policies, members, budget, approval_rating }` with `add_member`/`remove_member`/`update_policy` | Institution has members list + budget field | stub |
+| FR-CIV-SOCIAL-002 | Citizen ideology field + drift | `crates/engine/src/engine.rs` (`Citizen.ideology` field exists, never mutated) | *(no test — `ideology_shift` is unimplemented)* | Ideology vector changes after social event fixture | stub |
+| FR-CIV-SOCIAL-001-INSTITUTIONS | Alias → institutions (civ-021) | `agileplus-specs/civ-021-*/` | n/a — alias row | Collapse alias to FR-CIV-SOCIAL-001 | alias |
+| FR-CIV-SOCIAL-002-IDEOLOGY | Alias → ideology (civ-021) | `agileplus-specs/civ-021-*/` | n/a — alias row | Collapse alias to FR-CIV-SOCIAL-002 | alias |
 
 ---
 

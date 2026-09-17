@@ -239,7 +239,7 @@ missing.
 | FR-CIV-UX-001 | Era timelapse: configurable rate without divergence vs real-time. | `clients/godot-ref/` | `ux::timelapse_no_divergence` | implemented |
 | FR-CIV-UX-004 | Drag-place + convoy along path. | `godot-ref`, `web/dashboard` | `ux::convoy_positions`, `spawnConvoy.ts` | implemented |
 | FR-CIV-UX-006 | Spawn palette incl. hangar. | `engine/spawn.rs`, server, watch | `spawn_kind_palette_is_wired` | implemented |
-| FR-CIV-GODOT-ATTACH-000..004 | Godot civ-server WS + watch terrain. | `civis_ws_client.gd` | `ws_smoke`, attach docs | implemented |
+| FR-CIV-GODOT-ATTACH-000..004 | Godot civ-server WS + watch terrain. | `civis_ws_client.gd` | `clients/godot-ref/rust/tests/fr_godot_attach_tests.rs` (5 tests, FR-CIV-GODOT-ATTACH-000), `ws_smoke`, attach docs | implemented |
 
 ---
 

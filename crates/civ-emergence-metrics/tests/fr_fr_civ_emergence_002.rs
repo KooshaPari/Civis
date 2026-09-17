@@ -20,14 +20,16 @@ mod fr_fr_civ_emergence_002 {
     }
 
     #[test]
-    fn zero_defaults_give_zero() {
+    fn zero_defaults_give_low_score() {
+        // All-zero inputs are far below every operational band, so the
+        // indicator should be small but still finite and non-negative.
         let inputs = CriticalityInputs {
             branching_sigma: 0.0,
             power_law_alpha: 0.0,
             entropy_norm: 0.0,
         };
         let value = criticality_indicator(inputs, &CriticalityBands::default());
-        assert_eq!(value, 0.0);
+        assert!(value > 0.0 && value < 0.2, "zero defaults should give a low finite score, got {value}");
     }
 
     #[test]

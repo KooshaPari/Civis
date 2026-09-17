@@ -20,7 +20,7 @@ mod fr_fr_civ_emergence_010 {
     #[test]
     fn dirac_distribution_zero_entropy() {
         let se = ShannonEntropy::new();
-        let h = Histogram::dirac(100);
+        let h = Histogram::dirac(100, 0, 1);
         let e = se.compute(&h);
         assert_eq!(e, 0.0, "single-bin should have zero entropy");
     }

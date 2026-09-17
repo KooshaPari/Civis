@@ -6,21 +6,20 @@
 #[cfg(test)]
 mod fr_fr_civ_emergence_003 {
     use civ_emergence_metrics::dashboard::{
-        cluster_entropy, ideology_homophily, sentience_fraction,
-        psyche_stability, diplomacy_tension, EmergenceDashboard,
+        cluster_entropy, sentience_fraction, EmergenceDashboard,
     };
 
     #[test]
     fn verify_fr_civ_emergence_003_basic() {
         // Uniform population → high entropy
-        let pop = [25.0, 25.0, 25.0, 25.0];
+        let pop = [25, 25, 25, 25];
         let e = cluster_entropy(&pop);
         assert!(e > 0.9, "uniform should have high entropy, got {e}");
     }
 
     #[test]
     fn cluster_entropy_single_cluster_is_zero() {
-        let pop = [100.0];
+        let pop = [100];
         let e = cluster_entropy(&pop);
         assert_eq!(e, 0.0);
     }

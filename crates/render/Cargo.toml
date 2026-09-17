@@ -1,0 +1,13 @@
+[package]
+name = "civ-render"
+description = "CIV-0300 render substrate: hex map renderer, RTS camera, timeline scrubber, LOD transitions, event-driven UI state, SVG atlas packing, and glTF lazy loading"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
+serde_json = "1"

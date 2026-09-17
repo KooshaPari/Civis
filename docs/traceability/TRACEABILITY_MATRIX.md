@@ -247,7 +247,7 @@ Source spec: `docs/specs/CIV-0900-pve-session.md`
 | FR-SESS-002 | Hot-seat multiplayer SHALL allow multiple human players per session. | CIV-0900 | `crates/engine/src/session.rs` | `session::hotseat_multi_human` | planned |
 | FR-SESS-003 | Observer mode SHALL allow read-only session access without influencing simulation. | CIV-0900 | `crates/engine/src/session.rs` | `session::observer_read_only` | planned |
 | FR-SESS-004 | Challenge mode SHALL allow async submission of a civilization seed for scoring. | CIV-0900 | `crates/engine/src/challenge.rs` | `challenge::async_submission_accepted` | planned |
-| FR-SESS-005 | Session speed SHALL be configurable (1x, 2x, 4x, paused) and emit `session.speed_changed.v1`. | CIV-0900 | `crates/engine/src/session.rs` | `session::speed_change_emits_event` | planned |
+| FR-SESS-005 | Session speed SHALL be configurable (1x, 2x, 4x, paused) and emit `session.speed_changed.v1`. | CIV-0900 | `crates/server/src/jsonrpc.rs` (`sim.set_speed`) | `session::speed_change_emits_event` | implemented |
 | FR-SESS-006 | Turn boundaries in hot-seat mode SHALL emit `session.turn.start.v1` and `session.turn.end.v1`. | CIV-0900 | `crates/engine/src/session.rs` | `session::turn_events_emitted` | planned |
 
 ---

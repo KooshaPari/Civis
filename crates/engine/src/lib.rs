@@ -59,6 +59,7 @@ pub mod faction_decisions;
 pub mod famine;
 pub mod festivals;
 pub mod gameplay;
+pub mod grid;
 pub mod godtools;
 pub mod hash_chain;
 pub mod integrity;

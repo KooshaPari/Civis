@@ -40,7 +40,7 @@ Source spec: `docs/specs/CIV-0001-core-simulation-loop.md`
 | FR-CORE-006 | Consecutive tick hashes SHALL form an append-only chain (each hash includes prior hash). | CIV-0001 | `crates/engine/src/hash_chain.rs` | `hash_chain::chain_includes_prior` | implemented |
 | FR-CORE-007 | The engine SHALL surface a `run.hash.mismatch.v1` event when replayed state diverges. | CIV-0001 | `crates/engine/src/integrity.rs` | `integrity::mismatch_event_emitted` | implemented |
 | FR-CORE-008 | World state SHALL be modelled as bevy_ecs 0.18.x `World`; no global singletons. | CIV-0001 | `crates/engine/src/engine.rs` (`hecs::World`) | `world::no_global_resources` | in_progress |
-| FR-CORE-009 | Hex grid SHALL use `hexx` 0.21.x axial coordinates throughout engine and render crates. | CIV-0001 | `crates/engine/src/engine.rs` (`Position {x,y}` only) | `grid::axial_roundtrip` | planned |
+| FR-CORE-009 | Hex grid SHALL use `hexx` 0.21.x axial coordinates throughout engine and render crates. | CIV-0001 | `crates/engine/src/grid.rs` (`PositionAxial`, `PositionCube`) | `grid::axial_roundtrip`, `grid::cube_roundtrip` | implemented |
 | FR-CORE-010 | All integer quantities SHALL use fixed-point types (`FixedI32\<U16\>`, `i64` KiloJoules, `i64` MilliCredits). | CIV-0001 | `crates/engine/src/lib.rs` (`Fixed` i64 scale) | `numerics::no_float_in_state` | in_progress |
 
 ---

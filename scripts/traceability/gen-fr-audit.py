@@ -19,6 +19,7 @@ Classification:
 """
 
 import json
+import re
 import sys
 from datetime import date
 from pathlib import Path
@@ -191,8 +192,67 @@ def main() -> int:
     list_ids("IMPL-NO-TEST", "Implemented but untested IDs")
     list_ids("CODE-ONLY-no-spec", "Code-only IDs (missing spec/traceability)")
 
+    # -----------------------------------------------------------------
+    # Placeholder-test detection.
+    #
+    # A large batch of test files was auto-generated with the doc comment
+    # "Verify <ID> type existence and basic behavior." and a body that only
+    # touches a shared type. Many are byte-identical across unrelated IDs, so
+    # the test exercises nothing specific to the requirement it names. Such a
+    # file makes an ID look COVERED without verifying the requirement.
+    # -----------------------------------------------------------------
+    placeholder_re = re.compile(r"type existence and basic behavior")
+    placeholder_files = set()
+    for test_dir in (ROOT / "crates").rglob("tests"):
+        if not test_dir.is_dir():
+            continue
+        for tf in test_dir.glob("*.rs"):
+            try:
+                if placeholder_re.search(tf.read_text(encoding="utf-8", errors="replace")):
+                    placeholder_files.add(
+                        str(tf.relative_to(ROOT)).replace("\\", "/")
+                    )
+            except OSError:
+                continue
+
+    def is_placeholder_ref(ref: str) -> bool:
+        path = ref.split(":", 1)[0]
+        return path in placeholder_files
+
+    placeholder_only = []
+    for r in rows:
+        if r["status"] != "COVERED" or not r["test_refs"]:
+            continue
+        if all(is_placeholder_ref(t) for t in r["test_refs"]):
+            placeholder_only.append(r["id"])
+
+    md.append("## Placeholder-only coverage (weakest evidence) "
+              f"({len(placeholder_only)})")
+    md.append("")
+    md.append(
+        "These IDs are counted `COVERED` on tests whose file matches the "
+        "auto-generated placeholder pattern above. Their tests assert "
+        "properties of shared types, not the requirement, so treat the "
+        "coverage as unverified until a real oracle exists."
+    )
+    md.append("")
+    if placeholder_only:
+        md.append(f"`{len(placeholder_files)}` placeholder test files affect "
+                  f"`{len(placeholder_only)}` IDs.")
+        md.append("")
+        for pid in placeholder_only:
+            md.append(f"- `{pid}`")
+    else:
+        md.append("_None._")
+    md.append("")
+
     OUT_MD.write_text("\n".join(md) + "\n", encoding="utf-8")
     print(f"Wrote {OUT_MD}", file=sys.stderr)
+    print(
+        f"Placeholder-only COVERED IDs: {len(placeholder_only)} "
+        f"(from {len(placeholder_files)} placeholder files)",
+        file=sys.stderr,
+    )
 
     return 0
 

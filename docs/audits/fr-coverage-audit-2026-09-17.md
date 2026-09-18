@@ -3022,3 +3022,80 @@
   - code: crates/voxel/src/scale_stream.rs:1, crates/voxel/src/scale_stream.rs:16, crates/voxel/src/scale_stream.rs:58
   - tests: crates/voxel/src/scale_stream.rs:427, crates/voxel/src/scale_stream.rs:479, crates/voxel/src/scale_stream.rs:509
 
+## Placeholder-only coverage (weakest evidence) (70)
+
+These IDs are counted `COVERED` on tests whose file matches the auto-generated placeholder pattern above. Their tests assert properties of shared types, not the requirement, so treat the coverage as unverified until a real oracle exists.
+
+`552` placeholder test files affect `70` IDs.
+
+- `FR-CIV-0001-TICK`
+- `FR-CIV-ACT-003`
+- `FR-CIV-ACT-004`
+- `FR-CIV-ACT-005`
+- `FR-CIV-AI-001`
+- `FR-CIV-AI-002`
+- `FR-CIV-AI-003`
+- `FR-CIV-AI-004`
+- `FR-CIV-AI-005`
+- `FR-CIV-ARCH-001`
+- `FR-CIV-ARCH-002`
+- `FR-CIV-CORE-003`
+- `FR-CIV-CORE-004`
+- `FR-CIV-CORE-005`
+- `FR-CIV-CORE-013`
+- `FR-CIV-CORE-019`
+- `FR-CIV-ECON-003`
+- `FR-CIV-GODTOOL-910`
+- `FR-CIV-GODTOOL-911`
+- `FR-CIV-GODTOOL-912`
+- `FR-CIV-GODTOOL-920`
+- `FR-CIV-GODTOOL-921`
+- `FR-CIV-INFOVIEW-905`
+- `FR-CIV-INFOVIEW-911`
+- `FR-CIV-INFOVIEW-912`
+- `FR-CIV-INFOVIEW-914`
+- `FR-CIV-INSPECT-902`
+- `FR-CIV-INSPECT-920`
+- `FR-CIV-L5`
+- `FR-CIV-LANG-001`
+- `FR-CIV-LANG-002`
+- `FR-CIV-LANG-003`
+- `FR-CIV-LANG-005`
+- `FR-CIV-LANG-009`
+- `FR-CIV-MCP-001`
+- `FR-CIV-MCP-003`
+- `FR-CIV-NOTIFY-901`
+- `FR-CIV-NOTIFY-910`
+- `FR-CIV-NOTIFY-911`
+- `FR-CIV-NOTIFY-920`
+- `FR-CIV-NOTIFY-921`
+- `FR-CIV-PERF-001`
+- `FR-CIV-RENDER-001`
+- `FR-CIV-RENDER-002`
+- `FR-CIV-RES-001`
+- `FR-CIV-ROAD-901`
+- `FR-CIV-ROAD-902`
+- `FR-CIV-ROAD-910`
+- `FR-CIV-ROAD-920`
+- `FR-CIV-ROAD-921`
+- `FR-CIV-RTS-001`
+- `FR-CIV-RTS-002`
+- `FR-CIV-VOXEL-023`
+- `FR-CIV-VOXEL-024`
+- `FR-CIV-VOXEL-025`
+- `FR-CIV-VOXEL-030`
+- `FR-CIV-VOXEL-031`
+- `FR-CIV-VOXEL-032`
+- `FR-CLIENT-001`
+- `FR-CLIENT-002`
+- `FR-CLIENT-003`
+- `FR-CORE-002`
+- `FR-CORE-009`
+- `FR-ECON-006`
+- `FR-ECON-008`
+- `FR-ECON-009`
+- `FR-ECON-010`
+- `FR-PERF-003`
+- `FR-PERF-004`
+- `FR-SESS-005`
+

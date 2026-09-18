@@ -350,8 +350,24 @@ impl CaGrid {
     }
 
     /// Writes a cell when coordinates are in bounds.
+    ///
+    /// The cell takes the material's declared initial temperature
+    /// ([`MaterialDef::temperature`], documented as "used for phase transitions
+    /// and initial conditions"), not whatever temperature the cell happened to
+    /// be at. For `WATER` that is 20, comfortably above its `freeze_point` of 0.
+    ///
+    /// Preserving the previous cell temperature instead is a live trap: a fresh
+    /// [`CaGrid`] initialises every cell to 0, which equals `WATER`'s
+    /// `freeze_point`, so water placed with `set` froze to `ICE` on the very
+    /// next [`step`] — and the phase change also charged `latent_heat`, spiking
+    /// the cell to ~2257. Callers that want a specific temperature (for example
+    /// placing water into an already-hot cell) should use
+    /// [`Self::set_with_temp`], which is explicit about it.
     pub fn set(&mut self, x: usize, y: usize, z: usize, value: MaterialId) {
-        self.set_with_temp(x, y, z, value, self.get_temp(x, y, z));
+        let temp = MaterialRegistry::standard()
+            .get(value)
+            .map_or_else(|| self.get_temp(x, y, z), |def| def.temperature);
+        self.set_with_temp(x, y, z, value, temp);
     }
 
     /// Writes a saturation value when coordinates are in bounds.
@@ -896,9 +912,15 @@ fn fluid_thermo_pass(
                 temp = temp.saturating_sub(latent_heat);
             }
         } else if phase == Phase::Liquid
-            && t <= def.freeze_point
+            && t < def.freeze_point
             && (id == WATER || id == SALT_WATER)
         {
+            // Strict `<`: a cell sitting exactly on its freezing point stays
+            // liquid. With `<=`, WATER (freeze_point 0) placed in a grid whose
+            // default temperature is 0 froze to ICE on the first tick — and
+            // since ICE's melting_point is also 0 and that test is strict, it
+            // never melted back, trapping all water as ice. See
+            // `fr_civ_voxel_025_liquid_at_freezing_point_stays_liquid`.
             next = ICE;
             temp = temp.saturating_add(latent_heat);
         }
@@ -1213,7 +1235,16 @@ fn phase_transition_pass(grid: &mut CaGrid, reg: MaterialRegistry, cells: &[usiz
         // Decision order:
         //   - Solid + t > melt_point  → melt (Solid → Liquid/whatever-target)
         //   - Liquid + t >= boil_point → boil (Liquid → Gas/whatever-target)
-        //   - Liquid + t <= freeze_point → freeze (Liquid → Solid/whatever target)
+        //   - Liquid + t < freeze_point → freeze (Liquid → Solid/whatever target)
+        //
+        // Thresholds are strict (melt uses `t > melt_point`, freeze uses
+        // `t < freeze_point`) so that a cell sitting exactly on a phase
+        // boundary stays in its current phase. With an inclusive freeze test,
+        // a WATER cell at exactly `freeze_point` (0) froze to ICE while that
+        // ICE never melted back — `melt_point` is also 0 — which trapped water
+        // as ice the moment it was placed in a grid whose default temperature
+        // is 0. See `fr_civ_voxel_025` in
+        // `crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs`.
         let firing_threshold: Option<(&'static str, i32)> = match def.phase {
             Phase::Solid => {
                 let melt = match def.tpt_thermal.melt_point {
@@ -1242,7 +1273,7 @@ fn phase_transition_pass(grid: &mut CaGrid, reg: MaterialRegistry, cells: &[usiz
                             Some(f) => f,
                             None => continue,
                         };
-                        if t <= freeze && phase_target != id {
+                        if t < freeze && phase_target != id {
                             Some(("freeze", freeze))
                         } else {
                             None
@@ -1253,7 +1284,7 @@ fn phase_transition_pass(grid: &mut CaGrid, reg: MaterialRegistry, cells: &[usiz
                         Some(f) => f,
                         None => continue,
                     };
-                    if t <= freeze && phase_target != id {
+                    if t < freeze && phase_target != id {
                         Some(("freeze", freeze))
                     } else {
                         None
@@ -2543,13 +2574,61 @@ mod tests {
     #[test]
     fn dropped_water_marks_dirty_and_flows() {
         let mut g = CaGrid::new([4, 4, 1]);
-        // Warm water (temp 20) so it stays liquid as it falls; the grid default
-        // temp 0 equals water's freeze_point and would freeze it to ICE.
+        // Explicit warm water so the cell temperature is pinned regardless of
+        // the grid default. `set` now also adopts WATER's declared initial
+        // temperature (see `set_uses_material_initial_temperature_...`), but
+        // this test deliberately spells the temperature out.
         g.set_with_temp(1, 3, 0, WATER, 20);
         assert!(step(&mut g, reg()).changed);
         assert_eq!(g.get(1, 2, 0), WATER);
         assert_eq!(g.get(1, 3, 0), AIR);
         assert!(!g.dirty_chunks().is_empty());
+    }
+
+    /// `set` must place a material at that material's declared initial
+    /// temperature, not at the cell's previous temperature.
+    ///
+    /// A fresh `CaGrid` defaults every cell to 0, which is exactly `WATER`'s
+    /// `freeze_point`. When `set` preserved the previous temperature, water
+    /// placed with the obvious API froze to `ICE` on the next `step`, and the
+    /// phase change charged `latent_heat` (2257), so the cell also jumped to a
+    /// nonsensical temperature. Only `set_with_temp` callers dodged it, which
+    /// is why `dropped_water_marks_dirty_and_flows` above had to pass 20 by
+    /// hand.
+    #[test]
+    fn set_uses_material_initial_temperature_so_water_does_not_flash_freeze() {
+        let mut g = CaGrid::new([5, 4, 1]);
+        g.set(2, 1, 0, WATER);
+
+        // Initial temperature comes from the material data ("initial
+        // conditions"), i.e. WATER's declared 20 and not the grid's 0.
+        assert_eq!(
+            g.get_temp(2, 1, 0),
+            20,
+            "set must adopt WATER's declared initial temperature"
+        );
+
+        step(&mut g, reg());
+
+        assert_eq!(
+            count(&g, WATER),
+            1,
+            "water placed at its declared initial temperature must stay liquid"
+        );
+        assert_eq!(count(&g, ICE), 0, "ambient water must not flash-freeze to ice");
+    }
+
+    /// Genuinely cold water must still freeze — the fix above must not disable
+    /// the freeze front for water that is really below its freeze point.
+    #[test]
+    fn water_below_freezing_point_still_freezes() {
+        let mut g = CaGrid::new([5, 4, 1]);
+        g.set_with_temp(2, 1, 0, WATER, -5);
+
+        step(&mut g, reg());
+
+        assert_eq!(count(&g, ICE), 1, "water at -5 must freeze to ice");
+        assert_eq!(count(&g, WATER), 0, "no liquid water should remain at -5");
     }
 
     #[test]
@@ -3175,7 +3254,13 @@ mod tests {
     fn hot_water_evaporates_with_adjacent_air() {
         let mut g = CaGrid::new([2, 2, 1]);
         g.set_with_temp(0, 1, 0, WATER, 150);
-        g.set(1, 1, 0, AIR);
+        // Pin the neighbour temperature explicitly. `evaporation_pass` leaves
+        // the vacated water cell at `t - latent_heat` (150 - 2257 = -2107),
+        // which then reads as a cold neighbour and can immediately re-condense
+        // the steam it just created, so this scenario is sensitive to the exact
+        // starting temperature of the adjacent air. Spelling it out keeps the
+        // fixture about evaporation rather than about `set`'s default.
+        g.set_with_temp(1, 1, 0, AIR, 0);
         g.mark_dirty_cell(0, 1, 0);
         step_n_with_config(&mut g, reg(), 3, BoundaryConfig::closed(), 0);
         let has_steam = count(&g, STEAM) > 0;

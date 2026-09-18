@@ -319,8 +319,8 @@ mod tests {
             population: 100,
             energy_budget_joules: Fixed::from_num(1000),
             rng_seed: 12345,
-            factions: HashMap::new(),
-            faction_treasury: HashMap::new(),
+            factions: BTreeMap::new(),
+            faction_treasury: BTreeMap::new(),
             ..WorldState::default()
         };
         let s2 = WorldState {
@@ -328,8 +328,8 @@ mod tests {
             population: 100,
             energy_budget_joules: Fixed::from_num(1000),
             rng_seed: 12345,
-            factions: HashMap::new(),
-            faction_treasury: HashMap::new(),
+            factions: BTreeMap::new(),
+            faction_treasury: BTreeMap::new(),
             ..WorldState::default()
         };
 

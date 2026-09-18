@@ -397,11 +397,18 @@ pub struct WorldState {
     #[serde(default)]
     pub last_tick_faction_trade_open_intents: BTreeSet<u32>,
     /// Faction ID -> faction name
-    pub factions: HashMap<u32, String>,
+    ///
+    /// `BTreeMap`, not `HashMap`: FR-CIV-CORE-005 requires critical-path
+    /// collections to iterate in deterministic sorted order. This map is
+    /// iterated directly by the diplomacy phase (which consumes the shared RNG
+    /// inside the loop) and by emergence/gameplay/tech, so an unordered map
+    /// makes the simulation depend on per-process hash seeding and breaks both
+    /// FR-CIV-CORE-005 and FR-CORE-002.
+    pub factions: BTreeMap<u32, String>,
     /// Faction ID -> treasury balance
-    pub faction_treasury: HashMap<u32, Fixed>,
+    pub faction_treasury: BTreeMap<u32, Fixed>,
     /// Faction ID -> resource holdings.
-    pub faction_resources: HashMap<u32, Resources>,
+    pub faction_resources: BTreeMap<u32, Resources>,
     /// Active trade routes connecting factions.
     pub trade_routes: Vec<TradeRoute>,
     /// Global belief pressure used by emergence coupling.
@@ -570,17 +577,17 @@ impl Default for WorldState {
             last_tick_faction_unrest_response_intents: BTreeSet::new(),
             last_tick_faction_hostility_intents: BTreeSet::new(),
             last_tick_faction_trade_open_intents: BTreeSet::new(),
-            factions: HashMap::from([
+            factions: BTreeMap::from([
                 (0, "Player".to_string()),
                 (1, "AI Faction A".to_string()),
                 (2, "AI Faction B".to_string()),
             ]),
-            faction_treasury: HashMap::from([
+            faction_treasury: BTreeMap::from([
                 (0, Fixed::from_num(10_000)),
                 (1, Fixed::from_num(8_000)),
                 (2, Fixed::from_num(8_000)),
             ]),
-            faction_resources: HashMap::from([
+            faction_resources: BTreeMap::from([
                 (
                     0,
                     Resources {

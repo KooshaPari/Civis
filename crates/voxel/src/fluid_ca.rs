@@ -920,7 +920,8 @@ fn fluid_thermo_pass(
             // default temperature is 0 froze to ICE on the first tick — and
             // since ICE's melting_point is also 0 and that test is strict, it
             // never melted back, trapping all water as ice. See
-            // `fr_civ_voxel_025_liquid_at_freezing_point_stays_liquid`.
+            // `fr_civ_voxel_023_ambient_water_stays_liquid` in
+            // `crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs`.
             next = ICE;
             temp = temp.saturating_add(latent_heat);
         }
@@ -1243,7 +1244,7 @@ fn phase_transition_pass(grid: &mut CaGrid, reg: MaterialRegistry, cells: &[usiz
         // a WATER cell at exactly `freeze_point` (0) froze to ICE while that
         // ICE never melted back — `melt_point` is also 0 — which trapped water
         // as ice the moment it was placed in a grid whose default temperature
-        // is 0. See `fr_civ_voxel_025` in
+        // is 0. See `fr_civ_voxel_023_ambient_water_stays_liquid` in
         // `crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs`.
         let firing_threshold: Option<(&'static str, i32)> = match def.phase {
             Phase::Solid => {

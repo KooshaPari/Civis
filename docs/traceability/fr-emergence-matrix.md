@@ -107,10 +107,17 @@ Mapped to `crates/economy/src/market.rs` and `FR-ECON-003` (strategic matrix tra
 | FR-CIV-ARCH-003 | Tile-sets keyed on style vector not enum | `crates/build/src/lib.rs` | inline `#[test]` in `lib.rs` | Style vector perturbation changes tile-set selection | code-only |
 | FR-CIV-ARCH-004 | Demand + vector → deterministic template scores | `crates/build/src/lib.rs` | inline test `lib.rs` | Same demand signal ⇒ same ranked templates | code-only |
 | FR-CIV-ARCH-005 | Tile-set selection stable under candidate reorder | `crates/build/src/lib.rs` | inline test `lib.rs` | Permuting candidate list: same winner | code-only |
-| FR-CIV-ARCH-006 | BuildingGraph RON round-trip lossless | `crates/build/` | `build::graph_ron_roundtrip` | serialize→deserialize hash-equal | traced |
+| FR-CIV-ARCH-006 | BuildingGraph RON round-trip lossless | `crates/build/` | (see note) | serialize→deserialize hash-equal | code-only |
 | FR-CIV-ARCH-007 | Canonical mode keys by culture/era | `crates/build/src/lib.rs` | inline test `lib.rs` | `(culture, era)` key maps to stable mode id | code-only |
 | FR-CIV-ARCH-008 | Facade histogram tracks culture-vector divergence | `crates/build/src/lib.rs` | inline test `lib.rs` | Culture vector distance correlates with histogram L1 distance | code-only |
 | FR-CIV-ARCH-NOSVG-001 | No runtime SVG parsing in asset bundle | `web/tests/noSvgRuntime.test.mjs` | `node --test tests/noSvgRuntime.test.mjs` | Bundle scan: zero `.svg` in runtime load path | traced |
+
+> **Correction 2026-09-18.** `FR-CIV-ARCH-006` was listed `traced` against
+> `build::graph_ron_roundtrip`. That oracle exists at `crates/build/src/lib.rs:800`
+> but its own doc comment labels it `FR-CIV-BUILD-001`, so it verifies a
+> different requirement and did not cover ARCH-006. Downgraded to `code-only`
+> pending an oracle that names this ID. `FR-CIV-ARCH-NOSVG-001` stays `traced`:
+> `web/tests/noSvgRuntime.test.mjs` exists and its row is accurate.
 
 ---
 

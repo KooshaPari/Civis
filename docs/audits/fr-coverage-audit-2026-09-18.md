@@ -2,7 +2,7 @@
 
 **Generated:** 2026-09-18  
 **Source inventory:** `docs/audits/_id_inventory_v3.json`  
-**Total IDs scanned:** 1506
+**Total IDs scanned:** 1507
 
 ## Status legend
 
@@ -17,11 +17,11 @@
 
 | Status | Count | % |
 |--------|------:|--:|
-| `COVERED` | 573 | 38.0 |
-| `IMPL-NO-TEST` | 75 | 5.0 |
+| `COVERED` | 574 | 38.1 |
+| `IMPL-NO-TEST` | 74 | 4.9 |
 | `SPEC-ONLY` | 645 | 42.8 |
-| `CODE-ONLY-no-spec` | 213 | 14.1 |
-| **Total** | **1506** | **100.0** |
+| `CODE-ONLY-no-spec` | 214 | 14.2 |
+| **Total** | **1507** | **100.0** |
 
 ## Coverage by epic
 
@@ -204,6 +204,7 @@
 | FR-ECON | 10 | 10 | 0 | 0 | 0 |
 | FR-ECON-EMERGE | 3 | 0 | 0 | 0 | 3 |
 | FR-EMG | 24 | 0 | 0 | 0 | 24 |
+| FR-FR-CORE | 1 | 0 | 0 | 0 | 1 |
 | FR-GUARD | 2 | 0 | 0 | 2 | 0 |
 | FR-INST | 6 | 6 | 0 | 0 | 0 |
 | FR-INT | 1 | 0 | 0 | 1 | 0 |
@@ -272,7 +273,7 @@
 | NFR-CIV-PERF | 11 | 1 | 8 | 2 | 0 |
 | NFR-CIV-PORT | 3 | 0 | 0 | 3 | 0 |
 | NFR-CIV-REL | 4 | 0 | 0 | 4 | 0 |
-| NFR-CIV-SCALE | 9 | 1 | 6 | 2 | 0 |
+| NFR-CIV-SCALE | 9 | 2 | 5 | 2 | 0 |
 | NFR-CIV-SCALE-PERF | 1 | 0 | 0 | 0 | 1 |
 | NFR-CIV-SEC | 4 | 0 | 0 | 4 | 0 |
 | NFR-O | 6 | 0 | 0 | 6 | 0 |
@@ -1965,7 +1966,7 @@
 - `NFR-S-06`
   - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2071, docs/traceability/index.md:1236, docs/traceability/nfr-s-06/nfr-s-06-spec.md:1
 
-## Implemented but untested IDs (75)
+## Implemented but untested IDs (74)
 
 - `FR-CIV-BEVY-013`
   - spec: docs/traceability/fr-3d-matrix.md:178, docs/traceability/full-traceability-matrix.md:307, docs/traceability/fr-civ-bevy-013/fr-civ-bevy-013-adr.md:1
@@ -2026,7 +2027,7 @@
   - code: crates/engine/src/climate.rs:16, crates/engine/src/climate.rs:35, crates/engine/src/climate.rs:48
 - `FR-CIV-PLANET-030`
   - spec: agileplus-specs/civ-021-recovered-requirements/spec.md:91, docs/traceability/fr-civ-planet-030/fr-civ-planet-030-adr.md:1, docs/traceability/fr-civ-planet-030/fr-civ-planet-030-adr.md:6
-  - code: crates/engine/src/climate.rs:35, crates/engine/src/engine/engine_tests.rs:1850, crates/engine/src/engine.rs:813
+  - code: crates/engine/src/climate.rs:35, crates/engine/src/engine/engine_tests.rs:1850, crates/engine/src/engine.rs:820
 - `FR-CIV-PROTO3D-009-`
   - spec: docs/specs/gap-audit.md:306, docs/traceability/fr-3d-matrix.md:229
   - code: docs/development-guide/p-w1-kickoff.md:116
@@ -2074,7 +2075,7 @@
   - code: docs/development-guide/p-w1-kickoff.md:31
 - `FR-CIV-TACTICS-035`
   - spec: docs/traceability/fr-3d-matrix.md:122, docs/traceability/full-traceability-matrix.md:230, docs/traceability/fr-civ-tactics-035/fr-civ-tactics-035-adr.md:1
-  - code: crates/engine/src/engine.rs:805, crates/tactics/src/military_phase.rs:1, docs/development-guide/p-w1-kickoff.md:34
+  - code: crates/engine/src/engine.rs:812, crates/tactics/src/military_phase.rs:1, docs/development-guide/p-w1-kickoff.md:34
 - `FR-CIV-TACTICS-045`
   - spec: agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:56, docs/traceability/fr-3d-matrix.md:135, docs/traceability/full-traceability-matrix.md:240
   - code: crates/engine/src/scenario.rs:99, docs/development-guide/p-w1-kickoff.md:47
@@ -2171,9 +2172,6 @@
 - `NFR-CIV-PERF-902`
   - spec: docs/specs/requirements/NFR-CIV-SCALE-PERF.md:17, docs/traceability/fr-nfr-matrix.md:26, docs/traceability/index.md:1190
   - code: docs/agileplus/epics/civ-w5-scale.md:16, docs/agileplus/epics/civ-w5-scale.md:28, docs/agileplus/README.md:24
-- `NFR-CIV-SCALE-002`
-  - spec: docs/reference/non-functional-requirements.md:110, docs/reference/non-functional-requirements.md:206, docs/reference/non-functional-requirements.md:563
-  - code: docs/guides/voxel-emergent-vision-and-migration.md:96, docs/guides/voxel-emergent-vision-and-migration.md:152
 - `NFR-CIV-SCALE-004`
   - spec: docs/traceability/index.md:1201, docs/traceability/nfr-civ-scale-004/nfr-civ-scale-004-adr.md:1, docs/traceability/nfr-civ-scale-004/nfr-civ-scale-004-adr.md:6
   - code: docs/guides/voxel-emergent-vision-and-migration.md:172
@@ -2193,7 +2191,7 @@
   - spec: docs/traceability/fr-emergence-matrix.md:261, docs/traceability/index.md:1237, docs/traceability/nfr-scale-02/nfr-scale-02-adr.md:1
   - code: crates/legends/src/config.rs:18
 
-## Code-only IDs (missing spec/traceability) (213)
+## Code-only IDs (missing spec/traceability) (214)
 
 - `FR-ASSET-PIPELINE-001`
   - code: crates/asset-pipeline/src/lib.rs:3, crates/asset-pipeline/src/lib.rs:18, crates/asset-pipeline/src/lib.rs:57
@@ -2207,7 +2205,7 @@
 - `FR-CIV-ACCESS-020`
   - code: docs/adr/ADR-021-accessibility-and-l10n-strategy.md:48
 - `FR-CIV-AGGRESSION-001`
-  - code: crates/engine/src/engine.rs:485, crates/engine/src/engine.rs:2184
+  - code: crates/engine/src/engine.rs:492, crates/engine/src/engine.rs:2191
   - tests: crates/engine/tests/culture_ideology_aggression_persistence.rs:3
 - `FR-CIV-ARCH-A-001`
   - code: crates/build/src/tiers.rs:405
@@ -2292,14 +2290,14 @@
 - `FR-CIV-COHESION-001`
   - code: crates/engine/src/engine/social_settlement_phases.rs:272
 - `FR-CIV-CONSTRUCTION-001`
-  - code: crates/engine/src/engine.rs:459, crates/engine/src/engine.rs:2175
+  - code: crates/engine/src/engine.rs:466, crates/engine/src/engine.rs:2182
   - tests: crates/engine/tests/institutions_buildsites_econfocus_persistence.rs:4, crates/engine/tests/persistence_replay_coverage.rs:13
 - `FR-CIV-CONTENT-001`
   - code: crates/engine/src/emergence_coupling.rs:471
 - `FR-CIV-CORE-021`
   - tests: crates/build/tests/fr_matrix_batch12.rs:765
 - `FR-CIV-CULTURE-001`
-  - code: crates/engine/src/engine.rs:471, crates/engine/src/engine.rs:2183
+  - code: crates/engine/src/engine.rs:478, crates/engine/src/engine.rs:2190
   - tests: crates/engine/tests/culture_ideology_aggression_persistence.rs:2
 - `FR-CIV-DIPLO-003-006`
   - code: crates/diplomacy/src/shadow_networks.rs:660
@@ -2326,22 +2324,22 @@
   - code: crates/diplomacy/src/shadow_networks.rs:710, crates/diplomacy/src/shadow_networks.rs:712
   - tests: crates/diplomacy/src/shadow_networks.rs:710, crates/diplomacy/src/shadow_networks.rs:712
 - `FR-CIV-DIPLOMACY-001`
-  - code: crates/engine/src/engine.rs:2161, crates/engine/src/engine.rs:2336
+  - code: crates/engine/src/engine.rs:2168, crates/engine/src/engine.rs:2343
   - tests: crates/engine/tests/diplomacy_flow.rs:20, crates/engine/tests/persistence_replay_coverage.rs:15
 - `FR-CIV-DIPLOMACY-004`
-  - code: crates/diplomacy/src/stance.rs:1, crates/engine/src/engine.rs:433, crates/engine/src/engine.rs:996
+  - code: crates/diplomacy/src/stance.rs:1, crates/engine/src/engine.rs:440, crates/engine/src/engine.rs:1003
 - `FR-CIV-ECON-010`
-  - code: crates/engine/src/engine.rs:525, crates/engine/src/engine.rs:716, crates/engine/src/engine.rs:2193
+  - code: crates/engine/src/engine.rs:532, crates/engine/src/engine.rs:723, crates/engine/src/engine.rs:2200
   - tests: crates/engine/tests/riot_migrant_taxation_persistence.rs:3
 - `FR-CIV-ECON-FOCUS-001`
-  - code: crates/engine/src/engine.rs:465, crates/engine/src/engine.rs:2176
+  - code: crates/engine/src/engine.rs:472, crates/engine/src/engine.rs:2183
   - tests: crates/engine/tests/institutions_buildsites_econfocus_persistence.rs:4, crates/engine/tests/persistence_replay_coverage.rs:14
 - `FR-CIV-EMERGE-DASH-001`
   - code: clients/bevy-ref/src/emergence_dashboard.rs:3
 - `FR-CIV-EMERGENT-MIGRATION-001`
   - code: crates/engine/src/emergent_migration.rs:1, crates/engine/src/emergent_migration.rs:25
 - `FR-CIV-ERA-001`
-  - code: crates/engine/src/engine.rs:531
+  - code: crates/engine/src/engine.rs:538
   - tests: crates/engine/tests/era_emergence_significance_persistence.rs:2
 - `FR-CIV-FAMINE-001`
   - code: crates/engine/src/famine.rs:1
@@ -2363,24 +2361,24 @@
 - `FR-CIV-GODTOOL-001`
   - code: crates/civis-mcp/src/server.rs:148
 - `FR-CIV-GOV-003`
-  - code: crates/civ-institutions/src/lib.rs:38, crates/engine/src/engine.rs:849, crates/engine/src/engine.rs:858
+  - code: crates/civ-institutions/src/lib.rs:38, crates/engine/src/engine.rs:856, crates/engine/src/engine.rs:865
   - tests: crates/engine/tests/fr_civ_gov_institutions.rs:19, crates/engine/tests/fr_civ_gov_institutions.rs:132, crates/engine/tests/fr_civ_gov_institutions.rs:133
 - `FR-CIV-GOV-010`
-  - code: crates/engine/src/engine.rs:3424
+  - code: crates/engine/src/engine.rs:3431
   - tests: crates/engine/tests/fr_civ_gov_mood.rs:1
 - `FR-CIV-GOV-020`
   - code: crates/engine/src/social_types.rs:5, crates/engine/src/social_types.rs:69
   - tests: crates/engine/tests/fr_civ_gov_stratification.rs:1, crates/engine/tests/fr_civ_gov_stratification.rs:28, crates/engine/tests/fr_civ_gov_stratification.rs:29
 - `FR-CIV-GOV-100`
-  - code: crates/engine/src/engine.rs:863, crates/engine/src/engine.rs:868, crates/engine/src/engine.rs:873
+  - code: crates/engine/src/engine.rs:870, crates/engine/src/engine.rs:875, crates/engine/src/engine.rs:880
   - tests: crates/engine/tests/fr_emergence_quality.rs:347
 - `FR-CIV-GOV-200`
   - code: crates/engine/src/engine/social_settlement_phases.rs:179
 - `FR-CIV-IDEOLOGY-001`
-  - code: crates/engine/src/engine.rs:479, crates/engine/src/engine.rs:2183
+  - code: crates/engine/src/engine.rs:486, crates/engine/src/engine.rs:2190
   - tests: crates/engine/tests/culture_ideology_aggression_persistence.rs:2
 - `FR-CIV-INSTITUTIONS-001`
-  - code: crates/engine/src/engine.rs:451, crates/engine/src/engine.rs:2175
+  - code: crates/engine/src/engine.rs:458, crates/engine/src/engine.rs:2182
   - tests: crates/engine/tests/institutions_buildsites_econfocus_persistence.rs:3, crates/engine/tests/persistence_replay_coverage.rs:12
 - `FR-CIV-INT-001`
   - tests: crates/engine/tests/fr_engine_replay_integrity_tests.rs:5, crates/engine/tests/fr_engine_replay_integrity_tests.rs:113, crates/engine/tests/fr_engine_replay_integrity_tests.rs:116
@@ -2393,7 +2391,7 @@
 - `FR-CIV-L10N-040`
   - code: docs/adr/ADR-021-accessibility-and-l10n-strategy.md:52
 - `FR-CIV-LEGENDS-010`
-  - code: crates/engine/src/engine.rs:991
+  - code: crates/engine/src/engine.rs:998
 - `FR-CIV-NEEDS-DECAY-01`
   - code: crates/needs/src/decay.rs:32, crates/needs/src/decay.rs:219, crates/needs/src/decay.rs:336
   - tests: crates/needs/src/decay.rs:336, crates/needs/src/decay.rs:361, crates/needs/src/decay.rs:386
@@ -2430,7 +2428,7 @@
 - `FR-CIV-TEST-021`
   - tests: crates/server/tests/save_load_e2e.rs:1
 - `FR-CIV-UNREST-002`
-  - code: crates/engine/src/engine.rs:497, crates/engine/src/engine.rs:519, crates/engine/src/engine.rs:2193
+  - code: crates/engine/src/engine.rs:504, crates/engine/src/engine.rs:526, crates/engine/src/engine.rs:2200
   - tests: crates/engine/tests/riot_migrant_taxation_persistence.rs:2
 - `FR-CIV-WARFARE-001`
   - code: crates/tactics/src/war_from_diplomacy.rs:1
@@ -2505,8 +2503,10 @@
 - `FR-EMG-025`
   - code: crates/emergence-oracle/src/oracles/migration_pressure.rs:1, crates/emergence-oracle/src/oracles/migration_pressure.rs:16, crates/emergence-oracle/src/oracles/migration_pressure.rs:54
   - tests: crates/emergence-oracle/src/oracles/migration_pressure.rs:54
+- `FR-FR-CORE-009`
+  - tests: crates/engine/tests/fr_core_cluster.rs:1, crates/engine/tests/fr_core_cluster.rs:15, crates/engine/tests/fr_core_cluster.rs:184
 - `FR-LANGUAGE-001`
-  - code: crates/engine/src/engine/culture_phases.rs:230, crates/engine/src/engine.rs:169, crates/engine/src/engine.rs:828
+  - code: crates/engine/src/engine/culture_phases.rs:230, crates/engine/src/engine.rs:169, crates/engine/src/engine.rs:835
 - `FR-MUSIC-001`
   - code: crates/engine/src/engine/engine_tests.rs:3732
   - tests: crates/engine/src/engine/engine_tests.rs:3732
@@ -2684,34 +2684,19 @@
   - code: crates/voxel/src/scale_stream.rs:1, crates/voxel/src/scale_stream.rs:16, crates/voxel/src/scale_stream.rs:58
   - tests: crates/voxel/src/scale_stream.rs:427, crates/voxel/src/scale_stream.rs:479, crates/voxel/src/scale_stream.rs:509
 
-## Placeholder-only coverage (weakest evidence) (63)
+## Placeholder-only coverage (weakest evidence) (32)
 
 These IDs are counted `COVERED` on tests whose file matches the auto-generated placeholder pattern above. Their tests assert properties of shared types, not the requirement, so treat the coverage as unverified until a real oracle exists.
 
-`552` placeholder test files affect `63` IDs.
+`552` placeholder test files affect `32` IDs.
 
 - `FR-CIV-0001-TICK`
 - `FR-CIV-ACT-003`
 - `FR-CIV-ACT-004`
 - `FR-CIV-ACT-005`
-- `FR-CIV-AI-001`
-- `FR-CIV-AI-002`
-- `FR-CIV-AI-003`
-- `FR-CIV-AI-004`
-- `FR-CIV-AI-005`
 - `FR-CIV-ARCH-001`
 - `FR-CIV-ARCH-002`
-- `FR-CIV-CORE-003`
-- `FR-CIV-CORE-004`
-- `FR-CIV-CORE-005`
-- `FR-CIV-CORE-013`
-- `FR-CIV-CORE-019`
 - `FR-CIV-ECON-003`
-- `FR-CIV-GODTOOL-910`
-- `FR-CIV-GODTOOL-911`
-- `FR-CIV-GODTOOL-912`
-- `FR-CIV-GODTOOL-920`
-- `FR-CIV-GODTOOL-921`
 - `FR-CIV-INFOVIEW-905`
 - `FR-CIV-INFOVIEW-911`
 - `FR-CIV-INFOVIEW-912`
@@ -2719,24 +2704,10 @@ These IDs are counted `COVERED` on tests whose file matches the auto-generated p
 - `FR-CIV-INSPECT-902`
 - `FR-CIV-INSPECT-920`
 - `FR-CIV-L5`
-- `FR-CIV-LANG-001`
-- `FR-CIV-LANG-002`
-- `FR-CIV-LANG-003`
-- `FR-CIV-LANG-005`
-- `FR-CIV-LANG-009`
 - `FR-CIV-MCP-001`
 - `FR-CIV-MCP-003`
-- `FR-CIV-NOTIFY-901`
-- `FR-CIV-NOTIFY-910`
-- `FR-CIV-NOTIFY-911`
-- `FR-CIV-NOTIFY-920`
-- `FR-CIV-NOTIFY-921`
 - `FR-CIV-PERF-001`
-- `FR-CIV-RENDER-001`
-- `FR-CIV-RENDER-002`
 - `FR-CIV-RES-001`
-- `FR-CIV-ROAD-901`
-- `FR-CIV-ROAD-921`
 - `FR-CIV-RTS-001`
 - `FR-CIV-RTS-002`
 - `FR-CIV-VOXEL-031`
@@ -2744,10 +2715,8 @@ These IDs are counted `COVERED` on tests whose file matches the auto-generated p
 - `FR-CLIENT-001`
 - `FR-CLIENT-002`
 - `FR-CLIENT-003`
-- `FR-CORE-002`
 - `FR-CORE-009`
 - `FR-ECON-006`
-- `FR-ECON-008`
 - `FR-ECON-009`
 - `FR-ECON-010`
 - `FR-PERF-003`

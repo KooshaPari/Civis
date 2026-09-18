@@ -725,6 +725,7 @@ mod cloud_provider {
                     "the failure must name the missing key, got: {message}"
                 );
             }
+            Err(other) => panic!("expected Unavailable naming the key, got {other:?}"),
             Ok(_) => panic!("a cloud provider must not construct without credentials"),
         }
     }

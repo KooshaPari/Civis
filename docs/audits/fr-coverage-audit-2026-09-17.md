@@ -17,9 +17,9 @@
 
 | Status | Count | % |
 |--------|------:|--:|
-| `COVERED` | 750 | 49.8 |
-| `IMPL-NO-TEST` | 272 | 18.1 |
-| `SPEC-ONLY` | 263 | 17.5 |
+| `COVERED` | 754 | 50.1 |
+| `IMPL-NO-TEST` | 269 | 17.9 |
+| `SPEC-ONLY` | 262 | 17.4 |
 | `CODE-ONLY-no-spec` | 221 | 14.7 |
 | **Total** | **1506** | **100.0** |
 
@@ -82,10 +82,10 @@
 | FR-CIV-EMERG | 5 | 3 | 0 | 2 | 0 |
 | FR-CIV-EMERGE-DASH | 1 | 0 | 0 | 0 | 1 |
 | FR-CIV-EMERGENCE | 25 | 10 | 0 | 15 | 0 |
-| FR-CIV-EMERGENCE-N10 | 1 | 0 | 1 | 0 | 0 |
-| FR-CIV-EMERGENCE-N11 | 1 | 0 | 1 | 0 | 0 |
-| FR-CIV-EMERGENCE-N12 | 1 | 0 | 1 | 0 | 0 |
-| FR-CIV-EMERGENCE-N13 | 1 | 0 | 0 | 1 | 0 |
+| FR-CIV-EMERGENCE-N10 | 1 | 1 | 0 | 0 | 0 |
+| FR-CIV-EMERGENCE-N11 | 1 | 1 | 0 | 0 | 0 |
+| FR-CIV-EMERGENCE-N12 | 1 | 1 | 0 | 0 | 0 |
+| FR-CIV-EMERGENCE-N13 | 1 | 1 | 0 | 0 | 0 |
 | FR-CIV-EMERGENCE-RELIGION | 2 | 0 | 0 | 0 | 2 |
 | FR-CIV-EMERGENT-MIGRATION | 1 | 0 | 0 | 0 | 1 |
 | FR-CIV-ENGINE-INT | 10 | 0 | 10 | 0 | 0 |
@@ -281,7 +281,7 @@
 | NFR-S | 6 | 0 | 6 | 0 | 0 |
 | NFR-SCALE | 1 | 0 | 1 | 0 | 0 |
 
-## Spec-only IDs (need implementation) (263)
+## Spec-only IDs (need implementation) (262)
 
 - `FR-CIV-0100-`
   - spec: docs/traceability/emergent-systems-tracelinks.md:144, docs/traceability/fr-emergence-matrix.md:20, docs/traceability/fr-emergence-matrix.md:21
@@ -455,9 +455,6 @@
   - spec: docs/traceability/emergent-systems-tracelinks.md:163
 - `FR-CIV-EMERGENCE-249`
   - spec: docs/traceability/emergent-systems-tracelinks.md:164
-- `FR-CIV-EMERGENCE-N13`
-  - spec: docs/traceability/fr-emergence-matrix.md:198
-  - tests: crates/engine/tests/n13_coverage.rs:3
 - `FR-CIV-FOG-001`
   - spec: agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:47, docs/traceability/fr-civ-fog-001/fr-civ-fog-001-adr.md:1, docs/traceability/fr-civ-fog-001/fr-civ-fog-001-adr.md:6
   - tests: crates/tactics/tests/fr_fr_civ_fog_001.rs:1, crates/tactics/tests/fr_fr_civ_fog_001.rs:6, crates/tactics/tests/fr_fr_civ_fog_001.rs:14
@@ -991,6 +988,7 @@
   - tests: crates/engine/tests/fr_nfr_civ_rel_004.rs:1
 - `NFR-CIV-SCALE-001`
   - spec: docs/reference/non-functional-requirements.md:82, docs/reference/non-functional-requirements.md:188, docs/reference/non-functional-requirements.md:562
+  - tests: crates/protocol-3d/tests/fr_perf_005_frame3d_timing.rs:85
 - `NFR-CIV-SCALE-003`
   - spec: docs/reference/non-functional-requirements.md:220, docs/reference/non-functional-requirements.md:564, docs/reference/non-functional-requirements.md:602
 - `NFR-CIV-SEC-001`
@@ -1002,7 +1000,7 @@
 - `NFR-CIV-SEC-004`
   - spec: docs/reference/non-functional-requirements.md:336, docs/reference/non-functional-requirements.md:572, docs/reference/non-functional-requirements.md:611
 
-## Implemented but untested IDs (272)
+## Implemented but untested IDs (269)
 
 - `FR-CIV-ASSET-001`
   - spec: docs/traceability/fr-civ-asset-001/fr-civ-asset-001-adr.md:1, docs/traceability/fr-civ-asset-001/fr-civ-asset-001-adr.md:6, docs/traceability/fr-civ-asset-001/fr-civ-asset-001-adr.md:11
@@ -1112,15 +1110,6 @@
 - `FR-CIV-ECON-002-JOULE`
   - spec: agileplus-specs/civ-021-recovered-requirements/spec.md:70, docs/traceability/fr-civ-econ-002-joule/fr-civ-econ-002-joule-adr.md:1, docs/traceability/fr-civ-econ-002-joule/fr-civ-econ-002-joule-adr.md:6
   - code: docs/guides/COPILOT_L3_AGENTS.md:92, docs/guides/COPILOT_L3_AGENTS.md:93, docs/guides/COPILOT_L3_AGENTS.md:474
-- `FR-CIV-EMERGENCE-N10`
-  - spec: docs/traceability/fr-emergence-matrix.md:195
-  - code: crates/engine/src/emergence_coupling.rs:292, crates/engine/src/engine/engine_tests.rs:2669, crates/engine/src/social_dynamics.rs:216
-- `FR-CIV-EMERGENCE-N11`
-  - spec: docs/traceability/fr-emergence-matrix.md:196
-  - code: crates/engine/src/emergence_coupling.rs:275, crates/engine/src/engine/engine_tests.rs:2491, crates/engine/src/social_dynamics.rs:195
-- `FR-CIV-EMERGENCE-N12`
-  - spec: docs/traceability/fr-emergence-matrix.md:197
-  - code: crates/agents/src/psyche.rs:424, crates/engine/src/emergence_coupling.rs:329, crates/engine/src/emergence_coupling.rs:351
 - `FR-CIV-ENGINE-INT-001`
   - spec: docs/traceability/fr-civ-engine-int-001/fr-civ-engine-int-001-adr.md:1, docs/traceability/fr-civ-engine-int-001/fr-civ-engine-int-001-adr.md:6, docs/traceability/fr-civ-engine-int-001/fr-civ-engine-int-001-adr.md:11
   - code: crates/engine/src/engine/engine_tests.rs:949
@@ -1830,7 +1819,7 @@
 - `FR-CIV-0104-011`
   - code: docs/specs/CIV-0104-minimal-constraint-set-theorem.md:1504
 - `FR-CIV-014`
-  - code: crates/engine/src/engine/engine_tests.rs:3112
+  - code: crates/engine/src/engine/engine_tests.rs:3123
   - tests: crates/engine/src/emergence.rs:1625, crates/engine/src/save.rs:335, crates/engine/src/save.rs:375
 - `FR-CIV-0700`
   - code: docs/design/civ-actor-assets-fix.md:322
@@ -1964,11 +1953,11 @@
 - `FR-CIV-GAME-003`
   - code: clients/bevy-ref/src/era_hud.rs:2, crates/engine/src/era.rs:1
 - `FR-CIV-GENETICS-SEED-001`
-  - code: crates/engine/src/engine/engine_tests.rs:2896
+  - code: crates/engine/src/engine/engine_tests.rs:2907
 - `FR-CIV-GENETICS-SEED-002`
-  - code: crates/engine/src/engine/engine_tests.rs:2946
+  - code: crates/engine/src/engine/engine_tests.rs:2957
 - `FR-CIV-GENETICS-SEED-003`
-  - code: crates/engine/src/engine/engine_tests.rs:2992
+  - code: crates/engine/src/engine/engine_tests.rs:3003
 - `FR-CIV-GODTOOL-001`
   - code: crates/civis-mcp/src/server.rs:148
 - `FR-CIV-GOV-003`
@@ -2124,7 +2113,7 @@
 - `FR-LANGUAGE-001`
   - code: crates/engine/src/engine/culture_phases.rs:230, crates/engine/src/engine.rs:169, crates/engine/src/engine.rs:828
 - `FR-MUSIC-001`
-  - tests: crates/engine/src/engine/engine_tests.rs:3687
+  - tests: crates/engine/src/engine/engine_tests.rs:3698
 - `FR-NFR-C-01`
   - tests: crates/engine/tests/fr_nfr_c_01.rs:1, crates/engine/tests/fr_nfr_c_01.rs:6, crates/engine/tests/fr_nfr_c_01.rs:10
 - `FR-NFR-C-02`

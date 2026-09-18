@@ -27,7 +27,8 @@
         "crates/ai/src/goal_tree.rs:155",
         "crates/ai/src/goal_tree.rs:203",
         "crates/ai/src/utility.rs:1",
-        "docs/IMPLEMENTATION_STATUS.md:81"
+        "docs/IMPLEMENTATION_STATUS.md:81",
+        "scripts/traceability/gen-fr-audit.py:45"
       ],
       "in_tests": [
         "crates/ai/tests/fr_fr_ai_001.rs:1",
@@ -939,7 +940,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:3112"
+        "crates/engine/src/engine/engine_tests.rs:3123"
       ],
       "in_tests": [
         "crates/engine/src/emergence.rs:1625",
@@ -7710,10 +7711,15 @@
       ],
       "in_code": [
         "crates/engine/src/emergence_coupling.rs:292",
-        "crates/engine/src/engine/engine_tests.rs:2669",
+        "crates/engine/src/engine/engine_tests.rs:2672",
         "crates/engine/src/social_dynamics.rs:216"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/engine/src/engine/engine_tests.rs:2674",
+        "crates/engine/src/engine/engine_tests.rs:2683",
+        "crates/engine/src/engine/engine_tests.rs:2708",
+        "crates/engine/src/engine/engine_tests.rs:2743"
+      ]
     },
     {
       "id": "FR-CIV-EMERGENCE-N11",
@@ -7728,7 +7734,11 @@
         "crates/engine/src/engine/engine_tests.rs:2491",
         "crates/engine/src/social_dynamics.rs:195"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/engine/src/engine/engine_tests.rs:2493",
+        "crates/engine/src/engine/engine_tests.rs:2501",
+        "crates/engine/src/engine/engine_tests.rs:2518"
+      ]
     },
     {
       "id": "FR-CIV-EMERGENCE-N12",
@@ -7742,9 +7752,14 @@
         "crates/agents/src/psyche.rs:424",
         "crates/engine/src/emergence_coupling.rs:329",
         "crates/engine/src/emergence_coupling.rs:351",
-        "crates/engine/src/engine/engine_tests.rs:2754"
+        "crates/engine/src/engine/engine_tests.rs:2761"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/engine/src/engine/engine_tests.rs:2763",
+        "crates/engine/src/engine/engine_tests.rs:2771",
+        "crates/engine/src/engine/engine_tests.rs:2803",
+        "crates/engine/src/engine/engine_tests.rs:2823"
+      ]
     },
     {
       "id": "FR-CIV-EMERGENCE-N13",
@@ -7754,9 +7769,12 @@
       "in_traceability": [
         "docs/traceability/fr-emergence-matrix.md:198"
       ],
-      "in_code": [],
+      "in_code": [
+        "crates/agents/src/culture.rs:97"
+      ],
       "in_tests": [
-        "crates/engine/tests/n13_coverage.rs:3"
+        "crates/engine/tests/n13_coverage.rs:3",
+        "crates/engine/tests/n13_coverage.rs:20"
       ]
     },
     {
@@ -8454,7 +8472,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:2896"
+        "crates/engine/src/engine/engine_tests.rs:2907"
       ],
       "in_tests": []
     },
@@ -8465,7 +8483,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:2946"
+        "crates/engine/src/engine/engine_tests.rs:2957"
       ],
       "in_tests": []
     },
@@ -8476,7 +8494,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:2992"
+        "crates/engine/src/engine/engine_tests.rs:3003"
       ],
       "in_tests": []
     },
@@ -10586,7 +10604,7 @@
         "docs/traceability/fr-civ-lang-003/fr-civ-lang-003-plan.md:1"
       ],
       "in_code": [
-        "crates/agents/src/culture.rs:109"
+        "crates/agents/src/culture.rs:112"
       ],
       "in_tests": [
         "crates/engine/tests/fr_fr_civ_lang_003.rs:1",
@@ -10632,7 +10650,7 @@
         "docs/traceability/fr-civ-lang-005/fr-civ-lang-005-plan.md:1"
       ],
       "in_code": [
-        "crates/agents/src/culture.rs:109"
+        "crates/agents/src/culture.rs:112"
       ],
       "in_tests": [
         "crates/engine/tests/fr_fr_civ_lang_005.rs:1",
@@ -11575,7 +11593,7 @@
         "docs/traceability/fr-civ-life-001/fr-civ-life-001-intent.md:4"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:3958",
+        "crates/engine/src/engine/engine_tests.rs:3969",
         "crates/engine/src/engine/social_settlement_phases.rs:466",
         "crates/engine/src/engine.rs:3281",
         "crates/needs/src/lib.rs:14",
@@ -11610,7 +11628,7 @@
         "docs/traceability/fr-civ-life-002/fr-civ-life-002-intent.md:15"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:4055",
+        "crates/engine/src/engine/engine_tests.rs:4066",
         "crates/engine/src/engine/social_settlement_phases.rs:466",
         "crates/needs/src/lib.rs:14"
       ],
@@ -11652,7 +11670,7 @@
         "docs/design/civ-economy-emergent-markets.md:110"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:3869",
+        "crates/engine/src/engine/engine_tests.rs:3880",
         "crates/needs/src/lib.rs:502",
         "crates/needs/src/lib.rs:529",
         "crates/needs/src/lib.rs:663",
@@ -27054,7 +27072,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:3687"
+        "crates/engine/src/engine/engine_tests.rs:3698"
       ]
     },
     {
@@ -28352,10 +28370,12 @@
       "in_tests": [
         "crates/engine/src/perf.rs:183",
         "crates/engine/src/perf.rs:186",
-        "crates/engine/src/perf.rs:238",
+        "crates/engine/src/perf.rs:240",
         "crates/engine/tests/fr_fr_perf_005.rs:1",
         "crates/engine/tests/fr_fr_perf_005.rs:6",
-        "crates/engine/tests/fr_fr_perf_005.rs:10"
+        "crates/engine/tests/fr_fr_perf_005.rs:10",
+        "crates/protocol-3d/tests/fr_perf_005_frame3d_timing.rs:1",
+        "crates/protocol-3d/tests/fr_perf_005_frame3d_timing.rs:64"
       ]
     },
     {
@@ -33007,7 +33027,8 @@
       ],
       "in_code": [
         "docs/guides/voxel-emergent-vision-and-migration.md:96",
-        "docs/guides/voxel-emergent-vision-and-migration.md:99"
+        "docs/guides/voxel-emergent-vision-and-migration.md:99",
+        "scripts/traceability/gen-fr-audit.py:47"
       ],
       "in_tests": [
         "crates/engine/tests/fr_engine_hash_lod_perf_tests.rs:4",
@@ -33428,7 +33449,9 @@
         "docs/traceability/nfr-civ-scale-001/nfr-civ-scale-001-spec.md:1"
       ],
       "in_code": [],
-      "in_tests": []
+      "in_tests": [
+        "crates/protocol-3d/tests/fr_perf_005_frame3d_timing.rs:85"
+      ]
     },
     {
       "id": "NFR-CIV-SCALE-002",

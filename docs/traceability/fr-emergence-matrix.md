@@ -192,10 +192,10 @@ Mapped to `crates/economy/src/market.rs` and `FR-ECON-003` (strategic matrix tra
 | FR-CIV-EMERGENCE-003 | Environment-vector fitness (voxel vision) | `docs/guides/voxel-emergent-vision-and-migration.md` | TODO: `env_vector_fitness` | Fitness scalar monotonic with environment match score | stub |
 | FR-CIV-EMERGENCE-004 | Speciation registry driven by divergence | `crates/genetics/src/lib.rs` (`should_speciate`, `speciation_distance`) | `genetics::speciation_trigger` | Divergence > threshold ⇒ new species record | traced |
 | FR-CIV-EMERGENCE-010 | Spawn alignment from kinship proximity | `crates/agents/src/lib.rs` | spawn alignment tests | Kin proximity biases spawn faction alignment | code-only |
-| FR-CIV-EMERGENCE-N10 | Kinship→cohesion upward causation | `crates/engine/src/engine.rs` | `engine.rs:5175+` tests | Higher kinship ⇒ cohesion delta ≥ baseline | code-only |
-| FR-CIV-EMERGENCE-N11 | Psyche maturity→belief coupling | `crates/engine/src/engine.rs` | `engine.rs:5084+` tests | Maturity above threshold ⇒ belief accrual bonus > 0 | code-only |
-| FR-CIV-EMERGENCE-N12 | Affinity→diplomacy threshold bias | `crates/engine/src/engine.rs` | `engine.rs:5261+` tests | High affinity lowers conflict threshold | code-only |
-| FR-CIV-EMERGENCE-N13 | Language distance↔diplomatic tension | `crates/engine/tests/n13_coverage.rs` | full `n13_coverage.rs` | Language distance correlates with tension delta sign | code-only |
+| FR-CIV-EMERGENCE-N10 | Kinship→cohesion upward causation | `crates/engine/src/emergence_coupling.rs` | `engine_tests::n10_*` (4 tests) | Higher kinship ⇒ cohesion delta ≥ baseline | traced |
+| FR-CIV-EMERGENCE-N11 | Psyche maturity→belief coupling | `crates/engine/src/emergence_coupling.rs` | `engine_tests::n11_*` (3 tests) | Maturity above threshold ⇒ belief accrual bonus > 0 | traced |
+| FR-CIV-EMERGENCE-N12 | Affinity→diplomacy threshold bias | `crates/engine/src/emergence_coupling.rs` | `engine_tests::n12_*` (4 tests) | High affinity lowers conflict threshold | traced |
+| FR-CIV-EMERGENCE-N13 | Language distance↔diplomatic tension | `crates/agents/src/culture.rs` (`language_distance`) | `tests/n13_coverage.rs` (5 tests) | Language distance correlates with tension delta sign | traced |
 
 ---
 

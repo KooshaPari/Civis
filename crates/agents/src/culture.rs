@@ -93,6 +93,9 @@ pub fn cultural_distance(a: TraitVector, b: TraitVector) -> f32 {
 }
 
 /// Returns a normalized language distance in `[0, 1]` from trait vectors alone.
+///
+/// Implements FR-CIV-EMERGENCE-N13: this is the distance the diplomatic-tension
+/// coupling consumes (see `crates/engine/tests/n13_coverage.rs`).
 pub fn language_distance(a: TraitVector, b: TraitVector) -> f32 {
     cultural_distance(a, b)
 }

@@ -967,6 +967,8 @@ mod tests {
         assert_eq!(sim.climate(), &expected);
     }
 
+    /// Covers FR-CIV-PLANET-010.
+    ///
     /// FR-CIV-PLANET-010 — `Simulation::snapshot()` surfaces the deterministic
     /// `Climate` produced by `phase_planet`, bit-identical to `compute_climate`.
     #[test]
@@ -1593,6 +1595,8 @@ mod tests {
         assert_ne!(log.running_hash, after_tick);
     }
 
+    /// Covers FR-CIV-TACTICS-025.
+    ///
     /// FR-CIV-TACTICS-025-int — replay log restores queued combat damage events.
     #[test]
     fn replay_combat_events_restore_pending_damage() {

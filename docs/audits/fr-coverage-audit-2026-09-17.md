@@ -17,8 +17,8 @@
 
 | Status | Count | % |
 |--------|------:|--:|
-| `COVERED` | 449 | 29.8 |
-| `IMPL-NO-TEST` | 76 | 5.0 |
+| `COVERED` | 450 | 29.9 |
+| `IMPL-NO-TEST` | 75 | 5.0 |
 | `SPEC-ONLY` | 768 | 51.0 |
 | `CODE-ONLY-no-spec` | 213 | 14.1 |
 | **Total** | **1506** | **100.0** |
@@ -146,7 +146,7 @@
 | FR-CIV-PERF-BUILD | 1 | 0 | 0 | 1 | 0 |
 | FR-CIV-PERF-RT | 3 | 0 | 0 | 3 | 0 |
 | FR-CIV-PERF-WEB | 1 | 0 | 0 | 1 | 0 |
-| FR-CIV-PLANET | 12 | 5 | 3 | 3 | 1 |
+| FR-CIV-PLANET | 12 | 6 | 2 | 3 | 1 |
 | FR-CIV-POLITY | 8 | 0 | 0 | 8 | 0 |
 | FR-CIV-PROTO | 15 | 2 | 0 | 13 | 0 |
 | FR-CIV-PROTO3D | 20 | 5 | 1 | 14 | 0 |
@@ -2334,7 +2334,7 @@
 - `NFR-S-06`
   - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2071, docs/traceability/index.md:1236, docs/traceability/nfr-s-06/nfr-s-06-spec.md:1
 
-## Implemented but untested IDs (76)
+## Implemented but untested IDs (75)
 
 - `FR-CIV-BEVY-013`
   - spec: docs/traceability/fr-3d-matrix.md:178, docs/traceability/full-traceability-matrix.md:307, docs/traceability/fr-civ-bevy-013/fr-civ-bevy-013-adr.md:1
@@ -2365,7 +2365,7 @@
   - code: docs/guides/COPILOT_L3_AGENTS.md:92, docs/guides/COPILOT_L3_AGENTS.md:93, docs/guides/COPILOT_L3_AGENTS.md:474
 - `FR-CIV-ENGINE-INT-012`
   - spec: docs/traceability/fr-civ-engine-int-012/fr-civ-engine-int-012-adr.md:1, docs/traceability/fr-civ-engine-int-012/fr-civ-engine-int-012-adr.md:6, docs/traceability/fr-civ-engine-int-012/fr-civ-engine-int-012-adr.md:11
-  - code: crates/engine/src/engine/engine_tests.rs:1233
+  - code: crates/engine/src/engine/engine_tests.rs:1235
 - `FR-CIV-GEO-001`
   - spec: docs/specs/CIV-0300-rts-ui-ux-spec.md:2024, docs/traceability/fr-civ-geo-001/fr-civ-geo-001-adr.md:1, docs/traceability/fr-civ-geo-001/fr-civ-geo-001-adr.md:6
   - code: docs/reference/FR_TRACKER.md:22, docs/reports/STATUS_REPORT.md:95
@@ -2390,15 +2390,12 @@
 - `FR-CIV-LIFE-035`
   - spec: docs/traceability/fr-civ-life-035/fr-civ-life-035-adr.md:1, docs/traceability/fr-civ-life-035/fr-civ-life-035-adr.md:6, docs/traceability/fr-civ-life-035/fr-civ-life-035-adr.md:11
   - code: crates/agents/src/cluster.rs:76
-- `FR-CIV-PLANET-010`
-  - spec: agileplus-specs/civ-021-recovered-requirements/spec.md:160, agileplus-specs/civ-021-recovered-requirements/spec.md:166, docs/traceability/fr-civ-planet-010/fr-civ-planet-010-adr.md:1
-  - code: crates/engine/src/engine/engine_tests.rs:970, crates/engine/src/engine.rs:3381, crates/server/src/jsonrpc.rs:515
 - `FR-CIV-PLANET-020`
   - spec: agileplus-specs/civ-021-recovered-requirements/spec.md:85, docs/traceability/fr-civ-planet-020/fr-civ-planet-020-adr.md:1, docs/traceability/fr-civ-planet-020/fr-civ-planet-020-adr.md:6
   - code: crates/engine/src/climate.rs:16, crates/engine/src/climate.rs:35, crates/engine/src/climate.rs:48
 - `FR-CIV-PLANET-030`
   - spec: agileplus-specs/civ-021-recovered-requirements/spec.md:91, docs/traceability/fr-civ-planet-030/fr-civ-planet-030-adr.md:1, docs/traceability/fr-civ-planet-030/fr-civ-planet-030-adr.md:6
-  - code: crates/engine/src/climate.rs:35, crates/engine/src/engine/engine_tests.rs:1846, crates/engine/src/engine.rs:813
+  - code: crates/engine/src/climate.rs:35, crates/engine/src/engine/engine_tests.rs:1850, crates/engine/src/engine.rs:813
 - `FR-CIV-PROTO3D-009-`
   - spec: docs/specs/gap-audit.md:306, docs/traceability/fr-3d-matrix.md:229
   - code: docs/development-guide/p-w1-kickoff.md:116
@@ -2440,7 +2437,7 @@
   - code: PLAN.md:149, PLAN.md:150
 - `FR-CIV-TACTICS-025-`
   - spec: docs/traceability/fr-3d-matrix.md:123, docs/traceability/fr-3d-matrix.md:124, docs/traceability/fr-3d-matrix.md:125
-  - code: crates/engine/src/engine/engine_tests.rs:1596, crates/engine/src/engine/engine_tests.rs:1618, crates/engine/src/engine/engine_tests.rs:1642
+  - code: crates/engine/src/engine/engine_tests.rs:1600, crates/engine/src/engine/engine_tests.rs:1622, crates/engine/src/engine/engine_tests.rs:1646
 - `FR-CIV-TACTICS-032`
   - spec: docs/traceability/fr-3d-matrix.md:119, docs/traceability/full-traceability-matrix.md:227, docs/traceability/fr-civ-tactics-032/fr-civ-tactics-032-adr.md:1
   - code: docs/development-guide/p-w1-kickoff.md:31
@@ -2470,7 +2467,7 @@
   - code: crates/server/src/jsonrpc.rs:62, docs/development-guide/fr-godot-attach.md:15
 - `FR-CIV-VOXEL-006`
   - spec: docs/traceability/fr-civ-voxel-006/fr-civ-voxel-006-adr.md:1, docs/traceability/fr-civ-voxel-006/fr-civ-voxel-006-adr.md:6, docs/traceability/fr-civ-voxel-006/fr-civ-voxel-006-adr.md:11
-  - code: crates/engine/src/engine/engine_tests.rs:1393
+  - code: crates/engine/src/engine/engine_tests.rs:1395
 - `FR-CIV-WEB-000`
   - spec: docs/traceability/fr-civ-web-000/fr-civ-web-000-adr.md:1, docs/traceability/fr-civ-web-000/fr-civ-web-000-adr.md:6, docs/traceability/fr-civ-web-000/fr-civ-web-000-adr.md:11
   - code: docs/development-guide/fr-web-spectator.md:3, docs/development-guide/fr-web-spectator.md:29, docs/development-guide/pr-296-body.md:20
@@ -2572,7 +2569,7 @@
 - `FR-ASSET-PIPELINE-002`
   - code: crates/asset-pipeline/Cargo.toml:8, crates/asset-pipeline/src/bin/svg_export.rs:20, crates/asset-pipeline/src/error.rs:9
 - `FR-CIV-014`
-  - code: crates/engine/src/engine/engine_tests.rs:3153
+  - code: crates/engine/src/engine/engine_tests.rs:3157
   - tests: crates/engine/src/emergence.rs:1625, crates/engine/src/save.rs:335, crates/engine/src/save.rs:375
 - `FR-CIV-ACCESS-010`
   - code: docs/adr/ADR-021-accessibility-and-l10n-strategy.md:47
@@ -2698,11 +2695,11 @@
 - `FR-CIV-GAME-003`
   - code: clients/bevy-ref/src/era_hud.rs:2, crates/engine/src/era.rs:1
 - `FR-CIV-GENETICS-SEED-001`
-  - code: crates/engine/src/engine/engine_tests.rs:2937
+  - code: crates/engine/src/engine/engine_tests.rs:2941
 - `FR-CIV-GENETICS-SEED-002`
-  - code: crates/engine/src/engine/engine_tests.rs:2987
+  - code: crates/engine/src/engine/engine_tests.rs:2991
 - `FR-CIV-GENETICS-SEED-003`
-  - code: crates/engine/src/engine/engine_tests.rs:3033
+  - code: crates/engine/src/engine/engine_tests.rs:3037
 - `FR-CIV-GODTOOL-001`
   - code: crates/civis-mcp/src/server.rs:148
 - `FR-CIV-GOV-003`
@@ -2850,7 +2847,7 @@
 - `FR-LANGUAGE-001`
   - code: crates/engine/src/engine/culture_phases.rs:230, crates/engine/src/engine.rs:169, crates/engine/src/engine.rs:828
 - `FR-MUSIC-001`
-  - tests: crates/engine/src/engine/engine_tests.rs:3728
+  - tests: crates/engine/src/engine/engine_tests.rs:3732
 - `FR-NFR-C-01`
   - tests: crates/engine/tests/fr_nfr_c_01.rs:1, crates/engine/tests/fr_nfr_c_01.rs:6, crates/engine/tests/fr_nfr_c_01.rs:10
 - `FR-NFR-C-02`

@@ -167,15 +167,28 @@ mod tests {
             "serialized WorldState {bytes} bytes exceeds 1 MiB budget"
         );
 
-        // Also verify serialization itself is cheap
-        let start = std::time::Instant::now();
-        for _ in 0..100 {
-            let _ = serde_json::to_string(&state).expect("serialize");
+        // Also verify a tick's serialization output stays cheap to produce.
+        // This is wall-clock and therefore load-sensitive: a single round on a
+        // busy machine can absorb a scheduler preemption and blow the budget
+        // even though the work is fast, so warm up and take the best of a few
+        // rounds. That measures the operation instead of ambient load.
+        for _ in 0..5 {
+            let _ = serde_json::to_string(&state).expect("warmup");
         }
-        let elapsed = start.elapsed();
+        const ROUNDS: u32 = 5;
+        const ITERS: u32 = 100;
+        let mut best_ms = u128::MAX;
+        for _ in 0..ROUNDS {
+            let start = std::time::Instant::now();
+            for _ in 0..ITERS {
+                let _ = serde_json::to_string(&state).expect("serialize");
+            }
+            best_ms = best_ms.min(start.elapsed().as_millis());
+        }
         assert!(
-            elapsed.as_millis() < 100,
-            "100 serializations took {elapsed:?}, exceeds 100ms budget"
+            best_ms < 100,
+            "{ITERS} serializations took {best_ms}ms in the best of {ROUNDS} rounds, \
+             exceeds 100ms budget"
         );
     }
 

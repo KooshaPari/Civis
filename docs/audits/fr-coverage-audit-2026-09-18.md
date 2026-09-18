@@ -2684,11 +2684,11 @@
   - code: crates/voxel/src/scale_stream.rs:1, crates/voxel/src/scale_stream.rs:16, crates/voxel/src/scale_stream.rs:58
   - tests: crates/voxel/src/scale_stream.rs:427, crates/voxel/src/scale_stream.rs:479, crates/voxel/src/scale_stream.rs:509
 
-## Placeholder-only coverage (weakest evidence) (66)
+## Placeholder-only coverage (weakest evidence) (63)
 
 These IDs are counted `COVERED` on tests whose file matches the auto-generated placeholder pattern above. Their tests assert properties of shared types, not the requirement, so treat the coverage as unverified until a real oracle exists.
 
-`552` placeholder test files affect `66` IDs.
+`552` placeholder test files affect `63` IDs.
 
 - `FR-CIV-0001-TICK`
 - `FR-CIV-ACT-003`
@@ -2736,9 +2736,6 @@ These IDs are counted `COVERED` on tests whose file matches the auto-generated p
 - `FR-CIV-RENDER-002`
 - `FR-CIV-RES-001`
 - `FR-CIV-ROAD-901`
-- `FR-CIV-ROAD-902`
-- `FR-CIV-ROAD-910`
-- `FR-CIV-ROAD-920`
 - `FR-CIV-ROAD-921`
 - `FR-CIV-RTS-001`
 - `FR-CIV-RTS-002`

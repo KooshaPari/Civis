@@ -18448,6 +18448,11 @@
         "docs/agileplus/README.md:22"
       ],
       "test_refs": [
+        "crates/civ-traffic/tests/fr_civ_road_emergent_and_manual.rs:1",
+        "crates/civ-traffic/tests/fr_civ_road_emergent_and_manual.rs:6",
+        "crates/civ-traffic/tests/fr_civ_road_emergent_and_manual.rs:53",
+        "crates/civ-traffic/tests/fr_civ_road_emergent_and_manual.rs:56",
+        "crates/civ-traffic/tests/fr_civ_road_emergent_and_manual.rs:112",
         "crates/civ-traffic/tests/fr_fr_civ_road_902.rs:1",
         "crates/civ-traffic/tests/fr_fr_civ_road_902.rs:6",
         "crates/civ-traffic/tests/fr_fr_civ_road_902.rs:10"
@@ -18474,9 +18479,14 @@
         "docs/agileplus/README.md:22"
       ],
       "test_refs": [
+        "crates/civ-traffic/tests/fr_civ_road_emergent_and_manual.rs:9",
+        "crates/civ-traffic/tests/fr_civ_road_emergent_and_manual.rs:250",
+        "crates/civ-traffic/tests/fr_civ_road_emergent_and_manual.rs:253",
+        "crates/civ-traffic/tests/fr_civ_road_emergent_and_manual.rs:286",
+        "crates/civ-traffic/tests/fr_civ_road_emergent_and_manual.rs:318",
+        "crates/civ-traffic/tests/fr_civ_road_emergent_and_manual.rs:342",
         "crates/civ-traffic/tests/fr_fr_civ_road_910.rs:1",
-        "crates/civ-traffic/tests/fr_fr_civ_road_910.rs:6",
-        "crates/civ-traffic/tests/fr_fr_civ_road_910.rs:10"
+        "crates/civ-traffic/tests/fr_fr_civ_road_910.rs:6"
       ]
     },
     {
@@ -18500,6 +18510,11 @@
         "docs/agileplus/README.md:22"
       ],
       "test_refs": [
+        "crates/civ-traffic/tests/fr_civ_road_emergent_and_manual.rs:12",
+        "crates/civ-traffic/tests/fr_civ_road_emergent_and_manual.rs:140",
+        "crates/civ-traffic/tests/fr_civ_road_emergent_and_manual.rs:143",
+        "crates/civ-traffic/tests/fr_civ_road_emergent_and_manual.rs:185",
+        "crates/civ-traffic/tests/fr_civ_road_emergent_and_manual.rs:217",
         "crates/civ-traffic/tests/fr_fr_civ_road_920.rs:1",
         "crates/civ-traffic/tests/fr_fr_civ_road_920.rs:6",
         "crates/civ-traffic/tests/fr_fr_civ_road_920.rs:10"

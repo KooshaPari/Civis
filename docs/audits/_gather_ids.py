@@ -122,6 +122,25 @@ SPEC_FILES_EXACT = {
     "docs/traceability/full-traceability-matrix.md",
 }
 
+# Directory prefixes holding documents whose ROLE is to state requirements
+# rather than to implement them. A requirement-stating document is a spec
+# source: it describes intended behaviour. Counting it as "code" made an ID
+# look implemented when only a document existed, which inflated coverage.
+#
+# Evidence: `docs/design/psyche-social.md` declares itself "specs / AC /
+# pseudocode only, no implementation code"; `docs/models/civ-sim/USER_SPEC.md`
+# is a set of bold requirement statements; `docs/specs/CIV-*-spec.md` are
+# requirement tables. 707 IDs had their ONLY code reference in these docs.
+#
+# This does not drop real code references: an ID that cites both a doc here and
+# a `crates/**` path keeps the `crates/**` reference and stays classified on its
+# implementation.
+SPEC_DIR_PREFIXES = (
+    "docs/models/",
+    "docs/specs/",
+    "docs/design/",
+)
+
 # IDs must end with digits, with at least one FR-/NFR- <EPIC> <NUMBER> shape
 ID_RE = re.compile(
     r"\b(FR|NFR)-(?:[A-Z]+-)?[A-Z]+[-A-Z0-9]*\d+(?:[-A-Z]+\d*)*\b"
@@ -198,6 +217,9 @@ def classify(rel: str) -> str:
         return "spec"
     if rel_p.startswith("docs/traceability/") and rel_p.endswith(".md"):
         return "trace"
+    # Requirement-stating documents are spec sources, not implementing code.
+    if rel_p.startswith(SPEC_DIR_PREFIXES) and rel_p.endswith(".md"):
+        return "spec"
     return "code"
 
 

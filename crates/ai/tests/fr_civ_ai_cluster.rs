@@ -68,6 +68,10 @@ impl EnvGuard {
     fn set(&self, key: &str, value: &str) {
         std::env::set_var(key, value);
     }
+
+    fn remove(&self, key: &str) {
+        std::env::remove_var(key);
+    }
 }
 
 impl Drop for EnvGuard {
@@ -695,10 +699,17 @@ fn fr_civ_ai_004_cloud_is_opt_in_and_not_a_startup_requirement() {
     assert_eq!(civ_ai::preflight::preflight(&config), Ok(Vec::new()));
     assert!(!AiConfig::from_env().enable_cloud);
 
-    // Config only reports the opt-in flag; it never selects cloud implicitly.
-    let mut opted_in = AiConfig::default();
-    opted_in.enable_cloud = true;
-    assert!(opted_in.enable_cloud && AiConfig::default().local_model_path.is_none());
+    // Opting in is explicit and env-driven: `CIVAI_ENABLE_CLOUD=1` is the only
+    // switch, and turning it back off restores the local-first default.
+    env.set("CIVAI_ENABLE_CLOUD", "1");
+    let opted_in = AiConfig::from_env();
+    assert!(opted_in.enable_cloud);
+    assert_ne!(opted_in, AiConfig::default());
+    env.remove("CIVAI_ENABLE_CLOUD");
+    assert!(
+        !AiConfig::from_env().enable_cloud,
+        "cloud must not stay selected once the opt-in is withdrawn"
+    );
 
     // The cloud provider stays behind its feature gate (opt-in build knob too).
     let manifest = crate_file("Cargo.toml");

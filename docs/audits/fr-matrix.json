@@ -11,9 +11,9 @@
   "totals": {
     "rows": 1506,
     "by_status": {
-      "COVERED": 450,
+      "COVERED": 573,
       "IMPL-NO-TEST": 75,
-      "SPEC-ONLY": 768,
+      "SPEC-ONLY": 645,
       "CODE-ONLY-no-spec": 213
     },
     "by_epic": {
@@ -345,9 +345,9 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-AGENTS": {
-        "COVERED": 3,
+        "COVERED": 17,
         "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 14,
+        "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-AGGRESSION": {
@@ -363,9 +363,9 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-ARCH": {
-        "COVERED": 4,
+        "COVERED": 7,
         "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 4,
+        "SPEC-ONLY": 1,
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-ARCH-A": {
@@ -429,9 +429,9 @@
         "CODE-ONLY-no-spec": 1
       },
       "FR-CIV-BEVY": {
-        "COVERED": 8,
+        "COVERED": 9,
         "IMPL-NO-TEST": 8,
-        "SPEC-ONLY": 1,
+        "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 4
       },
       "FR-CIV-BIO": {
@@ -447,15 +447,15 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-BUILD": {
-        "COVERED": 7,
+        "COVERED": 14,
         "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 8,
+        "SPEC-ONLY": 1,
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-CA": {
-        "COVERED": 7,
+        "COVERED": 10,
         "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 3,
+        "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 1
       },
       "FR-CIV-CARAVAN": {
@@ -531,15 +531,15 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-DIFFUSION": {
-        "COVERED": 2,
+        "COVERED": 16,
         "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 14,
+        "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-DIPLO": {
-        "COVERED": 7,
+        "COVERED": 8,
         "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 1,
+        "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 8
       },
       "FR-CIV-DIPLO-001-RELATIONS": {
@@ -681,9 +681,9 @@
         "CODE-ONLY-no-spec": 3
       },
       "FR-CIV-GENETICS": {
-        "COVERED": 4,
+        "COVERED": 6,
         "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 2,
+        "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-GENETICS-SEED": {
@@ -705,9 +705,9 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-GODOT-F3D0": {
-        "COVERED": 0,
+        "COVERED": 1,
         "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 1,
+        "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-GODOT-UX": {
@@ -747,9 +747,9 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-INFRA": {
-        "COVERED": 4,
+        "COVERED": 13,
         "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 9,
+        "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-INSPECT": {
@@ -789,9 +789,9 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-LAWS": {
-        "COVERED": 3,
+        "COVERED": 10,
         "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 7,
+        "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-LEGENDS": {
@@ -897,9 +897,9 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-LIFE": {
-        "COVERED": 6,
+        "COVERED": 18,
         "IMPL-NO-TEST": 1,
-        "SPEC-ONLY": 13,
+        "SPEC-ONLY": 1,
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-LLM": {
@@ -939,9 +939,9 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-MOD": {
-        "COVERED": 0,
+        "COVERED": 1,
         "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 21,
+        "SPEC-ONLY": 20,
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-NEEDS-DECAY": {
@@ -987,9 +987,9 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-PLANET": {
-        "COVERED": 6,
+        "COVERED": 9,
         "IMPL-NO-TEST": 2,
-        "SPEC-ONLY": 3,
+        "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 1
       },
       "FR-CIV-POLITY": {
@@ -1005,9 +1005,9 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-PROTO3D": {
-        "COVERED": 5,
+        "COVERED": 19,
         "IMPL-NO-TEST": 1,
-        "SPEC-ONLY": 14,
+        "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-PSYCHE": {
@@ -1053,9 +1053,9 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-RESEARCH": {
-        "COVERED": 5,
+        "COVERED": 13,
         "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 8,
+        "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-RESEARCH-001-SCENARIO": {
@@ -1161,15 +1161,15 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-SPECIES": {
-        "COVERED": 2,
+        "COVERED": 12,
         "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 46,
+        "SPEC-ONLY": 36,
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-TACTICS": {
-        "COVERED": 53,
+        "COVERED": 56,
         "IMPL-NO-TEST": 5,
-        "SPEC-ONLY": 7,
+        "SPEC-ONLY": 4,
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-TECH": {
@@ -1191,9 +1191,9 @@
         "CODE-ONLY-no-spec": 7
       },
       "FR-CIV-TRAFFIC-LANE": {
-        "COVERED": 3,
+        "COVERED": 4,
         "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 1,
+        "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-UI": {
@@ -1233,15 +1233,15 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-VOXEL-DIRTY": {
-        "COVERED": 0,
+        "COVERED": 2,
         "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 2,
+        "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-WAR": {
-        "COVERED": 4,
+        "COVERED": 5,
         "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 11,
+        "SPEC-ONLY": 10,
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-WAR-001-UNITS": {
@@ -1359,9 +1359,9 @@
         "CODE-ONLY-no-spec": 1
       },
       "FR-LOD": {
-        "COVERED": 3,
+        "COVERED": 4,
         "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 1,
+        "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 0
       },
       "FR-MET": {
@@ -1377,9 +1377,9 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-MOD": {
-        "COVERED": 2,
+        "COVERED": 5,
         "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 3,
+        "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 0
       },
       "FR-MUSIC": {
@@ -1521,9 +1521,9 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-PROT": {
-        "COVERED": 1,
+        "COVERED": 2,
         "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 5,
+        "SPEC-ONLY": 4,
         "CODE-ONLY-no-spec": 0
       },
       "FR-PROTO": {
@@ -1545,9 +1545,9 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-SAVE": {
-        "COVERED": 2,
+        "COVERED": 3,
         "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 23,
+        "SPEC-ONLY": 22,
         "CODE-ONLY-no-spec": 0
       },
       "FR-SESS": {
@@ -1817,7 +1817,7 @@
         "crates/ai/src/goal_tree.rs:203",
         "crates/ai/src/utility.rs:1",
         "docs/IMPLEMENTATION_STATUS.md:81",
-        "scripts/traceability/gen-fr-audit.py:45"
+        "scripts/traceability/gen-fr-audit.py:46"
       ],
       "test_refs": [
         "crates/ai/tests/fr_fr_ai_001.rs:1",
@@ -2265,6 +2265,7 @@
         "crates/render/src/audio.rs:8",
         "crates/render/src/audio.rs:29",
         "crates/render/src/audio.rs:66",
+        "crates/render/src/audio.rs:341",
         "crates/render/src/lib.rs:13"
       ],
       "test_refs": [
@@ -2295,6 +2296,7 @@
         "crates/render/src/audio.rs:131",
         "crates/render/src/audio.rs:152",
         "crates/render/src/audio.rs:173",
+        "crates/render/src/audio.rs:378",
         "crates/render/src/lib.rs:13"
       ],
       "test_refs": [
@@ -2325,6 +2327,7 @@
         "crates/render/src/audio.rs:256",
         "crates/render/src/audio.rs:280",
         "crates/render/src/audio.rs:293",
+        "crates/render/src/audio.rs:423",
         "crates/render/src/lib.rs:13"
       ],
       "test_refs": [
@@ -2396,14 +2399,14 @@
         "docs/traceability/fr-emergence-matrix.md:4"
       ],
       "code_refs": [
+        "crates/economy/src/market.rs:349",
+        "crates/economy/src/market.rs:358",
+        "crates/economy/src/market.rs:367",
+        "crates/economy/src/market.rs:389",
         "crates/engine/src/_fix_header.py:11",
         "crates/engine/src/disasters.rs:78",
         "crates/engine/src/disasters.rs:233",
-        "crates/engine/src/emergence_coupling.rs:4",
-        "crates/engine/src/emergence_coupling.rs:94",
-        "crates/engine/src/emergence_coupling.rs:112",
-        "crates/engine/src/emergence_coupling.rs:157",
-        "crates/engine/src/emergence_coupling.rs:185"
+        "crates/engine/src/disasters.rs:687"
       ],
       "test_refs": [
         "crates/economy/src/market.rs:349",
@@ -2662,7 +2665,10 @@
       "epic": "FR-CIV",
       "spec_refs": [],
       "code_refs": [
-        "crates/engine/src/engine/engine_tests.rs:3157"
+        "crates/engine/src/emergence.rs:1625",
+        "crates/engine/src/engine/engine_tests.rs:3157",
+        "crates/engine/src/save.rs:335",
+        "crates/engine/src/save.rs:375"
       ],
       "test_refs": [
         "crates/engine/src/emergence.rs:1625",
@@ -3236,6 +3242,7 @@
         "docs/traceability/fr-civ-agents-000/fr-civ-agents-000-plan.md:1"
       ],
       "code_refs": [
+        "crates/agents/src/lib.rs:863",
         "docs/development-guide/fr-3d-additions.md:56"
       ],
       "test_refs": [
@@ -3263,6 +3270,8 @@
         "docs/traceability/fr-civ-agents-001/fr-civ-agents-001-plan.md:1"
       ],
       "code_refs": [
+        "crates/agents/src/lib.rs:876",
+        "crates/agents/src/lib.rs:903",
         "docs/development-guide/fr-3d-additions.md:57"
       ],
       "test_refs": [
@@ -3272,7 +3281,7 @@
     },
     {
       "id": "FR-CIV-AGENTS-002",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-002/fr-civ-agents-002-adr.md:1",
@@ -3284,14 +3293,16 @@
         "docs/traceability/fr-civ-agents-002/fr-civ-agents-002-intent.md:15",
         "docs/traceability/fr-civ-agents-002/fr-civ-agents-002-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/agents/src/lib.rs:922"
+      ],
       "test_refs": [
         "crates/agents/src/lib.rs:922"
       ]
     },
     {
       "id": "FR-CIV-AGENTS-003",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-003/fr-civ-agents-003-adr.md:1",
@@ -3303,7 +3314,9 @@
         "docs/traceability/fr-civ-agents-003/fr-civ-agents-003-intent.md:15",
         "docs/traceability/fr-civ-agents-003/fr-civ-agents-003-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/agents/src/lib.rs:938"
+      ],
       "test_refs": [
         "crates/agents/src/lib.rs:938"
       ]
@@ -3325,6 +3338,8 @@
         "docs/traceability/fr-civ-agents-010/fr-civ-agents-010-plan.md:1"
       ],
       "code_refs": [
+        "crates/agents/src/lib.rs:953",
+        "crates/agents/src/lib.rs:977",
         "docs/development-guide/fr-3d-additions.md:58"
       ],
       "test_refs": [
@@ -3334,7 +3349,7 @@
     },
     {
       "id": "FR-CIV-AGENTS-011",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-011/fr-civ-agents-011-adr.md:1",
@@ -3346,14 +3361,16 @@
         "docs/traceability/fr-civ-agents-011/fr-civ-agents-011-intent.md:15",
         "docs/traceability/fr-civ-agents-011/fr-civ-agents-011-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/agents/src/lib.rs:997"
+      ],
       "test_refs": [
         "crates/agents/src/lib.rs:997"
       ]
     },
     {
       "id": "FR-CIV-AGENTS-020",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-020/fr-civ-agents-020-adr.md:1",
@@ -3365,14 +3382,16 @@
         "docs/traceability/fr-civ-agents-020/fr-civ-agents-020-intent.md:15",
         "docs/traceability/fr-civ-agents-020/fr-civ-agents-020-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/agents/src/lib.rs:1013"
+      ],
       "test_refs": [
         "crates/agents/src/lib.rs:1013"
       ]
     },
     {
       "id": "FR-CIV-AGENTS-021",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-021/fr-civ-agents-021-adr.md:1",
@@ -3384,14 +3403,16 @@
         "docs/traceability/fr-civ-agents-021/fr-civ-agents-021-intent.md:15",
         "docs/traceability/fr-civ-agents-021/fr-civ-agents-021-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/agents/src/lib.rs:1076"
+      ],
       "test_refs": [
         "crates/agents/src/lib.rs:1076"
       ]
     },
     {
       "id": "FR-CIV-AGENTS-022",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-022/fr-civ-agents-022-adr.md:1",
@@ -3403,14 +3424,16 @@
         "docs/traceability/fr-civ-agents-022/fr-civ-agents-022-intent.md:15",
         "docs/traceability/fr-civ-agents-022/fr-civ-agents-022-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/agents/src/lib.rs:1090"
+      ],
       "test_refs": [
         "crates/agents/src/lib.rs:1090"
       ]
     },
     {
       "id": "FR-CIV-AGENTS-023",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-023/fr-civ-agents-023-adr.md:1",
@@ -3422,14 +3445,16 @@
         "docs/traceability/fr-civ-agents-023/fr-civ-agents-023-intent.md:15",
         "docs/traceability/fr-civ-agents-023/fr-civ-agents-023-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/agents/src/lib.rs:1337"
+      ],
       "test_refs": [
         "crates/agents/src/lib.rs:1337"
       ]
     },
     {
       "id": "FR-CIV-AGENTS-024",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-024/fr-civ-agents-024-adr.md:1",
@@ -3441,14 +3466,16 @@
         "docs/traceability/fr-civ-agents-024/fr-civ-agents-024-intent.md:15",
         "docs/traceability/fr-civ-agents-024/fr-civ-agents-024-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/agents/src/lib.rs:1360"
+      ],
       "test_refs": [
         "crates/agents/src/lib.rs:1360"
       ]
     },
     {
       "id": "FR-CIV-AGENTS-025",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-025/fr-civ-agents-025-adr.md:1",
@@ -3460,14 +3487,16 @@
         "docs/traceability/fr-civ-agents-025/fr-civ-agents-025-intent.md:15",
         "docs/traceability/fr-civ-agents-025/fr-civ-agents-025-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/agents/src/lib.rs:1654"
+      ],
       "test_refs": [
         "crates/agents/src/lib.rs:1654"
       ]
     },
     {
       "id": "FR-CIV-AGENTS-030",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-030/fr-civ-agents-030-adr.md:1",
@@ -3479,14 +3508,16 @@
         "docs/traceability/fr-civ-agents-030/fr-civ-agents-030-intent.md:15",
         "docs/traceability/fr-civ-agents-030/fr-civ-agents-030-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/agents/src/lib.rs:1241"
+      ],
       "test_refs": [
         "crates/agents/src/lib.rs:1241"
       ]
     },
     {
       "id": "FR-CIV-AGENTS-031",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-031/fr-civ-agents-031-adr.md:1",
@@ -3498,14 +3529,16 @@
         "docs/traceability/fr-civ-agents-031/fr-civ-agents-031-intent.md:15",
         "docs/traceability/fr-civ-agents-031/fr-civ-agents-031-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/agents/src/lib.rs:1262"
+      ],
       "test_refs": [
         "crates/agents/src/lib.rs:1262"
       ]
     },
     {
       "id": "FR-CIV-AGENTS-032",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-032/fr-civ-agents-032-adr.md:1",
@@ -3517,14 +3550,16 @@
         "docs/traceability/fr-civ-agents-032/fr-civ-agents-032-intent.md:15",
         "docs/traceability/fr-civ-agents-032/fr-civ-agents-032-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/agents/src/lib.rs:1273"
+      ],
       "test_refs": [
         "crates/agents/src/lib.rs:1273"
       ]
     },
     {
       "id": "FR-CIV-AGENTS-033",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-033/fr-civ-agents-033-adr.md:1",
@@ -3536,14 +3571,16 @@
         "docs/traceability/fr-civ-agents-033/fr-civ-agents-033-intent.md:15",
         "docs/traceability/fr-civ-agents-033/fr-civ-agents-033-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/agents/src/lib.rs:1289"
+      ],
       "test_refs": [
         "crates/agents/src/lib.rs:1289"
       ]
     },
     {
       "id": "FR-CIV-AGENTS-034",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-034/fr-civ-agents-034-adr.md:1",
@@ -3555,7 +3592,9 @@
         "docs/traceability/fr-civ-agents-034/fr-civ-agents-034-intent.md:15",
         "docs/traceability/fr-civ-agents-034/fr-civ-agents-034-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/agents/src/lib.rs:1317"
+      ],
       "test_refs": [
         "crates/agents/src/lib.rs:1317"
       ]
@@ -3719,6 +3758,7 @@
       "code_refs": [
         "crates/ai/src/providers/dummy.rs:1",
         "crates/engine/src/emergence.rs:59",
+        "crates/engine/src/emergence.rs:1479",
         "crates/engine/src/engine/engine_tests.rs:454"
       ],
       "test_refs": [
@@ -3744,10 +3784,13 @@
       ],
       "code_refs": [
         "crates/ai/src/cache.rs:3",
+        "crates/ai/src/cache.rs:64",
+        "crates/ai/src/cache.rs:79",
+        "crates/ai/src/cache.rs:90",
+        "crates/ai/src/cache.rs:104",
         "crates/ai/src/lib.rs:13",
         "crates/ai/src/lib.rs:215",
-        "crates/ai/src/lib.rs:229",
-        "crates/ai/src/provenance.rs:5"
+        "crates/ai/src/lib.rs:229"
       ],
       "test_refs": [
         "crates/ai/src/cache.rs:64",
@@ -3819,7 +3862,10 @@
         "docs/traceability/fr-civ-ai-010/fr-civ-ai-010-plan.md:1"
       ],
       "code_refs": [
-        "crates/ai/src/config.rs:1"
+        "crates/ai/src/config.rs:1",
+        "crates/ai/src/config.rs:77",
+        "crates/ai/src/config.rs:90",
+        "crates/ai/src/config.rs:154"
       ],
       "test_refs": [
         "crates/ai/src/config.rs:77",
@@ -4009,6 +4055,7 @@
         "docs/traceability/fr-civ-arch-003/fr-civ-arch-003-plan.md:1"
       ],
       "code_refs": [
+        "crates/build/src/lib.rs:1005",
         "crates/build/src/tiers.rs:30"
       ],
       "test_refs": [
@@ -4017,7 +4064,7 @@
     },
     {
       "id": "FR-CIV-ARCH-004",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-ARCH",
       "spec_refs": [
         "FUNCTIONAL_REQUIREMENTS.md",
@@ -4030,14 +4077,16 @@
         "docs/traceability/fr-civ-arch-004/fr-civ-arch-004-intent.md:15",
         "docs/traceability/fr-civ-arch-004/fr-civ-arch-004-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/build/src/lib.rs:1047"
+      ],
       "test_refs": [
         "crates/build/src/lib.rs:1047"
       ]
     },
     {
       "id": "FR-CIV-ARCH-005",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-ARCH",
       "spec_refs": [
         "FUNCTIONAL_REQUIREMENTS.md",
@@ -4050,7 +4099,9 @@
         "docs/traceability/fr-civ-arch-005/fr-civ-arch-005-intent.md:15",
         "docs/traceability/fr-civ-arch-005/fr-civ-arch-005-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/build/src/lib.rs:1069"
+      ],
       "test_refs": [
         "crates/build/src/lib.rs:1069",
         "crates/engine/tests/fr_fr_civ_arch_005.rs:1",
@@ -4082,7 +4133,7 @@
     },
     {
       "id": "FR-CIV-ARCH-007",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-ARCH",
       "spec_refs": [
         "FUNCTIONAL_REQUIREMENTS.md",
@@ -4095,7 +4146,9 @@
         "docs/traceability/fr-civ-arch-007/fr-civ-arch-007-intent.md:15",
         "docs/traceability/fr-civ-arch-007/fr-civ-arch-007-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/build/src/lib.rs:1098"
+      ],
       "test_refs": [
         "crates/build/src/lib.rs:1098"
       ]
@@ -4116,7 +4169,9 @@
         "docs/traceability/fr-civ-arch-008/fr-civ-arch-008-plan.md:1"
       ],
       "code_refs": [
-        "crates/build/src/tiers.rs:272"
+        "crates/build/src/lib.rs:1133",
+        "crates/build/src/tiers.rs:272",
+        "crates/build/src/tiers.rs:358"
       ],
       "test_refs": [
         "crates/build/src/lib.rs:1133",
@@ -4128,7 +4183,9 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-ARCH-A",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/build/src/tiers.rs:405"
+      ],
       "test_refs": [
         "crates/build/src/tiers.rs:405"
       ]
@@ -4138,7 +4195,9 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-ARCH-A",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/build/src/tiers.rs:426"
+      ],
       "test_refs": [
         "crates/build/src/tiers.rs:426"
       ]
@@ -4148,7 +4207,9 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-ARCH-A",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/build/src/tiers.rs:448"
+      ],
       "test_refs": [
         "crates/build/src/tiers.rs:448"
       ]
@@ -4158,7 +4219,9 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-ARCH-B",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/build/src/tiers.rs:472"
+      ],
       "test_refs": [
         "crates/build/src/tiers.rs:472"
       ]
@@ -4168,7 +4231,9 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-ARCH-B",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/build/src/tiers.rs:491"
+      ],
       "test_refs": [
         "crates/build/src/tiers.rs:491"
       ]
@@ -4178,7 +4243,9 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-ARCH-B",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/build/src/tiers.rs:505"
+      ],
       "test_refs": [
         "crates/build/src/tiers.rs:505"
       ]
@@ -4188,7 +4255,9 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-ARCH-B",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/build/src/tiers.rs:514"
+      ],
       "test_refs": [
         "crates/build/src/tiers.rs:514"
       ]
@@ -4198,7 +4267,9 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-ARCH-C",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/build/src/tiers.rs:530"
+      ],
       "test_refs": [
         "crates/build/src/tiers.rs:530"
       ]
@@ -4208,7 +4279,9 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-ARCH-C",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/build/src/tiers.rs:558"
+      ],
       "test_refs": [
         "crates/build/src/tiers.rs:558"
       ]
@@ -4218,7 +4291,9 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-ARCH-C",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/build/src/tiers.rs:576"
+      ],
       "test_refs": [
         "crates/build/src/tiers.rs:576"
       ]
@@ -4228,7 +4303,9 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-ARCH-C",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/build/src/tiers.rs:586"
+      ],
       "test_refs": [
         "crates/build/src/tiers.rs:586"
       ]
@@ -4238,7 +4315,9 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-ARCH-D",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/build/src/tiers.rs:602"
+      ],
       "test_refs": [
         "crates/build/src/tiers.rs:602"
       ]
@@ -4248,7 +4327,9 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-ARCH-D",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/build/src/tiers.rs:618"
+      ],
       "test_refs": [
         "crates/build/src/tiers.rs:618"
       ]
@@ -4258,7 +4339,9 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-ARCH-D",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/build/src/tiers.rs:633"
+      ],
       "test_refs": [
         "crates/build/src/tiers.rs:633"
       ]
@@ -4268,7 +4351,9 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-ARCH-D",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/build/src/tiers.rs:643"
+      ],
       "test_refs": [
         "crates/build/src/tiers.rs:643"
       ]
@@ -4759,9 +4844,11 @@
         "docs/traceability/fr-civ-audio-001/fr-civ-audio-001-plan.md:1"
       ],
       "code_refs": [
+        "crates/audio/src/bus.rs:210",
         "crates/audio/src/lib.rs:4",
         "crates/audio/src/lib.rs:14",
-        "crates/audio/src/mix.rs:1"
+        "crates/audio/src/mix.rs:1",
+        "crates/audio/src/mix.rs:199"
       ],
       "test_refs": [
         "crates/audio/src/bus.rs:210",
@@ -4786,6 +4873,7 @@
       ],
       "code_refs": [
         "crates/audio/src/ambient.rs:1",
+        "crates/audio/src/ambient.rs:514",
         "crates/audio/src/lib.rs:17"
       ],
       "test_refs": [
@@ -4834,7 +4922,8 @@
       ],
       "code_refs": [
         "crates/audio/src/lib.rs:22",
-        "crates/audio/src/mood.rs:1"
+        "crates/audio/src/mood.rs:1",
+        "crates/audio/src/mood.rs:396"
       ],
       "test_refs": [
         "crates/audio/src/mood.rs:396"
@@ -4862,7 +4951,9 @@
         "crates/audio/src/sfx.rs:58",
         "crates/audio/src/sfx.rs:62",
         "crates/audio/src/sfx.rs:83",
-        "crates/audio/src/triggers.rs:1"
+        "crates/audio/src/sfx.rs:415",
+        "crates/audio/src/triggers.rs:1",
+        "crates/audio/src/triggers.rs:263"
       ],
       "test_refs": [
         "crates/audio/src/sfx.rs:415",
@@ -4889,7 +4980,8 @@
       ],
       "code_refs": [
         "crates/audio/src/lib.rs:27",
-        "crates/audio/src/sfx.rs:1"
+        "crates/audio/src/sfx.rs:1",
+        "crates/audio/src/sfx.rs:475"
       ],
       "test_refs": [
         "crates/audio/src/sfx.rs:475"
@@ -4913,7 +5005,8 @@
       ],
       "code_refs": [
         "crates/audio/src/lib.rs:29",
-        "crates/audio/src/ui_sound.rs:1"
+        "crates/audio/src/ui_sound.rs:1",
+        "crates/audio/src/ui_sound.rs:251"
       ],
       "test_refs": [
         "crates/audio/src/ui_sound.rs:251",
@@ -4939,6 +5032,7 @@
       ],
       "code_refs": [
         "crates/audio/src/ducking.rs:1",
+        "crates/audio/src/ducking.rs:351",
         "crates/audio/src/lib.rs:32"
       ],
       "test_refs": [
@@ -5049,6 +5143,7 @@
         "docs/traceability/fr-civ-bevy-001/fr-civ-bevy-001-plan.md:1"
       ],
       "code_refs": [
+        "clients/bevy-ref/src/bevy_render.rs:170",
         "docs/development-guide/p-w1-kickoff.md:80"
       ],
       "test_refs": [
@@ -5072,6 +5167,7 @@
         "docs/traceability/fr-civ-bevy-002/fr-civ-bevy-002-plan.md:1"
       ],
       "code_refs": [
+        "clients/bevy-ref/src/lib.rs:1914",
         "docs/development-guide/p-w1-kickoff.md:81"
       ],
       "test_refs": [
@@ -5080,7 +5176,7 @@
     },
     {
       "id": "FR-CIV-BEVY-003",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-BEVY",
       "spec_refs": [
         "docs/traceability/fr-3d-matrix.md:177",
@@ -5094,7 +5190,9 @@
         "docs/traceability/fr-civ-bevy-003/fr-civ-bevy-003-intent.md:15",
         "docs/traceability/fr-civ-bevy-003/fr-civ-bevy-003-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "clients/bevy-ref/src/lib.rs:2061"
+      ],
       "test_refs": [
         "clients/bevy-ref/src/lib.rs:2061"
       ]
@@ -5181,6 +5279,10 @@
       ],
       "code_refs": [
         "clients/bevy-ref/README.md:26",
+        "clients/bevy-ref/src/live_focus.rs:148",
+        "clients/bevy-ref/src/live_minimap.rs:195",
+        "clients/bevy-ref/src/live_minimap.rs:234",
+        "clients/bevy-ref/src/live_stream.rs:1585",
         "docs/development-guide/p-w1-kickoff.md:128",
         "justfile:206"
       ],
@@ -5318,6 +5420,9 @@
       ],
       "code_refs": [
         "clients/bevy-ref/README.md:26",
+        "clients/bevy-ref/src/live_focus.rs:149",
+        "clients/bevy-ref/src/live_minimap.rs:196",
+        "clients/bevy-ref/src/live_minimap.rs:221",
         "docs/development-guide/p-w1-kickoff.md:134",
         "justfile:206"
       ],
@@ -5349,6 +5454,8 @@
         "docs/traceability/fr-civ-bevy-023/fr-civ-bevy-023-plan.md:1"
       ],
       "code_refs": [
+        "clients/bevy-ref/src/event_feed.rs:372",
+        "clients/bevy-ref/src/event_feed.rs:381",
         "docs/development-guide/p-w1-kickoff.md:135"
       ],
       "test_refs": [
@@ -5376,6 +5483,8 @@
       ],
       "code_refs": [
         "clients/bevy-ref/src/menus.rs:3",
+        "clients/bevy-ref/src/menus.rs:1553",
+        "clients/bevy-ref/src/sandbox_event_feed.rs:385",
         "docs/development-guide/p-w1-kickoff.md:136"
       ],
       "test_refs": [
@@ -5404,6 +5513,9 @@
       ],
       "code_refs": [
         "clients/bevy-ref/README.md:26",
+        "clients/bevy-ref/src/live_pick.rs:454",
+        "clients/bevy-ref/src/live_pick.rs:474",
+        "clients/bevy-ref/src/live_stream.rs:1586",
         "docs/development-guide/p-w1-kickoff.md:137",
         "justfile:206"
       ],
@@ -5433,6 +5545,7 @@
       ],
       "code_refs": [
         "clients/bevy-ref/README.md:182",
+        "clients/bevy-ref/src/native_backend.rs:117",
         "docs/development-guide/p-w1-kickoff.md:84",
         "docs/development-guide/p-w1-kickoff.md:138",
         "docs/research/wgpu-native-escape-hatches.md:380"
@@ -5461,7 +5574,9 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-BEVY",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "clients/bevy-ref/src/diplomacy_ui.rs:625"
+      ],
       "test_refs": [
         "clients/bevy-ref/src/diplomacy_ui.rs:625"
       ]
@@ -5471,7 +5586,9 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-BEVY",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "clients/bevy-ref/src/lib.rs:1973"
+      ],
       "test_refs": [
         "clients/bevy-ref/src/lib.rs:1973"
       ]
@@ -5871,6 +5988,7 @@
         "docs/traceability/fr-civ-build-000/fr-civ-build-000-plan.md:1"
       ],
       "code_refs": [
+        "crates/build/src/lib.rs:576",
         "docs/development-guide/fr-3d-additions.md:29"
       ],
       "test_refs": [
@@ -5902,11 +6020,11 @@
         "crates/build/src/lib.rs:18",
         "crates/build/src/lib.rs:288",
         "crates/build/src/lib.rs:322",
+        "crates/build/src/lib.rs:589",
+        "crates/build/src/lib.rs:800",
         "crates/build/src/tiers_build.rs:1",
         "crates/build/src/tiers_build.rs:6",
-        "crates/build/src/tiers_build.rs:20",
-        "crates/build/src/tiers_build.rs:119",
-        "crates/engine/src/engine.rs:816"
+        "crates/build/src/tiers_build.rs:20"
       ],
       "test_refs": [
         "crates/build/src/lib.rs:589",
@@ -5934,9 +6052,11 @@
         "docs/traceability/fr-civ-build-002/fr-civ-build-002-plan.md:1"
       ],
       "code_refs": [
+        "crates/build/src/lib.rs:607",
         "crates/build/src/tiers_build.rs:8",
         "crates/build/src/tiers_build.rs:76",
         "crates/build/src/tiers_build.rs:274",
+        "crates/build/src/tiers_build.rs:466",
         "crates/engine/src/engine.rs:818",
         "docs/reference/agileplus-artifacts-index.md:89",
         "docs/reference/agileplus-artifacts-index.md:273"
@@ -5965,13 +6085,14 @@
         "docs/traceability/fr-civ-build-003/fr-civ-build-003-plan.md:1"
       ],
       "code_refs": [
+        "crates/build/src/lib.rs:617",
         "crates/build/src/tiers_build.rs:10",
         "crates/build/src/tiers_build.rs:119",
         "crates/build/src/tiers_build.rs:190",
         "crates/build/src/tiers_build.rs:212",
         "crates/build/src/tiers_build.rs:221",
-        "docs/reference/agileplus-artifacts-index.md:89",
-        "docs/reference/agileplus-artifacts-index.md:274"
+        "crates/build/src/tiers_build.rs:476",
+        "docs/reference/agileplus-artifacts-index.md:89"
       ],
       "test_refs": [
         "crates/build/src/lib.rs:617",
@@ -5982,7 +6103,7 @@
     },
     {
       "id": "FR-CIV-BUILD-004",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-BUILD",
       "spec_refs": [
         "docs/traceability/fr-civ-build-004/fr-civ-build-004-adr.md:1",
@@ -5994,14 +6115,16 @@
         "docs/traceability/fr-civ-build-004/fr-civ-build-004-intent.md:15",
         "docs/traceability/fr-civ-build-004/fr-civ-build-004-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/build/src/lib.rs:641"
+      ],
       "test_refs": [
         "crates/build/src/lib.rs:641"
       ]
     },
     {
       "id": "FR-CIV-BUILD-005",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-BUILD",
       "spec_refs": [
         "docs/traceability/fr-civ-build-005/fr-civ-build-005-adr.md:1",
@@ -6013,7 +6136,9 @@
         "docs/traceability/fr-civ-build-005/fr-civ-build-005-intent.md:15",
         "docs/traceability/fr-civ-build-005/fr-civ-build-005-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/build/src/lib.rs:657"
+      ],
       "test_refs": [
         "crates/build/src/lib.rs:657"
       ]
@@ -6036,6 +6161,8 @@
         "docs/traceability/fr-civ-build-010/fr-civ-build-010-plan.md:1"
       ],
       "code_refs": [
+        "crates/build/src/lib.rs:678",
+        "crates/build/src/lib.rs:817",
         "docs/development-guide/fr-3d-additions.md:31"
       ],
       "test_refs": [
@@ -6057,7 +6184,7 @@
     },
     {
       "id": "FR-CIV-BUILD-011",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-BUILD",
       "spec_refs": [
         "docs/traceability/fr-civ-build-011/fr-civ-build-011-adr.md:1",
@@ -6069,14 +6196,16 @@
         "docs/traceability/fr-civ-build-011/fr-civ-build-011-intent.md:15",
         "docs/traceability/fr-civ-build-011/fr-civ-build-011-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/build/src/lib.rs:696"
+      ],
       "test_refs": [
         "crates/build/src/lib.rs:696"
       ]
     },
     {
       "id": "FR-CIV-BUILD-012",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-BUILD",
       "spec_refs": [
         "docs/traceability/fr-civ-build-012/fr-civ-build-012-adr.md:1",
@@ -6088,14 +6217,16 @@
         "docs/traceability/fr-civ-build-012/fr-civ-build-012-intent.md:15",
         "docs/traceability/fr-civ-build-012/fr-civ-build-012-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/build/src/lib.rs:727"
+      ],
       "test_refs": [
         "crates/build/src/lib.rs:727"
       ]
     },
     {
       "id": "FR-CIV-BUILD-013",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-BUILD",
       "spec_refs": [
         "docs/traceability/fr-civ-build-013/fr-civ-build-013-adr.md:1",
@@ -6107,14 +6238,16 @@
         "docs/traceability/fr-civ-build-013/fr-civ-build-013-intent.md:15",
         "docs/traceability/fr-civ-build-013/fr-civ-build-013-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/build/src/lib.rs:750"
+      ],
       "test_refs": [
         "crates/build/src/lib.rs:750"
       ]
     },
     {
       "id": "FR-CIV-BUILD-014",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-BUILD",
       "spec_refs": [
         "docs/traceability/fr-civ-build-014/fr-civ-build-014-adr.md:1",
@@ -6126,14 +6259,16 @@
         "docs/traceability/fr-civ-build-014/fr-civ-build-014-intent.md:15",
         "docs/traceability/fr-civ-build-014/fr-civ-build-014-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/build/src/lib.rs:780"
+      ],
       "test_refs": [
         "crates/build/src/lib.rs:780"
       ]
     },
     {
       "id": "FR-CIV-BUILD-015",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-BUILD",
       "spec_refs": [
         "docs/traceability/fr-civ-build-015/fr-civ-build-015-adr.md:1",
@@ -6145,7 +6280,9 @@
         "docs/traceability/fr-civ-build-015/fr-civ-build-015-intent.md:15",
         "docs/traceability/fr-civ-build-015/fr-civ-build-015-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/build/src/lib.rs:916"
+      ],
       "test_refs": [
         "crates/build/src/lib.rs:916"
       ]
@@ -6169,6 +6306,7 @@
         "docs/traceability/fr-civ-build-020/fr-civ-build-020-plan.md:1"
       ],
       "code_refs": [
+        "crates/build/src/lib.rs:840",
         "docs/development-guide/fr-3d-additions.md:33"
       ],
       "test_refs": [
@@ -6194,6 +6332,7 @@
         "docs/traceability/fr-civ-build-030/fr-civ-build-030-plan.md:1"
       ],
       "code_refs": [
+        "crates/build/src/lib.rs:883",
         "docs/development-guide/fr-3d-additions.md:36"
       ],
       "test_refs": [
@@ -6221,7 +6360,11 @@
       ],
       "code_refs": [
         "crates/voxel/src/fluid_ca.rs:32",
-        "crates/voxel/src/fluid_ca.rs:47"
+        "crates/voxel/src/fluid_ca.rs:47",
+        "crates/voxel/src/fluid_ca.rs:2027",
+        "crates/voxel/src/fluid_ca.rs:2042",
+        "crates/voxel/src/fluid_ca.rs:2602",
+        "crates/voxel/src/fluid_ca.rs:3051"
       ],
       "test_refs": [
         "crates/voxel/src/fluid_ca.rs:2027",
@@ -6249,8 +6392,12 @@
       "code_refs": [
         "crates/voxel/src/fluid_ca.rs:1116",
         "crates/voxel/src/fluid_ca.rs:1660",
-        "crates/voxel/src/material.rs:43",
-        "crates/voxel/src/material.rs:67"
+        "crates/voxel/src/fluid_ca.rs:2053",
+        "crates/voxel/src/fluid_ca.rs:2073",
+        "crates/voxel/src/fluid_ca.rs:2134",
+        "crates/voxel/src/fluid_ca.rs:2447",
+        "crates/voxel/src/fluid_ca.rs:2623",
+        "crates/voxel/src/fluid_ca.rs:2668"
       ],
       "test_refs": [
         "crates/voxel/src/fluid_ca.rs:2053",
@@ -6282,7 +6429,11 @@
         "crates/voxel/src/fluid_ca.rs:1000",
         "crates/voxel/src/fluid_ca.rs:1006",
         "crates/voxel/src/fluid_ca.rs:1031",
-        "crates/voxel/src/fluid_ca.rs:1078"
+        "crates/voxel/src/fluid_ca.rs:1078",
+        "crates/voxel/src/fluid_ca.rs:2146",
+        "crates/voxel/src/fluid_ca.rs:2157",
+        "crates/voxel/src/fluid_ca.rs:2172",
+        "crates/voxel/src/fluid_ca.rs:2224"
       ],
       "test_refs": [
         "crates/voxel/src/fluid_ca.rs:2146",
@@ -6312,7 +6463,11 @@
         "crates/voxel/src/fluid_ca.rs:1012",
         "crates/voxel/src/fluid_ca.rs:1069",
         "crates/voxel/src/fluid_ca.rs:1188",
-        "crates/voxel/src/fluid_ca.rs:1677"
+        "crates/voxel/src/fluid_ca.rs:1677",
+        "crates/voxel/src/fluid_ca.rs:2320",
+        "crates/voxel/src/fluid_ca.rs:2457",
+        "crates/voxel/src/fluid_ca.rs:3681",
+        "crates/voxel/src/fluid_ca.rs:3688"
       ],
       "test_refs": [
         "crates/voxel/src/fluid_ca.rs:2320",
@@ -6346,7 +6501,9 @@
         "crates/voxel/src/fluid_ca.rs:56",
         "crates/voxel/src/fluid_ca.rs:1020",
         "crates/voxel/src/fluid_ca.rs:1153",
-        "crates/voxel/src/fluid_ca.rs:1657"
+        "crates/voxel/src/fluid_ca.rs:1657",
+        "crates/voxel/src/fluid_ca.rs:2433",
+        "crates/voxel/src/fluid_ca.rs:2574"
       ],
       "test_refs": [
         "crates/voxel/src/fluid_ca.rs:2433",
@@ -6358,7 +6515,7 @@
     },
     {
       "id": "FR-CIV-CA-006",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-CA",
       "spec_refs": [
         "FUNCTIONAL_REQUIREMENTS.md",
@@ -6371,7 +6528,10 @@
         "docs/traceability/fr-civ-ca-006/fr-civ-ca-006-intent.md:15",
         "docs/traceability/fr-civ-ca-006/fr-civ-ca-006-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/voxel/src/fluid_ca.rs:2468",
+        "crates/voxel/src/fluid_ca.rs:2495"
+      ],
       "test_refs": [
         "crates/voxel/src/fluid_ca.rs:2468",
         "crates/voxel/src/fluid_ca.rs:2495"
@@ -6379,7 +6539,7 @@
     },
     {
       "id": "FR-CIV-CA-007",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-CA",
       "spec_refs": [
         "FUNCTIONAL_REQUIREMENTS.md",
@@ -6392,7 +6552,11 @@
         "docs/traceability/fr-civ-ca-007/fr-civ-ca-007-intent.md:15",
         "docs/traceability/fr-civ-ca-007/fr-civ-ca-007-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/voxel/src/fluid_ca.rs:2054",
+        "crates/voxel/src/fluid_ca.rs:2074",
+        "crates/voxel/src/fluid_ca.rs:2135"
+      ],
       "test_refs": [
         "crates/voxel/src/fluid_ca.rs:2054",
         "crates/voxel/src/fluid_ca.rs:2074",
@@ -6453,7 +6617,8 @@
         "crates/engine/src/engine/world_phases.rs:410",
         "crates/engine/src/engine.rs:1008",
         "crates/voxel/src/fluid_ca.rs:140",
-        "crates/voxel/src/fluid_ca.rs:157"
+        "crates/voxel/src/fluid_ca.rs:157",
+        "crates/voxel/src/fluid_ca.rs:2919"
       ],
       "test_refs": [
         "crates/voxel/src/fluid_ca.rs:2919",
@@ -6462,7 +6627,7 @@
     },
     {
       "id": "FR-CIV-CA-010",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-CA",
       "spec_refs": [
         "FUNCTIONAL_REQUIREMENTS.md",
@@ -6475,7 +6640,12 @@
         "docs/traceability/fr-civ-ca-010/fr-civ-ca-010-intent.md:15",
         "docs/traceability/fr-civ-ca-010/fr-civ-ca-010-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/voxel/src/fluid_ca.rs:2949",
+        "crates/voxel/src/fluid_ca.rs:2953",
+        "crates/voxel/src/fluid_ca.rs:2996",
+        "crates/voxel/src/fluid_ca.rs:3023"
+      ],
       "test_refs": [
         "crates/voxel/src/fluid_ca.rs:2949",
         "crates/voxel/src/fluid_ca.rs:2953",
@@ -6669,7 +6839,9 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-CLIMATE",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/planet/src/seasonal.rs:181"
+      ],
       "test_refs": [
         "crates/planet/src/seasonal.rs:181"
       ]
@@ -6679,7 +6851,9 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-CLIMATE",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/planet/src/seasonal.rs:193"
+      ],
       "test_refs": [
         "crates/planet/src/seasonal.rs:193"
       ]
@@ -6689,7 +6863,9 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-CLIMATE",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/planet/src/seasonal.rs:209"
+      ],
       "test_refs": [
         "crates/planet/src/seasonal.rs:209"
       ]
@@ -6699,7 +6875,9 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-CLIMATE",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/planet/src/seasonal.rs:218"
+      ],
       "test_refs": [
         "crates/planet/src/seasonal.rs:218"
       ]
@@ -7442,6 +7620,8 @@
         "docs/traceability/fr-civ-diffusion-000/fr-civ-diffusion-000-plan.md:1"
       ],
       "code_refs": [
+        "crates/diffusion/src/lib.rs:82",
+        "crates/diffusion/src/lib.rs:83",
         "docs/development-guide/fr-3d-additions.md:63"
       ],
       "test_refs": [
@@ -7467,6 +7647,8 @@
         "docs/traceability/fr-civ-diffusion-001/fr-civ-diffusion-001-plan.md:1"
       ],
       "code_refs": [
+        "crates/diffusion/src/lib.rs:96",
+        "crates/diffusion/src/lib.rs:97",
         "docs/development-guide/fr-3d-additions.md:64"
       ],
       "test_refs": [
@@ -7476,7 +7658,7 @@
     },
     {
       "id": "FR-CIV-DIFFUSION-002",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-002/fr-civ-diffusion-002-adr.md:1",
@@ -7488,14 +7670,16 @@
         "docs/traceability/fr-civ-diffusion-002/fr-civ-diffusion-002-intent.md:15",
         "docs/traceability/fr-civ-diffusion-002/fr-civ-diffusion-002-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/diffusion/src/lib.rs:112"
+      ],
       "test_refs": [
         "crates/diffusion/src/lib.rs:112"
       ]
     },
     {
       "id": "FR-CIV-DIFFUSION-003",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/design/tech-engineering.md:149",
@@ -7508,14 +7692,16 @@
         "docs/traceability/fr-civ-diffusion-003/fr-civ-diffusion-003-intent.md:15",
         "docs/traceability/fr-civ-diffusion-003/fr-civ-diffusion-003-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/diffusion/src/lib.rs:119"
+      ],
       "test_refs": [
         "crates/diffusion/src/lib.rs:119"
       ]
     },
     {
       "id": "FR-CIV-DIFFUSION-004",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-004/fr-civ-diffusion-004-adr.md:1",
@@ -7527,14 +7713,16 @@
         "docs/traceability/fr-civ-diffusion-004/fr-civ-diffusion-004-intent.md:15",
         "docs/traceability/fr-civ-diffusion-004/fr-civ-diffusion-004-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/diffusion/src/lib.rs:136"
+      ],
       "test_refs": [
         "crates/diffusion/src/lib.rs:136"
       ]
     },
     {
       "id": "FR-CIV-DIFFUSION-005",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-005/fr-civ-diffusion-005-adr.md:1",
@@ -7546,14 +7734,16 @@
         "docs/traceability/fr-civ-diffusion-005/fr-civ-diffusion-005-intent.md:15",
         "docs/traceability/fr-civ-diffusion-005/fr-civ-diffusion-005-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/diffusion/src/lib.rs:144"
+      ],
       "test_refs": [
         "crates/diffusion/src/lib.rs:144"
       ]
     },
     {
       "id": "FR-CIV-DIFFUSION-006",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-006/fr-civ-diffusion-006-adr.md:1",
@@ -7565,14 +7755,16 @@
         "docs/traceability/fr-civ-diffusion-006/fr-civ-diffusion-006-intent.md:15",
         "docs/traceability/fr-civ-diffusion-006/fr-civ-diffusion-006-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/diffusion/src/lib.rs:158"
+      ],
       "test_refs": [
         "crates/diffusion/src/lib.rs:158"
       ]
     },
     {
       "id": "FR-CIV-DIFFUSION-007",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-007/fr-civ-diffusion-007-adr.md:1",
@@ -7584,14 +7776,16 @@
         "docs/traceability/fr-civ-diffusion-007/fr-civ-diffusion-007-intent.md:15",
         "docs/traceability/fr-civ-diffusion-007/fr-civ-diffusion-007-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/diffusion/src/lib.rs:175"
+      ],
       "test_refs": [
         "crates/diffusion/src/lib.rs:175"
       ]
     },
     {
       "id": "FR-CIV-DIFFUSION-008",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-008/fr-civ-diffusion-008-adr.md:1",
@@ -7603,14 +7797,16 @@
         "docs/traceability/fr-civ-diffusion-008/fr-civ-diffusion-008-intent.md:15",
         "docs/traceability/fr-civ-diffusion-008/fr-civ-diffusion-008-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/diffusion/src/lib.rs:190"
+      ],
       "test_refs": [
         "crates/diffusion/src/lib.rs:190"
       ]
     },
     {
       "id": "FR-CIV-DIFFUSION-009",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-009/fr-civ-diffusion-009-adr.md:1",
@@ -7622,14 +7818,16 @@
         "docs/traceability/fr-civ-diffusion-009/fr-civ-diffusion-009-intent.md:15",
         "docs/traceability/fr-civ-diffusion-009/fr-civ-diffusion-009-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/diffusion/src/lib.rs:212"
+      ],
       "test_refs": [
         "crates/diffusion/src/lib.rs:212"
       ]
     },
     {
       "id": "FR-CIV-DIFFUSION-010",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-010/fr-civ-diffusion-010-adr.md:1",
@@ -7641,14 +7839,16 @@
         "docs/traceability/fr-civ-diffusion-010/fr-civ-diffusion-010-intent.md:15",
         "docs/traceability/fr-civ-diffusion-010/fr-civ-diffusion-010-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/diffusion/src/lib.rs:228"
+      ],
       "test_refs": [
         "crates/diffusion/src/lib.rs:228"
       ]
     },
     {
       "id": "FR-CIV-DIFFUSION-011",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-011/fr-civ-diffusion-011-adr.md:1",
@@ -7660,14 +7860,16 @@
         "docs/traceability/fr-civ-diffusion-011/fr-civ-diffusion-011-intent.md:15",
         "docs/traceability/fr-civ-diffusion-011/fr-civ-diffusion-011-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/diffusion/src/lib.rs:258"
+      ],
       "test_refs": [
         "crates/diffusion/src/lib.rs:258"
       ]
     },
     {
       "id": "FR-CIV-DIFFUSION-012",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-012/fr-civ-diffusion-012-adr.md:1",
@@ -7679,14 +7881,16 @@
         "docs/traceability/fr-civ-diffusion-012/fr-civ-diffusion-012-intent.md:15",
         "docs/traceability/fr-civ-diffusion-012/fr-civ-diffusion-012-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/diffusion/src/lib.rs:286"
+      ],
       "test_refs": [
         "crates/diffusion/src/lib.rs:286"
       ]
     },
     {
       "id": "FR-CIV-DIFFUSION-013",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-013/fr-civ-diffusion-013-adr.md:1",
@@ -7698,14 +7902,16 @@
         "docs/traceability/fr-civ-diffusion-013/fr-civ-diffusion-013-intent.md:15",
         "docs/traceability/fr-civ-diffusion-013/fr-civ-diffusion-013-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/diffusion/src/lib.rs:296"
+      ],
       "test_refs": [
         "crates/diffusion/src/lib.rs:296"
       ]
     },
     {
       "id": "FR-CIV-DIFFUSION-014",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-014/fr-civ-diffusion-014-adr.md:1",
@@ -7717,14 +7923,16 @@
         "docs/traceability/fr-civ-diffusion-014/fr-civ-diffusion-014-intent.md:15",
         "docs/traceability/fr-civ-diffusion-014/fr-civ-diffusion-014-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/diffusion/src/lib.rs:311"
+      ],
       "test_refs": [
         "crates/diffusion/src/lib.rs:311"
       ]
     },
     {
       "id": "FR-CIV-DIFFUSION-015",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-015/fr-civ-diffusion-015-adr.md:1",
@@ -7736,7 +7944,9 @@
         "docs/traceability/fr-civ-diffusion-015/fr-civ-diffusion-015-intent.md:15",
         "docs/traceability/fr-civ-diffusion-015/fr-civ-diffusion-015-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/diffusion/src/lib.rs:325"
+      ],
       "test_refs": [
         "crates/diffusion/src/lib.rs:325"
       ]
@@ -7797,6 +8007,7 @@
         "docs/traceability/fr-civ-diplo-001-relations/fr-civ-diplo-001-relations-plan.md:1"
       ],
       "code_refs": [
+        "crates/diplomacy/src/lib.rs:1120",
         "PLAN.md:207",
         "PLAN.md:208"
       ],
@@ -7824,6 +8035,9 @@
       ],
       "code_refs": [
         "crates/diplomacy/src/lib.rs:16",
+        "crates/diplomacy/src/lib.rs:1132",
+        "crates/diplomacy/src/lib.rs:1138",
+        "crates/diplomacy/src/lib.rs:1152",
         "docs/reference/agileplus-artifacts-index.md:137",
         "docs/reference/agileplus-artifacts-index.md:283",
         "PLAN.md:209",
@@ -7905,7 +8119,9 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-DIPLO",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/diplomacy/src/shadow_networks.rs:660"
+      ],
       "test_refs": [
         "crates/diplomacy/src/shadow_networks.rs:660"
       ]
@@ -7915,7 +8131,11 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-DIPLO",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/diplomacy/src/shadow_networks.rs:403",
+        "crates/diplomacy/src/shadow_networks.rs:405",
+        "crates/diplomacy/src/shadow_networks.rs:433"
+      ],
       "test_refs": [
         "crates/diplomacy/src/shadow_networks.rs:403",
         "crates/diplomacy/src/shadow_networks.rs:405",
@@ -7927,7 +8147,11 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-DIPLO",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/diplomacy/src/shadow_networks.rs:470",
+        "crates/diplomacy/src/shadow_networks.rs:472",
+        "crates/diplomacy/src/shadow_networks.rs:509"
+      ],
       "test_refs": [
         "crates/diplomacy/src/shadow_networks.rs:470",
         "crates/diplomacy/src/shadow_networks.rs:472",
@@ -7939,7 +8163,11 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-DIPLO",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/diplomacy/src/shadow_networks.rs:520",
+        "crates/diplomacy/src/shadow_networks.rs:522",
+        "crates/diplomacy/src/shadow_networks.rs:560"
+      ],
       "test_refs": [
         "crates/diplomacy/src/shadow_networks.rs:520",
         "crates/diplomacy/src/shadow_networks.rs:522",
@@ -7951,7 +8179,10 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-DIPLO",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/diplomacy/src/shadow_networks.rs:594",
+        "crates/diplomacy/src/shadow_networks.rs:596"
+      ],
       "test_refs": [
         "crates/diplomacy/src/shadow_networks.rs:594",
         "crates/diplomacy/src/shadow_networks.rs:596"
@@ -7962,7 +8193,10 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-DIPLO",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/diplomacy/src/shadow_networks.rs:620",
+        "crates/diplomacy/src/shadow_networks.rs:622"
+      ],
       "test_refs": [
         "crates/diplomacy/src/shadow_networks.rs:620",
         "crates/diplomacy/src/shadow_networks.rs:622"
@@ -7973,7 +8207,9 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-DIPLO",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/diplomacy/src/shadow_networks.rs:658"
+      ],
       "test_refs": [
         "crates/diplomacy/src/shadow_networks.rs:658"
       ]
@@ -7983,7 +8219,10 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-DIPLO",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/diplomacy/src/shadow_networks.rs:710",
+        "crates/diplomacy/src/shadow_networks.rs:712"
+      ],
       "test_refs": [
         "crates/diplomacy/src/shadow_networks.rs:710",
         "crates/diplomacy/src/shadow_networks.rs:712"
@@ -8010,8 +8249,9 @@
         "crates/diplomacy/src/concession_rounds.rs:38",
         "crates/diplomacy/src/concession_rounds.rs:68",
         "crates/diplomacy/src/concession_rounds.rs:252",
-        "crates/diplomacy/src/lib.rs:997",
-        "crates/emergence-migration/src/lib.rs:18"
+        "crates/diplomacy/src/concession_rounds.rs:428",
+        "crates/diplomacy/src/concession_rounds.rs:491",
+        "crates/diplomacy/src/concession_rounds.rs:507"
       ],
       "test_refs": [
         "crates/diplomacy/src/concession_rounds.rs:428",
@@ -8041,10 +8281,13 @@
       ],
       "code_refs": [
         "crates/diplomacy/src/lib.rs:1014",
+        "crates/diplomacy/src/lib.rs:1512",
+        "crates/diplomacy/src/lib.rs:1514",
         "crates/diplomacy/src/transcripts.rs:1",
         "crates/diplomacy/src/transcripts.rs:18",
         "crates/diplomacy/src/transcripts.rs:88",
-        "crates/diplomacy/src/transcripts.rs:200"
+        "crates/diplomacy/src/transcripts.rs:200",
+        "crates/diplomacy/src/transcripts.rs:281"
       ],
       "test_refs": [
         "crates/diplomacy/src/lib.rs:1512",
@@ -8090,7 +8333,7 @@
     },
     {
       "id": "FR-CIV-DIPLO-007",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-DIPLO",
       "spec_refs": [
         "FUNCTIONAL_REQUIREMENTS.md",
@@ -8103,7 +8346,10 @@
         "docs/traceability/fr-civ-diplo-007/fr-civ-diplo-007-intent.md:15",
         "docs/traceability/fr-civ-diplo-007/fr-civ-diplo-007-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/diplomacy/src/lib.rs:1653",
+        "crates/diplomacy/src/lib.rs:1655"
+      ],
       "test_refs": [
         "crates/diplomacy/src/lib.rs:1653",
         "crates/diplomacy/src/lib.rs:1655"
@@ -8129,7 +8375,10 @@
         "crates/diplomacy/src/lib.rs:333",
         "crates/diplomacy/src/lib.rs:502",
         "crates/diplomacy/src/lib.rs:516",
-        "crates/diplomacy/src/lib.rs:646"
+        "crates/diplomacy/src/lib.rs:646",
+        "crates/diplomacy/src/lib.rs:1664",
+        "crates/diplomacy/src/lib.rs:1666",
+        "crates/diplomacy/src/lib.rs:1675"
       ],
       "test_refs": [
         "crates/diplomacy/src/lib.rs:1664",
@@ -8186,14 +8435,14 @@
         "docs/traceability/fr-civ-econ-001/fr-civ-econ-001-intent.md:15"
       ],
       "code_refs": [
+        "crates/economy/src/chains.rs:627",
+        "crates/economy/src/chains.rs:629",
         "crates/engine/src/engine/policy_econ_phases.rs:10",
         "crates/engine/src/engine/policy_econ_phases.rs:52",
         "crates/engine/src/engine.rs:318",
         "crates/engine/src/engine.rs:980",
         "crates/engine/src/engine.rs:981",
-        "docs/AGILE_WORKSTREAM.md:65",
-        "docs/AGILE_WORKSTREAM.md:106",
-        "docs/AGILE_WORKSTREAM.md:168"
+        "docs/AGILE_WORKSTREAM.md:65"
       ],
       "test_refs": [
         "crates/economy/src/chains.rs:627",
@@ -8251,6 +8500,7 @@
         "docs/traceability/fr-civ-econ-002/fr-civ-econ-002-plan.md:1"
       ],
       "code_refs": [
+        "crates/economy/src/chains.rs:656",
         "docs/guides/COPILOT_L3_AGENTS.md:92",
         "docs/guides/COPILOT_L3_AGENTS.md:93",
         "docs/guides/COPILOT_L3_AGENTS.md:271",
@@ -8373,7 +8623,14 @@
         "docs/traceability/fr-civ-econ-015/fr-civ-econ-015-plan.md:1"
       ],
       "code_refs": [
-        "crates/economy/src/chains.rs:2"
+        "crates/economy/src/chains.rs:2",
+        "crates/economy/src/chains.rs:391",
+        "crates/economy/src/chains.rs:414",
+        "crates/economy/src/chains.rs:444",
+        "crates/economy/src/chains.rs:466",
+        "crates/economy/src/chains.rs:494",
+        "crates/economy/src/chains.rs:537",
+        "crates/economy/src/chains.rs:577"
       ],
       "test_refs": [
         "crates/economy/src/chains.rs:391",
@@ -8423,7 +8680,7 @@
         "crates/civ-emergence-metrics/src/dashboard.rs:16",
         "crates/civ-emergence-metrics/src/dashboard.rs:17",
         "crates/civ-emergence-metrics/src/dashboard.rs:28",
-        "crates/civis-mcp/src/server.rs:1375"
+        "crates/civ-emergence-metrics/src/dashboard.rs:397"
       ],
       "test_refs": [
         "crates/civ-emergence-metrics/src/dashboard.rs:397",
@@ -8448,7 +8705,8 @@
         "docs/traceability/fr-civ-emerg-002/fr-civ-emerg-002-plan.md:1"
       ],
       "code_refs": [
-        "crates/civis-mcp/src/server.rs:1032"
+        "crates/civis-mcp/src/server.rs:1032",
+        "crates/engine/src/emergence_metrics.rs:1204"
       ],
       "test_refs": [
         "crates/engine/src/emergence_metrics.rs:1204"
@@ -8475,7 +8733,8 @@
         "crates/engine/src/replay.rs:319",
         "crates/server/src/jsonrpc.rs:523",
         "crates/server/src/jsonrpc.rs:749",
-        "crates/server/src/jsonrpc.rs:1096"
+        "crates/server/src/jsonrpc.rs:1096",
+        "crates/server/src/jsonrpc.rs:3256"
       ],
       "test_refs": [
         "crates/server/src/jsonrpc.rs:3256"
@@ -8551,6 +8810,8 @@
       ],
       "code_refs": [
         "crates/agents/src/lib.rs:140",
+        "crates/agents/src/lib.rs:1492",
+        "crates/agents/src/lib.rs:1532",
         "crates/engine/src/engine.rs:537",
         "docs/guides/voxel-emergent-vision-and-migration.md:97",
         "docs/guides/voxel-emergent-vision-and-migration.md:133",
@@ -8587,6 +8848,9 @@
       "code_refs": [
         "crates/agents/src/lib.rs:154",
         "crates/agents/src/lib.rs:183",
+        "crates/agents/src/lib.rs:1554",
+        "crates/agents/src/lib.rs:1603",
+        "crates/agents/src/lib.rs:1628",
         "docs/guides/voxel-emergent-vision-and-migration.md:97",
         "docs/guides/voxel-emergent-vision-and-migration.md:138"
       ],
@@ -8636,6 +8900,8 @@
       ],
       "code_refs": [
         "crates/genetics/src/seeds.rs:417",
+        "crates/genetics/src/seeds.rs:1133",
+        "crates/genetics/src/seeds.rs:1429",
         "docs/guides/voxel-emergent-vision-and-migration.md:97",
         "docs/guides/voxel-emergent-vision-and-migration.md:140",
         "docs/guides/voxel-emergent-vision-and-migration.md:207"
@@ -8709,6 +8975,8 @@
       ],
       "code_refs": [
         "crates/agents/src/lib.rs:183",
+        "crates/agents/src/lib.rs:1380",
+        "crates/agents/src/lib.rs:1439",
         "docs/guides/voxel-emergent-vision-and-migration.md:98",
         "docs/guides/voxel-emergent-vision-and-migration.md:143",
         "docs/guides/voxel-emergent-vision-and-migration.md:213"
@@ -8941,11 +9209,15 @@
       "status": "COVERED",
       "epic": "FR-CIV-EMERGENCE-N10",
       "spec_refs": [
-        "docs/traceability/fr-emergence-matrix.md:195"
+        "docs/traceability/fr-emergence-matrix.md:202"
       ],
       "code_refs": [
         "crates/engine/src/emergence_coupling.rs:292",
         "crates/engine/src/engine/engine_tests.rs:2706",
+        "crates/engine/src/engine/engine_tests.rs:2708",
+        "crates/engine/src/engine/engine_tests.rs:2717",
+        "crates/engine/src/engine/engine_tests.rs:2742",
+        "crates/engine/src/engine/engine_tests.rs:2777",
         "crates/engine/src/social_dynamics.rs:216"
       ],
       "test_refs": [
@@ -8960,11 +9232,14 @@
       "status": "COVERED",
       "epic": "FR-CIV-EMERGENCE-N11",
       "spec_refs": [
-        "docs/traceability/fr-emergence-matrix.md:196"
+        "docs/traceability/fr-emergence-matrix.md:203"
       ],
       "code_refs": [
         "crates/engine/src/emergence_coupling.rs:275",
         "crates/engine/src/engine/engine_tests.rs:2525",
+        "crates/engine/src/engine/engine_tests.rs:2527",
+        "crates/engine/src/engine/engine_tests.rs:2535",
+        "crates/engine/src/engine/engine_tests.rs:2552",
         "crates/engine/src/social_dynamics.rs:195"
       ],
       "test_refs": [
@@ -8978,13 +9253,17 @@
       "status": "COVERED",
       "epic": "FR-CIV-EMERGENCE-N12",
       "spec_refs": [
-        "docs/traceability/fr-emergence-matrix.md:197"
+        "docs/traceability/fr-emergence-matrix.md:204"
       ],
       "code_refs": [
         "crates/agents/src/psyche.rs:424",
         "crates/engine/src/emergence_coupling.rs:329",
         "crates/engine/src/emergence_coupling.rs:351",
-        "crates/engine/src/engine/engine_tests.rs:2795"
+        "crates/engine/src/engine/engine_tests.rs:2795",
+        "crates/engine/src/engine/engine_tests.rs:2797",
+        "crates/engine/src/engine/engine_tests.rs:2805",
+        "crates/engine/src/engine/engine_tests.rs:2837",
+        "crates/engine/src/engine/engine_tests.rs:2857"
       ],
       "test_refs": [
         "crates/engine/src/engine/engine_tests.rs:2797",
@@ -8998,7 +9277,7 @@
       "status": "COVERED",
       "epic": "FR-CIV-EMERGENCE-N13",
       "spec_refs": [
-        "docs/traceability/fr-emergence-matrix.md:198"
+        "docs/traceability/fr-emergence-matrix.md:205"
       ],
       "code_refs": [
         "crates/agents/src/culture.rs:97"
@@ -9054,6 +9333,7 @@
         "docs/traceability/fr-civ-engine-int-001/fr-civ-engine-int-001-plan.md:1"
       ],
       "code_refs": [
+        "crates/engine/src/engine/engine_tests.rs:951",
         "crates/engine/src/engine/engine_tests.rs:953"
       ],
       "test_refs": [
@@ -9075,6 +9355,7 @@
         "docs/traceability/fr-civ-engine-int-002/fr-civ-engine-int-002-plan.md:1"
       ],
       "code_refs": [
+        "crates/engine/src/engine/engine_tests.rs:1142",
         "crates/engine/src/engine/engine_tests.rs:1144"
       ],
       "test_refs": [
@@ -9096,6 +9377,7 @@
         "docs/traceability/fr-civ-engine-int-003/fr-civ-engine-int-003-plan.md:1"
       ],
       "code_refs": [
+        "crates/engine/src/engine/engine_tests.rs:1177",
         "crates/engine/src/engine/engine_tests.rs:1179"
       ],
       "test_refs": [
@@ -9117,6 +9399,7 @@
         "docs/traceability/fr-civ-engine-int-005/fr-civ-engine-int-005-plan.md:1"
       ],
       "code_refs": [
+        "crates/engine/src/engine/engine_tests.rs:1369",
         "crates/engine/src/engine/engine_tests.rs:1371"
       ],
       "test_refs": [
@@ -9138,6 +9421,7 @@
         "docs/traceability/fr-civ-engine-int-010/fr-civ-engine-int-010-plan.md:1"
       ],
       "code_refs": [
+        "crates/engine/src/engine/engine_tests.rs:77",
         "crates/engine/src/engine/engine_tests.rs:79"
       ],
       "test_refs": [
@@ -9159,6 +9443,7 @@
         "docs/traceability/fr-civ-engine-int-011/fr-civ-engine-int-011-plan.md:1"
       ],
       "code_refs": [
+        "crates/engine/src/engine/engine_tests.rs:1195",
         "crates/engine/src/engine/engine_tests.rs:1197"
       ],
       "test_refs": [
@@ -9199,6 +9484,7 @@
         "docs/traceability/fr-civ-engine-int-013/fr-civ-engine-int-013-plan.md:1"
       ],
       "code_refs": [
+        "crates/engine/src/engine/engine_tests.rs:1317",
         "crates/engine/src/engine/engine_tests.rs:1319"
       ],
       "test_refs": [
@@ -9220,6 +9506,7 @@
         "docs/traceability/fr-civ-engine-int-014/fr-civ-engine-int-014-plan.md:1"
       ],
       "code_refs": [
+        "crates/engine/src/engine/engine_tests.rs:1357",
         "crates/engine/src/engine/engine_tests.rs:1359"
       ],
       "test_refs": [
@@ -9241,6 +9528,7 @@
         "docs/traceability/fr-civ-engine-int-015/fr-civ-engine-int-015-plan.md:1"
       ],
       "code_refs": [
+        "crates/engine/src/engine/engine_tests.rs:1260",
         "crates/engine/src/engine/engine_tests.rs:1262"
       ],
       "test_refs": [
@@ -9262,6 +9550,7 @@
         "docs/traceability/fr-civ-engine-replay-001/fr-civ-engine-replay-001-plan.md:1"
       ],
       "code_refs": [
+        "crates/engine/src/engine/engine_tests.rs:1542",
         "crates/engine/src/engine/engine_tests.rs:1544"
       ],
       "test_refs": [
@@ -9283,6 +9572,7 @@
         "docs/traceability/fr-civ-engine-replay-002/fr-civ-engine-replay-002-plan.md:1"
       ],
       "code_refs": [
+        "crates/engine/src/engine/engine_tests.rs:1569",
         "crates/engine/src/engine/engine_tests.rs:1571"
       ],
       "test_refs": [
@@ -9304,6 +9594,7 @@
         "docs/traceability/fr-civ-engine-replay-003/fr-civ-engine-replay-003-plan.md:1"
       ],
       "code_refs": [
+        "crates/engine/src/engine/engine_tests.rs:1708",
         "crates/engine/src/engine/engine_tests.rs:1710"
       ],
       "test_refs": [
@@ -9325,6 +9616,7 @@
         "docs/traceability/fr-civ-engine-replay-004/fr-civ-engine-replay-004-plan.md:1"
       ],
       "code_refs": [
+        "crates/engine/src/engine/engine_tests.rs:1726",
         "crates/engine/src/engine/engine_tests.rs:1728"
       ],
       "test_refs": [
@@ -9346,6 +9638,7 @@
         "docs/traceability/fr-civ-engine-replay-005/fr-civ-engine-replay-005-plan.md:1"
       ],
       "code_refs": [
+        "crates/engine/src/engine/engine_tests.rs:1778",
         "crates/engine/src/engine/engine_tests.rs:1780"
       ],
       "test_refs": [
@@ -9521,6 +9814,7 @@
       "code_refs": [
         "clients/bevy-ref/src/god_panel.rs:2",
         "crates/engine/src/gameplay.rs:2",
+        "crates/engine/src/gameplay.rs:888",
         "crates/engine/src/scenario.rs:140"
       ],
       "test_refs": [
@@ -9555,6 +9849,7 @@
         "docs/traceability/fr-civ-genetics-000/fr-civ-genetics-000-plan.md:1"
       ],
       "code_refs": [
+        "crates/genetics/src/lib.rs:187",
         "docs/development-guide/fr-3d-additions.md:41"
       ],
       "test_refs": [
@@ -9580,6 +9875,7 @@
         "docs/traceability/fr-civ-genetics-001/fr-civ-genetics-001-plan.md:1"
       ],
       "code_refs": [
+        "crates/genetics/src/lib.rs:200",
         "docs/development-guide/fr-3d-additions.md:42"
       ],
       "test_refs": [
@@ -9603,6 +9899,7 @@
         "docs/traceability/fr-civ-genetics-002/fr-civ-genetics-002-plan.md:1"
       ],
       "code_refs": [
+        "crates/genetics/src/lib.rs:213",
         "docs/development-guide/fr-3d-additions.md:43"
       ],
       "test_refs": [
@@ -9626,6 +9923,7 @@
         "docs/traceability/fr-civ-genetics-010/fr-civ-genetics-010-plan.md:1"
       ],
       "code_refs": [
+        "crates/genetics/src/lib.rs:230",
         "docs/development-guide/fr-3d-additions.md:45"
       ],
       "test_refs": [
@@ -9634,7 +9932,7 @@
     },
     {
       "id": "FR-CIV-GENETICS-011",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-GENETICS",
       "spec_refs": [
         "docs/traceability/fr-civ-genetics-011/fr-civ-genetics-011-adr.md:1",
@@ -9646,14 +9944,16 @@
         "docs/traceability/fr-civ-genetics-011/fr-civ-genetics-011-intent.md:15",
         "docs/traceability/fr-civ-genetics-011/fr-civ-genetics-011-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/genetics/src/lib.rs:250"
+      ],
       "test_refs": [
         "crates/genetics/src/lib.rs:250"
       ]
     },
     {
       "id": "FR-CIV-GENETICS-012",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-GENETICS",
       "spec_refs": [
         "docs/traceability/fr-civ-genetics-012/fr-civ-genetics-012-adr.md:1",
@@ -9665,7 +9965,9 @@
         "docs/traceability/fr-civ-genetics-012/fr-civ-genetics-012-intent.md:15",
         "docs/traceability/fr-civ-genetics-012/fr-civ-genetics-012-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/genetics/src/lib.rs:258"
+      ],
       "test_refs": [
         "crates/genetics/src/lib.rs:258"
       ]
@@ -9998,7 +10300,7 @@
     },
     {
       "id": "FR-CIV-GODOT-F3D0",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-GODOT-F3D0",
       "spec_refs": [
         "docs/traceability/fr-civ-godot-f3d0/fr-civ-godot-f3d0-adr.md:1",
@@ -10010,7 +10312,9 @@
         "docs/traceability/fr-civ-godot-f3d0/fr-civ-godot-f3d0-intent.md:15",
         "docs/traceability/fr-civ-godot-f3d0/fr-civ-godot-f3d0-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "clients/godot-ref/rust/src/ws_frame.rs:174"
+      ],
       "test_refs": [
         "clients/godot-ref/rust/src/ws_frame.rs:174"
       ]
@@ -10063,11 +10367,11 @@
         "crates/hud/src/god_tool_state.rs:1",
         "crates/hud/src/god_tool_state.rs:4",
         "crates/hud/src/god_tool_state.rs:498",
+        "crates/hud/src/god_tool_state.rs:736",
+        "crates/hud/src/god_tool_state.rs:770",
         "crates/hud/src/godtool_brush.rs:32",
         "crates/hud/src/godtool_brush.rs:190",
-        "crates/powers/civ-powers.cdx.json:20",
-        "crates/powers/src/lib.rs:2",
-        "crates/powers/src/registry.rs:37"
+        "crates/powers/civ-powers.cdx.json:20"
       ],
       "test_refs": [
         "crates/engine/tests/fr_fr_civ_godtool_900.rs:1",
@@ -10271,12 +10575,12 @@
       "code_refs": [
         "crates/civ-institutions/src/lib.rs:33",
         "crates/diplomacy/src/lib.rs:18",
+        "crates/diplomacy/src/lib.rs:1216",
         "crates/engine/src/engine/social_settlement_phases.rs:26",
         "crates/engine/src/engine.rs:845",
         "crates/engine/src/engine.rs:1094",
         "crates/engine/src/engine.rs:2875",
-        "crates/engine/src/engine.rs:3423",
-        "crates/engine/src/lib.rs:178"
+        "crates/engine/src/engine.rs:3423"
       ],
       "test_refs": [
         "crates/diplomacy/src/lib.rs:1216",
@@ -10305,6 +10609,7 @@
       ],
       "code_refs": [
         "crates/civ-institutions/src/lib.rs:36",
+        "crates/diplomacy/src/lib.rs:1261",
         "docs/reference/agileplus-artifacts-index.md:137",
         "docs/reference/agileplus-artifacts-index.md:286"
       ],
@@ -10436,6 +10741,9 @@
         "crates/voxel/src/hud.rs:5",
         "crates/voxel/src/hud.rs:7",
         "crates/voxel/src/hud.rs:32",
+        "crates/voxel/src/hud.rs:734",
+        "crates/voxel/src/hud.rs:736",
+        "crates/voxel/src/hud.rs:757",
         "docs/reference/agileplus-artifacts-index.md:201",
         "docs/reference/agileplus-artifacts-index.md:300"
       ],
@@ -10463,6 +10771,9 @@
       "code_refs": [
         "crates/voxel/src/hud.rs:8",
         "crates/voxel/src/hud.rs:222",
+        "crates/voxel/src/hud.rs:797",
+        "crates/voxel/src/hud.rs:799",
+        "crates/voxel/src/hud.rs:828",
         "docs/reference/agileplus-artifacts-index.md:201",
         "docs/reference/agileplus-artifacts-index.md:301"
       ],
@@ -10490,6 +10801,9 @@
       "code_refs": [
         "crates/voxel/src/hud.rs:9",
         "crates/voxel/src/hud.rs:399",
+        "crates/voxel/src/hud.rs:885",
+        "crates/voxel/src/hud.rs:887",
+        "crates/voxel/src/hud.rs:897",
         "docs/reference/agileplus-artifacts-index.md:201",
         "docs/reference/agileplus-artifacts-index.md:302"
       ],
@@ -10517,6 +10831,10 @@
       "code_refs": [
         "crates/voxel/src/hud.rs:10",
         "crates/voxel/src/hud.rs:508",
+        "crates/voxel/src/hud.rs:926",
+        "crates/voxel/src/hud.rs:928",
+        "crates/voxel/src/hud.rs:950",
+        "crates/voxel/src/hud.rs:967",
         "docs/reference/agileplus-artifacts-index.md:201",
         "docs/reference/agileplus-artifacts-index.md:303"
       ],
@@ -10545,6 +10863,9 @@
       "code_refs": [
         "crates/voxel/src/hud.rs:11",
         "crates/voxel/src/hud.rs:635",
+        "crates/voxel/src/hud.rs:987",
+        "crates/voxel/src/hud.rs:989",
+        "crates/voxel/src/hud.rs:1006",
         "docs/reference/agileplus-artifacts-index.md:201",
         "docs/reference/agileplus-artifacts-index.md:304"
       ],
@@ -10587,9 +10908,12 @@
       "code_refs": [
         "clients/bevy-ref/src/info_views.rs:19",
         "clients/bevy-ref/src/info_views.rs:382",
-        "docs/agileplus/epics/civ-w4-perception.md:9",
-        "docs/agileplus/epics/civ-w4-perception.md:28",
-        "docs/agileplus/README.md:23"
+        "clients/bevy-ref/src/info_views.rs:988",
+        "clients/bevy-ref/src/info_views.rs:1024",
+        "clients/bevy-ref/src/info_views.rs:1038",
+        "clients/bevy-ref/src/info_views.rs:1047",
+        "clients/bevy-ref/src/info_views.rs:1060",
+        "docs/agileplus/epics/civ-w4-perception.md:9"
       ],
       "test_refs": [
         "clients/bevy-ref/src/info_views.rs:988",
@@ -10616,13 +10940,13 @@
       ],
       "code_refs": [
         "clients/bevy-ref/src/info_views.rs:20",
+        "clients/bevy-ref/src/info_views.rs:1070",
         "crates/hud/src/overlay_registry.rs:3",
         "crates/hud/src/overlay_registry.rs:75",
         "crates/hud/src/overlay_registry.rs:80",
         "crates/hud/src/overlay_registry.rs:141",
         "crates/hud/src/overlay_registry.rs:254",
-        "crates/hud/src/overlay_registry.rs:292",
-        "crates/hud/src/overlay_registry.rs:462"
+        "crates/hud/src/overlay_registry.rs:292"
       ],
       "test_refs": [
         "clients/bevy-ref/src/info_views.rs:1070",
@@ -10766,12 +11090,12 @@
       "code_refs": [
         "clients/bevy-ref/src/info_views.rs:21",
         "clients/bevy-ref/src/info_views.rs:270",
+        "clients/bevy-ref/src/info_views.rs:1084",
+        "clients/bevy-ref/src/info_views.rs:1093",
+        "clients/bevy-ref/src/info_views.rs:1105",
         "crates/hud/src/env_overlay.rs:1",
         "crates/hud/src/env_overlay.rs:69",
-        "crates/hud/src/env_overlay.rs:135",
-        "crates/hud/src/env_overlay.rs:574",
-        "crates/hud/src/env_overlay.rs:774",
-        "docs/agileplus/epics/civ-w4-perception.md:11"
+        "crates/hud/src/env_overlay.rs:135"
       ],
       "test_refs": [
         "clients/bevy-ref/src/info_views.rs:1084",
@@ -10858,9 +11182,9 @@
         "crates/hud/src/society_overlay.rs:101",
         "crates/hud/src/society_overlay.rs:386",
         "crates/hud/src/society_overlay.rs:440",
+        "crates/hud/src/society_overlay.rs:480",
         "docs/agileplus/epics/civ-w4-perception.md:14",
-        "docs/agileplus/epics/civ-w4-perception.md:32",
-        "docs/agileplus/README.md:23"
+        "docs/agileplus/epics/civ-w4-perception.md:32"
       ],
       "test_refs": [
         "crates/engine/tests/fr_fr_civ_infoview_913.rs:1",
@@ -11028,9 +11352,9 @@
         "crates/hud/src/overlay_legend.rs:24",
         "crates/hud/src/overlay_legend.rs:89",
         "crates/hud/src/overlay_legend.rs:464",
-        "docs/agileplus/epics/civ-w4-perception.md:16",
-        "docs/agileplus/epics/civ-w4-perception.md:34",
-        "docs/agileplus/README.md:23"
+        "crates/hud/src/overlay_legend.rs:471",
+        "crates/hud/src/overlay_legend.rs:506",
+        "crates/hud/src/overlay_legend.rs:521"
       ],
       "test_refs": [
         "crates/engine/tests/fr_fr_civ_infoview_920.rs:1",
@@ -11089,7 +11413,7 @@
     },
     {
       "id": "FR-CIV-INFRA-001",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-INFRA",
       "spec_refs": [
         "docs/traceability/civis-tracelinks.md:25",
@@ -11101,14 +11425,16 @@
         "docs/traceability/fr-civ-infra-001/fr-civ-infra-001-intent.md:4",
         "docs/traceability/fr-civ-infra-001/fr-civ-infra-001-intent.md:15"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/civ-traffic/src/lib.rs:364"
+      ],
       "test_refs": [
         "crates/civ-traffic/src/lib.rs:364"
       ]
     },
     {
       "id": "FR-CIV-INFRA-010",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-INFRA",
       "spec_refs": [
         "docs/traceability/civis-tracelinks.md:26",
@@ -11120,14 +11446,16 @@
         "docs/traceability/fr-civ-infra-010/fr-civ-infra-010-intent.md:4",
         "docs/traceability/fr-civ-infra-010/fr-civ-infra-010-intent.md:15"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/civ-traffic/src/lib.rs:376"
+      ],
       "test_refs": [
         "crates/civ-traffic/src/lib.rs:376"
       ]
     },
     {
       "id": "FR-CIV-INFRA-011",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-INFRA",
       "spec_refs": [
         "docs/traceability/civis-tracelinks.md:27",
@@ -11139,14 +11467,16 @@
         "docs/traceability/fr-civ-infra-011/fr-civ-infra-011-intent.md:4",
         "docs/traceability/fr-civ-infra-011/fr-civ-infra-011-intent.md:15"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/civ-traffic/src/lib.rs:387"
+      ],
       "test_refs": [
         "crates/civ-traffic/src/lib.rs:387"
       ]
     },
     {
       "id": "FR-CIV-INFRA-020",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-INFRA",
       "spec_refs": [
         "docs/traceability/civis-tracelinks.md:28",
@@ -11158,14 +11488,16 @@
         "docs/traceability/fr-civ-infra-020/fr-civ-infra-020-intent.md:4",
         "docs/traceability/fr-civ-infra-020/fr-civ-infra-020-intent.md:15"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/civ-traffic/src/lib.rs:396"
+      ],
       "test_refs": [
         "crates/civ-traffic/src/lib.rs:396"
       ]
     },
     {
       "id": "FR-CIV-INFRA-021",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-INFRA",
       "spec_refs": [
         "docs/traceability/civis-tracelinks.md:29",
@@ -11177,14 +11509,16 @@
         "docs/traceability/fr-civ-infra-021/fr-civ-infra-021-intent.md:4",
         "docs/traceability/fr-civ-infra-021/fr-civ-infra-021-intent.md:15"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/civ-traffic/src/lib.rs:406"
+      ],
       "test_refs": [
         "crates/civ-traffic/src/lib.rs:406"
       ]
     },
     {
       "id": "FR-CIV-INFRA-022",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-INFRA",
       "spec_refs": [
         "docs/traceability/civis-tracelinks.md:30",
@@ -11196,7 +11530,9 @@
         "docs/traceability/fr-civ-infra-022/fr-civ-infra-022-intent.md:4",
         "docs/traceability/fr-civ-infra-022/fr-civ-infra-022-intent.md:15"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/civ-traffic/src/lib.rs:422"
+      ],
       "test_refs": [
         "crates/civ-traffic/src/lib.rs:422"
       ]
@@ -11217,7 +11553,8 @@
       ],
       "code_refs": [
         "crates/civ-traffic/src/flow_priority.rs:15",
-        "crates/civ-traffic/src/lib.rs:20"
+        "crates/civ-traffic/src/lib.rs:20",
+        "crates/civ-traffic/src/lib.rs:435"
       ],
       "test_refs": [
         "crates/civ-traffic/src/lib.rs:435"
@@ -11225,7 +11562,7 @@
     },
     {
       "id": "FR-CIV-INFRA-040",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-INFRA",
       "spec_refs": [
         "docs/design/vehicles-logistics.md:407",
@@ -11238,14 +11575,16 @@
         "docs/traceability/fr-civ-infra-040/fr-civ-infra-040-intent.md:4",
         "docs/traceability/fr-civ-infra-040/fr-civ-infra-040-intent.md:15"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/civ-traffic/src/lib.rs:448"
+      ],
       "test_refs": [
         "crates/civ-traffic/src/lib.rs:448"
       ]
     },
     {
       "id": "FR-CIV-INFRA-050",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-INFRA",
       "spec_refs": [
         "docs/traceability/civis-tracelinks.md:33",
@@ -11257,14 +11596,16 @@
         "docs/traceability/fr-civ-infra-050/fr-civ-infra-050-intent.md:4",
         "docs/traceability/fr-civ-infra-050/fr-civ-infra-050-intent.md:15"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/civ-traffic/src/lib.rs:458"
+      ],
       "test_refs": [
         "crates/civ-traffic/src/lib.rs:458"
       ]
     },
     {
       "id": "FR-CIV-INFRA-060",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-INFRA",
       "spec_refs": [
         "docs/traceability/civis-tracelinks.md:34",
@@ -11276,7 +11617,9 @@
         "docs/traceability/fr-civ-infra-060/fr-civ-infra-060-intent.md:4",
         "docs/traceability/fr-civ-infra-060/fr-civ-infra-060-intent.md:15"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/civ-traffic/src/lib.rs:468"
+      ],
       "test_refs": [
         "crates/civ-traffic/src/lib.rs:468"
       ]
@@ -11297,7 +11640,10 @@
         "docs/traceability/fr-civ-infra-070/fr-civ-infra-070-plan.md:1"
       ],
       "code_refs": [
-        "crates/civ-traffic/src/grid.rs:12"
+        "crates/civ-traffic/src/grid.rs:12",
+        "crates/civ-traffic/src/grid.rs:311",
+        "crates/civ-traffic/src/grid.rs:313",
+        "crates/civ-traffic/src/grid.rs:330"
       ],
       "test_refs": [
         "crates/civ-traffic/src/grid.rs:311",
@@ -11321,7 +11667,9 @@
         "docs/traceability/fr-civ-infra-071/fr-civ-infra-071-plan.md:1"
       ],
       "code_refs": [
-        "crates/civ-traffic/src/grid.rs:15"
+        "crates/civ-traffic/src/grid.rs:15",
+        "crates/civ-traffic/src/grid.rs:345",
+        "crates/civ-traffic/src/grid.rs:347"
       ],
       "test_refs": [
         "crates/civ-traffic/src/grid.rs:345",
@@ -11344,7 +11692,11 @@
         "docs/traceability/fr-civ-infra-072/fr-civ-infra-072-plan.md:1"
       ],
       "code_refs": [
-        "crates/civ-traffic/src/grid.rs:18"
+        "crates/civ-traffic/src/grid.rs:18",
+        "crates/civ-traffic/src/grid.rs:368",
+        "crates/civ-traffic/src/grid.rs:370",
+        "crates/civ-traffic/src/grid.rs:393",
+        "crates/civ-traffic/src/grid.rs:412"
       ],
       "test_refs": [
         "crates/civ-traffic/src/grid.rs:368",
@@ -11371,13 +11723,13 @@
       ],
       "code_refs": [
         "clients/bevy-ref/src/inspect.rs:12",
+        "clients/bevy-ref/src/inspect.rs:523",
+        "clients/bevy-ref/src/inspect.rs:535",
         "crates/holocron/src/inspect.rs:1",
         "crates/holocron/src/inspect.rs:8",
         "crates/holocron/src/inspect.rs:10",
-        "crates/holocron/src/lib.rs:17",
-        "docs/agileplus/epics/civ-w4-perception.md:17",
-        "docs/agileplus/epics/civ-w4-perception.md:35",
-        "docs/agileplus/README.md:23"
+        "crates/holocron/src/inspect.rs:878",
+        "crates/holocron/src/lib.rs:17"
       ],
       "test_refs": [
         "clients/bevy-ref/src/inspect.rs:523",
@@ -11496,6 +11848,8 @@
         "clients/bevy-ref/src/inspect.rs:13",
         "clients/bevy-ref/src/inspect.rs:104",
         "clients/bevy-ref/src/inspect.rs:395",
+        "clients/bevy-ref/src/inspect.rs:564",
+        "clients/bevy-ref/src/inspect.rs:576",
         "docs/agileplus/epics/civ-w4-perception.md:21",
         "docs/agileplus/epics/civ-w4-perception.md:37",
         "docs/agileplus/README.md:23"
@@ -11880,6 +12234,8 @@
         "docs/traceability/fr-civ-laws-000/fr-civ-laws-000-plan.md:1"
       ],
       "code_refs": [
+        "crates/laws/src/lib.rs:290",
+        "crates/laws/src/lib.rs:291",
         "docs/development-guide/fr-3d-additions.md:69"
       ],
       "test_refs": [
@@ -11904,6 +12260,8 @@
         "docs/traceability/fr-civ-laws-001/fr-civ-laws-001-plan.md:1"
       ],
       "code_refs": [
+        "crates/laws/src/lib.rs:332",
+        "crates/laws/src/lib.rs:333",
         "docs/development-guide/fr-3d-additions.md:70"
       ],
       "test_refs": [
@@ -11928,6 +12286,8 @@
         "docs/traceability/fr-civ-laws-002/fr-civ-laws-002-plan.md:1"
       ],
       "code_refs": [
+        "crates/laws/src/lib.rs:344",
+        "crates/laws/src/lib.rs:345",
         "docs/development-guide/fr-3d-additions.md:71"
       ],
       "test_refs": [
@@ -11937,7 +12297,7 @@
     },
     {
       "id": "FR-CIV-LAWS-003",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-LAWS",
       "spec_refs": [
         "docs/traceability/fr-civ-laws-003/fr-civ-laws-003-adr.md:1",
@@ -11949,14 +12309,16 @@
         "docs/traceability/fr-civ-laws-003/fr-civ-laws-003-intent.md:15",
         "docs/traceability/fr-civ-laws-003/fr-civ-laws-003-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/laws/src/lib.rs:368"
+      ],
       "test_refs": [
         "crates/laws/src/lib.rs:368"
       ]
     },
     {
       "id": "FR-CIV-LAWS-004",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-LAWS",
       "spec_refs": [
         "docs/traceability/fr-civ-laws-004/fr-civ-laws-004-adr.md:1",
@@ -11968,14 +12330,16 @@
         "docs/traceability/fr-civ-laws-004/fr-civ-laws-004-intent.md:15",
         "docs/traceability/fr-civ-laws-004/fr-civ-laws-004-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/laws/src/lib.rs:389"
+      ],
       "test_refs": [
         "crates/laws/src/lib.rs:389"
       ]
     },
     {
       "id": "FR-CIV-LAWS-005",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-LAWS",
       "spec_refs": [
         "docs/traceability/fr-civ-laws-005/fr-civ-laws-005-adr.md:1",
@@ -11987,19 +12351,27 @@
         "docs/traceability/fr-civ-laws-005/fr-civ-laws-005-intent.md:15",
         "docs/traceability/fr-civ-laws-005/fr-civ-laws-005-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/laws/src/lib.rs:411"
+      ],
       "test_refs": [
         "crates/laws/src/lib.rs:411"
       ]
     },
     {
       "id": "FR-CIV-LAWS-006",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-LAWS",
       "spec_refs": [
         "docs/traceability/fr-3d-matrix.md:87"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/laws/src/lib.rs:421",
+        "crates/laws/src/lib.rs:447",
+        "crates/laws/src/lib.rs:463",
+        "crates/laws/src/lib.rs:473",
+        "crates/laws/src/lib.rs:522"
+      ],
       "test_refs": [
         "crates/laws/src/lib.rs:421",
         "crates/laws/src/lib.rs:447",
@@ -12010,36 +12382,42 @@
     },
     {
       "id": "FR-CIV-LAWS-007",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-LAWS",
       "spec_refs": [
-        "docs/traceability/fr-emergence-matrix.md:303"
+        "docs/traceability/fr-emergence-matrix.md:310"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/laws/src/lib.rs:530"
+      ],
       "test_refs": [
         "crates/laws/src/lib.rs:530"
       ]
     },
     {
       "id": "FR-CIV-LAWS-008",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-LAWS",
       "spec_refs": [
-        "docs/traceability/fr-emergence-matrix.md:304"
+        "docs/traceability/fr-emergence-matrix.md:311"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/laws/src/lib.rs:551"
+      ],
       "test_refs": [
         "crates/laws/src/lib.rs:551"
       ]
     },
     {
       "id": "FR-CIV-LAWS-009",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-LAWS",
       "spec_refs": [
-        "docs/traceability/fr-emergence-matrix.md:305"
+        "docs/traceability/fr-emergence-matrix.md:312"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/laws/src/lib.rs:559"
+      ],
       "test_refs": [
         "crates/laws/src/lib.rs:559"
       ]
@@ -12124,7 +12502,8 @@
         "crates/legends/src/rumor.rs:46",
         "crates/legends/src/rumor.rs:105",
         "crates/legends/src/rumor.rs:305",
-        "crates/legends/src/rumor.rs:320"
+        "crates/legends/src/rumor.rs:320",
+        "crates/legends/src/rumor.rs:713"
       ],
       "test_refs": [
         "crates/legends/src/rumor.rs:713"
@@ -12150,7 +12529,8 @@
         "crates/legends/src/rumor.rs:127",
         "crates/legends/src/rumor.rs:199",
         "crates/legends/src/rumor.rs:299",
-        "crates/legends/src/rumor.rs:339"
+        "crates/legends/src/rumor.rs:339",
+        "crates/legends/src/rumor.rs:803"
       ],
       "test_refs": [
         "crates/legends/src/rumor.rs:803"
@@ -12237,7 +12617,8 @@
       "code_refs": [
         "crates/legends/src/rumor.rs:55",
         "crates/legends/src/rumor.rs:108",
-        "crates/legends/src/rumor.rs:194"
+        "crates/legends/src/rumor.rs:194",
+        "crates/legends/src/rumor.rs:843"
       ],
       "test_refs": [
         "crates/legends/src/rumor.rs:843"
@@ -12261,7 +12642,8 @@
       "code_refs": [
         "crates/legends/src/rumor.rs:71",
         "crates/legends/src/rumor.rs:210",
-        "crates/legends/src/rumor.rs:231"
+        "crates/legends/src/rumor.rs:231",
+        "crates/legends/src/rumor.rs:899"
       ],
       "test_refs": [
         "crates/legends/src/rumor.rs:899"
@@ -12326,7 +12708,7 @@
       "status": "SPEC-ONLY",
       "epic": "FR-CIV-LEGENDS-CONFIG",
       "spec_refs": [
-        "docs/traceability/fr-emergence-matrix.md:252"
+        "docs/traceability/fr-emergence-matrix.md:259"
       ],
       "code_refs": [],
       "test_refs": []
@@ -12392,6 +12774,9 @@
         "docs/traceability/fr-civ-legends-ingest-02/fr-civ-legends-ingest-02-plan.md:1"
       ],
       "code_refs": [
+        "crates/engine/src/emergence.rs:1374",
+        "crates/engine/src/emergence.rs:1727",
+        "crates/engine/src/emergence.rs:1745",
         "crates/engine/src/engine/engine_tests.rs:453",
         "crates/engine/src/engine/engine_tests.rs:527",
         "crates/legends/src/worker.rs:1"
@@ -12452,7 +12837,7 @@
       "status": "SPEC-ONLY",
       "epic": "FR-CIV-LEGENDS-PERF",
       "spec_refs": [
-        "docs/traceability/fr-emergence-matrix.md:253"
+        "docs/traceability/fr-emergence-matrix.md:260"
       ],
       "code_refs": [],
       "test_refs": []
@@ -12542,9 +12927,11 @@
         "crates/engine/src/emergence.rs:46",
         "crates/engine/src/emergence.rs:1123",
         "crates/engine/src/emergence.rs:1129",
+        "crates/engine/src/emergence.rs:1716",
         "crates/engine/src/engine/engine_tests.rs:454",
         "crates/server/src/jsonrpc.rs:80",
-        "crates/server/src/jsonrpc.rs:983"
+        "crates/server/src/jsonrpc.rs:983",
+        "crates/server/src/jsonrpc.rs:3371"
       ],
       "test_refs": [
         "crates/engine/src/emergence.rs:1716",
@@ -12581,7 +12968,7 @@
       "status": "SPEC-ONLY",
       "epic": "FR-CIV-LEGENDS-SCALE",
       "spec_refs": [
-        "docs/traceability/fr-emergence-matrix.md:254"
+        "docs/traceability/fr-emergence-matrix.md:261"
       ],
       "code_refs": [],
       "test_refs": []
@@ -12610,7 +12997,7 @@
     },
     {
       "id": "FR-CIV-LIFE-000",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-LIFE",
       "spec_refs": [
         "docs/traceability/civis-tracelinks.md:13",
@@ -12622,7 +13009,9 @@
         "docs/traceability/fr-civ-life-000/fr-civ-life-000-intent.md:4",
         "docs/traceability/fr-civ-life-000/fr-civ-life-000-intent.md:15"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/needs/src/lib.rs:374"
+      ],
       "test_refs": [
         "crates/needs/src/lib.rs:374"
       ]
@@ -12648,7 +13037,11 @@
         "crates/engine/src/engine/engine_tests.rs:4003",
         "crates/engine/src/engine/social_settlement_phases.rs:466",
         "crates/engine/src/engine.rs:3281",
-        "crates/needs/src/lib.rs:14"
+        "crates/needs/src/lib.rs:14",
+        "crates/needs/src/lib.rs:382",
+        "crates/needs/src/lib.rs:396",
+        "crates/needs/src/lib.rs:416",
+        "crates/needs/src/lib.rs:451"
       ],
       "test_refs": [
         "crates/needs/src/lib.rs:382",
@@ -12680,7 +13073,12 @@
       "code_refs": [
         "crates/engine/src/engine/engine_tests.rs:4100",
         "crates/engine/src/engine/social_settlement_phases.rs:466",
-        "crates/needs/src/lib.rs:14"
+        "crates/needs/src/lib.rs:14",
+        "crates/needs/src/lib.rs:559",
+        "crates/needs/src/lib.rs:602",
+        "crates/needs/src/lib.rs:682",
+        "crates/needs/src/lib.rs:723",
+        "crates/needs/src/lib.rs:853"
       ],
       "test_refs": [
         "crates/needs/src/lib.rs:559",
@@ -12713,11 +13111,14 @@
         "docs/traceability/fr-civ-life-003/fr-civ-life-003-intent.md:15"
       ],
       "code_refs": [
+        "crates/engine/src/engine/engine_tests.rs:3914",
         "crates/engine/src/engine/species_lifecycle.rs:636",
         "crates/needs/src/lib.rs:15",
-        "crates/needs/src/lib.rs:1094",
-        "crates/needs/src/lifecycle.rs:16",
-        "crates/needs/src/lifecycle.rs:47"
+        "crates/needs/src/lib.rs:502",
+        "crates/needs/src/lib.rs:529",
+        "crates/needs/src/lib.rs:663",
+        "crates/needs/src/lib.rs:754",
+        "crates/needs/src/lib.rs:974"
       ],
       "test_refs": [
         "crates/engine/src/engine/engine_tests.rs:3914",
@@ -12757,6 +13158,7 @@
         "docs/traceability/fr-civ-life-010/fr-civ-life-010-intent.md:4"
       ],
       "code_refs": [
+        "crates/agents/src/daily_path.rs:311",
         "crates/engine/src/engine.rs:767"
       ],
       "test_refs": [
@@ -12766,7 +13168,7 @@
     },
     {
       "id": "FR-CIV-LIFE-011",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-LIFE",
       "spec_refs": [
         "docs/traceability/fr-civ-life-011/fr-civ-life-011-adr.md:1",
@@ -12778,14 +13180,16 @@
         "docs/traceability/fr-civ-life-011/fr-civ-life-011-intent.md:15",
         "docs/traceability/fr-civ-life-011/fr-civ-life-011-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/agents/src/daily_path.rs:334"
+      ],
       "test_refs": [
         "crates/agents/src/daily_path.rs:334"
       ]
     },
     {
       "id": "FR-CIV-LIFE-012",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-LIFE",
       "spec_refs": [
         "docs/traceability/fr-civ-life-012/fr-civ-life-012-adr.md:1",
@@ -12797,14 +13201,16 @@
         "docs/traceability/fr-civ-life-012/fr-civ-life-012-intent.md:15",
         "docs/traceability/fr-civ-life-012/fr-civ-life-012-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/agents/src/daily_path.rs:370"
+      ],
       "test_refs": [
         "crates/agents/src/daily_path.rs:370"
       ]
     },
     {
       "id": "FR-CIV-LIFE-013",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-LIFE",
       "spec_refs": [
         "docs/traceability/fr-civ-life-013/fr-civ-life-013-adr.md:1",
@@ -12816,14 +13222,16 @@
         "docs/traceability/fr-civ-life-013/fr-civ-life-013-intent.md:15",
         "docs/traceability/fr-civ-life-013/fr-civ-life-013-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/agents/src/daily_path.rs:382"
+      ],
       "test_refs": [
         "crates/agents/src/daily_path.rs:382"
       ]
     },
     {
       "id": "FR-CIV-LIFE-014",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-LIFE",
       "spec_refs": [
         "docs/traceability/fr-civ-life-014/fr-civ-life-014-adr.md:1",
@@ -12835,14 +13243,16 @@
         "docs/traceability/fr-civ-life-014/fr-civ-life-014-intent.md:15",
         "docs/traceability/fr-civ-life-014/fr-civ-life-014-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/agents/src/daily_path.rs:406"
+      ],
       "test_refs": [
         "crates/agents/src/daily_path.rs:406"
       ]
     },
     {
       "id": "FR-CIV-LIFE-015",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-LIFE",
       "spec_refs": [
         "docs/traceability/fr-civ-life-015/fr-civ-life-015-adr.md:1",
@@ -12854,14 +13264,16 @@
         "docs/traceability/fr-civ-life-015/fr-civ-life-015-intent.md:15",
         "docs/traceability/fr-civ-life-015/fr-civ-life-015-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/agents/src/daily_path.rs:430"
+      ],
       "test_refs": [
         "crates/agents/src/daily_path.rs:430"
       ]
     },
     {
       "id": "FR-CIV-LIFE-016",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-LIFE",
       "spec_refs": [
         "docs/traceability/fr-civ-life-016/fr-civ-life-016-adr.md:1",
@@ -12873,7 +13285,9 @@
         "docs/traceability/fr-civ-life-016/fr-civ-life-016-intent.md:15",
         "docs/traceability/fr-civ-life-016/fr-civ-life-016-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/agents/src/daily_path.rs:438"
+      ],
       "test_refs": [
         "crates/agents/src/daily_path.rs:438"
       ]
@@ -12896,6 +13310,8 @@
         "docs/traceability/fr-civ-life-020/fr-civ-life-020-intent.md:4"
       ],
       "code_refs": [
+        "crates/economy/src/stocks.rs:294",
+        "crates/economy/src/stocks.rs:487",
         "crates/engine/src/engine.rs:3211"
       ],
       "test_refs": [
@@ -12905,7 +13321,7 @@
     },
     {
       "id": "FR-CIV-LIFE-021",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-LIFE",
       "spec_refs": [
         "docs/traceability/fr-civ-life-021/fr-civ-life-021-adr.md:1",
@@ -12917,14 +13333,16 @@
         "docs/traceability/fr-civ-life-021/fr-civ-life-021-intent.md:15",
         "docs/traceability/fr-civ-life-021/fr-civ-life-021-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/economy/src/stocks.rs:341"
+      ],
       "test_refs": [
         "crates/economy/src/stocks.rs:341"
       ]
     },
     {
       "id": "FR-CIV-LIFE-022",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-LIFE",
       "spec_refs": [
         "docs/traceability/fr-civ-life-022/fr-civ-life-022-adr.md:1",
@@ -12936,7 +13354,10 @@
         "docs/traceability/fr-civ-life-022/fr-civ-life-022-intent.md:15",
         "docs/traceability/fr-civ-life-022/fr-civ-life-022-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/economy/src/stocks.rs:353",
+        "crates/economy/src/stocks.rs:472"
+      ],
       "test_refs": [
         "crates/economy/src/stocks.rs:353",
         "crates/economy/src/stocks.rs:472"
@@ -12944,7 +13365,7 @@
     },
     {
       "id": "FR-CIV-LIFE-023",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-LIFE",
       "spec_refs": [
         "docs/traceability/fr-civ-life-023/fr-civ-life-023-adr.md:1",
@@ -12956,14 +13377,16 @@
         "docs/traceability/fr-civ-life-023/fr-civ-life-023-intent.md:15",
         "docs/traceability/fr-civ-life-023/fr-civ-life-023-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/economy/src/stocks.rs:360"
+      ],
       "test_refs": [
         "crates/economy/src/stocks.rs:360"
       ]
     },
     {
       "id": "FR-CIV-LIFE-024",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-LIFE",
       "spec_refs": [
         "docs/traceability/fr-civ-life-024/fr-civ-life-024-adr.md:1",
@@ -12975,7 +13398,10 @@
         "docs/traceability/fr-civ-life-024/fr-civ-life-024-intent.md:15",
         "docs/traceability/fr-civ-life-024/fr-civ-life-024-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/economy/src/stocks.rs:371",
+        "crates/economy/src/stocks.rs:412"
+      ],
       "test_refs": [
         "crates/economy/src/stocks.rs:371",
         "crates/economy/src/stocks.rs:412"
@@ -12983,7 +13409,7 @@
     },
     {
       "id": "FR-CIV-LIFE-025",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-LIFE",
       "spec_refs": [
         "docs/traceability/fr-civ-life-025/fr-civ-life-025-adr.md:1",
@@ -12995,7 +13421,9 @@
         "docs/traceability/fr-civ-life-025/fr-civ-life-025-intent.md:15",
         "docs/traceability/fr-civ-life-025/fr-civ-life-025-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/economy/src/stocks.rs:397"
+      ],
       "test_refs": [
         "crates/economy/src/stocks.rs:397"
       ]
@@ -13560,7 +13988,7 @@
       "status": "SPEC-ONLY",
       "epic": "FR-CIV-MIGRATION",
       "spec_refs": [
-        "docs/traceability/fr-emergence-matrix.md:208"
+        "docs/traceability/fr-emergence-matrix.md:215"
       ],
       "code_refs": [],
       "test_refs": []
@@ -13570,7 +13998,7 @@
       "status": "SPEC-ONLY",
       "epic": "FR-CIV-MIGRATION",
       "spec_refs": [
-        "docs/traceability/fr-emergence-matrix.md:209"
+        "docs/traceability/fr-emergence-matrix.md:216"
       ],
       "code_refs": [],
       "test_refs": []
@@ -13580,7 +14008,7 @@
       "status": "SPEC-ONLY",
       "epic": "FR-CIV-MIGRATION",
       "spec_refs": [
-        "docs/traceability/fr-emergence-matrix.md:210"
+        "docs/traceability/fr-emergence-matrix.md:217"
       ],
       "code_refs": [],
       "test_refs": []
@@ -13590,7 +14018,7 @@
       "status": "SPEC-ONLY",
       "epic": "FR-CIV-MIGRATION",
       "spec_refs": [
-        "docs/traceability/fr-emergence-matrix.md:211"
+        "docs/traceability/fr-emergence-matrix.md:218"
       ],
       "code_refs": [],
       "test_refs": []
@@ -13600,7 +14028,7 @@
       "status": "SPEC-ONLY",
       "epic": "FR-CIV-MIGRATION",
       "spec_refs": [
-        "docs/traceability/fr-emergence-matrix.md:212"
+        "docs/traceability/fr-emergence-matrix.md:219"
       ],
       "code_refs": [],
       "test_refs": []
@@ -13631,7 +14059,7 @@
     },
     {
       "id": "FR-CIV-MOD-001",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-MOD",
       "spec_refs": [
         "docs/design/modding-platform.md:27",
@@ -13646,7 +14074,9 @@
         "docs/traceability/fr-civ-mod-001/fr-civ-mod-001-intent.md:15",
         "docs/traceability/fr-civ-mod-001/fr-civ-mod-001-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/mod-host/src/lib.rs:1468"
+      ],
       "test_refs": [
         "crates/mod-host/src/lib.rs:1468",
         "crates/mod-host/tests/fr_matrix_batch10.rs:288"
@@ -14112,7 +14542,12 @@
       "spec_refs": [],
       "code_refs": [
         "crates/needs/src/decay.rs:32",
-        "crates/needs/src/decay.rs:219"
+        "crates/needs/src/decay.rs:219",
+        "crates/needs/src/decay.rs:336",
+        "crates/needs/src/decay.rs:361",
+        "crates/needs/src/decay.rs:386",
+        "crates/needs/src/decay.rs:405",
+        "crates/needs/src/decay.rs:436"
       ],
       "test_refs": [
         "crates/needs/src/decay.rs:336",
@@ -14142,6 +14577,9 @@
       ],
       "code_refs": [
         "crates/hud/src/notifications.rs:1",
+        "crates/hud/src/notifications.rs:315",
+        "crates/hud/src/notifications.rs:340",
+        "crates/hud/src/notifications.rs:376",
         "docs/agileplus/epics/civ-w6-ui.md:12",
         "docs/agileplus/epics/civ-w6-ui.md:26",
         "docs/agileplus/README.md:25"
@@ -14310,8 +14748,11 @@
         "clients/bevy-ref/src/post_fx.rs:106",
         "crates/voxel/src/material_pbr.rs:38",
         "crates/voxel/src/material_pbr.rs:63",
-        "crates/voxel/src/pbr/mod.rs:25",
-        "crates/voxel/src/pbr/triplanar_pipeline.rs:28"
+        "crates/voxel/src/material_pbr.rs:1089",
+        "crates/voxel/src/material_pbr.rs:1091",
+        "crates/voxel/src/material_pbr.rs:1117",
+        "crates/voxel/src/material_pbr.rs:1138",
+        "crates/voxel/src/pbr/mod.rs:25"
       ],
       "test_refs": [
         "crates/voxel/src/material_pbr.rs:1089",
@@ -14338,7 +14779,11 @@
       "code_refs": [
         "clients/bevy-ref/src/post_fx.rs:109",
         "crates/voxel/src/material_pbr.rs:502",
-        "crates/voxel/src/material_pbr.rs:533"
+        "crates/voxel/src/material_pbr.rs:533",
+        "crates/voxel/src/material_pbr.rs:1327",
+        "crates/voxel/src/material_pbr.rs:1329",
+        "crates/voxel/src/material_pbr.rs:1357",
+        "crates/voxel/src/material_pbr.rs:1377"
       ],
       "test_refs": [
         "crates/voxel/src/material_pbr.rs:1327",
@@ -14364,7 +14809,11 @@
       ],
       "code_refs": [
         "clients/bevy-ref/src/post_fx.rs:112",
-        "crates/voxel/src/material_pbr.rs:637"
+        "crates/voxel/src/material_pbr.rs:637",
+        "crates/voxel/src/material_pbr.rs:1387",
+        "crates/voxel/src/material_pbr.rs:1389",
+        "crates/voxel/src/material_pbr.rs:1403",
+        "crates/voxel/src/material_pbr.rs:1441"
       ],
       "test_refs": [
         "crates/voxel/src/material_pbr.rs:1387",
@@ -14390,7 +14839,10 @@
       ],
       "code_refs": [
         "clients/bevy-ref/src/post_fx.rs:116",
-        "crates/voxel/src/material_pbr.rs:863"
+        "crates/voxel/src/material_pbr.rs:863",
+        "crates/voxel/src/material_pbr.rs:1501",
+        "crates/voxel/src/material_pbr.rs:1503",
+        "crates/voxel/src/material_pbr.rs:1520"
       ],
       "test_refs": [
         "crates/voxel/src/material_pbr.rs:1501",
@@ -14415,7 +14867,10 @@
       ],
       "code_refs": [
         "crates/voxel/src/material_pbr.rs:39",
-        "crates/voxel/src/material_pbr.rs:166"
+        "crates/voxel/src/material_pbr.rs:166",
+        "crates/voxel/src/material_pbr.rs:1155",
+        "crates/voxel/src/material_pbr.rs:1157",
+        "crates/voxel/src/material_pbr.rs:1179"
       ],
       "test_refs": [
         "crates/voxel/src/material_pbr.rs:1155",
@@ -14441,7 +14896,10 @@
         "docs/traceability/fr-civ-pbr-006/fr-civ-pbr-006-plan.md:1"
       ],
       "code_refs": [
-        "crates/voxel/src/material_pbr.rs:933"
+        "crates/voxel/src/material_pbr.rs:933",
+        "crates/voxel/src/material_pbr.rs:1532",
+        "crates/voxel/src/material_pbr.rs:1534",
+        "crates/voxel/src/material_pbr.rs:1552"
       ],
       "test_refs": [
         "crates/voxel/src/material_pbr.rs:1532",
@@ -14466,7 +14924,11 @@
       ],
       "code_refs": [
         "crates/voxel/src/material_pbr.rs:41",
-        "crates/voxel/src/material_pbr.rs:267"
+        "crates/voxel/src/material_pbr.rs:267",
+        "crates/voxel/src/material_pbr.rs:1198",
+        "crates/voxel/src/material_pbr.rs:1200",
+        "crates/voxel/src/material_pbr.rs:1227",
+        "crates/voxel/src/material_pbr.rs:1255"
       ],
       "test_refs": [
         "crates/voxel/src/material_pbr.rs:1198",
@@ -14493,7 +14955,11 @@
       ],
       "code_refs": [
         "crates/voxel/src/material_pbr.rs:43",
-        "crates/voxel/src/material_pbr.rs:401"
+        "crates/voxel/src/material_pbr.rs:401",
+        "crates/voxel/src/material_pbr.rs:1267",
+        "crates/voxel/src/material_pbr.rs:1269",
+        "crates/voxel/src/material_pbr.rs:1283",
+        "crates/voxel/src/material_pbr.rs:1297"
       ],
       "test_refs": [
         "crates/voxel/src/material_pbr.rs:1267",
@@ -14508,7 +14974,8 @@
       "epic": "FR-CIV-PBR",
       "spec_refs": [],
       "code_refs": [
-        "crates/voxel/src/material_pbr.rs:754"
+        "crates/voxel/src/material_pbr.rs:754",
+        "crates/voxel/src/material_pbr.rs:1461"
       ],
       "test_refs": [
         "crates/voxel/src/material_pbr.rs:1461"
@@ -14521,7 +14988,10 @@
       "spec_refs": [],
       "code_refs": [
         "CHANGELOG.md:16",
-        "crates/voxel/src/material_pbr.rs:14"
+        "crates/voxel/src/material_pbr.rs:14",
+        "crates/voxel/src/material_pbr.rs:1560",
+        "crates/voxel/src/material_pbr.rs:1562",
+        "crates/voxel/src/material_pbr.rs:1594"
       ],
       "test_refs": [
         "crates/voxel/src/material_pbr.rs:1560",
@@ -15112,6 +15582,7 @@
         "docs/traceability/fr-civ-planet-000/fr-civ-planet-000-plan.md:1"
       ],
       "code_refs": [
+        "crates/planet/src/lib.rs:105",
         "docs/development-guide/fr-3d-additions.md:98"
       ],
       "test_refs": [
@@ -15136,6 +15607,7 @@
         "docs/traceability/fr-civ-planet-001/fr-civ-planet-001-plan.md:1"
       ],
       "code_refs": [
+        "crates/planet/src/lib.rs:118",
         "docs/development-guide/fr-3d-additions.md:99"
       ],
       "test_refs": [
@@ -15159,6 +15631,7 @@
         "docs/traceability/fr-civ-planet-002/fr-civ-planet-002-plan.md:1"
       ],
       "code_refs": [
+        "crates/planet/src/lib.rs:139",
         "docs/development-guide/fr-3d-additions.md:100"
       ],
       "test_refs": [
@@ -15167,7 +15640,7 @@
     },
     {
       "id": "FR-CIV-PLANET-003",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-PLANET",
       "spec_refs": [
         "docs/traceability/fr-civ-planet-003/fr-civ-planet-003-adr.md:1",
@@ -15179,14 +15652,16 @@
         "docs/traceability/fr-civ-planet-003/fr-civ-planet-003-intent.md:15",
         "docs/traceability/fr-civ-planet-003/fr-civ-planet-003-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/planet/src/lib.rs:160"
+      ],
       "test_refs": [
         "crates/planet/src/lib.rs:160"
       ]
     },
     {
       "id": "FR-CIV-PLANET-004",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-PLANET",
       "spec_refs": [
         "docs/traceability/fr-civ-planet-004/fr-civ-planet-004-adr.md:1",
@@ -15198,14 +15673,16 @@
         "docs/traceability/fr-civ-planet-004/fr-civ-planet-004-intent.md:15",
         "docs/traceability/fr-civ-planet-004/fr-civ-planet-004-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/planet/src/lib.rs:182"
+      ],
       "test_refs": [
         "crates/planet/src/lib.rs:182"
       ]
     },
     {
       "id": "FR-CIV-PLANET-005",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-PLANET",
       "spec_refs": [
         "docs/traceability/fr-civ-planet-005/fr-civ-planet-005-adr.md:1",
@@ -15217,7 +15694,9 @@
         "docs/traceability/fr-civ-planet-005/fr-civ-planet-005-intent.md:15",
         "docs/traceability/fr-civ-planet-005/fr-civ-planet-005-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/planet/src/lib.rs:195"
+      ],
       "test_refs": [
         "crates/planet/src/lib.rs:195"
       ]
@@ -15239,6 +15718,7 @@
         "docs/traceability/fr-civ-planet-010/fr-civ-planet-010-plan.md:1"
       ],
       "code_refs": [
+        "crates/engine/src/engine/engine_tests.rs:970",
         "crates/engine/src/engine/engine_tests.rs:972",
         "crates/engine/src/engine.rs:3381",
         "crates/server/src/jsonrpc.rs:515"
@@ -15314,12 +15794,12 @@
       "code_refs": [
         "crates/engine/src/engine.rs:3388",
         "crates/planet/src/geology.rs:1",
+        "crates/planet/src/geology.rs:588",
+        "crates/planet/src/geology.rs:612",
         "docs/superpowers/plans/2026-05-28-fr-civ-planet-040-geology-seed.md:1",
         "docs/superpowers/plans/2026-05-28-fr-civ-planet-040-geology-seed.md:34",
         "docs/superpowers/plans/2026-05-28-fr-civ-planet-040-geology-seed.md:213",
-        "docs/superpowers/plans/2026-05-28-fr-civ-planet-040-geology-seed.md:249",
-        "docs/superpowers/plans/2026-05-28-fr-civ-planet-040-geology-seed.md:307",
-        "docs/superpowers/plans/2026-05-28-fr-civ-planet-040-geology-seed.md:337"
+        "docs/superpowers/plans/2026-05-28-fr-civ-planet-040-geology-seed.md:249"
       ],
       "test_refs": [
         "crates/planet/src/geology.rs:588",
@@ -15332,7 +15812,16 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-CIV-PLANET",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/planet/src/geology.rs:651",
+        "crates/planet/src/geology.rs:658",
+        "crates/planet/src/geology.rs:665",
+        "crates/planet/src/geology.rs:672",
+        "crates/planet/src/geology.rs:679",
+        "crates/planet/src/geology.rs:686",
+        "crates/planet/src/geology.rs:693",
+        "crates/planet/src/geology.rs:700"
+      ],
       "test_refs": [
         "crates/planet/src/geology.rs:651",
         "crates/planet/src/geology.rs:658",
@@ -15363,6 +15852,7 @@
       "code_refs": [
         "crates/engine/src/hash_chain.rs:5",
         "crates/engine/src/hash_chain.rs:142",
+        "crates/engine/src/hash_chain.rs:248",
         "crates/engine/src/replay.rs:70",
         "crates/engine/src/replay.rs:391"
       ],
@@ -15884,6 +16374,7 @@
       ],
       "code_refs": [
         "crates/protocol-3d/src/lib.rs:22",
+        "crates/protocol-3d/src/lib.rs:1595",
         "docs/development-guide/fr-3d-additions.md:102"
       ],
       "test_refs": [
@@ -15912,6 +16403,7 @@
         "docs/traceability/fr-civ-proto3d-000/fr-civ-proto3d-000-plan.md:1"
       ],
       "code_refs": [
+        "crates/protocol-3d/src/lib.rs:980",
         "docs/development-guide/fr-3d-additions.md:104"
       ],
       "test_refs": [
@@ -15935,6 +16427,7 @@
         "docs/traceability/fr-civ-proto3d-001/fr-civ-proto3d-001-plan.md:1"
       ],
       "code_refs": [
+        "crates/protocol-3d/src/lib.rs:986",
         "docs/development-guide/fr-3d-additions.md:105"
       ],
       "test_refs": [
@@ -15958,6 +16451,7 @@
         "docs/traceability/fr-civ-proto3d-002/fr-civ-proto3d-002-plan.md:1"
       ],
       "code_refs": [
+        "crates/protocol-3d/src/lib.rs:1006",
         "docs/development-guide/fr-3d-additions.md:106"
       ],
       "test_refs": [
@@ -15966,7 +16460,7 @@
     },
     {
       "id": "FR-CIV-PROTO3D-003",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-003/fr-civ-proto3d-003-adr.md:1",
@@ -15978,14 +16472,16 @@
         "docs/traceability/fr-civ-proto3d-003/fr-civ-proto3d-003-intent.md:15",
         "docs/traceability/fr-civ-proto3d-003/fr-civ-proto3d-003-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/protocol-3d/src/lib.rs:1204"
+      ],
       "test_refs": [
         "crates/protocol-3d/src/lib.rs:1204"
       ]
     },
     {
       "id": "FR-CIV-PROTO3D-004",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-004/fr-civ-proto3d-004-adr.md:1",
@@ -15997,14 +16493,16 @@
         "docs/traceability/fr-civ-proto3d-004/fr-civ-proto3d-004-intent.md:15",
         "docs/traceability/fr-civ-proto3d-004/fr-civ-proto3d-004-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/protocol-3d/src/lib.rs:1221"
+      ],
       "test_refs": [
         "crates/protocol-3d/src/lib.rs:1221"
       ]
     },
     {
       "id": "FR-CIV-PROTO3D-005",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-005/fr-civ-proto3d-005-adr.md:1",
@@ -16016,14 +16514,16 @@
         "docs/traceability/fr-civ-proto3d-005/fr-civ-proto3d-005-intent.md:15",
         "docs/traceability/fr-civ-proto3d-005/fr-civ-proto3d-005-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/protocol-3d/src/lib.rs:1276"
+      ],
       "test_refs": [
         "crates/protocol-3d/src/lib.rs:1276"
       ]
     },
     {
       "id": "FR-CIV-PROTO3D-006",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-006/fr-civ-proto3d-006-adr.md:1",
@@ -16035,14 +16535,16 @@
         "docs/traceability/fr-civ-proto3d-006/fr-civ-proto3d-006-intent.md:15",
         "docs/traceability/fr-civ-proto3d-006/fr-civ-proto3d-006-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/protocol-3d/src/lib.rs:1237"
+      ],
       "test_refs": [
         "crates/protocol-3d/src/lib.rs:1237"
       ]
     },
     {
       "id": "FR-CIV-PROTO3D-007",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-007/fr-civ-proto3d-007-adr.md:1",
@@ -16054,14 +16556,16 @@
         "docs/traceability/fr-civ-proto3d-007/fr-civ-proto3d-007-intent.md:15",
         "docs/traceability/fr-civ-proto3d-007/fr-civ-proto3d-007-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/protocol-3d/src/lib.rs:1265"
+      ],
       "test_refs": [
         "crates/protocol-3d/src/lib.rs:1265"
       ]
     },
     {
       "id": "FR-CIV-PROTO3D-008",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-008/fr-civ-proto3d-008-adr.md:1",
@@ -16073,14 +16577,16 @@
         "docs/traceability/fr-civ-proto3d-008/fr-civ-proto3d-008-intent.md:15",
         "docs/traceability/fr-civ-proto3d-008/fr-civ-proto3d-008-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/protocol-3d/src/lib.rs:1069"
+      ],
       "test_refs": [
         "crates/protocol-3d/src/lib.rs:1069"
       ]
     },
     {
       "id": "FR-CIV-PROTO3D-009",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-009/fr-civ-proto3d-009-adr.md:1",
@@ -16092,7 +16598,9 @@
         "docs/traceability/fr-civ-proto3d-009/fr-civ-proto3d-009-intent.md:15",
         "docs/traceability/fr-civ-proto3d-009/fr-civ-proto3d-009-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/protocol-3d/src/lib.rs:1039"
+      ],
       "test_refs": [
         "crates/protocol-3d/src/lib.rs:1039"
       ]
@@ -16112,7 +16620,7 @@
     },
     {
       "id": "FR-CIV-PROTO3D-010",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-010/fr-civ-proto3d-010-adr.md:1",
@@ -16124,7 +16632,10 @@
         "docs/traceability/fr-civ-proto3d-010/fr-civ-proto3d-010-intent.md:15",
         "docs/traceability/fr-civ-proto3d-010/fr-civ-proto3d-010-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/protocol-3d/src/lib.rs:1020",
+        "crates/server/src/voxel_frame_builder.rs:233"
+      ],
       "test_refs": [
         "crates/protocol-3d/src/lib.rs:1020",
         "crates/server/src/voxel_frame_builder.rs:233"
@@ -16132,7 +16643,7 @@
     },
     {
       "id": "FR-CIV-PROTO3D-011",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-011/fr-civ-proto3d-011-adr.md:1",
@@ -16144,7 +16655,10 @@
         "docs/traceability/fr-civ-proto3d-011/fr-civ-proto3d-011-intent.md:15",
         "docs/traceability/fr-civ-proto3d-011/fr-civ-proto3d-011-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/protocol-3d/src/lib.rs:1103",
+        "crates/server/src/voxel_frame_builder.rs:242"
+      ],
       "test_refs": [
         "crates/protocol-3d/src/lib.rs:1103",
         "crates/server/src/voxel_frame_builder.rs:242"
@@ -16152,7 +16666,7 @@
     },
     {
       "id": "FR-CIV-PROTO3D-012",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-012/fr-civ-proto3d-012-adr.md:1",
@@ -16164,7 +16678,10 @@
         "docs/traceability/fr-civ-proto3d-012/fr-civ-proto3d-012-intent.md:15",
         "docs/traceability/fr-civ-proto3d-012/fr-civ-proto3d-012-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/protocol-3d/src/lib.rs:1139",
+        "crates/server/src/voxel_frame_builder.rs:274"
+      ],
       "test_refs": [
         "crates/protocol-3d/src/lib.rs:1139",
         "crates/server/src/voxel_frame_builder.rs:274"
@@ -16172,7 +16689,7 @@
     },
     {
       "id": "FR-CIV-PROTO3D-013",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-013/fr-civ-proto3d-013-adr.md:1",
@@ -16184,7 +16701,9 @@
         "docs/traceability/fr-civ-proto3d-013/fr-civ-proto3d-013-intent.md:15",
         "docs/traceability/fr-civ-proto3d-013/fr-civ-proto3d-013-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/protocol-3d/src/lib.rs:1163"
+      ],
       "test_refs": [
         "crates/protocol-3d/src/lib.rs:1163"
       ]
@@ -16206,6 +16725,10 @@
       ],
       "code_refs": [
         "crates/protocol-3d/src/lib.rs:612",
+        "crates/protocol-3d/src/lib.rs:1332",
+        "crates/protocol-3d/src/lib.rs:1335",
+        "crates/protocol-3d/src/lib.rs:1386",
+        "crates/protocol-3d/src/lib.rs:1570",
         "docs/development-guide/fr-3d-additions.md:108"
       ],
       "test_refs": [
@@ -16217,7 +16740,7 @@
     },
     {
       "id": "FR-CIV-PROTO3D-015",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-015/fr-civ-proto3d-015-adr.md:1",
@@ -16229,7 +16752,10 @@
         "docs/traceability/fr-civ-proto3d-015/fr-civ-proto3d-015-intent.md:15",
         "docs/traceability/fr-civ-proto3d-015/fr-civ-proto3d-015-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/protocol-3d/src/lib.rs:1443",
+        "crates/protocol-3d/src/lib.rs:1464"
+      ],
       "test_refs": [
         "crates/protocol-3d/src/lib.rs:1443",
         "crates/protocol-3d/src/lib.rs:1464"
@@ -16237,7 +16763,7 @@
     },
     {
       "id": "FR-CIV-PROTO3D-016",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-016/fr-civ-proto3d-016-adr.md:1",
@@ -16249,7 +16775,10 @@
         "docs/traceability/fr-civ-proto3d-016/fr-civ-proto3d-016-intent.md:15",
         "docs/traceability/fr-civ-proto3d-016/fr-civ-proto3d-016-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/protocol-3d/src/lib.rs:1483",
+        "crates/protocol-3d/src/lib.rs:1501"
+      ],
       "test_refs": [
         "crates/protocol-3d/src/lib.rs:1483",
         "crates/protocol-3d/src/lib.rs:1501"
@@ -16257,7 +16786,7 @@
     },
     {
       "id": "FR-CIV-PROTO3D-017",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-017/fr-civ-proto3d-017-adr.md:1",
@@ -16269,7 +16798,9 @@
         "docs/traceability/fr-civ-proto3d-017/fr-civ-proto3d-017-intent.md:15",
         "docs/traceability/fr-civ-proto3d-017/fr-civ-proto3d-017-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/protocol-3d/src/lib.rs:1520"
+      ],
       "test_refs": [
         "crates/protocol-3d/src/lib.rs:1520"
       ]
@@ -16784,9 +17315,13 @@
       ],
       "code_refs": [
         "crates/ai/src/mood.rs:1",
-        "docs/agileplus/epics/civ-w2-life-sim.md:10",
-        "docs/agileplus/epics/civ-w2-life-sim.md:22",
-        "docs/agileplus/README.md:21"
+        "crates/ai/src/mood.rs:415",
+        "crates/ai/src/mood.rs:459",
+        "crates/ai/src/mood.rs:505",
+        "crates/ai/src/mood.rs:559",
+        "crates/ai/src/mood.rs:578",
+        "crates/ai/src/mood.rs:605",
+        "crates/ai/src/mood.rs:620"
       ],
       "test_refs": [
         "crates/ai/src/mood.rs:415",
@@ -16815,6 +17350,7 @@
       ],
       "code_refs": [
         "crates/ai/src/social_graph.rs:1",
+        "crates/ai/src/social_graph.rs:468",
         "docs/agileplus/epics/civ-w2-life-sim.md:11",
         "docs/agileplus/epics/civ-w2-life-sim.md:23",
         "docs/agileplus/README.md:21"
@@ -16870,11 +17406,11 @@
         "crates/ai/src/language.rs:1",
         "crates/ai/src/language.rs:37",
         "crates/ai/src/language.rs:78",
+        "crates/ai/src/language.rs:426",
         "crates/engine/src/emergence_coupling.rs:973",
         "crates/engine/src/engine/engine_tests.rs:454",
         "crates/engine/src/settlement_helpers.rs:264",
-        "docs/agileplus/epics/civ-w2-life-sim.md:13",
-        "docs/agileplus/epics/civ-w2-life-sim.md:25"
+        "docs/agileplus/epics/civ-w2-life-sim.md:13"
       ],
       "test_refs": [
         "crates/ai/src/language.rs:426"
@@ -16904,7 +17440,7 @@
         "crates/legends/src/chronicle.rs:101",
         "crates/legends/src/chronicle.rs:109",
         "crates/legends/src/chronicle.rs:210",
-        "docs/agileplus/epics/civ-w2-life-sim.md:14"
+        "crates/legends/src/chronicle.rs:248"
       ],
       "test_refs": [
         "crates/legends/src/chronicle.rs:248"
@@ -16929,6 +17465,7 @@
         "crates/ai/src/psyche_lod.rs:1",
         "crates/ai/src/psyche_lod.rs:26",
         "crates/ai/src/psyche_lod.rs:436",
+        "crates/ai/src/psyche_lod.rs:599",
         "docs/agileplus/epics/civ-w2-life-sim.md:15",
         "docs/agileplus/epics/civ-w2-life-sim.md:27",
         "docs/agileplus/README.md:21",
@@ -17441,6 +17978,8 @@
         "docs/traceability/fr-civ-research-000/fr-civ-research-000-plan.md:1"
       ],
       "code_refs": [
+        "crates/research/src/lib.rs:371",
+        "crates/research/src/lib.rs:372",
         "docs/development-guide/fr-3d-additions.md:76"
       ],
       "test_refs": [
@@ -17468,6 +18007,9 @@
       ],
       "code_refs": [
         "crates/engine/src/engine.rs:513",
+        "crates/research/src/lib.rs:378",
+        "crates/research/src/lib.rs:409",
+        "crates/research/src/lib.rs:410",
         "docs/development-guide/fr-3d-additions.md:77",
         "PLAN.md:233",
         "PLAN.md:234"
@@ -17520,6 +18062,8 @@
         "docs/traceability/fr-civ-research-002/fr-civ-research-002-plan.md:1"
       ],
       "code_refs": [
+        "crates/research/src/lib.rs:603",
+        "crates/research/src/lib.rs:604",
         "docs/development-guide/fr-3d-additions.md:79",
         "PLAN.md:235",
         "PLAN.md:236"
@@ -17570,6 +18114,8 @@
         "docs/traceability/fr-civ-research-003/fr-civ-research-003-plan.md:1"
       ],
       "code_refs": [
+        "crates/research/src/lib.rs:619",
+        "crates/research/src/lib.rs:620",
         "docs/development-guide/fr-3d-additions.md:81",
         "PLAN.md:237",
         "PLAN.md:238"
@@ -17619,6 +18165,9 @@
         "docs/traceability/fr-civ-research-004/fr-civ-research-004-plan.md:1"
       ],
       "code_refs": [
+        "crates/research/src/lib.rs:654",
+        "crates/research/src/lib.rs:664",
+        "crates/research/src/lib.rs:692",
         "docs/development-guide/fr-3d-additions.md:82",
         "PLAN.md:239"
       ],
@@ -17654,7 +18203,7 @@
     },
     {
       "id": "FR-CIV-RESEARCH-010",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-RESEARCH",
       "spec_refs": [
         "docs/traceability/fr-civ-research-010/fr-civ-research-010-adr.md:1",
@@ -17666,14 +18215,16 @@
         "docs/traceability/fr-civ-research-010/fr-civ-research-010-intent.md:15",
         "docs/traceability/fr-civ-research-010/fr-civ-research-010-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/research/src/lib.rs:426"
+      ],
       "test_refs": [
         "crates/research/src/lib.rs:426"
       ]
     },
     {
       "id": "FR-CIV-RESEARCH-011",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-RESEARCH",
       "spec_refs": [
         "docs/traceability/fr-civ-research-011/fr-civ-research-011-adr.md:1",
@@ -17685,14 +18236,16 @@
         "docs/traceability/fr-civ-research-011/fr-civ-research-011-intent.md:15",
         "docs/traceability/fr-civ-research-011/fr-civ-research-011-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/research/src/lib.rs:444"
+      ],
       "test_refs": [
         "crates/research/src/lib.rs:444"
       ]
     },
     {
       "id": "FR-CIV-RESEARCH-012",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-RESEARCH",
       "spec_refs": [
         "docs/traceability/fr-civ-research-012/fr-civ-research-012-adr.md:1",
@@ -17704,14 +18257,16 @@
         "docs/traceability/fr-civ-research-012/fr-civ-research-012-intent.md:15",
         "docs/traceability/fr-civ-research-012/fr-civ-research-012-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/research/src/lib.rs:462"
+      ],
       "test_refs": [
         "crates/research/src/lib.rs:462"
       ]
     },
     {
       "id": "FR-CIV-RESEARCH-020",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-RESEARCH",
       "spec_refs": [
         "docs/traceability/fr-civ-research-020/fr-civ-research-020-adr.md:1",
@@ -17723,14 +18278,16 @@
         "docs/traceability/fr-civ-research-020/fr-civ-research-020-intent.md:15",
         "docs/traceability/fr-civ-research-020/fr-civ-research-020-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/research/src/lib.rs:480"
+      ],
       "test_refs": [
         "crates/research/src/lib.rs:480"
       ]
     },
     {
       "id": "FR-CIV-RESEARCH-030",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-RESEARCH",
       "spec_refs": [
         "docs/traceability/fr-civ-research-030/fr-civ-research-030-adr.md:1",
@@ -17742,14 +18299,16 @@
         "docs/traceability/fr-civ-research-030/fr-civ-research-030-intent.md:15",
         "docs/traceability/fr-civ-research-030/fr-civ-research-030-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/research/src/lib.rs:512"
+      ],
       "test_refs": [
         "crates/research/src/lib.rs:512"
       ]
     },
     {
       "id": "FR-CIV-RESEARCH-031",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-RESEARCH",
       "spec_refs": [
         "docs/traceability/fr-civ-research-031/fr-civ-research-031-adr.md:1",
@@ -17761,14 +18320,16 @@
         "docs/traceability/fr-civ-research-031/fr-civ-research-031-intent.md:15",
         "docs/traceability/fr-civ-research-031/fr-civ-research-031-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/research/src/lib.rs:542"
+      ],
       "test_refs": [
         "crates/research/src/lib.rs:542"
       ]
     },
     {
       "id": "FR-CIV-RESEARCH-032",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-RESEARCH",
       "spec_refs": [
         "docs/traceability/fr-civ-research-032/fr-civ-research-032-adr.md:1",
@@ -17780,14 +18341,16 @@
         "docs/traceability/fr-civ-research-032/fr-civ-research-032-intent.md:15",
         "docs/traceability/fr-civ-research-032/fr-civ-research-032-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/research/src/lib.rs:565"
+      ],
       "test_refs": [
         "crates/research/src/lib.rs:565"
       ]
     },
     {
       "id": "FR-CIV-RESEARCH-033",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-RESEARCH",
       "spec_refs": [
         "docs/traceability/fr-civ-research-033/fr-civ-research-033-adr.md:1",
@@ -17799,7 +18362,9 @@
         "docs/traceability/fr-civ-research-033/fr-civ-research-033-intent.md:15",
         "docs/traceability/fr-civ-research-033/fr-civ-research-033-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/research/src/lib.rs:635"
+      ],
       "test_refs": [
         "crates/research/src/lib.rs:635"
       ]
@@ -17821,6 +18386,8 @@
       ],
       "code_refs": [
         "crates/infra/src/desire_paths.rs:1",
+        "crates/infra/src/desire_paths.rs:308",
+        "crates/infra/src/desire_paths.rs:336",
         "crates/infra/src/lib.rs:18",
         "docs/agileplus/epics/civ-w3-infrastructure.md:9",
         "docs/agileplus/epics/civ-w3-infrastructure.md:20",
@@ -18509,9 +19076,13 @@
       ],
       "code_refs": [
         "clients/bevy-ref/src/save_load_ui.rs:3",
+        "crates/server/src/jsonrpc.rs:4486",
+        "crates/server/src/jsonrpc.rs:4528",
         "crates/server/src/saves.rs:26",
         "crates/server/src/saves.rs:99",
-        "crates/server/src/saves.rs:274"
+        "crates/server/src/saves.rs:274",
+        "crates/server/src/saves.rs:514",
+        "crates/server/src/saves.rs:516"
       ],
       "test_refs": [
         "crates/server/src/jsonrpc.rs:4486",
@@ -18539,7 +19110,9 @@
         "docs/traceability/fr-civ-save-002/fr-civ-save-002-intent.md:15"
       ],
       "code_refs": [
-        "clients/bevy-ref/src/save_load_ui.rs:3"
+        "clients/bevy-ref/src/save_load_ui.rs:3",
+        "crates/server/src/jsonrpc.rs:4487",
+        "crates/server/src/jsonrpc.rs:4529"
       ],
       "test_refs": [
         "crates/server/src/jsonrpc.rs:4487",
@@ -18672,7 +19245,11 @@
         "crates/voxel/src/scale_budget.rs:14",
         "crates/voxel/src/scale_budget.rs:404",
         "crates/voxel/src/scale_budget.rs:493",
-        "crates/voxel/src/scale_budget.rs:494"
+        "crates/voxel/src/scale_budget.rs:494",
+        "crates/voxel/src/scale_budget.rs:1031",
+        "crates/voxel/src/scale_budget.rs:1033",
+        "crates/voxel/src/scale_budget.rs:1056",
+        "crates/voxel/src/scale_budget.rs:1075"
       ],
       "test_refs": [
         "crates/voxel/src/scale_budget.rs:1031",
@@ -18702,7 +19279,11 @@
         "crates/voxel/src/scale_budget.rs:18",
         "crates/voxel/src/scale_budget.rs:668",
         "crates/voxel/src/scale_budget.rs:799",
-        "crates/voxel/src/scale_budget.rs:800"
+        "crates/voxel/src/scale_budget.rs:800",
+        "crates/voxel/src/scale_budget.rs:1111",
+        "crates/voxel/src/scale_budget.rs:1113",
+        "crates/voxel/src/scale_budget.rs:1125",
+        "crates/voxel/src/scale_budget.rs:1166"
       ],
       "test_refs": [
         "crates/voxel/src/scale_budget.rs:1111",
@@ -18730,7 +19311,8 @@
         "docs/traceability/fr-civ-scale-005/fr-civ-scale-005-plan.md:1"
       ],
       "code_refs": [
-        "crates/voxel/src/window/plan.rs:10"
+        "crates/voxel/src/window/plan.rs:10",
+        "crates/voxel/src/window/plan.rs:342"
       ],
       "test_refs": [
         "crates/voxel/src/window/plan.rs:342"
@@ -18752,7 +19334,8 @@
         "docs/traceability/fr-civ-scale-006/fr-civ-scale-006-plan.md:1"
       ],
       "code_refs": [
-        "crates/voxel/src/window/io.rs:13"
+        "crates/voxel/src/window/io.rs:13",
+        "crates/voxel/src/window/io.rs:213"
       ],
       "test_refs": [
         "crates/voxel/src/window/io.rs:213"
@@ -18775,7 +19358,8 @@
         "docs/traceability/fr-civ-scale-007/fr-civ-scale-007-plan.md:1"
       ],
       "code_refs": [
-        "crates/voxel/src/window/io.rs:17"
+        "crates/voxel/src/window/io.rs:17",
+        "crates/voxel/src/window/io.rs:253"
       ],
       "test_refs": [
         "crates/voxel/src/window/io.rs:253"
@@ -18798,7 +19382,8 @@
       ],
       "code_refs": [
         "crates/voxel/src/window/plan.rs:14",
-        "crates/voxel/src/window/plan.rs:193"
+        "crates/voxel/src/window/plan.rs:193",
+        "crates/voxel/src/window/plan.rs:463"
       ],
       "test_refs": [
         "crates/voxel/src/window/plan.rs:463"
@@ -19043,6 +19628,7 @@
         "docs/traceability/fr-civ-species-000/fr-civ-species-000-plan.md:1"
       ],
       "code_refs": [
+        "crates/species/src/lib.rs:147",
         "docs/development-guide/fr-3d-additions.md:50"
       ],
       "test_refs": [
@@ -19066,6 +19652,7 @@
         "docs/traceability/fr-civ-species-001/fr-civ-species-001-plan.md:1"
       ],
       "code_refs": [
+        "crates/species/src/lib.rs:160",
         "docs/development-guide/fr-3d-additions.md:51"
       ],
       "test_refs": [
@@ -19074,7 +19661,7 @@
     },
     {
       "id": "FR-CIV-SPECIES-002",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "docs/traceability/fr-civ-species-002/fr-civ-species-002-adr.md:1",
@@ -19086,14 +19673,16 @@
         "docs/traceability/fr-civ-species-002/fr-civ-species-002-intent.md:15",
         "docs/traceability/fr-civ-species-002/fr-civ-species-002-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/species/src/lib.rs:169"
+      ],
       "test_refs": [
         "crates/species/src/lib.rs:169"
       ]
     },
     {
       "id": "FR-CIV-SPECIES-003",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "docs/traceability/fr-civ-species-003/fr-civ-species-003-adr.md:1",
@@ -19105,14 +19694,16 @@
         "docs/traceability/fr-civ-species-003/fr-civ-species-003-intent.md:15",
         "docs/traceability/fr-civ-species-003/fr-civ-species-003-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/species/src/lib.rs:179"
+      ],
       "test_refs": [
         "crates/species/src/lib.rs:179"
       ]
     },
     {
       "id": "FR-CIV-SPECIES-004",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "docs/traceability/fr-civ-species-004/fr-civ-species-004-adr.md:1",
@@ -19124,14 +19715,16 @@
         "docs/traceability/fr-civ-species-004/fr-civ-species-004-intent.md:15",
         "docs/traceability/fr-civ-species-004/fr-civ-species-004-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/species/src/lib.rs:208"
+      ],
       "test_refs": [
         "crates/species/src/lib.rs:208"
       ]
     },
     {
       "id": "FR-CIV-SPECIES-005",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "docs/traceability/fr-civ-species-005/fr-civ-species-005-adr.md:1",
@@ -19143,14 +19736,16 @@
         "docs/traceability/fr-civ-species-005/fr-civ-species-005-intent.md:15",
         "docs/traceability/fr-civ-species-005/fr-civ-species-005-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/species/src/lib.rs:225"
+      ],
       "test_refs": [
         "crates/species/src/lib.rs:225"
       ]
     },
     {
       "id": "FR-CIV-SPECIES-006",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "docs/traceability/fr-civ-species-006/fr-civ-species-006-adr.md:1",
@@ -19162,14 +19757,16 @@
         "docs/traceability/fr-civ-species-006/fr-civ-species-006-intent.md:15",
         "docs/traceability/fr-civ-species-006/fr-civ-species-006-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/species/src/lib.rs:248"
+      ],
       "test_refs": [
         "crates/species/src/lib.rs:248"
       ]
     },
     {
       "id": "FR-CIV-SPECIES-007",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "docs/traceability/fr-civ-species-007/fr-civ-species-007-adr.md:1",
@@ -19181,14 +19778,16 @@
         "docs/traceability/fr-civ-species-007/fr-civ-species-007-intent.md:15",
         "docs/traceability/fr-civ-species-007/fr-civ-species-007-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/species/src/lib.rs:268"
+      ],
       "test_refs": [
         "crates/species/src/lib.rs:268"
       ]
     },
     {
       "id": "FR-CIV-SPECIES-008",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "docs/traceability/fr-civ-species-008/fr-civ-species-008-adr.md:1",
@@ -19200,14 +19799,16 @@
         "docs/traceability/fr-civ-species-008/fr-civ-species-008-intent.md:15",
         "docs/traceability/fr-civ-species-008/fr-civ-species-008-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/species/src/lib.rs:286"
+      ],
       "test_refs": [
         "crates/species/src/lib.rs:286"
       ]
     },
     {
       "id": "FR-CIV-SPECIES-009",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "docs/traceability/fr-civ-species-009/fr-civ-species-009-adr.md:1",
@@ -19219,14 +19820,16 @@
         "docs/traceability/fr-civ-species-009/fr-civ-species-009-intent.md:15",
         "docs/traceability/fr-civ-species-009/fr-civ-species-009-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/species/src/lib.rs:330"
+      ],
       "test_refs": [
         "crates/species/src/lib.rs:330"
       ]
     },
     {
       "id": "FR-CIV-SPECIES-010",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "FUNCTIONAL_REQUIREMENTS.md",
@@ -19239,14 +19842,16 @@
         "docs/traceability/fr-civ-species-010/fr-civ-species-010-intent.md:15",
         "docs/traceability/fr-civ-species-010/fr-civ-species-010-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/species/src/lib.rs:341"
+      ],
       "test_refs": [
         "crates/species/src/lib.rs:341"
       ]
     },
     {
       "id": "FR-CIV-SPECIES-011",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "FUNCTIONAL_REQUIREMENTS.md",
@@ -19259,7 +19864,9 @@
         "docs/traceability/fr-civ-species-011/fr-civ-species-011-intent.md:15",
         "docs/traceability/fr-civ-species-011/fr-civ-species-011-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/species/src/lib.rs:359"
+      ],
       "test_refs": [
         "crates/species/src/lib.rs:359"
       ]
@@ -19934,6 +20541,7 @@
         "docs/traceability/fr-civ-tactics-000/fr-civ-tactics-000-plan.md:1"
       ],
       "code_refs": [
+        "crates/tactics/src/lib.rs:249",
         "docs/development-guide/fr-3d-additions.md:87",
         "docs/development-guide/p-w1-kickoff.md:20"
       ],
@@ -19964,6 +20572,7 @@
         "docs/traceability/fr-civ-tactics-001/fr-civ-tactics-001-plan.md:1"
       ],
       "code_refs": [
+        "crates/tactics/src/lib.rs:262",
         "docs/development-guide/fr-3d-additions.md:88",
         "docs/development-guide/p-w1-kickoff.md:21"
       ],
@@ -19991,7 +20600,7 @@
     },
     {
       "id": "FR-CIV-TACTICS-002",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-TACTICS",
       "spec_refs": [
         "docs/traceability/fr-civ-tactics-002/fr-civ-tactics-002-adr.md:1",
@@ -20003,14 +20612,16 @@
         "docs/traceability/fr-civ-tactics-002/fr-civ-tactics-002-intent.md:15",
         "docs/traceability/fr-civ-tactics-002/fr-civ-tactics-002-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/tactics/src/lib.rs:336"
+      ],
       "test_refs": [
         "crates/tactics/src/lib.rs:336"
       ]
     },
     {
       "id": "FR-CIV-TACTICS-003",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-TACTICS",
       "spec_refs": [
         "docs/traceability/fr-civ-tactics-003/fr-civ-tactics-003-adr.md:1",
@@ -20022,7 +20633,9 @@
         "docs/traceability/fr-civ-tactics-003/fr-civ-tactics-003-intent.md:15",
         "docs/traceability/fr-civ-tactics-003/fr-civ-tactics-003-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/tactics/src/lib.rs:350"
+      ],
       "test_refs": [
         "crates/tactics/src/lib.rs:350"
       ]
@@ -20046,6 +20659,7 @@
       "code_refs": [
         "crates/engine/src/engine/engine_tests.rs:1126",
         "crates/engine/src/engine.rs:807",
+        "crates/tactics/src/lib.rs:366",
         "docs/development-guide/fr-3d-additions.md:89",
         "docs/development-guide/p-w1-kickoff.md:14",
         "docs/development-guide/p-w1-kickoff.md:22"
@@ -20062,7 +20676,7 @@
     },
     {
       "id": "FR-CIV-TACTICS-011",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-TACTICS",
       "spec_refs": [
         "docs/traceability/fr-civ-tactics-011/fr-civ-tactics-011-adr.md:1",
@@ -20074,7 +20688,9 @@
         "docs/traceability/fr-civ-tactics-011/fr-civ-tactics-011-intent.md:15",
         "docs/traceability/fr-civ-tactics-011/fr-civ-tactics-011-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/tactics/src/lib.rs:564"
+      ],
       "test_refs": [
         "crates/tactics/src/lib.rs:564"
       ]
@@ -20096,7 +20712,11 @@
         "docs/traceability/fr-civ-tactics-020/fr-civ-tactics-020-plan.md:1"
       ],
       "code_refs": [
+        "crates/tactics/src/lib.rs:394",
         "crates/tactics/src/los.rs:1",
+        "crates/tactics/src/los.rs:167",
+        "crates/tactics/src/los.rs:206",
+        "crates/tactics/src/los.rs:265",
         "docs/development-guide/fr-3d-additions.md:91",
         "docs/development-guide/p-w1-kickoff.md:23"
       ],
@@ -20129,6 +20749,8 @@
       ],
       "code_refs": [
         "crates/tactics/src/formation.rs:1",
+        "crates/tactics/src/formation.rs:205",
+        "crates/tactics/src/lib.rs:407",
         "docs/development-guide/fr-3d-additions.md:92",
         "docs/development-guide/p-w1-kickoff.md:24"
       ],
@@ -20160,8 +20782,10 @@
         "docs/traceability/fr-civ-tactics-022/fr-civ-tactics-022-plan.md:1"
       ],
       "code_refs": [
+        "crates/tactics/src/lib.rs:421",
         "crates/tactics/src/war_bridge.rs:1",
         "crates/tactics/src/war_bridge.rs:186",
+        "crates/tactics/src/war_bridge.rs:289",
         "docs/development-guide/fr-3d-additions.md:93",
         "docs/development-guide/p-w1-kickoff.md:25"
       ],
@@ -20195,6 +20819,7 @@
       ],
       "code_refs": [
         "crates/tactics/src/doctrine_fitness.rs:1",
+        "crates/tactics/src/lib.rs:545",
         "docs/development-guide/p-w1-kickoff.md:26"
       ],
       "test_refs": [
@@ -20229,6 +20854,7 @@
         "crates/engine/src/engine.rs:747",
         "crates/engine/src/engine.rs:3378",
         "crates/tactics/src/war_bridge.rs:29",
+        "crates/tactics/src/war_bridge.rs:351",
         "docs/development-guide/p-w1-kickoff.md:27"
       ],
       "test_refs": [
@@ -20258,6 +20884,7 @@
         "docs/traceability/fr-civ-tactics-025/fr-civ-tactics-025-plan.md:1"
       ],
       "code_refs": [
+        "crates/engine/src/engine/engine_tests.rs:1598",
         "crates/engine/src/engine/engine_tests.rs:1689",
         "crates/engine/src/engine/engine_tests.rs:1805",
         "crates/engine/src/replay.rs:57",
@@ -20338,6 +20965,7 @@
         "docs/traceability/fr-civ-tactics-031/fr-civ-tactics-031-plan.md:1"
       ],
       "code_refs": [
+        "crates/tactics/src/lib.rs:514",
         "crates/tactics/src/movement.rs:1",
         "docs/development-guide/p-w1-kickoff.md:30"
       ],
@@ -20386,6 +21014,7 @@
         "docs/traceability/fr-civ-tactics-033/fr-civ-tactics-033-plan.md:1"
       ],
       "code_refs": [
+        "crates/tactics/src/lib.rs:454",
         "crates/tactics/src/pathfinding.rs:1",
         "docs/development-guide/p-w1-kickoff.md:32"
       ],
@@ -20416,6 +21045,8 @@
         "docs/traceability/fr-civ-tactics-034/fr-civ-tactics-034-plan.md:1"
       ],
       "code_refs": [
+        "crates/mod-host/src/lib.rs:1147",
+        "crates/mod-host/src/lib.rs:1181",
         "docs/development-guide/p-w1-kickoff.md:33"
       ],
       "test_refs": [
@@ -20464,6 +21095,7 @@
       ],
       "code_refs": [
         "crates/tactics/src/grid_obstacles.rs:1",
+        "crates/tactics/src/lib.rs:489",
         "crates/tactics/src/pathfinding.rs:17",
         "docs/development-guide/p-w1-kickoff.md:36"
       ],
@@ -20493,6 +21125,7 @@
         "crates/tactics/src/pathfinding.rs:81",
         "crates/tactics/src/pathfinding.rs:84",
         "crates/tactics/src/pathfinding.rs:103",
+        "crates/tactics/src/pathfinding.rs:241",
         "docs/development-guide/p-w1-kickoff.md:37"
       ],
       "test_refs": [
@@ -20519,6 +21152,8 @@
         "docs/traceability/fr-civ-tactics-038/fr-civ-tactics-038-plan.md:1"
       ],
       "code_refs": [
+        "crates/mod-host/src/lib.rs:1148",
+        "crates/mod-host/src/lib.rs:1182",
         "docs/development-guide/p-w1-kickoff.md:38"
       ],
       "test_refs": [
@@ -20549,6 +21184,7 @@
       "code_refs": [
         "crates/tactics/src/grid_obstacles.rs:13",
         "crates/tactics/src/grid_obstacles.rs:27",
+        "crates/tactics/src/lib.rs:460",
         "docs/development-guide/p-w1-kickoff.md:41"
       ],
       "test_refs": [
@@ -20574,6 +21210,12 @@
         "docs/traceability/fr-civ-tactics-040/fr-civ-tactics-040-plan.md:1"
       ],
       "code_refs": [
+        "crates/tactics/src/fog_of_war.rs:166",
+        "crates/tactics/src/fog_of_war.rs:167",
+        "crates/tactics/src/fog_of_war.rs:205",
+        "crates/tactics/src/fog_of_war.rs:229",
+        "crates/tactics/src/fog_of_war.rs:263",
+        "crates/tactics/src/fog_of_war.rs:290",
         "docs/development-guide/p-w1-kickoff.md:42"
       ],
       "test_refs": [
@@ -20639,6 +21281,8 @@
       "code_refs": [
         "crates/tactics/src/fog_of_war.rs:1",
         "crates/tactics/src/war_bridge.rs:59",
+        "crates/tactics/src/war_bridge.rs:425",
+        "crates/tactics/src/war_bridge.rs:426",
         "docs/development-guide/p-w1-kickoff.md:44"
       ],
       "test_refs": [
@@ -20664,6 +21308,7 @@
       ],
       "code_refs": [
         "crates/mod-host/src/signature.rs:1",
+        "crates/mod-host/src/signature.rs:75",
         "docs/development-guide/p-w1-kickoff.md:45",
         "mods/README.md:21"
       ],
@@ -20688,6 +21333,7 @@
         "docs/traceability/fr-civ-tactics-044/fr-civ-tactics-044-plan.md:1"
       ],
       "code_refs": [
+        "crates/mod-host/src/lib.rs:1528",
         "docs/development-guide/p-w1-kickoff.md:46"
       ],
       "test_refs": [
@@ -20735,6 +21381,7 @@
       ],
       "code_refs": [
         "crates/mod-host/src/lib.rs:652",
+        "crates/mod-host/src/lib.rs:1263",
         "docs/development-guide/p-w1-kickoff.md:48"
       ],
       "test_refs": [
@@ -20759,6 +21406,7 @@
       ],
       "code_refs": [
         "crates/mod-host/src/wasm_guest.rs:10",
+        "crates/mod-host/src/wasm_guest.rs:561",
         "docs/development-guide/p-w1-kickoff.md:49"
       ],
       "test_refs": [
@@ -20782,6 +21430,8 @@
         "docs/traceability/fr-civ-tactics-048/fr-civ-tactics-048-plan.md:1"
       ],
       "code_refs": [
+        "crates/mod-host/src/lib.rs:1264",
+        "crates/mod-host/src/lib.rs:1265",
         "docs/development-guide/p-w1-kickoff.md:50"
       ],
       "test_refs": [
@@ -20807,6 +21457,7 @@
       ],
       "code_refs": [
         "crates/mod-host/src/wasm_guest.rs:27",
+        "crates/mod-host/src/wasm_guest.rs:574",
         "docs/development-guide/p-w1-kickoff.md:51"
       ],
       "test_refs": [
@@ -20883,6 +21534,7 @@
       ],
       "code_refs": [
         "crates/mod-host/src/lib.rs:325",
+        "crates/mod-host/src/lib.rs:1352",
         "docs/development-guide/p-w1-kickoff.md:54"
       ],
       "test_refs": [
@@ -20907,6 +21559,7 @@
       ],
       "code_refs": [
         "crates/mod-host/src/wasm_guest.rs:13",
+        "crates/mod-host/src/wasm_guest.rs:567",
         "docs/development-guide/p-w1-kickoff.md:55"
       ],
       "test_refs": [
@@ -20932,6 +21585,7 @@
       ],
       "code_refs": [
         "crates/mod-host/src/lib.rs:440",
+        "crates/mod-host/src/lib.rs:1419",
         "crates/server/src/jsonrpc.rs:507",
         "crates/watch/src/app.rs:307",
         "docs/development-guide/p-w1-kickoff.md:56"
@@ -20957,6 +21611,8 @@
         "docs/traceability/fr-civ-tactics-055/fr-civ-tactics-055-plan.md:1"
       ],
       "code_refs": [
+        "crates/mod-host/src/lib.rs:1353",
+        "crates/mod-host/src/lib.rs:1354",
         "docs/development-guide/p-w1-kickoff.md:57"
       ],
       "test_refs": [
@@ -20981,6 +21637,9 @@
         "docs/traceability/fr-civ-tactics-056/fr-civ-tactics-056-plan.md:1"
       ],
       "code_refs": [
+        "crates/mod-host/src/determinism.rs:124",
+        "crates/mod-host/src/determinism.rs:126",
+        "crates/mod-host/src/determinism.rs:148",
         "docs/development-guide/p-w1-kickoff.md:58"
       ],
       "test_refs": [
@@ -21007,6 +21666,8 @@
       ],
       "code_refs": [
         "crates/mod-host/src/determinism.rs:33",
+        "crates/mod-host/src/determinism.rs:145",
+        "crates/mod-host/src/determinism.rs:146",
         "docs/development-guide/p-w1-kickoff.md:59"
       ],
       "test_refs": [
@@ -21111,6 +21772,7 @@
       ],
       "code_refs": [
         "crates/mod-host/src/determinism.rs:33",
+        "crates/mod-host/src/determinism.rs:125",
         "docs/development-guide/p-w1-kickoff.md:60"
       ],
       "test_refs": [
@@ -21160,6 +21822,7 @@
         "docs/traceability/fr-civ-tactics-063/fr-civ-tactics-063-plan.md:1"
       ],
       "code_refs": [
+        "crates/mod-host/src/lib.rs:1992",
         "docs/development-guide/p-w1-kickoff.md:65"
       ],
       "test_refs": [
@@ -21238,6 +21901,9 @@
         "docs/traceability/fr-civ-tactics-066/fr-civ-tactics-066-plan.md:1"
       ],
       "code_refs": [
+        "crates/server/src/jsonrpc.rs:4488",
+        "crates/server/src/jsonrpc.rs:4489",
+        "crates/server/src/jsonrpc.rs:4530",
         "docs/development-guide/p-w1-kickoff.md:68"
       ],
       "test_refs": [
@@ -21289,6 +21955,7 @@
         "docs/traceability/fr-civ-tactics-068/fr-civ-tactics-068-plan.md:1"
       ],
       "code_refs": [
+        "crates/mod-host/src/lib.rs:2007",
         "docs/development-guide/p-w1-kickoff.md:70"
       ],
       "test_refs": [
@@ -21364,6 +22031,7 @@
         "docs/traceability/fr-civ-tactics-071/fr-civ-tactics-071-plan.md:1"
       ],
       "code_refs": [
+        "crates/mod-host/src/lib.rs:1529",
         "docs/development-guide/p-w1-kickoff.md:73"
       ],
       "test_refs": [
@@ -21438,6 +22106,8 @@
         "docs/traceability/fr-civ-tactics-074/fr-civ-tactics-074-plan.md:1"
       ],
       "code_refs": [
+        "crates/mod-host/src/lib.rs:1420",
+        "crates/mod-host/src/lib.rs:1421",
         "docs/development-guide/p-w1-kickoff.md:76"
       ],
       "test_refs": [
@@ -21462,6 +22132,8 @@
         "docs/traceability/fr-civ-tactics-075/fr-civ-tactics-075-plan.md:1"
       ],
       "code_refs": [
+        "crates/mod-host/src/lib.rs:1530",
+        "crates/mod-host/src/lib.rs:1531",
         "docs/development-guide/p-w1-kickoff.md:77"
       ],
       "test_refs": [
@@ -21514,6 +22186,8 @@
         "docs/traceability/fr-civ-tactics-077/fr-civ-tactics-077-plan.md:1"
       ],
       "code_refs": [
+        "crates/mod-host/src/signature.rs:76",
+        "crates/mod-host/src/signature.rs:77",
         "docs/development-guide/p-w1-kickoff.md:79"
       ],
       "test_refs": [
@@ -22189,7 +22863,8 @@
         "docs/traceability/fr-civ-traffic-lane-001/fr-civ-traffic-lane-001-intent.md:15"
       ],
       "code_refs": [
-        "crates/civ-traffic/src/lane.rs:3"
+        "crates/civ-traffic/src/lane.rs:3",
+        "crates/civ-traffic/src/lane.rs:323"
       ],
       "test_refs": [
         "crates/civ-traffic/src/lane.rs:323"
@@ -22210,7 +22885,8 @@
         "docs/traceability/fr-civ-traffic-lane-002/fr-civ-traffic-lane-002-intent.md:15"
       ],
       "code_refs": [
-        "crates/civ-traffic/src/lane.rs:4"
+        "crates/civ-traffic/src/lane.rs:4",
+        "crates/civ-traffic/src/lane.rs:346"
       ],
       "test_refs": [
         "crates/civ-traffic/src/lane.rs:346"
@@ -22231,7 +22907,8 @@
         "docs/traceability/fr-civ-traffic-lane-003/fr-civ-traffic-lane-003-intent.md:15"
       ],
       "code_refs": [
-        "crates/civ-traffic/src/lane.rs:5"
+        "crates/civ-traffic/src/lane.rs:5",
+        "crates/civ-traffic/src/lane.rs:359"
       ],
       "test_refs": [
         "crates/civ-traffic/src/lane.rs:359"
@@ -22239,7 +22916,7 @@
     },
     {
       "id": "FR-CIV-TRAFFIC-LANE-004",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-TRAFFIC-LANE",
       "spec_refs": [
         "docs/traceability/civis-tracelinks.md:43",
@@ -22251,7 +22928,9 @@
         "docs/traceability/fr-civ-traffic-lane-004/fr-civ-traffic-lane-004-intent.md:4",
         "docs/traceability/fr-civ-traffic-lane-004/fr-civ-traffic-lane-004-intent.md:15"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/civ-traffic/src/lane.rs:371"
+      ],
       "test_refs": [
         "crates/civ-traffic/src/lane.rs:371"
       ]
@@ -23362,6 +24041,10 @@
         "docs/traceability/fr-civ-voxel-000/fr-civ-voxel-000-intent.md:15"
       ],
       "code_refs": [
+        "crates/voxel/src/lib.rs:104",
+        "crates/voxel/src/lib.rs:105",
+        "crates/voxel/src/lib.rs:118",
+        "crates/voxel/src/lib.rs:120",
         "docs/development-guide/fr-3d-additions.md:15"
       ],
       "test_refs": [
@@ -23391,6 +24074,9 @@
         "docs/traceability/fr-civ-voxel-001/fr-civ-voxel-001-intent.md:15"
       ],
       "code_refs": [
+        "crates/voxel/src/lib.rs:119",
+        "crates/voxel/src/lib.rs:192",
+        "crates/voxel/src/lib.rs:193",
         "docs/development-guide/fr-3d-additions.md:16",
         "docs/guides/voxel-emergent-vision-and-migration.md:29",
         "docs/worklogs/2026-05-22-civis-3d-kickoff.md:59"
@@ -23424,6 +24110,9 @@
       "code_refs": [
         "crates/engine/src/climate.rs:95",
         "crates/engine/src/engine/engine_tests.rs:1061",
+        "crates/voxel/src/lib.rs:126",
+        "crates/voxel/src/lib.rs:224",
+        "crates/voxel/src/lib.rs:225",
         "docs/development-guide/fr-3d-additions.md:18",
         "docs/guides/voxel-emergent-vision-and-migration.md:183"
       ],
@@ -23450,6 +24139,8 @@
         "docs/traceability/fr-civ-voxel-003/fr-civ-voxel-003-intent.md:15"
       ],
       "code_refs": [
+        "crates/voxel/src/lib.rs:256",
+        "crates/voxel/src/lib.rs:257",
         "docs/development-guide/fr-3d-additions.md:20"
       ],
       "test_refs": [
@@ -23474,6 +24165,8 @@
         "docs/traceability/fr-civ-voxel-004/fr-civ-voxel-004-intent.md:15"
       ],
       "code_refs": [
+        "crates/voxel/src/lib.rs:277",
+        "crates/voxel/src/lib.rs:278",
         "docs/development-guide/fr-3d-additions.md:22"
       ],
       "test_refs": [
@@ -23496,6 +24189,7 @@
         "docs/traceability/fr-civ-voxel-005/fr-civ-voxel-005-intent.md:15"
       ],
       "code_refs": [
+        "crates/voxel/src/lib.rs:313",
         "docs/worklogs/2026-05-22-civis-3d-kickoff.md:72"
       ],
       "test_refs": [
@@ -23536,6 +24230,7 @@
         "docs/traceability/fr-civ-voxel-007/fr-civ-voxel-007-plan.md:1"
       ],
       "code_refs": [
+        "crates/engine/src/engine/engine_tests.rs:1445",
         "crates/engine/src/engine/engine_tests.rs:1447"
       ],
       "test_refs": [
@@ -23560,6 +24255,9 @@
         "docs/traceability/fr-civ-voxel-010/fr-civ-voxel-010-intent.md:15"
       ],
       "code_refs": [
+        "crates/voxel/src/lib.rs:144",
+        "crates/voxel/src/lib.rs:287",
+        "crates/voxel/src/lib.rs:288",
         "docs/development-guide/fr-3d-additions.md:24",
         "docs/guides/voxel-emergent-vision-and-migration.md:29",
         "docs/guides/voxel-emergent-vision-and-migration.md:96",
@@ -23588,10 +24286,12 @@
       "code_refs": [
         "clients/bevy-ref/src/bin/standalone.rs:226",
         "clients/bevy-ref/src/voxel_stream.rs:13",
+        "clients/bevy-ref/src/voxel_stream.rs:356",
+        "clients/bevy-ref/src/voxel_stream.rs:368",
+        "crates/voxel/src/boundary.rs:188",
+        "crates/voxel/src/boundary.rs:208",
         "crates/voxel/src/stream.rs:32",
-        "docs/guides/voxel-emergent-vision-and-migration.md:94",
-        "docs/guides/voxel-emergent-vision-and-migration.md:119",
-        "docs/guides/voxel-emergent-vision-and-migration.md:123"
+        "docs/guides/voxel-emergent-vision-and-migration.md:94"
       ],
       "test_refs": [
         "clients/bevy-ref/src/voxel_stream.rs:356",
@@ -23615,6 +24315,11 @@
         "docs/traceability/fr-civ-voxel-021/fr-civ-voxel-021-plan.md:1"
       ],
       "code_refs": [
+        "crates/voxel/src/worldgen.rs:539",
+        "crates/voxel/src/worldgen.rs:541",
+        "crates/voxel/src/worldgen.rs:558",
+        "crates/voxel/src/worldgen.rs:577",
+        "crates/voxel/src/worldgen.rs:601",
         "crates/voxel/src/worldgen.rs:622",
         "docs/guides/voxel-emergent-vision-and-migration.md:94",
         "docs/guides/voxel-emergent-vision-and-migration.md:124"
@@ -23642,6 +24347,8 @@
         "docs/traceability/fr-civ-voxel-022/fr-civ-voxel-022-plan.md:1"
       ],
       "code_refs": [
+        "crates/voxel/src/stream.rs:380",
+        "crates/voxel/src/stream.rs:395",
         "docs/guides/voxel-emergent-vision-and-migration.md:94",
         "docs/guides/voxel-emergent-vision-and-migration.md:125",
         "docs/guides/voxel-emergent-vision-and-migration.md:183"
@@ -23798,7 +24505,7 @@
     },
     {
       "id": "FR-CIV-VOXEL-DIRTY-001",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-VOXEL-DIRTY",
       "spec_refs": [
         "docs/traceability/fr-civ-voxel-dirty-001/fr-civ-voxel-dirty-001-adr.md:1",
@@ -23810,14 +24517,16 @@
         "docs/traceability/fr-civ-voxel-dirty-001/fr-civ-voxel-dirty-001-intent.md:15",
         "docs/traceability/fr-civ-voxel-dirty-001/fr-civ-voxel-dirty-001-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/voxel/src/fluid_ca.rs:2701"
+      ],
       "test_refs": [
         "crates/voxel/src/fluid_ca.rs:2701"
       ]
     },
     {
       "id": "FR-CIV-VOXEL-DIRTY-002",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-VOXEL-DIRTY",
       "spec_refs": [
         "docs/traceability/fr-civ-voxel-dirty-002/fr-civ-voxel-dirty-002-adr.md:1",
@@ -23829,7 +24538,9 @@
         "docs/traceability/fr-civ-voxel-dirty-002/fr-civ-voxel-dirty-002-intent.md:15",
         "docs/traceability/fr-civ-voxel-dirty-002/fr-civ-voxel-dirty-002-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/voxel/src/fluid_ca.rs:2746"
+      ],
       "test_refs": [
         "crates/voxel/src/fluid_ca.rs:2746"
       ]
@@ -23854,6 +24565,7 @@
         "docs/traceability/fr-civ-war-001/fr-civ-war-001-plan.md:1"
       ],
       "code_refs": [
+        "crates/tactics/src/war_bridge.rs:293",
         "docs/reference/agileplus-artifacts-index.md:121",
         "docs/reference/agileplus-artifacts-index.md:278",
         "docs/reference/FR_TRACKER.md:34",
@@ -23880,6 +24592,7 @@
         "docs/traceability/fr-civ-war-001-units/fr-civ-war-001-units-plan.md:1"
       ],
       "code_refs": [
+        "crates/tactics/src/war_bridge.rs:294",
         "PLAN.md:203",
         "PLAN.md:204"
       ],
@@ -23905,6 +24618,7 @@
         "docs/traceability/fr-civ-war-002/fr-civ-war-002-plan.md:1"
       ],
       "code_refs": [
+        "crates/tactics/src/war_bridge.rs:328",
         "docs/reference/agileplus-artifacts-index.md:121",
         "docs/reference/agileplus-artifacts-index.md:279",
         "PLAN.md:205",
@@ -23930,6 +24644,8 @@
         "docs/traceability/fr-civ-war-002-combat/fr-civ-war-002-combat-plan.md:1"
       ],
       "code_refs": [
+        "crates/tactics/src/war_bridge.rs:292",
+        "crates/tactics/src/war_bridge.rs:327",
         "PLAN.md:205",
         "PLAN.md:206"
       ],
@@ -23957,6 +24673,9 @@
       ],
       "code_refs": [
         "crates/tactics/src/lib.rs:86",
+        "crates/tactics/src/war_bridge.rs:354",
+        "crates/tactics/src/war_bridge.rs:386",
+        "crates/tactics/src/war_bridge.rs:415",
         "docs/reference/agileplus-artifacts-index.md:121",
         "docs/reference/agileplus-artifacts-index.md:280"
       ],
@@ -23983,6 +24702,7 @@
         "docs/traceability/fr-civ-war-004/fr-civ-war-004-plan.md:1"
       ],
       "code_refs": [
+        "crates/tactics/src/war_bridge.rs:355",
         "docs/reference/agileplus-artifacts-index.md:121",
         "docs/reference/agileplus-artifacts-index.md:281"
       ],
@@ -23992,7 +24712,7 @@
     },
     {
       "id": "FR-CIV-WAR-010",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-WAR",
       "spec_refs": [
         "agileplus-specs/civ-021-recovered-requirements/spec.md:227",
@@ -24007,7 +24727,9 @@
         "docs/traceability/fr-civ-war-010/fr-civ-war-010-intent.md:15",
         "docs/traceability/fr-civ-war-010/fr-civ-war-010-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/tactics/src/war_bridge.rs:460"
+      ],
       "test_refs": [
         "crates/tactics/src/war_bridge.rs:460"
       ]
@@ -24362,6 +25084,7 @@
       ],
       "code_refs": [
         "crates/engine/src/spectator.rs:1",
+        "crates/engine/src/spectator.rs:254",
         "docs/development-guide/fr-web-spectator.md:32",
         "docs/development-guide/fr-web-spectator.md:36",
         "web/src/snapshotView.mjs:2"
@@ -24953,6 +25676,7 @@
       ],
       "code_refs": [
         "crates/engine/src/hash_chain.rs:1",
+        "crates/engine/src/hash_chain.rs:188",
         "docs/reference/agileplus-artifacts-index.md:41",
         "docs/reference/agileplus-artifacts-index.md:258"
       ],
@@ -25068,6 +25792,7 @@
         "docs/traceability/fr-core-010/fr-core-010-plan.md:1"
       ],
       "code_refs": [
+        "crates/engine/src/save.rs:307",
         "docs/adr/ADR-022-runtime-representation-deviations.md:21",
         "docs/adr/ADR-022-runtime-representation-deviations.md:52",
         "docs/adr/ADR-022-runtime-representation-deviations.md:67",
@@ -25691,7 +26416,7 @@
         "crates/economy/src/production.rs:72",
         "crates/economy/src/production.rs:89",
         "crates/economy/src/production.rs:175",
-        "docs/reference/agileplus-artifacts-index.md:57"
+        "crates/economy/src/production.rs:511"
       ],
       "test_refs": [
         "crates/economy/src/production.rs:511"
@@ -25719,13 +26444,14 @@
         "docs/traceability/fr-econ-002/fr-econ-002-plan.md:1"
       ],
       "code_refs": [
+        "crates/economy/src/allocator.rs:970",
+        "crates/economy/src/allocator.rs:1021",
         "crates/economy/src/distribution.rs:1",
         "crates/economy/src/distribution.rs:5",
         "crates/economy/src/distribution.rs:119",
         "crates/economy/src/distribution.rs:127",
         "crates/economy/src/distribution.rs:221",
-        "docs/reference/agileplus-artifacts-index.md:57",
-        "docs/reference/agileplus-artifacts-index.md:261"
+        "docs/reference/agileplus-artifacts-index.md:57"
       ],
       "test_refs": [
         "crates/economy/src/allocator.rs:970",
@@ -25761,8 +26487,8 @@
         "crates/economy/src/market.rs:598",
         "crates/economy/src/market.rs:821",
         "crates/economy/src/market.rs:968",
-        "crates/economy/src/specialization.rs:3",
-        "docs/reference/agileplus-artifacts-index.md:57"
+        "crates/economy/src/market.rs:1001",
+        "crates/economy/src/market.rs:1061"
       ],
       "test_refs": [
         "crates/economy/src/market.rs:1001",
@@ -25801,8 +26527,8 @@
         "crates/economy/src/distribution.rs:148",
         "crates/economy/src/institution.rs:103",
         "crates/economy/src/institution.rs:382",
-        "crates/engine/src/scenario.rs:129",
-        "crates/engine/src/scenario.rs:149"
+        "crates/economy/src/institution.rs:797",
+        "crates/engine/src/scenario.rs:129"
       ],
       "test_refs": [
         "crates/economy/src/institution.rs:797",
@@ -25889,7 +26615,8 @@
         "docs/traceability/fr-econ-007/fr-econ-007-plan.md:1"
       ],
       "code_refs": [
-        "crates/economy/src/trade.rs:29"
+        "crates/economy/src/trade.rs:29",
+        "crates/economy/src/trade.rs:204"
       ],
       "test_refs": [
         "crates/economy/src/trade.rs:204",
@@ -26113,6 +26840,8 @@
       "epic": "FR-EMG",
       "spec_refs": [],
       "code_refs": [
+        "crates/emergence-oracle/src/lib.rs:158",
+        "crates/emergence-oracle/src/lib.rs:159",
         "crates/emergence-oracle/src/oracles/architecture.rs:1",
         "crates/emergence-oracle/src/oracles/architecture.rs:22"
       ],
@@ -26322,6 +27051,7 @@
       "code_refs": [
         "crates/emergence-oracle/src/oracles/migration_pressure.rs:1",
         "crates/emergence-oracle/src/oracles/migration_pressure.rs:16",
+        "crates/emergence-oracle/src/oracles/migration_pressure.rs:54",
         "crates/emergence-oracle/src/oracles/trade_flow.rs:1",
         "crates/emergence-oracle/src/oracles/trade_flow.rs:20"
       ],
@@ -26579,7 +27309,7 @@
     },
     {
       "id": "FR-LOD-001",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-LOD",
       "spec_refs": [
         "docs/traceability/TRACEABILITY_MATRIX.md:75",
@@ -26592,7 +27322,9 @@
         "docs/traceability/fr-lod-001/fr-lod-001-intent.md:15",
         "docs/traceability/fr-lod-001/fr-lod-001-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/engine/src/lod.rs:99"
+      ],
       "test_refs": [
         "crates/engine/src/lod.rs:99",
         "crates/engine/tests/fr_engine_hash_lod_perf_tests.rs:3",
@@ -26620,7 +27352,8 @@
         "docs/traceability/fr-lod-002/fr-lod-002-plan.md:1"
       ],
       "code_refs": [
-        "crates/engine/src/lod.rs:68"
+        "crates/engine/src/lod.rs:68",
+        "crates/engine/src/lod.rs:107"
       ],
       "test_refs": [
         "crates/engine/src/lod.rs:107",
@@ -26649,7 +27382,8 @@
         "docs/traceability/fr-lod-003/fr-lod-003-plan.md:1"
       ],
       "code_refs": [
-        "crates/engine/src/lod.rs:90"
+        "crates/engine/src/lod.rs:90",
+        "crates/engine/src/lod.rs:114"
       ],
       "test_refs": [
         "crates/engine/src/lod.rs:114",
@@ -26678,7 +27412,8 @@
       ],
       "code_refs": [
         "crates/engine/src/lod.rs:73",
-        "crates/engine/src/lod.rs:82"
+        "crates/engine/src/lod.rs:82",
+        "crates/engine/src/lod.rs:124"
       ],
       "test_refs": [
         "crates/engine/src/lod.rs:124",
@@ -26739,6 +27474,7 @@
       "code_refs": [
         "crates/economy/src/metrics.rs:1",
         "crates/economy/src/metrics.rs:28",
+        "crates/economy/src/metrics.rs:184",
         "docs/reference/agileplus-artifacts-index.md:57",
         "docs/reference/agileplus-artifacts-index.md:265"
       ],
@@ -26777,6 +27513,8 @@
       ],
       "code_refs": [
         "crates/economy/src/metrics.rs:116",
+        "crates/economy/src/metrics.rs:160",
+        "crates/economy/src/metrics.rs:192",
         "docs/reference/agileplus-artifacts-index.md:57",
         "docs/reference/agileplus-artifacts-index.md:266"
       ],
@@ -26815,6 +27553,9 @@
       ],
       "code_refs": [
         "crates/economy/src/metrics.rs:55",
+        "crates/economy/src/metrics.rs:168",
+        "crates/economy/src/metrics.rs:176",
+        "crates/economy/src/metrics.rs:200",
         "docs/reference/agileplus-artifacts-index.md:57",
         "docs/reference/agileplus-artifacts-index.md:267"
       ],
@@ -26889,6 +27630,13 @@
         "docs/traceability/fr-mod-001/fr-mod-001-plan.md:1"
       ],
       "code_refs": [
+        "crates/mod-host/src/lib.rs:2068",
+        "crates/mod-host/src/lib.rs:2071",
+        "crates/mod-host/src/lib.rs:2087",
+        "crates/mod-host/src/lib.rs:2092",
+        "crates/mod-host/src/lib.rs:2124",
+        "crates/mod-host/src/lib.rs:2142",
+        "crates/mod-host/src/lib.rs:2147",
         "docs/development-guide/fr-modding-roadmap.md:78"
       ],
       "test_refs": [
@@ -26904,7 +27652,7 @@
     },
     {
       "id": "FR-MOD-002",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-MOD",
       "spec_refs": [
         "docs/traceability/TRACEABILITY_MATRIX.md:233",
@@ -26917,7 +27665,15 @@
         "docs/traceability/fr-mod-002/fr-mod-002-intent.md:15",
         "docs/traceability/fr-mod-002/fr-mod-002-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/mod-host/src/lib.rs:2180",
+        "crates/mod-host/src/lib.rs:2183",
+        "crates/mod-host/src/lib.rs:2193",
+        "crates/mod-host/src/lib.rs:2198",
+        "crates/mod-host/src/lib.rs:2236",
+        "crates/mod-host/src/lib.rs:2254",
+        "crates/mod-host/src/lib.rs:2290"
+      ],
       "test_refs": [
         "crates/mod-host/src/lib.rs:2180",
         "crates/mod-host/src/lib.rs:2183",
@@ -26931,7 +27687,7 @@
     },
     {
       "id": "FR-MOD-003",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-MOD",
       "spec_refs": [
         "docs/traceability/TRACEABILITY_MATRIX.md:234",
@@ -26944,7 +27700,12 @@
         "docs/traceability/fr-mod-003/fr-mod-003-intent.md:15",
         "docs/traceability/fr-mod-003/fr-mod-003-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/mod-host/src/lib.rs:2339",
+        "crates/mod-host/src/lib.rs:2342",
+        "crates/mod-host/src/lib.rs:2366",
+        "crates/mod-host/src/lib.rs:2378"
+      ],
       "test_refs": [
         "crates/mod-host/src/lib.rs:2339",
         "crates/mod-host/src/lib.rs:2342",
@@ -26993,7 +27754,7 @@
     },
     {
       "id": "FR-MOD-005",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-MOD",
       "spec_refs": [
         "docs/traceability/TRACEABILITY_MATRIX.md:236",
@@ -27006,7 +27767,11 @@
         "docs/traceability/fr-mod-005/fr-mod-005-intent.md:15",
         "docs/traceability/fr-mod-005/fr-mod-005-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/mod-host/src/lib.rs:2449",
+        "crates/mod-host/src/lib.rs:2452",
+        "crates/mod-host/src/lib.rs:2490"
+      ],
       "test_refs": [
         "crates/mod-host/src/lib.rs:2449",
         "crates/mod-host/src/lib.rs:2452",
@@ -27021,7 +27786,9 @@
       "status": "CODE-ONLY-no-spec",
       "epic": "FR-MUSIC",
       "spec_refs": [],
-      "code_refs": [],
+      "code_refs": [
+        "crates/engine/src/engine/engine_tests.rs:3732"
+      ],
       "test_refs": [
         "crates/engine/src/engine/engine_tests.rs:3732"
       ]
@@ -28140,6 +28907,8 @@
         "docs/traceability/fr-perf-002/fr-perf-002-plan.md:1"
       ],
       "code_refs": [
+        "crates/engine/src/perf.rs:119",
+        "crates/engine/src/perf.rs:122",
         "docs/IMPLEMENTATION_STATUS.md:125"
       ],
       "test_refs": [
@@ -28216,6 +28985,9 @@
         "docs/traceability/fr-perf-005/fr-perf-005-intent.md:15"
       ],
       "code_refs": [
+        "crates/engine/src/perf.rs:183",
+        "crates/engine/src/perf.rs:186",
+        "crates/engine/src/perf.rs:240",
         "docs/IMPLEMENTATION_STATUS.md:125"
       ],
       "test_refs": [
@@ -28312,6 +29084,7 @@
       ],
       "code_refs": [
         "crates/server/src/audit_log.rs:1",
+        "crates/server/src/audit_log.rs:225",
         "crates/server/src/lib.rs:14"
       ],
       "test_refs": [
@@ -28345,7 +29118,7 @@
     },
     {
       "id": "FR-PROT-006",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-PROT",
       "spec_refs": [
         "docs/traceability/TRACEABILITY_MATRIX.md:183",
@@ -28358,7 +29131,11 @@
         "docs/traceability/fr-prot-006/fr-prot-006-intent.md:15",
         "docs/traceability/fr-prot-006/fr-prot-006-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/server/src/ws_bridge.rs:5227",
+        "crates/server/src/ws_bridge.rs:5229",
+        "crates/server/src/ws_bridge.rs:5268"
+      ],
       "test_refs": [
         "crates/engine/tests/fr_fr_prot_006.rs:1",
         "crates/engine/tests/fr_fr_prot_006.rs:6",
@@ -28672,6 +29449,7 @@
         "crates/engine/src/replay.rs:434",
         "crates/server/src/saves.rs:366",
         "crates/server/src/saves.rs:368",
+        "crates/server/src/saves.rs:754",
         "crates/watch/src/api_tests.rs:1368",
         "crates/watch/src/api_tests.rs:1391"
       ],
@@ -28687,7 +29465,7 @@
     },
     {
       "id": "FR-SAVE-003",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-SAVE",
       "spec_refs": [
         "docs/specs/CIV-1000-save-load-persistence-spec.md:2802",
@@ -28702,7 +29480,11 @@
         "docs/traceability/fr-save-003/fr-save-003-intent.md:15",
         "docs/traceability/fr-save-003/fr-save-003-plan.md:1"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/engine/src/save.rs:307",
+        "crates/engine/src/save_bundle.rs:1488",
+        "crates/engine/src/save_bundle.rs:1490"
+      ],
       "test_refs": [
         "crates/engine/src/save.rs:307",
         "crates/engine/src/save_bundle.rs:1488",
@@ -28755,7 +29537,8 @@
       "code_refs": [
         "crates/save-db/src/lib.rs:44",
         "crates/save-db/src/lib.rs:55",
-        "crates/save-db/src/lib.rs:126"
+        "crates/save-db/src/lib.rs:126",
+        "crates/save-db/src/lib.rs:554"
       ],
       "test_refs": [
         "crates/save-db/src/lib.rs:554",
@@ -29163,6 +29946,7 @@
         "crates/session/src/lib.rs:53",
         "crates/session/src/lib.rs:167",
         "crates/session/src/lib.rs:195",
+        "crates/session/src/lib.rs:490",
         "docs/IMPLEMENTATION_STATUS.md:85"
       ],
       "test_refs": [
@@ -29190,7 +29974,8 @@
       "code_refs": [
         "crates/session/src/lib.rs:5",
         "crates/session/src/lib.rs:55",
-        "crates/session/src/lib.rs:213"
+        "crates/session/src/lib.rs:213",
+        "crates/session/src/lib.rs:522"
       ],
       "test_refs": [
         "crates/engine/tests/fr_fr_sess_002.rs:1",
@@ -29220,7 +30005,8 @@
         "crates/session/src/lib.rs:57",
         "crates/session/src/lib.rs:231",
         "crates/session/src/lib.rs:277",
-        "crates/session/src/lib.rs:404"
+        "crates/session/src/lib.rs:404",
+        "crates/session/src/lib.rs:577"
       ],
       "test_refs": [
         "crates/engine/tests/fr_fr_sess_003.rs:1",
@@ -29250,7 +30036,8 @@
         "crates/session/src/lib.rs:101",
         "crates/session/src/lib.rs:249",
         "crates/session/src/lib.rs:375",
-        "crates/session/src/lib.rs:454"
+        "crates/session/src/lib.rs:454",
+        "crates/session/src/lib.rs:622"
       ],
       "test_refs": [
         "crates/engine/tests/fr_fr_sess_004.rs:1",
@@ -29307,6 +30094,7 @@
         "crates/session/src/lib.rs:325",
         "crates/session/src/lib.rs:441",
         "crates/session/src/lib.rs:443",
+        "crates/session/src/lib.rs:662",
         "docs/IMPLEMENTATION_STATUS.md:85"
       ],
       "test_refs": [
@@ -32484,7 +33272,7 @@
       "code_refs": [
         "docs/guides/voxel-emergent-vision-and-migration.md:96",
         "docs/guides/voxel-emergent-vision-and-migration.md:99",
-        "scripts/traceability/gen-fr-audit.py:47"
+        "scripts/traceability/gen-fr-audit.py:48"
       ],
       "test_refs": [
         "crates/engine/tests/fr_engine_hash_lod_perf_tests.rs:4",
@@ -33065,7 +33853,10 @@
         "crates/voxel/src/scale_stream.rs:1",
         "crates/voxel/src/scale_stream.rs:16",
         "crates/voxel/src/scale_stream.rs:58",
-        "crates/voxel/src/scale_stream.rs:60"
+        "crates/voxel/src/scale_stream.rs:60",
+        "crates/voxel/src/scale_stream.rs:427",
+        "crates/voxel/src/scale_stream.rs:479",
+        "crates/voxel/src/scale_stream.rs:509"
       ],
       "test_refs": [
         "crates/voxel/src/scale_stream.rs:427",
@@ -33504,7 +34295,7 @@
       "status": "IMPL-NO-TEST",
       "epic": "NFR-SCALE",
       "spec_refs": [
-        "docs/traceability/fr-emergence-matrix.md:254",
+        "docs/traceability/fr-emergence-matrix.md:261",
         "docs/traceability/index.md:1237",
         "docs/traceability/nfr-scale-02/nfr-scale-02-adr.md:1",
         "docs/traceability/nfr-scale-02/nfr-scale-02-adr.md:6",

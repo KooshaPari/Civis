@@ -305,6 +305,18 @@ def main():
             if is_test_ref:
                 if ref not in rec["in_tests"] and len(rec["in_tests"]) < max_refs:
                     rec["in_tests"].append(ref)
+                # A `#[cfg(test)]` module living inside a source file IS the
+                # implementation for that crate. Without this, an ID whose only
+                # reference is a test in the crate's own `src/lib.rs` gets a
+                # test ref but no code ref, and the audit wrongly reports it as
+                # SPEC-ONLY (e.g. FR-CIV-AGENTS-002 in crates/agents/src/lib.rs).
+                if (
+                    kind == "code"
+                    and rel.endswith(".rs")
+                    and not is_test_path(rel)
+                ):
+                    if ref not in rec["in_code"] and len(rec["in_code"]) < max_refs:
+                        rec["in_code"].append(ref)
             elif kind == "meta":
                 if ref not in rec["in_meta"] and len(rec["in_meta"]) < max_refs:
                     rec["in_meta"].append(ref)

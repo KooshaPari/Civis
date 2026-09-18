@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "generated_at": "2026-09-17",
+  "generated_at": "2026-09-18",
   "source_inventory": "docs/audits/_id_inventory_v3.json",
   "status_legend": {
     "COVERED": "spec/trace + code + test all present",
@@ -6361,16 +6361,16 @@
       "code_refs": [
         "crates/voxel/src/fluid_ca.rs:32",
         "crates/voxel/src/fluid_ca.rs:47",
-        "crates/voxel/src/fluid_ca.rs:2027",
-        "crates/voxel/src/fluid_ca.rs:2042",
-        "crates/voxel/src/fluid_ca.rs:2602",
-        "crates/voxel/src/fluid_ca.rs:3051"
+        "crates/voxel/src/fluid_ca.rs:2059",
+        "crates/voxel/src/fluid_ca.rs:2074",
+        "crates/voxel/src/fluid_ca.rs:2682",
+        "crates/voxel/src/fluid_ca.rs:3131"
       ],
       "test_refs": [
-        "crates/voxel/src/fluid_ca.rs:2027",
-        "crates/voxel/src/fluid_ca.rs:2042",
-        "crates/voxel/src/fluid_ca.rs:2602",
-        "crates/voxel/src/fluid_ca.rs:3051"
+        "crates/voxel/src/fluid_ca.rs:2059",
+        "crates/voxel/src/fluid_ca.rs:2074",
+        "crates/voxel/src/fluid_ca.rs:2682",
+        "crates/voxel/src/fluid_ca.rs:3131"
       ]
     },
     {
@@ -6390,22 +6390,22 @@
         "docs/traceability/fr-civ-ca-002/fr-civ-ca-002-intent.md:15"
       ],
       "code_refs": [
-        "crates/voxel/src/fluid_ca.rs:1116",
-        "crates/voxel/src/fluid_ca.rs:1660",
-        "crates/voxel/src/fluid_ca.rs:2053",
-        "crates/voxel/src/fluid_ca.rs:2073",
-        "crates/voxel/src/fluid_ca.rs:2134",
-        "crates/voxel/src/fluid_ca.rs:2447",
-        "crates/voxel/src/fluid_ca.rs:2623",
-        "crates/voxel/src/fluid_ca.rs:2668"
+        "crates/voxel/src/fluid_ca.rs:1139",
+        "crates/voxel/src/fluid_ca.rs:1692",
+        "crates/voxel/src/fluid_ca.rs:2085",
+        "crates/voxel/src/fluid_ca.rs:2105",
+        "crates/voxel/src/fluid_ca.rs:2166",
+        "crates/voxel/src/fluid_ca.rs:2479",
+        "crates/voxel/src/fluid_ca.rs:2703",
+        "crates/voxel/src/fluid_ca.rs:2748"
       ],
       "test_refs": [
-        "crates/voxel/src/fluid_ca.rs:2053",
-        "crates/voxel/src/fluid_ca.rs:2073",
-        "crates/voxel/src/fluid_ca.rs:2134",
-        "crates/voxel/src/fluid_ca.rs:2447",
-        "crates/voxel/src/fluid_ca.rs:2623",
-        "crates/voxel/src/fluid_ca.rs:2668",
+        "crates/voxel/src/fluid_ca.rs:2085",
+        "crates/voxel/src/fluid_ca.rs:2105",
+        "crates/voxel/src/fluid_ca.rs:2166",
+        "crates/voxel/src/fluid_ca.rs:2479",
+        "crates/voxel/src/fluid_ca.rs:2703",
+        "crates/voxel/src/fluid_ca.rs:2748",
         "crates/voxel/src/material.rs:1378"
       ]
     },
@@ -6426,21 +6426,21 @@
         "docs/traceability/fr-civ-ca-003/fr-civ-ca-003-intent.md:15"
       ],
       "code_refs": [
-        "crates/voxel/src/fluid_ca.rs:1000",
-        "crates/voxel/src/fluid_ca.rs:1006",
-        "crates/voxel/src/fluid_ca.rs:1031",
-        "crates/voxel/src/fluid_ca.rs:1078",
-        "crates/voxel/src/fluid_ca.rs:2146",
-        "crates/voxel/src/fluid_ca.rs:2157",
-        "crates/voxel/src/fluid_ca.rs:2172",
-        "crates/voxel/src/fluid_ca.rs:2224"
+        "crates/voxel/src/fluid_ca.rs:1023",
+        "crates/voxel/src/fluid_ca.rs:1029",
+        "crates/voxel/src/fluid_ca.rs:1054",
+        "crates/voxel/src/fluid_ca.rs:1101",
+        "crates/voxel/src/fluid_ca.rs:2178",
+        "crates/voxel/src/fluid_ca.rs:2189",
+        "crates/voxel/src/fluid_ca.rs:2204",
+        "crates/voxel/src/fluid_ca.rs:2256"
       ],
       "test_refs": [
-        "crates/voxel/src/fluid_ca.rs:2146",
-        "crates/voxel/src/fluid_ca.rs:2157",
-        "crates/voxel/src/fluid_ca.rs:2172",
-        "crates/voxel/src/fluid_ca.rs:2224",
-        "crates/voxel/src/fluid_ca.rs:2276"
+        "crates/voxel/src/fluid_ca.rs:2178",
+        "crates/voxel/src/fluid_ca.rs:2189",
+        "crates/voxel/src/fluid_ca.rs:2204",
+        "crates/voxel/src/fluid_ca.rs:2256",
+        "crates/voxel/src/fluid_ca.rs:2308"
       ]
     },
     {
@@ -6460,23 +6460,23 @@
         "docs/traceability/fr-civ-ca-004/fr-civ-ca-004-intent.md:15"
       ],
       "code_refs": [
-        "crates/voxel/src/fluid_ca.rs:1012",
-        "crates/voxel/src/fluid_ca.rs:1069",
-        "crates/voxel/src/fluid_ca.rs:1188",
-        "crates/voxel/src/fluid_ca.rs:1677",
-        "crates/voxel/src/fluid_ca.rs:2320",
-        "crates/voxel/src/fluid_ca.rs:2457",
-        "crates/voxel/src/fluid_ca.rs:3681",
-        "crates/voxel/src/fluid_ca.rs:3688"
+        "crates/voxel/src/fluid_ca.rs:1035",
+        "crates/voxel/src/fluid_ca.rs:1092",
+        "crates/voxel/src/fluid_ca.rs:1211",
+        "crates/voxel/src/fluid_ca.rs:1709",
+        "crates/voxel/src/fluid_ca.rs:2352",
+        "crates/voxel/src/fluid_ca.rs:2489",
+        "crates/voxel/src/fluid_ca.rs:3767",
+        "crates/voxel/src/fluid_ca.rs:3774"
       ],
       "test_refs": [
-        "crates/voxel/src/fluid_ca.rs:2320",
-        "crates/voxel/src/fluid_ca.rs:2457",
-        "crates/voxel/src/fluid_ca.rs:3681",
-        "crates/voxel/src/fluid_ca.rs:3688",
-        "crates/voxel/src/fluid_ca.rs:3722",
-        "crates/voxel/src/fluid_ca.rs:3749",
-        "crates/voxel/src/fluid_ca.rs:3773"
+        "crates/voxel/src/fluid_ca.rs:2352",
+        "crates/voxel/src/fluid_ca.rs:2489",
+        "crates/voxel/src/fluid_ca.rs:3767",
+        "crates/voxel/src/fluid_ca.rs:3774",
+        "crates/voxel/src/fluid_ca.rs:3808",
+        "crates/voxel/src/fluid_ca.rs:3835",
+        "crates/voxel/src/fluid_ca.rs:3859"
       ]
     },
     {
@@ -6499,18 +6499,18 @@
         "crates/engine/src/engine/engine_tests.rs:1490",
         "crates/voxel/src/fluid_ca.rs:49",
         "crates/voxel/src/fluid_ca.rs:56",
-        "crates/voxel/src/fluid_ca.rs:1020",
-        "crates/voxel/src/fluid_ca.rs:1153",
-        "crates/voxel/src/fluid_ca.rs:1657",
-        "crates/voxel/src/fluid_ca.rs:2433",
-        "crates/voxel/src/fluid_ca.rs:2574"
+        "crates/voxel/src/fluid_ca.rs:1043",
+        "crates/voxel/src/fluid_ca.rs:1176",
+        "crates/voxel/src/fluid_ca.rs:1689",
+        "crates/voxel/src/fluid_ca.rs:2465",
+        "crates/voxel/src/fluid_ca.rs:2654"
       ],
       "test_refs": [
-        "crates/voxel/src/fluid_ca.rs:2433",
-        "crates/voxel/src/fluid_ca.rs:2574",
-        "crates/voxel/src/fluid_ca.rs:3817",
-        "crates/voxel/src/fluid_ca.rs:3823",
-        "crates/voxel/src/fluid_ca.rs:3892"
+        "crates/voxel/src/fluid_ca.rs:2465",
+        "crates/voxel/src/fluid_ca.rs:2654",
+        "crates/voxel/src/fluid_ca.rs:3903",
+        "crates/voxel/src/fluid_ca.rs:3909",
+        "crates/voxel/src/fluid_ca.rs:3978"
       ]
     },
     {
@@ -6529,12 +6529,12 @@
         "docs/traceability/fr-civ-ca-006/fr-civ-ca-006-plan.md:1"
       ],
       "code_refs": [
-        "crates/voxel/src/fluid_ca.rs:2468",
-        "crates/voxel/src/fluid_ca.rs:2495"
+        "crates/voxel/src/fluid_ca.rs:2500",
+        "crates/voxel/src/fluid_ca.rs:2527"
       ],
       "test_refs": [
-        "crates/voxel/src/fluid_ca.rs:2468",
-        "crates/voxel/src/fluid_ca.rs:2495"
+        "crates/voxel/src/fluid_ca.rs:2500",
+        "crates/voxel/src/fluid_ca.rs:2527"
       ]
     },
     {
@@ -6553,14 +6553,14 @@
         "docs/traceability/fr-civ-ca-007/fr-civ-ca-007-plan.md:1"
       ],
       "code_refs": [
-        "crates/voxel/src/fluid_ca.rs:2054",
-        "crates/voxel/src/fluid_ca.rs:2074",
-        "crates/voxel/src/fluid_ca.rs:2135"
+        "crates/voxel/src/fluid_ca.rs:2086",
+        "crates/voxel/src/fluid_ca.rs:2106",
+        "crates/voxel/src/fluid_ca.rs:2167"
       ],
       "test_refs": [
-        "crates/voxel/src/fluid_ca.rs:2054",
-        "crates/voxel/src/fluid_ca.rs:2074",
-        "crates/voxel/src/fluid_ca.rs:2135"
+        "crates/voxel/src/fluid_ca.rs:2086",
+        "crates/voxel/src/fluid_ca.rs:2106",
+        "crates/voxel/src/fluid_ca.rs:2167"
       ]
     },
     {
@@ -6585,14 +6585,14 @@
         "crates/voxel/src/fluid_ca.rs:265",
         "crates/voxel/src/fluid_ca.rs:274",
         "crates/voxel/src/fluid_ca.rs:282",
-        "crates/voxel/src/fluid_ca.rs:795",
-        "crates/voxel/src/fluid_ca.rs:1057"
+        "crates/voxel/src/fluid_ca.rs:811",
+        "crates/voxel/src/fluid_ca.rs:1080"
       ],
       "test_refs": [
-        "crates/voxel/src/fluid_ca.rs:2814",
-        "crates/voxel/src/fluid_ca.rs:2819",
-        "crates/voxel/src/fluid_ca.rs:2846",
-        "crates/voxel/src/fluid_ca.rs:2847"
+        "crates/voxel/src/fluid_ca.rs:2894",
+        "crates/voxel/src/fluid_ca.rs:2899",
+        "crates/voxel/src/fluid_ca.rs:2926",
+        "crates/voxel/src/fluid_ca.rs:2927"
       ]
     },
     {
@@ -6618,11 +6618,11 @@
         "crates/engine/src/engine.rs:1008",
         "crates/voxel/src/fluid_ca.rs:140",
         "crates/voxel/src/fluid_ca.rs:157",
-        "crates/voxel/src/fluid_ca.rs:2919"
+        "crates/voxel/src/fluid_ca.rs:2999"
       ],
       "test_refs": [
-        "crates/voxel/src/fluid_ca.rs:2919",
-        "crates/voxel/src/fluid_ca.rs:2924"
+        "crates/voxel/src/fluid_ca.rs:2999",
+        "crates/voxel/src/fluid_ca.rs:3004"
       ]
     },
     {
@@ -6641,16 +6641,16 @@
         "docs/traceability/fr-civ-ca-010/fr-civ-ca-010-plan.md:1"
       ],
       "code_refs": [
-        "crates/voxel/src/fluid_ca.rs:2949",
-        "crates/voxel/src/fluid_ca.rs:2953",
-        "crates/voxel/src/fluid_ca.rs:2996",
-        "crates/voxel/src/fluid_ca.rs:3023"
+        "crates/voxel/src/fluid_ca.rs:3029",
+        "crates/voxel/src/fluid_ca.rs:3033",
+        "crates/voxel/src/fluid_ca.rs:3076",
+        "crates/voxel/src/fluid_ca.rs:3103"
       ],
       "test_refs": [
-        "crates/voxel/src/fluid_ca.rs:2949",
-        "crates/voxel/src/fluid_ca.rs:2953",
-        "crates/voxel/src/fluid_ca.rs:2996",
-        "crates/voxel/src/fluid_ca.rs:3023"
+        "crates/voxel/src/fluid_ca.rs:3029",
+        "crates/voxel/src/fluid_ca.rs:3033",
+        "crates/voxel/src/fluid_ca.rs:3076",
+        "crates/voxel/src/fluid_ca.rs:3103"
       ]
     },
     {
@@ -6659,8 +6659,8 @@
       "epic": "FR-CIV-CA",
       "spec_refs": [],
       "code_refs": [
-        "crates/voxel/src/fluid_ca.rs:1328",
-        "crates/voxel/src/fluid_ca.rs:1666"
+        "crates/voxel/src/fluid_ca.rs:1360",
+        "crates/voxel/src/fluid_ca.rs:1698"
       ],
       "test_refs": []
     },
@@ -24329,7 +24329,8 @@
         "crates/voxel/src/worldgen.rs:541",
         "crates/voxel/src/worldgen.rs:558",
         "crates/voxel/src/worldgen.rs:577",
-        "crates/voxel/src/worldgen.rs:601"
+        "crates/voxel/src/worldgen.rs:601",
+        "crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs:346"
       ]
     },
     {
@@ -24379,9 +24380,14 @@
         "docs/guides/voxel-emergent-vision-and-migration.md:126"
       ],
       "test_refs": [
+        "crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs:1",
+        "crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs:6",
+        "crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs:86",
+        "crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs:89",
+        "crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs:119",
+        "crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs:141",
         "crates/voxel/tests/fr_fr_civ_voxel_023.rs:1",
-        "crates/voxel/tests/fr_fr_civ_voxel_023.rs:6",
-        "crates/voxel/tests/fr_fr_civ_voxel_023.rs:10"
+        "crates/voxel/tests/fr_fr_civ_voxel_023.rs:6"
       ]
     },
     {
@@ -24402,6 +24408,10 @@
         "docs/guides/voxel-emergent-vision-and-migration.md:127"
       ],
       "test_refs": [
+        "crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs:8",
+        "crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs:165",
+        "crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs:168",
+        "crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs:197",
         "crates/voxel/tests/fr_fr_civ_voxel_024.rs:1",
         "crates/voxel/tests/fr_fr_civ_voxel_024.rs:6",
         "crates/voxel/tests/fr_fr_civ_voxel_024.rs:10"
@@ -24425,6 +24435,10 @@
         "docs/guides/voxel-emergent-vision-and-migration.md:128"
       ],
       "test_refs": [
+        "crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs:10",
+        "crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs:219",
+        "crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs:222",
+        "crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs:249",
         "crates/voxel/tests/fr_fr_civ_voxel_025.rs:1",
         "crates/voxel/tests/fr_fr_civ_voxel_025.rs:6",
         "crates/voxel/tests/fr_fr_civ_voxel_025.rs:10"
@@ -24449,6 +24463,11 @@
         "docs/guides/voxel-emergent-vision-and-migration.md:129"
       ],
       "test_refs": [
+        "crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs:273",
+        "crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs:276",
+        "crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs:303",
+        "crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs:340",
+        "crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs:345",
         "crates/voxel/tests/fr_fr_civ_voxel_030.rs:1",
         "crates/voxel/tests/fr_fr_civ_voxel_030.rs:6",
         "crates/voxel/tests/fr_fr_civ_voxel_030.rs:10"
@@ -24518,10 +24537,10 @@
         "docs/traceability/fr-civ-voxel-dirty-001/fr-civ-voxel-dirty-001-plan.md:1"
       ],
       "code_refs": [
-        "crates/voxel/src/fluid_ca.rs:2701"
+        "crates/voxel/src/fluid_ca.rs:2781"
       ],
       "test_refs": [
-        "crates/voxel/src/fluid_ca.rs:2701"
+        "crates/voxel/src/fluid_ca.rs:2781"
       ]
     },
     {
@@ -24539,10 +24558,10 @@
         "docs/traceability/fr-civ-voxel-dirty-002/fr-civ-voxel-dirty-002-plan.md:1"
       ],
       "code_refs": [
-        "crates/voxel/src/fluid_ca.rs:2746"
+        "crates/voxel/src/fluid_ca.rs:2826"
       ],
       "test_refs": [
-        "crates/voxel/src/fluid_ca.rs:2746"
+        "crates/voxel/src/fluid_ca.rs:2826"
       ]
     },
     {
@@ -28985,15 +29004,15 @@
         "docs/traceability/fr-perf-005/fr-perf-005-intent.md:15"
       ],
       "code_refs": [
-        "crates/engine/src/perf.rs:183",
-        "crates/engine/src/perf.rs:186",
-        "crates/engine/src/perf.rs:240",
+        "crates/engine/src/perf.rs:196",
+        "crates/engine/src/perf.rs:199",
+        "crates/engine/src/perf.rs:253",
         "docs/IMPLEMENTATION_STATUS.md:125"
       ],
       "test_refs": [
-        "crates/engine/src/perf.rs:183",
-        "crates/engine/src/perf.rs:186",
-        "crates/engine/src/perf.rs:240",
+        "crates/engine/src/perf.rs:196",
+        "crates/engine/src/perf.rs:199",
+        "crates/engine/src/perf.rs:253",
         "crates/engine/tests/fr_fr_perf_005.rs:1",
         "crates/engine/tests/fr_fr_perf_005.rs:6",
         "crates/engine/tests/fr_fr_perf_005.rs:10",

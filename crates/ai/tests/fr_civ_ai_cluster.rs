@@ -982,12 +982,16 @@ mod embed_provider {
             "model.onnx",
         ];
         for (index, missing) in chain.iter().enumerate() {
-            match civ_ai::providers::EmbedProvider::try_from_model_dir(
+            let error = match civ_ai::providers::EmbedProvider::try_from_model_dir(
                 "all-MiniLM-L6-v2",
                 dir,
                 384,
             ) {
-                Err(AiError::ModelMissing(message)) => {
+                Ok(_) => panic!("step {index}: loading must fail while `{missing}` is absent"),
+                Err(error) => error,
+            };
+            match error {
+                AiError::ModelMissing(message) => {
                     assert!(
                         message.contains(missing),
                         "step {index} must name `{missing}`, got: {message}"
@@ -1015,8 +1019,13 @@ mod embed_provider {
         let scratch = ScratchDir::new("fr005-zero-dim");
         // The directory is empty: a dimension guard must fire first, so the
         // failure is about the requested dimension and not about missing files.
-        match civ_ai::providers::EmbedProvider::try_from_model_dir("m", scratch.path(), 0) {
-            Err(AiError::InvalidResponse(message)) => {
+        let error = match civ_ai::providers::EmbedProvider::try_from_model_dir("m", scratch.path(), 0)
+        {
+            Ok(_) => panic!("a zero embedding dimension must be rejected"),
+            Err(error) => error,
+        };
+        match error {
+            AiError::InvalidResponse(message) => {
                 assert_eq!(message, "embedding dimension must be greater than zero");
             }
             other => panic!("expected InvalidResponse, got {other:?}"),

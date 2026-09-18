@@ -2490,6 +2490,7 @@ mod tests {
 
     // N11 maturity↔belief coupling tests (FR-CIV-EMERGENCE-N11)
 
+    /// Covers FR-CIV-EMERGENCE-N11.
     #[test]
     fn n11_avg_psyche_maturity_zero_for_empty_world() {
         let mut sim = Simulation::new();
@@ -2497,6 +2498,7 @@ mod tests {
         assert_eq!(avg_psyche_maturity(&sim.world), 0.0);
     }
 
+    /// Covers FR-CIV-EMERGENCE-N11.
     #[test]
     fn n11_avg_psyche_maturity_computes_mean() {
         use civ_agents::{Mood, Psyche, Temperament, PSYCHE_DIM};
@@ -2513,6 +2515,7 @@ mod tests {
         assert_eq!(avg_psyche_maturity(&sim.world), 1.0);
     }
 
+    /// Covers FR-CIV-EMERGENCE-N11.
     #[test]
     fn n11_drift_factor_bounds() {
         for (maturity, expected) in [(0.0f32, 0.95f32), (0.5, 0.975), (1.0, 1.0)] {
@@ -2668,6 +2671,7 @@ mod tests {
 
     // N10 kinship↔cohesion coupling tests (FR-CIV-EMERGENCE-N10)
 
+    /// Covers FR-CIV-EMERGENCE-N10.
     #[test]
     fn n10_avg_faction_kinship_computes_zero_for_empty_world() {
         let mut sim = Simulation::new();
@@ -2676,6 +2680,7 @@ mod tests {
         assert_eq!(avg, 0.0, "empty world should have zero average kinship");
     }
 
+    /// Covers FR-CIV-EMERGENCE-N10.
     #[test]
     fn n10_avg_faction_kinship_computes_mean_correctly() {
         use civ_agents::Tie;
@@ -2700,6 +2705,7 @@ mod tests {
         assert_eq!(avg, 1.0, "one kinship tie of 1.0 should average to 1.0");
     }
 
+    /// Covers FR-CIV-EMERGENCE-N10.
     #[test]
     fn n10_kinship_coupling_boosts_cohesion_basic() {
         use civ_agents::Tie;
@@ -2734,6 +2740,7 @@ mod tests {
         );
     }
 
+    /// Covers FR-CIV-EMERGENCE-N10.
     #[test]
     fn n10_kinship_decay_factor_bounds() {
         // Verify the decay_factor formula stays in [0.93, 0.98].
@@ -2753,6 +2760,7 @@ mod tests {
 
     // N12 affinity↔diplomacy coupling tests (FR-CIV-EMERGENCE-N12)
 
+    /// Covers FR-CIV-EMERGENCE-N12.
     #[test]
     fn n12_avg_social_affinity_zero_for_empty_world() {
         let mut sim = Simulation::new();
@@ -2760,6 +2768,7 @@ mod tests {
         assert_eq!(avg_social_affinity(&sim.world), 0.0);
     }
 
+    /// Covers FR-CIV-EMERGENCE-N12.
     #[test]
     fn n12_avg_social_affinity_computes_mean_and_clamps() {
         use civ_agents::Tie;
@@ -2791,6 +2800,7 @@ mod tests {
         assert!(avg_social_affinity(&sim.world).abs() < 1e-6);
     }
 
+    /// Covers FR-CIV-EMERGENCE-N12.
     #[test]
     fn n12_affinity_bias_direction_and_bounds() {
         // Positive affinity raises threshold; negative lowers it; bounded [-5000, 5000].
@@ -2810,6 +2820,7 @@ mod tests {
     }
 
     #[ignore = "requires full sim state bootstrapping (factions, languages, ideologies)"]
+    /// Covers FR-CIV-EMERGENCE-N12.
     #[test]
     fn n12_high_affinity_keeps_factions_trading() {
         use civ_agents::Tie;

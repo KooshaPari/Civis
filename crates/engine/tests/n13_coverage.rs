@@ -17,6 +17,7 @@ fn language_tension_signal(distance: f32) -> DiplomacySignal {
     }
 }
 
+/// Covers FR-CIV-EMERGENCE-N13.
 #[test]
 fn n13a_high_language_distance_raises_tension() {
     let dist = language_distance([1.0, 0.0, 1.0, 0.0], [0.0, 1.0, 0.0, 1.0]);

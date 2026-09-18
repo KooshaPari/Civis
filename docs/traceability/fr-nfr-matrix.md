@@ -158,3 +158,25 @@ without actually verifying the requirement:
 | NFR-CIV-MAINT-001..006 | Workspace-wide CI quality gates (llvm-cov, jscpd, tach, ratchets). |
 | NFR-CIV-SCALE-902, NFR-CIV-SCALE-920 | Disk-footprint estimate / determinism across LOD residency history. |
 
+### Status audit 2026-09-18
+
+`NFR-CIV-PERF-003` and `NFR-CIV-PERF-005` were re-checked while the
+similarly-numbered **FR**-PERF-005 oracle was rebuilt. The two ID spaces are
+unrelated, and both NFR rows stay `code-only`:
+
+**NFR-CIV-PERF-003** (engine tick within budget at 200 civilians) cites
+`benches/tick_budget_200_civilians`, which does not exist. Its contract is a
+P99 tick-duration series, i.e. a `criterion` harness rather than a pass/fail
+assertion, so it does not belong in the headless oracle set.
+
+**NFR-CIV-PERF-005** (terrain mesh generation for a 256x256 chunk) cites
+`benches/terrain_mesh_gen_256`, which also does not exist. Its contract is a
+P99 mesh-generation time that requires GPU throughput measurement.
+
+Separately, the FR-PERF-005 oracles were rebuilt and now measure real paths.
+The `F3D0` wire encoder in `crates/protocol-3d` meets the 5 ms per-batch budget
+for a per-tick frame, but costs ~64 ms for a 10k-agent appearance frame. That
+gap is a regression-guarded test with an explicit `TODO` in
+`crates/protocol-3d/tests/fr_perf_005_frame3d_timing.rs`, so it can neither
+silently regress nor be mistaken for compliance.
+

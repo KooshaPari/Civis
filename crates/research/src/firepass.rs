@@ -121,7 +121,19 @@ impl LlmClient for FirepassKimiClient {
         serde_json::from_str(&content)
             .map_err(|_| LlmError::InvalidResponse("invalid tech-card json".into()))
     }
+}
 
+/// Generic text generation, inherent to the client rather than part of the
+/// [`LlmClient`] port.
+///
+/// `LlmClient` declares only `propose_tech_card`; this is the raw
+/// chat-completions path that `civ-ai`'s cloud provider wraps, and callers
+/// invoke it as `client.generate(...)`, so it belongs in an inherent impl.
+/// While it sat inside the trait impl it failed to compile — `E0449` (a `pub`
+/// qualifier is not permitted on a trait-impl item) and `E0407` (`generate` is
+/// not a member of `LlmClient`) — which made this crate's `firepass-kimi`
+/// feature, and therefore `civ-ai`'s `cloud` feature, unbuildable.
+impl FirepassKimiClient {
     /// Generate generic text through the same authenticated chat-completions
     /// path used by tech-card proposals.
     pub async fn generate(

@@ -17,8 +17,8 @@
 
 | Status | Count | % |
 |--------|------:|--:|
-| `COVERED` | 434 | 28.8 |
-| `IMPL-NO-TEST` | 91 | 6.0 |
+| `COVERED` | 449 | 29.8 |
+| `IMPL-NO-TEST` | 76 | 5.0 |
 | `SPEC-ONLY` | 768 | 51.0 |
 | `CODE-ONLY-no-spec` | 213 | 14.1 |
 | **Total** | **1506** | **100.0** |
@@ -88,8 +88,8 @@
 | FR-CIV-EMERGENCE-N13 | 1 | 1 | 0 | 0 | 0 |
 | FR-CIV-EMERGENCE-RELIGION | 2 | 0 | 0 | 2 | 0 |
 | FR-CIV-EMERGENT-MIGRATION | 1 | 0 | 0 | 0 | 1 |
-| FR-CIV-ENGINE-INT | 10 | 0 | 10 | 0 | 0 |
-| FR-CIV-ENGINE-REPLAY | 5 | 0 | 5 | 0 | 0 |
+| FR-CIV-ENGINE-INT | 10 | 9 | 1 | 0 | 0 |
+| FR-CIV-ENGINE-REPLAY | 5 | 5 | 0 | 0 | 0 |
 | FR-CIV-ERA | 1 | 0 | 0 | 0 | 1 |
 | FR-CIV-FAMINE | 1 | 0 | 0 | 0 | 1 |
 | FR-CIV-FEST | 1 | 0 | 0 | 0 | 1 |
@@ -186,7 +186,7 @@
 | FR-CIV-UX | 7 | 5 | 2 | 0 | 0 |
 | FR-CIV-VEHICLE | 26 | 0 | 0 | 26 | 0 |
 | FR-CIV-VERIFY | 10 | 0 | 0 | 10 | 0 |
-| FR-CIV-VOXEL | 18 | 16 | 2 | 0 | 0 |
+| FR-CIV-VOXEL | 18 | 17 | 1 | 0 | 0 |
 | FR-CIV-VOXEL-DIRTY | 2 | 0 | 0 | 2 | 0 |
 | FR-CIV-WAR | 15 | 4 | 0 | 11 | 0 |
 | FR-CIV-WAR-001-UNITS | 1 | 1 | 0 | 0 | 0 |
@@ -2334,7 +2334,7 @@
 - `NFR-S-06`
   - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2071, docs/traceability/index.md:1236, docs/traceability/nfr-s-06/nfr-s-06-spec.md:1
 
-## Implemented but untested IDs (91)
+## Implemented but untested IDs (76)
 
 - `FR-CIV-BEVY-013`
   - spec: docs/traceability/fr-3d-matrix.md:178, docs/traceability/full-traceability-matrix.md:307, docs/traceability/fr-civ-bevy-013/fr-civ-bevy-013-adr.md:1
@@ -2363,51 +2363,9 @@
 - `FR-CIV-ECON-002-JOULE`
   - spec: agileplus-specs/civ-021-recovered-requirements/spec.md:70, docs/traceability/fr-civ-econ-002-joule/fr-civ-econ-002-joule-adr.md:1, docs/traceability/fr-civ-econ-002-joule/fr-civ-econ-002-joule-adr.md:6
   - code: docs/guides/COPILOT_L3_AGENTS.md:92, docs/guides/COPILOT_L3_AGENTS.md:93, docs/guides/COPILOT_L3_AGENTS.md:474
-- `FR-CIV-ENGINE-INT-001`
-  - spec: docs/traceability/fr-civ-engine-int-001/fr-civ-engine-int-001-adr.md:1, docs/traceability/fr-civ-engine-int-001/fr-civ-engine-int-001-adr.md:6, docs/traceability/fr-civ-engine-int-001/fr-civ-engine-int-001-adr.md:11
-  - code: crates/engine/src/engine/engine_tests.rs:949
-- `FR-CIV-ENGINE-INT-002`
-  - spec: docs/traceability/fr-civ-engine-int-002/fr-civ-engine-int-002-adr.md:1, docs/traceability/fr-civ-engine-int-002/fr-civ-engine-int-002-adr.md:6, docs/traceability/fr-civ-engine-int-002/fr-civ-engine-int-002-adr.md:11
-  - code: crates/engine/src/engine/engine_tests.rs:1136
-- `FR-CIV-ENGINE-INT-003`
-  - spec: docs/traceability/fr-civ-engine-int-003/fr-civ-engine-int-003-adr.md:1, docs/traceability/fr-civ-engine-int-003/fr-civ-engine-int-003-adr.md:6, docs/traceability/fr-civ-engine-int-003/fr-civ-engine-int-003-adr.md:11
-  - code: crates/engine/src/engine/engine_tests.rs:1169
-- `FR-CIV-ENGINE-INT-005`
-  - spec: docs/traceability/fr-civ-engine-int-005/fr-civ-engine-int-005-adr.md:1, docs/traceability/fr-civ-engine-int-005/fr-civ-engine-int-005-adr.md:6, docs/traceability/fr-civ-engine-int-005/fr-civ-engine-int-005-adr.md:11
-  - code: crates/engine/src/engine/engine_tests.rs:1351
-- `FR-CIV-ENGINE-INT-010`
-  - spec: docs/traceability/fr-civ-engine-int-010/fr-civ-engine-int-010-adr.md:1, docs/traceability/fr-civ-engine-int-010/fr-civ-engine-int-010-adr.md:6, docs/traceability/fr-civ-engine-int-010/fr-civ-engine-int-010-adr.md:11
-  - code: crates/engine/src/engine/engine_tests.rs:77
-- `FR-CIV-ENGINE-INT-011`
-  - spec: docs/traceability/fr-civ-engine-int-011/fr-civ-engine-int-011-adr.md:1, docs/traceability/fr-civ-engine-int-011/fr-civ-engine-int-011-adr.md:6, docs/traceability/fr-civ-engine-int-011/fr-civ-engine-int-011-adr.md:11
-  - code: crates/engine/src/engine/engine_tests.rs:1185
 - `FR-CIV-ENGINE-INT-012`
   - spec: docs/traceability/fr-civ-engine-int-012/fr-civ-engine-int-012-adr.md:1, docs/traceability/fr-civ-engine-int-012/fr-civ-engine-int-012-adr.md:6, docs/traceability/fr-civ-engine-int-012/fr-civ-engine-int-012-adr.md:11
-  - code: crates/engine/src/engine/engine_tests.rs:1223
-- `FR-CIV-ENGINE-INT-013`
-  - spec: docs/traceability/fr-civ-engine-int-013/fr-civ-engine-int-013-adr.md:1, docs/traceability/fr-civ-engine-int-013/fr-civ-engine-int-013-adr.md:6, docs/traceability/fr-civ-engine-int-013/fr-civ-engine-int-013-adr.md:11
-  - code: crates/engine/src/engine/engine_tests.rs:1303
-- `FR-CIV-ENGINE-INT-014`
-  - spec: docs/traceability/fr-civ-engine-int-014/fr-civ-engine-int-014-adr.md:1, docs/traceability/fr-civ-engine-int-014/fr-civ-engine-int-014-adr.md:6, docs/traceability/fr-civ-engine-int-014/fr-civ-engine-int-014-adr.md:11
-  - code: crates/engine/src/engine/engine_tests.rs:1341
-- `FR-CIV-ENGINE-INT-015`
-  - spec: docs/traceability/fr-civ-engine-int-015/fr-civ-engine-int-015-adr.md:1, docs/traceability/fr-civ-engine-int-015/fr-civ-engine-int-015-adr.md:6, docs/traceability/fr-civ-engine-int-015/fr-civ-engine-int-015-adr.md:11
-  - code: crates/engine/src/engine/engine_tests.rs:1248
-- `FR-CIV-ENGINE-REPLAY-001`
-  - spec: docs/traceability/fr-civ-engine-replay-001/fr-civ-engine-replay-001-adr.md:1, docs/traceability/fr-civ-engine-replay-001/fr-civ-engine-replay-001-adr.md:6, docs/traceability/fr-civ-engine-replay-001/fr-civ-engine-replay-001-adr.md:11
-  - code: crates/engine/src/engine/engine_tests.rs:1520
-- `FR-CIV-ENGINE-REPLAY-002`
-  - spec: docs/traceability/fr-civ-engine-replay-002/fr-civ-engine-replay-002-adr.md:1, docs/traceability/fr-civ-engine-replay-002/fr-civ-engine-replay-002-adr.md:6, docs/traceability/fr-civ-engine-replay-002/fr-civ-engine-replay-002-adr.md:11
-  - code: crates/engine/src/engine/engine_tests.rs:1545
-- `FR-CIV-ENGINE-REPLAY-003`
-  - spec: docs/traceability/fr-civ-engine-replay-003/fr-civ-engine-replay-003-adr.md:1, docs/traceability/fr-civ-engine-replay-003/fr-civ-engine-replay-003-adr.md:6, docs/traceability/fr-civ-engine-replay-003/fr-civ-engine-replay-003-adr.md:11
-  - code: crates/engine/src/engine/engine_tests.rs:1680
-- `FR-CIV-ENGINE-REPLAY-004`
-  - spec: docs/traceability/fr-civ-engine-replay-004/fr-civ-engine-replay-004-adr.md:1, docs/traceability/fr-civ-engine-replay-004/fr-civ-engine-replay-004-adr.md:6, docs/traceability/fr-civ-engine-replay-004/fr-civ-engine-replay-004-adr.md:11
-  - code: crates/engine/src/engine/engine_tests.rs:1696
-- `FR-CIV-ENGINE-REPLAY-005`
-  - spec: docs/traceability/fr-civ-engine-replay-005/fr-civ-engine-replay-005-adr.md:1, docs/traceability/fr-civ-engine-replay-005/fr-civ-engine-replay-005-adr.md:6, docs/traceability/fr-civ-engine-replay-005/fr-civ-engine-replay-005-adr.md:11
-  - code: crates/engine/src/engine/engine_tests.rs:1746
+  - code: crates/engine/src/engine/engine_tests.rs:1233
 - `FR-CIV-GEO-001`
   - spec: docs/specs/CIV-0300-rts-ui-ux-spec.md:2024, docs/traceability/fr-civ-geo-001/fr-civ-geo-001-adr.md:1, docs/traceability/fr-civ-geo-001/fr-civ-geo-001-adr.md:6
   - code: docs/reference/FR_TRACKER.md:22, docs/reports/STATUS_REPORT.md:95
@@ -2434,13 +2392,13 @@
   - code: crates/agents/src/cluster.rs:76
 - `FR-CIV-PLANET-010`
   - spec: agileplus-specs/civ-021-recovered-requirements/spec.md:160, agileplus-specs/civ-021-recovered-requirements/spec.md:166, docs/traceability/fr-civ-planet-010/fr-civ-planet-010-adr.md:1
-  - code: crates/engine/src/engine/engine_tests.rs:966, crates/engine/src/engine.rs:3381, crates/server/src/jsonrpc.rs:515
+  - code: crates/engine/src/engine/engine_tests.rs:970, crates/engine/src/engine.rs:3381, crates/server/src/jsonrpc.rs:515
 - `FR-CIV-PLANET-020`
   - spec: agileplus-specs/civ-021-recovered-requirements/spec.md:85, docs/traceability/fr-civ-planet-020/fr-civ-planet-020-adr.md:1, docs/traceability/fr-civ-planet-020/fr-civ-planet-020-adr.md:6
   - code: crates/engine/src/climate.rs:16, crates/engine/src/climate.rs:35, crates/engine/src/climate.rs:48
 - `FR-CIV-PLANET-030`
   - spec: agileplus-specs/civ-021-recovered-requirements/spec.md:91, docs/traceability/fr-civ-planet-030/fr-civ-planet-030-adr.md:1, docs/traceability/fr-civ-planet-030/fr-civ-planet-030-adr.md:6
-  - code: crates/engine/src/climate.rs:35, crates/engine/src/engine/engine_tests.rs:1816, crates/engine/src/engine.rs:813
+  - code: crates/engine/src/climate.rs:35, crates/engine/src/engine/engine_tests.rs:1846, crates/engine/src/engine.rs:813
 - `FR-CIV-PROTO3D-009-`
   - spec: docs/specs/gap-audit.md:306, docs/traceability/fr-3d-matrix.md:229
   - code: docs/development-guide/p-w1-kickoff.md:116
@@ -2449,7 +2407,7 @@
   - code: crates/agents/src/psyche.rs:312, crates/agents/src/psyche.rs:424, crates/engine/src/dormant_phases.rs:3
 - `FR-CIV-PSYCHE-911`
   - spec: docs/specs/build-green/engine_missing_symbols.md:13, docs/specs/requirements/FR-CIV-PSYCHE.md:14, docs/traceability/fr-civ-psyche-911/fr-civ-psyche-911-adr.md:1
-  - code: crates/agents/src/psyche.rs:491, crates/engine/src/engine/ai_decision.rs:57, crates/engine/src/engine/engine_tests.rs:451
+  - code: crates/agents/src/psyche.rs:491, crates/engine/src/engine/ai_decision.rs:57, crates/engine/src/engine/engine_tests.rs:453
 - `FR-CIV-REL-001`
   - spec: docs/traceability/fr-emergence-matrix.md:76
   - code: crates/engine/src/dormant_phases.rs:2, crates/engine/src/dormant_phases.rs:25, crates/engine/src/dormant_phases.rs:29
@@ -2482,7 +2440,7 @@
   - code: PLAN.md:149, PLAN.md:150
 - `FR-CIV-TACTICS-025-`
   - spec: docs/traceability/fr-3d-matrix.md:123, docs/traceability/fr-3d-matrix.md:124, docs/traceability/fr-3d-matrix.md:125
-  - code: crates/engine/src/engine/engine_tests.rs:1572, crates/engine/src/engine/engine_tests.rs:1594, crates/engine/src/engine/engine_tests.rs:1618
+  - code: crates/engine/src/engine/engine_tests.rs:1596, crates/engine/src/engine/engine_tests.rs:1618, crates/engine/src/engine/engine_tests.rs:1642
 - `FR-CIV-TACTICS-032`
   - spec: docs/traceability/fr-3d-matrix.md:119, docs/traceability/full-traceability-matrix.md:227, docs/traceability/fr-civ-tactics-032/fr-civ-tactics-032-adr.md:1
   - code: docs/development-guide/p-w1-kickoff.md:31
@@ -2512,10 +2470,7 @@
   - code: crates/server/src/jsonrpc.rs:62, docs/development-guide/fr-godot-attach.md:15
 - `FR-CIV-VOXEL-006`
   - spec: docs/traceability/fr-civ-voxel-006/fr-civ-voxel-006-adr.md:1, docs/traceability/fr-civ-voxel-006/fr-civ-voxel-006-adr.md:6, docs/traceability/fr-civ-voxel-006/fr-civ-voxel-006-adr.md:11
-  - code: crates/engine/src/engine/engine_tests.rs:1375
-- `FR-CIV-VOXEL-007`
-  - spec: docs/traceability/fr-civ-voxel-007/fr-civ-voxel-007-adr.md:1, docs/traceability/fr-civ-voxel-007/fr-civ-voxel-007-adr.md:6, docs/traceability/fr-civ-voxel-007/fr-civ-voxel-007-adr.md:11
-  - code: crates/engine/src/engine/engine_tests.rs:1425
+  - code: crates/engine/src/engine/engine_tests.rs:1393
 - `FR-CIV-WEB-000`
   - spec: docs/traceability/fr-civ-web-000/fr-civ-web-000-adr.md:1, docs/traceability/fr-civ-web-000/fr-civ-web-000-adr.md:6, docs/traceability/fr-civ-web-000/fr-civ-web-000-adr.md:11
   - code: docs/development-guide/fr-web-spectator.md:3, docs/development-guide/fr-web-spectator.md:29, docs/development-guide/pr-296-body.md:20
@@ -2617,7 +2572,7 @@
 - `FR-ASSET-PIPELINE-002`
   - code: crates/asset-pipeline/Cargo.toml:8, crates/asset-pipeline/src/bin/svg_export.rs:20, crates/asset-pipeline/src/error.rs:9
 - `FR-CIV-014`
-  - code: crates/engine/src/engine/engine_tests.rs:3123
+  - code: crates/engine/src/engine/engine_tests.rs:3153
   - tests: crates/engine/src/emergence.rs:1625, crates/engine/src/save.rs:335, crates/engine/src/save.rs:375
 - `FR-CIV-ACCESS-010`
   - code: docs/adr/ADR-021-accessibility-and-l10n-strategy.md:47
@@ -2743,11 +2698,11 @@
 - `FR-CIV-GAME-003`
   - code: clients/bevy-ref/src/era_hud.rs:2, crates/engine/src/era.rs:1
 - `FR-CIV-GENETICS-SEED-001`
-  - code: crates/engine/src/engine/engine_tests.rs:2907
+  - code: crates/engine/src/engine/engine_tests.rs:2937
 - `FR-CIV-GENETICS-SEED-002`
-  - code: crates/engine/src/engine/engine_tests.rs:2957
+  - code: crates/engine/src/engine/engine_tests.rs:2987
 - `FR-CIV-GENETICS-SEED-003`
-  - code: crates/engine/src/engine/engine_tests.rs:3003
+  - code: crates/engine/src/engine/engine_tests.rs:3033
 - `FR-CIV-GODTOOL-001`
   - code: crates/civis-mcp/src/server.rs:148
 - `FR-CIV-GOV-003`
@@ -2895,7 +2850,7 @@
 - `FR-LANGUAGE-001`
   - code: crates/engine/src/engine/culture_phases.rs:230, crates/engine/src/engine.rs:169, crates/engine/src/engine.rs:828
 - `FR-MUSIC-001`
-  - tests: crates/engine/src/engine/engine_tests.rs:3698
+  - tests: crates/engine/src/engine/engine_tests.rs:3728
 - `FR-NFR-C-01`
   - tests: crates/engine/tests/fr_nfr_c_01.rs:1, crates/engine/tests/fr_nfr_c_01.rs:6, crates/engine/tests/fr_nfr_c_01.rs:10
 - `FR-NFR-C-02`

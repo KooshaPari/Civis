@@ -74,6 +74,8 @@ mod tests {
         );
     }
 
+    /// Covers FR-CIV-ENGINE-INT-010.
+    ///
     /// FR-CIV-ENGINE-INT-010 — startup spawns 128 civilians across four factions.
     #[test]
     fn startup_spawns_128_civilians() {
@@ -946,6 +948,8 @@ mod tests {
         assert_eq!(sim1.state.population, sim2.state.population);
     }
 
+    /// Covers FR-CIV-ENGINE-INT-001.
+    ///
     /// FR-CIV-ENGINE-INT-001 — climate is recomputed every tick and matches
     /// `compute_climate` directly.
     #[test]
@@ -1133,6 +1137,8 @@ mod tests {
         );
     }
 
+    /// Covers FR-CIV-ENGINE-INT-002.
+    ///
     /// FR-CIV-ENGINE-INT-002 — queued damage drains and voxel chunk count
     /// decreases as expected.
     #[test]
@@ -1166,6 +1172,8 @@ mod tests {
         assert!(sim.pending_damage.is_empty());
     }
 
+    /// Covers FR-CIV-ENGINE-INT-003.
+    ///
     /// FR-CIV-ENGINE-INT-003 — compact runs every 64 ticks and the uniform
     /// chunk count is non-decreasing across the cadence.
     #[test]
@@ -1182,6 +1190,8 @@ mod tests {
         }
     }
 
+    /// Covers FR-CIV-ENGINE-INT-011.
+    ///
     /// FR-CIV-ENGINE-INT-011 — phase_buildings allocates over time when signals are high.
     #[test]
     fn phase_buildings_allocates_over_time_when_signals_are_high() {
@@ -1245,6 +1255,8 @@ mod tests {
         assert!(after > before);
     }
 
+    /// Covers FR-CIV-ENGINE-INT-015.
+    ///
     /// FR-CIV-ENGINE-INT-015 — Cold-tier wardrobe diffusion only runs on cadence boundaries.
     #[test]
     fn cold_tier_diffusion_only_on_cadence_boundaries() {
@@ -1300,6 +1312,8 @@ mod tests {
         }
     }
 
+    /// Covers FR-CIV-ENGINE-INT-013.
+    ///
     /// FR-CIV-ENGINE-INT-013 — replay determinism still holds across 200 ticks
     /// with all phases on.
     #[test]
@@ -1338,6 +1352,8 @@ mod tests {
         assert_eq!(sim1.last_cohort_stats(), sim2.last_cohort_stats());
     }
 
+    /// Covers FR-CIV-ENGINE-INT-014.
+    ///
     /// FR-CIV-ENGINE-INT-014 — last_cohort_stats reflects the population.
     #[test]
     fn last_cohort_stats_reflects_population() {
@@ -1348,6 +1364,8 @@ mod tests {
         assert_eq!(stats.total_civilians as usize, count_civilians(&sim.world));
     }
 
+    /// Covers FR-CIV-ENGINE-INT-005.
+    ///
     /// FR-CIV-ENGINE-INT-005 — `is_daytime` returns sensible day/night across
     /// one full day-length cycle.
     #[test]
@@ -1422,6 +1440,8 @@ mod tests {
         assert!(sim.last_tick_voxel_events().is_empty());
     }
 
+    /// Covers FR-CIV-VOXEL-007.
+    ///
     /// FR-CIV-VOXEL-007 — voxel state is part of the deterministic simulation:
     /// two sims with identical seed + identical voxel-write sequences emit
     /// bit-identical voxel events.
@@ -1517,6 +1537,8 @@ mod tests {
         assert_eq!(sim1.hash_chain_root(), sim2.hash_chain_root());
     }
 
+    /// Covers FR-CIV-ENGINE-REPLAY-001.
+    ///
     /// FR-CIV-ENGINE-REPLAY-001 — ReplayLog round-trips through save/load.
     #[test]
     fn replay_log_round_trips_through_save_load() {
@@ -1542,6 +1564,8 @@ mod tests {
         assert_eq!(loaded, log);
     }
 
+    /// Covers FR-CIV-ENGINE-REPLAY-002.
+    ///
     /// FR-CIV-ENGINE-REPLAY-002 — Simulation tick produces a ReplayEvent::Tick.
     #[test]
     fn simulation_tick_produces_replay_tick_event() {
@@ -1677,6 +1701,8 @@ mod tests {
         }));
     }
 
+    /// Covers FR-CIV-ENGINE-REPLAY-003.
+    ///
     /// FR-CIV-ENGINE-REPLAY-003 — push_damage records a Damage event.
     #[test]
     fn push_damage_records_damage_event() {
@@ -1693,6 +1719,8 @@ mod tests {
         ));
     }
 
+    /// Covers FR-CIV-ENGINE-REPLAY-004.
+    ///
     /// FR-CIV-ENGINE-REPLAY-004 — replay reproduces final voxel chunk count and tick.
     #[test]
     fn replay_reproduces_final_voxel_chunk_count_and_tick() {
@@ -1743,6 +1771,8 @@ mod tests {
         assert_eq!(loaded.state.tick, expected_tick);
     }
 
+    /// Covers FR-CIV-ENGINE-REPLAY-005.
+    ///
     /// FR-CIV-ENGINE-REPLAY-005 — identical replay logs converge to identical voxel state.
     #[test]
     fn replay_logs_converge_to_identical_voxel_state() {

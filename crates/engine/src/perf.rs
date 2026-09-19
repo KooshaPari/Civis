@@ -234,19 +234,28 @@ mod tests {
         // Warm up code paths.
         let _ = serde_json::to_string(&events).expect("warmup");
 
-        // Measure: serialize the full batch 100 times. The whole 100-batch run
-        // is timed once and compared against 100x the per-batch budget, so
-        // per-iteration `Instant::now()` overhead cannot inflate the result.
-        let start = std::time::Instant::now();
-        for _ in 0..100 {
-            let _ = serde_json::to_string(&events).expect("serialize event batch");
+        // Wall-clock and therefore load-sensitive: a full workspace run puts
+        // hundreds of test binaries on the machine at once, and a single
+        // timed stretch absorbs that contention. Observed 8.6 ms/batch under a
+        // 391-binary run against a ~86 us true cost. Take the best of several
+        // rounds, timing each round as a whole, so the figure measures the
+        // operation rather than ambient load and per-iteration `Instant::now()`
+        // overhead cannot inflate it.
+        const ROUNDS: u32 = 5;
+        const ITERS: u32 = 100;
+        let mut best_us = u128::MAX;
+        for _ in 0..ROUNDS {
+            let start = std::time::Instant::now();
+            for _ in 0..ITERS {
+                let _ = serde_json::to_string(&events).expect("serialize event batch");
+            }
+            best_us = best_us.min(start.elapsed().as_micros() / u128::from(ITERS));
         }
-        let elapsed = start.elapsed();
-        let per_batch_us = elapsed.as_micros() / 100;
 
         assert!(
-            elapsed.as_micros() < 100 * 5_000,
-            "event batch serialization took {per_batch_us}us per batch, exceeds 5ms budget"
+            best_us < 5_000,
+            "event batch serialization took {best_us}us per batch in the best of \
+             {ROUNDS} rounds, exceeds 5ms budget"
         );
     }
 

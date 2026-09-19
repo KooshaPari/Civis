@@ -1,6 +1,7 @@
 //! Tests for FR-NFR-CIV-LEGENDS-PERF-01
 //!
 //! Epic: auto-generated
+//! Stub: TDD-red — replace with real FR assertions
 //! Upgraded from stub to real assertions.
 //!
 //! This test file verifies FR FR-NFR-CIV-LEGENDS-PERF-01.

@@ -219,6 +219,35 @@ def is_test_path(rel: str) -> bool:
     return False
 
 
+# Placeholder/stub test files carry one of these markers in their first 30
+# lines. They are pre-existing shell tests that exercise a generic type (e.g.
+# `WorldState::default()`) without asserting anything FR-specific, so the
+# audit must not count them as real coverage. Detection is keyed off a string
+# the bulk-marker script inserts, plus the legacy `Epic: auto-generated`
+# header which the previous batch used on every placeholder.
+_STUB_HEADER_CACHE: dict[str, bool] = {}
+_STUB_MARKERS = ("Stub: TDD-red", "Epic: auto-generated")
+
+
+def is_stub_test(rel: str) -> bool:
+    """Return True iff the file at *rel* looks like a placeholder test."""
+    if rel in _STUB_HEADER_CACHE:
+        return _STUB_HEADER_CACHE[rel]
+    rel_p = rel.replace("\\", "/")
+    if not is_test_path(rel_p):
+        _STUB_HEADER_CACHE[rel] = False
+        return False
+    p = WORK / rel_p
+    try:
+        head = "\n".join(p.read_text(encoding="utf-8", errors="replace").splitlines()[:30])
+    except OSError:
+        _STUB_HEADER_CACHE[rel] = False
+        return False
+    match = any(m in head for m in _STUB_MARKERS)
+    _STUB_HEADER_CACHE[rel] = match
+    return match
+
+
 def classify(rel: str) -> str:
     """Return one of: 'spec' | 'meta' | 'trace' | 'test' | 'code'."""
     rel_p = rel.replace("\\", "/")
@@ -266,6 +295,7 @@ def main():
         "in_traceability": [],
         "in_code": [],
         "in_tests": [],
+        "in_stub_tests": [],
     })
 
     max_refs = 8  # cap per category
@@ -318,8 +348,12 @@ def main():
             is_cover = bool(COVERS_RE.match(lines[line_no - 1])) if 0 < line_no <= len(lines) else False
             is_test_ref = kind == "test" or in_cfg_test[line_no] or (is_cover and has_cfg_test_attr)
             if is_test_ref:
-                if ref not in rec["in_tests"] and len(rec["in_tests"]) < max_refs:
-                    rec["in_tests"].append(ref)
+                if is_stub_test(rel):
+                    bucket = "in_stub_tests"
+                else:
+                    bucket = "in_tests"
+                if ref not in rec[bucket] and len(rec[bucket]) < max_refs:
+                    rec[bucket].append(ref)
                 # A `#[cfg(test)]` module living inside a source file IS the
                 # implementation for that crate. Without this, an ID whose only
                 # reference is a test in the crate's own `src/lib.rs` gets a

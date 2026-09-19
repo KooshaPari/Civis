@@ -1,6 +1,7 @@
 //! Tests for FR-CIV-PERF-006
 //!
 //! Epic: auto-generated
+//! Stub: TDD-red — replace with real FR assertions
 //! Upgraded from stub to real assertions.
 //!
 //! This test file verifies FR FR-CIV-PERF-006.

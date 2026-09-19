@@ -1,6 +1,7 @@
 //! Tests for FR-CIV-QOL-180
 //!
 //! Epic: auto-generated
+//! Stub: TDD-red — replace with real FR assertions
 //! Upgraded from stub to real assertions.
 //!
 //! This test file verifies FR FR-CIV-QOL-180.

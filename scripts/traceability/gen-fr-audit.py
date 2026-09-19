@@ -12,8 +12,12 @@ Outputs:
     docs/audits/fr-coverage-audit-<date>.md
 
 Classification:
-    COVERED          — spec/trace reference + code reference + test reference
-    TEST-NO-CODE-REF — spec/trace reference + test reference, no code reference
+    COVERED          — spec/trace reference + code reference + real test reference
+    STUB-TEST-ONLY   — spec/trace reference + test exists but the test is a
+                        placeholder (Stub: TDD-red marker or legacy
+                        'Epic: auto-generated' header) and does not assert
+                        anything FR-specific
+    TEST-NO-CODE-REF — spec/trace reference + real test reference, no code ref
     IMPL-NO-TEST     — spec/trace reference + code reference, no test reference
     SPEC-ONLY        — spec/trace reference only, no code reference
     CODE-ONLY-no-spec — code reference only, no spec/trace reference
@@ -33,17 +37,24 @@ OUT_MD = ROOT / "docs" / "audits" / f"fr-coverage-audit-{date.today().isoformat(
 
 STATUS_ORDER = [
     "COVERED",
+    "STUB-TEST-ONLY",
     "TEST-NO-CODE-REF",
     "IMPL-NO-TEST",
     "SPEC-ONLY",
     "CODE-ONLY-no-spec",
 ]
 STATUS_LEGEND = {
-    "COVERED": "spec/trace + code + test all present",
+    "COVERED": "spec/trace + code + real test all present",
+    "STUB-TEST-ONLY": (
+        "spec/trace + code present, but the only test reference is a "
+        "placeholder (TDD-red stub or legacy 'Epic: auto-generated'). The "
+        "test file exists but does not exercise anything FR-specific, so "
+        "treat coverage as unverified. Fan-out agents target this bucket."
+    ),
     "TEST-NO-CODE-REF": (
-        "spec/trace + test present, but no ID-tagged code reference. A test "
-        "exercises the requirement yet no source file carries the ID, so the "
-        "implementation cannot be located from the ID alone."
+        "spec/trace + real test present, but no ID-tagged code reference. A "
+        "test exercises the requirement yet no source file carries the ID, so "
+        "the implementation cannot be located from the ID alone."
     ),
     "IMPL-NO-TEST": "spec/trace + code present, no test reference",
     "SPEC-ONLY": "spec/trace present, no implementing code found",
@@ -70,15 +81,28 @@ def classify(row: dict) -> str:
     has_spec = bool(row.get("in_specs") or row.get("in_traceability") or row.get("in_func_req"))
     has_code = bool(row.get("in_code"))
     has_test = bool(row.get("in_tests"))
+    has_stub = bool(row.get("in_stub_tests"))
 
     if has_spec and has_code and has_test:
         return "COVERED"
+    # STUB-TEST-ONLY: an ID has a spec/code and a stub test, but no real test.
+    # This is preferred over TEST-NO-CODE-REF because it tells the agent the
+    # stub file already exists and is the obvious place to add real
+    # assertions. A spec + code + stub-only test is essentially "missing
+    # coverage" and surfaces a concrete work item.
+    if has_spec and has_code and has_stub and not has_test:
+        return "STUB-TEST-ONLY"
     if has_spec and has_code:
         return "IMPL-NO-TEST"
     if has_spec and has_test:
         # A test exists but no source file carries the ID. Keep this visible
         # rather than folding it into SPEC-ONLY, which would hide the test.
         return "TEST-NO-CODE-REF"
+    if has_spec and has_stub:
+        # No real test, only a placeholder. Bucket as STUB-TEST-ONLY so the
+        # agent can find the stub file. Has no impl, but the stub file gives
+        # the work item a foothold.
+        return "STUB-TEST-ONLY"
     if has_spec:
         return "SPEC-ONLY"
     return "CODE-ONLY-no-spec"
@@ -118,6 +142,7 @@ def main() -> int:
             "spec_refs": spec_refs,
             "code_refs": item.get("in_code", []),
             "test_refs": item.get("in_tests", []),
+            "stub_test_refs": item.get("in_stub_tests", []),
         })
 
         totals[status] += 1
@@ -205,6 +230,10 @@ def main() -> int:
     list_ids(
         "TEST-NO-CODE-REF",
         "Tested IDs with no ID-tagged code (add a code reference)",
+    )
+    list_ids(
+        "STUB-TEST-ONLY",
+        "Stub-test IDs (replace placeholder tests with real FR assertions)",
     )
     list_ids("IMPL-NO-TEST", "Implemented but untested IDs")
     list_ids("CODE-ONLY-no-spec", "Code-only IDs (missing spec/traceability)")

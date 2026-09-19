@@ -1,6 +1,7 @@
 //! Tests for FR-PERF-005
 //!
 //! Epic: auto-generated
+//! Stub: TDD-red — replace with real FR assertions
 //! Upgraded from stub to real assertions.
 //!
 //! This test file verifies FR FR-PERF-005.

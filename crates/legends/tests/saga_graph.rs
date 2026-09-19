@@ -196,6 +196,128 @@ fn sig_05_prune_removes_provisional_noise_keeps_promoted() {
     assert!(g.entity(transient).is_none(), "decayed provisional pruned");
 }
 
+/// Covers: NFR-SCALE-02
+#[test]
+fn nfr_scale_02_node_budget_is_enforced_and_keeps_promoted_legends() {
+    let mut c = cfg();
+    c.max_graph_nodes = 10;
+    // The floor sweep is a no-op here so the assertions isolate the hard cap.
+    c.prune_floor = 0.0;
+    let mut g = SagaGraph::new(c);
+
+    // One high-magnitude act promotes the hero (promotion_threshold is 0.5).
+    g.ingest(ev(
+        0,
+        EventKind::WarEnded,
+        SourceCrate::Tactics,
+        1.0,
+        1,
+        Role::Leader,
+    ));
+    let hero = g
+        .entity_for_sim(SourceCrate::Tactics, SimRuntimeId(1))
+        .expect("hero resolved");
+    assert!(g.entity(hero).unwrap().promoted, "hero promoted");
+
+    // Flood with low-magnitude, distinct participants so the node count
+    // exceeds the budget many times over.
+    for i in 0..40u64 {
+        g.ingest(ev(
+            i + 1,
+            EventKind::Birth,
+            SourceCrate::Agents,
+            0.05,
+            100 + i,
+            Role::Victim,
+        ));
+    }
+    assert!(
+        g.node_count() > g.config.max_graph_nodes,
+        "graph must exceed the budget before prune"
+    );
+
+    let evicted = g.prune();
+
+    assert!(evicted > 0, "enforcing the cap must evict nodes");
+    assert!(
+        g.node_count() <= g.config.max_graph_nodes,
+        "node count {} must respect cap {}",
+        g.node_count(),
+        g.config.max_graph_nodes
+    );
+    assert!(g.entity(hero).is_some(), "promoted legend survives eviction");
+    // Side indices stay consistent: no dangling entity resolution.
+    assert!(
+        g.entity_for_sim(SourceCrate::Tactics, SimRuntimeId(1)) == Some(hero),
+        "promoted entity remains resolvable after eviction"
+    );
+}
+
+/// Covers: NFR-SCALE-02
+#[test]
+fn nfr_scale_02_eviction_spares_entities_reaching_a_promoted_legend() {
+    let mut c = cfg();
+    c.max_graph_nodes = 12;
+    c.prune_floor = 0.0; // isolate the hard cap from the floor sweep
+    let mut g = SagaGraph::new(c);
+
+    // Promoted settlement.
+    g.ingest(ev(
+        0,
+        EventKind::SettlementFounded,
+        SourceCrate::Protocol3d,
+        1.0,
+        50,
+        Role::Founder,
+    ));
+    let settlement = g
+        .entity_for_sim(SourceCrate::Protocol3d, SimRuntimeId(50))
+        .expect("settlement resolved");
+    assert!(g.entity(settlement).unwrap().promoted, "settlement promoted");
+
+    // A non-promoted agent that becomes part of the settlement's spine. §5.3
+    // says an entity reaching a promoted entity is never pruned.
+    g.ingest(ev(
+        1,
+        EventKind::Birth,
+        SourceCrate::Agents,
+        0.01,
+        7,
+        Role::Witness,
+    ));
+    let kinsman = g
+        .entity_for_sim(SourceCrate::Agents, SimRuntimeId(7))
+        .expect("kinsman resolved");
+    assert!(!g.entity(kinsman).unwrap().promoted, "kinsman not promoted");
+    g.link_entity_edge(kinsman, settlement, LegendEdge::MemberOf);
+
+    // Flood with unrelated marginals to blow past the budget.
+    for i in 0..40u64 {
+        g.ingest(ev(
+            i + 2,
+            EventKind::Birth,
+            SourceCrate::Agents,
+            0.05,
+            200 + i,
+            Role::Victim,
+        ));
+    }
+
+    g.prune();
+
+    assert!(
+        g.node_count() <= g.config.max_graph_nodes,
+        "node count {} must respect cap {}",
+        g.node_count(),
+        g.config.max_graph_nodes
+    );
+    assert!(g.entity(settlement).is_some(), "promoted settlement survives");
+    assert!(
+        g.entity(kinsman).is_some(),
+        "entity reaching a promoted legend survives eviction"
+    );
+}
+
 #[test]
 fn causal_06_chain_finds_shared_participant_cause() {
     // AC-Q-1: a regicide (shares the king) is returned as cause of the succession war.

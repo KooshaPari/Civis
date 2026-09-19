@@ -345,7 +345,102 @@ impl SagaGraph {
         if pruned > 0 {
             tracing::debug!("legends: pruned {pruned} provisional entities this epoch");
         }
-        pruned
+
+        // The provisional sweep only removes entities that decayed to the
+        // `prune_floor`. A long run with steady activity can still accumulate
+        // far more nodes than the budget allows, so enforce the cap here.
+        pruned + self.enforce_node_budget()
+    }
+
+    /// Evict the cheapest nodes until the graph fits `max_graph_nodes`
+    /// (NFR-SCALE-02). Lowest-significance non-promoted entities go first,
+    /// then oldest events. Promoted entities are never evicted: promotion is
+    /// exactly the signal that an entity is worth remembering. Returns the
+    /// number of nodes evicted.
+    fn enforce_node_budget(&mut self) -> usize {
+        let cap = self.config.max_graph_nodes;
+        if cap == 0 || self.g.node_count() <= cap {
+            return 0;
+        }
+        let mut evicted = 0;
+
+        // 1. Non-promoted entities, ascending significance (cheapest first).
+        let mut ents: Vec<(f32, LegendEntityId, NodeIndex)> = self
+            .entity_index
+            .iter()
+            .filter_map(|(id, idx)| match &self.g[*idx] {
+                LegendNode::Entity(e) if !e.promoted => Some((e.significance, *id, *idx)),
+                _ => None,
+            })
+            .collect();
+        ents.sort_by(|a, b| a.0.total_cmp(&b.0));
+        for (sig, id, idx) in ents {
+            if self.g.node_count() <= cap {
+                break;
+            }
+            // §5.3: an entity that reaches a promoted entity is a keeper, so
+            // the budget is met from events instead when only keepers remain.
+            if self.touches_promoted(idx) {
+                continue;
+            }
+            self.g.remove_node(idx);
+            self.entity_index.remove(&id);
+            self.significant_set.remove(&(OrderedF32(sig), id));
+            self.sim_resolution.retain(|_, v| *v != id);
+            evicted += 1;
+        }
+
+        // 2. Oldest events, if evicting entities alone was not enough.
+        let mut evs: Vec<(u64, LegendEventId, NodeIndex)> = self
+            .event_index
+            .iter()
+            .filter_map(|(id, idx)| match &self.g[*idx] {
+                LegendNode::Event(e) => Some((e.id.0, *id, *idx)),
+                _ => None,
+            })
+            .collect();
+        evs.sort_by_key(|(seq, _, _)| *seq);
+        for (_seq, id, idx) in evs {
+            if self.g.node_count() <= cap {
+                break;
+            }
+            let (epoch, region) = match &self.g[idx] {
+                LegendNode::Event(e) => (e.epoch, e.region),
+                _ => continue,
+            };
+            self.g.remove_node(idx);
+            self.event_index.remove(&id);
+            let epoch_empty = match self.epoch_buckets.get_mut(&epoch) {
+                Some(v) => {
+                    v.retain(|e| *e != id);
+                    v.is_empty()
+                }
+                None => false,
+            };
+            if epoch_empty {
+                self.epoch_buckets.remove(&epoch);
+            }
+            if let Some(r) = region {
+                let region_empty = match self.region_buckets.get_mut(&r) {
+                    Some(v) => {
+                        v.retain(|e| *e != id);
+                        v.is_empty()
+                    }
+                    None => false,
+                };
+                if region_empty {
+                    self.region_buckets.remove(&r);
+                }
+            }
+            evicted += 1;
+        }
+
+        if evicted > 0 {
+            tracing::debug!(
+                "legends: evicted {evicted} nodes to respect max_graph_nodes={cap}"
+            );
+        }
+        evicted
     }
 
     /// True if any neighbor (1 hop) of `idx` is a promoted entity.

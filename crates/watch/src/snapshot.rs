@@ -895,7 +895,7 @@ pub(crate) fn adjust_resource(
 }
 
 pub(crate) fn adjust_treasury(
-    treasury: &mut std::collections::HashMap<u32, civ_engine::Fixed>,
+    treasury: &mut std::collections::BTreeMap<u32, civ_engine::Fixed>,
     faction_id: u32,
     delta: f64,
 ) {
@@ -1363,8 +1363,8 @@ mod tests {
 
     #[test]
     fn adjust_treasury_updates_present_faction_and_ignores_absent() {
-        use std::collections::HashMap;
-        let mut treasury: HashMap<u32, civ_engine::Fixed> = HashMap::new();
+        use std::collections::BTreeMap;
+        let mut treasury: BTreeMap<u32, civ_engine::Fixed> = BTreeMap::new();
         treasury.insert(1, fixed_from_f64(100.0));
 
         adjust_treasury(&mut treasury, 1, 25.0);

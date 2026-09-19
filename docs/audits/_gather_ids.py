@@ -145,16 +145,22 @@ DOC_DIR_PREFIXES = (
 
 # IDs must end with digits, with at least one FR-/NFR- <EPIC> <NUMBER> shape.
 #
-# The trailing suffix group is `(?:-[A-Z]+\d*)*`: a continuation segment must
-# start with an UPPERCASE letter. The earlier `[-A-Z]+` form also accepted a
-# bare trailing hyphen, so prose like `FR-CIV-TACTICS-025-int` or
-# `FR-CIV-0100-int1..int4` was captured as a phantom ID `FR-CIV-TACTICS-025-`
-# that duplicated the real `FR-CIV-TACTICS-025`. Requiring `-[A-Z]` ends the
-# match at the real ID and lets the lowercase sub-label fall away.
+# The trailing suffix group is `(?:-?[A-Z]+\d*)*`. Two constraints shape it:
+#
+#  * The hyphen is optional so IDs whose segment ends in digit-then-letters
+#    still match: `FR-CIV-PROTO3D` and `FR-CIV-3D`. Requiring `-[A-Z]` broke
+#    those, silently dropping two real IDs that are referenced by their own
+#    tests and `/// Covers FR-CIV-PROTO3D` markers.
+#  * `[A-Z]+` (not `[-A-Z]+`) forbids a bare trailing hyphen. The earlier
+#    `[-A-Z]+` form consumed the `-` in prose like `FR-CIV-TACTICS-025-int`
+#    or `FR-CIV-0100-int1..int4`, minting phantom rows such as
+#    `FR-CIV-TACTICS-025-` that duplicated the real `FR-CIV-TACTICS-025`.
+#
+# A match therefore always ends in a letter or digit, never a hyphen.
 ID_RE = re.compile(
-    r"\b(FR|NFR)-(?:[A-Z]+-)?[A-Z]+[-A-Z0-9]*\d+(?:-[A-Z]+\d*)*\b"
+    r"\b(FR|NFR)-(?:[A-Z]+-)?[A-Z]+[-A-Z0-9]*\d+(?:-?[A-Z]+\d*)*\b"
 )
-COVERS_RE = re.compile(r"^\s*///\s*Covers\s*:?(?:\s*(?:FR|NFR)-(?:[A-Z]+-)?[A-Z]+[-A-Z0-9]*\d+(?:-[A-Z]+\d*)*)")
+COVERS_RE = re.compile(r"^\s*///\s*Covers\s*:?(?:\s*(?:FR|NFR)-(?:[A-Z]+-)?[A-Z]+[-A-Z0-9]*\d+(?:-?[A-Z]+\d*)*)")
 
 
 def is_self_ref(rel: str) -> bool:

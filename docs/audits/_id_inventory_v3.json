@@ -949,6 +949,17 @@
       "in_tests": []
     },
     {
+      "id": "FR-CIV-3D",
+      "in_specs": [
+        "docs/design/civ-actor-assets-fix.md:251"
+      ],
+      "in_meta": [],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
       "id": "FR-CIV-3D-001",
       "in_specs": [
         "docs/specs/CIV-0601-3d-asset-transition-and-agentic-gen-spec.md:1888"
@@ -15803,6 +15814,38 @@
         "crates/protocol-3d/tests/fr_civ_proto_tests.rs:3",
         "crates/protocol-3d/tests/fr_civ_proto_tests.rs:17",
         "crates/protocol-3d/tests/fr_fr_civ_proto_015.rs:1"
+      ]
+    },
+    {
+      "id": "FR-CIV-PROTO3D",
+      "in_specs": [
+        "docs/development-guide/fr-3d-additions.md:102",
+        "docs/traceability/fr-3d-matrix.md:221",
+        "docs/traceability/full-traceability-matrix.md:343"
+      ],
+      "in_meta": [],
+      "in_func_req": null,
+      "in_traceability": [
+        "docs/traceability/fr-civ-proto3d/fr-civ-proto3d-adr.md:1",
+        "docs/traceability/fr-civ-proto3d/fr-civ-proto3d-adr.md:6",
+        "docs/traceability/fr-civ-proto3d/fr-civ-proto3d-adr.md:11",
+        "docs/traceability/fr-civ-proto3d/fr-civ-proto3d-adr.md:25",
+        "docs/traceability/fr-civ-proto3d/fr-civ-proto3d-intent.md:1",
+        "docs/traceability/fr-civ-proto3d/fr-civ-proto3d-intent.md:4",
+        "docs/traceability/fr-civ-proto3d/fr-civ-proto3d-intent.md:15",
+        "docs/traceability/fr-civ-proto3d/fr-civ-proto3d-plan.md:1"
+      ],
+      "in_code": [
+        "crates/protocol-3d/src/lib.rs:22",
+        "crates/protocol-3d/src/lib.rs:1595"
+      ],
+      "in_tests": [
+        "crates/engine/tests/fr_fr_civ_proto3d.rs:1",
+        "crates/engine/tests/fr_fr_civ_proto3d.rs:6",
+        "crates/engine/tests/fr_fr_civ_proto3d.rs:10",
+        "crates/protocol-3d/src/lib.rs:1595",
+        "crates/protocol-3d/tests/fr_civ_proto_tests.rs:3",
+        "crates/protocol-3d/tests/fr_civ_proto_tests.rs:56"
       ]
     },
     {

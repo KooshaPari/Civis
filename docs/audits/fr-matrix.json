@@ -10,12 +10,12 @@
     "CODE-ONLY-no-spec": "code present, no spec/traceability reference"
   },
   "totals": {
-    "rows": 1501,
+    "rows": 1503,
     "by_status": {
-      "COVERED": 492,
+      "COVERED": 493,
       "TEST-NO-CODE-REF": 498,
       "IMPL-NO-TEST": 0,
-      "SPEC-ONLY": 302,
+      "SPEC-ONLY": 303,
       "CODE-ONLY-no-spec": 209
     },
     "by_epic": {
@@ -26,7 +26,7 @@
       "FR-AUD": 3,
       "FR-CIV": 15,
       "FR-CIV-0001-TICK": 1,
-      "FR-CIV-3D": 15,
+      "FR-CIV-3D": 16,
       "FR-CIV-ACCESS": 2,
       "FR-CIV-ACT": 4,
       "FR-CIV-ACTOR": 2,
@@ -141,7 +141,7 @@
       "FR-CIV-PLANET": 12,
       "FR-CIV-POLITY": 8,
       "FR-CIV-PROTO": 15,
-      "FR-CIV-PROTO3D": 18,
+      "FR-CIV-PROTO3D": 19,
       "FR-CIV-PSYCHE": 29,
       "FR-CIV-PSYCHE-N11": 1,
       "FR-CIV-QOL": 14,
@@ -328,7 +328,7 @@
         "COVERED": 0,
         "TEST-NO-CODE-REF": 15,
         "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 0,
+        "SPEC-ONLY": 1,
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-ACCESS": {
@@ -1130,7 +1130,7 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-PROTO3D": {
-        "COVERED": 18,
+        "COVERED": 19,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
         "SPEC-ONLY": 0,
@@ -2928,6 +2928,16 @@
       "epic": "FR-CIV",
       "spec_refs": [
         "docs/design/civ-actor-assets-fix.md:322"
+      ],
+      "code_refs": [],
+      "test_refs": []
+    },
+    {
+      "id": "FR-CIV-3D",
+      "status": "SPEC-ONLY",
+      "epic": "FR-CIV-3D",
+      "spec_refs": [
+        "docs/design/civ-actor-assets-fix.md:251"
       ],
       "code_refs": [],
       "test_refs": []
@@ -16756,6 +16766,36 @@
         "crates/protocol-3d/tests/fr_civ_proto_tests.rs:3",
         "crates/protocol-3d/tests/fr_civ_proto_tests.rs:17",
         "crates/protocol-3d/tests/fr_fr_civ_proto_015.rs:1"
+      ]
+    },
+    {
+      "id": "FR-CIV-PROTO3D",
+      "status": "COVERED",
+      "epic": "FR-CIV-PROTO3D",
+      "spec_refs": [
+        "docs/development-guide/fr-3d-additions.md:102",
+        "docs/traceability/fr-3d-matrix.md:221",
+        "docs/traceability/full-traceability-matrix.md:343",
+        "docs/traceability/fr-civ-proto3d/fr-civ-proto3d-adr.md:1",
+        "docs/traceability/fr-civ-proto3d/fr-civ-proto3d-adr.md:6",
+        "docs/traceability/fr-civ-proto3d/fr-civ-proto3d-adr.md:11",
+        "docs/traceability/fr-civ-proto3d/fr-civ-proto3d-adr.md:25",
+        "docs/traceability/fr-civ-proto3d/fr-civ-proto3d-intent.md:1",
+        "docs/traceability/fr-civ-proto3d/fr-civ-proto3d-intent.md:4",
+        "docs/traceability/fr-civ-proto3d/fr-civ-proto3d-intent.md:15",
+        "docs/traceability/fr-civ-proto3d/fr-civ-proto3d-plan.md:1"
+      ],
+      "code_refs": [
+        "crates/protocol-3d/src/lib.rs:22",
+        "crates/protocol-3d/src/lib.rs:1595"
+      ],
+      "test_refs": [
+        "crates/engine/tests/fr_fr_civ_proto3d.rs:1",
+        "crates/engine/tests/fr_fr_civ_proto3d.rs:6",
+        "crates/engine/tests/fr_fr_civ_proto3d.rs:10",
+        "crates/protocol-3d/src/lib.rs:1595",
+        "crates/protocol-3d/tests/fr_civ_proto_tests.rs:3",
+        "crates/protocol-3d/tests/fr_civ_proto_tests.rs:56"
       ]
     },
     {

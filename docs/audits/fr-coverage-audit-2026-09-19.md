@@ -2,7 +2,7 @@
 
 **Generated:** 2026-09-19  
 **Source inventory:** `docs/audits/_id_inventory_v3.json`  
-**Total IDs scanned:** 1501
+**Total IDs scanned:** 1503
 
 ## Status legend
 
@@ -18,12 +18,12 @@
 
 | Status | Count | % |
 |--------|------:|--:|
-| `COVERED` | 492 | 32.8 |
-| `TEST-NO-CODE-REF` | 498 | 33.2 |
+| `COVERED` | 493 | 32.8 |
+| `TEST-NO-CODE-REF` | 498 | 33.1 |
 | `IMPL-NO-TEST` | 0 | 0.0 |
-| `SPEC-ONLY` | 302 | 20.1 |
+| `SPEC-ONLY` | 303 | 20.2 |
 | `CODE-ONLY-no-spec` | 209 | 13.9 |
-| **Total** | **1501** | **100.0** |
+| **Total** | **1503** | **100.0** |
 
 ## Coverage by epic
 
@@ -36,7 +36,7 @@
 | FR-AUD | 3 | 3 | 0 | 0 | 0 | 0 |
 | FR-CIV | 15 | 1 | 11 | 0 | 2 | 1 |
 | FR-CIV-0001-TICK | 1 | 0 | 1 | 0 | 0 | 0 |
-| FR-CIV-3D | 15 | 0 | 15 | 0 | 0 | 0 |
+| FR-CIV-3D | 16 | 0 | 15 | 0 | 1 | 0 |
 | FR-CIV-ACCESS | 2 | 0 | 0 | 0 | 2 | 0 |
 | FR-CIV-ACT | 4 | 0 | 4 | 0 | 0 | 0 |
 | FR-CIV-ACTOR | 2 | 0 | 2 | 0 | 0 | 0 |
@@ -151,7 +151,7 @@
 | FR-CIV-PLANET | 12 | 11 | 0 | 0 | 0 | 1 |
 | FR-CIV-POLITY | 8 | 0 | 8 | 0 | 0 | 0 |
 | FR-CIV-PROTO | 15 | 1 | 14 | 0 | 0 | 0 |
-| FR-CIV-PROTO3D | 18 | 18 | 0 | 0 | 0 | 0 |
+| FR-CIV-PROTO3D | 19 | 19 | 0 | 0 | 0 | 0 |
 | FR-CIV-PSYCHE | 29 | 8 | 4 | 0 | 17 | 0 |
 | FR-CIV-PSYCHE-N11 | 1 | 0 | 0 | 0 | 0 | 1 |
 | FR-CIV-QOL | 14 | 0 | 14 | 0 | 0 | 0 |
@@ -284,12 +284,14 @@
 | NFR-S | 6 | 0 | 0 | 0 | 6 | 0 |
 | NFR-SCALE | 1 | 1 | 0 | 0 | 0 | 0 |
 
-## Spec-only IDs (need implementation) (302)
+## Spec-only IDs (need implementation) (303)
 
 - `FR-CIV-0104-011`
   - spec: docs/specs/CIV-0104-minimal-constraint-set-theorem.md:1504
 - `FR-CIV-0700`
   - spec: docs/design/civ-actor-assets-fix.md:322
+- `FR-CIV-3D`
+  - spec: docs/design/civ-actor-assets-fix.md:251
 - `FR-CIV-ACCESS-010`
   - spec: docs/adr/ADR-021-accessibility-and-l10n-strategy.md:47
 - `FR-CIV-ACCESS-020`

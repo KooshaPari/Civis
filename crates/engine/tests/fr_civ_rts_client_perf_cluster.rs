@@ -1325,36 +1325,22 @@ const SLO_P50: Duration = Duration::from_millis(8);
 const SLO_P99: Duration = Duration::from_millis(16);
 
 /// Food stockpile floor: the SLO describes a 1k-citizen *workload*, not a
-/// starvation scenario. Without a non-limiting stockpile the lifecycle phase
-/// migrates the population away (observed: 1_000 -> 943 citizens within the
-/// first 130 ticks), and the measured tick no longer contains 1k agents.
+/// starvation scenario. `phase_population` feeds each citizen from the global
+/// stockpile (`1 unit/tick/citizen`) and otherwise starves them, and
+/// `phase_life` migrates hungry adults away; a non-limiting stockpile is what
+/// keeps the measured window a 1k-citizen workload.
 const FOOD_FLOOR_BITS: i64 = 500_000_000;
 
 /// Top the scenario's food stockpile back up (called outside the timed region).
+///
+/// The stockpile is *not* set to a value that suppresses reproduction: feeding
+/// the cohort is exactly what makes the population grow through births
+/// (`phase_population` births for every fed citizen with `age > 18`), so the
+/// measured workload grows slightly round over round. See the population band
+/// guard in the SLO test.
 fn top_up_food(sim: &mut Sim) {
     if sim.state.resources.food.to_bits() < FOOD_FLOOR_BITS {
         sim.state.resources.food = civ_engine::Fixed::from_num(1_000_000u32);
-    }
-}
-
-/// Keep the measured cohort resident and fed between ticks (outside the timed
-/// region): a non-limiting global stockpile plus a full per-citizen food need,
-/// which is what `is_migratory_adult` requires to stay put. This is scenario
-/// upkeep, not a change to the tick under measurement.
-fn keep_cohort_resident(sim: &mut Sim) {
-    use civ_agents::{Civilian as AgentCivilian, Needs as AgentNeeds};
-
-    top_up_food(sim);
-    let entities: Vec<hecs::Entity> = sim
-        .world
-        .query::<&AgentCivilian>()
-        .iter()
-        .map(|(entity, _)| entity)
-        .collect();
-    for entity in entities {
-        if let Ok(mut needs) = sim.world.get::<&mut AgentNeeds>(entity) {
-            needs.food = 1.0;
-        }
     }
 }
 
@@ -1446,6 +1432,17 @@ fn max_of(samples: &[Duration]) -> Duration {
 ///     would be flaky;
 ///   * unoptimised builds widen the budget by [`PERF_BUDGET_FACTOR`]; the
 ///     values actually observed are printed so a regression is diagnosable.
+///
+/// ## Status of the SLO (measured 2026-09-19, this machine)
+///
+/// * debug (100-tick windows, x[`PERF_BUDGET_FACTOR`] budget): p50 ~197-229 ms,
+///   p99 ~296-315 ms at 1_000-1_034 citizens -> gate PASSES.
+/// * release (`cargo test --release`, full 1_000-tick windows, exact SLO):
+///   p50 ~20-27 ms, p99 ~30-42 ms at 1_192-1_390 fed citizens -> the exact
+///   8 ms/16 ms gate FAILS. FR-CIV-PERF-001 is an OPEN gap (CIV-0500 §13 marks
+///   it "Status: Open"): the 1k-citizen tick is ~2.5x over its p50 budget even
+///   optimised, and the tick cost grows with the cohort. The assertion is left
+///   at the spec value on purpose — the failing release run is the evidence.
 #[test]
 fn fr_civ_perf_001_1k_citizen_tick_meets_small_scenario_slo() {
     use civ_agents::count_civilians;
@@ -1458,7 +1455,7 @@ fn fr_civ_perf_001_1k_citizen_tick_meets_small_scenario_slo() {
     );
 
     for _ in 0..PERF_WARMUP_TICKS {
-        keep_cohort_resident(&mut sim);
+        top_up_food(&mut sim);
         sim.tick();
     }
 
@@ -1471,7 +1468,7 @@ fn fr_civ_perf_001_1k_citizen_tick_meets_small_scenario_slo() {
             sim.tick();
             samples.push(start.elapsed().as_micros() as u64);
             // Scenario upkeep happens outside the timed region.
-            keep_cohort_resident(&mut sim);
+            top_up_food(&mut sim);
         }
         samples.sort_unstable();
         let p50 = percentile(&samples, 0.50);
@@ -1494,9 +1491,12 @@ fn fr_civ_perf_001_1k_citizen_tick_meets_small_scenario_slo() {
              below the {POPULATION_FLOOR}-citizen floor for a 1k-citizen workload, so its \
              percentiles do not describe the reference scenario"
         );
-        // The cohort must not drift: births would also inflate the workload.
+        // The cohort must not run away: a fed population grows through births
+        // (measured +34 per 200-tick birth window in debug, +192 per 1_000 ticks
+        // in release), so this is a band, not an equality. A >2x cohort means the
+        // measured window is no longer the 1k-citizen reference scenario.
         assert!(
-            population <= 1_200,
+            population <= 2_000,
             "FR-CIV-PERF-001: round {round} grew to {population} citizens, so this is no \
              longer the 1k-citizen reference scenario"
         );

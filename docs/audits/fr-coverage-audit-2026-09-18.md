@@ -2,7 +2,7 @@
 
 **Generated:** 2026-09-18  
 **Source inventory:** `docs/audits/_id_inventory_v3.json`  
-**Total IDs scanned:** 1507
+**Total IDs scanned:** 1508
 
 ## Status legend
 
@@ -20,8 +20,8 @@
 | `COVERED` | 574 | 38.1 |
 | `IMPL-NO-TEST` | 74 | 4.9 |
 | `SPEC-ONLY` | 645 | 42.8 |
-| `CODE-ONLY-no-spec` | 214 | 14.2 |
-| **Total** | **1507** | **100.0** |
+| `CODE-ONLY-no-spec` | 215 | 14.3 |
+| **Total** | **1508** | **100.0** |
 
 ## Coverage by epic
 
@@ -42,7 +42,7 @@
 | FR-CIV-AGENTS | 17 | 17 | 0 | 0 | 0 |
 | FR-CIV-AGGRESSION | 1 | 0 | 0 | 0 | 1 |
 | FR-CIV-AI | 15 | 10 | 0 | 5 | 0 |
-| FR-CIV-ARCH | 8 | 7 | 0 | 1 | 0 |
+| FR-CIV-ARCH | 9 | 7 | 0 | 1 | 1 |
 | FR-CIV-ARCH-A | 3 | 0 | 0 | 0 | 3 |
 | FR-CIV-ARCH-B | 4 | 0 | 0 | 0 | 4 |
 | FR-CIV-ARCH-C | 4 | 0 | 0 | 0 | 4 |
@@ -841,7 +841,7 @@
   - tests: crates/engine/tests/fr_fr_civ_perf_009.rs:1, crates/engine/tests/fr_fr_civ_perf_009.rs:6, crates/engine/tests/fr_fr_civ_perf_009.rs:10
 - `FR-CIV-PERF-010`
   - spec: docs/specs/CIV-0500-performance-optimization-spec.md:1966, docs/traceability/fr-civ-perf-010/fr-civ-perf-010-adr.md:1, docs/traceability/fr-civ-perf-010/fr-civ-perf-010-adr.md:6
-  - tests: crates/engine/tests/fr_fr_civ_perf_010.rs:1, crates/engine/tests/fr_fr_civ_perf_010.rs:6, crates/engine/tests/fr_fr_civ_perf_010.rs:10
+  - tests: crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1176, crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1184, crates/engine/tests/fr_fr_civ_perf_010.rs:1
 - `FR-CIV-PERF-011`
   - spec: docs/specs/CIV-0500-performance-optimization-spec.md:1971, docs/traceability/fr-civ-perf-011/fr-civ-perf-011-adr.md:1, docs/traceability/fr-civ-perf-011/fr-civ-perf-011-adr.md:6
   - tests: crates/engine/tests/fr_fr_civ_perf_011.rs:1, crates/engine/tests/fr_fr_civ_perf_011.rs:6, crates/engine/tests/fr_fr_civ_perf_011.rs:10
@@ -2191,7 +2191,7 @@
   - spec: docs/traceability/fr-emergence-matrix.md:261, docs/traceability/index.md:1237, docs/traceability/nfr-scale-02/nfr-scale-02-adr.md:1
   - code: crates/legends/src/config.rs:18
 
-## Code-only IDs (missing spec/traceability) (214)
+## Code-only IDs (missing spec/traceability) (215)
 
 - `FR-ASSET-PIPELINE-001`
   - code: crates/asset-pipeline/src/lib.rs:3, crates/asset-pipeline/src/lib.rs:18, crates/asset-pipeline/src/lib.rs:57
@@ -2207,6 +2207,8 @@
 - `FR-CIV-AGGRESSION-001`
   - code: crates/engine/src/engine.rs:492, crates/engine/src/engine.rs:2191
   - tests: crates/engine/tests/culture_ideology_aggression_persistence.rs:3
+- `FR-CIV-ARCH-00`
+  - tests: crates/engine/tests/fr_civ_act_arch_cluster.rs:2
 - `FR-CIV-ARCH-A-001`
   - code: crates/build/src/tiers.rs:405
   - tests: crates/build/src/tiers.rs:405
@@ -2684,42 +2686,9 @@
   - code: crates/voxel/src/scale_stream.rs:1, crates/voxel/src/scale_stream.rs:16, crates/voxel/src/scale_stream.rs:58
   - tests: crates/voxel/src/scale_stream.rs:427, crates/voxel/src/scale_stream.rs:479, crates/voxel/src/scale_stream.rs:509
 
-## Placeholder-only coverage (weakest evidence) (32)
+## Placeholder-only coverage (weakest evidence) (0)
 
 These IDs are counted `COVERED` on tests whose file matches the auto-generated placeholder pattern above. Their tests assert properties of shared types, not the requirement, so treat the coverage as unverified until a real oracle exists.
 
-`552` placeholder test files affect `32` IDs.
-
-- `FR-CIV-0001-TICK`
-- `FR-CIV-ACT-003`
-- `FR-CIV-ACT-004`
-- `FR-CIV-ACT-005`
-- `FR-CIV-ARCH-001`
-- `FR-CIV-ARCH-002`
-- `FR-CIV-ECON-003`
-- `FR-CIV-INFOVIEW-905`
-- `FR-CIV-INFOVIEW-911`
-- `FR-CIV-INFOVIEW-912`
-- `FR-CIV-INFOVIEW-914`
-- `FR-CIV-INSPECT-902`
-- `FR-CIV-INSPECT-920`
-- `FR-CIV-L5`
-- `FR-CIV-MCP-001`
-- `FR-CIV-MCP-003`
-- `FR-CIV-PERF-001`
-- `FR-CIV-RES-001`
-- `FR-CIV-RTS-001`
-- `FR-CIV-RTS-002`
-- `FR-CIV-VOXEL-031`
-- `FR-CIV-VOXEL-032`
-- `FR-CLIENT-001`
-- `FR-CLIENT-002`
-- `FR-CLIENT-003`
-- `FR-CORE-009`
-- `FR-ECON-006`
-- `FR-ECON-009`
-- `FR-ECON-010`
-- `FR-PERF-003`
-- `FR-PERF-004`
-- `FR-SESS-005`
+_None._
 

@@ -9,12 +9,12 @@
     "CODE-ONLY-no-spec": "code present, no spec/traceability reference"
   },
   "totals": {
-    "rows": 1507,
+    "rows": 1508,
     "by_status": {
       "COVERED": 574,
       "IMPL-NO-TEST": 74,
       "SPEC-ONLY": 645,
-      "CODE-ONLY-no-spec": 214
+      "CODE-ONLY-no-spec": 215
     },
     "by_epic": {
       "FR-AI": 7,
@@ -32,7 +32,7 @@
       "FR-CIV-AGENTS": 17,
       "FR-CIV-AGGRESSION": 1,
       "FR-CIV-AI": 15,
-      "FR-CIV-ARCH": 8,
+      "FR-CIV-ARCH": 9,
       "FR-CIV-ARCH-A": 3,
       "FR-CIV-ARCH-B": 4,
       "FR-CIV-ARCH-C": 4,
@@ -367,7 +367,7 @@
         "COVERED": 7,
         "IMPL-NO-TEST": 0,
         "SPEC-ONLY": 1,
-        "CODE-ONLY-no-spec": 0
+        "CODE-ONLY-no-spec": 1
       },
       "FR-CIV-ARCH-A": {
         "COVERED": 0,
@@ -2386,9 +2386,14 @@
         "docs/reference/ENGINEERING_PROCESS_SUMMARY.md:119"
       ],
       "test_refs": [
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:1",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:11",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:131",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:134",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:155",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:183",
         "crates/engine/tests/fr_fr_civ_0001_tick.rs:1",
-        "crates/engine/tests/fr_fr_civ_0001_tick.rs:6",
-        "crates/engine/tests/fr_fr_civ_0001_tick.rs:10"
+        "crates/engine/tests/fr_fr_civ_0001_tick.rs:6"
       ]
     },
     {
@@ -3101,6 +3106,11 @@
         "docs/reference/REFERENCE_GAME_ANALYSIS.md:511"
       ],
       "test_refs": [
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:14",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:210",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:213",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:256",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:305",
         "crates/engine/tests/fr_fr_civ_act_003.rs:1",
         "crates/engine/tests/fr_fr_civ_act_003.rs:6",
         "crates/engine/tests/fr_fr_civ_act_003.rs:10"
@@ -3124,9 +3134,14 @@
         "docs/reference/REFERENCE_GAME_ANALYSIS.md:183"
       ],
       "test_refs": [
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:16",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:348",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:351",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:396",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:398",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:416",
         "crates/engine/tests/fr_fr_civ_act_004.rs:1",
-        "crates/engine/tests/fr_fr_civ_act_004.rs:6",
-        "crates/engine/tests/fr_fr_civ_act_004.rs:10"
+        "crates/engine/tests/fr_fr_civ_act_004.rs:6"
       ]
     },
     {
@@ -3147,9 +3162,14 @@
         "docs/reports/STATUS_REPORT.md:98"
       ],
       "test_refs": [
-        "crates/engine/tests/fr_fr_civ_act_005.rs:1",
-        "crates/engine/tests/fr_fr_civ_act_005.rs:6",
-        "crates/engine/tests/fr_fr_civ_act_005.rs:10"
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:18",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:429",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:432",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:487",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:521",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:544",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:611",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:613"
       ]
     },
     {
@@ -4024,6 +4044,16 @@
       ]
     },
     {
+      "id": "FR-CIV-ARCH-00",
+      "status": "CODE-ONLY-no-spec",
+      "epic": "FR-CIV-ARCH",
+      "spec_refs": [],
+      "code_refs": [],
+      "test_refs": [
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:2"
+      ]
+    },
+    {
       "id": "FR-CIV-ARCH-001",
       "status": "COVERED",
       "epic": "FR-CIV-ARCH",
@@ -4042,9 +4072,14 @@
         "crates/emergence-oracle/src/oracles/architecture.rs:5"
       ],
       "test_refs": [
-        "crates/engine/tests/fr_fr_civ_arch_001.rs:1",
-        "crates/engine/tests/fr_fr_civ_arch_001.rs:6",
-        "crates/engine/tests/fr_fr_civ_arch_001.rs:10"
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:19",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:759",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:762",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:836",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:838",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:850",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:871",
+        "crates/engine/tests/fr_fr_civ_arch_001.rs:1"
       ]
     },
     {
@@ -4066,6 +4101,9 @@
         "crates/emergence-oracle/src/oracles/architecture.rs:5"
       ],
       "test_refs": [
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:881",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:884",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:959",
         "crates/engine/tests/fr_fr_civ_arch_002.rs:1",
         "crates/engine/tests/fr_fr_civ_arch_002.rs:6",
         "crates/engine/tests/fr_fr_civ_arch_002.rs:10"
@@ -4091,7 +4129,8 @@
         "crates/build/src/tiers.rs:30"
       ],
       "test_refs": [
-        "crates/build/src/lib.rs:1005"
+        "crates/build/src/lib.rs:1005",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:1008"
       ]
     },
     {
@@ -8603,9 +8642,14 @@
         "docs/reports/STATUS_REPORT.md:91"
       ],
       "test_refs": [
-        "crates/economy/tests/fr_fr_civ_econ_003.rs:1",
-        "crates/economy/tests/fr_fr_civ_econ_003.rs:6",
-        "crates/economy/tests/fr_fr_civ_econ_003.rs:10"
+        "crates/economy/tests/fr_civ_econ_cluster.rs:2",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:13",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:74",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:80",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:112",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:142",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:160",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:186"
       ]
     },
     {
@@ -11114,6 +11158,11 @@
         "crates/hud/src/env_overlay.rs:704"
       ],
       "test_refs": [
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:1",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:16",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:169",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:172",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:238",
         "crates/engine/tests/fr_fr_civ_infoview_905.rs:1",
         "crates/engine/tests/fr_fr_civ_infoview_905.rs:6",
         "crates/engine/tests/fr_fr_civ_infoview_905.rs:10"
@@ -11197,9 +11246,14 @@
         "docs/agileplus/README.md:23"
       ],
       "test_refs": [
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:25",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:66",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:318",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:321",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:392",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:427",
         "crates/engine/tests/fr_fr_civ_infoview_911.rs:1",
-        "crates/engine/tests/fr_fr_civ_infoview_911.rs:6",
-        "crates/engine/tests/fr_fr_civ_infoview_911.rs:10"
+        "crates/engine/tests/fr_fr_civ_infoview_911.rs:6"
       ]
     },
     {
@@ -11225,6 +11279,10 @@
         "docs/research/songs-of-syx.md:34"
       ],
       "test_refs": [
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:32",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:472",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:475",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:543",
         "crates/engine/tests/fr_fr_civ_infoview_912.rs:1",
         "crates/engine/tests/fr_fr_civ_infoview_912.rs:6",
         "crates/engine/tests/fr_fr_civ_infoview_912.rs:10"
@@ -11285,6 +11343,11 @@
         "docs/agileplus/README.md:23"
       ],
       "test_refs": [
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:40",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:72",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:691",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:694",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:806",
         "crates/engine/tests/fr_fr_civ_infoview_914.rs:1",
         "crates/engine/tests/fr_fr_civ_infoview_914.rs:6",
         "crates/engine/tests/fr_fr_civ_infoview_914.rs:10"
@@ -11861,9 +11924,14 @@
         "docs/agileplus/README.md:23"
       ],
       "test_refs": [
-        "crates/engine/tests/fr_fr_civ_inspect_902.rs:1",
-        "crates/engine/tests/fr_fr_civ_inspect_902.rs:6",
-        "crates/engine/tests/fr_fr_civ_inspect_902.rs:10"
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:1",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:48",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:76",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:937",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:940",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:1041",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:1051",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:1160"
       ]
     },
     {
@@ -11951,9 +12019,14 @@
         "docs/agileplus/README.md:23"
       ],
       "test_refs": [
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:57",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:83",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:1176",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:1179",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:1241",
+        "crates/engine/tests/fr_civ_infoview_inspect_cluster.rs:1368",
         "crates/engine/tests/fr_fr_civ_inspect_920.rs:1",
-        "crates/engine/tests/fr_fr_civ_inspect_920.rs:6",
-        "crates/engine/tests/fr_fr_civ_inspect_920.rs:10"
+        "crates/engine/tests/fr_fr_civ_inspect_920.rs:6"
       ]
     },
     {
@@ -12043,9 +12116,14 @@
         "docs/development-guide/fr-l5-visual-pass.md:1"
       ],
       "test_refs": [
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:2",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:20",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:1033",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:1036",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:1067",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:1121",
         "crates/engine/tests/fr_fr_civ_l5.rs:1",
-        "crates/engine/tests/fr_fr_civ_l5.rs:6",
-        "crates/engine/tests/fr_fr_civ_l5.rs:10"
+        "crates/engine/tests/fr_fr_civ_l5.rs:6"
       ]
     },
     {
@@ -13898,9 +13976,14 @@
         "crates/civis-mcp/src/server.rs:986"
       ],
       "test_refs": [
-        "crates/civis-mcp/tests/fr_fr_civ_mcp_001.rs:1",
-        "crates/civis-mcp/tests/fr_fr_civ_mcp_001.rs:6",
-        "crates/civis-mcp/tests/fr_fr_civ_mcp_001.rs:10"
+        "crates/civis-mcp/tests/fr_civ_mcp_tool_surface.rs:1",
+        "crates/civis-mcp/tests/fr_civ_mcp_tool_surface.rs:5",
+        "crates/civis-mcp/tests/fr_civ_mcp_tool_surface.rs:49",
+        "crates/civis-mcp/tests/fr_civ_mcp_tool_surface.rs:52",
+        "crates/civis-mcp/tests/fr_civ_mcp_tool_surface.rs:70",
+        "crates/civis-mcp/tests/fr_civ_mcp_tool_surface.rs:85",
+        "crates/civis-mcp/tests/fr_civ_mcp_tool_surface.rs:107",
+        "crates/civis-mcp/tests/fr_fr_civ_mcp_001.rs:1"
       ]
     },
     {
@@ -13944,9 +14027,14 @@
         "crates/civis-mcp/src/server.rs:844"
       ],
       "test_refs": [
+        "crates/civis-mcp/tests/fr_civ_mcp_tool_surface.rs:9",
+        "crates/civis-mcp/tests/fr_civ_mcp_tool_surface.rs:150",
+        "crates/civis-mcp/tests/fr_civ_mcp_tool_surface.rs:153",
+        "crates/civis-mcp/tests/fr_civ_mcp_tool_surface.rs:182",
+        "crates/civis-mcp/tests/fr_civ_mcp_tool_surface.rs:210",
+        "crates/civis-mcp/tests/fr_civ_mcp_tool_surface.rs:234",
         "crates/civis-mcp/tests/fr_fr_civ_mcp_003.rs:1",
-        "crates/civis-mcp/tests/fr_fr_civ_mcp_003.rs:6",
-        "crates/civis-mcp/tests/fr_fr_civ_mcp_003.rs:10"
+        "crates/civis-mcp/tests/fr_fr_civ_mcp_003.rs:6"
       ]
     },
     {
@@ -15143,9 +15231,14 @@
         "crates/server/src/jsonrpc.rs:991"
       ],
       "test_refs": [
-        "crates/engine/tests/fr_fr_civ_perf_001.rs:1",
-        "crates/engine/tests/fr_fr_civ_perf_001.rs:6",
-        "crates/engine/tests/fr_fr_civ_perf_001.rs:10"
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:16",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:18",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1299",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1415",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1467",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1479",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1489",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1500"
       ]
     },
     {
@@ -15341,6 +15434,8 @@
       ],
       "code_refs": [],
       "test_refs": [
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1176",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1184",
         "crates/engine/tests/fr_fr_civ_perf_010.rs:1",
         "crates/engine/tests/fr_fr_civ_perf_010.rs:6",
         "crates/engine/tests/fr_fr_civ_perf_010.rs:10"
@@ -18077,9 +18172,14 @@
         "docs/reference/FR_TRACKER.md:40"
       ],
       "test_refs": [
-        "crates/engine/tests/fr_fr_civ_res_001.rs:1",
-        "crates/engine/tests/fr_fr_civ_res_001.rs:6",
-        "crates/engine/tests/fr_fr_civ_res_001.rs:10"
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:2",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:21",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:1182",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:1185",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:1222",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:1253",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:1332",
+        "crates/engine/tests/fr_civ_act_arch_cluster.rs:1386"
       ]
     },
     {
@@ -18699,9 +18799,14 @@
         "docs/reports/STATUS_REPORT.md:93"
       ],
       "test_refs": [
-        "crates/engine/tests/fr_fr_civ_rts_001.rs:1",
-        "crates/engine/tests/fr_fr_civ_rts_001.rs:6",
-        "crates/engine/tests/fr_fr_civ_rts_001.rs:10"
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:7",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:128",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:131",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:170",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:179",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:188",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:192",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:258"
       ]
     },
     {
@@ -18725,9 +18830,14 @@
         "docs/reports/STATUS_REPORT.md:94"
       ],
       "test_refs": [
-        "crates/engine/tests/fr_fr_civ_rts_002.rs:1",
-        "crates/engine/tests/fr_fr_civ_rts_002.rs:6",
-        "crates/engine/tests/fr_fr_civ_rts_002.rs:10"
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:8",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:370",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:373",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:390",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:395",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:404",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:416",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:425"
       ]
     },
     {
@@ -24613,9 +24723,9 @@
         "crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs:303",
         "crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs:340",
         "crates/voxel/tests/fr_civ_voxel_ca_fluid_gas_heat.rs:345",
+        "crates/voxel/tests/fr_civ_voxel_hydrology_atmosphere.rs:139",
         "crates/voxel/tests/fr_fr_civ_voxel_030.rs:1",
-        "crates/voxel/tests/fr_fr_civ_voxel_030.rs:6",
-        "crates/voxel/tests/fr_fr_civ_voxel_030.rs:10"
+        "crates/voxel/tests/fr_fr_civ_voxel_030.rs:6"
       ]
     },
     {
@@ -24637,9 +24747,14 @@
         "docs/guides/voxel-emergent-vision-and-migration.md:130"
       ],
       "test_refs": [
+        "crates/voxel/tests/fr_civ_voxel_hydrology_atmosphere.rs:1",
+        "crates/voxel/tests/fr_civ_voxel_hydrology_atmosphere.rs:5",
+        "crates/voxel/tests/fr_civ_voxel_hydrology_atmosphere.rs:54",
+        "crates/voxel/tests/fr_civ_voxel_hydrology_atmosphere.rs:57",
+        "crates/voxel/tests/fr_civ_voxel_hydrology_atmosphere.rs:99",
+        "crates/voxel/tests/fr_civ_voxel_hydrology_atmosphere.rs:136",
         "crates/voxel/tests/fr_fr_civ_voxel_031.rs:1",
-        "crates/voxel/tests/fr_fr_civ_voxel_031.rs:6",
-        "crates/voxel/tests/fr_fr_civ_voxel_031.rs:10"
+        "crates/voxel/tests/fr_fr_civ_voxel_031.rs:6"
       ]
     },
     {
@@ -24662,9 +24777,14 @@
         "docs/guides/voxel-emergent-vision-and-migration.md:131"
       ],
       "test_refs": [
-        "crates/voxel/tests/fr_fr_civ_voxel_032.rs:1",
-        "crates/voxel/tests/fr_fr_civ_voxel_032.rs:6",
-        "crates/voxel/tests/fr_fr_civ_voxel_032.rs:10"
+        "crates/voxel/tests/fr_civ_voxel_hydrology_atmosphere.rs:7",
+        "crates/voxel/tests/fr_civ_voxel_hydrology_atmosphere.rs:162",
+        "crates/voxel/tests/fr_civ_voxel_hydrology_atmosphere.rs:165",
+        "crates/voxel/tests/fr_civ_voxel_hydrology_atmosphere.rs:185",
+        "crates/voxel/tests/fr_civ_voxel_hydrology_atmosphere.rs:196",
+        "crates/voxel/tests/fr_civ_voxel_hydrology_atmosphere.rs:203",
+        "crates/voxel/tests/fr_civ_voxel_hydrology_atmosphere.rs:231",
+        "crates/voxel/tests/fr_fr_civ_voxel_032.rs:1"
       ]
     },
     {
@@ -25390,9 +25510,14 @@
         "docs/reference/agileplus-artifacts-index.md:299"
       ],
       "test_refs": [
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:9",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:595",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:598",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:651",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:655",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:676",
         "crates/engine/tests/fr_fr_client_001.rs:1",
-        "crates/engine/tests/fr_fr_client_001.rs:6",
-        "crates/engine/tests/fr_fr_client_001.rs:10"
+        "crates/engine/tests/fr_fr_client_001.rs:6"
       ]
     },
     {
@@ -25417,9 +25542,14 @@
         "docs/reference/agileplus-artifacts-index.md:335"
       ],
       "test_refs": [
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:10",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:682",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:685",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:700",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:707",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:731",
         "crates/engine/tests/fr_fr_client_002.rs:1",
-        "crates/engine/tests/fr_fr_client_002.rs:6",
-        "crates/engine/tests/fr_fr_client_002.rs:10"
+        "crates/engine/tests/fr_fr_client_002.rs:6"
       ]
     },
     {
@@ -25448,6 +25578,11 @@
         "docs/reference/agileplus-artifacts-index.md:298"
       ],
       "test_refs": [
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:11",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:740",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:743",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:751",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:771",
         "crates/engine/tests/fr_fr_client_003.rs:1",
         "crates/engine/tests/fr_fr_client_003.rs:6",
         "crates/engine/tests/fr_fr_client_003.rs:10"
@@ -25940,9 +26075,14 @@
         "crates/engine/src/grid.rs:1"
       ],
       "test_refs": [
-        "crates/engine/tests/fr_fr_core_009.rs:1",
-        "crates/engine/tests/fr_fr_core_009.rs:6",
-        "crates/engine/tests/fr_fr_core_009.rs:10"
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:12",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:793",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:796",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:832",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:839",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:870",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:876",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:913"
       ]
     },
     {
@@ -26763,9 +26903,14 @@
         "crates/economy/src/gdp.rs:1"
       ],
       "test_refs": [
-        "crates/economy/tests/fr_fr_econ_006.rs:1",
-        "crates/economy/tests/fr_fr_econ_006.rs:6",
-        "crates/economy/tests/fr_fr_econ_006.rs:10"
+        "crates/economy/tests/fr_civ_econ_cluster.rs:2",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:20",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:617",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:623",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:668",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:687",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:728",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:783"
       ]
     },
     {
@@ -26839,9 +26984,14 @@
         "crates/economy/src/subsistence.rs:12"
       ],
       "test_refs": [
-        "crates/economy/tests/fr_fr_econ_009.rs:1",
-        "crates/economy/tests/fr_fr_econ_009.rs:6",
-        "crates/economy/tests/fr_fr_econ_009.rs:10"
+        "crates/economy/tests/fr_civ_econ_cluster.rs:2",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:22",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:903",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:908",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:937",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:958",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:989",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:1014"
       ]
     },
     {
@@ -26864,9 +27014,14 @@
         "crates/economy/src/treasury.rs:9"
       ],
       "test_refs": [
-        "crates/economy/tests/fr_fr_econ_010.rs:1",
-        "crates/economy/tests/fr_fr_econ_010.rs:6",
-        "crates/economy/tests/fr_fr_econ_010.rs:10"
+        "crates/economy/tests/fr_civ_econ_cluster.rs:2",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:24",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:1038",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:1044",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:1065",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:1090",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:1128",
+        "crates/economy/tests/fr_civ_econ_cluster.rs:1164"
       ]
     },
     {
@@ -29124,9 +29279,14 @@
         "crates/render/src/lib.rs:15"
       ],
       "test_refs": [
-        "crates/engine/tests/fr_fr_perf_003.rs:1",
-        "crates/engine/tests/fr_fr_perf_003.rs:6",
-        "crates/engine/tests/fr_fr_perf_003.rs:10"
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:14",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1053",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1056",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1065",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1072",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1084",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1092",
+        "crates/engine/tests/fr_fr_perf_003.rs:1"
       ]
     },
     {
@@ -29148,9 +29308,14 @@
         "crates/save-db/src/lib.rs:322"
       ],
       "test_refs": [
-        "crates/engine/tests/fr_fr_perf_004.rs:1",
-        "crates/engine/tests/fr_fr_perf_004.rs:6",
-        "crates/engine/tests/fr_fr_perf_004.rs:10"
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:15",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:18",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1099",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1102",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1156",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1162",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1173",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1214"
       ]
     },
     {
@@ -30251,9 +30416,14 @@
         "crates/session/src/lib.rs:445"
       ],
       "test_refs": [
-        "crates/engine/tests/fr_fr_sess_005.rs:1",
-        "crates/engine/tests/fr_fr_sess_005.rs:6",
-        "crates/engine/tests/fr_fr_sess_005.rs:10"
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:13",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:919",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:922",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:941",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:956",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:961",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:974",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1007"
       ]
     },
     {

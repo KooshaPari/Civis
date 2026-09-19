@@ -14404,9 +14404,9 @@
         "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:18",
         "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1299",
         "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1415",
-        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1467",
-        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1479",
-        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1489",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1442",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1478",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1490",
         "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1500"
       ]
     },
@@ -17401,11 +17401,16 @@
         "crates/engine/src/dormant_phases.rs:2",
         "crates/engine/src/dormant_phases.rs:25",
         "crates/engine/src/dormant_phases.rs:29",
+        "crates/engine/src/dormant_phases.rs:111",
+        "crates/engine/src/dormant_phases.rs:184",
         "crates/engine/src/engine.rs:911",
         "crates/engine/src/engine.rs:1030",
         "crates/engine/src/engine.rs:2603"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/engine/src/dormant_phases.rs:111",
+        "crates/engine/src/dormant_phases.rs:184"
+      ]
     },
     {
       "id": "FR-CIV-REL-002",
@@ -17416,9 +17421,12 @@
         "docs/traceability/fr-emergence-matrix.md:77"
       ],
       "in_code": [
-        "crates/engine/src/dormant_phases.rs:36"
+        "crates/engine/src/dormant_phases.rs:36",
+        "crates/engine/src/dormant_phases.rs:123"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/engine/src/dormant_phases.rs:123"
+      ]
     },
     {
       "id": "FR-CIV-REL-003",
@@ -17431,10 +17439,15 @@
       "in_code": [
         "crates/engine/src/dormant_phases.rs:21",
         "crates/engine/src/dormant_phases.rs:65",
+        "crates/engine/src/dormant_phases.rs:138",
+        "crates/engine/src/dormant_phases.rs:161",
         "crates/engine/src/gameplay.rs:159",
         "crates/engine/src/gameplay.rs:392"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/engine/src/dormant_phases.rs:138",
+        "crates/engine/src/dormant_phases.rs:161"
+      ]
     },
     {
       "id": "FR-CIV-REL-004",
@@ -29618,13 +29631,13 @@
       "in_code": [
         "crates/engine/src/perf.rs:196",
         "crates/engine/src/perf.rs:199",
-        "crates/engine/src/perf.rs:253",
+        "crates/engine/src/perf.rs:262",
         "docs/IMPLEMENTATION_STATUS.md:125"
       ],
       "in_tests": [
         "crates/engine/src/perf.rs:196",
         "crates/engine/src/perf.rs:199",
-        "crates/engine/src/perf.rs:253",
+        "crates/engine/src/perf.rs:262",
         "crates/engine/tests/fr_fr_perf_005.rs:1",
         "crates/engine/tests/fr_fr_perf_005.rs:6",
         "crates/engine/tests/fr_fr_perf_005.rs:10",

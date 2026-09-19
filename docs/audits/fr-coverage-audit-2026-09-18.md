@@ -17,8 +17,8 @@
 
 | Status | Count | % |
 |--------|------:|--:|
-| `COVERED` | 574 | 38.1 |
-| `IMPL-NO-TEST` | 74 | 4.9 |
+| `COVERED` | 577 | 38.3 |
+| `IMPL-NO-TEST` | 71 | 4.7 |
 | `SPEC-ONLY` | 645 | 42.8 |
 | `CODE-ONLY-no-spec` | 215 | 14.3 |
 | **Total** | **1508** | **100.0** |
@@ -153,7 +153,7 @@
 | FR-CIV-PSYCHE | 29 | 6 | 2 | 21 | 0 |
 | FR-CIV-PSYCHE-N11 | 1 | 0 | 0 | 0 | 1 |
 | FR-CIV-QOL | 14 | 0 | 0 | 14 | 0 |
-| FR-CIV-REL | 5 | 0 | 3 | 1 | 1 |
+| FR-CIV-REL | 5 | 3 | 0 | 1 | 1 |
 | FR-CIV-RELIGION | 2 | 0 | 2 | 0 | 0 |
 | FR-CIV-RENDER | 2 | 2 | 0 | 0 | 0 |
 | FR-CIV-RES | 1 | 1 | 0 | 0 | 0 |
@@ -1966,7 +1966,7 @@
 - `NFR-S-06`
   - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2071, docs/traceability/index.md:1236, docs/traceability/nfr-s-06/nfr-s-06-spec.md:1
 
-## Implemented but untested IDs (74)
+## Implemented but untested IDs (71)
 
 - `FR-CIV-BEVY-013`
   - spec: docs/traceability/fr-3d-matrix.md:178, docs/traceability/full-traceability-matrix.md:307, docs/traceability/fr-civ-bevy-013/fr-civ-bevy-013-adr.md:1
@@ -2037,15 +2037,6 @@
 - `FR-CIV-PSYCHE-911`
   - spec: docs/specs/build-green/engine_missing_symbols.md:13, docs/specs/requirements/FR-CIV-PSYCHE.md:14, docs/traceability/fr-civ-psyche-911/fr-civ-psyche-911-adr.md:1
   - code: crates/agents/src/psyche.rs:491, crates/engine/src/engine/ai_decision.rs:57, crates/engine/src/engine/engine_tests.rs:453
-- `FR-CIV-REL-001`
-  - spec: docs/traceability/fr-emergence-matrix.md:76
-  - code: crates/engine/src/dormant_phases.rs:2, crates/engine/src/dormant_phases.rs:25, crates/engine/src/dormant_phases.rs:29
-- `FR-CIV-REL-002`
-  - spec: docs/traceability/fr-emergence-matrix.md:77
-  - code: crates/engine/src/dormant_phases.rs:36
-- `FR-CIV-REL-003`
-  - spec: docs/traceability/fr-emergence-matrix.md:78
-  - code: crates/engine/src/dormant_phases.rs:21, crates/engine/src/dormant_phases.rs:65, crates/engine/src/gameplay.rs:159
 - `FR-CIV-RELIGION-001`
   - spec: docs/traceability/civis-tracelinks.md:143
   - code: crates/engine/src/emergence.rs:2436

@@ -106,7 +106,9 @@ mod tests {
     use super::*;
     use crate::engine::Simulation;
 
+    /// `phase_belief_accrues_from_population` — belief +1 per pop/2000 + temple_level.
     #[test]
+    /// Covers: FR-CIV-REL-001
     fn phase_belief_accrues_from_population() {
         let mut sim = Simulation::with_seed(42);
         sim.state.population = 10_000;
@@ -116,7 +118,9 @@ mod tests {
         assert_eq!(sim.state.belief, 5, "+1 belief per pop/2000");
     }
 
+    /// `phase_unrest_feeds_belief_under_hardship` — unrest > 0 must add belief same tick.
     #[test]
+    /// Covers: FR-CIV-REL-002
     fn phase_unrest_feeds_belief_under_hardship() {
         let mut sim = Simulation::with_seed(42);
         sim.state.unrest = 500;
@@ -129,7 +133,9 @@ mod tests {
         );
     }
 
+    /// `phase_institutions_grows_temple_with_belief` — belief drives temple growth.
     #[test]
+    /// Covers: FR-CIV-REL-003
     fn phase_institutions_grows_temple_with_belief() {
         let mut sim = Simulation::with_seed(42);
         sim.state.belief = 10_000;
@@ -150,7 +156,9 @@ mod tests {
         );
     }
 
+    /// `phase_institutions_cluster_doctrine_boosts_temple` — divergence must not slow growth.
     #[test]
+    /// Covers: FR-CIV-REL-003
     fn phase_institutions_cluster_doctrine_boosts_temple() {
         let mut sim = Simulation::with_seed(42);
         sim.state.belief = 4_000;
@@ -171,7 +179,9 @@ mod tests {
         );
     }
 
+    /// `dormant_phases_same_seed_deterministic` — same seed → identical belief/unrest/cohesion/temple.
     #[test]
+    /// Covers: FR-CIV-REL-001
     fn dormant_phases_same_seed_deterministic() {
         let mut a = Simulation::with_seed(9_001);
         let mut b = Simulation::with_seed(9_001);

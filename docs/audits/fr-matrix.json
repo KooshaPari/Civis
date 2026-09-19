@@ -11,8 +11,8 @@
   "totals": {
     "rows": 1508,
     "by_status": {
-      "COVERED": 574,
-      "IMPL-NO-TEST": 74,
+      "COVERED": 577,
+      "IMPL-NO-TEST": 71,
       "SPEC-ONLY": 645,
       "CODE-ONLY-no-spec": 215
     },
@@ -1030,8 +1030,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-REL": {
-        "COVERED": 0,
-        "IMPL-NO-TEST": 3,
+        "COVERED": 3,
+        "IMPL-NO-TEST": 0,
         "SPEC-ONLY": 1,
         "CODE-ONLY-no-spec": 1
       },
@@ -15235,9 +15235,9 @@
         "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:18",
         "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1299",
         "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1415",
-        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1467",
-        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1479",
-        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1489",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1442",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1478",
+        "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1490",
         "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1500"
       ]
     },
@@ -18001,7 +18001,7 @@
     },
     {
       "id": "FR-CIV-REL-001",
-      "status": "IMPL-NO-TEST",
+      "status": "COVERED",
       "epic": "FR-CIV-REL",
       "spec_refs": [
         "docs/traceability/fr-emergence-matrix.md:76"
@@ -18010,27 +18010,35 @@
         "crates/engine/src/dormant_phases.rs:2",
         "crates/engine/src/dormant_phases.rs:25",
         "crates/engine/src/dormant_phases.rs:29",
+        "crates/engine/src/dormant_phases.rs:111",
+        "crates/engine/src/dormant_phases.rs:184",
         "crates/engine/src/engine.rs:911",
         "crates/engine/src/engine.rs:1030",
         "crates/engine/src/engine.rs:2603"
       ],
-      "test_refs": []
+      "test_refs": [
+        "crates/engine/src/dormant_phases.rs:111",
+        "crates/engine/src/dormant_phases.rs:184"
+      ]
     },
     {
       "id": "FR-CIV-REL-002",
-      "status": "IMPL-NO-TEST",
+      "status": "COVERED",
       "epic": "FR-CIV-REL",
       "spec_refs": [
         "docs/traceability/fr-emergence-matrix.md:77"
       ],
       "code_refs": [
-        "crates/engine/src/dormant_phases.rs:36"
+        "crates/engine/src/dormant_phases.rs:36",
+        "crates/engine/src/dormant_phases.rs:123"
       ],
-      "test_refs": []
+      "test_refs": [
+        "crates/engine/src/dormant_phases.rs:123"
+      ]
     },
     {
       "id": "FR-CIV-REL-003",
-      "status": "IMPL-NO-TEST",
+      "status": "COVERED",
       "epic": "FR-CIV-REL",
       "spec_refs": [
         "docs/traceability/fr-emergence-matrix.md:78"
@@ -18038,10 +18046,15 @@
       "code_refs": [
         "crates/engine/src/dormant_phases.rs:21",
         "crates/engine/src/dormant_phases.rs:65",
+        "crates/engine/src/dormant_phases.rs:138",
+        "crates/engine/src/dormant_phases.rs:161",
         "crates/engine/src/gameplay.rs:159",
         "crates/engine/src/gameplay.rs:392"
       ],
-      "test_refs": []
+      "test_refs": [
+        "crates/engine/src/dormant_phases.rs:138",
+        "crates/engine/src/dormant_phases.rs:161"
+      ]
     },
     {
       "id": "FR-CIV-REL-004",
@@ -29336,13 +29349,13 @@
       "code_refs": [
         "crates/engine/src/perf.rs:196",
         "crates/engine/src/perf.rs:199",
-        "crates/engine/src/perf.rs:253",
+        "crates/engine/src/perf.rs:262",
         "docs/IMPLEMENTATION_STATUS.md:125"
       ],
       "test_refs": [
         "crates/engine/src/perf.rs:196",
         "crates/engine/src/perf.rs:199",
-        "crates/engine/src/perf.rs:253",
+        "crates/engine/src/perf.rs:262",
         "crates/engine/tests/fr_fr_perf_005.rs:1",
         "crates/engine/tests/fr_fr_perf_005.rs:6",
         "crates/engine/tests/fr_fr_perf_005.rs:10",

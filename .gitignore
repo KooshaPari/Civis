@@ -105,6 +105,10 @@ Thumbs.db
 yarn-debug.log*
 yarn-error.log*
 
+# Python bytecode from the traceability / capture scripts
+__pycache__/
+*.pyc
+
 # Stray audit/spec .md files at repo root (anchored; README.md and CHANGELOG.md are preserved)
 /N*.md
 /FR_TRACE*.md

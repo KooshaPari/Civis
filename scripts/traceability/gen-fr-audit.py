@@ -13,6 +13,7 @@ Outputs:
 
 Classification:
     COVERED          — spec/trace reference + code reference + test reference
+    TEST-NO-CODE-REF — spec/trace reference + test reference, no code reference
     IMPL-NO-TEST     — spec/trace reference + code reference, no test reference
     SPEC-ONLY        — spec/trace reference only, no code reference
     CODE-ONLY-no-spec — code reference only, no spec/trace reference
@@ -30,9 +31,20 @@ INVENTORY = ROOT / "docs" / "audits" / "_id_inventory_v3.json"
 OUT_JSON = ROOT / "docs" / "audits" / "fr-matrix.json"
 OUT_MD = ROOT / "docs" / "audits" / f"fr-coverage-audit-{date.today().isoformat()}.md"
 
-STATUS_ORDER = ["COVERED", "IMPL-NO-TEST", "SPEC-ONLY", "CODE-ONLY-no-spec"]
+STATUS_ORDER = [
+    "COVERED",
+    "TEST-NO-CODE-REF",
+    "IMPL-NO-TEST",
+    "SPEC-ONLY",
+    "CODE-ONLY-no-spec",
+]
 STATUS_LEGEND = {
     "COVERED": "spec/trace + code + test all present",
+    "TEST-NO-CODE-REF": (
+        "spec/trace + test present, but no ID-tagged code reference. A test "
+        "exercises the requirement yet no source file carries the ID, so the "
+        "implementation cannot be located from the ID alone."
+    ),
     "IMPL-NO-TEST": "spec/trace + code present, no test reference",
     "SPEC-ONLY": "spec/trace present, no implementing code found",
     "CODE-ONLY-no-spec": "code present, no spec/traceability reference",
@@ -63,6 +75,10 @@ def classify(row: dict) -> str:
         return "COVERED"
     if has_spec and has_code:
         return "IMPL-NO-TEST"
+    if has_spec and has_test:
+        # A test exists but no source file carries the ID. Keep this visible
+        # rather than folding it into SPEC-ONLY, which would hide the test.
+        return "TEST-NO-CODE-REF"
     if has_spec:
         return "SPEC-ONLY"
     return "CODE-ONLY-no-spec"
@@ -157,17 +173,14 @@ def main() -> int:
     md.append("")
     md.append("## Coverage by epic")
     md.append("")
-    md.append("| Epic | Total | COVERED | IMPL-NO-TEST | SPEC-ONLY | CODE-ONLY-no-spec |")
-    md.append("|------|------:|--------:|-------------:|----------:|------------------:|")
+    header = "| Epic | Total | " + " | ".join(STATUS_ORDER) + " |"
+    sep = "|------|------:|" + "|".join("-" * (len(s) + 2) for s in STATUS_ORDER) + "|"
+    md.append(header)
+    md.append(sep)
     for epic in sorted(by_epic_status.keys()):
         counts = by_epic_status[epic]
-        md.append(
-            f"| {epic} | {by_epic[epic]} | "
-            f"{counts.get('COVERED', 0)} | "
-            f"{counts.get('IMPL-NO-TEST', 0)} | "
-            f"{counts.get('SPEC-ONLY', 0)} | "
-            f"{counts.get('CODE-ONLY-no-spec', 0)} |"
-        )
+        cells = " | ".join(str(counts.get(s, 0)) for s in STATUS_ORDER)
+        md.append(f"| {epic} | {by_epic[epic]} | {cells} |")
     md.append("")
 
     def list_ids(status: str, title: str) -> None:
@@ -189,6 +202,10 @@ def main() -> int:
         md.append("")
 
     list_ids("SPEC-ONLY", "Spec-only IDs (need implementation)")
+    list_ids(
+        "TEST-NO-CODE-REF",
+        "Tested IDs with no ID-tagged code (add a code reference)",
+    )
     list_ids("IMPL-NO-TEST", "Implemented but untested IDs")
     list_ids("CODE-ONLY-no-spec", "Code-only IDs (missing spec/traceability)")
 

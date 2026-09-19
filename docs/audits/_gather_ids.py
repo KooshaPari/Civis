@@ -120,32 +120,41 @@ SPEC_FILES_EXACT = {
     "docs/traceability/TRACEABILITY_MATRIX.md",
     "docs/traceability/fr-3d-matrix.md",
     "docs/traceability/full-traceability-matrix.md",
+    # Root roadmap documents state intended work; they are not code.
+    "PLAN.md",
+    "MASTER_PLAN.md",
 }
 
-# Directory prefixes holding documents whose ROLE is to state requirements
-# rather than to implement them. A requirement-stating document is a spec
-# source: it describes intended behaviour. Counting it as "code" made an ID
-# look implemented when only a document existed, which inflated coverage.
+# Documents under `docs/` state requirements or record project state; none of
+# them implement anything. Counting a document as "code" made an ID look
+# implemented when only a note existed, which inflated coverage.
 #
 # Evidence: `docs/design/psyche-social.md` declares itself "specs / AC /
 # pseudocode only, no implementation code"; `docs/models/civ-sim/USER_SPEC.md`
-# is a set of bold requirement statements; `docs/specs/CIV-*-spec.md` are
-# requirement tables. 707 IDs had their ONLY code reference in these docs.
+# is a set of bold requirement statements; `docs/reference/FR_TRACKER.md` and
+# `PLAN.md` are trackers and roadmaps. 707 IDs had their only "code" reference
+# in a document, and a further 92 were reported COVERED for that reason alone.
 #
-# This does not drop real code references: an ID that cites both a doc here and
-# a `crates/**` path keeps the `crates/**` reference and stays classified on its
-# implementation.
-SPEC_DIR_PREFIXES = (
-    "docs/models/",
-    "docs/specs/",
-    "docs/design/",
+# This does not drop real code references: an ID that cites both a document here
+# and a `crates/**` path keeps the `crates/**` reference and stays classified on
+# its implementation. `docs/traceability/` is handled earlier as `trace`.
+DOC_DIR_PREFIXES = (
+    "docs/",
+    "agileplus-specs/",
 )
 
-# IDs must end with digits, with at least one FR-/NFR- <EPIC> <NUMBER> shape
+# IDs must end with digits, with at least one FR-/NFR- <EPIC> <NUMBER> shape.
+#
+# The trailing suffix group is `(?:-[A-Z]+\d*)*`: a continuation segment must
+# start with an UPPERCASE letter. The earlier `[-A-Z]+` form also accepted a
+# bare trailing hyphen, so prose like `FR-CIV-TACTICS-025-int` or
+# `FR-CIV-0100-int1..int4` was captured as a phantom ID `FR-CIV-TACTICS-025-`
+# that duplicated the real `FR-CIV-TACTICS-025`. Requiring `-[A-Z]` ends the
+# match at the real ID and lets the lowercase sub-label fall away.
 ID_RE = re.compile(
-    r"\b(FR|NFR)-(?:[A-Z]+-)?[A-Z]+[-A-Z0-9]*\d+(?:[-A-Z]+\d*)*\b"
+    r"\b(FR|NFR)-(?:[A-Z]+-)?[A-Z]+[-A-Z0-9]*\d+(?:-[A-Z]+\d*)*\b"
 )
-COVERS_RE = re.compile(r"^\s*///\s*Covers\s*:?(?:\s*(?:FR|NFR)-(?:[A-Z]+-)?[A-Z]+[-A-Z0-9]*\d+(?:[-A-Z]+\d*)*)")
+COVERS_RE = re.compile(r"^\s*///\s*Covers\s*:?(?:\s*(?:FR|NFR)-(?:[A-Z]+-)?[A-Z]+[-A-Z0-9]*\d+(?:-[A-Z]+\d*)*)")
 
 
 def is_self_ref(rel: str) -> bool:
@@ -217,8 +226,8 @@ def classify(rel: str) -> str:
         return "spec"
     if rel_p.startswith("docs/traceability/") and rel_p.endswith(".md"):
         return "trace"
-    # Requirement-stating documents are spec sources, not implementing code.
-    if rel_p.startswith(SPEC_DIR_PREFIXES) and rel_p.endswith(".md"):
+    # Documents are spec sources, never implementing code.
+    if rel_p.startswith(DOC_DIR_PREFIXES) and rel_p.endswith(".md"):
         return "spec"
     return "code"
 

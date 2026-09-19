@@ -1,17 +1,55 @@
 //! Tests for FR-CIV-CORE-008
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
+//! Epic: FR-CIV-CORE
 //!
-//! This test file verifies FR FR-CIV-CORE-008.
+//! This test file verifies FR FR-CIV-CORE-008: Multi-Client Command Ordering.
+//! Commands from multiple clients are applied in deterministic order.
 
 #[cfg(test)]
 mod fr_fr_civ_core_008 {
-    /// Verify FR-CIV-CORE-008 type existence and basic behavior.
+    use civ_engine::command_queue::{Command, CommandError, CommandKind, CommandQueue};
+
+    /// Commands pushed from different clients come out in FIFO order.
     #[test]
-    fn verify_fr_civ_core_008_basic() {
-        let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+    fn commands_fifo_across_clients() {
+        let mut q = CommandQueue::new(20);
+        for i in 0..5u64 {
+            q.push(Command {
+                client_id: i % 3,
+                seq: i,
+                kind: CommandKind::Resume,
+                tick_issued: i * 10,
+            })
+            .unwrap();
+        }
+        let drained = q.drain();
+        assert_eq!(drained.len(), 5);
+        for (idx, cmd) in drained.iter().enumerate() {
+            assert_eq!(cmd.seq, idx as u64);
+        }
+    }
+
+    /// Queue enforces capacity; excess commands are rejected.
+    #[test]
+    fn capacity_enforced() {
+        let mut q = CommandQueue::new(3);
+        for i in 0..3u64 {
+            q.push(Command {
+                client_id: i,
+                seq: i,
+                kind: CommandKind::Pause,
+                tick_issued: 0,
+            })
+            .unwrap();
+        }
+        assert!(matches!(
+            q.push(Command {
+                client_id: 99,
+                seq: 99,
+                kind: CommandKind::Pause,
+                tick_issued: 0,
+            }),
+            Err(CommandError::CapacityExceeded)
+        ));
     }
 }

@@ -1,17 +1,20 @@
 //! Tests for FR-CIV-BRUSH-04
 //!
 //! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
 //!
 //! This test file verifies FR FR-CIV-BRUSH-04.
 
 #[cfg(test)]
 mod fr_fr_civ_brush_04 {
-    /// Verify FR-CIV-BRUSH-04 type existence and basic behavior.
+    use civ_engine::brush_types::{ActionKind, BrushCluster};
+
+    /// FR-CIV-BRUSH-04 -- ActionKind::cluster() routes to correct cluster.
     #[test]
     fn verify_fr_civ_brush_04_basic() {
-        let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        assert_eq!(ActionKind::MaterialReplace.cluster(), BrushCluster::Material);
+        assert_eq!(ActionKind::TerraformRaise.cluster(), BrushCluster::Terraform);
+        assert_eq!(ActionKind::LifeBless.cluster(), BrushCluster::Life);
+        assert_eq!(ActionKind::Select.cluster(), BrushCluster::Select);
+        assert_eq!(ActionKind::PolicyTax.cluster(), BrushCluster::Policy);
     }
 }

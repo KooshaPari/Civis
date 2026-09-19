@@ -1,17 +1,19 @@
 //! Tests for FR-CIV-BRUSH-09
 //!
 //! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
 //!
 //! This test file verifies FR FR-CIV-BRUSH-09.
 
 #[cfg(test)]
 mod fr_fr_civ_brush_09 {
-    /// Verify FR-CIV-BRUSH-09 type existence and basic behavior.
+    use civ_engine::brush_types::BrushCluster;
+
+    /// FR-CIV-BRUSH-09 -- Infrastructure cluster has 5 placement modes.
     #[test]
     fn verify_fr_civ_brush_09_basic() {
-        let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        let modes = BrushCluster::Infrastructure.modes();
+        assert_eq!(modes.len(), 5);
+        assert_eq!(modes[0].label, "Road");
+        assert_eq!(modes[4].label, "Canal");
     }
 }

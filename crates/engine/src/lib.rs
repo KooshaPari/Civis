@@ -93,6 +93,10 @@ pub mod psyche_behavior;
 pub mod religion;
 pub mod writing;
 
+pub mod brush_types;
+pub mod vehicle_types;
+pub mod rts_types;
+
 pub mod fixed_math;
 pub mod tutorial;
 

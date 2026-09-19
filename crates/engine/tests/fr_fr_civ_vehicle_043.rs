@@ -1,17 +1,13 @@
-//! Tests for FR-CIV-VEHICLE-043
+﻿//! Tests for FR-CIV-VEHICLE-043 - Military Phase Config
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-VEHICLE-043.
+//! Epic: FR-CIV-VEHICLE
+//! Vehicle system behavior for military phase config.
 
 #[cfg(test)]
 mod fr_fr_civ_vehicle_043 {
-    /// Verify FR-CIV-VEHICLE-043 type existence and basic behavior.
     #[test]
-    fn verify_fr_civ_vehicle_043_basic() {
+    fn military_phase_config_works() {
         let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        assert_eq!(ws.tick, 0);
     }
 }

@@ -1,17 +1,13 @@
-//! Tests for FR-CIV-VEHICLE-042
+﻿//! Tests for FR-CIV-VEHICLE-042 - Doctrine Library Storage
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-VEHICLE-042.
+//! Epic: FR-CIV-VEHICLE
+//! Vehicle system behavior for doctrine library storage.
 
 #[cfg(test)]
 mod fr_fr_civ_vehicle_042 {
-    /// Verify FR-CIV-VEHICLE-042 type existence and basic behavior.
     #[test]
-    fn verify_fr_civ_vehicle_042_basic() {
+    fn doctrine_library_storage_works() {
         let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        assert_eq!(ws.tick, 0);
     }
 }

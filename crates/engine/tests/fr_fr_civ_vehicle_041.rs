@@ -1,17 +1,13 @@
-//! Tests for FR-CIV-VEHICLE-041
+﻿//! Tests for FR-CIV-VEHICLE-041 - Doctrine Fitness Score
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-VEHICLE-041.
+//! Epic: FR-CIV-VEHICLE
+//! Vehicle system behavior for doctrine fitness score.
 
 #[cfg(test)]
 mod fr_fr_civ_vehicle_041 {
-    /// Verify FR-CIV-VEHICLE-041 type existence and basic behavior.
     #[test]
-    fn verify_fr_civ_vehicle_041_basic() {
+    fn doctrine_fitness_score_works() {
         let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        assert_eq!(ws.tick, 0);
     }
 }

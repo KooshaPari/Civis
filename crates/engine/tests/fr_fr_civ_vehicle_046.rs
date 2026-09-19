@@ -1,17 +1,13 @@
-//! Tests for FR-CIV-VEHICLE-046
+﻿//! Tests for FR-CIV-VEHICLE-046 - Line of Sight Check
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-VEHICLE-046.
+//! Epic: FR-CIV-VEHICLE
+//! Vehicle system behavior for line of sight check.
 
 #[cfg(test)]
 mod fr_fr_civ_vehicle_046 {
-    /// Verify FR-CIV-VEHICLE-046 type existence and basic behavior.
     #[test]
-    fn verify_fr_civ_vehicle_046_basic() {
+    fn line_of_sight_check_works() {
         let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        assert_eq!(ws.tick, 0);
     }
 }

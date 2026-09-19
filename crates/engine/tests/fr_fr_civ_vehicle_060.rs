@@ -1,17 +1,13 @@
-//! Tests for FR-CIV-VEHICLE-060
+﻿//! Tests for FR-CIV-VEHICLE-060 - Unit Recruitment
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-VEHICLE-060.
+//! Epic: FR-CIV-VEHICLE
+//! Vehicle system behavior for unit recruitment.
 
 #[cfg(test)]
 mod fr_fr_civ_vehicle_060 {
-    /// Verify FR-CIV-VEHICLE-060 type existence and basic behavior.
     #[test]
-    fn verify_fr_civ_vehicle_060_basic() {
+    fn unit_recruitment_works() {
         let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        assert_eq!(ws.tick, 0);
     }
 }

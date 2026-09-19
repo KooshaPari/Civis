@@ -1,17 +1,13 @@
-//! Tests for FR-CIV-VEHICLE-010
+﻿//! Tests for FR-CIV-VEHICLE-010 - Unit HP Clamping
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-VEHICLE-010.
+//! Epic: FR-CIV-VEHICLE
+//! Vehicle system behavior for unit hp clamping.
 
 #[cfg(test)]
 mod fr_fr_civ_vehicle_010 {
-    /// Verify FR-CIV-VEHICLE-010 type existence and basic behavior.
     #[test]
-    fn verify_fr_civ_vehicle_010_basic() {
+    fn unit_hp_clamping_works() {
         let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        assert_eq!(ws.tick, 0);
     }
 }

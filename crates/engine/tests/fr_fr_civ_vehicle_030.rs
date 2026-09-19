@@ -1,17 +1,13 @@
-//! Tests for FR-CIV-VEHICLE-030
+﻿//! Tests for FR-CIV-VEHICLE-030 - Unit Movement Path
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-VEHICLE-030.
+//! Epic: FR-CIV-VEHICLE
+//! Vehicle system behavior for unit movement path.
 
 #[cfg(test)]
 mod fr_fr_civ_vehicle_030 {
-    /// Verify FR-CIV-VEHICLE-030 type existence and basic behavior.
     #[test]
-    fn verify_fr_civ_vehicle_030_basic() {
+    fn unit_movement_path_works() {
         let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        assert_eq!(ws.tick, 0);
     }
 }

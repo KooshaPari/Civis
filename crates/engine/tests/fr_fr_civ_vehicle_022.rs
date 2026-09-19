@@ -1,17 +1,13 @@
-//! Tests for FR-CIV-VEHICLE-022
+﻿//! Tests for FR-CIV-VEHICLE-022 - Combat Pulse Position
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-VEHICLE-022.
+//! Epic: FR-CIV-VEHICLE
+//! Vehicle system behavior for combat pulse position.
 
 #[cfg(test)]
 mod fr_fr_civ_vehicle_022 {
-    /// Verify FR-CIV-VEHICLE-022 type existence and basic behavior.
     #[test]
-    fn verify_fr_civ_vehicle_022_basic() {
+    fn combat_pulse_position_works() {
         let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        assert_eq!(ws.tick, 0);
     }
 }

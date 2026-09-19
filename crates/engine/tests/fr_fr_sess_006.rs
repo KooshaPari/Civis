@@ -1,17 +1,16 @@
-//! Tests for FR-SESS-006
+//! Tests for FR-SESS-006 - Turn Boundaries
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-SESS-006.
+//! Epic: FR-SESS
+//! Turn boundaries in hot-seat mode SHALL emit turn.start/end events.
 
 #[cfg(test)]
 mod fr_fr_sess_006 {
-    /// Verify FR-SESS-006 type existence and basic behavior.
     #[test]
-    fn verify_fr_sess_006_basic() {
-        let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+    fn turn_boundary_tick_advances() {
+        let mut ws = civ_engine::WorldState::default();
+        for i in 1..=5 {
+            ws = civ_engine::step(ws, civ_engine::Fixed::from_num(0));
+            assert_eq!(ws.tick, i);
+        }
     }
 }

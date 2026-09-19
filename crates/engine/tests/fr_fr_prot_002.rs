@@ -1,17 +1,29 @@
-//! Tests for FR-PROT-002
+//! Tests for FR-PROT-002 — Event Envelope Compatibility
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-PROT-002.
+//! Epic: FR-PROT
+//! Events SHALL be emitted as JSON-RPC notifications with a common envelope.
+//! WorldState tick is the primary envelope field.
 
 #[cfg(test)]
 mod fr_fr_prot_002 {
-    /// Verify FR-PROT-002 type existence and basic behavior.
+    /// FR-PROT-002: SimulationSnapshot exposes tick for event envelope.
     #[test]
-    fn verify_fr_prot_002_basic() {
-        let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+    fn simulation_snapshot_has_tick() {
+        let ws = civ_engine::WorldState {
+            tick: 7,
+            ..civ_engine::WorldState::default()
+        };
+        assert_eq!(ws.tick, 7, "tick must be accessible for event envelope");
+    }
+
+    /// FR-PROT-002: Step produces new state with incremented tick for notification.
+    #[test]
+    fn step_produces_new_state_for_notification() {
+        let ws = civ_engine::WorldState {
+            tick: 100,
+            ..civ_engine::WorldState::default()
+        };
+        let ws2 = civ_engine::step(ws, civ_engine::Fixed::from_num(0));
+        assert_eq!(ws2.tick, 101);
     }
 }

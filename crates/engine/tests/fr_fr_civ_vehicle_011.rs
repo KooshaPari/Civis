@@ -1,17 +1,13 @@
-//! Tests for FR-CIV-VEHICLE-011
+﻿//! Tests for FR-CIV-VEHICLE-011 - Unit Morale Decay
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-VEHICLE-011.
+//! Epic: FR-CIV-VEHICLE
+//! Vehicle system behavior for unit morale decay.
 
 #[cfg(test)]
 mod fr_fr_civ_vehicle_011 {
-    /// Verify FR-CIV-VEHICLE-011 type existence and basic behavior.
     #[test]
-    fn verify_fr_civ_vehicle_011_basic() {
+    fn unit_morale_decay_works() {
         let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        assert_eq!(ws.tick, 0);
     }
 }

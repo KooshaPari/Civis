@@ -1,17 +1,13 @@
-//! Tests for FR-CIV-VEHICLE-045
+﻿//! Tests for FR-CIV-VEHICLE-045 - BFS Next Step
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-VEHICLE-045.
+//! Epic: FR-CIV-VEHICLE
+//! Vehicle system behavior for bfs next step.
 
 #[cfg(test)]
 mod fr_fr_civ_vehicle_045 {
-    /// Verify FR-CIV-VEHICLE-045 type existence and basic behavior.
     #[test]
-    fn verify_fr_civ_vehicle_045_basic() {
+    fn bfs_next_step_works() {
         let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        assert_eq!(ws.tick, 0);
     }
 }

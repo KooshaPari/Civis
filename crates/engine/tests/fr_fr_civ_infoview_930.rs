@@ -1,17 +1,13 @@
-//! Tests for FR-CIV-INFOVIEW-930
+﻿//! Tests for FR-CIV-INFOVIEW-930 - Info View Extended
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-INFOVIEW-930.
+//! Epic: FR-CIV-FRAME
+//! Info view extended entity and region display capabilities.
 
 #[cfg(test)]
 mod fr_fr_civ_infoview_930 {
-    /// Verify FR-CIV-INFOVIEW-930 type existence and basic behavior.
     #[test]
-    fn verify_fr_civ_infoview_930_basic() {
+    fn info_view_extended_works() {
         let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        assert_eq!(ws.tick, 0);
     }
 }

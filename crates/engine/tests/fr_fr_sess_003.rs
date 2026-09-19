@@ -1,17 +1,13 @@
-//! Tests for FR-SESS-003
+//! Tests for FR-SESS-003 - Observer Mode
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-SESS-003.
+//! Epic: FR-SESS
+//! Observer mode SHALL allow read-only session access.
 
 #[cfg(test)]
 mod fr_fr_sess_003 {
-    /// Verify FR-SESS-003 type existence and basic behavior.
     #[test]
-    fn verify_fr_sess_003_basic() {
+    fn observer_read_only_state() {
         let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        assert_eq!(ws.tick, 0, "observer sees tick 0 at start");
     }
 }

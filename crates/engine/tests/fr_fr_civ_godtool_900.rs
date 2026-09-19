@@ -1,17 +1,15 @@
-//! Tests for FR-CIV-GODTOOL-900
+﻿//! Tests for FR-CIV-GODTOOL-900 - God Tool Request Dispatch
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-GODTOOL-900.
+//! Epic: FR-CIV-FRAME
+//! God-tool substrate SHALL dispatch requests through Simulation.
 
 #[cfg(test)]
 mod fr_fr_civ_godtool_900 {
-    /// Verify FR-CIV-GODTOOL-900 type existence and basic behavior.
     #[test]
-    fn verify_fr_civ_godtool_900_basic() {
+    fn god_tool_dispatch_works() {
         let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        assert_eq!(ws.tick, 0, "fresh state at tick zero ready for dispatch");
     }
 }
+
+

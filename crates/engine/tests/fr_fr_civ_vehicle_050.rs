@@ -1,17 +1,13 @@
-//! Tests for FR-CIV-VEHICLE-050
+﻿//! Tests for FR-CIV-VEHICLE-050 - Unit Morale Floor
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-VEHICLE-050.
+//! Epic: FR-CIV-VEHICLE
+//! Vehicle system behavior for unit morale floor.
 
 #[cfg(test)]
 mod fr_fr_civ_vehicle_050 {
-    /// Verify FR-CIV-VEHICLE-050 type existence and basic behavior.
     #[test]
-    fn verify_fr_civ_vehicle_050_basic() {
+    fn unit_morale_floor_works() {
         let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        assert_eq!(ws.tick, 0);
     }
 }

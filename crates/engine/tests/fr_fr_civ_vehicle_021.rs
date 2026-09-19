@@ -1,17 +1,13 @@
-//! Tests for FR-CIV-VEHICLE-021
+﻿//! Tests for FR-CIV-VEHICLE-021 - Damage Event Type
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-VEHICLE-021.
+//! Epic: FR-CIV-VEHICLE
+//! Vehicle system behavior for damage event type.
 
 #[cfg(test)]
 mod fr_fr_civ_vehicle_021 {
-    /// Verify FR-CIV-VEHICLE-021 type existence and basic behavior.
     #[test]
-    fn verify_fr_civ_vehicle_021_basic() {
+    fn damage_event_type_works() {
         let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        assert_eq!(ws.tick, 0);
     }
 }

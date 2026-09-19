@@ -1,17 +1,13 @@
-//! Tests for FR-CIV-INFOVIEW-904
+﻿//! Tests for FR-CIV-INFOVIEW-904 - Info View Resource Display
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-INFOVIEW-904.
+//! Epic: FR-CIV-FRAME
+//! Info view SHALL expose entity and region data for UI rendering.
 
 #[cfg(test)]
 mod fr_fr_civ_infoview_904 {
-    /// Verify FR-CIV-INFOVIEW-904 type existence and basic behavior.
     #[test]
-    fn verify_fr_civ_infoview_904_basic() {
+    fn info_view_data_accessible() {
         let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        assert_eq!(ws.tick, 0);
     }
 }

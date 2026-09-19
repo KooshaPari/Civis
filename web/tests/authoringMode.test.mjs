@@ -1,3 +1,5 @@
+// FR-CIV-WEB-008: L2 authoring is on by default; `?spectator=1` (and
+// `?authoring=0`) disable it.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { authoringModeLabel, resolveAuthoringEnabled } from "../src/authoringMode.mjs";

@@ -1,3 +1,5 @@
+// FR-CIV-WEB-006: decode `F3D0` binary WS frames for voxel deltas. Read-only —
+// no encode/write path is exercised here.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

@@ -1,3 +1,5 @@
+// FR-CIV-WEB-007: `?renderer=babylon` selects the Babylon viewer; the Three
+// path stays the default so the FR-CIV-WEB-003 data contract is unchanged.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { resolveRendererMode } from "../src/rendererMode.mjs";

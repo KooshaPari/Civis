@@ -1,3 +1,6 @@
+// FR-CIV-WEB-002: on connect the dashboard issues `health` + `sim.snapshot`
+// JSON-RPC calls and surfaces tick / population / economy fields. The `.mjs`
+// RPC helpers mirror `dashboard/src/lib/civisServer.ts`.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {

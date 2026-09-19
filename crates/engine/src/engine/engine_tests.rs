@@ -447,14 +447,10 @@ mod tests {
         assert_eq!(decoded.unit_type, UnitType::Knight);
     }
 
-    /// L5-115 — `PHASE_ORDER` includes "emergence" and the phase is positioned
-    /// after `life` so the agent state that emergence depends on is finalized
-    /// (cluster stocks, needs, settlements) before emergence runs.
+    /// `phase_order_includes_emergence` — emergence after life so psyche rollup has data.
     /// Closes FR-CIV-LEGENDS-INGEST-02, FR-CIV-PSYCHE-900/901, FR-CIV-PSYCHE-911,
     /// FR-CIV-PSYCHE-912, FR-CIV-GENETICS, FR-CIV-AI-006, FR-CIV-LEGENDS-QUERY-07.
-    /// FR-ENGINE-phaseorder: emergence is the final core emergence phase;
-    /// `language` and `sentience` are emergence-following couplings and are
-    /// placed AFTER emergence (and before `diffusion` propagation).
+    /// Covers: FR-CIV-PSYCHE-911
     #[test]
     fn phase_order_includes_emergence() {
         let life_idx = PHASE_ORDER
@@ -1233,6 +1229,7 @@ mod tests {
     }
 
     /// FR-CIV-ENGINE-INT-012 — diffusion advances civilian wardrobe eras over time.
+    /// Covers: FR-CIV-ENGINE-INT-012
     #[ignore = "requires full sim state bootstrapping (factions, languages, ideologies)"]
     #[test]
     fn phase_diffusion_bumps_wardrobe_eras() {
@@ -1395,6 +1392,7 @@ mod tests {
     /// FR-CIV-VOXEL-006 — voxel writes between ticks produce dirty events that
     /// the engine's voxel phase drains into `last_tick_voxel_events`, in
     /// `(chunk_id, write_seq)` order.
+    /// Covers: FR-CIV-VOXEL-006
     #[test]
     #[ignore = "TDD red step: voxel dirty event drain not yet wired through tick"]
     fn voxel_phase_drains_dirty_events_each_tick() {
@@ -2525,6 +2523,7 @@ mod tests {
     // N11 maturity↔belief coupling tests (FR-CIV-EMERGENCE-N11)
 
     /// Covers FR-CIV-EMERGENCE-N11.
+    /// Covers: FR-CIV-PSYCHE-900
     #[test]
     fn n11_avg_psyche_maturity_zero_for_empty_world() {
         let mut sim = Simulation::new();
@@ -2533,6 +2532,7 @@ mod tests {
     }
 
     /// Covers FR-CIV-EMERGENCE-N11.
+    /// Covers: FR-CIV-PSYCHE-900
     #[test]
     fn n11_avg_psyche_maturity_computes_mean() {
         use civ_agents::{Mood, Psyche, Temperament, PSYCHE_DIM};

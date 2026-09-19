@@ -1420,6 +1420,8 @@ mod tests {
     }
 
     /// FR-CIV-RELIGION — cluster belief centroids diverge like culture profiles.
+    /// Covers: FR-CIV-RELIGION-001
+    /// Covers: FR-CIV-RELIGION-002
     #[test]
     fn cluster_beliefs_diverge_between_settlements() {
         let mut sim_a = Simulation::with_seed(66);

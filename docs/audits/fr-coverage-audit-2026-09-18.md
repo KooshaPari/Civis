@@ -17,8 +17,8 @@
 
 | Status | Count | % |
 |--------|------:|--:|
-| `COVERED` | 577 | 38.3 |
-| `IMPL-NO-TEST` | 71 | 4.7 |
+| `COVERED` | 595 | 39.5 |
+| `IMPL-NO-TEST` | 53 | 3.5 |
 | `SPEC-ONLY` | 645 | 42.8 |
 | `CODE-ONLY-no-spec` | 215 | 14.3 |
 | **Total** | **1508** | **100.0** |
@@ -88,7 +88,7 @@
 | FR-CIV-EMERGENCE-N13 | 1 | 1 | 0 | 0 | 0 |
 | FR-CIV-EMERGENCE-RELIGION | 2 | 0 | 0 | 2 | 0 |
 | FR-CIV-EMERGENT-MIGRATION | 1 | 0 | 0 | 0 | 1 |
-| FR-CIV-ENGINE-INT | 10 | 9 | 1 | 0 | 0 |
+| FR-CIV-ENGINE-INT | 10 | 10 | 0 | 0 | 0 |
 | FR-CIV-ENGINE-REPLAY | 5 | 5 | 0 | 0 | 0 |
 | FR-CIV-ERA | 1 | 0 | 0 | 0 | 1 |
 | FR-CIV-FAMINE | 1 | 0 | 0 | 0 | 1 |
@@ -131,7 +131,7 @@
 | FR-CIV-LEGENDS-RESOLVE | 1 | 0 | 0 | 1 | 0 |
 | FR-CIV-LEGENDS-SCALE | 1 | 0 | 0 | 1 | 0 |
 | FR-CIV-LEGENDS-SIG | 1 | 0 | 0 | 1 | 0 |
-| FR-CIV-LIFE | 20 | 18 | 1 | 1 | 0 |
+| FR-CIV-LIFE | 20 | 19 | 0 | 1 | 0 |
 | FR-CIV-LLM | 6 | 0 | 0 | 6 | 0 |
 | FR-CIV-MARKET | 8 | 0 | 0 | 8 | 0 |
 | FR-CIV-MCP | 6 | 2 | 0 | 4 | 0 |
@@ -146,15 +146,15 @@
 | FR-CIV-PERF-BUILD | 1 | 0 | 0 | 1 | 0 |
 | FR-CIV-PERF-RT | 3 | 0 | 0 | 3 | 0 |
 | FR-CIV-PERF-WEB | 1 | 0 | 0 | 1 | 0 |
-| FR-CIV-PLANET | 12 | 9 | 2 | 0 | 1 |
+| FR-CIV-PLANET | 12 | 11 | 0 | 0 | 1 |
 | FR-CIV-POLITY | 8 | 0 | 0 | 8 | 0 |
 | FR-CIV-PROTO | 15 | 2 | 0 | 13 | 0 |
 | FR-CIV-PROTO3D | 20 | 19 | 1 | 0 | 0 |
-| FR-CIV-PSYCHE | 29 | 6 | 2 | 21 | 0 |
+| FR-CIV-PSYCHE | 29 | 8 | 0 | 21 | 0 |
 | FR-CIV-PSYCHE-N11 | 1 | 0 | 0 | 0 | 1 |
 | FR-CIV-QOL | 14 | 0 | 0 | 14 | 0 |
 | FR-CIV-REL | 5 | 3 | 0 | 1 | 1 |
-| FR-CIV-RELIGION | 2 | 0 | 2 | 0 | 0 |
+| FR-CIV-RELIGION | 2 | 2 | 0 | 0 | 0 |
 | FR-CIV-RENDER | 2 | 2 | 0 | 0 | 0 |
 | FR-CIV-RES | 1 | 1 | 0 | 0 | 0 |
 | FR-CIV-RESEARCH | 13 | 13 | 0 | 0 | 0 |
@@ -176,17 +176,17 @@
 | FR-CIV-SOCIAL-001-INSTITUTIONS | 1 | 0 | 1 | 0 | 0 |
 | FR-CIV-SOCIAL-002-IDEOLOGY | 1 | 0 | 1 | 0 | 0 |
 | FR-CIV-SPECIES | 48 | 12 | 0 | 36 | 0 |
-| FR-CIV-TACTICS | 65 | 56 | 5 | 4 | 0 |
+| FR-CIV-TACTICS | 65 | 59 | 2 | 4 | 0 |
 | FR-CIV-TECH | 21 | 0 | 0 | 21 | 0 |
 | FR-CIV-TERRAIN | 6 | 0 | 0 | 6 | 0 |
 | FR-CIV-TEST | 7 | 0 | 0 | 0 | 7 |
 | FR-CIV-TRAFFIC-LANE | 4 | 4 | 0 | 0 | 0 |
 | FR-CIV-UI | 3 | 0 | 3 | 0 | 0 |
 | FR-CIV-UNREST | 2 | 1 | 0 | 0 | 1 |
-| FR-CIV-UX | 7 | 5 | 2 | 0 | 0 |
+| FR-CIV-UX | 7 | 7 | 0 | 0 | 0 |
 | FR-CIV-VEHICLE | 26 | 0 | 0 | 26 | 0 |
 | FR-CIV-VERIFY | 10 | 0 | 0 | 10 | 0 |
-| FR-CIV-VOXEL | 18 | 17 | 1 | 0 | 0 |
+| FR-CIV-VOXEL | 18 | 18 | 0 | 0 | 0 |
 | FR-CIV-VOXEL-DIRTY | 2 | 2 | 0 | 0 | 0 |
 | FR-CIV-WAR | 15 | 5 | 0 | 10 | 0 |
 | FR-CIV-WAR-001-UNITS | 1 | 1 | 0 | 0 | 0 |
@@ -262,13 +262,13 @@
 | NFR-C | 7 | 0 | 0 | 7 | 0 |
 | NFR-CIV | 13 | 0 | 0 | 13 | 0 |
 | NFR-CIV-ACC | 4 | 0 | 3 | 1 | 0 |
-| NFR-CIV-AI | 3 | 0 | 2 | 1 | 0 |
+| NFR-CIV-AI | 3 | 2 | 0 | 1 | 0 |
 | NFR-CIV-DET | 4 | 3 | 0 | 1 | 0 |
 | NFR-CIV-DEV-HYGIENE | 1 | 0 | 1 | 0 | 0 |
-| NFR-CIV-LEGENDS-CONFIG | 1 | 0 | 1 | 0 | 0 |
+| NFR-CIV-LEGENDS-CONFIG | 1 | 1 | 0 | 0 | 0 |
 | NFR-CIV-LEGENDS-LOUD | 1 | 0 | 0 | 1 | 0 |
 | NFR-CIV-LEGENDS-PERF | 1 | 0 | 0 | 1 | 0 |
-| NFR-CIV-LEGENDS-SCALE | 1 | 0 | 1 | 0 | 0 |
+| NFR-CIV-LEGENDS-SCALE | 1 | 1 | 0 | 0 | 0 |
 | NFR-CIV-MAINT | 6 | 0 | 0 | 6 | 0 |
 | NFR-CIV-PERF | 11 | 1 | 8 | 2 | 0 |
 | NFR-CIV-PORT | 3 | 0 | 0 | 3 | 0 |
@@ -1966,7 +1966,7 @@
 - `NFR-S-06`
   - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2071, docs/traceability/index.md:1236, docs/traceability/nfr-s-06/nfr-s-06-spec.md:1
 
-## Implemented but untested IDs (71)
+## Implemented but untested IDs (53)
 
 - `FR-CIV-BEVY-013`
   - spec: docs/traceability/fr-3d-matrix.md:178, docs/traceability/full-traceability-matrix.md:307, docs/traceability/fr-civ-bevy-013/fr-civ-bevy-013-adr.md:1
@@ -1995,9 +1995,6 @@
 - `FR-CIV-ECON-002-JOULE`
   - spec: agileplus-specs/civ-021-recovered-requirements/spec.md:70, docs/traceability/fr-civ-econ-002-joule/fr-civ-econ-002-joule-adr.md:1, docs/traceability/fr-civ-econ-002-joule/fr-civ-econ-002-joule-adr.md:6
   - code: docs/guides/COPILOT_L3_AGENTS.md:92, docs/guides/COPILOT_L3_AGENTS.md:93, docs/guides/COPILOT_L3_AGENTS.md:474
-- `FR-CIV-ENGINE-INT-012`
-  - spec: docs/traceability/fr-civ-engine-int-012/fr-civ-engine-int-012-adr.md:1, docs/traceability/fr-civ-engine-int-012/fr-civ-engine-int-012-adr.md:6, docs/traceability/fr-civ-engine-int-012/fr-civ-engine-int-012-adr.md:11
-  - code: crates/engine/src/engine/engine_tests.rs:1235
 - `FR-CIV-GEO-001`
   - spec: docs/specs/CIV-0300-rts-ui-ux-spec.md:2024, docs/traceability/fr-civ-geo-001/fr-civ-geo-001-adr.md:1, docs/traceability/fr-civ-geo-001/fr-civ-geo-001-adr.md:6
   - code: docs/reference/FR_TRACKER.md:22, docs/reports/STATUS_REPORT.md:95
@@ -2019,30 +2016,9 @@
 - `FR-CIV-GODOT-UX-000`
   - spec: docs/traceability/fr-civ-godot-ux-000/fr-civ-godot-ux-000-adr.md:1, docs/traceability/fr-civ-godot-ux-000/fr-civ-godot-ux-000-adr.md:6, docs/traceability/fr-civ-godot-ux-000/fr-civ-godot-ux-000-adr.md:11
   - code: docs/development-guide/fr-godot-attach.md:13
-- `FR-CIV-LIFE-035`
-  - spec: docs/traceability/fr-civ-life-035/fr-civ-life-035-adr.md:1, docs/traceability/fr-civ-life-035/fr-civ-life-035-adr.md:6, docs/traceability/fr-civ-life-035/fr-civ-life-035-adr.md:11
-  - code: crates/agents/src/cluster.rs:76
-- `FR-CIV-PLANET-020`
-  - spec: agileplus-specs/civ-021-recovered-requirements/spec.md:85, docs/traceability/fr-civ-planet-020/fr-civ-planet-020-adr.md:1, docs/traceability/fr-civ-planet-020/fr-civ-planet-020-adr.md:6
-  - code: crates/engine/src/climate.rs:16, crates/engine/src/climate.rs:35, crates/engine/src/climate.rs:48
-- `FR-CIV-PLANET-030`
-  - spec: agileplus-specs/civ-021-recovered-requirements/spec.md:91, docs/traceability/fr-civ-planet-030/fr-civ-planet-030-adr.md:1, docs/traceability/fr-civ-planet-030/fr-civ-planet-030-adr.md:6
-  - code: crates/engine/src/climate.rs:35, crates/engine/src/engine/engine_tests.rs:1850, crates/engine/src/engine.rs:820
 - `FR-CIV-PROTO3D-009-`
   - spec: docs/specs/gap-audit.md:306, docs/traceability/fr-3d-matrix.md:229
   - code: docs/development-guide/p-w1-kickoff.md:116
-- `FR-CIV-PSYCHE-900`
-  - spec: docs/specs/requirements/FR-CIV-PSYCHE.md:11, docs/traceability/civis-tracelinks.md:142, docs/traceability/fr-civ-psyche-900/fr-civ-psyche-900-adr.md:1
-  - code: crates/agents/src/psyche.rs:312, crates/agents/src/psyche.rs:424, crates/engine/src/dormant_phases.rs:3
-- `FR-CIV-PSYCHE-911`
-  - spec: docs/specs/build-green/engine_missing_symbols.md:13, docs/specs/requirements/FR-CIV-PSYCHE.md:14, docs/traceability/fr-civ-psyche-911/fr-civ-psyche-911-adr.md:1
-  - code: crates/agents/src/psyche.rs:491, crates/engine/src/engine/ai_decision.rs:57, crates/engine/src/engine/engine_tests.rs:453
-- `FR-CIV-RELIGION-001`
-  - spec: docs/traceability/civis-tracelinks.md:143
-  - code: crates/engine/src/emergence.rs:2436
-- `FR-CIV-RELIGION-002`
-  - spec: docs/traceability/fr-emergence-matrix.md:80
-  - code: clients/bevy-ref/src/game_ui.rs:38, crates/emergence-oracle/src/oracles/religion.rs:8, crates/engine/src/emergence.rs:208
 - `FR-CIV-RESEARCH-004-REPLAY`
   - spec: docs/traceability/fr-civ-research-004-replay/fr-civ-research-004-replay-adr.md:1, docs/traceability/fr-civ-research-004-replay/fr-civ-research-004-replay-adr.md:6, docs/traceability/fr-civ-research-004-replay/fr-civ-research-004-replay-adr.md:11
   - code: PLAN.md:239
@@ -2060,19 +2036,10 @@
   - code: PLAN.md:149, PLAN.md:150
 - `FR-CIV-TACTICS-025-`
   - spec: docs/traceability/fr-3d-matrix.md:123, docs/traceability/fr-3d-matrix.md:124, docs/traceability/fr-3d-matrix.md:125
-  - code: crates/engine/src/engine/engine_tests.rs:1600, crates/engine/src/engine/engine_tests.rs:1622, crates/engine/src/engine/engine_tests.rs:1646
+  - code: crates/engine/src/engine/engine_tests.rs:1598, crates/engine/src/engine/engine_tests.rs:1620, crates/engine/src/engine/engine_tests.rs:1644
 - `FR-CIV-TACTICS-032`
   - spec: docs/traceability/fr-3d-matrix.md:119, docs/traceability/full-traceability-matrix.md:227, docs/traceability/fr-civ-tactics-032/fr-civ-tactics-032-adr.md:1
   - code: docs/development-guide/p-w1-kickoff.md:31
-- `FR-CIV-TACTICS-035`
-  - spec: docs/traceability/fr-3d-matrix.md:122, docs/traceability/full-traceability-matrix.md:230, docs/traceability/fr-civ-tactics-035/fr-civ-tactics-035-adr.md:1
-  - code: crates/engine/src/engine.rs:812, crates/tactics/src/military_phase.rs:1, docs/development-guide/p-w1-kickoff.md:34
-- `FR-CIV-TACTICS-045`
-  - spec: agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:56, docs/traceability/fr-3d-matrix.md:135, docs/traceability/full-traceability-matrix.md:240
-  - code: crates/engine/src/scenario.rs:99, docs/development-guide/p-w1-kickoff.md:47
-- `FR-CIV-TACTICS-050`
-  - spec: docs/traceability/fr-3d-matrix.md:140, docs/traceability/full-traceability-matrix.md:245, docs/traceability/fr-civ-tactics-050/fr-civ-tactics-050-adr.md:1
-  - code: crates/engine/src/engine/military_phases.rs:234, crates/engine/src/scenario.rs:105, crates/engine/src/scenario.rs:189
 - `FR-CIV-UI-001`
   - spec: docs/traceability/fr-civ-ui-001/fr-civ-ui-001-adr.md:1, docs/traceability/fr-civ-ui-001/fr-civ-ui-001-adr.md:6, docs/traceability/fr-civ-ui-001/fr-civ-ui-001-adr.md:11
   - code: docs/guides/voxel-emergent-vision-and-migration.md:99, docs/guides/voxel-emergent-vision-and-migration.md:155, docs/guides/voxel-emergent-vision-and-migration.md:159
@@ -2082,15 +2049,6 @@
 - `FR-CIV-UI-003`
   - spec: docs/traceability/fr-civ-ui-003/fr-civ-ui-003-adr.md:1, docs/traceability/fr-civ-ui-003/fr-civ-ui-003-adr.md:6, docs/traceability/fr-civ-ui-003/fr-civ-ui-003-adr.md:11
   - code: docs/guides/voxel-emergent-vision-and-migration.md:99, docs/guides/voxel-emergent-vision-and-migration.md:155, docs/guides/voxel-emergent-vision-and-migration.md:161
-- `FR-CIV-UX-002`
-  - spec: docs/traceability/fr-civ-ux-002/fr-civ-ux-002-adr.md:1, docs/traceability/fr-civ-ux-002/fr-civ-ux-002-adr.md:6, docs/traceability/fr-civ-ux-002/fr-civ-ux-002-adr.md:11
-  - code: crates/server/src/jsonrpc.rs:58, docs/development-guide/fr-godot-attach.md:14
-- `FR-CIV-UX-003`
-  - spec: docs/traceability/fr-civ-ux-003/fr-civ-ux-003-adr.md:1, docs/traceability/fr-civ-ux-003/fr-civ-ux-003-adr.md:6, docs/traceability/fr-civ-ux-003/fr-civ-ux-003-adr.md:11
-  - code: crates/server/src/jsonrpc.rs:62, docs/development-guide/fr-godot-attach.md:15
-- `FR-CIV-VOXEL-006`
-  - spec: docs/traceability/fr-civ-voxel-006/fr-civ-voxel-006-adr.md:1, docs/traceability/fr-civ-voxel-006/fr-civ-voxel-006-adr.md:6, docs/traceability/fr-civ-voxel-006/fr-civ-voxel-006-adr.md:11
-  - code: crates/engine/src/engine/engine_tests.rs:1395
 - `FR-CIV-WEB-000`
   - spec: docs/traceability/fr-civ-web-000/fr-civ-web-000-adr.md:1, docs/traceability/fr-civ-web-000/fr-civ-web-000-adr.md:6, docs/traceability/fr-civ-web-000/fr-civ-web-000-adr.md:11
   - code: docs/development-guide/fr-web-spectator.md:3, docs/development-guide/fr-web-spectator.md:29, docs/development-guide/pr-296-body.md:20
@@ -2124,21 +2082,9 @@
 - `NFR-CIV-ACC-004`
   - spec: docs/reference/non-functional-requirements.md:394, docs/reference/non-functional-requirements.md:576, docs/reference/non-functional-requirements.md:610
   - code: docs/guides/voxel-emergent-vision-and-migration.md:99
-- `NFR-CIV-AI-001`
-  - spec: docs/design/civ-ai-crate.md:48, docs/design/civ-ai-crate.md:180, docs/design/civ-ai-crate.md:216
-  - code: crates/ai/src/pool.rs:1
-- `NFR-CIV-AI-003`
-  - spec: docs/design/civ-ai-crate.md:50, docs/design/civ-ai-crate.md:164, docs/traceability/index.md:1164
-  - code: crates/ai/src/lib.rs:13, crates/ai/src/lib.rs:229
 - `NFR-CIV-DEV-HYGIENE-001`
   - spec: docs/traceability/index.md:1169, docs/traceability/nfr-civ-dev-hygiene-001/nfr-civ-dev-hygiene-001-spec.md:1, docs/traceability/nfr-civ-dev-hygiene-001/nfr-civ-dev-hygiene-001-spec.md:5
   - code: docs/ops/history-purge-plan.md:4
-- `NFR-CIV-LEGENDS-CONFIG-04`
-  - spec: docs/design/legends-engine.md:454, docs/traceability/index.md:1170, docs/traceability/nfr-civ-legends-config-04/nfr-civ-legends-config-04-research.md:1
-  - code: crates/legends/src/config.rs:1
-- `NFR-CIV-LEGENDS-SCALE-02`
-  - spec: docs/design/legends-engine.md:452, docs/traceability/index.md:1173, docs/traceability/nfr-civ-legends-scale-02/nfr-civ-legends-scale-02-adr.md:1
-  - code: crates/legends/src/lib.rs:17
 - `NFR-CIV-PERF-003`
   - spec: agileplus-specs/civ-019-emergence-metrics-dashboard/spec.md:69, agileplus-specs/civ-020-ca-perf-dirty-chunk/spec.md:25, docs/design/civ-perf-dirty-incremental.md:9
   - code: docs/guides/voxel-emergent-vision-and-migration.md:170, docs/guides/voxel-emergent-vision-and-migration.md:189
@@ -2189,8 +2135,8 @@
 - `FR-ASSET-PIPELINE-002`
   - code: crates/asset-pipeline/Cargo.toml:8, crates/asset-pipeline/src/bin/svg_export.rs:20, crates/asset-pipeline/src/error.rs:9
 - `FR-CIV-014`
-  - code: crates/engine/src/emergence.rs:1625, crates/engine/src/engine/engine_tests.rs:3157, crates/engine/src/save.rs:335
-  - tests: crates/engine/src/emergence.rs:1625, crates/engine/src/save.rs:335, crates/engine/src/save.rs:375
+  - code: crates/engine/src/emergence.rs:1627, crates/engine/src/engine/engine_tests.rs:3157, crates/engine/src/save.rs:335
+  - tests: crates/engine/src/emergence.rs:1627, crates/engine/src/save.rs:335, crates/engine/src/save.rs:375
 - `FR-CIV-ACCESS-010`
   - code: docs/adr/ADR-021-accessibility-and-l10n-strategy.md:47
 - `FR-CIV-ACCESS-020`

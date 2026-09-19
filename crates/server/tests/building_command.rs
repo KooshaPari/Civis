@@ -482,6 +482,7 @@ fn building_state(sim: &Simulation) -> Vec<(u64, Building)> {
     buildings.sort_by_key(|(id, _)| *id);
     buildings
 }
+/// Covers: FR-CIV-UX-003
 #[tokio::test]
 async fn building_palette_and_interleaved_terrain_survive_replay_without_duplication() {
     use civ_engine::{decode_civreplay, encode_civreplay};

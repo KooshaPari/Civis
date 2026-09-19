@@ -279,7 +279,9 @@ mod tests {
         assert_eq!(members, vec![(2, None), (5, None)]);
     }
 
+    /// `clustering_is_order_independent` — sort by agent id makes output deterministic.
     #[test]
+    /// Covers: FR-CIV-LIFE-035
     fn clustering_is_order_independent() {
         let a = vec![
             (

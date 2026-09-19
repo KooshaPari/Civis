@@ -459,6 +459,7 @@ mod tests {
 
     /// FR-CIV-WAR-010 — engagement cadence control creates periodic conflict windows.
     /// resolve_combat respects the cadence — no engagements on off-cadence ticks.
+    /// Covers: FR-CIV-TACTICS-035
     #[test]
     fn combat_respects_cadence() {
         let world = empty_world();

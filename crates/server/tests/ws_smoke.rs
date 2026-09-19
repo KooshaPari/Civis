@@ -1759,6 +1759,7 @@ async fn ws_ten_clients_each_receive_text_frame() {
     );
 }
 
+/// Covers: FR-CIV-UX-002
 #[tokio::test]
 async fn ws_jsonrpc_sim_spawn_civilian_returns_entity_id() {
     let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(4)));

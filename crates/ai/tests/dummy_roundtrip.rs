@@ -37,6 +37,7 @@ async fn dummy_embed_round_trips() {
     assert_eq!(v1, v2);
 }
 
+/// Covers: NFR-CIV-AI-003
 #[tokio::test]
 async fn cached_generate_hits_on_repeat() {
     let p = DummyAiProvider;
@@ -76,6 +77,7 @@ fn registry_required_provider_fails_loud() {
     assert!(reg.require(ProviderRole::Embedder).is_err());
 }
 
+/// Covers: NFR-CIV-AI-001
 #[tokio::test(flavor = "current_thread")]
 #[ignore = "tokio runtime nesting: AiWorkerPool::spawn creates its own runtime, drops inside async context"]
 async fn worker_pool_runs_task_off_thread() {

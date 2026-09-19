@@ -134,6 +134,7 @@ fn sig_05_significant_lineage_promoted_over_transient_farmer() {
     assert!(!g.entity(farmer).unwrap().promoted, "farmer not promoted");
 }
 
+/// Covers: NFR-CIV-LEGENDS-CONFIG-04
 #[test]
 fn sig_05_decay_terminates_at_prune_floor() {
     // AC-SIG-2: with no new events, a non-promoted entity decays to <= prune_floor.
@@ -372,6 +373,7 @@ fn loud_gap_detected_when_producer_silent() {
     );
 }
 
+/// Covers: NFR-CIV-LEGENDS-SCALE-02
 #[test]
 fn worker_drains_off_path_and_maintains() {
     let mut w = LegendsWorker::new(SagaGraph::new(cfg()));

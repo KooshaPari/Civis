@@ -553,6 +553,7 @@ mod tests {
     }
 
     #[test]
+    /// Covers: FR-CIV-TACTICS-045
     fn scenario_fog_wires_military_phase() {
         let scenario = Scenario {
             version: SCENARIO_SCHEMA_VERSION,
@@ -579,6 +580,7 @@ mod tests {
     }
 
     #[test]
+    /// Covers: FR-CIV-TACTICS-050
     fn scenario_military_wires_military_phase() {
         let scenario = Scenario {
             version: SCENARIO_SCHEMA_VERSION,

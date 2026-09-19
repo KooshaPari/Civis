@@ -146,6 +146,8 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
+    /// Covers: FR-CIV-PLANET-020
+    /// Covers: FR-CIV-PLANET-030
     fn tide_movement_survives_save_and_load() {
         let mut sim = Simulation::with_seed(72);
         sim.moon = MoonConfig {

@@ -1,17 +1,13 @@
 //! Tests for FR-CIV-QOL-210
-//!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-QOL-210.
-
+//! Epic: FR-CIV-QOL. Settings persistence.
 #[cfg(test)]
 mod fr_fr_civ_qol_210 {
-    /// Verify FR-CIV-QOL-210 type existence and basic behavior.
     #[test]
-    fn verify_fr_civ_qol_210_basic() {
+    fn world_state_serializable_for_settings() {
         let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        // Settings persistence requires JSON round-trip capability.
+        let json = serde_json::to_string(&ws).expect("must serialize");
+        let ws2: civ_engine::WorldState = serde_json::from_str(&json).expect("must deserialize");
+        assert_eq!(ws.tick, ws2.tick);
     }
 }

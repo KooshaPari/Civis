@@ -45,6 +45,7 @@ pub mod caravan;
 pub mod climate;
 pub mod command_queue;
 pub mod conditions;
+pub mod constraints;
 pub mod culture;
 pub mod diplomacy;
 pub mod disasters;

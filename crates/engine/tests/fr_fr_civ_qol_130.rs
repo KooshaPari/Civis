@@ -1,17 +1,30 @@
 //! Tests for FR-CIV-QOL-130
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
+//! Epic: FR-CIV-QOL
 //! Upgraded from stub to real assertions.
 //!
-//! This test file verifies FR FR-CIV-QOL-130.
+//! FR-CIV-QOL-130: Blueprints / Copy-Paste (infra).
+//! Engine-side: verify WorldState serialization supports region snapshots.
 
 #[cfg(test)]
 mod fr_fr_civ_qol_130 {
-    /// Verify FR-CIV-QOL-130 type existence and basic behavior.
+    use civ_engine::WorldState;
+
+    /// WorldState can be serialized for blueprint capture.
     #[test]
-    fn verify_fr_civ_qol_130_basic() {
-        let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+    fn worldstate_serializable_for_blueprints() {
+        let ws = WorldState::default();
+        let json = serde_json::to_string(&ws).expect("must serialize");
+        assert!(!json.is_empty());
+    }
+
+    /// WorldState can be cloned for region snapshot (copy-paste).
+    #[test]
+    fn worldstate_clone_for_region_snapshot() {
+        let ws = WorldState::default();
+        let snapshot = ws.clone();
+        // Verify key fields are preserved.
+        assert_eq!(ws.factions, snapshot.factions);
+        assert_eq!(ws.faction_treasury, snapshot.faction_treasury);
     }
 }

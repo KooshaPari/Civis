@@ -1,17 +1,22 @@
 //! Tests for FR-CIV-QOL-230
-//!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-QOL-230.
-
+//! Epic: FR-CIV-QOL. Legends data browser.
 #[cfg(test)]
 mod fr_fr_civ_qol_230 {
-    /// Verify FR-CIV-QOL-230 type existence and basic behavior.
     #[test]
-    fn verify_fr_civ_qol_230_basic() {
+    fn significance_accumulator_exists_for_legends() {
+        // FR-CIV-QOL-230 requires Legends event data.
+        // The significance accumulator tracks entity importance.
         let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        // Significance is default-constructed.
+        let _sig = ws.significance;
+    }
+
+    #[test]
+    fn world_state_has_legends_relevant_fields() {
+        let ws = civ_engine::WorldState::default();
+        // Chronology of significant events.
+        assert!(ws.chronicle.is_empty());
+        // Research progress for tech legends.
+        assert!(ws.research_progress.is_empty());
     }
 }

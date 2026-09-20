@@ -1,17 +1,19 @@
-//! Tests for FR-CIV-MOD-009
+//! Tests for FR-CIV-MOD-009 — Host capability imports
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-MOD-009.
+//! Epic: FR-CIV-MOD
+//! Verifies that HOST_CAPABILITY_IMPORTS is populated.
 
 #[cfg(test)]
 mod fr_fr_civ_mod_009 {
-    /// Verify FR-CIV-MOD-009 type existence and basic behavior.
+    /// FR-CIV-MOD-009: HOST_CAPABILITY_IMPORTS is non-empty.
     #[test]
-    fn verify_fr_civ_mod_009_basic() {
-        use civ_mod_host::{ModType, ModGuestStateSave};
-        let _ = ModType::Policy;
+    fn capability_imports_nonempty() {
+        assert!(!civ_mod_host::HOST_CAPABILITY_IMPORTS.is_empty());
+    }
+
+    /// FR-CIV-MOD-009: HOST_GUEST_MEMORY_CAP is positive.
+    #[test]
+    fn guest_memory_cap_positive() {
+        assert!(civ_mod_host::HOST_GUEST_MEMORY_CAP > 0);
     }
 }

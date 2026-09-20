@@ -1,17 +1,36 @@
-//! Tests for FR-CIV-MOD-005
+//! Tests for FR-CIV-MOD-005 — Hook registration and execution
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-MOD-005.
+//! Epic: FR-CIV-MOD
+//! Verifies that ModHookEngine registers and executes hooks.
 
 #[cfg(test)]
 mod fr_fr_civ_mod_005 {
-    /// Verify FR-CIV-MOD-005 type existence and basic behavior.
+    /// FR-CIV-MOD-005: ModHookEngine starts empty.
     #[test]
-    fn verify_fr_civ_mod_005_basic() {
-        use civ_mod_host::{ModType, ModGuestStateSave};
-        let _ = ModType::Policy;
+    fn hook_engine_starts_empty() {
+        use civ_mod_host::hooks::{ModHookEngine, ModHook};
+        let engine = ModHookEngine::new();
+        let regs = engine.get_registrations(&ModHook::OnTick(0));
+        assert!(regs.is_empty());
+    }
+
+    /// FR-CIV-MOD-005: Registering a hook makes it retrievable.
+    #[test]
+    fn register_makes_hook_retrievable() {
+        use civ_mod_host::hooks::{ModHookEngine, ModHook};
+        let mut engine = ModHookEngine::new();
+        engine.register("test-mod", ModHook::OnTick(0), 0);
+        let regs = engine.get_registrations(&ModHook::OnTick(0));
+        assert_eq!(regs.len(), 1);
+        assert_eq!(regs[0].mod_id, "test-mod");
+    }
+
+    /// FR-CIV-MOD-005: Executing with no hooks returns Continue.
+    #[test]
+    fn execute_empty_returns_continue() {
+        use civ_mod_host::hooks::{ModHookEngine, ModHook, HookResult};
+        let mut engine = ModHookEngine::new();
+        let result = engine.execute(ModHook::OnTick(0), "{}");
+        assert!(matches!(result, HookResult::Continue));
     }
 }

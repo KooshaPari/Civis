@@ -109,6 +109,7 @@ pub struct AgentSnapshot {
 
 /// Compute migration pressure at the agent's home settlement.
 /// Higher pressure = more desperate to leave.
+// FR-CIV-ACT-005
 pub fn home_pressure(settlement: &SettlementSnapshot, config: &MigrationConfig) -> f32 {
     // Invert food_per_capita: low food → high pressure
     let food_pressure = (1.0 - settlement.food_per_capita) * config.food_weight;

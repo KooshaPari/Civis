@@ -43,6 +43,7 @@ impl Temperament {
 
 /// Fast-moving affect state.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+// FR-CIV-PSYCHE-002
 pub struct Mood {
     /// Valence from `-1.0` misery to `+1.0` contentment.
     pub valence: f32,

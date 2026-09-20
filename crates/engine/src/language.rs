@@ -102,6 +102,7 @@ pub fn borrow_word(target: &mut LanguageState, _source: &LanguageState, kind: Wo
     target.lexemes.push(key.to_string());
 }
 
+// FR-CIV-LANG-007
 /// Advance one language lineage tick under `isolation` pressure. Stub: no-op.
 pub fn tick_language_for_lineage(state: &mut LanguageState, isolation: f32, _lineage_id: u64) {
     state.drift_rate = (state.drift_rate + isolation * 0.01).clamp(0.0, 1.0);

@@ -24,6 +24,7 @@ pub enum Phase {
 }
 
 /// Static description of a single material.
+// FR-CIV-RENDER-002
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MaterialDef {
     /// Stable identifier used in world storage.

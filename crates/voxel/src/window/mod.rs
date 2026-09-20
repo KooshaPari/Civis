@@ -124,6 +124,7 @@ pub enum SimCohort {
 /// through `bincode` for replay/manifest persistence. Defaults are tuned
 /// to match `WORLD_DIMS_SMALL`'s working set (see
 /// `docs/design/streaming-window.md` §3.5 / §6).
+// FR-CIV-RENDER-001
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct WindowPolicy {
     /// Innermost ring fully meshed at LOD 0. Chunks at ring `≤

@@ -113,6 +113,8 @@ pub struct FacadeStyle {
 }
 
 /// Vectorized cultural-ecological input used to choose a tile-set family.
+// FR-CIV-CLIENT-GODOT-001
+// FR-CIV-CLIENT-GODOT-002
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct CultureEraWealthVector {
     /// Culture identifier for style-family lookup.
@@ -304,6 +306,7 @@ impl BuildingGraph {
     }
 
     /// Inserts or replaces a parcel.
+    // FR-CIV-ACTOR-001-LIFECYCLE
     pub fn insert_parcel(&mut self, parcel: Parcel) {
         if let Some(existing) = self.parcels.iter_mut().find(|p| p.id == parcel.id) {
             *existing = parcel;

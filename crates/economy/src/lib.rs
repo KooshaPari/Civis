@@ -85,6 +85,7 @@ use serde::{Deserialize, Serialize};
 
 // FR-CIV-ECON-001-MARKET
 /// Schema version for `civ-economy`. Bumped on breaking snapshot / ledger changes.
+// FR-CIV-MARKET-001
 pub const SCHEMA_VERSION: u32 = 1;
 
 /// Stub ledger account id (district / actor accounts land in CIV-0100 follow-up).
@@ -96,6 +97,7 @@ pub const ACCOUNT_ENERGY_BUDGET: AccountId = 0;
 pub const ACCOUNT_CONSUMPTION: AccountId = 1;
 
 /// Bookkeeping row for a single ledger leg (stub; full double-entry pairs in CIV-0100 §3d).
+// FR-CIV-ECON-004
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LedgerEntry {
     /// Simulation tick when the entry was recorded.

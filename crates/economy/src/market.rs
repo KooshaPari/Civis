@@ -34,6 +34,10 @@ pub const MIN_PRICE_CENTS: i64 = 1;
 pub const DEFAULT_SMOOTHING_FACTOR: i64 = 8;
 
 /// Per-good clearing prices in fixed-point cents (stub; full clearing in CIV-0100 §3c).
+// FR-CIV-MARKET-002
+// FR-CIV-MARKET-003
+// FR-CIV-MARKET-004
+// FR-CIV-MARKET-005
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MarketState {
     /// Good id → price in cents.

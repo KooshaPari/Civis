@@ -85,6 +85,7 @@ const SATURATION_VOLUME: i64 = 1_000;
 /// Holds the running trust score and a few diagnostics. The struct is the
 /// unit of additive integration: callers create one per currency they
 /// issue, then drive it through [`step_currency_trust`] every tick.
+// FR-CIV-MARKET-007
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CurrencyTrust {
     /// Stable currency id assigned by the caller.

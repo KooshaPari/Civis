@@ -50,6 +50,7 @@ impl AllocationEngine for PlannedAllocator {
 /// Joule / thermodynamic regime: identical fill curve to the planned regime at a
 /// single good, but kept distinct so engines can weight by joule cost when the
 /// hybrid scheduler routes energy-priced goods through it.
+// FR-CIV-ECON-003
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct JouleAllocator;
 
@@ -169,6 +170,7 @@ pub fn allocate_by_priority(
 /// Selectable allocation regime — the economy layer picks one and routes all
 /// rationing through [`allocate_with`] (FR-ECON-005). Serializable so a scenario
 /// or policy can set the regime deterministically.
+// FR-CIV-MARKET-006
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum AllocationRegime {
     /// Proportional market rationing (price-clearing proxy). Default.

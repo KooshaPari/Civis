@@ -1,19 +1,57 @@
 //! Tests for FR-CIV-MARKET-008
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
+//! Epic: FR-CIV-MARKET
 //! Upgraded from stub to real assertions.
 //!
-//! This test file verifies FR FR-CIV-MARKET-008.
+//! FR-CIV-MARKET-008: Credit/debt via institution postings.
+//! Deferred settlement reuses InstitutionLedger double-entry postings.
 
 #[cfg(test)]
 mod fr_fr_civ_market_008 {
-    /// Verify FR-CIV-MARKET-008 type existence and basic behavior.
+    use civ_economy::{
+        EconomyState, LedgerEntry, LedgerSide, verify_ledger_conservation, ACCOUNT_CONSUMPTION,
+        INSTITUTION_MARKET, INSTITUTION_TREASURY,
+    };
+
+    /// LedgerSide enum covers institution and macro accounts.
     #[test]
-    fn verify_fr_civ_market_008_basic() {
-        use civ_economy::{EconomyState, Good, ResourceType, SCHEMA_VERSION};
-        assert_eq!(SCHEMA_VERSION, 1);
-        let _ = EconomyState::default();
-        let _ = ResourceType::Food;
+    fn ledger_side_variants() {
+        let macro_side = LedgerSide::Macro(ACCOUNT_CONSUMPTION);
+        let inst_side = LedgerSide::Institution(INSTITUTION_MARKET);
+        let _ = (macro_side, inst_side);
+    }
+
+    /// Balanced postings pass ledger conservation.
+    #[test]
+    fn balanced_postings_pass_conservation() {
+        let mut state = EconomyState::with_energy_budget(10_000);
+        state.tick = 1;
+        state.ledger.push(LedgerEntry {
+            tick: 0,
+            debit: 500,
+            credit: 500,
+            account: ACCOUNT_CONSUMPTION,
+        });
+        assert!(
+            verify_ledger_conservation(&state).is_ok(),
+            "Balanced entries should pass conservation"
+        );
+    }
+
+    /// Unbalanced postings fail ledger conservation.
+    #[test]
+    fn unbalanced_postings_fail_conservation() {
+        let mut state = EconomyState::with_energy_budget(10_000);
+        state.tick = 1;
+        state.ledger.push(LedgerEntry {
+            tick: 0,
+            debit: 500,
+            credit: 300,
+            account: ACCOUNT_CONSUMPTION,
+        });
+        assert!(
+            verify_ledger_conservation(&state).is_err(),
+            "Unbalanced entries should fail conservation"
+        );
     }
 }

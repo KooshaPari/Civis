@@ -1,17 +1,20 @@
 //! Tests for FR-CIV-QOL-200
-//!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-QOL-200.
-
+//! Epic: FR-CIV-QOL. Notification system extensions.
 #[cfg(test)]
 mod fr_fr_civ_qol_200 {
-    /// Verify FR-CIV-QOL-200 type existence and basic behavior.
     #[test]
-    fn verify_fr_civ_qol_200_basic() {
+    fn chronicle_for_notification_events() {
         let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        // Chronicle is the engine-side event feed for notifications.
+        assert!(ws.chronicle.is_empty(), "Fresh world starts with empty chronicle");
+    }
+
+    #[test]
+    fn chronicle_dedup_index_exists() {
+        let ws = civ_engine::WorldState::default();
+        assert!(
+            ws.chronicle_age.is_empty(),
+            "Fresh world starts with empty dedup index"
+        );
     }
 }

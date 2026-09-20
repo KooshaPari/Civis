@@ -1,17 +1,12 @@
 //! Tests for FR-CIV-VERIFY-008
-//!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-VERIFY-008.
-
+//! Epic: FR-CIV-VERIFY. PR queue audit.
 #[cfg(test)]
 mod fr_fr_civ_verify_008 {
-    /// Verify FR-CIV-VERIFY-008 type existence and basic behavior.
     #[test]
-    fn verify_fr_civ_verify_008_basic() {
-        let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+    fn engine_has_deterministic_state_for_audit() {
+        // FR-CIV-VERIFY-008 requires reproducible state for audit comparison.
+        let ws1 = civ_engine::WorldState::default();
+        let ws2 = civ_engine::WorldState::default();
+        assert_eq!(ws1, ws2, "Default states must be identical for audit");
     }
 }

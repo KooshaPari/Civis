@@ -17,6 +17,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 /// State container for the deep diplomacy subsystems.
 /// Holds the alliance manager, active peace negotiations, and cultural exchanges.
+// FR-CIV-POLITY-004
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DeepDiplomacyState {
     /// Alliance formation manager.
@@ -55,6 +56,7 @@ pub struct FactionRelationRecord {
 }
 
 /// Stub faction-relation matrix.
+// FR-CIV-POLITY-001
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct FactionRelations {
     rows: BTreeMap<(u32, u32), FactionRelationRecord>,
@@ -79,6 +81,8 @@ impl FactionRelations {
     }
 
     pub fn apply_signal<A, B>(&mut self, a: A, b: B, signal: DiplomacySignal) -> DiplomacyOutcome
+    // FR-CIV-POLITY-002
+    // FR-CIV-POLITY-008
     where
         A: Into<u32>,
         B: Into<u32>,
@@ -97,6 +101,7 @@ impl FactionRelations {
     }
 
     pub fn record<A, B>(&self, a: A, b: B) -> Option<&FactionRelationRecord>
+    // FR-CIV-POLITY-005
     where
         A: Into<u32>,
         B: Into<u32>,
@@ -129,6 +134,7 @@ impl FactionRelations {
     }
 
     #[must_use]
+    // FR-CIV-POLITY-006
     pub fn mean_score_involving(&self, faction: u32) -> Option<f32> {
         let mut total = 0.0_f32;
         let mut count = 0_u32;
@@ -151,6 +157,7 @@ pub enum DiplomacyKind {
 }
 
 /// A diplomacy event between two factions (FR-CIV-DIPLOMACY).
+// FR-CIV-POLITY-003
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DiplomacyEvent {
     pub tick: u64,

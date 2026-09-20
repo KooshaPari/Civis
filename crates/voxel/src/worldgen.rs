@@ -25,6 +25,7 @@ const TERRAIN_FREQ: f64 = 5.0;
 /// elevation above sea level scaled by a smooth radial falloff so the terrain
 /// slopes DOWN into the sea at the world boundary instead of dropping as a
 /// vertical cliff wall.
+// FR-CIV-VOXEL-031
 #[must_use]
 pub const fn sea_level(dims: [usize; 3]) -> usize {
     dims[1].saturating_mul(40) / 100
@@ -34,6 +35,7 @@ pub const fn sea_level(dims: [usize; 3]) -> usize {
 ///
 /// `dims` is the world dimensions `[x, y, z]`, `seed` is the worldgen RNG seed, and
 /// `(x, z)` are the column coordinates. Returned height is in `[0, dims[1]]`.
+// FR-CIV-VOXEL-031
 #[must_use]
 pub fn surface_height(dims: [usize; 3], seed: u64, x: usize, z: usize) -> usize {
     let dx = dims[0].max(1);
@@ -75,6 +77,8 @@ fn edge_falloff(u: f64, v: f64) -> f64 {
 }
 
 /// Generates a deterministic world with strata, water fill, and ore pockets.
+// FR-CIV-VOXEL-030
+// FR-CIV-VOXEL-032
 #[must_use]
 pub fn generate(dims: [usize; 3], seed: u64) -> GenWorld {
     let mut cells = vec![AIR; dims[0] * dims[1] * dims[2]];

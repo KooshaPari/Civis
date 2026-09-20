@@ -107,6 +107,7 @@ impl StructureCount {
     /// Time: O(N α(N)) where N is the grid size. Space: O(N) for the
     /// `visited` buffer; the recursion is iterative (we use an explicit
     /// stack) so we don't blow the stack on large grids.
+    // FR-CIV-EMERGENCE-006
     pub fn evaluate<T, F>(&self, grid: &Grid<'_, T>, pred: F) -> ComponentSummary
     where
         F: Fn(&T) -> bool,

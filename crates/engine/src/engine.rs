@@ -375,6 +375,22 @@ pub struct MilitaryUnit {
 
 // FR-CIV-PERF-RT-003, FR-SOC-INS-001, FR-SOC-INS-002, FR-SOC-INS-003, FR-SOC-INS-004, FR-SOC-INS-005, FR-SOC-INS-006, FR-SOC-INS-007
 /// Global world state
+// FR-CIV-ARCH-NOSVG-001
+// FR-PROT-001
+// FR-PROT-002
+// FR-PROT-003
+// FR-PROT-005
+// FR-SOC-COH-001
+// FR-SOC-COH-002
+// FR-SOC-COH-003
+// FR-SOC-COH-004
+// FR-SOC-INTG-001
+// FR-SOC-INTG-002
+// FR-SOC-INTG-003
+// FR-SOC-INTG-004
+// FR-SOC-INTG-005
+// FR-SOC-INTG-006
+// FR-SOC-INTG-007
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorldState {
     pub tick: u64,
@@ -1284,6 +1300,9 @@ impl Simulation {
     }
 
     /// Create simulation with custom seed (accepts SimSeed wrapper or u64)
+    // FR-CIV-CORE-DET-001
+    // FR-CIV-CORE-DET-002
+    // FR-CIV-CORE-DET-003
     pub fn with_seed(seed: impl Into<SimSeed>) -> Self {
         Self::with_seed_internal(seed.into().0)
     }
@@ -2245,6 +2264,7 @@ impl Simulation {
     /// Phases run in [`PHASE_ORDER`] (CIV-0001 partial — engine-side deterministic
     /// transition only; server command intake and client broadcast live outside this
     /// crate). Exactly one [`ReplayEvent::Tick`] is appended after all phases finish.
+    // FR-CIV-0001-TICK
     pub fn tick(&mut self) {
         self.state.tick += 1;
         self.current_tick = self.state.tick;

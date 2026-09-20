@@ -38,6 +38,7 @@ pub const SESSION_HISTORY_CAP: usize = 32;
 ///    dispatches so the engine can audit actions.
 /// 3. The `sim.get_snapshot_for_session` JSON-RPC handler to return a
 ///    per-client view (connection_id + last_acked_tick + standard snapshot).
+// FR-CIV-SERVER-001
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SharedSession {
     /// Stable, opaque connection id (UUID v4 hex string).
@@ -145,6 +146,7 @@ impl SharedSession {
 /// for `sim.snapshot`) with session-specific context (connection_id,
 /// last_acked_tick) so a multiplayer client can confirm it is reading the
 /// right session's state.
+// FR-CIV-SERVER-002
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SessionSnapshot {
     /// Connection id of the session the snapshot is scoped to.

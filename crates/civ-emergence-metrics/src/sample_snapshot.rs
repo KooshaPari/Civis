@@ -7,6 +7,7 @@
 /// `EmergenceSample`; the snapshot is a flat, transport-safe DTO
 /// (no `Option`s except via the `criticality_*` band) so the
 /// dashboard can read each tile as a single JSON number.
+// FR-CIV-EMERGENCE-011
 pub struct EmergenceSampleSnapshot {
     /// Total live civilian count.
     pub agent_count: u32,

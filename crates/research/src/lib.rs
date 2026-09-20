@@ -43,6 +43,7 @@ pub struct TechCard {
 }
 
 /// Outcome of validating a tech card against a law DB.
+// FR-CIV-RESEARCH-002-SNAPSHOT
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ValidationOutcome {
     /// The card is canon and may be added to the live tech tree.

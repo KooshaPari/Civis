@@ -38,6 +38,7 @@ pub fn load_civreplay(path: impl AsRef<Path>) -> Result<ReplayLog, ReplayError> 
 }
 
 /// Serialize `log` into an in-memory `.civreplay` byte buffer.
+// NFR-CIV-REL-004
 pub fn encode_civreplay(log: &ReplayLog) -> Result<Vec<u8>, ReplayError> {
     let payload = ron::to_string(log)?;
     let payload_len = u32::try_from(payload.len()).map_err(|_| ReplayError::PayloadTooLarge)?;

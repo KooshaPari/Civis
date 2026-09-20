@@ -1909,6 +1909,10 @@ fn write_back_world(
 }
 
 /// Runs one deterministic CA tick over a grid. Returns a [`StepOutcome`].
+// FR-CIV-VOXEL-023
+// FR-CIV-VOXEL-024
+// FR-CIV-VOXEL-025
+// FR-CIV-VOXEL-030
 pub fn step(grid: &mut CaGrid, reg: MaterialRegistry) -> StepOutcome {
     step_with_config(grid, reg, BoundaryConfig::closed(), 0)
 }

@@ -42,6 +42,7 @@ pub struct IngestOutcome {
 }
 
 /// The saga graph + all side indices (spec §3.5), kept consistent on every mutation.
+// FR-CIV-LEGENDS-BROWSER-09
 #[derive(Clone)]
 pub struct SagaGraph {
     pub(crate) g: StableDiGraph<LegendNode, LegendEdge>,
@@ -455,6 +456,7 @@ impl SagaGraph {
     /// Ingest one raw event off the bus: normalize → resolve participants → insert
     /// event node → score significance + promote → causal link (spec §4). This is the
     /// single mutation entry point; it keeps every side index consistent.
+    // FR-CIV-LEGENDS-PRODUCER-03
     pub fn ingest(&mut self, raw: RawSimEvent) -> IngestOutcome {
         let epoch = self.config.epoch_of(raw.tick);
         self.cur_epoch = epoch.max(self.cur_epoch);

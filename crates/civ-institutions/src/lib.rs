@@ -54,6 +54,7 @@ pub mod events;
 pub mod faction_split;
 pub mod governance;
 pub mod legitimacy;
+pub mod policy;
 
 pub use capture::{CaptureConfig, CaptureScore, CAPTURE_THRESHOLD_BP};
 pub use collapse::{check_collapse, transition_target, CollapseCause, CollapseTransitionEvent};
@@ -67,6 +68,7 @@ pub use legitimacy::{
     GovernanceOutcome, InstitutionLegitimacy, DEFAULT_LEGITIMACY, LEGITIMACY_COLLAPSE_THRESHOLD,
     MAX_LEGITIMACY, MIN_LEGITIMACY,
 };
+pub use policy::{InstitutionPolicy, APPROVAL_FP_SCALE};
 
 use serde::{Deserialize, Serialize};
 

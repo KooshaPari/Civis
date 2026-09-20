@@ -170,6 +170,7 @@ pub fn allocate_by_priority(
 /// Selectable allocation regime — the economy layer picks one and routes all
 /// rationing through [`allocate_with`] (FR-ECON-005). Serializable so a scenario
 /// or policy can set the regime deterministically.
+// FR-CIV-MARKET-006
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum AllocationRegime {
     /// Proportional market rationing (price-clearing proxy). Default.

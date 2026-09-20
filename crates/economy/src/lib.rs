@@ -84,6 +84,7 @@ pub use trade_routes::{
 use serde::{Deserialize, Serialize};
 
 /// Schema version for `civ-economy`. Bumped on breaking snapshot / ledger changes.
+// FR-CIV-MARKET-001
 pub const SCHEMA_VERSION: u32 = 1;
 
 /// Stub ledger account id (district / actor accounts land in CIV-0100 follow-up).

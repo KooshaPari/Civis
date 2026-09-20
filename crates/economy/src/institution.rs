@@ -27,6 +27,7 @@ pub enum InstitutionKind {
 }
 
 /// One leg of an institution ↔ macro posting (debit side or credit side).
+// FR-CIV-MARKET-008
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum LedgerSide {
     /// Macro ledger account ([`AccountId`]).

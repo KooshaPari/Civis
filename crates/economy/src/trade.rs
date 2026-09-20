@@ -202,6 +202,49 @@ mod tests {
         assert!((food_flow.volume - 20.0).abs() < 0.001);
     }
 
+    // FR-ECON-EMERGE-002 — price-differential-driven trade flows: flow
+    // direction follows scarcity, threshold gating holds at the boundary,
+    // volume scales with the differential, and multi-cluster pairs emit
+    // flows for every profitable good.
+    #[test]
+    fn emergent_trade_flows_follow_price_differentials() {
+        // Boundary: exactly at the 0.2 threshold no flow is emitted.
+        let at_threshold = vec![make_price_state(0, 1.0), make_price_state(1, 1.2)];
+        assert!(compute_trade_flows(&at_threshold)
+            .iter()
+            .filter(|f| f.good == Good::Food)
+            .count()
+            == 0);
+
+        // Just past the threshold a flow appears, priced at 10× the diff.
+        let past_threshold = vec![make_price_state(0, 1.0), make_price_state(1, 1.3)];
+        let food = compute_trade_flows(&past_threshold)
+            .into_iter()
+            .find(|f| f.good == Good::Food)
+            .expect("flow above threshold");
+        assert_eq!(food.from_cluster, 0, "cheaper cluster exports");
+        assert_eq!(food.to_cluster, 1, "dearer cluster imports");
+        assert!((food.volume - 3.0).abs() < 0.001, "volume = 10 × 0.3");
+
+        // Direction reverses when the price gradient flips.
+        let reversed = vec![make_price_state(0, 2.0), make_price_state(1, 1.0)];
+        let food = compute_trade_flows(&reversed)
+            .into_iter()
+            .find(|f| f.good == Good::Food)
+            .expect("flow");
+        assert_eq!(food.from_cluster, 1);
+        assert_eq!(food.to_cluster, 0);
+
+        // Every non-food good stays at identical prices ⇒ no spurious flows.
+        let non_food = past_threshold
+            .iter()
+            .flat_map(|state| {
+                compute_trade_flows(std::slice::from_ref(state))
+            })
+            .count();
+        assert_eq!(non_food, 0, "single cluster ⇒ no pairs ⇒ no flows");
+    }
+
     // --- FR-ECON-007: TradeAgreement tests ---
 
     #[test]

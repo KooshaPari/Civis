@@ -1375,6 +1375,67 @@ mod tests {
         }
     }
 
+    // NFR-C-04 — RNG seeding coverage: every random draw in simulation
+    // crates derives from `WorldState::rng_seed` (or a deterministic XOR
+    // extension of it). The emergence module must not introduce unseeded
+    // entry points (`thread_rng`, `rand::random`, `OsRng`), and its
+    // per-agent RNG seeding (`rng_seed ^ id`) must be deterministic.
+    #[test]
+    fn nfr_c_04_emergence_rng_is_seeded_and_deterministic() {
+        // The emergence module must not use unseeded RNG entry points.
+        // Comment lines are stripped first so the module's own audit
+        // comment mentioning the bare names does not false-positive.
+        let source = include_str!("emergence.rs");
+        let code: String = source
+            .lines()
+            .filter(|line| !line.trim_start().starts_with("//"))
+            .collect();
+        assert!(
+            !code.contains("thread_rng"),
+            "unseeded thread_rng in emergence.rs"
+        );
+        assert!(
+            !code.contains("rand::random"),
+            "unseeded rand::random in emergence.rs"
+        );
+        assert!(
+            !code.contains("OsRng"),
+            "unseeded OsRng in emergence.rs"
+        );
+        // Every ChaCha8Rng construction in the module seeds from the world
+        // seed or a deterministic XOR extension of it.
+        for line in code.lines() {
+            if line.contains("ChaCha8Rng::") && line.contains("::new()") {
+                panic!("unseeded ChaCha8Rng::new() in emergence.rs: {line}");
+            }
+        }
+        assert!(source.contains("rng_seed"));
+
+        // Behavioral check: identical world seeds produce identical genome
+        // assignment across runs (deterministic seeding, no OS entropy).
+        let run_genome_signatures = || {
+            let mut sim = Simulation::with_seed(2026);
+            run_ticks(&mut sim, 3);
+            let mut sig = 0u64;
+            for (_, dna) in sim.world.query::<&Dna>().iter() {
+                sig = sig.wrapping_mul(31).wrapping_add(dna_class_fingerprint(dna));
+            }
+            sig
+        };
+        assert_eq!(
+            run_genome_signatures(),
+            run_genome_signatures(),
+            "genome RNG must derive purely from rng_seed"
+        );
+    }
+
+    fn dna_class_fingerprint(dna: &Dna) -> u64 {
+        use std::hash::{Hash, Hasher};
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        format!("{dna:?}").hash(&mut hasher);
+        hasher.finish()
+    }
+
     /// FR-CIV-LEGENDS-INGEST-02 — deaths on the life/citizen path reach the saga graph.
     #[test]
     fn legends_phase_ingests_death_events() {

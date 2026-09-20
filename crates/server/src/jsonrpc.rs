@@ -2794,6 +2794,61 @@ mod tests {
         assert_eq!(req.method, JsonRpcMethod::SimSaveReplay);
     }
 
+    // FR-CIV-GAME-001 — `sim.outcome` reports the precomputed outcome
+    // fields (tag, reason, tick, truthful progress) and falls back to a
+    // neutral "ongoing" payload when no live check was performed.
+    #[test]
+    fn dispatch_sim_outcome_reports_precomputed_fields_and_ongoing_fallback() {
+        let base_ctx = || DispatchContext {
+            tick: 640,
+            population: Some(12_345),
+            snapshot: None,
+            tile_probe: None,
+            require_role: false,
+            speed_multiplier: 1,
+            connection_role: None,
+            saves_dir: None,
+            emergence: None,
+            legends: None,
+            researched: vec![],
+            in_progress_tech: None,
+            last_tick_ms: 0.0,
+            outcome_fields: None,
+            psyche_snapshot: None,
+            sentience_events: None,
+            religion_state: None,
+        };
+
+        // Precomputed victory outcome is surfaced verbatim with progress.
+        let mut ctx = base_ctx();
+        ctx.outcome_fields = Some(OutcomeFields {
+            tag: "victory".to_owned(),
+            reason: "Thriving Civilization".to_owned(),
+            tick: 640,
+            progress: OutcomeProgress {
+                population: 12_345,
+                ..OutcomeProgress::default()
+            },
+        });
+        let req = parse_request(r#"{"jsonrpc":"2.0","id":31,"method":"sim.outcome"}"#).expect("parse");
+        let plan = dispatch_request(req, ctx);
+        assert_eq!(plan.effect, DispatchEffect::None);
+        let result = plan.response.result.expect("success result");
+        assert_eq!(result["outcome"], "victory");
+        assert_eq!(result["reason"], "Thriving Civilization");
+        assert_eq!(result["tick"], 640);
+        assert_eq!(result["progress"]["population"], 12_345);
+
+        // No precomputed fields ⇒ truthful "ongoing" fallback at ctx tick.
+        let req =
+            parse_request(r#"{"jsonrpc":"2.0","id":32,"method":"sim.outcome"}"#).expect("parse");
+        let plan = dispatch_request(req, base_ctx());
+        let result = plan.response.result.expect("success result");
+        assert_eq!(result["outcome"], "ongoing");
+        assert_eq!(result["reason"], "");
+        assert_eq!(result["tick"], 640);
+    }
+
     #[test]
     fn dispatch_sim_save_replay_plans_save_effect() {
         let req = parse_request(

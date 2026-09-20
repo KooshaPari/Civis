@@ -730,6 +730,50 @@ mod tests {
         assert!(prev < initial, "surge should decay below its peak");
     }
 
+    // FR-CIV-MIGRATION-004 — surge decay: surge converges back to 1.0
+    // after enough decay steps, and a stronger event yields a stronger
+    // initial surge (max-wins scaling by severity).
+    #[test]
+    fn surge_decay_converges_to_baseline_and_scales_with_severity() {
+        let mut mild = MigrationEngine::new(MigrationConfig::default());
+        mild.upsert(ClusterMigration::new(ClusterId(1), 100, 1000));
+        mild.apply_event(SurgeEvent::Disaster {
+            cluster: ClusterId(1),
+            severity: 0.25,
+        });
+        let mild_surge = mild.cluster(ClusterId(1)).unwrap().surge;
+
+        let mut severe = MigrationEngine::new(MigrationConfig::default());
+        severe.upsert(ClusterMigration::new(ClusterId(1), 100, 1000));
+        severe.apply_event(SurgeEvent::Disaster {
+            cluster: ClusterId(1),
+            severity: 1.0,
+        });
+        let severe_surge = severe.cluster(ClusterId(1)).unwrap().surge;
+
+        assert!(mild_surge > 1.0, "mild disaster still lifts surge");
+        assert!(
+            severe_surge > mild_surge,
+            "higher severity ⇒ stronger surge ({severe_surge} vs {mild_surge})"
+        );
+
+        // Repeated decay converges to exactly 1.0 and stays there.
+        for _ in 0..64 {
+            severe.decay_surges();
+        }
+        assert!((severe.cluster(ClusterId(1)).unwrap().surge - 1.0).abs() < 1e-4);
+        severe.decay_surges();
+        assert_eq!(severe.cluster(ClusterId(1)).unwrap().surge, 1.0);
+
+        // Events on unknown clusters are ignored without panicking.
+        let mut quiet = MigrationEngine::new(MigrationConfig::default());
+        quiet.apply_event(SurgeEvent::War {
+            cluster: ClusterId(99),
+            intensity: 1.0,
+        });
+        assert!(quiet.is_empty());
+    }
+
     #[test]
     fn migration_mixes_culture_and_reduces_divergence() {
         let mut eng = stress_to_opportunity();

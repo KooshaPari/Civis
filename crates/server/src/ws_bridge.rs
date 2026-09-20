@@ -3034,6 +3034,31 @@ mod tests {
         assert!(should_send_full_graph(true, Some(9), 9));
     }
 
+    // NFR-P-06 — broadcast lag: `make_tick_broadcast` produces a complete,
+    // versioned broadcast for the freshly built frame bundle so consumers can
+    // timestamp delivery and alert on p99 lag; graph version only advances
+    // when the serialized graph actually changes.
+    #[tokio::test]
+    async fn make_tick_broadcast_publishes_versioned_bundle_for_lag_measurement() {
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(42)));
+        let (_dir, state) = test_app_state(sim, 0, 0, false);
+        let loaded = Simulation::with_seed(42);
+        let frames = build_frame_bundle(&loaded).expect("frame bundle");
+        let version = observe_building_graph(&state, &loaded).expect("observe graph");
+
+        let batch = make_tick_broadcast(&state, loaded.state.tick, 1, false, frames, version)
+            .expect("tick broadcast");
+        assert_eq!(batch.tick, loaded.state.tick);
+        assert_eq!(batch.building_graph_version, version);
+        assert!(!batch.encoded.is_empty(), "broadcast carries encoded frames");
+        assert_eq!(batch.frames.len(), FRAME_BUNDLE_LEN);
+        assert_eq!(batch.compact_frames.len(), FRAME_BUNDLE_LEN);
+
+        // Observing an unchanged graph keeps the version stable.
+        let unchanged = observe_building_graph(&state, &loaded).expect("re-observe");
+        assert_eq!(unchanged, version);
+    }
+
     #[test]
     fn first_graph_delivery_is_full_then_an_unchanged_tick_is_compact() {
         let sim = Simulation::with_seed(78);

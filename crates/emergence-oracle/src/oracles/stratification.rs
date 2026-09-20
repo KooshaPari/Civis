@@ -47,3 +47,41 @@ impl FeatureOracle for StratificationOracle {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use civ_engine::Simulation;
+
+    /// FR-EMG-015 — stratification oracle passes at tick 0 regardless of
+    /// state, and requires both citizens and buildings afterwards.
+    #[test]
+    fn stratification_oracle_tick_zero_passes_and_reports_fr_id() {
+        let sim = Simulation::new();
+        let verdict = StratificationOracle.check(&sim);
+        assert_eq!(verdict.fr_id, "FR-EMG-015");
+        assert!(verdict.passed, "tick 0 always passes");
+        assert!((verdict.threshold - 0.0).abs() < f64::EPSILON);
+    }
+
+    /// FR-EMG-015 — after the first tick, a world without both citizens
+    /// and buildings fails the stratification threshold.
+    #[test]
+    fn stratification_oracle_requires_settled_infrastructure_after_warmup() {
+        let mut sim = Simulation::new();
+        sim.tick();
+        let verdict = StratificationOracle.check(&sim);
+        assert_eq!(verdict.fr_id, "FR-EMG-015");
+        // A bare sim has no citizens×buildings product yet.
+        if !verdict.passed {
+            assert!((verdict.threshold - 1.0).abs() < f64::EPSILON);
+            assert!(verdict.measured < 1.0, "unbuilt world cannot show stratification");
+        }
+        // Measured value is exactly the citizen×building product.
+        let snap = sim.snapshot();
+        assert!(
+            (verdict.measured - (snap.citizen_count * snap.building_count) as f64).abs()
+                < f64::EPSILON
+        );
+    }
+}

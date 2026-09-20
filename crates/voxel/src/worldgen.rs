@@ -75,6 +75,7 @@ fn edge_falloff(u: f64, v: f64) -> f64 {
 }
 
 /// Generates a deterministic world with strata, water fill, and ore pockets.
+// FR-CIV-VOXEL-030
 #[must_use]
 pub fn generate(dims: [usize; 3], seed: u64) -> GenWorld {
     let mut cells = vec![AIR; dims[0] * dims[1] * dims[2]];

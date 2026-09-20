@@ -484,6 +484,7 @@ pub fn check_all(result: &ConstraintSetResult) -> &ConstraintSetResult {
     result
 }
 
+// FR-CIV-0104-005
 /// Construct a `ConstraintSetResult` by running all five checks.
 #[must_use]
 pub fn run_all_checks(

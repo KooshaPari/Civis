@@ -471,6 +471,7 @@ impl Scenario {
     }
 }
 
+// FR-CIV-RES-001
 /// Load and validate a scenario YAML file from `path`.
 pub fn load_scenario(path: impl AsRef<Path>) -> Result<Scenario, ScenarioError> {
     let path = path.as_ref();

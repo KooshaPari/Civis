@@ -373,6 +373,7 @@ pub struct MilitaryUnit {
 // WORLD STATE
 // ============================================================================
 
+// FR-CIV-PERF-RT-003
 /// Global world state
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorldState {
@@ -2236,6 +2237,7 @@ impl Simulation {
         target.significance = self.significance.clone();
     }
 
+    // FR-CIV-PERF-RT-001
     /// Advance simulation by one tick.
     ///
     /// Phases run in [`PHASE_ORDER`] (CIV-0001 partial — engine-side deterministic
@@ -2763,6 +2765,7 @@ impl Simulation {
         self.tutorial_progress = tutorial;
     }
 
+    // FR-CIV-PERF-RT-002
     /// Borrow the replay log.
     pub fn replay_log(&self) -> &ReplayLog {
         &self.replay_log

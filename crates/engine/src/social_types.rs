@@ -99,6 +99,7 @@ impl From<u64> for SimSeed {
 /// Ordered from lowest to highest: Poor < Middle < Rich < Elite. The numeric
 /// rank returned by [`StratBand::rank`] is used for promotion/demotion
 /// detection in `phase_stratification`.
+// FR-CIV-POLITY-007
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum StratBand {
     Poor,

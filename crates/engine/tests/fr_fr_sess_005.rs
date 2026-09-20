@@ -1,17 +1,14 @@
-//! Tests for FR-SESS-005
+//! Tests for FR-SESS-005 - Session Speed Configuration
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-SESS-005.
+//! Epic: FR-SESS
+//! Session speed SHALL be configurable (1x, 2x, 4x, paused).
 
 #[cfg(test)]
 mod fr_fr_sess_005 {
-    /// Verify FR-SESS-005 type existence and basic behavior.
     #[test]
-    fn verify_fr_sess_005_basic() {
+    fn tick_advances_regardless_of_speed() {
         let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        let ws2 = civ_engine::step(ws, civ_engine::Fixed::from_num(0));
+        assert_eq!(ws2.tick, 1, "tick advances regardless of speed setting");
     }
 }

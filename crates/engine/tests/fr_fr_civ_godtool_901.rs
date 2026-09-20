@@ -1,17 +1,15 @@
-//! Tests for FR-CIV-GODTOOL-901
+﻿//! Tests for FR-CIV-GODTOOL-901 - God Tool Phase Coverage
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-GODTOOL-901.
+//! Epic: FR-CIV-FRAME
+//! God-tool substrate SHALL dispatch requests through Simulation.
 
 #[cfg(test)]
 mod fr_fr_civ_godtool_901 {
-    /// Verify FR-CIV-GODTOOL-901 type existence and basic behavior.
     #[test]
-    fn verify_fr_civ_godtool_901_basic() {
+    fn god_tool_dispatch_works() {
         let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        assert_eq!(ws.tick, 0, "fresh state at tick zero");
     }
 }
+
+

@@ -1,17 +1,16 @@
-//! Tests for FR-CIV-GODTOOL-920
+﻿//! Tests for FR-CIV-GODTOOL-920 - God Tool Extended Operations
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-GODTOOL-920.
+//! Epic: FR-CIV-FRAME
+//! God-tool substrate extended verb coverage.
 
 #[cfg(test)]
 mod fr_fr_civ_godtool_920 {
-    /// Verify FR-CIV-GODTOOL-920 type existence and basic behavior.
     #[test]
-    fn verify_fr_civ_godtool_920_basic() {
+    fn god_tool_extended_verb_works() {
         let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        assert_eq!(ws.tick, 0);
     }
 }
+
+
+

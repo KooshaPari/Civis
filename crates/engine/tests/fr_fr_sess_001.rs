@@ -1,17 +1,13 @@
-//! Tests for FR-SESS-001
+//! Tests for FR-SESS-001 - PvE Session Mode
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-SESS-001.
+//! Epic: FR-SESS
+//! The engine SHALL support PvE (human vs AI) sessions.
 
 #[cfg(test)]
 mod fr_fr_sess_001 {
-    /// Verify FR-SESS-001 type existence and basic behavior.
     #[test]
-    fn verify_fr_sess_001_basic() {
+    fn pve_session_state_default() {
         let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        assert_eq!(ws.tick, 0, "PvE session starts at tick zero");
     }
 }

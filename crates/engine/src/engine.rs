@@ -2241,6 +2241,7 @@ impl Simulation {
     /// Phases run in [`PHASE_ORDER`] (CIV-0001 partial — engine-side deterministic
     /// transition only; server command intake and client broadcast live outside this
     /// crate). Exactly one [`ReplayEvent::Tick`] is appended after all phases finish.
+    // FR-CIV-DET-001
     pub fn tick(&mut self) {
         self.state.tick += 1;
         self.current_tick = self.state.tick;

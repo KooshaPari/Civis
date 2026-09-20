@@ -255,6 +255,7 @@ pub struct CombatDamagePulse {
 
 /// Citizen entity component
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+// FR-CIV-ACT-004
 pub struct Citizen {
     pub age: u32,        // Age in years
     pub health: Fixed,   // Health 0.0 - 1.0

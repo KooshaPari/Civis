@@ -10,6 +10,7 @@ use crate::engine::Simulation;
 
 /// Ordered tutorial milestones surfaced to clients.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+// FR-CIV-NOTIFY-920
 pub enum TutorialMilestone {
     FirstFaction,
     FirstTech,

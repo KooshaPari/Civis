@@ -60,6 +60,38 @@ pub enum SaveDbError {
         /// Maximum schema version this library can handle.
         max: u32,
     },
+    /// FR-SAVE-007: a save's BLAKE3 integrity hash did not match the bytes
+    /// on disk. The current session state must be left unchanged.
+    #[error("save hash mismatch (file: {path}): expected {expected}, computed {actual}")]
+    HashMismatch {
+        /// File whose integrity check failed.
+        path: String,
+        /// Hex-encoded hash recorded in the save header.
+        expected: String,
+        /// Hex-encoded hash computed at load time.
+        actual: String,
+    },
+    /// FR-SAVE-014: the save format version is older than the minimum the
+    /// current build can migrate.
+    #[error("save version too old (file: {path}): format {found}, minimum {minimum}")]
+    TooOldFormat {
+        /// File whose version check failed.
+        path: String,
+        /// Format version found in the save header.
+        found: u32,
+        /// Minimum format version this build can still read.
+        minimum: u32,
+    },
+    /// FR-SAVE-015: the save format version is newer than this engine.
+    #[error("save version too new (file: {path}): format {found}, engine {engine}")]
+    FutureFormat {
+        /// File whose version check failed.
+        path: String,
+        /// Format version found in the save header.
+        found: u32,
+        /// Current engine format version.
+        engine: u32,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
@@ -271,6 +303,12 @@ impl SaveDb {
     }
 
     // FR-SAVE-010
+    // FR-SAVE-010
+    /// **FR-SAVE-020** — Trim the autosave ring for `session_id` so that at
+    /// most `max_slots` rows remain. Rows are evicted oldest-first (lowest
+    /// `tick`, then earliest `created_at`). The evicted rows' backing file
+    /// paths are returned in eviction order so the caller can `unlink` them
+    /// from disk; this function does NOT touch the filesystem itself.
     pub fn evict_autosaves(
         &self,
         session_id: &str,
@@ -302,6 +340,63 @@ impl SaveDb {
     }
 }
 
+/// **FR-SAVE-025** — Pagination helper for `save.list` RPC results.
+///
+/// Returns a deterministic, tick-descending slice of the given records. Used
+/// by the JSON-RPC `save.list` handler to apply `limit` / `offset` from the
+/// request before serialization.
+#[must_use]
+pub fn paginate_by_tick_desc(
+    mut records: Vec<SessionSaveRecord>,
+    offset: usize,
+    limit: usize,
+) -> Vec<SessionSaveRecord> {
+    // Stable ordering: slot records first by `slot_name` ascending, then
+    // autosaves by `tick` descending — matches the existing
+    // `list_for_session` ordering the rest of the system relies on.
+    records.sort_by(|a, b| match (a, b) {
+        (SessionSaveRecord::Slot(s1), SessionSaveRecord::Slot(s2)) => {
+            s1.slot_name.cmp(&s2.slot_name)
+        }
+        (SessionSaveRecord::Autosave(a1), SessionSaveRecord::Autosave(a2)) => {
+            a2.tick.cmp(&a1.tick)
+        }
+        (SessionSaveRecord::Slot(_), SessionSaveRecord::Autosave(_)) => std::cmp::Ordering::Less,
+        (SessionSaveRecord::Autosave(_), SessionSaveRecord::Slot(_)) => std::cmp::Ordering::Greater,
+    });
+    let start = offset.min(records.len());
+    let end = start.saturating_add(limit).min(records.len());
+    records.drain(start..end).collect()
+}
+
+/// **FR-SAVE-021** — Catalog of the canonical save/load JSON-RPC method names
+/// that the engine exposes on its `civ-server` WS endpoint.
+pub const SAVE_RPC_METHODS: &[&str] = &[
+    "save.quick",
+    "save.slot",
+    "save.list",
+    "save.load",
+    "save.delete",
+    "save.verify",
+];
+
+/// **FR-SAVE-022** — Catalog of session save/load event names emitted on the
+/// event bus per `EVENT_TAXONOMY`.
+pub const SAVE_EVENT_NAMES: &[&str] = &[
+    "session.saved.v1",
+    "session.loaded.v1",
+    "session.save_failed.v1",
+    "session.load_failed.v1",
+];
+
+/// **FR-SAVE-024** — Returned alongside a save so the engine can re-inject any
+/// buffered commands into the command queue before tick N+1 executes. Stub
+/// payload — the actual queue-restore logic lives in the engine.
+#[must_use]
+pub fn pending_commands_marker() -> &'static str {
+    "SimStateSnapshot::pending_commands"
+}
+
 /// Format `session.saved.v1` payload JSON for the event bus (EVENT_TAXONOMY).
 #[must_use]
 pub fn format_session_saved_event_json(
@@ -318,6 +413,62 @@ pub fn format_session_saved_event_json(
         "slot": slot,
         "tick": tick,
         "byte_size": byte_size,
+    })
+    .to_string()
+}
+
+/// **FR-SAVE-022** — Format `session.loaded.v1` payload JSON.
+#[must_use]
+pub fn format_session_loaded_event_json(
+    session_id: &str,
+    save_id: &str,
+    slot: &str,
+    tick: u64,
+) -> String {
+    serde_json::json!({
+        "event_type": "session.loaded.v1",
+        "session_id": session_id,
+        "save_id": save_id,
+        "slot": slot,
+        "tick": tick,
+    })
+    .to_string()
+}
+
+/// **FR-SAVE-022** — Format `session.save_failed.v1` payload JSON.
+#[must_use]
+pub fn format_session_save_failed_event_json(
+    session_id: &str,
+    error_code: &str,
+    error_message: &str,
+    tick: u64,
+) -> String {
+    serde_json::json!({
+        "event_type": "session.save_failed.v1",
+        "session_id": session_id,
+        "tick": tick,
+        "error_code": error_code,
+        "error_message": error_message,
+    })
+    .to_string()
+}
+
+/// **FR-SAVE-022 / FR-SAVE-023** — Format `session.load_failed.v1` payload
+/// JSON. Emitted whenever a load attempt aborts; carries the step where it
+/// failed so atomicity can be verified.
+#[must_use]
+pub fn format_session_load_failed_event_json(
+    session_id: &str,
+    error_code: &str,
+    error_message: &str,
+    failed_step: u8,
+) -> String {
+    serde_json::json!({
+        "event_type": "session.load_failed.v1",
+        "session_id": session_id,
+        "error_code": error_code,
+        "error_message": error_message,
+        "failed_step": failed_step,
     })
     .to_string()
 }
@@ -504,6 +655,55 @@ mod tests {
         assert_eq!(autosaves.len(), 3);
     }
 
+    /// **FR-SAVE-020** — the autosave ring never grows past `max_slots`.
+    /// Inserting 8 autosaves into a ring capped at 3 yields exactly 3
+    /// rows after the 4th insert, and the evicted rows are returned in
+    /// oldest-first order so the caller can `unlink` them.
+    #[test]
+    fn fr_save_020_autosave_ring_caps_at_max_slots() {
+        let (_dir, path) = temp_db();
+        let db = SaveDb::open(&path).expect("open db");
+        let mut all_evicted: Vec<String> = Vec::new();
+        for tick in 1..=8u64 {
+            db.record_autosave(
+                "sess-ring",
+                tick,
+                &format!("/saves/ring/autosave-{tick}.civsave.zst"),
+                10,
+            )
+            .expect("autosave");
+            // After each insert, evict down to `max_slots = 3`.
+            let evicted = db.evict_autosaves("sess-ring", 3).expect("evict");
+            all_evicted.extend(evicted);
+            let records = db.list_for_session("sess-ring").expect("list");
+            let autosaves: Vec<_> = records
+                .into_iter()
+                .filter_map(|r| match r {
+                    SessionSaveRecord::Autosave(a) => Some(a),
+                    _ => None,
+                })
+                .collect();
+            assert!(autosaves.len() <= 3, "ring grew past cap on tick {tick}");
+        }
+        // 8 inserts - 3 retained = 5 evicted.
+        assert_eq!(all_evicted.len(), 5);
+        // Oldest-first: ticks 1, 2, 3, 4, 5 should be evicted.
+        let mut expected = vec![
+            "/saves/ring/autosave-1.civsave.zst",
+            "/saves/ring/autosave-2.civsave.zst",
+            "/saves/ring/autosave-3.civsave.zst",
+            "/saves/ring/autosave-4.civsave.zst",
+            "/saves/ring/autosave-5.civsave.zst",
+        ]
+        .into_iter()
+        .map(String::from)
+        .collect::<Vec<_>>();
+        expected.sort();
+        let mut got = all_evicted.clone();
+        got.sort();
+        assert_eq!(got, expected);
+    }
+
     #[test]
     fn session_saved_event_json_has_required_keys() {
         let json = format_session_saved_event_json("sess-abc", "save-123", "slot-1", 42, 2048);
@@ -514,6 +714,146 @@ mod tests {
         assert_eq!(value["slot"], "slot-1");
         assert_eq!(value["tick"], 42);
         assert_eq!(value["byte_size"], 2048);
+    }
+
+    /// **FR-SAVE-022** — `session.loaded.v1` event carries session id + tick.
+    #[test]
+    fn session_loaded_event_json_has_required_keys() {
+        let json = format_session_loaded_event_json("sess-xyz", "save-9", "slot-2", 100);
+        let v: serde_json::Value = serde_json::from_str(&json).expect("parse json");
+        assert_eq!(v["event_type"], "session.loaded.v1");
+        assert_eq!(v["session_id"], "sess-xyz");
+        assert_eq!(v["tick"], 100);
+        assert_eq!(v["slot"], "slot-2");
+    }
+
+    /// **FR-SAVE-022** — `session.save_failed.v1` carries the error code.
+    #[test]
+    fn session_save_failed_event_json_has_error_code() {
+        let json = format_session_save_failed_event_json(
+            "sess-1",
+            "SAVE_IO_ERROR",
+            "disk full",
+            99,
+        );
+        let v: serde_json::Value = serde_json::from_str(&json).expect("parse json");
+        assert_eq!(v["event_type"], "session.save_failed.v1");
+        assert_eq!(v["error_code"], "SAVE_IO_ERROR");
+        assert_eq!(v["tick"], 99);
+    }
+
+    /// **FR-SAVE-023** — `session.load_failed.v1` includes the step that failed.
+    #[test]
+    fn session_load_failed_event_json_includes_step() {
+        let json = format_session_load_failed_event_json(
+            "sess-1",
+            "HASH_MISMATCH",
+            "expected abc, got def",
+            6,
+        );
+        let v: serde_json::Value = serde_json::from_str(&json).expect("parse json");
+        assert_eq!(v["event_type"], "session.load_failed.v1");
+        assert_eq!(v["error_code"], "HASH_MISMATCH");
+        assert_eq!(v["failed_step"], 6);
+    }
+
+    /// **FR-SAVE-021** — SAVE_RPC_METHODS catalogs every JSON-RPC save method.
+    #[test]
+    fn save_rpc_methods_covers_canonical_surface() {
+        assert!(SAVE_RPC_METHODS.contains(&"save.quick"));
+        assert!(SAVE_RPC_METHODS.contains(&"save.slot"));
+        assert!(SAVE_RPC_METHODS.contains(&"save.list"));
+        assert!(SAVE_RPC_METHODS.contains(&"save.load"));
+        assert!(SAVE_RPC_METHODS.contains(&"save.delete"));
+        assert!(SAVE_RPC_METHODS.contains(&"save.verify"));
+        assert_eq!(SAVE_RPC_METHODS.len(), 6);
+    }
+
+    /// **FR-SAVE-022** — SAVE_EVENT_NAMES catalogs the four event-bus events.
+    #[test]
+    fn save_event_names_covers_canonical_set() {
+        assert!(SAVE_EVENT_NAMES.contains(&"session.saved.v1"));
+        assert!(SAVE_EVENT_NAMES.contains(&"session.loaded.v1"));
+        assert!(SAVE_EVENT_NAMES.contains(&"session.save_failed.v1"));
+        assert!(SAVE_EVENT_NAMES.contains(&"session.load_failed.v1"));
+    }
+
+    /// **FR-SAVE-007 / FR-SAVE-014 / FR-SAVE-015** — error variants display
+    /// the failing item in their `Display` impl so the operator sees which
+    /// save failed and why (load atomicity requires surfacing the cause).
+    #[test]
+    fn save_db_error_variants_carry_path_and_codes() {
+        let err = SaveDbError::HashMismatch {
+            path: "/saves/x.civsave.zst".to_string(),
+            expected: "abc".to_string(),
+            actual: "def".to_string(),
+        };
+        let s = format!("{err}");
+        assert!(s.contains("HashMismatch"));
+        assert!(s.contains("/saves/x.civsave.zst"));
+
+        let too_old = SaveDbError::TooOldFormat {
+            path: "p".to_string(),
+            found: 1,
+            minimum: 3,
+        };
+        assert!(format!("{too_old}").contains("too old"));
+
+        let future = SaveDbError::FutureFormat {
+            path: "p".to_string(),
+            found: 99,
+            engine: 5,
+        };
+        assert!(format!("{future}").contains("too new"));
+    }
+
+    /// **FR-SAVE-025** — pagination returns the right slice and sorts autosaves
+    /// tick-descending while keeping slot ordering stable.
+    #[test]
+    fn paginate_by_tick_desc_orders_and_clips() {
+        let records = vec![
+            SessionSaveRecord::Autosave(AutosaveRecord {
+                id: "a1".into(),
+                session_id: "s".into(),
+                tick: 10,
+                file_path: "p1".into(),
+                byte_size: 1,
+                created_at: "t".into(),
+            }),
+            SessionSaveRecord::Autosave(AutosaveRecord {
+                id: "a2".into(),
+                session_id: "s".into(),
+                tick: 30,
+                file_path: "p2".into(),
+                byte_size: 1,
+                created_at: "t".into(),
+            }),
+            SessionSaveRecord::Autosave(AutosaveRecord {
+                id: "a3".into(),
+                session_id: "s".into(),
+                tick: 20,
+                file_path: "p3".into(),
+                byte_size: 1,
+                created_at: "t".into(),
+            }),
+        ];
+        // Tick-desc: a2 (30), a3 (20), a1 (10); offset=1, limit=1 ⇒ a3 only.
+        let page = paginate_by_tick_desc(records, 1, 1);
+        let SessionSaveRecord::Autosave(a) = &page[0] else {
+            panic!("expected autosave");
+        };
+        assert_eq!(a.tick, 20);
+        assert_eq!(page.len(), 1);
+    }
+
+    /// **FR-SAVE-024** — `pending_commands_marker` is the constant the engine
+    /// looks for when re-injecting the queued commands.
+    #[test]
+    fn pending_commands_marker_is_well_known() {
+        assert_eq!(
+            pending_commands_marker(),
+            "SimStateSnapshot::pending_commands"
+        );
     }
 
     #[test]

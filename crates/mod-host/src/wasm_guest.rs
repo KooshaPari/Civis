@@ -72,6 +72,49 @@ fn trim_guest_memory(mem: &mut Vec<u8>) {
     }
 }
 
+/// **NFR-CIV-SEC-001** — Allow-list of host import functions exposed to guest
+/// modules. Any guest module that imports a function not in this list (or
+/// from any module other than [`HOST_IMPORT_MODULE`]) is rejected at
+/// instantiation. Order matches [`link_host_imports`].
+const ALLOWED_HOST_IMPORTS: &[&str] = &[
+    "capability_api_version",
+    "sim_tick",
+    "memory_size",
+    "memory_read",
+    "memory_write",
+    "world_read",
+    "action_emit",
+];
+
+/// **NFR-CIV-SEC-001** — Reject any guest module that imports a function not
+/// in [`ALLOWED_HOST_IMPORTS`] (or from any module other than
+/// [`HOST_IMPORT_MODULE`]). Run before `Linker::instantiate` to fail fast
+/// on a malicious or stale mod before any host state is touched.
+fn validate_guest_imports(module: &Module) -> Result<(), WasmGuestError> {
+    for import in module.imports() {
+        if import.module() != HOST_IMPORT_MODULE {
+            return Err(WasmGuestError::Engine(wasmtime::Error::msg(format!(
+                "guest import '{}::{}' is outside the host allowlist (module != {})",
+                import.module(),
+                import.name(),
+                HOST_IMPORT_MODULE,
+            ))));
+        }
+        let Some(name) = import.name().as_str() else {
+            return Err(WasmGuestError::Engine(wasmtime::Error::msg(format!(
+                "guest import '{}::?' has a non-utf8 name; refusing to instantiate",
+                import.module(),
+            ))));
+        };
+        if !ALLOWED_HOST_IMPORTS.contains(&name) {
+            return Err(WasmGuestError::Engine(wasmtime::Error::msg(format!(
+                "guest import '{HOST_IMPORT_MODULE}::{name}' is not in the host allowlist",
+            ))));
+        }
+    }
+    Ok(())
+}
+
 fn record_permission_denial(state: &mut HostState, call: &str, domain: Option<WorldDomain>) {
     state.enforcement.record_denial(call, domain);
 }
@@ -188,6 +231,8 @@ fn with_guest_instance<R>(
     trim_guest_memory(guest_memory);
     let engine = Engine::default();
     let module = Module::new(&engine, wasm_bytes).map_err(WasmGuestError::Engine)?;
+    // **NFR-CIV-SEC-001** — fail fast on any import outside the host allowlist.
+    validate_guest_imports(&module)?;
     let mut linker = Linker::new(&engine);
     link_host_imports(&mut linker).map_err(WasmGuestError::Engine)?;
     let mut store = Store::new(
@@ -612,5 +657,69 @@ mod tests {
             0
         );
         assert_eq!(state.guest_memory.len(), HOST_GUEST_MEMORY_CAP);
+    }
+
+    /// Covers **NFR-CIV-SEC-001**. A guest that tries to import a function
+    /// outside the host allowlist is rejected before instantiation.
+    #[test]
+    fn nfr_civ_sec_001_green_validate_guest_imports_rejects_unknown_import() {
+        let wat = r#"
+            (module
+              (import "civlab" "memory_write" (func $write (param i32 i32)))
+              (import "civlab" "sneaky_net_send" (func $net (param i32 i32) (result i32)))
+              (func (export "civlab_economy_tick") (param i64) (result i32)
+                (i32.const 0)
+                (i32.const 0)
+                (call $write)
+                i32.const 0)
+            )
+            "#;
+        let wasm = wat::parse_str(wat).expect("wat");
+        let engine = Engine::default();
+        let module = Module::new(&engine, &wasm).expect("module");
+        let err = validate_guest_imports(&module).expect_err("must reject");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("sneaky_net_send") && msg.contains("allowlist"),
+            "unexpected error: {msg}"
+        );
+    }
+
+    /// Covers **NFR-CIV-SEC-001**. A guest that imports from a non-`civlab`
+    /// module (e.g. `wasi_snapshot_preview1`) is rejected.
+    #[test]
+    fn nfr_civ_sec_001_green_validate_guest_imports_rejects_foreign_module() {
+        let wat = r#"
+            (module
+              (import "wasi_snapshot_preview1" "fd_write" (func $fd (param i32 i32 i32) (result i32)))
+              (func (export "civlab_economy_tick") (param i64) (result i32) (i32.const 0))
+            )
+            "#;
+        let wasm = wat::parse_str(wat).expect("wat");
+        let engine = Engine::default();
+        let module = Module::new(&engine, &wasm).expect("module");
+        let err = validate_guest_imports(&module).expect_err("must reject");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("wasi_snapshot_preview1") && msg.contains("allowlist"),
+            "unexpected error: {msg}"
+        );
+    }
+
+    /// Covers **NFR-CIV-SEC-001**. A well-behaved guest that imports only
+    /// the allowed `civlab::*` functions is accepted.
+    #[test]
+    fn nfr_civ_sec_001_green_validate_guest_imports_accepts_allowed_set() {
+        let wat = r#"
+            (module
+              (import "civlab" "memory_write" (func $write (param i32 i32)))
+              (import "civlab" "world_read" (func $wr (param i32) (result i32)))
+              (func (export "civlab_economy_tick") (param i64) (result i32) (i32.const 0))
+            )
+            "#;
+        let wasm = wat::parse_str(wat).expect("wat");
+        let engine = Engine::default();
+        let module = Module::new(&engine, &wasm).expect("module");
+        validate_guest_imports(&module).expect("allowed set must validate");
     }
 }

@@ -162,12 +162,25 @@ impl ProminenceTracker {
 
     /// Explicitly prune legends below the supplied floor. Returns the ids
     /// pruned. Idempotent.
+    ///
+    /// **NFR-CIV-LEGENDS-LOUD-03**: every pruned legend id is announced via
+    /// `tracing::warn!` so the operator can see exactly which legends fell
+    /// below the salience floor (never a silent shrink).
     pub fn prune_below(&mut self, floor: f32) -> Vec<LegendEventId> {
         let before: Vec<_> = self
             .by_legend
             .iter()
             .filter_map(|(k, v)| if v.value < floor { Some(*k) } else { None })
             .collect();
+        if !before.is_empty() {
+            tracing::warn!(
+                target: "civis::legends::decay",
+                "prune_below(floor={:.3}) removing {} legend(s): {:?}",
+                floor,
+                before.len(),
+                before
+            );
+        }
         for id in &before {
             self.by_legend.remove(id);
         }

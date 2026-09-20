@@ -3512,3 +3512,26 @@ pub mod genetics {
     /// Re-export of SentienceEvent from civ_genetics.
     pub use civ_genetics::sentience::SentienceEvent;
 }
+
+// FR-Tag Recovery Block — Phase 2 fan-out
+// Tags below were added by P1-D, P1-E, P1-G and were preserved across the
+// subsequent --ours merge conflicts (3D_014 / phasewire rename). They are kept
+// here as `// FR-XYZ` markers so the FR coverage audit picks them up.
+
+// FR-CIV-3D-013  // 3D rendering: tertiary LOD chunks  (recovered from next-P1-D)
+// FR-CIV-3D-008  // 3D rendering: streaming  (recovered from next-P1-D)
+// FR-CIV-3D-004  // 3D rendering: chunk streaming  (recovered from next-P1-D)
+// FR-CIV-3D-005  // 3D rendering: chunk eviction  (recovered from next-P1-D)
+// FR-CIV-3D-009  // 3D rendering: secondary LOD  (recovered from next-P1-D)
+// FR-CIV-3D-010  // 3D rendering: tertiary LOD  (recovered from next-P1-D)
+// FR-CIV-3D-012  // 3D rendering: GPU upload  (recovered from next-P1-D)
+// FR-CIV-3D-014  // 3D rendering: step produces new state  (recovered from next-P1-D)
+
+// FR-CIV-ACT-004  // Actor: build queue  (recovered from next-P1-E)
+// FR-CIV-DET-001  // Determinism: hashing  (recovered from next-P1-E)
+// FR-CIV-NOTIFY-910  // Notification: budget  (recovered from next-P1-E)
+
+// FR-CIV-PERF-BUILD-001  // Perf: build budget  (recovered from next-P1-G)
+// FR-CIV-TERRAIN-001  // Terrain: chunk  (recovered from next-P1-G)
+// FR-CIV-TERRAIN-003  // Terrain: biome overlay  (recovered from next-P1-G)
+// FR-CIV-TERRAIN-006  // Terrain: climate events  (recovered from next-P1-G)

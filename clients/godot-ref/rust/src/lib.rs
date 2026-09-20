@@ -1,5 +1,6 @@
 #![allow(clippy::result_large_err)] // godot_api generated closures
 
+pub mod attach;
 pub mod f3d0_mesh;
 pub mod ux;
 pub mod ws_frame;

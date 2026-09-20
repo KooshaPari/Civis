@@ -22,7 +22,9 @@ use std::path::Path;
 
 mod error;
 pub mod manifest;
+mod validate;
 pub use error::ExportError;
+pub use validate::{validate_svg_template, TemplateRule};
 
 /// Export a vector SVG source to all required raster + icon formats.
 ///

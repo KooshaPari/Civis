@@ -49,6 +49,7 @@ pub const SCHEMA_VERSION: &str = "0.1.0";
 /// share every other data tag so the economy treats them identically; this only
 /// lets the renderer style them differently and lets saves audit provenance.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+// FR-CIV-ROAD-902
 pub enum InfraProvenance {
     /// Grown by accumulated agent traffic (desire path).
     Emergent,

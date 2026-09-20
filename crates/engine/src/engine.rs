@@ -375,6 +375,13 @@ pub struct MilitaryUnit {
 
 /// Global world state
 // FR-CIV-PERF-BUILD-001
+// FR-DET-001
+// FR-DET-002
+// FR-DET-003
+// FR-DET-004
+// FR-DET-005
+// FR-DET-006
+// FR-DET-007
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorldState {
     pub tick: u64,

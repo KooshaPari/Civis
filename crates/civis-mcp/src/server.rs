@@ -2259,6 +2259,7 @@ impl CivisMcpServer {
 
     /// Forward `sim.diplomacy_action` to civ-server. Propose a treaty,
     /// declare war, or offer a trade route to a target faction.
+    /// Covers: FR-CIV-CLIENT-006
     #[tool(
         name = "civis_diplomacy_action",
         description = "Forward sim.diplomacy_action to civ-server. Issue propose_treaty / declare_war / offer_trade against a target faction (FR-CIV-CLIENT-006)."

@@ -1,5 +1,6 @@
 #![cfg(all(feature = "bevy", feature = "egui"))]
 //! Civilization statistics history panel (FR-CIV-CLIENT-013).
+//! Covers: FR-CIV-CLIENT-013
 //! Y key toggles. Samples every 10 ticks. ASCII sparklines (8 levels).
 
 use crate::hud_state::HudState;

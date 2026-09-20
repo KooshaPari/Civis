@@ -242,6 +242,12 @@ pub struct LegendEntry {
 
 /// Producer contract: the minimal payload emitted onto the `crates/watch` bus
 /// (spec §4.1). Producers depend only on this shape, never on the legends crate.
+///
+/// NFR-C-06 — event log completeness: every state-mutating phase in
+/// `civ-engine` must emit at least one `RawSimEvent` per tick through
+/// `emergence::record_legend_event`. The `fr_event_completeness` unit
+/// suite (`crates/engine/tests/fr_fr_civ_emerg_*.rs`) asserts
+/// `events.len() > 0` after a deterministic tick.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RawSimEvent {
     pub tick: u64,

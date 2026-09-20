@@ -46,6 +46,11 @@
 //! weights, mood readings, and SFX coalescing caps depend only on their
 //! explicit inputs — no RNG, no `Instant::now`, no I/O. This is the
 //! hard prerequisite for replay-bound audio test coverage.
+//!
+//! NFR-CIV-MAINT-004 — doc-comment coverage: this crate denies
+//! `missing_docs` so every `pub` item must carry a rustdoc comment.
+//! The same lint is set to `warn` in the rest of the workspace and is
+//! escalated to `deny` in `quality/docs` CI (`cargo doc --no-deps -- -D warnings`).
 
 #![deny(missing_docs)]
 #![deny(unsafe_code)]

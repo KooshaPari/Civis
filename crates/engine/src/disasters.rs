@@ -61,6 +61,10 @@ impl Simulation {
     /// accumulated; returns `false` and does nothing otherwise. This is the
     /// player-facing divine power that closes the
     /// disasters → belief → divine-intervention loop (FR-CIV-EMERGENCE).
+    ///
+    /// FR-CIV-REL-004 — divine-intervention spend-or-fail: insufficient belief
+    /// ⇒ `false` (no side effects); sufficient belief ⇒ disaster triggers and
+    /// faith is debited by `cost` via `try_invoke_divine_power`.
     pub fn invoke_divine_disaster(
         &mut self,
         kind: DisasterKind,

@@ -631,6 +631,12 @@ pub struct MilitaryPinSnapshot {
 }
 
 /// Build the JSON-RPC result object for `sim.snapshot`.
+///
+/// NFR-P-07 — snapshot serialization overhead: this builder must complete
+/// in under 1 ms for the 1k-citizens scenario so the
+/// `TICK_PHASE_DURATION{phase="Snapshot"}` histogram stays inside its
+/// budget. `criterion::bench_snapshot_1k` (`crates/engine/benches/`) is
+/// the regression harness wired up to fail PRs that exceed the cap.
 pub fn snapshot_result_json(fields: &SnapshotFields) -> Value {
     let mut obj = serde_json::Map::new();
     obj.insert("tick".to_owned(), serde_json::json!(fields.tick));

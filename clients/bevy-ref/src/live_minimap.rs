@@ -2,6 +2,9 @@
 //!
 //! Used by [`crate::live_scene`] (render-to-texture minimap) and
 //! [`crate::bin::bevy_window`] (inset HUD minimap).
+//!
+//! FR-CIV-BEVY-013 — P-W1 item 38: shared live minimap computes bounds, UV
+//! positions, colors, and spawn helpers so both desktop paths agree.
 
 use bevy::prelude::*;
 use bevy::ui::FocusPolicy;

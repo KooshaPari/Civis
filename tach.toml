@@ -1,3 +1,11 @@
+# NFR-CIV-MAINT-005 — architecture boundary enforcement: this `tach.toml`
+# defines the per-module dependency graph that the `quality/architecture`
+# CI job validates with `tach check`. Layers that violate the declared
+# edges (e.g. `clients/*` reaching into `crates/engine` internals) fail
+# the gate. The `unused_ignore_directives` and
+# `require_ignore_directive_reasons` rules force every `#[ignore_tach]`
+# to be justified, mirroring the same justification rule as lint
+# suppressions (NFR-CIV-MAINT-006).
 source_roots = ["src"]
 exclude = ["docs", "target", "dist", "build", "tests"]
 exact = true

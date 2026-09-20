@@ -94,6 +94,10 @@ impl Default for Locale {
 /// Backed by a flat `HashMap<String, String>` loaded from a JSON file at
 /// `bundles/{locale}/strings.json` (embedded at compile time via `include_str!`
 /// or loaded at runtime from a known path).
+///
+/// FR-CIV-L10N-010 — string-table infrastructure: every locale ships a
+/// keyed JSON bundle embedded at compile time and accessed through the
+/// same `Bundle` / `tr!` API.
 #[derive(Debug, Clone)]
 pub struct Bundle {
     locale: Locale,
@@ -186,6 +190,10 @@ macro_rules! tr {
 /// 2. `LANG` env var (POSIX convention)
 ///
 /// Falls back to `Locale::En`.
+///
+/// FR-CIV-L10N-020 — locale detection: the runtime can derive a supported
+/// `Locale` from `Accept-Language`/BCP-47 input via `Locale::from_str` and
+/// from environment variables via `detect_locale_from_env`.
 pub fn detect_locale_from_env() -> Locale {
     if let Ok(val) = std::env::var("CIVIS_LANG") {
         if let Some(loc) = Locale::from_str(&val) {
@@ -291,5 +299,66 @@ mod tests {
         let bundle = Bundle::load(Locale::Fa);
         assert!(bundle.get("app.title").is_ok());
         assert!(bundle.get("godtools.raise_mountain").is_ok());
+    }
+
+    /// FR-CIV-L10N-030 — Persian (`fa`) bundle covers ≥80% of the English
+    /// string table; values differ from English (i.e. are translated, not
+    /// copy-paste placeholders).
+    #[test]
+    fn fa_bundle_coverage_meets_threshold() {
+        let en = Bundle::load(Locale::En);
+        let fa = Bundle::load(Locale::Fa);
+        let covered = en_keys_present_in(&fa);
+        let total = en_keys_iter().count();
+        let coverage = (covered as f32) / (total as f32).max(1.0);
+        assert!(
+            coverage >= 0.8,
+            "fa bundle coverage {coverage:.2} below 0.80 threshold ({covered} of {total})"
+        );
+        // Translated strings must differ from English for at least the title.
+        let en_title = en.get("app.title").unwrap();
+        let fa_title = fa.get("app.title").unwrap();
+        assert_ne!(
+            en_title, fa_title,
+            "fa title appears to be untranslated copy of English"
+        );
+    }
+
+    /// FR-CIV-L10N-040 — Simplified Chinese (`zh-CN`) bundle covers ≥80% of
+    /// the English string table and differs from English (translated, not
+    /// copy-paste).
+    #[test]
+    fn zh_cn_bundle_coverage_meets_threshold() {
+        let en = Bundle::load(Locale::En);
+        let zh = Bundle::load(Locale::ZhCN);
+        let covered = en_keys_present_in(&zh);
+        let total = en_keys_iter().count();
+        let coverage = (covered as f32) / (total as f32).max(1.0);
+        assert!(
+            coverage >= 0.8,
+            "zh-CN bundle coverage {coverage:.2} below 0.80 threshold ({covered} of {total})"
+        );
+        let en_title = en.get("app.title").unwrap();
+        let zh_title = zh.get("app.title").unwrap();
+        assert_ne!(
+            en_title, zh_title,
+            "zh-CN title appears to be untranslated copy of English"
+        );
+    }
+
+    /// Enumerate every key shipped in the embedded `bundles/en/strings.json`
+    /// so coverage tests can compute ratios against `Locale::En`.
+    fn en_keys_iter() -> impl Iterator<Item = String> {
+        let json = include_str!("../bundles/en/strings.json");
+        let map: HashMap<String, String> =
+            serde_json::from_str(json).expect("civ-i18n: invalid en bundle JSON");
+        map.into_keys()
+    }
+
+    /// Count how many English keys are present (and non-empty) in `other`.
+    fn en_keys_present_in(other: &Bundle) -> usize {
+        en_keys_iter()
+            .filter(|k| other.get(&k).map(str::len).unwrap_or(0) > 0)
+            .count()
     }
 }

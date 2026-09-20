@@ -648,6 +648,10 @@ const SNAPSHOT_POLL_SECS: u64 = 2;
 const OUTBOUND_WAKE_MILLIS: u64 = 20;
 
 /// First reconnect delay after a disconnect.
+///
+/// FR-CIV-BEVY-018 — P-W1 item 43: WebSocket reconnect backoff is bounded
+/// (`RECONNECT_BACKOFF_INITIAL_SECS` .. `RECONNECT_BACKOFF_MAX_SECS`) and the
+/// HUD reflects `WsConnectionState` transitions.
 pub const RECONNECT_BACKOFF_INITIAL_SECS: u64 = 1;
 /// Maximum reconnect delay (exponential backoff cap).
 pub const RECONNECT_BACKOFF_MAX_SECS: u64 = 30;

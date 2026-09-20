@@ -1,3 +1,8 @@
+# NFR-CIV-MAINT-006 — zero lint suppressions without justification: this
+# `clippy.toml` keeps the lint surface tight (`avoid-breaking-exported-api`,
+# `disallowed-methods = []`) so any new `#[allow(...)]` introduced in the
+# tree is surfaced by `hooks/suppress-*.sh` + the `quality/suppressions` CI
+# job. Lints may only be suppressed with a justification comment.
 # Phenotype-org standard clippy config
 msrv = "1.94.1"
 avoid-breaking-exported-api = true

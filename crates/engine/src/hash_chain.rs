@@ -4,6 +4,11 @@
 //!
 //! FR-CIV-PLANET-060 extends the chain to fold in Climate + WeatherGrid +
 //! GeologyMap via [`climate_event_bytes`].
+//!
+//! NFR-C-01 — tick-by-tick state hash determinism: every tick is hashed
+//! through this chain, so two runs with the same seed produce identical
+//! per-tick digests. Cross-checks live in the `fr_determinism_replay` suite
+//! (`crates/engine/tests/fr_fr_civ_core_*`).
 
 /// Length of a chain link (BLAKE3 digest).
 pub const HASH_LEN: usize = 32;
@@ -73,6 +78,12 @@ pub fn chain_root_from_ticks(ticks: impl IntoIterator<Item = u64>) -> Option<[u8
 }
 
 /// Advance the chain with an arbitrary canonical payload.
+///
+/// NFR-C-07 — `SimEvent.state_hash` parity: every replayable event folds
+/// its payload through [`chain_advance`], so the per-event digest matches
+/// the running chain root at the tick of emission. Replay verification
+/// (`civ-engine` `civreplay` parser) recomputes the chain and asserts
+/// equality.
 #[must_use]
 pub fn chain_advance(prev: &[u8; HASH_LEN], payload: &[u8]) -> [u8; HASH_LEN] {
     tick_hash(prev, payload)

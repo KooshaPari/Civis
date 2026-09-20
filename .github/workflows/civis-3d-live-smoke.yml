@@ -6,6 +6,9 @@
 # is dispatch-only — used for the offline-deps fallback documented in
 # `docs/development-guide/fr-bevy-attach.md` (libasound/libudev/libxkbcommon
 # libs that aren't on every CI runner).
+#
+# FR-CIV-BEVY-021 — P-W1 item 46: path-filtered CI invokes the headless
+# live-attach smoke recipe.
 name: Civis 3D Live Smoke
 
 on:

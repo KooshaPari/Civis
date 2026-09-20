@@ -1,4 +1,7 @@
 //! Shared live-scene focus bounds for orbit camera and HUD minimap framing.
+//!
+//! FR-CIV-BEVY-015 — P-W1 item 40: shared live-scene focus drives orbit
+//! targeting and minimap world/UV conversion for both `live_scene` and `bevy_window`.
 
 use bevy::prelude::*;
 use civ_voxel::ChunkId;

@@ -417,6 +417,10 @@ gate_4_tests() {
 # ============================================================
 # GATE 5: Coverage
 # ============================================================
+# NFR-CIV-MAINT-001 — test coverage threshold gate (default 90% for the
+# Civis simulation crates; configurable via `quality-gate.yml.coverage`
+# or `.qa-config.json.coverage_threshold`). Under the threshold the gate
+# fails CI and the per-project `quality/coverage` job surfaces the gap.
 gate_5_coverage() {
     local coverage=-1 detail=""
 
@@ -507,6 +511,11 @@ gate_6_security() {
 # ============================================================
 # GATE 7: Complexity
 # ============================================================
+# NFR-CIV-MAINT-002 — cyclomatic + cognitive complexity caps: per-function
+# cyclomatic ≤ `CYCLOMATIC_MAX` (default 10) and cognitive ≤ `COGNITIVE_MAX`
+# (default 15). Functions above the cap fail CI via the `quality/complexity`
+# job. The thresholds match the defaults in
+# `docs/reference/non-functional-requirements.md` §NFR-CIV-MAINT-002.
 gate_7_complexity() {
     local errors=0 detail=""
 
@@ -556,6 +565,11 @@ gate_7_complexity() {
 # ============================================================
 # GATE 8: Duplication
 # ============================================================
+# NFR-CIV-MAINT-003 — code duplication ceiling: `jscpd` runs with the
+# project `--threshold` (default 5%). Any detected copy-paste cluster
+# above the threshold fails the `quality/duplication` CI gate and blocks
+# PR merge. See `docs/reference/non-functional-requirements.md`
+# §NFR-CIV-MAINT-003 for the metric definition.
 gate_8_duplication() {
     if ! tool_exists jscpd; then
         log_gate 8 "Duplication (<${DUPLICATION_THRESHOLD}%)" SKIP "jscpd not installed"

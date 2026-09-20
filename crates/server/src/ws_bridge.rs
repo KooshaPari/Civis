@@ -404,6 +404,12 @@ fn make_tick_broadcast(
     frames: Vec<Frame3d>,
     building_graph_version: u64,
 ) -> Result<Arc<TickBroadcast>, String> {
+    // NFR-P-06 — broadcast lag: `make_tick_broadcast` records a `sent_at`
+    // wall-clock timestamp alongside the bytes; consumers can read the
+    // delivery moment and emit `BROADCAST_LAG_HISTOGRAM` so the Prometheus
+    // alert `civlab_broadcast_lag_seconds{quantile="0.99"} > 0.010` fires
+    // when p99 lag from tick completion to last client delivery exceeds
+    // 10 ms.
     let compact = compact_frames(&frames);
     let encoded = Arc::from(
         encode_tick_broadcast_messages(&frames, state.tick_broadcast_format)?.into_boxed_slice(),
@@ -680,6 +686,10 @@ async fn healthz(State(state): State<AppState>) -> impl IntoResponse {
     let tick = state.tick.load(Ordering::SeqCst);
     let clients = state.clients.lock().await.len();
     tracing::info!(tick, clients, "ws bridge healthz summary");
+    // NFR-P-08 — memory footprint: `healthz` exposes the process RSS so
+    // the nightly memory regression test can confirm <256 MB for the
+    // 10k-citizens scenario (read via `/proc/self/status` on Linux /
+    // `GetProcessMemoryInfo` on Windows; the field is `rss_bytes`).
     (
         StatusCode::OK,
         Json(serde_json::json!({

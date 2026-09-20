@@ -1,4 +1,7 @@
 //! Viewport picking for streamed live entities (agents, buildings, graph parcels).
+//!
+//! FR-CIV-BEVY-019 — P-W1 item 44: live entity ray picking selects the
+//! nearest valid marker and updates HUD selection.
 
 use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;

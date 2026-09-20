@@ -49,6 +49,7 @@ impl PowerLawFit {
     /// (bin 0 = rank 1, bin 1 = rank 2, …).  Empty bins are ignored.
     /// Returns `alpha = 0.0, r_squared = 0.0` when there are fewer
     /// than two non-empty bins or when the regression is degenerate.
+    // FR-CIV-EMERGENCE-005
     #[must_use]
     pub fn compute_rank_frequency(&self, input: &Histogram) -> PowerLawResult {
         let mut xs = Vec::new();

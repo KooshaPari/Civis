@@ -8,6 +8,7 @@
 //!
 //! | Module | Core types |
 //! |--------|-----------|
+//! | [`accessibility`] | `PaletteMode`, `HighContrastTheme`, `KeybindRegistry`, `TooltipRegistry` |
 //! | [`population_panel`] | `PopulationPanel`, `AgeBand`, `FactionBreakdown` |
 //! | [`economy_panel`] | `EconomyPanel`, `ResourceStock`, `EmploymentSector` |
 //! | [`diplomacy_panel`] | `DiplomacyPanel`, `RelationEntry`, `ThreatLevel` |
@@ -29,6 +30,7 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod accessibility;
 pub mod diplomacy_panel;
 pub mod economy_panel;
 pub mod env_overlay;

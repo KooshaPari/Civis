@@ -1,4 +1,5 @@
 //! Market shocks from disasters and demand events (FR-ECON-EMERGE-004).
+//! Covers: FR-ECON-EMERGE-004
 //!
 //! Shocks translate external events (disasters, demand surges) into price
 //! multipliers on top of the emergent supply/demand pricing in [`crate::prices`].

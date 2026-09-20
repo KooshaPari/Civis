@@ -1,4 +1,5 @@
 //! Trade flows driven by price differentials between clusters (FR-ECON-EMERGE-002).
+//! Covers: FR-ECON-EMERGE-002
 //!
 //! Surplus goods flow from low-price clusters (high supply) to high-price clusters
 //! (high scarcity). Flow volume is proportional to the price differential.

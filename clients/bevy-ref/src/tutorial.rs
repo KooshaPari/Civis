@@ -1,6 +1,7 @@
 #![cfg(all(feature = "bevy", feature = "egui"))]
 
 //! 6-step tutorial hint system (FR-CIV-CLIENT-011).
+//! Covers: FR-CIV-CLIENT-011
 //! Shown bottom-centre during InGame. Enter/click advances; H replays.
 //!
 //! **Intentionally local-only** — this panel displays static tutorial

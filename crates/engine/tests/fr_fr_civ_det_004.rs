@@ -1,6 +1,7 @@
 //! Tests for FR-CIV-DET-004 — Determinism (tick monotonicity)
 //!
 //! Epic: FR-CIV-DET
+//! Covers: FR-CIV-DET-004
 //! Verifies that tick counters only advance forward.
 
 #[cfg(test)]

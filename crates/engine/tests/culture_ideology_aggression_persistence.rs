@@ -2,6 +2,8 @@
 //! fields added to `WorldState` (FR-CIV-CULTURE-001 + FR-CIV-IDEOLOGY-001 +
 //! FR-CIV-AGGRESSION-001 + FR-CIV-UNREST-001).
 //!
+//! Covers: FR-CIV-IDEOLOGY-001
+//!
 //! These close the determinism gap by exercising the save-side and load-side
 //! mirrors at the byte-for-byte level: insert distinct values, advance a tick
 //! to fire `save_state_mirror`, save, load, and assert all 4 fields round-trip

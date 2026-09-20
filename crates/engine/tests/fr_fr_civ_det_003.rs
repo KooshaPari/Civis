@@ -1,6 +1,7 @@
 //! Tests for FR-CIV-DET-003 — Determinism (fixed-point math)
 //!
 //! Epic: FR-CIV-DET
+//! Covers: FR-CIV-DET-003
 //! Verifies fixed-point arithmetic produces deterministic cross-platform results.
 
 #[cfg(test)]

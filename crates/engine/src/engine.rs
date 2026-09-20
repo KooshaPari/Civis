@@ -484,6 +484,7 @@ pub struct WorldState {
     pub cluster_cultures: BTreeMap<u64, civ_agents::culture::CultureProfile>,
 
     // Faction ideologies (FR-CIV-IDEOLOGY-001) — durable across archive
+    /// Covers: FR-CIV-IDEOLOGY-001
     // round-trip. Mutated by phase_ideology; per-faction cultural doctrine
     // flags survive reload.
     #[serde(default)]
@@ -536,6 +537,7 @@ pub struct WorldState {
     pub scenario_taxation: civ_economy::Taxation,
 
     // Era progression (FR-CIV-ERA-001) — durable across archive round-trip.
+    /// Covers: FR-CIV-ERA-001
     // Mutated by phase_era every tick; era gates and per-faction era
     // history survive reload. legacy v3 saves deserialize to default.
     #[serde(default)]

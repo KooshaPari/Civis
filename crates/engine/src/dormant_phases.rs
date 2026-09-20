@@ -86,6 +86,7 @@ impl Simulation {
     }
 
     /// Macro psyche rollup — mature agents stabilize collective belief (FR-CIV-PSYCHE-N11).
+    /// Covers: FR-CIV-PSYCHE-N11
     ///
     /// Agent-level mood/belief mutation runs in `phase_emergence`; this phase only
     /// projects average maturity upward when `Psyche` components are present.

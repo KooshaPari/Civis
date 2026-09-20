@@ -80,6 +80,7 @@ pub enum JsonRpcMethod {
     /// Saga-graph / legends query (`sim.legends`, FR-CIV-LEGENDS-QUERY-07).
     SimLegends,
     /// Client-initiated diplomacy action (propose_treaty / declare_war / offer_trade). (sim.diplomacy_action, FR-CIV-CLIENT-006).
+    /// Covers: FR-CIV-CLIENT-006
     SimDiplomacyAction,
     /// Queue a research tech on the simulation (`sim.queue_research`, FR-CIV-SERVER-003).
     SimQueueResearch,

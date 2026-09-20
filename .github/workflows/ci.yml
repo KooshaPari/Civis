@@ -38,6 +38,10 @@ jobs:
 
     # ─── Rust Module Graph (cargo-modules graph per workspace package) ──
     module-graph:
+        # NFR-C-02 — cross-platform hash determinism is exercised across
+        # Linux x86_64, Windows, and macOS so the same per-tick digests
+        # match across all three platforms (the CI matrix here is the
+        # runtime proof; `cargo test fr_determinism_replay` runs in CI).
         name: Rust Module Graph (${{ matrix.os }})
         runs-on: ${{ matrix.os }}
         strategy:

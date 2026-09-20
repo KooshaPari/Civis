@@ -35,6 +35,10 @@ use hecs::Entity;
 use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
+// NFR-C-04 — RNG seeding coverage: every random draw in simulation crates
+// must derive from `WorldState::rng_seed` (or a deterministic XOR extension
+// of it). Unseeded entry points such as `thread_rng`, `rand::random`, and
+// `OsRng` are blocked by the CI grep-based scan plus pre-commit hook.
 use serde::{Deserialize, Serialize};
 
 use crate::engine::{awakening_belief_gain, awakening_cohesion_gain, Simulation};

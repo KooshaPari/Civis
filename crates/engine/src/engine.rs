@@ -388,6 +388,7 @@ pub struct MilitaryUnit {
 // FR-SOC-IDE-004
 // FR-SOC-IDE-005
 // FR-SOC-IDE-006
+// FR-VAL-001
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorldState {
     pub tick: u64,

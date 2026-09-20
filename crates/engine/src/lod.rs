@@ -66,6 +66,7 @@ pub fn should_tick_entity_with_policy(tick: u64, tier: LodTier, policy: LodPolic
 }
 
 /// Roll district populations into a region summary (FR-LOD-002 stub).
+// FR-CIV-NOTIFY-911
 pub fn aggregate_strategic(district_populations: &[u32]) -> u32 {
     district_populations.iter().sum()
 }

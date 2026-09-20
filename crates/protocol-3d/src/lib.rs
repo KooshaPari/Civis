@@ -40,6 +40,7 @@ pub use civ_voxel::{ChunkId, DirtyChunkEvent, MaterialId, WriteSeq};
 
 /// Schema version of the public protocol-3d frame types. Bumped on any
 /// wire-incompatible change; clients refuse to attach on mismatch.
+// FR-CIV-PROTO-015
 pub const SCHEMA_VERSION: u32 = 0;
 
 /// Provenance tag carried by every building diff so the renderer can style

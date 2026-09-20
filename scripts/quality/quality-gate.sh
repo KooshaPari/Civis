@@ -565,6 +565,11 @@ gate_7_complexity() {
 # ============================================================
 # GATE 8: Duplication
 # ============================================================
+# NFR-CIV-MAINT-003 — code duplication ceiling: `jscpd` runs with the
+# project `--threshold` (default 5%). Any detected copy-paste cluster
+# above the threshold fails the `quality/duplication` CI gate and blocks
+# PR merge. See `docs/reference/non-functional-requirements.md`
+# §NFR-CIV-MAINT-003 for the metric definition.
 gate_8_duplication() {
     if ! tool_exists jscpd; then
         log_gate 8 "Duplication (<${DUPLICATION_THRESHOLD}%)" SKIP "jscpd not installed"

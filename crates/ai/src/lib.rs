@@ -179,6 +179,7 @@ impl GenOutput {
     }
 }
 
+// FR-CIV-AI-013
 /// Request for [`AiProvider::embed`]. Batched by construction.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EmbedRequest {
@@ -208,6 +209,7 @@ pub enum AiError {
     ModelMissing(String),
 }
 
+// FR-CIV-AI-011
 /// Compute the composite cache key for a generate request against a provider.
 ///
 /// Mirrors `civ-research::LlmEvent::cache_key` verbatim:
@@ -223,6 +225,7 @@ pub fn gen_cache_key(provider: &dyn AiProvider, req: &GenRequest) -> Vec<u8> {
     )
 }
 
+// FR-CIV-AI-012, FR-CIV-AI-014
 /// Cache-wrapping generate: returns on hit, else calls the provider and stores.
 ///
 /// Providers stay cache-agnostic; this wrapper owns the cache path

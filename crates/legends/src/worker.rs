@@ -36,9 +36,23 @@ impl LegendsWorker {
     }
 
     /// Drain a batch of events (e.g. one bus poll) into the graph.
+    ///
+    /// **NFR-CIV-LEGENDS-LOUD-03**: every degrade path is announced + names the
+    /// failing item. We log a `warn!` per event whose ingest produced no
+    /// `event_id` so the operator can see which bus events were dropped
+    /// (rather than swallowing them silently).
     pub fn drain<I: IntoIterator<Item = RawSimEvent>>(&mut self, events: I) {
         for raw in events {
-            let _ = self.ingest(raw);
+            let outcome = self.ingest(raw);
+            if outcome.event_id.is_none() {
+                tracing::warn!(
+                    target: "civis::legends::worker",
+                    "drain dropped RawSimEvent kind={:?} source={:?} tick={} (no event_id minted)",
+                    raw.kind,
+                    raw.source,
+                    raw.tick
+                );
+            }
         }
     }
 

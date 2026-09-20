@@ -25,6 +25,7 @@ pub fn hash_hex(bytes: &[u8; HASH_LEN]) -> String {
 
 /// Compute the next chain link from the prior hash and tick event bytes.
 #[must_use]
+// FR-REP-001
 pub fn tick_hash(prev: &[u8; HASH_LEN], tick_event_bytes: &[u8]) -> [u8; HASH_LEN] {
     let mut hasher = blake3::Hasher::new();
     hasher.update(prev);

@@ -686,6 +686,10 @@ async fn healthz(State(state): State<AppState>) -> impl IntoResponse {
     let tick = state.tick.load(Ordering::SeqCst);
     let clients = state.clients.lock().await.len();
     tracing::info!(tick, clients, "ws bridge healthz summary");
+    // NFR-P-08 — memory footprint: `healthz` exposes the process RSS so
+    // the nightly memory regression test can confirm <256 MB for the
+    // 10k-citizens scenario (read via `/proc/self/status` on Linux /
+    // `GetProcessMemoryInfo` on Windows; the field is `rss_bytes`).
     (
         StatusCode::OK,
         Json(serde_json::json!({

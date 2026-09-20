@@ -1109,6 +1109,11 @@ pub const PRESENTATION_DAY_AMBIENT_RGB: [f32; 3] = [0.96, 0.93, 0.86];
 pub const PRESENTATION_NIGHT_AMBIENT_RGB: [f32; 3] = [0.55, 0.68, 0.92];
 
 /// Target presentation blend for directional light, ambient, and clear colour.
+///
+/// FR-CIV-BEVY-020 — P-W1 item 45: snapshot `is_day` drives desktop
+/// presentation lighting via `presentation_day_factor_target`,
+/// `presentation_clear_color_rgb`, `presentation_ambient_brightness`,
+/// `presentation_ambient_color_rgb`.
 #[must_use]
 pub fn presentation_day_factor_target(is_day: bool) -> f32 {
     if is_day {

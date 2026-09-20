@@ -36,6 +36,7 @@ use serde::{Deserialize, Serialize};
 /// from leaking `0.0` readings that the dashboard would mis-render as
 /// "all minimum".
 // FR-CIV-EMERG-004
+// FR-CIV-EMERG-005
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 pub struct EmergenceDashboard {
     /// Normalised Shannon entropy over per-cluster population sizes.

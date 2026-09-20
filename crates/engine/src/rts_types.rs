@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 /// A nation's color palette for sprite recoloring.
 /// Nation colors are not baked into atlas sprites; a fragment shader
 /// replaces palette indices at render time.
+// FR-CIV-RTS-NATION-001
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NationColor {
     /// Primary color as hex string (e.g. "#c8303c").
@@ -282,6 +283,7 @@ pub fn color_distance(a: [f32; 3], b: [f32; 3]) -> f32 {
 }
 
 /// Check whether two RGB colors match within the shader tolerance.
+// FR-CIV-RTS-NATION-002
 pub fn color_matches(a: [f32; 3], b: [f32; 3]) -> bool {
     color_distance(a, b) < SHADER_TOLERANCE
 }

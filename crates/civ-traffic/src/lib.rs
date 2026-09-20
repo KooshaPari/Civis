@@ -242,6 +242,7 @@ impl TrafficGraph {
     /// threshold. Creates the segment on first traversal. Returns the resulting
     /// [`RoadKind`]. User-placed segments keep their placed rank and provenance
     /// but still tally traffic (so the renderer can show wear/use).
+    // FR-CIV-ROAD-901
     pub fn record_traffic(&mut self, from: WorldCoord, to: WorldCoord, weight: f32) -> RoadKind {
         if from == to || weight <= 0.0 {
             return self.kind_between(from, to);

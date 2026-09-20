@@ -2,6 +2,11 @@ use serde::{Deserialize, Serialize};
 
 /// Fixed-point integer type for deterministic simulation math.
 /// Stores a 64-bit integer with an implied scale factor of 1_000.
+///
+/// NFR-C-03 — fixed-point arithmetic enforcement: simulation crates carry
+/// numeric state exclusively through this `Fixed` type (and its 1e6-scale
+/// sibling in `civ_mod_host`). Float arithmetic is blocked at the lint
+/// level via `cargo clippy -D clippy::float_arithmetic` in CI.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[repr(transparent)]
 pub struct Fixed(pub(crate) i64);

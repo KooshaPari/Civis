@@ -80,6 +80,7 @@ pub struct HexCellSnapshot {
 }
 
 /// Build an operational hex view from micro state (FR-LOD-004 stub).
+// FR-CIV-INFOVIEW-912
 pub fn operational_hex_snapshot(population: u32, resources: u32) -> HexCellSnapshot {
     HexCellSnapshot {
         population,

@@ -186,6 +186,7 @@ impl std::error::Error for UpgradeError {}
 // ---------------------------------------------------------------------------
 
 /// Engine that manages building tiers, upgrades, and per-tick simulation.
+// FR-CIV-INFOVIEW-914
 pub struct BuildingTierEngine {
     /// All active buildings.
     pub buildings: Vec<Building>,

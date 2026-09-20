@@ -302,10 +302,10 @@ pub fn pixels_tool_payload(path: &Path, grid: usize) -> Result<Value, String> {
     }))
 }
 
+// FR-CIV-MCP-006
 /// Build a JSON-RPC 2.0 outbound text frame for the given method + params.
 ///
 /// Mirrors `civis_cli::census::build_sim_status_request` but generic over
-// FR-CIV-MCP-006
 /// method name and parameters. The harness pins `id=1` so a single inflight
 /// call is enough for the current MCP surface (the bridge matches by
 /// `RequestId` already, but the wire contract is identical to the

@@ -38,6 +38,7 @@ pub fn load_civreplay(path: impl AsRef<Path>) -> Result<ReplayLog, ReplayError> 
 }
 
 // FR-CIV-CORE-010
+// FR-CIV-CORE-018
 /// Serialize `log` into an in-memory `.civreplay` byte buffer.
 pub fn encode_civreplay(log: &ReplayLog) -> Result<Vec<u8>, ReplayError> {
     let payload = ron::to_string(log)?;

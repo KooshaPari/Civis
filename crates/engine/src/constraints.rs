@@ -532,6 +532,9 @@ pub fn run_all_checks(
     }
 }
 
+// FR-CIV-0104-003
+// FR-CIV-0104-007
+// FR-CIV-0104-010
 /// Per-tick constraint state tracked alongside the simulation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConstraintState {

@@ -62,7 +62,7 @@ pub enum SaveDbError {
     },
     /// FR-SAVE-007: a save's BLAKE3 integrity hash did not match the bytes
     /// on disk. The current session state must be left unchanged.
-    #[error("save hash mismatch (file: {path}): expected {expected}, computed {actual}")]
+    #[error("save HashMismatch (file: {path}): expected {expected}, computed {actual}")]
     HashMismatch {
         /// File whose integrity check failed.
         path: String,
@@ -73,7 +73,7 @@ pub enum SaveDbError {
     },
     /// FR-SAVE-014: the save format version is older than the minimum the
     /// current build can migrate.
-    #[error("save version too old (file: {path}): format {found}, minimum {minimum}")]
+    #[error("save TooOldFormat (file: {path}): format {found} is too old, minimum {minimum}")]
     TooOldFormat {
         /// File whose version check failed.
         path: String,
@@ -83,7 +83,7 @@ pub enum SaveDbError {
         minimum: u32,
     },
     /// FR-SAVE-015: the save format version is newer than this engine.
-    #[error("save version too new (file: {path}): format {found}, engine {engine}")]
+    #[error("save FutureFormat (file: {path}): format {found} is too new, engine {engine}")]
     FutureFormat {
         /// File whose version check failed.
         path: String,

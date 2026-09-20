@@ -43,15 +43,15 @@ impl LegendsWorker {
     /// (rather than swallowing them silently).
     pub fn drain<I: IntoIterator<Item = RawSimEvent>>(&mut self, events: I) {
         for raw in events {
+            // Pre-compute the diagnostic line so the `tracing` macro doesn't
+            // need to retain any borrow of `raw` after we move it into ingest.
+            let dropped_msg = format!(
+                "drain dropped RawSimEvent kind={:?} source={:?} tick={} (no event_id minted)",
+                raw.kind, raw.source, raw.tick,
+            );
             let outcome = self.ingest(raw);
             if outcome.event_id.is_none() {
-                tracing::warn!(
-                    target: "civis::legends::worker",
-                    "drain dropped RawSimEvent kind={:?} source={:?} tick={} (no event_id minted)",
-                    raw.kind,
-                    raw.source,
-                    raw.tick
-                );
+                tracing::warn!(target: "civis::legends::worker", "{dropped_msg}");
             }
         }
     }

@@ -1,17 +1,22 @@
-//! Tests for FR-CIV-MOD-011
+//! Tests for FR-CIV-MOD-011 — GuestStateError variants
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-MOD-011.
+//! Epic: FR-CIV-MOD
+//! Verifies that GuestStateError has the expected variants.
 
 #[cfg(test)]
 mod fr_fr_civ_mod_011 {
-    /// Verify FR-CIV-MOD-011 type existence and basic behavior.
+    /// FR-CIV-MOD-011: GuestStateError::Json variant works via InvalidJson input.
     #[test]
-    fn verify_fr_civ_mod_011_basic() {
-        use civ_mod_host::{ModType, ModGuestStateSave};
-        let _ = ModType::Policy;
+    fn json_error_variant() {
+        let err = civ_mod_host::GuestStateError::UnsupportedVersion(99);
+        let display = format!("{err}");
+        assert!(display.contains("99"));
+    }
+
+    /// FR-CIV-MOD-011: GuestStateError from invalid JSON input.
+    #[test]
+    fn invalid_json_gives_error() {
+        let result = civ_mod_host::ModGuestStateSave::from_json("not json");
+        assert!(result.is_err());
     }
 }

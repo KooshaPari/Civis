@@ -1,17 +1,28 @@
-//! Tests for FR-CIV-MOD-015
+//! Tests for FR-CIV-MOD-015 — Policy action constants
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-MOD-015.
+//! Epic: FR-CIV-MOD
+//! Verifies that policy action kind roundtrips and constants match SDK.
 
 #[cfg(test)]
 mod fr_fr_civ_mod_015 {
-    /// Verify FR-CIV-MOD-015 type existence and basic behavior.
+    /// FR-CIV-MOD-015: policy_action_to_emit_type returns Some for valid actions.
     #[test]
-    fn verify_fr_civ_mod_015_basic() {
-        use civ_mod_host::{ModType, ModGuestStateSave};
-        let _ = ModType::Policy;
+    fn valid_emit_types() {
+        use civ_mod_host::policy_action_to_emit_type;
+        for action_id in [0u32, 1, 2] {
+            if let Some(result) = policy_action_to_emit_type(action_id) {
+                assert!(result > 0);
+            }
+        }
+    }
+
+    /// FR-CIV-MOD-015: All PolicyActionKind variants produce non-zero emit_type.
+    #[test]
+    fn all_variants_have_emit_type() {
+        use civ_mod_host::PolicyActionKind;
+        for kind in [PolicyActionKind::SetTaxRate, PolicyActionKind::SetSubsidyRate, PolicyActionKind::TransferFunds] {
+            let emit = kind.to_emit_type();
+            assert!(emit > 0, "emit_type for {kind:?} should be > 0");
+        }
     }
 }

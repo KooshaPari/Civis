@@ -1,18 +1,38 @@
-//! Tests for FR-CIV-LEGENDS-BROWSER-09
+//! Tests for FR-CIV-LEGENDS-BROWSER-09 — Legend browser UI (query API)
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-LEGENDS-BROWSER-09.
+//! Epic: FR-CIV-LEGENDS
+//! Verifies the saga graph supports browsing entities and their stories.
 
 #[cfg(test)]
 mod fr_fr_civ_legends_browser_09 {
-    /// Verify FR-CIV-LEGENDS-BROWSER-09 type existence and basic behavior.
+    use civ_legends::{SagaGraph, EventKind, RawSimEvent, SourceCrate};
+
+    /// FR-CIV-LEGENDS-BROWSER-09: SagaGraph default is empty.
     #[test]
-    fn verify_fr_civ_legends_browser_09_basic() {
-        use civ_legends::{SagaGraph, SignificanceConfig};
-        let _ = SagaGraph::default();
-        let _ = SignificanceConfig::default();
+    fn saga_graph_default_is_empty() {
+        let graph = SagaGraph::default();
+        assert_eq!(graph.node_count(), 0);
+        assert_eq!(graph.edge_count(), 0);
+    }
+
+    /// FR-CIV-LEGENDS-BROWSER-09: Ingesting events increases node count.
+    #[test]
+    fn ingest_increases_node_count() {
+        let mut graph = SagaGraph::default();
+        let raw = RawSimEvent::new(1, EventKind::Birth, SourceCrate::Engine, 0.5);
+        let outcome = graph.ingest(raw);
+        assert!(outcome.event_id.is_some());
+        assert!(graph.node_count() > 0);
+    }
+
+    /// FR-CIV-LEGENDS-BROWSER-09: Multiple events can be ingested.
+    #[test]
+    fn multiple_ingests_accumulate() {
+        let mut graph = SagaGraph::default();
+        for kind in [EventKind::Birth, EventKind::Death, EventKind::Battle] {
+            let raw = RawSimEvent::new(1, kind, SourceCrate::Engine, 0.8);
+            graph.ingest(raw);
+        }
+        assert!(graph.node_count() >= 3);
     }
 }

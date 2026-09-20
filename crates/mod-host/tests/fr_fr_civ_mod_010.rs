@@ -1,17 +1,22 @@
-//! Tests for FR-CIV-MOD-010
+//! Tests for FR-CIV-MOD-010 — Guest state save/load
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-MOD-010.
+//! Epic: FR-CIV-MOD
+//! Verifies ModGuestStateSave roundtrip serialization.
 
 #[cfg(test)]
 mod fr_fr_civ_mod_010 {
-    /// Verify FR-CIV-MOD-010 type existence and basic behavior.
+    /// FR-CIV-MOD-010: Empty GuestStateSave roundtrips through JSON.
     #[test]
-    fn verify_fr_civ_mod_010_basic() {
-        use civ_mod_host::{ModType, ModGuestStateSave};
-        let _ = ModType::Policy;
+    fn empty_save_roundtrips() {
+        let save = civ_mod_host::ModGuestStateSave::empty();
+        let json = save.to_json().expect("serialize");
+        let restored = civ_mod_host::ModGuestStateSave::from_json(&json).expect("deserialize");
+        assert_eq!(restored.version, save.version);
+    }
+
+    /// FR-CIV-MOD-010: MOD_GUEST_STATE_VERSION is positive.
+    #[test]
+    fn guest_state_version_positive() {
+        assert!(civ_mod_host::MOD_GUEST_STATE_VERSION > 0);
     }
 }

@@ -1,17 +1,25 @@
-//! Tests for FR-CIV-MOD-004
+//! Tests for FR-CIV-MOD-004 — ModStatus enum
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
-//!
-//! This test file verifies FR FR-CIV-MOD-004.
+//! Epic: FR-CIV-MOD
+//! Verifies the ModStatus enum variants.
 
 #[cfg(test)]
 mod fr_fr_civ_mod_004 {
-    /// Verify FR-CIV-MOD-004 type existence and basic behavior.
+    /// FR-CIV-MOD-004: ModStatus variants exist and are distinct.
     #[test]
-    fn verify_fr_civ_mod_004_basic() {
-        use civ_mod_host::{ModType, ModGuestStateSave};
-        let _ = ModType::Policy;
+    fn mod_status_variants() {
+        use civ_mod_host::ModStatus;
+        let a = ModStatus::Active;
+        let b = ModStatus::Suspended;
+        let c = ModStatus::Faulted;
+        assert_ne!(a, b);
+        assert_ne!(b, c);
+    }
+
+    /// FR-CIV-MOD-004: ModHost defaults to Active status for unknown mods.
+    #[test]
+    fn unknown_mod_defaults_to_active() {
+        let host = civ_mod_host::ModHost::new();
+        assert_eq!(host.mod_status("nonexistent"), civ_mod_host::ModStatus::Active);
     }
 }

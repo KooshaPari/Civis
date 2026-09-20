@@ -11,6 +11,7 @@ pub struct Command {
 
 /// The type of command a client can issue.
 #[derive(Debug)]
+// FR-CLIENT-003
 pub enum CommandKind {
     Pause,
     Resume,

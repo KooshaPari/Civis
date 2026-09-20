@@ -50,6 +50,7 @@ pub use wasm_guest::{
 };
 
 /// Supported mod kinds per CIV-0700 §4.1.
+// FR-CIV-MOD-000
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ModType {
@@ -64,6 +65,7 @@ pub enum ModType {
 }
 
 /// `[mod]` table — required metadata.
+// FR-CIV-MOD-000
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct ModMeta {
     /// Stable id: `[a-z][a-z0-9-]{0,63}`.
@@ -103,6 +105,7 @@ pub struct ModDependencies {
 }
 
 /// `[permissions]` table — all fields optional in file; defaults are false.
+// FR-CIV-MOD-002
 #[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
 pub struct ModPermissions {
     /// Allow reading economy state.
@@ -163,6 +166,7 @@ pub struct ModManifest {
 }
 
 /// Errors while loading or validating a manifest.
+// FR-CIV-MOD-017
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum ManifestError {
     /// Filesystem or IO failure.
@@ -200,9 +204,11 @@ pub enum ManifestError {
 }
 
 /// Root manifest path inside a `.civmod` ZIP archive.
+// FR-CIV-MOD-020
 pub const CIVMOD_MANIFEST_NAME: &str = "manifest.toml";
 
 /// `mod.loaded.v1` structured lifecycle record (FR-MOD-004).
+// FR-CIV-MOD-019
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ModLoadedRecord {
     /// Stable mod id from manifest.
@@ -316,6 +322,8 @@ impl ModRegistry {
 }
 
 /// In-process mod host (manifest + WASM guest execution).
+// FR-CIV-MOD-004
+// FR-CIV-MOD-020
 #[derive(Debug, Clone, Default)]
 pub struct ModHost {
     registry: ModRegistry,
@@ -745,6 +753,7 @@ impl ModHost {
 
 /// Format a `mod.loaded.v1` lifecycle event (EVENT_TAXONOMY / FR-MOD-004).
 #[must_use]
+// FR-CIV-MOD-019
 pub fn format_mod_loaded_event(record: &ModLoadedRecord) -> String {
     format!(
         "mod.loaded.v1 mod_id={} mod_name={} version={} tick={}",
@@ -754,6 +763,7 @@ pub fn format_mod_loaded_event(record: &ModLoadedRecord) -> String {
 
 /// Format `mod.loaded.v1` as JSON for the replay bus (FR-MOD-004 partial).
 #[must_use]
+// FR-CIV-MOD-019
 pub fn format_mod_loaded_event_json(record: &ModLoadedRecord) -> String {
     serde_json::json!({
         "event": "mod.loaded.v1",
@@ -801,6 +811,7 @@ fn read_optional_file(path: PathBuf) -> Option<Vec<u8>> {
 }
 
 /// Parse and validate manifest TOML from memory.
+// FR-CIV-MOD-018
 pub fn parse_manifest(contents: &str, path: &Path) -> Result<ModManifest, ManifestError> {
     let manifest: ModManifest = toml::from_str(contents).map_err(|e| ManifestError::Parse {
         path: path.to_path_buf(),

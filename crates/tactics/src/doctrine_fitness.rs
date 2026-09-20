@@ -3,6 +3,7 @@
 use crate::Doctrine;
 
 /// Per-faction combat stats accumulated during the last war-bridge cadence.
+// FR-CIV-WAR-030
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct FactionEngagementStats {
     /// Engagements where this faction had the shooter role.
@@ -23,6 +24,7 @@ impl FactionEngagementStats {
 /// Re-score a doctrine from composition balance plus live engagement stats.
 ///
 /// Deterministic for fixed inputs; used immediately before [`crate::evolve_doctrine`].
+// FR-CIV-WAR-030
 pub fn score_doctrine_fitness(doctrine: &Doctrine, stats: &FactionEngagementStats) -> f32 {
     let composition_sum: u32 = doctrine
         .unit_composition

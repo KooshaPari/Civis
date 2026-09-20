@@ -27,6 +27,11 @@ const DEFAULT_VISION_RADIUS: u32 = 8;
 /// Visibility is re-derived from scratch on every call to [`Self::update`];
 /// there is no incremental state. This keeps the data model simple and
 /// deterministic: two identical inputs always produce identical visibility.
+// FR-CIV-FOG-001
+// FR-CIV-FOG-002
+// FR-CIV-FOG-003
+// FR-CIV-FOG-004
+// FR-CIV-FOG-005
 pub struct FogOfWar {
     /// Number of grid cells on each axis.
     grid_size: u32,

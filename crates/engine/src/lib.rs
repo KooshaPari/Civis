@@ -105,6 +105,7 @@ pub mod tutorial;
 /// Fixed-point scaling factor (1 raw unit = SCALE joules). Engine energy
 /// quantities are stored in fixed-point `i64` for determinism and converted
 /// to `f64`/SI at the economy boundary using this constant.
+// FR-CIV-3D-003
 pub const SCALE: i64 = 1_000;
 
 // TODO(cleanup-surgeon): stub. `religion` is currently an empty `pub mod`
@@ -167,6 +168,7 @@ pub use spectator::SpectatorView;
 //     EmergentLayout, LayoutStrategy,
 // };
 pub use civ_institutions::InstitutionKind;
+// FR-CIV-3D-001
 pub use civ_voxel::WorldCoord;
 pub use era::{CivAge, CivEra, EraProgressionState, FactionEraSnapshot};
 pub use psyche_behavior::behavior_from_psyche;
@@ -260,18 +262,25 @@ use rand_chacha::ChaCha8Rng;
 /// definition (tuple `Fixed(i64)` with `FixedFromNum` trait) also fixes the
 /// `i128: From<{float}>` E0277 errors, since floats now route through the
 /// trait instead of `TryInto<i128>`.
+// FR-CIV-3D-003
 pub use engine::Fixed;
 
 /// Seeded RNG for deterministic simulation
 pub type SimRng = ChaCha8Rng;
 
 /// Create a seeded RNG from world state
+// FR-CIV-3D-006
+// FR-CIV-3D-007
 pub fn create_rng(seed: u64) -> SimRng {
     SimRng::seed_from_u64(seed)
 }
 
 // FR-NET-001, FR-NET-002, FR-NET-003
 /// Advance simulation by one tick (simple API)
+// FR-CIV-3D-006
+// FR-CIV-3D-007
+// FR-CIV-3D-009
+// FR-CIV-3D-014
 pub fn step(mut state: WorldState, consumption_joules: Fixed) -> WorldState {
     state.tick += 1;
     let result = state

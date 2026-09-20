@@ -33,6 +33,7 @@ impl std::error::Error for IntegrityError {}
 ///   is present, it must equal [`ReplayLog::recompute_running_hash`](crate::replay::ReplayLog::recompute_running_hash).
 ///   Legacy logs without a stored root skip this step.
 /// - **Invariants:** delegates to [`check_tick_invariants`].
+// FR-GUARD-001
 pub fn check_integrity(sim: &Simulation) -> Result<(), IntegrityError> {
     sim.replay_log()
         .verify_hash_chain()

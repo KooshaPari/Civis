@@ -17,6 +17,7 @@ pub const ACTION_TRANSFER_FUNDS: u32 = 4;
 pub const ACTION_TRIGGER_EVENT: u32 = 5;
 
 /// World-state domain tags for `world_read` capability checks.
+// FR-CIV-MOD-003
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(i32)]
 pub enum WorldDomain {
@@ -48,6 +49,7 @@ impl WorldDomain {
 }
 
 /// Runtime mod lifecycle status (CIV-0700 §4.3).
+// FR-CIV-MOD-004
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ModStatus {
     /// Normal operation.
@@ -64,6 +66,7 @@ pub enum ModStatus {
 }
 
 /// Compiled manifest permissions used for runtime enforcement.
+// FR-CIV-MOD-003
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ModCapabilitySet {
     read_economy: bool,

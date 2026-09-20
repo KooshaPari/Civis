@@ -12,6 +12,10 @@ use serde::{Deserialize, Serialize};
 // FR-CIV-RTS-RENDER-003
 /// Nation colors are not baked into atlas sprites; a fragment shader
 /// replaces palette indices at render time.
+// FR-CIV-ASSET-003
+// FR-CIV-ASSET-004
+// FR-CIV-ASSET-005
+// FR-CIV-ASSET-016
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NationColor {
     /// Primary color as hex string (e.g. "#c8303c").
@@ -60,6 +64,7 @@ pub const BAKED_SECONDARY: &str = "#f0c040";
 // FR-CIV-RTS-RENDER-004
 /// Atlas dimensions are fixed by asset category. Power-of-two required
 /// for WebGL texture compatibility.
+// FR-CIV-ASSET-006
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AtlasConfig {
     /// Atlas name (e.g. "terrain_atlas").
@@ -167,6 +172,7 @@ impl ZoomTier {
 }
 
 /// A sprite handle that references a specific asset at a zoom level.
+// FR-CIV-ASSET-018
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SpriteHandle {
     /// Asset identifier (e.g. "terrain_plains").
@@ -203,6 +209,7 @@ impl SpriteHandle {
 
 // FR-CIV-RTS-RENDER-005
 /// Rectangle within an atlas, used for UV mapping.
+// FR-CIV-ASSET-007
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UvRect {
     /// X offset in pixels.
@@ -239,6 +246,8 @@ impl UvRect {
 
 // FR-CIV-RTS-RENDER-001, FR-CIV-RTS-RENDER-002
 /// Supersampling configuration for sprite rasterization.
+// FR-CIV-ASSET-001
+// FR-CIV-ASSET-003
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SsConfig {
     /// Supersampling factor (e.g. 4 for 4x).

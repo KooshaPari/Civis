@@ -7,6 +7,8 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Game-level hook variants that mods can subscribe to.
+// FR-CIV-MOD-005
+// FR-CIV-MOD-006
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ModHook {
     /// Fired every simulation tick.  Payload is the tick number.
@@ -28,6 +30,7 @@ pub enum ModHook {
 }
 
 /// Result returned by a hook handler.
+// FR-CIV-MOD-007
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HookResult {
     /// Continue execution — no modifications.
@@ -52,6 +55,8 @@ pub struct ModHookRegistration {
 }
 
 /// Engine that manages hook registrations and executes them in priority order.
+// FR-CIV-MOD-005
+// FR-CIV-MOD-006
 #[derive(Debug, Clone, Default)]
 pub struct ModHookEngine {
     /// All active registrations.
@@ -189,6 +194,7 @@ impl ModHookEngine {
 /// - `Continue + Replace = Replace`
 /// - Any `Cancel`       = `Cancel`
 /// - `Replace` dominates `Modify`
+// FR-CIV-MOD-007
 #[must_use]
 pub fn merge_results(left: HookResult, right: HookResult) -> HookResult {
     match (&left, &right) {

@@ -82,6 +82,7 @@ impl MoraleTickInputs {
 }
 
 /// Current stance of the unit as a function of morale vs. the rout threshold.
+// FR-CIV-WAR-021
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum UnitStance {
     /// Morale ≥ rout threshold — unit can fight at full effect.
@@ -142,6 +143,7 @@ impl MoraleEvent {
 /// starting strength (`initial_strength`) and a rout threshold in absolute
 /// headcount. Morale itself is stored as a normalised `[0, 1]` value
 /// ([`MoraleLevel`]) so it is independent of the unit's actual paper strength.
+// FR-CIV-WAR-021
 #[derive(Debug, Clone, PartialEq)]
 pub struct MoraleState {
     /// `0.0..=1.0`. Morale past `rout_threshold` is [`UnitStance::Standing`],

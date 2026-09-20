@@ -268,6 +268,7 @@ pub struct HomeAssignment {
 
 /// Simulation fidelity tier. Far-from-camera civilians collapse to lower tiers
 /// to bound the per-tick cost.
+// FR-CIV-3D-002
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum LodTier {
     /// Full fidelity — every tick.

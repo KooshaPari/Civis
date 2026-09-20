@@ -28,6 +28,7 @@ pub enum InvariantError {
 /// - **Energy budget non-negative:** `energy_budget_joules.raw >= 0`.
 /// - **Economy ledger:** when non-empty, macro budget ≥ 0, leg balance, and
 ///   `ledger.len() <= economy_state.tick * 2` via [`civ_economy::verify_ledger_conservation`].
+// FR-GUARD-002
 pub fn check_tick_invariants(sim: &Simulation) -> Result<(), InvariantError> {
     use crate::replay::ReplayEvent;
 

@@ -3,9 +3,11 @@
 use serde::{Deserialize, Serialize};
 
 /// Schema version for [`ModGuestStateSave`].
+// FR-CIV-MOD-010
 pub const MOD_GUEST_STATE_VERSION: u32 = 1;
 
 /// One mod's opaque guest scratch bytes.
+// FR-CIV-MOD-010
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ModGuestMemoryBlob {
     /// Stable mod id (`manifest.meta.id`).
@@ -15,6 +17,7 @@ pub struct ModGuestMemoryBlob {
 }
 
 /// Serializable bundle of all mod guest memories for save/load.
+// FR-CIV-MOD-010
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct ModGuestStateSave {
     /// Format version for forward-compatible loaders.
@@ -49,6 +52,7 @@ impl ModGuestStateSave {
 }
 
 /// Errors loading guest state blobs.
+// FR-CIV-MOD-011
 #[derive(Debug, thiserror::Error)]
 pub enum GuestStateError {
     /// JSON parse/serialize failure.

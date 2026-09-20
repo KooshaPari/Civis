@@ -21,6 +21,7 @@
 use std::path::Path;
 
 mod error;
+pub mod manifest;
 pub use error::ExportError;
 
 /// Export a vector SVG source to all required raster + icon formats.

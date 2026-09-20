@@ -301,6 +301,7 @@ impl BuildingGraph {
     }
 
     /// Inserts or replaces a parcel.
+    // FR-CIV-ACTOR-001-LIFECYCLE
     pub fn insert_parcel(&mut self, parcel: Parcel) {
         if let Some(existing) = self.parcels.iter_mut().find(|p| p.id == parcel.id) {
             *existing = parcel;

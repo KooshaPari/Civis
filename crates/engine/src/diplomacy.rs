@@ -80,6 +80,8 @@ impl FactionRelations {
     }
 
     pub fn apply_signal<A, B>(&mut self, a: A, b: B, signal: DiplomacySignal) -> DiplomacyOutcome
+    // FR-CIV-POLITY-002
+    // FR-CIV-POLITY-008
     where
         A: Into<u32>,
         B: Into<u32>,

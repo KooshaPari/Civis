@@ -94,6 +94,10 @@ impl Default for Locale {
 /// Backed by a flat `HashMap<String, String>` loaded from a JSON file at
 /// `bundles/{locale}/strings.json` (embedded at compile time via `include_str!`
 /// or loaded at runtime from a known path).
+///
+/// FR-CIV-L10N-010 — string-table infrastructure: every locale ships a
+/// keyed JSON bundle embedded at compile time and accessed through the
+/// same `Bundle` / `tr!` API.
 #[derive(Debug, Clone)]
 pub struct Bundle {
     locale: Locale,

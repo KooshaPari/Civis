@@ -278,6 +278,7 @@ impl Allocator {
 
 /// Shared building graph for both autonomous growth and freehand authoring.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+// FR-CIV-BIO-001
 pub struct BuildingGraph {
     /// All known parcels in deterministic order.
     pub parcels: Vec<Parcel>,

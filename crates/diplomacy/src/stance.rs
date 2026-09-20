@@ -452,4 +452,99 @@ mod tests {
         engine.apply(a(), c(), &InteractionEvent::TreatyFormed);
         assert_eq!(engine.len(), 2);
     }
+
+    // FR-CIV-DIPLOMACY-004 — opinion-vector contract acceptance:
+    // defaults, coarse partition thresholds, concession bias clamping,
+    // decay toward zero, and BTreeMap-sorted deterministic iteration.
+
+    #[test]
+    fn fr_civ_diplomacy_004_default_is_all_zero_axes() {
+        let s = DiplomacyStance::default();
+        assert_eq!((s.trust, s.fear, s.respect), (0.0, 0.0, 0.0));
+    }
+
+    #[test]
+    fn fr_civ_diplomacy_004_coarse_stance_partitions_thresholds() {
+        // Ally requires trust > 0.5 AND respect > 0.3.
+        let ally = DiplomacyStance {
+            trust: 0.6,
+            fear: 0.0,
+            respect: 0.4,
+        };
+        assert_eq!(ally.coarse_stance(), crate::EmergentStance::Ally);
+        // Trust just over 0.5 but respect below 0.3 is not an ally.
+        let low_respect = DiplomacyStance {
+            trust: 0.6,
+            fear: 0.0,
+            respect: 0.2,
+        };
+        assert_eq!(low_respect.coarse_stance(), crate::EmergentStance::Neutral);
+        // Rival via distrust.
+        let rival_distrust = DiplomacyStance {
+            trust: -0.4,
+            fear: 0.0,
+            respect: 0.0,
+        };
+        assert_eq!(rival_distrust.coarse_stance(), crate::EmergentStance::Rival);
+        // Rival via fear alone.
+        let rival_fear = DiplomacyStance {
+            trust: 0.0,
+            fear: 0.8,
+            respect: 0.0,
+        };
+        assert_eq!(rival_fear.coarse_stance(), crate::EmergentStance::Rival);
+    }
+
+    #[test]
+    fn fr_civ_diplomacy_004_concession_bias_is_clamped_composite() {
+        // Maximum cooperation: fully trusting, respectful, fearless.
+        let friendly = DiplomacyStance {
+            trust: 1.0,
+            fear: 0.0,
+            respect: 1.0,
+        };
+        let bias = friendly.concession_bias();
+        assert!(
+            (-1.0..=1.0).contains(&bias),
+            "concession bias must stay clamped in [-1, 1]"
+        );
+        // Hostile composite must come out negative.
+        let hostile = DiplomacyStance {
+            trust: -1.0,
+            fear: 1.0,
+            respect: -1.0,
+        };
+        assert!(hostile.concession_bias() < 0.0);
+    }
+
+    #[test]
+    fn fr_civ_diplomacy_004_engine_iteration_is_deterministic_sorted() {
+        let mut engine = DiplomacyStanceEngine::new(0.0);
+        engine.apply(c(), a(), &InteractionEvent::TradeVolume { volume: 1.0 });
+        engine.apply(a(), b(), &InteractionEvent::TradeVolume { volume: 1.0 });
+        let keys: Vec<_> = engine.pairs().keys().collect();
+        let mut sorted = keys.clone();
+        sorted.sort();
+        assert_eq!(keys, sorted, "BTreeMap iteration must be pair-sorted");
+        // Insert order does not affect final map state (determinism).
+        let mut engine2 = DiplomacyStanceEngine::new(0.0);
+        engine2.apply(a(), b(), &InteractionEvent::TradeVolume { volume: 1.0 });
+        engine2.apply(c(), a(), &InteractionEvent::TradeVolume { volume: 1.0 });
+        assert_eq!(engine.pairs(), engine2.pairs());
+    }
+
+    #[test]
+    fn fr_civ_diplomacy_004_decay_pulls_toward_zero_per_tick() {
+        let mut s = DiplomacyStance {
+            trust: 0.8,
+            fear: 0.6,
+            respect: -0.4,
+        };
+        for _ in 0..50 {
+            s.decay(0.2);
+        }
+        assert!(s.trust.abs() < 1e-4);
+        assert!(s.fear.abs() < 1e-4);
+        assert!(s.respect.abs() < 1e-4);
+    }
 }

@@ -189,6 +189,7 @@ pub struct PairShadowAggregate {
 // Shadow network state
 // ---------------------------------------------------------------------------
 
+// FR-DIPL-007
 /// The shadow network system state. Owns all tracked flows and the
 /// per-tick event buffer.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

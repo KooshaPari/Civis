@@ -501,6 +501,7 @@ pub fn parcel_template_score(
         ^ (u64::from(tile_set.id) * 29)
 }
 
+// FR-CIV-CORE-020
 /// Chooses the highest-scoring tile-set under deterministic constraints.
 #[must_use]
 pub fn pick_tile_set(

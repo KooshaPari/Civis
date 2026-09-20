@@ -221,8 +221,8 @@ mod tests {
             );
         }
         // Casualties at zero hp are removed from the ECS entirely.
-        let survivors: Vec<(hecs::Entity, &MilitaryUnit)> =
-            sim.world.query::<&MilitaryUnit>().iter().collect();
+        let mut query = sim.world.query::<&MilitaryUnit>();
+        let survivors: Vec<(hecs::Entity, &MilitaryUnit)> = query.iter().collect();
         assert!(
             survivors.iter().all(|(_, unit)| unit.hp > Fixed::from_num(0)),
             "dead units must be despawned, not left at 0 hp"
@@ -496,7 +496,7 @@ mod tests {
         // Actor 1: bonded (kin + trust). Actor 2: isolated (no kin/trust).
         sim.set_settlement_actor(1, 1);
         sim.set_settlement_actor(2, 1);
-        sim.register_kinship(1, KinshipEdge { kind: KinshipKind::Parent, target: 2 });
+        sim.register_kinship(1, KinshipEdge { kind: KinshipKind::Family, target: 2 });
         sim.add_trust(1, 2, 40);
         // Institutions lift fabric for actor 1 only.
         sim.set_actor_in_settlement_institutions(1, true, false);

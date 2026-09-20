@@ -2941,9 +2941,9 @@ mod tests {
             tag: "victory".to_owned(),
             reason: "Thriving Civilization".to_owned(),
             tick: 640,
-            progress: OutcomeProgress {
+            progress: civ_engine::conditions::OutcomeProgress {
                 population: 12_345,
-                ..OutcomeProgress::default()
+                ..Default::default()
             },
         });
         let req = parse_request(r#"{"jsonrpc":"2.0","id":31,"method":"sim.outcome"}"#).expect("parse");

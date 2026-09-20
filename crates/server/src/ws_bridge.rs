@@ -3046,7 +3046,7 @@ mod tests {
         let frames = build_frame_bundle(&loaded).expect("frame bundle");
         let version = observe_building_graph(&state, &loaded).expect("observe graph");
 
-        let batch = make_tick_broadcast(&state, loaded.state.tick, 1, false, frames, version)
+        let batch = make_tick_broadcast(&state, loaded.state.tick, 1, false, frames.to_vec(), version)
             .expect("tick broadcast");
         assert_eq!(batch.tick, loaded.state.tick);
         assert_eq!(batch.building_graph_version, version);

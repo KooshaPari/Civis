@@ -86,6 +86,11 @@ pub struct LegendStop {
 }
 
 /// A data-driven info overlay registration (FR-CIV-INFOVIEW-900, extended).
+// FR-CIV-INFOVIEW-916
+// FR-CIV-INFOVIEW-917
+// FR-CIV-INFOVIEW-918
+// FR-CIV-INFOVIEW-919
+// FR-CIV-INFOVIEW-921
 #[derive(Debug, Clone)]
 pub struct InfoOverlay {
     /// Unique overlay identifier (stable across saves).
@@ -111,6 +116,7 @@ pub struct InfoOverlay {
 /// Categorical overlays MUST use this function instead of any authored taxonomy.
 /// The hash ensures that color assignment is deterministic and derived purely
 /// from the cluster id, never from a human-authored enum.
+// FR-CIV-INFOVIEW-915
 #[must_use]
 pub fn cluster_color(cluster_id: u64) -> [f32; 3] {
     // Simple deterministic hash -> hue rotation via golden ratio

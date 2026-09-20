@@ -12,6 +12,9 @@ use crate::{
 };
 
 /// 4-byte magic identifying a coalesced per-tick `Frame3d` bundle.
+// FR-CIV-PROTO-005
+// FR-CIV-PROTO-012
+// FR-CIV-PROTO-013
 pub const FRAME3D_BUNDLE_MAGIC: &[u8; 4] = b"F3DB";
 
 /// Current wire version of the `F3DB` envelope.
@@ -22,11 +25,16 @@ pub const FRAME3D_BUNDLE_VERSION: u8 = 1;
 pub const FRAME3D_BUNDLE_STANDARD_LEN: usize = 7;
 
 /// Default zstd level for tick bundles (fast decompress; CIV-0500 §8.4).
+// FR-CIV-PROTO-005
+// FR-CIV-PROTO-006
+// FR-CIV-PROTO-012
+// FR-CIV-PROTO-013
 pub const DEFAULT_FRAME3D_BUNDLE_ZSTD_LEVEL: i32 = 1;
 
 const FRAME3D_BUNDLE_HEADER_LEN: usize = 23;
 
 /// Capability / compression flag bits in the `F3DB` header.
+// FR-CIV-PROTO-014
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Frame3dBundleFlags(pub u8);
 
@@ -54,6 +62,11 @@ impl Frame3dBundleFlags {
 }
 
 /// Opt-in encoder settings for [`encode_frame3d_bundle`].
+// FR-CIV-PROTO-005
+// FR-CIV-PROTO-006
+// FR-CIV-PROTO-012
+// FR-CIV-PROTO-013
+// FR-CIV-PROTO-015
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Frame3dBundleEncodeOptions {
     /// When `true`, zstd-compress the concatenated `F3D0` payload.
@@ -117,6 +130,10 @@ pub enum Frame3dBundleError {
 
 /// Returns `true` if `bytes` starts with [`FRAME3D_BUNDLE_MAGIC`].
 #[must_use]
+/// FR-CIV-PROTO-005
+/// FR-CIV-PROTO-006
+/// FR-CIV-PROTO-012
+/// FR-CIV-PROTO-013
 pub fn is_frame3d_bundle(bytes: &[u8]) -> bool {
     bytes.len() >= FRAME3D_BUNDLE_MAGIC.len()
         && &bytes[..FRAME3D_BUNDLE_MAGIC.len()] == FRAME3D_BUNDLE_MAGIC
@@ -127,6 +144,10 @@ pub fn is_frame3d_bundle(bytes: &[u8]) -> bool {
 /// When [`Frame3dBundleEncodeOptions::compress`] is `false` (the default), the
 /// on-wire layout matches an uncompressed bundle and existing decoders that only
 /// understand `F3D0` can keep skipping `F3DB` via magic mismatch.
+// FR-CIV-PROTO-005
+// FR-CIV-PROTO-006
+// FR-CIV-PROTO-012
+// FR-CIV-PROTO-013
 pub fn encode_frame3d_bundle(
     frames: &[Frame3d],
     options: &Frame3dBundleEncodeOptions,
@@ -166,6 +187,10 @@ pub fn encode_frame3d_bundle_from_f3d0(
 }
 
 /// Decode an `F3DB` blob produced by [`encode_frame3d_bundle`].
+// FR-CIV-PROTO-005
+// FR-CIV-PROTO-006
+// FR-CIV-PROTO-012
+// FR-CIV-PROTO-013
 pub fn decode_frame3d_bundle(bytes: &[u8]) -> Result<Frame3dBundle, Frame3dBundleError> {
     if bytes.len() < FRAME3D_BUNDLE_HEADER_LEN {
         return Err(Frame3dBundleError::TooShort);

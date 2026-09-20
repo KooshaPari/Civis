@@ -373,6 +373,7 @@ pub struct MilitaryUnit {
 // WORLD STATE
 // ============================================================================
 
+// FR-CIV-PERF-RT-003, FR-SOC-INS-001, FR-SOC-INS-002, FR-SOC-INS-003, FR-SOC-INS-004, FR-SOC-INS-005, FR-SOC-INS-006, FR-SOC-INS-007
 /// Global world state
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorldState {
@@ -2068,6 +2069,7 @@ impl Simulation {
         &mut self.rng
     }
 
+    // FR-CIV-INSPECT-920
     /// Resolve a civilian agent id to its ECS entity.
     pub fn agent_entity(&self, agent_id: u64) -> Option<Entity> {
         self.world
@@ -2237,6 +2239,7 @@ impl Simulation {
         target.significance = self.significance.clone();
     }
 
+    // FR-CIV-PERF-RT-001
     /// Advance simulation by one tick.
     ///
     /// Phases run in [`PHASE_ORDER`] (CIV-0001 partial — engine-side deterministic
@@ -2764,6 +2767,7 @@ impl Simulation {
         self.tutorial_progress = tutorial;
     }
 
+    // FR-CIV-PERF-RT-002
     /// Borrow the replay log.
     pub fn replay_log(&self) -> &ReplayLog {
         &self.replay_log
@@ -3216,6 +3220,7 @@ impl Simulation {
         ids
     }
 
+    // FR-CIV-INSPECT-902
     /// Per-cluster (settlement) resource stocks keyed by `ClusterId` value, for
     /// the HUD `WorldResources` panel (FR-CIV-LIFE-020).
     #[must_use]

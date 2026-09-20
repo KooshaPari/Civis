@@ -4,6 +4,7 @@
 //! gitignored `.env`; see committed `.env.example`). Selection + budgets only;
 //! provider construction lives in [`crate::registry`].
 
+// FR-CIV-AI-015
 /// Resolved AI configuration. Built from the environment.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AiConfig {

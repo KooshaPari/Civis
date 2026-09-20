@@ -63,6 +63,7 @@ pub enum VehicleKind {
 
 // ── Vehicle archetype (§2 schema) ────────────────────────────────────────────
 
+// FR-CIV-VEHICLE-002
 /// A data row in the vehicle archetype catalog.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct VehicleArchetype {
@@ -74,12 +75,15 @@ pub struct VehicleArchetype {
     pub requires_traits: BTreeSet<String>,
     /// Materials required from the locale's stock.
     pub requires_materials: BTreeSet<String>,
+    // FR-CIV-VEHICLE-030
     /// Build cost in joules, charged against locale energy budget.
     pub build_cost: i64,
+    // FR-CIV-VEHICLE-041
     /// Goods-units capacity per trip.
     pub capacity: u32,
     /// Multiplier on top of lane speed.
     pub base_speed_mult: f32,
+    // FR-CIV-VEHICLE-005
     /// UI/legends hint; NOT the capability gate.
     pub era_hint: u16,
 }
@@ -130,6 +134,7 @@ pub fn check_build_capability(
 
 // ── Speed model (§4) ─────────────────────────────────────────────────────────
 
+// FR-CIV-VEHICLE-011, FR-CIV-VEHICLE-012, FR-CIV-VEHICLE-020, FR-CIV-VEHICLE-021, FR-CIV-VEHICLE-022, FR-CIV-VEHICLE-023, FR-CIV-VEHICLE-024, FR-CIV-VEHICLE-040, FR-CIV-VEHICLE-042, FR-CIV-VEHICLE-044, FR-CIV-VEHICLE-050, FR-CIV-VEHICLE-060
 /// Calculate effective speed on a lane for a vehicle with given load.
 ///
 /// `effective_speed = base_walk_speed × lane_speed × vehicle_speed
@@ -175,6 +180,7 @@ pub enum LaneClass {
 }
 
 impl LaneClass {
+    // FR-CIV-VEHICLE-010, FR-CIV-VEHICLE-013, FR-CIV-VEHICLE-014, FR-CIV-VEHICLE-043, FR-CIV-VEHICLE-045
     /// Whether this lane class admits the given medium.
     /// Land covers Trail/Road/Highway.
     pub fn admits_medium(self, medium: Medium) -> bool {

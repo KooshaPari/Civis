@@ -270,6 +270,7 @@ pub fn create_rng(seed: u64) -> SimRng {
     SimRng::seed_from_u64(seed)
 }
 
+// FR-NET-001, FR-NET-002, FR-NET-003
 /// Advance simulation by one tick (simple API)
 pub fn step(mut state: WorldState, consumption_joules: Fixed) -> WorldState {
     state.tick += 1;

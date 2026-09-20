@@ -54,6 +54,7 @@ impl HashChainState {
     }
 }
 
+// NFR-CIV-DET-001
 /// Recompute the chain root from an ordered tick sequence (empty → `None`).
 #[must_use]
 pub fn chain_root_from_ticks(ticks: impl IntoIterator<Item = u64>) -> Option<[u8; HASH_LEN]> {

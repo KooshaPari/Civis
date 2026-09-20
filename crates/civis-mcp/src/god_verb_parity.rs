@@ -22,6 +22,7 @@ pub fn ws_disaster_life_verbs() -> impl Iterator<Item = &'static str> {
         .copied()
 }
 
+// FR-CIV-MCP-004
 /// Map a Live/WS god verb to its dedicated MCP tool name.
 pub fn mcp_tool_for_ws_god_verb(verb: &str) -> Option<&'static str> {
     match verb {

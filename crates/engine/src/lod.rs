@@ -50,6 +50,7 @@ impl LodPolicy {
     }
 }
 
+// FR-CIV-VEHICLE-047
 /// Return whether an entity at `tier` should simulate on `tick`.
 ///
 /// Deterministic: Hot every tick; Warm/Cold on `tick % cadence == 0`.
@@ -65,6 +66,7 @@ pub fn should_tick_entity_with_policy(tick: u64, tier: LodTier, policy: LodPolic
     }
 }
 
+// FR-CIV-VEHICLE-046
 /// Roll district populations into a region summary (FR-LOD-002 stub).
 pub fn aggregate_strategic(district_populations: &[u32]) -> u32 {
     district_populations.iter().sum()

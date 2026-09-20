@@ -47,6 +47,7 @@ pub enum BuildingProvenance {
     Freehand,
 }
 
+// FR-API-002, FR-API-003, FR-API-004
 /// Marker version of this crate's public schema. Bumped on breaking changes
 /// so replay (`.civreplay`) files can refuse to load mismatched versions.
 pub const SCHEMA_VERSION: &str = "0.1.0-stub";
@@ -423,6 +424,7 @@ pub fn default_facade_for_era(era: u16) -> FacadeStyle {
     }
 }
 
+// FR-CIV-CLIMATE-001
 /// Returns the canonical tile-set for the given vector/mode combination.
 #[must_use]
 pub fn resolve_tile_set<'a>(
@@ -548,6 +550,7 @@ pub fn adjacency_weights_for_vector(
     .map_or_else(BTreeMap::new, |tile_set| tile_set.adjacency_weights.clone())
 }
 
+// FR-CIV-CLIMATE-003
 /// Resolves facade style under the requested architecture mode.
 #[must_use]
 pub fn facade_for_vector(

@@ -3372,6 +3372,7 @@ impl Default for Simulation {
     }
 }
 
+// FR-CIV-CORE-009
 /// Snapshot of simulation state
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimulationSnapshot {

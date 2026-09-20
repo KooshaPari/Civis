@@ -417,6 +417,10 @@ gate_4_tests() {
 # ============================================================
 # GATE 5: Coverage
 # ============================================================
+# NFR-CIV-MAINT-001 — test coverage threshold gate (default 90% for the
+# Civis simulation crates; configurable via `quality-gate.yml.coverage`
+# or `.qa-config.json.coverage_threshold`). Under the threshold the gate
+# fails CI and the per-project `quality/coverage` job surfaces the gap.
 gate_5_coverage() {
     local coverage=-1 detail=""
 

@@ -673,4 +673,44 @@ mod tests {
         assert!(!engine.is_active(1, FestivalType::Victory));
         assert!(!engine.is_active(2, FestivalType::Harvest));
     }
+
+    // FR-CIV-FEST-001 — festivals are periodic celebrations triggered by
+    // settlement conditions, with per-settlement cooldowns, happiness
+    // boosts, and temporary productivity penalties.
+    #[test]
+    fn fr_civ_fest_001_cultural_and_religious_threshold_triggers() {
+        let engine = FestivalEngine::new();
+        let mut state = default_state(3);
+        state.culture_output = 0.5; // below Cultural threshold 0.65
+        state.belief_strength = 0.6; // below Religious threshold 0.7
+        assert!(engine.evaluate(&state, 0).is_empty());
+
+        state.culture_output = 0.7;
+        state.belief_strength = 0.8;
+        let c = engine.evaluate(&state, 0);
+        assert!(c.contains(&FestivalType::Cultural));
+        assert!(c.contains(&FestivalType::Religious));
+    }
+
+    #[test]
+    fn fr_civ_fest_001_emergency_boosts_happiness_and_penalizes_productivity() {
+        let mut engine = FestivalEngine::new();
+        let mut state = default_state(1);
+        state.disaster_severity = 0.9;
+        assert!(engine.evaluate(&state, 0).contains(&FestivalType::Emergency));
+
+        let f = engine.spawn(FestivalType::Emergency, 1, 0, 100).unwrap();
+        // Emergency participation_rate is 0.4.
+        assert_eq!(f.participants, 40);
+        let effects = engine.apply_effects(1);
+        assert!(effects.happiness_delta > 0.0, "happiness boost");
+        assert!(effects.labor_delta < 0.0, "productivity penalty");
+        assert!(effects.unrest_delta < 0.0, "unrest reduction");
+
+        // After the festival runs its duration (3 ticks) it must expire.
+        engine.tick(3, 3);
+        assert!(!engine.is_active(1, FestivalType::Emergency));
+        // And effects vanish once no festival is active.
+        assert_eq!(engine.apply_effects(1), FestivalEffects::NONE);
+    }
 }

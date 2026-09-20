@@ -84,6 +84,7 @@ impl EntitySignificance {
 /// let sig = acc.get(entity_id);
 /// assert!(sig.score > 0.0);
 /// ```
+// FR-CIV-LEGENDS-PERSIST-11
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct SignificanceAccumulator {
     /// Entity id → accumulated significance.

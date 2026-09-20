@@ -20,6 +20,10 @@ pub struct WarEconomyDrain {
 ///
 /// Returns zero drain when `at_war` is false. Both `treasury_drain` and
 /// `population_loss` are monotonic in their respective inputs.
+// FR-CIV-WAR-012
+// FR-CIV-WAR-040
+// FR-CIV-WAR-041
+// FR-CIV-WAR-042
 pub fn compute_war_economy_drain(
     treasury: i64,
     estimated_casualties: u32,
@@ -45,6 +49,7 @@ pub fn compute_war_economy_drain(
 }
 
 /// Apply a drain result to a treasury balance, clamping to zero.
+// FR-CIV-WAR-041
 pub fn apply_war_drain(treasury: i64, drain: &WarEconomyDrain) -> i64 {
     (treasury - drain.treasury_drain).max(0)
 }

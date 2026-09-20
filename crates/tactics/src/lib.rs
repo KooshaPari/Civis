@@ -66,6 +66,8 @@ use std::cmp::Ordering;
 pub const SCHEMA_VERSION: &str = "0.1.0";
 
 /// A voxel damage application centered at a world coordinate.
+// FR-CIV-WAR-013
+// FR-CIV-WAR-022
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DamageEvent {
     /// Center of the damage sphere.
@@ -101,6 +103,7 @@ impl DamageEvent {
 }
 
 /// A doctrine candidate for the GA.
+// FR-CIV-WAR-030
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Doctrine {
     /// Stable doctrine identifier.

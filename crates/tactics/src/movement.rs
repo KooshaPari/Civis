@@ -6,6 +6,7 @@ use crate::war_bridge::MilitaryUnitSample;
 use civ_voxel::{MaterialId, VoxelWorld};
 
 /// Movement cadence for the operational layer.
+// FR-CIV-WAR-011
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct OperationalMovementConfig {
     /// Apply movement when `tick % cadence_ticks == 0`.

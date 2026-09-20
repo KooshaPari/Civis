@@ -27,6 +27,7 @@ pub struct MilitaryUnitSample {
 }
 
 /// Per-soldier engagement resolved on the war bridge cadence (FR-CIV-TACTICS-024).
+// FR-CIV-WAR-013
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CombatEngagement {
     /// Shooter pin id.

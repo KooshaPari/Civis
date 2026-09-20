@@ -51,6 +51,7 @@ use civis_cli::census::{
 use civis_cli::config::census_config_from_env;
 use civis_cli::pixels::{compute_pixel_stats, sample_rgb_grid, PixelStats};
 
+// FR-CIV-MCP-002
 /// Canonical names of the MCP tools this crate registers. The PR description
 /// references this list; tests assert the rmcp router matches it exactly so a
 /// future rename surfaces in CI rather than in production.
@@ -159,6 +160,7 @@ pub const TOOL_NAMES: &[&str] = &[
     "sim_update_subscription",
 ];
 
+// FR-CIV-MCP-005
 /// Library version string. Mirrors `civis_cli::HARNESS_VERSION` so MCP
 /// clients can correlate evidence packets with the harness build.
 pub const HARNESS_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -303,6 +305,7 @@ pub fn pixels_tool_payload(path: &Path, grid: usize) -> Result<Value, String> {
 /// Build a JSON-RPC 2.0 outbound text frame for the given method + params.
 ///
 /// Mirrors `civis_cli::census::build_sim_status_request` but generic over
+// FR-CIV-MCP-006
 /// method name and parameters. The harness pins `id=1` so a single inflight
 /// call is enough for the current MCP surface (the bridge matches by
 /// `RequestId` already, but the wire contract is identical to the

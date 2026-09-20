@@ -403,6 +403,9 @@ pub struct VoxelChunkDelta {
 /// pre-sorted by `(chunk_id, write_seq)` (the kernel guarantees this via
 /// `VoxelWorld::drain_dirty`); clients can rely on iteration order being
 /// identical across machines.
+// FR-CIV-PROTO-003
+// FR-CIV-PROTO-011
+// FR-CIV-PROTO-012
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct VoxelDeltaFrame {
     /// Server tick at which the batch was produced.
@@ -413,6 +416,7 @@ pub struct VoxelDeltaFrame {
 
 /// Agent appearance update — one entry per agent whose visible state changed
 /// this tick (wardrobe, tools, era).
+// FR-CIV-PROTO-008
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AgentAppearanceFrame {
     /// Server tick at which the update was produced.
@@ -517,11 +521,15 @@ pub fn map_build_provenance(provenance: civ_build::BuildingProvenance) -> Buildi
 }
 
 /// 4-byte magic identifying civ-protocol-3d binary frames (CIV-0200 partial).
+// FR-CIV-PROTO-003
+// FR-CIV-PROTO-004
+// FR-CIV-PROTO-011
 pub const FRAME3D_BINARY_MAGIC: &[u8; 4] = b"F3D0";
 
 /// Returns `true` if `payload` begins with [`FRAME3D_BINARY_MAGIC`], i.e. it is a
 /// civ-protocol-3d binary frame rather than a JSON or legacy payload. Cheap prefix
 /// check used by the live-attach path to route bytes to [`decode_frame3d_binary`].
+// FR-CIV-PROTO-004
 #[must_use]
 pub fn is_frame3d_binary(payload: &[u8]) -> bool {
     payload.len() >= FRAME3D_BINARY_MAGIC.len()
@@ -575,6 +583,8 @@ pub enum Frame3dBinaryError {
 ///
 /// JSON carries the full tagged union so clients can reuse existing serde
 /// schemas while the binary envelope satisfies CIV-0200 binary-frame clients.
+// FR-CIV-PROTO-003
+// FR-CIV-PROTO-011
 pub fn encode_frame3d_binary(frame: &Frame3d) -> Result<Vec<u8>, Frame3dBinaryError> {
     let json = serde_json::to_vec(frame)
         .map_err(|err| Frame3dBinaryError::InvalidPayload(err.to_string()))?;
@@ -601,6 +611,7 @@ pub fn encode_frame3d_binary_from_json(
 }
 
 /// Decode a binary blob produced by [`encode_frame3d_binary`].
+// FR-CIV-PROTO-003
 pub fn decode_frame3d_binary(bytes: &[u8]) -> Result<Frame3d, Frame3dBinaryError> {
     if bytes.len() < FRAME3D_BINARY_HEADER_LEN {
         return Err(Frame3dBinaryError::TooShort);

@@ -1,6 +1,7 @@
 //! Tests for FR-CIV-DET-002 — Determinism (hash chain)
 //!
 //! Epic: FR-CIV-DET
+//! Covers: FR-CIV-DET-002
 //! Verifies the per-tick BLAKE3 hash chain provides tamper-evident determinism.
 
 #[cfg(test)]

@@ -1,6 +1,7 @@
 //! Tests for FR-CIV-DET-006 — Determinism (simulation replay)
 //!
 //! Epic: FR-CIV-DET
+//! Covers: FR-CIV-DET-006
 //! Verifies that replay logs capture and restore simulation state deterministically.
 
 #[cfg(test)]

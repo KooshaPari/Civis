@@ -1,6 +1,7 @@
 //! Tests for FR-CIV-DET-007 — Determinism (RNG seed isolation)
 //!
 //! Epic: FR-CIV-DET
+//! Covers: FR-CIV-DET-007
 //! Verifies that seeded RNG produces different but reproducible sequences.
 
 #[cfg(test)]

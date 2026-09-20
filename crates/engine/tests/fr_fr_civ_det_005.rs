@@ -1,6 +1,7 @@
 //! Tests for FR-CIV-DET-005 — Determinism (energy budget non-negativity)
 //!
 //! Epic: FR-CIV-DET
+//! Covers: FR-CIV-DET-005
 //! Verifies the energy budget cannot go below zero.
 
 #[cfg(test)]

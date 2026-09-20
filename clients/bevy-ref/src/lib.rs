@@ -553,6 +553,9 @@ pub struct OutcomeHudData {
     pub progress: Option<OutcomeProgressHudData>,
 }
 /// Headless-friendly snapshot for the live attach HUD (FPS / tick / socket / scene stats).
+///
+/// FR-CIV-BEVY-017 — P-W1 item 42: live HUD exposes connection, tick,
+/// streamed counts (C/A/B/G), and optional `sim.snapshot` RTT.
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
 #[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
 pub struct LiveHudSnapshot {

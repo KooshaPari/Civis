@@ -9,6 +9,7 @@ use std::collections::BTreeSet;
 
 // ── Shared brush parameters (§1 of brush-tool-system.md) ──────────────────────
 
+// FR-CIV-BRUSH-01
 /// Shared brush parameters used by every cluster's Brush Control Panel.
 /// This is the single source of brush geometry, replacing the earlier
 /// duplicated `terraform_brush::BrushSettings` / `SelectedMaterial` split.
@@ -110,6 +111,7 @@ impl BrushCluster {
         self.modes().len()
     }
 
+    // FR-CIV-BRUSH-05, FR-CIV-BRUSH-06, FR-CIV-BRUSH-07, FR-CIV-BRUSH-08, FR-CIV-BRUSH-09, FR-CIV-BRUSH-10, FR-CIV-BRUSH-11, FR-CIV-BRUSH-12
     /// All action modes available in this cluster.
     pub fn modes(self) -> &'static [ActionMode] {
         match self {
@@ -180,6 +182,7 @@ impl BrushCluster {
         }
     }
 
+    // FR-CIV-BRUSH-02
     /// All nine clusters in toolbar order.
     pub fn all() -> &'static [BrushCluster] {
         &[
@@ -198,6 +201,7 @@ impl BrushCluster {
 
 // ── Action mode types (§1.2) ─────────────────────────────────────────────────
 
+// FR-CIV-BRUSH-03
 /// A single verb within a cluster's action group, shown as a segmented
 /// blade group in the Brush Control Panel.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -301,11 +305,13 @@ pub enum ActionKind {
 }
 
 impl ActionKind {
+    // FR-CIV-BRUSH-13
     /// Whether this action requires substrate mutation (vs read-only inspect).
     pub fn is_mutating(self) -> bool {
         !matches!(self, Self::Select | Self::Inspect)
     }
 
+    // FR-CIV-BRUSH-04
     /// The cluster this action belongs to.
     pub fn cluster(self) -> BrushCluster {
         match self {
@@ -331,9 +337,11 @@ impl ActionKind {
     }
 }
 
+// FR-CIV-BRUSH-13
 /// The total number of distinct action kinds across all clusters.
 pub const TOTAL_ACTION_KINDS: usize = 46;
 
+// FR-CIV-BRUSH-13
 /// Collect all unique action kinds across every cluster.
 pub fn all_action_kinds() -> Vec<ActionKind> {
     let mut kinds = Vec::new();

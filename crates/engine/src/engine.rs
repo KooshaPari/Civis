@@ -1282,6 +1282,9 @@ impl Simulation {
     }
 
     /// Create simulation with custom seed (accepts SimSeed wrapper or u64)
+    // FR-CIV-CORE-DET-001
+    // FR-CIV-CORE-DET-002
+    // FR-CIV-CORE-DET-003
     pub fn with_seed(seed: impl Into<SimSeed>) -> Self {
         Self::with_seed_internal(seed.into().0)
     }

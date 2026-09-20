@@ -294,6 +294,7 @@ pub struct BuildingGraph {
 }
 
 impl BuildingGraph {
+    // FR-CIV-0001
     /// Creates an empty building graph.
     #[must_use]
     pub fn new() -> Self {

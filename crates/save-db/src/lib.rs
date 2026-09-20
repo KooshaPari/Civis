@@ -155,6 +155,8 @@ impl SaveDb {
         Ok(())
     }
 
+    // FR-SAVE-001
+    // FR-SAVE-004
     pub fn record_slot_save(
         &self,
         session_id: &str,
@@ -268,6 +270,7 @@ impl SaveDb {
         Ok(records)
     }
 
+    // FR-SAVE-010
     pub fn evict_autosaves(
         &self,
         session_id: &str,

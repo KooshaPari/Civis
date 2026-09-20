@@ -660,7 +660,7 @@ mod tests {
         let (_dir, path) = temp_db();
         let db = SaveDb::open(&path).expect("open db");
         let mut all_evicted: Vec<String> = Vec::new();
-        for tick in 1..=8u32 {
+        for tick in 1..=8u64 {
             db.record_autosave(
                 "sess-ring",
                 tick,

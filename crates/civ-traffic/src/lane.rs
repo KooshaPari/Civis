@@ -222,6 +222,7 @@ impl LaneGraph {
 
 /// Generate lanes for one promoted segment.
 #[must_use]
+// FR-CIV-ROAD-910
 pub fn lanes_for(segment: EdgeKey, road: &RoadSegment) -> Vec<Lane> {
     let (class, count) = match road.kind {
         RoadKind::None => return Vec::new(),

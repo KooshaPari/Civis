@@ -300,6 +300,11 @@ impl SaveDb {
         Ok(records)
     }
 
+    /// **FR-SAVE-020** — Trim the autosave ring for `session_id` so that at
+    /// most `max_slots` rows remain. Rows are evicted oldest-first (lowest
+    /// `tick`, then earliest `created_at`). The evicted rows' backing file
+    /// paths are returned in eviction order so the caller can `unlink` them
+    /// from disk; this function does NOT touch the filesystem itself.
     pub fn evict_autosaves(
         &self,
         session_id: &str,
@@ -644,6 +649,55 @@ mod tests {
             })
             .collect();
         assert_eq!(autosaves.len(), 3);
+    }
+
+    /// **FR-SAVE-020** — the autosave ring never grows past `max_slots`.
+    /// Inserting 8 autosaves into a ring capped at 3 yields exactly 3
+    /// rows after the 4th insert, and the evicted rows are returned in
+    /// oldest-first order so the caller can `unlink` them.
+    #[test]
+    fn fr_save_020_autosave_ring_caps_at_max_slots() {
+        let (_dir, path) = temp_db();
+        let db = SaveDb::open(&path).expect("open db");
+        let mut all_evicted: Vec<String> = Vec::new();
+        for tick in 1..=8u32 {
+            db.record_autosave(
+                "sess-ring",
+                tick,
+                &format!("/saves/ring/autosave-{tick}.civsave.zst"),
+                10,
+            )
+            .expect("autosave");
+            // After each insert, evict down to `max_slots = 3`.
+            let evicted = db.evict_autosaves("sess-ring", 3).expect("evict");
+            all_evicted.extend(evicted);
+            let records = db.list_for_session("sess-ring").expect("list");
+            let autosaves: Vec<_> = records
+                .into_iter()
+                .filter_map(|r| match r {
+                    SessionSaveRecord::Autosave(a) => Some(a),
+                    _ => None,
+                })
+                .collect();
+            assert!(autosaves.len() <= 3, "ring grew past cap on tick {tick}");
+        }
+        // 8 inserts - 3 retained = 5 evicted.
+        assert_eq!(all_evicted.len(), 5);
+        // Oldest-first: ticks 1, 2, 3, 4, 5 should be evicted.
+        let mut expected = vec![
+            "/saves/ring/autosave-1.civsave.zst",
+            "/saves/ring/autosave-2.civsave.zst",
+            "/saves/ring/autosave-3.civsave.zst",
+            "/saves/ring/autosave-4.civsave.zst",
+            "/saves/ring/autosave-5.civsave.zst",
+        ]
+        .into_iter()
+        .map(String::from)
+        .collect::<Vec<_>>();
+        expected.sort();
+        let mut got = all_evicted.clone();
+        got.sort();
+        assert_eq!(got, expected);
     }
 
     #[test]

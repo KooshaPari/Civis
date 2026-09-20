@@ -55,6 +55,7 @@ pub struct FactionRelationRecord {
 }
 
 /// Stub faction-relation matrix.
+// FR-CIV-POLITY-001
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct FactionRelations {
     rows: BTreeMap<(u32, u32), FactionRelationRecord>,

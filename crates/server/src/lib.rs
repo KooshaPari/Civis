@@ -16,6 +16,8 @@ pub mod audit_log;
 pub mod jsonrpc;
 /// Runtime metrics collection (tick durations, clients, events, memory).
 pub mod metrics;
+pub mod perf_budgets;
+pub mod portability;
 pub mod saves;
 /// Per-client session tracking for the multiplayer bridge (connection id,
 /// subscription filter mirror, last-acked tick).

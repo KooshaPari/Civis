@@ -337,6 +337,7 @@ impl ReplayLog {
         });
     }
 
+    // NFR-CIV-DET-004
     /// Record a boolean RNG draw (FR-CORE-004) for replay reproducibility.
     pub fn record_rng_draw(&mut self, tick: u64, probability: f64, result: bool) {
         self.events.push(ReplayEvent::RngDraw {

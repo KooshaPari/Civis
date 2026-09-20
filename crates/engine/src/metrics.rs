@@ -10,6 +10,7 @@ pub struct Metrics {
     pub legitimacy_index: f64,
 }
 
+// NFR-CIV-DET-001, NFR-CIV-DET-003
 pub fn compute(energy_budget_joules: f64, consumption_joules: f64) -> Metrics {
     let energy_budget_joules = if energy_budget_joules.is_finite() {
         energy_budget_joules.max(0.0)
@@ -43,6 +44,7 @@ pub struct MetricsFixed {
     pub legitimacy_index: Fixed,
 }
 
+// NFR-CIV-DET-002
 /// Same formulas as [`compute`], using fixed-point arithmetic.
 pub fn compute_fixed(energy_budget_joules: Fixed, consumption_joules: Fixed) -> MetricsFixed {
     let energy_budget_joules = energy_budget_joules.max(Fixed::ZERO);

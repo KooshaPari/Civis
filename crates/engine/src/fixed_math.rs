@@ -210,3 +210,77 @@ impl std::fmt::Display for Fixed {
         write!(f, "{}", self.to_f64())
     }
 }
+
+#[cfg(test)]
+mod fixed_tests {
+    // NFR-C-03 — fixed-point arithmetic enforcement: all simulation numeric
+    // state flows through `Fixed` (scale 1_000) so ticks are deterministic
+    // and float arithmetic stays lint-blocked in CI.
+    use super::Fixed;
+
+    #[test]
+    fn nfr_c_03_from_num_to_num_roundtrip_integers() {
+        let v = Fixed::from_num(42i64);
+        assert_eq!(v.to_bits(), 42_000);
+        assert_eq!(v.to_num::<i64>(), 42);
+        assert_eq!(Fixed::from_num(-7i32).to_num::<i32>(), -7);
+        assert_eq!(Fixed::from_num(9u32).to_num::<u32>(), 9);
+    }
+
+    #[test]
+    fn nfr_c_03_float_conversion_uses_1000_scale() {
+        let v = Fixed::from_num(1.5f64);
+        assert_eq!(v.to_bits(), 1_500);
+        assert!((v.to_num::<f64>() - 1.5).abs() < 1e-9);
+        let v32 = Fixed::from_num(0.25f32);
+        assert_eq!(v32.to_bits(), 250);
+    }
+
+    #[test]
+    fn nfr_c_03_add_sub_assign_are_exact_integer_math() {
+        let mut a = Fixed::from_num(10i64);
+        a += Fixed::from_num(3i64);
+        assert_eq!(a.to_bits(), 13_000);
+        a -= Fixed::from_num(4i64);
+        assert_eq!(a.to_bits(), 9_000);
+        assert_eq!(
+            (Fixed::from_num(2i64) - Fixed::from_num(5i64)).to_bits(),
+            -3_000
+        );
+    }
+
+    #[test]
+    fn nfr_c_03_mul_div_truncate_to_scale() {
+        // 2.0 * 3.0 = 6.0
+        let m = Fixed::from_num(2i64) * Fixed::from_num(3i64);
+        assert_eq!(m.to_bits(), 6_000);
+        // 7.0 / 2.0 = 3.5
+        let d = Fixed::from_num(7i64) / Fixed::from_num(2i64);
+        assert_eq!(d.to_bits(), 3_500);
+        // Division by zero saturates to zero (deterministic, no panic).
+        assert_eq!((Fixed::from_num(1i64) / Fixed::ZERO).to_bits(), 0);
+    }
+
+    #[test]
+    fn nfr_c_03_min_max_saturating_sub_and_ordering() {
+        let a = Fixed::from_num(5i64);
+        let b = Fixed::from_num(9i64);
+        assert_eq!(a.min(b), a);
+        assert_eq!(a.max(b), b);
+        // saturating_sub clamps at i64::MIN (no wrap/panic).
+        assert_eq!(
+            Fixed::from_bits(i64::MIN).saturating_sub(b),
+            Fixed::from_bits(i64::MIN),
+            "saturating sub must clamp at i64::MIN, never wrap"
+        );
+        assert_eq!(b.saturating_sub(a).to_bits(), 4_000);
+        assert!(a < b);
+        assert!(Fixed::ONE > Fixed::ZERO);
+    }
+
+    #[test]
+    fn nfr_c_03_display_renders_scaled_value() {
+        assert_eq!(Fixed::from_num(1i64).to_string(), "1");
+        assert_eq!(Fixed::from_f64(0.125).to_string(), "0.125");
+    }
+}

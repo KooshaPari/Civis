@@ -100,12 +100,7 @@ fn validate_guest_imports(module: &Module) -> Result<(), WasmGuestError> {
                 HOST_IMPORT_MODULE,
             ))));
         }
-        let Some(name) = import.name().as_str() else {
-            return Err(WasmGuestError::Engine(wasmtime::Error::msg(format!(
-                "guest import '{}::?' has a non-utf8 name; refusing to instantiate",
-                import.module(),
-            ))));
-        };
+        let name = import.name();
         if !ALLOWED_HOST_IMPORTS.contains(&name) {
             return Err(WasmGuestError::Engine(wasmtime::Error::msg(format!(
                 "guest import '{HOST_IMPORT_MODULE}::{name}' is not in the host allowlist",

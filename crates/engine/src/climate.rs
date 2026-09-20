@@ -9,12 +9,14 @@ use civ_voxel::{MaterialId, WorldCoord};
 use serde::{Deserialize, Serialize};
 
 /// Water marker material used for coastal tide voxel writes.
+// FR-CIV-TERRAIN-005
 pub const WATER_MARKER_MATERIAL: MaterialId = WATER;
 
 /// A coastal water column registered with the engine. Each column anchors a
 /// single water-marker voxel that shifts vertically with the climate tide
 /// offset every tick (FR-CIV-PLANET-020). Iteration order is deterministic
 /// because columns live in a [`BTreeMap`](std::collections::BTreeMap).
+// FR-CIV-TERRAIN-002
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CoastalColumn {
     /// Sea-level y in fixed-point world units.

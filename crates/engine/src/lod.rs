@@ -7,6 +7,7 @@
 pub use civ_agents::LodTier;
 
 /// Strategic (region) vs operational (district / hex) zoom levels.
+// FR-CIV-TERRAIN-004
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ZoomLevel {
     /// Region aggregates — macro governance view.

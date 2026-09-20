@@ -677,6 +677,9 @@ impl Default for WorldState {
 }
 
 /// Simulation engine combining state + ECS world + 3D voxel substrate.
+// FR-CIV-TERRAIN-001
+// FR-CIV-TERRAIN-003
+// FR-CIV-TERRAIN-006
 pub struct Simulation {
     pub state: WorldState,
     pub world: World,

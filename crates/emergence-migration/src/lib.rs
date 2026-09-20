@@ -314,7 +314,7 @@ impl MigrationEngine {
         self.clusters.is_empty()
     }
 
-    /// **Feature 4** — apply a refugee surge from an exogenous event.
+    /// **FR-CIV-MIGRATION-004** — apply a refugee surge from an exogenous event.
     ///
     /// Disasters and wars raise the affected cluster's surge multiplier (taking the
     /// max so the worst concurrent event wins) and also feed the relevant stress
@@ -342,7 +342,7 @@ impl MigrationEngine {
         }
     }
 
-    /// **Feature 4** — decay every cluster's surge one step toward 1.0.
+    /// **FR-CIV-MIGRATION-004** — decay every cluster's surge one step toward 1.0.
     ///
     /// Called automatically at the end of [`MigrationEngine::tick`]; exposed for
     /// tests of surge decay in isolation.
@@ -356,16 +356,39 @@ impl MigrationEngine {
         }
     }
 
+    /// **FR-CIV-MIGRATION-001** — aggregate `MigrationStress::pressure` over a slice of clusters.
+    ///
+    /// Returns the maximum push observed; useful for engine-side logging or
+    /// dashboards that surface the worst-off cluster.
+    #[must_use]
+    pub fn max_stress_pressure(clusters: &[&ClusterMigration]) -> f32 {
+        clusters
+            .iter()
+            .map(|c| c.stress.pressure())
+            .fold(0.0f32, f32::max)
+    }
+
+    /// **FR-CIV-MIGRATION-001** — aggregate `MigrationOpportunity::attractiveness` over a slice.
+    ///
+    /// Returns the sum; useful for engine-side gauges that show total pull.
+    #[must_use]
+    pub fn total_attractiveness(clusters: &[&ClusterMigration]) -> f32 {
+        clusters.iter().map(|c| c.opportunity.attractiveness()).sum()
+    }
+
     /// Advance one migration tick.
     ///
-    /// 1. **Feature 1** computes net push/pull and resolves flows from high-stress
-    ///    origins to high-opportunity destinations (proportional to attractiveness).
-    /// 2. **Feature 2** applies arrivals/departures to cluster populations.
-    /// 3. **Feature 3** blends migrant culture/language/belief into destinations,
-    ///    reducing divergence.
-    /// 4. **Feature 4** decays refugee surges.
+    /// 1. **Feature 1** (`FR-CIV-MIGRATION-001`) computes net push/pull and resolves
+    ///    flows from high-stress origins to high-opportunity destinations
+    ///    (proportional to attractiveness).
+    /// 2. **Feature 2** (`FR-CIV-MIGRATION-002`) applies arrivals/departures to
+    ///    cluster populations.
+    /// 3. **Feature 3** (`FR-CIV-MIGRATION-003`) blends migrant culture /
+    ///    language / belief into destinations, reducing divergence.
+    /// 4. **Feature 4** (`FR-CIV-MIGRATION-004`) decays refugee surges.
     ///
-    /// Deterministic for a fixed `rng` seed and cluster state.
+    /// **FR-CIV-MIGRATION-005**: deterministic for a fixed `rng` seed and cluster
+    /// state — same seed + same state ⇒ identical flows and engine state.
     pub fn tick(&mut self, rng: &mut ChaCha8Rng) -> MigrationReport {
         let flows = self.compute_flows(rng);
         self.apply_flows(&flows);
@@ -375,7 +398,7 @@ impl MigrationEngine {
         MigrationReport { flows, total_moved }
     }
 
-    /// **Feature 1** — compute emergent flows for this tick (no mutation).
+    /// **FR-CIV-MIGRATION-001** — compute emergent flows for this tick (no mutation).
     fn compute_flows(&self, rng: &mut ChaCha8Rng) -> Vec<MigrationFlow> {
         // Destinations ranked by pull; iterate deterministically.
         let ids: Vec<ClusterId> = self.clusters.keys().copied().collect();
@@ -466,7 +489,7 @@ impl MigrationEngine {
         flows
     }
 
-    /// **Feature 2 + 3** — apply flows: reshape populations and blend culture.
+    /// **FR-CIV-MIGRATION-002 + FR-CIV-MIGRATION-003** — apply flows: reshape populations and blend culture.
     fn apply_flows(&mut self, flows: &[MigrationFlow]) {
         for flow in flows {
             // Snapshot the migrant cohort's attributes from the origin.

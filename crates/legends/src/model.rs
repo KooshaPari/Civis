@@ -263,7 +263,6 @@ pub struct RawSimEvent {
 }
 
 impl RawSimEvent {
-    /// Convenience constructor for a lived event with no spatial region.
     pub fn new(tick: u64, kind: EventKind, source: SourceCrate, raw_magnitude: f32) -> Self {
         RawSimEvent {
             tick,
@@ -390,5 +389,38 @@ impl HistoricalEvent {
     /// bookkeeping record). Producer-emitted events are never engine-authored.
     pub fn is_engine_authored(&self) -> bool {
         !self.authored_outcome
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// NFR-C-06 — event log completeness: the `RawSimEvent` producer
+    /// contract payload must serialize/deserialize losslessly (it is the
+    /// shape every state-mutating engine phase emits per tick), and the
+    /// narrator prose-cache key must be stable for identical inputs.
+    #[test]
+    fn nfr_c_06_raw_sim_event_roundtrip_and_stable_summary_key() {
+        let event = RawSimEvent::new(7, EventKind::Battle, SourceCrate::Engine, 0.75)
+            .with_participant(SourceCrate::Engine, SimRuntimeId(11), Role::Leader)
+            .with_participant(SourceCrate::Engine, SimRuntimeId(12), Role::Aggressor);
+
+        assert_eq!(event.tick, 7);
+        assert_eq!(event.provenance, Provenance::Lived);
+        assert_eq!(event.participants.len(), 2);
+        assert!(event.region.is_none());
+
+        let json = serde_json::to_string(&event).expect("serialize");
+        let back: RawSimEvent = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back, event, "RawSimEvent must round-trip losslessly");
+
+        let key_a =
+            summary_key(&EventKind::Battle, &[LegendEntityId(11), LegendEntityId(12)], 0.75, Epoch(0));
+        let key_b =
+            summary_key(&EventKind::Battle, &[LegendEntityId(11), LegendEntityId(12)], 0.75, Epoch(0));
+        assert_eq!(key_a, key_b, "identical events must share a prose-cache key");
+        let key_other = summary_key(&EventKind::Battle, &[LegendEntityId(11)], 0.75, Epoch(0));
+        assert_ne!(key_a, key_other, "different participants must differ");
     }
 }

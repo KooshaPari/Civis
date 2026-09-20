@@ -76,6 +76,12 @@ pub fn chain_root_from_ticks(ticks: impl IntoIterator<Item = u64>) -> Option<[u8
 }
 
 /// Advance the chain with an arbitrary canonical payload.
+///
+/// NFR-C-07 — `SimEvent.state_hash` parity: every replayable event folds
+/// its payload through [`chain_advance`], so the per-event digest matches
+/// the running chain root at the tick of emission. Replay verification
+/// (`civ-engine` `civreplay` parser) recomputes the chain and asserts
+/// equality.
 #[must_use]
 pub fn chain_advance(prev: &[u8; HASH_LEN], payload: &[u8]) -> [u8; HASH_LEN] {
     tick_hash(prev, payload)

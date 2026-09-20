@@ -58,6 +58,36 @@ fn bench_tick_100(c: &mut Criterion) {
     });
 }
 
+#[cfg(test)]
+mod nfr_p_03_tests {
+    // NFR-P-03 — p50/p99/p999 tick-time budgets at 1k citizens. The criterion
+    // harness above is the measurement surface; this test is the always-on
+    // smoke that the bench fixture is functional: a seeded sim ticks, advances
+    // deterministically, and a 100-tick run completes inside a generous
+    // wall-clock ceiling (a gross regression trips long before CI compares
+    // the stored criterion baseline).
+    use civ_engine::Simulation;
+    use std::time::Instant;
+
+    #[test]
+    fn tick_bench_fixture_ticks_and_stays_within_generous_ceiling() {
+        let mut sim = Simulation::with_seed(42);
+        assert_eq!(sim.state.tick, 0);
+        let start = Instant::now();
+        for _ in 0..100 {
+            sim.tick();
+        }
+        let elapsed = start.elapsed();
+        assert_eq!(sim.state.tick, 100);
+        // 100 ticks in < 30 s: only catches gross regressions, not noise.
+        assert!(
+            elapsed.as_secs() < 30,
+            "100-tick smoke took {:?}; gross tick-loop regression suspected",
+            elapsed
+        );
+    }
+}
+
 /// Benchmark tick with a populated voxel substrate — exercises the
 /// `phase_voxel` dirty-event drain path.
 fn bench_tick_with_voxels(c: &mut Criterion) {

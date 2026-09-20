@@ -45,3 +45,36 @@ impl FeatureOracle for FestivalOracle {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    // FR-EMG-012 — festival oracle: at tick 0 any state is acceptable
+    // (threshold 0.0); the verdict always names the FR and reports citizens ×
+    // buildings as the measurement.
+    use super::*;
+    use civ_engine::Simulation;
+
+    #[test]
+    fn fr_emg_012_passes_at_tick_zero() {
+        let sim = Simulation::new();
+        let v = FestivalOracle.check(&sim);
+        assert_eq!(v.fr_id, "FR-EMG-012");
+        assert!(v.passed, "tick 0 must pass unconditionally: {}", v.detail);
+        assert!((v.threshold - 0.0).abs() < f64::EPSILON);
+        assert!(!v.detail.is_empty());
+        assert!(v.measured >= 0.0);
+    }
+
+    #[test]
+    fn fr_emg_012_threshold_is_one_after_tick_zero() {
+        let mut sim = Simulation::new();
+        sim.tick();
+        let v = FestivalOracle.check(&sim);
+        assert!(
+            (v.threshold - 1.0).abs() < f64::EPSILON,
+            "post-tick-0 threshold must be 1.0"
+        );
+        // Passed iff both citizens and structures exist.
+        assert_eq!(v.passed, v.measured >= 1.0, "detail: {}", v.detail);
+    }
+}

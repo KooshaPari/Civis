@@ -613,6 +613,37 @@ mod tests {
         eng
     }
 
+    // FR-CIV-MIGRATION-001 — aggregate push/pull helpers: max_stress_pressure
+    // returns the worst cluster push, total_attractiveness sums pull, and the
+    // stressed fixture scores strictly higher on push than the attractive
+    // destination while the destination dominates on pull.
+    #[test]
+    fn fr_civ_migration_001_aggregates_push_and_pull() {
+        let eng = stress_to_opportunity();
+        let stressed = eng.cluster(ClusterId(1)).unwrap();
+        let rich = eng.cluster(ClusterId(2)).unwrap();
+
+        let clusters = [stressed, rich];
+        let max_push = MigrationEngine::max_stress_pressure(&clusters);
+        let total_pull = MigrationEngine::total_attractiveness(&clusters);
+
+        assert!(max_push > 0.0 && max_push <= 1.0, "push in (0,1]: {max_push}");
+        assert_eq!(
+            max_push,
+            stressed.stress.pressure(),
+            "max push must equal the stressed cluster's pressure"
+        );
+        assert!(total_pull > 0.0);
+        assert!(
+            total_pull >= rich.opportunity.attractiveness(),
+            "total pull sums across clusters"
+        );
+        // Empty slice: push floor 0, pull sum 0.
+        let empty: [&ClusterMigration; 0] = [];
+        assert_eq!(MigrationEngine::max_stress_pressure(&empty), 0.0);
+        assert_eq!(MigrationEngine::total_attractiveness(&empty), 0.0);
+    }
+
     #[test]
     fn population_flows_from_stress_to_opportunity() {
         let mut eng = stress_to_opportunity();

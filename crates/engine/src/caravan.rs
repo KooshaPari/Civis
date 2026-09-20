@@ -517,4 +517,40 @@ mod tests {
         // But not linearly
         assert!(t5 < t1 * 5, "Diminishing returns should apply");
     }
+
+    // FR-CIV-CARAVAN-001 — trade routes form organically between settlements
+    // with complementary resource profiles: the food-producing settlement
+    // sources a route into the food-deficit one, cargo loads at half surplus
+    // (capacity-capped), and no route forms between identical profiles.
+    #[test]
+    fn complementary_profiles_form_organic_route_and_cargo_loads() {
+        let source = make_source();
+        let target = make_target();
+        let config = CaravanConfig::default();
+
+        let route = evaluate_caravan_spawn(&source, &target, &config)
+            .expect("complementary profiles should form a trade route");
+        assert_eq!(route.source, source.id);
+        assert_eq!(route.target, target.id);
+        assert!(route.total_profit > 0);
+        assert_eq!(route.trust_bonus, config.trust_bonus);
+
+        let caravan = spawn_caravan(&route, &source, 7, 4);
+        assert_eq!(caravan.id, 7);
+        assert!(!caravan.cargo.is_empty());
+        // Load = half the surplus, capped at CARAVAN_CAPACITY.
+        for gap in &route.goods {
+            let expected = (gap.source_surplus / 2).min(CARAVAN_CAPACITY);
+            assert_eq!(caravan.cargo.get(&gap.good), Some(&expected));
+        }
+
+        // Non-complementary profiles (identical) yield no gaps → no route.
+        let clone = SettlementProfile {
+            id: 3,
+            ..make_source()
+        };
+        let none = evaluate_commodity_gaps(&source, &clone, MIN_COMMODITY_GAP);
+        assert!(none.is_empty(), "identical profiles have no commodity gap");
+        assert!(evaluate_caravan_spawn(&source, &clone, &config).is_none());
+    }
 }

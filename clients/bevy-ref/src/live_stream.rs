@@ -1,4 +1,7 @@
 //! Shared `Frame3d` entity sync for live attach clients (`live_scene`, `bevy_window`).
+//!
+//! FR-CIV-BEVY-014 — P-W1 item 39: shared stream apply keeps voxel deltas,
+//! ground anchoring, and provenance styling deterministic across both desktop paths.
 
 use std::collections::{HashMap, HashSet};
 

@@ -145,6 +145,7 @@ impl SharedSession {
 /// for `sim.snapshot`) with session-specific context (connection_id,
 /// last_acked_tick) so a multiplayer client can confirm it is reading the
 /// right session's state.
+// FR-CIV-SERVER-002
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SessionSnapshot {
     /// Connection id of the session the snapshot is scoped to.

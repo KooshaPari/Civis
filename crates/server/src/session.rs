@@ -120,6 +120,7 @@ impl SharedSession {
     /// Record that this session just received a tick broadcast for
     /// `tick`. Idempotent: the same tick value updates
     /// `tick_broadcasts_received` without regressing `last_acked_tick`.
+    // FR-CIV-SERVER-002-PROTO
     pub fn record_tick_delivery(&mut self, tick: u64) {
         if tick >= self.last_acked_tick {
             self.last_acked_tick = tick;

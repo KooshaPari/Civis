@@ -60,6 +60,7 @@ pub fn spawn_military_at(
 }
 
 /// Spawn an airport (civic hub) building at normalized coords.
+// FR-CLIENT-001
 pub fn spawn_airport_at(world: &mut World, x: f32, y: f32) -> Entity {
     world.spawn((Building {
         building_type: BuildingType::CityCenter,

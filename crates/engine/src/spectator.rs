@@ -96,6 +96,7 @@ pub struct SpectatorView {
 
 impl Simulation {
     /// Build deterministic spectator pins (matches `civ-watch` layout).
+    // FR-CLIENT-002
     pub fn spectator_view(&self) -> SpectatorView {
         let tick = self.state.tick;
         let factions = factions_for_tick(tick);

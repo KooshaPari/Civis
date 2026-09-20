@@ -206,6 +206,7 @@ pub(crate) fn settlement_anchor_for(settlement_id: u32, x: f32, y: f32) -> (f32,
 
 /// Deterministic job assignment for agent civilians (stable across seeds).
 #[inline]
+// FR-CIV-ACT-003
 pub fn job_type_for_civilian_id(id: u64) -> crate::engine::JobType {
     match id % 7 {
         0 => crate::engine::JobType::Farmer,

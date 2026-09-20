@@ -279,6 +279,7 @@ impl Allocator {
 
 /// Shared building graph for both autonomous growth and freehand authoring.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+// FR-CIV-BIO-001
 pub struct BuildingGraph {
     /// All known parcels in deterministic order.
     pub parcels: Vec<Parcel>,
@@ -316,6 +317,7 @@ impl BuildingGraph {
     }
 
     /// Assigns a provenance tag to a parcel.
+    // FR-CIV-ACT-001
     pub fn set_provenance(&mut self, id: BuildingId, provenance: BuildingProvenance) {
         self.provenance.insert(id, provenance);
     }
@@ -341,6 +343,7 @@ impl BuildingGraph {
 
     /// Returns the total housing capacity across all residential parcels.
     #[must_use]
+    // FR-CIV-BIO-002
     pub fn total_capacity(&self) -> u32 {
         self.parcels
             .iter()
@@ -353,6 +356,7 @@ impl BuildingGraph {
 
     /// Returns the occupied housing slots proxy from residential parcels.
     #[must_use]
+    // FR-CIV-BIO-003
     pub fn occupied(&self) -> u32 {
         self.parcels
             .iter()

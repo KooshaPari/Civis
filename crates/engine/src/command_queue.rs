@@ -11,6 +11,7 @@ pub struct Command {
 
 /// The type of command a client can issue.
 #[derive(Debug)]
+// FR-CLIENT-003
 pub enum CommandKind {
     Pause,
     Resume,
@@ -24,6 +25,7 @@ pub enum CommandKind {
 ///
 /// Commands are processed in FIFO order. The queue enforces a maximum
 /// number of pending commands to prevent unbounded growth.
+// FR-CIV-NOTIFY-921
 pub struct CommandQueue {
     commands: VecDeque<Command>,
     max_pending: usize,

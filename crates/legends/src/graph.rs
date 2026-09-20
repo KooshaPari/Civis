@@ -700,6 +700,7 @@ impl SagaGraph {
     /// reason string per gap (FR-CIV-LEGENDS-006). The empty-saga-with-reason
     /// contract: a `Saga` query on an entity from a silent producer must
     /// surface this reason, never a silent omission.
+    // FR-CIV-LEGENDS-GAP-12
     pub fn gap_reports(&self, now: Epoch) -> Vec<GapReport> {
         self.detect_gaps(now)
             .into_iter()

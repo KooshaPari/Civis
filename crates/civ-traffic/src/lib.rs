@@ -49,6 +49,7 @@ pub const SCHEMA_VERSION: &str = "0.1.0";
 /// share every other data tag so the economy treats them identically; this only
 /// lets the renderer style them differently and lets saves audit provenance.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+// FR-CIV-ROAD-902
 pub enum InfraProvenance {
     /// Grown by accumulated agent traffic (desire path).
     Emergent,
@@ -242,6 +243,7 @@ impl TrafficGraph {
     /// threshold. Creates the segment on first traversal. Returns the resulting
     /// [`RoadKind`]. User-placed segments keep their placed rank and provenance
     /// but still tally traffic (so the renderer can show wear/use).
+    // FR-CIV-ROAD-901
     pub fn record_traffic(&mut self, from: WorldCoord, to: WorldCoord, weight: f32) -> RoadKind {
         if from == to || weight <= 0.0 {
             return self.kind_between(from, to);
@@ -271,6 +273,7 @@ impl TrafficGraph {
     /// Freehand-place (or upgrade) a segment between two cells with an explicit
     /// [`RoadKind`]. Tagged [`InfraProvenance::UserPlaced`]. A later, stronger
     /// placement upgrades; a weaker one never downgrades an existing road.
+    // FR-CIV-ROAD-921
     pub fn place_segment(&mut self, from: WorldCoord, to: WorldCoord, kind: RoadKind) {
         if from == to {
             return;
@@ -293,6 +296,7 @@ impl TrafficGraph {
 
     /// Place a connected polyline of segments (drag-to-draw). Consecutive points
     /// are joined as undirected edges. Fewer than two points is a no-op.
+    // FR-CIV-ROAD-920
     pub fn place_path(&mut self, points: &[WorldCoord], kind: RoadKind) {
         for window in points.windows(2) {
             self.place_segment(window[0], window[1], kind);

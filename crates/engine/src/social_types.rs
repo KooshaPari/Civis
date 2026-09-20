@@ -333,6 +333,7 @@ pub struct CohesionSnapshot {
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
 )]
+// FR-CIV-NOTIFY-901
 pub enum UnrestLevel {
     Stable,
     Restless,

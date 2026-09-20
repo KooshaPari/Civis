@@ -86,6 +86,7 @@ impl EntitySignificance {
 /// ```
 // FR-CIV-LEGENDS-PERSIST-11
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+// FR-CIV-LEGENDS-SIG-05
 pub struct SignificanceAccumulator {
     /// Entity id → accumulated significance.
     by_entity: std::collections::HashMap<LegendEntityId, EntitySignificance>,

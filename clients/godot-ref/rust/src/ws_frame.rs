@@ -72,6 +72,7 @@ fn try_parse_frame3d_json(bytes: &[u8]) -> Result<DecodedWsPacket, String> {
 }
 
 /// Decode a WebSocket payload: F3D0 binary first, then UTF-8 JSON (JSON-RPC or `Frame3d`).
+// FR-CIV-GODOT-ATTACH-000
 pub fn decode_ws_packet_bytes(bytes: &[u8]) -> Result<DecodedWsPacket, String> {
     if is_frame3d_binary(bytes) {
         let frame = decode_frame3d_binary(bytes).map_err(|err| format!("{err:?}"))?;

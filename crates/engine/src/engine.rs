@@ -2066,6 +2066,7 @@ impl Simulation {
         &mut self.rng
     }
 
+    // FR-CIV-INSPECT-920
     /// Resolve a civilian agent id to its ECS entity.
     pub fn agent_entity(&self, agent_id: u64) -> Option<Entity> {
         self.world
@@ -3214,6 +3215,7 @@ impl Simulation {
         ids
     }
 
+    // FR-CIV-INSPECT-902
     /// Per-cluster (settlement) resource stocks keyed by `ClusterId` value, for
     /// the HUD `WorldResources` panel (FR-CIV-LIFE-020).
     #[must_use]

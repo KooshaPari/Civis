@@ -511,6 +511,11 @@ gate_6_security() {
 # ============================================================
 # GATE 7: Complexity
 # ============================================================
+# NFR-CIV-MAINT-002 — cyclomatic + cognitive complexity caps: per-function
+# cyclomatic ≤ `CYCLOMATIC_MAX` (default 10) and cognitive ≤ `COGNITIVE_MAX`
+# (default 15). Functions above the cap fail CI via the `quality/complexity`
+# job. The thresholds match the defaults in
+# `docs/reference/non-functional-requirements.md` §NFR-CIV-MAINT-002.
 gate_7_complexity() {
     local errors=0 detail=""
 

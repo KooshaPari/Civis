@@ -1564,6 +1564,10 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             response: JsonRpcResponse::success(req.id, serde_json::json!({ "tick": ctx.tick })),
             effect: DispatchEffect::None,
         },
+        // FR-CIV-SAVE-003 — `sim.status` returns `{ tick, population? }`,
+        // omitting the population field when the handler cannot read
+        // the simulation (the host hasn't initialized yet). The
+        // dispatch is total: every context shape has a defined result.
         JsonRpcMethod::SimStatus => {
             let result = match ctx.population {
                 Some(population) => {
@@ -1576,6 +1580,12 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 effect: DispatchEffect::None,
             }
         }
+        // FR-CIV-SAVE-003 — `sim.snapshot` returns the full snapshot
+        // payload (built by `snapshot_result_json` from the
+        // `SnapshotFields`) when the host has populated the dispatch
+        // context's `snapshot` field; otherwise it falls back to a
+        // minimal `{ tick, speed_multiplier }` payload so clients can
+        // poll before the simulation has produced a snapshot yet.
         JsonRpcMethod::SimSnapshot => {
             let result = match ctx.snapshot.as_ref() {
                 Some(fields) => snapshot_result_json(fields),

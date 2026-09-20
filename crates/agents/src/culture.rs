@@ -17,6 +17,7 @@ use crate::language::{drift_phonemes, phoneme_inventory_distance, PhonemeInvento
 pub type TraitVector = [f32; 4];
 
 /// Population-level cultural state.
+// FR-CIV-CULT-001
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CultureProfile {
     /// Cultural trait vector.
@@ -115,6 +116,7 @@ pub fn cluster_language_distance(a: &CultureProfile, b: &CultureProfile) -> f32 
 /// drift alone produces: `isolation_ticks` acts as a multiplier on baseline distance so
 /// populations that were once in contact and then separated grow further apart over time.
 /// Returns a value in `[0, 1]`.
+// FR-CIV-CULT-003
 #[must_use]
 pub fn language_divergence_from_isolation(
     a: &CultureProfile,

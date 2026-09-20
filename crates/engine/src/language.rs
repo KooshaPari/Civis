@@ -92,6 +92,7 @@ pub fn ensure_seeded_word(state: &mut LanguageState, kind: WordKind, meaning: [f
     ));
 }
 
+// FR-CIV-LANG-006
 /// Borrow a word from `source` into `target`. Stub: no-op.
 pub fn borrow_word(target: &mut LanguageState, _source: &LanguageState, kind: WordKind) {
     let key = match kind {

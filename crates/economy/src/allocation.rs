@@ -50,6 +50,7 @@ impl AllocationEngine for PlannedAllocator {
 /// Joule / thermodynamic regime: identical fill curve to the planned regime at a
 /// single good, but kept distinct so engines can weight by joule cost when the
 /// hybrid scheduler routes energy-priced goods through it.
+// FR-CIV-ECON-003
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct JouleAllocator;
 

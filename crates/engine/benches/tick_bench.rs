@@ -3,6 +3,14 @@
 //!
 //! These benchmarks catch performance regressions on every PR by running
 //! `cargo bench --workspace -- --test` in CI.
+//!
+//! NFR-P-01 / NFR-P-02 / NFR-P-03 — p50/p99/p999 tick-time budgets at 1k
+//! citizens: `bench_tick_single` and `bench_tick_1k_citizens` are the
+//! baseline criterion harnesses; CI compares against the stored baseline
+//! and fails PRs when p99 worsens by > 10%.
+//! NFR-P-04 — p50 tick time at 10k citizens (`bench_tick_10k_citizens`).
+//! NFR-P-05 — p50 tick time at 100k citizens (`bench_tick_100k_citizens`),
+//! nightly only to keep PR CI under the time budget.
 
 use civ_engine::Simulation;
 use civ_voxel::{

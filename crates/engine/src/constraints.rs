@@ -474,6 +474,7 @@ pub fn check_coalition_compatible_strategy(
 // Aggregated check_all
 // ---------------------------------------------------------------------------
 
+// FR-CIV-0104-001
 /// Run all five constraint checks and return the aggregate result.
 #[must_use]
 pub fn check_all(result: &ConstraintSetResult) -> &ConstraintSetResult {

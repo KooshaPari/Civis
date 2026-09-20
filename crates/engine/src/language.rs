@@ -70,6 +70,7 @@ impl Default for Language {
 // Legacy stub functions (seeded_language_state, ensure_seeded_word, etc.)
 // ---------------------------------------------------------------------------
 
+// FR-CIV-LANG-004
 /// Build a `LanguageState` seeded from `signature` (or zero if `None`).
 #[must_use]
 pub fn seeded_language_state(signature: [f32; 4]) -> LanguageState {

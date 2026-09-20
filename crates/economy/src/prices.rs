@@ -1,4 +1,5 @@
 //! Emergent price computation from supply/demand ratios (FR-ECON-EMERGE-001).
+//! Covers: FR-ECON-EMERGE-001
 //!
 //! Prices are derived per-cluster per-good from the ratio of demand to supply.
 //! No absolute price oracle exists; all prices are relative and emergent.

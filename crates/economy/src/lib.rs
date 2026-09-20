@@ -83,6 +83,7 @@ pub use trade_routes::{
 
 use serde::{Deserialize, Serialize};
 
+// FR-CIV-ECON-001-MARKET
 /// Schema version for `civ-economy`. Bumped on breaking snapshot / ledger changes.
 pub const SCHEMA_VERSION: u32 = 1;
 

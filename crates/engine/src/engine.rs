@@ -373,7 +373,7 @@ pub struct MilitaryUnit {
 // WORLD STATE
 // ============================================================================
 
-// FR-CIV-PERF-RT-003
+// FR-CIV-PERF-RT-003, FR-SOC-INS-001, FR-SOC-INS-002, FR-SOC-INS-003, FR-SOC-INS-004, FR-SOC-INS-005, FR-SOC-INS-006, FR-SOC-INS-007
 /// Global world state
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorldState {

@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 // ── Nation color types (§6.3, §10.3 of CIV-0600) ─────────────────────────────
 
 /// A nation's color palette for sprite recoloring.
+// FR-CIV-RTS-RENDER-003
 /// Nation colors are not baked into atlas sprites; a fragment shader
 /// replaces palette indices at render time.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -56,6 +57,7 @@ pub const BAKED_SECONDARY: &str = "#f0c040";
 
 // ── Atlas configuration (§7.2) ───────────────────────────────────────────────
 
+// FR-CIV-RTS-RENDER-004
 /// Atlas dimensions are fixed by asset category. Power-of-two required
 /// for WebGL texture compatibility.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -199,6 +201,7 @@ impl SpriteHandle {
 
 // ── UV rect (§7.3) ───────────────────────────────────────────────────────────
 
+// FR-CIV-RTS-RENDER-005
 /// Rectangle within an atlas, used for UV mapping.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UvRect {
@@ -234,6 +237,7 @@ impl UvRect {
 
 // ── Supersampling (§3.2) ─────────────────────────────────────────────────────
 
+// FR-CIV-RTS-RENDER-001, FR-CIV-RTS-RENDER-002
 /// Supersampling configuration for sprite rasterization.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SsConfig {

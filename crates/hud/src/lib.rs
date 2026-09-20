@@ -20,6 +20,7 @@
 //! | [`notifications`] | HUD notification entries |
 //! | [`godtool_brush`] | God-tool brush data |
 //! | [`god_tool_state`] | God-tool persistent state |
+//! | [`godtool_ui`] | God-tool UI extensions (FR-CIV-UI-001/002/003) |
 //!
 //! ## Design contract
 //!
@@ -36,6 +37,7 @@ pub mod economy_panel;
 pub mod env_overlay;
 pub mod god_tool_state;
 pub mod godtool_brush;
+pub mod godtool_ui;
 pub mod notifications;
 pub mod overlay_legend;
 pub mod overlay_registry;

@@ -111,6 +111,8 @@ pub struct FacadeStyle {
 }
 
 /// Vectorized cultural-ecological input used to choose a tile-set family.
+// FR-CIV-CLIENT-GODOT-001
+// FR-CIV-CLIENT-GODOT-002
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct CultureEraWealthVector {
     /// Culture identifier for style-family lookup.

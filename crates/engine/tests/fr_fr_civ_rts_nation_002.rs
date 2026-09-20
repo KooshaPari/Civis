@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-RTS-NATION-002
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-RTS-NATION-002.
 //! Maps to CIV-0600 FR-CIV-ASSET-016: Nation Recoloring Shader Correctness.

@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-AI-011
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-AI-011: Naming service
 //! (grammar+Markov inline; SLM seeds a per-culture grammar once, batch).

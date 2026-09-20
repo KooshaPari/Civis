@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-002
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-002.
 //! Removing a required material makes new builds fail; existing instances persist.

@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-INFOVIEW-915
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-INFOVIEW-915: Territory overlay (D1)
 //! — live emergent cluster; proves polities emerge, not enums.

@@ -42,7 +42,8 @@ mod fr_fr_civ_3d_014 {
     #[test]
     fn step_produces_new_state() {
         let ws1 = WorldState::default();
+        let initial_tick = ws1.tick;
         let ws2 = civ_engine::step(ws1, Fixed::from_num(10));
-        assert_ne!(ws1.tick, ws2.tick, "Step must advance tick");
+        assert_ne!(initial_tick, ws2.tick, "Step must advance tick");
     }
 }

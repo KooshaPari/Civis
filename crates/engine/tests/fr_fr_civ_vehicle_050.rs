@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-050
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-050.
 //! Agents path over the medium-filtered lane graph by effective time.

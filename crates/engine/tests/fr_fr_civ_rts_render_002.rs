@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-RTS-RENDER-002
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-RTS-RENDER-002.
 //! Maps to CIV-0600 FR-CIV-ASSET-003: 4x Supersampling Required.

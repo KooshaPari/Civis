@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-AI-013
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-AI-013: Culture/meme drift service
 //! (embeddings -> cosine drift -> speciation threshold). Speciation event

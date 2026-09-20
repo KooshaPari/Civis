@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-042
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-042.
 //! Bulk long-haul prefers high-capacity media emergently.

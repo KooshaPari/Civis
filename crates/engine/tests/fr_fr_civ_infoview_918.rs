@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-INFOVIEW-918
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-INFOVIEW-918: Roads / Network overlay
 //! (E1) — first Gizmo render-kind exemplar.

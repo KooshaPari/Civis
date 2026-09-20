@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-021
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-021.
 //! Fully-laden vehicle is strictly slower than empty.

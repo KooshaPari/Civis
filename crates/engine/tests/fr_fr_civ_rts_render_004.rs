@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-RTS-RENDER-004
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-RTS-RENDER-004.
 //! Maps to CIV-0600 FR-CIV-ASSET-006: Power-of-Two Atlas Dimensions.

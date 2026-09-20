@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-INFOVIEW-903
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-INFOVIEW-903: Three render kinds
 //! (LatticeRecolor, Gizmo, EntityTint) dispatched from the registry;

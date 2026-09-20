@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-RTS-ZOOM-001
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-RTS-ZOOM-001.
 //! Maps to CIV-0600 FR-CIV-ASSET-018: Zoom Transition Synchronous Swap.

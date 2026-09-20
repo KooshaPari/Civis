@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-INFOVIEW-904
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-INFOVIEW-904: Categorical overlays
 //! derive color from emergent cluster ids only (no authored taxonomy) —

@@ -1,7 +1,5 @@
 //! Tests for FR-CIV-ARCH-NOSVG-001
 //!
-//! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
 //! Upgraded from stub to real assertions.
 //!
 //! This test file verifies FR FR-CIV-ARCH-NOSVG-001.

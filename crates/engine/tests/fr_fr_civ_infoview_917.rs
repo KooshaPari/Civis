@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-INFOVIEW-917
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-INFOVIEW-917: Resource Deposits overlay
 //! (A8) — NEAR availability; turns static world into a strategic map.

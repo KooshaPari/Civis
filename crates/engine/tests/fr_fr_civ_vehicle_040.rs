@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-040
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-040.
 //! Goods flow from surplus to deficit along cheapest path.

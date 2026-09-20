@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-RTS-RENDER-003
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-RTS-RENDER-003.
 //! Maps to CIV-0600 FR-CIV-ASSET-004: Background Removal Quality Gate.

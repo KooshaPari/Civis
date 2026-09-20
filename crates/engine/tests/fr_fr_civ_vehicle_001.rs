@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-001
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-001.
 //! Vehicle archetype is buildable iff all three gates pass.

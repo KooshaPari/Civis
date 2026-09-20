@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-046
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-046.
 //! Far-region LOD solve produces aggregate flow without per-vehicle assignment.

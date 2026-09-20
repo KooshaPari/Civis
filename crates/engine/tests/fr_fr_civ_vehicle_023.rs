@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-023
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-023.
 //! Congestion can only slow, never speed up.

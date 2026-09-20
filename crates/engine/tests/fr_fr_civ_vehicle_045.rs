@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-045
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-045.
 //! Unassignable flow (no compatible vehicle) is reported as unmet demand.

@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-INFOVIEW-902
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-INFOVIEW-902: Overlays are grouped
 //! into the six CS2-class groups (Terrain/Population/Economy/Territory/

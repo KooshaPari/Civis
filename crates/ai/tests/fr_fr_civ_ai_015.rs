@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-AI-015
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-AI-015: Balance analyst dev-assist
 //! (heuristic anomaly detection -> SLM triage; offline/CI batch). Runs

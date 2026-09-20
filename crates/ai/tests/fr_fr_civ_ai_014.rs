@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-AI-014
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-AI-014: Chatter/headlines service
 //! (fixed-persona SLM, event-triggered, rate-limited, LOD-gated,

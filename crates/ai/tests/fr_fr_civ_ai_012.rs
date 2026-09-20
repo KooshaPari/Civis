@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-AI-012
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-AI-012: Legends narration service
 //! (epoch-digest -> SLM prose; digest-hash cached). One <=1.5B call per

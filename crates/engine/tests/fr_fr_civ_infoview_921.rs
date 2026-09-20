@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-INFOVIEW-921
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-INFOVIEW-921: Migration Flow overlay
 //! (B6) — Gizmo arrows; makes invisible agent movement readable.

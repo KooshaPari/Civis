@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-020
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-020.
 //! With all couplings at 1.0 and no load, effective_speed reduces to base*lane*vehicle.

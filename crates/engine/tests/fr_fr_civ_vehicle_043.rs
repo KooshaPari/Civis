@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-043
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-043.
 //! Multimodal chains form only through capability nodes.

@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-044
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-044.
 //! Comparative advantage: lower production cost makes locale a net exporter.

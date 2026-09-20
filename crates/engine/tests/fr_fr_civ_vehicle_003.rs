@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-003
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-003.
 //! Catalog is additive/forward-only: new archetypes slot in by adding rows.

@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-004
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-004.
 //! User placement honors the capability gate; sandbox flag bypasses.

@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-RTS-RENDER-001
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-RTS-RENDER-001.
 //! Maps to CIV-0600 FR-CIV-ASSET-001: SVG Template Rendering.

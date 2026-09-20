@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-014
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-014.
 //! Adding a LaneClass variant does not change land-only outcomes.

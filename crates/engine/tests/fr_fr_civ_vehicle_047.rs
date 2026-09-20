@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-047
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-047.
 //! Re-solve is dirty-region scoped: unchanged regions not recomputed.

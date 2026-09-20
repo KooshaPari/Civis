@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-010
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-010.
 //! Vehicle routes only over lanes admitting its medium.

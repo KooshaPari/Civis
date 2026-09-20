@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-005
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-005.
 //! era_hint is never read by routing/build logic.

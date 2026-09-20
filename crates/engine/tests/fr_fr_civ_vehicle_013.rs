@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-013
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-013.
 //! Multimodal transfer possible iff shared node has port capability.

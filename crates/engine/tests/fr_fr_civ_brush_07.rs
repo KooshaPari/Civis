@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-BRUSH-07
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-BRUSH-07.
 

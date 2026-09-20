@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-060
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-060.
 //! Delivered price = local price + transport cost; market coupling.

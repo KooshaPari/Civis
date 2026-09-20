@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-041
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-041.
 //! Per-good min-cost-flow respects arc capacity.

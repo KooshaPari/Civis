@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-030
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-030.
 //! Build charges energy+materials.

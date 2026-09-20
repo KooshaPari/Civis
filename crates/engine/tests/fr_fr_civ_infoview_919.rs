@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-INFOVIEW-919
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-INFOVIEW-919: Wealth / Prosperity
 //! overlay (C4) — first EntityTint exemplar; high "is there depth" payoff.

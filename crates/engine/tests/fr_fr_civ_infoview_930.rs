@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-INFOVIEW-930
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-INFOVIEW-930: The full 31-overlay
 //! catalog is specified and registrable; each overlay traces to a producing

@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-RTS-RENDER-005
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-RTS-RENDER-005.
 //! Maps to CIV-0600 FR-CIV-ASSET-007: UV Coordinate Validity.

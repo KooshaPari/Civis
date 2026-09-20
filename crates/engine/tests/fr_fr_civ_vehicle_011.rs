@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-011
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-011.
 //! Water-lane traversal speed uses medium coupling.

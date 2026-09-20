@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-024
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-024.
 //! Scalar speed path is unchanged when no vehicle is involved.

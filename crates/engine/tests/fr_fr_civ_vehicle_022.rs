@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-022
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-022.
 //! Sailing ship speed varies with wind direction.

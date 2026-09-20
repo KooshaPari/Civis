@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-VEHICLE-012
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-VEHICLE-012.
 //! Rail lanes are a forward-only overlay; absence leaves existing routing unchanged.

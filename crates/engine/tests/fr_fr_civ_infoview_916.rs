@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-INFOVIEW-916
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-INFOVIEW-916: Temperature overlay (A3)
 //! — live proxy; RAMP_ELEVATION-style continuous ramp.

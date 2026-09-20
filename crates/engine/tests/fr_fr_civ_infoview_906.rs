@@ -1,6 +1,5 @@
 //! Tests for FR-CIV-INFOVIEW-906
 //!
-//! Epic: auto-generated
 //!
 //! This test file verifies FR FR-CIV-INFOVIEW-906: Toggle UX — grouped
 //! accordion, legend dock, sub-controls, and hotkeys (Tab/Shift+Tab/backtick/

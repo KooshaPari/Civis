@@ -177,6 +177,14 @@ pub(crate) fn enforce_autosave_ring(dir: &Path) {
     }
 }
 
+// FR-CIV-SAVE-004 — Save/load round-trip.
+//
+// The HTTP `POST /control/save`, `POST /control/save/slot`, and
+// `POST /control/load` endpoints let the player persist the live
+// simulation to a `CivSaveBundle` archive and rehydrate it later.
+// Round-trip parity is asserted by
+// `crates/watch/src/api_tests.rs::fr_save_004_post_control_save_and_load_round_trip`
+// (saves + loads + asserts the entry appears in `/control/saves`).
 pub(crate) async fn save_handler(
     State(state): State<AppState>,
     Json(req): Json<SaveReq>,
@@ -221,6 +229,8 @@ pub(crate) async fn save_handler(
     }))
 }
 
+// FR-CIV-SAVE-004 — Slot-save endpoint, reuses `save_handler` after
+// validating the slot name is one of the production slots.
 pub(crate) async fn save_slot_handler(
     State(state): State<AppState>,
     Json(req): Json<SlotReq>,
@@ -237,6 +247,8 @@ pub(crate) async fn save_slot_handler(
     save_handler(State(state), Json(SaveReq { filename: req.slot })).await
 }
 
+// FR-CIV-SAVE-004 — Slot-load endpoint, reuses `load_handler` after
+// validating the slot name.
 pub(crate) async fn load_slot_handler(
     State(state): State<AppState>,
     Json(req): Json<SlotReq>,
@@ -253,6 +265,9 @@ pub(crate) async fn load_slot_handler(
     load_handler(State(state), Json(SaveReq { filename: req.slot })).await
 }
 
+// FR-CIV-SAVE-004 — Load handler, rehydrates a `CivSaveBundle`
+// (archive or directory) or legacy `.civreplay` file into the live
+// simulation state.
 pub(crate) async fn load_handler(
     State(state): State<AppState>,
     Json(req): Json<SaveReq>,

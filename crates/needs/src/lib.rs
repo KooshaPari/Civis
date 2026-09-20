@@ -282,6 +282,33 @@ pub fn decay(needs: &mut Needs, rates: &DecayRates) {
     needs.health = (needs.health - rates.health).max(0.0);
 }
 
+/// FR-CIV-LIFE-004 — share food between a co-located donor and receiver.
+///
+/// Per `docs/design/civ-003-emergent-lifecycle.md:101` (Society → Lifecycle,
+/// downward causation): a donor with `food > donor_threshold` satisfies a
+/// co-located receiver's `food` need by `share_rate` per tick, draining the
+/// donor's stock by the same amount. Returns the amount transferred (clamped
+/// to the receiver's headroom and the donor's surplus).
+///
+/// Both `donor` and `receiver` are mutated in place. No-op when the donor's
+/// food is at or below `donor_threshold` or the receiver is already sated.
+#[must_use]
+pub fn share_food_between(
+    donor: &mut Needs,
+    receiver: &mut Needs,
+    donor_threshold: f32,
+    share_rate: f32,
+) -> f32 {
+    let surplus = (donor.food - donor_threshold).max(0.0);
+    let headroom = (1.0 - receiver.food).max(0.0);
+    let transfer = surplus.min(headroom).min(share_rate.max(0.0));
+    if transfer > 0.0 {
+        donor.food = (donor.food - transfer).max(0.0);
+        receiver.food = (receiver.food + transfer).min(1.0);
+    }
+    transfer
+}
+
 /// Advance needs by one deterministic FR-CIV-LIFE tick.
 ///
 /// This is intentionally pure apart from the mutation of `needs`: decay is

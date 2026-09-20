@@ -299,6 +299,7 @@ pub struct BuildingGraph {
 }
 
 impl BuildingGraph {
+    // FR-CIV-0001
     /// Creates an empty building graph.
     #[must_use]
     pub fn new() -> Self {
@@ -486,6 +487,7 @@ pub fn resolve_tile_set<'a>(
         .max_by_key(|tile_set| (tile_set.era, tile_set.wealth_bucket, tile_set.id))
 }
 
+// FR-CIV-CORE-001
 /// Computes a deterministic parcel template score for this tile-set family.
 #[must_use]
 pub fn parcel_template_score(
@@ -509,6 +511,7 @@ pub fn parcel_template_score(
         ^ (u64::from(tile_set.id) * 29)
 }
 
+// FR-CIV-CORE-020
 /// Chooses the highest-scoring tile-set under deterministic constraints.
 #[must_use]
 pub fn pick_tile_set(

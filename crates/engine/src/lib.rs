@@ -268,6 +268,7 @@ pub use engine::Fixed;
 /// Seeded RNG for deterministic simulation
 pub type SimRng = ChaCha8Rng;
 
+// FR-DOC-001
 /// Create a seeded RNG from world state
 // FR-CIV-3D-006
 // FR-CIV-3D-007
@@ -276,6 +277,16 @@ pub fn create_rng(seed: u64) -> SimRng {
 }
 
 // FR-NET-001, FR-NET-002, FR-NET-003
+    // FR-CIV-VERIFY-001
+    // FR-CIV-VERIFY-002
+    // FR-CIV-VERIFY-003
+    // FR-CIV-VERIFY-004
+    // FR-CIV-VERIFY-005
+    // FR-CIV-VERIFY-006
+    // FR-CIV-VERIFY-007
+    // FR-CIV-VERIFY-008
+    // FR-CIV-VERIFY-009
+    // FR-CIV-VERIFY-010
 /// Advance simulation by one tick (simple API)
 // FR-CIV-3D-006
 // FR-CIV-3D-007

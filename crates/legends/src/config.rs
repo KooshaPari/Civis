@@ -6,6 +6,7 @@
 use crate::ids::Epoch;
 use crate::model::EventKind;
 
+// FR-CIV-LEGENDS-PRESIM-10
 /// Significance / causal / pruning configuration.
 #[derive(Debug, Clone)]
 pub struct LegendsConfig {

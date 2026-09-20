@@ -21,6 +21,8 @@ pub enum CommandKind {
     PolicyOverride { key: String, value: f64 },
 }
 
+// FR-CIV-CORE-008
+// FR-CIV-CORE-016
 /// A bounded multi-client command queue.
 ///
 /// Commands are processed in FIFO order. The queue enforces a maximum

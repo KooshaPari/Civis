@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 // NFR-CIV-DET-003
+    // FR-CIV-CORE-012
 /// Fixed-point integer type for deterministic simulation math.
 /// Stores a 64-bit integer with an implied scale factor of 1_000.
 ///

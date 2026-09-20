@@ -70,6 +70,7 @@ impl Default for Language {
 // Legacy stub functions (seeded_language_state, ensure_seeded_word, etc.)
 // ---------------------------------------------------------------------------
 
+// FR-CIV-LANG-004
 /// Build a `LanguageState` seeded from `signature` (or zero if `None`).
 #[must_use]
 pub fn seeded_language_state(signature: [f32; 4]) -> LanguageState {
@@ -91,6 +92,7 @@ pub fn ensure_seeded_word(state: &mut LanguageState, kind: WordKind, meaning: [f
     ));
 }
 
+// FR-CIV-LANG-006
 /// Borrow a word from `source` into `target`. Stub: no-op.
 pub fn borrow_word(target: &mut LanguageState, _source: &LanguageState, kind: WordKind) {
     let key = match kind {
@@ -100,6 +102,7 @@ pub fn borrow_word(target: &mut LanguageState, _source: &LanguageState, kind: Wo
     target.lexemes.push(key.to_string());
 }
 
+// FR-CIV-LANG-007
 /// Advance one language lineage tick under `isolation` pressure. Stub: no-op.
 pub fn tick_language_for_lineage(state: &mut LanguageState, isolation: f32, _lineage_id: u64) {
     state.drift_rate = (state.drift_rate + isolation * 0.01).clamp(0.0, 1.0);
@@ -131,6 +134,7 @@ pub fn person_name(_state: &LanguageState, faction_id: u32, person_id: u32) -> S
     format!("person-{faction_id}-{person_id}")
 }
 
+// FR-CIV-LANG-008
 /// Per-pair isolation pressure (0..1). Higher = more isolated.
 #[must_use]
 pub fn faction_isolation_pressure(
@@ -195,6 +199,7 @@ pub fn faction_isolation_pressure(
 // Core language functions
 // ---------------------------------------------------------------------------
 
+// FR-CIV-LANG-010
 /// Create a new language with given name, phonemes, and creation tick.
 #[must_use]
 pub fn create_language(name: &str, phonemes: Vec<String>, tick: u64) -> Language {

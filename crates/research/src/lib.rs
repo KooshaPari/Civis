@@ -25,6 +25,7 @@ pub const SCHEMA_VERSION: u32 = 0;
 /// A proposed tech card. Hand-authored cards or LLM-generated cards both
 /// take this shape so the validator is one entry point.
 // FR-CIV-RESEARCH-003-EXPORT
+    // FR-CIV-RESEARCH-001-SCENARIO
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TechCard {
     /// Stable identifier.

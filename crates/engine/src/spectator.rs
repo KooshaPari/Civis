@@ -95,6 +95,7 @@ pub struct SpectatorView {
 }
 
 impl Simulation {
+    // FR-CIV-PERF-WEB-001
     /// Build deterministic spectator pins (matches `civ-watch` layout).
     // FR-CLIENT-002
     pub fn spectator_view(&self) -> SpectatorView {

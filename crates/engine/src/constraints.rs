@@ -279,6 +279,7 @@ pub struct StabilityMetrics {
 // Constraint check functions
 // ---------------------------------------------------------------------------
 
+// FR-CIV-0104-002
 /// Check C1: Bounded Coercion.
 ///
 /// Returns `Ok(())` if enforcement intensity is below the computable ceiling.
@@ -474,6 +475,7 @@ pub fn check_coalition_compatible_strategy(
 // Aggregated check_all
 // ---------------------------------------------------------------------------
 
+// FR-CIV-0104-001
 /// Run all five constraint checks and return the aggregate result.
 #[must_use]
 pub fn check_all(result: &ConstraintSetResult) -> &ConstraintSetResult {
@@ -482,6 +484,8 @@ pub fn check_all(result: &ConstraintSetResult) -> &ConstraintSetResult {
     result
 }
 
+// FR-CIV-0104-005
+// FR-CIV-0104-006
 /// Construct a `ConstraintSetResult` by running all five checks.
 #[must_use]
 pub fn run_all_checks(
@@ -530,6 +534,9 @@ pub fn run_all_checks(
     }
 }
 
+// FR-CIV-0104-010
+// FR-CIV-0104-007
+// FR-CIV-0104-003
 /// Per-tick constraint state tracked alongside the simulation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConstraintState {
@@ -595,6 +602,7 @@ impl ConstraintState {
     }
 }
 
+// FR-CIV-0104-009
 /// Compute the state hash contribution from a `ConstraintSetResult`.
 ///
 /// Each violated constraint contributes its severity ordinal to the hash.

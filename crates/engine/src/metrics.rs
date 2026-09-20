@@ -11,6 +11,7 @@ pub struct Metrics {
 }
 
 // NFR-CIV-DET-001, NFR-CIV-DET-003
+    // FR-CIV-METRICS-001
 pub fn compute(energy_budget_joules: f64, consumption_joules: f64) -> Metrics {
     let energy_budget_joules = if energy_budget_joules.is_finite() {
         energy_budget_joules.max(0.0)

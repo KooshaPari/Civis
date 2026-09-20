@@ -379,6 +379,17 @@ pub struct MilitaryUnit {
 // ============================================================================
 
 // FR-CIV-PERF-RT-003, FR-SOC-INS-001, FR-SOC-INS-002, FR-SOC-INS-003, FR-SOC-INS-004, FR-SOC-INS-005, FR-SOC-INS-006, FR-SOC-INS-007
+    // FR-CIV-ARCH-006
+    // FR-CIV-CORE-002
+    // FR-CIV-CORE-004
+    // FR-CIV-CORE-019
+    // FR-SOC-CIV-001
+    // FR-SOC-CIV-002
+    // FR-SOC-INT-001
+    // FR-SOC-INT-002
+    // FR-SOC-INT-003
+    // FR-SOC-INT-004
+// NFR-CIV-PERF-002
 /// Global world state
 // FR-CIV-ARCH-NOSVG-001
 // FR-PROT-001
@@ -699,6 +710,13 @@ impl Default for WorldState {
     }
 }
 
+// FR-CIV-CORE-003
+// FR-CIV-CORE-006
+// FR-CIV-CORE-007
+// FR-CIV-CORE-011
+// FR-CIV-CORE-013
+// FR-CIV-CORE-014
+// FR-CIV-CORE-017
 /// Simulation engine combining state + ECS world + 3D voxel substrate.
 pub struct Simulation {
     pub state: WorldState,
@@ -2270,6 +2288,7 @@ impl Simulation {
     /// transition only; server command intake and client broadcast live outside this
     /// crate). Exactly one [`ReplayEvent::Tick`] is appended after all phases finish.
     // FR-CIV-0001-TICK
+    // FR-PERF-001
     pub fn tick(&mut self) {
         self.state.tick += 1;
         self.current_tick = self.state.tick;
@@ -3398,6 +3417,7 @@ impl Default for Simulation {
     }
 }
 
+// FR-CIV-CORE-009
 /// Snapshot of simulation state
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimulationSnapshot {

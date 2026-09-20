@@ -38,6 +38,8 @@ use serde::{Deserialize, Serialize};
 // FR-CIV-EMERGENCE-003
 // FR-CIV-EMERGENCE-012
 // FR-CIV-EMERGENCE-013
+    // FR-CIV-EMERG-004
+    // FR-CIV-EMERG-005
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 pub struct EmergenceDashboard {
     /// Normalised Shannon entropy over per-cluster population sizes.

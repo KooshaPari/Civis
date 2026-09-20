@@ -38,6 +38,7 @@ pub fn tick_hash(prev: &[u8; HASH_LEN], tick_event_bytes: &[u8]) -> [u8; HASH_LE
     *hasher.finalize().as_bytes()
 }
 
+// FR-CIV-CORE-015
 /// Running hash-chain state for a simulation run.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct HashChainState {

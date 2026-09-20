@@ -272,6 +272,7 @@ pub fn create_rng(seed: u64) -> SimRng {
 
 // FR-CIV-VERIFY-001
 // FR-CIV-VERIFY-002
+// FR-CIV-VERIFY-003
 /// Advance simulation by one tick (simple API)
 pub fn step(mut state: WorldState, consumption_joules: Fixed) -> WorldState {
     state.tick += 1;

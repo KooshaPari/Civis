@@ -46,3 +46,40 @@ impl FeatureOracle for MigrationOracle {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use civ_engine::Simulation;
+
+    /// FR-EMG-009 — at tick 0 the oracle passes with threshold 0.
+    #[test]
+    fn fr_emg_009_passes_at_tick_zero() {
+        let sim = Simulation::new();
+        let v = MigrationOracle.check(&sim);
+        assert!(v.passed, "tick 0 always passes");
+        assert_eq!(v.fr_id, "FR-EMG-009");
+        assert_eq!(v.threshold, 0.0);
+    }
+
+    /// FR-EMG-009 — after warmup ticks the settled world must satisfy the
+    /// citizen × building measurement and the oracle must pass.
+    #[test]
+    fn fr_emg_009_after_warmup_requires_settled_population() {
+        let mut sim = Simulation::new();
+        for _ in 0..10 {
+            sim.tick();
+        }
+        let v = MigrationOracle.check(&sim);
+        assert_eq!(v.threshold, 1.0);
+        assert!(
+            v.passed,
+            "warm sim should have citizens and buildings: {}",
+            v.detail
+        );
+        assert!(
+            v.measured >= 1.0,
+            "citizen×building product must be ≥ 1 after tick > 0"
+        );
+    }
+}

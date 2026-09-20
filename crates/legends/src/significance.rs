@@ -413,4 +413,42 @@ mod tests {
             "Battle + Leader should be more significant than Sickness + Witness"
         );
     }
+
+    /// FR-CIV-LEGENDS-010 — accumulator lifecycle acceptance: the live
+    /// `Simulation`-owned accumulator tracks per-entity significance across
+    /// the run, decays via sweep, ranks deterministically, and round-trips
+    /// through serde (the WorldState persistence mirror contract).
+    #[test]
+    fn fr_civ_legends_010_accumulator_tracks_decays_and_roundtrips() {
+        let mut acc = SignificanceAccumulator::new();
+        let cfg = SignificanceConfig::default();
+        let hero = LegendEntityId(42);
+
+        assert!(acc.is_empty(), "fresh accumulator starts empty");
+        acc.record_event(hero, Epoch(0), &EventKind::Battle, &[Role::Leader], 0.9, &cfg);
+        acc.record_event(hero, Epoch(1), &EventKind::WarDeclared, &[Role::Aggressor], 0.7, &cfg);
+        assert_eq!(acc.len(), 1);
+        let score = acc.get(hero).expect("tracked").score;
+        assert!(score > 0.0);
+
+        // Sweep at a much later epoch decays the score but keeps the entity.
+        acc.sweep(Epoch(5), &cfg);
+        let decayed = acc.get(hero).expect("still tracked").score;
+        assert!(decayed < score, "sweep must decay since last event");
+        assert!(decayed > 0.0);
+
+        // Ranked output reflects the tracked entity deterministically.
+        let ranked = acc.ranked();
+        assert_eq!(ranked, vec![(hero, decayed)]);
+
+        // Persistence mirror: serde round-trip preserves significance state.
+        let json = serde_json::to_string(&acc).expect("serialize");
+        let restored: SignificanceAccumulator = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(restored, acc);
+        assert_eq!(
+            restored.get(hero).expect("restored").score,
+            decayed,
+            "round-trip must preserve significance state"
+        );
+    }
 }

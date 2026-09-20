@@ -685,4 +685,39 @@ mod tests {
         assert_eq!(packed.atlas_texture.len(), 64 * 64 * CHANNELS_PER_TEXEL);
         assert!(packed.atlas_texture.iter().all(|&b| b == 0));
     }
+
+    /// FR-CIV-PBR-011 — replay safety: identical `(rects, atlas size)`
+    /// produce byte-identical packed output, and blitted pixel data lands
+    /// at each placement (row-major RGBA preserved verbatim).
+    #[test]
+    fn fr_civ_pbr_011_pack_is_deterministic_and_blits_pixels() {
+        let make_inputs = || {
+            vec![
+                InputTexture::solid("albedo", 32, 16, [200, 10, 10, 255]),
+                InputTexture::solid("normal", 16, 32, [10, 200, 10, 255]),
+                InputTexture::solid("orm", 8, 8, [10, 10, 200, 255]),
+            ]
+        };
+        let mut a = GreedyAtlasPacker::new(64, 64);
+        let mut b = GreedyAtlasPacker::new(64, 64);
+        let packed_a = a.pack(&make_inputs()).expect("pack a");
+        let packed_b = b.pack(&make_inputs()).expect("pack b");
+        assert_eq!(packed_a.placements, packed_b.placements);
+        assert_eq!(packed_a.atlas_texture, packed_b.atlas_texture);
+
+        // Each placement's first texel matches its input's first RGBA pixel.
+        for input in make_inputs() {
+            let rect = packed_a.placements[&input.name];
+            let row = (packed_a.width as usize) * CHANNELS_PER_TEXEL;
+            let off = rect.y as usize * row + rect.x as usize * CHANNELS_PER_TEXEL;
+            assert_eq!(&packed_a.atlas_texture[off..off + 4], &input.pixels[0..4]);
+        }
+
+        // Module is compiled with #![forbid(unsafe_code)] — assert at the
+        // type level via a compile-time sentinel is impossible; instead
+        // verify the placements stay within the requested atlas bounds.
+        for r in packed_a.placements.values() {
+            assert!(r.right() <= 64 && r.bottom() <= 64);
+        }
+    }
 }

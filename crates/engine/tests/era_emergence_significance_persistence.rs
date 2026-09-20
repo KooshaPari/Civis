@@ -2,6 +2,8 @@
 //! added to `WorldState` (FR-CIV-ERA-001 + FR-CIV-EMERGENCE-001 +
 //! FR-CIV-LEGENDS-001).
 //!
+//! Covers: FR-CIV-ERA-001
+//!
 //! These close the determinism gap by exercising the save-side and load-side
 //! mirrors at the byte-for-byte level: insert distinct values, advance a tick
 //! to fire `save_state_mirror`, save, load, and assert all 3 fields round-trip

@@ -8,9 +8,11 @@ use wasmtime::{Caller, Engine, Instance, Linker, Module, Store};
 pub const MOD_WASM_NAME: &str = "mod.wasm";
 
 /// Host import namespace for capability stubs (FR-CIV-TACTICS-047).
+// FR-CIV-MOD-008
 pub const HOST_IMPORT_MODULE: &str = "civlab";
 
 /// Host imports exposed to guests (FR-CIV-TACTICS-053).
+// FR-CIV-MOD-009
 pub const HOST_CAPABILITY_IMPORTS: &[&str] = &[
     "capability_api_version",
     "sim_tick",
@@ -22,12 +24,15 @@ pub const HOST_CAPABILITY_IMPORTS: &[&str] = &[
 ];
 
 /// Packed capability API major version returned by host import `capability_api_version`.
+// FR-CIV-MOD-008
 pub const HOST_CAPABILITY_API_VERSION: i32 = 1;
 
 /// Maximum guest scratch bytes exposed via host memory imports (FR-CIV-TACTICS-049).
+// FR-CIV-MOD-009
 pub const HOST_GUEST_MEMORY_CAP: usize = 65_536;
 
 /// Per-instance host state for capability imports.
+// FR-CIV-MOD-008
 #[derive(Debug)]
 pub struct HostState {
     guest_memory: Vec<u8>,

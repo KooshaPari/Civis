@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use wasmparser::{Operator, Parser, Payload, TypeRef};
 
 /// A site where a float-derived value may reach `action_emit`.
+// FR-CIV-MOD-016
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FloatContaminationSite {
     /// Function index in the module (imports + defined).
@@ -44,6 +45,7 @@ fn collect_action_emit_import_index(wasm_bytes: &[u8]) -> Result<Option<u32>, St
 }
 
 /// Scan WASM for float contamination at `civlab::action_emit` imports.
+// FR-CIV-MOD-016
 pub fn scan_float_action_emit_contamination(
     wasm_bytes: &[u8],
 ) -> Result<Vec<FloatContaminationSite>, String> {

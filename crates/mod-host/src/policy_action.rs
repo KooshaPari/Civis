@@ -6,6 +6,8 @@ use crate::capability::{
 };
 
 /// Known policy action discriminants understood by the MVP host bridge.
+// FR-CIV-MOD-002
+// FR-CIV-MOD-015
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum PolicyActionKind {
@@ -45,6 +47,8 @@ impl PolicyActionKind {
 /// Map a policy action discriminant to the host `action_emit` type constant.
 ///
 /// Returns `None` when the discriminant is not a registered policy action.
+// FR-CIV-MOD-002
+// FR-CIV-MOD-015
 #[must_use]
 pub fn policy_action_to_emit_type(action_type: u32) -> Option<u32> {
     PolicyActionKind::from_emit_type(action_type).map(PolicyActionKind::to_emit_type)

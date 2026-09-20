@@ -4,9 +4,11 @@ use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use thiserror::Error;
 
 /// Detached signature filename inside a `.civmod` archive.
+// FR-CIV-MOD-014
 pub const MOD_WASM_SIG_NAME: &str = "mod.wasm.sig";
 
 /// Signature verification failures.
+// FR-CIV-MOD-014
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum SignatureError {
     /// Hex pubkey in manifest is malformed.

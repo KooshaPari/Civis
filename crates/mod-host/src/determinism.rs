@@ -5,6 +5,7 @@ use thiserror::Error;
 use wasmparser::{Operator, Parser, Payload};
 
 /// Errors from the pre-instantiation determinism scan.
+// FR-CIV-MOD-012
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum DeterminismError {
     /// WASM parse failure.
@@ -31,6 +32,7 @@ pub enum DeterminismError {
 }
 
 /// Summary from scanning a WASM module (FR-CIV-TACTICS-057 / FR-CIV-TACTICS-061).
+// FR-CIV-MOD-012
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct DeterminismScanReport {
     /// Count of `f32` / `f64` opcodes (internal use may be OK; strict mode rejects).
@@ -44,6 +46,7 @@ pub struct DeterminismScanReport {
 }
 
 /// Scan a WASM module and return opcode statistics.
+// FR-CIV-MOD-013
 pub fn scan_wasm_determinism_report(
     wasm_bytes: &[u8],
 ) -> Result<DeterminismScanReport, DeterminismError> {
@@ -79,6 +82,7 @@ pub fn scan_wasm_determinism_report(
 ///
 /// MVP rules (CIV-0700 §3.5): reject platform-sensitive float ops and atomics.
 /// With feature `determinism-strict`, any float opcode fails the scan.
+// FR-CIV-MOD-013
 pub fn scan_wasm_determinism(wasm_bytes: &[u8]) -> Result<(), DeterminismError> {
     let report = scan_wasm_determinism_report(wasm_bytes)?;
     if let Some(first) = report.hard_rejections.first() {

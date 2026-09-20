@@ -1,17 +1,21 @@
 //! Tests for FR-CIV-BRUSH-07
 //!
 //! Epic: auto-generated
-//! Stub: TDD-red — replace with real FR assertions
-//! Upgraded from stub to real assertions.
 //!
 //! This test file verifies FR FR-CIV-BRUSH-07.
 
 #[cfg(test)]
 mod fr_fr_civ_brush_07 {
-    /// Verify FR-CIV-BRUSH-07 type existence and basic behavior.
+    use civ_engine::brush_types::{BrushCluster, ModeGroup};
+
+    /// FR-CIV-BRUSH-07 -- Life cluster has Spawn and Effect mode groups.
     #[test]
     fn verify_fr_civ_brush_07_basic() {
-        let ws = civ_engine::WorldState::default();
-        assert!(ws.tick == 0);
+        let modes = BrushCluster::Life.modes();
+        assert_eq!(modes.len(), 6);
+        assert_eq!(modes[0].group, ModeGroup::Spawn);
+        assert_eq!(modes[1].group, ModeGroup::Spawn);
+        assert_eq!(modes[2].group, ModeGroup::Effect);
+        assert_eq!(modes[5].label, "Extinct");
     }
 }

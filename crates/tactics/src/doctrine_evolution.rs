@@ -144,4 +144,40 @@ mod tests {
         evolve_doctrine_from_battle(&mut lib2, 1, &engagements, &mut rng(7), 0.2);
         assert_eq!(lib1, lib2);
     }
+
+    /// FR-CIV-WARFARE-002 — voxels_removed is proportional to the engagement
+    /// blast radius and faction stats are accumulated independently per side.
+    #[test]
+    fn fr_civ_warfare_002_voxels_removed_proportional_to_radius() {
+        let engagements = vec![
+            dummy_engagement(3, 4, 10),
+            dummy_engagement(3, 4, 20),
+            dummy_engagement(4, 3, 7),
+        ];
+        let shooter = accumulate_faction_stats(3, &engagements);
+        let target = accumulate_faction_stats(4, &engagements);
+        // Shooter blast radii sum into voxels_removed.
+        assert_eq!(shooter.voxels_removed, 30);
+        assert_eq!(shooter.engagements_as_shooter, 2);
+        // Faction 4 is the target twice and the shooter once (radius 7).
+        assert_eq!(target.engagements_as_target, 2);
+        assert_eq!(target.voxels_removed, 7);
+
+        // Doctrine evolution from these outcomes is deterministic per seed and
+        // advances the library by exactly one GA generation.
+        let make_lib = || DoctrineLibrary {
+            current: vec![Doctrine {
+                id: 1,
+                unit_composition: vec![3, 3, 3],
+                score: 0.0,
+            }],
+            generation: 5,
+        };
+        let mut lib_a = make_lib();
+        let mut lib_b = make_lib();
+        evolve_doctrine_from_battle(&mut lib_a, 3, &engagements, &mut rng(1234), 0.15);
+        evolve_doctrine_from_battle(&mut lib_b, 3, &engagements, &mut rng(1234), 0.15);
+        assert_eq!(lib_a, lib_b, "same (faction, seed) must evolve identically");
+        assert_eq!(lib_a.generation, 6);
+    }
 }

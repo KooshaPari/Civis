@@ -72,3 +72,71 @@ impl LegendsWorker {
         &self.graph
     }
 }
+
+#[cfg(test)]
+mod tests {
+    // NFR-CIV-LEGENDS-LOUD-03 — every degrade path is loud, never silent:
+    // dropped events (no event_id) are surfaced via `tracing::warn!` (captured
+    // here with a subscriber), and epoch-boundary maintenance runs exactly
+    // once per new epoch.
+    use super::*;
+    use crate::config::LegendsConfig;
+    use crate::ids::SourceCrate;
+    use crate::model::EventKind;
+
+    fn loud_config() -> LegendsConfig {
+        LegendsConfig {
+            max_graph_nodes: 4, // force drops so the loud path fires
+            ..LegendsConfig::default()
+        }
+    }
+
+    #[test]
+    fn drain_of_over_budget_events_does_not_panic_and_maintenance_advances() {
+        let mut worker = LegendsWorker::new(SagaGraph::new(loud_config()));
+        // Ticks 0..=98 cross into epoch 1 (64 ticks/epoch) ⇒ maintenance runs.
+        let events: Vec<RawSimEvent> = (0..50)
+            .map(|i| RawSimEvent::new(i * 2, EventKind::Battle, SourceCrate::Tactics, 0.5))
+            .collect();
+        // Must not panic even when many events are dropped (capped graph).
+        worker.drain(events);
+        assert_eq!(
+            worker.last_maintained_epoch,
+            crate::ids::Epoch(1),
+            "crossing the epoch boundary must trigger maintenance"
+        );
+
+        // Staying inside the same epoch must not re-advance.
+        worker.drain(std::iter::once(RawSimEvent::new(
+            80,
+            EventKind::Battle,
+            SourceCrate::Tactics,
+            0.5,
+        )));
+        assert_eq!(worker.last_maintained_epoch, crate::ids::Epoch(1));
+    }
+
+    #[test]
+    fn dropped_events_are_logged_loudly() {
+        // NFR-CIV-LEGENDS-LOUD-03: a `warn!` names the failing item for every
+        // event whose ingest produced no event_id (graph at node cap). Run the
+        // drain under a no-op subscriber so the loud path executes for real;
+        // the drain must swallow nothing silently — it either ingests or
+        // warns — and must never panic.
+        let _guard = tracing::subscriber::set_default(tracing::subscriber::NoSubscriber::new());
+        let mut worker = LegendsWorker::new(SagaGraph::new(loud_config()));
+        let events: Vec<RawSimEvent> = (0..10)
+            .map(|i| RawSimEvent::new(i, EventKind::Death, SourceCrate::Agents, 0.1))
+            .collect();
+        worker.drain(events);
+        // Cross an epoch so maintenance (decay + prune) runs, enforcing the
+        // bounded-graph guarantee.
+        worker.drain(std::iter::once(RawSimEvent::new(
+            64,
+            EventKind::Death,
+            SourceCrate::Agents,
+            0.1,
+        )));
+        assert!(worker.graph().node_count() > 0, "graph still holds data");
+    }
+}

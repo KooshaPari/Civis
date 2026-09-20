@@ -2729,6 +2729,122 @@ mod tests {
         assert_eq!(req.id, RequestId::Number(1));
     }
 
+    // FR-CIV-SAVE-003 — `sim.status` omits `population` when the host has no
+    // simulation yet, includes it when present, and the dispatch is total.
+    #[test]
+    fn fr_civ_save_003_sim_status_population_omission() {
+        let req = parse_request(r#"{"jsonrpc":"2.0","id":11,"method":"sim.status"}"#).expect("parse");
+        let ctx = DispatchContext {
+            tick: 42,
+            population: None,
+            snapshot: None,
+            tile_probe: None,
+            require_role: false,
+            speed_multiplier: 1,
+            connection_role: None,
+            saves_dir: None,
+            emergence: None,
+            legends: None,
+            researched: vec![],
+            in_progress_tech: None,
+            last_tick_ms: 0.0,
+            outcome_fields: None,
+            psyche_snapshot: None,
+            sentience_events: None,
+            religion_state: None,
+        };
+        let plan = dispatch_request(req.clone(), ctx.clone());
+        assert_eq!(plan.effect, DispatchEffect::None);
+        assert_eq!(
+            plan.response.result,
+            Some(serde_json::json!({ "tick": 42 })),
+            "population must be omitted pre-initialization"
+        );
+
+        let plan = dispatch_request(req, DispatchContext {
+            population: Some(1_234),
+            ..ctx
+        });
+        assert_eq!(
+            plan.response.result,
+            Some(serde_json::json!({ "tick": 42, "population": 1_234 })),
+            "population must be present when readable"
+        );
+    }
+
+    // FR-CIV-SAVE-003 — `sim.snapshot` falls back to a minimal
+    // `{tick, speed_multiplier}` payload before the first snapshot exists so
+    // clients can poll, and returns the full payload once populated.
+    #[test]
+    fn fr_civ_save_003_sim_snapshot_fallback_and_full_payload() {
+        let req = parse_request(r#"{"jsonrpc":"2.0","id":12,"method":"sim.snapshot"}"#).expect("parse");
+        let ctx = DispatchContext {
+            tick: 9,
+            population: None,
+            snapshot: None,
+            tile_probe: None,
+            require_role: false,
+            speed_multiplier: 4,
+            connection_role: None,
+            saves_dir: None,
+            emergence: None,
+            legends: None,
+            researched: vec![],
+            in_progress_tech: None,
+            last_tick_ms: 0.0,
+            outcome_fields: None,
+            psyche_snapshot: None,
+            sentience_events: None,
+            religion_state: None,
+        };
+        let plan = dispatch_request(req.clone(), ctx.clone());
+        assert_eq!(
+            plan.response.result,
+            Some(serde_json::json!({ "tick": 9, "speed_multiplier": 4 }))
+        );
+
+        let fields = SnapshotFields {
+            weather_grid: vec![],
+            tick: 10,
+            population: 777,
+            building_count: 0,
+            energy_budget: None,
+            market_prices: BTreeMap::new(),
+            hash_chain_root: None,
+            speed_multiplier: 4,
+            spectator: None,
+            institutions: vec![],
+            military_units: vec![],
+            damage_events: vec![],
+            damage_events_count: 0,
+            voxel_damage_removed_this_tick: 0,
+            mods: vec![],
+            mod_lifecycle: vec![],
+            session_saved: vec![],
+            mod_permission_violations: vec![],
+            climate: civ_engine::Climate {
+                tick: 10,
+                day_phase: 0.0,
+                year_phase: 0.0,
+                moon_phase: 0.0,
+                tide_offset: 0.0,
+            },
+            music_cues: BTreeMap::new(),
+            audio_events: vec![],
+            emergence: None,
+            researched: vec![],
+            in_progress_tech: None,
+            outcome_progress: Default::default(),
+        };
+        let plan = dispatch_request(req, DispatchContext {
+            snapshot: Some(fields),
+            ..ctx
+        });
+        let result = plan.response.result.expect("full snapshot payload");
+        assert_eq!(result["tick"], 10);
+        assert_eq!(result["population"], 777);
+    }
+
     #[test]
     fn parse_sim_command_request() {
         let req = parse_request(

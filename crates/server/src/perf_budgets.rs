@@ -221,4 +221,37 @@ mod tests {
         assert!(!r.ws_frame);
         assert!(r.ws_client);
     }
+
+    // NFR-S-03 — tick scaling 1k→10k citizens stays sub-linear at the spec
+    // budget (ratio < 8.0). Gate accepts ~5× (rayon expectation), rejects at
+    // the 8× budget bound, and rejects degenerate zero/negative baselines.
+    #[test]
+    fn nfr_s_03_tick_scale_budget_enforces_sublinear_scaling() {
+        assert_eq!(TICK_SCALE_BUDGET, 8.0);
+        // Expected rayon scaling (~5×) passes.
+        assert!(tick_scale_budget_met(10.0, 50.0));
+        // Just under the budget passes.
+        assert!(tick_scale_budget_met(10.0, 79.9));
+        // At or over the budget fails.
+        assert!(!tick_scale_budget_met(10.0, 80.0));
+        assert!(!tick_scale_budget_met(10.0, 100.0));
+        // Non-positive baseline is treated as a failed measurement.
+        assert!(!tick_scale_budget_met(0.0, 1.0));
+        assert!(!tick_scale_budget_met(-1.0, 1.0));
+
+        // End-to-end through the aggregate report: S-03 flag flips when the
+        // 10k tick time crosses the budget.
+        let mut m = BudgetMeasurement {
+            concurrent_clients: 100,
+            handshake_ms: 1.0,
+            tick_1k_ms: 10.0,
+            tick_10k_ms: 50.0,
+            commands_per_sec: 1_500,
+            event_log_bytes_per_min: 1_000_000,
+            ws_frame_bytes: 10_000,
+        };
+        assert!(BudgetReport::from_measurement(m).tick_scale);
+        m.tick_10k_ms = 80.0;
+        assert!(!BudgetReport::from_measurement(m).tick_scale);
+    }
 }

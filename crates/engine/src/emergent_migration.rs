@@ -468,4 +468,41 @@ mod tests {
         assert!(!is_eligible(&young, &c), "young agent ineligible");
         assert!(is_eligible(&old, &c), "old agent eligible");
     }
+
+    // FR-CIV-EMERGENT-MIGRATION-001 — a full migration tick is population
+    // conserving (net migration sums to zero) and deterministic: the same
+    // agent/settlement state produces identical events.
+    #[test]
+    fn migration_tick_conserves_population_and_is_deterministic() {
+        let settlements = vec![starving_settlement(), prosperous_settlement()];
+        let agents = vec![agent(20, 0), agent(30, 0), agent(40, 0)];
+        let c = config();
+
+        let events = migration_tick(&agents, &settlements, &c, 100);
+        assert!(!events.is_empty(), "starving settlers should move");
+
+        // Population conservation: sum of net migration across all
+        // settlements must be zero (every migrant leaves one and joins
+        // another).
+        let net0 = settlement_net_migration(&events, 0);
+        let net1 = settlement_net_migration(&events, 1);
+        assert_eq!(net0 + net1, 0, "migration must conserve population");
+
+        // Every event moves someone out of settlement 0 into settlement 1
+        // here (only alternative), and all share the same tick.
+        for e in &events {
+            assert_eq!(e.tick, 100);
+            assert_eq!(e.source_settlement, 0);
+            assert_eq!(e.target_settlement, 1);
+        }
+
+        // Determinism: re-running the same tick yields identical events.
+        let again = migration_tick(&agents, &settlements, &c, 100);
+        assert_eq!(events.len(), again.len());
+        for (a, b) in events.iter().zip(again.iter()) {
+            assert_eq!(a.source_settlement, b.source_settlement);
+            assert_eq!(a.target_settlement, b.target_settlement);
+            assert_eq!(a.tick, b.tick);
+        }
+    }
 }

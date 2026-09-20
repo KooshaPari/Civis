@@ -46,3 +46,34 @@ impl FeatureOracle for CoastalSettlementOracle {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    // FR-EMG-019 — coastal settlement oracle: at tick 0 any state passes;
+    // afterwards it demands both citizens and buildings and reports the
+    // product as the measurement.
+    use super::*;
+    use civ_engine::Simulation;
+
+    #[test]
+    fn fr_emg_019_passes_at_tick_zero() {
+        let sim = Simulation::new();
+        let v = CoastalSettlementOracle.check(&sim);
+        assert_eq!(v.fr_id, "FR-EMG-019");
+        assert!(v.passed, "tick 0 must pass unconditionally: {}", v.detail);
+        assert!((v.threshold - 0.0).abs() < f64::EPSILON);
+        assert!(!v.detail.is_empty());
+    }
+
+    #[test]
+    fn fr_emg_019_threshold_is_one_after_tick_zero() {
+        let mut sim = Simulation::new();
+        sim.tick();
+        let v = CoastalSettlementOracle.check(&sim);
+        assert!(
+            (v.threshold - 1.0).abs() < f64::EPSILON,
+            "post-tick-0 threshold must be 1.0"
+        );
+        assert_eq!(v.passed, v.measured >= 1.0, "detail: {}", v.detail);
+    }
+}

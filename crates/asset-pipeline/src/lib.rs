@@ -26,6 +26,43 @@ mod validate;
 pub use error::ExportError;
 pub use validate::{validate_svg_template, TemplateRule};
 
+#[cfg(test)]
+mod fr_asset_pipeline_001_tests {
+    // FR-ASSET-PIPELINE-001 — export_svg validates inputs and surfaces the
+    // scaffold error path with distinct error variants.
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn missing_input_is_io_error() {
+        let input = PathBuf::from("definitely-missing-input.svg");
+        let out = std::env::temp_dir();
+        let err = export_svg(&input, &out).unwrap_err();
+        assert!(matches!(err, ExportError::Io { .. }));
+    }
+
+    #[test]
+    fn missing_output_dir_is_io_error() {
+        let input = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml");
+        let out = PathBuf::from("definitely-missing-output-dir");
+        let err = export_svg(&input, &out).unwrap_err();
+        assert!(matches!(err, ExportError::Io { .. }));
+    }
+
+    #[test]
+    fn scaffold_stub_returns_encode_error_for_valid_paths() {
+        let input = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml");
+        let out = std::env::temp_dir();
+        let err = export_svg(&input, &out).unwrap_err();
+        match err {
+            ExportError::Encode(msg) => {
+                assert!(msg.contains("scaffold"), "expected scaffold stub: {msg}");
+            }
+            other => panic!("expected Encode error, got {other:?}"),
+        }
+    }
+}
+
 /// Export a vector SVG source to all required raster + icon formats.
 ///
 /// # Arguments

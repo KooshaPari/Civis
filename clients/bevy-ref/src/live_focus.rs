@@ -178,4 +178,41 @@ mod tests {
             (focus.centre.x, focus.centre.z)
         );
     }
+
+    // FR-CIV-BEVY-015 — shared live-scene focus: the `LiveSceneFocus` resource
+    // drives both orbit targeting and minimap world/UV conversion. Cover the
+    // resource-side API: default half extent spans the world, UV mapping is
+    // clamped to the minimap square, and the convenience method agrees with
+    // the free function.
+    #[test]
+    fn live_scene_focus_default_covers_world() {
+        let focus = LiveSceneFocus::default();
+        assert_eq!(focus.centre, Vec3::ZERO);
+        assert!((focus.half_extent - WORLD_SIZE * 0.5).abs() < 1e-3);
+        assert!(focus.half_extent >= LIVE_FOCUS_MIN_HALF_EXTENT);
+    }
+
+    #[test]
+    fn live_scene_focus_world_to_minimap_uv_clamps_and_matches_free_fn() {
+        let focus = LiveSceneFocus {
+            centre: Vec3::new(50.0, 0.0, 50.0),
+            half_extent: 10.0,
+        };
+        // Far outside the focus box clamps into [0,1].
+        let uv_far = focus.world_to_minimap_uv(500.0, 500.0);
+        assert!((0.0..=1.0).contains(&uv_far[0]));
+        assert!((0.0..=1.0).contains(&uv_far[1]));
+
+        // Centre maps to the middle of the minimap (v flipped ⇒ 0.5 stays 0.5).
+        let uv_centre = focus.world_to_minimap_uv(50.0, 50.0);
+        assert!((uv_centre[0] - 0.5).abs() < 1e-5);
+        assert!((uv_centre[1] - 0.5).abs() < 1e-5);
+
+        // Method delegates to the shared free function.
+        let world = Vec3::new(55.0, 0.0, 42.0);
+        let via_method = focus.world_to_minimap_uv(world.x, world.z);
+        let via_free = world_to_minimap_uv_focus(world, focus);
+        assert_eq!(via_method[0], via_free.x);
+        assert_eq!(via_method[1], via_free.y);
+    }
 }

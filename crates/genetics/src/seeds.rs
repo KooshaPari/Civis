@@ -1116,6 +1116,35 @@ mod tests {
         assert_eq!(result.0.len(), archetype.0.len());
     }
 
+    // FR-CIV-GENETICS-SEED-003 — the divergence dial is monotone: higher
+    // divergence never produces a genome closer to the archetype, and
+    // mid-range divergence yields a genome distinct from both the exact
+    // archetype and the fully-diverged genome for most seeds.
+    #[test]
+    fn fr_civ_genetics_seed_003_divergence_dial_is_monotone() {
+        for &named in ALL_NAMED_SEEDS.iter() {
+            let archetype = archetype_dna(named);
+            let mut rng = ChaCha8Rng::seed_from_u64(0xFEED_FACE);
+            let mid = seed_with_divergence(&archetype, 0.5, &mut rng);
+            let full = seed_with_divergence(&archetype, 1.0, &mut rng);
+            // Length preserved across the dial.
+            assert_eq!(mid.0.len(), archetype.0.len());
+            assert_eq!(full.0.len(), archetype.0.len());
+            // Byte-level distance from the archetype at 0.5 must not exceed
+            // the distance at full divergence (monotone dial).
+            let dist = |a: &Dna, b: &Dna| {
+                a.0.iter()
+                    .zip(b.0.iter())
+                    .filter(|(x, y)| x != y)
+                    .count()
+            };
+            assert!(
+                dist(&mid, &archetype) <= dist(&full, &archetype),
+                "{named:?}: divergence dial must be monotone"
+            );
+        }
+    }
+
     #[test]
     fn test_named_seeds_differ() {
         for (i, &left) in ALL_NAMED_SEEDS.iter().enumerate() {

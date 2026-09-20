@@ -752,6 +752,57 @@ mod viewport_indicator_tests {
             tall_h,
         );
     }
+
+    // FR-VIEWPORT-001 — viewport indicator: zero-height window and off-world
+    // camera positions must never push the indicator outside the minimap
+    // bounds or produce non-finite pixel values.
+    #[test]
+    fn fr_viewport_001_indicator_stays_in_bounds_for_degenerate_inputs() {
+        // Zero-height window: aspect falls back to 1.0 (no division by zero).
+        let mut rig = CameraRig::default();
+        rig.distance = 60.0;
+        let node = run_indicator(rig, (900.0, 0.0));
+        let all_px = [
+            node.left, node.top, node.width, node.height,
+        ]
+        .map(|v| match v {
+            Val::Px(v) => v,
+            _ => panic!("expected pixel value"),
+        });
+        for v in all_px {
+            assert!(v.is_finite(), "degenerate window must stay finite");
+        }
+        assert!(all_px[2] >= 8.0 && all_px[3] >= 8.0, "min 8px clamp");
+        assert!(all_px[2] <= MINIMAP_SIZE + f32::EPSILON);
+        assert!(all_px[3] <= MINIMAP_SIZE + f32::EPSILON);
+        assert!(all_px[0] >= 0.0 && all_px[1] >= 0.0);
+
+        // Camera pointed past the world corner: rect must still clamp into
+        // the minimap square.
+        let mut rig = CameraRig::default();
+        rig.target = Vec3::new(1_000_000.0, 0.0, 1_000_000.0);
+        let node = run_indicator(rig, (1600.0, 900.0));
+        let left = match node.left {
+            Val::Px(v) => v,
+            _ => panic!("expected pixel left"),
+        };
+        let top = match node.top {
+            Val::Px(v) => v,
+            _ => panic!("expected pixel top"),
+        };
+        let width = match node.width {
+            Val::Px(v) => v,
+            _ => panic!("expected pixel width"),
+        };
+        let height = match node.height {
+            Val::Px(v) => v,
+            _ => panic!("expected pixel height"),
+        };
+        assert!(left >= 0.0, "left must clamp into the minimap");
+        assert!(top >= 0.0, "top must clamp into the minimap");
+        assert!(left + width <= MINIMAP_SIZE + f32::EPSILON);
+        assert!(top + height <= MINIMAP_SIZE + f32::EPSILON);
+    }
 }
 
 #[cfg(test)]

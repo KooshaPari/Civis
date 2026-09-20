@@ -2765,6 +2765,7 @@ impl Simulation {
     }
 
     /// Borrow the replay log.
+    // FR-CIV-NOTIFY-910
     pub fn replay_log(&self) -> &ReplayLog {
         &self.replay_log
     }

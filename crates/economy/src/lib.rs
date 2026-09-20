@@ -95,6 +95,7 @@ pub const ACCOUNT_ENERGY_BUDGET: AccountId = 0;
 pub const ACCOUNT_CONSUMPTION: AccountId = 1;
 
 /// Bookkeeping row for a single ledger leg (stub; full double-entry pairs in CIV-0100 §3d).
+// FR-CIV-ECON-004
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LedgerEntry {
     /// Simulation tick when the entry was recorded.

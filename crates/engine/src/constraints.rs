@@ -601,6 +601,7 @@ impl ConstraintState {
     }
 }
 
+// FR-CIV-0104-009
 /// Compute the state hash contribution from a `ConstraintSetResult`.
 ///
 /// Each violated constraint contributes its severity ordinal to the hash.

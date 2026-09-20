@@ -351,6 +351,11 @@ pub enum UnitType {
 }
 
 /// ECS military unit component used by spawn helpers and JSON-RPC pin export.
+///
+/// FR-CIV-TACTICS-032 — `MilitaryUnit::hp` and `MilitaryUnit::max_hp` are
+/// first-class ECS fields (`Fixed`-typed) so damage flows through
+/// `civ_tactics::apply_damage` and `tick_war_bridge` can drain unit strength
+/// without losing resolution.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MilitaryUnit {
     /// Broad unit archetype.

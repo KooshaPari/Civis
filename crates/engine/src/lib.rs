@@ -265,6 +265,7 @@ pub use engine::Fixed;
 /// Seeded RNG for deterministic simulation
 pub type SimRng = ChaCha8Rng;
 
+// FR-DOC-001
 /// Create a seeded RNG from world state
 pub fn create_rng(seed: u64) -> SimRng {
     SimRng::seed_from_u64(seed)

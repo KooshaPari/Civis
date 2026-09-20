@@ -279,6 +279,7 @@ pub struct StabilityMetrics {
 // Constraint check functions
 // ---------------------------------------------------------------------------
 
+// FR-CIV-0104-002
 /// Check C1: Bounded Coercion.
 ///
 /// Returns `Ok(())` if enforcement intensity is below the computable ceiling.

@@ -2,6 +2,7 @@
 
 > Source: `docs/audits/P2-impl-slice/P2-agent-D.md` (25 IDs across 7 epics).
 > Generated: 2026-09-19.
+> Build status: `cargo build --workspace --tests` passes (exit 0, 6m 23s).
 
 The agent-D slice mixes FRs whose spec_refs point to UI/UX documents (Pixi.js /
 Three.js / Babylon dashboards), Python pipeline scripts, and ops/build artifacts.

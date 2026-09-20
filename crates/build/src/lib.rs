@@ -477,6 +477,7 @@ pub fn resolve_tile_set<'a>(
         .max_by_key(|tile_set| (tile_set.era, tile_set.wealth_bucket, tile_set.id))
 }
 
+// FR-CIV-CORE-001
 /// Computes a deterministic parcel template score for this tile-set family.
 #[must_use]
 pub fn parcel_template_score(

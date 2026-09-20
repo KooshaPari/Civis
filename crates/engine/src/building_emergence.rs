@@ -1,4 +1,9 @@
 //! Building emergence wiring — culture + biome + era style vectors and settlement anchors.
+//!
+//! NFR-C-05 — `BTreeMap` enforcement: simulation state uses ordered
+//! `BTreeMap` exclusively (no `HashMap`) so iteration order is deterministic
+//! across runs and replays. This is enforced by the custom clippy lint
+//! `sim_hashmap_forbidden` and the pre-commit grep scan.
 
 use std::collections::BTreeMap;
 

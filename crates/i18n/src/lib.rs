@@ -190,6 +190,10 @@ macro_rules! tr {
 /// 2. `LANG` env var (POSIX convention)
 ///
 /// Falls back to `Locale::En`.
+///
+/// FR-CIV-L10N-020 — locale detection: the runtime can derive a supported
+/// `Locale` from `Accept-Language`/BCP-47 input via `Locale::from_str` and
+/// from environment variables via `detect_locale_from_env`.
 pub fn detect_locale_from_env() -> Locale {
     if let Ok(val) = std::env::var("CIVIS_LANG") {
         if let Some(loc) = Locale::from_str(&val) {

@@ -17,6 +17,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 /// State container for the deep diplomacy subsystems.
 /// Holds the alliance manager, active peace negotiations, and cultural exchanges.
+// FR-CIV-POLITY-004
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DeepDiplomacyState {
     /// Alliance formation manager.

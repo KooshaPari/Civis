@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "generated_at": "2026-09-19",
+  "generated_at": "2026-09-20",
   "source_inventory": "docs/audits/_id_inventory_v3.json",
   "status_legend": {
     "COVERED": "spec/trace + code + real test all present",

@@ -1,0 +1,30 @@
+name: fr-coverage-gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run FR coverage gate
+        run: |
+          python scripts/traceability/check-fr-coverage.py --no-write
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+      - name: Upload matrix artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fr-matrix
+          path: docs/audits/fr-matrix.json

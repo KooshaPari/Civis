@@ -199,6 +199,7 @@ pub fn faction_isolation_pressure(
 // Core language functions
 // ---------------------------------------------------------------------------
 
+// FR-CIV-LANG-010
 /// Create a new language with given name, phonemes, and creation tick.
 #[must_use]
 pub fn create_language(name: &str, phonemes: Vec<String>, tick: u64) -> Language {

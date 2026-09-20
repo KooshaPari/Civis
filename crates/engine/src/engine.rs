@@ -284,6 +284,7 @@ pub struct Building {
     pub position: Position,
 }
 
+// FR-CIV-3D-013
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum BuildingType {
     Farm,
@@ -296,6 +297,7 @@ pub enum BuildingType {
 }
 
 /// Resource storage component
+// FR-CIV-3D-008
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct Resources {
     pub food: Fixed,
@@ -374,6 +376,13 @@ pub struct MilitaryUnit {
 // ============================================================================
 
 /// Global world state
+// FR-CIV-3D-004
+// FR-CIV-3D-005
+// FR-CIV-3D-008
+// FR-CIV-3D-009
+// FR-CIV-3D-010
+// FR-CIV-3D-012
+// FR-CIV-3D-014
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorldState {
     pub tick: u64,

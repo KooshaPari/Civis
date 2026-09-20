@@ -16,6 +16,8 @@ use crate::PlanetConfig;
 /// backward compatibility. The remaining variants are the enriched
 /// Whittaker-style biomes produced by [`classify_biome`] from per-cell
 /// elevation / temperature / moisture.
+// FR-CIV-3D-011
+// FR-CIV-3D-015
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum BiomeKind {
     /// Open water — radius-derived; large planets have proportionally more ocean.

@@ -134,6 +134,7 @@ pub fn person_name(_state: &LanguageState, faction_id: u32, person_id: u32) -> S
     format!("person-{faction_id}-{person_id}")
 }
 
+// FR-CIV-LANG-008
 /// Per-pair isolation pressure (0..1). Higher = more isolated.
 #[must_use]
 pub fn faction_isolation_pressure(

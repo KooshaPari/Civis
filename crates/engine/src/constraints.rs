@@ -111,6 +111,29 @@ impl ConstraintSetResult {
         ]
         .into_iter()
     }
+
+    /// FR-CIV-0104-011: self-consistency check.
+    ///
+    /// Returns `true` iff the two internal invariants both hold:
+    ///   1. `all_satisfied()` matches `iter_checks().all(ConstraintCheck::is_ok)`
+    ///   2. `most_severe()` equals the highest `ViolationSeverity` among the
+    ///      violated checks (or `None` when none are violated).
+    #[must_use]
+    pub fn verify_self_consistency(&self) -> bool {
+        let iter_all_ok = self.iter_checks().all(ConstraintCheck::is_ok);
+        let computed_all = self.all_satisfied();
+        if iter_all_ok != computed_all {
+            return false;
+        }
+        let iter_max = self
+            .iter_checks()
+            .filter_map(|c| match c {
+                ConstraintCheck::Violated { severity, .. } => Some(*severity),
+                ConstraintCheck::Ok => None,
+            })
+            .max();
+        self.most_severe() == iter_max
+    }
 }
 
 // ---------------------------------------------------------------------------

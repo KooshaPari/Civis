@@ -273,6 +273,7 @@ impl TrafficGraph {
     /// Freehand-place (or upgrade) a segment between two cells with an explicit
     /// [`RoadKind`]. Tagged [`InfraProvenance::UserPlaced`]. A later, stronger
     /// placement upgrades; a weaker one never downgrades an existing road.
+    // FR-CIV-ROAD-921
     pub fn place_segment(&mut self, from: WorldCoord, to: WorldCoord, kind: RoadKind) {
         if from == to {
             return;

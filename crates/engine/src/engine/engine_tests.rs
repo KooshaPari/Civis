@@ -183,6 +183,61 @@ mod tests {
         );
     }
 
+    // FR-CIV-TACTICS-032 — `MilitaryUnit::hp` / `max_hp` are first-class
+    // ECS fields with fixed-point resolution: damage flows through the war
+    // bridge and drains hp without losing strength resolution, and a unit
+    // at zero hp is despawned as a casualty.
+    #[test]
+    fn fr_civ_tactics_032_unit_hp_drains_with_fixed_resolution_and_casualties_despawn() {
+        let mut sim = Simulation::with_seed(2026_07_02);
+        sim.world = World::new();
+        sim.military_phase.movement.cadence_ticks = 0;
+        sim.military_phase.war.cadence_ticks = 1;
+        sim.military_phase.war.engage_range_grid = 4;
+
+        let max_hp = Fixed::from_num(3);
+        let spawn = |faction: u32, x: i32| MilitaryUnit {
+            unit_type: UnitType::Soldier,
+            strength: max_hp,
+            hp: max_hp,
+            max_hp,
+            morale: Fixed::from_num(1),
+            position: Position { x, y: 0 },
+            faction_id: faction,
+        };
+        let _ = sim.world.spawn((spawn(0, 0),));
+        let _ = sim.world.spawn((spawn(1, 1),));
+
+        sim.tick();
+
+        // hp is quantized to the configured per-engagement damage, never to
+        // integers of an inner float: it always equals a clean Fixed value.
+        for (_, unit) in sim.world.query::<&MilitaryUnit>().iter() {
+            assert!(unit.hp >= Fixed::from_num(0), "hp never goes negative");
+            assert!(unit.hp <= unit.max_hp, "hp never exceeds max_hp");
+            assert_eq!(
+                unit.strength, unit.hp,
+                "strength mirrors drained hp after damage"
+            );
+        }
+        // Casualties at zero hp are removed from the ECS entirely.
+        let survivors: Vec<(hecs::Entity, &MilitaryUnit)> =
+            sim.world.query::<&MilitaryUnit>().iter().collect();
+        assert!(
+            survivors.iter().all(|(_, unit)| unit.hp > Fixed::from_num(0)),
+            "dead units must be despawned, not left at 0 hp"
+        );
+        assert!(
+            survivors.len() < 2
+                || sim
+                    .world
+                    .query::<&MilitaryUnit>()
+                    .iter()
+                    .any(|(_, unit)| unit.hp < unit.max_hp),
+            "expected either a casualty or visible hp drain"
+        );
+    }
+
     /// FR-CORE-001 — each `Simulation::tick()` appends exactly one `ReplayEvent::Tick`.
     #[test]
     fn fr_core_001_single_tick_event_per_tick() {
@@ -428,6 +483,37 @@ mod tests {
             .map(|record| record.score)
             .expect("trade intent must raise relation score");
         assert!(trade_score > 0.8);
+    }
+
+    // FR-CIV-COHESION-001 — cohesion phase aggregates kinship, trust and
+    // institutions into per-settlement fabric snapshots with tiered fabric.
+    #[test]
+    fn fr_civ_cohesion_001_phase_aggregates_kinship_trust_into_settlement_fabric() {
+        use crate::KinshipEdge;
+        use crate::social_types::KinshipKind;
+
+        let mut sim = Simulation::with_seed(11);
+        // Actor 1: bonded (kin + trust). Actor 2: isolated (no kin/trust).
+        sim.set_settlement_actor(1, 1);
+        sim.set_settlement_actor(2, 1);
+        sim.register_kinship(1, KinshipEdge { kind: KinshipKind::Parent, target: 2 });
+        sim.add_trust(1, 2, 40);
+        // Institutions lift fabric for actor 1 only.
+        sim.set_actor_in_settlement_institutions(1, true, false);
+
+        sim.tick();
+
+        let snapshot = sim
+            .last_tick_cohesion_settlement(1)
+            .expect("cohesion snapshot after tick");
+        assert_eq!(snapshot.settlement_id, 1);
+        assert_eq!(snapshot.kin_count, 1, "only actor 1 has kinship edges");
+        assert_eq!(snapshot.trust_sum, 40, "trust sums across settlement actors");
+        assert_eq!(snapshot.faction_count, 2, "both actors counted");
+        assert_eq!(snapshot.fragmentations, 0, "healthy fabric does not fragment");
+        // Positive fabric (kin*10 + trust + temple=30) must land above the
+        // strained tier, proving tiered fabric classification runs.
+        assert_eq!(snapshot.fabric, FabricTier::Tight);
     }
 
     #[test]

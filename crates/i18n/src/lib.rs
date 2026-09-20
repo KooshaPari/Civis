@@ -304,6 +304,30 @@ mod tests {
     /// FR-CIV-L10N-030 — Persian (`fa`) bundle covers ≥80% of the English
     /// string table; values differ from English (i.e. are translated, not
     /// copy-paste placeholders).
+    /// FR-CIV-L10N-010 — string-table infrastructure: every supported locale
+    /// ships an embedded keyed JSON bundle reachable through the same
+    /// `Bundle` API, with a matching `locale()` and BCP-47 tag, and the
+    /// `tr!` macro resolves keys (or falls back to the raw key).
+    #[test]
+    fn string_table_infrastructure_serves_every_locale() {
+        for loc in Locale::ALL {
+            let bundle = Bundle::load(*loc);
+            assert_eq!(bundle.locale(), *loc, "bundle locale mismatch for {loc:?}");
+            assert!(!loc.as_str().is_empty(), "BCP-47 tag must be set");
+            assert!(
+                bundle.get("app.title").is_ok(),
+                "locale {:?} bundle missing core key `app.title`",
+                loc
+            );
+            // tr! resolves through get_or_key for the same bundle.
+            let resolved = tr!(bundle, "app.title");
+            assert_eq!(resolved, bundle.get_or_key("app.title"));
+        }
+        // Missing keys fall back to the raw key via tr! as well.
+        let en = Bundle::load(Locale::En);
+        assert_eq!(tr!(en, "definitely.not.a.key"), "definitely.not.a.key");
+    }
+
     #[test]
     fn fa_bundle_coverage_meets_threshold() {
         let en = Bundle::load(Locale::En);

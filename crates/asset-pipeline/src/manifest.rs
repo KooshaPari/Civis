@@ -190,4 +190,45 @@ mod tests {
             Err(SchemaError::MissingKey("pipeline_hash"))
         );
     }
+
+    // FR-CIV-ASSET-MANI-002 — schema conformance: every required top-level
+    // key is enforced, missing keys are reported in declaration order, and
+    // the canonical version constant matches the spec.
+    #[test]
+    fn schema_conformance_reports_missing_keys_in_order() {
+        assert_eq!(
+            REQUIRED_MANIFEST_KEYS,
+            ["manifest_version", "build_timestamp", "pipeline_hash", "assets"]
+        );
+        assert_eq!(REQUIRED_MANIFEST_VERSION, "1.0");
+
+        // Missing the first key reports it first.
+        let m = write_tmp(
+            "manifest_schema_missing_first.json",
+            "{\"build_timestamp\":\"x\",\"pipeline_hash\":\"y\",\"assets\":[]}",
+        );
+        assert_eq!(
+            check_manifest_schema(&m),
+            Err(SchemaError::MissingKey("manifest_version"))
+        );
+
+        // Missing the last key reports `assets`.
+        let m = write_tmp(
+            "manifest_schema_missing_last.json",
+            "{\"manifest_version\":\"1.0\",\"build_timestamp\":\"x\",\"pipeline_hash\":\"y\"}",
+        );
+        assert_eq!(
+            check_manifest_schema(&m),
+            Err(SchemaError::MissingKey("assets"))
+        );
+
+        // Unreadable manifest surfaces Io, not a key error.
+        let missing = std::env::temp_dir()
+            .join("asset_pipeline_manifest_tests")
+            .join("does_not_exist_schema.json");
+        assert_eq!(
+            check_manifest_schema(&missing),
+            Err(SchemaError::Io("no such file".to_owned()))
+        );
+    }
 }

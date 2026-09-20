@@ -537,4 +537,50 @@ mod tests {
         )
         .is_none());
     }
+
+    // FR-CIV-BEVY-019 — live entity picking selects the nearest valid
+    // marker across all four streamed kinds, skips invalid markers
+    // (non-finite / non-positive scale), and handles origin-inside
+    // boxes and scaled markers.
+    #[test]
+    fn pick_selects_nearest_valid_marker_across_kinds() {
+        let origin = [0.0, 1.0, -10.0];
+        let direction = [0.0, 0.0, 1.0];
+        // Distant agent, closer building, invalid marker in between.
+        let agents = [(1_u64, Vec3::new(0.0, 1.0, 8.0), Vec3::ONE)];
+        let buildings = [
+            (7_u64, Vec3::new(0.0, 1.0, 2.0), Vec3::ONE), // nearest, should win
+            (8_u64, Vec3::new(f32::NAN, 1.0, 1.0), Vec3::ONE), // invalid, skipped
+            (9_u64, Vec3::new(0.0, 1.0, 0.5), Vec3::new(0.0, 1.0, 1.0)), // zero scale, skipped
+        ];
+        let graph_parcels = [(4_u64, Vec3::new(50.0, 1.0, 2.0), Vec3::ONE)];
+        let chunks = [(5_u64, Vec3::new(0.0, 1.0, 6.0), Vec3::new(0.25, 0.25, 0.25))];
+
+        let picked =
+            pick_live_entity_along_ray(origin, direction, &agents, &buildings, &graph_parcels, &chunks)
+                .expect("pick");
+        assert_eq!(picked.kind, LiveEntityKind::Building);
+        assert_eq!(picked.id, 7);
+    }
+
+    // FR-CIV-BEVY-019 — a ray starting inside a box still registers a hit
+    // (at the exit distance), so clicking from within a large voxel chunk
+    // selects it rather than passing through.
+    #[test]
+    fn pick_hits_box_when_ray_origin_is_inside() {
+        let hit = ray_aabb_hit_distance([0.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 0.0, 0.0], [1.0; 3])
+            .expect("origin inside box still hits");
+        assert!((hit - 1.0).abs() < 1e-4, "hit at exit face, got {hit}");
+
+        // Scaled chunk marker: half extents scale with entity scale.
+        let half = chunk_marker_half_extents();
+        let scaled = [
+            half[0] * 2.0,
+            half[1] * 2.0,
+            half[2] * 2.0,
+        ];
+        let hit = ray_aabb_hit_distance([0.0, 0.0, -50.0], [0.0, 0.0, 1.0], [0.0, 0.0, 0.0], scaled)
+            .expect("scaled chunk hit");
+        assert!(hit > 0.0);
+    }
 }

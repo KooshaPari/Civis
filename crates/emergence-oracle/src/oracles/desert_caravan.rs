@@ -46,3 +46,41 @@ impl FeatureOracle for DesertCaravanOracle {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use civ_engine::Simulation;
+
+    /// FR-EMG-022 — desert-caravan oracle passes at tick 0 and reports
+    /// its FR id and threshold honestly.
+    #[test]
+    fn desert_caravan_oracle_tick_zero_passes_with_fr_id() {
+        let sim = Simulation::new();
+        let verdict = DesertCaravanOracle.check(&sim);
+        assert_eq!(verdict.fr_id, "FR-EMG-022");
+        assert!(verdict.passed, "tick 0 always passes");
+        assert!((verdict.threshold - 0.0).abs() < f64::EPSILON);
+        assert!((verdict.measured - 0.0).abs() < f64::EPSILON);
+    }
+
+    /// FR-EMG-022 — after warmup the measured value equals the
+    /// citizen×building product and the gate demands settled infrastructure.
+    #[test]
+    fn desert_caravan_oracle_measures_settled_product_after_warmup() {
+        let mut sim = Simulation::new();
+        sim.tick();
+        let verdict = DesertCaravanOracle.check(&sim);
+        let snap = sim.snapshot();
+        assert!(
+            (verdict.measured - (snap.citizen_count * snap.building_count) as f64).abs()
+                < f64::EPSILON
+        );
+        if !verdict.passed {
+            assert!((verdict.threshold - 1.0).abs() < f64::EPSILON);
+            assert!(snap.citizen_count == 0 || snap.building_count == 0);
+        } else {
+            assert!(snap.citizen_count > 0 && snap.building_count > 0);
+        }
+    }
+}

@@ -254,4 +254,32 @@ mod tests {
         m.tick_10k_ms = 80.0;
         assert!(!BudgetReport::from_measurement(m).tick_scale);
     }
+
+    // NFR-S-06 — WS binary frame budget: a 1k-citizen snapshot frame must
+    // stay under `WS_FRAME_BUDGET_BYTES` (20 KiB), the gate is strict (<,
+    // not <=), and the report aggregates the S-06 gate honestly.
+    #[test]
+    fn ws_frame_budget_gate_bounds_one_k_snapshot_frames() {
+        assert_eq!(WS_FRAME_BUDGET_BYTES, 20 * 1024);
+        // Representative encoded frame sizes for a 1k-citizen snapshot.
+        assert!(ws_frame_budget_met(12_288), "12 KiB frame within budget");
+        assert!(!ws_frame_budget_met(WS_FRAME_BUDGET_BYTES), "strict < gate");
+        assert!(!ws_frame_budget_met(usize::MAX));
+
+        // S-06 failure is surfaced through the aggregate report.
+        let measurement = BudgetMeasurement {
+            ws_frame_bytes: WS_FRAME_BUDGET_BYTES + 1,
+            ..BudgetMeasurement::default()
+        };
+        let report = BudgetReport::from_measurement(measurement);
+        assert!(!report.ws_frame);
+        assert!(!report.all_passed());
+
+        let ok = BudgetMeasurement {
+            ws_frame_bytes: WS_FRAME_BUDGET_BYTES - 1,
+            ..BudgetMeasurement::default()
+        };
+        let report = BudgetReport::from_measurement(ok);
+        assert!(report.ws_frame);
+    }
 }

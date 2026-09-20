@@ -154,6 +154,7 @@ pub enum DiplomacyKind {
 }
 
 /// A diplomacy event between two factions (FR-CIV-DIPLOMACY).
+// FR-CIV-POLITY-003
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DiplomacyEvent {
     pub tick: u64,

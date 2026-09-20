@@ -101,6 +101,7 @@ impl FactionRelations {
     }
 
     pub fn record<A, B>(&self, a: A, b: B) -> Option<&FactionRelationRecord>
+    // FR-CIV-POLITY-005
     where
         A: Into<u32>,
         B: Into<u32>,

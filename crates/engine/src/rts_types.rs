@@ -164,6 +164,7 @@ impl ZoomTier {
     }
 }
 
+// FR-CIV-RTS-ZOOM-001
 /// A sprite handle that references a specific asset at a zoom level.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SpriteHandle {

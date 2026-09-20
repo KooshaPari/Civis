@@ -470,6 +470,7 @@ mod tests {
     // -----------------------------------------------------------------------
 
     /// FR-CIV-ARCH-B-001 — buildings assigned to a cluster appear in parcels_in_cluster.
+    /// Covers: FR-CIV-ARCH-B-001
     #[test]
     fn fr_arch_b001_layout_cluster_membership() {
         let mut graph = BuildingGraph::new();
@@ -489,6 +490,7 @@ mod tests {
     }
 
     /// FR-CIV-ARCH-B-002 — clustered_parcel_offset spreads buildings around centre.
+    /// Covers: FR-CIV-ARCH-B-002
     #[test]
     fn fr_arch_b002_cluster_offsets_diverge_from_centre() {
         // Eight consecutive slots must not all map to the same offset.
@@ -503,6 +505,7 @@ mod tests {
     }
 
     /// FR-CIV-ARCH-B-003 — settlement centroid is within bounding box of members.
+    /// Covers: FR-CIV-ARCH-B-003
     #[test]
     fn fr_arch_b003_cluster_centroid_within_bounds() {
         let positions = vec![(0, 0, 0), (10, 0, 20), (20, 0, 40)];
@@ -512,6 +515,7 @@ mod tests {
     }
 
     /// FR-CIV-ARCH-B-004 — multiple clusters are tracked independently.
+    /// Covers: FR-CIV-ARCH-B-004
     #[test]
     fn fr_arch_b004_distinct_clusters_stay_separate() {
         let mut graph = BuildingGraph::new();

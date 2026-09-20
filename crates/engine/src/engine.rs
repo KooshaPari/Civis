@@ -376,6 +376,8 @@ pub struct MilitaryUnit {
 
 /// Global world state
 #[derive(Debug, Clone, Serialize, Deserialize)]
+// FR-SOC-FAC-001
+// FR-SOC-FAC-002
 pub struct WorldState {
     pub tick: u64,
     pub population: u64,

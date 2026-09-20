@@ -64,6 +64,7 @@ pub mod grid;
 pub mod godtools;
 pub mod hash_chain;
 pub mod integrity;
+pub mod info_views;
 pub mod invariants;
 pub mod io;
 pub mod lod;

@@ -47,6 +47,7 @@ pub enum BuildingProvenance {
     Freehand,
 }
 
+// FR-API-002, FR-API-003, FR-API-004
 /// Marker version of this crate's public schema. Bumped on breaking changes
 /// so replay (`.civreplay`) files can refuse to load mismatched versions.
 pub const SCHEMA_VERSION: &str = "0.1.0-stub";

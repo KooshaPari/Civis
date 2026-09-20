@@ -485,6 +485,7 @@ pub fn check_all(result: &ConstraintSetResult) -> &ConstraintSetResult {
 }
 
 // FR-CIV-0104-005
+// FR-CIV-0104-006
 /// Construct a `ConstraintSetResult` by running all five checks.
 #[must_use]
 pub fn run_all_checks(
@@ -534,8 +535,6 @@ pub fn run_all_checks(
 }
 
 // FR-CIV-0104-003
-// FR-CIV-0104-007
-// FR-CIV-0104-010
 /// Per-tick constraint state tracked alongside the simulation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConstraintState {

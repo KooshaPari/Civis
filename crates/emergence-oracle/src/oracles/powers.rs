@@ -58,4 +58,29 @@ mod tests {
         let registry = PowerRegistry::new(default_powers());
         assert!(!registry.is_empty());
     }
+
+    /// FR-EMG-024 — the default power registry is structurally consistent:
+    /// every registered power has a unique id and non-empty label +
+    /// coupling_note fields.
+    #[test]
+    fn fr_emg_024_default_powers_have_unique_ids_and_complete_fields() {
+        let registry = PowerRegistry::new(default_powers());
+        let powers = registry.defs();
+        assert!(!powers.is_empty(), "default catalogue must not be empty");
+
+        let mut seen = std::collections::HashSet::new();
+        for power in powers {
+            assert!(
+                seen.insert(power.id.as_str()),
+                "duplicate power id: {}",
+                power.id
+            );
+            assert!(!power.label.is_empty(), "power {} has empty label", power.id);
+            assert!(
+                !power.coupling_note.is_empty(),
+                "power {} has empty coupling_note",
+                power.id
+            );
+        }
+    }
 }

@@ -74,4 +74,22 @@ mod tests {
         let (passed, total) = lookup_safety_score();
         assert_eq!(passed, total);
     }
+
+    /// FR-EMG-024 — `Bundle::get_or_key` is panic-free for arbitrary keys
+    /// across every supported locale, including unicode, empty and padded
+    /// probes; every probe must return a non-empty fallback string.
+    #[test]
+    fn fr_emg_024_get_or_key_panic_free_across_locales() {
+        let probes = ["", "nonexistent.key", "app.title", "unicode.测试", " spaced key "];
+        for locale in Locale::ALL {
+            let bundle = Bundle::load(*locale);
+            for probe in probes {
+                let value = bundle.get_or_key(probe);
+                assert!(
+                    !value.is_empty(),
+                    "locale {locale:?} probe {probe:?} returned empty fallback"
+                );
+            }
+        }
+    }
 }

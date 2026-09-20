@@ -46,3 +46,40 @@ impl FeatureOracle for ExpansionOracle {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use civ_engine::Simulation;
+
+    /// FR-EMG-017 — at tick 0 the oracle passes with threshold 0.
+    #[test]
+    fn fr_emg_017_passes_at_tick_zero() {
+        let sim = Simulation::new();
+        let v = ExpansionOracle.check(&sim);
+        assert!(v.passed, "tick 0 always passes");
+        assert_eq!(v.fr_id, "FR-EMG-017");
+        assert_eq!(v.threshold, 0.0);
+    }
+
+    /// FR-EMG-017 — after warmup the expansion substrate (settled
+    /// infrastructure + population) must be measurable and passing.
+    #[test]
+    fn fr_emg_017_after_warmup_requires_settled_infrastructure() {
+        let mut sim = Simulation::new();
+        for _ in 0..10 {
+            sim.tick();
+        }
+        let v = ExpansionOracle.check(&sim);
+        assert_eq!(v.threshold, 1.0);
+        assert!(
+            v.passed,
+            "warm sim should have citizens and buildings: {}",
+            v.detail
+        );
+        assert!(
+            v.measured >= 1.0,
+            "citizen×building product must be ≥ 1 after tick > 0"
+        );
+    }
+}

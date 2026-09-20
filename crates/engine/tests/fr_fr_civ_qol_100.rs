@@ -11,14 +11,15 @@ mod fr_fr_civ_qol_100 {
     /// TutorialMilestone type exists for tracking onboarding progress.
     #[test]
     fn tutorial_milestone_exists() {
-        let milestone = civ_engine::TutorialMilestone::default();
+        let milestone = civ_engine::TutorialMilestone::FirstFaction;
         let _ = milestone;
     }
 
-    /// TutorialProgress type exists for persistence.
+    /// TutorialProgress type exists for persistence and has a default.
     #[test]
     fn tutorial_progress_exists() {
         let progress = civ_engine::TutorialProgress::default();
-        let _ = progress;
+        // Default progress starts at FirstFaction.
+        assert!(matches!(progress.current, civ_engine::TutorialMilestone::FirstFaction));
     }
 }

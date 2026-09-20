@@ -17,6 +17,7 @@ pub const PSYCHE_DIM: usize = 4;
 
 /// Reactivity/sociability/risk/impulsivity temperament.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+// FR-CIV-PSYCHE-003
 pub struct Temperament {
     /// How strongly mood swings in response to events.
     pub reactivity: f32,
@@ -64,6 +65,7 @@ impl Mood {
 
 /// Compact psyche vector for one agent.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+// FR-CIV-PSYCHE-006
 pub struct Psyche {
     /// Stable need-biasing drives.
     pub drives: [f32; PSYCHE_DIM],
@@ -79,6 +81,7 @@ pub struct Psyche {
 
 /// Data-driven genome projection for psyche axes.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+// FR-CIV-PSYCHE-005
 pub struct PsychGenomeProfile {
     /// DNA byte slots for the four drive axes.
     pub drive_slots: [Vec<(usize, f32)>; PSYCHE_DIM],

@@ -295,6 +295,7 @@ impl TrafficGraph {
 
     /// Place a connected polyline of segments (drag-to-draw). Consecutive points
     /// are joined as undirected edges. Fewer than two points is a no-op.
+    // FR-CIV-ROAD-920
     pub fn place_path(&mut self, points: &[WorldCoord], kind: RoadKind) {
         for window in points.windows(2) {
             self.place_segment(window[0], window[1], kind);

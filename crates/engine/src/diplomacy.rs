@@ -134,6 +134,7 @@ impl FactionRelations {
     }
 
     #[must_use]
+    // FR-CIV-POLITY-006
     pub fn mean_score_involving(&self, faction: u32) -> Option<f32> {
         let mut total = 0.0_f32;
         let mut count = 0_u32;

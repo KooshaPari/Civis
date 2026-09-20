@@ -315,6 +315,7 @@ impl BuildingGraph {
     }
 
     /// Assigns a provenance tag to a parcel.
+    // FR-CIV-ACT-001
     pub fn set_provenance(&mut self, id: BuildingId, provenance: BuildingProvenance) {
         self.provenance.insert(id, provenance);
     }

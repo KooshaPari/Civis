@@ -373,6 +373,7 @@ pub struct MilitaryUnit {
 // WORLD STATE
 // ============================================================================
 
+// FR-CIV-ARCH-006
 /// Global world state
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorldState {

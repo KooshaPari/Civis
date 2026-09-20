@@ -14,7 +14,8 @@
 //! resolution/scoring/linking — the tick never blocks on the engine.
 //!
 //! Requirements: FR-CIV-LEGENDS-GRAPH-01, -INGEST-02, -RESOLVE-04, -SIG-05,
-//! -CAUSAL-06, -QUERY-07, -NARRATOR-13; NFR-CIV-LEGENDS-SCALE-02, -CONFIG-04, -LOUD-03.
+//! -CAUSAL-06, -QUERY-07, -NARRATOR-13; NFR-CIV-LEGENDS-SCALE-02, -CONFIG-04, -LOUD-03,
+//! -PERF-01.
 #![forbid(unsafe_code)]
 
 pub mod config;
@@ -22,6 +23,7 @@ pub mod decay;
 pub mod graph;
 pub mod ids;
 pub mod model;
+pub mod perf;
 pub mod query;
 pub mod rumor;
 pub mod significance;

@@ -378,6 +378,7 @@ pub struct MilitaryUnit {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 // FR-SOC-FAC-001
 // FR-SOC-FAC-002
+// FR-TEST-001
 pub struct WorldState {
     pub tick: u64,
     pub population: u64,

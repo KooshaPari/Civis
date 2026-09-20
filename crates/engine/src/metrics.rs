@@ -35,6 +35,7 @@ pub fn compute(energy_budget_joules: f64, consumption_joules: f64) -> Metrics {
 }
 
 /// Fixed-point metrics for deterministic replay and cross-platform simulation.
+// FR-CIV-METRICS-001-TIMESERIES
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct MetricsFixed {
     pub waste_joules: Fixed,

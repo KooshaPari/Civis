@@ -289,6 +289,7 @@ async fn post_control_place_voxel_returns_ok() {
     assert_eq!(json["ok"], true);
 }
 
+// FR-CIV-SAVE-004 — POST /control/save round-trips through /control/saves and /control/load.
 #[tokio::test]
 async fn fr_save_004_post_control_save_and_load_round_trip() {
     let app = test_app();
@@ -371,6 +372,7 @@ fn autosave_archive_count(dir: &std::path::Path) -> usize {
         .count()
 }
 
+// FR-CIV-SAVE-004 — /control/save/slot and /control/load/slot validate the slot then reuse the save/load handlers.
 #[tokio::test]
 async fn fr_save_002_post_save_slot_round_trip() {
     let state = test_state();

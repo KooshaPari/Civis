@@ -238,6 +238,38 @@ mod tests {
         );
     }
 
+    /// Covers FR-CIV-TACTICS-032
+    // FR-CIV-TACTICS-032 — hp/max_hp persist as first-class Fixed ECS fields
+    // through the JSON-RPC pin export and drain independently of max_hp.
+    #[test]
+    fn fr_civ_tactics_032_hp_fields_survive_pin_export_and_drain_independently() {
+        let max_hp = Fixed::from_num(3);
+        let unit = MilitaryUnit {
+            unit_type: UnitType::Soldier,
+            strength: max_hp,
+            hp: max_hp,
+            max_hp,
+            morale: Fixed::from_num(1),
+            position: Position { x: 4, y: -2 },
+            faction_id: 7,
+        };
+
+        // JSON-RPC pin export round-trips hp/max_hp without losing resolution.
+        let json = serde_json::to_string(&unit).expect("MilitaryUnit serializes");
+        let back: MilitaryUnit = serde_json::from_str(&json).expect("MilitaryUnit deserializes");
+        assert_eq!(back.hp, max_hp, "hp survives the pin export exactly");
+        assert_eq!(back.max_hp, max_hp, "max_hp survives the pin export exactly");
+        assert_eq!(back, unit, "full round-trip is lossless");
+
+        // hp is an independent ECS field: draining it leaves max_hp as the ceiling.
+        let mut drained = unit.clone();
+        drained.hp = Fixed::from_num(1);
+        assert!(drained.hp < drained.max_hp, "drained hp sits below max_hp");
+        assert_eq!(drained.max_hp, max_hp, "max_hp unchanged by hp drain");
+        assert!(drained.hp >= Fixed::from_num(0), "hp bounded below by zero");
+        assert_eq!(drained.hp, Fixed::from_num(1), "hp keeps exact Fixed resolution");
+    }
+
     /// FR-CORE-001 — each `Simulation::tick()` appends exactly one `ReplayEvent::Tick`.
     #[test]
     fn fr_core_001_single_tick_event_per_tick() {

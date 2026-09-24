@@ -170,4 +170,38 @@ mod tests {
         apply_shock(&mut prices, &shock);
         assert!((prices[0].price(Good::Tools) - 1.0).abs() < 0.001);
     }
+
+    // FR-ECON-EMERGE-004 — disaster supply shocks convert severity into the
+    // exact price multiplier ×(1 + 9·s) and repeated shocks stay clamped to
+    // the emergent price cap of 10.0, targeting only their own good.
+    #[test]
+    fn fr_econ_emerge_004_disaster_shock_multiplier_exact_and_capped() {
+        let mut prices = vec![baseline_price_state(0)];
+        let quarter = MarketShock::DisasterSupplyShock {
+            cluster: 0,
+            good: Good::Food,
+            severity: 0.25,
+        };
+        assert_eq!(quarter.cluster(), 0, "shock reports its target cluster");
+        assert_eq!(quarter.good(), Good::Food, "shock reports its target good");
+
+        apply_shock(&mut prices, &quarter);
+        assert_eq!(
+            prices[0].price(Good::Food),
+            3.25,
+            "severity 0.25 must apply an exact ×3.25 multiplier"
+        );
+
+        // A follow-up max-severity shock would overshoot: clamped to the cap.
+        apply_shock(
+            &mut prices,
+            &MarketShock::DisasterSupplyShock {
+                cluster: 0,
+                good: Good::Food,
+                severity: 1.0,
+            },
+        );
+        assert_eq!(prices[0].price(Good::Food), 10.0, "repeated shocks clamp at the price cap");
+        assert_eq!(prices[0].price(Good::Water), 1.0, "shock targets only its good");
+    }
 }

@@ -360,4 +360,38 @@ mod tests {
         assert!(r.event_log, "sub-budget growth must pass S-05");
         assert!(r.all_passed(), "every budget met ⇒ report passes");
     }
+
+    // NFR-S-04 — command throughput: the server gate accepts at least
+    // COMMAND_RATE_BUDGET_PER_SEC commands/sec, rejects one below it, and a
+    // command-rate miss fails the aggregate BudgetReport.
+    #[test]
+    fn nfr_s_04_command_rate_budget_gate_and_report() {
+        assert_eq!(COMMAND_RATE_BUDGET_PER_SEC, 1_000);
+        assert!(
+            !command_rate_budget_met(COMMAND_RATE_BUDGET_PER_SEC - 1),
+            "one below the budget must fail"
+        );
+        assert!(
+            command_rate_budget_met(COMMAND_RATE_BUDGET_PER_SEC),
+            "an at-budget rate passes"
+        );
+        assert!(
+            command_rate_budget_met(2 * COMMAND_RATE_BUDGET_PER_SEC),
+            "headroom passes"
+        );
+
+        let at_budget = BudgetMeasurement {
+            commands_per_sec: COMMAND_RATE_BUDGET_PER_SEC,
+            ..BudgetMeasurement::default()
+        };
+        assert!(BudgetReport::from_measurement(at_budget).command_rate);
+
+        let below = BudgetMeasurement {
+            commands_per_sec: COMMAND_RATE_BUDGET_PER_SEC - 1,
+            ..BudgetMeasurement::default()
+        };
+        let report = BudgetReport::from_measurement(below);
+        assert!(!report.command_rate, "S-04 flag flips below the budget");
+        assert!(!report.all_passed(), "a command-rate miss fails the whole report");
+    }
 }

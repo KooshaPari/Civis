@@ -415,4 +415,33 @@ mod tests {
         let alt_second = diverged.advance(&tick_event_bytes(99));
         assert_ne!(alt_second, first_run[1], "divergent tick must diverge the chain");
     }
+
+    // NFR-C-07 — SimEvent.state_hash parity: chain_advance folds each event's
+    // payload through the running chain, and an independent replay of the same
+    // ordered payloads recomputes the identical per-event root.
+    #[test]
+    fn nfr_c_07_chain_advance_matches_independent_replay_root() {
+        let e1 = b"sim-event-1".to_vec();
+        let e2 = b"sim-event-2".to_vec();
+
+        // Incremental fold: root after event 1, then after event 2.
+        let root_after_1 = chain_advance(&GENESIS, &e1);
+        let root_after_2 = chain_advance(&root_after_1, &e2);
+
+        // Independent replay from the ordered payloads yields the same roots.
+        assert_eq!(
+            root_after_1,
+            chain_root_from_payloads([&e1[..]]).expect("one-event root")
+        );
+        assert_eq!(
+            root_after_2,
+            chain_root_from_payloads([&e1[..], &e2[..]]).expect("two-event root")
+        );
+
+        // Append-only and order-sensitive: the digest advances per event and a
+        // reordered replay does not match the emission-time root.
+        assert_ne!(root_after_1, root_after_2, "each event must advance the chain");
+        let reordered = chain_root_from_payloads([&e2[..], &e1[..]]).expect("reordered root");
+        assert_ne!(root_after_2, reordered, "event order is part of the state hash");
+    }
 }

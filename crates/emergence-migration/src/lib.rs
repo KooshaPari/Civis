@@ -896,6 +896,45 @@ mod tests {
     }
 
     #[test]
+    fn fr_civ_migration_002_apply_flows_reshapes_populations_exactly() {
+        let mut eng = stress_to_opportunity();
+        let origin = ClusterId(1);
+        let dest = ClusterId(2);
+
+        let mut prev_origin = eng.cluster(origin).unwrap().population;
+        let mut prev_dest = eng.cluster(dest).unwrap().population;
+
+        for tick in 0..3u64 {
+            let report = eng.tick(&mut rng(21 + tick));
+            let now_origin = eng.cluster(origin).unwrap().population;
+            let now_dest = eng.cluster(dest).unwrap().population;
+
+            let left = report.emigrants_from(origin);
+            let arrived = report.immigrants_to(dest);
+            assert!(left > 0, "tick {tick}: stressed origin must dispatch migrants");
+            assert_eq!(left, arrived, "tick {tick}: every departure has an arrival");
+            assert_eq!(
+                prev_origin - now_origin,
+                left,
+                "tick {tick}: departures subtract exactly the reported flow"
+            );
+            assert_eq!(
+                now_dest - prev_dest,
+                arrived,
+                "tick {tick}: arrivals add exactly the reported flow"
+            );
+            assert_eq!(
+                now_origin + now_dest,
+                prev_origin + prev_dest,
+                "tick {tick}: apply_flows conserves total population"
+            );
+
+            prev_origin = now_origin;
+            prev_dest = now_dest;
+        }
+    }
+
+    #[test]
     fn stress_and_opportunity_aggregates_are_bounded() {
         let s = MigrationStress {
             scarcity: 1.0,

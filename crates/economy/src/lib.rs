@@ -24,6 +24,7 @@ pub mod metrics;
 mod prices;
 mod production;
 pub mod shadow;
+pub mod shocks;
 pub mod specialization;
 mod stocks;
 mod tax_policy;

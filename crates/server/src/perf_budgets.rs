@@ -30,21 +30,24 @@ pub const WS_CLIENT_BUDGET: usize = 100;
 /// hardware so a viewer's first frame arrives within one tick.
 pub const WS_HANDSHAKE_BUDGET_MS: f64 = 5.0;
 
-/// NFR-S-03 — `tick_time_10k / tick_time_1k` budget. The spec allows
-/// at most ~8× with rayon (expect ~5×); we pin the budget at 8.0 so a
-/// regression to linear scaling trips the gate.
+/// FR-NFR-S-03 — `tick_time_10k / tick_time_1k` budget. The spec
+/// requires sub-linear scaling from 1k to 10k citizens: at most ~8×
+/// with rayon (expect ~5×); we pin the budget at 8.0 so a regression
+/// to linear (10×) scaling trips the gate.
 pub const TICK_SCALE_BUDGET: f64 = 8.0;
 
-/// NFR-S-04 — minimum command throughput (commands/sec) the server
-/// MUST accept without tick delay.
+/// FR-NFR-S-04 — minimum command throughput (commands/sec) the server
+/// MUST accept without the tick interval lengthening (1 kHz flood).
 pub const COMMAND_RATE_BUDGET_PER_SEC: u64 = 1_000;
 
-/// NFR-S-05 — event-log growth budget at 1k citizens at 10 ticks/sec,
-/// in bytes/minute.
+/// FR-NFR-S-05 — event-log growth budget at 1k citizens at 10 ticks/sec:
+/// the append-only replay/event log must stay under 5 MB/minute so a
+/// multi-day research run remains an archival-scale footprint.
 pub const EVENT_LOG_BUDGET_BYTES_MIN: u64 = 5 * 1024 * 1024;
 
-/// NFR-S-06 — WebSocket binary frame budget (average) for a 1k-citizen
-/// snapshot, in bytes.
+/// FR-NFR-S-06 — WebSocket binary frame budget (average) for a
+/// 1k-citizen snapshot, in bytes: the encoder must keep average frames
+/// under 20 KB (delta snapshots, compact IDs, RLE event payloads).
 pub const WS_FRAME_BUDGET_BYTES: usize = 20 * 1024;
 
 /// NFR-S-01 acceptance gate. Returns `true` when `concurrent_clients`
@@ -63,8 +66,9 @@ pub fn ws_handshake_budget_met(handshake_ms: f64) -> bool {
     handshake_ms < WS_HANDSHAKE_BUDGET_MS
 }
 
-/// NFR-S-03 acceptance gate. Returns `true` when the tick-time ratio
-/// (10k / 1k) is sub-linear at the spec bound.
+/// FR-NFR-S-03 acceptance gate. Returns `true` when the tick-time ratio
+/// (10k / 1k) is sub-linear at the spec bound (< 8.0). A non-positive
+/// 1k baseline is a failed measurement, not a pass.
 #[must_use]
 pub fn tick_scale_budget_met(tick_1k_ms: f64, tick_10k_ms: f64) -> bool {
     if tick_1k_ms <= 0.0 {
@@ -74,22 +78,23 @@ pub fn tick_scale_budget_met(tick_1k_ms: f64, tick_10k_ms: f64) -> bool {
     ratio < TICK_SCALE_BUDGET
 }
 
-/// NFR-S-04 acceptance gate. Returns `true` when the command rate
-/// meets the throughput budget.
+/// FR-NFR-S-04 acceptance gate. Returns `true` when the command rate
+/// meets the throughput budget (>= 1,000 commands/sec absorbed
+/// asynchronously without contending with the tick critical path).
 #[must_use]
 pub fn command_rate_budget_met(commands_per_sec: u64) -> bool {
     commands_per_sec >= COMMAND_RATE_BUDGET_PER_SEC
 }
 
-/// NFR-S-05 acceptance gate. Returns `true` when the event-log growth
-/// rate is within the byte budget.
+/// FR-NFR-S-05 acceptance gate. Returns `true` when the event-log growth
+/// rate is strictly within the byte budget (< 5 MiB/minute).
 #[must_use]
 pub fn event_log_budget_met(bytes_per_min: u64) -> bool {
     bytes_per_min < EVENT_LOG_BUDGET_BYTES_MIN
 }
 
-/// NFR-S-06 acceptance gate. Returns `true` when the average WS frame
-/// size is within the byte budget.
+/// FR-NFR-S-06 acceptance gate. Returns `true` when the average WS frame
+/// size is strictly within the byte budget (< 20 KB).
 #[must_use]
 pub fn ws_frame_budget_met(frame_bytes: usize) -> bool {
     frame_bytes < WS_FRAME_BUDGET_BYTES

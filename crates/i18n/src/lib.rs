@@ -215,6 +215,11 @@ pub fn detect_locale_from_env() -> Locale {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+
+    /// Serialises env-var mutation so parallel tests cannot interleave
+    /// `CIVIS_LANG`/`LANG` writes with each other's `detect_locale_from_env` reads.
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn locale_from_str_exact() {
@@ -274,10 +279,49 @@ mod tests {
 
     #[test]
     fn detect_locale_from_env_override() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|poison| poison.into_inner());
         std::env::set_var("CIVIS_LANG", "fa");
         let loc = detect_locale_from_env();
         assert_eq!(loc, Locale::Fa);
         std::env::remove_var("CIVIS_LANG");
+    }
+
+    // FR-CIV-L10N-020 — locale detection derives a supported Locale from
+    // BCP-47/Accept-Language input via `Locale::from_str` and from the
+    // CIVIS_LANG/LANG environment via `detect_locale_from_env`, falling back
+    // to English when nothing resolves.
+    #[test]
+    fn fr_civ_l10n_020_detect_locale_from_bcp47_and_env() {
+        // BCP-47-like input resolves to a supported Locale; unknown languages do not.
+        assert_eq!(Locale::from_str("fa-IR"), Some(Locale::Fa));
+        assert_eq!(Locale::from_str("en-US"), Some(Locale::En));
+        assert_eq!(Locale::from_str("zh-TW"), Some(Locale::ZhTW));
+        assert_eq!(Locale::from_str("fr-FR"), None);
+
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|poison| poison.into_inner());
+        let prev_civis = std::env::var("CIVIS_LANG").ok();
+        let prev_lang = std::env::var("LANG").ok();
+
+        // CIVIS_LANG wins as the explicit override.
+        std::env::set_var("CIVIS_LANG", "zh-TW");
+        assert_eq!(detect_locale_from_env(), Locale::ZhTW);
+
+        // An unparseable CIVIS_LANG falls through to LANG, then to English.
+        std::env::set_var("CIVIS_LANG", "not-a-locale");
+        std::env::set_var("LANG", "fa");
+        assert_eq!(detect_locale_from_env(), Locale::Fa);
+        std::env::remove_var("LANG");
+        assert_eq!(detect_locale_from_env(), Locale::En);
+
+        // Restore the ambient environment for any later test.
+        match prev_civis {
+            Some(value) => std::env::set_var("CIVIS_LANG", value),
+            None => std::env::remove_var("CIVIS_LANG"),
+        }
+        match prev_lang {
+            Some(value) => std::env::set_var("LANG", value),
+            None => std::env::remove_var("LANG"),
+        }
     }
 
     #[test]

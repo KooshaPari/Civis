@@ -1605,6 +1605,36 @@ mod tests {
         assert_eq!(format_gpu_capability_flag(false), "No");
     }
 
+    // FR-CIV-BEVY-036 — settings GPU readout: detected capabilities render as
+    // stable user-facing labels (backend, VRAM, ray tracing, DLSS, FSR) with an
+    // "Unknown" fallback when VRAM could not be detected.
+    #[test]
+    fn fr_civ_bevy_036_settings_gpu_readout_labels() {
+        let caps = GpuCapabilities {
+            ray_tracing: true,
+            mesh_shaders: true,
+            dlss_available: false,
+            fsr_available: true,
+            metal_fx: false,
+            max_vram_mb: 12288,
+            backend_name: "DX12".to_string(),
+        };
+        let labels = format_gpu_settings_labels(&caps);
+        assert_eq!(labels.len(), 5);
+        assert_eq!(labels[0], ("Backend", "DX12".to_string()));
+        assert_eq!(labels[1], ("Est. VRAM", "12288 MB".to_string()));
+        assert_eq!(labels[2], ("Ray tracing", "Yes".to_string()));
+        assert_eq!(labels[3], ("DLSS", "No".to_string()));
+        assert_eq!(labels[4], ("FSR", "Yes".to_string()));
+
+        // Unknown VRAM reads as "Unknown", never "0 MB", and the default
+        // backend label stays user-facing.
+        let fallback = format_gpu_settings_labels(&GpuCapabilities::default());
+        assert_eq!(fallback[0], ("Backend", "WebGPU".to_string()));
+        assert_eq!(fallback[1], ("Est. VRAM", "Unknown".to_string()));
+        assert_eq!(fallback[2], ("Ray tracing", "No".to_string()));
+    }
+
     #[test]
     fn resume_shell_pause_restores_stuck_zero_speed() {
         let mut mode = GameUiMode::Paused;

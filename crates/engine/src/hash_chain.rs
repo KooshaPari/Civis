@@ -373,4 +373,46 @@ mod tests {
         };
         assert_ne!(hash, sha256_first);
     }
+
+    // NFR-C-01 — tick-by-tick state hash determinism: two runs over the same
+    // tick sequence produce byte-identical per-tick digests, chained links
+    // always advance, and a single divergent tick changes the digest.
+    #[test]
+    fn nfr_c_01_identical_tick_sequences_replay_identical_per_tick_digests() {
+        let ticks = [3u64, 9, 27, 81, 243];
+
+        let run = || -> Vec<[u8; HASH_LEN]> {
+            let mut state = HashChainState::new();
+            ticks
+                .iter()
+                .map(|&tick| state.advance(&tick_event_bytes(tick)))
+                .collect()
+        };
+
+        let first_run = run();
+        let second_run = run();
+        assert_eq!(first_run.len(), ticks.len());
+        assert_eq!(
+            first_run, second_run,
+            "same-seed runs must replay identical per-tick digests"
+        );
+
+        // Each chained link differs from the previous one (a repeated digest
+        // would mean the chain skipped a tick).
+        for window in first_run.windows(2) {
+            assert_ne!(window[0], window[1], "per-tick digests must advance");
+        }
+
+        // The batch recomputation agrees with the incremental chain root.
+        assert_eq!(
+            chain_root_from_ticks(ticks),
+            Some(*first_run.last().expect("chain has ticks"))
+        );
+
+        // A single divergent tick changes the digest at that tick onward.
+        let mut diverged = HashChainState::new();
+        diverged.advance(&tick_event_bytes(ticks[0]));
+        let alt_second = diverged.advance(&tick_event_bytes(99));
+        assert_ne!(alt_second, first_run[1], "divergent tick must diverge the chain");
+    }
 }

@@ -1362,4 +1362,131 @@ mod tests {
         assert_eq!(world.military_alliances.len(), 1);
         assert_eq!(world.tribute_relationships.len(), 1);
     }
+
+    // FR-DIP-002 — the four advanced diplomacy effects each emit their typed
+    // event and mutate WorldState with integer-only, deterministic arithmetic.
+    #[test]
+    fn fr_dip_002_four_effects_emit_typed_events_deterministically() {
+        let scenario = || {
+            let mut world = WorldState {
+                tick: 12,
+                ..WorldState::default()
+            };
+            world
+                .cultural_profiles
+                .insert(p(1), CulturalProfile::uniform(20));
+            world
+                .cultural_profiles
+                .insert(p(2), CulturalProfile::uniform(80));
+            world.shared_borders.insert(pair(1, 2), 4);
+            world.trade_efficiency.insert(pair(1, 2), 75);
+            world.resources.insert(p(1), 1_000);
+            world.resources.insert(p(2), 300);
+
+            let cultural = CulturalInfluenceEffect { max_rate: 10 };
+            let embargo = TradeEmbargoEffect::default();
+            let alliance = MilitaryAllianceEffect::default();
+            let tribute = TributeEffect { max_tribute: 50 };
+
+            let cultural_events = cultural.apply(&mut world);
+            let embargo_event = embargo.impose(&mut world, p(1), p(2)).expect("first impose");
+            let alliance_event = alliance.form(&mut world, p(1), p(2)).expect("first form");
+            let tribute_event = tribute
+                .impose(&mut world, p(1), p(2), 40)
+                .expect("weaker vassal accepts tribute");
+            (
+                world,
+                cultural_events,
+                embargo_event,
+                alliance_event,
+                tribute_event,
+            )
+        };
+
+        let (world, cultural_events, embargo_event, alliance_event, tribute_event) = scenario();
+
+        // CulturalInfluenceEffect: profiles converge by min(shared, max_rate) = 4%.
+        assert_eq!(cultural_events.len(), 1);
+        match &cultural_events[0] {
+            DiplomacyEvent::CulturalShift {
+                pair: event_pair,
+                profile_lo,
+                profile_hi,
+                tick,
+            } => {
+                assert_eq!(*event_pair, pair(1, 2));
+                assert_eq!(*tick, 12);
+                assert_eq!(profile_lo.art, 22, "lo drifts 20 -> 22 by 4%");
+                assert_eq!(profile_hi.art, 78, "hi drifts 80 -> 78 by 4%");
+            }
+            other => panic!("expected CulturalShift, got {other:?}"),
+        }
+
+        // TradeEmbargoEffect: imposed embargo zeroes trade efficiency.
+        match &embargo_event {
+            DiplomacyEvent::TradeEmbargo {
+                pair: event_pair,
+                imposed,
+                tick,
+            } => {
+                assert_eq!(*event_pair, pair(1, 2));
+                assert!(*imposed);
+                assert_eq!(*tick, 12);
+            }
+            other => panic!("expected TradeEmbargo, got {other:?}"),
+        }
+        assert_eq!(world.trade_efficiency[&pair(1, 2)], 0);
+        assert!(world.embargoes[&pair(1, 2)]);
+
+        // MilitaryAllianceEffect: formed alliance grants bonus + shared intel.
+        match &alliance_event {
+            DiplomacyEvent::MilitaryAlliance {
+                pair: event_pair,
+                formed,
+                combat_bonus,
+                tick,
+            } => {
+                assert_eq!(*event_pair, pair(1, 2));
+                assert!(*formed);
+                assert_eq!(*combat_bonus, 15);
+                assert_eq!(*tick, 12);
+            }
+            other => panic!("expected MilitaryAlliance, got {other:?}"),
+        }
+        assert_eq!(world.combat_bonuses[&pair(1, 2)], 15);
+        assert_eq!(world.shared_intel[&pair(1, 2)], 0b1111);
+
+        // TributeEffect: 40 resources flow from the weaker vassal to the dominant.
+        match &tribute_event {
+            DiplomacyEvent::Tribute {
+                from,
+                to,
+                amount,
+                tick,
+            } => {
+                assert_eq!(*from, p(2));
+                assert_eq!(*to, p(1));
+                assert_eq!(*amount, 40);
+                assert_eq!(*tick, 12);
+            }
+            other => panic!("expected Tribute, got {other:?}"),
+        }
+        assert_eq!(world.resources[&p(1)], 1_040);
+        assert_eq!(world.resources[&p(2)], 260);
+        assert_eq!(world.tribute_relationships.len(), 1);
+
+        // Determinism: replaying the identical inputs yields identical events
+        // and identical world state (no RNG, no wall-clock, integer-only).
+        assert_eq!(
+            (
+                world,
+                cultural_events,
+                embargo_event,
+                alliance_event,
+                tribute_event,
+            ),
+            scenario(),
+            "identical inputs must produce identical events and state"
+        );
+    }
 }

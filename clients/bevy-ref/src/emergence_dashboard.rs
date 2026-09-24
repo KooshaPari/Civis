@@ -296,10 +296,58 @@ fn regime_badge(regime: &str) -> (&'static str, egui::Color32) {
 
 #[cfg(test)]
 mod tests {
-    use super::EmergenceDashboardState;
+    use super::{toggle_emergence_dashboard, EmergenceDashboardState};
 
     #[test]
     fn test_emergence_dashboard_default_state() {
         assert!(!EmergenceDashboardState::default().visible);
+    }
+
+    // FR-CIV-EMERGE-DASH-001 — the emergence dashboard starts hidden and the
+    // F7 toggle system flips its visibility once per fresh key press.
+    #[test]
+    fn fr_civ_emerge_dash_001_f7_toggles_visibility() {
+        use bevy::prelude::{App, ButtonInput, KeyCode, Update};
+
+        let mut app = App::new();
+        app.init_resource::<ButtonInput<KeyCode>>();
+        app.init_resource::<EmergenceDashboardState>();
+        app.add_systems(Update, toggle_emergence_dashboard);
+
+        // Panel starts hidden.
+        assert!(!app.world().resource::<EmergenceDashboardState>().visible);
+
+        // First F7 press opens the panel.
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::F7);
+        app.update();
+        assert!(
+            app.world().resource::<EmergenceDashboardState>().visible,
+            "F7 press must show the dashboard"
+        );
+
+        // A held key must not re-toggle once just_pressed has been cleared.
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .clear();
+        app.update();
+        assert!(
+            app.world().resource::<EmergenceDashboardState>().visible,
+            "cleared key state must not flip visibility"
+        );
+
+        // A second fresh press (key-up, then key-down) closes it again —
+        // release first so press() re-arms just_pressed for the held key.
+        {
+            let mut input = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            input.release(KeyCode::F7);
+            input.press(KeyCode::F7);
+        }
+        app.update();
+        assert!(
+            !app.world().resource::<EmergenceDashboardState>().visible,
+            "second F7 press must hide the dashboard"
+        );
     }
 }

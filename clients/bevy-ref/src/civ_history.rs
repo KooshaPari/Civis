@@ -272,7 +272,9 @@ mod tests {
             SystemState::new(&mut world);
 
         // Frame 1: Y pressed → panel opens.
-        world.insert_resource(ButtonInput::<KeyCode>::default());
+        let mut pressed = ButtonInput::<KeyCode>::default();
+        pressed.press(KeyCode::KeyY);
+        world.insert_resource(pressed);
         let (keys, open) = state.get_mut(&mut world);
         toggle_history_panel(keys, open);
         assert!(world.resource::<CivHistoryPanelOpen>().0, "Y opens the panel");

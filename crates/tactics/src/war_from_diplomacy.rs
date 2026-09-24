@@ -130,4 +130,99 @@ mod tests {
         let r2 = check_war_onset(&rel, 42);
         assert_eq!(r1, r2);
     }
+
+    // Passive friction drains standing each unresolved tick until it crosses
+    // the war-onset threshold.
+    // FR-CIV-WARFARE-001 — war emerges from sustained rivalry.
+    #[test]
+    fn fr_civ_warfare_001_rivalry_friction_escalates_to_war_onset() {
+        let pair = Pair::new(PolityId::new(7), PolityId::new(8));
+        let mut standing = -50;
+        let mut onset: Option<WarState> = None;
+        let mut tick = 0u64;
+        while onset.is_none() && tick < 100 {
+            standing = apply_rivalry_friction(standing);
+            onset = check_war_onset(
+                &Relation {
+                    pair,
+                    standing,
+                    last_updated_tick: tick,
+                },
+                tick,
+            );
+            tick += 1;
+        }
+
+        // -50 drains by 3/tick: -53, -56, -59, -62 → onset on the 4th tick.
+        let ws = onset.expect("persistent rivalry must eventually declare war");
+        assert_eq!(
+            ws.onset_tick, 3,
+            "4 friction steps cross {} at tick 3 (0-based)",
+            WAR_STANDING_THRESHOLD
+        );
+        assert!(ws.ongoing, "onset marks the war active");
+        assert_eq!(ws.pair, pair, "onset recorded for the rival pair");
+        assert!(standing < WAR_STANDING_THRESHOLD);
+        assert_eq!(standing, -50 + 4 * RIVALRY_FRICTION_DRAIN);
+    }
+
+    // Combat engagements convert 1:1 into diplomacy Combat events carrying
+    // shooter/target polities, damage energy, and the reporting tick.
+    // FR-CIV-WARFARE-001 — warfare feeds the diplomacy substrate.
+    #[test]
+    fn fr_civ_warfare_001_combat_engagements_become_diplomacy_events() {
+        let engagements = vec![
+            crate::CombatEngagement {
+                shooter_id: 1,
+                target_id: 2,
+                shooter_faction: 3,
+                target_faction: 5,
+                damage: crate::DamageEvent {
+                    center: civ_voxel::WorldCoord { x: 1, y: 2, z: 3 },
+                    radius_voxels: 2,
+                    energy: 250,
+                },
+                target_index: 0,
+            },
+            crate::CombatEngagement {
+                shooter_id: 4,
+                target_id: 9,
+                shooter_faction: 5,
+                target_faction: 3,
+                damage: crate::DamageEvent {
+                    center: civ_voxel::WorldCoord { x: -4, y: 0, z: 8 },
+                    radius_voxels: 1,
+                    energy: 75,
+                },
+                target_index: 1,
+            },
+        ];
+
+        let events = engagements_to_diplomacy_events(&engagements, 77);
+        assert_eq!(events.len(), 2, "one diplomacy event per engagement");
+
+        match &events[0] {
+            InteractionEvent::Combat {
+                attacker,
+                defender,
+                energy,
+                tick,
+            } => {
+                assert_eq!(*attacker, PolityId::new(3), "attacker is the shooter faction");
+                assert_eq!(*defender, PolityId::new(5), "defender is the target faction");
+                assert_eq!(*energy, 250, "damage energy carried through");
+                assert_eq!(*tick, 77, "reporting tick carried through");
+            }
+            _ => panic!("first engagement must map to InteractionEvent::Combat"),
+        }
+        match &events[1] {
+            InteractionEvent::Combat {
+                attacker, defender, ..
+            } => {
+                assert_eq!(*attacker, PolityId::new(5));
+                assert_eq!(*defender, PolityId::new(3));
+            }
+            _ => panic!("second engagement must map to InteractionEvent::Combat"),
+        }
+    }
 }

@@ -505,13 +505,23 @@ mod culture_phase_cadence_tests {
             vec![1, 2],
             "both inhabited settlement factions must be seeded"
         );
+        // The phase seeds the configured 0.05 baseline, then one lineage tick
+        // adds the faction's measured isolation pressure * 0.01 (clamped).
+        let member_counts = settlement_member_counts(&sim.world);
+        let dominant = settlement_dominant_factions(&sim.world, &member_counts);
+        let contacts =
+            settlement_contact_pairs(&sim.world, &member_counts, SETTLEMENT_CONTACT_RADIUS_FP);
         for (faction_id, lang) in &seeded {
+            let isolation =
+                faction_isolation_pressure(*faction_id, &dominant, &member_counts, &contacts);
+            let expected_drift = (0.05 + isolation * 0.01).clamp(0.0, 1.0);
             assert!(
-                (lang.drift_rate - 0.05).abs() < f32::EPSILON,
-                "faction {faction_id} drift rate must be the configured 0.05"
+                (lang.drift_rate - expected_drift).abs() < f32::EPSILON,
+                "faction {faction_id} drift rate must be the seeded 0.05 baseline plus measured isolation drift (expected {expected_drift}, got {})",
+                lang.drift_rate
             );
-            assert!(
-                (lang.split_threshold - 0.35).abs() < f32::EPSILON,
+            assert_eq!(
+                lang.split_threshold, 0.35,
                 "faction {faction_id} split threshold must be the configured 0.35"
             );
         }

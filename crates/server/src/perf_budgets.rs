@@ -282,4 +282,45 @@ mod tests {
         let report = BudgetReport::from_measurement(ok);
         assert!(report.ws_frame);
     }
+
+    // Event-log growth budget is < 5 MiB/minute at 1k citizens and 10 ticks/sec
+    // (spec §10.3). The gate is strictly under-budget: growth at exactly the
+    // budget fails, sub-budget growth passes, and BudgetReport::event_log
+    // surfaces the verdict through the aggregate report.
+    // NFR-S-05 — event-log growth gate enforces the spec byte budget.
+    #[test]
+    fn nfr_s_05_event_log_growth_budget_gate_is_strict() {
+        assert_eq!(EVENT_LOG_BUDGET_BYTES_MIN, 5 * 1024 * 1024);
+        // Within budget passes.
+        assert!(event_log_budget_met(0), "no growth is within budget");
+        assert!(event_log_budget_met(4 * 1024 * 1024));
+        assert!(event_log_budget_met(EVENT_LOG_BUDGET_BYTES_MIN - 1), "1 byte under passes");
+        // At or over budget fails (strict <).
+        assert!(
+            !event_log_budget_met(EVENT_LOG_BUDGET_BYTES_MIN),
+            "growth exactly at the budget must fail"
+        );
+        assert!(!event_log_budget_met(EVENT_LOG_BUDGET_BYTES_MIN + 1));
+        assert!(!event_log_budget_met(u64::MAX));
+
+        // Aggregate report: only the S-05 flag flips when growth overruns.
+        let mut m = BudgetMeasurement {
+            concurrent_clients: 150,
+            handshake_ms: 2.5,
+            tick_1k_ms: 10.0,
+            tick_10k_ms: 50.0,
+            commands_per_sec: 2_000,
+            event_log_bytes_per_min: EVENT_LOG_BUDGET_BYTES_MIN + 1,
+            ws_frame_bytes: 10_000,
+        };
+        let r = BudgetReport::from_measurement(m);
+        assert!(!r.event_log, "over-budget growth must fail S-05");
+        assert!(!r.all_passed());
+        assert!(r.ws_client && r.ws_handshake && r.tick_scale && r.command_rate && r.ws_frame);
+
+        m.event_log_bytes_per_min = EVENT_LOG_BUDGET_BYTES_MIN - 1;
+        let r = BudgetReport::from_measurement(m);
+        assert!(r.event_log, "sub-budget growth must pass S-05");
+        assert!(r.all_passed(), "every budget met ⇒ report passes");
+    }
 }

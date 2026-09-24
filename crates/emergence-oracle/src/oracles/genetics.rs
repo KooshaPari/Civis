@@ -104,4 +104,44 @@ mod tests {
             .collect());
         assert!(inheritance_trial(123, &class, &parent_a, &parent_b));
     }
+
+    // FR-EMG-023 — the oracle's Monte Carlo pass: all 64 seeded inheritance
+    // trials (seeds 11..=74, exactly the set check() runs after tick 0) preserve
+    // genome length and inherit every pre-mutation locus from a parent.
+    #[test]
+    fn fr_emg_023_all_monte_carlo_inheritance_trials_hold() {
+        let class = DnaClass::default();
+        let parent_a = Dna((0..class.length).map(|i| i as u8).collect());
+        let parent_b = Dna((0..class.length)
+            .map(|i| 255u8.wrapping_sub(i as u8))
+            .collect());
+        for trial in 0..64usize {
+            let seed = trial as u64 + 11;
+            assert!(
+                inheritance_trial(seed, &class, &parent_a, &parent_b),
+                "inheritance trial {trial} (seed {seed}) broke the contract"
+            );
+        }
+    }
+
+    // FR-EMG-023 — check() verdict: vacuous pass at tick 0 with threshold 0,
+    // and after warmup a full 64/64 measured against threshold 64.
+    #[test]
+    fn fr_emg_023_check_reports_full_inheritance_success_after_warmup() {
+        let sim0 = Simulation::new();
+        let v0 = GeneticsOracle.check(&sim0);
+        assert_eq!(v0.fr_id, "FR-EMG-023");
+        assert!(v0.passed, "tick 0 must pass: {}", v0.detail);
+        assert_eq!(v0.threshold, 0.0);
+
+        let mut sim = Simulation::new();
+        for _ in 0..10 {
+            sim.tick();
+        }
+        let v = GeneticsOracle.check(&sim);
+        assert_eq!(v.threshold, 64.0, "64 trials after tick 0");
+        assert_eq!(v.measured, 64.0, "every inheritance trial must succeed");
+        assert!(v.passed, "genetics inheritance oracle must pass: {}", v.detail);
+        assert!(v.detail.contains("Genetics inheritance:"));
+    }
 }

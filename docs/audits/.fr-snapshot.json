@@ -1,7 +1,7 @@
 {
   "CODE-ONLY-no-spec": 1,
-  "COVERED": 1006,
-  "IMPL-NO-TEST": 49,
+  "COVERED": 1025,
+  "IMPL-NO-TEST": 30,
   "SPEC-ONLY": 235,
   "STUB-TEST-ONLY": 9,
   "TEST-NO-CODE-REF": 155

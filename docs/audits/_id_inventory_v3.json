@@ -3656,9 +3656,12 @@
       ],
       "in_code": [
         "crates/asset-pipeline/src/manifest.rs:3",
-        "crates/asset-pipeline/src/manifest.rs:59"
+        "crates/asset-pipeline/src/manifest.rs:59",
+        "crates/asset-pipeline/src/manifest.rs:235"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/asset-pipeline/src/manifest.rs:235"
+      ],
       "in_stub_tests": []
     },
     {
@@ -4301,9 +4304,14 @@
         "docs/traceability/fr-civ-bevy-018/fr-civ-bevy-018-plan.md:1"
       ],
       "in_code": [
-        "clients/bevy-ref/src/ws_client.rs:652"
+        "clients/bevy-ref/src/ws_client.rs:652",
+        "clients/bevy-ref/src/ws_client.rs:1240",
+        "clients/bevy-ref/src/ws_client.rs:1275"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "clients/bevy-ref/src/ws_client.rs:1240",
+        "clients/bevy-ref/src/ws_client.rs:1275"
+      ],
       "in_stub_tests": []
     },
     {
@@ -4356,9 +4364,12 @@
         "docs/traceability/fr-civ-bevy-020/fr-civ-bevy-020-plan.md:1"
       ],
       "in_code": [
-        "clients/bevy-ref/src/lib.rs:1113"
+        "clients/bevy-ref/src/lib.rs:1113",
+        "clients/bevy-ref/src/lib.rs:2093"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "clients/bevy-ref/src/lib.rs:2093"
+      ],
       "in_stub_tests": []
     },
     {
@@ -5889,6 +5900,7 @@
         "crates/server/src/jsonrpc.rs:83"
       ],
       "in_tests": [
+        "crates/civis-mcp/src/server.rs:2262",
         "crates/server/src/jsonrpc.rs:83"
       ],
       "in_stub_tests": []
@@ -6165,9 +6177,12 @@
       ],
       "in_code": [
         "crates/engine/src/engine/engine_tests.rs:488",
+        "crates/engine/src/engine/engine_tests.rs:4284",
         "crates/engine/src/engine/social_settlement_phases.rs:272"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/engine/src/engine/engine_tests.rs:4284"
+      ],
       "in_stub_tests": []
     },
     {
@@ -6202,9 +6217,14 @@
         "docs/traceability/fr-civ-content-001/fr-civ-content-001-intent.md:57"
       ],
       "in_code": [
-        "crates/engine/src/emergence_coupling.rs:471"
+        "crates/engine/src/emergence_coupling.rs:471",
+        "crates/engine/src/emergence_coupling.rs:1014",
+        "crates/engine/src/emergence_coupling.rs:1070"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/engine/src/emergence_coupling.rs:1014",
+        "crates/engine/src/emergence_coupling.rs:1070"
+      ],
       "in_stub_tests": []
     },
     {
@@ -9985,9 +10005,12 @@
         "docs/traceability/fr-civ-genetics-seed-002/fr-civ-genetics-seed-002-intent.md:59"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:3077"
+        "crates/engine/src/engine/engine_tests.rs:3077",
+        "crates/engine/src/engine/engine_tests.rs:4339"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/engine/src/engine/engine_tests.rs:4339"
+      ],
       "in_stub_tests": []
     },
     {
@@ -10426,9 +10449,14 @@
         "docs/traceability/fr-civ-godtool-001/fr-civ-godtool-001-intent.md:4"
       ],
       "in_code": [
-        "crates/civis-mcp/src/server.rs:148"
+        "crates/civis-mcp/src/server.rs:148",
+        "crates/civis-mcp/src/server.rs:3285",
+        "crates/civis-mcp/src/server.rs:3325"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/civis-mcp/src/server.rs:3285",
+        "crates/civis-mcp/src/server.rs:3325"
+      ],
       "in_stub_tests": []
     },
     {
@@ -14802,10 +14830,10 @@
         "crates/emergence-migration/src/lib.rs:317",
         "crates/emergence-migration/src/lib.rs:345",
         "crates/emergence-migration/src/lib.rs:388",
-        "crates/emergence-migration/src/lib.rs:764"
+        "crates/emergence-migration/src/lib.rs:793"
       ],
       "in_tests": [
-        "crates/emergence-migration/src/lib.rs:764"
+        "crates/emergence-migration/src/lib.rs:793"
       ],
       "in_stub_tests": []
     },
@@ -14818,9 +14846,12 @@
         "docs/traceability/fr-emergence-matrix.md:219"
       ],
       "in_code": [
-        "crates/emergence-migration/src/lib.rs:390"
+        "crates/emergence-migration/src/lib.rs:390",
+        "crates/emergence-migration/src/lib.rs:647"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/emergence-migration/src/lib.rs:647"
+      ],
       "in_stub_tests": []
     },
     {
@@ -19314,9 +19345,12 @@
         "docs/traceability/fr-emergence-matrix.md:79"
       ],
       "in_code": [
-        "crates/engine/src/disasters.rs:65"
+        "crates/engine/src/disasters.rs:65",
+        "crates/engine/src/disasters.rs:958"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/engine/src/disasters.rs:958"
+      ],
       "in_stub_tests": []
     },
     {
@@ -27660,9 +27694,12 @@
         "docs/traceability/fr-civ-warfare-003/fr-civ-warfare-003-intent.md:4"
       ],
       "in_code": [
-        "crates/tactics/src/war_economy.rs:1"
+        "crates/tactics/src/war_economy.rs:1",
+        "crates/tactics/src/war_economy.rs:110"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/tactics/src/war_economy.rs:110"
+      ],
       "in_stub_tests": []
     },
     {
@@ -27675,9 +27712,12 @@
         "docs/traceability/fr-civ-warfare-004/fr-civ-warfare-004-intent.md:4"
       ],
       "in_code": [
-        "crates/tactics/src/war_legends.rs:1"
+        "crates/tactics/src/war_legends.rs:1",
+        "crates/tactics/src/war_legends.rs:143"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/tactics/src/war_legends.rs:143"
+      ],
       "in_stub_tests": []
     },
     {
@@ -29945,9 +29985,16 @@
       ],
       "in_code": [
         "crates/emergence-oracle/src/oracles/disaster.rs:1",
-        "crates/emergence-oracle/src/oracles/disaster.rs:17"
+        "crates/emergence-oracle/src/oracles/disaster.rs:17",
+        "crates/emergence-oracle/src/oracles/disaster.rs:53",
+        "crates/emergence-oracle/src/oracles/disaster.rs:59",
+        "crates/emergence-oracle/src/oracles/disaster.rs:65"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/emergence-oracle/src/oracles/disaster.rs:53",
+        "crates/emergence-oracle/src/oracles/disaster.rs:59",
+        "crates/emergence-oracle/src/oracles/disaster.rs:65"
+      ],
       "in_stub_tests": []
     },
     {
@@ -29961,9 +30008,18 @@
       ],
       "in_code": [
         "crates/emergence-oracle/src/oracles/mood.rs:1",
-        "crates/emergence-oracle/src/oracles/mood.rs:17"
+        "crates/emergence-oracle/src/oracles/mood.rs:17",
+        "crates/emergence-oracle/src/oracles/mood.rs:50",
+        "crates/emergence-oracle/src/oracles/mood.rs:56",
+        "crates/emergence-oracle/src/oracles/mood.rs:61",
+        "crates/emergence-oracle/src/oracles/mood.rs:71"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/emergence-oracle/src/oracles/mood.rs:50",
+        "crates/emergence-oracle/src/oracles/mood.rs:56",
+        "crates/emergence-oracle/src/oracles/mood.rs:61",
+        "crates/emergence-oracle/src/oracles/mood.rs:71"
+      ],
       "in_stub_tests": []
     },
     {
@@ -30142,9 +30198,16 @@
       ],
       "in_code": [
         "crates/emergence-oracle/src/oracles/genetics.rs:1",
-        "crates/emergence-oracle/src/oracles/genetics.rs:60"
+        "crates/emergence-oracle/src/oracles/genetics.rs:60",
+        "crates/emergence-oracle/src/oracles/genetics.rs:108",
+        "crates/emergence-oracle/src/oracles/genetics.rs:127",
+        "crates/emergence-oracle/src/oracles/genetics.rs:133"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/emergence-oracle/src/oracles/genetics.rs:108",
+        "crates/emergence-oracle/src/oracles/genetics.rs:127",
+        "crates/emergence-oracle/src/oracles/genetics.rs:133"
+      ],
       "in_stub_tests": []
     },
     {
@@ -30498,11 +30561,14 @@
       ],
       "in_code": [
         "crates/engine/src/engine/culture_phases.rs:230",
+        "crates/engine/src/engine/culture_phases.rs:481",
         "crates/engine/src/engine.rs:169",
         "crates/engine/src/engine.rs:877",
         "crates/engine/src/engine.rs:2682"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/engine/src/engine/culture_phases.rs:481"
+      ],
       "in_stub_tests": []
     },
     {
@@ -36725,7 +36791,13 @@
         "scripts/quality/quality-gate.sh:514",
         "scripts/quality/quality-gate.sh:518"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/engine/tests/nfr_civ_maint_002.rs:1",
+        "crates/engine/tests/nfr_civ_maint_002.rs:16",
+        "crates/engine/tests/nfr_civ_maint_002.rs:18",
+        "crates/engine/tests/nfr_civ_maint_002.rs:38",
+        "crates/engine/tests/nfr_civ_maint_002.rs:42"
+      ],
       "in_stub_tests": []
     },
     {
@@ -36748,7 +36820,12 @@
         "scripts/quality/quality-gate.sh:568",
         "scripts/quality/quality-gate.sh:572"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/server/tests/nfr_civ_maint_003.rs:1",
+        "crates/server/tests/nfr_civ_maint_003.rs:13",
+        "crates/server/tests/nfr_civ_maint_003.rs:22",
+        "crates/server/tests/nfr_civ_maint_003.rs:23"
+      ],
       "in_stub_tests": []
     },
     {
@@ -37790,7 +37867,12 @@
       "in_code": [
         "crates/engine/benches/tick_bench.rs:12"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/engine/tests/nfr_p_05.rs:1",
+        "crates/engine/tests/nfr_p_05.rs:7",
+        "crates/engine/tests/nfr_p_05.rs:13",
+        "crates/engine/tests/nfr_p_05.rs:34"
+      ],
       "in_stub_tests": []
     },
     {
@@ -37827,9 +37909,14 @@
         "docs/traceability/nfr-p-07/nfr-p-07-spec.md:5"
       ],
       "in_code": [
-        "crates/server/src/jsonrpc.rs:635"
+        "crates/server/src/jsonrpc.rs:635",
+        "crates/server/src/jsonrpc.rs:5258",
+        "crates/server/src/jsonrpc.rs:5324"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/server/src/jsonrpc.rs:5258",
+        "crates/server/src/jsonrpc.rs:5324"
+      ],
       "in_stub_tests": []
     },
     {

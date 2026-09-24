@@ -4270,4 +4270,104 @@ mod tests {
         );
         assert_eq!(sim.coastal_water_level(x, z), Some(current.y));
     }
+
+    // ---------------------------------------------------------------------------
+    // FR-traceability tagged tests. Nested under an explicit #[cfg(test)] module
+    // so scripts/traceability/_gather_ids.py records the ID literals below as
+    // test references rather than code references.
+    // ---------------------------------------------------------------------------
+
+    #[cfg(test)]
+    mod fr_traceability_tagged_tests {
+        use super::*;
+
+        // FR-CIV-COHESION-001 — the cohesion phase aggregates kinship, trust and
+        // institutions into per-settlement fabric snapshots: a bonded settlement
+        // scores healthy fabric while an isolated one stays Fractured, and each
+        // settlement keeps its own kin/trust/actor aggregates.
+        #[test]
+        fn fr_civ_cohesion_001_separates_settlement_fabric_snapshots() {
+            use crate::KinshipEdge;
+            use crate::social_types::KinshipKind;
+
+            let mut sim = Simulation::with_seed(23);
+            // Settlement 1: actor 1 bonded into actor 2 with kin + trust + temple.
+            sim.set_settlement_actor(1, 1);
+            sim.set_settlement_actor(2, 1);
+            sim.register_kinship(1, KinshipEdge { kind: KinshipKind::Family, target: 2 });
+            sim.add_trust(1, 2, 40);
+            sim.set_actor_in_settlement_institutions(1, true, false);
+            // Settlement 2: actor 3 isolated — no kin, no trust, no institutions.
+            sim.set_settlement_actor(3, 2);
+
+            sim.tick();
+
+            let bonded = sim
+                .last_tick_cohesion_settlement(1)
+                .expect("settlement 1 must have a cohesion snapshot");
+            assert_eq!(bonded.settlement_id, 1);
+            assert_eq!(bonded.kin_count, 1, "only actor 1 carries a kinship edge");
+            assert_eq!(bonded.trust_sum, 40, "trust sums across settlement actors");
+            assert_eq!(bonded.faction_count, 2, "both settlement actors counted");
+            // Actor 1 scores kin(10) + trust(40) + temple(30) = 80; the
+            // settlement average over its two actors is >= 40, so the tier must
+            // land at Loosened or better — never Strained/Fractured.
+            assert!(
+                matches!(bonded.fabric, FabricTier::Tight | FabricTier::Loosened),
+                "bonded fabric must be healthy, got {:?}",
+                bonded.fabric
+            );
+
+            let isolated = sim
+                .last_tick_cohesion_settlement(2)
+                .expect("settlement 2 must have a cohesion snapshot");
+            assert_eq!(isolated.settlement_id, 2);
+            assert_eq!(isolated.kin_count, 0, "settlement 2 has no kinship edges");
+            assert_eq!(isolated.trust_sum, 0, "settlement 2 has no trust");
+            assert_eq!(isolated.faction_count, 1, "only actor 3 in settlement 2");
+            assert_eq!(
+                isolated.fabric,
+                FabricTier::Fractured,
+                "score 0 (no kin/trust/institutions) ⇒ Fractured"
+            );
+            assert_ne!(
+                bonded.fabric, isolated.fabric,
+                "fabric tiers must be settlement-local"
+            );
+        }
+
+        // FR-CIV-GENETICS-SEED-002 — spawn indices 0, 1, and 2 map to three
+        // distinct NamedSeed assignments (Ardani, Velthari, Grundak) in order,
+        // deterministically, and each archetype carries a distinct genome.
+        #[test]
+        fn fr_civ_genetics_seed_002_spawn_index_cycles_named_seeds() {
+            use civ_genetics::NamedSeed;
+            use rand::SeedableRng;
+
+            let expected = [NamedSeed::Ardani, NamedSeed::Velthari, NamedSeed::Grundak];
+            // Same index + same rng seed ⇒ same assignment (deterministic cycle).
+            for (i, &exp) in expected.iter().enumerate() {
+                let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(5);
+                let got = choose_named_seed(&[], None, i, &mut rng);
+                assert_eq!(got, exp, "spawn index {i} must map to its named seed");
+            }
+            // A second cycle proves the % 3 wrap-around stays on the same order.
+            let mut cycle_rng = rand_chacha::ChaCha8Rng::seed_from_u64(9);
+            for i in 0..6 {
+                let got = choose_named_seed(&[], None, i, &mut cycle_rng);
+                assert_eq!(got, expected[i % 3], "cycle broke at spawn index {i}");
+            }
+
+            // "Three distinct NamedSeed assignments" ⇒ three distinct genomes
+            // of equal length.
+            let ardani = civ_genetics::archetype_dna(NamedSeed::Ardani);
+            let velthari = civ_genetics::archetype_dna(NamedSeed::Velthari);
+            let grundak = civ_genetics::archetype_dna(NamedSeed::Grundak);
+            assert_ne!(ardani, velthari, "Ardani and Velthari must differ");
+            assert_ne!(ardani, grundak, "Ardani and Grundak must differ");
+            assert_ne!(velthari, grundak, "Velthari and Grundak must differ");
+            assert_eq!(ardani.0.len(), velthari.0.len(), "genome lengths must match");
+            assert_eq!(velthari.0.len(), grundak.0.len(), "genome lengths must match");
+        }
+    }
 }

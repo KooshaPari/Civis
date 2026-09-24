@@ -644,6 +644,35 @@ mod tests {
         assert_eq!(MigrationEngine::total_attractiveness(&empty), 0.0);
     }
 
+    // FR-CIV-MIGRATION-005 — tick() is deterministic: two engines built from
+    // identical cluster state and advanced with identically-seeded RNGs produce
+    // identical flow reports and identical end state. The fixture uses the
+    // default flow_jitter > 0, so the seeded RNG genuinely shapes the flows.
+    #[test]
+    fn fr_civ_migration_005_tick_is_deterministic_for_fixed_seed_and_state() {
+        let mut a = stress_to_opportunity();
+        let mut b = stress_to_opportunity();
+        let mut ra = rng(20260924);
+        let mut rb = rng(20260924);
+        let mut reports_a = Vec::new();
+        let mut reports_b = Vec::new();
+        for _ in 0..5 {
+            reports_a.push(a.tick(&mut ra));
+            reports_b.push(b.tick(&mut rb));
+        }
+        // Non-vacuous: the fixture must keep migration flowing every tick, so
+        // the equality below compares real stochastic flows, not empty reports.
+        assert!(
+            reports_a.iter().all(|r| r.total_moved > 0),
+            "fixture must produce flows each tick: {reports_a:?}"
+        );
+        assert_eq!(
+            reports_a, reports_b,
+            "same seed + same cluster state ⇒ identical flow reports"
+        );
+        assert_eq!(a, b, "same seed + same cluster state ⇒ identical engine state");
+    }
+
     #[test]
     fn population_flows_from_stress_to_opportunity() {
         let mut eng = stress_to_opportunity();

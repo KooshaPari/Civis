@@ -1,6 +1,6 @@
 {
   "schema_version": 3,
-  "generated_at": "2026-09-20",
+  "generated_at": "2026-09-24",
   "ids": [
     {
       "id": "FR-AI-001",
@@ -4155,9 +4155,12 @@
         "docs/traceability/fr-civ-bevy-013/fr-civ-bevy-013-plan.md:1"
       ],
       "in_code": [
-        "clients/bevy-ref/src/live_minimap.rs:6"
+        "clients/bevy-ref/src/live_minimap.rs:6",
+        "clients/bevy-ref/src/live_minimap.rs:266"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "clients/bevy-ref/src/live_minimap.rs:266"
+      ],
       "in_stub_tests": []
     },
     {
@@ -5837,9 +5840,16 @@
       ],
       "in_code": [
         "crates/voxel/src/fluid_ca.rs:1360",
-        "crates/voxel/src/fluid_ca.rs:1698"
+        "crates/voxel/src/fluid_ca.rs:1698",
+        "crates/voxel/src/fluid_ca.rs:4029",
+        "crates/voxel/src/fluid_ca.rs:4033",
+        "crates/voxel/src/fluid_ca.rs:4062"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/voxel/src/fluid_ca.rs:4029",
+        "crates/voxel/src/fluid_ca.rs:4033",
+        "crates/voxel/src/fluid_ca.rs:4062"
+      ],
       "in_stub_tests": []
     },
     {
@@ -9549,9 +9559,12 @@
         "docs/traceability/fr-emg-025/fr-emg-025-intent.md:22"
       ],
       "in_code": [
-        "crates/engine/src/famine.rs:1"
+        "crates/engine/src/famine.rs:1",
+        "crates/engine/src/famine.rs:424"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/engine/src/famine.rs:424"
+      ],
       "in_stub_tests": []
     },
     {
@@ -13748,9 +13761,12 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/needs/src/lib.rs:285"
+        "crates/needs/src/lib.rs:285",
+        "crates/needs/src/lib.rs:1241"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/needs/src/lib.rs:1241"
+      ],
       "in_stub_tests": []
     },
     {
@@ -21288,9 +21304,12 @@
         "docs/traceability/fr-civ-social-001-institutions/fr-civ-social-001-institutions-plan.md:1"
       ],
       "in_code": [
-        "crates/civ-institutions/src/policy.rs:1"
+        "crates/civ-institutions/src/policy.rs:1",
+        "crates/civ-institutions/src/policy.rs:167"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/civ-institutions/src/policy.rs:167"
+      ],
       "in_stub_tests": []
     },
     {
@@ -29619,9 +29638,12 @@
       ],
       "in_code": [
         "crates/economy/src/prices.rs:1",
-        "crates/economy/src/prices.rs:2"
+        "crates/economy/src/prices.rs:2",
+        "crates/economy/src/prices.rs:111"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/economy/src/prices.rs:111"
+      ],
       "in_stub_tests": []
     },
     {
@@ -30020,9 +30042,16 @@
       ],
       "in_code": [
         "crates/emergence-oracle/src/oracles/migration_flow.rs:1",
-        "crates/emergence-oracle/src/oracles/migration_flow.rs:17"
+        "crates/emergence-oracle/src/oracles/migration_flow.rs:17",
+        "crates/emergence-oracle/src/oracles/migration_flow.rs:55",
+        "crates/emergence-oracle/src/oracles/migration_flow.rs:60",
+        "crates/emergence-oracle/src/oracles/migration_flow.rs:85"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/emergence-oracle/src/oracles/migration_flow.rs:55",
+        "crates/emergence-oracle/src/oracles/migration_flow.rs:60",
+        "crates/emergence-oracle/src/oracles/migration_flow.rs:85"
+      ],
       "in_stub_tests": []
     },
     {
@@ -31462,11 +31491,7 @@
       ],
       "in_code": [],
       "in_tests": [],
-      "in_stub_tests": [
-        "crates/engine/tests/fr_nfr_s_02.rs:1",
-        "crates/engine/tests/fr_nfr_s_02.rs:7",
-        "crates/engine/tests/fr_nfr_s_02.rs:11"
-      ]
+      "in_stub_tests": []
     },
     {
       "id": "FR-NFR-S-03",
@@ -36023,9 +36048,12 @@
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:243"
       ],
       "in_code": [
-        "crates/engine/src/building_emergence.rs:3"
+        "crates/engine/src/building_emergence.rs:3",
+        "crates/engine/src/building_emergence.rs:220"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/engine/src/building_emergence.rs:220"
+      ],
       "in_stub_tests": []
     },
     {
@@ -37676,9 +37704,14 @@
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:238"
       ],
       "in_code": [
-        "crates/engine/benches/tick_bench.rs:7"
+        "crates/engine/benches/tick_bench.rs:7",
+        "crates/engine/benches/tick_bench.rs:93",
+        "crates/engine/benches/tick_bench.rs:105"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/engine/benches/tick_bench.rs:93",
+        "crates/engine/benches/tick_bench.rs:105"
+      ],
       "in_stub_tests": []
     },
     {
@@ -37965,9 +37998,14 @@
         "crates/server/src/perf_budgets.rs:27",
         "crates/server/src/perf_budgets.rs:56",
         "crates/server/src/perf_budgets.rs:102",
-        "crates/server/src/perf_budgets.rs:145"
+        "crates/server/src/perf_budgets.rs:145",
+        "crates/server/src/perf_budgets.rs:286"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/engine/tests/fr_nfr_s_02.rs:1",
+        "crates/engine/tests/fr_nfr_s_02.rs:13",
+        "crates/server/src/perf_budgets.rs:286"
+      ],
       "in_stub_tests": []
     },
     {

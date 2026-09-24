@@ -88,6 +88,61 @@ mod nfr_p_03_tests {
     }
 }
 
+#[cfg(test)]
+mod nfr_p_02_tests {
+    // NFR-P-02 — p99 tick time at 1k citizens (spec target < 14 ms release).
+    // This always-on smoke builds the 1k-citizen scenario, samples 100 ticks,
+    // and asserts the nearest-rank p99 stays under a generous wall-clock
+    // ceiling; the criterion baseline comparison is the precise release gate,
+    // this only trips on gross regressions in the debug test build.
+    use civ_agents::{count_civilians, spawn_civilian_at, ActorVisualKind, Alignment};
+    use civ_engine::Simulation;
+    use std::time::Instant;
+
+    #[test]
+    fn nfr_p_02_p99_tick_time_at_1k_citizens_within_generous_ceiling() {
+        let mut sim = Simulation::with_seed(42);
+        let mut rng = sim.rng_mut().clone();
+        for i in 0..1000u64 {
+            let x = (i % 100) as f32 / 100.0 * 0.8 + 0.1;
+            let z = (i / 100) as f32 / 10.0 * 0.8 + 0.1;
+            let _ = spawn_civilian_at(
+                &mut sim.world,
+                60_000 + i,
+                Alignment::Faction(0),
+                x,
+                z,
+                ActorVisualKind::Humanoid,
+                &mut rng,
+            );
+        }
+        *sim.rng_mut() = rng;
+        let citizens = count_civilians(&sim.world);
+        assert!(
+            citizens >= 1000,
+            "scenario must hold at least 1k citizens, got {citizens}"
+        );
+
+        // Warm caches, then sample 100 single-tick durations.
+        for _ in 0..10 {
+            sim.tick();
+        }
+        let mut samples = Vec::with_capacity(100);
+        for _ in 0..100 {
+            let start = Instant::now();
+            sim.tick();
+            samples.push(start.elapsed());
+        }
+        samples.sort();
+        let p99 = samples[98]; // nearest-rank p99 over 100 samples
+        assert!(
+            p99.as_millis() < 1_000,
+            "NFR-P-02 p99 at 1k citizens was {p99:?} (14 ms release budget; 1 s debug regression ceiling)"
+        );
+        assert_eq!(sim.state.tick, 110, "warmup + 100 sampled ticks completed");
+    }
+}
+
 /// Benchmark tick with a populated voxel substrate — exercises the
 /// `phase_voxel` dirty-event drain path.
 fn bench_tick_with_voxels(c: &mut Criterion) {

@@ -44,3 +44,48 @@ impl FeatureOracle for MoodOracle {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    // FR-EMG-014 — mood oracle: at tick 0 any state passes; afterwards it
+    // demands both citizens and buildings (venues for sentiment formation)
+    // and reports their product as the measurement.
+    use super::*;
+    use civ_engine::Simulation;
+
+    // FR-EMG-014 — a fresh simulation passes unconditionally at tick 0.
+    #[test]
+    fn fr_emg_014_passes_at_tick_zero() {
+        let sim = Simulation::new();
+        let v = MoodOracle.check(&sim);
+        assert_eq!(v.fr_id, "FR-EMG-014");
+        assert!(v.passed, "tick 0 must pass unconditionally: {}", v.detail);
+        assert!((v.threshold - 0.0).abs() < f64::EPSILON);
+        assert!(
+            v.detail.contains("Mood emergence"),
+            "detail must identify the mood measurement: {}",
+            v.detail
+        );
+    }
+
+    // FR-EMG-014 — after tick 0 the threshold rises to 1.0 and passing
+    // requires at least one citizen AND one building.
+    #[test]
+    fn fr_emg_014_threshold_is_one_after_tick_zero() {
+        let mut sim = Simulation::new();
+        sim.tick();
+        let v = MoodOracle.check(&sim);
+        assert!(
+            (v.threshold - 1.0).abs() < f64::EPSILON,
+            "post-tick-0 threshold must be 1.0, got {}",
+            v.threshold
+        );
+        assert_eq!(v.passed, v.measured >= 1.0, "detail: {}", v.detail);
+        // The default world spawns citizens and buildings, so it must clear 1.0.
+        assert!(
+            v.measured >= 1.0,
+            "default world must have citizens and buildings: {}",
+            v.detail
+        );
+    }
+}

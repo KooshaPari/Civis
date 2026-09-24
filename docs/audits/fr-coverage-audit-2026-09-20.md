@@ -19,10 +19,10 @@
 
 | Status | Count | % |
 |--------|------:|--:|
-| `COVERED` | 960 | 66.0 |
+| `COVERED` | 996 | 68.5 |
 | `STUB-TEST-ONLY` | 10 | 0.7 |
 | `TEST-NO-CODE-REF` | 155 | 10.7 |
-| `IMPL-NO-TEST` | 95 | 6.5 |
+| `IMPL-NO-TEST` | 59 | 4.1 |
 | `SPEC-ONLY` | 234 | 16.1 |
 | `CODE-ONLY-no-spec` | 1 | 0.1 |
 | **Total** | **1455** | **100.0** |
@@ -34,7 +34,7 @@
 | FR-AI | 7 | 7 | 0 | 0 | 0 | 0 | 0 |
 | FR-API | 4 | 4 | 0 | 0 | 0 | 0 | 0 |
 | FR-ASSET | 4 | 4 | 0 | 0 | 0 | 0 | 0 |
-| FR-ASSET-PIPELINE | 2 | 0 | 0 | 0 | 2 | 0 | 0 |
+| FR-ASSET-PIPELINE | 2 | 2 | 0 | 0 | 0 | 0 | 0 |
 | FR-AUD | 3 | 3 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV | 15 | 14 | 0 | 0 | 0 | 1 | 0 |
 | FR-CIV-0001-TICK | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
@@ -53,16 +53,16 @@
 | FR-CIV-ARCH-D | 4 | 4 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-ARCH-NOSVG | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-ASSET | 20 | 8 | 0 | 0 | 0 | 12 | 0 |
-| FR-CIV-ASSET-MANI | 2 | 0 | 0 | 0 | 2 | 0 | 0 |
+| FR-CIV-ASSET-MANI | 2 | 1 | 0 | 0 | 1 | 0 | 0 |
 | FR-CIV-ASSET-QUAL | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-AUDIO | 12 | 8 | 0 | 0 | 0 | 4 | 0 |
 | FR-CIV-BELIEF | 1 | 0 | 0 | 0 | 1 | 0 | 0 |
-| FR-CIV-BEVY | 21 | 12 | 0 | 0 | 8 | 1 | 0 |
+| FR-CIV-BEVY | 21 | 14 | 0 | 0 | 6 | 1 | 0 |
 | FR-CIV-BIO | 3 | 3 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-BRUSH | 13 | 13 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-BUILD | 14 | 14 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-CA | 11 | 10 | 0 | 0 | 1 | 0 | 0 |
-| FR-CIV-CARAVAN | 1 | 0 | 0 | 0 | 1 | 0 | 0 |
+| FR-CIV-CARAVAN | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-CLIENT | 3 | 1 | 0 | 0 | 2 | 0 | 0 |
 | FR-CIV-CLIENT-GODOT | 2 | 2 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-CLIMATE | 7 | 7 | 0 | 0 | 0 | 0 | 0 |
@@ -78,7 +78,7 @@
 | FR-CIV-DIPLO | 16 | 16 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-DIPLO-001-RELATIONS | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-DIPLO-002-SHADOW | 1 | 0 | 0 | 1 | 0 | 0 | 0 |
-| FR-CIV-DIPLOMACY | 2 | 1 | 0 | 0 | 1 | 0 | 0 |
+| FR-CIV-DIPLOMACY | 2 | 2 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-ECON | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-ECON-001-MARKET | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-ECON-002-JOULE | 1 | 0 | 0 | 0 | 0 | 1 | 0 |
@@ -91,22 +91,22 @@
 | FR-CIV-EMERGENCE-N12 | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-EMERGENCE-N13 | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-EMERGENCE-RELIGION | 2 | 0 | 0 | 0 | 0 | 2 | 0 |
-| FR-CIV-EMERGENT-MIGRATION | 1 | 0 | 0 | 0 | 1 | 0 | 0 |
+| FR-CIV-EMERGENT-MIGRATION | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-ENGINE-INT | 10 | 10 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-ENGINE-REPLAY | 5 | 5 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-ERA | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-FAMINE | 1 | 0 | 0 | 0 | 1 | 0 | 0 |
-| FR-CIV-FEST | 1 | 0 | 0 | 0 | 1 | 0 | 0 |
+| FR-CIV-FEST | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-FOG | 5 | 5 | 0 | 0 | 0 | 0 | 0 |
-| FR-CIV-GAME | 3 | 1 | 0 | 0 | 2 | 0 | 0 |
+| FR-CIV-GAME | 3 | 2 | 0 | 0 | 1 | 0 | 0 |
 | FR-CIV-GENETICS | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
-| FR-CIV-GENETICS-SEED | 3 | 0 | 0 | 0 | 3 | 0 | 0 |
+| FR-CIV-GENETICS-SEED | 3 | 1 | 0 | 0 | 2 | 0 | 0 |
 | FR-CIV-GEO | 10 | 0 | 0 | 0 | 0 | 10 | 0 |
 | FR-CIV-GODOT-ATTACH | 5 | 5 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-GODOT-F3D0 | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-GODOT-UX | 1 | 0 | 0 | 0 | 0 | 1 | 0 |
 | FR-CIV-GODTOOL | 8 | 2 | 0 | 5 | 1 | 0 | 0 |
-| FR-CIV-GOV | 8 | 7 | 0 | 0 | 1 | 0 | 0 |
+| FR-CIV-GOV | 8 | 8 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-HUD | 5 | 5 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-IDEOLOGY | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-INFOVIEW | 20 | 20 | 0 | 0 | 0 | 0 | 0 |
@@ -114,11 +114,11 @@
 | FR-CIV-INSPECT | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-INSTITUTIONS | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-INT | 1 | 0 | 0 | 1 | 0 | 0 | 0 |
-| FR-CIV-L10N | 4 | 2 | 0 | 0 | 2 | 0 | 0 |
+| FR-CIV-L10N | 4 | 3 | 0 | 0 | 1 | 0 | 0 |
 | FR-CIV-L5 | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-LANG | 10 | 10 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-LAWS | 10 | 10 | 0 | 0 | 0 | 0 | 0 |
-| FR-CIV-LEGENDS | 9 | 8 | 0 | 0 | 1 | 0 | 0 |
+| FR-CIV-LEGENDS | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-LEGENDS-BROWSER | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-LEGENDS-CAUSAL | 1 | 0 | 0 | 1 | 0 | 0 | 0 |
 | FR-CIV-LEGENDS-CONFIG | 1 | 0 | 0 | 0 | 0 | 1 | 0 |
@@ -141,11 +141,11 @@
 | FR-CIV-MCP | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-METRICS | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-METRICS-001-TIMESERIES | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
-| FR-CIV-MIGRATION | 5 | 0 | 0 | 0 | 5 | 0 | 0 |
+| FR-CIV-MIGRATION | 5 | 2 | 0 | 0 | 3 | 0 | 0 |
 | FR-CIV-MOD | 21 | 21 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-NEEDS-DECAY | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-NOTIFY | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
-| FR-CIV-PBR | 11 | 10 | 0 | 0 | 1 | 0 | 0 |
+| FR-CIV-PBR | 11 | 11 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-PERF | 20 | 1 | 0 | 19 | 0 | 0 | 0 |
 | FR-CIV-PERF-BUILD | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-PERF-RT | 3 | 3 | 0 | 0 | 0 | 0 | 0 |
@@ -171,7 +171,7 @@
 | FR-CIV-RTS-NATION | 2 | 0 | 0 | 2 | 0 | 0 | 0 |
 | FR-CIV-RTS-RENDER | 5 | 5 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-RTS-ZOOM | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
-| FR-CIV-SAVE | 4 | 2 | 0 | 0 | 2 | 0 | 0 |
+| FR-CIV-SAVE | 4 | 3 | 0 | 0 | 1 | 0 | 0 |
 | FR-CIV-SCALE | 8 | 8 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-SERVER | 3 | 3 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-SERVER-001-WS | 1 | 0 | 0 | 1 | 0 | 0 | 0 |
@@ -195,7 +195,7 @@
 | FR-CIV-WAR | 15 | 14 | 0 | 0 | 0 | 1 | 0 |
 | FR-CIV-WAR-001-UNITS | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-WAR-002-COMBAT | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
-| FR-CIV-WARFARE | 4 | 0 | 0 | 0 | 4 | 0 | 0 |
+| FR-CIV-WARFARE | 4 | 1 | 0 | 0 | 3 | 0 | 0 |
 | FR-CIV-WEB | 9 | 5 | 0 | 0 | 0 | 4 | 0 |
 | FR-CLIENT | 3 | 3 | 0 | 0 | 0 | 0 | 0 |
 | FR-CLIM | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
@@ -206,8 +206,8 @@
 | FR-DOC | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-ECO | 10 | 0 | 0 | 10 | 0 | 0 | 0 |
 | FR-ECON | 10 | 10 | 0 | 0 | 0 | 0 | 0 |
-| FR-ECON-EMERGE | 3 | 0 | 0 | 0 | 3 | 0 | 0 |
-| FR-EMG | 24 | 9 | 0 | 0 | 15 | 0 | 0 |
+| FR-ECON-EMERGE | 3 | 1 | 0 | 0 | 2 | 0 | 0 |
+| FR-EMG | 24 | 16 | 0 | 0 | 8 | 0 | 0 |
 | FR-FR-CORE | 1 | 0 | 0 | 1 | 0 | 0 | 0 |
 | FR-GUARD | 2 | 2 | 0 | 0 | 0 | 0 | 0 |
 | FR-INST | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
@@ -248,15 +248,15 @@
 | FR-THRY | 4 | 0 | 0 | 4 | 0 | 0 | 0 |
 | FR-UX | 27 | 5 | 0 | 0 | 0 | 22 | 0 |
 | FR-VAL | 1 | 0 | 0 | 1 | 0 | 0 | 0 |
-| FR-VIEWPORT | 1 | 0 | 0 | 0 | 1 | 0 | 0 |
-| NFR-C | 7 | 0 | 0 | 0 | 6 | 1 | 0 |
+| FR-VIEWPORT | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
+| NFR-C | 7 | 3 | 0 | 0 | 3 | 1 | 0 |
 | NFR-CIV | 13 | 0 | 0 | 0 | 0 | 13 | 0 |
 | NFR-CIV-ACC | 4 | 4 | 0 | 0 | 0 | 0 | 0 |
 | NFR-CIV-AI | 3 | 2 | 0 | 0 | 0 | 1 | 0 |
 | NFR-CIV-DET | 4 | 4 | 0 | 0 | 0 | 0 | 0 |
 | NFR-CIV-DEV-HYGIENE | 1 | 0 | 0 | 0 | 0 | 1 | 0 |
 | NFR-CIV-LEGENDS-CONFIG | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
-| NFR-CIV-LEGENDS-LOUD | 1 | 0 | 0 | 0 | 1 | 0 | 0 |
+| NFR-CIV-LEGENDS-LOUD | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | NFR-CIV-LEGENDS-PERF | 1 | 0 | 0 | 0 | 0 | 1 | 0 |
 | NFR-CIV-LEGENDS-SCALE | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | NFR-CIV-MAINT | 6 | 0 | 0 | 0 | 4 | 2 | 0 |
@@ -267,9 +267,9 @@
 | NFR-CIV-SCALE-PERF | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | NFR-CIV-SEC | 4 | 1 | 0 | 0 | 0 | 3 | 0 |
 | NFR-O | 6 | 0 | 0 | 0 | 0 | 6 | 0 |
-| NFR-P | 8 | 0 | 0 | 0 | 8 | 0 | 0 |
+| NFR-P | 8 | 2 | 0 | 0 | 6 | 0 | 0 |
 | NFR-R | 6 | 0 | 0 | 0 | 0 | 6 | 0 |
-| NFR-S | 6 | 1 | 0 | 0 | 5 | 0 | 0 |
+| NFR-S | 6 | 3 | 0 | 0 | 3 | 0 | 0 |
 | NFR-SCALE | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 
 ## Spec-only IDs (need implementation) (234)
@@ -1234,20 +1234,11 @@
 - `FR-NFR-S-06`
   - spec: docs/traceability/fr-nfr-s-06/fr-nfr-s-06-intent.md:1, docs/traceability/fr-nfr-s-06/fr-nfr-s-06-intent.md:4
 
-## Implemented but untested IDs (95)
+## Implemented but untested IDs (59)
 
-- `FR-ASSET-PIPELINE-001`
-  - spec: docs/traceability/fr-asset-pipeline-001/fr-asset-pipeline-001-intent.md:1, docs/traceability/fr-asset-pipeline-001/fr-asset-pipeline-001-intent.md:4, docs/traceability/fr-asset-pipeline-001/fr-asset-pipeline-001-intent.md:13
-  - code: crates/asset-pipeline/src/lib.rs:3, crates/asset-pipeline/src/lib.rs:18, crates/asset-pipeline/src/lib.rs:60
-- `FR-ASSET-PIPELINE-002`
-  - spec: docs/traceability/fr-asset-pipeline-002/fr-asset-pipeline-002-intent.md:1, docs/traceability/fr-asset-pipeline-002/fr-asset-pipeline-002-intent.md:4
-  - code: crates/asset-pipeline/Cargo.toml:8, crates/asset-pipeline/src/bin/svg_export.rs:20, crates/asset-pipeline/src/error.rs:9
 - `FR-CIV-ASSET-MANI-001`
   - spec: docs/specs/CIV-0600-2d-asset-pipeline-spec.md:3212, docs/traceability/fr-civ-asset-mani-001/fr-civ-asset-mani-001-adr.md:1, docs/traceability/fr-civ-asset-mani-001/fr-civ-asset-mani-001-adr.md:6
   - code: crates/asset-pipeline/src/manifest.rs:3, crates/asset-pipeline/src/manifest.rs:59
-- `FR-CIV-ASSET-MANI-002`
-  - spec: docs/specs/CIV-0600-2d-asset-pipeline-spec.md:3213, docs/traceability/fr-civ-asset-mani-002/fr-civ-asset-mani-002-adr.md:1, docs/traceability/fr-civ-asset-mani-002/fr-civ-asset-mani-002-adr.md:6
-  - code: crates/asset-pipeline/src/manifest.rs:4, crates/asset-pipeline/src/manifest.rs:88
 - `FR-CIV-BELIEF-001`
   - spec: docs/traceability/fr-civ-belief-001/fr-civ-belief-001-intent.md:1, docs/traceability/fr-civ-belief-001/fr-civ-belief-001-intent.md:4, docs/traceability/fr-civ-belief-001/fr-civ-belief-001-intent.md:30
   - code: crates/engine/src/religion.rs:40, crates/engine/src/religion.rs:55, crates/engine/src/religion.rs:88
@@ -1257,18 +1248,12 @@
 - `FR-CIV-BEVY-014`
   - spec: docs/development-guide/p-w1-kickoff.md:82, docs/traceability/fr-3d-matrix.md:179, docs/traceability/full-traceability-matrix.md:308
   - code: clients/bevy-ref/src/live_stream.rs:3
-- `FR-CIV-BEVY-015`
-  - spec: docs/development-guide/p-w1-kickoff.md:127, docs/traceability/fr-3d-matrix.md:180, docs/traceability/full-traceability-matrix.md:309
-  - code: clients/bevy-ref/src/live_focus.rs:3
 - `FR-CIV-BEVY-017`
   - spec: docs/development-guide/p-w1-kickoff.md:129, docs/traceability/fr-3d-matrix.md:182, docs/traceability/full-traceability-matrix.md:311
   - code: clients/bevy-ref/src/lib.rs:557
 - `FR-CIV-BEVY-018`
   - spec: docs/development-guide/p-w1-kickoff.md:130, docs/traceability/fr-3d-matrix.md:183, docs/traceability/full-traceability-matrix.md:312
   - code: clients/bevy-ref/src/ws_client.rs:652
-- `FR-CIV-BEVY-019`
-  - spec: docs/development-guide/p-w1-kickoff.md:131, docs/traceability/fr-3d-matrix.md:184, docs/traceability/full-traceability-matrix.md:313
-  - code: clients/bevy-ref/src/live_pick.rs:3
 - `FR-CIV-BEVY-020`
   - spec: docs/development-guide/p-w1-kickoff.md:132, docs/traceability/fr-3d-matrix.md:185, docs/traceability/full-traceability-matrix.md:314
   - code: clients/bevy-ref/src/lib.rs:1113
@@ -1278,9 +1263,6 @@
 - `FR-CIV-CA-011`
   - spec: docs/traceability/fr-civ-ca-011/fr-civ-ca-011-intent.md:1, docs/traceability/fr-civ-ca-011/fr-civ-ca-011-intent.md:4
   - code: crates/voxel/src/fluid_ca.rs:1360, crates/voxel/src/fluid_ca.rs:1698
-- `FR-CIV-CARAVAN-001`
-  - spec: docs/traceability/fr-civ-caravan-001/fr-civ-caravan-001-intent.md:1, docs/traceability/fr-civ-caravan-001/fr-civ-caravan-001-intent.md:3, docs/traceability/fr-civ-caravan-001/fr-civ-caravan-001-intent.md:5
-  - code: crates/engine/src/caravan.rs:3
 - `FR-CIV-CLIENT-011`
   - spec: docs/traceability/fr-civ-client-011/fr-civ-client-011-intent.md:1, docs/traceability/fr-civ-client-011/fr-civ-client-011-intent.md:4, docs/traceability/fr-civ-client-011/fr-civ-client-011-intent.md:19
   - code: clients/bevy-ref/src/tutorial.rs:3, clients/bevy-ref/src/tutorial.rs:4
@@ -1289,82 +1271,46 @@
   - code: clients/bevy-ref/src/civ_history.rs:2, clients/bevy-ref/src/civ_history.rs:3
 - `FR-CIV-COHESION-001`
   - spec: docs/traceability/fr-civ-cohesion-001/fr-civ-cohesion-001-intent.md:1, docs/traceability/fr-civ-cohesion-001/fr-civ-cohesion-001-intent.md:4
-  - code: crates/engine/src/engine/social_settlement_phases.rs:272
+  - code: crates/engine/src/engine/engine_tests.rs:488, crates/engine/src/engine/social_settlement_phases.rs:272
 - `FR-CIV-CONTENT-001`
   - spec: docs/traceability/fr-civ-content-001/fr-civ-content-001-intent.md:1, docs/traceability/fr-civ-content-001/fr-civ-content-001-intent.md:4, docs/traceability/fr-civ-content-001/fr-civ-content-001-intent.md:27
   - code: crates/engine/src/emergence_coupling.rs:471
-- `FR-CIV-DIPLOMACY-004`
-  - spec: docs/traceability/fr-civ-diplomacy-004/fr-civ-diplomacy-004-intent.md:1, docs/traceability/fr-civ-diplomacy-004/fr-civ-diplomacy-004-intent.md:4, docs/traceability/fr-civ-diplomacy-004/fr-civ-diplomacy-004-intent.md:39
-  - code: crates/diplomacy/src/stance.rs:1, crates/engine/src/engine.rs:473, crates/engine/src/engine.rs:1045
 - `FR-CIV-EMERGE-DASH-001`
   - spec: docs/traceability/fr-civ-emerge-dash-001/fr-civ-emerge-dash-001-intent.md:1, docs/traceability/fr-civ-emerge-dash-001/fr-civ-emerge-dash-001-intent.md:4
   - code: clients/bevy-ref/src/emergence_dashboard.rs:3
-- `FR-CIV-EMERGENT-MIGRATION-001`
-  - spec: docs/traceability/fr-civ-emergent-migration-001/fr-civ-emergent-migration-001-intent.md:1, docs/traceability/fr-civ-emergent-migration-001/fr-civ-emergent-migration-001-intent.md:3, docs/traceability/fr-civ-emergent-migration-001/fr-civ-emergent-migration-001-intent.md:5
-  - code: crates/engine/src/emergent_migration.rs:1, crates/engine/src/emergent_migration.rs:25
 - `FR-CIV-FAMINE-001`
   - spec: docs/traceability/fr-civ-climate-3/fr-civ-climate-3-intent.md:21, docs/traceability/fr-civ-famine-001/fr-civ-famine-001-intent.md:1, docs/traceability/fr-civ-famine-001/fr-civ-famine-001-intent.md:4
   - code: crates/engine/src/famine.rs:1
-- `FR-CIV-FEST-001`
-  - spec: docs/traceability/fr-civ-fest-001/fr-civ-fest-001-intent.md:1, docs/traceability/fr-civ-fest-001/fr-civ-fest-001-intent.md:4
-  - code: crates/engine/src/festivals.rs:1
-- `FR-CIV-GAME-001`
-  - spec: docs/traceability/fr-civ-game-001/fr-civ-game-001-intent.md:1, docs/traceability/fr-civ-game-001/fr-civ-game-001-intent.md:4, docs/traceability/fr-civ-game-001/fr-civ-game-001-intent.md:29
-  - code: clients/bevy-ref/src/gameplay_hud.rs:3, clients/bevy-ref/src/lib.rs:541, clients/bevy-ref/src/outcome_overlay.rs:3
 - `FR-CIV-GAME-003`
   - spec: docs/traceability/fr-civ-game-003/fr-civ-game-003-intent.md:1, docs/traceability/fr-civ-game-003/fr-civ-game-003-intent.md:4, docs/traceability/fr-civ-game-003/fr-civ-game-003-intent.md:20
   - code: clients/bevy-ref/src/era_hud.rs:2, crates/engine/src/era.rs:1
 - `FR-CIV-GENETICS-SEED-001`
   - spec: docs/traceability/fr-civ-genetics-seed-001/fr-civ-genetics-seed-001-intent.md:1, docs/traceability/fr-civ-genetics-seed-001/fr-civ-genetics-seed-001-intent.md:4, docs/traceability/fr-civ-genetics-seed-001/fr-civ-genetics-seed-001-intent.md:26
-  - code: crates/engine/src/engine/engine_tests.rs:2941
+  - code: crates/engine/src/engine/engine_tests.rs:3027
 - `FR-CIV-GENETICS-SEED-002`
   - spec: docs/traceability/fr-civ-genetics-seed-002/fr-civ-genetics-seed-002-intent.md:1, docs/traceability/fr-civ-genetics-seed-002/fr-civ-genetics-seed-002-intent.md:4, docs/traceability/fr-civ-genetics-seed-002/fr-civ-genetics-seed-002-intent.md:26
-  - code: crates/engine/src/engine/engine_tests.rs:2991
-- `FR-CIV-GENETICS-SEED-003`
-  - spec: docs/traceability/fr-civ-genetics-seed-003/fr-civ-genetics-seed-003-intent.md:1, docs/traceability/fr-civ-genetics-seed-003/fr-civ-genetics-seed-003-intent.md:4, docs/traceability/fr-civ-genetics-seed-003/fr-civ-genetics-seed-003-intent.md:25
-  - code: crates/engine/src/engine/engine_tests.rs:3037
+  - code: crates/engine/src/engine/engine_tests.rs:3077
 - `FR-CIV-GODTOOL-001`
   - spec: docs/traceability/fr-civ-godtool-001/fr-civ-godtool-001-intent.md:1, docs/traceability/fr-civ-godtool-001/fr-civ-godtool-001-intent.md:4
   - code: crates/civis-mcp/src/server.rs:148
-- `FR-CIV-GOV-200`
-  - spec: docs/traceability/fr-civ-gov-200/fr-civ-gov-200-intent.md:1, docs/traceability/fr-civ-gov-200/fr-civ-gov-200-intent.md:3, docs/traceability/fr-civ-gov-200/fr-civ-gov-200-intent.md:5
-  - code: crates/engine/src/engine/social_settlement_phases.rs:179
-- `FR-CIV-L10N-010`
-  - spec: docs/adr/ADR-021-accessibility-and-l10n-strategy.md:49
-  - code: crates/i18n/src/lib.rs:98
 - `FR-CIV-L10N-020`
   - spec: docs/adr/ADR-021-accessibility-and-l10n-strategy.md:50
   - code: crates/i18n/src/lib.rs:194
-- `FR-CIV-LEGENDS-010`
-  - spec: docs/traceability/fr-civ-legends-010/fr-civ-legends-010-intent.md:1, docs/traceability/fr-civ-legends-010/fr-civ-legends-010-intent.md:4, docs/traceability/fr-civ-legends-010/fr-civ-legends-010-intent.md:22
-  - code: crates/engine/src/engine.rs:1040
 - `FR-CIV-LIFE-004`
   - spec: docs/design/civ-003-emergent-lifecycle.md:101
   - code: crates/needs/src/lib.rs:285
-- `FR-CIV-MIGRATION-001`
-  - spec: docs/traceability/fr-emergence-matrix.md:215
-  - code: crates/emergence-migration/src/lib.rs:359, crates/emergence-migration/src/lib.rs:371, crates/emergence-migration/src/lib.rs:381
 - `FR-CIV-MIGRATION-002`
   - spec: docs/traceability/fr-emergence-matrix.md:216
   - code: crates/emergence-migration/src/lib.rs:384, crates/emergence-migration/src/lib.rs:492
 - `FR-CIV-MIGRATION-003`
   - spec: docs/traceability/fr-emergence-matrix.md:217
   - code: crates/emergence-migration/src/lib.rs:386, crates/emergence-migration/src/lib.rs:492
-- `FR-CIV-MIGRATION-004`
-  - spec: docs/traceability/fr-emergence-matrix.md:218
-  - code: crates/emergence-migration/src/lib.rs:317, crates/emergence-migration/src/lib.rs:345, crates/emergence-migration/src/lib.rs:388
 - `FR-CIV-MIGRATION-005`
   - spec: docs/traceability/fr-emergence-matrix.md:219
   - code: crates/emergence-migration/src/lib.rs:390
-- `FR-CIV-PBR-011`
-  - spec: docs/traceability/fr-civ-pbr-011/fr-civ-pbr-011-intent.md:1, docs/traceability/fr-civ-pbr-011/fr-civ-pbr-011-intent.md:4
-  - code: CHANGELOG.md:17, crates/voxel/src/atlas/gpu_atlas.rs:1, crates/voxel/src/atlas/gpu_atlas.rs:40
 - `FR-CIV-REL-004`
   - spec: docs/traceability/fr-emergence-matrix.md:79
   - code: crates/engine/src/disasters.rs:65
-- `FR-CIV-SAVE-003`
-  - spec: docs/traceability/civis-tracelinks.md:66, docs/traceability/fr-civ-save-003/fr-civ-save-003-adr.md:1, docs/traceability/fr-civ-save-003/fr-civ-save-003-adr.md:6
-  - code: crates/server/src/jsonrpc.rs:1574, crates/server/src/jsonrpc.rs:1590
 - `FR-CIV-SAVE-004`
   - spec: docs/traceability/civis-tracelinks.md:67, docs/traceability/fr-civ-save-004/fr-civ-save-004-adr.md:1, docs/traceability/fr-civ-save-004/fr-civ-save-004-adr.md:6
   - code: crates/watch/src/saves_api.rs:180, crates/watch/src/saves_api.rs:232, crates/watch/src/saves_api.rs:250
@@ -1373,13 +1319,10 @@
   - code: crates/civ-institutions/src/policy.rs:1
 - `FR-CIV-TACTICS-032`
   - spec: docs/development-guide/p-w1-kickoff.md:31, docs/traceability/fr-3d-matrix.md:119, docs/traceability/full-traceability-matrix.md:227
-  - code: crates/engine/src/engine.rs:355
+  - code: crates/engine/src/engine/engine_tests.rs:186, crates/engine/src/engine.rs:355
 - `FR-CIV-WARFARE-001`
   - spec: docs/traceability/fr-civ-warfare-001/fr-civ-warfare-001-intent.md:1, docs/traceability/fr-civ-warfare-001/fr-civ-warfare-001-intent.md:4
   - code: crates/tactics/src/war_from_diplomacy.rs:1
-- `FR-CIV-WARFARE-002`
-  - spec: docs/traceability/fr-civ-warfare-002/fr-civ-warfare-002-intent.md:1, docs/traceability/fr-civ-warfare-002/fr-civ-warfare-002-intent.md:4
-  - code: crates/tactics/src/doctrine_evolution.rs:1
 - `FR-CIV-WARFARE-003`
   - spec: docs/traceability/fr-civ-warfare-003/fr-civ-warfare-003-intent.md:1, docs/traceability/fr-civ-warfare-003/fr-civ-warfare-003-intent.md:4
   - code: crates/tactics/src/war_economy.rs:1
@@ -1392,84 +1335,45 @@
 - `FR-ECON-EMERGE-001`
   - spec: docs/traceability/fr-econ-emerge-001/fr-econ-emerge-001-intent.md:1, docs/traceability/fr-econ-emerge-001/fr-econ-emerge-001-intent.md:4, docs/traceability/fr-econ-emerge-001/fr-econ-emerge-001-intent.md:20
   - code: crates/economy/src/prices.rs:1, crates/economy/src/prices.rs:2
-- `FR-ECON-EMERGE-002`
-  - spec: docs/traceability/fr-econ-emerge-002/fr-econ-emerge-002-intent.md:1, docs/traceability/fr-econ-emerge-002/fr-econ-emerge-002-intent.md:4, docs/traceability/fr-econ-emerge-002/fr-econ-emerge-002-intent.md:20
-  - code: crates/economy/src/trade.rs:1, crates/economy/src/trade.rs:2
 - `FR-ECON-EMERGE-004`
   - spec: docs/traceability/fr-econ-emerge-004/fr-econ-emerge-004-intent.md:1, docs/traceability/fr-econ-emerge-004/fr-econ-emerge-004-intent.md:4, docs/traceability/fr-econ-emerge-004/fr-econ-emerge-004-intent.md:20
   - code: crates/economy/src/shocks.rs:1, crates/economy/src/shocks.rs:2
-- `FR-EMG-009`
-  - spec: docs/traceability/fr-emg-009/fr-emg-009-intent.md:1, docs/traceability/fr-emg-009/fr-emg-009-intent.md:4
-  - code: crates/emergence-oracle/src/oracles/migration.rs:1, crates/emergence-oracle/src/oracles/migration.rs:17
 - `FR-EMG-010`
   - spec: docs/traceability/fr-emg-010/fr-emg-010-intent.md:1, docs/traceability/fr-emg-010/fr-emg-010-intent.md:4, docs/traceability/fr-emg-010/fr-emg-010-intent.md:9
   - code: crates/emergence-oracle/src/oracles/epidemic.rs:1, crates/emergence-oracle/src/oracles/epidemic.rs:17, crates/emergence-oracle/src/oracles/trade.rs:1
-- `FR-EMG-012`
-  - spec: docs/traceability/fr-emg-012/fr-emg-012-intent.md:1, docs/traceability/fr-emg-012/fr-emg-012-intent.md:4
-  - code: crates/emergence-oracle/src/oracles/festival.rs:1, crates/emergence-oracle/src/oracles/festival.rs:18
 - `FR-EMG-013`
   - spec: docs/traceability/fr-civ-climate-3/fr-civ-climate-3-intent.md:22, docs/traceability/fr-civ-climate-4/fr-civ-climate-4-intent.md:22, docs/traceability/fr-emg-013/fr-emg-013-intent.md:1
   - code: crates/emergence-oracle/src/oracles/disaster.rs:1, crates/emergence-oracle/src/oracles/disaster.rs:17
 - `FR-EMG-014`
   - spec: docs/traceability/fr-emg-014/fr-emg-014-intent.md:1, docs/traceability/fr-emg-014/fr-emg-014-intent.md:4
   - code: crates/emergence-oracle/src/oracles/mood.rs:1, crates/emergence-oracle/src/oracles/mood.rs:17
-- `FR-EMG-015`
-  - spec: docs/traceability/fr-emg-015/fr-emg-015-intent.md:1, docs/traceability/fr-emg-015/fr-emg-015-intent.md:4
-  - code: crates/emergence-oracle/src/oracles/stratification.rs:1, crates/emergence-oracle/src/oracles/stratification.rs:18
 - `FR-EMG-016`
   - spec: docs/traceability/fr-emg-016/fr-emg-016-intent.md:1, docs/traceability/fr-emg-016/fr-emg-016-intent.md:4
   - code: crates/emergence-oracle/src/oracles/religious_conflict.rs:1, crates/emergence-oracle/src/oracles/religious_conflict.rs:17
-- `FR-EMG-017`
-  - spec: docs/traceability/fr-emg-017/fr-emg-017-intent.md:1, docs/traceability/fr-emg-017/fr-emg-017-intent.md:4, docs/traceability/fr-emg-017/fr-emg-017-intent.md:21
-  - code: crates/emergence-oracle/src/oracles/expansion.rs:1, crates/emergence-oracle/src/oracles/expansion.rs:17
 - `FR-EMG-018`
   - spec: docs/traceability/fr-emg-018/fr-emg-018-intent.md:1, docs/traceability/fr-emg-018/fr-emg-018-intent.md:4
   - code: crates/emergence-oracle/src/oracles/migration_flow.rs:1, crates/emergence-oracle/src/oracles/migration_flow.rs:17
-- `FR-EMG-019`
-  - spec: docs/traceability/fr-emg-019/fr-emg-019-intent.md:1, docs/traceability/fr-emg-019/fr-emg-019-intent.md:4
-  - code: crates/emergence-oracle/src/oracles/coastal_settlement.rs:1, crates/emergence-oracle/src/oracles/coastal_settlement.rs:17
 - `FR-EMG-020`
   - spec: docs/traceability/fr-emg-020/fr-emg-020-intent.md:1, docs/traceability/fr-emg-020/fr-emg-020-intent.md:4, docs/traceability/fr-emg-020/fr-emg-020-intent.md:23
   - code: crates/emergence-oracle/src/oracles/river_trade.rs:1, crates/emergence-oracle/src/oracles/river_trade.rs:17
 - `FR-EMG-021`
   - spec: docs/traceability/fr-emg-021/fr-emg-021-intent.md:1, docs/traceability/fr-emg-021/fr-emg-021-intent.md:4
   - code: crates/emergence-oracle/src/oracles/mountain_pass.rs:1, crates/emergence-oracle/src/oracles/mountain_pass.rs:17
-- `FR-EMG-022`
-  - spec: docs/traceability/fr-emg-022/fr-emg-022-intent.md:1, docs/traceability/fr-emg-022/fr-emg-022-intent.md:4
-  - code: crates/emergence-oracle/src/oracles/desert_caravan.rs:1, crates/emergence-oracle/src/oracles/desert_caravan.rs:17
 - `FR-EMG-023`
   - spec: docs/traceability/fr-emg-023/fr-emg-023-intent.md:1, docs/traceability/fr-emg-023/fr-emg-023-intent.md:4
   - code: crates/emergence-oracle/src/oracles/genetics.rs:1, crates/emergence-oracle/src/oracles/genetics.rs:60
-- `FR-EMG-024`
-  - spec: docs/traceability/fr-emg-024/fr-emg-024-intent.md:1, docs/traceability/fr-emg-024/fr-emg-024-intent.md:4, docs/traceability/fr-emg-024/fr-emg-024-intent.md:9
-  - code: crates/emergence-oracle/src/oracles/i18n.rs:1, crates/emergence-oracle/src/oracles/i18n.rs:46, crates/emergence-oracle/src/oracles/powers.rs:1
 - `FR-LANGUAGE-001`
   - spec: docs/traceability/fr-language-001/fr-language-001-intent.md:1, docs/traceability/fr-language-001/fr-language-001-intent.md:4, docs/traceability/fr-language-001/fr-language-001-intent.md:21
   - code: crates/engine/src/engine/culture_phases.rs:230, crates/engine/src/engine.rs:169, crates/engine/src/engine.rs:877
-- `FR-VIEWPORT-001`
-  - spec: docs/traceability/fr-viewport-001/fr-viewport-001-intent.md:1, docs/traceability/fr-viewport-001/fr-viewport-001-intent.md:4, docs/traceability/fr-viewport-001/fr-viewport-001-intent.md:27
-  - code: crates/civis-cli/src/bin/three_d_quality.rs:54
 - `NFR-C-01`
   - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2041, docs/traceability/index.md:1151, docs/traceability/nfr-c-01/nfr-c-01-spec.md:1
   - code: crates/engine/src/hash_chain.rs:8
-- `NFR-C-03`
-  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2043, docs/traceability/index.md:1153, docs/traceability/nfr-c-03/nfr-c-03-spec.md:1
-  - code: crates/engine/src/fixed_math.rs:8
-- `NFR-C-04`
-  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2044, docs/traceability/index.md:1154, docs/traceability/nfr-c-04/nfr-c-04-spec.md:1
-  - code: crates/engine/src/emergence.rs:38
 - `NFR-C-05`
   - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2045, docs/traceability/index.md:1155, docs/traceability/nfr-c-05/nfr-c-05-spec.md:1
   - code: crates/engine/src/building_emergence.rs:3
-- `NFR-C-06`
-  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2046, docs/traceability/index.md:1156, docs/traceability/nfr-c-06/nfr-c-06-spec.md:1
-  - code: crates/legends/src/model.rs:246
 - `NFR-C-07`
   - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2047, docs/traceability/index.md:1157, docs/traceability/nfr-c-07/nfr-c-07-spec.md:1
   - code: crates/engine/src/hash_chain.rs:83
-- `NFR-CIV-LEGENDS-LOUD-03`
-  - spec: docs/design/legends-engine.md:453, docs/traceability/index.md:1171, docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:306
-  - code: crates/legends/src/decay.rs:166, crates/legends/src/worker.rs:40
 - `NFR-CIV-MAINT-001`
   - spec: docs/reference/non-functional-requirements.md:260, docs/reference/non-functional-requirements.md:461, docs/reference/non-functional-requirements.md:499
   - code: scripts/quality/quality-gate.sh:420
@@ -1488,18 +1392,12 @@
 - `NFR-P-02`
   - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2054, docs/traceability/index.md:1218, docs/traceability/nfr-p-02/nfr-p-02-spec.md:1
   - code: crates/engine/benches/tick_bench.rs:7
-- `NFR-P-03`
-  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2055, docs/traceability/index.md:1219, docs/traceability/nfr-p-03/nfr-p-03-spec.md:1
-  - code: crates/engine/benches/tick_bench.rs:7
 - `NFR-P-04`
   - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2056, docs/traceability/index.md:1220, docs/traceability/nfr-p-04/nfr-p-04-spec.md:1
   - code: crates/engine/benches/tick_bench.rs:11
 - `NFR-P-05`
   - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2057, docs/traceability/index.md:1221, docs/traceability/nfr-p-05/nfr-p-05-spec.md:1
   - code: crates/engine/benches/tick_bench.rs:12
-- `NFR-P-06`
-  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2058, docs/traceability/index.md:1222, docs/traceability/nfr-p-06/nfr-p-06-spec.md:1
-  - code: crates/server/src/ws_bridge.rs:407
 - `NFR-P-07`
   - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2059, docs/traceability/index.md:1223, docs/traceability/nfr-p-07/nfr-p-07-spec.md:1
   - code: crates/server/src/jsonrpc.rs:635
@@ -1509,18 +1407,12 @@
 - `NFR-S-02`
   - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2067, docs/traceability/index.md:1232, docs/traceability/nfr-s-02/nfr-s-02-spec.md:1
   - code: crates/server/src/perf_budgets.rs:1, crates/server/src/perf_budgets.rs:11, crates/server/src/perf_budgets.rs:27
-- `NFR-S-03`
-  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2068, docs/traceability/index.md:1233, docs/traceability/nfr-s-03/nfr-s-03-spec.md:1
-  - code: crates/server/src/perf_budgets.rs:1, crates/server/src/perf_budgets.rs:12, crates/server/src/perf_budgets.rs:31
 - `NFR-S-04`
   - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2069, docs/traceability/index.md:1234, docs/traceability/nfr-s-04/nfr-s-04-spec.md:1
   - code: crates/server/src/perf_budgets.rs:2, crates/server/src/perf_budgets.rs:13, crates/server/src/perf_budgets.rs:36
 - `NFR-S-05`
   - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2070, docs/traceability/index.md:1235, docs/traceability/nfr-s-05/nfr-s-05-spec.md:1
   - code: crates/server/src/perf_budgets.rs:2, crates/server/src/perf_budgets.rs:14, crates/server/src/perf_budgets.rs:40
-- `NFR-S-06`
-  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2071, docs/traceability/index.md:1236, docs/traceability/nfr-s-06/nfr-s-06-spec.md:1
-  - code: crates/server/src/perf_budgets.rs:2, crates/server/src/perf_budgets.rs:15, crates/server/src/perf_budgets.rs:44
 
 ## Code-only IDs (missing spec/traceability) (1)
 

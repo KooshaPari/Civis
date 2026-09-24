@@ -1,6 +1,6 @@
 {
   "schema_version": 3,
-  "generated_at": "2026-09-19",
+  "generated_at": "2026-09-20",
   "ids": [
     {
       "id": "FR-AI-001",
@@ -486,9 +486,12 @@
       "in_code": [
         "crates/asset-pipeline/src/lib.rs:3",
         "crates/asset-pipeline/src/lib.rs:18",
-        "crates/asset-pipeline/src/lib.rs:60"
+        "crates/asset-pipeline/src/lib.rs:31",
+        "crates/asset-pipeline/src/lib.rs:97"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/asset-pipeline/src/lib.rs:31"
+      ],
       "in_stub_tests": []
     },
     {
@@ -506,9 +509,15 @@
         "crates/asset-pipeline/src/error.rs:9",
         "crates/asset-pipeline/src/error.rs:27",
         "crates/asset-pipeline/src/lib.rs:3",
-        "crates/asset-pipeline/src/lib.rs:12"
+        "crates/asset-pipeline/src/lib.rs:12",
+        "crates/asset-pipeline/src/lib.rs:108",
+        "crates/asset-pipeline/src/lib.rs:140"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/asset-pipeline/src/lib.rs:108",
+        "crates/asset-pipeline/src/lib.rs:140",
+        "crates/asset-pipeline/src/lib.rs:155"
+      ],
       "in_stub_tests": []
     },
     {
@@ -998,13 +1007,13 @@
         "docs/traceability/fr-civ-014/fr-civ-014-intent.md:39"
       ],
       "in_code": [
-        "crates/engine/src/emergence.rs:1631",
-        "crates/engine/src/engine/engine_tests.rs:3157",
+        "crates/engine/src/emergence.rs:1692",
+        "crates/engine/src/engine/engine_tests.rs:3243",
         "crates/engine/src/save.rs:335",
         "crates/engine/src/save.rs:375"
       ],
       "in_tests": [
-        "crates/engine/src/emergence.rs:1631",
+        "crates/engine/src/emergence.rs:1692",
         "crates/engine/src/save.rs:335",
         "crates/engine/src/save.rs:375"
       ],
@@ -2327,12 +2336,12 @@
       "in_code": [
         "crates/ai/src/providers/dummy.rs:1",
         "crates/engine/src/emergence.rs:63",
-        "crates/engine/src/emergence.rs:1485",
-        "crates/engine/src/engine/engine_tests.rs:452"
+        "crates/engine/src/emergence.rs:1546",
+        "crates/engine/src/engine/engine_tests.rs:538"
       ],
       "in_tests": [
         "crates/ai/tests/dummy_roundtrip.rs:1",
-        "crates/engine/src/emergence.rs:1485"
+        "crates/engine/src/emergence.rs:1546"
       ],
       "in_stub_tests": []
     },
@@ -3671,9 +3680,12 @@
       ],
       "in_code": [
         "crates/asset-pipeline/src/manifest.rs:4",
-        "crates/asset-pipeline/src/manifest.rs:88"
+        "crates/asset-pipeline/src/manifest.rs:88",
+        "crates/asset-pipeline/src/manifest.rs:194"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/asset-pipeline/src/manifest.rs:194"
+      ],
       "in_stub_tests": []
     },
     {
@@ -4193,9 +4205,12 @@
         "docs/traceability/fr-civ-bevy-015/fr-civ-bevy-015-plan.md:1"
       ],
       "in_code": [
-        "clients/bevy-ref/src/live_focus.rs:3"
+        "clients/bevy-ref/src/live_focus.rs:3",
+        "clients/bevy-ref/src/live_focus.rs:182"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "clients/bevy-ref/src/live_focus.rs:182"
+      ],
       "in_stub_tests": []
     },
     {
@@ -4308,9 +4323,14 @@
         "docs/traceability/fr-civ-bevy-019/fr-civ-bevy-019-plan.md:1"
       ],
       "in_code": [
-        "clients/bevy-ref/src/live_pick.rs:3"
+        "clients/bevy-ref/src/live_pick.rs:3",
+        "clients/bevy-ref/src/live_pick.rs:541",
+        "clients/bevy-ref/src/live_pick.rs:566"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "clients/bevy-ref/src/live_pick.rs:541",
+        "clients/bevy-ref/src/live_pick.rs:566"
+      ],
       "in_stub_tests": []
     },
     {
@@ -5643,7 +5663,7 @@
         "docs/traceability/fr-civ-ca-005/fr-civ-ca-005-intent.md:15"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:1488",
+        "crates/engine/src/engine/engine_tests.rs:1574",
         "crates/voxel/src/fluid_ca.rs:49",
         "crates/voxel/src/fluid_ca.rs:56",
         "crates/voxel/src/fluid_ca.rs:1043",
@@ -5762,9 +5782,9 @@
         "docs/traceability/fr-civ-ca-009/fr-civ-ca-009-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:1897",
-        "crates/engine/src/engine/engine_tests.rs:1900",
-        "crates/engine/src/engine/engine_tests.rs:1911",
+        "crates/engine/src/engine/engine_tests.rs:1983",
+        "crates/engine/src/engine/engine_tests.rs:1986",
+        "crates/engine/src/engine/engine_tests.rs:1997",
         "crates/engine/src/engine/world_phases.rs:410",
         "crates/engine/src/engine.rs:1057",
         "crates/voxel/src/fluid_ca.rs:140",
@@ -5833,9 +5853,12 @@
         "docs/traceability/fr-civ-caravan-001/fr-civ-caravan-001-intent.md:5"
       ],
       "in_code": [
-        "crates/engine/src/caravan.rs:3"
+        "crates/engine/src/caravan.rs:3",
+        "crates/engine/src/caravan.rs:521"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/engine/src/caravan.rs:521"
+      ],
       "in_stub_tests": []
     },
     {
@@ -6131,6 +6154,7 @@
         "docs/traceability/fr-civ-cohesion-001/fr-civ-cohesion-001-intent.md:4"
       ],
       "in_code": [
+        "crates/engine/src/engine/engine_tests.rs:488",
         "crates/engine/src/engine/social_settlement_phases.rs:272"
       ],
       "in_tests": [],
@@ -8049,10 +8073,13 @@
       ],
       "in_code": [
         "crates/diplomacy/src/stance.rs:1",
+        "crates/diplomacy/src/stance.rs:456",
         "crates/engine/src/engine.rs:473",
         "crates/engine/src/engine.rs:1045"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/diplomacy/src/stance.rs:456"
+      ],
       "in_stub_tests": []
     },
     {
@@ -8435,10 +8462,10 @@
         "crates/server/src/jsonrpc.rs:524",
         "crates/server/src/jsonrpc.rs:756",
         "crates/server/src/jsonrpc.rs:1103",
-        "crates/server/src/jsonrpc.rs:3273"
+        "crates/server/src/jsonrpc.rs:3444"
       ],
       "in_tests": [
-        "crates/server/src/jsonrpc.rs:3273"
+        "crates/server/src/jsonrpc.rs:3444"
       ],
       "in_stub_tests": []
     },
@@ -8638,8 +8665,8 @@
       ],
       "in_code": [
         "crates/genetics/src/seeds.rs:417",
-        "crates/genetics/src/seeds.rs:1133",
-        "crates/genetics/src/seeds.rs:1429"
+        "crates/genetics/src/seeds.rs:1162",
+        "crates/genetics/src/seeds.rs:1458"
       ],
       "in_tests": [
         "crates/civ-emergence-metrics/tests/fr_civ_emergence_tests.rs:1",
@@ -9003,18 +9030,18 @@
       ],
       "in_code": [
         "crates/engine/src/emergence_coupling.rs:292",
-        "crates/engine/src/engine/engine_tests.rs:2706",
-        "crates/engine/src/engine/engine_tests.rs:2708",
-        "crates/engine/src/engine/engine_tests.rs:2717",
-        "crates/engine/src/engine/engine_tests.rs:2742",
-        "crates/engine/src/engine/engine_tests.rs:2777",
+        "crates/engine/src/engine/engine_tests.rs:2792",
+        "crates/engine/src/engine/engine_tests.rs:2794",
+        "crates/engine/src/engine/engine_tests.rs:2803",
+        "crates/engine/src/engine/engine_tests.rs:2828",
+        "crates/engine/src/engine/engine_tests.rs:2863",
         "crates/engine/src/social_dynamics.rs:216"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:2708",
-        "crates/engine/src/engine/engine_tests.rs:2717",
-        "crates/engine/src/engine/engine_tests.rs:2742",
-        "crates/engine/src/engine/engine_tests.rs:2777",
+        "crates/engine/src/engine/engine_tests.rs:2794",
+        "crates/engine/src/engine/engine_tests.rs:2803",
+        "crates/engine/src/engine/engine_tests.rs:2828",
+        "crates/engine/src/engine/engine_tests.rs:2863",
         "scripts/traceability/test_fr_audit_classification.py:100"
       ],
       "in_stub_tests": []
@@ -9029,16 +9056,16 @@
       ],
       "in_code": [
         "crates/engine/src/emergence_coupling.rs:275",
-        "crates/engine/src/engine/engine_tests.rs:2523",
-        "crates/engine/src/engine/engine_tests.rs:2525",
-        "crates/engine/src/engine/engine_tests.rs:2534",
-        "crates/engine/src/engine/engine_tests.rs:2552",
+        "crates/engine/src/engine/engine_tests.rs:2609",
+        "crates/engine/src/engine/engine_tests.rs:2611",
+        "crates/engine/src/engine/engine_tests.rs:2620",
+        "crates/engine/src/engine/engine_tests.rs:2638",
         "crates/engine/src/social_dynamics.rs:195"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:2525",
-        "crates/engine/src/engine/engine_tests.rs:2534",
-        "crates/engine/src/engine/engine_tests.rs:2552"
+        "crates/engine/src/engine/engine_tests.rs:2611",
+        "crates/engine/src/engine/engine_tests.rs:2620",
+        "crates/engine/src/engine/engine_tests.rs:2638"
       ],
       "in_stub_tests": []
     },
@@ -9054,17 +9081,17 @@
         "crates/agents/src/psyche.rs:428",
         "crates/engine/src/emergence_coupling.rs:329",
         "crates/engine/src/emergence_coupling.rs:351",
-        "crates/engine/src/engine/engine_tests.rs:2795",
-        "crates/engine/src/engine/engine_tests.rs:2797",
-        "crates/engine/src/engine/engine_tests.rs:2805",
-        "crates/engine/src/engine/engine_tests.rs:2837",
-        "crates/engine/src/engine/engine_tests.rs:2857"
+        "crates/engine/src/engine/engine_tests.rs:2881",
+        "crates/engine/src/engine/engine_tests.rs:2883",
+        "crates/engine/src/engine/engine_tests.rs:2891",
+        "crates/engine/src/engine/engine_tests.rs:2923",
+        "crates/engine/src/engine/engine_tests.rs:2943"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:2797",
-        "crates/engine/src/engine/engine_tests.rs:2805",
-        "crates/engine/src/engine/engine_tests.rs:2837",
-        "crates/engine/src/engine/engine_tests.rs:2857"
+        "crates/engine/src/engine/engine_tests.rs:2883",
+        "crates/engine/src/engine/engine_tests.rs:2891",
+        "crates/engine/src/engine/engine_tests.rs:2923",
+        "crates/engine/src/engine/engine_tests.rs:2943"
       ],
       "in_stub_tests": []
     },
@@ -9121,9 +9148,12 @@
       ],
       "in_code": [
         "crates/engine/src/emergent_migration.rs:1",
-        "crates/engine/src/emergent_migration.rs:25"
+        "crates/engine/src/emergent_migration.rs:25",
+        "crates/engine/src/emergent_migration.rs:472"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/engine/src/emergent_migration.rs:472"
+      ],
       "in_stub_tests": []
     },
     {
@@ -9142,11 +9172,11 @@
         "docs/traceability/fr-civ-engine-int-001/fr-civ-engine-int-001-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:947",
-        "crates/engine/src/engine/engine_tests.rs:949"
+        "crates/engine/src/engine/engine_tests.rs:1033",
+        "crates/engine/src/engine/engine_tests.rs:1035"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:947"
+        "crates/engine/src/engine/engine_tests.rs:1033"
       ],
       "in_stub_tests": []
     },
@@ -9166,11 +9196,11 @@
         "docs/traceability/fr-civ-engine-int-002/fr-civ-engine-int-002-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:1138",
-        "crates/engine/src/engine/engine_tests.rs:1140"
+        "crates/engine/src/engine/engine_tests.rs:1224",
+        "crates/engine/src/engine/engine_tests.rs:1226"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:1138"
+        "crates/engine/src/engine/engine_tests.rs:1224"
       ],
       "in_stub_tests": []
     },
@@ -9190,11 +9220,11 @@
         "docs/traceability/fr-civ-engine-int-003/fr-civ-engine-int-003-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:1173",
-        "crates/engine/src/engine/engine_tests.rs:1175"
+        "crates/engine/src/engine/engine_tests.rs:1259",
+        "crates/engine/src/engine/engine_tests.rs:1261"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:1173"
+        "crates/engine/src/engine/engine_tests.rs:1259"
       ],
       "in_stub_tests": []
     },
@@ -9214,11 +9244,11 @@
         "docs/traceability/fr-civ-engine-int-005/fr-civ-engine-int-005-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:1366",
-        "crates/engine/src/engine/engine_tests.rs:1368"
+        "crates/engine/src/engine/engine_tests.rs:1452",
+        "crates/engine/src/engine/engine_tests.rs:1454"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:1366"
+        "crates/engine/src/engine/engine_tests.rs:1452"
       ],
       "in_stub_tests": []
     },
@@ -9262,11 +9292,11 @@
         "docs/traceability/fr-civ-engine-int-011/fr-civ-engine-int-011-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:1191",
-        "crates/engine/src/engine/engine_tests.rs:1193"
+        "crates/engine/src/engine/engine_tests.rs:1277",
+        "crates/engine/src/engine/engine_tests.rs:1279"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:1191"
+        "crates/engine/src/engine/engine_tests.rs:1277"
       ],
       "in_stub_tests": []
     },
@@ -9286,11 +9316,11 @@
         "docs/traceability/fr-civ-engine-int-012/fr-civ-engine-int-012-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:1231",
-        "crates/engine/src/engine/engine_tests.rs:1232"
+        "crates/engine/src/engine/engine_tests.rs:1317",
+        "crates/engine/src/engine/engine_tests.rs:1318"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:1232"
+        "crates/engine/src/engine/engine_tests.rs:1318"
       ],
       "in_stub_tests": []
     },
@@ -9310,11 +9340,11 @@
         "docs/traceability/fr-civ-engine-int-013/fr-civ-engine-int-013-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:1314",
-        "crates/engine/src/engine/engine_tests.rs:1316"
+        "crates/engine/src/engine/engine_tests.rs:1400",
+        "crates/engine/src/engine/engine_tests.rs:1402"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:1314"
+        "crates/engine/src/engine/engine_tests.rs:1400"
       ],
       "in_stub_tests": []
     },
@@ -9334,11 +9364,11 @@
         "docs/traceability/fr-civ-engine-int-014/fr-civ-engine-int-014-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:1354",
-        "crates/engine/src/engine/engine_tests.rs:1356"
+        "crates/engine/src/engine/engine_tests.rs:1440",
+        "crates/engine/src/engine/engine_tests.rs:1442"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:1354"
+        "crates/engine/src/engine/engine_tests.rs:1440"
       ],
       "in_stub_tests": []
     },
@@ -9358,11 +9388,11 @@
         "docs/traceability/fr-civ-engine-int-015/fr-civ-engine-int-015-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:1257",
-        "crates/engine/src/engine/engine_tests.rs:1259"
+        "crates/engine/src/engine/engine_tests.rs:1343",
+        "crates/engine/src/engine/engine_tests.rs:1345"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:1257"
+        "crates/engine/src/engine/engine_tests.rs:1343"
       ],
       "in_stub_tests": []
     },
@@ -9382,11 +9412,11 @@
         "docs/traceability/fr-civ-engine-replay-001/fr-civ-engine-replay-001-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:1540",
-        "crates/engine/src/engine/engine_tests.rs:1542"
+        "crates/engine/src/engine/engine_tests.rs:1626",
+        "crates/engine/src/engine/engine_tests.rs:1628"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:1540"
+        "crates/engine/src/engine/engine_tests.rs:1626"
       ],
       "in_stub_tests": []
     },
@@ -9406,11 +9436,11 @@
         "docs/traceability/fr-civ-engine-replay-002/fr-civ-engine-replay-002-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:1567",
-        "crates/engine/src/engine/engine_tests.rs:1569"
+        "crates/engine/src/engine/engine_tests.rs:1653",
+        "crates/engine/src/engine/engine_tests.rs:1655"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:1567"
+        "crates/engine/src/engine/engine_tests.rs:1653"
       ],
       "in_stub_tests": []
     },
@@ -9430,11 +9460,11 @@
         "docs/traceability/fr-civ-engine-replay-003/fr-civ-engine-replay-003-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:1706",
-        "crates/engine/src/engine/engine_tests.rs:1708"
+        "crates/engine/src/engine/engine_tests.rs:1792",
+        "crates/engine/src/engine/engine_tests.rs:1794"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:1706"
+        "crates/engine/src/engine/engine_tests.rs:1792"
       ],
       "in_stub_tests": []
     },
@@ -9454,11 +9484,11 @@
         "docs/traceability/fr-civ-engine-replay-004/fr-civ-engine-replay-004-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:1724",
-        "crates/engine/src/engine/engine_tests.rs:1726"
+        "crates/engine/src/engine/engine_tests.rs:1810",
+        "crates/engine/src/engine/engine_tests.rs:1812"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:1724"
+        "crates/engine/src/engine/engine_tests.rs:1810"
       ],
       "in_stub_tests": []
     },
@@ -9478,11 +9508,11 @@
         "docs/traceability/fr-civ-engine-replay-005/fr-civ-engine-replay-005-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:1776",
-        "crates/engine/src/engine/engine_tests.rs:1778"
+        "crates/engine/src/engine/engine_tests.rs:1862",
+        "crates/engine/src/engine/engine_tests.rs:1864"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:1776"
+        "crates/engine/src/engine/engine_tests.rs:1862"
       ],
       "in_stub_tests": []
     },
@@ -9534,9 +9564,12 @@
         "docs/traceability/fr-civ-fest-001/fr-civ-fest-001-intent.md:4"
       ],
       "in_code": [
-        "crates/engine/src/festivals.rs:1"
+        "crates/engine/src/festivals.rs:1",
+        "crates/engine/src/festivals.rs:677"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/engine/src/festivals.rs:677"
+      ],
       "in_stub_tests": []
     },
     {
@@ -9704,9 +9737,12 @@
         "crates/engine/src/conditions.rs:1",
         "crates/server/src/jsonrpc.rs:97",
         "crates/server/src/jsonrpc.rs:951",
-        "crates/server/src/jsonrpc.rs:996"
+        "crates/server/src/jsonrpc.rs:996",
+        "crates/server/src/jsonrpc.rs:2913"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/server/src/jsonrpc.rs:2913"
+      ],
       "in_stub_tests": []
     },
     {
@@ -9919,7 +9955,7 @@
         "docs/traceability/fr-civ-genetics-seed-001/fr-civ-genetics-seed-001-intent.md:56"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:2941"
+        "crates/engine/src/engine/engine_tests.rs:3027"
       ],
       "in_tests": [],
       "in_stub_tests": []
@@ -9936,7 +9972,7 @@
         "docs/traceability/fr-civ-genetics-seed-002/fr-civ-genetics-seed-002-intent.md:59"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:2991"
+        "crates/engine/src/engine/engine_tests.rs:3077"
       ],
       "in_tests": [],
       "in_stub_tests": []
@@ -9953,9 +9989,12 @@
         "docs/traceability/fr-civ-genetics-seed-003/fr-civ-genetics-seed-003-intent.md:56"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:3037"
+        "crates/engine/src/engine/engine_tests.rs:3123",
+        "crates/genetics/src/seeds.rs:1119"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/genetics/src/seeds.rs:1119"
+      ],
       "in_stub_tests": []
     },
     {
@@ -10833,7 +10872,12 @@
       "in_code": [
         "crates/engine/src/engine/social_settlement_phases.rs:179"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/engine/tests/fr_civ_gov_200_stratification.rs:1",
+        "crates/engine/tests/fr_civ_gov_200_stratification.rs:22",
+        "crates/engine/tests/fr_civ_gov_200_stratification.rs:42",
+        "crates/engine/tests/fr_civ_gov_200_stratification.rs:92"
+      ],
       "in_stub_tests": []
     },
     {
@@ -12275,9 +12319,12 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/i18n/src/lib.rs:98"
+        "crates/i18n/src/lib.rs:98",
+        "crates/i18n/src/lib.rs:307"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/i18n/src/lib.rs:307"
+      ],
       "in_stub_tests": []
     },
     {
@@ -12319,10 +12366,10 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/i18n/src/lib.rs:327"
+        "crates/i18n/src/lib.rs:351"
       ],
       "in_tests": [
-        "crates/i18n/src/lib.rs:327"
+        "crates/i18n/src/lib.rs:351"
       ],
       "in_stub_tests": []
     },
@@ -12896,7 +12943,7 @@
       ],
       "in_code": [
         "crates/engine/src/engine.rs:586",
-        "crates/legends/src/model.rs:310"
+        "crates/legends/src/model.rs:309"
       ],
       "in_tests": [
         "crates/engine/tests/era_emergence_significance_persistence.rs:3",
@@ -13126,9 +13173,12 @@
         "docs/traceability/fr-civ-legends-010/fr-civ-legends-010-intent.md:28"
       ],
       "in_code": [
-        "crates/engine/src/engine.rs:1040"
+        "crates/engine/src/engine.rs:1040",
+        "crates/legends/src/significance.rs:417"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/legends/src/significance.rs:417"
+      ],
       "in_stub_tests": []
     },
     {
@@ -13269,17 +13319,17 @@
         "docs/traceability/fr-civ-legends-ingest-02/fr-civ-legends-ingest-02-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/emergence.rs:1378",
-        "crates/engine/src/emergence.rs:1733",
-        "crates/engine/src/emergence.rs:1751",
-        "crates/engine/src/engine/engine_tests.rs:451",
-        "crates/engine/src/engine/engine_tests.rs:523",
+        "crates/engine/src/emergence.rs:1439",
+        "crates/engine/src/emergence.rs:1794",
+        "crates/engine/src/emergence.rs:1812",
+        "crates/engine/src/engine/engine_tests.rs:537",
+        "crates/engine/src/engine/engine_tests.rs:609",
         "crates/legends/src/worker.rs:1"
       ],
       "in_tests": [
-        "crates/engine/src/emergence.rs:1378",
-        "crates/engine/src/emergence.rs:1733",
-        "crates/engine/src/emergence.rs:1751",
+        "crates/engine/src/emergence.rs:1439",
+        "crates/engine/src/emergence.rs:1794",
+        "crates/engine/src/emergence.rs:1812",
         "crates/engine/tests/fr_emergence_quality.rs:356"
       ],
       "in_stub_tests": []
@@ -13462,18 +13512,18 @@
         "crates/engine/src/emergence.rs:50",
         "crates/engine/src/emergence.rs:1127",
         "crates/engine/src/emergence.rs:1133",
-        "crates/engine/src/emergence.rs:1722",
-        "crates/engine/src/engine/engine_tests.rs:452",
+        "crates/engine/src/emergence.rs:1783",
+        "crates/engine/src/engine/engine_tests.rs:538",
         "crates/server/src/jsonrpc.rs:80",
         "crates/server/src/jsonrpc.rs:990",
-        "crates/server/src/jsonrpc.rs:3388"
+        "crates/server/src/jsonrpc.rs:3559"
       ],
       "in_tests": [
-        "crates/engine/src/emergence.rs:1722",
+        "crates/engine/src/emergence.rs:1783",
         "crates/legends/tests/fr_fr_civ_legends_query_07.rs:1",
         "crates/legends/tests/fr_fr_civ_legends_query_07.rs:5",
         "crates/legends/tests/fr_fr_civ_legends_query_07.rs:9",
-        "crates/server/src/jsonrpc.rs:3388"
+        "crates/server/src/jsonrpc.rs:3559"
       ],
       "in_stub_tests": []
     },
@@ -13587,7 +13637,7 @@
         "docs/traceability/fr-civ-life-001/fr-civ-life-001-intent.md:4"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:4003",
+        "crates/engine/src/engine/engine_tests.rs:4089",
         "crates/engine/src/engine/social_settlement_phases.rs:466",
         "crates/engine/src/engine.rs:3339",
         "crates/needs/src/lib.rs:14",
@@ -13626,7 +13676,7 @@
         "docs/traceability/fr-civ-life-002/fr-civ-life-002-intent.md:15"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:4100",
+        "crates/engine/src/engine/engine_tests.rs:4186",
         "crates/engine/src/engine/social_settlement_phases.rs:466",
         "crates/needs/src/lib.rs:14",
         "crates/needs/src/lib.rs:586",
@@ -13668,7 +13718,7 @@
         "docs/traceability/fr-civ-life-003/fr-civ-life-003-intent.md:15"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:3914",
+        "crates/engine/src/engine/engine_tests.rs:4000",
         "crates/engine/src/engine/species_lifecycle.rs:637",
         "crates/needs/src/lib.rs:15",
         "crates/needs/src/lib.rs:529",
@@ -13678,7 +13728,7 @@
         "crates/needs/src/lib.rs:1001"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:3914",
+        "crates/engine/src/engine/engine_tests.rs:4000",
         "crates/needs/src/lib.rs:529",
         "crates/needs/src/lib.rs:556",
         "crates/needs/src/lib.rs:690",
@@ -14686,9 +14736,12 @@
         "crates/emergence-migration/src/lib.rs:359",
         "crates/emergence-migration/src/lib.rs:371",
         "crates/emergence-migration/src/lib.rs:381",
-        "crates/emergence-migration/src/lib.rs:401"
+        "crates/emergence-migration/src/lib.rs:401",
+        "crates/emergence-migration/src/lib.rs:616"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/emergence-migration/src/lib.rs:616"
+      ],
       "in_stub_tests": []
     },
     {
@@ -14732,9 +14785,12 @@
       "in_code": [
         "crates/emergence-migration/src/lib.rs:317",
         "crates/emergence-migration/src/lib.rs:345",
-        "crates/emergence-migration/src/lib.rs:388"
+        "crates/emergence-migration/src/lib.rs:388",
+        "crates/emergence-migration/src/lib.rs:764"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/emergence-migration/src/lib.rs:764"
+      ],
       "in_stub_tests": []
     },
     {
@@ -15921,9 +15977,12 @@
       "in_code": [
         "CHANGELOG.md:17",
         "crates/voxel/src/atlas/gpu_atlas.rs:1",
-        "crates/voxel/src/atlas/gpu_atlas.rs:40"
+        "crates/voxel/src/atlas/gpu_atlas.rs:40",
+        "crates/voxel/src/atlas/gpu_atlas.rs:689"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/voxel/src/atlas/gpu_atlas.rs:689"
+      ],
       "in_stub_tests": []
     },
     {
@@ -16742,13 +16801,13 @@
         "docs/traceability/fr-civ-planet-010/fr-civ-planet-010-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:966",
-        "crates/engine/src/engine/engine_tests.rs:968",
+        "crates/engine/src/engine/engine_tests.rs:1052",
+        "crates/engine/src/engine/engine_tests.rs:1054",
         "crates/engine/src/engine.rs:3440",
         "crates/server/src/jsonrpc.rs:516"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:966"
+        "crates/engine/src/engine/engine_tests.rs:1052"
       ],
       "in_stub_tests": []
     },
@@ -16777,7 +16836,7 @@
         "crates/engine/src/climate.rs:50",
         "crates/engine/src/climate.rs:94",
         "crates/engine/src/climate.rs:151",
-        "crates/engine/src/engine/engine_tests.rs:1010",
+        "crates/engine/src/engine/engine_tests.rs:1096",
         "crates/engine/src/engine.rs:859"
       ],
       "in_tests": [
@@ -16807,7 +16866,7 @@
       "in_code": [
         "crates/engine/src/climate.rs:37",
         "crates/engine/src/climate.rs:152",
-        "crates/engine/src/engine/engine_tests.rs:1848",
+        "crates/engine/src/engine/engine_tests.rs:1934",
         "crates/engine/src/engine.rs:862",
         "crates/engine/src/engine.rs:3442",
         "crates/planet/src/weather.rs:1"
@@ -18600,13 +18659,13 @@
         "crates/agents/src/psyche.rs:316",
         "crates/agents/src/psyche.rs:428",
         "crates/engine/src/dormant_phases.rs:3",
-        "crates/engine/src/engine/engine_tests.rs:451",
-        "crates/engine/src/engine/engine_tests.rs:2526",
-        "crates/engine/src/engine/engine_tests.rs:2535"
+        "crates/engine/src/engine/engine_tests.rs:537",
+        "crates/engine/src/engine/engine_tests.rs:2612",
+        "crates/engine/src/engine/engine_tests.rs:2621"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:2526",
-        "crates/engine/src/engine/engine_tests.rs:2535"
+        "crates/engine/src/engine/engine_tests.rs:2612",
+        "crates/engine/src/engine/engine_tests.rs:2621"
       ],
       "in_stub_tests": []
     },
@@ -18705,13 +18764,13 @@
       "in_code": [
         "crates/agents/src/psyche.rs:495",
         "crates/engine/src/engine/ai_decision.rs:57",
-        "crates/engine/src/engine/engine_tests.rs:451",
-        "crates/engine/src/engine/engine_tests.rs:453",
-        "crates/engine/src/engine/engine_tests.rs:542",
+        "crates/engine/src/engine/engine_tests.rs:537",
+        "crates/engine/src/engine/engine_tests.rs:539",
+        "crates/engine/src/engine/engine_tests.rs:628",
         "crates/engine/src/engine.rs:763"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:453"
+        "crates/engine/src/engine/engine_tests.rs:539"
       ],
       "in_stub_tests": []
     },
@@ -18741,7 +18800,7 @@
         "crates/ai/src/language.rs:78",
         "crates/ai/src/language.rs:426",
         "crates/engine/src/emergence_coupling.rs:973",
-        "crates/engine/src/engine/engine_tests.rs:452",
+        "crates/engine/src/engine/engine_tests.rs:538",
         "crates/engine/src/settlement_helpers.rs:264"
       ],
       "in_tests": [
@@ -19268,11 +19327,11 @@
         "docs/traceability/civis-tracelinks.md:143"
       ],
       "in_code": [
-        "crates/engine/src/emergence.rs:1427",
-        "crates/engine/src/emergence.rs:2442"
+        "crates/engine/src/emergence.rs:1488",
+        "crates/engine/src/emergence.rs:2503"
       ],
       "in_tests": [
-        "crates/engine/src/emergence.rs:1427"
+        "crates/engine/src/emergence.rs:1488"
       ],
       "in_stub_tests": []
     },
@@ -19289,14 +19348,14 @@
         "clients/bevy-ref/src/game_ui.rs:38",
         "crates/emergence-oracle/src/oracles/religion.rs:8",
         "crates/engine/src/emergence.rs:212",
-        "crates/engine/src/emergence.rs:1428",
+        "crates/engine/src/emergence.rs:1489",
         "crates/engine/src/emergence_coupling.rs:369",
         "crates/engine/src/settlement_helpers.rs:127",
         "crates/engine/src/social_dynamics.rs:279",
         "crates/engine/src/social_dynamics.rs:422"
       ],
       "in_tests": [
-        "crates/engine/src/emergence.rs:1428"
+        "crates/engine/src/emergence.rs:1489"
       ],
       "in_stub_tests": []
     },
@@ -20685,8 +20744,8 @@
       ],
       "in_code": [
         "clients/bevy-ref/src/save_load_ui.rs:3",
-        "crates/server/src/jsonrpc.rs:4503",
-        "crates/server/src/jsonrpc.rs:4545",
+        "crates/server/src/jsonrpc.rs:4674",
+        "crates/server/src/jsonrpc.rs:4716",
         "crates/server/src/saves.rs:26",
         "crates/server/src/saves.rs:99",
         "crates/server/src/saves.rs:274",
@@ -20694,8 +20753,8 @@
         "crates/server/src/saves.rs:516"
       ],
       "in_tests": [
-        "crates/server/src/jsonrpc.rs:4503",
-        "crates/server/src/jsonrpc.rs:4545",
+        "crates/server/src/jsonrpc.rs:4674",
+        "crates/server/src/jsonrpc.rs:4716",
         "crates/server/src/saves.rs:514",
         "crates/server/src/saves.rs:516",
         "crates/server/src/saves.rs:523",
@@ -20722,12 +20781,12 @@
       ],
       "in_code": [
         "clients/bevy-ref/src/save_load_ui.rs:3",
-        "crates/server/src/jsonrpc.rs:4504",
-        "crates/server/src/jsonrpc.rs:4546"
+        "crates/server/src/jsonrpc.rs:4675",
+        "crates/server/src/jsonrpc.rs:4717"
       ],
       "in_tests": [
-        "crates/server/src/jsonrpc.rs:4504",
-        "crates/server/src/jsonrpc.rs:4546"
+        "crates/server/src/jsonrpc.rs:4675",
+        "crates/server/src/jsonrpc.rs:4717"
       ],
       "in_stub_tests": []
     },
@@ -20748,9 +20807,14 @@
       ],
       "in_code": [
         "crates/server/src/jsonrpc.rs:1574",
-        "crates/server/src/jsonrpc.rs:1590"
+        "crates/server/src/jsonrpc.rs:1590",
+        "crates/server/src/jsonrpc.rs:2732",
+        "crates/server/src/jsonrpc.rs:2775"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/server/src/jsonrpc.rs:2732",
+        "crates/server/src/jsonrpc.rs:2775"
+      ],
       "in_stub_tests": []
     },
     {
@@ -21169,9 +21233,9 @@
         "crates/server/src/jsonrpc.rs:994"
       ],
       "in_tests": [
-        "crates/server/src/jsonrpc.rs:4974",
-        "crates/server/src/jsonrpc.rs:5013",
-        "crates/server/src/jsonrpc.rs:5049"
+        "crates/server/src/jsonrpc.rs:5145",
+        "crates/server/src/jsonrpc.rs:5184",
+        "crates/server/src/jsonrpc.rs:5220"
       ],
       "in_stub_tests": []
     },
@@ -22464,7 +22528,7 @@
         "docs/traceability/fr-civ-tactics-010/fr-civ-tactics-010-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:1122",
+        "crates/engine/src/engine/engine_tests.rs:1208",
         "crates/engine/src/engine.rs:856",
         "crates/tactics/src/lib.rs:369"
       ],
@@ -22672,7 +22736,7 @@
         "docs/traceability/fr-civ-tactics-024/fr-civ-tactics-024-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:1833",
+        "crates/engine/src/engine/engine_tests.rs:1919",
         "crates/engine/src/engine.rs:796",
         "crates/engine/src/engine.rs:3437",
         "crates/tactics/src/war_bridge.rs:29",
@@ -22714,16 +22778,16 @@
         "docs/traceability/fr-civ-tactics-025/fr-civ-tactics-025-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:1596",
-        "crates/engine/src/engine/engine_tests.rs:1598",
-        "crates/engine/src/engine/engine_tests.rs:1620",
-        "crates/engine/src/engine/engine_tests.rs:1644",
-        "crates/engine/src/engine/engine_tests.rs:1687",
-        "crates/engine/src/engine/engine_tests.rs:1803",
+        "crates/engine/src/engine/engine_tests.rs:1682",
+        "crates/engine/src/engine/engine_tests.rs:1684",
+        "crates/engine/src/engine/engine_tests.rs:1706",
+        "crates/engine/src/engine/engine_tests.rs:1730",
+        "crates/engine/src/engine/engine_tests.rs:1773",
+        "crates/engine/src/engine/engine_tests.rs:1889",
         "crates/engine/src/replay.rs:57"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:1596",
+        "crates/engine/src/engine/engine_tests.rs:1682",
         "crates/tactics/tests/fr_civ_tactics_tests.rs:3",
         "crates/tactics/tests/fr_civ_tactics_tests.rs:10",
         "crates/tactics/tests/fr_civ_tactics_tests.rs:59",
@@ -22813,6 +22877,7 @@
         "docs/traceability/fr-civ-tactics-032/fr-civ-tactics-032-plan.md:1"
       ],
       "in_code": [
+        "crates/engine/src/engine/engine_tests.rs:186",
         "crates/engine/src/engine.rs:355"
       ],
       "in_tests": [],
@@ -23096,7 +23161,7 @@
         "docs/traceability/fr-civ-tactics-041/fr-civ-tactics-041-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:1580",
+        "crates/engine/src/engine/engine_tests.rs:1666",
         "crates/engine/src/hash_chain.rs:93",
         "crates/engine/src/hash_chain.rs:124"
       ],
@@ -23278,10 +23343,10 @@
       ],
       "in_code": [
         "crates/mod-host/src/wasm_guest.rs:10",
-        "crates/mod-host/src/wasm_guest.rs:611"
+        "crates/mod-host/src/wasm_guest.rs:606"
       ],
       "in_tests": [
-        "crates/mod-host/src/wasm_guest.rs:611"
+        "crates/mod-host/src/wasm_guest.rs:606"
       ],
       "in_stub_tests": []
     },
@@ -23335,10 +23400,10 @@
       ],
       "in_code": [
         "crates/mod-host/src/wasm_guest.rs:30",
-        "crates/mod-host/src/wasm_guest.rs:624"
+        "crates/mod-host/src/wasm_guest.rs:619"
       ],
       "in_tests": [
-        "crates/mod-host/src/wasm_guest.rs:624"
+        "crates/mod-host/src/wasm_guest.rs:619"
       ],
       "in_stub_tests": []
     },
@@ -23451,10 +23516,10 @@
       ],
       "in_code": [
         "crates/mod-host/src/wasm_guest.rs:14",
-        "crates/mod-host/src/wasm_guest.rs:617"
+        "crates/mod-host/src/wasm_guest.rs:612"
       ],
       "in_tests": [
-        "crates/mod-host/src/wasm_guest.rs:617"
+        "crates/mod-host/src/wasm_guest.rs:612"
       ],
       "in_stub_tests": []
     },
@@ -23827,14 +23892,14 @@
         "docs/traceability/fr-civ-tactics-066/fr-civ-tactics-066-plan.md:1"
       ],
       "in_code": [
-        "crates/server/src/jsonrpc.rs:4505",
-        "crates/server/src/jsonrpc.rs:4506",
-        "crates/server/src/jsonrpc.rs:4547"
+        "crates/server/src/jsonrpc.rs:4676",
+        "crates/server/src/jsonrpc.rs:4677",
+        "crates/server/src/jsonrpc.rs:4718"
       ],
       "in_tests": [
-        "crates/server/src/jsonrpc.rs:4505",
-        "crates/server/src/jsonrpc.rs:4506",
-        "crates/server/src/jsonrpc.rs:4547"
+        "crates/server/src/jsonrpc.rs:4676",
+        "crates/server/src/jsonrpc.rs:4677",
+        "crates/server/src/jsonrpc.rs:4718"
       ],
       "in_stub_tests": []
     },
@@ -26506,7 +26571,7 @@
       ],
       "in_code": [
         "crates/engine/src/climate.rs:97",
-        "crates/engine/src/engine/engine_tests.rs:1057",
+        "crates/engine/src/engine/engine_tests.rs:1143",
         "crates/voxel/src/lib.rs:126",
         "crates/voxel/src/lib.rs:224",
         "crates/voxel/src/lib.rs:225"
@@ -26617,11 +26682,11 @@
         "docs/traceability/fr-civ-voxel-006/fr-civ-voxel-006-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:1392",
-        "crates/engine/src/engine/engine_tests.rs:1395"
+        "crates/engine/src/engine/engine_tests.rs:1478",
+        "crates/engine/src/engine/engine_tests.rs:1481"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:1395"
+        "crates/engine/src/engine/engine_tests.rs:1481"
       ],
       "in_stub_tests": []
     },
@@ -26641,11 +26706,11 @@
         "docs/traceability/fr-civ-voxel-007/fr-civ-voxel-007-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:1443",
-        "crates/engine/src/engine/engine_tests.rs:1445"
+        "crates/engine/src/engine/engine_tests.rs:1529",
+        "crates/engine/src/engine/engine_tests.rs:1531"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:1443"
+        "crates/engine/src/engine/engine_tests.rs:1529"
       ],
       "in_stub_tests": []
     },
@@ -27558,9 +27623,12 @@
         "docs/traceability/fr-civ-warfare-002/fr-civ-warfare-002-intent.md:4"
       ],
       "in_code": [
-        "crates/tactics/src/doctrine_evolution.rs:1"
+        "crates/tactics/src/doctrine_evolution.rs:1",
+        "crates/tactics/src/doctrine_evolution.rs:148"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/tactics/src/doctrine_evolution.rs:148"
+      ],
       "in_stub_tests": []
     },
     {
@@ -28158,7 +28226,7 @@
         "docs/traceability/fr-core-001/fr-core-001-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:186",
+        "crates/engine/src/engine/engine_tests.rs:241",
         "README.md:264"
       ],
       "in_tests": [
@@ -28309,14 +28377,14 @@
         "docs/traceability/fr-core-005/fr-core-005-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:598",
-        "crates/engine/src/engine/engine_tests.rs:601",
-        "crates/engine/src/engine/engine_tests.rs:610",
-        "crates/engine/src/engine/engine_tests.rs:617",
-        "crates/engine/src/engine/engine_tests.rs:633",
-        "crates/engine/src/engine/engine_tests.rs:646",
-        "crates/engine/src/engine/engine_tests.rs:659",
-        "crates/engine/src/engine/engine_tests.rs:681"
+        "crates/engine/src/engine/engine_tests.rs:684",
+        "crates/engine/src/engine/engine_tests.rs:687",
+        "crates/engine/src/engine/engine_tests.rs:696",
+        "crates/engine/src/engine/engine_tests.rs:703",
+        "crates/engine/src/engine/engine_tests.rs:719",
+        "crates/engine/src/engine/engine_tests.rs:732",
+        "crates/engine/src/engine/engine_tests.rs:745",
+        "crates/engine/src/engine/engine_tests.rs:767"
       ],
       "in_tests": [
         "crates/engine/src/hash_chain.rs:239",
@@ -29429,10 +29497,10 @@
       ],
       "in_code": [
         "crates/economy/src/trade.rs:30",
-        "crates/economy/src/trade.rs:205"
+        "crates/economy/src/trade.rs:248"
       ],
       "in_tests": [
-        "crates/economy/src/trade.rs:205",
+        "crates/economy/src/trade.rs:248",
         "crates/economy/tests/fr_fr_econ_007.rs:1",
         "crates/economy/tests/fr_fr_econ_007.rs:13",
         "crates/economy/tests/fr_fr_econ_007.rs:27",
@@ -29568,9 +29636,12 @@
       ],
       "in_code": [
         "crates/economy/src/trade.rs:1",
-        "crates/economy/src/trade.rs:2"
+        "crates/economy/src/trade.rs:2",
+        "crates/economy/src/trade.rs:205"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/economy/src/trade.rs:205"
+      ],
       "in_stub_tests": []
     },
     {
@@ -29787,9 +29858,16 @@
       ],
       "in_code": [
         "crates/emergence-oracle/src/oracles/migration.rs:1",
-        "crates/emergence-oracle/src/oracles/migration.rs:17"
+        "crates/emergence-oracle/src/oracles/migration.rs:17",
+        "crates/emergence-oracle/src/oracles/migration.rs:55",
+        "crates/emergence-oracle/src/oracles/migration.rs:61",
+        "crates/emergence-oracle/src/oracles/migration.rs:65"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/emergence-oracle/src/oracles/migration.rs:55",
+        "crates/emergence-oracle/src/oracles/migration.rs:61",
+        "crates/emergence-oracle/src/oracles/migration.rs:65"
+      ],
       "in_stub_tests": []
     },
     {
@@ -29822,9 +29900,14 @@
       ],
       "in_code": [
         "crates/emergence-oracle/src/oracles/festival.rs:1",
-        "crates/emergence-oracle/src/oracles/festival.rs:18"
+        "crates/emergence-oracle/src/oracles/festival.rs:18",
+        "crates/emergence-oracle/src/oracles/festival.rs:51",
+        "crates/emergence-oracle/src/oracles/festival.rs:61"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/emergence-oracle/src/oracles/festival.rs:51",
+        "crates/emergence-oracle/src/oracles/festival.rs:61"
+      ],
       "in_stub_tests": []
     },
     {
@@ -29872,9 +29955,18 @@
       ],
       "in_code": [
         "crates/emergence-oracle/src/oracles/stratification.rs:1",
-        "crates/emergence-oracle/src/oracles/stratification.rs:18"
+        "crates/emergence-oracle/src/oracles/stratification.rs:18",
+        "crates/emergence-oracle/src/oracles/stratification.rs:56",
+        "crates/emergence-oracle/src/oracles/stratification.rs:62",
+        "crates/emergence-oracle/src/oracles/stratification.rs:67",
+        "crates/emergence-oracle/src/oracles/stratification.rs:74"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/emergence-oracle/src/oracles/stratification.rs:56",
+        "crates/emergence-oracle/src/oracles/stratification.rs:62",
+        "crates/emergence-oracle/src/oracles/stratification.rs:67",
+        "crates/emergence-oracle/src/oracles/stratification.rs:74"
+      ],
       "in_stub_tests": []
     },
     {
@@ -29905,9 +29997,16 @@
       ],
       "in_code": [
         "crates/emergence-oracle/src/oracles/expansion.rs:1",
-        "crates/emergence-oracle/src/oracles/expansion.rs:17"
+        "crates/emergence-oracle/src/oracles/expansion.rs:17",
+        "crates/emergence-oracle/src/oracles/expansion.rs:55",
+        "crates/emergence-oracle/src/oracles/expansion.rs:61",
+        "crates/emergence-oracle/src/oracles/expansion.rs:65"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/emergence-oracle/src/oracles/expansion.rs:55",
+        "crates/emergence-oracle/src/oracles/expansion.rs:61",
+        "crates/emergence-oracle/src/oracles/expansion.rs:65"
+      ],
       "in_stub_tests": []
     },
     {
@@ -29937,9 +30036,14 @@
       ],
       "in_code": [
         "crates/emergence-oracle/src/oracles/coastal_settlement.rs:1",
-        "crates/emergence-oracle/src/oracles/coastal_settlement.rs:17"
+        "crates/emergence-oracle/src/oracles/coastal_settlement.rs:17",
+        "crates/emergence-oracle/src/oracles/coastal_settlement.rs:52",
+        "crates/emergence-oracle/src/oracles/coastal_settlement.rs:62"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/emergence-oracle/src/oracles/coastal_settlement.rs:52",
+        "crates/emergence-oracle/src/oracles/coastal_settlement.rs:62"
+      ],
       "in_stub_tests": []
     },
     {
@@ -29986,9 +30090,16 @@
       ],
       "in_code": [
         "crates/emergence-oracle/src/oracles/desert_caravan.rs:1",
-        "crates/emergence-oracle/src/oracles/desert_caravan.rs:17"
+        "crates/emergence-oracle/src/oracles/desert_caravan.rs:17",
+        "crates/emergence-oracle/src/oracles/desert_caravan.rs:55",
+        "crates/emergence-oracle/src/oracles/desert_caravan.rs:61",
+        "crates/emergence-oracle/src/oracles/desert_caravan.rs:67"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/emergence-oracle/src/oracles/desert_caravan.rs:55",
+        "crates/emergence-oracle/src/oracles/desert_caravan.rs:61",
+        "crates/emergence-oracle/src/oracles/desert_caravan.rs:67"
+      ],
       "in_stub_tests": []
     },
     {
@@ -30020,10 +30131,15 @@
       "in_code": [
         "crates/emergence-oracle/src/oracles/i18n.rs:1",
         "crates/emergence-oracle/src/oracles/i18n.rs:46",
+        "crates/emergence-oracle/src/oracles/i18n.rs:78",
         "crates/emergence-oracle/src/oracles/powers.rs:1",
-        "crates/emergence-oracle/src/oracles/powers.rs:18"
+        "crates/emergence-oracle/src/oracles/powers.rs:18",
+        "crates/emergence-oracle/src/oracles/powers.rs:62"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/emergence-oracle/src/oracles/i18n.rs:78",
+        "crates/emergence-oracle/src/oracles/powers.rs:62"
+      ],
       "in_stub_tests": []
     },
     {
@@ -30897,10 +31013,10 @@
         "docs/traceability/fr-music-001/fr-music-001-intent.md:57"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:3732"
+        "crates/engine/src/engine/engine_tests.rs:3818"
       ],
       "in_tests": [
-        "crates/engine/src/engine/engine_tests.rs:3732"
+        "crates/engine/src/engine/engine_tests.rs:3818"
       ],
       "in_stub_tests": []
     },
@@ -31734,17 +31850,17 @@
         "docs/traceability/fr-prot-006/fr-prot-006-plan.md:1"
       ],
       "in_code": [
-        "crates/server/src/ws_bridge.rs:5237",
-        "crates/server/src/ws_bridge.rs:5239",
-        "crates/server/src/ws_bridge.rs:5278"
+        "crates/server/src/ws_bridge.rs:5262",
+        "crates/server/src/ws_bridge.rs:5264",
+        "crates/server/src/ws_bridge.rs:5303"
       ],
       "in_tests": [
         "crates/engine/tests/fr_fr_prot_006.rs:1",
         "crates/engine/tests/fr_fr_prot_006.rs:5",
         "crates/engine/tests/fr_fr_prot_006.rs:9",
-        "crates/server/src/ws_bridge.rs:5237",
-        "crates/server/src/ws_bridge.rs:5239",
-        "crates/server/src/ws_bridge.rs:5278"
+        "crates/server/src/ws_bridge.rs:5262",
+        "crates/server/src/ws_bridge.rs:5264",
+        "crates/server/src/ws_bridge.rs:5303"
       ],
       "in_stub_tests": []
     },
@@ -31976,7 +32092,7 @@
         "docs/traceability/fr-replay-001/fr-replay-001-plan.md:1"
       ],
       "in_code": [
-        "crates/engine/src/engine/engine_tests.rs:1760",
+        "crates/engine/src/engine/engine_tests.rs:1846",
         "crates/engine/src/engine.rs:2915",
         "crates/engine/src/replay_format.rs:1"
       ],
@@ -35805,9 +35921,12 @@
         "docs/traceability/fr-viewport-001/fr-viewport-001-intent.md:54"
       ],
       "in_code": [
+        "clients/bevy-ref/src/minimap.rs:756",
         "crates/civis-cli/src/bin/three_d_quality.rs:54"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "clients/bevy-ref/src/minimap.rs:756"
+      ],
       "in_stub_tests": []
     },
     {
@@ -35860,9 +35979,12 @@
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:243"
       ],
       "in_code": [
-        "crates/engine/src/fixed_math.rs:8"
+        "crates/engine/src/fixed_math.rs:8",
+        "crates/engine/src/fixed_math.rs:216"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/engine/src/fixed_math.rs:216"
+      ],
       "in_stub_tests": []
     },
     {
@@ -35879,9 +36001,12 @@
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:243"
       ],
       "in_code": [
-        "crates/engine/src/emergence.rs:38"
+        "crates/engine/src/emergence.rs:38",
+        "crates/engine/src/emergence.rs:1378"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/engine/src/emergence.rs:1378"
+      ],
       "in_stub_tests": []
     },
     {
@@ -35916,9 +36041,12 @@
         "docs/traceability/nfr-c-06/nfr-c-06-spec.md:5"
       ],
       "in_code": [
-        "crates/legends/src/model.rs:246"
+        "crates/legends/src/model.rs:246",
+        "crates/legends/src/model.rs:399"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/legends/src/model.rs:399"
+      ],
       "in_stub_tests": []
     },
     {
@@ -36461,9 +36589,14 @@
       ],
       "in_code": [
         "crates/legends/src/decay.rs:166",
-        "crates/legends/src/worker.rs:40"
+        "crates/legends/src/worker.rs:40",
+        "crates/legends/src/worker.rs:78",
+        "crates/legends/src/worker.rs:121"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/legends/src/worker.rs:78",
+        "crates/legends/src/worker.rs:121"
+      ],
       "in_stub_tests": []
     },
     {
@@ -37356,15 +37489,15 @@
       "in_code": [
         "crates/mod-host/src/wasm_guest.rs:75",
         "crates/mod-host/src/wasm_guest.rs:89",
-        "crates/mod-host/src/wasm_guest.rs:234",
-        "crates/mod-host/src/wasm_guest.rs:662",
-        "crates/mod-host/src/wasm_guest.rs:688",
-        "crates/mod-host/src/wasm_guest.rs:709"
+        "crates/mod-host/src/wasm_guest.rs:229",
+        "crates/mod-host/src/wasm_guest.rs:657",
+        "crates/mod-host/src/wasm_guest.rs:683",
+        "crates/mod-host/src/wasm_guest.rs:704"
       ],
       "in_tests": [
-        "crates/mod-host/src/wasm_guest.rs:662",
-        "crates/mod-host/src/wasm_guest.rs:688",
-        "crates/mod-host/src/wasm_guest.rs:709"
+        "crates/mod-host/src/wasm_guest.rs:657",
+        "crates/mod-host/src/wasm_guest.rs:683",
+        "crates/mod-host/src/wasm_guest.rs:704"
       ],
       "in_stub_tests": []
     },
@@ -37581,9 +37714,12 @@
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:238"
       ],
       "in_code": [
-        "crates/engine/benches/tick_bench.rs:7"
+        "crates/engine/benches/tick_bench.rs:7",
+        "crates/engine/benches/tick_bench.rs:63"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/engine/benches/tick_bench.rs:63"
+      ],
       "in_stub_tests": []
     },
     {
@@ -37637,9 +37773,12 @@
         "docs/traceability/nfr-p-06/nfr-p-06-spec.md:5"
       ],
       "in_code": [
-        "crates/server/src/ws_bridge.rs:407"
+        "crates/server/src/ws_bridge.rs:407",
+        "crates/server/src/ws_bridge.rs:3037"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/server/src/ws_bridge.rs:3037"
+      ],
       "in_stub_tests": []
     },
     {
@@ -37851,9 +37990,12 @@
         "crates/server/src/perf_budgets.rs:63",
         "crates/server/src/perf_budgets.rs:104",
         "crates/server/src/perf_budgets.rs:147",
-        "crates/server/src/perf_budgets.rs:149"
+        "crates/server/src/perf_budgets.rs:149",
+        "crates/server/src/perf_budgets.rs:225"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/server/src/perf_budgets.rs:225"
+      ],
       "in_stub_tests": []
     },
     {
@@ -37922,9 +38064,12 @@
         "crates/server/src/perf_budgets.rs:44",
         "crates/server/src/perf_budgets.rs:88",
         "crates/server/src/perf_budgets.rs:110",
-        "crates/server/src/perf_budgets.rs:155"
+        "crates/server/src/perf_budgets.rs:155",
+        "crates/server/src/perf_budgets.rs:258"
       ],
-      "in_tests": [],
+      "in_tests": [
+        "crates/server/src/perf_budgets.rs:258"
+      ],
       "in_stub_tests": []
     },
     {

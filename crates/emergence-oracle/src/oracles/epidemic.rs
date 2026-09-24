@@ -44,3 +44,54 @@ impl FeatureOracle for EpidemicOracle {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    // FR-EMG-010 — epidemic oracle: passes unconditionally at tick 0;
+    // afterwards it demands both citizens and settlements and reports the
+    // citizen×building product as the measurement.
+    use super::*;
+    use civ_engine::Simulation;
+
+    // FR-EMG-010 — tick 0 passes unconditionally and reports the census product.
+    #[test]
+    fn fr_emg_010_passes_at_tick_zero() {
+        let sim = Simulation::new();
+        let v = EpidemicOracle.check(&sim);
+        assert_eq!(v.fr_id, "FR-EMG-010");
+        assert!(v.passed, "tick 0 must pass unconditionally: {}", v.detail);
+        assert!((v.threshold - 0.0).abs() < f64::EPSILON, "tick-0 threshold is 0.0");
+        let snap = sim.snapshot();
+        assert_eq!(
+            v.measured,
+            (snap.citizen_count * snap.building_count) as f64,
+            "measured is the citizen×building product"
+        );
+        assert!(v.detail.contains("Epidemic emergence"), "detail identifies the oracle");
+    }
+
+    // FR-EMG-010 — after tick 0 the verdict demands citizens AND buildings.
+    #[test]
+    fn fr_emg_010_after_tick_zero_requires_citizens_and_buildings() {
+        let mut sim = Simulation::new();
+        sim.tick();
+        let v = EpidemicOracle.check(&sim);
+        assert!(
+            (v.threshold - 1.0).abs() < f64::EPSILON,
+            "post-tick-0 threshold must be 1.0"
+        );
+        let snap = sim.snapshot();
+        let expect = snap.citizen_count > 0 && snap.building_count > 0;
+        assert_eq!(
+            v.passed, expect,
+            "verdict mirrors the live census: {}",
+            v.detail
+        );
+        assert_eq!(
+            v.passed,
+            v.measured >= 1.0,
+            "product of censuses encodes the gate: {}",
+            v.detail
+        );
+    }
+}

@@ -201,3 +201,136 @@ fn draw_history_panel(
             }
         });
 }
+
+#[cfg(test)]
+mod tests {
+    // FR-CIV-CLIENT-013 — civ history panel: the Y key toggles the panel,
+    // stream state is sampled into ring buffers every 10 ticks (capped at
+    // HISTORY_CAP), and samples render as ASCII sparklines.
+    use super::*;
+    use crate::{EmergenceHudData, LiveHudSnapshot};
+    use bevy::ecs::system::SystemState;
+
+    fn hud_with_tick(tick: u64) -> HudState {
+        HudState {
+            snapshot: LiveHudSnapshot {
+                tick: Some(tick),
+                civilian_count: 1000,
+                faction_count: 4,
+                emergence: Some(EmergenceHudData {
+                    entropy_norm: 0.5,
+                    power_law_alpha: 2.1,
+                    novelty_rate: 0.01,
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            text: Entity::PLACEHOLDER,
+        }
+    }
+
+    // FR-CIV-CLIENT-013 — stream state lands in ring buffers every 10 ticks.
+    #[test]
+    fn fr_civ_client_013_samples_stream_state_every_ten_ticks() {
+        let mut world = World::new();
+        world.insert_resource(CivHistory::default());
+        let mut state: SystemState<(Res<HudState>, ResMut<CivHistory>)> =
+            SystemState::new(&mut world);
+
+        // Ticks 0 and 5 are too early; 10 samples; 15 is mid-interval; 20 samples again.
+        for tick in [0u64, 5, 10, 15, 20] {
+            world.insert_resource(hud_with_tick(tick));
+            let (hud, hist) = state.get_mut(&mut world);
+            sample_history(hud, hist);
+        }
+
+        let hist = world.resource::<CivHistory>();
+        assert_eq!(
+            hist.population.iter().copied().collect::<Vec<_>>(),
+            vec![1000, 1000],
+            "exactly two samples: first at tick 10, second at tick 20"
+        );
+        assert_eq!(
+            hist.faction_count.iter().copied().collect::<Vec<_>>(),
+            vec![4, 4],
+            "faction census sampled alongside population"
+        );
+        assert_eq!(hist.entropy.back(), Some(&0.5), "entropy_norm sampled");
+        assert!(
+            (hist.power_law.back().copied().unwrap() - 2.1).abs() < 1e-6,
+            "power-law alpha sampled"
+        );
+        assert_eq!(hist.last_sampled_tick, 20, "sampling cursor follows the stream");
+    }
+
+    // FR-CIV-CLIENT-013 — the Y key toggles the history panel open/closed.
+    #[test]
+    fn fr_civ_client_013_y_key_toggles_history_panel() {
+        let mut world = World::new();
+        world.insert_resource(CivHistoryPanelOpen(false));
+        let mut state: SystemState<(Res<ButtonInput<KeyCode>>, ResMut<CivHistoryPanelOpen>)> =
+            SystemState::new(&mut world);
+
+        // Frame 1: Y pressed → panel opens.
+        world.insert_resource(ButtonInput::<KeyCode>::default());
+        let (keys, open) = state.get_mut(&mut world);
+        toggle_history_panel(keys, open);
+        assert!(world.resource::<CivHistoryPanelOpen>().0, "Y opens the panel");
+
+        // Frame 2: no press → state held.
+        world.insert_resource(ButtonInput::<KeyCode>::default());
+        let (keys, open) = state.get_mut(&mut world);
+        toggle_history_panel(keys, open);
+        assert!(world.resource::<CivHistoryPanelOpen>().0, "no press keeps it open");
+
+        // Frame 3: Y pressed again → panel closes.
+        let mut pressed = ButtonInput::<KeyCode>::default();
+        pressed.press(KeyCode::KeyY);
+        world.insert_resource(pressed);
+        let (keys, open) = state.get_mut(&mut world);
+        toggle_history_panel(keys, open);
+        assert!(
+            !world.resource::<CivHistoryPanelOpen>().0,
+            "Y closes the panel again"
+        );
+    }
+
+    // FR-CIV-CLIENT-013 — sampled history renders as ASCII sparklines.
+    #[test]
+    fn fr_civ_client_013_sparkline_renders_samples_as_ascii() {
+        // Empty history renders the em-dash placeholder.
+        let empty: VecDeque<u32> = VecDeque::new();
+        assert_eq!(sparkline(&empty), "—");
+
+        // A flat run renders one bar per sample, all at the same level.
+        let flat: VecDeque<u32> = vec![5u32; 4].into();
+        let rendered = sparkline(&flat);
+        assert_eq!(rendered.chars().count(), 4, "one bar per sample");
+        let level = rendered.chars().next().unwrap();
+        assert!(
+            rendered.chars().all(|c| c == level),
+            "constant samples share one bar level: {rendered}"
+        );
+
+        // Extremes map to the lowest and full blocks.
+        let ramp: VecDeque<u32> = vec![0u32, 10].into();
+        let chars: Vec<char> = sparkline(&ramp).chars().collect();
+        assert_eq!(chars, vec![' ', '\u{2588}'], "min→blank, max→full block");
+    }
+
+    // FR-CIV-CLIENT-013 — the ring buffer never exceeds HISTORY_CAP samples.
+    #[test]
+    fn fr_civ_client_013_history_ring_buffer_caps_at_history_cap() {
+        let mut buf: VecDeque<u32> = VecDeque::new();
+        for i in 0..(HISTORY_CAP as u32 + 5) {
+            CivHistory::push(&mut buf, i);
+        }
+        assert_eq!(buf.len(), HISTORY_CAP, "buffer never exceeds HISTORY_CAP");
+        assert_eq!(buf.front().copied(), Some(5), "oldest samples evicted");
+        assert_eq!(
+            buf.back().copied(),
+            Some(HISTORY_CAP as u32 + 4),
+            "newest sample retained"
+        );
+    }
+}

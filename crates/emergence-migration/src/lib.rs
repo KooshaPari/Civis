@@ -890,4 +890,63 @@ mod tests {
         };
         assert_eq!(capped.attractiveness(), 0.0, "no capacity ⇒ no attraction");
     }
+
+    // Destination vectors move toward the origin cohort without overshooting,
+    // the source's own vectors are untouched, and measured language + belief
+    // divergence shrink (counter-divergence).
+    // FR-CIV-MIGRATION-003 — migrants blend culture/language/belief into the destination.
+    #[test]
+    fn fr_civ_migration_003_migrants_blend_culture_into_destination() {
+        let mut eng = stress_to_opportunity();
+        let src_before = eng.cluster(ClusterId(1)).unwrap().clone();
+        let dst_before = eng.cluster(ClusterId(2)).unwrap().clone();
+        assert!(
+            dst_before.language[0] < src_before.language[0],
+            "fixture must start diverged (dst={}, src={})",
+            dst_before.language[0],
+            src_before.language[0]
+        );
+        let lang_before = eng.language_divergence(ClusterId(1), ClusterId(2)).unwrap();
+        let belief_before = eng.belief_divergence(ClusterId(1), ClusterId(2)).unwrap();
+
+        let report = eng.tick(&mut rng(21));
+        assert!(report.total_moved > 0, "fixture must migrate a cohort");
+
+        let dst = eng.cluster(ClusterId(2)).unwrap();
+        // Every destination attribute moves toward the arriving cohort (0.9 vs 0.1)…
+        for i in 0..ATTR_DIM {
+            assert!(
+                dst.culture[i] > dst_before.culture[i],
+                "culture[{i}] must blend toward the migrants"
+            );
+            assert!(
+                dst.language[i] > dst_before.language[i],
+                "language[{i}] must blend toward the migrants"
+            );
+            assert!(
+                dst.belief[i] > dst_before.belief[i],
+                "belief[{i}] must blend toward the migrants"
+            );
+            // …but a single blend step never overshoots the source value.
+            assert!(dst.language[i] <= src_before.language[i] + 1e-6);
+        }
+
+        // The origin's attributes are carried, not mutated.
+        let src = eng.cluster(ClusterId(1)).unwrap();
+        assert_eq!(src.culture, src_before.culture, "source culture unchanged");
+        assert_eq!(src.language, src_before.language, "source language unchanged");
+        assert_eq!(src.belief, src_before.belief, "source belief unchanged");
+
+        // The FR's observable outcome: divergence between the pair shrinks.
+        let lang_after = eng.language_divergence(ClusterId(1), ClusterId(2)).unwrap();
+        let belief_after = eng.belief_divergence(ClusterId(1), ClusterId(2)).unwrap();
+        assert!(
+            lang_after < lang_before,
+            "language divergence must shrink (before={lang_before}, after={lang_after})"
+        );
+        assert!(
+            belief_after < belief_before,
+            "belief divergence must shrink (before={belief_before}, after={belief_after})"
+        );
+    }
 }

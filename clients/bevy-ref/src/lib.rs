@@ -2089,4 +2089,37 @@ mod tests {
         std::panic::catch_unwind(crate::crash_handler::install_crash_handler)
             .expect("install_crash_handler should install");
     }
+
+    // FR-CIV-BEVY-017 — live HUD exposes connection, tick, streamed counts (C/A/B/G), and optional sim.snapshot RTT.
+    #[test]
+    fn fr_civ_bevy_017_live_hud_exposes_connection_tick_counts_and_rtt() {
+        let mut snap = LiveHudSnapshot::default();
+        // Fresh snapshot: no server frame has arrived yet.
+        assert_eq!(snap.tick, None, "no tick before the first frame");
+        assert!(!snap.connected, "not connected before the first frame");
+        assert_eq!(snap.ws_rtt_ms, None, "RTT unknown until sim.snapshot is measured");
+
+        snap.connection = WsConnectionState::Reconnecting;
+        snap.connected = true;
+        snap.tick = Some(1234);
+        snap.fps = 59.6;
+        snap.ws_rtt_ms = Some(12.4);
+        snap.sync_scene_counts(4, 512, 96, 16, 480, 6);
+        assert_eq!(snap.chunk_count, 4, "synced chunk count");
+        assert_eq!(snap.civilian_count, 480, "synced civilian count");
+
+        let line = snap.format_overlay();
+        assert!(line.contains("tick: 1234"), "tick exposed: {line}");
+        assert!(line.contains("reconnecting"), "connection exposed: {line}");
+        assert!(line.contains("C:480"), "civilian count exposed: {line}");
+        assert!(line.contains("A:512"), "agent count exposed: {line}");
+        assert!(line.contains("B:96"), "building count exposed: {line}");
+        assert!(line.contains("G:16"), "graph parcel count exposed: {line}");
+        assert!(line.contains("RTT: 12ms"), "sim.snapshot RTT exposed: {line}");
+
+        // Wire round-trip preserves every HUD field.
+        let json = serde_json::to_string(&snap).expect("serialize LiveHudSnapshot");
+        let back: LiveHudSnapshot = serde_json::from_str(&json).expect("deserialize LiveHudSnapshot");
+        assert_eq!(back, snap, "HUD snapshot survives serde round-trip");
+    }
 }

@@ -1006,3 +1006,95 @@ pub(crate) const FACTION_RELATION_THRESHOLD_SPAN: i64 = 5_000;
 pub(crate) const CULTURE_PEACE_SPAN: f32 = 3_000.0;
 
 pub use crate::settlement_helpers::*;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // FR-CIV-CONTENT-001 — terrain biome modulates food production: fertile
+    // land grows more food than barren land, the documented factors hold
+    // exactly, and every factor stays inside the clamped [0.1, 1.5] range.
+    #[test]
+    fn fr_civ_content_001_biome_yield_modulates_food_production() {
+        let fertile = biome_yield_factor(BiomeKind::Grassland);
+        let barren = biome_yield_factor(BiomeKind::Desert);
+        let ocean = biome_yield_factor(BiomeKind::Ocean);
+        let glacier = biome_yield_factor(BiomeKind::Glacier);
+
+        // Downward causation ordering: grassland > desert > ocean > glacier.
+        assert!(fertile > barren, "fertile land must out-yield barren land");
+        assert!(barren > ocean, "desert must out-yield ocean");
+        assert!(ocean > glacier, "ocean must out-yield glacier");
+
+        // Exact documented factors.
+        assert_eq!(
+            fertile.to_bits(),
+            (Fixed::from_num(12) / Fixed::from_num(10)).to_bits(),
+            "grassland factor must be 1.2"
+        );
+        assert_eq!(
+            barren.to_bits(),
+            (Fixed::from_num(1) / Fixed::from_num(2)).to_bits(),
+            "desert factor must be 0.5"
+        );
+
+        // Every enumerated biome stays inside the documented clamp range.
+        let lo = Fixed::from_num(1) / Fixed::from_num(10);
+        let hi = Fixed::from_num(15) / Fixed::from_num(10);
+        for biome in [
+            BiomeKind::Rainforest,
+            BiomeKind::Wetland,
+            BiomeKind::Grassland,
+            BiomeKind::Plains,
+            BiomeKind::Forest,
+            BiomeKind::Savanna,
+            BiomeKind::Beach,
+            BiomeKind::Mountain,
+            BiomeKind::Taiga,
+            BiomeKind::Desert,
+            BiomeKind::Tundra,
+            BiomeKind::Ocean,
+            BiomeKind::Glacier,
+            BiomeKind::Shrubland,
+            BiomeKind::Steppe,
+            BiomeKind::Alpine,
+        ] {
+            let f = biome_yield_factor(biome);
+            assert!(
+                f >= lo && f <= hi,
+                "biome factor must stay within [0.1, 1.5]"
+            );
+        }
+    }
+
+    // FR-CIV-CONTENT-001 — aggregate biome yield: neutral for missing geology
+    // data, mean of real biomes otherwise, never outside the clamp range.
+    #[test]
+    fn fr_civ_content_001_aggregate_biome_yield_is_neutral_or_clamped() {
+        let one = Fixed::from_num(1) / Fixed::from_num(1);
+        assert_eq!(
+            aggregate_biome_yield(&[]).to_bits(),
+            one.to_bits(),
+            "empty geology must be neutral (1.0)"
+        );
+
+        // Single glacier sits exactly on the 0.1 floor rather than below it.
+        let lo = Fixed::from_num(1) / Fixed::from_num(10);
+        let glacier_mean = aggregate_biome_yield(&[BiomeKind::Glacier]);
+        assert!(
+            glacier_mean >= lo,
+            "mean must be clamped up to the 0.1 floor"
+        );
+
+        // Mixed slice: mean of grassland (1.2) and desert (0.5) is 0.85 —
+        // strictly between the two inputs, proving it averages rather than
+        // picking an extreme.
+        let mixed = aggregate_biome_yield(&[BiomeKind::Grassland, BiomeKind::Desert]);
+        let desert = biome_yield_factor(BiomeKind::Desert);
+        let grassland = biome_yield_factor(BiomeKind::Grassland);
+        assert!(
+            mixed > desert && mixed < grassland,
+            "aggregate must average biome factors"
+        );
+    }
+}

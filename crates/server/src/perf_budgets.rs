@@ -24,8 +24,10 @@
 /// server MUST accept at 10 ticks/sec.
 pub const WS_CLIENT_BUDGET: usize = 100;
 
-/// NFR-S-02 — per-client connection overhead budget (handshake +
-/// initial snapshot, in milliseconds).
+/// FR-NFR-S-02 — per-client connection overhead budget (WebSocket
+/// upgrade + handshake + initial snapshot, in milliseconds). The spec
+/// requires the join path to complete in < 5 ms on reference CI
+/// hardware so a viewer's first frame arrives within one tick.
 pub const WS_HANDSHAKE_BUDGET_MS: f64 = 5.0;
 
 /// NFR-S-03 — `tick_time_10k / tick_time_1k` budget. The spec allows
@@ -53,8 +55,9 @@ pub fn ws_client_budget_met(concurrent_clients: usize) -> bool {
     concurrent_clients >= WS_CLIENT_BUDGET
 }
 
-/// NFR-S-02 acceptance gate. Returns `true` when the per-client
-/// handshake latency is within the budget.
+/// FR-NFR-S-02 acceptance gate. Returns `true` when the per-client
+/// handshake latency is within the budget. The comparison is strict:
+/// a measured 5.0 ms already violates the "< 5 ms" requirement.
 #[must_use]
 pub fn ws_handshake_budget_met(handshake_ms: f64) -> bool {
     handshake_ms < WS_HANDSHAKE_BUDGET_MS

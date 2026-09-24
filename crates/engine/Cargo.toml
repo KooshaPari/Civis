@@ -72,6 +72,10 @@ civ-diplomacy = { path = "../diplomacy" }
 
 [dev-dependencies]
 civ-economy = { path = "../economy" }
+# FR-NFR-S-02..06: engine integration tests exercise the §10.3 scalability
+# acceptance gates in `civ_server::perf_budgets` (dev-only cycle; the server
+# crate depends on `civ-engine` normally, not through this edge).
+civ-server = { path = "../server" }
 criterion = { version = "=0.5.1", features = ["html_reports"] }
 proptest = "1.11"
 tempfile = "3"

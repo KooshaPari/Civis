@@ -4153,6 +4153,7 @@ dependencies = [
  "civ-needs",
  "civ-planet",
  "civ-save-db",
+ "civ-server",
  "civ-species",
  "civ-tactics",
  "civ-voxel",

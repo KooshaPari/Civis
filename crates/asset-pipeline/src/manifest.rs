@@ -231,4 +231,40 @@ mod tests {
             Err(SchemaError::Io("no such file".to_owned()))
         );
     }
+
+    // FR-CIV-ASSET-MANI-001 — manifest completeness: the manifest's asset
+    // count must equal the summed atlas counts; agreement passes, disagreement
+    // reports both totals, and unreadable input surfaces as Io.
+    #[test]
+    fn fr_civ_asset_mani_001_completeness_counts_manifest_against_atlas_totals() {
+        let m = write_tmp(
+            "mani_001_ok.json",
+            "{\"assets\":[{\"asset_id\":\"a\"},{\"asset_id\":\"b\"},{\"asset_id\":\"c\"}]}",
+        );
+        let a1 = write_tmp("mani_001_atlas1.json", "{\"count\":2}");
+        let a2 = write_tmp("mani_001_atlas2.json", "{\"count\":1}");
+        assert!(check_manifest_completeness(&m, &[&a1, &a2]).is_ok());
+
+        // Atlas undercount: mismatch carries both totals (3 vs 1).
+        let a3 = write_tmp("mani_001_atlas3.json", "{\"count\":1}");
+        assert_eq!(
+            check_manifest_completeness(&m, &[&a3]),
+            Err(CompletenessError::Mismatch {
+                manifest_assets: 3,
+                atlas_total: 1,
+            })
+        );
+
+        // Missing atlas file must not silently pass.
+        let missing = std::env::temp_dir()
+            .join("asset_pipeline_manifest_tests")
+            .join("does_not_exist_mani_001.json");
+        assert!(
+            matches!(
+                check_manifest_completeness(&m, &[&missing]),
+                Err(CompletenessError::Io(_))
+            ),
+            "unreadable atlas must surface as Io error"
+        );
+    }
 }

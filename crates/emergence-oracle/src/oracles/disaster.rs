@@ -44,3 +44,51 @@ impl FeatureOracle for DisasterOracle {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use civ_engine::Simulation;
+
+    // FR-EMG-013 — at tick 0 no emergence has occurred, so the disaster oracle
+    // passes vacuously with threshold 0 and reports its FR id.
+    #[test]
+    fn fr_emg_013_passes_at_tick_zero_with_zero_threshold() {
+        let sim = Simulation::new();
+        let v = DisasterOracle.check(&sim);
+        assert_eq!(v.fr_id, "FR-EMG-013");
+        assert!(v.passed, "tick 0 must pass: {}", v.detail);
+        assert_eq!(v.threshold, 0.0);
+        assert!(v.measured >= 0.0, "measured is the citizen×building product");
+    }
+
+    // FR-EMG-013 — after warmup the oracle requires an inhabited, exposed
+    // landscape: passing ⇔ citizens > 0 ∧ buildings > 0, with measured equal to
+    // the citizen×building product at threshold 1.
+    #[test]
+    fn fr_emg_013_after_warmup_requires_citizens_and_buildings() {
+        let mut sim = Simulation::new();
+        for _ in 0..10 {
+            sim.tick();
+        }
+        let snap = sim.snapshot();
+        let v = DisasterOracle.check(&sim);
+        assert_eq!(
+            v.threshold, 1.0,
+            "tick > 0 uses the inhabited-landscape threshold"
+        );
+        assert_eq!(
+            v.measured,
+            (snap.citizen_count * snap.building_count) as f64,
+            "measured must be the citizen×building product"
+        );
+        let expect_pass = snap.citizen_count > 0 && snap.building_count > 0;
+        assert_eq!(
+            v.passed, expect_pass,
+            "pass must hinge on both citizens and buildings: {}",
+            v.detail
+        );
+        assert!(v.passed, "seeded warm sim must be inhabited: {}", v.detail);
+        assert!(v.detail.starts_with("Disaster emergence:"));
+    }
+}

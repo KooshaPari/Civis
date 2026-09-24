@@ -78,17 +78,17 @@ print_summary() {
     end_time=$(date +%s)
     elapsed=$((end_time - START_TIME))
     echo ""
-    printf "${BOLD}=== Quality Gate Summary ===${NC}\n"
+    printf '%s=== Quality Gate Summary ===%s\n' "${BOLD}" "${NC}"
     for r in "${GATE_RESULTS[@]}"; do
         printf "  %b\n" "${r}"
     done
     echo ""
-    printf "  Passed: ${GREEN}%d${NC}  Failed: ${RED}%d${NC}  Skipped: ${YELLOW}%d${NC}  Time: %ds\n" \
-        "${PASSED_GATES}" "${FAILED_GATES}" "${SKIPPED_GATES}" "${elapsed}"
+    printf '  Passed: %s%d%s  Failed: %s%d%s  Skipped: %s%d%s  Time: %ds\n' \
+        "${GREEN}" "${PASSED_GATES}" "${NC}" "${RED}" "${FAILED_GATES}" "${NC}" "${YELLOW}" "${SKIPPED_GATES}" "${NC}" "${elapsed}"
     if [[ ${FAILED_GATES} -gt 0 ]]; then
-        printf "\n  ${RED}${BOLD}QUALITY GATE: FAILED${NC}\n"
+        printf '\n  %s%sQUALITY GATE: FAILED%s\n' "${RED}" "${BOLD}" "${NC}"
     else
-        printf "\n  ${GREEN}${BOLD}QUALITY GATE: PASSED${NC}\n"
+        printf '\n  %s%sQUALITY GATE: PASSED%s\n' "${GREEN}" "${BOLD}" "${NC}"
     fi
 }
 
@@ -643,7 +643,7 @@ gate_9_dependencies() {
 # Main
 # ============================================================
 main() {
-    printf "${BOLD}${BLUE}Running 9-Gate Quality System${NC}\n"
+    printf '%s%sRunning 9-Gate Quality System%s\n' "${BOLD}" "${BLUE}" "${NC}"
     printf "Project: %s\n\n" "${PROJECT_DIR}"
 
     detect_stacks

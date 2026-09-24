@@ -4271,3 +4271,110 @@ mod tests {
         assert_eq!(sim.coastal_water_level(x, z), Some(current.y));
     }
 }
+
+#[cfg(test)]
+mod fr_civ_genetics_seed_001_coverage {
+    // FR-CIV-GENETICS-SEED-001 — simulations sharing one seed spawn agents
+    // with bit-identical, archetype-derived DNA (Ardani genome length, never
+    // the zero genome), while a different seed takes a different genome path.
+    use civ_genetics::{archetype_dna, NamedSeed};
+
+    fn collect_dna(sim: &crate::engine::Simulation) -> Vec<crate::engine::Dna> {
+        sim.world
+            .query::<&crate::engine::Dna>()
+            .iter()
+            .map(|(_, d)| d.clone())
+            .collect()
+    }
+
+    // Simulations sharing one seed spawn agents with bit-identical,
+    // archetype-derived DNA; a different seed takes a different genome path.
+    // FR-CIV-GENETICS-SEED-001 — same-seed sims must agree bit-for-bit.
+    #[test]
+    fn fr_civ_genetics_seed_001_same_seed_spawns_identical_archetype_dna() {
+        let sim_a = crate::engine::Simulation::with_seed(0xC0FFEE_u64);
+        let sim_b = crate::engine::Simulation::with_seed(0xC0FFEE_u64);
+        let sim_c = crate::engine::Simulation::with_seed(0xBEEF_u64);
+
+        let dna_a = collect_dna(&sim_a);
+        let dna_b = collect_dna(&sim_b);
+        let dna_c = collect_dna(&sim_c);
+
+        assert!(
+            !dna_a.is_empty(),
+            "a seeded simulation must spawn at least one DNA-bearing agent"
+        );
+        assert_eq!(
+            dna_a, dna_b,
+            "identical seeds must produce bit-identical genomes"
+        );
+
+        // The first spawn is seeded from the Ardani archetype at divergence 0.3.
+        let archetype = archetype_dna(NamedSeed::Ardani);
+        assert_eq!(
+            dna_a[0].0.len(),
+            archetype.0.len(),
+            "first genome must match the Ardani archetype length"
+        );
+        assert_ne!(
+            dna_a[0].0,
+            vec![0u8; dna_a[0].0.len()],
+            "seeded DNA must not collapse to the zero genome"
+        );
+
+        // A different simulation seed must not reproduce the same genomes.
+        assert_ne!(
+            dna_a, dna_c,
+            "different seeds must select different genetic material"
+        );
+    }
+}
+
+#[cfg(test)]
+mod nfr_p_04_tests {
+    use crate::{Citizen, Fixed, Simulation};
+    use std::time::Instant;
+
+    // NFR-P-04 — 10k-citizen tick p50 regression smoke (spec budget: < 30 ms).
+    #[test]
+    fn nfr_p_04_ten_k_citizen_p50_stays_within_gross_regression_ceiling() {
+        let mut sim = Simulation::with_seed(42);
+        // Populate the census to 10k citizens via the Citizen component.
+        for i in 0..10_000u32 {
+            let _ = sim.world.spawn((Citizen {
+                age: 20 + (i % 40),
+                health: Fixed::from_num(0.8),
+                ideology: Fixed::from_num(0.0),
+                welfare: Fixed::from_num(0.5),
+                job: None,
+            },));
+        }
+        let census = sim.snapshot().citizen_count;
+        assert!(
+            census >= 10_000,
+            "fixture must hold at least 10k citizens, got {census}"
+        );
+
+        let start_tick = sim.state.tick;
+        // Warm-up so lazy allocations don't pollute the samples.
+        for _ in 0..3 {
+            sim.tick();
+        }
+        let mut samples = Vec::with_capacity(12);
+        for _ in 0..12 {
+            let t = Instant::now();
+            sim.tick();
+            samples.push(t.elapsed());
+        }
+        assert_eq!(sim.state.tick, start_tick + 15, "every tick must advance");
+
+        samples.sort();
+        let p50 = samples[samples.len() / 2];
+        let p50_ms = p50.as_secs_f64() * 1000.0;
+        assert!(
+            p50_ms < 10_000.0,
+            "p50 at 10k citizens was {p50_ms:.1} ms in debug; gross tick-loop \
+             regression suspected (CI's criterion baseline enforces the 30 ms budget)"
+        );
+    }
+}

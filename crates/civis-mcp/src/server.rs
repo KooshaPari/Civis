@@ -3277,3 +3277,59 @@ impl rmcp::ServerHandler for CivisMcpServer {
 pub fn registered_router() -> ToolRouter<CivisMcpServer> {
     CivisMcpServer::tool_router()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// FR-CIV-GODTOOL-001 — typed `GodActionArgs` serialize to the exact
+    /// JSON-RPC wire params the bridge parses: verb wire-name, coordinate
+    /// passthrough, legacy+substrate key aliasing, count/faction forwarding,
+    /// and no keys for unset optional fields.
+    #[test]
+    fn fr_civ_godtool_001_god_action_args_to_params_wire_shape() {
+        let args: GodActionArgs = serde_json::from_value(serde_json::json!({
+            "action": "multiply_creatures",
+            "x": 0.25,
+            "y": 0.75,
+            "radius": 4,
+            "magnitude": 0.5,
+            "material": 7,
+            "count": 5,
+            "faction": 2
+        }))
+        .expect("GodActionArgs must deserialize from tool JSON");
+
+        let params = args.to_params();
+        assert_eq!(params["action"], "multiply_creatures");
+        assert!((params["x"].as_f64().expect("x") - 0.25).abs() < 1e-9);
+        assert!((params["y"].as_f64().expect("y") - 0.75).abs() < 1e-9);
+        assert_eq!(params["count"], 5);
+        assert_eq!(params["target_faction"], 2, "faction maps to target_faction");
+        assert_eq!(params["radius"], 4, "legacy radius key retained");
+        assert_eq!(
+            params["radius_voxels"], 4,
+            "legacy radius aliases to the substrate radius_voxels key"
+        );
+        assert_eq!(
+            params["strength"], params["magnitude"],
+            "magnitude aliases to the substrate strength key"
+        );
+        assert_eq!(params["material_id"], 7, "material aliases to material_id");
+        assert!(
+            params.get("energy").is_none(),
+            "unset optional fields must not be forwarded to the bridge"
+        );
+    }
+
+    /// FR-CIV-GODTOOL-001 — every god-tool verb exposes the wire string the
+    /// `sim.god_action` JSON-RPC method accepts.
+    #[test]
+    fn fr_civ_godtool_001_wire_names_match_god_action_catalog() {
+        assert_eq!(GodActionKind::MultiplyCreatures.wire_name(), "multiply_creatures");
+        assert_eq!(GodActionKind::Smite.wire_name(), "smite");
+        assert_eq!(GodActionKind::Earthquake.wire_name(), "earthquake");
+        assert_eq!(GodActionKind::LifeSpawnOrganism.wire_name(), "life.spawn_organism");
+        assert_eq!(GodActionKind::DisasterWildfire.wire_name(), "disaster.wildfire");
+    }
+}

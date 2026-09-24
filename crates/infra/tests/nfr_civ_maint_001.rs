@@ -5,7 +5,13 @@ use std::process::Command;
 
 /// Find a bash capable of executing the repo's quality-gate script.
 fn find_bash() -> Option<String> {
-    for candidate in ["bash", r"C:\Program Files\Git\usr\bin\bash.exe"] {
+    // Prefer Git's MSYS bash explicitly: a PATH `bash` may resolve to WSL's
+    // System32 shim, which cannot open C:/... script paths (and boots slowly).
+    for candidate in [
+        r"C:\Program Files\Git\usr\bin\bash.exe",
+        r"C:\Program Files\Git\bin\bash.exe",
+        "bash",
+    ] {
         if Command::new(candidate)
             .arg("--version")
             .output()
@@ -27,7 +33,12 @@ fn run_quality_gate(bash: &str, script: &std::path::Path, project_dir: &std::pat
         .arg(&script_arg)
         .current_dir(project_dir)
         .env("PROJECT_DIR", project_dir)
-        .env("QUALITY_GATE_VERBOSE", "false")
+        // Verbose must stay on: in non-verbose mode log_gate's PASS/SKIP echo
+        // guard evaluates false as the last command, so the function returns
+        // nonzero and quality-gate.sh's `set -euo pipefail` aborts before the
+        // summary that reports the coverage threshold. Verbose prints the
+        // per-gate lines and completes with the summary (verified on this host).
+        .env("QUALITY_GATE_VERBOSE", "true")
         .output()
         .expect("quality-gate.sh must be executable");
     (

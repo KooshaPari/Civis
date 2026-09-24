@@ -522,4 +522,67 @@ mod tests {
             "stagnant faction should remain at {start_stagnant:?}, got {end_stagnant:?}"
         );
     }
+
+    // FR-CIV-GAME-003 — eras derive from live sim state: CivEra walks the
+    // population ladder first-match from most advanced down, CivAge gates on
+    // tech/economy signals, and the age ladder is strictly ordered so only
+    // advances (never regressions) can be detected.
+    #[test]
+    fn fr_civ_game_003_era_and_age_evaluate_from_sim_state() {
+        let mut sim = Simulation::with_seed(1);
+        sim.state.population = 0;
+        assert_eq!(CivEra::evaluate(&sim), CivEra::Prehistoric);
+        sim.state.population = 499;
+        assert_eq!(
+            CivEra::evaluate(&sim),
+            CivEra::Prehistoric,
+            "below 500 citizens stays Prehistoric"
+        );
+        sim.state.population = 500;
+        assert_eq!(CivEra::evaluate(&sim), CivEra::Ancient);
+        sim.state.population = 2_000;
+        assert_eq!(CivEra::evaluate(&sim), CivEra::Classical);
+        sim.state.population = 5_000;
+        assert_eq!(CivEra::evaluate(&sim), CivEra::Medieval);
+        sim.state.population = 10_000;
+        assert_eq!(CivEra::evaluate(&sim), CivEra::Renaissance);
+
+        // Wire-safe HUD names for the rungs the HUD renders.
+        assert_eq!(CivEra::Prehistoric.as_str(), "Prehistoric");
+        assert_eq!(CivEra::Renaissance.as_str(), "Renaissance");
+        assert_eq!(CivEra::Modern.as_str(), "Modern");
+
+        // Per-faction ages: tech and prosperity each advance the age.
+        assert_eq!(CivAge::evaluate(0, 0, 0), CivAge::Stone);
+        assert_eq!(CivAge::evaluate(400, 0, 0), CivAge::Bronze, "pop >= 300 reaches Bronze");
+        assert_eq!(CivAge::evaluate(0, 3, 0), CivAge::Iron, "tech >= 3 reaches Iron");
+        assert_eq!(
+            CivAge::evaluate(6_000, 0, 0),
+            CivAge::Iron,
+            "large pop without surplus skips the prosperity-gated rungs"
+        );
+        assert_eq!(
+            CivAge::evaluate(2_000, 0, 10),
+            CivAge::Classical,
+            "prosperous pop >= 2000 reaches Classical"
+        );
+        assert_eq!(
+            CivAge::evaluate(8_000, 10, 0),
+            CivAge::Industrial,
+            "tech >= 10 with pop >= 8000 reaches Industrial"
+        );
+
+        let ladder = [
+            CivAge::Stone,
+            CivAge::Bronze,
+            CivAge::Iron,
+            CivAge::Classical,
+            CivAge::Medieval,
+            CivAge::Industrial,
+        ];
+        assert!(
+            ladder.windows(2).all(|w| w[0] < w[1]),
+            "ages are strictly ordered so comparisons only detect advances"
+        );
+    }
 }

@@ -216,4 +216,71 @@ mod tests {
         let key = emergent_style_key_for_sim(&sim, None, &geology, &anchor);
         assert!(key.era <= 5);
     }
+
+    // NFR-C-05 — simulation state uses ordered `BTreeMap` exclusively (no
+    // `HashMap`) so iteration order is deterministic across runs and replays.
+    #[test]
+    fn nfr_c_05_settlement_anchor_deterministic_across_insert_orders() {
+        fn two_member_world(reverse_insert: bool) -> World {
+            let mut world = World::new();
+            let spawn = |world: &mut World, cluster: u64, x: i64, z: i64| {
+                let _ = world.spawn((
+                    civ_agents::ClusterMember {
+                        cluster: civ_agents::ClusterId(cluster),
+                    },
+                    Position3d {
+                        coord: WorldCoord { x, y: 0, z },
+                    },
+                ));
+            };
+            // Two clusters tied at 2 members each (both pass the >= 2 filter).
+            if reverse_insert {
+                spawn(&mut world, 2, 100, 100);
+                spawn(&mut world, 2, 200, 200);
+                spawn(&mut world, 5, 10, 30);
+                spawn(&mut world, 5, 30, 50);
+            } else {
+                spawn(&mut world, 5, 10, 30);
+                spawn(&mut world, 5, 30, 50);
+                spawn(&mut world, 2, 100, 100);
+                spawn(&mut world, 2, 200, 200);
+            }
+            // Singleton cluster never qualifies (needs >= 2 members).
+            spawn(&mut world, 9, 900, 900);
+            world
+        }
+
+        let a = two_member_world(false);
+        let b = two_member_world(true);
+        let (id_a, coord_a) = settlement_build_anchor(&a);
+        let (id_b, coord_b) = settlement_build_anchor(&b);
+
+        // Same ordered state => identical anchor regardless of insert order.
+        assert_eq!((id_a, coord_a), (id_b, coord_b));
+        // Ties resolve deterministically to the larger cluster id (BTreeMap
+        // ascending iteration + max_by_key keeps the last maximum).
+        assert_eq!(id_a, Some(5));
+        // Centroid is the integer mean of the winning cluster's positions.
+        assert_eq!(
+            coord_a,
+            WorldCoord {
+                x: 20,
+                y: 0,
+                z: 40
+            }
+        );
+
+        // Empty world: no cluster qualifies, anchor falls back to origin.
+        let empty = World::new();
+        let (none_id, origin) = settlement_build_anchor(&empty);
+        assert_eq!(none_id, None);
+        assert_eq!(
+            origin,
+            WorldCoord {
+                x: 0,
+                y: 0,
+                z: 0
+            }
+        );
+    }
 }

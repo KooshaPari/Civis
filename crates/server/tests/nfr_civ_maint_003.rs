@@ -39,7 +39,7 @@ fn nfr_civ_maint_003_quality_gate_enforces_duplication_ceiling() {
     // jscpd runs against the whole project with the configured threshold.
     assert!(
         script.contains("--threshold \"${DUPLICATION_THRESHOLD}\""),
-        "jscpd must run with --threshold ${DUPLICATION_THRESHOLD}"
+        "jscpd must run with --threshold ${{DUPLICATION_THRESHOLD}}"
     );
     // Detected clone output is classified as a gate failure.
     assert!(

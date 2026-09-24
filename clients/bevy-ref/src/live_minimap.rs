@@ -262,4 +262,41 @@ mod tests {
             minimap_chunk_signature([7, 3, 12].into_iter())
         );
     }
+
+    // FR-CIV-BEVY-013 — shared live minimap computes bounds, UV positions,
+    // colors, and spawn helpers so both desktop paths agree.
+    #[test]
+    fn fr_civ_bevy_013_shared_live_minimap_paths_agree() {
+        // Order-independent chunk signature: same set, any iteration order.
+        assert_eq!(
+            minimap_chunk_signature([1, 4, 9].into_iter()),
+            minimap_chunk_signature([9, 4, 1].into_iter())
+        );
+        // Set size is encoded too: a dropped chunk must change the signature.
+        assert_ne!(
+            minimap_chunk_signature([1, 4, 9].into_iter()),
+            minimap_chunk_signature([1, 4].into_iter())
+        );
+
+        // Focus rect: centre maps to mid-UV and world +Z maps to UI top
+        // (V flipped for the top-left origin) on both desktop paths.
+        let focus = MinimapFocusRect {
+            centre_x: 0.0,
+            centre_z: 0.0,
+            half_extent: 50.0,
+        };
+        let centre = focus.world_to_uv(0.0, 0.0);
+        assert!((centre[0] - 0.5).abs() < 1e-6);
+        assert!((centre[1] - 0.5).abs() < 1e-6);
+        let top = focus.world_to_uv(0.0, 50.0);
+        assert!(top[1].abs() < 1e-6, "world +Z edge maps to UI top");
+        let bottom = focus.world_to_uv(0.0, -50.0);
+        assert!((bottom[1] - 1.0).abs() < 1e-6, "world -Z edge maps to UI bottom");
+
+        // Full-panel layout centres a dot regardless of which path spawned it.
+        let layout = MinimapDotLayout::FullPanel { panel_size: 100.0 };
+        let (left, top_px) = layout.dot_origin([0.5, 0.5], 4.0);
+        assert!((left - 48.0).abs() < 1e-6);
+        assert!((top_px - 48.0).abs() < 1e-6);
+    }
 }

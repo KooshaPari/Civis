@@ -88,6 +88,56 @@ mod nfr_p_03_tests {
     }
 }
 
+#[cfg(test)]
+mod nfr_p_01_tests {
+    // NFR-P-01 — p50 tick time at 1k citizens stays under the 8 ms budget.
+    // The criterion baseline comparison in CI enforces the exact p50 gate;
+    // this always-on smoke measures the same scenario (the seeded fixture
+    // scaled to 1000 citizens) with a deliberately generous ceiling so only
+    // gross regressions trip it on shared runners.
+    use civ_engine::{Citizen, Simulation};
+    use std::time::{Duration, Instant};
+
+    #[test]
+    fn nfr_p_01_p50_tick_time_at_1k_citizens_stays_under_budget() {
+        let mut sim = Simulation::with_seed(42);
+
+        // Scale the fixture to the NFR-P-01 scenario: exactly 1000 citizens.
+        let template = {
+            let mut query = sim.world.query::<&Citizen>();
+            query
+                .iter()
+                .next()
+                .map(|(_, citizen)| *citizen)
+                .expect("seeded simulation starts with citizens")
+        };
+        let current = sim.snapshot().citizen_count;
+        for _ in current..1000 {
+            let _ = sim.world.spawn((template,));
+        }
+        assert_eq!(sim.snapshot().citizen_count, 1000);
+
+        // Warm up, then sample per-tick wall time for the p50 computation.
+        for _ in 0..5 {
+            sim.tick();
+        }
+        let mut samples = Vec::with_capacity(30);
+        for _ in 0..30 {
+            let started = Instant::now();
+            sim.tick();
+            samples.push(started.elapsed());
+        }
+        samples.sort();
+        let p50 = samples[samples.len() / 2];
+
+        assert_eq!(sim.state.tick, 35, "every warmup and sampled tick advanced");
+        assert!(
+            p50 < Duration::from_millis(500),
+            "p50 tick time at 1k citizens was {p50:?}; gross tick-loop regression suspected"
+        );
+    }
+}
+
 /// Benchmark tick with a populated voxel substrate — exercises the
 /// `phase_voxel` dirty-event drain path.
 fn bench_tick_with_voxels(c: &mut Criterion) {

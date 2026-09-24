@@ -1233,3 +1233,58 @@ mod test_reproduction {
         assert_eq!(prob, 0.0, "Sick adult should not reproduce");
     }
 }
+
+#[cfg(test)]
+mod test_share_food {
+    use super::*;
+
+    // FR-CIV-LIFE-004 â€” share food between a co-located donor and receiver:
+    // the donor's surplus satisfies the receiver's headroom at the share rate
+    // per tick, clamped to all three bounds.
+    #[test]
+    fn fr_civ_life_004_share_food_between_donor_receiver() {
+        // Rate-limited transfer: donor well above threshold, receiver empty.
+        let mut donor = Needs::sated();
+        donor.food = 0.9;
+        let mut receiver = Needs::sated();
+        receiver.food = 0.0;
+        let shared = share_food_between(&mut donor, &mut receiver, 0.5, 0.2);
+        assert!((shared - 0.2).abs() < 1e-6, "share rate caps the transfer");
+        assert!(
+            (donor.food - 0.7).abs() < 1e-6,
+            "donor stock drains by the shared amount"
+        );
+        assert!(
+            (receiver.food - 0.2).abs() < 1e-6,
+            "receiver gains exactly what was shared"
+        );
+
+        // No-op when the donor has no surplus at/below threshold.
+        let mut poor_donor = Needs::sated();
+        poor_donor.food = 0.5;
+        let mut hungry = Needs::sated();
+        hungry.food = 0.0;
+        let shared = share_food_between(&mut poor_donor, &mut hungry, 0.5, 0.2);
+        assert_eq!(shared, 0.0, "donor at threshold shares nothing");
+        assert_eq!(hungry.food, 0.0, "receiver unchanged on a no-op");
+
+        // Headroom clamp: the transfer never overfills the receiver.
+        let mut rich = Needs::sated();
+        rich.food = 1.0;
+        let mut nearly_sated = Needs::sated();
+        nearly_sated.food = 0.95;
+        let shared = share_food_between(&mut rich, &mut nearly_sated, 0.5, 0.2);
+        assert!(
+            (shared - 0.05).abs() < 1e-6,
+            "transfer clamped to receiver headroom"
+        );
+        assert!(
+            (nearly_sated.food - 1.0).abs() < 1e-6,
+            "receiver capped at 1.0"
+        );
+        assert!(
+            (rich.food - 0.95).abs() < 1e-6,
+            "donor drained by the clamped amount"
+        );
+    }
+}

@@ -282,4 +282,36 @@ mod tests {
         let report = BudgetReport::from_measurement(ok);
         assert!(report.ws_frame);
     }
+
+    // NFR-S-02 — per-client connection overhead (WebSocket handshake +
+    // initial snapshot) must stay strictly under WS_HANDSHAKE_BUDGET_MS.
+    #[test]
+    fn nfr_s_02_handshake_connection_overhead_budget_gate() {
+        assert_eq!(WS_HANDSHAKE_BUDGET_MS, 5.0);
+        // Strict less-than: just under passes, exactly at the budget fails.
+        assert!(ws_handshake_budget_met(WS_HANDSHAKE_BUDGET_MS - 0.001));
+        assert!(!ws_handshake_budget_met(WS_HANDSHAKE_BUDGET_MS));
+        assert!(!ws_handshake_budget_met(WS_HANDSHAKE_BUDGET_MS + 4.5));
+
+        // A within-budget handshake sample surfaces through the report.
+        let within = BudgetMeasurement {
+            handshake_ms: 2.5,
+            ..BudgetMeasurement::default()
+        };
+        let report = BudgetReport::from_measurement(within);
+        assert!(report.ws_handshake);
+        assert!(
+            !report.all_passed(),
+            "other budgets are unmeasured defaults, so all_passed stays false"
+        );
+
+        // An over-budget handshake fails only the S-02 gate.
+        let over = BudgetMeasurement {
+            handshake_ms: WS_HANDSHAKE_BUDGET_MS,
+            ..BudgetMeasurement::default()
+        };
+        let bad = BudgetReport::from_measurement(over);
+        assert!(!bad.ws_handshake);
+        assert!(bad.ws_client, "S-02 failure must not bleed into S-01");
+    }
 }

@@ -46,3 +46,52 @@ impl FeatureOracle for MigrationFlowOracle {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use civ_engine::Simulation;
+
+    // FR-EMG-018 — migration flow oracle validates settled-population
+    // emergence: citizen × building must reach the threshold after warmup.
+    #[test]
+    fn fr_emg_018_migration_flow_oracle_warmup_and_threshold() {
+        let oracle = MigrationFlowOracle;
+        assert_eq!(oracle.fr_id(), "FR-EMG-018");
+
+        // Tick 0: no emergence yet, any state passes with threshold 0.0.
+        let sim = Simulation::new();
+        let snap = sim.snapshot();
+        let v = oracle.check(&sim);
+        assert!(v.passed, "tick 0 always passes");
+        assert_eq!(v.threshold, 0.0);
+        assert_eq!(
+            v.measured,
+            (snap.citizen_count * snap.building_count) as f64
+        );
+        assert!(
+            v.detail.contains("citizens="),
+            "detail reports the citizen count"
+        );
+
+        // After warmup the threshold rises to 1.0 and the verdict mirrors
+        // the (citizens > 0 && buildings > 0) settled-infrastructure contract.
+        let mut sim = Simulation::new();
+        for _ in 0..10 {
+            sim.tick();
+        }
+        let snap = sim.snapshot();
+        let v = oracle.check(&sim);
+        assert_eq!(v.fr_id, "FR-EMG-018");
+        assert_eq!(v.threshold, 1.0);
+        assert_eq!(
+            v.passed,
+            snap.citizen_count > 0 && snap.building_count > 0,
+            "post-warmup pass requires both citizens and buildings"
+        );
+        assert_eq!(
+            v.measured,
+            (snap.citizen_count * snap.building_count) as f64
+        );
+    }
+}

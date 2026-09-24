@@ -163,4 +163,43 @@ mod tests {
         assert_eq!(inst.approval_rating_fp, APPROVAL_FP_SCALE);
         assert!((inst.approval_rating() - 1.0).abs() < 1e-6);
     }
+
+    // FR-CIV-SOCIAL-001-INSTITUTIONS — the institution record owns a member
+    // roster, string-keyed policies, a basis-point treasury, and a clamped
+    // approval rating.
+    #[test]
+    fn fr_civ_social_001_institutions_policy_membership_budget_lifecycle() {
+        let mut inst = InstitutionPolicy::new();
+        assert_eq!(inst.member_count(), 0);
+        assert!(inst.add_member(10));
+        assert!(inst.add_member(20));
+        assert!(!inst.add_member(10), "roster add is idempotent");
+        assert_eq!(inst.member_count(), 2);
+        assert!(inst.remove_member(10));
+        assert!(!inst.remove_member(10), "removing a non-member reports false");
+        assert_eq!(inst.members, vec![20]);
+
+        // Policies are opaque string tokens owned by this record.
+        assert_eq!(inst.update_policy("tax_rate", "0.10"), None);
+        assert_eq!(
+            inst.update_policy("tax_rate", "0.20"),
+            Some("0.10".to_string())
+        );
+        assert_eq!(inst.policy("tax_rate"), Some("0.20"));
+        assert_eq!(inst.policy("missing"), None);
+
+        // Treasury moves in basis points with saturating arithmetic.
+        inst.adjust_budget(1_500);
+        assert_eq!(inst.budget_bp, 1_500);
+        inst.adjust_budget(-10_000);
+        assert_eq!(inst.budget_bp, -8_500);
+
+        // Approval is fixed-point and clamped into [0, APPROVAL_FP_SCALE].
+        inst.set_approval_fp(750);
+        assert!((inst.approval_rating() - 0.75).abs() < 1e-6);
+        inst.set_approval_fp(APPROVAL_FP_SCALE + 10);
+        assert_eq!(inst.approval_rating_fp, APPROVAL_FP_SCALE);
+        inst.set_approval_fp(-10);
+        assert_eq!(inst.approval_rating_fp, 0);
+    }
 }

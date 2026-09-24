@@ -4024,4 +4024,51 @@ mod tests {
             "phase_budget must stay at 0 when no transition front is crossed"
         );
     }
+
+    // -----------------------------------------------------------------------
+    // FR-CIV-CA-011 — pairwise material reactions applied per dirty cell
+    // (reaction_pass wired into run_rule_passes).
+    // -----------------------------------------------------------------------
+
+    /// FR-CIV-CA-011 — FIRE beside WOOD ignites the fuel cell through the
+    /// pairwise `reaction_pass`, writes both sides of the rule, marks the
+    /// chunk dirty for remesh, and leaves cells outside the dirty set alone.
+    #[test]
+    fn fr_civ_ca_011_reaction_pass_ignites_fuel_cell_pair() {
+        let mut g = CaGrid::new([3, 1, 1]);
+        g.set(0, 0, 0, FIRE);
+        g.set(1, 0, 0, WOOD);
+        g.set(2, 0, 0, STONE); // control cell outside the reacting pair
+        g.dirty_chunks.clear();
+        let cells = vec![g.index(0, 0, 0).unwrap(), g.index(1, 0, 0).unwrap()];
+        reaction_pass(&mut g, &cells);
+        assert_eq!(
+            g.get(1, 0, 0),
+            FIRE,
+            "WOOD beside FIRE must ignite via the reaction table"
+        );
+        assert_eq!(g.get(0, 0, 0), FIRE, "fire cell stays fire");
+        assert_eq!(
+            g.get(2, 0, 0),
+            STONE,
+            "cell outside the dirty set must not react"
+        );
+        assert!(
+            !g.dirty_chunks.is_empty(),
+            "a reaction must mark the owning chunk dirty for remesh"
+        );
+    }
+
+    /// FR-CIV-CA-011 — ACID + STONE dissolves the pair to AIR + AIR: both
+    /// cells of the reacting pair are written immediately in one pass.
+    #[test]
+    fn fr_civ_ca_011_reaction_pass_dissolves_stone_with_acid() {
+        let mut g = CaGrid::new([2, 1, 1]);
+        g.set(0, 0, 0, ACID);
+        g.set(1, 0, 0, STONE);
+        let cells = vec![g.index(0, 0, 0).unwrap(), g.index(1, 0, 0).unwrap()];
+        reaction_pass(&mut g, &cells);
+        assert_eq!(g.get(0, 0, 0), AIR, "acid consumed by the dissolve");
+        assert_eq!(g.get(1, 0, 0), AIR, "stone dissolved by acid");
+    }
 }

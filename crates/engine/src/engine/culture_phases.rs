@@ -477,4 +477,57 @@ mod culture_phase_cadence_tests {
         assert!(!sim.faction_aggression.contains_key(&0));
         assert!(!sim.faction_languages.contains_key(&0));
     }
+
+    /// FR-LANGUAGE-001 — per-faction language drift: inhabited settlements are
+    /// seeded with the configured drift/split parameters, the snapshot-level
+    /// `language_state` mirrors the lead faction, and an identical world
+    /// drifts to identical per-faction language state (determinism).
+    #[test]
+    fn fr_language_001_phase_language_drift_seeds_deterministic_faction_languages() {
+        fn with_cultures(mut sim: Simulation) -> Simulation {
+            // Centroids need per-cluster culture profiles before the phase
+            // will seed any faction language state.
+            sim.emergence
+                .cluster_cultures
+                .insert(1, civ_agents::culture::CultureProfile::new([0.2; 4]));
+            sim.emergence
+                .cluster_cultures
+                .insert(3, civ_agents::culture::CultureProfile::new([0.8; 4]));
+            sim.faction_languages.clear();
+            sim.phase_language_drift();
+            sim
+        }
+
+        let sim = with_cultures(populated_sim());
+        let seeded = sim.faction_languages().clone();
+        assert_eq!(
+            seeded.keys().copied().collect::<Vec<_>>(),
+            vec![1, 2],
+            "both inhabited settlement factions must be seeded"
+        );
+        for (faction_id, lang) in &seeded {
+            assert!(
+                (lang.drift_rate - 0.05).abs() < f32::EPSILON,
+                "faction {faction_id} drift rate must be the configured 0.05"
+            );
+            assert!(
+                (lang.split_threshold - 0.35).abs() < f32::EPSILON,
+                "faction {faction_id} split threshold must be the configured 0.35"
+            );
+        }
+        let lead = seeded.values().next().cloned().expect("lead faction state");
+        assert_eq!(
+            sim.language_state(),
+            &lead,
+            "snapshot language_state must mirror the lead faction's language"
+        );
+
+        // Determinism: an identical world + identical cultures drift identically.
+        let twin = with_cultures(populated_sim());
+        assert_eq!(
+            twin.faction_languages(),
+            sim.faction_languages(),
+            "language drift must be deterministic for identical worlds"
+        );
+    }
 }

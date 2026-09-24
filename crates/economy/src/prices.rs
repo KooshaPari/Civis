@@ -107,4 +107,37 @@ mod tests {
         let state2 = update_cluster_prices(1, &empty);
         assert_eq!(state2.price(Good::Food), 10.0);
     }
+
+    // FR-ECON-EMERGE-001 — prices emerge per-cluster from the supply/demand
+    // ratio with no absolute price oracle: scarcity raises the multiplier,
+    // surplus lowers it, and zero supply clamps to the maximum.
+    #[test]
+    fn fr_econ_emerge_001_prices_emerge_from_supply_demand_ratio() {
+        // Balanced supply/demand leaves the base price untouched.
+        assert_eq!(compute_price(1.0, 1.0, 1.0), 1.0);
+        // Scarcity (demand > supply) raises the price; surplus lowers it.
+        assert_eq!(compute_price(0.5, 1.0, 1.0), 2.0);
+        assert_eq!(compute_price(2.0, 1.0, 1.0), 0.5);
+        // Ratio clamps: no supply => max multiplier; glut => min multiplier.
+        assert_eq!(compute_price(0.0, 1.0, 1.0), 10.0);
+        assert_eq!(compute_price(1_000.0, 1.0, 1.0), 0.1);
+
+        // Cluster state derives each good's price from normalised stocks.
+        let mut stocks = Stocks::default();
+        stocks.add(Good::Food, 500); // supply = 5.0, unit demand => 0.2
+        let state = update_cluster_prices(42, &stocks);
+        assert_eq!(state.cluster_id, 42);
+        assert!((state.price(Good::Food) - 0.2).abs() < 1e-6);
+
+        // Empty stock clamps to the max emergent multiplier.
+        let empty = update_cluster_prices(43, &Stocks::default());
+        assert_eq!(empty.price(Good::Food), 10.0);
+
+        // An unset price defaults to the neutral base of 1.0.
+        let unset = PriceState {
+            cluster_id: 0,
+            prices: BTreeMap::new(),
+        };
+        assert_eq!(unset.price(Good::Food), 1.0);
+    }
 }

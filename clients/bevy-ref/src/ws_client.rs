@@ -1237,6 +1237,68 @@ mod tests {
         assert_eq!(backoff.next_delay(), Duration::from_secs(30));
     }
 
+    // FR-CIV-BEVY-018 — reconnect backoff is bounded: it doubles from
+    // RECONNECT_BACKOFF_INITIAL_SECS, never exceeds RECONNECT_BACKOFF_MAX_SECS
+    // even after many failed attempts, and a reset restarts at the initial delay.
+    #[test]
+    fn fr_civ_bevy_018_reconnect_backoff_stays_bounded_until_max() {
+        let mut backoff = ReconnectBackoff::new();
+        let mut delays = Vec::new();
+        for _ in 0..16 {
+            let secs = backoff.next_delay().as_secs();
+            assert!(
+                secs >= RECONNECT_BACKOFF_INITIAL_SECS,
+                "delay {secs}s below the initial floor"
+            );
+            assert!(
+                secs <= RECONNECT_BACKOFF_MAX_SECS,
+                "delay {secs}s above the reconnect cap"
+            );
+            delays.push(secs);
+        }
+        assert_eq!(delays[0], RECONNECT_BACKOFF_INITIAL_SECS);
+        assert_eq!(delays[1], 2 * RECONNECT_BACKOFF_INITIAL_SECS);
+        // After six attempts the exponential schedule hits the cap and pins there.
+        assert_eq!(delays[5], RECONNECT_BACKOFF_MAX_SECS);
+        assert!(
+            delays[5..].iter().all(|&d| d == RECONNECT_BACKOFF_MAX_SECS),
+            "backoff must stay pinned at {RECONNECT_BACKOFF_MAX_SECS}s"
+        );
+        // A successful reconnect resets the schedule to the initial delay.
+        backoff.reset();
+        assert_eq!(
+            backoff.next_delay(),
+            Duration::from_secs(RECONNECT_BACKOFF_INITIAL_SECS)
+        );
+    }
+
+    // FR-CIV-BEVY-018 — the HUD connection indicator reflects WsConnectionState
+    // transitions: every state maps to a distinct atomic code that round-trips,
+    // and publish_state delivers the transition over the state channel.
+    #[test]
+    fn fr_civ_bevy_018_hud_connection_state_roundtrips() {
+        let states = [
+            WsConnectionState::Connected,
+            WsConnectionState::Reconnecting,
+            WsConnectionState::Disconnected,
+        ];
+        let mut codes = Vec::new();
+        for state in states {
+            let code = state_to_atomic(state);
+            assert_eq!(atomic_to_state(code), state, "state must round-trip");
+            codes.push(code);
+        }
+        let unique: std::collections::HashSet<_> = codes.iter().collect();
+        assert_eq!(unique.len(), 3, "each state needs a distinct HUD code");
+
+        let (tx, rx) = std::sync::mpsc::channel();
+        publish_state(&tx, WsConnectionState::Reconnecting);
+        assert_eq!(
+            rx.try_recv().expect("transition published to HUD channel"),
+            WsConnectionState::Reconnecting
+        );
+    }
+
     #[test]
     fn drain_into_reuses_capacity_across_bursts() {
         let (sender, receiver) = crossbeam_channel::unbounded();

@@ -19,3 +19,9 @@ clients/unreal-show/Source/Civis/lib/
 
 # Vendored upstream snapshot (never reformat)
 vendor/
+
+# Generated FR-traceability audit artifacts (rewritten by docs/audits/_gather_ids.py)
+docs/audits/fr-matrix.json
+docs/audits/_id_inventory_v3.json
+docs/audits/.fr-snapshot.json
+docs/audits/fr-coverage-audit-*.md

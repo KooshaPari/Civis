@@ -2089,4 +2089,56 @@ mod tests {
         std::panic::catch_unwind(crate::crash_handler::install_crash_handler)
             .expect("install_crash_handler should install");
     }
+
+    /// FR-CIV-BEVY-020 — snapshot `is_day` / climate `day_phase` drive the
+    /// desktop presentation lighting: day-factor targets, the clear-colour
+    /// lerp endpoints, and ambient brightness all follow the blend factor.
+    #[test]
+    fn fr_civ_bevy_020_presentation_lighting_follows_day_factor() {
+        // Snapshot is_day drives the target blend directly.
+        assert_eq!(presentation_day_factor_target(true), 1.0);
+        assert_eq!(
+            presentation_day_factor_target(false),
+            PRESENTATION_NIGHT_DAY_FACTOR
+        );
+
+        // Climate day_phase: [0.20, 0.80) is day, outside is night,
+        // non-finite falls back to night, and wrapping stays in range.
+        assert_eq!(presentation_day_factor_from_climate(0.5), 1.0);
+        assert_eq!(
+            presentation_day_factor_from_climate(0.19),
+            PRESENTATION_NIGHT_DAY_FACTOR
+        );
+        assert_eq!(
+            presentation_day_factor_from_climate(0.80),
+            PRESENTATION_NIGHT_DAY_FACTOR
+        );
+        assert_eq!(
+            presentation_day_factor_from_climate(f32::NAN),
+            PRESENTATION_NIGHT_DAY_FACTOR
+        );
+        assert_eq!(
+            presentation_day_factor_from_climate(1.5),
+            presentation_day_factor_from_climate(0.5),
+            "day_phase must wrap via rem_euclid before classification"
+        );
+
+        // Clear colour + ambient interpolate between the night and day endpoints.
+        assert_eq!(presentation_clear_color_rgb(0.0), PRESENTATION_NIGHT_CLEAR_RGB);
+        assert_eq!(presentation_clear_color_rgb(1.0), PRESENTATION_DAY_CLEAR_RGB);
+        assert_eq!(
+            presentation_ambient_brightness(0.0),
+            PRESENTATION_NIGHT_AMBIENT_BRIGHTNESS
+        );
+        assert!(
+            (presentation_ambient_brightness(1.0) - PRESENTATION_DAY_AMBIENT_BRIGHTNESS).abs()
+                < 1e-6
+        );
+        let mid = presentation_ambient_brightness(0.5);
+        assert!(
+            mid > PRESENTATION_NIGHT_AMBIENT_BRIGHTNESS
+                && mid < PRESENTATION_DAY_AMBIENT_BRIGHTNESS,
+            "mid blend must sit strictly between night and day ambient"
+        );
+    }
 }

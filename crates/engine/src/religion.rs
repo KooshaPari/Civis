@@ -1386,4 +1386,65 @@ mod religion_extended_tests {
             assert!(!tenets.is_empty(), "Denomination {v:?} has no tenets");
         }
     }
+
+    // FR-CIV-BELIEF-001 — §7/§8/§10 belief substrate: substrate gradients,
+    // religious profile, the Big-Gods response curve, and the per-tick
+    // ReligionEvent all stay clamped to the [0, 1] range with the
+    // MAX_MISERY_UNREST ceiling at 1.0.
+    #[test]
+    fn fr_civ_belief_001_substrate_profile_and_event_stay_clamped() {
+        // §10.1: the unrest signal saturates at the MAX_MISERY_UNREST ceiling.
+        assert_eq!(MAX_MISERY_UNREST, 1.0);
+
+        // §7: zero gradients are all-zero defaults.
+        let zero = SubstrateGradients::zero();
+        assert_eq!(zero, SubstrateGradients::default());
+        assert_eq!(zero.unrest, 0.0);
+        assert_eq!(zero.grad_T, 0.0);
+        assert_eq!(zero.migration_rate, 0.0);
+
+        // §8: a fresh profile starts at zero scores with the seeding tick recorded.
+        let mut profile = ReligiousProfile::new(500, 7);
+        assert_eq!(profile.population, 500);
+        assert_eq!(profile.created_tick, 7);
+        assert_eq!(profile.monitoring, 0.0);
+        assert_eq!(profile.mythic_coherence, 0.0);
+        assert_eq!(profile.uncertainty_reduction, 0.0);
+
+        // §9 Big-Gods curve: gradients feed the three scores by 1% per tick.
+        let gradients = SubstrateGradients {
+            grad_T: 1.0,
+            grad_B: 1.0,
+            unrest: MAX_MISERY_UNREST,
+            ..SubstrateGradients::default()
+        };
+        apply_big_gods_response(&mut profile, &gradients, 8);
+        assert_eq!(profile.created_tick, 8);
+        assert!((profile.monitoring - 0.01).abs() < f32::EPSILON);
+        assert!((profile.mythic_coherence - 0.01).abs() < f32::EPSILON);
+        assert!((profile.uncertainty_reduction - 0.01).abs() < f32::EPSILON);
+
+        // Long-run saturation: every score clamps at the 1.0 ceiling, never above.
+        for tick in 9..2_000 {
+            apply_big_gods_response(&mut profile, &gradients, tick);
+        }
+        assert_eq!(profile.monitoring, 1.0);
+        assert_eq!(profile.mythic_coherence, 1.0);
+        assert_eq!(profile.uncertainty_reduction, 1.0);
+
+        // §10: the per-tick ReligionEvent snapshot carries components + tick.
+        let event = ReligionEvent::tick(3, 0.5, 0.6, 0.7, 42);
+        assert_eq!(event.settlement_id, 3);
+        assert_eq!(event.monitoring, 0.5);
+        assert_eq!(event.mythic_coherence, 0.6);
+        assert_eq!(event.uncertainty_reduction, 0.7);
+        assert_eq!(event.tick, 42);
+        assert!(event.is_notable());
+
+        // The §7 gradient struct round-trips through serde for the wire path.
+        let json = serde_json::to_string(&gradients).expect("serialize gradients");
+        let decoded: SubstrateGradients =
+            serde_json::from_str(&json).expect("deserialize gradients");
+        assert_eq!(decoded, gradients);
+    }
 }

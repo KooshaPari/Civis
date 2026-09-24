@@ -2111,4 +2111,81 @@ mod tests {
         let got = rx.try_recv().expect("raw delivered");
         assert_eq!(got, raw);
     }
+
+    // FR-CIV-BEVY-014 — the shared stream apply is deterministic: feeding the
+    // same voxel delta frame to two independent scenes yields identical chunk
+    // sets and voxel caches, and clearing resets the shared scene state.
+    #[test]
+    fn fr_civ_bevy_014_shared_stream_apply_is_deterministic() {
+        use bevy::prelude::*;
+
+        let chunk_id = encode_chunk_id(0, 0, 0);
+        let delta = VoxelDeltaFrame {
+            tick: 1,
+            deltas: vec![VoxelChunkDelta {
+                event: DirtyChunkEvent {
+                    chunk_id,
+                    write_seq: WriteSeq(1),
+                },
+                voxels: solid_chunk_voxels(),
+            }],
+        };
+        let culling = StreamCulling {
+            eye: [8.0, 8.0, 8.0],
+            max_distance: 512.0,
+            gpu_quality: GpuQualityMode::Full,
+        };
+
+        let mut world_a = World::new();
+        let mut world_b = World::new();
+        let mut scene_a = LiveStreamScene::default();
+        let mut scene_b = LiveStreamScene::default();
+        for (scene, world) in [(&mut scene_a, &mut world_a), (&mut scene_b, &mut world_b)] {
+            let mut mesh_assets = Assets::<Mesh>::default();
+            let mut material_assets = Assets::<StandardMaterial>::default();
+            let mut commands = world.commands();
+            apply_voxel_delta_frame(
+                &mut commands,
+                scene,
+                &mut mesh_assets,
+                &mut material_assets,
+                culling,
+                &DebugRender::default(),
+                &delta,
+                None,
+            );
+        }
+
+        assert_eq!(scene_a.chunks.len(), 1, "delta caches one chunk");
+        let mut keys_a: Vec<u64> = scene_a.chunks.keys().copied().collect();
+        let mut keys_b: Vec<u64> = scene_b.chunks.keys().copied().collect();
+        keys_a.sort_unstable();
+        keys_b.sort_unstable();
+        assert_eq!(keys_a, keys_b, "identical deltas map to identical chunk sets");
+
+        let voxels_a = scene_a
+            .chunk_voxels
+            .get_chunk(chunk_id)
+            .expect("scene A caches the voxel payload");
+        let voxels_b = scene_b
+            .chunk_voxels
+            .get_chunk(chunk_id)
+            .expect("scene B caches the voxel payload");
+        assert_eq!(voxels_a, voxels_b, "voxel caches are identical across scenes");
+        assert_eq!(voxels_a.len(), CHUNK_VOXELS, "full chunk payload cached");
+
+        // Clearing resets the shared scene for the next WorldGen boot.
+        let mut commands = world_a.commands();
+        clear_live_stream_scene(&mut commands, &mut scene_a);
+        assert!(scene_a.chunks.is_empty(), "clear drops chunk entities");
+        assert!(
+            scene_a.chunk_voxels.chunks().is_empty(),
+            "clear drops cached voxels"
+        );
+        assert!(
+            matches!(scene_a.building_provenance, BuildingProvenance::Procedural),
+            "provenance styling resets to the default"
+        );
+        assert!(scene_a.climate.is_none(), "climate snapshot resets");
+    }
 }

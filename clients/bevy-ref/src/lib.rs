@@ -2111,8 +2111,8 @@ mod tests {
         let line = snap.format_overlay();
         assert!(line.contains("tick: 1234"), "tick exposed: {line}");
         assert!(line.contains("reconnecting"), "connection exposed: {line}");
-        assert!(line.contains("C:480"), "civilian count exposed: {line}");
-        assert!(line.contains("A:512"), "agent count exposed: {line}");
+        assert!(line.contains("P:480"), "civilian count exposed: {line}");
+        assert!(line.contains("C:4 A:512"), "chunk and agent counts exposed: {line}");
         assert!(line.contains("B:96"), "building count exposed: {line}");
         assert!(line.contains("G:16"), "graph parcel count exposed: {line}");
         assert!(line.contains("RTT: 12ms"), "sim.snapshot RTT exposed: {line}");

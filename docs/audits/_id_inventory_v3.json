@@ -1,6 +1,6 @@
 {
   "schema_version": 3,
-  "generated_at": "2026-09-20",
+  "generated_at": "2026-09-24",
   "ids": [
     {
       "id": "FR-AI-001",
@@ -31460,13 +31460,21 @@
         "docs/traceability/fr-nfr-s-02/fr-nfr-s-02-intent.md:1",
         "docs/traceability/fr-nfr-s-02/fr-nfr-s-02-intent.md:4"
       ],
-      "in_code": [],
-      "in_tests": [],
-      "in_stub_tests": [
+      "in_code": [
+        "crates/engine/Cargo.toml:75",
+        "crates/server/src/perf_budgets.rs:27",
+        "crates/server/src/perf_budgets.rs:61"
+      ],
+      "in_tests": [
         "crates/engine/tests/fr_nfr_s_02.rs:1",
-        "crates/engine/tests/fr_nfr_s_02.rs:7",
-        "crates/engine/tests/fr_nfr_s_02.rs:11"
-      ]
+        "crates/engine/tests/fr_nfr_s_02.rs:19",
+        "crates/engine/tests/fr_nfr_s_02.rs:29",
+        "crates/engine/tests/fr_nfr_s_02.rs:41",
+        "crates/engine/tests/fr_nfr_s_02.rs:53",
+        "crates/engine/tests/fr_nfr_s_02.rs:68",
+        "crates/engine/tests/fr_nfr_s_02.rs:76"
+      ],
+      "in_stub_tests": []
     },
     {
       "id": "FR-NFR-S-03",
@@ -31477,13 +31485,21 @@
         "docs/traceability/fr-nfr-s-03/fr-nfr-s-03-intent.md:1",
         "docs/traceability/fr-nfr-s-03/fr-nfr-s-03-intent.md:4"
       ],
-      "in_code": [],
-      "in_tests": [],
-      "in_stub_tests": [
+      "in_code": [
+        "crates/server/src/perf_budgets.rs:33",
+        "crates/server/src/perf_budgets.rs:69"
+      ],
+      "in_tests": [
         "crates/engine/tests/fr_nfr_s_03.rs:1",
-        "crates/engine/tests/fr_nfr_s_03.rs:7",
-        "crates/engine/tests/fr_nfr_s_03.rs:11"
-      ]
+        "crates/engine/tests/fr_nfr_s_03.rs:19",
+        "crates/engine/tests/fr_nfr_s_03.rs:29",
+        "crates/engine/tests/fr_nfr_s_03.rs:42",
+        "crates/engine/tests/fr_nfr_s_03.rs:51",
+        "crates/engine/tests/fr_nfr_s_03.rs:58",
+        "crates/engine/tests/fr_nfr_s_03.rs:73",
+        "crates/engine/tests/fr_nfr_s_03.rs:83"
+      ],
+      "in_stub_tests": []
     },
     {
       "id": "FR-NFR-S-04",
@@ -31494,13 +31510,21 @@
         "docs/traceability/fr-nfr-s-04/fr-nfr-s-04-intent.md:1",
         "docs/traceability/fr-nfr-s-04/fr-nfr-s-04-intent.md:4"
       ],
-      "in_code": [],
-      "in_tests": [],
-      "in_stub_tests": [
+      "in_code": [
+        "crates/server/src/perf_budgets.rs:39",
+        "crates/server/src/perf_budgets.rs:81"
+      ],
+      "in_tests": [
         "crates/engine/tests/fr_nfr_s_04.rs:1",
-        "crates/engine/tests/fr_nfr_s_04.rs:7",
-        "crates/engine/tests/fr_nfr_s_04.rs:11"
-      ]
+        "crates/engine/tests/fr_nfr_s_04.rs:19",
+        "crates/engine/tests/fr_nfr_s_04.rs:28",
+        "crates/engine/tests/fr_nfr_s_04.rs:43",
+        "crates/engine/tests/fr_nfr_s_04.rs:49",
+        "crates/engine/tests/fr_nfr_s_04.rs:55",
+        "crates/engine/tests/fr_nfr_s_04.rs:70",
+        "crates/engine/tests/fr_nfr_s_04.rs:80"
+      ],
+      "in_stub_tests": []
     },
     {
       "id": "FR-NFR-S-05",
@@ -31511,13 +31535,20 @@
         "docs/traceability/fr-nfr-s-05/fr-nfr-s-05-intent.md:1",
         "docs/traceability/fr-nfr-s-05/fr-nfr-s-05-intent.md:4"
       ],
-      "in_code": [],
-      "in_tests": [],
-      "in_stub_tests": [
+      "in_code": [
+        "crates/server/src/perf_budgets.rs:43",
+        "crates/server/src/perf_budgets.rs:89"
+      ],
+      "in_tests": [
         "crates/engine/tests/fr_nfr_s_05.rs:1",
-        "crates/engine/tests/fr_nfr_s_05.rs:7",
-        "crates/engine/tests/fr_nfr_s_05.rs:11"
-      ]
+        "crates/engine/tests/fr_nfr_s_05.rs:19",
+        "crates/engine/tests/fr_nfr_s_05.rs:29",
+        "crates/engine/tests/fr_nfr_s_05.rs:41",
+        "crates/engine/tests/fr_nfr_s_05.rs:57",
+        "crates/engine/tests/fr_nfr_s_05.rs:72",
+        "crates/engine/tests/fr_nfr_s_05.rs:82"
+      ],
+      "in_stub_tests": []
     },
     {
       "id": "FR-NFR-S-06",
@@ -31528,13 +31559,20 @@
         "docs/traceability/fr-nfr-s-06/fr-nfr-s-06-intent.md:1",
         "docs/traceability/fr-nfr-s-06/fr-nfr-s-06-intent.md:4"
       ],
-      "in_code": [],
-      "in_tests": [],
-      "in_stub_tests": [
+      "in_code": [
+        "crates/server/src/perf_budgets.rs:48",
+        "crates/server/src/perf_budgets.rs:96"
+      ],
+      "in_tests": [
         "crates/engine/tests/fr_nfr_s_06.rs:1",
-        "crates/engine/tests/fr_nfr_s_06.rs:7",
-        "crates/engine/tests/fr_nfr_s_06.rs:11"
-      ]
+        "crates/engine/tests/fr_nfr_s_06.rs:19",
+        "crates/engine/tests/fr_nfr_s_06.rs:29",
+        "crates/engine/tests/fr_nfr_s_06.rs:40",
+        "crates/engine/tests/fr_nfr_s_06.rs:55",
+        "crates/engine/tests/fr_nfr_s_06.rs:70",
+        "crates/engine/tests/fr_nfr_s_06.rs:80"
+      ],
+      "in_stub_tests": []
     },
     {
       "id": "FR-PERF-001",
@@ -37935,14 +37973,14 @@
         "crates/server/src/perf_budgets.rs:1",
         "crates/server/src/perf_budgets.rs:10",
         "crates/server/src/perf_budgets.rs:23",
-        "crates/server/src/perf_budgets.rs:48",
-        "crates/server/src/perf_budgets.rs:100",
-        "crates/server/src/perf_budgets.rs:115",
-        "crates/server/src/perf_budgets.rs:143",
-        "crates/server/src/perf_budgets.rs:163"
+        "crates/server/src/perf_budgets.rs:53",
+        "crates/server/src/perf_budgets.rs:108",
+        "crates/server/src/perf_budgets.rs:123",
+        "crates/server/src/perf_budgets.rs:151",
+        "crates/server/src/perf_budgets.rs:171"
       ],
       "in_tests": [
-        "crates/server/src/perf_budgets.rs:163"
+        "crates/server/src/perf_budgets.rs:171"
       ],
       "in_stub_tests": []
     },
@@ -37962,10 +38000,8 @@
       "in_code": [
         "crates/server/src/perf_budgets.rs:1",
         "crates/server/src/perf_budgets.rs:11",
-        "crates/server/src/perf_budgets.rs:27",
-        "crates/server/src/perf_budgets.rs:56",
-        "crates/server/src/perf_budgets.rs:102",
-        "crates/server/src/perf_budgets.rs:145"
+        "crates/server/src/perf_budgets.rs:110",
+        "crates/server/src/perf_budgets.rs:153"
       ],
       "in_tests": [],
       "in_stub_tests": []
@@ -37986,15 +38022,13 @@
       "in_code": [
         "crates/server/src/perf_budgets.rs:1",
         "crates/server/src/perf_budgets.rs:12",
-        "crates/server/src/perf_budgets.rs:31",
-        "crates/server/src/perf_budgets.rs:63",
-        "crates/server/src/perf_budgets.rs:104",
-        "crates/server/src/perf_budgets.rs:147",
-        "crates/server/src/perf_budgets.rs:149",
-        "crates/server/src/perf_budgets.rs:225"
+        "crates/server/src/perf_budgets.rs:112",
+        "crates/server/src/perf_budgets.rs:155",
+        "crates/server/src/perf_budgets.rs:157",
+        "crates/server/src/perf_budgets.rs:233"
       ],
       "in_tests": [
-        "crates/server/src/perf_budgets.rs:225"
+        "crates/server/src/perf_budgets.rs:233"
       ],
       "in_stub_tests": []
     },
@@ -38014,10 +38048,8 @@
       "in_code": [
         "crates/server/src/perf_budgets.rs:2",
         "crates/server/src/perf_budgets.rs:13",
-        "crates/server/src/perf_budgets.rs:36",
-        "crates/server/src/perf_budgets.rs:74",
-        "crates/server/src/perf_budgets.rs:106",
-        "crates/server/src/perf_budgets.rs:151"
+        "crates/server/src/perf_budgets.rs:114",
+        "crates/server/src/perf_budgets.rs:159"
       ],
       "in_tests": [],
       "in_stub_tests": []
@@ -38038,10 +38070,8 @@
       "in_code": [
         "crates/server/src/perf_budgets.rs:2",
         "crates/server/src/perf_budgets.rs:14",
-        "crates/server/src/perf_budgets.rs:40",
-        "crates/server/src/perf_budgets.rs:81",
-        "crates/server/src/perf_budgets.rs:108",
-        "crates/server/src/perf_budgets.rs:153"
+        "crates/server/src/perf_budgets.rs:116",
+        "crates/server/src/perf_budgets.rs:161"
       ],
       "in_tests": [],
       "in_stub_tests": []
@@ -38061,14 +38091,12 @@
       "in_code": [
         "crates/server/src/perf_budgets.rs:2",
         "crates/server/src/perf_budgets.rs:15",
-        "crates/server/src/perf_budgets.rs:44",
-        "crates/server/src/perf_budgets.rs:88",
-        "crates/server/src/perf_budgets.rs:110",
-        "crates/server/src/perf_budgets.rs:155",
-        "crates/server/src/perf_budgets.rs:258"
+        "crates/server/src/perf_budgets.rs:118",
+        "crates/server/src/perf_budgets.rs:163",
+        "crates/server/src/perf_budgets.rs:266"
       ],
       "in_tests": [
-        "crates/server/src/perf_budgets.rs:258"
+        "crates/server/src/perf_budgets.rs:266"
       ],
       "in_stub_tests": []
     },

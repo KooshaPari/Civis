@@ -624,6 +624,10 @@ async fn serve_ws_bridge(
     config: WsBridgeConfig,
     sim: Arc<Mutex<Simulation>>,
 ) {
+    // Documented startup signal (docs/playthrough.md); CI playthrough-validate,
+    // game-e2e.sh, and e2e-sandbox.sh grep server.log for this exact line.
+    let addr = listener.local_addr().expect("ws bridge local addr");
+    tracing::info!(addr = %addr, max_clients = config.max_clients, "ws bridge listening");
     std::fs::create_dir_all(&config.saves_dir).expect("create saves directory");
     std::fs::create_dir_all(&config.replays_dir).expect("create replays directory");
     let save_db_path = save_db_path_for_saves_dir(&config.saves_dir);
@@ -667,6 +671,9 @@ async fn serve_ws_bridge(
         .with_state(state.clone());
 
     let server = axum::serve(listener, app.into_make_service());
+
+    // Also documented in docs/playthrough.md's expected server log.
+    tracing::info!(format = ?state.tick_broadcast_format, "tick loop broadcasting");
 
     let ticker_state = state.clone();
     let ticker = tokio::spawn(async move {

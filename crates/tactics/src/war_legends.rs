@@ -139,4 +139,32 @@ mod tests {
         let ev = battle_to_legend_event(&s).unwrap();
         assert_eq!(ev.region, Some(RegionId(42)));
     }
+
+    /// FR-CIV-WARFARE-004 — major battles and decisive victories promote war
+    /// legends: the magnitude threshold gates emission, a decisive victory
+    /// carries the boosted decisive weight, and an even fight keeps its raw
+    /// magnitude with both sides attached as participants.
+    #[test]
+    fn fr_civ_warfare_004_major_and_decisive_battles_promote_legends() {
+        // Below threshold: a minor skirmish produces no legend entry.
+        assert!(battle_to_legend_event(&summary(3_999, 2_000)).is_none());
+
+        // At threshold: a major battle emits an event with both combatants.
+        let major = battle_to_legend_event(&summary(4_000, 2_000))
+            .expect("major battle must emit a legend event");
+        assert_eq!(major.participants.len(), 2);
+        assert!(major.raw_magnitude >= LEGEND_BATTLE_MAGNITUDE_THRESHOLD);
+
+        // Decisive victory (one side takes >= 80% of casualties) is boosted.
+        let decisive = summary(5_000, 1_000);
+        assert!(decisive.is_decisive_victory());
+        let ev = battle_to_legend_event(&decisive).expect("decisive battle emits");
+        assert!(ev.raw_magnitude >= DECISIVE_VICTORY_MAGNITUDE);
+
+        // Even fight: no decisiveness boost — raw magnitude stays at the battle magnitude.
+        let even = summary(5_000, 2_500);
+        assert!(!even.is_decisive_victory());
+        let ev = battle_to_legend_event(&even).expect("even battle emits");
+        assert!((ev.raw_magnitude - 0.5).abs() < f32::EPSILON);
+    }
 }

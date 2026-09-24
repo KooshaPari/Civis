@@ -954,4 +954,37 @@ mod tests {
             "Drought should parch terrain under sustained low precip and high temp"
         );
     }
+
+    /// FR-CIV-REL-004 — divine intervention spend gate: `invoke_divine_disaster`
+    /// debits exactly `cost` belief (net of the disaster's flat fear gain) on
+    /// success and leaves the faith pool untouched when belief is insufficient.
+    #[test]
+    fn fr_civ_rel_004_invoke_divine_disaster_debits_cost_or_no_side_effects() {
+        let target = WorldCoord { x: 0, y: 0, z: 0 };
+
+        // Measure the flat fear gain a Quake produces on an identical twin sim
+        // so the debit assertion below is exact rather than approximate.
+        let mut ctrl = seeded_sim();
+        let ctrl_before = ctrl.belief();
+        trigger_disaster(&mut ctrl, DisasterKind::Quake, target);
+        let fear_gain = ctrl.belief().saturating_sub(ctrl_before);
+        assert!(fear_gain > 0, "a disaster must raise belief (fear breeds faith)");
+
+        // Insufficient faith: refused, and not a single point of belief is spent.
+        let mut sim = seeded_sim();
+        let broke = sim.belief();
+        assert!(!sim.invoke_divine_disaster(DisasterKind::Quake, target, 10));
+        assert_eq!(sim.belief(), broke, "refused invocation must not debit belief");
+
+        // Sufficient faith: exactly `cost` is debited, offset by the same fear gain.
+        sim.add_belief(700);
+        let before = sim.belief();
+        const COST: u64 = 250;
+        assert!(sim.invoke_divine_disaster(DisasterKind::Quake, target, COST as i64));
+        assert_eq!(
+            sim.belief(),
+            before - COST + fear_gain,
+            "successful invocation must debit exactly `cost` belief"
+        );
+    }
 }

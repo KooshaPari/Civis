@@ -420,4 +420,56 @@ mod tests {
             "should pick up migration from b"
         );
     }
+
+    // FR-CIV-FAMINE-001 — food shortage propagates through the four cascade
+    // stages (hungry -> starving -> famine -> collapse), each feeding unrest,
+    // labor, migration pressure, trade desperation, and death risk.
+    #[test]
+    fn fr_civ_famine_001_cascade_stages_drive_subsystem_effects() {
+        // Stage boundaries follow food_per_capita thresholds from the spec.
+        assert_eq!(classify_famine(1.0), FamineStage::None);
+        assert_eq!(classify_famine(0.49), FamineStage::Hungry);
+        assert_eq!(classify_famine(0.29), FamineStage::Starving);
+        assert_eq!(classify_famine(0.09), FamineStage::Famine);
+        assert_eq!(classify_famine(0.0), FamineStage::Collapse);
+
+        // Hungry: mild unrest, slight labor loss, no migration pressure.
+        let hungry = famine_effects(FamineStage::Hungry);
+        assert!((hungry.unrest_delta - 0.10).abs() < 1e-6);
+        assert!((hungry.labor_multiplier - 0.95).abs() < 1e-6);
+        assert_eq!(hungry.migration_pressure, 0.0);
+
+        // Starving: heavier unrest, deeper labor loss, migration pressure on.
+        let starving = famine_effects(FamineStage::Starving);
+        assert!((starving.unrest_delta - 0.25).abs() < 1e-6);
+        assert!((starving.labor_multiplier - 0.80).abs() < 1e-6);
+        assert!(
+            starving.migration_pressure > 0.0,
+            "starving must push emigration"
+        );
+
+        // Famine: half the labor, trade desperation, nonzero death risk.
+        let famine = famine_effects(FamineStage::Famine);
+        assert!((famine.unrest_delta - 0.50).abs() < 1e-6);
+        assert!((famine.labor_multiplier - 0.50).abs() < 1e-6);
+        assert!(
+            famine.trade_desperation > 0.0,
+            "famine must drive trade desperation"
+        );
+        assert!(famine.death_risk > 0.0, "famine carries death risk");
+
+        // Collapse: worst unrest/labor/migration of the cascade.
+        let collapse = famine_effects(FamineStage::Collapse);
+        assert!((collapse.unrest_delta - 0.80).abs() < 1e-6);
+        assert!((collapse.labor_multiplier - 0.20).abs() < 1e-6);
+        assert!(collapse.migration_pressure >= famine.migration_pressure);
+
+        // End-to-end settlement path: 9 food / 100 pop => fpc 0.09 => Famine.
+        let (stage, effects) = settlement_famine(9.0, 100);
+        assert_eq!(stage, FamineStage::Famine);
+        assert!(
+            effects.labor_multiplier <= 0.5 + f32::EPSILON,
+            "famine-stage settlement loses at least half its labor"
+        );
+    }
 }

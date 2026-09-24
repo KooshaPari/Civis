@@ -46,3 +46,38 @@ impl FeatureOracle for ReligiousConflictOracle {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // FR-EMG-016 — religious conflict oracle: any state passes at tick 0;
+    // afterwards the verdict demands both citizens and buildings.
+    #[test]
+    fn fr_emg_016_passes_at_tick_zero() {
+        let sim = Simulation::new();
+        let v = ReligiousConflictOracle.check(&sim);
+        assert_eq!(v.fr_id, "FR-EMG-016");
+        assert!(v.passed, "tick 0 must pass unconditionally: {}", v.detail);
+        assert!((v.threshold - 0.0).abs() < f64::EPSILON);
+        assert!(!v.detail.is_empty());
+    }
+
+    // FR-EMG-016 — after tick 0 the threshold rises to 1.0 and the verdict
+    // gates on citizen×building >= 1, reporting the product in the detail.
+    #[test]
+    fn fr_emg_016_threshold_requires_settlement_after_tick_zero() {
+        let mut sim = Simulation::new();
+        sim.tick();
+        let v = ReligiousConflictOracle.check(&sim);
+        assert!((v.threshold - 1.0).abs() < f64::EPSILON, "post-tick-0 threshold must be 1.0");
+        assert_eq!(v.passed, v.measured >= 1.0, "detail: {}", v.detail);
+        assert_eq!(v.fr_id, "FR-EMG-016");
+        assert!(v.detail.contains("citizens="), "detail: {}", v.detail);
+        assert!(
+            v.detail.contains(&format!("tick={}", sim.state.tick)),
+            "detail: {}",
+            v.detail
+        );
+    }
+}

@@ -50,6 +50,10 @@ exclude = [
   "clients/godot-ref/rust",
   "clients/unreal-show/Source/Civis/rust-shim",
   "fuzz",
+  # Vendored to keep the workspace self-contained: the upstream
+  # `KooshaPari/phenotype-gfx` remote is no longer reachable, so the voxel
+  # kernel is checked in under vendor/. See vendor/phenotype-gfx/PROVENANCE.md.
+  "vendor/phenotype-gfx",
 ]
 resolver = "2"
 

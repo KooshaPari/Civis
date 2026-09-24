@@ -12,8 +12,15 @@ serde = { version = "1.0", features = ["derive"] }
 bincode = "1.3"
 
 # Adaptive voxel kernel shared across Phenotype-org game clients.
-# Pin the git revision so CI can resolve the same kernel without a sibling checkout.
-phenotype-voxel = { git = "https://github.com/KooshaPari/phenotype-gfx.git", rev = "7ed27211554f5ba25d3a79c54c73262db6e160b1", package = "phenotype-voxel" }
+#
+# Vendor as a workspace path dependency: the upstream remote
+# (https://github.com/KooshaPari/phenotype-gfx.git @ 7ed27211554f5ba25d3a79c54c73262db6e160b1)
+# now returns "Repository not found", which made `cargo metadata` fail on every
+# clean checkout and reddened the whole CI surface. The exact revision that was
+# pinned is checked in under vendor/phenotype-gfx/ so builds no longer depend on
+# network access to a private/gone remote.
+# Provenance: vendor/phenotype-gfx/PROVENANCE.md
+phenotype-voxel = { path = "../../vendor/phenotype-gfx/crates/phenotype-voxel", package = "phenotype-voxel" }
 
 [dev-dependencies]
 criterion = { version = "=0.5.1", features = ["html_reports"] }

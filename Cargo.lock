@@ -10337,7 +10337,6 @@ dependencies = [
 [[package]]
 name = "phenotype-gfx"
 version = "0.2.0"
-source = "git+https://github.com/KooshaPari/phenotype-gfx.git?rev=7ed27211554f5ba25d3a79c54c73262db6e160b1#7ed27211554f5ba25d3a79c54c73262db6e160b1"
 dependencies = [
  "bytemuck",
  "glam 0.29.3",
@@ -10350,7 +10349,6 @@ dependencies = [
 [[package]]
 name = "phenotype-voxel"
 version = "0.2.0"
-source = "git+https://github.com/KooshaPari/phenotype-gfx.git?rev=7ed27211554f5ba25d3a79c54c73262db6e160b1#7ed27211554f5ba25d3a79c54c73262db6e160b1"
 dependencies = [
  "phenotype-gfx",
 ]

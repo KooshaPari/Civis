@@ -46,3 +46,50 @@ impl FeatureOracle for RiverTradeOracle {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // FR-EMG-020 — at tick 0 no emergence has happened yet, so the
+    // river-trade oracle passes vacuously with a zero threshold while
+    // still reporting its FR id.
+    #[test]
+    fn fr_emg_020_river_trade_oracle_passes_at_tick_zero() {
+        let sim = Simulation::new();
+        let verdict = RiverTradeOracle.check(&sim);
+        assert_eq!(verdict.fr_id, "FR-EMG-020");
+        assert!(verdict.passed, "tick 0 accepts any state: {}", verdict.detail);
+        assert_eq!(verdict.threshold, 0.0, "no threshold applies before tick 0");
+        assert!(verdict.measured.is_finite());
+        assert!(verdict.detail.contains("citizens="));
+    }
+
+    // FR-EMG-020 — after tick > 0 the oracle demands settled infrastructure:
+    // measured is exactly citizen×building, and passed ⇔ both counts exceed 0.
+    #[test]
+    fn fr_emg_020_requires_citizens_and_buildings_after_tick_zero() {
+        let mut sim = Simulation::new();
+        for _ in 0..300 {
+            sim.tick();
+        }
+        let verdict = RiverTradeOracle.check(&sim);
+        let snap = sim.snapshot();
+        assert!(snap.building_count > 0, "the initial world spawns settlement buildings");
+        assert_eq!(verdict.threshold, 1.0, "post-tick-0 threshold is one settled unit");
+        assert_eq!(
+            verdict.measured,
+            (snap.citizen_count * snap.building_count) as f64,
+            "measured must be the citizen×building product"
+        );
+        assert_eq!(
+            verdict.passed,
+            snap.citizen_count > 0 && snap.building_count > 0,
+            "pass requires citizens AND buildings: {}",
+            verdict.detail
+        );
+        assert!(verdict.detail.contains(&format!("citizens={}", snap.citizen_count)));
+        assert!(verdict.detail.contains(&format!("buildings={}", snap.building_count)));
+        assert!(verdict.detail.contains("tick=300"), "detail carries the tick: {}", verdict.detail);
+    }
+}

@@ -106,4 +106,38 @@ mod tests {
         let remaining = apply_war_drain(10_000, &drain);
         assert!(remaining < 10_000);
     }
+
+    // FR-CIV-WARFARE-003 — sustained war drains the cluster treasury at
+    // WAR_ECONOMY_DRAIN_RATE every tick, attrition converts estimated
+    // casualties into population loss, and a treasury at the exhaustion floor
+    // flags economic exhaustion.
+    #[test]
+    fn fr_civ_warfare_003_sustained_war_drains_treasury_and_attrition() {
+        let mut treasury = 10_000i64;
+        let mut total_attrition = 0u32;
+        let mut prev = treasury;
+        for _ in 0..10 {
+            let drain = compute_war_economy_drain(treasury, 2_000, true);
+            assert_eq!(
+                drain.treasury_drain,
+                (treasury as f32 * WAR_ECONOMY_DRAIN_RATE) as i64,
+                "drain must be WAR_ECONOMY_DRAIN_RATE of the current treasury"
+            );
+            assert!(drain.treasury_drain > 0, "active war must drain every tick");
+            treasury = apply_war_drain(treasury, &drain);
+            assert!(treasury < prev, "war tick must strictly reduce the treasury");
+            prev = treasury;
+            total_attrition += drain.population_loss;
+        }
+        // Attrition: 2 000 estimated casualties x 0.001 per unit ⇒ 2 population
+        // lost per tick, 20 over the ten-tick campaign.
+        assert_eq!(total_attrition, 20, "cumulative war attrition");
+        assert!(treasury < 10_000, "sustained war must leave the treasury poorer");
+
+        // Exhaustion flag: a balance pinned at the floor (remaining <=
+        // max(treasury/10, 10)) is economically exhausted; a healthy treasury
+        // is not.
+        assert!(compute_war_economy_drain(10, 0, true).economically_exhausted);
+        assert!(!compute_war_economy_drain(10_000, 0, true).economically_exhausted);
+    }
 }

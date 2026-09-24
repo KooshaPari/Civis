@@ -5254,4 +5254,74 @@ mod tests {
             "available should be non-empty"
         );
     }
+
+    /// NFR-P-07 — `snapshot_result_json` (the `sim.snapshot` result builder)
+    /// must complete in under 1 ms for the 1k-citizens scenario so the
+    /// `TICK_PHASE_DURATION{phase="Snapshot"}` histogram stays inside its
+    /// budget. `criterion::bench_snapshot_1k` is the strict regression
+    /// harness; this test pins the builder-level budget using the best of 50
+    /// runs (scheduler-noise resistant) and checks the emitted snapshot keys.
+    #[test]
+    fn nfr_p_07_snapshot_result_builder_under_1ms_for_1k_citizens() {
+        let fields = SnapshotFields {
+            weather_grid: vec![],
+            tick: 1_000,
+            population: 1_000,
+            building_count: 250,
+            energy_budget: Some(50_000.0),
+            market_prices: BTreeMap::from([
+                ("food".to_string(), 1_000),
+                ("energy".to_string(), 1_250),
+            ]),
+            hash_chain_root: None,
+            speed_multiplier: 1,
+            spectator: None,
+            institutions: vec![],
+            military_units: vec![],
+            damage_events: vec![],
+            damage_events_count: 0,
+            voxel_damage_removed_this_tick: 0,
+            mods: vec![],
+            mod_lifecycle: vec![],
+            session_saved: vec![],
+            mod_permission_violations: vec![],
+            climate: civ_engine::Climate {
+                tick: 1_000,
+                day_phase: 0.25,
+                year_phase: 0.5,
+                moon_phase: 0.0,
+                tide_offset: 0.0,
+            },
+            music_cues: BTreeMap::new(),
+            audio_events: Vec::new(),
+            emergence: None,
+            researched: vec![],
+            in_progress_tech: None,
+            outcome_progress: Default::default(),
+        };
+
+        // Warm-up pass: allocation + branch-profile stabilization.
+        let _ = snapshot_result_json(&fields);
+
+        // Best of 50 measures the builder's own cost without scheduler noise
+        // from parallel test threads / shared CI runners.
+        let mut best = std::time::Duration::MAX;
+        let mut json = serde_json::Value::Null;
+        for _ in 0..50 {
+            let started = std::time::Instant::now();
+            json = snapshot_result_json(&fields);
+            let elapsed = started.elapsed();
+            if elapsed < best {
+                best = elapsed;
+            }
+        }
+
+        assert_eq!(json["tick"], 1_000, "snapshot must carry the tick");
+        assert_eq!(json["population"], 1_000, "1k-citizens scenario population");
+        assert!(json.get("climate").is_some(), "climate block must be present");
+        assert!(
+            best < std::time::Duration::from_millis(1),
+            "NFR-P-07: best snapshot_result_json run took {best:?}, budget is 1 ms"
+        );
+    }
 }

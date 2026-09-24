@@ -979,11 +979,10 @@ mod tests {
         // Sufficient faith: exactly `cost` is debited, offset by the same fear gain.
         sim.add_belief(700);
         let before = sim.belief();
-        const COST: u64 = 250;
-        assert!(sim.invoke_divine_disaster(DisasterKind::Quake, target, COST as i64));
+        assert!(sim.invoke_divine_disaster(DisasterKind::Quake, target, 250));
         assert_eq!(
             sim.belief(),
-            before - COST + fear_gain,
+            before - 250 + fear_gain,
             "successful invocation must debit exactly `cost` belief"
         );
     }

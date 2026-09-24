@@ -1,8 +1,8 @@
 {
-  "CODE-ONLY-no-spec": 1,
-  "COVERED": 996,
-  "IMPL-NO-TEST": 59,
-  "SPEC-ONLY": 234,
-  "STUB-TEST-ONLY": 10,
-  "TEST-NO-CODE-REF": 155
+    "CODE-ONLY-no-spec": 1,
+    "COVERED": 996,
+    "IMPL-NO-TEST": 59,
+    "SPEC-ONLY": 234,
+    "STUB-TEST-ONLY": 10,
+    "TEST-NO-CODE-REF": 155
 }

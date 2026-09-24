@@ -16,3 +16,6 @@ clients/unreal-show/Source/Civis/lib/
 
 # CI artifacts
 .ci/quality-manifest.json
+
+# Vendored upstream snapshot (never reformat)
+vendor/

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2249,SC2312,SC2250
 # Civis v0.4.0 — scripted playthrough (idempotent).
 #
 # Runs the ten-step reproducible playthrough against a live civ-server.
@@ -87,6 +88,7 @@ require() {
         case "$1" in
             websocat) fail "install via: cargo install websocat   (https://github.com/vi/websocat)";;
             jq)        fail "install via your package manager (e.g. apt install jq)";;
+            *)         fail "unknown required tool '$1'";;
         esac
         exit 1
     fi

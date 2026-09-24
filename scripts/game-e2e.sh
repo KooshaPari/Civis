@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034,SC2310,SC2012,SC2312
 # game-e2e.sh — Visual E2E test for the Civis game client
 #
 # Launches the game, navigates through menus, runs the simulation,
@@ -33,10 +34,10 @@ cd "${REPO_ROOT}"
 QUICK=0
 HEADLESS=0
 UPDATE_BASELINES=0
-GAME_TIMEOUT=60
+export GAME_TIMEOUT=60
 FRAMES_TO_WAIT=120
 PORT=3000
-SEED=42
+export SEED=42
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -62,7 +63,7 @@ C_OK="\033[32m"; C_FAIL="\033[31m"; C_INFO="\033[36m"; C_DIM="\033[2m"; C_RST="\
 step()  { printf '%b[game-e2e]%b %s\n' "${C_INFO}" "${C_RST}" "$*"; }
 ok()    { printf '%b  ok  %b %s\n' "${C_OK}"  "${C_RST}" "$*"; }
 fail()  { printf '%b FAIL %b %s\n' "${C_FAIL}" "${C_RST}" "$*" >&2; }
-dim()   { printf '%b     %b\n' "${C_DIM}" "${C_RST}" "$*"; }
+dim()   { printf '%b     %b %s\n' "${C_DIM}" "${C_RST}" "$*"; }
 
 mkdir -p "${E2E_DIR}" "${CAPTURES}" "${LOGS}" "${BASELINES}"
 

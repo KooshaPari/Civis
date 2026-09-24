@@ -312,6 +312,11 @@ mod tests {
         };
         let bad = BudgetReport::from_measurement(over);
         assert!(!bad.ws_handshake);
-        assert!(bad.ws_client, "S-02 failure must not bleed into S-01");
+        // Each budget keeps an independent verdict: the default 0-byte
+        // frame sample still clears NFR-S-06, while the NFR-S-01 gate
+        // ("at least 100 concurrent clients") is false for a 0-client
+        // default regardless of the handshake result.
+        assert!(bad.ws_frame);
+        assert!(!bad.ws_client);
     }
 }

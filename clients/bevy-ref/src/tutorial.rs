@@ -228,3 +228,41 @@ fn draw_tutorial_hint(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // FR-CIV-CLIENT-011 — the six-step hint ladder advances one step per
+    // Enter/click, resets the acknowledged flag on each fresh hint, and
+    // disables the panel for good after the final step.
+    #[test]
+    fn fr_civ_client_011_six_step_hint_advances_then_disables() {
+        assert_eq!(HINTS.len(), 6, "the tutorial ships exactly six hints");
+
+        let mut state = TutorialState::default();
+        assert!(state.enabled, "tutorial starts enabled");
+        assert_eq!(state.step, 0, "tutorial starts on the first hint");
+        assert!(should_show(&state));
+
+        // Steps 1..=5 advance without completing the ladder.
+        for expected in 1..HINTS.len() as u8 {
+            let completed = advance(&mut state);
+            assert!(!completed, "step {expected} must not complete the tutorial");
+            assert_eq!(state.step, expected, "step advances to {expected}");
+            assert!(!state.acknowledged, "acknowledgement resets for the fresh hint");
+            assert!(should_show(&state), "hint panel stays visible mid-ladder");
+            assert!(
+                !HINTS[state.step as usize].is_empty(),
+                "the active hint carries copy"
+            );
+        }
+
+        // The sixth advance lands past the final hint and hides the panel.
+        let completed = advance(&mut state);
+        assert!(completed, "advancing past hint 6 completes the tutorial");
+        assert!(!state.enabled, "completed tutorial disables itself");
+        assert_eq!(state.step as usize, HINTS.len() - 1, "step holds at the final hint");
+        assert!(!should_show(&state), "completed tutorial stops showing hints");
+    }
+}

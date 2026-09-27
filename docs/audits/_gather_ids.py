@@ -209,6 +209,12 @@ def is_test_path(rel: str) -> bool:
     if "/tests/" in rel_p:
         return True
     base = rel_p.rsplit("/", 1)[-1]
+    # Rust test-only modules: `foo_tests.rs` / `foo_test.rs` (e.g.
+    # crates/watch/src/api_tests.rs, crates/engine/src/engine/engine_tests.rs).
+    # These are `#[cfg(test)]`-gated modules containing only test fns; without
+    # this rule their FR-ID comments counted as code refs, not test refs.
+    if base.endswith(("_tests.rs", "_test.rs")):
+        return True
     if base.endswith((".test.mjs", ".test.ts", ".test.tsx", ".test.js", ".test.jsx",
                        ".spec.ts", ".spec.tsx", ".spec.mjs")):
         return True

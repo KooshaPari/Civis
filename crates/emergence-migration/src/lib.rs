@@ -895,6 +895,9 @@ mod tests {
         );
     }
 
+    // FR-CIV-MIGRATION-002 — apply flows reshapes cluster populations exactly:
+    // every departure has an arrival, the reported flow matches the delta, and
+    // the total population is conserved across ticks.
     #[test]
     fn fr_civ_migration_002_apply_flows_reshapes_populations_exactly() {
         let mut eng = stress_to_opportunity();

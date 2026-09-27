@@ -77,6 +77,8 @@ def test_real_source_classifies_as_code(path: str) -> None:
     [
         "crates/engine/tests/fr_matrix_batch1.rs",
         "web/tests/frame3d.test.mjs",
+        "crates/engine/src/engine/engine_tests.rs",
+        "crates/watch/src/api_tests.rs",
     ],
 )
 def test_tests_classify_as_test(path: str) -> None:

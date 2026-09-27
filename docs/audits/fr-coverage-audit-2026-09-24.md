@@ -19,10 +19,10 @@
 
 | Status | Count | % |
 |--------|------:|--:|
-| `COVERED` | 1059 | 72.8 |
+| `COVERED` | 1041 | 71.5 |
 | `STUB-TEST-ONLY` | 0 | 0.0 |
-| `TEST-NO-CODE-REF` | 160 | 11.0 |
-| `IMPL-NO-TEST` | 2 | 0.1 |
+| `TEST-NO-CODE-REF` | 180 | 12.4 |
+| `IMPL-NO-TEST` | 0 | 0.0 |
 | `SPEC-ONLY` | 233 | 16.0 |
 | `CODE-ONLY-no-spec` | 1 | 0.1 |
 | **Total** | **1455** | **100.0** |
@@ -92,15 +92,15 @@
 | FR-CIV-EMERGENCE-N13 | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-EMERGENCE-RELIGION | 2 | 0 | 0 | 0 | 0 | 2 | 0 |
 | FR-CIV-EMERGENT-MIGRATION | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
-| FR-CIV-ENGINE-INT | 10 | 10 | 0 | 0 | 0 | 0 | 0 |
-| FR-CIV-ENGINE-REPLAY | 5 | 5 | 0 | 0 | 0 | 0 | 0 |
+| FR-CIV-ENGINE-INT | 10 | 0 | 0 | 10 | 0 | 0 | 0 |
+| FR-CIV-ENGINE-REPLAY | 5 | 0 | 0 | 5 | 0 | 0 | 0 |
 | FR-CIV-ERA | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-FAMINE | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-FEST | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-FOG | 5 | 5 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-GAME | 3 | 3 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-GENETICS | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
-| FR-CIV-GENETICS-SEED | 3 | 3 | 0 | 0 | 0 | 0 | 0 |
+| FR-CIV-GENETICS-SEED | 3 | 1 | 0 | 2 | 0 | 0 | 0 |
 | FR-CIV-GEO | 10 | 0 | 0 | 0 | 0 | 10 | 0 |
 | FR-CIV-GODOT-ATTACH | 5 | 5 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-GODOT-F3D0 | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
@@ -141,7 +141,7 @@
 | FR-CIV-MCP | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-METRICS | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-METRICS-001-TIMESERIES | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
-| FR-CIV-MIGRATION | 5 | 4 | 0 | 0 | 1 | 0 | 0 |
+| FR-CIV-MIGRATION | 5 | 5 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-MOD | 21 | 21 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-NEEDS-DECAY | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-NOTIFY | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
@@ -171,7 +171,7 @@
 | FR-CIV-RTS-NATION | 2 | 0 | 0 | 2 | 0 | 0 | 0 |
 | FR-CIV-RTS-RENDER | 5 | 5 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-RTS-ZOOM | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
-| FR-CIV-SAVE | 4 | 3 | 0 | 0 | 1 | 0 | 0 |
+| FR-CIV-SAVE | 4 | 4 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-SCALE | 8 | 8 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-SERVER | 3 | 3 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-SERVER-001-WS | 1 | 0 | 0 | 1 | 0 | 0 | 0 |
@@ -190,7 +190,7 @@
 | FR-CIV-UX | 7 | 7 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-VEHICLE | 26 | 26 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-VERIFY | 10 | 10 | 0 | 0 | 0 | 0 | 0 |
-| FR-CIV-VOXEL | 18 | 18 | 0 | 0 | 0 | 0 | 0 |
+| FR-CIV-VOXEL | 18 | 16 | 0 | 2 | 0 | 0 | 0 |
 | FR-CIV-VOXEL-DIRTY | 2 | 2 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-WAR | 15 | 14 | 0 | 0 | 0 | 1 | 0 |
 | FR-CIV-WAR-001-UNITS | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
@@ -217,7 +217,7 @@
 | FR-MET | 1 | 0 | 0 | 1 | 0 | 0 | 0 |
 | FR-METRICS | 5 | 3 | 0 | 2 | 0 | 0 | 0 |
 | FR-MOD | 5 | 5 | 0 | 0 | 0 | 0 | 0 |
-| FR-MUSIC | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
+| FR-MUSIC | 1 | 0 | 0 | 1 | 0 | 0 | 0 |
 | FR-NET | 3 | 3 | 0 | 0 | 0 | 0 | 0 |
 | FR-NFR-CIV-DET | 3 | 0 | 0 | 0 | 0 | 3 | 0 |
 | FR-NFR-CIV-DEV-HYGIENE | 1 | 0 | 0 | 1 | 0 | 0 | 0 |
@@ -741,7 +741,7 @@
 - `NFR-R-06`
   - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2082, docs/traceability/index.md:1230, docs/traceability/nfr-r-06/nfr-r-06-spec.md:1
 
-## Tested IDs with no ID-tagged code (add a code reference) (160)
+## Tested IDs with no ID-tagged code (add a code reference) (180)
 
 - `FR-CIV-ARCH-00`
   - spec: docs/traceability/fr-civ-arch-00/fr-civ-arch-00-intent.md:1, docs/traceability/fr-civ-arch-00/fr-civ-arch-00-intent.md:4, docs/traceability/fr-civ-arch-00/fr-civ-arch-00-intent.md:9
@@ -770,6 +770,57 @@
 - `FR-CIV-DIPLO-002-SHADOW`
   - spec: agileplus-specs/civ-021-recovered-requirements/spec.md:215, PLAN.md:209, PLAN.md:210
   - tests: crates/diplomacy/tests/fr_civ_diplo_tests.rs:3, crates/diplomacy/tests/fr_civ_diplo_tests.rs:8, crates/diplomacy/tests/fr_civ_diplo_tests.rs:11
+- `FR-CIV-ENGINE-INT-001`
+  - spec: docs/traceability/fr-civ-engine-int-001/fr-civ-engine-int-001-adr.md:1, docs/traceability/fr-civ-engine-int-001/fr-civ-engine-int-001-adr.md:6, docs/traceability/fr-civ-engine-int-001/fr-civ-engine-int-001-adr.md:11
+  - tests: crates/engine/src/engine/engine_tests.rs:1065, crates/engine/src/engine/engine_tests.rs:1067
+- `FR-CIV-ENGINE-INT-002`
+  - spec: docs/traceability/fr-civ-engine-int-002/fr-civ-engine-int-002-adr.md:1, docs/traceability/fr-civ-engine-int-002/fr-civ-engine-int-002-adr.md:6, docs/traceability/fr-civ-engine-int-002/fr-civ-engine-int-002-adr.md:11
+  - tests: crates/engine/src/engine/engine_tests.rs:1256, crates/engine/src/engine/engine_tests.rs:1258
+- `FR-CIV-ENGINE-INT-003`
+  - spec: docs/traceability/fr-civ-engine-int-003/fr-civ-engine-int-003-adr.md:1, docs/traceability/fr-civ-engine-int-003/fr-civ-engine-int-003-adr.md:6, docs/traceability/fr-civ-engine-int-003/fr-civ-engine-int-003-adr.md:11
+  - tests: crates/engine/src/engine/engine_tests.rs:1291, crates/engine/src/engine/engine_tests.rs:1293
+- `FR-CIV-ENGINE-INT-005`
+  - spec: docs/traceability/fr-civ-engine-int-005/fr-civ-engine-int-005-adr.md:1, docs/traceability/fr-civ-engine-int-005/fr-civ-engine-int-005-adr.md:6, docs/traceability/fr-civ-engine-int-005/fr-civ-engine-int-005-adr.md:11
+  - tests: crates/engine/src/engine/engine_tests.rs:1484, crates/engine/src/engine/engine_tests.rs:1486
+- `FR-CIV-ENGINE-INT-010`
+  - spec: docs/traceability/fr-civ-engine-int-010/fr-civ-engine-int-010-adr.md:1, docs/traceability/fr-civ-engine-int-010/fr-civ-engine-int-010-adr.md:6, docs/traceability/fr-civ-engine-int-010/fr-civ-engine-int-010-adr.md:11
+  - tests: crates/engine/src/engine/engine_tests.rs:77, crates/engine/src/engine/engine_tests.rs:79
+- `FR-CIV-ENGINE-INT-011`
+  - spec: docs/traceability/fr-civ-engine-int-011/fr-civ-engine-int-011-adr.md:1, docs/traceability/fr-civ-engine-int-011/fr-civ-engine-int-011-adr.md:6, docs/traceability/fr-civ-engine-int-011/fr-civ-engine-int-011-adr.md:11
+  - tests: crates/engine/src/engine/engine_tests.rs:1309, crates/engine/src/engine/engine_tests.rs:1311
+- `FR-CIV-ENGINE-INT-012`
+  - spec: docs/traceability/fr-civ-engine-int-012/fr-civ-engine-int-012-adr.md:1, docs/traceability/fr-civ-engine-int-012/fr-civ-engine-int-012-adr.md:6, docs/traceability/fr-civ-engine-int-012/fr-civ-engine-int-012-adr.md:11
+  - tests: crates/engine/src/engine/engine_tests.rs:1349, crates/engine/src/engine/engine_tests.rs:1350
+- `FR-CIV-ENGINE-INT-013`
+  - spec: docs/traceability/fr-civ-engine-int-013/fr-civ-engine-int-013-adr.md:1, docs/traceability/fr-civ-engine-int-013/fr-civ-engine-int-013-adr.md:6, docs/traceability/fr-civ-engine-int-013/fr-civ-engine-int-013-adr.md:11
+  - tests: crates/engine/src/engine/engine_tests.rs:1432, crates/engine/src/engine/engine_tests.rs:1434
+- `FR-CIV-ENGINE-INT-014`
+  - spec: docs/traceability/fr-civ-engine-int-014/fr-civ-engine-int-014-adr.md:1, docs/traceability/fr-civ-engine-int-014/fr-civ-engine-int-014-adr.md:6, docs/traceability/fr-civ-engine-int-014/fr-civ-engine-int-014-adr.md:11
+  - tests: crates/engine/src/engine/engine_tests.rs:1472, crates/engine/src/engine/engine_tests.rs:1474
+- `FR-CIV-ENGINE-INT-015`
+  - spec: docs/traceability/fr-civ-engine-int-015/fr-civ-engine-int-015-adr.md:1, docs/traceability/fr-civ-engine-int-015/fr-civ-engine-int-015-adr.md:6, docs/traceability/fr-civ-engine-int-015/fr-civ-engine-int-015-adr.md:11
+  - tests: crates/engine/src/engine/engine_tests.rs:1375, crates/engine/src/engine/engine_tests.rs:1377
+- `FR-CIV-ENGINE-REPLAY-001`
+  - spec: docs/traceability/fr-civ-engine-replay-001/fr-civ-engine-replay-001-adr.md:1, docs/traceability/fr-civ-engine-replay-001/fr-civ-engine-replay-001-adr.md:6, docs/traceability/fr-civ-engine-replay-001/fr-civ-engine-replay-001-adr.md:11
+  - tests: crates/engine/src/engine/engine_tests.rs:1658, crates/engine/src/engine/engine_tests.rs:1660
+- `FR-CIV-ENGINE-REPLAY-002`
+  - spec: docs/traceability/fr-civ-engine-replay-002/fr-civ-engine-replay-002-adr.md:1, docs/traceability/fr-civ-engine-replay-002/fr-civ-engine-replay-002-adr.md:6, docs/traceability/fr-civ-engine-replay-002/fr-civ-engine-replay-002-adr.md:11
+  - tests: crates/engine/src/engine/engine_tests.rs:1685, crates/engine/src/engine/engine_tests.rs:1687
+- `FR-CIV-ENGINE-REPLAY-003`
+  - spec: docs/traceability/fr-civ-engine-replay-003/fr-civ-engine-replay-003-adr.md:1, docs/traceability/fr-civ-engine-replay-003/fr-civ-engine-replay-003-adr.md:6, docs/traceability/fr-civ-engine-replay-003/fr-civ-engine-replay-003-adr.md:11
+  - tests: crates/engine/src/engine/engine_tests.rs:1824, crates/engine/src/engine/engine_tests.rs:1826
+- `FR-CIV-ENGINE-REPLAY-004`
+  - spec: docs/traceability/fr-civ-engine-replay-004/fr-civ-engine-replay-004-adr.md:1, docs/traceability/fr-civ-engine-replay-004/fr-civ-engine-replay-004-adr.md:6, docs/traceability/fr-civ-engine-replay-004/fr-civ-engine-replay-004-adr.md:11
+  - tests: crates/engine/src/engine/engine_tests.rs:1842, crates/engine/src/engine/engine_tests.rs:1844
+- `FR-CIV-ENGINE-REPLAY-005`
+  - spec: docs/traceability/fr-civ-engine-replay-005/fr-civ-engine-replay-005-adr.md:1, docs/traceability/fr-civ-engine-replay-005/fr-civ-engine-replay-005-adr.md:6, docs/traceability/fr-civ-engine-replay-005/fr-civ-engine-replay-005-adr.md:11
+  - tests: crates/engine/src/engine/engine_tests.rs:1894, crates/engine/src/engine/engine_tests.rs:1896
+- `FR-CIV-GENETICS-SEED-001`
+  - spec: docs/traceability/fr-civ-genetics-seed-001/fr-civ-genetics-seed-001-intent.md:1, docs/traceability/fr-civ-genetics-seed-001/fr-civ-genetics-seed-001-intent.md:4, docs/traceability/fr-civ-genetics-seed-001/fr-civ-genetics-seed-001-intent.md:26
+  - tests: crates/engine/src/engine/engine_tests.rs:3059, crates/engine/src/engine/engine_tests.rs:4409, crates/engine/src/engine/engine_tests.rs:4424
+- `FR-CIV-GENETICS-SEED-002`
+  - spec: docs/traceability/fr-civ-genetics-seed-002/fr-civ-genetics-seed-002-intent.md:1, docs/traceability/fr-civ-genetics-seed-002/fr-civ-genetics-seed-002-intent.md:4, docs/traceability/fr-civ-genetics-seed-002/fr-civ-genetics-seed-002-intent.md:26
+  - tests: crates/engine/src/engine/engine_tests.rs:3109, crates/engine/src/engine/engine_tests.rs:4371
 - `FR-CIV-GODTOOL-910`
   - spec: docs/agileplus/epics/civ-w1-voxel-render.md:9, docs/agileplus/epics/civ-w1-voxel-render.md:19, docs/agileplus/README.md:20
   - tests: crates/engine/tests/fr_civ_godtool_cluster.rs:2, crates/engine/tests/fr_civ_godtool_cluster.rs:173, crates/engine/tests/fr_civ_godtool_cluster.rs:176
@@ -1040,6 +1091,12 @@
 - `FR-CIV-TEST-021`
   - spec: docs/traceability/fr-civ-test-021/fr-civ-test-021-intent.md:1, docs/traceability/fr-civ-test-021/fr-civ-test-021-intent.md:4, docs/traceability/fr-civ-test-021/fr-civ-test-021-intent.md:25
   - tests: crates/server/tests/save_load_e2e.rs:1
+- `FR-CIV-VOXEL-006`
+  - spec: docs/traceability/fr-civ-voxel-006/fr-civ-voxel-006-adr.md:1, docs/traceability/fr-civ-voxel-006/fr-civ-voxel-006-adr.md:6, docs/traceability/fr-civ-voxel-006/fr-civ-voxel-006-adr.md:11
+  - tests: crates/engine/src/engine/engine_tests.rs:1510, crates/engine/src/engine/engine_tests.rs:1513
+- `FR-CIV-VOXEL-007`
+  - spec: docs/traceability/fr-civ-voxel-007/fr-civ-voxel-007-adr.md:1, docs/traceability/fr-civ-voxel-007/fr-civ-voxel-007-adr.md:6, docs/traceability/fr-civ-voxel-007/fr-civ-voxel-007-adr.md:11
+  - tests: crates/engine/src/engine/engine_tests.rs:1561, crates/engine/src/engine/engine_tests.rs:1563
 - `FR-CORE-003`
   - spec: FUNCTIONAL_REQUIREMENTS.md, agileplus-specs/civ-001-core-simulation-engine/spec.md:26, agileplus-specs/civ-002-economy-joule-system/spec.md:42
   - tests: crates/engine/tests/fr_fr_core_003.rs:1
@@ -1112,6 +1169,9 @@
 - `FR-METRICS-005`
   - spec: docs/FR.md:37, docs/traceability/fr-metrics-005/fr-metrics-005-adr.md:1, docs/traceability/fr-metrics-005/fr-metrics-005-adr.md:6
   - tests: crates/engine/tests/fr_fr_metrics_005.rs:1, crates/engine/tests/fr_fr_metrics_005.rs:8, crates/engine/tests/fr_fr_metrics_005.rs:16
+- `FR-MUSIC-001`
+  - spec: docs/traceability/fr-music-001/fr-music-001-intent.md:1, docs/traceability/fr-music-001/fr-music-001-intent.md:4, docs/traceability/fr-music-001/fr-music-001-intent.md:26
+  - tests: crates/engine/src/engine/engine_tests.rs:3850
 - `FR-NFR-CIV-DEV-HYGIENE-001`
   - spec: docs/traceability/fr-nfr-civ-dev-hygiene-001/fr-nfr-civ-dev-hygiene-001-intent.md:1, docs/traceability/fr-nfr-civ-dev-hygiene-001/fr-nfr-civ-dev-hygiene-001-intent.md:4
   - tests: crates/engine/tests/fr_nfr_civ_dev_hygiene_001.rs:1, crates/engine/tests/fr_nfr_civ_dev_hygiene_001.rs:5, crates/engine/tests/fr_nfr_civ_dev_hygiene_001.rs:39
@@ -1228,14 +1288,9 @@
 
 _None._
 
-## Implemented but untested IDs (2)
+## Implemented but untested IDs (0)
 
-- `FR-CIV-MIGRATION-002`
-  - spec: docs/traceability/fr-emergence-matrix.md:216
-  - code: crates/emergence-migration/src/lib.rs:384, crates/emergence-migration/src/lib.rs:492
-- `FR-CIV-SAVE-004`
-  - spec: docs/traceability/civis-tracelinks.md:67, docs/traceability/fr-civ-save-004/fr-civ-save-004-adr.md:1, docs/traceability/fr-civ-save-004/fr-civ-save-004-adr.md:6
-  - code: crates/watch/src/api_tests.rs:292, crates/watch/src/api_tests.rs:375, crates/watch/src/saves_api.rs:180
+_None._
 
 ## Code-only IDs (missing spec/traceability) (1)
 

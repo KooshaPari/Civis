@@ -61,6 +61,7 @@ fn phase(tick: u64, period_ticks: u32) -> f32 {
     (tick % period_ticks.max(1) as u64) as f32 / period
 }
 
+// FR-CIV-ENGINE-INT-001
 /// Compute the deterministic climate snapshot for a given tick.
 pub fn compute_climate(tick: u64, planet: &PlanetConfig, moon: &MoonConfig) -> Climate {
     let day_phase = phase(tick, planet.day_length_ticks);
@@ -77,6 +78,7 @@ pub fn compute_climate(tick: u64, planet: &PlanetConfig, moon: &MoonConfig) -> C
     }
 }
 
+// FR-CIV-ENGINE-INT-005
 /// Determine whether the supplied climate falls within the daytime window.
 pub fn is_daytime(climate: &Climate) -> bool {
     (0.25..=0.75).contains(&climate.day_phase)

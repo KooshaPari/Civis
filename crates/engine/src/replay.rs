@@ -143,6 +143,7 @@ pub enum ReplayEvent {
     },
 }
 
+// FR-CIV-RTS-015
 /// Persistent replay log.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ReplayLog {

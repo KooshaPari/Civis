@@ -131,6 +131,7 @@ impl BuildingType {
     }
 }
 
+// FR-CIV-ARCH-00
 /// Shared tile-set registry (lazy static via function — deterministic contents).
 #[must_use]
 pub fn architecture_tile_sets() -> &'static [civ_build::TileSetProfile] {

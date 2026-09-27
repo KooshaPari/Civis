@@ -8,6 +8,8 @@
 /// Wall-clock duration (microseconds) recorded for one named tick phase.
 pub type PhaseTiming = (&'static str, u64);
 
+// FR-CIV-PERF-006
+// FR-CIV-PERF-004
 /// Transient per-tick timing record. Cleared and refilled every [`Simulation::tick`].
 ///
 /// [`Simulation::tick`]: crate::Simulation::tick

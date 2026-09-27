@@ -397,6 +397,7 @@ pub fn pending_commands_marker() -> &'static str {
     "SimStateSnapshot::pending_commands"
 }
 
+// FR-CIV-TACTICS-072
 /// Format `session.saved.v1` payload JSON for the event bus (EVENT_TAXONOMY).
 #[must_use]
 pub fn format_session_saved_event_json(

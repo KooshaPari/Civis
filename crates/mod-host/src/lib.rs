@@ -251,6 +251,7 @@ pub struct LoadedMod {
     pub float_contamination_site_count: u32,
 }
 
+// FR-CIV-TACTICS-070
 /// Registry of loaded mod manifests (v2 stub — no WASM guests).
 #[derive(Debug, Clone, Default)]
 pub struct ModRegistry {
@@ -376,6 +377,7 @@ impl ModHost {
         self.registry.mods()
     }
 
+// FR-CIV-TACTICS-067
     /// `mod.loaded.v1` records emitted on successful loads.
     #[must_use]
     pub fn loaded_records(&self) -> &[ModLoadedRecord] {
@@ -826,6 +828,7 @@ pub fn read_manifest_from_civmod(archive_path: &Path) -> Result<ModManifest, Man
     read_civmod_archive(archive_path).map(|(manifest, _)| manifest)
 }
 
+// FR-CIV-TACTICS-064
 /// Read manifest and optional `mod.wasm` from a `.civmod` ZIP archive.
 pub fn read_civmod_archive(
     archive_path: &Path,

@@ -1133,6 +1133,7 @@ pub struct GodActionRecord {
     pub params_json: String,
 }
 
+// FR-CIV-GODTOOL-921
 /// Maximum number of [`GodActionRecord`] entries retained per tick.
 ///
 /// Picked to comfortably cover bursty god-button UIs (each frame can fire
@@ -1714,6 +1715,7 @@ impl Simulation {
         &self.weather_grid
     }
 
+// FR-CIV-ENGINE-REPLAY-003
     /// Queue tactical voxel damage for the tactics phase.
     pub fn push_damage(&mut self, event: DamageEvent) {
         self.replay_log.record_damage(self.state.tick, event);
@@ -1900,6 +1902,7 @@ impl Simulation {
         &mut self.building_graph
     }
 
+// FR-CIV-ENGINE-INT-014
     /// Borrow the most recent cohort diffusion statistics.
     pub fn last_cohort_stats(&self) -> Option<&CohortStats> {
         self.last_cohort_stats.as_ref()
@@ -2735,6 +2738,7 @@ impl Simulation {
         }
     }
 
+// FR-CIV-ENGINE-INT-011
     /// Top-level buildings (layouts) phase (FR-CIV-ARCH wiring).
     ///
     /// Iterates over each settlement's stored list of

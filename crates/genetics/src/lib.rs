@@ -64,6 +64,7 @@ impl Dna {
     }
 }
 
+// FR-CIV-GODTOOL-911
 /// Per-class genetic configuration. New classes (humanoid, quadruped,
 /// silicate, …) are data-driven; this struct is the entire schema.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

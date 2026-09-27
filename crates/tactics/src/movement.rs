@@ -24,6 +24,7 @@ impl Default for OperationalMovementConfig {
     }
 }
 
+// FR-CIV-RTS-001
 /// Grid position update for a unit index in the operational slice.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GridMove {

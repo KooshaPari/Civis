@@ -63,6 +63,7 @@ pub enum GuestStateError {
     UnsupportedVersion(u32),
 }
 
+// FR-CIV-TACTICS-062
 /// UI / RPC row describing a loaded mod (mod browser stub).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ModBrowserEntry {

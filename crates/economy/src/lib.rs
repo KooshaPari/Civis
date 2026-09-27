@@ -206,6 +206,7 @@ pub enum LedgerInvariantError {
     },
 }
 
+// FR-CIV-TEST-006
 /// Verify macro budget and, when the ledger is non-empty, growth and leg balance.
 ///
 /// Posting bound: at most two legs per economy tick (consumption drain + tick-close).

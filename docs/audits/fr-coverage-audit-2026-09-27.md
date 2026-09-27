@@ -19,9 +19,9 @@
 
 | Status | Count | % |
 |--------|------:|--:|
-| `COVERED` | 1059 | 72.8 |
+| `COVERED` | 1060 | 72.9 |
 | `STUB-TEST-ONLY` | 0 | 0.0 |
-| `TEST-NO-CODE-REF` | 162 | 11.1 |
+| `TEST-NO-CODE-REF` | 161 | 11.1 |
 | `IMPL-NO-TEST` | 0 | 0.0 |
 | `SPEC-ONLY` | 233 | 16.0 |
 | `CODE-ONLY-no-spec` | 1 | 0.1 |
@@ -100,7 +100,7 @@
 | FR-CIV-FOG | 5 | 5 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-GAME | 3 | 3 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-GENETICS | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
-| FR-CIV-GENETICS-SEED | 3 | 1 | 0 | 2 | 0 | 0 | 0 |
+| FR-CIV-GENETICS-SEED | 3 | 2 | 0 | 1 | 0 | 0 | 0 |
 | FR-CIV-GEO | 10 | 0 | 0 | 0 | 0 | 10 | 0 |
 | FR-CIV-GODOT-ATTACH | 5 | 5 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-GODOT-F3D0 | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
@@ -741,7 +741,7 @@
 - `NFR-R-06`
   - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2082, docs/traceability/index.md:1230, docs/traceability/nfr-r-06/nfr-r-06-spec.md:1
 
-## Tested IDs with no ID-tagged code (add a code reference) (162)
+## Tested IDs with no ID-tagged code (add a code reference) (161)
 
 - `FR-CIV-CORE-021`
   - spec: docs/traceability/fr-civ-core-021/fr-civ-core-021-intent.md:1, docs/traceability/fr-civ-core-021/fr-civ-core-021-intent.md:4
@@ -797,9 +797,6 @@
 - `FR-CIV-ENGINE-REPLAY-005`
   - spec: docs/traceability/fr-civ-engine-replay-005/fr-civ-engine-replay-005-adr.md:1, docs/traceability/fr-civ-engine-replay-005/fr-civ-engine-replay-005-adr.md:6, docs/traceability/fr-civ-engine-replay-005/fr-civ-engine-replay-005-adr.md:11
   - tests: crates/engine/src/engine/engine_tests.rs:1894, crates/engine/src/engine/engine_tests.rs:1896
-- `FR-CIV-GENETICS-SEED-001`
-  - spec: docs/traceability/fr-civ-genetics-seed-001/fr-civ-genetics-seed-001-intent.md:1, docs/traceability/fr-civ-genetics-seed-001/fr-civ-genetics-seed-001-intent.md:4, docs/traceability/fr-civ-genetics-seed-001/fr-civ-genetics-seed-001-intent.md:26
-  - tests: crates/engine/src/engine/engine_tests.rs:3059, crates/engine/src/engine/engine_tests.rs:4409, crates/engine/src/engine/engine_tests.rs:4424
 - `FR-CIV-GENETICS-SEED-002`
   - spec: docs/traceability/fr-civ-genetics-seed-002/fr-civ-genetics-seed-002-intent.md:1, docs/traceability/fr-civ-genetics-seed-002/fr-civ-genetics-seed-002-intent.md:4, docs/traceability/fr-civ-genetics-seed-002/fr-civ-genetics-seed-002-intent.md:26
   - tests: crates/engine/src/engine/engine_tests.rs:3109, crates/engine/src/engine/engine_tests.rs:4371

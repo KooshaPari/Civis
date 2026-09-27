@@ -557,6 +557,7 @@ pub fn spawn_civilian_at(
     entity
 }
 
+// FR-CIV-GENETICS-SEED-001
 /// Spawn a deterministic batch of civilians with sequential IDs.
 pub fn spawn_many(
     world: &mut World,

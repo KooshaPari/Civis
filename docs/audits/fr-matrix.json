@@ -13,9 +13,9 @@
   "totals": {
     "rows": 1455,
     "by_status": {
-      "COVERED": 1059,
+      "COVERED": 1060,
       "STUB-TEST-ONLY": 0,
-      "TEST-NO-CODE-REF": 162,
+      "TEST-NO-CODE-REF": 161,
       "IMPL-NO-TEST": 0,
       "SPEC-ONLY": 233,
       "CODE-ONLY-no-spec": 1
@@ -816,9 +816,9 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-GENETICS-SEED": {
-        "COVERED": 1,
+        "COVERED": 2,
         "STUB-TEST-ONLY": 0,
-        "TEST-NO-CODE-REF": 2,
+        "TEST-NO-CODE-REF": 1,
         "IMPL-NO-TEST": 0,
         "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 0
@@ -3797,10 +3797,10 @@
         "docs/traceability/fr-civ-agents-000/fr-civ-agents-000-plan.md:1"
       ],
       "code_refs": [
-        "crates/agents/src/lib.rs:864"
+        "crates/agents/src/lib.rs:865"
       ],
       "test_refs": [
-        "crates/agents/src/lib.rs:864"
+        "crates/agents/src/lib.rs:865"
       ],
       "stub_test_refs": []
     },
@@ -3826,12 +3826,12 @@
         "docs/traceability/fr-civ-agents-001/fr-civ-agents-001-plan.md:1"
       ],
       "code_refs": [
-        "crates/agents/src/lib.rs:877",
-        "crates/agents/src/lib.rs:904"
+        "crates/agents/src/lib.rs:878",
+        "crates/agents/src/lib.rs:905"
       ],
       "test_refs": [
-        "crates/agents/src/lib.rs:877",
-        "crates/agents/src/lib.rs:904"
+        "crates/agents/src/lib.rs:878",
+        "crates/agents/src/lib.rs:905"
       ],
       "stub_test_refs": []
     },
@@ -3850,10 +3850,10 @@
         "docs/traceability/fr-civ-agents-002/fr-civ-agents-002-plan.md:1"
       ],
       "code_refs": [
-        "crates/agents/src/lib.rs:923"
+        "crates/agents/src/lib.rs:924"
       ],
       "test_refs": [
-        "crates/agents/src/lib.rs:923"
+        "crates/agents/src/lib.rs:924"
       ],
       "stub_test_refs": []
     },
@@ -3872,10 +3872,10 @@
         "docs/traceability/fr-civ-agents-003/fr-civ-agents-003-plan.md:1"
       ],
       "code_refs": [
-        "crates/agents/src/lib.rs:939"
+        "crates/agents/src/lib.rs:940"
       ],
       "test_refs": [
-        "crates/agents/src/lib.rs:939"
+        "crates/agents/src/lib.rs:940"
       ],
       "stub_test_refs": []
     },
@@ -3897,12 +3897,12 @@
         "docs/traceability/fr-civ-agents-010/fr-civ-agents-010-plan.md:1"
       ],
       "code_refs": [
-        "crates/agents/src/lib.rs:954",
-        "crates/agents/src/lib.rs:978"
+        "crates/agents/src/lib.rs:955",
+        "crates/agents/src/lib.rs:979"
       ],
       "test_refs": [
-        "crates/agents/src/lib.rs:954",
-        "crates/agents/src/lib.rs:978"
+        "crates/agents/src/lib.rs:955",
+        "crates/agents/src/lib.rs:979"
       ],
       "stub_test_refs": []
     },
@@ -3921,10 +3921,10 @@
         "docs/traceability/fr-civ-agents-011/fr-civ-agents-011-plan.md:1"
       ],
       "code_refs": [
-        "crates/agents/src/lib.rs:998"
+        "crates/agents/src/lib.rs:999"
       ],
       "test_refs": [
-        "crates/agents/src/lib.rs:998"
+        "crates/agents/src/lib.rs:999"
       ],
       "stub_test_refs": []
     },
@@ -3943,10 +3943,10 @@
         "docs/traceability/fr-civ-agents-020/fr-civ-agents-020-plan.md:1"
       ],
       "code_refs": [
-        "crates/agents/src/lib.rs:1014"
+        "crates/agents/src/lib.rs:1015"
       ],
       "test_refs": [
-        "crates/agents/src/lib.rs:1014"
+        "crates/agents/src/lib.rs:1015"
       ],
       "stub_test_refs": []
     },
@@ -3965,10 +3965,10 @@
         "docs/traceability/fr-civ-agents-021/fr-civ-agents-021-plan.md:1"
       ],
       "code_refs": [
-        "crates/agents/src/lib.rs:1077"
+        "crates/agents/src/lib.rs:1078"
       ],
       "test_refs": [
-        "crates/agents/src/lib.rs:1077"
+        "crates/agents/src/lib.rs:1078"
       ],
       "stub_test_refs": []
     },
@@ -3987,10 +3987,10 @@
         "docs/traceability/fr-civ-agents-022/fr-civ-agents-022-plan.md:1"
       ],
       "code_refs": [
-        "crates/agents/src/lib.rs:1091"
+        "crates/agents/src/lib.rs:1092"
       ],
       "test_refs": [
-        "crates/agents/src/lib.rs:1091"
+        "crates/agents/src/lib.rs:1092"
       ],
       "stub_test_refs": []
     },
@@ -4009,10 +4009,10 @@
         "docs/traceability/fr-civ-agents-023/fr-civ-agents-023-plan.md:1"
       ],
       "code_refs": [
-        "crates/agents/src/lib.rs:1338"
+        "crates/agents/src/lib.rs:1339"
       ],
       "test_refs": [
-        "crates/agents/src/lib.rs:1338"
+        "crates/agents/src/lib.rs:1339"
       ],
       "stub_test_refs": []
     },
@@ -4031,10 +4031,10 @@
         "docs/traceability/fr-civ-agents-024/fr-civ-agents-024-plan.md:1"
       ],
       "code_refs": [
-        "crates/agents/src/lib.rs:1361"
+        "crates/agents/src/lib.rs:1362"
       ],
       "test_refs": [
-        "crates/agents/src/lib.rs:1361"
+        "crates/agents/src/lib.rs:1362"
       ],
       "stub_test_refs": []
     },
@@ -4053,10 +4053,10 @@
         "docs/traceability/fr-civ-agents-025/fr-civ-agents-025-plan.md:1"
       ],
       "code_refs": [
-        "crates/agents/src/lib.rs:1655"
+        "crates/agents/src/lib.rs:1656"
       ],
       "test_refs": [
-        "crates/agents/src/lib.rs:1655"
+        "crates/agents/src/lib.rs:1656"
       ],
       "stub_test_refs": []
     },
@@ -4075,10 +4075,10 @@
         "docs/traceability/fr-civ-agents-030/fr-civ-agents-030-plan.md:1"
       ],
       "code_refs": [
-        "crates/agents/src/lib.rs:1242"
+        "crates/agents/src/lib.rs:1243"
       ],
       "test_refs": [
-        "crates/agents/src/lib.rs:1242"
+        "crates/agents/src/lib.rs:1243"
       ],
       "stub_test_refs": []
     },
@@ -4097,10 +4097,10 @@
         "docs/traceability/fr-civ-agents-031/fr-civ-agents-031-plan.md:1"
       ],
       "code_refs": [
-        "crates/agents/src/lib.rs:1263"
+        "crates/agents/src/lib.rs:1264"
       ],
       "test_refs": [
-        "crates/agents/src/lib.rs:1263"
+        "crates/agents/src/lib.rs:1264"
       ],
       "stub_test_refs": []
     },
@@ -4119,10 +4119,10 @@
         "docs/traceability/fr-civ-agents-032/fr-civ-agents-032-plan.md:1"
       ],
       "code_refs": [
-        "crates/agents/src/lib.rs:1274"
+        "crates/agents/src/lib.rs:1275"
       ],
       "test_refs": [
-        "crates/agents/src/lib.rs:1274"
+        "crates/agents/src/lib.rs:1275"
       ],
       "stub_test_refs": []
     },
@@ -4141,10 +4141,10 @@
         "docs/traceability/fr-civ-agents-033/fr-civ-agents-033-plan.md:1"
       ],
       "code_refs": [
-        "crates/agents/src/lib.rs:1290"
+        "crates/agents/src/lib.rs:1291"
       ],
       "test_refs": [
-        "crates/agents/src/lib.rs:1290"
+        "crates/agents/src/lib.rs:1291"
       ],
       "stub_test_refs": []
     },
@@ -4163,10 +4163,10 @@
         "docs/traceability/fr-civ-agents-034/fr-civ-agents-034-plan.md:1"
       ],
       "code_refs": [
-        "crates/agents/src/lib.rs:1318"
+        "crates/agents/src/lib.rs:1319"
       ],
       "test_refs": [
-        "crates/agents/src/lib.rs:1318"
+        "crates/agents/src/lib.rs:1319"
       ],
       "stub_test_refs": []
     },
@@ -10245,13 +10245,13 @@
       ],
       "code_refs": [
         "crates/agents/src/lib.rs:140",
-        "crates/agents/src/lib.rs:1493",
-        "crates/agents/src/lib.rs:1533",
+        "crates/agents/src/lib.rs:1494",
+        "crates/agents/src/lib.rs:1534",
         "crates/engine/src/engine.rs:579"
       ],
       "test_refs": [
-        "crates/agents/src/lib.rs:1493",
-        "crates/agents/src/lib.rs:1533",
+        "crates/agents/src/lib.rs:1494",
+        "crates/agents/src/lib.rs:1534",
         "crates/civ-emergence-metrics/tests/fr_civ_emergence_tests.rs:1",
         "crates/civ-emergence-metrics/tests/fr_civ_emergence_tests.rs:3",
         "crates/civ-emergence-metrics/tests/fr_civ_emergence_tests.rs:37",
@@ -10283,14 +10283,14 @@
       "code_refs": [
         "crates/agents/src/lib.rs:154",
         "crates/agents/src/lib.rs:183",
-        "crates/agents/src/lib.rs:1555",
-        "crates/agents/src/lib.rs:1604",
-        "crates/agents/src/lib.rs:1629"
+        "crates/agents/src/lib.rs:1556",
+        "crates/agents/src/lib.rs:1605",
+        "crates/agents/src/lib.rs:1630"
       ],
       "test_refs": [
-        "crates/agents/src/lib.rs:1555",
-        "crates/agents/src/lib.rs:1604",
-        "crates/agents/src/lib.rs:1629",
+        "crates/agents/src/lib.rs:1556",
+        "crates/agents/src/lib.rs:1605",
+        "crates/agents/src/lib.rs:1630",
         "crates/civ-emergence-metrics/tests/fr_fr_civ_emergence_002.rs:1"
       ],
       "stub_test_refs": []
@@ -10419,12 +10419,12 @@
       ],
       "code_refs": [
         "crates/agents/src/lib.rs:183",
-        "crates/agents/src/lib.rs:1381",
-        "crates/agents/src/lib.rs:1440"
+        "crates/agents/src/lib.rs:1382",
+        "crates/agents/src/lib.rs:1441"
       ],
       "test_refs": [
-        "crates/agents/src/lib.rs:1381",
-        "crates/agents/src/lib.rs:1440",
+        "crates/agents/src/lib.rs:1382",
+        "crates/agents/src/lib.rs:1441",
         "crates/civ-emergence-metrics/tests/fr_fr_civ_emergence_010.rs:1"
       ],
       "stub_test_refs": []
@@ -11509,7 +11509,7 @@
     },
     {
       "id": "FR-CIV-GENETICS-SEED-001",
-      "status": "TEST-NO-CODE-REF",
+      "status": "COVERED",
       "epic": "FR-CIV-GENETICS-SEED",
       "spec_refs": [
         "docs/traceability/fr-civ-genetics-seed-001/fr-civ-genetics-seed-001-intent.md:1",
@@ -11517,7 +11517,9 @@
         "docs/traceability/fr-civ-genetics-seed-001/fr-civ-genetics-seed-001-intent.md:26",
         "docs/traceability/fr-civ-genetics-seed-001/fr-civ-genetics-seed-001-intent.md:56"
       ],
-      "code_refs": [],
+      "code_refs": [
+        "crates/agents/src/lib.rs:560"
+      ],
       "test_refs": [
         "crates/engine/src/engine/engine_tests.rs:3059",
         "crates/engine/src/engine/engine_tests.rs:4409",

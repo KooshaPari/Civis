@@ -2,7 +2,7 @@
 
 **Generated:** 2026-09-29  
 **Source inventory:** `docs/audits/_id_inventory_v3.json`  
-**Total IDs scanned:** 1422
+**Total IDs scanned:** 1423
 
 ## Status legend
 
@@ -19,13 +19,13 @@
 
 | Status | Count | % |
 |--------|------:|--:|
-| `COVERED` | 1060 | 74.5 |
+| `COVERED` | 1057 | 74.3 |
 | `STUB-TEST-ONLY` | 0 | 0.0 |
-| `TEST-NO-CODE-REF` | 157 | 11.0 |
-| `IMPL-NO-TEST` | 0 | 0.0 |
-| `SPEC-ONLY` | 205 | 14.4 |
-| `CODE-ONLY-no-spec` | 0 | 0.0 |
-| **Total** | **1422** | **100.0** |
+| `TEST-NO-CODE-REF` | 154 | 10.8 |
+| `IMPL-NO-TEST` | 9 | 0.6 |
+| `SPEC-ONLY` | 202 | 14.2 |
+| `CODE-ONLY-no-spec` | 1 | 0.1 |
+| **Total** | **1423** | **100.0** |
 
 ## Coverage by epic
 
@@ -52,7 +52,7 @@
 | FR-CIV-ARCH-C | 4 | 4 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-ARCH-D | 4 | 4 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-ARCH-NOSVG | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
-| FR-CIV-ASSET | 20 | 8 | 0 | 0 | 0 | 12 | 0 |
+| FR-CIV-ASSET | 20 | 0 | 0 | 0 | 9 | 11 | 0 |
 | FR-CIV-ASSET-MANI | 2 | 2 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-ASSET-QUAL | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-AUDIO | 12 | 8 | 0 | 0 | 0 | 4 | 0 |
@@ -139,7 +139,7 @@
 | FR-CIV-METRICS | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-METRICS-001-TIMESERIES | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-MIGRATION | 5 | 5 | 0 | 0 | 0 | 0 | 0 |
-| FR-CIV-MOD | 21 | 21 | 0 | 0 | 0 | 0 | 0 |
+| FR-CIV-MOD | 22 | 21 | 0 | 0 | 0 | 0 | 1 |
 | FR-CIV-NEEDS-DECAY | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-NOTIFY | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-PBR | 11 | 11 | 0 | 0 | 0 | 0 | 0 |
@@ -171,13 +171,13 @@
 | FR-CIV-SAVE | 4 | 4 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-SCALE | 8 | 8 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-SERVER | 3 | 3 | 0 | 0 | 0 | 0 | 0 |
-| FR-CIV-SERVER-001-WS | 1 | 0 | 0 | 1 | 0 | 0 | 0 |
+| FR-CIV-SERVER-001-WS | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-SERVER-002-PROTO | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-SOCIAL | 2 | 0 | 0 | 0 | 0 | 2 | 0 |
 | FR-CIV-SOCIAL-001-INSTITUTIONS | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-SOCIAL-002-IDEOLOGY | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-SPECIES | 48 | 13 | 0 | 0 | 0 | 35 | 0 |
-| FR-CIV-TACTICS | 63 | 53 | 0 | 10 | 0 | 0 | 0 |
+| FR-CIV-TACTICS | 63 | 54 | 0 | 9 | 0 | 0 | 0 |
 | FR-CIV-TECH | 21 | 4 | 0 | 0 | 0 | 17 | 0 |
 | FR-CIV-TERRAIN | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-TEST | 7 | 1 | 0 | 6 | 0 | 0 | 0 |
@@ -221,7 +221,7 @@
 | FR-PROTO | 5 | 0 | 0 | 5 | 0 | 0 | 0 |
 | FR-REP | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-REPLAY | 2 | 1 | 0 | 1 | 0 | 0 | 0 |
-| FR-SAVE | 25 | 15 | 0 | 0 | 0 | 10 | 0 |
+| FR-SAVE | 25 | 17 | 0 | 0 | 0 | 8 | 0 |
 | FR-SESS | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
 | FR-SESSION | 33 | 33 | 0 | 0 | 0 | 0 | 0 |
 | FR-SOC-CIV | 2 | 2 | 0 | 0 | 0 | 0 | 0 |
@@ -254,7 +254,7 @@
 | NFR-CIV-PERF | 11 | 2 | 0 | 0 | 0 | 9 | 0 |
 | NFR-CIV-PORT | 3 | 3 | 0 | 0 | 0 | 0 | 0 |
 | NFR-CIV-REL | 4 | 1 | 0 | 0 | 0 | 3 | 0 |
-| NFR-CIV-SCALE | 9 | 0 | 0 | 3 | 0 | 6 | 0 |
+| NFR-CIV-SCALE | 9 | 1 | 0 | 2 | 0 | 6 | 0 |
 | NFR-CIV-SCALE-PERF | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | NFR-CIV-SEC | 4 | 1 | 0 | 0 | 0 | 3 | 0 |
 | NFR-O | 6 | 0 | 0 | 0 | 0 | 6 | 0 |
@@ -263,7 +263,7 @@
 | NFR-S | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
 | NFR-SCALE | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 
-## Spec-only IDs (need implementation) (205)
+## Spec-only IDs (need implementation) (202)
 
 - `FR-CIV-0700`
   - spec: docs/design/civ-actor-assets-fix.md:322
@@ -275,8 +275,6 @@
   - spec: docs/specs/CIV-0600-2d-asset-pipeline-spec.md:2507, docs/specs/CIV-0600-2d-asset-pipeline-spec.md:3213, docs/traceability/fr-civ-asset-009/fr-civ-asset-009-adr.md:1
 - `FR-CIV-ASSET-010`
   - spec: docs/specs/CIV-0600-2d-asset-pipeline-spec.md:80, docs/specs/CIV-0600-2d-asset-pipeline-spec.md:2425, docs/specs/CIV-0600-2d-asset-pipeline-spec.md:2517
-- `FR-CIV-ASSET-011`
-  - spec: docs/specs/CIV-0600-2d-asset-pipeline-spec.md:81, docs/specs/CIV-0600-2d-asset-pipeline-spec.md:2527, docs/specs/CIV-0600-2d-asset-pipeline-spec.md:2529
 - `FR-CIV-ASSET-012`
   - spec: docs/specs/CIV-0600-2d-asset-pipeline-spec.md:2539, docs/specs/CIV-0600-2d-asset-pipeline-spec.md:2917, docs/specs/CIV-0600-2d-asset-pipeline-spec.md:3216
 - `FR-CIV-ASSET-013`
@@ -511,12 +509,8 @@
   - spec: docs/development-guide/fr-web-spectator.md:33, docs/traceability/fr-civ-web-004/fr-civ-web-004-adr.md:1, docs/traceability/fr-civ-web-004/fr-civ-web-004-adr.md:6
 - `FR-CIV-WEB-005`
   - spec: docs/development-guide/fr-web-spectator.md:34, docs/traceability/fr-civ-web-005/fr-civ-web-005-adr.md:1, docs/traceability/fr-civ-web-005/fr-civ-web-005-adr.md:6
-- `FR-SAVE-006`
-  - spec: docs/specs/CIV-1000-save-load-persistence-spec.md:2805, docs/specs/CIV-1000-save-load-persistence-spec.md:2943, docs/traceability/fr-save-006/fr-save-006-adr.md:1
 - `FR-SAVE-008`
   - spec: docs/specs/CIV-1000-save-load-persistence-spec.md:2807, docs/specs/CIV-1000-save-load-persistence-spec.md:2949, docs/traceability/fr-save-008/fr-save-008-adr.md:1
-- `FR-SAVE-009`
-  - spec: docs/specs/CIV-1000-save-load-persistence-spec.md:2808, docs/traceability/fr-save-009/fr-save-009-adr.md:1, docs/traceability/fr-save-009/fr-save-009-adr.md:6
 - `FR-SAVE-011`
   - spec: docs/specs/CIV-1000-save-load-persistence-spec.md:2810, docs/specs/CIV-1000-save-load-persistence-spec.md:2963, docs/traceability/fr-save-011/fr-save-011-adr.md:1
 - `FR-SAVE-012`
@@ -676,7 +670,7 @@
 - `NFR-R-06`
   - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2082, docs/traceability/index.md:1230, docs/traceability/nfr-r-06/nfr-r-06-intent.md:1
 
-## Tested IDs with no ID-tagged code (add a code reference) (157)
+## Tested IDs with no ID-tagged code (add a code reference) (154)
 
 - `FR-CIV-CORE-021`
   - spec: docs/traceability/fr-civ-core-021/fr-civ-core-021-intent.md:1, docs/traceability/fr-civ-core-021/fr-civ-core-021-intent.md:4
@@ -914,13 +908,10 @@
   - tests: crates/engine/tests/fr_fr_civ_rts_014.rs:1, crates/engine/tests/fr_fr_civ_rts_014.rs:5
 - `FR-CIV-RTS-NATION-001`
   - spec: docs/specs/CIV-0600-2d-asset-pipeline-spec.md:3209, docs/traceability/fr-civ-rts-nation-001/fr-civ-rts-nation-001-adr.md:1, docs/traceability/fr-civ-rts-nation-001/fr-civ-rts-nation-001-adr.md:6
-  - tests: crates/engine/tests/fr_fr_civ_rts_nation_001.rs:1, crates/engine/tests/fr_fr_civ_rts_nation_001.rs:4, crates/engine/tests/fr_fr_civ_rts_nation_001.rs:11
+  - tests: crates/engine/tests/rts_nation_color_rgba.rs:3
 - `FR-CIV-RTS-NATION-002`
   - spec: docs/specs/CIV-0600-2d-asset-pipeline-spec.md:3220, docs/traceability/fr-civ-rts-nation-002/fr-civ-rts-nation-002-adr.md:1, docs/traceability/fr-civ-rts-nation-002/fr-civ-rts-nation-002-adr.md:6
-  - tests: crates/engine/tests/fr_fr_civ_rts_nation_002.rs:1, crates/engine/tests/fr_fr_civ_rts_nation_002.rs:4, crates/engine/tests/fr_fr_civ_rts_nation_002.rs:11
-- `FR-CIV-SERVER-001-WS`
-  - spec: agileplus-specs/civ-021-recovered-requirements/spec.md:221, agileplus-specs/civ-021-recovered-requirements/spec.md:222, PLAN.md:174
-  - tests: crates/server/tests/fr_civ_server_tests.rs:3, crates/server/tests/fr_civ_server_tests.rs:18, crates/server/tests/fr_fr_civ_server_001_ws.rs:1
+  - tests: crates/engine/tests/rts_nation_shader_tolerance.rs:3
 - `FR-CIV-TACTICS-051`
   - spec: docs/development-guide/p-w1-kickoff.md:53, docs/traceability/fr-3d-matrix.md:141, docs/traceability/full-traceability-matrix.md:246
   - tests: crates/tactics/tests/fr_civ_tactics_tests.rs:18, crates/tactics/tests/fr_civ_tactics_tests.rs:26, crates/tactics/tests/fr_fr_civ_tactics_051.rs:1
@@ -939,9 +930,6 @@
 - `FR-CIV-TACTICS-073`
   - spec: docs/development-guide/p-w1-kickoff.md:75, docs/traceability/fr-3d-matrix.md:163, docs/traceability/full-traceability-matrix.md:268
   - tests: crates/tactics/tests/fr_fr_civ_tactics_073.rs:1, crates/tactics/tests/fr_fr_civ_tactics_073.rs:6, crates/tactics/tests/fr_fr_civ_tactics_073.rs:16
-- `FR-CIV-TACTICS-076`
-  - spec: docs/development-guide/p-w1-kickoff.md:78, docs/traceability/fr-3d-matrix.md:166, docs/traceability/full-traceability-matrix.md:271
-  - tests: crates/tactics/tests/fr_civ_tactics_tests.rs:41, crates/tactics/tests/fr_civ_tactics_tests.rs:49, crates/tactics/tests/fr_fr_civ_tactics_076.rs:1
 - `FR-CIV-TACTICS-100`
   - spec: agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:36, docs/traceability/fr-civ-tactics-100/fr-civ-tactics-100-adr.md:1, docs/traceability/fr-civ-tactics-100/fr-civ-tactics-100-adr.md:6
   - tests: crates/tactics/tests/fr_fr_civ_tactics_100.rs:1, crates/tactics/tests/fr_fr_civ_tactics_100.rs:6, crates/tactics/tests/fr_fr_civ_tactics_100.rs:14
@@ -1143,9 +1131,6 @@
 - `NFR-CIV-SCALE-001`
   - spec: docs/reference/non-functional-requirements.md:82, docs/reference/non-functional-requirements.md:188, docs/reference/non-functional-requirements.md:562
   - tests: crates/protocol-3d/tests/fr_perf_005_frame3d_timing.rs:85
-- `NFR-CIV-SCALE-002`
-  - spec: docs/guides/voxel-emergent-vision-and-migration.md:96, docs/guides/voxel-emergent-vision-and-migration.md:152, docs/reference/non-functional-requirements.md:110
-  - tests: crates/voxel/tests/fr_civ_render_001_chunk_stream_radius.rs:6
 - `NFR-CIV-SCALE-901`
   - spec: docs/agileplus/epics/civ-w5-scale.md:10, docs/agileplus/epics/civ-w5-scale.md:23, docs/agileplus/README.md:24
   - tests: crates/voxel/tests/fr_nfr_civ_scale_901.rs:1
@@ -1154,20 +1139,50 @@
 
 _None._
 
-## Implemented but untested IDs (0)
+## Implemented but untested IDs (9)
 
-_None._
+- `FR-CIV-ASSET-001`
+  - spec: docs/specs/CIV-0600-2d-asset-pipeline-spec.md:80, docs/specs/CIV-0600-2d-asset-pipeline-spec.md:2425, docs/specs/CIV-0600-2d-asset-pipeline-spec.md:2427
+  - code: crates/engine/src/rts_types.rs:294, crates/engine/src/rts_types.rs:295, crates/render/src/atlas.rs:24
+- `FR-CIV-ASSET-003`
+  - spec: docs/specs/CIV-0600-2d-asset-pipeline-spec.md:2447, docs/specs/CIV-0600-2d-asset-pipeline-spec.md:3207, docs/traceability/fr-civ-asset-003/fr-civ-asset-003-adr.md:1
+  - code: crates/engine/src/rts_types.rs:17, crates/engine/src/rts_types.rs:294, crates/engine/src/rts_types.rs:296
+- `FR-CIV-ASSET-004`
+  - spec: docs/specs/CIV-0600-2d-asset-pipeline-spec.md:2457, docs/specs/CIV-0600-2d-asset-pipeline-spec.md:3208, docs/traceability/fr-civ-asset-004/fr-civ-asset-004-adr.md:1
+  - code: crates/engine/src/rts_types.rs:18, crates/engine/src/rts_types.rs:42
+- `FR-CIV-ASSET-005`
+  - spec: docs/specs/CIV-0600-2d-asset-pipeline-spec.md:2467, docs/specs/CIV-0600-2d-asset-pipeline-spec.md:3209, docs/traceability/fr-civ-asset-005/fr-civ-asset-005-adr.md:1
+  - code: crates/engine/src/rts_types.rs:19
+- `FR-CIV-ASSET-006`
+  - spec: docs/specs/CIV-0600-2d-asset-pipeline-spec.md:2477, docs/specs/CIV-0600-2d-asset-pipeline-spec.md:3210, docs/traceability/fr-civ-asset-006/fr-civ-asset-006-adr.md:1
+  - code: crates/engine/src/rts_types.rs:95
+- `FR-CIV-ASSET-007`
+  - spec: docs/specs/CIV-0600-2d-asset-pipeline-spec.md:2487, docs/specs/CIV-0600-2d-asset-pipeline-spec.md:3211, docs/traceability/fr-civ-asset-007/fr-civ-asset-007-adr.md:1
+  - code: crates/engine/src/rts_types.rs:252
+- `FR-CIV-ASSET-011`
+  - spec: docs/specs/CIV-0600-2d-asset-pipeline-spec.md:81, docs/specs/CIV-0600-2d-asset-pipeline-spec.md:2527, docs/specs/CIV-0600-2d-asset-pipeline-spec.md:2529
+  - code: crates/render/src/atlas.rs:26
+- `FR-CIV-ASSET-016`
+  - spec: docs/specs/CIV-0600-2d-asset-pipeline-spec.md:2579, docs/specs/CIV-0600-2d-asset-pipeline-spec.md:3220, docs/traceability/fr-civ-asset-016/fr-civ-asset-016-adr.md:1
+  - code: crates/engine/src/rts_types.rs:21
+- `FR-CIV-ASSET-018`
+  - spec: docs/specs/CIV-0600-2d-asset-pipeline-spec.md:2599, docs/specs/CIV-0600-2d-asset-pipeline-spec.md:3222, docs/traceability/fr-civ-asset-018/fr-civ-asset-018-adr.md:1
+  - code: crates/engine/src/rts_types.rs:208
 
-## Code-only IDs (missing spec/traceability) (0)
+## Code-only IDs (missing spec/traceability) (1)
 
-_None._
+- `FR-CIV-MOD-00`
+  - code: crates/mod-host/src/lib.rs:82
 
-## Placeholder-only coverage (weakest evidence) (56)
+## Placeholder-only coverage (weakest evidence) (59)
 
 These IDs are counted `COVERED` on tests whose file matches the auto-generated placeholder pattern above. Their tests assert properties of shared types, not the requirement, so treat the coverage as unverified until a real oracle exists.
 
-`183` placeholder test files affect `56` IDs.
+`183` placeholder test files affect `59` IDs.
 
+- `FR-AUD-001`
+- `FR-AUD-002`
+- `FR-AUD-003`
 - `FR-SESSION-001`
 - `FR-SESSION-002`
 - `FR-SESSION-003`

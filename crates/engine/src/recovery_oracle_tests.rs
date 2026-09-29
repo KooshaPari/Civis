@@ -77,7 +77,7 @@ fn recovery_oracle_guest_memory_does_not_prove_loaded_mod_restoration() {
         "fixture first proves orphan guest bytes survive"
     );
     assert!(
-        loaded.mod_host().mods().iter().any(|m| m.manifest.id == orphan_id),
+        loaded.mod_host().mods().iter().any(|m| m.manifest.meta.id == orphan_id),
         "EXPECTED CURRENT FAILURE / CONTRACT QUESTION: guest memory exists without a corresponding loaded mod; a mature load must resolve, migrate, reject, or explicitly degrade this state rather than call bytes alone a restored active mod"
     );
 }

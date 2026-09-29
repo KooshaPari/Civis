@@ -4,11 +4,27 @@ use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use thiserror::Error;
 
 /// Detached signature filename inside a `.civmod` archive.
-// FR-CIV-MOD-014
+// The following 1 requirement tags were removed from MOD_WASM_SIG_NAME.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// See the namespace-collision note above.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-MOD-014: COLLIDING ID. modding-platform.md:40 = hot-reload with staged code tier; CIV-0700:2460 = Lua script parity. ModHost::reload_mod is an unload-then-reload with no file watcher and no staged tier, and a failed reload leaves the mod unloaded rather than keeping the prior version; grep for lua under crates/ returns zero. Tagged on a filename const and an error enum (signature.rs)
 pub const MOD_WASM_SIG_NAME: &str = "mod.wasm.sig";
 
 /// Signature verification failures.
-// FR-CIV-MOD-014
+// The following 1 requirement tags were removed from SignatureError.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// See the namespace-collision note above. The correct id for this file is CIV-0700
+// FR-CIV-MOD-008 (Signature Verification); it is not written anywhere, and applying
+// it is deferred until the collision is resolved.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-MOD-014: COLLIDING ID. modding-platform.md:40 = hot-reload with staged code tier; CIV-0700:2460 = Lua script parity. ModHost::reload_mod is an unload-then-reload with no file watcher and no staged tier, and a failed reload leaves the mod unloaded rather than keeping the prior version; grep for lua under crates/ returns zero. Tagged on a filename const and an error enum (signature.rs)
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum SignatureError {
     /// Hex pubkey in manifest is malformed.

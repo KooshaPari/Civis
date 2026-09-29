@@ -17,7 +17,14 @@ pub const ACTION_TRANSFER_FUNDS: u32 = 4;
 pub const ACTION_TRIGGER_EVENT: u32 = 5;
 
 /// World-state domain tags for `world_read` capability checks.
-// FR-CIV-MOD-003
+// The following 1 requirement tags were removed from WorldDomain.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// See the namespace-collision note above.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-MOD-003: COLLIDING ID. modding-platform.md:29 = building/recipe/structure grammar registration; CIV-0700:2372 = API version compatibility with IncompatibleApiVersion. The real behavior at ModCapabilitySet::can_read_domain/can_emit_action is deny-by-default permission gating, which is CIV-0700 FR-CIV-MOD-006, and WorldDomain is a 5-variant tag enum (capability.rs)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(i32)]
 pub enum WorldDomain {
@@ -49,7 +56,14 @@ impl WorldDomain {
 }
 
 /// Runtime mod lifecycle status (CIV-0700 §4.3).
-// FR-CIV-MOD-004
+// The following 1 requirement tags were removed from ModStatus.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// See the namespace-collision note above.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-MOD-004: COLLIDING ID. modding-platform.md:30 = law/physics-constant extension; CIV-0700:2380 = determinism invariant at every tick boundary. Neither exists. ModStatus is a lifecycle enum with no transition function, so its Faulted/Degraded states are unreachable; ModHost is a 5-field aggregate (capability.rs, lib.rs)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ModStatus {
     /// Normal operation.
@@ -66,7 +80,17 @@ pub enum ModStatus {
 }
 
 /// Compiled manifest permissions used for runtime enforcement.
-// FR-CIV-MOD-003
+// The following 1 requirement tags were removed from ModCapabilitySet.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// See the namespace-collision note above. The permission behavior implemented here
+// is real, tested, and currently untagged; it belongs to CIV-0700 FR-CIV-MOD-006,
+// which is recorded as follow-up rather than applied here, because the id space is
+// still ambiguous.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-MOD-003: COLLIDING ID. modding-platform.md:29 = building/recipe/structure grammar registration; CIV-0700:2372 = API version compatibility with IncompatibleApiVersion. The real behavior at ModCapabilitySet::can_read_domain/can_emit_action is deny-by-default permission gating, which is CIV-0700 FR-CIV-MOD-006, and WorldDomain is a 5-variant tag enum (capability.rs)
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ModCapabilitySet {
     read_economy: bool,

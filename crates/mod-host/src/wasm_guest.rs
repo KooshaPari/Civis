@@ -7,12 +7,26 @@ use wasmtime::{Caller, Engine, Instance, Linker, Module, Store};
 /// WASM module filename inside mod directories and `.civmod` archives.
 pub const MOD_WASM_NAME: &str = "mod.wasm";
 
+// The following 1 requirement tags were removed from HOST_IMPORT_MODULE.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// See the namespace-collision note above.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-MOD-008: COLLIDING ID. modding-platform.md:34 = UI/overlay registration; CIV-0700:2412 = Ed25519 signature verification before instantiation. No OverlayRegistrar exists; the real signature check is verify_wasm_signature (signature.rs:26), which carries no tag. Tagged on an import-module string, an i32 version const, and a 4-field store (wasm_guest.rs)
 /// Host import namespace for capability stubs (FR-CIV-TACTICS-047).
-// FR-CIV-MOD-008
 pub const HOST_IMPORT_MODULE: &str = "civlab";
 
+// The following 1 requirement tags were removed from HOST_CAPABILITY_IMPORTS.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// See the namespace-collision note above.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-MOD-009: COLLIDING ID. modding-platform.md:35 = charter validator rejecting hardcoded-outcome mods; CIV-0700:2420 = scenario registration via ScenarioDescriptor. grep for charter under crates/mod-host/src returns zero and no ScenarioDescriptor exists. An import allowlist and a memory cap are neither (wasm_guest.rs)
 /// Host imports exposed to guests (FR-CIV-TACTICS-053).
-// FR-CIV-MOD-009
 pub const HOST_CAPABILITY_IMPORTS: &[&str] = &[
     "capability_api_version",
     "sim_tick",
@@ -24,15 +38,36 @@ pub const HOST_CAPABILITY_IMPORTS: &[&str] = &[
 ];
 
 /// Packed capability API major version returned by host import `capability_api_version`.
-// FR-CIV-MOD-008
+// The following 1 requirement tags were removed from HOST_CAPABILITY_API_VERSION.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// See the namespace-collision note above.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-MOD-008: COLLIDING ID. modding-platform.md:34 = UI/overlay registration; CIV-0700:2412 = Ed25519 signature verification before instantiation. No OverlayRegistrar exists; the real signature check is verify_wasm_signature (signature.rs:26), which carries no tag. Tagged on an import-module string, an i32 version const, and a 4-field store (wasm_guest.rs)
 pub const HOST_CAPABILITY_API_VERSION: i32 = 1;
 
+// The following 1 requirement tags were removed from HOST_GUEST_MEMORY_CAP.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// See the namespace-collision note above.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-MOD-009: COLLIDING ID. modding-platform.md:35 = charter validator rejecting hardcoded-outcome mods; CIV-0700:2420 = scenario registration via ScenarioDescriptor. grep for charter under crates/mod-host/src returns zero and no ScenarioDescriptor exists. An import allowlist and a memory cap are neither (wasm_guest.rs)
 /// Maximum guest scratch bytes exposed via host memory imports (FR-CIV-TACTICS-049).
-// FR-CIV-MOD-009
 pub const HOST_GUEST_MEMORY_CAP: usize = 65_536;
 
 /// Per-instance host state for capability imports.
-// FR-CIV-MOD-008
+// The following 1 requirement tags were removed from HostState.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// See the namespace-collision note above.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-MOD-008: COLLIDING ID. modding-platform.md:34 = UI/overlay registration; CIV-0700:2412 = Ed25519 signature verification before instantiation. No OverlayRegistrar exists; the real signature check is verify_wasm_signature (signature.rs:26), which carries no tag. Tagged on an import-module string, an i32 version const, and a 4-field store (wasm_guest.rs)
 #[derive(Debug)]
 pub struct HostState {
     guest_memory: Vec<u8>,

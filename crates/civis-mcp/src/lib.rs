@@ -51,7 +51,15 @@ use civis_cli::census::{
 use civis_cli::config::census_config_from_env;
 use civis_cli::pixels::{compute_pixel_stats, sample_rgb_grid, PixelStats};
 
-// FR-CIV-MCP-002
+// The following 1 requirement tags were removed from TOOL_NAMES.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The list has no route kind attached and no read-only gate, so it cannot discharge
+// the requirement however the tools are actually dispatched.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-MCP-002: requirement is read-only HTTP tools plus a --allow-mutations gate before any mutating /control/* route; allow_mutations and allow-mutations have zero hits under crates/civis-mcp. The list is 100+ tool names with no route kind attached and includes plainly mutating tools (civis_place_voxel, sim_undo, sim_reset) with no gate (civ-017 spec:38-42)
 /// Canonical names of the MCP tools this crate registers. The PR description
 /// references this list; tests assert the rmcp router matches it exactly so a
 /// future rename surfaces in CI rather than in production.
@@ -160,7 +168,14 @@ pub const TOOL_NAMES: &[&str] = &[
     "sim_update_subscription",
 ];
 
-// FR-CIV-MCP-005
+// The following 1 requirement tags were removed from HARNESS_VERSION.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// A compile-time version string is not environment-variable configuration.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-MCP-005: requirement is configuration read only from CIVIS_MCP_CIV_SERVER_URL, CIVIS_MCP_CIV_WATCH_URL, and CIVIS_MCP_AUTH_TOKEN; all three have zero hits under crates/civis-mcp. HARNESS_VERSION is env!("CARGO_PKG_VERSION"), a compile-time version string (civ-017 spec:49-51)
 /// Library version string. Mirrors `civis_cli::HARNESS_VERSION` so MCP
 /// clients can correlate evidence packets with the harness build.
 pub const HARNESS_VERSION: &str = env!("CARGO_PKG_VERSION");

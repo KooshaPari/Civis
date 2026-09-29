@@ -4,7 +4,14 @@ use serde::{Deserialize, Serialize};
 use wasmparser::{Operator, Parser, Payload, TypeRef};
 
 /// A site where a float-derived value may reach `action_emit`.
-// FR-CIV-MOD-016
+// The following 1 requirement tags were removed from FloatContaminationSite.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// See the namespace-collision note above.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-MOD-016: requirement is conflict detection and resolution (id collisions, law contradictions); the spec's conflict table needs a post-merge id scan, LawDb::validate over the union, and a constant-clash priority rule, none of which exist. FloatContaminationSite is a float data-flow diagnostic, a different feature (float_data_flow.rs)
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FloatContaminationSite {
     /// Function index in the module (imports + defined).

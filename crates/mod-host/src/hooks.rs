@@ -7,8 +7,15 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Game-level hook variants that mods can subscribe to.
-// FR-CIV-MOD-005
-// FR-CIV-MOD-006
+// The following 2 requirement tags were removed from ModHook.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// See the namespace-collision note above.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-MOD-005: COLLIDING ID. modding-platform.md:31 = species/genome primitive registration; CIV-0700:2388 = non-deterministic instruction rejection. No GenomeRegistrar exists; the real determinism scan is at scan_wasm_determinism (determinism.rs:86). ModHook is an 8-variant event enum and ModHookEngine just dispatches it (hooks.rs)
+//  [unbound] FR-CIV-MOD-006: COLLIDING ID. modding-platform.md:32 = biome/climate rule registration; CIV-0700:2396 = permission enforcement. No BiomeRegistrar exists; the real permission gate is at capability.rs:121,133. A hook variant and the engine struct are neither (hooks.rs)
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ModHook {
     /// Fired every simulation tick.  Payload is the tick number.
@@ -30,7 +37,14 @@ pub enum ModHook {
 }
 
 /// Result returned by a hook handler.
-// FR-CIV-MOD-007
+// The following 1 requirement tags were removed from HookResult.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// See the namespace-collision note above.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-MOD-007: COLLIDING ID. modding-platform.md:33 = event hooks with bounded reactors; CIV-0700:2404 = mod fault isolation. ModHookEngine::execute is a real priority-ordered dispatch but no handler runs: hooks.rs:96 is `let _ = context; // available for future mod-guest calls`. No fault isolation and no capability-gated observer. HookResult is a 4-variant enum (hooks.rs)
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HookResult {
     /// Continue execution — no modifications.
@@ -55,8 +69,15 @@ pub struct ModHookRegistration {
 }
 
 /// Engine that manages hook registrations and executes them in priority order.
-// FR-CIV-MOD-005
-// FR-CIV-MOD-006
+// The following 2 requirement tags were removed from ModHookEngine.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// See the namespace-collision note above.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-MOD-005: COLLIDING ID. modding-platform.md:31 = species/genome primitive registration; CIV-0700:2388 = non-deterministic instruction rejection. No GenomeRegistrar exists; the real determinism scan is at scan_wasm_determinism (determinism.rs:86). ModHook is an 8-variant event enum and ModHookEngine just dispatches it (hooks.rs)
+//  [unbound] FR-CIV-MOD-006: COLLIDING ID. modding-platform.md:32 = biome/climate rule registration; CIV-0700:2396 = permission enforcement. No BiomeRegistrar exists; the real permission gate is at capability.rs:121,133. A hook variant and the engine struct are neither (hooks.rs)
 #[derive(Debug, Clone, Default)]
 pub struct ModHookEngine {
     /// All active registrations.

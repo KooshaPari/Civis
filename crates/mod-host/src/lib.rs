@@ -105,7 +105,18 @@ pub struct ModDependencies {
 }
 
 /// `[permissions]` table — all fields optional in file; defaults are false.
-// FR-CIV-MOD-002
+// The following 1 requirement tags were removed from ModPermissions.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The FR-CIV-MOD-* namespace is a genuine collision: CIV-0700 and
+// docs/design/modding-platform.md define the same ids as different taxonomies. Every
+// tag below is removed because the tagged symbol fails under *both* readings, not
+// because the collision has been resolved. Which taxonomy wins is a spec-ownership
+// decision and is escalated in docs/audits/triage-container-protocol-modhost.md.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-MOD-002: COLLIDING ID. modding-platform.md:28 = material + reaction registration; CIV-0700:2364 = CPU budget enforcement at 50us. No ReactionRegistrar/LawRegistrar exists and no fuel metering or epoch interruption exists. A boolean flag table is neither (policy_action.rs, lib.rs ModPermissions)
 #[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
 pub struct ModPermissions {
     /// Allow reading economy state.
@@ -166,7 +177,14 @@ pub struct ModManifest {
 }
 
 /// Errors while loading or validating a manifest.
-// FR-CIV-MOD-017
+// The following 1 requirement tags were removed from ManifestError.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// See the namespace-collision note above.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-MOD-017: requirement is a Workshop-style content-addressed signed .civmod bundle with .civmod-lock and .civmod-sig members; both have zero hits repo-wide and the repo ships a plain ZIP. ManifestError is a thiserror enum describing IO failure (lib.rs)
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum ManifestError {
     /// Filesystem or IO failure.
@@ -204,11 +222,25 @@ pub enum ManifestError {
 }
 
 /// Root manifest path inside a `.civmod` ZIP archive.
-// FR-CIV-MOD-020
+// The following 1 requirement tags were removed from CIVMOD_MANIFEST_NAME.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// See the namespace-collision note above.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-MOD-020: requirement is save-game/mod compatibility and migration; save_schema, min_save_schema, and max_save_schema have zero hits across crates/mod-host and save_bundle.rs, so no compat block and no mod-set in any save. Tagged on the manifest filename const and a ModHost field (lib.rs)
 pub const CIVMOD_MANIFEST_NAME: &str = "manifest.toml";
 
+// The following 1 requirement tags were removed from ModLoadedRecord.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// See the namespace-collision note above.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-MOD-019: requirement is a mod test harness and lint at `civis mod validate`; that subcommand does not exist. ModLoadedRecord is a mod.loaded.v1 lifecycle record whose own doc comment cites a different id (lib.rs)
 /// `mod.loaded.v1` structured lifecycle record (FR-MOD-004).
-// FR-CIV-MOD-019
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ModLoadedRecord {
     /// Stable mod id from manifest.
@@ -251,7 +283,19 @@ pub struct LoadedMod {
     pub float_contamination_site_count: u32,
 }
 
-// FR-CIV-TACTICS-070
+// The following 1 requirement tags were removed from ModRegistry.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// See the namespace-collision note above. FR-CIV-TACTICS-070 is NOT undefined: it is
+// defined at docs/traceability/fr-3d-matrix.md:160 as "Remote mod fetch cache",
+// implemented by civ-watch's post_mods_fetch and list_remote_mods handlers
+// (crates/watch/src/mods_api.rs; behaviour tested at api_tests.rs:1286). The tag sits
+// on a registry Vec in the wrong crate and is removed as a mis-binding, not as an
+// undefined id.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-TACTICS-070: MIS-BOUND, NOT UNDEFINED. Defined at docs/traceability/fr-3d-matrix.md:160 as "Remote mod fetch cache", discharged by civ-watch's post_mods_fetch and list_remote_mods handlers (crates/watch/src/mods_api.rs, tested at api_tests.rs:1286). ModRegistry is a Vec<LoadedMod> in the wrong crate whose phase stubs say "WASM callbacks not invoked yet" (mod-host/src/lib.rs:254)
 /// Registry of loaded mod manifests (v2 stub — no WASM guests).
 #[derive(Debug, Clone, Default)]
 pub struct ModRegistry {
@@ -323,8 +367,15 @@ impl ModRegistry {
 }
 
 /// In-process mod host (manifest + WASM guest execution).
-// FR-CIV-MOD-004
-// FR-CIV-MOD-020
+// The following 2 requirement tags were removed from ModHost.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// See the namespace-collision note above.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-MOD-004: COLLIDING ID. modding-platform.md:30 = law/physics-constant extension; CIV-0700:2380 = determinism invariant at every tick boundary. Neither exists. ModStatus is a lifecycle enum with no transition function, so its Faulted/Degraded states are unreachable; ModHost is a 5-field aggregate (capability.rs, lib.rs)
+//  [unbound] FR-CIV-MOD-020: requirement is save-game/mod compatibility and migration; save_schema, min_save_schema, and max_save_schema have zero hits across crates/mod-host and save_bundle.rs, so no compat block and no mod-set in any save. Tagged on the manifest filename const and a ModHost field (lib.rs)
 #[derive(Debug, Clone, Default)]
 pub struct ModHost {
     registry: ModRegistry,

@@ -12,9 +12,16 @@ use crate::{
 };
 
 /// 4-byte magic identifying a coalesced per-tick `Frame3d` bundle.
-// FR-CIV-PROTO-005
-// FR-CIV-PROTO-012
-// FR-CIV-PROTO-013
+// The following 3 requirement tags were removed from FRAME3D_BUNDLE_MAGIC.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// `b"F3DB"` filters nothing, connects to nothing, and unpacks nothing.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-PROTO-005: requirement is subscription filtering by entity type/region; filtering is real but by frame kind at SubscriptionFilter::filter_frames, and get_snapshot_for_session returns the full snapshot. A magic constant and a zstd level filter nothing (CIV-0200:1144)
+//  [unbound] FR-CIV-PROTO-012: requirement is a Bevy client that connects, subscribes, and renders agent positions under the example_bevy_client gate; the client exists at clients/bevy-ref but the gate does not, and the tag is on a voxel frame and a magic constant (CIV-0200:1179)
+//  [unbound] FR-CIV-PROTO-013: requirement is an Unreal plugin that unpacks binary frames and updates AActor transforms; clients/unreal-show contains no C++ that unpacks F3DB (CIV-0200:1184)
 pub const FRAME3D_BUNDLE_MAGIC: &[u8; 4] = b"F3DB";
 
 /// Current wire version of the `F3DB` envelope.
@@ -25,16 +32,33 @@ pub const FRAME3D_BUNDLE_VERSION: u8 = 1;
 pub const FRAME3D_BUNDLE_STANDARD_LEN: usize = 7;
 
 /// Default zstd level for tick bundles (fast decompress; CIV-0500 §8.4).
-// FR-CIV-PROTO-005
+// The following 3 requirement tags were removed from DEFAULT_FRAME3D_BUNDLE_ZSTD_LEVEL.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// FR-CIV-PROTO-006 is deliberately kept on this constant: a zstd level is exactly
+// the data the requirement names, so that one tag is legitimate on shape. The other
+// three are not.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-PROTO-005: requirement is subscription filtering by entity type/region; filtering is real but by frame kind at SubscriptionFilter::filter_frames, and get_snapshot_for_session returns the full snapshot. A magic constant and a zstd level filter nothing (CIV-0200:1144)
+//  [unbound] FR-CIV-PROTO-012: requirement is a Bevy client that connects, subscribes, and renders agent positions under the example_bevy_client gate; the client exists at clients/bevy-ref but the gate does not, and the tag is on a voxel frame and a magic constant (CIV-0200:1179)
+//  [unbound] FR-CIV-PROTO-013: requirement is an Unreal plugin that unpacks binary frames and updates AActor transforms; clients/unreal-show contains no C++ that unpacks F3DB (CIV-0200:1184)
 // FR-CIV-PROTO-006
-// FR-CIV-PROTO-012
-// FR-CIV-PROTO-013
 pub const DEFAULT_FRAME3D_BUNDLE_ZSTD_LEVEL: i32 = 1;
 
 const FRAME3D_BUNDLE_HEADER_LEN: usize = 23;
 
 /// Capability / compression flag bits in the `F3DB` header.
-// FR-CIV-PROTO-014
+// The following 1 requirement tags were removed from Frame3dBundleFlags.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// There is no Unity client in this repository; the tag is on a newtype over one
+// compression bit.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-PROTO-014: requirement is a Unity client connecting over WebSocket and rendering snapshots; there is no Unity client in this repository (clients/ holds bevy-ref, godot-ref, unreal-show only) (CIV-0200:1189)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Frame3dBundleFlags(pub u8);
 
@@ -62,11 +86,18 @@ impl Frame3dBundleFlags {
 }
 
 /// Opt-in encoder settings for [`encode_frame3d_bundle`].
-// FR-CIV-PROTO-005
+// The following 4 requirement tags were removed from Frame3dBundleEncodeOptions.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// FR-CIV-PROTO-006 is kept here for the same reason as on the constant above.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-PROTO-005: requirement is subscription filtering by entity type/region; filtering is real but by frame kind at SubscriptionFilter::filter_frames, and get_snapshot_for_session returns the full snapshot. A magic constant and a zstd level filter nothing (CIV-0200:1144)
+//  [unbound] FR-CIV-PROTO-012: requirement is a Bevy client that connects, subscribes, and renders agent positions under the example_bevy_client gate; the client exists at clients/bevy-ref but the gate does not, and the tag is on a voxel frame and a magic constant (CIV-0200:1179)
+//  [unbound] FR-CIV-PROTO-013: requirement is an Unreal plugin that unpacks binary frames and updates AActor transforms; clients/unreal-show contains no C++ that unpacks F3DB (CIV-0200:1184)
+//  [unbound] FR-CIV-PROTO-015: requirement is a React/Vue web client that connects, subscribes, and renders; no component under web/dashboard/src imports a protocol-3d type, and the spec's example_web_client gate exists only inside docs/fragmented/ (CIV-0200:1194)
 // FR-CIV-PROTO-006
-// FR-CIV-PROTO-012
-// FR-CIV-PROTO-013
-// FR-CIV-PROTO-015
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Frame3dBundleEncodeOptions {
     /// When `true`, zstd-compress the concatenated `F3D0` payload.

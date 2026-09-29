@@ -5,7 +5,14 @@ use thiserror::Error;
 use wasmparser::{Operator, Parser, Payload};
 
 /// Errors from the pre-instantiation determinism scan.
-// FR-CIV-MOD-012
+// The following 1 requirement tags were removed from DeterminismError.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// See the namespace-collision note above.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-MOD-012: COLLIDING ID. modding-platform.md:38 = load ordering (topological + priority + deterministic tie-break); CIV-0700:2444 = mid-simulation mod swap. No dependency graph exists, ModMeta has no priority field, ModRegistry::register is a bare Vec::push, and no sim.mod.swap method exists. DeterminismError/DeterminismScanReport are diagnostics, not an ordering mechanism (determinism.rs)
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum DeterminismError {
     /// WASM parse failure.
@@ -31,8 +38,15 @@ pub enum DeterminismError {
     },
 }
 
+// The following 1 requirement tags were removed from DeterminismScanReport.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// See the namespace-collision note above.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-MOD-012: COLLIDING ID. modding-platform.md:38 = load ordering (topological + priority + deterministic tie-break); CIV-0700:2444 = mid-simulation mod swap. No dependency graph exists, ModMeta has no priority field, ModRegistry::register is a bare Vec::push, and no sim.mod.swap method exists. DeterminismError/DeterminismScanReport are diagnostics, not an ordering mechanism (determinism.rs)
 /// Summary from scanning a WASM module (FR-CIV-TACTICS-057 / FR-CIV-TACTICS-061).
-// FR-CIV-MOD-012
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct DeterminismScanReport {
     /// Count of `f32` / `f64` opcodes (internal use may be OK; strict mode rejects).

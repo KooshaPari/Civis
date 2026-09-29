@@ -143,7 +143,17 @@ pub enum ReplayEvent {
     },
 }
 
-// FR-CIV-RTS-015, FR-SAVE-009
+// The following 1 requirement tags were removed from ReplayLog.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// FR-SAVE-009 is deliberately kept on ReplayLog: the hash-chain tail really is
+// serialized and restored, and that requirement is materially met. FR-CIV-RTS-015
+// describes client-side prediction, which is a different subsystem entirely.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-RTS-015: requirement is client-side prediction and replay correction (interpolation, snap under 100 ms), which is a client behavior; no prediction or smoothing code exists in crates/. ReplayLog is a server-side event recorder (CIV-0300 sec 12.1)
+// FR-SAVE-009
 /// Persistent replay log.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ReplayLog {

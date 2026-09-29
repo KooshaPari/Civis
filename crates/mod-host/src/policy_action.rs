@@ -6,8 +6,15 @@ use crate::capability::{
 };
 
 /// Known policy action discriminants understood by the MVP host bridge.
-// FR-CIV-MOD-002
-// FR-CIV-MOD-015
+// The following 2 requirement tags were removed from PolicyActionKind.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// See the namespace-collision note above.
+//
+// Removed, with the reason each cannot be discharged here:
+//  [unbound] FR-CIV-MOD-002: COLLIDING ID. modding-platform.md:28 = material + reaction registration; CIV-0700:2364 = CPU budget enforcement at 50us. No ReactionRegistrar/LawRegistrar exists and no fuel metering or epoch interruption exists. A boolean flag table is neither (policy_action.rs, lib.rs ModPermissions)
+//  [unbound] FR-CIV-MOD-015: COLLIDING ID. modding-platform.md:41 = stable semver'd mod API surface; CIV-0700:2468 = mod status telemetry. The nine registrar traits the spec freezes do not exist, there is no mod-API SCHEMA_VERSION, and no mod counters reach crates/server/src/metrics.rs. PolicyActionKind is a discriminant enum (policy_action.rs)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum PolicyActionKind {

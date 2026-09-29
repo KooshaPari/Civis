@@ -123,3 +123,11 @@ __pycache__/
 Civis-codex-finalize/
 target-codex-menus-pr1411/  
 .game-e2e/
+
+# Transient agent scratch slices under docs/audits/. These are per-session
+# planning debris (P1-agent-*.md, _plan-P1-summary.md), not audit artifacts.
+# Committed audit outputs live directly in docs/audits/.
+# Note: P3-cleanup-slice/ was committed before this rule, so it stays tracked.
+# This only keeps NEW scratch from being added.
+/docs/audits/next-slice/
+/docs/audits/*-cleanup-slice/

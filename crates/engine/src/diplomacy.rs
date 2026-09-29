@@ -17,7 +17,18 @@ use std::collections::{BTreeMap, BTreeSet};
 
 /// State container for the deep diplomacy subsystems.
 /// Holds the alliance manager, active peace negotiations, and cultural exchanges.
-// FR-CIV-POLITY-004
+// The following 1 requirement tags were removed from DeepDiplomacyState.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// DeepDiplomacyState is a real state container that is genuinely threaded
+// through WorldState (crates/engine/src/engine.rs:492, 702, 1097, 1273, 1547)
+// and does model alliances, negotiations and wars. That it is wired in is not
+// the question. FR-CIV-POLITY-004 asks for a computed classification of a
+// polity from its edge structure, and this struct has no edges to read.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-POLITY-004: The requirement is at docs/design/polities-markets.md:68-74: "FR-CIV-POLITY-004 -- Regime read-out from graph topology. A polity's *displayed* shape is a pure function of its internal edge structure", with a table mapping topological signatures (mean coordination, reciprocity, degree distribution, coercion asymmetry) to read-out labels Anarchic / Networked / Collective / Hierarchical / Dominant. The mandated behavior is a pure function: read the edge structure, classify the regime. `DeepDiplomacyState` is an 8-field passive aggregate (alliance_manager, active_negotiations, active_exchanges, faction_cultures, faction_resources, active_wars, war_start_ticks, war_casualties; diplomacy.rs:22-39) with a derived Default and no impl block at all -- it holds no edge structure, computes no topology, and has no classification function to call. It cannot do what is asked. `git grep -rni "Anarchic|Networked|Collective|Hierarchical|regime" -- crates/` returns the unrelated branching-regime classifier (crates/civ-emergence-metrics/src/branching.rs:180, classify_regime over sigma-bar) and the unrelated economy allocation regimes (crates/economy/src/allocation.rs:177); neither reads polity edge topology, and the allocation enum's own removal note concedes "no code path ever changes a locale's regime as coercion rises". There is no graph-topology classifier in the workspace, so the read-out has no implementing symbol and the container cannot stand in for one. Collateral observation: the only test file for this id, crates/engine/tests/fr_fr_civ_polity_004.rs, asserts that the struct's default is empty and that it is Clone. A test that checks emptiness and clonability is evidence about the container, not about regime read-out, and is a stub in spirit even though it compiles.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DeepDiplomacyState {
     /// Alliance formation manager.
@@ -56,7 +67,19 @@ pub struct FactionRelationRecord {
 }
 
 /// Stub faction-relation matrix.
-// FR-CIV-POLITY-001
+// The following 1 requirement tags were removed from FactionRelations.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// This is the clearest CONTAINER-ONLY in the batch: a 2-field record in a
+// BTreeMap, self-described as a stub, carrying a single undirected relation
+// score, sitting under a tag that promises a directed five-term weighted
+// graph over ClusterId nodes. The struct does real work for a different
+// requirement (FR-CIV-POLITY-002, tagged on apply_signal at diplomacy.rs:84),
+// which is exactly why the binding looks plausible and is still false.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-POLITY-001: The requirement is at docs/design/polities-markets.md:37-44: "FR-CIV-POLITY-001 -- Cohesion graph. A polity surface is computed as a weighted graph over clusters (nodes = ClusterId, edges = directed coordination weight)", with each edge weight a monotone blend of five named terms: coord(i->j) = w_colo*colocation + w_kin*kinship_overlap + w_cult*(1 - culture_distance) + w_econ*max(0, payoff_if_coordinated) + w_coer*coercion(i->j). The mandated artifact is a weighted GRAPH whose nodes are clusters and whose edges carry a computed five-term weight. `FactionRelations` is a single `rows: BTreeMap<(u32,u32), FactionRelationRecord>` where each record is just { score: f32, samples: u32 } (diplomacy.rs:61-63, 53-56). Its nodes are faction integer ids, not ClusterId; it has no edge weight; it has none of the five terms (no colocation, kinship overlap, culture distance, payoff, or coercion); and `apply_signal` (diplomacy.rs:83-101) computes only a single scalar relation score from trade_volume and combat_grievance. The struct's own doc comment calls it a "Stub faction-relation matrix" (diplomacy.rs:58) and engine.rs:802 calls it "a stub: an empty FactionRelations until DiplomacyMatrix schema is ...". A one-scalar relation score between factions is not a weighted cohesion graph over clusters. `git grep -rni "coordination_weight|CohesionGraph|colocation|culture_distance|kinship_overlap|reciprocity" -- crates/` returns only cluster_by_colocation (crates/agents/src/cluster.rs:71), which partitions positions into clusters and never computes an edge weight; no cohesion-graph builder exists, so the requirement has no implementing symbol. The id's own test file concedes the gap: crates/engine/tests/fr_fr_civ_polity_001.rs:5 says the FR "captures: Diplomacy relations matrix" rather than the cohesion graph, and its strongest assertion is that a default world has zero rows.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct FactionRelations {
     rows: BTreeMap<(u32, u32), FactionRelationRecord>,
@@ -156,8 +179,20 @@ pub enum DiplomacyKind {
     Peace,
 }
 
+// The following 1 requirement tags were removed from DiplomacyEvent.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// DiplomacyEvent is a legitimate event type in its own right; the problem is
+// only that it is tagged with a requirement about deriving a scalar from
+// substrate. Note the parallel: a genuine diplomacy event enum does exist
+// elsewhere (crates/diplomacy/src/effects.rs:121) and is actually constructed
+// and returned by effect appliers, so the workspace can emit diplomacy
+// events -- just not by deriving coercion, and not from this type.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-POLITY-003: The requirement is at docs/design/polities-markets.md:54-61: "FR-CIV-POLITY-003 -- Coercion derives, never declared. `coercion(i->j)` measures i's capacity to compel j, computed from substrate only": a clamp01 of relative capability power(i)/(power(i)+power(j)+eps) times proximity(i,j) times (1 - relation_score(i,j).max(0)). The defining clause is "derives, never declared" -- the coercion value must be COMPUTED from power, proximity and relations on every read, and must not be a stored attribute. `DiplomacyEvent` is a 4-field event record (tick, faction_a, faction_b, kind: DiplomacyKind; diplomacy.rs:162-167) that is emitted on state change; it holds no coercion value, no power, no proximity, and no relation score, and it performs no computation. Not only does it not discharge the requirement, its shape is the opposite of it: a persisted event row is exactly the "declared" storage the spec forbids. `git grep -rn "fn coercion|fn compute_coercion" -- crates/` returns nothing; the only 'coercion' identifiers in the workspace are the unrelated bounded-coercion constraint check (crates/engine/src/constraints.rs:310) and a removed MARKET-006 note that itself records "no code path ever changes a locale's regime as coercion rises". The derivation has no implementing symbol. Separately, the doc comment immediately above the tag (diplomacy.rs:159) cites "FR-CIV-DIPLOMACY", an id that `git grep` does not find in docs/specs, agileplus-specs or docs/design at all -- it is a phantom id, and under RULES a doc comment claiming coverage is a claim, not evidence.
 /// A diplomacy event between two factions (FR-CIV-DIPLOMACY).
-// FR-CIV-POLITY-003
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DiplomacyEvent {
     pub tick: u64,

@@ -110,7 +110,14 @@ pub const ACCOUNT_ENERGY_BUDGET: AccountId = 0;
 pub const ACCOUNT_CONSUMPTION: AccountId = 1;
 
 /// Bookkeeping row for a single ledger leg (stub; full double-entry pairs in CIV-0100 §3d).
-// FR-CIV-ECON-004
+// The following 1 requirement tags were removed from LedgerEntry.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// A ledger row cannot be a fiscal policy. The spec for this id names a different file, which is the strongest single piece of evidence that the binding was mis-placed rather than merely under-tested.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-ECON-004: The requirement in agileplus-specs/civ-021-recovered-requirements/spec.md:76-78 is 'FR-CIV-ECON-004 -- Policy-driven fiscal control via crates/engine/src/policy.rs.' LedgerEntry is a four-field bookkeeping row (crates/economy/src/lib.rs:115-124) holding tick, debit, credit and account, and its own doc comment at :112 calls it a 'stub; full double-entry pairs in CIV-0100'. It records a posting after the fact; it does not drive one. Policy-driven fiscal control means a policy object is evaluated each tick and its output changes fiscal behavior, and that is implemented in a different crate: the Policy trait at crates/engine/src/policy.rs:64 reads WorldState and returns ControlSignals, ControlSignals::tax_rates at crates/engine/src/policy.rs:53 carries per-institution tax rates in basis points, and Simulation::phase_policy (policy.rs:9-11) evaluates it each tick immediately before phase_economy. LedgerEntry has no connection to any of that: it is never passed a policy, never holds a rate, and never selects a tax. The only writers of the type are economy/src/lib.rs:170 and :331-343, all plain appends. Note also that the spec names crates/engine/src/policy.rs as the required artifact, so the spec never pointed at this struct at all. Tag comes off; the fiscal control path is policy.rs.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LedgerEntry {
     /// Simulation tick when the entry was recorded.

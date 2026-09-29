@@ -80,12 +80,19 @@ const MAX_PASS_LOSS_BP: i64 = 600; // −6 %/tick
 /// `volume >= SATURATION_VOLUME` yields the full per-pass gain.
 const SATURATION_VOLUME: i64 = 1_000;
 
+// The following 1 requirement tags were removed from CurrencyTrust.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// `CurrencyTrust` really does implement currency trust, tracked by the separate FR-CIV-CURRENCY-TRUST id. FR-CIV-MARKET-007 was bound to it only because the word 'currency' appeared in the name. The requirement is about an emerging unit of account, and the crate has no code that picks one.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-MARKET-007: The requirement in docs/design/polities-markets.md:144 is 'FR-CIV-MARKET-007 -- Money emerges, is not declared. No hardcoded currency. A numeraire emerges as the good with the highest liquidity (trade frequency x acceptability across counterparties) in a region; prices may re-denominate against it.' CurrencyTrust is a per-currency trust accumulator: it holds a trust score in basis points plus cumulative trade volume, gained/lost trust and pass counters (currency_trust.rs:90-111), and the doc comment above it at :83-87 describes a trust score, not a unit of account. It names a single issued currency by caller-supplied currency_id, which is the declared-currency model the requirement explicitly rejects. Nothing in it selects a good, ranks goods by liquidity, or re-denominates a price against a chosen numeraire. Grepping crates/ for 'numeraire' returns 8 hits and every one is a comment, an [unbound] reason, or a guard test asserting the numeraire read-out is still absent (crates/economy/tests/fr_civ_econ_cluster.rs:464-468); there is no numeraire type, no numeraire field, and no numeraire selection function anywhere in the workspace. The 'liquidity' hits in crates/economy/src/market.rs:659-798 are order-book depth accounting on a single good, not cross-good liquidity used to pick a unit of account. The nearest symbol to the requirement is the price book itself, MultiGoodMarket in crates/economy/src/market.rs:832, which stores per-good prices but likewise never selects a numeraire. The true implementing symbol for this requirement does not exist.
 /// FR-CIV-CURRENCY-TRUST — per-currency trust state.
 ///
 /// Holds the running trust score and a few diagnostics. The struct is the
 /// unit of additive integration: callers create one per currency they
 /// issue, then drive it through [`step_currency_trust`] every tick.
-// FR-CIV-MARKET-007
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CurrencyTrust {
     /// Stable currency id assigned by the caller.

@@ -7,7 +7,14 @@
 pub use civ_agents::LodTier;
 
 /// Strategic (region) vs operational (district / hex) zoom levels.
-// FR-CIV-TERRAIN-004
+// The following 1 requirement tags were removed from ZoomLevel.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// Note the mismatch between the two TERRAIN specs in play: agileplus-specs/civ-014 spells it Map2D, while the tag sits on a symbol described as CIV-0101 two-zoom LOD. Even a perfect identity projection would not satisfy the civ-014 wording, which names a watch HTTP surface and a web dashboard.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-TERRAIN-004: NOT IMPLEMENTED. agileplus-specs/civ-014-terrain-playable-hardening/spec.md:44 reads "Map2D zoom levels SHALL round-trip without voxel-data loss; `map2d.zoom` and `map2d.ux` (issue #2494) SHALL be expressed in the watch HTTP surface and the web dashboard". The requirement is an end-to-end property of a Map2D type plus a watch HTTP field plus a dashboard, and the searched-for type does not exist: `git grep -n "Map2D" -- crates/` returns exactly one hit, and it is a test file header (crates/engine/tests/fr_fr_civ_terrain_004.rs:5), not a type. There is no round-trip function (no serialization of a zoom value exists anywhere) and there is no map2d.zoom field in the watch surface. ZoomLevel is a two-variant view enum (Strategic/Operational, crates/engine/src/lod.rs:12-17) whose only consumer is project_zoom (lod.rs:96), and that function is the identity `(state_tick, zoom) -> (state_tick, zoom)`. An identity function cannot round-trip anything, and the module header calls the whole file a 'CIV-0101 two-zoom level-of-detail policy (stub)' (lod.rs:1). The file's own test asserts only that two variants exist and differ (two_levels_defined, lod.rs:106). No implementing symbol exists.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ZoomLevel {
     /// Region aggregates — macro governance view.

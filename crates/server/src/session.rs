@@ -79,7 +79,14 @@ pub const SESSION_HISTORY_CAP: usize = 32;
 ///    dispatches so the engine can audit actions.
 /// 3. The `sim.get_snapshot_for_session` JSON-RPC handler to return a
 ///    per-client view (connection_id + last_acked_tick + standard snapshot).
-// FR-CIV-SERVER-001
+// The following 1 requirement tags were removed from SharedSession.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The test file for the live id is itself a stub and should not be counted as evidence: crates/server/tests/fr_fr_civ_server_001_ws.rs asserts only `SESSION_HISTORY_CAP > 0`, which is the constant that this crate already had 33 unrelated ids unbound from (session.rs:27-68).
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-SERVER-001: IMPLEMENTED-BY-BEHAVIOR, against the wrong id. agileplus-specs/civ-021-recovered-requirements/spec.md:221-222 is a rename table: `FR-CIV-SERVER-001` -> `FR-CIV-SERVER-001-WS`, with the note that the real WebSocket server is the hyphenated form. So the id on this declaration is a STALE-ID that the repo's own recovery spec retired; the live id is FR-CIV-SERVER-001-WS. And the tagged type is a per-connection record, not a server: SharedSession holds connection_id, connected_at, role, subscribed_frame_kinds, last_acked_tick, tick_broadcasts_received, closed (crates/server/src/session.rs:84-128). It cannot accept a connection. True implementing symbol for the WebSocket server: the bridge in crates/server/src/ws_bridge.rs, which binds a TcpListener (:588) at 127.0.0.1:3800 (:150, default also in crates/server/src/main.rs:86) and services the upgrade. One caveat on that symbol, recorded so it is not lost: the spec text this id traces to names port 9876 (docs/specs/CIV-0001-core-simulation-loop.md:373, "WebSocket connect to ws://localhost:9876/sim"), and `git grep -rn "9876" -- crates/` returns zero hits - the bridge is on 3800, which crates/protocol-3d/src/lib.rs:67 already records for the sibling FR-CIV-PROTO-002. So the requirement is implemented under the wrong port; that is a spec/implementation drift to raise separately, not a reason to keep a stale id on a session record.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SharedSession {
     /// Stable, opaque connection id (UUID v4 hex string).
@@ -188,7 +195,15 @@ impl SharedSession {
 /// for `sim.snapshot`) with session-specific context (connection_id,
 /// last_acked_tick) so a multiplayer client can confirm it is reading the
 /// right session's state.
-// FR-CIV-SERVER-002
+// The following 1 requirement tags were removed from SessionSnapshot.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// Same stub-test caveat: crates/server/tests/fr_fr_civ_server_002_proto.rs also asserts only `SESSION_HISTORY_CAP > 0`.
+// Both SERVER tags fail the same way, so both come off together: the recovery spec at civ-021 retired these exact ids, and each is parked on a per-connection data struct rather than on the transport or protocol that would discharge it.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-SERVER-002: IMPLEMENTED-BY-BEHAVIOR, against the wrong id and the wrong scope. agileplus-specs/civ-021-recovered-requirements/spec.md:223-224 is the same rename table: `FR-CIV-SERVER-002` -> `FR-CIV-SERVER-002-PROTO`, noting that the real protocol is the hyphenated form, so the id here is a retired STALE-ID. Even taking the un-retired reading, the requirement is a client/server message protocol, and `git grep -rn "ClientMessage\|ServerMessage" -- crates/server/src/` returns zero hits: there are no such types. What the crate actually has is a JSON-RPC surface in crates/server/src/jsonrpc.rs, and this struct is a response envelope for one method. SessionSnapshot is a four-field record - connection_id, last_acked_tick, tick_broadcasts_received, snapshot: Option<SnapshotFields> (crates/server/src/session.rs:193-203) - with two constructors that copy session fields and wrap an engine payload (:208, :224). It defines no method, no variant, and no framing; it cannot be a protocol. True implementing symbols: the JSON-RPC request/response types in crates/server/src/jsonrpc.rs, surfaced over the ws_bridge transport. A stale id on a response DTO is strictly worse than no tag: it inflates the coverage count for a protocol that is implemented under a different id, and the id it advertises has no definition left in the repo.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SessionSnapshot {
     /// Connection id of the session the snapshot is scoped to.

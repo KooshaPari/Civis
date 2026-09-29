@@ -27,7 +27,14 @@ pub enum InstitutionKind {
 }
 
 /// One leg of an institution ↔ macro posting (debit side or credit side).
-// FR-CIV-MARKET-008
+// The following 1 requirement tags were removed from LedgerSide.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// This is the closest call in the batch. The double-entry posting machinery the requirement leans on is real and is exercised from the engine through EconomyState::institutions. The error is placement: the tag sits on the enum that names an account, not on the type that records and settles a debt.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-MARKET-008: The requirement in docs/design/polities-markets.md:146 is 'FR-CIV-MARKET-008 -- Credit/debt via institution postings. Deferred settlement reuses institution::InstitutionLedger double-entry postings: a credit market records a debt as a balanced posting (debtor liability <-> creditor asset) that settles later. Conservation (verify_conservation) holds throughout; default/forgiveness is a posting that writes the debt off and souring DiplomacyMatrix relationships.' The posting half of this is genuinely implemented: InstitutionLedger::post (crates/economy/src/institution.rs:220) writes a balanced debit/credit pair, InstitutionLedger::verify_conservation (crates/economy/src/institution.rs:323) checks it, and the self-trade branch at crates/economy/src/allocator.rs:444-453 records the debtor/creditor pair that the design doc names as the credit-market seed. But that behavior is the ledger's, not the enum's. LedgerSide is a two-variant enum (crates/economy/src/institution.rs:32-37) naming which account a leg posts to: Macro(AccountId) or Institution(InstitutionId). It has no methods, no fields, and no behavior, so it cannot record a debt, schedule a later settlement, hold a liability across ticks, or write off a default. The debt lifecycle the requirement demands is absent: grepping crates/ for 'deferred' returns only unrelated comment hits and finds no deferred-settlement type, and 'self_trade' has 0 hits. Critically, InstitutionLedger::post at :230-235 actively REJECTS the self-trade case the design doc cites as the credit seed, returning InstitutionLedgerError::SelfPosting. The allocator works around that rejection at allocator.rs:444-453 by posting the same account on both legs, so the obligation is logged but never created as a balance. Tag belongs on InstitutionLedger / InstitutionPosting, not on the leg-enum.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum LedgerSide {
     /// Macro ledger account ([`AccountId`]).

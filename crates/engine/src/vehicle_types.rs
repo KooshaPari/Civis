@@ -63,7 +63,20 @@ pub enum VehicleKind {
 
 // ── Vehicle archetype (§2 schema) ────────────────────────────────────────────
 
-// FR-CIV-VEHICLE-002
+// The following 1 requirement tags were removed from VehicleArchetype.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// This is the one site in the batch where the true implementing symbol
+// exists and is easy to name, which makes it the most useful removal: the
+// capability gate is check_build_capability at vehicle_types.rs:106, and
+// FR-CIV-VEHICLE-001 already tags the CapabilityGate enum directly above it
+// (vehicle_types.rs:91). FR-CIV-VEHICLE-002 should be recorded against that
+// function once the non-retroactive half is built, not against the data row
+// that merely stores the requirement set.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-VEHICLE-002: The requirement is at docs/design/vehicles-logistics.md:105-106: "FR-CIV-VEHICLE-002 -- Removing a required material from a locale's stock makes new builds of that kind fail while existing instances persist (capability is per-build, not retroactive)". The mandated behavior has two halves, and the tag is on the half that implements neither. `VehicleArchetype` is a 9-field catalog data row (kind, medium, requires_traits, requires_materials, build_cost, capacity, base_speed_mult, era_hint; vehicle_types.rs:69-89) whose own doc comment is "A data row in the vehicle archetype catalog". It is the declarative requirement set, not the gate: it stores `requires_materials` and does nothing with them. No method on the type evaluates the gate, and the only two functions in the file, check_build_capability (vehicle_types.rs:106) and effective_speed (:142), are free functions taking `&VehicleArchetype` rather than methods on it. Both halves of FR-CIV-VEHICLE-002 are therefore outside the tagged declaration. The first half (new builds fail) is really implemented, by a different symbol: crates/engine/src/vehicle_types.rs:106 check_build_capability walks archetype.requires_materials against the locale's set and returns CapabilityGate::Fail { missing }, exercised for real at crates/engine/tests/fr_fr_civ_vehicle_002.rs:14-35, which removes "livestock" and asserts the fail names it. The second half (existing instances persist / not retroactive) has NO implementing symbol at all: there is no placed-vehicle or vehicle-instance type in the crate, and `git grep -rni "instance" -- crates/engine/src/vehicle_types.rs` returns exactly one hit, the doc comment "How a vehicle instance was created" at :210 on the unrelated `InfraProvenance` enum. Nothing anywhere stores a built vehicle, so nothing can persist. The test file for this id does not cover the persistence half at all: fr_fr_civ_vehicle_002.rs:5 claims to verify "Removing a required material makes new builds fail; existing instances persist", but the body only tests the first half, so the file's own header overstates what it checks.
 /// A data row in the vehicle archetype catalog.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct VehicleArchetype {

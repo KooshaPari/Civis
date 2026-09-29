@@ -49,7 +49,14 @@ pub const SCHEMA_VERSION: &str = "0.1.0";
 /// share every other data tag so the economy treats them identically; this only
 /// lets the renderer style them differently and lets saves audit provenance.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-// FR-CIV-ROAD-902
+// The following 1 requirement tags were removed from InfraProvenance.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The enum is genuinely load-bearing inside this crate: record_traffic (lib.rs:247) branches on it to decide whether a segment may be promoted by traffic or only upgraded, and place_segment (lib.rs:277) stamps UserPlaced. That is real behavior, but it is road-growth policy, not the shared-tag/uniform-query contract the requirement describes.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-ROAD-902: IMPLEMENTED-BY-BEHAVIOR, and the tagged declaration is the wrong half of it. docs/specs/requirements/FR-CIV-ROAD.md:13 reads "All structures + roads SHALL carry shared data tags regardless of author (procedural vs player), via the building graph", with the acceptance note "`civ-protocol-3d` building graph tags provenance but exposes uniform query API". The building-graph half is real and lives elsewhere: civ_build::BuildingProvenance (Procedural/Freehand, crates/build/src/lib.rs:43) is stored per parcel in BuildingGraph.provenance (crates/build/src/lib.rs:319), written by BuildingGraph::set_provenance (crates/build/src/lib.rs:353) from both the procedural allocator (:274) and the freehand authoring path (:710), and mapped onto the wire by map_build_provenance (crates/protocol-3d/src/lib.rs:586). The uniform query API exists too: civ_build::BuildingGraph::iter-like accessors never filter on provenance, and the traffic side exposes kind_between / speed_multiplier_at / iter_segments (crates/civ-traffic/src/lib.rs:309,323,355) that read every segment regardless of author. But InfraProvenance itself is a two-variant marker (Emergent/UserPlaced, lib.rs:53-58) and the requirement says structures, i.e. the building graph, not vehicles or road segments. The tag belongs on the civ-build / protocol-3d provenance types, not on a traffic-crate enum. True implementing symbols: civ_build::BuildingProvenance (crates/build/src/lib.rs:43) and BuildingGraph::set_provenance (crates/build/src/lib.rs:353).
 pub enum InfraProvenance {
     /// Grown by accumulated agent traffic (desire path).
     Emergent,

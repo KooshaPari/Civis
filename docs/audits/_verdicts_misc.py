@@ -22,7 +22,7 @@ Verdicts here are removal-only: ids judged IMPLEMENTED are omitted from
 
 
 KEEP = {
-    "FR-CIV-SAVE-009": (
+    "FR-SAVE-009": (
         "Genuinely implemented. The requirement is that the BLAKE3 hash chain tail SHALL be "
         "serialized and restored on load, enabling the chain to continue unbroken from the "
         "saved tick (docs/specs/CIV-1000-save-load-persistence-spec.md:2808). ReplayLog."

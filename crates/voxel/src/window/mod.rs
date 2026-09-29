@@ -124,7 +124,14 @@ pub enum SimCohort {
 /// through `bincode` for replay/manifest persistence. Defaults are tuned
 /// to match `WORLD_DIMS_SMALL`'s working set (see
 /// `docs/design/streaming-window.md` §3.5 / §6).
-// FR-CIV-RENDER-001
+// The following 1 requirement tags were removed from WindowPolicy.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// Borderline call, and the reason it lands on removal rather than keep: if the audit treated configuration structs as discharging the requirements they parameterize, half this repository's tags would survive. The rule set for this pass does not. The honest summary is that the streaming behavior lives in classify, the timing clause lives nowhere, and WindowPolicy is a knob panel.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-RENDER-001: DATA-SHAPE-ONLY. The requirement is two clauses, quoted from docs/guides/voxel-emergent-vision-and-migration.md:152: "Bevy chunk streamer loads and unloads chunks within a 3-chunk camera radius; no render-thread stalls (NFR-CIV-SCALE-002)." The first half is genuinely implemented, and not by this struct's declaration: WindowPolicy::classify (crates/voxel/src/window/mod.rs:233) is the pure function that maps (coord, anchor, policy) to a ChunkState - Meshed inside mesh_ring, Fading through the seam band, Resident out to coarse_ring - and it is the load/unload decision the renderer's per-frame plan calls. That decision is exercised end to end by crates/voxel/tests/fr_civ_render_001_chunk_stream_radius.rs, whose first test loads rings 0..=3 and unloads ring 4 under a three-chunk policy. WindowPolicy itself is a ten-field config POD whose only methods are `checked` (a validating constructor, :190) and the Default impl (:163); it performs no load, no unload, and owns no clock, so it cannot discharge the streaming contract on its own. The second half - 'no render-thread stalls' - has no artifact at all: that needs a frame loop and timing, and the test file concedes it at lines 14-16 ("The geometry pass and the 'no render-thread stalls' timing clause need a GPU and a frame loop, which are out of scope here"). Half the requirement is implemented by classify and half is unimplemented; the struct that holds the constants discharges neither half on its own, so the binding overstates what this declaration provides.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct WindowPolicy {
     /// Innermost ring fully meshed at LOD 0. Chunks at ring `≤

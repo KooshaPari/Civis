@@ -1,9 +1,26 @@
 """Verdicts for the requirement tags on data-type declarations in `crates/tactics`.
 
-Scope: nine tags that sit directly above a struct/enum/const declaration. Each tag
-claims "this symbol implements this requirement". Eight of the nine claims are
-false and are listed in SITES for removal; one (FR-CIV-FOG-001 on `FogOfWar`) is
+Scope: requirement tags bound to declarations in `crates/tactics`. Each tag claims
+"this symbol implements this requirement". The assigned nine were nine tags sitting
+directly above a struct/enum/const declaration; eight of those claims are false and
+are listed in SITES for removal, while one (FR-CIV-FOG-001 on `FogOfWar`) is
 genuinely discharged and is recorded in KEEP.
+
+Four further ids were adjudicated in a second pass at the coordinator's request:
+the line-27 FR-CIV-WAR-030 tag on `score_doctrine_fitness` (a function, and judged
+as a function), plus two ids surfaced by a dry run, FR-CIV-MORALE on `MoraleState`
+and FR-CIV-TACTICS-024 on `CombatEngagement`. Those two are doc-comment bindings
+(`/// ... (ID)`) rather than standalone tag lines, but `_apply_verdicts.is_tag_line`
+returns True for them, so they are mechanically removable and were adjudicated on
+the same merits. FR-CIV-MORALE is not a defined requirement id anywhere in the repo
+and is therefore removed on different grounds than the rest.
+
+  * FR-CIV-TACTICS-024 -- docs/traceability/fr-3d-matrix.md:115, "Per-soldier
+    combat engagements on snapshot." Its own
+    docs/traceability/fr-civ-tactics-024/fr-civ-tactics-024-spec.md is an empty
+    auto-generated template (STATUS SPEC-TEMPLATE, "## Requirement" followed only
+    by an HTML comment), so the matrix row is the only real statement of intent.
+  * FR-CIV-MORALE -- no authoritative text exists. See the MoraleState entry.
 
 Authoritative requirement text:
   * FR-CIV-FOG-001 -- agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:47-50
@@ -15,11 +32,12 @@ Authoritative requirement text:
     the 011..042 block exists solely in warfare.md, and every one of these test
     files self-describes as "Status: CODE-ONLY-no-spec".
 
-Two ids appear twice each, on two different declarations. Both sites are judged
-independently and both removals are recorded; the pair agreement is stated in the
-note lines for each declaration.
+Three ids now appear more than once. Every site is judged independently and every
+removal is recorded; pair agreement is stated in the note lines for each
+declaration.
 
 Nothing under crates/ was modified to produce this file, and cargo was not run.
+_apply_verdicts.py was not run, in any mode.
 """
 
 KEEP = {
@@ -202,16 +220,112 @@ SITES = [
             "what it does, and tagging the stats struct it consumes with the same id is "
             "equally unfounded. Both tags overstate coverage of a requirement the spec "
             "itself marks as not yet coded.",
-            "Only the FactionEngagementStats entry is in SITES here. The "
-            "score_doctrine_fitness tag at crates/tactics/src/doctrine_fitness.rs:27 was "
-            "not in the assigned nine, so it is reported rather than removed; it is a "
-            "false binding of the same kind and should be added to scope.",
+            "Only the FactionEngagementStats and score_doctrine_fitness entries are in "
+            "SITES for this module. The score_doctrine_fitness tag at "
+            "crates/tactics/src/doctrine_fitness.rs:27 was outside the assigned nine and "
+            "was added on request in a second pass; its own SITES entry records the full "
+            "reason.",
+        ],
+    ),
+    (
+        "crates/tactics/src/doctrine_fitness.rs",
+        "score_doctrine_fitness",
+        {
+            "FR-CIV-WAR-030": (
+                "DATA-SHAPE-ONLY, and in this case the function's own body is the "
+                "clearest evidence that the tag is false. The requirement is to extend "
+                "the doctrine fitness signal beyond tactical engagement stats to include "
+                "operational and strategic outcomes -- net theater objective gain, supply "
+                "efficiency, own attrition and routs, civilian grievance generated -- so "
+                "that doctrines which win battles but lose the war are selected against, "
+                "with per-cluster independent libraries and memetic diffusion across "
+                "contact networks (docs/design/warfare.md:124-140, AC-WAR-7 at :178). The "
+                "coordinator's hypothesis that a function might be the genuine binding "
+                "where the struct is not does not survive reading it. "
+                "score_doctrine_fitness at crates/tactics/src/doctrine_fitness.rs:28 "
+                "takes (doctrine: &Doctrine, stats: &FactionEngagementStats) and returns "
+                "the sum of exactly two terms: composition_balance, the mean of "
+                "doctrine.unit_composition, and a 'battle' term computed solely from "
+                "stats.net_pressure(), stats.engagements_as_shooter and "
+                "stats.voxels_removed (:29-39). Every input is a tactical quantity. The "
+                "function has no parameter through which an operational or strategic "
+                "outcome could enter: no objective gain, no supply state, no attrition, "
+                "no rout count, no grievance term exists on either argument. That is the "
+                "definition of the pre-extension state the spec describes at "
+                "docs/design/warfare.md:125, 'Doctrine fitness today reads tactical "
+                "engagement stats only. Extend the fitness signal (spec; not yet coded)'. "
+                "Tagging this function with FR-CIV-WAR-030 therefore asserts the exact "
+                "opposite of what it does: it is the code the requirement says must be "
+                "extended, and it has not been. Corroborating searches: git grep -n -i "
+                "-E 'k_terr|k_supl|k_loss|k_grv|civilian_grievance|own_attrition|memetic|"
+                "diffusion' -- crates/ returns no hit in the tactics crate (the only "
+                "diffusion matches are unrelated civ-agents tech/wardrobe propagation); "
+                "the module defines only two public functions, net_pressure (:19) and "
+                "this one (:28), so there is no second scoring path elsewhere; and "
+                "git grep -n 'score_doctrine_fitness' -- crates/ shows the only "
+                "production call sites are crates/engine/src/engine/military_phases.rs:95 "
+                "and crates/tactics/src/doctrine_evolution.rs:47, both of which pass "
+                "nothing but a &Doctrine and a &FactionEngagementStats, so no operational "
+                "or strategic input is available anywhere on the call path. The remaining "
+                "references are re-exports and tests, including "
+                "crates/tactics/tests/fr_fr_civ_war_030.rs, which asserts only that higher "
+                "engagement stats raise fitness and that scoring is deterministic -- "
+                "precisely the tactical-only behavior, never the extension."
+            ),
+        },
+        [
+            "Adjudicated as a function, not as a data container, at the coordinator's "
+            "request. Being a function makes it a more plausible candidate for a "
+            "behavioral requirement than any struct in this batch, and it is still false: "
+            "it is the pre-extension fitness function the requirement is written to change, "
+            "not an implementation of the change.",
+            "All three FR-CIV-WAR-030 sites are now adjudicated and all three are false, so "
+            "this id disagrees with itself nowhere: crates/tactics/src/lib.rs:106 on "
+            "Doctrine, crates/tactics/src/doctrine_fitness.rs:6 on "
+            "FactionEngagementStats, and crates/tactics/src/doctrine_fitness.rs:27 here. "
+            "The requirement is real and specified, but the extension is unimplemented, "
+            "so every tag asserting it is overstating coverage. Whoever implements the "
+            "four extra terms can re-add the tag to this function, which is where it "
+            "belongs.",
+            "find_decl in _apply_verdicts.py:75-85 matches 'pub fn' as well as struct, "
+            "enum, const, static, type and trait, and the tag at :27 sits directly above "
+            "this pub fn with no intervening doc line, so this site is mechanically "
+            "removable in the same way as the struct sites.",
         ],
     ),
     (
         "crates/tactics/src/morale.rs",
         "MoraleState",
         {
+            "FR-CIV-MORALE": (
+                "PHANTOM ID, NOT A REQUIREMENT. Unlike every other entry in this file, "
+                "this id cannot be judged against requirement text because no such "
+                "requirement is defined anywhere in the repo. FR-CIV-MORALE occurs in "
+                "exactly two files, one of which is this audit file: "
+                "crates/tactics/src/morale.rs, where it appears in the module doc at "
+                ":1, in the struct doc at :139, and in six test doc comments at :358, "
+                ":397, :430, :470, :490 and :520. Searches that came back empty: "
+                "git grep -rn 'FR-CIV-MORALE' outside crates/tactics/src/morale.rs; "
+                "git grep -n -A6 'FR-CIV-MORALE' -- docs/specs agileplus-specs "
+                "docs/design docs/guides; a case-insensitive search for 'morale' in "
+                "docs/traceability/index.md, which enumerates the repo's requirement ids "
+                "and contains no MORALE row; a check for a "
+                "docs/traceability/fr-civ-morale/ directory, which does not exist; and a "
+                "scan of docs/audits/_id_inventory_v3.json, whose keys contain no "
+                "MORALE entry. The only MORALE-adjacent hit anywhere in the spec tree is "
+                "an unrelated constant MORALE_ATTRITION_FACTOR at "
+                "docs/specs/CIV-0105-war-diplomacy-shadow-v1.md:232, which belongs to a "
+                "different id scheme. So the binding cannot be wrong in the sense of "
+                "misplacing a real requirement, because there is no requirement to place. "
+                "It is a self-referential id invented so the morale module's own unit "
+                "tests read as requirement coverage. That is the phantom-tag pattern this "
+                "audit exists to strip, and the id should be struck rather than "
+                "re-pointed at some real requirement: if morale behavior is meant to be "
+                "tracked, a spec has to be written first. Note this id is a doc comment, "
+                "/// Per-unit morale tracker (FR-CIV-MORALE)., not a standalone tag line; "
+                "_apply_verdicts.is_tag_line still returns True for it, so it is "
+                "mechanically removable."
+            ),
             "FR-CIV-WAR-021": (
                 "DATA-SHAPE-ONLY, and worse, an orphan. The requirement is that "
                 "per-soldier behavior reads emergent agent psyche -- morale, fear, "
@@ -330,6 +444,38 @@ SITES = [
         "crates/tactics/src/war_bridge.rs",
         "CombatEngagement",
         {
+            "FR-CIV-TACTICS-024": (
+                "DATA-SHAPE-ONLY, and the true implementing symbol is a different one. "
+                "The requirement is 'Per-soldier combat engagements on snapshot.' "
+                "(docs/traceability/fr-3d-matrix.md:115), whose own spec file is an empty "
+                "auto-generated template: "
+                "docs/traceability/fr-civ-tactics-024/fr-civ-tactics-024-spec.md is "
+                "marked 'Status: SPEC-TEMPLATE (auto-generated 2026-09-16)' at :2 and its "
+                "'## Requirement' section at :8-10 contains only an HTML placeholder "
+                "comment, so the matrix row is the only real statement of intent. Two "
+                "things are demanded: that engagements be resolved per soldier, and that "
+                "they appear on the snapshot. Both are genuinely implemented, but not by "
+                "this struct. Per-soldier resolution is tick_war_bridge in "
+                "crates/tactics/src/war_bridge.rs, driven from "
+                "crates/engine/src/engine/military_phases.rs:175, and the snapshot "
+                "surface is the per-soldier damage pulse vector at "
+                "crates/engine/src/engine.rs:842, documented '(FR-CIV-TACTICS-024)', "
+                "which holds SmallVec<[CombatDamagePulse; 8]> and is wired at :3498 as "
+                "feeding doctrine fitness and the server /sim/state wire. The requirement "
+                "is accepted by a real test, "
+                "war_bridge_records_combat_replay_events at "
+                "crates/engine/src/engine/engine_tests.rs:1807, which ticks a Simulation "
+                "and asserts ReplayEvent::Combat entries with non-zero shooter and "
+                "target ids appear in the replay log. CombatEngagement itself is a "
+                "six-field per-engagement record (crates/tactics/src/war_bridge.rs:32) "
+                "and does not resolve engagements or publish them on any snapshot. So "
+                "the coverage is real and the binding is wrong: this is IMPLEMENTED-BY-"
+                "BEHAVIOR, and the tag belongs on tick_war_bridge and on the "
+                "last_tick_combat_pulses field at engine.rs:842, "
+                "snapshot field, which already carries it. Because the behavior is real, "
+                "removing this id loses no coverage as long as the engine.rs:842 binding "
+                "is retained."
+            ),
             "FR-CIV-WAR-013": (
                 "DATA-SHAPE-ONLY. The requirement is that the operational layer hands a "
                 "contact off to the tactical war bridge, that operational supply and "

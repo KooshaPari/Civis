@@ -82,7 +82,15 @@ impl MoraleTickInputs {
 }
 
 /// Current stance of the unit as a function of morale vs. the rout threshold.
-// FR-CIV-WAR-021
+// The following 1 requirement tags were removed from UnitStance.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// Same id as the MoraleState entry, judged independently as instructed. The two sites differ in severity, not in verdict: MoraleState at least holds the morale scalar, UnitStance holds nothing but a classification. Neither is consumed outside morale.rs and test files, so the requirement's 'per-soldier behavior reads psyche' clause is unimplemented at both sites.
+// If a future change wants to discharge FR-CIV-WAR-021, the correct home is not either of these declarations. It is the combat and movement path that would have to consult stance before firing or advancing, which today is WarBridge::resolve_combat in crates/tactics/src/war_bridge.rs and operational_movement_pulse in crates/tactics/src/movement.rs:51, neither of which reads morale at all.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-WAR-021: CONTAINER-ONLY. The requirement is that emergent agent psyche modulates fire discipline, rout threshold and willingness to follow orders, and that casualties and atrocities write grievance and trauma back into psyche (docs/design/warfare.md:111-113). UnitStance at crates/tactics/src/morale.rs:87 is a two-variant marker enum (Standing, Routing) whose entire body is two unit variants. A marker cannot read psyche, modulate anything, or write anything back, so this is the weakest possible claim of the nine. The morale computation that does exist lives on the sibling type, MoraleState::stance at crates/tactics/src/morale.rs:211, and even that is only a comparison of one scalar against one threshold. git grep -n -E 'fear|loyalty|grievance|trauma|ideolog' -- crates/tactics/src/ returns nothing, so three of the four named psyche inputs and the entire write-back half of the requirement have no symbol anywhere in the crate.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum UnitStance {
     /// Morale ≥ rout threshold — unit can fight at full effect.
@@ -136,14 +144,22 @@ impl MoraleEvent {
     }
 }
 
-/// Per-unit morale tracker (FR-CIV-MORALE).
+// The following 2 requirement tags were removed from MoraleState.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The two FR-CIV-WAR-021 sites do not agree in kind, though both come off. MoraleState is a state record that is merely unread; UnitStance is a two-variant enum that can never modulate anything by construction, so it is the weaker binding of the pair. The orphaned-consumer problem is shared: the same greps show UnitStance is likewise referenced only in morale.rs and in tests, never in war_bridge.rs, movement.rs or military_phases.rs.
+// MoraleState carries FR-CIV-MORALE in its own doc comment and is legitimately tagged FR-CIV-TACTICS-076 by its test coverage, so removing FR-CIV-WAR-021 leaves the type's real provenance intact and loses no true coverage. The test at crates/tactics/tests/fr_fr_civ_war_021.rs:15 asserts only that casualties flip stance from Standing to Routing on an isolated instance; that is a unit test of the struct, not evidence that psyche drives combat.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-MORALE: PHANTOM ID, NOT A REQUIREMENT. Unlike every other entry in this file, this id cannot be judged against requirement text because no such requirement is defined anywhere in the repo. FR-CIV-MORALE occurs in exactly two files, one of which is this audit file: crates/tactics/src/morale.rs, where it appears in the module doc at :1, in the struct doc at :139, and in six test doc comments at :358, :397, :430, :470, :490 and :520. Searches that came back empty: git grep -rn 'FR-CIV-MORALE' outside crates/tactics/src/morale.rs; git grep -n -A6 'FR-CIV-MORALE' -- docs/specs agileplus-specs docs/design docs/guides; a case-insensitive search for 'morale' in docs/traceability/index.md, which enumerates the repo's requirement ids and contains no MORALE row; a check for a docs/traceability/fr-civ-morale/ directory, which does not exist; and a scan of docs/audits/_id_inventory_v3.json, whose keys contain no MORALE entry. The only MORALE-adjacent hit anywhere in the spec tree is an unrelated constant MORALE_ATTRITION_FACTOR at docs/specs/CIV-0105-war-diplomacy-shadow-v1.md:232, which belongs to a different id scheme. So the binding cannot be wrong in the sense of misplacing a real requirement, because there is no requirement to place. It is a self-referential id invented so the morale module's own unit tests read as requirement coverage. That is the phantom-tag pattern this audit exists to strip, and the id should be struck rather than re-pointed at some real requirement: if morale behavior is meant to be tracked, a spec has to be written first. Note this id is a doc comment, /// Per-unit morale tracker (FR-CIV-MORALE)., not a standalone tag line; _apply_verdicts.is_tag_line still returns True for it, so it is mechanically removable.
+// [unbound] FR-CIV-WAR-021: DATA-SHAPE-ONLY, and worse, an orphan. The requirement is that per-soldier behavior reads emergent agent psyche -- morale, fear, in-group loyalty and fatigue modulate fire discipline, rout threshold and willingness to follow orders, with casualties and atrocities writing grievance and trauma back into psyche (docs/design/warfare.md:111-113). MoraleState models one of the four named inputs (morale) and a rout threshold, which is real coverage of that slice; none of the other three are present. git grep -n -i -E 'fear|loyalty|grievance|trauma|ideolog' -- crates/tactics/src/ returned no hits at all, so there is no fear, loyalty, grievance, trauma or ideology term for the struct to read, and nothing anywhere writes grievance or trauma back. The decisive point is that the struct has no production consumer: git grep -n 'MoraleState' -- crates/ shows hits only inside morale.rs itself and in test files (crates/tactics/tests/fr_fr_civ_war_021.rs:9, crates/tactics/tests/fr_civ_tactics_tests.rs:6, crates/tactics/tests/fr_fr_civ_tactics_076.rs:8). No combat, movement or war-bridge path in the crate ever constructs one, so morale does not in fact modulate fire discipline, rout threshold or order-following in the running simulation. A tracker nothing reads cannot discharge a behavioral requirement.
 ///
 /// Owns the unit's current morale, its threshold at which it routs, and an
 /// event-log of the most recent changes. Constructed at unit spawn with a
 /// starting strength (`initial_strength`) and a rout threshold in absolute
 /// headcount. Morale itself is stored as a normalised `[0, 1]` value
 /// ([`MoraleLevel`]) so it is independent of the unit's actual paper strength.
-// FR-CIV-WAR-021
 #[derive(Debug, Clone, PartialEq)]
 pub struct MoraleState {
     /// `0.0..=1.0`. Morale past `rout_threshold` is [`UnitStance::Standing`],

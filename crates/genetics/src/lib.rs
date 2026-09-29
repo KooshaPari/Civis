@@ -64,7 +64,14 @@ impl Dna {
     }
 }
 
-// FR-CIV-GODTOOL-911
+// The following 1 requirement tags were removed from DnaClass.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// Not a false positive about capability - the requirement really is satisfied - but a false positive about attribution. This is the difference the IMPLEMENTED-BY-BEHAVIOR verdict exists for: the tag asserts that a config struct seeds organisms, and it does not.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-GODTOOL-911: IMPLEMENTED-BY-BEHAVIOR. docs/specs/requirements/FR-CIV-GODTOOL.md:14 reads "Life/spawn tools SHALL seed DNA-bearing organisms; outcome (survival, speciation, sentience) emerges, never scripted. | Spawn injects `civ-genetics` DNA; lineage then evolves under laws only". The spawn tool is real and does inject DNA: Simulation::apply_god_tool (crates/engine/src/godtools.rs:1033) dispatches LifeRequest::SpawnOrganism (godtools.rs:326) to civ_agents::spawn_civilian_at (crates/agents/src/lib.rs:517), which builds a genome from an archetype seed with divergence - `spawn_genome_with_divergence(rng, &dna_class, &seed_def, 0.3)` at crates/agents/src/lib.rs:550 - and attaches it via spawn_civilian (:552). Emergence-not-scripting is real too: civ_genetics::mutate (crates/genetics/src/lib.rs:97) applies per-byte class-parameterised point mutation under a seeded ChaCha8Rng and recombine (:108) does uniform crossover, and speciation falls out of should_speciate (:162) Hamming distance rather than any authored branch. The requirement is met - by the spawn tool, not by the genome schema. DnaClass is a four-field config POD (name/length/mutation_rate/speciation_threshold, lib.rs:71-81) whose `Default` is the only construction anywhere in the workspace: every single call site uses `DnaClass::default()` (crates/agents/src/lib.rs:397,548,622; crates/emergence-oracle/src/oracles/genetics.rs:65,100,113; crates/engine/src/emergence.rs:229; and every test). A struct that is never configured and is read only by mutate/speciate cannot be the thing that 'seeds DNA-bearing organisms'. True implementing symbol: civ_agents::spawn_civilian_at (crates/agents/src/lib.rs:517), reached from Simulation::apply_god_tool (crates/engine/src/godtools.rs:1033) - that is the artifact the test file for this id already exercises (crates/engine/tests/fr_civ_godtool_cluster.rs:443).
 /// Per-class genetic configuration. New classes (humanoid, quadruped,
 /// silicate, …) are data-driven; this struct is the entire schema.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

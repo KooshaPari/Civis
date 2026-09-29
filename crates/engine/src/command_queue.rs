@@ -11,7 +11,17 @@ pub struct Command {
 
 /// The type of command a client can issue.
 #[derive(Debug)]
-// FR-CLIENT-003
+// The following 1 requirement tags were removed from CommandKind.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// CommandKind is the command vocabulary for a client, which is why the tag
+// was plausible: it names the actions the requirement wants to restrict. But
+// a list of what a client MAY do is the opposite of a gate on what a given
+// client tier may do, and the enum has no role dimension to gate on.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CLIENT-003: The requirement is at agileplus-specs/civ-010-multi-client-protocol/spec.md:30: "Role authorization -- research clients cannot issue build or policy commands; unauthorized -> JSON-RPC error -32603 with role information; enforced by integration tests covering all three role tiers". That is a behavioral authorization requirement with three named deliverables (a rejection path, a specific error code, and tests across three role tiers). `CommandKind` is a flat 6-variant enum of the actions a client may issue (Pause/Resume/SetSpeed/SaveReplay/LoadReplay/PolicyOverride, command_queue.rs:15-22). It carries no role, no tier, no authorization field and no permission table, so it cannot reject anything: CommandQueue::push (command_queue.rs:58) accepts every variant from every client id unconditionally. Nothing in the enum discharges any clause of the requirement, and the enum is only a vocabulary, not a gate. The workspace's own test file already admits the absence in writing: crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:743-754 is headed "FR-CLIENT-003 -- Client role authorization enforcement (ABSENT)" and states "no crate in the workspace defines a client role, and the engine's command envelope carries no role at all, so a policy override from an unknown client id is accepted verbatim". The only -32603 in the server (crates/server/src/jsonrpc.rs:25, INTERNAL_ERROR) is the generic JSON-RPC internal-error constant, not a role rejection. `git grep -rn "-32603" -- crates/` returns only that constant, its two test literals, and an unrelated civis-cli MCP reply; no role-gated rejection exists anywhere. No implementing symbol exists, so the tag is removed.
 pub enum CommandKind {
     Pause,
     Resume,

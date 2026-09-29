@@ -17,7 +17,14 @@ pub const PSYCHE_DIM: usize = 4;
 
 /// Reactivity/sociability/risk/impulsivity temperament.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-// FR-CIV-PSYCHE-003
+// The following 1 requirement tags were removed from Temperament.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// A 4-field aggregate of f32 cannot be 'lifelong' or 'plastic'. Lifelong-ness is a property of the surrounding tick loop that feeds lived experience into the nudge, not of the vector.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-PSYCHE-003: IMPLEMENTED-BY-BEHAVIOR. docs/design/psyche-social.md:274 reads "FR-CIV-PSYCHE-003 | Lifelong temperament plasticity gated by maturity", and :134 spells out the gate: temperament drifts toward lived-experience statistics, "gated by `(1 - maturity*0.8)` so children are plastic, adults stable". That gate is real code - nudge_temperament (crates/agents/src/psyche.rs:188) computes `let plasticity = (1.0 - maturity * 0.8).clamp(0.0, 1.0);` at :194 and scales the learning rate by it at :195 before nudging reactivity and sociability at :196-200, with maturity advanced by tick_maturity (:171) from lived experience and stress. The maturity clock itself is a field on `Psyche` (:86) and lives on that record, not on Temperament. Temperament here is a four-f32 POD with only a `neutral()` constructor (psyche.rs:21-43); it has no maturity, no experience input, and no update rule, so the plasticity behavior is not on this declaration. True implementing symbol: nudge_temperament (crates/agents/src/psyche.rs:188). Note the tag directly above that function currently says FR-CIV-PSYCHE-010 (line 186), which is the mood id - the plasticity function is the one PSYCHE-003 needs, and PSYCHE-010 is already discharged by update_mood (:204). Coverage moves, it does not disappear.
 pub struct Temperament {
     /// How strongly mood swings in response to events.
     pub reactivity: f32,
@@ -44,7 +51,15 @@ impl Temperament {
 
 /// Fast-moving affect state.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-// FR-CIV-PSYCHE-002
+// The following 1 requirement tags were removed from Mood.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The PSYCHE-002 binding looks authoritative only because docs/specs/requirements/FR-CIV-PSYCHE.md exists and looks like the spec for this file. It is a different catalog: it uses a 9xx series (PSYCHE-900/901/910/911/912/920/921) and contains no -002 or -003. The 0xx catalog that does define these ids is docs/design/psyche-social.md. Two catalogs, same prefix, disjoint numbering - the same shape of problem as the MOD-000 collision below.
+// Worth noting for whoever re-tags: `git grep "FR-CIV-PSYCHE-006"` and `-005` were already unbound from `Psyche` and `PsychGenomeProfile` in this file, with reasons that cite the 9xx catalog. Those reasons and this one use different source docs for ids in the same prefix.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-PSYCHE-002: IMPLEMENTED-BY-BEHAVIOR. FR-CIV-PSYCHE-002 is not a mood requirement at all. docs/design/psyche-social.md:273 reads "FR-CIV-PSYCHE-002 | Temperament emerges from DNA (reactivity/sociability/risk/impulsivity)", and the same doc's AC-1 (line 254) scopes it to genetics->psyche projection. The mood requirement in that catalog is FR-CIV-PSYCHE-010 ("Mood emerges from needs vector + decayed event memory", psyche-social.md:277, formula at :142-148), and that is the id currently on the function that does the work. Mood is a two-field valence/arousal POD with one `neutral()` constructor (crates/agents/src/psyche.rs:48-64); it cannot emerge anything from anything. True implementing symbol for PSYCHE-002: psyche_from_dna (crates/agents/src/psyche.rs:152), which projects reactivity/sociability/risk_tol/impulsivity out of DNA byte slots via score_axis (:139) -> civ_genetics::sentience::cognition_score, and is the artifact AC-1 names. That coverage is not lost; it needs the tag, not this one.
 pub struct Mood {
     /// Valence from `-1.0` misery to `+1.0` contentment.
     pub valence: f32,

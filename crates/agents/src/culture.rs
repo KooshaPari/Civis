@@ -17,7 +17,15 @@ use crate::language::{drift_phonemes, phoneme_inventory_distance, PhonemeInvento
 pub type TraitVector = [f32; 4];
 
 /// Population-level cultural state.
-// FR-CIV-CULT-001
+// The following 1 requirement tags were removed from CultureProfile.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// CultureProfile is genuinely used: culture_phase_drifts_cluster_profiles (crates/agents/src/culture.rs:138) mutates the trait vectors, and cluster_language_distance (:106) reads them. That real work is what FR-CIV-CULT-002/003 (culture diffusion, ideology convergence) are tagged on elsewhere; it does not make the type the CULT-001 entity.
+// The sibling requirement ids in the same spec (CULT-002, CULT-003) do have code behind them in this file. CULT-001 is the entity-shape one, and no entity of that shape exists in the repository.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-CULT-001: NOT IMPLEMENTED. The requirement is a named entity with named fields: agileplus-specs/civ-009-culture-diffusion/spec.md:24 reads "Culture entity `Culture { id, name, ideology_centroid: Fixed, spread_rate: Fixed, resistance: Fixed }` - each nation has a dominant culture; citizens have `culture_affinity: Fixed` to each known culture". CultureProfile is none of that: `git grep -n "struct Culture\b\|enum Culture\b" -- crates/` returns zero hits, so the Culture entity does not exist under any name. Its four required scalars (ideology_centroid, spread_rate, resistance) are absent - the crate's only spread_rate hits are fire/flood hazard fields in crates/climate/src/disaster_spread.rs, and `git grep -n "culture_affinity" -- crates/` returns zero hits, so the per-citizen affinity the requirement mandates is not modeled at all. What does exist is an unrelated per-population meme vector (traits/language/phonemes/contact/kinship, culture.rs:22-35) whose behavior is language drift and cluster distance, not the CULT-001 entity. No implementing symbol exists.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CultureProfile {
     /// Cultural trait vector.

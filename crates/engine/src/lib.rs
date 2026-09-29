@@ -105,7 +105,20 @@ pub mod tutorial;
 /// Fixed-point scaling factor (1 raw unit = SCALE joules). Engine energy
 /// quantities are stored in fixed-point `i64` for determinism and converted
 /// to `f64`/SI at the economy boundary using this constant.
-// FR-CIV-3D-003
+// The following 1 requirement tags were removed from SCALE.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// SCALE is a genuinely used constant -- crates/engine/src/economy_engine.rs:7
+// and :15 divide joules by it at the economy boundary -- but that is a joule
+// conversion, and a used constant is still not a frame-rate measurement. Note
+// the id collision hazard: FR-CIV-3D-003 (45 fps on M2, headless Chromium) and
+// FR-PERF-003 (60 fps on reference GPU, civ-render) are different requirements
+// with similar targets, and the test file for this one is a tautology dressed
+// as coverage.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-3D-003: The requirement is at docs/specs/CIV-0601-3d-asset-transition-and-agentic-gen-spec.md:1904-1908: "FR-CIV-3D-003 -- Frame Rate -- Primary Hardware. SHALL: The 3D web client SHALL maintain a minimum of 45 frames per second at 1080p resolution when rendering a Zoom 2 view (12x12 hex cell grid) on M2 MacBook hardware", with "Verification: Automated benchmark via headless Chromium with performance.now frame timing. Run on CI hardware with Apple Silicon runner. Pass threshold: 95th percentile frame time < 22.2ms over a 300-frame sample". That is a pure MEASUREMENT requirement: a wall-clock frame-time percentile produced by a headless-Chromium benchmark on specific hardware. `pub const SCALE: i64 = 1_000` (lib.rs:109) is a fixed-point scaling factor for joules; it is an integer literal that says nothing about frame rate, and a constant cannot discharge a benchmark. Worse, the test pinned to this id is a pure tautology: crates/engine/tests/fr_fr_civ_3d_003.rs:20 computes `Fixed::from_num(1000) / Fixed::from_num(1000)` -- literally 1000/1000 -- and asserts only `fps_45 > Fixed::ZERO`, which holds for every value of every constant, so it passes unconditionally and measures nothing; the companion test at :27 asserts only `SCALE == 1_000`. `git grep -rni "performance.now|headless chromium|95th percentile" -- crates/` returns only an unrelated server-side latency histogram (crates/server/src/metrics.rs:219, p95 of a metrics histogram) and an unrelated NFR-S-02 p95 test. The only real frame-budget code in the workspace is crates/render/src/frame.rs, whose own header says "Frame budget planning for 60 fps rendering (CIV-0500; no FR-PERF-003 id)" -- 60 fps planning arithmetic, not a 45 fps measured benchmark, and it is in civ-render, not in civ-engine. The companion file makes the same point for FR-PERF-003 at crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:14: "NOT engine-testable (GPU + civ-render is not a dependency of civ-engine)". No implementing benchmark artifact exists, so the tag is removed. The id is additionally a scope mismatch on its face: a render-frame-rate criterion cannot be discharged by a crate that does not depend on the renderer, and lib.rs:46-102 is a module list with no rendering path.
 pub const SCALE: i64 = 1_000;
 
 // TODO(cleanup-surgeon): stub. `religion` is currently an empty `pub mod`

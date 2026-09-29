@@ -50,7 +50,14 @@ pub use wasm_guest::{
 };
 
 /// Supported mod kinds per CIV-0700 §4.1.
-// FR-CIV-MOD-000
+// The following 1 requirement tags were removed from ModType.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// Because both mod-host sites carry the same id, both are removed on the same evidence. Neither is a data shape that satisfies the manifest requirement, and neither is in the crate the design doc says should own it.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-MOD-000: CONTAINER-ONLY. Same collision as on ModMeta, and the weaker half of it. Under the CIV-0700 reading there is no FR-CIV-MOD-000 to point at (the series starts at -001, docs/specs/CIV-0700-modding-api-spec.md:2356). Under the only real definition, docs/design/modding-platform.md:26 "Mod manifest schema (RON primary / JSON parallel), versioned", ModType is a four-variant serde enum (Policy/Economic/Event/Scenario, crates/mod-host/src/lib.rs:56-65) that is one field of ModMeta (`pub mod_type: ModType`, lib.rs:80). It is a value in a schema, not a schema: no fields, no format handling, no version, no loader. It cannot express a manifest and the requirement does not ask it to. The tag is here because the enum name contains 'Mod' and the id ends in 'MOD-000' - the same name-matching failure mode that put 33 unrelated PvE session ids on SESSION_HISTORY_CAP in this crate (crates/server/src/session.rs:27-68) and three Python-package ids on a Rust version string (crates/build/src/lib.rs:50-63). What ModType really implements is CIV-0700 section 2's mod-type taxonomy, which is exercised for real: it is matched at lib.rs:352,363,675,722 to route policy vs economic guest invocations, and rendered by mod_type_label (lib.rs:986, duplicated at crates/watch/src/mods_api.rs:97).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ModType {
@@ -65,7 +72,14 @@ pub enum ModType {
 }
 
 /// `[mod]` table — required metadata.
-// FR-CIV-MOD-000
+// The following 1 requirement tags were removed from ModMeta.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// For the collision, the more damning detail: modding-platform.md is dated 2026-05-30 and states at the top that it expands `crates/civlab-sdk` (manifest.rs, material.rs, building.rs) - a different crate from the `civ-mod-host` this tag sits in. The doc's own words say 'Do NOT duplicate those'. The tagged types are a TOML-only, post-dating-looking re-implementation of a manifest concept that its cited home already owns. Which definition wins is a spec-ownership decision and is escalated in docs/audits/triage-container-protocol-modhost.md; it does not change the verdict here, because ModMeta satisfies neither candidate.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-MOD-000: DATA-SHAPE-ONLY. Two collisions land on this id, and it fails under both readings. (1) The CIV-0700 series does not define -000 at all: `git grep -n "FR-CIV-MOD-00" -- docs/specs/CIV-0700-modding-api-spec.md` returns FR-CIV-MOD-001 through -020 and no -000, so if the mod-host tags were minted from the spec this crate is named for, the id is a hallucination. Its own test file is the tell - crates/mod-host/tests/fr_fr_civ_mod_000.rs asserts only that the four ModType variants equal themselves, which is a tautology. (2) The only real definition is docs/design/modding-platform.md:26, "Mod manifest schema (RON primary / JSON parallel), versioned", and ModMeta is closer than anything else in the repo but still does not discharge it. The v1 schema in that doc is the union of its own two statements about the format - the index row says RON primary, the section body at modding-platform.md:92-94 says "The loader keeps dual-format parsing already in `parse_manifest`" with JSON already supported - and the repo has neither: `git grep -n "ron::\|manifest.ron\|manifest.json" -- crates/mod-host` returns zero hits and CIVMOD_MANIFEST_NAME is "manifest.toml" (crates/mod-host/src/lib.rs:233). The manifest table also carries no `sdk` semver-req, no `entrypoint`, no `requires`/`conflicts`/`load_after`/`load_before`/`priority`, no `provides` file globs, and no `compat { min_save_schema, max_save_schema }`; those field names have zero hits across the crate. `version` and `api_version` are plain Strings with no semver parse and no host-range check, so the only "versioned" claim is a field name. ModMeta is a serde Deserialize record for a [mod] table: it records required data, it cannot load, validate, version-check, or dual-parse anything.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct ModMeta {
     /// Stable id: `[a-z][a-z0-9-]{0,63}`.
@@ -229,7 +243,8 @@ pub enum ManifestError {
 // See the namespace-collision note above.
 //
 // Removed, with the reason each cannot be discharged here:
-//  [unbound] FR-CIV-MOD-020: requirement is save-game/mod compatibility and migration; save_schema, min_save_schema, and max_save_schema have zero hits across crates/mod-host and save_bundle.rs, so no compat block and no mod-set in any save. Tagged on the manifest filename const and a ModHost field (lib.rs)
+//  [unbound] FR-CIV-MOD-020: NOT IMPLEMENTED, and this constant is the least capable thing it could sit on. The requirement is "Save-game / mod compatibility + migration" (docs/design/modding-platform.md:46, §13 at :500). `git grep -n "save_schema\|min_save_schema\|max_save_schema"` across crates/mod-host and crates/engine/src/save_bundle.rs returns zero hits, so no save records a mod set, no manifest declares a supported save range, and no migration path exists. This constant is a single &str naming the root path inside the ZIP ("manifest.toml", lib.rs:246); a filename cannot express a version range or migrate a save.
+
 pub const CIVMOD_MANIFEST_NAME: &str = "manifest.toml";
 
 // The following 1 requirement tags were removed from ModLoadedRecord.
@@ -375,7 +390,7 @@ impl ModRegistry {
 //
 // Removed, with the reason each cannot be discharged here:
 //  [unbound] FR-CIV-MOD-004: COLLIDING ID. modding-platform.md:30 = law/physics-constant extension; CIV-0700:2380 = determinism invariant at every tick boundary. Neither exists. ModStatus is a lifecycle enum with no transition function, so its Faulted/Degraded states are unreachable; ModHost is a 5-field aggregate (capability.rs, lib.rs)
-//  [unbound] FR-CIV-MOD-020: requirement is save-game/mod compatibility and migration; save_schema, min_save_schema, and max_save_schema have zero hits across crates/mod-host and save_bundle.rs, so no compat block and no mod-set in any save. Tagged on the manifest filename const and a ModHost field (lib.rs)
+//  [unbound] FR-CIV-MOD-020: NOT IMPLEMENTED, same requirement as the tag on CIVMOD_MANIFEST_NAME, different subject. "Save-game / mod compatibility + migration" (docs/design/modding-platform.md:46, §13 at :500) needs a mod set to be recorded in each save and checked against a declared range on load. ModHost is a five-field runtime aggregate (registry, loaded_records, reload_roots, guest_memory_by_mod, permissions) that holds live host state and is not serialized; nothing in the save path in crates/engine/src/save_bundle.rs consults it, and `git grep -n "save_schema\|min_save_schema\|max_save_schema"` across crates/mod-host and that file returns zero hits. This is the second of two FR-CIV-MOD-020 tags in the crate and the pair agrees: the requirement is absent at both.
 #[derive(Debug, Clone, Default)]
 pub struct ModHost {
     registry: ModRegistry,

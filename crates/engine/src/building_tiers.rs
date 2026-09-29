@@ -186,7 +186,14 @@ impl std::error::Error for UpgradeError {}
 // ---------------------------------------------------------------------------
 
 /// Engine that manages building tiers, upgrades, and per-tick simulation.
-// FR-CIV-INFOVIEW-914
+// The following 1 requirement tags were removed from BuildingTierEngine.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The id is also unstable across sources: docs/design/info-views.md:109 binds FR-CIV-INFOVIEW-914 to 'Needs Pressure (B2)', a Population-group overlay, while docs/specs/requirements/FR-CIV-INFOVIEW.md:18 binds it to infrastructure. Either way BuildingTierEngine is neither.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-INFOVIEW-914: DESIGN-ONLY. docs/specs/requirements/FR-CIV-INFOVIEW.md:18 reads "Infrastructure overlays: roads/traffic, building level, service coverage, transport lines. | Reads emergent architecture/road graph; coverage falloff shown. | UI (reads [EMERGENT])", and the family closes with INFOVIEW-920: "Each overlay SHALL show a legend (scale + units) and update live as the sim ticks" (:19). This is a UI-surface requirement with a UI artifact. BuildingTierEngine is a headless sim aggregate - `buildings: Vec<Building>`, `configs: Vec<BuildingTierConfig>`, `next_id: u32` (building_tiers.rs:190-197) - whose methods are spawn, upgrade, and per-tick cost/maintenance decay. It renders nothing, has no legend, no per-cell coverage field, and no transport line representation. `git grep -n "BuildingTierEngine" -- crates/` returns only its own impl, its own unit tests (:395, :535, :557, :607) and two test files in crates/engine/tests/, so it is not even consulted by any overlay sampler. The overlay artifact that does exist is a registry row, not this engine: InfoOverlay { id: "info_roads", group: OverlayGroup::Infrastructure, render_kind: RenderKind::Gizmo } at crates/engine/src/info_views.rs:346-358, which is metadata about an overlay and does not read the graph either - and note the design doc assigns the roads overlay to FR-CIV-INFOVIEW-918 (docs/design/info-views.md:113), not 914. A sim engine cannot present a legend; that is why this is DESIGN-ONLY rather than NOT-IMPLEMENTED.
 pub struct BuildingTierEngine {
     /// All active buildings.
     pub buildings: Vec<Building>,

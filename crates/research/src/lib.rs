@@ -109,7 +109,14 @@ pub enum RejectReason {
     NoEffects,
 }
 
-// FR-CIV-TECH-007
+// The following 1 requirement tags were removed from ReplayMode.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The distinction from FR-SAVE-009 on ReplayLog, kept in the same file: there the tagged type owns the hash-chain tail and a real verifier enforces it on load, so the binding stands. Here the enum only names a mode.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-TECH-007: IMPLEMENTED-BY-BEHAVIOR. docs/design/tech-engineering.md:231 reads "Canonical saves never emit `LlmEvent`s; invention draws from canonical + diffused candidates only. | replay-mode test | AC-P1". That gate is real and it is the match arm in replay_advance_llm_event (crates/research/src/lib.rs:182): `ReplayMode::Canonical => ReplayAdvanceOutcome::Refused(ReplayRefusal::CanonicalLlmEvent)` at :193, with Hybrid/Free requiring a cache hit at :194-200 and the early `if !is_replay` live-play escape at :188-190. The AI-side twin exists too (crates/ai/src/provenance.rs:111-112). ReplayMode is a three-variant serde enum (Canonical/Hybrid/Free, crates/research/src/lib.rs:115-122) and by construction it cannot refuse anything: the refusal is a property of the function that matches on it. Two secondary problems reinforce the removal. (1) The tag sits directly above the enum, but the file's own tags put FR-CIV-TECH-009 - the sibling requirement about exactly this replay path ("Hybrid/Free replay reproduces accepted cards from cache; cold cache halts loudly (`HybridCacheMiss`)", tech-engineering.md:233) - directly above the function that implements the cache-miss half (crates/research/src/lib.rs:176). TECH-007 is the mode declaration; TECH-009 is the behavior. One function serves both, and the existing tag is on the other id. (2) The requirement's second clause, that invention draws from canonical + diffused candidates only, is not discharged anywhere in this file: the tag names a mode enum, not a candidate-selection rule. True implementing symbol: replay_advance_llm_event (crates/research/src/lib.rs:182), verified by the replay-mode test the requirement names (crates/research/tests/fr_civ_tech_tests.rs:146,159).
 /// Per-save progression mode (ADR-006).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ReplayMode {

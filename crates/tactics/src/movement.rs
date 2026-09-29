@@ -6,7 +6,15 @@ use crate::war_bridge::MilitaryUnitSample;
 use civ_voxel::{MaterialId, VoxelWorld};
 
 /// Movement cadence for the operational layer.
-// FR-CIV-WAR-011
+// The following 1 requirement tags were removed from OperationalMovementConfig.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The requirement is behavioral by construction: it is about which target a formation picks, and the only symbol that picks targets is operational_movement_pulse, not this config. That is a true observation about where the behavior would live, but it does not make this verdict IMPLEMENTED-BY-BEHAVIOR, because the supply-gradient utility comparison the requirement mandates does not exist in operational_movement_pulse either. The movement code is advance-to-contact only.
+// docs/design/warfare.md:83 credits 'already in movement.rs' for operational movement generally, and that much is real and shipped. The credit does not extend to the objective-and-supply driving that FR-CIV-WAR-011 actually asks for, which is the gap the tag was papering over.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-WAR-011: DATA-SHAPE-ONLY. The requirement is that operational movement is driven by theater objectives plus supply gradients, so that formations advance toward objectives only while supplied and otherwise fall back to supply, with advance-to-contact and fall-back-to-supply emerging from one utility comparison (docs/design/warfare.md:83-85). OperationalMovementConfig at crates/tactics/src/movement.rs:11 is a two-field cadence struct (cadence_ticks, path_search_radius) and carries no objective vector, no supply state and no utility comparison. The movement it parameterizes actively contradicts the requirement: operational_movement_pulse at crates/tactics/src/movement.rs:51 steers every unit at the nearest enemy by Manhattan distance, unconditionally, with no supply term and no objective term in the choice. git grep -n -i -E 'supply|objective|gradient' -- crates/tactics/src/movement.rs returned no hits, and the same search across all of crates/ for 'objective_gain|supply_efficiency|supply_gradient|theater_objective' returned nothing at all, so no supply-gradient driver exists anywhere in the repo. The test at crates/tactics/tests/fr_fr_civ_war_011.rs asserts only that cadence_ticks > 0 and path_search_radius > 0, which validates the struct's defaults and nothing about maneuver policy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct OperationalMovementConfig {
     /// Apply movement when `tick % cadence_ticks == 0`.

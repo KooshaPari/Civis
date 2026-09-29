@@ -24,7 +24,14 @@ pub enum Phase {
 }
 
 /// Static description of a single material.
-// FR-CIV-RENDER-002
+// The following 1 requirement tags were removed from MaterialDef.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// This is the clearest false positive of the batch in the sense that the tag is on the one type whose doc comment literally says 'RGBA render hint for engine adapters' (material.rs:64) - the phrasing makes the binding read as obvious, and it is still a data field standing in for a render pass that nobody wrote.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-RENDER-002: DATA-SHAPE-ONLY. The requirement is a rendering pass, quoted from docs/guides/voxel-emergent-vision-and-migration.md:153: "Translucent material pass: liquid and gas cells rendered with alpha-blended geometry; solid cells rendered opaque first." A pass that emits alpha-blended geometry and orders opaque before translucent does not exist in this repository: `git grep -rn -i "translucent\|alpha_blend\|AlphaMode\|transparent" -- crates/voxel/src crates/render/src crates/asset-pipeline/src` returns four hits, all of them comments about uncovered texels in the GPU texture atlas (crates/voxel/src/atlas/gpu_atlas.rs:150,381,679,681). crates/render has ten modules (atlas, audio, camera, frame, gltf, hex_map, lib, lod, state, timeline) and none is a material pass. What exists is exactly the classification data a pass would read: MaterialDef carries `color: [u8; 4]` (material.rs:65) and `phase: Phase` (:35) with is_liquid/is_gas helpers (:94,100). That is the headless-checkable half, and the crate's own test says so in as many words - crates/voxel/tests/fr_civ_render_002_translucency.rs:19-23 states "the geometry pass itself lives in the Bevy client, which needs a GPU and is not exercised here. What is verified is the classification the pass reads". The test also records that the shipped palette does not even split strictly on phase (lava is an opaque liquid, glass a translucent solid, :128-136), so the data is not a faithful encoding of the rule either. MaterialDef records the data; the pass the requirement asks for is absent.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MaterialDef {
     /// Stable identifier used in world storage.

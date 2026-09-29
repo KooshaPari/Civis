@@ -79,4 +79,60 @@ mod fr_fr_econ_005 {
         assert!(result.waste_joules > 0);
         assert!(result.productive_joules > 0);
     }
+
+    /// FR-ECON-005: an out-of-range fraction is clamped, not honoured.
+    ///
+    /// `fraction_bp` is documented as living in `[0, 10_000]`. Nothing enforces
+    /// that on the public struct, so `compute_waste_heat` has to. Without the
+    /// clamp, `fraction_bp = 50_000` returns waste five times consumption, which
+    /// makes `productive_joules` negative and breaks the conservation invariant
+    /// the test above checks. Mutation testing showed this clamp was untested:
+    /// deleting it left the whole suite green.
+    #[test]
+    fn out_of_range_fraction_is_clamped() {
+        for fraction_bp in [10_001, 50_000, i64::MAX] {
+            let config = WasteHeatConfig { fraction_bp };
+            let result = compute_waste_heat(1_000, &config);
+            assert_eq!(
+                result.waste_joules, 1_000,
+                "fraction_bp {fraction_bp} must clamp to 100% waste, not scale with the input"
+            );
+            assert_eq!(
+                result.productive_joules, 0,
+                "productive joules must not go negative at fraction_bp {fraction_bp}"
+            );
+            assert_eq!(
+                result.waste_joules + result.productive_joules,
+                result.consumption_joules,
+                "conservation must hold at fraction_bp {fraction_bp}"
+            );
+        }
+    }
+
+    /// FR-ECON-005: a negative fraction is clamped to zero waste, not negative waste.
+    #[test]
+    fn negative_fraction_is_clamped_to_zero() {
+        for fraction_bp in [-1, -10_000, i64::MIN] {
+            let config = WasteHeatConfig { fraction_bp };
+            let result = compute_waste_heat(1_000, &config);
+            assert_eq!(
+                result.waste_joules, 0,
+                "fraction_bp {fraction_bp} must clamp to zero waste, not negative waste"
+            );
+            assert_eq!(
+                result.productive_joules, 1_000,
+                "all consumption stays productive at fraction_bp {fraction_bp}"
+            );
+        }
+    }
+
+    /// FR-ECON-005: the exact clamp boundaries behave as documented.
+    #[test]
+    fn clamp_boundaries_are_exact() {
+        let zero = compute_waste_heat(1_000, &WasteHeatConfig { fraction_bp: 0 });
+        assert_eq!((zero.waste_joules, zero.productive_joules), (0, 1_000));
+
+        let full = compute_waste_heat(1_000, &WasteHeatConfig { fraction_bp: 10_000 });
+        assert_eq!((full.waste_joules, full.productive_joules), (1_000, 0));
+    }
 }

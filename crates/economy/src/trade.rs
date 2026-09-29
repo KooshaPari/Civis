@@ -208,13 +208,61 @@ mod tests {
     // flows for every profitable good.
     #[test]
     fn emergent_trade_flows_follow_price_differentials() {
-        // Boundary: exactly at the 0.2 threshold no flow is emitted.
-        let at_threshold = vec![make_price_state(0, 1.0), make_price_state(1, 1.2)];
-        assert!(compute_trade_flows(&at_threshold)
-            .iter()
-            .filter(|f| f.good == Good::Food)
-            .count()
-            == 0);
+        // Boundary: at the threshold no flow is emitted.
+        //
+        // The gate is `diff.abs() <= PRICE_DIFFERENTIAL_THRESHOLD`, so a diff of
+        // exactly the threshold must not produce a flow. The original fixture wrote
+        // that as `1.2 - 1.0`, which is unreachable in f32: the subtraction yields
+        // 0.20000004768371582, strictly greater than 0.2f32 (0.20000000298023224),
+        // so a flow is correct and the old assertion could never hold.
+        //
+        // 0.2f32 is not a power of two, so no pair of nearby f32 values differs by
+        // exactly 0.2f32. Checked over the plausible magnitudes: (1.0+t)-1.0,
+        // (4.0+t)-4.0 and (8.0+t)-8.0 are each off by one or two ULPs. The only
+        // exact difference equal to 0.2f32 is t - 0.0, i.e. a zero-priced cluster,
+        // which is a real state for a collapsed or unpriced market. The fixture
+        // uses it and asserts its own exactness so it cannot silently drift.
+        // The fixture pins 0.2 literally rather than reading the constant. A
+        // fixture derived from PRICE_DIFFERENTIAL_THRESHOLD moves with the
+        // constant, so changing the threshold keeps the test green while the
+        // documented behavior silently changes; that is how two of three
+        // mutants survived the first version of this test.
+        const EXPECTED_THRESHOLD: f32 = 0.2;
+        assert_eq!(
+            PRICE_DIFFERENTIAL_THRESHOLD, EXPECTED_THRESHOLD,
+            "PRICE_DIFFERENTIAL_THRESHOLD changed; this boundary fixture and its \
+             comment describe 0.2 and must be revisited with it"
+        );
+        let (lo, hi) = (0.0f32, EXPECTED_THRESHOLD);
+        assert_eq!(
+            hi - lo,
+            EXPECTED_THRESHOLD,
+            "the boundary fixture must be exact in f32, or this test proves nothing"
+        );
+        let at_threshold = vec![make_price_state(0, lo), make_price_state(1, hi)];
+        assert!(
+            compute_trade_flows(&at_threshold)
+                .iter()
+                .filter(|f| f.good == Good::Food)
+                .count()
+                == 0,
+            "no flow at exactly the threshold (diff {})",
+            hi - lo
+        );
+
+        // The gate is a real comparison, not blanket suppression: one ULP above the
+        // same fixture a flow does appear.
+        let just_past = vec![
+            make_price_state(0, lo),
+            make_price_state(1, f32::from_bits(EXPECTED_THRESHOLD.to_bits() + 1)),
+        ];
+        assert!(
+            compute_trade_flows(&just_past)
+                .iter()
+                .any(|f| f.good == Good::Food),
+            "a flow appears one ULP above the threshold"
+        );
+
 
         // Just past the threshold a flow appears, priced at 10× the diff.
         let past_threshold = vec![make_price_state(0, 1.0), make_price_state(1, 1.3)];

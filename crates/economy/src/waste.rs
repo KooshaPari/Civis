@@ -45,11 +45,18 @@ pub struct WasteHeatResult {
 /// `waste = consumption * fraction_bp / 10_000`
 ///
 /// Returns zero waste for zero or negative consumption.
+///
+/// The intermediate product is evaluated in `u128`. In plain `i64`,
+/// `consumption * fraction` overflows once consumption exceeds roughly
+/// `i64::MAX / 10_000`, which a long-running civilisation sim can reach, and the
+/// overflow panics in debug builds. Widening keeps the result exact: `fraction`
+/// is clamped to `[0, BP_DENOM]`, so the quotient can never exceed `consumption`
+/// and the cast back to `i64` cannot truncate.
 #[must_use]
 pub fn compute_waste_heat(consumption_joules: i64, config: &WasteHeatConfig) -> WasteHeatResult {
     let consumption = consumption_joules.max(0);
     let fraction = config.fraction_bp.clamp(0, BP_DENOM);
-    let waste = consumption * fraction / BP_DENOM;
+    let waste = (consumption as u128 * fraction as u128 / BP_DENOM as u128) as i64;
     WasteHeatResult {
         consumption_joules: consumption,
         waste_joules: waste,

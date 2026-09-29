@@ -1,8 +1,8 @@
-# Intent: FR-NFR-S-03 — Citizen count scaling (1k → 10k)
+# Intent: NFR-S-03 — Citizen count scaling (1k → 10k)
 
 > Date: 2026-09-20
-> FR: FR-NFR-S-03
-> Epic: FR-NFR-S
+> FR: NFR-S-03
+> Epic: NFR-S
 
 ## What This FR Captures
 

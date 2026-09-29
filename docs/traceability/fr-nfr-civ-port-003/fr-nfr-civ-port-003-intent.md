@@ -1,8 +1,8 @@
-# Intent: FR-NFR-CIV-PORT-003 — Headless server on all platforms
+# Intent: NFR-CIV-PORT-003 — Headless server on all platforms
 
 > Date: 2026-09-20
-> FR: FR-NFR-CIV-PORT-003
-> Epic: FR-NFR-CIV-PORT
+> FR: NFR-CIV-PORT-003
+> Epic: NFR-CIV-PORT
 
 ## What This FR Captures
 

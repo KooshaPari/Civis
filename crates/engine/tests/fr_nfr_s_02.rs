@@ -1,4 +1,4 @@
-//! FR-NFR-S-02 — WebSocket connection overhead (< 5 ms per client).
+//! NFR-S-02 — WebSocket connection overhead (< 5 ms per client).
 //!
 //! Spec: `docs/traceability/fr-nfr-s-02/fr-nfr-s-02-intent.md`, sourced
 //! from `docs/models/civ-sim/TECHNICAL_SPEC.md` §10.3. A viewer's join
@@ -16,7 +16,7 @@ use civ_server::perf_budgets::{
     ws_handshake_budget_met, BudgetMeasurement, BudgetReport, WS_HANDSHAKE_BUDGET_MS,
 };
 
-/// FR-NFR-S-02: the budget constant itself is the spec's 5 ms figure.
+/// NFR-S-02: the budget constant itself is the spec's 5 ms figure.
 #[test]
 fn nfr_s_02_budget_constant_is_five_millis() {
     assert!(
@@ -26,7 +26,7 @@ fn nfr_s_02_budget_constant_is_five_millis() {
     );
 }
 
-/// FR-NFR-S-02 happy path: join latencies strictly under 5 ms pass the
+/// NFR-S-02 happy path: join latencies strictly under 5 ms pass the
 /// gate, including a join that completes instantaneously.
 #[test]
 fn nfr_s_02_handshake_under_budget_accepted() {
@@ -38,7 +38,7 @@ fn nfr_s_02_handshake_under_budget_accepted() {
     assert!(ws_handshake_budget_met(WS_HANDSHAKE_BUDGET_MS - 0.001));
 }
 
-/// FR-NFR-S-02 edge case: the requirement is strict "< 5 ms", so a
+/// NFR-S-02 edge case: the requirement is strict "< 5 ms", so a
 /// measurement exactly at the budget or beyond it is a violation.
 #[test]
 fn nfr_s_02_handshake_at_or_over_budget_rejected() {
@@ -50,7 +50,7 @@ fn nfr_s_02_handshake_at_or_over_budget_rejected() {
     assert!(!ws_handshake_budget_met(f64::INFINITY));
 }
 
-/// FR-NFR-S-02 end-to-end: a p95 measurement reported through
+/// NFR-S-02 end-to-end: a p95 measurement reported through
 /// `BudgetMeasurement` flips only the handshake flag, and a failing
 /// handshake alone is enough to fail the aggregate report.
 #[test]
@@ -65,7 +65,7 @@ fn nfr_s_02_budget_report_surfaces_handshake_violation() {
         ws_frame_bytes: 10_000,
     };
     let ok = BudgetReport::from_measurement(passing);
-    assert!(ok.ws_handshake, "4.5 ms join must satisfy FR-NFR-S-02");
+    assert!(ok.ws_handshake, "4.5 ms join must satisfy NFR-S-02");
     assert!(ok.all_passed());
 
     let slow = BudgetMeasurement {
@@ -73,7 +73,7 @@ fn nfr_s_02_budget_report_surfaces_handshake_violation() {
         ..passing
     };
     let bad = BudgetReport::from_measurement(slow);
-    assert!(!bad.ws_handshake, "5.5 ms join violates FR-NFR-S-02");
+    assert!(!bad.ws_handshake, "5.5 ms join violates NFR-S-02");
     assert!(
         !bad.all_passed(),
         "slow handshake must fail the aggregate budget report"

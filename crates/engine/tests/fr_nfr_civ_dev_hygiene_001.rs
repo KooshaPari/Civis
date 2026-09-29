@@ -1,8 +1,8 @@
-//! Real coverage for FR-NFR-CIV-DEV-HYGIENE-001 — history-purge plan
+//! Real coverage for NFR-CIV-DEV-HYGIENE-001 — history-purge plan
 //! (build-artifact trees).
 //!
 //! This file replaces the previous placeholder body for
-//! FR-NFR-CIV-DEV-HYGIENE-001 with assertions against the acceptance
+//! NFR-CIV-DEV-HYGIENE-001 with assertions against the acceptance
 //! signal defined in the intent doc:
 //! `docs/traceability/fr-nfr-civ-dev-hygiene-001/fr-nfr-civ-dev-hygiene-001-intent.md`.
 //!
@@ -36,7 +36,7 @@ const INTENT: &str =
     "docs/traceability/fr-nfr-civ-dev-hygiene-001/fr-nfr-civ-dev-hygiene-001-intent.md";
 
 /// Happy path: the plan exists, is tracked at the exact path the FR names,
-/// and carries the `Trace:` line that binds it to FR-NFR-CIV-DEV-HYGIENE-001.
+/// and carries the `Trace:` line that binds it to NFR-CIV-DEV-HYGIENE-001.
 #[test]
 fn history_purge_plan_exists_with_fr_trace_line() {
     let plan = read_repo(PLAN);
@@ -134,7 +134,7 @@ fn history_purge_plan_is_substantive_and_intent_links_back() {
         "the intent doc must reference {PLAN} as its plan artifact"
     );
     assert!(
-        intent.contains("FR-NFR-CIV-DEV-HYGIENE-001"),
-        "the intent doc must name FR-NFR-CIV-DEV-HYGIENE-001"
+        intent.contains("NFR-CIV-DEV-HYGIENE-001"),
+        "the intent doc must name NFR-CIV-DEV-HYGIENE-001"
     );
 }

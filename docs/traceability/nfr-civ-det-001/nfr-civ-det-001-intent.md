@@ -1,8 +1,8 @@
-# Intent: FR-NFR-CIV-DET-001 -- Determinism placeholder
+# Intent: NFR-CIV-DET-001 -- Determinism placeholder
 
 > Date: 2026-09-20
-> FR: FR-NFR-CIV-DET-001
-> Epic: FR-NFR-CIV-DET
+> FR: NFR-CIV-DET-001
+> Epic: NFR-CIV-DET
 > Status: NO-OP PLACEHOLDER (consolidated under FR-CIV-CORE-DET)
 
 ## User Intent
@@ -16,7 +16,7 @@ no additional requirement beyond the consolidated contract.
 
 Marks the slot so downstream tooling has a non-empty spec entry;
 the real coverage lives in FR-CIV-CORE-DET-001..003 and
-FR-NFR-CIV-DET-003/004.
+NFR-CIV-DET-003/004.
 
 ### Product Context
 

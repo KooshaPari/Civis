@@ -2,7 +2,7 @@
 
 Status: Accepted
 Date: 2026-09-24
-Trace: NFR-CIV-PORT-002 (FR-NFR-CIV-PORT-002)
+Trace: NFR-CIV-PORT-002 (NFR-CIV-PORT-002)
 
 ## Context
 

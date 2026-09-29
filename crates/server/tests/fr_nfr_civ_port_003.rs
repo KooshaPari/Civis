@@ -1,4 +1,4 @@
-//! Behavioral coverage for FR-NFR-CIV-PORT-003 — headless server runs
+//! Behavioral coverage for NFR-CIV-PORT-003 — headless server runs
 //! without a GPU backend on all platforms.
 //!
 //! `civ_server::portability` carries the headless build contract:

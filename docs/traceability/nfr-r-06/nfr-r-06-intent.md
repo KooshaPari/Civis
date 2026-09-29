@@ -1,8 +1,8 @@
-# Intent: FR-NFR-R-06 -- Reliability placeholder (deprecated)
+# Intent: NFR-R-06 -- Reliability placeholder (deprecated)
 
 > Date: 2026-09-20
-> FR: FR-NFR-R-06
-> Epic: FR-NFR-R
+> FR: NFR-R-06
+> Epic: NFR-R
 > Status: DEPRECATED — orphan stub deleted
 
 ## User Intent
@@ -20,7 +20,7 @@ Marks the slot so downstream tooling has a non-empty spec entry.
 
 The engine test that exercised this slot was a degenerate
 `assert!(ws.tick == 0)` stub (`crates/engine/tests/fr_nfr_r_06.rs`)
-and has been removed. Per the P3 cleanup bias, generic FR-NFR-R-*
+and has been removed. Per the P3 cleanup bias, generic NFR-R-*
 prefixes without substance are deleted rather than documented.
 
 ## Acceptance Signal

@@ -1,0 +1,862 @@
+{
+  "generated_by": "docs/audits/_classify_spec_only.py",
+  "spec_only_total": 208,
+  "category_blurb": {
+    "reporting-only": "Named only by a matrix, audit, status report, or tracker.",
+    "synthetic-expansion": "Numbered inside an area that has real specs, but no spec section of its own.",
+    "design-document": "Defined only in a design / direction document (intent, not acceptance criteria).",
+    "traceable-requirement": "Real spec, and the spec names the test to write.",
+    "actionable": "Real spec requirement with no implementation reference and no named test."
+  },
+  "counts": {
+    "actionable": 62,
+    "traceable-requirement": 15,
+    "synthetic-expansion": 49,
+    "design-document": 52,
+    "reporting-only": 30
+  },
+  "ids": {
+    "actionable": [
+      {
+        "id": "FR-CIV-GEO-001",
+        "reason": "genuine spec home: docs/specs/CIV-0300-rts-ui-ux-spec.md"
+      },
+      {
+        "id": "FR-CIV-GEO-002",
+        "reason": "genuine spec home: docs/specs/CIV-0300-rts-ui-ux-spec.md"
+      },
+      {
+        "id": "FR-CIV-GEO-003",
+        "reason": "genuine spec home: docs/specs/CIV-0300-rts-ui-ux-spec.md"
+      },
+      {
+        "id": "FR-CIV-GEO-004",
+        "reason": "genuine spec home: docs/specs/CIV-0300-rts-ui-ux-spec.md"
+      },
+      {
+        "id": "FR-CIV-GEO-005",
+        "reason": "genuine spec home: docs/specs/CIV-0300-rts-ui-ux-spec.md"
+      },
+      {
+        "id": "FR-CIV-GEO-006",
+        "reason": "genuine spec home: docs/specs/CIV-0300-rts-ui-ux-spec.md"
+      },
+      {
+        "id": "FR-CIV-GEO-007",
+        "reason": "genuine spec home: docs/specs/CIV-0300-rts-ui-ux-spec.md"
+      },
+      {
+        "id": "FR-CIV-GEO-008",
+        "reason": "genuine spec home: docs/specs/CIV-0300-rts-ui-ux-spec.md"
+      },
+      {
+        "id": "FR-CIV-GEO-009",
+        "reason": "genuine spec home: docs/specs/CIV-0300-rts-ui-ux-spec.md"
+      },
+      {
+        "id": "FR-CIV-GEO-010",
+        "reason": "genuine spec home: docs/specs/CIV-0101-two-zoom-lod-v1.md"
+      },
+      {
+        "id": "FR-CIV-GODOT-UX-000",
+        "reason": "genuine spec home: docs/development-guide/fr-godot-attach.md"
+      },
+      {
+        "id": "FR-CIV-RESEARCH-004-REPLAY",
+        "reason": "genuine spec home: PLAN.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-012",
+        "reason": "genuine spec home: ."
+      },
+      {
+        "id": "FR-CIV-SPECIES-013",
+        "reason": "genuine spec home: ."
+      },
+      {
+        "id": "FR-CIV-SPECIES-014",
+        "reason": "genuine spec home: ."
+      },
+      {
+        "id": "FR-CIV-SPECIES-015",
+        "reason": "genuine spec home: ."
+      },
+      {
+        "id": "FR-CIV-SPECIES-016",
+        "reason": "genuine spec home: ."
+      },
+      {
+        "id": "FR-CIV-SPECIES-017",
+        "reason": "genuine spec home: ."
+      },
+      {
+        "id": "FR-CIV-WAR-020",
+        "reason": "genuine spec home: agileplus-specs/civ-021-recovered-requirements/spec.md"
+      },
+      {
+        "id": "FR-CIV-WEB-000",
+        "reason": "genuine spec home: docs/development-guide/fr-web-spectator.md"
+      },
+      {
+        "id": "FR-CIV-WEB-001",
+        "reason": "genuine spec home: docs/development-guide/fr-web-spectator.md"
+      },
+      {
+        "id": "FR-CIV-WEB-004",
+        "reason": "genuine spec home: docs/development-guide/fr-web-spectator.md"
+      },
+      {
+        "id": "FR-CIV-WEB-005",
+        "reason": "genuine spec home: docs/development-guide/fr-web-spectator.md"
+      },
+      {
+        "id": "FR-SAVE-006",
+        "reason": "genuine spec home: docs/specs/CIV-1000-save-load-persistence-spec.md"
+      },
+      {
+        "id": "FR-SAVE-008",
+        "reason": "genuine spec home: docs/specs/CIV-1000-save-load-persistence-spec.md"
+      },
+      {
+        "id": "FR-SAVE-009",
+        "reason": "genuine spec home: docs/specs/CIV-1000-save-load-persistence-spec.md"
+      },
+      {
+        "id": "FR-SAVE-011",
+        "reason": "genuine spec home: docs/specs/CIV-1000-save-load-persistence-spec.md"
+      },
+      {
+        "id": "FR-SAVE-012",
+        "reason": "genuine spec home: docs/specs/CIV-1000-save-load-persistence-spec.md"
+      },
+      {
+        "id": "FR-SAVE-013",
+        "reason": "genuine spec home: docs/specs/CIV-1000-save-load-persistence-spec.md"
+      },
+      {
+        "id": "FR-SAVE-016",
+        "reason": "genuine spec home: docs/specs/CIV-1000-save-load-persistence-spec.md"
+      },
+      {
+        "id": "FR-SAVE-017",
+        "reason": "genuine spec home: docs/specs/CIV-1000-save-load-persistence-spec.md"
+      },
+      {
+        "id": "FR-SAVE-018",
+        "reason": "genuine spec home: docs/specs/CIV-1000-save-load-persistence-spec.md"
+      },
+      {
+        "id": "FR-SAVE-019",
+        "reason": "genuine spec home: docs/specs/CIV-1000-save-load-persistence-spec.md"
+      },
+      {
+        "id": "FR-UX-006",
+        "reason": "genuine spec home: docs/models/civ-sim/USER_SPEC.md"
+      },
+      {
+        "id": "FR-UX-007",
+        "reason": "genuine spec home: docs/models/civ-sim/USER_SPEC.md"
+      },
+      {
+        "id": "FR-UX-008",
+        "reason": "genuine spec home: docs/models/civ-sim/USER_SPEC.md"
+      },
+      {
+        "id": "FR-UX-009",
+        "reason": "genuine spec home: docs/models/civ-sim/USER_SPEC.md"
+      },
+      {
+        "id": "FR-UX-010",
+        "reason": "genuine spec home: docs/models/civ-sim/USER_SPEC.md"
+      },
+      {
+        "id": "FR-UX-011",
+        "reason": "genuine spec home: docs/models/civ-sim/USER_SPEC.md"
+      },
+      {
+        "id": "FR-UX-012",
+        "reason": "genuine spec home: docs/models/civ-sim/USER_SPEC.md"
+      },
+      {
+        "id": "FR-UX-013",
+        "reason": "genuine spec home: docs/models/civ-sim/USER_SPEC.md"
+      },
+      {
+        "id": "FR-UX-014",
+        "reason": "genuine spec home: docs/models/civ-sim/USER_SPEC.md"
+      },
+      {
+        "id": "FR-UX-015",
+        "reason": "genuine spec home: docs/models/civ-sim/USER_SPEC.md"
+      },
+      {
+        "id": "FR-UX-016",
+        "reason": "genuine spec home: docs/models/civ-sim/USER_SPEC.md"
+      },
+      {
+        "id": "FR-UX-017",
+        "reason": "genuine spec home: docs/models/civ-sim/USER_SPEC.md"
+      },
+      {
+        "id": "FR-UX-018",
+        "reason": "genuine spec home: docs/models/civ-sim/USER_SPEC.md"
+      },
+      {
+        "id": "FR-UX-019",
+        "reason": "genuine spec home: docs/models/civ-sim/USER_SPEC.md"
+      },
+      {
+        "id": "FR-UX-020",
+        "reason": "genuine spec home: docs/models/civ-sim/USER_SPEC.md"
+      },
+      {
+        "id": "FR-UX-021",
+        "reason": "genuine spec home: docs/models/civ-sim/USER_SPEC.md"
+      },
+      {
+        "id": "FR-UX-022",
+        "reason": "genuine spec home: docs/models/civ-sim/USER_SPEC.md"
+      },
+      {
+        "id": "FR-UX-023",
+        "reason": "genuine spec home: docs/models/civ-sim/USER_SPEC.md"
+      },
+      {
+        "id": "FR-UX-024",
+        "reason": "genuine spec home: docs/models/civ-sim/USER_SPEC.md"
+      },
+      {
+        "id": "FR-UX-025",
+        "reason": "genuine spec home: docs/models/civ-sim/USER_SPEC.md"
+      },
+      {
+        "id": "FR-UX-026",
+        "reason": "genuine spec home: docs/models/civ-sim/USER_SPEC.md"
+      },
+      {
+        "id": "FR-UX-027",
+        "reason": "genuine spec home: docs/models/civ-sim/USER_SPEC.md"
+      },
+      {
+        "id": "NFR-CIV-PERF-900",
+        "reason": "genuine spec home: docs/agileplus/README.md"
+      },
+      {
+        "id": "NFR-CIV-PERF-901",
+        "reason": "genuine spec home: docs/agileplus/README.md"
+      },
+      {
+        "id": "NFR-CIV-PERF-902",
+        "reason": "genuine spec home: docs/agileplus/README.md"
+      },
+      {
+        "id": "NFR-CIV-SCALE-900",
+        "reason": "genuine spec home: docs/agileplus/README.md"
+      },
+      {
+        "id": "NFR-CIV-SCALE-902",
+        "reason": "genuine spec home: docs/agileplus/README.md"
+      },
+      {
+        "id": "NFR-CIV-SCALE-910",
+        "reason": "genuine spec home: docs/agileplus/README.md"
+      },
+      {
+        "id": "NFR-CIV-SCALE-920",
+        "reason": "genuine spec home: docs/agileplus/README.md"
+      }
+    ],
+    "traceable-requirement": [
+      {
+        "id": "FR-CIV-ASSET-002",
+        "reason": "docs/specs/CIV-0600-2d-asset-pipeline-spec.md names a concrete test for this id"
+      },
+      {
+        "id": "FR-CIV-ASSET-008",
+        "reason": "docs/specs/CIV-0600-2d-asset-pipeline-spec.md names a concrete test for this id"
+      },
+      {
+        "id": "FR-CIV-ASSET-009",
+        "reason": "docs/specs/CIV-0600-2d-asset-pipeline-spec.md names a concrete test for this id"
+      },
+      {
+        "id": "FR-CIV-ASSET-010",
+        "reason": "docs/specs/CIV-0600-2d-asset-pipeline-spec.md names a concrete test for this id"
+      },
+      {
+        "id": "FR-CIV-ASSET-011",
+        "reason": "docs/specs/CIV-0600-2d-asset-pipeline-spec.md names a concrete test for this id"
+      },
+      {
+        "id": "FR-CIV-ASSET-012",
+        "reason": "docs/specs/CIV-0600-2d-asset-pipeline-spec.md names a concrete test for this id"
+      },
+      {
+        "id": "FR-CIV-ASSET-013",
+        "reason": "docs/specs/CIV-0600-2d-asset-pipeline-spec.md names a concrete test for this id"
+      },
+      {
+        "id": "FR-CIV-ASSET-014",
+        "reason": "docs/specs/CIV-0600-2d-asset-pipeline-spec.md names a concrete test for this id"
+      },
+      {
+        "id": "FR-CIV-ASSET-015",
+        "reason": "docs/specs/CIV-0600-2d-asset-pipeline-spec.md names a concrete test for this id"
+      },
+      {
+        "id": "FR-CIV-ASSET-017",
+        "reason": "docs/specs/CIV-0600-2d-asset-pipeline-spec.md names a concrete test for this id"
+      },
+      {
+        "id": "FR-CIV-ASSET-019",
+        "reason": "docs/specs/CIV-0600-2d-asset-pipeline-spec.md names a concrete test for this id"
+      },
+      {
+        "id": "FR-CIV-ASSET-020",
+        "reason": "docs/specs/CIV-0600-2d-asset-pipeline-spec.md names a concrete test for this id"
+      },
+      {
+        "id": "FR-CIV-ECON-002-JOULE",
+        "reason": "docs/guides/COPILOT_L3_AGENTS.md names a concrete test for this id"
+      },
+      {
+        "id": "FR-CIV-SOCIAL-001",
+        "reason": "PLAN.md names a concrete test for this id"
+      },
+      {
+        "id": "FR-CIV-SOCIAL-002",
+        "reason": "PLAN.md names a concrete test for this id"
+      }
+    ],
+    "synthetic-expansion": [
+      {
+        "id": "FR-CIV-0700",
+        "reason": "area CIV has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "FR-CIV-BEVY-021",
+        "reason": "area CIV-BEVY has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "FR-CIV-PSYCHE-004",
+        "reason": "area CIV-PSYCHE has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "FR-CIV-PSYCHE-007",
+        "reason": "area CIV-PSYCHE has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "FR-CIV-PSYCHE-008",
+        "reason": "area CIV-PSYCHE has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "FR-CIV-PSYCHE-011",
+        "reason": "area CIV-PSYCHE has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "FR-CIV-PSYCHE-020",
+        "reason": "area CIV-PSYCHE has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "FR-CIV-PSYCHE-021",
+        "reason": "area CIV-PSYCHE has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "FR-CIV-PSYCHE-024",
+        "reason": "area CIV-PSYCHE has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "FR-CIV-PSYCHE-030",
+        "reason": "area CIV-PSYCHE has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "FR-CIV-PSYCHE-031",
+        "reason": "area CIV-PSYCHE has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "FR-CIV-PSYCHE-032",
+        "reason": "area CIV-PSYCHE has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "FR-CIV-PSYCHE-033",
+        "reason": "area CIV-PSYCHE has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "FR-CIV-PSYCHE-034",
+        "reason": "area CIV-PSYCHE has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "FR-CIV-PSYCHE-035",
+        "reason": "area CIV-PSYCHE has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "FR-CIV-PSYCHE-036",
+        "reason": "area CIV-PSYCHE has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "FR-CIV-PSYCHE-037",
+        "reason": "area CIV-PSYCHE has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "FR-CIV-PSYCHE-040",
+        "reason": "area CIV-PSYCHE has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-C-02",
+        "reason": "area C has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-CIV-AI-002",
+        "reason": "area CIV-AI has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-CIV-LEGENDS-PERF-01",
+        "reason": "area CIV-LEGENDS-PERF has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-CIV-MAINT-005",
+        "reason": "area CIV-MAINT has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-CIV-MAINT-006",
+        "reason": "area CIV-MAINT has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-CIV-PERF-003",
+        "reason": "area CIV-PERF has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-CIV-PERF-004",
+        "reason": "area CIV-PERF has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-CIV-PERF-005",
+        "reason": "area CIV-PERF has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-CIV-PERF-006",
+        "reason": "area CIV-PERF has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-CIV-PERF-007",
+        "reason": "area CIV-PERF has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-CIV-PERF-008",
+        "reason": "area CIV-PERF has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-CIV-REL-001",
+        "reason": "area CIV-REL has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-CIV-REL-002",
+        "reason": "area CIV-REL has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-CIV-REL-003",
+        "reason": "area CIV-REL has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-CIV-SCALE-003",
+        "reason": "area CIV-SCALE has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-CIV-SCALE-004",
+        "reason": "area CIV-SCALE has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-CIV-SEC-002",
+        "reason": "area CIV-SEC has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-CIV-SEC-003",
+        "reason": "area CIV-SEC has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-CIV-SEC-004",
+        "reason": "area CIV-SEC has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-O-01",
+        "reason": "area O has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-O-02",
+        "reason": "area O has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-O-03",
+        "reason": "area O has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-O-04",
+        "reason": "area O has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-O-05",
+        "reason": "area O has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-O-06",
+        "reason": "area O has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-R-01",
+        "reason": "area R has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-R-02",
+        "reason": "area R has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-R-03",
+        "reason": "area R has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-R-04",
+        "reason": "area R has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-R-05",
+        "reason": "area R has spec-backed siblings, but this id has no spec section"
+      },
+      {
+        "id": "NFR-R-06",
+        "reason": "area R has spec-backed siblings, but this id has no spec section"
+      }
+    ],
+    "design-document": [
+      {
+        "id": "FR-CIV-AUDIO-009",
+        "reason": "only design/direction docs: docs/design/audio-direction.md"
+      },
+      {
+        "id": "FR-CIV-AUDIO-010",
+        "reason": "only design/direction docs: docs/design/audio-direction.md"
+      },
+      {
+        "id": "FR-CIV-AUDIO-011",
+        "reason": "only design/direction docs: docs/design/audio-direction.md"
+      },
+      {
+        "id": "FR-CIV-AUDIO-012",
+        "reason": "only design/direction docs: docs/design/audio-direction.md"
+      },
+      {
+        "id": "FR-CIV-EMERGENCE-RELIGION-1",
+        "reason": "only design/direction docs: docs/design/RELIGION_EMERGENCE.md"
+      },
+      {
+        "id": "FR-CIV-EMERGENCE-RELIGION-2",
+        "reason": "only design/direction docs: docs/design/RELIGION_EMERGENCE.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-100",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-101",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-102",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-103",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-104",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-105",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-201",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-202",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-203",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-204",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-205",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-300",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-301",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-302",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-303",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-304",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-400",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-401",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-402",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-403",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-404",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-405",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-406",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-500",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-501",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-502",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-503",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-504",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-SPECIES-505",
+        "reason": "only design/direction docs: docs/design/species-sentience.md"
+      },
+      {
+        "id": "FR-CIV-TECH-001",
+        "reason": "only design/direction docs: docs/design/tech-engineering.md"
+      },
+      {
+        "id": "FR-CIV-TECH-003",
+        "reason": "only design/direction docs: docs/design/tech-engineering.md"
+      },
+      {
+        "id": "FR-CIV-TECH-004",
+        "reason": "only design/direction docs: docs/design/tech-engineering.md"
+      },
+      {
+        "id": "FR-CIV-TECH-005",
+        "reason": "only design/direction docs: docs/design/tech-engineering.md"
+      },
+      {
+        "id": "FR-CIV-TECH-006",
+        "reason": "only design/direction docs: docs/design/tech-engineering.md"
+      },
+      {
+        "id": "FR-CIV-TECH-010",
+        "reason": "only design/direction docs: docs/design/tech-engineering.md"
+      },
+      {
+        "id": "FR-CIV-TECH-011",
+        "reason": "only design/direction docs: docs/design/tech-engineering.md"
+      },
+      {
+        "id": "FR-CIV-TECH-012",
+        "reason": "only design/direction docs: docs/design/tech-engineering.md"
+      },
+      {
+        "id": "FR-CIV-TECH-013",
+        "reason": "only design/direction docs: docs/design/tech-engineering.md"
+      },
+      {
+        "id": "FR-CIV-TECH-014",
+        "reason": "only design/direction docs: docs/design/tech-engineering.md"
+      },
+      {
+        "id": "FR-CIV-TECH-015",
+        "reason": "only design/direction docs: docs/design/tech-engineering.md"
+      },
+      {
+        "id": "FR-CIV-TECH-016",
+        "reason": "only design/direction docs: docs/design/tech-engineering.md"
+      },
+      {
+        "id": "FR-CIV-TECH-017",
+        "reason": "only design/direction docs: docs/design/tech-engineering.md"
+      },
+      {
+        "id": "FR-CIV-TECH-018",
+        "reason": "only design/direction docs: docs/design/tech-engineering.md"
+      },
+      {
+        "id": "FR-CIV-TECH-019",
+        "reason": "only design/direction docs: docs/design/tech-engineering.md"
+      },
+      {
+        "id": "FR-CIV-TECH-020",
+        "reason": "only design/direction docs: docs/design/tech-engineering.md"
+      },
+      {
+        "id": "FR-CIV-TECH-021",
+        "reason": "only design/direction docs: docs/design/tech-engineering.md"
+      }
+    ],
+    "reporting-only": [
+      {
+        "id": "FR-CIV-EMERGENCE-100",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "FR-CIV-EMERGENCE-111",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "FR-CIV-EMERGENCE-119",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "FR-CIV-EMERGENCE-124",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "FR-CIV-EMERGENCE-132",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "FR-CIV-EMERGENCE-141",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "FR-CIV-EMERGENCE-144",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "FR-CIV-EMERGENCE-151",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "FR-CIV-EMERGENCE-168",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "FR-CIV-EMERGENCE-198",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "FR-CIV-EMERGENCE-221",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "FR-CIV-EMERGENCE-236",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "FR-CIV-EMERGENCE-239",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "FR-CIV-EMERGENCE-241",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "FR-CIV-EMERGENCE-249",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "FR-CIV-LEGENDS-CONFIG-04",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "FR-CIV-LEGENDS-SCALE-02",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "NFR-CIV-001",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "NFR-CIV-002",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "NFR-CIV-003",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "NFR-CIV-004",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "NFR-CIV-005",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "NFR-CIV-006",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "NFR-CIV-007",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "NFR-CIV-008",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "NFR-CIV-009",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "NFR-CIV-010",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "NFR-CIV-011",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "NFR-CIV-012",
+        "reason": "recorded only in matrix/audit documents"
+      },
+      {
+        "id": "NFR-CIV-013",
+        "reason": "recorded only in matrix/audit documents"
+      }
+    ]
+  }
+}

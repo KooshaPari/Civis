@@ -1,8 +1,8 @@
-# Intent: FR-NFR-S-06 — WebSocket frame size
+# Intent: NFR-S-06 — WebSocket frame size
 
 > Date: 2026-09-20
-> FR: FR-NFR-S-06
-> Epic: FR-NFR-S
+> FR: NFR-S-06
+> Epic: NFR-S
 
 ## What This FR Captures
 

@@ -1,7 +1,7 @@
-//! Real coverage for FR-NFR-CIV-PORT-003 — headless server on all platforms.
+//! Real coverage for NFR-CIV-PORT-003 — headless server on all platforms.
 //!
 //! This file replaces the previous placeholder body for
-//! FR-NFR-CIV-PORT-003 with assertions against the acceptance signal in
+//! NFR-CIV-PORT-003 with assertions against the acceptance signal in
 //! `docs/traceability/fr-nfr-civ-port-003/fr-nfr-civ-port-003-intent.md`:
 //!
 //! * The NFR statement requires `cargo build -p civlab-server
@@ -78,7 +78,7 @@ fn nfr_statement_requires_no_gpu_build_and_determinism() {
 /// plain engine code, no GPU backend or feature flags involved.
 #[test]
 fn fifty_tick_determinism_same_seed_identical_state() {
-    const SEED: u64 = 0x50_77_30_03; // FR-NFR-CIV-PORT-003 marker seed
+    const SEED: u64 = 0x50_77_30_03; // NFR-CIV-PORT-003 marker seed
     let mut a = Simulation::with_seed(SEED);
     let mut b = Simulation::with_seed(SEED);
     a.advance_ticks(50);
@@ -133,7 +133,7 @@ fn headless_server_manifest_declares_no_gpu_backend() {
 #[test]
 fn intent_doc_links_the_nfr_statement() {
     let intent = read_repo(INTENT);
-    assert!(intent.contains("FR-NFR-CIV-PORT-003"));
+    assert!(intent.contains("NFR-CIV-PORT-003"));
     assert!(
         intent.contains(NFR_DOC),
         "the intent doc must reference {NFR_DOC} as the statement of record"

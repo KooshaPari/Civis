@@ -1,7 +1,7 @@
-//! Real coverage for FR-NFR-CIV-PORT-002 — backend selection tradeoff ADR.
+//! Real coverage for NFR-CIV-PORT-002 — backend selection tradeoff ADR.
 //!
 //! This file replaces the previous placeholder body for
-//! FR-NFR-CIV-PORT-002 with assertions against the acceptance signal in
+//! NFR-CIV-PORT-002 with assertions against the acceptance signal in
 //! `docs/traceability/fr-nfr-civ-port-002/fr-nfr-civ-port-002-intent.md`:
 //!
 //! * `docs/adr/backend-selection-dlss-vs-solari.md` exists and is ≥ 200
@@ -29,7 +29,7 @@ const ADR: &str = "docs/adr/backend-selection-dlss-vs-solari.md";
 const CLIENT_MANIFEST: &str = "clients/bevy-ref/Cargo.toml";
 const INTENT: &str = "docs/traceability/fr-nfr-civ-port-002/fr-nfr-civ-port-002-intent.md";
 
-/// Happy path: the ADR exists, is bound to FR-NFR-CIV-PORT-002, and is a
+/// Happy path: the ADR exists, is bound to NFR-CIV-PORT-002, and is a
 /// substantive document (≥ 200 words, per the NFR measurable target) —
 /// not a one-line placeholder.
 #[test]
@@ -41,7 +41,7 @@ fn backend_selection_adr_exists_and_is_substantive() {
         "{ADR} must be ≥ 200 words per NFR-CIV-PORT-002, found {words}"
     );
     assert!(
-        adr.contains("FR-NFR-CIV-PORT-002"),
+        adr.contains("NFR-CIV-PORT-002"),
         "{ADR} must carry the FR trace line"
     );
     assert!(
@@ -135,7 +135,7 @@ fn client_manifest_references_the_adr_from_feature_docs() {
 #[test]
 fn intent_and_nfr_statement_agree_on_the_adr_path() {
     let intent = read_repo(INTENT);
-    assert!(intent.contains("FR-NFR-CIV-PORT-002"));
+    assert!(intent.contains("NFR-CIV-PORT-002"));
     assert!(
         intent.contains("docs/reference/non-functional-requirements.md"),
         "the intent doc must reference the NFR statement of record"

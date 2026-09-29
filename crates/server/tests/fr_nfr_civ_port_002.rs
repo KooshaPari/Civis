@@ -1,4 +1,4 @@
-//! Behavioral coverage for FR-NFR-CIV-PORT-002 — backend selection tradeoff ADR.
+//! Behavioral coverage for NFR-CIV-PORT-002 — backend selection tradeoff ADR.
 //!
 //! `civ_server::portability::BACKEND_SELECTION_ADR` is the single
 //! source-of-truth constant for the ADR path: CI doc lints call it to

@@ -157,7 +157,7 @@ vfx = ["bevy", "dep:bevy_hanabi"]
 # top of the base material pipeline (src/materials.rs). OFF by default so CI builds
 # stay fast and texture assets are optional. Enable: `--features pbr-textures`.
 pbr-textures = ["bevy"]
-# FR-NFR-CIV-PORT-002 — the `dlss` / `solari` backend-selection tradeoff is
+# NFR-CIV-PORT-002 — the `dlss` / `solari` backend-selection tradeoff is
 # documented at docs/adr/backend-selection-dlss-vs-solari.md (canonical source;
 # civ_server::portability::BACKEND_SELECTION_ADR). Summary: Windows defaults to
 # DX12 (src/native_backend.rs, CIV_BEVY_BACKEND overrides); `solari` needs a

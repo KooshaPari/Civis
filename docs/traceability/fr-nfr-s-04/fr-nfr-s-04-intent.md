@@ -1,8 +1,8 @@
-# Intent: FR-NFR-S-04 — Command throughput
+# Intent: NFR-S-04 — Command throughput
 
 > Date: 2026-09-20
-> FR: FR-NFR-S-04
-> Epic: FR-NFR-S
+> FR: NFR-S-04
+> Epic: NFR-S
 
 ## What This FR Captures
 

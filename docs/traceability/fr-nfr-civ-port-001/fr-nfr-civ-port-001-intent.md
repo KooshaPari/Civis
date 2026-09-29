@@ -1,8 +1,8 @@
-# Intent: FR-NFR-CIV-PORT-001 — Target platform matrix
+# Intent: NFR-CIV-PORT-001 — Target platform matrix
 
 > Date: 2026-09-20
-> FR: FR-NFR-CIV-PORT-001
-> Epic: FR-NFR-CIV-PORT
+> FR: NFR-CIV-PORT-001
+> Epic: NFR-CIV-PORT
 
 ## What This FR Captures
 

@@ -1,8 +1,8 @@
-# Intent: FR-NFR-S-02 — WebSocket connection overhead
+# Intent: NFR-S-02 — WebSocket connection overhead
 
 > Date: 2026-09-20
-> FR: FR-NFR-S-02
-> Epic: FR-NFR-S
+> FR: NFR-S-02
+> Epic: NFR-S
 
 ## What This FR Captures
 

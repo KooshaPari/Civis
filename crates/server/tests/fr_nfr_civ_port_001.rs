@@ -1,4 +1,4 @@
-//! Behavioral coverage for FR-NFR-CIV-PORT-001 — target platform matrix.
+//! Behavioral coverage for NFR-CIV-PORT-001 — target platform matrix.
 //!
 //! `civ_server::portability` is the implementing code named by
 //! NFR-CIV-PORT-001: [`PLATFORM_MATRIX`] is the canonical, compile-time

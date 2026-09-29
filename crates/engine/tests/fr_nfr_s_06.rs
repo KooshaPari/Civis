@@ -1,4 +1,4 @@
-//! FR-NFR-S-06 — WebSocket frame size (< 20 KB average per frame).
+//! NFR-S-06 — WebSocket frame size (< 20 KB average per frame).
 //!
 //! Spec: `docs/traceability/fr-nfr-s-06/fr-nfr-s-06-intent.md`, sourced
 //! from `docs/models/civ-sim/TECHNICAL_SPEC.md` §10.3. The average
@@ -16,7 +16,7 @@ use civ_server::perf_budgets::{
     ws_frame_budget_met, BudgetMeasurement, BudgetReport, WS_FRAME_BUDGET_BYTES,
 };
 
-/// FR-NFR-S-06: the budget constant is the spec's 20 KB figure.
+/// NFR-S-06: the budget constant is the spec's 20 KB figure.
 #[test]
 fn nfr_s_06_budget_constant_is_twenty_kb() {
     assert_eq!(
@@ -26,7 +26,7 @@ fn nfr_s_06_budget_constant_is_twenty_kb() {
     );
 }
 
-/// FR-NFR-S-06 happy path: compact encodings stay within the budget —
+/// NFR-S-06 happy path: compact encodings stay within the budget —
 /// an empty frame, a small delta frame, and a full-budget-tight frame.
 #[test]
 fn nfr_s_06_frames_within_budget_accepted() {
@@ -37,7 +37,7 @@ fn nfr_s_06_frames_within_budget_accepted() {
     assert!(ws_frame_budget_met(WS_FRAME_BUDGET_BYTES - 1));
 }
 
-/// FR-NFR-S-06 edge case: the requirement is strict "< 20 KB", so a
+/// NFR-S-06 edge case: the requirement is strict "< 20 KB", so a
 /// frame exactly at the budget or a raw un-compacted snapshot blob
 /// violates the NFR.
 #[test]
@@ -52,7 +52,7 @@ fn nfr_s_06_frames_at_or_over_budget_rejected() {
     assert!(!ws_frame_budget_met(usize::MAX));
 }
 
-/// FR-NFR-S-06 end-to-end: the measured average frame size flows
+/// NFR-S-06 end-to-end: the measured average frame size flows
 /// through `BudgetMeasurement`; only the frame flag reacts when the
 /// encoder blows the budget, and the aggregate report fails.
 #[test]
@@ -67,7 +67,7 @@ fn nfr_s_06_budget_report_surfaces_oversized_frames() {
         ws_frame_bytes: 16 * 1024,
     };
     let ok = BudgetReport::from_measurement(base);
-    assert!(ok.ws_frame, "16 KiB average satisfies FR-NFR-S-06");
+    assert!(ok.ws_frame, "16 KiB average satisfies NFR-S-06");
     assert!(ok.all_passed());
 
     let bloated = BudgetMeasurement {
@@ -77,7 +77,7 @@ fn nfr_s_06_budget_report_surfaces_oversized_frames() {
     let bad = BudgetReport::from_measurement(bloated);
     assert!(
         !bad.ws_frame,
-        "32 KiB average violates FR-NFR-S-06 and must flip the flag"
+        "32 KiB average violates NFR-S-06 and must flip the flag"
     );
     assert!(!bad.all_passed());
     // Only the frame-size flag reacts to the frame sample.

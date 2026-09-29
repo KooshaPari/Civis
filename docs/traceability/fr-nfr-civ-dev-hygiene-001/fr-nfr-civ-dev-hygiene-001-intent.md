@@ -1,8 +1,8 @@
-# Intent: FR-NFR-CIV-DEV-HYGIENE-001 — History-purge plan (build artifacts)
+# Intent: NFR-CIV-DEV-HYGIENE-001 — History-purge plan (build artifacts)
 
 > Date: 2026-09-20
-> FR: FR-NFR-CIV-DEV-HYGIENE-001
-> Epic: FR-NFR-CIV-DEV-HYGIENE
+> FR: NFR-CIV-DEV-HYGIENE-001
+> Epic: NFR-CIV-DEV-HYGIENE
 
 ## What This FR Captures
 

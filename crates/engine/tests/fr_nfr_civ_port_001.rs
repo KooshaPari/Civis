@@ -1,7 +1,7 @@
-//! Real coverage for FR-NFR-CIV-PORT-001 — target platform matrix.
+//! Real coverage for NFR-CIV-PORT-001 — target platform matrix.
 //!
 //! This file replaces the previous placeholder body for
-//! FR-NFR-CIV-PORT-001 with assertions against the acceptance signal in
+//! NFR-CIV-PORT-001 with assertions against the acceptance signal in
 //! `docs/traceability/fr-nfr-civ-port-001/fr-nfr-civ-port-001-intent.md`:
 //!
 //! * The NFR statement (`docs/reference/non-functional-requirements.md`
@@ -137,7 +137,7 @@ fn ci_workflow_builds_on_all_three_host_operating_systems() {
 #[test]
 fn intent_doc_links_the_nfr_statement() {
     let intent = read_repo(INTENT);
-    assert!(intent.contains("FR-NFR-CIV-PORT-001"));
+    assert!(intent.contains("NFR-CIV-PORT-001"));
     assert!(
         intent.contains(NFR_DOC),
         "the intent doc must reference {NFR_DOC} as the statement of record"

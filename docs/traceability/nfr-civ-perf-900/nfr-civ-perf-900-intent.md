@@ -1,8 +1,8 @@
-# Intent: FR-NFR-CIV-PERF-900 -- Performance placeholder (suite 900)
+# Intent: NFR-CIV-PERF-900 -- Performance placeholder (suite 900)
 
 > Date: 2026-09-20
-> FR: FR-NFR-CIV-PERF-900
-> Epic: FR-NFR-CIV-PERF
+> FR: NFR-CIV-PERF-900
+> Epic: NFR-CIV-PERF
 > Status: NO-OP PLACEHOLDER
 
 ## User Intent

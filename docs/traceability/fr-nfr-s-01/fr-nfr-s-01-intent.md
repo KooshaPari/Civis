@@ -1,8 +1,8 @@
-# Intent: FR-NFR-S-01 — Max simultaneous WebSocket clients
+# Intent: NFR-S-01 — Max simultaneous WebSocket clients
 
 > Date: 2026-09-20
-> FR: FR-NFR-S-01
-> Epic: FR-NFR-S
+> FR: NFR-S-01
+> Epic: NFR-S
 
 ## What This FR Captures
 

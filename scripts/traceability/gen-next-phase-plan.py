@@ -117,8 +117,8 @@ one wrote down what they're for.
    don't waste cycles later.
 
 ## Bias
-- Default to Option A. Most FR-NFR-prefixed orphans are intentional.
-- Default to Option B for FR-NFR-P/NFR-C/NFR-R/NFR-S etc. that look
+- Default to Option A. Most NFR-prefixed orphans are intentional.
+- Default to Option B for NFR-P/NFR-C/NFR-R/NFR-S etc. that look
   like generic categories without substance.
 
 """,

@@ -1,4 +1,4 @@
-//! FR-NFR-S-03 — citizen count scaling, 1k → 10k sub-linear (< 8×).
+//! NFR-S-03 — citizen count scaling, 1k → 10k sub-linear (< 8×).
 //!
 //! Spec: `docs/traceability/fr-nfr-s-03/fr-nfr-s-03-intent.md`, sourced
 //! from `docs/models/civ-sim/TECHNICAL_SPEC.md` §10.3. A 10× population
@@ -16,7 +16,7 @@ use civ_server::perf_budgets::{
     tick_scale_budget_met, BudgetMeasurement, BudgetReport, TICK_SCALE_BUDGET,
 };
 
-/// FR-NFR-S-03: the budget constant is the spec's 8× bound.
+/// NFR-S-03: the budget constant is the spec's 8× bound.
 #[test]
 fn nfr_s_03_budget_constant_is_eight_x() {
     assert!(
@@ -26,7 +26,7 @@ fn nfr_s_03_budget_constant_is_eight_x() {
     );
 }
 
-/// FR-NFR-S-03 happy path: sub-linear scaling passes. The spec's
+/// NFR-S-03 happy path: sub-linear scaling passes. The spec's
 /// expected rayon result (~5×) and the tightest legal ratio just under
 /// 8× are both accepted; perfect O(1) scaling trivially passes.
 #[test]
@@ -39,7 +39,7 @@ fn nfr_s_03_sublinear_scaling_accepted() {
     assert!(tick_scale_budget_met(10.0, 79.9));
 }
 
-/// FR-NFR-S-03 edge case: linear scaling (10×) or worse violates the
+/// NFR-S-03 edge case: linear scaling (10×) or worse violates the
 /// requirement, as does a degenerate (non-positive) 1k baseline.
 #[test]
 fn nfr_s_03_linear_or_degenerate_scaling_rejected() {
@@ -48,14 +48,14 @@ fn nfr_s_03_linear_or_degenerate_scaling_rejected() {
     // Full linear blowup: 10x citizens -> 10x tick time.
     assert!(
         !tick_scale_budget_met(10.0, 100.0),
-        "linear scaling violates FR-NFR-S-03"
+        "linear scaling violates NFR-S-03"
     );
     // Degenerate baselines are failed measurements, not passes.
     assert!(!tick_scale_budget_met(0.0, 1.0), "zero baseline");
     assert!(!tick_scale_budget_met(-1.0, 1.0), "negative baseline");
 }
 
-/// FR-NFR-S-03 end-to-end: measured tick-time pairs flow through
+/// NFR-S-03 end-to-end: measured tick-time pairs flow through
 /// `BudgetMeasurement` and only the tick-scale flag reacts when the
 /// 10k measurement crosses the budget.
 #[test]
@@ -70,7 +70,7 @@ fn nfr_s_03_budget_report_surfaces_scaling_regression() {
         ws_frame_bytes: 10_000,
     };
     let ok = BudgetReport::from_measurement(base);
-    assert!(ok.tick_scale, "5x scaling satisfies FR-NFR-S-03");
+    assert!(ok.tick_scale, "5x scaling satisfies NFR-S-03");
     assert!(ok.all_passed());
 
     let regressed = BudgetMeasurement {
@@ -80,7 +80,7 @@ fn nfr_s_03_budget_report_surfaces_scaling_regression() {
     let bad = BudgetReport::from_measurement(regressed);
     assert!(
         !bad.tick_scale,
-        "10x scaling violates FR-NFR-S-03 and must flip the flag"
+        "10x scaling violates NFR-S-03 and must flip the flag"
     );
     assert!(!bad.all_passed());
     // Only the tick-scale flag reacts to the tick-time pair.

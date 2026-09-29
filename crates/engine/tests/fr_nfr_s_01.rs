@@ -1,7 +1,7 @@
-//! Real coverage for FR-NFR-S-01 — max simultaneous WebSocket clients
+//! Real coverage for NFR-S-01 — max simultaneous WebSocket clients
 //! (> 100 concurrent clients at 10 ticks/sec).
 //!
-//! This file replaces the previous placeholder body for FR-NFR-S-01 with
+//! This file replaces the previous placeholder body for NFR-S-01 with
 //! assertions against the acceptance signal in
 //! `docs/traceability/fr-nfr-s-01/fr-nfr-s-01-intent.md`:
 //!
@@ -77,15 +77,15 @@ fn nfr_row_pins_the_scalability_target() {
     );
 }
 
-/// Happy path: the behavioral load test exists, is bound to FR-NFR-S-01,
+/// Happy path: the behavioral load test exists, is bound to NFR-S-01,
 /// uses the strict > 100 client count (101), and contains real async
 /// assertions rather than placeholder markers.
 #[test]
 fn behavioral_load_test_exists_with_real_assertions() {
     let test = read_repo(LOAD_TEST);
     assert!(
-        test.contains("FR-NFR-S-01"),
-        "{LOAD_TEST} must reference FR-NFR-S-01 for traceability"
+        test.contains("NFR-S-01"),
+        "{LOAD_TEST} must reference NFR-S-01 for traceability"
     );
     assert!(
         test.contains("const CLIENTS: usize = 101"),
@@ -113,7 +113,7 @@ fn behavioral_load_test_exists_with_real_assertions() {
 #[test]
 fn threshold_is_strictly_greater_than_100_per_intent() {
     let intent = read_repo(INTENT);
-    assert!(intent.contains("FR-NFR-S-01"));
+    assert!(intent.contains("NFR-S-01"));
     assert!(
         intent.contains("greater than 100"),
         "the intent doc must record the strict-greater-than threshold reasoning"

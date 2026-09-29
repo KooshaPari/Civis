@@ -1,8 +1,8 @@
-# Intent: FR-NFR-S-05 — Event log growth rate
+# Intent: NFR-S-05 — Event log growth rate
 
 > Date: 2026-09-20
-> FR: FR-NFR-S-05
-> Epic: FR-NFR-S
+> FR: NFR-S-05
+> Epic: NFR-S
 
 ## What This FR Captures
 

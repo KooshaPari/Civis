@@ -1,8 +1,8 @@
-# Intent: FR-NFR-CIV-PORT-002 — Backend selection tradeoff ADR
+# Intent: NFR-CIV-PORT-002 — Backend selection tradeoff ADR
 
 > Date: 2026-09-20
-> FR: FR-NFR-CIV-PORT-002
-> Epic: FR-NFR-CIV-PORT
+> FR: NFR-CIV-PORT-002
+> Epic: NFR-CIV-PORT
 
 ## What This FR Captures
 

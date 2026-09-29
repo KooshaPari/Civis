@@ -1,4 +1,4 @@
-//! Behavioral coverage for FR-NFR-S-01 — max simultaneous WebSocket
+//! Behavioral coverage for NFR-S-01 — max simultaneous WebSocket
 //! clients: the server must sustain > 100 concurrent WebSocket clients at
 //! 10 ticks/sec with no dropped frames.
 //!
@@ -94,7 +94,7 @@ async fn get_healthz(addr: std::net::SocketAddr) -> serde_json::Value {
     .expect("healthz timeout")
 }
 
-/// Happy path + edge cases for FR-NFR-S-01:
+/// Happy path + edge cases for NFR-S-01:
 ///
 /// * 101 concurrent clients all complete the WebSocket handshake.
 /// * Every client sees a non-empty, monotonic tick stream spanning at

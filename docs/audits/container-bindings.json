@@ -1,0 +1,4148 @@
+[
+  {
+    "file": "crates/agents/src/culture.rs",
+    "line": 20,
+    "ids": [
+      "FR-CIV-CULT-001"
+    ],
+    "kind": "struct",
+    "name": "CultureProfile",
+    "id": "FR-CIV-CULT-001",
+    "defined_by_spec": true,
+    "requirement": "Phase 1: Culture entity (FR-CIV-CULT-001)"
+  },
+  {
+    "file": "crates/agents/src/lib.rs",
+    "line": 271,
+    "ids": [
+      "FR-CIV-3D-002"
+    ],
+    "kind": "enum",
+    "name": "LodTier",
+    "id": "FR-CIV-3D-002",
+    "defined_by_spec": true,
+    "requirement": "\u2014 LOD Budget Enforcement"
+  },
+  {
+    "file": "crates/agents/src/psyche.rs",
+    "line": 20,
+    "ids": [
+      "FR-CIV-PSYCHE-003"
+    ],
+    "kind": "struct",
+    "name": "Temperament",
+    "id": "FR-CIV-PSYCHE-003",
+    "defined_by_spec": true,
+    "requirement": "Lifelong plasticity (small):** temperament nudges toward the statistics of lived experience, gated by `(1 - maturity*0.8)` so children are plastic, adults stable (**FR-CIV-PSYCHE-003**):"
+  },
+  {
+    "file": "crates/agents/src/psyche.rs",
+    "line": 47,
+    "ids": [
+      "FR-CIV-PSYCHE-002"
+    ],
+    "kind": "struct",
+    "name": "Mood",
+    "id": "FR-CIV-PSYCHE-002",
+    "defined_by_spec": true,
+    "requirement": "Temperament emerges from DNA (reactivity/sociability/risk/impulsivity)"
+  },
+  {
+    "file": "crates/agents/src/psyche.rs",
+    "line": 68,
+    "ids": [
+      "FR-CIV-PSYCHE-006"
+    ],
+    "kind": "struct",
+    "name": "Psyche",
+    "id": "FR-CIV-PSYCHE-006",
+    "defined_by_spec": true,
+    "requirement": "Cold agents collapse to cluster-level aggregates (mean mood, belief centroid, intra/inter tie density) \u2014 no per-tie sim far from camera, matching the agent-LOD charter rule. Promotion rehydrates ties lazily from a compac"
+  },
+  {
+    "file": "crates/agents/src/psyche.rs",
+    "line": 84,
+    "ids": [
+      "FR-CIV-PSYCHE-005"
+    ],
+    "kind": "struct",
+    "name": "PsychGenomeProfile",
+    "id": "FR-CIV-PSYCHE-005",
+    "defined_by_spec": true,
+    "requirement": "Per-agent cost is O(MAX_TIES) bounded; decay is amortised (touch on access / periodic sweep). **FR-CIV-PSYCHE-005**."
+  },
+  {
+    "file": "crates/ai/src/config.rs",
+    "line": 7,
+    "ids": [
+      "FR-CIV-AI-015"
+    ],
+    "kind": "struct",
+    "name": "AiConfig",
+    "id": "FR-CIV-AI-015",
+    "defined_by_spec": true,
+    "requirement": "** | **Balance analyst** dev-assist (heuristic anomaly detection \u2192 SLM triage; offline/CI batch). | \u00a73 / top-5 #5 | Runs headless; emits a human-readable balance report; never in shipping sim."
+  },
+  {
+    "file": "crates/ai/src/lib.rs",
+    "line": 182,
+    "ids": [
+      "FR-CIV-AI-013"
+    ],
+    "kind": "struct",
+    "name": "EmbedRequest",
+    "id": "FR-CIV-AI-013",
+    "defined_by_spec": true,
+    "requirement": "** | **Culture/meme drift** service (embeddings \u2192 cosine drift \u2192 speciation threshold). | \u00a71.4 / top-5 #3 | Speciation event fires past threshold; vectors stored on meme record."
+  },
+  {
+    "file": "crates/build/src/lib.rs",
+    "line": 50,
+    "ids": [
+      "FR-API-002",
+      "FR-API-003",
+      "FR-API-004"
+    ],
+    "kind": "const",
+    "name": "SCHEMA_VERSION",
+    "id": "FR-API-002",
+    "defined_by_spec": true,
+    "requirement": "Phase 3: Python scenario runner (FR-API-002, FR-API-003)"
+  },
+  {
+    "file": "crates/build/src/lib.rs",
+    "line": 50,
+    "ids": [
+      "FR-API-002",
+      "FR-API-003",
+      "FR-API-004"
+    ],
+    "kind": "const",
+    "name": "SCHEMA_VERSION",
+    "id": "FR-API-003",
+    "defined_by_spec": true,
+    "requirement": "Phase 3: Python scenario runner (FR-API-002, FR-API-003)"
+  },
+  {
+    "file": "crates/build/src/lib.rs",
+    "line": 50,
+    "ids": [
+      "FR-API-002",
+      "FR-API-003",
+      "FR-API-004"
+    ],
+    "kind": "const",
+    "name": "SCHEMA_VERSION",
+    "id": "FR-API-004",
+    "defined_by_spec": true,
+    "requirement": "Phase 4: Data export (FR-API-004)"
+  },
+  {
+    "file": "crates/build/src/lib.rs",
+    "line": 116,
+    "ids": [
+      "FR-CIV-CLIENT-GODOT-001"
+    ],
+    "kind": "struct",
+    "name": "CultureEraWealthVector",
+    "id": "FR-CIV-CLIENT-GODOT-001",
+    "defined_by_spec": true,
+    "requirement": "Phase 1: WebSocket connection and handshake (FR-CIV-CLIENT-GODOT-001)"
+  },
+  {
+    "file": "crates/build/src/lib.rs",
+    "line": 117,
+    "ids": [
+      "FR-CIV-CLIENT-GODOT-002"
+    ],
+    "kind": "struct",
+    "name": "CultureEraWealthVector",
+    "id": "FR-CIV-CLIENT-GODOT-002",
+    "defined_by_spec": true,
+    "requirement": "Phase 2: 3D scene rendering (FR-CIV-CLIENT-GODOT-002)"
+  },
+  {
+    "file": "crates/build/src/lib.rs",
+    "line": 285,
+    "ids": [
+      "FR-CIV-BIO-001"
+    ],
+    "kind": "struct",
+    "name": "BuildingGraph",
+    "id": "FR-CIV-BIO-001",
+    "defined_by_spec": true,
+    "requirement": "Phase 1: Species registry and YAML schema (FR-CIV-BIO-001)"
+  },
+  {
+    "file": "crates/civ-emergence-metrics/src/dashboard.rs",
+    "line": 38,
+    "ids": [
+      "FR-CIV-EMERGENCE-003"
+    ],
+    "kind": "struct",
+    "name": "EmergenceDashboard",
+    "id": "FR-CIV-EMERGENCE-003",
+    "defined_by_spec": false,
+    "requirement": ""
+  },
+  {
+    "file": "crates/civ-emergence-metrics/src/dashboard.rs",
+    "line": 39,
+    "ids": [
+      "FR-CIV-EMERGENCE-012"
+    ],
+    "kind": "struct",
+    "name": "EmergenceDashboard",
+    "id": "FR-CIV-EMERGENCE-012",
+    "defined_by_spec": false,
+    "requirement": ""
+  },
+  {
+    "file": "crates/civ-emergence-metrics/src/dashboard.rs",
+    "line": 40,
+    "ids": [
+      "FR-CIV-EMERGENCE-013"
+    ],
+    "kind": "struct",
+    "name": "EmergenceDashboard",
+    "id": "FR-CIV-EMERGENCE-013",
+    "defined_by_spec": false,
+    "requirement": ""
+  },
+  {
+    "file": "crates/civ-emergence-metrics/src/dashboard.rs",
+    "line": 41,
+    "ids": [
+      "FR-CIV-EMERG-004"
+    ],
+    "kind": "struct",
+    "name": "EmergenceDashboard",
+    "id": "FR-CIV-EMERG-004",
+    "defined_by_spec": true,
+    "requirement": "[ ] **FR-CIV-EMERG-004**: The web dashboard SHALL provide an"
+  },
+  {
+    "file": "crates/civ-emergence-metrics/src/dashboard.rs",
+    "line": 42,
+    "ids": [
+      "FR-CIV-EMERG-005"
+    ],
+    "kind": "struct",
+    "name": "EmergenceDashboard",
+    "id": "FR-CIV-EMERG-005",
+    "defined_by_spec": true,
+    "requirement": "[ ] **FR-CIV-EMERG-005**: The Bevy primary client SHALL provide a"
+  },
+  {
+    "file": "crates/civ-emergence-metrics/src/sample_snapshot.rs",
+    "line": 10,
+    "ids": [
+      "FR-CIV-EMERGENCE-011"
+    ],
+    "kind": "struct",
+    "name": "EmergenceSampleSnapshot",
+    "id": "FR-CIV-EMERGENCE-011",
+    "defined_by_spec": false,
+    "requirement": ""
+  },
+  {
+    "file": "crates/civ-traffic/src/lib.rs",
+    "line": 52,
+    "ids": [
+      "FR-CIV-ROAD-902"
+    ],
+    "kind": "enum",
+    "name": "InfraProvenance",
+    "id": "FR-CIV-ROAD-902",
+    "defined_by_spec": true,
+    "requirement": "All structures + roads SHALL carry shared data tags regardless of author (procedural vs player), via the building graph. | `civ-protocol-3d` building graph tags provenance but exposes uniform query API. | EMERGENT+UI"
+  },
+  {
+    "file": "crates/civis-mcp/src/lib.rs",
+    "line": 54,
+    "ids": [
+      "FR-CIV-MCP-002"
+    ],
+    "kind": "const",
+    "name": "TOOL_NAMES",
+    "id": "FR-CIV-MCP-002",
+    "defined_by_spec": true,
+    "requirement": "[ ] **FR-CIV-MCP-002**: The MCP server SHALL register read-only HTTP"
+  },
+  {
+    "file": "crates/civis-mcp/src/lib.rs",
+    "line": 163,
+    "ids": [
+      "FR-CIV-MCP-005"
+    ],
+    "kind": "const",
+    "name": "HARNESS_VERSION",
+    "id": "FR-CIV-MCP-005",
+    "defined_by_spec": true,
+    "requirement": "[ ] **FR-CIV-MCP-005**: Configuration SHALL be read from environment"
+  },
+  {
+    "file": "crates/diplomacy/src/shadow_networks.rs",
+    "line": 192,
+    "ids": [
+      "FR-DIPL-007"
+    ],
+    "kind": "struct",
+    "name": "ShadowNetworkState",
+    "id": "FR-DIPL-007",
+    "defined_by_spec": false,
+    "requirement": ""
+  },
+  {
+    "file": "crates/economy/src/allocation.rs",
+    "line": 53,
+    "ids": [
+      "FR-CIV-ECON-003"
+    ],
+    "kind": "struct",
+    "name": "JouleAllocator",
+    "id": "FR-CIV-ECON-003",
+    "defined_by_spec": true,
+    "requirement": "Traceability:** FR-CIV-MARKET-001..008 (carry-over from `polities-markets.md` \u00a72 \u2014 fully consumed by this spec), FR-CIV-ECON-003 (numeraire emergence), FR-CIV-EMERGENCE-001 (micro-driver \u2192 macro-pattern mapping), FR-CIV-"
+  },
+  {
+    "file": "crates/economy/src/allocation.rs",
+    "line": 173,
+    "ids": [
+      "FR-CIV-MARKET-006"
+    ],
+    "kind": "enum",
+    "name": "AllocationRegime",
+    "id": "FR-CIV-MARKET-006",
+    "defined_by_spec": true,
+    "requirement": "Polity coercion overlap (FR-CIV-POLITY-008) | `AllocationRegime` for that locale flips to `Planned` (the regime selector is in `allocation.rs:111-120`); planned override is `polities-markets.md` \u00a7FR-CIV-MARKET-006 | 1 ti"
+  },
+  {
+    "file": "crates/economy/src/currency_trust.rs",
+    "line": 88,
+    "ids": [
+      "FR-CIV-MARKET-007"
+    ],
+    "kind": "struct",
+    "name": "CurrencyTrust",
+    "id": "FR-CIV-MARKET-007",
+    "defined_by_spec": true,
+    "requirement": "3.4 What this spec inherits from `polities-markets.md` \u00a7FR-CIV-MARKET-007"
+  },
+  {
+    "file": "crates/economy/src/institution.rs",
+    "line": 30,
+    "ids": [
+      "FR-CIV-MARKET-008"
+    ],
+    "kind": "enum",
+    "name": "LedgerSide",
+    "id": "FR-CIV-MARKET-008",
+    "defined_by_spec": true,
+    "requirement": "Credit / debt.** A `ClearedTrade` with `bidder == offerer` (self-trade, already supported at `allocator.rs:448-457`) is the seed pattern: a balanced `InstitutionPosting` of a future obligation. The full credit-market spe"
+  },
+  {
+    "file": "crates/economy/src/lib.rs",
+    "line": 87,
+    "ids": [
+      "FR-CIV-ECON-001-MARKET"
+    ],
+    "kind": "const",
+    "name": "SCHEMA_VERSION",
+    "id": "FR-CIV-ECON-001-MARKET",
+    "defined_by_spec": true,
+    "requirement": "F4.4 | Decide on the FR-CIV-ECON-001-MARKET / FR-CIV-ECON-002 / -002-JOULE hyphen-collapse (RENAME candidates) | P3.* | Future"
+  },
+  {
+    "file": "crates/economy/src/lib.rs",
+    "line": 89,
+    "ids": [
+      "FR-CIV-MARKET-001"
+    ],
+    "kind": "const",
+    "name": "SCHEMA_VERSION",
+    "id": "FR-CIV-MARKET-001",
+    "defined_by_spec": true,
+    "requirement": "Traceability:** FR-CIV-MARKET-001..008 (carry-over from `polities-markets.md` \u00a72 \u2014 fully consumed by this spec), FR-CIV-ECON-003 (numeraire emergence), FR-CIV-EMERGENCE-001 (micro-driver \u2192 macro-pattern mapping), FR-CIV-"
+  },
+  {
+    "file": "crates/economy/src/lib.rs",
+    "line": 101,
+    "ids": [
+      "FR-CIV-ECON-004"
+    ],
+    "kind": "struct",
+    "name": "LedgerEntry",
+    "id": "FR-CIV-ECON-004",
+    "defined_by_spec": true,
+    "requirement": "[ ] **FR-CIV-ECON-004** \u2014 Policy-driven fiscal control via"
+  },
+  {
+    "file": "crates/economy/src/market.rs",
+    "line": 37,
+    "ids": [
+      "FR-CIV-MARKET-002"
+    ],
+    "kind": "struct",
+    "name": "MarketState",
+    "id": "FR-CIV-MARKET-002",
+    "defined_by_spec": true,
+    "requirement": "Two projector functions produce the price field that overlays, dashboards, and the polity market-type classifier (FR-CIV-MARKET-002) read. Both are *pure*, *read-only*, and re-evaluated every call \u2014 never stored on `Mark"
+  },
+  {
+    "file": "crates/economy/src/market.rs",
+    "line": 38,
+    "ids": [
+      "FR-CIV-MARKET-003"
+    ],
+    "kind": "struct",
+    "name": "MarketState",
+    "id": "FR-CIV-MARKET-003",
+    "defined_by_spec": true,
+    "requirement": "\u2014 One spectrum, smooth transitions.** Locales hold a soft membership over types (weights), not a hard switch, so a market can be \"mostly barter, partly credit.\" Read-out picks the argmax for the label; mechanics blend."
+  },
+  {
+    "file": "crates/economy/src/market.rs",
+    "line": 39,
+    "ids": [
+      "FR-CIV-MARKET-004"
+    ],
+    "kind": "struct",
+    "name": "MarketState",
+    "id": "FR-CIV-MARKET-004",
+    "defined_by_spec": true,
+    "requirement": "\u2014 T\u00e2tonnement is the default law.** Every priced locale runs **damped t\u00e2tonnement** as the baseline price-discovery dynamic (game-rnd \u00a71.3, \"now\"). Replace the current placeholder `MarketState::step` random-walk delta wi"
+  },
+  {
+    "file": "crates/economy/src/market.rs",
+    "line": 40,
+    "ids": [
+      "FR-CIV-MARKET-005"
+    ],
+    "kind": "struct",
+    "name": "MarketState",
+    "id": "FR-CIV-MARKET-005",
+    "defined_by_spec": true,
+    "requirement": "\u2014 CDA upgrade near high-trust settlements.** Where `trust` and trade volume are high AND the locale is near-camera/active, the locale upgrades to a **continuous double auction** (order-book bid/ask matching \u2014 game-rnd \u00a71"
+  },
+  {
+    "file": "crates/engine/src/building_tiers.rs",
+    "line": 189,
+    "ids": [
+      "FR-CIV-INFOVIEW-914"
+    ],
+    "kind": "struct",
+    "name": "BuildingTierEngine",
+    "id": "FR-CIV-INFOVIEW-914",
+    "defined_by_spec": true,
+    "requirement": "5 | Needs Pressure (B2) | Population | live; the single most charter-demonstrating overlay (shows emergent strain) | LIVE | FR-CIV-INFOVIEW-914"
+  },
+  {
+    "file": "crates/engine/src/climate.rs",
+    "line": 12,
+    "ids": [
+      "FR-CIV-TERRAIN-005"
+    ],
+    "kind": "const",
+    "name": "WATER_MARKER_MATERIAL",
+    "id": "FR-CIV-TERRAIN-005",
+    "defined_by_spec": true,
+    "requirement": "[ ] **FR-CIV-TERRAIN-005**: Water placement tools SHALL respect a single source of"
+  },
+  {
+    "file": "crates/engine/src/climate.rs",
+    "line": 19,
+    "ids": [
+      "FR-CIV-TERRAIN-002"
+    ],
+    "kind": "struct",
+    "name": "CoastalColumn",
+    "id": "FR-CIV-TERRAIN-002",
+    "defined_by_spec": true,
+    "requirement": "[ ] **FR-CIV-TERRAIN-002**: `civ-voxel` chunk seams SHALL be free of visible"
+  },
+  {
+    "file": "crates/engine/src/command_queue.rs",
+    "line": 14,
+    "ids": [
+      "FR-CLIENT-003"
+    ],
+    "kind": "enum",
+    "name": "CommandKind",
+    "id": "FR-CLIENT-003",
+    "defined_by_spec": true,
+    "requirement": "Phase 4: Role authorization (E3.7, FR-CLIENT-003)"
+  },
+  {
+    "file": "crates/engine/src/command_queue.rs",
+    "line": 24,
+    "ids": [
+      "FR-CIV-CORE-008"
+    ],
+    "kind": "struct",
+    "name": "CommandQueue",
+    "id": "FR-CIV-CORE-008",
+    "defined_by_spec": true,
+    "requirement": ": Multi-Client Command Ordering"
+  },
+  {
+    "file": "crates/engine/src/command_queue.rs",
+    "line": 25,
+    "ids": [
+      "FR-CIV-CORE-016"
+    ],
+    "kind": "struct",
+    "name": "CommandQueue",
+    "id": "FR-CIV-CORE-016",
+    "defined_by_spec": true,
+    "requirement": ": Client Priority Tiers"
+  },
+  {
+    "file": "crates/engine/src/command_queue.rs",
+    "line": 30,
+    "ids": [
+      "FR-CIV-NOTIFY-921"
+    ],
+    "kind": "struct",
+    "name": "CommandQueue",
+    "id": "FR-CIV-NOTIFY-921",
+    "defined_by_spec": true,
+    "requirement": "FR-CIV-QOL-140..145.** Extends `FR-CIV-NOTIFY-921` (rebindable hotkey map). Priority: **7**. Crate: **`leafwing-input-manager`** (Bevy gold-standard: action-based, rebindable, gamepad+kb). Wrap, don't hand-roll a keymap."
+  },
+  {
+    "file": "crates/engine/src/constraints.rs",
+    "line": 560,
+    "ids": [
+      "FR-CIV-0104-010"
+    ],
+    "kind": "struct",
+    "name": "ConstraintState",
+    "id": "FR-CIV-0104-010",
+    "defined_by_spec": true,
+    "requirement": ": Recovery Window Tracking"
+  },
+  {
+    "file": "crates/engine/src/constraints.rs",
+    "line": 561,
+    "ids": [
+      "FR-CIV-0104-007"
+    ],
+    "kind": "struct",
+    "name": "ConstraintState",
+    "id": "FR-CIV-0104-007",
+    "defined_by_spec": true,
+    "requirement": ": Baseline Stable Under Full Constraint Set"
+  },
+  {
+    "file": "crates/engine/src/constraints.rs",
+    "line": 562,
+    "ids": [
+      "FR-CIV-0104-003"
+    ],
+    "kind": "struct",
+    "name": "ConstraintState",
+    "id": "FR-CIV-0104-003",
+    "defined_by_spec": true,
+    "requirement": ": ABLATION_MODE Flag Propagates"
+  },
+  {
+    "file": "crates/engine/src/diplomacy.rs",
+    "line": 20,
+    "ids": [
+      "FR-CIV-POLITY-004"
+    ],
+    "kind": "struct",
+    "name": "DeepDiplomacyState",
+    "id": "FR-CIV-POLITY-004",
+    "defined_by_spec": true,
+    "requirement": "\u2014 Regime read-out from graph topology.** A polity's *displayed* shape is a pure function of its internal edge structure:"
+  },
+  {
+    "file": "crates/engine/src/diplomacy.rs",
+    "line": 59,
+    "ids": [
+      "FR-CIV-POLITY-001"
+    ],
+    "kind": "struct",
+    "name": "FactionRelations",
+    "id": "FR-CIV-POLITY-001",
+    "defined_by_spec": true,
+    "requirement": "[`polities-markets.md`](./polities-markets.md) | `FR-CIV-POLITY-001..008`, `FR-CIV-MARKET-001..008` | Emergent society/economy | Depth (depends on psyche/social graph)"
+  },
+  {
+    "file": "crates/engine/src/diplomacy.rs",
+    "line": 160,
+    "ids": [
+      "FR-CIV-POLITY-003"
+    ],
+    "kind": "struct",
+    "name": "DiplomacyEvent",
+    "id": "FR-CIV-POLITY-003",
+    "defined_by_spec": true,
+    "requirement": "\u2014 Coercion derives, never declared.** `coercion(i\u2192j)` measures `i`'s capacity to compel `j`, computed from substrate only:"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 381,
+    "ids": [
+      "FR-CIV-PERF-RT-003",
+      "FR-SOC-INS-001",
+      "FR-SOC-INS-002",
+      "FR-SOC-INS-003",
+      "FR-SOC-INS-004",
+      "FR-SOC-INS-005",
+      "FR-SOC-INS-006",
+      "FR-SOC-INS-007"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-CIV-PERF-RT-003",
+    "defined_by_spec": true,
+    "requirement": "FR-CIV-ASSET-017 | Sprite Pool Pre-Warm | FR-CIV-PERF-RT-003 | Runtime | `test_sprite_pool.spec.ts` | P1"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 381,
+    "ids": [
+      "FR-CIV-PERF-RT-003",
+      "FR-SOC-INS-001",
+      "FR-SOC-INS-002",
+      "FR-SOC-INS-003",
+      "FR-SOC-INS-004",
+      "FR-SOC-INS-005",
+      "FR-SOC-INS-006",
+      "FR-SOC-INS-007"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-SOC-INS-001",
+    "defined_by_spec": true,
+    "requirement": "/// FR-SOC-INS-001: Insurgency risk increases under max coercion + max stress"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 381,
+    "ids": [
+      "FR-CIV-PERF-RT-003",
+      "FR-SOC-INS-001",
+      "FR-SOC-INS-002",
+      "FR-SOC-INS-003",
+      "FR-SOC-INS-004",
+      "FR-SOC-INS-005",
+      "FR-SOC-INS-006",
+      "FR-SOC-INS-007"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-SOC-INS-002",
+    "defined_by_spec": true,
+    "requirement": "/// FR-SOC-INS-002: Coercion inflection \u2014 above inflection point, marginal return is negative"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 381,
+    "ids": [
+      "FR-CIV-PERF-RT-003",
+      "FR-SOC-INS-001",
+      "FR-SOC-INS-002",
+      "FR-SOC-INS-003",
+      "FR-SOC-INS-004",
+      "FR-SOC-INS-005",
+      "FR-SOC-INS-006",
+      "FR-SOC-INS-007"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-SOC-INS-003",
+    "defined_by_spec": true,
+    "requirement": "/// FR-SOC-INS-003: Cell formation fires when mobilization crosses threshold"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 381,
+    "ids": [
+      "FR-CIV-PERF-RT-003",
+      "FR-SOC-INS-001",
+      "FR-SOC-INS-002",
+      "FR-SOC-INS-003",
+      "FR-SOC-INS-004",
+      "FR-SOC-INS-005",
+      "FR-SOC-INS-006",
+      "FR-SOC-INS-007"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-SOC-INS-004",
+    "defined_by_spec": true,
+    "requirement": "/// FR-SOC-INS-004: Amnesty campaign reduces mobilization score and risk"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 381,
+    "ids": [
+      "FR-CIV-PERF-RT-003",
+      "FR-SOC-INS-001",
+      "FR-SOC-INS-002",
+      "FR-SOC-INS-003",
+      "FR-SOC-INS-004",
+      "FR-SOC-INS-005",
+      "FR-SOC-INS-006",
+      "FR-SOC-INS-007"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-SOC-INS-005",
+    "defined_by_spec": true,
+    "requirement": "/// FR-SOC-INS-005: Non-linear risk jump near mobilization threshold"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 381,
+    "ids": [
+      "FR-CIV-PERF-RT-003",
+      "FR-SOC-INS-001",
+      "FR-SOC-INS-002",
+      "FR-SOC-INS-003",
+      "FR-SOC-INS-004",
+      "FR-SOC-INS-005",
+      "FR-SOC-INS-006",
+      "FR-SOC-INS-007"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-SOC-INS-006",
+    "defined_by_spec": true,
+    "requirement": "/// FR-SOC-INS-006: Insurgency cell lifecycle transitions follow declared rules."
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 381,
+    "ids": [
+      "FR-CIV-PERF-RT-003",
+      "FR-SOC-INS-001",
+      "FR-SOC-INS-002",
+      "FR-SOC-INS-003",
+      "FR-SOC-INS-004",
+      "FR-SOC-INS-005",
+      "FR-SOC-INS-006",
+      "FR-SOC-INS-007"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-SOC-INS-007",
+    "defined_by_spec": true,
+    "requirement": "/// FR-SOC-INS-007: Counterinsurgency detection probability is monotonically"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 382,
+    "ids": [
+      "FR-CIV-ARCH-006"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-CIV-ARCH-006",
+    "defined_by_spec": false,
+    "requirement": ""
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 383,
+    "ids": [
+      "FR-CIV-CORE-002"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-CIV-CORE-002",
+    "defined_by_spec": true,
+    "requirement": "/// FR-CIV-CORE-002: Deterministic Transition"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 384,
+    "ids": [
+      "FR-CIV-CORE-004"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-CIV-CORE-004",
+    "defined_by_spec": true,
+    "requirement": ": Sub-16ms Tick Time"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 385,
+    "ids": [
+      "FR-CIV-CORE-019"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-CIV-CORE-019",
+    "defined_by_spec": true,
+    "requirement": "\u00a74 ECS World Design | FR-CIV-CORE-019, FR-CIV-ACT-001 | CIV-0001"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 386,
+    "ids": [
+      "FR-SOC-CIV-001"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-SOC-CIV-001",
+    "defined_by_spec": true,
+    "requirement": "/// FR-SOC-CIV-001: Civic compartmental R\u2080 is bounded correctly."
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 387,
+    "ids": [
+      "FR-SOC-CIV-002"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-SOC-CIV-002",
+    "defined_by_spec": true,
+    "requirement": "/// FR-SOC-CIV-002: Civic compartment population is conserved (E+A+R=1.0)."
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 388,
+    "ids": [
+      "FR-SOC-INT-001"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-SOC-INT-001",
+    "defined_by_spec": true,
+    "requirement": "/// FR-SOC-INT-001: Each intervention toggles output in declared direction"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 389,
+    "ids": [
+      "FR-SOC-INT-002"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-SOC-INT-002",
+    "defined_by_spec": true,
+    "requirement": "/// FR-SOC-INT-002: Information integrity program reduces ideology diffusion rate"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 390,
+    "ids": [
+      "FR-SOC-INT-003"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-SOC-INT-003",
+    "defined_by_spec": true,
+    "requirement": "/// FR-SOC-INT-003: Intervention effects are event-emitting"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 391,
+    "ids": [
+      "FR-SOC-INT-004"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-SOC-INT-004",
+    "defined_by_spec": true,
+    "requirement": "/// FR-SOC-INT-004: Expired interventions have no effect"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 392,
+    "ids": [
+      "NFR-CIV-PERF-002"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "NFR-CIV-PERF-002",
+    "defined_by_spec": false,
+    "requirement": ""
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 394,
+    "ids": [
+      "FR-CIV-ARCH-NOSVG-001"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-CIV-ARCH-NOSVG-001",
+    "defined_by_spec": true,
+    "requirement": "FR-CIV-ASSET-014 | No Runtime SVG Parsing | FR-CIV-ARCH-NOSVG-001 | Runtime / CI | `check_bundle_no_svg_runtime.sh` | P0"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 395,
+    "ids": [
+      "FR-PROT-001"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-PROT-001",
+    "defined_by_spec": false,
+    "requirement": ""
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 396,
+    "ids": [
+      "FR-PROT-002"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-PROT-002",
+    "defined_by_spec": false,
+    "requirement": ""
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 397,
+    "ids": [
+      "FR-PROT-003"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-PROT-003",
+    "defined_by_spec": false,
+    "requirement": ""
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 398,
+    "ids": [
+      "FR-PROT-005"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-PROT-005",
+    "defined_by_spec": false,
+    "requirement": ""
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 399,
+    "ids": [
+      "FR-SOC-COH-001"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-SOC-COH-001",
+    "defined_by_spec": true,
+    "requirement": "/// FR-SOC-COH-001: Cohesion decay under max coercion"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 400,
+    "ids": [
+      "FR-SOC-COH-002"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-SOC-COH-002",
+    "defined_by_spec": true,
+    "requirement": "/// FR-SOC-COH-002: Cohesion reinforced by welfare floor increase"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 401,
+    "ids": [
+      "FR-SOC-COH-003"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-SOC-COH-003",
+    "defined_by_spec": true,
+    "requirement": "/// FR-SOC-COH-003: Polarization feedback accelerates cohesion decay"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 402,
+    "ids": [
+      "FR-SOC-COH-004"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-SOC-COH-004",
+    "defined_by_spec": true,
+    "requirement": "/// FR-SOC-COH-004: Spatial diffusion propagates across adjacent regions"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 403,
+    "ids": [
+      "FR-SOC-INTG-001"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-SOC-INTG-001",
+    "defined_by_spec": true,
+    "requirement": "/// FR-SOC-INTG-001: Social module outputs couple correctly to insurgency in CIV-0105"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 404,
+    "ids": [
+      "FR-SOC-INTG-002"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-SOC-INTG-002",
+    "defined_by_spec": true,
+    "requirement": "/// FR-SOC-INTG-002: Coercion index from CIV-0105 raises insurgency risk"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 405,
+    "ids": [
+      "FR-SOC-INTG-003"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-SOC-INTG-003",
+    "defined_by_spec": true,
+    "requirement": "/// FR-SOC-INTG-003: Citizen lifecycle dissenting stage raises recruit susceptibility"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 406,
+    "ids": [
+      "FR-SOC-INTG-004"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-SOC-INTG-004",
+    "defined_by_spec": true,
+    "requirement": "/// FR-SOC-INTG-004: Faction coalition stability feeds back into insurgency propensity."
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 407,
+    "ids": [
+      "FR-SOC-INTG-005"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-SOC-INTG-005",
+    "defined_by_spec": true,
+    "requirement": "/// FR-SOC-INTG-005: Cross-module health-labor feedback: epidemic reduces joule output."
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 408,
+    "ids": [
+      "FR-SOC-INTG-006"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-SOC-INTG-006",
+    "defined_by_spec": true,
+    "requirement": "/// FR-SOC-INTG-006: Radicalization attractor stability \u2014 under sustained"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 409,
+    "ids": [
+      "FR-SOC-INTG-007"
+    ],
+    "kind": "struct",
+    "name": "WorldState",
+    "id": "FR-SOC-INTG-007",
+    "defined_by_spec": true,
+    "requirement": "/// FR-SOC-INTG-007: Civic recovery path \u2014 sustained welfare + legitimacy improvement"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 713,
+    "ids": [
+      "FR-CIV-CORE-003"
+    ],
+    "kind": "struct",
+    "name": "Simulation",
+    "id": "FR-CIV-CORE-003",
+    "defined_by_spec": true,
+    "requirement": ": Seeded RNG in Stochastic Phase"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 714,
+    "ids": [
+      "FR-CIV-CORE-006"
+    ],
+    "kind": "struct",
+    "name": "Simulation",
+    "id": "FR-CIV-CORE-006",
+    "defined_by_spec": true,
+    "requirement": ": No System Time in Simulation"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 715,
+    "ids": [
+      "FR-CIV-CORE-007"
+    ],
+    "kind": "struct",
+    "name": "Simulation",
+    "id": "FR-CIV-CORE-007",
+    "defined_by_spec": true,
+    "requirement": ": Snapshot Serialization"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 716,
+    "ids": [
+      "FR-CIV-CORE-011"
+    ],
+    "kind": "struct",
+    "name": "Simulation",
+    "id": "FR-CIV-CORE-011",
+    "defined_by_spec": true,
+    "requirement": "/// FR-CIV-CORE-011: Replay Determinism Verification"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 717,
+    "ids": [
+      "FR-CIV-CORE-013"
+    ],
+    "kind": "struct",
+    "name": "Simulation",
+    "id": "FR-CIV-CORE-013",
+    "defined_by_spec": true,
+    "requirement": ": Phase Schedule Integrity"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 718,
+    "ids": [
+      "FR-CIV-CORE-014"
+    ],
+    "kind": "struct",
+    "name": "Simulation",
+    "id": "FR-CIV-CORE-014",
+    "defined_by_spec": true,
+    "requirement": ": Event Logging"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 719,
+    "ids": [
+      "FR-CIV-CORE-017"
+    ],
+    "kind": "struct",
+    "name": "Simulation",
+    "id": "FR-CIV-CORE-017",
+    "defined_by_spec": true,
+    "requirement": ": Snapshot Filtering"
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 1136,
+    "ids": [
+      "FR-CIV-GODTOOL-921"
+    ],
+    "kind": "const",
+    "name": "GOD_ACTION_AUDIT_CAP",
+    "id": "FR-CIV-GODTOOL-921",
+    "defined_by_spec": true,
+    "requirement": "God-tool actions SHALL support undo and a blueprint copy/paste of a region. | Undo reverts last brush deterministically; blueprint captures + re-stamps a voxel/structure region."
+  },
+  {
+    "file": "crates/engine/src/engine.rs",
+    "line": 3424,
+    "ids": [
+      "FR-CIV-CORE-009"
+    ],
+    "kind": "struct",
+    "name": "SimulationSnapshot",
+    "id": "FR-CIV-CORE-009",
+    "defined_by_spec": true,
+    "requirement": ": WebSocket JSON-RPC Protocol"
+  },
+  {
+    "file": "crates/engine/src/fixed_math.rs",
+    "line": 3,
+    "ids": [
+      "NFR-CIV-DET-003"
+    ],
+    "kind": "struct",
+    "name": "Fixed",
+    "id": "NFR-CIV-DET-003",
+    "defined_by_spec": false,
+    "requirement": ""
+  },
+  {
+    "file": "crates/engine/src/fixed_math.rs",
+    "line": 4,
+    "ids": [
+      "FR-CIV-CORE-012"
+    ],
+    "kind": "struct",
+    "name": "Fixed",
+    "id": "FR-CIV-CORE-012",
+    "defined_by_spec": true,
+    "requirement": ": Fixed-Point Arithmetic"
+  },
+  {
+    "file": "crates/engine/src/hash_chain.rs",
+    "line": 41,
+    "ids": [
+      "FR-CIV-CORE-015"
+    ],
+    "kind": "struct",
+    "name": "HashChainState",
+    "id": "FR-CIV-CORE-015",
+    "defined_by_spec": true,
+    "requirement": ": State Hash Contracts"
+  },
+  {
+    "file": "crates/engine/src/info_views.rs",
+    "line": 89,
+    "ids": [
+      "FR-CIV-INFOVIEW-916"
+    ],
+    "kind": "struct",
+    "name": "InfoOverlay",
+    "id": "FR-CIV-INFOVIEW-916",
+    "defined_by_spec": true,
+    "requirement": "7 | Temperature (A3) | Terrain | live proxy now; upgrades to `planet` with no overlay change | LIVE/NEAR | FR-CIV-INFOVIEW-916"
+  },
+  {
+    "file": "crates/engine/src/info_views.rs",
+    "line": 90,
+    "ids": [
+      "FR-CIV-INFOVIEW-917"
+    ],
+    "kind": "struct",
+    "name": "InfoOverlay",
+    "id": "FR-CIV-INFOVIEW-917",
+    "defined_by_spec": true,
+    "requirement": "8 | Resource Deposits (A8) | Terrain | NEAR; turns the static world into a *strategic* map | NEAR | FR-CIV-INFOVIEW-917"
+  },
+  {
+    "file": "crates/engine/src/info_views.rs",
+    "line": 91,
+    "ids": [
+      "FR-CIV-INFOVIEW-918"
+    ],
+    "kind": "struct",
+    "name": "InfoOverlay",
+    "id": "FR-CIV-INFOVIEW-918",
+    "defined_by_spec": true,
+    "requirement": "9 | Roads / Network (E1) | Infra | NEAR; `TrafficGraph` exists; first Gizmo render-kind exemplar | NEAR | FR-CIV-INFOVIEW-918"
+  },
+  {
+    "file": "crates/engine/src/info_views.rs",
+    "line": 92,
+    "ids": [
+      "FR-CIV-INFOVIEW-919"
+    ],
+    "kind": "struct",
+    "name": "InfoOverlay",
+    "id": "FR-CIV-INFOVIEW-919",
+    "defined_by_spec": true,
+    "requirement": "10 | Wealth / Prosperity (C4) | Economy | NEAR; first EntityTint exemplar; high \"is there depth\" payoff | NEAR | FR-CIV-INFOVIEW-919"
+  },
+  {
+    "file": "crates/engine/src/info_views.rs",
+    "line": 93,
+    "ids": [
+      "FR-CIV-INFOVIEW-921"
+    ],
+    "kind": "struct",
+    "name": "InfoOverlay",
+    "id": "FR-CIV-INFOVIEW-921",
+    "defined_by_spec": true,
+    "requirement": "12 | Migration Flow (B6) | Population | NEAR; Gizmo arrows; makes invisible agent movement *readable* | NEAR | FR-CIV-INFOVIEW-921"
+  },
+  {
+    "file": "crates/engine/src/lib.rs",
+    "line": 108,
+    "ids": [
+      "FR-CIV-3D-003"
+    ],
+    "kind": "const",
+    "name": "SCALE",
+    "id": "FR-CIV-3D-003",
+    "defined_by_spec": true,
+    "requirement": "\u2014 Frame Rate \u2014 Primary Hardware"
+  },
+  {
+    "file": "crates/engine/src/lod.rs",
+    "line": 10,
+    "ids": [
+      "FR-CIV-TERRAIN-004"
+    ],
+    "kind": "enum",
+    "name": "ZoomLevel",
+    "id": "FR-CIV-TERRAIN-004",
+    "defined_by_spec": true,
+    "requirement": "[ ] **FR-CIV-TERRAIN-004**: Map2D zoom levels SHALL round-trip without voxel-data"
+  },
+  {
+    "file": "crates/engine/src/metrics.rs",
+    "line": 40,
+    "ids": [
+      "FR-CIV-METRICS-001-TIMESERIES"
+    ],
+    "kind": "struct",
+    "name": "MetricsFixed",
+    "id": "FR-CIV-METRICS-001-TIMESERIES",
+    "defined_by_spec": true,
+    "requirement": "`FR-CIV-METRICS-001` | \u2192 | `FR-CIV-METRICS-001-TIMESERIES` | `PLAN.md:151`; non-hyphenated form is a phantom alias."
+  },
+  {
+    "file": "crates/engine/src/perf.rs",
+    "line": 11,
+    "ids": [
+      "FR-CIV-PERF-006"
+    ],
+    "kind": "struct",
+    "name": "TickProfile",
+    "id": "FR-CIV-PERF-006",
+    "defined_by_spec": true,
+    "requirement": ": Full Snapshot at 10k Citizens"
+  },
+  {
+    "file": "crates/engine/src/perf.rs",
+    "line": 12,
+    "ids": [
+      "FR-CIV-PERF-004"
+    ],
+    "kind": "struct",
+    "name": "TickProfile",
+    "id": "FR-CIV-PERF-004",
+    "defined_by_spec": true,
+    "requirement": ": WebSocket Command Latency"
+  },
+  {
+    "file": "crates/engine/src/replay.rs",
+    "line": 146,
+    "ids": [
+      "FR-CIV-RTS-015",
+      "FR-SAVE-009"
+    ],
+    "kind": "struct",
+    "name": "ReplayLog",
+    "id": "FR-CIV-RTS-015",
+    "defined_by_spec": true,
+    "requirement": "Client-Side Prediction & Replay Correction | Smooth unit movement interpolation (frame-rate independent); snap correction \\< 100ms | Unit positions extrapolated per-frame; server authoritative state corrects if drift > 1"
+  },
+  {
+    "file": "crates/engine/src/replay.rs",
+    "line": 146,
+    "ids": [
+      "FR-CIV-RTS-015",
+      "FR-SAVE-009"
+    ],
+    "kind": "struct",
+    "name": "ReplayLog",
+    "id": "FR-SAVE-009",
+    "defined_by_spec": true,
+    "requirement": "The BLAKE3 hash chain tail SHALL be serialized and restored on load, enabling the chain to continue unbroken from the saved tick. | MUST | \u00a73.3, \u00a77.1"
+  },
+  {
+    "file": "crates/engine/src/rts_types.rs",
+    "line": 12,
+    "ids": [
+      "FR-CIV-RTS-RENDER-003"
+    ],
+    "kind": "struct",
+    "name": "NationColor",
+    "id": "FR-CIV-RTS-RENDER-003",
+    "defined_by_spec": true,
+    "requirement": "FR-CIV-ASSET-004 | Background Removal Quality Gate | FR-CIV-RTS-RENDER-003 | Stage 3 | `test_rembg_batch.py` | P0"
+  },
+  {
+    "file": "crates/engine/src/rts_types.rs",
+    "line": 15,
+    "ids": [
+      "FR-CIV-ASSET-003"
+    ],
+    "kind": "struct",
+    "name": "NationColor",
+    "id": "FR-CIV-ASSET-003",
+    "defined_by_spec": true,
+    "requirement": "\u2014 Supersampling Quality**"
+  },
+  {
+    "file": "crates/engine/src/rts_types.rs",
+    "line": 16,
+    "ids": [
+      "FR-CIV-ASSET-004"
+    ],
+    "kind": "struct",
+    "name": "NationColor",
+    "id": "FR-CIV-ASSET-004",
+    "defined_by_spec": true,
+    "requirement": "\u2014 Background Removal Quality Gate**"
+  },
+  {
+    "file": "crates/engine/src/rts_types.rs",
+    "line": 17,
+    "ids": [
+      "FR-CIV-ASSET-005"
+    ],
+    "kind": "struct",
+    "name": "NationColor",
+    "id": "FR-CIV-ASSET-005",
+    "defined_by_spec": true,
+    "requirement": "\u2014 Nation Color Preservation in Quantization**"
+  },
+  {
+    "file": "crates/engine/src/rts_types.rs",
+    "line": 18,
+    "ids": [
+      "FR-CIV-ASSET-016"
+    ],
+    "kind": "struct",
+    "name": "NationColor",
+    "id": "FR-CIV-ASSET-016",
+    "defined_by_spec": true,
+    "requirement": "\u2014 Nation Recoloring Shader Correctness**"
+  },
+  {
+    "file": "crates/engine/src/rts_types.rs",
+    "line": 64,
+    "ids": [
+      "FR-CIV-RTS-RENDER-004"
+    ],
+    "kind": "struct",
+    "name": "AtlasConfig",
+    "id": "FR-CIV-RTS-RENDER-004",
+    "defined_by_spec": true,
+    "requirement": "FR-CIV-ASSET-006 | Power-of-Two Atlas Dimensions | FR-CIV-RTS-RENDER-004 | Stage 5 | `test_atlas_pack.rs` | P0"
+  },
+  {
+    "file": "crates/engine/src/rts_types.rs",
+    "line": 67,
+    "ids": [
+      "FR-CIV-ASSET-006"
+    ],
+    "kind": "struct",
+    "name": "AtlasConfig",
+    "id": "FR-CIV-ASSET-006",
+    "defined_by_spec": true,
+    "requirement": "\u2014 Atlas Power-of-Two Dimensions**"
+  },
+  {
+    "file": "crates/engine/src/rts_types.rs",
+    "line": 174,
+    "ids": [
+      "FR-CIV-RTS-ZOOM-001"
+    ],
+    "kind": "struct",
+    "name": "SpriteHandle",
+    "id": "FR-CIV-RTS-ZOOM-001",
+    "defined_by_spec": true,
+    "requirement": "FR-CIV-ASSET-018 | Zoom Transition Synchronous Swap | FR-CIV-RTS-ZOOM-001 | Runtime | `test_sprite_manager.spec.ts` | P1"
+  },
+  {
+    "file": "crates/engine/src/rts_types.rs",
+    "line": 176,
+    "ids": [
+      "FR-CIV-ASSET-018"
+    ],
+    "kind": "struct",
+    "name": "SpriteHandle",
+    "id": "FR-CIV-ASSET-018",
+    "defined_by_spec": true,
+    "requirement": "\u2014 Zoom Transition Texture Swap**"
+  },
+  {
+    "file": "crates/engine/src/rts_types.rs",
+    "line": 211,
+    "ids": [
+      "FR-CIV-RTS-RENDER-005"
+    ],
+    "kind": "struct",
+    "name": "UvRect",
+    "id": "FR-CIV-RTS-RENDER-005",
+    "defined_by_spec": true,
+    "requirement": "FR-CIV-ASSET-007 | UV Coordinate Validity | FR-CIV-RTS-RENDER-005 | Stage 5 | `test_atlas_pack.rs` | P0"
+  },
+  {
+    "file": "crates/engine/src/rts_types.rs",
+    "line": 213,
+    "ids": [
+      "FR-CIV-ASSET-007"
+    ],
+    "kind": "struct",
+    "name": "UvRect",
+    "id": "FR-CIV-ASSET-007",
+    "defined_by_spec": true,
+    "requirement": "\u2014 Atlas UV Coordinate Validity**"
+  },
+  {
+    "file": "crates/engine/src/rts_types.rs",
+    "line": 248,
+    "ids": [
+      "FR-CIV-RTS-RENDER-001",
+      "FR-CIV-RTS-RENDER-002"
+    ],
+    "kind": "struct",
+    "name": "SsConfig",
+    "id": "FR-CIV-RTS-RENDER-001",
+    "defined_by_spec": true,
+    "requirement": "FR-CIV-ASSET-001 | SVG Template Rendering | FR-CIV-RTS-RENDER-001 | Stage 1 | `test_svg_inject.py` | P0"
+  },
+  {
+    "file": "crates/engine/src/rts_types.rs",
+    "line": 248,
+    "ids": [
+      "FR-CIV-RTS-RENDER-001",
+      "FR-CIV-RTS-RENDER-002"
+    ],
+    "kind": "struct",
+    "name": "SsConfig",
+    "id": "FR-CIV-RTS-RENDER-002",
+    "defined_by_spec": true,
+    "requirement": "FR-CIV-ASSET-003 | 4\u00d7 Supersampling Required | FR-CIV-RTS-RENDER-002 | Stage 2 | `test_resvg_config.rs` | P0"
+  },
+  {
+    "file": "crates/engine/src/rts_types.rs",
+    "line": 250,
+    "ids": [
+      "FR-CIV-ASSET-001"
+    ],
+    "kind": "struct",
+    "name": "SsConfig",
+    "id": "FR-CIV-ASSET-001",
+    "defined_by_spec": true,
+    "requirement": "11.1 [FR-CIV-ASSET-001 through FR-CIV-ASSET-010](#111-fr-civ-asset-001-through-fr-civ-asset-010)"
+  },
+  {
+    "file": "crates/engine/src/rts_types.rs",
+    "line": 251,
+    "ids": [
+      "FR-CIV-ASSET-003"
+    ],
+    "kind": "struct",
+    "name": "SsConfig",
+    "id": "FR-CIV-ASSET-003",
+    "defined_by_spec": true,
+    "requirement": "\u2014 Supersampling Quality**"
+  },
+  {
+    "file": "crates/engine/src/social_types.rs",
+    "line": 102,
+    "ids": [
+      "FR-CIV-POLITY-007"
+    ],
+    "kind": "enum",
+    "name": "StratBand",
+    "id": "FR-CIV-POLITY-007",
+    "defined_by_spec": true,
+    "requirement": "\u2014 Collapse.** A polity dissolves when its internal mean coord falls below the anarchic floor for a sustained window (population loss, surplus collapse starving payoff, or coercion capacity evaporating). Collapse emits it"
+  },
+  {
+    "file": "crates/engine/src/social_types.rs",
+    "line": 336,
+    "ids": [
+      "FR-CIV-NOTIFY-901"
+    ],
+    "kind": "enum",
+    "name": "UnrestLevel",
+    "id": "FR-CIV-NOTIFY-901",
+    "defined_by_spec": true,
+    "requirement": "Data-driven thresholds** (`FR-CIV-NOTIFY-901`): alert rules in RON (happiness < X, population collapse, hyperinflation) \u2014 measured, not scripted."
+  },
+  {
+    "file": "crates/engine/src/tutorial.rs",
+    "line": 13,
+    "ids": [
+      "FR-CIV-NOTIFY-920"
+    ],
+    "kind": "enum",
+    "name": "TutorialMilestone",
+    "id": "FR-CIV-NOTIFY-920",
+    "defined_by_spec": true,
+    "requirement": "FR-CIV-QOL-100..109.** Extends `FR-CIV-NOTIFY-920`. Priority: **8 (must-ship)**."
+  },
+  {
+    "file": "crates/engine/src/vehicle_types.rs",
+    "line": 66,
+    "ids": [
+      "FR-CIV-VEHICLE-002"
+    ],
+    "kind": "struct",
+    "name": "VehicleArchetype",
+    "id": "FR-CIV-VEHICLE-002",
+    "defined_by_spec": true,
+    "requirement": "** \u2014 Removing a required material from a locale's stock makes new builds of that kind"
+  },
+  {
+    "file": "crates/genetics/src/lib.rs",
+    "line": 67,
+    "ids": [
+      "FR-CIV-GODTOOL-911"
+    ],
+    "kind": "struct",
+    "name": "DnaClass",
+    "id": "FR-CIV-GODTOOL-911",
+    "defined_by_spec": true,
+    "requirement": "Life/spawn tools SHALL seed DNA-bearing organisms; outcome (survival, speciation, sentience) emerges, never scripted. | Spawn injects `civ-genetics` DNA; lineage then evolves under laws only."
+  },
+  {
+    "file": "crates/mod-host/src/capability.rs",
+    "line": 20,
+    "ids": [
+      "FR-CIV-MOD-003"
+    ],
+    "kind": "enum",
+    "name": "WorldDomain",
+    "id": "FR-CIV-MOD-003",
+    "defined_by_spec": true,
+    "requirement": "Building / recipe / structure **grammar** registration | \u00a73.2"
+  },
+  {
+    "file": "crates/mod-host/src/capability.rs",
+    "line": 52,
+    "ids": [
+      "FR-CIV-MOD-004"
+    ],
+    "kind": "enum",
+    "name": "ModStatus",
+    "id": "FR-CIV-MOD-004",
+    "defined_by_spec": true,
+    "requirement": "Law / physics-constant extension (extends `crates/laws`) | \u00a73.3"
+  },
+  {
+    "file": "crates/mod-host/src/capability.rs",
+    "line": 69,
+    "ids": [
+      "FR-CIV-MOD-003"
+    ],
+    "kind": "struct",
+    "name": "ModCapabilitySet",
+    "id": "FR-CIV-MOD-003",
+    "defined_by_spec": true,
+    "requirement": "Building / recipe / structure **grammar** registration | \u00a73.2"
+  },
+  {
+    "file": "crates/mod-host/src/determinism.rs",
+    "line": 8,
+    "ids": [
+      "FR-CIV-MOD-012"
+    ],
+    "kind": "enum",
+    "name": "DeterminismError",
+    "id": "FR-CIV-MOD-012",
+    "defined_by_spec": true,
+    "requirement": "Load ordering (topological + priority + deterministic tie-break) | \u00a75.3"
+  },
+  {
+    "file": "crates/mod-host/src/determinism.rs",
+    "line": 35,
+    "ids": [
+      "FR-CIV-MOD-012"
+    ],
+    "kind": "struct",
+    "name": "DeterminismScanReport",
+    "id": "FR-CIV-MOD-012",
+    "defined_by_spec": true,
+    "requirement": "Load ordering (topological + priority + deterministic tie-break) | \u00a75.3"
+  },
+  {
+    "file": "crates/mod-host/src/float_data_flow.rs",
+    "line": 7,
+    "ids": [
+      "FR-CIV-MOD-016"
+    ],
+    "kind": "struct",
+    "name": "FloatContaminationSite",
+    "id": "FR-CIV-MOD-016",
+    "defined_by_spec": true,
+    "requirement": "Conflict detection + resolution (ID collisions, law contradictions) | \u00a79"
+  },
+  {
+    "file": "crates/mod-host/src/guest_state.rs",
+    "line": 6,
+    "ids": [
+      "FR-CIV-MOD-010"
+    ],
+    "kind": "const",
+    "name": "MOD_GUEST_STATE_VERSION",
+    "id": "FR-CIV-MOD-010",
+    "defined_by_spec": true,
+    "requirement": "Mod loading pipeline (discover \u2192 parse \u2192 validate \u2192 resolve \u2192 bind) | \u00a75"
+  },
+  {
+    "file": "crates/mod-host/src/guest_state.rs",
+    "line": 10,
+    "ids": [
+      "FR-CIV-MOD-010"
+    ],
+    "kind": "struct",
+    "name": "ModGuestMemoryBlob",
+    "id": "FR-CIV-MOD-010",
+    "defined_by_spec": true,
+    "requirement": "Mod loading pipeline (discover \u2192 parse \u2192 validate \u2192 resolve \u2192 bind) | \u00a75"
+  },
+  {
+    "file": "crates/mod-host/src/guest_state.rs",
+    "line": 20,
+    "ids": [
+      "FR-CIV-MOD-010"
+    ],
+    "kind": "struct",
+    "name": "ModGuestStateSave",
+    "id": "FR-CIV-MOD-010",
+    "defined_by_spec": true,
+    "requirement": "Mod loading pipeline (discover \u2192 parse \u2192 validate \u2192 resolve \u2192 bind) | \u00a75"
+  },
+  {
+    "file": "crates/mod-host/src/guest_state.rs",
+    "line": 55,
+    "ids": [
+      "FR-CIV-MOD-011"
+    ],
+    "kind": "enum",
+    "name": "GuestStateError",
+    "id": "FR-CIV-MOD-011",
+    "defined_by_spec": true,
+    "requirement": "Dependency + version + capability model (semver) | \u00a75.2"
+  },
+  {
+    "file": "crates/mod-host/src/guest_state.rs",
+    "line": 66,
+    "ids": [
+      "FR-CIV-TACTICS-062"
+    ],
+    "kind": "struct",
+    "name": "ModBrowserEntry",
+    "id": "FR-CIV-TACTICS-062",
+    "defined_by_spec": false,
+    "requirement": ""
+  },
+  {
+    "file": "crates/mod-host/src/hooks.rs",
+    "line": 10,
+    "ids": [
+      "FR-CIV-MOD-005"
+    ],
+    "kind": "enum",
+    "name": "ModHook",
+    "id": "FR-CIV-MOD-005",
+    "defined_by_spec": true,
+    "requirement": "Species / genome primitive registration | \u00a73.4"
+  },
+  {
+    "file": "crates/mod-host/src/hooks.rs",
+    "line": 11,
+    "ids": [
+      "FR-CIV-MOD-006"
+    ],
+    "kind": "enum",
+    "name": "ModHook",
+    "id": "FR-CIV-MOD-006",
+    "defined_by_spec": true,
+    "requirement": "Biome / climate rule registration | \u00a73.5"
+  },
+  {
+    "file": "crates/mod-host/src/hooks.rs",
+    "line": 33,
+    "ids": [
+      "FR-CIV-MOD-007"
+    ],
+    "kind": "enum",
+    "name": "HookResult",
+    "id": "FR-CIV-MOD-007",
+    "defined_by_spec": true,
+    "requirement": "Event hooks (read-only observers + bounded reactors) | \u00a73.6"
+  },
+  {
+    "file": "crates/mod-host/src/hooks.rs",
+    "line": 58,
+    "ids": [
+      "FR-CIV-MOD-005"
+    ],
+    "kind": "struct",
+    "name": "ModHookEngine",
+    "id": "FR-CIV-MOD-005",
+    "defined_by_spec": true,
+    "requirement": "Species / genome primitive registration | \u00a73.4"
+  },
+  {
+    "file": "crates/mod-host/src/hooks.rs",
+    "line": 59,
+    "ids": [
+      "FR-CIV-MOD-006"
+    ],
+    "kind": "struct",
+    "name": "ModHookEngine",
+    "id": "FR-CIV-MOD-006",
+    "defined_by_spec": true,
+    "requirement": "Biome / climate rule registration | \u00a73.5"
+  },
+  {
+    "file": "crates/mod-host/src/lib.rs",
+    "line": 53,
+    "ids": [
+      "FR-CIV-MOD-000"
+    ],
+    "kind": "enum",
+    "name": "ModType",
+    "id": "FR-CIV-MOD-000",
+    "defined_by_spec": true,
+    "requirement": "Mod manifest schema (RON primary / JSON parallel), versioned | \u00a72"
+  },
+  {
+    "file": "crates/mod-host/src/lib.rs",
+    "line": 68,
+    "ids": [
+      "FR-CIV-MOD-000"
+    ],
+    "kind": "struct",
+    "name": "ModMeta",
+    "id": "FR-CIV-MOD-000",
+    "defined_by_spec": true,
+    "requirement": "Mod manifest schema (RON primary / JSON parallel), versioned | \u00a72"
+  },
+  {
+    "file": "crates/mod-host/src/lib.rs",
+    "line": 108,
+    "ids": [
+      "FR-CIV-MOD-002"
+    ],
+    "kind": "struct",
+    "name": "ModPermissions",
+    "id": "FR-CIV-MOD-002",
+    "defined_by_spec": true,
+    "requirement": "Material + reaction registration (extends `material.rs` + `laws`) | \u00a73.1"
+  },
+  {
+    "file": "crates/mod-host/src/lib.rs",
+    "line": 169,
+    "ids": [
+      "FR-CIV-MOD-017"
+    ],
+    "kind": "enum",
+    "name": "ManifestError",
+    "id": "FR-CIV-MOD-017",
+    "defined_by_spec": true,
+    "requirement": "Sharing format \u2014 Workshop-style bundle = seed + diff | \u00a710"
+  },
+  {
+    "file": "crates/mod-host/src/lib.rs",
+    "line": 207,
+    "ids": [
+      "FR-CIV-MOD-020"
+    ],
+    "kind": "const",
+    "name": "CIVMOD_MANIFEST_NAME",
+    "id": "FR-CIV-MOD-020",
+    "defined_by_spec": true,
+    "requirement": "Save-game / mod compatibility + migration | \u00a713"
+  },
+  {
+    "file": "crates/mod-host/src/lib.rs",
+    "line": 211,
+    "ids": [
+      "FR-CIV-MOD-019"
+    ],
+    "kind": "struct",
+    "name": "ModLoadedRecord",
+    "id": "FR-CIV-MOD-019",
+    "defined_by_spec": true,
+    "requirement": "Mod test harness + lint (`civis mod validate`) | \u00a712"
+  },
+  {
+    "file": "crates/mod-host/src/lib.rs",
+    "line": 254,
+    "ids": [
+      "FR-CIV-TACTICS-070"
+    ],
+    "kind": "struct",
+    "name": "ModRegistry",
+    "id": "FR-CIV-TACTICS-070",
+    "defined_by_spec": false,
+    "requirement": ""
+  },
+  {
+    "file": "crates/mod-host/src/lib.rs",
+    "line": 326,
+    "ids": [
+      "FR-CIV-MOD-004"
+    ],
+    "kind": "struct",
+    "name": "ModHost",
+    "id": "FR-CIV-MOD-004",
+    "defined_by_spec": true,
+    "requirement": "Law / physics-constant extension (extends `crates/laws`) | \u00a73.3"
+  },
+  {
+    "file": "crates/mod-host/src/lib.rs",
+    "line": 327,
+    "ids": [
+      "FR-CIV-MOD-020"
+    ],
+    "kind": "struct",
+    "name": "ModHost",
+    "id": "FR-CIV-MOD-020",
+    "defined_by_spec": true,
+    "requirement": "Save-game / mod compatibility + migration | \u00a713"
+  },
+  {
+    "file": "crates/mod-host/src/policy_action.rs",
+    "line": 9,
+    "ids": [
+      "FR-CIV-MOD-002"
+    ],
+    "kind": "enum",
+    "name": "PolicyActionKind",
+    "id": "FR-CIV-MOD-002",
+    "defined_by_spec": true,
+    "requirement": "Material + reaction registration (extends `material.rs` + `laws`) | \u00a73.1"
+  },
+  {
+    "file": "crates/mod-host/src/policy_action.rs",
+    "line": 10,
+    "ids": [
+      "FR-CIV-MOD-015"
+    ],
+    "kind": "enum",
+    "name": "PolicyActionKind",
+    "id": "FR-CIV-MOD-015",
+    "defined_by_spec": true,
+    "requirement": "Stable mod API surface (trait + ABI contract, semver'd) | \u00a78"
+  },
+  {
+    "file": "crates/mod-host/src/signature.rs",
+    "line": 7,
+    "ids": [
+      "FR-CIV-MOD-014"
+    ],
+    "kind": "const",
+    "name": "MOD_WASM_SIG_NAME",
+    "id": "FR-CIV-MOD-014",
+    "defined_by_spec": true,
+    "requirement": "Hot-reload of mods (data-tier live, code-tier staged) | \u00a77"
+  },
+  {
+    "file": "crates/mod-host/src/signature.rs",
+    "line": 11,
+    "ids": [
+      "FR-CIV-MOD-014"
+    ],
+    "kind": "enum",
+    "name": "SignatureError",
+    "id": "FR-CIV-MOD-014",
+    "defined_by_spec": true,
+    "requirement": "Hot-reload of mods (data-tier live, code-tier staged) | \u00a77"
+  },
+  {
+    "file": "crates/mod-host/src/wasm_guest.rs",
+    "line": 11,
+    "ids": [
+      "FR-CIV-MOD-008"
+    ],
+    "kind": "const",
+    "name": "HOST_IMPORT_MODULE",
+    "id": "FR-CIV-MOD-008",
+    "defined_by_spec": true,
+    "requirement": "UI / overlay registration | \u00a73.7"
+  },
+  {
+    "file": "crates/mod-host/src/wasm_guest.rs",
+    "line": 15,
+    "ids": [
+      "FR-CIV-MOD-009"
+    ],
+    "kind": "const",
+    "name": "HOST_CAPABILITY_IMPORTS",
+    "id": "FR-CIV-MOD-009",
+    "defined_by_spec": true,
+    "requirement": "Charter validator \u2014 reject hardcoded-outcome mods | \u00a74"
+  },
+  {
+    "file": "crates/mod-host/src/wasm_guest.rs",
+    "line": 27,
+    "ids": [
+      "FR-CIV-MOD-008"
+    ],
+    "kind": "const",
+    "name": "HOST_CAPABILITY_API_VERSION",
+    "id": "FR-CIV-MOD-008",
+    "defined_by_spec": true,
+    "requirement": "UI / overlay registration | \u00a73.7"
+  },
+  {
+    "file": "crates/mod-host/src/wasm_guest.rs",
+    "line": 31,
+    "ids": [
+      "FR-CIV-MOD-009"
+    ],
+    "kind": "const",
+    "name": "HOST_GUEST_MEMORY_CAP",
+    "id": "FR-CIV-MOD-009",
+    "defined_by_spec": true,
+    "requirement": "Charter validator \u2014 reject hardcoded-outcome mods | \u00a74"
+  },
+  {
+    "file": "crates/mod-host/src/wasm_guest.rs",
+    "line": 35,
+    "ids": [
+      "FR-CIV-MOD-008"
+    ],
+    "kind": "struct",
+    "name": "HostState",
+    "id": "FR-CIV-MOD-008",
+    "defined_by_spec": true,
+    "requirement": "UI / overlay registration | \u00a73.7"
+  },
+  {
+    "file": "crates/planet/src/geology.rs",
+    "line": 19,
+    "ids": [
+      "FR-CIV-3D-011"
+    ],
+    "kind": "enum",
+    "name": "BiomeKind",
+    "id": "FR-CIV-3D-011",
+    "defined_by_spec": true,
+    "requirement": "\u2014 Biome Coverage"
+  },
+  {
+    "file": "crates/planet/src/geology.rs",
+    "line": 20,
+    "ids": [
+      "FR-CIV-3D-015"
+    ],
+    "kind": "enum",
+    "name": "BiomeKind",
+    "id": "FR-CIV-3D-015",
+    "defined_by_spec": true,
+    "requirement": "\u2014 Texture Atlas Completeness"
+  },
+  {
+    "file": "crates/protocol-3d/src/bundle.rs",
+    "line": 15,
+    "ids": [
+      "FR-CIV-PROTO-005"
+    ],
+    "kind": "const",
+    "name": "FRAME3D_BUNDLE_MAGIC",
+    "id": "FR-CIV-PROTO-005",
+    "defined_by_spec": true,
+    "requirement": ": Snapshot Filtering"
+  },
+  {
+    "file": "crates/protocol-3d/src/bundle.rs",
+    "line": 16,
+    "ids": [
+      "FR-CIV-PROTO-012"
+    ],
+    "kind": "const",
+    "name": "FRAME3D_BUNDLE_MAGIC",
+    "id": "FR-CIV-PROTO-012",
+    "defined_by_spec": true,
+    "requirement": ": Bevy Plugin Integration"
+  },
+  {
+    "file": "crates/protocol-3d/src/bundle.rs",
+    "line": 17,
+    "ids": [
+      "FR-CIV-PROTO-013"
+    ],
+    "kind": "const",
+    "name": "FRAME3D_BUNDLE_MAGIC",
+    "id": "FR-CIV-PROTO-013",
+    "defined_by_spec": true,
+    "requirement": ": Unreal C++ Integration"
+  },
+  {
+    "file": "crates/protocol-3d/src/bundle.rs",
+    "line": 28,
+    "ids": [
+      "FR-CIV-PROTO-005"
+    ],
+    "kind": "const",
+    "name": "DEFAULT_FRAME3D_BUNDLE_ZSTD_LEVEL",
+    "id": "FR-CIV-PROTO-005",
+    "defined_by_spec": true,
+    "requirement": ": Snapshot Filtering"
+  },
+  {
+    "file": "crates/protocol-3d/src/bundle.rs",
+    "line": 29,
+    "ids": [
+      "FR-CIV-PROTO-006"
+    ],
+    "kind": "const",
+    "name": "DEFAULT_FRAME3D_BUNDLE_ZSTD_LEVEL",
+    "id": "FR-CIV-PROTO-006",
+    "defined_by_spec": true,
+    "requirement": ": Binary Frame Format"
+  },
+  {
+    "file": "crates/protocol-3d/src/bundle.rs",
+    "line": 30,
+    "ids": [
+      "FR-CIV-PROTO-012"
+    ],
+    "kind": "const",
+    "name": "DEFAULT_FRAME3D_BUNDLE_ZSTD_LEVEL",
+    "id": "FR-CIV-PROTO-012",
+    "defined_by_spec": true,
+    "requirement": ": Bevy Plugin Integration"
+  },
+  {
+    "file": "crates/protocol-3d/src/bundle.rs",
+    "line": 31,
+    "ids": [
+      "FR-CIV-PROTO-013"
+    ],
+    "kind": "const",
+    "name": "DEFAULT_FRAME3D_BUNDLE_ZSTD_LEVEL",
+    "id": "FR-CIV-PROTO-013",
+    "defined_by_spec": true,
+    "requirement": ": Unreal C++ Integration"
+  },
+  {
+    "file": "crates/protocol-3d/src/bundle.rs",
+    "line": 37,
+    "ids": [
+      "FR-CIV-PROTO-014"
+    ],
+    "kind": "struct",
+    "name": "Frame3dBundleFlags",
+    "id": "FR-CIV-PROTO-014",
+    "defined_by_spec": true,
+    "requirement": ": Unity C# Integration"
+  },
+  {
+    "file": "crates/protocol-3d/src/bundle.rs",
+    "line": 65,
+    "ids": [
+      "FR-CIV-PROTO-005"
+    ],
+    "kind": "struct",
+    "name": "Frame3dBundleEncodeOptions",
+    "id": "FR-CIV-PROTO-005",
+    "defined_by_spec": true,
+    "requirement": ": Snapshot Filtering"
+  },
+  {
+    "file": "crates/protocol-3d/src/bundle.rs",
+    "line": 66,
+    "ids": [
+      "FR-CIV-PROTO-006"
+    ],
+    "kind": "struct",
+    "name": "Frame3dBundleEncodeOptions",
+    "id": "FR-CIV-PROTO-006",
+    "defined_by_spec": true,
+    "requirement": ": Binary Frame Format"
+  },
+  {
+    "file": "crates/protocol-3d/src/bundle.rs",
+    "line": 67,
+    "ids": [
+      "FR-CIV-PROTO-012"
+    ],
+    "kind": "struct",
+    "name": "Frame3dBundleEncodeOptions",
+    "id": "FR-CIV-PROTO-012",
+    "defined_by_spec": true,
+    "requirement": ": Bevy Plugin Integration"
+  },
+  {
+    "file": "crates/protocol-3d/src/bundle.rs",
+    "line": 68,
+    "ids": [
+      "FR-CIV-PROTO-013"
+    ],
+    "kind": "struct",
+    "name": "Frame3dBundleEncodeOptions",
+    "id": "FR-CIV-PROTO-013",
+    "defined_by_spec": true,
+    "requirement": ": Unreal C++ Integration"
+  },
+  {
+    "file": "crates/protocol-3d/src/bundle.rs",
+    "line": 69,
+    "ids": [
+      "FR-CIV-PROTO-015"
+    ],
+    "kind": "struct",
+    "name": "Frame3dBundleEncodeOptions",
+    "id": "FR-CIV-PROTO-015",
+    "defined_by_spec": true,
+    "requirement": ": Web TypeScript Integration"
+  },
+  {
+    "file": "crates/protocol-3d/src/lib.rs",
+    "line": 43,
+    "ids": [
+      "FR-CIV-PROTO-001"
+    ],
+    "kind": "const",
+    "name": "SCHEMA_VERSION",
+    "id": "FR-CIV-PROTO-001",
+    "defined_by_spec": true,
+    "requirement": "\u00a77 Server Architecture | FR-CIV-PROTO-001 through 015 | CIV-0200"
+  },
+  {
+    "file": "crates/protocol-3d/src/lib.rs",
+    "line": 44,
+    "ids": [
+      "FR-CIV-PROTO-015"
+    ],
+    "kind": "const",
+    "name": "SCHEMA_VERSION",
+    "id": "FR-CIV-PROTO-015",
+    "defined_by_spec": true,
+    "requirement": ": Web TypeScript Integration"
+  },
+  {
+    "file": "crates/protocol-3d/src/lib.rs",
+    "line": 49,
+    "ids": [
+      "FR-CIV-PROTO-002"
+    ],
+    "kind": "enum",
+    "name": "BuildingProvenance",
+    "id": "FR-CIV-PROTO-002",
+    "defined_by_spec": true,
+    "requirement": ": WebSocket Transport"
+  },
+  {
+    "file": "crates/protocol-3d/src/lib.rs",
+    "line": 50,
+    "ids": [
+      "FR-CIV-PROTO-007"
+    ],
+    "kind": "enum",
+    "name": "BuildingProvenance",
+    "id": "FR-CIV-PROTO-007",
+    "defined_by_spec": true,
+    "requirement": ": Multi-Client Simultaneous"
+  },
+  {
+    "file": "crates/protocol-3d/src/lib.rs",
+    "line": 60,
+    "ids": [
+      "FR-CIV-PROTO-002"
+    ],
+    "kind": "struct",
+    "name": "WorldXZ",
+    "id": "FR-CIV-PROTO-002",
+    "defined_by_spec": true,
+    "requirement": ": WebSocket Transport"
+  },
+  {
+    "file": "crates/protocol-3d/src/lib.rs",
+    "line": 61,
+    "ids": [
+      "FR-CIV-PROTO-009"
+    ],
+    "kind": "struct",
+    "name": "WorldXZ",
+    "id": "FR-CIV-PROTO-009",
+    "defined_by_spec": true,
+    "requirement": ": Subscription Unsubscribe"
+  },
+  {
+    "file": "crates/protocol-3d/src/lib.rs",
+    "line": 62,
+    "ids": [
+      "FR-CIV-PROTO-010"
+    ],
+    "kind": "struct",
+    "name": "WorldXZ",
+    "id": "FR-CIV-PROTO-010",
+    "defined_by_spec": false,
+    "requirement": ""
+  },
+  {
+    "file": "crates/protocol-3d/src/lib.rs",
+    "line": 84,
+    "ids": [
+      "FR-CIV-PROTO-002"
+    ],
+    "kind": "enum",
+    "name": "BuildingKind3d",
+    "id": "FR-CIV-PROTO-002",
+    "defined_by_spec": true,
+    "requirement": ": WebSocket Transport"
+  },
+  {
+    "file": "crates/protocol-3d/src/lib.rs",
+    "line": 85,
+    "ids": [
+      "FR-CIV-PROTO-007"
+    ],
+    "kind": "enum",
+    "name": "BuildingKind3d",
+    "id": "FR-CIV-PROTO-007",
+    "defined_by_spec": true,
+    "requirement": ": Multi-Client Simultaneous"
+  },
+  {
+    "file": "crates/protocol-3d/src/lib.rs",
+    "line": 86,
+    "ids": [
+      "FR-CIV-PROTO-010"
+    ],
+    "kind": "enum",
+    "name": "BuildingKind3d",
+    "id": "FR-CIV-PROTO-010",
+    "defined_by_spec": false,
+    "requirement": ""
+  },
+  {
+    "file": "crates/protocol-3d/src/lib.rs",
+    "line": 106,
+    "ids": [
+      "FR-CIV-PROTO-002"
+    ],
+    "kind": "struct",
+    "name": "BuildingDiffEntry",
+    "id": "FR-CIV-PROTO-002",
+    "defined_by_spec": true,
+    "requirement": ": WebSocket Transport"
+  },
+  {
+    "file": "crates/protocol-3d/src/lib.rs",
+    "line": 107,
+    "ids": [
+      "FR-CIV-PROTO-010"
+    ],
+    "kind": "struct",
+    "name": "BuildingDiffEntry",
+    "id": "FR-CIV-PROTO-010",
+    "defined_by_spec": false,
+    "requirement": ""
+  },
+  {
+    "file": "crates/protocol-3d/src/lib.rs",
+    "line": 122,
+    "ids": [
+      "FR-CIV-PROTO-002"
+    ],
+    "kind": "struct",
+    "name": "BuildingDiffFrame",
+    "id": "FR-CIV-PROTO-002",
+    "defined_by_spec": true,
+    "requirement": ": WebSocket Transport"
+  },
+  {
+    "file": "crates/protocol-3d/src/lib.rs",
+    "line": 140,
+    "ids": [
+      "FR-CIV-PROTO-008"
+    ],
+    "kind": "struct",
+    "name": "CivilianNeeds3d",
+    "id": "FR-CIV-PROTO-008",
+    "defined_by_spec": true,
+    "requirement": ": Command Ordering (Priority)"
+  },
+  {
+    "file": "crates/protocol-3d/src/lib.rs",
+    "line": 408,
+    "ids": [
+      "FR-CIV-PROTO-003"
+    ],
+    "kind": "struct",
+    "name": "VoxelDeltaFrame",
+    "id": "FR-CIV-PROTO-003",
+    "defined_by_spec": true,
+    "requirement": ": Handshake Protocol"
+  },
+  {
+    "file": "crates/protocol-3d/src/lib.rs",
+    "line": 409,
+    "ids": [
+      "FR-CIV-PROTO-011"
+    ],
+    "kind": "struct",
+    "name": "VoxelDeltaFrame",
+    "id": "FR-CIV-PROTO-011",
+    "defined_by_spec": true,
+    "requirement": ": Error Handling"
+  },
+  {
+    "file": "crates/protocol-3d/src/lib.rs",
+    "line": 410,
+    "ids": [
+      "FR-CIV-PROTO-012"
+    ],
+    "kind": "struct",
+    "name": "VoxelDeltaFrame",
+    "id": "FR-CIV-PROTO-012",
+    "defined_by_spec": true,
+    "requirement": ": Bevy Plugin Integration"
+  },
+  {
+    "file": "crates/protocol-3d/src/lib.rs",
+    "line": 421,
+    "ids": [
+      "FR-CIV-PROTO-008"
+    ],
+    "kind": "struct",
+    "name": "AgentAppearanceFrame",
+    "id": "FR-CIV-PROTO-008",
+    "defined_by_spec": true,
+    "requirement": ": Command Ordering (Priority)"
+  },
+  {
+    "file": "crates/protocol-3d/src/lib.rs",
+    "line": 526,
+    "ids": [
+      "FR-CIV-PROTO-003"
+    ],
+    "kind": "const",
+    "name": "FRAME3D_BINARY_MAGIC",
+    "id": "FR-CIV-PROTO-003",
+    "defined_by_spec": true,
+    "requirement": ": Handshake Protocol"
+  },
+  {
+    "file": "crates/protocol-3d/src/lib.rs",
+    "line": 527,
+    "ids": [
+      "FR-CIV-PROTO-004"
+    ],
+    "kind": "const",
+    "name": "FRAME3D_BINARY_MAGIC",
+    "id": "FR-CIV-PROTO-004",
+    "defined_by_spec": true,
+    "requirement": ": Command Acceptance"
+  },
+  {
+    "file": "crates/protocol-3d/src/lib.rs",
+    "line": 528,
+    "ids": [
+      "FR-CIV-PROTO-011"
+    ],
+    "kind": "const",
+    "name": "FRAME3D_BINARY_MAGIC",
+    "id": "FR-CIV-PROTO-011",
+    "defined_by_spec": true,
+    "requirement": ": Error Handling"
+  },
+  {
+    "file": "crates/research/src/lib.rs",
+    "line": 27,
+    "ids": [
+      "FR-CIV-RESEARCH-003-EXPORT"
+    ],
+    "kind": "struct",
+    "name": "TechCard",
+    "id": "FR-CIV-RESEARCH-003-EXPORT",
+    "defined_by_spec": true,
+    "requirement": "`FR-CIV-RESEARCH-003-EXPORT` | \u2192 | (keep) | `PLAN.md:237-238`; the real hybrid-replay line is `crates/research/src/lib.rs:616`."
+  },
+  {
+    "file": "crates/research/src/lib.rs",
+    "line": 28,
+    "ids": [
+      "FR-CIV-RESEARCH-001-SCENARIO"
+    ],
+    "kind": "struct",
+    "name": "TechCard",
+    "id": "FR-CIV-RESEARCH-001-SCENARIO",
+    "defined_by_spec": true,
+    "requirement": "`FR-CIV-RESEARCH-001-SCENARIO` | \u2192 | (keep) | `PLAN.md:233-234`; the real LLM cache + card acceptance is `FR-CIV-RESEARCH-001` in `crates/research/src/lib.rs:377,408`."
+  },
+  {
+    "file": "crates/research/src/lib.rs",
+    "line": 48,
+    "ids": [
+      "FR-CIV-RESEARCH-002-SNAPSHOT"
+    ],
+    "kind": "enum",
+    "name": "ValidationOutcome",
+    "id": "FR-CIV-RESEARCH-002-SNAPSHOT",
+    "defined_by_spec": true,
+    "requirement": "`FR-CIV-RESEARCH-002-SNAPSHOT` | \u2192 | (keep) | `PLAN.md:235-236`; the real canonical-replay line is `crates/research/src/lib.rs:601`."
+  },
+  {
+    "file": "crates/research/src/lib.rs",
+    "line": 98,
+    "ids": [
+      "FR-CIV-TECH-007"
+    ],
+    "kind": "enum",
+    "name": "ReplayMode",
+    "id": "FR-CIV-TECH-007",
+    "defined_by_spec": true,
+    "requirement": "** | Canonical saves never emit `LlmEvent`s; invention draws from canonical + diffused candidates only. | replay-mode test | AC-P1"
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-001",
+    "defined_by_spec": true,
+    "requirement": ":** The engine SHALL support a session type `pve` with exactly one human-controlled nation and one or more AI-controlled nations in the same simulation."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-002",
+    "defined_by_spec": true,
+    "requirement": ":** The engine SHALL assign each AI nation a `ChaCha20Rng` sub-stream derived deterministically from the session seed and the nation's `rng_offset`. Given identical (seed, rng_offset) inputs, the derived sub-stream SHALL"
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-003",
+    "defined_by_spec": true,
+    "requirement": ":** In a PvE session, the human client SHALL have permanent input authority for their nation for the full duration of the session. There SHALL be no turn token in PvE mode."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-004",
+    "defined_by_spec": true,
+    "requirement": ":** AI nations in a PvE session SHALL submit actions through the same `NationAction` queue as the human client. AI nations SHALL NOT access simulation state through any privileged mechanism not available to the human cli"
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-005",
+    "defined_by_spec": true,
+    "requirement": ":** The engine SHALL reject any action submitted by an AI controller that is not a valid `NationAction` as defined by the current game rules, returning a validation error to the internal audit log."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-006",
+    "defined_by_spec": true,
+    "requirement": ":** The engine SHALL support a session type `hot_seat` with two or more human-controlled nations sharing a single WebSocket client connection, with a turn token that rotates between nations."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-007",
+    "defined_by_spec": true,
+    "requirement": ":** The engine SHALL reject any `NationAction` submitted by a nation that does not currently hold the turn token with error code `-32001` (NOT_YOUR_TURN)."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-008",
+    "defined_by_spec": true,
+    "requirement": ":** The engine SHALL advance the turn token to the next nation in rotation when the current holder calls `session.turn.end`, validating that the `token_sequence` in the request matches the engine's current sequence befor"
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-009",
+    "defined_by_spec": true,
+    "requirement": ":** If `turn_timeout_ticks > 0` and the current token holder has not called `session.turn.end` by `expires_at_tick`, the engine SHALL automatically advance the token and emit `session.turn.auto_passed.v1`."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-010",
+    "defined_by_spec": true,
+    "requirement": ":** In simultaneous turn mode, the engine SHALL collect actions from all human nations within a tick and resolve them together in deterministic order (lexicographic by NationId) before advancing the simulation."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-011",
+    "defined_by_spec": true,
+    "requirement": ":** The engine SHALL support observer client connections that receive tick broadcasts without any ability to inject NationActions."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-012",
+    "defined_by_spec": true,
+    "requirement": ":** The engine SHALL reject any `NationAction` or session-mutating RPC submitted by a client registered as an observer with error code `-32002` (OBSERVER_READ_ONLY)."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-013",
+    "defined_by_spec": true,
+    "requirement": ":** In omniscient observer mode, the engine SHALL transmit the full unfiltered SimState snapshot to the observer client every `tick_stride` ticks."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-014",
+    "defined_by_spec": true,
+    "requirement": ") SHALL apply server-side visibility filtering before"
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-015",
+    "defined_by_spec": true,
+    "requirement": ":** The engine SHALL support a replay observer mode for ENDED sessions, allowing clients to subscribe at any starting tick and request seek operations."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-016",
+    "defined_by_spec": true,
+    "requirement": ":** The engine SHALL accept a `ChallengeBundle` submission via `POST /api/v1/challenges` and return a `challenge_id` and queue position within 500ms of receiving a valid submission."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-017",
+    "defined_by_spec": true,
+    "requirement": ":** The engine SHALL run challenge sessions fully headless: no WebSocket client, no tick broadcast, no pause/resume \u2014 at maximum available tick speed."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-018",
+    "defined_by_spec": true,
+    "requirement": ":** The engine SHALL compute a baseline score by running an AI-only session with the same scenario, seed, and opponent configuration, replacing the human nation with a Standard (difficulty 2) AI controller. The baseline "
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-019",
+    "defined_by_spec": true,
+    "requirement": ":** The challenge score SHALL be computed as a weighted sum of normalized metric deltas against the baseline, using fixed-point arithmetic (i32 \u00d71000). No floating-point arithmetic SHALL appear in the scoring computation"
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-020",
+    "defined_by_spec": true,
+    "requirement": ":** On challenge completion, the engine SHALL store the full `.civreplay` file and make it accessible at `GET /api/v1/challenges/{id}/replay`."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-021",
+    "defined_by_spec": true,
+    "requirement": ":** `session.pause` SHALL halt the tick loop after completing the current tick in progress. Partial ticks SHALL NOT be possible; the simulation SHALL always be in a fully-resolved tick state when paused."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-022",
+    "defined_by_spec": true,
+    "requirement": ":** `session.resume` SHALL resume the tick loop from the exact state at pause time. The BLAKE3 chain SHALL continue from the hash at the pause tick without any gaps or synthetic ticks."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-023",
+    "defined_by_spec": true,
+    "requirement": ":** `session.set_speed` SHALL accept `ticks_per_second` in the range `1..=100` and apply the new rate at the next tick boundary. Values outside this range SHALL be rejected with a JSON-RPC error."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-024",
+    "defined_by_spec": true,
+    "requirement": ":** `session.fast_forward` SHALL suppress client tick broadcasts for all intermediate ticks and send a single full-state snapshot when the target tick is reached."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-025",
+    "defined_by_spec": true,
+    "requirement": ":** All pause, resume, and speed change operations SHALL emit the corresponding session-layer events (`session.paused.v1`, `session.resumed.v1`, `session.speed_changed.v1`) to all connected clients (human and observer)."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-026",
+    "defined_by_spec": true,
+    "requirement": ":** `session.save` SHALL serialize the complete SimState (as defined in CIV-1000) to the named slot, compute a BLAKE3 hash of the blob, and store both in the `session_saves` table."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-027",
+    "defined_by_spec": true,
+    "requirement": ":** `session.load` SHALL verify the BLAKE3 hash of the stored blob before restoring state. A hash mismatch SHALL cause load to fail with error code `-32008` (SAVE_INTEGRITY_FAILURE) without applying any state changes."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-028",
+    "defined_by_spec": true,
+    "requirement": ":** The autosave mechanism SHALL write to the `\"autosave\"` slot every `autosave_interval_ticks` ticks, overwriting the previous autosave. User-created slots SHALL never be overwritten by autosave."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-029",
+    "defined_by_spec": true,
+    "requirement": ":** Loading a save slot from an ENDED session SHALL create a new session branching from the save point, with a new `session_id`. The original ENDED session SHALL remain immutable."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-030",
+    "defined_by_spec": true,
+    "requirement": ":** The engine SHALL assign each session a UUIDv7 at `session.create` time. The session ID SHALL be included in every event and RPC response associated with that session."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-031",
+    "defined_by_spec": true,
+    "requirement": ":** The engine SHALL validate the complete `SessionConfig` at `session.create` time, including scenario resolution, seed validity, and AI nation config validation, before returning a response. Invalid configs SHALL be re"
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-032",
+    "defined_by_spec": true,
+    "requirement": ":** Session state SHALL be persisted to the `sessions` table before the engine returns a success response for any lifecycle-changing RPC (create, start, pause, resume, end)."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 27,
+    "ids": [
+      "FR-SESSION-001",
+      "FR-SESSION-002",
+      "FR-SESSION-003",
+      "FR-SESSION-004",
+      "FR-SESSION-005",
+      "FR-SESSION-006",
+      "FR-SESSION-007",
+      "FR-SESSION-008",
+      "FR-SESSION-009",
+      "FR-SESSION-010",
+      "FR-SESSION-011",
+      "FR-SESSION-012",
+      "FR-SESSION-013",
+      "FR-SESSION-014",
+      "FR-SESSION-015",
+      "FR-SESSION-016",
+      "FR-SESSION-017",
+      "FR-SESSION-018",
+      "FR-SESSION-019",
+      "FR-SESSION-020",
+      "FR-SESSION-021",
+      "FR-SESSION-022",
+      "FR-SESSION-023",
+      "FR-SESSION-024",
+      "FR-SESSION-025",
+      "FR-SESSION-026",
+      "FR-SESSION-027",
+      "FR-SESSION-028",
+      "FR-SESSION-029",
+      "FR-SESSION-030",
+      "FR-SESSION-031",
+      "FR-SESSION-032",
+      "FR-SESSION-033"
+    ],
+    "kind": "const",
+    "name": "SESSION_HISTORY_CAP",
+    "id": "FR-SESSION-033",
+    "defined_by_spec": true,
+    "requirement": ":** On engine restart, incomplete sessions (status not `ended`) SHALL be reloaded from the database and made available for resumption by the original client."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 41,
+    "ids": [
+      "FR-CIV-SERVER-001"
+    ],
+    "kind": "struct",
+    "name": "SharedSession",
+    "id": "FR-CIV-SERVER-001",
+    "defined_by_spec": true,
+    "requirement": "`FR-CIV-SERVER-001` | \u2192 | `FR-CIV-SERVER-001-WS` | `PLAN.md:174-175`; the real WebSocket server is the hyphenated form."
+  },
+  {
+    "file": "crates/server/src/session.rs",
+    "line": 150,
+    "ids": [
+      "FR-CIV-SERVER-002"
+    ],
+    "kind": "struct",
+    "name": "SessionSnapshot",
+    "id": "FR-CIV-SERVER-002",
+    "defined_by_spec": true,
+    "requirement": "`FR-CIV-SERVER-002` | \u2192 | `FR-CIV-SERVER-002-PROTO` | `PLAN.md:176-177`; the real protocol is the hyphenated form."
+  },
+  {
+    "file": "crates/tactics/src/doctrine_fitness.rs",
+    "line": 6,
+    "ids": [
+      "FR-CIV-WAR-030"
+    ],
+    "kind": "struct",
+    "name": "FactionEngagementStats",
+    "id": "FR-CIV-WAR-030",
+    "defined_by_spec": true,
+    "requirement": "4.2 Spec extension \u2014 close the loop with operational + strategic outcomes \u2014 `FR-CIV-WAR-030`"
+  },
+  {
+    "file": "crates/tactics/src/fog_of_war.rs",
+    "line": 30,
+    "ids": [
+      "FR-CIV-FOG-001"
+    ],
+    "kind": "struct",
+    "name": "FogOfWar",
+    "id": "FR-CIV-FOG-001",
+    "defined_by_spec": true,
+    "requirement": "[ ] **FR-CIV-FOG-001**: Fog-of-war visibility SHALL be a function of `(unit"
+  },
+  {
+    "file": "crates/tactics/src/fog_of_war.rs",
+    "line": 31,
+    "ids": [
+      "FR-CIV-FOG-002"
+    ],
+    "kind": "struct",
+    "name": "FogOfWar",
+    "id": "FR-CIV-FOG-002",
+    "defined_by_spec": true,
+    "requirement": "[ ] **FR-CIV-FOG-002**: The war bridge SHALL NOT queue `DamageEvent`s for"
+  },
+  {
+    "file": "crates/tactics/src/fog_of_war.rs",
+    "line": 32,
+    "ids": [
+      "FR-CIV-FOG-003"
+    ],
+    "kind": "struct",
+    "name": "FogOfWar",
+    "id": "FR-CIV-FOG-003",
+    "defined_by_spec": true,
+    "requirement": "[ ] **FR-CIV-FOG-003**: Scenario `fog_vision_radius` SHALL be respected"
+  },
+  {
+    "file": "crates/tactics/src/fog_of_war.rs",
+    "line": 33,
+    "ids": [
+      "FR-CIV-FOG-004"
+    ],
+    "kind": "struct",
+    "name": "FogOfWar",
+    "id": "FR-CIV-FOG-004",
+    "defined_by_spec": true,
+    "requirement": "[ ] **FR-CIV-FOG-004**: The web dashboard SHALL provide a tactics panel"
+  },
+  {
+    "file": "crates/tactics/src/fog_of_war.rs",
+    "line": 34,
+    "ids": [
+      "FR-CIV-FOG-005"
+    ],
+    "kind": "struct",
+    "name": "FogOfWar",
+    "id": "FR-CIV-FOG-005",
+    "defined_by_spec": true,
+    "requirement": "[ ] **FR-CIV-FOG-005**: Fog-of-war observer mode (per the legacy"
+  },
+  {
+    "file": "crates/tactics/src/lib.rs",
+    "line": 69,
+    "ids": [
+      "FR-CIV-WAR-013"
+    ],
+    "kind": "struct",
+    "name": "DamageEvent",
+    "id": "FR-CIV-WAR-013",
+    "defined_by_spec": true,
+    "requirement": "2.6 Bridge to tactical \u2014 `FR-CIV-WAR-013`"
+  },
+  {
+    "file": "crates/tactics/src/lib.rs",
+    "line": 70,
+    "ids": [
+      "FR-CIV-WAR-022"
+    ],
+    "kind": "struct",
+    "name": "DamageEvent",
+    "id": "FR-CIV-WAR-022",
+    "defined_by_spec": true,
+    "requirement": "3.4 Voxel destruction feedback \u2014 `FR-CIV-WAR-022`"
+  },
+  {
+    "file": "crates/tactics/src/lib.rs",
+    "line": 106,
+    "ids": [
+      "FR-CIV-WAR-030"
+    ],
+    "kind": "struct",
+    "name": "Doctrine",
+    "id": "FR-CIV-WAR-030",
+    "defined_by_spec": true,
+    "requirement": "4.2 Spec extension \u2014 close the loop with operational + strategic outcomes \u2014 `FR-CIV-WAR-030`"
+  },
+  {
+    "file": "crates/tactics/src/morale.rs",
+    "line": 85,
+    "ids": [
+      "FR-CIV-WAR-021"
+    ],
+    "kind": "enum",
+    "name": "UnitStance",
+    "id": "FR-CIV-WAR-021",
+    "defined_by_spec": true,
+    "requirement": "3.3 Reads from psyche/agent state \u2014 `FR-CIV-WAR-021`"
+  },
+  {
+    "file": "crates/tactics/src/morale.rs",
+    "line": 146,
+    "ids": [
+      "FR-CIV-WAR-021"
+    ],
+    "kind": "struct",
+    "name": "MoraleState",
+    "id": "FR-CIV-WAR-021",
+    "defined_by_spec": true,
+    "requirement": "3.3 Reads from psyche/agent state \u2014 `FR-CIV-WAR-021`"
+  },
+  {
+    "file": "crates/tactics/src/movement.rs",
+    "line": 9,
+    "ids": [
+      "FR-CIV-WAR-011"
+    ],
+    "kind": "struct",
+    "name": "OperationalMovementConfig",
+    "id": "FR-CIV-WAR-011",
+    "defined_by_spec": true,
+    "requirement": "2.4 Maneuver \u2014 `FR-CIV-WAR-011`"
+  },
+  {
+    "file": "crates/tactics/src/movement.rs",
+    "line": 27,
+    "ids": [
+      "FR-CIV-RTS-001"
+    ],
+    "kind": "struct",
+    "name": "GridMove",
+    "id": "FR-CIV-RTS-001",
+    "defined_by_spec": true,
+    "requirement": "`Q` | Move command (click target to confirm) | FR-CIV-RTS-001"
+  },
+  {
+    "file": "crates/tactics/src/war_bridge.rs",
+    "line": 30,
+    "ids": [
+      "FR-CIV-WAR-013"
+    ],
+    "kind": "struct",
+    "name": "CombatEngagement",
+    "id": "FR-CIV-WAR-013",
+    "defined_by_spec": true,
+    "requirement": "2.6 Bridge to tactical \u2014 `FR-CIV-WAR-013`"
+  },
+  {
+    "file": "crates/voxel/src/material.rs",
+    "line": 27,
+    "ids": [
+      "FR-CIV-RENDER-002"
+    ],
+    "kind": "struct",
+    "name": "MaterialDef",
+    "id": "FR-CIV-RENDER-002",
+    "defined_by_spec": false,
+    "requirement": ""
+  },
+  {
+    "file": "crates/voxel/src/window/mod.rs",
+    "line": 127,
+    "ids": [
+      "FR-CIV-RENDER-001"
+    ],
+    "kind": "struct",
+    "name": "WindowPolicy",
+    "id": "FR-CIV-RENDER-001",
+    "defined_by_spec": false,
+    "requirement": ""
+  }
+]

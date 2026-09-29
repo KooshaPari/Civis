@@ -142,6 +142,19 @@ mod tests {
         p
     }
 
+    /// Return `p` after proving it does not exist, removing it first if a
+    /// previous run (or another test) left one behind. A test that asserts
+    /// "missing file" behavior must not depend on leftover temp state.
+    fn assert_not_found(p: &std::path::Path) -> std::path::PathBuf {
+        let _ = std::fs::remove_file(p);
+        assert!(
+            !p.exists(),
+            "expected {} to not exist before asserting NotFound",
+            p.display()
+        );
+        p.to_path_buf()
+    }
+
     #[test]
     fn completeness_matches_when_counts_agree() {
         let m = write_tmp(
@@ -223,13 +236,23 @@ mod tests {
         );
 
         // Unreadable manifest surfaces Io, not a key error.
+        //
+        // The OS error *string* is platform-specific ("no such file or
+        // directory" on Linux, "The system cannot find the file specified. (os
+        // error 2)" on Windows), so asserting on the text made this test fail
+        // everywhere except Linux. Assert the variant and that it came from
+        // a not-found error instead.
         let missing = std::env::temp_dir()
             .join("asset_pipeline_manifest_tests")
             .join("does_not_exist_schema.json");
-        assert_eq!(
-            check_manifest_schema(&missing),
-            Err(SchemaError::Io("no such file".to_owned()))
-        );
+        let missing = assert_not_found(&missing);
+        match check_manifest_schema(&missing) {
+            Err(SchemaError::Io(msg)) => assert!(
+                !msg.is_empty(),
+                "Io variant must carry the OS message, got an empty string"
+            ),
+            other => panic!("expected SchemaError::Io for an unreadable manifest, got {other:?}"),
+        }
     }
 
     // FR-CIV-ASSET-MANI-001 — manifest completeness: the manifest's asset

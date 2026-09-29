@@ -3,6 +3,29 @@
 //! Types for the 2D asset pipeline and runtime sprite system described in
 //! `docs/specs/CIV-0600-2d-asset-pipeline-spec.md`. These cover nation color
 //! binding, atlas configuration, zoom-level switching, and sprite management.
+//!
+//! # Scope warning: these are data types, not pipeline stages
+//!
+//! An earlier revision tagged the `FR-CIV-ASSET-*` requirements on the structs
+//! below, which made the matrix report them COVERED. That was false. The CIV-0600
+//! asset pipeline described by that spec — `scripts/svg_inject.py`,
+//! `src/bin/resvg_batch.rs`, `scripts/rembg_batch.py`, `src/bin/quantize.rs`,
+//! `src/bin/atlas_pack.rs`, `scripts/gen_manifest.py` — does not exist in this
+//! repository, and the specific requirements removed here are behaviors that no
+//! code performs:
+//!
+//! - FR-CIV-ASSET-003 "4x supersampling ... downscale with Lanczos3"
+//! - FR-CIV-ASSET-004 "reject any output sprite with alpha coverage below 60%"
+//! - FR-CIV-ASSET-005 "preserve the nation primary color (palette index 0) and
+//!   nation secondary color (palette index 1) as exact forced palette entries"
+//! - FR-CIV-ASSET-016 "the nation recoloring shader SHALL replace all pixels
+//!   whose RGB distance from `uBakedPrimary` is less than `TOLERANCE` (0.08)"
+//!
+//! A struct whose fields happen to be named after those requirements implements
+//! none of them. The `FR-CIV-RTS-*` tags below are kept only where the struct is
+//! genuinely the named artifact of that requirement (a data-shape or binding
+//! contract), and every behavioral stage is recorded as
+//! DEFERRED-PIPELINE-ABSENT in `docs/traceability/spec-only-deferrals.json`.
 
 use serde::{Deserialize, Serialize};
 
@@ -12,10 +35,6 @@ use serde::{Deserialize, Serialize};
 // FR-CIV-RTS-RENDER-003
 /// Nation colors are not baked into atlas sprites; a fragment shader
 /// replaces palette indices at render time.
-// FR-CIV-ASSET-003
-// FR-CIV-ASSET-004
-// FR-CIV-ASSET-005
-// FR-CIV-ASSET-016
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NationColor {
     /// Primary color as hex string (e.g. "#c8303c").
@@ -64,7 +83,12 @@ pub const BAKED_SECONDARY: &str = "#f0c040";
 // FR-CIV-RTS-RENDER-004
 /// Atlas dimensions are fixed by asset category. Power-of-two required
 /// for WebGL texture compatibility.
-// FR-CIV-ASSET-006
+///
+/// This records the *intended* dimensions only. FR-CIV-ASSET-006 ("all output
+/// atlas PNGs SHALL have power-of-two width and height") was previously tagged
+/// here and removed: nothing in this repo packs or emits an atlas PNG, so
+/// there is no output for this constant to constrain. See the module-level
+/// scope warning.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AtlasConfig {
     /// Atlas name (e.g. "terrain_atlas").
@@ -173,7 +197,12 @@ impl ZoomTier {
 
 // FR-CIV-RTS-ZOOM-001
 /// A sprite handle that references a specific asset at a zoom level.
-// FR-CIV-ASSET-018
+///
+/// FR-CIV-ASSET-018 ("when SpriteManager.setZoomLevel() is called, all active
+/// sprite handles SHALL swap textures within the same JS event loop tick") was
+/// previously tagged here and removed. This is a record of a handle's state,
+/// not the synchronous swap; there is no SpriteManager and no JavaScript
+/// runtime in this repository. See the module-level scope warning.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SpriteHandle {
     /// Asset identifier (e.g. "terrain_plains").
@@ -210,7 +239,12 @@ impl SpriteHandle {
 
 // FR-CIV-RTS-RENDER-005
 /// Rectangle within an atlas, used for UV mapping.
-// FR-CIV-ASSET-007
+///
+/// FR-CIV-ASSET-007 ("every sprite entry in an atlas JSON SHALL have a frame
+/// rect fully contained within the atlas dimensions, with no overflow and no
+/// overlap") was previously tagged here and removed. A rect type cannot
+/// enforce containment, and the atlas JSON that the requirement validates is
+/// never produced. See the module-level scope warning.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UvRect {
     /// X offset in pixels.
@@ -247,8 +281,13 @@ impl UvRect {
 
 // FR-CIV-RTS-RENDER-001, FR-CIV-RTS-RENDER-002
 /// Supersampling configuration for sprite rasterization.
-// FR-CIV-ASSET-001
-// FR-CIV-ASSET-003
+///
+/// FR-CIV-ASSET-001 ("render every `.svg.j2` template for every parameter
+/// combination in asset_parameters.yaml") and FR-CIV-ASSET-003 ("the resvg
+/// renderer SHALL apply 4x supersampling ... downscale with Lanczos3") were
+/// previously tagged here and removed. This type stores the intended factor;
+/// no code rasterizes an SVG through it, and neither `asset_parameters.yaml`
+/// nor any `.svg.j2` template exists. See the module-level scope warning.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SsConfig {
     /// Supersampling factor (e.g. 4 for 4x).

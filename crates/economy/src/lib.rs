@@ -93,11 +93,13 @@ use serde::{Deserialize, Serialize};
 // requirements themselves are real and the ledger and market types in this
 // crate plausibly discharge them; only the binding is wrong. That is a weaker
 // finding than the build/src ones and is flagged for a follow-up pass that
-// locates the true artifacts rather than being removed outright here.
+// locates the true artifacts rather than being removed outright here. Both
+// notes above have since been corrected: the follow-up pass ran, found the
+// named artifacts absent, and reclassified both ids as NOT IMPLEMENTED.
 //
 // Removed, with the reason each cannot be discharged here:
-// [unbound] FR-CIV-ECON-001-MARKET: MIS-BOUND. The economy ledger serialization requirement is discharged by the ledger types themselves (LedgerEntry and friends in this crate) plus the save/load path, not by a version string. The constant is a version marker for wire compatibility, which is at most adjacent to the requirement rather than an implementation of it. Kept here only until the real artifact is located; the binding as written is not defensible.
-// [unbound] FR-CIV-MARKET-001: MIS-BOUND. Same finding as the id above it. The market-state requirement is about the market data model and its behavior, which lives in crates/economy/src/market.rs. A bare version string is not the market.
+// [unbound] FR-CIV-ECON-001-MARKET: NOT IMPLEMENTED. An earlier note here called this MIS-BOUND and described the requirement as economy ledger serialization discharged by LedgerEntry. That framing was invented and pointed at the wrong crate. The authoritative text (agileplus-specs/civ-021-recovered-requirements/spec.md:64-65) is "Market price tracking (`Market::record_transaction`, `update_prices`, `get_price`) in `crates/economy/src/market.rs`". `git grep -n "fn record_transaction\|fn update_prices\|fn get_price\|struct Market\b" -- crates/` returns zero hits, so the price-tracking API the requirement names does not exist anywhere in the workspace. The constant is an unsigned schema-version marker; it cannot track a price. Not mis-bound but unimplemented, and re-pointing it at the ledger types would have been as wrong as the original tag.
+// [unbound] FR-CIV-MARKET-001: NOT IMPLEMENTED, and a different requirement from the id above it, not a second spelling of it. The authoritative text (docs/design/polities-markets.md:98-107) is "Per-locale condition probe": a six-element condition vector of scarcity, trust, surplus, specialization, coordinator and liquidity_need. `git grep -n "per-locale\|condition probe\|probe_locale" -- crates/economy/src/` returns nothing, no locale type exists in the economy crate (the only `Locale` in the workspace is the i18n enum at crates/i18n/src/lib.rs:29), and no condition-vector type exists. One is a price-tracking API, the other a condition-classification probe. Both are also open RENAME-candidates per spec.md:67-68.
 /// Schema version for `civ-economy`. Bumped on breaking snapshot / ledger changes.
 pub const SCHEMA_VERSION: u32 = 1;
 

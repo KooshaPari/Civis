@@ -1,21 +1,30 @@
 //! SVG build-time rasterisation and texture atlas packing (CIV-0600).
 //!
-//! Implements:
+//! Responsibilities:
 //!
-//! - **FR-ASSET-001** — All 2D tile sprites SHALL be derived from SVG sources
-//!   and rasterised at build time. [`rasterise_at_build`] performs that pass:
-//!   it only ever consumes SVG text, never pre-baked bitmaps.
-//! - **FR-ASSET-002** — The asset pipeline SHALL pack all tile sprites into a
-//!   single texture atlas per LOD level. [`pack_atlas_per_lod`] emits exactly
-//!   one [`TextureAtlas`] per [`LodLevel`] present in the sprite set.
-//! - **FR-ASSET-003** — Atlas build SHALL emit `asset.atlas.built.v1` on
-//!   success or `asset.generation.failed.v1` on error.
-//!   [`atlas_build_event`] produces that payload for the event bus.
+//! - Rasterise 2D tile sprites from SVG sources at build time.
+//!   [`rasterise_at_build`] only ever consumes SVG text, never pre-baked
+//!   bitmaps.
+//! - Pack tile sprites into one texture atlas per LOD level.
+//!   [`pack_atlas_per_lod`] emits exactly one [`TextureAtlas`] per
+//!   [`LodLevel`] present in the sprite set.
+//! - Emit `asset.atlas.built.v1` on success or `asset.generation.failed.v1`
+//!   on error. [`atlas_build_event`] produces that payload for the event bus.
 //!
 //! Rasterisation here is deterministic and CPU-only: sprite geometry comes from
 //! the SVG's `width`/`height` attributes and the fill colour is derived from a
 //! hash of the SVG body, so the same source always yields the same pixels. The
 //! real renderer swaps in `resvg`/`tiny-skia` behind the same signature.
+//!
+//! NOTE: this module previously carried `FR-ASSET-001`, `FR-ASSET-002`, and
+//! `FR-ASSET-003` tags. No authoritative spec defines those ids; their only
+//! definition was a table in `docs/traceability/TRACEABILITY_MATRIX.md`
+//! claiming source spec `docs/specs/CIV-0600-2d-assets.md`, which does not
+//! exist (the real file is `CIV-0600-2d-asset-pipeline-spec.md`, and it
+//! numbers its requirements `FR-CIV-ASSET-001..`). The tags were removed
+//! rather than rebound. The 60 fps hex-grid constraint that genuinely does
+//! apply here is `FR-CIV-ASSET-011`, defined in
+//! `docs/specs/CIV-0600-2d-asset-pipeline-spec.md`.
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};

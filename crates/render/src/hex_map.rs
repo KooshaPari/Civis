@@ -1,9 +1,20 @@
-//! Hex map renderer (FR-UX-001, CIV-0300).
+//! Hex map renderer (CIV-0300 RTS UI/UX; no FR-UX-* id).
 //!
-//! The UI SHALL render the hex map using the `crates/render` crate at a
-//! 60 fps target. This module provides a pure-data model for the hex grid
-//! and a [`HexMapRenderer`] that converts the *visible* subset of tiles into
-//! a draw list sized to the frame budget.
+//! The `crates/render` hex map models a hex grid and generates a culled,
+//! terrain-batched draw list targeting 60 fps. The authoritative 60 fps
+//! hex-grid constraint lives in CIV-0600 (see [`crate::frame`] for the
+//! shared frame budget).
+//!
+//! NOTE: this module previously carried a `FR-UX-001` tag. That id belongs
+//! to `docs/models/civ-sim/USER_SPEC.md` ("Every chart must display its
+//! provenance") and was never implemented here. The only document claiming
+//! otherwise was `docs/traceability/TRACEABILITY_MATRIX.md`, which cites a
+//! nonexistent spec file. The tag was removed rather than rebound, because
+//! no authoritative requirement id describes hex-map rendering.
+//!
+//! This module provides a pure-data model for the hex grid and a
+//! [`HexMapRenderer`] that converts the *visible* subset of tiles into a
+//! draw list sized to the frame budget.
 //!
 //! No GPU dependency lives here; the client (`clients/bevy-ref/`) walks the
 //! emitted [`DrawList`] and issues the corresponding wgpu draw calls. Keeping

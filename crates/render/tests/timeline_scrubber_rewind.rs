@@ -1,7 +1,13 @@
-//! FR-UX-003 — a timeline scrubber SHALL display tick history and allow
+//!
+//! Provenance: this test previously carried a `FR-UX-003` tag. That id is
+//! defined in `docs/models/civ-sim/USER_SPEC.md` as an unrelated
+//! requirement and is NOT implemented by this code. The only document
+//! claiming otherwise was `docs/traceability/TRACEABILITY_MATRIX.md`,
+//! which cited a nonexistent spec file. The assertions below are real and
+//! are retained as a behavioral test of tick-history scrubber rewind; the false id was removed
+//! rather than rebound. See `docs/audits/id-provenance-corrections.md`.
 //! rewind to any stored tick.
 //!
-//! Matrix check: `render::timeline_scrubber_rewind`.
 
 use civ_render::timeline::Timeline;
 

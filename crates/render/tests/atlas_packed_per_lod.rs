@@ -1,7 +1,10 @@
-//! FR-ASSET-002 — the asset pipeline SHALL pack all tile sprites into a
-//! single texture atlas per LOD level.
 //!
-//! Matrix check: `asset::atlas_packed_per_lod`.
+//! Provenance: this test previously carried a `FR-ASSET-002` tag. No authoritative
+//! spec defines that id; its only definition was a table in
+//! `docs/traceability/TRACEABILITY_MATRIX.md` citing a nonexistent spec
+//! file. The assertions below are real and are retained as a behavioral test
+//! of per-LOD atlas packing; the false id was removed rather than rebound. See
+//! `docs/audits/id-provenance-corrections.md`.
 
 use civ_render::atlas::{pack_atlas_per_lod, rasterise_at_build, SvgSource};
 use civ_render::lod::LodLevel;

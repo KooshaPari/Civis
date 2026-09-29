@@ -1,13 +1,21 @@
-//! glTF 2.0 lazy asset loading (FR-ASSET-004, CIV-0601).
+//! glTF 2.0 lazy asset loading (CIV-0601; no FR-ASSET-* id).
 //!
-//! 3D assets SHALL be stored as glTF 2.0 and loaded lazily on demand. The
-//! loader therefore keeps only lightweight *descriptors* (asset name + source
+//! 3D assets are stored as glTF 2.0 and loaded lazily on demand. The
+//! loader keeps only lightweight *descriptors* (asset name + source
 //! path + byte size) until a caller explicitly requests a mesh, at which point
 //! the asset is parsed and cached.
 //!
 //! [`GltfLoader::register`] never reads pixels; [`GltfLoader::load`] is the only
 //! operation that resolves an asset, and it records the load so a test can
 //! prove nothing was loaded eagerly.
+//!
+//! NOTE: this module previously carried an `FR-ASSET-004` tag. No
+//! authoritative spec defines that id; its only definition was a table in
+//! `docs/traceability/TRACEABILITY_MATRIX.md` claiming source spec
+//! `docs/specs/CIV-0601-3d-assets.md`, which does not exist. The real
+//! CIV-0601 spec numbers its requirements `FR-CIV-3D-001..015`. The tag was
+//! removed rather than rebound because none of those requirements describes
+//! lazy glTF descriptor loading.
 
 use std::collections::{BTreeMap, BTreeSet};
 

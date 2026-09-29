@@ -1,7 +1,13 @@
-//! FR-UX-005 — all UI state changes SHALL derive from events; no direct
+//!
+//! Provenance: this test previously carried a `FR-UX-005` tag. That id is
+//! defined in `docs/models/civ-sim/USER_SPEC.md` as an unrelated
+//! requirement and is NOT implemented by this code. The only document
+//! claiming otherwise was `docs/traceability/TRACEABILITY_MATRIX.md`,
+//! which cited a nonexistent spec file. The assertions below are real and
+//! are retained as a behavioral test of event-derived UI state with zero polling; the false id was removed
+//! rather than rebound. See `docs/audits/id-provenance-corrections.md`.
 //! engine state polling.
 //!
-//! Matrix check: `render::state_from_events_only`.
 
 use civ_render::state::{UiEvent, UiState};
 

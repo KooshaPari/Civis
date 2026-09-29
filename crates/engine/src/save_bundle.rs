@@ -1547,4 +1547,99 @@ mod tests {
             "double roundtrip tick must match original"
         );
     }
+
+    // -----------------------------------------------------------------------
+    // FR-SAVE-009 — hash chain tail survives save/load
+    // -----------------------------------------------------------------------
+
+    /// FR-SAVE-009: the BLAKE3 hash chain tail is serialized into the bundle
+    /// and restored on load, so a save/load does not fork the chain.
+    ///
+    /// This exercises the *whole* path the spec names, not just the
+    /// `civreplay` codec: the tail is recorded, written into a real
+    /// `.civsave` bundle (tar + zstd), read back, and then used to continue
+    /// the chain across the load boundary. A bundle that dropped or reset the
+    /// tail would make the continued root diverge from an uninterrupted run.
+    #[test]
+    fn fr_save_009_hash_chain_tail_survives_bundle_roundtrip() {
+        let mut sim = Simulation::with_seed(7);
+        for _ in 0..4 {
+            sim.tick();
+        }
+        // Record explicit ticks so the chain has a known tail to preserve.
+        for t in 0..4u64 {
+            sim.replay_log_mut().record_tick(100 + t);
+        }
+
+        let tail_at_save = sim
+            .replay_log()
+            .hash_chain_root()
+            .expect("chain has a tail after recording ticks");
+        assert_eq!(
+            sim.replay_log().recompute_running_hash(),
+            Some(tail_at_save),
+            "stored tail must equal the recomputed chain root before saving"
+        );
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("chain.civsave.zst");
+        CivSaveBundle::save_archive(&path, &sim).expect("save");
+
+        let mut loaded = CivSaveBundle::load_archive(&path).expect("load");
+
+        // The tail came back intact...
+        let tail_after_load = loaded
+            .replay_log()
+            .hash_chain_root()
+            .expect("chain tail restored from bundle");
+        assert_eq!(
+            tail_after_load, tail_at_save,
+            "FR-SAVE-009: chain tail must survive the save/load roundtrip"
+        );
+
+        // ...and `load_civreplay` verified it rather than trusting it.
+        assert_eq!(
+            loaded.replay_log().recompute_running_hash(),
+            Some(tail_after_load),
+            "restored chain must re-verify against its own events"
+        );
+
+        // Continuing the chain after the load must equal an uninterrupted run.
+        let mut expected = sim.replay_log().clone();
+        expected.record_tick(999);
+        let mut actual = loaded.replay_log_mut().clone();
+        actual.record_tick(999);
+        assert_eq!(
+            actual.hash_chain_root(),
+            expected.hash_chain_root(),
+            "FR-SAVE-009: chain must continue unbroken from the saved tick"
+        );
+    }
+
+    /// FR-SAVE-009 negative case: a bundle whose embedded chain tail has been
+    /// tampered with must be rejected at load rather than silently accepted.
+    /// This proves the tail is load-bearing, not decorative.
+    #[test]
+    fn fr_save_009_tampered_chain_tail_is_rejected_on_load() {
+        let mut sim = Simulation::with_seed(11);
+        sim.tick();
+        sim.replay_log_mut().record_tick(1);
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let save_dir_path = dir.path().join("bundle");
+        CivSaveBundle::save_dir(&save_dir_path, &sim).expect("save");
+
+        // Corrupt the last byte of the embedded chain tail.
+        let replay_path = save_dir_path.join("replay.civreplay");
+        let mut bytes = fs::read(&replay_path).expect("read replay");
+        let last = bytes.len() - 1;
+        bytes[last] ^= 0xFF;
+        fs::write(&replay_path, &bytes).expect("write tampered replay");
+
+        let result = CivSaveBundle::load_dir(&save_dir_path);
+        assert!(
+            result.is_err(),
+            "FR-SAVE-009: a tampered chain tail must fail the load, not pass silently"
+        );
+    }
 }

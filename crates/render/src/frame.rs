@@ -1,11 +1,19 @@
-//! Frame budget planning for 60 fps rendering (FR-PERF-003).
+//! Frame budget planning for 60 fps rendering (CIV-0500; no FR-PERF-003 id).
 //!
-//! The render crate SHALL maintain 60 fps at 1080p on the reference GPU
-//! profile. This module provides a [`FrameBudget`] struct that encapsulates
-//! the timing constraints so the render loop can enforce them.
+//! The render crate targets 60 fps at 1080p on the reference GPU profile. This
+//! module provides a [`FrameBudget`] struct that encapsulates the timing
+//! constraints so the render loop can enforce them.
 //!
 //! The client reads the budget each frame and decides whether to skip
 //! expensive passes (e.g. shadows, bloom) when the budget is tight.
+//!
+//! NOTE: this module previously carried an `FR-PERF-003` tag. No
+//! authoritative spec defines that id; its only definition was a table in
+//! `docs/traceability/TRACEABILITY_MATRIX.md` citing a nonexistent spec file.
+//! The nearest genuine requirement is `FR-PERF-002` ("The system SHOULD
+//! support 50,000 entities", `docs/FR_DETAILED.md`), which is an entity-count
+//! constraint rather than a frame-budget one, so it is deliberately not
+//! claimed here. The tag was removed rather than rebound.
 
 use serde::{Deserialize, Serialize};
 

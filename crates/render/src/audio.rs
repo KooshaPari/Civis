@@ -1,32 +1,44 @@
-//! Audio integration for the render layer (FR-AUD-001, FR-AUD-002, FR-AUD-003).
+//! Audio integration for the render layer (FR-CIV-AUDIO-004, design-only).
 //!
 //! This module provides the substrate types that sit between the engine's
 //! simulation events and the Kira audio backend wired in the client
 //! (`clients/bevy-ref/src/audio.rs`). The math here is pure and testable
 //! without any audio engine dependency.
 //!
-//! ## FR-AUD-001 — Background music via Kira
+//! ## FR-CIV-AUDIO-004 — Adaptive emergent score from MoodVector stems
 //!
 //! [`KiraMusic`] owns the high-level music state (tension, prosperity, war)
 //! and exposes `set_*` mutators that the engine tick loop calls. The client
 //! reads the resulting [`MusicState`] each frame and applies Kira tween
-//! commands.
-//!
-//! ## FR-AUD-002 — Music layers fade based on state
+//! commands. This is gain-only remixing driven by a mood vector, with no
+//! per-tick retriggering.
 //!
 //! [`MusicLayers`] tracks per-layer gain targets and provides `fade_in` /
 //! `fade_out` that compute the new gain after a duration. The client
 //! interpolates toward these targets using Kira's `tween` API.
 //!
-//! ## FR-AUD-003 — SFX triggered by events
-//!
 //! [`SfxTriggerEvent`] wraps an event label + optional intensity and produces
 //! a [`SfxPlaybackCommand`] that the client maps to a Kira one-shot handle.
+//!
+//! ## Scope limit
+//!
+//! `FR-CIV-AUDIO-001` (four-tier bus tree), `-002` (biome cross-fades), and
+//! `-003` (weather/diurnal ambient) are defined in the same design document
+//! but are *not* implemented here; this module only produces gain targets,
+//! not a mixer graph, so it cannot satisfy them. Those remain open.
+//!
+//! ## Provenance correction
+//!
+//! This module previously carried `FR-AUD-001`, `FR-AUD-002`, and
+//! `FR-AUD-003` tags. No authoritative spec defines those ids; their only
+//! definition was a table in `docs/traceability/TRACEABILITY_MATRIX.md`
+//! citing a nonexistent spec file. The tags were replaced with the single
+//! genuine id this module actually implements.
 
 use serde::{Deserialize, Serialize};
 
 // ---------------------------------------------------------------------------
-// FR-AUD-001: KiraMusic
+// FR-CIV-AUDIO-004: KiraMusic
 // ---------------------------------------------------------------------------
 
 /// Continuous game-state signals that drive background music adaptation.
@@ -63,7 +75,7 @@ impl MusicState {
     }
 }
 
-/// Kira-backed background music controller (FR-AUD-001).
+/// Kira-backed background music controller (FR-CIV-AUDIO-004).
 ///
 /// The struct holds the authoritative music state and is mutated by the
 /// engine tick loop via `set_*` methods. The client polls [`current_state`]
@@ -128,7 +140,7 @@ impl KiraMusic {
 }
 
 // ---------------------------------------------------------------------------
-// FR-AUD-002: MusicLayers
+// FR-CIV-AUDIO-004: MusicLayers
 // ---------------------------------------------------------------------------
 
 /// Identifies a music layer in the adaptive score.
@@ -149,7 +161,7 @@ pub enum MusicLayer {
     Bass,
 }
 
-/// A single layer's fade state (FR-AUD-002).
+/// A single layer's fade state (FR-CIV-AUDIO-004).
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct LayerState {
     /// Current gain in `[0.0, 1.0]`.
@@ -170,7 +182,7 @@ impl Default for LayerState {
     }
 }
 
-/// Manages per-layer fade in/out for adaptive music (FR-AUD-002).
+/// Manages per-layer fade in/out for adaptive music (FR-CIV-AUDIO-004).
 ///
 /// The engine calls `fade_in` / `fade_out` to set layer targets; the client
 /// polls [`layer_state`] each frame and interpolates toward the target using
@@ -253,7 +265,7 @@ impl MusicLayers {
 }
 
 // ---------------------------------------------------------------------------
-// FR-AUD-003: SfxTriggerEvent
+// FR-CIV-AUDIO-004: SfxTriggerEvent
 // ---------------------------------------------------------------------------
 
 /// Identifies a category of reactive SFX event.
@@ -277,7 +289,7 @@ pub enum SfxEventKind {
     TreatySigned,
 }
 
-/// Playback command produced by [`SfxTriggerEvent::trigger_event`] (FR-AUD-003).
+/// Playback command produced by [`SfxTriggerEvent::trigger_event`] (FR-CIV-AUDIO-004).
 ///
 /// The client maps `event_kind` → audio handle and applies `volume` to the
 /// Kira one-shot instance.
@@ -290,7 +302,7 @@ pub struct SfxPlaybackCommand {
 }
 
 /// Reactive SFX trigger that maps simulation events to playback commands
-/// (FR-AUD-003).
+/// (FR-CIV-AUDIO-004).
 ///
 /// The engine creates an `SfxTriggerEvent` when a notable event fires and
 /// calls `trigger_event` to produce a [`SfxPlaybackCommand`] the client
@@ -338,7 +350,7 @@ impl SfxTriggerEvent {
 mod tests {
     use super::*;
 
-    // --- FR-AUD-001: KiraMusic tests ---
+    // --- FR-CIV-AUDIO-004: KiraMusic tests ---
 
     #[test]
     fn kira_music_init_creates_default_state() {
@@ -375,7 +387,7 @@ mod tests {
         assert!(music.current_state().war.abs() < f32::EPSILON);
     }
 
-    // --- FR-AUD-002: MusicLayers tests ---
+    // --- FR-CIV-AUDIO-004: MusicLayers tests ---
 
     #[test]
     fn music_layers_new_starts_all_silent() {
@@ -420,7 +432,7 @@ mod tests {
         assert!(ambient.target.abs() < f32::EPSILON);
     }
 
-    // --- FR-AUD-003: SfxTriggerEvent tests ---
+    // --- FR-CIV-AUDIO-004: SfxTriggerEvent tests ---
 
     #[test]
     fn sfx_trigger_event_produces_playback_command() {

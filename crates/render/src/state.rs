@@ -1,6 +1,6 @@
-//! Event-driven UI state (FR-UX-005, CIV-0300).
+//! Event-driven UI state (CIV-0300 RTS UI/UX; no FR-UX-* id).
 //!
-//! All UI state changes SHALL derive from events; no direct engine state
+//! All UI state changes derive from events; there is no direct engine state
 //! polling. [`UiState`] is therefore a pure fold over a stream of
 //! [`UiEvent`]s: the only way to mutate it is [`UiState::apply`]. It exposes
 //! no reference to the engine and counts polling accesses (which must remain
@@ -8,6 +8,13 @@
 //!
 //! The client subscribes to the event bus and calls [`apply`](UiState::apply)
 //! once per event; it never reads engine memory directly to refresh the UI.
+//!
+//! NOTE: this module previously carried a `FR-UX-005` tag. That id belongs
+//! to `docs/models/civ-sim/USER_SPEC.md` ("Tick state hashes must be visible
+//! in timeline view") and was never implemented here. The only document
+//! claiming otherwise was `docs/traceability/TRACEABILITY_MATRIX.md`, which
+//! cites a nonexistent spec file. No authoritative requirement id describes
+//! event-derived UI state, so the tag was removed rather than rebound.
 
 use serde::{Deserialize, Serialize};
 

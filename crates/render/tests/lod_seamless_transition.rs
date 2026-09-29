@@ -1,7 +1,13 @@
-//! FR-UX-004 — LOD transitions SHALL be visually seamless within one
+//!
+//! Provenance: this test previously carried a `FR-UX-004` tag. That id is
+//! defined in `docs/models/civ-sim/USER_SPEC.md` as an unrelated
+//! requirement and is NOT implemented by this code. The only document
+//! claiming otherwise was `docs/traceability/TRACEABILITY_MATRIX.md`,
+//! which cited a nonexistent spec file. The assertions below are real and
+//! are retained as a behavioral test of single-frame LOD transition; the false id was removed
+//! rather than rebound. See `docs/audits/id-provenance-corrections.md`.
 //! rendered frame.
 //!
-//! Matrix check: `render::lod_seamless_transition`.
 
 use civ_render::lod::{LodLevel, LodTransition};
 

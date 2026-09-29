@@ -1,8 +1,15 @@
-//! RTS camera controls (FR-UX-002, CIV-0300).
+//! RTS camera controls (CIV-0300 RTS UI/UX; no FR-UX-* id).
 //!
-//! The UI SHALL support real-time-strategy style camera pan, zoom, and unit
-//! selection. This module models the camera as pure state fed by input events,
-//! so behaviour is deterministic and testable without a window.
+//! Models RTS-style camera pan, zoom, and rect selection as pure state fed by
+//! input events, so behaviour is deterministic and testable without a window.
+//!
+//! NOTE: this module previously carried a `FR-UX-002` tag. That id belongs
+//! to `docs/models/civ-sim/USER_SPEC.md` ("Exported artifacts must include
+//! full assumption disclosure") and was never implemented here. The only
+//! document claiming otherwise was
+//! `docs/traceability/TRACEABILITY_MATRIX.md`, which cites a nonexistent spec
+//! file. No authoritative requirement id describes camera controls, so the
+//! tag was removed rather than rebound.
 //!
 //! Inputs arrive as [`CameraInput`] values (emitted by the client from raw
 //! winit/bevy events); [`RtsCamera::apply`] folds them into the camera state.

@@ -1,7 +1,10 @@
-//! FR-ASSET-003 — atlas build SHALL emit `asset.atlas.built.v1` on success or
-//! `asset.generation.failed.v1` on error.
 //!
-//! Matrix check: `asset::atlas_build_events`.
+//! Provenance: this test previously carried a `FR-ASSET-003` tag. No authoritative
+//! spec defines that id; its only definition was a table in
+//! `docs/traceability/TRACEABILITY_MATRIX.md` citing a nonexistent spec
+//! file. The assertions below are real and are retained as a behavioral test
+//! of atlas build event payloads; the false id was removed rather than rebound. See
+//! `docs/audits/id-provenance-corrections.md`.
 
 use civ_render::atlas::{
     atlas_build_event, pack_atlas_per_lod, rasterise_at_build, AssetError, SvgSource,

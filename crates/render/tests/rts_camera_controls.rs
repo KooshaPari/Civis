@@ -1,7 +1,13 @@
-//! FR-UX-002 — the UI SHALL support RTS-style camera pan, zoom, and unit
+//!
+//! Provenance: this test previously carried a `FR-UX-002` tag. That id is
+//! defined in `docs/models/civ-sim/USER_SPEC.md` as an unrelated
+//! requirement and is NOT implemented by this code. The only document
+//! claiming otherwise was `docs/traceability/TRACEABILITY_MATRIX.md`,
+//! which cited a nonexistent spec file. The assertions below are real and
+//! are retained as a behavioral test of RTS camera pan/zoom/selection; the false id was removed
+//! rather than rebound. See `docs/audits/id-provenance-corrections.md`.
 //! selection.
 //!
-//! Matrix check: `render::rts_camera_controls`.
 
 use civ_render::camera::{CameraInput, RtsCamera, SelectableUnit, MAX_ZOOM, MIN_ZOOM};
 

@@ -143,7 +143,7 @@ pub enum ReplayEvent {
     },
 }
 
-// FR-CIV-RTS-015
+// FR-CIV-RTS-015, FR-SAVE-009
 /// Persistent replay log.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ReplayLog {
@@ -151,6 +151,12 @@ pub struct ReplayLog {
     pub seed: u64,
     pub schema_version: u32,
     /// Latest BLAKE3 chain root after the most recent [`Self::record_tick`].
+    ///
+    /// FR-SAVE-009: this is the hash chain tail. It is a serde-derived field, so
+    /// it is written into and read back from `replay.civreplay`, which the
+    /// `.civsave` bundle embeds. `load_civreplay` re-verifies the chain
+    /// (`verify_hash_chain`) before accepting the log, so a load resumes the
+    /// chain unbroken from the saved tick.
     #[serde(default)]
     pub running_hash: Option<[u8; HASH_LEN]>,
 }

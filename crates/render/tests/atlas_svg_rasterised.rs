@@ -1,7 +1,10 @@
-//! FR-ASSET-001 — all 2D tile sprites SHALL be derived from SVG sources and
-//! rasterised at build time.
 //!
-//! Matrix check: `asset::svg_rasterised_at_build`.
+//! Provenance: this test previously carried a `FR-ASSET-001` tag. No authoritative
+//! spec defines that id; its only definition was a table in
+//! `docs/traceability/TRACEABILITY_MATRIX.md` citing a nonexistent spec
+//! file. The assertions below are real and are retained as a behavioral test
+//! of SVG build-time rasterisation; the false id was removed rather than rebound. See
+//! `docs/audits/id-provenance-corrections.md`.
 
 use civ_render::atlas::{rasterise_at_build, AssetError, SvgSource, DEFAULT_SPRITE_SIZE};
 use civ_render::lod::LodLevel;

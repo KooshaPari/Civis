@@ -1,6 +1,6 @@
 {
   "generated_by": "docs/audits/_classify_spec_only.py",
-  "spec_only_total": 205,
+  "spec_only_total": 204,
   "category_blurb": {
     "reporting-only": "Named only by a matrix, audit, status report, or tracker.",
     "stub-template": "Only an unfilled auto-generated traceability template.",
@@ -10,12 +10,12 @@
     "actionable": "Real spec requirement with no implementation reference and no named test."
   },
   "counts": {
-    "actionable": 59,
-    "traceable-requirement": 15,
-    "synthetic-expansion": 22,
+    "actionable": 58,
     "design-document": 52,
+    "reporting-only": 28,
     "stub-template": 29,
-    "reporting-only": 28
+    "synthetic-expansion": 22,
+    "traceable-requirement": 15
   },
   "ids": {
     "actionable": [
@@ -117,11 +117,7 @@
       },
       {
         "id": "FR-SAVE-008",
-        "reason": "genuine spec home: docs/specs/CIV-1000-save-load-persistence-spec.md"
-      },
-      {
-        "id": "FR-SAVE-009",
-        "reason": "genuine spec home: docs/specs/CIV-1000-save-load-persistence-spec.md"
+        "reason": "NOT IMPLEMENTED. Engine uses ChaCha8Rng (engine.rs SimRng alias), not ChaCha20, and persists only rng_seed: u64; no RngSnapshot or stream-position/word-count capture exists, so AC-1000-06/07 cannot be met. (rand_chacha 0.3 is already a dependency, so the prior 'requires ChaCha20Rng::from_state introspection' reason was wrong.)"
       },
       {
         "id": "FR-SAVE-011",

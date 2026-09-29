@@ -1,12 +1,17 @@
-//! LOD transitions (FR-UX-004, CIV-0300).
+//! LOD transitions (CIV-0300 RTS UI/UX; no FR-UX-* id).
 //!
-//! LOD transitions SHALL be visually seamless within one rendered frame. To
-//! guarantee that, a transition never spans multiple frames: when the chosen
-//! detail level changes, the new level is swapped in atomically inside the same
-//! frame, and any cross-fade is expressed as a single-frame blend weight rather
-//! than a multi-frame animation.
+//! A level-of-detail change is applied atomically inside a single rendered
+//! frame: the new detail level is swapped in immediately, and any cross-fade
+//! is expressed as a single-frame blend weight rather than a multi-frame
+//! animation. This module models that contract so it can be asserted
+//! headlessly.
 //!
-//! This module models that contract so it can be asserted headlessly.
+//! NOTE: this module previously carried a `FR-UX-004` tag. That id belongs
+//! to `docs/models/civ-sim/USER_SPEC.md` ("Replay references must be
+//! self-contained") and was never implemented here. The only document
+//! claiming otherwise was `docs/traceability/TRACEABILITY_MATRIX.md`, which
+//! cites a nonexistent spec file. No authoritative requirement id describes
+//! single-frame LOD transitions, so the tag was removed rather than rebound.
 
 use serde::{Deserialize, Serialize};
 

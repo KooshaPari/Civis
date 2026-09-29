@@ -1,7 +1,12 @@
-//! FR-UX-001 — the UI SHALL render the hex map using the `crates/render`
-//! crate at a 60 fps target.
 //!
-//! Matrix check: `render::hex_map_60fps`.
+//! Provenance: this test previously carried a `FR-UX-001` tag. That id is
+//! defined in `docs/models/civ-sim/USER_SPEC.md` as an unrelated
+//! requirement and is NOT implemented by this code. The only document
+//! claiming otherwise was `docs/traceability/TRACEABILITY_MATRIX.md`,
+//! which cited a nonexistent spec file. The assertions below are real and
+//! are retained as a behavioral test of hex map draw-list culling and batching; the false id was removed
+//! rather than rebound. See `docs/audits/id-provenance-corrections.md`.
+//!
 
 use civ_render::frame::TARGET_FPS;
 use civ_render::hex_map::{HexCoord, HexMapRenderer, Tile, HEX_MAP_TARGET_FPS};

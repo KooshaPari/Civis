@@ -1,12 +1,18 @@
-//! Timeline scrubber (FR-UX-003, CIV-0300).
+//! Timeline scrubber (CIV-0300 RTS UI/UX; no FR-UX-* id).
 //!
-//! A timeline scrubber SHALL display tick history and allow rewind to any
-//! stored tick. This module keeps a bounded ring of tick snapshots plus the
-//! scrub position, and exposes the seek operations the client needs.
+//! Keeps a bounded ring of tick snapshots plus the scrub position, and
+//! exposes the seek operations the client needs.
 //!
 //! Snapshots are opaque byte payloads: the render layer never interprets world
 //! state, it only stores and returns it, so the scrubber stays decoupled from
 //! the engine's state encoding.
+//!
+//! NOTE: this module previously carried a `FR-UX-003` tag. That id belongs
+//! to `docs/models/civ-sim/USER_SPEC.md` ("Run IDs must be stable, unique,
+//! and human-readable") and was never implemented here. The only document
+//! claiming otherwise was `docs/traceability/TRACEABILITY_MATRIX.md`, which
+//! cites a nonexistent spec file. No authoritative requirement id describes
+//! tick-history scrubbing, so the tag was removed rather than rebound.
 
 use serde::{Deserialize, Serialize};
 

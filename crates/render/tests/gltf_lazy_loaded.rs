@@ -1,7 +1,10 @@
-//! FR-ASSET-004 — 3D assets SHALL be stored as glTF 2.0 and loaded lazily on
-//! demand.
 //!
-//! Matrix check: `asset::gltf_lazy_loaded`.
+//! Provenance: this test previously carried a `FR-ASSET-004` tag. No authoritative
+//! spec defines that id; its only definition was a table in
+//! `docs/traceability/TRACEABILITY_MATRIX.md` citing a nonexistent spec
+//! file. The assertions below are real and are retained as a behavioral test
+//! of lazy glTF descriptor loading; the false id was removed rather than rebound. See
+//! `docs/audits/id-provenance-corrections.md`.
 
 use civ_render::gltf::{GltfAsset, GltfError, GltfLoader, GLTF_VERSION_MAJOR};
 

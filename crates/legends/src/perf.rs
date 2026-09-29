@@ -1,4 +1,4 @@
-//! Legends ingest performance budget — FR-CIV-LEGENDS-PERF-01.
+//! Legends ingest performance budget — NFR-CIV-LEGENDS-PERF-01.
 //!
 //! Per `docs/traceability/fr-emergence-matrix.md` row 260, the legends
 //! ingest pipeline SHALL keep its P99 latency below `INGEST_P99_BUDGET_MS`
@@ -25,7 +25,7 @@
 
 use std::time::Instant;
 
-/// The legends-ingest P99 latency budget — FR-CIV-LEGENDS-PERF-01.
+/// The legends-ingest P99 latency budget — NFR-CIV-LEGENDS-PERF-01.
 ///
 /// Per the spec, ingesting 1k events must run at P99 < 50 ms on the
 /// reference benchmark machine. The benchmark fixture
@@ -34,7 +34,7 @@ use std::time::Instant;
 pub const INGEST_P99_BUDGET_MS: f64 = 50.0;
 
 /// The reference fixture size — 1k events, as specified by
-/// FR-CIV-LEGENDS-PERF-01.
+/// NFR-CIV-LEGENDS-PERF-01.
 pub const INGEST_FIXTURE_SIZE: usize = 1_000;
 
 /// A stopwatch for measuring legends-ingest latency.
@@ -72,7 +72,7 @@ impl IngestTimer {
     }
 }
 
-/// True when `p99_ms` is within the FR-CIV-LEGENDS-PERF-01 budget
+/// True when `p99_ms` is within the NFR-CIV-LEGENDS-PERF-01 budget
 /// (`<= INGEST_P99_BUDGET_MS`). Hosts and benches use this as a
 /// single-line assertion gate.
 #[must_use]
@@ -84,7 +84,7 @@ pub fn ingest_p99_within_budget(p99_ms: f64) -> bool {
 mod tests {
     use super::*;
 
-    /// FR-CIV-LEGENDS-PERF-01: the spec constants are non-zero and the
+    /// NFR-CIV-LEGENDS-PERF-01: the spec constants are non-zero and the
     /// fixture size is `1000`.
     #[test]
     fn budget_constants_match_spec() {

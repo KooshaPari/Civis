@@ -1,19 +1,21 @@
 {
   "generated_by": "docs/audits/_classify_spec_only.py",
-  "spec_only_total": 208,
+  "spec_only_total": 205,
   "category_blurb": {
     "reporting-only": "Named only by a matrix, audit, status report, or tracker.",
+    "stub-template": "Only an unfilled auto-generated traceability template.",
     "synthetic-expansion": "Numbered inside an area that has real specs, but no spec section of its own.",
     "design-document": "Defined only in a design / direction document (intent, not acceptance criteria).",
     "traceable-requirement": "Real spec, and the spec names the test to write.",
     "actionable": "Real spec requirement with no implementation reference and no named test."
   },
   "counts": {
-    "actionable": 62,
+    "actionable": 59,
     "traceable-requirement": 15,
-    "synthetic-expansion": 49,
+    "synthetic-expansion": 22,
     "design-document": 52,
-    "reporting-only": 30
+    "stub-template": 29,
+    "reporting-only": 28
   },
   "ids": {
     "actionable": [
@@ -238,18 +240,6 @@
         "reason": "genuine spec home: docs/models/civ-sim/USER_SPEC.md"
       },
       {
-        "id": "NFR-CIV-PERF-900",
-        "reason": "genuine spec home: docs/agileplus/README.md"
-      },
-      {
-        "id": "NFR-CIV-PERF-901",
-        "reason": "genuine spec home: docs/agileplus/README.md"
-      },
-      {
-        "id": "NFR-CIV-PERF-902",
-        "reason": "genuine spec home: docs/agileplus/README.md"
-      },
-      {
         "id": "NFR-CIV-SCALE-900",
         "reason": "genuine spec home: docs/agileplus/README.md"
       },
@@ -402,60 +392,12 @@
         "reason": "area CIV-PSYCHE has spec-backed siblings, but this id has no spec section"
       },
       {
-        "id": "NFR-C-02",
-        "reason": "area C has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-CIV-AI-002",
-        "reason": "area CIV-AI has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-CIV-LEGENDS-PERF-01",
-        "reason": "area CIV-LEGENDS-PERF has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-CIV-MAINT-005",
-        "reason": "area CIV-MAINT has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-CIV-MAINT-006",
-        "reason": "area CIV-MAINT has spec-backed siblings, but this id has no spec section"
-      },
-      {
         "id": "NFR-CIV-PERF-003",
-        "reason": "area CIV-PERF has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-CIV-PERF-004",
         "reason": "area CIV-PERF has spec-backed siblings, but this id has no spec section"
       },
       {
         "id": "NFR-CIV-PERF-005",
         "reason": "area CIV-PERF has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-CIV-PERF-006",
-        "reason": "area CIV-PERF has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-CIV-PERF-007",
-        "reason": "area CIV-PERF has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-CIV-PERF-008",
-        "reason": "area CIV-PERF has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-CIV-REL-001",
-        "reason": "area CIV-REL has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-CIV-REL-002",
-        "reason": "area CIV-REL has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-CIV-REL-003",
-        "reason": "area CIV-REL has spec-backed siblings, but this id has no spec section"
       },
       {
         "id": "NFR-CIV-SCALE-003",
@@ -464,66 +406,6 @@
       {
         "id": "NFR-CIV-SCALE-004",
         "reason": "area CIV-SCALE has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-CIV-SEC-002",
-        "reason": "area CIV-SEC has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-CIV-SEC-003",
-        "reason": "area CIV-SEC has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-CIV-SEC-004",
-        "reason": "area CIV-SEC has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-O-01",
-        "reason": "area O has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-O-02",
-        "reason": "area O has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-O-03",
-        "reason": "area O has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-O-04",
-        "reason": "area O has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-O-05",
-        "reason": "area O has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-O-06",
-        "reason": "area O has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-R-01",
-        "reason": "area R has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-R-02",
-        "reason": "area R has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-R-03",
-        "reason": "area R has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-R-04",
-        "reason": "area R has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-R-05",
-        "reason": "area R has spec-backed siblings, but this id has no spec section"
-      },
-      {
-        "id": "NFR-R-06",
-        "reason": "area R has spec-backed siblings, but this id has no spec section"
       }
     ],
     "design-document": [
@@ -736,6 +618,124 @@
         "reason": "only design/direction docs: docs/design/tech-engineering.md"
       }
     ],
+    "stub-template": [
+      {
+        "id": "NFR-C-02",
+        "reason": "unfilled traceability template: docs/traceability/nfr-c-02/nfr-c-02-spec.md"
+      },
+      {
+        "id": "NFR-CIV-AI-002",
+        "reason": "unfilled traceability template: docs/traceability/nfr-civ-ai-002/nfr-civ-ai-002-spec.md"
+      },
+      {
+        "id": "NFR-CIV-MAINT-005",
+        "reason": "unfilled traceability template: docs/traceability/nfr-civ-maint-005/nfr-civ-maint-005-spec.md"
+      },
+      {
+        "id": "NFR-CIV-MAINT-006",
+        "reason": "unfilled traceability template: docs/traceability/nfr-civ-maint-006/nfr-civ-maint-006-spec.md"
+      },
+      {
+        "id": "NFR-CIV-PERF-004",
+        "reason": "unfilled traceability template: docs/traceability/nfr-civ-perf-004/nfr-civ-perf-004-spec.md"
+      },
+      {
+        "id": "NFR-CIV-PERF-006",
+        "reason": "unfilled traceability template: docs/traceability/nfr-civ-perf-006/nfr-civ-perf-006-spec.md"
+      },
+      {
+        "id": "NFR-CIV-PERF-007",
+        "reason": "unfilled traceability template: docs/traceability/nfr-civ-perf-007/nfr-civ-perf-007-spec.md"
+      },
+      {
+        "id": "NFR-CIV-PERF-008",
+        "reason": "unfilled traceability template: docs/traceability/nfr-civ-perf-008/nfr-civ-perf-008-spec.md"
+      },
+      {
+        "id": "NFR-CIV-PERF-900",
+        "reason": "unfilled traceability template: docs/traceability/nfr-civ-perf-900/nfr-civ-perf-900-spec.md"
+      },
+      {
+        "id": "NFR-CIV-PERF-901",
+        "reason": "unfilled traceability template: docs/traceability/nfr-civ-perf-901/nfr-civ-perf-901-spec.md"
+      },
+      {
+        "id": "NFR-CIV-PERF-902",
+        "reason": "unfilled traceability template: docs/traceability/nfr-civ-perf-902/nfr-civ-perf-902-spec.md"
+      },
+      {
+        "id": "NFR-CIV-REL-001",
+        "reason": "unfilled traceability template: docs/traceability/nfr-civ-rel-001/nfr-civ-rel-001-spec.md"
+      },
+      {
+        "id": "NFR-CIV-REL-002",
+        "reason": "unfilled traceability template: docs/traceability/nfr-civ-rel-002/nfr-civ-rel-002-spec.md"
+      },
+      {
+        "id": "NFR-CIV-REL-003",
+        "reason": "unfilled traceability template: docs/traceability/nfr-civ-rel-003/nfr-civ-rel-003-spec.md"
+      },
+      {
+        "id": "NFR-CIV-SEC-002",
+        "reason": "unfilled traceability template: docs/traceability/nfr-civ-sec-002/nfr-civ-sec-002-spec.md"
+      },
+      {
+        "id": "NFR-CIV-SEC-003",
+        "reason": "unfilled traceability template: docs/traceability/nfr-civ-sec-003/nfr-civ-sec-003-spec.md"
+      },
+      {
+        "id": "NFR-CIV-SEC-004",
+        "reason": "unfilled traceability template: docs/traceability/nfr-civ-sec-004/nfr-civ-sec-004-spec.md"
+      },
+      {
+        "id": "NFR-O-01",
+        "reason": "unfilled traceability template: docs/traceability/nfr-o-01/nfr-o-01-spec.md"
+      },
+      {
+        "id": "NFR-O-02",
+        "reason": "unfilled traceability template: docs/traceability/nfr-o-02/nfr-o-02-spec.md"
+      },
+      {
+        "id": "NFR-O-03",
+        "reason": "unfilled traceability template: docs/traceability/nfr-o-03/nfr-o-03-spec.md"
+      },
+      {
+        "id": "NFR-O-04",
+        "reason": "unfilled traceability template: docs/traceability/nfr-o-04/nfr-o-04-spec.md"
+      },
+      {
+        "id": "NFR-O-05",
+        "reason": "unfilled traceability template: docs/traceability/nfr-o-05/nfr-o-05-spec.md"
+      },
+      {
+        "id": "NFR-O-06",
+        "reason": "unfilled traceability template: docs/traceability/nfr-o-06/nfr-o-06-spec.md"
+      },
+      {
+        "id": "NFR-R-01",
+        "reason": "unfilled traceability template: docs/traceability/nfr-r-01/nfr-r-01-spec.md"
+      },
+      {
+        "id": "NFR-R-02",
+        "reason": "unfilled traceability template: docs/traceability/nfr-r-02/nfr-r-02-spec.md"
+      },
+      {
+        "id": "NFR-R-03",
+        "reason": "unfilled traceability template: docs/traceability/nfr-r-03/nfr-r-03-spec.md"
+      },
+      {
+        "id": "NFR-R-04",
+        "reason": "unfilled traceability template: docs/traceability/nfr-r-04/nfr-r-04-spec.md"
+      },
+      {
+        "id": "NFR-R-05",
+        "reason": "unfilled traceability template: docs/traceability/nfr-r-05/nfr-r-05-spec.md"
+      },
+      {
+        "id": "NFR-R-06",
+        "reason": "unfilled traceability template: docs/traceability/nfr-r-06/nfr-r-06-spec.md"
+      }
+    ],
     "reporting-only": [
       {
         "id": "FR-CIV-EMERGENCE-100",
@@ -795,14 +795,6 @@
       },
       {
         "id": "FR-CIV-EMERGENCE-249",
-        "reason": "recorded only in matrix/audit documents"
-      },
-      {
-        "id": "FR-CIV-LEGENDS-CONFIG-04",
-        "reason": "recorded only in matrix/audit documents"
-      },
-      {
-        "id": "FR-CIV-LEGENDS-SCALE-02",
         "reason": "recorded only in matrix/audit documents"
       },
       {

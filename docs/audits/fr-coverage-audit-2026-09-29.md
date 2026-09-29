@@ -2,7 +2,7 @@
 
 **Generated:** 2026-09-29  
 **Source inventory:** `docs/audits/_id_inventory_v3.json`  
-**Total IDs scanned:** 1425
+**Total IDs scanned:** 1422
 
 ## Status legend
 
@@ -19,13 +19,13 @@
 
 | Status | Count | % |
 |--------|------:|--:|
-| `COVERED` | 1060 | 74.4 |
+| `COVERED` | 1060 | 74.5 |
 | `STUB-TEST-ONLY` | 0 | 0.0 |
 | `TEST-NO-CODE-REF` | 157 | 11.0 |
 | `IMPL-NO-TEST` | 0 | 0.0 |
-| `SPEC-ONLY` | 208 | 14.6 |
+| `SPEC-ONLY` | 205 | 14.4 |
 | `CODE-ONLY-no-spec` | 0 | 0.0 |
-| **Total** | **1425** | **100.0** |
+| **Total** | **1422** | **100.0** |
 
 ## Coverage by epic
 
@@ -121,19 +121,16 @@
 | FR-CIV-LEGENDS | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-LEGENDS-BROWSER | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-LEGENDS-CAUSAL | 1 | 0 | 0 | 1 | 0 | 0 | 0 |
-| FR-CIV-LEGENDS-CONFIG | 1 | 0 | 0 | 0 | 0 | 1 | 0 |
 | FR-CIV-LEGENDS-GAP | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-LEGENDS-GRAPH | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-LEGENDS-INGEST | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-LEGENDS-INSPECT | 1 | 0 | 0 | 1 | 0 | 0 | 0 |
 | FR-CIV-LEGENDS-NARRATOR | 1 | 0 | 0 | 1 | 0 | 0 | 0 |
-| FR-CIV-LEGENDS-PERF | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-LEGENDS-PERSIST | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-LEGENDS-PRESIM | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-LEGENDS-PRODUCER | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-LEGENDS-QUERY | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-LEGENDS-RESOLVE | 1 | 0 | 0 | 1 | 0 | 0 | 0 |
-| FR-CIV-LEGENDS-SCALE | 1 | 0 | 0 | 0 | 0 | 1 | 0 |
 | FR-CIV-LEGENDS-SIG | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-LIFE | 20 | 20 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-LLM | 6 | 0 | 0 | 6 | 0 | 0 | 0 |
@@ -251,7 +248,7 @@
 | NFR-CIV-DEV-HYGIENE | 1 | 0 | 0 | 1 | 0 | 0 | 0 |
 | NFR-CIV-LEGENDS-CONFIG | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | NFR-CIV-LEGENDS-LOUD | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
-| NFR-CIV-LEGENDS-PERF | 1 | 0 | 0 | 0 | 0 | 1 | 0 |
+| NFR-CIV-LEGENDS-PERF | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | NFR-CIV-LEGENDS-SCALE | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 | NFR-CIV-MAINT | 6 | 4 | 0 | 0 | 0 | 2 | 0 |
 | NFR-CIV-PERF | 11 | 2 | 0 | 0 | 0 | 9 | 0 |
@@ -266,7 +263,7 @@
 | NFR-S | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
 | NFR-SCALE | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
 
-## Spec-only IDs (need implementation) (208)
+## Spec-only IDs (need implementation) (205)
 
 - `FR-CIV-0700`
   - spec: docs/design/civ-actor-assets-fix.md:322
@@ -362,10 +359,6 @@
   - spec: docs/specs/CIV-0101-two-zoom-lod-v1.md:1580, docs/specs/CIV-0101-two-zoom-lod-v1.md:1582, docs/specs/CIV-0101-two-zoom-lod-v1.md:1584
 - `FR-CIV-GODOT-UX-000`
   - spec: docs/development-guide/fr-godot-attach.md:13, docs/traceability/fr-civ-godot-ux-000/fr-civ-godot-ux-000-adr.md:1, docs/traceability/fr-civ-godot-ux-000/fr-civ-godot-ux-000-adr.md:6
-- `FR-CIV-LEGENDS-CONFIG-04`
-  - spec: docs/traceability/fr-emergence-matrix.md:259
-- `FR-CIV-LEGENDS-SCALE-02`
-  - spec: docs/traceability/fr-emergence-matrix.md:261
 - `FR-CIV-PSYCHE-004`
   - spec: FUNCTIONAL_REQUIREMENTS.md, docs/traceability/fr-civ-psyche-004/fr-civ-psyche-004-adr.md:1, docs/traceability/fr-civ-psyche-004/fr-civ-psyche-004-adr.md:6
 - `FR-CIV-PSYCHE-007`
@@ -612,8 +605,6 @@
   - spec: docs/traceability/nfr-matrix.md:64
 - `NFR-CIV-AI-002`
   - spec: docs/design/civ-ai-crate.md:49, docs/traceability/index.md:1163, docs/traceability/nfr-civ-ai-002/nfr-civ-ai-002-research.md:1
-- `NFR-CIV-LEGENDS-PERF-01`
-  - spec: docs/design/legends-engine.md:451, docs/traceability/index.md:1172, docs/traceability/nfr-civ-legends-perf-01/nfr-civ-legends-perf-01-research.md:1
 - `NFR-CIV-MAINT-005`
   - spec: docs/reference/non-functional-requirements.md:517, docs/reference/non-functional-requirements.md:584, docs/reference/non-functional-requirements.md:608
 - `NFR-CIV-MAINT-006`

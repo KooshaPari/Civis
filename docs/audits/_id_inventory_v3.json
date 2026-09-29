@@ -13291,18 +13291,6 @@
       "in_stub_tests": []
     },
     {
-      "id": "FR-CIV-LEGENDS-CONFIG-04",
-      "in_specs": [],
-      "in_meta": [],
-      "in_func_req": null,
-      "in_traceability": [
-        "docs/traceability/fr-emergence-matrix.md:259"
-      ],
-      "in_code": [],
-      "in_tests": [],
-      "in_stub_tests": []
-    },
-    {
       "id": "FR-CIV-LEGENDS-GAP-12",
       "in_specs": [
         "docs/design/legends-engine.md:447"
@@ -13439,26 +13427,6 @@
         "crates/legends/tests/fr_fr_civ_legends_narrator_13.rs:10",
         "crates/legends/tests/fr_fr_civ_legends_narrator_13.rs:21",
         "crates/legends/tests/fr_fr_civ_legends_narrator_13.rs:27"
-      ],
-      "in_stub_tests": []
-    },
-    {
-      "id": "FR-CIV-LEGENDS-PERF-01",
-      "in_specs": [],
-      "in_meta": [],
-      "in_func_req": null,
-      "in_traceability": [
-        "docs/traceability/fr-emergence-matrix.md:260"
-      ],
-      "in_code": [
-        "crates/legends/src/perf.rs:1",
-        "crates/legends/src/perf.rs:28",
-        "crates/legends/src/perf.rs:37",
-        "crates/legends/src/perf.rs:75",
-        "crates/legends/src/perf.rs:87"
-      ],
-      "in_tests": [
-        "crates/legends/src/perf.rs:87"
       ],
       "in_stub_tests": []
     },
@@ -13606,18 +13574,6 @@
         "crates/legends/tests/fr_fr_civ_legends_resolve_04.rs:26",
         "crates/legends/tests/fr_fr_civ_legends_resolve_04.rs:35"
       ],
-      "in_stub_tests": []
-    },
-    {
-      "id": "FR-CIV-LEGENDS-SCALE-02",
-      "in_specs": [],
-      "in_meta": [],
-      "in_func_req": null,
-      "in_traceability": [
-        "docs/traceability/fr-emergence-matrix.md:261"
-      ],
-      "in_code": [],
-      "in_tests": [],
       "in_stub_tests": []
     },
     {
@@ -36372,6 +36328,7 @@
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [
+        "docs/traceability/fr-emergence-matrix.md:259",
         "docs/traceability/index.md:1170",
         "docs/traceability/nfr-civ-legends-config-04/nfr-civ-legends-config-04-research.md:1",
         "docs/traceability/nfr-civ-legends-config-04/nfr-civ-legends-config-04-research.md:4",
@@ -36418,17 +36375,25 @@
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [
+        "docs/traceability/fr-emergence-matrix.md:260",
         "docs/traceability/index.md:1172",
         "docs/traceability/nfr-civ-legends-perf-01/nfr-civ-legends-perf-01-research.md:1",
         "docs/traceability/nfr-civ-legends-perf-01/nfr-civ-legends-perf-01-research.md:4",
         "docs/traceability/nfr-civ-legends-perf-01/nfr-civ-legends-perf-01-spec.md:1",
         "docs/traceability/nfr-civ-legends-perf-01/nfr-civ-legends-perf-01-spec.md:5",
         "docs/traceability/nfr-civ-perf-002/nfr-civ-perf-002-intent.md:17",
-        "docs/traceability/nfr-civ-perf-003/nfr-civ-perf-003-intent.md:17",
-        "docs/traceability/nfr-civ-perf-004/nfr-civ-perf-004-intent.md:17"
+        "docs/traceability/nfr-civ-perf-003/nfr-civ-perf-003-intent.md:17"
       ],
-      "in_code": [],
-      "in_tests": [],
+      "in_code": [
+        "crates/legends/src/perf.rs:1",
+        "crates/legends/src/perf.rs:28",
+        "crates/legends/src/perf.rs:37",
+        "crates/legends/src/perf.rs:75",
+        "crates/legends/src/perf.rs:87"
+      ],
+      "in_tests": [
+        "crates/legends/src/perf.rs:87"
+      ],
       "in_stub_tests": []
     },
     {
@@ -36439,14 +36404,14 @@
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [
+        "docs/traceability/fr-emergence-matrix.md:261",
         "docs/traceability/index.md:1173",
         "docs/traceability/nfr-civ-legends-scale-02/nfr-civ-legends-scale-02-adr.md:1",
         "docs/traceability/nfr-civ-legends-scale-02/nfr-civ-legends-scale-02-adr.md:6",
         "docs/traceability/nfr-civ-legends-scale-02/nfr-civ-legends-scale-02-adr.md:10",
         "docs/traceability/nfr-civ-legends-scale-02/nfr-civ-legends-scale-02-research.md:1",
         "docs/traceability/nfr-civ-legends-scale-02/nfr-civ-legends-scale-02-research.md:4",
-        "docs/traceability/nfr-civ-legends-scale-02/nfr-civ-legends-scale-02-spec.md:1",
-        "docs/traceability/nfr-civ-legends-scale-02/nfr-civ-legends-scale-02-spec.md:5"
+        "docs/traceability/nfr-civ-legends-scale-02/nfr-civ-legends-scale-02-spec.md:1"
       ],
       "in_code": [
         "crates/legends/src/lib.rs:17"

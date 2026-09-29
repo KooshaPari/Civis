@@ -22,6 +22,12 @@ on unchanged inputs reproduces the ledger byte-for-byte.
   reporting-only        The ID is only ever named by a matrix, audit report,
                         status report, or tracker. Those documents restate
                         other requirements; they do not define new ones.
+  stub-template         The ID's only "spec" is an auto-generated
+                        docs/traceability/<id>/<id>-spec.md that was never
+                        filled in. All 1221 of those files still say
+                        "Status: SPEC-TEMPLATE" and keep the placeholder
+                        text under every heading, so they scaffold a slot for
+                        an ID rather than specifying it.
   synthetic-expansion   The ID's area has genuinely spec-backed siblings, but
                         this particular ID has no spec section of its own.
                         The numbering was expanded past what the spec defines.
@@ -33,11 +39,19 @@ on unchanged inputs reproduces the ledger byte-for-byte.
   actionable            A real requirement in a real spec with no named test.
                         This is the hand-review list.
 
-NOTE on honesty: the first revision of this script used a loose regex for the
-design category that also matched docs/development-guide/ and any path
-containing "guide". That silently absorbed 12 IDs whose only spec home was a
-development guide. The rule is now a plain docs/design/ prefix match, and the
-previously-hidden IDs are back in the hand-review list.
+NOTE on honesty: two earlier revisions of this script were wrong and the
+mistakes are recorded here so they are not reintroduced.
+
+1. The design category used a loose regex that also matched
+   docs/development-guide/ and any path containing "guide". That silently
+   absorbed 12 IDs whose only spec home was a development guide. The rule is
+   now a plain docs/design/ prefix match.
+
+2. Every docs/traceability/<id>/<id>-spec.md was treated as a genuine spec.
+   All 1221 are unfilled auto-generated templates marked
+   "Status: SPEC-TEMPLATE" with placeholder text under every heading. That
+   made 50 IDs look spec-backed when nothing had been written. is_stub_spec()
+   now detects and excludes them.
 """
 
 from __future__ import annotations
@@ -86,16 +100,21 @@ CATEGORY_ORDER = (
     "traceable-requirement",
     "synthetic-expansion",
     "design-document",
+    "stub-template",
     "reporting-only",
 )
 
 CATEGORY_BLURB = {
     "reporting-only": "Named only by a matrix, audit, status report, or tracker.",
+    "stub-template": "Only an unfilled auto-generated traceability template.",
     "synthetic-expansion": "Numbered inside an area that has real specs, but no spec section of its own.",
     "design-document": "Defined only in a design / direction document (intent, not acceptance criteria).",
     "traceable-requirement": "Real spec, and the spec names the test to write.",
     "actionable": "Real spec requirement with no implementation reference and no named test.",
 }
+
+# An auto-generated, never-filled traceability spec template.
+STUB_SPEC_MARKER = "Status: SPEC-TEMPLATE"
 
 
 def load(path: Path):
@@ -128,6 +147,25 @@ def is_reporting(p: str) -> bool:
     return p in REPORTING_FILES or any(p.startswith(x) for x in REPORTING_PREFIXES)
 
 
+_STUB_SPEC_CACHE: dict[str, bool] = {}
+
+
+def is_stub_spec(p: str) -> bool:
+    """True for an auto-generated, never-filled traceability spec template."""
+    if p in _STUB_SPEC_CACHE:
+        return _STUB_SPEC_CACHE[p]
+    f = ROOT / p
+    verdict = False
+    if f.is_file():
+        try:
+            head = f.read_text(encoding="utf-8", errors="replace")[:2000]
+        except OSError:
+            head = ""
+        verdict = STUB_SPEC_MARKER in head
+    _STUB_SPEC_CACHE[p] = verdict
+    return verdict
+
+
 def is_design(p: str) -> bool:
     return p in DESIGN_EXACT or any(p.startswith(x) for x in DESIGN_PREFIXES)
 
@@ -149,8 +187,15 @@ def spec_names_a_test(path: str, iid: str) -> bool:
 
 def classify(iid: str, row: dict, area_specs: dict[str, set[str]]) -> tuple[str, str]:
     homes = spec_homes(row)
-    genuine = [p for p in homes if not is_reporting(p)]
     area, _ = split_id(iid)
+
+    # An unfilled traceability template is a distinct kind of nothing: the ID
+    # has a dedicated spec *slot* that was scaffolded and never written.
+    stub_only = [p for p in homes if is_stub_spec(p)]
+    if stub_only:
+        return "stub-template", f"unfilled traceability template: {stub_only[0]}"
+
+    genuine = [p for p in homes if not is_reporting(p)]
 
     if not genuine:
         return "reporting-only", "recorded only in matrix/audit documents"
@@ -246,6 +291,8 @@ def main() -> int:
     for iid, row in rows.items():
         area, _ = split_id(iid)
         for p in spec_homes(row):
+            if is_reporting(p) or is_stub_spec(p):
+                continue
             if p.startswith("docs/specs/") or p.endswith("-spec.md"):
                 area_specs[area].add(p)
 

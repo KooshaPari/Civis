@@ -9,54 +9,52 @@ python scripts/traceability/gen-fr-audit.py
 python docs/audits/_classify_spec_only.py
 ```
 
-Total SPEC-ONLY IDs: **208**
+Total SPEC-ONLY IDs: **205**
 
 | Category | Count | Meaning |
 |---|---:|---|
-| `actionable` | 62 | Real spec requirement with no implementation reference and no named test. |
+| `actionable` | 59 | Real spec requirement with no implementation reference and no named test. |
 | `traceable-requirement` | 15 | Real spec, and the spec names the test to write. |
-| `synthetic-expansion` | 49 | Numbered inside an area that has real specs, but no spec section of its own. |
+| `synthetic-expansion` | 22 | Numbered inside an area that has real specs, but no spec section of its own. |
 | `design-document` | 52 | Defined only in a design / direction document (intent, not acceptance criteria). |
-| `reporting-only` | 30 | Named only by a matrix, audit, status report, or tracker. |
+| `stub-template` | 29 | Only an unfilled auto-generated traceability template. |
+| `reporting-only` | 28 | Named only by a matrix, audit, status report, or tracker. |
 
 Deferred = real but not a Rust/behavioral test target: it names no code artifact, or its only home is a document that restates other requirements. Deferred does **not** mean implemented.
 
 ## By area
 
-| Area | Total | `actionable` | `traceable-requirement` | `synthetic-expansion` | `design-document` | `reporting-only` |
-|---|---:|---:|---:|---:|---:|---:|
-| `UX` | 22 | 22 | 0 | 0 | 0 | 0 |
-| `CIV-GEO` | 10 | 10 | 0 | 0 | 0 | 0 |
-| `SAVE` | 10 | 10 | 0 | 0 | 0 | 0 |
-| `CIV-SPECIES` | 35 | 6 | 0 | 0 | 29 | 0 |
-| `CIV-SCALE` | 6 | 4 | 0 | 2 | 0 | 0 |
-| `CIV-WEB` | 4 | 4 | 0 | 0 | 0 | 0 |
-| `CIV-PERF` | 9 | 3 | 0 | 6 | 0 | 0 |
-| `CIV-GODOT-UX` | 1 | 1 | 0 | 0 | 0 | 0 |
-| `CIV-RESEARCH` | 1 | 1 | 0 | 0 | 0 | 0 |
-| `CIV-WAR` | 1 | 1 | 0 | 0 | 0 | 0 |
-| `C` | 1 | 0 | 0 | 1 | 0 | 0 |
-| `CIV` | 14 | 0 | 0 | 1 | 0 | 13 |
-| `CIV-AI` | 1 | 0 | 0 | 1 | 0 | 0 |
-| `CIV-ASSET` | 12 | 0 | 12 | 0 | 0 | 0 |
-| `CIV-AUDIO` | 4 | 0 | 0 | 0 | 4 | 0 |
-| `CIV-BEVY` | 1 | 0 | 0 | 1 | 0 | 0 |
-| `CIV-ECON` | 1 | 0 | 1 | 0 | 0 | 0 |
-| `CIV-EMERGENCE` | 15 | 0 | 0 | 0 | 0 | 15 |
-| `CIV-EMERGENCE-RELIGION` | 2 | 0 | 0 | 0 | 2 | 0 |
-| `CIV-LEGENDS-CONFIG` | 1 | 0 | 0 | 0 | 0 | 1 |
-| `CIV-LEGENDS-PERF` | 1 | 0 | 0 | 1 | 0 | 0 |
-| `CIV-LEGENDS-SCALE` | 1 | 0 | 0 | 0 | 0 | 1 |
-| `CIV-MAINT` | 2 | 0 | 0 | 2 | 0 | 0 |
-| `CIV-PSYCHE` | 16 | 0 | 0 | 16 | 0 | 0 |
-| `CIV-REL` | 3 | 0 | 0 | 3 | 0 | 0 |
-| `CIV-SEC` | 3 | 0 | 0 | 3 | 0 | 0 |
-| `CIV-SOCIAL` | 2 | 0 | 2 | 0 | 0 | 0 |
-| `CIV-TECH` | 17 | 0 | 0 | 0 | 17 | 0 |
-| `O` | 6 | 0 | 0 | 6 | 0 | 0 |
-| `R` | 6 | 0 | 0 | 6 | 0 | 0 |
+| Area | Total | `actionable` | `traceable-requirement` | `synthetic-expansion` | `design-document` | `stub-template` | `reporting-only` |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `UX` | 22 | 22 | 0 | 0 | 0 | 0 | 0 |
+| `CIV-GEO` | 10 | 10 | 0 | 0 | 0 | 0 | 0 |
+| `SAVE` | 10 | 10 | 0 | 0 | 0 | 0 | 0 |
+| `CIV-SPECIES` | 35 | 6 | 0 | 0 | 29 | 0 | 0 |
+| `CIV-SCALE` | 6 | 4 | 0 | 2 | 0 | 0 | 0 |
+| `CIV-WEB` | 4 | 4 | 0 | 0 | 0 | 0 | 0 |
+| `CIV-GODOT-UX` | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
+| `CIV-RESEARCH` | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
+| `CIV-WAR` | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
+| `C` | 1 | 0 | 0 | 0 | 0 | 1 | 0 |
+| `CIV` | 14 | 0 | 0 | 1 | 0 | 0 | 13 |
+| `CIV-AI` | 1 | 0 | 0 | 0 | 0 | 1 | 0 |
+| `CIV-ASSET` | 12 | 0 | 12 | 0 | 0 | 0 | 0 |
+| `CIV-AUDIO` | 4 | 0 | 0 | 0 | 4 | 0 | 0 |
+| `CIV-BEVY` | 1 | 0 | 0 | 1 | 0 | 0 | 0 |
+| `CIV-ECON` | 1 | 0 | 1 | 0 | 0 | 0 | 0 |
+| `CIV-EMERGENCE` | 15 | 0 | 0 | 0 | 0 | 0 | 15 |
+| `CIV-EMERGENCE-RELIGION` | 2 | 0 | 0 | 0 | 2 | 0 | 0 |
+| `CIV-MAINT` | 2 | 0 | 0 | 0 | 0 | 2 | 0 |
+| `CIV-PERF` | 9 | 0 | 0 | 2 | 0 | 7 | 0 |
+| `CIV-PSYCHE` | 16 | 0 | 0 | 16 | 0 | 0 | 0 |
+| `CIV-REL` | 3 | 0 | 0 | 0 | 0 | 3 | 0 |
+| `CIV-SEC` | 3 | 0 | 0 | 0 | 0 | 3 | 0 |
+| `CIV-SOCIAL` | 2 | 0 | 2 | 0 | 0 | 0 | 0 |
+| `CIV-TECH` | 17 | 0 | 0 | 0 | 17 | 0 | 0 |
+| `O` | 6 | 0 | 0 | 0 | 0 | 6 | 0 |
+| `R` | 6 | 0 | 0 | 0 | 0 | 6 | 0 |
 
-## `actionable` (62)
+## `actionable` (59)
 
 Real spec requirement with no implementation reference and no named test.
 
@@ -117,9 +115,6 @@ Real spec requirement with no implementation reference and no named test.
 | `FR-UX-025` | genuine spec home: docs/models/civ-sim/USER_SPEC.md |
 | `FR-UX-026` | genuine spec home: docs/models/civ-sim/USER_SPEC.md |
 | `FR-UX-027` | genuine spec home: docs/models/civ-sim/USER_SPEC.md |
-| `NFR-CIV-PERF-900` | genuine spec home: docs/agileplus/README.md |
-| `NFR-CIV-PERF-901` | genuine spec home: docs/agileplus/README.md |
-| `NFR-CIV-PERF-902` | genuine spec home: docs/agileplus/README.md |
 | `NFR-CIV-SCALE-900` | genuine spec home: docs/agileplus/README.md |
 | `NFR-CIV-SCALE-902` | genuine spec home: docs/agileplus/README.md |
 | `NFR-CIV-SCALE-910` | genuine spec home: docs/agileplus/README.md |
@@ -147,7 +142,7 @@ Real spec, and the spec names the test to write.
 | `FR-CIV-SOCIAL-001` | PLAN.md names a concrete test for this id |
 | `FR-CIV-SOCIAL-002` | PLAN.md names a concrete test for this id |
 
-## `synthetic-expansion` (49)
+## `synthetic-expansion` (22)
 
 Numbered inside an area that has real specs, but no spec section of its own.
 
@@ -171,37 +166,10 @@ Numbered inside an area that has real specs, but no spec section of its own.
 | `FR-CIV-PSYCHE-036` | area CIV-PSYCHE has spec-backed siblings, but this id has no spec section |
 | `FR-CIV-PSYCHE-037` | area CIV-PSYCHE has spec-backed siblings, but this id has no spec section |
 | `FR-CIV-PSYCHE-040` | area CIV-PSYCHE has spec-backed siblings, but this id has no spec section |
-| `NFR-C-02` | area C has spec-backed siblings, but this id has no spec section |
-| `NFR-CIV-AI-002` | area CIV-AI has spec-backed siblings, but this id has no spec section |
-| `NFR-CIV-LEGENDS-PERF-01` | area CIV-LEGENDS-PERF has spec-backed siblings, but this id has no spec section |
-| `NFR-CIV-MAINT-005` | area CIV-MAINT has spec-backed siblings, but this id has no spec section |
-| `NFR-CIV-MAINT-006` | area CIV-MAINT has spec-backed siblings, but this id has no spec section |
 | `NFR-CIV-PERF-003` | area CIV-PERF has spec-backed siblings, but this id has no spec section |
-| `NFR-CIV-PERF-004` | area CIV-PERF has spec-backed siblings, but this id has no spec section |
 | `NFR-CIV-PERF-005` | area CIV-PERF has spec-backed siblings, but this id has no spec section |
-| `NFR-CIV-PERF-006` | area CIV-PERF has spec-backed siblings, but this id has no spec section |
-| `NFR-CIV-PERF-007` | area CIV-PERF has spec-backed siblings, but this id has no spec section |
-| `NFR-CIV-PERF-008` | area CIV-PERF has spec-backed siblings, but this id has no spec section |
-| `NFR-CIV-REL-001` | area CIV-REL has spec-backed siblings, but this id has no spec section |
-| `NFR-CIV-REL-002` | area CIV-REL has spec-backed siblings, but this id has no spec section |
-| `NFR-CIV-REL-003` | area CIV-REL has spec-backed siblings, but this id has no spec section |
 | `NFR-CIV-SCALE-003` | area CIV-SCALE has spec-backed siblings, but this id has no spec section |
 | `NFR-CIV-SCALE-004` | area CIV-SCALE has spec-backed siblings, but this id has no spec section |
-| `NFR-CIV-SEC-002` | area CIV-SEC has spec-backed siblings, but this id has no spec section |
-| `NFR-CIV-SEC-003` | area CIV-SEC has spec-backed siblings, but this id has no spec section |
-| `NFR-CIV-SEC-004` | area CIV-SEC has spec-backed siblings, but this id has no spec section |
-| `NFR-O-01` | area O has spec-backed siblings, but this id has no spec section |
-| `NFR-O-02` | area O has spec-backed siblings, but this id has no spec section |
-| `NFR-O-03` | area O has spec-backed siblings, but this id has no spec section |
-| `NFR-O-04` | area O has spec-backed siblings, but this id has no spec section |
-| `NFR-O-05` | area O has spec-backed siblings, but this id has no spec section |
-| `NFR-O-06` | area O has spec-backed siblings, but this id has no spec section |
-| `NFR-R-01` | area R has spec-backed siblings, but this id has no spec section |
-| `NFR-R-02` | area R has spec-backed siblings, but this id has no spec section |
-| `NFR-R-03` | area R has spec-backed siblings, but this id has no spec section |
-| `NFR-R-04` | area R has spec-backed siblings, but this id has no spec section |
-| `NFR-R-05` | area R has spec-backed siblings, but this id has no spec section |
-| `NFR-R-06` | area R has spec-backed siblings, but this id has no spec section |
 
 ## `design-document` (52)
 
@@ -262,7 +230,43 @@ Defined only in a design / direction document (intent, not acceptance criteria).
 | `FR-CIV-TECH-020` | only design/direction docs: docs/design/tech-engineering.md |
 | `FR-CIV-TECH-021` | only design/direction docs: docs/design/tech-engineering.md |
 
-## `reporting-only` (30)
+## `stub-template` (29)
+
+Only an unfilled auto-generated traceability template.
+
+| ID | Why |
+|---|---|
+| `NFR-C-02` | unfilled traceability template: docs/traceability/nfr-c-02/nfr-c-02-spec.md |
+| `NFR-CIV-AI-002` | unfilled traceability template: docs/traceability/nfr-civ-ai-002/nfr-civ-ai-002-spec.md |
+| `NFR-CIV-MAINT-005` | unfilled traceability template: docs/traceability/nfr-civ-maint-005/nfr-civ-maint-005-spec.md |
+| `NFR-CIV-MAINT-006` | unfilled traceability template: docs/traceability/nfr-civ-maint-006/nfr-civ-maint-006-spec.md |
+| `NFR-CIV-PERF-004` | unfilled traceability template: docs/traceability/nfr-civ-perf-004/nfr-civ-perf-004-spec.md |
+| `NFR-CIV-PERF-006` | unfilled traceability template: docs/traceability/nfr-civ-perf-006/nfr-civ-perf-006-spec.md |
+| `NFR-CIV-PERF-007` | unfilled traceability template: docs/traceability/nfr-civ-perf-007/nfr-civ-perf-007-spec.md |
+| `NFR-CIV-PERF-008` | unfilled traceability template: docs/traceability/nfr-civ-perf-008/nfr-civ-perf-008-spec.md |
+| `NFR-CIV-PERF-900` | unfilled traceability template: docs/traceability/nfr-civ-perf-900/nfr-civ-perf-900-spec.md |
+| `NFR-CIV-PERF-901` | unfilled traceability template: docs/traceability/nfr-civ-perf-901/nfr-civ-perf-901-spec.md |
+| `NFR-CIV-PERF-902` | unfilled traceability template: docs/traceability/nfr-civ-perf-902/nfr-civ-perf-902-spec.md |
+| `NFR-CIV-REL-001` | unfilled traceability template: docs/traceability/nfr-civ-rel-001/nfr-civ-rel-001-spec.md |
+| `NFR-CIV-REL-002` | unfilled traceability template: docs/traceability/nfr-civ-rel-002/nfr-civ-rel-002-spec.md |
+| `NFR-CIV-REL-003` | unfilled traceability template: docs/traceability/nfr-civ-rel-003/nfr-civ-rel-003-spec.md |
+| `NFR-CIV-SEC-002` | unfilled traceability template: docs/traceability/nfr-civ-sec-002/nfr-civ-sec-002-spec.md |
+| `NFR-CIV-SEC-003` | unfilled traceability template: docs/traceability/nfr-civ-sec-003/nfr-civ-sec-003-spec.md |
+| `NFR-CIV-SEC-004` | unfilled traceability template: docs/traceability/nfr-civ-sec-004/nfr-civ-sec-004-spec.md |
+| `NFR-O-01` | unfilled traceability template: docs/traceability/nfr-o-01/nfr-o-01-spec.md |
+| `NFR-O-02` | unfilled traceability template: docs/traceability/nfr-o-02/nfr-o-02-spec.md |
+| `NFR-O-03` | unfilled traceability template: docs/traceability/nfr-o-03/nfr-o-03-spec.md |
+| `NFR-O-04` | unfilled traceability template: docs/traceability/nfr-o-04/nfr-o-04-spec.md |
+| `NFR-O-05` | unfilled traceability template: docs/traceability/nfr-o-05/nfr-o-05-spec.md |
+| `NFR-O-06` | unfilled traceability template: docs/traceability/nfr-o-06/nfr-o-06-spec.md |
+| `NFR-R-01` | unfilled traceability template: docs/traceability/nfr-r-01/nfr-r-01-spec.md |
+| `NFR-R-02` | unfilled traceability template: docs/traceability/nfr-r-02/nfr-r-02-spec.md |
+| `NFR-R-03` | unfilled traceability template: docs/traceability/nfr-r-03/nfr-r-03-spec.md |
+| `NFR-R-04` | unfilled traceability template: docs/traceability/nfr-r-04/nfr-r-04-spec.md |
+| `NFR-R-05` | unfilled traceability template: docs/traceability/nfr-r-05/nfr-r-05-spec.md |
+| `NFR-R-06` | unfilled traceability template: docs/traceability/nfr-r-06/nfr-r-06-spec.md |
+
+## `reporting-only` (28)
 
 Named only by a matrix, audit, status report, or tracker.
 
@@ -283,8 +287,6 @@ Named only by a matrix, audit, status report, or tracker.
 | `FR-CIV-EMERGENCE-239` | recorded only in matrix/audit documents |
 | `FR-CIV-EMERGENCE-241` | recorded only in matrix/audit documents |
 | `FR-CIV-EMERGENCE-249` | recorded only in matrix/audit documents |
-| `FR-CIV-LEGENDS-CONFIG-04` | recorded only in matrix/audit documents |
-| `FR-CIV-LEGENDS-SCALE-02` | recorded only in matrix/audit documents |
 | `NFR-CIV-001` | recorded only in matrix/audit documents |
 | `NFR-CIV-002` | recorded only in matrix/audit documents |
 | `NFR-CIV-003` | recorded only in matrix/audit documents |

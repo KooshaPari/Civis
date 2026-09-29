@@ -11,13 +11,13 @@
     "CODE-ONLY-no-spec": "code present, no spec/traceability reference"
   },
   "totals": {
-    "rows": 1425,
+    "rows": 1422,
     "by_status": {
       "COVERED": 1060,
       "STUB-TEST-ONLY": 0,
       "TEST-NO-CODE-REF": 157,
       "IMPL-NO-TEST": 0,
-      "SPEC-ONLY": 208,
+      "SPEC-ONLY": 205,
       "CODE-ONLY-no-spec": 0
     },
     "by_epic": {
@@ -111,19 +111,16 @@
       "FR-CIV-LEGENDS": 9,
       "FR-CIV-LEGENDS-BROWSER": 1,
       "FR-CIV-LEGENDS-CAUSAL": 1,
-      "FR-CIV-LEGENDS-CONFIG": 1,
       "FR-CIV-LEGENDS-GAP": 1,
       "FR-CIV-LEGENDS-GRAPH": 1,
       "FR-CIV-LEGENDS-INGEST": 1,
       "FR-CIV-LEGENDS-INSPECT": 1,
       "FR-CIV-LEGENDS-NARRATOR": 1,
-      "FR-CIV-LEGENDS-PERF": 1,
       "FR-CIV-LEGENDS-PERSIST": 1,
       "FR-CIV-LEGENDS-PRESIM": 1,
       "FR-CIV-LEGENDS-PRODUCER": 1,
       "FR-CIV-LEGENDS-QUERY": 1,
       "FR-CIV-LEGENDS-RESOLVE": 1,
-      "FR-CIV-LEGENDS-SCALE": 1,
       "FR-CIV-LEGENDS-SIG": 1,
       "FR-CIV-LIFE": 20,
       "FR-CIV-LLM": 6,
@@ -977,14 +974,6 @@
         "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 0
       },
-      "FR-CIV-LEGENDS-CONFIG": {
-        "COVERED": 0,
-        "STUB-TEST-ONLY": 0,
-        "TEST-NO-CODE-REF": 0,
-        "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 1,
-        "CODE-ONLY-no-spec": 0
-      },
       "FR-CIV-LEGENDS-GAP": {
         "COVERED": 1,
         "STUB-TEST-ONLY": 0,
@@ -1021,14 +1010,6 @@
         "COVERED": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 1,
-        "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 0,
-        "CODE-ONLY-no-spec": 0
-      },
-      "FR-CIV-LEGENDS-PERF": {
-        "COVERED": 1,
-        "STUB-TEST-ONLY": 0,
-        "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
         "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 0
@@ -1071,14 +1052,6 @@
         "TEST-NO-CODE-REF": 1,
         "IMPL-NO-TEST": 0,
         "SPEC-ONLY": 0,
-        "CODE-ONLY-no-spec": 0
-      },
-      "FR-CIV-LEGENDS-SCALE": {
-        "COVERED": 0,
-        "STUB-TEST-ONLY": 0,
-        "TEST-NO-CODE-REF": 0,
-        "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 1,
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-LEGENDS-SIG": {
@@ -2018,11 +1991,11 @@
         "CODE-ONLY-no-spec": 0
       },
       "NFR-CIV-LEGENDS-PERF": {
-        "COVERED": 0,
+        "COVERED": 1,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 1,
+        "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 0
       },
       "NFR-CIV-LEGENDS-SCALE": {
@@ -14587,17 +14560,6 @@
       "stub_test_refs": []
     },
     {
-      "id": "FR-CIV-LEGENDS-CONFIG-04",
-      "status": "SPEC-ONLY",
-      "epic": "FR-CIV-LEGENDS-CONFIG",
-      "spec_refs": [
-        "docs/traceability/fr-emergence-matrix.md:259"
-      ],
-      "code_refs": [],
-      "test_refs": [],
-      "stub_test_refs": []
-    },
-    {
       "id": "FR-CIV-LEGENDS-GAP-12",
       "status": "COVERED",
       "epic": "FR-CIV-LEGENDS-GAP",
@@ -14724,25 +14686,6 @@
         "crates/legends/tests/fr_fr_civ_legends_narrator_13.rs:10",
         "crates/legends/tests/fr_fr_civ_legends_narrator_13.rs:21",
         "crates/legends/tests/fr_fr_civ_legends_narrator_13.rs:27"
-      ],
-      "stub_test_refs": []
-    },
-    {
-      "id": "FR-CIV-LEGENDS-PERF-01",
-      "status": "COVERED",
-      "epic": "FR-CIV-LEGENDS-PERF",
-      "spec_refs": [
-        "docs/traceability/fr-emergence-matrix.md:260"
-      ],
-      "code_refs": [
-        "crates/legends/src/perf.rs:1",
-        "crates/legends/src/perf.rs:28",
-        "crates/legends/src/perf.rs:37",
-        "crates/legends/src/perf.rs:75",
-        "crates/legends/src/perf.rs:87"
-      ],
-      "test_refs": [
-        "crates/legends/src/perf.rs:87"
       ],
       "stub_test_refs": []
     },
@@ -14880,17 +14823,6 @@
         "crates/legends/tests/fr_fr_civ_legends_resolve_04.rs:26",
         "crates/legends/tests/fr_fr_civ_legends_resolve_04.rs:35"
       ],
-      "stub_test_refs": []
-    },
-    {
-      "id": "FR-CIV-LEGENDS-SCALE-02",
-      "status": "SPEC-ONLY",
-      "epic": "FR-CIV-LEGENDS-SCALE",
-      "spec_refs": [
-        "docs/traceability/fr-emergence-matrix.md:261"
-      ],
-      "code_refs": [],
-      "test_refs": [],
       "stub_test_refs": []
     },
     {
@@ -36084,6 +36016,7 @@
       "epic": "NFR-CIV-LEGENDS-CONFIG",
       "spec_refs": [
         "docs/design/legends-engine.md:454",
+        "docs/traceability/fr-emergence-matrix.md:259",
         "docs/traceability/index.md:1170",
         "docs/traceability/nfr-civ-legends-config-04/nfr-civ-legends-config-04-research.md:1",
         "docs/traceability/nfr-civ-legends-config-04/nfr-civ-legends-config-04-research.md:4",
@@ -36122,21 +36055,29 @@
     },
     {
       "id": "NFR-CIV-LEGENDS-PERF-01",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "NFR-CIV-LEGENDS-PERF",
       "spec_refs": [
         "docs/design/legends-engine.md:451",
+        "docs/traceability/fr-emergence-matrix.md:260",
         "docs/traceability/index.md:1172",
         "docs/traceability/nfr-civ-legends-perf-01/nfr-civ-legends-perf-01-research.md:1",
         "docs/traceability/nfr-civ-legends-perf-01/nfr-civ-legends-perf-01-research.md:4",
         "docs/traceability/nfr-civ-legends-perf-01/nfr-civ-legends-perf-01-spec.md:1",
         "docs/traceability/nfr-civ-legends-perf-01/nfr-civ-legends-perf-01-spec.md:5",
         "docs/traceability/nfr-civ-perf-002/nfr-civ-perf-002-intent.md:17",
-        "docs/traceability/nfr-civ-perf-003/nfr-civ-perf-003-intent.md:17",
-        "docs/traceability/nfr-civ-perf-004/nfr-civ-perf-004-intent.md:17"
+        "docs/traceability/nfr-civ-perf-003/nfr-civ-perf-003-intent.md:17"
       ],
-      "code_refs": [],
-      "test_refs": [],
+      "code_refs": [
+        "crates/legends/src/perf.rs:1",
+        "crates/legends/src/perf.rs:28",
+        "crates/legends/src/perf.rs:37",
+        "crates/legends/src/perf.rs:75",
+        "crates/legends/src/perf.rs:87"
+      ],
+      "test_refs": [
+        "crates/legends/src/perf.rs:87"
+      ],
       "stub_test_refs": []
     },
     {
@@ -36145,14 +36086,14 @@
       "epic": "NFR-CIV-LEGENDS-SCALE",
       "spec_refs": [
         "docs/design/legends-engine.md:452",
+        "docs/traceability/fr-emergence-matrix.md:261",
         "docs/traceability/index.md:1173",
         "docs/traceability/nfr-civ-legends-scale-02/nfr-civ-legends-scale-02-adr.md:1",
         "docs/traceability/nfr-civ-legends-scale-02/nfr-civ-legends-scale-02-adr.md:6",
         "docs/traceability/nfr-civ-legends-scale-02/nfr-civ-legends-scale-02-adr.md:10",
         "docs/traceability/nfr-civ-legends-scale-02/nfr-civ-legends-scale-02-research.md:1",
         "docs/traceability/nfr-civ-legends-scale-02/nfr-civ-legends-scale-02-research.md:4",
-        "docs/traceability/nfr-civ-legends-scale-02/nfr-civ-legends-scale-02-spec.md:1",
-        "docs/traceability/nfr-civ-legends-scale-02/nfr-civ-legends-scale-02-spec.md:5"
+        "docs/traceability/nfr-civ-legends-scale-02/nfr-civ-legends-scale-02-spec.md:1"
       ],
       "code_refs": [
         "crates/legends/src/lib.rs:17"

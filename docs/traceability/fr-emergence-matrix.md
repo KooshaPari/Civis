@@ -256,9 +256,9 @@ Emergent population migration: flows computed from cluster state (scarcity/disas
 | FR-CIV-LEGENDS-CAUSAL-06 | Causal chains + acyclicity | `crates/legends/src/lib.rs` | `causal_06_*` | Graph remains DAG after ingest | code-only |
 | FR-CIV-LEGENDS-QUERY-07 | Read-only query API + emergence feed | `crates/legends/src/query.rs` | `query_07_*` | Query does not mutate sim state | code-only |
 | FR-CIV-LEGENDS-NARRATOR-13 | Epoch digest hash stable | `crates/legends/src/lib.rs` | `narrator_13_*` | Same epoch events ⇒ identical digest hash | code-only |
-| FR-CIV-LEGENDS-CONFIG-04 | Legends config schema versioned | `crates/legends/src/config.rs` | TODO: config roundtrip | RON round-trip lossless | dormant |
-| FR-CIV-LEGENDS-PERF-01 | Legends ingest P99 budget | `crates/legends/` | TODO: bench ingest | Ingest 1k events P99 < 50 ms | dormant |
-| FR-CIV-LEGENDS-SCALE-02 | Graph node cap (NFR-SCALE-02) | `crates/legends/src/config.rs` | TODO: prune at cap | Node count ≤ `max_nodes` after prune | dormant |
+| NFR-CIV-LEGENDS-CONFIG-04 | Legends config schema versioned | `crates/legends/src/config.rs` | TODO: config roundtrip | RON round-trip lossless | dormant |
+| NFR-CIV-LEGENDS-PERF-01 | Legends ingest P99 budget | `crates/legends/` | TODO: bench ingest | Ingest 1k events P99 < 50 ms | dormant |
+| NFR-CIV-LEGENDS-SCALE-02 | Graph node cap (NFR-SCALE-02) | `crates/legends/src/config.rs` | TODO: prune at cap | Node count ≤ `max_nodes` after prune | dormant |
 
 ---
 
